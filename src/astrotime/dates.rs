@@ -86,19 +86,19 @@ impl Date {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
-pub struct Time {
-    hour: i64,
-    minute: i64,
-    second: i64,
-    attosecond: i64,
-}
-
-#[derive(Debug, Copy, Clone)]
-pub struct DateTime {
-    date: Date,
-    time: Time,
-}
+// #[derive(Debug, Copy, Clone)]
+// pub struct Time {
+//     hour: i64,
+//     minute: i64,
+//     second: i64,
+//     attosecond: i64,
+// }
+//
+// #[derive(Debug, Copy, Clone)]
+// pub struct DateTime {
+//     date: Date,
+//     time: Time,
+// }
 
 fn find_year(calendar: Calendar, j2000day: i64) -> i64 {
     match calendar {

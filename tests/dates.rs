@@ -25,7 +25,14 @@ use rstest::rstest;
 #[case(2000, 2, 28, 58)]
 #[case(2000, 2, 29, 59)]
 #[case(2000, 3, 1, 60)]
-fn dates_test(#[case] year: i64, #[case] month: i64, #[case] day: i64, #[case] exp: i64) {
+fn test_dates(#[case] year: i64, #[case] month: i64, #[case] day: i64, #[case] exp: i64) {
     let date = Date::new(year, month, day).expect("Invalid date");
     assert_eq!(exp, date.j2000())
+}
+
+#[test]
+fn test_illegal_dates() {
+    assert!(Date::new(2018, 2, 29).is_err());
+    assert!(Date::new(2018, 0, 1).is_err());
+    assert!(Date::new(2018, 13, 1).is_err());
 }
