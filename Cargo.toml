@@ -1,0 +1,18 @@
+[package]
+name = "lox-space"
+version = "0.1.0"
+edition = "2021"
+license = "MPL-2.0"
+
+[lib]
+name = "lox"
+path = "src/lib.rs"
+
+[[bin]]
+name = "lox"
+path = "src/bin/lox.rs"
+
+[dependencies]
+
+[dev-dependencies]
+rstest = "0.16.0"
