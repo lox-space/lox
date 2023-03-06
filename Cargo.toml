@@ -13,6 +13,7 @@ name = "lox"
 path = "src/bin/lox.rs"
 
 [dependencies]
+num = "0.4.0"
 
 [dev-dependencies]
 rstest = "0.16.0"
