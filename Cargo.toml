@@ -16,4 +16,5 @@ path = "src/bin/lox.rs"
 num = "0.4.0"
 
 [dev-dependencies]
+proptest = "1.1.0"
 rstest = "0.16.0"

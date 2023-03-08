@@ -3,6 +3,10 @@ use num::ToPrimitive;
 
 const SECONDS_PER_DAY_F64: f64 = 24.0 * 60.0 * 60.0;
 
+const SECONDS_PER_MINUTE: i64 = 60;
+const SECONDS_PER_HOUR: i64 = 60 * SECONDS_PER_MINUTE;
+const SECONDS_PER_DAY: i64 = 24 * SECONDS_PER_HOUR;
+
 #[derive(Debug, Copy, Clone)]
 pub enum TimeScale {
     TAI,
@@ -18,10 +22,6 @@ pub struct RawEpoch {
     second: i64,
     attosecond: i64,
 }
-
-const SECONDS_PER_MINUTE: i64 = 60;
-const SECONDS_PER_HOUR: i64 = 60 * SECONDS_PER_MINUTE;
-const SECONDS_PER_DAY: i64 = 24 * SECONDS_PER_HOUR;
 
 #[derive(Debug, Copy, Clone)]
 pub enum Epoch {
