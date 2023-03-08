@@ -40,10 +40,7 @@ impl Date {
             Err("Invalid month")
         } else {
             let calendar = get_calendar(year, month, day);
-            let check = match Date::from_days(j2000(calendar, year, month, day)) {
-                Ok(check) => check,
-                Err(msg) => return Err(msg),
-            };
+            let check = Date::from_days(j2000(calendar, year, month, day))?;
 
             if check.year() != year || check.month() != month || check.day() != day {
                 Err("Invalid date")
@@ -73,17 +70,14 @@ impl Date {
         let leap = is_leap(calendar, year);
         let day_in_year = offset - last_day_of_year_j2k(calendar, year - 1);
         let month = find_month(day_in_year, leap);
-        let day = find_day(day_in_year, month, leap);
+        let day = find_day(day_in_year, month, leap)?;
 
-        match day {
-            Ok(day) => Ok(Date {
-                calendar,
-                year,
-                month,
-                day,
-            }),
-            Err(msg) => Err(msg),
-        }
+        Ok(Date {
+            calendar,
+            year,
+            month,
+            day,
+        })
     }
 
     pub fn j2000(&self) -> i64 {
