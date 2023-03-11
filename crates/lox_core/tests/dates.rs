@@ -1,4 +1,4 @@
-use lox::time::dates::{Date, Time};
+use lox_core::time::dates::{Date, Time};
 use rstest::rstest;
 
 #[rstest]

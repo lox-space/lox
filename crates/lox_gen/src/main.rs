@@ -1,3 +1,4 @@
+use std::path::Path;
 use std::{fs, io, io::prelude::*};
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
@@ -6,7 +7,6 @@ type Result<T> = std::result::Result<T, Error>;
 pub fn main() -> Result<()> {
     let mut output = vec!["// AUTO-GENERATED DO NOT EDIT!".to_string(), "".to_string()];
     let mut in_data = false;
-    // let mut in_statement = false;
     let mut statement = Vec::new();
     for line in io::stdin().lock().lines() {
         let l = line?;
@@ -35,7 +35,13 @@ pub fn main() -> Result<()> {
         }
     }
 
-    fs::write("../bodies/pck_constants.rs", output.join("\n"))?;
+    let file = Path::new(file!());
+    let out = file
+        .parent()
+        .unwrap()
+        .join("../../lox_core/src/bodies/pck_constants.rs");
+
+    fs::write(out, output.join("\n"))?;
 
     Ok(())
 }
