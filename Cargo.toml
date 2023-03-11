@@ -4,17 +4,9 @@ version = "0.1.0"
 edition = "2021"
 license = "MPL-2.0"
 
-[lib]
-name = "lox"
-path = "src/lib.rs"
+[workspace]
 
-[[bin]]
-name = "lox"
-path = "src/bin/lox.rs"
+members = [
+    "crates/*"
+]
 
-[dependencies]
-num = "0.4.0"
-
-[dev-dependencies]
-proptest = "1.1.0"
-rstest = "0.16.0"

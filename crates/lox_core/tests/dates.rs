@@ -1,4 +1,4 @@
-use lox::astrotime::dates::{Date, Time};
+use lox::time::dates::{Date, Time};
 use rstest::rstest;
 
 #[rstest]

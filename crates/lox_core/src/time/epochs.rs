@@ -1,4 +1,4 @@
-use crate::astrotime::dates::{Date, DateTime, Time};
+use crate::time::dates::{Date, DateTime, Time};
 use num::ToPrimitive;
 
 const SECONDS_PER_DAY_F64: f64 = 24.0 * 60.0 * 60.0;
