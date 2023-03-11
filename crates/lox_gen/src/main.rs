@@ -65,5 +65,5 @@ fn format_statement(statement: &str) -> String {
         .collect();
     let n = data.len();
     let out = data.join(", ");
-    format!("const {name}: [f64; {n}] = [{out}];")
+    format!("pub const {name}: [f64; {n}] = [{out}];")
 }

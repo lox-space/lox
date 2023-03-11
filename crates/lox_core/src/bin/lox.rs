@@ -1,7 +1,7 @@
-use lox_core::bodies::{MercuryBarycenter, NaifId};
+use lox_core::bodies::barycenters::MercuryBarycenter;
+use lox_core::bodies::NaifId;
 
 fn main() {
     println!("Hello LOX");
-    let m = MercuryBarycenter;
-    println!("{}", m.id())
+    println!("{}", MercuryBarycenter::id())
 }
