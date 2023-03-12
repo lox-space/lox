@@ -8,21 +8,21 @@ use nom::sequence::{delimited, terminated, tuple};
 use nom::IResult;
 
 #[derive(Debug)]
-enum PckArray {
-    Str(Vec<String>),
+enum Array {
+    String(Vec<String>),
     Float(Vec<f64>),
 }
 
-impl PartialEq for PckArray {
+impl PartialEq for Array {
     fn eq(&self, other: &Self) -> bool {
         match self {
-            PckArray::Str(v1) => match other {
-                PckArray::Str(v2) => v1 == v2,
-                PckArray::Float(_) => false,
+            Array::String(v1) => match other {
+                Array::String(v2) => v1 == v2,
+                Array::Float(_) => false,
             },
-            PckArray::Float(v1) => match other {
-                PckArray::Str(_) => false,
-                PckArray::Float(v2) => v1 == v2,
+            Array::Float(v1) => match other {
+                Array::String(_) => false,
+                Array::Float(v2) => v1 == v2,
             },
         }
     }
@@ -36,12 +36,12 @@ fn fortran_double(s: &str) -> IResult<&str, f64> {
     parser(s)
 }
 
-fn pck_double(s: &str) -> IResult<&str, f64> {
+fn spice_double(s: &str) -> IResult<&str, f64> {
     let mut parser = alt((fortran_double, double));
     parser(s)
 }
 
-fn pck_string(s: &str) -> IResult<&str, String> {
+fn spice_string(s: &str) -> IResult<&str, String> {
     let mut parser = fold_many1(
         delimited(tag("'"), take_until("'"), tag("'")),
         String::new,
@@ -60,31 +60,31 @@ fn separator(s: &str) -> IResult<&str, &str> {
     take_while1(|x: char| x.is_whitespace() || x == ',')(s)
 }
 
-fn float_array(s: &str) -> IResult<&str, PckArray> {
+fn float_array(s: &str) -> IResult<&str, Array> {
     let mut parser = map(
         delimited(
             terminated(tag("("), separator),
-            many1(terminated(pck_double, separator)),
+            many1(terminated(spice_double, separator)),
             tag(")"),
         ),
-        PckArray::Float,
+        Array::Float,
     );
     parser(s)
 }
 
-fn string_array(s: &str) -> IResult<&str, PckArray> {
+fn string_array(s: &str) -> IResult<&str, Array> {
     let mut parser = map(
         delimited(
             terminated(tag("("), separator),
-            many1(terminated(pck_string, separator)),
+            many1(terminated(spice_string, separator)),
             tag(")"),
         ),
-        PckArray::Str,
+        Array::String,
     );
     parser(s)
 }
 
-fn array(s: &str) -> IResult<&str, PckArray> {
+fn array(s: &str) -> IResult<&str, Array> {
     let mut parser = alt((float_array, string_array));
     parser(s)
 }
@@ -94,28 +94,28 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_pck_double() {
-        assert_eq!(pck_double("+6378.1366"), Ok(("", 6378.1366)));
-        assert_eq!(pck_double("6.3781366D3"), Ok(("", 6378.1366)));
-        assert_eq!(pck_double("6.3781366d3"), Ok(("", 6378.1366)));
-        assert_eq!(pck_double("6.3781366E3"), Ok(("", 6378.1366)));
-        assert_eq!(pck_double("6.3781366e3"), Ok(("", 6378.1366)));
-        assert_eq!(pck_double("6378"), Ok(("", 6378.0)));
+    fn test_spice_double() {
+        assert_eq!(spice_double("+6378.1366"), Ok(("", 6378.1366)));
+        assert_eq!(spice_double("6.3781366D3"), Ok(("", 6378.1366)));
+        assert_eq!(spice_double("6.3781366d3"), Ok(("", 6378.1366)));
+        assert_eq!(spice_double("6.3781366E3"), Ok(("", 6378.1366)));
+        assert_eq!(spice_double("6.3781366e3"), Ok(("", 6378.1366)));
+        assert_eq!(spice_double("6378"), Ok(("", 6378.0)));
 
-        assert_eq!(pck_double("11e-1"), Ok(("", 1.1)));
-        assert_eq!(pck_double("123E-02"), Ok(("", 1.23)));
-        assert_eq!(pck_double("123K-01"), Ok(("K-01", 123.0)));
-        assert!(pck_double("abc").is_err());
+        assert_eq!(spice_double("11e-1"), Ok(("", 1.1)));
+        assert_eq!(spice_double("123E-02"), Ok(("", 1.23)));
+        assert_eq!(spice_double("123K-01"), Ok(("K-01", 123.0)));
+        assert!(spice_double("abc").is_err());
     }
 
     #[test]
-    fn test_pck_string() {
+    fn test_spice_string() {
         assert_eq!(
-            pck_string("'KILOMETERS'"),
+            spice_string("'KILOMETERS'"),
             Ok(("", "KILOMETERS".to_string()))
         );
         assert_eq!(
-            pck_string("'You can''t always get what you want.'"),
+            spice_string("'You can''t always get what you want.'"),
             Ok(("", "You can't always get what you want.".to_string()))
         );
     }
@@ -131,11 +131,11 @@ mod tests {
     fn test_float_array() {
         assert_eq!(
             float_array("( 6378.1366     6378.1366     6356.7519   )"),
-            Ok(("", PckArray::Float(vec!(6378.1366, 6378.1366, 6356.7519))))
+            Ok(("", Array::Float(vec!(6378.1366, 6378.1366, 6356.7519))))
         );
         assert_eq!(
             float_array("( 6378.1366, 6378.1366, 6356.7519 )"),
-            Ok(("", PckArray::Float(vec!(6378.1366, 6378.1366, 6356.7519))))
+            Ok(("", Array::Float(vec!(6378.1366, 6378.1366, 6356.7519))))
         )
     }
 
@@ -147,12 +147,31 @@ mod tests {
             string_array(input),
             Ok((
                 "",
-                PckArray::Str(vec!(
+                Array::String(vec!(
                     "KILOMETERS".to_string(),
                     "SECONDS".to_string(),
                     "KILOMETERS/SECOND".to_string()
                 ))
             ))
         );
+    }
+
+    #[test]
+    fn test_array() {
+        let exp_float = Array::Float(vec![6378.1366, 6378.1366, 6356.7519]);
+        let exp_string = Array::String(vec![
+            "KILOMETERS".to_string(),
+            "SECONDS".to_string(),
+            "KILOMETERS/SECOND".to_string(),
+        ]);
+        assert_ne!(exp_float, exp_string);
+        assert_ne!(exp_string, exp_float);
+        assert_eq!(
+            array("( 6378.1366, 6378.1366, 6356.7519 )"),
+            Ok(("", exp_float))
+        );
+        let input = "( 'KILOMETERS','SECONDS' \
+            'KILOMETERS/SECOND' )";
+        assert_eq!(array(input), Ok(("", exp_string)));
     }
 }
