@@ -8,6 +8,7 @@
 
 pub mod bodies;
 pub mod communications;
+pub mod ephemeris;
 pub mod errors;
 pub mod frames;
 pub mod time;
