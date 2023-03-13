@@ -1,10 +1,11 @@
 use nom::branch::alt;
-use nom::bytes::complete::{tag, take_until, take_while1};
-use nom::character::complete::one_of;
+use nom::bytes::complete::{tag, take_until, take_until1, take_while, take_while1};
+use nom::character::complete::{line_ending, multispace0, newline, not_line_ending, one_of};
+use nom::character::{is_newline, is_space};
 use nom::combinator::{map, map_res, recognize};
-use nom::multi::{fold_many1, many1};
+use nom::multi::{fold_many1, many0, many1};
 use nom::number::complete::{double, float};
-use nom::sequence::{delimited, terminated, tuple};
+use nom::sequence::{delimited, preceded, separated_pair, terminated, tuple};
 use nom::IResult;
 
 #[derive(Debug, PartialEq)]
@@ -83,6 +84,44 @@ fn string_value(s: &str) -> IResult<&str, Value> {
 
 fn array_value(s: &str) -> IResult<&str, Value> {
     let mut parser = alt((double_array, string_array));
+    parser(s)
+}
+
+fn key_value(s: &str) -> IResult<&str, (String, Value)> {
+    let mut parser = map(
+        separated_pair(
+            terminated(
+                take_while1(|x: char| !x.is_whitespace()),
+                take_while1(char::is_whitespace),
+            ),
+            terminated(tag("="), take_while1(char::is_whitespace)),
+            alt((double_value, string_value, array_value)),
+        ),
+        |kv: (&str, Value)| (kv.0.to_string(), kv.1),
+    );
+    parser(s)
+}
+
+fn start_tag(s: &str) -> IResult<&str, &str> {
+    let mut parser = delimited(
+        terminated(line_ending, take_while(char::is_whitespace)),
+        tag("\\begindata"),
+        preceded(not_line_ending, line_ending),
+    );
+    parser(s)
+}
+
+fn end_tag(s: &str) -> IResult<&str, &str> {
+    let mut parser = tag("\\begintext");
+    parser(s)
+}
+
+fn data_block(s: &str) -> IResult<&str, Vec<(String, Value)>> {
+    let mut parser = delimited(
+        start_tag,
+        many0(preceded(multispace0, key_value)),
+        preceded(multispace0, end_tag),
+    );
     parser(s)
 }
 
@@ -186,5 +225,82 @@ mod tests {
         let input = "( 'KILOMETERS','SECONDS' \
             'KILOMETERS/SECOND' )";
         assert_eq!(array_value(input), Ok(("", exp_string)));
+    }
+
+    #[test]
+    fn test_key_value() {
+        let input = "BODY399_RADII     = ( 6378.1366     6378.1366     6356.7519   )";
+        let exp_value = Value::DoubleArray(vec![6378.1366, 6378.1366, 6356.7519]);
+        let exp_key = "BODY399_RADII".to_string();
+        assert_eq!(key_value(input), Ok(("", (exp_key, exp_value))));
+    }
+
+    #[test]
+    fn test_data_block() {
+        assert_eq!(start_tag("\n\\begindata\n"), Ok(("", "\\begindata")));
+        assert_eq!(start_tag("\n   \\begindata   \n"), Ok(("", "\\begindata")));
+        assert!(start_tag("\nfoo\\begindatabar\n").is_err());
+        assert_eq!(end_tag("\\begintext"), Ok(("", "\\begintext")));
+
+        let block = "\n\\begindata
+
+        BODY499_POLE_RA          = (  317.269202  -0.10927547        0.  )
+        BODY499_POLE_DEC         = (   54.432516  -0.05827105        0.  )
+        BODY499_PM               = (  176.049863  +350.891982443297  0.  )
+
+        BODY499_NUT_PREC_RA      = (  0     0     0     0     0
+                                      0     0     0     0     0
+                                      0.000068
+                                      0.000238
+                                      0.000052
+                                      0.000009
+                                      0.419057                  )
+
+
+        BODY499_NUT_PREC_DEC     = (  0     0     0     0     0
+                                      0     0     0     0     0
+                                      0     0     0     0     0
+                                      0.000051
+                                      0.000141
+                                      0.000031
+                                      0.000005
+                                      1.591274                  )
+
+
+        BODY499_NUT_PREC_PM      = (  0     0     0     0     0
+                                      0     0     0     0     0
+                                      0     0     0     0     0
+                                      0     0     0     0     0
+                                      0.000145
+                                      0.000157
+                                      0.000040
+                                      0.000001
+                                      0.000001
+                                      0.584542                  )
+
+        \\begintext";
+        let k1 = "BODY499_POLE_RA".to_string();
+        let v1 = Value::DoubleArray(vec![317.269202, -0.10927547, 0.]);
+        let k2 = "BODY499_POLE_DEC".to_string();
+        let v2 = Value::DoubleArray(vec![54.432516, -0.05827105, 0.]);
+        let k3 = "BODY499_PM".to_string();
+        let v3 = Value::DoubleArray(vec![176.049863, 350.891982443297, 0.]);
+        let k4 = "BODY499_NUT_PREC_RA".to_string();
+        let v4 = Value::DoubleArray(vec![
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.000068, 0.000238, 0.000052,
+            0.000009, 0.419057,
+        ]);
+        let k5 = "BODY499_NUT_PREC_DEC".to_string();
+        let v5 = Value::DoubleArray(vec![
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.000051,
+            0.000141, 0.000031, 0.000005, 1.591274,
+        ]);
+        let k6 = "BODY499_NUT_PREC_PM".to_string();
+        let v6 = Value::DoubleArray(vec![
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.000145, 0.000157, 0.000040, 0.000001, 0.000001, 0.584542,
+        ]);
+        let exp = vec![(k1, v1), (k2, v2), (k3, v3), (k4, v4), (k5, v5), (k6, v6)];
+        assert_eq!(data_block(block), Ok(("", exp)));
     }
 }
