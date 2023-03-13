@@ -7,25 +7,12 @@ use nom::number::complete::{double, float};
 use nom::sequence::{delimited, terminated, tuple};
 use nom::IResult;
 
-#[derive(Debug)]
-enum Array {
-    String(Vec<String>),
-    Float(Vec<f64>),
-}
-
-impl PartialEq for Array {
-    fn eq(&self, other: &Self) -> bool {
-        match self {
-            Array::String(v1) => match other {
-                Array::String(v2) => v1 == v2,
-                Array::Float(_) => false,
-            },
-            Array::Float(v1) => match other {
-                Array::String(_) => false,
-                Array::Float(v2) => v1 == v2,
-            },
-        }
-    }
+#[derive(Debug, PartialEq)]
+enum Value {
+    Double(f64),
+    String(String),
+    DoubleArray(Vec<f64>),
+    StringArray(Vec<String>),
 }
 
 fn fortran_double(s: &str) -> IResult<&str, f64> {
@@ -60,32 +47,42 @@ fn separator(s: &str) -> IResult<&str, &str> {
     take_while1(|x: char| x.is_whitespace() || x == ',')(s)
 }
 
-fn float_array(s: &str) -> IResult<&str, Array> {
+fn double_array(s: &str) -> IResult<&str, Value> {
     let mut parser = map(
         delimited(
             terminated(tag("("), separator),
             many1(terminated(spice_double, separator)),
             tag(")"),
         ),
-        Array::Float,
+        Value::DoubleArray,
     );
     parser(s)
 }
 
-fn string_array(s: &str) -> IResult<&str, Array> {
+fn string_array(s: &str) -> IResult<&str, Value> {
     let mut parser = map(
         delimited(
             terminated(tag("("), separator),
             many1(terminated(spice_string, separator)),
             tag(")"),
         ),
-        Array::String,
+        Value::StringArray,
     );
     parser(s)
 }
 
-fn array(s: &str) -> IResult<&str, Array> {
-    let mut parser = alt((float_array, string_array));
+fn double_value(s: &str) -> IResult<&str, Value> {
+    let mut parser = map(spice_double, Value::Double);
+    parser(s)
+}
+
+fn string_value(s: &str) -> IResult<&str, Value> {
+    let mut parser = map(spice_string, Value::String);
+    parser(s)
+}
+
+fn array_value(s: &str) -> IResult<&str, Value> {
+    let mut parser = alt((double_array, string_array));
     parser(s)
 }
 
@@ -94,13 +91,18 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_spice_double() {
+    fn test_double() {
+        assert_eq!(spice_double("6.3781366e3"), Ok(("", 6378.1366)));
         assert_eq!(spice_double("+6378.1366"), Ok(("", 6378.1366)));
         assert_eq!(spice_double("6.3781366D3"), Ok(("", 6378.1366)));
         assert_eq!(spice_double("6.3781366d3"), Ok(("", 6378.1366)));
         assert_eq!(spice_double("6.3781366E3"), Ok(("", 6378.1366)));
-        assert_eq!(spice_double("6.3781366e3"), Ok(("", 6378.1366)));
         assert_eq!(spice_double("6378"), Ok(("", 6378.0)));
+
+        assert_eq!(
+            double_value("6.3781366e3"),
+            Ok(("", Value::Double(6378.1366)))
+        );
 
         assert_eq!(spice_double("11e-1"), Ok(("", 1.1)));
         assert_eq!(spice_double("123E-02"), Ok(("", 1.23)));
@@ -109,10 +111,14 @@ mod tests {
     }
 
     #[test]
-    fn test_spice_string() {
+    fn test_string() {
         assert_eq!(
             spice_string("'KILOMETERS'"),
             Ok(("", "KILOMETERS".to_string()))
+        );
+        assert_eq!(
+            string_value("'KILOMETERS'"),
+            Ok(("", Value::String("KILOMETERS".to_string())))
         );
         assert_eq!(
             spice_string("'You can''t always get what you want.'"),
@@ -128,14 +134,20 @@ mod tests {
     }
 
     #[test]
-    fn test_float_array() {
+    fn test_double_array() {
         assert_eq!(
-            float_array("( 6378.1366     6378.1366     6356.7519   )"),
-            Ok(("", Array::Float(vec!(6378.1366, 6378.1366, 6356.7519))))
+            double_array("( 6378.1366     6378.1366     6356.7519   )"),
+            Ok((
+                "",
+                Value::DoubleArray(vec!(6378.1366, 6378.1366, 6356.7519))
+            ))
         );
         assert_eq!(
-            float_array("( 6378.1366, 6378.1366, 6356.7519 )"),
-            Ok(("", Array::Float(vec!(6378.1366, 6378.1366, 6356.7519))))
+            double_array("( 6378.1366, 6378.1366, 6356.7519 )"),
+            Ok((
+                "",
+                Value::DoubleArray(vec!(6378.1366, 6378.1366, 6356.7519))
+            ))
         )
     }
 
@@ -147,7 +159,7 @@ mod tests {
             string_array(input),
             Ok((
                 "",
-                Array::String(vec!(
+                Value::StringArray(vec!(
                     "KILOMETERS".to_string(),
                     "SECONDS".to_string(),
                     "KILOMETERS/SECOND".to_string()
@@ -158,20 +170,21 @@ mod tests {
 
     #[test]
     fn test_array() {
-        let exp_float = Array::Float(vec![6378.1366, 6378.1366, 6356.7519]);
-        let exp_string = Array::String(vec![
+        let exp_float = Value::DoubleArray(vec![6378.1366, 6378.1366, 6356.7519]);
+        let exp_string = Value::StringArray(vec![
             "KILOMETERS".to_string(),
             "SECONDS".to_string(),
             "KILOMETERS/SECOND".to_string(),
         ]);
+        assert_ne!(Value::Double(3.0), Value::Double(3.1));
         assert_ne!(exp_float, exp_string);
         assert_ne!(exp_string, exp_float);
         assert_eq!(
-            array("( 6378.1366, 6378.1366, 6356.7519 )"),
+            array_value("( 6378.1366, 6378.1366, 6356.7519 )"),
             Ok(("", exp_float))
         );
         let input = "( 'KILOMETERS','SECONDS' \
             'KILOMETERS/SECOND' )";
-        assert_eq!(array(input), Ok(("", exp_string)));
+        assert_eq!(array_value(input), Ok(("", exp_string)));
     }
 }
