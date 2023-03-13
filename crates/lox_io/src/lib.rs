@@ -1,12 +1,12 @@
 use nom::branch::alt;
-use nom::bytes::complete::{tag, take_until, take_until1, take_while, take_while1};
-use nom::character::complete::{line_ending, multispace0, newline, not_line_ending, one_of};
-use nom::character::{is_newline, is_space};
-use nom::combinator::{map, map_res, recognize};
-use nom::multi::{fold_many1, many0, many1};
+use nom::bytes::complete::{tag, take_until, take_while1};
+use nom::character::complete::{alpha1, line_ending, multispace0, one_of};
+use nom::combinator::{map, map_res, recognize, rest};
+use nom::multi::{fold_many0, fold_many1, many0, many1};
 use nom::number::complete::{double, float};
 use nom::sequence::{delimited, preceded, separated_pair, terminated, tuple};
 use nom::IResult;
+use std::collections::HashMap;
 
 #[derive(Debug, PartialEq)]
 enum Value {
@@ -14,6 +14,69 @@ enum Value {
     String(String),
     DoubleArray(Vec<f64>),
     StringArray(Vec<String>),
+}
+
+pub struct Kernel {
+    type_id: String,
+    items: HashMap<String, Value>,
+}
+
+type Entries = Vec<(String, Value)>;
+
+impl Kernel {
+    pub fn parse(input: &str) -> Result<Self, &'static str> {
+        if let Ok(("", (type_id, entries, _))) = kernel(input) {
+            Ok(Self {
+                type_id: type_id.to_string(),
+                items: entries.into_iter().collect(),
+            })
+        } else {
+            Err("that did not work")
+        }
+    }
+
+    pub fn type_id(&self) -> &str {
+        &self.type_id
+    }
+
+    pub fn get_double(&self, key: &str) -> Option<f64> {
+        let value = self.items.get(key)?;
+        if let Value::Double(v) = value {
+            Some(*v)
+        } else {
+            None
+        }
+    }
+
+    pub fn get_double_array(&self, key: &str) -> Option<&Vec<f64>> {
+        let value = self.items.get(key)?;
+        if let Value::DoubleArray(v) = value {
+            Some(v)
+        } else {
+            None
+        }
+    }
+}
+
+fn kernel(s: &str) -> IResult<&str, (&str, Entries, &str)> {
+    let mut parser = tuple((
+        header,
+        fold_many0(
+            preceded(take_until("\\begindata\n"), data_block),
+            Vec::new,
+            |mut out: Entries, item: Entries| {
+                out.extend(item);
+                out
+            },
+        ),
+        rest,
+    ));
+    parser(s)
+}
+
+fn header(s: &str) -> IResult<&str, &str> {
+    let mut parser = preceded(tag("KPL/"), alpha1);
+    parser(s)
 }
 
 fn fortran_double(s: &str) -> IResult<&str, f64> {
@@ -103,20 +166,16 @@ fn key_value(s: &str) -> IResult<&str, (String, Value)> {
 }
 
 fn start_tag(s: &str) -> IResult<&str, &str> {
-    let mut parser = delimited(
-        terminated(line_ending, take_while(char::is_whitespace)),
-        tag("\\begindata"),
-        preceded(not_line_ending, line_ending),
-    );
+    let mut parser = terminated(tag("\\begindata"), line_ending);
     parser(s)
 }
 
 fn end_tag(s: &str) -> IResult<&str, &str> {
-    let mut parser = tag("\\begintext");
+    let parser = tag("\\begintext");
     parser(s)
 }
 
-fn data_block(s: &str) -> IResult<&str, Vec<(String, Value)>> {
+fn data_block(s: &str) -> IResult<&str, Entries> {
     let mut parser = delimited(
         start_tag,
         many0(preceded(multispace0, key_value)),
@@ -237,12 +296,10 @@ mod tests {
 
     #[test]
     fn test_data_block() {
-        assert_eq!(start_tag("\n\\begindata\n"), Ok(("", "\\begindata")));
-        assert_eq!(start_tag("\n   \\begindata   \n"), Ok(("", "\\begindata")));
-        assert!(start_tag("\nfoo\\begindatabar\n").is_err());
-        assert_eq!(end_tag("\\begintext"), Ok(("", "\\begintext")));
+        assert_eq!(start_tag("\\begindata\n"), Ok(("", "\\begindata")));
+        assert!(start_tag("foo \\begindata bar\n").is_err());
 
-        let block = "\n\\begindata
+        let block = "\\begindata
 
         BODY499_POLE_RA          = (  317.269202  -0.10927547        0.  )
         BODY499_POLE_DEC         = (   54.432516  -0.05827105        0.  )
