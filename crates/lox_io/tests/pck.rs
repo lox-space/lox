@@ -1,4 +1,4 @@
-use lox_io::Kernel;
+use lox_io::spice::Kernel;
 
 #[test]
 fn test_pck() {
