@@ -31,7 +31,7 @@ impl Kernel {
                 items: entries.into_iter().collect(),
             })
         } else {
-            Err("that did not work")
+            Err("kernel parsing failed")
         }
     }
 
@@ -187,6 +187,12 @@ fn data_block(s: &str) -> IResult<&str, Entries> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parse_err() {
+        let kernel = Kernel::parse("foo");
+        assert!(kernel.is_err());
+    }
 
     #[test]
     fn test_double() {

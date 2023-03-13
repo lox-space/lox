@@ -22,4 +22,7 @@ fn test_pck() {
         .get_double("BODY4_MAX_PHASE_DEGREE")
         .expect("value should be present");
     assert_eq!(act, 2.0);
+
+    assert!(kernel.get_double("foo").is_none());
+    assert!(kernel.get_double_array("foo").is_none());
 }
