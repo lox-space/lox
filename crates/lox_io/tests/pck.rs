@@ -3,7 +3,7 @@ use lox_io::spice::Kernel;
 #[test]
 fn test_pck() {
     let pck = include_str!("pck00011.tpc");
-    let kernel = Kernel::parse(pck).expect("file should be parsable");
+    let kernel = Kernel::from_string(pck).expect("file should be parsable");
     assert_eq!(kernel.type_id(), "PCK");
 
     let exp = vec![286.13, 0., 0.];

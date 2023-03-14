@@ -24,7 +24,7 @@ pub struct Kernel {
 type Entries = Vec<(String, Value)>;
 
 impl Kernel {
-    pub fn parse(input: &str) -> Result<Self, &'static str> {
+    pub fn from_string(input: &str) -> Result<Self, &'static str> {
         if let Ok(("", (type_id, entries, _))) = kernel(input) {
             Ok(Self {
                 type_id: type_id.to_string(),
@@ -59,6 +59,7 @@ impl Kernel {
 }
 
 fn kernel(s: &str) -> IResult<&str, (&str, Entries, &str)> {
+    let header = preceded(tag("KPL/"), alpha1);
     let mut parser = tuple((
         header,
         fold_many0(
@@ -71,11 +72,6 @@ fn kernel(s: &str) -> IResult<&str, (&str, Entries, &str)> {
         ),
         rest,
     ));
-    parser(s)
-}
-
-fn header(s: &str) -> IResult<&str, &str> {
-    let mut parser = preceded(tag("KPL/"), alpha1);
     parser(s)
 }
 
@@ -190,7 +186,7 @@ mod tests {
 
     #[test]
     fn parse_err() {
-        let kernel = Kernel::parse("foo");
+        let kernel = Kernel::from_string("foo");
         assert!(kernel.is_err());
     }
 
