@@ -11,4 +11,7 @@ lox_core = { path = "crates/lox_core" }
 members = [
     "crates/*"
 ]
+exclude = [
+    "tools/lox_gen"
+]
 

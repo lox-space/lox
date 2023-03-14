@@ -249,10 +249,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lox_gen"
-version = "0.1.0"
-
-[[package]]
 name = "lox_io"
 version = "0.1.0"
 dependencies = [

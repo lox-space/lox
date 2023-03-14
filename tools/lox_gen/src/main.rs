@@ -39,7 +39,7 @@ pub fn main() -> Result<()> {
     let out = file
         .parent()
         .unwrap()
-        .join("../../lox_core/src/bodies/pck_constants.rs");
+        .join("../../../crates/lox_core/src/bodies/pck_constants.rs");
 
     fs::write(out, output.join("\n"))?;
 
