@@ -47,9 +47,7 @@ fn planets(kernel: &Kernel) -> TokenStream {
         };
 
         let radii = format!("BODY{id}_RADII");
-        println!("{:?}", radii);
         if let Some(radii) = kernel.get_double_array(&radii) {
-            println!("{:?}", radii);
             let max_eq = radii.first().expect("radius should be here");
             let min_eq = radii.get(1).expect("radius should be here");
             let polar = radii.get(2).expect("radius should be here");
