@@ -1,4 +1,4 @@
-use crate::bodies::NaifId;
+use super::NaifId;
 
 pub struct SolarSystemBarycenter;
 
