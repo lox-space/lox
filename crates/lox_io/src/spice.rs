@@ -1,8 +1,8 @@
 use nom::branch::alt;
-use nom::bytes::complete::{tag, take_until, take_while1};
+use nom::bytes::complete::{tag, take_until, take_while, take_while1};
 use nom::character::complete::{alpha1, line_ending, multispace0, one_of};
 use nom::combinator::{map, map_res, recognize, rest};
-use nom::multi::{fold_many0, fold_many1, many0, many1};
+use nom::multi::{fold_many1, many0, many1};
 use nom::number::complete::{double, float};
 use nom::sequence::{delimited, preceded, separated_pair, terminated, tuple};
 use nom::IResult;
@@ -56,14 +56,21 @@ impl Kernel {
             None
         }
     }
+
+    pub fn keys(&self) -> Vec<&String> {
+        self.items.keys().collect()
+    }
 }
 
 fn kernel(s: &str) -> IResult<&str, (&str, Entries, &str)> {
     let header = preceded(tag("KPL/"), alpha1);
     let mut parser = tuple((
         header,
-        fold_many0(
-            preceded(take_until("\\begindata\n"), data_block),
+        fold_many1(
+            preceded(
+                alt((take_until("\\begindata\n"), take_until("\\begindata\r"))),
+                data_block,
+            ),
             Vec::new,
             |mut out: Entries, item: Entries| {
                 out.extend(item);
@@ -150,8 +157,8 @@ fn key_value(s: &str) -> IResult<&str, (String, Value)> {
     let mut parser = map(
         separated_pair(
             terminated(
-                take_while1(|x: char| !x.is_whitespace()),
-                take_while1(char::is_whitespace),
+                take_while1(|x: char| !x.is_whitespace() && x != '='),
+                take_while(char::is_whitespace),
             ),
             terminated(tag("="), take_while1(char::is_whitespace)),
             alt((double_value, string_value, array_value)),
@@ -248,6 +255,10 @@ mod tests {
                 "",
                 Value::DoubleArray(vec!(6378.1366, 6378.1366, 6356.7519))
             ))
+        );
+        assert_eq!(
+            double_array("( 2.2031868551400003E+04 )"),
+            Ok(("", Value::DoubleArray(vec!(2.2031868551400003e4))))
         )
     }
 
@@ -293,6 +304,10 @@ mod tests {
         let input = "BODY399_RADII     = ( 6378.1366     6378.1366     6356.7519   )";
         let exp_value = Value::DoubleArray(vec![6378.1366, 6378.1366, 6356.7519]);
         let exp_key = "BODY399_RADII".to_string();
+        assert_eq!(key_value(input), Ok(("", (exp_key, exp_value))));
+        let input = "BODY1_GM       = ( 2.2031868551400003E+04 )";
+        let exp_value = Value::DoubleArray(vec![2.2031868551400003e4]);
+        let exp_key = "BODY1_GM".to_string();
         assert_eq!(key_value(input), Ok(("", (exp_key, exp_value))));
     }
 

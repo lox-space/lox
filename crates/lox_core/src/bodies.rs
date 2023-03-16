@@ -22,6 +22,10 @@ pub fn mean_radius<T: Ellipsoid>(_: T) -> f64 {
     <T as Ellipsoid>::mean_radius()
 }
 
+pub trait PointMass {
+    fn gravitational_parameter() -> f64;
+}
+
 pub struct Sun;
 
 impl NaifId for Sun {

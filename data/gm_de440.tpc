@@ -1,0 +1,302 @@
+KPL/PCK
+
+  This file is the version of gm_Horizons.pck from November 28, 2022 with
+  GMs for 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 199, 299, 301, and 399 reset to
+  their DE440 values from gm_de440.pck, and comments reduced to keep just
+  "Sources" and "Modification history" sections.
+
+  gm_Horizons.pck and gm_de440.pck PCKs were provided Jon Giorgini, SSD/JPL
+  on 11/28/22 and 11/30/22. 
+
+  BVS/NAIF, 12/14/22.
+
+  --------
+
+  Mass parameters for planets, natural satellites, and other major objects. 
+
+  The latest version of this file may be retrieved at:
+   https://ssd.jpl.nasa.gov/ftp/xfr/gm_Horizons.pck
+
+  All units are km^3/s^2
+
+  Sources: 
+  
+    1. DE-440 NAVIO file "ASTRO-VALUES",               [1-10,199,299,301,399] 
+
+       See also:
+       "The JPL Planetary and Lunar Ephemerides DE440 and DE441"
+         Ryan S. Park, William M. Folkner, James G. Williams, 
+         and Dale H. Boggs
+        The Astronomical Journal, 161:105 (15pp), 2021 March
+        https://doi.org/10.3847/1538-3881/abd414
+
+    2. Natural satellite file release forms [non-lunar satellites, planets]
+        https://ssd.jpl.nasa.gov/ftp/sats/{*.txt}
+
+    3. SB441-N16 small-body integration perturber file (DE441 masses)
+
+  Modification history:
+
+   DATE         Who  Change
+   -----------  ---  ---------------------------------------------------------
+   2021-Apr-12  JDG  Version 4.0 (introduced with Horizons 4.80) 
+                      Updated DE441 & N16 perturber model (from prior DE431)
+                        Removed: 2000048, 2000451
+                        Added  : 2000007, 2000107
+   2021-Jun-07  JDG  Updated for PLU058 (901-905, 999)
+   2021-Sep-30  JDG  Updated for URA116 (799)
+   2022-Jan-26  JDG  Updated for SAT441L (601-609,612,699)
+   2022-Mar-03  JDG  Added GM's for Didymos system (DART mission target) 
+                      20065803, 920065803, 120065803
+   2022-Apr-20  JDG  Updated for NEP100/101 (899)
+   2022-May-03  JDG  Updated 9,901-905,999 for PLU043 reversion
+   2022-May-19  JDG  Updated for NEP100/101 (8)
+   2022-Sep-21  JDG  Added Eris system: 20136199
+   2022-Oct-12  JDG  Updated Didymos system GMs:
+                      20065803 920065803 120065803
+                     Added nine other KBO systems: 
+                      20050000 920050000 120050000
+                      20090482 920090482 120090482
+                      20120347 920120347 120120347
+                      20136108 920136108 120136108 220136108
+                      20469705 920469705 120469705
+                      20612095 920612095 120612095
+                      20612687 920512687 120612687
+                      53031823 953031823 153031823
+                      53092511 953092511 153092511
+   2022-12-14   BVS  Restored DE440 values for barycenters, Sun, Mercury,
+                     Venus, Earth, and Moon. Reduced comments.
+
+  Key:
+   JDG= Jon.D.Giorgini@jpl.nasa.gov
+   BVS= Boris.V.Semenov@jpl.nasa.gov
+
+   \begindata
+
+     BODY000_GMLIST= ( 1 2 3 4 5 6 7 8 9 10
+                       199 
+                       299 
+                       301 399 
+                       401 402 499 
+                       501 502 503 504 505 506 514 515 516 599
+                       601 602 603 604 605 606 607 608 609 610 611 612 615 616 699
+                       701 702 703 704 705 799
+                       801 803 804 805 806 807 808 899
+                       901 902 903 904 905 999
+                       2000001 2000002 2000003 2000004 2000007 2000010 2000015 2000016
+                       2000031 2000052 2000065 2000087 2000088 2000107 2000433
+                       2000511 
+                       2000704 
+                       20065803 920065803 120065803
+                       20050000 920050000 120050000
+                       20090482 920090482 120090482
+                       20120347 920120347 120120347
+                       20136108 920136108 120136108 220136108
+                       20136199 920136199 120136199   
+                       20469705 920469705 120469705
+                       20612095 920612095 120612095
+                       20612687 920512687 120612687
+                       53031823 953031823 153031823
+                       53092511 953092511 153092511 )
+
+     BODY1_GM       = ( 2.2031868551400003E+04 )
+     BODY2_GM       = ( 3.2485859200000000E+05 )
+     BODY3_GM       = ( 4.0350323562548019E+05 )
+     BODY4_GM       = ( 4.2828375815756102E+04 )
+     BODY5_GM       = ( 1.2671276409999998E+08 )
+     BODY6_GM       = ( 3.7940584841799997E+07 )
+     BODY7_GM       = ( 5.7945563999999985E+06 )
+     BODY8_GM       = ( 6.8365271005803989D+06 )
+     BODY9_GM       = ( 9.7550000000000000D+02 )
+     BODY10_GM      = ( 1.3271244004127942E+11 )
+
+     BODY199_GM     = ( 2.2031868551400003D+04 )
+     BODY299_GM     = ( 3.2485859200000000D+05 )
+     BODY301_GM     = ( 4.9028001184575496D+03 )
+     BODY399_GM     = ( 3.9860043550702266D+05 )
+
+     BODY499_GM     = ( 4.282837362069909E+04  )
+     BODY599_GM     = ( 1.266865319003704E+08  )
+     BODY699_GM     = ( 3.793120623436167E+07  )
+     BODY799_GM     = ( 5.793951256527211E+06  )
+     BODY899_GM     = ( 6.835103145462294E+06  )
+     BODY999_GM     = ( 8.696138177608748E+02  )
+ 
+     BODY401_GM     = ( 7.087546066894452E-04 )
+     BODY402_GM     = ( 9.615569648120313E-05 )
+
+     BODY501_GM     = ( 5.959915466180539E+03 )
+     BODY502_GM     = ( 3.202712099607295E+03 )
+     BODY503_GM     = ( 9.887832752719638E+03 )
+     BODY504_GM     = ( 7.179283402579837E+03 )
+     BODY505_GM     = ( 1.645634534798259E-01 )
+     BODY506_GM     = ( 1.515524299611265E-01 )
+     BODY514_GM     = ( 3.014800000000000E-02 )
+     BODY515_GM     = ( 1.390000000000000E-04 )
+     BODY516_GM     = ( 2.501000000000000E-03 )
+ 
+     BODY601_GM     = ( 2.503488768152587E+00 )
+     BODY602_GM     = ( 7.210366688598896E+00 )
+     BODY603_GM     = ( 4.121352885489587E+01 )
+     BODY604_GM     = ( 7.311607172482067E+01 )
+     BODY605_GM     = ( 1.539417519146563E+02 )
+     BODY606_GM     = ( 8.978137095521046E+03 )
+     BODY607_GM     = ( 3.704913747932265E-01 )
+     BODY608_GM     = ( 1.205151060137642E+02 )
+     BODY609_GM     = ( 5.547860052791678E-01 )
+     BODY610_GM     = ( 1.265765099012197E-01 )
+     BODY611_GM     = ( 3.512333288208074E-02 )
+     BODY612_GM     = ( 4.757419551776972E-04 )
+     BODY615_GM     = ( 3.718871247516475E-04 )
+     BODY616_GM     = ( 1.075208001007610E-02 )
+     BODY617_GM     = ( 9.290325122028795E-03 )
+
+     BODY701_GM     = ( 8.346344431770477E+01 )
+     BODY702_GM     = ( 8.509338094489388E+01 )
+     BODY703_GM     = ( 2.269437003741248E+02 )
+     BODY704_GM     = ( 2.053234302535623E+02 )
+     BODY705_GM     = ( 4.319516899232100E+00 )
+
+     BODY801_GM     = ( 1.428495462910464E+03 )
+     BODY803_GM     = ( 8.530281246540886E-03 )
+     BODY804_GM     = ( 2.358873197992170E-02 )
+     BODY805_GM     = ( 1.167318403814998E-01 )
+     BODY806_GM     = ( 1.898985039060690E-01 )
+     BODY807_GM     = ( 2.548437405693583E-01 )
+     BODY808_GM     = ( 2.583422379120727E+00 )
+  
+     BODY901_GM     = ( 1.058799888601881E+02 )
+     BODY902_GM     = ( 3.048175648169760E-03 )
+     BODY903_GM     = ( 3.211039206155255E-03 )
+     BODY904_GM     = ( 1.110040850536676E-03 )
+     BODY905_GM     = ( 0.000000000000000E+00 )
+
+     BODY2000001_GM = ( 6.2628888644409933E+01 )
+     BODY2000002_GM = ( 1.3665878145967422E+01 )
+     BODY2000003_GM = ( 1.9205707002025889E+00 )
+     BODY2000004_GM = ( 1.7288232879171513E+01 )
+     BODY2000007_GM = ( 1.1398723232184107E+00 )
+     BODY2000010_GM = ( 5.6251476453852289E+00 )
+     BODY2000015_GM = ( 2.0230209871098284E+00 )
+     BODY2000016_GM = ( 1.5896582441709424E+00 )
+     BODY2000031_GM = ( 1.0793714577033560E+00 )
+     BODY2000052_GM = ( 2.6830359242821795E+00 )
+     BODY2000065_GM = ( 9.3810575639151328E-01 )
+     BODY2000087_GM = ( 2.1682320736996910E+00 )
+     BODY2000088_GM = ( 1.1898077088121908E+00 )
+     BODY2000107_GM = ( 1.4437384031866001E+00 )
+     BODY2000433_GM = ( 4.463E-4 )
+     BODY2000511_GM = ( 3.8944831481705644E+00 )
+     BODY2000704_GM = ( 2.8304096393299849E+00 )
+
+      \begintext
+
+ 65802 Didymos system (primary Didymos= 920065802, satellite I = Dimorphos = 120065803)
+       System mass IOM 392R-21-008, Naidu, 2021-Sep-28 
+       Mass ratio Agrusa et al. 2020 in Nakano et al. 2022 
+       https://iopscience.iop.org/article/10.3847/PSJ/ac7566/pdf
+        Primary/system = 0.990823906
+        Sat/system     = 0.009176020
+
+       \begindata
+          BODY20065803_GM = ( 3.70362727488241E-8 ) 
+         BODY920065803_GM = ( 3.6696427161329E-8  )
+         BODY120065803_GM = ( 3.39845587494E-10   )
+       \begintext
+
+ 50000 Quaoar system (primary Quaoar= 920050000, satellite I = Weywot = 120050000)
+       System mass from IOM 392R-22-003, Brozovic, 2022-Sep-1
+       Mass ratio 1/2000 * primary, Fraser et al, (2010) 
+        https://iopscience.iop.org/article/10.1088/0004-637X/714/2/1547/pdf
+       High precision below is to better match system when summing. 
+
+       \begindata
+          BODY20050000_GM = ( 9.565E+01            )
+         BODY920050000_GM = ( 9.56021989005497E+01 )
+         BODY120050000_GM = ( 4.78010994502749E-02 )
+       \begintext
+
+ 90482 Orcus system (primary Orcus= 920090482, satellite I = Vanth = 120090482)
+       System mass IOM 392R-22-003, Brozovic, 2022-Sep-1
+       Vanth mass ratio 0.09*primary, Ortiz et al (2010) https://doi.org/10.1051/0004-6361/201015309
+
+       \begindata
+          BODY20090482_GM = ( 4.203E+01   )
+         BODY920090482_GM = ( 3.855963303E+01 )
+         BODY120090482_GM = ( 3.470366973E+00  )
+       \begintext
+
+ 120347 Salacia system (primary Salacia= 920120347, satellite I= Actaea= 120120347)
+       System mass from IOM 392R-22-003, Brozovic, 2022-Sep-1, Table 6
+
+       \begindata
+          BODY20120347_GM = ( 3.291E+01    )
+         BODY920120347_GM = ( 3.291E+01    )
+         BODY120120347_GM = ( 0.0E0        )
+       \begintext
+
+ 136108 Haumea system (primary Haumea= 920136108, satellite I= Hi'iaka= 120136108, II= Namaka= 220136108)
+       Masses from IOM 392R-22-003, Brozovic, 2022-Sep-1, Table 6
+
+       \begindata
+           BODY20136108_GM = ( 2.656E+02   )
+          BODY920136108_GM = ( 2.64413E+02 )
+          BODY120136108_GM = ( 1.151E+00   )
+          BODY220136108_GM = ( 3.6E-02     )
+       \begintext
+
+ 136199 Eris system (primary Eris= 920136199, satellite I Dysnomia= 120136199)
+       System mass IOM 392R-22-003, Brozovic, 2022-Sep-1
+       Possible (unused) Dysnomia mass ratio in range 1/37 to 1/115 in Brown et al, 2018 p.5
+       https://iopscience.iop.org/article/10.3847/1538-3881/aad9f2/pdf
+
+       \begindata
+          BODY20136199_GM = ( 1.0989E+03  )
+         BODY920136199_GM = ( 1.0989E+03  )
+         BODY120136199_GM = ( 0.E+00  )
+       \begintext
+
+ 469705 |=Kagara system (primary |=Kagara = 920469705, satellite I = !Haunu= 120469705)
+       System mass IOM 392R-22-003, Brozovic, 2022-Sep-1
+
+       \begindata
+          BODY20469705_GM = ( 1.47E-01    ) 
+         BODY920469705_GM = ( 1.47E-01    )
+         BODY120469705_GM = ( 0.E+00      )
+       \begintext
+
+ (612095) 1999 OJ4 system (primary 1999 OJ4 = 920612095, satellite = S/2005 (612095) 1 = 120612095
+       System mass IOM 392R-22-003, Brozovic, 2022-Sep-1
+
+       \begindata
+          BODY20612095_GM = ( 2.68E-02    )
+         BODY920612095_GM = ( 2.68E-02    )
+         BODY120612095_GM = ( 0.E+00      )
+       \begintext
+
+ (612687) 2003 UN284 system (primary 2003 UN284 = 920612687, satellite = S/2003 (612687) 1 = 120612687
+       System mass IOM 392R-22-003, Brozovic, 2022-Sep-1
+
+       \begindata
+          BODY20612687_GM = ( 9.4E-02     )
+         BODY920612687_GM = ( 9.4E-02     )
+         BODY120612687_GM = ( 0.E+00      )
+       \begintext
+
+(1998 WW31) system (primary 1998 WW31 = 953031823, satellite = S/2000 (1998 WW31) 1 = 153031823
+       System mass IOM 392R-22-003, Brozovic, 2022-Sep-1
+
+       \begindata
+          BODY53031823_GM = ( 1.77E-01    )
+         BODY953031823_GM = ( 1.77E-01    )
+         BODY153031823_GM = ( 0.E+00      )
+       \begintext
+
+ 2001 QW322 system (primary 2001 QW322 = 953092511, satellite = S/2001 (2001 QW322) 1 )
+       System mass IOM 392R-22-003, Brozovic, 2022-Sep-1
+
+       \begindata
+          BODY53092511_GM = ( 1.49E-01    )
+         BODY953092511_GM = ( 1.49E-01    )
+         BODY153092511_GM = ( 0.E+00      )
+       \begintext
