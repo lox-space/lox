@@ -36,6 +36,11 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_naif_id() {
+        assert_eq!(naif_id(Sun), 10);
+    }
+
+    #[test]
     fn test_mean_radius() {
         assert_eq!(mean_radius(Earth), 6371.008366666666);
     }
