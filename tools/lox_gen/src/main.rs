@@ -1,13 +1,14 @@
-mod naif_ids;
-
-use crate::naif_ids::{BARYCENTERS, SATELLITES};
-use lox_io::spice::Kernel;
-use naif_ids::PLANETS;
-use proc_macro2::{Ident, TokenStream};
-use quote::{format_ident, quote};
 use std::fs;
 use std::path::Path;
 use std::process::Command;
+
+use proc_macro2::{Ident, TokenStream};
+use quote::{format_ident, quote};
+
+use lox_io::spice::Kernel;
+use naif_ids::{BARYCENTERS, PLANETS, SATELLITES};
+
+mod naif_ids;
 
 type Generator = fn(&Kernel, &Kernel) -> TokenStream;
 
