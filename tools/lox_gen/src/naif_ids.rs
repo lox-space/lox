@@ -177,3 +177,24 @@ pub const SATELLITES: [(i32, &str); 152] = [
     (904, "Kerberos"),
     (905, "Styx"),
 ];
+
+pub const MINOR_BODIES: [(i32, &str); 18] = [
+    (9511010, "Gaspra"),
+    (2431010, "Ida"),
+    (2431011, "Dactyl"),
+    (2000001, "Ceres"),
+    (2000002, "Pallas"),
+    (2000004, "Vesta"),
+    (2000016, "Psyche"),
+    (2000021, "Lutetia"),
+    (2000216, "Kleopatra"),
+    (2000433, "Eros"),
+    (2000511, "Davida"),
+    (2000253, "Mathilde"),
+    (2002867, "Steins"),
+    (2009969, "Braille"),
+    (2004015, "WilsonHarrington"),
+    (2004179, "Toutatis"),
+    (2025143, "Itokawa"),
+    (2101955, "Bennu"),
+];
