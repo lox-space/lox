@@ -61,14 +61,14 @@ fn planets(pck: &Kernel, gm: &Kernel) -> TokenStream {
             pub struct #ident;
         };
         naif_id(&mut tokens, &ident, id);
-        ellipsoid(&mut tokens, &ident, id, pck);
+        spheroid(&mut tokens, &ident, id, pck);
         grav_param(&mut tokens, &ident, id, gm);
 
         tokens
     });
 
     quote! {
-        use super::{NaifId,Ellipsoid,PointMass};
+        use super::{NaifId,Ellipsoid,Spheroid,PointMass};
         #(#tokens)*
     }
 }
@@ -87,7 +87,7 @@ fn satellites(pck: &Kernel, gm: &Kernel) -> TokenStream {
     });
 
     quote! {
-        use super::{NaifId,Ellipsoid,PointMass};
+        use super::{NaifId,Ellipsoid,TriAxial,PointMass};
         #(#tokens)*
     }
 }
@@ -104,28 +104,58 @@ fn naif_id(tokens: &mut TokenStream, ident: &Ident, id: &i32) {
     }
 }
 
-fn ellipsoid(tokens: &mut TokenStream, ident: &Ident, id: &i32, pck: &Kernel) {
+fn spheroid(tokens: &mut TokenStream, ident: &Ident, id: &i32, pck: &Kernel) {
     let radii = format!("BODY{id}_RADII");
     if let Some(radii) = pck.get_double_array(&radii) {
-        let max_eq = radii.first().expect("radius should be here");
-        let min_eq = radii.get(1).expect("radius should be here");
+        let equatorial = radii.first().expect("radius should be here");
         let polar = radii.get(2).expect("radius should be here");
-        let mean = (max_eq + min_eq + polar) / 3.0;
+        let mean = (2.0 * equatorial + polar) / 3.0;
         *tokens = quote! {
             #tokens
 
             impl Ellipsoid for #ident {
-                fn max_equatorial_radius() -> f64 {
-                    #max_eq
-                }
-                fn min_equatorial_radius() -> f64 {
-                    #min_eq
-                }
                 fn polar_radius() -> f64 {
                     #polar
                 }
                 fn mean_radius() -> f64 {
                     #mean
+                }
+            }
+
+            impl Spheroid for #ident {
+                fn equatorial_radius() -> f64 {
+                    #equatorial
+                }
+            }
+        }
+    }
+}
+
+fn ellipsoid(tokens: &mut TokenStream, ident: &Ident, id: &i32, pck: &Kernel) {
+    let radii = format!("BODY{id}_RADII");
+    if let Some(radii) = pck.get_double_array(&radii) {
+        let subplanetary = radii.first().expect("radius should be here");
+        let along_orbit = radii.get(1).expect("radius should be here");
+        let polar = radii.get(2).expect("radius should be here");
+        let mean = (subplanetary + along_orbit + polar) / 3.0;
+        *tokens = quote! {
+            #tokens
+
+            impl Ellipsoid for #ident {
+                fn polar_radius() -> f64 {
+                    #polar
+                }
+                fn mean_radius() -> f64 {
+                    #mean
+                }
+            }
+
+            impl TriAxial for #ident {
+                fn subplanetary_radius() -> f64 {
+                    #subplanetary
+                }
+                fn along_orbit_radius() -> f64 {
+                    #along_orbit
                 }
             }
         }
