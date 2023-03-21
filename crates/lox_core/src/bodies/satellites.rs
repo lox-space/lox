@@ -6,6 +6,11 @@ impl NaifId for Moon {
         301i32
     }
 }
+impl PointMass for Moon {
+    fn gravitational_parameter() -> f64 {
+        4902.80011845755f64
+    }
+}
 impl Ellipsoid for Moon {
     fn polar_radius() -> f64 {
         1737.4f64
@@ -22,15 +27,15 @@ impl TriAxial for Moon {
         1737.4f64
     }
 }
-impl PointMass for Moon {
-    fn gravitational_parameter() -> f64 {
-        4902.80011845755f64
-    }
-}
 pub struct Phobos;
 impl NaifId for Phobos {
     fn id() -> i32 {
         401i32
+    }
+}
+impl PointMass for Phobos {
+    fn gravitational_parameter() -> f64 {
+        0.0007087546066894452f64
     }
 }
 impl Ellipsoid for Phobos {
@@ -49,15 +54,15 @@ impl TriAxial for Phobos {
         11.4f64
     }
 }
-impl PointMass for Phobos {
-    fn gravitational_parameter() -> f64 {
-        0.0007087546066894452f64
-    }
-}
 pub struct Deimos;
 impl NaifId for Deimos {
     fn id() -> i32 {
         402i32
+    }
+}
+impl PointMass for Deimos {
+    fn gravitational_parameter() -> f64 {
+        0.00009615569648120313f64
     }
 }
 impl Ellipsoid for Deimos {
@@ -76,15 +81,15 @@ impl TriAxial for Deimos {
         6f64
     }
 }
-impl PointMass for Deimos {
-    fn gravitational_parameter() -> f64 {
-        0.00009615569648120313f64
-    }
-}
 pub struct Io;
 impl NaifId for Io {
     fn id() -> i32 {
         501i32
+    }
+}
+impl PointMass for Io {
+    fn gravitational_parameter() -> f64 {
+        5959.915466180539f64
     }
 }
 impl Ellipsoid for Io {
@@ -103,15 +108,15 @@ impl TriAxial for Io {
         1819.4f64
     }
 }
-impl PointMass for Io {
-    fn gravitational_parameter() -> f64 {
-        5959.915466180539f64
-    }
-}
 pub struct Europa;
 impl NaifId for Europa {
     fn id() -> i32 {
         502i32
+    }
+}
+impl PointMass for Europa {
+    fn gravitational_parameter() -> f64 {
+        3202.712099607295f64
     }
 }
 impl Ellipsoid for Europa {
@@ -130,15 +135,15 @@ impl TriAxial for Europa {
         1560.3f64
     }
 }
-impl PointMass for Europa {
-    fn gravitational_parameter() -> f64 {
-        3202.712099607295f64
-    }
-}
 pub struct Ganymede;
 impl NaifId for Ganymede {
     fn id() -> i32 {
         503i32
+    }
+}
+impl PointMass for Ganymede {
+    fn gravitational_parameter() -> f64 {
+        9887.832752719638f64
     }
 }
 impl Ellipsoid for Ganymede {
@@ -157,15 +162,15 @@ impl TriAxial for Ganymede {
         2631.2f64
     }
 }
-impl PointMass for Ganymede {
-    fn gravitational_parameter() -> f64 {
-        9887.832752719638f64
-    }
-}
 pub struct Callisto;
 impl NaifId for Callisto {
     fn id() -> i32 {
         504i32
+    }
+}
+impl PointMass for Callisto {
+    fn gravitational_parameter() -> f64 {
+        7179.283402579837f64
     }
 }
 impl Ellipsoid for Callisto {
@@ -184,15 +189,15 @@ impl TriAxial for Callisto {
         2410.3f64
     }
 }
-impl PointMass for Callisto {
-    fn gravitational_parameter() -> f64 {
-        7179.283402579837f64
-    }
-}
 pub struct Amalthea;
 impl NaifId for Amalthea {
     fn id() -> i32 {
         505i32
+    }
+}
+impl PointMass for Amalthea {
+    fn gravitational_parameter() -> f64 {
+        0.1645634534798259f64
     }
 }
 impl Ellipsoid for Amalthea {
@@ -211,15 +216,15 @@ impl TriAxial for Amalthea {
         73f64
     }
 }
-impl PointMass for Amalthea {
-    fn gravitational_parameter() -> f64 {
-        0.1645634534798259f64
-    }
-}
 pub struct Himalia;
 impl NaifId for Himalia {
     fn id() -> i32 {
         506i32
+    }
+}
+impl PointMass for Himalia {
+    fn gravitational_parameter() -> f64 {
+        0.1515524299611265f64
     }
 }
 impl Ellipsoid for Himalia {
@@ -236,11 +241,6 @@ impl TriAxial for Himalia {
     }
     fn along_orbit_radius() -> f64 {
         85f64
-    }
-}
-impl PointMass for Himalia {
-    fn gravitational_parameter() -> f64 {
-        0.1515524299611265f64
     }
 }
 pub struct Elara;
@@ -403,6 +403,11 @@ impl NaifId for Thebe {
         514i32
     }
 }
+impl PointMass for Thebe {
+    fn gravitational_parameter() -> f64 {
+        0.030148f64
+    }
+}
 impl Ellipsoid for Thebe {
     fn polar_radius() -> f64 {
         42f64
@@ -419,15 +424,15 @@ impl TriAxial for Thebe {
         49f64
     }
 }
-impl PointMass for Thebe {
-    fn gravitational_parameter() -> f64 {
-        0.030148f64
-    }
-}
 pub struct Adrastea;
 impl NaifId for Adrastea {
     fn id() -> i32 {
         515i32
+    }
+}
+impl PointMass for Adrastea {
+    fn gravitational_parameter() -> f64 {
+        0.000139f64
     }
 }
 impl Ellipsoid for Adrastea {
@@ -446,15 +451,15 @@ impl TriAxial for Adrastea {
         8f64
     }
 }
-impl PointMass for Adrastea {
-    fn gravitational_parameter() -> f64 {
-        0.000139f64
-    }
-}
 pub struct Metis;
 impl NaifId for Metis {
     fn id() -> i32 {
         516i32
+    }
+}
+impl PointMass for Metis {
+    fn gravitational_parameter() -> f64 {
+        0.002501f64
     }
 }
 impl Ellipsoid for Metis {
@@ -471,11 +476,6 @@ impl TriAxial for Metis {
     }
     fn along_orbit_radius() -> f64 {
         20f64
-    }
-}
-impl PointMass for Metis {
-    fn gravitational_parameter() -> f64 {
-        0.002501f64
     }
 }
 pub struct Callirrhoe;
@@ -694,6 +694,11 @@ impl NaifId for Mimas {
         601i32
     }
 }
+impl PointMass for Mimas {
+    fn gravitational_parameter() -> f64 {
+        2.503488768152587f64
+    }
+}
 impl Ellipsoid for Mimas {
     fn polar_radius() -> f64 {
         190.6f64
@@ -710,15 +715,15 @@ impl TriAxial for Mimas {
         196.7f64
     }
 }
-impl PointMass for Mimas {
-    fn gravitational_parameter() -> f64 {
-        2.503488768152587f64
-    }
-}
 pub struct Enceladus;
 impl NaifId for Enceladus {
     fn id() -> i32 {
         602i32
+    }
+}
+impl PointMass for Enceladus {
+    fn gravitational_parameter() -> f64 {
+        7.210366688598896f64
     }
 }
 impl Ellipsoid for Enceladus {
@@ -737,15 +742,15 @@ impl TriAxial for Enceladus {
         251.4f64
     }
 }
-impl PointMass for Enceladus {
-    fn gravitational_parameter() -> f64 {
-        7.210366688598896f64
-    }
-}
 pub struct Tethys;
 impl NaifId for Tethys {
     fn id() -> i32 {
         603i32
+    }
+}
+impl PointMass for Tethys {
+    fn gravitational_parameter() -> f64 {
+        41.21352885489587f64
     }
 }
 impl Ellipsoid for Tethys {
@@ -764,15 +769,15 @@ impl TriAxial for Tethys {
         528.3f64
     }
 }
-impl PointMass for Tethys {
-    fn gravitational_parameter() -> f64 {
-        41.21352885489587f64
-    }
-}
 pub struct Dione;
 impl NaifId for Dione {
     fn id() -> i32 {
         604i32
+    }
+}
+impl PointMass for Dione {
+    fn gravitational_parameter() -> f64 {
+        73.11607172482067f64
     }
 }
 impl Ellipsoid for Dione {
@@ -791,15 +796,15 @@ impl TriAxial for Dione {
         561.3f64
     }
 }
-impl PointMass for Dione {
-    fn gravitational_parameter() -> f64 {
-        73.11607172482067f64
-    }
-}
 pub struct Rhea;
 impl NaifId for Rhea {
     fn id() -> i32 {
         605i32
+    }
+}
+impl PointMass for Rhea {
+    fn gravitational_parameter() -> f64 {
+        153.9417519146563f64
     }
 }
 impl Ellipsoid for Rhea {
@@ -818,15 +823,15 @@ impl TriAxial for Rhea {
         763.1f64
     }
 }
-impl PointMass for Rhea {
-    fn gravitational_parameter() -> f64 {
-        153.9417519146563f64
-    }
-}
 pub struct Titan;
 impl NaifId for Titan {
     fn id() -> i32 {
         606i32
+    }
+}
+impl PointMass for Titan {
+    fn gravitational_parameter() -> f64 {
+        8978.137095521046f64
     }
 }
 impl Ellipsoid for Titan {
@@ -845,15 +850,15 @@ impl TriAxial for Titan {
         2574.78f64
     }
 }
-impl PointMass for Titan {
-    fn gravitational_parameter() -> f64 {
-        8978.137095521046f64
-    }
-}
 pub struct Hyperion;
 impl NaifId for Hyperion {
     fn id() -> i32 {
         607i32
+    }
+}
+impl PointMass for Hyperion {
+    fn gravitational_parameter() -> f64 {
+        0.3704913747932265f64
     }
 }
 impl Ellipsoid for Hyperion {
@@ -872,15 +877,15 @@ impl TriAxial for Hyperion {
         133f64
     }
 }
-impl PointMass for Hyperion {
-    fn gravitational_parameter() -> f64 {
-        0.3704913747932265f64
-    }
-}
 pub struct Iapetus;
 impl NaifId for Iapetus {
     fn id() -> i32 {
         608i32
+    }
+}
+impl PointMass for Iapetus {
+    fn gravitational_parameter() -> f64 {
+        120.5151060137642f64
     }
 }
 impl Ellipsoid for Iapetus {
@@ -899,15 +904,15 @@ impl TriAxial for Iapetus {
         745.7f64
     }
 }
-impl PointMass for Iapetus {
-    fn gravitational_parameter() -> f64 {
-        120.5151060137642f64
-    }
-}
 pub struct Phoebe;
 impl NaifId for Phoebe {
     fn id() -> i32 {
         609i32
+    }
+}
+impl PointMass for Phoebe {
+    fn gravitational_parameter() -> f64 {
+        0.5547860052791678f64
     }
 }
 impl Ellipsoid for Phoebe {
@@ -926,15 +931,15 @@ impl TriAxial for Phoebe {
         108.5f64
     }
 }
-impl PointMass for Phoebe {
-    fn gravitational_parameter() -> f64 {
-        0.5547860052791678f64
-    }
-}
 pub struct Janus;
 impl NaifId for Janus {
     fn id() -> i32 {
         610i32
+    }
+}
+impl PointMass for Janus {
+    fn gravitational_parameter() -> f64 {
+        0.1265765099012197f64
     }
 }
 impl Ellipsoid for Janus {
@@ -953,15 +958,15 @@ impl TriAxial for Janus {
         93f64
     }
 }
-impl PointMass for Janus {
-    fn gravitational_parameter() -> f64 {
-        0.1265765099012197f64
-    }
-}
 pub struct Epimetheus;
 impl NaifId for Epimetheus {
     fn id() -> i32 {
         611i32
+    }
+}
+impl PointMass for Epimetheus {
+    fn gravitational_parameter() -> f64 {
+        0.03512333288208074f64
     }
 }
 impl Ellipsoid for Epimetheus {
@@ -980,15 +985,15 @@ impl TriAxial for Epimetheus {
         57.3f64
     }
 }
-impl PointMass for Epimetheus {
-    fn gravitational_parameter() -> f64 {
-        0.03512333288208074f64
-    }
-}
 pub struct Helene;
 impl NaifId for Helene {
     fn id() -> i32 {
         612i32
+    }
+}
+impl PointMass for Helene {
+    fn gravitational_parameter() -> f64 {
+        0.0004757419551776972f64
     }
 }
 impl Ellipsoid for Helene {
@@ -1005,11 +1010,6 @@ impl TriAxial for Helene {
     }
     fn along_orbit_radius() -> f64 {
         19.6f64
-    }
-}
-impl PointMass for Helene {
-    fn gravitational_parameter() -> f64 {
-        0.0004757419551776972f64
     }
 }
 pub struct Telesto;
@@ -1062,6 +1062,11 @@ impl NaifId for Atlas {
         615i32
     }
 }
+impl PointMass for Atlas {
+    fn gravitational_parameter() -> f64 {
+        0.0003718871247516475f64
+    }
+}
 impl Ellipsoid for Atlas {
     fn polar_radius() -> f64 {
         9.4f64
@@ -1078,15 +1083,15 @@ impl TriAxial for Atlas {
         17.8f64
     }
 }
-impl PointMass for Atlas {
-    fn gravitational_parameter() -> f64 {
-        0.0003718871247516475f64
-    }
-}
 pub struct Prometheus;
 impl NaifId for Prometheus {
     fn id() -> i32 {
         616i32
+    }
+}
+impl PointMass for Prometheus {
+    fn gravitational_parameter() -> f64 {
+        0.0107520800100761f64
     }
 }
 impl Ellipsoid for Prometheus {
@@ -1105,15 +1110,15 @@ impl TriAxial for Prometheus {
         41.6f64
     }
 }
-impl PointMass for Prometheus {
-    fn gravitational_parameter() -> f64 {
-        0.0107520800100761f64
-    }
-}
 pub struct Pandora;
 impl NaifId for Pandora {
     fn id() -> i32 {
         617i32
+    }
+}
+impl PointMass for Pandora {
+    fn gravitational_parameter() -> f64 {
+        0.009290325122028795f64
     }
 }
 impl Ellipsoid for Pandora {
@@ -1130,11 +1135,6 @@ impl TriAxial for Pandora {
     }
     fn along_orbit_radius() -> f64 {
         40.8f64
-    }
-}
-impl PointMass for Pandora {
-    fn gravitational_parameter() -> f64 {
-        0.009290325122028795f64
     }
 }
 pub struct Pan;
@@ -1471,6 +1471,11 @@ impl NaifId for Ariel {
         701i32
     }
 }
+impl PointMass for Ariel {
+    fn gravitational_parameter() -> f64 {
+        83.46344431770477f64
+    }
+}
 impl Ellipsoid for Ariel {
     fn polar_radius() -> f64 {
         577.7f64
@@ -1487,15 +1492,15 @@ impl TriAxial for Ariel {
         577.9f64
     }
 }
-impl PointMass for Ariel {
-    fn gravitational_parameter() -> f64 {
-        83.46344431770477f64
-    }
-}
 pub struct Umbriel;
 impl NaifId for Umbriel {
     fn id() -> i32 {
         702i32
+    }
+}
+impl PointMass for Umbriel {
+    fn gravitational_parameter() -> f64 {
+        85.09338094489388f64
     }
 }
 impl Ellipsoid for Umbriel {
@@ -1514,15 +1519,15 @@ impl TriAxial for Umbriel {
         584.7f64
     }
 }
-impl PointMass for Umbriel {
-    fn gravitational_parameter() -> f64 {
-        85.09338094489388f64
-    }
-}
 pub struct Titania;
 impl NaifId for Titania {
     fn id() -> i32 {
         703i32
+    }
+}
+impl PointMass for Titania {
+    fn gravitational_parameter() -> f64 {
+        226.9437003741248f64
     }
 }
 impl Ellipsoid for Titania {
@@ -1541,15 +1546,15 @@ impl TriAxial for Titania {
         788.9f64
     }
 }
-impl PointMass for Titania {
-    fn gravitational_parameter() -> f64 {
-        226.9437003741248f64
-    }
-}
 pub struct Oberon;
 impl NaifId for Oberon {
     fn id() -> i32 {
         704i32
+    }
+}
+impl PointMass for Oberon {
+    fn gravitational_parameter() -> f64 {
+        205.3234302535623f64
     }
 }
 impl Ellipsoid for Oberon {
@@ -1568,15 +1573,15 @@ impl TriAxial for Oberon {
         761.4f64
     }
 }
-impl PointMass for Oberon {
-    fn gravitational_parameter() -> f64 {
-        205.3234302535623f64
-    }
-}
 pub struct Miranda;
 impl NaifId for Miranda {
     fn id() -> i32 {
         705i32
+    }
+}
+impl PointMass for Miranda {
+    fn gravitational_parameter() -> f64 {
+        4.3195168992321f64
     }
 }
 impl Ellipsoid for Miranda {
@@ -1593,11 +1598,6 @@ impl TriAxial for Miranda {
     }
     fn along_orbit_radius() -> f64 {
         234.2f64
-    }
-}
-impl PointMass for Miranda {
-    fn gravitational_parameter() -> f64 {
-        4.3195168992321f64
     }
 }
 pub struct Cordelia;
@@ -1898,6 +1898,11 @@ impl NaifId for Triton {
         801i32
     }
 }
+impl PointMass for Triton {
+    fn gravitational_parameter() -> f64 {
+        1428.495462910464f64
+    }
+}
 impl Ellipsoid for Triton {
     fn polar_radius() -> f64 {
         1352.6f64
@@ -1912,11 +1917,6 @@ impl TriAxial for Triton {
     }
     fn along_orbit_radius() -> f64 {
         1352.6f64
-    }
-}
-impl PointMass for Triton {
-    fn gravitational_parameter() -> f64 {
-        1428.495462910464f64
     }
 }
 pub struct Nereid;
@@ -1947,6 +1947,11 @@ impl NaifId for Naiad {
         803i32
     }
 }
+impl PointMass for Naiad {
+    fn gravitational_parameter() -> f64 {
+        0.008530281246540886f64
+    }
+}
 impl Ellipsoid for Naiad {
     fn polar_radius() -> f64 {
         29f64
@@ -1963,15 +1968,15 @@ impl TriAxial for Naiad {
         29f64
     }
 }
-impl PointMass for Naiad {
-    fn gravitational_parameter() -> f64 {
-        0.008530281246540886f64
-    }
-}
 pub struct Thalassa;
 impl NaifId for Thalassa {
     fn id() -> i32 {
         804i32
+    }
+}
+impl PointMass for Thalassa {
+    fn gravitational_parameter() -> f64 {
+        0.0235887319799217f64
     }
 }
 impl Ellipsoid for Thalassa {
@@ -1990,15 +1995,15 @@ impl TriAxial for Thalassa {
         40f64
     }
 }
-impl PointMass for Thalassa {
-    fn gravitational_parameter() -> f64 {
-        0.0235887319799217f64
-    }
-}
 pub struct Despina;
 impl NaifId for Despina {
     fn id() -> i32 {
         805i32
+    }
+}
+impl PointMass for Despina {
+    fn gravitational_parameter() -> f64 {
+        0.1167318403814998f64
     }
 }
 impl Ellipsoid for Despina {
@@ -2017,15 +2022,15 @@ impl TriAxial for Despina {
         74f64
     }
 }
-impl PointMass for Despina {
-    fn gravitational_parameter() -> f64 {
-        0.1167318403814998f64
-    }
-}
 pub struct Galatea;
 impl NaifId for Galatea {
     fn id() -> i32 {
         806i32
+    }
+}
+impl PointMass for Galatea {
+    fn gravitational_parameter() -> f64 {
+        0.189898503906069f64
     }
 }
 impl Ellipsoid for Galatea {
@@ -2044,15 +2049,15 @@ impl TriAxial for Galatea {
         79f64
     }
 }
-impl PointMass for Galatea {
-    fn gravitational_parameter() -> f64 {
-        0.189898503906069f64
-    }
-}
 pub struct Larissa;
 impl NaifId for Larissa {
     fn id() -> i32 {
         807i32
+    }
+}
+impl PointMass for Larissa {
+    fn gravitational_parameter() -> f64 {
+        0.2548437405693583f64
     }
 }
 impl Ellipsoid for Larissa {
@@ -2071,15 +2076,15 @@ impl TriAxial for Larissa {
         96f64
     }
 }
-impl PointMass for Larissa {
-    fn gravitational_parameter() -> f64 {
-        0.2548437405693583f64
-    }
-}
 pub struct Proteus;
 impl NaifId for Proteus {
     fn id() -> i32 {
         808i32
+    }
+}
+impl PointMass for Proteus {
+    fn gravitational_parameter() -> f64 {
+        2.583422379120727f64
     }
 }
 impl Ellipsoid for Proteus {
@@ -2096,11 +2101,6 @@ impl TriAxial for Proteus {
     }
     fn along_orbit_radius() -> f64 {
         208f64
-    }
-}
-impl PointMass for Proteus {
-    fn gravitational_parameter() -> f64 {
-        2.583422379120727f64
     }
 }
 pub struct Halimede;
@@ -2139,6 +2139,11 @@ impl NaifId for Charon {
         901i32
     }
 }
+impl PointMass for Charon {
+    fn gravitational_parameter() -> f64 {
+        105.8799888601881f64
+    }
+}
 impl Ellipsoid for Charon {
     fn polar_radius() -> f64 {
         606f64
@@ -2153,11 +2158,6 @@ impl TriAxial for Charon {
     }
     fn along_orbit_radius() -> f64 {
         606f64
-    }
-}
-impl PointMass for Charon {
-    fn gravitational_parameter() -> f64 {
-        105.8799888601881f64
     }
 }
 pub struct Nix;
@@ -2202,5 +2202,1265 @@ impl NaifId for Styx {
 impl PointMass for Styx {
     fn gravitational_parameter() -> f64 {
         0f64
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_naif_id_301() {
+        assert_eq!(Moon::id(), 301i32)
+    }
+    #[test]
+    fn test_point_mass_301() {
+        assert_eq!(Moon::gravitational_parameter(), 4902.80011845755f64);
+    }
+    #[test]
+    fn test_tri_axial_301() {
+        assert_eq!(Moon::polar_radius(), 1737.4f64);
+        assert_eq!(Moon::mean_radius(), 1737.4000000000003f64);
+        assert_eq!(Moon::subplanetary_radius(), 1737.4f64);
+        assert_eq!(Moon::along_orbit_radius(), 1737.4f64);
+    }
+    #[test]
+    fn test_naif_id_401() {
+        assert_eq!(Phobos::id(), 401i32)
+    }
+    #[test]
+    fn test_point_mass_401() {
+        assert_eq!(Phobos::gravitational_parameter(), 0.0007087546066894452f64);
+    }
+    #[test]
+    fn test_tri_axial_401() {
+        assert_eq!(Phobos::polar_radius(), 9.1f64);
+        assert_eq!(Phobos::mean_radius(), 11.166666666666666f64);
+        assert_eq!(Phobos::subplanetary_radius(), 13f64);
+        assert_eq!(Phobos::along_orbit_radius(), 11.4f64);
+    }
+    #[test]
+    fn test_naif_id_402() {
+        assert_eq!(Deimos::id(), 402i32)
+    }
+    #[test]
+    fn test_point_mass_402() {
+        assert_eq!(Deimos::gravitational_parameter(), 0.00009615569648120313f64);
+    }
+    #[test]
+    fn test_tri_axial_402() {
+        assert_eq!(Deimos::polar_radius(), 5.1f64);
+        assert_eq!(Deimos::mean_radius(), 6.3f64);
+        assert_eq!(Deimos::subplanetary_radius(), 7.8f64);
+        assert_eq!(Deimos::along_orbit_radius(), 6f64);
+    }
+    #[test]
+    fn test_naif_id_501() {
+        assert_eq!(Io::id(), 501i32)
+    }
+    #[test]
+    fn test_point_mass_501() {
+        assert_eq!(Io::gravitational_parameter(), 5959.915466180539f64);
+    }
+    #[test]
+    fn test_tri_axial_501() {
+        assert_eq!(Io::polar_radius(), 1815.7f64);
+        assert_eq!(Io::mean_radius(), 1821.5f64);
+        assert_eq!(Io::subplanetary_radius(), 1829.4f64);
+        assert_eq!(Io::along_orbit_radius(), 1819.4f64);
+    }
+    #[test]
+    fn test_naif_id_502() {
+        assert_eq!(Europa::id(), 502i32)
+    }
+    #[test]
+    fn test_point_mass_502() {
+        assert_eq!(Europa::gravitational_parameter(), 3202.712099607295f64);
+    }
+    #[test]
+    fn test_tri_axial_502() {
+        assert_eq!(Europa::polar_radius(), 1559.5f64);
+        assert_eq!(Europa::mean_radius(), 1560.8f64);
+        assert_eq!(Europa::subplanetary_radius(), 1562.6f64);
+        assert_eq!(Europa::along_orbit_radius(), 1560.3f64);
+    }
+    #[test]
+    fn test_naif_id_503() {
+        assert_eq!(Ganymede::id(), 503i32)
+    }
+    #[test]
+    fn test_point_mass_503() {
+        assert_eq!(Ganymede::gravitational_parameter(), 9887.832752719638f64);
+    }
+    #[test]
+    fn test_tri_axial_503() {
+        assert_eq!(Ganymede::polar_radius(), 2631.2f64);
+        assert_eq!(Ganymede::mean_radius(), 2631.2f64);
+        assert_eq!(Ganymede::subplanetary_radius(), 2631.2f64);
+        assert_eq!(Ganymede::along_orbit_radius(), 2631.2f64);
+    }
+    #[test]
+    fn test_naif_id_504() {
+        assert_eq!(Callisto::id(), 504i32)
+    }
+    #[test]
+    fn test_point_mass_504() {
+        assert_eq!(Callisto::gravitational_parameter(), 7179.283402579837f64);
+    }
+    #[test]
+    fn test_tri_axial_504() {
+        assert_eq!(Callisto::polar_radius(), 2410.3f64);
+        assert_eq!(Callisto::mean_radius(), 2410.3f64);
+        assert_eq!(Callisto::subplanetary_radius(), 2410.3f64);
+        assert_eq!(Callisto::along_orbit_radius(), 2410.3f64);
+    }
+    #[test]
+    fn test_naif_id_505() {
+        assert_eq!(Amalthea::id(), 505i32)
+    }
+    #[test]
+    fn test_point_mass_505() {
+        assert_eq!(Amalthea::gravitational_parameter(), 0.1645634534798259f64);
+    }
+    #[test]
+    fn test_tri_axial_505() {
+        assert_eq!(Amalthea::polar_radius(), 64f64);
+        assert_eq!(Amalthea::mean_radius(), 87.33333333333333f64);
+        assert_eq!(Amalthea::subplanetary_radius(), 125f64);
+        assert_eq!(Amalthea::along_orbit_radius(), 73f64);
+    }
+    #[test]
+    fn test_naif_id_506() {
+        assert_eq!(Himalia::id(), 506i32)
+    }
+    #[test]
+    fn test_point_mass_506() {
+        assert_eq!(Himalia::gravitational_parameter(), 0.1515524299611265f64);
+    }
+    #[test]
+    fn test_tri_axial_506() {
+        assert_eq!(Himalia::polar_radius(), 85f64);
+        assert_eq!(Himalia::mean_radius(), 85f64);
+        assert_eq!(Himalia::subplanetary_radius(), 85f64);
+        assert_eq!(Himalia::along_orbit_radius(), 85f64);
+    }
+    #[test]
+    fn test_naif_id_507() {
+        assert_eq!(Elara::id(), 507i32)
+    }
+    #[test]
+    fn test_tri_axial_507() {
+        assert_eq!(Elara::polar_radius(), 40f64);
+        assert_eq!(Elara::mean_radius(), 40f64);
+        assert_eq!(Elara::subplanetary_radius(), 40f64);
+        assert_eq!(Elara::along_orbit_radius(), 40f64);
+    }
+    #[test]
+    fn test_naif_id_508() {
+        assert_eq!(Pasiphae::id(), 508i32)
+    }
+    #[test]
+    fn test_tri_axial_508() {
+        assert_eq!(Pasiphae::polar_radius(), 18f64);
+        assert_eq!(Pasiphae::mean_radius(), 18f64);
+        assert_eq!(Pasiphae::subplanetary_radius(), 18f64);
+        assert_eq!(Pasiphae::along_orbit_radius(), 18f64);
+    }
+    #[test]
+    fn test_naif_id_509() {
+        assert_eq!(Sinope::id(), 509i32)
+    }
+    #[test]
+    fn test_tri_axial_509() {
+        assert_eq!(Sinope::polar_radius(), 14f64);
+        assert_eq!(Sinope::mean_radius(), 14f64);
+        assert_eq!(Sinope::subplanetary_radius(), 14f64);
+        assert_eq!(Sinope::along_orbit_radius(), 14f64);
+    }
+    #[test]
+    fn test_naif_id_510() {
+        assert_eq!(Lysithea::id(), 510i32)
+    }
+    #[test]
+    fn test_tri_axial_510() {
+        assert_eq!(Lysithea::polar_radius(), 12f64);
+        assert_eq!(Lysithea::mean_radius(), 12f64);
+        assert_eq!(Lysithea::subplanetary_radius(), 12f64);
+        assert_eq!(Lysithea::along_orbit_radius(), 12f64);
+    }
+    #[test]
+    fn test_naif_id_511() {
+        assert_eq!(Carme::id(), 511i32)
+    }
+    #[test]
+    fn test_tri_axial_511() {
+        assert_eq!(Carme::polar_radius(), 15f64);
+        assert_eq!(Carme::mean_radius(), 15f64);
+        assert_eq!(Carme::subplanetary_radius(), 15f64);
+        assert_eq!(Carme::along_orbit_radius(), 15f64);
+    }
+    #[test]
+    fn test_naif_id_512() {
+        assert_eq!(Ananke::id(), 512i32)
+    }
+    #[test]
+    fn test_tri_axial_512() {
+        assert_eq!(Ananke::polar_radius(), 10f64);
+        assert_eq!(Ananke::mean_radius(), 10f64);
+        assert_eq!(Ananke::subplanetary_radius(), 10f64);
+        assert_eq!(Ananke::along_orbit_radius(), 10f64);
+    }
+    #[test]
+    fn test_naif_id_513() {
+        assert_eq!(Leda::id(), 513i32)
+    }
+    #[test]
+    fn test_tri_axial_513() {
+        assert_eq!(Leda::polar_radius(), 5f64);
+        assert_eq!(Leda::mean_radius(), 5f64);
+        assert_eq!(Leda::subplanetary_radius(), 5f64);
+        assert_eq!(Leda::along_orbit_radius(), 5f64);
+    }
+    #[test]
+    fn test_naif_id_514() {
+        assert_eq!(Thebe::id(), 514i32)
+    }
+    #[test]
+    fn test_point_mass_514() {
+        assert_eq!(Thebe::gravitational_parameter(), 0.030148f64);
+    }
+    #[test]
+    fn test_tri_axial_514() {
+        assert_eq!(Thebe::polar_radius(), 42f64);
+        assert_eq!(Thebe::mean_radius(), 49.666666666666664f64);
+        assert_eq!(Thebe::subplanetary_radius(), 58f64);
+        assert_eq!(Thebe::along_orbit_radius(), 49f64);
+    }
+    #[test]
+    fn test_naif_id_515() {
+        assert_eq!(Adrastea::id(), 515i32)
+    }
+    #[test]
+    fn test_point_mass_515() {
+        assert_eq!(Adrastea::gravitational_parameter(), 0.000139f64);
+    }
+    #[test]
+    fn test_tri_axial_515() {
+        assert_eq!(Adrastea::polar_radius(), 7f64);
+        assert_eq!(Adrastea::mean_radius(), 8.333333333333334f64);
+        assert_eq!(Adrastea::subplanetary_radius(), 10f64);
+        assert_eq!(Adrastea::along_orbit_radius(), 8f64);
+    }
+    #[test]
+    fn test_naif_id_516() {
+        assert_eq!(Metis::id(), 516i32)
+    }
+    #[test]
+    fn test_point_mass_516() {
+        assert_eq!(Metis::gravitational_parameter(), 0.002501f64);
+    }
+    #[test]
+    fn test_tri_axial_516() {
+        assert_eq!(Metis::polar_radius(), 17f64);
+        assert_eq!(Metis::mean_radius(), 22.333333333333332f64);
+        assert_eq!(Metis::subplanetary_radius(), 30f64);
+        assert_eq!(Metis::along_orbit_radius(), 20f64);
+    }
+    #[test]
+    fn test_naif_id_517() {
+        assert_eq!(Callirrhoe::id(), 517i32)
+    }
+    #[test]
+    fn test_naif_id_518() {
+        assert_eq!(Themisto::id(), 518i32)
+    }
+    #[test]
+    fn test_naif_id_519() {
+        assert_eq!(Magaclite::id(), 519i32)
+    }
+    #[test]
+    fn test_naif_id_520() {
+        assert_eq!(Taygete::id(), 520i32)
+    }
+    #[test]
+    fn test_naif_id_521() {
+        assert_eq!(Chaldene::id(), 521i32)
+    }
+    #[test]
+    fn test_naif_id_522() {
+        assert_eq!(Harpalyke::id(), 522i32)
+    }
+    #[test]
+    fn test_naif_id_523() {
+        assert_eq!(Kalyke::id(), 523i32)
+    }
+    #[test]
+    fn test_naif_id_524() {
+        assert_eq!(Iocaste::id(), 524i32)
+    }
+    #[test]
+    fn test_naif_id_525() {
+        assert_eq!(Erinome::id(), 525i32)
+    }
+    #[test]
+    fn test_naif_id_526() {
+        assert_eq!(Isonoe::id(), 526i32)
+    }
+    #[test]
+    fn test_naif_id_527() {
+        assert_eq!(Praxidike::id(), 527i32)
+    }
+    #[test]
+    fn test_naif_id_528() {
+        assert_eq!(Autonoe::id(), 528i32)
+    }
+    #[test]
+    fn test_naif_id_529() {
+        assert_eq!(Thyone::id(), 529i32)
+    }
+    #[test]
+    fn test_naif_id_530() {
+        assert_eq!(Hermippe::id(), 530i32)
+    }
+    #[test]
+    fn test_naif_id_531() {
+        assert_eq!(Aitne::id(), 531i32)
+    }
+    #[test]
+    fn test_naif_id_532() {
+        assert_eq!(Eurydome::id(), 532i32)
+    }
+    #[test]
+    fn test_naif_id_533() {
+        assert_eq!(Euanthe::id(), 533i32)
+    }
+    #[test]
+    fn test_naif_id_534() {
+        assert_eq!(Euporie::id(), 534i32)
+    }
+    #[test]
+    fn test_naif_id_535() {
+        assert_eq!(Orthosie::id(), 535i32)
+    }
+    #[test]
+    fn test_naif_id_536() {
+        assert_eq!(Sponde::id(), 536i32)
+    }
+    #[test]
+    fn test_naif_id_537() {
+        assert_eq!(Kale::id(), 537i32)
+    }
+    #[test]
+    fn test_naif_id_538() {
+        assert_eq!(Pasithee::id(), 538i32)
+    }
+    #[test]
+    fn test_naif_id_539() {
+        assert_eq!(Hegemone::id(), 539i32)
+    }
+    #[test]
+    fn test_naif_id_540() {
+        assert_eq!(Mneme::id(), 540i32)
+    }
+    #[test]
+    fn test_naif_id_541() {
+        assert_eq!(Aoede::id(), 541i32)
+    }
+    #[test]
+    fn test_naif_id_542() {
+        assert_eq!(Thelxinoe::id(), 542i32)
+    }
+    #[test]
+    fn test_naif_id_543() {
+        assert_eq!(Arche::id(), 543i32)
+    }
+    #[test]
+    fn test_naif_id_544() {
+        assert_eq!(Kallichore::id(), 544i32)
+    }
+    #[test]
+    fn test_naif_id_545() {
+        assert_eq!(Helike::id(), 545i32)
+    }
+    #[test]
+    fn test_naif_id_546() {
+        assert_eq!(Carpo::id(), 546i32)
+    }
+    #[test]
+    fn test_naif_id_547() {
+        assert_eq!(Eukelade::id(), 547i32)
+    }
+    #[test]
+    fn test_naif_id_548() {
+        assert_eq!(Cyllene::id(), 548i32)
+    }
+    #[test]
+    fn test_naif_id_549() {
+        assert_eq!(Kore::id(), 549i32)
+    }
+    #[test]
+    fn test_naif_id_550() {
+        assert_eq!(Herse::id(), 550i32)
+    }
+    #[test]
+    fn test_naif_id_553() {
+        assert_eq!(Dia::id(), 553i32)
+    }
+    #[test]
+    fn test_naif_id_601() {
+        assert_eq!(Mimas::id(), 601i32)
+    }
+    #[test]
+    fn test_point_mass_601() {
+        assert_eq!(Mimas::gravitational_parameter(), 2.503488768152587f64);
+    }
+    #[test]
+    fn test_tri_axial_601() {
+        assert_eq!(Mimas::polar_radius(), 190.6f64);
+        assert_eq!(Mimas::mean_radius(), 198.36666666666667f64);
+        assert_eq!(Mimas::subplanetary_radius(), 207.8f64);
+        assert_eq!(Mimas::along_orbit_radius(), 196.7f64);
+    }
+    #[test]
+    fn test_naif_id_602() {
+        assert_eq!(Enceladus::id(), 602i32)
+    }
+    #[test]
+    fn test_point_mass_602() {
+        assert_eq!(Enceladus::gravitational_parameter(), 7.210366688598896f64);
+    }
+    #[test]
+    fn test_tri_axial_602() {
+        assert_eq!(Enceladus::polar_radius(), 248.3f64);
+        assert_eq!(Enceladus::mean_radius(), 252.1f64);
+        assert_eq!(Enceladus::subplanetary_radius(), 256.6f64);
+        assert_eq!(Enceladus::along_orbit_radius(), 251.4f64);
+    }
+    #[test]
+    fn test_naif_id_603() {
+        assert_eq!(Tethys::id(), 603i32)
+    }
+    #[test]
+    fn test_point_mass_603() {
+        assert_eq!(Tethys::gravitational_parameter(), 41.21352885489587f64);
+    }
+    #[test]
+    fn test_tri_axial_603() {
+        assert_eq!(Tethys::polar_radius(), 526.3f64);
+        assert_eq!(Tethys::mean_radius(), 530.9999999999999f64);
+        assert_eq!(Tethys::subplanetary_radius(), 538.4f64);
+        assert_eq!(Tethys::along_orbit_radius(), 528.3f64);
+    }
+    #[test]
+    fn test_naif_id_604() {
+        assert_eq!(Dione::id(), 604i32)
+    }
+    #[test]
+    fn test_point_mass_604() {
+        assert_eq!(Dione::gravitational_parameter(), 73.11607172482067f64);
+    }
+    #[test]
+    fn test_tri_axial_604() {
+        assert_eq!(Dione::polar_radius(), 559.6f64);
+        assert_eq!(Dione::mean_radius(), 561.4333333333333f64);
+        assert_eq!(Dione::subplanetary_radius(), 563.4f64);
+        assert_eq!(Dione::along_orbit_radius(), 561.3f64);
+    }
+    #[test]
+    fn test_naif_id_605() {
+        assert_eq!(Rhea::id(), 605i32)
+    }
+    #[test]
+    fn test_point_mass_605() {
+        assert_eq!(Rhea::gravitational_parameter(), 153.9417519146563f64);
+    }
+    #[test]
+    fn test_tri_axial_605() {
+        assert_eq!(Rhea::polar_radius(), 762.4f64);
+        assert_eq!(Rhea::mean_radius(), 763.5f64);
+        assert_eq!(Rhea::subplanetary_radius(), 765f64);
+        assert_eq!(Rhea::along_orbit_radius(), 763.1f64);
+    }
+    #[test]
+    fn test_naif_id_606() {
+        assert_eq!(Titan::id(), 606i32)
+    }
+    #[test]
+    fn test_point_mass_606() {
+        assert_eq!(Titan::gravitational_parameter(), 8978.137095521046f64);
+    }
+    #[test]
+    fn test_tri_axial_606() {
+        assert_eq!(Titan::polar_radius(), 2574.47f64);
+        assert_eq!(Titan::mean_radius(), 2574.7999999999997f64);
+        assert_eq!(Titan::subplanetary_radius(), 2575.15f64);
+        assert_eq!(Titan::along_orbit_radius(), 2574.78f64);
+    }
+    #[test]
+    fn test_naif_id_607() {
+        assert_eq!(Hyperion::id(), 607i32)
+    }
+    #[test]
+    fn test_point_mass_607() {
+        assert_eq!(Hyperion::gravitational_parameter(), 0.3704913747932265f64);
+    }
+    #[test]
+    fn test_tri_axial_607() {
+        assert_eq!(Hyperion::polar_radius(), 102.7f64);
+        assert_eq!(Hyperion::mean_radius(), 138.6f64);
+        assert_eq!(Hyperion::subplanetary_radius(), 180.1f64);
+        assert_eq!(Hyperion::along_orbit_radius(), 133f64);
+    }
+    #[test]
+    fn test_naif_id_608() {
+        assert_eq!(Iapetus::id(), 608i32)
+    }
+    #[test]
+    fn test_point_mass_608() {
+        assert_eq!(Iapetus::gravitational_parameter(), 120.5151060137642f64);
+    }
+    #[test]
+    fn test_tri_axial_608() {
+        assert_eq!(Iapetus::polar_radius(), 712.1f64);
+        assert_eq!(Iapetus::mean_radius(), 734.5f64);
+        assert_eq!(Iapetus::subplanetary_radius(), 745.7f64);
+        assert_eq!(Iapetus::along_orbit_radius(), 745.7f64);
+    }
+    #[test]
+    fn test_naif_id_609() {
+        assert_eq!(Phoebe::id(), 609i32)
+    }
+    #[test]
+    fn test_point_mass_609() {
+        assert_eq!(Phoebe::gravitational_parameter(), 0.5547860052791678f64);
+    }
+    #[test]
+    fn test_tri_axial_609() {
+        assert_eq!(Phoebe::polar_radius(), 101.8f64);
+        assert_eq!(Phoebe::mean_radius(), 106.56666666666666f64);
+        assert_eq!(Phoebe::subplanetary_radius(), 109.4f64);
+        assert_eq!(Phoebe::along_orbit_radius(), 108.5f64);
+    }
+    #[test]
+    fn test_naif_id_610() {
+        assert_eq!(Janus::id(), 610i32)
+    }
+    #[test]
+    fn test_point_mass_610() {
+        assert_eq!(Janus::gravitational_parameter(), 0.1265765099012197f64);
+    }
+    #[test]
+    fn test_tri_axial_610() {
+        assert_eq!(Janus::polar_radius(), 76.3f64);
+        assert_eq!(Janus::mean_radius(), 90.33333333333333f64);
+        assert_eq!(Janus::subplanetary_radius(), 101.7f64);
+        assert_eq!(Janus::along_orbit_radius(), 93f64);
+    }
+    #[test]
+    fn test_naif_id_611() {
+        assert_eq!(Epimetheus::id(), 611i32)
+    }
+    #[test]
+    fn test_point_mass_611() {
+        assert_eq!(
+            Epimetheus::gravitational_parameter(),
+            0.03512333288208074f64
+        );
+    }
+    #[test]
+    fn test_tri_axial_611() {
+        assert_eq!(Epimetheus::polar_radius(), 53f64);
+        assert_eq!(Epimetheus::mean_radius(), 58.4f64);
+        assert_eq!(Epimetheus::subplanetary_radius(), 64.9f64);
+        assert_eq!(Epimetheus::along_orbit_radius(), 57.3f64);
+    }
+    #[test]
+    fn test_naif_id_612() {
+        assert_eq!(Helene::id(), 612i32)
+    }
+    #[test]
+    fn test_point_mass_612() {
+        assert_eq!(Helene::gravitational_parameter(), 0.0004757419551776972f64);
+    }
+    #[test]
+    fn test_tri_axial_612() {
+        assert_eq!(Helene::polar_radius(), 13.3f64);
+        assert_eq!(Helene::mean_radius(), 18.46666666666667f64);
+        assert_eq!(Helene::subplanetary_radius(), 22.5f64);
+        assert_eq!(Helene::along_orbit_radius(), 19.6f64);
+    }
+    #[test]
+    fn test_naif_id_613() {
+        assert_eq!(Telesto::id(), 613i32)
+    }
+    #[test]
+    fn test_tri_axial_613() {
+        assert_eq!(Telesto::polar_radius(), 9.8f64);
+        assert_eq!(Telesto::mean_radius(), 12.633333333333335f64);
+        assert_eq!(Telesto::subplanetary_radius(), 16.3f64);
+        assert_eq!(Telesto::along_orbit_radius(), 11.8f64);
+    }
+    #[test]
+    fn test_naif_id_614() {
+        assert_eq!(Calypso::id(), 614i32)
+    }
+    #[test]
+    fn test_tri_axial_614() {
+        assert_eq!(Calypso::polar_radius(), 6.3f64);
+        assert_eq!(Calypso::mean_radius(), 10.3f64);
+        assert_eq!(Calypso::subplanetary_radius(), 15.3f64);
+        assert_eq!(Calypso::along_orbit_radius(), 9.3f64);
+    }
+    #[test]
+    fn test_naif_id_615() {
+        assert_eq!(Atlas::id(), 615i32)
+    }
+    #[test]
+    fn test_point_mass_615() {
+        assert_eq!(Atlas::gravitational_parameter(), 0.0003718871247516475f64);
+    }
+    #[test]
+    fn test_tri_axial_615() {
+        assert_eq!(Atlas::polar_radius(), 9.4f64);
+        assert_eq!(Atlas::mean_radius(), 15.899999999999999f64);
+        assert_eq!(Atlas::subplanetary_radius(), 20.5f64);
+        assert_eq!(Atlas::along_orbit_radius(), 17.8f64);
+    }
+    #[test]
+    fn test_naif_id_616() {
+        assert_eq!(Prometheus::id(), 616i32)
+    }
+    #[test]
+    fn test_point_mass_616() {
+        assert_eq!(Prometheus::gravitational_parameter(), 0.0107520800100761f64);
+    }
+    #[test]
+    fn test_tri_axial_616() {
+        assert_eq!(Prometheus::polar_radius(), 28.2f64);
+        assert_eq!(Prometheus::mean_radius(), 46f64);
+        assert_eq!(Prometheus::subplanetary_radius(), 68.2f64);
+        assert_eq!(Prometheus::along_orbit_radius(), 41.6f64);
+    }
+    #[test]
+    fn test_naif_id_617() {
+        assert_eq!(Pandora::id(), 617i32)
+    }
+    #[test]
+    fn test_point_mass_617() {
+        assert_eq!(Pandora::gravitational_parameter(), 0.009290325122028795f64);
+    }
+    #[test]
+    fn test_tri_axial_617() {
+        assert_eq!(Pandora::polar_radius(), 31.5f64);
+        assert_eq!(Pandora::mean_radius(), 41.5f64);
+        assert_eq!(Pandora::subplanetary_radius(), 52.2f64);
+        assert_eq!(Pandora::along_orbit_radius(), 40.8f64);
+    }
+    #[test]
+    fn test_naif_id_618() {
+        assert_eq!(Pan::id(), 618i32)
+    }
+    #[test]
+    fn test_tri_axial_618() {
+        assert_eq!(Pan::polar_radius(), 10.4f64);
+        assert_eq!(Pan::mean_radius(), 14.333333333333334f64);
+        assert_eq!(Pan::subplanetary_radius(), 17.2f64);
+        assert_eq!(Pan::along_orbit_radius(), 15.4f64);
+    }
+    #[test]
+    fn test_naif_id_619() {
+        assert_eq!(Ymir::id(), 619i32)
+    }
+    #[test]
+    fn test_naif_id_620() {
+        assert_eq!(Paaliaq::id(), 620i32)
+    }
+    #[test]
+    fn test_naif_id_621() {
+        assert_eq!(Tarvos::id(), 621i32)
+    }
+    #[test]
+    fn test_naif_id_622() {
+        assert_eq!(Ijiraq::id(), 622i32)
+    }
+    #[test]
+    fn test_naif_id_623() {
+        assert_eq!(Suttungr::id(), 623i32)
+    }
+    #[test]
+    fn test_naif_id_624() {
+        assert_eq!(Kiviuq::id(), 624i32)
+    }
+    #[test]
+    fn test_naif_id_625() {
+        assert_eq!(Mundilfari::id(), 625i32)
+    }
+    #[test]
+    fn test_naif_id_626() {
+        assert_eq!(Albiorix::id(), 626i32)
+    }
+    #[test]
+    fn test_naif_id_627() {
+        assert_eq!(Skathi::id(), 627i32)
+    }
+    #[test]
+    fn test_naif_id_628() {
+        assert_eq!(Erriapus::id(), 628i32)
+    }
+    #[test]
+    fn test_naif_id_629() {
+        assert_eq!(Siarnaq::id(), 629i32)
+    }
+    #[test]
+    fn test_naif_id_630() {
+        assert_eq!(Thrymr::id(), 630i32)
+    }
+    #[test]
+    fn test_naif_id_631() {
+        assert_eq!(Narvi::id(), 631i32)
+    }
+    #[test]
+    fn test_naif_id_632() {
+        assert_eq!(Methone::id(), 632i32)
+    }
+    #[test]
+    fn test_tri_axial_632() {
+        assert_eq!(Methone::polar_radius(), 1.21f64);
+        assert_eq!(Methone::mean_radius(), 1.4799999999999998f64);
+        assert_eq!(Methone::subplanetary_radius(), 1.94f64);
+        assert_eq!(Methone::along_orbit_radius(), 1.29f64);
+    }
+    #[test]
+    fn test_naif_id_633() {
+        assert_eq!(Pallene::id(), 633i32)
+    }
+    #[test]
+    fn test_tri_axial_633() {
+        assert_eq!(Pallene::polar_radius(), 1.8f64);
+        assert_eq!(Pallene::mean_radius(), 2.2533333333333334f64);
+        assert_eq!(Pallene::subplanetary_radius(), 2.88f64);
+        assert_eq!(Pallene::along_orbit_radius(), 2.08f64);
+    }
+    #[test]
+    fn test_naif_id_634() {
+        assert_eq!(Polydeuces::id(), 634i32)
+    }
+    #[test]
+    fn test_tri_axial_634() {
+        assert_eq!(Polydeuces::polar_radius(), 1f64);
+        assert_eq!(Polydeuces::mean_radius(), 1.2333333333333334f64);
+        assert_eq!(Polydeuces::subplanetary_radius(), 1.5f64);
+        assert_eq!(Polydeuces::along_orbit_radius(), 1.2f64);
+    }
+    #[test]
+    fn test_naif_id_635() {
+        assert_eq!(Daphnis::id(), 635i32)
+    }
+    #[test]
+    fn test_tri_axial_635() {
+        assert_eq!(Daphnis::polar_radius(), 2.8f64);
+        assert_eq!(Daphnis::mean_radius(), 3.9666666666666663f64);
+        assert_eq!(Daphnis::subplanetary_radius(), 4.6f64);
+        assert_eq!(Daphnis::along_orbit_radius(), 4.5f64);
+    }
+    #[test]
+    fn test_naif_id_636() {
+        assert_eq!(Aegir::id(), 636i32)
+    }
+    #[test]
+    fn test_naif_id_637() {
+        assert_eq!(Bebhionn::id(), 637i32)
+    }
+    #[test]
+    fn test_naif_id_638() {
+        assert_eq!(Bergelmir::id(), 638i32)
+    }
+    #[test]
+    fn test_naif_id_639() {
+        assert_eq!(Bestla::id(), 639i32)
+    }
+    #[test]
+    fn test_naif_id_640() {
+        assert_eq!(Farbauti::id(), 640i32)
+    }
+    #[test]
+    fn test_naif_id_641() {
+        assert_eq!(Fenrir::id(), 641i32)
+    }
+    #[test]
+    fn test_naif_id_642() {
+        assert_eq!(Fornjot::id(), 642i32)
+    }
+    #[test]
+    fn test_naif_id_643() {
+        assert_eq!(Hati::id(), 643i32)
+    }
+    #[test]
+    fn test_naif_id_644() {
+        assert_eq!(Hyrrokkin::id(), 644i32)
+    }
+    #[test]
+    fn test_naif_id_645() {
+        assert_eq!(Kari::id(), 645i32)
+    }
+    #[test]
+    fn test_naif_id_646() {
+        assert_eq!(Loge::id(), 646i32)
+    }
+    #[test]
+    fn test_naif_id_647() {
+        assert_eq!(Skoll::id(), 647i32)
+    }
+    #[test]
+    fn test_naif_id_648() {
+        assert_eq!(Surtur::id(), 648i32)
+    }
+    #[test]
+    fn test_naif_id_649() {
+        assert_eq!(Anthe::id(), 649i32)
+    }
+    #[test]
+    fn test_tri_axial_649() {
+        assert_eq!(Anthe::polar_radius(), 0.5f64);
+        assert_eq!(Anthe::mean_radius(), 0.5f64);
+        assert_eq!(Anthe::subplanetary_radius(), 0.5f64);
+        assert_eq!(Anthe::along_orbit_radius(), 0.5f64);
+    }
+    #[test]
+    fn test_naif_id_650() {
+        assert_eq!(Jarnsaxa::id(), 650i32)
+    }
+    #[test]
+    fn test_naif_id_651() {
+        assert_eq!(Greip::id(), 651i32)
+    }
+    #[test]
+    fn test_naif_id_652() {
+        assert_eq!(Tarqeq::id(), 652i32)
+    }
+    #[test]
+    fn test_naif_id_653() {
+        assert_eq!(Aegaeon::id(), 653i32)
+    }
+    #[test]
+    fn test_tri_axial_653() {
+        assert_eq!(Aegaeon::polar_radius(), 0.2f64);
+        assert_eq!(Aegaeon::mean_radius(), 0.3833333333333333f64);
+        assert_eq!(Aegaeon::subplanetary_radius(), 0.7f64);
+        assert_eq!(Aegaeon::along_orbit_radius(), 0.25f64);
+    }
+    #[test]
+    fn test_naif_id_701() {
+        assert_eq!(Ariel::id(), 701i32)
+    }
+    #[test]
+    fn test_point_mass_701() {
+        assert_eq!(Ariel::gravitational_parameter(), 83.46344431770477f64);
+    }
+    #[test]
+    fn test_tri_axial_701() {
+        assert_eq!(Ariel::polar_radius(), 577.7f64);
+        assert_eq!(Ariel::mean_radius(), 578.9f64);
+        assert_eq!(Ariel::subplanetary_radius(), 581.1f64);
+        assert_eq!(Ariel::along_orbit_radius(), 577.9f64);
+    }
+    #[test]
+    fn test_naif_id_702() {
+        assert_eq!(Umbriel::id(), 702i32)
+    }
+    #[test]
+    fn test_point_mass_702() {
+        assert_eq!(Umbriel::gravitational_parameter(), 85.09338094489388f64);
+    }
+    #[test]
+    fn test_tri_axial_702() {
+        assert_eq!(Umbriel::polar_radius(), 584.7f64);
+        assert_eq!(Umbriel::mean_radius(), 584.7f64);
+        assert_eq!(Umbriel::subplanetary_radius(), 584.7f64);
+        assert_eq!(Umbriel::along_orbit_radius(), 584.7f64);
+    }
+    #[test]
+    fn test_naif_id_703() {
+        assert_eq!(Titania::id(), 703i32)
+    }
+    #[test]
+    fn test_point_mass_703() {
+        assert_eq!(Titania::gravitational_parameter(), 226.9437003741248f64);
+    }
+    #[test]
+    fn test_tri_axial_703() {
+        assert_eq!(Titania::polar_radius(), 788.9f64);
+        assert_eq!(Titania::mean_radius(), 788.9f64);
+        assert_eq!(Titania::subplanetary_radius(), 788.9f64);
+        assert_eq!(Titania::along_orbit_radius(), 788.9f64);
+    }
+    #[test]
+    fn test_naif_id_704() {
+        assert_eq!(Oberon::id(), 704i32)
+    }
+    #[test]
+    fn test_point_mass_704() {
+        assert_eq!(Oberon::gravitational_parameter(), 205.3234302535623f64);
+    }
+    #[test]
+    fn test_tri_axial_704() {
+        assert_eq!(Oberon::polar_radius(), 761.4f64);
+        assert_eq!(Oberon::mean_radius(), 761.4f64);
+        assert_eq!(Oberon::subplanetary_radius(), 761.4f64);
+        assert_eq!(Oberon::along_orbit_radius(), 761.4f64);
+    }
+    #[test]
+    fn test_naif_id_705() {
+        assert_eq!(Miranda::id(), 705i32)
+    }
+    #[test]
+    fn test_point_mass_705() {
+        assert_eq!(Miranda::gravitational_parameter(), 4.3195168992321f64);
+    }
+    #[test]
+    fn test_tri_axial_705() {
+        assert_eq!(Miranda::polar_radius(), 232.9f64);
+        assert_eq!(Miranda::mean_radius(), 235.83333333333334f64);
+        assert_eq!(Miranda::subplanetary_radius(), 240.4f64);
+        assert_eq!(Miranda::along_orbit_radius(), 234.2f64);
+    }
+    #[test]
+    fn test_naif_id_706() {
+        assert_eq!(Cordelia::id(), 706i32)
+    }
+    #[test]
+    fn test_tri_axial_706() {
+        assert_eq!(Cordelia::polar_radius(), 13f64);
+        assert_eq!(Cordelia::mean_radius(), 13f64);
+        assert_eq!(Cordelia::subplanetary_radius(), 13f64);
+        assert_eq!(Cordelia::along_orbit_radius(), 13f64);
+    }
+    #[test]
+    fn test_naif_id_707() {
+        assert_eq!(Ophelia::id(), 707i32)
+    }
+    #[test]
+    fn test_tri_axial_707() {
+        assert_eq!(Ophelia::polar_radius(), 15f64);
+        assert_eq!(Ophelia::mean_radius(), 15f64);
+        assert_eq!(Ophelia::subplanetary_radius(), 15f64);
+        assert_eq!(Ophelia::along_orbit_radius(), 15f64);
+    }
+    #[test]
+    fn test_naif_id_708() {
+        assert_eq!(Bianca::id(), 708i32)
+    }
+    #[test]
+    fn test_tri_axial_708() {
+        assert_eq!(Bianca::polar_radius(), 21f64);
+        assert_eq!(Bianca::mean_radius(), 21f64);
+        assert_eq!(Bianca::subplanetary_radius(), 21f64);
+        assert_eq!(Bianca::along_orbit_radius(), 21f64);
+    }
+    #[test]
+    fn test_naif_id_709() {
+        assert_eq!(Cressida::id(), 709i32)
+    }
+    #[test]
+    fn test_tri_axial_709() {
+        assert_eq!(Cressida::polar_radius(), 31f64);
+        assert_eq!(Cressida::mean_radius(), 31f64);
+        assert_eq!(Cressida::subplanetary_radius(), 31f64);
+        assert_eq!(Cressida::along_orbit_radius(), 31f64);
+    }
+    #[test]
+    fn test_naif_id_710() {
+        assert_eq!(Desdemona::id(), 710i32)
+    }
+    #[test]
+    fn test_tri_axial_710() {
+        assert_eq!(Desdemona::polar_radius(), 27f64);
+        assert_eq!(Desdemona::mean_radius(), 27f64);
+        assert_eq!(Desdemona::subplanetary_radius(), 27f64);
+        assert_eq!(Desdemona::along_orbit_radius(), 27f64);
+    }
+    #[test]
+    fn test_naif_id_711() {
+        assert_eq!(Juliet::id(), 711i32)
+    }
+    #[test]
+    fn test_tri_axial_711() {
+        assert_eq!(Juliet::polar_radius(), 42f64);
+        assert_eq!(Juliet::mean_radius(), 42f64);
+        assert_eq!(Juliet::subplanetary_radius(), 42f64);
+        assert_eq!(Juliet::along_orbit_radius(), 42f64);
+    }
+    #[test]
+    fn test_naif_id_712() {
+        assert_eq!(Portia::id(), 712i32)
+    }
+    #[test]
+    fn test_tri_axial_712() {
+        assert_eq!(Portia::polar_radius(), 54f64);
+        assert_eq!(Portia::mean_radius(), 54f64);
+        assert_eq!(Portia::subplanetary_radius(), 54f64);
+        assert_eq!(Portia::along_orbit_radius(), 54f64);
+    }
+    #[test]
+    fn test_naif_id_713() {
+        assert_eq!(Rosalind::id(), 713i32)
+    }
+    #[test]
+    fn test_tri_axial_713() {
+        assert_eq!(Rosalind::polar_radius(), 27f64);
+        assert_eq!(Rosalind::mean_radius(), 27f64);
+        assert_eq!(Rosalind::subplanetary_radius(), 27f64);
+        assert_eq!(Rosalind::along_orbit_radius(), 27f64);
+    }
+    #[test]
+    fn test_naif_id_714() {
+        assert_eq!(Belinda::id(), 714i32)
+    }
+    #[test]
+    fn test_tri_axial_714() {
+        assert_eq!(Belinda::polar_radius(), 33f64);
+        assert_eq!(Belinda::mean_radius(), 33f64);
+        assert_eq!(Belinda::subplanetary_radius(), 33f64);
+        assert_eq!(Belinda::along_orbit_radius(), 33f64);
+    }
+    #[test]
+    fn test_naif_id_715() {
+        assert_eq!(Puck::id(), 715i32)
+    }
+    #[test]
+    fn test_tri_axial_715() {
+        assert_eq!(Puck::polar_radius(), 77f64);
+        assert_eq!(Puck::mean_radius(), 77f64);
+        assert_eq!(Puck::subplanetary_radius(), 77f64);
+        assert_eq!(Puck::along_orbit_radius(), 77f64);
+    }
+    #[test]
+    fn test_naif_id_716() {
+        assert_eq!(Caliban::id(), 716i32)
+    }
+    #[test]
+    fn test_naif_id_717() {
+        assert_eq!(Sycorax::id(), 717i32)
+    }
+    #[test]
+    fn test_naif_id_718() {
+        assert_eq!(Prospero::id(), 718i32)
+    }
+    #[test]
+    fn test_naif_id_719() {
+        assert_eq!(Setebos::id(), 719i32)
+    }
+    #[test]
+    fn test_naif_id_720() {
+        assert_eq!(Stephano::id(), 720i32)
+    }
+    #[test]
+    fn test_naif_id_721() {
+        assert_eq!(Trinculo::id(), 721i32)
+    }
+    #[test]
+    fn test_naif_id_722() {
+        assert_eq!(Francisco::id(), 722i32)
+    }
+    #[test]
+    fn test_naif_id_723() {
+        assert_eq!(Margaret::id(), 723i32)
+    }
+    #[test]
+    fn test_naif_id_724() {
+        assert_eq!(Ferdinand::id(), 724i32)
+    }
+    #[test]
+    fn test_naif_id_725() {
+        assert_eq!(Perdita::id(), 725i32)
+    }
+    #[test]
+    fn test_naif_id_726() {
+        assert_eq!(Mab::id(), 726i32)
+    }
+    #[test]
+    fn test_naif_id_727() {
+        assert_eq!(Cupid::id(), 727i32)
+    }
+    #[test]
+    fn test_naif_id_801() {
+        assert_eq!(Triton::id(), 801i32)
+    }
+    #[test]
+    fn test_point_mass_801() {
+        assert_eq!(Triton::gravitational_parameter(), 1428.495462910464f64);
+    }
+    #[test]
+    fn test_tri_axial_801() {
+        assert_eq!(Triton::polar_radius(), 1352.6f64);
+        assert_eq!(Triton::mean_radius(), 1352.6f64);
+        assert_eq!(Triton::subplanetary_radius(), 1352.6f64);
+        assert_eq!(Triton::along_orbit_radius(), 1352.6f64);
+    }
+    #[test]
+    fn test_naif_id_802() {
+        assert_eq!(Nereid::id(), 802i32)
+    }
+    #[test]
+    fn test_tri_axial_802() {
+        assert_eq!(Nereid::polar_radius(), 170f64);
+        assert_eq!(Nereid::mean_radius(), 170f64);
+        assert_eq!(Nereid::subplanetary_radius(), 170f64);
+        assert_eq!(Nereid::along_orbit_radius(), 170f64);
+    }
+    #[test]
+    fn test_naif_id_803() {
+        assert_eq!(Naiad::id(), 803i32)
+    }
+    #[test]
+    fn test_point_mass_803() {
+        assert_eq!(Naiad::gravitational_parameter(), 0.008530281246540886f64);
+    }
+    #[test]
+    fn test_tri_axial_803() {
+        assert_eq!(Naiad::polar_radius(), 29f64);
+        assert_eq!(Naiad::mean_radius(), 29f64);
+        assert_eq!(Naiad::subplanetary_radius(), 29f64);
+        assert_eq!(Naiad::along_orbit_radius(), 29f64);
+    }
+    #[test]
+    fn test_naif_id_804() {
+        assert_eq!(Thalassa::id(), 804i32)
+    }
+    #[test]
+    fn test_point_mass_804() {
+        assert_eq!(Thalassa::gravitational_parameter(), 0.0235887319799217f64);
+    }
+    #[test]
+    fn test_tri_axial_804() {
+        assert_eq!(Thalassa::polar_radius(), 40f64);
+        assert_eq!(Thalassa::mean_radius(), 40f64);
+        assert_eq!(Thalassa::subplanetary_radius(), 40f64);
+        assert_eq!(Thalassa::along_orbit_radius(), 40f64);
+    }
+    #[test]
+    fn test_naif_id_805() {
+        assert_eq!(Despina::id(), 805i32)
+    }
+    #[test]
+    fn test_point_mass_805() {
+        assert_eq!(Despina::gravitational_parameter(), 0.1167318403814998f64);
+    }
+    #[test]
+    fn test_tri_axial_805() {
+        assert_eq!(Despina::polar_radius(), 74f64);
+        assert_eq!(Despina::mean_radius(), 74f64);
+        assert_eq!(Despina::subplanetary_radius(), 74f64);
+        assert_eq!(Despina::along_orbit_radius(), 74f64);
+    }
+    #[test]
+    fn test_naif_id_806() {
+        assert_eq!(Galatea::id(), 806i32)
+    }
+    #[test]
+    fn test_point_mass_806() {
+        assert_eq!(Galatea::gravitational_parameter(), 0.189898503906069f64);
+    }
+    #[test]
+    fn test_tri_axial_806() {
+        assert_eq!(Galatea::polar_radius(), 79f64);
+        assert_eq!(Galatea::mean_radius(), 79f64);
+        assert_eq!(Galatea::subplanetary_radius(), 79f64);
+        assert_eq!(Galatea::along_orbit_radius(), 79f64);
+    }
+    #[test]
+    fn test_naif_id_807() {
+        assert_eq!(Larissa::id(), 807i32)
+    }
+    #[test]
+    fn test_point_mass_807() {
+        assert_eq!(Larissa::gravitational_parameter(), 0.2548437405693583f64);
+    }
+    #[test]
+    fn test_tri_axial_807() {
+        assert_eq!(Larissa::polar_radius(), 96f64);
+        assert_eq!(Larissa::mean_radius(), 96f64);
+        assert_eq!(Larissa::subplanetary_radius(), 96f64);
+        assert_eq!(Larissa::along_orbit_radius(), 96f64);
+    }
+    #[test]
+    fn test_naif_id_808() {
+        assert_eq!(Proteus::id(), 808i32)
+    }
+    #[test]
+    fn test_point_mass_808() {
+        assert_eq!(Proteus::gravitational_parameter(), 2.583422379120727f64);
+    }
+    #[test]
+    fn test_tri_axial_808() {
+        assert_eq!(Proteus::polar_radius(), 201f64);
+        assert_eq!(Proteus::mean_radius(), 209f64);
+        assert_eq!(Proteus::subplanetary_radius(), 218f64);
+        assert_eq!(Proteus::along_orbit_radius(), 208f64);
+    }
+    #[test]
+    fn test_naif_id_809() {
+        assert_eq!(Halimede::id(), 809i32)
+    }
+    #[test]
+    fn test_naif_id_810() {
+        assert_eq!(Psamathe::id(), 810i32)
+    }
+    #[test]
+    fn test_naif_id_811() {
+        assert_eq!(Sao::id(), 811i32)
+    }
+    #[test]
+    fn test_naif_id_812() {
+        assert_eq!(Laomedeia::id(), 812i32)
+    }
+    #[test]
+    fn test_naif_id_813() {
+        assert_eq!(Neso::id(), 813i32)
+    }
+    #[test]
+    fn test_naif_id_901() {
+        assert_eq!(Charon::id(), 901i32)
+    }
+    #[test]
+    fn test_point_mass_901() {
+        assert_eq!(Charon::gravitational_parameter(), 105.8799888601881f64);
+    }
+    #[test]
+    fn test_tri_axial_901() {
+        assert_eq!(Charon::polar_radius(), 606f64);
+        assert_eq!(Charon::mean_radius(), 606f64);
+        assert_eq!(Charon::subplanetary_radius(), 606f64);
+        assert_eq!(Charon::along_orbit_radius(), 606f64);
+    }
+    #[test]
+    fn test_naif_id_902() {
+        assert_eq!(Nix::id(), 902i32)
+    }
+    #[test]
+    fn test_point_mass_902() {
+        assert_eq!(Nix::gravitational_parameter(), 0.00304817564816976f64);
+    }
+    #[test]
+    fn test_naif_id_903() {
+        assert_eq!(Hydra::id(), 903i32)
+    }
+    #[test]
+    fn test_point_mass_903() {
+        assert_eq!(Hydra::gravitational_parameter(), 0.003211039206155255f64);
+    }
+    #[test]
+    fn test_naif_id_904() {
+        assert_eq!(Kerberos::id(), 904i32)
+    }
+    #[test]
+    fn test_point_mass_904() {
+        assert_eq!(Kerberos::gravitational_parameter(), 0.001110040850536676f64);
+    }
+    #[test]
+    fn test_naif_id_905() {
+        assert_eq!(Styx::id(), 905i32)
+    }
+    #[test]
+    fn test_point_mass_905() {
+        assert_eq!(Styx::gravitational_parameter(), 0f64);
     }
 }

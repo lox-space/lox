@@ -105,3 +105,104 @@ impl PointMass for PlutoBarycenter {
         975.5f64
     }
 }
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_naif_id_0() {
+        assert_eq!(SolarSystemBarycenter::id(), 0i32)
+    }
+    #[test]
+    fn test_naif_id_1() {
+        assert_eq!(MercuryBarycenter::id(), 1i32)
+    }
+    #[test]
+    fn test_point_mass_1() {
+        assert_eq!(
+            MercuryBarycenter::gravitational_parameter(),
+            22031.868551400003f64
+        );
+    }
+    #[test]
+    fn test_naif_id_2() {
+        assert_eq!(VenusBarycenter::id(), 2i32)
+    }
+    #[test]
+    fn test_point_mass_2() {
+        assert_eq!(VenusBarycenter::gravitational_parameter(), 324858.592f64);
+    }
+    #[test]
+    fn test_naif_id_3() {
+        assert_eq!(EarthBarycenter::id(), 3i32)
+    }
+    #[test]
+    fn test_point_mass_3() {
+        assert_eq!(
+            EarthBarycenter::gravitational_parameter(),
+            403503.2356254802f64
+        );
+    }
+    #[test]
+    fn test_naif_id_4() {
+        assert_eq!(MarsBarycenter::id(), 4i32)
+    }
+    #[test]
+    fn test_point_mass_4() {
+        assert_eq!(
+            MarsBarycenter::gravitational_parameter(),
+            42828.3758157561f64
+        );
+    }
+    #[test]
+    fn test_naif_id_5() {
+        assert_eq!(JupiterBarycenter::id(), 5i32)
+    }
+    #[test]
+    fn test_point_mass_5() {
+        assert_eq!(
+            JupiterBarycenter::gravitational_parameter(),
+            126712764.09999998f64
+        );
+    }
+    #[test]
+    fn test_naif_id_6() {
+        assert_eq!(SaturnBarycenter::id(), 6i32)
+    }
+    #[test]
+    fn test_point_mass_6() {
+        assert_eq!(
+            SaturnBarycenter::gravitational_parameter(),
+            37940584.8418f64
+        );
+    }
+    #[test]
+    fn test_naif_id_7() {
+        assert_eq!(UranusBarycenter::id(), 7i32)
+    }
+    #[test]
+    fn test_point_mass_7() {
+        assert_eq!(
+            UranusBarycenter::gravitational_parameter(),
+            5794556.3999999985f64
+        );
+    }
+    #[test]
+    fn test_naif_id_8() {
+        assert_eq!(NeptuneBarycenter::id(), 8i32)
+    }
+    #[test]
+    fn test_point_mass_8() {
+        assert_eq!(
+            NeptuneBarycenter::gravitational_parameter(),
+            6836527.100580399f64
+        );
+    }
+    #[test]
+    fn test_naif_id_9() {
+        assert_eq!(PlutoBarycenter::id(), 9i32)
+    }
+    #[test]
+    fn test_point_mass_9() {
+        assert_eq!(PlutoBarycenter::gravitational_parameter(), 975.5f64);
+    }
+}

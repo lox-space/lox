@@ -6,6 +6,11 @@ impl NaifId for Mercury {
         199i32
     }
 }
+impl PointMass for Mercury {
+    fn gravitational_parameter() -> f64 {
+        22031.868551400003f64
+    }
+}
 impl Ellipsoid for Mercury {
     fn polar_radius() -> f64 {
         2438.26f64
@@ -19,15 +24,15 @@ impl Spheroid for Mercury {
         2440.53f64
     }
 }
-impl PointMass for Mercury {
-    fn gravitational_parameter() -> f64 {
-        22031.868551400003f64
-    }
-}
 pub struct Venus;
 impl NaifId for Venus {
     fn id() -> i32 {
         299i32
+    }
+}
+impl PointMass for Venus {
+    fn gravitational_parameter() -> f64 {
+        324858.592f64
     }
 }
 impl Ellipsoid for Venus {
@@ -43,15 +48,15 @@ impl Spheroid for Venus {
         6051.8f64
     }
 }
-impl PointMass for Venus {
-    fn gravitational_parameter() -> f64 {
-        324858.592f64
-    }
-}
 pub struct Earth;
 impl NaifId for Earth {
     fn id() -> i32 {
         399i32
+    }
+}
+impl PointMass for Earth {
+    fn gravitational_parameter() -> f64 {
+        398600.43550702266f64
     }
 }
 impl Ellipsoid for Earth {
@@ -67,15 +72,15 @@ impl Spheroid for Earth {
         6378.1366f64
     }
 }
-impl PointMass for Earth {
-    fn gravitational_parameter() -> f64 {
-        398600.43550702266f64
-    }
-}
 pub struct Mars;
 impl NaifId for Mars {
     fn id() -> i32 {
         499i32
+    }
+}
+impl PointMass for Mars {
+    fn gravitational_parameter() -> f64 {
+        42828.37362069909f64
     }
 }
 impl Ellipsoid for Mars {
@@ -91,15 +96,15 @@ impl Spheroid for Mars {
         3396.19f64
     }
 }
-impl PointMass for Mars {
-    fn gravitational_parameter() -> f64 {
-        42828.37362069909f64
-    }
-}
 pub struct Jupiter;
 impl NaifId for Jupiter {
     fn id() -> i32 {
         599i32
+    }
+}
+impl PointMass for Jupiter {
+    fn gravitational_parameter() -> f64 {
+        126686531.9003704f64
     }
 }
 impl Ellipsoid for Jupiter {
@@ -115,15 +120,15 @@ impl Spheroid for Jupiter {
         71492f64
     }
 }
-impl PointMass for Jupiter {
-    fn gravitational_parameter() -> f64 {
-        126686531.9003704f64
-    }
-}
 pub struct Saturn;
 impl NaifId for Saturn {
     fn id() -> i32 {
         699i32
+    }
+}
+impl PointMass for Saturn {
+    fn gravitational_parameter() -> f64 {
+        37931206.23436167f64
     }
 }
 impl Ellipsoid for Saturn {
@@ -139,15 +144,15 @@ impl Spheroid for Saturn {
         60268f64
     }
 }
-impl PointMass for Saturn {
-    fn gravitational_parameter() -> f64 {
-        37931206.23436167f64
-    }
-}
 pub struct Uranus;
 impl NaifId for Uranus {
     fn id() -> i32 {
         799i32
+    }
+}
+impl PointMass for Uranus {
+    fn gravitational_parameter() -> f64 {
+        5793951.256527211f64
     }
 }
 impl Ellipsoid for Uranus {
@@ -163,15 +168,15 @@ impl Spheroid for Uranus {
         25559f64
     }
 }
-impl PointMass for Uranus {
-    fn gravitational_parameter() -> f64 {
-        5793951.256527211f64
-    }
-}
 pub struct Neptune;
 impl NaifId for Neptune {
     fn id() -> i32 {
         899i32
+    }
+}
+impl PointMass for Neptune {
+    fn gravitational_parameter() -> f64 {
+        6835103.145462294f64
     }
 }
 impl Ellipsoid for Neptune {
@@ -187,15 +192,15 @@ impl Spheroid for Neptune {
         24764f64
     }
 }
-impl PointMass for Neptune {
-    fn gravitational_parameter() -> f64 {
-        6835103.145462294f64
-    }
-}
 pub struct Pluto;
 impl NaifId for Pluto {
     fn id() -> i32 {
         999i32
+    }
+}
+impl PointMass for Pluto {
+    fn gravitational_parameter() -> f64 {
+        869.6138177608748f64
     }
 }
 impl Ellipsoid for Pluto {
@@ -211,8 +216,133 @@ impl Spheroid for Pluto {
         1188.3f64
     }
 }
-impl PointMass for Pluto {
-    fn gravitational_parameter() -> f64 {
-        869.6138177608748f64
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_naif_id_199() {
+        assert_eq!(Mercury::id(), 199i32)
+    }
+    #[test]
+    fn test_point_mass_199() {
+        assert_eq!(Mercury::gravitational_parameter(), 22031.868551400003f64);
+    }
+    #[test]
+    fn test_spheroid_199() {
+        assert_eq!(Mercury::polar_radius(), 2438.26f64);
+        assert_eq!(Mercury::mean_radius(), 2439.7733333333335f64);
+        assert_eq!(Mercury::equatorial_radius(), 2440.53f64);
+    }
+    #[test]
+    fn test_naif_id_299() {
+        assert_eq!(Venus::id(), 299i32)
+    }
+    #[test]
+    fn test_point_mass_299() {
+        assert_eq!(Venus::gravitational_parameter(), 324858.592f64);
+    }
+    #[test]
+    fn test_spheroid_299() {
+        assert_eq!(Venus::polar_radius(), 6051.8f64);
+        assert_eq!(Venus::mean_radius(), 6051.8f64);
+        assert_eq!(Venus::equatorial_radius(), 6051.8f64);
+    }
+    #[test]
+    fn test_naif_id_399() {
+        assert_eq!(Earth::id(), 399i32)
+    }
+    #[test]
+    fn test_point_mass_399() {
+        assert_eq!(Earth::gravitational_parameter(), 398600.43550702266f64);
+    }
+    #[test]
+    fn test_spheroid_399() {
+        assert_eq!(Earth::polar_radius(), 6356.7519f64);
+        assert_eq!(Earth::mean_radius(), 6371.008366666666f64);
+        assert_eq!(Earth::equatorial_radius(), 6378.1366f64);
+    }
+    #[test]
+    fn test_naif_id_499() {
+        assert_eq!(Mars::id(), 499i32)
+    }
+    #[test]
+    fn test_point_mass_499() {
+        assert_eq!(Mars::gravitational_parameter(), 42828.37362069909f64);
+    }
+    #[test]
+    fn test_spheroid_499() {
+        assert_eq!(Mars::polar_radius(), 3376.2f64);
+        assert_eq!(Mars::mean_radius(), 3389.5266666666666f64);
+        assert_eq!(Mars::equatorial_radius(), 3396.19f64);
+    }
+    #[test]
+    fn test_naif_id_599() {
+        assert_eq!(Jupiter::id(), 599i32)
+    }
+    #[test]
+    fn test_point_mass_599() {
+        assert_eq!(Jupiter::gravitational_parameter(), 126686531.9003704f64);
+    }
+    #[test]
+    fn test_spheroid_599() {
+        assert_eq!(Jupiter::polar_radius(), 66854f64);
+        assert_eq!(Jupiter::mean_radius(), 69946f64);
+        assert_eq!(Jupiter::equatorial_radius(), 71492f64);
+    }
+    #[test]
+    fn test_naif_id_699() {
+        assert_eq!(Saturn::id(), 699i32)
+    }
+    #[test]
+    fn test_point_mass_699() {
+        assert_eq!(Saturn::gravitational_parameter(), 37931206.23436167f64);
+    }
+    #[test]
+    fn test_spheroid_699() {
+        assert_eq!(Saturn::polar_radius(), 54364f64);
+        assert_eq!(Saturn::mean_radius(), 58300f64);
+        assert_eq!(Saturn::equatorial_radius(), 60268f64);
+    }
+    #[test]
+    fn test_naif_id_799() {
+        assert_eq!(Uranus::id(), 799i32)
+    }
+    #[test]
+    fn test_point_mass_799() {
+        assert_eq!(Uranus::gravitational_parameter(), 5793951.256527211f64);
+    }
+    #[test]
+    fn test_spheroid_799() {
+        assert_eq!(Uranus::polar_radius(), 24973f64);
+        assert_eq!(Uranus::mean_radius(), 25363.666666666668f64);
+        assert_eq!(Uranus::equatorial_radius(), 25559f64);
+    }
+    #[test]
+    fn test_naif_id_899() {
+        assert_eq!(Neptune::id(), 899i32)
+    }
+    #[test]
+    fn test_point_mass_899() {
+        assert_eq!(Neptune::gravitational_parameter(), 6835103.145462294f64);
+    }
+    #[test]
+    fn test_spheroid_899() {
+        assert_eq!(Neptune::polar_radius(), 24341f64);
+        assert_eq!(Neptune::mean_radius(), 24623f64);
+        assert_eq!(Neptune::equatorial_radius(), 24764f64);
+    }
+    #[test]
+    fn test_naif_id_999() {
+        assert_eq!(Pluto::id(), 999i32)
+    }
+    #[test]
+    fn test_point_mass_999() {
+        assert_eq!(Pluto::gravitational_parameter(), 869.6138177608748f64);
+    }
+    #[test]
+    fn test_spheroid_999() {
+        assert_eq!(Pluto::polar_radius(), 1188.3f64);
+        assert_eq!(Pluto::mean_radius(), 1188.3f64);
+        assert_eq!(Pluto::equatorial_radius(), 1188.3f64);
     }
 }
