@@ -5,9 +5,8 @@ use std::process::Command;
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote};
 
-use crate::naif_ids::MINOR_BODIES;
 use lox_io::spice::Kernel;
-use naif_ids::{BARYCENTERS, PLANETS, SATELLITES};
+use naif_ids::{Body, BARYCENTERS, MINOR_BODIES, PLANETS, SATELLITES, SUN};
 
 mod naif_ids;
 
@@ -19,7 +18,6 @@ type Generator = fn(
     id: &i32,
     data: &Data,
 );
-type Body = (i32, &'static str);
 
 struct Data {
     pck: Kernel,
@@ -32,7 +30,8 @@ pub fn main() {
     let gm = Kernel::from_string(include_str!("../../../data/gm_de440.tpc"))
         .expect("parsing should succeed");
     let data = Data { pck, gm };
-    let bodies: [(&str, Vec<Body>, Vec<Generator>); 4] = [
+    let bodies: [(&str, Vec<Body>, Vec<Generator>); 5] = [
+        ("sun", Vec::from(SUN), vec![naif_id, point_mass, spheroid]),
         (
             "barycenters",
             Vec::from(BARYCENTERS),

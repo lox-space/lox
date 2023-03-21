@@ -1,4 +1,8 @@
-pub const BARYCENTERS: [(i32, &str); 10] = [
+pub type Body = (i32, &'static str);
+
+pub const SUN: [Body; 1] = [(10, "Sun")];
+
+pub const BARYCENTERS: [Body; 10] = [
     (0, "SolarSystemBarycenter"),
     (1, "MercuryBarycenter"),
     (2, "VenusBarycenter"),
@@ -11,7 +15,7 @@ pub const BARYCENTERS: [(i32, &str); 10] = [
     (9, "PlutoBarycenter"),
 ];
 
-pub const PLANETS: [(i32, &str); 9] = [
+pub const PLANETS: [Body; 9] = [
     (199, "Mercury"),
     (299, "Venus"),
     (399, "Earth"),
@@ -23,7 +27,7 @@ pub const PLANETS: [(i32, &str); 9] = [
     (999, "Pluto"),
 ];
 
-pub const SATELLITES: [(i32, &str); 152] = [
+pub const SATELLITES: [Body; 152] = [
     (301, "Moon"),
     (401, "Phobos"),
     (402, "Deimos"),
@@ -178,7 +182,7 @@ pub const SATELLITES: [(i32, &str); 152] = [
     (905, "Styx"),
 ];
 
-pub const MINOR_BODIES: [(i32, &str); 18] = [
+pub const MINOR_BODIES: [Body; 18] = [
     (9511010, "Gaspra"),
     (2431010, "Ida"),
     (2431011, "Dactyl"),

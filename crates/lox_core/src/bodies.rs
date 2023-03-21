@@ -2,6 +2,7 @@ pub mod barycenters;
 pub mod minor;
 pub mod planets;
 pub mod satellites;
+pub mod sun;
 
 pub trait NaifId {
     fn id() -> i32;
@@ -53,14 +54,6 @@ pub fn gravitational_parameter<T: PointMass>(_: T) -> f64 {
     <T as PointMass>::gravitational_parameter()
 }
 
-pub struct Sun;
-
-impl NaifId for Sun {
-    fn id() -> i32 {
-        10
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::planets::Earth;
@@ -69,7 +62,7 @@ mod tests {
 
     #[test]
     fn test_naif_id() {
-        assert_eq!(naif_id(Sun), 10);
+        assert_eq!(naif_id(Earth), Earth::id());
     }
 
     #[test]
