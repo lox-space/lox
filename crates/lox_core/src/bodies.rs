@@ -49,6 +49,10 @@ pub trait PointMass {
     fn gravitational_parameter() -> f64;
 }
 
+pub fn gravitational_parameter<T: PointMass>(_: T) -> f64 {
+    <T as PointMass>::gravitational_parameter()
+}
+
 pub struct Sun;
 
 impl NaifId for Sun {
@@ -60,6 +64,7 @@ impl NaifId for Sun {
 #[cfg(test)]
 mod tests {
     use super::planets::Earth;
+    use super::satellites::Moon;
     use super::*;
 
     #[test]
@@ -68,7 +73,35 @@ mod tests {
     }
 
     #[test]
+    fn test_grav_param() {
+        assert_eq!(
+            gravitational_parameter(Earth),
+            Earth::gravitational_parameter()
+        );
+    }
+
+    #[test]
     fn test_mean_radius() {
-        assert_eq!(mean_radius(Earth), 6371.008366666666);
+        assert_eq!(mean_radius(Earth), Earth::mean_radius());
+    }
+
+    #[test]
+    fn test_polar_radius() {
+        assert_eq!(polar_radius(Earth), Earth::polar_radius());
+    }
+
+    #[test]
+    fn test_equatorial_radius() {
+        assert_eq!(equatorial_radius(Earth), Earth::equatorial_radius());
+    }
+
+    #[test]
+    fn test_subplanetary_radius() {
+        assert_eq!(subplanetary_radius(Moon), Moon::subplanetary_radius());
+    }
+
+    #[test]
+    fn test_along_orbit_radius() {
+        assert_eq!(along_orbit_radius(Moon), Moon::along_orbit_radius());
     }
 }
