@@ -4,7 +4,7 @@ pub mod planets;
 pub mod satellites;
 pub mod sun;
 
-pub trait NaifId {
+pub trait NaifId: Copy {
     fn id() -> i32;
 }
 
@@ -12,7 +12,7 @@ pub fn naif_id<T: NaifId>(_: T) -> i32 {
     <T as NaifId>::id()
 }
 
-pub trait Ellipsoid {
+pub trait Ellipsoid: Copy {
     fn polar_radius() -> f64;
     fn mean_radius() -> f64;
 }
@@ -46,7 +46,7 @@ pub fn along_orbit_radius<T: TriAxial>(_: T) -> f64 {
     <T as TriAxial>::along_orbit_radius()
 }
 
-pub trait PointMass {
+pub trait PointMass: Copy {
     fn gravitational_parameter() -> f64;
 }
 
