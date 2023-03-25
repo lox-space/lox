@@ -1,43 +1,100 @@
-use crate::bodies::pck_constants::BODY10_RADII;
-
 pub mod barycenters;
 pub mod minor;
-#[allow(clippy::approx_constant, clippy::excessive_precision, dead_code)]
-pub mod pck_constants;
 pub mod planets;
 pub mod satellites;
+pub mod sun;
 
 pub trait NaifId {
     fn id() -> i32;
 }
 
+pub fn naif_id<T: NaifId>(_: T) -> i32 {
+    <T as NaifId>::id()
+}
+
 pub trait Ellipsoid {
-    fn max_equatorial_radius() -> f64;
-    fn min_equatorial_radius() -> f64;
     fn polar_radius() -> f64;
     fn mean_radius() -> f64;
 }
 
-pub struct Sun;
-
-impl NaifId for Sun {
-    fn id() -> i32 {
-        10
-    }
+pub fn polar_radius<T: Ellipsoid>(_: T) -> f64 {
+    <T as Ellipsoid>::polar_radius()
 }
 
-impl Ellipsoid for Sun {
-    fn max_equatorial_radius() -> f64 {
-        BODY10_RADII[0]
+pub fn mean_radius<T: Ellipsoid>(_: T) -> f64 {
+    <T as Ellipsoid>::mean_radius()
+}
+
+pub trait Spheroid: Ellipsoid {
+    fn equatorial_radius() -> f64;
+}
+
+pub fn equatorial_radius<T: Spheroid>(_: T) -> f64 {
+    <T as Spheroid>::equatorial_radius()
+}
+
+pub trait TriAxial: Ellipsoid {
+    fn subplanetary_radius() -> f64;
+    fn along_orbit_radius() -> f64;
+}
+
+pub fn subplanetary_radius<T: TriAxial>(_: T) -> f64 {
+    <T as TriAxial>::subplanetary_radius()
+}
+
+pub fn along_orbit_radius<T: TriAxial>(_: T) -> f64 {
+    <T as TriAxial>::along_orbit_radius()
+}
+
+pub trait PointMass {
+    fn gravitational_parameter() -> f64;
+}
+
+pub fn gravitational_parameter<T: PointMass>(_: T) -> f64 {
+    <T as PointMass>::gravitational_parameter()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::planets::Earth;
+    use super::satellites::Moon;
+    use super::*;
+
+    #[test]
+    fn test_naif_id() {
+        assert_eq!(naif_id(Earth), Earth::id());
     }
-    fn min_equatorial_radius() -> f64 {
-        BODY10_RADII[1]
+
+    #[test]
+    fn test_grav_param() {
+        assert_eq!(
+            gravitational_parameter(Earth),
+            Earth::gravitational_parameter()
+        );
     }
-    fn polar_radius() -> f64 {
-        BODY10_RADII[2]
+
+    #[test]
+    fn test_mean_radius() {
+        assert_eq!(mean_radius(Earth), Earth::mean_radius());
     }
-    fn mean_radius() -> f64 {
-        let sum: f64 = BODY10_RADII.iter().sum();
-        sum / 3.0
+
+    #[test]
+    fn test_polar_radius() {
+        assert_eq!(polar_radius(Earth), Earth::polar_radius());
+    }
+
+    #[test]
+    fn test_equatorial_radius() {
+        assert_eq!(equatorial_radius(Earth), Earth::equatorial_radius());
+    }
+
+    #[test]
+    fn test_subplanetary_radius() {
+        assert_eq!(subplanetary_radius(Moon), Moon::subplanetary_radius());
+    }
+
+    #[test]
+    fn test_along_orbit_radius() {
+        assert_eq!(along_orbit_radius(Moon), Moon::along_orbit_radius());
     }
 }

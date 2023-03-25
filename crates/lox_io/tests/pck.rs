@@ -2,7 +2,7 @@ use lox_io::spice::Kernel;
 
 #[test]
 fn test_pck() {
-    let pck = include_str!("pck00011.tpc");
+    let pck = include_str!("../../../data/pck00011.tpc");
     let kernel = Kernel::from_string(pck).expect("file should be parsable");
     assert_eq!(kernel.type_id(), "PCK");
 
