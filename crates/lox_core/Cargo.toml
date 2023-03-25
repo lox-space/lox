@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+float_eq = "1.0.1"
+glam = "0.23.0"
 num = "0.4.0"
 
 [dev-dependencies]
