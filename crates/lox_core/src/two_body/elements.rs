@@ -223,7 +223,7 @@ mod tests {
 
     #[test]
     fn test_circular() {
-        let grav_param = 3.9860047e14;
+        let grav_param = 3.986004418e14;
         let semi_major = 6778136.6;
         let eccentricity = 0.0;
         let inclination = 15f64.to_radians();
@@ -259,7 +259,155 @@ mod tests {
         assert_float_eq!(vel.z, vel1.z, rel <= 1e-4);
 
         assert_float_eq!(semi_major, semi_major1, rel <= 1e-8);
-        assert_float_eq!(eccentricity, eccentricity1, rel <= 1e-8);
+        assert_float_eq!(eccentricity, eccentricity1, abs <= 1e-8);
+        assert_float_eq!(inclination, inclination1, rel <= 1e-8);
+        assert_float_eq!(ascending_node, ascending_node1, rel <= 1e-8);
+        assert_float_eq!(periapsis_arg, periapsis_arg1, rel <= 1e-8);
+        assert_float_eq!(true_anomaly, true_anomaly1, rel <= 1e-8);
+    }
+
+    #[test]
+    fn test_circular_orekit() {
+        let grav_param = 3.9860047e14;
+        let semi_major = 24464560.0;
+        let eccentricity = 0.0;
+        let inclination = 0.122138;
+        let ascending_node = 1.00681;
+        let periapsis_arg = 0.0;
+        let true_anomaly = 0.048363;
+
+        let (pos, vel) = keplerian_to_cartesian(
+            grav_param,
+            semi_major,
+            eccentricity,
+            inclination,
+            ascending_node,
+            periapsis_arg,
+            true_anomaly,
+        );
+
+        let (
+            semi_major1,
+            eccentricity1,
+            inclination1,
+            ascending_node1,
+            periapsis_arg1,
+            true_anomaly1,
+        ) = cartesian_to_keplerian(grav_param, pos, vel);
+
+        assert_float_eq!(semi_major, semi_major1, rel <= 1e-8);
+        assert_float_eq!(eccentricity, eccentricity1, abs <= 1e-8);
+        assert_float_eq!(inclination, inclination1, rel <= 1e-8);
+        assert_float_eq!(ascending_node, ascending_node1, rel <= 1e-8);
+        assert_float_eq!(periapsis_arg, periapsis_arg1, rel <= 1e-8);
+        assert_float_eq!(true_anomaly, true_anomaly1, rel <= 1e-8);
+    }
+
+    #[test]
+    fn test_hyperbolic_orekit() {
+        let grav_param = 3.9860047e14;
+        let semi_major = -24464560.0;
+        let eccentricity = 1.7311;
+        let inclination = 0.122138;
+        let ascending_node = 1.00681;
+        let periapsis_arg = 3.10686;
+        let true_anomaly = 0.12741601769795755;
+
+        let (pos, vel) = keplerian_to_cartesian(
+            grav_param,
+            semi_major,
+            eccentricity,
+            inclination,
+            ascending_node,
+            periapsis_arg,
+            true_anomaly,
+        );
+
+        let (
+            semi_major1,
+            eccentricity1,
+            inclination1,
+            ascending_node1,
+            periapsis_arg1,
+            true_anomaly1,
+        ) = cartesian_to_keplerian(grav_param, pos, vel);
+
+        assert_float_eq!(semi_major, semi_major1, rel <= 1e-8);
+        assert_float_eq!(eccentricity, eccentricity1, abs <= 1e-8);
+        assert_float_eq!(inclination, inclination1, rel <= 1e-8);
+        assert_float_eq!(ascending_node, ascending_node1, rel <= 1e-8);
+        assert_float_eq!(periapsis_arg, periapsis_arg1, rel <= 1e-8);
+        assert_float_eq!(true_anomaly, true_anomaly1, rel <= 1e-8);
+    }
+
+    #[test]
+    fn test_equatorial() {
+        let grav_param = 3.9860047e14;
+        let semi_major = 24464560.0;
+        let eccentricity = 0.7311;
+        let inclination = 0.0;
+        let ascending_node = 0.0;
+        let periapsis_arg = 3.10686;
+        let true_anomaly = 0.44369564302687126;
+
+        let (pos, vel) = keplerian_to_cartesian(
+            grav_param,
+            semi_major,
+            eccentricity,
+            inclination,
+            ascending_node,
+            periapsis_arg,
+            true_anomaly,
+        );
+
+        let (
+            semi_major1,
+            eccentricity1,
+            inclination1,
+            ascending_node1,
+            periapsis_arg1,
+            true_anomaly1,
+        ) = cartesian_to_keplerian(grav_param, pos, vel);
+
+        assert_float_eq!(semi_major, semi_major1, rel <= 1e-8);
+        assert_float_eq!(eccentricity, eccentricity1, abs <= 1e-8);
+        assert_float_eq!(inclination, inclination1, rel <= 1e-8);
+        assert_float_eq!(ascending_node, ascending_node1, rel <= 1e-8);
+        assert_float_eq!(periapsis_arg, periapsis_arg1, rel <= 1e-8);
+        assert_float_eq!(true_anomaly, true_anomaly1, rel <= 1e-8);
+    }
+
+    #[test]
+    fn test_circular_equatorial() {
+        let grav_param = 3.9860047e14;
+        let semi_major = 24464560.0;
+        let eccentricity = 0.0;
+        let inclination = 0.0;
+        let ascending_node = 0.0;
+        let periapsis_arg = 0.0;
+        let true_anomaly = 0.44369564302687126;
+
+        let (pos, vel) = keplerian_to_cartesian(
+            grav_param,
+            semi_major,
+            eccentricity,
+            inclination,
+            ascending_node,
+            periapsis_arg,
+            true_anomaly,
+        );
+
+        let (
+            semi_major1,
+            eccentricity1,
+            inclination1,
+            ascending_node1,
+            periapsis_arg1,
+            true_anomaly1,
+        ) = cartesian_to_keplerian(grav_param, pos, vel);
+
+        assert_float_eq!(semi_major, semi_major1, rel <= 1e-8);
+        assert_float_eq!(eccentricity, eccentricity1, abs <= 1e-8);
         assert_float_eq!(inclination, inclination1, rel <= 1e-8);
         assert_float_eq!(ascending_node, ascending_node1, rel <= 1e-8);
         assert_float_eq!(periapsis_arg, periapsis_arg1, rel <= 1e-8);
