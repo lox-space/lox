@@ -144,7 +144,7 @@ pub fn parse_comment_area(input: &[u8], comment_areas_count: u32) -> nom::IResul
             };
 
         let comment_record_content =
-            String::from_utf8_lossy(comment_record_content).replace("\0", "\n");
+            String::from_utf8_lossy(comment_record_content).replace('\0', "\n");
 
         comment_area.push_str(&comment_record_content)
     }
