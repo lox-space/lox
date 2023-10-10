@@ -213,8 +213,8 @@ impl<T: PointMass> From<Cartesian<T>> for Keplerian<T> {
 
 #[cfg(test)]
 mod tests {
-    use std::ops::Mul;
     use float_eq::assert_float_eq;
+    use std::ops::Mul;
 
     use crate::bodies::planets::Earth;
     use crate::time::dates::{Date, Time};
@@ -237,12 +237,14 @@ mod tests {
             -0.107622532467967e7,
             -0.676589636432773e7,
             -0.332308783350379e6,
-        ).mul(1e-3);
+        )
+        .mul(1e-3);
         let vel = DVec3::new(
             0.935685775154103e4,
             -0.331234775037644e4,
             -0.118801577532701e4,
-        ).mul(1e-3);
+        )
+        .mul(1e-3);
 
         let cartesian = Cartesian::new(epoch, Earth, pos, vel);
 
