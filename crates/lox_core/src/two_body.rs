@@ -248,6 +248,10 @@ mod tests {
 
         let cartesian = Cartesian::new(epoch, Earth, pos, vel);
 
+        assert_eq!(
+            cartesian.cartesian(),
+            (cartesian.position(), cartesian.velocity())
+        );
         assert_eq!(cartesian.epoch(), epoch);
         assert_eq!(cartesian.center(), Earth);
         assert_eq!(cartesian.position(), pos);
@@ -272,6 +276,17 @@ mod tests {
             ),
         );
 
+        assert_eq!(
+            keplerian.keplerian(),
+            (
+                semi_major,
+                eccentricity,
+                inclination,
+                ascending_node,
+                periapsis_arg,
+                true_anomaly
+            )
+        );
         assert_eq!(keplerian.epoch(), epoch);
         assert_eq!(keplerian.center(), Earth);
         assert_float_eq!(keplerian.position().x, pos.x, rel <= 1e-8);
