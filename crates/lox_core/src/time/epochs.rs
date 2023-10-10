@@ -17,13 +17,13 @@ pub enum TimeScale {
     UT1,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct RawEpoch {
     second: i64,
     attosecond: i64,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Epoch {
     TAI(RawEpoch),
     TCB(RawEpoch),
