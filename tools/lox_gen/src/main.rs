@@ -80,7 +80,7 @@ fn generate_code(bodies: &[Body], generators: &[Generator], data: &Data) -> Stri
         let ident = format_ident!("{}", name);
         code = quote! {
             #code
-            #[derive(Debug, Clone, Copy)]
+            #[derive(Debug, Clone, Copy, Eq, PartialEq)]
             pub struct #ident;
         };
         generators
