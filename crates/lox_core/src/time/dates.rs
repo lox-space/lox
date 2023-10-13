@@ -1,3 +1,4 @@
+use crate::errors::LoxError;
 use num::ToPrimitive;
 
 #[derive(Debug, Copy, Clone)]
@@ -35,15 +36,15 @@ impl Date {
         self.day
     }
 
-    pub fn new(year: i64, month: i64, day: i64) -> Result<Self, &'static str> {
+    pub fn new(year: i64, month: i64, day: i64) -> Result<Self, LoxError> {
         if !(1..=12).contains(&month) {
-            Err("Invalid month")
+            Err(LoxError::InvalidDate(year, month, day))
         } else {
             let calendar = get_calendar(year, month, day);
             let check = Date::from_days(j2000(calendar, year, month, day))?;
 
             if check.year() != year || check.month() != month || check.day() != day {
-                Err("Invalid date")
+                Err(LoxError::InvalidDate(year, month, day))
             } else {
                 Ok(Date {
                     calendar,
@@ -55,7 +56,7 @@ impl Date {
         }
     }
 
-    pub fn from_days(offset: i64) -> Result<Self, &'static str> {
+    pub fn from_days(offset: i64) -> Result<Self, LoxError> {
         let calendar = if offset < LAST_JULIAN_DAY_J2K {
             if offset > LAST_PROLEPTIC_JULIAN_DAY_J2K {
                 Calendar::Julian
@@ -99,13 +100,9 @@ pub struct Time {
 }
 
 impl Time {
-    pub fn new(hour: i64, minute: i64, second: i64) -> Result<Self, &'static str> {
-        if !(0..24).contains(&hour) {
-            Err("`hour` must be an integer between 0 and 23.")
-        } else if !(0..60).contains(&minute) {
-            Err("`minute` must be an integer between 0 and 59.")
-        } else if !(0..61).contains(&second) {
-            Err("`second` must be an integer between 0 and 61.")
+    pub fn new(hour: i64, minute: i64, second: i64) -> Result<Self, LoxError> {
+        if !(0..24).contains(&hour) || !(0..60).contains(&minute) || !(0..61).contains(&second) {
+            Err(LoxError::InvalidTime(hour, minute, second))
         } else {
             Ok(Self {
                 hour,
@@ -146,9 +143,9 @@ impl Time {
         self
     }
 
-    pub fn from_seconds(hour: i64, minute: i64, seconds: f64) -> Result<Self, &'static str> {
+    pub fn from_seconds(hour: i64, minute: i64, seconds: f64) -> Result<Self, LoxError> {
         if !(0.0..61.0).contains(&seconds) {
-            return Err("Invalid second");
+            return Err(LoxError::InvalidSeconds(hour, minute, seconds));
         }
         let sub = split_seconds(seconds.fract()).unwrap();
         let second = seconds.round().to_i64().unwrap();
@@ -239,8 +236,8 @@ const PREVIOUS_MONTH_END_DAY_LEAP: [i64; 12] =
 
 const PREVIOUS_MONTH_END_DAY: [i64; 12] = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
 
-fn find_month(day_in_year: i64, isleap: bool) -> i64 {
-    let offset = if isleap { 313 } else { 323 };
+fn find_month(day_in_year: i64, is_leap: bool) -> i64 {
+    let offset = if is_leap { 313 } else { 323 };
     if day_in_year < 32 {
         1
     } else {
@@ -248,11 +245,11 @@ fn find_month(day_in_year: i64, isleap: bool) -> i64 {
     }
 }
 
-fn find_day(day_in_year: i64, month: i64, isleap: bool) -> Result<i64, &'static str> {
-    if !isleap && day_in_year > 365 {
-        Err("Day of year cannot be 366 for a non-leap year.")
+fn find_day(day_in_year: i64, month: i64, is_leap: bool) -> Result<i64, LoxError> {
+    if !is_leap && day_in_year > 365 {
+        Err(LoxError::NonLeapYear)
     } else {
-        let previous_days = if isleap {
+        let previous_days = if is_leap {
             PREVIOUS_MONTH_END_DAY_LEAP
         } else {
             PREVIOUS_MONTH_END_DAY
@@ -261,8 +258,8 @@ fn find_day(day_in_year: i64, month: i64, isleap: bool) -> Result<i64, &'static 
     }
 }
 
-fn find_day_in_year(month: i64, day: i64, isleap: bool) -> i64 {
-    let previous_days = if isleap {
+fn find_day_in_year(month: i64, day: i64, is_leap: bool) -> i64 {
+    let previous_days = if is_leap {
         PREVIOUS_MONTH_END_DAY_LEAP
     } else {
         PREVIOUS_MONTH_END_DAY
