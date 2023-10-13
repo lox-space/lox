@@ -1,5 +1,9 @@
-use crate::time::dates::{Date, DateTime, Time};
+use std::fmt;
+use std::fmt::Formatter;
+
 use num::ToPrimitive;
+
+use crate::time::dates::{Date, DateTime, Time};
 
 const SECONDS_PER_DAY_F64: f64 = 24.0 * 60.0 * 60.0;
 
@@ -17,6 +21,19 @@ pub enum TimeScale {
     UT1,
 }
 
+impl fmt::Display for TimeScale {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            TimeScale::TAI => write!(f, "TAI"),
+            TimeScale::TCB => write!(f, "TCB"),
+            TimeScale::TCG => write!(f, "TCG"),
+            TimeScale::TDB => write!(f, "TDB"),
+            TimeScale::TT => write!(f, "TT"),
+            TimeScale::UT1 => write!(f, "UT1"),
+        }
+    }
+}
+
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct RawEpoch {
     second: i64,
@@ -31,6 +48,12 @@ pub enum Epoch {
     TDB(RawEpoch),
     TT(RawEpoch),
     UT1(RawEpoch),
+}
+
+impl fmt::Display for Epoch {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "foo")
+    }
 }
 
 impl Epoch {

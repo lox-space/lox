@@ -1,0 +1,17 @@
+[package]
+name = "lox_py"
+version = "0.1.0"
+
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "lox_space"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = "0.20.0"
+lox_core.workspace = true
+thiserror.workspace = true
