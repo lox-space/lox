@@ -4,8 +4,8 @@ use thiserror::Error;
 
 use lox_core::errors::LoxError;
 use lox_core::time::dates::{Date, Time};
-use lox_core::time::epochs::Epoch as _Epoch;
-use lox_core::time::epochs::TimeScale as _TimeScale;
+use lox_core::time::epochs::Epoch;
+use lox_core::time::epochs::TimeScale;
 
 #[derive(Error, Debug)]
 pub enum LoxPyError {
@@ -27,20 +27,20 @@ impl From<LoxPyError> for PyErr {
     }
 }
 
-#[pyclass]
-struct TimeScale(_TimeScale);
+#[pyclass(name = "TimeScale")]
+struct PyTimeScale(TimeScale);
 
 #[pymethods]
-impl TimeScale {
+impl PyTimeScale {
     #[new]
     fn new(name: &str) -> Result<Self, LoxPyError> {
         match name {
-            "TAI" => Ok(TimeScale(_TimeScale::TAI)),
-            "TCB" => Ok(TimeScale(_TimeScale::TCB)),
-            "TCG" => Ok(TimeScale(_TimeScale::TCG)),
-            "TDB" => Ok(TimeScale(_TimeScale::TDB)),
-            "TT" => Ok(TimeScale(_TimeScale::TT)),
-            "UT1" => Ok(TimeScale(_TimeScale::UT1)),
+            "TAI" => Ok(PyTimeScale(TimeScale::TAI)),
+            "TCB" => Ok(PyTimeScale(TimeScale::TCB)),
+            "TCG" => Ok(PyTimeScale(TimeScale::TCG)),
+            "TDB" => Ok(PyTimeScale(TimeScale::TDB)),
+            "TT" => Ok(PyTimeScale(TimeScale::TT)),
+            "UT1" => Ok(PyTimeScale(TimeScale::UT1)),
             _ => Err(LoxPyError::InvalidTimeScale(name.to_string())),
         }
     }
@@ -48,13 +48,17 @@ impl TimeScale {
     fn __repr__(&self) -> String {
         format!("TimeScale(\"{}\")", self.0)
     }
+
+    fn __str__(&self) -> String {
+        format!("{}", self.0)
+    }
 }
 
-#[pyclass]
-struct Epoch(_Epoch);
+#[pyclass(name = "Epoch")]
+struct PyEpoch(Epoch);
 
 #[pymethods]
-impl Epoch {
+impl PyEpoch {
     #[allow(clippy::too_many_arguments)]
     #[pyo3(signature = (
         scale,
@@ -87,7 +91,7 @@ impl Epoch {
         femto: Option<i64>,
         atto: Option<i64>,
     ) -> Result<Self, LoxPyError> {
-        let time_scale = TimeScale::new(scale)?;
+        let time_scale = PyTimeScale::new(scale)?;
         let date = Date::new(year, month, day)?;
 
         let hour = hour.unwrap_or(0);
@@ -112,7 +116,7 @@ impl Epoch {
         if let Some(atto) = atto {
             time = time.atto(atto);
         }
-        Ok(Epoch(_Epoch::from_date_and_time(time_scale.0, date, time)))
+        Ok(PyEpoch(Epoch::from_date_and_time(time_scale.0, date, time)))
     }
 
     fn attosecond(&self) -> i64 {
@@ -127,7 +131,7 @@ impl Epoch {
 /// A Python module implemented in Rust.
 #[pymodule]
 fn lox_space(_py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_class::<TimeScale>()?;
-    m.add_class::<Epoch>()?;
+    m.add_class::<PyTimeScale>()?;
+    m.add_class::<PyEpoch>()?;
     Ok(())
 }
