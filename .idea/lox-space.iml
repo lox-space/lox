@@ -9,7 +9,8 @@
       <sourceFolder url="file://$MODULE_DIR$/crates/lox_io/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/lox_io/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/tools/lox_gen/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/lox-space/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/lox-space/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
       <excludeFolder url="file://$MODULE_DIR$/tools/lox_gen/target" />
     </content>

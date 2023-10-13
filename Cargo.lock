@@ -207,7 +207,7 @@ checksum = "da2479e8c062e40bf0066ffa0bc823de0a9368974af99c9f6df941d2c231e03f"
 
 [[package]]
 name = "lox-space"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "lox_core",
 ]
@@ -225,7 +225,7 @@ dependencies = [
 
 [[package]]
 name = "lox_io"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "nom",
 ]

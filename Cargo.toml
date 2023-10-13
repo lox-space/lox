@@ -1,12 +1,3 @@
-[package]
-name = "lox-space"
-version = "0.1.0"
-edition = "2021"
-license = "MPL-2.0"
-
-[dependencies]
-lox_core = { path = "crates/lox_core" }
-
 [workspace]
 members = [
     "crates/*"
@@ -14,4 +5,15 @@ members = [
 exclude = [
     "tools/lox_gen"
 ]
+resolver = "2"
+
+[workspace.package]
+rust-version = "1.70"
+edition = "2021"
+license = "MPL-2.0"
+authors = ["Helge Eichhorn and the lox-space contributors"]
+
+[workspace.dependencies]
+lox_core = { path = "./crates/lox_core" }
+lox_io = { path = "./crates/lox_io" }
 

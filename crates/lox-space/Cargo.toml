@@ -1,5 +1,5 @@
 [package]
-name = "lox_io"
+name = "lox-space"
 version = "0.0.0"
 
 authors.workspace = true
@@ -8,4 +8,4 @@ license.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-nom = "7.1.3"
+lox_core.workspace = true
