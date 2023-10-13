@@ -21,9 +21,10 @@ permissions:
 jobs:
   linux:
     runs-on: ubuntu-latest
+    working-directory: ./crates/lox_py
     strategy:
       matrix:
-        target: [x86_64, x86, aarch64, armv7, s390x, ppc64le]
+        target: [ x86_64, x86, aarch64, armv7, s390x, ppc64le ]
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
@@ -44,9 +45,10 @@ jobs:
 
   windows:
     runs-on: windows-latest
+    working-directory: ./crates/lox_py
     strategy:
       matrix:
-        target: [x64, x86]
+        target: [ x64, x86 ]
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
@@ -67,9 +69,10 @@ jobs:
 
   macos:
     runs-on: macos-latest
+    working-directory: ./crates/lox_py
     strategy:
       matrix:
-        target: [x86_64, aarch64]
+        target: [ x86_64, aarch64 ]
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
@@ -89,6 +92,7 @@ jobs:
 
   sdist:
     runs-on: ubuntu-latest
+    working-directory: ./crates/lox_py
     steps:
       - uses: actions/checkout@v3
       - name: Build sdist
@@ -105,8 +109,9 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    working-directory: ./crates/lox_py
     if: "startsWith(github.ref, 'refs/tags/')"
-    needs: [linux, windows, macos, sdist]
+    needs: [ linux, windows, macos, sdist ]
     steps:
       - uses: actions/download-artifact@v3
         with:
