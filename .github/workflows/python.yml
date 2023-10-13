@@ -3,7 +3,7 @@
 #
 #    maturin generate-ci github
 #
-name: CI
+name: Python
 
 on:
   push:
@@ -17,10 +17,6 @@ on:
 
 permissions:
   contents: read
-
-defaults:
-  run:
-    working-directory: ./crates/lox_py
 
 jobs:
   linux:
@@ -37,6 +33,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
+          working-directory: ./crates/lox_py
           args: --release --out dist --find-interpreter
           sccache: 'true'
           manylinux: auto
@@ -44,7 +41,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: wheels
-          path: dist
+          path: ./crates/lox_py/dist
 
   windows:
     runs-on: windows-latest
@@ -61,13 +58,14 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
+          working-directory: ./crates/lox_py
           args: --release --out dist --find-interpreter
           sccache: 'true'
       - name: Upload wheels
         uses: actions/upload-artifact@v3
         with:
           name: wheels
-          path: dist
+          path: ./crates/lox_py/dist
 
   macos:
     runs-on: macos-latest
@@ -83,13 +81,14 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
+          working-directory: ./crates/lox_py
           args: --release --out dist --find-interpreter
           sccache: 'true'
       - name: Upload wheels
         uses: actions/upload-artifact@v3
         with:
           name: wheels
-          path: dist
+          path: ./crates/lox_py/dist
 
   sdist:
     runs-on: ubuntu-latest
@@ -98,13 +97,14 @@ jobs:
       - name: Build sdist
         uses: PyO3/maturin-action@v1
         with:
+          working-directory: ./crates/lox_py
           command: sdist
           args: --out dist
       - name: Upload sdist
         uses: actions/upload-artifact@v3
         with:
           name: wheels
-          path: dist
+          path: ./crates/lox_py/dist
 
   release:
     name: Release
@@ -120,5 +120,6 @@ jobs:
         env:
           MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         with:
+          working-directory: ./crates/lox_py
           command: upload
           args: --non-interactive --skip-existing *
