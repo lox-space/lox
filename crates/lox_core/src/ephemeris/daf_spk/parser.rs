@@ -161,7 +161,7 @@ pub fn parse_summary_and_name_record_pair(
     ni: u32,
 ) -> nom::IResult<&[u8], SummaryRecord> {
     let summary_record_input = input;
-    let mut name_record_input = &input[1024..];
+    let mut name_record_input = &input[RECORD_SIZE as usize..];
 
     let nc = 8 * (nd + (ni + 1) / 2);
 
