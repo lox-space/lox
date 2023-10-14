@@ -33,6 +33,7 @@ pub struct Summary {
 #[derive(Debug, PartialEq)]
 pub struct SummaryRecord {
     pub next: u32,
+    pub count: u32,
     pub summaries: Vec<Summary>,
 }
 
@@ -204,7 +205,14 @@ pub fn parse_summary_and_name_record_pair(
         });
     }
 
-    Ok((&[], SummaryRecord { next, summaries }))
+    Ok((
+        &[],
+        SummaryRecord {
+            next,
+            count: nsum,
+            summaries,
+        },
+    ))
 }
 
 pub fn parse_all_summary_and_name_record_pairs(
@@ -272,6 +280,7 @@ mod test {
         // @TODO Find out if these values are correct by comparing to other libs
         SummaryRecord {
             next: 0,
+            count: 14,
             summaries: vec![
                 Summary {
                     name: "DE-0430LE-0430".to_string().to_string(),
