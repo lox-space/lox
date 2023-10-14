@@ -1,3 +1,11 @@
+/*
+ * Copyright (c) 2023. Helge Eichhorn and the LOX contributors
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take_until, take_while, take_while1};
 use nom::character::complete::{alpha1, line_ending, multispace0, one_of};

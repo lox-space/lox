@@ -1,3 +1,11 @@
+/*
+ * Copyright (c) 2023. Helge Eichhorn and the LOX contributors
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 use std::fmt;
 use std::fmt::Formatter;
 
@@ -50,12 +58,6 @@ pub enum Epoch {
     UT1(RawEpoch),
 }
 
-impl fmt::Display for Epoch {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "foo")
-    }
-}
-
 impl Epoch {
     pub fn from_date_and_time(scale: TimeScale, date: Date, time: Time) -> Self {
         let day_in_seconds = date.j2000() * SECONDS_PER_DAY - SECONDS_PER_DAY / 2;
@@ -101,5 +103,11 @@ impl Epoch {
         let d1 = self.second().to_f64().unwrap_or_default() / SECONDS_PER_DAY_F64;
         let d2 = self.attosecond().to_f64().unwrap_or_default() / 1e18 / SECONDS_PER_DAY_F64;
         d2 + d1
+    }
+}
+
+impl fmt::Display for Epoch {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "foo")
     }
 }
