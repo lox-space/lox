@@ -20,7 +20,7 @@ pub struct DafFileRecord {
 #[derive(Debug, PartialEq)]
 pub struct DafComponents {
     pub double_precision_components: Vec<f64>,
-    pub integer_components: Vec<i64>,
+    pub integer_components: Vec<i32>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -192,7 +192,7 @@ pub fn parse_daf_summary_and_name_record_pair(
 
         let integer_components;
         (summary_record_input, integer_components) =
-            nom::multi::many_m_n(ni as usize, ni as usize, nom::number::complete::le_i64)(
+            nom::multi::many_m_n(ni as usize, ni as usize, nom::number::complete::le_i32)(
                 summary_record_input,
             )?;
 
@@ -286,170 +286,101 @@ mod test {
             count: 14,
             summaries: vec![
                 DafSummary {
-                    name: "DE-0430LE-0430".to_string().to_string(),
+                    name: "DE-0430LE-0430".to_string(),
                     components: DafComponents {
                         double_precision_components: vec![-14200747200.0, 20514081600.0],
-                        integer_components: vec![
-                            1,
-                            8589934593,
-                            9494025207808641,
-                            -4464629148630908928,
-                            4761178849910194176,
-                            2,
-                        ],
-                    },
-                },
-                DafSummary {
-                    name: "DE-0430LE-0430".to_string(),
-                    components: DafComponents {
-                        double_precision_components: vec![
-                            4.2439915824e-314,
-                            8.341616384367734e-308,
-                        ],
-                        integer_components: vec![
-                            -4464629148630908928,
-                            4761178849910194176,
-                            3,
-                            8589934593,
-                            17367490538372553,
-                            -4464629148630908928,
-                        ],
-                    },
-                },
-                DafSummary {
-                    name: "DE-0430LE-0430".to_string(),
-                    components: DafComponents {
-                        double_precision_components: vec![20514081600.0, 2e-323],
-                        integer_components: vec![
-                            8589934593,
-                            19254974047171493,
-                            -4464629148630908928,
-                            4761178849910194176,
-                            5,
-                            8589934593,
-                        ],
-                    },
-                },
-                DafSummary {
-                    name: "DE-0430LE-0430".to_string(),
-                    components: DafComponents {
-                        double_precision_components: vec![2.8245970871090138e-307, -14200747200.0],
-                        integer_components: vec![
-                            4761178849910194176,
-                            6,
-                            8589934593,
-                            21897461266736009,
-                            -4464629148630908928,
-                            4761178849910194176,
-                        ],
-                    },
-                },
-                DafSummary {
-                    name: "DE-0430LE-0430".to_string(),
-                    components: DafComponents {
-                        double_precision_components: vec![3.5e-323, 4.2439915824e-314],
-                        integer_components: vec![
-                            22976030634265505,
-                            -4464629148630908928,
-                            4761178849910194176,
-                            8,
-                            8589934593,
-                            24054600001757333,
-                        ],
+                        integer_components: vec![1, 0, 1, 2, 641, 2210500],
                     },
                 },
                 DafSummary {
                     name: "DE-0430LE-0430".to_string(),
                     components: DafComponents {
                         double_precision_components: vec![-14200747200.0, 20514081600.0],
-                        integer_components: vec![
-                            9,
-                            8589934593,
-                            25133169369249161,
-                            -4464629148630908928,
-                            4761178849910194176,
-                            10,
-                        ],
+                        integer_components: vec![2, 0, 1, 2, 2210501, 3014088],
                     },
                 },
                 DafSummary {
                     name: "DE-0430LE-0430".to_string(),
                     components: DafComponents {
-                        double_precision_components: vec![
-                            4.2439915824e-314,
-                            1.0102845736390232e-306,
-                        ],
-                        integer_components: vec![
-                            -4464629148630908928,
-                            4761178849910194176,
-                            12884902189,
-                            8589934593,
-                            46596392258810825,
-                            -4464629148630908928,
-                        ],
+                        double_precision_components: vec![-14200747200.0, 20514081600.0],
+                        integer_components: vec![3, 0, 1, 2, 3014089, 4043684],
                     },
                 },
                 DafSummary {
                     name: "DE-0430LE-0430".to_string(),
                     components: DafComponents {
-                        double_precision_components: vec![20514081600.0, 6.36598757e-314],
-                        integer_components: vec![
-                            8589934593,
-                            64284665315691309,
-                            -4464629148630908928,
-                            4761178849910194176,
-                            4294967495,
-                            8589934593,
-                        ],
+                        double_precision_components: vec![-14200747200.0, 20514081600.0],
+                        integer_components: vec![4, 0, 1, 2, 4043685, 4483148],
                     },
                 },
                 DafSummary {
                     name: "DE-0430LE-0430".to_string(),
                     components: DafComponents {
-                        double_precision_components: vec![2.3223582656725217e-304, -14200747200.0],
-                        integer_components: vec![
-                            4761178849910194176,
-                            8589934891,
-                            8589934593,
-                            64284768399024797,
-                            0,
-                            0,
-                        ],
+                        double_precision_components: vec![-14200747200.0, 20514081600.0],
+                        integer_components: vec![5, 0, 1, 2, 4483149, 4809608],
                     },
                 },
                 DafSummary {
                     name: "DE-0430LE-0430".to_string(),
                     components: DafComponents {
-                        double_precision_components: vec![0.0, 0.0],
-                        integer_components: vec![0, 0, 0, 0, 0, 0],
+                        double_precision_components: vec![-14200747200.0, 20514081600.0],
+                        integer_components: vec![6, 0, 1, 2, 4809609, 5098400],
                     },
                 },
                 DafSummary {
                     name: "DE-0430LE-0430".to_string(),
                     components: DafComponents {
-                        double_precision_components: vec![0.0, 0.0],
-                        integer_components: vec![0, 0, 0, 0, 0, 0],
+                        double_precision_components: vec![-14200747200.0, 20514081600.0],
+                        integer_components: vec![7, 0, 1, 2, 5098401, 5349524],
                     },
                 },
                 DafSummary {
                     name: "DE-0430LE-0430".to_string(),
                     components: DafComponents {
-                        double_precision_components: vec![0.0, 0.0],
-                        integer_components: vec![0, 0, 0, 0, 0, 0],
+                        double_precision_components: vec![-14200747200.0, 20514081600.0],
+                        integer_components: vec![8, 0, 1, 2, 5349525, 5600648],
                     },
                 },
                 DafSummary {
                     name: "DE-0430LE-0430".to_string(),
                     components: DafComponents {
-                        double_precision_components: vec![0.0, 0.0],
-                        integer_components: vec![0, 0, 0, 0, 0, 0],
+                        double_precision_components: vec![-14200747200.0, 20514081600.0],
+                        integer_components: vec![9, 0, 1, 2, 5600649, 5851772],
                     },
                 },
                 DafSummary {
                     name: "DE-0430LE-0430".to_string(),
                     components: DafComponents {
-                        double_precision_components: vec![0.0, 0.0],
-                        integer_components: vec![0, 0, 0, 0, 0, 0],
+                        double_precision_components: vec![-14200747200.0, 20514081600.0],
+                        integer_components: vec![10, 0, 1, 2, 5851773, 6730696],
+                    },
+                },
+                DafSummary {
+                    name: "DE-0430LE-0430".to_string(),
+                    components: DafComponents {
+                        double_precision_components: vec![-14200747200.0, 20514081600.0],
+                        integer_components: vec![301, 3, 1, 2, 6730697, 10849068],
+                    },
+                },
+                DafSummary {
+                    name: "DE-0430LE-0430".to_string(),
+                    components: DafComponents {
+                        double_precision_components: vec![-14200747200.0, 20514081600.0],
+                        integer_components: vec![399, 3, 1, 2, 10849069, 14967440],
+                    },
+                },
+                DafSummary {
+                    name: "DE-0430LE-0430".to_string(),
+                    components: DafComponents {
+                        double_precision_components: vec![-14200747200.0, 20514081600.0],
+                        integer_components: vec![199, 1, 1, 2, 14967441, 14967452],
+                    },
+                },
+                DafSummary {
+                    name: "DE-0430LE-0430".to_string(),
+                    components: DafComponents {
+                        double_precision_components: vec![-14200747200.0, 20514081600.0],
+                        integer_components: vec![299, 2, 1, 2, 14967453, 14967464],
                     },
                 },
             ],
