@@ -1,5 +1,4 @@
-use nom::{error::ErrorKind, number::complete::double, Err};
-use num::integer;
+use nom::error::ErrorKind;
 
 const RECORD_SIZE: u32 = 1024;
 
