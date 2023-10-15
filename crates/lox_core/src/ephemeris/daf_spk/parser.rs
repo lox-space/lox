@@ -1,4 +1,5 @@
-use nom::error::ErrorKind;
+use nom::{error::ErrorKind, number::complete::double, Err};
+use num::integer;
 
 const RECORD_SIZE: u32 = 1024;
 
@@ -31,6 +32,60 @@ pub struct DafSummary {
 }
 
 #[derive(Debug, PartialEq)]
+pub enum DafSpkError {
+    // The data type integer value does not match the ones in the spec
+    InvalidSpkSegmentDataType,
+    // The number of DAF components does not match the SPK specification
+    UnexpectedNumberOfComponents,
+}
+
+#[derive(Debug, PartialEq)]
+
+pub struct SpkSegment {
+    pub name: String,
+    // In J2000 epoch
+    pub initial_epoch: f64,
+    // In J2000 epoch
+    pub final_epoch: f64,
+    // NAIF id of the target
+    pub target_id: i32,
+    // NAIF id of the center
+    pub center_id: i32,
+    // NAIF id of the reference frame
+    pub reference_frame_id: i32,
+    pub data_type: i32,
+    pub initial_address: i32,
+    pub final_address: i32,
+}
+
+impl SpkSegment {
+    pub fn from_daf_summary(summary: &DafSummary) -> Result<SpkSegment, DafSpkError> {
+        let double_precision_components = &summary.components.double_precision_components;
+        let integer_components = &summary.components.integer_components;
+
+        if double_precision_components.len() != 2 {
+            return Err(DafSpkError::UnexpectedNumberOfComponents);
+        }
+
+        if integer_components.len() != 6 {
+            return Err(DafSpkError::UnexpectedNumberOfComponents);
+        }
+
+        Ok(SpkSegment {
+            name: summary.name.clone(),
+            initial_epoch: double_precision_components[0],
+            final_epoch: double_precision_components[1],
+            target_id: integer_components[0],
+            center_id: integer_components[1],
+            reference_frame_id: integer_components[2],
+            data_type: integer_components[3],
+            initial_address: integer_components[4],
+            final_address: integer_components[5],
+        })
+    }
+}
+
+#[derive(Debug, PartialEq)]
 pub struct DafSummaryRecord {
     pub next: u32,
     pub count: u32,
@@ -41,6 +96,7 @@ pub struct DafSummaryRecord {
 pub struct SPK {
     pub file_record: DafFileRecord,
     pub comment: String,
+    pub segments: Vec<SpkSegment>,
 }
 
 pub fn parse_daf_file_record(input: &[u8]) -> nom::IResult<&[u8], DafFileRecord> {
@@ -266,11 +322,27 @@ pub fn parse_daf_spk(full_input: &[u8]) -> nom::IResult<&[u8], SPK> {
         file_record.fward,
     )?;
 
+    let segments = all_summaries
+        .iter()
+        .map(|summary_record| {
+            summary_record
+                .summaries
+                .iter()
+                .map(SpkSegment::from_daf_summary)
+                .collect::<Result<Vec<SpkSegment>, DafSpkError>>()
+        })
+        .collect::<Result<Vec<_>, DafSpkError>>()
+        .expect("Bla") //@TODO
+        .into_iter()
+        .flatten()
+        .collect::<_>();
+
     Ok((
-        full_input, //@TODO
+        full_input,
         SPK {
             file_record,
             comment,
+            segments,
         },
     ))
 }
@@ -278,6 +350,261 @@ pub fn parse_daf_spk(full_input: &[u8]) -> nom::IResult<&[u8], SPK> {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    fn get_expected_comment_string() -> String {
+        r#"September 03, 2013
+C. Acton
+
+JPL's Solar System Dynamics Group has released two new planetary/lunar ephemerides,
+named DE430 and DE431.
+
+DE430 is now considered the official export lunar/planetary ephemeris, suitable for
+all users/uses. It's approximate time span is 1550 JAN 01 to 2650 JAN 22.
+
+If a longer time span is needed, DE431 may be used, except that the lunar ephemeris
+portion is of relatively poor accuracy outside of the time span covered by DE430.
+The time span covered by DE431 is approximately 13202 B.C. to 17191 A.D. Because de431
+is so long, leading to a huge file, it has been split into two parts having the
+approximagte time spans of:
+
+   13202 B.C. to     0
+       0      to 17191 A.D.
+
+More details about these ephemeris files are contained in accompanying documentation
+available on the NAIF server:  http://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/
+
+
+Special note regarding Mars:  starting with this DE file the location of Mars' mass center
+(NAIF ID = 499) is *NOT* included; only the Mars system barycenter (ID = 4) is present.
+The offset between Mars' mass center and the Mars' system barycenter in DE403 is quite small
+--about 20 cm.--so most SPICE users could use the Mars system barycenter in place of the
+Mars mass center. However, if you wish/need to have the Mars mass center available to your
+program, you'll need to load a Mars satellite ephemeris file such as "mar097.bsp" in addition
+to DE430. Satellite ephemeris files are available from the NAIF server here:
+http://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/satellites/
+
+
+Details about SPICE planet and satellite ephemeris files, known as SPK files, including
+how to read them using SPICE Toolkit software, may be found in the SPK tutorial (PDF file
+name is "19_spk") available from the NAIF website (http://naif.jpl.nasa.gov/tutorials.html)."#
+            .to_string()
+    }
+
+    fn get_expected_spk() -> SPK {
+        SPK {
+            file_record: DafFileRecord {
+                locidw: "DAF/SPK".to_string(),
+                nd: 2,
+                ni: 6,
+                locifn: "NIO2SPK".to_string(),
+                fward: 4,
+                bward: 4,
+                free: 14967465,
+                locfmt: "LTL-IEEE".to_string(),
+                prenul: vec![
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0,
+                ],
+                ftpstr: vec![
+                    70, 84, 80, 83, 84, 82, 58, 13, 58, 10, 58, 13, 10, 58, 13, 0, 58, 129, 58, 16,
+                    206, 58, 69, 78, 68, 70, 84, 80,
+                ],
+                pstnul: vec![
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                ],
+            },
+            comment: get_expected_comment_string(),
+            segments: vec![
+                SpkSegment {
+                    name: "DE-0430LE-0430".to_string(),
+                    initial_epoch: -14200747200.0,
+                    final_epoch: 20514081600.0,
+                    target_id: 1,
+                    center_id: 0,
+                    reference_frame_id: 1,
+                    data_type: 2,
+                    initial_address: 641,
+                    final_address: 2210500,
+                },
+                SpkSegment {
+                    name: "DE-0430LE-0430".to_string(),
+                    initial_epoch: -14200747200.0,
+                    final_epoch: 20514081600.0,
+                    target_id: 2,
+                    center_id: 0,
+                    reference_frame_id: 1,
+                    data_type: 2,
+                    initial_address: 2210501,
+                    final_address: 3014088,
+                },
+                SpkSegment {
+                    name: "DE-0430LE-0430".to_string(),
+                    initial_epoch: -14200747200.0,
+                    final_epoch: 20514081600.0,
+                    target_id: 3,
+                    center_id: 0,
+                    reference_frame_id: 1,
+                    data_type: 2,
+                    initial_address: 3014089,
+                    final_address: 4043684,
+                },
+                SpkSegment {
+                    name: "DE-0430LE-0430".to_string(),
+                    initial_epoch: -14200747200.0,
+                    final_epoch: 20514081600.0,
+                    target_id: 4,
+                    center_id: 0,
+                    reference_frame_id: 1,
+                    data_type: 2,
+                    initial_address: 4043685,
+                    final_address: 4483148,
+                },
+                SpkSegment {
+                    name: "DE-0430LE-0430".to_string(),
+                    initial_epoch: -14200747200.0,
+                    final_epoch: 20514081600.0,
+                    target_id: 5,
+                    center_id: 0,
+                    reference_frame_id: 1,
+                    data_type: 2,
+                    initial_address: 4483149,
+                    final_address: 4809608,
+                },
+                SpkSegment {
+                    name: "DE-0430LE-0430".to_string(),
+                    initial_epoch: -14200747200.0,
+                    final_epoch: 20514081600.0,
+                    target_id: 6,
+                    center_id: 0,
+                    reference_frame_id: 1,
+                    data_type: 2,
+                    initial_address: 4809609,
+                    final_address: 5098400,
+                },
+                SpkSegment {
+                    name: "DE-0430LE-0430".to_string(),
+                    initial_epoch: -14200747200.0,
+                    final_epoch: 20514081600.0,
+                    target_id: 7,
+                    center_id: 0,
+                    reference_frame_id: 1,
+                    data_type: 2,
+                    initial_address: 5098401,
+                    final_address: 5349524,
+                },
+                SpkSegment {
+                    name: "DE-0430LE-0430".to_string(),
+                    initial_epoch: -14200747200.0,
+                    final_epoch: 20514081600.0,
+                    target_id: 8,
+                    center_id: 0,
+                    reference_frame_id: 1,
+                    data_type: 2,
+                    initial_address: 5349525,
+                    final_address: 5600648,
+                },
+                SpkSegment {
+                    name: "DE-0430LE-0430".to_string(),
+                    initial_epoch: -14200747200.0,
+                    final_epoch: 20514081600.0,
+                    target_id: 9,
+                    center_id: 0,
+                    reference_frame_id: 1,
+                    data_type: 2,
+                    initial_address: 5600649,
+                    final_address: 5851772,
+                },
+                SpkSegment {
+                    name: "DE-0430LE-0430".to_string(),
+                    initial_epoch: -14200747200.0,
+                    final_epoch: 20514081600.0,
+                    target_id: 10,
+                    center_id: 0,
+                    reference_frame_id: 1,
+                    data_type: 2,
+                    initial_address: 5851773,
+                    final_address: 6730696,
+                },
+                SpkSegment {
+                    name: "DE-0430LE-0430".to_string(),
+                    initial_epoch: -14200747200.0,
+                    final_epoch: 20514081600.0,
+                    target_id: 301,
+                    center_id: 3,
+                    reference_frame_id: 1,
+                    data_type: 2,
+                    initial_address: 6730697,
+                    final_address: 10849068,
+                },
+                SpkSegment {
+                    name: "DE-0430LE-0430".to_string(),
+                    initial_epoch: -14200747200.0,
+                    final_epoch: 20514081600.0,
+                    target_id: 399,
+                    center_id: 3,
+                    reference_frame_id: 1,
+                    data_type: 2,
+                    initial_address: 10849069,
+                    final_address: 14967440,
+                },
+                SpkSegment {
+                    name: "DE-0430LE-0430".to_string(),
+                    initial_epoch: -14200747200.0,
+                    final_epoch: 20514081600.0,
+                    target_id: 199,
+                    center_id: 1,
+                    reference_frame_id: 1,
+                    data_type: 2,
+                    initial_address: 14967441,
+                    final_address: 14967452,
+                },
+                SpkSegment {
+                    name: "DE-0430LE-0430".to_string(),
+                    initial_epoch: -14200747200.0,
+                    final_epoch: 20514081600.0,
+                    target_id: 299,
+                    center_id: 2,
+                    reference_frame_id: 1,
+                    data_type: 2,
+                    initial_address: 14967453,
+                    final_address: 14967464,
+                },
+            ],
+        }
+    }
 
     fn get_expected_summary_record() -> DafSummaryRecord {
         // @TODO Find out if these values are correct by comparing to other libs
@@ -411,44 +738,7 @@ mod test {
 
         assert_eq!(unparsed_string.len(), 0);
 
-        assert_eq!(
-            r#"September 03, 2013
-C. Acton
-
-JPL's Solar System Dynamics Group has released two new planetary/lunar ephemerides,
-named DE430 and DE431.
-
-DE430 is now considered the official export lunar/planetary ephemeris, suitable for
-all users/uses. It's approximate time span is 1550 JAN 01 to 2650 JAN 22.
-
-If a longer time span is needed, DE431 may be used, except that the lunar ephemeris
-portion is of relatively poor accuracy outside of the time span covered by DE430.
-The time span covered by DE431 is approximately 13202 B.C. to 17191 A.D. Because de431
-is so long, leading to a huge file, it has been split into two parts having the
-approximagte time spans of:
-
-   13202 B.C. to     0
-       0      to 17191 A.D.
-
-More details about these ephemeris files are contained in accompanying documentation
-available on the NAIF server:  http://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/
-
-
-Special note regarding Mars:  starting with this DE file the location of Mars' mass center
-(NAIF ID = 499) is *NOT* included; only the Mars system barycenter (ID = 4) is present.
-The offset between Mars' mass center and the Mars' system barycenter in DE403 is quite small
---about 20 cm.--so most SPICE users could use the Mars system barycenter in place of the
-Mars mass center. However, if you wish/need to have the Mars mass center available to your
-program, you'll need to load a Mars satellite ephemeris file such as "mar097.bsp" in addition
-to DE430. Satellite ephemeris files are available from the NAIF server here:
-http://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/satellites/
-
-
-Details about SPICE planet and satellite ephemeris files, known as SPK files, including
-how to read them using SPICE Toolkit software, may be found in the SPK tutorial (PDF file
-name is "19_spk") available from the NAIF website (http://naif.jpl.nasa.gov/tutorials.html)."#,
-            comment
-        );
+        assert_eq!(get_expected_comment_string(), comment);
     }
 
     #[test]
@@ -470,6 +760,17 @@ name is "19_spk") available from the NAIF website (http://naif.jpl.nasa.gov/tuto
             file_record.ftpstr,
             b"FTPSTR:\r:\n:\r\n:\r\x00:\x81:\x10\xce:ENDFTP"
         );
+    }
+
+    #[test]
+    fn test_parse_daf_spk() {
+        let spk = parse_daf_spk(&FILE_CONTENTS);
+
+        assert!(spk.is_ok());
+
+        if let Ok((_, spk)) = spk {
+            assert_eq!(spk, get_expected_spk());
+        }
     }
 
     const FILE_CONTENTS: [u8; 5120] = [
