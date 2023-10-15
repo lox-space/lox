@@ -350,6 +350,65 @@ pub fn parse_daf_spk(full_input: &[u8]) -> nom::IResult<&[u8], Spk> {
 mod test {
     use super::*;
 
+    #[test]
+    fn test_parse_all_summary_and_name_record_pairs() {
+        let (_, all_summary_records) =
+            parse_all_summary_and_name_record_pairs(&FILE_CONTENTS, 2, 6, 4)
+                .expect("DafSummary record parsing should succeed");
+
+        assert_eq!(all_summary_records, vec![get_expected_summary_record()]);
+    }
+
+    #[test]
+    fn test_parse_daf_summary_and_name_record_pair() {
+        let (_, summary_record) = parse_daf_summary_and_name_record_pair(&SUMMARY_RECORD, 2, 6)
+            .expect("DafSummary record parsing should succeed");
+
+        assert_eq!(summary_record, get_expected_summary_record());
+    }
+
+    #[test]
+    fn test_parse_daf_comment_area() {
+        let (unparsed_string, comment) = parse_daf_comment_area(&COMMENT_AREA_SEGMENT, 2)
+            .expect("Comment area parsing should succeed");
+
+        assert_eq!(unparsed_string.len(), 0);
+
+        assert_eq!(get_expected_comment_string(), comment);
+    }
+
+    #[test]
+    fn test_parse_daf_file_record() {
+        let (unparsed_string, file_record) = parse_daf_file_record(&FILE_RECORD_SEGMENT)
+            .expect("File record parsing should succeed");
+
+        assert_eq!(unparsed_string.len(), 0);
+
+        assert_eq!(file_record.locidw, "DAF/SPK");
+        assert_eq!(file_record.nd, 2);
+        assert_eq!(file_record.ni, 6);
+        assert_eq!(file_record.locifn, "NIO2SPK");
+        assert_eq!(file_record.fward, 4);
+        assert_eq!(file_record.bward, 4);
+        assert_eq!(file_record.free, 14967465);
+        assert_eq!(file_record.locfmt, "LTL-IEEE");
+        assert_eq!(
+            file_record.ftpstr,
+            b"FTPSTR:\r:\n:\r\n:\r\x00:\x81:\x10\xce:ENDFTP"
+        );
+    }
+
+    #[test]
+    fn test_parse_daf_spk() {
+        let spk = parse_daf_spk(&FILE_CONTENTS);
+
+        assert!(spk.is_ok());
+
+        if let Ok((_, spk)) = spk {
+            assert_eq!(spk, get_expected_spk());
+        }
+    }
+
     fn get_expected_comment_string() -> String {
         r#"September 03, 2013
 C. Acton
@@ -710,65 +769,6 @@ name is "19_spk") available from the NAIF website (http://naif.jpl.nasa.gov/tuto
                     },
                 },
             ],
-        }
-    }
-
-    #[test]
-    fn test_parse_all_summary_and_name_record_pairs() {
-        let (_, all_summary_records) =
-            parse_all_summary_and_name_record_pairs(&FILE_CONTENTS, 2, 6, 4)
-                .expect("DafSummary record parsing should succeed");
-
-        assert_eq!(all_summary_records, vec![get_expected_summary_record()]);
-    }
-
-    #[test]
-    fn test_parse_daf_summary_and_name_record_pair() {
-        let (_, summary_record) = parse_daf_summary_and_name_record_pair(&SUMMARY_RECORD, 2, 6)
-            .expect("DafSummary record parsing should succeed");
-
-        assert_eq!(summary_record, get_expected_summary_record());
-    }
-
-    #[test]
-    fn test_parse_daf_comment_area() {
-        let (unparsed_string, comment) = parse_daf_comment_area(&COMMENT_AREA_SEGMENT, 2)
-            .expect("Comment area parsing should succeed");
-
-        assert_eq!(unparsed_string.len(), 0);
-
-        assert_eq!(get_expected_comment_string(), comment);
-    }
-
-    #[test]
-    fn test_parse_daf_file_record() {
-        let (unparsed_string, file_record) = parse_daf_file_record(&FILE_RECORD_SEGMENT)
-            .expect("File record parsing should succeed");
-
-        assert_eq!(unparsed_string.len(), 0);
-
-        assert_eq!(file_record.locidw, "DAF/SPK");
-        assert_eq!(file_record.nd, 2);
-        assert_eq!(file_record.ni, 6);
-        assert_eq!(file_record.locifn, "NIO2SPK");
-        assert_eq!(file_record.fward, 4);
-        assert_eq!(file_record.bward, 4);
-        assert_eq!(file_record.free, 14967465);
-        assert_eq!(file_record.locfmt, "LTL-IEEE");
-        assert_eq!(
-            file_record.ftpstr,
-            b"FTPSTR:\r:\n:\r\n:\r\x00:\x81:\x10\xce:ENDFTP"
-        );
-    }
-
-    #[test]
-    fn test_parse_daf_spk() {
-        let spk = parse_daf_spk(&FILE_CONTENTS);
-
-        assert!(spk.is_ok());
-
-        if let Ok((_, spk)) = spk {
-            assert_eq!(spk, get_expected_spk());
         }
     }
 
