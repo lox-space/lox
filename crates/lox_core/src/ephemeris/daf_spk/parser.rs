@@ -3,7 +3,7 @@ use nom::error::ErrorKind;
 const RECORD_SIZE: u32 = 1024;
 
 #[derive(Debug, PartialEq)]
-pub struct FileRecord {
+pub struct DafFileRecord {
     pub locidw: String,
     pub nd: u32,
     pub ni: u32,
@@ -18,32 +18,32 @@ pub struct FileRecord {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Components {
+pub struct DafComponents {
     pub double_precision_components: Vec<f64>,
     pub integer_components: Vec<i64>,
 }
 
 #[derive(Debug, PartialEq)]
 
-pub struct Summary {
+pub struct DafSummary {
     pub name: String,
-    pub components: Components,
+    pub components: DafComponents,
 }
 
 #[derive(Debug, PartialEq)]
-pub struct SummaryRecord {
+pub struct DafSummaryRecord {
     pub next: u32,
     pub count: u32,
-    pub summaries: Vec<Summary>,
+    pub summaries: Vec<DafSummary>,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct SPK {
-    pub file_record: FileRecord,
+    pub file_record: DafFileRecord,
     pub comment: String,
 }
 
-pub fn parse_file_record(input: &[u8]) -> nom::IResult<&[u8], FileRecord> {
+pub fn parse_daf_file_record(input: &[u8]) -> nom::IResult<&[u8], DafFileRecord> {
     // 1. LOCIDW (8 charactersu8, 8 bytes): An identification word (`DAF/xxxx').
     // The 'xxxx' substring is a string of four characters or less indicating the
     // type of data stored in the DAF file. This is used by the SPICELIB
@@ -102,7 +102,7 @@ pub fn parse_file_record(input: &[u8]) -> nom::IResult<&[u8], FileRecord> {
     // should be safe.
     Ok((
         input,
-        FileRecord {
+        DafFileRecord {
             locidw: String::from_utf8_lossy(locidw).trim().to_string(),
             nd,
             ni,
@@ -118,7 +118,10 @@ pub fn parse_file_record(input: &[u8]) -> nom::IResult<&[u8], FileRecord> {
     ))
 }
 
-pub fn parse_comment_area(input: &[u8], comment_areas_count: u32) -> nom::IResult<&[u8], String> {
+pub fn parse_daf_comment_area(
+    input: &[u8],
+    comment_areas_count: u32,
+) -> nom::IResult<&[u8], String> {
     // This function is definetely not optimal as there are several allocations at
     // different points but this is not a hot data path.
     let mut comment_area = String::new();
@@ -155,11 +158,11 @@ pub fn parse_comment_area(input: &[u8], comment_areas_count: u32) -> nom::IResul
     Ok((input_cursor, comment_area))
 }
 
-pub fn parse_summary_and_name_record_pair(
+pub fn parse_daf_summary_and_name_record_pair(
     input: &[u8],
     nd: u32,
     ni: u32,
-) -> nom::IResult<&[u8], SummaryRecord> {
+) -> nom::IResult<&[u8], DafSummaryRecord> {
     let summary_record_input = input;
     let mut name_record_input = &input[RECORD_SIZE as usize..];
 
@@ -196,9 +199,9 @@ pub fn parse_summary_and_name_record_pair(
         let name;
         (name_record_input, name) = nom::bytes::complete::take(nc)(name_record_input)?;
 
-        summaries.push(Summary {
+        summaries.push(DafSummary {
             name: String::from_utf8_lossy(name).trim().to_string(),
-            components: Components {
+            components: DafComponents {
                 double_precision_components,
                 integer_components,
             },
@@ -207,7 +210,7 @@ pub fn parse_summary_and_name_record_pair(
 
     Ok((
         &[],
-        SummaryRecord {
+        DafSummaryRecord {
             next,
             count: nsum,
             summaries,
@@ -220,7 +223,7 @@ pub fn parse_all_summary_and_name_record_pairs(
     nd: u32,
     ni: u32,
     fward: u32,
-) -> nom::IResult<&[u8], Vec<SummaryRecord>> {
+) -> nom::IResult<&[u8], Vec<DafSummaryRecord>> {
     let mut all_summary_records = Vec::new();
 
     let mut next = fward;
@@ -231,7 +234,7 @@ pub fn parse_all_summary_and_name_record_pairs(
         let summary_and_name_record_pair = &input[start..end];
 
         let (_, summaries_record) =
-            parse_summary_and_name_record_pair(summary_and_name_record_pair, nd, ni)?;
+            parse_daf_summary_and_name_record_pair(summary_and_name_record_pair, nd, ni)?;
 
         next = summaries_record.next;
 
@@ -252,9 +255,9 @@ pub fn parse_daf_spk(full_input: &[u8]) -> nom::IResult<&[u8], SPK> {
 
     let input_cursor = full_input;
 
-    let (input_cursor, file_record) = parse_file_record(input_cursor)?;
+    let (input_cursor, file_record) = parse_daf_file_record(input_cursor)?;
 
-    let (_, comment) = parse_comment_area(input_cursor, file_record.fward - 2)?;
+    let (_, comment) = parse_daf_comment_area(input_cursor, file_record.fward - 2)?;
 
     let (_, all_summaries) = parse_all_summary_and_name_record_pairs(
         full_input,
@@ -276,15 +279,15 @@ pub fn parse_daf_spk(full_input: &[u8]) -> nom::IResult<&[u8], SPK> {
 mod test {
     use super::*;
 
-    fn get_expected_summary_record() -> SummaryRecord {
+    fn get_expected_summary_record() -> DafSummaryRecord {
         // @TODO Find out if these values are correct by comparing to other libs
-        SummaryRecord {
+        DafSummaryRecord {
             next: 0,
             count: 14,
             summaries: vec![
-                Summary {
+                DafSummary {
                     name: "DE-0430LE-0430".to_string().to_string(),
-                    components: Components {
+                    components: DafComponents {
                         double_precision_components: vec![-14200747200.0, 20514081600.0],
                         integer_components: vec![
                             1,
@@ -296,9 +299,9 @@ mod test {
                         ],
                     },
                 },
-                Summary {
+                DafSummary {
                     name: "DE-0430LE-0430".to_string(),
-                    components: Components {
+                    components: DafComponents {
                         double_precision_components: vec![
                             4.2439915824e-314,
                             8.341616384367734e-308,
@@ -313,9 +316,9 @@ mod test {
                         ],
                     },
                 },
-                Summary {
+                DafSummary {
                     name: "DE-0430LE-0430".to_string(),
-                    components: Components {
+                    components: DafComponents {
                         double_precision_components: vec![20514081600.0, 2e-323],
                         integer_components: vec![
                             8589934593,
@@ -327,9 +330,9 @@ mod test {
                         ],
                     },
                 },
-                Summary {
+                DafSummary {
                     name: "DE-0430LE-0430".to_string(),
-                    components: Components {
+                    components: DafComponents {
                         double_precision_components: vec![2.8245970871090138e-307, -14200747200.0],
                         integer_components: vec![
                             4761178849910194176,
@@ -341,9 +344,9 @@ mod test {
                         ],
                     },
                 },
-                Summary {
+                DafSummary {
                     name: "DE-0430LE-0430".to_string(),
-                    components: Components {
+                    components: DafComponents {
                         double_precision_components: vec![3.5e-323, 4.2439915824e-314],
                         integer_components: vec![
                             22976030634265505,
@@ -355,9 +358,9 @@ mod test {
                         ],
                     },
                 },
-                Summary {
+                DafSummary {
                     name: "DE-0430LE-0430".to_string(),
-                    components: Components {
+                    components: DafComponents {
                         double_precision_components: vec![-14200747200.0, 20514081600.0],
                         integer_components: vec![
                             9,
@@ -369,9 +372,9 @@ mod test {
                         ],
                     },
                 },
-                Summary {
+                DafSummary {
                     name: "DE-0430LE-0430".to_string(),
-                    components: Components {
+                    components: DafComponents {
                         double_precision_components: vec![
                             4.2439915824e-314,
                             1.0102845736390232e-306,
@@ -386,9 +389,9 @@ mod test {
                         ],
                     },
                 },
-                Summary {
+                DafSummary {
                     name: "DE-0430LE-0430".to_string(),
-                    components: Components {
+                    components: DafComponents {
                         double_precision_components: vec![20514081600.0, 6.36598757e-314],
                         integer_components: vec![
                             8589934593,
@@ -400,9 +403,9 @@ mod test {
                         ],
                     },
                 },
-                Summary {
+                DafSummary {
                     name: "DE-0430LE-0430".to_string(),
-                    components: Components {
+                    components: DafComponents {
                         double_precision_components: vec![2.3223582656725217e-304, -14200747200.0],
                         integer_components: vec![
                             4761178849910194176,
@@ -414,37 +417,37 @@ mod test {
                         ],
                     },
                 },
-                Summary {
+                DafSummary {
                     name: "DE-0430LE-0430".to_string(),
-                    components: Components {
+                    components: DafComponents {
                         double_precision_components: vec![0.0, 0.0],
                         integer_components: vec![0, 0, 0, 0, 0, 0],
                     },
                 },
-                Summary {
+                DafSummary {
                     name: "DE-0430LE-0430".to_string(),
-                    components: Components {
+                    components: DafComponents {
                         double_precision_components: vec![0.0, 0.0],
                         integer_components: vec![0, 0, 0, 0, 0, 0],
                     },
                 },
-                Summary {
+                DafSummary {
                     name: "DE-0430LE-0430".to_string(),
-                    components: Components {
+                    components: DafComponents {
                         double_precision_components: vec![0.0, 0.0],
                         integer_components: vec![0, 0, 0, 0, 0, 0],
                     },
                 },
-                Summary {
+                DafSummary {
                     name: "DE-0430LE-0430".to_string(),
-                    components: Components {
+                    components: DafComponents {
                         double_precision_components: vec![0.0, 0.0],
                         integer_components: vec![0, 0, 0, 0, 0, 0],
                     },
                 },
-                Summary {
+                DafSummary {
                     name: "DE-0430LE-0430".to_string(),
-                    components: Components {
+                    components: DafComponents {
                         double_precision_components: vec![0.0, 0.0],
                         integer_components: vec![0, 0, 0, 0, 0, 0],
                     },
@@ -457,22 +460,22 @@ mod test {
     fn test_parse_all_summary_and_name_record_pairs() {
         let (_, all_summary_records) =
             parse_all_summary_and_name_record_pairs(&FILE_CONTENTS, 2, 6, 4)
-                .expect("Summary record parsing should succeed");
+                .expect("DafSummary record parsing should succeed");
 
         assert_eq!(all_summary_records, vec![get_expected_summary_record()]);
     }
 
     #[test]
-    fn test_parse_summary_and_name_record_pair() {
-        let (_, summary_record) = parse_summary_and_name_record_pair(&SUMMARY_RECORD, 2, 6)
-            .expect("Summary record parsing should succeed");
+    fn test_parse_daf_summary_and_name_record_pair() {
+        let (_, summary_record) = parse_daf_summary_and_name_record_pair(&SUMMARY_RECORD, 2, 6)
+            .expect("DafSummary record parsing should succeed");
 
         assert_eq!(summary_record, get_expected_summary_record());
     }
 
     #[test]
-    fn test_parse_comment_area() {
-        let (unparsed_string, comment) = parse_comment_area(&COMMENT_AREA_SEGMENT, 2)
+    fn test_parse_daf_comment_area() {
+        let (unparsed_string, comment) = parse_daf_comment_area(&COMMENT_AREA_SEGMENT, 2)
             .expect("Comment area parsing should succeed");
 
         assert_eq!(unparsed_string.len(), 0);
@@ -518,9 +521,9 @@ name is "19_spk") available from the NAIF website (http://naif.jpl.nasa.gov/tuto
     }
 
     #[test]
-    fn test_parse_file_record() {
-        let (unparsed_string, file_record) =
-            parse_file_record(&FILE_RECORD_SEGMENT).expect("File record parsing should succeed");
+    fn test_parse_daf_file_record() {
+        let (unparsed_string, file_record) = parse_daf_file_record(&FILE_RECORD_SEGMENT)
+            .expect("File record parsing should succeed");
 
         assert_eq!(unparsed_string.len(), 0);
 
