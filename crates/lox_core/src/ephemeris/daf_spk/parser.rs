@@ -93,7 +93,7 @@ pub struct DafSummaryRecord {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct SPK {
+pub struct Spk {
     pub file_record: DafFileRecord,
     pub comment: String,
     pub segments: Vec<SpkSegment>,
@@ -304,7 +304,7 @@ pub fn parse_all_summary_and_name_record_pairs(
     Ok((&[], all_summary_records))
 }
 
-pub fn parse_daf_spk(full_input: &[u8]) -> nom::IResult<&[u8], SPK> {
+pub fn parse_daf_spk(full_input: &[u8]) -> nom::IResult<&[u8], Spk> {
     // - https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/req/daf.html
     // - https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/req/spk.html
     // - https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/Tutorials/office/individual_docs/42_making_an_spk.pptx
@@ -339,7 +339,7 @@ pub fn parse_daf_spk(full_input: &[u8]) -> nom::IResult<&[u8], SPK> {
 
     Ok((
         full_input,
-        SPK {
+        Spk {
             file_record,
             comment,
             segments,
@@ -390,8 +390,8 @@ name is "19_spk") available from the NAIF website (http://naif.jpl.nasa.gov/tuto
             .to_string()
     }
 
-    fn get_expected_spk() -> SPK {
-        SPK {
+    fn get_expected_spk() -> Spk {
+        Spk {
             file_record: DafFileRecord {
                 locidw: "DAF/SPK".to_string(),
                 nd: 2,
