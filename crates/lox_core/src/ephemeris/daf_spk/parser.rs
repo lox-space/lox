@@ -36,6 +36,9 @@ pub enum DafSpkError {
     InvalidSpkSegmentDataType,
     // The number of DAF components does not match the SPK specification
     UnexpectedNumberOfComponents,
+    UnableToParseSummaries,
+    UnableToParseFileRecord,
+    UnableToParseCommentArea,
 }
 
 #[derive(Debug, PartialEq)]
@@ -344,16 +347,18 @@ pub fn parse_all_summary_and_name_record_pairs(
     Ok((&[], all_summary_records))
 }
 
-pub fn parse_daf_spk(full_input: &[u8]) -> nom::IResult<&[u8], Spk> {
+pub fn parse_daf_spk(full_input: &[u8]) -> Result<Spk, DafSpkError> {
     // - https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/req/daf.html
     // - https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/req/spk.html
     // - https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/Tutorials/office/individual_docs/42_making_an_spk.pptx
 
     let input_cursor = full_input;
 
-    let (input_cursor, (endianness, file_record)) = parse_daf_file_record(input_cursor)?;
+    let (input_cursor, (endianness, file_record)) =
+        parse_daf_file_record(input_cursor).map_err(|_| DafSpkError::UnableToParseFileRecord)?;
 
-    let (_, comment) = parse_daf_comment_area(input_cursor, file_record.fward - 2)?;
+    let (_, comment) = parse_daf_comment_area(input_cursor, file_record.fward - 2)
+        .map_err(|_| DafSpkError::UnableToParseCommentArea)?;
 
     let (_, all_summaries) = parse_all_summary_and_name_record_pairs(
         full_input,
@@ -361,7 +366,8 @@ pub fn parse_daf_spk(full_input: &[u8]) -> nom::IResult<&[u8], Spk> {
         file_record.nd,
         file_record.ni,
         file_record.fward,
-    )?;
+    )
+    .map_err(|_| DafSpkError::UnableToParseSummaries)?;
 
     let segments = all_summaries
         .iter()
@@ -372,20 +378,16 @@ pub fn parse_daf_spk(full_input: &[u8]) -> nom::IResult<&[u8], Spk> {
                 .map(SpkSegment::from_daf_summary)
                 .collect::<Result<Vec<SpkSegment>, DafSpkError>>()
         })
-        .collect::<Result<Vec<_>, DafSpkError>>()
-        .expect("Bla") //@TODO
+        .collect::<Result<Vec<_>, DafSpkError>>()?
         .into_iter()
         .flatten()
         .collect::<_>();
 
-    Ok((
-        full_input,
-        Spk {
-            file_record,
-            comment,
-            segments,
-        },
-    ))
+    Ok(Spk {
+        file_record,
+        comment,
+        segments,
+    })
 }
 
 #[cfg(test)]
@@ -458,7 +460,7 @@ mod test {
 
         assert!(spk.is_ok());
 
-        if let Ok((_, spk)) = spk {
+        if let Ok(spk) = spk {
             assert_eq!(spk, get_expected_spk());
         }
     }
