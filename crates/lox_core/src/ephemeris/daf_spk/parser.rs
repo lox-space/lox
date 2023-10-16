@@ -98,7 +98,35 @@ pub struct Spk {
     pub segments: Vec<SpkSegment>,
 }
 
-pub fn parse_daf_file_record(input: &[u8]) -> nom::IResult<&[u8], DafFileRecord> {
+pub fn parse_daf_file_record_endianness(
+    input: &[u8],
+) -> nom::IResult<&[u8], nom::number::Endianness> {
+    // 8. LOCFMT ( 8 charactersu8, 8 bytes): The character string that indicates the
+    // numeric binary format of the DAF. The string has value either "LTL-IEEE"
+    // or "BIG-IEEE." [Address 88]
+    let (_, locfmt) = nom::branch::alt((
+        nom::bytes::complete::tag("LTL-IEEE"),
+        nom::bytes::complete::tag("BIG-IEEE"),
+    ))(&input[88..])?;
+
+    // We know the loc strings are ASCII in the spec, so parsing them as utf-8
+    // should be safe.
+    let locfmt = String::from_utf8_lossy(locfmt).trim().to_string();
+
+    let endianness = match locfmt.as_str() {
+        "LTL-IEEE" => nom::number::Endianness::Little,
+        "BIG-IEEE" => nom::number::Endianness::Big,
+        _ => unreachable!(),
+    };
+
+    Ok((input, endianness))
+}
+
+pub fn parse_daf_file_record(
+    input: &[u8],
+) -> nom::IResult<&[u8], (nom::number::Endianness, DafFileRecord)> {
+    let (_, endianness) = parse_daf_file_record_endianness(input)?;
+
     // 1. LOCIDW (8 charactersu8, 8 bytes): An identification word (`DAF/xxxx').
     // The 'xxxx' substring is a string of four characters or less indicating the
     // type of data stored in the DAF file. This is used by the SPICELIB
@@ -110,11 +138,11 @@ pub fn parse_daf_file_record(input: &[u8]) -> nom::IResult<&[u8], DafFileRecord>
 
     // 2. ND ( 1 integeru8, 4 bytes): The number of double precision components in
     // each array summary. [Address 8]
-    let (input, nd) = nom::number::complete::le_u32(input)?;
+    let (input, nd) = nom::number::complete::u32(endianness)(input)?;
 
     // 3. NI ( 1 integeru8, 4 bytes): The number of integer components in each array
     // summary. [Address 12]
-    let (input, ni) = nom::number::complete::le_u32(input)?;
+    let (input, ni) = nom::number::complete::u32(endianness)(input)?;
 
     // 4. LOCIFN (60 charactersu8, 60 bytes): The internal name or description of
     // the array file. [Address 16]
@@ -122,16 +150,16 @@ pub fn parse_daf_file_record(input: &[u8]) -> nom::IResult<&[u8], DafFileRecord>
 
     // 5. FWARD ( 1 integeru8, 4 bytes): The record number of the initial summary
     // record in the file. [Address 76]
-    let (input, fward) = nom::number::complete::le_u32(input)?;
+    let (input, fward) = nom::number::complete::u32(endianness)(input)?;
 
     // 6. BWARD ( 1 integeru8, 4 bytes): The record number of the final summary
     // record in the file. [Address 80]
-    let (input, bward) = nom::number::complete::le_u32(input)?;
+    let (input, bward) = nom::number::complete::u32(endianness)(input)?;
 
     // 7. FREE ( 1 integeru8, 4 bytes): The first free address in the file. This is
     // the address at which the first element of the next array to be added to
     // the file will be stored. [Address 84]
-    let (input, free) = nom::number::complete::le_u32(input)?;
+    let (input, free) = nom::number::complete::u32(endianness)(input)?;
 
     // 8. LOCFMT ( 8 charactersu8, 8 bytes): The character string that indicates the
     // numeric binary format of the DAF. The string has value either "LTL-IEEE"
@@ -157,19 +185,22 @@ pub fn parse_daf_file_record(input: &[u8]) -> nom::IResult<&[u8], DafFileRecord>
     // should be safe.
     Ok((
         input,
-        DafFileRecord {
-            locidw: String::from_utf8_lossy(locidw).trim().to_string(),
-            nd,
-            ni,
-            locifn: String::from_utf8_lossy(locifn).trim().to_string(),
-            fward,
-            bward,
-            free,
-            locfmt: String::from_utf8_lossy(locfmt).trim().to_string(),
-            prenul: prenul.to_owned(),
-            ftpstr: ftpstr.to_owned(),
-            pstnul: pstnul.to_owned(),
-        },
+        (
+            endianness,
+            DafFileRecord {
+                locidw: String::from_utf8_lossy(locidw).trim().to_string(),
+                nd,
+                ni,
+                locifn: String::from_utf8_lossy(locifn).trim().to_string(),
+                fward,
+                bward,
+                free,
+                locfmt: String::from_utf8_lossy(locfmt).trim().to_string(),
+                prenul: prenul.to_owned(),
+                ftpstr: ftpstr.to_owned(),
+                pstnul: pstnul.to_owned(),
+            },
+        ),
     ))
 }
 
@@ -215,6 +246,7 @@ pub fn parse_daf_comment_area(
 
 pub fn parse_daf_summary_and_name_record_pair(
     input: &[u8],
+    endianness: nom::number::Endianness,
     nd: u32,
     ni: u32,
 ) -> nom::IResult<&[u8], DafSummaryRecord> {
@@ -227,29 +259,33 @@ pub fn parse_daf_summary_and_name_record_pair(
 
     // 1. The record number of the next summary record in the file. (Zero if this is
     // the final summary record.)
-    let (summary_record_input, next) = nom::number::complete::le_f64(summary_record_input)?;
+    let (summary_record_input, next) =
+        nom::number::complete::f64(endianness)(summary_record_input)?;
     let next = next as u32;
 
     // 2. The record number of the previous summary record in the file. (Zero if
     // this is the initial summary record.)
-    let (summary_record_input, _) = nom::number::complete::le_f64(summary_record_input)?;
+    let (summary_record_input, _) = nom::number::complete::f64(endianness)(summary_record_input)?;
 
     // 3. The number of summaries stored in this record.
-    let (mut summary_record_input, nsum) = nom::number::complete::le_f64(summary_record_input)?;
+    let (mut summary_record_input, nsum) =
+        nom::number::complete::f64(endianness)(summary_record_input)?;
     let nsum = nsum as u32;
 
     for _ in 0..nsum {
         let double_precision_components;
-        (summary_record_input, double_precision_components) =
-            nom::multi::many_m_n(nd as usize, nd as usize, nom::number::complete::le_f64)(
-                summary_record_input,
-            )?;
+        (summary_record_input, double_precision_components) = nom::multi::many_m_n(
+            nd as usize,
+            nd as usize,
+            nom::number::complete::f64(endianness),
+        )(summary_record_input)?;
 
         let integer_components;
-        (summary_record_input, integer_components) =
-            nom::multi::many_m_n(ni as usize, ni as usize, nom::number::complete::le_i32)(
-                summary_record_input,
-            )?;
+        (summary_record_input, integer_components) = nom::multi::many_m_n(
+            ni as usize,
+            ni as usize,
+            nom::number::complete::i32(endianness),
+        )(summary_record_input)?;
 
         let name;
         (name_record_input, name) = nom::bytes::complete::take(nc)(name_record_input)?;
@@ -275,6 +311,7 @@ pub fn parse_daf_summary_and_name_record_pair(
 
 pub fn parse_all_summary_and_name_record_pairs(
     input: &[u8],
+    endianness: nom::number::Endianness,
     nd: u32,
     ni: u32,
     fward: u32,
@@ -288,8 +325,12 @@ pub fn parse_all_summary_and_name_record_pairs(
 
         let summary_and_name_record_pair = &input[start..end];
 
-        let (_, summaries_record) =
-            parse_daf_summary_and_name_record_pair(summary_and_name_record_pair, nd, ni)?;
+        let (_, summaries_record) = parse_daf_summary_and_name_record_pair(
+            summary_and_name_record_pair,
+            endianness,
+            nd,
+            ni,
+        )?;
 
         next = summaries_record.next;
 
@@ -310,12 +351,13 @@ pub fn parse_daf_spk(full_input: &[u8]) -> nom::IResult<&[u8], Spk> {
 
     let input_cursor = full_input;
 
-    let (input_cursor, file_record) = parse_daf_file_record(input_cursor)?;
+    let (input_cursor, (endianness, file_record)) = parse_daf_file_record(input_cursor)?;
 
     let (_, comment) = parse_daf_comment_area(input_cursor, file_record.fward - 2)?;
 
     let (_, all_summaries) = parse_all_summary_and_name_record_pairs(
         full_input,
+        endianness,
         file_record.nd,
         file_record.ni,
         file_record.fward,
@@ -352,17 +394,27 @@ mod test {
 
     #[test]
     fn test_parse_all_summary_and_name_record_pairs() {
-        let (_, all_summary_records) =
-            parse_all_summary_and_name_record_pairs(&FILE_CONTENTS, 2, 6, 4)
-                .expect("DafSummary record parsing should succeed");
+        let (_, all_summary_records) = parse_all_summary_and_name_record_pairs(
+            &FILE_CONTENTS,
+            nom::number::Endianness::Little,
+            2,
+            6,
+            4,
+        )
+        .expect("DafSummary record parsing should succeed");
 
         assert_eq!(all_summary_records, vec![get_expected_summary_record()]);
     }
 
     #[test]
     fn test_parse_daf_summary_and_name_record_pair() {
-        let (_, summary_record) = parse_daf_summary_and_name_record_pair(&SUMMARY_RECORD, 2, 6)
-            .expect("DafSummary record parsing should succeed");
+        let (_, summary_record) = parse_daf_summary_and_name_record_pair(
+            &SUMMARY_RECORD,
+            nom::number::Endianness::Little,
+            2,
+            6,
+        )
+        .expect("DafSummary record parsing should succeed");
 
         assert_eq!(summary_record, get_expected_summary_record());
     }
@@ -379,11 +431,13 @@ mod test {
 
     #[test]
     fn test_parse_daf_file_record() {
-        let (unparsed_string, file_record) = parse_daf_file_record(&FILE_RECORD_SEGMENT)
-            .expect("File record parsing should succeed");
+        let (unparsed_string, (endianness, file_record)) =
+            parse_daf_file_record(&FILE_RECORD_SEGMENT)
+                .expect("File record parsing should succeed");
 
         assert_eq!(unparsed_string.len(), 0);
 
+        assert_eq!(endianness, nom::number::Endianness::Little);
         assert_eq!(file_record.locidw, "DAF/SPK");
         assert_eq!(file_record.nd, 2);
         assert_eq!(file_record.ni, 6);
