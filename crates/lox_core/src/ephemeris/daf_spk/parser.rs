@@ -1,4 +1,7 @@
-use nom::error::ErrorKind;
+use nom::{error::ErrorKind, ToUsize};
+
+use nom::bytes::complete as nb;
+use nom::number::complete as nn;
 
 const RECORD_SIZE: u32 = 1024;
 
@@ -28,6 +31,8 @@ pub struct DafComponents {
 pub struct DafSummary {
     pub name: String,
     pub components: DafComponents,
+    pub initial_address: usize,
+    pub final_address: usize,
 }
 
 #[derive(Debug, PartialEq)]
@@ -36,13 +41,29 @@ pub enum DafSpkError {
     InvalidSpkSegmentDataType,
     // The number of DAF components does not match the SPK specification
     UnexpectedNumberOfComponents,
-    UnableToParseSummaries,
-    UnableToParseFileRecord,
-    UnableToParseCommentArea,
+    UnableToParse,
+    UnsupportedSpkArrayType { data_type: i32 },
 }
 
 #[derive(Debug, PartialEq)]
+pub struct SpkType2Record {
+    x: Vec<f64>,
+    y: Vec<f64>,
+    z: Vec<f64>,
+}
 
+#[derive(Debug, PartialEq)]
+pub enum SpkArray {
+    Type2 {
+        records: Vec<SpkType2Record>,
+        init: u32,
+        intlen: u32,
+        rsize: u32,
+        n: u32,
+    },
+}
+
+#[derive(Debug, PartialEq)]
 pub struct SpkSegment {
     pub name: String,
     // In J2000 epoch
@@ -56,35 +77,9 @@ pub struct SpkSegment {
     // NAIF id of the reference frame
     pub reference_frame_id: i32,
     pub data_type: i32,
-    pub initial_address: i32,
-    pub final_address: i32,
-}
-
-impl SpkSegment {
-    pub fn from_daf_summary(summary: &DafSummary) -> Result<SpkSegment, DafSpkError> {
-        let double_precision_components = &summary.components.double_precision_components;
-        let integer_components = &summary.components.integer_components;
-
-        if double_precision_components.len() != 2 {
-            return Err(DafSpkError::UnexpectedNumberOfComponents);
-        }
-
-        if integer_components.len() != 6 {
-            return Err(DafSpkError::UnexpectedNumberOfComponents);
-        }
-
-        Ok(SpkSegment {
-            name: summary.name.clone(),
-            initial_epoch: double_precision_components[0],
-            final_epoch: double_precision_components[1],
-            target_id: integer_components[0],
-            center_id: integer_components[1],
-            reference_frame_id: integer_components[2],
-            data_type: integer_components[3],
-            initial_address: integer_components[4],
-            final_address: integer_components[5],
-        })
-    }
+    pub initial_address: usize,
+    pub final_address: usize,
+    pub data: SpkArray,
 }
 
 #[derive(Debug, PartialEq)]
@@ -107,10 +102,7 @@ pub fn parse_daf_file_record_endianness(
     // 8. LOCFMT ( 8 charactersu8, 8 bytes): The character string that indicates the
     // numeric binary format of the DAF. The string has value either "LTL-IEEE"
     // or "BIG-IEEE." [Address 88]
-    let (_, locfmt) = nom::branch::alt((
-        nom::bytes::complete::tag("LTL-IEEE"),
-        nom::bytes::complete::tag("BIG-IEEE"),
-    ))(&input[88..])?;
+    let (_, locfmt) = nom::branch::alt((nb::tag("LTL-IEEE"), nb::tag("BIG-IEEE")))(&input[88..])?;
 
     // We know the loc strings are ASCII in the spec, so parsing them as utf-8
     // should be safe.
@@ -137,52 +129,52 @@ pub fn parse_daf_file_record(
     // merely a direct access file with the same record length. When
     // a DAF is openedu8, an error signals if this keyword is not present. [Address
     // 0]
-    let (input, locidw) = nom::bytes::complete::take(8u32)(input)?;
+    let (input, locidw) = nb::take(8u32)(input)?;
 
     // 2. ND ( 1 integeru8, 4 bytes): The number of double precision components in
     // each array summary. [Address 8]
-    let (input, nd) = nom::number::complete::u32(endianness)(input)?;
+    let (input, nd) = nn::u32(endianness)(input)?;
 
     // 3. NI ( 1 integeru8, 4 bytes): The number of integer components in each array
     // summary. [Address 12]
-    let (input, ni) = nom::number::complete::u32(endianness)(input)?;
+    let (input, ni) = nn::u32(endianness)(input)?;
 
     // 4. LOCIFN (60 charactersu8, 60 bytes): The internal name or description of
     // the array file. [Address 16]
-    let (input, locifn) = nom::bytes::complete::take(60u32)(input)?;
+    let (input, locifn) = nb::take(60u32)(input)?;
 
     // 5. FWARD ( 1 integeru8, 4 bytes): The record number of the initial summary
     // record in the file. [Address 76]
-    let (input, fward) = nom::number::complete::u32(endianness)(input)?;
+    let (input, fward) = nn::u32(endianness)(input)?;
 
     // 6. BWARD ( 1 integeru8, 4 bytes): The record number of the final summary
     // record in the file. [Address 80]
-    let (input, bward) = nom::number::complete::u32(endianness)(input)?;
+    let (input, bward) = nn::u32(endianness)(input)?;
 
     // 7. FREE ( 1 integeru8, 4 bytes): The first free address in the file. This is
     // the address at which the first element of the next array to be added to
     // the file will be stored. [Address 84]
-    let (input, free) = nom::number::complete::u32(endianness)(input)?;
+    let (input, free) = nn::u32(endianness)(input)?;
 
     // 8. LOCFMT ( 8 charactersu8, 8 bytes): The character string that indicates the
     // numeric binary format of the DAF. The string has value either "LTL-IEEE"
     // or "BIG-IEEE." [Address 88]
-    let (input, locfmt) = nom::bytes::complete::take(8u32)(input)?;
+    let (input, locfmt) = nb::take(8u32)(input)?;
 
     // 9. PRENUL ( 603 charactersu8, 603 bytes): A block of nulls to pad between the
     // last character of LOCFMT and the first character of FTPSTR to keep FTPSTR
     // at character 700 (address 699) in a 1024 byte record. [Address 96]
-    let (input, prenul) = nom::bytes::complete::take(603u32)(input)?;
+    let (input, prenul) = nb::take(603u32)(input)?;
 
     // 10. FTPSTR ( 28 charactersu8, 28 bytes): The FTP validation string.
     // This string is assembled using components returned from the SPICELIB private
     // routine ZZFTPSTR. [Address 699]
-    let (input, ftpstr) = nom::bytes::complete::take(28u32)(input)?;
+    let (input, ftpstr) = nb::take(28u32)(input)?;
 
     // 11. PSTNUL ( 297 charactersu8, 297 bytes): A block of nulls to pad from the
     // last character of FTPSTR to the end of the file record. Note: this value
     // enforces the length of the file record as 1024 bytes. [Address 727]
-    let (input, pstnul) = nom::bytes::complete::take(297u32)(input)?;
+    let (input, pstnul) = nb::take(297u32)(input)?;
 
     // We know the loc strings are ASCII in the spec, so parsing them as utf-8
     // should be safe.
@@ -218,12 +210,11 @@ pub fn parse_daf_comment_area(
     let mut input_cursor = input;
     for _ in 0..comment_areas_count {
         let comment_areas;
-        (input_cursor, comment_areas) = nom::bytes::complete::take(RECORD_SIZE)(input_cursor)?;
+        (input_cursor, comment_areas) = nb::take(RECORD_SIZE)(input_cursor)?;
 
-        let (_, comment_record_content) = nom::bytes::complete::take(1000u32)(comment_areas)?;
+        let (_, comment_record_content) = nb::take(1000u32)(comment_areas)?;
 
-        let comment_record_content =
-            match nom::bytes::complete::take_until("\x04")(comment_record_content) {
+        let comment_record_content = match nb::take_until("\x04")(comment_record_content) {
                 Ok((_, content_to_end_of_transmission_char)) => content_to_end_of_transmission_char,
                 Err(error) => match error {
                     // This is one ugly error type. What we're saying here is, if we can't
@@ -262,36 +253,44 @@ pub fn parse_daf_summary_and_name_record_pair(
 
     // 1. The record number of the next summary record in the file. (Zero if this is
     // the final summary record.)
-    let (summary_record_input, next) =
-        nom::number::complete::f64(endianness)(summary_record_input)?;
+    let (summary_record_input, next) = nn::f64(endianness)(summary_record_input)?;
     let next = next as u32;
 
     // 2. The record number of the previous summary record in the file. (Zero if
     // this is the initial summary record.)
-    let (summary_record_input, _) = nom::number::complete::f64(endianness)(summary_record_input)?;
+    let (summary_record_input, _) = nn::f64(endianness)(summary_record_input)?;
 
     // 3. The number of summaries stored in this record.
-    let (mut summary_record_input, nsum) =
-        nom::number::complete::f64(endianness)(summary_record_input)?;
+    let (mut summary_record_input, nsum) = nn::f64(endianness)(summary_record_input)?;
     let nsum = nsum as u32;
 
     for _ in 0..nsum {
         let double_precision_components;
-        (summary_record_input, double_precision_components) = nom::multi::many_m_n(
-            nd as usize,
-            nd as usize,
-            nom::number::complete::f64(endianness),
-        )(summary_record_input)?;
+        (summary_record_input, double_precision_components) =
+            nom::multi::many_m_n(nd as usize, nd as usize, nn::f64(endianness))(
+                summary_record_input,
+            )?;
+
+        // The initial and final addresses of an array are always the values of the
+        // final two integer components of the summary for the array.
+        assert!(ni >= 2, "A correct DAF file has NI >= 2");
+        let component_count_without_addresses = ni - 2;
 
         let integer_components;
         (summary_record_input, integer_components) = nom::multi::many_m_n(
-            ni as usize,
-            ni as usize,
-            nom::number::complete::i32(endianness),
+            component_count_without_addresses as usize,
+            component_count_without_addresses as usize,
+            nn::i32(endianness),
         )(summary_record_input)?;
 
+        let initial_address;
+        (summary_record_input, initial_address) = nn::u32(endianness)(summary_record_input)?;
+
+        let final_address;
+        (summary_record_input, final_address) = nn::u32(endianness)(summary_record_input)?;
+
         let name;
-        (name_record_input, name) = nom::bytes::complete::take(nc)(name_record_input)?;
+        (name_record_input, name) = nb::take(nc)(name_record_input)?;
 
         summaries.push(DafSummary {
             name: String::from_utf8_lossy(name).trim().to_string(),
@@ -299,6 +298,8 @@ pub fn parse_daf_summary_and_name_record_pair(
                 double_precision_components,
                 integer_components,
             },
+            initial_address: initial_address.to_usize(),
+            final_address: final_address.to_usize(),
         });
     }
 
@@ -354,11 +355,9 @@ pub fn parse_daf_spk(full_input: &[u8]) -> Result<Spk, DafSpkError> {
 
     let input_cursor = full_input;
 
-    let (input_cursor, (endianness, file_record)) =
-        parse_daf_file_record(input_cursor).map_err(|_| DafSpkError::UnableToParseFileRecord)?;
+    let (input_cursor, (endianness, file_record)) = parse_daf_file_record(input_cursor)?;
 
-    let (_, comment) = parse_daf_comment_area(input_cursor, file_record.fward - 2)
-        .map_err(|_| DafSpkError::UnableToParseCommentArea)?;
+    let (_, comment) = parse_daf_comment_area(input_cursor, file_record.fward - 2)?;
 
     let (_, all_summaries) = parse_all_summary_and_name_record_pairs(
         full_input,
@@ -366,8 +365,7 @@ pub fn parse_daf_spk(full_input: &[u8]) -> Result<Spk, DafSpkError> {
         file_record.nd,
         file_record.ni,
         file_record.fward,
-    )
-    .map_err(|_| DafSpkError::UnableToParseSummaries)?;
+    )?;
 
     let segments = all_summaries
         .iter()
@@ -375,7 +373,7 @@ pub fn parse_daf_spk(full_input: &[u8]) -> Result<Spk, DafSpkError> {
             summary_record
                 .summaries
                 .iter()
-                .map(SpkSegment::from_daf_summary)
+                .map(|summary| parse_spk_segment(summary, full_input, endianness))
                 .collect::<Result<Vec<SpkSegment>, DafSpkError>>()
         })
         .collect::<Result<Vec<_>, DafSpkError>>()?
@@ -387,6 +385,131 @@ pub fn parse_daf_spk(full_input: &[u8]) -> Result<Spk, DafSpkError> {
         file_record,
         comment,
         segments,
+    })
+}
+
+impl<I> From<nom::error::Error<I>> for DafSpkError {
+    fn from(_: nom::error::Error<I>) -> Self {
+        DafSpkError::UnableToParse
+    }
+}
+
+impl<I> From<nom::Err<I>> for DafSpkError {
+    fn from(_: nom::Err<I>) -> Self {
+        DafSpkError::UnableToParse
+    }
+}
+
+pub fn parse_spk_segment(
+    summary: &DafSummary,
+    full_input: &[u8],
+    endianness: nom::number::Endianness,
+) -> Result<SpkSegment, DafSpkError> {
+    let double_precision_components = &summary.components.double_precision_components;
+    let integer_components = &summary.components.integer_components;
+
+    if double_precision_components.len() != 2 {
+        return Err(DafSpkError::UnexpectedNumberOfComponents);
+    }
+
+    // The 2 is for initial address and final address
+    if integer_components.len() + 2 != 6 {
+        return Err(DafSpkError::UnexpectedNumberOfComponents);
+    }
+
+    let data_type = summary.components.integer_components[3];
+    let initial_address = summary.initial_address;
+    let final_address = summary.final_address;
+
+    let data = match data_type {
+        2 => {
+            let size_of_f64 = std::mem::size_of::<f64>();
+
+            // Words are 1-indexed
+            let start_word = initial_address - 1;
+            let initial_byte_address = start_word * size_of_f64;
+
+            let final_word = final_address;
+            let final_byte_address = final_word * size_of_f64;
+
+            let directory_initial_address = final_byte_address - 4 * size_of_f64;
+            let directory_data = &full_input[directory_initial_address..final_byte_address];
+
+            let f64_parser = nn::f64::<&[u8], nom::error::Error<_>>(endianness);
+
+            let (directory_data, init) = f64_parser(directory_data)?;
+            let (directory_data, intlen) = f64_parser(directory_data)?;
+            let (directory_data, rsize) = f64_parser(directory_data)?;
+            let (_, n) = f64_parser(directory_data)?;
+
+            let init = init as u32;
+            let intlen = intlen as u32;
+            let rsize = rsize as u32;
+            let n = n as u32;
+
+            let degree_of_polynomial = (rsize - 2) / 3;
+
+            let mut segment_data = &full_input[initial_byte_address..final_byte_address];
+
+            let mut records: Vec<SpkType2Record> = Vec::with_capacity(n as usize);
+
+            for _ in 0..n {
+                // MID and RADIUS seem to be generally ignored in the industry
+                (segment_data, _) = f64_parser(segment_data)?;
+                (segment_data, _) = f64_parser(segment_data)?;
+
+                // Possibly not the most efficient way of parsing since this can likely trigger
+                // tons of allocations
+                let x_coeff;
+                (segment_data, x_coeff) = nom::multi::many_m_n(
+                    degree_of_polynomial as usize,
+                    degree_of_polynomial as usize,
+                    f64_parser,
+                )(segment_data)?;
+
+                let y_coeff;
+                (segment_data, y_coeff) = nom::multi::many_m_n(
+                    degree_of_polynomial as usize,
+                    degree_of_polynomial as usize,
+                    f64_parser,
+                )(segment_data)?;
+
+                let z_coeff;
+                (segment_data, z_coeff) = nom::multi::many_m_n(
+                    degree_of_polynomial as usize,
+                    degree_of_polynomial as usize,
+                    f64_parser,
+                )(segment_data)?;
+
+                records.push(SpkType2Record {
+                    x: x_coeff,
+                    y: y_coeff,
+                    z: z_coeff,
+                });
+            }
+
+            SpkArray::Type2 {
+                records,
+                init,
+                intlen,
+                rsize,
+                n,
+            }
+        }
+        _ => return Err(DafSpkError::UnsupportedSpkArrayType { data_type }),
+    };
+
+    Ok(SpkSegment {
+        name: summary.name.clone(),
+        initial_epoch: double_precision_components[0],
+        final_epoch: double_precision_components[1],
+        target_id: integer_components[0],
+        center_id: integer_components[1],
+        reference_frame_id: integer_components[2],
+        data_type: integer_components[3],
+        initial_address: summary.initial_address,
+        final_address: summary.final_address,
+        data,
     })
 }
 
