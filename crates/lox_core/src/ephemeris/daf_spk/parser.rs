@@ -1,4 +1,4 @@
-use nom::{error::ErrorKind, ToUsize};
+use nom::error::ErrorKind;
 
 use nom::bytes::complete as nb;
 use nom::number::complete as nn;
