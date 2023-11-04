@@ -298,8 +298,8 @@ pub fn parse_daf_summary_and_name_record_pair(
                 double_precision_components,
                 integer_components,
             },
-            initial_address: initial_address.to_usize(),
-            final_address: final_address.to_usize(),
+            initial_address: initial_address as usize,
+            final_address: final_address as usize,
         });
     }
 
