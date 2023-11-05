@@ -7,6 +7,7 @@
  */
 
 use derive_more::{Deref, From};
+use crate::bodies;
 
 pub mod barycenters;
 pub mod minor;
@@ -78,7 +79,7 @@ pub struct PolynomialCoefficient(f64);
 pub struct RightAscensionCoefficients((PolynomialCoefficient, PolynomialCoefficient));
 
 pub trait RotationalElements: Copy {
-    fn right_ascension_coefficients() -> RightAscensionCoefficients;
+    const RIGHT_ASCENSION_COEFFICIENTS: RightAscensionCoefficients;
 }
 
 #[cfg(test)]
