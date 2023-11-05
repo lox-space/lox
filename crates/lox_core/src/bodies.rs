@@ -6,18 +6,22 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+use derive_more::{Deref, From};
+
 pub mod barycenters;
 pub mod minor;
 pub mod planets;
 pub mod satellites;
 pub mod sun;
 
+// Rather than every instance of an Earth object having a function defined on it, there is only
+// one empty, zero-sized Earth object which shares static associated functions.
 pub trait NaifId: Copy {
     fn id() -> i32;
 }
 
 pub fn naif_id<T: NaifId>(_: T) -> i32 {
-    <T as NaifId>::id()
+    T::id()
 }
 
 pub trait Ellipsoid: Copy {
@@ -60,6 +64,21 @@ pub trait PointMass: Copy {
 
 pub fn gravitational_parameter<T: PointMass>(_: T) -> f64 {
     <T as PointMass>::gravitational_parameter()
+}
+
+#[repr(transparent)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Deref, From)]
+pub struct PolynomialCoefficient(f64);
+
+/// Right ascension polynomial coefficients.
+///
+/// p2 is implicit, being 0.0 for all supported bodies.
+#[repr(transparent)]
+#[derive(Clone, Debug, PartialEq, Eq, Deref, From)]
+pub struct RightAscensionCoefficients((PolynomialCoefficient, PolynomialCoefficient));
+
+pub trait RotationalElements: Copy {
+    fn right_ascension_coefficients() -> RightAscensionCoefficients;
 }
 
 #[cfg(test)]
