@@ -26,7 +26,7 @@ impl Spheroid for Mercury {
     }
 }
 impl RotationalElements for Mercury {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [281.0103f64, -0.0328f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [281.0103f64, -0.0328f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Venus;
@@ -54,7 +54,7 @@ impl Spheroid for Venus {
     }
 }
 impl RotationalElements for Venus {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [272.76f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [272.76f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Earth;
@@ -82,7 +82,7 @@ impl Spheroid for Earth {
     }
 }
 impl RotationalElements for Earth {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [0f64, -0.641f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [0f64, -0.641f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Mars;
@@ -110,7 +110,7 @@ impl Spheroid for Mars {
     }
 }
 impl RotationalElements for Mars {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [317.269202f64, -0.10927547f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [317.269202f64, -0.10927547f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Jupiter;
@@ -138,7 +138,7 @@ impl Spheroid for Jupiter {
     }
 }
 impl RotationalElements for Jupiter {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [268.056595f64, -0.006499f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [268.056595f64, -0.006499f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Saturn;
@@ -166,7 +166,7 @@ impl Spheroid for Saturn {
     }
 }
 impl RotationalElements for Saturn {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [40.589f64, -0.036f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [40.589f64, -0.036f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Uranus;
@@ -194,7 +194,7 @@ impl Spheroid for Uranus {
     }
 }
 impl RotationalElements for Uranus {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [257.311f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [257.311f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Neptune;
@@ -222,7 +222,7 @@ impl Spheroid for Neptune {
     }
 }
 impl RotationalElements for Neptune {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [299.36f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [299.36f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Pluto;
@@ -250,7 +250,7 @@ impl Spheroid for Pluto {
     }
 }
 impl RotationalElements for Pluto {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [132.993f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [132.993f64, 0f64, 0f64];
 }
 #[cfg(test)]
 mod tests {

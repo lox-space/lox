@@ -26,7 +26,7 @@ impl Spheroid for Sun {
     }
 }
 impl RotationalElements for Sun {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [286.13f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [286.13f64, 0f64, 0f64];
 }
 #[cfg(test)]
 mod tests {

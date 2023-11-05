@@ -24,7 +24,7 @@ impl TriAxial for Gaspra {
     }
 }
 impl RotationalElements for Gaspra {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [9.47f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [9.47f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Ida;
@@ -50,7 +50,7 @@ impl TriAxial for Ida {
     }
 }
 impl RotationalElements for Ida {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [168.76f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [168.76f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Dactyl;
@@ -88,7 +88,7 @@ impl TriAxial for Ceres {
     }
 }
 impl RotationalElements for Ceres {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [291.418f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [291.418f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Pallas;
@@ -103,7 +103,7 @@ impl PointMass for Pallas {
     }
 }
 impl RotationalElements for Pallas {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [33f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [33f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Vesta;
@@ -134,7 +134,7 @@ impl TriAxial for Vesta {
     }
 }
 impl RotationalElements for Vesta {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [309.031f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [309.031f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Psyche;
@@ -188,7 +188,7 @@ impl TriAxial for Lutetia {
     }
 }
 impl RotationalElements for Lutetia {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [52f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [52f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Kleopatra;
@@ -226,7 +226,7 @@ impl TriAxial for Eros {
     }
 }
 impl RotationalElements for Eros {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [11.35f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [11.35f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Davida;
@@ -257,7 +257,7 @@ impl TriAxial for Davida {
     }
 }
 impl RotationalElements for Davida {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [297f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [297f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Mathilde;
@@ -306,7 +306,7 @@ impl TriAxial for Steins {
     }
 }
 impl RotationalElements for Steins {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [91f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [91f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Braille;
@@ -369,7 +369,7 @@ impl TriAxial for Itokawa {
     }
 }
 impl RotationalElements for Itokawa {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [90.53f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [90.53f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Bennu;

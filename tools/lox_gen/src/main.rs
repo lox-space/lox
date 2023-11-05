@@ -326,7 +326,7 @@ fn rotational_elements(
         }
     }
 
-    let (ra_p0, ra_p1) = if let Some(rac) = get_ra_coefficients(id, data) {
+    let (ra_p0, ra_p1, ra_p2) = if let Some(rac) = get_ra_coefficients(id, data) {
         rac
     } else {
         return; // RotationalElements can't be implemented for this body
@@ -336,7 +336,7 @@ fn rotational_elements(
         #code
 
         impl RotationalElements for #ident {
-            const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [#ra_p0, #ra_p1];
+            const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [#ra_p0, #ra_p1, #ra_p2];
         }
     };
 
@@ -351,26 +351,22 @@ fn rotational_elements(
     }
 }
 
-fn get_ra_coefficients(id: &i32, data: &Data) -> Option<(f64, f64)> {
+fn get_ra_coefficients(id: &i32, data: &Data) -> Option<(f64, f64, f64)> {
     let key = format!("BODY{id}_POLE_RA");
     match data.pck.get_double_array(&key) {
         None => None,
-        Some(polynomials) if polynomials.len() < 2 => {
+        Some(polynomials) if polynomials.len() == 2 => {
+            Some((polynomials[0], polynomials[1], 0.0))
+        },
+        Some(polynomials) if polynomials.len() == 3 => {
+            Some((polynomials[0], polynomials[1], polynomials[2]))
+        },
+        Some(polynomials) => {
             panic!(
-                "PCK DoubleArray with key {} had size {}, but must be at least 2",
+                "PCK DoubleArray with key {} had size {}, expected 2 <= size <= 3",
                 key,
                 polynomials.len(),
             )
-        },
-        Some(polynomials) if polynomials.len() > 3 => {
-            panic!(
-                "PCK DoubleArray with key {} had size {}, but must be at most 3",
-                key,
-                polynomials.len(),
-            )
-        },
-        // RA coefficients may be given as a pair or triple, but p2 is always 0.0. Hence,
-        // we return only p0 and p1.
-        Some(polynomials) => Some((polynomials[0], polynomials[1]))
+        }
     }
 }

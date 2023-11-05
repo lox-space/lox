@@ -29,7 +29,7 @@ impl TriAxial for Moon {
     }
 }
 impl RotationalElements for Moon {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [269.9949f64, 0.0031f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [269.9949f64, 0.0031f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Phobos;
@@ -60,7 +60,7 @@ impl TriAxial for Phobos {
     }
 }
 impl RotationalElements for Phobos {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [317.67071657f64, -0.10844326f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [317.67071657f64, -0.10844326f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Deimos;
@@ -91,7 +91,7 @@ impl TriAxial for Deimos {
     }
 }
 impl RotationalElements for Deimos {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [316.65705808f64, -0.10518014f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [316.65705808f64, -0.10518014f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Io;
@@ -122,7 +122,7 @@ impl TriAxial for Io {
     }
 }
 impl RotationalElements for Io {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [268.05f64, -0.009f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [268.05f64, -0.009f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Europa;
@@ -153,7 +153,7 @@ impl TriAxial for Europa {
     }
 }
 impl RotationalElements for Europa {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [268.08f64, -0.009f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [268.08f64, -0.009f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Ganymede;
@@ -184,7 +184,7 @@ impl TriAxial for Ganymede {
     }
 }
 impl RotationalElements for Ganymede {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [268.2f64, -0.009f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [268.2f64, -0.009f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Callisto;
@@ -215,7 +215,7 @@ impl TriAxial for Callisto {
     }
 }
 impl RotationalElements for Callisto {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [268.72f64, -0.009f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [268.72f64, -0.009f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Amalthea;
@@ -246,7 +246,7 @@ impl TriAxial for Amalthea {
     }
 }
 impl RotationalElements for Amalthea {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [268.05f64, -0.009f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [268.05f64, -0.009f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Himalia;
@@ -466,7 +466,7 @@ impl TriAxial for Thebe {
     }
 }
 impl RotationalElements for Thebe {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [268.05f64, -0.009f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [268.05f64, -0.009f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Adrastea;
@@ -497,7 +497,7 @@ impl TriAxial for Adrastea {
     }
 }
 impl RotationalElements for Adrastea {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [268.05f64, -0.009f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [268.05f64, -0.009f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Metis;
@@ -528,7 +528,7 @@ impl TriAxial for Metis {
     }
 }
 impl RotationalElements for Metis {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [268.05f64, -0.009f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [268.05f64, -0.009f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Callirrhoe;
@@ -804,7 +804,7 @@ impl TriAxial for Mimas {
     }
 }
 impl RotationalElements for Mimas {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [40.66f64, -0.036f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [40.66f64, -0.036f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Enceladus;
@@ -835,7 +835,7 @@ impl TriAxial for Enceladus {
     }
 }
 impl RotationalElements for Enceladus {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [40.66f64, -0.036f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [40.66f64, -0.036f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Tethys;
@@ -866,7 +866,7 @@ impl TriAxial for Tethys {
     }
 }
 impl RotationalElements for Tethys {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [40.66f64, -0.036f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [40.66f64, -0.036f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Dione;
@@ -897,7 +897,7 @@ impl TriAxial for Dione {
     }
 }
 impl RotationalElements for Dione {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [40.66f64, -0.036f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [40.66f64, -0.036f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Rhea;
@@ -928,7 +928,7 @@ impl TriAxial for Rhea {
     }
 }
 impl RotationalElements for Rhea {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [40.38f64, -0.036f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [40.38f64, -0.036f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Titan;
@@ -959,7 +959,7 @@ impl TriAxial for Titan {
     }
 }
 impl RotationalElements for Titan {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [39.4827f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [39.4827f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Hyperion;
@@ -1018,7 +1018,7 @@ impl TriAxial for Iapetus {
     }
 }
 impl RotationalElements for Iapetus {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [318.16f64, -3.949f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [318.16f64, -3.949f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Phoebe;
@@ -1049,7 +1049,7 @@ impl TriAxial for Phoebe {
     }
 }
 impl RotationalElements for Phoebe {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [356.9f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [356.9f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Janus;
@@ -1080,7 +1080,7 @@ impl TriAxial for Janus {
     }
 }
 impl RotationalElements for Janus {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [40.58f64, -0.036f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [40.58f64, -0.036f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Epimetheus;
@@ -1111,7 +1111,7 @@ impl TriAxial for Epimetheus {
     }
 }
 impl RotationalElements for Epimetheus {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [40.58f64, -0.036f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [40.58f64, -0.036f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Helene;
@@ -1142,7 +1142,7 @@ impl TriAxial for Helene {
     }
 }
 impl RotationalElements for Helene {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [40.85f64, -0.036f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [40.85f64, -0.036f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Telesto;
@@ -1168,7 +1168,7 @@ impl TriAxial for Telesto {
     }
 }
 impl RotationalElements for Telesto {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [50.51f64, -0.036f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [50.51f64, -0.036f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Calypso;
@@ -1194,7 +1194,7 @@ impl TriAxial for Calypso {
     }
 }
 impl RotationalElements for Calypso {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [36.41f64, -0.036f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [36.41f64, -0.036f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Atlas;
@@ -1225,7 +1225,7 @@ impl TriAxial for Atlas {
     }
 }
 impl RotationalElements for Atlas {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [40.58f64, -0.036f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [40.58f64, -0.036f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Prometheus;
@@ -1256,7 +1256,7 @@ impl TriAxial for Prometheus {
     }
 }
 impl RotationalElements for Prometheus {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [40.58f64, -0.036f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [40.58f64, -0.036f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Pandora;
@@ -1287,7 +1287,7 @@ impl TriAxial for Pandora {
     }
 }
 impl RotationalElements for Pandora {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [40.58f64, -0.036f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [40.58f64, -0.036f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Pan;
@@ -1313,7 +1313,7 @@ impl TriAxial for Pan {
     }
 }
 impl RotationalElements for Pan {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [40.6f64, -0.036f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [40.6f64, -0.036f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Ymir;
@@ -1685,7 +1685,7 @@ impl TriAxial for Ariel {
     }
 }
 impl RotationalElements for Ariel {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [257.43f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [257.43f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Umbriel;
@@ -1716,7 +1716,7 @@ impl TriAxial for Umbriel {
     }
 }
 impl RotationalElements for Umbriel {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [257.43f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [257.43f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Titania;
@@ -1747,7 +1747,7 @@ impl TriAxial for Titania {
     }
 }
 impl RotationalElements for Titania {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [257.43f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [257.43f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Oberon;
@@ -1778,7 +1778,7 @@ impl TriAxial for Oberon {
     }
 }
 impl RotationalElements for Oberon {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [257.43f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [257.43f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Miranda;
@@ -1809,7 +1809,7 @@ impl TriAxial for Miranda {
     }
 }
 impl RotationalElements for Miranda {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [257.43f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [257.43f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Cordelia;
@@ -1835,7 +1835,7 @@ impl TriAxial for Cordelia {
     }
 }
 impl RotationalElements for Cordelia {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [257.31f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [257.31f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Ophelia;
@@ -1861,7 +1861,7 @@ impl TriAxial for Ophelia {
     }
 }
 impl RotationalElements for Ophelia {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [257.31f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [257.31f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Bianca;
@@ -1887,7 +1887,7 @@ impl TriAxial for Bianca {
     }
 }
 impl RotationalElements for Bianca {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [257.31f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [257.31f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Cressida;
@@ -1913,7 +1913,7 @@ impl TriAxial for Cressida {
     }
 }
 impl RotationalElements for Cressida {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [257.31f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [257.31f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Desdemona;
@@ -1939,7 +1939,7 @@ impl TriAxial for Desdemona {
     }
 }
 impl RotationalElements for Desdemona {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [257.31f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [257.31f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Juliet;
@@ -1965,7 +1965,7 @@ impl TriAxial for Juliet {
     }
 }
 impl RotationalElements for Juliet {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [257.31f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [257.31f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Portia;
@@ -1991,7 +1991,7 @@ impl TriAxial for Portia {
     }
 }
 impl RotationalElements for Portia {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [257.31f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [257.31f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Rosalind;
@@ -2017,7 +2017,7 @@ impl TriAxial for Rosalind {
     }
 }
 impl RotationalElements for Rosalind {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [257.31f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [257.31f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Belinda;
@@ -2043,7 +2043,7 @@ impl TriAxial for Belinda {
     }
 }
 impl RotationalElements for Belinda {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [257.31f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [257.31f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Puck;
@@ -2069,7 +2069,7 @@ impl TriAxial for Puck {
     }
 }
 impl RotationalElements for Puck {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [257.31f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [257.31f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Caliban;
@@ -2184,7 +2184,7 @@ impl TriAxial for Triton {
     }
 }
 impl RotationalElements for Triton {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [299.36f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [299.36f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Nereid;
@@ -2238,7 +2238,7 @@ impl TriAxial for Naiad {
     }
 }
 impl RotationalElements for Naiad {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [299.36f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [299.36f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Thalassa;
@@ -2269,7 +2269,7 @@ impl TriAxial for Thalassa {
     }
 }
 impl RotationalElements for Thalassa {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [299.36f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [299.36f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Despina;
@@ -2300,7 +2300,7 @@ impl TriAxial for Despina {
     }
 }
 impl RotationalElements for Despina {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [299.36f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [299.36f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Galatea;
@@ -2331,7 +2331,7 @@ impl TriAxial for Galatea {
     }
 }
 impl RotationalElements for Galatea {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [299.36f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [299.36f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Larissa;
@@ -2362,7 +2362,7 @@ impl TriAxial for Larissa {
     }
 }
 impl RotationalElements for Larissa {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [299.36f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [299.36f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Proteus;
@@ -2393,7 +2393,7 @@ impl TriAxial for Proteus {
     }
 }
 impl RotationalElements for Proteus {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [299.27f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [299.27f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Halimede;
@@ -2459,7 +2459,7 @@ impl TriAxial for Charon {
     }
 }
 impl RotationalElements for Charon {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [132.993f64, 0f64];
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [132.993f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Nix;
