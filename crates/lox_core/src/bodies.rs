@@ -74,9 +74,9 @@ pub trait RotationalElements: Copy {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::planets::Earth;
     use super::satellites::Moon;
+    use super::*;
 
     #[test]
     fn test_naif_id() {

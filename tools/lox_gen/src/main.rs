@@ -14,7 +14,7 @@ use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote};
 
 use lox_io::spice::Kernel;
-use naif_ids::{BARYCENTERS, Body, MINOR_BODIES, PLANETS, SATELLITES, SUN};
+use naif_ids::{Body, BARYCENTERS, MINOR_BODIES, PLANETS, SATELLITES, SUN};
 
 mod naif_ids;
 
@@ -39,7 +39,11 @@ pub fn main() {
         .expect("parsing should succeed");
     let data = Data { pck, gm };
     let bodies: [(&str, Vec<Body>, Vec<Generator>); 5] = [
-        ("sun", Vec::from(SUN), vec![naif_id, point_mass, spheroid, rotational_elements]),
+        (
+            "sun",
+            Vec::from(SUN),
+            vec![naif_id, point_mass, spheroid, rotational_elements],
+        ),
         (
             "barycenters",
             Vec::from(BARYCENTERS),
@@ -317,7 +321,7 @@ fn rotational_elements(
 ) {
     let shared_imports = vec![
         format_ident!("RotationalElements"),
-        format_ident!("RACoefficients")
+        format_ident!("RACoefficients"),
     ];
 
     for import in shared_imports {
@@ -355,12 +359,10 @@ fn get_ra_coefficients(id: &i32, data: &Data) -> Option<(f64, f64, f64)> {
     let key = format!("BODY{id}_POLE_RA");
     match data.pck.get_double_array(&key) {
         None => None,
-        Some(polynomials) if polynomials.len() == 2 => {
-            Some((polynomials[0], polynomials[1], 0.0))
-        },
+        Some(polynomials) if polynomials.len() == 2 => Some((polynomials[0], polynomials[1], 0.0)),
         Some(polynomials) if polynomials.len() == 3 => {
             Some((polynomials[0], polynomials[1], polynomials[2]))
-        },
+        }
         Some(polynomials) => {
             panic!(
                 "PCK DoubleArray with key {} had size {}, expected 2 <= size <= 3",
