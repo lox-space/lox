@@ -1,7 +1,11 @@
+use std::collections::HashMap;
+
 use nom::error::ErrorKind;
 
 use nom::bytes::complete as nb;
 use nom::number::complete as nn;
+
+type BodyId = i32;
 
 const RECORD_SIZE: u32 = 1024;
 
@@ -43,24 +47,37 @@ pub enum DafSpkError {
     UnexpectedNumberOfComponents,
     UnableToParse,
     UnsupportedSpkArrayType { data_type: i32 },
+    // Unable to find the segment for a given center body and target body
+    UnableToFindMatchingSegment,
+    // Unable to find record for a given date
+    UnableToFindMatchingRecord,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct SpkType2Record {
-    x: Vec<f64>,
-    y: Vec<f64>,
-    z: Vec<f64>,
+    pub x: Vec<f64>,
+    pub y: Vec<f64>,
+    pub z: Vec<f64>,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct SpkType2Array {
+    pub records: Vec<SpkType2Record>,
+    pub init: u32,
+    pub intlen: u32,
+    pub rsize: u32,
+    pub n: u32,
+}
+
+impl SpkType2Array {
+    pub fn degree_of_polynomial(&self) -> u32 {
+        degree_of_chebyshev_polynomial(self.rsize)
+    }
 }
 
 #[derive(Debug, PartialEq)]
 pub enum SpkArray {
-    Type2 {
-        records: Vec<SpkType2Record>,
-        init: u32,
-        intlen: u32,
-        rsize: u32,
-        n: u32,
-    },
+    Type2(SpkType2Array),
 }
 
 #[derive(Debug, PartialEq)]
@@ -71,11 +88,11 @@ pub struct SpkSegment {
     // In J2000 epoch
     pub final_epoch: f64,
     // NAIF id of the target
-    pub target_id: i32,
+    pub target_id: BodyId,
     // NAIF id of the center
-    pub center_id: i32,
+    pub center_id: BodyId,
     // NAIF id of the reference frame
-    pub reference_frame_id: i32,
+    pub reference_frame_id: BodyId,
     pub data_type: i32,
     pub initial_address: usize,
     pub final_address: usize,
@@ -93,7 +110,7 @@ pub struct DafSummaryRecord {
 pub struct Spk {
     pub file_record: DafFileRecord,
     pub comment: String,
-    pub segments: Vec<SpkSegment>,
+    pub segments: HashMap<BodyId, HashMap<BodyId, SpkSegment>>,
 }
 
 pub fn parse_daf_file_record_endianness(
@@ -367,7 +384,7 @@ pub fn parse_daf_spk(full_input: &[u8]) -> Result<Spk, DafSpkError> {
         file_record.fward,
     )?;
 
-    let segments = all_summaries
+    let segments: HashMap<BodyId, HashMap<BodyId, SpkSegment>> = all_summaries
         .iter()
         .map(|summary_record| {
             summary_record
@@ -379,7 +396,14 @@ pub fn parse_daf_spk(full_input: &[u8]) -> Result<Spk, DafSpkError> {
         .collect::<Result<Vec<_>, DafSpkError>>()?
         .into_iter()
         .flatten()
-        .collect::<_>();
+        .fold(HashMap::new(), |mut map, segment| {
+            map.entry(segment.center_id)
+                .or_default()
+                .entry(segment.target_id)
+                .or_insert(segment);
+
+            map
+        });
 
     Ok(Spk {
         file_record,
@@ -398,6 +422,10 @@ impl<I> From<nom::Err<I>> for DafSpkError {
     fn from(_: nom::Err<I>) -> Self {
         DafSpkError::UnableToParse
     }
+}
+
+fn degree_of_chebyshev_polynomial(rsize: u32) -> u32 {
+    (rsize - 2) / 3
 }
 
 pub fn parse_spk_segment(
@@ -447,7 +475,7 @@ pub fn parse_spk_segment(
             let rsize = rsize as u32;
             let n = n as u32;
 
-            let degree_of_polynomial = (rsize - 2) / 3;
+            let degree_of_polynomial = degree_of_chebyshev_polynomial(rsize);
 
             let mut segment_data = &full_input[initial_byte_address..final_byte_address];
 
@@ -488,13 +516,13 @@ pub fn parse_spk_segment(
                 });
             }
 
-            SpkArray::Type2 {
+            SpkArray::Type2(SpkType2Array {
                 records,
                 init,
                 intlen,
                 rsize,
                 n,
-            }
+            })
         }
         _ => return Err(DafSpkError::UnsupportedSpkArrayType { data_type }),
     };
@@ -514,7 +542,7 @@ pub fn parse_spk_segment(
 }
 
 #[cfg(test)]
-mod test {
+pub mod test {
     use super::*;
 
     #[test]
@@ -637,63 +665,14 @@ name is "19_spk") available from the NAIF website (http://naif.jpl.nasa.gov/tuto
 
     fn get_expected_spk() -> Spk {
         // Values confirmed with JPLEphem.jp and python-jplephem
-        Spk {
-            file_record: DafFileRecord {
-                locidw: "DAF/SPK".to_string(),
-                nd: 2,
-                ni: 6,
-                locifn: "NIO2SPK".to_string(),
-                fward: 4,
-                bward: 4,
-                free: 14967465,
-                locfmt: "LTL-IEEE".to_string(),
-                prenul: vec![
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0,
-                ],
-                ftpstr: vec![
-                    70, 84, 80, 83, 84, 82, 58, 13, 58, 10, 58, 13, 10, 58, 13, 0, 58, 129, 58, 16,
-                    206, 58, 69, 78, 68, 70, 84, 80,
-                ],
-                pstnul: vec![
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                ],
-            },
-            comment: get_expected_comment_string(),
-            segments: vec![SpkSegment {
+
+        let mut segments: HashMap<i32, HashMap<i32, SpkSegment>> = HashMap::new();
+
+        segments
+            .entry(0)
+            .or_default()
+            .entry(1)
+            .or_insert(SpkSegment {
                 name: "DE-0430LE-0430".to_string(),
                 initial_epoch: -14200747200.0,
                 final_epoch: 20514081600.0,
@@ -703,7 +682,7 @@ name is "19_spk") available from the NAIF website (http://naif.jpl.nasa.gov/tuto
                 data_type: 2,
                 initial_address: 641,
                 final_address: 1280,
-                data: SpkArray::Type2 {
+                data: SpkArray::Type2(SpkType2Array {
                     records: vec![
                         SpkType2Record {
                             x: vec![
@@ -1410,8 +1389,66 @@ name is "19_spk") available from the NAIF website (http://naif.jpl.nasa.gov/tuto
                     intlen: 691200,
                     rsize: 44,
                     n: 14,
-                },
-            }],
+                }),
+            });
+
+        Spk {
+            file_record: DafFileRecord {
+                locidw: "DAF/SPK".to_string(),
+                nd: 2,
+                ni: 6,
+                locifn: "NIO2SPK".to_string(),
+                fward: 4,
+                bward: 4,
+                free: 14967465,
+                locfmt: "LTL-IEEE".to_string(),
+                prenul: vec![
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0,
+                ],
+                ftpstr: vec![
+                    70, 84, 80, 83, 84, 82, 58, 13, 58, 10, 58, 13, 10, 58, 13, 0, 58, 129, 58, 16,
+                    206, 58, 69, 78, 68, 70, 84, 80,
+                ],
+                pstnul: vec![
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                ],
+            },
+            comment: get_expected_comment_string(),
+            segments,
         }
     }
 
@@ -1463,7 +1500,7 @@ name is "19_spk") available from the NAIF website (http://naif.jpl.nasa.gov/tuto
         }
     }
 
-    const FILE_CONTENTS: [u8; 10240] = [
+    pub const FILE_CONTENTS: [u8; 10240] = [
         0x44u8, 0x41u8, 0x46u8, 0x2Fu8, 0x53u8, 0x50u8, 0x4Bu8, 0x20u8, 0x02u8, 0x00u8, 0x00u8,
         0x00u8, 0x06u8, 0x00u8, 0x00u8, 0x00u8, 0x4Eu8, 0x49u8, 0x4Fu8, 0x32u8, 0x53u8, 0x50u8,
         0x4Bu8, 0x20u8, 0x20u8, 0x20u8, 0x20u8, 0x20u8, 0x20u8, 0x20u8, 0x20u8, 0x20u8, 0x20u8,
