@@ -12,14 +12,12 @@ pub mod planets;
 pub mod satellites;
 pub mod sun;
 
-// Rather than every instance of an Earth object having a function defined on it, there is only
-// one empty, zero-sized Earth object which shares static associated functions.
 pub trait NaifId: Copy {
     fn id() -> i32;
 }
 
 pub fn naif_id<T: NaifId>(_: T) -> i32 {
-    T::id()
+    <T as NaifId>::id()
 }
 
 pub trait Ellipsoid: Copy {
