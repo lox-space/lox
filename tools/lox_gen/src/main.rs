@@ -12,6 +12,7 @@ use std::process::Command;
 
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote};
+use lox_core::bodies::{PolynomialCoefficient, RightAscensionCoefficients};
 
 use lox_io::spice::Kernel;
 use naif_ids::{Body, BARYCENTERS, MINOR_BODIES, PLANETS, SATELLITES, SUN};
@@ -48,7 +49,7 @@ pub fn main() {
         (
             "planets",
             Vec::from(PLANETS),
-            vec![naif_id, point_mass, spheroid],
+            vec![naif_id, point_mass, spheroid, rotational_elements],
         ),
         (
             "satellites",
@@ -304,4 +305,57 @@ fn point_mass(
             }
         }
     };
+}
+
+/// Generates implementations for [lox_core::bodies::RotationalElements].
+fn rotational_elements(
+    imports: &mut Vec<Ident>,
+    code: &mut TokenStream,
+    tests: &mut TokenStream,
+    ident: &Ident,
+    id: &i32,
+    data: &Data,
+) {
+    let shared_imports = vec![
+        format_ident!("RotationalElements"),
+        format_ident!("PolynomialCoefficient"),
+        format_ident!("RightAscensionCoefficients")
+    ];
+
+    for import in shared_imports {
+        if !imports.contains(&import) {
+            imports.push(import)
+        }
+    }
+
+    let (ra_p0, ra_p1) = get_ra_coefficients(id, data);
+    *code = quote! {
+        #code
+
+        impl RotationalElements for #ident {
+            const RIGHT_ASCENSION_COEFFICIENTS: RightAscensionCoefficients = RightAscensionCoefficients(PolynomialCoefficient(#ra_p0), PolynomialCoefficient(#ra_p1));
+        }
+    }
+}
+
+fn get_ra_coefficients(id: &i32, data: &Data) -> (f64, f64) {
+    let key = format!("BODY{id}_POLE_RA");
+    match data.pck.get_double_array(&key) {
+        None => panic!("{} was not found in PCK data", key),
+        Some(polynomials) if polynomials.len() < 2 => {
+            panic!(
+                "PCK DoubleArray with key {} had size {}, but must be at least 2",
+                key,
+                polynomials.len(),
+            )
+        },
+        Some(polynomials) if polynomials.len() > 3 => {
+            panic!(
+                "PCK DoubleArray with key {} had size {}, but must be at most 3",
+                key,
+                polynomials.len(),
+            )
+        },
+        Some(polynomials) => (polynomials[0], polynomials[1])
+    }
 }

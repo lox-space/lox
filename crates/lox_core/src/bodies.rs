@@ -67,16 +67,15 @@ pub fn gravitational_parameter<T: PointMass>(_: T) -> f64 {
     <T as PointMass>::gravitational_parameter()
 }
 
-#[repr(transparent)]
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Deref, From)]
-pub struct PolynomialCoefficient(f64);
+#[derive(Copy, Clone, Debug, PartialEq, PartialOrd, Deref, From)]
+pub struct PolynomialCoefficient(pub f64);
 
 /// Right ascension polynomial coefficients.
 ///
 /// p2 is implicit, being 0.0 for all supported bodies.
-#[repr(transparent)]
-#[derive(Clone, Debug, PartialEq, Eq, Deref, From)]
-pub struct RightAscensionCoefficients((PolynomialCoefficient, PolynomialCoefficient));
+#[derive(Clone, Debug, PartialEq, From)]
+#[from(forward)]
+pub struct RightAscensionCoefficients(pub PolynomialCoefficient, pub PolynomialCoefficient);
 
 pub trait RotationalElements: Copy {
     const RIGHT_ASCENSION_COEFFICIENTS: RightAscensionCoefficients;
