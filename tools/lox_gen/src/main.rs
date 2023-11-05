@@ -13,10 +13,12 @@ use std::process::Command;
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote};
 
+use crate::rotational_elements::RotationalElements;
 use lox_io::spice::Kernel;
 use naif_ids::{Body, BARYCENTERS, MINOR_BODIES, PLANETS, SATELLITES, SUN};
 
 mod naif_ids;
+mod rotational_elements;
 
 type Generator = fn(
     imports: &mut Vec<Ident>,
@@ -330,62 +332,12 @@ fn rotational_elements(
         }
     }
 
-    let right_ascension_key = format!("BODY{}_POLE_RA", *id);
-    let (ra_p0, ra_p1, ra_p2) =
-        if let Some(rac) = get_polynomial_coefficients(&right_ascension_key, data) {
-            rac
-        } else {
-            return; // RotationalElements can't be implemented for this body
-        };
-
-    let declination_key = format!("BODY{}_POLE_DEC", *id);
-    let (dec_p0, dec_p1, dec_p2) =
-        if let Some(dec) = get_polynomial_coefficients(&declination_key, data) {
-            dec
-        } else {
-            return;
-        };
-
-    *code = quote! {
-        #code
-
-        impl RotationalElements for #ident {
-            const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [#ra_p0, #ra_p1, #ra_p2];
-            const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [#dec_p0, #dec_p1, #dec_p2];
-        }
+    let rot_el = if let Some(rot_el) = RotationalElements::parse(*id, ident, data) {
+        rot_el
+    } else {
+        return;
     };
 
-    let right_ascension_test_name =
-        format_ident!("test_right_ascension_coefficients_{}", *id as u32);
-    let declination_test_name = format_ident!("test_declination_coefficients_{}", *id as u32);
-    *tests = quote! {
-        #tests
-
-        #[test]
-        fn #right_ascension_test_name() {
-            assert_eq!([#ra_p0, #ra_p1, #ra_p2], #ident::RIGHT_ASCENSION_COEFFICIENTS)
-        }
-
-        #[test]
-        fn #declination_test_name() {
-            assert_eq!([#dec_p0, #dec_p1, #dec_p2], #ident::DECLINATION_COEFFICIENTS)
-        }
-    }
-}
-
-fn get_polynomial_coefficients(key: &str, data: &Data) -> Option<(f64, f64, f64)> {
-    match data.pck.get_double_array(key) {
-        None => None,
-        Some(polynomials) if polynomials.len() == 2 => Some((polynomials[0], polynomials[1], 0.0)),
-        Some(polynomials) if polynomials.len() == 3 => {
-            Some((polynomials[0], polynomials[1], polynomials[2]))
-        }
-        Some(polynomials) => {
-            panic!(
-                "PCK DoubleArray with key {} had size {}, expected 2 <= size <= 3",
-                key,
-                polynomials.len(),
-            )
-        }
-    }
+    code.extend(rot_el.code_tokens());
+    tests.extend(rot_el.test_tokens());
 }
