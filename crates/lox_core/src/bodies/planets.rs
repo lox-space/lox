@@ -272,7 +272,7 @@ mod tests {
     #[test]
     fn test_ra_coefficients_199() {
         assert_eq!(
-            [281.0103f64, -0.0328f64],
+            [281.0103f64, -0.0328f64, 0f64],
             Mercury::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
@@ -292,7 +292,7 @@ mod tests {
     }
     #[test]
     fn test_ra_coefficients_299() {
-        assert_eq!([272.76f64, 0f64], Venus::RIGHT_ASCENSION_COEFFICIENTS)
+        assert_eq!([272.76f64, 0f64, 0f64], Venus::RIGHT_ASCENSION_COEFFICIENTS)
     }
     #[test]
     fn test_naif_id_399() {
@@ -310,7 +310,7 @@ mod tests {
     }
     #[test]
     fn test_ra_coefficients_399() {
-        assert_eq!([0f64, -0.641f64], Earth::RIGHT_ASCENSION_COEFFICIENTS)
+        assert_eq!([0f64, -0.641f64, 0f64], Earth::RIGHT_ASCENSION_COEFFICIENTS)
     }
     #[test]
     fn test_naif_id_499() {
@@ -329,7 +329,7 @@ mod tests {
     #[test]
     fn test_ra_coefficients_499() {
         assert_eq!(
-            [317.269202f64, -0.10927547f64],
+            [317.269202f64, -0.10927547f64, 0f64],
             Mars::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
@@ -350,7 +350,7 @@ mod tests {
     #[test]
     fn test_ra_coefficients_599() {
         assert_eq!(
-            [268.056595f64, -0.006499f64],
+            [268.056595f64, -0.006499f64, 0f64],
             Jupiter::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
@@ -370,7 +370,10 @@ mod tests {
     }
     #[test]
     fn test_ra_coefficients_699() {
-        assert_eq!([40.589f64, -0.036f64], Saturn::RIGHT_ASCENSION_COEFFICIENTS)
+        assert_eq!(
+            [40.589f64, -0.036f64, 0f64],
+            Saturn::RIGHT_ASCENSION_COEFFICIENTS
+        )
     }
     #[test]
     fn test_naif_id_799() {
@@ -388,7 +391,10 @@ mod tests {
     }
     #[test]
     fn test_ra_coefficients_799() {
-        assert_eq!([257.311f64, 0f64], Uranus::RIGHT_ASCENSION_COEFFICIENTS)
+        assert_eq!(
+            [257.311f64, 0f64, 0f64],
+            Uranus::RIGHT_ASCENSION_COEFFICIENTS
+        )
     }
     #[test]
     fn test_naif_id_899() {
@@ -406,7 +412,10 @@ mod tests {
     }
     #[test]
     fn test_ra_coefficients_899() {
-        assert_eq!([299.36f64, 0f64], Neptune::RIGHT_ASCENSION_COEFFICIENTS)
+        assert_eq!(
+            [299.36f64, 0f64, 0f64],
+            Neptune::RIGHT_ASCENSION_COEFFICIENTS
+        )
     }
     #[test]
     fn test_naif_id_999() {
@@ -424,6 +433,9 @@ mod tests {
     }
     #[test]
     fn test_ra_coefficients_999() {
-        assert_eq!([132.993f64, 0f64], Pluto::RIGHT_ASCENSION_COEFFICIENTS)
+        assert_eq!(
+            [132.993f64, 0f64, 0f64],
+            Pluto::RIGHT_ASCENSION_COEFFICIENTS
+        )
     }
 }

@@ -47,6 +47,6 @@ mod tests {
     }
     #[test]
     fn test_ra_coefficients_10() {
-        assert_eq!([286.13f64, 0f64], Sun::RIGHT_ASCENSION_COEFFICIENTS)
+        assert_eq!([286.13f64, 0f64, 0f64], Sun::RIGHT_ASCENSION_COEFFICIENTS)
     }
 }

@@ -394,7 +394,7 @@ mod tests {
     }
     #[test]
     fn test_ra_coefficients_9511010() {
-        assert_eq!([9.47f64, 0f64], Gaspra::RIGHT_ASCENSION_COEFFICIENTS)
+        assert_eq!([9.47f64, 0f64, 0f64], Gaspra::RIGHT_ASCENSION_COEFFICIENTS)
     }
     #[test]
     fn test_naif_id_2431010() {
@@ -409,7 +409,7 @@ mod tests {
     }
     #[test]
     fn test_ra_coefficients_2431010() {
-        assert_eq!([168.76f64, 0f64], Ida::RIGHT_ASCENSION_COEFFICIENTS)
+        assert_eq!([168.76f64, 0f64, 0f64], Ida::RIGHT_ASCENSION_COEFFICIENTS)
     }
     #[test]
     fn test_naif_id_2431011() {
@@ -432,7 +432,10 @@ mod tests {
     }
     #[test]
     fn test_ra_coefficients_2000001() {
-        assert_eq!([291.418f64, 0f64], Ceres::RIGHT_ASCENSION_COEFFICIENTS)
+        assert_eq!(
+            [291.418f64, 0f64, 0f64],
+            Ceres::RIGHT_ASCENSION_COEFFICIENTS
+        )
     }
     #[test]
     fn test_naif_id_2000002() {
@@ -444,7 +447,7 @@ mod tests {
     }
     #[test]
     fn test_ra_coefficients_2000002() {
-        assert_eq!([33f64, 0f64], Pallas::RIGHT_ASCENSION_COEFFICIENTS)
+        assert_eq!([33f64, 0f64, 0f64], Pallas::RIGHT_ASCENSION_COEFFICIENTS)
     }
     #[test]
     fn test_naif_id_2000004() {
@@ -463,7 +466,10 @@ mod tests {
     }
     #[test]
     fn test_ra_coefficients_2000004() {
-        assert_eq!([309.031f64, 0f64], Vesta::RIGHT_ASCENSION_COEFFICIENTS)
+        assert_eq!(
+            [309.031f64, 0f64, 0f64],
+            Vesta::RIGHT_ASCENSION_COEFFICIENTS
+        )
     }
     #[test]
     fn test_naif_id_2000016() {
@@ -493,7 +499,7 @@ mod tests {
     }
     #[test]
     fn test_ra_coefficients_2000021() {
-        assert_eq!([52f64, 0f64], Lutetia::RIGHT_ASCENSION_COEFFICIENTS)
+        assert_eq!([52f64, 0f64, 0f64], Lutetia::RIGHT_ASCENSION_COEFFICIENTS)
     }
     #[test]
     fn test_naif_id_2000216() {
@@ -516,7 +522,7 @@ mod tests {
     }
     #[test]
     fn test_ra_coefficients_2000433() {
-        assert_eq!([11.35f64, 0f64], Eros::RIGHT_ASCENSION_COEFFICIENTS)
+        assert_eq!([11.35f64, 0f64, 0f64], Eros::RIGHT_ASCENSION_COEFFICIENTS)
     }
     #[test]
     fn test_naif_id_2000511() {
@@ -535,7 +541,7 @@ mod tests {
     }
     #[test]
     fn test_ra_coefficients_2000511() {
-        assert_eq!([297f64, 0f64], Davida::RIGHT_ASCENSION_COEFFICIENTS)
+        assert_eq!([297f64, 0f64, 0f64], Davida::RIGHT_ASCENSION_COEFFICIENTS)
     }
     #[test]
     fn test_naif_id_2000253() {
@@ -561,7 +567,7 @@ mod tests {
     }
     #[test]
     fn test_ra_coefficients_2002867() {
-        assert_eq!([91f64, 0f64], Steins::RIGHT_ASCENSION_COEFFICIENTS)
+        assert_eq!([91f64, 0f64, 0f64], Steins::RIGHT_ASCENSION_COEFFICIENTS)
     }
     #[test]
     fn test_naif_id_2009969() {
@@ -595,7 +601,10 @@ mod tests {
     }
     #[test]
     fn test_ra_coefficients_2025143() {
-        assert_eq!([90.53f64, 0f64], Itokawa::RIGHT_ASCENSION_COEFFICIENTS)
+        assert_eq!(
+            [90.53f64, 0f64, 0f64],
+            Itokawa::RIGHT_ASCENSION_COEFFICIENTS
+        )
     }
     #[test]
     fn test_naif_id_2101955() {
