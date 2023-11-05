@@ -12,10 +12,9 @@ use std::process::Command;
 
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote};
-use lox_core::bodies::{PolynomialCoefficient, RightAscensionCoefficients};
 
 use lox_io::spice::Kernel;
-use naif_ids::{Body, BARYCENTERS, MINOR_BODIES, PLANETS, SATELLITES, SUN};
+use naif_ids::{BARYCENTERS, Body, MINOR_BODIES, PLANETS, SATELLITES, SUN};
 
 mod naif_ids;
 
@@ -40,7 +39,7 @@ pub fn main() {
         .expect("parsing should succeed");
     let data = Data { pck, gm };
     let bodies: [(&str, Vec<Body>, Vec<Generator>); 5] = [
-        ("sun", Vec::from(SUN), vec![naif_id, point_mass, spheroid]),
+        ("sun", Vec::from(SUN), vec![naif_id, point_mass, spheroid, rotational_elements]),
         (
             "barycenters",
             Vec::from(BARYCENTERS),
@@ -54,12 +53,12 @@ pub fn main() {
         (
             "satellites",
             Vec::from(SATELLITES),
-            vec![naif_id, point_mass, tri_axial],
+            vec![naif_id, point_mass, tri_axial, rotational_elements],
         ),
         (
             "minor",
             Vec::from(MINOR_BODIES),
-            vec![naif_id, point_mass, tri_axial],
+            vec![naif_id, point_mass, tri_axial, rotational_elements],
         ),
     ];
     bodies
@@ -318,8 +317,7 @@ fn rotational_elements(
 ) {
     let shared_imports = vec![
         format_ident!("RotationalElements"),
-        format_ident!("PolynomialCoefficient"),
-        format_ident!("RightAscensionCoefficients")
+        format_ident!("RACoefficients")
     ];
 
     for import in shared_imports {
@@ -328,20 +326,35 @@ fn rotational_elements(
         }
     }
 
-    let (ra_p0, ra_p1) = get_ra_coefficients(id, data);
+    let (ra_p0, ra_p1) = if let Some(rac) = get_ra_coefficients(id, data) {
+        rac
+    } else {
+        return; // RotationalElements can't be implemented for this body
+    };
+
     *code = quote! {
         #code
 
         impl RotationalElements for #ident {
-            const RIGHT_ASCENSION_COEFFICIENTS: RightAscensionCoefficients = RightAscensionCoefficients(PolynomialCoefficient(#ra_p0), PolynomialCoefficient(#ra_p1));
+            const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [#ra_p0, #ra_p1];
+        }
+    };
+
+    let ra_test_name = format_ident!("test_ra_coefficients_{}", *id as u32);
+    *tests = quote! {
+        #tests
+
+        #[test]
+        fn #ra_test_name() {
+            assert_eq!([#ra_p0, #ra_p1], #ident::RIGHT_ASCENSION_COEFFICIENTS)
         }
     }
 }
 
-fn get_ra_coefficients(id: &i32, data: &Data) -> (f64, f64) {
+fn get_ra_coefficients(id: &i32, data: &Data) -> Option<(f64, f64)> {
     let key = format!("BODY{id}_POLE_RA");
     match data.pck.get_double_array(&key) {
-        None => panic!("{} was not found in PCK data", key),
+        None => None,
         Some(polynomials) if polynomials.len() < 2 => {
             panic!(
                 "PCK DoubleArray with key {} had size {}, but must be at least 2",
@@ -356,6 +369,8 @@ fn get_ra_coefficients(id: &i32, data: &Data) -> (f64, f64) {
                 polynomials.len(),
             )
         },
-        Some(polynomials) => (polynomials[0], polynomials[1])
+        // RA coefficients may be given as a pair or triple, but p2 is always 0.0. Hence,
+        // we return only p0 and p1.
+        Some(polynomials) => Some((polynomials[0], polynomials[1]))
     }
 }

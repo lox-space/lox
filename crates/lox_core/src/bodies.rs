@@ -6,9 +6,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-use derive_more::{Deref, From};
-use crate::bodies;
-
 pub mod barycenters;
 pub mod minor;
 pub mod planets;
@@ -67,25 +64,23 @@ pub fn gravitational_parameter<T: PointMass>(_: T) -> f64 {
     <T as PointMass>::gravitational_parameter()
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, PartialOrd, Deref, From)]
-pub struct PolynomialCoefficient(pub f64);
+/// Semantic type alias for f64 in the context of polynomial types and operations.
+pub type PolynomialCoefficient = f64;
 
 /// Right ascension polynomial coefficients.
 ///
 /// p2 is implicit, being 0.0 for all supported bodies.
-#[derive(Clone, Debug, PartialEq, From)]
-#[from(forward)]
-pub struct RightAscensionCoefficients(pub PolynomialCoefficient, pub PolynomialCoefficient);
+pub type RACoefficients = [PolynomialCoefficient; 2];
 
 pub trait RotationalElements: Copy {
-    const RIGHT_ASCENSION_COEFFICIENTS: RightAscensionCoefficients;
+    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients;
 }
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use super::planets::Earth;
     use super::satellites::Moon;
-    use super::*;
 
     #[test]
     fn test_naif_id() {
