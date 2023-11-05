@@ -65,11 +65,9 @@ pub fn gravitational_parameter<T: PointMass>(_: T) -> f64 {
 /// Semantic type alias for f64 in the context of polynomial types and operations.
 pub type PolynomialCoefficient = f64;
 
-// Right ascension polynomial coefficients.
-pub type RACoefficients = [PolynomialCoefficient; 3];
-
 pub trait RotationalElements: Copy {
-    const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients;
+    const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3];
+    const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3];
 }
 
 #[cfg(test)]

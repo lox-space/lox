@@ -321,7 +321,7 @@ fn rotational_elements(
 ) {
     let shared_imports = vec![
         format_ident!("RotationalElements"),
-        format_ident!("RACoefficients"),
+        format_ident!("PolynomialCoefficient"),
     ];
 
     for import in shared_imports {
@@ -330,34 +330,51 @@ fn rotational_elements(
         }
     }
 
-    let (ra_p0, ra_p1, ra_p2) = if let Some(rac) = get_ra_coefficients(id, data) {
-        rac
-    } else {
-        return; // RotationalElements can't be implemented for this body
-    };
+    let right_ascension_key = format!("BODY{}_POLE_RA", *id);
+    let (ra_p0, ra_p1, ra_p2) =
+        if let Some(rac) = get_polynomial_coefficients(&right_ascension_key, data) {
+            rac
+        } else {
+            return; // RotationalElements can't be implemented for this body
+        };
+
+    let declination_key = format!("BODY{}_POLE_DEC", *id);
+    let (dec_p0, dec_p1, dec_p2) =
+        if let Some(dec) = get_polynomial_coefficients(&declination_key, data) {
+            dec
+        } else {
+            return;
+        };
 
     *code = quote! {
         #code
 
         impl RotationalElements for #ident {
-            const RIGHT_ASCENSION_COEFFICIENTS: RACoefficients = [#ra_p0, #ra_p1, #ra_p2];
+            const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [#ra_p0, #ra_p1, #ra_p2];
+            const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [#dec_p0, #dec_p1, #dec_p2];
         }
     };
 
-    let ra_test_name = format_ident!("test_ra_coefficients_{}", *id as u32);
+    let right_ascension_test_name =
+        format_ident!("test_right_ascension_coefficients_{}", *id as u32);
+    let declination_test_name = format_ident!("test_declination_coefficients_{}", *id as u32);
     *tests = quote! {
         #tests
 
         #[test]
-        fn #ra_test_name() {
+        fn #right_ascension_test_name() {
             assert_eq!([#ra_p0, #ra_p1, #ra_p2], #ident::RIGHT_ASCENSION_COEFFICIENTS)
+        }
+
+        #[test]
+        fn #declination_test_name() {
+            assert_eq!([#dec_p0, #dec_p1, #dec_p2], #ident::DECLINATION_COEFFICIENTS)
         }
     }
 }
 
-fn get_ra_coefficients(id: &i32, data: &Data) -> Option<(f64, f64, f64)> {
-    let key = format!("BODY{id}_POLE_RA");
-    match data.pck.get_double_array(&key) {
+fn get_polynomial_coefficients(key: &str, data: &Data) -> Option<(f64, f64, f64)> {
+    match data.pck.get_double_array(key) {
         None => None,
         Some(polynomials) if polynomials.len() == 2 => Some((polynomials[0], polynomials[1], 0.0)),
         Some(polynomials) if polynomials.len() == 3 => {
