@@ -346,7 +346,7 @@ fn rotational_elements(
 
         #[test]
         fn #ra_test_name() {
-            assert_eq!([#ra_p0, #ra_p1], #ident::RIGHT_ASCENSION_COEFFICIENTS)
+            assert_eq!([#ra_p0, #ra_p1, #ra_p2], #ident::RIGHT_ASCENSION_COEFFICIENTS)
         }
     }
 }
