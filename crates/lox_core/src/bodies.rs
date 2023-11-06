@@ -6,8 +6,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-use std::char::MAX;
-
 pub mod barycenters;
 pub mod minor;
 pub mod planets;
@@ -74,7 +72,9 @@ pub trait RotationalElements: Copy {
 }
 
 pub trait TrigonometricRotationalElements: RotationalElements {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient];
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient];
 }
 
 #[cfg(test)]

@@ -6,6 +6,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
@@ -13,15 +14,16 @@ use std::process::Command;
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote};
 
-use crate::rotational_elements::RotationalElements;
 use lox_io::spice::Kernel;
 use naif_ids::{Body, BARYCENTERS, MINOR_BODIES, PLANETS, SATELLITES, SUN};
+
+use crate::rotational_elements::RotationalElements;
 
 mod naif_ids;
 mod rotational_elements;
 
 type Generator = fn(
-    imports: &mut Vec<Ident>,
+    imports: &mut HashSet<Ident>,
     code: &mut TokenStream,
     tests: &mut TokenStream,
     ident: &Ident,
@@ -86,7 +88,7 @@ fn write_file(file: &str, bodies: &[Body], generators: &[Generator], data: &Data
 }
 
 fn generate_code(bodies: &[Body], generators: &[Generator], data: &Data) -> String {
-    let mut imports: Vec<Ident> = Vec::new();
+    let mut imports: HashSet<Ident> = HashSet::new();
     let mut code = quote!();
     let mut tests = quote!();
 
@@ -102,8 +104,9 @@ fn generate_code(bodies: &[Body], generators: &[Generator], data: &Data) -> Stri
             .for_each(|generator| generator(&mut imports, &mut code, &mut tests, &ident, id, data))
     });
 
+    let imports_iter = imports.iter();
     let module = quote! {
-        use super::{#(#imports),*};
+        use super::{#(#imports_iter),*};
 
         #code
 
@@ -118,18 +121,14 @@ fn generate_code(bodies: &[Body], generators: &[Generator], data: &Data) -> Stri
 }
 
 fn naif_id(
-    imports: &mut Vec<Ident>,
+    imports: &mut HashSet<Ident>,
     code: &mut TokenStream,
     tests: &mut TokenStream,
     ident: &Ident,
     id: &i32,
     _data: &Data,
 ) {
-    let trait_name = format_ident!("NaifId");
-
-    if !imports.contains(&trait_name) {
-        imports.push(trait_name);
-    }
+    imports.insert(format_ident!("NaifId"));
 
     *code = quote! {
         #code
@@ -154,22 +153,14 @@ fn naif_id(
 }
 
 fn spheroid(
-    imports: &mut Vec<Ident>,
+    imports: &mut HashSet<Ident>,
     code: &mut TokenStream,
     tests: &mut TokenStream,
     ident: &Ident,
     id: &i32,
     data: &Data,
 ) {
-    let trait_name = format_ident!("Ellipsoid");
-    if !imports.contains(&trait_name) {
-        imports.push(trait_name);
-    }
-
-    let trait_name = format_ident!("Spheroid");
-    if !imports.contains(&trait_name) {
-        imports.push(trait_name);
-    }
+    imports.extend([format_ident!("Ellipsoid"), format_ident!("Spheroid")]);
 
     let radii = format!("BODY{id}_RADII");
     if let Some(radii) = data.pck.get_double_array(&radii) {
@@ -212,22 +203,14 @@ fn spheroid(
 }
 
 fn tri_axial(
-    imports: &mut Vec<Ident>,
+    imports: &mut HashSet<Ident>,
     code: &mut TokenStream,
     tests: &mut TokenStream,
     ident: &Ident,
     id: &i32,
     data: &Data,
 ) {
-    let trait_name = format_ident!("Ellipsoid");
-    if !imports.contains(&trait_name) {
-        imports.push(trait_name);
-    }
-
-    let trait_name = format_ident!("TriAxial");
-    if !imports.contains(&trait_name) {
-        imports.push(trait_name);
-    }
+    imports.extend([format_ident!("Ellipsoid"), format_ident!("TriAxial")]);
 
     let radii = format!("BODY{id}_RADII");
     if let Some(radii) = data.pck.get_double_array(&radii) {
@@ -275,17 +258,15 @@ fn tri_axial(
 }
 
 fn point_mass(
-    imports: &mut Vec<Ident>,
+    imports: &mut HashSet<Ident>,
     code: &mut TokenStream,
     tests: &mut TokenStream,
     ident: &Ident,
     id: &i32,
     data: &Data,
 ) {
-    let trait_name = format_ident!("PointMass");
-    if !imports.contains(&trait_name) {
-        imports.push(trait_name);
-    }
+    imports.insert(format_ident!("PointMass"));
+
     let key = format!("BODY{id}_GM");
     if let Some(gm) = data.gm.get_double_array(&key) {
         let gm = gm.first().unwrap();
@@ -314,30 +295,26 @@ fn point_mass(
 
 /// Generates implementations for [lox_core::bodies::RotationalElements].
 fn rotational_elements(
-    imports: &mut Vec<Ident>,
+    imports: &mut HashSet<Ident>,
     code: &mut TokenStream,
     tests: &mut TokenStream,
     ident: &Ident,
     id: &i32,
     data: &Data,
 ) {
-    let shared_imports = vec![
-        format_ident!("RotationalElements"),
-        format_ident!("TrigonometricRotationalElements"),
-        format_ident!("PolynomialCoefficient"),
-    ];
-
-    for import in shared_imports {
-        if !imports.contains(&import) {
-            imports.push(import)
-        }
-    }
-
     let elements = if let Some(elements) = RotationalElements::parse(*id, ident, &data.pck) {
         elements
     } else {
         return;
     };
+
+    imports.extend([
+        format_ident!("RotationalElements"),
+        format_ident!("PolynomialCoefficient"),
+    ]);
+    if elements.has_trig_elements() {
+        imports.insert(format_ident!("TrigonometricRotationalElements"));
+    }
 
     code.extend(elements.code_tokens());
     tests.extend(elements.test_tokens());

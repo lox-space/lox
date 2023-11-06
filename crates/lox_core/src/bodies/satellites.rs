@@ -38,9 +38,17 @@ impl RotationalElements for Moon {
         [38.3213f64, 13.17635815f64, -0.0000000000014f64];
 }
 impl TrigonometricRotationalElements for Moon {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         -3.8787f64, -0.1204f64, 0.07f64, -0.0172f64, 0f64, 0.0072f64, 0f64, 0f64, 0f64, -0.0052f64,
         0f64, 0f64, 0.0043f64,
+    ];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        1.5419f64, 0.0239f64, -0.0278f64, 0.0068f64, 0f64, -0.0029f64, 0.0009f64, 0f64, 0f64,
+        0.0008f64, 0f64, 0f64, -0.0009f64,
+    ];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        3.561f64, 0.1208f64, -0.0642f64, 0.0158f64, 0.0252f64, -0.0066f64, -0.0047f64, -0.0046f64,
+        0.0028f64, 0.0052f64, 0.004f64, 0.0019f64, -0.0044f64,
     ];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -83,11 +91,20 @@ impl RotationalElements for Phobos {
     ];
 }
 impl TrigonometricRotationalElements for Phobos {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         -1.78428399f64,
         0.02212824f64,
         -0.01028251f64,
         -0.00475595f64,
+    ];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] =
+        &[-1.07516537f64, 0.00668626f64, -0.0064874f64, 0.00281576f64];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        1.42421769f64,
+        -0.02273783f64,
+        0.00410711f64,
+        0.00631964f64,
+        -1.143f64,
     ];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -127,7 +144,7 @@ impl RotationalElements for Deimos {
         [79.39932954f64, 285.16188899f64, 0f64];
 }
 impl TrigonometricRotationalElements for Deimos {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64,
         0f64,
         0f64,
@@ -138,6 +155,30 @@ impl TrigonometricRotationalElements for Deimos {
         0.06418655f64,
         0.02533537f64,
         0.00778695f64,
+    ];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0f64,
+        0f64,
+        0f64,
+        0f64,
+        0f64,
+        1.83936004f64,
+        0.1432532f64,
+        0.01911409f64,
+        -0.0148259f64,
+        0.0019243f64,
+    ];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0f64,
+        0f64,
+        0f64,
+        0f64,
+        0f64,
+        -2.73954829f64,
+        -0.39968606f64,
+        -0.06563259f64,
+        -0.0291294f64,
+        0.0169916f64,
     ];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -175,8 +216,12 @@ impl RotationalElements for Io {
         [200.39f64, 203.4889538f64, 0f64];
 }
 impl TrigonometricRotationalElements for Io {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] =
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] =
         &[0f64, 0f64, 0.094f64, 0.024f64];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] =
+        &[0f64, 0f64, 0.04f64, 0.011f64];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] =
+        &[0f64, 0f64, -0.085f64, -0.022f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Europa;
@@ -213,8 +258,12 @@ impl RotationalElements for Europa {
         [36.022f64, 101.3747235f64, 0f64];
 }
 impl TrigonometricRotationalElements for Europa {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] =
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] =
         &[0f64, 0f64, 0f64, 1.086f64, 0.06f64, 0.015f64, 0.009f64];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] =
+        &[0f64, 0f64, 0f64, 0.468f64, 0.026f64, 0.007f64, 0.002f64];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] =
+        &[0f64, 0f64, 0f64, -0.98f64, -0.054f64, -0.014f64, -0.008f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Ganymede;
@@ -251,8 +300,12 @@ impl RotationalElements for Ganymede {
         [44.064f64, 50.3176081f64, 0f64];
 }
 impl TrigonometricRotationalElements for Ganymede {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] =
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] =
         &[0f64, 0f64, 0f64, -0.037f64, 0.431f64, 0.091f64];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] =
+        &[0f64, 0f64, 0f64, -0.016f64, 0.186f64, 0.039f64];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] =
+        &[0f64, 0f64, 0f64, 0.033f64, -0.389f64, -0.082f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Callisto;
@@ -289,8 +342,12 @@ impl RotationalElements for Callisto {
         [259.51f64, 21.5710715f64, 0f64];
 }
 impl TrigonometricRotationalElements for Callisto {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] =
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] =
         &[0f64, 0f64, 0f64, 0f64, -0.068f64, 0.59f64, 0f64, 0.01f64];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] =
+        &[0f64, 0f64, 0f64, 0f64, -0.029f64, 0.254f64, 0f64, -0.004f64];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] =
+        &[0f64, 0f64, 0f64, 0f64, 0.061f64, -0.533f64, 0f64, -0.009f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Amalthea;
@@ -327,8 +384,14 @@ impl RotationalElements for Amalthea {
         [231.67f64, 722.631456f64, 0f64];
 }
 impl TrigonometricRotationalElements for Amalthea {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         -0.84f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.01f64, 0f64,
+    ];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        -0.36f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+    ];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0.76f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.01f64, 0f64,
     ];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -554,8 +617,14 @@ impl RotationalElements for Thebe {
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] = [8.56f64, 533.70041f64, 0f64];
 }
 impl TrigonometricRotationalElements for Thebe {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64, -2.11f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.04f64,
+    ];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0f64, -0.91f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.01f64,
+    ];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0f64, 1.91f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.04f64,
     ];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -906,8 +975,12 @@ impl RotationalElements for Mimas {
         [333.46f64, 381.994555f64, 0f64];
 }
 impl TrigonometricRotationalElements for Mimas {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] =
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] =
         &[0f64, 0f64, 13.56f64, 0f64, 0f64, 0f64, 0f64, 0f64];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] =
+        &[0f64, 0f64, -1.53f64, 0f64, 0f64, 0f64, 0f64, 0f64];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] =
+        &[0f64, 0f64, -13.48f64, 0f64, -44.85f64, 0f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Enceladus;
@@ -976,8 +1049,12 @@ impl RotationalElements for Tethys {
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] = [8.95f64, 190.6979085f64, 0f64];
 }
 impl TrigonometricRotationalElements for Tethys {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] =
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] =
         &[0f64, 0f64, 0f64, 9.66f64, 0f64, 0f64, 0f64, 0f64];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] =
+        &[0f64, 0f64, 0f64, -1.09f64, 0f64, 0f64, 0f64, 0f64];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] =
+        &[0f64, 0f64, 0f64, -9.6f64, 2.23f64, 0f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Dione;
@@ -1048,8 +1125,12 @@ impl RotationalElements for Rhea {
         [235.16f64, 79.6900478f64, 0f64];
 }
 impl TrigonometricRotationalElements for Rhea {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] =
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] =
         &[0f64, 0f64, 0f64, 0f64, 0f64, 3.1f64, 0f64, 0f64];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] =
+        &[0f64, 0f64, 0f64, 0f64, 0f64, -0.35f64, 0f64, 0f64];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] =
+        &[0f64, 0f64, 0f64, 0f64, 0f64, -3.08f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Titan;
@@ -1086,7 +1167,11 @@ impl RotationalElements for Titan {
         [186.5855f64, 22.5769768f64, 0f64];
 }
 impl TrigonometricRotationalElements for Titan {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] =
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] =
+        &[0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] =
+        &[0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] =
         &[0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -1218,8 +1303,12 @@ impl RotationalElements for Janus {
         [58.83f64, 518.2359876f64, 0f64];
 }
 impl TrigonometricRotationalElements for Janus {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] =
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] =
         &[0f64, -1.623f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.023f64];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] =
+        &[0f64, -0.183f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.001f64];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] =
+        &[0f64, 1.613f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.023f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Epimetheus;
@@ -1256,8 +1345,12 @@ impl RotationalElements for Epimetheus {
         [293.87f64, 518.4907239f64, 0f64];
 }
 impl TrigonometricRotationalElements for Epimetheus {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] =
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] =
         &[-3.153f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.086f64, 0f64];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] =
+        &[-0.356f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.005f64, 0f64];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] =
+        &[3.133f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.086f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Helene;
@@ -1854,8 +1947,14 @@ impl RotationalElements for Ariel {
         [156.22f64, -142.8356681f64, 0f64];
 }
 impl TrigonometricRotationalElements for Ariel {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.29f64,
+    ];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.28f64,
+    ];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.05f64, 0.08f64,
     ];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -1893,8 +1992,14 @@ impl RotationalElements for Umbriel {
         [108.05f64, -86.8688923f64, 0f64];
 }
 impl TrigonometricRotationalElements for Umbriel {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.21f64,
+    ];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.2f64,
+    ];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.09f64, 0f64, 0.06f64,
     ];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -1932,8 +2037,14 @@ impl RotationalElements for Titania {
         [77.74f64, -41.3514316f64, 0f64];
 }
 impl TrigonometricRotationalElements for Titania {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.29f64,
+    ];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.28f64,
+    ];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.08f64,
     ];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -1970,9 +2081,17 @@ impl RotationalElements for Oberon {
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] = [6.77f64, -26.7394932f64, 0f64];
 }
 impl TrigonometricRotationalElements for Oberon {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
         0.16f64,
+    ];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+        0.16f64,
+    ];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+        0.04f64,
     ];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -2010,9 +2129,17 @@ impl RotationalElements for Miranda {
         [30.7f64, -254.6906892f64, 0f64];
 }
 impl TrigonometricRotationalElements for Miranda {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 4.41f64, 0f64, 0f64, 0f64,
         0f64, 0f64, -0.04f64, 0f64,
+    ];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 4.25f64, 0f64, 0f64, 0f64,
+        0f64, 0f64, -0.02f64, 0f64,
+    ];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 1.15f64, -1.27f64, 0f64, 0f64,
+        0f64, 0f64, -0.09f64, 0.15f64,
     ];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -2045,8 +2172,16 @@ impl RotationalElements for Cordelia {
         [127.69f64, -1074.520573f64, 0f64];
 }
 impl TrigonometricRotationalElements for Cordelia {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         -0.15f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+        0f64, 0f64, 0f64, 0f64,
+    ];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0.14f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+        0f64, 0f64, 0f64, 0f64,
+    ];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        -0.04f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
         0f64, 0f64, 0f64, 0f64,
     ];
 }
@@ -2080,8 +2215,16 @@ impl RotationalElements for Ophelia {
         [130.35f64, -956.406815f64, 0f64];
 }
 impl TrigonometricRotationalElements for Ophelia {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64, -0.09f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+        0f64, 0f64, 0f64, 0f64,
+    ];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0f64, 0.09f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+        0f64, 0f64, 0f64, 0f64,
+    ];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0f64, -0.03f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
         0f64, 0f64, 0f64, 0f64,
     ];
 }
@@ -2115,8 +2258,16 @@ impl RotationalElements for Bianca {
         [105.46f64, -828.391476f64, 0f64];
 }
 impl TrigonometricRotationalElements for Bianca {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64, 0f64, -0.16f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+        0f64, 0f64, 0f64, 0f64,
+    ];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0f64, 0f64, 0.16f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+        0f64, 0f64, 0f64, 0f64,
+    ];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0f64, 0f64, -0.04f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
         0f64, 0f64, 0f64, 0f64,
     ];
 }
@@ -2150,8 +2301,16 @@ impl RotationalElements for Cressida {
         [59.16f64, -776.581632f64, 0f64];
 }
 impl TrigonometricRotationalElements for Cressida {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64, 0f64, 0f64, -0.04f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+        0f64, 0f64, 0f64, 0f64,
+    ];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0f64, 0f64, 0f64, 0.04f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+        0f64, 0f64, 0f64, 0f64,
+    ];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0f64, 0f64, 0f64, -0.01f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
         0f64, 0f64, 0f64, 0f64,
     ];
 }
@@ -2185,8 +2344,16 @@ impl RotationalElements for Desdemona {
         [95.08f64, -760.053169f64, 0f64];
 }
 impl TrigonometricRotationalElements for Desdemona {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64, 0f64, 0f64, 0f64, -0.17f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+        0f64, 0f64, 0f64, 0f64,
+    ];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0f64, 0f64, 0f64, 0f64, 0.16f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+        0f64, 0f64, 0f64, 0f64,
+    ];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0f64, 0f64, 0f64, 0f64, -0.04f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
         0f64, 0f64, 0f64, 0f64,
     ];
 }
@@ -2220,8 +2387,16 @@ impl RotationalElements for Juliet {
         [302.56f64, -730.125366f64, 0f64];
 }
 impl TrigonometricRotationalElements for Juliet {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64, 0f64, 0f64, 0f64, 0f64, -0.06f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+        0f64, 0f64, 0f64, 0f64,
+    ];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0f64, 0f64, 0f64, 0f64, 0f64, 0.06f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+        0f64, 0f64, 0f64, 0f64,
+    ];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0f64, 0f64, 0f64, 0f64, 0f64, -0.02f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
         0f64, 0f64, 0f64, 0f64,
     ];
 }
@@ -2255,8 +2430,16 @@ impl RotationalElements for Portia {
         [25.03f64, -701.486587f64, 0f64];
 }
 impl TrigonometricRotationalElements for Portia {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.09f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+        0f64, 0f64, 0f64, 0f64,
+    ];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.09f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+        0f64, 0f64, 0f64, 0f64,
+    ];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.02f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
         0f64, 0f64, 0f64, 0f64,
     ];
 }
@@ -2290,8 +2473,16 @@ impl RotationalElements for Rosalind {
         [314.9f64, -644.631126f64, 0f64];
 }
 impl TrigonometricRotationalElements for Rosalind {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.29f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+        0f64, 0f64, 0f64, 0f64,
+    ];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.28f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+        0f64, 0f64, 0f64, 0f64,
+    ];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.08f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
         0f64, 0f64, 0f64, 0f64,
     ];
 }
@@ -2325,8 +2516,16 @@ impl RotationalElements for Belinda {
         [297.46f64, -577.362817f64, 0f64];
 }
 impl TrigonometricRotationalElements for Belinda {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.03f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+        0f64, 0f64, 0f64, 0f64,
+    ];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.03f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+        0f64, 0f64, 0f64, 0f64,
+    ];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.01f64, 0f64, 0f64, 0f64, 0f64, 0f64,
         0f64, 0f64, 0f64, 0f64,
     ];
 }
@@ -2360,8 +2559,16 @@ impl RotationalElements for Puck {
         [91.24f64, -472.545069f64, 0f64];
 }
 impl TrigonometricRotationalElements for Puck {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.33f64, 0f64, 0f64, 0f64, 0f64,
+        0f64, 0f64, 0f64, 0f64,
+    ];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.31f64, 0f64, 0f64, 0f64, 0f64,
+        0f64, 0f64, 0f64, 0f64,
+    ];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.09f64, 0f64, 0f64, 0f64, 0f64,
         0f64, 0f64, 0f64, 0f64,
     ];
 }
@@ -2484,9 +2691,17 @@ impl RotationalElements for Triton {
         [296.53f64, -61.2572637f64, 0f64];
 }
 impl TrigonometricRotationalElements for Triton {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, -32.35f64, 0f64, -6.28f64, -2.08f64, -0.74f64,
         -0.28f64, -0.11f64, -0.07f64, -0.02f64, -0.01f64,
+    ];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 22.55f64, 0f64, 2.1f64, 0.55f64, 0.16f64,
+        0.05f64, 0.02f64, 0.01f64, 0f64, 0f64,
+    ];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 22.25f64, 0f64, 6.73f64, 2.05f64, 0.74f64,
+        0.28f64, 0.11f64, 0.05f64, 0.02f64, 0.01f64,
     ];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -2547,8 +2762,16 @@ impl RotationalElements for Naiad {
         [254.06f64, 1222.8441209f64, 0f64];
 }
 impl TrigonometricRotationalElements for Naiad {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0.7f64, -6.49f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.25f64, 0f64, 0f64, 0f64, 0f64,
+        0f64, 0f64, 0f64, 0f64,
+    ];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        -0.51f64, -4.75f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.09f64, 0f64, 0f64, 0f64, 0f64,
+        0f64, 0f64, 0f64, 0f64,
+    ];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        -0.48f64, 4.4f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.27f64, 0f64, 0f64, 0f64, 0f64,
         0f64, 0f64, 0f64, 0f64,
     ];
 }
@@ -2587,8 +2810,16 @@ impl RotationalElements for Thalassa {
         [102.06f64, 1155.7555612f64, 0f64];
 }
 impl TrigonometricRotationalElements for Thalassa {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0.7f64, 0f64, -0.28f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+        0f64, 0f64, 0f64,
+    ];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        -0.51f64, 0f64, -0.21f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+        0f64, 0f64, 0f64,
+    ];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        -0.48f64, 0f64, 0.19f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
         0f64, 0f64, 0f64,
     ];
 }
@@ -2627,8 +2858,16 @@ impl RotationalElements for Despina {
         [306.51f64, 1075.7341562f64, 0f64];
 }
 impl TrigonometricRotationalElements for Despina {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0.7f64, 0f64, 0f64, -0.09f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+        0f64, 0f64, 0f64,
+    ];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        -0.51f64, 0f64, 0f64, -0.07f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+        0f64, 0f64, 0f64,
+    ];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        -0.49f64, 0f64, 0f64, 0.06f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
         0f64, 0f64, 0f64,
     ];
 }
@@ -2667,8 +2906,16 @@ impl RotationalElements for Galatea {
         [258.09f64, 839.6597686f64, 0f64];
 }
 impl TrigonometricRotationalElements for Galatea {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0.7f64, 0f64, 0f64, 0f64, -0.07f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+        0f64, 0f64, 0f64,
+    ];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        -0.51f64, 0f64, 0f64, 0f64, -0.05f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+        0f64, 0f64, 0f64,
+    ];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        -0.48f64, 0f64, 0f64, 0f64, 0.05f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
         0f64, 0f64, 0f64,
     ];
 }
@@ -2707,8 +2954,16 @@ impl RotationalElements for Larissa {
         [179.41f64, 649.053447f64, 0f64];
 }
 impl TrigonometricRotationalElements for Larissa {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0.7f64, 0f64, 0f64, 0f64, 0f64, -0.27f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+        0f64, 0f64, 0f64,
+    ];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        -0.51f64, 0f64, 0f64, 0f64, 0f64, -0.2f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+        0f64, 0f64, 0f64,
+    ];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        -0.48f64, 0f64, 0f64, 0f64, 0f64, 0.19f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
         0f64, 0f64, 0f64,
     ];
 }
@@ -2747,8 +3002,16 @@ impl RotationalElements for Proteus {
         [93.38f64, 320.7654228f64, 0f64];
 }
 impl TrigonometricRotationalElements for Proteus {
-    const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+    const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0.7f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.05f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+        0f64, 0f64, 0f64,
+    ];
+    const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        -0.51f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.04f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+        0f64, 0f64, 0f64,
+    ];
+    const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
+        -0.48f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.04f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
         0f64, 0f64, 0f64,
     ];
 }
@@ -2888,31 +3151,51 @@ mod tests {
         assert_eq!(Moon::along_orbit_radius(), 1737.4f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_301() {
+    fn test_rotational_elements_right_ascension_coefficients_301() {
         assert_eq!(
             [269.9949f64, 0.0031f64, 0f64],
             Moon::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_301() {
+    fn test_rotational_elements_declination_coefficients_301() {
         assert_eq!([66.5392f64, 0.013f64, 0f64], Moon::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_301() {
+    fn test_rotational_elements_prime_meridian_coefficients_301() {
         assert_eq!(
             [38.3213f64, 13.17635815f64, -0.0000000000014f64],
             Moon::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_301() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_301() {
         assert_eq!(
             &[
                 -3.8787f64, -0.1204f64, 0.07f64, -0.0172f64, 0f64, 0.0072f64, 0f64, 0f64, 0f64,
                 -0.0052f64, 0f64, 0f64, 0.0043f64
             ],
-            Moon::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Moon::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_301() {
+        assert_eq!(
+            &[
+                1.5419f64, 0.0239f64, -0.0278f64, 0.0068f64, 0f64, -0.0029f64, 0.0009f64, 0f64,
+                0f64, 0.0008f64, 0f64, 0f64, -0.0009f64
+            ],
+            Moon::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_301() {
+        assert_eq!(
+            &[
+                3.561f64, 0.1208f64, -0.0642f64, 0.0158f64, 0.0252f64, -0.0066f64, -0.0047f64,
+                -0.0046f64, 0.0028f64, 0.0052f64, 0.004f64, 0.0019f64, -0.0044f64
+            ],
+            Moon::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -2931,21 +3214,21 @@ mod tests {
         assert_eq!(Phobos::along_orbit_radius(), 11.4f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_401() {
+    fn test_rotational_elements_right_ascension_coefficients_401() {
         assert_eq!(
             [317.67071657f64, -0.10844326f64, 0f64],
             Phobos::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_401() {
+    fn test_rotational_elements_declination_coefficients_401() {
         assert_eq!(
             [52.88627266f64, -0.06134706f64, 0f64],
             Phobos::DECLINATION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_prime_meridian_coefficients_401() {
+    fn test_rotational_elements_prime_meridian_coefficients_401() {
         assert_eq!(
             [
                 35.1877444f64,
@@ -2956,7 +3239,7 @@ mod tests {
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_401() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_401() {
         assert_eq!(
             &[
                 -1.78428399f64,
@@ -2964,7 +3247,27 @@ mod tests {
                 -0.01028251f64,
                 -0.00475595f64
             ],
-            Phobos::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Phobos::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_401() {
+        assert_eq!(
+            &[-1.07516537f64, 0.00668626f64, -0.0064874f64, 0.00281576f64],
+            Phobos::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_401() {
+        assert_eq!(
+            &[
+                1.42421769f64,
+                -0.02273783f64,
+                0.00410711f64,
+                0.00631964f64,
+                -1.143f64
+            ],
+            Phobos::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -2983,28 +3286,28 @@ mod tests {
         assert_eq!(Deimos::along_orbit_radius(), 6f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_402() {
+    fn test_rotational_elements_right_ascension_coefficients_402() {
         assert_eq!(
             [316.65705808f64, -0.10518014f64, 0f64],
             Deimos::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_402() {
+    fn test_rotational_elements_declination_coefficients_402() {
         assert_eq!(
             [53.50992033f64, -0.05979094f64, 0f64],
             Deimos::DECLINATION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_prime_meridian_coefficients_402() {
+    fn test_rotational_elements_prime_meridian_coefficients_402() {
         assert_eq!(
             [79.39932954f64, 285.16188899f64, 0f64],
             Deimos::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_402() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_402() {
         assert_eq!(
             &[
                 0f64,
@@ -3018,7 +3321,43 @@ mod tests {
                 0.02533537f64,
                 0.00778695f64
             ],
-            Deimos::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Deimos::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_402() {
+        assert_eq!(
+            &[
+                0f64,
+                0f64,
+                0f64,
+                0f64,
+                0f64,
+                1.83936004f64,
+                0.1432532f64,
+                0.01911409f64,
+                -0.0148259f64,
+                0.0019243f64
+            ],
+            Deimos::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_402() {
+        assert_eq!(
+            &[
+                0f64,
+                0f64,
+                0f64,
+                0f64,
+                0f64,
+                -2.73954829f64,
+                -0.39968606f64,
+                -0.06563259f64,
+                -0.0291294f64,
+                0.0169916f64
+            ],
+            Deimos::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -3037,28 +3376,42 @@ mod tests {
         assert_eq!(Io::along_orbit_radius(), 1819.4f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_501() {
+    fn test_rotational_elements_right_ascension_coefficients_501() {
         assert_eq!(
             [268.05f64, -0.009f64, 0f64],
             Io::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_501() {
+    fn test_rotational_elements_declination_coefficients_501() {
         assert_eq!([64.5f64, 0.003f64, 0f64], Io::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_501() {
+    fn test_rotational_elements_prime_meridian_coefficients_501() {
         assert_eq!(
             [200.39f64, 203.4889538f64, 0f64],
             Io::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_501() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_501() {
         assert_eq!(
             &[0f64, 0f64, 0.094f64, 0.024f64],
-            Io::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Io::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_501() {
+        assert_eq!(
+            &[0f64, 0f64, 0.04f64, 0.011f64],
+            Io::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_501() {
+        assert_eq!(
+            &[0f64, 0f64, -0.085f64, -0.022f64],
+            Io::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -3077,28 +3430,42 @@ mod tests {
         assert_eq!(Europa::along_orbit_radius(), 1560.3f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_502() {
+    fn test_rotational_elements_right_ascension_coefficients_502() {
         assert_eq!(
             [268.08f64, -0.009f64, 0f64],
             Europa::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_502() {
+    fn test_rotational_elements_declination_coefficients_502() {
         assert_eq!([64.51f64, 0.003f64, 0f64], Europa::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_502() {
+    fn test_rotational_elements_prime_meridian_coefficients_502() {
         assert_eq!(
             [36.022f64, 101.3747235f64, 0f64],
             Europa::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_502() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_502() {
         assert_eq!(
             &[0f64, 0f64, 0f64, 1.086f64, 0.06f64, 0.015f64, 0.009f64],
-            Europa::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Europa::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_502() {
+        assert_eq!(
+            &[0f64, 0f64, 0f64, 0.468f64, 0.026f64, 0.007f64, 0.002f64],
+            Europa::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_502() {
+        assert_eq!(
+            &[0f64, 0f64, 0f64, -0.98f64, -0.054f64, -0.014f64, -0.008f64],
+            Europa::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -3117,31 +3484,45 @@ mod tests {
         assert_eq!(Ganymede::along_orbit_radius(), 2631.2f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_503() {
+    fn test_rotational_elements_right_ascension_coefficients_503() {
         assert_eq!(
             [268.2f64, -0.009f64, 0f64],
             Ganymede::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_503() {
+    fn test_rotational_elements_declination_coefficients_503() {
         assert_eq!(
             [64.57f64, 0.003f64, 0f64],
             Ganymede::DECLINATION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_prime_meridian_coefficients_503() {
+    fn test_rotational_elements_prime_meridian_coefficients_503() {
         assert_eq!(
             [44.064f64, 50.3176081f64, 0f64],
             Ganymede::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_503() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_503() {
         assert_eq!(
             &[0f64, 0f64, 0f64, -0.037f64, 0.431f64, 0.091f64],
-            Ganymede::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Ganymede::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_503() {
+        assert_eq!(
+            &[0f64, 0f64, 0f64, -0.016f64, 0.186f64, 0.039f64],
+            Ganymede::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_503() {
+        assert_eq!(
+            &[0f64, 0f64, 0f64, 0.033f64, -0.389f64, -0.082f64],
+            Ganymede::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -3160,31 +3541,45 @@ mod tests {
         assert_eq!(Callisto::along_orbit_radius(), 2410.3f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_504() {
+    fn test_rotational_elements_right_ascension_coefficients_504() {
         assert_eq!(
             [268.72f64, -0.009f64, 0f64],
             Callisto::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_504() {
+    fn test_rotational_elements_declination_coefficients_504() {
         assert_eq!(
             [64.83f64, 0.003f64, 0f64],
             Callisto::DECLINATION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_prime_meridian_coefficients_504() {
+    fn test_rotational_elements_prime_meridian_coefficients_504() {
         assert_eq!(
             [259.51f64, 21.5710715f64, 0f64],
             Callisto::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_504() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_504() {
         assert_eq!(
             &[0f64, 0f64, 0f64, 0f64, -0.068f64, 0.59f64, 0f64, 0.01f64],
-            Callisto::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Callisto::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_504() {
+        assert_eq!(
+            &[0f64, 0f64, 0f64, 0f64, -0.029f64, 0.254f64, 0f64, -0.004f64],
+            Callisto::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_504() {
+        assert_eq!(
+            &[0f64, 0f64, 0f64, 0f64, 0.061f64, -0.533f64, 0f64, -0.009f64],
+            Callisto::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -3203,31 +3598,45 @@ mod tests {
         assert_eq!(Amalthea::along_orbit_radius(), 73f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_505() {
+    fn test_rotational_elements_right_ascension_coefficients_505() {
         assert_eq!(
             [268.05f64, -0.009f64, 0f64],
             Amalthea::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_505() {
+    fn test_rotational_elements_declination_coefficients_505() {
         assert_eq!(
             [64.49f64, 0.003f64, 0f64],
             Amalthea::DECLINATION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_prime_meridian_coefficients_505() {
+    fn test_rotational_elements_prime_meridian_coefficients_505() {
         assert_eq!(
             [231.67f64, 722.631456f64, 0f64],
             Amalthea::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_505() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_505() {
         assert_eq!(
             &[-0.84f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.01f64, 0f64],
-            Amalthea::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Amalthea::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_505() {
+        assert_eq!(
+            &[-0.36f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64],
+            Amalthea::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_505() {
+        assert_eq!(
+            &[0.76f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.01f64, 0f64],
+            Amalthea::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -3338,28 +3747,42 @@ mod tests {
         assert_eq!(Thebe::along_orbit_radius(), 49f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_514() {
+    fn test_rotational_elements_right_ascension_coefficients_514() {
         assert_eq!(
             [268.05f64, -0.009f64, 0f64],
             Thebe::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_514() {
+    fn test_rotational_elements_declination_coefficients_514() {
         assert_eq!([64.49f64, 0.003f64, 0f64], Thebe::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_514() {
+    fn test_rotational_elements_prime_meridian_coefficients_514() {
         assert_eq!(
             [8.56f64, 533.70041f64, 0f64],
             Thebe::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_514() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_514() {
         assert_eq!(
             &[0f64, -2.11f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.04f64],
-            Thebe::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Thebe::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_514() {
+        assert_eq!(
+            &[0f64, -0.91f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.01f64],
+            Thebe::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_514() {
+        assert_eq!(
+            &[0f64, 1.91f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.04f64],
+            Thebe::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -3378,21 +3801,21 @@ mod tests {
         assert_eq!(Adrastea::along_orbit_radius(), 8f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_515() {
+    fn test_rotational_elements_right_ascension_coefficients_515() {
         assert_eq!(
             [268.05f64, -0.009f64, 0f64],
             Adrastea::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_515() {
+    fn test_rotational_elements_declination_coefficients_515() {
         assert_eq!(
             [64.49f64, 0.003f64, 0f64],
             Adrastea::DECLINATION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_prime_meridian_coefficients_515() {
+    fn test_rotational_elements_prime_meridian_coefficients_515() {
         assert_eq!(
             [33.29f64, 1206.9986602f64, 0f64],
             Adrastea::PRIME_MERIDIAN_COEFFICIENTS
@@ -3414,18 +3837,18 @@ mod tests {
         assert_eq!(Metis::along_orbit_radius(), 20f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_516() {
+    fn test_rotational_elements_right_ascension_coefficients_516() {
         assert_eq!(
             [268.05f64, -0.009f64, 0f64],
             Metis::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_516() {
+    fn test_rotational_elements_declination_coefficients_516() {
         assert_eq!([64.49f64, 0.003f64, 0f64], Metis::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_516() {
+    fn test_rotational_elements_prime_meridian_coefficients_516() {
         assert_eq!(
             [346.09f64, 1221.2547301f64, 0f64],
             Metis::PRIME_MERIDIAN_COEFFICIENTS
@@ -3587,28 +4010,42 @@ mod tests {
         assert_eq!(Mimas::along_orbit_radius(), 196.7f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_601() {
+    fn test_rotational_elements_right_ascension_coefficients_601() {
         assert_eq!(
             [40.66f64, -0.036f64, 0f64],
             Mimas::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_601() {
+    fn test_rotational_elements_declination_coefficients_601() {
         assert_eq!([83.52f64, -0.004f64, 0f64], Mimas::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_601() {
+    fn test_rotational_elements_prime_meridian_coefficients_601() {
         assert_eq!(
             [333.46f64, 381.994555f64, 0f64],
             Mimas::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_601() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_601() {
         assert_eq!(
             &[0f64, 0f64, 13.56f64, 0f64, 0f64, 0f64, 0f64, 0f64],
-            Mimas::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Mimas::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_601() {
+        assert_eq!(
+            &[0f64, 0f64, -1.53f64, 0f64, 0f64, 0f64, 0f64, 0f64],
+            Mimas::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_601() {
+        assert_eq!(
+            &[0f64, 0f64, -13.48f64, 0f64, -44.85f64, 0f64, 0f64, 0f64],
+            Mimas::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -3627,21 +4064,21 @@ mod tests {
         assert_eq!(Enceladus::along_orbit_radius(), 251.4f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_602() {
+    fn test_rotational_elements_right_ascension_coefficients_602() {
         assert_eq!(
             [40.66f64, -0.036f64, 0f64],
             Enceladus::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_602() {
+    fn test_rotational_elements_declination_coefficients_602() {
         assert_eq!(
             [83.52f64, -0.004f64, 0f64],
             Enceladus::DECLINATION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_prime_meridian_coefficients_602() {
+    fn test_rotational_elements_prime_meridian_coefficients_602() {
         assert_eq!(
             [6.32f64, 262.7318996f64, 0f64],
             Enceladus::PRIME_MERIDIAN_COEFFICIENTS
@@ -3663,31 +4100,45 @@ mod tests {
         assert_eq!(Tethys::along_orbit_radius(), 528.3f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_603() {
+    fn test_rotational_elements_right_ascension_coefficients_603() {
         assert_eq!(
             [40.66f64, -0.036f64, 0f64],
             Tethys::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_603() {
+    fn test_rotational_elements_declination_coefficients_603() {
         assert_eq!(
             [83.52f64, -0.004f64, 0f64],
             Tethys::DECLINATION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_prime_meridian_coefficients_603() {
+    fn test_rotational_elements_prime_meridian_coefficients_603() {
         assert_eq!(
             [8.95f64, 190.6979085f64, 0f64],
             Tethys::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_603() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_603() {
         assert_eq!(
             &[0f64, 0f64, 0f64, 9.66f64, 0f64, 0f64, 0f64, 0f64],
-            Tethys::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Tethys::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_603() {
+        assert_eq!(
+            &[0f64, 0f64, 0f64, -1.09f64, 0f64, 0f64, 0f64, 0f64],
+            Tethys::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_603() {
+        assert_eq!(
+            &[0f64, 0f64, 0f64, -9.6f64, 2.23f64, 0f64, 0f64, 0f64],
+            Tethys::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -3706,18 +4157,18 @@ mod tests {
         assert_eq!(Dione::along_orbit_radius(), 561.3f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_604() {
+    fn test_rotational_elements_right_ascension_coefficients_604() {
         assert_eq!(
             [40.66f64, -0.036f64, 0f64],
             Dione::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_604() {
+    fn test_rotational_elements_declination_coefficients_604() {
         assert_eq!([83.52f64, -0.004f64, 0f64], Dione::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_604() {
+    fn test_rotational_elements_prime_meridian_coefficients_604() {
         assert_eq!(
             [357.6f64, 131.5349316f64, 0f64],
             Dione::PRIME_MERIDIAN_COEFFICIENTS
@@ -3739,28 +4190,42 @@ mod tests {
         assert_eq!(Rhea::along_orbit_radius(), 763.1f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_605() {
+    fn test_rotational_elements_right_ascension_coefficients_605() {
         assert_eq!(
             [40.38f64, -0.036f64, 0f64],
             Rhea::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_605() {
+    fn test_rotational_elements_declination_coefficients_605() {
         assert_eq!([83.55f64, -0.004f64, 0f64], Rhea::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_605() {
+    fn test_rotational_elements_prime_meridian_coefficients_605() {
         assert_eq!(
             [235.16f64, 79.6900478f64, 0f64],
             Rhea::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_605() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_605() {
         assert_eq!(
             &[0f64, 0f64, 0f64, 0f64, 0f64, 3.1f64, 0f64, 0f64],
-            Rhea::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Rhea::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_605() {
+        assert_eq!(
+            &[0f64, 0f64, 0f64, 0f64, 0f64, -0.35f64, 0f64, 0f64],
+            Rhea::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_605() {
+        assert_eq!(
+            &[0f64, 0f64, 0f64, 0f64, 0f64, -3.08f64, 0f64, 0f64],
+            Rhea::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -3779,28 +4244,42 @@ mod tests {
         assert_eq!(Titan::along_orbit_radius(), 2574.78f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_606() {
+    fn test_rotational_elements_right_ascension_coefficients_606() {
         assert_eq!(
             [39.4827f64, 0f64, 0f64],
             Titan::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_606() {
+    fn test_rotational_elements_declination_coefficients_606() {
         assert_eq!([83.4279f64, 0f64, 0f64], Titan::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_606() {
+    fn test_rotational_elements_prime_meridian_coefficients_606() {
         assert_eq!(
             [186.5855f64, 22.5769768f64, 0f64],
             Titan::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_606() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_606() {
         assert_eq!(
             &[0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64],
-            Titan::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Titan::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_606() {
+        assert_eq!(
+            &[0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64],
+            Titan::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_606() {
+        assert_eq!(
+            &[0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64],
+            Titan::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -3834,21 +4313,21 @@ mod tests {
         assert_eq!(Iapetus::along_orbit_radius(), 745.7f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_608() {
+    fn test_rotational_elements_right_ascension_coefficients_608() {
         assert_eq!(
             [318.16f64, -3.949f64, 0f64],
             Iapetus::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_608() {
+    fn test_rotational_elements_declination_coefficients_608() {
         assert_eq!(
             [75.03f64, -1.143f64, 0f64],
             Iapetus::DECLINATION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_prime_meridian_coefficients_608() {
+    fn test_rotational_elements_prime_meridian_coefficients_608() {
         assert_eq!(
             [355.2f64, 4.5379572f64, 0f64],
             Iapetus::PRIME_MERIDIAN_COEFFICIENTS
@@ -3870,15 +4349,15 @@ mod tests {
         assert_eq!(Phoebe::along_orbit_radius(), 108.5f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_609() {
+    fn test_rotational_elements_right_ascension_coefficients_609() {
         assert_eq!([356.9f64, 0f64, 0f64], Phoebe::RIGHT_ASCENSION_COEFFICIENTS)
     }
     #[test]
-    fn test_declination_coefficients_609() {
+    fn test_rotational_elements_declination_coefficients_609() {
         assert_eq!([77.8f64, 0f64, 0f64], Phoebe::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_609() {
+    fn test_rotational_elements_prime_meridian_coefficients_609() {
         assert_eq!(
             [178.58f64, 931.639f64, 0f64],
             Phoebe::PRIME_MERIDIAN_COEFFICIENTS
@@ -3900,28 +4379,42 @@ mod tests {
         assert_eq!(Janus::along_orbit_radius(), 93f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_610() {
+    fn test_rotational_elements_right_ascension_coefficients_610() {
         assert_eq!(
             [40.58f64, -0.036f64, 0f64],
             Janus::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_610() {
+    fn test_rotational_elements_declination_coefficients_610() {
         assert_eq!([83.52f64, -0.004f64, 0f64], Janus::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_610() {
+    fn test_rotational_elements_prime_meridian_coefficients_610() {
         assert_eq!(
             [58.83f64, 518.2359876f64, 0f64],
             Janus::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_610() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_610() {
         assert_eq!(
             &[0f64, -1.623f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.023f64],
-            Janus::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Janus::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_610() {
+        assert_eq!(
+            &[0f64, -0.183f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.001f64],
+            Janus::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_610() {
+        assert_eq!(
+            &[0f64, 1.613f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.023f64],
+            Janus::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -3943,31 +4436,45 @@ mod tests {
         assert_eq!(Epimetheus::along_orbit_radius(), 57.3f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_611() {
+    fn test_rotational_elements_right_ascension_coefficients_611() {
         assert_eq!(
             [40.58f64, -0.036f64, 0f64],
             Epimetheus::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_611() {
+    fn test_rotational_elements_declination_coefficients_611() {
         assert_eq!(
             [83.52f64, -0.004f64, 0f64],
             Epimetheus::DECLINATION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_prime_meridian_coefficients_611() {
+    fn test_rotational_elements_prime_meridian_coefficients_611() {
         assert_eq!(
             [293.87f64, 518.4907239f64, 0f64],
             Epimetheus::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_611() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_611() {
         assert_eq!(
             &[-3.153f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.086f64, 0f64],
-            Epimetheus::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Epimetheus::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_611() {
+        assert_eq!(
+            &[-0.356f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.005f64, 0f64],
+            Epimetheus::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_611() {
+        assert_eq!(
+            &[3.133f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.086f64, 0f64],
+            Epimetheus::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -3986,21 +4493,21 @@ mod tests {
         assert_eq!(Helene::along_orbit_radius(), 19.6f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_612() {
+    fn test_rotational_elements_right_ascension_coefficients_612() {
         assert_eq!(
             [40.85f64, -0.036f64, 0f64],
             Helene::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_612() {
+    fn test_rotational_elements_declination_coefficients_612() {
         assert_eq!(
             [83.34f64, -0.004f64, 0f64],
             Helene::DECLINATION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_prime_meridian_coefficients_612() {
+    fn test_rotational_elements_prime_meridian_coefficients_612() {
         assert_eq!(
             [245.12f64, 131.6174056f64, 0f64],
             Helene::PRIME_MERIDIAN_COEFFICIENTS
@@ -4018,21 +4525,21 @@ mod tests {
         assert_eq!(Telesto::along_orbit_radius(), 11.8f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_613() {
+    fn test_rotational_elements_right_ascension_coefficients_613() {
         assert_eq!(
             [50.51f64, -0.036f64, 0f64],
             Telesto::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_613() {
+    fn test_rotational_elements_declination_coefficients_613() {
         assert_eq!(
             [84.06f64, -0.004f64, 0f64],
             Telesto::DECLINATION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_prime_meridian_coefficients_613() {
+    fn test_rotational_elements_prime_meridian_coefficients_613() {
         assert_eq!(
             [56.88f64, 190.6979332f64, 0f64],
             Telesto::PRIME_MERIDIAN_COEFFICIENTS
@@ -4050,21 +4557,21 @@ mod tests {
         assert_eq!(Calypso::along_orbit_radius(), 9.3f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_614() {
+    fn test_rotational_elements_right_ascension_coefficients_614() {
         assert_eq!(
             [36.41f64, -0.036f64, 0f64],
             Calypso::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_614() {
+    fn test_rotational_elements_declination_coefficients_614() {
         assert_eq!(
             [85.04f64, -0.004f64, 0f64],
             Calypso::DECLINATION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_prime_meridian_coefficients_614() {
+    fn test_rotational_elements_prime_meridian_coefficients_614() {
         assert_eq!(
             [153.51f64, 190.6742373f64, 0f64],
             Calypso::PRIME_MERIDIAN_COEFFICIENTS
@@ -4086,18 +4593,18 @@ mod tests {
         assert_eq!(Atlas::along_orbit_radius(), 17.8f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_615() {
+    fn test_rotational_elements_right_ascension_coefficients_615() {
         assert_eq!(
             [40.58f64, -0.036f64, 0f64],
             Atlas::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_615() {
+    fn test_rotational_elements_declination_coefficients_615() {
         assert_eq!([83.53f64, -0.004f64, 0f64], Atlas::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_615() {
+    fn test_rotational_elements_prime_meridian_coefficients_615() {
         assert_eq!(
             [137.88f64, 598.306f64, 0f64],
             Atlas::PRIME_MERIDIAN_COEFFICIENTS
@@ -4119,21 +4626,21 @@ mod tests {
         assert_eq!(Prometheus::along_orbit_radius(), 41.6f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_616() {
+    fn test_rotational_elements_right_ascension_coefficients_616() {
         assert_eq!(
             [40.58f64, -0.036f64, 0f64],
             Prometheus::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_616() {
+    fn test_rotational_elements_declination_coefficients_616() {
         assert_eq!(
             [83.53f64, -0.004f64, 0f64],
             Prometheus::DECLINATION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_prime_meridian_coefficients_616() {
+    fn test_rotational_elements_prime_meridian_coefficients_616() {
         assert_eq!(
             [296.14f64, 587.289f64, 0f64],
             Prometheus::PRIME_MERIDIAN_COEFFICIENTS
@@ -4155,21 +4662,21 @@ mod tests {
         assert_eq!(Pandora::along_orbit_radius(), 40.8f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_617() {
+    fn test_rotational_elements_right_ascension_coefficients_617() {
         assert_eq!(
             [40.58f64, -0.036f64, 0f64],
             Pandora::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_617() {
+    fn test_rotational_elements_declination_coefficients_617() {
         assert_eq!(
             [83.53f64, -0.004f64, 0f64],
             Pandora::DECLINATION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_prime_meridian_coefficients_617() {
+    fn test_rotational_elements_prime_meridian_coefficients_617() {
         assert_eq!(
             [162.92f64, 572.7891f64, 0f64],
             Pandora::PRIME_MERIDIAN_COEFFICIENTS
@@ -4187,18 +4694,18 @@ mod tests {
         assert_eq!(Pan::along_orbit_radius(), 15.4f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_618() {
+    fn test_rotational_elements_right_ascension_coefficients_618() {
         assert_eq!(
             [40.6f64, -0.036f64, 0f64],
             Pan::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_618() {
+    fn test_rotational_elements_declination_coefficients_618() {
         assert_eq!([83.5f64, -0.004f64, 0f64], Pan::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_618() {
+    fn test_rotational_elements_prime_meridian_coefficients_618() {
         assert_eq!(
             [48.8f64, 626.044f64, 0f64],
             Pan::PRIME_MERIDIAN_COEFFICIENTS
@@ -4402,25 +4909,39 @@ mod tests {
         assert_eq!(Ariel::along_orbit_radius(), 577.9f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_701() {
+    fn test_rotational_elements_right_ascension_coefficients_701() {
         assert_eq!([257.43f64, 0f64, 0f64], Ariel::RIGHT_ASCENSION_COEFFICIENTS)
     }
     #[test]
-    fn test_declination_coefficients_701() {
+    fn test_rotational_elements_declination_coefficients_701() {
         assert_eq!([-15.1f64, 0f64, 0f64], Ariel::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_701() {
+    fn test_rotational_elements_prime_meridian_coefficients_701() {
         assert_eq!(
             [156.22f64, -142.8356681f64, 0f64],
             Ariel::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_701() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_701() {
         assert_eq!(
             &[0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.29f64],
-            Ariel::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Ariel::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_701() {
+        assert_eq!(
+            &[0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.28f64],
+            Ariel::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_701() {
+        assert_eq!(
+            &[0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.05f64, 0.08f64],
+            Ariel::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -4439,31 +4960,51 @@ mod tests {
         assert_eq!(Umbriel::along_orbit_radius(), 584.7f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_702() {
+    fn test_rotational_elements_right_ascension_coefficients_702() {
         assert_eq!(
             [257.43f64, 0f64, 0f64],
             Umbriel::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_702() {
+    fn test_rotational_elements_declination_coefficients_702() {
         assert_eq!([-15.1f64, 0f64, 0f64], Umbriel::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_702() {
+    fn test_rotational_elements_prime_meridian_coefficients_702() {
         assert_eq!(
             [108.05f64, -86.8688923f64, 0f64],
             Umbriel::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_702() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_702() {
         assert_eq!(
             &[
                 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
                 0.21f64
             ],
-            Umbriel::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Umbriel::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_702() {
+        assert_eq!(
+            &[
+                0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+                0.2f64
+            ],
+            Umbriel::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_702() {
+        assert_eq!(
+            &[
+                0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.09f64, 0f64,
+                0.06f64
+            ],
+            Umbriel::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -4482,31 +5023,51 @@ mod tests {
         assert_eq!(Titania::along_orbit_radius(), 788.9f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_703() {
+    fn test_rotational_elements_right_ascension_coefficients_703() {
         assert_eq!(
             [257.43f64, 0f64, 0f64],
             Titania::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_703() {
+    fn test_rotational_elements_declination_coefficients_703() {
         assert_eq!([-15.1f64, 0f64, 0f64], Titania::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_703() {
+    fn test_rotational_elements_prime_meridian_coefficients_703() {
         assert_eq!(
             [77.74f64, -41.3514316f64, 0f64],
             Titania::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_703() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_703() {
         assert_eq!(
             &[
                 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
                 0.29f64
             ],
-            Titania::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Titania::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_703() {
+        assert_eq!(
+            &[
+                0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+                0.28f64
+            ],
+            Titania::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_703() {
+        assert_eq!(
+            &[
+                0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+                0.08f64
+            ],
+            Titania::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -4525,31 +5086,51 @@ mod tests {
         assert_eq!(Oberon::along_orbit_radius(), 761.4f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_704() {
+    fn test_rotational_elements_right_ascension_coefficients_704() {
         assert_eq!(
             [257.43f64, 0f64, 0f64],
             Oberon::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_704() {
+    fn test_rotational_elements_declination_coefficients_704() {
         assert_eq!([-15.1f64, 0f64, 0f64], Oberon::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_704() {
+    fn test_rotational_elements_prime_meridian_coefficients_704() {
         assert_eq!(
             [6.77f64, -26.7394932f64, 0f64],
             Oberon::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_704() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_704() {
         assert_eq!(
             &[
                 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
                 0f64, 0.16f64
             ],
-            Oberon::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Oberon::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_704() {
+        assert_eq!(
+            &[
+                0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+                0f64, 0.16f64
+            ],
+            Oberon::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_704() {
+        assert_eq!(
+            &[
+                0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+                0f64, 0.04f64
+            ],
+            Oberon::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -4568,31 +5149,51 @@ mod tests {
         assert_eq!(Miranda::along_orbit_radius(), 234.2f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_705() {
+    fn test_rotational_elements_right_ascension_coefficients_705() {
         assert_eq!(
             [257.43f64, 0f64, 0f64],
             Miranda::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_705() {
+    fn test_rotational_elements_declination_coefficients_705() {
         assert_eq!([-15.08f64, 0f64, 0f64], Miranda::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_705() {
+    fn test_rotational_elements_prime_meridian_coefficients_705() {
         assert_eq!(
             [30.7f64, -254.6906892f64, 0f64],
             Miranda::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_705() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_705() {
         assert_eq!(
             &[
                 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 4.41f64, 0f64, 0f64,
                 0f64, 0f64, 0f64, -0.04f64, 0f64
             ],
-            Miranda::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Miranda::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_705() {
+        assert_eq!(
+            &[
+                0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 4.25f64, 0f64, 0f64,
+                0f64, 0f64, 0f64, -0.02f64, 0f64
+            ],
+            Miranda::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_705() {
+        assert_eq!(
+            &[
+                0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 1.15f64, -1.27f64,
+                0f64, 0f64, 0f64, 0f64, -0.09f64, 0.15f64
+            ],
+            Miranda::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -4607,31 +5208,51 @@ mod tests {
         assert_eq!(Cordelia::along_orbit_radius(), 13f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_706() {
+    fn test_rotational_elements_right_ascension_coefficients_706() {
         assert_eq!(
             [257.31f64, 0f64, 0f64],
             Cordelia::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_706() {
+    fn test_rotational_elements_declination_coefficients_706() {
         assert_eq!([-15.18f64, 0f64, 0f64], Cordelia::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_706() {
+    fn test_rotational_elements_prime_meridian_coefficients_706() {
         assert_eq!(
             [127.69f64, -1074.520573f64, 0f64],
             Cordelia::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_706() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_706() {
         assert_eq!(
             &[
                 -0.15f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
                 0f64, 0f64, 0f64, 0f64, 0f64
             ],
-            Cordelia::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Cordelia::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_706() {
+        assert_eq!(
+            &[
+                0.14f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+                0f64, 0f64, 0f64, 0f64, 0f64
+            ],
+            Cordelia::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_706() {
+        assert_eq!(
+            &[
+                -0.04f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+                0f64, 0f64, 0f64, 0f64, 0f64
+            ],
+            Cordelia::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -4646,31 +5267,51 @@ mod tests {
         assert_eq!(Ophelia::along_orbit_radius(), 15f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_707() {
+    fn test_rotational_elements_right_ascension_coefficients_707() {
         assert_eq!(
             [257.31f64, 0f64, 0f64],
             Ophelia::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_707() {
+    fn test_rotational_elements_declination_coefficients_707() {
         assert_eq!([-15.18f64, 0f64, 0f64], Ophelia::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_707() {
+    fn test_rotational_elements_prime_meridian_coefficients_707() {
         assert_eq!(
             [130.35f64, -956.406815f64, 0f64],
             Ophelia::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_707() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_707() {
         assert_eq!(
             &[
                 0f64, -0.09f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
                 0f64, 0f64, 0f64, 0f64, 0f64
             ],
-            Ophelia::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Ophelia::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_707() {
+        assert_eq!(
+            &[
+                0f64, 0.09f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+                0f64, 0f64, 0f64, 0f64, 0f64
+            ],
+            Ophelia::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_707() {
+        assert_eq!(
+            &[
+                0f64, -0.03f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+                0f64, 0f64, 0f64, 0f64, 0f64
+            ],
+            Ophelia::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -4685,31 +5326,51 @@ mod tests {
         assert_eq!(Bianca::along_orbit_radius(), 21f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_708() {
+    fn test_rotational_elements_right_ascension_coefficients_708() {
         assert_eq!(
             [257.31f64, 0f64, 0f64],
             Bianca::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_708() {
+    fn test_rotational_elements_declination_coefficients_708() {
         assert_eq!([-15.18f64, 0f64, 0f64], Bianca::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_708() {
+    fn test_rotational_elements_prime_meridian_coefficients_708() {
         assert_eq!(
             [105.46f64, -828.391476f64, 0f64],
             Bianca::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_708() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_708() {
         assert_eq!(
             &[
                 0f64, 0f64, -0.16f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
                 0f64, 0f64, 0f64, 0f64, 0f64
             ],
-            Bianca::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Bianca::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_708() {
+        assert_eq!(
+            &[
+                0f64, 0f64, 0.16f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+                0f64, 0f64, 0f64, 0f64, 0f64
+            ],
+            Bianca::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_708() {
+        assert_eq!(
+            &[
+                0f64, 0f64, -0.04f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+                0f64, 0f64, 0f64, 0f64, 0f64
+            ],
+            Bianca::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -4724,31 +5385,51 @@ mod tests {
         assert_eq!(Cressida::along_orbit_radius(), 31f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_709() {
+    fn test_rotational_elements_right_ascension_coefficients_709() {
         assert_eq!(
             [257.31f64, 0f64, 0f64],
             Cressida::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_709() {
+    fn test_rotational_elements_declination_coefficients_709() {
         assert_eq!([-15.18f64, 0f64, 0f64], Cressida::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_709() {
+    fn test_rotational_elements_prime_meridian_coefficients_709() {
         assert_eq!(
             [59.16f64, -776.581632f64, 0f64],
             Cressida::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_709() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_709() {
         assert_eq!(
             &[
                 0f64, 0f64, 0f64, -0.04f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
                 0f64, 0f64, 0f64, 0f64, 0f64
             ],
-            Cressida::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Cressida::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_709() {
+        assert_eq!(
+            &[
+                0f64, 0f64, 0f64, 0.04f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+                0f64, 0f64, 0f64, 0f64, 0f64
+            ],
+            Cressida::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_709() {
+        assert_eq!(
+            &[
+                0f64, 0f64, 0f64, -0.01f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+                0f64, 0f64, 0f64, 0f64, 0f64
+            ],
+            Cressida::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -4763,31 +5444,51 @@ mod tests {
         assert_eq!(Desdemona::along_orbit_radius(), 27f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_710() {
+    fn test_rotational_elements_right_ascension_coefficients_710() {
         assert_eq!(
             [257.31f64, 0f64, 0f64],
             Desdemona::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_710() {
+    fn test_rotational_elements_declination_coefficients_710() {
         assert_eq!([-15.18f64, 0f64, 0f64], Desdemona::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_710() {
+    fn test_rotational_elements_prime_meridian_coefficients_710() {
         assert_eq!(
             [95.08f64, -760.053169f64, 0f64],
             Desdemona::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_710() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_710() {
         assert_eq!(
             &[
                 0f64, 0f64, 0f64, 0f64, -0.17f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
                 0f64, 0f64, 0f64, 0f64, 0f64
             ],
-            Desdemona::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Desdemona::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_710() {
+        assert_eq!(
+            &[
+                0f64, 0f64, 0f64, 0f64, 0.16f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+                0f64, 0f64, 0f64, 0f64, 0f64
+            ],
+            Desdemona::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_710() {
+        assert_eq!(
+            &[
+                0f64, 0f64, 0f64, 0f64, -0.04f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+                0f64, 0f64, 0f64, 0f64, 0f64
+            ],
+            Desdemona::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -4802,31 +5503,51 @@ mod tests {
         assert_eq!(Juliet::along_orbit_radius(), 42f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_711() {
+    fn test_rotational_elements_right_ascension_coefficients_711() {
         assert_eq!(
             [257.31f64, 0f64, 0f64],
             Juliet::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_711() {
+    fn test_rotational_elements_declination_coefficients_711() {
         assert_eq!([-15.18f64, 0f64, 0f64], Juliet::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_711() {
+    fn test_rotational_elements_prime_meridian_coefficients_711() {
         assert_eq!(
             [302.56f64, -730.125366f64, 0f64],
             Juliet::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_711() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_711() {
         assert_eq!(
             &[
                 0f64, 0f64, 0f64, 0f64, 0f64, -0.06f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
                 0f64, 0f64, 0f64, 0f64, 0f64
             ],
-            Juliet::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Juliet::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_711() {
+        assert_eq!(
+            &[
+                0f64, 0f64, 0f64, 0f64, 0f64, 0.06f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+                0f64, 0f64, 0f64, 0f64, 0f64
+            ],
+            Juliet::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_711() {
+        assert_eq!(
+            &[
+                0f64, 0f64, 0f64, 0f64, 0f64, -0.02f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+                0f64, 0f64, 0f64, 0f64, 0f64
+            ],
+            Juliet::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -4841,31 +5562,51 @@ mod tests {
         assert_eq!(Portia::along_orbit_radius(), 54f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_712() {
+    fn test_rotational_elements_right_ascension_coefficients_712() {
         assert_eq!(
             [257.31f64, 0f64, 0f64],
             Portia::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_712() {
+    fn test_rotational_elements_declination_coefficients_712() {
         assert_eq!([-15.18f64, 0f64, 0f64], Portia::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_712() {
+    fn test_rotational_elements_prime_meridian_coefficients_712() {
         assert_eq!(
             [25.03f64, -701.486587f64, 0f64],
             Portia::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_712() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_712() {
         assert_eq!(
             &[
                 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.09f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
                 0f64, 0f64, 0f64, 0f64, 0f64
             ],
-            Portia::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Portia::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_712() {
+        assert_eq!(
+            &[
+                0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.09f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+                0f64, 0f64, 0f64, 0f64, 0f64
+            ],
+            Portia::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_712() {
+        assert_eq!(
+            &[
+                0f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.02f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+                0f64, 0f64, 0f64, 0f64, 0f64
+            ],
+            Portia::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -4880,31 +5621,51 @@ mod tests {
         assert_eq!(Rosalind::along_orbit_radius(), 27f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_713() {
+    fn test_rotational_elements_right_ascension_coefficients_713() {
         assert_eq!(
             [257.31f64, 0f64, 0f64],
             Rosalind::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_713() {
+    fn test_rotational_elements_declination_coefficients_713() {
         assert_eq!([-15.18f64, 0f64, 0f64], Rosalind::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_713() {
+    fn test_rotational_elements_prime_meridian_coefficients_713() {
         assert_eq!(
             [314.9f64, -644.631126f64, 0f64],
             Rosalind::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_713() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_713() {
         assert_eq!(
             &[
                 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.29f64, 0f64, 0f64, 0f64, 0f64, 0f64,
                 0f64, 0f64, 0f64, 0f64, 0f64
             ],
-            Rosalind::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Rosalind::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_713() {
+        assert_eq!(
+            &[
+                0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.28f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+                0f64, 0f64, 0f64, 0f64, 0f64
+            ],
+            Rosalind::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_713() {
+        assert_eq!(
+            &[
+                0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.08f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+                0f64, 0f64, 0f64, 0f64, 0f64
+            ],
+            Rosalind::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -4919,31 +5680,51 @@ mod tests {
         assert_eq!(Belinda::along_orbit_radius(), 33f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_714() {
+    fn test_rotational_elements_right_ascension_coefficients_714() {
         assert_eq!(
             [257.31f64, 0f64, 0f64],
             Belinda::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_714() {
+    fn test_rotational_elements_declination_coefficients_714() {
         assert_eq!([-15.18f64, 0f64, 0f64], Belinda::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_714() {
+    fn test_rotational_elements_prime_meridian_coefficients_714() {
         assert_eq!(
             [297.46f64, -577.362817f64, 0f64],
             Belinda::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_714() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_714() {
         assert_eq!(
             &[
                 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.03f64, 0f64, 0f64, 0f64, 0f64,
                 0f64, 0f64, 0f64, 0f64, 0f64
             ],
-            Belinda::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Belinda::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_714() {
+        assert_eq!(
+            &[
+                0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.03f64, 0f64, 0f64, 0f64, 0f64,
+                0f64, 0f64, 0f64, 0f64, 0f64
+            ],
+            Belinda::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_714() {
+        assert_eq!(
+            &[
+                0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.01f64, 0f64, 0f64, 0f64, 0f64,
+                0f64, 0f64, 0f64, 0f64, 0f64
+            ],
+            Belinda::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -4958,28 +5739,48 @@ mod tests {
         assert_eq!(Puck::along_orbit_radius(), 77f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_715() {
+    fn test_rotational_elements_right_ascension_coefficients_715() {
         assert_eq!([257.31f64, 0f64, 0f64], Puck::RIGHT_ASCENSION_COEFFICIENTS)
     }
     #[test]
-    fn test_declination_coefficients_715() {
+    fn test_rotational_elements_declination_coefficients_715() {
         assert_eq!([-15.18f64, 0f64, 0f64], Puck::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_715() {
+    fn test_rotational_elements_prime_meridian_coefficients_715() {
         assert_eq!(
             [91.24f64, -472.545069f64, 0f64],
             Puck::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_715() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_715() {
         assert_eq!(
             &[
                 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.33f64, 0f64, 0f64, 0f64,
                 0f64, 0f64, 0f64, 0f64, 0f64
             ],
-            Puck::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Puck::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_715() {
+        assert_eq!(
+            &[
+                0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.31f64, 0f64, 0f64, 0f64,
+                0f64, 0f64, 0f64, 0f64, 0f64
+            ],
+            Puck::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_715() {
+        assert_eq!(
+            &[
+                0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.09f64, 0f64, 0f64, 0f64,
+                0f64, 0f64, 0f64, 0f64, 0f64
+            ],
+            Puck::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -5046,31 +5847,51 @@ mod tests {
         assert_eq!(Triton::along_orbit_radius(), 1352.6f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_801() {
+    fn test_rotational_elements_right_ascension_coefficients_801() {
         assert_eq!(
             [299.36f64, 0f64, 0f64],
             Triton::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_801() {
+    fn test_rotational_elements_declination_coefficients_801() {
         assert_eq!([41.17f64, 0f64, 0f64], Triton::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_801() {
+    fn test_rotational_elements_prime_meridian_coefficients_801() {
         assert_eq!(
             [296.53f64, -61.2572637f64, 0f64],
             Triton::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_801() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_801() {
         assert_eq!(
             &[
                 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, -32.35f64, 0f64, -6.28f64, -2.08f64,
                 -0.74f64, -0.28f64, -0.11f64, -0.07f64, -0.02f64, -0.01f64
             ],
-            Triton::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Triton::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_801() {
+        assert_eq!(
+            &[
+                0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 22.55f64, 0f64, 2.1f64, 0.55f64, 0.16f64,
+                0.05f64, 0.02f64, 0.01f64, 0f64, 0f64
+            ],
+            Triton::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_801() {
+        assert_eq!(
+            &[
+                0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 22.25f64, 0f64, 6.73f64, 2.05f64,
+                0.74f64, 0.28f64, 0.11f64, 0.05f64, 0.02f64, 0.01f64
+            ],
+            Triton::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -5100,28 +5921,48 @@ mod tests {
         assert_eq!(Naiad::along_orbit_radius(), 29f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_803() {
+    fn test_rotational_elements_right_ascension_coefficients_803() {
         assert_eq!([299.36f64, 0f64, 0f64], Naiad::RIGHT_ASCENSION_COEFFICIENTS)
     }
     #[test]
-    fn test_declination_coefficients_803() {
+    fn test_rotational_elements_declination_coefficients_803() {
         assert_eq!([43.36f64, 0f64, 0f64], Naiad::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_803() {
+    fn test_rotational_elements_prime_meridian_coefficients_803() {
         assert_eq!(
             [254.06f64, 1222.8441209f64, 0f64],
             Naiad::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_803() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_803() {
         assert_eq!(
             &[
                 0.7f64, -6.49f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.25f64, 0f64, 0f64, 0f64,
                 0f64, 0f64, 0f64, 0f64, 0f64
             ],
-            Naiad::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Naiad::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_803() {
+        assert_eq!(
+            &[
+                -0.51f64, -4.75f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.09f64, 0f64, 0f64, 0f64,
+                0f64, 0f64, 0f64, 0f64, 0f64
+            ],
+            Naiad::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_803() {
+        assert_eq!(
+            &[
+                -0.48f64, 4.4f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.27f64, 0f64, 0f64, 0f64,
+                0f64, 0f64, 0f64, 0f64, 0f64
+            ],
+            Naiad::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -5140,31 +5981,51 @@ mod tests {
         assert_eq!(Thalassa::along_orbit_radius(), 40f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_804() {
+    fn test_rotational_elements_right_ascension_coefficients_804() {
         assert_eq!(
             [299.36f64, 0f64, 0f64],
             Thalassa::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_804() {
+    fn test_rotational_elements_declination_coefficients_804() {
         assert_eq!([43.45f64, 0f64, 0f64], Thalassa::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_804() {
+    fn test_rotational_elements_prime_meridian_coefficients_804() {
         assert_eq!(
             [102.06f64, 1155.7555612f64, 0f64],
             Thalassa::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_804() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_804() {
         assert_eq!(
             &[
                 0.7f64, 0f64, -0.28f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
                 0f64, 0f64, 0f64, 0f64
             ],
-            Thalassa::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Thalassa::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_804() {
+        assert_eq!(
+            &[
+                -0.51f64, 0f64, -0.21f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+                0f64, 0f64, 0f64, 0f64, 0f64
+            ],
+            Thalassa::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_804() {
+        assert_eq!(
+            &[
+                -0.48f64, 0f64, 0.19f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+                0f64, 0f64, 0f64, 0f64, 0f64
+            ],
+            Thalassa::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -5183,31 +6044,51 @@ mod tests {
         assert_eq!(Despina::along_orbit_radius(), 74f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_805() {
+    fn test_rotational_elements_right_ascension_coefficients_805() {
         assert_eq!(
             [299.36f64, 0f64, 0f64],
             Despina::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_805() {
+    fn test_rotational_elements_declination_coefficients_805() {
         assert_eq!([43.45f64, 0f64, 0f64], Despina::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_805() {
+    fn test_rotational_elements_prime_meridian_coefficients_805() {
         assert_eq!(
             [306.51f64, 1075.7341562f64, 0f64],
             Despina::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_805() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_805() {
         assert_eq!(
             &[
                 0.7f64, 0f64, 0f64, -0.09f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
                 0f64, 0f64, 0f64, 0f64
             ],
-            Despina::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Despina::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_805() {
+        assert_eq!(
+            &[
+                -0.51f64, 0f64, 0f64, -0.07f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+                0f64, 0f64, 0f64, 0f64, 0f64
+            ],
+            Despina::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_805() {
+        assert_eq!(
+            &[
+                -0.49f64, 0f64, 0f64, 0.06f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+                0f64, 0f64, 0f64, 0f64, 0f64
+            ],
+            Despina::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -5226,31 +6107,51 @@ mod tests {
         assert_eq!(Galatea::along_orbit_radius(), 79f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_806() {
+    fn test_rotational_elements_right_ascension_coefficients_806() {
         assert_eq!(
             [299.36f64, 0f64, 0f64],
             Galatea::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_806() {
+    fn test_rotational_elements_declination_coefficients_806() {
         assert_eq!([43.43f64, 0f64, 0f64], Galatea::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_806() {
+    fn test_rotational_elements_prime_meridian_coefficients_806() {
         assert_eq!(
             [258.09f64, 839.6597686f64, 0f64],
             Galatea::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_806() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_806() {
         assert_eq!(
             &[
                 0.7f64, 0f64, 0f64, 0f64, -0.07f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
                 0f64, 0f64, 0f64, 0f64
             ],
-            Galatea::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Galatea::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_806() {
+        assert_eq!(
+            &[
+                -0.51f64, 0f64, 0f64, 0f64, -0.05f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+                0f64, 0f64, 0f64, 0f64, 0f64
+            ],
+            Galatea::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_806() {
+        assert_eq!(
+            &[
+                -0.48f64, 0f64, 0f64, 0f64, 0.05f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+                0f64, 0f64, 0f64, 0f64, 0f64
+            ],
+            Galatea::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -5269,31 +6170,51 @@ mod tests {
         assert_eq!(Larissa::along_orbit_radius(), 96f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_807() {
+    fn test_rotational_elements_right_ascension_coefficients_807() {
         assert_eq!(
             [299.36f64, 0f64, 0f64],
             Larissa::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_807() {
+    fn test_rotational_elements_declination_coefficients_807() {
         assert_eq!([43.41f64, 0f64, 0f64], Larissa::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_807() {
+    fn test_rotational_elements_prime_meridian_coefficients_807() {
         assert_eq!(
             [179.41f64, 649.053447f64, 0f64],
             Larissa::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_807() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_807() {
         assert_eq!(
             &[
                 0.7f64, 0f64, 0f64, 0f64, 0f64, -0.27f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
                 0f64, 0f64, 0f64, 0f64
             ],
-            Larissa::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Larissa::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_807() {
+        assert_eq!(
+            &[
+                -0.51f64, 0f64, 0f64, 0f64, 0f64, -0.2f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+                0f64, 0f64, 0f64, 0f64, 0f64
+            ],
+            Larissa::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_807() {
+        assert_eq!(
+            &[
+                -0.48f64, 0f64, 0f64, 0f64, 0f64, 0.19f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+                0f64, 0f64, 0f64, 0f64, 0f64
+            ],
+            Larissa::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -5312,31 +6233,51 @@ mod tests {
         assert_eq!(Proteus::along_orbit_radius(), 208f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_808() {
+    fn test_rotational_elements_right_ascension_coefficients_808() {
         assert_eq!(
             [299.27f64, 0f64, 0f64],
             Proteus::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_808() {
+    fn test_rotational_elements_declination_coefficients_808() {
         assert_eq!([42.91f64, 0f64, 0f64], Proteus::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_808() {
+    fn test_rotational_elements_prime_meridian_coefficients_808() {
         assert_eq!(
             [93.38f64, 320.7654228f64, 0f64],
             Proteus::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
-    fn test_nut_prec_right_ascension_trig_coefficients_808() {
+    fn test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_808() {
         assert_eq!(
             &[
                 0.7f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.05f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
                 0f64, 0f64, 0f64, 0f64
             ],
-            Proteus::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS
+            Proteus::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_808() {
+        assert_eq!(
+            &[
+                -0.51f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.04f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+                0f64, 0f64, 0f64, 0f64, 0f64
+            ],
+            Proteus::NUT_PREC_DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_808() {
+        assert_eq!(
+            &[
+                -0.48f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.04f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+                0f64, 0f64, 0f64, 0f64, 0f64
+            ],
+            Proteus::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -5375,18 +6316,18 @@ mod tests {
         assert_eq!(Charon::along_orbit_radius(), 606f64);
     }
     #[test]
-    fn test_right_ascension_coefficients_901() {
+    fn test_rotational_elements_right_ascension_coefficients_901() {
         assert_eq!(
             [132.993f64, 0f64, 0f64],
             Charon::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
-    fn test_declination_coefficients_901() {
+    fn test_rotational_elements_declination_coefficients_901() {
         assert_eq!([-6.163f64, 0f64, 0f64], Charon::DECLINATION_COEFFICIENTS)
     }
     #[test]
-    fn test_prime_meridian_coefficients_901() {
+    fn test_rotational_elements_prime_meridian_coefficients_901() {
         assert_eq!(
             [122.695f64, 56.3625225f64, 0f64],
             Charon::PRIME_MERIDIAN_COEFFICIENTS

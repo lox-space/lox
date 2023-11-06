@@ -20,11 +20,9 @@ pub(crate) struct RotationalElements<'a, 'b> {
     right_ascension: [f64; 3],
     declination: [f64; 3],
     prime_meridian: [f64; 3],
+    // Not all bodies have trigonometric rotational elements, so we encapsulate these fields in
+    // a separate, optional struct.
     trig_elements: Option<TrigonometricElements<'b>>,
-}
-
-struct TrigonometricElements<'a> {
-    nut_prec_right_ascension: &'a Vec<f64>,
 }
 
 impl<'a, 'b> RotationalElements<'a, 'b> {
@@ -43,11 +41,12 @@ impl<'a, 'b> RotationalElements<'a, 'b> {
         })
     }
 
+    /// Returns the TokenStream corresponding to the [lox_core::bodies::RotationalElements] impl.
     pub(crate) fn code_tokens(&self) -> TokenStream {
         let ident = self.ident;
-        let right_ascension = self.right_ascension();
-        let declination = self.declination();
-        let prime_meridian = self.prime_meridian();
+        let right_ascension = array_tokens_for(&self.right_ascension);
+        let declination = array_tokens_for(&self.declination);
+        let prime_meridian = array_tokens_for(&self.prime_meridian);
 
         let mut tokens = quote! {
             impl RotationalElements for #ident {
@@ -64,18 +63,25 @@ impl<'a, 'b> RotationalElements<'a, 'b> {
         tokens
     }
 
+    /// Returns the TokenStream testing the [lox_core::bodies::RotationalElements] impl.
     pub(crate) fn test_tokens(&self) -> TokenStream {
         let ident = self.ident;
-        let right_ascension = self.right_ascension();
-        let declination = self.declination();
-        let prime_meridian = self.prime_meridian();
+        let right_ascension = array_tokens_for(&self.right_ascension);
+        let declination = array_tokens_for(&self.declination);
+        let prime_meridian = array_tokens_for(&self.prime_meridian);
 
-        let right_ascension_test_name =
-            format_ident!("test_right_ascension_coefficients_{}", self.id as u32);
-        let declination_test_name =
-            format_ident!("test_declination_coefficients_{}", self.id as u32);
-        let prime_meridian_test_name =
-            format_ident!("test_prime_meridian_coefficients_{}", self.id as u32);
+        let right_ascension_test_name = format_ident!(
+            "test_rotational_elements_right_ascension_coefficients_{}",
+            self.id as u32
+        );
+        let declination_test_name = format_ident!(
+            "test_rotational_elements_declination_coefficients_{}",
+            self.id as u32
+        );
+        let prime_meridian_test_name = format_ident!(
+            "test_rotational_elements_prime_meridian_coefficients_{}",
+            self.id as u32
+        );
 
         let mut tokens = quote! {
             #[test]
@@ -101,59 +107,80 @@ impl<'a, 'b> RotationalElements<'a, 'b> {
         tokens
     }
 
-    fn right_ascension(&self) -> TokenStream {
-        let [ra_0, ra_1, ra_2] = self.right_ascension;
-        quote! { [#ra_0, #ra_1, #ra_2] }
+    pub(crate) fn has_trig_elements(&self) -> bool {
+        self.trig_elements.is_some()
     }
+}
 
-    fn declination(&self) -> TokenStream {
-        let [dec_0, dec_1, dec_2] = self.declination;
-        quote! { [#dec_0, #dec_1, #dec_2] }
-    }
-
-    fn prime_meridian(&self) -> TokenStream {
-        let [pm_0, pm_1, pm_2] = self.prime_meridian;
-        quote! { [#pm_0, #pm_1, #pm_2] }
-    }
+struct TrigonometricElements<'a> {
+    nut_prec_right_ascension: &'a Vec<f64>,
+    nut_prec_declination: &'a Vec<f64>,
+    nut_prec_prime_meridian: &'a Vec<f64>,
 }
 
 impl<'a> TrigonometricElements<'a> {
     fn parse(id: i32, kernel: &'a Kernel) -> Option<Self> {
         let nut_prec_right_ascension_key = format!("BODY{}_NUT_PREC_RA", id);
+        let nut_prec_declination_key = format!("BODY{}_NUT_PREC_DEC", id);
+        let nut_prec_prime_meridian_key = format!("BODY{}_NUT_PREC_PM", id);
 
         Some(Self {
             nut_prec_right_ascension: kernel.get_double_array(&nut_prec_right_ascension_key)?,
+            nut_prec_declination: kernel.get_double_array(&nut_prec_declination_key)?,
+            nut_prec_prime_meridian: kernel.get_double_array(&nut_prec_prime_meridian_key)?,
         })
     }
 
+    /// Returns the TokenStream corresponding to the [lox_core::bodies::TrigonometricRotationalElements] impl.
     fn code_tokens(&self, ident: &Ident) -> TokenStream {
-        let nut_prec_ra = self.nut_prec_right_ascension();
+        let nut_prec_ra = slice_tokens_for(self.nut_prec_right_ascension);
+        let nut_prec_dec = slice_tokens_for(self.nut_prec_declination);
+        let nut_prec_pm = slice_tokens_for(self.nut_prec_prime_meridian);
 
         quote! {
             impl TrigonometricRotationalElements for #ident {
-                const NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS: &'static [PolynomialCoefficient] = #nut_prec_ra;
+                const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = #nut_prec_ra;
+                const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] = #nut_prec_dec;
+                const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] = #nut_prec_pm;
             }
         }
     }
 
+    /// Returns the TokenStream testing the [lox_core::bodies::TrigonometricRotationalElements] impl.
     fn test_tokens(&self, id: i32, ident: &Ident) -> TokenStream {
-        let nut_prec_ra = self.nut_prec_right_ascension();
         let nut_prec_ra_test_name = format_ident!(
-            "test_nut_prec_right_ascension_trig_coefficients_{}",
+            "test_trigonometric_rotational_elements_nut_prec_right_ascension_trig_coefficients_{}",
             id as u32
         );
+        let nut_prec_dec_test_name = format_ident!(
+            "test_trigonometric_rotational_elements_nut_prec_declination_trig_coefficients_{}",
+            id as u32
+        );
+        let nut_prec_pm_test_name = format_ident!(
+            "test_trigonometric_rotational_elements_nut_prec_prime_meridian_trig_coefficients_{}",
+            id as u32
+        );
+
+        let nut_prec_ra = slice_tokens_for(self.nut_prec_right_ascension);
+        let nut_prec_dec = slice_tokens_for(self.nut_prec_declination);
+        let nut_prec_pm = slice_tokens_for(self.nut_prec_prime_meridian);
 
         quote! {
             #[test]
             fn #nut_prec_ra_test_name() {
-                assert_eq!(#nut_prec_ra, #ident::NUT_PREC_RIGHT_ASCENSION_TRIG_COEFFICIENTS)
+                assert_eq!(#nut_prec_ra, #ident::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS)
+            }
+
+            #[test]
+            fn #nut_prec_dec_test_name() {
+                assert_eq!(#nut_prec_dec, #ident::NUT_PREC_DECLINATION_COEFFICIENTS)
+            }
+
+            #[test]
+            fn #nut_prec_pm_test_name() {
+                assert_eq!(#nut_prec_pm, #ident::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS)
             }
         }
-    }
-
-    fn nut_prec_right_ascension(&self) -> TokenStream {
-        let data = &self.nut_prec_right_ascension;
-        quote! { &[#(#data),*] }
     }
 }
 
@@ -172,4 +199,12 @@ fn get_polynomial_coefficients(key: &str, kernel: &Kernel) -> Option<[f64; 3]> {
             )
         }
     }
+}
+
+fn array_tokens_for(data: &[f64]) -> TokenStream {
+    quote! { [#(#data),*] }
+}
+
+fn slice_tokens_for(data: &[f64]) -> TokenStream {
+    quote! { &[#(#data),*] }
 }
