@@ -29,6 +29,8 @@ impl RotationalElements for Mercury {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [281.0103f64, -0.0328f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [61.4155f64, -0.0049f64, 0f64];
+    const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
+        [329.5988f64, 6.1385108f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Venus;
@@ -58,6 +60,7 @@ impl Spheroid for Venus {
 impl RotationalElements for Venus {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [272.76f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [67.16f64, 0f64, 0f64];
+    const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] = [160.2f64, -1.4813688f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Earth;
@@ -87,6 +90,8 @@ impl Spheroid for Earth {
 impl RotationalElements for Earth {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [0f64, -0.641f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [90f64, -0.557f64, 0f64];
+    const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
+        [190.147f64, 360.9856235f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Mars;
@@ -118,6 +123,8 @@ impl RotationalElements for Mars {
         [317.269202f64, -0.10927547f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [54.432516f64, -0.05827105f64, 0f64];
+    const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
+        [176.049863f64, 350.891982443297f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Jupiter;
@@ -148,6 +155,7 @@ impl RotationalElements for Jupiter {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [268.056595f64, -0.006499f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [64.495303f64, 0.002413f64, 0f64];
+    const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] = [284.95f64, 870.536f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Saturn;
@@ -177,6 +185,7 @@ impl Spheroid for Saturn {
 impl RotationalElements for Saturn {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [40.589f64, -0.036f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [83.537f64, -0.004f64, 0f64];
+    const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] = [38.9f64, 810.7939024f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Uranus;
@@ -206,6 +215,8 @@ impl Spheroid for Uranus {
 impl RotationalElements for Uranus {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [257.311f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [-15.175f64, 0f64, 0f64];
+    const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
+        [203.81f64, -501.1600928f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Neptune;
@@ -235,6 +246,8 @@ impl Spheroid for Neptune {
 impl RotationalElements for Neptune {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [299.36f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [43.46f64, 0f64, 0f64];
+    const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
+        [249.978f64, 541.1397757f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Pluto;
@@ -264,6 +277,8 @@ impl Spheroid for Pluto {
 impl RotationalElements for Pluto {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [132.993f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [-6.163f64, 0f64, 0f64];
+    const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
+        [302.695f64, 56.3625225f64, 0f64];
 }
 #[cfg(test)]
 mod tests {
@@ -297,6 +312,13 @@ mod tests {
         )
     }
     #[test]
+    fn test_prime_meridian_coefficients_199() {
+        assert_eq!(
+            [329.5988f64, 6.1385108f64, 0f64],
+            Mercury::PRIME_MERIDIAN_COEFFICIENTS
+        )
+    }
+    #[test]
     fn test_naif_id_299() {
         assert_eq!(Venus::id(), 299i32)
     }
@@ -319,6 +341,13 @@ mod tests {
         assert_eq!([67.16f64, 0f64, 0f64], Venus::DECLINATION_COEFFICIENTS)
     }
     #[test]
+    fn test_prime_meridian_coefficients_299() {
+        assert_eq!(
+            [160.2f64, -1.4813688f64, 0f64],
+            Venus::PRIME_MERIDIAN_COEFFICIENTS
+        )
+    }
+    #[test]
     fn test_naif_id_399() {
         assert_eq!(Earth::id(), 399i32)
     }
@@ -339,6 +368,13 @@ mod tests {
     #[test]
     fn test_declination_coefficients_399() {
         assert_eq!([90f64, -0.557f64, 0f64], Earth::DECLINATION_COEFFICIENTS)
+    }
+    #[test]
+    fn test_prime_meridian_coefficients_399() {
+        assert_eq!(
+            [190.147f64, 360.9856235f64, 0f64],
+            Earth::PRIME_MERIDIAN_COEFFICIENTS
+        )
     }
     #[test]
     fn test_naif_id_499() {
@@ -366,6 +402,13 @@ mod tests {
         assert_eq!(
             [54.432516f64, -0.05827105f64, 0f64],
             Mars::DECLINATION_COEFFICIENTS
+        )
+    }
+    #[test]
+    fn test_prime_meridian_coefficients_499() {
+        assert_eq!(
+            [176.049863f64, 350.891982443297f64, 0f64],
+            Mars::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -397,6 +440,13 @@ mod tests {
         )
     }
     #[test]
+    fn test_prime_meridian_coefficients_599() {
+        assert_eq!(
+            [284.95f64, 870.536f64, 0f64],
+            Jupiter::PRIME_MERIDIAN_COEFFICIENTS
+        )
+    }
+    #[test]
     fn test_naif_id_699() {
         assert_eq!(Saturn::id(), 699i32)
     }
@@ -425,6 +475,13 @@ mod tests {
         )
     }
     #[test]
+    fn test_prime_meridian_coefficients_699() {
+        assert_eq!(
+            [38.9f64, 810.7939024f64, 0f64],
+            Saturn::PRIME_MERIDIAN_COEFFICIENTS
+        )
+    }
+    #[test]
     fn test_naif_id_799() {
         assert_eq!(Uranus::id(), 799i32)
     }
@@ -448,6 +505,13 @@ mod tests {
     #[test]
     fn test_declination_coefficients_799() {
         assert_eq!([-15.175f64, 0f64, 0f64], Uranus::DECLINATION_COEFFICIENTS)
+    }
+    #[test]
+    fn test_prime_meridian_coefficients_799() {
+        assert_eq!(
+            [203.81f64, -501.1600928f64, 0f64],
+            Uranus::PRIME_MERIDIAN_COEFFICIENTS
+        )
     }
     #[test]
     fn test_naif_id_899() {
@@ -475,6 +539,13 @@ mod tests {
         assert_eq!([43.46f64, 0f64, 0f64], Neptune::DECLINATION_COEFFICIENTS)
     }
     #[test]
+    fn test_prime_meridian_coefficients_899() {
+        assert_eq!(
+            [249.978f64, 541.1397757f64, 0f64],
+            Neptune::PRIME_MERIDIAN_COEFFICIENTS
+        )
+    }
+    #[test]
     fn test_naif_id_999() {
         assert_eq!(Pluto::id(), 999i32)
     }
@@ -498,5 +569,12 @@ mod tests {
     #[test]
     fn test_declination_coefficients_999() {
         assert_eq!([-6.163f64, 0f64, 0f64], Pluto::DECLINATION_COEFFICIENTS)
+    }
+    #[test]
+    fn test_prime_meridian_coefficients_999() {
+        assert_eq!(
+            [302.695f64, 56.3625225f64, 0f64],
+            Pluto::PRIME_MERIDIAN_COEFFICIENTS
+        )
     }
 }

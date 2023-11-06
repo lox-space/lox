@@ -68,6 +68,7 @@ pub type PolynomialCoefficient = f64;
 pub trait RotationalElements: Copy {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3];
+    const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3];
 }
 
 #[cfg(test)]

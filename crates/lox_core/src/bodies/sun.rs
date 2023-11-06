@@ -28,6 +28,7 @@ impl Spheroid for Sun {
 impl RotationalElements for Sun {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [286.13f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [63.87f64, 0f64, 0f64];
+    const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] = [84.176f64, 14.1844f64, 0f64];
 }
 #[cfg(test)]
 mod tests {
@@ -53,5 +54,12 @@ mod tests {
     #[test]
     fn test_declination_coefficients_10() {
         assert_eq!([63.87f64, 0f64, 0f64], Sun::DECLINATION_COEFFICIENTS)
+    }
+    #[test]
+    fn test_prime_meridian_coefficients_10() {
+        assert_eq!(
+            [84.176f64, 14.1844f64, 0f64],
+            Sun::PRIME_MERIDIAN_COEFFICIENTS
+        )
     }
 }

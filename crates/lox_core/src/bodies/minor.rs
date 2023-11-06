@@ -26,6 +26,8 @@ impl TriAxial for Gaspra {
 impl RotationalElements for Gaspra {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [9.47f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [26.7f64, 0f64, 0f64];
+    const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
+        [83.67f64, 1226.911485f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Ida;
@@ -53,6 +55,8 @@ impl TriAxial for Ida {
 impl RotationalElements for Ida {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [168.76f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [-87.12f64, 0f64, 0f64];
+    const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
+        [274.05f64, 1864.628007f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Dactyl;
@@ -92,6 +96,7 @@ impl TriAxial for Ceres {
 impl RotationalElements for Ceres {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [291.418f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [66.764f64, 0f64, 0f64];
+    const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] = [170.65f64, 952.1532f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Pallas;
@@ -108,6 +113,7 @@ impl PointMass for Pallas {
 impl RotationalElements for Pallas {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [33f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [-3f64, 0f64, 0f64];
+    const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] = [38f64, 1105.8036f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Vesta;
@@ -140,6 +146,8 @@ impl TriAxial for Vesta {
 impl RotationalElements for Vesta {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [309.031f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [42.235f64, 0f64, 0f64];
+    const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
+        [285.39f64, 1617.3329428f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Psyche;
@@ -195,6 +203,7 @@ impl TriAxial for Lutetia {
 impl RotationalElements for Lutetia {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [52f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [12f64, 0f64, 0f64];
+    const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] = [94f64, 1057.7515f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Kleopatra;
@@ -234,6 +243,8 @@ impl TriAxial for Eros {
 impl RotationalElements for Eros {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [11.35f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [17.22f64, 0f64, 0f64];
+    const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
+        [326.07f64, 1639.38864745f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Davida;
@@ -266,6 +277,8 @@ impl TriAxial for Davida {
 impl RotationalElements for Davida {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [297f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [5f64, 0f64, 0f64];
+    const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
+        [268.1f64, 1684.4193549f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Mathilde;
@@ -316,6 +329,8 @@ impl TriAxial for Steins {
 impl RotationalElements for Steins {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [91f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [-62f64, 0f64, 0f64];
+    const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
+        [321.76f64, 1428.09917f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Braille;
@@ -380,6 +395,7 @@ impl TriAxial for Itokawa {
 impl RotationalElements for Itokawa {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [90.53f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [-66.3f64, 0f64, 0f64];
+    const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] = [0f64, 712.143f64, 0f64];
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Bennu;
@@ -411,6 +427,13 @@ mod tests {
         assert_eq!([26.7f64, 0f64, 0f64], Gaspra::DECLINATION_COEFFICIENTS)
     }
     #[test]
+    fn test_prime_meridian_coefficients_9511010() {
+        assert_eq!(
+            [83.67f64, 1226.911485f64, 0f64],
+            Gaspra::PRIME_MERIDIAN_COEFFICIENTS
+        )
+    }
+    #[test]
     fn test_naif_id_2431010() {
         assert_eq!(Ida::id(), 2431010i32)
     }
@@ -428,6 +451,13 @@ mod tests {
     #[test]
     fn test_declination_coefficients_2431010() {
         assert_eq!([-87.12f64, 0f64, 0f64], Ida::DECLINATION_COEFFICIENTS)
+    }
+    #[test]
+    fn test_prime_meridian_coefficients_2431010() {
+        assert_eq!(
+            [274.05f64, 1864.628007f64, 0f64],
+            Ida::PRIME_MERIDIAN_COEFFICIENTS
+        )
     }
     #[test]
     fn test_naif_id_2431011() {
@@ -460,6 +490,13 @@ mod tests {
         assert_eq!([66.764f64, 0f64, 0f64], Ceres::DECLINATION_COEFFICIENTS)
     }
     #[test]
+    fn test_prime_meridian_coefficients_2000001() {
+        assert_eq!(
+            [170.65f64, 952.1532f64, 0f64],
+            Ceres::PRIME_MERIDIAN_COEFFICIENTS
+        )
+    }
+    #[test]
     fn test_naif_id_2000002() {
         assert_eq!(Pallas::id(), 2000002i32)
     }
@@ -474,6 +511,13 @@ mod tests {
     #[test]
     fn test_declination_coefficients_2000002() {
         assert_eq!([-3f64, 0f64, 0f64], Pallas::DECLINATION_COEFFICIENTS)
+    }
+    #[test]
+    fn test_prime_meridian_coefficients_2000002() {
+        assert_eq!(
+            [38f64, 1105.8036f64, 0f64],
+            Pallas::PRIME_MERIDIAN_COEFFICIENTS
+        )
     }
     #[test]
     fn test_naif_id_2000004() {
@@ -500,6 +544,13 @@ mod tests {
     #[test]
     fn test_declination_coefficients_2000004() {
         assert_eq!([42.235f64, 0f64, 0f64], Vesta::DECLINATION_COEFFICIENTS)
+    }
+    #[test]
+    fn test_prime_meridian_coefficients_2000004() {
+        assert_eq!(
+            [285.39f64, 1617.3329428f64, 0f64],
+            Vesta::PRIME_MERIDIAN_COEFFICIENTS
+        )
     }
     #[test]
     fn test_naif_id_2000016() {
@@ -536,6 +587,13 @@ mod tests {
         assert_eq!([12f64, 0f64, 0f64], Lutetia::DECLINATION_COEFFICIENTS)
     }
     #[test]
+    fn test_prime_meridian_coefficients_2000021() {
+        assert_eq!(
+            [94f64, 1057.7515f64, 0f64],
+            Lutetia::PRIME_MERIDIAN_COEFFICIENTS
+        )
+    }
+    #[test]
     fn test_naif_id_2000216() {
         assert_eq!(Kleopatra::id(), 2000216i32)
     }
@@ -563,6 +621,13 @@ mod tests {
         assert_eq!([17.22f64, 0f64, 0f64], Eros::DECLINATION_COEFFICIENTS)
     }
     #[test]
+    fn test_prime_meridian_coefficients_2000433() {
+        assert_eq!(
+            [326.07f64, 1639.38864745f64, 0f64],
+            Eros::PRIME_MERIDIAN_COEFFICIENTS
+        )
+    }
+    #[test]
     fn test_naif_id_2000511() {
         assert_eq!(Davida::id(), 2000511i32)
     }
@@ -584,6 +649,13 @@ mod tests {
     #[test]
     fn test_declination_coefficients_2000511() {
         assert_eq!([5f64, 0f64, 0f64], Davida::DECLINATION_COEFFICIENTS)
+    }
+    #[test]
+    fn test_prime_meridian_coefficients_2000511() {
+        assert_eq!(
+            [268.1f64, 1684.4193549f64, 0f64],
+            Davida::PRIME_MERIDIAN_COEFFICIENTS
+        )
     }
     #[test]
     fn test_naif_id_2000253() {
@@ -614,6 +686,13 @@ mod tests {
     #[test]
     fn test_declination_coefficients_2002867() {
         assert_eq!([-62f64, 0f64, 0f64], Steins::DECLINATION_COEFFICIENTS)
+    }
+    #[test]
+    fn test_prime_meridian_coefficients_2002867() {
+        assert_eq!(
+            [321.76f64, 1428.09917f64, 0f64],
+            Steins::PRIME_MERIDIAN_COEFFICIENTS
+        )
     }
     #[test]
     fn test_naif_id_2009969() {
@@ -655,6 +734,13 @@ mod tests {
     #[test]
     fn test_declination_coefficients_2025143() {
         assert_eq!([-66.3f64, 0f64, 0f64], Itokawa::DECLINATION_COEFFICIENTS)
+    }
+    #[test]
+    fn test_prime_meridian_coefficients_2025143() {
+        assert_eq!(
+            [0f64, 712.143f64, 0f64],
+            Itokawa::PRIME_MERIDIAN_COEFFICIENTS
+        )
     }
     #[test]
     fn test_naif_id_2101955() {

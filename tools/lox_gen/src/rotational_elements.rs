@@ -10,15 +10,18 @@ use crate::Data;
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote};
 
+type PolynomialCoefficients = (f64, f64, f64);
+
 /// Holds the rotational elements for a given body.
 ///
 /// May be parsed directly from PCK data and knows how to represent its code and test components as
 /// streams of tokens.
-pub struct RotationalElements<'a> {
+pub(crate) struct RotationalElements<'a> {
     id: i32,
     ident: &'a Ident,
-    right_ascension: (f64, f64, f64),
-    declination: (f64, f64, f64),
+    right_ascension: PolynomialCoefficients,
+    declination: PolynomialCoefficients,
+    prime_meridian: PolynomialCoefficients,
 }
 
 impl<'a> RotationalElements<'a> {
@@ -29,11 +32,15 @@ impl<'a> RotationalElements<'a> {
         let declination_key = format!("BODY{}_POLE_DEC", id);
         let declination = get_polynomial_coefficients(&declination_key, data)?;
 
+        let prime_meridian_key = format!("BODY{}_PM", id);
+        let prime_meridian = get_polynomial_coefficients(&prime_meridian_key, data)?;
+
         Some(Self {
             id,
             ident,
             right_ascension,
             declination,
+            prime_meridian,
         })
     }
 
@@ -41,11 +48,13 @@ impl<'a> RotationalElements<'a> {
         let ident = self.ident;
         let right_ascension = self.right_ascension();
         let declination = self.declination();
+        let prime_meridian = self.prime_meridian();
 
         quote! {
             impl RotationalElements for #ident {
                 const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = #right_ascension;
                 const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = #declination;
+                const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] = #prime_meridian;
             }
         }
     }
@@ -54,11 +63,14 @@ impl<'a> RotationalElements<'a> {
         let ident = self.ident;
         let right_ascension = self.right_ascension();
         let declination = self.declination();
+        let prime_meridian = self.prime_meridian();
 
         let right_ascension_test_name =
             format_ident!("test_right_ascension_coefficients_{}", self.id as u32);
         let declination_test_name =
             format_ident!("test_declination_coefficients_{}", self.id as u32);
+        let prime_meridian_test_name =
+            format_ident!("test_prime_meridian_coefficients_{}", self.id as u32);
 
         quote! {
             #[test]
@@ -69,6 +81,11 @@ impl<'a> RotationalElements<'a> {
             #[test]
             fn #declination_test_name() {
                 assert_eq!(#declination, #ident::DECLINATION_COEFFICIENTS)
+            }
+
+            #[test]
+            fn #prime_meridian_test_name() {
+                assert_eq!(#prime_meridian, #ident::PRIME_MERIDIAN_COEFFICIENTS)
             }
         }
     }
@@ -82,9 +99,14 @@ impl<'a> RotationalElements<'a> {
         let (dec_0, dec_1, dec_2) = self.declination;
         quote! { [#dec_0, #dec_1, #dec_2] }
     }
+
+    fn prime_meridian(&self) -> TokenStream {
+        let (pm_0, pm_1, pm_2) = self.prime_meridian;
+        quote! { [#pm_0, #pm_1, #pm_2] }
+    }
 }
 
-fn get_polynomial_coefficients(key: &str, data: &Data) -> Option<(f64, f64, f64)> {
+fn get_polynomial_coefficients(key: &str, data: &Data) -> Option<PolynomialCoefficients> {
     match data.pck.get_double_array(key) {
         None => None,
         Some(polynomials) if polynomials.len() == 2 => Some((polynomials[0], polynomials[1], 0.0)),

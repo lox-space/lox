@@ -332,12 +332,12 @@ fn rotational_elements(
         }
     }
 
-    let rot_el = if let Some(rot_el) = RotationalElements::parse(*id, ident, data) {
-        rot_el
+    let elements = if let Some(elements) = RotationalElements::parse(*id, ident, data) {
+        elements
     } else {
         return;
     };
 
-    code.extend(rot_el.code_tokens());
-    tests.extend(rot_el.test_tokens());
+    code.extend(elements.code_tokens());
+    tests.extend(elements.test_tokens());
 }
