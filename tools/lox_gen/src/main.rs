@@ -323,6 +323,7 @@ fn rotational_elements(
 ) {
     let shared_imports = vec![
         format_ident!("RotationalElements"),
+        format_ident!("TrigonometricRotationalElements"),
         format_ident!("PolynomialCoefficient"),
     ];
 
@@ -332,7 +333,7 @@ fn rotational_elements(
         }
     }
 
-    let elements = if let Some(elements) = RotationalElements::parse(*id, ident, data) {
+    let elements = if let Some(elements) = RotationalElements::parse(*id, ident, &data.pck) {
         elements
     } else {
         return;
