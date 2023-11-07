@@ -131,8 +131,12 @@ impl PyEpoch {
         self.0.attosecond()
     }
 
+    fn j2000(&self) -> f64 {
+        self.0.j2000()
+    }
+
     fn __str__(&self) -> String {
-        "foo".to_string()
+        todo!()
     }
 }
 

@@ -12,6 +12,8 @@
       <sourceFolder url="file://$MODULE_DIR$/crates/lox-space/examples" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/lox-space/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/lox_py/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/lox-eop/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/lox-utils/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
       <excludeFolder url="file://$MODULE_DIR$/tools/lox_gen/target" />
     </content>
