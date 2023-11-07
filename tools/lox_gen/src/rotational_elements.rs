@@ -50,6 +50,7 @@ impl<'a, 'b> BodyRotationalElements<'a, 'b> {
         let prime_meridian = array_tokens_for(&self.prime_meridian);
 
         let mut tokens = quote! {
+            #[allow(clippy::approx_constant)]
             impl BodyRotationalElements for #ident {
                 const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = #right_ascension;
                 const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = #declination;
@@ -141,6 +142,7 @@ impl<'a> TrigonometricElements<'a> {
         let nut_prec_pm = slice_tokens_for(self.nut_prec_prime_meridian);
 
         quote! {
+            #[allow(clippy::approx_constant)]
             impl BodyTrigRotationalElements for #ident {
                 const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = #nut_prec_ra;
                 const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] = #nut_prec_dec;
@@ -211,6 +213,7 @@ impl<'a, 'b> BarycenterTrigElements<'a, 'b> {
         let nut_prec_angles = slice_tokens_for(self.nut_prec_angles);
 
         quote! {
+            #[allow(clippy::approx_constant)]
             impl BarycenterTrigRotationalElements for #ident {
                 const NUT_PREC_ANGLES: &'static [PolynomialCoefficient] = #nut_prec_angles;
             }

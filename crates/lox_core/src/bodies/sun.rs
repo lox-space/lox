@@ -36,12 +36,14 @@ impl Spheroid for Sun {
         695700f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Sun {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [286.13f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [63.87f64, 0f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] = [84.176f64, 14.1844f64, 0f64];
 }
 #[cfg(test)]
+#[allow(clippy::approx_constant)]
 mod tests {
     use super::*;
     #[test]

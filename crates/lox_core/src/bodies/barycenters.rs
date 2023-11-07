@@ -28,6 +28,7 @@ impl PointMass for MercuryBarycenter {
         22031.868551400003f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BarycenterTrigRotationalElements for MercuryBarycenter {
     const NUT_PREC_ANGLES: &'static [PolynomialCoefficient] = &[
         174.7910857f64,
@@ -66,6 +67,7 @@ impl PointMass for EarthBarycenter {
         403503.2356254802f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BarycenterTrigRotationalElements for EarthBarycenter {
     const NUT_PREC_ANGLES: &'static [PolynomialCoefficient] = &[
         125.045f64,
@@ -108,6 +110,7 @@ impl PointMass for MarsBarycenter {
         42828.3758157561f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BarycenterTrigRotationalElements for MarsBarycenter {
     const NUT_PREC_ANGLES: &'static [PolynomialCoefficient] = &[
         190.72646643f64,
@@ -202,6 +205,7 @@ impl PointMass for JupiterBarycenter {
         126712764.09999998f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BarycenterTrigRotationalElements for JupiterBarycenter {
     const NUT_PREC_ANGLES: &'static [PolynomialCoefficient] = &[
         73.32f64,
@@ -248,6 +252,7 @@ impl PointMass for SaturnBarycenter {
         37940584.8418f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BarycenterTrigRotationalElements for SaturnBarycenter {
     const NUT_PREC_ANGLES: &'static [PolynomialCoefficient] = &[
         353.32f64,
@@ -280,6 +285,7 @@ impl PointMass for UranusBarycenter {
         5794556.3999999985f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BarycenterTrigRotationalElements for UranusBarycenter {
     const NUT_PREC_ANGLES: &'static [PolynomialCoefficient] = &[
         115.75f64,
@@ -332,6 +338,7 @@ impl PointMass for NeptuneBarycenter {
         6836527.100580399f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BarycenterTrigRotationalElements for NeptuneBarycenter {
     const NUT_PREC_ANGLES: &'static [PolynomialCoefficient] = &[
         357.85f64,
@@ -383,6 +390,7 @@ impl PointMass for PlutoBarycenter {
     }
 }
 #[cfg(test)]
+#[allow(clippy::approx_constant)]
 mod tests {
     use super::*;
     #[test]

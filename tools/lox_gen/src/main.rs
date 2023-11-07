@@ -122,6 +122,7 @@ fn generate_code(bodies: &[Body], generators: &[Generator], data: &Data) -> Stri
         #code
 
         #[cfg(test)]
+        #[allow(clippy::approx_constant)] // at least one parsed constant is close to TAU
         mod tests {
             use super::*;
 

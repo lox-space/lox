@@ -34,6 +34,7 @@ impl TriAxial for Gaspra {
         5.2f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Gaspra {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [9.47f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [26.7f64, 0f64, 0f64];
@@ -63,6 +64,7 @@ impl TriAxial for Ida {
         12f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Ida {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [168.76f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [-87.12f64, 0f64, 0f64];
@@ -104,6 +106,7 @@ impl TriAxial for Ceres {
         487.3f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Ceres {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [291.418f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [66.764f64, 0f64, 0f64];
@@ -121,6 +124,7 @@ impl PointMass for Pallas {
         13.665878145967422f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Pallas {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [33f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [-3f64, 0f64, 0f64];
@@ -154,6 +158,7 @@ impl TriAxial for Vesta {
         280f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Vesta {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [309.031f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [42.235f64, 0f64, 0f64];
@@ -211,6 +216,7 @@ impl TriAxial for Lutetia {
         50.5f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Lutetia {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [52f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [12f64, 0f64, 0f64];
@@ -251,6 +257,7 @@ impl TriAxial for Eros {
         5.5f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Eros {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [11.35f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [17.22f64, 0f64, 0f64];
@@ -285,6 +292,7 @@ impl TriAxial for Davida {
         147f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Davida {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [297f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [5f64, 0f64, 0f64];
@@ -337,6 +345,7 @@ impl TriAxial for Steins {
         2.73f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Steins {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [91f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [-62f64, 0f64, 0f64];
@@ -403,6 +412,7 @@ impl TriAxial for Itokawa {
         0.147f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Itokawa {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [90.53f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [-66.3f64, 0f64, 0f64];
@@ -416,6 +426,7 @@ impl NaifId for Bennu {
     }
 }
 #[cfg(test)]
+#[allow(clippy::approx_constant)]
 mod tests {
     use super::*;
     #[test]

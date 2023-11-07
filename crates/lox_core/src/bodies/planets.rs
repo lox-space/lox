@@ -37,6 +37,7 @@ impl Spheroid for Mercury {
         2440.53f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Mercury {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [281.0103f64, -0.0328f64, 0f64];
@@ -44,6 +45,7 @@ impl BodyRotationalElements for Mercury {
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [329.5988f64, 6.1385108f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Mercury {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] =
         &[0f64, 0f64, 0f64, 0f64, 0f64];
@@ -82,6 +84,7 @@ impl Spheroid for Venus {
         6051.8f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Venus {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [272.76f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [67.16f64, 0f64, 0f64];
@@ -112,6 +115,7 @@ impl Spheroid for Earth {
         6378.1366f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Earth {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [0f64, -0.641f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [90f64, -0.557f64, 0f64];
@@ -143,6 +147,7 @@ impl Spheroid for Mars {
         3396.19f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Mars {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [317.269202f64, -0.10927547f64, 0f64];
@@ -151,6 +156,7 @@ impl BodyRotationalElements for Mars {
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [176.049863f64, 350.891982443297f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Mars {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64,
@@ -245,12 +251,14 @@ impl Spheroid for Jupiter {
         71492f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Jupiter {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [268.056595f64, -0.006499f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [64.495303f64, 0.002413f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] = [284.95f64, 870.536f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Jupiter {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64,
@@ -315,6 +323,7 @@ impl Spheroid for Saturn {
         60268f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Saturn {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [40.589f64, -0.036f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [83.537f64, -0.004f64, 0f64];
@@ -345,6 +354,7 @@ impl Spheroid for Uranus {
         25559f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Uranus {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [257.311f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [-15.175f64, 0f64, 0f64];
@@ -376,12 +386,14 @@ impl Spheroid for Neptune {
         24764f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Neptune {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [299.36f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [43.46f64, 0f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [249.978f64, 541.1397757f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Neptune {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] =
         &[0.7f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64];
@@ -415,6 +427,7 @@ impl Spheroid for Pluto {
         1188.3f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Pluto {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [132.993f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [-6.163f64, 0f64, 0f64];
@@ -422,6 +435,7 @@ impl BodyRotationalElements for Pluto {
         [302.695f64, 56.3625225f64, 0f64];
 }
 #[cfg(test)]
+#[allow(clippy::approx_constant)]
 mod tests {
     use super::*;
     #[test]

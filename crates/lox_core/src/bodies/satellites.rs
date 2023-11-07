@@ -40,12 +40,14 @@ impl TriAxial for Moon {
         1737.4f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Moon {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [269.9949f64, 0.0031f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [66.5392f64, 0.013f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [38.3213f64, 13.17635815f64, -0.0000000000014f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Moon {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         -3.8787f64, -0.1204f64, 0.07f64, -0.0172f64, 0f64, 0.0072f64, 0f64, 0f64, 0f64, -0.0052f64,
@@ -88,6 +90,7 @@ impl TriAxial for Phobos {
         11.4f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Phobos {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [317.67071657f64, -0.10844326f64, 0f64];
@@ -99,6 +102,7 @@ impl BodyRotationalElements for Phobos {
         0.000000009536137031212154f64,
     ];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Phobos {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         -1.78428399f64,
@@ -144,6 +148,7 @@ impl TriAxial for Deimos {
         6f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Deimos {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [316.65705808f64, -0.10518014f64, 0f64];
@@ -152,6 +157,7 @@ impl BodyRotationalElements for Deimos {
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [79.39932954f64, 285.16188899f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Deimos {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64,
@@ -218,12 +224,14 @@ impl TriAxial for Io {
         1819.4f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Io {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [268.05f64, -0.009f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [64.5f64, 0.003f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [200.39f64, 203.4889538f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Io {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] =
         &[0f64, 0f64, 0.094f64, 0.024f64];
@@ -260,12 +268,14 @@ impl TriAxial for Europa {
         1560.3f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Europa {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [268.08f64, -0.009f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [64.51f64, 0.003f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [36.022f64, 101.3747235f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Europa {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] =
         &[0f64, 0f64, 0f64, 1.086f64, 0.06f64, 0.015f64, 0.009f64];
@@ -302,12 +312,14 @@ impl TriAxial for Ganymede {
         2631.2f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Ganymede {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [268.2f64, -0.009f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [64.57f64, 0.003f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [44.064f64, 50.3176081f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Ganymede {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] =
         &[0f64, 0f64, 0f64, -0.037f64, 0.431f64, 0.091f64];
@@ -344,12 +356,14 @@ impl TriAxial for Callisto {
         2410.3f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Callisto {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [268.72f64, -0.009f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [64.83f64, 0.003f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [259.51f64, 21.5710715f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Callisto {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] =
         &[0f64, 0f64, 0f64, 0f64, -0.068f64, 0.59f64, 0f64, 0.01f64];
@@ -386,12 +400,14 @@ impl TriAxial for Amalthea {
         73f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Amalthea {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [268.05f64, -0.009f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [64.49f64, 0.003f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [231.67f64, 722.631456f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Amalthea {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         -0.84f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.01f64, 0f64,
@@ -620,11 +636,13 @@ impl TriAxial for Thebe {
         49f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Thebe {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [268.05f64, -0.009f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [64.49f64, 0.003f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] = [8.56f64, 533.70041f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Thebe {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64, -2.11f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.04f64,
@@ -664,6 +682,7 @@ impl TriAxial for Adrastea {
         8f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Adrastea {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [268.05f64, -0.009f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [64.49f64, 0.003f64, 0f64];
@@ -698,6 +717,7 @@ impl TriAxial for Metis {
         20f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Metis {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [268.05f64, -0.009f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [64.49f64, 0.003f64, 0f64];
@@ -977,12 +997,14 @@ impl TriAxial for Mimas {
         196.7f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Mimas {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [40.66f64, -0.036f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [83.52f64, -0.004f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [333.46f64, 381.994555f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Mimas {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] =
         &[0f64, 0f64, 13.56f64, 0f64, 0f64, 0f64, 0f64, 0f64];
@@ -1019,6 +1041,7 @@ impl TriAxial for Enceladus {
         251.4f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Enceladus {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [40.66f64, -0.036f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [83.52f64, -0.004f64, 0f64];
@@ -1052,11 +1075,13 @@ impl TriAxial for Tethys {
         528.3f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Tethys {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [40.66f64, -0.036f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [83.52f64, -0.004f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] = [8.95f64, 190.6979085f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Tethys {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] =
         &[0f64, 0f64, 0f64, 9.66f64, 0f64, 0f64, 0f64, 0f64];
@@ -1093,6 +1118,7 @@ impl TriAxial for Dione {
         561.3f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Dione {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [40.66f64, -0.036f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [83.52f64, -0.004f64, 0f64];
@@ -1127,12 +1153,14 @@ impl TriAxial for Rhea {
         763.1f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Rhea {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [40.38f64, -0.036f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [83.55f64, -0.004f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [235.16f64, 79.6900478f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Rhea {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] =
         &[0f64, 0f64, 0f64, 0f64, 0f64, 3.1f64, 0f64, 0f64];
@@ -1169,12 +1197,14 @@ impl TriAxial for Titan {
         2574.78f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Titan {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [39.4827f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [83.4279f64, 0f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [186.5855f64, 22.5769768f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Titan {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] =
         &[0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64];
@@ -1239,6 +1269,7 @@ impl TriAxial for Iapetus {
         745.7f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Iapetus {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [318.16f64, -3.949f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [75.03f64, -1.143f64, 0f64];
@@ -1272,6 +1303,7 @@ impl TriAxial for Phoebe {
         108.5f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Phoebe {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [356.9f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [77.8f64, 0f64, 0f64];
@@ -1305,12 +1337,14 @@ impl TriAxial for Janus {
         93f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Janus {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [40.58f64, -0.036f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [83.52f64, -0.004f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [58.83f64, 518.2359876f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Janus {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] =
         &[0f64, -1.623f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.023f64];
@@ -1347,12 +1381,14 @@ impl TriAxial for Epimetheus {
         57.3f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Epimetheus {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [40.58f64, -0.036f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [83.52f64, -0.004f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [293.87f64, 518.4907239f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Epimetheus {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] =
         &[-3.153f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.086f64, 0f64];
@@ -1389,6 +1425,7 @@ impl TriAxial for Helene {
         19.6f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Helene {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [40.85f64, -0.036f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [83.34f64, -0.004f64, 0f64];
@@ -1418,6 +1455,7 @@ impl TriAxial for Telesto {
         11.8f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Telesto {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [50.51f64, -0.036f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [84.06f64, -0.004f64, 0f64];
@@ -1447,6 +1485,7 @@ impl TriAxial for Calypso {
         9.3f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Calypso {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [36.41f64, -0.036f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [85.04f64, -0.004f64, 0f64];
@@ -1481,6 +1520,7 @@ impl TriAxial for Atlas {
         17.8f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Atlas {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [40.58f64, -0.036f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [83.53f64, -0.004f64, 0f64];
@@ -1514,6 +1554,7 @@ impl TriAxial for Prometheus {
         41.6f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Prometheus {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [40.58f64, -0.036f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [83.53f64, -0.004f64, 0f64];
@@ -1547,6 +1588,7 @@ impl TriAxial for Pandora {
         40.8f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Pandora {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [40.58f64, -0.036f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [83.53f64, -0.004f64, 0f64];
@@ -1575,6 +1617,7 @@ impl TriAxial for Pan {
         15.4f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Pan {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [40.6f64, -0.036f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [83.5f64, -0.004f64, 0f64];
@@ -1949,12 +1992,14 @@ impl TriAxial for Ariel {
         577.9f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Ariel {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [257.43f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [-15.1f64, 0f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [156.22f64, -142.8356681f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Ariel {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.29f64,
@@ -1994,12 +2039,14 @@ impl TriAxial for Umbriel {
         584.7f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Umbriel {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [257.43f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [-15.1f64, 0f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [108.05f64, -86.8688923f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Umbriel {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.21f64,
@@ -2039,12 +2086,14 @@ impl TriAxial for Titania {
         788.9f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Titania {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [257.43f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [-15.1f64, 0f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [77.74f64, -41.3514316f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Titania {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.29f64,
@@ -2084,11 +2133,13 @@ impl TriAxial for Oberon {
         761.4f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Oberon {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [257.43f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [-15.1f64, 0f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] = [6.77f64, -26.7394932f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Oberon {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
@@ -2131,12 +2182,14 @@ impl TriAxial for Miranda {
         234.2f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Miranda {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [257.43f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [-15.08f64, 0f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [30.7f64, -254.6906892f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Miranda {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 4.41f64, 0f64, 0f64, 0f64,
@@ -2174,12 +2227,14 @@ impl TriAxial for Cordelia {
         13f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Cordelia {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [257.31f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [-15.18f64, 0f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [127.69f64, -1074.520573f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Cordelia {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         -0.15f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
@@ -2217,12 +2272,14 @@ impl TriAxial for Ophelia {
         15f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Ophelia {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [257.31f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [-15.18f64, 0f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [130.35f64, -956.406815f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Ophelia {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64, -0.09f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
@@ -2260,12 +2317,14 @@ impl TriAxial for Bianca {
         21f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Bianca {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [257.31f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [-15.18f64, 0f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [105.46f64, -828.391476f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Bianca {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64, 0f64, -0.16f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
@@ -2303,12 +2362,14 @@ impl TriAxial for Cressida {
         31f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Cressida {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [257.31f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [-15.18f64, 0f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [59.16f64, -776.581632f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Cressida {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64, 0f64, 0f64, -0.04f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
@@ -2346,12 +2407,14 @@ impl TriAxial for Desdemona {
         27f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Desdemona {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [257.31f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [-15.18f64, 0f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [95.08f64, -760.053169f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Desdemona {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64, 0f64, 0f64, 0f64, -0.17f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
@@ -2389,12 +2452,14 @@ impl TriAxial for Juliet {
         42f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Juliet {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [257.31f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [-15.18f64, 0f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [302.56f64, -730.125366f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Juliet {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64, 0f64, 0f64, 0f64, 0f64, -0.06f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
@@ -2432,12 +2497,14 @@ impl TriAxial for Portia {
         54f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Portia {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [257.31f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [-15.18f64, 0f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [25.03f64, -701.486587f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Portia {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.09f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
@@ -2475,12 +2542,14 @@ impl TriAxial for Rosalind {
         27f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Rosalind {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [257.31f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [-15.18f64, 0f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [314.9f64, -644.631126f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Rosalind {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.29f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
@@ -2518,12 +2587,14 @@ impl TriAxial for Belinda {
         33f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Belinda {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [257.31f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [-15.18f64, 0f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [297.46f64, -577.362817f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Belinda {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.03f64, 0f64, 0f64, 0f64, 0f64, 0f64,
@@ -2561,12 +2632,14 @@ impl TriAxial for Puck {
         77f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Puck {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [257.31f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [-15.18f64, 0f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [91.24f64, -472.545069f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Puck {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.33f64, 0f64, 0f64, 0f64, 0f64,
@@ -2693,12 +2766,14 @@ impl TriAxial for Triton {
         1352.6f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Triton {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [299.36f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [41.17f64, 0f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [296.53f64, -61.2572637f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Triton {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, -32.35f64, 0f64, -6.28f64, -2.08f64, -0.74f64,
@@ -2764,12 +2839,14 @@ impl TriAxial for Naiad {
         29f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Naiad {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [299.36f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [43.36f64, 0f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [254.06f64, 1222.8441209f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Naiad {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0.7f64, -6.49f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0.25f64, 0f64, 0f64, 0f64, 0f64,
@@ -2812,12 +2889,14 @@ impl TriAxial for Thalassa {
         40f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Thalassa {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [299.36f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [43.45f64, 0f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [102.06f64, 1155.7555612f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Thalassa {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0.7f64, 0f64, -0.28f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
@@ -2860,12 +2939,14 @@ impl TriAxial for Despina {
         74f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Despina {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [299.36f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [43.45f64, 0f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [306.51f64, 1075.7341562f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Despina {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0.7f64, 0f64, 0f64, -0.09f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
@@ -2908,12 +2989,14 @@ impl TriAxial for Galatea {
         79f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Galatea {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [299.36f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [43.43f64, 0f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [258.09f64, 839.6597686f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Galatea {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0.7f64, 0f64, 0f64, 0f64, -0.07f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
@@ -2956,12 +3039,14 @@ impl TriAxial for Larissa {
         96f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Larissa {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [299.36f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [43.41f64, 0f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [179.41f64, 649.053447f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Larissa {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0.7f64, 0f64, 0f64, 0f64, 0f64, -0.27f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
@@ -3004,12 +3089,14 @@ impl TriAxial for Proteus {
         208f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Proteus {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [299.27f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [42.91f64, 0f64, 0f64];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3] =
         [93.38f64, 320.7654228f64, 0f64];
 }
+#[allow(clippy::approx_constant)]
 impl BodyTrigRotationalElements for Proteus {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = &[
         0.7f64, 0f64, 0f64, 0f64, 0f64, 0f64, -0.05f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
@@ -3087,6 +3174,7 @@ impl TriAxial for Charon {
         606f64
     }
 }
+#[allow(clippy::approx_constant)]
 impl BodyRotationalElements for Charon {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3] = [132.993f64, 0f64, 0f64];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3] = [-6.163f64, 0f64, 0f64];
@@ -3142,6 +3230,7 @@ impl PointMass for Styx {
     }
 }
 #[cfg(test)]
+#[allow(clippy::approx_constant)]
 mod tests {
     use super::*;
     #[test]
