@@ -7,6 +7,7 @@
  */
 
 use crate::time::constants::f64::{SECONDS_PER_DAY, SECONDS_PER_JULIAN_CENTURY};
+use std::f64::consts::PI;
 
 pub mod barycenters;
 pub mod minor;
@@ -67,7 +68,10 @@ pub fn gravitational_parameter<T: PointMass>(_: T) -> f64 {
 const N_COEFFICIENTS: usize = 18;
 
 type PolynomialCoefficients = (f64, f64, f64, [f64; N_COEFFICIENTS]);
+
 type NutationPrecessionCoefficients = ([f64; N_COEFFICIENTS], [f64; N_COEFFICIENTS]);
+
+type Elements = (f64, f64, f64);
 
 pub trait RotationalElements {
     fn nutation_precession_coefficients() -> NutationPrecessionCoefficients;
@@ -160,6 +164,22 @@ pub trait RotationalElements {
         }
         let c_trig: f64 = c_trig.iter().sum();
         c1 / dt + 2.0 * c2 * t / dt.powi(2) + c_trig
+    }
+
+    fn rotational_elements(t: f64) -> Elements {
+        (
+            Self::right_ascension(t) + PI / 2.0,
+            PI / 2.0 - Self::declination(t),
+            Self::prime_meridian(t) % (2.0 * PI),
+        )
+    }
+
+    fn rotational_element_rates(t: f64) -> Elements {
+        (
+            Self::right_ascension_dot(t),
+            -Self::declination_dot(t),
+            Self::prime_meridian_dot(t),
+        )
     }
 }
 
