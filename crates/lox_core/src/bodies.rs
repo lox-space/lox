@@ -65,16 +65,20 @@ pub fn gravitational_parameter<T: PointMass>(_: T) -> f64 {
 /// Semantic type alias for f64 in the context of polynomial types and operations.
 pub type PolynomialCoefficient = f64;
 
-pub trait RotationalElements: Copy {
+pub trait BodyRotationalElements: Copy {
     const RIGHT_ASCENSION_COEFFICIENTS: [PolynomialCoefficient; 3];
     const DECLINATION_COEFFICIENTS: [PolynomialCoefficient; 3];
     const PRIME_MERIDIAN_COEFFICIENTS: [PolynomialCoefficient; 3];
 }
 
-pub trait TrigonometricRotationalElements: RotationalElements {
+pub trait BodyTrigRotationalElements: BodyRotationalElements {
     const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient];
     const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient];
     const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient];
+}
+
+pub trait BarycenterTrigRotationalElements: NaifId {
+    const NUT_PREC_ANGLES: &'static [PolynomialCoefficient];
 }
 
 #[cfg(test)]
