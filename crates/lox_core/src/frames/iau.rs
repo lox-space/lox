@@ -14,11 +14,11 @@ use crate::bodies::RotationalElements;
 use crate::frames::{Epoch, Icrf, ReferenceFrame, Rotation, TransformFrom};
 
 #[derive(Debug, Copy, Clone)]
-struct BodyFixed<T: RotationalElements>(T);
+pub struct BodyFixed<T: RotationalElements>(pub T);
 
 impl<T: RotationalElements> ReferenceFrame for BodyFixed<T> {
-    fn is_rotating() -> bool {
-        true
+    fn is_inertial(&self) -> bool {
+        false
     }
 }
 
@@ -49,6 +49,9 @@ mod tests {
     #[test]
     fn test_bodyfixed() {
         let iau_jupiter = BodyFixed(Jupiter);
+        assert!(!iau_jupiter.is_inertial());
+        assert!(iau_jupiter.is_rotating());
+
         let from_icrf = iau_jupiter.rotation_from(Icrf, 0.0);
         let to_icrf = iau_jupiter.rotation_into(Icrf, 0.0);
 
@@ -62,6 +65,23 @@ mod tests {
 
         let rv1_act = from_icrf.rotate(rv0_exp);
         let rv0_act = to_icrf.rotate(rv1_exp);
+
+        assert_float_eq!(rv1_act.0.x, rv1_exp.0.x, rel <= 1e-8);
+        assert_float_eq!(rv1_act.0.y, rv1_exp.0.y, rel <= 1e-8);
+        assert_float_eq!(rv1_act.0.z, rv1_exp.0.z, rel <= 1e-8);
+        assert_float_eq!(rv1_act.1.x, rv1_exp.1.x, rel <= 1e-8);
+        assert_float_eq!(rv1_act.1.y, rv1_exp.1.y, rel <= 1e-8);
+        assert_float_eq!(rv1_act.1.z, rv1_exp.1.z, rel <= 1e-8);
+
+        assert_float_eq!(rv0_act.0.x, rv0_exp.0.x, rel <= 1e-8);
+        assert_float_eq!(rv0_act.0.y, rv0_exp.0.y, rel <= 1e-8);
+        assert_float_eq!(rv0_act.0.z, rv0_exp.0.z, rel <= 1e-8);
+        assert_float_eq!(rv0_act.1.x, rv0_exp.1.x, rel <= 1e-8);
+        assert_float_eq!(rv0_act.1.y, rv0_exp.1.y, rel <= 1e-8);
+        assert_float_eq!(rv0_act.1.z, rv0_exp.1.z, rel <= 1e-8);
+
+        let rv1_act = iau_jupiter.transform_form(Icrf, 0.0, rv0_exp);
+        let rv0_act = iau_jupiter.transform_into(Icrf, 0.0, rv1_exp);
 
         assert_float_eq!(rv1_act.0.x, rv1_exp.0.x, rel <= 1e-8);
         assert_float_eq!(rv1_act.0.y, rv1_exp.0.y, rel <= 1e-8);

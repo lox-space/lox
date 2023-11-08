@@ -10,18 +10,16 @@ use std::fmt::{Debug, Display, Formatter};
 
 use glam::{DMat3, DVec3};
 
-mod iau;
+pub mod iau;
 
 // TODO: Replace with proper `Epoch` type
 type Epoch = f64;
 
 pub trait ReferenceFrame: Copy {
-    fn is_inertial() -> bool {
-        !Self::is_rotating()
-    }
+    fn is_inertial(&self) -> bool;
 
-    fn is_rotating() -> bool {
-        !Self::is_inertial()
+    fn is_rotating(&self) -> bool {
+        !self.is_inertial()
     }
 }
 
@@ -35,7 +33,7 @@ impl Display for Icrf {
 }
 
 impl ReferenceFrame for Icrf {
-    fn is_inertial() -> bool {
+    fn is_inertial(&self) -> bool {
         true
     }
 }
@@ -82,7 +80,12 @@ impl Rotation {
 }
 
 pub trait TransformFrom<T: ReferenceFrame> {
-    fn rotation_from(&self, _: T, t: Epoch) -> Rotation;
+    fn rotation_from(&self, frame: T, t: Epoch) -> Rotation;
+
+    fn transform_form(&self, frame: T, t: Epoch, state: State) -> State {
+        let rotation = self.rotation_from(frame, t);
+        rotation.rotate(state)
+    }
 }
 
 impl<T: ReferenceFrame> TransformFrom<T> for T {
@@ -92,7 +95,12 @@ impl<T: ReferenceFrame> TransformFrom<T> for T {
 }
 
 pub trait TransformInto<T: ReferenceFrame> {
-    fn rotation_into(&self, _: T, t: Epoch) -> Rotation;
+    fn rotation_into(&self, frame: T, t: Epoch) -> Rotation;
+
+    fn transform_into(&self, frame: T, t: Epoch, state: State) -> State {
+        let rotation = self.rotation_into(frame, t);
+        rotation.rotate(state)
+    }
 }
 
 impl<T, U: ReferenceFrame> TransformInto<U> for T
