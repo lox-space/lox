@@ -1,4 +1,4 @@
-use super::parser::{DafSpkError, Spk, SpkSegment, SpkType2Array, SpkType2Record};
+use super::parser::{DafSpkError, Spk, SpkSegment, SpkType2Array, SpkType2Coefficients};
 
 type Position = (f64, f64, f64);
 type Epoch = f64;
@@ -34,7 +34,7 @@ impl Spk {
         array: &'a SpkType2Array,
         initial_epoch: Epoch,
         epoch: Epoch,
-    ) -> Result<(&SpkType2Record, f64), DafSpkError> {
+    ) -> Result<(&Vec<SpkType2Coefficients>, f64), DafSpkError> {
         let seconds_from_record_start = epoch - initial_epoch;
 
         let intlen = array.intlen as f64;
@@ -71,7 +71,6 @@ impl Spk {
             return Err(DafSpkError::UnableToFindMatchingSegment);
         }
 
-        // @TODO use a more flexible way
         let mut x = 0f64;
         let mut y = 0f64;
         let mut z = 0f64;
@@ -93,9 +92,9 @@ impl Spk {
 
                 #[allow(clippy::needless_range_loop)]
                 for i in 0..degree_of_polynomial {
-                    x += sign * record.x[i] * coefficients[i];
-                    y += sign * record.y[i] * coefficients[i];
-                    z += sign * record.z[i] * coefficients[i];
+                    x += sign * record[i].x * coefficients[i];
+                    y += sign * record[i].y * coefficients[i];
+                    z += sign * record[i].z * coefficients[i];
                 }
             }
         }
