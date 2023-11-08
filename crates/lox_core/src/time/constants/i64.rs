@@ -6,6 +6,6 @@
  * file, you can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-pub mod constants;
-pub mod dates;
-pub mod epochs;
+pub const SECONDS_PER_MINUTE: i64 = 60;
+pub const SECONDS_PER_HOUR: i64 = 60 * SECONDS_PER_MINUTE;
+pub const SECONDS_PER_DAY: i64 = 24 * SECONDS_PER_HOUR;

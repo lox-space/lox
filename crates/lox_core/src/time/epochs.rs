@@ -3,21 +3,17 @@
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * file, you can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
 use std::fmt;
 use std::fmt::Formatter;
 
+use crate::time::constants;
+use crate::time::constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HOUR, SECONDS_PER_MINUTE};
 use num::ToPrimitive;
 
 use crate::time::dates::{Date, DateTime, Time};
-
-const SECONDS_PER_DAY_F64: f64 = 24.0 * 60.0 * 60.0;
-
-const SECONDS_PER_MINUTE: i64 = 60;
-const SECONDS_PER_HOUR: i64 = 60 * SECONDS_PER_MINUTE;
-const SECONDS_PER_DAY: i64 = 24 * SECONDS_PER_HOUR;
 
 #[derive(Debug, Copy, Clone)]
 pub enum TimeScale {
@@ -100,8 +96,9 @@ impl Epoch {
     }
 
     pub fn j2000(&self) -> f64 {
-        let d1 = self.second().to_f64().unwrap_or_default() / SECONDS_PER_DAY_F64;
-        let d2 = self.attosecond().to_f64().unwrap_or_default() / 1e18 / SECONDS_PER_DAY_F64;
+        let d1 = self.second().to_f64().unwrap_or_default() / constants::f64::SECONDS_PER_DAY;
+        let d2 =
+            self.attosecond().to_f64().unwrap_or_default() / 1e18 / constants::f64::SECONDS_PER_DAY;
         d2 + d1
     }
 }
