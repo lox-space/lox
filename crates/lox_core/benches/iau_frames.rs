@@ -63,6 +63,6 @@ fn transform(bencher: Bencher) {
             )
         })
         .bench_values(|rv| {
-            BodyFixed(Jupiter).transform_form(Icrf, divan::black_box(0.0), divan::black_box(rv))
+            BodyFixed(Jupiter).transform_from(Icrf, divan::black_box(0.0), divan::black_box(rv))
         })
 }

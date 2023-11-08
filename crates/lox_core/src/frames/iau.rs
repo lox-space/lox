@@ -80,7 +80,7 @@ mod tests {
         assert_float_eq!(rv0_act.1.y, rv0_exp.1.y, rel <= 1e-8);
         assert_float_eq!(rv0_act.1.z, rv0_exp.1.z, rel <= 1e-8);
 
-        let rv1_act = iau_jupiter.transform_form(Icrf, 0.0, rv0_exp);
+        let rv1_act = iau_jupiter.transform_from(Icrf, 0.0, rv0_exp);
         let rv0_act = iau_jupiter.transform_into(Icrf, 0.0, rv1_exp);
 
         assert_float_eq!(rv1_act.0.x, rv1_exp.0.x, rel <= 1e-8);

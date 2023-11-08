@@ -82,7 +82,7 @@ impl Rotation {
 pub trait TransformFrom<T: ReferenceFrame> {
     fn rotation_from(&self, frame: T, t: Epoch) -> Rotation;
 
-    fn transform_form(&self, frame: T, t: Epoch, state: State) -> State {
+    fn transform_from(&self, frame: T, t: Epoch, state: State) -> State {
         let rotation = self.rotation_from(frame, t);
         rotation.rotate(state)
     }
