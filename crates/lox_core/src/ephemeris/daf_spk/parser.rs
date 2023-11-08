@@ -398,10 +398,12 @@ pub fn parse_daf_spk(full_input: &[u8]) -> Result<Spk, DafSpkError> {
         .into_iter()
         .flatten()
         .fold(HashMap::new(), |mut map, segment| {
+            // An SPK file may contain any number of segments. A single file may contain overlapping segments:
+            // segments containing data for the same body over a common interval. When this happens, the
+            // latest segment in a file supersedes any competing segments earlier in the file.
             map.entry(segment.center_id)
                 .or_default()
-                .entry(segment.target_id)
-                .or_insert(segment);
+                .insert(segment.target_id, segment);
 
             map
         });
@@ -665,9 +667,7 @@ name is "19_spk") available from the NAIF website (http://naif.jpl.nasa.gov/tuto
             .to_string()
     }
 
-    fn get_expected_spk() -> Spk {
-        // Values confirmed with JPLEphem.jp and python-jplephem
-
+    pub fn get_expected_segments() -> HashMap<i32, HashMap<i32, SpkSegment>> {
         let mut segments: HashMap<i32, HashMap<i32, SpkSegment>> = HashMap::new();
 
         segments
@@ -1702,6 +1702,12 @@ name is "19_spk") available from the NAIF website (http://naif.jpl.nasa.gov/tuto
                 }),
             });
 
+        segments
+    }
+
+    fn get_expected_spk() -> Spk {
+        // Values confirmed with JPLEphem.jp and python-jplephem
+
         Spk {
             file_record: DafFileRecord {
                 locidw: "DAF/SPK".to_string(),
@@ -1758,7 +1764,7 @@ name is "19_spk") available from the NAIF website (http://naif.jpl.nasa.gov/tuto
                 ],
             },
             comment: get_expected_comment_string(),
-            segments,
+            segments: get_expected_segments(),
         }
     }
 
