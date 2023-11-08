@@ -64,13 +64,21 @@ pub fn gravitational_parameter<T: PointMass>(_: T) -> f64 {
     <T as PointMass>::gravitational_parameter()
 }
 
-const N_COEFFICIENTS: usize = 18;
+pub const N_COEFFICIENTS: usize = 18;
 
-type PolynomialCoefficients = (f64, f64, f64, [f64; N_COEFFICIENTS]);
-type NutationPrecessionCoefficients = ([f64; N_COEFFICIENTS], [f64; N_COEFFICIENTS]);
+pub struct PolynomialCoefficients(f64, f64, f64, [f64; N_COEFFICIENTS]);
+
+pub struct NutationPrecessionCoefficients(pub [f64; N_COEFFICIENTS], pub [f64; N_COEFFICIENTS]);
+
+impl Default for NutationPrecessionCoefficients {
+    fn default() -> Self {
+        Self([0.0; N_COEFFICIENTS], [0.0; N_COEFFICIENTS])
+    }
+}
 
 pub trait RotationalElements {
     fn nutation_precession_coefficients() -> NutationPrecessionCoefficients;
+
     fn right_ascension_coefficients() -> PolynomialCoefficients;
 
     fn declination_coefficients() -> PolynomialCoefficients;

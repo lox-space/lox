@@ -6,16 +6,38 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+use lox_core::bodies::{NutationPrecessionCoefficients, PolynomialCoefficients, N_COEFFICIENTS};
 use proc_macro2::{Ident, TokenStream};
-use quote::{format_ident, quote};
+use quote::{format_ident, quote, ToTokens};
+use thiserror::Error;
 
 use lox_io::spice::Kernel;
+
+/// Converts a set of PolynomialCoefficients into a TokenStream.
+struct TokenizeablePolynomialCoefficients(PolynomialCoefficients);
+
+impl ToTokens for TokenizeablePolynomialCoefficients {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let PolynomialCoefficients(a, b, c, d) = self.0;
+        tokens.extend(quote! { PolynomialCoefficients(#a, #b, #c, #d) });
+    }
+}
+
+/// Converts a set of NutationPrecessionCoefficients into a TokenStream.
+struct TokenizeableNutPrecCoefficients(NutationPrecessionCoefficients);
+
+impl ToTokens for TokenizeableNutPrecCoefficients {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let NutationPrecessionCoefficients(a, b) = self.0;
+        tokens.extend(quote! { NutationPrecessionCoefficients([#(#a),*], [#(#b),*]) });
+    }
+}
 
 /// Holds the rotational elements for a given body.
 ///
 /// May be parsed directly from PCK data and knows how to represent its code and test components as
 /// streams of tokens.
-pub(crate) struct BodyRotationalElements<'a, 'b> {
+pub(crate) struct RotationalElements<'a, 'b> {
     id: u32,
     ident: &'a Ident,
     right_ascension: [f64; 3],
@@ -26,7 +48,7 @@ pub(crate) struct BodyRotationalElements<'a, 'b> {
     trig_elements: Option<TrigonometricElements<'b>>,
 }
 
-impl<'a, 'b> BodyRotationalElements<'a, 'b> {
+impl<'a, 'b> RotationalElements<'a, 'b> {
     pub(crate) fn parse(id: u32, ident: &'a Ident, kernel: &'b Kernel) -> Option<Self> {
         let right_ascension_key = format!("BODY{}_POLE_RA", id);
         let declination_key = format!("BODY{}_POLE_DEC", id);
@@ -35,9 +57,9 @@ impl<'a, 'b> BodyRotationalElements<'a, 'b> {
         Some(Self {
             id,
             ident,
-            right_ascension: get_polynomial_coefficients(&right_ascension_key, kernel)?,
-            declination: get_polynomial_coefficients(&declination_key, kernel)?,
-            prime_meridian: get_polynomial_coefficients(&prime_meridian_key, kernel)?,
+            right_ascension: get_polynomial_coefficients_or_default(&right_ascension_key, kernel)?,
+            declination: get_polynomial_coefficients_or_default(&declination_key, kernel)?,
+            prime_meridian: get_polynomial_coefficients_or_default(&prime_meridian_key, kernel)?,
             trig_elements: TrigonometricElements::parse(id, kernel),
         })
     }
@@ -112,153 +134,160 @@ impl<'a, 'b> BodyRotationalElements<'a, 'b> {
     pub(crate) fn has_trig_elements(&self) -> bool {
         self.trig_elements.is_some()
     }
+
+    fn barycenter_id(&self) -> u32 {
+        self.id / 100
+    }
 }
 
-/// The trigonometric rotational elements for a given body and, optionally, its system, where such
-/// data is available.
-struct TrigonometricElements<'a> {
-    nut_prec_right_ascension: &'a Vec<f64>,
-    nut_prec_declination: &'a Vec<f64>,
-    nut_prec_prime_meridian: &'a Vec<f64>,
+/// The type of coefficient to be retrieved from the kernel.
+enum PolynomialCoefficientType {
+    RightAscension,
+    Declination,
+    PrimeMeridian,
 }
 
-impl<'a> TrigonometricElements<'a> {
-    fn parse(id: u32, kernel: &'a Kernel) -> Option<Self> {
-        let nut_prec_right_ascension_key = format!("BODY{}_NUT_PREC_RA", id);
-        let nut_prec_declination_key = format!("BODY{}_NUT_PREC_DEC", id);
-        let nut_prec_prime_meridian_key = format!("BODY{}_NUT_PREC_PM", id);
-
-        Some(Self {
-            nut_prec_right_ascension: kernel.get_double_array(&nut_prec_right_ascension_key)?,
-            nut_prec_declination: kernel.get_double_array(&nut_prec_declination_key)?,
-            nut_prec_prime_meridian: kernel.get_double_array(&nut_prec_prime_meridian_key)?,
-        })
-    }
-
-    /// Returns the TokenStream corresponding to the [lox_core::bodies::BodyTrigRotationalElements] impl.
-    fn code_tokens(&self, ident: &Ident) -> TokenStream {
-        let nut_prec_ra = slice_tokens_for(self.nut_prec_right_ascension);
-        let nut_prec_dec = slice_tokens_for(self.nut_prec_declination);
-        let nut_prec_pm = slice_tokens_for(self.nut_prec_prime_meridian);
-
-        quote! {
-            #[allow(clippy::approx_constant)]
-            impl BodyTrigRotationalElements for #ident {
-                const NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS: &'static [PolynomialCoefficient] = #nut_prec_ra;
-                const NUT_PREC_DECLINATION_COEFFICIENTS: &'static [PolynomialCoefficient] = #nut_prec_dec;
-                const NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS: &'static [PolynomialCoefficient] = #nut_prec_pm;
-            }
-        }
-    }
-
-    /// Returns the TokenStream testing the [lox_core::bodies::BodyTrigRotationalElements] impl.
-    fn test_tokens(&self, id: u32, ident: &Ident) -> TokenStream {
-        let nut_prec_ra_test_name = format_ident!(
-            "test_trig_rotational_elements_nut_prec_right_ascension_coefficients{}",
-            id
-        );
-        let nut_prec_dec_test_name = format_ident!(
-            "test_trig_rotational_elements_nut_prec_declination_coefficients{}",
-            id
-        );
-        let nut_prec_pm_test_name = format_ident!(
-            "test_trig_rotational_elements_nut_prec_prime_meridian_coefficients{}",
-            id
-        );
-
-        let nut_prec_ra = slice_tokens_for(self.nut_prec_right_ascension);
-        let nut_prec_dec = slice_tokens_for(self.nut_prec_declination);
-        let nut_prec_pm = slice_tokens_for(self.nut_prec_prime_meridian);
-
-        quote! {
-            #[test]
-            fn #nut_prec_ra_test_name() {
-                assert_eq!(#nut_prec_ra, #ident::NUT_PREC_RIGHT_ASCENSION_COEFFICIENTS)
-            }
-
-            #[test]
-            fn #nut_prec_dec_test_name() {
-                assert_eq!(#nut_prec_dec, #ident::NUT_PREC_DECLINATION_COEFFICIENTS)
-            }
-
-            #[test]
-            fn #nut_prec_pm_test_name() {
-                assert_eq!(#nut_prec_pm, #ident::NUT_PREC_PRIME_MERIDIAN_COEFFICIENTS)
+impl PolynomialCoefficientType {
+    /// Returns the pair of kernel keys required to retrieve the trig and non-trig coefficients for
+    /// a given body and coefficient type.  
+    fn keys(&self, id: u32) -> (String, String) {
+        match self {
+            PolynomialCoefficientType::RightAscension => (
+                format!("BODY{}_POLE_RA", id),
+                format!("BODY{}_NUT_PREC_RA", id),
+            ),
+            PolynomialCoefficientType::Declination => (
+                format!("BODY{}_POLE_DEC", id),
+                format!("BODY{}_NUT_PREC_DEC", id),
+            ),
+            PolynomialCoefficientType::PrimeMeridian => {
+                (format!("BODY{}_PM", id), format!("BODY{}_NUT_PREC_PM", id))
             }
         }
     }
 }
 
-/// The trigonometric rotational elements for a given system.
-pub(crate) struct BarycenterTrigElements<'a, 'b> {
-    id: u32,
-    ident: &'a Ident,
-    nut_prec_angles: &'b Vec<f64>,
+/// Indicates that a value retrieved from the kernel did not conform to the domain model.
+#[derive(Debug, Error)]
+pub(crate) enum ParsingError {
+    #[error("Kernel coefficients with key {key} had size {actual}, expected at least {actual}")]
+    TooFewTerms {
+        key: String,
+        min: usize,
+        actual: usize,
+    },
+    #[error("Kernel coefficients with key {key} had size {actual}, expected at most {actual}")]
+    TooManyTerms {
+        key: String,
+        max: usize,
+        actual: usize,
+    },
+    #[error("Barycenter nutation precession coefficients with key {key} had an odd number of terms, but an even number is required")]
+    OddTerms { key: String },
 }
 
-impl<'a, 'b> BarycenterTrigElements<'a, 'b> {
-    pub(crate) fn parse(id: u32, ident: &'a Ident, kernel: &'b Kernel) -> Option<Self> {
-        let nut_prec_angles_key = format!("BODY{}_NUT_PREC_ANGLES", id);
+/// Translation layer between the Kernel and RotationalElements.
+struct CoefficientKernel<'a>(&'a Kernel);
 
-        Some(Self {
-            id,
-            ident,
-            nut_prec_angles: kernel.get_double_array(&nut_prec_angles_key)?,
-        })
+impl<'a> CoefficientKernel<'a> {
+    fn get_polynomial_coefficients_or_default(
+        &self,
+        id: u32,
+        pct: PolynomialCoefficientType,
+    ) -> Result<TokenizeablePolynomialCoefficients, Box<ParsingError>> {
+        let (key, nut_prec_key) = pct.keys(id);
+        let non_trig_coefficients = self.get_non_trig_coefficients_or_default(&key)?;
+        let nut_prec_coefficients = self.get_nut_prec_coefficients_or_default(&nut_prec_key)?;
+        Ok(TokenizeablePolynomialCoefficients(PolynomialCoefficients(
+            non_trig_coefficients[0],
+            non_trig_coefficients[1],
+            non_trig_coefficients[2],
+            nut_prec_coefficients,
+        )))
     }
 
-    /// Returns the TokenStream corresponding to the [lox_core::bodies::BarycenterRotationalElements] impl.
-    pub(crate) fn code_tokens(&self) -> TokenStream {
-        let ident = self.ident;
-        let nut_prec_angles = slice_tokens_for(self.nut_prec_angles);
-
-        quote! {
-            #[allow(clippy::approx_constant)]
-            impl BarycenterTrigRotationalElements for #ident {
-                const NUT_PREC_ANGLES: &'static [PolynomialCoefficient] = #nut_prec_angles;
+    fn get_non_trig_coefficients_or_default(
+        &self,
+        key: &str,
+    ) -> Result<[f64; 3], Box<ParsingError>> {
+        match self.0.get_double_array(key) {
+            None => Ok([0.0; 3]),
+            Some(polynomials) if polynomials.len() < 2 => {
+                Err(Box::new(ParsingError::TooFewTerms {
+                    key: key.to_string(),
+                    min: 2,
+                    actual: polynomials.len(),
+                }))
+            }
+            Some(polynomials) if polynomials.len() > 3 => {
+                Err(Box::new(ParsingError::TooManyTerms {
+                    key: key.to_string(),
+                    max: 3,
+                    actual: polynomials.len(),
+                }))
+            }
+            Some(polynomials) => {
+                let mut polynomial_coefficients = [0.0; 3];
+                polynomial_coefficients.copy_from_slice(&polynomials);
+                Ok(polynomial_coefficients)
             }
         }
     }
 
-    /// Returns the TokenStream testing the [lox_core::bodies::BarycenterRotationalElements] impl.
-    pub(crate) fn test_tokens(&self) -> TokenStream {
-        let nut_prec_angles_test_name = format_ident!(
-            "test_barycenter_trig_rotational_elements_nut_prec_angles_{}",
-            self.id
-        );
-        let ident = self.ident;
-        let nut_prec_angles = slice_tokens_for(self.nut_prec_angles);
+    fn get_nut_prec_coefficients_or_default(
+        &self,
+        key: &str,
+    ) -> Result<[f64; N_COEFFICIENTS], Box<ParsingError>> {
+        match self.0.get_double_array(key) {
+            None => Ok([0.0; N_COEFFICIENTS]),
+            Some(coefficients) if coefficients.len() <= N_COEFFICIENTS => {
+                let mut nut_prec_coefficients = [0.0; N_COEFFICIENTS];
+                nut_prec_coefficients.copy_from_slice(&coefficients);
+                Some(nut_prec_coefficients)
+            }
+            Some(coefficients) => Err(Box::new(ParsingError::TooManyTerms {
+                key: key.to_string(),
+                max: N_COEFFICIENTS,
+                actual: coefficients.len(),
+            })),
+        }
+    }
 
-        quote! {
-            #[test]
-            fn #nut_prec_angles_test_name() {
-                assert_eq!(#nut_prec_angles, #ident::NUT_PREC_ANGLES)
+    fn get_barycenter_nut_prec_coefficients(
+        &self,
+        barycenter_id: u32,
+    ) -> Result<TokenizeableNutPrecCoefficients, Box<ParsingError>> {
+        let key = format!("BODY{}_NUT_PREC_ANGLES", barycenter_id);
+        match self.0.get_double_array(&key) {
+            None => Ok(TokenizeableNutPrecCoefficients(
+                NutationPrecessionCoefficients::default(),
+            )),
+            Some(coefficients) if coefficients.len() > N_COEFFICIENTS * 2 => {
+                Err(Box::new(ParsingError::TooManyTerms {
+                    key: key.to_string(),
+                    max: N_COEFFICIENTS * 2,
+                    actual: coefficients.len(),
+                }))
+            }
+            Some(coefficients) if coefficients.len() % 2 == 1 => {
+                Err(Box::new(ParsingError::OddTerms {
+                    key: key.to_string(),
+                }))
+            }
+            Some(coefficients) => {
+                let mut a = [0.0; N_COEFFICIENTS];
+                let mut b = [0.0; N_COEFFICIENTS];
+                coefficients.iter().enumerate().for_each(|(i, c)| {
+                    if i % 2 == 0 {
+                        a[i / 2] = *c;
+                    } else {
+                        b[i / 2] = *c;
+                    }
+                });
+                Ok(TokenizeableNutPrecCoefficients(
+                    NutationPrecessionCoefficients(a, b),
+                ))
             }
         }
     }
-}
-
-fn get_polynomial_coefficients(key: &str, kernel: &Kernel) -> Option<[f64; 3]> {
-    match kernel.get_double_array(key) {
-        None => None,
-        Some(polynomials) if polynomials.len() == 2 => Some([polynomials[0], polynomials[1], 0.0]),
-        Some(polynomials) if polynomials.len() == 3 => {
-            Some([polynomials[0], polynomials[1], polynomials[2]])
-        }
-        Some(polynomials) => {
-            panic!(
-                "PCK DoubleArray with key {} had size {}, expected 2 <= size <= 3",
-                key,
-                polynomials.len(),
-            )
-        }
-    }
-}
-
-fn array_tokens_for(data: &[f64]) -> TokenStream {
-    quote! { [#(#data),*] }
-}
-
-fn slice_tokens_for(data: &[f64]) -> TokenStream {
-    quote! { &[#(#data),*] }
 }

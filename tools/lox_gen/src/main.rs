@@ -15,9 +15,9 @@ use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote};
 
 use lox_io::spice::Kernel;
-use naif_ids::{Body, BARYCENTERS, MINOR_BODIES, PLANETS, SATELLITES, SUN};
+use naif_ids::{BARYCENTERS, Body, MINOR_BODIES, PLANETS, SATELLITES, SUN};
 
-use crate::rotational_elements::{BarycenterTrigElements, BodyRotationalElements};
+use crate::rotational_elements::RotationalElements;
 
 mod naif_ids;
 mod rotational_elements;
@@ -46,27 +46,27 @@ pub fn main() {
         (
             "sun",
             Vec::from(SUN),
-            vec![naif_id, point_mass, spheroid, body_rotational_elements],
+            vec![naif_id, point_mass, spheroid, rotational_elements],
         ),
         (
             "barycenters",
             Vec::from(BARYCENTERS),
-            vec![naif_id, point_mass, barycenter_rotational_elements],
+            vec![naif_id, point_mass],
         ),
         (
             "planets",
             Vec::from(PLANETS),
-            vec![naif_id, point_mass, spheroid, body_rotational_elements],
+            vec![naif_id, point_mass, spheroid, rotational_elements],
         ),
         (
             "satellites",
             Vec::from(SATELLITES),
-            vec![naif_id, point_mass, tri_axial, body_rotational_elements],
+            vec![naif_id, point_mass, tri_axial, rotational_elements],
         ),
         (
             "minor",
             Vec::from(MINOR_BODIES),
-            vec![naif_id, point_mass, tri_axial, body_rotational_elements],
+            vec![naif_id, point_mass, tri_axial, rotational_elements],
         ),
     ];
     bodies
@@ -305,8 +305,8 @@ fn point_mass(
     };
 }
 
-/// Generates implementations for [lox_core::bodies::BodyRotationalElements].
-fn body_rotational_elements(
+/// Generates implementations for [lox_core::bodies::RotationalElements].
+fn rotational_elements(
     imports: &mut HashSet<Ident>,
     code: &mut TokenStream,
     tests: &mut TokenStream,
@@ -315,7 +315,7 @@ fn body_rotational_elements(
     data: &Data,
 ) {
     let elements =
-        if let Some(elements) = BodyRotationalElements::parse(*id as u32, ident, &data.pck) {
+        if let Some(elements) = RotationalElements::parse(*id as u32, ident, &data.pck) {
             elements
         } else {
             return;
@@ -329,29 +329,6 @@ fn body_rotational_elements(
         imports.insert(format_ident!("BodyTrigRotationalElements"));
     }
 
-    code.extend(elements.code_tokens());
-    tests.extend(elements.test_tokens());
-}
-
-fn barycenter_rotational_elements(
-    imports: &mut HashSet<Ident>,
-    code: &mut TokenStream,
-    tests: &mut TokenStream,
-    ident: &Ident,
-    id: &i32,
-    data: &Data,
-) {
-    let elements =
-        if let Some(elements) = BarycenterTrigElements::parse(*id as u32, ident, &data.pck) {
-            elements
-        } else {
-            return;
-        };
-
-    imports.extend([
-        format_ident!("BarycenterTrigRotationalElements"),
-        format_ident!("PolynomialCoefficient"),
-    ]);
     code.extend(elements.code_tokens());
     tests.extend(elements.test_tokens());
 }
