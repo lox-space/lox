@@ -111,7 +111,7 @@ pub struct DafSummaryRecord {
 pub struct Spk {
     pub file_record: DafFileRecord,
     pub comment: String,
-    pub segments: HashMap<BodyId, HashMap<BodyId, SpkSegment>>,
+    pub segments: HashMap<BodyId, HashMap<BodyId, Vec<SpkSegment>>>,
 }
 
 pub fn parse_daf_file_record_endianness(
@@ -385,7 +385,7 @@ pub fn parse_daf_spk(full_input: &[u8]) -> Result<Spk, DafSpkError> {
         file_record.fward,
     )?;
 
-    let segments: HashMap<BodyId, HashMap<BodyId, SpkSegment>> = all_summaries
+    let segments: HashMap<BodyId, HashMap<BodyId, Vec<SpkSegment>>> = all_summaries
         .iter()
         .map(|summary_record| {
             summary_record
@@ -401,7 +401,8 @@ pub fn parse_daf_spk(full_input: &[u8]) -> Result<Spk, DafSpkError> {
             map.entry(segment.center_id)
                 .or_default()
                 .entry(segment.target_id)
-                .or_insert(segment);
+                .or_default()
+                .push(segment);
 
             map
         });
@@ -665,16 +666,15 @@ name is "19_spk") available from the NAIF website (http://naif.jpl.nasa.gov/tuto
             .to_string()
     }
 
-    fn get_expected_spk() -> Spk {
-        // Values confirmed with JPLEphem.jp and python-jplephem
-
-        let mut segments: HashMap<i32, HashMap<i32, SpkSegment>> = HashMap::new();
+    pub fn get_expected_segments() -> HashMap<i32, HashMap<i32, Vec<SpkSegment>>> {
+        let mut segments: HashMap<i32, HashMap<i32, Vec<SpkSegment>>> = HashMap::new();
 
         segments
             .entry(0)
             .or_default()
             .entry(1)
-            .or_insert(SpkSegment {
+            .or_default()
+            .push(SpkSegment {
                 name: "DE-0430LE-0430".to_string(),
                 initial_epoch: -14200747200.0,
                 final_epoch: 20514081600.0,
@@ -1702,6 +1702,12 @@ name is "19_spk") available from the NAIF website (http://naif.jpl.nasa.gov/tuto
                 }),
             });
 
+        segments
+    }
+
+    fn get_expected_spk() -> Spk {
+        // Values confirmed with JPLEphem.jp and python-jplephem
+
         Spk {
             file_record: DafFileRecord {
                 locidw: "DAF/SPK".to_string(),
@@ -1758,7 +1764,7 @@ name is "19_spk") available from the NAIF website (http://naif.jpl.nasa.gov/tuto
                 ],
             },
             comment: get_expected_comment_string(),
-            segments,
+            segments: get_expected_segments(),
         }
     }
 

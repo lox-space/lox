@@ -21,11 +21,16 @@ impl Spk {
             sign = -1;
         }
 
+        // An SPK file may contain any number of segments. A single file may contain overlapping segments:
+        // segments containing data for the same body over a common interval. When this happens, the
+        // latest segment in a file supersedes any competing segments earlier in the file.
         let segment = self
             .segments
             .get(&origin)
             .ok_or(DafSpkError::UnableToFindMatchingSegment)?
             .get(&target)
+            .ok_or(DafSpkError::UnableToFindMatchingSegment)?
+            .last()
             .ok_or(DafSpkError::UnableToFindMatchingSegment)?;
 
         Ok((&segment, sign))
@@ -60,7 +65,7 @@ impl Spk {
         Ok((record, fraction))
     }
 
-    pub fn get_segments(&self) -> &HashMap<i32, HashMap<i32, SpkSegment>> {
+    pub fn get_segments(&self) -> &HashMap<i32, HashMap<i32, Vec<SpkSegment>>> {
         &self.segments
     }
 
