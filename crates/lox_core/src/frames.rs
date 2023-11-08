@@ -6,9 +6,39 @@
  * file, you can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+use std::fmt::{Debug, Display, Formatter};
+
 use glam::{DMat3, DVec3};
 
 mod iau;
+
+// TODO: Replace with proper `Epoch` type
+type Epoch = f64;
+
+pub trait ReferenceFrame: Copy {
+    fn is_inertial() -> bool {
+        !Self::is_rotating()
+    }
+
+    fn is_rotating() -> bool {
+        !Self::is_inertial()
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct Icrf;
+
+impl Display for Icrf {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ICRF")
+    }
+}
+
+impl ReferenceFrame for Icrf {
+    fn is_inertial() -> bool {
+        true
+    }
+}
 
 pub fn rotation_matrix_derivative(m: DMat3, v: DVec3) -> DMat3 {
     let sx = DVec3::new(0.0, v.z, v.y);
@@ -51,16 +81,25 @@ impl Rotation {
     }
 }
 
-pub trait FromIcrf {
-    fn rotation_from_icrf(&self, t: f64) -> Rotation;
+pub trait TransformFrom<T: ReferenceFrame> {
+    fn rotation_from(&self, _: T, t: Epoch) -> Rotation;
 }
 
-pub trait ToIcrf {
-    fn rotation_to_icrf(&self, t: f64) -> Rotation;
+impl<T: ReferenceFrame> TransformFrom<T> for T {
+    fn rotation_from(&self, _: T, _: Epoch) -> Rotation {
+        Rotation::new(DMat3::IDENTITY)
+    }
 }
 
-impl<T: FromIcrf> ToIcrf for T {
-    fn rotation_to_icrf(&self, t: f64) -> Rotation {
-        self.rotation_from_icrf(t).transpose()
+pub trait TransformInto<T: ReferenceFrame> {
+    fn rotation_into(&self, _: T, t: Epoch) -> Rotation;
+}
+
+impl<T, U: ReferenceFrame> TransformInto<U> for T
+where
+    T: TransformFrom<U>,
+{
+    fn rotation_into(&self, frame: U, t: Epoch) -> Rotation {
+        self.rotation_from(frame, t).transpose()
     }
 }

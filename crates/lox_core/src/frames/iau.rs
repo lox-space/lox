@@ -6,15 +6,24 @@
  * file, you can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+use std::fmt::Debug;
+
 use glam::{DMat3, DVec3};
 
 use crate::bodies::RotationalElements;
-use crate::frames::{FromIcrf, Rotation};
+use crate::frames::{Epoch, Icrf, ReferenceFrame, Rotation, TransformFrom};
 
+#[derive(Debug, Copy, Clone)]
 struct BodyFixed<T: RotationalElements>(T);
 
-impl<T: RotationalElements> FromIcrf for BodyFixed<T> {
-    fn rotation_from_icrf(&self, t: f64) -> Rotation {
+impl<T: RotationalElements> ReferenceFrame for BodyFixed<T> {
+    fn is_rotating() -> bool {
+        true
+    }
+}
+
+impl<T: RotationalElements> TransformFrom<Icrf> for BodyFixed<T> {
+    fn rotation_from(&self, _: Icrf, t: Epoch) -> Rotation {
         let (right_ascension, declination, prime_meridian) = T::rotational_elements(t);
         let (right_ascension_rate, declination_rate, prime_meridian_rate) =
             T::rotational_element_rates(t);
@@ -33,14 +42,15 @@ mod tests {
     use glam::DVec3;
 
     use crate::bodies::planets::Jupiter;
-    use crate::frames::iau::BodyFixed;
-    use crate::frames::{FromIcrf, ToIcrf};
+    use crate::frames::{Icrf, TransformFrom, TransformInto};
+
+    use super::*;
 
     #[test]
     fn test_bodyfixed() {
         let iau_jupiter = BodyFixed(Jupiter);
-        let from_icrf = iau_jupiter.rotation_from_icrf(0.0);
-        let to_icrf = iau_jupiter.rotation_to_icrf(0.0);
+        let from_icrf = iau_jupiter.rotation_from(Icrf, 0.0);
+        let to_icrf = iau_jupiter.rotation_into(Icrf, 0.0);
 
         let r0 = DVec3::new(6068279.27e-3, -1692843.94e-3, -2516619.18e-3);
         let v0 = DVec3::new(-660.415582e-3, 5495.938726e-3, -5303.093233e-3);

@@ -6,8 +6,9 @@
  * file, you can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-use crate::time::constants::f64::{SECONDS_PER_DAY, SECONDS_PER_JULIAN_CENTURY};
 use std::f64::consts::PI;
+
+use crate::time::constants::f64::{SECONDS_PER_DAY, SECONDS_PER_JULIAN_CENTURY};
 
 pub mod barycenters;
 pub mod minor;
@@ -25,6 +26,7 @@ pub fn naif_id<T: NaifId>(_: T) -> i32 {
 
 pub trait Ellipsoid: Copy {
     fn polar_radius() -> f64;
+
     fn mean_radius() -> f64;
 }
 
@@ -46,6 +48,7 @@ pub fn equatorial_radius<T: Spheroid>(_: T) -> f64 {
 
 pub trait TriAxial: Ellipsoid {
     fn subplanetary_radius() -> f64;
+
     fn along_orbit_radius() -> f64;
 }
 
@@ -73,8 +76,9 @@ type NutationPrecessionCoefficients = ([f64; N_COEFFICIENTS], [f64; N_COEFFICIEN
 
 type Elements = (f64, f64, f64);
 
-pub trait RotationalElements {
+pub trait RotationalElements: Copy {
     fn nutation_precession_coefficients() -> NutationPrecessionCoefficients;
+
     fn right_ascension_coefficients() -> PolynomialCoefficients;
 
     fn declination_coefficients() -> PolynomialCoefficients;
