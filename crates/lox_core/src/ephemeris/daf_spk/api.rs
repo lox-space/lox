@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use super::parser::{DafSpkError, Spk, SpkSegment, SpkType2Array, SpkType2Coefficients};
 
 type Position = (f64, f64, f64);
@@ -58,6 +60,10 @@ impl Spk {
         Ok((record, fraction))
     }
 
+    pub fn get_segments(&self) -> &HashMap<i32, HashMap<i32, SpkSegment>> {
+        &self.segments
+    }
+
     pub fn position(
         &self,
         epoch: Epoch,
@@ -106,7 +112,7 @@ impl Spk {
 #[cfg(test)]
 mod test {
     use crate::ephemeris::daf_spk::parser::parse_daf_spk;
-    use crate::ephemeris::daf_spk::parser::test::FILE_CONTENTS;
+    use crate::ephemeris::daf_spk::parser::test::{get_expected_segments, FILE_CONTENTS};
 
     use super::*;
 
@@ -122,5 +128,12 @@ mod test {
             Ok((-32703259.291699532, 31370540.51993667, 20159681.594182793)),
             spk.position(-14200747200.0 as Epoch, 0, 1)
         );
+    }
+
+    #[test]
+    fn test_get_segments() {
+        let spk = parse_daf_spk(&FILE_CONTENTS).expect("Unable to parse DAF/SPK");
+
+        assert_eq!(&get_expected_segments(), spk.get_segments());
     }
 }
