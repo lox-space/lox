@@ -15,9 +15,9 @@ use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote};
 
 use lox_io::spice::Kernel;
-use naif_ids::{BARYCENTERS, Body, MINOR_BODIES, PLANETS, SATELLITES, SUN};
+use naif_ids::{Body, BARYCENTERS, MINOR_BODIES, PLANETS, SATELLITES, SUN};
 
-use crate::rotational_elements::RotationalElements;
+use crate::rotational_elements::{CoefficientKernel, RotationalElements};
 
 mod naif_ids;
 mod rotational_elements;
@@ -314,21 +314,17 @@ fn rotational_elements(
     id: &i32,
     data: &Data,
 ) {
-    let elements =
-        if let Some(elements) = RotationalElements::parse(*id as u32, ident, &data.pck) {
-            elements
-        } else {
-            return;
-        };
+    let elements = match RotationalElements::parse(*id as u32, ident, CoefficientKernel(&data.pck))
+    {
+        Ok(elements) => elements,
+        Err(err) => panic!("failed to parse rotational elements for {}: {}", ident, err),
+    };
 
     imports.extend([
-        format_ident!("BodyRotationalElements"),
-        format_ident!("PolynomialCoefficient"),
+        format_ident!("RotationalElements"),
+        format_ident!("PolynomialCoefficients"),
+        format_ident!("NutationPrecessionCoefficients"),
     ]);
-    if elements.has_trig_elements() {
-        imports.insert(format_ident!("BodyTrigRotationalElements"));
-    }
-
     code.extend(elements.code_tokens());
     tests.extend(elements.test_tokens());
 }
