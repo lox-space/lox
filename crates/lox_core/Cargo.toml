@@ -12,3 +12,8 @@ thiserror.workspace = true
 [dev-dependencies]
 proptest = "1.1.0"
 rstest = "0.18.2"
+divan = "0.1.2"
+
+[[bench]]
+name = "iau_frames"
+harness = false

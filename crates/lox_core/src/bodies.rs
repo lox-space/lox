@@ -6,6 +6,8 @@
  * file, you can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+use std::f64::consts::PI;
+
 use crate::time::constants::f64::{SECONDS_PER_DAY, SECONDS_PER_JULIAN_CENTURY};
 
 pub mod barycenters;
@@ -24,6 +26,7 @@ pub fn naif_id<T: NaifId>(_: T) -> i32 {
 
 pub trait Ellipsoid: Copy {
     fn polar_radius() -> f64;
+
     fn mean_radius() -> f64;
 }
 
@@ -45,6 +48,7 @@ pub fn equatorial_radius<T: Spheroid>(_: T) -> f64 {
 
 pub trait TriAxial: Ellipsoid {
     fn subplanetary_radius() -> f64;
+
     fn along_orbit_radius() -> f64;
 }
 
@@ -67,10 +71,14 @@ pub fn gravitational_parameter<T: PointMass>(_: T) -> f64 {
 const N_COEFFICIENTS: usize = 18;
 
 type PolynomialCoefficients = (f64, f64, f64, [f64; N_COEFFICIENTS]);
+
 type NutationPrecessionCoefficients = ([f64; N_COEFFICIENTS], [f64; N_COEFFICIENTS]);
 
-pub trait RotationalElements {
+type Elements = (f64, f64, f64);
+
+pub trait RotationalElements: Copy {
     fn nutation_precession_coefficients() -> NutationPrecessionCoefficients;
+
     fn right_ascension_coefficients() -> PolynomialCoefficients;
 
     fn declination_coefficients() -> PolynomialCoefficients;
@@ -160,6 +168,22 @@ pub trait RotationalElements {
         }
         let c_trig: f64 = c_trig.iter().sum();
         c1 / dt + 2.0 * c2 * t / dt.powi(2) + c_trig
+    }
+
+    fn rotational_elements(t: f64) -> Elements {
+        (
+            Self::right_ascension(t) + PI / 2.0,
+            PI / 2.0 - Self::declination(t),
+            Self::prime_meridian(t) % (2.0 * PI),
+        )
+    }
+
+    fn rotational_element_rates(t: f64) -> Elements {
+        (
+            Self::right_ascension_dot(t),
+            -Self::declination_dot(t),
+            Self::prime_meridian_dot(t),
+        )
     }
 }
 
