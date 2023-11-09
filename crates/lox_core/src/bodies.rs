@@ -68,28 +68,27 @@ pub fn gravitational_parameter<T: PointMass>(_: T) -> f64 {
     <T as PointMass>::gravitational_parameter()
 }
 
-const N_COEFFICIENTS: usize = 18;
+pub type PolynomialCoefficients = (f64, f64, f64, &'static [f64]);
 
-type PolynomialCoefficients = (f64, f64, f64, [f64; N_COEFFICIENTS]);
-
-type NutationPrecessionCoefficients = ([f64; N_COEFFICIENTS], [f64; N_COEFFICIENTS]);
+pub type NutationPrecessionCoefficients = (&'static [f64], &'static [f64]);
 
 type Elements = (f64, f64, f64);
 
 pub trait RotationalElements: Copy {
-    fn nutation_precession_coefficients() -> NutationPrecessionCoefficients;
+    const NUTATION_PRECESSION_COEFFICIENTS: NutationPrecessionCoefficients;
+    const RIGHT_ASCENSION_COEFFICIENTS: PolynomialCoefficients;
+    const DECLINATION_COEFFICIENTS: PolynomialCoefficients;
+    const PRIME_MERIDIAN_COEFFICIENTS: PolynomialCoefficients;
 
-    fn right_ascension_coefficients() -> PolynomialCoefficients;
-
-    fn declination_coefficients() -> PolynomialCoefficients;
-
-    fn prime_meridian_coefficients() -> PolynomialCoefficients;
-
-    fn theta(t: f64) -> [f64; N_COEFFICIENTS] {
+    fn theta(t: f64) -> Vec<f64> {
         let t = t / SECONDS_PER_JULIAN_CENTURY;
-        let (theta0, theta1) = Self::nutation_precession_coefficients();
-        let mut theta = [0.0; N_COEFFICIENTS];
-        for i in 0..N_COEFFICIENTS {
+        let (theta0, theta1) = Self::NUTATION_PRECESSION_COEFFICIENTS;
+        let mut theta = vec![0.0; theta0.len()];
+        if theta0.is_empty() {
+            return theta;
+        }
+
+        for i in 0..theta.len() {
             theta[i] = theta0[i] + theta1[i] * t;
         }
         theta
@@ -97,11 +96,13 @@ pub trait RotationalElements: Copy {
 
     fn right_ascension(t: f64) -> f64 {
         let dt = SECONDS_PER_JULIAN_CENTURY;
-        let (c0, c1, c2, c) = Self::right_ascension_coefficients();
+        let (c0, c1, c2, c) = Self::RIGHT_ASCENSION_COEFFICIENTS;
         let theta = Self::theta(t);
-        let mut c_trig = [0.0; N_COEFFICIENTS];
-        for i in 0..N_COEFFICIENTS {
-            c_trig[i] = c[i] * theta[i].sin();
+        let mut c_trig = vec![0.0; c.len()];
+        if !c.is_empty() {
+            for i in 0..c.len() {
+                c_trig[i] = c[i] * theta[i].sin();
+            }
         }
         let c_trig: f64 = c_trig.iter().sum();
         c0 + c1 * t / dt + c2 * t.powi(2) / dt.powi(2) + c_trig
@@ -109,12 +110,14 @@ pub trait RotationalElements: Copy {
 
     fn right_ascension_dot(t: f64) -> f64 {
         let dt = SECONDS_PER_JULIAN_CENTURY;
-        let (_, c1, c2, c) = Self::right_ascension_coefficients();
-        let (_, theta1) = Self::nutation_precession_coefficients();
+        let (_, c1, c2, c) = Self::RIGHT_ASCENSION_COEFFICIENTS;
+        let (_, theta1) = Self::NUTATION_PRECESSION_COEFFICIENTS;
         let theta = Self::theta(t);
-        let mut c_trig = [0.0; N_COEFFICIENTS];
-        for i in 0..N_COEFFICIENTS {
-            c_trig[i] = c[i] * theta1[i] / SECONDS_PER_JULIAN_CENTURY * theta[i].cos()
+        let mut c_trig = vec![0.0; c.len()];
+        if !c.is_empty() {
+            for i in 0..c.len() {
+                c_trig[i] = c[i] * theta1[i] / SECONDS_PER_JULIAN_CENTURY * theta[i].cos()
+            }
         }
         let c_trig: f64 = c_trig.iter().sum();
         c1 / dt + 2.0 * c2 * t / dt.powi(2) + c_trig
@@ -122,11 +125,13 @@ pub trait RotationalElements: Copy {
 
     fn declination(t: f64) -> f64 {
         let dt = SECONDS_PER_JULIAN_CENTURY;
-        let (c0, c1, c2, c) = Self::declination_coefficients();
+        let (c0, c1, c2, c) = Self::DECLINATION_COEFFICIENTS;
         let theta = Self::theta(t);
-        let mut c_trig = [0.0; N_COEFFICIENTS];
-        for i in 0..N_COEFFICIENTS {
-            c_trig[i] = c[i] * theta[i].cos();
+        let mut c_trig = vec![0.0; c.len()];
+        if !c.is_empty() {
+            for i in 0..c.len() {
+                c_trig[i] = c[i] * theta[i].cos();
+            }
         }
         let c_trig: f64 = c_trig.iter().sum();
         c0 + c1 * t / dt + c2 * t.powi(2) / dt.powi(2) + c_trig
@@ -134,12 +139,14 @@ pub trait RotationalElements: Copy {
 
     fn declination_dot(t: f64) -> f64 {
         let dt = SECONDS_PER_JULIAN_CENTURY;
-        let (_, c1, c2, c) = Self::declination_coefficients();
-        let (_, theta1) = Self::nutation_precession_coefficients();
+        let (_, c1, c2, c) = Self::DECLINATION_COEFFICIENTS;
+        let (_, theta1) = Self::NUTATION_PRECESSION_COEFFICIENTS;
         let theta = Self::theta(t);
-        let mut c_trig = [0.0; N_COEFFICIENTS];
-        for i in 0..N_COEFFICIENTS {
-            c_trig[i] = c[i] * theta1[i] / SECONDS_PER_JULIAN_CENTURY * theta[i].sin()
+        let mut c_trig = vec![0.0; c.len()];
+        if !c.is_empty() {
+            for i in 0..c.len() {
+                c_trig[i] = c[i] * theta1[i] / SECONDS_PER_JULIAN_CENTURY * theta[i].sin()
+            }
         }
         let c_trig: f64 = c_trig.iter().sum();
         c1 / dt + 2.0 * c2 * t / dt.powi(2) - c_trig
@@ -147,11 +154,13 @@ pub trait RotationalElements: Copy {
 
     fn prime_meridian(t: f64) -> f64 {
         let dt = SECONDS_PER_DAY;
-        let (c0, c1, c2, c) = Self::prime_meridian_coefficients();
+        let (c0, c1, c2, c) = Self::PRIME_MERIDIAN_COEFFICIENTS;
         let theta = Self::theta(t);
-        let mut c_trig = [0.0; N_COEFFICIENTS];
-        for i in 0..N_COEFFICIENTS {
-            c_trig[i] = c[i] * theta[i].sin();
+        let mut c_trig = vec![0.0; c.len()];
+        if !c.is_empty() {
+            for i in 0..c.len() {
+                c_trig[i] = c[i] * theta[i].sin();
+            }
         }
         let c_trig: f64 = c_trig.iter().sum();
         c0 + c1 * t / dt + c2 * t.powi(2) / dt.powi(2) + c_trig
@@ -159,12 +168,14 @@ pub trait RotationalElements: Copy {
 
     fn prime_meridian_dot(t: f64) -> f64 {
         let dt = SECONDS_PER_DAY;
-        let (_, c1, c2, c) = Self::prime_meridian_coefficients();
-        let (_, theta1) = Self::nutation_precession_coefficients();
+        let (_, c1, c2, c) = Self::PRIME_MERIDIAN_COEFFICIENTS;
+        let (_, theta1) = Self::NUTATION_PRECESSION_COEFFICIENTS;
         let theta = Self::theta(t);
-        let mut c_trig = [0.0; N_COEFFICIENTS];
-        for i in 0..N_COEFFICIENTS {
-            c_trig[i] = c[i] * theta1[i] / SECONDS_PER_JULIAN_CENTURY * theta[i].cos()
+        let mut c_trig = vec![0.0; c.len()];
+        if !c.is_empty() {
+            for i in 0..c.len() {
+                c_trig[i] = c[i] * theta1[i] / SECONDS_PER_JULIAN_CENTURY * theta[i].cos()
+            }
         }
         let c_trig: f64 = c_trig.iter().sum();
         c1 / dt + 2.0 * c2 * t / dt.powi(2) + c_trig
@@ -187,123 +198,9 @@ pub trait RotationalElements: Copy {
     }
 }
 
-impl RotationalElements for planets::Jupiter {
-    fn nutation_precession_coefficients() -> NutationPrecessionCoefficients {
-        (
-            [
-                1.2796754075622423,
-                0.42970006184100396,
-                4.9549897464119015,
-                6.2098814785958245,
-                2.092649773141201,
-                4.010766621082969,
-                6.147922290150026,
-                1.9783307071355725,
-                2.5593508151244846,
-                0.8594001236820079,
-                1.734171606432425,
-                3.0699533280603655,
-                5.241627996900319,
-                1.9898901100379935,
-                0.864134346731335,
-                0.0,
-                0.0,
-                0.0,
-            ],
-            [
-                1596.503281347521,
-                787.7927551311844,
-                84.66068602648895,
-                20.792107379008446,
-                4.574507969477138,
-                1.1222467090323538,
-                41.58421475801689,
-                105.9414855960558,
-                3193.006562695042,
-                1575.5855102623689,
-                84.65553032387855,
-                20.80363527871787,
-                4.582318317879813,
-                105.94580703128374,
-                1.1222467090323538,
-                0.0,
-                0.0,
-                0.0,
-            ],
-        )
-    }
-
-    fn right_ascension_coefficients() -> PolynomialCoefficients {
-        (
-            4.6784701644349695,
-            -0.00011342894808711148,
-            0.0,
-            [
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                2.0420352248333656e-6,
-                1.6371188383706813e-5,
-                2.4993114888558796e-5,
-                5.235987755982989e-7,
-                3.752457891787809e-5,
-                0.0,
-                0.0,
-                0.0,
-            ],
-        )
-    }
-
-    fn declination_coefficients() -> PolynomialCoefficients {
-        (
-            1.1256553894213766,
-            4.211479485062318e-5,
-            0.0,
-            [
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                8.726646259971648e-7,
-                7.051130178057092e-6,
-                1.0768681484805013e-5,
-                -2.2689280275926283e-7,
-                1.616174887346749e-5,
-                0.0,
-                0.0,
-                0.0,
-            ],
-        )
-    }
-
-    fn prime_meridian_coefficients() -> PolynomialCoefficients {
-        (
-            4.973315703557842,
-            15.193719457141356,
-            0.0,
-            [0.0; N_COEFFICIENTS],
-        )
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use float_eq::assert_float_eq;
-
-    use crate::bodies::planets::Jupiter;
 
     use super::planets::Earth;
     use super::satellites::Moon;
@@ -347,29 +244,216 @@ mod tests {
         assert_eq!(along_orbit_radius(Moon), Moon::along_orbit_radius());
     }
 
+    // Jupiter is manually redefined here usings known data. This avoids a dependecy on the
+    // correctness of the PCK parser to test RotationalElements.
+    #[derive(Copy, Clone)]
+    struct Jupiter;
+
+    impl RotationalElements for Jupiter {
+        const NUTATION_PRECESSION_COEFFICIENTS: NutationPrecessionCoefficients = (
+            &[
+                1.2796754075622423f64,
+                0.42970006184100396f64,
+                4.9549897464119015f64,
+                6.2098814785958245f64,
+                2.092649773141201f64,
+                4.010766621082969f64,
+                6.147922290150026f64,
+                1.9783307071355725f64,
+                2.5593508151244846f64,
+                0.8594001236820079f64,
+                1.734171606432425f64,
+                3.0699533280603655f64,
+                5.241627996900319f64,
+                1.9898901100379935f64,
+                0.864134346731335f64,
+            ],
+            &[
+                1596.503281347521f64,
+                787.7927551311844f64,
+                84.66068602648895f64,
+                20.792107379008446f64,
+                4.574507969477138f64,
+                1.1222467090323538f64,
+                41.58421475801689f64,
+                105.9414855960558f64,
+                3193.006562695042f64,
+                1575.5855102623689f64,
+                84.65553032387855f64,
+                20.80363527871787f64,
+                4.582318317879813f64,
+                105.94580703128374f64,
+                1.1222467090323538f64,
+            ],
+        );
+
+        const RIGHT_ASCENSION_COEFFICIENTS: PolynomialCoefficients = (
+            4.6784701644349695f64,
+            -0.00011342894808711148f64,
+            0f64,
+            &[
+                0f64,
+                0f64,
+                0f64,
+                0f64,
+                0f64,
+                0f64,
+                0f64,
+                0f64,
+                0f64,
+                0f64,
+                0.0000020420352248333656f64,
+                0.000016371188383706813f64,
+                0.000024993114888558796f64,
+                0.0000005235987755982989f64,
+                0.00003752457891787809f64,
+            ],
+        );
+
+        const DECLINATION_COEFFICIENTS: PolynomialCoefficients = (
+            1.1256553894213766f64,
+            0.00004211479485062318f64,
+            0f64,
+            &[
+                0f64,
+                0f64,
+                0f64,
+                0f64,
+                0f64,
+                0f64,
+                0f64,
+                0f64,
+                0f64,
+                0f64,
+                0.0000008726646259971648f64,
+                0.000007051130178057092f64,
+                0.000010768681484805013f64,
+                -0.00000022689280275926283f64,
+                0.00001616174887346749f64,
+            ],
+        );
+
+        const PRIME_MERIDIAN_COEFFICIENTS: PolynomialCoefficients = (
+            4.973315703557842f64,
+            15.193719457141356f64,
+            0f64,
+            &[
+                0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+                0f64,
+            ],
+        );
+    }
+
     #[test]
-    fn test_rotational_elements() {
+    fn test_rotational_elements_right_ascension() {
         assert_float_eq!(
             Jupiter::right_ascension(0.0),
             4.678480799964803,
             rel <= 1e-8
         );
+    }
+
+    #[test]
+    fn test_rotational_elements_right_ascension_dot() {
         assert_float_eq!(
             Jupiter::right_ascension_dot(0.0),
             -1.3266588500099516e-13,
             rel <= 1e-8
         );
+    }
+
+    #[test]
+    fn test_rotational_elements_declination() {
         assert_float_eq!(Jupiter::declination(0.0), 1.1256642372977634, rel <= 1e-8);
+    }
+
+    #[test]
+    fn test_rotational_elements_declination_dot() {
         assert_float_eq!(
             Jupiter::declination_dot(0.0),
             3.004482367136341e-15,
             rel <= 1e-8
         );
+    }
+
+    #[test]
+    fn test_rotational_elements_prime_meridian() {
         assert_float_eq!(Jupiter::prime_meridian(0.0), 4.973315703557842, rel <= 1e-8);
+    }
+
+    #[test]
+    fn test_rotational_elements_prime_meridian_dot() {
         assert_float_eq!(
             Jupiter::prime_meridian_dot(0.0),
             0.00017585323445765458,
             rel <= 1e-8
+        );
+    }
+
+    #[test]
+    fn test_rotational_elements_rotational_elements() {
+        let (ra, dec, pm) = Jupiter::rotational_elements(0.0);
+        let (expected_ra, expected_dec, expected_pm) =
+            (6.249277121030398, 0.44513208936761073, 4.973315703557842);
+
+        assert_float_eq!(
+            ra,
+            expected_ra,
+            rel <= 1e-8,
+            "Expected right ascension {}, got {}",
+            expected_ra,
+            ra
+        );
+        assert_float_eq!(
+            dec,
+            expected_dec,
+            rel <= 1e-8,
+            "Expected declination {}, got {}",
+            expected_dec,
+            dec
+        );
+        assert_float_eq!(
+            pm,
+            expected_pm,
+            rel <= 1e-8,
+            "Expected prime meridian {}, got {}",
+            expected_pm,
+            pm
+        );
+    }
+
+    #[test]
+    fn test_rotational_elements_rotational_element_rates() {
+        let (ra_dot, dec_dot, pm_dot) = Jupiter::rotational_element_rates(0.0);
+        let (expected_ra_dot, expected_dec_dot, expected_pm_dot) = (
+            -1.3266588500099516e-13,
+            -3.004482367136341e-15,
+            0.00017585323445765458,
+        );
+
+        assert_float_eq!(
+            ra_dot,
+            expected_ra_dot,
+            rel <= 1e-8,
+            "Expected right ascension rate {}, got {}",
+            expected_ra_dot,
+            ra_dot
+        );
+        assert_float_eq!(
+            dec_dot,
+            expected_dec_dot,
+            rel <= 1e-8,
+            "Expected declination rate {}, got {}",
+            expected_dec_dot,
+            dec_dot
+        );
+        assert_float_eq!(
+            pm_dot,
+            expected_pm_dot,
+            rel <= 1e-8,
+            "Expected prime meridian rate {}, got {}",
+            expected_pm_dot,
+            pm_dot
         );
     }
 }

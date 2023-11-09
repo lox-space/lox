@@ -9,3 +9,5 @@ edition = "2021"
 proc-macro2 = "1.0"
 quote = "1.0"
 lox_io = { path = "../../crates/lox_io" }
+lox_core = { path = "../../crates/lox_core" }
+thiserror = "1.0.50"

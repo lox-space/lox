@@ -6,6 +6,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
@@ -16,10 +17,13 @@ use quote::{format_ident, quote};
 use lox_io::spice::Kernel;
 use naif_ids::{Body, BARYCENTERS, MINOR_BODIES, PLANETS, SATELLITES, SUN};
 
+use crate::rotational_elements::{CoefficientKernel, RotationalElements};
+
 mod naif_ids;
+mod rotational_elements;
 
 type Generator = fn(
-    imports: &mut Vec<Ident>,
+    imports: &mut HashSet<Ident>,
     code: &mut TokenStream,
     tests: &mut TokenStream,
     ident: &Ident,
@@ -39,7 +43,11 @@ pub fn main() {
         .expect("parsing should succeed");
     let data = Data { pck, gm };
     let bodies: [(&str, Vec<Body>, Vec<Generator>); 5] = [
-        ("sun", Vec::from(SUN), vec![naif_id, point_mass, spheroid]),
+        (
+            "sun",
+            Vec::from(SUN),
+            vec![naif_id, point_mass, spheroid, rotational_elements],
+        ),
         (
             "barycenters",
             Vec::from(BARYCENTERS),
@@ -48,17 +56,17 @@ pub fn main() {
         (
             "planets",
             Vec::from(PLANETS),
-            vec![naif_id, point_mass, spheroid],
+            vec![naif_id, point_mass, spheroid, rotational_elements],
         ),
         (
             "satellites",
             Vec::from(SATELLITES),
-            vec![naif_id, point_mass, tri_axial],
+            vec![naif_id, point_mass, tri_axial, rotational_elements],
         ),
         (
             "minor",
             Vec::from(MINOR_BODIES),
-            vec![naif_id, point_mass, tri_axial],
+            vec![naif_id, point_mass, tri_axial, rotational_elements],
         ),
     ];
     bodies
@@ -91,7 +99,7 @@ fn write_file(file: &str, bodies: &[Body], generators: &[Generator], data: &Data
 }
 
 fn generate_code(bodies: &[Body], generators: &[Generator], data: &Data) -> String {
-    let mut imports: Vec<Ident> = Vec::new();
+    let mut imports: HashSet<Ident> = HashSet::new();
     let mut code = quote!();
     let mut tests = quote!();
 
@@ -107,12 +115,14 @@ fn generate_code(bodies: &[Body], generators: &[Generator], data: &Data) -> Stri
             .for_each(|generator| generator(&mut imports, &mut code, &mut tests, &ident, id, data))
     });
 
+    let imports_iter = imports.iter();
     let module = quote! {
-        use super::{#(#imports),*};
+        use super::{#(#imports_iter),*};
 
         #code
 
         #[cfg(test)]
+        #[allow(clippy::approx_constant)] // at least one parsed constant is close to TAU
         mod tests {
             use super::*;
 
@@ -123,18 +133,14 @@ fn generate_code(bodies: &[Body], generators: &[Generator], data: &Data) -> Stri
 }
 
 fn naif_id(
-    imports: &mut Vec<Ident>,
+    imports: &mut HashSet<Ident>,
     code: &mut TokenStream,
     tests: &mut TokenStream,
     ident: &Ident,
     id: &i32,
     _data: &Data,
 ) {
-    let trait_name = format_ident!("NaifId");
-
-    if !imports.contains(&trait_name) {
-        imports.push(trait_name);
-    }
+    imports.insert(format_ident!("NaifId"));
 
     *code = quote! {
         #code
@@ -159,22 +165,14 @@ fn naif_id(
 }
 
 fn spheroid(
-    imports: &mut Vec<Ident>,
+    imports: &mut HashSet<Ident>,
     code: &mut TokenStream,
     tests: &mut TokenStream,
     ident: &Ident,
     id: &i32,
     data: &Data,
 ) {
-    let trait_name = format_ident!("Ellipsoid");
-    if !imports.contains(&trait_name) {
-        imports.push(trait_name);
-    }
-
-    let trait_name = format_ident!("Spheroid");
-    if !imports.contains(&trait_name) {
-        imports.push(trait_name);
-    }
+    imports.extend([format_ident!("Ellipsoid"), format_ident!("Spheroid")]);
 
     let radii = format!("BODY{id}_RADII");
     if let Some(radii) = data.pck.get_double_array(&radii) {
@@ -217,22 +215,14 @@ fn spheroid(
 }
 
 fn tri_axial(
-    imports: &mut Vec<Ident>,
+    imports: &mut HashSet<Ident>,
     code: &mut TokenStream,
     tests: &mut TokenStream,
     ident: &Ident,
     id: &i32,
     data: &Data,
 ) {
-    let trait_name = format_ident!("Ellipsoid");
-    if !imports.contains(&trait_name) {
-        imports.push(trait_name);
-    }
-
-    let trait_name = format_ident!("TriAxial");
-    if !imports.contains(&trait_name) {
-        imports.push(trait_name);
-    }
+    imports.extend([format_ident!("Ellipsoid"), format_ident!("TriAxial")]);
 
     let radii = format!("BODY{id}_RADII");
     if let Some(radii) = data.pck.get_double_array(&radii) {
@@ -280,17 +270,15 @@ fn tri_axial(
 }
 
 fn point_mass(
-    imports: &mut Vec<Ident>,
+    imports: &mut HashSet<Ident>,
     code: &mut TokenStream,
     tests: &mut TokenStream,
     ident: &Ident,
     id: &i32,
     data: &Data,
 ) {
-    let trait_name = format_ident!("PointMass");
-    if !imports.contains(&trait_name) {
-        imports.push(trait_name);
-    }
+    imports.insert(format_ident!("PointMass"));
+
     let key = format!("BODY{id}_GM");
     if let Some(gm) = data.gm.get_double_array(&key) {
         let gm = gm.first().unwrap();
@@ -315,4 +303,28 @@ fn point_mass(
             }
         }
     };
+}
+
+/// Generates implementations for [lox_core::bodies::RotationalElements].
+fn rotational_elements(
+    imports: &mut HashSet<Ident>,
+    code: &mut TokenStream,
+    tests: &mut TokenStream,
+    ident: &Ident,
+    id: &i32,
+    data: &Data,
+) {
+    let elements = match RotationalElements::parse(*id as u32, ident, CoefficientKernel(&data.pck))
+    {
+        Ok(elements) => elements,
+        Err(err) => panic!("failed to parse rotational elements for {}: {}", ident, err),
+    };
+
+    imports.extend([
+        format_ident!("RotationalElements"),
+        format_ident!("PolynomialCoefficients"),
+        format_ident!("NutationPrecessionCoefficients"),
+    ]);
+    code.extend(elements.code_tokens());
+    tests.extend(elements.test_tokens());
 }

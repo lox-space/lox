@@ -35,6 +35,10 @@ pub const PLANETS: [Body; 9] = [
     (999, "Pluto"),
 ];
 
+pub fn is_planet(id: i32) -> bool {
+    PLANETS.iter().any(|(i, _)| *i == id)
+}
+
 pub const SATELLITES: [Body; 152] = [
     (301, "Moon"),
     (401, "Phobos"),
