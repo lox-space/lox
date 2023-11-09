@@ -43,13 +43,18 @@ impl RotationalElements for Sun {
         (&[] as &[f64], &[] as &[f64])
     }
     fn right_ascension_coefficients() -> PolynomialCoefficients {
-        (286.13f64, 0f64, 0f64, &[] as &[f64])
+        (4.993910588731375f64, 0f64, 0f64, &[] as &[f64])
     }
     fn declination_coefficients() -> PolynomialCoefficients {
-        (63.87f64, 0f64, 0f64, &[] as &[f64])
+        (1.1147417932487782f64, 0f64, 0f64, &[] as &[f64])
     }
     fn prime_meridian_coefficients() -> PolynomialCoefficients {
-        (84.176f64, 14.1844f64, 0f64, &[] as &[f64])
+        (
+            1.4691483511587469f64,
+            0.24756448241988369f64,
+            0f64,
+            &[] as &[f64],
+        )
     }
 }
 #[cfg(test)]
@@ -80,21 +85,26 @@ mod tests {
     #[test]
     fn test_rotational_elements_right_ascension_coefficients_10() {
         assert_eq!(
-            (286.13f64, 0f64, 0f64, &[] as &[f64]),
+            (4.993910588731375f64, 0f64, 0f64, &[] as &[f64]),
             Sun::right_ascension_coefficients()
         )
     }
     #[test]
     fn test_rotational_elements_declination_coefficients_10() {
         assert_eq!(
-            (63.87f64, 0f64, 0f64, &[] as &[f64]),
+            (1.1147417932487782f64, 0f64, 0f64, &[] as &[f64]),
             Sun::declination_coefficients()
         )
     }
     #[test]
     fn test_rotational_elements_prime_meridian_coefficients_10() {
         assert_eq!(
-            (84.176f64, 14.1844f64, 0f64, &[] as &[f64]),
+            (
+                1.4691483511587469f64,
+                0.24756448241988369f64,
+                0f64,
+                &[] as &[f64]
+            ),
             Sun::prime_meridian_coefficients()
         )
     }

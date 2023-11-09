@@ -183,8 +183,6 @@ pub trait RotationalElements {
 mod tests {
     use float_eq::assert_float_eq;
 
-    use crate::bodies::planets::Jupiter;
-
     use super::planets::Earth;
     use super::satellites::Moon;
     use super::*;
@@ -227,119 +225,117 @@ mod tests {
         assert_eq!(along_orbit_radius(Moon), Moon::along_orbit_radius());
     }
 
-    struct SomeBody;
+    // Jupiter is manually defined with known data here to avoid depending on the correctness of the
+    // PCK parser to test RotationalElements.
+    struct Jupiter;
 
-    impl RotationalElements for SomeBody {
+    impl RotationalElements for Jupiter {
         fn nutation_precession_coefficients() -> NutationPrecessionCoefficients {
             (
                 &[
-                    1.2796754075622423,
-                    0.42970006184100396,
-                    4.9549897464119015,
-                    6.2098814785958245,
-                    2.092649773141201,
-                    4.010766621082969,
-                    6.147922290150026,
-                    1.9783307071355725,
-                    2.5593508151244846,
-                    0.8594001236820079,
-                    1.734171606432425,
-                    3.0699533280603655,
-                    5.241627996900319,
-                    1.9898901100379935,
-                    0.864134346731335,
-                    0.0,
-                    0.0,
-                    0.0,
+                    1.2796754075622423f64,
+                    0.42970006184100396f64,
+                    4.9549897464119015f64,
+                    6.2098814785958245f64,
+                    2.092649773141201f64,
+                    4.010766621082969f64,
+                    6.147922290150026f64,
+                    1.9783307071355725f64,
+                    2.5593508151244846f64,
+                    0.8594001236820079f64,
+                    1.734171606432425f64,
+                    3.0699533280603655f64,
+                    5.241627996900319f64,
+                    1.9898901100379935f64,
+                    0.864134346731335f64,
                 ],
                 &[
-                    1596.503281347521,
-                    787.7927551311844,
-                    84.66068602648895,
-                    20.792107379008446,
-                    4.574507969477138,
-                    1.1222467090323538,
-                    41.58421475801689,
-                    105.9414855960558,
-                    3193.006562695042,
-                    1575.5855102623689,
-                    84.65553032387855,
-                    20.80363527871787,
-                    4.582318317879813,
-                    105.94580703128374,
-                    1.1222467090323538,
-                    0.0,
-                    0.0,
-                    0.0,
+                    1596.503281347521f64,
+                    787.7927551311844f64,
+                    84.66068602648895f64,
+                    20.792107379008446f64,
+                    4.574507969477138f64,
+                    1.1222467090323538f64,
+                    41.58421475801689f64,
+                    105.9414855960558f64,
+                    3193.006562695042f64,
+                    1575.5855102623689f64,
+                    84.65553032387855f64,
+                    20.80363527871787f64,
+                    4.582318317879813f64,
+                    105.94580703128374f64,
+                    1.1222467090323538f64,
                 ],
             )
         }
 
         fn right_ascension_coefficients() -> PolynomialCoefficients {
             (
-                4.6784701644349695,
-                -0.00011342894808711148,
-                0.0,
+                4.6784701644349695f64,
+                -0.00011342894808711148f64,
+                0f64,
                 &[
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    2.0420352248333656e-6,
-                    1.6371188383706813e-5,
-                    2.4993114888558796e-5,
-                    5.235987755982989e-7,
-                    3.752457891787809e-5,
-                    0.0,
-                    0.0,
-                    0.0,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.0000020420352248333656f64,
+                    0.000016371188383706813f64,
+                    0.000024993114888558796f64,
+                    0.0000005235987755982989f64,
+                    0.00003752457891787809f64,
                 ],
             )
         }
 
         fn declination_coefficients() -> PolynomialCoefficients {
             (
-                1.1256553894213766,
-                4.211479485062318e-5,
-                0.0,
+                1.1256553894213766f64,
+                0.00004211479485062318f64,
+                0f64,
                 &[
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    8.726646259971648e-7,
-                    7.051130178057092e-6,
-                    1.0768681484805013e-5,
-                    -2.2689280275926283e-7,
-                    1.616174887346749e-5,
-                    0.0,
-                    0.0,
-                    0.0,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.0000008726646259971648f64,
+                    0.000007051130178057092f64,
+                    0.000010768681484805013f64,
+                    -0.00000022689280275926283f64,
+                    0.00001616174887346749f64,
                 ],
             )
         }
 
         fn prime_meridian_coefficients() -> PolynomialCoefficients {
-            (4.973315703557842, 15.193719457141356, 0.0, &[0.0; 3])
+            (
+                4.973315703557842f64,
+                15.193719457141356f64,
+                0f64,
+                &[
+                    0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+                    0f64, 0f64,
+                ],
+            )
         }
     }
 
     #[test]
     fn test_rotational_elements_right_ascension() {
         assert_float_eq!(
-            SomeBody::right_ascension(0.0),
+            Jupiter::right_ascension(0.0),
             4.678480799964803,
             rel <= 1e-8
         );
@@ -348,40 +344,36 @@ mod tests {
     #[test]
     fn test_rotational_elements_right_ascension_dot() {
         assert_float_eq!(
-            SomeBody::right_ascension_dot(0.0),
-            -1.1342894808711148e-7,
+            Jupiter::right_ascension_dot(0.0),
+            -1.3266588500099516e-13,
             rel <= 1e-8
         );
     }
 
     #[test]
     fn test_rotational_elements_declination() {
-        assert_float_eq!(SomeBody::declination(0.0), 1.1256642372977634, rel <= 1e-8);
+        assert_float_eq!(Jupiter::declination(0.0), 1.1256642372977634, rel <= 1e-8);
     }
 
     #[test]
     fn test_rotational_elements_declination_dot() {
         assert_float_eq!(
-            SomeBody::declination_dot(0.0),
-            4.211479485062318e-5,
+            Jupiter::declination_dot(0.0),
+            3.004482367136341e-15,
             rel <= 1e-8
         );
     }
 
     #[test]
     fn test_rotational_elements_prime_meridian() {
-        assert_float_eq!(
-            SomeBody::prime_meridian(0.0),
-            4.973315703557842,
-            rel <= 1e-8
-        );
+        assert_float_eq!(Jupiter::prime_meridian(0.0), 4.973315703557842, rel <= 1e-8);
     }
 
     #[test]
     fn test_rotational_elements_prime_meridian_dot() {
         assert_float_eq!(
-            SomeBody::prime_meridian_dot(0.0),
-            15.193719457141356,
+            Jupiter::prime_meridian_dot(0.0),
+            0.00017585323445765458,
             rel <= 1e-8
         );
     }

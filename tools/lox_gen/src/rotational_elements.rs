@@ -157,19 +157,22 @@ impl<'a> RotationalElements<'a> {
 /// Indicates that a value retrieved from the kernel did not conform to the domain model.
 #[derive(Debug, Error)]
 pub enum CoefficientsError {
-    #[error("Kernel coefficients with key {key} had size {actual}, expected at least {actual}")]
+    #[error("kernel coefficients with key {key} had size {actual}, expected at least {actual}")]
     TooFew {
         key: String,
         min: usize,
         actual: usize,
     },
-    #[error("Kernel coefficients with key {key} had size {actual}, expected at most {actual}")]
+    #[error("kernel coefficients with key {key} had size {actual}, expected at most {actual}")]
     TooMany {
         key: String,
         max: usize,
         actual: usize,
     },
-    #[error("Barycenter nutation precession coefficients with key {key} had an odd number of terms, but an even number is required")]
+    #[error(
+        "barycenter nutation precession coefficients with key {key} had an odd number of \
+        terms, but an even number is required"
+    )]
     OddNumber { key: String },
 }
 
@@ -196,7 +199,8 @@ pub trait GetPolynomialCoefficients {
     ) -> Result<TokenizeableNutPrecCoefficients, Box<CoefficientsError>>;
 }
 
-/// Concrete translator from a raw PCK kernel to RotationalElements.
+/// Concrete translator from a raw PCK kernel to RotationalElements. Produces coefficients in
+/// radians.
 pub struct CoefficientKernel<'a>(pub &'a Kernel);
 
 /// The type of coefficient to be retrieved from the kernel.
@@ -270,13 +274,13 @@ impl GetPolynomialCoefficients for CoefficientKernel<'_> {
             }
             // Split the implicit pairs into two index-matched arrays.
             Some(coefficients) => {
-                let mut a: Vec<f64> = Vec::new();
-                let mut b: Vec<f64> = Vec::new();
+                let mut a: Vec<f64> = Vec::with_capacity(coefficients.len() / 2);
+                let mut b: Vec<f64> = Vec::with_capacity(coefficients.len() / 2);
                 for (i, coefficient) in coefficients.iter().enumerate() {
                     if i % 2 == 0 {
-                        a.push(*coefficient);
+                        a.push(coefficient.to_radians());
                     } else {
-                        b.push(*coefficient);
+                        b.push(coefficient.to_radians());
                     }
                 }
                 Ok(TokenizeableNutPrecCoefficients((a, b)))
@@ -294,6 +298,7 @@ impl<'a> CoefficientKernel<'a> {
         let (key, nut_prec_key) = pct.keys(id);
         let non_trig_coefficients = self.get_non_trig_coefficients_or_default(&key)?;
         let nut_prec_coefficients = self.get_nut_prec_coefficients_or_default(&nut_prec_key)?;
+
         Ok(TokenizeablePolynomialCoefficients(
             non_trig_coefficients[0],
             non_trig_coefficients[1],
@@ -308,25 +313,25 @@ impl<'a> CoefficientKernel<'a> {
     ) -> Result<[f64; 3], Box<CoefficientsError>> {
         match self.0.get_double_array(key) {
             None => Ok([0.0; 3]),
-            Some(polynomials) if polynomials.len() < 2 => {
+            Some(coefficients) if coefficients.len() < 2 => {
                 Err(Box::new(CoefficientsError::TooFew {
                     key: key.to_string(),
                     min: 2,
-                    actual: polynomials.len(),
+                    actual: coefficients.len(),
                 }))
             }
-            Some(polynomials) if polynomials.len() > 3 => {
+            Some(coefficients) if coefficients.len() > 3 => {
                 Err(Box::new(CoefficientsError::TooMany {
                     key: key.to_string(),
                     max: 3,
-                    actual: polynomials.len(),
+                    actual: coefficients.len(),
                 }))
             }
-            Some(polynomials) => {
-                let mut polynomial_coefficients = [0.0; 3];
-                polynomial_coefficients[..polynomials.len()].copy_from_slice(polynomials);
-                Ok(polynomial_coefficients)
-            }
+            Some(coefficients) => Ok([
+                coefficients[0].to_radians(),
+                coefficients[1].to_radians(),
+                coefficients.get(2).copied().unwrap_or(0.0).to_radians(),
+            ]),
         }
     }
 
@@ -336,7 +341,7 @@ impl<'a> CoefficientKernel<'a> {
     ) -> Result<Vec<f64>, Box<CoefficientsError>> {
         match self.0.get_double_array(key) {
             None => Ok(vec![]),
-            Some(coefficients) => Ok(coefficients.to_vec()),
+            Some(coefficients) => Ok(coefficients.iter().map(|c| c.to_radians()).collect()),
         }
     }
 }

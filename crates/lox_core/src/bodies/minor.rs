@@ -41,13 +41,18 @@ impl RotationalElements for Gaspra {
         (&[] as &[f64], &[] as &[f64])
     }
     fn right_ascension_coefficients() -> PolynomialCoefficients {
-        (9.47f64, 0f64, 0f64, &[] as &[f64])
+        (0.16528268016386302f64, 0f64, 0f64, &[] as &[f64])
     }
     fn declination_coefficients() -> PolynomialCoefficients {
-        (26.7f64, 0f64, 0f64, &[] as &[f64])
+        (0.46600291028248597f64, 0f64, 0f64, &[] as &[f64])
     }
     fn prime_meridian_coefficients() -> PolynomialCoefficients {
-        (83.67f64, 1226.911485f64, 0f64, &[] as &[f64])
+        (
+            1.4603169851436555f64,
+            21.41364504378302f64,
+            0f64,
+            &[] as &[f64],
+        )
     }
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -79,13 +84,18 @@ impl RotationalElements for Ida {
         (&[] as &[f64], &[] as &[f64])
     }
     fn right_ascension_coefficients() -> PolynomialCoefficients {
-        (168.76f64, 0f64, 0f64, &[] as &[f64])
+        (2.9454176456656302f64, 0f64, 0f64, &[] as &[f64])
     }
     fn declination_coefficients() -> PolynomialCoefficients {
-        (-87.12f64, 0f64, 0f64, &[] as &[f64])
+        (-1.5205308443374599f64, 0f64, 0f64, &[] as &[f64])
     }
     fn prime_meridian_coefficients() -> PolynomialCoefficients {
-        (274.05f64, 1864.628007f64, 0f64, &[] as &[f64])
+        (
+            4.78307481509046f64,
+            32.54389804704987f64,
+            0f64,
+            &[] as &[f64],
+        )
     }
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -144,13 +154,18 @@ impl RotationalElements for Ceres {
         (&[] as &[f64], &[] as &[f64])
     }
     fn right_ascension_coefficients() -> PolynomialCoefficients {
-        (291.418f64, 0f64, 0f64, &[] as &[f64])
+        (5.0862035995768355f64, 0f64, 0f64, &[] as &[f64])
     }
     fn declination_coefficients() -> PolynomialCoefficients {
-        (66.764f64, 0f64, 0f64, &[] as &[f64])
+        (1.165251621801494f64, 0f64, 0f64, &[] as &[f64])
     }
     fn prime_meridian_coefficients() -> PolynomialCoefficients {
-        (170.65f64, 952.1532f64, 0f64, &[] as &[f64])
+        (
+            2.9784043685283237f64,
+            16.618208323400072f64,
+            0f64,
+            &[] as &[f64],
+        )
     }
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -171,13 +186,18 @@ impl RotationalElements for Pallas {
         (&[] as &[f64], &[] as &[f64])
     }
     fn right_ascension_coefficients() -> PolynomialCoefficients {
-        (33f64, 0f64, 0f64, &[] as &[f64])
+        (0.5759586531581288f64, 0f64, 0f64, &[] as &[f64])
     }
     fn declination_coefficients() -> PolynomialCoefficients {
-        (-3f64, 0f64, 0f64, &[] as &[f64])
+        (-0.05235987755982989f64, 0f64, 0f64, &[] as &[f64])
     }
     fn prime_meridian_coefficients() -> PolynomialCoefficients {
-        (38f64, 1105.8036f64, 0f64, &[] as &[f64])
+        (
+            0.6632251157578453f64,
+            19.299913700406368f64,
+            0f64,
+            &[] as &[f64],
+        )
     }
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -214,13 +234,18 @@ impl RotationalElements for Vesta {
         (&[] as &[f64], &[] as &[f64])
     }
     fn right_ascension_coefficients() -> PolynomialCoefficients {
-        (309.031f64, 0f64, 0f64, &[] as &[f64])
+        (5.393608440730596f64, 0f64, 0f64, &[] as &[f64])
     }
     fn declination_coefficients() -> PolynomialCoefficients {
-        (42.235f64, 0f64, 0f64, &[] as &[f64])
+        (0.7371398095798051f64, 0f64, 0f64, &[] as &[f64])
     }
     fn prime_meridian_coefficients() -> PolynomialCoefficients {
-        (285.39f64, 1617.3329428f64, 0f64, &[] as &[f64])
+        (
+            4.980995152266617f64,
+            28.22778495282912f64,
+            0f64,
+            &[] as &[f64],
+        )
     }
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -295,13 +320,18 @@ impl RotationalElements for Lutetia {
         (&[] as &[f64], &[] as &[f64])
     }
     fn right_ascension_coefficients() -> PolynomialCoefficients {
-        (52f64, 0f64, 0f64, &[] as &[f64])
+        (0.9075712110370514f64, 0f64, 0f64, &[] as &[f64])
     }
     fn declination_coefficients() -> PolynomialCoefficients {
-        (12f64, 0f64, 0f64, &[] as &[f64])
+        (0.20943951023931956f64, 0f64, 0f64, &[] as &[f64])
     }
     fn prime_meridian_coefficients() -> PolynomialCoefficients {
-        (94f64, 1057.7515f64, 0f64, &[] as &[f64])
+        (
+            1.6406094968746698f64,
+            18.4612463429088f64,
+            0f64,
+            &[] as &[f64],
+        )
     }
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -360,13 +390,18 @@ impl RotationalElements for Eros {
         (&[] as &[f64], &[] as &[f64])
     }
     fn right_ascension_coefficients() -> PolynomialCoefficients {
-        (11.35f64, 0f64, 0f64, &[] as &[f64])
+        (0.1980948701013564f64, 0f64, 0f64, &[] as &[f64])
     }
     fn declination_coefficients() -> PolynomialCoefficients {
-        (17.22f64, 0f64, 0f64, &[] as &[f64])
+        (0.30054569719342356f64, 0f64, 0f64, &[] as &[f64])
     }
     fn prime_meridian_coefficients() -> PolynomialCoefficients {
-        (326.07f64, 1639.38864745f64, 0f64, &[] as &[f64])
+        (
+            5.690995091977911f64,
+            28.612729617819042f64,
+            0f64,
+            &[] as &[f64],
+        )
     }
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -403,13 +438,18 @@ impl RotationalElements for Davida {
         (&[] as &[f64], &[] as &[f64])
     }
     fn right_ascension_coefficients() -> PolynomialCoefficients {
-        (297f64, 0f64, 0f64, &[] as &[f64])
+        (5.183627878423159f64, 0f64, 0f64, &[] as &[f64])
     }
     fn declination_coefficients() -> PolynomialCoefficients {
-        (5f64, 0f64, 0f64, &[] as &[f64])
+        (0.08726646259971647f64, 0f64, 0f64, &[] as &[f64])
     }
     fn prime_meridian_coefficients() -> PolynomialCoefficients {
-        (268.1f64, 1684.4193549f64, 0f64, &[] as &[f64])
+        (
+            4.679227724596798f64,
+            29.39866372732388f64,
+            0f64,
+            &[] as &[f64],
+        )
     }
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -479,13 +519,18 @@ impl RotationalElements for Steins {
         (&[] as &[f64], &[] as &[f64])
     }
     fn right_ascension_coefficients() -> PolynomialCoefficients {
-        (91f64, 0f64, 0f64, &[] as &[f64])
+        (1.5882496193148399f64, 0f64, 0f64, &[] as &[f64])
     }
     fn declination_coefficients() -> PolynomialCoefficients {
-        (-62f64, 0f64, 0f64, &[] as &[f64])
+        (-1.0821041362364843f64, 0f64, 0f64, &[] as &[f64])
     }
     fn prime_meridian_coefficients() -> PolynomialCoefficients {
-        (321.76f64, 1428.09917f64, 0f64, &[] as &[f64])
+        (
+            5.615771401216954f64,
+            24.925032561498227f64,
+            0f64,
+            &[] as &[f64],
+        )
     }
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -599,13 +644,13 @@ impl RotationalElements for Itokawa {
         (&[] as &[f64], &[] as &[f64])
     }
     fn right_ascension_coefficients() -> PolynomialCoefficients {
-        (90.53f64, 0f64, 0f64, &[] as &[f64])
+        (1.5800465718304666f64, 0f64, 0f64, &[] as &[f64])
     }
     fn declination_coefficients() -> PolynomialCoefficients {
-        (-66.3f64, 0f64, 0f64, &[] as &[f64])
+        (-1.1571532940722404f64, 0f64, 0f64, &[] as &[f64])
     }
     fn prime_meridian_coefficients() -> PolynomialCoefficients {
-        (0f64, 712.143f64, 0f64, &[] as &[f64])
+        (0f64, 12.429240095029979f64, 0f64, &[] as &[f64])
     }
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -655,21 +700,26 @@ mod tests {
     #[test]
     fn test_rotational_elements_right_ascension_coefficients_9511010() {
         assert_eq!(
-            (9.47f64, 0f64, 0f64, &[] as &[f64]),
+            (0.16528268016386302f64, 0f64, 0f64, &[] as &[f64]),
             Gaspra::right_ascension_coefficients()
         )
     }
     #[test]
     fn test_rotational_elements_declination_coefficients_9511010() {
         assert_eq!(
-            (26.7f64, 0f64, 0f64, &[] as &[f64]),
+            (0.46600291028248597f64, 0f64, 0f64, &[] as &[f64]),
             Gaspra::declination_coefficients()
         )
     }
     #[test]
     fn test_rotational_elements_prime_meridian_coefficients_9511010() {
         assert_eq!(
-            (83.67f64, 1226.911485f64, 0f64, &[] as &[f64]),
+            (
+                1.4603169851436555f64,
+                21.41364504378302f64,
+                0f64,
+                &[] as &[f64]
+            ),
             Gaspra::prime_meridian_coefficients()
         )
     }
@@ -694,21 +744,26 @@ mod tests {
     #[test]
     fn test_rotational_elements_right_ascension_coefficients_2431010() {
         assert_eq!(
-            (168.76f64, 0f64, 0f64, &[] as &[f64]),
+            (2.9454176456656302f64, 0f64, 0f64, &[] as &[f64]),
             Ida::right_ascension_coefficients()
         )
     }
     #[test]
     fn test_rotational_elements_declination_coefficients_2431010() {
         assert_eq!(
-            (-87.12f64, 0f64, 0f64, &[] as &[f64]),
+            (-1.5205308443374599f64, 0f64, 0f64, &[] as &[f64]),
             Ida::declination_coefficients()
         )
     }
     #[test]
     fn test_rotational_elements_prime_meridian_coefficients_2431010() {
         assert_eq!(
-            (274.05f64, 1864.628007f64, 0f64, &[] as &[f64]),
+            (
+                4.78307481509046f64,
+                32.54389804704987f64,
+                0f64,
+                &[] as &[f64]
+            ),
             Ida::prime_meridian_coefficients()
         )
     }
@@ -769,21 +824,26 @@ mod tests {
     #[test]
     fn test_rotational_elements_right_ascension_coefficients_2000001() {
         assert_eq!(
-            (291.418f64, 0f64, 0f64, &[] as &[f64]),
+            (5.0862035995768355f64, 0f64, 0f64, &[] as &[f64]),
             Ceres::right_ascension_coefficients()
         )
     }
     #[test]
     fn test_rotational_elements_declination_coefficients_2000001() {
         assert_eq!(
-            (66.764f64, 0f64, 0f64, &[] as &[f64]),
+            (1.165251621801494f64, 0f64, 0f64, &[] as &[f64]),
             Ceres::declination_coefficients()
         )
     }
     #[test]
     fn test_rotational_elements_prime_meridian_coefficients_2000001() {
         assert_eq!(
-            (170.65f64, 952.1532f64, 0f64, &[] as &[f64]),
+            (
+                2.9784043685283237f64,
+                16.618208323400072f64,
+                0f64,
+                &[] as &[f64]
+            ),
             Ceres::prime_meridian_coefficients()
         )
     }
@@ -805,21 +865,26 @@ mod tests {
     #[test]
     fn test_rotational_elements_right_ascension_coefficients_2000002() {
         assert_eq!(
-            (33f64, 0f64, 0f64, &[] as &[f64]),
+            (0.5759586531581288f64, 0f64, 0f64, &[] as &[f64]),
             Pallas::right_ascension_coefficients()
         )
     }
     #[test]
     fn test_rotational_elements_declination_coefficients_2000002() {
         assert_eq!(
-            (-3f64, 0f64, 0f64, &[] as &[f64]),
+            (-0.05235987755982989f64, 0f64, 0f64, &[] as &[f64]),
             Pallas::declination_coefficients()
         )
     }
     #[test]
     fn test_rotational_elements_prime_meridian_coefficients_2000002() {
         assert_eq!(
-            (38f64, 1105.8036f64, 0f64, &[] as &[f64]),
+            (
+                0.6632251157578453f64,
+                19.299913700406368f64,
+                0f64,
+                &[] as &[f64]
+            ),
             Pallas::prime_meridian_coefficients()
         )
     }
@@ -848,21 +913,26 @@ mod tests {
     #[test]
     fn test_rotational_elements_right_ascension_coefficients_2000004() {
         assert_eq!(
-            (309.031f64, 0f64, 0f64, &[] as &[f64]),
+            (5.393608440730596f64, 0f64, 0f64, &[] as &[f64]),
             Vesta::right_ascension_coefficients()
         )
     }
     #[test]
     fn test_rotational_elements_declination_coefficients_2000004() {
         assert_eq!(
-            (42.235f64, 0f64, 0f64, &[] as &[f64]),
+            (0.7371398095798051f64, 0f64, 0f64, &[] as &[f64]),
             Vesta::declination_coefficients()
         )
     }
     #[test]
     fn test_rotational_elements_prime_meridian_coefficients_2000004() {
         assert_eq!(
-            (285.39f64, 1617.3329428f64, 0f64, &[] as &[f64]),
+            (
+                4.980995152266617f64,
+                28.22778495282912f64,
+                0f64,
+                &[] as &[f64]
+            ),
             Vesta::prime_meridian_coefficients()
         )
     }
@@ -930,21 +1000,26 @@ mod tests {
     #[test]
     fn test_rotational_elements_right_ascension_coefficients_2000021() {
         assert_eq!(
-            (52f64, 0f64, 0f64, &[] as &[f64]),
+            (0.9075712110370514f64, 0f64, 0f64, &[] as &[f64]),
             Lutetia::right_ascension_coefficients()
         )
     }
     #[test]
     fn test_rotational_elements_declination_coefficients_2000021() {
         assert_eq!(
-            (12f64, 0f64, 0f64, &[] as &[f64]),
+            (0.20943951023931956f64, 0f64, 0f64, &[] as &[f64]),
             Lutetia::declination_coefficients()
         )
     }
     #[test]
     fn test_rotational_elements_prime_meridian_coefficients_2000021() {
         assert_eq!(
-            (94f64, 1057.7515f64, 0f64, &[] as &[f64]),
+            (
+                1.6406094968746698f64,
+                18.4612463429088f64,
+                0f64,
+                &[] as &[f64]
+            ),
             Lutetia::prime_meridian_coefficients()
         )
     }
@@ -1005,21 +1080,26 @@ mod tests {
     #[test]
     fn test_rotational_elements_right_ascension_coefficients_2000433() {
         assert_eq!(
-            (11.35f64, 0f64, 0f64, &[] as &[f64]),
+            (0.1980948701013564f64, 0f64, 0f64, &[] as &[f64]),
             Eros::right_ascension_coefficients()
         )
     }
     #[test]
     fn test_rotational_elements_declination_coefficients_2000433() {
         assert_eq!(
-            (17.22f64, 0f64, 0f64, &[] as &[f64]),
+            (0.30054569719342356f64, 0f64, 0f64, &[] as &[f64]),
             Eros::declination_coefficients()
         )
     }
     #[test]
     fn test_rotational_elements_prime_meridian_coefficients_2000433() {
         assert_eq!(
-            (326.07f64, 1639.38864745f64, 0f64, &[] as &[f64]),
+            (
+                5.690995091977911f64,
+                28.612729617819042f64,
+                0f64,
+                &[] as &[f64]
+            ),
             Eros::prime_meridian_coefficients()
         )
     }
@@ -1048,21 +1128,26 @@ mod tests {
     #[test]
     fn test_rotational_elements_right_ascension_coefficients_2000511() {
         assert_eq!(
-            (297f64, 0f64, 0f64, &[] as &[f64]),
+            (5.183627878423159f64, 0f64, 0f64, &[] as &[f64]),
             Davida::right_ascension_coefficients()
         )
     }
     #[test]
     fn test_rotational_elements_declination_coefficients_2000511() {
         assert_eq!(
-            (5f64, 0f64, 0f64, &[] as &[f64]),
+            (0.08726646259971647f64, 0f64, 0f64, &[] as &[f64]),
             Davida::declination_coefficients()
         )
     }
     #[test]
     fn test_rotational_elements_prime_meridian_coefficients_2000511() {
         assert_eq!(
-            (268.1f64, 1684.4193549f64, 0f64, &[] as &[f64]),
+            (
+                4.679227724596798f64,
+                29.39866372732388f64,
+                0f64,
+                &[] as &[f64]
+            ),
             Davida::prime_meridian_coefficients()
         )
     }
@@ -1126,21 +1211,26 @@ mod tests {
     #[test]
     fn test_rotational_elements_right_ascension_coefficients_2002867() {
         assert_eq!(
-            (91f64, 0f64, 0f64, &[] as &[f64]),
+            (1.5882496193148399f64, 0f64, 0f64, &[] as &[f64]),
             Steins::right_ascension_coefficients()
         )
     }
     #[test]
     fn test_rotational_elements_declination_coefficients_2002867() {
         assert_eq!(
-            (-62f64, 0f64, 0f64, &[] as &[f64]),
+            (-1.0821041362364843f64, 0f64, 0f64, &[] as &[f64]),
             Steins::declination_coefficients()
         )
     }
     #[test]
     fn test_rotational_elements_prime_meridian_coefficients_2002867() {
         assert_eq!(
-            (321.76f64, 1428.09917f64, 0f64, &[] as &[f64]),
+            (
+                5.615771401216954f64,
+                24.925032561498227f64,
+                0f64,
+                &[] as &[f64]
+            ),
             Steins::prime_meridian_coefficients()
         )
     }
@@ -1268,21 +1358,21 @@ mod tests {
     #[test]
     fn test_rotational_elements_right_ascension_coefficients_2025143() {
         assert_eq!(
-            (90.53f64, 0f64, 0f64, &[] as &[f64]),
+            (1.5800465718304666f64, 0f64, 0f64, &[] as &[f64]),
             Itokawa::right_ascension_coefficients()
         )
     }
     #[test]
     fn test_rotational_elements_declination_coefficients_2025143() {
         assert_eq!(
-            (-66.3f64, 0f64, 0f64, &[] as &[f64]),
+            (-1.1571532940722404f64, 0f64, 0f64, &[] as &[f64]),
             Itokawa::declination_coefficients()
         )
     }
     #[test]
     fn test_rotational_elements_prime_meridian_coefficients_2025143() {
         assert_eq!(
-            (0f64, 712.143f64, 0f64, &[] as &[f64]),
+            (0f64, 12.429240095029979f64, 0f64, &[] as &[f64]),
             Itokawa::prime_meridian_coefficients()
         )
     }
