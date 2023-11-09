@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use super::parser::{DafSpkError, Spk, SpkSegment, SpkType2Array, SpkType2Coefficients};
 
 type Position = (f64, f64, f64);
+type Velocity = (f64, f64, f64);
 type Epoch = f64;
 type Body = i32;
 
@@ -64,24 +65,12 @@ impl Spk {
         &self.segments
     }
 
-    pub fn position(
-        &self,
+    fn get_chebyshev_polynomial<'a>(
+        &'a self,
         epoch: Epoch,
-        origin: Body,
-        target: Body,
-    ) -> Result<Position, DafSpkError> {
-        let (segment, sign) = self.find_segment(origin, target)?;
-        let sign = sign as f64;
-
-        if epoch < segment.initial_epoch || epoch > segment.final_epoch {
-            return Err(DafSpkError::UnableToFindMatchingSegment);
-        }
-
-        let mut x = 0f64;
-        let mut y = 0f64;
-        let mut z = 0f64;
-
-        match &segment.data {
+        segment: &'a SpkSegment,
+    ) -> Result<(Vec<f64>, &Vec<SpkType2Coefficients>), DafSpkError> {
+        let (coefficients, record) = match &segment.data {
             super::parser::SpkArray::Type2(array) => {
                 let (record, fraction) = self.find_record(array, segment.initial_epoch, epoch)?;
 
@@ -96,16 +85,111 @@ impl Spk {
                         .push(2f64 * coefficients[1] * coefficients[i - 1] - coefficients[i - 2]);
                 }
 
+                (coefficients, record)
+            }
+        };
+
+        Ok((coefficients, record))
+    }
+
+    pub fn position(
+        &self,
+        epoch: Epoch,
+        origin: Body,
+        target: Body,
+    ) -> Result<Position, DafSpkError> {
+        let (segment, sign) = self.find_segment(origin, target)?;
+
+        if epoch < segment.initial_epoch || epoch > segment.final_epoch {
+            return Err(DafSpkError::UnableToFindMatchingSegment);
+        }
+
+        let mut x = 0f64;
+        let mut y = 0f64;
+        let mut z = 0f64;
+
+        match &segment.data {
+            super::parser::SpkArray::Type2(array) => {
+                let (polynomial, record) = self.get_chebyshev_polynomial(epoch, segment)?;
+                let sign = sign as f64;
+
+                let degree_of_polynomial = array.degree_of_polynomial() as usize;
+
                 #[allow(clippy::needless_range_loop)]
                 for i in 0..degree_of_polynomial {
-                    x += sign * record[i].x * coefficients[i];
-                    y += sign * record[i].y * coefficients[i];
-                    z += sign * record[i].z * coefficients[i];
+                    x += sign * record[i].x * polynomial[i];
+                    y += sign * record[i].y * polynomial[i];
+                    z += sign * record[i].z * polynomial[i];
                 }
             }
         }
 
         Ok((x, y, z))
+    }
+
+    pub fn velocity(
+        &self,
+        epoch: Epoch,
+        origin: Body,
+        target: Body,
+    ) -> Result<Velocity, DafSpkError> {
+        let (segment, sign) = self.find_segment(origin, target)?;
+
+        if epoch < segment.initial_epoch || epoch > segment.final_epoch {
+            return Err(DafSpkError::UnableToFindMatchingSegment);
+        }
+
+        let mut x = 0f64;
+        let mut y = 0f64;
+        let mut z = 0f64;
+
+        match &segment.data {
+            super::parser::SpkArray::Type2(array) => {
+                let (polynomial, record) = self.get_chebyshev_polynomial(epoch, segment)?;
+                let sign = sign as f64;
+
+                let degree_of_polynomial = array.degree_of_polynomial() as usize;
+
+                let mut derivative = Vec::<f64>::with_capacity(degree_of_polynomial);
+
+                derivative.push(0f64);
+                derivative.push(1f64);
+
+                if degree_of_polynomial > 2 {
+                    derivative.push(4f64 * polynomial[1]);
+                    for i in 3..degree_of_polynomial {
+                        let x = 2f64 * polynomial[1] * derivative[i - 1]
+                            - derivative[i - 2] * polynomial[i - 1]
+                            + polynomial[i - 1];
+                        let x = 2f64 * x;
+                        let x = x / array.intlen as f64;
+
+                        derivative.push(x);
+                    }
+                }
+
+                #[allow(clippy::needless_range_loop)]
+                for i in 0..degree_of_polynomial {
+                    x += sign * record[i].x * derivative[i];
+                    y += sign * record[i].y * derivative[i];
+                    z += sign * record[i].z * derivative[i];
+                }
+            }
+        }
+
+        Ok((x, y, z))
+    }
+
+    pub fn state(
+        &self,
+        epoch: Epoch,
+        origin: Body,
+        target: Body,
+    ) -> Result<(Position, Velocity), DafSpkError> {
+        let position = self.position(epoch, origin, target)?;
+        let velocity = self.velocity(epoch, origin, target)?;
+
+        Ok((position, velocity))
     }
 }
 
@@ -117,16 +201,45 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_position() {
+    fn test_unable_to_find_segment() {
         let spk = parse_daf_spk(&FILE_CONTENTS).expect("Unable to parse DAF/SPK");
 
         assert_eq!(
             Err(DafSpkError::UnableToFindMatchingSegment),
             spk.position(2457388.5000000 as Epoch, 1, 2)
         );
+    }
+
+    #[test]
+    fn test_position() {
+        let spk = parse_daf_spk(&FILE_CONTENTS).expect("Unable to parse DAF/SPK");
+
         assert_eq!(
             Ok((-32703259.291699532, 31370540.51993667, 20159681.594182793)),
             spk.position(-14200747200.0 as Epoch, 0, 1)
+        );
+    }
+
+    #[test]
+    fn test_velocity() {
+        let spk = parse_daf_spk(&FILE_CONTENTS).expect("Unable to parse DAF/SPK");
+
+        assert_eq!(
+            Ok((-16347507.654236255, -10396015.881953504, -3828362.817319523)), //@TODO validate
+            spk.velocity(-14200747200.0 as Epoch, 0, 1)
+        );
+    }
+
+    #[test]
+    fn test_state() {
+        let spk = parse_daf_spk(&FILE_CONTENTS).expect("Unable to parse DAF/SPK");
+
+        assert_eq!(
+            Ok((
+                (-32703259.291699532, 31370540.51993667, 20159681.594182793),
+                (-16347507.654236255, -10396015.881953504, -3828362.817319523),
+            )),
+            spk.state(-14200747200.0 as Epoch, 0, 1)
         );
     }
 
