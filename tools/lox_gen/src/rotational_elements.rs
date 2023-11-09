@@ -261,19 +261,8 @@ impl GetPolynomialCoefficients for CoefficientKernel<'_> {
                     key: key.to_string(),
                 }))
             }
-            // Split the implicit pairs into two index-matched arrays.
-            Some(coefficients) => {
-                let mut a: Vec<f64> = Vec::with_capacity(coefficients.len() / 2);
-                let mut b: Vec<f64> = Vec::with_capacity(coefficients.len() / 2);
-                for (i, coefficient) in coefficients.iter().enumerate() {
-                    if i % 2 == 0 {
-                        a.push(coefficient.to_radians());
-                    } else {
-                        b.push(coefficient.to_radians());
-                    }
-                }
-                Ok(TokenizeableNutPrecCoefficients((a, b)))
-            }
+            // Split the implicit pairs into two index-matched vecs.
+            Some(coefficients) => Ok(TokenizeableNutPrecCoefficients(unpair(coefficients))),
         }
     }
 }
@@ -333,4 +322,17 @@ impl<'a> CoefficientKernel<'a> {
             Some(coefficients) => Ok(coefficients.iter().map(|c| c.to_radians()).collect()),
         }
     }
+}
+
+fn unpair(vec: &Vec<f64>) -> (Vec<f64>, Vec<f64>) {
+    let mut a: Vec<f64> = Vec::with_capacity(vec.len() / 2);
+    let mut b: Vec<f64> = Vec::with_capacity(vec.len() / 2);
+    for (i, coefficient) in vec.iter().enumerate() {
+        if i % 2 == 0 {
+            a.push(*coefficient);
+        } else {
+            b.push(*coefficient);
+        }
+    }
+    (a, b)
 }
