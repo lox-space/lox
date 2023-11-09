@@ -11,7 +11,7 @@ use glam::DVec3;
 use lox_core::bodies::planets::Jupiter;
 use lox_core::bodies::RotationalElements;
 use lox_core::frames::iau::BodyFixed;
-use lox_core::frames::{Icrf, Rotation, TransformFrom};
+use lox_core::frames::{FromFrame, Icrf, Rotation};
 
 fn main() {
     // Run registered benchmarks.

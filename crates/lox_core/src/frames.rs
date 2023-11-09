@@ -74,38 +74,38 @@ impl Rotation {
         Self { m, dm }
     }
 
-    pub fn rotate(&self, (pos, vel): State) -> State {
+    pub fn apply(&self, (pos, vel): State) -> State {
         (self.m * pos, self.dm * pos + self.m * vel)
     }
 }
 
-pub trait TransformFrom<T: ReferenceFrame> {
+pub trait FromFrame<T: ReferenceFrame> {
     fn rotation_from(&self, frame: T, t: Epoch) -> Rotation;
 
     fn transform_from(&self, frame: T, t: Epoch, state: State) -> State {
         let rotation = self.rotation_from(frame, t);
-        rotation.rotate(state)
+        rotation.apply(state)
     }
 }
 
-impl<T: ReferenceFrame> TransformFrom<T> for T {
+impl<T: ReferenceFrame> FromFrame<T> for T {
     fn rotation_from(&self, _: T, _: Epoch) -> Rotation {
         Rotation::new(DMat3::IDENTITY)
     }
 }
 
-pub trait TransformInto<T: ReferenceFrame> {
+pub trait IntoFrame<T: ReferenceFrame> {
     fn rotation_into(&self, frame: T, t: Epoch) -> Rotation;
 
     fn transform_into(&self, frame: T, t: Epoch, state: State) -> State {
         let rotation = self.rotation_into(frame, t);
-        rotation.rotate(state)
+        rotation.apply(state)
     }
 }
 
-impl<T, U: ReferenceFrame> TransformInto<U> for T
+impl<T, U: ReferenceFrame> IntoFrame<U> for T
 where
-    T: TransformFrom<U>,
+    T: FromFrame<U>,
 {
     fn rotation_into(&self, frame: U, t: Epoch) -> Rotation {
         self.rotation_from(frame, t).transpose()

@@ -11,7 +11,7 @@ use std::fmt::Debug;
 use glam::{DMat3, DVec3};
 
 use crate::bodies::RotationalElements;
-use crate::frames::{Epoch, Icrf, ReferenceFrame, Rotation, TransformFrom};
+use crate::frames::{Epoch, FromFrame, Icrf, ReferenceFrame, Rotation};
 
 #[derive(Debug, Copy, Clone)]
 pub struct BodyFixed<T: RotationalElements>(pub T);
@@ -22,7 +22,7 @@ impl<T: RotationalElements> ReferenceFrame for BodyFixed<T> {
     }
 }
 
-impl<T: RotationalElements> TransformFrom<Icrf> for BodyFixed<T> {
+impl<T: RotationalElements> FromFrame<Icrf> for BodyFixed<T> {
     fn rotation_from(&self, _: Icrf, t: Epoch) -> Rotation {
         let (right_ascension, declination, prime_meridian) = T::rotational_elements(t);
         let (right_ascension_rate, declination_rate, prime_meridian_rate) =
@@ -42,7 +42,7 @@ mod tests {
     use glam::DVec3;
 
     use crate::bodies::planets::Jupiter;
-    use crate::frames::{Icrf, TransformFrom, TransformInto};
+    use crate::frames::{FromFrame, Icrf, IntoFrame};
 
     use super::*;
 
@@ -63,8 +63,8 @@ mod tests {
         let rv0_exp = (r0, v0);
         let rv1_exp = (r1, v1);
 
-        let rv1_act = from_icrf.rotate(rv0_exp);
-        let rv0_act = to_icrf.rotate(rv1_exp);
+        let rv1_act = from_icrf.apply(rv0_exp);
+        let rv0_act = to_icrf.apply(rv1_exp);
 
         assert_float_eq!(rv1_act.0.x, rv1_exp.0.x, rel <= 1e-8);
         assert_float_eq!(rv1_act.0.y, rv1_exp.0.y, rel <= 1e-8);
