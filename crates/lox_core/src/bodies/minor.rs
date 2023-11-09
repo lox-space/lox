@@ -37,23 +37,18 @@ impl TriAxial for Gaspra {
 }
 #[allow(clippy::approx_constant)]
 impl RotationalElements for Gaspra {
-    fn nutation_precession_coefficients() -> NutationPrecessionCoefficients {
-        (&[] as &[f64], &[] as &[f64])
-    }
-    fn right_ascension_coefficients() -> PolynomialCoefficients {
-        (0.16528268016386302f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn declination_coefficients() -> PolynomialCoefficients {
-        (0.46600291028248597f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn prime_meridian_coefficients() -> PolynomialCoefficients {
-        (
-            1.4603169851436555f64,
-            21.41364504378302f64,
-            0f64,
-            &[] as &[f64],
-        )
-    }
+    const NUTATION_PRECESSION_COEFFICIENTS: NutationPrecessionCoefficients =
+        (&[] as &[f64], &[] as &[f64]);
+    const RIGHT_ASCENSION_COEFFICIENTS: PolynomialCoefficients =
+        (0.16528268016386302f64, 0f64, 0f64, &[] as &[f64]);
+    const DECLINATION_COEFFICIENTS: PolynomialCoefficients =
+        (0.46600291028248597f64, 0f64, 0f64, &[] as &[f64]);
+    const PRIME_MERIDIAN_COEFFICIENTS: PolynomialCoefficients = (
+        1.4603169851436555f64,
+        21.41364504378302f64,
+        0f64,
+        &[] as &[f64],
+    );
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Ida;
@@ -80,23 +75,18 @@ impl TriAxial for Ida {
 }
 #[allow(clippy::approx_constant)]
 impl RotationalElements for Ida {
-    fn nutation_precession_coefficients() -> NutationPrecessionCoefficients {
-        (&[] as &[f64], &[] as &[f64])
-    }
-    fn right_ascension_coefficients() -> PolynomialCoefficients {
-        (2.9454176456656302f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn declination_coefficients() -> PolynomialCoefficients {
-        (-1.5205308443374599f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn prime_meridian_coefficients() -> PolynomialCoefficients {
-        (
-            4.78307481509046f64,
-            32.54389804704987f64,
-            0f64,
-            &[] as &[f64],
-        )
-    }
+    const NUTATION_PRECESSION_COEFFICIENTS: NutationPrecessionCoefficients =
+        (&[] as &[f64], &[] as &[f64]);
+    const RIGHT_ASCENSION_COEFFICIENTS: PolynomialCoefficients =
+        (2.9454176456656302f64, 0f64, 0f64, &[] as &[f64]);
+    const DECLINATION_COEFFICIENTS: PolynomialCoefficients =
+        (-1.5205308443374599f64, 0f64, 0f64, &[] as &[f64]);
+    const PRIME_MERIDIAN_COEFFICIENTS: PolynomialCoefficients = (
+        4.78307481509046f64,
+        32.54389804704987f64,
+        0f64,
+        &[] as &[f64],
+    );
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Dactyl;
@@ -107,18 +97,11 @@ impl NaifId for Dactyl {
 }
 #[allow(clippy::approx_constant)]
 impl RotationalElements for Dactyl {
-    fn nutation_precession_coefficients() -> NutationPrecessionCoefficients {
-        (&[] as &[f64], &[] as &[f64])
-    }
-    fn right_ascension_coefficients() -> PolynomialCoefficients {
-        (0f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn declination_coefficients() -> PolynomialCoefficients {
-        (0f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn prime_meridian_coefficients() -> PolynomialCoefficients {
-        (0f64, 0f64, 0f64, &[] as &[f64])
-    }
+    const NUTATION_PRECESSION_COEFFICIENTS: NutationPrecessionCoefficients =
+        (&[] as &[f64], &[] as &[f64]);
+    const RIGHT_ASCENSION_COEFFICIENTS: PolynomialCoefficients = (0f64, 0f64, 0f64, &[] as &[f64]);
+    const DECLINATION_COEFFICIENTS: PolynomialCoefficients = (0f64, 0f64, 0f64, &[] as &[f64]);
+    const PRIME_MERIDIAN_COEFFICIENTS: PolynomialCoefficients = (0f64, 0f64, 0f64, &[] as &[f64]);
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Ceres;
@@ -150,23 +133,18 @@ impl TriAxial for Ceres {
 }
 #[allow(clippy::approx_constant)]
 impl RotationalElements for Ceres {
-    fn nutation_precession_coefficients() -> NutationPrecessionCoefficients {
-        (&[] as &[f64], &[] as &[f64])
-    }
-    fn right_ascension_coefficients() -> PolynomialCoefficients {
-        (5.0862035995768355f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn declination_coefficients() -> PolynomialCoefficients {
-        (1.165251621801494f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn prime_meridian_coefficients() -> PolynomialCoefficients {
-        (
-            2.9784043685283237f64,
-            16.618208323400072f64,
-            0f64,
-            &[] as &[f64],
-        )
-    }
+    const NUTATION_PRECESSION_COEFFICIENTS: NutationPrecessionCoefficients =
+        (&[] as &[f64], &[] as &[f64]);
+    const RIGHT_ASCENSION_COEFFICIENTS: PolynomialCoefficients =
+        (5.0862035995768355f64, 0f64, 0f64, &[] as &[f64]);
+    const DECLINATION_COEFFICIENTS: PolynomialCoefficients =
+        (1.165251621801494f64, 0f64, 0f64, &[] as &[f64]);
+    const PRIME_MERIDIAN_COEFFICIENTS: PolynomialCoefficients = (
+        2.9784043685283237f64,
+        16.618208323400072f64,
+        0f64,
+        &[] as &[f64],
+    );
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Pallas;
@@ -182,23 +160,18 @@ impl PointMass for Pallas {
 }
 #[allow(clippy::approx_constant)]
 impl RotationalElements for Pallas {
-    fn nutation_precession_coefficients() -> NutationPrecessionCoefficients {
-        (&[] as &[f64], &[] as &[f64])
-    }
-    fn right_ascension_coefficients() -> PolynomialCoefficients {
-        (0.5759586531581288f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn declination_coefficients() -> PolynomialCoefficients {
-        (-0.05235987755982989f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn prime_meridian_coefficients() -> PolynomialCoefficients {
-        (
-            0.6632251157578453f64,
-            19.299913700406368f64,
-            0f64,
-            &[] as &[f64],
-        )
-    }
+    const NUTATION_PRECESSION_COEFFICIENTS: NutationPrecessionCoefficients =
+        (&[] as &[f64], &[] as &[f64]);
+    const RIGHT_ASCENSION_COEFFICIENTS: PolynomialCoefficients =
+        (0.5759586531581288f64, 0f64, 0f64, &[] as &[f64]);
+    const DECLINATION_COEFFICIENTS: PolynomialCoefficients =
+        (-0.05235987755982989f64, 0f64, 0f64, &[] as &[f64]);
+    const PRIME_MERIDIAN_COEFFICIENTS: PolynomialCoefficients = (
+        0.6632251157578453f64,
+        19.299913700406368f64,
+        0f64,
+        &[] as &[f64],
+    );
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Vesta;
@@ -230,23 +203,18 @@ impl TriAxial for Vesta {
 }
 #[allow(clippy::approx_constant)]
 impl RotationalElements for Vesta {
-    fn nutation_precession_coefficients() -> NutationPrecessionCoefficients {
-        (&[] as &[f64], &[] as &[f64])
-    }
-    fn right_ascension_coefficients() -> PolynomialCoefficients {
-        (5.393608440730596f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn declination_coefficients() -> PolynomialCoefficients {
-        (0.7371398095798051f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn prime_meridian_coefficients() -> PolynomialCoefficients {
-        (
-            4.980995152266617f64,
-            28.22778495282912f64,
-            0f64,
-            &[] as &[f64],
-        )
-    }
+    const NUTATION_PRECESSION_COEFFICIENTS: NutationPrecessionCoefficients =
+        (&[] as &[f64], &[] as &[f64]);
+    const RIGHT_ASCENSION_COEFFICIENTS: PolynomialCoefficients =
+        (5.393608440730596f64, 0f64, 0f64, &[] as &[f64]);
+    const DECLINATION_COEFFICIENTS: PolynomialCoefficients =
+        (0.7371398095798051f64, 0f64, 0f64, &[] as &[f64]);
+    const PRIME_MERIDIAN_COEFFICIENTS: PolynomialCoefficients = (
+        4.980995152266617f64,
+        28.22778495282912f64,
+        0f64,
+        &[] as &[f64],
+    );
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Psyche;
@@ -278,18 +246,11 @@ impl TriAxial for Psyche {
 }
 #[allow(clippy::approx_constant)]
 impl RotationalElements for Psyche {
-    fn nutation_precession_coefficients() -> NutationPrecessionCoefficients {
-        (&[] as &[f64], &[] as &[f64])
-    }
-    fn right_ascension_coefficients() -> PolynomialCoefficients {
-        (0f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn declination_coefficients() -> PolynomialCoefficients {
-        (0f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn prime_meridian_coefficients() -> PolynomialCoefficients {
-        (0f64, 0f64, 0f64, &[] as &[f64])
-    }
+    const NUTATION_PRECESSION_COEFFICIENTS: NutationPrecessionCoefficients =
+        (&[] as &[f64], &[] as &[f64]);
+    const RIGHT_ASCENSION_COEFFICIENTS: PolynomialCoefficients = (0f64, 0f64, 0f64, &[] as &[f64]);
+    const DECLINATION_COEFFICIENTS: PolynomialCoefficients = (0f64, 0f64, 0f64, &[] as &[f64]);
+    const PRIME_MERIDIAN_COEFFICIENTS: PolynomialCoefficients = (0f64, 0f64, 0f64, &[] as &[f64]);
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Lutetia;
@@ -316,23 +277,18 @@ impl TriAxial for Lutetia {
 }
 #[allow(clippy::approx_constant)]
 impl RotationalElements for Lutetia {
-    fn nutation_precession_coefficients() -> NutationPrecessionCoefficients {
-        (&[] as &[f64], &[] as &[f64])
-    }
-    fn right_ascension_coefficients() -> PolynomialCoefficients {
-        (0.9075712110370514f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn declination_coefficients() -> PolynomialCoefficients {
-        (0.20943951023931956f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn prime_meridian_coefficients() -> PolynomialCoefficients {
-        (
-            1.6406094968746698f64,
-            18.4612463429088f64,
-            0f64,
-            &[] as &[f64],
-        )
-    }
+    const NUTATION_PRECESSION_COEFFICIENTS: NutationPrecessionCoefficients =
+        (&[] as &[f64], &[] as &[f64]);
+    const RIGHT_ASCENSION_COEFFICIENTS: PolynomialCoefficients =
+        (0.9075712110370514f64, 0f64, 0f64, &[] as &[f64]);
+    const DECLINATION_COEFFICIENTS: PolynomialCoefficients =
+        (0.20943951023931956f64, 0f64, 0f64, &[] as &[f64]);
+    const PRIME_MERIDIAN_COEFFICIENTS: PolynomialCoefficients = (
+        1.6406094968746698f64,
+        18.4612463429088f64,
+        0f64,
+        &[] as &[f64],
+    );
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Kleopatra;
@@ -343,18 +299,11 @@ impl NaifId for Kleopatra {
 }
 #[allow(clippy::approx_constant)]
 impl RotationalElements for Kleopatra {
-    fn nutation_precession_coefficients() -> NutationPrecessionCoefficients {
-        (&[] as &[f64], &[] as &[f64])
-    }
-    fn right_ascension_coefficients() -> PolynomialCoefficients {
-        (0f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn declination_coefficients() -> PolynomialCoefficients {
-        (0f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn prime_meridian_coefficients() -> PolynomialCoefficients {
-        (0f64, 0f64, 0f64, &[] as &[f64])
-    }
+    const NUTATION_PRECESSION_COEFFICIENTS: NutationPrecessionCoefficients =
+        (&[] as &[f64], &[] as &[f64]);
+    const RIGHT_ASCENSION_COEFFICIENTS: PolynomialCoefficients = (0f64, 0f64, 0f64, &[] as &[f64]);
+    const DECLINATION_COEFFICIENTS: PolynomialCoefficients = (0f64, 0f64, 0f64, &[] as &[f64]);
+    const PRIME_MERIDIAN_COEFFICIENTS: PolynomialCoefficients = (0f64, 0f64, 0f64, &[] as &[f64]);
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Eros;
@@ -386,23 +335,18 @@ impl TriAxial for Eros {
 }
 #[allow(clippy::approx_constant)]
 impl RotationalElements for Eros {
-    fn nutation_precession_coefficients() -> NutationPrecessionCoefficients {
-        (&[] as &[f64], &[] as &[f64])
-    }
-    fn right_ascension_coefficients() -> PolynomialCoefficients {
-        (0.1980948701013564f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn declination_coefficients() -> PolynomialCoefficients {
-        (0.30054569719342356f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn prime_meridian_coefficients() -> PolynomialCoefficients {
-        (
-            5.690995091977911f64,
-            28.612729617819042f64,
-            0f64,
-            &[] as &[f64],
-        )
-    }
+    const NUTATION_PRECESSION_COEFFICIENTS: NutationPrecessionCoefficients =
+        (&[] as &[f64], &[] as &[f64]);
+    const RIGHT_ASCENSION_COEFFICIENTS: PolynomialCoefficients =
+        (0.1980948701013564f64, 0f64, 0f64, &[] as &[f64]);
+    const DECLINATION_COEFFICIENTS: PolynomialCoefficients =
+        (0.30054569719342356f64, 0f64, 0f64, &[] as &[f64]);
+    const PRIME_MERIDIAN_COEFFICIENTS: PolynomialCoefficients = (
+        5.690995091977911f64,
+        28.612729617819042f64,
+        0f64,
+        &[] as &[f64],
+    );
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Davida;
@@ -434,23 +378,18 @@ impl TriAxial for Davida {
 }
 #[allow(clippy::approx_constant)]
 impl RotationalElements for Davida {
-    fn nutation_precession_coefficients() -> NutationPrecessionCoefficients {
-        (&[] as &[f64], &[] as &[f64])
-    }
-    fn right_ascension_coefficients() -> PolynomialCoefficients {
-        (5.183627878423159f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn declination_coefficients() -> PolynomialCoefficients {
-        (0.08726646259971647f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn prime_meridian_coefficients() -> PolynomialCoefficients {
-        (
-            4.679227724596798f64,
-            29.39866372732388f64,
-            0f64,
-            &[] as &[f64],
-        )
-    }
+    const NUTATION_PRECESSION_COEFFICIENTS: NutationPrecessionCoefficients =
+        (&[] as &[f64], &[] as &[f64]);
+    const RIGHT_ASCENSION_COEFFICIENTS: PolynomialCoefficients =
+        (5.183627878423159f64, 0f64, 0f64, &[] as &[f64]);
+    const DECLINATION_COEFFICIENTS: PolynomialCoefficients =
+        (0.08726646259971647f64, 0f64, 0f64, &[] as &[f64]);
+    const PRIME_MERIDIAN_COEFFICIENTS: PolynomialCoefficients = (
+        4.679227724596798f64,
+        29.39866372732388f64,
+        0f64,
+        &[] as &[f64],
+    );
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Mathilde;
@@ -477,18 +416,11 @@ impl TriAxial for Mathilde {
 }
 #[allow(clippy::approx_constant)]
 impl RotationalElements for Mathilde {
-    fn nutation_precession_coefficients() -> NutationPrecessionCoefficients {
-        (&[] as &[f64], &[] as &[f64])
-    }
-    fn right_ascension_coefficients() -> PolynomialCoefficients {
-        (0f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn declination_coefficients() -> PolynomialCoefficients {
-        (0f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn prime_meridian_coefficients() -> PolynomialCoefficients {
-        (0f64, 0f64, 0f64, &[] as &[f64])
-    }
+    const NUTATION_PRECESSION_COEFFICIENTS: NutationPrecessionCoefficients =
+        (&[] as &[f64], &[] as &[f64]);
+    const RIGHT_ASCENSION_COEFFICIENTS: PolynomialCoefficients = (0f64, 0f64, 0f64, &[] as &[f64]);
+    const DECLINATION_COEFFICIENTS: PolynomialCoefficients = (0f64, 0f64, 0f64, &[] as &[f64]);
+    const PRIME_MERIDIAN_COEFFICIENTS: PolynomialCoefficients = (0f64, 0f64, 0f64, &[] as &[f64]);
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Steins;
@@ -515,23 +447,18 @@ impl TriAxial for Steins {
 }
 #[allow(clippy::approx_constant)]
 impl RotationalElements for Steins {
-    fn nutation_precession_coefficients() -> NutationPrecessionCoefficients {
-        (&[] as &[f64], &[] as &[f64])
-    }
-    fn right_ascension_coefficients() -> PolynomialCoefficients {
-        (1.5882496193148399f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn declination_coefficients() -> PolynomialCoefficients {
-        (-1.0821041362364843f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn prime_meridian_coefficients() -> PolynomialCoefficients {
-        (
-            5.615771401216954f64,
-            24.925032561498227f64,
-            0f64,
-            &[] as &[f64],
-        )
-    }
+    const NUTATION_PRECESSION_COEFFICIENTS: NutationPrecessionCoefficients =
+        (&[] as &[f64], &[] as &[f64]);
+    const RIGHT_ASCENSION_COEFFICIENTS: PolynomialCoefficients =
+        (1.5882496193148399f64, 0f64, 0f64, &[] as &[f64]);
+    const DECLINATION_COEFFICIENTS: PolynomialCoefficients =
+        (-1.0821041362364843f64, 0f64, 0f64, &[] as &[f64]);
+    const PRIME_MERIDIAN_COEFFICIENTS: PolynomialCoefficients = (
+        5.615771401216954f64,
+        24.925032561498227f64,
+        0f64,
+        &[] as &[f64],
+    );
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Braille;
@@ -542,18 +469,11 @@ impl NaifId for Braille {
 }
 #[allow(clippy::approx_constant)]
 impl RotationalElements for Braille {
-    fn nutation_precession_coefficients() -> NutationPrecessionCoefficients {
-        (&[] as &[f64], &[] as &[f64])
-    }
-    fn right_ascension_coefficients() -> PolynomialCoefficients {
-        (0f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn declination_coefficients() -> PolynomialCoefficients {
-        (0f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn prime_meridian_coefficients() -> PolynomialCoefficients {
-        (0f64, 0f64, 0f64, &[] as &[f64])
-    }
+    const NUTATION_PRECESSION_COEFFICIENTS: NutationPrecessionCoefficients =
+        (&[] as &[f64], &[] as &[f64]);
+    const RIGHT_ASCENSION_COEFFICIENTS: PolynomialCoefficients = (0f64, 0f64, 0f64, &[] as &[f64]);
+    const DECLINATION_COEFFICIENTS: PolynomialCoefficients = (0f64, 0f64, 0f64, &[] as &[f64]);
+    const PRIME_MERIDIAN_COEFFICIENTS: PolynomialCoefficients = (0f64, 0f64, 0f64, &[] as &[f64]);
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct WilsonHarrington;
@@ -564,18 +484,11 @@ impl NaifId for WilsonHarrington {
 }
 #[allow(clippy::approx_constant)]
 impl RotationalElements for WilsonHarrington {
-    fn nutation_precession_coefficients() -> NutationPrecessionCoefficients {
-        (&[] as &[f64], &[] as &[f64])
-    }
-    fn right_ascension_coefficients() -> PolynomialCoefficients {
-        (0f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn declination_coefficients() -> PolynomialCoefficients {
-        (0f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn prime_meridian_coefficients() -> PolynomialCoefficients {
-        (0f64, 0f64, 0f64, &[] as &[f64])
-    }
+    const NUTATION_PRECESSION_COEFFICIENTS: NutationPrecessionCoefficients =
+        (&[] as &[f64], &[] as &[f64]);
+    const RIGHT_ASCENSION_COEFFICIENTS: PolynomialCoefficients = (0f64, 0f64, 0f64, &[] as &[f64]);
+    const DECLINATION_COEFFICIENTS: PolynomialCoefficients = (0f64, 0f64, 0f64, &[] as &[f64]);
+    const PRIME_MERIDIAN_COEFFICIENTS: PolynomialCoefficients = (0f64, 0f64, 0f64, &[] as &[f64]);
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Toutatis;
@@ -602,18 +515,11 @@ impl TriAxial for Toutatis {
 }
 #[allow(clippy::approx_constant)]
 impl RotationalElements for Toutatis {
-    fn nutation_precession_coefficients() -> NutationPrecessionCoefficients {
-        (&[] as &[f64], &[] as &[f64])
-    }
-    fn right_ascension_coefficients() -> PolynomialCoefficients {
-        (0f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn declination_coefficients() -> PolynomialCoefficients {
-        (0f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn prime_meridian_coefficients() -> PolynomialCoefficients {
-        (0f64, 0f64, 0f64, &[] as &[f64])
-    }
+    const NUTATION_PRECESSION_COEFFICIENTS: NutationPrecessionCoefficients =
+        (&[] as &[f64], &[] as &[f64]);
+    const RIGHT_ASCENSION_COEFFICIENTS: PolynomialCoefficients = (0f64, 0f64, 0f64, &[] as &[f64]);
+    const DECLINATION_COEFFICIENTS: PolynomialCoefficients = (0f64, 0f64, 0f64, &[] as &[f64]);
+    const PRIME_MERIDIAN_COEFFICIENTS: PolynomialCoefficients = (0f64, 0f64, 0f64, &[] as &[f64]);
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Itokawa;
@@ -640,18 +546,14 @@ impl TriAxial for Itokawa {
 }
 #[allow(clippy::approx_constant)]
 impl RotationalElements for Itokawa {
-    fn nutation_precession_coefficients() -> NutationPrecessionCoefficients {
-        (&[] as &[f64], &[] as &[f64])
-    }
-    fn right_ascension_coefficients() -> PolynomialCoefficients {
-        (1.5800465718304666f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn declination_coefficients() -> PolynomialCoefficients {
-        (-1.1571532940722404f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn prime_meridian_coefficients() -> PolynomialCoefficients {
-        (0f64, 12.429240095029979f64, 0f64, &[] as &[f64])
-    }
+    const NUTATION_PRECESSION_COEFFICIENTS: NutationPrecessionCoefficients =
+        (&[] as &[f64], &[] as &[f64]);
+    const RIGHT_ASCENSION_COEFFICIENTS: PolynomialCoefficients =
+        (1.5800465718304666f64, 0f64, 0f64, &[] as &[f64]);
+    const DECLINATION_COEFFICIENTS: PolynomialCoefficients =
+        (-1.1571532940722404f64, 0f64, 0f64, &[] as &[f64]);
+    const PRIME_MERIDIAN_COEFFICIENTS: PolynomialCoefficients =
+        (0f64, 12.429240095029979f64, 0f64, &[] as &[f64]);
 }
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Bennu;
@@ -662,18 +564,11 @@ impl NaifId for Bennu {
 }
 #[allow(clippy::approx_constant)]
 impl RotationalElements for Bennu {
-    fn nutation_precession_coefficients() -> NutationPrecessionCoefficients {
-        (&[] as &[f64], &[] as &[f64])
-    }
-    fn right_ascension_coefficients() -> PolynomialCoefficients {
-        (0f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn declination_coefficients() -> PolynomialCoefficients {
-        (0f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn prime_meridian_coefficients() -> PolynomialCoefficients {
-        (0f64, 0f64, 0f64, &[] as &[f64])
-    }
+    const NUTATION_PRECESSION_COEFFICIENTS: NutationPrecessionCoefficients =
+        (&[] as &[f64], &[] as &[f64]);
+    const RIGHT_ASCENSION_COEFFICIENTS: PolynomialCoefficients = (0f64, 0f64, 0f64, &[] as &[f64]);
+    const DECLINATION_COEFFICIENTS: PolynomialCoefficients = (0f64, 0f64, 0f64, &[] as &[f64]);
+    const PRIME_MERIDIAN_COEFFICIENTS: PolynomialCoefficients = (0f64, 0f64, 0f64, &[] as &[f64]);
 }
 #[cfg(test)]
 #[allow(clippy::approx_constant)]
@@ -694,21 +589,21 @@ mod tests {
     fn test_rotational_elements_nutation_precession_coefficients_9511010() {
         assert_eq!(
             (&[] as &[f64], &[] as &[f64]),
-            Gaspra::nutation_precession_coefficients()
+            Gaspra::NUTATION_PRECESSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_right_ascension_coefficients_9511010() {
         assert_eq!(
             (0.16528268016386302f64, 0f64, 0f64, &[] as &[f64]),
-            Gaspra::right_ascension_coefficients()
+            Gaspra::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_declination_coefficients_9511010() {
         assert_eq!(
             (0.46600291028248597f64, 0f64, 0f64, &[] as &[f64]),
-            Gaspra::declination_coefficients()
+            Gaspra::DECLINATION_COEFFICIENTS
         )
     }
     #[test]
@@ -720,7 +615,7 @@ mod tests {
                 0f64,
                 &[] as &[f64]
             ),
-            Gaspra::prime_meridian_coefficients()
+            Gaspra::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -738,21 +633,21 @@ mod tests {
     fn test_rotational_elements_nutation_precession_coefficients_2431010() {
         assert_eq!(
             (&[] as &[f64], &[] as &[f64]),
-            Ida::nutation_precession_coefficients()
+            Ida::NUTATION_PRECESSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_right_ascension_coefficients_2431010() {
         assert_eq!(
             (2.9454176456656302f64, 0f64, 0f64, &[] as &[f64]),
-            Ida::right_ascension_coefficients()
+            Ida::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_declination_coefficients_2431010() {
         assert_eq!(
             (-1.5205308443374599f64, 0f64, 0f64, &[] as &[f64]),
-            Ida::declination_coefficients()
+            Ida::DECLINATION_COEFFICIENTS
         )
     }
     #[test]
@@ -764,7 +659,7 @@ mod tests {
                 0f64,
                 &[] as &[f64]
             ),
-            Ida::prime_meridian_coefficients()
+            Ida::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -775,28 +670,28 @@ mod tests {
     fn test_rotational_elements_nutation_precession_coefficients_2431011() {
         assert_eq!(
             (&[] as &[f64], &[] as &[f64]),
-            Dactyl::nutation_precession_coefficients()
+            Dactyl::NUTATION_PRECESSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_right_ascension_coefficients_2431011() {
         assert_eq!(
             (0f64, 0f64, 0f64, &[] as &[f64]),
-            Dactyl::right_ascension_coefficients()
+            Dactyl::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_declination_coefficients_2431011() {
         assert_eq!(
             (0f64, 0f64, 0f64, &[] as &[f64]),
-            Dactyl::declination_coefficients()
+            Dactyl::DECLINATION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_prime_meridian_coefficients_2431011() {
         assert_eq!(
             (0f64, 0f64, 0f64, &[] as &[f64]),
-            Dactyl::prime_meridian_coefficients()
+            Dactyl::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -818,21 +713,21 @@ mod tests {
     fn test_rotational_elements_nutation_precession_coefficients_2000001() {
         assert_eq!(
             (&[] as &[f64], &[] as &[f64]),
-            Ceres::nutation_precession_coefficients()
+            Ceres::NUTATION_PRECESSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_right_ascension_coefficients_2000001() {
         assert_eq!(
             (5.0862035995768355f64, 0f64, 0f64, &[] as &[f64]),
-            Ceres::right_ascension_coefficients()
+            Ceres::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_declination_coefficients_2000001() {
         assert_eq!(
             (1.165251621801494f64, 0f64, 0f64, &[] as &[f64]),
-            Ceres::declination_coefficients()
+            Ceres::DECLINATION_COEFFICIENTS
         )
     }
     #[test]
@@ -844,7 +739,7 @@ mod tests {
                 0f64,
                 &[] as &[f64]
             ),
-            Ceres::prime_meridian_coefficients()
+            Ceres::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -859,21 +754,21 @@ mod tests {
     fn test_rotational_elements_nutation_precession_coefficients_2000002() {
         assert_eq!(
             (&[] as &[f64], &[] as &[f64]),
-            Pallas::nutation_precession_coefficients()
+            Pallas::NUTATION_PRECESSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_right_ascension_coefficients_2000002() {
         assert_eq!(
             (0.5759586531581288f64, 0f64, 0f64, &[] as &[f64]),
-            Pallas::right_ascension_coefficients()
+            Pallas::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_declination_coefficients_2000002() {
         assert_eq!(
             (-0.05235987755982989f64, 0f64, 0f64, &[] as &[f64]),
-            Pallas::declination_coefficients()
+            Pallas::DECLINATION_COEFFICIENTS
         )
     }
     #[test]
@@ -885,7 +780,7 @@ mod tests {
                 0f64,
                 &[] as &[f64]
             ),
-            Pallas::prime_meridian_coefficients()
+            Pallas::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -907,21 +802,21 @@ mod tests {
     fn test_rotational_elements_nutation_precession_coefficients_2000004() {
         assert_eq!(
             (&[] as &[f64], &[] as &[f64]),
-            Vesta::nutation_precession_coefficients()
+            Vesta::NUTATION_PRECESSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_right_ascension_coefficients_2000004() {
         assert_eq!(
             (5.393608440730596f64, 0f64, 0f64, &[] as &[f64]),
-            Vesta::right_ascension_coefficients()
+            Vesta::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_declination_coefficients_2000004() {
         assert_eq!(
             (0.7371398095798051f64, 0f64, 0f64, &[] as &[f64]),
-            Vesta::declination_coefficients()
+            Vesta::DECLINATION_COEFFICIENTS
         )
     }
     #[test]
@@ -933,7 +828,7 @@ mod tests {
                 0f64,
                 &[] as &[f64]
             ),
-            Vesta::prime_meridian_coefficients()
+            Vesta::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -955,28 +850,28 @@ mod tests {
     fn test_rotational_elements_nutation_precession_coefficients_2000016() {
         assert_eq!(
             (&[] as &[f64], &[] as &[f64]),
-            Psyche::nutation_precession_coefficients()
+            Psyche::NUTATION_PRECESSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_right_ascension_coefficients_2000016() {
         assert_eq!(
             (0f64, 0f64, 0f64, &[] as &[f64]),
-            Psyche::right_ascension_coefficients()
+            Psyche::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_declination_coefficients_2000016() {
         assert_eq!(
             (0f64, 0f64, 0f64, &[] as &[f64]),
-            Psyche::declination_coefficients()
+            Psyche::DECLINATION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_prime_meridian_coefficients_2000016() {
         assert_eq!(
             (0f64, 0f64, 0f64, &[] as &[f64]),
-            Psyche::prime_meridian_coefficients()
+            Psyche::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -994,21 +889,21 @@ mod tests {
     fn test_rotational_elements_nutation_precession_coefficients_2000021() {
         assert_eq!(
             (&[] as &[f64], &[] as &[f64]),
-            Lutetia::nutation_precession_coefficients()
+            Lutetia::NUTATION_PRECESSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_right_ascension_coefficients_2000021() {
         assert_eq!(
             (0.9075712110370514f64, 0f64, 0f64, &[] as &[f64]),
-            Lutetia::right_ascension_coefficients()
+            Lutetia::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_declination_coefficients_2000021() {
         assert_eq!(
             (0.20943951023931956f64, 0f64, 0f64, &[] as &[f64]),
-            Lutetia::declination_coefficients()
+            Lutetia::DECLINATION_COEFFICIENTS
         )
     }
     #[test]
@@ -1020,7 +915,7 @@ mod tests {
                 0f64,
                 &[] as &[f64]
             ),
-            Lutetia::prime_meridian_coefficients()
+            Lutetia::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -1031,28 +926,28 @@ mod tests {
     fn test_rotational_elements_nutation_precession_coefficients_2000216() {
         assert_eq!(
             (&[] as &[f64], &[] as &[f64]),
-            Kleopatra::nutation_precession_coefficients()
+            Kleopatra::NUTATION_PRECESSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_right_ascension_coefficients_2000216() {
         assert_eq!(
             (0f64, 0f64, 0f64, &[] as &[f64]),
-            Kleopatra::right_ascension_coefficients()
+            Kleopatra::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_declination_coefficients_2000216() {
         assert_eq!(
             (0f64, 0f64, 0f64, &[] as &[f64]),
-            Kleopatra::declination_coefficients()
+            Kleopatra::DECLINATION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_prime_meridian_coefficients_2000216() {
         assert_eq!(
             (0f64, 0f64, 0f64, &[] as &[f64]),
-            Kleopatra::prime_meridian_coefficients()
+            Kleopatra::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -1074,21 +969,21 @@ mod tests {
     fn test_rotational_elements_nutation_precession_coefficients_2000433() {
         assert_eq!(
             (&[] as &[f64], &[] as &[f64]),
-            Eros::nutation_precession_coefficients()
+            Eros::NUTATION_PRECESSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_right_ascension_coefficients_2000433() {
         assert_eq!(
             (0.1980948701013564f64, 0f64, 0f64, &[] as &[f64]),
-            Eros::right_ascension_coefficients()
+            Eros::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_declination_coefficients_2000433() {
         assert_eq!(
             (0.30054569719342356f64, 0f64, 0f64, &[] as &[f64]),
-            Eros::declination_coefficients()
+            Eros::DECLINATION_COEFFICIENTS
         )
     }
     #[test]
@@ -1100,7 +995,7 @@ mod tests {
                 0f64,
                 &[] as &[f64]
             ),
-            Eros::prime_meridian_coefficients()
+            Eros::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -1122,21 +1017,21 @@ mod tests {
     fn test_rotational_elements_nutation_precession_coefficients_2000511() {
         assert_eq!(
             (&[] as &[f64], &[] as &[f64]),
-            Davida::nutation_precession_coefficients()
+            Davida::NUTATION_PRECESSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_right_ascension_coefficients_2000511() {
         assert_eq!(
             (5.183627878423159f64, 0f64, 0f64, &[] as &[f64]),
-            Davida::right_ascension_coefficients()
+            Davida::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_declination_coefficients_2000511() {
         assert_eq!(
             (0.08726646259971647f64, 0f64, 0f64, &[] as &[f64]),
-            Davida::declination_coefficients()
+            Davida::DECLINATION_COEFFICIENTS
         )
     }
     #[test]
@@ -1148,7 +1043,7 @@ mod tests {
                 0f64,
                 &[] as &[f64]
             ),
-            Davida::prime_meridian_coefficients()
+            Davida::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -1166,28 +1061,28 @@ mod tests {
     fn test_rotational_elements_nutation_precession_coefficients_2000253() {
         assert_eq!(
             (&[] as &[f64], &[] as &[f64]),
-            Mathilde::nutation_precession_coefficients()
+            Mathilde::NUTATION_PRECESSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_right_ascension_coefficients_2000253() {
         assert_eq!(
             (0f64, 0f64, 0f64, &[] as &[f64]),
-            Mathilde::right_ascension_coefficients()
+            Mathilde::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_declination_coefficients_2000253() {
         assert_eq!(
             (0f64, 0f64, 0f64, &[] as &[f64]),
-            Mathilde::declination_coefficients()
+            Mathilde::DECLINATION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_prime_meridian_coefficients_2000253() {
         assert_eq!(
             (0f64, 0f64, 0f64, &[] as &[f64]),
-            Mathilde::prime_meridian_coefficients()
+            Mathilde::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -1205,21 +1100,21 @@ mod tests {
     fn test_rotational_elements_nutation_precession_coefficients_2002867() {
         assert_eq!(
             (&[] as &[f64], &[] as &[f64]),
-            Steins::nutation_precession_coefficients()
+            Steins::NUTATION_PRECESSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_right_ascension_coefficients_2002867() {
         assert_eq!(
             (1.5882496193148399f64, 0f64, 0f64, &[] as &[f64]),
-            Steins::right_ascension_coefficients()
+            Steins::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_declination_coefficients_2002867() {
         assert_eq!(
             (-1.0821041362364843f64, 0f64, 0f64, &[] as &[f64]),
-            Steins::declination_coefficients()
+            Steins::DECLINATION_COEFFICIENTS
         )
     }
     #[test]
@@ -1231,7 +1126,7 @@ mod tests {
                 0f64,
                 &[] as &[f64]
             ),
-            Steins::prime_meridian_coefficients()
+            Steins::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -1242,28 +1137,28 @@ mod tests {
     fn test_rotational_elements_nutation_precession_coefficients_2009969() {
         assert_eq!(
             (&[] as &[f64], &[] as &[f64]),
-            Braille::nutation_precession_coefficients()
+            Braille::NUTATION_PRECESSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_right_ascension_coefficients_2009969() {
         assert_eq!(
             (0f64, 0f64, 0f64, &[] as &[f64]),
-            Braille::right_ascension_coefficients()
+            Braille::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_declination_coefficients_2009969() {
         assert_eq!(
             (0f64, 0f64, 0f64, &[] as &[f64]),
-            Braille::declination_coefficients()
+            Braille::DECLINATION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_prime_meridian_coefficients_2009969() {
         assert_eq!(
             (0f64, 0f64, 0f64, &[] as &[f64]),
-            Braille::prime_meridian_coefficients()
+            Braille::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -1274,28 +1169,28 @@ mod tests {
     fn test_rotational_elements_nutation_precession_coefficients_2004015() {
         assert_eq!(
             (&[] as &[f64], &[] as &[f64]),
-            WilsonHarrington::nutation_precession_coefficients()
+            WilsonHarrington::NUTATION_PRECESSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_right_ascension_coefficients_2004015() {
         assert_eq!(
             (0f64, 0f64, 0f64, &[] as &[f64]),
-            WilsonHarrington::right_ascension_coefficients()
+            WilsonHarrington::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_declination_coefficients_2004015() {
         assert_eq!(
             (0f64, 0f64, 0f64, &[] as &[f64]),
-            WilsonHarrington::declination_coefficients()
+            WilsonHarrington::DECLINATION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_prime_meridian_coefficients_2004015() {
         assert_eq!(
             (0f64, 0f64, 0f64, &[] as &[f64]),
-            WilsonHarrington::prime_meridian_coefficients()
+            WilsonHarrington::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -1313,28 +1208,28 @@ mod tests {
     fn test_rotational_elements_nutation_precession_coefficients_2004179() {
         assert_eq!(
             (&[] as &[f64], &[] as &[f64]),
-            Toutatis::nutation_precession_coefficients()
+            Toutatis::NUTATION_PRECESSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_right_ascension_coefficients_2004179() {
         assert_eq!(
             (0f64, 0f64, 0f64, &[] as &[f64]),
-            Toutatis::right_ascension_coefficients()
+            Toutatis::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_declination_coefficients_2004179() {
         assert_eq!(
             (0f64, 0f64, 0f64, &[] as &[f64]),
-            Toutatis::declination_coefficients()
+            Toutatis::DECLINATION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_prime_meridian_coefficients_2004179() {
         assert_eq!(
             (0f64, 0f64, 0f64, &[] as &[f64]),
-            Toutatis::prime_meridian_coefficients()
+            Toutatis::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -1352,28 +1247,28 @@ mod tests {
     fn test_rotational_elements_nutation_precession_coefficients_2025143() {
         assert_eq!(
             (&[] as &[f64], &[] as &[f64]),
-            Itokawa::nutation_precession_coefficients()
+            Itokawa::NUTATION_PRECESSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_right_ascension_coefficients_2025143() {
         assert_eq!(
             (1.5800465718304666f64, 0f64, 0f64, &[] as &[f64]),
-            Itokawa::right_ascension_coefficients()
+            Itokawa::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_declination_coefficients_2025143() {
         assert_eq!(
             (-1.1571532940722404f64, 0f64, 0f64, &[] as &[f64]),
-            Itokawa::declination_coefficients()
+            Itokawa::DECLINATION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_prime_meridian_coefficients_2025143() {
         assert_eq!(
             (0f64, 12.429240095029979f64, 0f64, &[] as &[f64]),
-            Itokawa::prime_meridian_coefficients()
+            Itokawa::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
     #[test]
@@ -1384,28 +1279,28 @@ mod tests {
     fn test_rotational_elements_nutation_precession_coefficients_2101955() {
         assert_eq!(
             (&[] as &[f64], &[] as &[f64]),
-            Bennu::nutation_precession_coefficients()
+            Bennu::NUTATION_PRECESSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_right_ascension_coefficients_2101955() {
         assert_eq!(
             (0f64, 0f64, 0f64, &[] as &[f64]),
-            Bennu::right_ascension_coefficients()
+            Bennu::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_declination_coefficients_2101955() {
         assert_eq!(
             (0f64, 0f64, 0f64, &[] as &[f64]),
-            Bennu::declination_coefficients()
+            Bennu::DECLINATION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_prime_meridian_coefficients_2101955() {
         assert_eq!(
             (0f64, 0f64, 0f64, &[] as &[f64]),
-            Bennu::prime_meridian_coefficients()
+            Bennu::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
 }

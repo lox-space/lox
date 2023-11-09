@@ -39,23 +39,18 @@ impl Spheroid for Sun {
 }
 #[allow(clippy::approx_constant)]
 impl RotationalElements for Sun {
-    fn nutation_precession_coefficients() -> NutationPrecessionCoefficients {
-        (&[] as &[f64], &[] as &[f64])
-    }
-    fn right_ascension_coefficients() -> PolynomialCoefficients {
-        (4.993910588731375f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn declination_coefficients() -> PolynomialCoefficients {
-        (1.1147417932487782f64, 0f64, 0f64, &[] as &[f64])
-    }
-    fn prime_meridian_coefficients() -> PolynomialCoefficients {
-        (
-            1.4691483511587469f64,
-            0.24756448241988369f64,
-            0f64,
-            &[] as &[f64],
-        )
-    }
+    const NUTATION_PRECESSION_COEFFICIENTS: NutationPrecessionCoefficients =
+        (&[] as &[f64], &[] as &[f64]);
+    const RIGHT_ASCENSION_COEFFICIENTS: PolynomialCoefficients =
+        (4.993910588731375f64, 0f64, 0f64, &[] as &[f64]);
+    const DECLINATION_COEFFICIENTS: PolynomialCoefficients =
+        (1.1147417932487782f64, 0f64, 0f64, &[] as &[f64]);
+    const PRIME_MERIDIAN_COEFFICIENTS: PolynomialCoefficients = (
+        1.4691483511587469f64,
+        0.24756448241988369f64,
+        0f64,
+        &[] as &[f64],
+    );
 }
 #[cfg(test)]
 #[allow(clippy::approx_constant)]
@@ -79,21 +74,21 @@ mod tests {
     fn test_rotational_elements_nutation_precession_coefficients_10() {
         assert_eq!(
             (&[] as &[f64], &[] as &[f64]),
-            Sun::nutation_precession_coefficients()
+            Sun::NUTATION_PRECESSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_right_ascension_coefficients_10() {
         assert_eq!(
             (4.993910588731375f64, 0f64, 0f64, &[] as &[f64]),
-            Sun::right_ascension_coefficients()
+            Sun::RIGHT_ASCENSION_COEFFICIENTS
         )
     }
     #[test]
     fn test_rotational_elements_declination_coefficients_10() {
         assert_eq!(
             (1.1147417932487782f64, 0f64, 0f64, &[] as &[f64]),
-            Sun::declination_coefficients()
+            Sun::DECLINATION_COEFFICIENTS
         )
     }
     #[test]
@@ -105,7 +100,7 @@ mod tests {
                 0f64,
                 &[] as &[f64]
             ),
-            Sun::prime_meridian_coefficients()
+            Sun::PRIME_MERIDIAN_COEFFICIENTS
         )
     }
 }
