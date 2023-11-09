@@ -6,6 +6,8 @@
  * file, you can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+use std::f64::consts::PI;
+
 use crate::time::constants::f64::{SECONDS_PER_DAY, SECONDS_PER_JULIAN_CENTURY};
 
 pub mod barycenters;
@@ -24,6 +26,7 @@ pub fn naif_id<T: NaifId>(_: T) -> i32 {
 
 pub trait Ellipsoid: Copy {
     fn polar_radius() -> f64;
+
     fn mean_radius() -> f64;
 }
 
@@ -45,6 +48,7 @@ pub fn equatorial_radius<T: Spheroid>(_: T) -> f64 {
 
 pub trait TriAxial: Ellipsoid {
     fn subplanetary_radius() -> f64;
+
     fn along_orbit_radius() -> f64;
 }
 
@@ -68,7 +72,9 @@ pub type PolynomialCoefficients = (f64, f64, f64, &'static [f64]);
 
 pub type NutationPrecessionCoefficients = (&'static [f64], &'static [f64]);
 
-pub trait RotationalElements {
+type Elements = (f64, f64, f64);
+
+pub trait RotationalElements: Copy {
     const NUTATION_PRECESSION_COEFFICIENTS: NutationPrecessionCoefficients;
     const RIGHT_ASCENSION_COEFFICIENTS: PolynomialCoefficients;
     const DECLINATION_COEFFICIENTS: PolynomialCoefficients;
@@ -174,6 +180,22 @@ pub trait RotationalElements {
         let c_trig: f64 = c_trig.iter().sum();
         c1 / dt + 2.0 * c2 * t / dt.powi(2) + c_trig
     }
+
+    fn rotational_elements(t: f64) -> Elements {
+        (
+            Self::right_ascension(t) + PI / 2.0,
+            PI / 2.0 - Self::declination(t),
+            Self::prime_meridian(t) % (2.0 * PI),
+        )
+    }
+
+    fn rotational_element_rates(t: f64) -> Elements {
+        (
+            Self::right_ascension_dot(t),
+            -Self::declination_dot(t),
+            Self::prime_meridian_dot(t),
+        )
+    }
 }
 
 #[cfg(test)]
@@ -224,6 +246,7 @@ mod tests {
 
     // Jupiter is manually redefined here usings known data. This avoids a dependecy on the
     // correctness of the PCK parser to test RotationalElements.
+    #[derive(Copy, Clone)]
     struct Jupiter;
 
     impl RotationalElements for Jupiter {
@@ -364,6 +387,73 @@ mod tests {
             Jupiter::prime_meridian_dot(0.0),
             0.00017585323445765458,
             rel <= 1e-8
+        );
+    }
+
+    #[test]
+    fn test_rotational_elements_rotational_elements() {
+        let (ra, dec, pm) = Jupiter::rotational_elements(0.0);
+        let (expected_ra, expected_dec, expected_pm) =
+            (6.249277121030398, 0.44513208936761073, 4.973315703557842);
+
+        assert_float_eq!(
+            ra,
+            expected_ra,
+            rel <= 1e-8,
+            "Expected right ascension {}, got {}",
+            expected_ra,
+            ra
+        );
+        assert_float_eq!(
+            dec,
+            expected_dec,
+            rel <= 1e-8,
+            "Expected declination {}, got {}",
+            expected_dec,
+            dec
+        );
+        assert_float_eq!(
+            pm,
+            expected_pm,
+            rel <= 1e-8,
+            "Expected prime meridian {}, got {}",
+            expected_pm,
+            pm
+        );
+    }
+
+    #[test]
+    fn test_rotational_elements_rotational_element_rates() {
+        let (ra_dot, dec_dot, pm_dot) = Jupiter::rotational_element_rates(0.0);
+        let (expected_ra_dot, expected_dec_dot, expected_pm_dot) = (
+            -1.3266588500099516e-13,
+            -3.004482367136341e-15,
+            0.00017585323445765458,
+        );
+
+        assert_float_eq!(
+            ra_dot,
+            expected_ra_dot,
+            rel <= 1e-8,
+            "Expected right ascension rate {}, got {}",
+            expected_ra_dot,
+            ra_dot
+        );
+        assert_float_eq!(
+            dec_dot,
+            expected_dec_dot,
+            rel <= 1e-8,
+            "Expected declination rate {}, got {}",
+            expected_dec_dot,
+            dec_dot
+        );
+        assert_float_eq!(
+            pm_dot,
+            expected_pm_dot,
+            rel <= 1e-8,
+            "Expected prime meridian rate {}, got {}",
+            expected_pm_dot,
+            pm_dot
         );
     }
 }
