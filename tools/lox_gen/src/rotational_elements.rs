@@ -14,7 +14,7 @@ use lox_io::spice::Kernel;
 
 use crate::naif_ids::is_planet;
 
-/// Converts a set of PolynomialCoefficients into a TokenStream.
+/// Converts [lox_core::bodies::PolynomialCoefficients] into a TokenStream.
 pub struct TokenizeablePolynomialCoefficients(f64, f64, f64, Vec<f64>);
 
 impl ToTokens for TokenizeablePolynomialCoefficients {
@@ -25,7 +25,7 @@ impl ToTokens for TokenizeablePolynomialCoefficients {
     }
 }
 
-/// Converts a set of NutationPrecessionCoefficients into a TokenStream.
+/// Converts [lox_core::bodies::NutationPrecessionCoefficients] into a TokenStream.
 #[derive(Default)]
 pub struct TokenizeableNutPrecCoefficients((Vec<f64>, Vec<f64>));
 
@@ -42,8 +42,7 @@ impl ToTokens for TokenizeableNutPrecCoefficients {
 /// May be parsed directly from PCK data and knows how to represent its code and test components as
 /// streams of tokens.
 ///
-/// Wherever data is not available for a given body, the corresponding fields will be represented
-/// as the default value for the type.
+/// Wherever data is not available for a given body, the corresponding field will be empty.
 pub(crate) struct RotationalElements<'a> {
     id: u32,
     ident: &'a Ident,
