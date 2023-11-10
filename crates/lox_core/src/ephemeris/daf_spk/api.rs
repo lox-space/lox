@@ -163,15 +163,18 @@ impl Spk {
                 if degree_of_polynomial > 2 {
                     derivative.push(4f64 * polynomial[1]);
                     for i in 3..degree_of_polynomial {
-                        let x = 2f64 * polynomial[1] * derivative[i - 1]
-                            - derivative[i - 2] * polynomial[i - 1]
+                        let x = 2f64 * polynomial[1] * derivative[i - 1] - derivative[i - 2]
+                            + polynomial[i - 1]
                             + polynomial[i - 1];
-                        let x = 2f64 * x;
-                        let x = x / array.intlen as f64;
 
                         derivative.push(x);
                     }
                 }
+
+                let derivative: Vec<f64> = derivative
+                    .iter()
+                    .map(|d| 2.0 * d / array.intlen as f64)
+                    .collect();
 
                 #[allow(clippy::needless_range_loop)]
                 for i in 0..degree_of_polynomial {
@@ -230,7 +233,11 @@ mod test {
         let spk = parse_daf_spk(&FILE_CONTENTS).expect("Unable to parse DAF/SPK");
 
         assert_eq!(
-            Ok((-16347507.654236255, -10396015.881953504, -3828362.817319523)), //@TODO validate
+            Ok((
+                -46.723420416476635,
+                -28.050723083678367,
+                -10.055174230490163,
+            )),
             spk.velocity(-14200747200.0 as Epoch, 0, 1)
         );
     }
@@ -242,7 +249,11 @@ mod test {
         assert_eq!(
             Ok((
                 (-32703259.291699532, 31370540.51993667, 20159681.594182793),
-                (-16347507.654236255, -10396015.881953504, -3828362.817319523),
+                (
+                    -46.723420416476635,
+                    -28.050723083678367,
+                    -10.055174230490163,
+                ),
             )),
             spk.state(-14200747200.0 as Epoch, 0, 1)
         );
