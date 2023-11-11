@@ -221,16 +221,16 @@ pub fn parse_daf_comment_area(
     input: &[u8],
     comment_areas_count: u32,
 ) -> nom::IResult<&[u8], String> {
-    // This function is definetely not optimal as there are several allocations at
-    // different points but this is not a hot data path.
-    let mut comment_area = String::new();
+    let record_size = 1000;
+
+    let mut comment_area = String::with_capacity((comment_areas_count * record_size) as usize);
 
     let mut input_cursor = input;
     for _ in 0..comment_areas_count {
         let comment_areas;
         (input_cursor, comment_areas) = nb::take(RECORD_SIZE)(input_cursor)?;
 
-        let (_, comment_record_content) = nb::take(1000u32)(comment_areas)?;
+        let (_, comment_record_content) = nb::take(record_size)(comment_areas)?;
 
         let comment_record_content = match nb::take_until("\x04")(comment_record_content) {
             Ok((_, content_to_end_of_transmission_char)) => content_to_end_of_transmission_char,
@@ -267,8 +267,6 @@ pub fn parse_daf_summary_and_name_record_pair(
 
     let nc = 8 * (nd + (ni + 1) / 2);
 
-    let mut summaries = Vec::new();
-
     // 1. The record number of the next summary record in the file. (Zero if this is
     // the final summary record.)
     let (summary_record_input, next) = nn::f64(endianness)(summary_record_input)?;
@@ -281,6 +279,8 @@ pub fn parse_daf_summary_and_name_record_pair(
     // 3. The number of summaries stored in this record.
     let (mut summary_record_input, nsum) = nn::f64(endianness)(summary_record_input)?;
     let nsum = nsum as u32;
+
+    let mut summaries = Vec::with_capacity(nsum as usize);
 
     for _ in 0..nsum {
         let double_precision_components;
