@@ -413,41 +413,9 @@ mod tests {
 
     use super::*;
 
-    #[test]
-    fn test_grav_param() {
-        assert_eq!(
-            gravitational_parameter(Jupiter),
-            Jupiter::gravitational_parameter()
-        );
-    }
-
-    #[test]
-    fn test_mean_radius() {
-        assert_eq!(mean_radius(Jupiter), Jupiter::mean_radius());
-    }
-
-    #[test]
-    fn test_polar_radius() {
-        assert_eq!(polar_radius(Jupiter), Jupiter::polar_radius());
-    }
-
-    #[test]
-    fn test_equatorial_radius() {
-        assert_eq!(equatorial_radius(Jupiter), Jupiter::equatorial_radius());
-    }
-
-    #[test]
-    fn test_subplanetary_radius() {
-        assert_eq!(subplanetary_radius(Moon), Moon::subplanetary_radius());
-    }
-
-    #[test]
-    fn test_along_orbit_radius() {
-        assert_eq!(along_orbit_radius(Moon), Moon::along_orbit_radius());
-    }
-
-    // Jupiter is redefined here usings known data. This avoids a dependecy on the
-    // correctness of the PCK parser to test RotationalElements.
+    // Jupiter is manually redefined here using known data. This avoids a dependecy on the
+    // correctness of the PCK parser to test RotationalElements, and prevents compiler errors
+    // when generated files are malformed or deleted in preparation for regeneration.
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     struct Jupiter;
 
@@ -567,6 +535,39 @@ mod tests {
                 0f64,
             ],
         );
+    }
+
+    #[test]
+    fn test_grav_param() {
+        assert_eq!(
+            gravitational_parameter(Jupiter),
+            Jupiter::gravitational_parameter()
+        );
+    }
+
+    #[test]
+    fn test_mean_radius() {
+        assert_eq!(mean_radius(Jupiter), Jupiter::mean_radius());
+    }
+
+    #[test]
+    fn test_polar_radius() {
+        assert_eq!(polar_radius(Jupiter), Jupiter::polar_radius());
+    }
+
+    #[test]
+    fn test_equatorial_radius() {
+        assert_eq!(equatorial_radius(Jupiter), Jupiter::equatorial_radius());
+    }
+
+    #[test]
+    fn test_subplanetary_radius() {
+        assert_eq!(subplanetary_radius(Moon), Moon::subplanetary_radius());
+    }
+
+    #[test]
+    fn test_along_orbit_radius() {
+        assert_eq!(along_orbit_radius(Moon), Moon::along_orbit_radius());
     }
 
     #[test]
