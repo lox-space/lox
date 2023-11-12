@@ -18,7 +18,7 @@ pub mod sun;
 
 /// NaifId is implemented for all bodies.
 pub trait NaifId: Copy {
-    const NAIF_ID: i32;
+    const ID: i32;
 }
 
 /// Expands to derivations of the fundamental traits every body must implement.
@@ -28,7 +28,7 @@ macro_rules! body {
         pub struct $i;
 
         impl NaifId for $i {
-            const NAIF_ID: i32 = $naif_id;
+            const ID: i32 = $naif_id;
         }
     };
 }
@@ -420,7 +420,7 @@ mod tests {
     struct Jupiter;
 
     impl NaifId for Jupiter {
-        const NAIF_ID: i32 = 599;
+        const ID: i32 = 599;
     }
 
     impl PointMass for Jupiter {
