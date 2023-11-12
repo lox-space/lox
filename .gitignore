@@ -1,4 +1,4 @@
 /target
 /tools/*/target/
 .venv/
-.idea/*
+.idea/

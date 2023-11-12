@@ -41,8 +41,8 @@ mod tests {
     use float_eq::assert_float_eq;
     use glam::DVec3;
 
-    use crate::bodies::planets::Jupiter;
-    use crate::frames::{FromFrame, Icrf, IntoFrame};
+    use crate::bodies::Jupiter;
+    use crate::frames::{Icrf, IntoFrame};
 
     use super::*;
 

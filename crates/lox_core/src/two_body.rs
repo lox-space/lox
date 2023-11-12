@@ -224,7 +224,7 @@ mod tests {
     use float_eq::assert_float_eq;
     use std::ops::Mul;
 
-    use crate::bodies::planets::Earth;
+    use crate::bodies::Earth;
     use crate::time::dates::{Date, Time};
     use crate::time::epochs::TimeScale;
 

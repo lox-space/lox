@@ -16,15 +16,224 @@ pub mod planets;
 pub mod satellites;
 pub mod sun;
 
+/// NaifId is implemented for all bodies.
 pub trait NaifId: Copy {
-    fn id() -> i32;
+    const NAIF_ID: i32;
 }
 
-pub fn naif_id<T: NaifId>(_: T) -> i32 {
-    <T as NaifId>::id()
+/// Expands to derivations of the fundamental traits every body must implement.
+macro_rules! body {
+    ($i:ident, $naif_id:literal) => {
+        #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+        pub struct $i;
+
+        impl NaifId for $i {
+            const NAIF_ID: i32 = $naif_id;
+        }
+    };
 }
 
-pub trait Ellipsoid: Copy {
+// The Sun.
+body! { Sun, 10 }
+
+// Planets.
+body! { Mercury, 199 }
+body! { Venus, 299 }
+body! { Earth, 399 }
+body! { Mars, 499 }
+body! { Jupiter, 599 }
+body! { Saturn, 699 }
+body! { Uranus, 799 }
+body! { Neptune, 899 }
+body! { Pluto, 999 }
+
+// Barycenters.
+body! { SolarSystemBarycenter, 0 }
+body! { MercuryBarycenter, 1 }
+body! { VenusBarycenter, 2 }
+body! { EarthBarycenter, 3 }
+body! { MarsBarycenter, 4 }
+body! { JupiterBarycenter, 5 }
+body! { SaturnBarycenter, 6 }
+body! { UranusBarycenter, 7 }
+body! { NeptuneBarycenter, 8 }
+body! { PlutoBarycenter, 9 }
+
+// Satellites.
+body! { Moon, 301 }
+body! { Phobos, 401 }
+body! { Deimos, 402 }
+body! { Io, 501 }
+body! { Europa, 502 }
+body! { Ganymede, 503 }
+body! { Callisto, 504 }
+body! { Amalthea, 505 }
+body! { Himalia, 506 }
+body! { Elara, 507 }
+body! { Pasiphae, 508 }
+body! { Sinope, 509 }
+body! { Lysithea, 510 }
+body! { Carme, 511 }
+body! { Ananke, 512 }
+body! { Leda, 513 }
+body! { Thebe, 514 }
+body! { Adrastea, 515 }
+body! { Metis, 516 }
+body! { Callirrhoe, 517 }
+body! { Themisto, 518 }
+body! { Magaclite, 519 }
+body! { Taygete, 520 }
+body! { Chaldene, 521 }
+body! { Harpalyke, 522 }
+body! { Kalyke, 523 }
+body! { Iocaste, 524 }
+body! { Erinome, 525 }
+body! { Isonoe, 526 }
+body! { Praxidike, 527 }
+body! { Autonoe, 528 }
+body! { Thyone, 529 }
+body! { Hermippe, 530 }
+body! { Aitne, 531 }
+body! { Eurydome, 532 }
+body! { Euanthe, 533 }
+body! { Euporie, 534 }
+body! { Orthosie, 535 }
+body! { Sponde, 536 }
+body! { Kale, 537 }
+body! { Pasithee, 538 }
+body! { Hegemone, 539 }
+body! { Mneme, 540 }
+body! { Aoede, 541 }
+body! { Thelxinoe, 542 }
+body! { Arche, 543 }
+body! { Kallichore, 544 }
+body! { Helike, 545 }
+body! { Carpo, 546 }
+body! { Eukelade, 547 }
+body! { Cyllene, 548 }
+body! { Kore, 549 }
+body! { Herse, 550 }
+body! { Dia, 553 }
+body! { Mimas, 601 }
+body! { Enceladus, 602 }
+body! { Tethys, 603 }
+body! { Dione, 604 }
+body! { Rhea, 605 }
+body! { Titan, 606 }
+body! { Hyperion, 607 }
+body! { Iapetus, 608 }
+body! { Phoebe, 609 }
+body! { Janus, 610 }
+body! { Epimetheus, 611 }
+body! { Helene, 612 }
+body! { Telesto, 613 }
+body! { Calypso, 614 }
+body! { Atlas, 615 }
+body! { Prometheus, 616 }
+body! { Pandora, 617 }
+body! { Pan, 618 }
+body! { Ymir, 619 }
+body! { Paaliaq, 620 }
+body! { Tarvos, 621 }
+body! { Ijiraq, 622 }
+body! { Suttungr, 623 }
+body! { Kiviuq, 624 }
+body! { Mundilfari, 625 }
+body! { Albiorix, 626 }
+body! { Skathi, 627 }
+body! { Erriapus, 628 }
+body! { Siarnaq, 629 }
+body! { Thrymr, 630 }
+body! { Narvi, 631 }
+body! { Methone, 632 }
+body! { Pallene, 633 }
+body! { Polydeuces, 634 }
+body! { Daphnis, 635 }
+body! { Aegir, 636 }
+body! { Bebhionn, 637 }
+body! { Bergelmir, 638 }
+body! { Bestla, 639 }
+body! { Farbauti, 640 }
+body! { Fenrir, 641 }
+body! { Fornjot, 642 }
+body! { Hati, 643 }
+body! { Hyrrokkin, 644 }
+body! { Kari, 645 }
+body! { Loge, 646 }
+body! { Skoll, 647 }
+body! { Surtur, 648 }
+body! { Anthe, 649 }
+body! { Jarnsaxa, 650 }
+body! { Greip, 651 }
+body! { Tarqeq, 652 }
+body! { Aegaeon, 653 }
+body! { Ariel, 701 }
+body! { Umbriel, 702 }
+body! { Titania, 703 }
+body! { Oberon, 704 }
+body! { Miranda, 705 }
+body! { Cordelia, 706 }
+body! { Ophelia, 707 }
+body! { Bianca, 708 }
+body! { Cressida, 709 }
+body! { Desdemona, 710 }
+body! { Juliet, 711 }
+body! { Portia, 712 }
+body! { Rosalind, 713 }
+body! { Belinda, 714 }
+body! { Puck, 715 }
+body! { Caliban, 716 }
+body! { Sycorax, 717 }
+body! { Prospero, 718 }
+body! { Setebos, 719 }
+body! { Stephano, 720 }
+body! { Trinculo, 721 }
+body! { Francisco, 722 }
+body! { Margaret, 723 }
+body! { Ferdinand, 724 }
+body! { Perdita, 725 }
+body! { Mab, 726 }
+body! { Cupid, 727 }
+body! { Triton, 801 }
+body! { Nereid, 802 }
+body! { Naiad, 803 }
+body! { Thalassa, 804 }
+body! { Despina, 805 }
+body! { Galatea, 806 }
+body! { Larissa, 807 }
+body! { Proteus, 808 }
+body! { Halimede, 809 }
+body! { Psamathe, 810 }
+body! { Sao, 811 }
+body! { Laomedeia, 812 }
+body! { Neso, 813 }
+body! { Charon, 901 }
+body! { Nix, 902 }
+body! { Hydra, 903 }
+body! { Kerberos, 904 }
+body! { Styx, 905 }
+
+// Minor bodies.
+body! {Gaspra, 9511010 }
+body! {Ida, 2431010 }
+body! {Dactyl, 2431011 }
+body! {Ceres, 2000001 }
+body! {Pallas, 2000002 }
+body! {Vesta, 2000004 }
+body! {Psyche, 2000016 }
+body! {Lutetia, 2000021 }
+body! {Kleopatra, 2000216 }
+body! {Eros, 2000433 }
+body! {Davida, 2000511 }
+body! {Mathilde, 2000253 }
+body! {Steins, 2002867 }
+body! {Braille, 2009969 }
+body! {WilsonHarrington, 2004015 }
+body! {Toutatis, 2004179 }
+body! {Itokawa, 2025143 }
+body! {Bennu, 2101955 }
+
+pub trait Ellipsoid: NaifId {
     fn polar_radius() -> f64;
 
     fn mean_radius() -> f64;
@@ -60,7 +269,7 @@ pub fn along_orbit_radius<T: TriAxial>(_: T) -> f64 {
     <T as TriAxial>::along_orbit_radius()
 }
 
-pub trait PointMass: Copy {
+pub trait PointMass: NaifId {
     fn gravitational_parameter() -> f64;
 }
 
@@ -74,7 +283,7 @@ pub type NutationPrecessionCoefficients = (&'static [f64], &'static [f64]);
 
 type Elements = (f64, f64, f64);
 
-pub trait RotationalElements: Copy {
+pub trait RotationalElements: NaifId {
     const NUTATION_PRECESSION_COEFFICIENTS: NutationPrecessionCoefficients;
     const RIGHT_ASCENSION_COEFFICIENTS: PolynomialCoefficients;
     const DECLINATION_COEFFICIENTS: PolynomialCoefficients;
@@ -202,36 +411,29 @@ pub trait RotationalElements: Copy {
 mod tests {
     use float_eq::assert_float_eq;
 
-    use super::planets::Earth;
-    use super::satellites::Moon;
     use super::*;
-
-    #[test]
-    fn test_naif_id() {
-        assert_eq!(naif_id(Earth), Earth::id());
-    }
 
     #[test]
     fn test_grav_param() {
         assert_eq!(
-            gravitational_parameter(Earth),
-            Earth::gravitational_parameter()
+            gravitational_parameter(Jupiter),
+            Jupiter::gravitational_parameter()
         );
     }
 
     #[test]
     fn test_mean_radius() {
-        assert_eq!(mean_radius(Earth), Earth::mean_radius());
+        assert_eq!(mean_radius(Jupiter), Jupiter::mean_radius());
     }
 
     #[test]
     fn test_polar_radius() {
-        assert_eq!(polar_radius(Earth), Earth::polar_radius());
+        assert_eq!(polar_radius(Jupiter), Jupiter::polar_radius());
     }
 
     #[test]
     fn test_equatorial_radius() {
-        assert_eq!(equatorial_radius(Earth), Earth::equatorial_radius());
+        assert_eq!(equatorial_radius(Jupiter), Jupiter::equatorial_radius());
     }
 
     #[test]
@@ -244,10 +446,33 @@ mod tests {
         assert_eq!(along_orbit_radius(Moon), Moon::along_orbit_radius());
     }
 
-    // Jupiter is manually redefined here usings known data. This avoids a dependecy on the
+    // Jupiter is redefined here usings known data. This avoids a dependecy on the
     // correctness of the PCK parser to test RotationalElements.
-    #[derive(Copy, Clone)]
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     struct Jupiter;
+
+    impl NaifId for Jupiter {
+        const NAIF_ID: i32 = 599;
+    }
+
+    impl PointMass for Jupiter {
+        fn gravitational_parameter() -> f64 {
+            126686531.9003704f64
+        }
+    }
+    impl Ellipsoid for Jupiter {
+        fn polar_radius() -> f64 {
+            66854f64
+        }
+        fn mean_radius() -> f64 {
+            69946f64
+        }
+    }
+    impl Spheroid for Jupiter {
+        fn equatorial_radius() -> f64 {
+            71492f64
+        }
+    }
 
     impl RotationalElements for Jupiter {
         const NUTATION_PRECESSION_COEFFICIENTS: NutationPrecessionCoefficients = (
