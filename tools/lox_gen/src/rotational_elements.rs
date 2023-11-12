@@ -262,7 +262,12 @@ impl GetPolynomialCoefficients for CoefficientKernel<'_> {
                 }))
             }
             // Split the implicit pairs into two index-matched vecs.
-            Some(coefficients) => Ok(TokenizeableNutPrecCoefficients(unpair(coefficients))),
+            Some(coefficients) => {
+                let mut unpaired = unpair(coefficients);
+                unpaired.0.iter_mut().for_each(|c| *c = c.to_radians());
+                unpaired.1.iter_mut().for_each(|c| *c = c.to_radians());
+                Ok(TokenizeableNutPrecCoefficients(unpaired))
+            }
         }
     }
 }
