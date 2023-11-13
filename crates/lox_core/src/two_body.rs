@@ -104,10 +104,7 @@ impl<T: PointMass + Copy> TwoBody for Cartesian<T> {
     }
 }
 
-impl<T: PointMass> From<Keplerian<T>> for Cartesian<T>
-where
-    T: Copy,
-{
+impl<T: PointMass + Copy> From<Keplerian<T>> for Cartesian<T> {
     fn from(value: Keplerian<T>) -> Self {
         let epoch = value.epoch;
         let center = value.center;
@@ -224,8 +221,9 @@ impl<T: PointMass + Copy> From<Cartesian<T>> for Keplerian<T> {
 
 #[cfg(test)]
 mod tests {
-    use float_eq::assert_float_eq;
     use std::ops::Mul;
+
+    use float_eq::assert_float_eq;
 
     use crate::bodies::Earth;
     use crate::time::dates::{Date, Time};
