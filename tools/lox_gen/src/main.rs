@@ -46,27 +46,23 @@ pub fn main() {
         (
             "sun",
             Vec::from(SUN),
-            vec![naif_id, point_mass, spheroid, rotational_elements],
+            vec![point_mass, spheroid, rotational_elements],
         ),
-        (
-            "barycenters",
-            Vec::from(BARYCENTERS),
-            vec![naif_id, point_mass],
-        ),
+        ("barycenters", Vec::from(BARYCENTERS), vec![point_mass]),
         (
             "planets",
             Vec::from(PLANETS),
-            vec![naif_id, point_mass, spheroid, rotational_elements],
+            vec![point_mass, spheroid, rotational_elements],
         ),
         (
             "satellites",
             Vec::from(SATELLITES),
-            vec![naif_id, point_mass, tri_axial, rotational_elements],
+            vec![point_mass, tri_axial, rotational_elements],
         ),
         (
             "minor",
             Vec::from(MINOR_BODIES),
-            vec![naif_id, point_mass, tri_axial, rotational_elements],
+            vec![point_mass, tri_axial, rotational_elements],
         ),
     ];
     bodies
@@ -105,11 +101,6 @@ fn generate_code(bodies: &[Body], generators: &[Generator], data: &Data) -> Stri
 
     bodies.iter().for_each(|(id, name)| {
         let ident = format_ident!("{}", name);
-        code = quote! {
-            #code
-            #[derive(Debug, Clone, Copy, Eq, PartialEq)]
-            pub struct #ident;
-        };
         generators
             .iter()
             .for_each(|generator| generator(&mut imports, &mut code, &mut tests, &ident, id, data))
@@ -132,38 +123,6 @@ fn generate_code(bodies: &[Body], generators: &[Generator], data: &Data) -> Stri
     module.to_string()
 }
 
-fn naif_id(
-    imports: &mut HashSet<Ident>,
-    code: &mut TokenStream,
-    tests: &mut TokenStream,
-    ident: &Ident,
-    id: &i32,
-    _data: &Data,
-) {
-    imports.insert(format_ident!("NaifId"));
-
-    *code = quote! {
-        #code
-
-        impl NaifId for #ident {
-            fn id() -> i32 {
-                #id
-            }
-        }
-    };
-
-    let test_name = format_ident!("test_naif_id_{}", *id as u32);
-
-    *tests = quote! {
-        #tests
-
-        #[test]
-        fn #test_name() {
-            assert_eq!(#ident::id(), #id)
-        }
-    }
-}
-
 fn spheroid(
     imports: &mut HashSet<Ident>,
     code: &mut TokenStream,
@@ -172,8 +131,6 @@ fn spheroid(
     id: &i32,
     data: &Data,
 ) {
-    imports.extend([format_ident!("Ellipsoid"), format_ident!("Spheroid")]);
-
     let radii = format!("BODY{id}_RADII");
     if let Some(radii) = data.pck.get_double_array(&radii) {
         let equatorial = radii.first().expect("radius should be here");
@@ -210,7 +167,15 @@ fn spheroid(
                 assert_eq!(#ident::mean_radius(), #mean);
                 assert_eq!(#ident::equatorial_radius(), #equatorial);
             }
-        }
+        };
+
+        // Imports are added after any early returns or panics, guaranteeing that the trait is
+        // implemented for ident and avoiding unused imports.
+        imports.extend([
+            ident.clone(),
+            format_ident!("Ellipsoid"),
+            format_ident!("Spheroid"),
+        ]);
     }
 }
 
@@ -222,8 +187,6 @@ fn tri_axial(
     id: &i32,
     data: &Data,
 ) {
-    imports.extend([format_ident!("Ellipsoid"), format_ident!("TriAxial")]);
-
     let radii = format!("BODY{id}_RADII");
     if let Some(radii) = data.pck.get_double_array(&radii) {
         let subplanetary = radii.first().expect("radius should be here");
@@ -265,7 +228,15 @@ fn tri_axial(
                 assert_eq!(#ident::subplanetary_radius(), #subplanetary);
                 assert_eq!(#ident::along_orbit_radius(), #along_orbit);
             }
-        }
+        };
+
+        // Imports are added after any early returns or panics, guaranteeing that the trait is
+        // implemented for ident and avoiding unused imports.
+        imports.extend([
+            ident.clone(),
+            format_ident!("Ellipsoid"),
+            format_ident!("TriAxial"),
+        ]);
     }
 }
 
@@ -277,8 +248,6 @@ fn point_mass(
     id: &i32,
     data: &Data,
 ) {
-    imports.insert(format_ident!("PointMass"));
-
     let key = format!("BODY{id}_GM");
     if let Some(gm) = data.gm.get_double_array(&key) {
         let gm = gm.first().unwrap();
@@ -301,7 +270,11 @@ fn point_mass(
             fn #test_name() {
                 assert_eq!(#ident::gravitational_parameter(), #gm);
             }
-        }
+        };
+
+        // Imports are added after any early returns or panics, guaranteeing that the trait is
+        // implemented for ident and avoiding unused imports.
+        imports.extend([ident.clone(), format_ident!("PointMass")]);
     };
 }
 
@@ -320,7 +293,10 @@ fn rotational_elements(
         Err(err) => panic!("failed to parse rotational elements for {}: {}", ident, err),
     };
 
+    // Imports are added after any early returns or panics, guaranteeing that the trait is
+    // implemented for ident and avoiding unused imports.
     imports.extend([
+        ident.clone(),
         format_ident!("RotationalElements"),
         format_ident!("PolynomialCoefficients"),
         format_ident!("NutationPrecessionCoefficients"),

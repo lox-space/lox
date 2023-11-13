@@ -26,6 +26,7 @@ version = "0.1.0"
 dependencies = [
  "float_eq",
  "glam",
+ "nom",
  "num",
  "thiserror",
 ]
