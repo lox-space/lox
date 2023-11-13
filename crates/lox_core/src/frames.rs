@@ -15,7 +15,7 @@ pub mod iau;
 // TODO: Replace with proper `Epoch` type
 type Epoch = f64;
 
-pub trait ReferenceFrame: Copy {
+pub trait ReferenceFrame {
     fn is_inertial(&self) -> bool;
 
     fn is_rotating(&self) -> bool {

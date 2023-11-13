@@ -33,14 +33,14 @@ pub trait TwoBody {
 }
 
 #[derive(Debug, Clone)]
-pub struct Cartesian<T: PointMass> {
+pub struct Cartesian<T: PointMass + Copy> {
     epoch: Epoch,
     center: T,
     position: DVec3,
     velocity: DVec3,
 }
 
-impl<T: PointMass> Cartesian<T> {
+impl<T: PointMass + Copy> Cartesian<T> {
     pub fn new(epoch: Epoch, center: T, position: DVec3, velocity: DVec3) -> Self {
         Self {
             epoch,
@@ -51,7 +51,7 @@ impl<T: PointMass> Cartesian<T> {
     }
 }
 
-impl<T: PointMass> TwoBody for Cartesian<T> {
+impl<T: PointMass + Copy> TwoBody for Cartesian<T> {
     type Center = T;
 
     fn epoch(&self) -> Epoch {
@@ -104,7 +104,10 @@ impl<T: PointMass> TwoBody for Cartesian<T> {
     }
 }
 
-impl<T: PointMass> From<Keplerian<T>> for Cartesian<T> {
+impl<T: PointMass> From<Keplerian<T>> for Cartesian<T>
+where
+    T: Copy,
+{
     fn from(value: Keplerian<T>) -> Self {
         let epoch = value.epoch;
         let center = value.center;
@@ -114,7 +117,7 @@ impl<T: PointMass> From<Keplerian<T>> for Cartesian<T> {
 }
 
 #[derive(Debug, Clone)]
-pub struct Keplerian<T: PointMass> {
+pub struct Keplerian<T: PointMass + Copy> {
     epoch: Epoch,
     center: T,
     semi_major: f64,
@@ -125,7 +128,7 @@ pub struct Keplerian<T: PointMass> {
     true_anomaly: f64,
 }
 
-impl<T: PointMass> Keplerian<T> {
+impl<T: PointMass + Copy> Keplerian<T> {
     pub fn new(epoch: Epoch, center: T, elements: Elements) -> Self {
         let (semi_major, eccentricity, inclination, ascending_node, periapsis_arg, true_anomaly) =
             elements;
@@ -142,7 +145,7 @@ impl<T: PointMass> Keplerian<T> {
     }
 }
 
-impl<T: PointMass> TwoBody for Keplerian<T> {
+impl<T: PointMass + Copy> TwoBody for Keplerian<T> {
     type Center = T;
 
     fn epoch(&self) -> Epoch {
@@ -210,7 +213,7 @@ impl<T: PointMass> TwoBody for Keplerian<T> {
     }
 }
 
-impl<T: PointMass> From<Cartesian<T>> for Keplerian<T> {
+impl<T: PointMass + Copy> From<Cartesian<T>> for Keplerian<T> {
     fn from(value: Cartesian<T>) -> Self {
         let epoch = value.epoch;
         let center = value.center;

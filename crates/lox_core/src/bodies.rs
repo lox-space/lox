@@ -7,15 +7,26 @@
  */
 
 use std::f64::consts::PI;
+use std::fmt::{Display, Formatter};
 
 use crate::time::constants::f64::{SECONDS_PER_DAY, SECONDS_PER_JULIAN_CENTURY};
 
 mod generated;
 pub use generated::*;
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct NaifId(pub i32);
+
+impl Display for NaifId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 /// NaifId is implemented for all bodies.
-pub trait NaifId: Copy {
-    const ID: i32;
+pub trait Body {
+    fn id(&self) -> NaifId;
+    fn name(&self) -> &'static str;
 }
 
 /// Expands to derivations of the fundamental traits every body must implement.
@@ -24,8 +35,28 @@ macro_rules! body {
         #[derive(Clone, Copy, Debug, Eq, PartialEq)]
         pub struct $i;
 
-        impl NaifId for $i {
-            const ID: i32 = $naif_id;
+        impl Body for $i {
+            fn id(&self) -> NaifId {
+                NaifId($naif_id)
+            }
+
+            fn name(&self) -> &'static str {
+                stringify!($ident)
+            }
+        }
+    };
+    ($i:ident, $name:literal, $naif_id:literal) => {
+        #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+        pub struct $i;
+
+        impl Body for $i {
+            fn id(&self) -> NaifId {
+                NaifId($naif_id)
+            }
+
+            fn name(&self) -> &'static str {
+                $name
+            }
         }
     };
 }
@@ -45,16 +76,16 @@ body! { Neptune, 899 }
 body! { Pluto, 999 }
 
 // Barycenters.
-body! { SolarSystemBarycenter, 0 }
-body! { MercuryBarycenter, 1 }
-body! { VenusBarycenter, 2 }
-body! { EarthBarycenter, 3 }
-body! { MarsBarycenter, 4 }
-body! { JupiterBarycenter, 5 }
-body! { SaturnBarycenter, 6 }
-body! { UranusBarycenter, 7 }
-body! { NeptuneBarycenter, 8 }
-body! { PlutoBarycenter, 9 }
+body! { SolarSystemBarycenter, "Solar System Barycenter", 0 }
+body! { MercuryBarycenter, "Mercury Barycenter", 1 }
+body! { VenusBarycenter, "Venus Barycenter", 2 }
+body! { EarthBarycenter, "Earth Barycenter", 3 }
+body! { MarsBarycenter, "Mars Barycenter", 4 }
+body! { JupiterBarycenter, "Jupiter Barycenter", 5 }
+body! { SaturnBarycenter, "Saturn Barycenter", 6 }
+body! { UranusBarycenter, "Uranus Barycenter", 7 }
+body! { NeptuneBarycenter, "Neptune Barycenter", 8 }
+body! { PlutoBarycenter, "Pluto Barycenter", 9 }
 
 // Satellites.
 body! { Moon, 301 }
@@ -225,12 +256,226 @@ body! {Davida, 2000511 }
 body! {Mathilde, 2000253 }
 body! {Steins, 2002867 }
 body! {Braille, 2009969 }
-body! {WilsonHarrington, 2004015 }
+body! {WilsonHarrington, "Wilson-Harrington", 2004015 }
 body! {Toutatis, 2004179 }
 body! {Itokawa, 2025143 }
 body! {Bennu, 2101955 }
 
-pub trait Ellipsoid: NaifId {
+impl NaifId {
+    pub fn body(&self) -> Option<Box<dyn Body>> {
+        match self.0 {
+            10 => Some(Box::new(Sun)),
+
+            // Planets.
+            199 => Some(Box::new(Mercury)),
+            299 => Some(Box::new(Venus)),
+            399 => Some(Box::new(Earth)),
+            499 => Some(Box::new(Mars)),
+            599 => Some(Box::new(Jupiter)),
+            699 => Some(Box::new(Saturn)),
+            799 => Some(Box::new(Uranus)),
+            899 => Some(Box::new(Neptune)),
+            999 => Some(Box::new(Pluto)),
+
+            // Barycenters.
+            0 => Some(Box::new(SolarSystemBarycenter)),
+            1 => Some(Box::new(MercuryBarycenter)),
+            2 => Some(Box::new(VenusBarycenter)),
+            3 => Some(Box::new(EarthBarycenter)),
+            4 => Some(Box::new(MarsBarycenter)),
+            5 => Some(Box::new(JupiterBarycenter)),
+            6 => Some(Box::new(SaturnBarycenter)),
+            7 => Some(Box::new(UranusBarycenter)),
+            8 => Some(Box::new(NeptuneBarycenter)),
+            9 => Some(Box::new(PlutoBarycenter)),
+
+            // Satellites.
+            301 => Some(Box::new(Moon)),
+            401 => Some(Box::new(Phobos)),
+            402 => Some(Box::new(Deimos)),
+            501 => Some(Box::new(Io)),
+            502 => Some(Box::new(Europa)),
+            503 => Some(Box::new(Ganymede)),
+            504 => Some(Box::new(Callisto)),
+            505 => Some(Box::new(Amalthea)),
+            506 => Some(Box::new(Himalia)),
+            507 => Some(Box::new(Elara)),
+            508 => Some(Box::new(Pasiphae)),
+            509 => Some(Box::new(Sinope)),
+            510 => Some(Box::new(Lysithea)),
+            511 => Some(Box::new(Carme)),
+            512 => Some(Box::new(Ananke)),
+            513 => Some(Box::new(Leda)),
+            514 => Some(Box::new(Thebe)),
+            515 => Some(Box::new(Adrastea)),
+            516 => Some(Box::new(Metis)),
+            517 => Some(Box::new(Callirrhoe)),
+            518 => Some(Box::new(Themisto)),
+            519 => Some(Box::new(Magaclite)),
+            520 => Some(Box::new(Taygete)),
+            521 => Some(Box::new(Chaldene)),
+            522 => Some(Box::new(Harpalyke)),
+            523 => Some(Box::new(Kalyke)),
+            524 => Some(Box::new(Iocaste)),
+            525 => Some(Box::new(Erinome)),
+            526 => Some(Box::new(Isonoe)),
+            527 => Some(Box::new(Praxidike)),
+            528 => Some(Box::new(Autonoe)),
+            529 => Some(Box::new(Thyone)),
+            530 => Some(Box::new(Hermippe)),
+            531 => Some(Box::new(Aitne)),
+            532 => Some(Box::new(Eurydome)),
+            533 => Some(Box::new(Euanthe)),
+            534 => Some(Box::new(Euporie)),
+            535 => Some(Box::new(Orthosie)),
+            536 => Some(Box::new(Sponde)),
+            537 => Some(Box::new(Kale)),
+            538 => Some(Box::new(Pasithee)),
+            539 => Some(Box::new(Hegemone)),
+            540 => Some(Box::new(Mneme)),
+            541 => Some(Box::new(Aoede)),
+            542 => Some(Box::new(Thelxinoe)),
+            543 => Some(Box::new(Arche)),
+            544 => Some(Box::new(Kallichore)),
+            545 => Some(Box::new(Helike)),
+            546 => Some(Box::new(Carpo)),
+            547 => Some(Box::new(Eukelade)),
+            548 => Some(Box::new(Cyllene)),
+            549 => Some(Box::new(Kore)),
+            550 => Some(Box::new(Herse)),
+            553 => Some(Box::new(Dia)),
+            601 => Some(Box::new(Mimas)),
+            602 => Some(Box::new(Enceladus)),
+            603 => Some(Box::new(Tethys)),
+            604 => Some(Box::new(Dione)),
+            605 => Some(Box::new(Rhea)),
+            606 => Some(Box::new(Titan)),
+            607 => Some(Box::new(Hyperion)),
+            608 => Some(Box::new(Iapetus)),
+            609 => Some(Box::new(Phoebe)),
+            610 => Some(Box::new(Janus)),
+            611 => Some(Box::new(Epimetheus)),
+            612 => Some(Box::new(Helene)),
+            613 => Some(Box::new(Telesto)),
+            614 => Some(Box::new(Calypso)),
+            615 => Some(Box::new(Atlas)),
+            616 => Some(Box::new(Prometheus)),
+            617 => Some(Box::new(Pandora)),
+            618 => Some(Box::new(Pan)),
+            619 => Some(Box::new(Ymir)),
+            620 => Some(Box::new(Paaliaq)),
+            621 => Some(Box::new(Tarvos)),
+            622 => Some(Box::new(Ijiraq)),
+            623 => Some(Box::new(Suttungr)),
+            624 => Some(Box::new(Kiviuq)),
+            625 => Some(Box::new(Mundilfari)),
+            626 => Some(Box::new(Albiorix)),
+            627 => Some(Box::new(Skathi)),
+            628 => Some(Box::new(Erriapus)),
+            629 => Some(Box::new(Siarnaq)),
+            630 => Some(Box::new(Thrymr)),
+            631 => Some(Box::new(Narvi)),
+            632 => Some(Box::new(Methone)),
+            633 => Some(Box::new(Pallene)),
+            634 => Some(Box::new(Polydeuces)),
+            635 => Some(Box::new(Daphnis)),
+            636 => Some(Box::new(Aegir)),
+            637 => Some(Box::new(Bebhionn)),
+            638 => Some(Box::new(Bergelmir)),
+            639 => Some(Box::new(Bestla)),
+            640 => Some(Box::new(Farbauti)),
+            641 => Some(Box::new(Fenrir)),
+            642 => Some(Box::new(Fornjot)),
+            643 => Some(Box::new(Hati)),
+            644 => Some(Box::new(Hyrrokkin)),
+            645 => Some(Box::new(Kari)),
+            646 => Some(Box::new(Loge)),
+            647 => Some(Box::new(Skoll)),
+            648 => Some(Box::new(Surtur)),
+            649 => Some(Box::new(Anthe)),
+            650 => Some(Box::new(Jarnsaxa)),
+            651 => Some(Box::new(Greip)),
+            652 => Some(Box::new(Tarqeq)),
+            653 => Some(Box::new(Aegaeon)),
+            701 => Some(Box::new(Ariel)),
+            702 => Some(Box::new(Umbriel)),
+            703 => Some(Box::new(Titania)),
+            704 => Some(Box::new(Oberon)),
+            705 => Some(Box::new(Miranda)),
+            706 => Some(Box::new(Cordelia)),
+            707 => Some(Box::new(Ophelia)),
+            708 => Some(Box::new(Bianca)),
+            709 => Some(Box::new(Cressida)),
+            710 => Some(Box::new(Desdemona)),
+            711 => Some(Box::new(Juliet)),
+            712 => Some(Box::new(Portia)),
+            713 => Some(Box::new(Rosalind)),
+            714 => Some(Box::new(Belinda)),
+            715 => Some(Box::new(Puck)),
+            716 => Some(Box::new(Caliban)),
+            717 => Some(Box::new(Sycorax)),
+            718 => Some(Box::new(Prospero)),
+            719 => Some(Box::new(Setebos)),
+            720 => Some(Box::new(Stephano)),
+            721 => Some(Box::new(Trinculo)),
+            722 => Some(Box::new(Francisco)),
+            723 => Some(Box::new(Margaret)),
+            724 => Some(Box::new(Ferdinand)),
+            725 => Some(Box::new(Perdita)),
+            726 => Some(Box::new(Mab)),
+            727 => Some(Box::new(Cupid)),
+            801 => Some(Box::new(Triton)),
+            802 => Some(Box::new(Nereid)),
+            803 => Some(Box::new(Naiad)),
+            804 => Some(Box::new(Thalassa)),
+            805 => Some(Box::new(Despina)),
+            806 => Some(Box::new(Galatea)),
+            807 => Some(Box::new(Larissa)),
+            808 => Some(Box::new(Proteus)),
+            809 => Some(Box::new(Halimede)),
+            810 => Some(Box::new(Psamathe)),
+            811 => Some(Box::new(Sao)),
+            812 => Some(Box::new(Laomedeia)),
+            813 => Some(Box::new(Neso)),
+            901 => Some(Box::new(Charon)),
+            902 => Some(Box::new(Nix)),
+            903 => Some(Box::new(Hydra)),
+            904 => Some(Box::new(Kerberos)),
+            905 => Some(Box::new(Styx)),
+
+            // Minor bodies.
+            9511010 => Some(Box::new(Gaspra)),
+            2431010 => Some(Box::new(Ida)),
+            2431011 => Some(Box::new(Dactyl)),
+            2000001 => Some(Box::new(Ceres)),
+            2000002 => Some(Box::new(Pallas)),
+            2000004 => Some(Box::new(Vesta)),
+            2000016 => Some(Box::new(Psyche)),
+            2000021 => Some(Box::new(Lutetia)),
+            2000216 => Some(Box::new(Kleopatra)),
+            2000433 => Some(Box::new(Eros)),
+            2000511 => Some(Box::new(Davida)),
+            2000253 => Some(Box::new(Mathilde)),
+            2002867 => Some(Box::new(Steins)),
+            2009969 => Some(Box::new(Braille)),
+            2004015 => Some(Box::new(WilsonHarrington)),
+            2004179 => Some(Box::new(Toutatis)),
+            2025143 => Some(Box::new(Itokawa)),
+            2101955 => Some(Box::new(Bennu)),
+            _ => None,
+        }
+    }
+
+    pub fn name(&self) -> String {
+        if let Some(body) = self.body() {
+            body.name().to_string()
+        } else {
+            format!("Body {}", self.0)
+        }
+    }
+}
+
+pub trait Ellipsoid: Body {
     fn polar_radius() -> f64;
 
     fn mean_radius() -> f64;
@@ -266,7 +511,7 @@ pub fn along_orbit_radius<T: TriAxial>(_: T) -> f64 {
     <T as TriAxial>::along_orbit_radius()
 }
 
-pub trait PointMass: NaifId {
+pub trait PointMass: Body {
     fn gravitational_parameter() -> f64;
 }
 
@@ -280,7 +525,7 @@ pub type NutationPrecessionCoefficients = (&'static [f64], &'static [f64]);
 
 type Elements = (f64, f64, f64);
 
-pub trait RotationalElements: NaifId {
+pub trait RotationalElements: Body {
     const NUTATION_PRECESSION_COEFFICIENTS: NutationPrecessionCoefficients;
     const RIGHT_ASCENSION_COEFFICIENTS: PolynomialCoefficients;
     const DECLINATION_COEFFICIENTS: PolynomialCoefficients;
@@ -410,14 +655,20 @@ mod tests {
 
     use super::*;
 
-    // Jupiter is manually redefined here using known data. This avoids a dependecy on the
+    // Jupiter is manually redefined here using known data. This avoids a dependency on the
     // correctness of the PCK parser to test RotationalElements, and prevents compiler errors
     // when generated files are malformed or deleted in preparation for regeneration.
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     struct Jupiter;
 
-    impl NaifId for Jupiter {
-        const ID: i32 = 599;
+    impl Body for Jupiter {
+        fn id(&self) -> NaifId {
+            NaifId(599)
+        }
+
+        fn name(&self) -> &'static str {
+            "Jupiter"
+        }
     }
 
     impl PointMass for Jupiter {
@@ -425,6 +676,7 @@ mod tests {
             126686531.9003704f64
         }
     }
+
     impl Ellipsoid for Jupiter {
         fn polar_radius() -> f64 {
             66854f64
@@ -433,6 +685,7 @@ mod tests {
             69946f64
         }
     }
+
     impl Spheroid for Jupiter {
         fn equatorial_radius() -> f64 {
             71492f64
@@ -532,6 +785,17 @@ mod tests {
                 0f64,
             ],
         );
+    }
+
+    #[test]
+    fn test_naif_id() {
+        let id = NaifId(0);
+        let name = id.name();
+        assert_eq!(name, "Solar System Barycenter");
+
+        let id = NaifId(-42);
+        let name = id.name();
+        assert_eq!(name, "Body -42");
     }
 
     #[test]

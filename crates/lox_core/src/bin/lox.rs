@@ -6,9 +6,9 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-use lox_core::bodies::{MercuryBarycenter, NaifId};
+use lox_core::bodies::{Body, MercuryBarycenter};
 
 fn main() {
     println!("Hello LOX");
-    println!("{}", MercuryBarycenter::ID)
+    println!("{}", MercuryBarycenter.id())
 }
