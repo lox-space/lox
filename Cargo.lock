@@ -123,6 +123,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fast_polynomial"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "831e16abe0108eef0005da4a921664c9c15707301148c30ecfc5c9ae4b3fdeda"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
 name = "fastrand"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -336,6 +345,7 @@ name = "lox_core"
 version = "0.1.0"
 dependencies = [
  "divan",
+ "fast_polynomial",
  "float_eq",
  "glam",
  "nom",

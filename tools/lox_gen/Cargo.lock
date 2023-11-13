@@ -9,6 +9,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 
 [[package]]
+name = "fast_polynomial"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "831e16abe0108eef0005da4a921664c9c15707301148c30ecfc5c9ae4b3fdeda"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
 name = "float_eq"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -30,6 +39,7 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 name = "lox_core"
 version = "0.1.0"
 dependencies = [
+ "fast_polynomial",
  "float_eq",
  "glam",
  "nom",

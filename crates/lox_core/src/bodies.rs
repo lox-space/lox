@@ -13,6 +13,8 @@ use crate::time::constants::f64::{SECONDS_PER_DAY, SECONDS_PER_JULIAN_CENTURY};
 mod generated;
 pub use generated::*;
 
+pub mod fundamental;
+
 /// NaifId is implemented for all bodies.
 pub trait NaifId: Copy {
     const ID: i32;
