@@ -15,6 +15,7 @@ mod generated;
 pub use generated::*;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[repr(transparent)]
 pub struct NaifId(pub i32);
 
 impl Display for NaifId {
