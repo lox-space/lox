@@ -10,5 +10,5 @@ use lox_core::bodies::{MercuryBarycenter, NaifId};
 
 fn main() {
     println!("Hello LOX");
-    println!("{}", MercuryBarycenter::NAIF_ID)
+    println!("{}", MercuryBarycenter::ID)
 }

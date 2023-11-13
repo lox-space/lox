@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="CPP_MODULE" version="4">
+  <component name="NewModuleRootManager">
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/crates/lox_core/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/lox_core/src/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/lox_core/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/lox_io/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/lox_io/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/tools/lox_gen/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/lox-space/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/lox-space/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/lox_py/src" isTestSource="false" />
+      <excludeFolder url="file://$MODULE_DIR$/target" />
+      <excludeFolder url="file://$MODULE_DIR$/tools/lox_gen/target" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>
