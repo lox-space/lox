@@ -10,11 +10,8 @@ use std::f64::consts::PI;
 
 use crate::time::constants::f64::{SECONDS_PER_DAY, SECONDS_PER_JULIAN_CENTURY};
 
-pub mod barycenters;
-pub mod minor;
-pub mod planets;
-pub mod satellites;
-pub mod sun;
+mod generated;
+pub use generated::*;
 
 /// NaifId is implemented for all bodies.
 pub trait NaifId: Copy {
