@@ -3,7 +3,7 @@
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, you can obtain one at http://mozilla.org/MPL/2.0/.
+ * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
 use std::f64::consts::PI;
@@ -42,7 +42,13 @@ macro_rules! body {
             }
 
             fn name(&self) -> &'static str {
-                stringify!($ident)
+                stringify!($i)
+            }
+        }
+
+        impl Display for $i {
+            fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", self.name())
             }
         }
     };
@@ -57,6 +63,12 @@ macro_rules! body {
 
             fn name(&self) -> &'static str {
                 $name
+            }
+        }
+
+        impl Display for $i {
+            fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", self.name())
             }
         }
     };
@@ -659,18 +671,7 @@ mod tests {
     // Jupiter is manually redefined here using known data. This avoids a dependency on the
     // correctness of the PCK parser to test RotationalElements, and prevents compiler errors
     // when generated files are malformed or deleted in preparation for regeneration.
-    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-    struct Jupiter;
-
-    impl Body for Jupiter {
-        fn id(&self) -> NaifId {
-            NaifId(599)
-        }
-
-        fn name(&self) -> &'static str {
-            "Jupiter"
-        }
-    }
+    body! { Jupiter, 599 }
 
     impl PointMass for Jupiter {
         fn gravitational_parameter() -> f64 {
@@ -786,6 +787,23 @@ mod tests {
                 0f64,
             ],
         );
+    }
+
+    body! { Rupert, "Persephone/Rupert", 1099 }
+
+    #[test]
+    fn test_body() {
+        let body = Jupiter;
+        let id = body.id().0;
+        let name = body.name();
+        assert_eq!(id, 599);
+        assert_eq!(name, "Jupiter");
+
+        let body = Rupert;
+        let id = body.id().0;
+        let name = body.name();
+        assert_eq!(id, 1099);
+        assert_eq!(name, "Persephone/Rupert");
     }
 
     #[test]
