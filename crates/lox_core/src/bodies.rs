@@ -14,6 +14,8 @@ use crate::time::constants::f64::{SECONDS_PER_DAY, SECONDS_PER_JULIAN_CENTURY};
 mod generated;
 pub use generated::*;
 
+pub mod fundamental;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[repr(transparent)]
 pub struct NaifId(pub i32);
