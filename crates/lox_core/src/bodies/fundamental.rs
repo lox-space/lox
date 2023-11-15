@@ -16,15 +16,15 @@ use super::{Earth, Jupiter, Mars, Mercury, Moon, Neptune, Saturn, Sun, Uranus, V
 type Radians = f64;
 
 /// Strictly TDB, TT is sufficient for most applications.
-type TDBJulianCenturiesSinceJ2000_0 = f64;
+type TDBJulianCenturiesSinceJ2000 = f64;
 
 /// General accumulated precession in longitude.
-pub fn general_accum_precession_in_longitude(t: TDBJulianCenturiesSinceJ2000_0) -> Radians {
+pub fn general_accum_precession_in_longitude(t: TDBJulianCenturiesSinceJ2000) -> Radians {
     fast_polynomial::poly_array(t, &[0.0, 0.024381750, 0.00000538691])
 }
 
 /// Mean elongation of the Moon from the Sun.
-pub fn mean_moon_sun_elongation(t: TDBJulianCenturiesSinceJ2000_0) -> Radians {
+pub fn mean_moon_sun_elongation(t: TDBJulianCenturiesSinceJ2000) -> Radians {
     let arcsec: f64 = fast_polynomial::poly_array(
         t,
         &[
@@ -39,11 +39,11 @@ pub fn mean_moon_sun_elongation(t: TDBJulianCenturiesSinceJ2000_0) -> Radians {
 }
 
 pub trait MeanAnomaly {
-    fn mean_anomaly(&self, t: TDBJulianCenturiesSinceJ2000_0) -> Radians;
+    fn mean_anomaly(&self, t: TDBJulianCenturiesSinceJ2000) -> Radians;
 }
 
 impl MeanAnomaly for Sun {
-    fn mean_anomaly(&self, t: TDBJulianCenturiesSinceJ2000_0) -> Radians {
+    fn mean_anomaly(&self, t: TDBJulianCenturiesSinceJ2000) -> Radians {
         let arcsec: f64 = fast_polynomial::poly_array(
             t,
             &[
@@ -59,7 +59,7 @@ impl MeanAnomaly for Sun {
 }
 
 impl MeanAnomaly for Moon {
-    fn mean_anomaly(&self, t: TDBJulianCenturiesSinceJ2000_0) -> Radians {
+    fn mean_anomaly(&self, t: TDBJulianCenturiesSinceJ2000) -> Radians {
         let arcsec: f64 = fast_polynomial::poly_array(
             t,
             &[
@@ -78,7 +78,7 @@ impl Moon {
     /// Mean longitude of the Moon minus the mean longitude of the Moon's ascending node.
     pub fn mean_longitude_minus_ascending_node_mean_longitude(
         &self,
-        t: TDBJulianCenturiesSinceJ2000_0,
+        t: TDBJulianCenturiesSinceJ2000,
     ) -> Radians {
         let arcsec = fast_polynomial::poly_array(
             t,
@@ -93,7 +93,7 @@ impl Moon {
         arcsec_to_rad_wrapping(arcsec)
     }
 
-    pub fn ascending_node_mean_longitude(&self, t: TDBJulianCenturiesSinceJ2000_0) -> Radians {
+    pub fn ascending_node_mean_longitude(&self, t: TDBJulianCenturiesSinceJ2000) -> Radians {
         let arcsec = fast_polynomial::poly_array(
             t,
             &[450160.398036, -6962890.5431, 7.4722, 0.007702, -0.00005939],
@@ -103,61 +103,61 @@ impl Moon {
 }
 
 pub trait MeanLongitude {
-    fn mean_longitude(&self, t: TDBJulianCenturiesSinceJ2000_0) -> Radians;
+    fn mean_longitude(&self, t: TDBJulianCenturiesSinceJ2000) -> Radians;
 }
 
 impl MeanLongitude for Mercury {
     #[inline]
-    fn mean_longitude(&self, t: TDBJulianCenturiesSinceJ2000_0) -> Radians {
+    fn mean_longitude(&self, t: TDBJulianCenturiesSinceJ2000) -> Radians {
         (4.402608842 + 2608.7903141574 * t) % TAU
     }
 }
 
 impl MeanLongitude for Venus {
     #[inline]
-    fn mean_longitude(&self, t: TDBJulianCenturiesSinceJ2000_0) -> Radians {
+    fn mean_longitude(&self, t: TDBJulianCenturiesSinceJ2000) -> Radians {
         (3.176146697 + 1021.3285546211 * t) % TAU
     }
 }
 
 impl MeanLongitude for Earth {
     #[inline]
-    fn mean_longitude(&self, t: TDBJulianCenturiesSinceJ2000_0) -> Radians {
+    fn mean_longitude(&self, t: TDBJulianCenturiesSinceJ2000) -> Radians {
         (1.753470314 + 628.3075849991 * t) % TAU
     }
 }
 
 impl MeanLongitude for Mars {
     #[inline]
-    fn mean_longitude(&self, t: TDBJulianCenturiesSinceJ2000_0) -> Radians {
+    fn mean_longitude(&self, t: TDBJulianCenturiesSinceJ2000) -> Radians {
         (6.203480913 + 334.0612426700 * t) % TAU
     }
 }
 
 impl MeanLongitude for Jupiter {
     #[inline]
-    fn mean_longitude(&self, t: TDBJulianCenturiesSinceJ2000_0) -> Radians {
+    fn mean_longitude(&self, t: TDBJulianCenturiesSinceJ2000) -> Radians {
         (0.599546497 + 52.9690962641 * t) % TAU
     }
 }
 
 impl MeanLongitude for Saturn {
     #[inline]
-    fn mean_longitude(&self, t: TDBJulianCenturiesSinceJ2000_0) -> Radians {
+    fn mean_longitude(&self, t: TDBJulianCenturiesSinceJ2000) -> Radians {
         (0.874016757 + 21.3299104960 * t) % TAU
     }
 }
 
 impl MeanLongitude for Neptune {
     #[inline]
-    fn mean_longitude(&self, t: TDBJulianCenturiesSinceJ2000_0) -> Radians {
+    fn mean_longitude(&self, t: TDBJulianCenturiesSinceJ2000) -> Radians {
         (5.311886287 + 3.8133035638 * t) % TAU
     }
 }
 
 impl MeanLongitude for Uranus {
     #[inline]
-    fn mean_longitude(&self, t: TDBJulianCenturiesSinceJ2000_0) -> Radians {
+    fn mean_longitude(&self, t: TDBJulianCenturiesSinceJ2000) -> Radians {
         (5.481293872 + 7.4781598567 * t) % TAU
     }
 }
@@ -191,9 +191,9 @@ mod tests {
     const THRESHOLD: f64 = 1e-11;
 
     // Test cases for t.
-    const T_ZERO: TDBJulianCenturiesSinceJ2000_0 = 0.0;
-    const T_POSITIVE: TDBJulianCenturiesSinceJ2000_0 = 1.23456789;
-    const T_NEGATIVE: TDBJulianCenturiesSinceJ2000_0 = -1.23456789;
+    const T_ZERO: TDBJulianCenturiesSinceJ2000 = 0.0;
+    const T_POSITIVE: TDBJulianCenturiesSinceJ2000 = 1.23456789;
+    const T_NEGATIVE: TDBJulianCenturiesSinceJ2000 = -1.23456789;
 
     #[test]
     fn test_general_accum_precession_in_longitude() {
