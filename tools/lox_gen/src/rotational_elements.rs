@@ -3,16 +3,17 @@
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote, ToTokens};
 use thiserror::Error;
 
+use lox_core::bodies::NaifId;
 use lox_io::spice::Kernel;
 
-use crate::naif_ids::is_planet;
+use crate::bodies::PLANETS;
 
 /// Converts [lox_core::bodies::PolynomialCoefficients] into a TokenStream.
 pub struct TokenizeablePolynomialCoefficients(f64, f64, f64, Vec<f64>);
@@ -219,6 +220,12 @@ impl PolynomialCoefficientType {
     }
 }
 
+fn is_planet(id: u32) -> bool {
+    PLANETS
+        .iter()
+        .any(|planet| planet.id() == NaifId(id as i32))
+}
+
 impl GetPolynomialCoefficients for CoefficientKernel<'_> {
     fn get_right_ascension_coefficients_or_default(
         &self,
@@ -245,7 +252,7 @@ impl GetPolynomialCoefficients for CoefficientKernel<'_> {
         &self,
         id: u32,
     ) -> Result<TokenizeableNutPrecCoefficients, Box<CoefficientsError>> {
-        if !is_planet(id as i32) {
+        if !is_planet(id) {
             return Ok(TokenizeableNutPrecCoefficients::default());
         }
 
