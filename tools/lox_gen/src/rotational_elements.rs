@@ -10,7 +10,10 @@ use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote, ToTokens};
 use thiserror::Error;
 
+use lox_core::bodies::NaifId;
 use lox_io::spice::Kernel;
+
+use crate::bodies::PLANETS;
 
 /// Converts [lox_core::bodies::PolynomialCoefficients] into a TokenStream.
 pub struct TokenizeablePolynomialCoefficients(f64, f64, f64, Vec<f64>);
@@ -218,7 +221,9 @@ impl PolynomialCoefficientType {
 }
 
 fn is_planet(id: u32) -> bool {
-    id.to_string().ends_with("99")
+    PLANETS
+        .iter()
+        .any(|planet| planet.id() == NaifId(id as i32))
 }
 
 impl GetPolynomialCoefficients for CoefficientKernel<'_> {
