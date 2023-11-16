@@ -9,11 +9,11 @@
 //! Functions for calculating fundamental astronomical parameters as specified by IERS Conventions
 //! (2003).
 
+use crate::math::{arcsec_to_rad, arcsec_to_rad_two_pi, normalize_two_pi};
+use crate::types::Radians;
 use std::f64::consts::TAU;
 
 use super::{Earth, Jupiter, Mars, Mercury, Moon, Neptune, Saturn, Sun, Uranus, Venus};
-
-type Radians = f64;
 
 /// Strictly TDB, TT is sufficient for most applications.
 type TDBJulianCenturiesSinceJ2000 = f64;
@@ -35,7 +35,7 @@ pub fn mean_moon_sun_elongation(t: TDBJulianCenturiesSinceJ2000) -> Radians {
             -0.00003169,
         ],
     );
-    arcsec_to_rad_wrapping(arcsec)
+    arcsec_to_rad_two_pi(arcsec)
 }
 
 pub trait MeanAnomaly {
@@ -54,7 +54,7 @@ impl MeanAnomaly for Sun {
                 -0.00001149,
             ],
         );
-        arcsec_to_rad_wrapping(arcsec)
+        arcsec_to_rad_two_pi(arcsec)
     }
 }
 
@@ -70,7 +70,7 @@ impl MeanAnomaly for Moon {
                 -0.00024470,
             ],
         );
-        arcsec_to_rad_wrapping(arcsec)
+        arcsec_to_rad_two_pi(arcsec)
     }
 }
 
@@ -90,7 +90,7 @@ impl Moon {
                 0.00000417,
             ],
         );
-        arcsec_to_rad_wrapping(arcsec)
+        arcsec_to_rad_two_pi(arcsec)
     }
 
     pub fn ascending_node_mean_longitude(&self, t: TDBJulianCenturiesSinceJ2000) -> Radians {
@@ -98,7 +98,7 @@ impl Moon {
             t,
             &[450160.398036, -6962890.5431, 7.4722, 0.007702, -0.00005939],
         );
-        arcsec_to_rad_wrapping(arcsec)
+        arcsec_to_rad_two_pi(arcsec)
     }
 }
 
@@ -160,20 +160,6 @@ impl MeanLongitude for Uranus {
     fn mean_longitude(&self, t: TDBJulianCenturiesSinceJ2000) -> Radians {
         (5.481293872 + 7.4781598567 * t) % TAU
     }
-}
-
-const ARCSECONDS_IN_CIRCLE: f64 = 360.0 * 60.0 * 60.0;
-
-const RADIANS_IN_ARCSECOND: Radians = TAU / ARCSECONDS_IN_CIRCLE;
-
-#[inline]
-fn arcsec_to_rad_wrapping(arcsec: f64) -> Radians {
-    arcsec_to_rad(arcsec % ARCSECONDS_IN_CIRCLE)
-}
-
-#[inline]
-fn arcsec_to_rad(arcsec: f64) -> Radians {
-    arcsec * RADIANS_IN_ARCSECOND
 }
 
 #[cfg(test)]

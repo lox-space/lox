@@ -15,6 +15,7 @@ mod generated;
 pub use generated::*;
 
 pub mod fundamental;
+pub mod nutation;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[repr(transparent)]
