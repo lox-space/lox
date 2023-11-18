@@ -9,14 +9,13 @@
 //! Functions for calculating fundamental astronomical parameters as specified by IERS Conventions
 //! (2003).
 
-use crate::math::{arcsec_to_rad, arcsec_to_rad_two_pi, normalize_two_pi};
-use crate::types::Radians;
 use std::f64::consts::TAU;
 
-use super::{Earth, Jupiter, Mars, Mercury, Moon, Neptune, Saturn, Sun, Uranus, Venus};
+use crate::math::arcsec_to_rad_two_pi;
+use crate::time::intervals::TDBJulianCenturiesSinceJ2000;
+use crate::types::Radians;
 
-/// Strictly TDB, TT is sufficient for most applications.
-type TDBJulianCenturiesSinceJ2000 = f64;
+use super::{Earth, Jupiter, Mars, Mercury, Moon, Neptune, Saturn, Sun, Uranus, Venus};
 
 /// General accumulated precession in longitude.
 pub fn general_accum_precession_in_longitude(t: TDBJulianCenturiesSinceJ2000) -> Radians {

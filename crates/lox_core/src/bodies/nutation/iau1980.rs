@@ -1,11 +1,13 @@
-use crate::bodies::fundamental::mean_moon_sun_elongation;
-use crate::bodies::nutation::{Coefficients, JulianInterval, Nutation};
-use crate::bodies::Moon;
-use crate::math::{arcsec_to_rad, milliarcsec_to_rad, normalize_two_pi};
-use crate::types::{Arcsec, Radians};
 use std::f64::consts::TAU;
 
-pub(crate) fn nutation_iau1980(t: JulianInterval) -> Nutation {
+use crate::bodies::fundamental::mean_moon_sun_elongation;
+use crate::bodies::nutation::{Coefficients, Nutation};
+use crate::bodies::Moon;
+use crate::math::{arcsec_to_rad, milliarcsec_to_rad, normalize_two_pi};
+use crate::time::intervals::TDBJulianCenturiesSinceJ2000;
+use crate::types::{Arcsec, Radians};
+
+pub(crate) fn nutation_iau1980(t: TDBJulianCenturiesSinceJ2000) -> Nutation {
     let l = l(t);
     let lp = l_prime(t);
     let f = f(t);
@@ -35,7 +37,7 @@ pub(crate) fn nutation_iau1980(t: JulianInterval) -> Nutation {
 
 /// `l`, the mean longitude of the Moon measured from the mean position of the perigee,
 /// normalized to the range [0, 2π).
-fn l(t: JulianInterval) -> Radians {
+fn l(t: TDBJulianCenturiesSinceJ2000) -> Radians {
     let l_poly: Arcsec = fast_polynomial::poly_array(t, &[485866.733, 715922.633, 31.31, 0.064]);
     let l_poly: Radians = arcsec_to_rad(l_poly);
     let l_non_normal = l_poly + (1325.0 * t % 1.0) * TAU;
@@ -44,7 +46,7 @@ fn l(t: JulianInterval) -> Radians {
 
 /// `l'`, the mean longitude of the Sun measured from the mean position of the perigee,
 /// normalized to the range [0, 2π).
-fn l_prime(t: JulianInterval) -> Radians {
+fn l_prime(t: TDBJulianCenturiesSinceJ2000) -> Radians {
     let lp_poly: Arcsec = fast_polynomial::poly_array(t, &[485866.733, 715922.633, 31.31, 0.064]);
     let lp_poly: Radians = arcsec_to_rad(lp_poly);
     let lp_non_normal = lp_poly + (1325.0 * t % 1.0) * TAU;
@@ -53,22 +55,20 @@ fn l_prime(t: JulianInterval) -> Radians {
 
 /// `F`, the mean longitude of the Moon minus the mean longitude of the Moon's ascending node,
 /// normalized to the range [0, 2π).
-fn f(t: JulianInterval) -> Radians {
-    // Question: is JulianInterval == TDBCenturiesSinceJ2000 (the argument type of the method call
-    // below)? Seems to be used interchangeably by ERFA in this instance.
+fn f(t: TDBJulianCenturiesSinceJ2000) -> Radians {
     let f_non_normal = Moon.mean_longitude_minus_ascending_node_mean_longitude(t);
     normalize_two_pi(f_non_normal, 0.0)
 }
 
 /// `D`, the mean elongation of the Moon from the Sun, normalized to the range [0, 2π).
-fn d(t: JulianInterval) -> Radians {
+fn d(t: TDBJulianCenturiesSinceJ2000) -> Radians {
     let d_non_normal = mean_moon_sun_elongation(t);
     normalize_two_pi(d_non_normal, 0.0)
 }
 
 /// `Ω`, the longitude of the mean ascending node of the lunar orbit on the ecliptic, measured from
 /// the mean equinox of date.
-fn omega(t: JulianInterval) -> Radians {
+fn omega(t: TDBJulianCenturiesSinceJ2000) -> Radians {
     let om_poly: Arcsec = fast_polynomial::poly_array(t, &[450160.280, -482890.539, 7.455, 0.008]);
     let om_poly: Radians = arcsec_to_rad(om_poly);
     let om_non_normal = om_poly + (-5.0 * t % 1.0) * TAU;
@@ -184,3 +184,21 @@ const COEFFICIENTS: [Coefficients; 106] = [
     Coefficients{ l: 0.0,	lp: 0.0,	f: 2.0,	d: 4.0,	om: 2.0,	long_sin_1:     -1.0,	long_sin_t:   0.0,	obl_cos_1:     0.0,	obl_cos_t:  0.0 },
     Coefficients{ l: 0.0,	lp: 1.0,	f: 0.0,	d: 1.0,	om: 0.0,	long_sin_1:      1.0,	long_sin_t:   0.0,	obl_cos_1:     0.0,	obl_cos_t:  0.0 },
 ];
+
+#[cfg(test)]
+mod tests {
+    use crate::time::intervals::TDBJulianCenturiesSinceJ2000;
+    use float_eq::assert_float_eq;
+
+    use super::nutation_iau1980;
+
+    const TOLERANCE: f64 = 1e-12;
+
+    #[test]
+    fn test_nutation_iau1980() {
+        let t: TDBJulianCenturiesSinceJ2000 = 0.0;
+        let actual = nutation_iau1980(t);
+        assert_float_eq!(0.000006934047787, actual.longitude, rel <= TOLERANCE);
+        assert_float_eq!(0.000041312550614, actual.obliquity, rel <= TOLERANCE);
+    }
+}

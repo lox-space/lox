@@ -1,5 +1,6 @@
 use crate::bodies::nutation::iau1980::nutation_iau1980;
 use crate::time::epochs::Epoch;
+use crate::time::intervals::{tdb_julian_centuries_since_j2000, TDBJulianCenturiesSinceJ2000};
 use crate::types::Radians;
 
 mod iau1980;
@@ -11,20 +12,13 @@ pub enum Model {
     IAU2006A,
 }
 
+/// Nutation components with respect to some ecliptic of date.
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct Nutation {
     /// δψ
     pub longitude: Radians,
     /// δε
     pub obliquity: Radians,
-}
-
-impl Default for Nutation {
-    fn default() -> Self {
-        Self {
-            longitude: 0.0,
-            obliquity: 0.0,
-        }
-    }
 }
 
 struct Coefficients {
@@ -46,13 +40,10 @@ struct Coefficients {
     obl_cos_t: f64,
 }
 
-/// The interval between J2000 and a given Julian date.
-pub type JulianInterval = f64;
-
 pub fn nutation(model: Model, epoch: Epoch) -> Nutation {
     // TODO: This call is placeholder. We need to ensure correct calculation of the Julian interval
     // from the epoch.
-    let t: JulianInterval = epoch.j2000();
+    let t = tdb_julian_centuries_since_j2000(epoch);
     match model {
         Model::IAU1980 => nutation_iau1980(t),
         Model::IAU2000A => nutation_iau2000a(t),
@@ -61,14 +52,14 @@ pub fn nutation(model: Model, epoch: Epoch) -> Nutation {
     }
 }
 
-fn nutation_iau2000a(t: JulianInterval) -> Nutation {
+fn nutation_iau2000a(t: TDBJulianCenturiesSinceJ2000) -> Nutation {
     todo!()
 }
 
-fn nutation_iau2000b(t: JulianInterval) -> Nutation {
+fn nutation_iau2000b(t: TDBJulianCenturiesSinceJ2000) -> Nutation {
     todo!()
 }
 
-fn nutation_iau2006a(t: JulianInterval) -> Nutation {
+fn nutation_iau2006a(t: TDBJulianCenturiesSinceJ2000) -> Nutation {
     todo!()
 }

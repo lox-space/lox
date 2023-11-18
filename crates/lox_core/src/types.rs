@@ -1,4 +1,4 @@
-///! Contains common types and aliases useful in many parts of the library.
+/// Contains common types and aliases useful in many parts of the library.
 
 pub type MilliArcsec = f64;
 

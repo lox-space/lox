@@ -348,6 +348,7 @@ dependencies = [
  "fast_polynomial",
  "float_eq",
  "glam",
+ "lazy_static",
  "nom",
  "num",
  "proptest",

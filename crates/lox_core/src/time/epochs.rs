@@ -6,12 +6,12 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use num::ToPrimitive;
 use std::fmt;
 use std::fmt::Formatter;
 
 use crate::time::constants;
 use crate::time::constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HOUR, SECONDS_PER_MINUTE};
-use num::ToPrimitive;
 
 use crate::time::dates::{Date, DateTime, Time};
 
@@ -38,7 +38,7 @@ impl fmt::Display for TimeScale {
     }
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
 pub struct RawEpoch {
     second: i64,
     attosecond: i64,
@@ -97,8 +97,7 @@ impl Epoch {
 
     pub fn j2000(&self) -> f64 {
         let d1 = self.second().to_f64().unwrap_or_default() / constants::f64::SECONDS_PER_DAY;
-        let d2 =
-            self.attosecond().to_f64().unwrap_or_default() / 1e18 / constants::f64::SECONDS_PER_DAY;
+        let d2 = self.attosecond().to_f64().unwrap() / constants::f64::ATTOSECONDS_PER_DAY;
         d2 + d1
     }
 }

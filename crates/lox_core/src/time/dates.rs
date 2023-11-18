@@ -18,10 +18,10 @@ pub enum Calendar {
 
 #[derive(Debug, Copy, Clone)]
 pub struct Date {
-    calendar: Calendar,
-    year: i64,
-    month: i64,
-    day: i64,
+    pub calendar: Calendar,
+    pub year: i64,
+    pub month: i64,
+    pub day: i64,
 }
 
 const LAST_PROLEPTIC_JULIAN_DAY_J2K: i64 = -730122;
@@ -200,6 +200,10 @@ pub struct DateTime {
 }
 
 impl DateTime {
+    pub fn new(date: Date, time: Time) -> Self {
+        Self { date, time }
+    }
+
     pub fn date(&self) -> Date {
         self.date
     }
