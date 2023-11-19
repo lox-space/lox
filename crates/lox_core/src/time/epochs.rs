@@ -133,11 +133,107 @@ mod tests {
 
     #[test]
     fn test_epoch_j2000() {
-        let expected = Epoch::TT(RawEpoch {
-            second: 0,
-            attosecond: 0,
+        [
+            (
+                TimeScale::TAI,
+                Epoch::TAI(RawEpoch {
+                    second: 0,
+                    attosecond: 0,
+                }),
+            ),
+            (
+                TimeScale::TCB,
+                Epoch::TCB(RawEpoch {
+                    second: 0,
+                    attosecond: 0,
+                }),
+            ),
+            (
+                TimeScale::TCG,
+                Epoch::TCG(RawEpoch {
+                    second: 0,
+                    attosecond: 0,
+                }),
+            ),
+            (
+                TimeScale::TDB,
+                Epoch::TDB(RawEpoch {
+                    second: 0,
+                    attosecond: 0,
+                }),
+            ),
+            (
+                TimeScale::TT,
+                Epoch::TT(RawEpoch {
+                    second: 0,
+                    attosecond: 0,
+                }),
+            ),
+            (
+                TimeScale::UT1,
+                Epoch::UT1(RawEpoch {
+                    second: 0,
+                    attosecond: 0,
+                }),
+            ),
+        ]
+        .iter()
+        .for_each(|(scale, expected)| {
+            let actual = Epoch::j2000(*scale);
+            assert_eq!(*expected, actual);
         });
-        let actual = Epoch::j2000(TimeScale::TT);
-        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_epoch_jd0() {
+        [
+            (
+                TimeScale::TAI,
+                Epoch::TAI(RawEpoch {
+                    second: -211813488000,
+                    attosecond: 0,
+                }),
+            ),
+            (
+                TimeScale::TCB,
+                Epoch::TCB(RawEpoch {
+                    second: -211813488000,
+                    attosecond: 0,
+                }),
+            ),
+            (
+                TimeScale::TCG,
+                Epoch::TCG(RawEpoch {
+                    second: -211813488000,
+                    attosecond: 0,
+                }),
+            ),
+            (
+                TimeScale::TDB,
+                Epoch::TDB(RawEpoch {
+                    second: -211813488000,
+                    attosecond: 0,
+                }),
+            ),
+            (
+                TimeScale::TT,
+                Epoch::TT(RawEpoch {
+                    second: -211813488000,
+                    attosecond: 0,
+                }),
+            ),
+            (
+                TimeScale::UT1,
+                Epoch::UT1(RawEpoch {
+                    second: -211813488000,
+                    attosecond: 0,
+                }),
+            ),
+        ]
+        .iter()
+        .for_each(|(scale, expected)| {
+            let actual = Epoch::jd0(*scale);
+            assert_eq!(*expected, actual);
+        });
     }
 }
