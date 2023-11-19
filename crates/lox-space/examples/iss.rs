@@ -16,7 +16,7 @@ fn main() {
     let velocity = DVec3::new(-660.415582, 5495.938726, -5303.093233) * 1e-3;
     let iss = Cartesian::new(epoch, Earth, position, velocity);
 
-    println!("ISS Orbit for Julian Day {}", iss.epoch().j2000());
+    println!("ISS Orbit for Julian Day {}", iss.epoch().days_since_j2000());
     println!("=============================");
     println!("Semi-major axis: {:.3} km", iss.semi_major());
     println!("Eccentricity: {:.6}", iss.eccentricity());

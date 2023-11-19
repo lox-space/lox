@@ -170,7 +170,7 @@ mod tests {
 
     // Note that all expected values are outputs from the equivalent ERFA functions.
 
-    // Relative error TOLERANCE for float_eq assertions.
+    // Relative error tolerance for float_eq assertions.
     // This is somewhat loose, being based on observations of how closely our implementations
     // match ERFA outputs rather than any target TOLERANCE.
     const TOLERANCE: f64 = 1e-11;
