@@ -214,7 +214,7 @@ impl DateTime {
     pub fn new(date: Date, time: Time) -> Self {
         Self { date, time }
     }
-
+    
     pub fn date(&self) -> Date {
         self.date
     }

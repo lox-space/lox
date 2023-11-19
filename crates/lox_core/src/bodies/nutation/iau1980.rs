@@ -1,9 +1,7 @@
 use std::f64::consts::TAU;
 
-use crate::bodies::fundamental::mean_moon_sun_elongation;
-use crate::bodies::nutation::{Coefficients, Nutation};
-use crate::bodies::Moon;
-use crate::math::{arcsec_to_rad, milliarcsec_to_rad, normalize_two_pi};
+use crate::bodies::nutation::{point1_milliarcsec_to_rad, Coefficients, Nutation};
+use crate::math::{arcsec_to_rad, normalize_two_pi};
 use crate::time::intervals::TDBJulianCenturiesSinceJ2000;
 use crate::types::{Arcsec, Radians};
 
@@ -11,14 +9,17 @@ pub(crate) fn nutation_iau1980(t: TDBJulianCenturiesSinceJ2000) -> Nutation {
     let l = l(t);
     let lp = l_prime(t);
     let f = f(t);
+    let d = d(t);
     let om = omega(t);
 
     let mut nutation = COEFFICIENTS
         .iter()
-        .rev() // What's the best way of articulating why this is reversed in a comment?
+        // The coefficients are given by descending magnitude but folded by ascending
+        // magnitude to minimise floating-point errors.
+        .rev()
         .fold(Nutation::default(), |mut nut, coeff| {
             // Form argument for current term.
-            let arg = coeff.l * l + coeff.lp * lp + coeff.f * f + coeff.d * d(t) + coeff.om * om;
+            let arg = coeff.l * l + coeff.lp * lp + coeff.f * f + coeff.d * d + coeff.om * om;
 
             // Accumulate current term.
             let sin = coeff.long_sin_1 + coeff.long_sin_t * t;
@@ -29,8 +30,8 @@ pub(crate) fn nutation_iau1980(t: TDBJulianCenturiesSinceJ2000) -> Nutation {
             nut
         });
 
-    nutation.longitude = milliarcsec_to_rad(nutation.longitude);
-    nutation.obliquity = milliarcsec_to_rad(nutation.obliquity);
+    nutation.longitude = point1_milliarcsec_to_rad(nutation.longitude);
+    nutation.obliquity = point1_milliarcsec_to_rad(nutation.obliquity);
 
     nutation
 }
@@ -47,22 +48,27 @@ fn l(t: TDBJulianCenturiesSinceJ2000) -> Radians {
 /// `l'`, the mean longitude of the Sun measured from the mean position of the perigee,
 /// normalized to the range [0, 2π).
 fn l_prime(t: TDBJulianCenturiesSinceJ2000) -> Radians {
-    let lp_poly: Arcsec = fast_polynomial::poly_array(t, &[485866.733, 715922.633, 31.31, 0.064]);
+    let lp_poly: Arcsec =
+        fast_polynomial::poly_array(t, &[1287099.804, 1292581.224, -0.577, -0.012]);
     let lp_poly: Radians = arcsec_to_rad(lp_poly);
-    let lp_non_normal = lp_poly + (1325.0 * t % 1.0) * TAU;
+    let lp_non_normal = lp_poly + (99.0 * t % 1.0) * TAU;
     normalize_two_pi(lp_non_normal, 0.0)
 }
 
 /// `F`, the mean longitude of the Moon minus the mean longitude of the Moon's ascending node,
 /// normalized to the range [0, 2π).
 fn f(t: TDBJulianCenturiesSinceJ2000) -> Radians {
-    let f_non_normal = Moon.mean_longitude_minus_ascending_node_mean_longitude(t);
+    let f_poly: Arcsec = fast_polynomial::poly_array(t, &[335778.877, 295263.137, -13.257, 0.011]);
+    let f_poly: Radians = arcsec_to_rad(f_poly);
+    let f_non_normal = f_poly + (1342.0 * t % 1.0) * TAU;
     normalize_two_pi(f_non_normal, 0.0)
 }
 
 /// `D`, the mean elongation of the Moon from the Sun, normalized to the range [0, 2π).
 fn d(t: TDBJulianCenturiesSinceJ2000) -> Radians {
-    let d_non_normal = mean_moon_sun_elongation(t);
+    let d_poly: Arcsec = fast_polynomial::poly_array(t, &[1072261.307, 1105601.328, -6.891, 0.019]);
+    let d: Radians = arcsec_to_rad(d_poly);
+    let d_non_normal = d + (1236.0 * t % 1.0) * TAU;
     normalize_two_pi(d_non_normal, 0.0)
 }
 
@@ -186,19 +192,38 @@ const COEFFICIENTS: [Coefficients; 106] = [
 ];
 
 #[cfg(test)]
+/// All fixtures and assertion values were generated using the ERFA C library unless otherwise
+/// stated.
 mod tests {
-    use crate::time::intervals::TDBJulianCenturiesSinceJ2000;
     use float_eq::assert_float_eq;
+
+    use crate::time::intervals::TDBJulianCenturiesSinceJ2000;
 
     use super::nutation_iau1980;
 
     const TOLERANCE: f64 = 1e-12;
 
     #[test]
-    fn test_nutation_iau1980() {
-        let t: TDBJulianCenturiesSinceJ2000 = 0.0;
-        let actual = nutation_iau1980(t);
-        assert_float_eq!(0.000006934047787, actual.longitude, rel <= TOLERANCE);
-        assert_float_eq!(0.000041312550614, actual.obliquity, rel <= TOLERANCE);
+    fn test_nutation_iau1980_jd0() {
+        let jd0: TDBJulianCenturiesSinceJ2000 = -67.11964407939767;
+        let actual = nutation_iau1980(jd0);
+        assert_float_eq!(0.00000693404778664026, actual.longitude, rel <= TOLERANCE);
+        assert_float_eq!(0.00004131255061383108, actual.obliquity, rel <= TOLERANCE);
+    }
+
+    #[test]
+    fn test_nutation_iau1980_j2000() {
+        let j2000: TDBJulianCenturiesSinceJ2000 = 0.0;
+        let actual = nutation_iau1980(j2000);
+        assert_float_eq!(-0.00006750247617532478, actual.longitude, rel <= TOLERANCE);
+        assert_float_eq!(-0.00002799221238377013, actual.obliquity, rel <= TOLERANCE);
+    }
+
+    #[test]
+    fn test_nutation_iau1980_j2100() {
+        let j2100: TDBJulianCenturiesSinceJ2000 = 1.0;
+        let actual = nutation_iau1980(j2100);
+        assert_float_eq!(0.00001584138015187132, actual.longitude, rel <= TOLERANCE);
+        assert_float_eq!(0.00004158958379918889, actual.obliquity, rel <= TOLERANCE);
     }
 }
