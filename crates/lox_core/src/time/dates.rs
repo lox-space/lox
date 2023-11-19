@@ -9,7 +9,7 @@
 use crate::errors::LoxError;
 use num::ToPrimitive;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Calendar {
     ProlepticJulian,
     Julian,
@@ -28,6 +28,17 @@ const LAST_PROLEPTIC_JULIAN_DAY_J2K: i64 = -730122;
 const LAST_JULIAN_DAY_J2K: i64 = -152384;
 
 impl Date {
+    /// Create a Date from raw parts. This is particularly useful for generating test dates that
+    /// are known to be correct, without exposing the internals of the Date struct.
+    pub(crate) fn new_unchecked(calendar: Calendar, year: i64, month: i64, day: i64) -> Self {
+        Self {
+            calendar,
+            year,
+            month,
+            day,
+        }
+    }
+
     pub fn calendar(&self) -> Calendar {
         self.calendar
     }
@@ -383,5 +394,14 @@ mod tests {
     fn test_illegal_split_second() {
         assert!(split_seconds(2.0).is_none());
         assert!(split_seconds(-0.2).is_none());
+    }
+
+    #[test]
+    fn test_date_new_unchecked() {
+        let date = Date::new_unchecked(Calendar::Gregorian, 2021, 1, 1);
+        assert_eq!(Calendar::Gregorian, date.calendar);
+        assert_eq!(2021, date.year);
+        assert_eq!(1, date.month);
+        assert_eq!(1, date.day);
     }
 }

@@ -1,7 +1,7 @@
 use crate::time::constants;
 use crate::time::epochs::Epoch;
 
-/// Strictly TDB, TT is sufficient for most applications.
+/// Although strictly TDB, TT is sufficient for most applications.
 pub type TDBJulianCenturiesSinceJ2000 = f64;
 
 pub fn tdb_julian_centuries_since_j2000(epoch: Epoch) -> TDBJulianCenturiesSinceJ2000 {
@@ -20,26 +20,18 @@ mod epoch_tests {
     use float_eq::assert_float_eq;
     use lazy_static::lazy_static;
 
+    /// A somewhat arbitrary tolerance for floating point comparisons.
     const TOLERANCE: f64 = 1e-12;
 
     lazy_static! {
         static ref MIDDAY: Time = Time::new(12, 0, 0).expect("midday should be a valid time");
         static ref JD0: DateTime = DateTime::new(
-            Date {
-                calendar: ProlepticJulian,
-                year: -4713,
-                month: 1,
-                day: 1,
-            },
+            // This represents 4713 BC, since there is no year 0.
+            Date::new_unchecked(ProlepticJulian, -4712, 1, 1),
             *MIDDAY,
         );
         static ref J2100: DateTime = DateTime::new(
-            Date {
-                calendar: Gregorian,
-                year: 2100,
-                month: 1,
-                day: 1,
-            },
+            Date::new_unchecked(Gregorian, 2100, 1, 1),
             *MIDDAY,
         );
     }
@@ -47,18 +39,20 @@ mod epoch_tests {
     #[test]
     fn test_tdb_julian_centuries_since_j2000_tt() {
         let jd0 = Epoch::from_datetime(TimeScale::TT, *JD0);
-        let j2000 = Epoch::TT(RawEpoch::default());
-        let j2100 = Epoch::from_datetime(TimeScale::TT, *J2100);
         assert_float_eq!(
             -67.1196440794,
             tdb_julian_centuries_since_j2000(jd0),
             rel <= TOLERANCE
         );
+
+        let j2000 = Epoch::TT(RawEpoch::default());
         assert_float_eq!(
             0.0,
             tdb_julian_centuries_since_j2000(j2000),
             rel <= TOLERANCE
         );
+
+        let j2100 = Epoch::from_datetime(TimeScale::TT, *J2100);
         assert_float_eq!(
             1.0,
             tdb_julian_centuries_since_j2000(j2100),
