@@ -32,15 +32,18 @@ mod tests {
 
     use super::*;
 
-    const TOLERANCE: f64 = 1e-12;
+    const TOLERANCE: f64 = f64::EPSILON;
 
     #[test]
     fn test_normalize_two_pi() {
         // Center 0.0 – expected range [-π, π).
-        assert_float_eq!(normalize_two_pi(0.0, 0.0), 0.0, rel <= TOLERANCE);
+        //
+        // abs is preferred to rel for floating-point comparisons with 0.0. See
+        // https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/#inferna
+        assert_float_eq!(normalize_two_pi(0.0, 0.0), 0.0, abs <= TOLERANCE);
         assert_float_eq!(normalize_two_pi(PI, 0.0), -PI, rel <= TOLERANCE);
         assert_float_eq!(normalize_two_pi(-PI, 0.0), -PI, rel <= TOLERANCE);
-        assert_float_eq!(normalize_two_pi(TAU, 0.0), 0.0, rel <= TOLERANCE);
+        assert_float_eq!(normalize_two_pi(TAU, 0.0), 0.0, abs <= TOLERANCE);
         assert_float_eq!(normalize_two_pi(PI / 2.0, 0.0), PI / 2.0, rel <= TOLERANCE);
         assert_float_eq!(
             normalize_two_pi(-PI / 2.0, 0.0),
@@ -49,10 +52,10 @@ mod tests {
         );
 
         // Center π – expected range [0, 2π).
-        assert_float_eq!(normalize_two_pi(0.0, PI), 0.0, rel <= TOLERANCE);
+        assert_float_eq!(normalize_two_pi(0.0, PI), 0.0, abs <= TOLERANCE);
         assert_float_eq!(normalize_two_pi(PI, PI), PI, rel <= TOLERANCE);
         assert_float_eq!(normalize_two_pi(-PI, PI), PI, rel <= TOLERANCE);
-        assert_float_eq!(normalize_two_pi(TAU, PI), 0.0, rel <= TOLERANCE);
+        assert_float_eq!(normalize_two_pi(TAU, PI), 0.0, abs <= TOLERANCE);
         assert_float_eq!(normalize_two_pi(PI / 2.0, PI), PI / 2.0, rel <= TOLERANCE);
         assert_float_eq!(
             normalize_two_pi(-PI / 2.0, PI),

@@ -172,7 +172,8 @@ mod tests {
 
     // Relative error tolerance for float_eq assertions.
     // This is somewhat loose, being based on observations of how closely our implementations
-    // match ERFA outputs rather than any target TOLERANCE.
+    // match ERFA outputs rather than any target tolerance.
+    // See https://github.com/lox-space/lox/pull/23#discussion_r1398485509
     const TOLERANCE: f64 = 1e-11;
 
     // Test cases for t.
@@ -185,7 +186,7 @@ mod tests {
         assert_float_eq!(
             general_accum_precession_in_longitude(T_ZERO),
             0.0,
-            rel <= TOLERANCE
+            abs <= TOLERANCE
         );
         assert_float_eq!(
             general_accum_precession_in_longitude(T_POSITIVE),

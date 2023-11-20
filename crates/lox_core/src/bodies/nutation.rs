@@ -35,11 +35,11 @@ struct Coefficients {
     /// `Ω`.
     om: f64,
     /// Longitude sine.
-    long_sin_1: f64,
-    long_sin_t: f64,
+    sin_psi_1: f64,
+    sin_psi_t: f64,
     /// Obliquity cosine.
-    obl_cos_1: f64,
-    obl_cos_t: f64,
+    cos_eps_1: f64,
+    cos_eps_t: f64,
 }
 
 /// Calculate nutation coefficients at `epoch` using the given [Model].
