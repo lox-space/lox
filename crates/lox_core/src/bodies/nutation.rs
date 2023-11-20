@@ -1,3 +1,5 @@
+use std::ops::Add;
+
 use crate::bodies::nutation::iau1980::nutation_iau1980;
 use crate::math::RADIANS_IN_MILLIARCSECOND;
 use crate::time::epochs::Epoch;
@@ -22,6 +24,17 @@ pub struct Nutation {
     pub longitude: Radians,
     /// δε
     pub obliquity: Radians,
+}
+
+impl Add for Nutation {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self {
+            longitude: self.longitude + rhs.longitude,
+            obliquity: self.obliquity + rhs.obliquity,
+        }
+    }
 }
 
 /// Calculate nutation coefficients at `epoch` using the given [Model].

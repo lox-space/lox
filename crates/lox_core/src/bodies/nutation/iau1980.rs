@@ -32,7 +32,7 @@ pub(crate) fn nutation_iau1980(t: TDBJulianCenturiesSinceJ2000) -> Nutation {
     let mut nutation = COEFFICIENTS
         .iter()
         // The coefficients are given by descending magnitude but folded by ascending
-        // magnitude to minimise floating-point errors.
+        // magnitude to minimise floating-point error.
         .rev()
         .fold(Nutation::default(), |mut nut, coeff| {
             // Form argument for current term.
