@@ -34,12 +34,27 @@ impl MeanLongitudeOfAscendingNode for Moon<MHB2000> {
     }
 }
 
-/// And it's still perfectly possible to implement methods that don't care about the conventions
+/// And it's still possible to implement methods that don't care about the conventions
 /// followed by the body.
-impl Default for Moon<T> {
-    fn default() -> Self {
-        Self {
-            _convention: PhantomData,
-        }
+impl Body for Moon<T> {
+    fn naif_id() -> i32 {
+        301
+    }
+
+    fn name() -> &'static str {
+        "Moon"
+    }
+}
+
+fn example_usage() {
+    let iers2003_mean_long = Moon::<IERS2003>.mean_longitude_of_ascending_node();
+    let mhb2000_mean_long = Moon::<MHB2000>.mean_longitude_of_ascending_node();
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_example_usage_compiles() {
+        super::example_usage();
     }
 }
