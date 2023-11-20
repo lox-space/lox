@@ -13,7 +13,7 @@ use std::marker::PhantomData;
 struct IERS2003;
 struct MHB2000;
 
-struct Moon<C> {
+struct Moon<C = IERS2003> {
     /// Phantom data has no runtime representation, so the struct is still zero-sized.
     _convention: PhantomData<C>,
 }
@@ -48,7 +48,7 @@ impl<T> Body for Moon<T> {
 }
 
 /// One disadvantage is that our ZSTs can no longer be used as types or instances interchangeably,
-/// but, still being zero-sized, these objects are considered constant and can be defined as such.
+/// but, still being zero-sized, these objects are considered constant and can be defined as such...
 const MOON_IERS2003: Moon<IERS2003> = Moon {
     _convention: PhantomData,
 };
@@ -57,9 +57,42 @@ const MOON_MHB2000: Moon<MHB2000> = Moon {
     _convention: PhantomData,
 };
 
+/// We could designate a default convention...
+const MOON: Moon = MOON_IERS2003;
+
 fn example_usage() {
-    let iers2003_mean_long = MOON_IERS2003.mean_longitude_of_ascending_node();
-    let mhb2000_mean_long = MOON_MHB2000.mean_longitude_of_ascending_node();
+    let _default_mean_long = MOON.mean_longitude_of_ascending_node();
+    let _iers2003_mean_long = MOON_IERS2003.mean_longitude_of_ascending_node();
+    let _mhb2000_mean_long = MOON_MHB2000.mean_longitude_of_ascending_node();
+}
+
+/// ... but the most practical implementation is probably to limit the scope of these changes to mod
+/// fundamental, unless there are other cases you know of that are likely to make it useful outside
+/// this module.
+mod fundamental_example {
+    use std::marker::PhantomData;
+
+    use crate::bodies::{Body, Earth};
+    use crate::example::MeanLongitudeOfAscendingNode;
+
+    use super::IERS2003;
+
+    /// This is still zero-sized! Cool, no?
+    struct ConventionalBody<B: Body, C> {
+        body: B,
+        _convention: PhantomData<C>,
+    }
+
+    impl MeanLongitudeOfAscendingNode for ConventionalBody<Earth, IERS2003> {
+        fn mean_longitude_of_ascending_node(&self) -> f64 {
+            0.0
+        }
+    }
+
+    const EARTH_IERS2003: ConventionalBody<Earth, IERS2003> = ConventionalBody {
+        body: Earth,
+        _convention: PhantomData,
+    };
 }
 
 #[cfg(test)]
