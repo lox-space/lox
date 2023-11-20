@@ -5,6 +5,7 @@ use crate::time::intervals::{tdb_julian_centuries_since_j2000, TDBJulianCenturie
 use crate::types::Radians;
 
 mod iau1980;
+mod iau2000a;
 
 /// The supported IAU nutation models.
 pub enum Model {
@@ -21,25 +22,6 @@ pub struct Nutation {
     pub longitude: Radians,
     /// δε
     pub obliquity: Radians,
-}
-
-struct Coefficients {
-    /// `l`.
-    l: f64,
-    /// `l'`.
-    lp: f64,
-    /// `F`.
-    f: f64,
-    /// `D`.
-    d: f64,
-    /// `Ω`.
-    om: f64,
-    /// Longitude sine.
-    sin_psi_1: f64,
-    sin_psi_t: f64,
-    /// Obliquity cosine.
-    cos_eps_1: f64,
-    cos_eps_t: f64,
 }
 
 /// Calculate nutation coefficients at `epoch` using the given [Model].
