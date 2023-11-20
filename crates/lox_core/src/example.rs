@@ -31,7 +31,7 @@ impl MeanLongitudeOfAscendingNode for Moon<IERS2003> {
 
 impl MeanLongitudeOfAscendingNode for Moon<MHB2000> {
     fn mean_longitude_of_ascending_node(&self) -> f64 {
-        0.0
+        3.0
     }
 }
 
