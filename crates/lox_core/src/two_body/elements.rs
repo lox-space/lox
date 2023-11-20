@@ -6,6 +6,7 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use crate::math::normalize_two_pi;
 use float_eq::float_eq;
 use glam::{DMat3, DVec3};
 use std::f64::consts::PI;
@@ -111,10 +112,6 @@ pub fn cartesian_to_keplerian(grav_param: f64, pos: DVec3, vel: DVec3) -> Kepler
         mod_two_pi(periapsis_arg),
         normalize_two_pi(true_anomaly, 0.0),
     )
-}
-
-fn normalize_two_pi(a: f64, center: f64) -> f64 {
-    a - 2.0 * PI * ((a + PI - center) / (2.0 * PI)).floor()
 }
 
 fn mod_two_pi(a: f64) -> f64 {

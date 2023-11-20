@@ -11,12 +11,11 @@
 
 use std::f64::consts::TAU;
 
+use crate::math::arcsec_to_rad_two_pi;
+use crate::time::intervals::TDBJulianCenturiesSinceJ2000;
+use crate::types::Radians;
+
 use super::{Earth, Jupiter, Mars, Mercury, Moon, Neptune, Saturn, Sun, Uranus, Venus};
-
-type Radians = f64;
-
-/// Strictly TDB, TT is sufficient for most applications.
-type TDBJulianCenturiesSinceJ2000 = f64;
 
 /// General accumulated precession in longitude.
 pub fn general_accum_precession_in_longitude(t: TDBJulianCenturiesSinceJ2000) -> Radians {
@@ -35,7 +34,7 @@ pub fn mean_moon_sun_elongation(t: TDBJulianCenturiesSinceJ2000) -> Radians {
             -0.00003169,
         ],
     );
-    arcsec_to_rad_wrapping(arcsec)
+    arcsec_to_rad_two_pi(arcsec)
 }
 
 pub trait MeanAnomaly {
@@ -54,7 +53,7 @@ impl MeanAnomaly for Sun {
                 -0.00001149,
             ],
         );
-        arcsec_to_rad_wrapping(arcsec)
+        arcsec_to_rad_two_pi(arcsec)
     }
 }
 
@@ -70,7 +69,7 @@ impl MeanAnomaly for Moon {
                 -0.00024470,
             ],
         );
-        arcsec_to_rad_wrapping(arcsec)
+        arcsec_to_rad_two_pi(arcsec)
     }
 }
 
@@ -90,7 +89,7 @@ impl Moon {
                 0.00000417,
             ],
         );
-        arcsec_to_rad_wrapping(arcsec)
+        arcsec_to_rad_two_pi(arcsec)
     }
 
     pub fn ascending_node_mean_longitude(&self, t: TDBJulianCenturiesSinceJ2000) -> Radians {
@@ -98,7 +97,7 @@ impl Moon {
             t,
             &[450160.398036, -6962890.5431, 7.4722, 0.007702, -0.00005939],
         );
-        arcsec_to_rad_wrapping(arcsec)
+        arcsec_to_rad_two_pi(arcsec)
     }
 }
 
@@ -162,20 +161,6 @@ impl MeanLongitude for Uranus {
     }
 }
 
-const ARCSECONDS_IN_CIRCLE: f64 = 360.0 * 60.0 * 60.0;
-
-const RADIANS_IN_ARCSECOND: Radians = TAU / ARCSECONDS_IN_CIRCLE;
-
-#[inline]
-fn arcsec_to_rad_wrapping(arcsec: f64) -> Radians {
-    arcsec_to_rad(arcsec % ARCSECONDS_IN_CIRCLE)
-}
-
-#[inline]
-fn arcsec_to_rad(arcsec: f64) -> Radians {
-    arcsec * RADIANS_IN_ARCSECOND
-}
-
 #[cfg(test)]
 #[allow(clippy::approx_constant)]
 mod tests {
@@ -185,10 +170,11 @@ mod tests {
 
     // Note that all expected values are outputs from the equivalent ERFA functions.
 
-    // Relative error threshold for float_eq assertions.
+    // Relative error tolerance for float_eq assertions.
     // This is somewhat loose, being based on observations of how closely our implementations
-    // match ERFA outputs rather than any target threshold.
-    const THRESHOLD: f64 = 1e-11;
+    // match ERFA outputs rather than any target tolerance.
+    // See https://github.com/lox-space/lox/pull/23#discussion_r1398485509
+    const TOLERANCE: f64 = 1e-11;
 
     // Test cases for t.
     const T_ZERO: TDBJulianCenturiesSinceJ2000 = 0.0;
@@ -200,17 +186,17 @@ mod tests {
         assert_float_eq!(
             general_accum_precession_in_longitude(T_ZERO),
             0.0,
-            rel <= THRESHOLD
+            abs <= TOLERANCE
         );
         assert_float_eq!(
             general_accum_precession_in_longitude(T_POSITIVE),
             0.030109136153306,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
         assert_float_eq!(
             general_accum_precession_in_longitude(T_NEGATIVE),
             -0.030092715150709,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
     }
 
@@ -219,17 +205,17 @@ mod tests {
         assert_float_eq!(
             mean_moon_sun_elongation(T_ZERO),
             5.198466588660199,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
         assert_float_eq!(
             mean_moon_sun_elongation(T_POSITIVE),
             5.067140540634685,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
         assert_float_eq!(
             mean_moon_sun_elongation(T_NEGATIVE),
             -0.953486820085112,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
     }
 
@@ -238,17 +224,17 @@ mod tests {
         assert_float_eq!(
             Sun.mean_anomaly(T_ZERO),
             6.240060126913284,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
         assert_float_eq!(
             Sun.mean_anomaly(T_POSITIVE),
             2.806497028806777,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
         assert_float_eq!(
             Sun.mean_anomaly(T_NEGATIVE),
             -2.892755565148333,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
     }
 
@@ -257,17 +243,17 @@ mod tests {
         assert_float_eq!(
             Moon.mean_anomaly(T_ZERO),
             2.355555743493879,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
         assert_float_eq!(
             Moon.mean_anomaly(T_POSITIVE),
             5.399629142881749,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
         assert_float_eq!(
             Moon.mean_anomaly(T_NEGATIVE),
             -0.688046529809469,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
     }
 
@@ -276,17 +262,17 @@ mod tests {
         assert_float_eq!(
             Moon.mean_longitude_minus_ascending_node_mean_longitude(T_ZERO),
             1.627905081537519,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
         assert_float_eq!(
             Moon.mean_longitude_minus_ascending_node_mean_longitude(T_POSITIVE),
             2.076275583431815,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
         assert_float_eq!(
             Moon.mean_longitude_minus_ascending_node_mean_longitude(T_NEGATIVE),
             -5.103839172987284,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
     }
 
@@ -295,17 +281,17 @@ mod tests {
         assert_float_eq!(
             Moon.ascending_node_mean_longitude(T_ZERO),
             2.182439196615671,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
         assert_float_eq!(
             Moon.ascending_node_mean_longitude(T_POSITIVE),
             -1.793758671799353,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
         assert_float_eq!(
             Moon.ascending_node_mean_longitude(T_NEGATIVE),
             6.158747492734907,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
     }
 
@@ -314,62 +300,62 @@ mod tests {
         assert_float_eq!(
             Mercury.mean_longitude(T_ZERO),
             4.402608842,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
         assert_float_eq!(
             Mercury.mean_longitude(T_POSITIVE),
             1.857299860610716,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
         assert_float_eq!(
             Mercury.mean_longitude(T_NEGATIVE),
             -5.618452790969762,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
     }
 
     #[test]
     fn test_mean_longitude_venus() {
-        assert_float_eq!(Venus.mean_longitude(T_ZERO), 3.176146697, rel <= THRESHOLD);
+        assert_float_eq!(Venus.mean_longitude(T_ZERO), 3.176146697, rel <= TOLERANCE);
         assert_float_eq!(
             Venus.mean_longitude(T_POSITIVE),
             1.155338629224197,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
         assert_float_eq!(
             Venus.mean_longitude(T_NEGATIVE),
             -1.086230542403939,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
     }
 
     #[test]
     fn test_mean_longitude_earth() {
-        assert_float_eq!(Earth.mean_longitude(T_ZERO), 1.753470314, rel <= THRESHOLD);
+        assert_float_eq!(Earth.mean_longitude(T_ZERO), 1.753470314, rel <= TOLERANCE);
         assert_float_eq!(
             Earth.mean_longitude(T_POSITIVE),
             4.610047014245303,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
         assert_float_eq!(
             Earth.mean_longitude(T_NEGATIVE),
             -1.103106386245365,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
     }
 
     #[test]
     fn test_mean_longitude_mars() {
-        assert_float_eq!(Mars.mean_longitude(T_ZERO), 6.203480913, rel <= THRESHOLD);
+        assert_float_eq!(Mars.mean_longitude(T_ZERO), 6.203480913, rel <= TOLERANCE);
         assert_float_eq!(
             Mars.mean_longitude(T_POSITIVE),
             3.934534133027128,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
         assert_float_eq!(
             Mars.mean_longitude(T_NEGATIVE),
             -4.093942921386315,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
     }
 
@@ -378,47 +364,47 @@ mod tests {
         assert_float_eq!(
             Jupiter.mean_longitude(T_ZERO),
             0.599546497,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
         assert_float_eq!(
             Jupiter.mean_longitude(T_POSITIVE),
             3.161638835180952,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
         assert_float_eq!(
             Jupiter.mean_longitude(T_NEGATIVE),
             -1.962545841180955,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
     }
 
     #[test]
     fn test_mean_longitude_saturn() {
-        assert_float_eq!(Saturn.mean_longitude(T_ZERO), 0.874016757, rel <= THRESHOLD);
+        assert_float_eq!(Saturn.mean_longitude(T_ZERO), 0.874016757, rel <= TOLERANCE);
         assert_float_eq!(
             Saturn.mean_longitude(T_POSITIVE),
             2.074498123217225,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
         assert_float_eq!(
             Saturn.mean_longitude(T_NEGATIVE),
             -0.326464609217226,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
     }
 
     #[test]
     fn test_mean_longitude_uranus() {
-        assert_float_eq!(Uranus.mean_longitude(T_ZERO), 5.481293872, rel <= THRESHOLD);
+        assert_float_eq!(Uranus.mean_longitude(T_ZERO), 5.481293872, rel <= TOLERANCE);
         assert_float_eq!(
             Uranus.mean_longitude(T_POSITIVE),
             2.147219293009648,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
         assert_float_eq!(
             Uranus.mean_longitude(T_NEGATIVE),
             -3.75100216336882,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
     }
 
@@ -427,17 +413,17 @@ mod tests {
         assert_float_eq!(
             Neptune.mean_longitude(T_ZERO),
             5.311886287,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
         assert_float_eq!(
             Neptune.mean_longitude(T_POSITIVE),
             3.73648311451046,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
         assert_float_eq!(
             Neptune.mean_longitude(T_NEGATIVE),
             0.604104152309954,
-            rel <= THRESHOLD
+            rel <= TOLERANCE
         );
     }
 }

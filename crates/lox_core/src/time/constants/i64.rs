@@ -7,5 +7,7 @@
  */
 
 pub const SECONDS_PER_MINUTE: i64 = 60;
+
 pub const SECONDS_PER_HOUR: i64 = 60 * SECONDS_PER_MINUTE;
+
 pub const SECONDS_PER_DAY: i64 = 24 * SECONDS_PER_HOUR;
