@@ -79,7 +79,7 @@ mod fundamental_example {
 
     /// This is still zero-sized! Cool, no?
     struct ConventionalBody<B: Body, C> {
-        body: B,
+        _body: PhantomData<B>,
         _convention: PhantomData<C>,
     }
 
@@ -90,7 +90,7 @@ mod fundamental_example {
     }
 
     const EARTH_IERS2003: ConventionalBody<Earth, IERS2003> = ConventionalBody {
-        body: Earth,
+        _body: PhantomData,
         _convention: PhantomData,
     };
 }
