@@ -9,22 +9,6 @@
 use crate::bodies::{Body, NaifId};
 use std::marker::PhantomData;
 
-/// Problem: different conventions define the same fundamental arguments differently for the same
-/// bodies. For example, the mean longitude of the ascending node of the Moon is defined differently
-/// in the IERS2003 and MHB2000 conventions. The set of traits defined in fundamental.rs is
-/// IERS2003-only, but we don't want to define a new trait for each combination of conventions and
-/// argument, which will quickly get out of hand and lead to long, convoluted method names to
-/// avoid clashes when implemented on the same body. Nor do we want to define a new body for
-/// each set of conventions – there are enough of them as it is.
-///
-/// Proposed solution: Following a recommendation in Rust for Rustaceans, we can define a marker type for
-/// each convention, make the body generic over the marker, and implement the same trait for each
-/// marker. The body remains zero-sized, its instances are constant, and there's no need to
-/// namespace fundamental arguments trait declarations.
-///
-/// This is also clearer for consumers of the API, who no longer have to wonder why mod fundamental
-/// provides only IERS03 fundamental args.
-
 /// Marker types indicating the conventions followed by the body.
 struct IERS2003;
 struct MHB2000;
