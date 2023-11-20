@@ -12,9 +12,9 @@ use std::marker::PhantomData;
 struct IERS2003;
 struct MHB2000;
 
-struct Moon<SERIES> {
+struct Moon<C> {
     /// Phantom data has no runtime representation, so the struct is still zero-sized.
-    _series: PhantomData<SERIES>,
+    _convention: PhantomData<C>,
 }
 
 trait MeanLongitudeOfAscendingNode {
@@ -39,7 +39,7 @@ impl MeanLongitudeOfAscendingNode for Moon<MHB2000> {
 impl Default for Moon<T> {
     fn default() -> Self {
         Self {
-            _series: PhantomData,
+            _convention: PhantomData,
         }
     }
 }
