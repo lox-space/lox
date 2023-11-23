@@ -96,6 +96,39 @@ pub fn offset_utc_tai(utc_date_time: TwoPartDateTime) -> Result<f64, LeapSecondE
     Ok(-offset)
 }
 
+/// Returns the difference between TAI and UTC for a given date
+///
+/// Input is a two-part TAI Julian datetime.
+pub fn offset_tai_utc(tai_date_time: TwoPartDateTime) -> Result<f64, LeapSecondError> {
+    let mjd = tai_date_time.0 - MJD_EPOCH + tai_date_time.1;
+
+    // Before 1960-01-01
+    if mjd < 36934.0 {
+        return Err(LeapSecondError::UTCDateBefore1960);
+    }
+
+    // Before 1972-01-01
+    if mjd < LS_EPOCHS[1] as f64 {
+        // Invariant: EPOCHS must be sorted for the search below to work
+        debug_assert!(is_sorted(&EPOCHS));
+
+        let threshold = mjd.floor() as u64;
+        let position = EPOCHS
+            .iter()
+            .rposition(|item| item <= &threshold)
+            .ok_or(LeapSecondError::UTCDateOutOfRange)?;
+
+        let rate_utc = DRIFT_RATES[position] / SECONDS_PER_DAY;
+        let rate_tai = rate_utc / (1.0 + rate_utc) * SECONDS_PER_DAY;
+        let offset = OFFSETS[position];
+        let dt = mjd - DRIFT_EPOCHS[position] as f64 - offset / SECONDS_PER_DAY;
+
+        return Ok(offset + dt * rate_tai);
+    }
+
+    leap_seconds(mjd)
+}
+
 #[cfg(test)]
 pub mod test {
     use super::*;
@@ -110,5 +143,17 @@ pub mod test {
         assert_eq!(offset_utc_tai((2.4515445e6, 0f64)), Ok(-32.0));
         // datetime2julian(DateTime(2020, 1, 1))
         assert_eq!(offset_utc_tai((2.4577545e6, 0f64)), Ok(-37.0));
+    }
+
+    #[test]
+    fn test_offset_tai_utc() {
+        // Values validated against LeapSeconds.jl
+
+        // datetime2julian(DateTime(1990, 1, 1))
+        assert_eq!(offset_tai_utc((2.4478925e6, 0f64)), Ok(25.0));
+        // datetime2julian(DateTime(2000, 1, 1))
+        assert_eq!(offset_tai_utc((2.4515445e6, 0f64)), Ok(32.0));
+        // datetime2julian(DateTime(2020, 1, 1))
+        assert_eq!(offset_tai_utc((2.4577545e6, 0f64)), Ok(37.0));
     }
 }
