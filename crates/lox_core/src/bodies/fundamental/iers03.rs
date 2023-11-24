@@ -68,7 +68,6 @@ impl Moon {
         arcsec_to_rad_two_pi(arcsec)
     }
 
-    // Mean longitude of the Moon minus the mean longitude of the Moon's ascending node.
     pub fn mean_longitude_minus_ascending_node_mean_longitude_iers03(
         &self,
         t: TDBJulianCenturiesSinceJ2000,
