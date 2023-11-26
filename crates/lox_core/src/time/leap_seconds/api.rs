@@ -47,7 +47,19 @@ pub enum LeapSecondError {
 /// This type is used for increased precision
 ///
 /// The first part is the UTC day number, and the second part is the second offset.
-type TwoPartDateTime = (f64, f64);
+pub struct TwoPartDateTime {
+    pub day: f64,
+    pub seconds_offset: f64,
+}
+
+impl From<(f64, f64)> for TwoPartDateTime {
+    fn from(item: (f64, f64)) -> Self {
+        TwoPartDateTime {
+            day: item.0,
+            seconds_offset: item.1,
+        }
+    }
+}
 
 fn is_sorted(array: &[u64]) -> bool {
     array.windows(2).all(|x| x[0] <= x[1])
@@ -72,7 +84,7 @@ fn leap_seconds(mjd: f64) -> Result<f64, LeapSecondError> {
 pub fn offset_utc_tai(utc_date_time: TwoPartDateTime) -> Result<f64, LeapSecondError> {
     // This function uses the [ERFA convention](https://github.com/liberfa/erfa/blob/master/src/dtf2d.c#L49)
     // for Julian day numbers representing UTC dates during leap seconds.
-    let mjd = utc_date_time.0 - MJD_EPOCH + utc_date_time.1;
+    let mjd = utc_date_time.day - MJD_EPOCH + utc_date_time.seconds_offset;
 
     // Before 1960-01-01
     if mjd < 36934.0 {
@@ -108,7 +120,7 @@ pub fn offset_utc_tai(utc_date_time: TwoPartDateTime) -> Result<f64, LeapSecondE
 ///
 /// Input is a two-part TAI Julian datetime.
 pub fn offset_tai_utc(tai_date_time: TwoPartDateTime) -> Result<f64, LeapSecondError> {
-    let mjd = tai_date_time.0 - MJD_EPOCH + tai_date_time.1;
+    let mjd = tai_date_time.day - MJD_EPOCH + tai_date_time.seconds_offset;
 
     // Before 1960-01-01
     if mjd < 36934.0 {
@@ -146,11 +158,20 @@ pub mod test {
         // Values validated against LeapSeconds.jl
 
         // datetime2julian(DateTime(1990, 1, 1))
-        assert_eq!(offset_utc_tai((2.4478925e6, 0f64)), Ok(-25.0));
+        assert_eq!(
+            offset_utc_tai(TwoPartDateTime::from((2.4478925e6, 0f64))),
+            Ok(-25.0)
+        );
         // datetime2julian(DateTime(2000, 1, 1))
-        assert_eq!(offset_utc_tai((2.4515445e6, 0f64)), Ok(-32.0));
+        assert_eq!(
+            offset_utc_tai(TwoPartDateTime::from((2.4515445e6, 0f64))),
+            Ok(-32.0)
+        );
         // datetime2julian(DateTime(2020, 1, 1))
-        assert_eq!(offset_utc_tai((2.4577545e6, 0f64)), Ok(-37.0));
+        assert_eq!(
+            offset_utc_tai(TwoPartDateTime::from((2.4577545e6, 0f64))),
+            Ok(-37.0)
+        );
     }
 
     #[test]
@@ -158,10 +179,19 @@ pub mod test {
         // Values validated against LeapSeconds.jl
 
         // datetime2julian(DateTime(1990, 1, 1))
-        assert_eq!(offset_tai_utc((2.4478925e6, 0f64)), Ok(25.0));
+        assert_eq!(
+            offset_tai_utc(TwoPartDateTime::from((2.4478925e6, 0f64))),
+            Ok(25.0)
+        );
         // datetime2julian(DateTime(2000, 1, 1))
-        assert_eq!(offset_tai_utc((2.4515445e6, 0f64)), Ok(32.0));
+        assert_eq!(
+            offset_tai_utc(TwoPartDateTime::from((2.4515445e6, 0f64))),
+            Ok(32.0)
+        );
         // datetime2julian(DateTime(2020, 1, 1))
-        assert_eq!(offset_tai_utc((2.4577545e6, 0f64)), Ok(37.0));
+        assert_eq!(
+            offset_tai_utc(TwoPartDateTime::from((2.4577545e6, 0f64))),
+            Ok(37.0)
+        );
     }
 }
