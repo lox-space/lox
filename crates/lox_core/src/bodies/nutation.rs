@@ -1,7 +1,8 @@
 use std::ops::Add;
 
 use crate::bodies::nutation::iau1980::nutation_iau1980;
-use crate::math::RADIANS_IN_MILLIARCSECOND;
+use crate::bodies::nutation::iau2000a::nutation_iau2000a;
+use crate::math::RADIANS_IN_ARCSECOND;
 use crate::time::epochs::Epoch;
 use crate::time::intervals::{tdb_julian_centuries_since_j2000, TDBJulianCenturiesSinceJ2000};
 use crate::types::Radians;
@@ -48,10 +49,6 @@ pub fn nutation(model: Model, epoch: Epoch) -> Nutation {
     }
 }
 
-fn nutation_iau2000a(_t: TDBJulianCenturiesSinceJ2000) -> Nutation {
-    todo!()
-}
-
 fn nutation_iau2000b(_t: TDBJulianCenturiesSinceJ2000) -> Nutation {
     todo!()
 }
@@ -60,9 +57,10 @@ fn nutation_iau2006a(_t: TDBJulianCenturiesSinceJ2000) -> Nutation {
     todo!()
 }
 
-pub(crate) const RADIANS_IN_POINT_ONE_MILLIARCSECOND: Radians = RADIANS_IN_MILLIARCSECOND / 10.0;
+pub(crate) const RADIANS_IN_POINT_ONE_MILLIARCSECOND: Radians = RADIANS_IN_ARCSECOND / 1e4;
 
-/// Units of 0.1 mas are returned by nutation calculations before being converted to radians.
+/// Units of 0.1 mas are returned by certain nutation calculations before being converted to
+/// radians.
 pub(crate) type Point1Milliarcsec = f64;
 
 #[inline]
@@ -70,12 +68,24 @@ pub(crate) fn point1_milliarcsec_to_rad(p1_mas: Point1Milliarcsec) -> Radians {
     p1_mas * RADIANS_IN_POINT_ONE_MILLIARCSECOND
 }
 
+pub(crate) const RADIANS_IN_POINT_ONE_MICROARCSECOND: Radians = RADIANS_IN_ARCSECOND / 1e7;
+
+/// Units of 0.1 μas are returned by certain nutation calculations before being converted to
+/// radians.
+pub(crate) type Point1Microarcsec = f64;
+
+#[inline]
+pub(crate) fn point1_microarcsec_to_rad(p1_uas: Point1Microarcsec) -> Radians {
+    p1_uas * RADIANS_IN_POINT_ONE_MICROARCSECOND
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::time::epochs::{Epoch, TimeScale};
     use float_eq::assert_float_eq;
 
-    use super::{nutation, point1_milliarcsec_to_rad, Model, Nutation};
+    use crate::time::epochs::{Epoch, TimeScale};
+
+    use super::*;
 
     const TOLERANCE: f64 = 1e-12;
 
@@ -90,10 +100,21 @@ mod tests {
         assert_float_eq!(expected.longitude, actual.longitude, rel <= TOLERANCE);
         assert_float_eq!(expected.obliquity, actual.obliquity, rel <= TOLERANCE);
     }
+    #[test]
+    fn test_nutation_iau2000a() {
+        let epoch = Epoch::j2000(TimeScale::TT);
+        let expected = Nutation {
+            longitude: -0.00006754422426417299,
+            obliquity: -0.00002797083119237414,
+        };
+        let actual = nutation(Model::IAU2000A, epoch);
+        assert_float_eq!(expected.longitude, actual.longitude, rel <= TOLERANCE);
+        assert_float_eq!(expected.obliquity, actual.obliquity, rel <= TOLERANCE);
+    }
 
     #[test]
     fn test_point1_milliarcsec_to_rad() {
-        assert_float_eq!(point1_milliarcsec_to_rad(0.0), 0.0, rel <= TOLERANCE);
+        assert_float_eq!(point1_milliarcsec_to_rad(0.0), 0.0, abs <= TOLERANCE);
         assert_float_eq!(
             point1_milliarcsec_to_rad(1.0),
             4.84813681109536e-10,
@@ -106,7 +127,26 @@ mod tests {
         );
         assert_float_eq!(
             point1_milliarcsec_to_rad(37.0),
-            1.7938106201052832e-8,
+            1.793810620105283e-8,
+            rel <= TOLERANCE
+        );
+    }
+    #[test]
+    fn test_point1_microarcsec_to_rad() {
+        assert_float_eq!(point1_microarcsec_to_rad(0.0), 0.0, abs <= TOLERANCE);
+        assert_float_eq!(
+            point1_microarcsec_to_rad(1.0),
+            4.84813681109536e-13,
+            rel <= TOLERANCE
+        );
+        assert_float_eq!(
+            point1_microarcsec_to_rad(-1.0),
+            -4.84813681109536e-13,
+            rel <= TOLERANCE
+        );
+        assert_float_eq!(
+            point1_microarcsec_to_rad(37.0),
+            1.793810620105283e-11,
             rel <= TOLERANCE
         );
     }

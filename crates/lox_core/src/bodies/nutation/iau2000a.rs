@@ -8,12 +8,13 @@
 
 use std::f64::consts::TAU;
 
-use crate::bodies::fundamental::MeanAnomaly;
-use crate::bodies::nutation::{point1_milliarcsec_to_rad, Nutation};
-use crate::bodies::Moon;
-use crate::math::{arcsec_to_rad, arcsec_to_rad_two_pi, normalize_two_pi};
+use crate::bodies::fundamental::iers03::general_accum_precession_in_longitude_iers03;
+use crate::bodies::fundamental::mhb2000::{
+    mean_moon_sun_elongation_mhb2000_luni_solar, mean_moon_sun_elongation_mhb2000_planetary,
+};
+use crate::bodies::nutation::{point1_microarcsec_to_rad, Nutation};
+use crate::bodies::*;
 use crate::time::intervals::TDBJulianCenturiesSinceJ2000;
-use crate::types::{Arcsec, Radians};
 
 mod luni_solar;
 mod planetary;
@@ -72,11 +73,11 @@ pub(crate) fn nutation_iau2000a(t: TDBJulianCenturiesSinceJ2000) -> Nutation {
 
 fn luni_solar_nutation(t: TDBJulianCenturiesSinceJ2000) -> Nutation {
     // Delaunay arguments.
-    let l = Moon.mean_anomaly(t);
-    let lp = l_prime(t);
-    let f = Moon.mean_longitude_minus_ascending_node_mean_longitude(t);
-    let d = d(t);
-    let om = Moon.ascending_node_mean_longitude(t);
+    let l = Moon.mean_anomaly_iers03(t);
+    let lp = Sun.mean_anomaly_mhb2000(t);
+    let f = Moon.mean_longitude_minus_ascending_node_mean_longitude_iers03(t);
+    let d = mean_moon_sun_elongation_mhb2000_luni_solar(t);
+    let om = Moon.ascending_node_mean_longitude_iers03(t);
 
     let mut nutation = luni_solar::COEFFICIENTS
         .iter()
@@ -99,47 +100,54 @@ fn luni_solar_nutation(t: TDBJulianCenturiesSinceJ2000) -> Nutation {
             nut
         });
 
-    nutation.longitude = point1_milliarcsec_to_rad(nutation.longitude);
-    nutation.obliquity = point1_milliarcsec_to_rad(nutation.obliquity);
+    nutation.longitude = point1_microarcsec_to_rad(nutation.longitude);
+    nutation.obliquity = point1_microarcsec_to_rad(nutation.obliquity);
 
     nutation
 }
 
 fn planetary_nutation(t: TDBJulianCenturiesSinceJ2000) -> Nutation {
-    Nutation {
-        longitude: 0.0,
-        obliquity: 0.0,
-    }
-}
+    // Delaunay arguments.
+    let l = Moon.mean_anomaly_mhb2000(t);
+    let f = Moon.mean_longitude_minus_ascending_node_mean_longitude_mhb2000(t);
+    let d = mean_moon_sun_elongation_mhb2000_planetary(t);
+    let om = Moon.ascending_node_mean_longitude_mhb2000(t);
 
-/// `l'`, the mean anomaly of the Sun (MHB2000).
-fn l_prime(t: TDBJulianCenturiesSinceJ2000) -> Radians {
-    let lp: Arcsec = fast_polynomial::poly_array(
-        t,
-        &[
-            1287104.79305,
-            129596581.0481,
-            -0.5532,
-            0.000136,
-            -0.00001149,
-        ],
-    );
-    arcsec_to_rad_two_pi(lp)
-}
+    let mut nutation = planetary::COEFFICIENTS
+        .iter()
+        // The coefficients are given by descending magnitude but folded by ascending
+        // magnitude to minimise floating-point error.
+        .rev()
+        .fold(Nutation::default(), |mut nut, coeff| {
+            // Form argument for current term.
+            let mut arg = coeff.l * l
+                + coeff.f * f
+                + coeff.d * d
+                + coeff.om * om
+                + coeff.mercury * Mercury.mean_longitude_iers03(t)
+                + coeff.venus * Venus.mean_longitude_iers03(t)
+                + coeff.earth * Earth.mean_longitude_iers03(t)
+                + coeff.mars * Mars.mean_longitude_iers03(t)
+                + coeff.jupiter * Jupiter.mean_longitude_iers03(t)
+                + coeff.saturn * Saturn.mean_longitude_iers03(t)
+                + coeff.uranus * Uranus.mean_longitude_iers03(t)
+                + coeff.neptune * Neptune.mean_longitude_mhb2000(t)
+                + coeff.pa * general_accum_precession_in_longitude_iers03(t);
+            arg %= TAU;
 
-/// `D`, the mean elongation of the Moon from the Sun (MHB2000).
-fn d(t: TDBJulianCenturiesSinceJ2000) -> Radians {
-    let d: Arcsec = fast_polynomial::poly_array(
-        t,
-        &[
-            1072260.70369,
-            1602961601.2090,
-            -6.3706,
-            0.006593,
-            -0.00003169,
-        ],
-    );
-    arcsec_to_rad_two_pi(d)
+            // Accumulate current term.
+            let sin_arg = arg.sin();
+            let cos_arg = arg.cos();
+            nut.longitude += coeff.sin_psi * sin_arg + coeff.cos_psi * cos_arg;
+            nut.obliquity += coeff.sin_eps * sin_arg + coeff.cos_eps * cos_arg;
+
+            nut
+        });
+
+    nutation.longitude = point1_microarcsec_to_rad(nutation.longitude);
+    nutation.obliquity = point1_microarcsec_to_rad(nutation.obliquity);
+
+    nutation
 }
 
 #[cfg(test)]
@@ -152,29 +160,29 @@ mod tests {
 
     use super::nutation_iau2000a;
 
-    const TOLERANCE: f64 = 1e-12;
+    const TOLERANCE: f64 = 1e-11;
 
     #[test]
-    fn test_nutation_iau1980_jd0() {
+    fn test_nutation_iau2000a_jd0() {
         let jd0: TDBJulianCenturiesSinceJ2000 = -67.11964407939767;
         let actual = nutation_iau2000a(jd0);
-        assert_float_eq!(0.00000693404778664026, actual.longitude, rel <= TOLERANCE);
-        assert_float_eq!(0.00004131255061383108, actual.obliquity, rel <= TOLERANCE);
+        assert_float_eq!(0.00000737147877835653, actual.longitude, rel <= TOLERANCE);
+        assert_float_eq!(0.00004132135467915123, actual.obliquity, rel <= TOLERANCE);
     }
 
     #[test]
-    fn test_nutation_iau1980_j2000() {
+    fn test_nutation_iau2000a_j2000() {
         let j2000: TDBJulianCenturiesSinceJ2000 = 0.0;
         let actual = nutation_iau2000a(j2000);
-        assert_float_eq!(-0.00006750247617532478, actual.longitude, rel <= TOLERANCE);
-        assert_float_eq!(-0.00002799221238377013, actual.obliquity, rel <= TOLERANCE);
+        assert_float_eq!(-0.00006754422426417299, actual.longitude, rel <= TOLERANCE);
+        assert_float_eq!(-0.00002797083119237414, actual.obliquity, rel <= TOLERANCE);
     }
 
     #[test]
-    fn test_nutation_iau1980_j2100() {
+    fn test_nutation_iau2000a_j2100() {
         let j2100: TDBJulianCenturiesSinceJ2000 = 1.0;
         let actual = nutation_iau2000a(j2100);
-        assert_float_eq!(0.00001584138015187132, actual.longitude, rel <= TOLERANCE);
-        assert_float_eq!(0.00004158958379918889, actual.obliquity, rel <= TOLERANCE);
+        assert_float_eq!(0.00001585987390484147, actual.longitude, rel <= TOLERANCE);
+        assert_float_eq!(0.00004162326779426948, actual.obliquity, rel <= TOLERANCE);
     }
 }

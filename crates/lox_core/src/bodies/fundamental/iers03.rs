@@ -18,12 +18,12 @@ use crate::types::Radians;
 use crate::bodies::{Earth, Jupiter, Mars, Mercury, Moon, Neptune, Saturn, Sun, Uranus, Venus};
 
 /// General accumulated precession in longitude.
-pub fn general_accum_precession_in_longitude(t: TDBJulianCenturiesSinceJ2000) -> Radians {
+pub fn general_accum_precession_in_longitude_iers03(t: TDBJulianCenturiesSinceJ2000) -> Radians {
     fast_polynomial::poly_array(t, &[0.0, 0.024381750, 0.00000538691])
 }
 
 /// Mean elongation of the Moon from the Sun.
-pub fn mean_moon_sun_elongation(t: TDBJulianCenturiesSinceJ2000) -> Radians {
+pub fn mean_moon_sun_elongation_iers03(t: TDBJulianCenturiesSinceJ2000) -> Radians {
     let arcsec: f64 = fast_polynomial::poly_array(
         t,
         &[
@@ -173,17 +173,17 @@ mod tests {
     #[test]
     fn test_general_accum_precession_in_longitude() {
         assert_float_eq!(
-            general_accum_precession_in_longitude(T_ZERO),
+            general_accum_precession_in_longitude_iers03(T_ZERO),
             0.0,
             abs <= TOLERANCE
         );
         assert_float_eq!(
-            general_accum_precession_in_longitude(T_POSITIVE),
+            general_accum_precession_in_longitude_iers03(T_POSITIVE),
             0.030109136153306,
             rel <= TOLERANCE
         );
         assert_float_eq!(
-            general_accum_precession_in_longitude(T_NEGATIVE),
+            general_accum_precession_in_longitude_iers03(T_NEGATIVE),
             -0.030092715150709,
             rel <= TOLERANCE
         );
@@ -192,17 +192,17 @@ mod tests {
     #[test]
     fn test_mean_moon_sun_elongation() {
         assert_float_eq!(
-            mean_moon_sun_elongation(T_ZERO),
+            mean_moon_sun_elongation_iers03(T_ZERO),
             5.198466588660199,
             rel <= TOLERANCE
         );
         assert_float_eq!(
-            mean_moon_sun_elongation(T_POSITIVE),
+            mean_moon_sun_elongation_iers03(T_POSITIVE),
             5.067140540634685,
             rel <= TOLERANCE
         );
         assert_float_eq!(
-            mean_moon_sun_elongation(T_NEGATIVE),
+            mean_moon_sun_elongation_iers03(T_NEGATIVE),
             -0.953486820085112,
             rel <= TOLERANCE
         );
