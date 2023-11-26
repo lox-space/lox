@@ -1,14 +1,14 @@
-use std::ops::Add;
+use std::ops::{Add, Deref};
 
 use crate::bodies::nutation::iau1980::nutation_iau1980;
-use crate::bodies::nutation::iau2000a::nutation_iau2000a;
+use crate::bodies::nutation::iau2000::nutation_iau2000a;
 use crate::math::RADIANS_IN_ARCSECOND;
 use crate::time::epochs::Epoch;
 use crate::time::intervals::{tdb_julian_centuries_since_j2000, TDBJulianCenturiesSinceJ2000};
 use crate::types::Radians;
 
 mod iau1980;
-mod iau2000a;
+mod iau2000;
 
 /// The supported IAU nutation models.
 pub enum Model {
@@ -32,6 +32,17 @@ impl Add for Nutation {
 
     fn add(self, rhs: Self) -> Self::Output {
         Self {
+            longitude: self.longitude + rhs.longitude,
+            obliquity: self.obliquity + rhs.obliquity,
+        }
+    }
+}
+
+impl Add<&Self> for Nutation {
+    type Output = Self;
+
+    fn add(self, rhs: &Self) -> Self::Output {
+        Nutation {
             longitude: self.longitude + rhs.longitude,
             obliquity: self.obliquity + rhs.obliquity,
         }
