@@ -57,25 +57,25 @@ fn nutation_iau2006a(_t: TDBJulianCenturiesSinceJ2000) -> Nutation {
     todo!()
 }
 
-pub(crate) const RADIANS_IN_POINT_ONE_MILLIARCSECOND: Radians = RADIANS_IN_ARCSECOND / 1e4;
+const RADIANS_IN_POINT_ONE_MILLIARCSECOND: Radians = RADIANS_IN_ARCSECOND / 1e4;
 
 /// Units of 0.1 mas are returned by certain nutation calculations before being converted to
 /// radians.
-pub(crate) type Point1Milliarcsec = f64;
+type Point1Milliarcsec = f64;
 
 #[inline]
-pub(crate) fn point1_milliarcsec_to_rad(p1_mas: Point1Milliarcsec) -> Radians {
+fn point1_milliarcsec_to_rad(p1_mas: Point1Milliarcsec) -> Radians {
     p1_mas * RADIANS_IN_POINT_ONE_MILLIARCSECOND
 }
 
-pub(crate) const RADIANS_IN_POINT_ONE_MICROARCSECOND: Radians = RADIANS_IN_ARCSECOND / 1e7;
+const RADIANS_IN_POINT_ONE_MICROARCSECOND: Radians = RADIANS_IN_ARCSECOND / 1e7;
 
 /// Units of 0.1 μas are returned by certain nutation calculations before being converted to
 /// radians.
-pub(crate) type Point1Microarcsec = f64;
+type Point1Microarcsec = f64;
 
 #[inline]
-pub(crate) fn point1_microarcsec_to_rad(p1_uas: Point1Microarcsec) -> Radians {
+fn point1_microarcsec_to_rad(p1_uas: Point1Microarcsec) -> Radians {
     p1_uas * RADIANS_IN_POINT_ONE_MICROARCSECOND
 }
 
