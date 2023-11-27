@@ -13,8 +13,6 @@ pub(crate) const ARCSECONDS_IN_CIRCLE: f64 = 360.0 * 60.0 * 60.0;
 
 pub(crate) const RADIANS_IN_ARCSECOND: Radians = TAU / ARCSECONDS_IN_CIRCLE;
 
-pub(crate) const RADIANS_IN_MILLIARCSECOND: Radians = RADIANS_IN_ARCSECOND / 1000.0;
-
 /// Converts arcseconds to radians, modulo 2π.
 #[inline]
 pub(crate) fn arcsec_to_rad_two_pi(arcsec: Arcsec) -> Radians {
