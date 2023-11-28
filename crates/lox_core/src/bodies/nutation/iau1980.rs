@@ -24,7 +24,7 @@ struct Coefficients {
 
 pub(crate) fn nutation_iau1980(t: TDBJulianCenturiesSinceJ2000) -> Nutation {
     let l = l(t);
-    let lp = l_prime(t);
+    let lp = lp(t);
     let f = f(t);
     let d = d(t);
     let om = omega(t);
@@ -64,7 +64,7 @@ fn l(t: TDBJulianCenturiesSinceJ2000) -> Radians {
 
 /// `l'`, the mean longitude of the Sun measured from the mean position of the perigee,
 /// normalized to the range [0, 2π).
-fn l_prime(t: TDBJulianCenturiesSinceJ2000) -> Radians {
+fn lp(t: TDBJulianCenturiesSinceJ2000) -> Radians {
     let lp_poly: Arcsec =
         fast_polynomial::poly_array(t, &[1287099.804, 1292581.224, -0.577, -0.012]);
     let lp_poly: Radians = arcsec_to_rad(lp_poly);
