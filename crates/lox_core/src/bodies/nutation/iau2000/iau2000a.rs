@@ -66,7 +66,7 @@ pub(crate) fn nutation_iau2000a(t: TDBJulianCenturiesSinceJ2000) -> Nutation {
         om: Moon.ascending_node_mean_longitude_mhb2000(t),
     };
 
-    luni_solar_nutation(t, luni_solar_args, &luni_solar::COEFFICIENTS)
+    luni_solar_nutation(t, &luni_solar_args, &luni_solar::COEFFICIENTS)
         + planetary_nutation(t, planetary_args)
 }
 
@@ -78,7 +78,7 @@ fn planetary_nutation(t: TDBJulianCenturiesSinceJ2000, args: DelaunayArguments) 
         .rev()
         .fold(Nutation::default(), |mut nut, coeff| {
             // Form argument for current term.
-            let mut arg = (coeff.l * args.l
+            let arg = (coeff.l * args.l
                 + coeff.f * args.f
                 + coeff.d * args.d
                 + coeff.om * args.om

@@ -1,7 +1,8 @@
-use std::ops::{Add, Deref};
+use std::ops::Add;
 
 use crate::bodies::nutation::iau1980::nutation_iau1980;
 use crate::bodies::nutation::iau2000::nutation_iau2000a;
+use crate::bodies::nutation::iau2000::nutation_iau2000b;
 use crate::math::RADIANS_IN_ARCSECOND;
 use crate::time::epochs::Epoch;
 use crate::time::intervals::{tdb_julian_centuries_since_j2000, TDBJulianCenturiesSinceJ2000};
@@ -60,10 +61,6 @@ pub fn nutation(model: Model, epoch: Epoch) -> Nutation {
     }
 }
 
-fn nutation_iau2000b(_t: TDBJulianCenturiesSinceJ2000) -> Nutation {
-    todo!()
-}
-
 fn nutation_iau2006a(_t: TDBJulianCenturiesSinceJ2000) -> Nutation {
     todo!()
 }
@@ -119,6 +116,18 @@ mod tests {
             obliquity: -0.00002797083119237414,
         };
         let actual = nutation(Model::IAU2000A, epoch);
+        assert_float_eq!(expected.longitude, actual.longitude, rel <= TOLERANCE);
+        assert_float_eq!(expected.obliquity, actual.obliquity, rel <= TOLERANCE);
+    }
+
+    #[test]
+    fn test_nutation_iau2000b() {
+        let epoch = Epoch::j2000(TimeScale::TT);
+        let expected = Nutation {
+            longitude: -0.00006754261253992235,
+            obliquity: -0.00002797092331098565,
+        };
+        let actual = nutation(Model::IAU2000B, epoch);
         assert_float_eq!(expected.longitude, actual.longitude, rel <= TOLERANCE);
         assert_float_eq!(expected.obliquity, actual.obliquity, rel <= TOLERANCE);
     }

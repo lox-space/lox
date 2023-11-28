@@ -10,7 +10,6 @@ use crate::bodies::fundamental::simon1994::mean_moon_sun_elongation_simon1994;
 use crate::bodies::nutation::iau2000::{luni_solar_nutation, DelaunayArguments};
 use crate::bodies::nutation::Nutation;
 use crate::bodies::*;
-use crate::math::RADIANS_IN_ARCSECOND;
 use crate::time::intervals::TDBJulianCenturiesSinceJ2000;
 
 mod luni_solar;
@@ -25,7 +24,7 @@ pub(crate) fn nutation_iau2000b(t: TDBJulianCenturiesSinceJ2000) -> Nutation {
         om: Moon.ascending_node_mean_longitude_simon1994(t),
     };
 
-    luni_solar_nutation(t, luni_solar_args, &luni_solar::COEFFICIENTS) + planetary::OFFSETS
+    luni_solar_nutation(t, &luni_solar_args, &luni_solar::COEFFICIENTS) + planetary::OFFSETS
 }
 
 #[cfg(test)]
@@ -41,26 +40,26 @@ mod tests {
     const TOLERANCE: f64 = 1e-11;
 
     #[test]
-    fn test_nutation_iau2000a_jd0() {
+    fn test_nutation_iau2000b_jd0() {
         let jd0: TDBJulianCenturiesSinceJ2000 = -67.11964407939767;
         let actual = nutation_iau2000b(jd0);
-        assert_float_eq!(0.00000737147877835653, actual.longitude, rel <= TOLERANCE);
-        assert_float_eq!(0.00004132135467915123, actual.obliquity, rel <= TOLERANCE);
+        assert_float_eq!(0.00001795252319583832, actual.longitude, rel <= TOLERANCE);
+        assert_float_eq!(0.00004024546928325646, actual.obliquity, rel <= TOLERANCE);
     }
 
     #[test]
-    fn test_nutation_iau2000a_j2000() {
+    fn test_nutation_iau2000b_j2000() {
         let j2000: TDBJulianCenturiesSinceJ2000 = 0.0;
         let actual = nutation_iau2000b(j2000);
-        assert_float_eq!(-0.00006754422426417299, actual.longitude, rel <= TOLERANCE);
-        assert_float_eq!(-0.00002797083119237414, actual.obliquity, rel <= TOLERANCE);
+        assert_float_eq!(-0.00006754261253992235, actual.longitude, rel <= TOLERANCE);
+        assert_float_eq!(-0.00002797092331098565, actual.obliquity, rel <= TOLERANCE);
     }
 
     #[test]
-    fn test_nutation_iau2000a_j2100() {
+    fn test_nutation_iau2000b_j2100() {
         let j2100: TDBJulianCenturiesSinceJ2000 = 1.0;
         let actual = nutation_iau2000b(j2100);
-        assert_float_eq!(0.00001585987390484147, actual.longitude, rel <= TOLERANCE);
-        assert_float_eq!(0.00004162326779426948, actual.obliquity, rel <= TOLERANCE);
+        assert_float_eq!(0.00001586677813945249, actual.longitude, rel <= TOLERANCE);
+        assert_float_eq!(0.00004162057618703116, actual.obliquity, rel <= TOLERANCE);
     }
 }
