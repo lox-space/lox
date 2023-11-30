@@ -3,13 +3,15 @@ use std::ops::Add;
 use crate::bodies::nutation::iau1980::nutation_iau1980;
 use crate::bodies::nutation::iau2000::nutation_iau2000a;
 use crate::bodies::nutation::iau2000::nutation_iau2000b;
+use crate::bodies::nutation::iau2006::nutation_iau2006a;
 use crate::math::RADIANS_IN_ARCSECOND;
 use crate::time::epochs::Epoch;
-use crate::time::intervals::{tdb_julian_centuries_since_j2000, TDBJulianCenturiesSinceJ2000};
+use crate::time::intervals::tdb_julian_centuries_since_j2000;
 use crate::types::Radians;
 
 mod iau1980;
 mod iau2000;
+mod iau2006;
 
 /// The supported IAU nutation models.
 pub enum Model {
@@ -59,10 +61,6 @@ pub fn nutation(model: Model, epoch: Epoch) -> Nutation {
         Model::IAU2000B => nutation_iau2000b(t),
         Model::IAU2006A => nutation_iau2006a(t),
     }
-}
-
-fn nutation_iau2006a(_t: TDBJulianCenturiesSinceJ2000) -> Nutation {
-    todo!()
 }
 
 const RADIANS_IN_POINT_ONE_MILLIARCSECOND: Radians = RADIANS_IN_ARCSECOND / 1e4;
@@ -128,6 +126,18 @@ mod tests {
             obliquity: -0.00002797092331098565,
         };
         let actual = nutation(Model::IAU2000B, epoch);
+        assert_float_eq!(expected.longitude, actual.longitude, rel <= TOLERANCE);
+        assert_float_eq!(expected.obliquity, actual.obliquity, rel <= TOLERANCE);
+    }
+
+    #[test]
+    fn test_nutation_iau2006a() {
+        let epoch = Epoch::j2000(TimeScale::TT);
+        let expected = Nutation {
+            longitude: -0.00006754425598969513,
+            obliquity: -0.00002797083119237414,
+        };
+        let actual = nutation(Model::IAU2006A, epoch);
         assert_float_eq!(expected.longitude, actual.longitude, rel <= TOLERANCE);
         assert_float_eq!(expected.obliquity, actual.obliquity, rel <= TOLERANCE);
     }
