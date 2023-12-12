@@ -103,8 +103,8 @@ fn nutation_components(
     // (as opposed to a tuple).
     let mut sin_cos = [0.0; 2];
 
-    // The last amplitude to be processed.
-    let mut last_amplitudes_index = amplitudes::COEFFICIENTS.len();
+    // The last amplitude chunk to be processed.
+    let mut last_amplitude_chunk_index = amplitudes::COEFFICIENTS.len();
 
     for (freq_list_idx, freq_list) in planetary::FREQUENCY_LISTS.iter().enumerate().rev() {
         // Calculate argument functions.
@@ -115,26 +115,25 @@ fn nutation_components(
         sin_cos[0] = arg.sin();
         sin_cos[1] = arg.cos();
 
-        // Iterate backwards through the amplitudes at the current frequency.
-
         // The list of indices into the amplitudes array contains both luni-solar and planetary
         // indices. We offset by the number of luni-solar frequency lists to get the correct
         // planetary index.
         let amplitude_indices_idx = freq_list_idx + luni_solar::N_FREQUENCY_LISTS;
-        let amplitude_idx = amplitudes::INDICES[amplitude_indices_idx];
-        amplitudes::COEFFICIENTS[amplitude_idx..last_amplitudes_index] // last_ampl_index is 1 greater than C but exclusive
-            .iter()
-            .enumerate()
-            .rev()
-            .for_each(|(i, amplitude)| {
-                let axis = amplitudes::USAGE_XY[i];
-                let trig_func = amplitudes::USAGE_SIN_COS[i];
-                let power_of_t = amplitudes::USAGE_POWER_OF_T[i];
+        let current_amplitude_chunk_idx = amplitudes::INDICES[amplitude_indices_idx];
 
-                // Accumulate the component.
-                result.planetary[axis] += amplitude * sin_cos[trig_func] * powers_of_t[power_of_t];
-            });
-        last_amplitudes_index = amplitude_idx;
+        // Iterate backwards through the amplitudes of the current frequency chunk.
+        for i in (current_amplitude_chunk_idx..=last_amplitude_chunk_index).rev() {
+            // The index of the current amplitude within the chunk.
+            let relative_amplitude_idx = i - current_amplitude_chunk_idx;
+            let axis = amplitudes::USAGE_XY[relative_amplitude_idx];
+            let trig_func = amplitudes::USAGE_SIN_COS[relative_amplitude_idx];
+            let power_of_t = amplitudes::USAGE_POWER_OF_T[relative_amplitude_idx];
+
+            // Accumulate the component.
+            result.planetary[axis] +=
+                amplitudes::COEFFICIENTS[i - 1] * sin_cos[trig_func] * powers_of_t[power_of_t];
+        }
+        last_amplitude_chunk_index = current_amplitude_chunk_idx - 1;
     }
 
     result
@@ -151,7 +150,7 @@ mod tests {
         let powers_of_t = powers_of_t(t);
         let fundamental_args = fundamental_args(t);
         let result = nutation_components(&powers_of_t, &fundamental_args);
-        assert_float_eq!(result.planetary[0], -8.595532, rel <= 1e-11);
-        assert_float_eq!(result.planetary[1], 274.365087, rel <= 1e-11);
+        assert_float_eq!(result.planetary[0], -8.595532436021767, rel <= 1e-11);
+        assert_float_eq!(result.planetary[1], 274.365087353907654, rel <= 1e-11);
     }
 }

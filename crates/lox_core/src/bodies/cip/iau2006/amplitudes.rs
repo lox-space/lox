@@ -751,7 +751,7 @@ pub const COEFFICIENTS: [MicroArcsecond; 4755] = [
 
 pub const USAGE_XY: [usize; 20] = [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1];
 
-pub const USAGE_SIN_COS: [usize; 20] = [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1];
+pub const USAGE_SIN_COS: [usize; 20] = [0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0];
 
 pub const USAGE_POWER_OF_T: [usize; 20] =
     [0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4];
