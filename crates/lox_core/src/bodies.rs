@@ -14,9 +14,9 @@ use crate::time::constants::f64::{SECONDS_PER_DAY, SECONDS_PER_JULIAN_CENTURY};
 mod generated;
 pub use generated::*;
 
+mod cip;
 pub mod fundamental;
 pub mod nutation;
-mod cip;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[repr(transparent)]

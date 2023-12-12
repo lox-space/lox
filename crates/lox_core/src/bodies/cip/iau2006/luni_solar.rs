@@ -6,9 +6,9 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use super::{LuniSolarFrequencyList, MicroArcsecond};
+use super::LuniSolarFrequencyList;
 
-pub const N_FREQUENCY_LISTS: usize = 653;
+pub(super) const N_FREQUENCY_LISTS: usize = 653;
 
 #[rustfmt::skip]
 // @formatter:off (sometimes RustRover ignores the rustfmt skip)
