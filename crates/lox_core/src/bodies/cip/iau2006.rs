@@ -197,8 +197,8 @@ mod tests {
     fn test_cip_xy_jd0() {
         let jd0: TDBJulianCenturiesSinceJ2000 = -67.11964407939767;
         let xy = cip_xy(jd0);
-        assert_float_eq!(xy[0], -0.0000269463795685740, rel <= TOLERANCE);
-        assert_float_eq!(xy[1], -0.00002800472282281282, rel <= TOLERANCE);
+        assert_float_eq!(xy[0], -0.4088355637476968, rel <= TOLERANCE);
+        assert_float_eq!(xy[1], -0.38359667445777073, rel <= TOLERANCE);
     }
 
     #[test]
@@ -213,7 +213,7 @@ mod tests {
     fn test_cip_xy_j2100() {
         let j2100: TDBJulianCenturiesSinceJ2000 = 1.0;
         let xy = cip_xy(j2100);
-        assert_float_eq!(xy[0], -0.0000269463795685740, rel <= TOLERANCE);
-        assert_float_eq!(xy[1], -0.00002800472282281282, rel <= TOLERANCE);
+        assert_float_eq!(xy[0], 0.00972070446172924, rel <= TOLERANCE);
+        assert_float_eq!(xy[1], -0.0000673058699616719, rel <= TOLERANCE);
     }
 }
