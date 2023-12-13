@@ -9,4 +9,4 @@
 // TODO: Remove this once all module components are actively used.
 #![allow(dead_code)]
 
-pub mod xy;
+pub mod xy06;
