@@ -6,7 +6,12 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use super::PolynomialCoefficients;
+use super::MAX_POWER_OF_T;
+
+pub(super) struct PolynomialCoefficients {
+    pub x: [f64; MAX_POWER_OF_T + 1],
+    pub y: [f64; MAX_POWER_OF_T + 1],
+}
 
 pub(super) const COEFFICIENTS: PolynomialCoefficients = PolynomialCoefficients {
     x: [

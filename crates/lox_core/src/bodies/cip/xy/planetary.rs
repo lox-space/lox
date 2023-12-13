@@ -6,7 +6,7 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use super::PlanetaryFrequencyList;
+pub(super) type PlanetaryFrequencyList = [f64; 14];
 
 #[rustfmt::skip]
 // @formatter:off (sometimes RustRover ignores the rustfmt skip)

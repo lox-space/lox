@@ -6,7 +6,7 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use super::LuniSolarFrequencyList;
+pub(super) type LuniSolarFrequencyList = [f64; 5];
 
 pub(super) const N_FREQUENCY_LISTS: usize = 653;
 

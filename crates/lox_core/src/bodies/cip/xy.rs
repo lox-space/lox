@@ -29,15 +29,6 @@ type PowersOfT = [f64; MAX_POWER_OF_T + 1];
 
 type FundamentalArgs = [Radians; 14];
 
-struct PolynomialCoefficients {
-    x: [f64; MAX_POWER_OF_T + 1],
-    y: [f64; MAX_POWER_OF_T + 1],
-}
-
-type LuniSolarFrequencyList = [f64; 5];
-
-type PlanetaryFrequencyList = [f64; 14];
-
 type MicroArcsecond = f64;
 
 #[derive(Default)]
