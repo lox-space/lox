@@ -8,7 +8,7 @@
 
 mod terms;
 
-use crate::bodies::cip::xy06::{xy, XY};
+use crate::bodies::cip::xy06::XY;
 use crate::bodies::fundamental::iers03::{
     general_accum_precession_in_longitude_iers03, mean_moon_sun_elongation_iers03,
 };
@@ -21,7 +21,7 @@ use crate::types::Radians;
 type FundamentalArgs = [Radians; 8];
 
 /// The Celestial Intermediate Origin (CIO) locator s, in radians, given the (X, Y) coordinates of
-/// Celestial Intermediate Pole (CIP). Based on IAU 2006 precession and IAU 2000A nutation.
+/// the Celestial Intermediate Pole (CIP). Based on IAU 2006 precession and IAU 2000A nutation.
 pub fn s(t: TDBJulianCenturiesSinceJ2000, xy: XY) -> Radians {
     let fundamental_args = fundamental_args(t);
     let evaluated_terms = evaluate_terms(&fundamental_args);
@@ -74,6 +74,7 @@ fn evaluate_single_order_terms(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::bodies::cip::xy06::xy;
     use float_eq::assert_float_eq;
 
     const TOLERANCE: f64 = 1e-11;
