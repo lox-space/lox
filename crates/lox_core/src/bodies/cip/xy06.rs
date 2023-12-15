@@ -31,7 +31,7 @@ type FundamentalArgs = [Radians; 14];
 
 type MicroArcsecond = f64;
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 struct NutationComponents {
     planetary: XY,
     luni_solar: XY,
@@ -49,7 +49,7 @@ pub fn xy(t: TDBJulianCenturiesSinceJ2000) -> XY {
 
 fn powers_of_t(t: TDBJulianCenturiesSinceJ2000) -> PowersOfT {
     let mut tn: f64 = 1.0;
-    let mut powers_of_t = [0.0; MAX_POWER_OF_T + 1];
+    let mut powers_of_t = PowersOfT::default();
     for pow in powers_of_t.iter_mut() {
         *pow = tn;
         tn *= t;
@@ -57,8 +57,9 @@ fn powers_of_t(t: TDBJulianCenturiesSinceJ2000) -> PowersOfT {
     powers_of_t
 }
 
-/// The output of the CIP calculation is dependent on the ordering of these arguments. DO NOT EDIT.
 fn fundamental_args(t: TDBJulianCenturiesSinceJ2000) -> FundamentalArgs {
+    // The output of the CIP calculation is dependent on the ordering of these arguments. DO NOT
+    // EDIT.
     [
         Moon.mean_anomaly_iers03(t),
         Sun.mean_anomaly_iers03(t),
@@ -206,5 +207,31 @@ mod tests {
         let xy = xy(j2100);
         assert_float_eq!(xy[0], 0.00972070446172924, rel <= TOLERANCE);
         assert_float_eq!(xy[1], -0.0000673058699616719, rel <= TOLERANCE);
+    }
+
+    #[test]
+    fn test_fundamental_args_ordering() {
+        let j2000: TDBJulianCenturiesSinceJ2000 = 0.0;
+        let actual = fundamental_args(j2000);
+        let expected = [
+            Moon.mean_anomaly_iers03(j2000),
+            Sun.mean_anomaly_iers03(j2000),
+            Moon.mean_longitude_minus_ascending_node_mean_longitude_iers03(j2000),
+            mean_moon_sun_elongation_iers03(j2000),
+            Moon.ascending_node_mean_longitude_iers03(j2000),
+            Mercury.mean_longitude_iers03(j2000),
+            Venus.mean_longitude_iers03(j2000),
+            Earth.mean_longitude_iers03(j2000),
+            Mars.mean_longitude_iers03(j2000),
+            Jupiter.mean_longitude_iers03(j2000),
+            Saturn.mean_longitude_iers03(j2000),
+            Uranus.mean_longitude_iers03(j2000),
+            Neptune.mean_longitude_iers03(j2000),
+            general_accum_precession_in_longitude_iers03(j2000),
+        ];
+
+        expected.iter().enumerate().for_each(|(i, expected)| {
+            assert_float_eq!(*expected, actual[i], rel <= TOLERANCE);
+        });
     }
 }
