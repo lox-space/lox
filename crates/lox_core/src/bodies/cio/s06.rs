@@ -20,7 +20,7 @@ use crate::types::Radians;
 /// l, l', F, D, Ω, LVe, LE and pA.
 type FundamentalArgs = [Radians; 8];
 
-/// The Celestial Intermediate Origin (CIO) locator s, in radians, given the (X, Y) coordinates of
+/// Computes the Celestial Intermediate Origin (CIO) locator s, in radians, given the (X, Y) coordinates of
 /// the Celestial Intermediate Pole (CIP). Based on IAU 2006 precession and IAU 2000A nutation.
 pub fn s(t: TDBJulianCenturiesSinceJ2000, xy: XY) -> Radians {
     let fundamental_args = fundamental_args(t);
@@ -30,8 +30,9 @@ pub fn s(t: TDBJulianCenturiesSinceJ2000, xy: XY) -> Radians {
     radians - xy[0] * xy[1] / 2.0
 }
 
-/// The output of the CIO calculation is dependent on the ordering of these arguments. DO NOT EDIT.
 fn fundamental_args(t: TDBJulianCenturiesSinceJ2000) -> FundamentalArgs {
+    // The output of the CIO calculation is dependent on the ordering of these arguments. DO NOT
+    // EDIT.
     [
         Moon.mean_anomaly_iers03(t),
         Sun.mean_anomaly_iers03(t),
@@ -98,5 +99,25 @@ mod tests {
         let j2100: TDBJulianCenturiesSinceJ2000 = 1.0;
         let xy = xy(j2100);
         assert_float_eq!(s(j2100, xy), -0.00000000480511934533, rel <= TOLERANCE);
+    }
+
+    #[test]
+    fn test_fundamental_args_ordering() {
+        let j2000: TDBJulianCenturiesSinceJ2000 = 0.0;
+        let actual = fundamental_args(j2000);
+        let expected = [
+            Moon.mean_anomaly_iers03(j2000),
+            Sun.mean_anomaly_iers03(j2000),
+            Moon.mean_longitude_minus_ascending_node_mean_longitude_iers03(j2000),
+            mean_moon_sun_elongation_iers03(j2000),
+            Moon.ascending_node_mean_longitude_iers03(j2000),
+            Venus.mean_longitude_iers03(j2000),
+            Earth.mean_longitude_iers03(j2000),
+            general_accum_precession_in_longitude_iers03(j2000),
+        ];
+
+        expected.iter().enumerate().for_each(|(i, expected)| {
+            assert_float_eq!(*expected, actual[i], rel <= TOLERANCE);
+        });
     }
 }
