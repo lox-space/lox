@@ -36,6 +36,7 @@ impl SphericalAngles {
 ///
 /// Note that the signs of all angles are reversed relative to ERFA, which uses left-handed
 /// coordinates, whereas glam is right-handed.
+#[allow(dead_code)] // TODO: Remove this once all module components are actively used.
 pub fn celestial_to_intermediate_frame_of_date_matrix(cip: XY, s: Radians) -> DMat3 {
     let spherical_angles = SphericalAngles::new(cip);
     let mut result = DMat3::default();
