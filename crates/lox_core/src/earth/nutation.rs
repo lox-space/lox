@@ -1,9 +1,9 @@
 use std::ops::Add;
 
-use crate::bodies::nutation::iau1980::nutation_iau1980;
-use crate::bodies::nutation::iau2000::nutation_iau2000a;
-use crate::bodies::nutation::iau2000::nutation_iau2000b;
-use crate::bodies::nutation::iau2006::nutation_iau2006a;
+use crate::earth::nutation::iau1980::nutation_iau1980;
+use crate::earth::nutation::iau2000::nutation_iau2000a;
+use crate::earth::nutation::iau2000::nutation_iau2000b;
+use crate::earth::nutation::iau2006::nutation_iau2006a;
 use crate::math::RADIANS_IN_ARCSECOND;
 use crate::time::epochs::Epoch;
 use crate::time::intervals::tdb_julian_centuries_since_j2000;

@@ -6,11 +6,11 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-pub(super) type PlanetaryFrequencyList = [f64; 14];
+pub(crate) type PlanetaryFrequencyList = [f64; 14];
 
 #[rustfmt::skip]
 // @formatter:off (sometimes RustRover ignores the rustfmt skip)
-pub(super) const FREQUENCY_LISTS: [PlanetaryFrequencyList; 656] = [
+pub(crate) const FREQUENCY_LISTS: [PlanetaryFrequencyList; 656] = [
     [0.0,  0.0,  1.0, -1.0,  1.0,  0.0,  0.0, -1.0,  0.0, -2.0,  5.0,  0.0,  0.0,  0.0],
     [0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  2.0, -5.0,  0.0,  0.0, -1.0],
     [0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  3.0, -5.0,  0.0,  0.0,  0.0,  0.0,  0.0, -2.0],

@@ -6,14 +6,4 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-pub mod bodies;
-pub mod communications;
-pub mod ephemeris;
-pub mod errors;
-pub mod frames;
-pub mod time;
-pub mod two_body;
-pub mod types;
-
-mod earth;
-pub(crate) mod math;
+mod s06;

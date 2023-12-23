@@ -1,6 +1,6 @@
 use std::f64::consts::TAU;
 
-use crate::bodies::nutation::{point1_milliarcsec_to_rad, Nutation};
+use crate::earth::nutation::{point1_milliarcsec_to_rad, Nutation};
 use crate::math::{arcsec_to_rad, normalize_two_pi};
 use crate::time::intervals::TDBJulianCenturiesSinceJ2000;
 use crate::types::{Arcsec, Radians};

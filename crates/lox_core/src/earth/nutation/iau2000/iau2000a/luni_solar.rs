@@ -6,11 +6,11 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::bodies::nutation::iau2000::LuniSolarCoefficients;
+use crate::earth::nutation::iau2000::LuniSolarCoefficients;
 
 #[rustfmt::skip]
 // @formatter:off (sometimes RustRover ignores the rustfmt skip)
-pub(super) const COEFFICIENTS: [LuniSolarCoefficients; 678] = [
+pub(crate) const COEFFICIENTS: [LuniSolarCoefficients; 678] = [
     LuniSolarCoefficients{ l:  0.0,    lp:  0.0, f:  0.0,  d:  0.0,  om:  1.0, sin_psi: -172064161.0,    sin_psi_t: -174666.0,   cos_psi:  33386.0,    cos_eps:  92052331.0, cos_eps_t:  9086.0, sin_eps:  15377.0},
     LuniSolarCoefficients{ l:  0.0,    lp:  0.0, f:  2.0,  d: -2.0,  om:  2.0, sin_psi: -13170906.0,     sin_psi_t: -1675.0,     cos_psi: -13696.0,    cos_eps:  5730336.0,  cos_eps_t: -3015.0, sin_eps: -4587.0},
     LuniSolarCoefficients{ l:  0.0,    lp:  0.0, f:  2.0,  d:  0.0,  om:  2.0, sin_psi: -2276413.0,      sin_psi_t: -234.0,      cos_psi:  2796.0,     cos_eps:  978459.0,   cos_eps_t: -485.0,  sin_eps:  1374.0},

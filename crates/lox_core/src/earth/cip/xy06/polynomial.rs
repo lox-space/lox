@@ -8,12 +8,12 @@
 
 use super::MAX_POWER_OF_T;
 
-pub(super) struct PolynomialCoefficients {
+pub(crate) struct PolynomialCoefficients {
     pub x: [f64; MAX_POWER_OF_T + 1],
     pub y: [f64; MAX_POWER_OF_T + 1],
 }
 
-pub(super) const COEFFICIENTS: PolynomialCoefficients = PolynomialCoefficients {
+pub(crate) const COEFFICIENTS: PolynomialCoefficients = PolynomialCoefficients {
     x: [
         -0.016617,
         2004.191898,

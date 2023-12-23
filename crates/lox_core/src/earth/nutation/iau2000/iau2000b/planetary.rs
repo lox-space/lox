@@ -6,13 +6,13 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::bodies::nutation::Nutation;
+use crate::earth::nutation::Nutation;
 use crate::math::RADIANS_IN_ARCSECOND;
 
 const RADIANS_IN_MILLIARCSECOND: f64 = RADIANS_IN_ARCSECOND / 1e3;
 
 /// 2000B uses fixed offsets for ψ and ε in lieu of planetary terms.
-pub(super) static OFFSETS: &Nutation = &Nutation {
+pub(crate) static OFFSETS: &Nutation = &Nutation {
     longitude: -0.135 * RADIANS_IN_MILLIARCSECOND,
     obliquity: 0.388 * RADIANS_IN_MILLIARCSECOND,
 };
