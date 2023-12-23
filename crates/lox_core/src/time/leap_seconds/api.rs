@@ -151,6 +151,8 @@ pub fn offset_tai_utc(tai_date_time: &TwoPartDateTime) -> Result<f64, LeapSecond
 
 #[cfg(test)]
 pub mod test {
+    use float_eq::assert_float_eq;
+
     use super::*;
 
     #[test]
@@ -260,8 +262,8 @@ pub mod test {
             let utc_jd = parameter.0.day + parameter.0.seconds_offset;
             let tai_jd = parameter.1.day + parameter.1.seconds_offset;
 
-            assert!((utc_jd - diff_utc_tai - tai_jd).abs() < 1e-9);
-            assert!((tai_jd - diff_tai_utc - utc_jd).abs() < 1e-9);
+            assert_float_eq!(utc_jd - diff_utc_tai - tai_jd, 0.0, abs <= 1e-9);
+            assert_float_eq!(tai_jd - diff_tai_utc - utc_jd, 0.0, abs <= 1e-9);
         }
     }
 }
