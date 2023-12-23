@@ -15,5 +15,5 @@ pub mod time;
 pub mod two_body;
 pub mod types;
 
-pub(crate) mod math;
 mod earth;
+pub(crate) mod math;
