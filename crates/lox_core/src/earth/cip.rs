@@ -6,7 +6,4 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-// TODO: Remove this once all module components are actively used.
-#![allow(dead_code)]
-
 pub mod xy06;

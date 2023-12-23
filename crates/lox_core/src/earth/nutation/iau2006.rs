@@ -6,8 +6,8 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::bodies::nutation::iau2000::nutation_iau2000a;
-use crate::bodies::nutation::Nutation;
+use crate::earth::nutation::iau2000::nutation_iau2000a;
+use crate::earth::nutation::Nutation;
 use crate::bodies::Earth;
 use crate::time::intervals::TDBJulianCenturiesSinceJ2000;
 

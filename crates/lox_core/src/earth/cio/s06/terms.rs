@@ -8,7 +8,7 @@
 
 use crate::types::Radians;
 
-pub(super) const COEFFICIENTS: [f64; 6] = [
+pub(crate) const COEFFICIENTS: [f64; 6] = [
     94.00e-6,
     3808.65e-6,
     -122.68e-6,
@@ -18,9 +18,9 @@ pub(super) const COEFFICIENTS: [f64; 6] = [
 ];
 
 /// Coefficients of l, l', F, D, Ω, LVe, LE and pA.
-pub(super) type FundamentalArgCoeffs = [Radians; 8];
+pub(crate) type FundamentalArgCoeffs = [Radians; 8];
 
-pub(super) struct Term {
+pub(crate) struct Term {
     pub fundamental_arg_coeffs: FundamentalArgCoeffs,
     pub sin_coeff: f64,
     pub cos_coeff: f64,
@@ -28,7 +28,7 @@ pub(super) struct Term {
 
 #[rustfmt::skip]
 // @formatter:off (sometimes RustRover ignores the rustfmt skip)
-pub(super) const ZERO_ORDER: [Term; 33] = [
+pub(crate) const ZERO_ORDER: [Term; 33] = [
     Term{ fundamental_arg_coeffs: [0.0,  0.0,  0.0,  0.0,  1.0,  0.0,  0.0,  0.0], sin_coeff: -2640.73e-6, cos_coeff:  0.39e-6 },
     Term{ fundamental_arg_coeffs: [0.0,  0.0,  0.0,  0.0,  2.0,  0.0,  0.0,  0.0], sin_coeff:   -63.53e-6, cos_coeff:  0.02e-6 },
     Term{ fundamental_arg_coeffs: [0.0,  0.0,  2.0, -2.0,  3.0,  0.0,  0.0,  0.0], sin_coeff:   -11.75e-6, cos_coeff: -0.01e-6 },
@@ -66,7 +66,7 @@ pub(super) const ZERO_ORDER: [Term; 33] = [
 
 #[rustfmt::skip]
 // @formatter:off (sometimes RustRover ignores the rustfmt skip)
-pub(super) const FIRST_ORDER: [Term; 3] = [
+pub(crate) const FIRST_ORDER: [Term; 3] = [
     Term{ fundamental_arg_coeffs: [0.0,  0.0,  0.0,  0.0,  2.0,  0.0,  0.0,  0.0], sin_coeff: -0.07e-6, cos_coeff:  3.57e-6 },
     Term{ fundamental_arg_coeffs: [0.0,  0.0,  0.0,  0.0,  1.0,  0.0,  0.0,  0.0], sin_coeff:  1.73e-6, cos_coeff: -0.03e-6 },
     Term{ fundamental_arg_coeffs: [0.0,  0.0,  2.0, -2.0,  3.0,  0.0,  0.0,  0.0], sin_coeff:  0.00e-6, cos_coeff:  0.48e-6 },
@@ -74,7 +74,7 @@ pub(super) const FIRST_ORDER: [Term; 3] = [
 
 #[rustfmt::skip]
 // @formatter:off (sometimes RustRover ignores the rustfmt skip)
-pub(super) const SECOND_ORDER: [Term; 25] = [
+pub(crate) const SECOND_ORDER: [Term; 25] = [
     Term{ fundamental_arg_coeffs: [0.0,  0.0,  0.0,  0.0,  1.0,  0.0,  0.0,  0.0], sin_coeff: 743.52e-6, cos_coeff: -0.17e-6 },
     Term{ fundamental_arg_coeffs: [0.0,  0.0,  2.0, -2.0,  2.0,  0.0,  0.0,  0.0], sin_coeff:  56.91e-6, cos_coeff:  0.06e-6 },
     Term{ fundamental_arg_coeffs: [0.0,  0.0,  2.0,  0.0,  2.0,  0.0,  0.0,  0.0], sin_coeff:   9.84e-6, cos_coeff: -0.01e-6 },
@@ -104,7 +104,7 @@ pub(super) const SECOND_ORDER: [Term; 25] = [
 
 #[rustfmt::skip]
 // @formatter:off (sometimes RustRover ignores the rustfmt skip)
-pub(super) const THIRD_ORDER: [Term; 4] = [
+pub(crate) const THIRD_ORDER: [Term; 4] = [
     Term{ fundamental_arg_coeffs: [0.0,  0.0,  0.0,  0.0,  1.0,  0.0,  0.0,  0.0], sin_coeff:  0.30e-6, cos_coeff: -23.42e-6 },
     Term{ fundamental_arg_coeffs: [0.0,  0.0,  2.0, -2.0,  2.0,  0.0,  0.0,  0.0], sin_coeff: -0.03e-6, cos_coeff:  -1.46e-6 },
     Term{ fundamental_arg_coeffs: [0.0,  0.0,  2.0,  0.0,  2.0,  0.0,  0.0,  0.0], sin_coeff: -0.01e-6, cos_coeff:  -0.25e-6 },
@@ -113,6 +113,6 @@ pub(super) const THIRD_ORDER: [Term; 4] = [
 
 #[rustfmt::skip]
 // @formatter:off (sometimes RustRover ignores the rustfmt skip)
-pub(super) const FOURTH_ORDER: [Term; 1] = [
+pub(crate) const FOURTH_ORDER: [Term; 1] = [
     Term{ fundamental_arg_coeffs: [0.0,  0.0,  0.0,  0.0,  1.0,  0.0,  0.0,  0.0], sin_coeff: -0.26e-6, cos_coeff: -0.01e-6 }
 ];
