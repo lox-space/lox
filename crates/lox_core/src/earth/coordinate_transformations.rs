@@ -6,14 +6,12 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::types::Radians;
-use glam::DMat3;
+//! Module coordinate_transformations provides functions for transforming coordinates between
+//! reference systems.
 
-// TODO: Decide on correct home for this type once module structure discussed with
-// Helge. (An array is preferable to a tuple because the CIP calculation requires the dynamic
-// access an array provides, and we want to avoid excess allocations moving between steps of the
-// pipeline.)
-type XY = [f64; 2];
+use glam::{DMat3, DVec2};
+
+use crate::types::Radians;
 
 /// The spherical angles E and d.
 struct SphericalAngles {
@@ -22,7 +20,7 @@ struct SphericalAngles {
 }
 
 impl SphericalAngles {
-    fn new(cip: XY) -> Self {
+    fn new(cip: DVec2) -> Self {
         let r2 = cip[0] * cip[0] + cip[1] * cip[1];
         let e = cip[1].atan2(cip[0]);
         let d = (r2 / (1.0 - r2)).sqrt().atan();
@@ -36,8 +34,7 @@ impl SphericalAngles {
 ///
 /// Note that the signs of all angles are reversed relative to ERFA, which uses left-handed
 /// coordinates, whereas glam is right-handed.
-#[allow(dead_code)] // TODO: Remove this once all module components are actively used.
-pub fn celestial_to_intermediate_frame_of_date_matrix(cip: XY, s: Radians) -> DMat3 {
+pub fn celestial_to_intermediate_frame_of_date_matrix(cip: DVec2, s: Radians) -> DMat3 {
     let spherical_angles = SphericalAngles::new(cip);
     let mut result = DMat3::default();
     result = DMat3::from_rotation_z(-spherical_angles.e) * result;
@@ -47,15 +44,19 @@ pub fn celestial_to_intermediate_frame_of_date_matrix(cip: XY, s: Radians) -> DM
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use float_eq::assert_float_eq;
+
+    use super::*;
 
     // TODO: Is this sufficient?
     const TOLERANCE: f64 = 1e-9;
 
     #[test]
     fn test_celestial_to_intermediate_frame_of_date_matrix_jd0() {
-        let cip = [-0.4088355637476968, -0.38359667445777073];
+        let cip = DVec2 {
+            x: -0.4088355637476968,
+            y: -0.38359667445777073,
+        };
         let s = -0.0723985415686306;
         let expected = [
             0.899981235912944,
@@ -74,7 +75,10 @@ mod tests {
 
     #[test]
     fn test_celestial_to_intermediate_frame_of_date_matrix_j2000() {
-        let cip = [-0.0000269463795685740, -0.00002800472282281282];
+        let cip = DVec2 {
+            x: -0.0000269463795685740,
+            y: -0.00002800472282281282,
+        };
         let s = -0.00000001013396519178;
         let expected = [
             0.999999999636946,
@@ -93,7 +97,10 @@ mod tests {
 
     #[test]
     fn test_celestial_to_intermediate_frame_of_date_matrix_j2100() {
-        let cip = [0.00972070446172924, -0.0000673058699616719];
+        let cip = DVec2 {
+            x: 0.00972070446172924,
+            y: -0.0000673058699616719,
+        };
         let s = -0.00000000480511934533;
         let expected = [
             0.999952752836184,

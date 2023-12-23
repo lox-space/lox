@@ -6,4 +6,6 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+//! Module cio exposes functions for calculating the Celestial Intermediate Origin (CIO) locator, s.
+
 mod s06;

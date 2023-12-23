@@ -11,7 +11,6 @@ use std::fmt::{Debug, Display, Formatter};
 use glam::{DMat3, DVec3};
 
 pub mod iau;
-mod transformations;
 
 // TODO: Replace with proper `Epoch` type
 type Epoch = f64;
