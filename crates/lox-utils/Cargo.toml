@@ -6,6 +6,8 @@ edition = "2021"
 [dependencies]
 fast_polynomial.workspace = true
 thiserror.workspace = true
+quick-xml = { version = "0.31.0", features = ["serde"] }
+serde = { version = "1.0.194", features = ["serde_derive"] }
 
 [dev-dependencies]
 float_eq.workspace = true

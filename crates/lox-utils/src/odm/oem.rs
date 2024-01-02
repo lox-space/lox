@@ -1,3 +1,5 @@
+use serde;
+
 use super::common;
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
