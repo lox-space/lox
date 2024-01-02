@@ -20,7 +20,7 @@ use crate::time::intervals::TDBJulianCenturiesSinceJ2000;
 mod luni_solar;
 mod planetary;
 
-struct PlanetaryCoefficients {
+pub(crate) struct PlanetaryCoefficients {
     /// Coefficients of l, F, D and Ω.
     l: f64,
     f: f64,

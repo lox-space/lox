@@ -8,7 +8,7 @@ pub(crate) use iau2000b::nutation_iau2000b;
 use std::f64::consts::TAU;
 
 /// IAU 2000A and 2000B use the same structure for luni-solar coefficients.
-struct LuniSolarCoefficients {
+pub(crate) struct LuniSolarCoefficients {
     /// Coefficients of l, l', F, D and Ω.
     l: f64,
     lp: f64,
