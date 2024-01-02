@@ -92,58 +92,6 @@ pub struct VelocityUnits(#[serde(rename = "$text")] std::string::String);
 pub struct VecDouble {
     pub items: Vec<f64>,
 }
-impl yaserde::YaDeserialize for VecDouble {
-    fn deserialize<R: std::io::Read>(
-        reader: &mut yaserde::de::Deserializer<R>,
-    ) -> Result<Self, String> {
-        loop {
-            match reader.next_event()? {
-                xml::reader::XmlEvent::StartElement { .. } => {}
-                xml::reader::XmlEvent::Characters(ref text_content) => {
-                    let items: Vec<f64> = text_content
-                        .split(' ')
-                        .map(|item| item.to_owned())
-                        .map(|item| item.parse().unwrap())
-                        .collect();
-                    return Ok(VecDouble { items });
-                }
-                _ => {
-                    break;
-                }
-            }
-        }
-        Err("Unable to parse attribute".to_string())
-    }
-}
-impl yaserde::YaSerialize for VecDouble {
-    fn serialize<W: std::io::Write>(
-        &self,
-        writer: &mut yaserde::ser::Serializer<W>,
-    ) -> Result<(), String> {
-        let content = self
-            .items
-            .iter()
-            .map(|item| item.to_string())
-            .collect::<Vec<String>>()
-            .join(" ");
-        let data_event = xml::writer::XmlEvent::characters(&content);
-        writer.write(data_event).map_err(|e| e.to_string())?;
-        Ok(())
-    }
-    fn serialize_attributes(
-        &self,
-        mut source_attributes: Vec<xml::attribute::OwnedAttribute>,
-        mut source_namespace: xml::namespace::Namespace,
-    ) -> Result<
-        (
-            Vec<xml::attribute::OwnedAttribute>,
-            xml::namespace::Namespace,
-        ),
-        String,
-    > {
-        Ok((source_attributes, source_namespace))
-    }
-}
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
