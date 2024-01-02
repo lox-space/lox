@@ -6,6 +6,9 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+//! Module xy06 provides a function to calculate the (X, Y) position of the Celestial Intermediate
+//! Pole (CIP) using the IAU 2006 precession and IAU 2000A nutation models.
+
 mod amplitudes;
 mod luni_solar;
 mod planetary;
@@ -18,10 +21,7 @@ use crate::bodies::{Earth, Jupiter, Mars, Mercury, Moon, Neptune, Saturn, Sun, U
 use crate::math::arcsec_to_rad;
 use crate::time::intervals::TDBJulianCenturiesSinceJ2000;
 use crate::types::Radians;
-
-/// A convenient type for performing batch mathematical operations on X and Y components. This
-/// type may change or become unexported as the needs of upstream components become clearer.
-pub type XY = [f64; 2];
+use glam::DVec2;
 
 const MAX_POWER_OF_T: usize = 5;
 
@@ -33,13 +33,13 @@ type MicroArcsecond = f64;
 
 #[derive(Debug, Default)]
 struct NutationComponents {
-    planetary: XY,
-    luni_solar: XY,
+    planetary: DVec2,
+    luni_solar: DVec2,
 }
 
-/// (X, Y) coordinates of the Celestial Intermediate Pole (CIP) using the the IAU 2006 precession
-/// and IAU 2000A nutation models.
-pub fn xy(t: TDBJulianCenturiesSinceJ2000) -> XY {
+/// Calculates the (X, Y) coordinates of the Celestial Intermediate Pole (CIP) using the the IAU
+/// 2006 precession and IAU 2000A nutation models.
+pub fn xy(t: TDBJulianCenturiesSinceJ2000) -> DVec2 {
     let powers_of_t = powers_of_t(t);
     let fundamental_args = fundamental_args(t);
     let polynomial_components = polynomial_components(&powers_of_t);
@@ -78,8 +78,8 @@ fn fundamental_args(t: TDBJulianCenturiesSinceJ2000) -> FundamentalArgs {
     ]
 }
 
-fn polynomial_components(powers_of_t: &PowersOfT) -> XY {
-    let mut result = [0.0; 2];
+fn polynomial_components(powers_of_t: &PowersOfT) -> DVec2 {
+    let mut result = DVec2::default();
     for (i, power_of_t) in powers_of_t.iter().enumerate().rev() {
         result[0] += polynomial::COEFFICIENTS.x[i] * power_of_t;
         result[1] += polynomial::COEFFICIENTS.y[i] * power_of_t;
@@ -166,16 +166,17 @@ fn nutation_components(
 }
 
 fn calculate_cip_unit_vector(
-    polynomial_components: &XY,
+    polynomial_components: &DVec2,
     nutation_components: &NutationComponents,
-) -> XY {
+) -> DVec2 {
     let x_arcsec = polynomial_components[0]
         + (nutation_components.planetary[0] + nutation_components.luni_solar[0]) / 1e6;
     let y_arcsec = polynomial_components[1]
         + (nutation_components.planetary[1] + nutation_components.luni_solar[1]) / 1e6;
-    let x = arcsec_to_rad(x_arcsec);
-    let y = arcsec_to_rad(y_arcsec);
-    [x, y]
+    DVec2 {
+        x: arcsec_to_rad(x_arcsec),
+        y: arcsec_to_rad(y_arcsec),
+    }
 }
 
 #[cfg(test)]

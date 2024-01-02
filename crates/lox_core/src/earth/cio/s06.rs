@@ -6,23 +6,26 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+//! Module s06 exposes a function for calculating the Celestial Intermediate Origin (CIO) locator,
+//! s, using IAU 2006 precession and IAU 2000A nutation.
+
 mod terms;
 
 use crate::bodies::fundamental::iers03::{
     general_accum_precession_in_longitude_iers03, mean_moon_sun_elongation_iers03,
 };
 use crate::bodies::{Earth, Moon, Sun, Venus};
-use crate::earth::cip::xy06::XY;
 use crate::math::arcsec_to_rad;
 use crate::time::intervals::TDBJulianCenturiesSinceJ2000;
 use crate::types::Radians;
+use glam::DVec2;
 
 /// l, l', F, D, Ω, LVe, LE and pA.
 type FundamentalArgs = [Radians; 8];
 
-/// Computes the Celestial Intermediate Origin (CIO) locator s, in radians, given the (X, Y) coordinates of
-/// the Celestial Intermediate Pole (CIP). Based on IAU 2006 precession and IAU 2000A nutation.
-pub fn s(t: TDBJulianCenturiesSinceJ2000, xy: XY) -> Radians {
+/// Computes the Celestial Intermediate Origin (CIO) locator s, in radians, given the (X, Y)
+/// coordinates of the Celestial Intermediate Pole (CIP).
+pub fn s(t: TDBJulianCenturiesSinceJ2000, xy: DVec2) -> Radians {
     let fundamental_args = fundamental_args(t);
     let evaluated_terms = evaluate_terms(&fundamental_args);
     let arcsec = fast_polynomial::poly_array(t, &evaluated_terms);

@@ -6,4 +6,7 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+//! Module cip exposes functions for calculating the position of the
+//! Celestial Intermediate Pole (CIP).
+
 pub mod xy06;

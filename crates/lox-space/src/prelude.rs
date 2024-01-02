@@ -6,8 +6,6 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-pub use lox_core::bodies::barycenters::*;
-pub use lox_core::bodies::planets::*;
 pub use lox_core::bodies::*;
 
 pub use lox_core::time::dates::*;
