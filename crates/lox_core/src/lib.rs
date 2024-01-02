@@ -11,6 +11,7 @@ pub mod communications;
 pub mod ephemeris;
 pub mod errors;
 pub mod frames;
+pub mod odm;
 pub mod time;
 pub mod two_body;
 pub mod types;
