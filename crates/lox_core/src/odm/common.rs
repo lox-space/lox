@@ -1,3 +1,5 @@
+use serde;
+
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 pub struct AccUnits(#[serde(rename = "$text")] std::string::String);
