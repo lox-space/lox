@@ -15,6 +15,7 @@ use crate::bodies::fundamental::iers03::{
     general_accum_precession_in_longitude_iers03, mean_moon_sun_elongation_iers03,
 };
 use crate::bodies::{Earth, Moon, Sun, Venus};
+use crate::earth::cip::xy06::XY;
 use crate::math::arcsec_to_rad;
 use crate::time::intervals::TDBJulianCenturiesSinceJ2000;
 use crate::types::Radians;
