@@ -11,7 +11,7 @@ use super::MicroArcsecond;
 /// Indices into amplitude [COEFFICIENTS].
 #[rustfmt::skip]
 // @formatter:off (sometimes RustRover ignores the rustfmt skip)
-pub(super) const INDICES: [usize; 1309] = [
+pub(crate) const INDICES: [usize; 1309] = [
     1,     21,    37,    51,    65,    79,    91,    103,   115,   127,
     139,   151,   163,   172,   184,   196,   207,   219,   231,   240,
     252,   261,   273,   285,   297,   309,   318,   327,   339,   351,
@@ -148,7 +148,7 @@ pub(super) const INDICES: [usize; 1309] = [
 #[rustfmt::skip]
 // @formatter:off (sometimes RustRover ignores the rustfmt skip)
 #[allow(clippy::approx_constant)]
-pub(super) const COEFFICIENTS: [MicroArcsecond; 4755] = [
+pub(crate) const COEFFICIENTS: [MicroArcsecond; 4755] = [
     -6844318.44,     9205236.26,1328.67,1538.18,      205833.11,
     153041.79,       -3309.73, 853.32,2037.98,       -2301.27,
     81.46, 120.56, -20.39, -15.22,   1.73,  -1.61,  -0.10,   0.11,
@@ -751,11 +751,11 @@ pub(super) const COEFFICIENTS: [MicroArcsecond; 4755] = [
     0.12,   0.00,   0.00,   0.12,   0.12,   0.08,   0.00,   0.04
 ];
 
-pub(super) const USAGE_XY: [usize; 20] =
+pub(crate) const USAGE_XY: [usize; 20] =
     [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1];
 
-pub(super) const USAGE_SIN_COS: [usize; 20] =
+pub(crate) const USAGE_SIN_COS: [usize; 20] =
     [0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0];
 
-pub(super) const USAGE_POWER_OF_T: [usize; 20] =
+pub(crate) const USAGE_POWER_OF_T: [usize; 20] =
     [0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4];

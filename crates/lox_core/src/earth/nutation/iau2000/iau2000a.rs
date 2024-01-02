@@ -12,9 +12,9 @@ use crate::bodies::fundamental::iers03::general_accum_precession_in_longitude_ie
 use crate::bodies::fundamental::mhb2000::{
     mean_moon_sun_elongation_mhb2000_luni_solar, mean_moon_sun_elongation_mhb2000_planetary,
 };
-use crate::bodies::nutation::iau2000::{luni_solar_nutation, DelaunayArguments};
-use crate::bodies::nutation::{point1_microarcsec_to_rad, Nutation};
 use crate::bodies::*;
+use crate::earth::nutation::iau2000::{luni_solar_nutation, DelaunayArguments};
+use crate::earth::nutation::{point1_microarcsec_to_rad, Nutation};
 use crate::time::intervals::TDBJulianCenturiesSinceJ2000;
 
 mod luni_solar;

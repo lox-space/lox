@@ -1,10 +1,10 @@
 mod iau2000a;
 mod iau2000b;
 
-use crate::bodies::nutation::{point1_microarcsec_to_rad, Nutation};
+use crate::earth::nutation::{point1_microarcsec_to_rad, Nutation};
 use crate::time::intervals::TDBJulianCenturiesSinceJ2000;
-pub(super) use iau2000a::nutation_iau2000a;
-pub(super) use iau2000b::nutation_iau2000b;
+pub(crate) use iau2000a::nutation_iau2000a;
+pub(crate) use iau2000b::nutation_iau2000b;
 use std::f64::consts::TAU;
 
 /// IAU 2000A and 2000B use the same structure for luni-solar coefficients.

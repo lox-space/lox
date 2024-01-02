@@ -9,4 +9,6 @@
 // TODO: Remove this once all module components are actively used.
 #![allow(dead_code)]
 
-mod s06;
+mod cio;
+mod cip;
+mod nutation;
