@@ -48,7 +48,6 @@ mod tests {
 
     use super::*;
 
-    // TODO: Is this sufficient?
     const TOLERANCE: f64 = 1e-9;
 
     #[test]
