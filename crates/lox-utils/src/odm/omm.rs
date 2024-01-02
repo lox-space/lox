@@ -40,7 +40,7 @@ pub struct OmmType {
     #[serde(rename = "header")]
     pub header: common::OdmHeader,
     #[serde(rename = "body")]
-    pub body: common::OmmBody,
+    pub body: OmmBody,
     #[serde(rename = "@id")]
     pub id: String,
     #[serde(rename = "@version")]
@@ -51,16 +51,16 @@ pub struct OmmType {
 #[serde(default)]
 pub struct OmmBody {
     #[serde(rename = "segment")]
-    pub segment: common::OmmSegment,
+    pub segment: OmmSegment,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 pub struct OmmSegment {
     #[serde(rename = "metadata")]
-    pub metadata: common::OmmMetadata,
+    pub metadata: OmmMetadata,
     #[serde(rename = "data")]
-    pub data: common::OmmData,
+    pub data: OmmData,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -90,11 +90,11 @@ pub struct OmmData {
     #[serde(rename = "COMMENT")]
     pub comment_list: Vec<String>,
     #[serde(rename = "meanElements")]
-    pub mean_elements: common::MeanElementsType,
+    pub mean_elements: MeanElementsType,
     #[serde(rename = "spacecraftParameters")]
     pub spacecraft_parameters: Option<common::SpacecraftParametersType>,
     #[serde(rename = "tleParameters")]
-    pub tle_parameters: Option<common::TleParametersType>,
+    pub tle_parameters: Option<TleParametersType>,
     #[serde(rename = "covarianceMatrix")]
     pub covariance_matrix: Option<common::OpmCovarianceMatrixType>,
     #[serde(rename = "userDefinedParameters")]
@@ -134,11 +134,11 @@ pub struct TleParametersType {
     #[serde(rename = "NORAD_CAT_ID")]
     pub norad_cat_id: Option<i32>,
     #[serde(rename = "ELEMENT_SET_NO")]
-    pub element_set_no: Option<common::ElementSetNoType>,
+    pub element_set_no: Option<ElementSetNoType>,
     #[serde(rename = "REV_AT_EPOCH")]
     pub rev_at_epoch: Option<u64>,
     #[serde(rename = "MEAN_MOTION_DOT")]
-    pub mean_motion_dot: common::DRevType,
+    pub mean_motion_dot: DRevType,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -147,7 +147,7 @@ pub struct BStarType {
     #[serde(rename = "$text")]
     pub base: f64,
     #[serde(rename = "@units")]
-    pub units: Option<common::BStarUnits>,
+    pub units: Option<BStarUnits>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -156,7 +156,7 @@ pub struct BTermType {
     #[serde(rename = "$text")]
     pub base: f64,
     #[serde(rename = "@units")]
-    pub units: Option<common::BTermUnits>,
+    pub units: Option<BTermUnits>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -165,7 +165,7 @@ pub struct AgomType {
     #[serde(rename = "$text")]
     pub base: f64,
     #[serde(rename = "@units")]
-    pub units: Option<common::AgomUnits>,
+    pub units: Option<AgomUnits>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -174,7 +174,7 @@ pub struct RevType {
     #[serde(rename = "$text")]
     pub base: f64,
     #[serde(rename = "@units")]
-    pub units: Option<common::RevUnits>,
+    pub units: Option<RevUnits>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -183,7 +183,7 @@ pub struct DRevType {
     #[serde(rename = "$text")]
     pub base: f64,
     #[serde(rename = "@units")]
-    pub units: Option<common::DRevUnits>,
+    pub units: Option<DRevUnits>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -192,5 +192,5 @@ pub struct DdRevType {
     #[serde(rename = "$text")]
     pub base: f64,
     #[serde(rename = "@units")]
-    pub units: Option<common::DdRevUnits>,
+    pub units: Option<DdRevUnits>,
 }

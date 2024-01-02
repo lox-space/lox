@@ -8,7 +8,7 @@ pub struct OpmType {
     #[serde(rename = "header")]
     pub header: common::OdmHeader,
     #[serde(rename = "body")]
-    pub body: common::OpmBody,
+    pub body: OpmBody,
     #[serde(rename = "@id")]
     pub id: String,
     #[serde(rename = "@version")]
@@ -19,16 +19,16 @@ pub struct OpmType {
 #[serde(default)]
 pub struct OpmBody {
     #[serde(rename = "segment")]
-    pub segment: common::OpmSegment,
+    pub segment: OpmSegment,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 pub struct OpmSegment {
     #[serde(rename = "metadata")]
-    pub metadata: common::OpmMetadata,
+    pub metadata: OpmMetadata,
     #[serde(rename = "data")]
-    pub data: common::OpmData,
+    pub data: OpmData,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -58,13 +58,13 @@ pub struct OpmData {
     #[serde(rename = "stateVector")]
     pub state_vector: common::StateVectorType,
     #[serde(rename = "keplerianElements")]
-    pub keplerian_elements: Option<common::KeplerianElementsType>,
+    pub keplerian_elements: Option<KeplerianElementsType>,
     #[serde(rename = "spacecraftParameters")]
     pub spacecraft_parameters: Option<common::SpacecraftParametersType>,
     #[serde(rename = "covarianceMatrix")]
     pub covariance_matrix: Option<common::OpmCovarianceMatrixType>,
     #[serde(rename = "maneuverParameters")]
-    pub maneuver_parameters_list: Vec<common::ManeuverParametersType>,
+    pub maneuver_parameters_list: Vec<ManeuverParametersType>,
     #[serde(rename = "userDefinedParameters")]
     pub user_defined_parameters: Option<common::UserDefinedType>,
 }
