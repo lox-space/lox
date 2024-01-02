@@ -8,7 +8,7 @@ pub struct OemType {
     #[serde(rename = "header")]
     pub header: common::OdmHeader,
     #[serde(rename = "body")]
-    pub body: common::OemBody,
+    pub body: OemBody,
     #[serde(rename = "@id")]
     pub id: String,
     #[serde(rename = "@version")]
@@ -19,16 +19,16 @@ pub struct OemType {
 #[serde(default)]
 pub struct OemBody {
     #[serde(rename = "segment")]
-    pub segment_list: Vec<common::OemSegment>,
+    pub segment_list: Vec<OemSegment>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 pub struct OemSegment {
     #[serde(rename = "metadata")]
-    pub metadata: common::OemMetadata,
+    pub metadata: OemMetadata,
     #[serde(rename = "data")]
-    pub data: common::OemData,
+    pub data: OemData,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]

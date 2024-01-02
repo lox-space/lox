@@ -8,7 +8,7 @@ pub struct OcmType {
     #[serde(rename = "header")]
     pub header: common::OdmHeader,
     #[serde(rename = "body")]
-    pub body: common::OcmBody,
+    pub body: OcmBody,
     #[serde(rename = "@id")]
     pub id: String,
     #[serde(rename = "@version")]
@@ -19,16 +19,16 @@ pub struct OcmType {
 #[serde(default)]
 pub struct OcmBody {
     #[serde(rename = "segment")]
-    pub segment: common::OcmSegment,
+    pub segment: OcmSegment,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 pub struct OcmSegment {
     #[serde(rename = "metadata")]
-    pub metadata: common::OcmMetadata,
+    pub metadata: OcmMetadata,
     #[serde(rename = "data")]
-    pub data: common::OcmData,
+    pub data: OcmData,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -136,17 +136,17 @@ pub struct OcmMetadata {
 #[serde(default)]
 pub struct OcmData {
     #[serde(rename = "traj")]
-    pub traj_list: Vec<common::OcmTrajStateType>,
+    pub traj_list: Vec<OcmTrajStateType>,
     #[serde(rename = "phys")]
-    pub phys: Option<common::OcmPhysicalDescriptionType>,
+    pub phys: Option<OcmPhysicalDescriptionType>,
     #[serde(rename = "cov")]
-    pub cov_list: Vec<common::OcmCovarianceMatrixType>,
+    pub cov_list: Vec<OcmCovarianceMatrixType>,
     #[serde(rename = "man")]
-    pub man_list: Vec<common::OcmManeuverParametersType>,
+    pub man_list: Vec<OcmManeuverParametersType>,
     #[serde(rename = "pert")]
-    pub pert: Option<common::OcmPerturbationsType>,
+    pub pert: Option<OcmPerturbationsType>,
     #[serde(rename = "od")]
-    pub od: Option<common::OcmOdParametersType>,
+    pub od: Option<OcmOdParametersType>,
     #[serde(rename = "user")]
     pub user: Option<common::UserDefinedType>,
 }
