@@ -42,6 +42,18 @@ pub fn celestial_to_intermediate_frame_of_date_matrix(cip: DVec2, s: Radians) ->
     DMat3::from_rotation_z(spherical_angles.e + s) * result
 }
 
+/// Compute the celestial-terrestrial transformation matrix (excluding polar motion) given the
+/// intermediate-frame-of-date matrix and the Earth rotation angle (ERA) in Radians.
+///
+/// Note that the signs of all angles are reversed relative to ERFA, which uses left-handed
+/// coordinates, whereas glam is right-handed.
+pub fn celestial_terrestrial_matrix(
+    intermediate_frame_of_date_matrix: DMat3,
+    era: Radians,
+) -> DMat3 {
+    DMat3::from_rotation_z(-era) * intermediate_frame_of_date_matrix
+}
+
 #[cfg(test)]
 mod tests {
     use float_eq::assert_float_eq;
@@ -113,6 +125,28 @@ mod tests {
             0.999952750571089,
         ];
         let actual = celestial_to_intermediate_frame_of_date_matrix(cip, s).to_cols_array();
+        assert_mat3_eq(&expected, &actual)
+    }
+
+    #[test]
+    fn test_celestial_terrestrial_matrix() {
+        //
+        let intermediate_frame_of_date_matrix =
+            DMat3::from_cols_array(&[0.0, 3.0, 6.0, 1.0, 4.0, 7.0, 2.0, 5.0, 8.0]);
+        let era = -0.123456789;
+        let expected = [
+            -0.3694302455469326,
+            2.9771666553411373,
+            6.0,
+            0.4998152243844689,
+            4.09269895563716,
+            7.0,
+            1.3690606943158702,
+            5.208231255933183,
+            8.0,
+        ];
+        let actual =
+            celestial_terrestrial_matrix(intermediate_frame_of_date_matrix, era).to_cols_array();
         assert_mat3_eq(&expected, &actual)
     }
 
