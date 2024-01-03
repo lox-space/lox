@@ -21,7 +21,7 @@ const SECULAR_DRIFT: ArcsecondsPerCentury = -47e-6;
 
 /// Approximate the TIO locator, s', in radians using the IAU 2000 model.
 #[inline]
-pub fn tio_00(t: TTJulianCenturiesSinceJ2000) -> Radians {
+pub fn sp_00(t: TTJulianCenturiesSinceJ2000) -> Radians {
     SECULAR_DRIFT * t * RADIANS_IN_ARCSECOND
 }
 
@@ -31,9 +31,9 @@ mod tests {
     use float_eq::assert_float_eq;
 
     #[test]
-    fn test_tio_00() {
+    fn test_sp_00() {
         let t = 123.45;
         let expected = -2.812961699849694e-8;
-        assert_float_eq!(expected, tio_00(t), rel <= 1e-12);
+        assert_float_eq!(expected, sp_00(t), rel <= 1e-12);
     }
 }
