@@ -13,6 +13,8 @@ pub fn tdb_julian_centuries_since_j2000(epoch: Epoch) -> TDBJulianCenturiesSince
     }
 }
 
+pub type UT1DaysSinceJ2000 = f64;
+
 #[cfg(test)]
 mod epoch_tests {
     use float_eq::assert_float_eq;
