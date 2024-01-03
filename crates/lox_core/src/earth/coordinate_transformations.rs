@@ -43,7 +43,7 @@ pub fn celestial_to_intermediate_frame_of_date_matrix(cip: DVec2, s: Radians) ->
 }
 
 /// Compute the celestial-terrestrial transformation matrix (excluding polar motion) given the
-/// intermediate-frame-of-date matrix and the Earth rotation angle (ERA) in Radians.
+/// intermediate frame-of-date matrix and the Earth rotation angle (ERA) in radians.
 ///
 /// Note that the signs of all angles are reversed relative to ERFA, which uses left-handed
 /// coordinates, whereas glam is right-handed.
