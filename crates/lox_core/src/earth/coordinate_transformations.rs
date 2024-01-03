@@ -54,6 +54,17 @@ pub fn celestial_terrestrial_matrix(
     DMat3::from_rotation_z(-era) * intermediate_frame_of_date_matrix
 }
 
+/// Compute the polar motion matrix given the pole coordinates and the TIO locator, s', in radians.
+///
+/// Note that the signs of all angles are reversed relative to ERFA, which uses left-handed
+/// coordinates, whereas glam is right-handed.
+pub fn polar_motion_matrix(pole_coords: DVec2, sp: Radians) -> DMat3 {
+    let mut result = DMat3::default();
+    result = DMat3::from_rotation_z(-sp) * result;
+    result = DMat3::from_rotation_y(pole_coords[0]) * result;
+    DMat3::from_rotation_x(pole_coords[1]) * result
+}
+
 #[cfg(test)]
 mod tests {
     use float_eq::assert_float_eq;
@@ -147,6 +158,28 @@ mod tests {
         ];
         let actual =
             celestial_terrestrial_matrix(intermediate_frame_of_date_matrix, era).to_cols_array();
+        assert_mat3_eq(&expected, &actual)
+    }
+
+    #[test]
+    fn test_polar_motion_matrix() {
+        let pole_coords = DVec2 {
+            x: 0.123456789,
+            y: 0.987654321,
+        };
+        let sp = 1.23456789;
+        let expected = [
+            0.32741794183501576,
+            -0.4859020097420154,
+            -0.8103682670818204,
+            0.9368207889782118,
+            0.2787117816107756,
+            0.21139193960411084,
+            0.12314341518231086,
+            -0.828383353116187,
+            0.5464583420327842,
+        ];
+        let actual = polar_motion_matrix(pole_coords, sp).to_cols_array();
         assert_mat3_eq(&expected, &actual)
     }
 
