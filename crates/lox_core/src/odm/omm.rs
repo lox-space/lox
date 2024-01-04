@@ -108,6 +108,10 @@ pub struct MeanElementsType {
     pub comment_list: Vec<String>,
     #[serde(rename = "EPOCH")]
     pub epoch: common::EpochType,
+    #[serde(rename = "SEMI_MAJOR_AXIS")]
+    pub semi_major_axis: Option<common::DistanceType>,
+    #[serde(rename = "MEAN_MOTION")]
+    pub mean_motion: Option<common::RevType>,  
     #[serde(rename = "ECCENTRICITY")]
     pub eccentricity: common::NonNegativeDouble,
     #[serde(rename = "INCLINATION")]
@@ -137,8 +141,16 @@ pub struct TleParametersType {
     pub element_set_no: Option<ElementSetNoType>,
     #[serde(rename = "REV_AT_EPOCH")]
     pub rev_at_epoch: Option<u64>,
+    #[serde(rename = "BSTAR")]
+    pub bstar: Option<common::BStarType>,
+    #[serde(rename = "BTERM")]
+    pub bterm: Option<common::BTermType>,
     #[serde(rename = "MEAN_MOTION_DOT")]
     pub mean_motion_dot: DRevType,
+    #[serde(rename = "MEAN_MOTION_DDOT")]
+    pub mean_motion_ddot: Option<common::DRevType>,
+    #[serde(rename = "AGOM")]
+    pub agom: Option<common::AgomType>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
