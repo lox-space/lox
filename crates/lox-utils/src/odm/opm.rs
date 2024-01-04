@@ -84,6 +84,10 @@ pub struct KeplerianElementsType {
     pub ra_of_asc_node: common::AngleType,
     #[serde(rename = "ARG_OF_PERICENTER")]
     pub arg_of_pericenter: common::AngleType,
+    #[serde(rename = "TRUE_ANOMALY")]
+    pub true_anomaly: Option<common::AngleType>,
+    #[serde(rename = "MEAN_ANOMALY")]
+    pub mean_anomaly: Option<common::AngleType>,  
     #[serde(rename = "GM")]
     pub gm: common::GmType,
 }
