@@ -10,7 +10,7 @@ use super::PlanetaryCoefficients;
 
 #[rustfmt::skip]
 // @formatter:off (sometimes RustRover ignores the rustfmt skip)
-pub(crate) const COEFFICIENTS: [PlanetaryCoefficients; 687] = [
+pub(super) const COEFFICIENTS: [PlanetaryCoefficients; 687] = [
     PlanetaryCoefficients{ l:  0.0,   f:  0.0,  d:  0.0,  om:  0.0, mercury:  0.0,    venus:   0.0, earth:   8.0, mars: -16.0,  jupiter:  4.0,    saturn:  5.0, uranus:  0.0, neptune:  0.0,    pa:  0.0, sin_psi:  1440.0, cos_psi:    0.0,  sin_eps:     0.0, cos_eps:    0.0},
     PlanetaryCoefficients{ l:  0.0,   f:  0.0,  d:  0.0,  om:  0.0, mercury:  0.0,    venus:   0.0, earth:  -8.0, mars:  16.0,  jupiter: -4.0,    saturn: -5.0, uranus:  0.0, neptune:  0.0,    pa:  2.0, sin_psi:    56.0, cos_psi: -117.0,  sin_eps:   -42.0, cos_eps:  -40.0},
     PlanetaryCoefficients{ l:  0.0,   f:  0.0,  d:  0.0,  om:  0.0, mercury:  0.0,    venus:   0.0, earth:   8.0, mars: -16.0,  jupiter:  4.0,    saturn:  5.0, uranus:  0.0, neptune:  0.0,    pa:  2.0, sin_psi:   125.0, cos_psi:  -43.0,  sin_eps:     0.0, cos_eps:  -54.0},
