@@ -7,7 +7,8 @@
  */
 
 pub mod constants;
+pub mod continuous;
 pub mod dates;
-pub mod epochs;
 pub mod intervals;
 pub mod leap_seconds;
+pub mod utc;

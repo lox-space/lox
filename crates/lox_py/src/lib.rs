@@ -11,8 +11,8 @@ use pyo3::prelude::*;
 use thiserror::Error;
 
 use lox_core::errors::LoxError;
-use lox_core::time::dates::{Date, Time};
-use lox_core::time::epochs::Epoch;
+use lox_core::time::dates::{Date, OldTime};
+use lox_core::time::epochs::OldTime;
 use lox_core::time::epochs::TimeScale;
 
 #[derive(Error, Debug)]
@@ -63,7 +63,7 @@ impl PyTimeScale {
 }
 
 #[pyclass(name = "Epoch")]
-struct PyEpoch(Epoch);
+struct PyEpoch(OldTime);
 
 #[pymethods]
 impl PyEpoch {
@@ -105,7 +105,7 @@ impl PyEpoch {
         let hour = hour.unwrap_or(0);
         let minute = minute.unwrap_or(0);
         let second = second.unwrap_or(0);
-        let mut time = Time::new(hour, minute, second)?;
+        let mut time = OldTime::new(hour, minute, second)?;
         if let Some(milli) = milli {
             time = time.milli(milli);
         }
@@ -124,7 +124,11 @@ impl PyEpoch {
         if let Some(atto) = atto {
             time = time.atto(atto);
         }
-        Ok(PyEpoch(Epoch::from_date_and_time(time_scale.0, date, time)))
+        Ok(PyEpoch(OldTime::from_date_and_time(
+            time_scale.0,
+            date,
+            time,
+        )))
     }
 
     fn attosecond(&self) -> i64 {

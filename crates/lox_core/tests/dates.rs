@@ -6,8 +6,9 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use lox_core::time::dates::{Date, Time};
+use lox_core::time::dates::Date;
 use rstest::rstest;
+use lox_core::time::utc::UTC;
 
 #[rstest]
 #[case(-4713, 12, 31, -2451546)]
@@ -47,7 +48,7 @@ fn test_illegal_dates() {
 
 #[test]
 fn test_illegal_times() {
-    assert!(Time::from_seconds(24, 59, 59.0).is_err());
-    assert!(Time::from_seconds(23, 60, 59.0).is_err());
-    assert!(Time::from_seconds(23, 59, 61.0).is_err());
+    assert!(UTC::from_fractional_seconds(24, 59, 59.0).is_err());
+    assert!(UTC::from_fractional_seconds(23, 60, 59.0).is_err());
+    assert!(UTC::from_fractional_seconds(23, 59, 61.0).is_err());
 }

@@ -13,9 +13,11 @@ pub enum LoxError {
     #[error("invalid date `{0}-{1}-{2}`")]
     InvalidDate(i64, i64, i64),
     #[error("invalid time `{0}:{1}:{2}`")]
-    InvalidTime(i64, i64, i64),
-    #[error("invalid time `{0}:{1}:{2}`")]
-    InvalidSeconds(i64, i64, f64),
+    InvalidTime(u8, u8, u8),
+    #[error("seconds must be in the range [0.0, 60.0], but was `{0}`")]
+    InvalidSeconds(f64),
+    #[error("thousandths must be in the range [0, 999], but was `{0}`")]
+    InvalidThousandths(u16),
     #[error("day of year cannot be 366 for a non-leap year")]
     NonLeapYear,
 }
