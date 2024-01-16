@@ -12,36 +12,13 @@ use std::ops::{Add, Sub};
 
 use num::ToPrimitive;
 
-use crate::time::constants;
 use crate::time::constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HOUR, SECONDS_PER_MINUTE};
 use crate::time::constants::u64::ATTOSECONDS_PER_SECOND;
 use crate::time::dates::Calendar::ProlepticJulian;
 use crate::time::dates::Date;
+use crate::time::scales::TimeScale;
 use crate::time::utc::{UTCDateTime, UTC};
-
-/// The continuous time scales supported by Lox.
-#[derive(Debug, Copy, Clone)]
-pub enum TimeScale {
-    TAI,
-    TCB,
-    TCG,
-    TDB,
-    TT,
-    UT1,
-}
-
-impl fmt::Display for TimeScale {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            TimeScale::TAI => write!(f, "TAI"),
-            TimeScale::TCB => write!(f, "TCB"),
-            TimeScale::TCG => write!(f, "TCG"),
-            TimeScale::TDB => write!(f, "TDB"),
-            TimeScale::TT => write!(f, "TT"),
-            TimeScale::UT1 => write!(f, "UT1"),
-        }
-    }
-}
+use crate::time::{constants, Thousandths, WallClock};
 
 /// `ContinuousTime` is the base time representation for time scales without leap seconds. It is measured relative to an
 /// arbitrary epoch. `RawTime::default()` represents the epoch itself.
@@ -97,11 +74,64 @@ pub struct Delta {
     attoseconds: u64,
 }
 
+/// Dateable continuous time formats can report their date in their respective calendar.
+pub trait Dateable {
+    fn date(&self) -> Date;
+}
+
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct TAI(ContinuousTime);
 
 impl TAI {
     pub fn to_ut1(&self, _dut: Delta, _dat: Delta) -> UT1 {
+        todo!()
+    }
+}
+
+impl Dateable for TAI {
+    fn date(&self) -> Date {
+        todo!()
+    }
+}
+
+impl WallClock for TAI {
+    fn scale(&self) -> TimeScale {
+        TimeScale::TAI
+    }
+
+    fn hour(&self) -> u8 {
+        todo!()
+    }
+
+    fn minute(&self) -> u8 {
+        todo!()
+    }
+
+    fn second(&self) -> u8 {
+        todo!()
+    }
+
+    fn millisecond(&self) -> Thousandths {
+        todo!()
+    }
+
+    fn microsecond(&self) -> Thousandths {
+        todo!()
+    }
+
+    fn nanosecond(&self) -> Thousandths {
+        todo!()
+    }
+
+    fn picosecond(&self) -> Thousandths {
+        todo!()
+    }
+
+    fn femtosecond(&self) -> Thousandths {
+        todo!()
+    }
+
+    fn attosecond(&self) -> Thousandths {
         todo!()
     }
 }
@@ -162,17 +192,6 @@ impl Time {
         let first_proleptic_day = Date::new_unchecked(ProlepticJulian, -4712, 1, 1);
         let midday = UTC::new(12, 0, 0).expect("midday should be a valid time");
         Self::from_date_and_utc_timestamp(scale, first_proleptic_day, midday)
-    }
-
-    fn from_raw(scale: TimeScale, raw_time: ContinuousTime) -> Self {
-        match scale {
-            TimeScale::TAI => Time::TAI(TAI(raw_time)),
-            TimeScale::TCB => Time::TCB(TCB(raw_time)),
-            TimeScale::TCG => Time::TCG(TCG(raw_time)),
-            TimeScale::TDB => Time::TDB(TDB(raw_time)),
-            TimeScale::TT => Time::TT(TT(raw_time)),
-            TimeScale::UT1 => Time::UT1(UT1(raw_time)),
-        }
     }
 
     fn raw(&self) -> ContinuousTime {

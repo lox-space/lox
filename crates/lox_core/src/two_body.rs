@@ -226,8 +226,8 @@ mod tests {
     use float_eq::assert_float_eq;
 
     use crate::bodies::Earth;
-    use crate::time::continuous::TimeScale;
     use crate::time::dates::Date;
+    use crate::time::scales::TimeScale;
     use crate::time::utc::UTC;
 
     use super::*;

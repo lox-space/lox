@@ -100,7 +100,7 @@ fn point1_microarcsec_to_rad(p1_uas: Point1Microarcsec) -> Radians {
 mod tests {
     use float_eq::assert_float_eq;
 
-    use crate::time::continuous::TimeScale;
+    use crate::time::scales::TimeScale;
 
     use super::*;
 

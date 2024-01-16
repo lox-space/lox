@@ -4,61 +4,10 @@ use crate::time::constants::u64::{
     ATTOSECONDS_PER_NANOSECOND, ATTOSECONDS_PER_PICOSECOND,
 };
 use crate::time::dates::Date;
+use crate::time::scales::TimeScale;
+use crate::time::{Thousandths, WallClock};
 use num::ToPrimitive;
 use std::fmt::Display;
-
-/// Newtype wrapper for thousandths of an SI-prefixed subsecond (milli, micro, nano, etc.).
-#[repr(transparent)]
-#[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Thousandths(u16);
-
-impl Thousandths {
-    pub fn new(thousandths: u16) -> Result<Self, LoxError> {
-        if !(0..1000).contains(&thousandths) {
-            Err(LoxError::InvalidThousandths(thousandths))
-        } else {
-            Ok(Self(thousandths))
-        }
-    }
-}
-
-impl Display for Thousandths {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:03}", self.0)
-    }
-}
-
-impl TryFrom<u16> for Thousandths {
-    type Error = LoxError;
-
-    fn try_from(thousandths: u16) -> Result<Self, Self::Error> {
-        Self::new(thousandths)
-    }
-}
-
-#[allow(clippy::from_over_into)] // the Into conversion is infallible, but From is not
-impl Into<u64> for Thousandths {
-    fn into(self) -> u64 {
-        self.0 as u64
-    }
-}
-
-#[cfg(test)]
-mod thousandths_tests {
-    use crate::time::utc::Thousandths;
-
-    #[test]
-    fn test_new_valid() {
-        assert!(Thousandths::new(0).is_ok());
-        assert!(Thousandths::new(999).is_ok());
-    }
-
-    #[test]
-    fn test_new_invalid() {
-        assert!(Thousandths::new(1000).is_err());
-        assert!(Thousandths::new(1001).is_err());
-    }
-}
 
 /// A UTC timestamp with additional support for fractional seconds represented with attosecond
 /// precision.
@@ -156,6 +105,48 @@ impl Display for UTC {
             self.atto
         )?;
         Ok(())
+    }
+}
+
+impl WallClock for UTC {
+    fn scale(&self) -> TimeScale {
+        TimeScale::UTC
+    }
+
+    fn hour(&self) -> u8 {
+        self.hour
+    }
+
+    fn minute(&self) -> u8 {
+        self.minute
+    }
+
+    fn second(&self) -> u8 {
+        self.second
+    }
+
+    fn millisecond(&self) -> Thousandths {
+        self.milli
+    }
+
+    fn microsecond(&self) -> Thousandths {
+        self.micro
+    }
+
+    fn nanosecond(&self) -> Thousandths {
+        self.nano
+    }
+
+    fn picosecond(&self) -> Thousandths {
+        self.pico
+    }
+
+    fn femtosecond(&self) -> Thousandths {
+        self.femto
+    }
+
+    fn attosecond(&self) -> Thousandths {
+        self.atto
     }
 }
 

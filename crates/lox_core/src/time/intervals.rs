@@ -21,9 +21,10 @@ pub type UT1DaysSinceJ2000 = f64;
 mod epoch_tests {
     use float_eq::assert_float_eq;
 
-    use crate::time::continuous::{Time, TimeScale};
+    use crate::time::continuous::Time;
     use crate::time::dates::Calendar::Gregorian;
     use crate::time::dates::Date;
+    use crate::time::scales::TimeScale;
     use crate::time::utc::UTC;
 
     use super::tdb_julian_centuries_since_j2000;
