@@ -13,7 +13,7 @@ use lox_core::bodies::*;
 use crate::LoxPyError;
 
 #[pyclass(name = "Sun")]
-struct PySun;
+pub struct PySun;
 
 #[pymethods]
 impl PySun {
@@ -56,7 +56,7 @@ impl PySun {
 }
 
 #[pyclass(name = "Barycenter")]
-struct PyBarycenter(Box<dyn PointMass + Send>);
+pub struct PyBarycenter(Box<dyn PointMass + Send>);
 
 #[pymethods]
 impl PyBarycenter {
@@ -105,7 +105,7 @@ impl PyBarycenter {
 }
 
 #[pyclass(name = "Planet")]
-struct PyPlanet(Box<dyn Planet + Send>);
+pub struct PyPlanet(Box<dyn Planet + Send>);
 
 #[pymethods]
 impl PyPlanet {
@@ -163,7 +163,7 @@ impl PyPlanet {
 }
 
 #[pyclass(name = "Satellite")]
-struct PySatellite(Box<dyn Satellite + Send>);
+pub struct PySatellite(Box<dyn Satellite + Send>);
 
 #[pymethods]
 impl PySatellite {
@@ -256,7 +256,7 @@ impl PySatellite {
 }
 
 #[pyclass(name = "MinorBody")]
-struct PyMinorBody(Box<dyn MinorBody + Send>);
+pub struct PyMinorBody(Box<dyn MinorBody + Send>);
 
 #[pymethods]
 impl PyMinorBody {
@@ -311,15 +311,4 @@ impl PyMinorBody {
     fn along_orbit_radius(&self) -> f64 {
         self.0.along_orbit_radius()
     }
-}
-
-#[pymodule]
-#[pyo3(name = "bodies")]
-pub fn module(_py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_class::<PySun>()?;
-    m.add_class::<PyBarycenter>()?;
-    m.add_class::<PyPlanet>()?;
-    m.add_class::<PySatellite>()?;
-    m.add_class::<PyMinorBody>()?;
-    Ok(())
 }

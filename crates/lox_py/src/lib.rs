@@ -8,13 +8,14 @@
 
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use pyo3::wrap_pymodule;
 use thiserror::Error;
 
 use lox_core::errors::LoxError;
 use lox_core::time::dates::{Date, Time};
 use lox_core::time::epochs::Epoch;
 use lox_core::time::epochs::TimeScale;
+
+use crate::bodies::{PyBarycenter, PyMinorBody, PyPlanet, PySatellite, PySun};
 
 mod bodies;
 
@@ -145,8 +146,12 @@ impl PyEpoch {
 /// A Python module implemented in Rust.
 #[pymodule]
 fn lox_space(_py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_wrapped(wrap_pymodule!(bodies::module))?;
     m.add_class::<PyTimeScale>()?;
     m.add_class::<PyEpoch>()?;
+    m.add_class::<PySun>()?;
+    m.add_class::<PyBarycenter>()?;
+    m.add_class::<PyPlanet>()?;
+    m.add_class::<PySatellite>()?;
+    m.add_class::<PyMinorBody>()?;
     Ok(())
 }
