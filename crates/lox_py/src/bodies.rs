@@ -84,7 +84,7 @@ impl PyBarycenter {
     }
 
     fn __repr__(&self) -> PyResult<String> {
-        Ok(format!("MinorBody(\"{}\")", self.name()))
+        Ok(format!("Barycenter(\"{}\")", self.name()))
     }
 
     fn __str__(&self) -> PyResult<String> {
@@ -130,7 +130,7 @@ impl PyPlanet {
     }
 
     fn __repr__(&self) -> PyResult<String> {
-        Ok(format!("MinorBody(\"{}\")", self.name()))
+        Ok(format!("Planet(\"{}\")", self.name()))
     }
 
     fn __str__(&self) -> PyResult<String> {
@@ -219,7 +219,7 @@ impl PySatellite {
     }
 
     fn __repr__(&self) -> PyResult<String> {
-        Ok(format!("MinorBody(\"{}\")", self.name()))
+        Ok(format!("Satellite(\"{}\")", self.name()))
     }
 
     fn __str__(&self) -> PyResult<String> {
