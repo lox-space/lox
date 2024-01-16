@@ -14,12 +14,16 @@ use crate::two_body::elements::{cartesian_to_keplerian, keplerian_to_cartesian};
 
 pub mod elements;
 
-type Elements = (f64, f64, f64, f64, f64, f64);
+pub type Elements = (f64, f64, f64, f64, f64, f64);
+
+pub trait Center {
+    type Center;
+
+    fn center(&self) -> Self::Center;
+}
 
 pub trait TwoBody {
-    type Center;
     fn epoch(&self) -> Epoch;
-    fn center(&self) -> Self::Center;
     fn position(&self) -> DVec3;
     fn velocity(&self) -> DVec3;
     fn cartesian(&self) -> (DVec3, DVec3);
@@ -51,15 +55,17 @@ impl<T: PointMass + Copy> Cartesian<T> {
     }
 }
 
-impl<T: PointMass + Copy> TwoBody for Cartesian<T> {
+impl<T: PointMass + Copy> Center for Cartesian<T> {
     type Center = T;
-
-    fn epoch(&self) -> Epoch {
-        self.epoch
-    }
 
     fn center(&self) -> Self::Center {
         self.center
+    }
+}
+
+impl<T: PointMass + Copy> TwoBody for Cartesian<T> {
+    fn epoch(&self) -> Epoch {
+        self.epoch
     }
 
     fn position(&self) -> DVec3 {
@@ -142,15 +148,17 @@ impl<T: PointMass + Copy> Keplerian<T> {
     }
 }
 
-impl<T: PointMass + Copy> TwoBody for Keplerian<T> {
+impl<T: PointMass + Copy> Center for Keplerian<T> {
     type Center = T;
-
-    fn epoch(&self) -> Epoch {
-        self.epoch
-    }
 
     fn center(&self) -> Self::Center {
         self.center
+    }
+}
+
+impl<T: PointMass + Copy> TwoBody for Keplerian<T> {
+    fn epoch(&self) -> Epoch {
+        self.epoch
     }
 
     fn position(&self) -> DVec3 {

@@ -13,12 +13,13 @@ use lox_core::bodies::*;
 use crate::LoxPyError;
 
 #[pyclass(name = "Sun")]
+#[derive(Clone)]
 pub struct PySun;
 
 #[pymethods]
 impl PySun {
     #[new]
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self
     }
 
@@ -30,38 +31,39 @@ impl PySun {
         Ok("Sun".to_string())
     }
 
-    fn id(&self) -> i32 {
+    pub fn id(&self) -> i32 {
         Sun.id().0
     }
 
-    fn name(&self) -> &'static str {
+    pub fn name(&self) -> &'static str {
         Sun.name()
     }
 
-    fn gravitational_parameter(&self) -> f64 {
+    pub fn gravitational_parameter(&self) -> f64 {
         Sun.gravitational_parameter()
     }
 
-    fn mean_radius(&self) -> f64 {
+    pub fn mean_radius(&self) -> f64 {
         Sun.mean_radius()
     }
 
-    fn polar_radius(&self) -> f64 {
+    pub fn polar_radius(&self) -> f64 {
         Sun.polar_radius()
     }
 
-    fn equatorial_radius(&self) -> f64 {
+    pub fn equatorial_radius(&self) -> f64 {
         Sun.equatorial_radius()
     }
 }
 
 #[pyclass(name = "Barycenter")]
+#[derive(Clone)]
 pub struct PyBarycenter(Box<dyn PointMass + Send>);
 
 #[pymethods]
 impl PyBarycenter {
     #[new]
-    fn new(name: &str) -> Result<Self, LoxPyError> {
+    pub fn new(name: &str) -> Result<Self, LoxPyError> {
         let barycenter: Option<Box<dyn PointMass + Send>> = match name {
             "ssb" | "SSB" | "solar system barycenter" | "Solar System Barycenter" => {
                 Some(Box::new(SolarSystemBarycenter))
@@ -91,26 +93,27 @@ impl PyBarycenter {
         Ok(self.name().to_string())
     }
 
-    fn id(&self) -> i32 {
+    pub fn id(&self) -> i32 {
         self.0.id().0
     }
 
-    fn name(&self) -> &'static str {
+    pub fn name(&self) -> &'static str {
         self.0.name()
     }
 
-    fn gravitational_parameter(&self) -> f64 {
+    pub fn gravitational_parameter(&self) -> f64 {
         self.0.gravitational_parameter()
     }
 }
 
 #[pyclass(name = "Planet")]
+#[derive(Clone)]
 pub struct PyPlanet(Box<dyn Planet + Send>);
 
 #[pymethods]
 impl PyPlanet {
     #[new]
-    fn new(name: &str) -> Result<Self, LoxPyError> {
+    pub fn new(name: &str) -> Result<Self, LoxPyError> {
         let planet: Option<Box<dyn Planet + Send>> = match name {
             "mercury" | "Mercury" => Some(Box::new(Mercury)),
             "venus" | "Venus" => Some(Box::new(Venus)),
@@ -137,38 +140,39 @@ impl PyPlanet {
         Ok(self.name().to_string())
     }
 
-    fn id(&self) -> i32 {
+    pub fn id(&self) -> i32 {
         self.0.id().0
     }
 
-    fn name(&self) -> &'static str {
+    pub fn name(&self) -> &'static str {
         self.0.name()
     }
 
-    fn gravitational_parameter(&self) -> f64 {
+    pub fn gravitational_parameter(&self) -> f64 {
         self.0.gravitational_parameter()
     }
 
-    fn mean_radius(&self) -> f64 {
+    pub fn mean_radius(&self) -> f64 {
         self.0.mean_radius()
     }
 
-    fn polar_radius(&self) -> f64 {
+    pub fn polar_radius(&self) -> f64 {
         self.0.polar_radius()
     }
 
-    fn equatorial_radius(&self) -> f64 {
+    pub fn equatorial_radius(&self) -> f64 {
         self.0.equatorial_radius()
     }
 }
 
 #[pyclass(name = "Satellite")]
+#[derive(Clone)]
 pub struct PySatellite(Box<dyn Satellite + Send>);
 
 #[pymethods]
 impl PySatellite {
     #[new]
-    fn new(name: &str) -> Result<Self, LoxPyError> {
+    pub fn new(name: &str) -> Result<Self, LoxPyError> {
         let satellite: Option<Box<dyn Satellite + Send>> = match name {
             "moon" | "Moon" | "luna" | "Luna" => Some(Box::new(Moon)),
             "phobos" | "Phobos" => Some(Box::new(Phobos)),
@@ -226,42 +230,43 @@ impl PySatellite {
         Ok(self.name().to_string())
     }
 
-    fn id(&self) -> i32 {
+    pub fn id(&self) -> i32 {
         self.0.id().0
     }
 
-    fn name(&self) -> &'static str {
+    pub fn name(&self) -> &'static str {
         self.0.name()
     }
 
-    fn gravitational_parameter(&self) -> f64 {
+    pub fn gravitational_parameter(&self) -> f64 {
         self.0.gravitational_parameter()
     }
 
-    fn mean_radius(&self) -> f64 {
+    pub fn mean_radius(&self) -> f64 {
         self.0.mean_radius()
     }
 
-    fn polar_radius(&self) -> f64 {
+    pub fn polar_radius(&self) -> f64 {
         self.0.polar_radius()
     }
 
-    fn subplanetary_radius(&self) -> f64 {
+    pub fn subplanetary_radius(&self) -> f64 {
         self.0.subplanetary_radius()
     }
 
-    fn along_orbit_radius(&self) -> f64 {
+    pub fn along_orbit_radius(&self) -> f64 {
         self.0.along_orbit_radius()
     }
 }
 
 #[pyclass(name = "MinorBody")]
+#[derive(Clone)]
 pub struct PyMinorBody(Box<dyn MinorBody + Send>);
 
 #[pymethods]
 impl PyMinorBody {
     #[new]
-    fn new(name: &str) -> Result<Self, LoxPyError> {
+    pub fn new(name: &str) -> Result<Self, LoxPyError> {
         let minor: Option<Box<dyn MinorBody + Send>> = match name {
             "ceres" | "Ceres" => Some(Box::new(Ceres)),
             "vesta" | "Vesta" => Some(Box::new(Vesta)),
@@ -284,31 +289,39 @@ impl PyMinorBody {
         Ok(self.name().to_string())
     }
 
-    fn id(&self) -> i32 {
+    pub fn id(&self) -> i32 {
         self.0.id().0
     }
 
-    fn name(&self) -> &'static str {
+    pub fn name(&self) -> &'static str {
         self.0.name()
     }
 
-    fn gravitational_parameter(&self) -> f64 {
+    pub fn gravitational_parameter(&self) -> f64 {
         self.0.gravitational_parameter()
     }
 
-    fn mean_radius(&self) -> f64 {
+    pub fn mean_radius(&self) -> f64 {
         self.0.mean_radius()
     }
 
-    fn polar_radius(&self) -> f64 {
+    pub fn polar_radius(&self) -> f64 {
         self.0.polar_radius()
     }
 
-    fn subplanetary_radius(&self) -> f64 {
+    pub fn subplanetary_radius(&self) -> f64 {
         self.0.subplanetary_radius()
     }
 
-    fn along_orbit_radius(&self) -> f64 {
+    pub fn along_orbit_radius(&self) -> f64 {
         self.0.along_orbit_radius()
     }
+}
+
+pub enum PyBody {
+    Barycenter(PyBarycenter),
+    Sun(PySun),
+    Planet(PyPlanet),
+    Satellite(PySatellite),
+    MinorBody(PyMinorBody),
 }

@@ -6,6 +6,7 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use dyn_clone::{clone_trait_object, DynClone};
 use std::f64::consts::PI;
 use std::fmt::{Display, Formatter};
 
@@ -103,7 +104,8 @@ macro_rules! body {
 body! { Sun, 10 }
 
 // Planets.
-pub trait Planet: PointMass + Spheroid {}
+pub trait Planet: PointMass + Spheroid + DynClone {}
+clone_trait_object!(Planet);
 
 body! { Mercury, Planet, 199 }
 body! { Venus, Planet, 299 }
@@ -134,7 +136,8 @@ impl PointMass for SolarSystemBarycenter {
 }
 
 // Satellites.
-pub trait Satellite: PointMass + TriAxial {}
+pub trait Satellite: PointMass + TriAxial + DynClone {}
+clone_trait_object!(Satellite);
 
 body! { Moon, Satellite, 301 }
 body! { Phobos, Satellite, 401 }
@@ -290,7 +293,8 @@ body! { Kerberos,  904 }
 body! { Styx,  905 }
 
 // Minor bodies.
-pub trait MinorBody: PointMass + TriAxial {}
+pub trait MinorBody: PointMass + TriAxial + DynClone {}
+clone_trait_object!(MinorBody);
 
 body! {Gaspra, 9511010 }
 body! {Ida, 2431010 }
@@ -541,9 +545,11 @@ pub trait TriAxial: Ellipsoid {
     fn along_orbit_radius(&self) -> f64;
 }
 
-pub trait PointMass: Body {
+pub trait PointMass: Body + DynClone {
     fn gravitational_parameter(&self) -> f64;
 }
+
+clone_trait_object!(PointMass);
 
 pub type PolynomialCoefficients = (f64, f64, f64, &'static [f64]);
 
