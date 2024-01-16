@@ -8,6 +8,7 @@
 
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
+use pyo3::wrap_pymodule;
 use thiserror::Error;
 
 use lox_core::errors::LoxError;
@@ -15,10 +16,14 @@ use lox_core::time::dates::{Date, Time};
 use lox_core::time::epochs::Epoch;
 use lox_core::time::epochs::TimeScale;
 
+mod bodies;
+
 #[derive(Error, Debug)]
 pub enum LoxPyError {
     #[error("invalid time scale `{0}`")]
     InvalidTimeScale(String),
+    #[error("unknown body `{0}`")]
+    InvalidBody(String),
     #[error(transparent)]
     LoxError(#[from] LoxError),
     #[error(transparent)]
@@ -29,6 +34,7 @@ impl From<LoxPyError> for PyErr {
     fn from(value: LoxPyError) -> Self {
         match value {
             LoxPyError::InvalidTimeScale(_) => PyValueError::new_err(value.to_string()),
+            LoxPyError::InvalidBody(_) => PyValueError::new_err(value.to_string()),
             LoxPyError::LoxError(value) => PyValueError::new_err(value.to_string()),
             LoxPyError::PyError(value) => value,
         }
@@ -69,19 +75,19 @@ struct PyEpoch(Epoch);
 impl PyEpoch {
     #[allow(clippy::too_many_arguments)]
     #[pyo3(signature = (
-        scale,
-        year,
-        month,
-        day,
-        hour = 0,
-        minute = 0,
-        second = 0,
-        milli = 0,
-        micro = 0,
-        nano = 0,
-        pico = 0,
-        femto = 0,
-        atto = 0
+    scale,
+    year,
+    month,
+    day,
+    hour = 0,
+    minute = 0,
+    second = 0,
+    milli = 0,
+    micro = 0,
+    nano = 0,
+    pico = 0,
+    femto = 0,
+    atto = 0
     ))]
     #[new]
     fn new(
@@ -139,6 +145,7 @@ impl PyEpoch {
 /// A Python module implemented in Rust.
 #[pymodule]
 fn lox_space(_py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_wrapped(wrap_pymodule!(bodies::module))?;
     m.add_class::<PyTimeScale>()?;
     m.add_class::<PyEpoch>()?;
     Ok(())
