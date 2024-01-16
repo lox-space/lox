@@ -159,16 +159,16 @@ fn spheroid(
             #code
 
             impl Ellipsoid for #ident {
-                fn polar_radius() -> f64 {
+                fn polar_radius(&self) -> f64 {
                     #polar
                 }
-                fn mean_radius() -> f64 {
+                fn mean_radius(&self) -> f64 {
                     #mean
                 }
             }
 
             impl Spheroid for #ident {
-                fn equatorial_radius() -> f64 {
+                fn equatorial_radius(&self) -> f64 {
                     #equatorial
                 }
             }
@@ -181,9 +181,9 @@ fn spheroid(
 
             #[test]
             fn #test_name() {
-                assert_eq!(#ident::polar_radius(), #polar);
-                assert_eq!(#ident::mean_radius(), #mean);
-                assert_eq!(#ident::equatorial_radius(), #equatorial);
+                assert_eq!(#ident.polar_radius(), #polar);
+                assert_eq!(#ident.mean_radius(), #mean);
+                assert_eq!(#ident.equatorial_radius(), #equatorial);
             }
         };
 
@@ -216,19 +216,19 @@ fn tri_axial(
             #code
 
             impl Ellipsoid for #ident {
-                fn polar_radius() -> f64 {
+                fn polar_radius(&self) -> f64 {
                     #polar
                 }
-                fn mean_radius() -> f64 {
+                fn mean_radius(&self) -> f64 {
                     #mean
                 }
             }
 
             impl TriAxial for #ident {
-                fn subplanetary_radius() -> f64 {
+                fn subplanetary_radius(&self) -> f64 {
                     #subplanetary
                 }
-                fn along_orbit_radius() -> f64 {
+                fn along_orbit_radius(&self) -> f64 {
                     #along_orbit
                 }
             }
@@ -241,10 +241,10 @@ fn tri_axial(
 
             #[test]
             fn #test_name() {
-                assert_eq!(#ident::polar_radius(), #polar);
-                assert_eq!(#ident::mean_radius(), #mean);
-                assert_eq!(#ident::subplanetary_radius(), #subplanetary);
-                assert_eq!(#ident::along_orbit_radius(), #along_orbit);
+                assert_eq!(#ident.polar_radius(), #polar);
+                assert_eq!(#ident.mean_radius(), #mean);
+                assert_eq!(#ident.subplanetary_radius(), #subplanetary);
+                assert_eq!(#ident.along_orbit_radius(), #along_orbit);
             }
         };
 
@@ -273,7 +273,7 @@ fn point_mass(
             #code
 
             impl PointMass for #ident {
-                fn gravitational_parameter() -> f64 {
+                fn gravitational_parameter(&self) -> f64 {
                     #gm
                 }
             }
@@ -286,7 +286,7 @@ fn point_mass(
 
             #[test]
             fn #test_name() {
-                assert_eq!(#ident::gravitational_parameter(), #gm);
+                assert_eq!(#ident.gravitational_parameter(), #gm);
             }
         };
 

@@ -18,4 +18,6 @@ pub enum LoxError {
     InvalidSeconds(i64, i64, f64),
     #[error("day of year cannot be 366 for a non-leap year")]
     NonLeapYear,
+    #[error("unknown body `{0}`")]
+    UnknownBody(String),
 }

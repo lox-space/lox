@@ -15,10 +15,16 @@ use lox_core::time::dates::{Date, Time};
 use lox_core::time::epochs::Epoch;
 use lox_core::time::epochs::TimeScale;
 
+use crate::bodies::{PyBarycenter, PyMinorBody, PyPlanet, PySatellite, PySun};
+
+mod bodies;
+
 #[derive(Error, Debug)]
 pub enum LoxPyError {
     #[error("invalid time scale `{0}`")]
     InvalidTimeScale(String),
+    #[error("unknown body `{0}`")]
+    InvalidBody(String),
     #[error(transparent)]
     LoxError(#[from] LoxError),
     #[error(transparent)]
@@ -29,6 +35,7 @@ impl From<LoxPyError> for PyErr {
     fn from(value: LoxPyError) -> Self {
         match value {
             LoxPyError::InvalidTimeScale(_) => PyValueError::new_err(value.to_string()),
+            LoxPyError::InvalidBody(_) => PyValueError::new_err(value.to_string()),
             LoxPyError::LoxError(value) => PyValueError::new_err(value.to_string()),
             LoxPyError::PyError(value) => value,
         }
@@ -69,19 +76,19 @@ struct PyEpoch(Epoch);
 impl PyEpoch {
     #[allow(clippy::too_many_arguments)]
     #[pyo3(signature = (
-        scale,
-        year,
-        month,
-        day,
-        hour = 0,
-        minute = 0,
-        second = 0,
-        milli = 0,
-        micro = 0,
-        nano = 0,
-        pico = 0,
-        femto = 0,
-        atto = 0
+    scale,
+    year,
+    month,
+    day,
+    hour = 0,
+    minute = 0,
+    second = 0,
+    milli = 0,
+    micro = 0,
+    nano = 0,
+    pico = 0,
+    femto = 0,
+    atto = 0
     ))]
     #[new]
     fn new(
@@ -141,5 +148,10 @@ impl PyEpoch {
 fn lox_space(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyTimeScale>()?;
     m.add_class::<PyEpoch>()?;
+    m.add_class::<PySun>()?;
+    m.add_class::<PyBarycenter>()?;
+    m.add_class::<PyPlanet>()?;
+    m.add_class::<PySatellite>()?;
+    m.add_class::<PyMinorBody>()?;
     Ok(())
 }

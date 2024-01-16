@@ -8,7 +8,7 @@
 
 pub use glam::DVec3;
 
-use crate::bodies::{gravitational_parameter, PointMass};
+use crate::bodies::PointMass;
 use crate::time::epochs::Epoch;
 use crate::two_body::elements::{cartesian_to_keplerian, keplerian_to_cartesian};
 
@@ -75,7 +75,7 @@ impl<T: PointMass + Copy> TwoBody for Cartesian<T> {
     }
 
     fn keplerian(&self) -> Elements {
-        let mu = gravitational_parameter(self.center);
+        let mu = self.center.gravitational_parameter();
         cartesian_to_keplerian(mu, self.position, self.velocity)
     }
 
@@ -162,7 +162,7 @@ impl<T: PointMass + Copy> TwoBody for Keplerian<T> {
     }
 
     fn cartesian(&self) -> (DVec3, DVec3) {
-        let mu = gravitational_parameter(self.center);
+        let mu = self.center.gravitational_parameter();
         keplerian_to_cartesian(
             mu,
             self.semi_major,
