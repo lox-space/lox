@@ -98,6 +98,28 @@ macro_rules! body {
             }
         }
     };
+    ($i:ident, $t:ident, $name:literal, $naif_id:literal) => {
+        #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+        pub struct $i;
+
+        impl $t for $i {}
+
+        impl Body for $i {
+            fn id(&self) -> NaifId {
+                NaifId($naif_id)
+            }
+
+            fn name(&self) -> &'static str {
+                $name
+            }
+        }
+
+        impl Display for $i {
+            fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", self.name())
+            }
+        }
+    };
 }
 
 // The Sun.
@@ -118,16 +140,19 @@ body! { Neptune, Planet, 899 }
 body! { Pluto, Planet, 999 }
 
 // Barycenters.
-body! { SolarSystemBarycenter, "Solar System Barycenter", 0 }
-body! { MercuryBarycenter, "Mercury Barycenter", 1 }
-body! { VenusBarycenter, "Venus Barycenter", 2 }
-body! { EarthBarycenter, "Earth Barycenter", 3 }
-body! { MarsBarycenter, "Mars Barycenter", 4 }
-body! { JupiterBarycenter, "Jupiter Barycenter", 5 }
-body! { SaturnBarycenter, "Saturn Barycenter", 6 }
-body! { UranusBarycenter, "Uranus Barycenter", 7 }
-body! { NeptuneBarycenter, "Neptune Barycenter", 8 }
-body! { PlutoBarycenter, "Pluto Barycenter", 9 }
+pub trait Barycenter: PointMass + DynClone {}
+clone_trait_object!(Barycenter);
+
+body! { SolarSystemBarycenter, Barycenter, "Solar System Barycenter", 0 }
+body! { MercuryBarycenter, Barycenter, "Mercury Barycenter", 1 }
+body! { VenusBarycenter, Barycenter, "Venus Barycenter", 2 }
+body! { EarthBarycenter, Barycenter, "Earth Barycenter", 3 }
+body! { MarsBarycenter, Barycenter, "Mars Barycenter", 4 }
+body! { JupiterBarycenter, Barycenter, "Jupiter Barycenter", 5 }
+body! { SaturnBarycenter, Barycenter, "Saturn Barycenter", 6 }
+body! { UranusBarycenter, Barycenter, "Uranus Barycenter", 7 }
+body! { NeptuneBarycenter, Barycenter, "Neptune Barycenter", 8 }
+body! { PlutoBarycenter, Barycenter, "Pluto Barycenter", 9 }
 
 impl PointMass for SolarSystemBarycenter {
     fn gravitational_parameter(&self) -> f64 {
@@ -545,11 +570,9 @@ pub trait TriAxial: Ellipsoid {
     fn along_orbit_radius(&self) -> f64;
 }
 
-pub trait PointMass: Body + DynClone {
+pub trait PointMass: Body {
     fn gravitational_parameter(&self) -> f64;
 }
-
-clone_trait_object!(PointMass);
 
 pub type PolynomialCoefficients = (f64, f64, f64, &'static [f64]);
 

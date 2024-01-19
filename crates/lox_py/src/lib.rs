@@ -12,19 +12,22 @@ use thiserror::Error;
 
 use crate::bodies::{PyBarycenter, PyMinorBody, PyPlanet, PySatellite, PySun};
 use crate::time::{PyEpoch, PyTimeScale};
-use crate::twobody::PyCartesian;
+use crate::two_body::PyCartesian;
 use lox_core::errors::LoxError;
 
 mod bodies;
+mod frames;
 mod time;
-mod twobody;
+mod two_body;
 
 #[derive(Error, Debug)]
 pub enum LoxPyError {
-    #[error("invalid time scale `{0}`")]
+    #[error("unknown time scale `{0}`")]
     InvalidTimeScale(String),
     #[error("unknown body `{0}`")]
     InvalidBody(String),
+    #[error("unknown frame `{0}`")]
+    InvalidFrame(String),
     #[error(transparent)]
     LoxError(#[from] LoxError),
     #[error(transparent)]
@@ -34,8 +37,9 @@ pub enum LoxPyError {
 impl From<LoxPyError> for PyErr {
     fn from(value: LoxPyError) -> Self {
         match value {
-            LoxPyError::InvalidTimeScale(_) => PyValueError::new_err(value.to_string()),
-            LoxPyError::InvalidBody(_) => PyValueError::new_err(value.to_string()),
+            LoxPyError::InvalidTimeScale(_)
+            | LoxPyError::InvalidFrame(_)
+            | LoxPyError::InvalidBody(_) => PyValueError::new_err(value.to_string()),
             LoxPyError::LoxError(value) => PyValueError::new_err(value.to_string()),
             LoxPyError::PyError(value) => value,
         }

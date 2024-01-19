@@ -6,6 +6,7 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 use lox_core::bodies::*;
@@ -13,7 +14,7 @@ use lox_core::bodies::*;
 use crate::LoxPyError;
 
 #[pyclass(name = "Sun")]
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct PySun;
 
 #[pymethods]
@@ -58,13 +59,13 @@ impl PySun {
 
 #[pyclass(name = "Barycenter")]
 #[derive(Clone)]
-pub struct PyBarycenter(Box<dyn PointMass + Send>);
+pub struct PyBarycenter(Box<dyn Barycenter + Send>);
 
 #[pymethods]
 impl PyBarycenter {
     #[new]
     pub fn new(name: &str) -> Result<Self, LoxPyError> {
-        let barycenter: Option<Box<dyn PointMass + Send>> = match name {
+        let barycenter: Option<Box<dyn Barycenter + Send>> = match name {
             "ssb" | "SSB" | "solar system barycenter" | "Solar System Barycenter" => {
                 Some(Box::new(SolarSystemBarycenter))
             }
@@ -318,10 +319,79 @@ impl PyMinorBody {
     }
 }
 
+#[derive(Clone)]
 pub enum PyBody {
     Barycenter(PyBarycenter),
     Sun(PySun),
     Planet(PyPlanet),
     Satellite(PySatellite),
     MinorBody(PyMinorBody),
+}
+
+impl From<PyBody> for PyObject {
+    fn from(body: PyBody) -> Self {
+        Python::with_gil(|py| match body {
+            PyBody::Barycenter(barycenter) => barycenter.clone().into_py(py),
+            PyBody::Sun(sun) => sun.clone().into_py(py),
+            PyBody::Planet(planet) => planet.clone().into_py(py),
+            PyBody::Satellite(satellite) => satellite.clone().into_py(py),
+            PyBody::MinorBody(minor_body) => minor_body.clone().into_py(py),
+        })
+    }
+}
+
+impl TryFrom<PyObject> for PyBody {
+    type Error = PyErr;
+
+    fn try_from(body: PyObject) -> Result<Self, Self::Error> {
+        Python::with_gil(|py| {
+            if let Ok(body) = body.extract::<PyBarycenter>(py) {
+                Ok(PyBody::Barycenter(body))
+            } else if let Ok(body) = body.extract::<PySun>(py) {
+                Ok(PyBody::Sun(body))
+            } else if let Ok(body) = body.extract::<PyPlanet>(py) {
+                Ok(PyBody::Planet(body))
+            } else if let Ok(body) = body.extract::<PySatellite>(py) {
+                Ok(PyBody::Satellite(body))
+            } else if let Ok(body) = body.extract::<PyMinorBody>(py) {
+                Ok(PyBody::MinorBody(body))
+            } else {
+                Err(PyValueError::new_err("Invalid body"))
+            }
+        })
+    }
+}
+
+impl Body for PyBody {
+    fn id(&self) -> NaifId {
+        match &self {
+            PyBody::Barycenter(barycenter) => NaifId(barycenter.id()),
+            PyBody::Sun(sun) => NaifId(sun.id()),
+            PyBody::Planet(planet) => NaifId(planet.id()),
+            PyBody::Satellite(satellite) => NaifId(satellite.id()),
+            PyBody::MinorBody(minor_body) => NaifId(minor_body.id()),
+        }
+    }
+
+    fn name(&self) -> &'static str {
+        match &self {
+            PyBody::Barycenter(barycenter) => barycenter.name(),
+            PyBody::Sun(sun) => sun.name(),
+            PyBody::Planet(planet) => planet.name(),
+            PyBody::Satellite(satellite) => satellite.name(),
+            PyBody::MinorBody(minor_body) => minor_body.name(),
+        }
+    }
+}
+
+impl PointMass for PyBody {
+    fn gravitational_parameter(&self) -> f64 {
+        match &self {
+            PyBody::Barycenter(barycenter) => barycenter.gravitational_parameter(),
+            PyBody::Sun(sun) => sun.gravitational_parameter(),
+            PyBody::Planet(planet) => planet.gravitational_parameter(),
+            PyBody::Satellite(satellite) => satellite.gravitational_parameter(),
+            PyBody::MinorBody(minor_body) => minor_body.gravitational_parameter(),
+        }
+    }
 }
