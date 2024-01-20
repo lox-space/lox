@@ -4,8 +4,8 @@ use crate::time::constants::u64::{
     ATTOSECONDS_PER_NANOSECOND, ATTOSECONDS_PER_PICOSECOND,
 };
 use crate::time::dates::Date;
-use crate::time::scales::TimeScale;
-use crate::time::{Thousandths, WallClock};
+use crate::time::TimeScale;
+use crate::time::{PerMille, WallClock};
 use num::ToPrimitive;
 use std::fmt::Display;
 
@@ -21,12 +21,12 @@ pub struct UTC {
     hour: u8,
     minute: u8,
     second: u8,
-    pub milli: Thousandths,
-    pub micro: Thousandths,
-    pub nano: Thousandths,
-    pub pico: Thousandths,
-    pub femto: Thousandths,
-    pub atto: Thousandths,
+    pub milli: PerMille,
+    pub micro: PerMille,
+    pub nano: PerMille,
+    pub pico: PerMille,
+    pub femto: PerMille,
+    pub atto: PerMille,
 }
 
 impl UTC {
@@ -54,12 +54,12 @@ impl UTC {
             hour,
             minute,
             second,
-            milli: Thousandths(sub[0] as u16),
-            micro: Thousandths(sub[1] as u16),
-            nano: Thousandths(sub[2] as u16),
-            pico: Thousandths(sub[3] as u16),
-            femto: Thousandths(sub[4] as u16),
-            atto: Thousandths(sub[5] as u16),
+            milli: PerMille(sub[0] as u16),
+            micro: PerMille(sub[1] as u16),
+            nano: PerMille(sub[2] as u16),
+            pico: PerMille(sub[3] as u16),
+            femto: PerMille(sub[4] as u16),
+            atto: PerMille(sub[5] as u16),
         })
     }
 
@@ -113,40 +113,40 @@ impl WallClock for UTC {
         TimeScale::UTC
     }
 
-    fn hour(&self) -> u8 {
-        self.hour
+    fn hour(&self) -> i64 {
+        self.hour as i64
     }
 
-    fn minute(&self) -> u8 {
-        self.minute
+    fn minute(&self) -> i64 {
+        self.minute as i64
     }
 
-    fn second(&self) -> u8 {
-        self.second
+    fn second(&self) -> i64 {
+        self.second as i64
     }
 
-    fn millisecond(&self) -> Thousandths {
-        self.milli
+    fn millisecond(&self) -> i64 {
+        self.milli.into()
     }
 
-    fn microsecond(&self) -> Thousandths {
-        self.micro
+    fn microsecond(&self) -> i64 {
+        self.micro.into()
     }
 
-    fn nanosecond(&self) -> Thousandths {
-        self.nano
+    fn nanosecond(&self) -> i64 {
+        self.nano.into()
     }
 
-    fn picosecond(&self) -> Thousandths {
-        self.pico
+    fn picosecond(&self) -> i64 {
+        self.pico.into()
     }
 
-    fn femtosecond(&self) -> Thousandths {
-        self.femto
+    fn femtosecond(&self) -> i64 {
+        self.femto.into()
     }
 
-    fn attosecond(&self) -> Thousandths {
-        self.atto
+    fn attosecond(&self) -> i64 {
+        self.atto.into()
     }
 }
 
@@ -166,7 +166,7 @@ fn split_seconds(seconds: f64) -> Option<[i64; 6]> {
     Some(parts)
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct UTCDateTime {
     date: Date,
     time: UTC,
@@ -188,8 +188,71 @@ impl UTCDateTime {
 
 #[cfg(test)]
 mod tests {
-    use crate::time::utc::split_seconds;
-    use proptest::prelude::*;
+    use super::*;
+    use crate::time::dates::Calendar::Gregorian;
+    use proptest::{prop_assert, proptest};
+
+    const TIME: UTC = UTC {
+        hour: 12,
+        minute: 34,
+        second: 56,
+        milli: PerMille(789),
+        micro: PerMille(123),
+        nano: PerMille(456),
+        pico: PerMille(789),
+        femto: PerMille(123),
+        atto: PerMille(456),
+    };
+
+    #[test]
+    fn test_utc_wall_clock_scale() {
+        assert_eq!(TIME.scale(), TimeScale::UTC);
+    }
+
+    #[test]
+    fn test_utc_wall_clock_hour() {
+        assert_eq!(TIME.hour(), TIME.hour as i64);
+    }
+
+    #[test]
+    fn test_utc_wall_clock_minute() {
+        assert_eq!(TIME.minute(), TIME.minute as i64);
+    }
+
+    #[test]
+    fn test_utc_wall_clock_second() {
+        assert_eq!(TIME.second(), TIME.second as i64);
+    }
+
+    #[test]
+    fn test_utc_wall_clock_millisecond() {
+        assert_eq!(TIME.millisecond(), TIME.milli.into());
+    }
+
+    #[test]
+    fn test_utc_wall_clock_microsecond() {
+        assert_eq!(TIME.microsecond(), TIME.micro.into());
+    }
+
+    #[test]
+    fn test_utc_wall_clock_nanosecond() {
+        assert_eq!(TIME.nanosecond(), TIME.nano.into());
+    }
+
+    #[test]
+    fn test_utc_wall_clock_picosecond() {
+        assert_eq!(TIME.picosecond(), TIME.pico.into());
+    }
+
+    #[test]
+    fn test_utc_wall_clock_femtosecond() {
+        assert_eq!(TIME.femtosecond(), TIME.femto.into());
+    }
+
+    #[test]
+    fn test_utc_wall_clock_attosecond() {
+        assert_eq!(TIME.attosecond(), TIME.atto.into());
+    }
 
     proptest! {
         #[test]
@@ -199,7 +262,7 @@ mod tests {
     }
 
     #[test]
-    fn test_split_second() {
+    fn test_split_seconds() {
         let s1 = split_seconds(0.123).expect("seconds should be valid");
         assert_eq!(123, s1[0]);
         assert_eq!(0, s1[1]);
@@ -252,8 +315,17 @@ mod tests {
     }
 
     #[test]
-    fn test_illegal_split_second() {
+    fn test_illegal_split_seconds() {
         assert!(split_seconds(2.0).is_none());
         assert!(split_seconds(-0.2).is_none());
+    }
+
+    #[test]
+    fn test_utc_datetime_new() {
+        let date = Date::new_unchecked(Gregorian, 2021, 1, 1);
+        let time = UTC::new(12, 34, 56).expect("time should be valid");
+        let expected = UTCDateTime { date, time };
+        let actual = UTCDateTime::new(date, time);
+        assert_eq!(expected, actual);
     }
 }

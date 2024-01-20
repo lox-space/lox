@@ -9,7 +9,7 @@
 pub use glam::DVec3;
 
 use crate::bodies::{gravitational_parameter, PointMass};
-use crate::time::continuous::Time;
+use crate::time::continuous::ContinuousTime;
 use crate::two_body::elements::{cartesian_to_keplerian, keplerian_to_cartesian};
 
 pub mod elements;
@@ -18,7 +18,7 @@ type Elements = (f64, f64, f64, f64, f64, f64);
 
 pub trait TwoBody {
     type Center;
-    fn epoch(&self) -> Time;
+    fn epoch(&self) -> ContinuousTime;
     fn center(&self) -> Self::Center;
     fn position(&self) -> DVec3;
     fn velocity(&self) -> DVec3;
@@ -34,14 +34,14 @@ pub trait TwoBody {
 
 #[derive(Debug, Clone)]
 pub struct Cartesian<T: PointMass + Copy> {
-    epoch: Time,
+    epoch: ContinuousTime,
     center: T,
     position: DVec3,
     velocity: DVec3,
 }
 
 impl<T: PointMass + Copy> Cartesian<T> {
-    pub fn new(epoch: Time, center: T, position: DVec3, velocity: DVec3) -> Self {
+    pub fn new(epoch: ContinuousTime, center: T, position: DVec3, velocity: DVec3) -> Self {
         Self {
             epoch,
             center,
@@ -54,7 +54,7 @@ impl<T: PointMass + Copy> Cartesian<T> {
 impl<T: PointMass + Copy> TwoBody for Cartesian<T> {
     type Center = T;
 
-    fn epoch(&self) -> Time {
+    fn epoch(&self) -> ContinuousTime {
         self.epoch
     }
 
@@ -115,7 +115,7 @@ impl<T: PointMass + Copy> From<Keplerian<T>> for Cartesian<T> {
 
 #[derive(Debug, Clone)]
 pub struct Keplerian<T: PointMass + Copy> {
-    epoch: Time,
+    epoch: ContinuousTime,
     center: T,
     semi_major: f64,
     eccentricity: f64,
@@ -126,7 +126,7 @@ pub struct Keplerian<T: PointMass + Copy> {
 }
 
 impl<T: PointMass + Copy> Keplerian<T> {
-    pub fn new(epoch: Time, center: T, elements: Elements) -> Self {
+    pub fn new(epoch: ContinuousTime, center: T, elements: Elements) -> Self {
         let (semi_major, eccentricity, inclination, ascending_node, periapsis_arg, true_anomaly) =
             elements;
         Self {
@@ -145,7 +145,7 @@ impl<T: PointMass + Copy> Keplerian<T> {
 impl<T: PointMass + Copy> TwoBody for Keplerian<T> {
     type Center = T;
 
-    fn epoch(&self) -> Time {
+    fn epoch(&self) -> ContinuousTime {
         self.epoch
     }
 
@@ -226,8 +226,8 @@ mod tests {
     use float_eq::assert_float_eq;
 
     use crate::bodies::Earth;
+    use crate::time::continuous::ContinuousTimeScale;
     use crate::time::dates::Date;
-    use crate::time::scales::TimeScale;
     use crate::time::utc::UTC;
 
     use super::*;
@@ -236,7 +236,8 @@ mod tests {
     fn test_two_body() {
         let date = Date::new(2023, 3, 25).expect("Date should be valid");
         let time = UTC::new(21, 8, 0).expect("Time should be valid");
-        let epoch = Time::from_date_and_utc_timestamp(TimeScale::TDB, date, time);
+        let epoch =
+            ContinuousTime::from_date_and_utc_timestamp(ContinuousTimeScale::TDB, date, time);
         let semi_major = 24464560.0e-3;
         let eccentricity = 0.7311;
         let inclination = 0.122138;

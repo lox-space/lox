@@ -15,7 +15,7 @@ pub enum Calendar {
     Gregorian,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Date {
     calendar: Calendar,
     year: i64,
