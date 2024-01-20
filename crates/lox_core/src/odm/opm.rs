@@ -1,3 +1,11 @@
+/*
+ * Copyright (c) 2023. Helge Eichhorn and the LOX contributors
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, you can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 use serde;
 
 use super::common;
@@ -87,7 +95,7 @@ pub struct KeplerianElementsType {
     #[serde(rename = "TRUE_ANOMALY")]
     pub true_anomaly: Option<common::AngleType>,
     #[serde(rename = "MEAN_ANOMALY")]
-    pub mean_anomaly: Option<common::AngleType>,  
+    pub mean_anomaly: Option<common::AngleType>,
     #[serde(rename = "GM")]
     pub gm: common::GmType,
 }
