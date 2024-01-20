@@ -11,14 +11,14 @@ use pyo3::prelude::*;
 use thiserror::Error;
 
 use crate::bodies::{PyBarycenter, PyMinorBody, PyPlanet, PySatellite, PySun};
+use crate::coords::PyCartesian;
 use crate::time::{PyEpoch, PyTimeScale};
-use crate::two_body::PyCartesian;
 use lox_core::errors::LoxError;
 
 mod bodies;
+mod coords;
 mod frames;
 mod time;
-mod two_body;
 
 #[derive(Error, Debug)]
 pub enum LoxPyError {

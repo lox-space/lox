@@ -6,13 +6,13 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use numpy::{pyarray, PyArray1};
-use pyo3::prelude::*;
 use std::str::FromStr;
 
+use numpy::{pyarray, PyArray1};
+use pyo3::prelude::*;
+
 use lox_core::bodies::PointMass;
-use lox_core::time::epochs::Epoch;
-use lox_core::two_body::{CartesianState, KeplerianState};
+use lox_core::coords::states::{CartesianState, KeplerianState, StateVector};
 
 use crate::bodies::PyBody;
 use crate::frames::PyFrame;
@@ -20,10 +20,9 @@ use crate::time::PyEpoch;
 
 #[pyclass(name = "Cartesian")]
 pub struct PyCartesian {
-    time: Epoch,
+    state: CartesianState,
     origin: PyBody,
     frame: PyFrame,
-    state: CartesianState,
 }
 
 #[pymethods]
@@ -31,7 +30,7 @@ impl PyCartesian {
     #[new]
     #[allow(clippy::too_many_arguments)]
     fn new(
-        t: &PyEpoch,
+        time: &PyEpoch,
         body: PyObject,
         frame: &str,
         x: f64,
@@ -43,11 +42,11 @@ impl PyCartesian {
     ) -> PyResult<Self> {
         let origin: PyBody = body.try_into()?;
         let frame = PyFrame::from_str(frame)?;
+        let state: CartesianState = StateVector(time.0, x, y, z, vx, vy, vz).into();
         Ok(Self {
-            time: t.0,
+            state,
             origin,
             frame,
-            state: CartesianState::from_coords(x, y, z, vx, vy, vz),
         })
     }
 
@@ -55,7 +54,6 @@ impl PyCartesian {
         let mu = self.origin.gravitational_parameter();
         let state = self.state.to_keplerian_state(mu);
         PyKeplerian {
-            time: self.time,
             origin: self.origin.clone(),
             frame: self.frame.clone(),
             state,
@@ -63,7 +61,7 @@ impl PyCartesian {
     }
 
     fn time(&self) -> PyEpoch {
-        PyEpoch(self.time)
+        PyEpoch(self.state.time())
     }
 
     fn reference_frame(&self) -> String {
@@ -138,10 +136,9 @@ impl PyCartesian {
 
 #[pyclass(name = "Keplerian")]
 pub struct PyKeplerian {
-    time: Epoch,
+    state: KeplerianState,
     origin: PyBody,
     frame: PyFrame,
-    state: KeplerianState,
 }
 
 #[pymethods]
@@ -161,18 +158,20 @@ impl PyKeplerian {
     ) -> PyResult<Self> {
         let origin: PyBody = body.try_into()?;
         let frame = PyFrame::from_str(frame)?;
+        let state: KeplerianState = StateVector(
+            t.0,
+            semi_major,
+            eccentricity,
+            inclination,
+            ascending_node,
+            periapsis_arg,
+            true_anomaly,
+        )
+        .into();
         Ok(Self {
-            time: t.0,
+            state,
             origin,
             frame,
-            state: KeplerianState::new(
-                semi_major,
-                eccentricity,
-                inclination,
-                ascending_node,
-                periapsis_arg,
-                true_anomaly,
-            ),
         })
     }
 
@@ -180,15 +179,14 @@ impl PyKeplerian {
         let mu = self.origin.gravitational_parameter();
         let state = self.state.to_cartesian_state(mu);
         PyCartesian {
-            time: self.time,
+            state,
             origin: self.origin.clone(),
             frame: self.frame.clone(),
-            state,
         }
     }
 
     fn time(&self) -> PyEpoch {
-        PyEpoch(self.time)
+        PyEpoch(self.state.time())
     }
 
     fn reference_frame(&self) -> String {
