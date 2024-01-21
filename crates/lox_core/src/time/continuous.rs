@@ -18,7 +18,9 @@ use std::ops::{Add, Sub};
 
 use num::{abs, ToPrimitive};
 
-use crate::time::constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HOUR, SECONDS_PER_MINUTE};
+use crate::time::constants::i64::{
+    SECONDS_PER_DAY, SECONDS_PER_HALF_DAY, SECONDS_PER_HOUR, SECONDS_PER_MINUTE,
+};
 use crate::time::constants::u64::{
     ATTOSECONDS_PER_FEMTOSECOND, ATTOSECONDS_PER_MICROSECOND, ATTOSECONDS_PER_MILLISECOND,
     ATTOSECONDS_PER_NANOSECOND, ATTOSECONDS_PER_PICOSECOND, ATTOSECONDS_PER_SECOND,
@@ -35,15 +37,23 @@ pub struct TimeDelta {
     attoseconds: u64,
 }
 
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
 /// `RawContinuousTime` is the base time representation for time scales without leap seconds. It is measured relative to
 /// J2000. `RawTime::default()` represents the epoch itself.
 ///
 /// `RawContinuousTime` has attosecond precision, and supports times within 292 billion years either side of the epoch.
-///  The sign of the time is determined by the sign of the `second` component.
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
 pub struct RawContinuousTime {
-    pub seconds: i64,
-    pub attoseconds: u64,
+    // The sign of the time is determined exclusively by the sign of the `second` field. `attoseconds` is always the
+    // positive count of attoseconds since the last whole second. For example, one attosecond before the epoch is
+    // represented as
+    // ```
+    // let time = RawContinuousTime {
+    //     seconds: -1,
+    //     attoseconds: ATTOSECONDS_PER_SECOND - 1,
+    // };
+    // ```
+    seconds: i64,
+    attoseconds: u64,
 }
 
 impl RawContinuousTime {
@@ -52,10 +62,11 @@ impl RawContinuousTime {
     }
 
     fn hour(&self) -> i64 {
+        // Since J2000 is taken from midday, we offset by half a day to get the wall clock hour.
         let day_seconds: i64 = if self.is_negative() {
-            SECONDS_PER_DAY - abs(self.seconds) % SECONDS_PER_DAY
+            SECONDS_PER_DAY - (abs(self.seconds) + SECONDS_PER_HALF_DAY) % SECONDS_PER_DAY
         } else {
-            self.seconds % SECONDS_PER_DAY
+            (self.seconds + SECONDS_PER_HALF_DAY) % SECONDS_PER_DAY
         };
         day_seconds / SECONDS_PER_HOUR
     }
@@ -78,42 +89,27 @@ impl RawContinuousTime {
     }
 
     fn millisecond(&self) -> i64 {
-        let millisecond = (self.attoseconds / ATTOSECONDS_PER_MILLISECOND) as i64;
-        self.sign_adjust_thousandths(millisecond)
+        (self.attoseconds / ATTOSECONDS_PER_MILLISECOND) as i64
     }
 
     fn microsecond(&self) -> i64 {
-        let microsecond = (self.attoseconds / ATTOSECONDS_PER_MICROSECOND % 1000) as i64;
-        self.sign_adjust_thousandths(microsecond)
+        (self.attoseconds / ATTOSECONDS_PER_MICROSECOND % 1000) as i64
     }
 
     fn nanosecond(&self) -> i64 {
-        let nanosecond = (self.attoseconds / ATTOSECONDS_PER_NANOSECOND % 1000) as i64;
-        self.sign_adjust_thousandths(nanosecond)
+        (self.attoseconds / ATTOSECONDS_PER_NANOSECOND % 1000) as i64
     }
 
     fn picosecond(&self) -> i64 {
-        let picosecond = (self.attoseconds / ATTOSECONDS_PER_PICOSECOND % 1000) as i64;
-        self.sign_adjust_thousandths(picosecond)
+        (self.attoseconds / ATTOSECONDS_PER_PICOSECOND % 1000) as i64
     }
 
     fn femtosecond(&self) -> i64 {
-        let femtosecond = (self.attoseconds / ATTOSECONDS_PER_FEMTOSECOND % 1000) as i64;
-        self.sign_adjust_thousandths(femtosecond)
+        (self.attoseconds / ATTOSECONDS_PER_FEMTOSECOND % 1000) as i64
     }
 
     fn attosecond(&self) -> i64 {
-        let attosecond = (self.attoseconds % 1000) as i64;
-        self.sign_adjust_thousandths(attosecond)
-    }
-
-    #[inline]
-    fn sign_adjust_thousandths(&self, thousandths: i64) -> i64 {
-        if self.is_negative() {
-            1000 - thousandths
-        } else {
-            thousandths
-        }
+        (self.attoseconds % 1000) as i64
     }
 }
 
@@ -552,6 +548,396 @@ mod tests {
             attoseconds: 0
         }
         .is_negative());
+    }
+
+    #[test]
+    fn test_raw_continuous_time_hour() {
+        struct TestCase {
+            desc: &'static str,
+            time: RawContinuousTime,
+            expected_hour: i64,
+        }
+
+        let test_cases = [
+            TestCase {
+                desc: "zero value",
+                time: RawContinuousTime {
+                    seconds: 0,
+                    attoseconds: 0,
+                },
+                expected_hour: 12,
+            },
+            TestCase {
+                desc: "one attosecond less than an hour",
+                time: RawContinuousTime {
+                    seconds: SECONDS_PER_HOUR - 1,
+                    attoseconds: ATTOSECONDS_PER_SECOND - 1,
+                },
+                expected_hour: 12,
+            },
+            TestCase {
+                desc: "exactly one hour",
+                time: RawContinuousTime {
+                    seconds: SECONDS_PER_HOUR,
+                    attoseconds: 0,
+                },
+                expected_hour: 13,
+            },
+            TestCase {
+                desc: "one day and one hour",
+                time: RawContinuousTime {
+                    seconds: SECONDS_PER_HOUR * 25,
+                    attoseconds: 0,
+                },
+                expected_hour: 13,
+            },
+            TestCase {
+                desc: "one attosecond less than the epoch",
+                time: RawContinuousTime {
+                    seconds: -1,
+                    attoseconds: ATTOSECONDS_PER_SECOND - 1,
+                },
+                expected_hour: 11,
+            },
+            TestCase {
+                desc: "one hour less than the epoch",
+                time: RawContinuousTime {
+                    seconds: -SECONDS_PER_HOUR,
+                    attoseconds: 0,
+                },
+                expected_hour: 11,
+            },
+            TestCase {
+                desc: "one hour and one attosecond less than the epoch",
+                time: RawContinuousTime {
+                    seconds: -SECONDS_PER_HOUR - 1,
+                    attoseconds: ATTOSECONDS_PER_SECOND - 1,
+                },
+                expected_hour: 10,
+            },
+            TestCase {
+                desc: "one day less than the epoch",
+                time: RawContinuousTime {
+                    seconds: -SECONDS_PER_DAY,
+                    attoseconds: 0,
+                },
+                expected_hour: 12,
+            },
+            TestCase {
+                // Exercises the case where the number of seconds exceeds the number of seconds in a day.
+                desc: "two days less than the epoch",
+                time: RawContinuousTime {
+                    seconds: -SECONDS_PER_DAY * 2,
+                    attoseconds: 0,
+                },
+                expected_hour: 12,
+            },
+        ];
+
+        for tc in test_cases {
+            let actual = tc.time.hour();
+            assert_eq!(
+                actual, tc.expected_hour,
+                "{}: expected {}, got {}",
+                tc.desc, tc.expected_hour, actual
+            );
+        }
+    }
+
+    #[test]
+    fn test_raw_continuous_time_minute() {
+        struct TestCase {
+            desc: &'static str,
+            time: RawContinuousTime,
+            expected_minute: i64,
+        }
+
+        let test_cases = [
+            TestCase {
+                desc: "zero value",
+                time: RawContinuousTime {
+                    seconds: 0,
+                    attoseconds: 0,
+                },
+                expected_minute: 0,
+            },
+            TestCase {
+                desc: "one attosecond less than one minute",
+                time: RawContinuousTime {
+                    seconds: SECONDS_PER_MINUTE - 1,
+                    attoseconds: ATTOSECONDS_PER_SECOND - 1,
+                },
+                expected_minute: 0,
+            },
+            TestCase {
+                desc: "one minute",
+                time: RawContinuousTime {
+                    seconds: SECONDS_PER_MINUTE,
+                    attoseconds: 0,
+                },
+                expected_minute: 1,
+            },
+            TestCase {
+                desc: "one attosecond less than an hour",
+                time: RawContinuousTime {
+                    seconds: SECONDS_PER_HOUR - 1,
+                    attoseconds: ATTOSECONDS_PER_SECOND - 1,
+                },
+                expected_minute: 59,
+            },
+            TestCase {
+                desc: "exactly one hour",
+                time: RawContinuousTime {
+                    seconds: SECONDS_PER_HOUR,
+                    attoseconds: 0,
+                },
+                expected_minute: 0,
+            },
+            TestCase {
+                desc: "one hour and one minute",
+                time: RawContinuousTime {
+                    seconds: SECONDS_PER_HOUR + SECONDS_PER_MINUTE,
+                    attoseconds: 0,
+                },
+                expected_minute: 1,
+            },
+            TestCase {
+                desc: "one attosecond less than the epoch",
+                time: RawContinuousTime {
+                    seconds: -1,
+                    attoseconds: ATTOSECONDS_PER_SECOND - 1,
+                },
+                expected_minute: 59,
+            },
+            TestCase {
+                desc: "one minute less than the epoch",
+                time: RawContinuousTime {
+                    seconds: -SECONDS_PER_MINUTE,
+                    attoseconds: 0,
+                },
+                expected_minute: 59,
+            },
+            TestCase {
+                desc: "one minute and one attosecond less than the epoch",
+                time: RawContinuousTime {
+                    seconds: -SECONDS_PER_MINUTE - 1,
+                    attoseconds: ATTOSECONDS_PER_SECOND - 1,
+                },
+                expected_minute: 58,
+            },
+        ];
+
+        for tc in test_cases {
+            let actual = tc.time.minute();
+            assert_eq!(
+                actual, tc.expected_minute,
+                "{}: expected {}, got {}",
+                tc.desc, tc.expected_minute, actual
+            );
+        }
+    }
+
+    #[test]
+    fn test_raw_continuous_time_second() {
+        struct TestCase {
+            desc: &'static str,
+            time: RawContinuousTime,
+            expected_second: i64,
+        }
+
+        let test_cases = [
+            TestCase {
+                desc: "zero value",
+                time: RawContinuousTime {
+                    seconds: 0,
+                    attoseconds: 0,
+                },
+                expected_second: 0,
+            },
+            TestCase {
+                desc: "one attosecond less than one second",
+                time: RawContinuousTime {
+                    seconds: 0,
+                    attoseconds: ATTOSECONDS_PER_SECOND - 1,
+                },
+                expected_second: 0,
+            },
+            TestCase {
+                desc: "one second",
+                time: RawContinuousTime {
+                    seconds: 1,
+                    attoseconds: 0,
+                },
+                expected_second: 1,
+            },
+            TestCase {
+                desc: "one attosecond less than a minute",
+                time: RawContinuousTime {
+                    seconds: SECONDS_PER_MINUTE - 1,
+                    attoseconds: ATTOSECONDS_PER_SECOND - 1,
+                },
+                expected_second: 59,
+            },
+            TestCase {
+                desc: "exactly one minute",
+                time: RawContinuousTime {
+                    seconds: SECONDS_PER_MINUTE,
+                    attoseconds: 0,
+                },
+                expected_second: 0,
+            },
+            TestCase {
+                desc: "one minute and one second",
+                time: RawContinuousTime {
+                    seconds: SECONDS_PER_MINUTE + 1,
+                    attoseconds: 0,
+                },
+                expected_second: 1,
+            },
+            TestCase {
+                desc: "one attosecond less than the epoch",
+                time: RawContinuousTime {
+                    seconds: -1,
+                    attoseconds: ATTOSECONDS_PER_SECOND - 1,
+                },
+                expected_second: 59,
+            },
+            TestCase {
+                desc: "one second less than the epoch",
+                time: RawContinuousTime {
+                    seconds: -1,
+                    attoseconds: 0,
+                },
+                expected_second: 59,
+            },
+            TestCase {
+                desc: "one second and one attosecond less than the epoch",
+                time: RawContinuousTime {
+                    seconds: -2,
+                    attoseconds: ATTOSECONDS_PER_SECOND - 1,
+                },
+                expected_second: 58,
+            },
+        ];
+
+        for tc in test_cases {
+            let actual = tc.time.second();
+            assert_eq!(
+                actual, tc.expected_second,
+                "{}: expected {}, got {}",
+                tc.desc, tc.expected_second, actual
+            );
+        }
+    }
+
+    #[test]
+    fn test_raw_continuous_time_subseconds_with_positive_seconds() {
+        let time = RawContinuousTime {
+            seconds: 0,
+            attoseconds: 123_456_789_012_345_678,
+        };
+
+        struct TestCase {
+            unit: &'static str,
+            expected: i64,
+            actual: i64,
+        }
+
+        let test_cases = [
+            TestCase {
+                unit: "millisecond",
+                expected: 123,
+                actual: time.millisecond(),
+            },
+            TestCase {
+                unit: "microsecond",
+                expected: 456,
+                actual: time.microsecond(),
+            },
+            TestCase {
+                unit: "nanosecond",
+                expected: 789,
+                actual: time.nanosecond(),
+            },
+            TestCase {
+                unit: "picosecond",
+                expected: 12,
+                actual: time.picosecond(),
+            },
+            TestCase {
+                unit: "femtosecond",
+                expected: 345,
+                actual: time.femtosecond(),
+            },
+            TestCase {
+                unit: "attosecond",
+                expected: 678,
+                actual: time.attosecond(),
+            },
+        ];
+
+        for tc in test_cases {
+            assert_eq!(
+                tc.actual, tc.expected,
+                "expected {} {}, got {}",
+                tc.unit, tc.expected, tc.actual
+            );
+        }
+    }
+
+    #[test]
+    fn test_raw_continuous_time_subseconds_with_negative_seconds() {
+        let time = RawContinuousTime {
+            seconds: -1,
+            attoseconds: 123_456_789_012_345_678,
+        };
+
+        struct TestCase {
+            unit: &'static str,
+            expected: i64,
+            actual: i64,
+        }
+
+        let test_cases = [
+            TestCase {
+                unit: "millisecond",
+                expected: 123,
+                actual: time.millisecond(),
+            },
+            TestCase {
+                unit: "microsecond",
+                expected: 456,
+                actual: time.microsecond(),
+            },
+            TestCase {
+                unit: "nanosecond",
+                expected: 789,
+                actual: time.nanosecond(),
+            },
+            TestCase {
+                unit: "picosecond",
+                expected: 12,
+                actual: time.picosecond(),
+            },
+            TestCase {
+                unit: "femtosecond",
+                expected: 345,
+                actual: time.femtosecond(),
+            },
+            TestCase {
+                unit: "attosecond",
+                expected: 678,
+                actual: time.attosecond(),
+            },
+        ];
+
+        for tc in test_cases {
+            assert_eq!(
+                tc.actual, tc.expected,
+                "expected {} {}, got {}",
+                tc.unit, tc.expected, tc.actual
+            );
+        }
     }
 
     #[test]
