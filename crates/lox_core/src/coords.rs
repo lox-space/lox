@@ -249,7 +249,7 @@ mod tests {
         .mul(1e-3);
 
         let cartesian = Cartesian::new(epoch, Earth, Icrf, pos, vel);
-        let cartesian1: Cartesian<Earth, Icrf> = Keplerian::from(cartesian).into();
+        let cartesian1 = cartesian.to_keplerian().to_cartesian();
 
         assert_eq!(cartesian1.time(), epoch);
         assert_eq!(cartesian1.origin(), Earth);
@@ -286,7 +286,7 @@ mod tests {
             periapsis_arg,
             true_anomaly,
         );
-        let keplerian1: Keplerian<Earth, Icrf> = Cartesian::from(keplerian).into();
+        let keplerian1 = keplerian.to_cartesian().to_keplerian();
 
         assert_eq!(keplerian1.time(), epoch);
         assert_eq!(keplerian1.origin(), Earth);
