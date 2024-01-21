@@ -7,7 +7,7 @@ pub type TDBJulianCenturiesSinceJ2000 = f64;
 pub fn tdb_julian_centuries_since_j2000(epoch: ContinuousTime) -> TDBJulianCenturiesSinceJ2000 {
     match epoch {
         ContinuousTime::TT(_) | ContinuousTime::TDB(_) => {
-            epoch.fractional_days() / constants::f64::DAYS_PER_JULIAN_CENTURY
+            epoch.days_since_j2000() / constants::f64::DAYS_PER_JULIAN_CENTURY
         }
         _ => todo!("perform the simpler of the conversions to TT or TDB first"),
     }

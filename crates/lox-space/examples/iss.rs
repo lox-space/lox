@@ -6,12 +6,13 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use lox_core::time::utc::UTC;
 use lox_space::prelude::*;
 
 fn main() {
     let date = Date::new(2016, 5, 30).unwrap();
-    let time = OldTime::new(12, 0, 0).unwrap();
-    let epoch = OldTime::from_date_and_time(TimeScale::TDB, date, time);
+    let time = UTC::new(12, 0, 0).unwrap();
+    let epoch = ContinuousTime::from_date_and_utc_timestamp(ContinuousTimeScale::TDB, date, time);
     let position = DVec3::new(6068279.27, -1692843.94, -2516619.18) * 1e-3;
     let velocity = DVec3::new(-660.415582, 5495.938726, -5303.093233) * 1e-3;
     let iss = Cartesian::new(epoch, Earth, position, velocity);

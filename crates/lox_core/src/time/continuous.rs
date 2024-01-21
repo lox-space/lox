@@ -402,7 +402,7 @@ impl ContinuousTime {
     }
 
     /// The fractional number of Julian days since J2000.
-    pub fn fractional_days(&self) -> f64 {
+    pub fn days_since_j2000(&self) -> f64 {
         let d1 = self.seconds().to_f64().unwrap_or_default() / constants::f64::SECONDS_PER_DAY;
         let d2 = self.attoseconds().to_f64().unwrap() / constants::f64::ATTOSECONDS_PER_DAY;
         d2 + d1
