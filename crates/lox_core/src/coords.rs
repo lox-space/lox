@@ -11,11 +11,11 @@ pub use glam::DVec3;
 use states::{CartesianState, KeplerianState};
 
 use crate::bodies::PointMass;
-use crate::coords::states::StateVector;
+use crate::coords::states::TwoBodyState;
 use crate::frames::{InertialFrame, ReferenceFrame};
 use crate::time::epochs::Epoch;
 
-pub mod elements;
+pub mod anomalies;
 pub mod states;
 
 pub trait CoordinateSystem {
@@ -26,21 +26,7 @@ pub trait CoordinateSystem {
     fn reference_frame(&self) -> Self::Frame;
 }
 
-pub trait TwoBody {
-    fn time(&self) -> Epoch;
-    fn to_cartesian_state(&self) -> CartesianState;
-    fn to_keplerian_state(&self) -> KeplerianState;
-    fn position(&self) -> DVec3;
-    fn velocity(&self) -> DVec3;
-    fn semi_major(&self) -> f64;
-    fn eccentricity(&self) -> f64;
-    fn inclination(&self) -> f64;
-    fn ascending_node(&self) -> f64;
-    fn periapsis_arg(&self) -> f64;
-    fn true_anomaly(&self) -> f64;
-}
-
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Cartesian<T, S>
 where
     T: PointMass + Copy,
@@ -64,6 +50,28 @@ where
             frame,
         }
     }
+
+    pub fn time(&self) -> Epoch {
+        self.state.time()
+    }
+
+    pub fn position(&self) -> DVec3 {
+        self.state.position()
+    }
+
+    pub fn velocity(&self) -> DVec3 {
+        self.state.position()
+    }
+}
+
+impl<T, S> Cartesian<T, S>
+where
+    T: PointMass + Copy,
+    S: InertialFrame + Copy,
+{
+    pub fn to_keplerian(&self) -> Keplerian<T, S> {
+        Keplerian::from(*self)
+    }
 }
 
 impl<T, S> CoordinateSystem for Cartesian<T, S>
@@ -83,75 +91,23 @@ where
     }
 }
 
-impl<T, S> TwoBody for Cartesian<T, S>
-where
-    T: PointMass + Copy,
-    S: ReferenceFrame + Copy,
-{
-    fn time(&self) -> Epoch {
-        self.state.time()
-    }
-
-    fn to_cartesian_state(&self) -> CartesianState {
-        self.state
-    }
-
-    fn to_keplerian_state(&self) -> KeplerianState {
-        let mu = self.origin.gravitational_parameter();
-        self.state.to_keplerian_state(mu)
-    }
-
-    fn position(&self) -> DVec3 {
-        self.state.position()
-    }
-
-    fn velocity(&self) -> DVec3 {
-        self.state.velocity()
-    }
-
-    fn semi_major(&self) -> f64 {
-        self.to_keplerian_state().semi_major()
-    }
-
-    fn eccentricity(&self) -> f64 {
-        self.to_keplerian_state().eccentricity()
-    }
-
-    fn inclination(&self) -> f64 {
-        self.to_keplerian_state().inclination()
-    }
-
-    fn ascending_node(&self) -> f64 {
-        self.to_keplerian_state().ascending_node()
-    }
-
-    fn periapsis_arg(&self) -> f64 {
-        self.to_keplerian_state().periapsis_arg()
-    }
-
-    fn true_anomaly(&self) -> f64 {
-        self.to_keplerian_state().true_anomaly()
-    }
-}
-
 impl<T, S> From<Keplerian<T, S>> for Cartesian<T, S>
 where
     T: PointMass + Copy,
     S: InertialFrame + Copy,
 {
     fn from(keplerian: Keplerian<T, S>) -> Self {
-        let origin = keplerian.origin;
-        let frame = keplerian.frame;
-        let state = keplerian.to_cartesian_state();
+        let grav_param = keplerian.origin.gravitational_parameter();
+        let state = keplerian.state.to_cartesian_state(grav_param);
         Cartesian {
             state,
-            origin,
-            frame,
+            origin: keplerian.origin,
+            frame: keplerian.frame,
         }
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Keplerian<T, S>
 where
     T: PointMass + Copy,
@@ -179,7 +135,7 @@ where
         periapsis_arg: f64,
         true_anomaly: f64,
     ) -> Self {
-        let state: KeplerianState = StateVector(
+        let state = KeplerianState::new(
             time,
             semi_major,
             eccentricity,
@@ -187,13 +143,44 @@ where
             ascending_node,
             periapsis_arg,
             true_anomaly,
-        )
-        .into();
+        );
         Self {
             state,
             origin,
             frame,
         }
+    }
+
+    pub fn time(&self) -> Epoch {
+        self.state.time()
+    }
+
+    pub fn semi_major_axis(&self) -> f64 {
+        self.state.semi_major_axis()
+    }
+
+    pub fn eccentricity(&self) -> f64 {
+        self.state.eccentricity()
+    }
+
+    pub fn inclination(&self) -> f64 {
+        self.state.inclination()
+    }
+
+    pub fn ascending_node(&self) -> f64 {
+        self.state.ascending_node()
+    }
+
+    pub fn periapsis_argument(&self) -> f64 {
+        self.state.periapsis_argument()
+    }
+
+    pub fn true_anomaly(&self) -> f64 {
+        self.state.true_anomaly()
+    }
+
+    pub fn to_cartesian(&self) -> Cartesian<T, S> {
+        Cartesian::from(*self)
     }
 }
 
@@ -214,70 +201,18 @@ where
     }
 }
 
-impl<T, S> TwoBody for Keplerian<T, S>
-where
-    T: PointMass + Copy,
-    S: InertialFrame + Copy,
-{
-    fn time(&self) -> Epoch {
-        self.state.time()
-    }
-
-    fn to_cartesian_state(&self) -> CartesianState {
-        let mu = self.origin.gravitational_parameter();
-        self.state.to_cartesian_state(mu)
-    }
-
-    fn to_keplerian_state(&self) -> KeplerianState {
-        self.state
-    }
-
-    fn position(&self) -> DVec3 {
-        self.to_cartesian_state().position()
-    }
-
-    fn velocity(&self) -> DVec3 {
-        self.to_cartesian_state().velocity()
-    }
-
-    fn semi_major(&self) -> f64 {
-        self.state.semi_major()
-    }
-
-    fn eccentricity(&self) -> f64 {
-        self.state.eccentricity()
-    }
-
-    fn inclination(&self) -> f64 {
-        self.state.inclination()
-    }
-
-    fn ascending_node(&self) -> f64 {
-        self.state.ascending_node()
-    }
-
-    fn periapsis_arg(&self) -> f64 {
-        self.state.periapsis_arg()
-    }
-
-    fn true_anomaly(&self) -> f64 {
-        self.state.true_anomaly()
-    }
-}
-
 impl<T, S> From<Cartesian<T, S>> for Keplerian<T, S>
 where
     T: PointMass + Copy,
     S: InertialFrame + Copy,
 {
     fn from(cartesian: Cartesian<T, S>) -> Self {
-        let origin = cartesian.origin;
-        let frame = cartesian.frame;
-        let state = cartesian.to_keplerian_state();
+        let grav_param = cartesian.origin.gravitational_parameter();
+        let state = cartesian.state.to_keplerian_state(grav_param);
         Self {
             state,
-            origin,
-            frame,
+            origin: cartesian.origin,
+            frame: cartesian.frame,
         }
     }
 }
@@ -296,16 +231,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_two_body() {
+    fn test_cartesian() {
         let date = Date::new(2023, 3, 25).expect("Date should be valid");
         let time = Time::new(21, 8, 0).expect("Time should be valid");
         let epoch = Epoch::from_date_and_time(TimeScale::TDB, date, time);
-        let semi_major = 24464560.0e-3;
-        let eccentricity = 0.7311;
-        let inclination = 0.122138;
-        let ascending_node = 1.00681;
-        let periapsis_arg = 3.10686;
-        let true_anomaly = 0.44369564302687126;
         let pos = DVec3::new(
             -0.107622532467967e7,
             -0.676589636432773e7,
@@ -320,21 +249,31 @@ mod tests {
         .mul(1e-3);
 
         let cartesian = Cartesian::new(epoch, Earth, Icrf, pos, vel);
+        let cartesian1: Cartesian<Earth, Icrf> = Keplerian::from(cartesian).into();
 
-        assert_eq!(
-            cartesian.to_cartesian_state(),
-            CartesianState::new(cartesian.time(), cartesian.position(), cartesian.velocity())
-        );
-        assert_eq!(cartesian.time(), epoch);
-        assert_eq!(cartesian.origin(), Earth);
-        assert_eq!(cartesian.position(), pos);
-        assert_eq!(cartesian.velocity(), vel);
-        assert_float_eq!(cartesian.semi_major(), semi_major, rel <= 1e-6);
-        assert_float_eq!(cartesian.eccentricity(), eccentricity, rel <= 1e-6);
-        assert_float_eq!(cartesian.inclination(), inclination, rel <= 1e-6);
-        assert_float_eq!(cartesian.ascending_node(), ascending_node, rel <= 1e-6);
-        assert_float_eq!(cartesian.periapsis_arg(), periapsis_arg, rel <= 1e-6);
-        assert_float_eq!(cartesian.true_anomaly(), true_anomaly, rel <= 1e-6);
+        assert_eq!(cartesian1.time(), epoch);
+        assert_eq!(cartesian1.origin(), Earth);
+        assert_eq!(cartesian1.reference_frame(), Icrf);
+
+        assert_float_eq!(cartesian.position().x, cartesian1.position().x, rel <= 1e-8);
+        assert_float_eq!(cartesian.position().y, cartesian1.position().y, rel <= 1e-8);
+        assert_float_eq!(cartesian.position().z, cartesian1.position().z, rel <= 1e-8);
+        assert_float_eq!(cartesian.velocity().x, cartesian1.velocity().x, rel <= 1e-6);
+        assert_float_eq!(cartesian.velocity().y, cartesian1.velocity().y, rel <= 1e-6);
+        assert_float_eq!(cartesian.velocity().z, cartesian1.velocity().z, rel <= 1e-6);
+    }
+
+    #[test]
+    fn test_keplerian() {
+        let date = Date::new(2023, 3, 25).expect("Date should be valid");
+        let time = Time::new(21, 8, 0).expect("Time should be valid");
+        let epoch = Epoch::from_date_and_time(TimeScale::TDB, date, time);
+        let semi_major = 24464560.0e-3;
+        let eccentricity = 0.7311;
+        let inclination = 0.122138;
+        let ascending_node = 1.00681;
+        let periapsis_arg = 3.10686;
+        let true_anomaly = 0.44369564302687126;
 
         let keplerian = Keplerian::new(
             epoch,
@@ -347,45 +286,17 @@ mod tests {
             periapsis_arg,
             true_anomaly,
         );
+        let keplerian1: Keplerian<Earth, Icrf> = Cartesian::from(keplerian).into();
 
-        assert_eq!(
-            keplerian.to_keplerian_state(),
-            KeplerianState::new(
-                keplerian.time(),
-                keplerian.semi_major(),
-                keplerian.eccentricity(),
-                keplerian.inclination(),
-                keplerian.ascending_node(),
-                keplerian.periapsis_arg(),
-                keplerian.true_anomaly(),
-            )
+        assert_eq!(keplerian1.time(), epoch);
+        assert_eq!(keplerian1.origin(), Earth);
+        assert_eq!(keplerian1.reference_frame(), Icrf);
+
+        assert_float_eq!(
+            keplerian.semi_major_axis(),
+            keplerian1.semi_major_axis(),
+            rel <= 1e-6
         );
-        assert_eq!(keplerian.time(), epoch);
-        assert_eq!(keplerian.origin(), Earth);
-        assert_float_eq!(keplerian.position().x, pos.x, rel <= 1e-8);
-        assert_float_eq!(keplerian.position().y, pos.y, rel <= 1e-8);
-        assert_float_eq!(keplerian.position().z, pos.z, rel <= 1e-8);
-        assert_float_eq!(keplerian.velocity().x, vel.x, rel <= 1e-6);
-        assert_float_eq!(keplerian.velocity().y, vel.y, rel <= 1e-6);
-        assert_float_eq!(keplerian.velocity().z, vel.z, rel <= 1e-6);
-        assert_float_eq!(keplerian.semi_major(), semi_major, rel <= 1e-6);
-        assert_float_eq!(keplerian.eccentricity(), eccentricity, rel <= 1e-6);
-        assert_float_eq!(keplerian.inclination(), inclination, rel <= 1e-6);
-        assert_float_eq!(keplerian.ascending_node(), ascending_node, rel <= 1e-6);
-        assert_float_eq!(keplerian.periapsis_arg(), periapsis_arg, rel <= 1e-6);
-        assert_float_eq!(keplerian.true_anomaly(), true_anomaly, rel <= 1e-6);
-
-        let cartesian1 = Cartesian::from(keplerian.clone());
-        let keplerian1 = Keplerian::from(cartesian.clone());
-
-        assert_float_eq!(cartesian.position().x, cartesian1.position().x, rel <= 1e-8);
-        assert_float_eq!(cartesian.position().y, cartesian1.position().y, rel <= 1e-8);
-        assert_float_eq!(cartesian.position().z, cartesian1.position().z, rel <= 1e-8);
-        assert_float_eq!(cartesian.velocity().x, cartesian1.velocity().x, rel <= 1e-6);
-        assert_float_eq!(cartesian.velocity().y, cartesian1.velocity().y, rel <= 1e-6);
-        assert_float_eq!(cartesian.velocity().z, cartesian1.velocity().z, rel <= 1e-6);
-
-        assert_float_eq!(keplerian.semi_major(), keplerian1.semi_major(), rel <= 1e-2);
         assert_float_eq!(
             keplerian.eccentricity(),
             keplerian1.eccentricity(),
@@ -402,8 +313,8 @@ mod tests {
             rel <= 1e-6
         );
         assert_float_eq!(
-            keplerian.periapsis_arg(),
-            keplerian1.periapsis_arg(),
+            keplerian.periapsis_argument(),
+            keplerian1.periapsis_argument(),
             rel <= 1e-6
         );
         assert_float_eq!(

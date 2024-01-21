@@ -12,7 +12,8 @@ use numpy::{pyarray, PyArray1};
 use pyo3::prelude::*;
 
 use lox_core::bodies::PointMass;
-use lox_core::coords::states::{CartesianState, KeplerianState, StateVector};
+use lox_core::coords::states::{CartesianState, KeplerianState, TwoBodyState};
+use lox_core::coords::DVec3;
 
 use crate::bodies::PyBody;
 use crate::frames::PyFrame;
@@ -42,7 +43,7 @@ impl PyCartesian {
     ) -> PyResult<Self> {
         let origin: PyBody = body.try_into()?;
         let frame = PyFrame::from_str(frame)?;
-        let state: CartesianState = StateVector(time.0, x, y, z, vx, vy, vz).into();
+        let state = CartesianState::new(time.0, DVec3::new(x, y, z), DVec3::new(vx, vy, vz));
         Ok(Self {
             state,
             origin,
@@ -81,57 +82,6 @@ impl PyCartesian {
         let velocity = self.state.velocity();
         Python::with_gil(|py| pyarray![py, velocity.x, velocity.y, velocity.z].into_py(py))
     }
-
-    fn cartesian(&self) -> (Py<PyArray1<f64>>, Py<PyArray1<f64>>) {
-        (self.position(), self.velocity())
-    }
-
-    fn keplerian(&self) -> Py<PyArray1<f64>> {
-        let mu = self.origin.gravitational_parameter();
-        let keplerian = self.state.to_keplerian_state(mu);
-        Python::with_gil(|py| {
-            pyarray![
-                py,
-                keplerian.true_anomaly(),
-                keplerian.eccentricity(),
-                keplerian.inclination(),
-                keplerian.ascending_node(),
-                keplerian.periapsis_arg(),
-                keplerian.true_anomaly()
-            ]
-            .into_py(py)
-        })
-    }
-
-    fn semi_major(&self) -> f64 {
-        let mu = self.origin.gravitational_parameter();
-        self.state.semi_major(mu)
-    }
-
-    fn eccentricity(&self) -> f64 {
-        let mu = self.origin.gravitational_parameter();
-        self.state.eccentricity(mu)
-    }
-
-    fn inclination(&self) -> f64 {
-        let mu = self.origin.gravitational_parameter();
-        self.state.inclination(mu)
-    }
-
-    fn ascending_node(&self) -> f64 {
-        let mu = self.origin.gravitational_parameter();
-        self.state.ascending_node(mu)
-    }
-
-    fn periapsis_arg(&self) -> f64 {
-        let mu = self.origin.gravitational_parameter();
-        self.state.periapsis_arg(mu)
-    }
-
-    fn true_anomaly(&self) -> f64 {
-        let mu = self.origin.gravitational_parameter();
-        self.state.true_anomaly(mu)
-    }
 }
 
 #[pyclass(name = "Keplerian")]
@@ -158,7 +108,7 @@ impl PyKeplerian {
     ) -> PyResult<Self> {
         let origin: PyBody = body.try_into()?;
         let frame = PyFrame::from_str(frame)?;
-        let state: KeplerianState = StateVector(
+        let state = KeplerianState::new(
             t.0,
             semi_major,
             eccentricity,
@@ -166,8 +116,7 @@ impl PyKeplerian {
             ascending_node,
             periapsis_arg,
             true_anomaly,
-        )
-        .into();
+        );
         Ok(Self {
             state,
             origin,
@@ -197,24 +146,6 @@ impl PyKeplerian {
         self.origin.clone().into()
     }
 
-    fn position(&self) -> Py<PyArray1<f64>> {
-        let mu = self.origin.gravitational_parameter();
-        let cartesian = self.state.to_cartesian_state(mu);
-        let position = cartesian.position();
-        Python::with_gil(|py| pyarray![py, position.x, position.y, position.z].into_py(py))
-    }
-
-    fn velocity(&self) -> Py<PyArray1<f64>> {
-        let mu = self.origin.gravitational_parameter();
-        let cartesian = self.state.to_cartesian_state(mu);
-        let velocity = cartesian.velocity();
-        Python::with_gil(|py| pyarray![py, velocity.x, velocity.y, velocity.z].into_py(py))
-    }
-
-    fn cartesian(&self) -> (Py<PyArray1<f64>>, Py<PyArray1<f64>>) {
-        (self.position(), self.velocity())
-    }
-
     fn keplerian(&self) -> Py<PyArray1<f64>> {
         Python::with_gil(|py| {
             pyarray![
@@ -223,7 +154,7 @@ impl PyKeplerian {
                 self.state.eccentricity(),
                 self.state.inclination(),
                 self.state.ascending_node(),
-                self.state.periapsis_arg(),
+                self.state.periapsis_argument(),
                 self.state.true_anomaly()
             ]
             .into_py(py)
@@ -231,7 +162,7 @@ impl PyKeplerian {
     }
 
     fn semi_major(&self) -> f64 {
-        self.state.semi_major()
+        self.state.semi_major_axis()
     }
 
     fn eccentricity(&self) -> f64 {
@@ -247,7 +178,7 @@ impl PyKeplerian {
     }
 
     fn periapsis_arg(&self) -> f64 {
-        self.state.periapsis_arg()
+        self.state.periapsis_argument()
     }
 
     fn true_anomaly(&self) -> f64 {

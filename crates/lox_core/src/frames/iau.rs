@@ -13,7 +13,7 @@ use glam::{DMat3, DVec3};
 use crate::bodies::RotationalElements;
 use crate::frames::{Epoch, FromFrame, Icrf, ReferenceFrame, RotatingFrame, Rotation};
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct BodyFixed<T: RotationalElements>(pub T);
 
 impl<T: RotationalElements> Display for BodyFixed<T> {

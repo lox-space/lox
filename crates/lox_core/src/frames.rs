@@ -37,7 +37,7 @@ pub trait RotatingFrame: ReferenceFrame {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Icrf;
 
 impl Display for Icrf {
