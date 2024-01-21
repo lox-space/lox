@@ -9,6 +9,7 @@
 use std::str::FromStr;
 
 use numpy::{pyarray, PyArray1};
+use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 use lox_core::bodies::PointMass;
@@ -29,18 +30,29 @@ pub struct PyCartesian {
 #[pymethods]
 impl PyCartesian {
     #[new]
-    #[allow(clippy::too_many_arguments)]
     fn new(
         time: &PyEpoch,
         body: PyObject,
         frame: &str,
-        x: f64,
-        y: f64,
-        z: f64,
-        vx: f64,
-        vy: f64,
-        vz: f64,
+        position: &PyArray1<f64>,
+        velocity: &PyArray1<f64>,
     ) -> PyResult<Self> {
+        if position.len() != 3 {
+            return Err(PyValueError::new_err(
+                "position vector must have three elements",
+            ));
+        }
+        if velocity.len() != 3 {
+            return Err(PyValueError::new_err(
+                "velocity vector must have three elements",
+            ));
+        }
+        let x = position.get_owned(0).unwrap();
+        let y = position.get_owned(1).unwrap();
+        let z = position.get_owned(2).unwrap();
+        let vx = velocity.get_owned(0).unwrap();
+        let vy = velocity.get_owned(1).unwrap();
+        let vz = velocity.get_owned(2).unwrap();
         let origin: PyBody = body.try_into()?;
         let frame = PyFrame::from_str(frame)?;
         let state = CartesianState::new(time.0, DVec3::new(x, y, z), DVec3::new(vx, vy, vz));
@@ -151,7 +163,7 @@ impl PyKeplerian {
         self.origin.clone().into()
     }
 
-    fn semi_major(&self) -> f64 {
+    fn semi_major_axis(&self) -> f64 {
         self.state.semi_major_axis()
     }
 
@@ -167,7 +179,7 @@ impl PyKeplerian {
         self.state.ascending_node()
     }
 
-    fn periapsis_arg(&self) -> f64 {
+    fn periapsis_argument(&self) -> f64 {
         self.state.periapsis_argument()
     }
 
