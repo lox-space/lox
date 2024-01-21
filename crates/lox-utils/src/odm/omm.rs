@@ -214,3 +214,240 @@ pub struct DdRevType {
     #[serde(rename = "@units")]
     pub units: Option<DdRevUnits>,
 }
+
+mod test {
+    use super::*;
+
+    use quick_xml::de::from_str;
+
+    #[test]
+    fn test_parse_oem_message() {
+        let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+        <omm xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:noNamespaceSchemaLocation="http://cwe.ccsds.org/moims/docs/MOIMS-NAV/Schemas/ndmxml-1.0-master.xsd"
+             id="CCSDS_OMM_VERS" version="2.0">
+        
+            <header>
+                <COMMENT>THIS EXAMPLE CONFORMS TO FIGURE 4-2 IN 502.0-B-2</COMMENT>
+                <CREATION_DATE>2007-065T16:00:00</CREATION_DATE>
+                <ORIGINATOR>NOAA/USA</ORIGINATOR>
+            </header>
+            <body>
+                <segment>
+                    <metadata>
+                        <OBJECT_NAME>GOES-9</OBJECT_NAME>
+                        <OBJECT_ID>1995-025A</OBJECT_ID>
+                        <CENTER_NAME>EARTH</CENTER_NAME>
+                        <REF_FRAME>TEME</REF_FRAME>
+                        <TIME_SYSTEM>UTC</TIME_SYSTEM>
+                        <MEAN_ELEMENT_THEORY>TLE</MEAN_ELEMENT_THEORY>
+                    </metadata>
+                    <data>
+                        <COMMENT>USAF SGP4 IS THE ONLY PROPAGATOR THAT SHOULD BE USED FOR THIS DATA</COMMENT>
+                        <meanElements>
+                            <EPOCH>2007-064T10:34:41.4264</EPOCH>
+                            <MEAN_MOTION>1.00273272</MEAN_MOTION>
+                            <ECCENTRICITY>0.0005013</ECCENTRICITY>
+                            <INCLINATION>3.0539</INCLINATION>
+                            <RA_OF_ASC_NODE>81.7939</RA_OF_ASC_NODE>
+                            <ARG_OF_PERICENTER>249.2363</ARG_OF_PERICENTER>
+                            <MEAN_ANOMALY>150.1602</MEAN_ANOMALY>
+                            <GM>398600.8</GM>
+                        </meanElements>
+                        <tleParameters>
+                            <NORAD_CAT_ID>23581</NORAD_CAT_ID>
+                            <ELEMENT_SET_NO>0925</ELEMENT_SET_NO>
+                            <REV_AT_EPOCH>4316</REV_AT_EPOCH>
+                            <BSTAR>0.0001</BSTAR>
+                            <MEAN_MOTION_DOT>-0.00000113</MEAN_MOTION_DOT>
+                            <MEAN_MOTION_DDOT>0.0</MEAN_MOTION_DDOT>
+                        </tleParameters>
+                        <userDefinedParameters>
+                            <USER_DEFINED parameter="ABC0">xyz</USER_DEFINED>
+                            <USER_DEFINED parameter="ABC1">9</USER_DEFINED>
+                            <USER_DEFINED parameter="ABC2">xyz</USER_DEFINED>
+                            <USER_DEFINED parameter="ABC3">9</USER_DEFINED>
+                            <USER_DEFINED parameter="ABC4">xyz</USER_DEFINED>
+                            <USER_DEFINED parameter="ABC5">9</USER_DEFINED>
+                            <USER_DEFINED parameter="ABC6">xyz</USER_DEFINED>
+                            <USER_DEFINED parameter="ABC7">9</USER_DEFINED>
+                            <USER_DEFINED parameter="ABC8">xyz</USER_DEFINED>
+                            <USER_DEFINED parameter="ABC9">9</USER_DEFINED>
+                        </userDefinedParameters>
+                    </data>
+                </segment>
+            </body>
+        </omm>"#;
+
+        let message: OmmType = from_str(xml).unwrap();
+
+        assert_eq!(message, 
+            OmmType {
+                header: common::OdmHeader {
+                    comment_list: vec![
+                        "THIS EXAMPLE CONFORMS TO FIGURE 4-2 IN 502.0-B-2".to_string(),
+                    ],
+                    classification_list: vec![],
+                    creation_date: common::EpochType(
+                        "2007-065T16:00:00".to_string(),
+                    ),
+                    originator: "NOAA/USA".to_string(),
+                    message_id: None,
+                },
+                body: OmmBody {
+                    segment: OmmSegment {
+                        metadata: OmmMetadata {
+                            comment_list: vec![],
+                            object_name: "GOES-9".to_string(),
+                            object_id: "1995-025A".to_string(),
+                            center_name: "EARTH".to_string(),
+                            ref_frame: "TEME".to_string(),
+                            ref_frame_epoch: None,
+                            time_system: "UTC".to_string(),
+                            mean_element_theory: "TLE".to_string(),
+                        },
+                        data: OmmData {
+                            comment_list: vec![
+                                "USAF SGP4 IS THE ONLY PROPAGATOR THAT SHOULD BE USED FOR THIS DATA".to_string(),
+                            ],
+                            mean_elements: MeanElementsType {
+                                comment_list: vec![],
+                                epoch: common::EpochType(
+                                    "2007-064T10:34:41.4264".to_string(),
+                                ),
+                                semi_major_axis: None,
+                                mean_motion: Some(
+                                    RevType {
+                                        base: 1.00273272,
+                                        units: None,
+                                    },
+                                ),
+                                eccentricity: common::NonNegativeDouble(
+                                    "0.0005013".to_string(),
+                                ),
+                                inclination: common::InclinationType {
+                                    base: common::InclinationRange(
+                                        "3.0539".to_string(),
+                                    ),
+                                    units: None,
+                                },
+                                ra_of_asc_node: common::AngleType {
+                                    base: common::AngleRange(
+                                        "81.7939".to_string(),
+                                    ),
+                                    units: None,
+                                },
+                                arg_of_pericenter: common::AngleType {
+                                    base: common::AngleRange(
+                                        "249.2363".to_string(),
+                                    ),
+                                    units: None,
+                                },
+                                mean_anomaly: common::AngleType {
+                                    base: common::AngleRange(
+                                        "150.1602".to_string(),
+                                    ),
+                                    units: None,
+                                },
+                                gm: Some(
+                                    common::GmType {
+                                        base: common::PositiveDouble(
+                                            "398600.8".to_string(),
+                                        ),
+                                        units: None,
+                                    },
+                                ),
+                            },
+                            spacecraft_parameters: None,
+                            tle_parameters: Some(
+                                TleParametersType {
+                                    comment_list: vec![],
+                                    ephemeris_type: None,
+                                    classification_type: None,
+                                    norad_cat_id: Some(
+                                        23581,
+                                    ),
+                                    element_set_no: Some(
+                                        ElementSetNoType(
+                                            "0925".to_string(),
+                                        ),
+                                    ),
+                                    rev_at_epoch: Some(
+                                        4316,
+                                    ),
+                                    bstar: Some(
+                                        BStarType {
+                                            base: 0.0001,
+                                            units: None,
+                                        },
+                                    ),
+                                    bterm: None,
+                                    mean_motion_dot: DRevType {
+                                        base: -1.13e-6,
+                                        units: None,
+                                    },
+                                    mean_motion_ddot: Some(
+                                        DRevType {
+                                            base: 0.0,
+                                            units: None,
+                                        },
+                                    ),
+                                    agom: None,
+                                },
+                            ),
+                            covariance_matrix: None,
+                            user_defined_parameters: Some(
+                                common::UserDefinedType {
+                                    comment_list: vec![],
+                                    user_defined_list: vec![
+                                        common::UserDefinedParameterType {
+                                            base: "xyz".to_string(),
+                                            parameter: "ABC0".to_string(),
+                                        },
+                                        common::UserDefinedParameterType {
+                                            base: "9".to_string(),
+                                            parameter: "ABC1".to_string(),
+                                        },
+                                        common::UserDefinedParameterType {
+                                            base: "xyz".to_string(),
+                                            parameter: "ABC2".to_string(),
+                                        },
+                                        common::UserDefinedParameterType {
+                                            base: "9".to_string(),
+                                            parameter: "ABC3".to_string(),
+                                        },
+                                        common::UserDefinedParameterType {
+                                            base: "xyz".to_string(),
+                                            parameter: "ABC4".to_string(),
+                                        },
+                                        common::UserDefinedParameterType {
+                                            base: "9".to_string(),
+                                            parameter: "ABC5".to_string(),
+                                        },
+                                        common::UserDefinedParameterType {
+                                            base: "xyz".to_string(),
+                                            parameter: "ABC6".to_string(),
+                                        },
+                                        common::UserDefinedParameterType {
+                                            base: "9".to_string(),
+                                            parameter: "ABC7".to_string(),
+                                        },
+                                        common::UserDefinedParameterType {
+                                            base: "xyz".to_string(),
+                                            parameter: "ABC8".to_string(),
+                                        },
+                                        common::UserDefinedParameterType {
+                                            base: "9".to_string(),
+                                            parameter: "ABC9".to_string(),
+                                        },
+                                    ],
+                                },
+                            ),
+                        },
+                    },
+                },
+                id: "CCSDS_OMM_VERS".to_string(),
+                version: "2.0".to_string(),
+            });
+    }
+}
