@@ -122,3 +122,14 @@ where
         self.rotation_from(frame, t).transpose()
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_icrf() {
+        assert!(Icrf.is_inertial());
+        assert!(!Icrf.is_rotating());
+    }
+}
