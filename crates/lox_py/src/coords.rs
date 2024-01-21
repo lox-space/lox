@@ -51,16 +51,6 @@ impl PyCartesian {
         })
     }
 
-    fn to_keplerian(&self) -> PyKeplerian {
-        let mu = self.origin.gravitational_parameter();
-        let state = self.state.to_keplerian_state(mu);
-        PyKeplerian {
-            origin: self.origin.clone(),
-            frame: self.frame.clone(),
-            state,
-        }
-    }
-
     fn time(&self) -> PyEpoch {
         PyEpoch(self.state.time())
     }
@@ -82,6 +72,31 @@ impl PyCartesian {
         let velocity = self.state.velocity();
         Python::with_gil(|py| pyarray![py, velocity.x, velocity.y, velocity.z].into_py(py))
     }
+
+    fn to_keplerian(&self) -> PyKeplerian {
+        let mu = self.origin.gravitational_parameter();
+        let state = self.state.to_keplerian_state(mu);
+        PyKeplerian {
+            origin: self.origin.clone(),
+            frame: self.frame.clone(),
+            state,
+        }
+    }
+
+    fn to_array(&self) -> Py<PyArray1<f64>> {
+        Python::with_gil(|py| {
+            pyarray![
+                py,
+                self.state.position().x,
+                self.state.position().y,
+                self.state.position().z,
+                self.state.velocity().x,
+                self.state.velocity().y,
+                self.state.velocity().z
+            ]
+            .into_py(py)
+        })
+    }
 }
 
 #[pyclass(name = "Keplerian")]
@@ -99,22 +114,22 @@ impl PyKeplerian {
         t: &PyEpoch,
         body: PyObject,
         frame: &str,
-        semi_major: f64,
+        semi_major_axis: f64,
         eccentricity: f64,
         inclination: f64,
         ascending_node: f64,
-        periapsis_arg: f64,
+        periapsis_argument: f64,
         true_anomaly: f64,
     ) -> PyResult<Self> {
         let origin: PyBody = body.try_into()?;
         let frame = PyFrame::from_str(frame)?;
         let state = KeplerianState::new(
             t.0,
-            semi_major,
+            semi_major_axis,
             eccentricity,
             inclination,
             ascending_node,
-            periapsis_arg,
+            periapsis_argument,
             true_anomaly,
         );
         Ok(Self {
@@ -122,16 +137,6 @@ impl PyKeplerian {
             origin,
             frame,
         })
-    }
-
-    fn to_cartesian(&self) -> PyCartesian {
-        let mu = self.origin.gravitational_parameter();
-        let state = self.state.to_cartesian_state(mu);
-        PyCartesian {
-            state,
-            origin: self.origin.clone(),
-            frame: self.frame.clone(),
-        }
     }
 
     fn time(&self) -> PyEpoch {
@@ -144,21 +149,6 @@ impl PyKeplerian {
 
     fn origin(&self) -> PyObject {
         self.origin.clone().into()
-    }
-
-    fn keplerian(&self) -> Py<PyArray1<f64>> {
-        Python::with_gil(|py| {
-            pyarray![
-                py,
-                self.state.true_anomaly(),
-                self.state.eccentricity(),
-                self.state.inclination(),
-                self.state.ascending_node(),
-                self.state.periapsis_argument(),
-                self.state.true_anomaly()
-            ]
-            .into_py(py)
-        })
     }
 
     fn semi_major(&self) -> f64 {
@@ -183,5 +173,30 @@ impl PyKeplerian {
 
     fn true_anomaly(&self) -> f64 {
         self.state.true_anomaly()
+    }
+
+    fn to_cartesian(&self) -> PyCartesian {
+        let mu = self.origin.gravitational_parameter();
+        let state = self.state.to_cartesian_state(mu);
+        PyCartesian {
+            state,
+            origin: self.origin.clone(),
+            frame: self.frame.clone(),
+        }
+    }
+
+    fn to_array(&self) -> Py<PyArray1<f64>> {
+        Python::with_gil(|py| {
+            pyarray![
+                py,
+                self.state.true_anomaly(),
+                self.state.eccentricity(),
+                self.state.inclination(),
+                self.state.ascending_node(),
+                self.state.periapsis_argument(),
+                self.state.true_anomaly()
+            ]
+            .into_py(py)
+        })
     }
 }

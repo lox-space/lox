@@ -15,5 +15,10 @@ dependencies = [
     "numpy~=1.26"
 ]
 
+[project.optional-dependencies]
+dev = [
+    "black"
+]
+
 [tool.maturin]
 features = ["pyo3/extension-module"]
