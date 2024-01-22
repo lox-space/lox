@@ -26,6 +26,16 @@ pub trait CoordinateSystem {
     fn reference_frame(&self) -> Self::Frame;
 }
 
+pub trait TwoBody<T, S>
+where
+    T: PointMass + Copy,
+    S: InertialFrame + Copy,
+{
+    fn to_cartesian(&self) -> Cartesian<T, S>;
+
+    fn to_keplerian(&self) -> Keplerian<T, S>;
+}
+
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Cartesian<T, S>
 where
@@ -64,12 +74,16 @@ where
     }
 }
 
-impl<T, S> Cartesian<T, S>
+impl<T, S> TwoBody<T, S> for Cartesian<T, S>
 where
     T: PointMass + Copy,
     S: InertialFrame + Copy,
 {
-    pub fn to_keplerian(&self) -> Keplerian<T, S> {
+    fn to_cartesian(&self) -> Cartesian<T, S> {
+        *self
+    }
+
+    fn to_keplerian(&self) -> Keplerian<T, S> {
         Keplerian::from(*self)
     }
 }
@@ -178,9 +192,19 @@ where
     pub fn true_anomaly(&self) -> f64 {
         self.state.true_anomaly()
     }
+}
 
-    pub fn to_cartesian(&self) -> Cartesian<T, S> {
+impl<T, S> TwoBody<T, S> for Keplerian<T, S>
+where
+    T: PointMass + Copy,
+    S: InertialFrame + Copy,
+{
+    fn to_cartesian(&self) -> Cartesian<T, S> {
         Cartesian::from(*self)
+    }
+
+    fn to_keplerian(&self) -> Keplerian<T, S> {
+        *self
     }
 }
 
