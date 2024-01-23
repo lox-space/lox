@@ -11,7 +11,7 @@ use pyo3::prelude::*;
 use thiserror::Error;
 
 use crate::bodies::{PyBarycenter, PyMinorBody, PyPlanet, PySatellite, PySun};
-use crate::coords::PyCartesian;
+use crate::coords::{PyCartesian, PyKeplerian};
 use crate::time::{PyEpoch, PyTimeScale};
 use lox_core::errors::LoxError;
 
@@ -57,5 +57,6 @@ fn lox_space(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PySatellite>()?;
     m.add_class::<PyMinorBody>()?;
     m.add_class::<PyCartesian>()?;
+    m.add_class::<PyKeplerian>()?;
     Ok(())
 }

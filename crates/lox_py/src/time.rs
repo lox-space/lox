@@ -39,6 +39,7 @@ impl PyTimeScale {
 }
 
 #[pyclass(name = "Epoch")]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct PyEpoch(pub Epoch);
 
 #[pymethods]
@@ -60,7 +61,7 @@ impl PyEpoch {
     atto = 0
     ))]
     #[new]
-    fn new(
+    pub fn new(
         scale: &str,
         year: i64,
         month: i64,
