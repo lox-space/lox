@@ -223,12 +223,12 @@ impl PySatellite {
         }
     }
 
-    fn __repr__(&self) -> PyResult<String> {
-        Ok(format!("Satellite(\"{}\")", self.name()))
+    fn __repr__(&self) -> String {
+        format!("Satellite(\"{}\")", self.name())
     }
 
-    fn __str__(&self) -> PyResult<String> {
-        Ok(self.name().to_string())
+    fn __str__(&self) -> &str {
+        self.name()
     }
 
     pub fn id(&self) -> i32 {
@@ -282,12 +282,12 @@ impl PyMinorBody {
         }
     }
 
-    fn __repr__(&self) -> PyResult<String> {
-        Ok(format!("MinorBody(\"{}\")", self.name()))
+    fn __repr__(&self) -> String {
+        format!("MinorBody(\"{}\")", self.name())
     }
 
-    fn __str__(&self) -> PyResult<String> {
-        Ok(self.name().to_string())
+    fn __str__(&self) -> &str {
+        self.name()
     }
 
     pub fn id(&self) -> i32 {
@@ -415,33 +415,9 @@ mod tests {
         assert_eq!(sun.equatorial_radius(), Sun.equatorial_radius());
     }
 
-    #[test]
-    fn test_ssb() {
-        let ssb = PyBarycenter::new("ssb").expect("barycenter should be valid");
-        assert_eq!(ssb.__repr__(), "Barycenter(\"Solar System Barycenter\")");
-        assert_eq!(ssb.__str__(), "Solar System Barycenter");
-        assert_eq!(ssb.name(), SolarSystemBarycenter.name());
-        let ssb = PyBarycenter::new("SSB").expect("barycenter should be valid");
-        assert_eq!(ssb.__repr__(), "Barycenter(\"Solar System Barycenter\")");
-        assert_eq!(ssb.__str__(), "Solar System Barycenter");
-        assert_eq!(ssb.name(), SolarSystemBarycenter.name());
-        let ssb = PyBarycenter::new("Solar System Barycenter").expect("barycenter should be valid");
-        assert_eq!(ssb.__repr__(), "Barycenter(\"Solar System Barycenter\")");
-        assert_eq!(ssb.__str__(), "Solar System Barycenter");
-        assert_eq!(ssb.name(), SolarSystemBarycenter.name());
-        let ssb = PyBarycenter::new(&"Solar System Barycenter".to_lowercase())
-            .expect("barycenter should be valid");
-        assert_eq!(ssb.__repr__(), "Barycenter(\"Solar System Barycenter\")");
-        assert_eq!(ssb.__str__(), "Solar System Barycenter");
-        assert_eq!(ssb.name(), SolarSystemBarycenter.name());
-        assert_eq!(ssb.id(), SolarSystemBarycenter.id().0);
-        assert_eq!(
-            ssb.gravitational_parameter(),
-            SolarSystemBarycenter.gravitational_parameter()
-        );
-    }
-
     #[rstest]
+    #[case("Solar System Barycenter", SolarSystemBarycenter)]
+    #[case("SSB", SolarSystemBarycenter)]
     #[case("Mercury Barycenter", MercuryBarycenter)]
     #[case("Venus Barycenter", VenusBarycenter)]
     #[case("Earth Barycenter", EarthBarycenter)]
@@ -455,18 +431,18 @@ mod tests {
         let py_barycenter = PyBarycenter::new(name).expect("barycenter should be valid");
         assert_eq!(
             py_barycenter.__repr__(),
-            format!("Barycenter(\"{}\")", name)
+            format!("Barycenter(\"{}\")", barycenter.name())
         );
-        assert_eq!(py_barycenter.__str__(), name);
-        assert_eq!(py_barycenter.name(), name);
+        assert_eq!(py_barycenter.__str__(), barycenter.name());
+        assert_eq!(py_barycenter.name(), barycenter.name());
         let py_barycenter =
             PyBarycenter::new(&name.to_lowercase()).expect("barycenter should be valid");
         assert_eq!(
             py_barycenter.__repr__(),
-            format!("Barycenter(\"{}\")", name)
+            format!("Barycenter(\"{}\")", barycenter.name())
         );
-        assert_eq!(py_barycenter.__str__(), name);
-        assert_eq!(py_barycenter.name(), name);
+        assert_eq!(py_barycenter.__str__(), barycenter.name());
+        assert_eq!(py_barycenter.name(), barycenter.name());
         assert_eq!(py_barycenter.id(), barycenter.id().0);
         assert_eq!(
             py_barycenter.gravitational_parameter(),
@@ -501,5 +477,119 @@ mod tests {
         assert_eq!(py_planet.mean_radius(), planet.mean_radius());
         assert_eq!(py_planet.polar_radius(), planet.polar_radius());
         assert_eq!(py_planet.equatorial_radius(), planet.equatorial_radius());
+    }
+
+    #[rstest]
+    #[case("Moon", Moon)]
+    #[case("Luna", Moon)]
+    #[case("Phobos", Phobos)]
+    #[case("Deimos", Deimos)]
+    #[case("Io", Io)]
+    #[case("Europa", Europa)]
+    #[case("Ganymede", Ganymede)]
+    #[case("Callisto", Callisto)]
+    #[case("Amalthea", Amalthea)]
+    #[case("Himalia", Himalia)]
+    #[case("Thebe", Thebe)]
+    #[case("Adrastea", Adrastea)]
+    #[case("Metis", Metis)]
+    #[case("Mimas", Mimas)]
+    #[case("Enceladus", Enceladus)]
+    #[case("Tethys", Tethys)]
+    #[case("Dione", Dione)]
+    #[case("Rhea", Rhea)]
+    #[case("Titan", Titan)]
+    #[case("Hyperion", Hyperion)]
+    #[case("Iapetus", Iapetus)]
+    #[case("Phoebe", Phoebe)]
+    #[case("Janus", Janus)]
+    #[case("Epimetheus", Epimetheus)]
+    #[case("Helene", Helene)]
+    #[case("Atlas", Atlas)]
+    #[case("Prometheus", Prometheus)]
+    #[case("Pandora", Pandora)]
+    #[case("Ariel", Ariel)]
+    #[case("Umbriel", Umbriel)]
+    #[case("Titania", Titania)]
+    #[case("Oberon", Oberon)]
+    #[case("Miranda", Miranda)]
+    #[case("Triton", Triton)]
+    #[case("Naiad", Naiad)]
+    #[case("Thalassa", Thalassa)]
+    #[case("Despina", Despina)]
+    #[case("Galatea", Galatea)]
+    #[case("Larissa", Larissa)]
+    #[case("Proteus", Proteus)]
+    #[case("Charon", Charon)]
+    fn test_satellite(#[case] name: &str, #[case] satellite: impl Satellite) {
+        let py_satellite = PySatellite::new(name).expect("satellite should be valid");
+        assert_eq!(
+            py_satellite.__repr__(),
+            format!("Satellite(\"{}\")", satellite.name())
+        );
+        assert_eq!(py_satellite.__str__(), satellite.name());
+        assert_eq!(py_satellite.name(), satellite.name());
+        let py_satellite =
+            PySatellite::new(&name.to_lowercase()).expect("satellite should be valid");
+        assert_eq!(
+            py_satellite.__repr__(),
+            format!("Satellite(\"{}\")", satellite.name())
+        );
+        assert_eq!(py_satellite.__str__(), satellite.name());
+        assert_eq!(py_satellite.name(), satellite.name());
+        assert_eq!(py_satellite.id(), satellite.id().0);
+        assert_eq!(
+            py_satellite.gravitational_parameter(),
+            satellite.gravitational_parameter()
+        );
+        assert_eq!(py_satellite.mean_radius(), satellite.mean_radius());
+        assert_eq!(py_satellite.polar_radius(), satellite.polar_radius());
+        assert_eq!(
+            py_satellite.subplanetary_radius(),
+            satellite.subplanetary_radius()
+        );
+        assert_eq!(
+            py_satellite.along_orbit_radius(),
+            satellite.along_orbit_radius()
+        );
+    }
+
+    #[rstest]
+    #[case("Ceres", Ceres)]
+    #[case("Vesta", Vesta)]
+    #[case("Psyche", Psyche)]
+    #[case("Eros", Eros)]
+    #[case("Davida", Davida)]
+    fn test_minor_body(#[case] name: &str, #[case] minor_body: impl MinorBody) {
+        let py_minor_body = PyMinorBody::new(name).expect("minor body should be valid");
+        assert_eq!(
+            py_minor_body.__repr__(),
+            format!("MinorBody(\"{}\")", minor_body.name())
+        );
+        assert_eq!(py_minor_body.__str__(), minor_body.name());
+        assert_eq!(py_minor_body.name(), minor_body.name());
+        let py_minor_body =
+            PyMinorBody::new(&name.to_lowercase()).expect("minor body should be valid");
+        assert_eq!(
+            py_minor_body.__repr__(),
+            format!("MinorBody(\"{}\")", minor_body.name())
+        );
+        assert_eq!(py_minor_body.__str__(), minor_body.name());
+        assert_eq!(py_minor_body.name(), minor_body.name());
+        assert_eq!(py_minor_body.id(), minor_body.id().0);
+        assert_eq!(
+            py_minor_body.gravitational_parameter(),
+            minor_body.gravitational_parameter()
+        );
+        assert_eq!(py_minor_body.mean_radius(), minor_body.mean_radius());
+        assert_eq!(py_minor_body.polar_radius(), minor_body.polar_radius());
+        assert_eq!(
+            py_minor_body.subplanetary_radius(),
+            minor_body.subplanetary_radius()
+        );
+        assert_eq!(
+            py_minor_body.along_orbit_radius(),
+            minor_body.along_orbit_radius()
+        );
     }
 }
