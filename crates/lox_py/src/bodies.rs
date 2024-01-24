@@ -450,6 +450,12 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_invalid_barycenter() {
+        let barycenter = PyBarycenter::new("Rupert Barycenter");
+        assert!(barycenter.is_err());
+    }
+
     #[rstest]
     #[case("Mercury", Mercury)]
     #[case("Venus", Venus)]
@@ -477,6 +483,12 @@ mod tests {
         assert_eq!(py_planet.mean_radius(), planet.mean_radius());
         assert_eq!(py_planet.polar_radius(), planet.polar_radius());
         assert_eq!(py_planet.equatorial_radius(), planet.equatorial_radius());
+    }
+
+    #[test]
+    fn test_invalid_planet() {
+        let planet = PyPlanet::new("Rupert");
+        assert!(planet.is_err());
     }
 
     #[rstest]
@@ -554,6 +566,12 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_invalid_satellite() {
+        let satellite = PySatellite::new("Endor");
+        assert!(satellite.is_err());
+    }
+
     #[rstest]
     #[case("Ceres", Ceres)]
     #[case("Vesta", Vesta)]
@@ -591,5 +609,71 @@ mod tests {
             py_minor_body.along_orbit_radius(),
             minor_body.along_orbit_radius()
         );
+    }
+
+    #[test]
+    fn test_invalid_minor_body() {
+        let minor_body = PyMinorBody::new("Bielefeld");
+        assert!(minor_body.is_err());
+    }
+
+    #[test]
+    fn test_body() {
+        let sun = PyBody::Sun(PySun::new());
+        assert_eq!(sun.id(), Sun.id());
+        assert_eq!(sun.name(), Sun.name());
+        assert_eq!(sun.gravitational_parameter(), Sun.gravitational_parameter());
+        let sun1: PyBody = PyObject::from(sun.clone())
+            .try_into()
+            .expect("sun is valid");
+        assert_eq!(sun1.id(), sun.id());
+
+        let barycenter = PyBody::Barycenter(PyBarycenter::new("ssb").expect("barycenter is valid"));
+        assert_eq!(barycenter.id(), SolarSystemBarycenter.id());
+        assert_eq!(barycenter.name(), SolarSystemBarycenter.name());
+        assert_eq!(
+            barycenter.gravitational_parameter(),
+            SolarSystemBarycenter.gravitational_parameter()
+        );
+        let barycenter1: PyBody = PyObject::from(barycenter.clone())
+            .try_into()
+            .expect("barycenter is valid");
+        assert_eq!(barycenter1.id(), barycenter.id());
+
+        let planet = PyBody::Planet(PyPlanet::new("earth").expect("planet is valid"));
+        assert_eq!(planet.id(), Earth.id());
+        assert_eq!(planet.name(), Earth.name());
+        assert_eq!(
+            planet.gravitational_parameter(),
+            Earth.gravitational_parameter()
+        );
+        let planet1: PyBody = PyObject::from(planet.clone())
+            .try_into()
+            .expect("planet is valid");
+        assert_eq!(planet1.id(), planet.id());
+
+        let satellite = PyBody::Satellite(PySatellite::new("moon").expect("satellite is valid"));
+        assert_eq!(satellite.id(), Moon.id());
+        assert_eq!(satellite.name(), Moon.name());
+        assert_eq!(
+            satellite.gravitational_parameter(),
+            Moon.gravitational_parameter()
+        );
+        let satellite1: PyBody = PyObject::from(satellite.clone())
+            .try_into()
+            .expect("satellite is valid");
+        assert_eq!(satellite1.id(), satellite.id());
+
+        let minor_body = PyBody::MinorBody(PyMinorBody::new("ceres").expect("minor body is valid"));
+        assert_eq!(minor_body.id(), Ceres.id());
+        assert_eq!(minor_body.name(), Ceres.name());
+        assert_eq!(
+            minor_body.gravitational_parameter(),
+            Ceres.gravitational_parameter()
+        );
+        let minor_body1: PyBody = PyObject::from(minor_body.clone())
+            .try_into()
+            .expect("minor_body is valid");
+        assert_eq!(minor_body1.id(), minor_body.id());
     }
 }
