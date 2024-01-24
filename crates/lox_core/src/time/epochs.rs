@@ -16,7 +16,7 @@ use crate::time::constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HOUR, SECONDS_PER
 use crate::time::dates::Calendar::ProlepticJulian;
 use crate::time::dates::{Date, DateTime, Time};
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum TimeScale {
     TAI,
     TCB,

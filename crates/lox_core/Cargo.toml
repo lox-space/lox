@@ -13,8 +13,8 @@ fast_polynomial = "0.1.0"
 dyn-clone = "1.0.16"
 
 [dev-dependencies]
-proptest = "1.4.0"
-rstest = "0.18.2"
+proptest.workspace = true
+rstest.workspace = true
 divan = "0.1.11"
 
 [[bench]]

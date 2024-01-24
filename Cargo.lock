@@ -357,6 +357,7 @@ dependencies = [
  "float_eq",
  "lox_core",
  "pyo3",
+ "rstest",
  "thiserror",
 ]
 

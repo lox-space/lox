@@ -6,10 +6,12 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::LoxPyError;
+use pyo3::{pyclass, pymethods};
+
 use lox_core::time::dates::{Date, Time};
 use lox_core::time::epochs::{Epoch, TimeScale};
-use pyo3::{pyclass, pymethods};
+
+use crate::LoxPyError;
 
 #[pyclass(name = "TimeScale")]
 pub struct PyTimeScale(pub TimeScale);
@@ -103,12 +105,46 @@ impl PyEpoch {
         }
         Ok(PyEpoch(Epoch::from_date_and_time(time_scale.0, date, time)))
     }
+}
 
-    fn attosecond(&self) -> i64 {
-        self.0.attosecond()
+#[cfg(test)]
+mod tests {
+    use rstest::rstest;
+
+    use super::*;
+
+    #[rstest]
+    #[case("TAI", TimeScale::TAI)]
+    #[case("TCB", TimeScale::TCB)]
+    #[case("TCG", TimeScale::TCG)]
+    #[case("TDB", TimeScale::TDB)]
+    #[case("TT", TimeScale::TT)]
+    #[case("UT1", TimeScale::UT1)]
+    fn test_scale(#[case] name: &str, #[case] scale: TimeScale) {
+        let py_scale = PyTimeScale::new(name).expect("time scale should be valid");
+        assert_eq!(py_scale.0, scale);
+        assert_eq!(py_scale.__str__(), name);
+        assert_eq!(py_scale.__repr__(), format!("TimeScale(\"{}\")", name));
     }
 
-    fn __str__(&self) -> String {
-        "foo".to_string()
+    #[test]
+    fn test_time() {
+        let time = PyEpoch::new(
+            "TDB",
+            2024,
+            1,
+            1,
+            Some(1),
+            Some(1),
+            Some(1),
+            Some(123),
+            Some(456),
+            Some(789),
+            Some(123),
+            Some(456),
+            Some(789),
+        )
+        .expect("time should be valid");
+        assert_eq!(time.0.attosecond(), 123456789123456789);
     }
 }
