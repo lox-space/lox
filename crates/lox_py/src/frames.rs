@@ -16,7 +16,7 @@ use lox_core::frames::Icrf;
 use crate::LoxPyError;
 
 // TODO: Add other supported IAU frames
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum PyFrame {
     Icrf(Icrf),
     IauMercury(BodyFixed<Mercury>),
@@ -64,5 +64,38 @@ impl FromStr for PyFrame {
             "iau_pluto" | "IAU_PLUTO" => Ok(PyFrame::IauPluto(BodyFixed(Pluto))),
             _ => Err(LoxPyError::InvalidFrame(name.to_string())),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use rstest::rstest;
+
+    use super::*;
+
+    #[rstest]
+    #[case("icrf", PyFrame::Icrf(Icrf))]
+    #[case("iau_mercury", PyFrame::IauMercury(BodyFixed(Mercury)))]
+    #[case("iau_venus", PyFrame::IauVenus(BodyFixed(Venus)))]
+    #[case("iau_earth", PyFrame::IauEarth(BodyFixed(Earth)))]
+    #[case("iau_mars", PyFrame::IauMars(BodyFixed(Mars)))]
+    #[case("iau_jupiter", PyFrame::IauJupiter(BodyFixed(Jupiter)))]
+    #[case("iau_saturn", PyFrame::IauSaturn(BodyFixed(Saturn)))]
+    #[case("iau_uranus", PyFrame::IauUranus(BodyFixed(Uranus)))]
+    #[case("iau_neptune", PyFrame::IauNeptune(BodyFixed(Neptune)))]
+    #[case("iau_pluto", PyFrame::IauPluto(BodyFixed(Pluto)))]
+    fn test_frames(#[case] name: &str, #[case] exp: PyFrame) {
+        let upper = name.to_uppercase();
+        let act = PyFrame::from_str(name).expect("frame should be valid");
+        assert_eq!(act, exp);
+        let act = PyFrame::from_str(&upper).expect("frame should be valid");
+        assert_eq!(act, exp);
+        assert_eq!(format!("{}", act), upper);
+    }
+
+    #[test]
+    fn test_invalid_frame() {
+        let frame = PyFrame::from_str("Flat Earth");
+        assert!(frame.is_err());
     }
 }

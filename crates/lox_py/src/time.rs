@@ -128,6 +128,12 @@ mod tests {
     }
 
     #[test]
+    fn test_invalid_scale() {
+        let py_scale = PyTimeScale::new("disco time");
+        assert!(py_scale.is_err())
+    }
+
+    #[test]
     fn test_time() {
         let time = PyEpoch::new(
             "TDB",
