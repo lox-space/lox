@@ -119,6 +119,17 @@ impl Epoch {
         let d2 = self.attosecond().to_f64().unwrap() / constants::f64::ATTOSECONDS_PER_DAY;
         d2 + d1
     }
+
+    pub fn scale(&self) -> &'static str {
+        match self {
+            Epoch::TAI(_) => "TAI",
+            Epoch::TCB(_) => "TCB",
+            Epoch::TCG(_) => "TCG",
+            Epoch::TDB(_) => "TDB",
+            Epoch::TT(_) => "TT",
+            Epoch::UT1(_) => "UT1",
+        }
+    }
 }
 
 impl fmt::Display for Epoch {

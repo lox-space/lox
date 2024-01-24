@@ -109,6 +109,10 @@ impl PyEpoch {
     fn days_since_j2000(&self) -> f64 {
         self.0.days_since_j2000()
     }
+
+    fn scale(&self) -> &str {
+        self.0.scale()
+    }
 }
 
 #[cfg(test)]
@@ -158,5 +162,6 @@ mod tests {
         .expect("time should be valid");
         assert_eq!(time.0.attosecond(), 123456789123456789);
         assert_float_eq!(time.days_since_j2000(), 8765.542374114084, rel <= 1e-8);
+        assert_eq!(time.scale(), "TDB");
     }
 }
