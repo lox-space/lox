@@ -24,12 +24,12 @@ impl PySun {
         Self
     }
 
-    fn __repr__(&self) -> PyResult<String> {
-        Ok("Sun()".to_string())
+    fn __repr__(&self) -> &str {
+        "Sun()"
     }
 
-    fn __str__(&self) -> PyResult<String> {
-        Ok("Sun".to_string())
+    fn __str__(&self) -> &str {
+        "Sun"
     }
 
     pub fn id(&self) -> i32 {
@@ -86,12 +86,12 @@ impl PyBarycenter {
         }
     }
 
-    fn __repr__(&self) -> PyResult<String> {
-        Ok(format!("Barycenter(\"{}\")", self.name()))
+    fn __repr__(&self) -> String {
+        format!("Barycenter(\"{}\")", self.name())
     }
 
-    fn __str__(&self) -> PyResult<String> {
-        Ok(self.name().to_string())
+    fn __str__(&self) -> &str {
+        self.name()
     }
 
     pub fn id(&self) -> i32 {
@@ -393,5 +393,77 @@ impl PointMass for PyBody {
             PyBody::Satellite(satellite) => satellite.gravitational_parameter(),
             PyBody::MinorBody(minor_body) => minor_body.gravitational_parameter(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use rstest::rstest;
+
+    use super::*;
+
+    #[test]
+    fn test_sun() {
+        let sun = PySun::new();
+        assert_eq!(sun.__repr__(), "Sun()");
+        assert_eq!(sun.__str__(), "Sun");
+        assert_eq!(sun.id(), Sun.id().0);
+        assert_eq!(sun.name(), Sun.name());
+        assert_eq!(sun.gravitational_parameter(), Sun.gravitational_parameter());
+        assert_eq!(sun.mean_radius(), Sun.mean_radius());
+        assert_eq!(sun.polar_radius(), Sun.polar_radius());
+        assert_eq!(sun.equatorial_radius(), Sun.equatorial_radius());
+    }
+
+    #[test]
+    fn test_ssb() {
+        let ssb = PyBarycenter::new("ssb").expect("barycenter should be valid");
+        assert_eq!(ssb.__repr__(), "Barycenter(\"Solar System Barycenter\")");
+        assert_eq!(ssb.__str__(), "Solar System Barycenter");
+        assert_eq!(ssb.name(), SolarSystemBarycenter.name());
+        let ssb = PyBarycenter::new("SSB").expect("barycenter should be valid");
+        assert_eq!(ssb.__repr__(), "Barycenter(\"Solar System Barycenter\")");
+        assert_eq!(ssb.__str__(), "Solar System Barycenter");
+        assert_eq!(ssb.name(), SolarSystemBarycenter.name());
+        let ssb = PyBarycenter::new("Solar System Barycenter").expect("barycenter should be valid");
+        assert_eq!(ssb.__repr__(), "Barycenter(\"Solar System Barycenter\")");
+        assert_eq!(ssb.__str__(), "Solar System Barycenter");
+        assert_eq!(ssb.name(), SolarSystemBarycenter.name());
+        let ssb = PyBarycenter::new(&"Solar System Barycenter".to_lowercase())
+            .expect("barycenter should be valid");
+        assert_eq!(ssb.__repr__(), "Barycenter(\"Solar System Barycenter\")");
+        assert_eq!(ssb.__str__(), "Solar System Barycenter");
+        assert_eq!(ssb.name(), SolarSystemBarycenter.name());
+        assert_eq!(ssb.id(), SolarSystemBarycenter.id().0);
+        assert_eq!(
+            ssb.gravitational_parameter(),
+            SolarSystemBarycenter.gravitational_parameter()
+        );
+    }
+
+    #[rstest]
+    #[case("Mercury Barycenter", MercuryBarycenter)]
+    #[case("Venus Barycenter", VenusBarycenter)]
+    fn test_barycenter(#[case] name: &str, #[case] barycenter: impl Barycenter) {
+        let py_barycenter = PyBarycenter::new(name).expect("barycenter should be valid");
+        assert_eq!(
+            py_barycenter.__repr__(),
+            format!("Barycenter(\"{}\")", name)
+        );
+        assert_eq!(py_barycenter.__str__(), name);
+        assert_eq!(py_barycenter.name(), name);
+        let py_barycenter =
+            PyBarycenter::new(&name.to_lowercase()).expect("barycenter should be valid");
+        assert_eq!(
+            py_barycenter.__repr__(),
+            format!("Barycenter(\"{}\")", name)
+        );
+        assert_eq!(py_barycenter.__str__(), name);
+        assert_eq!(py_barycenter.name(), name);
+        assert_eq!(py_barycenter.id(), barycenter.id().0);
+        assert_eq!(
+            py_barycenter.gravitational_parameter(),
+            barycenter.gravitational_parameter()
+        );
     }
 }

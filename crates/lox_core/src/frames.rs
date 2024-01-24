@@ -131,5 +131,6 @@ mod test {
     fn test_icrf() {
         assert!(Icrf.is_inertial());
         assert!(!Icrf.is_rotating());
+        assert_eq!(format!("{}", Icrf), "ICRF");
     }
 }
