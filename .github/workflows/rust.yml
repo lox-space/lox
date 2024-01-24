@@ -16,6 +16,29 @@ jobs:
       - name: Run tests
         run: cargo test
 
+  python:
+    name: Python smoke tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Generate virtual environment
+        run: python -m venv .venv
+      - name: Build Python wrapper
+        uses: PyO3/maturin-action@v1
+        with:
+          command: develop
+          working-directory: ./crates/lox_py
+          args: --extras dev
+      - name: Run test
+        run: |
+          source .venv/bin/activate
+          pytest crates/lox_py/tests
+
   fmt:
     name: Rustfmt
     runs-on: ubuntu-latest

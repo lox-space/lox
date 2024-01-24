@@ -15,15 +15,29 @@ pub mod iau;
 // TODO: Replace with proper `Epoch` type
 type Epoch = f64;
 
-pub trait ReferenceFrame {
-    fn is_inertial(&self) -> bool;
+pub trait ReferenceFrame {}
+
+pub trait InertialFrame: ReferenceFrame {
+    fn is_inertial(&self) -> bool {
+        true
+    }
 
     fn is_rotating(&self) -> bool {
-        !self.is_inertial()
+        false
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+pub trait RotatingFrame: ReferenceFrame {
+    fn is_inertial(&self) -> bool {
+        false
+    }
+
+    fn is_rotating(&self) -> bool {
+        true
+    }
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Icrf;
 
 impl Display for Icrf {
@@ -32,11 +46,8 @@ impl Display for Icrf {
     }
 }
 
-impl ReferenceFrame for Icrf {
-    fn is_inertial(&self) -> bool {
-        true
-    }
-}
+impl ReferenceFrame for Icrf {}
+impl InertialFrame for Icrf {}
 
 pub fn rotation_matrix_derivative(m: DMat3, v: DVec3) -> DMat3 {
     let sx = DVec3::new(0.0, v.z, v.y);
@@ -109,5 +120,17 @@ where
 {
     fn rotation_into(&self, frame: U, t: Epoch) -> Rotation {
         self.rotation_from(frame, t).transpose()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_icrf() {
+        assert!(Icrf.is_inertial());
+        assert!(!Icrf.is_rotating());
+        assert_eq!(format!("{}", Icrf), "ICRF");
     }
 }

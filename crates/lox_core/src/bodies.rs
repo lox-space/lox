@@ -6,6 +6,7 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use dyn_clone::{clone_trait_object, DynClone};
 use std::f64::consts::PI;
 use std::fmt::{Display, Formatter};
 
@@ -97,13 +98,36 @@ macro_rules! body {
             }
         }
     };
+    ($i:ident, $t:ident, $name:literal, $naif_id:literal) => {
+        #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+        pub struct $i;
+
+        impl $t for $i {}
+
+        impl Body for $i {
+            fn id(&self) -> NaifId {
+                NaifId($naif_id)
+            }
+
+            fn name(&self) -> &'static str {
+                $name
+            }
+        }
+
+        impl Display for $i {
+            fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", self.name())
+            }
+        }
+    };
 }
 
 // The Sun.
 body! { Sun, 10 }
 
 // Planets.
-pub trait Planet: PointMass + Spheroid {}
+pub trait Planet: PointMass + Spheroid + DynClone {}
+clone_trait_object!(Planet);
 
 body! { Mercury, Planet, 199 }
 body! { Venus, Planet, 299 }
@@ -116,16 +140,19 @@ body! { Neptune, Planet, 899 }
 body! { Pluto, Planet, 999 }
 
 // Barycenters.
-body! { SolarSystemBarycenter, "Solar System Barycenter", 0 }
-body! { MercuryBarycenter, "Mercury Barycenter", 1 }
-body! { VenusBarycenter, "Venus Barycenter", 2 }
-body! { EarthBarycenter, "Earth Barycenter", 3 }
-body! { MarsBarycenter, "Mars Barycenter", 4 }
-body! { JupiterBarycenter, "Jupiter Barycenter", 5 }
-body! { SaturnBarycenter, "Saturn Barycenter", 6 }
-body! { UranusBarycenter, "Uranus Barycenter", 7 }
-body! { NeptuneBarycenter, "Neptune Barycenter", 8 }
-body! { PlutoBarycenter, "Pluto Barycenter", 9 }
+pub trait Barycenter: PointMass + DynClone {}
+clone_trait_object!(Barycenter);
+
+body! { SolarSystemBarycenter, Barycenter, "Solar System Barycenter", 0 }
+body! { MercuryBarycenter, Barycenter, "Mercury Barycenter", 1 }
+body! { VenusBarycenter, Barycenter, "Venus Barycenter", 2 }
+body! { EarthBarycenter, Barycenter, "Earth Barycenter", 3 }
+body! { MarsBarycenter, Barycenter, "Mars Barycenter", 4 }
+body! { JupiterBarycenter, Barycenter, "Jupiter Barycenter", 5 }
+body! { SaturnBarycenter, Barycenter, "Saturn Barycenter", 6 }
+body! { UranusBarycenter, Barycenter, "Uranus Barycenter", 7 }
+body! { NeptuneBarycenter, Barycenter, "Neptune Barycenter", 8 }
+body! { PlutoBarycenter, Barycenter, "Pluto Barycenter", 9 }
 
 impl PointMass for SolarSystemBarycenter {
     fn gravitational_parameter(&self) -> f64 {
@@ -134,7 +161,8 @@ impl PointMass for SolarSystemBarycenter {
 }
 
 // Satellites.
-pub trait Satellite: PointMass + TriAxial {}
+pub trait Satellite: PointMass + TriAxial + DynClone {}
+clone_trait_object!(Satellite);
 
 body! { Moon, Satellite, 301 }
 body! { Phobos, Satellite, 401 }
@@ -290,7 +318,8 @@ body! { Kerberos,  904 }
 body! { Styx,  905 }
 
 // Minor bodies.
-pub trait MinorBody: PointMass + TriAxial {}
+pub trait MinorBody: PointMass + TriAxial + DynClone {}
+clone_trait_object!(MinorBody);
 
 body! {Gaspra, 9511010 }
 body! {Ida, 2431010 }
