@@ -133,12 +133,12 @@ impl PyPlanet {
         }
     }
 
-    fn __repr__(&self) -> PyResult<String> {
-        Ok(format!("Planet(\"{}\")", self.name()))
+    fn __repr__(&self) -> String {
+        format!("Planet(\"{}\")", self.name())
     }
 
-    fn __str__(&self) -> PyResult<String> {
-        Ok(self.name().to_string())
+    fn __str__(&self) -> &str {
+        self.name()
     }
 
     pub fn id(&self) -> i32 {
@@ -444,6 +444,13 @@ mod tests {
     #[rstest]
     #[case("Mercury Barycenter", MercuryBarycenter)]
     #[case("Venus Barycenter", VenusBarycenter)]
+    #[case("Earth Barycenter", EarthBarycenter)]
+    #[case("Mars Barycenter", MarsBarycenter)]
+    #[case("Jupiter Barycenter", JupiterBarycenter)]
+    #[case("Saturn Barycenter", SaturnBarycenter)]
+    #[case("Uranus Barycenter", UranusBarycenter)]
+    #[case("Neptune Barycenter", NeptuneBarycenter)]
+    #[case("Pluto Barycenter", PlutoBarycenter)]
     fn test_barycenter(#[case] name: &str, #[case] barycenter: impl Barycenter) {
         let py_barycenter = PyBarycenter::new(name).expect("barycenter should be valid");
         assert_eq!(
@@ -465,5 +472,34 @@ mod tests {
             py_barycenter.gravitational_parameter(),
             barycenter.gravitational_parameter()
         );
+    }
+
+    #[rstest]
+    #[case("Mercury", Mercury)]
+    #[case("Venus", Venus)]
+    #[case("Earth", Earth)]
+    #[case("Mars", Mars)]
+    #[case("Jupiter", Jupiter)]
+    #[case("Saturn", Saturn)]
+    #[case("Uranus", Uranus)]
+    #[case("Neptune", Neptune)]
+    #[case("Pluto", Pluto)]
+    fn test_planet(#[case] name: &str, #[case] planet: impl Planet) {
+        let py_planet = PyPlanet::new(name).expect("planet should be valid");
+        assert_eq!(py_planet.__repr__(), format!("Planet(\"{}\")", name));
+        assert_eq!(py_planet.__str__(), name);
+        assert_eq!(py_planet.name(), name);
+        let py_planet = PyPlanet::new(&name.to_lowercase()).expect("planet should be valid");
+        assert_eq!(py_planet.__repr__(), format!("Planet(\"{}\")", name));
+        assert_eq!(py_planet.__str__(), name);
+        assert_eq!(py_planet.name(), name);
+        assert_eq!(py_planet.id(), planet.id().0);
+        assert_eq!(
+            py_planet.gravitational_parameter(),
+            planet.gravitational_parameter()
+        );
+        assert_eq!(py_planet.mean_radius(), planet.mean_radius());
+        assert_eq!(py_planet.polar_radius(), planet.polar_radius());
+        assert_eq!(py_planet.equatorial_radius(), planet.equatorial_radius());
     }
 }
