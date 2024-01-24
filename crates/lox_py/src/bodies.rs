@@ -675,5 +675,9 @@ mod tests {
             .try_into()
             .expect("minor_body is valid");
         assert_eq!(minor_body1.id(), minor_body.id());
+
+        let obj = Python::with_gil(|py| 1.into_py(py));
+        let body = PyBody::try_from(obj);
+        assert!(body.is_err());
     }
 }

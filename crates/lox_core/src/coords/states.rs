@@ -34,10 +34,6 @@ impl CartesianState {
         }
     }
 
-    pub fn time(&self) -> Epoch {
-        self.time
-    }
-
     pub fn position(&self) -> DVec3 {
         self.position
     }
@@ -261,7 +257,10 @@ mod tests {
             -0.331234775037644e4,
             -0.118801577532701e4,
         );
+
         let cartesian = CartesianState::new(time, pos, vel);
+        assert_eq!(cartesian.to_cartesian_state(grav_param), cartesian);
+
         let keplerian = KeplerianState::new(
             time,
             semi_major,
@@ -271,9 +270,13 @@ mod tests {
             periapsis_arg,
             true_anomaly,
         );
+        assert_eq!(keplerian.to_keplerian_state(grav_param), keplerian);
 
         let cartesian1 = keplerian.to_cartesian_state(grav_param);
         let keplerian1 = cartesian.to_keplerian_state(grav_param);
+
+        assert_eq!(cartesian1.time(), time);
+        assert_eq!(keplerian1.time(), time);
 
         assert_float_eq!(pos.x, cartesian1.position.x, rel <= 1e-8);
         assert_float_eq!(pos.y, cartesian1.position.y, rel <= 1e-8);
