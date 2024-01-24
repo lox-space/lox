@@ -105,10 +105,15 @@ impl PyEpoch {
         }
         Ok(PyEpoch(Epoch::from_date_and_time(time_scale.0, date, time)))
     }
+
+    fn days_since_j2000(&self) -> f64 {
+        self.0.days_since_j2000()
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use float_eq::assert_float_eq;
     use rstest::rstest;
 
     use super::*;
@@ -152,5 +157,6 @@ mod tests {
         )
         .expect("time should be valid");
         assert_eq!(time.0.attosecond(), 123456789123456789);
+        assert_float_eq!(time.days_since_j2000(), 8765.542374114084, rel <= 1e-8);
     }
 }
