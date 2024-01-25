@@ -10,7 +10,7 @@
 //!
 //! Continuous times are represented with attosecond precision.
 //!
-//! The supported timescales are specified by [ContinuousTimeScale].
+//! The supported timescales are specified by [TimeScale].
 
 use std::fmt;
 use std::fmt::{Display, Formatter};
@@ -38,16 +38,16 @@ pub struct TimeDelta {
 }
 
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
-/// `RawContinuousTime` is the base time representation for time scales without leap seconds. It is measured relative to
+/// `RawTime` is the base time representation for time scales without leap seconds. It is measured relative to
 /// J2000. `RawTime::default()` represents the epoch itself.
 ///
-/// `RawContinuousTime` has attosecond precision, and supports times within 292 billion years either side of the epoch.
-pub struct RawContinuousTime {
+/// `RawTime` has attosecond precision, and supports times within 292 billion years either side of the epoch.
+pub struct RawTime {
     // The sign of the time is determined exclusively by the sign of the `second` field. `attoseconds` is always the
     // positive count of attoseconds since the last whole second. For example, one attosecond before the epoch is
     // represented as
     // ```
-    // let time = RawContinuousTime {
+    // let time = RawTime {
     //     seconds: -1,
     //     attoseconds: ATTOSECONDS_PER_SECOND - 1,
     // };
@@ -56,7 +56,7 @@ pub struct RawContinuousTime {
     attoseconds: u64,
 }
 
-impl RawContinuousTime {
+impl RawTime {
     fn is_negative(&self) -> bool {
         self.seconds < 0
     }
@@ -113,10 +113,10 @@ impl RawContinuousTime {
     }
 }
 
-impl Add<TimeDelta> for RawContinuousTime {
+impl Add<TimeDelta> for RawTime {
     type Output = Self;
 
-    /// The implementation of [Add] for [RawContinuousTime] follows the default Rust rules for integer overflow, which
+    /// The implementation of [Add] for [RawTime] follows the default Rust rules for integer overflow, which
     /// should be sufficient for all practical purposes.
     fn add(self, rhs: TimeDelta) -> Self::Output {
         let mut attoseconds = self.attoseconds + rhs.attoseconds;
@@ -132,10 +132,10 @@ impl Add<TimeDelta> for RawContinuousTime {
     }
 }
 
-impl Sub<TimeDelta> for RawContinuousTime {
+impl Sub<TimeDelta> for RawTime {
     type Output = Self;
 
-    /// The implementation of [Sub] for [RawContinuousTime] follows the default Rust rules for integer overflow, which
+    /// The implementation of [Sub] for [RawTime] follows the default Rust rules for integer overflow, which
     /// should be sufficient for all practical purposes.
     fn sub(self, rhs: TimeDelta) -> Self::Output {
         let mut seconds = self.seconds - rhs.seconds as i64;
@@ -155,7 +155,7 @@ impl Sub<TimeDelta> for RawContinuousTime {
 
 /// The continuous time scales supported by Lox.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum ContinuousTimeScale {
+pub enum TimeScale {
     TAI,
     TCB,
     TCG,
@@ -171,7 +171,7 @@ pub trait CalendarDate {
 
 /// International Atomic Time. Defaults to the J2000 epoch.
 #[derive(Debug, Copy, Default, Clone, Eq, PartialEq)]
-pub struct TAI(RawContinuousTime);
+pub struct TAI(RawTime);
 
 impl TAI {
     pub fn to_ut1(&self, _dut: TimeDelta, _dat: TimeDelta) -> UT1 {
@@ -187,25 +187,25 @@ impl CalendarDate for TAI {
 
 /// Barycentric Coordinate Time. Defaults to the J2000 epoch.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
-pub struct TCB(RawContinuousTime);
+pub struct TCB(RawTime);
 
 /// Geocentric Coordinate Time. Defaults to the J2000 epoch.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
-pub struct TCG(RawContinuousTime);
+pub struct TCG(RawTime);
 
 /// Barycentric Dynamical Time. Defaults to the J2000 epoch.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
-pub struct TDB(RawContinuousTime);
+pub struct TDB(RawTime);
 
 /// Terrestrial Time. Defaults to the J2000 epoch.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
-pub struct TT(RawContinuousTime);
+pub struct TT(RawTime);
 
 /// Universal Time. Defaults to the J2000 epoch.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
-pub struct UT1(RawContinuousTime);
+pub struct UT1(RawTime);
 
-/// Implements the `WallClock` trait for the a time scale based on [RawContinuousTime] in terms of the underlying
+/// Implements the `WallClock` trait for the a time scale based on [RawTime] in terms of the underlying
 /// raw time.
 macro_rules! wall_clock {
     ($time_scale:ident, $test_module:ident) => {
@@ -253,10 +253,10 @@ macro_rules! wall_clock {
 
         #[cfg(test)]
         mod $test_module {
-            use super::{$time_scale, RawContinuousTime};
+            use super::{$time_scale, RawTime};
             use crate::time::{TimeScale, WallClock};
 
-            const RAW_TIME: RawContinuousTime = RawContinuousTime {
+            const RAW_TIME: RawTime = RawTime {
                 seconds: 1234,
                 attoseconds: 5678,
             };
@@ -324,9 +324,9 @@ wall_clock!(TDB, tdb_wall_clock_tests);
 wall_clock!(TT, tt_wall_clock_tests);
 wall_clock!(UT1, ut1_wall_clock_tests);
 
-/// `ContinuousTime` represents a time in any of the supported continuous timescales.
+/// `Time` represents a time in any of the supported continuous timescales.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum ContinuousTime {
+pub enum Time {
     TAI(TAI),
     TCB(TCB),
     TCG(TCG),
@@ -335,59 +335,59 @@ pub enum ContinuousTime {
     UT1(UT1),
 }
 
-impl ContinuousTime {
-    /// Instantiates a `ContinuousTime` of the given scale from a date and UTC timestamp.
-    pub fn from_date_and_utc_timestamp(scale: ContinuousTimeScale, date: Date, time: UTC) -> Self {
+impl Time {
+    /// Instantiates a `Time` of the given scale from a date and UTC timestamp.
+    pub fn from_date_and_utc_timestamp(scale: TimeScale, date: Date, time: UTC) -> Self {
         let day_in_seconds = date.j2000() * SECONDS_PER_DAY - SECONDS_PER_DAY / 2;
         let hour_in_seconds = time.hour() * SECONDS_PER_HOUR;
         let minute_in_seconds = time.minute() * SECONDS_PER_MINUTE;
         let seconds = day_in_seconds + hour_in_seconds + minute_in_seconds + time.second();
         let attoseconds = time.subsecond_as_attoseconds();
-        let raw = RawContinuousTime {
+        let raw = RawTime {
             seconds,
             attoseconds,
         };
         Self::from_raw(scale, raw)
     }
 
-    /// Instantiates a `ContinuousTime` of the given scale from a UTC datetime.
-    pub fn from_utc_datetime(scale: ContinuousTimeScale, dt: UTCDateTime) -> Self {
+    /// Instantiates a `Time` of the given scale from a UTC datetime.
+    pub fn from_utc_datetime(scale: TimeScale, dt: UTCDateTime) -> Self {
         Self::from_date_and_utc_timestamp(scale, dt.date(), dt.time())
     }
 
     /// Returns the J2000 epoch in the given timescale.
-    pub fn j2000(scale: ContinuousTimeScale) -> Self {
-        Self::from_raw(scale, RawContinuousTime::default())
+    pub fn j2000(scale: TimeScale) -> Self {
+        Self::from_raw(scale, RawTime::default())
     }
 
     /// Returns, as an epoch in the given timescale, midday on the first day of the proleptic Julian
     /// calendar.
-    pub fn jd0(scale: ContinuousTimeScale) -> Self {
+    pub fn jd0(scale: TimeScale) -> Self {
         // This represents 4713 BC, since there is no year 0 separating BC and AD.
         let first_proleptic_day = Date::new_unchecked(ProlepticJulian, -4712, 1, 1);
         let midday = UTC::new(12, 0, 0).expect("midday should be a valid time");
         Self::from_date_and_utc_timestamp(scale, first_proleptic_day, midday)
     }
 
-    fn from_raw(scale: ContinuousTimeScale, raw: RawContinuousTime) -> Self {
+    fn from_raw(scale: TimeScale, raw: RawTime) -> Self {
         match scale {
-            ContinuousTimeScale::TAI => ContinuousTime::TAI(TAI(raw)),
-            ContinuousTimeScale::TCB => ContinuousTime::TCB(TCB(raw)),
-            ContinuousTimeScale::TCG => ContinuousTime::TCG(TCG(raw)),
-            ContinuousTimeScale::TDB => ContinuousTime::TDB(TDB(raw)),
-            ContinuousTimeScale::TT => ContinuousTime::TT(TT(raw)),
-            ContinuousTimeScale::UT1 => ContinuousTime::UT1(UT1(raw)),
+            TimeScale::TAI => Time::TAI(TAI(raw)),
+            TimeScale::TCB => Time::TCB(TCB(raw)),
+            TimeScale::TCG => Time::TCG(TCG(raw)),
+            TimeScale::TDB => Time::TDB(TDB(raw)),
+            TimeScale::TT => Time::TT(TT(raw)),
+            TimeScale::UT1 => Time::UT1(UT1(raw)),
         }
     }
 
-    fn raw(&self) -> RawContinuousTime {
+    fn raw(&self) -> RawTime {
         match self {
-            ContinuousTime::TAI(tai) => tai.0,
-            ContinuousTime::TCB(tcb) => tcb.0,
-            ContinuousTime::TCG(tcg) => tcg.0,
-            ContinuousTime::TDB(tdb) => tdb.0,
-            ContinuousTime::TT(tt) => tt.0,
-            ContinuousTime::UT1(ut1) => ut1.0,
+            Time::TAI(tai) => tai.0,
+            Time::TCB(tcb) => tcb.0,
+            Time::TCG(tcg) => tcg.0,
+            Time::TDB(tdb) => tdb.0,
+            Time::TT(tt) => tt.0,
+            Time::UT1(ut1) => ut1.0,
         }
     }
 
@@ -409,120 +409,120 @@ impl ContinuousTime {
     }
 }
 
-impl Display for ContinuousTime {
+impl Display for Time {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "foo")
     }
 }
 
-impl WallClock for ContinuousTime {
+impl WallClock for Time {
     fn scale(&self) -> TimeScale {
         match self {
-            ContinuousTime::TAI(_) => TimeScale::TAI,
-            ContinuousTime::TCB(_) => TimeScale::TCB,
-            ContinuousTime::TCG(_) => TimeScale::TCG,
-            ContinuousTime::TDB(_) => TimeScale::TDB,
-            ContinuousTime::TT(_) => TimeScale::TT,
-            ContinuousTime::UT1(_) => TimeScale::UT1,
+            Time::TAI(_) => TimeScale::TAI,
+            Time::TCB(_) => TimeScale::TCB,
+            Time::TCG(_) => TimeScale::TCG,
+            Time::TDB(_) => TimeScale::TDB,
+            Time::TT(_) => TimeScale::TT,
+            Time::UT1(_) => TimeScale::UT1,
         }
     }
 
     fn hour(&self) -> i64 {
         match self {
-            ContinuousTime::TAI(t) => t.hour(),
-            ContinuousTime::TCB(t) => t.hour(),
-            ContinuousTime::TCG(t) => t.hour(),
-            ContinuousTime::TDB(t) => t.hour(),
-            ContinuousTime::TT(t) => t.hour(),
-            ContinuousTime::UT1(t) => t.hour(),
+            Time::TAI(t) => t.hour(),
+            Time::TCB(t) => t.hour(),
+            Time::TCG(t) => t.hour(),
+            Time::TDB(t) => t.hour(),
+            Time::TT(t) => t.hour(),
+            Time::UT1(t) => t.hour(),
         }
     }
 
     fn minute(&self) -> i64 {
         match self {
-            ContinuousTime::TAI(t) => t.minute(),
-            ContinuousTime::TCB(t) => t.minute(),
-            ContinuousTime::TCG(t) => t.minute(),
-            ContinuousTime::TDB(t) => t.minute(),
-            ContinuousTime::TT(t) => t.minute(),
-            ContinuousTime::UT1(t) => t.minute(),
+            Time::TAI(t) => t.minute(),
+            Time::TCB(t) => t.minute(),
+            Time::TCG(t) => t.minute(),
+            Time::TDB(t) => t.minute(),
+            Time::TT(t) => t.minute(),
+            Time::UT1(t) => t.minute(),
         }
     }
 
     fn second(&self) -> i64 {
         match self {
-            ContinuousTime::TAI(t) => t.second(),
-            ContinuousTime::TCB(t) => t.second(),
-            ContinuousTime::TCG(t) => t.second(),
-            ContinuousTime::TDB(t) => t.second(),
-            ContinuousTime::TT(t) => t.second(),
-            ContinuousTime::UT1(t) => t.second(),
+            Time::TAI(t) => t.second(),
+            Time::TCB(t) => t.second(),
+            Time::TCG(t) => t.second(),
+            Time::TDB(t) => t.second(),
+            Time::TT(t) => t.second(),
+            Time::UT1(t) => t.second(),
         }
     }
 
     fn millisecond(&self) -> i64 {
         match self {
-            ContinuousTime::TAI(t) => t.millisecond(),
-            ContinuousTime::TCB(t) => t.millisecond(),
-            ContinuousTime::TCG(t) => t.millisecond(),
-            ContinuousTime::TDB(t) => t.millisecond(),
-            ContinuousTime::TT(t) => t.millisecond(),
-            ContinuousTime::UT1(t) => t.millisecond(),
+            Time::TAI(t) => t.millisecond(),
+            Time::TCB(t) => t.millisecond(),
+            Time::TCG(t) => t.millisecond(),
+            Time::TDB(t) => t.millisecond(),
+            Time::TT(t) => t.millisecond(),
+            Time::UT1(t) => t.millisecond(),
         }
     }
 
     fn microsecond(&self) -> i64 {
         match self {
-            ContinuousTime::TAI(t) => t.microsecond(),
-            ContinuousTime::TCB(t) => t.microsecond(),
-            ContinuousTime::TCG(t) => t.microsecond(),
-            ContinuousTime::TDB(t) => t.microsecond(),
-            ContinuousTime::TT(t) => t.microsecond(),
-            ContinuousTime::UT1(t) => t.microsecond(),
+            Time::TAI(t) => t.microsecond(),
+            Time::TCB(t) => t.microsecond(),
+            Time::TCG(t) => t.microsecond(),
+            Time::TDB(t) => t.microsecond(),
+            Time::TT(t) => t.microsecond(),
+            Time::UT1(t) => t.microsecond(),
         }
     }
 
     fn nanosecond(&self) -> i64 {
         match self {
-            ContinuousTime::TAI(t) => t.nanosecond(),
-            ContinuousTime::TCB(t) => t.nanosecond(),
-            ContinuousTime::TCG(t) => t.nanosecond(),
-            ContinuousTime::TDB(t) => t.nanosecond(),
-            ContinuousTime::TT(t) => t.nanosecond(),
-            ContinuousTime::UT1(t) => t.nanosecond(),
+            Time::TAI(t) => t.nanosecond(),
+            Time::TCB(t) => t.nanosecond(),
+            Time::TCG(t) => t.nanosecond(),
+            Time::TDB(t) => t.nanosecond(),
+            Time::TT(t) => t.nanosecond(),
+            Time::UT1(t) => t.nanosecond(),
         }
     }
 
     fn picosecond(&self) -> i64 {
         match self {
-            ContinuousTime::TAI(t) => t.picosecond(),
-            ContinuousTime::TCB(t) => t.picosecond(),
-            ContinuousTime::TCG(t) => t.picosecond(),
-            ContinuousTime::TDB(t) => t.picosecond(),
-            ContinuousTime::TT(t) => t.picosecond(),
-            ContinuousTime::UT1(t) => t.picosecond(),
+            Time::TAI(t) => t.picosecond(),
+            Time::TCB(t) => t.picosecond(),
+            Time::TCG(t) => t.picosecond(),
+            Time::TDB(t) => t.picosecond(),
+            Time::TT(t) => t.picosecond(),
+            Time::UT1(t) => t.picosecond(),
         }
     }
 
     fn femtosecond(&self) -> i64 {
         match self {
-            ContinuousTime::TAI(t) => t.femtosecond(),
-            ContinuousTime::TCB(t) => t.femtosecond(),
-            ContinuousTime::TCG(t) => t.femtosecond(),
-            ContinuousTime::TDB(t) => t.femtosecond(),
-            ContinuousTime::TT(t) => t.femtosecond(),
-            ContinuousTime::UT1(t) => t.femtosecond(),
+            Time::TAI(t) => t.femtosecond(),
+            Time::TCB(t) => t.femtosecond(),
+            Time::TCG(t) => t.femtosecond(),
+            Time::TDB(t) => t.femtosecond(),
+            Time::TT(t) => t.femtosecond(),
+            Time::UT1(t) => t.femtosecond(),
         }
     }
 
     fn attosecond(&self) -> i64 {
         match self {
-            ContinuousTime::TAI(t) => t.attosecond(),
-            ContinuousTime::TCB(t) => t.attosecond(),
-            ContinuousTime::TCG(t) => t.attosecond(),
-            ContinuousTime::TDB(t) => t.attosecond(),
-            ContinuousTime::TT(t) => t.attosecond(),
-            ContinuousTime::UT1(t) => t.attosecond(),
+            Time::TAI(t) => t.attosecond(),
+            Time::TCB(t) => t.attosecond(),
+            Time::TCG(t) => t.attosecond(),
+            Time::TDB(t) => t.attosecond(),
+            Time::TT(t) => t.attosecond(),
+            Time::UT1(t) => t.attosecond(),
         }
     }
 }
@@ -532,18 +532,18 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_raw_continuous_time_is_negative() {
-        assert!(RawContinuousTime {
+    fn test_raw_time_is_negative() {
+        assert!(RawTime {
             seconds: -1,
             attoseconds: 0
         }
         .is_negative());
-        assert!(!RawContinuousTime {
+        assert!(!RawTime {
             seconds: 0,
             attoseconds: 0
         }
         .is_negative());
-        assert!(!RawContinuousTime {
+        assert!(!RawTime {
             seconds: 1,
             attoseconds: 0
         }
@@ -551,17 +551,17 @@ mod tests {
     }
 
     #[test]
-    fn test_raw_continuous_time_hour() {
+    fn test_raw_time_hour() {
         struct TestCase {
             desc: &'static str,
-            time: RawContinuousTime,
+            time: RawTime,
             expected_hour: i64,
         }
 
         let test_cases = [
             TestCase {
                 desc: "zero value",
-                time: RawContinuousTime {
+                time: RawTime {
                     seconds: 0,
                     attoseconds: 0,
                 },
@@ -569,7 +569,7 @@ mod tests {
             },
             TestCase {
                 desc: "one attosecond less than an hour",
-                time: RawContinuousTime {
+                time: RawTime {
                     seconds: SECONDS_PER_HOUR - 1,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -577,7 +577,7 @@ mod tests {
             },
             TestCase {
                 desc: "exactly one hour",
-                time: RawContinuousTime {
+                time: RawTime {
                     seconds: SECONDS_PER_HOUR,
                     attoseconds: 0,
                 },
@@ -585,7 +585,7 @@ mod tests {
             },
             TestCase {
                 desc: "one day and one hour",
-                time: RawContinuousTime {
+                time: RawTime {
                     seconds: SECONDS_PER_HOUR * 25,
                     attoseconds: 0,
                 },
@@ -593,7 +593,7 @@ mod tests {
             },
             TestCase {
                 desc: "one attosecond less than the epoch",
-                time: RawContinuousTime {
+                time: RawTime {
                     seconds: -1,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -601,7 +601,7 @@ mod tests {
             },
             TestCase {
                 desc: "one hour less than the epoch",
-                time: RawContinuousTime {
+                time: RawTime {
                     seconds: -SECONDS_PER_HOUR,
                     attoseconds: 0,
                 },
@@ -609,7 +609,7 @@ mod tests {
             },
             TestCase {
                 desc: "one hour and one attosecond less than the epoch",
-                time: RawContinuousTime {
+                time: RawTime {
                     seconds: -SECONDS_PER_HOUR - 1,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -617,7 +617,7 @@ mod tests {
             },
             TestCase {
                 desc: "one day less than the epoch",
-                time: RawContinuousTime {
+                time: RawTime {
                     seconds: -SECONDS_PER_DAY,
                     attoseconds: 0,
                 },
@@ -626,7 +626,7 @@ mod tests {
             TestCase {
                 // Exercises the case where the number of seconds exceeds the number of seconds in a day.
                 desc: "two days less than the epoch",
-                time: RawContinuousTime {
+                time: RawTime {
                     seconds: -SECONDS_PER_DAY * 2,
                     attoseconds: 0,
                 },
@@ -645,17 +645,17 @@ mod tests {
     }
 
     #[test]
-    fn test_raw_continuous_time_minute() {
+    fn test_raw_time_minute() {
         struct TestCase {
             desc: &'static str,
-            time: RawContinuousTime,
+            time: RawTime,
             expected_minute: i64,
         }
 
         let test_cases = [
             TestCase {
                 desc: "zero value",
-                time: RawContinuousTime {
+                time: RawTime {
                     seconds: 0,
                     attoseconds: 0,
                 },
@@ -663,7 +663,7 @@ mod tests {
             },
             TestCase {
                 desc: "one attosecond less than one minute",
-                time: RawContinuousTime {
+                time: RawTime {
                     seconds: SECONDS_PER_MINUTE - 1,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -671,7 +671,7 @@ mod tests {
             },
             TestCase {
                 desc: "one minute",
-                time: RawContinuousTime {
+                time: RawTime {
                     seconds: SECONDS_PER_MINUTE,
                     attoseconds: 0,
                 },
@@ -679,7 +679,7 @@ mod tests {
             },
             TestCase {
                 desc: "one attosecond less than an hour",
-                time: RawContinuousTime {
+                time: RawTime {
                     seconds: SECONDS_PER_HOUR - 1,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -687,7 +687,7 @@ mod tests {
             },
             TestCase {
                 desc: "exactly one hour",
-                time: RawContinuousTime {
+                time: RawTime {
                     seconds: SECONDS_PER_HOUR,
                     attoseconds: 0,
                 },
@@ -695,7 +695,7 @@ mod tests {
             },
             TestCase {
                 desc: "one hour and one minute",
-                time: RawContinuousTime {
+                time: RawTime {
                     seconds: SECONDS_PER_HOUR + SECONDS_PER_MINUTE,
                     attoseconds: 0,
                 },
@@ -703,7 +703,7 @@ mod tests {
             },
             TestCase {
                 desc: "one attosecond less than the epoch",
-                time: RawContinuousTime {
+                time: RawTime {
                     seconds: -1,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -711,7 +711,7 @@ mod tests {
             },
             TestCase {
                 desc: "one minute less than the epoch",
-                time: RawContinuousTime {
+                time: RawTime {
                     seconds: -SECONDS_PER_MINUTE,
                     attoseconds: 0,
                 },
@@ -719,7 +719,7 @@ mod tests {
             },
             TestCase {
                 desc: "one minute and one attosecond less than the epoch",
-                time: RawContinuousTime {
+                time: RawTime {
                     seconds: -SECONDS_PER_MINUTE - 1,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -738,17 +738,17 @@ mod tests {
     }
 
     #[test]
-    fn test_raw_continuous_time_second() {
+    fn test_raw_time_second() {
         struct TestCase {
             desc: &'static str,
-            time: RawContinuousTime,
+            time: RawTime,
             expected_second: i64,
         }
 
         let test_cases = [
             TestCase {
                 desc: "zero value",
-                time: RawContinuousTime {
+                time: RawTime {
                     seconds: 0,
                     attoseconds: 0,
                 },
@@ -756,7 +756,7 @@ mod tests {
             },
             TestCase {
                 desc: "one attosecond less than one second",
-                time: RawContinuousTime {
+                time: RawTime {
                     seconds: 0,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -764,7 +764,7 @@ mod tests {
             },
             TestCase {
                 desc: "one second",
-                time: RawContinuousTime {
+                time: RawTime {
                     seconds: 1,
                     attoseconds: 0,
                 },
@@ -772,7 +772,7 @@ mod tests {
             },
             TestCase {
                 desc: "one attosecond less than a minute",
-                time: RawContinuousTime {
+                time: RawTime {
                     seconds: SECONDS_PER_MINUTE - 1,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -780,7 +780,7 @@ mod tests {
             },
             TestCase {
                 desc: "exactly one minute",
-                time: RawContinuousTime {
+                time: RawTime {
                     seconds: SECONDS_PER_MINUTE,
                     attoseconds: 0,
                 },
@@ -788,7 +788,7 @@ mod tests {
             },
             TestCase {
                 desc: "one minute and one second",
-                time: RawContinuousTime {
+                time: RawTime {
                     seconds: SECONDS_PER_MINUTE + 1,
                     attoseconds: 0,
                 },
@@ -796,7 +796,7 @@ mod tests {
             },
             TestCase {
                 desc: "one attosecond less than the epoch",
-                time: RawContinuousTime {
+                time: RawTime {
                     seconds: -1,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -804,7 +804,7 @@ mod tests {
             },
             TestCase {
                 desc: "one second less than the epoch",
-                time: RawContinuousTime {
+                time: RawTime {
                     seconds: -1,
                     attoseconds: 0,
                 },
@@ -812,7 +812,7 @@ mod tests {
             },
             TestCase {
                 desc: "one second and one attosecond less than the epoch",
-                time: RawContinuousTime {
+                time: RawTime {
                     seconds: -2,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -831,8 +831,8 @@ mod tests {
     }
 
     #[test]
-    fn test_raw_continuous_time_subseconds_with_positive_seconds() {
-        let time = RawContinuousTime {
+    fn test_raw_time_subseconds_with_positive_seconds() {
+        let time = RawTime {
             seconds: 0,
             attoseconds: 123_456_789_012_345_678,
         };
@@ -886,8 +886,8 @@ mod tests {
     }
 
     #[test]
-    fn test_raw_continuous_time_subseconds_with_negative_seconds() {
-        let time = RawContinuousTime {
+    fn test_raw_time_subseconds_with_negative_seconds() {
+        let time = RawTime {
             seconds: -1,
             attoseconds: 123_456_789_012_345_678,
         };
@@ -941,16 +941,16 @@ mod tests {
     }
 
     #[test]
-    fn test_raw_continuous_time_add_time_delta_positive_time_no_attosecond_wrap() {
+    fn test_raw_time_add_time_delta_positive_time_no_attosecond_wrap() {
         let delta = TimeDelta {
             seconds: 1,
             attoseconds: 1,
         };
-        let time = RawContinuousTime {
+        let time = RawTime {
             seconds: 1,
             attoseconds: 0,
         };
-        let expected = RawContinuousTime {
+        let expected = RawTime {
             seconds: 2,
             attoseconds: 1,
         };
@@ -959,16 +959,16 @@ mod tests {
     }
 
     #[test]
-    fn test_raw_continuous_time_add_time_delta_positive_time_attosecond_wrap() {
+    fn test_raw_time_add_time_delta_positive_time_attosecond_wrap() {
         let delta = TimeDelta {
             seconds: 1,
             attoseconds: 2,
         };
-        let time = RawContinuousTime {
+        let time = RawTime {
             seconds: 1,
             attoseconds: ATTOSECONDS_PER_SECOND - 1,
         };
-        let expected = RawContinuousTime {
+        let expected = RawTime {
             seconds: 3,
             attoseconds: 1,
         };
@@ -977,16 +977,16 @@ mod tests {
     }
 
     #[test]
-    fn test_raw_continuous_time_add_time_delta_negative_time_no_attosecond_wrap() {
+    fn test_raw_time_add_time_delta_negative_time_no_attosecond_wrap() {
         let delta = TimeDelta {
             seconds: 1,
             attoseconds: 1,
         };
-        let time = RawContinuousTime {
+        let time = RawTime {
             seconds: -1,
             attoseconds: 0,
         };
-        let expected = RawContinuousTime {
+        let expected = RawTime {
             seconds: 0,
             attoseconds: 1,
         };
@@ -995,16 +995,16 @@ mod tests {
     }
 
     #[test]
-    fn test_raw_continuous_time_add_time_delta_negative_time_attosecond_wrap() {
+    fn test_raw_time_add_time_delta_negative_time_attosecond_wrap() {
         let delta = TimeDelta {
             seconds: 1,
             attoseconds: 2,
         };
-        let time = RawContinuousTime {
+        let time = RawTime {
             seconds: -1,
             attoseconds: ATTOSECONDS_PER_SECOND - 1,
         };
-        let expected = RawContinuousTime {
+        let expected = RawTime {
             seconds: 1,
             attoseconds: 1,
         };
@@ -1015,31 +1015,16 @@ mod tests {
     #[test]
     fn test_j2000() {
         [
-            (
-                ContinuousTimeScale::TAI,
-                ContinuousTime::TAI(TAI::default()),
-            ),
-            (
-                ContinuousTimeScale::TCB,
-                ContinuousTime::TCB(TCB::default()),
-            ),
-            (
-                ContinuousTimeScale::TCG,
-                ContinuousTime::TCG(TCG::default()),
-            ),
-            (
-                ContinuousTimeScale::TDB,
-                ContinuousTime::TDB(TDB::default()),
-            ),
-            (ContinuousTimeScale::TT, ContinuousTime::TT(TT::default())),
-            (
-                ContinuousTimeScale::UT1,
-                ContinuousTime::UT1(UT1::default()),
-            ),
+            (TimeScale::TAI, Time::TAI(TAI::default())),
+            (TimeScale::TCB, Time::TCB(TCB::default())),
+            (TimeScale::TCG, Time::TCG(TCG::default())),
+            (TimeScale::TDB, Time::TDB(TDB::default())),
+            (TimeScale::TT, Time::TT(TT::default())),
+            (TimeScale::UT1, Time::UT1(UT1::default())),
         ]
         .iter()
         .for_each(|(scale, expected)| {
-            let actual = ContinuousTime::j2000(*scale);
+            let actual = Time::j2000(*scale);
             assert_eq!(*expected, actual);
         });
     }
@@ -1048,43 +1033,43 @@ mod tests {
     fn test_jd0() {
         [
             (
-                ContinuousTimeScale::TAI,
-                ContinuousTime::TAI(TAI(RawContinuousTime {
+                TimeScale::TAI,
+                Time::TAI(TAI(RawTime {
                     seconds: -211813488000,
                     attoseconds: 0,
                 })),
             ),
             (
-                ContinuousTimeScale::TCB,
-                ContinuousTime::TCB(TCB(RawContinuousTime {
+                TimeScale::TCB,
+                Time::TCB(TCB(RawTime {
                     seconds: -211813488000,
                     attoseconds: 0,
                 })),
             ),
             (
-                ContinuousTimeScale::TCG,
-                ContinuousTime::TCG(TCG(RawContinuousTime {
+                TimeScale::TCG,
+                Time::TCG(TCG(RawTime {
                     seconds: -211813488000,
                     attoseconds: 0,
                 })),
             ),
             (
-                ContinuousTimeScale::TDB,
-                ContinuousTime::TDB(TDB(RawContinuousTime {
+                TimeScale::TDB,
+                Time::TDB(TDB(RawTime {
                     seconds: -211813488000,
                     attoseconds: 0,
                 })),
             ),
             (
-                ContinuousTimeScale::TT,
-                ContinuousTime::TT(TT(RawContinuousTime {
+                TimeScale::TT,
+                Time::TT(TT(RawTime {
                     seconds: -211813488000,
                     attoseconds: 0,
                 })),
             ),
             (
-                ContinuousTimeScale::UT1,
-                ContinuousTime::UT1(UT1(RawContinuousTime {
+                TimeScale::UT1,
+                Time::UT1(UT1(RawTime {
                     seconds: -211813488000,
                     attoseconds: 0,
                 })),
@@ -1092,7 +1077,7 @@ mod tests {
         ]
         .iter()
         .for_each(|(scale, expected)| {
-            let actual = ContinuousTime::jd0(*scale);
+            let actual = Time::jd0(*scale);
             assert_eq!(*expected, actual);
         });
     }

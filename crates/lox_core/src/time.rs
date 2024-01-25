@@ -17,38 +17,8 @@ pub mod intervals;
 pub mod leap_seconds;
 pub mod utc;
 
-/// The time scales supported by Lox.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum TimeScale {
-    TAI,
-    TCB,
-    TCG,
-    TDB,
-    TT,
-    UT1,
-    UTC,
-}
-
-impl Display for TimeScale {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            TimeScale::TAI => write!(f, "TAI"),
-            TimeScale::TCB => write!(f, "TCB"),
-            TimeScale::TCG => write!(f, "TCG"),
-            TimeScale::TDB => write!(f, "TDB"),
-            TimeScale::TT => write!(f, "TT"),
-            TimeScale::UT1 => write!(f, "UT1"),
-            TimeScale::UTC => write!(f, "UTC"),
-        }
-    }
-}
-
 /// `WallClock` is the trait by which high-precision time representations expose human-readable time components.
-///
-/// The components returned by a `WallClock` must be interpreted in terms of its [TimeScale]. For example, a UTC
-/// `WallClock` will have a `second` component of 60 during a leap second.
 pub trait WallClock {
-    fn scale(&self) -> TimeScale;
     fn hour(&self) -> i64;
     fn minute(&self) -> i64;
     fn second(&self) -> i64;
