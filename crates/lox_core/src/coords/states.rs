@@ -174,8 +174,8 @@ impl KeplerianState {
         self.true_anomaly
     }
 
-    pub fn semi_latus_rectum(&self) -> f64 {
-        if float_eq!(self.eccentricity, 0.0, abs <= 1e-3) {
+    pub fn semiparameter(&self) -> f64 {
+        if is_circular(self.eccentricity) {
             self.semi_major
         } else {
             self.semi_major * (1.0 - self.eccentricity.powi(2))
@@ -183,12 +183,12 @@ impl KeplerianState {
     }
 
     pub fn to_perifocal(&self, grav_param: f64) -> (DVec3, DVec3) {
-        let semi_latus = self.semi_latus_rectum();
+        let semiparameter = self.semiparameter();
         let (sin_nu, cos_nu) = self.true_anomaly.sin_cos();
-        let sqrt_mu_p = (grav_param / semi_latus).sqrt();
+        let sqrt_mu_p = (grav_param / semiparameter).sqrt();
 
         let pos =
-            DVec3::new(cos_nu, sin_nu, 0.0) * (semi_latus / (1.0 + self.eccentricity * cos_nu));
+            DVec3::new(cos_nu, sin_nu, 0.0) * (semiparameter / (1.0 + self.eccentricity * cos_nu));
         let vel = DVec3::new(-sin_nu, self.eccentricity + cos_nu, 0.0) * sqrt_mu_p;
 
         (pos, vel)
@@ -222,18 +222,20 @@ fn eccentricity_vector(grav_param: f64, pos: DVec3, vel: DVec3) -> DVec3 {
 }
 
 fn is_equatorial(inclination: f64) -> bool {
-    float_eq!(inclination.abs(), 0.0, abs <= 1e-3)
+    float_eq!(inclination.abs(), 0.0, abs <= 1e-8)
 }
 
 fn is_circular(eccentricity: f64) -> bool {
-    float_eq!(eccentricity, 0.0, abs <= 1e-3)
+    float_eq!(eccentricity, 0.0, abs <= 1e-8)
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::time::continuous::TimeScale;
     use float_eq::assert_float_eq;
     use glam::DVec3;
+
+    use crate::bodies::{Earth, PointMass};
+    use crate::time::continuous::TimeScale;
 
     use super::*;
 
@@ -460,5 +462,24 @@ mod tests {
         assert_float_eq!(ascending_node, keplerian1.ascending_node, rel <= 1e-8);
         assert_float_eq!(periapsis_arg, keplerian1.periapsis_argument, rel <= 1e-8);
         assert_float_eq!(true_anomaly, keplerian1.true_anomaly, rel <= 1e-8);
+    }
+
+    #[test]
+    fn test_iss() {
+        let time = Time::j2000(TimeScale::TDB);
+        let position = DVec3::new(6068.27927, -1692.84394, -2516.61918);
+        let velocity = DVec3::new(-0.660415582, 5.495938726, -5.303093233);
+        let grav_param = Earth.gravitational_parameter();
+        let cartesian = CartesianState::new(time, position, velocity);
+        let cartesian1 = cartesian
+            .to_keplerian_state(grav_param)
+            .to_cartesian_state(grav_param);
+
+        assert_float_eq!(position.x, cartesian1.position.x, rel <= 1e-8);
+        assert_float_eq!(position.y, cartesian1.position.y, rel <= 1e-8);
+        assert_float_eq!(position.z, cartesian1.position.z, rel <= 1e-8);
+        assert_float_eq!(velocity.x, cartesian1.velocity.x, rel <= 1e-8);
+        assert_float_eq!(velocity.y, cartesian1.velocity.y, rel <= 1e-8);
+        assert_float_eq!(velocity.z, cartesian1.velocity.z, rel <= 1e-8);
     }
 }
