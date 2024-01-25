@@ -14,18 +14,18 @@ use crate::bodies::{
     Psyche, RotationalElements, Steins, Toutatis, TriAxial, Vesta, WilsonHarrington,
 };
 impl Ellipsoid for Gaspra {
-    fn polar_radius() -> f64 {
+    fn polar_radius(&self) -> f64 {
         4.4f64
     }
-    fn mean_radius() -> f64 {
+    fn mean_radius(&self) -> f64 {
         6.233333333333334f64
     }
 }
 impl TriAxial for Gaspra {
-    fn subplanetary_radius() -> f64 {
+    fn subplanetary_radius(&self) -> f64 {
         9.1f64
     }
-    fn along_orbit_radius() -> f64 {
+    fn along_orbit_radius(&self) -> f64 {
         5.2f64
     }
 }
@@ -45,18 +45,18 @@ impl RotationalElements for Gaspra {
     );
 }
 impl Ellipsoid for Ida {
-    fn polar_radius() -> f64 {
+    fn polar_radius(&self) -> f64 {
         7.6f64
     }
-    fn mean_radius() -> f64 {
+    fn mean_radius(&self) -> f64 {
         15.466666666666667f64
     }
 }
 impl TriAxial for Ida {
-    fn subplanetary_radius() -> f64 {
+    fn subplanetary_radius(&self) -> f64 {
         26.8f64
     }
-    fn along_orbit_radius() -> f64 {
+    fn along_orbit_radius(&self) -> f64 {
         12f64
     }
 }
@@ -84,23 +84,23 @@ impl RotationalElements for Dactyl {
     const PRIME_MERIDIAN_COEFFICIENTS: PolynomialCoefficients = (0f64, 0f64, 0f64, &[] as &[f64]);
 }
 impl PointMass for Ceres {
-    fn gravitational_parameter() -> f64 {
+    fn gravitational_parameter(&self) -> f64 {
         62.62888864440993f64
     }
 }
 impl Ellipsoid for Ceres {
-    fn polar_radius() -> f64 {
+    fn polar_radius(&self) -> f64 {
         446f64
     }
-    fn mean_radius() -> f64 {
+    fn mean_radius(&self) -> f64 {
         473.5333333333333f64
     }
 }
 impl TriAxial for Ceres {
-    fn subplanetary_radius() -> f64 {
+    fn subplanetary_radius(&self) -> f64 {
         487.3f64
     }
-    fn along_orbit_radius() -> f64 {
+    fn along_orbit_radius(&self) -> f64 {
         487.3f64
     }
 }
@@ -120,7 +120,7 @@ impl RotationalElements for Ceres {
     );
 }
 impl PointMass for Pallas {
-    fn gravitational_parameter() -> f64 {
+    fn gravitational_parameter(&self) -> f64 {
         13.665878145967422f64
     }
 }
@@ -140,23 +140,23 @@ impl RotationalElements for Pallas {
     );
 }
 impl PointMass for Vesta {
-    fn gravitational_parameter() -> f64 {
+    fn gravitational_parameter(&self) -> f64 {
         17.288232879171513f64
     }
 }
 impl Ellipsoid for Vesta {
-    fn polar_radius() -> f64 {
+    fn polar_radius(&self) -> f64 {
         229f64
     }
-    fn mean_radius() -> f64 {
+    fn mean_radius(&self) -> f64 {
         266f64
     }
 }
 impl TriAxial for Vesta {
-    fn subplanetary_radius() -> f64 {
+    fn subplanetary_radius(&self) -> f64 {
         289f64
     }
-    fn along_orbit_radius() -> f64 {
+    fn along_orbit_radius(&self) -> f64 {
         280f64
     }
 }
@@ -176,23 +176,23 @@ impl RotationalElements for Vesta {
     );
 }
 impl PointMass for Psyche {
-    fn gravitational_parameter() -> f64 {
+    fn gravitational_parameter(&self) -> f64 {
         1.5896582441709424f64
     }
 }
 impl Ellipsoid for Psyche {
-    fn polar_radius() -> f64 {
+    fn polar_radius(&self) -> f64 {
         94.5f64
     }
-    fn mean_radius() -> f64 {
+    fn mean_radius(&self) -> f64 {
         116.66666666666667f64
     }
 }
 impl TriAxial for Psyche {
-    fn subplanetary_radius() -> f64 {
+    fn subplanetary_radius(&self) -> f64 {
         139.5f64
     }
-    fn along_orbit_radius() -> f64 {
+    fn along_orbit_radius(&self) -> f64 {
         116f64
     }
 }
@@ -205,18 +205,18 @@ impl RotationalElements for Psyche {
     const PRIME_MERIDIAN_COEFFICIENTS: PolynomialCoefficients = (0f64, 0f64, 0f64, &[] as &[f64]);
 }
 impl Ellipsoid for Lutetia {
-    fn polar_radius() -> f64 {
+    fn polar_radius(&self) -> f64 {
         46.5f64
     }
-    fn mean_radius() -> f64 {
+    fn mean_radius(&self) -> f64 {
         53f64
     }
 }
 impl TriAxial for Lutetia {
-    fn subplanetary_radius() -> f64 {
+    fn subplanetary_radius(&self) -> f64 {
         62f64
     }
-    fn along_orbit_radius() -> f64 {
+    fn along_orbit_radius(&self) -> f64 {
         50.5f64
     }
 }
@@ -244,23 +244,23 @@ impl RotationalElements for Kleopatra {
     const PRIME_MERIDIAN_COEFFICIENTS: PolynomialCoefficients = (0f64, 0f64, 0f64, &[] as &[f64]);
 }
 impl PointMass for Eros {
-    fn gravitational_parameter() -> f64 {
+    fn gravitational_parameter(&self) -> f64 {
         0.0004463f64
     }
 }
 impl Ellipsoid for Eros {
-    fn polar_radius() -> f64 {
+    fn polar_radius(&self) -> f64 {
         5.5f64
     }
-    fn mean_radius() -> f64 {
+    fn mean_radius(&self) -> f64 {
         9.333333333333334f64
     }
 }
 impl TriAxial for Eros {
-    fn subplanetary_radius() -> f64 {
+    fn subplanetary_radius(&self) -> f64 {
         17f64
     }
-    fn along_orbit_radius() -> f64 {
+    fn along_orbit_radius(&self) -> f64 {
         5.5f64
     }
 }
@@ -280,23 +280,23 @@ impl RotationalElements for Eros {
     );
 }
 impl PointMass for Davida {
-    fn gravitational_parameter() -> f64 {
+    fn gravitational_parameter(&self) -> f64 {
         3.8944831481705644f64
     }
 }
 impl Ellipsoid for Davida {
-    fn polar_radius() -> f64 {
+    fn polar_radius(&self) -> f64 {
         127f64
     }
-    fn mean_radius() -> f64 {
+    fn mean_radius(&self) -> f64 {
         151.33333333333334f64
     }
 }
 impl TriAxial for Davida {
-    fn subplanetary_radius() -> f64 {
+    fn subplanetary_radius(&self) -> f64 {
         180f64
     }
-    fn along_orbit_radius() -> f64 {
+    fn along_orbit_radius(&self) -> f64 {
         147f64
     }
 }
@@ -316,18 +316,18 @@ impl RotationalElements for Davida {
     );
 }
 impl Ellipsoid for Mathilde {
-    fn polar_radius() -> f64 {
+    fn polar_radius(&self) -> f64 {
         23f64
     }
-    fn mean_radius() -> f64 {
+    fn mean_radius(&self) -> f64 {
         26.666666666666668f64
     }
 }
 impl TriAxial for Mathilde {
-    fn subplanetary_radius() -> f64 {
+    fn subplanetary_radius(&self) -> f64 {
         33f64
     }
-    fn along_orbit_radius() -> f64 {
+    fn along_orbit_radius(&self) -> f64 {
         24f64
     }
 }
@@ -340,18 +340,18 @@ impl RotationalElements for Mathilde {
     const PRIME_MERIDIAN_COEFFICIENTS: PolynomialCoefficients = (0f64, 0f64, 0f64, &[] as &[f64]);
 }
 impl Ellipsoid for Steins {
-    fn polar_radius() -> f64 {
+    fn polar_radius(&self) -> f64 {
         2.04f64
     }
-    fn mean_radius() -> f64 {
+    fn mean_radius(&self) -> f64 {
         2.6700000000000004f64
     }
 }
 impl TriAxial for Steins {
-    fn subplanetary_radius() -> f64 {
+    fn subplanetary_radius(&self) -> f64 {
         3.24f64
     }
-    fn along_orbit_radius() -> f64 {
+    fn along_orbit_radius(&self) -> f64 {
         2.73f64
     }
 }
@@ -387,18 +387,18 @@ impl RotationalElements for WilsonHarrington {
     const PRIME_MERIDIAN_COEFFICIENTS: PolynomialCoefficients = (0f64, 0f64, 0f64, &[] as &[f64]);
 }
 impl Ellipsoid for Toutatis {
-    fn polar_radius() -> f64 {
+    fn polar_radius(&self) -> f64 {
         0.85f64
     }
-    fn mean_radius() -> f64 {
+    fn mean_radius(&self) -> f64 {
         1.3316666666666666f64
     }
 }
 impl TriAxial for Toutatis {
-    fn subplanetary_radius() -> f64 {
+    fn subplanetary_radius(&self) -> f64 {
         2.13f64
     }
-    fn along_orbit_radius() -> f64 {
+    fn along_orbit_radius(&self) -> f64 {
         1.015f64
     }
 }
@@ -411,18 +411,18 @@ impl RotationalElements for Toutatis {
     const PRIME_MERIDIAN_COEFFICIENTS: PolynomialCoefficients = (0f64, 0f64, 0f64, &[] as &[f64]);
 }
 impl Ellipsoid for Itokawa {
-    fn polar_radius() -> f64 {
+    fn polar_radius(&self) -> f64 {
         0.104f64
     }
-    fn mean_radius() -> f64 {
+    fn mean_radius(&self) -> f64 {
         0.17300000000000001f64
     }
 }
 impl TriAxial for Itokawa {
-    fn subplanetary_radius() -> f64 {
+    fn subplanetary_radius(&self) -> f64 {
         0.268f64
     }
-    fn along_orbit_radius() -> f64 {
+    fn along_orbit_radius(&self) -> f64 {
         0.147f64
     }
 }
@@ -451,10 +451,10 @@ mod tests {
     use crate::bodies::*;
     #[test]
     fn test_tri_axial_9511010() {
-        assert_eq!(Gaspra::polar_radius(), 4.4f64);
-        assert_eq!(Gaspra::mean_radius(), 6.233333333333334f64);
-        assert_eq!(Gaspra::subplanetary_radius(), 9.1f64);
-        assert_eq!(Gaspra::along_orbit_radius(), 5.2f64);
+        assert_eq!(Gaspra.polar_radius(), 4.4f64);
+        assert_eq!(Gaspra.mean_radius(), 6.233333333333334f64);
+        assert_eq!(Gaspra.subplanetary_radius(), 9.1f64);
+        assert_eq!(Gaspra.along_orbit_radius(), 5.2f64);
     }
     #[test]
     fn test_rotational_elements_nutation_precession_coefficients_9511010() {
@@ -491,10 +491,10 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_2431010() {
-        assert_eq!(Ida::polar_radius(), 7.6f64);
-        assert_eq!(Ida::mean_radius(), 15.466666666666667f64);
-        assert_eq!(Ida::subplanetary_radius(), 26.8f64);
-        assert_eq!(Ida::along_orbit_radius(), 12f64);
+        assert_eq!(Ida.polar_radius(), 7.6f64);
+        assert_eq!(Ida.mean_radius(), 15.466666666666667f64);
+        assert_eq!(Ida.subplanetary_radius(), 26.8f64);
+        assert_eq!(Ida.along_orbit_radius(), 12f64);
     }
     #[test]
     fn test_rotational_elements_nutation_precession_coefficients_2431010() {
@@ -559,14 +559,14 @@ mod tests {
     }
     #[test]
     fn test_point_mass_2000001() {
-        assert_eq!(Ceres::gravitational_parameter(), 62.62888864440993f64);
+        assert_eq!(Ceres.gravitational_parameter(), 62.62888864440993f64);
     }
     #[test]
     fn test_tri_axial_2000001() {
-        assert_eq!(Ceres::polar_radius(), 446f64);
-        assert_eq!(Ceres::mean_radius(), 473.5333333333333f64);
-        assert_eq!(Ceres::subplanetary_radius(), 487.3f64);
-        assert_eq!(Ceres::along_orbit_radius(), 487.3f64);
+        assert_eq!(Ceres.polar_radius(), 446f64);
+        assert_eq!(Ceres.mean_radius(), 473.5333333333333f64);
+        assert_eq!(Ceres.subplanetary_radius(), 487.3f64);
+        assert_eq!(Ceres.along_orbit_radius(), 487.3f64);
     }
     #[test]
     fn test_rotational_elements_nutation_precession_coefficients_2000001() {
@@ -603,7 +603,7 @@ mod tests {
     }
     #[test]
     fn test_point_mass_2000002() {
-        assert_eq!(Pallas::gravitational_parameter(), 13.665878145967422f64);
+        assert_eq!(Pallas.gravitational_parameter(), 13.665878145967422f64);
     }
     #[test]
     fn test_rotational_elements_nutation_precession_coefficients_2000002() {
@@ -640,14 +640,14 @@ mod tests {
     }
     #[test]
     fn test_point_mass_2000004() {
-        assert_eq!(Vesta::gravitational_parameter(), 17.288232879171513f64);
+        assert_eq!(Vesta.gravitational_parameter(), 17.288232879171513f64);
     }
     #[test]
     fn test_tri_axial_2000004() {
-        assert_eq!(Vesta::polar_radius(), 229f64);
-        assert_eq!(Vesta::mean_radius(), 266f64);
-        assert_eq!(Vesta::subplanetary_radius(), 289f64);
-        assert_eq!(Vesta::along_orbit_radius(), 280f64);
+        assert_eq!(Vesta.polar_radius(), 229f64);
+        assert_eq!(Vesta.mean_radius(), 266f64);
+        assert_eq!(Vesta.subplanetary_radius(), 289f64);
+        assert_eq!(Vesta.along_orbit_radius(), 280f64);
     }
     #[test]
     fn test_rotational_elements_nutation_precession_coefficients_2000004() {
@@ -684,14 +684,14 @@ mod tests {
     }
     #[test]
     fn test_point_mass_2000016() {
-        assert_eq!(Psyche::gravitational_parameter(), 1.5896582441709424f64);
+        assert_eq!(Psyche.gravitational_parameter(), 1.5896582441709424f64);
     }
     #[test]
     fn test_tri_axial_2000016() {
-        assert_eq!(Psyche::polar_radius(), 94.5f64);
-        assert_eq!(Psyche::mean_radius(), 116.66666666666667f64);
-        assert_eq!(Psyche::subplanetary_radius(), 139.5f64);
-        assert_eq!(Psyche::along_orbit_radius(), 116f64);
+        assert_eq!(Psyche.polar_radius(), 94.5f64);
+        assert_eq!(Psyche.mean_radius(), 116.66666666666667f64);
+        assert_eq!(Psyche.subplanetary_radius(), 139.5f64);
+        assert_eq!(Psyche.along_orbit_radius(), 116f64);
     }
     #[test]
     fn test_rotational_elements_nutation_precession_coefficients_2000016() {
@@ -723,10 +723,10 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_2000021() {
-        assert_eq!(Lutetia::polar_radius(), 46.5f64);
-        assert_eq!(Lutetia::mean_radius(), 53f64);
-        assert_eq!(Lutetia::subplanetary_radius(), 62f64);
-        assert_eq!(Lutetia::along_orbit_radius(), 50.5f64);
+        assert_eq!(Lutetia.polar_radius(), 46.5f64);
+        assert_eq!(Lutetia.mean_radius(), 53f64);
+        assert_eq!(Lutetia.subplanetary_radius(), 62f64);
+        assert_eq!(Lutetia.along_orbit_radius(), 50.5f64);
     }
     #[test]
     fn test_rotational_elements_nutation_precession_coefficients_2000021() {
@@ -791,14 +791,14 @@ mod tests {
     }
     #[test]
     fn test_point_mass_2000433() {
-        assert_eq!(Eros::gravitational_parameter(), 0.0004463f64);
+        assert_eq!(Eros.gravitational_parameter(), 0.0004463f64);
     }
     #[test]
     fn test_tri_axial_2000433() {
-        assert_eq!(Eros::polar_radius(), 5.5f64);
-        assert_eq!(Eros::mean_radius(), 9.333333333333334f64);
-        assert_eq!(Eros::subplanetary_radius(), 17f64);
-        assert_eq!(Eros::along_orbit_radius(), 5.5f64);
+        assert_eq!(Eros.polar_radius(), 5.5f64);
+        assert_eq!(Eros.mean_radius(), 9.333333333333334f64);
+        assert_eq!(Eros.subplanetary_radius(), 17f64);
+        assert_eq!(Eros.along_orbit_radius(), 5.5f64);
     }
     #[test]
     fn test_rotational_elements_nutation_precession_coefficients_2000433() {
@@ -835,14 +835,14 @@ mod tests {
     }
     #[test]
     fn test_point_mass_2000511() {
-        assert_eq!(Davida::gravitational_parameter(), 3.8944831481705644f64);
+        assert_eq!(Davida.gravitational_parameter(), 3.8944831481705644f64);
     }
     #[test]
     fn test_tri_axial_2000511() {
-        assert_eq!(Davida::polar_radius(), 127f64);
-        assert_eq!(Davida::mean_radius(), 151.33333333333334f64);
-        assert_eq!(Davida::subplanetary_radius(), 180f64);
-        assert_eq!(Davida::along_orbit_radius(), 147f64);
+        assert_eq!(Davida.polar_radius(), 127f64);
+        assert_eq!(Davida.mean_radius(), 151.33333333333334f64);
+        assert_eq!(Davida.subplanetary_radius(), 180f64);
+        assert_eq!(Davida.along_orbit_radius(), 147f64);
     }
     #[test]
     fn test_rotational_elements_nutation_precession_coefficients_2000511() {
@@ -879,10 +879,10 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_2000253() {
-        assert_eq!(Mathilde::polar_radius(), 23f64);
-        assert_eq!(Mathilde::mean_radius(), 26.666666666666668f64);
-        assert_eq!(Mathilde::subplanetary_radius(), 33f64);
-        assert_eq!(Mathilde::along_orbit_radius(), 24f64);
+        assert_eq!(Mathilde.polar_radius(), 23f64);
+        assert_eq!(Mathilde.mean_radius(), 26.666666666666668f64);
+        assert_eq!(Mathilde.subplanetary_radius(), 33f64);
+        assert_eq!(Mathilde.along_orbit_radius(), 24f64);
     }
     #[test]
     fn test_rotational_elements_nutation_precession_coefficients_2000253() {
@@ -914,10 +914,10 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_2002867() {
-        assert_eq!(Steins::polar_radius(), 2.04f64);
-        assert_eq!(Steins::mean_radius(), 2.6700000000000004f64);
-        assert_eq!(Steins::subplanetary_radius(), 3.24f64);
-        assert_eq!(Steins::along_orbit_radius(), 2.73f64);
+        assert_eq!(Steins.polar_radius(), 2.04f64);
+        assert_eq!(Steins.mean_radius(), 2.6700000000000004f64);
+        assert_eq!(Steins.subplanetary_radius(), 3.24f64);
+        assert_eq!(Steins.along_orbit_radius(), 2.73f64);
     }
     #[test]
     fn test_rotational_elements_nutation_precession_coefficients_2002867() {
@@ -1010,10 +1010,10 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_2004179() {
-        assert_eq!(Toutatis::polar_radius(), 0.85f64);
-        assert_eq!(Toutatis::mean_radius(), 1.3316666666666666f64);
-        assert_eq!(Toutatis::subplanetary_radius(), 2.13f64);
-        assert_eq!(Toutatis::along_orbit_radius(), 1.015f64);
+        assert_eq!(Toutatis.polar_radius(), 0.85f64);
+        assert_eq!(Toutatis.mean_radius(), 1.3316666666666666f64);
+        assert_eq!(Toutatis.subplanetary_radius(), 2.13f64);
+        assert_eq!(Toutatis.along_orbit_radius(), 1.015f64);
     }
     #[test]
     fn test_rotational_elements_nutation_precession_coefficients_2004179() {
@@ -1045,10 +1045,10 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_2025143() {
-        assert_eq!(Itokawa::polar_radius(), 0.104f64);
-        assert_eq!(Itokawa::mean_radius(), 0.17300000000000001f64);
-        assert_eq!(Itokawa::subplanetary_radius(), 0.268f64);
-        assert_eq!(Itokawa::along_orbit_radius(), 0.147f64);
+        assert_eq!(Itokawa.polar_radius(), 0.104f64);
+        assert_eq!(Itokawa.mean_radius(), 0.17300000000000001f64);
+        assert_eq!(Itokawa.subplanetary_radius(), 0.268f64);
+        assert_eq!(Itokawa.along_orbit_radius(), 0.147f64);
     }
     #[test]
     fn test_rotational_elements_nutation_precession_coefficients_2025143() {

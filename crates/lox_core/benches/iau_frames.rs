@@ -8,8 +8,7 @@
 
 use divan::Bencher;
 use glam::DVec3;
-use lox_core::bodies::planets::Jupiter;
-use lox_core::bodies::RotationalElements;
+use lox_core::bodies::{Jupiter, RotationalElements};
 use lox_core::frames::iau::BodyFixed;
 use lox_core::frames::{FromFrame, Icrf, Rotation};
 

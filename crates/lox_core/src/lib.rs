@@ -8,11 +8,11 @@
 
 pub mod bodies;
 pub mod communications;
+pub mod coords;
 pub mod ephemeris;
 pub mod errors;
 pub mod frames;
 pub mod time;
-pub mod two_body;
 pub mod types;
 
 mod earth;

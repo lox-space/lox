@@ -24,6 +24,16 @@ pub(crate) fn arcsec_to_rad(arcsec: Arcsec) -> Radians {
     arcsec * RADIANS_IN_ARCSECOND
 }
 
+/// Modulus after division by 2π, returning in the range [0,2π).
+pub fn mod_two_pi(a: f64) -> f64 {
+    let w = a % (2.0 * PI);
+    if w < 0.0 {
+        w + 2.0 * PI
+    } else {
+        w
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use float_eq::assert_float_eq;

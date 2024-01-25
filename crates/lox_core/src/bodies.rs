@@ -6,13 +6,15 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use dyn_clone::{clone_trait_object, DynClone};
 use std::f64::consts::PI;
 use std::fmt::{Display, Formatter};
+
+pub use generated::*;
 
 use crate::time::constants::f64::{SECONDS_PER_DAY, SECONDS_PER_JULIAN_CENTURY};
 
 mod generated;
-pub use generated::*;
 
 pub mod fundamental;
 
@@ -54,9 +56,53 @@ macro_rules! body {
             }
         }
     };
+    ($i:ident, $t:ident, $naif_id:literal) => {
+        #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+        pub struct $i;
+
+        impl $t for $i {}
+
+        impl Body for $i {
+            fn id(&self) -> NaifId {
+                NaifId($naif_id)
+            }
+
+            fn name(&self) -> &'static str {
+                stringify!($i)
+            }
+        }
+
+        impl Display for $i {
+            fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", self.name())
+            }
+        }
+    };
     ($i:ident, $name:literal, $naif_id:literal) => {
         #[derive(Clone, Copy, Debug, Eq, PartialEq)]
         pub struct $i;
+
+        impl Body for $i {
+            fn id(&self) -> NaifId {
+                NaifId($naif_id)
+            }
+
+            fn name(&self) -> &'static str {
+                $name
+            }
+        }
+
+        impl Display for $i {
+            fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", self.name())
+            }
+        }
+    };
+    ($i:ident, $t:ident, $name:literal, $naif_id:literal) => {
+        #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+        pub struct $i;
+
+        impl $t for $i {}
 
         impl Body for $i {
             fn id(&self) -> NaifId {
@@ -80,194 +126,212 @@ macro_rules! body {
 body! { Sun, 10 }
 
 // Planets.
-body! { Mercury, 199 }
-body! { Venus, 299 }
-body! { Earth, 399 }
-body! { Mars, 499 }
-body! { Jupiter, 599 }
-body! { Saturn, 699 }
-body! { Uranus, 799 }
-body! { Neptune, 899 }
-body! { Pluto, 999 }
+pub trait Planet: PointMass + Spheroid + DynClone {}
+clone_trait_object!(Planet);
+
+body! { Mercury, Planet, 199 }
+body! { Venus, Planet, 299 }
+body! { Earth, Planet, 399 }
+body! { Mars, Planet, 499 }
+body! { Jupiter, Planet, 599 }
+body! { Saturn, Planet, 699 }
+body! { Uranus, Planet, 799 }
+body! { Neptune, Planet, 899 }
+body! { Pluto, Planet, 999 }
 
 // Barycenters.
-body! { SolarSystemBarycenter, "Solar System Barycenter", 0 }
-body! { MercuryBarycenter, "Mercury Barycenter", 1 }
-body! { VenusBarycenter, "Venus Barycenter", 2 }
-body! { EarthBarycenter, "Earth Barycenter", 3 }
-body! { MarsBarycenter, "Mars Barycenter", 4 }
-body! { JupiterBarycenter, "Jupiter Barycenter", 5 }
-body! { SaturnBarycenter, "Saturn Barycenter", 6 }
-body! { UranusBarycenter, "Uranus Barycenter", 7 }
-body! { NeptuneBarycenter, "Neptune Barycenter", 8 }
-body! { PlutoBarycenter, "Pluto Barycenter", 9 }
+pub trait Barycenter: PointMass + DynClone {}
+clone_trait_object!(Barycenter);
+
+body! { SolarSystemBarycenter, Barycenter, "Solar System Barycenter", 0 }
+body! { MercuryBarycenter, Barycenter, "Mercury Barycenter", 1 }
+body! { VenusBarycenter, Barycenter, "Venus Barycenter", 2 }
+body! { EarthBarycenter, Barycenter, "Earth Barycenter", 3 }
+body! { MarsBarycenter, Barycenter, "Mars Barycenter", 4 }
+body! { JupiterBarycenter, Barycenter, "Jupiter Barycenter", 5 }
+body! { SaturnBarycenter, Barycenter, "Saturn Barycenter", 6 }
+body! { UranusBarycenter, Barycenter, "Uranus Barycenter", 7 }
+body! { NeptuneBarycenter, Barycenter, "Neptune Barycenter", 8 }
+body! { PlutoBarycenter, Barycenter, "Pluto Barycenter", 9 }
+
+impl PointMass for SolarSystemBarycenter {
+    fn gravitational_parameter(&self) -> f64 {
+        Sun.gravitational_parameter()
+    }
+}
 
 // Satellites.
-body! { Moon, 301 }
-body! { Phobos, 401 }
-body! { Deimos, 402 }
-body! { Io, 501 }
-body! { Europa, 502 }
-body! { Ganymede, 503 }
-body! { Callisto, 504 }
-body! { Amalthea, 505 }
-body! { Himalia, 506 }
-body! { Elara, 507 }
-body! { Pasiphae, 508 }
-body! { Sinope, 509 }
-body! { Lysithea, 510 }
-body! { Carme, 511 }
-body! { Ananke, 512 }
-body! { Leda, 513 }
-body! { Thebe, 514 }
-body! { Adrastea, 515 }
-body! { Metis, 516 }
-body! { Callirrhoe, 517 }
-body! { Themisto, 518 }
-body! { Magaclite, 519 }
-body! { Taygete, 520 }
-body! { Chaldene, 521 }
-body! { Harpalyke, 522 }
-body! { Kalyke, 523 }
-body! { Iocaste, 524 }
-body! { Erinome, 525 }
-body! { Isonoe, 526 }
-body! { Praxidike, 527 }
-body! { Autonoe, 528 }
-body! { Thyone, 529 }
-body! { Hermippe, 530 }
-body! { Aitne, 531 }
-body! { Eurydome, 532 }
-body! { Euanthe, 533 }
-body! { Euporie, 534 }
-body! { Orthosie, 535 }
-body! { Sponde, 536 }
-body! { Kale, 537 }
-body! { Pasithee, 538 }
-body! { Hegemone, 539 }
-body! { Mneme, 540 }
-body! { Aoede, 541 }
-body! { Thelxinoe, 542 }
-body! { Arche, 543 }
-body! { Kallichore, 544 }
-body! { Helike, 545 }
-body! { Carpo, 546 }
-body! { Eukelade, 547 }
-body! { Cyllene, 548 }
-body! { Kore, 549 }
-body! { Herse, 550 }
-body! { Dia, 553 }
-body! { Mimas, 601 }
-body! { Enceladus, 602 }
-body! { Tethys, 603 }
-body! { Dione, 604 }
-body! { Rhea, 605 }
-body! { Titan, 606 }
-body! { Hyperion, 607 }
-body! { Iapetus, 608 }
-body! { Phoebe, 609 }
-body! { Janus, 610 }
-body! { Epimetheus, 611 }
-body! { Helene, 612 }
-body! { Telesto, 613 }
-body! { Calypso, 614 }
-body! { Atlas, 615 }
-body! { Prometheus, 616 }
-body! { Pandora, 617 }
-body! { Pan, 618 }
-body! { Ymir, 619 }
-body! { Paaliaq, 620 }
-body! { Tarvos, 621 }
-body! { Ijiraq, 622 }
-body! { Suttungr, 623 }
-body! { Kiviuq, 624 }
-body! { Mundilfari, 625 }
-body! { Albiorix, 626 }
-body! { Skathi, 627 }
-body! { Erriapus, 628 }
-body! { Siarnaq, 629 }
-body! { Thrymr, 630 }
-body! { Narvi, 631 }
-body! { Methone, 632 }
-body! { Pallene, 633 }
-body! { Polydeuces, 634 }
-body! { Daphnis, 635 }
-body! { Aegir, 636 }
-body! { Bebhionn, 637 }
-body! { Bergelmir, 638 }
-body! { Bestla, 639 }
-body! { Farbauti, 640 }
-body! { Fenrir, 641 }
-body! { Fornjot, 642 }
-body! { Hati, 643 }
-body! { Hyrrokkin, 644 }
-body! { Kari, 645 }
-body! { Loge, 646 }
-body! { Skoll, 647 }
-body! { Surtur, 648 }
-body! { Anthe, 649 }
-body! { Jarnsaxa, 650 }
-body! { Greip, 651 }
-body! { Tarqeq, 652 }
-body! { Aegaeon, 653 }
-body! { Ariel, 701 }
-body! { Umbriel, 702 }
-body! { Titania, 703 }
-body! { Oberon, 704 }
-body! { Miranda, 705 }
-body! { Cordelia, 706 }
-body! { Ophelia, 707 }
-body! { Bianca, 708 }
-body! { Cressida, 709 }
-body! { Desdemona, 710 }
-body! { Juliet, 711 }
-body! { Portia, 712 }
-body! { Rosalind, 713 }
-body! { Belinda, 714 }
-body! { Puck, 715 }
-body! { Caliban, 716 }
-body! { Sycorax, 717 }
-body! { Prospero, 718 }
-body! { Setebos, 719 }
-body! { Stephano, 720 }
-body! { Trinculo, 721 }
-body! { Francisco, 722 }
-body! { Margaret, 723 }
-body! { Ferdinand, 724 }
-body! { Perdita, 725 }
-body! { Mab, 726 }
-body! { Cupid, 727 }
-body! { Triton, 801 }
-body! { Nereid, 802 }
-body! { Naiad, 803 }
-body! { Thalassa, 804 }
-body! { Despina, 805 }
-body! { Galatea, 806 }
-body! { Larissa, 807 }
-body! { Proteus, 808 }
-body! { Halimede, 809 }
-body! { Psamathe, 810 }
-body! { Sao, 811 }
-body! { Laomedeia, 812 }
-body! { Neso, 813 }
-body! { Charon, 901 }
-body! { Nix, 902 }
-body! { Hydra, 903 }
-body! { Kerberos, 904 }
-body! { Styx, 905 }
+pub trait Satellite: PointMass + TriAxial + DynClone {}
+clone_trait_object!(Satellite);
+
+body! { Moon, Satellite, 301 }
+body! { Phobos, Satellite, 401 }
+body! { Deimos, Satellite, 402 }
+body! { Io, Satellite, 501 }
+body! { Europa, Satellite, 502 }
+body! { Ganymede, Satellite, 503 }
+body! { Callisto, Satellite, 504 }
+body! { Amalthea, Satellite, 505 }
+body! { Himalia, Satellite, 506 }
+body! { Elara,  507 }
+body! { Pasiphae,  508 }
+body! { Sinope,  509 }
+body! { Lysithea,  510 }
+body! { Carme,  511 }
+body! { Ananke,  512 }
+body! { Leda,  513 }
+body! { Thebe, Satellite, 514 }
+body! { Adrastea, Satellite, 515 }
+body! { Metis, Satellite, 516 }
+body! { Callirrhoe,  517 }
+body! { Themisto,  518 }
+body! { Magaclite,  519 }
+body! { Taygete,  520 }
+body! { Chaldene,  521 }
+body! { Harpalyke,  522 }
+body! { Kalyke,  523 }
+body! { Iocaste,  524 }
+body! { Erinome,  525 }
+body! { Isonoe,  526 }
+body! { Praxidike,  527 }
+body! { Autonoe,  528 }
+body! { Thyone,  529 }
+body! { Hermippe,  530 }
+body! { Aitne,  531 }
+body! { Eurydome,  532 }
+body! { Euanthe,  533 }
+body! { Euporie,  534 }
+body! { Orthosie,  535 }
+body! { Sponde,  536 }
+body! { Kale,  537 }
+body! { Pasithee,  538 }
+body! { Hegemone,  539 }
+body! { Mneme,  540 }
+body! { Aoede,  541 }
+body! { Thelxinoe,  542 }
+body! { Arche,  543 }
+body! { Kallichore,  544 }
+body! { Helike,  545 }
+body! { Carpo,  546 }
+body! { Eukelade,  547 }
+body! { Cyllene,  548 }
+body! { Kore,  549 }
+body! { Herse,  550 }
+body! { Dia,  553 }
+body! { Mimas, Satellite, 601 }
+body! { Enceladus, Satellite, 602 }
+body! { Tethys, Satellite, 603 }
+body! { Dione, Satellite, 604 }
+body! { Rhea, Satellite, 605 }
+body! { Titan, Satellite, 606 }
+body! { Hyperion, Satellite, 607 }
+body! { Iapetus, Satellite, 608 }
+body! { Phoebe, Satellite, 609 }
+body! { Janus, Satellite, 610 }
+body! { Epimetheus, Satellite, 611 }
+body! { Helene, Satellite, 612 }
+body! { Telesto,  613 }
+body! { Calypso,  614 }
+body! { Atlas, Satellite, 615 }
+body! { Prometheus, Satellite, 616 }
+body! { Pandora, Satellite, 617 }
+body! { Pan,  618 }
+body! { Ymir,  619 }
+body! { Paaliaq,  620 }
+body! { Tarvos,  621 }
+body! { Ijiraq,  622 }
+body! { Suttungr,  623 }
+body! { Kiviuq,  624 }
+body! { Mundilfari,  625 }
+body! { Albiorix,  626 }
+body! { Skathi,  627 }
+body! { Erriapus,  628 }
+body! { Siarnaq,  629 }
+body! { Thrymr,  630 }
+body! { Narvi,  631 }
+body! { Methone,  632 }
+body! { Pallene,  633 }
+body! { Polydeuces,  634 }
+body! { Daphnis,  635 }
+body! { Aegir,  636 }
+body! { Bebhionn,  637 }
+body! { Bergelmir,  638 }
+body! { Bestla,  639 }
+body! { Farbauti,  640 }
+body! { Fenrir,  641 }
+body! { Fornjot,  642 }
+body! { Hati,  643 }
+body! { Hyrrokkin,  644 }
+body! { Kari,  645 }
+body! { Loge,  646 }
+body! { Skoll,  647 }
+body! { Surtur,  648 }
+body! { Anthe,  649 }
+body! { Jarnsaxa,  650 }
+body! { Greip,  651 }
+body! { Tarqeq,  652 }
+body! { Aegaeon,  653 }
+body! { Ariel, Satellite, 701 }
+body! { Umbriel, Satellite, 702 }
+body! { Titania, Satellite, 703 }
+body! { Oberon, Satellite, 704 }
+body! { Miranda, Satellite, 705 }
+body! { Cordelia,  706 }
+body! { Ophelia,  707 }
+body! { Bianca,  708 }
+body! { Cressida,  709 }
+body! { Desdemona,  710 }
+body! { Juliet,  711 }
+body! { Portia,  712 }
+body! { Rosalind,  713 }
+body! { Belinda,  714 }
+body! { Puck,  715 }
+body! { Caliban,  716 }
+body! { Sycorax,  717 }
+body! { Prospero,  718 }
+body! { Setebos,  719 }
+body! { Stephano,  720 }
+body! { Trinculo,  721 }
+body! { Francisco,  722 }
+body! { Margaret,  723 }
+body! { Ferdinand,  724 }
+body! { Perdita,  725 }
+body! { Mab,  726 }
+body! { Cupid,  727 }
+body! { Triton, Satellite, 801 }
+body! { Nereid,  802 }
+body! { Naiad, Satellite, 803 }
+body! { Thalassa, Satellite, 804 }
+body! { Despina, Satellite, 805 }
+body! { Galatea, Satellite, 806 }
+body! { Larissa, Satellite, 807 }
+body! { Proteus, Satellite, 808 }
+body! { Halimede,  809 }
+body! { Psamathe,  810 }
+body! { Sao,  811 }
+body! { Laomedeia,  812 }
+body! { Neso,  813 }
+body! { Charon, Satellite, 901 }
+body! { Nix,  902 }
+body! { Hydra,  903 }
+body! { Kerberos,  904 }
+body! { Styx,  905 }
 
 // Minor bodies.
+pub trait MinorBody: PointMass + TriAxial + DynClone {}
+clone_trait_object!(MinorBody);
+
 body! {Gaspra, 9511010 }
 body! {Ida, 2431010 }
 body! {Dactyl, 2431011 }
-body! {Ceres, 2000001 }
+body! {Ceres, MinorBody, 2000001 }
 body! {Pallas, 2000002 }
-body! {Vesta, 2000004 }
-body! {Psyche, 2000016 }
+body! {Vesta, MinorBody, 2000004 }
+body! {Psyche, MinorBody, 2000016 }
 body! {Lutetia, 2000021 }
 body! {Kleopatra, 2000216 }
-body! {Eros, 2000433 }
-body! {Davida, 2000511 }
+body! {Eros, MinorBody, 2000433 }
+body! {Davida, MinorBody, 2000511 }
 body! {Mathilde, 2000253 }
 body! {Steins, 2002867 }
 body! {Braille, 2009969 }
@@ -491,47 +555,23 @@ impl NaifId {
 }
 
 pub trait Ellipsoid: Body {
-    fn polar_radius() -> f64;
+    fn polar_radius(&self) -> f64;
 
-    fn mean_radius() -> f64;
-}
-
-pub fn polar_radius<T: Ellipsoid>(_: T) -> f64 {
-    <T as Ellipsoid>::polar_radius()
-}
-
-pub fn mean_radius<T: Ellipsoid>(_: T) -> f64 {
-    <T as Ellipsoid>::mean_radius()
+    fn mean_radius(&self) -> f64;
 }
 
 pub trait Spheroid: Ellipsoid {
-    fn equatorial_radius() -> f64;
-}
-
-pub fn equatorial_radius<T: Spheroid>(_: T) -> f64 {
-    <T as Spheroid>::equatorial_radius()
+    fn equatorial_radius(&self) -> f64;
 }
 
 pub trait TriAxial: Ellipsoid {
-    fn subplanetary_radius() -> f64;
+    fn subplanetary_radius(&self) -> f64;
 
-    fn along_orbit_radius() -> f64;
-}
-
-pub fn subplanetary_radius<T: TriAxial>(_: T) -> f64 {
-    <T as TriAxial>::subplanetary_radius()
-}
-
-pub fn along_orbit_radius<T: TriAxial>(_: T) -> f64 {
-    <T as TriAxial>::along_orbit_radius()
+    fn along_orbit_radius(&self) -> f64;
 }
 
 pub trait PointMass: Body {
-    fn gravitational_parameter() -> f64;
-}
-
-pub fn gravitational_parameter<T: PointMass>(_: T) -> f64 {
-    <T as PointMass>::gravitational_parameter()
+    fn gravitational_parameter(&self) -> f64;
 }
 
 pub type PolynomialCoefficients = (f64, f64, f64, &'static [f64]);
@@ -675,27 +715,6 @@ mod tests {
     // when generated files are malformed or deleted in preparation for regeneration.
     body! { Jupiter, 599 }
 
-    impl PointMass for Jupiter {
-        fn gravitational_parameter() -> f64 {
-            126686531.9003704f64
-        }
-    }
-
-    impl Ellipsoid for Jupiter {
-        fn polar_radius() -> f64 {
-            66854f64
-        }
-        fn mean_radius() -> f64 {
-            69946f64
-        }
-    }
-
-    impl Spheroid for Jupiter {
-        fn equatorial_radius() -> f64 {
-            71492f64
-        }
-    }
-
     impl RotationalElements for Jupiter {
         const NUTATION_PRECESSION_COEFFICIENTS: NutationPrecessionCoefficients = (
             &[
@@ -817,39 +836,6 @@ mod tests {
         let id = NaifId(-42);
         let name = id.name();
         assert_eq!(name, "Body -42");
-    }
-
-    #[test]
-    fn test_grav_param() {
-        assert_eq!(
-            gravitational_parameter(Jupiter),
-            Jupiter::gravitational_parameter()
-        );
-    }
-
-    #[test]
-    fn test_mean_radius() {
-        assert_eq!(mean_radius(Jupiter), Jupiter::mean_radius());
-    }
-
-    #[test]
-    fn test_polar_radius() {
-        assert_eq!(polar_radius(Jupiter), Jupiter::polar_radius());
-    }
-
-    #[test]
-    fn test_equatorial_radius() {
-        assert_eq!(equatorial_radius(Jupiter), Jupiter::equatorial_radius());
-    }
-
-    #[test]
-    fn test_subplanetary_radius() {
-        assert_eq!(subplanetary_radius(Moon), Moon::subplanetary_radius());
-    }
-
-    #[test]
-    fn test_along_orbit_radius() {
-        assert_eq!(along_orbit_radius(Moon), Moon::along_orbit_radius());
     }
 
     #[test]

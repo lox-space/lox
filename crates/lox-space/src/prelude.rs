@@ -8,7 +8,8 @@
 
 pub use lox_core::bodies::*;
 
+pub use lox_core::coords::two_body::{Cartesian, Keplerian};
+pub use lox_core::coords::DVec3;
+pub use lox_core::frames::*;
 pub use lox_core::time::continuous::*;
 pub use lox_core::time::dates::*;
-
-pub use lox_core::two_body::{Cartesian, DVec3, Keplerian, TwoBody};

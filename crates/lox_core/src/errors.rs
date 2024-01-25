@@ -20,4 +20,6 @@ pub enum LoxError {
     InvalidPerMille(u16),
     #[error("day of year cannot be 366 for a non-leap year")]
     NonLeapYear,
+    #[error("unknown body `{0}`")]
+    UnknownBody(String),
 }

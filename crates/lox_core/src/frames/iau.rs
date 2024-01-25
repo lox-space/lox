@@ -6,21 +6,24 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use std::fmt::Debug;
+use std::fmt::{Debug, Display, Formatter};
 
 use glam::{DMat3, DVec3};
 
 use crate::bodies::RotationalElements;
-use crate::frames::{Epoch, FromFrame, Icrf, ReferenceFrame, Rotation};
+use crate::frames::{Epoch, FromFrame, Icrf, ReferenceFrame, RotatingFrame, Rotation};
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct BodyFixed<T: RotationalElements>(pub T);
 
-impl<T: RotationalElements> ReferenceFrame for BodyFixed<T> {
-    fn is_inertial(&self) -> bool {
-        false
+impl<T: RotationalElements> Display for BodyFixed<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "IAU_{}", &self.0.name().to_uppercase())
     }
 }
+
+impl<T: RotationalElements> ReferenceFrame for BodyFixed<T> {}
+impl<T: RotationalElements> RotatingFrame for BodyFixed<T> {}
 
 impl<T: RotationalElements> FromFrame<Icrf> for BodyFixed<T> {
     fn rotation_from(&self, _: Icrf, t: Epoch) -> Rotation {
@@ -49,6 +52,7 @@ mod tests {
     #[test]
     fn test_bodyfixed() {
         let iau_jupiter = BodyFixed(Jupiter);
+        assert_eq!(format!("{}", iau_jupiter), "IAU_JUPITER");
         assert!(!iau_jupiter.is_inertial());
         assert!(iau_jupiter.is_rotating());
 
