@@ -11,11 +11,11 @@ use lox_space::prelude::*;
 
 fn main() {
     let date = Date::new(2016, 5, 30).unwrap();
-    let time = UTC::new(12, 0, 0).unwrap();
-    let epoch = Time::from_date_and_utc_timestamp(TimeScale::TDB, date, time);
+    let utc = UTC::new(12, 0, 0).unwrap();
+    let time = Time::from_date_and_utc_timestamp(TimeScale::TDB, date, utc);
     let position = DVec3::new(6068279.27, -1692843.94, -2516619.18) * 1e-3;
     let velocity = DVec3::new(-660.415582, 5495.938726, -5303.093233) * 1e-3;
-    let iss_cartesian = Cartesian::new(epoch, Earth, Icrf, position, velocity);
+    let iss_cartesian = Cartesian::new(time, Earth, Icrf, position, velocity);
     let iss = Keplerian::from(iss_cartesian);
 
     println!("ISS Orbit for Julian Day {}", iss.time().days_since_j2000(),);

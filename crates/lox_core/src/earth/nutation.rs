@@ -63,9 +63,9 @@ impl Add<&Self> for Nutation {
     }
 }
 
-/// Calculate nutation coefficients at `epoch` using the given [Model].
-pub fn nutation(model: Model, epoch: Time) -> Nutation {
-    let t = tdb_julian_centuries_since_j2000(epoch);
+/// Calculate nutation coefficients at `time` using the given [Model].
+pub fn nutation(model: Model, time: Time) -> Nutation {
+    let t = tdb_julian_centuries_since_j2000(time);
     match model {
         Model::IAU1980 => nutation_iau1980(t),
         Model::IAU2000A => nutation_iau2000a(t),
@@ -107,47 +107,47 @@ mod tests {
 
     #[test]
     fn test_nutation_iau1980() {
-        let epoch = Time::j2000(TimeScale::TT);
+        let time = Time::j2000(TimeScale::TT);
         let expected = Nutation {
             longitude: -0.00006750247617532478,
             obliquity: -0.00002799221238377013,
         };
-        let actual = nutation(Model::IAU1980, epoch);
+        let actual = nutation(Model::IAU1980, time);
         assert_float_eq!(expected.longitude, actual.longitude, rel <= TOLERANCE);
         assert_float_eq!(expected.obliquity, actual.obliquity, rel <= TOLERANCE);
     }
     #[test]
     fn test_nutation_iau2000a() {
-        let epoch = Time::j2000(TimeScale::TT);
+        let time = Time::j2000(TimeScale::TT);
         let expected = Nutation {
             longitude: -0.00006754422426417299,
             obliquity: -0.00002797083119237414,
         };
-        let actual = nutation(Model::IAU2000A, epoch);
+        let actual = nutation(Model::IAU2000A, time);
         assert_float_eq!(expected.longitude, actual.longitude, rel <= TOLERANCE);
         assert_float_eq!(expected.obliquity, actual.obliquity, rel <= TOLERANCE);
     }
 
     #[test]
     fn test_nutation_iau2000b() {
-        let epoch = Time::j2000(TimeScale::TT);
+        let time = Time::j2000(TimeScale::TT);
         let expected = Nutation {
             longitude: -0.00006754261253992235,
             obliquity: -0.00002797092331098565,
         };
-        let actual = nutation(Model::IAU2000B, epoch);
+        let actual = nutation(Model::IAU2000B, time);
         assert_float_eq!(expected.longitude, actual.longitude, rel <= TOLERANCE);
         assert_float_eq!(expected.obliquity, actual.obliquity, rel <= TOLERANCE);
     }
 
     #[test]
     fn test_nutation_iau2006a() {
-        let epoch = Time::j2000(TimeScale::TT);
+        let time = Time::j2000(TimeScale::TT);
         let expected = Nutation {
             longitude: -0.00006754425598969513,
             obliquity: -0.00002797083119237414,
         };
-        let actual = nutation(Model::IAU2006A, epoch);
+        let actual = nutation(Model::IAU2006A, time);
         assert_float_eq!(expected.longitude, actual.longitude, rel <= TOLERANCE);
         assert_float_eq!(expected.obliquity, actual.obliquity, rel <= TOLERANCE);
     }

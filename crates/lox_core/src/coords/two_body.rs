@@ -243,8 +243,8 @@ mod tests {
     #[test]
     fn test_cartesian() {
         let date = Date::new(2023, 3, 25).expect("Date should be valid");
-        let time = UTC::new(21, 8, 0).expect("Time should be valid");
-        let epoch = Time::from_date_and_utc_timestamp(TimeScale::TDB, date, time);
+        let utc = UTC::new(21, 8, 0).expect("Time should be valid");
+        let time = Time::from_date_and_utc_timestamp(TimeScale::TDB, date, utc);
         let pos = DVec3::new(
             -0.107622532467967e7,
             -0.676589636432773e7,
@@ -256,12 +256,12 @@ mod tests {
             -0.118801577532701e4,
         ) * 1e-3;
 
-        let cartesian = Cartesian::new(epoch, Earth, Icrf, pos, vel);
+        let cartesian = Cartesian::new(time, Earth, Icrf, pos, vel);
         assert_eq!(cartesian.to_cartesian(), cartesian);
 
         let cartesian1 = cartesian.to_keplerian().to_cartesian();
 
-        assert_eq!(cartesian1.time(), epoch);
+        assert_eq!(cartesian1.time(), time);
         assert_eq!(cartesian1.origin(), Earth);
         assert_eq!(cartesian1.reference_frame(), Icrf);
 
@@ -276,8 +276,8 @@ mod tests {
     #[test]
     fn test_keplerian() {
         let date = Date::new(2023, 3, 25).expect("Date should be valid");
-        let time = UTC::new(21, 8, 0).expect("Time should be valid");
-        let epoch = Time::from_date_and_utc_timestamp(TimeScale::TDB, date, time);
+        let utc = UTC::new(21, 8, 0).expect("Time should be valid");
+        let time = Time::from_date_and_utc_timestamp(TimeScale::TDB, date, utc);
         let semi_major = 24464560.0e-3;
         let eccentricity = 0.7311;
         let inclination = 0.122138;
@@ -286,7 +286,7 @@ mod tests {
         let true_anomaly = 0.44369564302687126;
 
         let keplerian = Keplerian::new(
-            epoch,
+            time,
             Earth,
             Icrf,
             semi_major,
@@ -300,7 +300,7 @@ mod tests {
 
         let keplerian1 = keplerian.to_cartesian().to_keplerian();
 
-        assert_eq!(keplerian1.time(), epoch);
+        assert_eq!(keplerian1.time(), time);
         assert_eq!(keplerian1.origin(), Earth);
         assert_eq!(keplerian1.reference_frame(), Icrf);
 

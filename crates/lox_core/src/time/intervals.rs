@@ -4,10 +4,10 @@ use crate::time::continuous::Time;
 /// Although strictly TDB, TT is sufficient for most applications.
 pub type TDBJulianCenturiesSinceJ2000 = f64;
 
-pub fn tdb_julian_centuries_since_j2000(epoch: Time) -> TDBJulianCenturiesSinceJ2000 {
-    match epoch {
+pub fn tdb_julian_centuries_since_j2000(time: Time) -> TDBJulianCenturiesSinceJ2000 {
+    match time {
         Time::TT(_) | Time::TDB(_) => {
-            epoch.days_since_j2000() / constants::f64::DAYS_PER_JULIAN_CENTURY
+            time.days_since_j2000() / constants::f64::DAYS_PER_JULIAN_CENTURY
         }
         _ => todo!("perform the simpler of the conversions to TT or TDB first"),
     }
@@ -18,7 +18,7 @@ pub type TTJulianCenturiesSinceJ2000 = f64;
 pub type UT1DaysSinceJ2000 = f64;
 
 #[cfg(test)]
-mod epoch_tests {
+mod tests {
     use float_eq::assert_float_eq;
 
     use crate::time::continuous::{Time, TimeScale};
