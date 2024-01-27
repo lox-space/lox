@@ -433,7 +433,20 @@ impl Time {
 
 impl Display for Time {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "foo")
+        write!(
+            f,
+            "{} {:02}:{:02}:{:02}.{:03}.{:03}.{:03}.{:03}.{:03}.{:03}",
+            self.scale(),
+            self.hour(),
+            self.minute(),
+            self.second(),
+            self.millisecond(),
+            self.microsecond(),
+            self.nanosecond(),
+            self.picosecond(),
+            self.femtosecond(),
+            self.attosecond()
+        )
     }
 }
 
@@ -541,6 +554,16 @@ impl WallClock for Time {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::time::dates::Calendar::Gregorian;
+
+    const TIME_SCALES: [TimeScale; 6] = [
+        TimeScale::TAI,
+        TimeScale::TCB,
+        TimeScale::TCG,
+        TimeScale::TDB,
+        TimeScale::TT,
+        TimeScale::UT1,
+    ];
 
     #[test]
     fn test_raw_time_is_negative() {
@@ -1024,6 +1047,78 @@ mod tests {
     }
 
     #[test]
+    fn test_raw_time_sub_time_delta_positive_time_no_attosecond_wrap() {
+        let delta = TimeDelta {
+            seconds: 1,
+            attoseconds: 1,
+        };
+        let time = RawTime {
+            seconds: 2,
+            attoseconds: 2,
+        };
+        let expected = RawTime {
+            seconds: 1,
+            attoseconds: 1,
+        };
+        let actual = time - delta;
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_raw_time_sub_time_delta_positive_time_attosecond_wrap() {
+        let delta = TimeDelta {
+            seconds: 1,
+            attoseconds: 2,
+        };
+        let time = RawTime {
+            seconds: 2,
+            attoseconds: 1,
+        };
+        let expected = RawTime {
+            seconds: 0,
+            attoseconds: ATTOSECONDS_PER_SECOND - 1,
+        };
+        let actual = time - delta;
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_raw_time_sub_time_delta_negative_time_no_attosecond_wrap() {
+        let delta = TimeDelta {
+            seconds: 1,
+            attoseconds: 1,
+        };
+        let time = RawTime {
+            seconds: -1,
+            attoseconds: 2,
+        };
+        let expected = RawTime {
+            seconds: -2,
+            attoseconds: 1,
+        };
+        let actual = time - delta;
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_raw_time_sub_time_delta_negative_time_attosecond_wrap() {
+        let delta = TimeDelta {
+            seconds: 1,
+            attoseconds: 2,
+        };
+        let time = RawTime {
+            seconds: -1,
+            attoseconds: 1,
+        };
+        let expected = RawTime {
+            seconds: -3,
+            attoseconds: ATTOSECONDS_PER_SECOND - 1,
+        };
+        let actual = time - delta;
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
     fn test_timescale_into_str() {
         let test_cases = [
             (TimeScale::TAI, "TAI"),
@@ -1037,6 +1132,27 @@ mod tests {
         for (scale, expected) in test_cases {
             assert_eq!(Into::<&str>::into(scale), expected);
         }
+    }
+
+    #[test]
+    fn test_time_from_date_and_utc_timestamp() {
+        let date = Date::new_unchecked(Gregorian, 2021, 1, 1);
+        let utc = UTC::new(12, 34, 56).expect("time should be valid");
+        let datetime = UTCDateTime::new(date, utc);
+
+        for scale in TIME_SCALES {
+            let actual = Time::from_date_and_utc_timestamp(scale, date, utc);
+            let expected = Time::from_utc_datetime(scale, datetime);
+            assert_eq!(actual, expected);
+        }
+    }
+
+    #[test]
+    fn test_time_display() {
+        let time = Time::TAI(TAI::default());
+        let expected = "TAI 12:00:00.000.000.000.000.000.000".to_string();
+        let actual = time.to_string();
+        assert_eq!(actual, expected);
     }
 
     #[test]
@@ -1122,6 +1238,141 @@ mod tests {
 
         for (time, expected) in test_cases {
             assert_eq!(time.scale(), expected);
+        }
+    }
+
+    #[test]
+    fn test_time_wall_clock_hour() {
+        let raw_time = RawTime::default();
+        let expected = raw_time.hour();
+        for scale in TIME_SCALES {
+            let time = Time::from_raw(scale, raw_time);
+            let actual = time.hour();
+            assert_eq!(
+                actual, expected,
+                "expected time in scale {} to have hour {}, but got {}",
+                scale, expected, actual
+            );
+        }
+    }
+
+    #[test]
+    fn test_time_wall_clock_minute() {
+        let raw_time = RawTime::default();
+        let expected = raw_time.minute();
+        for scale in TIME_SCALES {
+            let time = Time::from_raw(scale, raw_time);
+            let actual = time.minute();
+            assert_eq!(
+                actual, expected,
+                "expected time in scale {} to have minute {}, but got {}",
+                scale, expected, actual
+            );
+        }
+    }
+
+    #[test]
+    fn test_time_wall_clock_second() {
+        let raw_time = RawTime::default();
+        let expected = raw_time.second();
+        for scale in TIME_SCALES {
+            let time = Time::from_raw(scale, raw_time);
+            let actual = time.second();
+            assert_eq!(
+                actual, expected,
+                "expected time in scale {} to have second {}, but got {}",
+                scale, expected, actual
+            );
+        }
+    }
+
+    #[test]
+    fn test_time_wall_clock_millisecond() {
+        let raw_time = RawTime::default();
+        let expected = raw_time.millisecond();
+        for scale in TIME_SCALES {
+            let time = Time::from_raw(scale, raw_time);
+            let actual = time.millisecond();
+            assert_eq!(
+                actual, expected,
+                "expected time in scale {} to have millisecond {}, but got {}",
+                scale, expected, actual
+            );
+        }
+    }
+
+    #[test]
+    fn test_time_wall_clock_microsecond() {
+        let raw_time = RawTime::default();
+        let expected = raw_time.microsecond();
+        for scale in TIME_SCALES {
+            let time = Time::from_raw(scale, raw_time);
+            let actual = time.microsecond();
+            assert_eq!(
+                actual, expected,
+                "expected time in scale {} to have microsecond {}, but got {}",
+                scale, expected, actual
+            );
+        }
+    }
+
+    #[test]
+    fn test_time_wall_clock_nanosecond() {
+        let raw_time = RawTime::default();
+        let expected = raw_time.nanosecond();
+        for scale in TIME_SCALES {
+            let time = Time::from_raw(scale, raw_time);
+            let actual = time.nanosecond();
+            assert_eq!(
+                actual, expected,
+                "expected time in scale {} to have nanosecond {}, but got {}",
+                scale, expected, actual
+            );
+        }
+    }
+
+    #[test]
+    fn test_time_wall_clock_picosecond() {
+        let raw_time = RawTime::default();
+        let expected = raw_time.picosecond();
+        for scale in TIME_SCALES {
+            let time = Time::from_raw(scale, raw_time);
+            let actual = time.picosecond();
+            assert_eq!(
+                actual, expected,
+                "expected time in scale {} to have picosecond {}, but got {}",
+                scale, expected, actual
+            );
+        }
+    }
+
+    #[test]
+    fn test_time_wall_clock_femtosecond() {
+        let raw_time = RawTime::default();
+        let expected = raw_time.femtosecond();
+        for scale in TIME_SCALES {
+            let time = Time::from_raw(scale, raw_time);
+            let actual = time.femtosecond();
+            assert_eq!(
+                actual, expected,
+                "expected time in scale {} to have femtosecond {}, but got {}",
+                scale, expected, actual
+            );
+        }
+    }
+
+    #[test]
+    fn test_time_wall_clock_attosecond() {
+        let raw_time = RawTime::default();
+        let expected = raw_time.attosecond();
+        for scale in TIME_SCALES {
+            let time = Time::from_raw(scale, raw_time);
+            let actual = time.attosecond();
+            assert_eq!(
+                actual, expected,
+                "expected time in scale {} to have attosecond {}, but got {}",
+                scale, expected, actual
+            );
         }
     }
 }
