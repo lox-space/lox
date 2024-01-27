@@ -221,7 +221,7 @@ mod test {
     use quick_xml::de::from_str;
 
     #[test]
-    fn test_parse_oem_message() {
+    fn test_parse_omm_message() {
         let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
 <omm xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://cwe.ccsds.org/moims/docs/MOIMS-NAV/Schemas/ndmxml-1.0-master.xsd"
