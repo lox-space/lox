@@ -92,7 +92,7 @@ impl Display for UTC {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{:02}:{:02}:{:02}.{}.{}.{}.{}.{}.{}",
+            "{:02}:{:02}:{:02}.{:03}.{:03}.{:03}.{:03}.{:03}.{:03} UTC",
             self.hour,
             self.minute,
             self.second,
@@ -198,6 +198,11 @@ mod tests {
         femto: PerMille(123),
         atto: PerMille(456),
     };
+
+    #[test]
+    fn test_time_display() {
+        assert_eq!("12:34:56.789.123.456.789.123.456 UTC", TIME.to_string());
+    }
 
     #[test]
     fn test_utc_wall_clock_hour() {

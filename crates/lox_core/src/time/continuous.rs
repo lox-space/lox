@@ -435,8 +435,7 @@ impl Display for Time {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{} {:02}:{:02}:{:02}.{:03}.{:03}.{:03}.{:03}.{:03}.{:03}",
-            self.scale(),
+            "{:02}:{:02}:{:02}.{:03}.{:03}.{:03}.{:03}.{:03}.{:03} {}",
             self.hour(),
             self.minute(),
             self.second(),
@@ -445,7 +444,8 @@ impl Display for Time {
             self.nanosecond(),
             self.picosecond(),
             self.femtosecond(),
-            self.attosecond()
+            self.attosecond(),
+            self.scale(),
         )
     }
 }
@@ -1150,7 +1150,7 @@ mod tests {
     #[test]
     fn test_time_display() {
         let time = Time::TAI(TAI::default());
-        let expected = "TAI 12:00:00.000.000.000.000.000.000".to_string();
+        let expected = "12:00:00.000.000.000.000.000.000 TAI".to_string();
         let actual = time.to_string();
         assert_eq!(actual, expected);
     }
