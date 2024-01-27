@@ -753,38 +753,106 @@ pub struct SolarFluxType {
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct OpmCovarianceMatrixAbstractType {
-    #[serde(rename = "COMMENT")]
-    pub comment_list: Vec<String>,
-    #[serde(rename = "COV_REF_FRAME")]
-    pub cov_ref_frame: Option<String>,
-}
-
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
-#[serde(default)]
-pub struct OemCovarianceMatrixAbstractType {
+pub struct OemCovarianceMatrixType {
     #[serde(rename = "COMMENT")]
     pub comment_list: Vec<String>,
     #[serde(rename = "EPOCH")]
     pub epoch: EpochType,
     #[serde(rename = "COV_REF_FRAME")]
     pub cov_ref_frame: Option<String>,
-}
-
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
-#[serde(default)]
-pub struct OemCovarianceMatrixType {
-    #[serde(flatten)]
-    pub base: OemCovarianceMatrixAbstractType,
+    #[serde(rename = "CX_X")]
+    pub cx_x: PositionCovarianceType,
+    #[serde(rename = "CY_X")]
+    pub cy_x: PositionCovarianceType,
+    #[serde(rename = "CY_Y")]
+    pub cy_y: PositionCovarianceType,
+    #[serde(rename = "CZ_X")]
+    pub cz_x: PositionCovarianceType,
+    #[serde(rename = "CZ_Y")]
+    pub cz_y: PositionCovarianceType,
+    #[serde(rename = "CZ_Z")]
+    pub cz_z: PositionCovarianceType,
+    #[serde(rename = "CX_DOT_X")]
+    pub cx_dot_x: PositionVelocityCovarianceType,
+    #[serde(rename = "CX_DOT_Y")]
+    pub cx_dot_y: PositionVelocityCovarianceType,
+    #[serde(rename = "CX_DOT_Z")]
+    pub cx_dot_z: PositionVelocityCovarianceType,
+    #[serde(rename = "CX_DOT_X_DOT")]
+    pub cx_dot_x_dot: VelocityCovarianceType,
+    #[serde(rename = "CY_DOT_X")]
+    pub cy_dot_x: PositionVelocityCovarianceType,
+    #[serde(rename = "CY_DOT_Y")]
+    pub cy_dot_y: PositionVelocityCovarianceType,
+    #[serde(rename = "CY_DOT_Z")]
+    pub cy_dot_z: PositionVelocityCovarianceType,
+    #[serde(rename = "CY_DOT_X_DOT")]
+    pub cy_dot_x_dot: VelocityCovarianceType,
+    #[serde(rename = "CY_DOT_Y_DOT")]
+    pub cy_dot_y_dot: VelocityCovarianceType,
+    #[serde(rename = "CZ_DOT_X")]
+    pub cz_dot_x: PositionVelocityCovarianceType,
+    #[serde(rename = "CZ_DOT_Y")]
+    pub cz_dot_y: PositionVelocityCovarianceType,
+    #[serde(rename = "CZ_DOT_Z")]
+    pub cz_dot_z: PositionVelocityCovarianceType,
+    #[serde(rename = "CZ_DOT_X_DOT")]
+    pub cz_dot_x_dot: VelocityCovarianceType,
+    #[serde(rename = "CZ_DOT_Y_DOT")]
+    pub cz_dot_y_dot: VelocityCovarianceType,
+    #[serde(rename = "CZ_DOT_Z_DOT")]
+    pub cz_dot_z_dot: VelocityCovarianceType,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 pub struct OpmCovarianceMatrixType {
-    #[serde(flatten)]
-    pub base: OpmCovarianceMatrixAbstractType,
-    #[serde(flatten)]
-    pub extension: CovarianceMatrixElementsGroup,
+    #[serde(rename = "COMMENT")]
+    pub comment_list: Vec<String>,
+    #[serde(rename = "COV_REF_FRAME")]
+    pub cov_ref_frame: Option<String>,
+    #[serde(rename = "CX_X")]
+    pub cx_x: PositionCovarianceType,
+    #[serde(rename = "CY_X")]
+    pub cy_x: PositionCovarianceType,
+    #[serde(rename = "CY_Y")]
+    pub cy_y: PositionCovarianceType,
+    #[serde(rename = "CZ_X")]
+    pub cz_x: PositionCovarianceType,
+    #[serde(rename = "CZ_Y")]
+    pub cz_y: PositionCovarianceType,
+    #[serde(rename = "CZ_Z")]
+    pub cz_z: PositionCovarianceType,
+    #[serde(rename = "CX_DOT_X")]
+    pub cx_dot_x: PositionVelocityCovarianceType,
+    #[serde(rename = "CX_DOT_Y")]
+    pub cx_dot_y: PositionVelocityCovarianceType,
+    #[serde(rename = "CX_DOT_Z")]
+    pub cx_dot_z: PositionVelocityCovarianceType,
+    #[serde(rename = "CX_DOT_X_DOT")]
+    pub cx_dot_x_dot: VelocityCovarianceType,
+    #[serde(rename = "CY_DOT_X")]
+    pub cy_dot_x: PositionVelocityCovarianceType,
+    #[serde(rename = "CY_DOT_Y")]
+    pub cy_dot_y: PositionVelocityCovarianceType,
+    #[serde(rename = "CY_DOT_Z")]
+    pub cy_dot_z: PositionVelocityCovarianceType,
+    #[serde(rename = "CY_DOT_X_DOT")]
+    pub cy_dot_x_dot: VelocityCovarianceType,
+    #[serde(rename = "CY_DOT_Y_DOT")]
+    pub cy_dot_y_dot: VelocityCovarianceType,
+    #[serde(rename = "CZ_DOT_X")]
+    pub cz_dot_x: PositionVelocityCovarianceType,
+    #[serde(rename = "CZ_DOT_Y")]
+    pub cz_dot_y: PositionVelocityCovarianceType,
+    #[serde(rename = "CZ_DOT_Z")]
+    pub cz_dot_z: PositionVelocityCovarianceType,
+    #[serde(rename = "CZ_DOT_X_DOT")]
+    pub cz_dot_x_dot: VelocityCovarianceType,
+    #[serde(rename = "CZ_DOT_Y_DOT")]
+    pub cz_dot_y_dot: VelocityCovarianceType,
+    #[serde(rename = "CZ_DOT_Z_DOT")]
+    pub cz_dot_z_dot: VelocityCovarianceType,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -1075,51 +1143,4 @@ pub struct TorqueType {
     pub base: f64,
     #[serde(rename = "@units")]
     pub units: Option<TorqueUnits>,
-}
-
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
-#[serde(default)]
-pub struct CovarianceMatrixElementsGroup {
-    #[serde(rename = "CX_X")]
-    pub cx_x: PositionCovarianceType,
-    #[serde(rename = "CY_X")]
-    pub cy_x: PositionCovarianceType,
-    #[serde(rename = "CY_Y")]
-    pub cy_y: PositionCovarianceType,
-    #[serde(rename = "CZ_X")]
-    pub cz_x: PositionCovarianceType,
-    #[serde(rename = "CZ_Y")]
-    pub cz_y: PositionCovarianceType,
-    #[serde(rename = "CZ_Z")]
-    pub cz_z: PositionCovarianceType,
-    #[serde(rename = "CX_DOT_X")]
-    pub cx_dot_x: PositionVelocityCovarianceType,
-    #[serde(rename = "CX_DOT_Y")]
-    pub cx_dot_y: PositionVelocityCovarianceType,
-    #[serde(rename = "CX_DOT_Z")]
-    pub cx_dot_z: PositionVelocityCovarianceType,
-    #[serde(rename = "CX_DOT_X_DOT")]
-    pub cx_dot_x_dot: VelocityCovarianceType,
-    #[serde(rename = "CY_DOT_X")]
-    pub cy_dot_x: PositionVelocityCovarianceType,
-    #[serde(rename = "CY_DOT_Y")]
-    pub cy_dot_y: PositionVelocityCovarianceType,
-    #[serde(rename = "CY_DOT_Z")]
-    pub cy_dot_z: PositionVelocityCovarianceType,
-    #[serde(rename = "CY_DOT_X_DOT")]
-    pub cy_dot_x_dot: VelocityCovarianceType,
-    #[serde(rename = "CY_DOT_Y_DOT")]
-    pub cy_dot_y_dot: VelocityCovarianceType,
-    #[serde(rename = "CZ_DOT_X")]
-    pub cz_dot_x: PositionVelocityCovarianceType,
-    #[serde(rename = "CZ_DOT_Y")]
-    pub cz_dot_y: PositionVelocityCovarianceType,
-    #[serde(rename = "CZ_DOT_Z")]
-    pub cz_dot_z: PositionVelocityCovarianceType,
-    #[serde(rename = "CZ_DOT_X_DOT")]
-    pub cz_dot_x_dot: VelocityCovarianceType,
-    #[serde(rename = "CZ_DOT_Y_DOT")]
-    pub cz_dot_y_dot: VelocityCovarianceType,
-    #[serde(rename = "CZ_DOT_Z_DOT")]
-    pub cz_dot_z_dot: VelocityCovarianceType,
 }
