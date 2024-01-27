@@ -223,61 +223,61 @@ mod test {
     #[test]
     fn test_parse_oem_message() {
         let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
-        <omm xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-             xsi:noNamespaceSchemaLocation="http://cwe.ccsds.org/moims/docs/MOIMS-NAV/Schemas/ndmxml-1.0-master.xsd"
-             id="CCSDS_OMM_VERS" version="2.0">
-        
-            <header>
-                <COMMENT>THIS EXAMPLE CONFORMS TO FIGURE 4-2 IN 502.0-B-2</COMMENT>
-                <CREATION_DATE>2007-065T16:00:00</CREATION_DATE>
-                <ORIGINATOR>NOAA/USA</ORIGINATOR>
-            </header>
-            <body>
-                <segment>
-                    <metadata>
-                        <OBJECT_NAME>GOES-9</OBJECT_NAME>
-                        <OBJECT_ID>1995-025A</OBJECT_ID>
-                        <CENTER_NAME>EARTH</CENTER_NAME>
-                        <REF_FRAME>TEME</REF_FRAME>
-                        <TIME_SYSTEM>UTC</TIME_SYSTEM>
-                        <MEAN_ELEMENT_THEORY>TLE</MEAN_ELEMENT_THEORY>
-                    </metadata>
-                    <data>
-                        <COMMENT>USAF SGP4 IS THE ONLY PROPAGATOR THAT SHOULD BE USED FOR THIS DATA</COMMENT>
-                        <meanElements>
-                            <EPOCH>2007-064T10:34:41.4264</EPOCH>
-                            <MEAN_MOTION>1.00273272</MEAN_MOTION>
-                            <ECCENTRICITY>0.0005013</ECCENTRICITY>
-                            <INCLINATION>3.0539</INCLINATION>
-                            <RA_OF_ASC_NODE>81.7939</RA_OF_ASC_NODE>
-                            <ARG_OF_PERICENTER>249.2363</ARG_OF_PERICENTER>
-                            <MEAN_ANOMALY>150.1602</MEAN_ANOMALY>
-                            <GM>398600.8</GM>
-                        </meanElements>
-                        <tleParameters>
-                            <NORAD_CAT_ID>23581</NORAD_CAT_ID>
-                            <ELEMENT_SET_NO>0925</ELEMENT_SET_NO>
-                            <REV_AT_EPOCH>4316</REV_AT_EPOCH>
-                            <BSTAR>0.0001</BSTAR>
-                            <MEAN_MOTION_DOT>-0.00000113</MEAN_MOTION_DOT>
-                            <MEAN_MOTION_DDOT>0.0</MEAN_MOTION_DDOT>
-                        </tleParameters>
-                        <userDefinedParameters>
-                            <USER_DEFINED parameter="ABC0">xyz</USER_DEFINED>
-                            <USER_DEFINED parameter="ABC1">9</USER_DEFINED>
-                            <USER_DEFINED parameter="ABC2">xyz</USER_DEFINED>
-                            <USER_DEFINED parameter="ABC3">9</USER_DEFINED>
-                            <USER_DEFINED parameter="ABC4">xyz</USER_DEFINED>
-                            <USER_DEFINED parameter="ABC5">9</USER_DEFINED>
-                            <USER_DEFINED parameter="ABC6">xyz</USER_DEFINED>
-                            <USER_DEFINED parameter="ABC7">9</USER_DEFINED>
-                            <USER_DEFINED parameter="ABC8">xyz</USER_DEFINED>
-                            <USER_DEFINED parameter="ABC9">9</USER_DEFINED>
-                        </userDefinedParameters>
-                    </data>
-                </segment>
-            </body>
-        </omm>"#;
+<omm xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://cwe.ccsds.org/moims/docs/MOIMS-NAV/Schemas/ndmxml-1.0-master.xsd"
+        id="CCSDS_OMM_VERS" version="2.0">
+
+    <header>
+        <COMMENT>THIS EXAMPLE CONFORMS TO FIGURE 4-2 IN 502.0-B-2</COMMENT>
+        <CREATION_DATE>2007-065T16:00:00</CREATION_DATE>
+        <ORIGINATOR>NOAA/USA</ORIGINATOR>
+    </header>
+    <body>
+        <segment>
+            <metadata>
+                <OBJECT_NAME>GOES-9</OBJECT_NAME>
+                <OBJECT_ID>1995-025A</OBJECT_ID>
+                <CENTER_NAME>EARTH</CENTER_NAME>
+                <REF_FRAME>TEME</REF_FRAME>
+                <TIME_SYSTEM>UTC</TIME_SYSTEM>
+                <MEAN_ELEMENT_THEORY>TLE</MEAN_ELEMENT_THEORY>
+            </metadata>
+            <data>
+                <COMMENT>USAF SGP4 IS THE ONLY PROPAGATOR THAT SHOULD BE USED FOR THIS DATA</COMMENT>
+                <meanElements>
+                    <EPOCH>2007-064T10:34:41.4264</EPOCH>
+                    <MEAN_MOTION>1.00273272</MEAN_MOTION>
+                    <ECCENTRICITY>0.0005013</ECCENTRICITY>
+                    <INCLINATION>3.0539</INCLINATION>
+                    <RA_OF_ASC_NODE>81.7939</RA_OF_ASC_NODE>
+                    <ARG_OF_PERICENTER>249.2363</ARG_OF_PERICENTER>
+                    <MEAN_ANOMALY>150.1602</MEAN_ANOMALY>
+                    <GM>398600.8</GM>
+                </meanElements>
+                <tleParameters>
+                    <NORAD_CAT_ID>23581</NORAD_CAT_ID>
+                    <ELEMENT_SET_NO>0925</ELEMENT_SET_NO>
+                    <REV_AT_EPOCH>4316</REV_AT_EPOCH>
+                    <BSTAR>0.0001</BSTAR>
+                    <MEAN_MOTION_DOT>-0.00000113</MEAN_MOTION_DOT>
+                    <MEAN_MOTION_DDOT>0.0</MEAN_MOTION_DDOT>
+                </tleParameters>
+                <userDefinedParameters>
+                    <USER_DEFINED parameter="ABC0">xyz</USER_DEFINED>
+                    <USER_DEFINED parameter="ABC1">9</USER_DEFINED>
+                    <USER_DEFINED parameter="ABC2">xyz</USER_DEFINED>
+                    <USER_DEFINED parameter="ABC3">9</USER_DEFINED>
+                    <USER_DEFINED parameter="ABC4">xyz</USER_DEFINED>
+                    <USER_DEFINED parameter="ABC5">9</USER_DEFINED>
+                    <USER_DEFINED parameter="ABC6">xyz</USER_DEFINED>
+                    <USER_DEFINED parameter="ABC7">9</USER_DEFINED>
+                    <USER_DEFINED parameter="ABC8">xyz</USER_DEFINED>
+                    <USER_DEFINED parameter="ABC9">9</USER_DEFINED>
+                </userDefinedParameters>
+            </data>
+        </segment>
+    </body>
+</omm>"#;
 
         let message: OmmType = from_str(xml).unwrap();
 
