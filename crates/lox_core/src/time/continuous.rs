@@ -28,7 +28,7 @@ use crate::time::constants::u64::{
 use crate::time::dates::Calendar::ProlepticJulian;
 use crate::time::dates::Date;
 use crate::time::utc::{UTCDateTime, UTC};
-use crate::time::{constants, TimeScale, WallClock};
+use crate::time::{constants, WallClock};
 
 /// An absolute continuous time difference with attosecond precision.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -164,6 +164,26 @@ pub enum TimeScale {
     UT1,
 }
 
+impl Display for TimeScale {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", Into::<&str>::into(*self))
+    }
+}
+
+#[allow(clippy::from_over_into)] // Into is infallible, but From is not
+impl Into<&str> for TimeScale {
+    fn into(self) -> &'static str {
+        match self {
+            TimeScale::TAI => "TAI",
+            TimeScale::TCB => "TCB",
+            TimeScale::TCG => "TCG",
+            TimeScale::TDB => "TDB",
+            TimeScale::TT => "TT",
+            TimeScale::UT1 => "UT1",
+        }
+    }
+}
+
 /// CalendarDate allows continuous time formats to report their date in their respective calendar.
 pub trait CalendarDate {
     fn date(&self) -> Date;
@@ -210,10 +230,6 @@ pub struct UT1(RawTime);
 macro_rules! wall_clock {
     ($time_scale:ident, $test_module:ident) => {
         impl WallClock for $time_scale {
-            fn scale(&self) -> TimeScale {
-                TimeScale::$time_scale
-            }
-
             fn hour(&self) -> i64 {
                 self.0.hour()
             }
@@ -254,7 +270,7 @@ macro_rules! wall_clock {
         #[cfg(test)]
         mod $test_module {
             use super::{$time_scale, RawTime};
-            use crate::time::{TimeScale, WallClock};
+            use crate::time::WallClock;
 
             const RAW_TIME: RawTime = RawTime {
                 seconds: 1234,
@@ -262,11 +278,6 @@ macro_rules! wall_clock {
             };
 
             const TIME: $time_scale = $time_scale(RAW_TIME);
-
-            #[test]
-            fn test_scale() {
-                assert_eq!(TIME.scale(), TimeScale::$time_scale);
-            }
 
             #[test]
             fn test_hour_delegation() {
@@ -355,6 +366,17 @@ impl Time {
         Self::from_date_and_utc_timestamp(scale, dt.date(), dt.time())
     }
 
+    pub fn scale(&self) -> TimeScale {
+        match &self {
+            Time::TAI(_) => TimeScale::TAI,
+            Time::TCB(_) => TimeScale::TCB,
+            Time::TCG(_) => TimeScale::TCG,
+            Time::TDB(_) => TimeScale::TDB,
+            Time::TT(_) => TimeScale::TT,
+            Time::UT1(_) => TimeScale::UT1,
+        }
+    }
+
     /// Returns the J2000 epoch in the given timescale.
     pub fn j2000(scale: TimeScale) -> Self {
         Self::from_raw(scale, RawTime::default())
@@ -416,17 +438,6 @@ impl Display for Time {
 }
 
 impl WallClock for Time {
-    fn scale(&self) -> TimeScale {
-        match self {
-            Time::TAI(_) => TimeScale::TAI,
-            Time::TCB(_) => TimeScale::TCB,
-            Time::TCG(_) => TimeScale::TCG,
-            Time::TDB(_) => TimeScale::TDB,
-            Time::TT(_) => TimeScale::TT,
-            Time::UT1(_) => TimeScale::UT1,
-        }
-    }
-
     fn hour(&self) -> i64 {
         match self {
             Time::TAI(t) => t.hour(),
@@ -1013,7 +1024,23 @@ mod tests {
     }
 
     #[test]
-    fn test_j2000() {
+    fn test_timescale_into_str() {
+        let test_cases = [
+            (TimeScale::TAI, "TAI"),
+            (TimeScale::TCB, "TCB"),
+            (TimeScale::TCG, "TCG"),
+            (TimeScale::TDB, "TDB"),
+            (TimeScale::TT, "TT"),
+            (TimeScale::UT1, "UT1"),
+        ];
+
+        for (scale, expected) in test_cases {
+            assert_eq!(Into::<&str>::into(scale), expected);
+        }
+    }
+
+    #[test]
+    fn test_time_j2000() {
         [
             (TimeScale::TAI, Time::TAI(TAI::default())),
             (TimeScale::TCB, Time::TCB(TCB::default())),
@@ -1030,7 +1057,7 @@ mod tests {
     }
 
     #[test]
-    fn test_jd0() {
+    fn test_time_jd0() {
         [
             (
                 TimeScale::TAI,
@@ -1080,5 +1107,21 @@ mod tests {
             let actual = Time::jd0(*scale);
             assert_eq!(*expected, actual);
         });
+    }
+
+    #[test]
+    fn test_time_scale() {
+        let test_cases = [
+            (Time::TAI(TAI::default()), TimeScale::TAI),
+            (Time::TCB(TCB::default()), TimeScale::TCB),
+            (Time::TCG(TCG::default()), TimeScale::TCG),
+            (Time::TDB(TDB::default()), TimeScale::TDB),
+            (Time::TT(TT::default()), TimeScale::TT),
+            (Time::UT1(UT1::default()), TimeScale::UT1),
+        ];
+
+        for (time, expected) in test_cases {
+            assert_eq!(time.scale(), expected);
+        }
     }
 }

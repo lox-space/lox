@@ -8,8 +8,10 @@
 
 use pyo3::{pyclass, pymethods};
 
-use lox_core::time::dates::{Date, Time};
-use lox_core::time::epochs::{Epoch, TimeScale};
+use lox_core::time::continuous::{Time, TimeScale};
+use lox_core::time::dates::Date;
+use lox_core::time::utc::UTC;
+use lox_core::time::PerMille;
 
 use crate::LoxPyError;
 
@@ -40,12 +42,12 @@ impl PyTimeScale {
     }
 }
 
-#[pyclass(name = "Epoch")]
+#[pyclass(name = "Time")]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub struct PyEpoch(pub Epoch);
+pub struct PyTime(pub Time);
 
 #[pymethods]
-impl PyEpoch {
+impl PyTime {
     #[allow(clippy::too_many_arguments)]
     #[pyo3(signature = (
     scale,
@@ -68,15 +70,15 @@ impl PyEpoch {
         year: i64,
         month: i64,
         day: i64,
-        hour: Option<i64>,
-        minute: Option<i64>,
-        second: Option<i64>,
-        milli: Option<i64>,
-        micro: Option<i64>,
-        nano: Option<i64>,
-        pico: Option<i64>,
-        femto: Option<i64>,
-        atto: Option<i64>,
+        hour: Option<u8>,
+        minute: Option<u8>,
+        second: Option<u8>,
+        milli: Option<u16>,
+        micro: Option<u16>,
+        nano: Option<u16>,
+        pico: Option<u16>,
+        femto: Option<u16>,
+        atto: Option<u16>,
     ) -> Result<Self, LoxPyError> {
         let time_scale = PyTimeScale::new(scale)?;
         let date = Date::new(year, month, day)?;
@@ -84,26 +86,30 @@ impl PyEpoch {
         let hour = hour.unwrap_or(0);
         let minute = minute.unwrap_or(0);
         let second = second.unwrap_or(0);
-        let mut time = Time::new(hour, minute, second)?;
+        let mut utc = UTC::new(hour, minute, second)?;
         if let Some(milli) = milli {
-            time = time.milli(milli);
+            utc.milli = PerMille::new(milli)?;
         }
         if let Some(micro) = micro {
-            time = time.micro(micro);
+            utc.micro = PerMille::new(micro)?;
         }
         if let Some(nano) = nano {
-            time = time.nano(nano);
+            utc.nano = PerMille::new(nano)?;
         }
         if let Some(pico) = pico {
-            time = time.pico(pico);
+            utc.pico = PerMille::new(pico)?;
         }
         if let Some(femto) = femto {
-            time = time.femto(femto);
+            utc.femto = PerMille::new(femto)?;
         }
         if let Some(atto) = atto {
-            time = time.atto(atto);
+            utc.atto = PerMille::new(atto)?;
         }
-        Ok(PyEpoch(Epoch::from_date_and_time(time_scale.0, date, time)))
+        Ok(PyTime(Time::from_date_and_utc_timestamp(
+            time_scale.0,
+            date,
+            utc,
+        )))
     }
 
     fn days_since_j2000(&self) -> f64 {
@@ -111,7 +117,7 @@ impl PyEpoch {
     }
 
     fn scale(&self) -> &str {
-        self.0.scale()
+        self.0.scale().into()
     }
 }
 
@@ -144,7 +150,7 @@ mod tests {
 
     #[test]
     fn test_time() {
-        let time = PyEpoch::new(
+        let time = PyTime::new(
             "TDB",
             2024,
             1,
@@ -160,7 +166,7 @@ mod tests {
             Some(789),
         )
         .expect("time should be valid");
-        assert_eq!(time.0.attosecond(), 123456789123456789);
+        assert_eq!(time.0.attoseconds(), 123456789123456789);
         assert_float_eq!(time.days_since_j2000(), 8765.542374114084, rel <= 1e-8);
         assert_eq!(time.scale(), "TDB");
     }

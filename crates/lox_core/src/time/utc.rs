@@ -4,7 +4,6 @@ use crate::time::constants::u64::{
     ATTOSECONDS_PER_NANOSECOND, ATTOSECONDS_PER_PICOSECOND,
 };
 use crate::time::dates::Date;
-use crate::time::TimeScale;
 use crate::time::{PerMille, WallClock};
 use num::ToPrimitive;
 use std::fmt::Display;
@@ -109,10 +108,6 @@ impl Display for UTC {
 }
 
 impl WallClock for UTC {
-    fn scale(&self) -> TimeScale {
-        TimeScale::UTC
-    }
-
     fn hour(&self) -> i64 {
         self.hour as i64
     }
@@ -203,11 +198,6 @@ mod tests {
         femto: PerMille(123),
         atto: PerMille(456),
     };
-
-    #[test]
-    fn test_utc_wall_clock_scale() {
-        assert_eq!(TIME.scale(), TimeScale::UTC);
-    }
 
     #[test]
     fn test_utc_wall_clock_hour() {

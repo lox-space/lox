@@ -10,23 +10,23 @@ use float_eq::float_eq;
 use glam::{DMat3, DVec3};
 
 use crate::math::{mod_two_pi, normalize_two_pi};
-use crate::time::epochs::Epoch;
+use crate::time::continuous::Time;
 
 pub trait TwoBodyState {
-    fn time(&self) -> Epoch;
+    fn time(&self) -> Time;
     fn to_cartesian_state(&self, grav_param: f64) -> CartesianState;
     fn to_keplerian_state(&self, grav_param: f64) -> KeplerianState;
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct CartesianState {
-    time: Epoch,
+    time: Time,
     position: DVec3,
     velocity: DVec3,
 }
 
 impl CartesianState {
-    pub fn new(time: Epoch, position: DVec3, velocity: DVec3) -> Self {
+    pub fn new(time: Time, position: DVec3, velocity: DVec3) -> Self {
         Self {
             time,
             position,
@@ -44,7 +44,7 @@ impl CartesianState {
 }
 
 impl TwoBodyState for CartesianState {
-    fn time(&self) -> Epoch {
+    fn time(&self) -> Time {
         self.time
     }
 
@@ -120,7 +120,7 @@ impl TwoBodyState for CartesianState {
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct KeplerianState {
-    time: Epoch,
+    time: Time,
     semi_major: f64,
     eccentricity: f64,
     inclination: f64,
@@ -131,7 +131,7 @@ pub struct KeplerianState {
 
 impl KeplerianState {
     pub fn new(
-        time: Epoch,
+        time: Time,
         semi_major: f64,
         eccentricity: f64,
         inclination: f64,
@@ -196,7 +196,7 @@ impl KeplerianState {
 }
 
 impl TwoBodyState for KeplerianState {
-    fn time(&self) -> Epoch {
+    fn time(&self) -> Time {
         self.time
     }
 
@@ -231,7 +231,7 @@ fn is_circular(eccentricity: f64) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use crate::time::epochs::TimeScale;
+    use crate::time::continuous::TimeScale;
     use float_eq::assert_float_eq;
     use glam::DVec3;
 
@@ -239,7 +239,7 @@ mod tests {
 
     #[test]
     fn test_elliptic() {
-        let time = Epoch::j2000(TimeScale::TDB);
+        let time = Time::j2000(TimeScale::TDB);
         let grav_param = 3.9860047e14;
         let semi_major = 24464560.0;
         let eccentricity = 0.7311;
@@ -295,7 +295,7 @@ mod tests {
 
     #[test]
     fn test_circular() {
-        let time = Epoch::j2000(TimeScale::TDB);
+        let time = Time::j2000(TimeScale::TDB);
         let grav_param = 3.986004418e14;
         let semi_major = 6778136.6;
         let eccentricity = 0.0;
@@ -336,7 +336,7 @@ mod tests {
 
     #[test]
     fn test_circular_orekit() {
-        let time = Epoch::j2000(TimeScale::TDB);
+        let time = Time::j2000(TimeScale::TDB);
         let grav_param = 3.9860047e14;
         let semi_major = 24464560.0;
         let eccentricity = 0.0;
@@ -368,7 +368,7 @@ mod tests {
 
     #[test]
     fn test_hyperbolic_orekit() {
-        let time = Epoch::j2000(TimeScale::TDB);
+        let time = Time::j2000(TimeScale::TDB);
         let grav_param = 3.9860047e14;
         let semi_major = -24464560.0;
         let eccentricity = 1.7311;
@@ -400,7 +400,7 @@ mod tests {
 
     #[test]
     fn test_equatorial() {
-        let time = Epoch::j2000(TimeScale::TDB);
+        let time = Time::j2000(TimeScale::TDB);
         let grav_param = 3.9860047e14;
         let semi_major = 24464560.0;
         let eccentricity = 0.7311;
@@ -432,7 +432,7 @@ mod tests {
 
     #[test]
     fn test_circular_equatorial() {
-        let time = Epoch::j2000(TimeScale::TDB);
+        let time = Time::j2000(TimeScale::TDB);
         let grav_param = 3.9860047e14;
         let semi_major = 24464560.0;
         let eccentricity = 0.0;

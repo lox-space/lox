@@ -12,7 +12,7 @@ use crate::bodies::PointMass;
 use crate::coords::states::{CartesianState, KeplerianState, TwoBodyState};
 use crate::coords::CoordinateSystem;
 use crate::frames::{InertialFrame, ReferenceFrame};
-use crate::time::epochs::Epoch;
+use crate::time::continuous::Time;
 
 pub trait TwoBody<T, S>
 where
@@ -40,7 +40,7 @@ where
     T: PointMass + Copy,
     S: ReferenceFrame + Copy,
 {
-    pub fn new(time: Epoch, origin: T, frame: S, position: DVec3, velocity: DVec3) -> Self {
+    pub fn new(time: Time, origin: T, frame: S, position: DVec3, velocity: DVec3) -> Self {
         let state = CartesianState::new(time, position, velocity);
         Self {
             state,
@@ -49,7 +49,7 @@ where
         }
     }
 
-    pub fn time(&self) -> Epoch {
+    pub fn time(&self) -> Time {
         self.state.time()
     }
 
@@ -127,7 +127,7 @@ where
 {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        time: Epoch,
+        time: Time,
         origin: T,
         frame: S,
         semi_major: f64,
@@ -153,7 +153,7 @@ where
         }
     }
 
-    pub fn time(&self) -> Epoch {
+    pub fn time(&self) -> Time {
         self.state.time()
     }
 
@@ -233,18 +233,18 @@ where
 mod tests {
     use float_eq::assert_float_eq;
 
+    use super::*;
     use crate::bodies::Earth;
     use crate::frames::Icrf;
-    use crate::time::dates::{Date, Time};
-    use crate::time::epochs::TimeScale;
-
-    use super::*;
+    use crate::time::continuous::{Time, TimeScale};
+    use crate::time::dates::Date;
+    use crate::time::utc::UTC;
 
     #[test]
     fn test_cartesian() {
         let date = Date::new(2023, 3, 25).expect("Date should be valid");
-        let time = Time::new(21, 8, 0).expect("Time should be valid");
-        let epoch = Epoch::from_date_and_time(TimeScale::TDB, date, time);
+        let time = UTC::new(21, 8, 0).expect("Time should be valid");
+        let epoch = Time::from_date_and_utc_timestamp(TimeScale::TDB, date, time);
         let pos = DVec3::new(
             -0.107622532467967e7,
             -0.676589636432773e7,
@@ -276,8 +276,8 @@ mod tests {
     #[test]
     fn test_keplerian() {
         let date = Date::new(2023, 3, 25).expect("Date should be valid");
-        let time = Time::new(21, 8, 0).expect("Time should be valid");
-        let epoch = Epoch::from_date_and_time(TimeScale::TDB, date, time);
+        let time = UTC::new(21, 8, 0).expect("Time should be valid");
+        let epoch = Time::from_date_and_utc_timestamp(TimeScale::TDB, date, time);
         let semi_major = 24464560.0e-3;
         let eccentricity = 0.7311;
         let inclination = 0.122138;
