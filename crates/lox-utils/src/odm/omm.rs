@@ -452,7 +452,10 @@ mod test {
     }
 
     #[test]
-    fn test_parse_omm_message2() {
+    fn test_parse_omm_message_with_empty_object_id() {
+        // According to Orekit this should fail to parse due to having an empty object id. However, the XSD type of
+        // the object id is just xsd:string, which allows empty strings too.
+
         let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
 <omm id="CCSDS_OMM_VERS" version="2.0">
     <header>
@@ -614,7 +617,7 @@ mod test {
     }
 
     #[test]
-    fn test_parse_omm_message3() {
+    fn test_parse_omm_message2() {
         let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
 <omm  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://sanaregistry.org/r/ndmxml/ndmxml-1.0-master.xsd"
