@@ -1399,4 +1399,35 @@ mod test {
                 version: "2.0".to_string(),
             });
     }
+
+
+    #[test]
+    fn test_parse_omm_message_spurious() {
+        let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<omm id="CCSDS_OMM_VERS" version="2.0">
+    <header>
+    <CREATION_DATE>2021-03-24T23:00:00.000</CREATION_DATE>
+    <ORIGINATOR>CelesTrak</ORIGINATOR>
+    </header>
+    <body>
+    <segment>
+        <metadata>
+        <OBJECT_NAME>STARLETTE</OBJECT_NAME>
+        <OBJECT_ID>1975-010A</OBJECT_ID>
+        <CENTER_NAME>EARTH</CENTER_NAME>
+        <REF_FRAME>TEME</REF_FRAME>
+        <TIME_SYSTEM>UTC</TIME_SYSTEM>
+        <MEAN_ELEMENT_THEORY>SGP4</MEAN_ELEMENT_THEORY>
+        </metadata>
+        <metadata>
+        <COMMENT>second metadata is an error</COMMENT>
+        </metadata>
+    </segment>
+    </body>
+</omm>"#;
+
+        let message: Result<OmmType, _> = from_str(xml);
+
+        assert!(message.is_err());
+    }
 }
