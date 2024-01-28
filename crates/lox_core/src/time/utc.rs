@@ -62,21 +62,6 @@ impl UTC {
         })
     }
 
-    /// Returns the `hour` component of the timestamp in a representation convenient for calculations.
-    pub fn hour(&self) -> i64 {
-        self.hour as i64
-    }
-
-    /// Returns the `minute` component of the timestamp in a representation convenient for calculations.
-    pub fn minute(&self) -> i64 {
-        self.minute as i64
-    }
-
-    /// Returns the `second` component of the timestamp in a representation convenient for calculations.
-    pub fn second(&self) -> i64 {
-        self.second as i64
-    }
-
     pub fn subsecond_as_attoseconds(&self) -> u64 {
         let mut attoseconds = self.atto.0 as u64;
         attoseconds += self.femto.0 as u64 * ATTOSECONDS_PER_FEMTOSECOND;
