@@ -12,7 +12,7 @@ use thiserror::Error;
 
 use crate::bodies::{PyBarycenter, PyMinorBody, PyPlanet, PySatellite, PySun};
 use crate::coords::{PyCartesian, PyKeplerian};
-use crate::time::{PyEpoch, PyTimeScale};
+use crate::time::{PyTime, PyTimeScale};
 use lox_core::errors::LoxError;
 
 mod bodies;
@@ -50,7 +50,7 @@ impl From<LoxPyError> for PyErr {
 #[pymodule]
 fn lox_space(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyTimeScale>()?;
-    m.add_class::<PyEpoch>()?;
+    m.add_class::<PyTime>()?;
     m.add_class::<PySun>()?;
     m.add_class::<PyBarycenter>()?;
     m.add_class::<PyPlanet>()?;

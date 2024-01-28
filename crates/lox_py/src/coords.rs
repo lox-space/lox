@@ -16,7 +16,7 @@ use lox_core::coords::DVec3;
 
 use crate::bodies::PyBody;
 use crate::frames::PyFrame;
-use crate::time::PyEpoch;
+use crate::time::PyTime;
 
 #[pyclass(name = "Cartesian")]
 pub struct PyCartesian {
@@ -30,7 +30,7 @@ impl PyCartesian {
     #[allow(clippy::too_many_arguments)]
     #[new]
     fn new(
-        time: &PyEpoch,
+        time: &PyTime,
         body: PyObject,
         frame: &str,
         x: f64,
@@ -50,8 +50,8 @@ impl PyCartesian {
         })
     }
 
-    fn time(&self) -> PyEpoch {
-        PyEpoch(self.state.time())
+    fn time(&self) -> PyTime {
+        PyTime(self.state.time())
     }
 
     fn reference_frame(&self) -> String {
@@ -95,7 +95,7 @@ impl PyKeplerian {
     #[new]
     #[allow(clippy::too_many_arguments)]
     fn new(
-        t: &PyEpoch,
+        t: &PyTime,
         body: PyObject,
         frame: &str,
         semi_major_axis: f64,
@@ -123,8 +123,8 @@ impl PyKeplerian {
         })
     }
 
-    fn time(&self) -> PyEpoch {
-        PyEpoch(self.state.time())
+    fn time(&self) -> PyTime {
+        PyTime(self.state.time())
     }
 
     fn reference_frame(&self) -> String {
@@ -180,7 +180,7 @@ mod tests {
 
     #[test]
     fn test_cartesian() {
-        let epoch = PyEpoch::new(
+        let epoch = PyTime::new(
             "TDB",
             2023,
             3,
@@ -244,7 +244,7 @@ mod tests {
 
     #[test]
     fn test_keplerian() {
-        let epoch = PyEpoch::new(
+        let epoch = PyTime::new(
             "TDB",
             2023,
             3,
