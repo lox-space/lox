@@ -67,18 +67,94 @@ impl Into<i64> for PerMille {
 }
 
 #[cfg(test)]
-mod per_mille_tests {
+mod tests {
+    use crate::errors::LoxError;
     use crate::time::PerMille;
 
     #[test]
-    fn test_new_valid() {
-        assert!(PerMille::new(0).is_ok());
-        assert!(PerMille::new(999).is_ok());
+    fn test_per_mille_new() {
+        struct TestCase {
+            desc: &'static str,
+            input: u16,
+            expected: Result<PerMille, LoxError>,
+        }
+
+        let test_cases = [
+            TestCase {
+                desc: "on lower bound",
+                input: 0,
+                expected: Ok(PerMille(0)),
+            },
+            TestCase {
+                desc: "between bounds",
+                input: 1,
+                expected: Ok(PerMille(1)),
+            },
+            TestCase {
+                desc: "on upper bound",
+                input: 999,
+                expected: Ok(PerMille(999)),
+            },
+            TestCase {
+                desc: "above upper bound",
+                input: 1000,
+                expected: Err(LoxError::InvalidPerMille(1000)),
+            },
+        ];
+
+        for tc in test_cases {
+            let actual = PerMille::new(tc.input);
+            assert_eq!(
+                actual, tc.expected,
+                "expected {:?} when input is {:?}, but got {:?}",
+                tc.expected, tc.input, tc.desc
+            );
+        }
     }
 
     #[test]
-    fn test_new_invalid() {
-        assert!(PerMille::new(1000).is_err());
-        assert!(PerMille::new(1001).is_err());
+    fn test_per_mille_display() {
+        struct TestCase {
+            input: PerMille,
+            expected: &'static str,
+        }
+
+        let test_cases = [
+            TestCase {
+                input: PerMille(1),
+                expected: "001",
+            },
+            TestCase {
+                input: PerMille(11),
+                expected: "011",
+            },
+            TestCase {
+                input: PerMille(111),
+                expected: "111",
+            },
+        ];
+
+        for tc in test_cases {
+            let actual = format!("{}", tc.input);
+            assert_eq!(
+                actual, tc.expected,
+                "expected {:?} when input is {:?}, but got {:?}",
+                tc.expected, tc.input, actual,
+            );
+        }
+    }
+
+    #[test]
+    fn test_per_mille_try_from() {
+        assert_eq!(PerMille::try_from(0), Ok(PerMille(0)));
+        assert_eq!(
+            PerMille::try_from(1000),
+            Err(LoxError::InvalidPerMille(1000))
+        );
+    }
+
+    #[test]
+    fn test_per_mille_into_i64() {
+        assert_eq!(Into::<i64>::into(PerMille(0)), 0i64);
     }
 }

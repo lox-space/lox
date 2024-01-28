@@ -975,147 +975,182 @@ mod tests {
     }
 
     #[test]
-    fn test_raw_time_add_time_delta_positive_time_no_attosecond_wrap() {
-        let delta = TimeDelta {
-            seconds: 1,
-            attoseconds: 1,
-        };
-        let time = RawTime {
-            seconds: 1,
-            attoseconds: 0,
-        };
-        let expected = RawTime {
-            seconds: 2,
-            attoseconds: 1,
-        };
-        let actual = time + delta;
-        assert_eq!(expected, actual);
+    fn test_raw_time_add_time_delta() {
+        struct TestCase {
+            desc: &'static str,
+            delta: TimeDelta,
+            time: RawTime,
+            expected: RawTime,
+        }
+
+        let test_cases = [
+            TestCase {
+                desc: "positive time with no attosecond wrap",
+                delta: TimeDelta {
+                    seconds: 1,
+                    attoseconds: 1,
+                },
+                time: RawTime {
+                    seconds: 1,
+                    attoseconds: 0,
+                },
+                expected: RawTime {
+                    seconds: 2,
+                    attoseconds: 1,
+                },
+            },
+            TestCase {
+                desc: "positive time with attosecond wrap",
+                delta: TimeDelta {
+                    seconds: 1,
+                    attoseconds: 2,
+                },
+                time: RawTime {
+                    seconds: 1,
+                    attoseconds: ATTOSECONDS_PER_SECOND - 1,
+                },
+                expected: RawTime {
+                    seconds: 3,
+                    attoseconds: 1,
+                },
+            },
+            TestCase {
+                desc: "negative time with no attosecond wrap",
+                delta: TimeDelta {
+                    seconds: 1,
+                    attoseconds: 1,
+                },
+                time: RawTime {
+                    seconds: -1,
+                    attoseconds: 0,
+                },
+                expected: RawTime {
+                    seconds: 0,
+                    attoseconds: 1,
+                },
+            },
+            TestCase {
+                desc: "negative time with attosecond wrap",
+                delta: TimeDelta {
+                    seconds: 1,
+                    attoseconds: 2,
+                },
+                time: RawTime {
+                    seconds: -1,
+                    attoseconds: ATTOSECONDS_PER_SECOND - 1,
+                },
+                expected: RawTime {
+                    seconds: 1,
+                    attoseconds: 1,
+                },
+            },
+        ];
+
+        for tc in test_cases {
+            let actual = tc.time + tc.delta;
+            assert_eq!(
+                actual, tc.expected,
+                "{}: expected {:?}, got {:?}",
+                tc.desc, tc.expected, actual
+            );
+        }
     }
 
     #[test]
-    fn test_raw_time_add_time_delta_positive_time_attosecond_wrap() {
-        let delta = TimeDelta {
-            seconds: 1,
-            attoseconds: 2,
-        };
-        let time = RawTime {
-            seconds: 1,
-            attoseconds: ATTOSECONDS_PER_SECOND - 1,
-        };
-        let expected = RawTime {
-            seconds: 3,
-            attoseconds: 1,
-        };
-        let actual = time + delta;
-        assert_eq!(expected, actual);
-    }
+    fn test_raw_time_sub_time_delta() {
+        struct TestCase {
+            desc: &'static str,
+            delta: TimeDelta,
+            time: RawTime,
+            expected: RawTime,
+        }
 
-    #[test]
-    fn test_raw_time_add_time_delta_negative_time_no_attosecond_wrap() {
-        let delta = TimeDelta {
-            seconds: 1,
-            attoseconds: 1,
-        };
-        let time = RawTime {
-            seconds: -1,
-            attoseconds: 0,
-        };
-        let expected = RawTime {
-            seconds: 0,
-            attoseconds: 1,
-        };
-        let actual = time + delta;
-        assert_eq!(expected, actual);
-    }
+        let test_cases = [
+            TestCase {
+                desc: "positive time with no attosecond wrap",
+                delta: TimeDelta {
+                    seconds: 1,
+                    attoseconds: 1,
+                },
+                time: RawTime {
+                    seconds: 2,
+                    attoseconds: 2,
+                },
+                expected: RawTime {
+                    seconds: 1,
+                    attoseconds: 1,
+                },
+            },
+            TestCase {
+                desc: "positive time with attosecond wrap",
+                delta: TimeDelta {
+                    seconds: 1,
+                    attoseconds: 2,
+                },
+                time: RawTime {
+                    seconds: 2,
+                    attoseconds: 1,
+                },
+                expected: RawTime {
+                    seconds: 0,
+                    attoseconds: ATTOSECONDS_PER_SECOND - 1,
+                },
+            },
+            TestCase {
+                desc: "negative time with no attosecond wrap",
+                delta: TimeDelta {
+                    seconds: 1,
+                    attoseconds: 1,
+                },
+                time: RawTime {
+                    seconds: -1,
+                    attoseconds: 2,
+                },
+                expected: RawTime {
+                    seconds: -2,
+                    attoseconds: 1,
+                },
+            },
+            TestCase {
+                desc: "negative time with attosecond wrap",
+                delta: TimeDelta {
+                    seconds: 1,
+                    attoseconds: 2,
+                },
+                time: RawTime {
+                    seconds: -1,
+                    attoseconds: 1,
+                },
+                expected: RawTime {
+                    seconds: -3,
+                    attoseconds: ATTOSECONDS_PER_SECOND - 1,
+                },
+            },
+            TestCase {
+                desc: "transition from positive to negative time",
+                delta: TimeDelta {
+                    seconds: 1,
+                    attoseconds: 2,
+                },
+                time: RawTime {
+                    seconds: 0,
+                    attoseconds: 1,
+                },
+                expected: RawTime {
+                    seconds: -2,
+                    attoseconds: ATTOSECONDS_PER_SECOND - 1,
+                },
+            },
+        ];
 
-    #[test]
-    fn test_raw_time_add_time_delta_negative_time_attosecond_wrap() {
-        let delta = TimeDelta {
-            seconds: 1,
-            attoseconds: 2,
-        };
-        let time = RawTime {
-            seconds: -1,
-            attoseconds: ATTOSECONDS_PER_SECOND - 1,
-        };
-        let expected = RawTime {
-            seconds: 1,
-            attoseconds: 1,
-        };
-        let actual = time + delta;
-        assert_eq!(expected, actual);
-    }
-
-    #[test]
-    fn test_raw_time_sub_time_delta_positive_time_no_attosecond_wrap() {
-        let delta = TimeDelta {
-            seconds: 1,
-            attoseconds: 1,
-        };
-        let time = RawTime {
-            seconds: 2,
-            attoseconds: 2,
-        };
-        let expected = RawTime {
-            seconds: 1,
-            attoseconds: 1,
-        };
-        let actual = time - delta;
-        assert_eq!(expected, actual);
-    }
-
-    #[test]
-    fn test_raw_time_sub_time_delta_positive_time_attosecond_wrap() {
-        let delta = TimeDelta {
-            seconds: 1,
-            attoseconds: 2,
-        };
-        let time = RawTime {
-            seconds: 2,
-            attoseconds: 1,
-        };
-        let expected = RawTime {
-            seconds: 0,
-            attoseconds: ATTOSECONDS_PER_SECOND - 1,
-        };
-        let actual = time - delta;
-        assert_eq!(expected, actual);
-    }
-
-    #[test]
-    fn test_raw_time_sub_time_delta_negative_time_no_attosecond_wrap() {
-        let delta = TimeDelta {
-            seconds: 1,
-            attoseconds: 1,
-        };
-        let time = RawTime {
-            seconds: -1,
-            attoseconds: 2,
-        };
-        let expected = RawTime {
-            seconds: -2,
-            attoseconds: 1,
-        };
-        let actual = time - delta;
-        assert_eq!(expected, actual);
-    }
-
-    #[test]
-    fn test_raw_time_sub_time_delta_negative_time_attosecond_wrap() {
-        let delta = TimeDelta {
-            seconds: 1,
-            attoseconds: 2,
-        };
-        let time = RawTime {
-            seconds: -1,
-            attoseconds: 1,
-        };
-        let expected = RawTime {
-            seconds: -3,
-            attoseconds: ATTOSECONDS_PER_SECOND - 1,
-        };
-        let actual = time - delta;
-        assert_eq!(expected, actual);
+        for tc in test_cases {
+            let actual = tc.time - tc.delta;
+            assert_eq!(
+                actual, tc.expected,
+                "{}: expected {:?}, got {:?}",
+                tc.desc, tc.expected, actual
+            );
+        }
     }
 
     #[test]

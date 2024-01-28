@@ -77,7 +77,7 @@ impl Display for UTC {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{:02}:{:02}:{:02}.{:03}.{:03}.{:03}.{:03}.{:03}.{:03} UTC",
+            "{:02}:{:02}:{:02}.{}.{}.{}.{}.{}.{} UTC",
             self.hour,
             self.minute,
             self.second,
@@ -306,6 +306,27 @@ mod tests {
         let time = UTC::new(12, 34, 56).expect("time should be valid");
         let expected = UTCDateTime { date, time };
         let actual = UTCDateTime::new(date, time);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_from_fractional_seconds() {
+        let hour = 0;
+        let minute = 0;
+        let second = 0.123_456_789_123_456_78;
+        let expected = UTC {
+            hour: 0,
+            minute: 0,
+            second: 0,
+            milli: PerMille(123),
+            micro: PerMille(456),
+            nano: PerMille(789),
+            pico: PerMille(123),
+            femto: PerMille(456),
+            atto: PerMille(780),
+        };
+        let actual =
+            UTC::from_fractional_seconds(hour, minute, second).expect("time should be valid");
         assert_eq!(expected, actual);
     }
 }
