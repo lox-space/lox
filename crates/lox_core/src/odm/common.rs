@@ -18,7 +18,7 @@ pub struct AngleUnits(#[serde(rename = "$text")] pub std::string::String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct AngleRange(#[serde(rename = "$text")] pub std::string::String);
+pub struct AngleRange(#[serde(rename = "$text")] pub f64);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
@@ -30,7 +30,7 @@ pub struct AngMomentumUnits(#[serde(rename = "$text")] pub std::string::String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct AngVelFrameType(#[serde(rename = "$text")] pub std::string::String);
+pub struct AngVelFrameType(#[serde(rename = "$text")] pub f64);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
@@ -50,7 +50,7 @@ pub struct GmUnits(#[serde(rename = "$text")] pub std::string::String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct InclinationRange(#[serde(rename = "$text")] pub std::string::String);
+pub struct InclinationRange(#[serde(rename = "$text")] pub f64);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
@@ -103,15 +103,15 @@ pub struct VecDouble {
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct Vec3Double(#[serde(rename = "$text")] pub std::string::String);
+pub struct Vec3Double(#[serde(rename = "$text")] pub f64);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct Vec6Double(#[serde(rename = "$text")] pub std::string::String);
+pub struct Vec6Double(#[serde(rename = "$text")] pub f64);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct Vec9Double(#[serde(rename = "$text")] pub std::string::String);
+pub struct Vec9Double(#[serde(rename = "$text")] pub f64);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
@@ -127,11 +127,11 @@ pub struct TimeSystemType(#[serde(rename = "$text")] pub std::string::String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct NegativeDouble(#[serde(rename = "$text")] pub std::string::String);
+pub struct NegativeDouble(#[serde(rename = "$text")] pub f64);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct NonNegativeDouble(#[serde(rename = "$text")] pub std::string::String);
+pub struct NonNegativeDouble(#[serde(rename = "$text")] pub f64);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
@@ -143,7 +143,7 @@ pub struct PercentType(#[serde(rename = "$text")] pub std::string::String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct PositiveDouble(#[serde(rename = "$text")] pub std::string::String);
+pub struct PositiveDouble(#[serde(rename = "$text")] pub f64);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]

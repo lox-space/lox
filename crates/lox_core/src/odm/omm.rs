@@ -323,36 +323,36 @@ mod test {
                                     },
                                 ),
                                 eccentricity: common::NonNegativeDouble(
-                                    "0.0005013".to_string(),
+                                    0.0005013,
                                 ),
                                 inclination: common::InclinationType {
                                     base: common::InclinationRange(
-                                        "3.0539".to_string(),
+                                        3.0539,
                                     ),
                                     units: None,
                                 },
                                 ra_of_asc_node: common::AngleType {
                                     base: common::AngleRange(
-                                        "81.7939".to_string(),
+                                        81.7939,
                                     ),
                                     units: None,
                                 },
                                 arg_of_pericenter: common::AngleType {
                                     base: common::AngleRange(
-                                        "249.2363".to_string(),
+                                        249.2363,
                                     ),
                                     units: None,
                                 },
                                 mean_anomaly: common::AngleType {
                                     base: common::AngleRange(
-                                        "150.1602".to_string(),
+                                        150.1602,
                                     ),
                                     units: None,
                                 },
                                 gm: Some(
                                     common::GmType {
                                         base: common::PositiveDouble(
-                                            "398600.8".to_string(),
+                                            398600.8,
                                         ),
                                         units: None,
                                     },
@@ -537,29 +537,29 @@ mod test {
                                     },
                                 ),
                                 eccentricity: common::NonNegativeDouble(
-                                    ".0205751".to_string(),
+                                    0.0205751,
                                 ),
                                 inclination: common::InclinationType {
                                     base: common::InclinationRange(
-                                        "49.8237".to_string(),
+                                        49.8237,
                                     ),
                                     units: None,
                                 },
                                 ra_of_asc_node: common::AngleType {
                                     base: common::AngleRange(
-                                        "93.8140".to_string(),
+                                        93.8140,
                                     ),
                                     units: None,
                                 },
                                 arg_of_pericenter: common::AngleType {
                                     base: common::AngleRange(
-                                        "224.8348".to_string(),
+                                        224.8348,
                                     ),
                                     units: None,
                                 },
                                 mean_anomaly: common::AngleType {
                                     base: common::AngleRange(
-                                        "133.5761".to_string(),
+                                        133.5761,
                                     ),
                                     units: None,
                                 },
@@ -732,36 +732,36 @@ mod test {
                                     },
                                 ),
                                 eccentricity: common::NonNegativeDouble(
-                                    "0.0005013".to_string(),
+                                    0.0005013,
                                 ),
                                 inclination: common::InclinationType {
                                     base: common::InclinationRange(
-                                        "3.0539".to_string(),
+                                        3.0539,
                                     ),
                                     units: None,
                                 },
                                 ra_of_asc_node: common::AngleType {
                                     base: common::AngleRange(
-                                        "81.7939".to_string(),
+                                        81.7939,
                                     ),
                                     units: None,
                                 },
                                 arg_of_pericenter: common::AngleType {
                                     base: common::AngleRange(
-                                        "249.2363".to_string(),
+                                        249.2363,
                                     ),
                                     units: None,
                                 },
                                 mean_anomaly: common::AngleType {
                                     base: common::AngleRange(
-                                        "150.1602".to_string(),
+                                        150.1602,
                                     ),
                                     units: None,
                                 },
                                 gm: Some(
                                     common::GmType {
                                         base: common::PositiveDouble(
-                                            "398600.8".to_string(),
+                                            398600.8,
                                         ),
                                         units: None,
                                     },
@@ -1030,11 +1030,11 @@ mod test {
                                     },
                                 ),
                                 eccentricity: common::NonNegativeDouble(
-                                    "0.0005013".to_string(),
+                                    0.0005013,
                                 ),
                                 inclination: common::InclinationType {
                                     base: common::InclinationRange(
-                                        "3.0539".to_string(),
+                                        3.0539,
                                     ),
                                     units: Some(
                                         common::AngleUnits(
@@ -1044,7 +1044,7 @@ mod test {
                                 },
                                 ra_of_asc_node: common::AngleType {
                                     base: common::AngleRange(
-                                        "81.7939".to_string(),
+                                        81.7939,
                                     ),
                                     units: Some(
                                         common::AngleUnits(
@@ -1054,7 +1054,7 @@ mod test {
                                 },
                                 arg_of_pericenter: common::AngleType {
                                     base: common::AngleRange(
-                                        "249.2363".to_string(),
+                                        249.2363,
                                     ),
                                     units: Some(
                                         common::AngleUnits(
@@ -1064,7 +1064,7 @@ mod test {
                                 },
                                 mean_anomaly: common::AngleType {
                                     base: common::AngleRange(
-                                        "150.1602".to_string(),
+                                        150.1602,
                                     ),
                                     units: Some(
                                         common::AngleUnits(
@@ -1075,7 +1075,7 @@ mod test {
                                 gm: Some(
                                     common::GmType {
                                         base: common::PositiveDouble(
-                                            "398600.8".to_string(),
+                                            398600.8,
                                         ),
                                         units: None,
                                     },
