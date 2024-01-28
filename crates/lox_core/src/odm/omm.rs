@@ -221,7 +221,7 @@ mod test {
     use quick_xml::de::from_str;
 
     #[test]
-    fn test_parse_omm_message() {
+    fn test_parse_omm_message1() {
         let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
 <omm xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://cwe.ccsds.org/moims/docs/MOIMS-NAV/Schemas/ndmxml-1.0-master.xsd"
@@ -443,6 +443,168 @@ mod test {
                                     ],
                                 },
                             ),
+                        },
+                    },
+                },
+                id: "CCSDS_OMM_VERS".to_string(),
+                version: "2.0".to_string(),
+            });
+    }
+
+    #[test]
+    fn test_parse_omm_message2() {
+        let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<omm id="CCSDS_OMM_VERS" version="2.0">
+    <header>
+    <CREATION_DATE>2021-03-24T23:00:00.000</CREATION_DATE>
+    <ORIGINATOR>CelesTrak</ORIGINATOR>
+    </header>
+    <body>
+    <segment>
+        <metadata>
+        <OBJECT_NAME>STARLETTE</OBJECT_NAME>
+        <OBJECT_ID></OBJECT_ID>
+        <CENTER_NAME>EARTH</CENTER_NAME>
+        <REF_FRAME>TEME</REF_FRAME>
+        <TIME_SYSTEM>UTC</TIME_SYSTEM>
+        <MEAN_ELEMENT_THEORY>SGP4</MEAN_ELEMENT_THEORY>
+        </metadata>
+        <data>
+        <meanElements>
+            <EPOCH>2021-03-22T13:21:09.224928</EPOCH>
+            <MEAN_MOTION>13.82309053</MEAN_MOTION>
+            <ECCENTRICITY>.0205751</ECCENTRICITY>
+            <INCLINATION>49.8237</INCLINATION>
+            <RA_OF_ASC_NODE>93.8140</RA_OF_ASC_NODE>
+            <ARG_OF_PERICENTER>224.8348</ARG_OF_PERICENTER>
+            <MEAN_ANOMALY>133.5761</MEAN_ANOMALY>
+        </meanElements>
+        <tleParameters>
+            <EPHEMERIS_TYPE>0</EPHEMERIS_TYPE>
+            <CLASSIFICATION_TYPE>U</CLASSIFICATION_TYPE>
+            <NORAD_CAT_ID>7646</NORAD_CAT_ID>
+            <ELEMENT_SET_NO>999</ELEMENT_SET_NO>
+            <REV_AT_EPOCH>32997</REV_AT_EPOCH>
+            <BSTAR>-.47102E-5</BSTAR>
+            <MEAN_MOTION_DOT>-.147E-5</MEAN_MOTION_DOT>
+            <MEAN_MOTION_DDOT>0</MEAN_MOTION_DDOT>
+        </tleParameters>
+        </data>
+    </segment>
+    </body>
+</omm>"#;
+
+        let message: OmmType = from_str(xml).unwrap();
+
+        assert_eq!(message, 
+            OmmType {
+                header: common::OdmHeader {
+                    comment_list: vec![],
+                    classification_list: vec![],
+                    creation_date: common::EpochType(
+                        "2021-03-24T23:00:00.000".to_string(),
+                    ),
+                    originator: "CelesTrak".to_string(),
+                    message_id: None,
+                },
+                body: OmmBody {
+                    segment: OmmSegment {
+                        metadata: OmmMetadata {
+                            comment_list: vec![],
+                            object_name: "STARLETTE".to_string(),
+                            object_id: "".to_string(),
+                            center_name: "EARTH".to_string(),
+                            ref_frame: "TEME".to_string(),
+                            ref_frame_epoch: None,
+                            time_system: "UTC".to_string(),
+                            mean_element_theory: "SGP4".to_string(),
+                        },
+                        data: OmmData {
+                            comment_list: vec![],
+                            mean_elements: MeanElementsType {
+                                comment_list: vec![],
+                                epoch: common::EpochType(
+                                    "2021-03-22T13:21:09.224928".to_string(),
+                                ),
+                                semi_major_axis: None,
+                                mean_motion: Some(
+                                    RevType {
+                                        base: 13.82309053,
+                                        units: None,
+                                    },
+                                ),
+                                eccentricity: common::NonNegativeDouble(
+                                    ".0205751".to_string(),
+                                ),
+                                inclination: common::InclinationType {
+                                    base: common::InclinationRange(
+                                        "49.8237".to_string(),
+                                    ),
+                                    units: None,
+                                },
+                                ra_of_asc_node: common::AngleType {
+                                    base: common::AngleRange(
+                                        "93.8140".to_string(),
+                                    ),
+                                    units: None,
+                                },
+                                arg_of_pericenter: common::AngleType {
+                                    base: common::AngleRange(
+                                        "224.8348".to_string(),
+                                    ),
+                                    units: None,
+                                },
+                                mean_anomaly: common::AngleType {
+                                    base: common::AngleRange(
+                                        "133.5761".to_string(),
+                                    ),
+                                    units: None,
+                                },
+                                gm: None,
+                            },
+                            spacecraft_parameters: None,
+                            tle_parameters: Some(
+                                TleParametersType {
+                                    comment_list: vec![],
+                                    ephemeris_type: Some(
+                                        0,
+                                    ),
+                                    classification_type: Some(
+                                        "U".to_string(),
+                                    ),
+                                    norad_cat_id: Some(
+                                        7646,
+                                    ),
+                                    element_set_no: Some(
+                                        ElementSetNoType(
+                                            "999".to_string(),
+                                        ),
+                                    ),
+                                    rev_at_epoch: Some(
+                                        32997,
+                                    ),
+                                    bstar: Some(
+                                        BStarType {
+                                            base: -4.7102e-6,
+                                            units: None,
+                                        },
+                                    ),
+                                    bterm: None,
+                                    mean_motion_dot: DRevType {
+                                        base: -1.47e-6,
+                                        units: None,
+                                    },
+                                    mean_motion_ddot: Some(
+                                        DRevType {
+                                            base: 0.0,
+                                            units: None,
+                                        },
+                                    ),
+                                    agom: None,
+                                },
+                            ),
+                            covariance_matrix: None,
+                            user_defined_parameters: None,
                         },
                     },
                 },
