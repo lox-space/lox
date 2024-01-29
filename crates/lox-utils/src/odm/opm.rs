@@ -142,55 +142,64 @@ mod test {
     <body>
     <segment>
         <metadata>
-        <COMMENT>GEOCENTRIC, CARTESIAN, EARTH FIXED</COMMENT>
-        <OBJECT_NAME>OSPREY 5</OBJECT_NAME>
-        <OBJECT_ID>1998-999A</OBJECT_ID>
-        <CENTER_NAME>EARTH</CENTER_NAME>
-        <REF_FRAME>TOD</REF_FRAME>
-        <REF_FRAME_EPOCH>1998-12-18T14:28:15.1172</REF_FRAME_EPOCH>
-        <TIME_SYSTEM>UTC</TIME_SYSTEM>
+            <COMMENT>GEOCENTRIC, CARTESIAN, EARTH FIXED</COMMENT>
+            <OBJECT_NAME>OSPREY 5</OBJECT_NAME>
+            <OBJECT_ID>1998-999A</OBJECT_ID>
+            <CENTER_NAME>EARTH</CENTER_NAME>
+            <REF_FRAME>TOD</REF_FRAME>
+            <REF_FRAME_EPOCH>1998-12-18T14:28:15.1172</REF_FRAME_EPOCH>
+            <TIME_SYSTEM>UTC</TIME_SYSTEM>
         </metadata>
         <data>
-        <stateVector>
-            <EPOCH>1996-12-18T14:28:15.1172</EPOCH>
-            <X>6503.514000</X>
-            <Y>1239.647000</Y>
-            <Z>-717.490000</Z>
-            <X_DOT>-0.873160</X_DOT>
-            <Y_DOT>8.740420</Y_DOT>
-            <Z_DOT>-4.191076</Z_DOT>
-        </stateVector>
-        <spacecraftParameters>
-            <MASS>3000.000000</MASS>
-            <SOLAR_RAD_AREA>18.770000</SOLAR_RAD_AREA>
-            <SOLAR_RAD_COEFF>1.000000</SOLAR_RAD_COEFF>
-            <DRAG_AREA>18.770000</DRAG_AREA>
-            <DRAG_COEFF>2.500000</DRAG_COEFF>
-        </spacecraftParameters>
-        <covarianceMatrix>
-            <COV_REF_FRAME>ITRF1997</COV_REF_FRAME>
-            <CX_X>0.316</CX_X>
-            <CY_X>0.722</CY_X>
-            <CY_Y>0.518</CY_Y>
-            <CZ_X>0.202</CZ_X>
-            <CZ_Y>0.715</CZ_Y>
-            <CZ_Z>0.002</CZ_Z>
-            <CX_DOT_X>0.912</CX_DOT_X>
-            <CX_DOT_Y>0.306</CX_DOT_Y>
-            <CX_DOT_Z>0.276</CX_DOT_Z>
-            <CX_DOT_X_DOT>0.797</CX_DOT_X_DOT>
-            <CY_DOT_X>0.562</CY_DOT_X>
-            <CY_DOT_Y>0.899</CY_DOT_Y>
-            <CY_DOT_Z>0.022</CY_DOT_Z>
-            <CY_DOT_X_DOT>0.079</CY_DOT_X_DOT>
-            <CY_DOT_Y_DOT>0.415</CY_DOT_Y_DOT>
-            <CZ_DOT_X>0.245</CZ_DOT_X>
-            <CZ_DOT_Y>0.965</CZ_DOT_Y>
-            <CZ_DOT_Z>0.950</CZ_DOT_Z>
-            <CZ_DOT_X_DOT>0.435</CZ_DOT_X_DOT>
-            <CZ_DOT_Y_DOT>0.621</CZ_DOT_Y_DOT>
-            <CZ_DOT_Z_DOT>0.991</CZ_DOT_Z_DOT>
-        </covarianceMatrix>
+            <stateVector>
+                <EPOCH>2008-09-20T12:25:40.104192</EPOCH>
+                <X units="km">4086.147180</X>
+                <Y units="km">-994.936814</Y>
+                <Z units="km">5250.678791</Z>
+                <X_DOT units="km/s">2.511071</X_DOT>
+                <Y_DOT units="km/s">7.255240</Y_DOT>
+                <Z_DOT units="km/s">-0.583165</Z_DOT>
+            </stateVector>
+            <keplerianElements>
+                <SEMI_MAJOR_AXIS units="km">6730.96</SEMI_MAJOR_AXIS>
+                <ECCENTRICITY>0.0006703</ECCENTRICITY>
+                <INCLINATION units="deg">51.6416</INCLINATION>
+                <RA_OF_ASC_NODE units="deg">247.463</RA_OF_ASC_NODE>
+                <ARG_OF_PERICENTER units="deg">130.536</ARG_OF_PERICENTER>
+                <TRUE_ANOMALY units="deg">324.985</TRUE_ANOMALY>
+                <GM units="km**3/s**2">398600.9368</GM>
+            </keplerianElements>
+            <spacecraftParameters>
+                <MASS>3000.000000</MASS>
+                <SOLAR_RAD_AREA>18.770000</SOLAR_RAD_AREA>
+                <SOLAR_RAD_COEFF>1.000000</SOLAR_RAD_COEFF>
+                <DRAG_AREA>18.770000</DRAG_AREA>
+                <DRAG_COEFF>2.500000</DRAG_COEFF>
+            </spacecraftParameters>
+            <covarianceMatrix>
+                <COV_REF_FRAME>ITRF1997</COV_REF_FRAME>
+                <CX_X>0.316</CX_X>
+                <CY_X>0.722</CY_X>
+                <CY_Y>0.518</CY_Y>
+                <CZ_X>0.202</CZ_X>
+                <CZ_Y>0.715</CZ_Y>
+                <CZ_Z>0.002</CZ_Z>
+                <CX_DOT_X>0.912</CX_DOT_X>
+                <CX_DOT_Y>0.306</CX_DOT_Y>
+                <CX_DOT_Z>0.276</CX_DOT_Z>
+                <CX_DOT_X_DOT>0.797</CX_DOT_X_DOT>
+                <CY_DOT_X>0.562</CY_DOT_X>
+                <CY_DOT_Y>0.899</CY_DOT_Y>
+                <CY_DOT_Z>0.022</CY_DOT_Z>
+                <CY_DOT_X_DOT>0.079</CY_DOT_X_DOT>
+                <CY_DOT_Y_DOT>0.415</CY_DOT_Y_DOT>
+                <CZ_DOT_X>0.245</CZ_DOT_X>
+                <CZ_DOT_Y>0.965</CZ_DOT_Y>
+                <CZ_DOT_Z>0.950</CZ_DOT_Z>
+                <CZ_DOT_X_DOT>0.435</CZ_DOT_X_DOT>
+                <CZ_DOT_Y_DOT>0.621</CZ_DOT_Y_DOT>
+                <CZ_DOT_Z_DOT>0.991</CZ_DOT_Z_DOT>
+            </covarianceMatrix>
         </data>
     </segment>
     </body>
@@ -225,33 +234,61 @@ mod test {
                             comment_list: vec![],
                             state_vector: common::StateVectorType {
                                 comment_list: vec![],
-                                epoch: common::EpochType("1996-12-18T14:28:15.1172".to_string(),),
+                                epoch: common::EpochType("2008-09-20T12:25:40.104192".to_string(),),
                                 x: common::PositionType {
-                                    base: 6503.514,
-                                    units: None,
+                                    base: 4086.14718,
+                                    units: Some(common::PositionUnits("km".to_string(),),),
                                 },
                                 y: common::PositionType {
-                                    base: 1239.647,
-                                    units: None,
+                                    base: -994.936814,
+                                    units: Some(common::PositionUnits("km".to_string(),),),
                                 },
                                 z: common::PositionType {
-                                    base: -717.49,
-                                    units: None,
+                                    base: 5250.678791,
+                                    units: Some(common::PositionUnits("km".to_string(),),),
                                 },
                                 x_dot: common::VelocityType {
-                                    base: -0.87316,
-                                    units: None,
+                                    base: 2.511071,
+                                    units: Some(common::VelocityUnits("km/s".to_string(),),),
                                 },
                                 y_dot: common::VelocityType {
-                                    base: 8.74042,
-                                    units: None,
+                                    base: 7.25524,
+                                    units: Some(common::VelocityUnits("km/s".to_string(),),),
                                 },
                                 z_dot: common::VelocityType {
-                                    base: -4.191076,
-                                    units: None,
+                                    base: -0.583165,
+                                    units: Some(common::VelocityUnits("km/s".to_string(),),),
                                 },
                             },
-                            keplerian_elements: None,
+                            keplerian_elements: Some(KeplerianElementsType {
+                                comment_list: vec![],
+                                semi_major_axis: common::DistanceType {
+                                    base: 6730.96,
+                                    units: Some(common::PositionUnits("km".to_string(),),),
+                                },
+                                eccentricity: common::NonNegativeDouble(0.0006703,),
+                                inclination: common::InclinationType {
+                                    base: common::InclinationRange(51.6416,),
+                                    units: Some(common::AngleUnits("deg".to_string(),),),
+                                },
+                                ra_of_asc_node: common::AngleType {
+                                    base: common::AngleRange(247.463,),
+                                    units: Some(common::AngleUnits("deg".to_string(),),),
+                                },
+                                arg_of_pericenter: common::AngleType {
+                                    base: common::AngleRange(130.536,),
+                                    units: Some(common::AngleUnits("deg".to_string(),),),
+                                },
+                                true_anomaly: Some(common::AngleType {
+                                    base: common::AngleRange(324.985,),
+                                    units: Some(common::AngleUnits("deg".to_string(),),),
+                                },),
+                                mean_anomaly: None,
+                                gm: common::GmType {
+                                    base: common::PositiveDouble(398600.9368,),
+                                    units: Some(common::GmUnits("km**3/s**2".to_string(),),),
+                                },
+                            },),
                             spacecraft_parameters: Some(common::SpacecraftParametersType {
                                 comment_list: vec![],
                                 mass: Some(common::MassType {
