@@ -367,4 +367,40 @@ mod test {
             }
         );
     }
+
+    #[test]
+    fn test_parse_opm_message_spurious() {
+        let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<opm  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://sanaregistry.org/r/ndmxml/ndmxml-1.0-master.xsd"
+        id="CCSDS_OPM_VERS" version="3.0">
+
+    <header>
+    <COMMENT>THIS IS AN XML VERSION OF THE OPM</COMMENT>
+    <CREATION_DATE>2001-11-06T09:23:57</CREATION_DATE>
+    <ORIGINATOR>JAXA</ORIGINATOR>
+    <MESSAGE_ID>OPM 201113719185</MESSAGE_ID>
+    </header>
+    <body>
+    <segment>
+        <metadata>
+        <COMMENT>GEOCENTRIC, CARTESIAN, EARTH FIXED</COMMENT>
+        <OBJECT_NAME>OSPREY 5</OBJECT_NAME>
+        <OBJECT_ID>1998-999A</OBJECT_ID>
+        <CENTER_NAME>EARTH</CENTER_NAME>
+        <REF_FRAME>TOD</REF_FRAME>
+        <REF_FRAME_EPOCH>1998-12-18T14:28:15.1172</REF_FRAME_EPOCH>
+        <TIME_SYSTEM>UTC</TIME_SYSTEM>
+        </metadata>
+        <metadata>
+        <COMMENT>second metadata is an error</COMMENT>
+        </metadata>
+    </segment>
+    </body>
+</opm>"#;
+
+        let message: Result<OpmType, _> = from_str(xml);
+
+        assert!(message.is_err());
+    }
 }
