@@ -544,3 +544,445 @@ pub struct OcmOdParametersType {
     #[serde(rename = "DATA_TYPES")]
     pub data_types: Option<String>,
 }
+
+mod test {
+    use super::*;
+
+    use quick_xml::de::from_str;
+
+    #[test]
+    fn test_parse_ocm_message() {
+        let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<ocm  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="http://sanaregistry.org/r/ndmxml/ndmxml-1.0-master.xsd"
+      id="CCSDS_OCM_VERS" version="3.0">
+  <header>
+    <COMMENT>ODM V.3 Example G-2</COMMENT>
+    <COMMENT>OCM example with space object characteristics and perturbations.</COMMENT>
+    <COMMENT>This OCM reflects the latest conditions post-maneuver A67Z</COMMENT>
+    <COMMENT>This example shows the specification of multiple comment lines</COMMENT>
+    <CREATION_DATE>1998-11-06T09:23:57</CREATION_DATE>
+    <ORIGINATOR>JAXA</ORIGINATOR>
+    <MESSAGE_ID>OCM 201113719185</MESSAGE_ID>
+  </header>
+  <body>
+    <segment>
+      <metadata>
+        <INTERNATIONAL_DESIGNATOR>1998-999A</INTERNATIONAL_DESIGNATOR>
+        <ORIGINATOR_POC>R. Rabbit</ORIGINATOR_POC>
+        <ORIGINATOR_POSITION>Flight Dynamics Mission Design Lead</ORIGINATOR_POSITION>
+        <ORIGINATOR_PHONE>(719)555-1234</ORIGINATOR_PHONE>
+        <TECH_POC>Mr. Rodgers</TECH_POC>
+        <TECH_PHONE>(719)555-1234</TECH_PHONE>
+        <TECH_ADDRESS>email@email.XXX</TECH_ADDRESS>
+        <TIME_SYSTEM>UT1</TIME_SYSTEM>
+        <EPOCH_TZERO>1998-12-18T00:00:00.0000</EPOCH_TZERO>
+        <TAIMUTC_AT_TZERO units="s">36</TAIMUTC_AT_TZERO>
+        <UT1MUTC_AT_TZERO units="s">.357</UT1MUTC_AT_TZERO> 
+      </metadata>
+      <data>
+        <traj>
+           <COMMENT>GEOCENTRIC, CARTESIAN, EARTH FIXED</COMMENT>
+           <COMMENT>THIS IS MY SECOND COMMENT LINE</COMMENT>
+           <TRAJ_BASIS>PREDICTED</TRAJ_BASIS >
+           <TRAJ_REF_FRAME>EFG</TRAJ_REF_FRAME>
+           <TRAJ_TYPE>CARTPVA</TRAJ_TYPE>
+           <trajLine>0.0  2854.5 -2916.2 -5360.7 5.90 4.86 0.52 0.0037 -0.0038 -0.0070</trajLine>
+        </traj>
+        <phys>
+           <COMMENT>Spacecraft Physical Characteristics</COMMENT>
+           <WET_MASS units="kg">100.0</WET_MASS>
+           <OEB_Q1>0.03123</OEB_Q1>
+           <OEB_Q2>0.78543</OEB_Q2>
+           <OEB_Q3>0.39158</OEB_Q3>
+           <OEB_QC>0.47832</OEB_QC>
+           <OEB_MAX units="m">2.0</OEB_MAX>
+           <OEB_INT units="m">1.0</OEB_INT>
+           <OEB_MIN units="m">0.5</OEB_MIN>
+           <AREA_ALONG_OEB_MAX units="m**2">0.15</AREA_ALONG_OEB_MAX>
+           <AREA_ALONG_OEB_INT units="m**2">0.3</AREA_ALONG_OEB_INT>
+           <AREA_ALONG_OEB_MIN units="m**2">0.5</AREA_ALONG_OEB_MIN>
+        </phys>
+        <pert>
+           <COMMENT>Perturbations Specification</COMMENT>
+           <ATMOSPHERIC_MODEL>NRLMSIS00</ATMOSPHERIC_MODEL>
+           <GRAVITY_MODEL>EGM-96: 36D 36O</GRAVITY_MODEL>
+           <GM units="km**3/s**2">398600.4415</GM>
+           <N_BODY_PERTURBATIONS>MOON, SUN</N_BODY_PERTURBATIONS>
+           <FIXED_GEOMAG_KP>12.0</FIXED_GEOMAG_KP>
+           <FIXED_F10P7>105.0</FIXED_F10P7>
+           <FIXED_F10P7_MEAN>120.0</FIXED_F10P7_MEAN>
+        </pert>
+        <user>
+           <USER_DEFINED parameter="EARTH_MODEL">WGS-84</USER_DEFINED>
+        </user>
+      </data>
+    </segment>
+  </body>
+</ocm>"#;
+
+        let message: OcmType = from_str(xml).unwrap();
+
+        assert_eq!(message, OcmType {
+            header: common::OdmHeader {
+                comment_list: vec![
+                    "ODM V.3 Example G-2".to_string(),
+                    "OCM example with space object characteristics and perturbations.".to_string(),
+                    "This OCM reflects the latest conditions post-maneuver A67Z".to_string(),
+                    "This example shows the specification of multiple comment lines".to_string(),
+                ],
+                classification_list: vec![],
+                creation_date: common::EpochType(
+                    "1998-11-06T09:23:57".to_string(),
+                ),
+                originator: "JAXA".to_string(),
+                message_id: Some(
+                    "OCM 201113719185".to_string(),
+                ),
+            },
+            body: OcmBody {
+                segment: OcmSegment {
+                    metadata: OcmMetadata {
+                        comment_list: vec![],
+                        object_name: None,
+                        international_designator: Some(
+                            "1998-999A".to_string(),
+                        ),
+                        catalog_name: None,
+                        object_designator: None,
+                        alternate_names: None,
+                        originator_poc: Some(
+                            "R. Rabbit".to_string(),
+                        ),
+                        originator_position: Some(
+                            "Flight Dynamics Mission Design Lead".to_string(),
+                        ),
+                        originator_phone: Some(
+                            "(719)555-1234".to_string(),
+                        ),
+                        originator_email: None,
+                        originator_address: None,
+                        tech_org: None,
+                        tech_poc: Some(
+                            "Mr. Rodgers".to_string(),
+                        ),
+                        tech_position: None,
+                        tech_phone: Some(
+                            "(719)555-1234".to_string(),
+                        ),
+                        tech_email: None,
+                        tech_address: Some(
+                            "email@email.XXX".to_string(),
+                        ),
+                        previous_message_id: None,
+                        next_message_id: None,
+                        adm_msg_link: None,
+                        cdm_msg_link: None,
+                        prm_msg_link: None,
+                        rdm_msg_link: None,
+                        tdm_msg_link: None,
+                        operator: None,
+                        owner: None,
+                        country: None,
+                        constellation: None,
+                        object_type: None,
+                        time_system: "UT1".to_string(),
+                        epoch_tzero: common::EpochType(
+                            "1998-12-18T00:00:00.0000".to_string(),
+                        ),
+                        ops_status: None,
+                        orbit_category: None,
+                        ocm_data_elements: None,
+                        sclk_offset_at_epoch: None,
+                        sclk_sec_per_si_sec: None,
+                        previous_message_epoch: None,
+                        next_message_epoch: None,
+                        start_time: None,
+                        stop_time: None,
+                        time_span: None,
+                        taimutc_at_tzero: Some(
+                            common::TimeOffsetType {
+                                base: 36.0,
+                                units: Some(
+                                    common::TimeUnits(
+                                        "s".to_string(),
+                                    ),
+                                ),
+                            },
+                        ),
+                        next_leap_epoch: None,
+                        next_leap_taimutc: None,
+                        ut1mutc_at_tzero: Some(
+                            common::TimeOffsetType {
+                                base: 0.357,
+                                units: Some(
+                                    common::TimeUnits(
+                                        "s".to_string(),
+                                    ),
+                                ),
+                            },
+                        ),
+                        eop_source: None,
+                        interp_method_eop: None,
+                        celestial_source: None,
+                    },
+                    data: OcmData {
+                        traj_list: vec![
+                            OcmTrajStateType {
+                                comment_list: vec![
+                                    "GEOCENTRIC, CARTESIAN, EARTH FIXED".to_string(),
+                                    "THIS IS MY SECOND COMMENT LINE".to_string(),
+                                ],
+                                traj_id: None,
+                                traj_prev_id: None,
+                                traj_next_id: None,
+                                traj_basis: Some(
+                                    common::TrajBasisType(
+                                        "PREDICTED".to_string(),
+                                    ),
+                                ),
+                                traj_basis_id: None,
+                                interpolation: None,
+                                interpolation_degree: None,
+                                propagator: None,
+                                center_name: "".to_string(),
+                                traj_ref_frame: "EFG".to_string(),
+                                traj_frame_epoch: None,
+                                useable_start_time: None,
+                                useable_stop_time: None,
+                                orb_revnum: None,
+                                orb_revnum_basis: None,
+                                traj_type: "CARTPVA".to_string(),
+                                orb_averaging: None,
+                                traj_units: None,
+                                traj_line_list: vec![
+                                    "0.0  2854.5 -2916.2 -5360.7 5.90 4.86 0.52 0.0037 -0.0038 -0.0070".to_string(),
+                                ],
+                            },
+                        ],
+                        phys: Some(
+                            OcmPhysicalDescriptionType {
+                                comment_list: vec![
+                                    "Spacecraft Physical Characteristics".to_string(),
+                                ],
+                                manufacturer: None,
+                                bus_model: None,
+                                docked_with: None,
+                                drag_const_area: None,
+                                drag_coeff_nom: None,
+                                drag_uncertainty: None,
+                                initial_wet_mass: None,
+                                wet_mass: Some(
+                                    common::MassType {
+                                        base: common::NonNegativeDouble(
+                                            100.0,
+                                        ),
+                                        units: Some(
+                                            common::MassUnits(
+                                                "kg".to_string(),
+                                            ),
+                                        ),
+                                    },
+                                ),
+                                dry_mass: None,
+                                oeb_parent_frame: None,
+                                oeb_parent_frame_epoch: None,
+                                oeb_q1: Some(
+                                    0.03123,
+                                ),
+                                oeb_q2: Some(
+                                    0.78543,
+                                ),
+                                oeb_q3: Some(
+                                    0.39158,
+                                ),
+                                oeb_qc: Some(
+                                    0.47832,
+                                ),
+                                oeb_max: Some(
+                                    common::OcmLengthType {
+                                        base: 2.0,
+                                        units: Some(
+                                            common::LengthUnits(
+                                                "m".to_string(),
+                                            ),
+                                        ),
+                                    },
+                                ),
+                                oeb_int: Some(
+                                    common::OcmLengthType {
+                                        base: 1.0,
+                                        units: Some(
+                                            common::LengthUnits(
+                                                "m".to_string(),
+                                            ),
+                                        ),
+                                    },
+                                ),
+                                oeb_min: Some(
+                                    common::OcmLengthType {
+                                        base: 0.5,
+                                        units: Some(
+                                            common::LengthUnits(
+                                                "m".to_string(),
+                                            ),
+                                        ),
+                                    },
+                                ),
+                                area_along_oeb_max: Some(
+                                    common::AreaType {
+                                        base: common::NonNegativeDouble(
+                                            0.15,
+                                        ),
+                                        units: Some(
+                                            common::AreaUnits(
+                                                "m**2".to_string(),
+                                            ),
+                                        ),
+                                    },
+                                ),
+                                area_along_oeb_int: Some(
+                                    common::AreaType {
+                                        base: common::NonNegativeDouble(
+                                            0.3,
+                                        ),
+                                        units: Some(
+                                            common::AreaUnits(
+                                                "m**2".to_string(),
+                                            ),
+                                        ),
+                                    },
+                                ),
+                                area_along_oeb_min: Some(
+                                    common::AreaType {
+                                        base: common::NonNegativeDouble(
+                                            0.5,
+                                        ),
+                                        units: Some(
+                                            common::AreaUnits(
+                                                "m**2".to_string(),
+                                            ),
+                                        ),
+                                    },
+                                ),
+                                area_min_for_pc: None,
+                                area_max_for_pc: None,
+                                area_typ_for_pc: None,
+                                rcs: None,
+                                rcs_min: None,
+                                rcs_max: None,
+                                srp_const_area: None,
+                                solar_rad_coeff: None,
+                                solar_rad_uncertainty: None,
+                                vm_absolute: None,
+                                vm_apparent_min: None,
+                                vm_apparent: None,
+                                vm_apparent_max: None,
+                                reflectance: None,
+                                att_control_mode: None,
+                                att_actuator_type: None,
+                                att_knowledge: None,
+                                att_control: None,
+                                att_pointing: None,
+                                avg_maneuver_freq: None,
+                                max_thrust: None,
+                                dv_bol: None,
+                                dv_remaining: None,
+                                ixx: None,
+                                iyy: None,
+                                izz: None,
+                                ixy: None,
+                                ixz: None,
+                                iyz: None,
+                            },
+                        ),
+                        cov_list: vec![],
+                        man_list: vec![],
+                        pert: Some(
+                            OcmPerturbationsType {
+                                comment_list: vec![
+                                    "Perturbations Specification".to_string(),
+                                ],
+                                atmospheric_model: Some(
+                                    "NRLMSIS00".to_string(),
+                                ),
+                                gravity_model: Some(
+                                    "EGM-96: 36D 36O".to_string(),
+                                ),
+                                equatorial_radius: None,
+                                gm: Some(
+                                    common::GmType {
+                                        base: common::PositiveDouble(
+                                            398600.4415,
+                                        ),
+                                        units: Some(
+                                            common::GmUnits(
+                                                "km**3/s**2".to_string(),
+                                            ),
+                                        ),
+                                    },
+                                ),
+                                n_body_perturbations: Some(
+                                    "MOON, SUN".to_string(),
+                                ),
+                                central_body_rotation: None,
+                                oblate_flattening: None,
+                                ocean_tides_model: None,
+                                solid_tides_model: None,
+                                reduction_theory: None,
+                                albedo_model: None,
+                                albedo_grid_size: None,
+                                shadow_model: None,
+                                shadow_bodies: None,
+                                srp_model: None,
+                                sw_data_source: None,
+                                sw_data_epoch: None,
+                                sw_interp_method: None,
+                                fixed_geomag_kp: Some(
+                                    common::GeomagType {
+                                        base: 12.0,
+                                        units: None,
+                                    },
+                                ),
+                                fixed_geomag_ap: None,
+                                fixed_geomag_dst: None,
+                                fixed_f10p7: Some(
+                                    common::SolarFluxType {
+                                        base: 105.0,
+                                        units: None,
+                                    },
+                                ),
+                                fixed_f10p7_mean: Some(
+                                    common::SolarFluxType {
+                                        base: 120.0,
+                                        units: None,
+                                    },
+                                ),
+                                fixed_m10p7: None,
+                                fixed_m10p7_mean: None,
+                                fixed_s10p7: None,
+                                fixed_s10p7_mean: None,
+                                fixed_y10p7: None,
+                                fixed_y10p7_mean: None,
+                            },
+                        ),
+                        od: None,
+                        user: Some(
+                            common::UserDefinedType {
+                                comment_list: vec![],
+                                user_defined_list: vec![
+                                    common::UserDefinedParameterType {
+                                        base: "WGS-84".to_string(),
+                                        parameter: "EARTH_MODEL".to_string(),
+                                    },
+                                ],
+                            },
+                        ),
+                    },
+                },
+            },
+            id: "CCSDS_OCM_VERS".to_string(),
+            version: "3.0".to_string(),
+        });
+    }
+}
