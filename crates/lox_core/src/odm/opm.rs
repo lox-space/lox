@@ -200,12 +200,33 @@ mod test {
                 <CZ_DOT_Y_DOT>0.621</CZ_DOT_Y_DOT>
                 <CZ_DOT_Z_DOT>0.991</CZ_DOT_Z_DOT>
             </covarianceMatrix>
+            <maneuverParameters>
+                <COMMENT>Maneuver 1</COMMENT>
+                <MAN_EPOCH_IGNITION>2008-09-20T12:41:09.984493</MAN_EPOCH_IGNITION>
+                <MAN_DURATION units="s">180.000</MAN_DURATION>
+                <MAN_DELTA_MASS units="kg">-0.001</MAN_DELTA_MASS>
+                <MAN_REF_FRAME>RSW</MAN_REF_FRAME>
+                <MAN_DV_1 units="km/s">0.000000</MAN_DV_1>
+                <MAN_DV_2 units="km/s">0.280000</MAN_DV_2>
+                <MAN_DV_3 units="km/s">0.000000</MAN_DV_3>
+            </maneuverParameters>
+            <maneuverParameters>
+                <MAN_EPOCH_IGNITION>2008-09-20T13:33:11.374985</MAN_EPOCH_IGNITION>
+                <MAN_DURATION units="s">180.000</MAN_DURATION>
+                <MAN_DELTA_MASS units="kg">-0.001</MAN_DELTA_MASS>
+                <MAN_REF_FRAME>RSW</MAN_REF_FRAME>
+                <MAN_DV_1 units="km/s">0.000000</MAN_DV_1>
+                <MAN_DV_2 units="km/s">0.270000</MAN_DV_2>
+                <MAN_DV_3 units="km/s">0.000000</MAN_DV_3>
+            </maneuverParameters>
         </data>
     </segment>
     </body>
 </opm>"#;
 
         let message: OpmType = from_str(xml).unwrap();
+
+        println!("{:#?}", message);
 
         assert_eq!(
             message,
@@ -394,7 +415,62 @@ mod test {
                                     units: None,
                                 },
                             },),
-                            maneuver_parameters_list: vec![],
+                            maneuver_parameters_list: vec![
+                                ManeuverParametersType {
+                                    comment_list: vec!["Maneuver 1".to_string(),],
+                                    man_epoch_ignition: common::EpochType(
+                                        "2008-09-20T12:41:09.984493".to_string(),
+                                    ),
+                                    man_duration: common::DurationType {
+                                        base: common::NonNegativeDouble(180.0,),
+                                        units: Some(common::TimeUnits("s".to_string(),),),
+                                    },
+                                    man_delta_mass: common::DeltamassType {
+                                        base: common::NegativeDouble(-0.001,),
+                                        units: Some(common::MassUnits("kg".to_string(),),),
+                                    },
+                                    man_ref_frame: "RSW".to_string(),
+                                    man_dv_1: common::VelocityType {
+                                        base: 0.0,
+                                        units: Some(common::VelocityUnits("km/s".to_string(),),),
+                                    },
+                                    man_dv_2: common::VelocityType {
+                                        base: 0.28,
+                                        units: Some(common::VelocityUnits("km/s".to_string(),),),
+                                    },
+                                    man_dv_3: common::VelocityType {
+                                        base: 0.0,
+                                        units: Some(common::VelocityUnits("km/s".to_string(),),),
+                                    },
+                                },
+                                ManeuverParametersType {
+                                    comment_list: vec![],
+                                    man_epoch_ignition: common::EpochType(
+                                        "2008-09-20T13:33:11.374985".to_string(),
+                                    ),
+                                    man_duration: common::DurationType {
+                                        base: common::NonNegativeDouble(180.0,),
+                                        units: Some(common::TimeUnits("s".to_string(),),),
+                                    },
+                                    man_delta_mass: common::DeltamassType {
+                                        base: common::NegativeDouble(-0.001,),
+                                        units: Some(common::MassUnits("kg".to_string(),),),
+                                    },
+                                    man_ref_frame: "RSW".to_string(),
+                                    man_dv_1: common::VelocityType {
+                                        base: 0.0,
+                                        units: Some(common::VelocityUnits("km/s".to_string(),),),
+                                    },
+                                    man_dv_2: common::VelocityType {
+                                        base: 0.27,
+                                        units: Some(common::VelocityUnits("km/s".to_string(),),),
+                                    },
+                                    man_dv_3: common::VelocityType {
+                                        base: 0.0,
+                                        units: Some(common::VelocityUnits("km/s".to_string(),),),
+                                    },
+                                },
+                            ],
                             user_defined_parameters: None,
                         },
                     },
