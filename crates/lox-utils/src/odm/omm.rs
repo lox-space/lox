@@ -1256,13 +1256,14 @@ mod test {
         </metadata>
         <data>
         <meanElements>
-            <EPOCH>2021-03-22T13:21:09.224928</EPOCH>
-            <MEAN_MOTION>13.82309053</MEAN_MOTION>
-            <ECCENTRICITY>.0205751</ECCENTRICITY>
-            <INCLINATION>49.8237</INCLINATION>
-            <RA_OF_ASC_NODE>93.8140</RA_OF_ASC_NODE>
-            <ARG_OF_PERICENTER>224.8348</ARG_OF_PERICENTER>
-            <MEAN_ANOMALY>133.5761</MEAN_ANOMALY>
+            <EPOCH>2008-09-20T12:25:40.104192</EPOCH>
+            <MEAN_MOTION units="rev/day">15.72125391</MEAN_MOTION>
+            <ECCENTRICITY>0.0006703</ECCENTRICITY>
+            <INCLINATION units="deg">51.6416</INCLINATION>
+            <RA_OF_ASC_NODE units="deg">247.4627</RA_OF_ASC_NODE>
+            <ARG_OF_PERICENTER units="deg">130.5360</ARG_OF_PERICENTER>
+            <MEAN_ANOMALY units="deg">325.0288</MEAN_ANOMALY>
+            <GM units="km**3/s**2">398600.8</GM>
         </meanElements>
         <tleParameters>
             <EPHEMERIS_TYPE>0</EPHEMERIS_TYPE>
@@ -1311,43 +1312,74 @@ mod test {
                             mean_elements: MeanElementsType {
                                 comment_list: vec![],
                                 epoch: common::EpochType(
-                                    "2021-03-22T13:21:09.224928".to_string(),
+                                    "2008-09-20T12:25:40.104192".to_string(),
                                 ),
                                 semi_major_axis: None,
                                 mean_motion: Some(
                                     RevType {
-                                        base: 13.82309053,
-                                        units: None,
+                                        base: 15.72125391,
+                                        units: Some(
+                                            RevUnits(
+                                                "rev/day".to_string(),
+                                            ),
+                                        ),
                                     },
                                 ),
                                 eccentricity: common::NonNegativeDouble(
-                                    0.0205751,
+                                    0.0006703,
                                 ),
                                 inclination: common::InclinationType {
                                     base: common::InclinationRange(
-                                        49.8237,
+                                        51.6416,
                                     ),
-                                    units: None,
+                                    units: Some(
+                                        common::AngleUnits(
+                                            "deg".to_string(),
+                                        ),
+                                    ),
                                 },
                                 ra_of_asc_node: common::AngleType {
                                     base: common::AngleRange(
-                                        93.814,
+                                        247.4627,
                                     ),
-                                    units: None,
+                                    units: Some(
+                                        common::AngleUnits(
+                                            "deg".to_string(),
+                                        ),
+                                    ),
                                 },
                                 arg_of_pericenter: common::AngleType {
                                     base: common::AngleRange(
-                                        224.8348,
+                                        130.536,
                                     ),
-                                    units: None,
+                                    units: Some(
+                                        common::AngleUnits(
+                                            "deg".to_string(),
+                                        ),
+                                    ),
                                 },
                                 mean_anomaly: common::AngleType {
                                     base: common::AngleRange(
-                                        133.5761,
+                                        325.0288,
                                     ),
-                                    units: None,
+                                    units: Some(
+                                        common::AngleUnits(
+                                            "deg".to_string(),
+                                        ),
+                                    ),
                                 },
-                                gm: None,
+                                gm: Some(
+                                    common::GmType {
+                                        base: common::PositiveDouble(
+                                            398600.8,
+                                        ),
+                                        units: Some(
+                                            common::GmUnits(
+                                                "km**3/s**2".to_string(),
+                                            ),
+                                        ),
+                                    },
+                                ),
                             },
                             spacecraft_parameters: None,
                             tle_parameters: Some(
