@@ -453,7 +453,7 @@ mod tests {
     const TEST_DATA_DIR: &str = "../../data";
 
     /*
-     * This is the langrangian interpolation routine from
+     * This is the Langrangian interpolation routine from
      * ftp://hpiers.obspm.fr/iers/models/interp.f
      */
     fn lagint(x: &[i32], y: &[f64], xint: f64) -> f64 {
