@@ -12,6 +12,9 @@
 //!
 //! The supported timescales are specified by [TimeScale].
 
+mod tt;
+mod ut1;
+
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, Sub};
@@ -29,6 +32,9 @@ use crate::time::dates::Calendar::ProlepticJulian;
 use crate::time::dates::Date;
 use crate::time::utc::{UTCDateTime, UTC};
 use crate::time::{constants, WallClock};
+
+pub use tt::TT;
+pub use ut1::UT1;
 
 /// An absolute continuous time difference with attosecond precision.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -217,16 +223,9 @@ pub struct TCG(RawTime);
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
 pub struct TDB(RawTime);
 
-/// Terrestrial Time. Defaults to the J2000 epoch.
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
-pub struct TT(RawTime);
-
-/// Universal Time. Defaults to the J2000 epoch.
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
-pub struct UT1(RawTime);
-
-/// Implements the `WallClock` trait for the a time scale based on [RawTime] in terms of the underlying
+/// Implements the `WallClock` trait for a timescale based on [RawTime] in terms of the underlying
 /// raw time.
+#[macro_export]
 macro_rules! wall_clock {
     ($time_scale:ident, $test_module:ident) => {
         impl WallClock for $time_scale {
@@ -270,7 +269,7 @@ macro_rules! wall_clock {
         #[cfg(test)]
         mod $test_module {
             use super::{$time_scale, RawTime};
-            use crate::time::WallClock;
+            use $crate::time::WallClock;
 
             const RAW_TIME: RawTime = RawTime {
                 seconds: 1234,
@@ -332,8 +331,6 @@ wall_clock!(TAI, tai_wall_clock_tests);
 wall_clock!(TCB, tcb_wall_clock_tests);
 wall_clock!(TCG, tcg_wall_clock_tests);
 wall_clock!(TDB, tdb_wall_clock_tests);
-wall_clock!(TT, tt_wall_clock_tests);
-wall_clock!(UT1, ut1_wall_clock_tests);
 
 /// `Time` represents a time in any of the supported continuous timescales.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -397,8 +394,8 @@ impl Time {
             TimeScale::TCB => Time::TCB(TCB(raw)),
             TimeScale::TCG => Time::TCG(TCG(raw)),
             TimeScale::TDB => Time::TDB(TDB(raw)),
-            TimeScale::TT => Time::TT(TT(raw)),
-            TimeScale::UT1 => Time::UT1(UT1(raw)),
+            TimeScale::TT => Time::TT(TT::new(raw)),
+            TimeScale::UT1 => Time::UT1(UT1::new(raw)),
         }
     }
 
@@ -408,8 +405,8 @@ impl Time {
             Time::TCB(tcb) => tcb.0,
             Time::TCG(tcg) => tcg.0,
             Time::TDB(tdb) => tdb.0,
-            Time::TT(tt) => tt.0,
-            Time::UT1(ut1) => ut1.0,
+            Time::TT(tt) => tt.to_raw(),
+            Time::UT1(ut1) => ut1.to_raw(),
         }
     }
 
@@ -1240,14 +1237,14 @@ mod tests {
             ),
             (
                 TimeScale::TT,
-                Time::TT(TT(RawTime {
+                Time::TT(TT::new(RawTime {
                     seconds: -211813488000,
                     attoseconds: 0,
                 })),
             ),
             (
                 TimeScale::UT1,
-                Time::UT1(UT1(RawTime {
+                Time::UT1(UT1::new(RawTime {
                     seconds: -211813488000,
                     attoseconds: 0,
                 })),
