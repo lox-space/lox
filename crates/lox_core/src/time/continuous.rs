@@ -223,7 +223,7 @@ pub struct TCG(RawTime);
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
 pub struct TDB(RawTime);
 
-/// Implements the `WallClock` trait for a timescale based on [RawTime] in terms of the underlying
+/// Implements and tests the `WallClock` trait for a timescale based on [RawTime] in terms of the underlying
 /// raw time.
 #[macro_export]
 macro_rules! wall_clock {
