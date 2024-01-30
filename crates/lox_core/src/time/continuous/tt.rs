@@ -24,6 +24,7 @@ impl TT {
         Self(t)
     }
 
+    /// Convert from TT to UT1 given a user-supplied value for ΔT.
     pub fn to_ut1(&self, dt: TimeDelta) -> UT1 {
         UT1::new(self.0 - dt)
     }
