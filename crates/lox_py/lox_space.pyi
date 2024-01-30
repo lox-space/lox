@@ -1,4 +1,4 @@
-class Epoch:
+class Time:
     def __init__(
             self,
             scale: str,
