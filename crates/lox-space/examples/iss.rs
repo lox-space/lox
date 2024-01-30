@@ -13,8 +13,8 @@ fn main() {
     let date = Date::new(2016, 5, 30).unwrap();
     let utc = UTC::new(12, 0, 0).unwrap();
     let time = Time::from_date_and_utc_timestamp(TimeScale::TDB, date, utc);
-    let position = DVec3::new(6068279.27, -1692843.94, -2516619.18) * 1e-3;
-    let velocity = DVec3::new(-660.415582, 5495.938726, -5303.093233) * 1e-3;
+    let position = DVec3::new(6068.27927, -1692.84394, -2516.61918);
+    let velocity = DVec3::new(-0.660415582, 5.495938726, -5.303093233);
     let iss_cartesian = Cartesian::new(time, Earth, Icrf, position, velocity);
     let iss = Keplerian::from(iss_cartesian);
 

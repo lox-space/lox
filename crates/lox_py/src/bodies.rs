@@ -8,12 +8,13 @@
 
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
+use pyo3::types::PyTuple;
 
 use lox_core::bodies::*;
 
 use crate::LoxPyError;
 
-#[pyclass(name = "Sun")]
+#[pyclass(name = "Sun", module = "lox_space")]
 #[derive(Clone, Default)]
 pub struct PySun;
 
@@ -30,6 +31,16 @@ impl PySun {
 
     fn __str__(&self) -> &str {
         "Sun"
+    }
+
+    fn __eq__(&self, _other: &Self) -> bool {
+        true
+    }
+
+    fn __getnewargs__(&self) -> Py<PyTuple> {
+        // A unit return type would be converted to `None` on the Python side,
+        // but we actually want an empty tuple here.
+        Python::with_gil(|py| PyTuple::empty(py).into_py(py))
     }
 
     pub fn id(&self) -> i32 {
@@ -57,7 +68,7 @@ impl PySun {
     }
 }
 
-#[pyclass(name = "Barycenter")]
+#[pyclass(name = "Barycenter", module = "lox_space")]
 #[derive(Clone)]
 pub struct PyBarycenter(Box<dyn Barycenter + Send>);
 
@@ -94,6 +105,14 @@ impl PyBarycenter {
         self.name()
     }
 
+    fn __eq__(&self, other: &Self) -> bool {
+        self.id() == other.id()
+    }
+
+    fn __getnewargs__(&self) -> (&str,) {
+        (self.name(),)
+    }
+
     pub fn id(&self) -> i32 {
         self.0.id().0
     }
@@ -107,7 +126,7 @@ impl PyBarycenter {
     }
 }
 
-#[pyclass(name = "Planet")]
+#[pyclass(name = "Planet", module = "lox_space")]
 #[derive(Clone)]
 pub struct PyPlanet(Box<dyn Planet + Send>);
 
@@ -141,6 +160,14 @@ impl PyPlanet {
         self.name()
     }
 
+    fn __eq__(&self, other: &Self) -> bool {
+        self.id() == other.id()
+    }
+
+    fn __getnewargs__(&self) -> (&str,) {
+        (self.name(),)
+    }
+
     pub fn id(&self) -> i32 {
         self.0.id().0
     }
@@ -166,7 +193,7 @@ impl PyPlanet {
     }
 }
 
-#[pyclass(name = "Satellite")]
+#[pyclass(name = "Satellite", module = "lox_space")]
 #[derive(Clone)]
 pub struct PySatellite(Box<dyn Satellite + Send>);
 
@@ -231,6 +258,14 @@ impl PySatellite {
         self.name()
     }
 
+    fn __eq__(&self, other: &Self) -> bool {
+        self.id() == other.id()
+    }
+
+    fn __getnewargs__(&self) -> (&str,) {
+        (self.name(),)
+    }
+
     pub fn id(&self) -> i32 {
         self.0.id().0
     }
@@ -260,7 +295,7 @@ impl PySatellite {
     }
 }
 
-#[pyclass(name = "MinorBody")]
+#[pyclass(name = "MinorBody", module = "lox_space")]
 #[derive(Clone)]
 pub struct PyMinorBody(Box<dyn MinorBody + Send>);
 
@@ -288,6 +323,14 @@ impl PyMinorBody {
 
     fn __str__(&self) -> &str {
         self.name()
+    }
+
+    fn __eq__(&self, other: &Self) -> bool {
+        self.id() == other.id()
+    }
+
+    fn __getnewargs__(&self) -> (&str,) {
+        (self.name(),)
     }
 
     pub fn id(&self) -> i32 {
@@ -413,6 +456,10 @@ mod tests {
         assert_eq!(sun.mean_radius(), Sun.mean_radius());
         assert_eq!(sun.polar_radius(), Sun.polar_radius());
         assert_eq!(sun.equatorial_radius(), Sun.equatorial_radius());
+        assert!(sun.__eq__(&sun));
+        let sun_args = sun.__getnewargs__();
+        let empty: Py<PyTuple> = Python::with_gil(|py| PyTuple::empty(py).into_py(py));
+        assert!(sun_args.is(&empty));
     }
 
     #[rstest]
@@ -448,6 +495,8 @@ mod tests {
             py_barycenter.gravitational_parameter(),
             barycenter.gravitational_parameter()
         );
+        assert_eq!(py_barycenter.__getnewargs__(), (barycenter.name(),));
+        assert!(py_barycenter.__eq__(&py_barycenter));
     }
 
     #[test]
@@ -483,6 +532,8 @@ mod tests {
         assert_eq!(py_planet.mean_radius(), planet.mean_radius());
         assert_eq!(py_planet.polar_radius(), planet.polar_radius());
         assert_eq!(py_planet.equatorial_radius(), planet.equatorial_radius());
+        assert_eq!(py_planet.__getnewargs__(), (planet.name(),));
+        assert!(py_planet.__eq__(&py_planet));
     }
 
     #[test]
@@ -564,6 +615,8 @@ mod tests {
             py_satellite.along_orbit_radius(),
             satellite.along_orbit_radius()
         );
+        assert_eq!(py_satellite.__getnewargs__(), (satellite.name(),));
+        assert!(py_satellite.__eq__(&py_satellite));
     }
 
     #[test]
@@ -609,6 +662,8 @@ mod tests {
             py_minor_body.along_orbit_radius(),
             minor_body.along_orbit_radius()
         );
+        assert_eq!(py_minor_body.__getnewargs__(), (minor_body.name(),));
+        assert!(py_minor_body.__eq__(&py_minor_body));
     }
 
     #[test]
