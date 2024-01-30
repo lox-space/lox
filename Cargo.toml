@@ -15,7 +15,8 @@ authors = ["Helge Eichhorn and the lox-space contributors"]
 
 [workspace.dependencies]
 lox_core = { path = "./crates/lox_core" }
-lox_io = { path = "./crates/lox_io" }
-lox_py = { path = "./crates/lox_py" }
+float_eq = "1.0.1"
+proptest = "1.4.0"
+rstest = "0.18.2"
 thiserror = "1.0"
 

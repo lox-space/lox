@@ -3,20 +3,19 @@
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
 use crate::errors::LoxError;
-use num::ToPrimitive;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Calendar {
     ProlepticJulian,
     Julian,
     Gregorian,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Date {
     calendar: Calendar,
     year: i64,
@@ -28,6 +27,17 @@ const LAST_PROLEPTIC_JULIAN_DAY_J2K: i64 = -730122;
 const LAST_JULIAN_DAY_J2K: i64 = -152384;
 
 impl Date {
+    /// Create a Date from raw parts. This is particularly useful for generating test dates that
+    /// are known to be correct, without exposing the internals of the Date struct.
+    pub(crate) fn new_unchecked(calendar: Calendar, year: i64, month: i64, day: i64) -> Self {
+        Self {
+            calendar,
+            year,
+            month,
+            day,
+        }
+    }
+
     pub fn calendar(&self) -> Calendar {
         self.calendar
     }
@@ -91,121 +101,6 @@ impl Date {
 
     pub fn j2000(&self) -> i64 {
         j2000(self.calendar, self.year, self.month, self.day)
-    }
-}
-
-#[derive(Debug, Copy, Clone, Default)]
-pub struct Time {
-    hour: i64,
-    minute: i64,
-    second: i64,
-    milli: i64,
-    micro: i64,
-    nano: i64,
-    pico: i64,
-    femto: i64,
-    atto: i64,
-}
-
-impl Time {
-    pub fn new(hour: i64, minute: i64, second: i64) -> Result<Self, LoxError> {
-        if !(0..24).contains(&hour) || !(0..60).contains(&minute) || !(0..61).contains(&second) {
-            Err(LoxError::InvalidTime(hour, minute, second))
-        } else {
-            Ok(Self {
-                hour,
-                minute,
-                second,
-                ..Default::default()
-            })
-        }
-    }
-
-    pub fn milli(mut self, milli: i64) -> Self {
-        self.milli = milli;
-        self
-    }
-
-    pub fn micro(mut self, micro: i64) -> Self {
-        self.micro = micro;
-        self
-    }
-
-    pub fn nano(mut self, nano: i64) -> Self {
-        self.nano = nano;
-        self
-    }
-
-    pub fn pico(mut self, pico: i64) -> Self {
-        self.pico = pico;
-        self
-    }
-
-    pub fn femto(mut self, femto: i64) -> Self {
-        self.femto = femto;
-        self
-    }
-
-    pub fn atto(mut self, atto: i64) -> Self {
-        self.atto = atto;
-        self
-    }
-
-    pub fn from_seconds(hour: i64, minute: i64, seconds: f64) -> Result<Self, LoxError> {
-        if !(0.0..61.0).contains(&seconds) {
-            return Err(LoxError::InvalidSeconds(hour, minute, seconds));
-        }
-        let sub = split_seconds(seconds.fract()).unwrap();
-        let second = seconds.round().to_i64().unwrap();
-        Self::new(hour, minute, second)?;
-        Ok(Self {
-            hour,
-            minute,
-            second,
-            milli: sub[0],
-            micro: sub[1],
-            nano: sub[2],
-            pico: sub[3],
-            femto: sub[4],
-            atto: sub[5],
-        })
-    }
-
-    pub fn hour(&self) -> i64 {
-        self.hour
-    }
-
-    pub fn minute(&self) -> i64 {
-        self.minute
-    }
-
-    pub fn second(&self) -> i64 {
-        self.second
-    }
-
-    pub fn attosecond(&self) -> i64 {
-        self.milli * i64::pow(10, 15)
-            + self.micro * i64::pow(10, 12)
-            + self.nano * i64::pow(10, 9)
-            + self.pico * i64::pow(10, 6)
-            + self.femto * i64::pow(10, 3)
-            + self.atto
-    }
-}
-
-#[derive(Debug, Copy, Clone)]
-pub struct DateTime {
-    date: Date,
-    time: Time,
-}
-
-impl DateTime {
-    pub fn date(&self) -> Date {
-        self.date
-    }
-
-    pub fn time(&self) -> Time {
-        self.time
     }
 }
 
@@ -295,89 +190,16 @@ fn j2000(calendar: Calendar, year: i64, month: i64, day: i64) -> i64 {
     d1 + d2
 }
 
-fn split_seconds(seconds: f64) -> Option<[i64; 6]> {
-    if !(0.0..1.0).contains(&seconds) {
-        return None;
-    }
-    let mut atto = (seconds * 1e18).to_i64()?;
-    let mut parts: [i64; 6] = [0; 6];
-    for (i, exponent) in (3..18).step_by(3).rev().enumerate() {
-        let factor = i64::pow(10, exponent);
-        parts[i] = atto / factor;
-        atto -= parts[i] * factor;
-    }
-    parts[5] = atto / 10 * 10;
-    Some(parts)
-}
-
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use proptest::prelude::*;
-
-    proptest! {
-        #[test]
-        fn prop_test_split_seconds(s in 0.0..1.0) {
-            prop_assert!(split_seconds(s).is_some())
-        }
-    }
+    use crate::time::dates::{Calendar, Date};
 
     #[test]
-    fn test_sub_second() {
-        let s1 = split_seconds(0.123).expect("seconds should be valid");
-        assert_eq!(123, s1[0]);
-        assert_eq!(0, s1[1]);
-        assert_eq!(0, s1[2]);
-        assert_eq!(0, s1[3]);
-        assert_eq!(0, s1[4]);
-        assert_eq!(0, s1[5]);
-        let s2 = split_seconds(0.123_456).expect("seconds should be valid");
-        assert_eq!(123, s2[0]);
-        assert_eq!(456, s2[1]);
-        assert_eq!(0, s2[2]);
-        assert_eq!(0, s2[3]);
-        assert_eq!(0, s2[4]);
-        assert_eq!(0, s2[5]);
-        let s3 = split_seconds(0.123_456_789).expect("seconds should be valid");
-        assert_eq!(123, s3[0]);
-        assert_eq!(456, s3[1]);
-        assert_eq!(789, s3[2]);
-        assert_eq!(0, s3[3]);
-        assert_eq!(0, s3[4]);
-        assert_eq!(0, s3[5]);
-        let s4 = split_seconds(0.123_456_789_123).expect("seconds should be valid");
-        assert_eq!(123, s4[0]);
-        assert_eq!(456, s4[1]);
-        assert_eq!(789, s4[2]);
-        assert_eq!(123, s4[3]);
-        assert_eq!(0, s4[4]);
-        assert_eq!(0, s4[5]);
-        let s5 = split_seconds(0.123_456_789_123_456).expect("seconds should be valid");
-        assert_eq!(123, s5[0]);
-        assert_eq!(456, s5[1]);
-        assert_eq!(789, s5[2]);
-        assert_eq!(123, s5[3]);
-        assert_eq!(456, s5[4]);
-        assert_eq!(0, s5[5]);
-        let s6 = split_seconds(0.123_456_789_123_456_78).expect("seconds should be valid");
-        assert_eq!(123, s6[0]);
-        assert_eq!(456, s6[1]);
-        assert_eq!(789, s6[2]);
-        assert_eq!(123, s6[3]);
-        assert_eq!(456, s6[4]);
-        assert_eq!(780, s6[5]);
-        let s7 = split_seconds(0.000_000_000_000_000_01).expect("seconds should be valid");
-        assert_eq!(0, s7[0]);
-        assert_eq!(0, s7[1]);
-        assert_eq!(0, s7[2]);
-        assert_eq!(0, s7[3]);
-        assert_eq!(0, s7[4]);
-        assert_eq!(10, s7[5]);
-    }
-
-    #[test]
-    fn test_illegal_split_second() {
-        assert!(split_seconds(2.0).is_none());
-        assert!(split_seconds(-0.2).is_none());
+    fn test_date_new_unchecked() {
+        let date = Date::new_unchecked(Calendar::Gregorian, 2021, 1, 1);
+        assert_eq!(Calendar::Gregorian, date.calendar);
+        assert_eq!(2021, date.year);
+        assert_eq!(1, date.month);
+        assert_eq!(1, date.day);
     }
 }

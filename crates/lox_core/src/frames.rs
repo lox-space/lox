@@ -3,47 +3,134 @@
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use glam::DVec3;
+use std::fmt::{Debug, Display, Formatter};
 
-pub trait Frame {
-    fn is_inertial() -> bool;
+use glam::{DMat3, DVec3};
 
-    fn is_rotating() -> bool;
-}
+pub mod iau;
 
-pub trait Transform {
-    fn transform_position(position: DVec3) -> DVec3;
+// TODO: Replace with proper `Epoch` type
+type Epoch = f64;
 
-    fn transform_velocity(velocity: DVec3) -> DVec3;
+pub trait ReferenceFrame {}
 
-    fn transform_state(position: DVec3, velocity: DVec3) -> (DVec3, DVec3);
-}
-
-struct ICRF;
-
-impl Frame for ICRF {
-    fn is_inertial() -> bool {
+pub trait InertialFrame: ReferenceFrame {
+    fn is_inertial(&self) -> bool {
         true
     }
 
-    fn is_rotating() -> bool {
+    fn is_rotating(&self) -> bool {
         false
     }
 }
 
-pub fn take_frame(_foo: impl Frame) {
-    println!("Huzzah")
+pub trait RotatingFrame: ReferenceFrame {
+    fn is_inertial(&self) -> bool {
+        false
+    }
+
+    fn is_rotating(&self) -> bool {
+        true
+    }
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct Icrf;
+
+impl Display for Icrf {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ICRF")
+    }
+}
+
+impl ReferenceFrame for Icrf {}
+impl InertialFrame for Icrf {}
+
+pub fn rotation_matrix_derivative(m: DMat3, v: DVec3) -> DMat3 {
+    let sx = DVec3::new(0.0, v.z, v.y);
+    let sy = DVec3::new(-v.z, 0.0, v.x);
+    let sz = DVec3::new(v.y, -v.x, 0.0);
+    let s = DMat3::from_cols(sx, sy, sz);
+    -s * m
+}
+
+type State = (DVec3, DVec3);
+
+pub struct Rotation {
+    m: DMat3,
+    dm: DMat3,
+}
+
+impl Rotation {
+    pub fn new(m: DMat3) -> Self {
+        Self { m, dm: DMat3::ZERO }
+    }
+
+    pub fn with_derivative(mut self, dm: DMat3) -> Self {
+        self.dm = dm;
+        self
+    }
+
+    pub fn with_velocity(mut self, v: DVec3) -> Self {
+        self.dm = rotation_matrix_derivative(self.m, v);
+        self
+    }
+
+    fn transpose(&self) -> Self {
+        let m = self.m.transpose();
+        let dm = self.dm.transpose();
+        Self { m, dm }
+    }
+
+    pub fn apply(&self, (pos, vel): State) -> State {
+        (self.m * pos, self.dm * pos + self.m * vel)
+    }
+}
+
+pub trait FromFrame<T: ReferenceFrame> {
+    fn rotation_from(&self, frame: T, t: Epoch) -> Rotation;
+
+    fn transform_from(&self, frame: T, t: Epoch, state: State) -> State {
+        let rotation = self.rotation_from(frame, t);
+        rotation.apply(state)
+    }
+}
+
+impl<T: ReferenceFrame> FromFrame<T> for T {
+    fn rotation_from(&self, _: T, _: Epoch) -> Rotation {
+        Rotation::new(DMat3::IDENTITY)
+    }
+}
+
+pub trait IntoFrame<T: ReferenceFrame> {
+    fn rotation_into(&self, frame: T, t: Epoch) -> Rotation;
+
+    fn transform_into(&self, frame: T, t: Epoch, state: State) -> State {
+        let rotation = self.rotation_into(frame, t);
+        rotation.apply(state)
+    }
+}
+
+impl<T, U: ReferenceFrame> IntoFrame<U> for T
+where
+    T: FromFrame<U>,
+{
+    fn rotation_into(&self, frame: U, t: Epoch) -> Rotation {
+        self.rotation_from(frame, t).transpose()
+    }
 }
 
 #[cfg(test)]
-mod tests {
-    use crate::frames::{take_frame, ICRF};
+mod test {
+    use super::*;
 
     #[test]
     fn test_icrf() {
-        take_frame(ICRF)
+        assert!(Icrf.is_inertial());
+        assert!(!Icrf.is_rotating());
+        assert_eq!(format!("{}", Icrf), "ICRF");
     }
 }
