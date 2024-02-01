@@ -1058,7 +1058,7 @@ mod tests {
     }
 
     #[test]
-    fn test_raw_time_julian_days() {
+    fn test_raw_time_days_since_j2000() {
         struct TestCase {
             desc: &'static str,
             time: RawTime,
