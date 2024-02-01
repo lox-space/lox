@@ -111,6 +111,35 @@ impl RawTime {
     fn attosecond(&self) -> i64 {
         (self.attoseconds % 1000) as i64
     }
+
+    /// The fractional number of Julian days since J2000.
+    fn days_since_j2000(&self) -> f64 {
+        self.seconds.to_f64().unwrap() / constants::f64::SECONDS_PER_DAY
+            + self.attoseconds.to_f64().unwrap() / constants::f64::ATTOSECONDS_PER_DAY
+    }
+
+    /// The fractional number of Julian centuries since J2000.
+    fn centuries_since_j2000(&self) -> f64 {
+        self.days_since_j2000() / constants::f64::DAYS_PER_JULIAN_CENTURY
+    }
+}
+
+impl Display for RawTime {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{:02}:{:02}:{:02}.{:03}.{:03}.{:03}.{:03}.{:03}.{:03}",
+            self.hour(),
+            self.minute(),
+            self.second(),
+            self.millisecond(),
+            self.microsecond(),
+            self.nanosecond(),
+            self.picosecond(),
+            self.femtosecond(),
+            self.attosecond(),
+        )
+    }
 }
 
 impl Add<TimeDelta> for RawTime {
@@ -193,18 +222,6 @@ pub trait CalendarDate {
 #[derive(Debug, Copy, Default, Clone, Eq, PartialEq)]
 pub struct TAI(RawTime);
 
-impl TAI {
-    pub fn to_ut1(&self, _dut: TimeDelta, _dat: TimeDelta) -> UT1 {
-        todo!()
-    }
-}
-
-impl CalendarDate for TAI {
-    fn date(&self) -> Date {
-        todo!()
-    }
-}
-
 /// Barycentric Coordinate Time. Defaults to the J2000 epoch.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
 pub struct TCB(RawTime);
@@ -225,10 +242,35 @@ pub struct TT(RawTime);
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
 pub struct UT1(RawTime);
 
-/// Implements the `WallClock` trait for the a time scale based on [RawTime] in terms of the underlying
-/// raw time.
-macro_rules! wall_clock {
+/// Implements a time, [Display] and [WallClock] in terms of the underlying [RawTime].
+macro_rules! delegate_to_raw_time {
     ($time_scale:ident, $test_module:ident) => {
+        impl $time_scale {
+            pub fn new(t: RawTime) -> Self {
+                Self(t)
+            }
+
+            pub fn to_raw(&self) -> RawTime {
+                self.0
+            }
+
+            /// The fractional number of Julian days since the J2000 epoch.
+            pub fn days_since_j2000(&self) -> f64 {
+                self.0.days_since_j2000()
+            }
+
+            /// The fractional number of Julian centuries since J2000.
+            pub fn centuries_since_j2000(&self) -> f64 {
+                self.0.centuries_since_j2000()
+            }
+        }
+
+        impl Display for $time_scale {
+            fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+                write!(f, "{} {}", self.0, stringify!($time_scale))
+            }
+        }
+
         impl WallClock for $time_scale {
             fn hour(&self) -> i64 {
                 self.0.hour()
@@ -270,14 +312,60 @@ macro_rules! wall_clock {
         #[cfg(test)]
         mod $test_module {
             use super::{$time_scale, RawTime};
-            use crate::time::WallClock;
+            use float_eq::assert_float_eq;
+            use $crate::time::WallClock;
 
             const RAW_TIME: RawTime = RawTime {
-                seconds: 1234,
-                attoseconds: 5678,
+                seconds: 123456789,
+                attoseconds: 123456789,
             };
 
             const TIME: $time_scale = $time_scale(RAW_TIME);
+
+            #[test]
+            fn test_new() {
+                assert_eq!($time_scale::new(RAW_TIME), TIME);
+            }
+
+            #[test]
+            fn test_to_raw() {
+                assert_eq!(RAW_TIME, TIME.to_raw());
+            }
+
+            #[test]
+            fn test_days_since_j2000_delegation() {
+                let expected = RAW_TIME.days_since_j2000();
+                let actual = TIME.days_since_j2000();
+                assert_float_eq!(
+                    expected,
+                    actual,
+                    rel <= 1e-15,
+                    "expected {} Julian days, got {}",
+                    expected,
+                    actual,
+                );
+            }
+
+            #[test]
+            fn test_centuries_since_j2000_delegation() {
+                let expected = RAW_TIME.centuries_since_j2000();
+                let actual = TIME.centuries_since_j2000();
+                assert_float_eq!(
+                    expected,
+                    actual,
+                    rel <= 1e-15,
+                    "expected {} Julian centuries, got {}",
+                    expected,
+                    actual,
+                );
+            }
+
+            #[test]
+            fn test_display() {
+                let expected = format!("{} {}", RAW_TIME, stringify!($time_scale));
+                let actual = format!("{}", TIME);
+                assert_eq!(expected, actual);
+            }
 
             #[test]
             fn test_hour_delegation() {
@@ -327,13 +415,13 @@ macro_rules! wall_clock {
     };
 }
 
-// Implement WallClock for all continuous time scales.
-wall_clock!(TAI, tai_wall_clock_tests);
-wall_clock!(TCB, tcb_wall_clock_tests);
-wall_clock!(TCG, tcg_wall_clock_tests);
-wall_clock!(TDB, tdb_wall_clock_tests);
-wall_clock!(TT, tt_wall_clock_tests);
-wall_clock!(UT1, ut1_wall_clock_tests);
+// Implement continuous time scales and `WallClock` in terms of `RawTime`.
+delegate_to_raw_time!(TAI, tai_wall_clock_tests);
+delegate_to_raw_time!(TCB, tcb_wall_clock_tests);
+delegate_to_raw_time!(TCG, tcg_wall_clock_tests);
+delegate_to_raw_time!(TDB, tdb_wall_clock_tests);
+delegate_to_raw_time!(TT, tt_wall_clock_tests);
+delegate_to_raw_time!(UT1, ut1_wall_clock_tests);
 
 /// `Time` represents a time in any of the supported continuous timescales.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -425,28 +513,20 @@ impl Time {
 
     /// The fractional number of Julian days since J2000.
     pub fn days_since_j2000(&self) -> f64 {
-        let d1 = self.seconds().to_f64().unwrap_or_default() / constants::f64::SECONDS_PER_DAY;
-        let d2 = self.attoseconds().to_f64().unwrap() / constants::f64::ATTOSECONDS_PER_DAY;
-        d2 + d1
+        self.raw().days_since_j2000()
     }
 }
 
 impl Display for Time {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{:02}:{:02}:{:02}.{:03}.{:03}.{:03}.{:03}.{:03}.{:03} {}",
-            self.hour(),
-            self.minute(),
-            self.second(),
-            self.millisecond(),
-            self.microsecond(),
-            self.nanosecond(),
-            self.picosecond(),
-            self.femtosecond(),
-            self.attosecond(),
-            self.scale(),
-        )
+        match self {
+            Time::TAI(t) => t.fmt(f),
+            Time::TCB(t) => t.fmt(f),
+            Time::TCG(t) => t.fmt(f),
+            Time::TDB(t) => t.fmt(f),
+            Time::TT(t) => t.fmt(f),
+            Time::UT1(t) => t.fmt(f),
+        }
     }
 }
 
@@ -553,8 +633,11 @@ impl WallClock for Time {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use float_eq::assert_float_eq;
+
     use crate::time::dates::Calendar::Gregorian;
+
+    use super::*;
 
     const TIME_SCALES: [TimeScale; 6] = [
         TimeScale::TAI,
@@ -975,6 +1058,62 @@ mod tests {
     }
 
     #[test]
+    fn test_raw_time_julian_days() {
+        struct TestCase {
+            desc: &'static str,
+            time: RawTime,
+            expected: f64,
+        }
+
+        let test_cases = [
+            TestCase {
+                desc: "at the epoch",
+                time: RawTime::default(),
+                expected: 0.0,
+            },
+            TestCase {
+                desc: "less than one day after the epoch",
+                time: RawTime {
+                    seconds: SECONDS_PER_DAY - 1,
+                    // Test a sufficient number of attoseconds that the difference is representable by a float.
+                    attoseconds: ATTOSECONDS_PER_SECOND / 2,
+                },
+                expected: 0.999994212962963,
+            },
+            TestCase {
+                desc: "one day after the epoch",
+                time: RawTime {
+                    seconds: SECONDS_PER_DAY,
+                    attoseconds: 0,
+                },
+                expected: 1.0,
+            },
+            TestCase {
+                desc: "before the epoch",
+                time: RawTime {
+                    seconds: -1,
+                    // Test a sufficient number of attoseconds that the difference is representable by a float.
+                    attoseconds: ATTOSECONDS_PER_SECOND / 2,
+                },
+                expected: -0.000005787037037037037,
+            },
+        ];
+
+        for tc in test_cases {
+            let actual = tc.time.days_since_j2000();
+            assert_float_eq!(
+                actual,
+                tc.expected,
+                rel <= 1e-15,
+                "{}: expected {}, got {}",
+                tc.desc,
+                tc.expected,
+                actual
+            );
+        }
+    }
+
+    #[test]
     fn test_raw_time_add_time_delta() {
         struct TestCase {
             desc: &'static str,
@@ -1184,10 +1323,9 @@ mod tests {
 
     #[test]
     fn test_time_display() {
-        let time = Time::TAI(TAI::default());
-        let expected = "12:00:00.000.000.000.000.000.000 TAI".to_string();
-        let actual = time.to_string();
-        assert_eq!(actual, expected);
+        let tai = TAI::default();
+        let time = Time::TAI(tai);
+        assert_eq!(tai.to_string(), time.to_string());
     }
 
     #[test]

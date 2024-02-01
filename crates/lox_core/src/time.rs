@@ -66,6 +66,12 @@ impl Into<i64> for PerMille {
     }
 }
 
+/// Transform between times in two scales. Lox provides a default transformer for all common time scale pairings, but
+/// `TimeScaleTransformer` may be implemented manually for more sophisticated use cases.
+pub trait TimeScaleTransformer<T, U> {
+    fn transform(&self, time: T) -> U;
+}
+
 #[cfg(test)]
 mod tests {
     use crate::errors::LoxError;
