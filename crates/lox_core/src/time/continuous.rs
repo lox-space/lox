@@ -14,7 +14,8 @@
 
 use std::fmt;
 use std::fmt::{Display, Formatter};
-use std::ops::{Add, Sub};
+use std::marker::PhantomData;
+use std::ops::{Add, AddAssign, Sub};
 
 use num::{abs, ToPrimitive};
 
@@ -38,16 +39,16 @@ pub struct TimeDelta {
 }
 
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
-/// `RawTime` is the base time representation for time scales without leap seconds. It is measured relative to
-/// J2000. `RawTime::default()` represents the epoch itself.
+/// `UnscaledTime` is the base time representation for time scales without leap seconds. It is measured relative to
+/// J2000. `UnscaledTime::default()` represents the epoch itself.
 ///
-/// `RawTime` has attosecond precision, and supports times within 292 billion years either side of the epoch.
-pub struct RawTime {
+/// `UnscaledTime` has attosecond precision, and supports times within 292 billion years either side of the epoch.
+pub struct UnscaledTime {
     // The sign of the time is determined exclusively by the sign of the `second` field. `attoseconds` is always the
     // positive count of attoseconds since the last whole second. For example, one attosecond before the epoch is
     // represented as
     // ```
-    // let time = RawTime {
+    // let time = UnscaledTime {
     //     seconds: -1,
     //     attoseconds: ATTOSECONDS_PER_SECOND - 1,
     // };
@@ -56,11 +57,71 @@ pub struct RawTime {
     attoseconds: u64,
 }
 
-impl RawTime {
+impl UnscaledTime {
     fn is_negative(&self) -> bool {
         self.seconds < 0
     }
+}
 
+impl Display for UnscaledTime {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{:02}:{:02}:{:02}.{:03}.{:03}.{:03}.{:03}.{:03}.{:03}",
+            self.hour(),
+            self.minute(),
+            self.second(),
+            self.millisecond(),
+            self.microsecond(),
+            self.nanosecond(),
+            self.picosecond(),
+            self.femtosecond(),
+            self.attosecond(),
+        )
+    }
+}
+
+impl Add<TimeDelta> for UnscaledTime {
+    type Output = Self;
+
+    /// The implementation of [Add] for [UnscaledTime] follows the default Rust rules for integer overflow, which
+    /// should be sufficient for all practical purposes.
+    fn add(self, rhs: TimeDelta) -> Self::Output {
+        let mut attoseconds = self.attoseconds + rhs.attoseconds;
+        let mut seconds = self.seconds + rhs.seconds as i64;
+        if attoseconds >= ATTOSECONDS_PER_SECOND {
+            seconds += 1;
+            attoseconds -= ATTOSECONDS_PER_SECOND;
+        }
+        Self {
+            seconds,
+            attoseconds,
+        }
+    }
+}
+
+impl Sub<TimeDelta> for UnscaledTime {
+    type Output = Self;
+
+    /// The implementation of [Sub] for [UnscaledTime] follows the default Rust rules for integer overflow, which
+    /// should be sufficient for all practical purposes.
+    fn sub(self, rhs: TimeDelta) -> Self::Output {
+        let mut seconds = self.seconds - rhs.seconds as i64;
+        let mut attoseconds = self.attoseconds;
+        if rhs.attoseconds > self.attoseconds {
+            seconds -= 1;
+            attoseconds = ATTOSECONDS_PER_SECOND - (rhs.attoseconds - self.attoseconds);
+        } else {
+            attoseconds -= rhs.attoseconds;
+        }
+        Self {
+            seconds,
+            attoseconds,
+        }
+    }
+}
+
+impl WallClock for UnscaledTime {
     fn hour(&self) -> i64 {
         // Since J2000 is taken from midday, we offset by half a day to get the wall clock hour.
         let day_seconds: i64 = if self.is_negative() {
@@ -113,43 +174,212 @@ impl RawTime {
     }
 }
 
-impl Add<TimeDelta> for RawTime {
-    type Output = Self;
+pub trait TimeScaleTrait {
+    const ABBREVIATION: &'static str;
+    const NAME: &'static str;
+}
 
-    /// The implementation of [Add] for [RawTime] follows the default Rust rules for integer overflow, which
-    /// should be sufficient for all practical purposes.
-    fn add(self, rhs: TimeDelta) -> Self::Output {
-        let mut attoseconds = self.attoseconds + rhs.attoseconds;
-        let mut seconds = self.seconds + rhs.seconds as i64;
-        if attoseconds >= ATTOSECONDS_PER_SECOND {
-            seconds += 1;
-            attoseconds -= ATTOSECONDS_PER_SECOND;
-        }
-        Self {
-            seconds,
-            attoseconds,
-        }
+/// Barycentric Coordinate Time. Defaults to the J2000 epoch.
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct TCB2;
+
+impl TimeScaleTrait for TCB2 {
+    const ABBREVIATION: &'static str = "TCB";
+    const NAME: &'static str = "Barycentric Coordinate Time";
+}
+
+/// Geocentric Coordinate Time. Defaults to the J2000 epoch.
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct TCG2;
+
+impl TimeScaleTrait for TCG2 {
+    const ABBREVIATION: &'static str = "TCG";
+    const NAME: &'static str = "Geocentric Coordinate Time";
+}
+
+/// Barycentric Dynamical Time. Defaults to the J2000 epoch.
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct TDB2;
+
+impl TimeScaleTrait for TDB2 {
+    const ABBREVIATION: &'static str = "TDB";
+    const NAME: &'static str = "Barycentric Dynamical Time";
+}
+
+/// Terrestrial Time. Defaults to the J2000 epoch.
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct TT2;
+
+impl TimeScaleTrait for TT2 {
+    const ABBREVIATION: &'static str = "TT";
+    const NAME: &'static str = "Terrestrial Time";
+}
+
+/// Universal Time. Defaults to the J2000 epoch.
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct UT12;
+
+impl TimeScaleTrait for UT12 {
+    const ABBREVIATION: &'static str = "UT1";
+    const NAME: &'static str = "Universal Time";
+}
+
+#[derive(Debug, Default, Eq, PartialEq)]
+pub struct TimeGeneric<T: TimeScaleTrait> {
+    scale: PhantomData<T>,
+    timestamp: UnscaledTime,
+}
+
+// Must be manually implemented, since derive macros always bound the generic parameters by the given trait, not the
+// tightest possible bound, which in this case is given by PhantomData.
+// See https://github.com/rust-lang/rust/issues/108894#issuecomment-1459943821
+impl<T: TimeScaleTrait> Clone for TimeGeneric<T> {
+    fn clone(&self) -> Self {
+        *self
     }
 }
 
-impl Sub<TimeDelta> for RawTime {
-    type Output = Self;
+impl<T: TimeScaleTrait> Copy for TimeGeneric<T> {}
 
-    /// The implementation of [Sub] for [RawTime] follows the default Rust rules for integer overflow, which
-    /// should be sufficient for all practical purposes.
-    fn sub(self, rhs: TimeDelta) -> Self::Output {
-        let mut seconds = self.seconds - rhs.seconds as i64;
-        let mut attoseconds = self.attoseconds;
-        if rhs.attoseconds > self.attoseconds {
-            seconds -= 1;
-            attoseconds = ATTOSECONDS_PER_SECOND - (rhs.attoseconds - self.attoseconds);
-        } else {
-            attoseconds -= rhs.attoseconds;
-        }
+impl<T: TimeScaleTrait> From<UnscaledTime> for TimeGeneric<T> {
+    fn from(timestamp: UnscaledTime) -> Self {
+        Self::from_unscaled(timestamp)
+    }
+}
+
+impl<T: TimeScaleTrait> TimeGeneric<T> {
+    pub fn new(seconds: i64, attoseconds: u64) -> Self {
         Self {
+            scale: PhantomData,
+            timestamp: UnscaledTime {
+                seconds,
+                attoseconds,
+            },
+        }
+    }
+
+    pub fn from_unscaled(timestamp: UnscaledTime) -> Self {
+        Self {
+            scale: PhantomData,
+            timestamp,
+        }
+    }
+
+    /// Instantiates a `Time` of the given scale from a date and UTC timestamp.
+    pub fn from_date_and_utc_timestamp(date: Date, time: UTC) -> Self {
+        let day_in_seconds = date.j2000() * SECONDS_PER_DAY - SECONDS_PER_DAY / 2;
+        let hour_in_seconds = time.hour() * SECONDS_PER_HOUR;
+        let minute_in_seconds = time.minute() * SECONDS_PER_MINUTE;
+        let seconds = day_in_seconds + hour_in_seconds + minute_in_seconds + time.second();
+        let attoseconds = time.subsecond_as_attoseconds();
+        let unscaled = UnscaledTime {
             seconds,
             attoseconds,
+        };
+        Self::from_unscaled(unscaled)
+    }
+
+    /// Instantiates a `Time` of the given scale from a UTC datetime.
+    pub fn from_utc_datetime(dt: UTCDateTime) -> Self {
+        Self::from_date_and_utc_timestamp(dt.date(), dt.time())
+    }
+
+    pub fn unscaled(&self) -> UnscaledTime {
+        self.timestamp
+    }
+
+    /// Returns the J2000 epoch in the given timescale.
+    pub fn j2000() -> Self {
+        Self {
+            scale: PhantomData,
+            timestamp: UnscaledTime::default(),
         }
+    }
+
+    /// Returns, as an epoch in the given timescale, midday on the first day of the proleptic Julian
+    /// calendar.
+    pub fn jd0() -> Self {
+        // This represents 4713 BC, since there is no year 0 separating BC and AD.
+        let first_proleptic_day = Date::new_unchecked(ProlepticJulian, -4712, 1, 1);
+        let midday = UTC::new(12, 0, 0).expect("midday should be a valid time");
+        Self::from_date_and_utc_timestamp(first_proleptic_day, midday)
+    }
+
+    /// The number of whole seconds since J2000.
+    pub fn seconds(self) -> i64 {
+        self.timestamp.seconds
+    }
+
+    /// The number of attoseconds from the last whole second.
+    pub fn attoseconds(self) -> u64 {
+        self.timestamp.attoseconds
+    }
+
+    /// The fractional number of Julian days since J2000.
+    pub fn days_since_j2000(self) -> f64 {
+        let d1 = self.seconds().to_f64().unwrap_or_default() / constants::f64::SECONDS_PER_DAY;
+        let d2 = self.attoseconds().to_f64().unwrap() / constants::f64::ATTOSECONDS_PER_DAY;
+        d2 + d1
+    }
+}
+
+impl<T: TimeScaleTrait> Display for TimeGeneric<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{} {}", self.timestamp, T::ABBREVIATION)
+    }
+}
+
+impl<T: TimeScaleTrait> Add<TimeDelta> for TimeGeneric<T> {
+    type Output = Self;
+
+    fn add(self, rhs: TimeDelta) -> Self::Output {
+        Self::from_unscaled(self.timestamp + rhs)
+    }
+}
+
+impl<T: TimeScaleTrait> Sub<TimeDelta> for TimeGeneric<T> {
+    type Output = Self;
+
+    fn sub(self, rhs: TimeDelta) -> Self::Output {
+        Self::from_unscaled(self.timestamp - rhs)
+    }
+}
+
+impl<T: TimeScaleTrait> WallClock for TimeGeneric<T> {
+    fn hour(&self) -> i64 {
+        self.timestamp.hour()
+    }
+
+    fn minute(&self) -> i64 {
+        self.timestamp.minute()
+    }
+
+    fn second(&self) -> i64 {
+        self.timestamp.second()
+    }
+
+    fn millisecond(&self) -> i64 {
+        self.timestamp.millisecond()
+    }
+
+    fn microsecond(&self) -> i64 {
+        self.timestamp.microsecond()
+    }
+
+    fn nanosecond(&self) -> i64 {
+        self.timestamp.nanosecond()
+    }
+
+    fn picosecond(&self) -> i64 {
+        self.timestamp.picosecond()
+    }
+
+    fn femtosecond(&self) -> i64 {
+        self.timestamp.femtosecond()
+    }
+
+    fn attosecond(&self) -> i64 {
+        self.timestamp.attosecond()
     }
 }
 
@@ -191,7 +421,7 @@ pub trait CalendarDate {
 
 /// International Atomic Time. Defaults to the J2000 epoch.
 #[derive(Debug, Copy, Default, Clone, Eq, PartialEq)]
-pub struct TAI(RawTime);
+pub struct TAI(UnscaledTime);
 
 impl TAI {
     pub fn to_ut1(&self, _dut: TimeDelta, _dat: TimeDelta) -> UT1 {
@@ -207,25 +437,25 @@ impl CalendarDate for TAI {
 
 /// Barycentric Coordinate Time. Defaults to the J2000 epoch.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
-pub struct TCB(RawTime);
+pub struct TCB(UnscaledTime);
 
 /// Geocentric Coordinate Time. Defaults to the J2000 epoch.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
-pub struct TCG(RawTime);
+pub struct TCG(UnscaledTime);
 
 /// Barycentric Dynamical Time. Defaults to the J2000 epoch.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
-pub struct TDB(RawTime);
+pub struct TDB(UnscaledTime);
 
 /// Terrestrial Time. Defaults to the J2000 epoch.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
-pub struct TT(RawTime);
+pub struct TT(UnscaledTime);
 
 /// Universal Time. Defaults to the J2000 epoch.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
-pub struct UT1(RawTime);
+pub struct UT1(UnscaledTime);
 
-/// Implements the `WallClock` trait for the a time scale based on [RawTime] in terms of the underlying
+/// Implements the `WallClock` trait for the a time scale based on [UnscaledTime] in terms of the underlying
 /// raw time.
 macro_rules! wall_clock {
     ($time_scale:ident, $test_module:ident) => {
@@ -269,10 +499,10 @@ macro_rules! wall_clock {
 
         #[cfg(test)]
         mod $test_module {
-            use super::{$time_scale, RawTime};
+            use super::{$time_scale, UnscaledTime};
             use crate::time::WallClock;
 
-            const RAW_TIME: RawTime = RawTime {
+            const RAW_TIME: UnscaledTime = UnscaledTime {
                 seconds: 1234,
                 attoseconds: 5678,
             };
@@ -354,7 +584,7 @@ impl Time {
         let minute_in_seconds = time.minute() * SECONDS_PER_MINUTE;
         let seconds = day_in_seconds + hour_in_seconds + minute_in_seconds + time.second();
         let attoseconds = time.subsecond_as_attoseconds();
-        let raw = RawTime {
+        let raw = UnscaledTime {
             seconds,
             attoseconds,
         };
@@ -379,7 +609,7 @@ impl Time {
 
     /// Returns the J2000 epoch in the given timescale.
     pub fn j2000(scale: TimeScale) -> Self {
-        Self::from_raw(scale, RawTime::default())
+        Self::from_raw(scale, UnscaledTime::default())
     }
 
     /// Returns, as an epoch in the given timescale, midday on the first day of the proleptic Julian
@@ -391,7 +621,7 @@ impl Time {
         Self::from_date_and_utc_timestamp(scale, first_proleptic_day, midday)
     }
 
-    fn from_raw(scale: TimeScale, raw: RawTime) -> Self {
+    fn from_raw(scale: TimeScale, raw: UnscaledTime) -> Self {
         match scale {
             TimeScale::TAI => Time::TAI(TAI(raw)),
             TimeScale::TCB => Time::TCB(TCB(raw)),
@@ -402,7 +632,7 @@ impl Time {
         }
     }
 
-    fn raw(&self) -> RawTime {
+    fn raw(&self) -> UnscaledTime {
         match self {
             Time::TAI(tai) => tai.0,
             Time::TCB(tcb) => tcb.0,
@@ -567,17 +797,17 @@ mod tests {
 
     #[test]
     fn test_raw_time_is_negative() {
-        assert!(RawTime {
+        assert!(UnscaledTime {
             seconds: -1,
             attoseconds: 0
         }
         .is_negative());
-        assert!(!RawTime {
+        assert!(!UnscaledTime {
             seconds: 0,
             attoseconds: 0
         }
         .is_negative());
-        assert!(!RawTime {
+        assert!(!UnscaledTime {
             seconds: 1,
             attoseconds: 0
         }
@@ -588,14 +818,14 @@ mod tests {
     fn test_raw_time_hour() {
         struct TestCase {
             desc: &'static str,
-            time: RawTime,
+            time: UnscaledTime,
             expected_hour: i64,
         }
 
         let test_cases = [
             TestCase {
                 desc: "zero value",
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: 0,
                     attoseconds: 0,
                 },
@@ -603,7 +833,7 @@ mod tests {
             },
             TestCase {
                 desc: "one attosecond less than an hour",
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: SECONDS_PER_HOUR - 1,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -611,7 +841,7 @@ mod tests {
             },
             TestCase {
                 desc: "exactly one hour",
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: SECONDS_PER_HOUR,
                     attoseconds: 0,
                 },
@@ -619,7 +849,7 @@ mod tests {
             },
             TestCase {
                 desc: "one day and one hour",
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: SECONDS_PER_HOUR * 25,
                     attoseconds: 0,
                 },
@@ -627,7 +857,7 @@ mod tests {
             },
             TestCase {
                 desc: "one attosecond less than the epoch",
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: -1,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -635,7 +865,7 @@ mod tests {
             },
             TestCase {
                 desc: "one hour less than the epoch",
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: -SECONDS_PER_HOUR,
                     attoseconds: 0,
                 },
@@ -643,7 +873,7 @@ mod tests {
             },
             TestCase {
                 desc: "one hour and one attosecond less than the epoch",
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: -SECONDS_PER_HOUR - 1,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -651,7 +881,7 @@ mod tests {
             },
             TestCase {
                 desc: "one day less than the epoch",
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: -SECONDS_PER_DAY,
                     attoseconds: 0,
                 },
@@ -660,7 +890,7 @@ mod tests {
             TestCase {
                 // Exercises the case where the number of seconds exceeds the number of seconds in a day.
                 desc: "two days less than the epoch",
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: -SECONDS_PER_DAY * 2,
                     attoseconds: 0,
                 },
@@ -682,14 +912,14 @@ mod tests {
     fn test_raw_time_minute() {
         struct TestCase {
             desc: &'static str,
-            time: RawTime,
+            time: UnscaledTime,
             expected_minute: i64,
         }
 
         let test_cases = [
             TestCase {
                 desc: "zero value",
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: 0,
                     attoseconds: 0,
                 },
@@ -697,7 +927,7 @@ mod tests {
             },
             TestCase {
                 desc: "one attosecond less than one minute",
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: SECONDS_PER_MINUTE - 1,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -705,7 +935,7 @@ mod tests {
             },
             TestCase {
                 desc: "one minute",
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: SECONDS_PER_MINUTE,
                     attoseconds: 0,
                 },
@@ -713,7 +943,7 @@ mod tests {
             },
             TestCase {
                 desc: "one attosecond less than an hour",
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: SECONDS_PER_HOUR - 1,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -721,7 +951,7 @@ mod tests {
             },
             TestCase {
                 desc: "exactly one hour",
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: SECONDS_PER_HOUR,
                     attoseconds: 0,
                 },
@@ -729,7 +959,7 @@ mod tests {
             },
             TestCase {
                 desc: "one hour and one minute",
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: SECONDS_PER_HOUR + SECONDS_PER_MINUTE,
                     attoseconds: 0,
                 },
@@ -737,7 +967,7 @@ mod tests {
             },
             TestCase {
                 desc: "one attosecond less than the epoch",
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: -1,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -745,7 +975,7 @@ mod tests {
             },
             TestCase {
                 desc: "one minute less than the epoch",
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: -SECONDS_PER_MINUTE,
                     attoseconds: 0,
                 },
@@ -753,7 +983,7 @@ mod tests {
             },
             TestCase {
                 desc: "one minute and one attosecond less than the epoch",
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: -SECONDS_PER_MINUTE - 1,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -775,14 +1005,14 @@ mod tests {
     fn test_raw_time_second() {
         struct TestCase {
             desc: &'static str,
-            time: RawTime,
+            time: UnscaledTime,
             expected_second: i64,
         }
 
         let test_cases = [
             TestCase {
                 desc: "zero value",
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: 0,
                     attoseconds: 0,
                 },
@@ -790,7 +1020,7 @@ mod tests {
             },
             TestCase {
                 desc: "one attosecond less than one second",
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: 0,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -798,7 +1028,7 @@ mod tests {
             },
             TestCase {
                 desc: "one second",
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: 1,
                     attoseconds: 0,
                 },
@@ -806,7 +1036,7 @@ mod tests {
             },
             TestCase {
                 desc: "one attosecond less than a minute",
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: SECONDS_PER_MINUTE - 1,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -814,7 +1044,7 @@ mod tests {
             },
             TestCase {
                 desc: "exactly one minute",
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: SECONDS_PER_MINUTE,
                     attoseconds: 0,
                 },
@@ -822,7 +1052,7 @@ mod tests {
             },
             TestCase {
                 desc: "one minute and one second",
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: SECONDS_PER_MINUTE + 1,
                     attoseconds: 0,
                 },
@@ -830,7 +1060,7 @@ mod tests {
             },
             TestCase {
                 desc: "one attosecond less than the epoch",
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: -1,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -838,7 +1068,7 @@ mod tests {
             },
             TestCase {
                 desc: "one second less than the epoch",
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: -1,
                     attoseconds: 0,
                 },
@@ -846,7 +1076,7 @@ mod tests {
             },
             TestCase {
                 desc: "one second and one attosecond less than the epoch",
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: -2,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -866,7 +1096,7 @@ mod tests {
 
     #[test]
     fn test_raw_time_subseconds_with_positive_seconds() {
-        let time = RawTime {
+        let time = UnscaledTime {
             seconds: 0,
             attoseconds: 123_456_789_012_345_678,
         };
@@ -921,7 +1151,7 @@ mod tests {
 
     #[test]
     fn test_raw_time_subseconds_with_negative_seconds() {
-        let time = RawTime {
+        let time = UnscaledTime {
             seconds: -1,
             attoseconds: 123_456_789_012_345_678,
         };
@@ -979,8 +1209,8 @@ mod tests {
         struct TestCase {
             desc: &'static str,
             delta: TimeDelta,
-            time: RawTime,
-            expected: RawTime,
+            time: UnscaledTime,
+            expected: UnscaledTime,
         }
 
         let test_cases = [
@@ -990,11 +1220,11 @@ mod tests {
                     seconds: 1,
                     attoseconds: 1,
                 },
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: 1,
                     attoseconds: 0,
                 },
-                expected: RawTime {
+                expected: UnscaledTime {
                     seconds: 2,
                     attoseconds: 1,
                 },
@@ -1005,11 +1235,11 @@ mod tests {
                     seconds: 1,
                     attoseconds: 2,
                 },
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: 1,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
-                expected: RawTime {
+                expected: UnscaledTime {
                     seconds: 3,
                     attoseconds: 1,
                 },
@@ -1020,11 +1250,11 @@ mod tests {
                     seconds: 1,
                     attoseconds: 1,
                 },
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: -1,
                     attoseconds: 0,
                 },
-                expected: RawTime {
+                expected: UnscaledTime {
                     seconds: 0,
                     attoseconds: 1,
                 },
@@ -1035,11 +1265,11 @@ mod tests {
                     seconds: 1,
                     attoseconds: 2,
                 },
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: -1,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
-                expected: RawTime {
+                expected: UnscaledTime {
                     seconds: 1,
                     attoseconds: 1,
                 },
@@ -1061,8 +1291,8 @@ mod tests {
         struct TestCase {
             desc: &'static str,
             delta: TimeDelta,
-            time: RawTime,
-            expected: RawTime,
+            time: UnscaledTime,
+            expected: UnscaledTime,
         }
 
         let test_cases = [
@@ -1072,11 +1302,11 @@ mod tests {
                     seconds: 1,
                     attoseconds: 1,
                 },
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: 2,
                     attoseconds: 2,
                 },
-                expected: RawTime {
+                expected: UnscaledTime {
                     seconds: 1,
                     attoseconds: 1,
                 },
@@ -1087,11 +1317,11 @@ mod tests {
                     seconds: 1,
                     attoseconds: 2,
                 },
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: 2,
                     attoseconds: 1,
                 },
-                expected: RawTime {
+                expected: UnscaledTime {
                     seconds: 0,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -1102,11 +1332,11 @@ mod tests {
                     seconds: 1,
                     attoseconds: 1,
                 },
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: -1,
                     attoseconds: 2,
                 },
-                expected: RawTime {
+                expected: UnscaledTime {
                     seconds: -2,
                     attoseconds: 1,
                 },
@@ -1117,11 +1347,11 @@ mod tests {
                     seconds: 1,
                     attoseconds: 2,
                 },
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: -1,
                     attoseconds: 1,
                 },
-                expected: RawTime {
+                expected: UnscaledTime {
                     seconds: -3,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -1132,11 +1362,11 @@ mod tests {
                     seconds: 1,
                     attoseconds: 2,
                 },
-                time: RawTime {
+                time: UnscaledTime {
                     seconds: 0,
                     attoseconds: 1,
                 },
-                expected: RawTime {
+                expected: UnscaledTime {
                     seconds: -2,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -1212,42 +1442,42 @@ mod tests {
         [
             (
                 TimeScale::TAI,
-                Time::TAI(TAI(RawTime {
+                Time::TAI(TAI(UnscaledTime {
                     seconds: -211813488000,
                     attoseconds: 0,
                 })),
             ),
             (
                 TimeScale::TCB,
-                Time::TCB(TCB(RawTime {
+                Time::TCB(TCB(UnscaledTime {
                     seconds: -211813488000,
                     attoseconds: 0,
                 })),
             ),
             (
                 TimeScale::TCG,
-                Time::TCG(TCG(RawTime {
+                Time::TCG(TCG(UnscaledTime {
                     seconds: -211813488000,
                     attoseconds: 0,
                 })),
             ),
             (
                 TimeScale::TDB,
-                Time::TDB(TDB(RawTime {
+                Time::TDB(TDB(UnscaledTime {
                     seconds: -211813488000,
                     attoseconds: 0,
                 })),
             ),
             (
                 TimeScale::TT,
-                Time::TT(TT(RawTime {
+                Time::TT(TT(UnscaledTime {
                     seconds: -211813488000,
                     attoseconds: 0,
                 })),
             ),
             (
                 TimeScale::UT1,
-                Time::UT1(UT1(RawTime {
+                Time::UT1(UT1(UnscaledTime {
                     seconds: -211813488000,
                     attoseconds: 0,
                 })),
@@ -1278,7 +1508,7 @@ mod tests {
 
     #[test]
     fn test_time_wall_clock_hour() {
-        let raw_time = RawTime::default();
+        let raw_time = UnscaledTime::default();
         let expected = raw_time.hour();
         for scale in TIME_SCALES {
             let time = Time::from_raw(scale, raw_time);
@@ -1293,7 +1523,7 @@ mod tests {
 
     #[test]
     fn test_time_wall_clock_minute() {
-        let raw_time = RawTime::default();
+        let raw_time = UnscaledTime::default();
         let expected = raw_time.minute();
         for scale in TIME_SCALES {
             let time = Time::from_raw(scale, raw_time);
@@ -1308,7 +1538,7 @@ mod tests {
 
     #[test]
     fn test_time_wall_clock_second() {
-        let raw_time = RawTime::default();
+        let raw_time = UnscaledTime::default();
         let expected = raw_time.second();
         for scale in TIME_SCALES {
             let time = Time::from_raw(scale, raw_time);
@@ -1323,7 +1553,7 @@ mod tests {
 
     #[test]
     fn test_time_wall_clock_millisecond() {
-        let raw_time = RawTime::default();
+        let raw_time = UnscaledTime::default();
         let expected = raw_time.millisecond();
         for scale in TIME_SCALES {
             let time = Time::from_raw(scale, raw_time);
@@ -1338,7 +1568,7 @@ mod tests {
 
     #[test]
     fn test_time_wall_clock_microsecond() {
-        let raw_time = RawTime::default();
+        let raw_time = UnscaledTime::default();
         let expected = raw_time.microsecond();
         for scale in TIME_SCALES {
             let time = Time::from_raw(scale, raw_time);
@@ -1353,7 +1583,7 @@ mod tests {
 
     #[test]
     fn test_time_wall_clock_nanosecond() {
-        let raw_time = RawTime::default();
+        let raw_time = UnscaledTime::default();
         let expected = raw_time.nanosecond();
         for scale in TIME_SCALES {
             let time = Time::from_raw(scale, raw_time);
@@ -1368,7 +1598,7 @@ mod tests {
 
     #[test]
     fn test_time_wall_clock_picosecond() {
-        let raw_time = RawTime::default();
+        let raw_time = UnscaledTime::default();
         let expected = raw_time.picosecond();
         for scale in TIME_SCALES {
             let time = Time::from_raw(scale, raw_time);
@@ -1383,7 +1613,7 @@ mod tests {
 
     #[test]
     fn test_time_wall_clock_femtosecond() {
-        let raw_time = RawTime::default();
+        let raw_time = UnscaledTime::default();
         let expected = raw_time.femtosecond();
         for scale in TIME_SCALES {
             let time = Time::from_raw(scale, raw_time);
@@ -1398,7 +1628,7 @@ mod tests {
 
     #[test]
     fn test_time_wall_clock_attosecond() {
-        let raw_time = RawTime::default();
+        let raw_time = UnscaledTime::default();
         let expected = raw_time.attosecond();
         for scale in TIME_SCALES {
             let time = Time::from_raw(scale, raw_time);
