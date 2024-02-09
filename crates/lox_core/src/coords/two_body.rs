@@ -12,35 +12,38 @@ use crate::bodies::PointMass;
 use crate::coords::states::{CartesianState, KeplerianState, TwoBodyState};
 use crate::coords::CoordinateSystem;
 use crate::frames::{InertialFrame, ReferenceFrame};
-use crate::time::continuous::Time;
+use crate::time::continuous::{Time, TimeScale};
 
-pub trait TwoBody<T, S>
+pub trait TwoBody<T, O, F>
 where
-    T: PointMass + Copy,
-    S: InertialFrame + Copy,
+    T: TimeScale,
+    O: PointMass + Copy,
+    F: InertialFrame + Copy,
 {
-    fn to_cartesian(&self) -> Cartesian<T, S>;
+    fn to_cartesian(&self) -> Cartesian<T, O, F>;
 
-    fn to_keplerian(&self) -> Keplerian<T, S>;
+    fn to_keplerian(&self) -> Keplerian<T, O, F>;
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Cartesian<T, S>
+pub struct Cartesian<T, O, F>
 where
-    T: PointMass + Copy,
-    S: ReferenceFrame + Copy,
+    T: TimeScale,
+    O: PointMass + Copy,
+    F: ReferenceFrame + Copy,
 {
-    state: CartesianState,
-    origin: T,
-    frame: S,
+    state: CartesianState<T>,
+    origin: O,
+    frame: F,
 }
 
-impl<T, S> Cartesian<T, S>
+impl<T, O, F> Cartesian<T, O, F>
 where
-    T: PointMass + Copy,
-    S: ReferenceFrame + Copy,
+    T: TimeScale,
+    O: PointMass + Copy,
+    F: ReferenceFrame + Copy,
 {
-    pub fn new(time: Time, origin: T, frame: S, position: DVec3, velocity: DVec3) -> Self {
+    pub fn new(time: Time<T>, origin: O, frame: F, position: DVec3, velocity: DVec3) -> Self {
         let state = CartesianState::new(time, position, velocity);
         Self {
             state,
@@ -49,7 +52,7 @@ where
         }
     }
 
-    pub fn time(&self) -> Time {
+    pub fn time(&self) -> Time<T> {
         self.state.time()
     }
 
@@ -62,27 +65,29 @@ where
     }
 }
 
-impl<T, S> TwoBody<T, S> for Cartesian<T, S>
+impl<T, O, F> TwoBody<T, O, F> for Cartesian<T, O, F>
 where
-    T: PointMass + Copy,
-    S: InertialFrame + Copy,
+    T: TimeScale,
+    O: PointMass + Copy,
+    F: InertialFrame + Copy,
 {
-    fn to_cartesian(&self) -> Cartesian<T, S> {
+    fn to_cartesian(&self) -> Cartesian<T, O, F> {
         *self
     }
 
-    fn to_keplerian(&self) -> Keplerian<T, S> {
+    fn to_keplerian(&self) -> Keplerian<T, O, F> {
         Keplerian::from(*self)
     }
 }
 
-impl<T, S> CoordinateSystem for Cartesian<T, S>
+impl<T, O, F> CoordinateSystem for Cartesian<T, O, F>
 where
-    T: PointMass + Copy,
-    S: ReferenceFrame + Copy,
+    T: TimeScale,
+    O: PointMass + Copy,
+    F: ReferenceFrame + Copy,
 {
-    type Origin = T;
-    type Frame = S;
+    type Origin = O;
+    type Frame = F;
 
     fn origin(&self) -> Self::Origin {
         self.origin
@@ -93,12 +98,13 @@ where
     }
 }
 
-impl<T, S> From<Keplerian<T, S>> for Cartesian<T, S>
+impl<T, O, F> From<Keplerian<T, O, F>> for Cartesian<T, O, F>
 where
-    T: PointMass + Copy,
-    S: InertialFrame + Copy,
+    T: TimeScale,
+    O: PointMass + Copy,
+    F: InertialFrame + Copy,
 {
-    fn from(keplerian: Keplerian<T, S>) -> Self {
+    fn from(keplerian: Keplerian<T, O, F>) -> Self {
         let grav_param = keplerian.origin.gravitational_parameter();
         let state = keplerian.state.to_cartesian_state(grav_param);
         Cartesian {
@@ -110,26 +116,28 @@ where
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Keplerian<T, S>
+pub struct Keplerian<T, O, F>
 where
-    T: PointMass + Copy,
-    S: InertialFrame + Copy,
+    T: TimeScale,
+    O: PointMass + Copy,
+    F: InertialFrame + Copy,
 {
-    state: KeplerianState,
-    origin: T,
-    frame: S,
+    state: KeplerianState<T>,
+    origin: O,
+    frame: F,
 }
 
-impl<T, S> Keplerian<T, S>
+impl<T, O, F> Keplerian<T, O, F>
 where
-    T: PointMass + Copy,
-    S: InertialFrame + Copy,
+    T: TimeScale,
+    O: PointMass + Copy,
+    F: InertialFrame + Copy,
 {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        time: Time,
-        origin: T,
-        frame: S,
+        time: Time<T>,
+        origin: O,
+        frame: F,
         semi_major: f64,
         eccentricity: f64,
         inclination: f64,
@@ -153,7 +161,7 @@ where
         }
     }
 
-    pub fn time(&self) -> Time {
+    pub fn time(&self) -> Time<T> {
         self.state.time()
     }
 
@@ -182,27 +190,29 @@ where
     }
 }
 
-impl<T, S> TwoBody<T, S> for Keplerian<T, S>
+impl<T, O, F> TwoBody<T, O, F> for Keplerian<T, O, F>
 where
-    T: PointMass + Copy,
-    S: InertialFrame + Copy,
+    T: TimeScale,
+    O: PointMass + Copy,
+    F: InertialFrame + Copy,
 {
-    fn to_cartesian(&self) -> Cartesian<T, S> {
+    fn to_cartesian(&self) -> Cartesian<T, O, F> {
         Cartesian::from(*self)
     }
 
-    fn to_keplerian(&self) -> Keplerian<T, S> {
+    fn to_keplerian(&self) -> Keplerian<T, O, F> {
         *self
     }
 }
 
-impl<T, S> CoordinateSystem for Keplerian<T, S>
+impl<T, O, F> CoordinateSystem for Keplerian<T, O, F>
 where
-    T: PointMass + Copy,
-    S: InertialFrame + Copy,
+    T: TimeScale,
+    O: PointMass + Copy,
+    F: InertialFrame + Copy,
 {
-    type Origin = T;
-    type Frame = S;
+    type Origin = O;
+    type Frame = F;
 
     fn origin(&self) -> Self::Origin {
         self.origin
@@ -213,12 +223,13 @@ where
     }
 }
 
-impl<T, S> From<Cartesian<T, S>> for Keplerian<T, S>
+impl<T, O, F> From<Cartesian<T, O, F>> for Keplerian<T, O, F>
 where
-    T: PointMass + Copy,
-    S: InertialFrame + Copy,
+    T: TimeScale,
+    O: PointMass + Copy,
+    F: InertialFrame + Copy,
 {
-    fn from(cartesian: Cartesian<T, S>) -> Self {
+    fn from(cartesian: Cartesian<T, O, F>) -> Self {
         let grav_param = cartesian.origin.gravitational_parameter();
         let state = cartesian.state.to_keplerian_state(grav_param);
         Self {
@@ -236,7 +247,7 @@ mod tests {
     use super::*;
     use crate::bodies::Earth;
     use crate::frames::Icrf;
-    use crate::time::continuous::{Time, TimeScale};
+    use crate::time::continuous::{Time, TDB};
     use crate::time::dates::Date;
     use crate::time::utc::UTC;
 
@@ -244,7 +255,7 @@ mod tests {
     fn test_cartesian() {
         let date = Date::new(2023, 3, 25).expect("Date should be valid");
         let utc = UTC::new(21, 8, 0).expect("Time should be valid");
-        let time = Time::from_date_and_utc_timestamp(TimeScale::TDB, date, utc);
+        let time = Time::<TDB>::from_date_and_utc_timestamp(date, utc);
         let pos = DVec3::new(
             -0.107622532467967e7,
             -0.676589636432773e7,
@@ -277,7 +288,7 @@ mod tests {
     fn test_keplerian() {
         let date = Date::new(2023, 3, 25).expect("Date should be valid");
         let utc = UTC::new(21, 8, 0).expect("Time should be valid");
-        let time = Time::from_date_and_utc_timestamp(TimeScale::TDB, date, utc);
+        let time = Time::<TDB>::from_date_and_utc_timestamp(date, utc);
         let semi_major = 24464560.0e-3;
         let eccentricity = 0.7311;
         let inclination = 0.122138;

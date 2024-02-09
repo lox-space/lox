@@ -15,10 +15,11 @@
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::marker::PhantomData;
-use std::ops::{Add, AddAssign, Sub};
+use std::ops::{Add, Sub};
 
 use num::{abs, ToPrimitive};
 
+use crate::time::constants::f64::DAYS_PER_JULIAN_CENTURY;
 use crate::time::constants::i64::{
     SECONDS_PER_DAY, SECONDS_PER_HALF_DAY, SECONDS_PER_HOUR, SECONDS_PER_MINUTE,
 };
@@ -60,6 +61,18 @@ pub struct UnscaledTime {
 impl UnscaledTime {
     fn is_negative(&self) -> bool {
         self.seconds < 0
+    }
+
+    /// The fractional number of Julian days since J2000.
+    fn days_since_j2000(&self) -> f64 {
+        let d1 = self.seconds().to_f64().unwrap_or_default() / constants::f64::SECONDS_PER_DAY;
+        let d2 = self.attoseconds().to_f64().unwrap() / constants::f64::ATTOSECONDS_PER_DAY;
+        d2 + d1
+    }
+
+    /// The fractional number of Julian centuries since J2000.
+    fn centuries_since_j2000(&self) -> f64 {
+        self.days_since_j2000() / DAYS_PER_JULIAN_CENTURY
     }
 }
 
@@ -174,80 +187,95 @@ impl WallClock for UnscaledTime {
     }
 }
 
-pub trait TimeScaleTrait {
+/// Marker trait with associated constants denoting a continuous astronomical time scale.
+pub trait TimeScale {
     const ABBREVIATION: &'static str;
     const NAME: &'static str;
 }
 
-/// Barycentric Coordinate Time. Defaults to the J2000 epoch.
+/// International Atomic Time.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub struct TCB2;
+pub struct TAI;
 
-impl TimeScaleTrait for TCB2 {
+impl TimeScale for TAI {
+    const ABBREVIATION: &'static str = "TAI";
+    const NAME: &'static str = "International Atomic Time";
+}
+
+/// Barycentric Coordinate Time.
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct TCB;
+
+impl TimeScale for TCB {
     const ABBREVIATION: &'static str = "TCB";
     const NAME: &'static str = "Barycentric Coordinate Time";
 }
 
-/// Geocentric Coordinate Time. Defaults to the J2000 epoch.
+/// Geocentric Coordinate Time.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub struct TCG2;
+pub struct TCG;
 
-impl TimeScaleTrait for TCG2 {
+impl TimeScale for TCG {
     const ABBREVIATION: &'static str = "TCG";
     const NAME: &'static str = "Geocentric Coordinate Time";
 }
 
-/// Barycentric Dynamical Time. Defaults to the J2000 epoch.
+/// Barycentric Dynamical Time.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub struct TDB2;
+pub struct TDB;
 
-impl TimeScaleTrait for TDB2 {
+impl TimeScale for TDB {
     const ABBREVIATION: &'static str = "TDB";
     const NAME: &'static str = "Barycentric Dynamical Time";
 }
 
-/// Terrestrial Time. Defaults to the J2000 epoch.
+/// Terrestrial Time.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub struct TT2;
+pub struct TT;
 
-impl TimeScaleTrait for TT2 {
+impl TimeScale for TT {
     const ABBREVIATION: &'static str = "TT";
     const NAME: &'static str = "Terrestrial Time";
 }
 
-/// Universal Time. Defaults to the J2000 epoch.
+/// Universal Time.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub struct UT12;
+pub struct UT1;
 
-impl TimeScaleTrait for UT12 {
+impl TimeScale for UT1 {
     const ABBREVIATION: &'static str = "UT1";
     const NAME: &'static str = "Universal Time";
 }
 
+/// An instant in time in a given time scale.
 #[derive(Debug, Default, Eq, PartialEq)]
-pub struct TimeGeneric<T: TimeScaleTrait> {
+pub struct Time<T: TimeScale> {
+    // The `TimeScale` is always known statically, and all data related to the `TimeScale` required by `Time` is
+    // accessed via the scale's associated constants. Hence, we don't need an actual `T` at runtime, and we don't
+    // require additional bounds on `T` such as `Copy` and `Default`.
     scale: PhantomData<T>,
     timestamp: UnscaledTime,
 }
 
 // Must be manually implemented, since derive macros always bound the generic parameters by the given trait, not the
-// tightest possible bound, which in this case is given by PhantomData.
+// tightest possible bound. I.e., `TimeScale` is not inherently `Copy`, but `PhantomData<TimeScale>` is.
 // See https://github.com/rust-lang/rust/issues/108894#issuecomment-1459943821
-impl<T: TimeScaleTrait> Clone for TimeGeneric<T> {
+impl<T: TimeScale> Clone for Time<T> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<T: TimeScaleTrait> Copy for TimeGeneric<T> {}
+impl<T: TimeScale> Copy for Time<T> {}
 
-impl<T: TimeScaleTrait> From<UnscaledTime> for TimeGeneric<T> {
+impl<T: TimeScale> From<UnscaledTime> for Time<T> {
     fn from(timestamp: UnscaledTime) -> Self {
         Self::from_unscaled(timestamp)
     }
 }
 
-impl<T: TimeScaleTrait> TimeGeneric<T> {
+impl<T: TimeScale> Time<T> {
+    /// Instantiates a [Time] in the given scale from seconds and attoseconds since the epoch.
     pub fn new(seconds: i64, attoseconds: u64) -> Self {
         Self {
             scale: PhantomData,
@@ -258,6 +286,7 @@ impl<T: TimeScaleTrait> TimeGeneric<T> {
         }
     }
 
+    /// Instantiates a [Time] in the given scale from an [UnscaledTime].
     pub fn from_unscaled(timestamp: UnscaledTime) -> Self {
         Self {
             scale: PhantomData,
@@ -265,7 +294,7 @@ impl<T: TimeScaleTrait> TimeGeneric<T> {
         }
     }
 
-    /// Instantiates a `Time` of the given scale from a date and UTC timestamp.
+    /// Instantiates a [Time] in the given scale from a date and UTC timestamp.
     pub fn from_date_and_utc_timestamp(date: Date, time: UTC) -> Self {
         let day_in_seconds = date.j2000() * SECONDS_PER_DAY - SECONDS_PER_DAY / 2;
         let hour_in_seconds = time.hour() * SECONDS_PER_HOUR;
@@ -279,13 +308,9 @@ impl<T: TimeScaleTrait> TimeGeneric<T> {
         Self::from_unscaled(unscaled)
     }
 
-    /// Instantiates a `Time` of the given scale from a UTC datetime.
+    /// Instantiates a [Time] in the given scale from a UTC datetime.
     pub fn from_utc_datetime(dt: UTCDateTime) -> Self {
         Self::from_date_and_utc_timestamp(dt.date(), dt.time())
-    }
-
-    pub fn unscaled(&self) -> UnscaledTime {
-        self.timestamp
     }
 
     /// Returns the J2000 epoch in the given timescale.
@@ -305,31 +330,39 @@ impl<T: TimeScaleTrait> TimeGeneric<T> {
         Self::from_date_and_utc_timestamp(first_proleptic_day, midday)
     }
 
+    /// The underlying unscaled timestamp.
+    pub fn unscaled(&self) -> UnscaledTime {
+        self.timestamp
+    }
+
     /// The number of whole seconds since J2000.
-    pub fn seconds(self) -> i64 {
+    pub fn seconds(&self) -> i64 {
         self.timestamp.seconds
     }
 
     /// The number of attoseconds from the last whole second.
-    pub fn attoseconds(self) -> u64 {
+    pub fn attoseconds(&self) -> u64 {
         self.timestamp.attoseconds
     }
 
     /// The fractional number of Julian days since J2000.
-    pub fn days_since_j2000(self) -> f64 {
-        let d1 = self.seconds().to_f64().unwrap_or_default() / constants::f64::SECONDS_PER_DAY;
-        let d2 = self.attoseconds().to_f64().unwrap() / constants::f64::ATTOSECONDS_PER_DAY;
-        d2 + d1
+    pub fn days_since_j2000(&self) -> f64 {
+        self.timestamp.days_since_j2000()
+    }
+
+    /// The fractional number of Julian centuries since J2000.
+    pub fn centuries_since_j2000(&self) -> f64 {
+        self.timestamp.centuries_since_j2000()
     }
 }
 
-impl<T: TimeScaleTrait> Display for TimeGeneric<T> {
+impl<T: TimeScale> Display for Time<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{} {}", self.timestamp, T::ABBREVIATION)
     }
 }
 
-impl<T: TimeScaleTrait> Add<TimeDelta> for TimeGeneric<T> {
+impl<T: TimeScale> Add<TimeDelta> for Time<T> {
     type Output = Self;
 
     fn add(self, rhs: TimeDelta) -> Self::Output {
@@ -337,7 +370,7 @@ impl<T: TimeScaleTrait> Add<TimeDelta> for TimeGeneric<T> {
     }
 }
 
-impl<T: TimeScaleTrait> Sub<TimeDelta> for TimeGeneric<T> {
+impl<T: TimeScale> Sub<TimeDelta> for Time<T> {
     type Output = Self;
 
     fn sub(self, rhs: TimeDelta) -> Self::Output {
@@ -345,7 +378,7 @@ impl<T: TimeScaleTrait> Sub<TimeDelta> for TimeGeneric<T> {
     }
 }
 
-impl<T: TimeScaleTrait> WallClock for TimeGeneric<T> {
+impl<T: TimeScale> WallClock for Time<T> {
     fn hour(&self) -> i64 {
         self.timestamp.hour()
     }
@@ -383,420 +416,19 @@ impl<T: TimeScaleTrait> WallClock for TimeGeneric<T> {
     }
 }
 
-/// The continuous time scales supported by Lox.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum TimeScale {
-    TAI,
-    TCB,
-    TCG,
-    TDB,
-    TT,
-    UT1,
-}
-
-impl Display for TimeScale {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", Into::<&str>::into(*self))
-    }
-}
-
-#[allow(clippy::from_over_into)] // Into is infallible, but From is not
-impl Into<&str> for TimeScale {
-    fn into(self) -> &'static str {
-        match self {
-            TimeScale::TAI => "TAI",
-            TimeScale::TCB => "TCB",
-            TimeScale::TCG => "TCG",
-            TimeScale::TDB => "TDB",
-            TimeScale::TT => "TT",
-            TimeScale::UT1 => "UT1",
-        }
-    }
-}
-
 /// CalendarDate allows continuous time formats to report their date in their respective calendar.
 pub trait CalendarDate {
     fn date(&self) -> Date;
 }
 
-/// International Atomic Time. Defaults to the J2000 epoch.
-#[derive(Debug, Copy, Default, Clone, Eq, PartialEq)]
-pub struct TAI(UnscaledTime);
-
-impl TAI {
-    pub fn to_ut1(&self, _dut: TimeDelta, _dat: TimeDelta) -> UT1 {
-        todo!()
-    }
-}
-
-impl CalendarDate for TAI {
-    fn date(&self) -> Date {
-        todo!()
-    }
-}
-
-/// Barycentric Coordinate Time. Defaults to the J2000 epoch.
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
-pub struct TCB(UnscaledTime);
-
-/// Geocentric Coordinate Time. Defaults to the J2000 epoch.
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
-pub struct TCG(UnscaledTime);
-
-/// Barycentric Dynamical Time. Defaults to the J2000 epoch.
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
-pub struct TDB(UnscaledTime);
-
-/// Terrestrial Time. Defaults to the J2000 epoch.
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
-pub struct TT(UnscaledTime);
-
-/// Universal Time. Defaults to the J2000 epoch.
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
-pub struct UT1(UnscaledTime);
-
-/// Implements the `WallClock` trait for the a time scale based on [UnscaledTime] in terms of the underlying
-/// raw time.
-macro_rules! wall_clock {
-    ($time_scale:ident, $test_module:ident) => {
-        impl WallClock for $time_scale {
-            fn hour(&self) -> i64 {
-                self.0.hour()
-            }
-
-            fn minute(&self) -> i64 {
-                self.0.minute()
-            }
-
-            fn second(&self) -> i64 {
-                self.0.second()
-            }
-
-            fn millisecond(&self) -> i64 {
-                self.0.millisecond()
-            }
-
-            fn microsecond(&self) -> i64 {
-                self.0.microsecond()
-            }
-
-            fn nanosecond(&self) -> i64 {
-                self.0.nanosecond()
-            }
-
-            fn picosecond(&self) -> i64 {
-                self.0.picosecond()
-            }
-
-            fn femtosecond(&self) -> i64 {
-                self.0.femtosecond()
-            }
-
-            fn attosecond(&self) -> i64 {
-                self.0.attosecond()
-            }
-        }
-
-        #[cfg(test)]
-        mod $test_module {
-            use super::{$time_scale, UnscaledTime};
-            use crate::time::WallClock;
-
-            const RAW_TIME: UnscaledTime = UnscaledTime {
-                seconds: 1234,
-                attoseconds: 5678,
-            };
-
-            const TIME: $time_scale = $time_scale(RAW_TIME);
-
-            #[test]
-            fn test_hour_delegation() {
-                assert_eq!(TIME.hour(), RAW_TIME.hour());
-            }
-
-            #[test]
-            fn test_minute_delegation() {
-                assert_eq!(TIME.minute(), RAW_TIME.minute());
-            }
-
-            #[test]
-            fn test_second_delegation() {
-                assert_eq!(TIME.second(), RAW_TIME.second());
-            }
-
-            #[test]
-            fn test_millisecond_delegation() {
-                assert_eq!(TIME.millisecond(), RAW_TIME.millisecond());
-            }
-
-            #[test]
-            fn test_microsecond_delegation() {
-                assert_eq!(TIME.microsecond(), RAW_TIME.microsecond());
-            }
-
-            #[test]
-            fn test_nanosecond_delegation() {
-                assert_eq!(TIME.nanosecond(), RAW_TIME.nanosecond());
-            }
-
-            #[test]
-            fn test_picosecond_delegation() {
-                assert_eq!(TIME.picosecond(), RAW_TIME.picosecond());
-            }
-
-            #[test]
-            fn test_femtosecond_delegation() {
-                assert_eq!(TIME.femtosecond(), RAW_TIME.femtosecond());
-            }
-
-            #[test]
-            fn test_attosecond_delegation() {
-                assert_eq!(TIME.attosecond(), RAW_TIME.attosecond());
-            }
-        }
-    };
-}
-
-// Implement WallClock for all continuous time scales.
-wall_clock!(TAI, tai_wall_clock_tests);
-wall_clock!(TCB, tcb_wall_clock_tests);
-wall_clock!(TCG, tcg_wall_clock_tests);
-wall_clock!(TDB, tdb_wall_clock_tests);
-wall_clock!(TT, tt_wall_clock_tests);
-wall_clock!(UT1, ut1_wall_clock_tests);
-
-/// `Time` represents a time in any of the supported continuous timescales.
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum Time {
-    TAI(TAI),
-    TCB(TCB),
-    TCG(TCG),
-    TDB(TDB),
-    TT(TT),
-    UT1(UT1),
-}
-
-impl Time {
-    /// Instantiates a `Time` of the given scale from a date and UTC timestamp.
-    pub fn from_date_and_utc_timestamp(scale: TimeScale, date: Date, time: UTC) -> Self {
-        let day_in_seconds = date.j2000() * SECONDS_PER_DAY - SECONDS_PER_DAY / 2;
-        let hour_in_seconds = time.hour() * SECONDS_PER_HOUR;
-        let minute_in_seconds = time.minute() * SECONDS_PER_MINUTE;
-        let seconds = day_in_seconds + hour_in_seconds + minute_in_seconds + time.second();
-        let attoseconds = time.subsecond_as_attoseconds();
-        let raw = UnscaledTime {
-            seconds,
-            attoseconds,
-        };
-        Self::from_raw(scale, raw)
-    }
-
-    /// Instantiates a `Time` of the given scale from a UTC datetime.
-    pub fn from_utc_datetime(scale: TimeScale, dt: UTCDateTime) -> Self {
-        Self::from_date_and_utc_timestamp(scale, dt.date(), dt.time())
-    }
-
-    pub fn scale(&self) -> TimeScale {
-        match &self {
-            Time::TAI(_) => TimeScale::TAI,
-            Time::TCB(_) => TimeScale::TCB,
-            Time::TCG(_) => TimeScale::TCG,
-            Time::TDB(_) => TimeScale::TDB,
-            Time::TT(_) => TimeScale::TT,
-            Time::UT1(_) => TimeScale::UT1,
-        }
-    }
-
-    /// Returns the J2000 epoch in the given timescale.
-    pub fn j2000(scale: TimeScale) -> Self {
-        Self::from_raw(scale, UnscaledTime::default())
-    }
-
-    /// Returns, as an epoch in the given timescale, midday on the first day of the proleptic Julian
-    /// calendar.
-    pub fn jd0(scale: TimeScale) -> Self {
-        // This represents 4713 BC, since there is no year 0 separating BC and AD.
-        let first_proleptic_day = Date::new_unchecked(ProlepticJulian, -4712, 1, 1);
-        let midday = UTC::new(12, 0, 0).expect("midday should be a valid time");
-        Self::from_date_and_utc_timestamp(scale, first_proleptic_day, midday)
-    }
-
-    fn from_raw(scale: TimeScale, raw: UnscaledTime) -> Self {
-        match scale {
-            TimeScale::TAI => Time::TAI(TAI(raw)),
-            TimeScale::TCB => Time::TCB(TCB(raw)),
-            TimeScale::TCG => Time::TCG(TCG(raw)),
-            TimeScale::TDB => Time::TDB(TDB(raw)),
-            TimeScale::TT => Time::TT(TT(raw)),
-            TimeScale::UT1 => Time::UT1(UT1(raw)),
-        }
-    }
-
-    fn raw(&self) -> UnscaledTime {
-        match self {
-            Time::TAI(tai) => tai.0,
-            Time::TCB(tcb) => tcb.0,
-            Time::TCG(tcg) => tcg.0,
-            Time::TDB(tdb) => tdb.0,
-            Time::TT(tt) => tt.0,
-            Time::UT1(ut1) => ut1.0,
-        }
-    }
-
-    /// The number of whole seconds since J2000.
-    pub fn seconds(&self) -> i64 {
-        self.raw().seconds
-    }
-
-    /// The number of attoseconds from the last whole second.
-    pub fn attoseconds(&self) -> u64 {
-        self.raw().attoseconds
-    }
-
-    /// The fractional number of Julian days since J2000.
-    pub fn days_since_j2000(&self) -> f64 {
-        let d1 = self.seconds().to_f64().unwrap_or_default() / constants::f64::SECONDS_PER_DAY;
-        let d2 = self.attoseconds().to_f64().unwrap() / constants::f64::ATTOSECONDS_PER_DAY;
-        d2 + d1
-    }
-}
-
-impl Display for Time {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{:02}:{:02}:{:02}.{:03}.{:03}.{:03}.{:03}.{:03}.{:03} {}",
-            self.hour(),
-            self.minute(),
-            self.second(),
-            self.millisecond(),
-            self.microsecond(),
-            self.nanosecond(),
-            self.picosecond(),
-            self.femtosecond(),
-            self.attosecond(),
-            self.scale(),
-        )
-    }
-}
-
-impl WallClock for Time {
-    fn hour(&self) -> i64 {
-        match self {
-            Time::TAI(t) => t.hour(),
-            Time::TCB(t) => t.hour(),
-            Time::TCG(t) => t.hour(),
-            Time::TDB(t) => t.hour(),
-            Time::TT(t) => t.hour(),
-            Time::UT1(t) => t.hour(),
-        }
-    }
-
-    fn minute(&self) -> i64 {
-        match self {
-            Time::TAI(t) => t.minute(),
-            Time::TCB(t) => t.minute(),
-            Time::TCG(t) => t.minute(),
-            Time::TDB(t) => t.minute(),
-            Time::TT(t) => t.minute(),
-            Time::UT1(t) => t.minute(),
-        }
-    }
-
-    fn second(&self) -> i64 {
-        match self {
-            Time::TAI(t) => t.second(),
-            Time::TCB(t) => t.second(),
-            Time::TCG(t) => t.second(),
-            Time::TDB(t) => t.second(),
-            Time::TT(t) => t.second(),
-            Time::UT1(t) => t.second(),
-        }
-    }
-
-    fn millisecond(&self) -> i64 {
-        match self {
-            Time::TAI(t) => t.millisecond(),
-            Time::TCB(t) => t.millisecond(),
-            Time::TCG(t) => t.millisecond(),
-            Time::TDB(t) => t.millisecond(),
-            Time::TT(t) => t.millisecond(),
-            Time::UT1(t) => t.millisecond(),
-        }
-    }
-
-    fn microsecond(&self) -> i64 {
-        match self {
-            Time::TAI(t) => t.microsecond(),
-            Time::TCB(t) => t.microsecond(),
-            Time::TCG(t) => t.microsecond(),
-            Time::TDB(t) => t.microsecond(),
-            Time::TT(t) => t.microsecond(),
-            Time::UT1(t) => t.microsecond(),
-        }
-    }
-
-    fn nanosecond(&self) -> i64 {
-        match self {
-            Time::TAI(t) => t.nanosecond(),
-            Time::TCB(t) => t.nanosecond(),
-            Time::TCG(t) => t.nanosecond(),
-            Time::TDB(t) => t.nanosecond(),
-            Time::TT(t) => t.nanosecond(),
-            Time::UT1(t) => t.nanosecond(),
-        }
-    }
-
-    fn picosecond(&self) -> i64 {
-        match self {
-            Time::TAI(t) => t.picosecond(),
-            Time::TCB(t) => t.picosecond(),
-            Time::TCG(t) => t.picosecond(),
-            Time::TDB(t) => t.picosecond(),
-            Time::TT(t) => t.picosecond(),
-            Time::UT1(t) => t.picosecond(),
-        }
-    }
-
-    fn femtosecond(&self) -> i64 {
-        match self {
-            Time::TAI(t) => t.femtosecond(),
-            Time::TCB(t) => t.femtosecond(),
-            Time::TCG(t) => t.femtosecond(),
-            Time::TDB(t) => t.femtosecond(),
-            Time::TT(t) => t.femtosecond(),
-            Time::UT1(t) => t.femtosecond(),
-        }
-    }
-
-    fn attosecond(&self) -> i64 {
-        match self {
-            Time::TAI(t) => t.attosecond(),
-            Time::TCB(t) => t.attosecond(),
-            Time::TCG(t) => t.attosecond(),
-            Time::TDB(t) => t.attosecond(),
-            Time::TT(t) => t.attosecond(),
-            Time::UT1(t) => t.attosecond(),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::time::dates::Calendar::Gregorian;
 
-    const TIME_SCALES: [TimeScale; 6] = [
-        TimeScale::TAI,
-        TimeScale::TCB,
-        TimeScale::TCG,
-        TimeScale::TDB,
-        TimeScale::TT,
-        TimeScale::UT1,
-    ];
+    use super::*;
 
     #[test]
-    fn test_raw_time_is_negative() {
+    fn test_unscaled_time_is_negative() {
         assert!(UnscaledTime {
             seconds: -1,
             attoseconds: 0
@@ -815,7 +447,7 @@ mod tests {
     }
 
     #[test]
-    fn test_raw_time_hour() {
+    fn test_unscaled_time_hour() {
         struct TestCase {
             desc: &'static str,
             time: UnscaledTime,
@@ -909,7 +541,7 @@ mod tests {
     }
 
     #[test]
-    fn test_raw_time_minute() {
+    fn test_unscaled_time_minute() {
         struct TestCase {
             desc: &'static str,
             time: UnscaledTime,
@@ -1002,7 +634,7 @@ mod tests {
     }
 
     #[test]
-    fn test_raw_time_second() {
+    fn test_unscaled_time_second() {
         struct TestCase {
             desc: &'static str,
             time: UnscaledTime,
@@ -1095,7 +727,7 @@ mod tests {
     }
 
     #[test]
-    fn test_raw_time_subseconds_with_positive_seconds() {
+    fn test_unscaled_time_subseconds_with_positive_seconds() {
         let time = UnscaledTime {
             seconds: 0,
             attoseconds: 123_456_789_012_345_678,
@@ -1150,7 +782,7 @@ mod tests {
     }
 
     #[test]
-    fn test_raw_time_subseconds_with_negative_seconds() {
+    fn test_unscaled_time_subseconds_with_negative_seconds() {
         let time = UnscaledTime {
             seconds: -1,
             attoseconds: 123_456_789_012_345_678,
@@ -1205,7 +837,7 @@ mod tests {
     }
 
     #[test]
-    fn test_raw_time_add_time_delta() {
+    fn test_unscaled_time_add_time_delta() {
         struct TestCase {
             desc: &'static str,
             delta: TimeDelta,
@@ -1287,7 +919,7 @@ mod tests {
     }
 
     #[test]
-    fn test_raw_time_sub_time_delta() {
+    fn test_unscaled_time_sub_time_delta() {
         struct TestCase {
             desc: &'static str,
             delta: TimeDelta,
@@ -1384,37 +1016,24 @@ mod tests {
     }
 
     #[test]
-    fn test_timescale_into_str() {
-        let test_cases = [
-            (TimeScale::TAI, "TAI"),
-            (TimeScale::TCB, "TCB"),
-            (TimeScale::TCG, "TCG"),
-            (TimeScale::TDB, "TDB"),
-            (TimeScale::TT, "TT"),
-            (TimeScale::UT1, "UT1"),
-        ];
+    fn test_unscaled_time_days_since_j2000() {}
 
-        for (scale, expected) in test_cases {
-            assert_eq!(Into::<&str>::into(scale), expected);
-        }
-    }
+    #[test]
+    fn test_unscaled_time_centuries_since_j2000() {}
 
     #[test]
     fn test_time_from_date_and_utc_timestamp() {
         let date = Date::new_unchecked(Gregorian, 2021, 1, 1);
         let utc = UTC::new(12, 34, 56).expect("time should be valid");
         let datetime = UTCDateTime::new(date, utc);
-
-        for scale in TIME_SCALES {
-            let actual = Time::from_date_and_utc_timestamp(scale, date, utc);
-            let expected = Time::from_utc_datetime(scale, datetime);
-            assert_eq!(actual, expected);
-        }
+        let actual = Time::<TAI>::from_date_and_utc_timestamp(date, utc);
+        let expected = Time::<TAI>::from_utc_datetime(datetime);
+        assert_eq!(actual, expected);
     }
 
     #[test]
     fn test_time_display() {
-        let time = Time::TAI(TAI::default());
+        let time = Time::<TAI>::j2000();
         let expected = "12:00:00.000.000.000.000.000.000 TAI".to_string();
         let actual = time.to_string();
         assert_eq!(actual, expected);
@@ -1422,222 +1041,156 @@ mod tests {
 
     #[test]
     fn test_time_j2000() {
-        [
-            (TimeScale::TAI, Time::TAI(TAI::default())),
-            (TimeScale::TCB, Time::TCB(TCB::default())),
-            (TimeScale::TCG, Time::TCG(TCG::default())),
-            (TimeScale::TDB, Time::TDB(TDB::default())),
-            (TimeScale::TT, Time::TT(TT::default())),
-            (TimeScale::UT1, Time::UT1(UT1::default())),
-        ]
-        .iter()
-        .for_each(|(scale, expected)| {
-            let actual = Time::j2000(*scale);
-            assert_eq!(*expected, actual);
-        });
+        let actual = Time::<TAI>::j2000();
+        let expected = Time {
+            scale: PhantomData::<TAI>::default(),
+            timestamp: UnscaledTime::default(),
+        };
+        assert_eq!(*expected, actual);
     }
 
     #[test]
     fn test_time_jd0() {
-        [
-            (
-                TimeScale::TAI,
-                Time::TAI(TAI(UnscaledTime {
-                    seconds: -211813488000,
-                    attoseconds: 0,
-                })),
-            ),
-            (
-                TimeScale::TCB,
-                Time::TCB(TCB(UnscaledTime {
-                    seconds: -211813488000,
-                    attoseconds: 0,
-                })),
-            ),
-            (
-                TimeScale::TCG,
-                Time::TCG(TCG(UnscaledTime {
-                    seconds: -211813488000,
-                    attoseconds: 0,
-                })),
-            ),
-            (
-                TimeScale::TDB,
-                Time::TDB(TDB(UnscaledTime {
-                    seconds: -211813488000,
-                    attoseconds: 0,
-                })),
-            ),
-            (
-                TimeScale::TT,
-                Time::TT(TT(UnscaledTime {
-                    seconds: -211813488000,
-                    attoseconds: 0,
-                })),
-            ),
-            (
-                TimeScale::UT1,
-                Time::UT1(UT1(UnscaledTime {
-                    seconds: -211813488000,
-                    attoseconds: 0,
-                })),
-            ),
-        ]
-        .iter()
-        .for_each(|(scale, expected)| {
-            let actual = Time::jd0(*scale);
-            assert_eq!(*expected, actual);
+        let actual = Time::<TAI>::jd0();
+        let expected = Time::<TAI>::from_unscaled(UnscaledTime {
+            seconds: -211813488000,
+            attoseconds: 0,
         });
-    }
-
-    #[test]
-    fn test_time_scale() {
-        let test_cases = [
-            (Time::TAI(TAI::default()), TimeScale::TAI),
-            (Time::TCB(TCB::default()), TimeScale::TCB),
-            (Time::TCG(TCG::default()), TimeScale::TCG),
-            (Time::TDB(TDB::default()), TimeScale::TDB),
-            (Time::TT(TT::default()), TimeScale::TT),
-            (Time::UT1(UT1::default()), TimeScale::UT1),
-        ];
-
-        for (time, expected) in test_cases {
-            assert_eq!(time.scale(), expected);
-        }
+        assert_eq!(*expected, actual);
     }
 
     #[test]
     fn test_time_wall_clock_hour() {
-        let raw_time = UnscaledTime::default();
-        let expected = raw_time.hour();
-        for scale in TIME_SCALES {
-            let time = Time::from_raw(scale, raw_time);
-            let actual = time.hour();
-            assert_eq!(
-                actual, expected,
-                "expected time in scale {} to have hour {}, but got {}",
-                scale, expected, actual
-            );
-        }
+        let unscaled_time = UnscaledTime {
+            seconds: 1234567890,
+            attoseconds: 9876543210,
+        };
+        let expected = unscaled_time.hour();
+        let actual = Time::<TAI>::j2000().hour();
+        assert_eq!(
+            actual, expected,
+            "expected Time to have hour {}, but got {}",
+            expected, actual
+        );
     }
 
     #[test]
     fn test_time_wall_clock_minute() {
-        let raw_time = UnscaledTime::default();
-        let expected = raw_time.minute();
-        for scale in TIME_SCALES {
-            let time = Time::from_raw(scale, raw_time);
-            let actual = time.minute();
-            assert_eq!(
-                actual, expected,
-                "expected time in scale {} to have minute {}, but got {}",
-                scale, expected, actual
-            );
-        }
+        let unscaled_time = UnscaledTime {
+            seconds: 1234567890,
+            attoseconds: 9876543210,
+        };
+        let expected = unscaled_time.minute();
+        let actual = Time::<TAI>::j2000().minute();
+        assert_eq!(
+            actual, expected,
+            "expected Time to have minute {}, but got {}",
+            expected, actual,
+        );
     }
 
     #[test]
     fn test_time_wall_clock_second() {
-        let raw_time = UnscaledTime::default();
-        let expected = raw_time.second();
-        for scale in TIME_SCALES {
-            let time = Time::from_raw(scale, raw_time);
-            let actual = time.second();
-            assert_eq!(
-                actual, expected,
-                "expected time in scale {} to have second {}, but got {}",
-                scale, expected, actual
-            );
-        }
+        let unscaled_time = UnscaledTime {
+            seconds: 1234567890,
+            attoseconds: 9876543210,
+        };
+        let expected = unscaled_time.second();
+        let actual = Time::<TAI>::j2000().second();
+        assert_eq!(
+            actual, expected,
+            "expected Time to have second {}, but got {}",
+            expected, actual,
+        );
     }
 
     #[test]
     fn test_time_wall_clock_millisecond() {
-        let raw_time = UnscaledTime::default();
-        let expected = raw_time.millisecond();
-        for scale in TIME_SCALES {
-            let time = Time::from_raw(scale, raw_time);
-            let actual = time.millisecond();
-            assert_eq!(
-                actual, expected,
-                "expected time in scale {} to have millisecond {}, but got {}",
-                scale, expected, actual
-            );
-        }
+        let unscaled_time = UnscaledTime {
+            seconds: 1234567890,
+            attoseconds: 9876543210,
+        };
+        let expected = unscaled_time.millisecond();
+        let actual = Time::<TAI>::j2000().millisecond();
+        assert_eq!(
+            actual, expected,
+            "expected Time to have millisecond {}, but got {}",
+            expected, actual,
+        );
     }
 
     #[test]
     fn test_time_wall_clock_microsecond() {
-        let raw_time = UnscaledTime::default();
-        let expected = raw_time.microsecond();
-        for scale in TIME_SCALES {
-            let time = Time::from_raw(scale, raw_time);
-            let actual = time.microsecond();
-            assert_eq!(
-                actual, expected,
-                "expected time in scale {} to have microsecond {}, but got {}",
-                scale, expected, actual
-            );
-        }
+        let unscaled_time = UnscaledTime {
+            seconds: 1234567890,
+            attoseconds: 9876543210,
+        };
+        let expected = unscaled_time.microsecond();
+        let actual = Time::<TAI>::j2000().microsecond();
+        assert_eq!(
+            actual, expected,
+            "expected Time to have microsecond {}, but got {}",
+            expected, actual,
+        );
     }
 
     #[test]
     fn test_time_wall_clock_nanosecond() {
-        let raw_time = UnscaledTime::default();
-        let expected = raw_time.nanosecond();
-        for scale in TIME_SCALES {
-            let time = Time::from_raw(scale, raw_time);
-            let actual = time.nanosecond();
-            assert_eq!(
-                actual, expected,
-                "expected time in scale {} to have nanosecond {}, but got {}",
-                scale, expected, actual
-            );
-        }
+        let unscaled_time = UnscaledTime {
+            seconds: 1234567890,
+            attoseconds: 9876543210,
+        };
+        let expected = unscaled_time.nanosecond();
+        let actual = Time::<TAI>::j2000().nanosecond();
+        assert_eq!(
+            actual, expected,
+            "expected Time to have nanosecond {}, but got {}",
+            expected, actual,
+        );
     }
 
     #[test]
     fn test_time_wall_clock_picosecond() {
-        let raw_time = UnscaledTime::default();
-        let expected = raw_time.picosecond();
-        for scale in TIME_SCALES {
-            let time = Time::from_raw(scale, raw_time);
-            let actual = time.picosecond();
-            assert_eq!(
-                actual, expected,
-                "expected time in scale {} to have picosecond {}, but got {}",
-                scale, expected, actual
-            );
-        }
+        let unscaled_time = UnscaledTime {
+            seconds: 1234567890,
+            attoseconds: 9876543210,
+        };
+        let expected = unscaled_time.picosecond();
+        let actual = Time::<TAI>::j2000().picosecond();
+        assert_eq!(
+            actual, expected,
+            "expected Time to have picosecond {}, but got {}",
+            expected, actual,
+        );
     }
 
     #[test]
     fn test_time_wall_clock_femtosecond() {
-        let raw_time = UnscaledTime::default();
-        let expected = raw_time.femtosecond();
-        for scale in TIME_SCALES {
-            let time = Time::from_raw(scale, raw_time);
-            let actual = time.femtosecond();
-            assert_eq!(
-                actual, expected,
-                "expected time in scale {} to have femtosecond {}, but got {}",
-                scale, expected, actual
-            );
-        }
+        let unscaled_time = UnscaledTime {
+            seconds: 1234567890,
+            attoseconds: 9876543210,
+        };
+        let expected = unscaled_time.femtosecond();
+        let actual = Time::<TAI>::j2000().femtosecond();
+        assert_eq!(
+            actual, expected,
+            "expected Time to have femtosecond {}, but got {}",
+            expected, actual,
+        );
     }
 
     #[test]
     fn test_time_wall_clock_attosecond() {
-        let raw_time = UnscaledTime::default();
-        let expected = raw_time.attosecond();
-        for scale in TIME_SCALES {
-            let time = Time::from_raw(scale, raw_time);
-            let actual = time.attosecond();
-            assert_eq!(
-                actual, expected,
-                "expected time in scale {} to have attosecond {}, but got {}",
-                scale, expected, actual
-            );
-        }
+        let unscaled_time = UnscaledTime {
+            seconds: 1234567890,
+            attoseconds: 9876543210,
+        };
+        let expected = unscaled_time.attosecond();
+        let actual = Time::<TAI>::j2000().attosecond();
+        assert_eq!(
+            actual, expected,
+            "expected Time to have attosecond {}, but got {}",
+            expected, actual,
+        );
     }
 }

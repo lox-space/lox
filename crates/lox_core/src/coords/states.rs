@@ -10,23 +10,23 @@ use float_eq::float_eq;
 use glam::{DMat3, DVec3};
 
 use crate::math::{mod_two_pi, normalize_two_pi};
-use crate::time::continuous::Time;
+use crate::time::continuous::{Time, TimeScale};
 
-pub trait TwoBodyState {
-    fn time(&self) -> Time;
-    fn to_cartesian_state(&self, grav_param: f64) -> CartesianState;
-    fn to_keplerian_state(&self, grav_param: f64) -> KeplerianState;
+pub trait TwoBodyState<T: TimeScale> {
+    fn time(&self) -> Time<T>;
+    fn to_cartesian_state(&self, grav_param: f64) -> CartesianState<T>;
+    fn to_keplerian_state(&self, grav_param: f64) -> KeplerianState<T>;
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct CartesianState {
-    time: Time,
+pub struct CartesianState<T: TimeScale> {
+    time: Time<T>,
     position: DVec3,
     velocity: DVec3,
 }
 
-impl CartesianState {
-    pub fn new(time: Time, position: DVec3, velocity: DVec3) -> Self {
+impl<T: TimeScale> CartesianState<T> {
+    pub fn new(time: Time<T>, position: DVec3, velocity: DVec3) -> Self {
         Self {
             time,
             position,
@@ -43,16 +43,16 @@ impl CartesianState {
     }
 }
 
-impl TwoBodyState for CartesianState {
-    fn time(&self) -> Time {
+impl<T: TimeScale> TwoBodyState<T> for CartesianState<T> {
+    fn time(&self) -> Time<T> {
         self.time
     }
 
-    fn to_cartesian_state(&self, _grav_param: f64) -> CartesianState {
+    fn to_cartesian_state(&self, _grav_param: f64) -> CartesianState<T> {
         *self
     }
 
-    fn to_keplerian_state(&self, grav_param: f64) -> KeplerianState {
+    fn to_keplerian_state(&self, grav_param: f64) -> KeplerianState<T> {
         let r = self.position.length();
         let v = self.velocity.length();
         let h = self.position.cross(self.velocity);
@@ -119,8 +119,8 @@ impl TwoBodyState for CartesianState {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct KeplerianState {
-    time: Time,
+pub struct KeplerianState<T: TimeScale> {
+    time: Time<T>,
     semi_major: f64,
     eccentricity: f64,
     inclination: f64,
@@ -129,9 +129,9 @@ pub struct KeplerianState {
     true_anomaly: f64,
 }
 
-impl KeplerianState {
+impl<T: TimeScale> KeplerianState<T> {
     pub fn new(
-        time: Time,
+        time: Time<T>,
         semi_major: f64,
         eccentricity: f64,
         inclination: f64,
@@ -195,12 +195,12 @@ impl KeplerianState {
     }
 }
 
-impl TwoBodyState for KeplerianState {
-    fn time(&self) -> Time {
+impl<T: TimeScale> TwoBodyState<T> for KeplerianState<T> {
+    fn time(&self) -> Time<T> {
         self.time
     }
 
-    fn to_cartesian_state(&self, grav_param: f64) -> CartesianState {
+    fn to_cartesian_state(&self, grav_param: f64) -> CartesianState<T> {
         let (pos, vel) = self.to_perifocal(grav_param);
         let rot = DMat3::from_rotation_z(self.ascending_node)
             * DMat3::from_rotation_x(self.inclination)
@@ -208,7 +208,7 @@ impl TwoBodyState for KeplerianState {
         CartesianState::new(self.time, rot * pos, rot * vel)
     }
 
-    fn to_keplerian_state(&self, _grav_param: f64) -> KeplerianState {
+    fn to_keplerian_state(&self, _grav_param: f64) -> KeplerianState<T> {
         *self
     }
 }
@@ -235,13 +235,13 @@ mod tests {
     use glam::DVec3;
 
     use crate::bodies::{Earth, PointMass};
-    use crate::time::continuous::TimeScale;
+    use crate::time::continuous::{TimeScale, TDB};
 
     use super::*;
 
     #[test]
     fn test_elliptic() {
-        let time = Time::j2000(TimeScale::TDB);
+        let time = Time::<TDB>::j2000();
         let grav_param = 3.9860047e14;
         let semi_major = 24464560.0;
         let eccentricity = 0.7311;
@@ -297,7 +297,7 @@ mod tests {
 
     #[test]
     fn test_circular() {
-        let time = Time::j2000(TimeScale::TDB);
+        let time = Time::<TDB>::j2000();
         let grav_param = 3.986004418e14;
         let semi_major = 6778136.6;
         let eccentricity = 0.0;
@@ -338,7 +338,7 @@ mod tests {
 
     #[test]
     fn test_circular_orekit() {
-        let time = Time::j2000(TimeScale::TDB);
+        let time = Time::<TDB>::j2000();
         let grav_param = 3.9860047e14;
         let semi_major = 24464560.0;
         let eccentricity = 0.0;
@@ -370,7 +370,7 @@ mod tests {
 
     #[test]
     fn test_hyperbolic_orekit() {
-        let time = Time::j2000(TimeScale::TDB);
+        let time = Time::<TDB>::j2000();
         let grav_param = 3.9860047e14;
         let semi_major = -24464560.0;
         let eccentricity = 1.7311;
@@ -402,7 +402,7 @@ mod tests {
 
     #[test]
     fn test_equatorial() {
-        let time = Time::j2000(TimeScale::TDB);
+        let time = Time::<TDB>::j2000();
         let grav_param = 3.9860047e14;
         let semi_major = 24464560.0;
         let eccentricity = 0.7311;
@@ -434,7 +434,7 @@ mod tests {
 
     #[test]
     fn test_circular_equatorial() {
-        let time = Time::j2000(TimeScale::TDB);
+        let time = Time::<TDB>::j2000();
         let grav_param = 3.9860047e14;
         let semi_major = 24464560.0;
         let eccentricity = 0.0;
@@ -466,7 +466,7 @@ mod tests {
 
     #[test]
     fn test_iss() {
-        let time = Time::j2000(TimeScale::TDB);
+        let time = Time::<TDB>::j2000();
         let position = DVec3::new(6068.27927, -1692.84394, -2516.61918);
         let velocity = DVec3::new(-0.660415582, 5.495938726, -5.303093233);
         let grav_param = Earth.gravitational_parameter();

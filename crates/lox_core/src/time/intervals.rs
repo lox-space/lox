@@ -4,7 +4,7 @@ use crate::time::continuous::Time;
 /// Although strictly TDB, TT is sufficient for most applications.
 pub type TDBJulianCenturiesSinceJ2000 = f64;
 
-pub fn tdb_julian_centuries_since_j2000(time: Time) -> TDBJulianCenturiesSinceJ2000 {
+pub fn tdb_julian_centuries_since_j2000<T: TimeScale>(time: Time<T>) -> TDBJulianCenturiesSinceJ2000 {
     match time {
         Time::TT(_) | Time::TDB(_) => {
             time.days_since_j2000() / constants::f64::DAYS_PER_JULIAN_CENTURY
