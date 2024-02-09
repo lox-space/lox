@@ -13,6 +13,7 @@ use pyo3::prelude::*;
 use lox_core::bodies::PointMass;
 use lox_core::coords::states::{CartesianState, KeplerianState, TwoBodyState};
 use lox_core::coords::DVec3;
+use lox_core::time::continuous::{Time, TimeScale};
 
 use crate::bodies::PyBody;
 use crate::frames::PyFrame;
@@ -20,9 +21,36 @@ use crate::time::PyTime;
 
 #[pyclass(name = "Cartesian")]
 pub struct PyCartesian {
-    state: CartesianState,
+    state: PyCartesianState,
     origin: PyBody,
     frame: PyFrame,
+}
+
+#[pyclass(name = "CartesianState")]
+pub struct PyCartesianState {
+    time: PyTime,
+    position: DVec3,
+    velocity: DVec3,
+}
+
+impl PyCartesianState {
+    pub fn to_keplerian_state(&self) -> PyKeplerianState {
+        unimplemented!(
+            "There's no way to create a Rust `Time` dynamically from a `PyTime` enum variant."
+        )
+    }
+}
+
+#[derive(Debug, PartialEq)]
+#[pyclass(name = "KeplerianState")]
+pub struct PyKeplerianState {
+    time: PyTime,
+    semi_major: f64,
+    eccentricity: f64,
+    inclination: f64,
+    ascending_node: f64,
+    periapsis_argument: f64,
+    true_anomaly: f64,
 }
 
 #[pymethods]
@@ -30,7 +58,7 @@ impl PyCartesian {
     #[allow(clippy::too_many_arguments)]
     #[new]
     fn new(
-        time: &PyTime,
+        time: PyTime,
         body: PyObject,
         frame: &str,
         x: f64,
@@ -42,7 +70,11 @@ impl PyCartesian {
     ) -> PyResult<Self> {
         let origin: PyBody = body.try_into()?;
         let frame = PyFrame::from_str(frame)?;
-        let state = CartesianState::new(time.0, DVec3::new(x, y, z), DVec3::new(vx, vy, vz));
+        let state = PyCartesianState {
+            time,
+            position: DVec3::new(x, y, z),
+            veclocity: DVec3::new(vx, vy, vz),
+        };
         Ok(Self {
             state,
             origin,
@@ -51,7 +83,7 @@ impl PyCartesian {
     }
 
     fn time(&self) -> PyTime {
-        PyTime(self.state.time())
+        self.state.time
     }
 
     fn reference_frame(&self) -> String {

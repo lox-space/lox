@@ -9,7 +9,7 @@
 use pyo3::{pyclass, pymethods};
 use std::fmt::{Display, Formatter};
 
-use lox_core::time::continuous::{Time, UnscaledTime, TAI, TCB, TCG, TDB, TT, UT1};
+use lox_core::time::continuous::{Time, TimeScale, UnscaledTime, TAI, TCB, TCG, TDB, TT, UT1};
 use lox_core::time::dates::Date;
 use lox_core::time::utc::UTC;
 use lox_core::time::PerMille;
@@ -154,6 +154,15 @@ impl PyTime {
 
     pub fn scale(&self) -> PyTimeScale {
         self.scale
+    }
+}
+
+impl From<Time<TDB>> for PyTime {
+    fn from(time: Time<TDB>) -> Self {
+        PyTime {
+            scale: PyTimeScale::TDB,
+            timestamp: time.unscaled(),
+        }
     }
 }
 
