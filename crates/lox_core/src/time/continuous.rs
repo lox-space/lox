@@ -17,7 +17,7 @@ use std::fmt::{Display, Formatter};
 use std::marker::PhantomData;
 use std::ops::{Add, Sub};
 
-use num::{abs, ToPrimitive};
+use num::abs;
 
 use crate::time::constants::f64::DAYS_PER_JULIAN_CENTURY;
 use crate::time::constants::i64::{
@@ -64,14 +64,14 @@ impl UnscaledTime {
     }
 
     /// The fractional number of Julian days since J2000.
-    fn days_since_j2000(&self) -> f64 {
-        let d1 = self.seconds().to_f64().unwrap_or_default() / constants::f64::SECONDS_PER_DAY;
-        let d2 = self.attoseconds().to_f64().unwrap() / constants::f64::ATTOSECONDS_PER_DAY;
+    pub fn days_since_j2000(&self) -> f64 {
+        let d1 = self.seconds as f64 / constants::f64::SECONDS_PER_DAY;
+        let d2 = self.attoseconds as f64 / constants::f64::ATTOSECONDS_PER_DAY;
         d2 + d1
     }
 
     /// The fractional number of Julian centuries since J2000.
-    fn centuries_since_j2000(&self) -> f64 {
+    pub fn centuries_since_j2000(&self) -> f64 {
         self.days_since_j2000() / DAYS_PER_JULIAN_CENTURY
     }
 }
@@ -424,6 +424,7 @@ pub trait CalendarDate {
 #[cfg(test)]
 mod tests {
     use crate::time::dates::Calendar::Gregorian;
+    use float_eq::assert_float_eq;
 
     use super::*;
 
@@ -1016,7 +1017,42 @@ mod tests {
     }
 
     #[test]
-    fn test_unscaled_time_days_since_j2000() {}
+    fn test_unscaled_time_days_since_j2000() {
+        struct TestCase {
+            desc: &'static str,
+            time: UnscaledTime,
+            expected: f64,
+        }
+
+        let test_cases = [
+            TestCase {
+                desc: "at the epoch",
+                time: UnscaledTime::default(),
+                expected: 0.0,
+            },
+            TestCase {
+                desc: "exactly one day after the epoch",
+                time: UnscaledTime {
+                    seconds: SECONDS_PER_DAY,
+                    attoseconds: 0,
+                },
+                expected: 1.0,
+            },
+            TestCase {
+                desc: "exactly one day before the epoch",
+                time: UnscaledTime {
+                    seconds: -SECONDS_PER_DAY,
+                    attoseconds: 0,
+                },
+                expected: -1.0,
+            },
+        ];
+
+        for tc in test_cases {
+            let actual = tc.time.days_since_j2000();
+            assert_float_eq!(tc.expected, actual, abs <= 1e-12)
+        }
+    }
 
     #[test]
     fn test_unscaled_time_centuries_since_j2000() {}

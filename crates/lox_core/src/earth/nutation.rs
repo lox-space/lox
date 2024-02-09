@@ -16,8 +16,7 @@ use crate::earth::nutation::iau2000::nutation_iau2000a;
 use crate::earth::nutation::iau2000::nutation_iau2000b;
 use crate::earth::nutation::iau2006::nutation_iau2006a;
 use crate::math::RADIANS_IN_ARCSECOND;
-use crate::time::continuous::Time;
-use crate::time::intervals::tdb_julian_centuries_since_j2000;
+use crate::time::continuous::{Time, TDB};
 use crate::types::Radians;
 
 mod iau1980;
@@ -64,8 +63,8 @@ impl Add<&Self> for Nutation {
 }
 
 /// Calculate nutation coefficients at `time` using the given [Model].
-pub fn nutation(model: Model, time: Time) -> Nutation {
-    let t = tdb_julian_centuries_since_j2000(time);
+pub fn nutation(model: Model, time: Time<TDB>) -> Nutation {
+    let t = time.centuries_since_j2000();
     match model {
         Model::IAU1980 => nutation_iau1980(t),
         Model::IAU2000A => nutation_iau2000a(t),
@@ -98,7 +97,7 @@ fn point1_microarcsec_to_rad(p1_uas: Point1Microarcsec) -> Radians {
 
 #[cfg(test)]
 mod tests {
-    use crate::time::continuous::TimeScale;
+    use crate::time::continuous::{TimeScale, TT};
     use float_eq::assert_float_eq;
 
     use super::*;
@@ -107,7 +106,7 @@ mod tests {
 
     #[test]
     fn test_nutation_iau1980() {
-        let time = Time::j2000(TimeScale::TT);
+        let time = Time::<TDB>::j2000();
         let expected = Nutation {
             longitude: -0.00006750247617532478,
             obliquity: -0.00002799221238377013,
@@ -118,7 +117,7 @@ mod tests {
     }
     #[test]
     fn test_nutation_iau2000a() {
-        let time = Time::j2000(TimeScale::TT);
+        let time = Time::<TDB>::j2000();
         let expected = Nutation {
             longitude: -0.00006754422426417299,
             obliquity: -0.00002797083119237414,
@@ -130,7 +129,7 @@ mod tests {
 
     #[test]
     fn test_nutation_iau2000b() {
-        let time = Time::j2000(TimeScale::TT);
+        let time = Time::<TDB>::j2000();
         let expected = Nutation {
             longitude: -0.00006754261253992235,
             obliquity: -0.00002797092331098565,
@@ -142,7 +141,7 @@ mod tests {
 
     #[test]
     fn test_nutation_iau2006a() {
-        let time = Time::j2000(TimeScale::TT);
+        let time = Time::<TDB>::j2000();
         let expected = Nutation {
             longitude: -0.00006754425598969513,
             obliquity: -0.00002797083119237414,

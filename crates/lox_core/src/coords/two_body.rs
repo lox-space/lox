@@ -25,7 +25,7 @@ where
     fn to_keplerian(&self) -> Keplerian<T, O, F>;
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct Cartesian<T, O, F>
 where
     T: TimeScale,
@@ -35,6 +35,28 @@ where
     state: CartesianState<T>,
     origin: O,
     frame: F,
+}
+
+// Must be manually implemented, since derive macros always bound the generic parameters by the given trait, not the
+// tightest possible bound. I.e., `TimeScale` is not inherently `Copy`, but `Cartesian<TimeScale>` is.
+// See https://github.com/rust-lang/rust/issues/108894#issuecomment-1459943821
+impl<T, O, F> Clone for Cartesian<T, O, F>
+where
+    T: TimeScale,
+    O: PointMass + Copy,
+    F: ReferenceFrame + Copy,
+{
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<T, O, F> Copy for Cartesian<T, O, F>
+where
+    T: TimeScale,
+    O: PointMass + Copy,
+    F: ReferenceFrame + Copy,
+{
 }
 
 impl<T, O, F> Cartesian<T, O, F>
@@ -115,7 +137,7 @@ where
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct Keplerian<T, O, F>
 where
     T: TimeScale,
@@ -125,6 +147,28 @@ where
     state: KeplerianState<T>,
     origin: O,
     frame: F,
+}
+
+// Must be manually implemented, since derive macros always bound the generic parameters by the given trait, not the
+// tightest possible bound. I.e., `TimeScale` is not inherently `Copy`, but `Keplerian<TimeScale>` is.
+// See https://github.com/rust-lang/rust/issues/108894#issuecomment-1459943821
+impl<T, O, F> Clone for Keplerian<T, O, F>
+where
+    T: TimeScale,
+    O: PointMass + Copy,
+    F: InertialFrame + Copy,
+{
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<T, O, F> Copy for Keplerian<T, O, F>
+where
+    T: TimeScale,
+    O: PointMass + Copy,
+    F: InertialFrame + Copy,
+{
 }
 
 impl<T, O, F> Keplerian<T, O, F>

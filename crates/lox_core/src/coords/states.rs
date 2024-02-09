@@ -18,12 +18,23 @@ pub trait TwoBodyState<T: TimeScale> {
     fn to_keplerian_state(&self, grav_param: f64) -> KeplerianState<T>;
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct CartesianState<T: TimeScale> {
     time: Time<T>,
     position: DVec3,
     velocity: DVec3,
 }
+
+// Must be manually implemented, since derive macros always bound the generic parameters by the given trait, not the
+// tightest possible bound. I.e., `TimeScale` is not inherently `Copy`, but `Time<TimeScale>` is.
+// See https://github.com/rust-lang/rust/issues/108894#issuecomment-1459943821
+impl<T: TimeScale> Clone for CartesianState<T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<T: TimeScale> Copy for CartesianState<T> {}
 
 impl<T: TimeScale> CartesianState<T> {
     pub fn new(time: Time<T>, position: DVec3, velocity: DVec3) -> Self {
@@ -118,7 +129,7 @@ impl<T: TimeScale> TwoBodyState<T> for CartesianState<T> {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct KeplerianState<T: TimeScale> {
     time: Time<T>,
     semi_major: f64,
@@ -128,6 +139,17 @@ pub struct KeplerianState<T: TimeScale> {
     periapsis_argument: f64,
     true_anomaly: f64,
 }
+
+// Must be manually implemented, since derive macros always bound the generic parameters by the given trait, not the
+// tightest possible bound. I.e., `TimeScale` is not inherently `Copy`, but `Time<TimeScale>` is.
+// See https://github.com/rust-lang/rust/issues/108894#issuecomment-1459943821
+impl<T: TimeScale> Clone for KeplerianState<T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<T: TimeScale> Copy for KeplerianState<T> {}
 
 impl<T: TimeScale> KeplerianState<T> {
     pub fn new(
@@ -235,7 +257,7 @@ mod tests {
     use glam::DVec3;
 
     use crate::bodies::{Earth, PointMass};
-    use crate::time::continuous::{TimeScale, TDB};
+    use crate::time::continuous::TDB;
 
     use super::*;
 
