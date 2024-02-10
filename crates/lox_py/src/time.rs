@@ -18,6 +18,7 @@ use crate::LoxPyError;
 
 #[pyclass(name = "TimeScale")]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[allow(clippy::upper_case_acronyms)]
 pub enum PyTimeScale {
     TAI,
     TCB,
