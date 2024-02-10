@@ -14,7 +14,6 @@
 
 use std::fmt;
 use std::fmt::{Display, Formatter};
-use std::marker::PhantomData;
 use std::ops::{Add, Sub};
 
 use num::abs;
@@ -248,37 +247,17 @@ impl TimeScale for UT1 {
 }
 
 /// An instant in time in a given time scale.
-#[derive(Debug, Default, Eq, PartialEq)]
-pub struct Time<T: TimeScale> {
-    // The `TimeScale` is always known statically, and all data related to the `TimeScale` required by `Time` is
-    // accessed via the scale's associated constants. Hence, we don't need an actual `T` at runtime, and we don't
-    // require additional bounds on `T` such as `Copy` and `Default`.
-    scale: PhantomData<T>,
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct Time<T: TimeScale + Copy> {
+    scale: T,
     timestamp: UnscaledTime,
 }
 
-// Must be manually implemented, since derive macros always bound the generic parameters by the given trait, not the
-// tightest possible bound. I.e., `TimeScale` is not inherently `Copy`, but `PhantomData<TimeScale>` is.
-// See https://github.com/rust-lang/rust/issues/108894#issuecomment-1459943821
-impl<T: TimeScale> Clone for Time<T> {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-
-impl<T: TimeScale> Copy for Time<T> {}
-
-impl<T: TimeScale> From<UnscaledTime> for Time<T> {
-    fn from(timestamp: UnscaledTime) -> Self {
-        Self::from_unscaled(timestamp)
-    }
-}
-
-impl<T: TimeScale> Time<T> {
+impl<T: TimeScale + Copy> Time<T> {
     /// Instantiates a [Time] in the given scale from seconds and attoseconds since the epoch.
-    pub fn new(seconds: i64, attoseconds: u64) -> Self {
+    pub fn new(scale: T, seconds: i64, attoseconds: u64) -> Self {
         Self {
-            scale: PhantomData,
+            scale,
             timestamp: UnscaledTime {
                 seconds,
                 attoseconds,
@@ -287,15 +266,12 @@ impl<T: TimeScale> Time<T> {
     }
 
     /// Instantiates a [Time] in the given scale from an [UnscaledTime].
-    pub fn from_unscaled(timestamp: UnscaledTime) -> Self {
-        Self {
-            scale: PhantomData,
-            timestamp,
-        }
+    pub fn from_unscaled(scale: T, timestamp: UnscaledTime) -> Self {
+        Self { scale, timestamp }
     }
 
     /// Instantiates a [Time] in the given scale from a date and UTC timestamp.
-    pub fn from_date_and_utc_timestamp(date: Date, time: UTC) -> Self {
+    pub fn from_date_and_utc_timestamp(scale: T, date: Date, time: UTC) -> Self {
         let day_in_seconds = date.j2000() * SECONDS_PER_DAY - SECONDS_PER_DAY / 2;
         let hour_in_seconds = time.hour() * SECONDS_PER_HOUR;
         let minute_in_seconds = time.minute() * SECONDS_PER_MINUTE;
@@ -305,29 +281,29 @@ impl<T: TimeScale> Time<T> {
             seconds,
             attoseconds,
         };
-        Self::from_unscaled(unscaled)
+        Self::from_unscaled(scale, unscaled)
     }
 
     /// Instantiates a [Time] in the given scale from a UTC datetime.
-    pub fn from_utc_datetime(dt: UTCDateTime) -> Self {
-        Self::from_date_and_utc_timestamp(dt.date(), dt.time())
+    pub fn from_utc_datetime(scale: T, dt: UTCDateTime) -> Self {
+        Self::from_date_and_utc_timestamp(scale, dt.date(), dt.time())
     }
 
     /// Returns the J2000 epoch in the given timescale.
-    pub fn j2000() -> Self {
+    pub fn j2000(scale: T) -> Self {
         Self {
-            scale: PhantomData,
+            scale,
             timestamp: UnscaledTime::default(),
         }
     }
 
     /// Returns, as an epoch in the given timescale, midday on the first day of the proleptic Julian
     /// calendar.
-    pub fn jd0() -> Self {
+    pub fn jd0(scale: T) -> Self {
         // This represents 4713 BC, since there is no year 0 separating BC and AD.
         let first_proleptic_day = Date::new_unchecked(ProlepticJulian, -4712, 1, 1);
         let midday = UTC::new(12, 0, 0).expect("midday should be a valid time");
-        Self::from_date_and_utc_timestamp(first_proleptic_day, midday)
+        Self::from_date_and_utc_timestamp(scale, first_proleptic_day, midday)
     }
 
     /// The underlying unscaled timestamp.
@@ -356,29 +332,29 @@ impl<T: TimeScale> Time<T> {
     }
 }
 
-impl<T: TimeScale> Display for Time<T> {
+impl<T: TimeScale + Copy> Display for Time<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{} {}", self.timestamp, T::ABBREVIATION)
     }
 }
 
-impl<T: TimeScale> Add<TimeDelta> for Time<T> {
+impl<T: TimeScale + Copy> Add<TimeDelta> for Time<T> {
     type Output = Self;
 
     fn add(self, rhs: TimeDelta) -> Self::Output {
-        Self::from_unscaled(self.timestamp + rhs)
+        Self::from_unscaled(self.scale, self.timestamp + rhs)
     }
 }
 
-impl<T: TimeScale> Sub<TimeDelta> for Time<T> {
+impl<T: TimeScale + Copy> Sub<TimeDelta> for Time<T> {
     type Output = Self;
 
     fn sub(self, rhs: TimeDelta) -> Self::Output {
-        Self::from_unscaled(self.timestamp - rhs)
+        Self::from_unscaled(self.scale, self.timestamp - rhs)
     }
 }
 
-impl<T: TimeScale> WallClock for Time<T> {
+impl<T: TimeScale + Copy> WallClock for Time<T> {
     fn hour(&self) -> i64 {
         self.timestamp.hour()
     }
@@ -1062,14 +1038,14 @@ mod tests {
         let date = Date::new_unchecked(Gregorian, 2021, 1, 1);
         let utc = UTC::new(12, 34, 56).expect("time should be valid");
         let datetime = UTCDateTime::new(date, utc);
-        let actual = Time::<TAI>::from_date_and_utc_timestamp(date, utc);
-        let expected = Time::<TAI>::from_utc_datetime(datetime);
+        let actual = Time::from_date_and_utc_timestamp(TAI, date, utc);
+        let expected = Time::from_utc_datetime(TAI, datetime);
         assert_eq!(actual, expected);
     }
 
     #[test]
     fn test_time_display() {
-        let time = Time::<TAI>::j2000();
+        let time = Time::j2000(TAI);
         let expected = "12:00:00.000.000.000.000.000.000 TAI".to_string();
         let actual = time.to_string();
         assert_eq!(actual, expected);
@@ -1077,9 +1053,9 @@ mod tests {
 
     #[test]
     fn test_time_j2000() {
-        let actual = Time::<TAI>::j2000();
+        let actual = Time::j2000(TAI);
         let expected = Time {
-            scale: PhantomData::<TAI>::default(),
+            scale: TAI,
             timestamp: UnscaledTime::default(),
         };
         assert_eq!(*expected, actual);
@@ -1087,11 +1063,14 @@ mod tests {
 
     #[test]
     fn test_time_jd0() {
-        let actual = Time::<TAI>::jd0();
-        let expected = Time::<TAI>::from_unscaled(UnscaledTime {
-            seconds: -211813488000,
-            attoseconds: 0,
-        });
+        let actual = Time::jd0(TAI);
+        let expected = Time::from_unscaled(
+            TAI,
+            UnscaledTime {
+                seconds: -211813488000,
+                attoseconds: 0,
+            },
+        );
         assert_eq!(*expected, actual);
     }
 
@@ -1102,7 +1081,7 @@ mod tests {
             attoseconds: 9876543210,
         };
         let expected = unscaled_time.hour();
-        let actual = Time::<TAI>::j2000().hour();
+        let actual = Time::j2000(TAI).hour();
         assert_eq!(
             actual, expected,
             "expected Time to have hour {}, but got {}",
@@ -1117,7 +1096,7 @@ mod tests {
             attoseconds: 9876543210,
         };
         let expected = unscaled_time.minute();
-        let actual = Time::<TAI>::j2000().minute();
+        let actual = Time::j2000(TAI).minute();
         assert_eq!(
             actual, expected,
             "expected Time to have minute {}, but got {}",
@@ -1132,7 +1111,7 @@ mod tests {
             attoseconds: 9876543210,
         };
         let expected = unscaled_time.second();
-        let actual = Time::<TAI>::j2000().second();
+        let actual = Time::j2000(TAI).second();
         assert_eq!(
             actual, expected,
             "expected Time to have second {}, but got {}",
@@ -1147,7 +1126,7 @@ mod tests {
             attoseconds: 9876543210,
         };
         let expected = unscaled_time.millisecond();
-        let actual = Time::<TAI>::j2000().millisecond();
+        let actual = Time::j2000(TAI).millisecond();
         assert_eq!(
             actual, expected,
             "expected Time to have millisecond {}, but got {}",
@@ -1162,7 +1141,7 @@ mod tests {
             attoseconds: 9876543210,
         };
         let expected = unscaled_time.microsecond();
-        let actual = Time::<TAI>::j2000().microsecond();
+        let actual = Time::j2000(TAI).microsecond();
         assert_eq!(
             actual, expected,
             "expected Time to have microsecond {}, but got {}",
@@ -1177,7 +1156,7 @@ mod tests {
             attoseconds: 9876543210,
         };
         let expected = unscaled_time.nanosecond();
-        let actual = Time::<TAI>::j2000().nanosecond();
+        let actual = Time::j2000(TAI).nanosecond();
         assert_eq!(
             actual, expected,
             "expected Time to have nanosecond {}, but got {}",
@@ -1192,7 +1171,7 @@ mod tests {
             attoseconds: 9876543210,
         };
         let expected = unscaled_time.picosecond();
-        let actual = Time::<TAI>::j2000().picosecond();
+        let actual = Time::j2000(TAI).picosecond();
         assert_eq!(
             actual, expected,
             "expected Time to have picosecond {}, but got {}",
@@ -1207,7 +1186,7 @@ mod tests {
             attoseconds: 9876543210,
         };
         let expected = unscaled_time.femtosecond();
-        let actual = Time::<TAI>::j2000().femtosecond();
+        let actual = Time::j2000(TAI).femtosecond();
         assert_eq!(
             actual, expected,
             "expected Time to have femtosecond {}, but got {}",
@@ -1222,7 +1201,7 @@ mod tests {
             attoseconds: 9876543210,
         };
         let expected = unscaled_time.attosecond();
-        let actual = Time::<TAI>::j2000().attosecond();
+        let actual = Time::j2000(TAI).attosecond();
         assert_eq!(
             actual, expected,
             "expected Time to have attosecond {}, but got {}",

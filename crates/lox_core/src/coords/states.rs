@@ -12,14 +12,14 @@ use glam::{DMat3, DVec3};
 use crate::math::{mod_two_pi, normalize_two_pi};
 use crate::time::continuous::{Time, TimeScale};
 
-pub trait TwoBodyState<T: TimeScale> {
+pub trait TwoBodyState<T: TimeScale + Copy> {
     fn time(&self) -> Time<T>;
     fn to_cartesian_state(&self, grav_param: f64) -> CartesianState<T>;
     fn to_keplerian_state(&self, grav_param: f64) -> KeplerianState<T>;
 }
 
 #[derive(Debug, PartialEq)]
-pub struct CartesianState<T: TimeScale> {
+pub struct CartesianState<T: TimeScale + Copy> {
     time: Time<T>,
     position: DVec3,
     velocity: DVec3,
@@ -28,15 +28,15 @@ pub struct CartesianState<T: TimeScale> {
 // Must be manually implemented, since derive macros always bound the generic parameters by the given trait, not the
 // tightest possible bound. I.e., `TimeScale` is not inherently `Copy`, but `Time<TimeScale>` is.
 // See https://github.com/rust-lang/rust/issues/108894#issuecomment-1459943821
-impl<T: TimeScale> Clone for CartesianState<T> {
+impl<T: TimeScale + Copy> Clone for CartesianState<T> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<T: TimeScale> Copy for CartesianState<T> {}
+impl<T: TimeScale + Copy> Copy for CartesianState<T> {}
 
-impl<T: TimeScale> CartesianState<T> {
+impl<T: TimeScale + Copy> CartesianState<T> {
     pub fn new(time: Time<T>, position: DVec3, velocity: DVec3) -> Self {
         Self {
             time,
@@ -54,7 +54,7 @@ impl<T: TimeScale> CartesianState<T> {
     }
 }
 
-impl<T: TimeScale> TwoBodyState<T> for CartesianState<T> {
+impl<T: TimeScale + Copy> TwoBodyState<T> for CartesianState<T> {
     fn time(&self) -> Time<T> {
         self.time
     }
@@ -130,7 +130,7 @@ impl<T: TimeScale> TwoBodyState<T> for CartesianState<T> {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct KeplerianState<T: TimeScale> {
+pub struct KeplerianState<T: TimeScale + Copy> {
     time: Time<T>,
     semi_major: f64,
     eccentricity: f64,
@@ -143,15 +143,15 @@ pub struct KeplerianState<T: TimeScale> {
 // Must be manually implemented, since derive macros always bound the generic parameters by the given trait, not the
 // tightest possible bound. I.e., `TimeScale` is not inherently `Copy`, but `Time<TimeScale>` is.
 // See https://github.com/rust-lang/rust/issues/108894#issuecomment-1459943821
-impl<T: TimeScale> Clone for KeplerianState<T> {
+impl<T: TimeScale + Copy> Clone for KeplerianState<T> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<T: TimeScale> Copy for KeplerianState<T> {}
+impl<T: TimeScale + Copy> Copy for KeplerianState<T> {}
 
-impl<T: TimeScale> KeplerianState<T> {
+impl<T: TimeScale + Copy> KeplerianState<T> {
     pub fn new(
         time: Time<T>,
         semi_major: f64,
@@ -217,7 +217,7 @@ impl<T: TimeScale> KeplerianState<T> {
     }
 }
 
-impl<T: TimeScale> TwoBodyState<T> for KeplerianState<T> {
+impl<T: TimeScale + Copy> TwoBodyState<T> for KeplerianState<T> {
     fn time(&self) -> Time<T> {
         self.time
     }
