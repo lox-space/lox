@@ -407,6 +407,7 @@ pub trait CalendarDate {
 
 #[cfg(test)]
 mod tests {
+    use crate::time::constants::i64::SECONDS_PER_JULIAN_CENTURY;
     use crate::time::dates::Calendar::Gregorian;
     use float_eq::assert_float_eq;
 
@@ -1030,16 +1031,83 @@ mod tests {
                 },
                 expected: -1.0,
             },
+            TestCase {
+                desc: "a partial number of days after the epoch",
+                time: UnscaledTime {
+                    seconds: (SECONDS_PER_DAY / 2) * 3,
+                    attoseconds: ATTOSECONDS_PER_SECOND / 2,
+                },
+                expected: 1.5000057870370371,
+            },
         ];
 
         for tc in test_cases {
             let actual = tc.time.days_since_j2000();
-            assert_float_eq!(tc.expected, actual, abs <= 1e-12)
+            assert_float_eq!(
+                tc.expected,
+                actual,
+                abs <= 1e-12,
+                "{}: expected {}, got {}",
+                tc.desc,
+                tc.expected,
+                actual
+            );
         }
     }
 
     #[test]
-    fn test_unscaled_time_centuries_since_j2000() {}
+    fn test_unscaled_time_centuries_since_j2000() {
+        struct TestCase {
+            desc: &'static str,
+            time: UnscaledTime,
+            expected: f64,
+        }
+
+        let test_cases = [
+            TestCase {
+                desc: "at the epoch",
+                time: UnscaledTime::default(),
+                expected: 0.0,
+            },
+            TestCase {
+                desc: "exactly one century after the epoch",
+                time: UnscaledTime {
+                    seconds: SECONDS_PER_JULIAN_CENTURY,
+                    attoseconds: 0,
+                },
+                expected: 1.0,
+            },
+            TestCase {
+                desc: "exactly one century before the epoch",
+                time: UnscaledTime {
+                    seconds: -SECONDS_PER_JULIAN_CENTURY,
+                    attoseconds: 0,
+                },
+                expected: -1.0,
+            },
+            TestCase {
+                desc: "a partial number of centuries after the epoch",
+                time: UnscaledTime {
+                    seconds: (SECONDS_PER_JULIAN_CENTURY / 2) * 3,
+                    attoseconds: ATTOSECONDS_PER_SECOND / 2,
+                },
+                expected: 1.5000000001584404,
+            },
+        ];
+
+        for tc in test_cases {
+            let actual = tc.time.centuries_since_j2000();
+            assert_float_eq!(
+                tc.expected,
+                actual,
+                abs <= 1e-12,
+                "{}: expected {}, got {}",
+                tc.desc,
+                tc.expected,
+                actual
+            );
+        }
+    }
 
     #[test]
     fn test_time_from_date_and_utc_timestamp() {
@@ -1083,13 +1151,49 @@ mod tests {
     }
 
     #[test]
+    fn test_time_days_since_j2000() {
+        let unscaled = UnscaledTime {
+            seconds: 1234567890,
+            attoseconds: 9876543210,
+        };
+        let expected = unscaled.days_since_j2000();
+        let actual = Time::from_unscaled(TAI, unscaled).days_since_j2000();
+        assert_float_eq!(
+            actual,
+            expected,
+            rel <= 1e-15,
+            "expected {} days since J2000, but got {}",
+            expected,
+            actual
+        );
+    }
+
+    #[test]
+    fn test_time_centuries_since_j2000() {
+        let unscaled = UnscaledTime {
+            seconds: 1234567890,
+            attoseconds: 9876543210,
+        };
+        let expected = unscaled.centuries_since_j2000();
+        let actual = Time::from_unscaled(TAI, unscaled).centuries_since_j2000();
+        assert_float_eq!(
+            actual,
+            expected,
+            rel <= 1e-15,
+            "expected {} centuries since J2000, but got {}",
+            expected,
+            actual
+        );
+    }
+
+    #[test]
     fn test_time_wall_clock_hour() {
         let unscaled_time = UnscaledTime {
             seconds: 1234567890,
             attoseconds: 9876543210,
         };
         let expected = unscaled_time.hour();
-        let actual = Time::j2000(TAI).hour();
+        let actual = Time::from_unscaled(TAI, unscaled_time).hour();
         assert_eq!(
             actual, expected,
             "expected Time to have hour {}, but got {}",
@@ -1104,7 +1208,7 @@ mod tests {
             attoseconds: 9876543210,
         };
         let expected = unscaled_time.minute();
-        let actual = Time::j2000(TAI).minute();
+        let actual = Time::from_unscaled(TAI, unscaled_time).minute();
         assert_eq!(
             actual, expected,
             "expected Time to have minute {}, but got {}",
@@ -1119,7 +1223,7 @@ mod tests {
             attoseconds: 9876543210,
         };
         let expected = unscaled_time.second();
-        let actual = Time::j2000(TAI).second();
+        let actual = Time::from_unscaled(TAI, unscaled_time).second();
         assert_eq!(
             actual, expected,
             "expected Time to have second {}, but got {}",
@@ -1134,7 +1238,7 @@ mod tests {
             attoseconds: 9876543210,
         };
         let expected = unscaled_time.millisecond();
-        let actual = Time::j2000(TAI).millisecond();
+        let actual = Time::from_unscaled(TAI, unscaled_time).millisecond();
         assert_eq!(
             actual, expected,
             "expected Time to have millisecond {}, but got {}",
@@ -1149,7 +1253,7 @@ mod tests {
             attoseconds: 9876543210,
         };
         let expected = unscaled_time.microsecond();
-        let actual = Time::j2000(TAI).microsecond();
+        let actual = Time::from_unscaled(TAI, unscaled_time).microsecond();
         assert_eq!(
             actual, expected,
             "expected Time to have microsecond {}, but got {}",
@@ -1164,7 +1268,7 @@ mod tests {
             attoseconds: 9876543210,
         };
         let expected = unscaled_time.nanosecond();
-        let actual = Time::j2000(TAI).nanosecond();
+        let actual = Time::from_unscaled(TAI, unscaled_time).nanosecond();
         assert_eq!(
             actual, expected,
             "expected Time to have nanosecond {}, but got {}",
@@ -1179,7 +1283,7 @@ mod tests {
             attoseconds: 9876543210,
         };
         let expected = unscaled_time.picosecond();
-        let actual = Time::j2000(TAI).picosecond();
+        let actual = Time::from_unscaled(TAI, unscaled_time).picosecond();
         assert_eq!(
             actual, expected,
             "expected Time to have picosecond {}, but got {}",
@@ -1194,7 +1298,7 @@ mod tests {
             attoseconds: 9876543210,
         };
         let expected = unscaled_time.femtosecond();
-        let actual = Time::j2000(TAI).femtosecond();
+        let actual = Time::from_unscaled(TAI, unscaled_time).femtosecond();
         assert_eq!(
             actual, expected,
             "expected Time to have femtosecond {}, but got {}",
@@ -1209,7 +1313,7 @@ mod tests {
             attoseconds: 9876543210,
         };
         let expected = unscaled_time.attosecond();
-        let actual = Time::j2000(TAI).attosecond();
+        let actual = Time::from_unscaled(TAI, unscaled_time).attosecond();
         assert_eq!(
             actual, expected,
             "expected Time to have attosecond {}, but got {}",
