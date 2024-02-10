@@ -16,66 +16,44 @@ use crate::time::continuous::{Time, TimeScale};
 
 pub trait TwoBody<T, O, F>
 where
-    T: TimeScale,
+    T: TimeScale + Copy,
     O: PointMass + Copy,
     F: InertialFrame + Copy,
 {
+    fn time(&self) -> Time<T>;
+
     fn to_cartesian(&self) -> Cartesian<T, O, F>;
 
     fn to_keplerian(&self) -> Keplerian<T, O, F>;
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Cartesian<T, O, F>
 where
-    T: TimeScale,
+    T: TimeScale + Copy,
     O: PointMass + Copy,
     F: ReferenceFrame + Copy,
 {
-    state: CartesianState<T>,
+    time: Time<T>,
+    state: CartesianState,
     origin: O,
     frame: F,
 }
 
-// Must be manually implemented, since derive macros always bound the generic parameters by the given trait, not the
-// tightest possible bound. I.e., `TimeScale` is not inherently `Copy`, but `Cartesian<TimeScale>` is.
-// See https://github.com/rust-lang/rust/issues/108894#issuecomment-1459943821
-impl<T, O, F> Clone for Cartesian<T, O, F>
-where
-    T: TimeScale,
-    O: PointMass + Copy,
-    F: ReferenceFrame + Copy,
-{
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-
-impl<T, O, F> Copy for Cartesian<T, O, F>
-where
-    T: TimeScale,
-    O: PointMass + Copy,
-    F: ReferenceFrame + Copy,
-{
-}
-
 impl<T, O, F> Cartesian<T, O, F>
 where
-    T: TimeScale,
+    T: TimeScale + Copy,
     O: PointMass + Copy,
     F: ReferenceFrame + Copy,
 {
     pub fn new(time: Time<T>, origin: O, frame: F, position: DVec3, velocity: DVec3) -> Self {
-        let state = CartesianState::new(time, position, velocity);
+        let state = CartesianState::new(position, velocity);
         Self {
+            time,
             state,
             origin,
             frame,
         }
-    }
-
-    pub fn time(&self) -> Time<T> {
-        self.state.time()
     }
 
     pub fn position(&self) -> DVec3 {
@@ -89,10 +67,14 @@ where
 
 impl<T, O, F> TwoBody<T, O, F> for Cartesian<T, O, F>
 where
-    T: TimeScale,
+    T: TimeScale + Copy,
     O: PointMass + Copy,
     F: InertialFrame + Copy,
 {
+    fn time(&self) -> Time<T> {
+        self.time
+    }
+
     fn to_cartesian(&self) -> Cartesian<T, O, F> {
         *self
     }
@@ -104,7 +86,7 @@ where
 
 impl<T, O, F> CoordinateSystem for Cartesian<T, O, F>
 where
-    T: TimeScale,
+    T: TimeScale + Copy,
     O: PointMass + Copy,
     F: ReferenceFrame + Copy,
 {
@@ -122,7 +104,7 @@ where
 
 impl<T, O, F> From<Keplerian<T, O, F>> for Cartesian<T, O, F>
 where
-    T: TimeScale,
+    T: TimeScale + Copy,
     O: PointMass + Copy,
     F: InertialFrame + Copy,
 {
@@ -131,49 +113,29 @@ where
         let state = keplerian.state.to_cartesian_state(grav_param);
         Cartesian {
             state,
+            time: keplerian.time(),
             origin: keplerian.origin,
             frame: keplerian.frame,
         }
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Keplerian<T, O, F>
 where
-    T: TimeScale,
+    T: TimeScale + Copy,
     O: PointMass + Copy,
     F: InertialFrame + Copy,
 {
-    state: KeplerianState<T>,
+    time: Time<T>,
+    state: KeplerianState,
     origin: O,
     frame: F,
 }
 
-// Must be manually implemented, since derive macros always bound the generic parameters by the given trait, not the
-// tightest possible bound. I.e., `TimeScale` is not inherently `Copy`, but `Keplerian<TimeScale>` is.
-// See https://github.com/rust-lang/rust/issues/108894#issuecomment-1459943821
-impl<T, O, F> Clone for Keplerian<T, O, F>
-where
-    T: TimeScale,
-    O: PointMass + Copy,
-    F: InertialFrame + Copy,
-{
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-
-impl<T, O, F> Copy for Keplerian<T, O, F>
-where
-    T: TimeScale,
-    O: PointMass + Copy,
-    F: InertialFrame + Copy,
-{
-}
-
 impl<T, O, F> Keplerian<T, O, F>
 where
-    T: TimeScale,
+    T: TimeScale + Copy,
     O: PointMass + Copy,
     F: InertialFrame + Copy,
 {
@@ -190,7 +152,6 @@ where
         true_anomaly: f64,
     ) -> Self {
         let state = KeplerianState::new(
-            time,
             semi_major,
             eccentricity,
             inclination,
@@ -199,14 +160,11 @@ where
             true_anomaly,
         );
         Self {
+            time,
             state,
             origin,
             frame,
         }
-    }
-
-    pub fn time(&self) -> Time<T> {
-        self.state.time()
     }
 
     pub fn semi_major_axis(&self) -> f64 {
@@ -236,10 +194,14 @@ where
 
 impl<T, O, F> TwoBody<T, O, F> for Keplerian<T, O, F>
 where
-    T: TimeScale,
+    T: TimeScale + Copy,
     O: PointMass + Copy,
     F: InertialFrame + Copy,
 {
+    fn time(&self) -> Time<T> {
+        self.time
+    }
+
     fn to_cartesian(&self) -> Cartesian<T, O, F> {
         Cartesian::from(*self)
     }
@@ -251,7 +213,7 @@ where
 
 impl<T, O, F> CoordinateSystem for Keplerian<T, O, F>
 where
-    T: TimeScale,
+    T: TimeScale + Copy,
     O: PointMass + Copy,
     F: InertialFrame + Copy,
 {
@@ -269,7 +231,7 @@ where
 
 impl<T, O, F> From<Cartesian<T, O, F>> for Keplerian<T, O, F>
 where
-    T: TimeScale,
+    T: TimeScale + Copy,
     O: PointMass + Copy,
     F: InertialFrame + Copy,
 {
@@ -278,6 +240,7 @@ where
         let state = cartesian.state.to_keplerian_state(grav_param);
         Self {
             state,
+            time: cartesian.time,
             origin: cartesian.origin,
             frame: cartesian.frame,
         }
@@ -299,7 +262,7 @@ mod tests {
     fn test_cartesian() {
         let date = Date::new(2023, 3, 25).expect("Date should be valid");
         let utc = UTC::new(21, 8, 0).expect("Time should be valid");
-        let time = Time::<TDB>::from_date_and_utc_timestamp(date, utc);
+        let time = Time::from_date_and_utc_timestamp(TDB, date, utc);
         let pos = DVec3::new(
             -0.107622532467967e7,
             -0.676589636432773e7,
@@ -332,7 +295,7 @@ mod tests {
     fn test_keplerian() {
         let date = Date::new(2023, 3, 25).expect("Date should be valid");
         let utc = UTC::new(21, 8, 0).expect("Time should be valid");
-        let time = Time::<TDB>::from_date_and_utc_timestamp(date, utc);
+        let time = Time::from_date_and_utc_timestamp(TDB, date, utc);
         let semi_major = 24464560.0e-3;
         let eccentricity = 0.7311;
         let inclination = 0.122138;
