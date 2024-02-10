@@ -56,6 +56,10 @@ where
         }
     }
 
+    pub fn time(&self) -> Time<T> {
+        self.time
+    }
+
     pub fn position(&self) -> DVec3 {
         self.state.position()
     }
@@ -165,6 +169,10 @@ where
             origin,
             frame,
         }
+    }
+
+    pub fn time(&self) -> Time<T> {
+        self.time
     }
 
     pub fn semi_major_axis(&self) -> f64 {

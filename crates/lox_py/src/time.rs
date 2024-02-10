@@ -9,7 +9,7 @@
 use pyo3::{pyclass, pymethods};
 use std::fmt::{Display, Formatter};
 
-use lox_core::time::continuous::{Time, TimeScale, UnscaledTime, TAI, TCB, TCG, TDB, TT, UT1};
+use lox_core::time::continuous::{Time, UnscaledTime, TAI, TCB, TCG, TDB, TT, UT1};
 use lox_core::time::dates::Date;
 use lox_core::time::utc::UTC;
 use lox_core::time::PerMille;
@@ -131,21 +131,7 @@ impl PyTime {
             utc.atto = PerMille::new(atto)?;
         }
 
-        Ok(Self::from_date_and_utc_timestamp(scale, date, utc))
-    }
-
-    pub fn from_date_and_utc_timestamp(scale: PyTimeScale, date: Date, utc: UTC) -> Self {
-        let timestamp = match scale {
-            PyTimeScale::TAI => Time::<TAI>::from_date_and_utc_timestamp(date, utc),
-            PyTimeScale::TCB => Time::<TCB>::from_date_and_utc_timestamp(date, utc),
-            PyTimeScale::TCG => Time::<TCG>::from_date_and_utc_timestamp(date, utc),
-            PyTimeScale::TDB => Time::<TDB>::from_date_and_utc_timestamp(date, utc),
-            PyTimeScale::TT => Time::<TT>::from_date_and_utc_timestamp(date, utc),
-            PyTimeScale::UT1 => Time::<UT1>::from_date_and_utc_timestamp(date, utc),
-        }
-        .unscaled();
-
-        PyTime { timestamp, scale }
+        Ok(pytime_from_date_and_utc_timestamp(scale, date, utc))
     }
 
     pub fn days_since_j2000(&self) -> f64 {
@@ -163,6 +149,31 @@ impl From<Time<TDB>> for PyTime {
             scale: PyTimeScale::TDB,
             timestamp: time.unscaled(),
         }
+    }
+}
+
+fn pytime_from_date_and_utc_timestamp(scale: PyTimeScale, date: Date, utc: UTC) -> PyTime {
+    PyTime {
+        timestamp: unscaled_time_from_date_and_utc_timestamp(scale, date, utc),
+        scale,
+    }
+}
+
+/// Invokes the appropriate [Time::from_date_and_utc_timestamp] method based on the time scale, and returns the
+/// result as an [UnscaledTime]. The Rust time library performs the appropriate transformation while keeping
+/// generics out of the Python interface.
+fn unscaled_time_from_date_and_utc_timestamp(
+    scale: PyTimeScale,
+    date: Date,
+    utc: UTC,
+) -> UnscaledTime {
+    match scale {
+        PyTimeScale::TAI => Time::from_date_and_utc_timestamp(TAI, date, utc).unscaled(),
+        PyTimeScale::TCB => Time::from_date_and_utc_timestamp(TCB, date, utc).unscaled(),
+        PyTimeScale::TCG => Time::from_date_and_utc_timestamp(TCG, date, utc).unscaled(),
+        PyTimeScale::TDB => Time::from_date_and_utc_timestamp(TDB, date, utc).unscaled(),
+        PyTimeScale::TT => Time::from_date_and_utc_timestamp(TT, date, utc).unscaled(),
+        PyTimeScale::UT1 => Time::from_date_and_utc_timestamp(UT1, date, utc).unscaled(),
     }
 }
 
@@ -213,6 +224,6 @@ mod tests {
         .expect("time should be valid");
         assert_eq!(time.timestamp.attoseconds(), 123456789123456789);
         assert_float_eq!(time.days_since_j2000(), 8765.542374114084, rel <= 1e-8);
-        assert_eq!(time.scale(), "TDB");
+        assert_eq!(time.scale(), PyTimeScale::TDB);
     }
 }

@@ -62,6 +62,14 @@ impl UnscaledTime {
         self.seconds < 0
     }
 
+    pub fn seconds(&self) -> i64 {
+        self.seconds
+    }
+
+    pub fn attoseconds(&self) -> u64 {
+        self.attoseconds
+    }
+
     /// The fractional number of Julian days since J2000.
     pub fn days_since_j2000(&self) -> f64 {
         let d1 = self.seconds as f64 / constants::f64::SECONDS_PER_DAY;
@@ -1058,7 +1066,7 @@ mod tests {
             scale: TAI,
             timestamp: UnscaledTime::default(),
         };
-        assert_eq!(*expected, actual);
+        assert_eq!(expected, actual);
     }
 
     #[test]
@@ -1071,7 +1079,7 @@ mod tests {
                 attoseconds: 0,
             },
         );
-        assert_eq!(*expected, actual);
+        assert_eq!(expected, actual);
     }
 
     #[test]

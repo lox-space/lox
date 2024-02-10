@@ -97,7 +97,6 @@ fn point1_microarcsec_to_rad(p1_uas: Point1Microarcsec) -> Radians {
 
 #[cfg(test)]
 mod tests {
-    use crate::time::continuous::{TimeScale, TT};
     use float_eq::assert_float_eq;
 
     use super::*;
@@ -106,7 +105,7 @@ mod tests {
 
     #[test]
     fn test_nutation_iau1980() {
-        let time = Time::<TDB>::j2000();
+        let time = Time::j2000(TDB);
         let expected = Nutation {
             longitude: -0.00006750247617532478,
             obliquity: -0.00002799221238377013,
@@ -117,7 +116,7 @@ mod tests {
     }
     #[test]
     fn test_nutation_iau2000a() {
-        let time = Time::<TDB>::j2000();
+        let time = Time::j2000(TDB);
         let expected = Nutation {
             longitude: -0.00006754422426417299,
             obliquity: -0.00002797083119237414,
@@ -129,7 +128,7 @@ mod tests {
 
     #[test]
     fn test_nutation_iau2000b() {
-        let time = Time::<TDB>::j2000();
+        let time = Time::j2000(TDB);
         let expected = Nutation {
             longitude: -0.00006754261253992235,
             obliquity: -0.00002797092331098565,
@@ -141,7 +140,7 @@ mod tests {
 
     #[test]
     fn test_nutation_iau2006a() {
-        let time = Time::<TDB>::j2000();
+        let time = Time::j2000(TDB);
         let expected = Nutation {
             longitude: -0.00006754425598969513,
             obliquity: -0.00002797083119237414,
