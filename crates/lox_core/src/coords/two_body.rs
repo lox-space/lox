@@ -300,6 +300,26 @@ mod tests {
     }
 
     #[test]
+    fn test_cartesian_two_body_time() {
+        let date = Date::new(2023, 3, 25).expect("Date should be valid");
+        let utc = UTC::new(21, 8, 0).expect("Time should be valid");
+        let time = Time::from_date_and_utc_timestamp(TDB, date, utc);
+        let pos = DVec3::new(
+            -0.107622532467967e7,
+            -0.676589636432773e7,
+            -0.332308783350379e6,
+        ) * 1e-3;
+        let vel = DVec3::new(
+            0.935685775154103e4,
+            -0.331234775037644e4,
+            -0.118801577532701e4,
+        ) * 1e-3;
+
+        let cartesian = Cartesian::new(time, Earth, Icrf, pos, vel);
+        assert_eq!(TwoBody::time(&cartesian), time);
+    }
+
+    #[test]
     fn test_keplerian() {
         let date = Date::new(2023, 3, 25).expect("Date should be valid");
         let utc = UTC::new(21, 8, 0).expect("Time should be valid");
@@ -360,5 +380,31 @@ mod tests {
             keplerian1.true_anomaly(),
             rel <= 1e-6
         );
+    }
+
+    #[test]
+    fn test_keplerian_two_body_time() {
+        let date = Date::new(2023, 3, 25).expect("Date should be valid");
+        let utc = UTC::new(21, 8, 0).expect("Time should be valid");
+        let time = Time::from_date_and_utc_timestamp(TDB, date, utc);
+        let semi_major = 24464560.0e-3;
+        let eccentricity = 0.7311;
+        let inclination = 0.122138;
+        let ascending_node = 1.00681;
+        let periapsis_arg = 3.10686;
+        let true_anomaly = 0.44369564302687126;
+
+        let keplerian = Keplerian::new(
+            time,
+            Earth,
+            Icrf,
+            semi_major,
+            eccentricity,
+            inclination,
+            ascending_node,
+            periapsis_arg,
+            true_anomaly,
+        );
+        assert_eq!(TwoBody::time(&keplerian), time);
     }
 }
