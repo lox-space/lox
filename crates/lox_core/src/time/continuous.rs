@@ -433,7 +433,25 @@ mod tests {
     }
 
     #[test]
-    fn test_unscaled_time_hour() {
+    fn test_unscaled_time_seconds() {
+        let time = UnscaledTime {
+            seconds: 123,
+            attoseconds: 0,
+        };
+        assert_eq!(time.seconds(), 123);
+    }
+
+    #[test]
+    fn test_unscaled_time_attoseconds() {
+        let time = UnscaledTime {
+            seconds: 0,
+            attoseconds: 123,
+        };
+        assert_eq!(time.attoseconds(), 123);
+    }
+
+    #[test]
+    fn test_unscaled_time_wall_clock_hour() {
         struct TestCase {
             desc: &'static str,
             time: UnscaledTime,
@@ -527,7 +545,7 @@ mod tests {
     }
 
     #[test]
-    fn test_unscaled_time_minute() {
+    fn test_unscaled_time_wall_clock_minute() {
         struct TestCase {
             desc: &'static str,
             time: UnscaledTime,
@@ -620,7 +638,7 @@ mod tests {
     }
 
     #[test]
-    fn test_unscaled_time_second() {
+    fn test_unscaled_time_wall_clock_second() {
         struct TestCase {
             desc: &'static str,
             time: UnscaledTime,
@@ -1110,6 +1128,22 @@ mod tests {
     }
 
     #[test]
+    fn test_time_new() {
+        let scale = TAI;
+        let seconds = 1234567890;
+        let attoseconds = 9876543210;
+        let expected = Time {
+            scale,
+            timestamp: UnscaledTime {
+                seconds,
+                attoseconds,
+            },
+        };
+        let actual = Time::new(scale, seconds, attoseconds);
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
     fn test_time_from_date_and_utc_timestamp() {
         let date = Date::new_unchecked(Gregorian, 2021, 1, 1);
         let utc = UTC::new(12, 34, 56).expect("time should be valid");
@@ -1148,6 +1182,30 @@ mod tests {
             },
         );
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_time_seconds() {
+        let time = Time::new(TAI, 1234567890, 9876543210);
+        let expected = 1234567890;
+        let actual = time.seconds();
+        assert_eq!(
+            actual, expected,
+            "expected Time to have {} seconds, but got {}",
+            expected, actual
+        );
+    }
+
+    #[test]
+    fn test_time_attoseconds() {
+        let time = Time::new(TAI, 1234567890, 9876543210);
+        let expected = 9876543210;
+        let actual = time.attoseconds();
+        assert_eq!(
+            actual, expected,
+            "expected Time to have {} attoseconds, but got {}",
+            expected, actual
+        );
     }
 
     #[test]
