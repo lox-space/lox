@@ -144,15 +144,6 @@ impl PyTime {
     }
 }
 
-impl From<Time<TDB>> for PyTime {
-    fn from(time: Time<TDB>) -> Self {
-        PyTime {
-            scale: PyTimeScale::TDB,
-            timestamp: time.unscaled(),
-        }
-    }
-}
-
 fn pytime_from_date_and_utc_timestamp(scale: PyTimeScale, date: Date, utc: UTC) -> PyTime {
     PyTime {
         timestamp: unscaled_time_from_date_and_utc_timestamp(scale, date, utc),
