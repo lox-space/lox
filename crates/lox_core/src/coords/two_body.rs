@@ -6,6 +6,8 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use std::f64::consts::TAU;
+
 use glam::DVec3;
 
 use crate::bodies::PointMass;
@@ -65,7 +67,7 @@ where
     }
 
     pub fn velocity(&self) -> DVec3 {
-        self.state.position()
+        self.state.velocity()
     }
 }
 
@@ -198,6 +200,10 @@ where
     pub fn true_anomaly(&self) -> f64 {
         self.state.true_anomaly()
     }
+
+    pub fn orbital_period(&self) -> f64 {
+        TAU * (self.semi_major_axis().powi(3) / self.origin.gravitational_parameter()).sqrt()
+    }
 }
 
 impl<T, O, F> TwoBody<T, O, F> for Keplerian<T, O, F>
@@ -259,12 +265,13 @@ where
 mod tests {
     use float_eq::assert_float_eq;
 
-    use super::*;
     use crate::bodies::Earth;
     use crate::frames::Icrf;
     use crate::time::continuous::{Time, TDB};
     use crate::time::dates::Date;
     use crate::time::utc::UTC;
+
+    use super::*;
 
     #[test]
     fn test_cartesian() {

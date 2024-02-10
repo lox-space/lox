@@ -13,6 +13,7 @@ use crate::frames::ReferenceFrame;
 
 pub mod anomalies;
 pub mod base;
+pub mod trajectories;
 pub mod two_body;
 
 pub trait CoordinateSystem {
