@@ -70,78 +70,38 @@ impl Into<i64> for PerMille {
 mod tests {
     use crate::errors::LoxError;
     use crate::time::PerMille;
+    use rstest::rstest;
 
-    #[test]
-    fn test_per_mille_new() {
-        struct TestCase {
-            desc: &'static str,
-            input: u16,
-            expected: Result<PerMille, LoxError>,
-        }
-
-        let test_cases = [
-            TestCase {
-                desc: "on lower bound",
-                input: 0,
-                expected: Ok(PerMille(0)),
-            },
-            TestCase {
-                desc: "between bounds",
-                input: 1,
-                expected: Ok(PerMille(1)),
-            },
-            TestCase {
-                desc: "on upper bound",
-                input: 999,
-                expected: Ok(PerMille(999)),
-            },
-            TestCase {
-                desc: "above upper bound",
-                input: 1000,
-                expected: Err(LoxError::InvalidPerMille(1000)),
-            },
-        ];
-
-        for tc in test_cases {
-            let actual = PerMille::new(tc.input);
-            assert_eq!(
-                actual, tc.expected,
-                "expected {:?} when input is {:?}, but got {:?}",
-                tc.expected, tc.input, tc.desc
-            );
-        }
+    #[rstest]
+    #[case("on lower bound", 0, Ok(PerMille(0)))]
+    #[case("between bounds", 1, Ok(PerMille(1)))]
+    #[case("on upper bound", 999, Ok(PerMille(999)))]
+    #[case("above upper bound", 1000, Err(LoxError::InvalidPerMille(1000)))]
+    fn test_per_mille_new(
+        #[case] desc: &str,
+        #[case] input: u16,
+        #[case] expected: Result<PerMille, LoxError>,
+    ) {
+        let actual = PerMille::new(input);
+        assert_eq!(
+            expected, actual,
+            "{}: expected {:?}, got {:?}",
+            desc, expected, actual
+        );
     }
 
-    #[test]
-    fn test_per_mille_display() {
-        struct TestCase {
-            input: PerMille,
-            expected: &'static str,
-        }
-
-        let test_cases = [
-            TestCase {
-                input: PerMille(1),
-                expected: "001",
-            },
-            TestCase {
-                input: PerMille(11),
-                expected: "011",
-            },
-            TestCase {
-                input: PerMille(111),
-                expected: "111",
-            },
-        ];
-
-        for tc in test_cases {
-            let actual = format!("{}", tc.input);
-            assert_eq!(
-                actual, tc.expected,
-                "expected {:?} when input is {:?}, but got {:?}",
-                tc.expected, tc.input, actual,
-            );
-        }
+    #[rstest]
+    #[case(PerMille(0), "000")]
+    #[case(PerMille(1), "001")]
+    #[case(PerMille(11), "011")]
+    #[case(PerMille(111), "111")]
+    fn test_per_mille_display(#[case] input: PerMille, #[case] expected: &str) {
+        let actual = input.to_string();
+        assert_eq!(
+            expected, actual,
+            "input {:?}: expected {:?}, got {:?}",
+            input, expected, actual,
+        );
     }
 
     #[test]

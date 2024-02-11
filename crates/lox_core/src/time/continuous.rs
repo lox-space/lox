@@ -408,6 +408,7 @@ pub trait CalendarDate {
 #[cfg(test)]
 mod tests {
     use float_eq::assert_float_eq;
+    use rstest::rstest;
 
     use crate::time::constants::i64::SECONDS_PER_JULIAN_CENTURY;
     use crate::time::dates::Calendar::Gregorian;
@@ -415,7 +416,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_unscaled_time_is_negative() {
+    fn test_base_time_is_negative() {
         assert!(BaseTime {
             seconds: -1,
             attoseconds: 0,
@@ -434,7 +435,7 @@ mod tests {
     }
 
     #[test]
-    fn test_unscaled_time_seconds() {
+    fn test_base_time_seconds() {
         let time = BaseTime {
             seconds: 123,
             attoseconds: 0,
@@ -443,7 +444,7 @@ mod tests {
     }
 
     #[test]
-    fn test_unscaled_time_attoseconds() {
+    fn test_base_time_attoseconds() {
         let time = BaseTime {
             seconds: 0,
             attoseconds: 123,
@@ -451,681 +452,331 @@ mod tests {
         assert_eq!(time.attoseconds(), 123);
     }
 
-    #[test]
-    fn test_unscaled_time_wall_clock_hour() {
-        struct TestCase {
-            desc: &'static str,
-            time: BaseTime,
-            expected_hour: i64,
-        }
-
-        let test_cases = [
-            TestCase {
-                desc: "zero value",
-                time: BaseTime {
-                    seconds: 0,
-                    attoseconds: 0,
-                },
-                expected_hour: 12,
-            },
-            TestCase {
-                desc: "one attosecond less than an hour",
-                time: BaseTime {
-                    seconds: SECONDS_PER_HOUR - 1,
-                    attoseconds: ATTOSECONDS_PER_SECOND - 1,
-                },
-                expected_hour: 12,
-            },
-            TestCase {
-                desc: "exactly one hour",
-                time: BaseTime {
-                    seconds: SECONDS_PER_HOUR,
-                    attoseconds: 0,
-                },
-                expected_hour: 13,
-            },
-            TestCase {
-                desc: "one day and one hour",
-                time: BaseTime {
-                    seconds: SECONDS_PER_HOUR * 25,
-                    attoseconds: 0,
-                },
-                expected_hour: 13,
-            },
-            TestCase {
-                desc: "one attosecond less than the epoch",
-                time: BaseTime {
-                    seconds: -1,
-                    attoseconds: ATTOSECONDS_PER_SECOND - 1,
-                },
-                expected_hour: 11,
-            },
-            TestCase {
-                desc: "one hour less than the epoch",
-                time: BaseTime {
-                    seconds: -SECONDS_PER_HOUR,
-                    attoseconds: 0,
-                },
-                expected_hour: 11,
-            },
-            TestCase {
-                desc: "one hour and one attosecond less than the epoch",
-                time: BaseTime {
-                    seconds: -SECONDS_PER_HOUR - 1,
-                    attoseconds: ATTOSECONDS_PER_SECOND - 1,
-                },
-                expected_hour: 10,
-            },
-            TestCase {
-                desc: "one day less than the epoch",
-                time: BaseTime {
-                    seconds: -SECONDS_PER_DAY,
-                    attoseconds: 0,
-                },
-                expected_hour: 12,
-            },
-            TestCase {
-                // Exercises the case where the number of seconds exceeds the number of seconds in a day.
-                desc: "two days less than the epoch",
-                time: BaseTime {
-                    seconds: -SECONDS_PER_DAY * 2,
-                    attoseconds: 0,
-                },
-                expected_hour: 12,
-            },
-        ];
-
-        for tc in test_cases {
-            let actual = tc.time.hour();
-            assert_eq!(
-                actual, tc.expected_hour,
-                "{}: expected {}, got {}",
-                tc.desc, tc.expected_hour, actual
-            );
-        }
+    #[rstest]
+    #[case::zero_value(BaseTime { seconds: 0, attoseconds: 0 }, 12)]
+    #[case::one_attosecond_less_than_an_hour(BaseTime { seconds: SECONDS_PER_HOUR - 1, attoseconds: ATTOSECONDS_PER_SECOND - 1 }, 12)]
+    #[case::exactly_one_hour(BaseTime { seconds: SECONDS_PER_HOUR, attoseconds: 0 }, 13)]
+    #[case::one_day_and_one_hour(BaseTime { seconds: SECONDS_PER_HOUR * 25, attoseconds: 0 }, 13)]
+    #[case::one_attosecond_less_than_the_epoch(BaseTime { seconds: -1, attoseconds: ATTOSECONDS_PER_SECOND - 1 }, 11)]
+    #[case::one_hour_less_than_the_epoch(BaseTime { seconds: -SECONDS_PER_HOUR, attoseconds: 0 }, 11)]
+    #[case::one_hour_and_one_attosecond_less_than_the_epoch(BaseTime { seconds: -SECONDS_PER_HOUR - 1, attoseconds: ATTOSECONDS_PER_SECOND - 1 }, 10)]
+    #[case::one_day_less_than_the_epoch(BaseTime { seconds: -SECONDS_PER_DAY, attoseconds: 0 }, 12)]
+    #[case::two_days_less_than_the_epoch(BaseTime { seconds: -SECONDS_PER_DAY * 2, attoseconds: 0 }, 12)]
+    fn test_base_time_wall_clock_hour(#[case] time: BaseTime, #[case] expected: i64) {
+        let actual = time.hour();
+        assert_eq!(expected, actual);
     }
 
-    #[test]
-    fn test_unscaled_time_wall_clock_minute() {
-        struct TestCase {
-            desc: &'static str,
-            time: BaseTime,
-            expected_minute: i64,
-        }
-
-        let test_cases = [
-            TestCase {
-                desc: "zero value",
-                time: BaseTime {
-                    seconds: 0,
-                    attoseconds: 0,
-                },
-                expected_minute: 0,
-            },
-            TestCase {
-                desc: "one attosecond less than one minute",
-                time: BaseTime {
-                    seconds: SECONDS_PER_MINUTE - 1,
-                    attoseconds: ATTOSECONDS_PER_SECOND - 1,
-                },
-                expected_minute: 0,
-            },
-            TestCase {
-                desc: "one minute",
-                time: BaseTime {
-                    seconds: SECONDS_PER_MINUTE,
-                    attoseconds: 0,
-                },
-                expected_minute: 1,
-            },
-            TestCase {
-                desc: "one attosecond less than an hour",
-                time: BaseTime {
-                    seconds: SECONDS_PER_HOUR - 1,
-                    attoseconds: ATTOSECONDS_PER_SECOND - 1,
-                },
-                expected_minute: 59,
-            },
-            TestCase {
-                desc: "exactly one hour",
-                time: BaseTime {
-                    seconds: SECONDS_PER_HOUR,
-                    attoseconds: 0,
-                },
-                expected_minute: 0,
-            },
-            TestCase {
-                desc: "one hour and one minute",
-                time: BaseTime {
-                    seconds: SECONDS_PER_HOUR + SECONDS_PER_MINUTE,
-                    attoseconds: 0,
-                },
-                expected_minute: 1,
-            },
-            TestCase {
-                desc: "one attosecond less than the epoch",
-                time: BaseTime {
-                    seconds: -1,
-                    attoseconds: ATTOSECONDS_PER_SECOND - 1,
-                },
-                expected_minute: 59,
-            },
-            TestCase {
-                desc: "one minute less than the epoch",
-                time: BaseTime {
-                    seconds: -SECONDS_PER_MINUTE,
-                    attoseconds: 0,
-                },
-                expected_minute: 59,
-            },
-            TestCase {
-                desc: "one minute and one attosecond less than the epoch",
-                time: BaseTime {
-                    seconds: -SECONDS_PER_MINUTE - 1,
-                    attoseconds: ATTOSECONDS_PER_SECOND - 1,
-                },
-                expected_minute: 58,
-            },
-        ];
-
-        for tc in test_cases {
-            let actual = tc.time.minute();
-            assert_eq!(
-                actual, tc.expected_minute,
-                "{}: expected {}, got {}",
-                tc.desc, tc.expected_minute, actual
-            );
-        }
+    #[rstest]
+    #[case::zero_value(BaseTime { seconds: 0, attoseconds: 0 }, 0)]
+    #[case::one_attosecond_less_than_one_minute(BaseTime { seconds: SECONDS_PER_MINUTE - 1, attoseconds: ATTOSECONDS_PER_SECOND - 1 }, 0)]
+    #[case::one_minute(BaseTime { seconds: SECONDS_PER_MINUTE, attoseconds: 0 }, 1)]
+    #[case::one_attosecond_less_than_an_hour(BaseTime { seconds: SECONDS_PER_HOUR - 1, attoseconds: ATTOSECONDS_PER_SECOND - 1 }, 59)]
+    #[case::exactly_one_hour(BaseTime { seconds: SECONDS_PER_HOUR, attoseconds: 0 }, 0)]
+    #[case::one_hour_and_one_minute(BaseTime { seconds: SECONDS_PER_HOUR + SECONDS_PER_MINUTE, attoseconds: 0 }, 1)]
+    #[case::one_attosecond_less_than_the_epoch(BaseTime { seconds: -1, attoseconds: ATTOSECONDS_PER_SECOND - 1 }, 59)]
+    #[case::one_minute_less_than_the_epoch(BaseTime { seconds: -SECONDS_PER_MINUTE, attoseconds: 0 }, 59)]
+    #[case::one_minute_and_one_attosecond_less_than_the_epoch(BaseTime { seconds: -SECONDS_PER_MINUTE - 1, attoseconds: ATTOSECONDS_PER_SECOND - 1 }, 58)]
+    fn test_base_time_wall_clock_minute(#[case] time: BaseTime, #[case] expected: i64) {
+        let actual = time.minute();
+        assert_eq!(expected, actual);
     }
 
-    #[test]
-    fn test_unscaled_time_wall_clock_second() {
-        struct TestCase {
-            desc: &'static str,
-            time: BaseTime,
-            expected_second: i64,
-        }
-
-        let test_cases = [
-            TestCase {
-                desc: "zero value",
-                time: BaseTime {
-                    seconds: 0,
-                    attoseconds: 0,
-                },
-                expected_second: 0,
-            },
-            TestCase {
-                desc: "one attosecond less than one second",
-                time: BaseTime {
-                    seconds: 0,
-                    attoseconds: ATTOSECONDS_PER_SECOND - 1,
-                },
-                expected_second: 0,
-            },
-            TestCase {
-                desc: "one second",
-                time: BaseTime {
-                    seconds: 1,
-                    attoseconds: 0,
-                },
-                expected_second: 1,
-            },
-            TestCase {
-                desc: "one attosecond less than a minute",
-                time: BaseTime {
-                    seconds: SECONDS_PER_MINUTE - 1,
-                    attoseconds: ATTOSECONDS_PER_SECOND - 1,
-                },
-                expected_second: 59,
-            },
-            TestCase {
-                desc: "exactly one minute",
-                time: BaseTime {
-                    seconds: SECONDS_PER_MINUTE,
-                    attoseconds: 0,
-                },
-                expected_second: 0,
-            },
-            TestCase {
-                desc: "one minute and one second",
-                time: BaseTime {
-                    seconds: SECONDS_PER_MINUTE + 1,
-                    attoseconds: 0,
-                },
-                expected_second: 1,
-            },
-            TestCase {
-                desc: "one attosecond less than the epoch",
-                time: BaseTime {
-                    seconds: -1,
-                    attoseconds: ATTOSECONDS_PER_SECOND - 1,
-                },
-                expected_second: 59,
-            },
-            TestCase {
-                desc: "one second less than the epoch",
-                time: BaseTime {
-                    seconds: -1,
-                    attoseconds: 0,
-                },
-                expected_second: 59,
-            },
-            TestCase {
-                desc: "one second and one attosecond less than the epoch",
-                time: BaseTime {
-                    seconds: -2,
-                    attoseconds: ATTOSECONDS_PER_SECOND - 1,
-                },
-                expected_second: 58,
-            },
-        ];
-
-        for tc in test_cases {
-            let actual = tc.time.second();
-            assert_eq!(
-                actual, tc.expected_second,
-                "{}: expected {}, got {}",
-                tc.desc, tc.expected_second, actual
-            );
-        }
+    #[rstest]
+    #[case::zero_value(BaseTime { seconds: 0, attoseconds: 0 }, 0)]
+    #[case::one_attosecond_less_than_one_second(BaseTime { seconds: 0, attoseconds: ATTOSECONDS_PER_SECOND - 1 }, 0)]
+    #[case::one_second(BaseTime { seconds: 1, attoseconds: 0 }, 1)]
+    #[case::one_attosecond_less_than_a_minute(BaseTime { seconds: SECONDS_PER_MINUTE - 1, attoseconds: ATTOSECONDS_PER_SECOND - 1 }, 59)]
+    #[case::exactly_one_minute(BaseTime { seconds: SECONDS_PER_MINUTE, attoseconds: 0 }, 0)]
+    #[case::one_minute_and_one_second(BaseTime { seconds: SECONDS_PER_MINUTE + 1, attoseconds: 0 }, 1)]
+    #[case::one_attosecond_less_than_the_epoch(BaseTime { seconds: -1, attoseconds: ATTOSECONDS_PER_SECOND - 1 }, 59)]
+    #[case::one_second_less_than_the_epoch(BaseTime { seconds: -1, attoseconds: 0 }, 59)]
+    #[case::one_second_and_one_attosecond_less_than_the_epoch(BaseTime { seconds: -2, attoseconds: ATTOSECONDS_PER_SECOND - 1 }, 58)]
+    fn test_base_time_wall_clock_second(#[case] time: BaseTime, #[case] expected: i64) {
+        let actual = time.second();
+        assert_eq!(expected, actual);
     }
 
-    #[test]
-    fn test_unscaled_time_subseconds_with_positive_seconds() {
-        let time = BaseTime {
-            seconds: 0,
-            attoseconds: 123_456_789_012_345_678,
-        };
+    const POSITIVE_BASE_TIME_SUBSECONDS_FIXTURE: BaseTime = BaseTime {
+        seconds: 0,
+        attoseconds: 123_456_789_012_345_678,
+    };
 
-        struct TestCase {
-            unit: &'static str,
-            expected: i64,
-            actual: i64,
-        }
+    const NEGATIVE_BASE_TIME_SUBSECONDS_FIXTURE: BaseTime = BaseTime {
+        seconds: -1,
+        attoseconds: 123_456_789_012_345_678,
+    };
 
-        let test_cases = [
-            TestCase {
-                unit: "millisecond",
-                expected: 123,
-                actual: time.millisecond(),
-            },
-            TestCase {
-                unit: "microsecond",
-                expected: 456,
-                actual: time.microsecond(),
-            },
-            TestCase {
-                unit: "nanosecond",
-                expected: 789,
-                actual: time.nanosecond(),
-            },
-            TestCase {
-                unit: "picosecond",
-                expected: 12,
-                actual: time.picosecond(),
-            },
-            TestCase {
-                unit: "femtosecond",
-                expected: 345,
-                actual: time.femtosecond(),
-            },
-            TestCase {
-                unit: "attosecond",
-                expected: 678,
-                actual: time.attosecond(),
-            },
-        ];
-
-        for tc in test_cases {
-            assert_eq!(
-                tc.actual, tc.expected,
-                "expected {} {}, got {}",
-                tc.unit, tc.expected, tc.actual
-            );
-        }
+    #[rstest]
+    #[case::positive_time_millisecond(
+        POSITIVE_BASE_TIME_SUBSECONDS_FIXTURE,
+        WallClock::millisecond,
+        123
+    )]
+    #[case::positive_time_microsecond(
+        POSITIVE_BASE_TIME_SUBSECONDS_FIXTURE,
+        WallClock::microsecond,
+        456
+    )]
+    #[case::positive_time_nanosecond(
+        POSITIVE_BASE_TIME_SUBSECONDS_FIXTURE,
+        WallClock::nanosecond,
+        789
+    )]
+    #[case::positive_time_picosecond(
+        POSITIVE_BASE_TIME_SUBSECONDS_FIXTURE,
+        WallClock::picosecond,
+        12
+    )]
+    #[case::positive_time_femtosecond(
+        POSITIVE_BASE_TIME_SUBSECONDS_FIXTURE,
+        WallClock::femtosecond,
+        345
+    )]
+    #[case::positive_time_attosecond(
+        POSITIVE_BASE_TIME_SUBSECONDS_FIXTURE,
+        WallClock::attosecond,
+        678
+    )]
+    #[case::negative_time_millisecond(
+        NEGATIVE_BASE_TIME_SUBSECONDS_FIXTURE,
+        WallClock::millisecond,
+        123
+    )]
+    #[case::negative_time_microsecond(
+        NEGATIVE_BASE_TIME_SUBSECONDS_FIXTURE,
+        WallClock::microsecond,
+        456
+    )]
+    #[case::negative_time_nanosecond(
+        NEGATIVE_BASE_TIME_SUBSECONDS_FIXTURE,
+        WallClock::nanosecond,
+        789
+    )]
+    #[case::negative_time_picosecond(
+        NEGATIVE_BASE_TIME_SUBSECONDS_FIXTURE,
+        WallClock::picosecond,
+        12
+    )]
+    #[case::negative_time_femtosecond(
+        NEGATIVE_BASE_TIME_SUBSECONDS_FIXTURE,
+        WallClock::femtosecond,
+        345
+    )]
+    #[case::negative_time_attosecond(
+        NEGATIVE_BASE_TIME_SUBSECONDS_FIXTURE,
+        WallClock::attosecond,
+        678
+    )]
+    fn test_base_time_subseconds(
+        #[case] time: BaseTime,
+        #[case] f: fn(&BaseTime) -> i64,
+        #[case] expected: i64,
+    ) {
+        let actual = f(&time);
+        assert_eq!(expected, actual);
     }
 
-    #[test]
-    fn test_unscaled_time_subseconds_with_negative_seconds() {
-        let time = BaseTime {
+    #[rstest]
+    #[case::positive_time_no_attosecond_wrap(
+        TimeDelta {
+            seconds: 1,
+            attoseconds: 1
+        },
+        BaseTime {
+            seconds: 1,
+            attoseconds: 0
+        },
+        BaseTime {
+            seconds: 2,
+            attoseconds: 1
+        }
+    )]
+    #[case::positive_time_attosecond_wrap(
+        TimeDelta {
+            seconds: 1,
+            attoseconds: 2
+        },
+        BaseTime {
+            seconds: 1,
+            attoseconds: ATTOSECONDS_PER_SECOND - 1
+        },
+        BaseTime {
+            seconds: 3,
+            attoseconds: 1
+        }
+    )]
+    #[case::negative_time_no_attosecond_wrap(
+        TimeDelta {
+            seconds: 1,
+            attoseconds: 1
+        },
+        BaseTime {
             seconds: -1,
-            attoseconds: 123_456_789_012_345_678,
-        };
-
-        struct TestCase {
-            unit: &'static str,
-            expected: i64,
-            actual: i64,
+            attoseconds: 0
+        },
+        BaseTime {
+            seconds: 0,
+            attoseconds: 1
         }
-
-        let test_cases = [
-            TestCase {
-                unit: "millisecond",
-                expected: 123,
-                actual: time.millisecond(),
-            },
-            TestCase {
-                unit: "microsecond",
-                expected: 456,
-                actual: time.microsecond(),
-            },
-            TestCase {
-                unit: "nanosecond",
-                expected: 789,
-                actual: time.nanosecond(),
-            },
-            TestCase {
-                unit: "picosecond",
-                expected: 12,
-                actual: time.picosecond(),
-            },
-            TestCase {
-                unit: "femtosecond",
-                expected: 345,
-                actual: time.femtosecond(),
-            },
-            TestCase {
-                unit: "attosecond",
-                expected: 678,
-                actual: time.attosecond(),
-            },
-        ];
-
-        for tc in test_cases {
-            assert_eq!(
-                tc.actual, tc.expected,
-                "expected {} {}, got {}",
-                tc.unit, tc.expected, tc.actual
-            );
+    )]
+    #[case::negative_time_attosecond_wrap(
+        TimeDelta {
+            seconds: 1,
+            attoseconds: 2
+        },
+        BaseTime {
+            seconds: -1,
+            attoseconds: ATTOSECONDS_PER_SECOND - 1
+        },
+        BaseTime {
+            seconds: 1,
+            attoseconds: 1
         }
+    )]
+    fn test_base_time_add_time_delta(
+        #[case] delta: TimeDelta,
+        #[case] time: BaseTime,
+        #[case] expected: BaseTime,
+    ) {
+        let actual = time + delta;
+        assert_eq!(expected, actual);
     }
 
-    #[test]
-    fn test_unscaled_time_add_time_delta() {
-        struct TestCase {
-            desc: &'static str,
-            delta: TimeDelta,
-            time: BaseTime,
-            expected: BaseTime,
+    #[rstest]
+    #[case::positive_time_no_attosecond_wrap(
+        TimeDelta {
+            seconds: 1,
+            attoseconds: 1
+        },
+        BaseTime {
+            seconds: 2,
+            attoseconds: 2
+        },
+        BaseTime {
+            seconds: 1,
+            attoseconds: 1
         }
-
-        let test_cases = [
-            TestCase {
-                desc: "positive time with no attosecond wrap",
-                delta: TimeDelta {
-                    seconds: 1,
-                    attoseconds: 1,
-                },
-                time: BaseTime {
-                    seconds: 1,
-                    attoseconds: 0,
-                },
-                expected: BaseTime {
-                    seconds: 2,
-                    attoseconds: 1,
-                },
-            },
-            TestCase {
-                desc: "positive time with attosecond wrap",
-                delta: TimeDelta {
-                    seconds: 1,
-                    attoseconds: 2,
-                },
-                time: BaseTime {
-                    seconds: 1,
-                    attoseconds: ATTOSECONDS_PER_SECOND - 1,
-                },
-                expected: BaseTime {
-                    seconds: 3,
-                    attoseconds: 1,
-                },
-            },
-            TestCase {
-                desc: "negative time with no attosecond wrap",
-                delta: TimeDelta {
-                    seconds: 1,
-                    attoseconds: 1,
-                },
-                time: BaseTime {
-                    seconds: -1,
-                    attoseconds: 0,
-                },
-                expected: BaseTime {
-                    seconds: 0,
-                    attoseconds: 1,
-                },
-            },
-            TestCase {
-                desc: "negative time with attosecond wrap",
-                delta: TimeDelta {
-                    seconds: 1,
-                    attoseconds: 2,
-                },
-                time: BaseTime {
-                    seconds: -1,
-                    attoseconds: ATTOSECONDS_PER_SECOND - 1,
-                },
-                expected: BaseTime {
-                    seconds: 1,
-                    attoseconds: 1,
-                },
-            },
-        ];
-
-        for tc in test_cases {
-            let actual = tc.time + tc.delta;
-            assert_eq!(
-                actual, tc.expected,
-                "{}: expected {:?}, got {:?}",
-                tc.desc, tc.expected, actual
-            );
+    )]
+    #[case::positive_time_attosecond_wrap(
+        TimeDelta {
+            seconds: 1,
+            attoseconds: 2
+        },
+        BaseTime {
+            seconds: 2,
+            attoseconds: 1
+        },
+        BaseTime {
+            seconds: 0,
+            attoseconds: ATTOSECONDS_PER_SECOND - 1
         }
+    )]
+    #[case::negative_time_no_attosecond_wrap(
+        TimeDelta {
+            seconds: 1,
+            attoseconds: 1
+        },
+        BaseTime {
+            seconds: -1,
+            attoseconds: 2
+        },
+        BaseTime {
+            seconds: -2,
+            attoseconds: 1
+        }
+    )]
+    #[case::negative_time_attosecond_wrap(
+        TimeDelta {
+            seconds: 1,
+            attoseconds: 2
+        },
+        BaseTime {
+            seconds: -1,
+            attoseconds: 1
+        },
+        BaseTime {
+            seconds: -3,
+            attoseconds: ATTOSECONDS_PER_SECOND - 1
+        }
+    )]
+    #[case::transition_from_positive_to_negative_time(
+        TimeDelta {
+            seconds: 1,
+            attoseconds: 2
+        },
+        BaseTime {
+            seconds: 0,
+            attoseconds: 1
+        },
+        BaseTime {
+            seconds: -2,
+            attoseconds: ATTOSECONDS_PER_SECOND - 1
+        }
+    )]
+    fn test_base_time_sub_time_delta(
+        #[case] delta: TimeDelta,
+        #[case] time: BaseTime,
+        #[case] expected: BaseTime,
+    ) {
+        let actual = time - delta;
+        assert_eq!(expected, actual);
     }
 
-    #[test]
-    fn test_unscaled_time_sub_time_delta() {
-        struct TestCase {
-            desc: &'static str,
-            delta: TimeDelta,
-            time: BaseTime,
-            expected: BaseTime,
-        }
-
-        let test_cases = [
-            TestCase {
-                desc: "positive time with no attosecond wrap",
-                delta: TimeDelta {
-                    seconds: 1,
-                    attoseconds: 1,
-                },
-                time: BaseTime {
-                    seconds: 2,
-                    attoseconds: 2,
-                },
-                expected: BaseTime {
-                    seconds: 1,
-                    attoseconds: 1,
-                },
-            },
-            TestCase {
-                desc: "positive time with attosecond wrap",
-                delta: TimeDelta {
-                    seconds: 1,
-                    attoseconds: 2,
-                },
-                time: BaseTime {
-                    seconds: 2,
-                    attoseconds: 1,
-                },
-                expected: BaseTime {
-                    seconds: 0,
-                    attoseconds: ATTOSECONDS_PER_SECOND - 1,
-                },
-            },
-            TestCase {
-                desc: "negative time with no attosecond wrap",
-                delta: TimeDelta {
-                    seconds: 1,
-                    attoseconds: 1,
-                },
-                time: BaseTime {
-                    seconds: -1,
-                    attoseconds: 2,
-                },
-                expected: BaseTime {
-                    seconds: -2,
-                    attoseconds: 1,
-                },
-            },
-            TestCase {
-                desc: "negative time with attosecond wrap",
-                delta: TimeDelta {
-                    seconds: 1,
-                    attoseconds: 2,
-                },
-                time: BaseTime {
-                    seconds: -1,
-                    attoseconds: 1,
-                },
-                expected: BaseTime {
-                    seconds: -3,
-                    attoseconds: ATTOSECONDS_PER_SECOND - 1,
-                },
-            },
-            TestCase {
-                desc: "transition from positive to negative time",
-                delta: TimeDelta {
-                    seconds: 1,
-                    attoseconds: 2,
-                },
-                time: BaseTime {
-                    seconds: 0,
-                    attoseconds: 1,
-                },
-                expected: BaseTime {
-                    seconds: -2,
-                    attoseconds: ATTOSECONDS_PER_SECOND - 1,
-                },
-            },
-        ];
-
-        for tc in test_cases {
-            let actual = tc.time - tc.delta;
-            assert_eq!(
-                actual, tc.expected,
-                "{}: expected {:?}, got {:?}",
-                tc.desc, tc.expected, actual
-            );
-        }
+    #[rstest]
+    #[case::at_the_epoch(BaseTime::default(), 0.0)]
+    #[case::exactly_one_day_after_the_epoch(
+        BaseTime {
+            seconds: SECONDS_PER_DAY,
+            attoseconds: 0
+        },
+        1.0
+    )]
+    #[case::exactly_one_day_before_the_epoch(
+        BaseTime {
+            seconds: -SECONDS_PER_DAY,
+            attoseconds: 0
+        },
+        -1.0
+    )]
+    #[case::a_partial_number_of_days_after_the_epoch(
+        BaseTime {
+            seconds: (SECONDS_PER_DAY / 2) * 3,
+            attoseconds: ATTOSECONDS_PER_SECOND / 2
+        },
+        1.5000057870370371
+    )]
+    fn test_base_time_days_since_j2000(#[case] time: BaseTime, #[case] expected: f64) {
+        let actual = time.days_since_j2000();
+        assert_float_eq!(expected, actual, abs <= 1e-12);
     }
 
-    #[test]
-    fn test_unscaled_time_days_since_j2000() {
-        struct TestCase {
-            desc: &'static str,
-            time: BaseTime,
-            expected: f64,
-        }
-
-        let test_cases = [
-            TestCase {
-                desc: "at the epoch",
-                time: BaseTime::default(),
-                expected: 0.0,
-            },
-            TestCase {
-                desc: "exactly one day after the epoch",
-                time: BaseTime {
-                    seconds: SECONDS_PER_DAY,
-                    attoseconds: 0,
-                },
-                expected: 1.0,
-            },
-            TestCase {
-                desc: "exactly one day before the epoch",
-                time: BaseTime {
-                    seconds: -SECONDS_PER_DAY,
-                    attoseconds: 0,
-                },
-                expected: -1.0,
-            },
-            TestCase {
-                desc: "a partial number of days after the epoch",
-                time: BaseTime {
-                    seconds: (SECONDS_PER_DAY / 2) * 3,
-                    attoseconds: ATTOSECONDS_PER_SECOND / 2,
-                },
-                expected: 1.5000057870370371,
-            },
-        ];
-
-        for tc in test_cases {
-            let actual = tc.time.days_since_j2000();
-            assert_float_eq!(
-                tc.expected,
-                actual,
-                abs <= 1e-12,
-                "{}: expected {}, got {}",
-                tc.desc,
-                tc.expected,
-                actual
-            );
-        }
-    }
-
-    #[test]
-    fn test_unscaled_time_centuries_since_j2000() {
-        struct TestCase {
-            desc: &'static str,
-            time: BaseTime,
-            expected: f64,
-        }
-
-        let test_cases = [
-            TestCase {
-                desc: "at the epoch",
-                time: BaseTime::default(),
-                expected: 0.0,
-            },
-            TestCase {
-                desc: "exactly one century after the epoch",
-                time: BaseTime {
-                    seconds: SECONDS_PER_JULIAN_CENTURY,
-                    attoseconds: 0,
-                },
-                expected: 1.0,
-            },
-            TestCase {
-                desc: "exactly one century before the epoch",
-                time: BaseTime {
-                    seconds: -SECONDS_PER_JULIAN_CENTURY,
-                    attoseconds: 0,
-                },
-                expected: -1.0,
-            },
-            TestCase {
-                desc: "a partial number of centuries after the epoch",
-                time: BaseTime {
-                    seconds: (SECONDS_PER_JULIAN_CENTURY / 2) * 3,
-                    attoseconds: ATTOSECONDS_PER_SECOND / 2,
-                },
-                expected: 1.5000000001584404,
-            },
-        ];
-
-        for tc in test_cases {
-            let actual = tc.time.centuries_since_j2000();
-            assert_float_eq!(
-                tc.expected,
-                actual,
-                abs <= 1e-12,
-                "{}: expected {}, got {}",
-                tc.desc,
-                tc.expected,
-                actual
-            );
-        }
+    #[rstest]
+    #[case::at_the_epoch(BaseTime::default(), 0.0)]
+    #[case::exactly_one_century_after_the_epoch(
+        BaseTime {
+            seconds: SECONDS_PER_JULIAN_CENTURY,
+            attoseconds: 0
+        },
+        1.0
+    )]
+    #[case::exactly_one_century_before_the_epoch(
+        BaseTime {
+            seconds: -SECONDS_PER_JULIAN_CENTURY,
+            attoseconds: 0
+        },
+        -1.0
+    )]
+    #[case::a_partial_number_of_centuries_after_the_epoch(
+        BaseTime {
+            seconds: (SECONDS_PER_JULIAN_CENTURY / 2) * 3,
+            attoseconds: ATTOSECONDS_PER_SECOND / 2
+        },
+        1.5000000001584404
+    )]
+    fn test_base_time_centuries_since_j2000(#[case] time: BaseTime, #[case] expected: f64) {
+        let actual = time.centuries_since_j2000();
+        assert_float_eq!(expected, actual, abs <= 1e-12,);
     }
 
     #[test]
@@ -1141,7 +792,7 @@ mod tests {
             },
         };
         let actual = Time::new(scale, seconds, attoseconds);
-        assert_eq!(actual, expected);
+        assert_eq!(expected, actual);
     }
 
     #[test]
@@ -1151,7 +802,7 @@ mod tests {
         let datetime = UTCDateTime::new(date, utc);
         let actual = Time::from_date_and_utc_timestamp(TAI, date, utc);
         let expected = Time::from_utc_datetime(TAI, datetime);
-        assert_eq!(actual, expected);
+        assert_eq!(expected, actual);
     }
 
     #[test]
@@ -1159,7 +810,7 @@ mod tests {
         let time = Time::j2000(TAI);
         let expected = "12:00:00.000.000.000.000.000.000 TAI".to_string();
         let actual = time.to_string();
-        assert_eq!(actual, expected);
+        assert_eq!(expected, actual);
     }
 
     #[test]
@@ -1191,7 +842,7 @@ mod tests {
         let expected = 1234567890;
         let actual = time.seconds();
         assert_eq!(
-            actual, expected,
+            expected, actual,
             "expected Time to have {} seconds, but got {}",
             expected, actual
         );
@@ -1203,7 +854,7 @@ mod tests {
         let expected = 9876543210;
         let actual = time.attoseconds();
         assert_eq!(
-            actual, expected,
+            expected, actual,
             "expected Time to have {} attoseconds, but got {}",
             expected, actual
         );
@@ -1247,14 +898,14 @@ mod tests {
 
     #[test]
     fn test_time_wall_clock_hour() {
-        let unscaled_time = BaseTime {
+        let base_time = BaseTime {
             seconds: 1234567890,
             attoseconds: 9876543210,
         };
-        let expected = unscaled_time.hour();
-        let actual = Time::from_unscaled(TAI, unscaled_time).hour();
+        let expected = base_time.hour();
+        let actual = Time::from_unscaled(TAI, base_time).hour();
         assert_eq!(
-            actual, expected,
+            expected, actual,
             "expected Time to have hour {}, but got {}",
             expected, actual
         );
@@ -1262,14 +913,14 @@ mod tests {
 
     #[test]
     fn test_time_wall_clock_minute() {
-        let unscaled_time = BaseTime {
+        let base_time = BaseTime {
             seconds: 1234567890,
             attoseconds: 9876543210,
         };
-        let expected = unscaled_time.minute();
-        let actual = Time::from_unscaled(TAI, unscaled_time).minute();
+        let expected = base_time.minute();
+        let actual = Time::from_unscaled(TAI, base_time).minute();
         assert_eq!(
-            actual, expected,
+            expected, actual,
             "expected Time to have minute {}, but got {}",
             expected, actual,
         );
@@ -1277,14 +928,14 @@ mod tests {
 
     #[test]
     fn test_time_wall_clock_second() {
-        let unscaled_time = BaseTime {
+        let base_time = BaseTime {
             seconds: 1234567890,
             attoseconds: 9876543210,
         };
-        let expected = unscaled_time.second();
-        let actual = Time::from_unscaled(TAI, unscaled_time).second();
+        let expected = base_time.second();
+        let actual = Time::from_unscaled(TAI, base_time).second();
         assert_eq!(
-            actual, expected,
+            expected, actual,
             "expected Time to have second {}, but got {}",
             expected, actual,
         );
@@ -1292,14 +943,14 @@ mod tests {
 
     #[test]
     fn test_time_wall_clock_millisecond() {
-        let unscaled_time = BaseTime {
+        let base_time = BaseTime {
             seconds: 1234567890,
             attoseconds: 9876543210,
         };
-        let expected = unscaled_time.millisecond();
-        let actual = Time::from_unscaled(TAI, unscaled_time).millisecond();
+        let expected = base_time.millisecond();
+        let actual = Time::from_unscaled(TAI, base_time).millisecond();
         assert_eq!(
-            actual, expected,
+            expected, actual,
             "expected Time to have millisecond {}, but got {}",
             expected, actual,
         );
@@ -1307,14 +958,14 @@ mod tests {
 
     #[test]
     fn test_time_wall_clock_microsecond() {
-        let unscaled_time = BaseTime {
+        let base_time = BaseTime {
             seconds: 1234567890,
             attoseconds: 9876543210,
         };
-        let expected = unscaled_time.microsecond();
-        let actual = Time::from_unscaled(TAI, unscaled_time).microsecond();
+        let expected = base_time.microsecond();
+        let actual = Time::from_unscaled(TAI, base_time).microsecond();
         assert_eq!(
-            actual, expected,
+            expected, actual,
             "expected Time to have microsecond {}, but got {}",
             expected, actual,
         );
@@ -1322,14 +973,14 @@ mod tests {
 
     #[test]
     fn test_time_wall_clock_nanosecond() {
-        let unscaled_time = BaseTime {
+        let base_time = BaseTime {
             seconds: 1234567890,
             attoseconds: 9876543210,
         };
-        let expected = unscaled_time.nanosecond();
-        let actual = Time::from_unscaled(TAI, unscaled_time).nanosecond();
+        let expected = base_time.nanosecond();
+        let actual = Time::from_unscaled(TAI, base_time).nanosecond();
         assert_eq!(
-            actual, expected,
+            expected, actual,
             "expected Time to have nanosecond {}, but got {}",
             expected, actual,
         );
@@ -1337,14 +988,14 @@ mod tests {
 
     #[test]
     fn test_time_wall_clock_picosecond() {
-        let unscaled_time = BaseTime {
+        let base_time = BaseTime {
             seconds: 1234567890,
             attoseconds: 9876543210,
         };
-        let expected = unscaled_time.picosecond();
-        let actual = Time::from_unscaled(TAI, unscaled_time).picosecond();
+        let expected = base_time.picosecond();
+        let actual = Time::from_unscaled(TAI, base_time).picosecond();
         assert_eq!(
-            actual, expected,
+            expected, actual,
             "expected Time to have picosecond {}, but got {}",
             expected, actual,
         );
@@ -1352,14 +1003,14 @@ mod tests {
 
     #[test]
     fn test_time_wall_clock_femtosecond() {
-        let unscaled_time = BaseTime {
+        let base_time = BaseTime {
             seconds: 1234567890,
             attoseconds: 9876543210,
         };
-        let expected = unscaled_time.femtosecond();
-        let actual = Time::from_unscaled(TAI, unscaled_time).femtosecond();
+        let expected = base_time.femtosecond();
+        let actual = Time::from_unscaled(TAI, base_time).femtosecond();
         assert_eq!(
-            actual, expected,
+            expected, actual,
             "expected Time to have femtosecond {}, but got {}",
             expected, actual,
         );
@@ -1367,14 +1018,14 @@ mod tests {
 
     #[test]
     fn test_time_wall_clock_attosecond() {
-        let unscaled_time = BaseTime {
+        let base_time = BaseTime {
             seconds: 1234567890,
             attoseconds: 9876543210,
         };
-        let expected = unscaled_time.attosecond();
-        let actual = Time::from_unscaled(TAI, unscaled_time).attosecond();
+        let expected = base_time.attosecond();
+        let actual = Time::from_unscaled(TAI, base_time).attosecond();
         assert_eq!(
-            actual, expected,
+            expected, actual,
             "expected Time to have attosecond {}, but got {}",
             expected, actual,
         );
