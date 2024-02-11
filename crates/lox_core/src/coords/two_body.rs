@@ -37,7 +37,7 @@ where
     F: ReferenceFrame + Copy,
 {
     time: Time<T>,
-    state: BaseCartesian,
+    base: BaseCartesian,
     origin: O,
     frame: F,
 }
@@ -49,10 +49,10 @@ where
     F: ReferenceFrame + Copy,
 {
     pub fn new(time: Time<T>, origin: O, frame: F, position: DVec3, velocity: DVec3) -> Self {
-        let state = BaseCartesian::new(position, velocity);
+        let base = BaseCartesian::new(position, velocity);
         Self {
             time,
-            state,
+            base,
             origin,
             frame,
         }
@@ -63,11 +63,11 @@ where
     }
 
     pub fn position(&self) -> DVec3 {
-        self.state.position()
+        self.base.position()
     }
 
     pub fn velocity(&self) -> DVec3 {
-        self.state.velocity()
+        self.base.velocity()
     }
 }
 
@@ -116,9 +116,9 @@ where
 {
     fn from(keplerian: Keplerian<T, O, F>) -> Self {
         let grav_param = keplerian.origin.gravitational_parameter();
-        let state = keplerian.state.to_cartesian_state(grav_param);
+        let base = keplerian.base.to_cartesian(grav_param);
         Cartesian {
-            state,
+            base,
             time: keplerian.time(),
             origin: keplerian.origin,
             frame: keplerian.frame,
@@ -134,7 +134,7 @@ where
     F: InertialFrame + Copy,
 {
     time: Time<T>,
-    state: BaseKeplerian,
+    base: BaseKeplerian,
     origin: O,
     frame: F,
 }
@@ -157,7 +157,7 @@ where
         periapsis_arg: f64,
         true_anomaly: f64,
     ) -> Self {
-        let state = BaseKeplerian::new(
+        let base = BaseKeplerian::new(
             semi_major,
             eccentricity,
             inclination,
@@ -167,7 +167,7 @@ where
         );
         Self {
             time,
-            state,
+            base,
             origin,
             frame,
         }
@@ -178,27 +178,27 @@ where
     }
 
     pub fn semi_major_axis(&self) -> f64 {
-        self.state.semi_major_axis()
+        self.base.semi_major_axis()
     }
 
     pub fn eccentricity(&self) -> f64 {
-        self.state.eccentricity()
+        self.base.eccentricity()
     }
 
     pub fn inclination(&self) -> f64 {
-        self.state.inclination()
+        self.base.inclination()
     }
 
     pub fn ascending_node(&self) -> f64 {
-        self.state.ascending_node()
+        self.base.ascending_node()
     }
 
     pub fn periapsis_argument(&self) -> f64 {
-        self.state.periapsis_argument()
+        self.base.periapsis_argument()
     }
 
     pub fn true_anomaly(&self) -> f64 {
-        self.state.true_anomaly()
+        self.base.true_anomaly()
     }
 
     pub fn orbital_period(&self) -> f64 {
@@ -251,9 +251,9 @@ where
 {
     fn from(cartesian: Cartesian<T, O, F>) -> Self {
         let grav_param = cartesian.origin.gravitational_parameter();
-        let state = cartesian.state.to_keplerian_state(grav_param);
+        let base = cartesian.base.to_keplerian(grav_param);
         Self {
-            state,
+            base,
             time: cartesian.time,
             origin: cartesian.origin,
             frame: cartesian.frame,

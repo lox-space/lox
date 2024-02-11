@@ -12,8 +12,8 @@ use glam::{DMat3, DVec3};
 use crate::math::{mod_two_pi, normalize_two_pi};
 
 pub trait BaseTwoBody {
-    fn to_cartesian_state(&self, grav_param: f64) -> BaseCartesian;
-    fn to_keplerian_state(&self, grav_param: f64) -> BaseKeplerian;
+    fn to_cartesian(&self, grav_param: f64) -> BaseCartesian;
+    fn to_keplerian(&self, grav_param: f64) -> BaseKeplerian;
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -37,11 +37,11 @@ impl BaseCartesian {
 }
 
 impl BaseTwoBody for BaseCartesian {
-    fn to_cartesian_state(&self, _grav_param: f64) -> BaseCartesian {
+    fn to_cartesian(&self, _grav_param: f64) -> BaseCartesian {
         *self
     }
 
-    fn to_keplerian_state(&self, grav_param: f64) -> BaseKeplerian {
+    fn to_keplerian(&self, grav_param: f64) -> BaseKeplerian {
         let r = self.position.length();
         let v = self.velocity.length();
         let h = self.position.cross(self.velocity);
@@ -181,7 +181,7 @@ impl BaseKeplerian {
 }
 
 impl BaseTwoBody for BaseKeplerian {
-    fn to_cartesian_state(&self, grav_param: f64) -> BaseCartesian {
+    fn to_cartesian(&self, grav_param: f64) -> BaseCartesian {
         let (pos, vel) = self.to_perifocal(grav_param);
         let rot = DMat3::from_rotation_z(self.ascending_node)
             * DMat3::from_rotation_x(self.inclination)
@@ -189,7 +189,7 @@ impl BaseTwoBody for BaseKeplerian {
         BaseCartesian::new(rot * pos, rot * vel)
     }
 
-    fn to_keplerian_state(&self, _grav_param: f64) -> BaseKeplerian {
+    fn to_keplerian(&self, _grav_param: f64) -> BaseKeplerian {
         *self
     }
 }
@@ -240,7 +240,7 @@ mod tests {
         );
 
         let cartesian = BaseCartesian::new(pos, vel);
-        assert_eq!(cartesian.to_cartesian_state(grav_param), cartesian);
+        assert_eq!(cartesian.to_cartesian(grav_param), cartesian);
 
         let keplerian = BaseKeplerian::new(
             semi_major,
@@ -250,10 +250,10 @@ mod tests {
             periapsis_arg,
             true_anomaly,
         );
-        assert_eq!(keplerian.to_keplerian_state(grav_param), keplerian);
+        assert_eq!(keplerian.to_keplerian(grav_param), keplerian);
 
-        let cartesian1 = keplerian.to_cartesian_state(grav_param);
-        let keplerian1 = cartesian.to_keplerian_state(grav_param);
+        let cartesian1 = keplerian.to_cartesian(grav_param);
+        let keplerian1 = cartesian.to_keplerian(grav_param);
 
         assert_float_eq!(pos.x, cartesian1.position.x, rel <= 1e-8);
         assert_float_eq!(pos.y, cartesian1.position.y, rel <= 1e-8);
@@ -291,8 +291,8 @@ mod tests {
             true_anomaly,
         );
 
-        let cartesian1 = keplerian.to_cartesian_state(grav_param);
-        let keplerian1 = cartesian.to_keplerian_state(grav_param);
+        let cartesian1 = keplerian.to_cartesian(grav_param);
+        let keplerian1 = cartesian.to_keplerian(grav_param);
 
         assert_float_eq!(pos.x, cartesian1.position.x, rel <= 1e-8);
         assert_float_eq!(pos.y, cartesian1.position.y, rel <= 1e-8);
@@ -327,9 +327,7 @@ mod tests {
             true_anomaly,
         );
 
-        let keplerian1 = keplerian
-            .to_cartesian_state(grav_param)
-            .to_keplerian_state(grav_param);
+        let keplerian1 = keplerian.to_cartesian(grav_param).to_keplerian(grav_param);
 
         assert_float_eq!(semi_major, keplerian1.semi_major, rel <= 1e-8);
         assert_float_eq!(eccentricity, keplerian1.eccentricity, abs <= 1e-8);
@@ -357,9 +355,7 @@ mod tests {
             true_anomaly,
         );
 
-        let keplerian1 = keplerian
-            .to_cartesian_state(grav_param)
-            .to_keplerian_state(grav_param);
+        let keplerian1 = keplerian.to_cartesian(grav_param).to_keplerian(grav_param);
 
         assert_float_eq!(semi_major, keplerian1.semi_major, rel <= 1e-8);
         assert_float_eq!(eccentricity, keplerian1.eccentricity, rel <= 1e-8);
@@ -387,9 +383,7 @@ mod tests {
             true_anomaly,
         );
 
-        let keplerian1 = keplerian
-            .to_cartesian_state(grav_param)
-            .to_keplerian_state(grav_param);
+        let keplerian1 = keplerian.to_cartesian(grav_param).to_keplerian(grav_param);
 
         assert_float_eq!(semi_major, keplerian1.semi_major, rel <= 1e-8);
         assert_float_eq!(eccentricity, keplerian1.eccentricity, rel <= 1e-8);
@@ -417,9 +411,7 @@ mod tests {
             true_anomaly,
         );
 
-        let keplerian1 = keplerian
-            .to_cartesian_state(grav_param)
-            .to_keplerian_state(grav_param);
+        let keplerian1 = keplerian.to_cartesian(grav_param).to_keplerian(grav_param);
 
         assert_float_eq!(semi_major, keplerian1.semi_major, rel <= 1e-8);
         assert_float_eq!(eccentricity, keplerian1.eccentricity, abs <= 1e-8);
@@ -435,9 +427,7 @@ mod tests {
         let velocity = DVec3::new(-0.660415582, 5.495938726, -5.303093233);
         let grav_param = Earth.gravitational_parameter();
         let cartesian = BaseCartesian::new(position, velocity);
-        let cartesian1 = cartesian
-            .to_keplerian_state(grav_param)
-            .to_cartesian_state(grav_param);
+        let cartesian1 = cartesian.to_keplerian(grav_param).to_cartesian(grav_param);
 
         assert_float_eq!(position.x, cartesian1.position.x, rel <= 1e-8);
         assert_float_eq!(position.y, cartesian1.position.y, rel <= 1e-8);

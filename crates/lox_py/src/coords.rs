@@ -76,7 +76,7 @@ impl PyCartesian {
 
     fn to_keplerian(&self) -> PyKeplerian {
         let mu = self.origin.gravitational_parameter();
-        let state = self.state.to_keplerian_state(mu);
+        let state = self.state.to_keplerian(mu);
         PyKeplerian {
             state,
             time: self.time,
@@ -165,7 +165,7 @@ impl PyKeplerian {
 
     fn to_cartesian(&self) -> PyCartesian {
         let mu = self.origin.gravitational_parameter();
-        let state = self.state.to_cartesian_state(mu);
+        let state = self.state.to_cartesian(mu);
         PyCartesian {
             state,
             time: self.time,

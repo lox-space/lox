@@ -10,6 +10,7 @@ use lox_core::bodies::PointMass;
 use lox_core::coords::two_body::Cartesian;
 use lox_core::coords::CoordinateSystem;
 use lox_core::frames::ReferenceFrame;
+use lox_core::time::continuous::TimeScale;
 
 use crate::{stumpff, Propagator};
 
@@ -24,14 +25,19 @@ impl Default for Vallado {
     }
 }
 
-impl<T: PointMass + Copy, S: ReferenceFrame + Copy> Propagator<T, S> for Vallado {
+impl<T, O, R> Propagator<T, O, R> for Vallado
+where
+    T: TimeScale + Copy,
+    O: PointMass + Copy,
+    R: ReferenceFrame + Copy,
+{
     type Error = &'static str;
 
     fn state_from_delta(
         &self,
-        initial_state: Cartesian<T, S>,
+        initial_state: Cartesian<T, O, R>,
         delta: f64,
-    ) -> Result<Cartesian<T, S>, Self::Error> {
+    ) -> Result<Cartesian<T, O, R>, Self::Error> {
         let dt = delta;
         let mu = initial_state.origin().gravitational_parameter();
         let sqrt_mu = mu.sqrt();
@@ -104,7 +110,7 @@ mod tests {
     use lox_core::bodies::Earth;
     use lox_core::coords::two_body::{Keplerian, TwoBody};
     use lox_core::frames::Icrf;
-    use lox_core::time::continuous::{Time, TimeScale};
+    use lox_core::time::continuous::{Time, TDB};
     use lox_core::time::dates::Date;
     use lox_core::time::utc::UTC;
 
@@ -114,7 +120,7 @@ mod tests {
     fn test_vallado_propagator() {
         let date = Date::new(2023, 3, 25).expect("Date should be valid");
         let utc = UTC::new(21, 8, 0).expect("Time should be valid");
-        let time = Time::from_date_and_utc_timestamp(TimeScale::TDB, date, utc);
+        let time = Time::from_date_and_utc_timestamp(TDB, date, utc);
         let semi_major = 24464560.0e-3;
         let eccentricity = 0.7311;
         let inclination = 0.122138;
