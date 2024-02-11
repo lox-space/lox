@@ -18,6 +18,7 @@ use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, Sub};
 
+use deltas::TimeDelta;
 use num::abs;
 
 use crate::time::constants::f64::DAYS_PER_JULIAN_CENTURY;
@@ -34,12 +35,7 @@ use crate::time::dates::Date;
 use crate::time::utc::{UTCDateTime, UTC};
 use crate::time::{constants, WallClock};
 
-/// An absolute continuous time difference with femtosecond precision.
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub struct TimeDelta {
-    seconds: u64,
-    femtoseconds: u64,
-}
+pub mod deltas;
 
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
 /// `BaseTime` is the base time representation for time scales without leap seconds. It is measured relative to
