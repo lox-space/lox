@@ -43,7 +43,7 @@ pub struct TimeDelta {
 /// J2000. `UnscaledTime::default()` represents the epoch itself.
 ///
 /// `UnscaledTime` has attosecond precision, and supports times within 292 billion years either side of the epoch.
-pub struct UnscaledTime {
+pub struct BaseTime {
     // The sign of the time is determined exclusively by the sign of the `second` field. `attoseconds` is always the
     // positive count of attoseconds since the last whole second. For example, one attosecond before the epoch is
     // represented as
@@ -57,7 +57,7 @@ pub struct UnscaledTime {
     attoseconds: u64,
 }
 
-impl UnscaledTime {
+impl BaseTime {
     fn is_negative(&self) -> bool {
         self.seconds < 0
     }
@@ -83,7 +83,7 @@ impl UnscaledTime {
     }
 }
 
-impl Display for UnscaledTime {
+impl Display for BaseTime {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -101,10 +101,10 @@ impl Display for UnscaledTime {
     }
 }
 
-impl Add<TimeDelta> for UnscaledTime {
+impl Add<TimeDelta> for BaseTime {
     type Output = Self;
 
-    /// The implementation of [Add] for [UnscaledTime] follows the default Rust rules for integer overflow, which
+    /// The implementation of [Add] for [BaseTime] follows the default Rust rules for integer overflow, which
     /// should be sufficient for all practical purposes.
     fn add(self, rhs: TimeDelta) -> Self::Output {
         let mut attoseconds = self.attoseconds + rhs.attoseconds;
@@ -120,10 +120,10 @@ impl Add<TimeDelta> for UnscaledTime {
     }
 }
 
-impl Sub<TimeDelta> for UnscaledTime {
+impl Sub<TimeDelta> for BaseTime {
     type Output = Self;
 
-    /// The implementation of [Sub] for [UnscaledTime] follows the default Rust rules for integer overflow, which
+    /// The implementation of [Sub] for [BaseTime] follows the default Rust rules for integer overflow, which
     /// should be sufficient for all practical purposes.
     fn sub(self, rhs: TimeDelta) -> Self::Output {
         let mut seconds = self.seconds - rhs.seconds as i64;
@@ -141,7 +141,7 @@ impl Sub<TimeDelta> for UnscaledTime {
     }
 }
 
-impl WallClock for UnscaledTime {
+impl WallClock for BaseTime {
     fn hour(&self) -> i64 {
         // Since J2000 is taken from midday, we offset by half a day to get the wall clock hour.
         let day_seconds: i64 = if self.is_negative() {
@@ -258,7 +258,7 @@ impl TimeScale for UT1 {
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct Time<T: TimeScale + Copy> {
     scale: T,
-    timestamp: UnscaledTime,
+    timestamp: BaseTime,
 }
 
 impl<T: TimeScale + Copy> Time<T> {
@@ -266,15 +266,15 @@ impl<T: TimeScale + Copy> Time<T> {
     pub fn new(scale: T, seconds: i64, attoseconds: u64) -> Self {
         Self {
             scale,
-            timestamp: UnscaledTime {
+            timestamp: BaseTime {
                 seconds,
                 attoseconds,
             },
         }
     }
 
-    /// Instantiates a [Time] in the given scale from an [UnscaledTime].
-    pub fn from_unscaled(scale: T, timestamp: UnscaledTime) -> Self {
+    /// Instantiates a [Time] in the given scale from a [BaseTime].
+    pub fn from_unscaled(scale: T, timestamp: BaseTime) -> Self {
         Self { scale, timestamp }
     }
 
@@ -285,7 +285,7 @@ impl<T: TimeScale + Copy> Time<T> {
         let minute_in_seconds = time.minute() * SECONDS_PER_MINUTE;
         let seconds = day_in_seconds + hour_in_seconds + minute_in_seconds + time.second();
         let attoseconds = time.subsecond_as_attoseconds();
-        let unscaled = UnscaledTime {
+        let unscaled = BaseTime {
             seconds,
             attoseconds,
         };
@@ -301,7 +301,7 @@ impl<T: TimeScale + Copy> Time<T> {
     pub fn j2000(scale: T) -> Self {
         Self {
             scale,
-            timestamp: UnscaledTime::default(),
+            timestamp: BaseTime::default(),
         }
     }
 
@@ -315,7 +315,7 @@ impl<T: TimeScale + Copy> Time<T> {
     }
 
     /// The underlying unscaled timestamp.
-    pub fn unscaled(&self) -> UnscaledTime {
+    pub fn unscaled(&self) -> BaseTime {
         self.timestamp
     }
 
@@ -407,34 +407,35 @@ pub trait CalendarDate {
 
 #[cfg(test)]
 mod tests {
+    use float_eq::assert_float_eq;
+
     use crate::time::constants::i64::SECONDS_PER_JULIAN_CENTURY;
     use crate::time::dates::Calendar::Gregorian;
-    use float_eq::assert_float_eq;
 
     use super::*;
 
     #[test]
     fn test_unscaled_time_is_negative() {
-        assert!(UnscaledTime {
+        assert!(BaseTime {
             seconds: -1,
-            attoseconds: 0
+            attoseconds: 0,
         }
         .is_negative());
-        assert!(!UnscaledTime {
+        assert!(!BaseTime {
             seconds: 0,
-            attoseconds: 0
+            attoseconds: 0,
         }
         .is_negative());
-        assert!(!UnscaledTime {
+        assert!(!BaseTime {
             seconds: 1,
-            attoseconds: 0
+            attoseconds: 0,
         }
         .is_negative());
     }
 
     #[test]
     fn test_unscaled_time_seconds() {
-        let time = UnscaledTime {
+        let time = BaseTime {
             seconds: 123,
             attoseconds: 0,
         };
@@ -443,7 +444,7 @@ mod tests {
 
     #[test]
     fn test_unscaled_time_attoseconds() {
-        let time = UnscaledTime {
+        let time = BaseTime {
             seconds: 0,
             attoseconds: 123,
         };
@@ -454,14 +455,14 @@ mod tests {
     fn test_unscaled_time_wall_clock_hour() {
         struct TestCase {
             desc: &'static str,
-            time: UnscaledTime,
+            time: BaseTime,
             expected_hour: i64,
         }
 
         let test_cases = [
             TestCase {
                 desc: "zero value",
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: 0,
                     attoseconds: 0,
                 },
@@ -469,7 +470,7 @@ mod tests {
             },
             TestCase {
                 desc: "one attosecond less than an hour",
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: SECONDS_PER_HOUR - 1,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -477,7 +478,7 @@ mod tests {
             },
             TestCase {
                 desc: "exactly one hour",
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: SECONDS_PER_HOUR,
                     attoseconds: 0,
                 },
@@ -485,7 +486,7 @@ mod tests {
             },
             TestCase {
                 desc: "one day and one hour",
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: SECONDS_PER_HOUR * 25,
                     attoseconds: 0,
                 },
@@ -493,7 +494,7 @@ mod tests {
             },
             TestCase {
                 desc: "one attosecond less than the epoch",
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: -1,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -501,7 +502,7 @@ mod tests {
             },
             TestCase {
                 desc: "one hour less than the epoch",
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: -SECONDS_PER_HOUR,
                     attoseconds: 0,
                 },
@@ -509,7 +510,7 @@ mod tests {
             },
             TestCase {
                 desc: "one hour and one attosecond less than the epoch",
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: -SECONDS_PER_HOUR - 1,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -517,7 +518,7 @@ mod tests {
             },
             TestCase {
                 desc: "one day less than the epoch",
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: -SECONDS_PER_DAY,
                     attoseconds: 0,
                 },
@@ -526,7 +527,7 @@ mod tests {
             TestCase {
                 // Exercises the case where the number of seconds exceeds the number of seconds in a day.
                 desc: "two days less than the epoch",
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: -SECONDS_PER_DAY * 2,
                     attoseconds: 0,
                 },
@@ -548,14 +549,14 @@ mod tests {
     fn test_unscaled_time_wall_clock_minute() {
         struct TestCase {
             desc: &'static str,
-            time: UnscaledTime,
+            time: BaseTime,
             expected_minute: i64,
         }
 
         let test_cases = [
             TestCase {
                 desc: "zero value",
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: 0,
                     attoseconds: 0,
                 },
@@ -563,7 +564,7 @@ mod tests {
             },
             TestCase {
                 desc: "one attosecond less than one minute",
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: SECONDS_PER_MINUTE - 1,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -571,7 +572,7 @@ mod tests {
             },
             TestCase {
                 desc: "one minute",
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: SECONDS_PER_MINUTE,
                     attoseconds: 0,
                 },
@@ -579,7 +580,7 @@ mod tests {
             },
             TestCase {
                 desc: "one attosecond less than an hour",
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: SECONDS_PER_HOUR - 1,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -587,7 +588,7 @@ mod tests {
             },
             TestCase {
                 desc: "exactly one hour",
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: SECONDS_PER_HOUR,
                     attoseconds: 0,
                 },
@@ -595,7 +596,7 @@ mod tests {
             },
             TestCase {
                 desc: "one hour and one minute",
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: SECONDS_PER_HOUR + SECONDS_PER_MINUTE,
                     attoseconds: 0,
                 },
@@ -603,7 +604,7 @@ mod tests {
             },
             TestCase {
                 desc: "one attosecond less than the epoch",
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: -1,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -611,7 +612,7 @@ mod tests {
             },
             TestCase {
                 desc: "one minute less than the epoch",
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: -SECONDS_PER_MINUTE,
                     attoseconds: 0,
                 },
@@ -619,7 +620,7 @@ mod tests {
             },
             TestCase {
                 desc: "one minute and one attosecond less than the epoch",
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: -SECONDS_PER_MINUTE - 1,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -641,14 +642,14 @@ mod tests {
     fn test_unscaled_time_wall_clock_second() {
         struct TestCase {
             desc: &'static str,
-            time: UnscaledTime,
+            time: BaseTime,
             expected_second: i64,
         }
 
         let test_cases = [
             TestCase {
                 desc: "zero value",
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: 0,
                     attoseconds: 0,
                 },
@@ -656,7 +657,7 @@ mod tests {
             },
             TestCase {
                 desc: "one attosecond less than one second",
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: 0,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -664,7 +665,7 @@ mod tests {
             },
             TestCase {
                 desc: "one second",
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: 1,
                     attoseconds: 0,
                 },
@@ -672,7 +673,7 @@ mod tests {
             },
             TestCase {
                 desc: "one attosecond less than a minute",
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: SECONDS_PER_MINUTE - 1,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -680,7 +681,7 @@ mod tests {
             },
             TestCase {
                 desc: "exactly one minute",
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: SECONDS_PER_MINUTE,
                     attoseconds: 0,
                 },
@@ -688,7 +689,7 @@ mod tests {
             },
             TestCase {
                 desc: "one minute and one second",
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: SECONDS_PER_MINUTE + 1,
                     attoseconds: 0,
                 },
@@ -696,7 +697,7 @@ mod tests {
             },
             TestCase {
                 desc: "one attosecond less than the epoch",
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: -1,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -704,7 +705,7 @@ mod tests {
             },
             TestCase {
                 desc: "one second less than the epoch",
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: -1,
                     attoseconds: 0,
                 },
@@ -712,7 +713,7 @@ mod tests {
             },
             TestCase {
                 desc: "one second and one attosecond less than the epoch",
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: -2,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -732,7 +733,7 @@ mod tests {
 
     #[test]
     fn test_unscaled_time_subseconds_with_positive_seconds() {
-        let time = UnscaledTime {
+        let time = BaseTime {
             seconds: 0,
             attoseconds: 123_456_789_012_345_678,
         };
@@ -787,7 +788,7 @@ mod tests {
 
     #[test]
     fn test_unscaled_time_subseconds_with_negative_seconds() {
-        let time = UnscaledTime {
+        let time = BaseTime {
             seconds: -1,
             attoseconds: 123_456_789_012_345_678,
         };
@@ -845,8 +846,8 @@ mod tests {
         struct TestCase {
             desc: &'static str,
             delta: TimeDelta,
-            time: UnscaledTime,
-            expected: UnscaledTime,
+            time: BaseTime,
+            expected: BaseTime,
         }
 
         let test_cases = [
@@ -856,11 +857,11 @@ mod tests {
                     seconds: 1,
                     attoseconds: 1,
                 },
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: 1,
                     attoseconds: 0,
                 },
-                expected: UnscaledTime {
+                expected: BaseTime {
                     seconds: 2,
                     attoseconds: 1,
                 },
@@ -871,11 +872,11 @@ mod tests {
                     seconds: 1,
                     attoseconds: 2,
                 },
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: 1,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
-                expected: UnscaledTime {
+                expected: BaseTime {
                     seconds: 3,
                     attoseconds: 1,
                 },
@@ -886,11 +887,11 @@ mod tests {
                     seconds: 1,
                     attoseconds: 1,
                 },
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: -1,
                     attoseconds: 0,
                 },
-                expected: UnscaledTime {
+                expected: BaseTime {
                     seconds: 0,
                     attoseconds: 1,
                 },
@@ -901,11 +902,11 @@ mod tests {
                     seconds: 1,
                     attoseconds: 2,
                 },
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: -1,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
-                expected: UnscaledTime {
+                expected: BaseTime {
                     seconds: 1,
                     attoseconds: 1,
                 },
@@ -927,8 +928,8 @@ mod tests {
         struct TestCase {
             desc: &'static str,
             delta: TimeDelta,
-            time: UnscaledTime,
-            expected: UnscaledTime,
+            time: BaseTime,
+            expected: BaseTime,
         }
 
         let test_cases = [
@@ -938,11 +939,11 @@ mod tests {
                     seconds: 1,
                     attoseconds: 1,
                 },
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: 2,
                     attoseconds: 2,
                 },
-                expected: UnscaledTime {
+                expected: BaseTime {
                     seconds: 1,
                     attoseconds: 1,
                 },
@@ -953,11 +954,11 @@ mod tests {
                     seconds: 1,
                     attoseconds: 2,
                 },
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: 2,
                     attoseconds: 1,
                 },
-                expected: UnscaledTime {
+                expected: BaseTime {
                     seconds: 0,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -968,11 +969,11 @@ mod tests {
                     seconds: 1,
                     attoseconds: 1,
                 },
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: -1,
                     attoseconds: 2,
                 },
-                expected: UnscaledTime {
+                expected: BaseTime {
                     seconds: -2,
                     attoseconds: 1,
                 },
@@ -983,11 +984,11 @@ mod tests {
                     seconds: 1,
                     attoseconds: 2,
                 },
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: -1,
                     attoseconds: 1,
                 },
-                expected: UnscaledTime {
+                expected: BaseTime {
                     seconds: -3,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -998,11 +999,11 @@ mod tests {
                     seconds: 1,
                     attoseconds: 2,
                 },
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: 0,
                     attoseconds: 1,
                 },
-                expected: UnscaledTime {
+                expected: BaseTime {
                     seconds: -2,
                     attoseconds: ATTOSECONDS_PER_SECOND - 1,
                 },
@@ -1023,19 +1024,19 @@ mod tests {
     fn test_unscaled_time_days_since_j2000() {
         struct TestCase {
             desc: &'static str,
-            time: UnscaledTime,
+            time: BaseTime,
             expected: f64,
         }
 
         let test_cases = [
             TestCase {
                 desc: "at the epoch",
-                time: UnscaledTime::default(),
+                time: BaseTime::default(),
                 expected: 0.0,
             },
             TestCase {
                 desc: "exactly one day after the epoch",
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: SECONDS_PER_DAY,
                     attoseconds: 0,
                 },
@@ -1043,7 +1044,7 @@ mod tests {
             },
             TestCase {
                 desc: "exactly one day before the epoch",
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: -SECONDS_PER_DAY,
                     attoseconds: 0,
                 },
@@ -1051,7 +1052,7 @@ mod tests {
             },
             TestCase {
                 desc: "a partial number of days after the epoch",
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: (SECONDS_PER_DAY / 2) * 3,
                     attoseconds: ATTOSECONDS_PER_SECOND / 2,
                 },
@@ -1077,19 +1078,19 @@ mod tests {
     fn test_unscaled_time_centuries_since_j2000() {
         struct TestCase {
             desc: &'static str,
-            time: UnscaledTime,
+            time: BaseTime,
             expected: f64,
         }
 
         let test_cases = [
             TestCase {
                 desc: "at the epoch",
-                time: UnscaledTime::default(),
+                time: BaseTime::default(),
                 expected: 0.0,
             },
             TestCase {
                 desc: "exactly one century after the epoch",
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: SECONDS_PER_JULIAN_CENTURY,
                     attoseconds: 0,
                 },
@@ -1097,7 +1098,7 @@ mod tests {
             },
             TestCase {
                 desc: "exactly one century before the epoch",
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: -SECONDS_PER_JULIAN_CENTURY,
                     attoseconds: 0,
                 },
@@ -1105,7 +1106,7 @@ mod tests {
             },
             TestCase {
                 desc: "a partial number of centuries after the epoch",
-                time: UnscaledTime {
+                time: BaseTime {
                     seconds: (SECONDS_PER_JULIAN_CENTURY / 2) * 3,
                     attoseconds: ATTOSECONDS_PER_SECOND / 2,
                 },
@@ -1134,7 +1135,7 @@ mod tests {
         let attoseconds = 9876543210;
         let expected = Time {
             scale,
-            timestamp: UnscaledTime {
+            timestamp: BaseTime {
                 seconds,
                 attoseconds,
             },
@@ -1166,7 +1167,7 @@ mod tests {
         let actual = Time::j2000(TAI);
         let expected = Time {
             scale: TAI,
-            timestamp: UnscaledTime::default(),
+            timestamp: BaseTime::default(),
         };
         assert_eq!(expected, actual);
     }
@@ -1176,7 +1177,7 @@ mod tests {
         let actual = Time::jd0(TAI);
         let expected = Time::from_unscaled(
             TAI,
-            UnscaledTime {
+            BaseTime {
                 seconds: -211813488000,
                 attoseconds: 0,
             },
@@ -1210,7 +1211,7 @@ mod tests {
 
     #[test]
     fn test_time_days_since_j2000() {
-        let unscaled = UnscaledTime {
+        let unscaled = BaseTime {
             seconds: 1234567890,
             attoseconds: 9876543210,
         };
@@ -1228,7 +1229,7 @@ mod tests {
 
     #[test]
     fn test_time_centuries_since_j2000() {
-        let unscaled = UnscaledTime {
+        let unscaled = BaseTime {
             seconds: 1234567890,
             attoseconds: 9876543210,
         };
@@ -1246,7 +1247,7 @@ mod tests {
 
     #[test]
     fn test_time_wall_clock_hour() {
-        let unscaled_time = UnscaledTime {
+        let unscaled_time = BaseTime {
             seconds: 1234567890,
             attoseconds: 9876543210,
         };
@@ -1261,7 +1262,7 @@ mod tests {
 
     #[test]
     fn test_time_wall_clock_minute() {
-        let unscaled_time = UnscaledTime {
+        let unscaled_time = BaseTime {
             seconds: 1234567890,
             attoseconds: 9876543210,
         };
@@ -1276,7 +1277,7 @@ mod tests {
 
     #[test]
     fn test_time_wall_clock_second() {
-        let unscaled_time = UnscaledTime {
+        let unscaled_time = BaseTime {
             seconds: 1234567890,
             attoseconds: 9876543210,
         };
@@ -1291,7 +1292,7 @@ mod tests {
 
     #[test]
     fn test_time_wall_clock_millisecond() {
-        let unscaled_time = UnscaledTime {
+        let unscaled_time = BaseTime {
             seconds: 1234567890,
             attoseconds: 9876543210,
         };
@@ -1306,7 +1307,7 @@ mod tests {
 
     #[test]
     fn test_time_wall_clock_microsecond() {
-        let unscaled_time = UnscaledTime {
+        let unscaled_time = BaseTime {
             seconds: 1234567890,
             attoseconds: 9876543210,
         };
@@ -1321,7 +1322,7 @@ mod tests {
 
     #[test]
     fn test_time_wall_clock_nanosecond() {
-        let unscaled_time = UnscaledTime {
+        let unscaled_time = BaseTime {
             seconds: 1234567890,
             attoseconds: 9876543210,
         };
@@ -1336,7 +1337,7 @@ mod tests {
 
     #[test]
     fn test_time_wall_clock_picosecond() {
-        let unscaled_time = UnscaledTime {
+        let unscaled_time = BaseTime {
             seconds: 1234567890,
             attoseconds: 9876543210,
         };
@@ -1351,7 +1352,7 @@ mod tests {
 
     #[test]
     fn test_time_wall_clock_femtosecond() {
-        let unscaled_time = UnscaledTime {
+        let unscaled_time = BaseTime {
             seconds: 1234567890,
             attoseconds: 9876543210,
         };
@@ -1366,7 +1367,7 @@ mod tests {
 
     #[test]
     fn test_time_wall_clock_attosecond() {
-        let unscaled_time = UnscaledTime {
+        let unscaled_time = BaseTime {
             seconds: 1234567890,
             attoseconds: 9876543210,
         };

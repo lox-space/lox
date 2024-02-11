@@ -12,7 +12,7 @@ use crate::bodies::PointMass;
 use crate::frames::ReferenceFrame;
 
 pub mod anomalies;
-pub mod states;
+pub mod base;
 pub mod two_body;
 
 pub trait CoordinateSystem {
