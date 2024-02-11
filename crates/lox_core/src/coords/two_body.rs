@@ -9,7 +9,7 @@
 use glam::DVec3;
 
 use crate::bodies::PointMass;
-use crate::coords::states::{CartesianState, KeplerianState, TwoBodyState};
+use crate::coords::base::{BaseCartesian, BaseKeplerian, BaseTwoBody};
 use crate::coords::CoordinateSystem;
 use crate::frames::{InertialFrame, ReferenceFrame};
 use crate::time::continuous::{Time, TimeScale};
@@ -35,7 +35,7 @@ where
     F: ReferenceFrame + Copy,
 {
     time: Time<T>,
-    state: CartesianState,
+    state: BaseCartesian,
     origin: O,
     frame: F,
 }
@@ -47,7 +47,7 @@ where
     F: ReferenceFrame + Copy,
 {
     pub fn new(time: Time<T>, origin: O, frame: F, position: DVec3, velocity: DVec3) -> Self {
-        let state = CartesianState::new(position, velocity);
+        let state = BaseCartesian::new(position, velocity);
         Self {
             time,
             state,
@@ -132,7 +132,7 @@ where
     F: InertialFrame + Copy,
 {
     time: Time<T>,
-    state: KeplerianState,
+    state: BaseKeplerian,
     origin: O,
     frame: F,
 }
@@ -155,7 +155,7 @@ where
         periapsis_arg: f64,
         true_anomaly: f64,
     ) -> Self {
-        let state = KeplerianState::new(
+        let state = BaseKeplerian::new(
             semi_major,
             eccentricity,
             inclination,

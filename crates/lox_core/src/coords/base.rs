@@ -11,18 +11,18 @@ use glam::{DMat3, DVec3};
 
 use crate::math::{mod_two_pi, normalize_two_pi};
 
-pub trait TwoBodyState {
-    fn to_cartesian_state(&self, grav_param: f64) -> CartesianState;
-    fn to_keplerian_state(&self, grav_param: f64) -> KeplerianState;
+pub trait BaseTwoBody {
+    fn to_cartesian_state(&self, grav_param: f64) -> BaseCartesian;
+    fn to_keplerian_state(&self, grav_param: f64) -> BaseKeplerian;
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct CartesianState {
+pub struct BaseCartesian {
     position: DVec3,
     velocity: DVec3,
 }
 
-impl CartesianState {
+impl BaseCartesian {
     pub fn new(position: DVec3, velocity: DVec3) -> Self {
         Self { position, velocity }
     }
@@ -36,12 +36,12 @@ impl CartesianState {
     }
 }
 
-impl TwoBodyState for CartesianState {
-    fn to_cartesian_state(&self, _grav_param: f64) -> CartesianState {
+impl BaseTwoBody for BaseCartesian {
+    fn to_cartesian_state(&self, _grav_param: f64) -> BaseCartesian {
         *self
     }
 
-    fn to_keplerian_state(&self, grav_param: f64) -> KeplerianState {
+    fn to_keplerian_state(&self, grav_param: f64) -> BaseKeplerian {
         let r = self.position.length();
         let v = self.velocity.length();
         let h = self.position.cross(self.velocity);
@@ -95,7 +95,7 @@ impl TwoBodyState for CartesianState {
             periapsis_arg = py.atan2(px) - true_anomaly;
         }
 
-        KeplerianState::new(
+        BaseKeplerian::new(
             semi_major,
             eccentricity,
             inclination,
@@ -107,7 +107,7 @@ impl TwoBodyState for CartesianState {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct KeplerianState {
+pub struct BaseKeplerian {
     semi_major: f64,
     eccentricity: f64,
     inclination: f64,
@@ -116,7 +116,7 @@ pub struct KeplerianState {
     true_anomaly: f64,
 }
 
-impl KeplerianState {
+impl BaseKeplerian {
     pub fn new(
         semi_major: f64,
         eccentricity: f64,
@@ -180,16 +180,16 @@ impl KeplerianState {
     }
 }
 
-impl TwoBodyState for KeplerianState {
-    fn to_cartesian_state(&self, grav_param: f64) -> CartesianState {
+impl BaseTwoBody for BaseKeplerian {
+    fn to_cartesian_state(&self, grav_param: f64) -> BaseCartesian {
         let (pos, vel) = self.to_perifocal(grav_param);
         let rot = DMat3::from_rotation_z(self.ascending_node)
             * DMat3::from_rotation_x(self.inclination)
             * DMat3::from_rotation_z(self.periapsis_argument);
-        CartesianState::new(rot * pos, rot * vel)
+        BaseCartesian::new(rot * pos, rot * vel)
     }
 
-    fn to_keplerian_state(&self, _grav_param: f64) -> KeplerianState {
+    fn to_keplerian_state(&self, _grav_param: f64) -> BaseKeplerian {
         *self
     }
 }
@@ -239,10 +239,10 @@ mod tests {
             -0.118801577532701e4,
         );
 
-        let cartesian = CartesianState::new(pos, vel);
+        let cartesian = BaseCartesian::new(pos, vel);
         assert_eq!(cartesian.to_cartesian_state(grav_param), cartesian);
 
-        let keplerian = KeplerianState::new(
+        let keplerian = BaseKeplerian::new(
             semi_major,
             eccentricity,
             inclination,
@@ -281,8 +281,8 @@ mod tests {
         let true_anomaly = 30f64.to_radians();
         let pos = DVec3::new(4396398.60746266, 5083838.45333733, 877155.42119322);
         let vel = DVec3::new(-5797.06004014, 4716.60916063, 1718.86034246);
-        let cartesian = CartesianState::new(pos, vel);
-        let keplerian = KeplerianState::new(
+        let cartesian = BaseCartesian::new(pos, vel);
+        let keplerian = BaseKeplerian::new(
             semi_major,
             eccentricity,
             inclination,
@@ -318,7 +318,7 @@ mod tests {
         let ascending_node = 1.00681;
         let periapsis_arg = 0.0;
         let true_anomaly = 0.048363;
-        let keplerian = KeplerianState::new(
+        let keplerian = BaseKeplerian::new(
             semi_major,
             eccentricity,
             inclination,
@@ -348,7 +348,7 @@ mod tests {
         let ascending_node = 1.00681;
         let periapsis_arg = 3.10686;
         let true_anomaly = 0.12741601769795755;
-        let keplerian = KeplerianState::new(
+        let keplerian = BaseKeplerian::new(
             semi_major,
             eccentricity,
             inclination,
@@ -378,7 +378,7 @@ mod tests {
         let ascending_node = 0.0;
         let periapsis_arg = 3.10686;
         let true_anomaly = 0.44369564302687126;
-        let keplerian = KeplerianState::new(
+        let keplerian = BaseKeplerian::new(
             semi_major,
             eccentricity,
             inclination,
@@ -408,7 +408,7 @@ mod tests {
         let ascending_node = 0.0;
         let periapsis_arg = 0.0;
         let true_anomaly = 0.44369564302687126;
-        let keplerian = KeplerianState::new(
+        let keplerian = BaseKeplerian::new(
             semi_major,
             eccentricity,
             inclination,
@@ -434,7 +434,7 @@ mod tests {
         let position = DVec3::new(6068.27927, -1692.84394, -2516.61918);
         let velocity = DVec3::new(-0.660415582, 5.495938726, -5.303093233);
         let grav_param = Earth.gravitational_parameter();
-        let cartesian = CartesianState::new(position, velocity);
+        let cartesian = BaseCartesian::new(position, velocity);
         let cartesian1 = cartesian
             .to_keplerian_state(grav_param)
             .to_cartesian_state(grav_param);

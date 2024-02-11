@@ -11,7 +11,7 @@ use std::str::FromStr;
 use pyo3::prelude::*;
 
 use lox_core::bodies::PointMass;
-use lox_core::coords::states::{CartesianState, KeplerianState, TwoBodyState};
+use lox_core::coords::base::{BaseCartesian, BaseKeplerian, BaseTwoBody};
 use lox_core::coords::DVec3;
 
 use crate::bodies::PyBody;
@@ -21,7 +21,7 @@ use crate::time::PyTime;
 #[pyclass(name = "Cartesian")]
 pub struct PyCartesian {
     time: PyTime,
-    state: CartesianState,
+    state: BaseCartesian,
     origin: PyBody,
     frame: PyFrame,
 }
@@ -43,7 +43,7 @@ impl PyCartesian {
     ) -> PyResult<Self> {
         let origin: PyBody = body.try_into()?;
         let frame = PyFrame::from_str(frame)?;
-        let state = CartesianState::new(DVec3::new(x, y, z), DVec3::new(vx, vy, vz));
+        let state = BaseCartesian::new(DVec3::new(x, y, z), DVec3::new(vx, vy, vz));
         Ok(Self {
             time,
             state,
@@ -89,7 +89,7 @@ impl PyCartesian {
 #[pyclass(name = "Keplerian")]
 pub struct PyKeplerian {
     time: PyTime,
-    state: KeplerianState,
+    state: BaseKeplerian,
     origin: PyBody,
     frame: PyFrame,
 }
@@ -111,7 +111,7 @@ impl PyKeplerian {
     ) -> PyResult<Self> {
         let origin: PyBody = body.try_into()?;
         let frame = PyFrame::from_str(frame)?;
-        let state = KeplerianState::new(
+        let state = BaseKeplerian::new(
             semi_major_axis,
             eccentricity,
             inclination,

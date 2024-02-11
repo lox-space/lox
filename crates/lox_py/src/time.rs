@@ -6,10 +6,11 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use pyo3::{pyclass, pymethods};
 use std::fmt::{Display, Formatter};
 
-use lox_core::time::continuous::{Time, UnscaledTime, TAI, TCB, TCG, TDB, TT, UT1};
+use pyo3::{pyclass, pymethods};
+
+use lox_core::time::continuous::{BaseTime, Time, TAI, TCB, TCG, TDB, TT, UT1};
 use lox_core::time::dates::Date;
 use lox_core::time::utc::UTC;
 use lox_core::time::PerMille;
@@ -70,7 +71,7 @@ impl Display for PyTimeScale {
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct PyTime {
     pub scale: PyTimeScale,
-    pub timestamp: UnscaledTime,
+    pub timestamp: BaseTime,
 }
 
 #[pymethods]
@@ -152,13 +153,9 @@ fn pytime_from_date_and_utc_timestamp(scale: PyTimeScale, date: Date, utc: UTC) 
 }
 
 /// Invokes the appropriate [Time::from_date_and_utc_timestamp] method based on the time scale, and returns the
-/// result as an [UnscaledTime]. The Rust time library performs the appropriate transformation while keeping
+/// result as a [BaseTime]. The Rust time library performs the appropriate transformation while keeping
 /// generics out of the Python interface.
-fn unscaled_time_from_date_and_utc_timestamp(
-    scale: PyTimeScale,
-    date: Date,
-    utc: UTC,
-) -> UnscaledTime {
+fn unscaled_time_from_date_and_utc_timestamp(scale: PyTimeScale, date: Date, utc: UTC) -> BaseTime {
     match scale {
         PyTimeScale::TAI => Time::from_date_and_utc_timestamp(TAI, date, utc).unscaled(),
         PyTimeScale::TCB => Time::from_date_and_utc_timestamp(TCB, date, utc).unscaled(),
