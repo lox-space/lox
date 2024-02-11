@@ -4,6 +4,7 @@ use lox_core::coords::two_body::Cartesian;
 use lox_core::frames::ReferenceFrame;
 
 pub mod semi_analytical;
+mod stumpff;
 
 pub trait Propagator<T: PointMass + Copy, S: ReferenceFrame + Copy> {
     type Error;
