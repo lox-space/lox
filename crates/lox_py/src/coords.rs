@@ -20,6 +20,7 @@ use crate::time::PyTime;
 
 #[pyclass(name = "Cartesian")]
 pub struct PyCartesian {
+    time: PyTime,
     state: CartesianState,
     origin: PyBody,
     frame: PyFrame,
@@ -30,7 +31,7 @@ impl PyCartesian {
     #[allow(clippy::too_many_arguments)]
     #[new]
     fn new(
-        time: &PyTime,
+        time: PyTime,
         body: PyObject,
         frame: &str,
         x: f64,
@@ -42,8 +43,9 @@ impl PyCartesian {
     ) -> PyResult<Self> {
         let origin: PyBody = body.try_into()?;
         let frame = PyFrame::from_str(frame)?;
-        let state = CartesianState::new(time.0, DVec3::new(x, y, z), DVec3::new(vx, vy, vz));
+        let state = CartesianState::new(DVec3::new(x, y, z), DVec3::new(vx, vy, vz));
         Ok(Self {
+            time,
             state,
             origin,
             frame,
@@ -51,7 +53,7 @@ impl PyCartesian {
     }
 
     fn time(&self) -> PyTime {
-        PyTime(self.state.time())
+        self.time
     }
 
     fn reference_frame(&self) -> String {
@@ -76,15 +78,17 @@ impl PyCartesian {
         let mu = self.origin.gravitational_parameter();
         let state = self.state.to_keplerian_state(mu);
         PyKeplerian {
+            state,
+            time: self.time,
             origin: self.origin.clone(),
             frame: self.frame.clone(),
-            state,
         }
     }
 }
 
 #[pyclass(name = "Keplerian")]
 pub struct PyKeplerian {
+    time: PyTime,
     state: KeplerianState,
     origin: PyBody,
     frame: PyFrame,
@@ -95,7 +99,7 @@ impl PyKeplerian {
     #[new]
     #[allow(clippy::too_many_arguments)]
     fn new(
-        t: &PyTime,
+        time: PyTime,
         body: PyObject,
         frame: &str,
         semi_major_axis: f64,
@@ -108,7 +112,6 @@ impl PyKeplerian {
         let origin: PyBody = body.try_into()?;
         let frame = PyFrame::from_str(frame)?;
         let state = KeplerianState::new(
-            t.0,
             semi_major_axis,
             eccentricity,
             inclination,
@@ -117,6 +120,7 @@ impl PyKeplerian {
             true_anomaly,
         );
         Ok(Self {
+            time,
             state,
             origin,
             frame,
@@ -124,7 +128,7 @@ impl PyKeplerian {
     }
 
     fn time(&self) -> PyTime {
-        PyTime(self.state.time())
+        self.time
     }
 
     fn reference_frame(&self) -> String {
@@ -164,6 +168,7 @@ impl PyKeplerian {
         let state = self.state.to_cartesian_state(mu);
         PyCartesian {
             state,
+            time: self.time,
             origin: self.origin.clone(),
             frame: self.frame.clone(),
         }
@@ -175,13 +180,14 @@ mod tests {
     use float_eq::assert_float_eq;
 
     use crate::bodies::PyPlanet;
+    use crate::time::PyTimeScale;
 
     use super::*;
 
     #[test]
     fn test_cartesian() {
-        let epoch = PyTime::new(
-            "TDB",
+        let time = PyTime::new(
+            PyTimeScale::TDB,
             2023,
             3,
             25,
@@ -213,7 +219,7 @@ mod tests {
         ) * 1e-3;
 
         let cartesian = PyCartesian::new(
-            &epoch,
+            time,
             body.clone(),
             "ICRF",
             pos.x,
@@ -230,7 +236,7 @@ mod tests {
             Python::with_gil(|py| body.extract::<PyPlanet>(py)).expect("origin should be a planet");
         let origin1 = Python::with_gil(|py| cartesian1.origin().extract::<PyPlanet>(py))
             .expect("origin should be a planet");
-        assert_eq!(cartesian1.time(), epoch);
+        assert_eq!(cartesian1.time(), time);
         assert_eq!(origin1.name(), origin.name());
         assert_eq!(cartesian1.reference_frame(), "ICRF");
 
@@ -244,8 +250,8 @@ mod tests {
 
     #[test]
     fn test_keplerian() {
-        let epoch = PyTime::new(
-            "TDB",
+        let time = PyTime::new(
+            PyTimeScale::TDB,
             2023,
             3,
             25,
@@ -273,7 +279,7 @@ mod tests {
         let true_anomaly = 0.44369564302687126;
 
         let keplerian = PyKeplerian::new(
-            &epoch,
+            time,
             body.clone(),
             "ICRF",
             semi_major,
@@ -290,7 +296,7 @@ mod tests {
             Python::with_gil(|py| body.extract::<PyPlanet>(py)).expect("origin should be a planet");
         let origin1 = Python::with_gil(|py| keplerian1.origin().extract::<PyPlanet>(py))
             .expect("origin should be a planet");
-        assert_eq!(keplerian1.time(), epoch);
+        assert_eq!(keplerian1.time(), time);
         assert_eq!(origin1.name(), origin.name());
         assert_eq!(keplerian1.reference_frame(), "ICRF");
 

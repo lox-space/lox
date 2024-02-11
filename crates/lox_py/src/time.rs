@@ -7,8 +7,9 @@
  */
 
 use pyo3::{pyclass, pymethods};
+use std::fmt::{Display, Formatter};
 
-use lox_core::time::continuous::{Time, TimeScale};
+use lox_core::time::continuous::{Time, UnscaledTime, TAI, TCB, TCG, TDB, TT, UT1};
 use lox_core::time::dates::Date;
 use lox_core::time::utc::UTC;
 use lox_core::time::PerMille;
@@ -16,35 +17,61 @@ use lox_core::time::PerMille;
 use crate::LoxPyError;
 
 #[pyclass(name = "TimeScale")]
-pub struct PyTimeScale(pub TimeScale);
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[allow(clippy::upper_case_acronyms)]
+pub enum PyTimeScale {
+    TAI,
+    TCB,
+    TCG,
+    TDB,
+    TT,
+    UT1,
+}
 
 #[pymethods]
 impl PyTimeScale {
     #[new]
     fn new(name: &str) -> Result<Self, LoxPyError> {
         match name {
-            "TAI" => Ok(PyTimeScale(TimeScale::TAI)),
-            "TCB" => Ok(PyTimeScale(TimeScale::TCB)),
-            "TCG" => Ok(PyTimeScale(TimeScale::TCG)),
-            "TDB" => Ok(PyTimeScale(TimeScale::TDB)),
-            "TT" => Ok(PyTimeScale(TimeScale::TT)),
-            "UT1" => Ok(PyTimeScale(TimeScale::UT1)),
+            "TAI" => Ok(PyTimeScale::TAI),
+            "TCB" => Ok(PyTimeScale::TCB),
+            "TCG" => Ok(PyTimeScale::TCG),
+            "TDB" => Ok(PyTimeScale::TDB),
+            "TT" => Ok(PyTimeScale::TT),
+            "UT1" => Ok(PyTimeScale::UT1),
             _ => Err(LoxPyError::InvalidTimeScale(name.to_string())),
         }
     }
 
     fn __repr__(&self) -> String {
-        format!("TimeScale(\"{}\")", self.0)
+        format!("TimeScale(\"{}\")", self)
     }
 
     fn __str__(&self) -> String {
-        format!("{}", self.0)
+        format!("{}", self)
+    }
+}
+
+impl Display for PyTimeScale {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            PyTimeScale::TAI => "TAI",
+            PyTimeScale::TCB => "TCB",
+            PyTimeScale::TCG => "TCG",
+            PyTimeScale::TDB => "TDB",
+            PyTimeScale::TT => "TT",
+            PyTimeScale::UT1 => "UT1",
+        };
+        write!(f, "{}", s)
     }
 }
 
 #[pyclass(name = "Time")]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub struct PyTime(pub Time);
+pub struct PyTime {
+    pub scale: PyTimeScale,
+    pub timestamp: UnscaledTime,
+}
 
 #[pymethods]
 impl PyTime {
@@ -66,7 +93,7 @@ impl PyTime {
     ))]
     #[new]
     pub fn new(
-        scale: &str,
+        scale: PyTimeScale,
         year: i64,
         month: i64,
         day: i64,
@@ -80,7 +107,6 @@ impl PyTime {
         femto: Option<u16>,
         atto: Option<u16>,
     ) -> Result<Self, LoxPyError> {
-        let time_scale = PyTimeScale::new(scale)?;
         let date = Date::new(year, month, day)?;
 
         let hour = hour.unwrap_or(0);
@@ -105,19 +131,41 @@ impl PyTime {
         if let Some(atto) = atto {
             utc.atto = PerMille::new(atto)?;
         }
-        Ok(PyTime(Time::from_date_and_utc_timestamp(
-            time_scale.0,
-            date,
-            utc,
-        )))
+
+        Ok(pytime_from_date_and_utc_timestamp(scale, date, utc))
     }
 
-    fn days_since_j2000(&self) -> f64 {
-        self.0.days_since_j2000()
+    pub fn days_since_j2000(&self) -> f64 {
+        self.timestamp.days_since_j2000()
     }
 
-    fn scale(&self) -> &str {
-        self.0.scale().into()
+    pub fn scale(&self) -> PyTimeScale {
+        self.scale
+    }
+}
+
+fn pytime_from_date_and_utc_timestamp(scale: PyTimeScale, date: Date, utc: UTC) -> PyTime {
+    PyTime {
+        timestamp: unscaled_time_from_date_and_utc_timestamp(scale, date, utc),
+        scale,
+    }
+}
+
+/// Invokes the appropriate [Time::from_date_and_utc_timestamp] method based on the time scale, and returns the
+/// result as an [UnscaledTime]. The Rust time library performs the appropriate transformation while keeping
+/// generics out of the Python interface.
+fn unscaled_time_from_date_and_utc_timestamp(
+    scale: PyTimeScale,
+    date: Date,
+    utc: UTC,
+) -> UnscaledTime {
+    match scale {
+        PyTimeScale::TAI => Time::from_date_and_utc_timestamp(TAI, date, utc).unscaled(),
+        PyTimeScale::TCB => Time::from_date_and_utc_timestamp(TCB, date, utc).unscaled(),
+        PyTimeScale::TCG => Time::from_date_and_utc_timestamp(TCG, date, utc).unscaled(),
+        PyTimeScale::TDB => Time::from_date_and_utc_timestamp(TDB, date, utc).unscaled(),
+        PyTimeScale::TT => Time::from_date_and_utc_timestamp(TT, date, utc).unscaled(),
+        PyTimeScale::UT1 => Time::from_date_and_utc_timestamp(UT1, date, utc).unscaled(),
     }
 }
 
@@ -129,15 +177,15 @@ mod tests {
     use super::*;
 
     #[rstest]
-    #[case("TAI", TimeScale::TAI)]
-    #[case("TCB", TimeScale::TCB)]
-    #[case("TCG", TimeScale::TCG)]
-    #[case("TDB", TimeScale::TDB)]
-    #[case("TT", TimeScale::TT)]
-    #[case("UT1", TimeScale::UT1)]
-    fn test_scale(#[case] name: &str, #[case] scale: TimeScale) {
+    #[case("TAI", PyTimeScale::TAI)]
+    #[case("TCB", PyTimeScale::TCB)]
+    #[case("TCG", PyTimeScale::TCG)]
+    #[case("TDB", PyTimeScale::TDB)]
+    #[case("TT", PyTimeScale::TT)]
+    #[case("UT1", PyTimeScale::UT1)]
+    fn test_scale(#[case] name: &str, #[case] scale: PyTimeScale) {
         let py_scale = PyTimeScale::new(name).expect("time scale should be valid");
-        assert_eq!(py_scale.0, scale);
+        assert_eq!(py_scale, scale);
         assert_eq!(py_scale.__str__(), name);
         assert_eq!(py_scale.__repr__(), format!("TimeScale(\"{}\")", name));
     }
@@ -151,7 +199,7 @@ mod tests {
     #[test]
     fn test_time() {
         let time = PyTime::new(
-            "TDB",
+            PyTimeScale::TDB,
             2024,
             1,
             1,
@@ -166,8 +214,8 @@ mod tests {
             Some(789),
         )
         .expect("time should be valid");
-        assert_eq!(time.0.attoseconds(), 123456789123456789);
+        assert_eq!(time.timestamp.attoseconds(), 123456789123456789);
         assert_float_eq!(time.days_since_j2000(), 8765.542374114084, rel <= 1e-8);
-        assert_eq!(time.scale(), "TDB");
+        assert_eq!(time.scale(), PyTimeScale::TDB);
     }
 }
