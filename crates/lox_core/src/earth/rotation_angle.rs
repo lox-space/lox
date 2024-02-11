@@ -25,32 +25,26 @@ impl Earth {
 mod tests {
     use super::*;
     use float_eq::assert_float_eq;
+    use rstest::rstest;
 
-    #[test]
-    fn test_rotation_angle_00() {
-        struct TestCase {
-            t: UT1DaysSinceJ2000,
-            expected: Radians,
-        }
-
-        [
-            TestCase {
-                t: -123.45,
-                expected: 6.227104062035152,
-            },
-            TestCase {
-                t: 0.0,
-                expected: 4.894961212823756,
-            },
-            TestCase {
-                t: 123.45,
-                expected: 3.562818363612361,
-            },
-        ]
-        .iter()
-        .for_each(|tc| {
-            let actual = Earth::rotation_angle_00(tc.t);
-            assert_float_eq!(tc.expected, actual, rel <= 1e-9);
-        });
+    #[rstest]
+    #[case("before J2000", -123.45, 6.227104062035152)]
+    #[case("J2000", 0.0, 4.894961212823756)]
+    #[case("after J2000", 123.45, 3.562818363612361)]
+    fn test_rotation_angle_00(
+        #[case] desc: &str,
+        #[case] t: UT1DaysSinceJ2000,
+        #[case] expected: Radians,
+    ) {
+        let actual = Earth::rotation_angle_00(t);
+        assert_float_eq!(
+            expected,
+            actual,
+            rel <= 1e-9,
+            "{}: expected {}, got {}",
+            desc,
+            expected,
+            actual
+        );
     }
 }
