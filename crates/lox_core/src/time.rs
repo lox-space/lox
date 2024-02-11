@@ -73,35 +73,23 @@ mod tests {
     use rstest::rstest;
 
     #[rstest]
-    #[case("on lower bound", 0, Ok(PerMille(0)))]
-    #[case("between bounds", 1, Ok(PerMille(1)))]
-    #[case("on upper bound", 999, Ok(PerMille(999)))]
-    #[case("above upper bound", 1000, Err(LoxError::InvalidPerMille(1000)))]
-    fn test_per_mille_new(
-        #[case] desc: &str,
-        #[case] input: u16,
-        #[case] expected: Result<PerMille, LoxError>,
-    ) {
+    #[case::on_lower_bound(0, Ok(PerMille(0)))]
+    #[case::between_bounds(1, Ok(PerMille(1)))]
+    #[case::on_upper_bound(999, Ok(PerMille(999)))]
+    #[case::above_upper_bound(1000, Err(LoxError::InvalidPerMille(1000)))]
+    fn test_per_mille_new(#[case] input: u16, #[case] expected: Result<PerMille, LoxError>) {
         let actual = PerMille::new(input);
-        assert_eq!(
-            expected, actual,
-            "{}: expected {:?}, got {:?}",
-            desc, expected, actual
-        );
+        assert_eq!(expected, actual);
     }
 
     #[rstest]
-    #[case(PerMille(0), "000")]
-    #[case(PerMille(1), "001")]
-    #[case(PerMille(11), "011")]
-    #[case(PerMille(111), "111")]
+    #[case::zero(PerMille(0), "000")]
+    #[case::one_digit(PerMille(1), "001")]
+    #[case::two_digits(PerMille(11), "011")]
+    #[case::three_digts(PerMille(111), "111")]
     fn test_per_mille_display(#[case] input: PerMille, #[case] expected: &str) {
         let actual = input.to_string();
-        assert_eq!(
-            expected, actual,
-            "input {:?}: expected {:?}, got {:?}",
-            input, expected, actual,
-        );
+        assert_eq!(expected, actual);
     }
 
     #[test]
