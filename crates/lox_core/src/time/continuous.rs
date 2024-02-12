@@ -12,6 +12,8 @@
 //!
 //! The supported timescales are specified by [TimeScale].
 
+pub mod transform;
+
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, Sub};
