@@ -199,7 +199,6 @@ mod tests {
             Some(0),
             Some(0),
             Some(0),
-            Some(0),
         )
         .expect("time should be valid");
         let body = Python::with_gil(|py| {
@@ -257,7 +256,6 @@ mod tests {
             25,
             Some(21),
             Some(8),
-            Some(0),
             Some(0),
             Some(0),
             Some(0),
