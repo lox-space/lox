@@ -12,6 +12,7 @@
 //!
 //! The supported timescales are specified by [TimeScale].
 
+mod constants;
 pub mod transform;
 
 use std::fmt;

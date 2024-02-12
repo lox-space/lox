@@ -27,3 +27,15 @@ where
 /// Users with custom time scales, pairings, data sources, or who require specific transformation
 /// algorithms should implement `TransformTimeScale` for their specific use case.
 pub struct TimeScaleTransformer {}
+
+impl TransformTimeScale<TT, TCG> for TimeScaleTransformer {
+    const T77T: Time = Time {
+        scale: TT,
+        timestamp: UnscaledTime {
+            seconds:
+    }
+}
+    fn transform(&self, time: Time<TT>) -> Time<TCG> {
+        Time::new(time.value())
+    }
+}
