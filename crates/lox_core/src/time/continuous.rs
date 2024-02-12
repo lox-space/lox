@@ -145,7 +145,7 @@ impl Sub<TimeDelta> for BaseTime {
         }
         Self {
             seconds,
-            femtoseconds: femtoseconds,
+            femtoseconds,
         }
     }
 }
