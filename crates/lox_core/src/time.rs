@@ -27,7 +27,6 @@ pub trait WallClock {
     fn nanosecond(&self) -> i64;
     fn picosecond(&self) -> i64;
     fn femtosecond(&self) -> i64;
-    fn attosecond(&self) -> i64;
 }
 
 /// Newtype wrapper for thousandths of an SI-prefixed subsecond (milli, micro, nano, etc.).

@@ -13,7 +13,6 @@ class Time:
             nano: int = 0,
             pico: int = 0,
             femto: int = 0,
-            atto: int = 0,
     ): ...
 
     def days_since_j2000(self) -> float: ...
