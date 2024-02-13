@@ -6,6 +6,7 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use lox_core::time::continuous::julian_dates::JulianDate;
 use lox_core::time::utc::UTC;
 use lox_space::prelude::*;
 

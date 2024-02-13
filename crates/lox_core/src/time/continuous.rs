@@ -18,10 +18,10 @@ use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, Sub};
 
-use deltas::TimeDelta;
-use num::abs;
+use num::{abs, ToPrimitive};
 
-use crate::time::constants::f64::DAYS_PER_JULIAN_CENTURY;
+use deltas::TimeDelta;
+
 use crate::time::constants::i64::{
     SECONDS_PER_DAY, SECONDS_PER_HALF_DAY, SECONDS_PER_HOUR, SECONDS_PER_MINUTE,
 };
@@ -29,6 +29,7 @@ use crate::time::constants::u64::{
     FEMTOSECONDS_PER_MICROSECOND, FEMTOSECONDS_PER_MILLISECOND, FEMTOSECONDS_PER_NANOSECOND,
     FEMTOSECONDS_PER_PICOSECOND, FEMTOSECONDS_PER_SECOND,
 };
+use crate::time::continuous::julian_dates::{adjust_epoch, JulianDate, JulianEpoch, Unit};
 use crate::time::continuous::transform::TransformTimeScale;
 use crate::time::dates::Calendar::ProlepticJulian;
 use crate::time::dates::Date;
@@ -36,6 +37,7 @@ use crate::time::utc::{UTCDateTime, UTC};
 use crate::time::{constants, WallClock};
 
 pub mod deltas;
+pub mod julian_dates;
 
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
 /// `BaseTime` is the base time representation for time scales without leap seconds. It is measured relative to
@@ -76,18 +78,6 @@ impl BaseTime {
 
     pub fn femtoseconds(&self) -> u64 {
         self.femtoseconds
-    }
-
-    /// The fractional number of Julian days since J2000.
-    pub fn days_since_j2000(&self) -> f64 {
-        let d1 = self.seconds as f64 / constants::f64::SECONDS_PER_DAY;
-        let d2 = self.femtoseconds as f64 / constants::f64::FEMTOSECONDS_PER_DAY;
-        d2 + d1
-    }
-
-    /// The fractional number of Julian centuries since J2000.
-    pub fn centuries_since_j2000(&self) -> f64 {
-        self.days_since_j2000() / DAYS_PER_JULIAN_CENTURY
     }
 }
 
@@ -195,6 +185,25 @@ impl WallClock for BaseTime {
 
     fn femtosecond(&self) -> i64 {
         (self.femtoseconds % 1000) as i64
+    }
+}
+
+impl JulianDate for BaseTime {
+    fn julian_date(&self, epoch: JulianEpoch, unit: Unit) -> f64 {
+        let seconds = adjust_epoch(self.seconds, epoch).to_f64().unwrap();
+        let fraction =
+            self.femtoseconds.to_f64().unwrap() / constants::f64::FEMTOSECONDS_PER_SECOND;
+        let seconds = fraction + seconds;
+        match unit {
+            Unit::Seconds => seconds,
+            Unit::Days => seconds / constants::f64::SECONDS_PER_DAY,
+            Unit::Centuries => seconds / constants::f64::SECONDS_PER_JULIAN_CENTURY,
+        }
+    }
+
+    fn two_part_julian_date(&self) -> (f64, f64) {
+        let days = self.julian_date(JulianEpoch::JulianDate, Unit::Days);
+        (days.trunc(), days.fract())
     }
 }
 
@@ -329,15 +338,15 @@ impl<T: TimeScale + Copy> Time<T> {
     pub fn femtoseconds(&self) -> u64 {
         self.timestamp.femtoseconds
     }
+}
 
-    /// The fractional number of Julian days since J2000.
-    pub fn days_since_j2000(&self) -> f64 {
-        self.timestamp.days_since_j2000()
+impl<T: TimeScale + Copy> JulianDate for Time<T> {
+    fn julian_date(&self, epoch: JulianEpoch, unit: Unit) -> f64 {
+        self.timestamp.julian_date(epoch, unit)
     }
 
-    /// The fractional number of Julian centuries since J2000.
-    pub fn centuries_since_j2000(&self) -> f64 {
-        self.timestamp.centuries_since_j2000()
+    fn two_part_julian_date(&self) -> (f64, f64) {
+        self.timestamp.two_part_julian_date()
     }
 
     /// Given a `Time` in [TimeScale] `S`, and a transformer from `S` to `T`, returns a new Time in
