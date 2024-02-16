@@ -28,10 +28,10 @@ where
 /// time scale pairs.
 ///
 /// Users with custom time scales, pairings, data sources, or who require specific transformation
-/// algorithms should implement `TransformTimeScale` for their specific use case.
+/// algorithms should implement `TransformTimeScale` for their particular use case.
 pub struct TimeScaleTransformer {}
 
-/// The fixed, 32.184 s offset between TAI and TT.
+/// The constant offset between TAI and TT.
 pub const D_TAI_TT: TimeDelta = TimeDelta {
     seconds: 32,
     femtoseconds: 184 * FEMTOSECONDS_PER_MILLISECOND,
