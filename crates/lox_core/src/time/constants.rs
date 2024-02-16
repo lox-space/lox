@@ -8,6 +8,6 @@
 
 pub mod f64;
 pub mod i64;
-pub(crate) mod julian_epochs;
+pub(crate) mod julian_dates;
 pub mod u128;
 pub mod u64;
