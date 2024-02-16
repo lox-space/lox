@@ -29,6 +29,7 @@ const LAST_JULIAN_DAY_J2K: i64 = -152384;
 impl Date {
     /// Create a Date from raw parts. This is particularly useful for generating test dates that
     /// are known to be correct, without exposing the internals of the Date struct.
+    #[cfg(test)]
     pub(crate) fn new_unchecked(calendar: Calendar, year: i64, month: i64, day: i64) -> Self {
         Self {
             calendar,

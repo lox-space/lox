@@ -12,8 +12,6 @@
 //!
 //! The supported timescales are specified by [TimeScale].
 
-pub mod transform;
-
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, Sub};
@@ -34,10 +32,11 @@ use crate::time::constants::u64::{
 };
 use crate::time::continuous::julian_dates::{JulianDate, JulianDateVariant, Unit};
 use crate::time::continuous::transform::TransformTimeScale;
-use crate::time::dates::Calendar::ProlepticJulian;
 use crate::time::dates::Date;
 use crate::time::utc::{UTCDateTime, UTC};
 use crate::time::{constants, WallClock};
+
+pub mod transform;
 
 pub mod deltas;
 pub mod julian_dates;
@@ -369,16 +368,6 @@ impl<T: TimeScale + Copy> Time<T> {
     pub fn femtoseconds(&self) -> u64 {
         self.timestamp.femtoseconds
     }
-}
-
-impl<T: TimeScale + Copy> JulianDate for Time<T> {
-    fn julian_date(&self, variant: JulianDateVariant, unit: Unit) -> f64 {
-        self.timestamp.julian_date(variant, unit)
-    }
-
-    fn two_part_julian_date(&self) -> (f64, f64) {
-        self.timestamp.two_part_julian_date()
-    }
 
     /// Given a `Time` in [TimeScale] `S`, and a transformer from `S` to `T`, returns a new Time in
     /// [TimeScale] `T`.
@@ -395,6 +384,16 @@ impl<T: TimeScale + Copy> JulianDate for Time<T> {
         transformer: impl TransformTimeScale<T, S>,
     ) -> Time<S> {
         Time::from_scale(self, transformer)
+    }
+}
+
+impl<T: TimeScale + Copy> JulianDate for Time<T> {
+    fn julian_date(&self, variant: JulianDateVariant, unit: Unit) -> f64 {
+        self.timestamp.julian_date(variant, unit)
+    }
+
+    fn two_part_julian_date(&self) -> (f64, f64) {
+        self.timestamp.two_part_julian_date()
     }
 }
 
