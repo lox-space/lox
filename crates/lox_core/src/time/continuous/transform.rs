@@ -9,10 +9,13 @@
 //! Module transform provides a trait for transforming between pairs of timescales, together
 //! with a default implementation for the most commonly used time scale pairs.
 
-use crate::time::continuous::{Time, TimeScale, TCG, TT};
+use crate::time::constants::u64::FEMTOSECONDS_PER_MILLISECOND;
+use crate::time::continuous::{Time, TimeDelta, TimeScale, TAI, TT};
+use mockall::automock;
 
 /// TransformTimeScale transforms a [Time] in [TimeScale] `T` to the corresponding [Time] in
 /// [TimeScale] `U`.
+#[automock]
 pub trait TransformTimeScale<T, U>
 where
     T: TimeScale + Copy,
@@ -28,14 +31,45 @@ where
 /// algorithms should implement `TransformTimeScale` for their specific use case.
 pub struct TimeScaleTransformer {}
 
-impl TransformTimeScale<TT, TCG> for TimeScaleTransformer {
-    const T77T: Time = Time {
-        scale: TT,
-        timestamp: UnscaledTime {
-            seconds:
+/// The fixed, 32.184 s offset between TAI and TT.
+pub const D_TAI_TT: TimeDelta = TimeDelta {
+    seconds: 32,
+    femtoseconds: 184 * FEMTOSECONDS_PER_MILLISECOND,
+};
+
+impl TransformTimeScale<TAI, TT> for &TimeScaleTransformer {
+    fn transform(&self, time: Time<TAI>) -> Time<TT> {
+        let base_time = time.base_time() + D_TAI_TT;
+        Time::from_base_time(TT, base_time)
     }
 }
-    fn transform(&self, time: Time<TT>) -> Time<TCG> {
-        Time::new(time.value())
+
+impl TransformTimeScale<TT, TAI> for &TimeScaleTransformer {
+    fn transform(&self, time: Time<TT>) -> Time<TAI> {
+        let base_time = time.base_time() - D_TAI_TT;
+        Time::from_base_time(TAI, base_time)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_transform_tai_tt() {
+        let transformer = &TimeScaleTransformer {};
+        let tai = Time::new(TAI, 0, 0);
+        let tt = transformer.transform(tai);
+        let expected = Time::new(TT, 32, 184 * FEMTOSECONDS_PER_MILLISECOND);
+        assert_eq!(expected, tt);
+    }
+
+    #[test]
+    fn test_transform_tt_tai() {
+        let transformer = &TimeScaleTransformer {};
+        let tt = Time::new(TT, 32, 184 * FEMTOSECONDS_PER_MILLISECOND);
+        let tai = transformer.transform(tt);
+        let expected = Time::new(TAI, 0, 0);
+        assert_eq!(expected, tai);
     }
 }
