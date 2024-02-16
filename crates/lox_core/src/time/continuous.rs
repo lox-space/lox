@@ -12,6 +12,8 @@
 //!
 //! The supported timescales are specified by [TimeScale].
 
+pub mod transform;
+
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, Sub};
@@ -26,6 +28,7 @@ use crate::time::constants::u64::{
     FEMTOSECONDS_PER_MICROSECOND, FEMTOSECONDS_PER_MILLISECOND, FEMTOSECONDS_PER_NANOSECOND,
     FEMTOSECONDS_PER_PICOSECOND, FEMTOSECONDS_PER_SECOND,
 };
+use crate::time::continuous::transform::TransformTimeScale;
 use crate::time::dates::Calendar::ProlepticJulian;
 use crate::time::dates::Date;
 use crate::time::utc::{UTCDateTime, UTC};
@@ -340,6 +343,23 @@ impl<T: TimeScale + Copy> Time<T> {
     pub fn centuries_since_j2000(&self) -> f64 {
         self.timestamp.centuries_since_j2000()
     }
+
+    /// Given a `Time` in [TimeScale] `S`, and a transformer from `S` to `T`, returns a new Time in
+    /// [TimeScale] `T`.
+    pub fn from_scale<S: TimeScale + Copy>(
+        time: Time<S>,
+        transformer: impl TransformTimeScale<S, T>,
+    ) -> Self {
+        transformer.transform(time)
+    }
+
+    /// Given a transformer from `T` to `S`, returns a new `Time` in [TimeScale] `S`.
+    pub fn into_scale<S: TimeScale + Copy>(
+        self,
+        transformer: impl TransformTimeScale<T, S>,
+    ) -> Time<S> {
+        Time::from_scale(self, transformer)
+    }
 }
 
 impl<T: TimeScale + Copy> Display for Time<T> {
@@ -406,9 +426,11 @@ pub trait CalendarDate {
 #[cfg(test)]
 mod tests {
     use float_eq::assert_float_eq;
+    use mockall::predicate;
     use rstest::rstest;
 
     use crate::time::constants::i64::SECONDS_PER_JULIAN_CENTURY;
+    use crate::time::continuous::transform::MockTransformTimeScale;
     use crate::time::dates::Calendar::Gregorian;
 
     use super::*;
@@ -1014,5 +1036,35 @@ mod tests {
             "expected Time to have femtosecond {}, but got {}",
             expected, actual,
         );
+    }
+
+    #[test]
+    fn test_from_scale() {
+        let time = Time::j2000(TAI);
+        let mut transformer = MockTransformTimeScale::<TAI, TT>::new();
+        let expected = Time::j2000(TT);
+
+        transformer
+            .expect_transform()
+            .with(predicate::eq(time))
+            .return_const(expected);
+
+        let actual = Time::from_scale(time, transformer);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_into_scale() {
+        let time = Time::j2000(TAI);
+        let mut transformer = MockTransformTimeScale::<TAI, TT>::new();
+        let expected = Time::j2000(TT);
+
+        transformer
+            .expect_transform()
+            .with(predicate::eq(time))
+            .return_const(expected);
+
+        let actual = time.into_scale(transformer);
+        assert_eq!(expected, actual);
     }
 }
