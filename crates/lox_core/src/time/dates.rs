@@ -27,6 +27,17 @@ const LAST_PROLEPTIC_JULIAN_DAY_J2K: i64 = -730122;
 const LAST_JULIAN_DAY_J2K: i64 = -152384;
 
 impl Date {
+    /// Create a Date from raw parts. This is particularly useful for generating test dates that
+    /// are known to be correct, without exposing the internals of the Date struct.
+    pub(crate) fn new_unchecked(calendar: Calendar, year: i64, month: i64, day: i64) -> Self {
+        Self {
+            calendar,
+            year,
+            month,
+            day,
+        }
+    }
+
     pub fn calendar(&self) -> Calendar {
         self.calendar
     }
@@ -177,4 +188,18 @@ fn j2000(calendar: Calendar, year: i64, month: i64, day: i64) -> i64 {
     let d1 = last_day_of_year_j2k(calendar, year - 1);
     let d2 = find_day_in_year(month, day, is_leap(calendar, year));
     d1 + d2
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::time::dates::{Calendar, Date};
+
+    #[test]
+    fn test_date_new_unchecked() {
+        let date = Date::new_unchecked(Calendar::Gregorian, 2021, 1, 1);
+        assert_eq!(Calendar::Gregorian, date.calendar);
+        assert_eq!(2021, date.year);
+        assert_eq!(1, date.month);
+        assert_eq!(1, date.day);
+    }
 }
