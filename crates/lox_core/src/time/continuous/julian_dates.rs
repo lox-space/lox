@@ -6,10 +6,6 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-const SECONDS_JD_J2000: i64 = 211813488000;
-const SECONDS_MJD_J2000: i64 = 4453444800;
-const SECONDS_J1950_J2000: i64 = 1577880000;
-
 pub enum JulianEpoch {
     JulianDate,
     ModifiedJulianDate,
@@ -21,15 +17,6 @@ pub enum Unit {
     Seconds,
     Days,
     Centuries,
-}
-
-pub fn adjust_epoch(seconds: i64, epoch: JulianEpoch) -> i64 {
-    match epoch {
-        JulianEpoch::JulianDate => seconds + SECONDS_JD_J2000,
-        JulianEpoch::ModifiedJulianDate => seconds + SECONDS_MJD_J2000,
-        JulianEpoch::J1950 => seconds + SECONDS_J1950_J2000,
-        JulianEpoch::J2000 => seconds,
-    }
 }
 
 pub trait JulianDate {

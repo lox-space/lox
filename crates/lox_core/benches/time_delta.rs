@@ -15,5 +15,5 @@ fn main() {
 
 #[divan::bench]
 fn from_f64_seconds() {
-    TimeDelta::seconds(divan::black_box(60.3));
+    TimeDelta::from_decimal_seconds(divan::black_box(60.3));
 }

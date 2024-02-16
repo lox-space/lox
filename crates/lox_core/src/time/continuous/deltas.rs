@@ -6,11 +6,12 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use num::traits::Inv;
+use crate::debug_panic;
 use num::ToPrimitive;
 
 use crate::time::constants::f64;
 use crate::time::constants::u128;
+use crate::types::Seconds;
 
 /// An absolute continuous time difference with femtosecond precision.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
@@ -20,18 +21,27 @@ pub struct TimeDelta {
 }
 
 impl TimeDelta {
-    pub fn int_seconds(seconds: u64) -> Self {
+    pub fn from_seconds(seconds: u64) -> Self {
         Self {
             seconds,
             femtoseconds: 0,
         }
     }
 
-    pub fn seconds(value: f64) -> Self {
-        if value < f64::FEMTOSECONDS_PER_SECOND.inv() || value.is_nan() {
+    pub fn from_decimal_seconds(value: f64) -> Self {
+        if value < f64::SECONDS_PER_FEMTOSECOND {
+            return Self::default();
+        }
+        if value.is_nan() {
+            debug_panic!(
+                "TimeDelta seconds component was NaN, which will be set to zero in production"
+            );
             return Self::default();
         }
         if value > u64::MAX as f64 {
+            debug_panic!(
+                "TimeDelta seconds component exceeds u64::MAX, which will saturate in production"
+            );
             return Self {
                 seconds: u64::MAX,
                 femtoseconds: 0,
@@ -55,27 +65,27 @@ impl TimeDelta {
         }
     }
 
-    pub fn minutes(value: f64) -> Self {
-        Self::seconds(value * f64::SECONDS_PER_MINUTE)
+    pub fn from_minutes(value: f64) -> Self {
+        Self::from_decimal_seconds(value * f64::SECONDS_PER_MINUTE)
     }
 
-    pub fn hours(value: f64) -> Self {
-        Self::seconds(value * f64::SECONDS_PER_HOUR)
+    pub fn from_hours(value: f64) -> Self {
+        Self::from_decimal_seconds(value * f64::SECONDS_PER_HOUR)
     }
 
-    pub fn days(value: f64) -> Self {
-        Self::seconds(value * f64::SECONDS_PER_DAY)
+    pub fn from_days(value: f64) -> Self {
+        Self::from_decimal_seconds(value * f64::SECONDS_PER_DAY)
     }
 
-    pub fn years(value: f64) -> Self {
-        Self::seconds(value * f64::SECONDS_PER_JULIAN_YEAR)
+    pub fn from_julian_years(value: f64) -> Self {
+        Self::from_decimal_seconds(value * f64::SECONDS_PER_JULIAN_YEAR)
     }
 
-    pub fn centuries(value: f64) -> Self {
-        Self::seconds(value * f64::SECONDS_PER_JULIAN_CENTURY)
+    pub fn from_julian_centuries(value: f64) -> Self {
+        Self::from_decimal_seconds(value * f64::SECONDS_PER_JULIAN_CENTURY)
     }
 
-    pub fn to_seconds(&self) -> f64 {
+    pub fn to_decimal_seconds(&self) -> Seconds {
         self.femtoseconds.to_f64().unwrap() / f64::FEMTOSECONDS_PER_SECOND
             + self.seconds.to_f64().unwrap()
     }
@@ -84,84 +94,102 @@ impl TimeDelta {
 #[cfg(test)]
 mod tests {
     use float_eq::assert_float_eq;
-    use proptest::num::f64::ANY;
     use proptest::prelude::*;
 
     use super::*;
 
     #[test]
-    fn test_int_seconds() {
-        let dt = TimeDelta::int_seconds(60);
+    fn test_seconds() {
+        let dt = TimeDelta::from_seconds(60);
         assert_eq!(dt.seconds, 60);
         assert_eq!(dt.femtoseconds, 0);
     }
 
     #[test]
-    fn test_seconds() {
-        let dt = TimeDelta::seconds(60.3);
+    fn test_decimal_seconds() {
+        let dt = TimeDelta::from_decimal_seconds(60.3);
         assert_eq!(dt.seconds, 60);
         assert_eq!(dt.femtoseconds, 3 * 10u64.pow(14));
     }
 
     #[test]
+    fn test_decimal_seconds_without_fraction() {
+        let dt = TimeDelta::from_decimal_seconds(60.0);
+        assert_eq!(dt.seconds, 60);
+        assert_eq!(dt.femtoseconds, 0);
+    }
+
+    #[test]
+    #[should_panic(expected = "saturate in production")]
+    fn test_decimal_seconds_exceeds_max() {
+        let dt = TimeDelta::from_decimal_seconds(f64::MAX);
+        assert_eq!(dt.seconds, 60);
+        assert_eq!(dt.femtoseconds, 0);
+    }
+
+    #[test]
+    #[should_panic(expected = "zero in production")]
+    fn test_decimal_seconds_is_nan() {
+        let dt = TimeDelta::from_decimal_seconds(f64::NAN);
+        assert_eq!(dt.seconds, 60);
+        assert_eq!(dt.femtoseconds, 0);
+    }
+
+    #[test]
     fn test_minutes() {
-        let dt = TimeDelta::minutes(1.0);
+        let dt = TimeDelta::from_minutes(1.0);
         assert_eq!(dt.seconds, 60);
         assert_eq!(dt.femtoseconds, 0);
     }
 
     #[test]
     fn test_hours() {
-        let dt = TimeDelta::hours(1.0);
+        let dt = TimeDelta::from_hours(1.0);
         assert_eq!(dt.seconds, 3600);
         assert_eq!(dt.femtoseconds, 0);
     }
 
     #[test]
     fn test_days() {
-        let dt = TimeDelta::days(1.0);
+        let dt = TimeDelta::from_days(1.0);
         assert_eq!(dt.seconds, 86400);
         assert_eq!(dt.femtoseconds, 0);
     }
 
     #[test]
     fn test_years() {
-        let dt = TimeDelta::years(1.0);
+        let dt = TimeDelta::from_julian_years(1.0);
         assert_eq!(dt.seconds, 31557600);
         assert_eq!(dt.femtoseconds, 0);
     }
 
     #[test]
     fn test_centuries() {
-        let dt = TimeDelta::centuries(1.0);
+        let dt = TimeDelta::from_julian_centuries(1.0);
         assert_eq!(dt.seconds, 3155760000);
         assert_eq!(dt.femtoseconds, 0);
     }
 
     #[test]
     fn test_attosecond() {
-        let dt = TimeDelta::seconds(f64::FEMTOSECONDS_PER_SECOND.inv());
+        let dt = TimeDelta::from_decimal_seconds(f64::SECONDS_PER_FEMTOSECOND);
         assert_eq!(dt.seconds, 0);
         assert_eq!(dt.femtoseconds, 1);
     }
 
     proptest! {
         #[test]
-        fn prop_seconds_roundtrip(s in ANY) {
-            let min = f64::FEMTOSECONDS_PER_SECOND.inv();
-            let max = u64::MAX as f64;
-            let exp = if s < min || s.is_nan() {
+        fn prop_seconds_roundtrip(s in 0.0..u64::MAX as f64) {
+            let exp = if s < f64::SECONDS_PER_FEMTOSECOND {
                 0.0
-            } else if s > max {
-                max
             } else {
                 s
             };
-            let delta = TimeDelta::seconds(s);
+            let delta = TimeDelta::from_decimal_seconds(s);
             if s > 1.0 {
-                assert_float_eq!(delta.to_seconds(), exp, rel <= 1e-15);
+                assert_float_eq!(delta.to_decimal_seconds(), exp, rel <= 1e-15);
             } else {
-                assert_float_eq!(delta.to_seconds(), exp, abs <= 1e-15);
+                assert_float_eq!(delta.to_decimal_seconds(), exp, abs <= 1e-15);
             }
         }
     }
