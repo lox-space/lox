@@ -120,19 +120,22 @@ mod tests {
     }
 
     #[test]
+    fn test_decimal_seconds_below_resolution() {
+        let dt = TimeDelta::from_decimal_seconds(1e-18);
+        assert_eq!(dt.seconds, 0);
+        assert_eq!(dt.femtoseconds, 0);
+    }
+
+    #[test]
     #[should_panic(expected = "saturate in production")]
     fn test_decimal_seconds_exceeds_max() {
-        let dt = TimeDelta::from_decimal_seconds(f64::MAX);
-        assert_eq!(dt.seconds, 60);
-        assert_eq!(dt.femtoseconds, 0);
+        TimeDelta::from_decimal_seconds(f64::MAX);
     }
 
     #[test]
     #[should_panic(expected = "zero in production")]
     fn test_decimal_seconds_is_nan() {
-        let dt = TimeDelta::from_decimal_seconds(f64::NAN);
-        assert_eq!(dt.seconds, 60);
-        assert_eq!(dt.femtoseconds, 0);
+        TimeDelta::from_decimal_seconds(f64::NAN);
     }
 
     #[test]
