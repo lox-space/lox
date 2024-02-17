@@ -2,6 +2,22 @@ use serde;
 
 use super::{ocm, oem, omm, opm};
 
+#[derive(Clone, Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+#[serde()]
+pub enum NdmChildChoice {
+    #[serde(rename = "ocm")]
+    Ocm(ocm::OcmType),
+
+    #[serde(rename = "oem")]
+    Oem(oem::OemType),
+
+    #[serde(rename = "omm")]
+    Omm(omm::OmmType),
+
+    #[serde(rename = "opm")]
+    Opm(opm::OpmType),
+}
+
 /// Combined instantiation type. Currently does not support AEM, APM, CDM, RDM, TDM
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
@@ -11,14 +27,8 @@ pub struct NdmType {
     #[serde(rename = "COMMENT")]
     pub comment_list: Vec<String>,
 
-    #[serde(rename = "ocm")]
-    pub ocm_list: Vec<ocm::OcmType>,
-    #[serde(rename = "oem")]
-    pub oem_list: Vec<oem::OemType>,
-    #[serde(rename = "omm")]
-    pub omm_list: Vec<omm::OmmType>,
-    #[serde(rename = "opm")]
-    pub opm_list: Vec<opm::OpmType>,
+    #[serde(rename = "$value")]
+    pub child_list: Vec<NdmChildChoice>,
 }
 
 mod test {
@@ -81,6 +91,160 @@ mod test {
         </segment>
     </body>
 </omm>
+<opm id="CCSDS_OPM_VERS" version="2.0">
+<header>
+   <CREATION_DATE>2004-281T17:26:06</CREATION_DATE>
+   <ORIGINATOR>me</ORIGINATOR>
+</header>
+<body>
+   <segment>
+      <metadata>
+         <OBJECT_NAME>Cassini</OBJECT_NAME>
+         <OBJECT_ID>1997-061A</OBJECT_ID>
+         <CENTER_NAME>Saturn</CENTER_NAME>
+         <REF_FRAME>IAU-Saturn</REF_FRAME>
+         <TIME_SYSTEM>UTC</TIME_SYSTEM>
+      </metadata>
+      <data>
+         <COMMENT>final COMMENT, I think</COMMENT>
+         <stateVector>
+            <EPOCH>2004-100T00:00:00Z</EPOCH>
+            <X>1</X>
+            <Y>1</Y>
+            <Z>1</Z>
+            <X_DOT>1</X_DOT>
+            <Y_DOT>1</Y_DOT>
+            <Z_DOT>1</Z_DOT>
+         </stateVector>
+         <keplerianElements>
+            <SEMI_MAJOR_AXIS units="km">1</SEMI_MAJOR_AXIS>
+            <ECCENTRICITY>0</ECCENTRICITY>
+            <INCLINATION units="deg">45</INCLINATION>
+            <RA_OF_ASC_NODE units="deg">0</RA_OF_ASC_NODE>
+            <ARG_OF_PERICENTER units="deg">15</ARG_OF_PERICENTER>
+            <TRUE_ANOMALY units="deg">15</TRUE_ANOMALY>
+            <GM units="km**3/s**2">398644</GM>
+         </keplerianElements>
+         <spacecraftParameters>
+            <MASS units="kg">100</MASS>
+            <SOLAR_RAD_AREA units="m**2">2</SOLAR_RAD_AREA>
+            <SOLAR_RAD_COEFF>1</SOLAR_RAD_COEFF>
+            <DRAG_AREA units="m**2">2</DRAG_AREA>
+            <DRAG_COEFF>2.0</DRAG_COEFF>
+         </spacecraftParameters>
+         <maneuverParameters>
+            <MAN_EPOCH_IGNITION>2004-125T00:00:00Z</MAN_EPOCH_IGNITION>
+            <MAN_DURATION>0</MAN_DURATION>
+            <MAN_DELTA_MASS>-1</MAN_DELTA_MASS>
+            <MAN_REF_FRAME>GRC</MAN_REF_FRAME>
+            <MAN_DV_1 units="km/s">1</MAN_DV_1>
+            <MAN_DV_2 units="km/s">1</MAN_DV_2>
+            <MAN_DV_3 units="km/s">1</MAN_DV_3>
+         </maneuverParameters>
+      </data>
+   </segment>
+</body>
+</opm>
+
+<opm id="CCSDS_OPM_VERS" version="2.0">
+<header>
+   <CREATION_DATE>2004-281T17:26:06</CREATION_DATE>
+   <ORIGINATOR>me</ORIGINATOR>
+</header>
+<body>
+   <segment>
+      <metadata>
+         <OBJECT_NAME>Cassini</OBJECT_NAME>
+         <OBJECT_ID>1997-061A</OBJECT_ID>
+         <CENTER_NAME>Saturn</CENTER_NAME>
+         <REF_FRAME>IAU-Saturn</REF_FRAME>
+         <TIME_SYSTEM>UTC</TIME_SYSTEM>
+      </metadata>
+      <data>
+         <stateVector>
+            <COMMENT>this is a comment</COMMENT>
+            <EPOCH>2004-100T00:00:00</EPOCH>
+            <X>1</X>
+            <Y>1</Y>
+            <Z>1</Z>
+            <X_DOT>1</X_DOT>
+            <Y_DOT>1</Y_DOT>
+            <Z_DOT>1</Z_DOT>
+         </stateVector>
+         <spacecraftParameters>
+            <COMMENT>This is a COMMENT</COMMENT>
+            <MASS>100</MASS>
+            <SOLAR_RAD_AREA>2</SOLAR_RAD_AREA>
+            <SOLAR_RAD_COEFF>1</SOLAR_RAD_COEFF>
+            <DRAG_AREA units="m**2">2</DRAG_AREA>
+            <DRAG_COEFF>2.0</DRAG_COEFF>
+         </spacecraftParameters>
+         <maneuverParameters>
+            <COMMENT>This is a COMMENT</COMMENT>
+            <MAN_EPOCH_IGNITION>2004-125T00:00:00</MAN_EPOCH_IGNITION>
+            <MAN_DURATION units="s">0</MAN_DURATION>
+            <MAN_DELTA_MASS units="kg">-1</MAN_DELTA_MASS>
+            <MAN_REF_FRAME>GRC</MAN_REF_FRAME>
+            <MAN_DV_1>1</MAN_DV_1>
+            <MAN_DV_2>1</MAN_DV_2>
+            <MAN_DV_3>1</MAN_DV_3>
+         </maneuverParameters>
+      </data>
+   </segment>
+</body>
+</opm>
+
+
+<oem id="CCSDS_OEM_VERS" version="2.0">
+<header>
+   <CREATION_DATE>2004-281T17:26:06</CREATION_DATE>
+   <ORIGINATOR>me</ORIGINATOR>
+</header>
+<body>
+   <segment>
+      <metadata>
+         <OBJECT_NAME>Cassini</OBJECT_NAME>
+         <OBJECT_ID>1997-061A</OBJECT_ID>
+         <CENTER_NAME>Saturn</CENTER_NAME>
+         <REF_FRAME>IAU-Saturn</REF_FRAME>
+         <TIME_SYSTEM>UTC</TIME_SYSTEM>
+         <START_TIME>2004-100T00:00:00.000000</START_TIME>
+         <STOP_TIME>2004-100T01:00:00.000000</STOP_TIME>
+         <INTERPOLATION>Hermite</INTERPOLATION>
+         <INTERPOLATION_DEGREE>1</INTERPOLATION_DEGREE>
+      </metadata>
+      <data>
+         <stateVector>
+            <EPOCH>2004-100T00:00:00</EPOCH>
+            <X units="km">1</X>
+            <Y>1</Y>
+            <Z>1</Z>
+            <X_DOT units="km/s">1</X_DOT>
+            <Y_DOT>1</Y_DOT>
+            <Z_DOT>1</Z_DOT>
+         </stateVector>
+         <stateVector>
+            <EPOCH>2004-100T00:00:00</EPOCH>
+            <X>1</X>
+            <Y units="km">1</Y>
+            <Z>1</Z>
+            <X_DOT>1</X_DOT>
+            <Y_DOT units="km/s">1</Y_DOT>
+            <Z_DOT>1</Z_DOT>
+         </stateVector>
+         <stateVector>
+            <EPOCH>2004-100T00:00:00</EPOCH>
+            <X>1</X>
+            <Y>1</Y>
+            <Z units="km">1</Z>
+            <X_DOT>1</X_DOT>
+            <Y_DOT>1</Y_DOT>
+            <Z_DOT units="km/s">1</Z_DOT>
+         </stateVector>
+      </data>
+   </segment>
+</body>
+</oem>
 <omm id="CCSDS_OMM_VERS" version="2.0">
     <header>
         <CREATION_DATE/>
@@ -198,19 +362,19 @@ mod test {
         </segment>
     </body>
 </omm>
+
 </ndm>"#;
 
         let message: NdmType = from_str(xml).unwrap();
 
+        println!("{:#?}", message);
         assert_eq!(
             message,
             NdmType {
                 message_id: Some("bla".to_string()),
                 comment_list: vec!["asdfg".to_string()],
-                ocm_list: vec![],
-                oem_list: vec![],
-                omm_list: vec![
-                    omm::OmmType {
+                child_list: vec![
+                    NdmChildChoice::Omm(omm::OmmType {
                         header: common::OdmHeader {
                             comment_list: vec![],
                             classification_list: vec![],
@@ -265,8 +429,8 @@ mod test {
                         },
                         id: "CCSDS_OMM_VERS".to_string(),
                         version: "2.0".to_string(),
-                    },
-                    omm::OmmType {
+                    }),
+                    NdmChildChoice::Omm(omm::OmmType {
                         header: common::OdmHeader {
                             comment_list: vec![],
                             classification_list: vec![],
@@ -349,8 +513,388 @@ mod test {
                         },
                         id: "CCSDS_OMM_VERS".to_string(),
                         version: "2.0".to_string(),
-                    },
-                    omm::OmmType {
+                    }),
+                    NdmChildChoice::Opm(opm::OpmType {
+                        header: common::OdmHeader {
+                            comment_list: vec![],
+                            classification_list: vec![],
+                            creation_date: common::EpochType("2004-281T17:26:06".to_string()),
+                            originator: "me".to_string(),
+                            message_id: None,
+                        },
+                        body: opm::OpmBody {
+                            segment: opm::OpmSegment {
+                                metadata: opm::OpmMetadata {
+                                    comment_list: vec![],
+                                    object_name: "Cassini".to_string(),
+                                    object_id: "1997-061A".to_string(),
+                                    center_name: "Saturn".to_string(),
+                                    ref_frame: "IAU-Saturn".to_string(),
+                                    ref_frame_epoch: None,
+                                    time_system: "UTC".to_string(),
+                                },
+                                data: opm::OpmData {
+                                    comment_list: vec!["final COMMENT, I think".to_string(),],
+                                    state_vector: common::StateVectorType {
+                                        comment_list: vec![],
+                                        epoch: common::EpochType("2004-100T00:00:00Z".to_string(),),
+                                        x: common::PositionType {
+                                            base: 1.0,
+                                            units: None,
+                                        },
+                                        y: common::PositionType {
+                                            base: 1.0,
+                                            units: None,
+                                        },
+                                        z: common::PositionType {
+                                            base: 1.0,
+                                            units: None,
+                                        },
+                                        x_dot: common::VelocityType {
+                                            base: 1.0,
+                                            units: None,
+                                        },
+                                        y_dot: common::VelocityType {
+                                            base: 1.0,
+                                            units: None,
+                                        },
+                                        z_dot: common::VelocityType {
+                                            base: 1.0,
+                                            units: None,
+                                        },
+                                    },
+                                    keplerian_elements: Some(opm::KeplerianElementsType {
+                                        comment_list: vec![],
+                                        semi_major_axis: common::DistanceType {
+                                            base: 1.0,
+                                            units: Some(common::PositionUnits("km".to_string(),),),
+                                        },
+                                        eccentricity: common::NonNegativeDouble(0.0,),
+                                        inclination: common::InclinationType {
+                                            base: common::InclinationRange(45.0,),
+                                            units: Some(common::AngleUnits("deg".to_string(),),),
+                                        },
+                                        ra_of_asc_node: common::AngleType {
+                                            base: common::AngleRange(0.0,),
+                                            units: Some(common::AngleUnits("deg".to_string(),),),
+                                        },
+                                        arg_of_pericenter: common::AngleType {
+                                            base: common::AngleRange(15.0,),
+                                            units: Some(common::AngleUnits("deg".to_string(),),),
+                                        },
+                                        true_anomaly: Some(common::AngleType {
+                                            base: common::AngleRange(15.0,),
+                                            units: Some(common::AngleUnits("deg".to_string(),),),
+                                        },),
+                                        mean_anomaly: None,
+                                        gm: common::GmType {
+                                            base: common::PositiveDouble(398644.0,),
+                                            units: Some(common::GmUnits("km**3/s**2".to_string(),),),
+                                        },
+                                    },),
+                                    spacecraft_parameters: Some(common::SpacecraftParametersType {
+                                        comment_list: vec![],
+                                        mass: Some(common::MassType {
+                                            base: common::NonNegativeDouble(100.0,),
+                                            units: Some(common::MassUnits("kg".to_string(),),),
+                                        },),
+                                        solar_rad_area: Some(common::AreaType {
+                                            base: common::NonNegativeDouble(2.0,),
+                                            units: Some(common::AreaUnits("m**2".to_string(),),),
+                                        },),
+                                        solar_rad_coeff: Some(common::NonNegativeDouble(1.0,),),
+                                        drag_area: Some(common::AreaType {
+                                            base: common::NonNegativeDouble(2.0,),
+                                            units: Some(common::AreaUnits("m**2".to_string(),),),
+                                        },),
+                                        drag_coeff: Some(common::NonNegativeDouble(2.0,),),
+                                    },),
+                                    covariance_matrix: None,
+                                    maneuver_parameters_list: vec![opm::ManeuverParametersType {
+                                        comment_list: vec![],
+                                        man_epoch_ignition: common::EpochType(
+                                            "2004-125T00:00:00Z".to_string(),
+                                        ),
+                                        man_duration: common::DurationType {
+                                            base: common::NonNegativeDouble(0.0,),
+                                            units: None,
+                                        },
+                                        man_delta_mass: common::DeltamassType {
+                                            base: common::NegativeDouble(-1.0,),
+                                            units: None,
+                                        },
+                                        man_ref_frame: "GRC".to_string(),
+                                        man_dv_1: common::VelocityType {
+                                            base: 1.0,
+                                            units: Some(common::VelocityUnits("km/s".to_string(),),),
+                                        },
+                                        man_dv_2: common::VelocityType {
+                                            base: 1.0,
+                                            units: Some(common::VelocityUnits("km/s".to_string(),),),
+                                        },
+                                        man_dv_3: common::VelocityType {
+                                            base: 1.0,
+                                            units: Some(common::VelocityUnits("km/s".to_string(),),),
+                                        },
+                                    },],
+                                    user_defined_parameters: None,
+                                },
+                            },
+                        },
+                        id: "CCSDS_OPM_VERS".to_string(),
+                        version: "2.0".to_string(),
+                    },),
+                    NdmChildChoice::Opm(opm::OpmType {
+                        header: common::OdmHeader {
+                            comment_list: vec![],
+                            classification_list: vec![],
+                            creation_date: common::EpochType("2004-281T17:26:06".to_string(),),
+                            originator: "me".to_string(),
+                            message_id: None,
+                        },
+                        body: opm::OpmBody {
+                            segment: opm::OpmSegment {
+                                metadata: opm::OpmMetadata {
+                                    comment_list: vec![],
+                                    object_name: "Cassini".to_string(),
+                                    object_id: "1997-061A".to_string(),
+                                    center_name: "Saturn".to_string(),
+                                    ref_frame: "IAU-Saturn".to_string(),
+                                    ref_frame_epoch: None,
+                                    time_system: "UTC".to_string(),
+                                },
+                                data: opm::OpmData {
+                                    comment_list: vec![],
+                                    state_vector: common::StateVectorType {
+                                        comment_list: vec!["this is a comment".to_string(),],
+                                        epoch: common::EpochType("2004-100T00:00:00".to_string(),),
+                                        x: common::PositionType {
+                                            base: 1.0,
+                                            units: None,
+                                        },
+                                        y: common::PositionType {
+                                            base: 1.0,
+                                            units: None,
+                                        },
+                                        z: common::PositionType {
+                                            base: 1.0,
+                                            units: None,
+                                        },
+                                        x_dot: common::VelocityType {
+                                            base: 1.0,
+                                            units: None,
+                                        },
+                                        y_dot: common::VelocityType {
+                                            base: 1.0,
+                                            units: None,
+                                        },
+                                        z_dot: common::VelocityType {
+                                            base: 1.0,
+                                            units: None,
+                                        },
+                                    },
+                                    keplerian_elements: None,
+                                    spacecraft_parameters: Some(common::SpacecraftParametersType {
+                                        comment_list: vec!["This is a COMMENT".to_string(),],
+                                        mass: Some(common::MassType {
+                                            base: common::NonNegativeDouble(100.0,),
+                                            units: None,
+                                        },),
+                                        solar_rad_area: Some(common::AreaType {
+                                            base: common::NonNegativeDouble(2.0,),
+                                            units: None,
+                                        },),
+                                        solar_rad_coeff: Some(common::NonNegativeDouble(1.0,),),
+                                        drag_area: Some(common::AreaType {
+                                            base: common::NonNegativeDouble(2.0,),
+                                            units: Some(common::AreaUnits("m**2".to_string(),),),
+                                        },),
+                                        drag_coeff: Some(common::NonNegativeDouble(2.0,),),
+                                    },),
+                                    covariance_matrix: None,
+                                    maneuver_parameters_list: vec![opm::ManeuverParametersType {
+                                        comment_list: vec!["This is a COMMENT".to_string(),],
+                                        man_epoch_ignition: common::EpochType(
+                                            "2004-125T00:00:00".to_string(),
+                                        ),
+                                        man_duration: common::DurationType {
+                                            base: common::NonNegativeDouble(0.0,),
+                                            units: Some(common::TimeUnits("s".to_string(),),),
+                                        },
+                                        man_delta_mass: common::DeltamassType {
+                                            base: common::NegativeDouble(-1.0,),
+                                            units: Some(common::MassUnits("kg".to_string(),),),
+                                        },
+                                        man_ref_frame: "GRC".to_string(),
+                                        man_dv_1: common::VelocityType {
+                                            base: 1.0,
+                                            units: None,
+                                        },
+                                        man_dv_2: common::VelocityType {
+                                            base: 1.0,
+                                            units: None,
+                                        },
+                                        man_dv_3: common::VelocityType {
+                                            base: 1.0,
+                                            units: None,
+                                        },
+                                    },],
+                                    user_defined_parameters: None,
+                                },
+                            },
+                        },
+                        id: "CCSDS_OPM_VERS".to_string(),
+                        version: "2.0".to_string(),
+                    },),
+                    NdmChildChoice::Oem(oem::OemType {
+                        header: common::OdmHeader {
+                            comment_list: vec![],
+                            classification_list: vec![],
+                            creation_date: common::EpochType("2004-281T17:26:06".to_string(),),
+                            originator: "me".to_string(),
+                            message_id: None,
+                        },
+                        body: oem::OemBody {
+                            segment_list: vec![oem::OemSegment {
+                                metadata: oem::OemMetadata {
+                                    comment_list: vec![],
+                                    object_name: "Cassini".to_string(),
+                                    object_id: "1997-061A".to_string(),
+                                    center_name: "Saturn".to_string(),
+                                    ref_frame: "IAU-Saturn".to_string(),
+                                    ref_frame_epoch: None,
+                                    time_system: "UTC".to_string(),
+                                    start_time: common::EpochType(
+                                        "2004-100T00:00:00.000000".to_string(),
+                                    ),
+                                    useable_start_time: None,
+                                    useable_stop_time: None,
+                                    stop_time: common::EpochType(
+                                        "2004-100T01:00:00.000000".to_string(),
+                                    ),
+                                    interpolation: Some("Hermite".to_string(),),
+                                    interpolation_degree: Some(1,),
+                                },
+                                data: oem::OemData {
+                                    comment_list: vec![],
+                                    state_vector_list: vec![
+                                        common::StateVectorAccType {
+                                            epoch: common::EpochType(
+                                                "2004-100T00:00:00".to_string(),
+                                            ),
+                                            x: common::PositionType {
+                                                base: 1.0,
+                                                units: Some(common::PositionUnits(
+                                                    "km".to_string(),
+                                                ),),
+                                            },
+                                            y: common::PositionType {
+                                                base: 1.0,
+                                                units: None,
+                                            },
+                                            z: common::PositionType {
+                                                base: 1.0,
+                                                units: None,
+                                            },
+                                            x_dot: common::VelocityType {
+                                                base: 1.0,
+                                                units: Some(common::VelocityUnits(
+                                                    "km/s".to_string(),
+                                                ),),
+                                            },
+                                            y_dot: common::VelocityType {
+                                                base: 1.0,
+                                                units: None,
+                                            },
+                                            z_dot: common::VelocityType {
+                                                base: 1.0,
+                                                units: None,
+                                            },
+                                            x_ddot: None,
+                                            y_ddot: None,
+                                            z_ddot: None,
+                                        },
+                                        common::StateVectorAccType {
+                                            epoch: common::EpochType(
+                                                "2004-100T00:00:00".to_string(),
+                                            ),
+                                            x: common::PositionType {
+                                                base: 1.0,
+                                                units: None,
+                                            },
+                                            y: common::PositionType {
+                                                base: 1.0,
+                                                units: Some(common::PositionUnits(
+                                                    "km".to_string(),
+                                                ),),
+                                            },
+                                            z: common::PositionType {
+                                                base: 1.0,
+                                                units: None,
+                                            },
+                                            x_dot: common::VelocityType {
+                                                base: 1.0,
+                                                units: None,
+                                            },
+                                            y_dot: common::VelocityType {
+                                                base: 1.0,
+                                                units: Some(common::VelocityUnits(
+                                                    "km/s".to_string(),
+                                                ),),
+                                            },
+                                            z_dot: common::VelocityType {
+                                                base: 1.0,
+                                                units: None,
+                                            },
+                                            x_ddot: None,
+                                            y_ddot: None,
+                                            z_ddot: None,
+                                        },
+                                        common::StateVectorAccType {
+                                            epoch: common::EpochType(
+                                                "2004-100T00:00:00".to_string(),
+                                            ),
+                                            x: common::PositionType {
+                                                base: 1.0,
+                                                units: None,
+                                            },
+                                            y: common::PositionType {
+                                                base: 1.0,
+                                                units: None,
+                                            },
+                                            z: common::PositionType {
+                                                base: 1.0,
+                                                units: Some(common::PositionUnits(
+                                                    "km".to_string(),
+                                                ),),
+                                            },
+                                            x_dot: common::VelocityType {
+                                                base: 1.0,
+                                                units: None,
+                                            },
+                                            y_dot: common::VelocityType {
+                                                base: 1.0,
+                                                units: None,
+                                            },
+                                            z_dot: common::VelocityType {
+                                                base: 1.0,
+                                                units: Some(common::VelocityUnits(
+                                                    "km/s".to_string(),
+                                                ),),
+                                            },
+                                            x_ddot: None,
+                                            y_ddot: None,
+                                            z_ddot: None,
+                                        },
+                                    ],
+                                    covariance_matrix_list: vec![],
+                                },
+                            },],
+                        },
+                        id: "CCSDS_OEM_VERS".to_string(),
+                        version: "2.0".to_string(),
+                    },),
+                    NdmChildChoice::Omm(omm::OmmType {
                         header: common::OdmHeader {
                             comment_list: vec![],
                             classification_list: vec![],
@@ -433,8 +977,8 @@ mod test {
                         },
                         id: "CCSDS_OMM_VERS".to_string(),
                         version: "2.0".to_string(),
-                    },
-                    omm::OmmType {
+                    }),
+                    NdmChildChoice::Omm(omm::OmmType {
                         header: common::OdmHeader {
                             comment_list: vec![],
                             classification_list: vec![],
@@ -517,8 +1061,8 @@ mod test {
                         },
                         id: "CCSDS_OMM_VERS".to_string(),
                         version: "2.0".to_string(),
-                    },
-                    omm::OmmType {
+                    }),
+                    NdmChildChoice::Omm(omm::OmmType {
                         header: common::OdmHeader {
                             comment_list: vec![],
                             classification_list: vec![],
@@ -601,9 +1145,8 @@ mod test {
                         },
                         id: "CCSDS_OMM_VERS".to_string(),
                         version: "2.0".to_string(),
-                    },
+                    }),
                 ],
-                opm_list: vec![],
             },
         );
     }
