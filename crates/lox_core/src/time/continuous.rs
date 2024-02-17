@@ -466,6 +466,7 @@ mod tests {
 
     use crate::time::constants::i64::SECONDS_PER_JULIAN_CENTURY;
     use crate::time::continuous::transform::MockTransformTimeScale;
+    use crate::time::dates::Calendar;
     use crate::time::dates::Calendar::Gregorian;
 
     use super::*;
@@ -1101,5 +1102,71 @@ mod tests {
 
         let actual = time.into_scale(transformer);
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_julian_date() {
+        let time = Time::jd0(TDB);
+        assert_eq!(
+            time.julian_date(JulianDateVariant::JulianDate, Unit::Days),
+            0.0
+        );
+        assert_eq!(time.seconds_since_julian_epoch(), 0.0);
+        assert_eq!(time.days_since_julian_epoch(), 0.0);
+        assert_eq!(time.centuries_since_julian_epoch(), 0.0);
+    }
+
+    #[test]
+    fn test_modified_julian_date() {
+        let time = Time::mjd0(TDB);
+        assert_eq!(
+            time.julian_date(JulianDateVariant::ModifiedJulianDate, Unit::Days),
+            0.0
+        );
+        assert_eq!(time.seconds_since_modified_julian_epoch(), 0.0);
+        assert_eq!(time.days_since_modified_julian_epoch(), 0.0);
+        assert_eq!(time.centuries_since_modified_julian_epoch(), 0.0);
+    }
+
+    #[test]
+    fn test_j1950() {
+        let time = Time::j1950(TDB);
+        assert_eq!(time.julian_date(JulianDateVariant::J1950, Unit::Days), 0.0);
+        assert_eq!(time.seconds_since_j1950(), 0.0);
+        assert_eq!(time.days_since_j1950(), 0.0);
+        assert_eq!(time.centuries_since_j1950(), 0.0);
+    }
+
+    #[test]
+    fn test_j2000() {
+        let time = Time::j2000(TDB);
+        assert_eq!(time.julian_date(JulianDateVariant::J2000, Unit::Days), 0.0);
+        assert_eq!(time.seconds_since_j2000(), 0.0);
+        assert_eq!(time.days_since_j2000(), 0.0);
+        assert_eq!(time.centuries_since_j2000(), 0.0);
+    }
+
+    #[test]
+    fn test_j2100() {
+        let date = Date::new_unchecked(Gregorian, 2100, 1, 1);
+        let utc = UTC::new(12, 0, 0).expect("should be valid");
+        let time = Time::from_date_and_utc_timestamp(TDB, date, utc);
+        assert_eq!(
+            time.julian_date(JulianDateVariant::J2000, Unit::Days),
+            36525.0
+        );
+        assert_eq!(time.seconds_since_j2000(), 3155760000.0);
+        assert_eq!(time.days_since_j2000(), 36525.0);
+        assert_eq!(time.centuries_since_j2000(), 1.0);
+    }
+
+    #[test]
+    fn test_two_part_julian_date() {
+        let date = Date::new_unchecked(Gregorian, 2100, 1, 2);
+        let utc = UTC::new(0, 0, 0).expect("should be valid");
+        let time = Time::from_date_and_utc_timestamp(TDB, date, utc);
+        let (jd1, jd2) = time.two_part_julian_date();
+        assert_eq!(jd1, 2451545.0 + 36525.0);
+        assert_eq!(jd2, 0.5);
     }
 }
