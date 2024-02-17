@@ -10,7 +10,7 @@ pub mod constants;
 pub mod is_close;
 pub mod linear_algebra;
 pub mod math;
-pub mod odm;
+pub mod ndm;
 pub mod series;
 pub mod slices;
 pub mod types;
