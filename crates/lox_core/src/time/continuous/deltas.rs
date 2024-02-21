@@ -29,7 +29,10 @@ impl TimeDelta {
     }
 
     pub fn from_decimal_seconds(value: f64) -> Self {
-        if value < f64::SECONDS_PER_FEMTOSECOND {
+        if value < 0.0 {
+            debug_panic!(
+                "TimeDelta seconds component was negative, which will be set to zero in production"
+            );
             return Self::default();
         }
         if value.is_nan() {
@@ -46,6 +49,9 @@ impl TimeDelta {
                 seconds: u64::MAX,
                 femtoseconds: 0,
             };
+        }
+        if value < f64::SECONDS_PER_FEMTOSECOND {
+            return Self::default();
         }
         if value.fract() == 0.0 {
             let seconds = value.to_u64().unwrap();

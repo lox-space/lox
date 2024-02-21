@@ -30,7 +30,7 @@ use crate::time::constants::u64::{
     FEMTOSECONDS_PER_MICROSECOND, FEMTOSECONDS_PER_MILLISECOND, FEMTOSECONDS_PER_NANOSECOND,
     FEMTOSECONDS_PER_PICOSECOND, FEMTOSECONDS_PER_SECOND,
 };
-use crate::time::continuous::julian_dates::{JulianDate, JulianDateVariant, Unit};
+use crate::time::continuous::julian_dates::{JulianDate, Epoch, Unit};
 use crate::time::continuous::transform::TransformTimeScale;
 use crate::time::dates::Date;
 use crate::time::utc::{UTCDateTime, UTC};
@@ -70,12 +70,12 @@ impl BaseTime {
         }
     }
 
-    pub fn julian_epoch(variant: JulianDateVariant) -> Self {
-        match variant {
-            JulianDateVariant::JulianDate => Self::new(-SECONDS_BETWEEN_JD_AND_J2000, 0),
-            JulianDateVariant::ModifiedJulianDate => Self::new(-SECONDS_BETWEEN_MJD_AND_J2000, 0),
-            JulianDateVariant::J1950 => Self::new(-SECONDS_BETWEEN_J1950_AND_J2000, 0),
-            JulianDateVariant::J2000 => Self::new(0, 0),
+    pub fn from_epoch(epoch: Epoch) -> Self {
+        match epoch {
+            Epoch::JulianDate => Self::new(-SECONDS_BETWEEN_JD_AND_J2000, 0),
+            Epoch::ModifiedJulianDate => Self::new(-SECONDS_BETWEEN_MJD_AND_J2000, 0),
+            Epoch::J1950 => Self::new(-SECONDS_BETWEEN_J1950_AND_J2000, 0),
+            Epoch::J2000 => Self::new(0, 0),
         }
     }
 
@@ -91,12 +91,12 @@ impl BaseTime {
         self.femtoseconds
     }
 
-    pub fn seconds_from_epoch(&self, variant: JulianDateVariant) -> i64 {
-        match variant {
-            JulianDateVariant::JulianDate => self.seconds + SECONDS_BETWEEN_JD_AND_J2000,
-            JulianDateVariant::ModifiedJulianDate => self.seconds + SECONDS_BETWEEN_MJD_AND_J2000,
-            JulianDateVariant::J1950 => self.seconds + SECONDS_BETWEEN_J1950_AND_J2000,
-            JulianDateVariant::J2000 => self.seconds,
+    pub fn seconds_from_epoch(&self, epoch: Epoch) -> i64 {
+        match epoch {
+            Epoch::JulianDate => self.seconds + SECONDS_BETWEEN_JD_AND_J2000,
+            Epoch::ModifiedJulianDate => self.seconds + SECONDS_BETWEEN_MJD_AND_J2000,
+            Epoch::J1950 => self.seconds + SECONDS_BETWEEN_J1950_AND_J2000,
+            Epoch::J2000 => self.seconds,
         }
     }
 }
@@ -209,8 +209,8 @@ impl WallClock for BaseTime {
 }
 
 impl JulianDate for BaseTime {
-    fn julian_date(&self, variant: JulianDateVariant, unit: Unit) -> f64 {
-        let mut seconds = self.seconds_from_epoch(variant).to_f64().unwrap();
+    fn julian_date(&self, epoch: Epoch, unit: Unit) -> f64 {
+        let mut seconds = self.seconds_from_epoch(epoch).to_f64().unwrap();
         let fraction =
             self.femtoseconds.to_f64().unwrap() / constants::f64::FEMTOSECONDS_PER_SECOND;
         seconds += fraction;
@@ -222,7 +222,7 @@ impl JulianDate for BaseTime {
     }
 
     fn two_part_julian_date(&self) -> (f64, f64) {
-        let days = self.julian_date(JulianDateVariant::JulianDate, Unit::Days);
+        let days = self.julian_date(Epoch::JulianDate, Unit::Days);
         (days.trunc(), days.fract())
     }
 }
@@ -327,31 +327,31 @@ impl<T: TimeScale + Copy> Time<T> {
         Self::from_date_and_utc_timestamp(scale, dt.date(), dt.time())
     }
 
-    /// Returns the epoch for the given [JulianDateVariant] in the given timescale.
-    pub fn julian_epoch(scale: T, variant: JulianDateVariant) -> Self {
-        let timestamp = BaseTime::julian_epoch(variant);
+    /// Returns the epoch for the given [Epoch] in the given timescale.
+    pub fn from_epoch(scale: T, epoch: Epoch) -> Self {
+        let timestamp = BaseTime::from_epoch(epoch);
         Self { scale, timestamp }
     }
 
     /// Returns, as an epoch in the given timescale, midday on the first day of the proleptic Julian
     /// calendar.
     pub fn jd0(scale: T) -> Self {
-        Self::julian_epoch(scale, JulianDateVariant::JulianDate)
+        Self::from_epoch(scale, Epoch::JulianDate)
     }
 
     /// Returns the epoch of the Modified Julian Date in the given timescale.
     pub fn mjd0(scale: T) -> Self {
-        Self::julian_epoch(scale, JulianDateVariant::ModifiedJulianDate)
+        Self::from_epoch(scale, Epoch::ModifiedJulianDate)
     }
 
     /// Returns the J1950 epoch in the given timescale.
     pub fn j1950(scale: T) -> Self {
-        Self::julian_epoch(scale, JulianDateVariant::J1950)
+        Self::from_epoch(scale, Epoch::J1950)
     }
 
     /// Returns the J2000 epoch in the given timescale.
     pub fn j2000(scale: T) -> Self {
-        Self::julian_epoch(scale, JulianDateVariant::J2000)
+        Self::from_epoch(scale, Epoch::J2000)
     }
 
     /// The underlying base timestamp.
@@ -388,8 +388,8 @@ impl<T: TimeScale + Copy> Time<T> {
 }
 
 impl<T: TimeScale + Copy> JulianDate for Time<T> {
-    fn julian_date(&self, variant: JulianDateVariant, unit: Unit) -> f64 {
-        self.timestamp.julian_date(variant, unit)
+    fn julian_date(&self, epoch: Epoch, unit: Unit) -> f64 {
+        self.timestamp.julian_date(epoch, unit)
     }
 
     fn two_part_julian_date(&self) -> (f64, f64) {
@@ -466,7 +466,6 @@ mod tests {
 
     use crate::time::constants::i64::SECONDS_PER_JULIAN_CENTURY;
     use crate::time::continuous::transform::MockTransformTimeScale;
-    use crate::time::dates::Calendar;
     use crate::time::dates::Calendar::Gregorian;
 
     use super::*;
@@ -1108,7 +1107,7 @@ mod tests {
     fn test_julian_date() {
         let time = Time::jd0(TDB);
         assert_eq!(
-            time.julian_date(JulianDateVariant::JulianDate, Unit::Days),
+            time.julian_date(Epoch::JulianDate, Unit::Days),
             0.0
         );
         assert_eq!(time.seconds_since_julian_epoch(), 0.0);
@@ -1120,7 +1119,7 @@ mod tests {
     fn test_modified_julian_date() {
         let time = Time::mjd0(TDB);
         assert_eq!(
-            time.julian_date(JulianDateVariant::ModifiedJulianDate, Unit::Days),
+            time.julian_date(Epoch::ModifiedJulianDate, Unit::Days),
             0.0
         );
         assert_eq!(time.seconds_since_modified_julian_epoch(), 0.0);
@@ -1131,7 +1130,7 @@ mod tests {
     #[test]
     fn test_j1950() {
         let time = Time::j1950(TDB);
-        assert_eq!(time.julian_date(JulianDateVariant::J1950, Unit::Days), 0.0);
+        assert_eq!(time.julian_date(Epoch::J1950, Unit::Days), 0.0);
         assert_eq!(time.seconds_since_j1950(), 0.0);
         assert_eq!(time.days_since_j1950(), 0.0);
         assert_eq!(time.centuries_since_j1950(), 0.0);
@@ -1140,7 +1139,7 @@ mod tests {
     #[test]
     fn test_j2000() {
         let time = Time::j2000(TDB);
-        assert_eq!(time.julian_date(JulianDateVariant::J2000, Unit::Days), 0.0);
+        assert_eq!(time.julian_date(Epoch::J2000, Unit::Days), 0.0);
         assert_eq!(time.seconds_since_j2000(), 0.0);
         assert_eq!(time.days_since_j2000(), 0.0);
         assert_eq!(time.centuries_since_j2000(), 0.0);
@@ -1152,7 +1151,7 @@ mod tests {
         let utc = UTC::new(12, 0, 0).expect("should be valid");
         let time = Time::from_date_and_utc_timestamp(TDB, date, utc);
         assert_eq!(
-            time.julian_date(JulianDateVariant::J2000, Unit::Days),
+            time.julian_date(Epoch::J2000, Unit::Days),
             36525.0
         );
         assert_eq!(time.seconds_since_j2000(), 3155760000.0);
