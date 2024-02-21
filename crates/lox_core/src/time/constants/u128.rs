@@ -1,13 +1,9 @@
 /*
- * Copyright (c) 2023. Helge Eichhorn and the LOX contributors
+ * Copyright (c) 2024. Helge Eichhorn and the LOX contributors
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-pub mod f64;
-pub mod i64;
-pub(crate) mod julian_dates;
-pub mod u128;
-pub mod u64;
+pub const FEMTOSECONDS_PER_SECOND: u128 = 1_000_000_000_000_000;

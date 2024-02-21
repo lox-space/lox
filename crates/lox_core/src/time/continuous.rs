@@ -12,34 +12,34 @@
 //!
 //! The supported timescales are specified by [TimeScale].
 
-pub mod transform;
-
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, Sub};
 
-use num::abs;
+use num::{abs, ToPrimitive};
 
-use crate::time::constants::f64::DAYS_PER_JULIAN_CENTURY;
+use deltas::TimeDelta;
+
 use crate::time::constants::i64::{
     SECONDS_PER_DAY, SECONDS_PER_HALF_DAY, SECONDS_PER_HOUR, SECONDS_PER_MINUTE,
+};
+use crate::time::constants::julian_dates::{
+    SECONDS_BETWEEN_J1950_AND_J2000, SECONDS_BETWEEN_JD_AND_J2000, SECONDS_BETWEEN_MJD_AND_J2000,
 };
 use crate::time::constants::u64::{
     FEMTOSECONDS_PER_MICROSECOND, FEMTOSECONDS_PER_MILLISECOND, FEMTOSECONDS_PER_NANOSECOND,
     FEMTOSECONDS_PER_PICOSECOND, FEMTOSECONDS_PER_SECOND,
 };
+use crate::time::continuous::julian_dates::{JulianDate, Epoch, Unit};
 use crate::time::continuous::transform::TransformTimeScale;
-use crate::time::dates::Calendar::ProlepticJulian;
 use crate::time::dates::Date;
 use crate::time::utc::{UTCDateTime, UTC};
 use crate::time::{constants, WallClock};
 
-/// An absolute continuous time difference with femtosecond precision.
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub struct TimeDelta {
-    seconds: u64,
-    femtoseconds: u64,
-}
+pub mod transform;
+
+pub mod deltas;
+pub mod julian_dates;
 
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
 /// `BaseTime` is the base time representation for time scales without leap seconds. It is measured relative to
@@ -70,6 +70,15 @@ impl BaseTime {
         }
     }
 
+    pub fn from_epoch(epoch: Epoch) -> Self {
+        match epoch {
+            Epoch::JulianDate => Self::new(-SECONDS_BETWEEN_JD_AND_J2000, 0),
+            Epoch::ModifiedJulianDate => Self::new(-SECONDS_BETWEEN_MJD_AND_J2000, 0),
+            Epoch::J1950 => Self::new(-SECONDS_BETWEEN_J1950_AND_J2000, 0),
+            Epoch::J2000 => Self::new(0, 0),
+        }
+    }
+
     fn is_negative(&self) -> bool {
         self.seconds < 0
     }
@@ -82,16 +91,13 @@ impl BaseTime {
         self.femtoseconds
     }
 
-    /// The fractional number of Julian days since J2000.
-    pub fn days_since_j2000(&self) -> f64 {
-        let d1 = self.seconds as f64 / constants::f64::SECONDS_PER_DAY;
-        let d2 = self.femtoseconds as f64 / constants::f64::FEMTOSECONDS_PER_DAY;
-        d2 + d1
-    }
-
-    /// The fractional number of Julian centuries since J2000.
-    pub fn centuries_since_j2000(&self) -> f64 {
-        self.days_since_j2000() / DAYS_PER_JULIAN_CENTURY
+    pub fn seconds_from_epoch(&self, epoch: Epoch) -> i64 {
+        match epoch {
+            Epoch::JulianDate => self.seconds + SECONDS_BETWEEN_JD_AND_J2000,
+            Epoch::ModifiedJulianDate => self.seconds + SECONDS_BETWEEN_MJD_AND_J2000,
+            Epoch::J1950 => self.seconds + SECONDS_BETWEEN_J1950_AND_J2000,
+            Epoch::J2000 => self.seconds,
+        }
     }
 }
 
@@ -202,6 +208,25 @@ impl WallClock for BaseTime {
     }
 }
 
+impl JulianDate for BaseTime {
+    fn julian_date(&self, epoch: Epoch, unit: Unit) -> f64 {
+        let mut seconds = self.seconds_from_epoch(epoch).to_f64().unwrap();
+        let fraction =
+            self.femtoseconds.to_f64().unwrap() / constants::f64::FEMTOSECONDS_PER_SECOND;
+        seconds += fraction;
+        match unit {
+            Unit::Seconds => seconds,
+            Unit::Days => seconds / constants::f64::SECONDS_PER_DAY,
+            Unit::Centuries => seconds / constants::f64::SECONDS_PER_JULIAN_CENTURY,
+        }
+    }
+
+    fn two_part_julian_date(&self) -> (f64, f64) {
+        let days = self.julian_date(Epoch::JulianDate, Unit::Days);
+        (days.trunc(), days.fract())
+    }
+}
+
 /// Marker trait with associated constants denoting a continuous astronomical time scale.
 pub trait TimeScale {
     const ABBREVIATION: &'static str;
@@ -302,21 +327,31 @@ impl<T: TimeScale + Copy> Time<T> {
         Self::from_date_and_utc_timestamp(scale, dt.date(), dt.time())
     }
 
-    /// Returns the J2000 epoch in the given timescale.
-    pub fn j2000(scale: T) -> Self {
-        Self {
-            scale,
-            timestamp: BaseTime::default(),
-        }
+    /// Returns the epoch for the given [Epoch] in the given timescale.
+    pub fn from_epoch(scale: T, epoch: Epoch) -> Self {
+        let timestamp = BaseTime::from_epoch(epoch);
+        Self { scale, timestamp }
     }
 
     /// Returns, as an epoch in the given timescale, midday on the first day of the proleptic Julian
     /// calendar.
     pub fn jd0(scale: T) -> Self {
-        // This represents 4713 BC, since there is no year 0 separating BC and AD.
-        let first_proleptic_day = Date::new_unchecked(ProlepticJulian, -4712, 1, 1);
-        let midday = UTC::new(12, 0, 0).expect("midday should be a valid time");
-        Self::from_date_and_utc_timestamp(scale, first_proleptic_day, midday)
+        Self::from_epoch(scale, Epoch::JulianDate)
+    }
+
+    /// Returns the epoch of the Modified Julian Date in the given timescale.
+    pub fn mjd0(scale: T) -> Self {
+        Self::from_epoch(scale, Epoch::ModifiedJulianDate)
+    }
+
+    /// Returns the J1950 epoch in the given timescale.
+    pub fn j1950(scale: T) -> Self {
+        Self::from_epoch(scale, Epoch::J1950)
+    }
+
+    /// Returns the J2000 epoch in the given timescale.
+    pub fn j2000(scale: T) -> Self {
+        Self::from_epoch(scale, Epoch::J2000)
     }
 
     /// The underlying base timestamp.
@@ -334,16 +369,6 @@ impl<T: TimeScale + Copy> Time<T> {
         self.timestamp.femtoseconds
     }
 
-    /// The fractional number of Julian days since J2000.
-    pub fn days_since_j2000(&self) -> f64 {
-        self.timestamp.days_since_j2000()
-    }
-
-    /// The fractional number of Julian centuries since J2000.
-    pub fn centuries_since_j2000(&self) -> f64 {
-        self.timestamp.centuries_since_j2000()
-    }
-
     /// Given a `Time` in [TimeScale] `S`, and a transformer from `S` to `T`, returns a new Time in
     /// [TimeScale] `T`.
     pub fn from_scale<S: TimeScale + Copy>(
@@ -359,6 +384,16 @@ impl<T: TimeScale + Copy> Time<T> {
         transformer: impl TransformTimeScale<T, S>,
     ) -> Time<S> {
         Time::from_scale(self, transformer)
+    }
+}
+
+impl<T: TimeScale + Copy> JulianDate for Time<T> {
+    fn julian_date(&self, epoch: Epoch, unit: Unit) -> f64 {
+        self.timestamp.julian_date(epoch, unit)
+    }
+
+    fn two_part_julian_date(&self) -> (f64, f64) {
+        self.timestamp.two_part_julian_date()
     }
 }
 
@@ -489,11 +524,11 @@ mod tests {
     #[case::one_femtosecond_less_than_an_hour(BaseTime { seconds: SECONDS_PER_HOUR - 1, femtoseconds: FEMTOSECONDS_PER_SECOND - 1 }, 12)]
     #[case::exactly_one_hour(BaseTime { seconds: SECONDS_PER_HOUR, femtoseconds: 0 }, 13)]
     #[case::one_day_and_one_hour(BaseTime { seconds: SECONDS_PER_HOUR * 25, femtoseconds: 0 }, 13)]
-    #[case::one_femtosecond_less_than_the_epoch(BaseTime { seconds: -1, femtoseconds: FEMTOSECONDS_PER_SECOND - 1 }, 11)]
-    #[case::one_hour_less_than_the_epoch(BaseTime { seconds: -SECONDS_PER_HOUR, femtoseconds: 0 }, 11)]
-    #[case::one_hour_and_one_femtosecond_less_than_the_epoch(BaseTime { seconds: -SECONDS_PER_HOUR - 1, femtoseconds: FEMTOSECONDS_PER_SECOND - 1 }, 10)]
-    #[case::one_day_less_than_the_epoch(BaseTime { seconds: -SECONDS_PER_DAY, femtoseconds: 0 }, 12)]
-    #[case::two_days_less_than_the_epoch(BaseTime { seconds: -SECONDS_PER_DAY * 2, femtoseconds: 0 }, 12)]
+    #[case::one_femtosecond_less_than_the_epoch(BaseTime { seconds: - 1, femtoseconds: FEMTOSECONDS_PER_SECOND - 1 }, 11)]
+    #[case::one_hour_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_HOUR, femtoseconds: 0 }, 11)]
+    #[case::one_hour_and_one_femtosecond_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_HOUR - 1, femtoseconds: FEMTOSECONDS_PER_SECOND - 1 }, 10)]
+    #[case::one_day_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_DAY, femtoseconds: 0 }, 12)]
+    #[case::two_days_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_DAY * 2, femtoseconds: 0 }, 12)]
     fn test_base_time_wall_clock_hour(#[case] time: BaseTime, #[case] expected: i64) {
         let actual = time.hour();
         assert_eq!(expected, actual);
@@ -506,9 +541,9 @@ mod tests {
     #[case::one_femtosecond_less_than_an_hour(BaseTime { seconds: SECONDS_PER_HOUR - 1, femtoseconds: FEMTOSECONDS_PER_SECOND - 1 }, 59)]
     #[case::exactly_one_hour(BaseTime { seconds: SECONDS_PER_HOUR, femtoseconds: 0 }, 0)]
     #[case::one_hour_and_one_minute(BaseTime { seconds: SECONDS_PER_HOUR + SECONDS_PER_MINUTE, femtoseconds: 0 }, 1)]
-    #[case::one_femtosecond_less_than_the_epoch(BaseTime { seconds: -1, femtoseconds: FEMTOSECONDS_PER_SECOND - 1 }, 59)]
-    #[case::one_minute_less_than_the_epoch(BaseTime { seconds: -SECONDS_PER_MINUTE, femtoseconds: 0 }, 59)]
-    #[case::one_minute_and_one_femtosecond_less_than_the_epoch(BaseTime { seconds: -SECONDS_PER_MINUTE - 1, femtoseconds: FEMTOSECONDS_PER_SECOND - 1 }, 58)]
+    #[case::one_femtosecond_less_than_the_epoch(BaseTime { seconds: - 1, femtoseconds: FEMTOSECONDS_PER_SECOND - 1 }, 59)]
+    #[case::one_minute_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_MINUTE, femtoseconds: 0 }, 59)]
+    #[case::one_minute_and_one_femtosecond_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_MINUTE - 1, femtoseconds: FEMTOSECONDS_PER_SECOND - 1 }, 58)]
     fn test_base_time_wall_clock_minute(#[case] time: BaseTime, #[case] expected: i64) {
         let actual = time.minute();
         assert_eq!(expected, actual);
@@ -521,9 +556,9 @@ mod tests {
     #[case::one_femtosecond_less_than_a_minute(BaseTime { seconds: SECONDS_PER_MINUTE - 1, femtoseconds: FEMTOSECONDS_PER_SECOND - 1 }, 59)]
     #[case::exactly_one_minute(BaseTime { seconds: SECONDS_PER_MINUTE, femtoseconds: 0 }, 0)]
     #[case::one_minute_and_one_second(BaseTime { seconds: SECONDS_PER_MINUTE + 1, femtoseconds: 0 }, 1)]
-    #[case::one_femtosecond_less_than_the_epoch(BaseTime { seconds: -1, femtoseconds: FEMTOSECONDS_PER_SECOND - 1 }, 59)]
-    #[case::one_second_less_than_the_epoch(BaseTime { seconds: -1, femtoseconds: 0 }, 59)]
-    #[case::one_second_and_one_femtosecond_less_than_the_epoch(BaseTime { seconds: -2, femtoseconds: FEMTOSECONDS_PER_SECOND - 1 }, 58)]
+    #[case::one_femtosecond_less_than_the_epoch(BaseTime { seconds: - 1, femtoseconds: FEMTOSECONDS_PER_SECOND - 1 }, 59)]
+    #[case::one_second_less_than_the_epoch(BaseTime { seconds: - 1, femtoseconds: 0 }, 59)]
+    #[case::one_second_and_one_femtosecond_less_than_the_epoch(BaseTime { seconds: - 2, femtoseconds: FEMTOSECONDS_PER_SECOND - 1 }, 58)]
     fn test_base_time_wall_clock_second(#[case] time: BaseTime, #[case] expected: i64) {
         let actual = time.second();
         assert_eq!(expected, actual);
@@ -601,60 +636,60 @@ mod tests {
 
     #[rstest]
     #[case::positive_time_no_femtosecond_wrap(
-        TimeDelta {
-            seconds: 1,
-            femtoseconds: 1
-        },
-        BaseTime {
-            seconds: 1,
-            femtoseconds: 0
-        },
-        BaseTime {
-            seconds: 2,
-            femtoseconds: 1
-        }
+    TimeDelta {
+    seconds: 1,
+    femtoseconds: 1
+    },
+    BaseTime {
+    seconds: 1,
+    femtoseconds: 0
+    },
+    BaseTime {
+    seconds: 2,
+    femtoseconds: 1
+    }
     )]
     #[case::positive_time_femtosecond_wrap(
-        TimeDelta {
-            seconds: 1,
-            femtoseconds: 2
-        },
-        BaseTime {
-            seconds: 1,
-            femtoseconds: FEMTOSECONDS_PER_SECOND - 1
-        },
-        BaseTime {
-            seconds: 3,
-            femtoseconds: 1
-        }
+    TimeDelta {
+    seconds: 1,
+    femtoseconds: 2
+    },
+    BaseTime {
+    seconds: 1,
+    femtoseconds: FEMTOSECONDS_PER_SECOND - 1
+    },
+    BaseTime {
+    seconds: 3,
+    femtoseconds: 1
+    }
     )]
     #[case::negative_time_no_femtosecond_wrap(
-        TimeDelta {
-            seconds: 1,
-            femtoseconds: 1
-        },
-        BaseTime {
-            seconds: -1,
-            femtoseconds: 0
-        },
-        BaseTime {
-            seconds: 0,
-            femtoseconds: 1
-        }
+    TimeDelta {
+    seconds: 1,
+    femtoseconds: 1
+    },
+    BaseTime {
+    seconds: - 1,
+    femtoseconds: 0
+    },
+    BaseTime {
+    seconds: 0,
+    femtoseconds: 1
+    }
     )]
     #[case::negative_time_femtosecond_wrap(
-        TimeDelta {
-            seconds: 1,
-            femtoseconds: 2
-        },
-        BaseTime {
-            seconds: -1,
-            femtoseconds: FEMTOSECONDS_PER_SECOND - 1
-        },
-        BaseTime {
-            seconds: 1,
-            femtoseconds: 1
-        }
+    TimeDelta {
+    seconds: 1,
+    femtoseconds: 2
+    },
+    BaseTime {
+    seconds: - 1,
+    femtoseconds: FEMTOSECONDS_PER_SECOND - 1
+    },
+    BaseTime {
+    seconds: 1,
+    femtoseconds: 1
+    }
     )]
     fn test_base_time_add_time_delta(
         #[case] delta: TimeDelta,
@@ -667,74 +702,74 @@ mod tests {
 
     #[rstest]
     #[case::positive_time_no_femtosecond_wrap(
-        TimeDelta {
-            seconds: 1,
-            femtoseconds: 1
-        },
-        BaseTime {
-            seconds: 2,
-            femtoseconds: 2
-        },
-        BaseTime {
-            seconds: 1,
-            femtoseconds: 1
-        }
+    TimeDelta {
+    seconds: 1,
+    femtoseconds: 1
+    },
+    BaseTime {
+    seconds: 2,
+    femtoseconds: 2
+    },
+    BaseTime {
+    seconds: 1,
+    femtoseconds: 1
+    }
     )]
     #[case::positive_time_femtosecond_wrap(
-        TimeDelta {
-            seconds: 1,
-            femtoseconds: 2
-        },
-        BaseTime {
-            seconds: 2,
-            femtoseconds: 1
-        },
-        BaseTime {
-            seconds: 0,
-            femtoseconds: FEMTOSECONDS_PER_SECOND - 1
-        }
+    TimeDelta {
+    seconds: 1,
+    femtoseconds: 2
+    },
+    BaseTime {
+    seconds: 2,
+    femtoseconds: 1
+    },
+    BaseTime {
+    seconds: 0,
+    femtoseconds: FEMTOSECONDS_PER_SECOND - 1
+    }
     )]
     #[case::negative_time_no_femtosecond_wrap(
-        TimeDelta {
-            seconds: 1,
-            femtoseconds: 1
-        },
-        BaseTime {
-            seconds: -1,
-            femtoseconds: 2
-        },
-        BaseTime {
-            seconds: -2,
-            femtoseconds: 1
-        }
+    TimeDelta {
+    seconds: 1,
+    femtoseconds: 1
+    },
+    BaseTime {
+    seconds: - 1,
+    femtoseconds: 2
+    },
+    BaseTime {
+    seconds: - 2,
+    femtoseconds: 1
+    }
     )]
     #[case::negative_time_femtosecond_wrap(
-        TimeDelta {
-            seconds: 1,
-            femtoseconds: 2
-        },
-        BaseTime {
-            seconds: -1,
-            femtoseconds: 1
-        },
-        BaseTime {
-            seconds: -3,
-            femtoseconds: FEMTOSECONDS_PER_SECOND - 1
-        }
+    TimeDelta {
+    seconds: 1,
+    femtoseconds: 2
+    },
+    BaseTime {
+    seconds: - 1,
+    femtoseconds: 1
+    },
+    BaseTime {
+    seconds: - 3,
+    femtoseconds: FEMTOSECONDS_PER_SECOND - 1
+    }
     )]
     #[case::transition_from_positive_to_negative_time(
-        TimeDelta {
-            seconds: 1,
-            femtoseconds: 2
-        },
-        BaseTime {
-            seconds: 0,
-            femtoseconds: 1
-        },
-        BaseTime {
-            seconds: -2,
-            femtoseconds: FEMTOSECONDS_PER_SECOND - 1
-        }
+    TimeDelta {
+    seconds: 1,
+    femtoseconds: 2
+    },
+    BaseTime {
+    seconds: 0,
+    femtoseconds: 1
+    },
+    BaseTime {
+    seconds: - 2,
+    femtoseconds: FEMTOSECONDS_PER_SECOND - 1
+    }
     )]
     fn test_base_time_sub_time_delta(
         #[case] delta: TimeDelta,
@@ -748,25 +783,25 @@ mod tests {
     #[rstest]
     #[case::at_the_epoch(BaseTime::default(), 0.0)]
     #[case::exactly_one_day_after_the_epoch(
-        BaseTime {
-            seconds: SECONDS_PER_DAY,
-            femtoseconds: 0
-        },
-        1.0
+    BaseTime {
+    seconds: SECONDS_PER_DAY,
+    femtoseconds: 0
+    },
+    1.0
     )]
     #[case::exactly_one_day_before_the_epoch(
-        BaseTime {
-            seconds: -SECONDS_PER_DAY,
-            femtoseconds: 0
-        },
-        -1.0
+    BaseTime {
+    seconds: - SECONDS_PER_DAY,
+    femtoseconds: 0
+    },
+    - 1.0
     )]
     #[case::a_partial_number_of_days_after_the_epoch(
-        BaseTime {
-            seconds: (SECONDS_PER_DAY / 2) * 3,
-            femtoseconds: FEMTOSECONDS_PER_SECOND / 2
-        },
-        1.5000057870370371
+    BaseTime {
+    seconds: (SECONDS_PER_DAY / 2) * 3,
+    femtoseconds: FEMTOSECONDS_PER_SECOND / 2
+    },
+    1.5000057870370371
     )]
     fn test_base_time_days_since_j2000(#[case] time: BaseTime, #[case] expected: f64) {
         let actual = time.days_since_j2000();
@@ -776,25 +811,25 @@ mod tests {
     #[rstest]
     #[case::at_the_epoch(BaseTime::default(), 0.0)]
     #[case::exactly_one_century_after_the_epoch(
-        BaseTime {
-            seconds: SECONDS_PER_JULIAN_CENTURY,
-            femtoseconds: 0
-        },
-        1.0
+    BaseTime {
+    seconds: SECONDS_PER_JULIAN_CENTURY,
+    femtoseconds: 0
+    },
+    1.0
     )]
     #[case::exactly_one_century_before_the_epoch(
-        BaseTime {
-            seconds: -SECONDS_PER_JULIAN_CENTURY,
-            femtoseconds: 0
-        },
-        -1.0
+    BaseTime {
+    seconds: - SECONDS_PER_JULIAN_CENTURY,
+    femtoseconds: 0
+    },
+    - 1.0
     )]
     #[case::a_partial_number_of_centuries_after_the_epoch(
-        BaseTime {
-            seconds: (SECONDS_PER_JULIAN_CENTURY / 2) * 3,
-            femtoseconds: FEMTOSECONDS_PER_SECOND / 2
-        },
-        1.5000000001584404
+    BaseTime {
+    seconds: (SECONDS_PER_JULIAN_CENTURY / 2) * 3,
+    femtoseconds: FEMTOSECONDS_PER_SECOND / 2
+    },
+    1.5000000001584404
     )]
     fn test_base_time_centuries_since_j2000(#[case] time: BaseTime, #[case] expected: f64) {
         let actual = time.centuries_since_j2000();
@@ -1066,5 +1101,71 @@ mod tests {
 
         let actual = time.into_scale(transformer);
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_julian_date() {
+        let time = Time::jd0(TDB);
+        assert_eq!(
+            time.julian_date(Epoch::JulianDate, Unit::Days),
+            0.0
+        );
+        assert_eq!(time.seconds_since_julian_epoch(), 0.0);
+        assert_eq!(time.days_since_julian_epoch(), 0.0);
+        assert_eq!(time.centuries_since_julian_epoch(), 0.0);
+    }
+
+    #[test]
+    fn test_modified_julian_date() {
+        let time = Time::mjd0(TDB);
+        assert_eq!(
+            time.julian_date(Epoch::ModifiedJulianDate, Unit::Days),
+            0.0
+        );
+        assert_eq!(time.seconds_since_modified_julian_epoch(), 0.0);
+        assert_eq!(time.days_since_modified_julian_epoch(), 0.0);
+        assert_eq!(time.centuries_since_modified_julian_epoch(), 0.0);
+    }
+
+    #[test]
+    fn test_j1950() {
+        let time = Time::j1950(TDB);
+        assert_eq!(time.julian_date(Epoch::J1950, Unit::Days), 0.0);
+        assert_eq!(time.seconds_since_j1950(), 0.0);
+        assert_eq!(time.days_since_j1950(), 0.0);
+        assert_eq!(time.centuries_since_j1950(), 0.0);
+    }
+
+    #[test]
+    fn test_j2000() {
+        let time = Time::j2000(TDB);
+        assert_eq!(time.julian_date(Epoch::J2000, Unit::Days), 0.0);
+        assert_eq!(time.seconds_since_j2000(), 0.0);
+        assert_eq!(time.days_since_j2000(), 0.0);
+        assert_eq!(time.centuries_since_j2000(), 0.0);
+    }
+
+    #[test]
+    fn test_j2100() {
+        let date = Date::new_unchecked(Gregorian, 2100, 1, 1);
+        let utc = UTC::new(12, 0, 0).expect("should be valid");
+        let time = Time::from_date_and_utc_timestamp(TDB, date, utc);
+        assert_eq!(
+            time.julian_date(Epoch::J2000, Unit::Days),
+            36525.0
+        );
+        assert_eq!(time.seconds_since_j2000(), 3155760000.0);
+        assert_eq!(time.days_since_j2000(), 36525.0);
+        assert_eq!(time.centuries_since_j2000(), 1.0);
+    }
+
+    #[test]
+    fn test_two_part_julian_date() {
+        let date = Date::new_unchecked(Gregorian, 2100, 1, 2);
+        let utc = UTC::new(0, 0, 0).expect("should be valid");
+        let time = Time::from_date_and_utc_timestamp(TDB, date, utc);
+        let (jd1, jd2) = time.two_part_julian_date();
+        assert_eq!(jd1, 2451545.0 + 36525.0);
+        assert_eq!(jd2, 0.5);
     }
 }

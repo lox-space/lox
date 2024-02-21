@@ -6,8 +6,14 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-pub mod f64;
-pub mod i64;
-pub(crate) mod julian_dates;
-pub mod u128;
-pub mod u64;
+use lox_core::time::continuous::deltas::TimeDelta;
+
+fn main() {
+    // Run registered benchmarks.
+    divan::main();
+}
+
+#[divan::bench]
+fn from_f64_seconds() {
+    TimeDelta::from_decimal_seconds(divan::black_box(60.3));
+}

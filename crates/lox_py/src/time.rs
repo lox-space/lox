@@ -10,6 +10,7 @@ use std::fmt::{Display, Formatter};
 
 use pyo3::{pyclass, pymethods};
 
+use lox_core::time::continuous::julian_dates::JulianDate;
 use lox_core::time::continuous::{BaseTime, Time, TAI, TCB, TCG, TDB, TT, UT1};
 use lox_core::time::dates::Date;
 use lox_core::time::utc::UTC;
