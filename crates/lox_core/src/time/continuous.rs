@@ -14,7 +14,7 @@
 
 use std::fmt;
 use std::fmt::{Display, Formatter};
-use std::ops::{Add, Sub};
+use std::ops::{Add, Mul, Sub};
 
 use num::{abs, ToPrimitive};
 
@@ -30,7 +30,7 @@ use crate::time::constants::u64::{
     FEMTOSECONDS_PER_MICROSECOND, FEMTOSECONDS_PER_MILLISECOND, FEMTOSECONDS_PER_NANOSECOND,
     FEMTOSECONDS_PER_PICOSECOND, FEMTOSECONDS_PER_SECOND,
 };
-use crate::time::continuous::julian_dates::{JulianDate, Epoch, Unit};
+use crate::time::continuous::julian_dates::{Epoch, JulianDate, Unit};
 use crate::time::continuous::transform::TransformTimeScale;
 use crate::time::dates::Date;
 use crate::time::utc::{UTCDateTime, UTC};
@@ -122,8 +122,8 @@ impl Display for BaseTime {
 impl Add<TimeDelta> for BaseTime {
     type Output = Self;
 
-    /// The implementation of [Add] for [BaseTime] follows the default Rust rules for integer overflow, which
-    /// should be sufficient for all practical purposes.
+    /// The implementation of [Add] for [BaseTime] follows the default Rust rules for integer
+    /// overflow, which should be sufficient for all practical purposes.
     fn add(self, rhs: TimeDelta) -> Self::Output {
         let mut femtoseconds = self.femtoseconds + rhs.femtoseconds;
         let mut seconds = self.seconds + rhs.seconds as i64;
@@ -141,8 +141,8 @@ impl Add<TimeDelta> for BaseTime {
 impl Sub<TimeDelta> for BaseTime {
     type Output = Self;
 
-    /// The implementation of [Sub] for [BaseTime] follows the default Rust rules for integer overflow, which
-    /// should be sufficient for all practical purposes.
+    /// The implementation of [Sub] for [BaseTime] follows the default Rust rules for integer
+    /// overflow, which should be sufficient for all practical purposes.
     fn sub(self, rhs: TimeDelta) -> Self::Output {
         let mut seconds = self.seconds - rhs.seconds as i64;
         let mut femtoseconds = self.femtoseconds;
@@ -152,6 +152,40 @@ impl Sub<TimeDelta> for BaseTime {
         } else {
             femtoseconds -= rhs.femtoseconds;
         }
+        Self {
+            seconds,
+            femtoseconds,
+        }
+    }
+}
+
+/// The implementation of [Mul] for [BaseTime] follows the default Rust rules for integer
+/// overflow, which should be sufficient for all practical purposes.
+impl Mul<f64> for BaseTime {
+    type Output = Self;
+
+    fn mul(self, rhs: f64) -> Self::Output {
+        let mut seconds = self.seconds as f64 * rhs;
+        let fract_seconds_as_femtos = seconds.fract() * constants::f64::FEMTOSECONDS_PER_SECOND;
+        let femtoseconds = if rhs >= 0.0 {
+            let femtoseconds = self.femtoseconds as f64 * rhs + fract_seconds_as_femtos;
+            seconds += femtoseconds / constants::f64::FEMTOSECONDS_PER_SECOND;
+            femtoseconds % constants::f64::FEMTOSECONDS_PER_SECOND
+        } else {
+            let neg_femtoseconds = self.femtoseconds as f64 * rhs.abs() - fract_seconds_as_femtos;
+            seconds -= neg_femtoseconds / constants::f64::FEMTOSECONDS_PER_SECOND;
+            constants::f64::FEMTOSECONDS_PER_SECOND
+                - neg_femtoseconds % constants::f64::FEMTOSECONDS_PER_SECOND
+        };
+
+        let seconds = seconds
+            .trunc()
+            .to_i64()
+            .expect("calculated f64 `seconds` cannot be represented as an i64");
+        let femtoseconds = femtoseconds
+            .round()
+            .to_u64()
+            .expect("calculated f64 `femtoseconds` cannot be represented as a u64");
         Self {
             seconds,
             femtoseconds,
@@ -517,6 +551,17 @@ mod tests {
             femtoseconds: 123,
         };
         assert_eq!(time.femtoseconds(), 123);
+    }
+
+    #[rstest]
+    #[case::zero_value(BaseTime::default(), BaseTime::default())]
+    #[case::positive_seconds(BaseTime { seconds: 1, femtoseconds: 0 }, BaseTime { seconds: 0, femtoseconds: 66743 })]
+    #[case::positive_femtoseconds(BaseTime { seconds: 0, femtoseconds: 100_000_000_000_000 }, BaseTime { seconds: 0, femtoseconds: 6674 })]
+    #[case::positive_femtosecond_rounding(BaseTime { seconds: 0, femtoseconds: 1_000_000_000_000 }, BaseTime { seconds: 0, femtoseconds: 67 })]
+    fn test_base_time_mul_f64(#[case] time: BaseTime, #[case] expected: BaseTime) {
+        let multiplier = 6.67430e-11;
+        let actual = time * multiplier;
+        assert_eq!(expected, actual);
     }
 
     #[rstest]
@@ -1106,10 +1151,7 @@ mod tests {
     #[test]
     fn test_julian_date() {
         let time = Time::jd0(TDB);
-        assert_eq!(
-            time.julian_date(Epoch::JulianDate, Unit::Days),
-            0.0
-        );
+        assert_eq!(time.julian_date(Epoch::JulianDate, Unit::Days), 0.0);
         assert_eq!(time.seconds_since_julian_epoch(), 0.0);
         assert_eq!(time.days_since_julian_epoch(), 0.0);
         assert_eq!(time.centuries_since_julian_epoch(), 0.0);
@@ -1118,10 +1160,7 @@ mod tests {
     #[test]
     fn test_modified_julian_date() {
         let time = Time::mjd0(TDB);
-        assert_eq!(
-            time.julian_date(Epoch::ModifiedJulianDate, Unit::Days),
-            0.0
-        );
+        assert_eq!(time.julian_date(Epoch::ModifiedJulianDate, Unit::Days), 0.0);
         assert_eq!(time.seconds_since_modified_julian_epoch(), 0.0);
         assert_eq!(time.days_since_modified_julian_epoch(), 0.0);
         assert_eq!(time.centuries_since_modified_julian_epoch(), 0.0);
@@ -1150,10 +1189,7 @@ mod tests {
         let date = Date::new_unchecked(Gregorian, 2100, 1, 1);
         let utc = UTC::new(12, 0, 0).expect("should be valid");
         let time = Time::from_date_and_utc_timestamp(TDB, date, utc);
-        assert_eq!(
-            time.julian_date(Epoch::J2000, Unit::Days),
-            36525.0
-        );
+        assert_eq!(time.julian_date(Epoch::J2000, Unit::Days), 36525.0);
         assert_eq!(time.seconds_since_j2000(), 3155760000.0);
         assert_eq!(time.days_since_j2000(), 36525.0);
         assert_eq!(time.centuries_since_j2000(), 1.0);
