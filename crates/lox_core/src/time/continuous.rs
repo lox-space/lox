@@ -16,7 +16,6 @@ use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, Mul, Neg, Sub};
 
-use num::traits::MulAddAssign;
 use num::{abs, ToPrimitive};
 
 use deltas::TimeDelta;
@@ -225,21 +224,6 @@ impl Mul<f64> for BaseTime {
             .expect("calculated f64 `seconds` cannot be represented as an i64");
         seconds += (femtoseconds / FEMTOSECONDS_PER_SECOND) as i64;
         femtoseconds %= FEMTOSECONDS_PER_SECOND;
-
-        // let femtoseconds = if rhs >= 0.0 {
-        //     let femtoseconds = self.femtoseconds as f64 * rhs + fract_second;
-        //     seconds += femtoseconds / constants::f64::FEMTOSECONDS_PER_SECOND;
-        //     femtoseconds % constants::f64::FEMTOSECONDS_PER_SECOND
-        // } else {
-        //     // When multiplying by a negative number, the sign of the femtoseconds component is
-        //     // reversed, counting down from the next whole second. We convert to positive
-        //     // femtoseconds counting up from the previous whole second, accounting for the
-        //     // fractional second.
-        //     let neg_femtoseconds = self.femtoseconds as f64 * rhs.abs() - fract_second;
-        //     seconds -= neg_femtoseconds / constants::f64::FEMTOSECONDS_PER_SECOND;
-        //     constants::f64::FEMTOSECONDS_PER_SECOND
-        //         - neg_femtoseconds % constants::f64::FEMTOSECONDS_PER_SECOND
-        // };
 
         let result = Self {
             seconds,
@@ -510,6 +494,14 @@ impl<T: TimeScale + Copy> Sub<TimeDelta> for Time<T> {
 
     fn sub(self, rhs: TimeDelta) -> Self::Output {
         Self::from_base_time(self.scale, self.timestamp - rhs)
+    }
+}
+
+impl<T: TimeScale + Copy> Mul<f64> for Time<T> {
+    type Output = Self;
+
+    fn mul(self, rhs: f64) -> Self::Output {
+        Self::from_base_time(self.scale, self.timestamp * rhs)
     }
 }
 
@@ -1096,6 +1088,17 @@ mod tests {
             expected,
             actual
         );
+    }
+
+    #[test]
+    fn test_time_mul_f64() {
+        let base_time = BaseTime {
+            seconds: 1234567890,
+            femtoseconds: 9876543210,
+        };
+        let expected = Time::from_base_time(TAI, base_time * G);
+        let actual = Time::from_base_time(TAI, base_time) * G;
+        assert_eq!(expected, actual);
     }
 
     #[test]
