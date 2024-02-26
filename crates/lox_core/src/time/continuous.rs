@@ -14,8 +14,9 @@
 
 use std::fmt;
 use std::fmt::{Display, Formatter};
-use std::ops::{Add, Mul, Sub};
+use std::ops::{Add, Mul, Neg, Sub};
 
+use num::traits::MulAddAssign;
 use num::{abs, ToPrimitive};
 
 use deltas::TimeDelta;
@@ -79,8 +80,16 @@ impl BaseTime {
         }
     }
 
-    fn is_negative(&self) -> bool {
-        self.seconds < 0
+    pub fn is_negative(&self) -> bool {
+        self.seconds.is_negative()
+    }
+
+    pub fn is_positive(&self) -> bool {
+        self.seconds.is_positive() || self.seconds == 0 && self.femtoseconds > 0
+    }
+
+    pub fn is_zero(&self) -> bool {
+        self.seconds == 0 && self.femtoseconds == 0
     }
 
     pub fn seconds(&self) -> i64 {
@@ -116,6 +125,24 @@ impl Display for BaseTime {
             self.femtosecond(),
             self.femtosecond(),
         )
+    }
+}
+
+impl Neg for BaseTime {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        if self.femtoseconds == 0 {
+            Self {
+                seconds: -self.seconds,
+                femtoseconds: 0,
+            }
+        } else {
+            Self {
+                seconds: -self.seconds - 1,
+                femtoseconds: FEMTOSECONDS_PER_SECOND - self.femtoseconds,
+            }
+        }
     }
 }
 
@@ -164,31 +191,64 @@ impl Sub<TimeDelta> for BaseTime {
 impl Mul<f64> for BaseTime {
     type Output = Self;
 
-    fn mul(self, rhs: f64) -> Self::Output {
-        let mut seconds = self.seconds as f64 * rhs;
-        let fract_seconds_as_femtos = seconds.fract() * constants::f64::FEMTOSECONDS_PER_SECOND;
-        let femtoseconds = if rhs >= 0.0 {
-            let femtoseconds = self.femtoseconds as f64 * rhs + fract_seconds_as_femtos;
-            seconds += femtoseconds / constants::f64::FEMTOSECONDS_PER_SECOND;
-            femtoseconds % constants::f64::FEMTOSECONDS_PER_SECOND
-        } else {
-            let neg_femtoseconds = self.femtoseconds as f64 * rhs.abs() - fract_seconds_as_femtos;
-            seconds -= neg_femtoseconds / constants::f64::FEMTOSECONDS_PER_SECOND;
-            constants::f64::FEMTOSECONDS_PER_SECOND
-                - neg_femtoseconds % constants::f64::FEMTOSECONDS_PER_SECOND
-        };
+    fn mul(mut self, mut rhs: f64) -> Self::Output {
+        // This algorithm is substantially simplified by treating all times and multipliers as
+        // positive, and then applying the sign at the end.
+        let mut sign = 1;
+        if self.is_negative() {
+            if rhs.is_sign_negative() {
+                self = -self;
+                rhs = rhs.abs();
+            } else {
+                self = -self;
+                sign = -sign;
+            }
+        } else if self.is_positive() && rhs.is_sign_negative() {
+            sign = -sign;
+            rhs = rhs.abs();
+        }
 
-        let seconds = seconds
-            .trunc()
-            .to_i64()
-            .expect("calculated f64 `seconds` cannot be represented as an i64");
-        let femtoseconds = femtoseconds
+        // Calculate f64 components.
+        let seconds = self.seconds as f64 * rhs;
+        // The fractional part of seconds as femtoseconds.
+        let fract_second = seconds.fract() * constants::f64::FEMTOSECONDS_PER_SECOND;
+        let femtoseconds = (self.femtoseconds as f64).mul_add(rhs, fract_second);
+
+        // Convert f64 components to integers and handle carries.
+        let mut femtoseconds = femtoseconds
             .round()
             .to_u64()
             .expect("calculated f64 `femtoseconds` cannot be represented as a u64");
-        Self {
+        let mut seconds = seconds
+            .trunc()
+            .to_i64()
+            .expect("calculated f64 `seconds` cannot be represented as an i64");
+        seconds += (femtoseconds / FEMTOSECONDS_PER_SECOND) as i64;
+        femtoseconds %= FEMTOSECONDS_PER_SECOND;
+
+        // let femtoseconds = if rhs >= 0.0 {
+        //     let femtoseconds = self.femtoseconds as f64 * rhs + fract_second;
+        //     seconds += femtoseconds / constants::f64::FEMTOSECONDS_PER_SECOND;
+        //     femtoseconds % constants::f64::FEMTOSECONDS_PER_SECOND
+        // } else {
+        //     // When multiplying by a negative number, the sign of the femtoseconds component is
+        //     // reversed, counting down from the next whole second. We convert to positive
+        //     // femtoseconds counting up from the previous whole second, accounting for the
+        //     // fractional second.
+        //     let neg_femtoseconds = self.femtoseconds as f64 * rhs.abs() - fract_second;
+        //     seconds -= neg_femtoseconds / constants::f64::FEMTOSECONDS_PER_SECOND;
+        //     constants::f64::FEMTOSECONDS_PER_SECOND
+        //         - neg_femtoseconds % constants::f64::FEMTOSECONDS_PER_SECOND
+        // };
+
+        let result = Self {
             seconds,
             femtoseconds,
+        };
+        if sign == -1 {
+            -result
+        } else {
+            result
         }
     }
 }
@@ -516,23 +576,33 @@ mod tests {
         assert_eq!(expected, actual);
     }
 
-    #[test]
-    fn test_base_time_is_negative() {
-        assert!(BaseTime {
-            seconds: -1,
-            femtoseconds: 0,
-        }
-        .is_negative());
-        assert!(!BaseTime {
-            seconds: 0,
-            femtoseconds: 0,
-        }
-        .is_negative());
-        assert!(!BaseTime {
-            seconds: 1,
-            femtoseconds: 0,
-        }
-        .is_negative());
+    #[rstest]
+    #[case::zero_value(BaseTime::default(), false)]
+    #[case::positive(BaseTime { seconds: 1, femtoseconds: 0 }, false)]
+    #[case::negative(BaseTime { seconds: -1, femtoseconds: 0 }, true)]
+    fn test_base_time_is_negative(#[case] time: BaseTime, #[case] expected: bool) {
+        let actual = time.is_negative();
+        assert_eq!(expected, actual);
+    }
+
+    #[rstest]
+    #[case::zero_value(BaseTime::default(), false)]
+    #[case::positive_seconds(BaseTime { seconds: 1, femtoseconds: 0 }, true)]
+    #[case::zero_seconds_positive_femtoseconds(BaseTime { seconds: 0, femtoseconds: 1 }, true)]
+    #[case::negative(BaseTime { seconds: -1, femtoseconds: 0 }, false)]
+    fn test_base_time_is_positive(#[case] time: BaseTime, #[case] expected: bool) {
+        let actual = time.is_positive();
+        assert_eq!(expected, actual);
+    }
+
+    #[rstest]
+    #[case::zero_value(BaseTime::default(), true)]
+    #[case::positive_seconds(BaseTime { seconds: 1, femtoseconds: 0 }, false)]
+    #[case::zero_seconds_positive_femtoseconds(BaseTime { seconds: 1, femtoseconds: 0 }, false)]
+    #[case::negative(BaseTime { seconds: -1, femtoseconds: 0 }, false)]
+    fn test_base_time_is_zero(#[case] time: BaseTime, #[case] expected: bool) {
+        let actual = time.is_zero();
+        assert_eq!(expected, actual);
     }
 
     #[test]
@@ -555,11 +625,41 @@ mod tests {
 
     #[rstest]
     #[case::zero_value(BaseTime::default(), BaseTime::default())]
-    #[case::positive_seconds(BaseTime { seconds: 1, femtoseconds: 0 }, BaseTime { seconds: 0, femtoseconds: 66743 })]
-    #[case::positive_femtoseconds(BaseTime { seconds: 0, femtoseconds: 100_000_000_000_000 }, BaseTime { seconds: 0, femtoseconds: 6674 })]
-    #[case::positive_femtosecond_rounding(BaseTime { seconds: 0, femtoseconds: 1_000_000_000_000 }, BaseTime { seconds: 0, femtoseconds: 67 })]
-    fn test_base_time_mul_f64(#[case] time: BaseTime, #[case] expected: BaseTime) {
-        let multiplier = 6.67430e-11;
+    #[case::zero_seconds(BaseTime { seconds: 0, femtoseconds: 1 }, BaseTime { seconds: -1, femtoseconds: FEMTOSECONDS_PER_SECOND - 1 })]
+    #[case::positive_seconds_no_femtoseconds(BaseTime { seconds: 1, femtoseconds: 0 }, BaseTime { seconds: -1, femtoseconds: 0 })]
+    #[case::positive_seconds_with_femtoseconds(BaseTime { seconds: 1, femtoseconds: 1 }, BaseTime { seconds: -2, femtoseconds: FEMTOSECONDS_PER_SECOND - 1 })]
+    #[case::negative_seconds_no_femtoseconds(BaseTime { seconds: -1, femtoseconds: 0 }, BaseTime { seconds: 1, femtoseconds: 0 })]
+    #[case::negative_seconds_with_femtoseconds(BaseTime { seconds: -1, femtoseconds: 1 }, BaseTime { seconds: 0, femtoseconds: FEMTOSECONDS_PER_SECOND - 1 })]
+    fn test_base_time_neg(#[case] time: BaseTime, #[case] expected: BaseTime) {
+        let actual = -time;
+        assert_eq!(expected, actual);
+    }
+
+    const G: f64 = 6.67430e-11;
+
+    #[rstest]
+    #[case::zero_value(BaseTime::default(), G, BaseTime::default())]
+    // +ve BaseTime, +ve RHS
+    #[case::positive_seconds_positive_rhs(BaseTime { seconds: 1, femtoseconds: 0 }, G, BaseTime { seconds: 0, femtoseconds: 66743 })]
+    #[case::positive_femtoseconds_positive_rhs(BaseTime { seconds: 0, femtoseconds: 100_000_000_000_000 }, G, BaseTime { seconds: 0, femtoseconds: 6674 })]
+    #[case::positive_time_positive_rhs_with_carry(BaseTime { seconds: 1, femtoseconds: 250_000_000_000_000 }, 2.5, BaseTime { seconds: 3, femtoseconds: 125_000_000_000_000 })]
+    // -ve BaseTime, +ve RHS
+    #[case::negative_seconds_positive_rhs(BaseTime { seconds: -1, femtoseconds: 0 }, G, BaseTime { seconds: -1, femtoseconds: 999_999_999_933_257 })]
+    #[case::negative_femtoseconds_positive_rhs(BaseTime { seconds: -1, femtoseconds: 500_000_000_000_000 }, G, BaseTime { seconds: -1, femtoseconds: 999_999_999_966_628 })]
+    #[case::negative_time_positive_rhs_with_carry(BaseTime { seconds: -1, femtoseconds: 250_000_000_000_000 }, 2.5, BaseTime { seconds: -2, femtoseconds: 125_000_000_000_000 })]
+    // +ve BaseTime, -ve RHS
+    #[case::positive_seconds_negative_rhs(BaseTime { seconds: 1, femtoseconds: 0 }, -G, BaseTime { seconds: -1, femtoseconds: 999_999_999_933_257 })]
+    #[case::positive_femtoseconds_negative_rhs(BaseTime { seconds: 0, femtoseconds: 100_000_000_000_000 }, -G, BaseTime { seconds: -1, femtoseconds: 999_999_999_993_326 })]
+    #[case::positive_time_negative_rhs_with_carry(BaseTime { seconds: 1, femtoseconds: 250_000_000_000_000 }, -2.5, BaseTime { seconds: -4, femtoseconds: 875_000_000_000_000 })]
+    // -ve BaseTime, -ve RHS
+    #[case::negative_seconds_negative_rhs(BaseTime { seconds: -1, femtoseconds: 0 }, -G, BaseTime { seconds: 0, femtoseconds: 66743 })]
+    #[case::negative_femtoseconds_negative_rhs(BaseTime { seconds: -1, femtoseconds: 100_000_000_000_000 }, -G, BaseTime { seconds: 0, femtoseconds: 60069 })]
+    #[case::negative_time_negative_rhs_with_carry(BaseTime { seconds: -1, femtoseconds: 250_000_000_000_000 }, -2.5, BaseTime { seconds: 1, femtoseconds: 875_000_000_000_000 })]
+    fn test_base_time_mul_f64(
+        #[case] time: BaseTime,
+        #[case] multiplier: f64,
+        #[case] expected: BaseTime,
+    ) {
         let actual = time * multiplier;
         assert_eq!(expected, actual);
     }
