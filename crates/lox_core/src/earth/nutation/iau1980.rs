@@ -2,8 +2,8 @@ use std::f64::consts::TAU;
 
 use crate::earth::nutation::{point1_milliarcsec_to_rad, Nutation};
 use crate::math::{arcsec_to_rad, normalize_two_pi};
-use crate::time::intervals::TDBJulianCenturiesSinceJ2000;
 use crate::types::{Arcsec, Radians};
+use lox_time::intervals::TDBJulianCenturiesSinceJ2000;
 
 struct Coefficients {
     /// Coefficients of l, l', F, D and Ω.
@@ -216,7 +216,7 @@ const COEFFICIENTS: [Coefficients; 106] = [
 mod tests {
     use float_eq::assert_float_eq;
 
-    use crate::time::intervals::TDBJulianCenturiesSinceJ2000;
+    use lox_time::intervals::TDBJulianCenturiesSinceJ2000;
 
     use super::nutation_iau1980;
 

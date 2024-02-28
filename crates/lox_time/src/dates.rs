@@ -6,7 +6,7 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::errors::LoxError;
+use crate::errors::LoxTimeError;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Calendar {
@@ -55,15 +55,15 @@ impl Date {
         self.day
     }
 
-    pub fn new(year: i64, month: i64, day: i64) -> Result<Self, LoxError> {
+    pub fn new(year: i64, month: i64, day: i64) -> Result<Self, LoxTimeError> {
         if !(1..=12).contains(&month) {
-            Err(LoxError::InvalidDate(year, month, day))
+            Err(LoxTimeError::InvalidDate(year, month, day))
         } else {
             let calendar = get_calendar(year, month, day);
             let check = Date::from_days(j2000(calendar, year, month, day))?;
 
             if check.year() != year || check.month() != month || check.day() != day {
-                Err(LoxError::InvalidDate(year, month, day))
+                Err(LoxTimeError::InvalidDate(year, month, day))
             } else {
                 Ok(Date {
                     calendar,
@@ -75,7 +75,7 @@ impl Date {
         }
     }
 
-    pub fn from_days(offset: i64) -> Result<Self, LoxError> {
+    pub fn from_days(offset: i64) -> Result<Self, LoxTimeError> {
         let calendar = if offset < LAST_JULIAN_DAY_J2K {
             if offset > LAST_PROLEPTIC_JULIAN_DAY_J2K {
                 Calendar::Julian
@@ -149,9 +149,9 @@ fn find_month(day_in_year: i64, is_leap: bool) -> i64 {
     }
 }
 
-fn find_day(day_in_year: i64, month: i64, is_leap: bool) -> Result<i64, LoxError> {
+fn find_day(day_in_year: i64, month: i64, is_leap: bool) -> Result<i64, LoxTimeError> {
     if !is_leap && day_in_year > 365 {
-        Err(LoxError::NonLeapYear)
+        Err(LoxTimeError::NonLeapYear)
     } else {
         let previous_days = if is_leap {
             PREVIOUS_MONTH_END_DAY_LEAP
@@ -193,7 +193,7 @@ fn j2000(calendar: Calendar, year: i64, month: i64, day: i64) -> i64 {
 
 #[cfg(test)]
 mod tests {
-    use crate::time::dates::{Calendar, Date};
+    use crate::dates::{Calendar, Date};
 
     #[test]
     fn test_date_new_unchecked() {

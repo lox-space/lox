@@ -12,7 +12,7 @@ use crate::bodies::PointMass;
 use crate::coords::base::{BaseCartesian, BaseKeplerian, BaseTwoBody};
 use crate::coords::CoordinateSystem;
 use crate::frames::{InertialFrame, ReferenceFrame};
-use crate::time::continuous::{Time, TimeScale};
+use lox_time::continuous::{Time, TimeScale};
 
 pub trait TwoBody<T, O, F>
 where
@@ -262,9 +262,9 @@ mod tests {
     use super::*;
     use crate::bodies::Earth;
     use crate::frames::Icrf;
-    use crate::time::continuous::{Time, TDB};
-    use crate::time::dates::Date;
-    use crate::time::utc::UTC;
+    use lox_time::continuous::{Time, TDB};
+    use lox_time::dates::Date;
+    use lox_time::utc::UTC;
 
     #[test]
     fn test_cartesian() {

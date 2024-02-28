@@ -9,8 +9,8 @@
 //! Module rotation_angle exposes functions for calculating the Earth Rotation Angle (ERA).
 
 use crate::bodies::Earth;
-use crate::time::intervals::UT1DaysSinceJ2000;
 use crate::types::Radians;
+use lox_time::intervals::UT1DaysSinceJ2000;
 use std::f64::consts::TAU;
 
 impl Earth {

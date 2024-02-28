@@ -10,7 +10,7 @@ use crate::bodies::fundamental::simon1994::mean_moon_sun_elongation_simon1994;
 use crate::bodies::*;
 use crate::earth::nutation::iau2000::{luni_solar_nutation, DelaunayArguments};
 use crate::earth::nutation::Nutation;
-use crate::time::intervals::TDBJulianCenturiesSinceJ2000;
+use lox_time::intervals::TDBJulianCenturiesSinceJ2000;
 
 mod luni_solar;
 mod planetary;
@@ -33,7 +33,7 @@ pub(crate) fn nutation_iau2000b(t: TDBJulianCenturiesSinceJ2000) -> Nutation {
 mod tests {
     use float_eq::assert_float_eq;
 
-    use crate::time::intervals::TDBJulianCenturiesSinceJ2000;
+    use lox_time::intervals::TDBJulianCenturiesSinceJ2000;
 
     use super::nutation_iau2000b;
 

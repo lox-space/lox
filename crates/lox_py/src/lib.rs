@@ -14,6 +14,7 @@ use crate::bodies::{PyBarycenter, PyMinorBody, PyPlanet, PySatellite, PySun};
 use crate::coords::{PyCartesian, PyKeplerian};
 use crate::time::{PyTime, PyTimeScale};
 use lox_core::errors::LoxError;
+use lox_time::errors::LoxTimeError;
 
 mod bodies;
 mod coords;
@@ -31,6 +32,8 @@ pub enum LoxPyError {
     #[error(transparent)]
     LoxError(#[from] LoxError),
     #[error(transparent)]
+    LoxTimeError(#[from] LoxTimeError),
+    #[error(transparent)]
     PyError(#[from] PyErr),
 }
 
@@ -41,6 +44,7 @@ impl From<LoxPyError> for PyErr {
             | LoxPyError::InvalidFrame(_)
             | LoxPyError::InvalidBody(_) => PyValueError::new_err(value.to_string()),
             LoxPyError::LoxError(value) => PyValueError::new_err(value.to_string()),
+            LoxPyError::LoxTimeError(value) => PyValueError::new_err(value.to_string()),
             LoxPyError::PyError(value) => value,
         }
     }

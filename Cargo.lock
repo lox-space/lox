@@ -337,6 +337,7 @@ name = "lox-space"
 version = "0.0.0"
 dependencies = [
  "lox_core",
+ "lox_time",
 ]
 
 [[package]]
@@ -348,9 +349,8 @@ dependencies = [
  "fast_polynomial",
  "float_eq",
  "glam",
- "mockall",
+ "lox_time",
  "nom",
- "num",
  "proptest",
  "rstest",
  "thiserror",
@@ -369,7 +369,20 @@ version = "0.1.0"
 dependencies = [
  "float_eq",
  "lox_core",
+ "lox_time",
  "pyo3",
+ "rstest",
+ "thiserror",
+]
+
+[[package]]
+name = "lox_time"
+version = "0.1.0"
+dependencies = [
+ "float_eq",
+ "mockall",
+ "num",
+ "proptest",
  "rstest",
  "thiserror",
 ]
@@ -459,28 +472,27 @@ dependencies = [
 
 [[package]]
 name = "num-complex"
-version = "0.4.4"
+version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1ba157ca0885411de85d6ca030ba7e2a83a28636056c7c699b07c8b6f7383214"
+checksum = "23c6602fda94a57c990fe0df199a035d83576b496aa29f4e634a8ac6004e68a6"
 dependencies = [
  "num-traits",
 ]
 
 [[package]]
 name = "num-integer"
-version = "0.1.45"
+version = "0.1.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "225d3389fb3509a24c93f5c29eb6bde2586b98d9f016636dff58d7c6f7569cd9"
+checksum = "7969661fd2958a5cb096e56c8e1ad0444ac2bbcd0061bd28660485a44879858f"
 dependencies = [
- "autocfg",
  "num-traits",
 ]
 
 [[package]]
 name = "num-iter"
-version = "0.1.43"
+version = "0.1.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d03e6c028c5dc5cac6e2dec0efda81fc887605bb3d884578bb6d6bf7514e252"
+checksum = "d869c01cc0c455284163fd0092f1f93835385ccab5a98a0dcc497b2f8bf055a9"
 dependencies = [
  "autocfg",
  "num-integer",

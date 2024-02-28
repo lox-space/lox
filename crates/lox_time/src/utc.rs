@@ -1,10 +1,10 @@
-use crate::errors::LoxError;
-use crate::time::constants::u64::{
+use crate::constants::u64::{
     FEMTOSECONDS_PER_MICROSECOND, FEMTOSECONDS_PER_MILLISECOND, FEMTOSECONDS_PER_NANOSECOND,
     FEMTOSECONDS_PER_PICOSECOND,
 };
-use crate::time::dates::Date;
-use crate::time::{PerMille, WallClock};
+use crate::dates::Date;
+use crate::errors::LoxTimeError;
+use crate::{PerMille, WallClock};
 use num::ToPrimitive;
 use std::fmt::Display;
 
@@ -28,9 +28,9 @@ pub struct UTC {
 }
 
 impl UTC {
-    pub fn new(hour: u8, minute: u8, second: u8) -> Result<Self, LoxError> {
+    pub fn new(hour: u8, minute: u8, second: u8) -> Result<Self, LoxTimeError> {
         if !(0..24).contains(&hour) || !(0..60).contains(&minute) || !(0..61).contains(&second) {
-            Err(LoxError::InvalidTime(hour, minute, second))
+            Err(LoxTimeError::InvalidTime(hour, minute, second))
         } else {
             Ok(Self {
                 hour,
@@ -41,9 +41,13 @@ impl UTC {
         }
     }
 
-    pub fn from_fractional_seconds(hour: u8, minute: u8, seconds: f64) -> Result<Self, LoxError> {
+    pub fn from_fractional_seconds(
+        hour: u8,
+        minute: u8,
+        seconds: f64,
+    ) -> Result<Self, LoxTimeError> {
         if !(0.0..61.0).contains(&seconds) {
-            return Err(LoxError::InvalidSeconds(seconds));
+            return Err(LoxTimeError::InvalidSeconds(seconds));
         }
         let sub = split_seconds(seconds.fract()).unwrap();
         let second = seconds.round().to_u8().unwrap();
@@ -161,7 +165,7 @@ impl UTCDateTime {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::time::dates::Calendar::Gregorian;
+    use crate::dates::Calendar::Gregorian;
     use proptest::{prop_assert, proptest};
 
     const TIME: UTC = UTC {

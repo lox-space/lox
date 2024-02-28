@@ -19,9 +19,9 @@ use crate::bodies::fundamental::iers03::{
 };
 use crate::bodies::{Earth, Jupiter, Mars, Mercury, Moon, Neptune, Saturn, Sun, Uranus, Venus};
 use crate::math::arcsec_to_rad;
-use crate::time::intervals::TDBJulianCenturiesSinceJ2000;
 use crate::types::Radians;
 use glam::DVec2;
+use lox_time::intervals::TDBJulianCenturiesSinceJ2000;
 
 const MAX_POWER_OF_T: usize = 5;
 

@@ -9,7 +9,7 @@
 use crate::bodies::Earth;
 use crate::earth::nutation::iau2000::nutation_iau2000a;
 use crate::earth::nutation::Nutation;
-use crate::time::intervals::TDBJulianCenturiesSinceJ2000;
+use lox_time::intervals::TDBJulianCenturiesSinceJ2000;
 
 /// The IAU 2000A nutation model adjusted to match the IAU 2006 precession model per
 /// Wallace & Capitaine, 2006.
@@ -35,7 +35,7 @@ impl Earth {
 mod tests {
     use float_eq::assert_float_eq;
 
-    use crate::time::intervals::TDBJulianCenturiesSinceJ2000;
+    use lox_time::intervals::TDBJulianCenturiesSinceJ2000;
 
     use super::nutation_iau2006a;
 

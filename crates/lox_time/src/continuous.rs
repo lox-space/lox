@@ -20,21 +20,21 @@ use num::{abs, ToPrimitive};
 
 use deltas::TimeDelta;
 
-use crate::time::constants::i64::{
+use crate::constants::i64::{
     SECONDS_PER_DAY, SECONDS_PER_HALF_DAY, SECONDS_PER_HOUR, SECONDS_PER_MINUTE,
 };
-use crate::time::constants::julian_dates::{
+use crate::constants::julian_dates::{
     SECONDS_BETWEEN_J1950_AND_J2000, SECONDS_BETWEEN_JD_AND_J2000, SECONDS_BETWEEN_MJD_AND_J2000,
 };
-use crate::time::constants::u64::{
+use crate::constants::u64::{
     FEMTOSECONDS_PER_MICROSECOND, FEMTOSECONDS_PER_MILLISECOND, FEMTOSECONDS_PER_NANOSECOND,
     FEMTOSECONDS_PER_PICOSECOND, FEMTOSECONDS_PER_SECOND,
 };
-use crate::time::continuous::julian_dates::{JulianDate, Epoch, Unit};
-use crate::time::continuous::transform::TransformTimeScale;
-use crate::time::dates::Date;
-use crate::time::utc::{UTCDateTime, UTC};
-use crate::time::{constants, WallClock};
+use crate::continuous::julian_dates::{Epoch, JulianDate, Unit};
+use crate::continuous::transform::TransformTimeScale;
+use crate::dates::Date;
+use crate::utc::{UTCDateTime, UTC};
+use crate::{constants, WallClock};
 
 pub mod transform;
 
@@ -464,9 +464,9 @@ mod tests {
     use mockall::predicate;
     use rstest::rstest;
 
-    use crate::time::constants::i64::SECONDS_PER_JULIAN_CENTURY;
-    use crate::time::continuous::transform::MockTransformTimeScale;
-    use crate::time::dates::Calendar::Gregorian;
+    use crate::constants::i64::SECONDS_PER_JULIAN_CENTURY;
+    use crate::continuous::transform::MockTransformTimeScale;
+    use crate::dates::Calendar::Gregorian;
 
     use super::*;
 
@@ -1106,10 +1106,7 @@ mod tests {
     #[test]
     fn test_julian_date() {
         let time = Time::jd0(TDB);
-        assert_eq!(
-            time.julian_date(Epoch::JulianDate, Unit::Days),
-            0.0
-        );
+        assert_eq!(time.julian_date(Epoch::JulianDate, Unit::Days), 0.0);
         assert_eq!(time.seconds_since_julian_epoch(), 0.0);
         assert_eq!(time.days_since_julian_epoch(), 0.0);
         assert_eq!(time.centuries_since_julian_epoch(), 0.0);
@@ -1118,10 +1115,7 @@ mod tests {
     #[test]
     fn test_modified_julian_date() {
         let time = Time::mjd0(TDB);
-        assert_eq!(
-            time.julian_date(Epoch::ModifiedJulianDate, Unit::Days),
-            0.0
-        );
+        assert_eq!(time.julian_date(Epoch::ModifiedJulianDate, Unit::Days), 0.0);
         assert_eq!(time.seconds_since_modified_julian_epoch(), 0.0);
         assert_eq!(time.days_since_modified_julian_epoch(), 0.0);
         assert_eq!(time.centuries_since_modified_julian_epoch(), 0.0);
@@ -1150,10 +1144,7 @@ mod tests {
         let date = Date::new_unchecked(Gregorian, 2100, 1, 1);
         let utc = UTC::new(12, 0, 0).expect("should be valid");
         let time = Time::from_date_and_utc_timestamp(TDB, date, utc);
-        assert_eq!(
-            time.julian_date(Epoch::J2000, Unit::Days),
-            36525.0
-        );
+        assert_eq!(time.julian_date(Epoch::J2000, Unit::Days), 36525.0);
         assert_eq!(time.seconds_since_j2000(), 3155760000.0);
         assert_eq!(time.days_since_j2000(), 36525.0);
         assert_eq!(time.centuries_since_j2000(), 1.0);

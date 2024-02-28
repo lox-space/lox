@@ -3,8 +3,8 @@
 
 use crate::bodies::{Moon, Sun};
 use crate::math::arcsec_to_rad_two_pi;
-use crate::time::intervals::TDBJulianCenturiesSinceJ2000;
 use crate::types::{Arcsec, Radians};
+use lox_time::intervals::TDBJulianCenturiesSinceJ2000;
 
 pub fn mean_moon_sun_elongation_simon1994(t: TDBJulianCenturiesSinceJ2000) -> Radians {
     let arcsec: Arcsec = fast_polynomial::poly_array(t, &[1072260.70369, 1602961601.2090]);

@@ -13,8 +13,8 @@
 
 use crate::bodies::{Moon, Neptune, Sun};
 use crate::math::arcsec_to_rad_two_pi;
-use crate::time::intervals::TDBJulianCenturiesSinceJ2000;
 use crate::types::{Arcsec, Radians};
+use lox_time::intervals::TDBJulianCenturiesSinceJ2000;
 use std::f64::consts::TAU;
 
 pub fn mean_moon_sun_elongation_mhb2000_luni_solar(t: TDBJulianCenturiesSinceJ2000) -> Radians {

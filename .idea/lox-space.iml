@@ -19,6 +19,7 @@
       <sourceFolder url="file://$MODULE_DIR$/crates/lox_py/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/lox_core/benches" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/crates/lox_py/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/lox_time/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
       <excludeFolder url="file://$MODULE_DIR$/tools/lox_gen/target" />
       <excludeFolder url="file://$MODULE_DIR$/venv" />

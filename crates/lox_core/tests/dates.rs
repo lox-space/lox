@@ -6,8 +6,8 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use lox_core::time::dates::Date;
-use lox_core::time::utc::UTC;
+use lox_time::dates::Date;
+use lox_time::utc::UTC;
 use rstest::rstest;
 
 #[rstest]
