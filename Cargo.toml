@@ -14,7 +14,8 @@ license = "MPL-2.0"
 authors = ["Helge Eichhorn and the lox-space contributors"]
 
 [workspace.dependencies]
-lox_core = { path = "./crates/lox_core" }
+lox_core = { path = "crates/lox_core" }
+lox-comms = { path = "crates/lox-comms" }
 lox-time = { path = "crates/lox-time" }
 float_eq = "1.0.1"
 proptest = "1.4.0"

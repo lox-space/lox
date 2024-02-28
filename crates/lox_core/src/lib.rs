@@ -7,7 +7,6 @@
  */
 
 pub mod bodies;
-pub mod communications;
 pub mod coords;
 pub mod ephemeris;
 pub mod errors;
