@@ -10,8 +10,8 @@
 //! s', which places the TIO on the equator of the Celestial Intermediate Pole (CIP).
 
 use crate::math::RADIANS_IN_ARCSECOND;
-use crate::time::intervals::TTJulianCenturiesSinceJ2000;
 use crate::types::Radians;
+use lox_time::intervals::TTJulianCenturiesSinceJ2000;
 
 type ArcsecondsPerCentury = f64;
 

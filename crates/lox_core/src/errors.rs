@@ -10,21 +10,6 @@ use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum LoxError {
-    #[error("invalid date `{0}-{1}-{2}`")]
-    InvalidDate(i64, i64, i64),
-    #[error("invalid time `{0}:{1}:{2}`")]
-    InvalidTime(u8, u8, u8),
-    #[error("seconds must be in the range [0.0, 60.0], but was `{0}`")]
-    InvalidSeconds(f64),
-    #[error("PerMille value must be in the range [0, 999], but was `{0}`")]
-    InvalidPerMille(u16),
-    #[error("day of year cannot be 366 for a non-leap year")]
-    NonLeapYear,
     #[error("unknown body `{0}`")]
     UnknownBody(String),
-}
-
-#[macro_export]
-macro_rules! debug_panic {
-    ($($arg:tt)*) => (if cfg!(debug_assertions) { panic!($($arg)*); })
 }

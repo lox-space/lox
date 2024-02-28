@@ -12,7 +12,6 @@ pub mod coords;
 pub mod ephemeris;
 pub mod errors;
 pub mod frames;
-pub mod time;
 pub mod types;
 
 mod earth;

@@ -6,7 +6,7 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::time::leap_seconds::gen::{LEAP_SECONDS, LS_EPOCHS};
+use crate::leap_seconds::gen::{LEAP_SECONDS, LS_EPOCHS};
 
 const MJD_EPOCH: f64 = 2400000.5;
 const SECONDS_PER_DAY: f64 = 86400.0;

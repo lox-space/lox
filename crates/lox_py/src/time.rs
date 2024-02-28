@@ -10,11 +10,11 @@ use std::fmt::{Display, Formatter};
 
 use pyo3::{pyclass, pymethods};
 
-use lox_core::time::continuous::julian_dates::JulianDate;
-use lox_core::time::continuous::{BaseTime, Time, TAI, TCB, TCG, TDB, TT, UT1};
-use lox_core::time::dates::Date;
-use lox_core::time::utc::UTC;
-use lox_core::time::PerMille;
+use lox_time::continuous::julian_dates::JulianDate;
+use lox_time::continuous::{BaseTime, Time, TAI, TCB, TCG, TDB, TT, UT1};
+use lox_time::dates::Date;
+use lox_time::utc::UTC;
+use lox_time::PerMille;
 
 use crate::LoxPyError;
 

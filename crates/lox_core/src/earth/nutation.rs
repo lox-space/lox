@@ -16,9 +16,9 @@ use crate::earth::nutation::iau2000::nutation_iau2000a;
 use crate::earth::nutation::iau2000::nutation_iau2000b;
 use crate::earth::nutation::iau2006::nutation_iau2006a;
 use crate::math::RADIANS_IN_ARCSECOND;
-use crate::time::continuous::julian_dates::JulianDate;
-use crate::time::continuous::{Time, TDB};
 use crate::types::Radians;
+use lox_time::continuous::julian_dates::JulianDate;
+use lox_time::continuous::{Time, TDB};
 
 mod iau1980;
 mod iau2000;

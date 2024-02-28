@@ -9,9 +9,8 @@
 use crate::debug_panic;
 use num::ToPrimitive;
 
-use crate::time::constants::f64;
-use crate::time::constants::u128;
-use crate::types::Seconds;
+use crate::constants::f64;
+use crate::constants::u128;
 
 /// An absolute continuous time difference with femtosecond precision.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
@@ -91,7 +90,7 @@ impl TimeDelta {
         Self::from_decimal_seconds(value * f64::SECONDS_PER_JULIAN_CENTURY)
     }
 
-    pub fn to_decimal_seconds(&self) -> Seconds {
+    pub fn to_decimal_seconds(&self) -> f64 {
         self.femtoseconds.to_f64().unwrap() / f64::FEMTOSECONDS_PER_SECOND
             + self.seconds.to_f64().unwrap()
     }

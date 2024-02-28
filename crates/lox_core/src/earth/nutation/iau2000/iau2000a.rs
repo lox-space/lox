@@ -15,7 +15,7 @@ use crate::bodies::fundamental::mhb2000::{
 use crate::bodies::*;
 use crate::earth::nutation::iau2000::{luni_solar_nutation, DelaunayArguments};
 use crate::earth::nutation::{point1_microarcsec_to_rad, Nutation};
-use crate::time::intervals::TDBJulianCenturiesSinceJ2000;
+use lox_time::intervals::TDBJulianCenturiesSinceJ2000;
 
 mod luni_solar;
 mod planetary;
@@ -114,7 +114,7 @@ fn planetary_nutation(t: TDBJulianCenturiesSinceJ2000, args: DelaunayArguments) 
 mod tests {
     use float_eq::assert_float_eq;
 
-    use crate::time::intervals::TDBJulianCenturiesSinceJ2000;
+    use lox_time::intervals::TDBJulianCenturiesSinceJ2000;
 
     use super::nutation_iau2000a;
 

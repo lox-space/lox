@@ -12,7 +12,7 @@ use std::fmt::{Display, Formatter};
 
 pub use generated::*;
 
-use crate::time::constants::f64::{SECONDS_PER_DAY, SECONDS_PER_JULIAN_CENTURY};
+use lox_time::constants::f64::{SECONDS_PER_DAY, SECONDS_PER_JULIAN_CENTURY};
 
 mod generated;
 

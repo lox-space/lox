@@ -9,8 +9,8 @@
 //! Module transform provides a trait for transforming between pairs of timescales, together
 //! with a default implementation for the most commonly used time scale pairs.
 
-use crate::time::constants::u64::FEMTOSECONDS_PER_MILLISECOND;
-use crate::time::continuous::{Time, TimeDelta, TimeScale, TAI, TT};
+use crate::constants::u64::FEMTOSECONDS_PER_MILLISECOND;
+use crate::continuous::{Time, TimeDelta, TimeScale, TAI, TT};
 use mockall::automock;
 
 /// TransformTimeScale transforms a [Time] in [TimeScale] `T` to the corresponding [Time] in

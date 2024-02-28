@@ -3,5 +3,3 @@
 pub type Arcsec = f64;
 
 pub type Radians = f64;
-
-pub type Seconds = f64;

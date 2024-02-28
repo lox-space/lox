@@ -16,9 +16,9 @@ use crate::bodies::fundamental::iers03::{
 };
 use crate::bodies::{Earth, Moon, Sun, Venus};
 use crate::math::arcsec_to_rad;
-use crate::time::intervals::TDBJulianCenturiesSinceJ2000;
 use crate::types::Radians;
 use glam::DVec2;
+use lox_time::intervals::TDBJulianCenturiesSinceJ2000;
 
 /// l, l', F, D, Ω, LVe, LE and pA.
 type FundamentalArgs = [Radians; 8];

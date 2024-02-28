@@ -12,8 +12,8 @@
 use std::f64::consts::TAU;
 
 use crate::math::arcsec_to_rad_two_pi;
-use crate::time::intervals::TDBJulianCenturiesSinceJ2000;
 use crate::types::Radians;
+use lox_time::intervals::TDBJulianCenturiesSinceJ2000;
 
 use crate::bodies::{Earth, Jupiter, Mars, Mercury, Moon, Neptune, Saturn, Sun, Uranus, Venus};
 

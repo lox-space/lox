@@ -6,13 +6,15 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::errors::LoxError;
+use crate::errors::LoxTimeError;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 
 pub mod constants;
 pub mod continuous;
 pub mod dates;
+mod debug_panic;
+pub mod errors;
 pub mod intervals;
 pub mod leap_seconds;
 pub mod utc;
@@ -35,9 +37,9 @@ pub trait WallClock {
 pub struct PerMille(u16);
 
 impl PerMille {
-    pub fn new(per_mille: u16) -> Result<Self, LoxError> {
+    pub fn new(per_mille: u16) -> Result<Self, LoxTimeError> {
         if !(0..1000).contains(&per_mille) {
-            Err(LoxError::InvalidPerMille(per_mille))
+            Err(LoxTimeError::InvalidPerMille(per_mille))
         } else {
             Ok(Self(per_mille))
         }
@@ -51,7 +53,7 @@ impl Display for PerMille {
 }
 
 impl TryFrom<u16> for PerMille {
-    type Error = LoxError;
+    type Error = LoxTimeError;
 
     fn try_from(per_mille: u16) -> Result<Self, Self::Error> {
         Self::new(per_mille)
@@ -67,16 +69,16 @@ impl Into<i64> for PerMille {
 
 #[cfg(test)]
 mod tests {
-    use crate::errors::LoxError;
-    use crate::time::PerMille;
+    use crate::errors::LoxTimeError;
+    use crate::PerMille;
     use rstest::rstest;
 
     #[rstest]
     #[case::on_lower_bound(0, Ok(PerMille(0)))]
     #[case::between_bounds(1, Ok(PerMille(1)))]
     #[case::on_upper_bound(999, Ok(PerMille(999)))]
-    #[case::above_upper_bound(1000, Err(LoxError::InvalidPerMille(1000)))]
-    fn test_per_mille_new(#[case] input: u16, #[case] expected: Result<PerMille, LoxError>) {
+    #[case::above_upper_bound(1000, Err(LoxTimeError::InvalidPerMille(1000)))]
+    fn test_per_mille_new(#[case] input: u16, #[case] expected: Result<PerMille, LoxTimeError>) {
         let actual = PerMille::new(input);
         assert_eq!(expected, actual);
     }
@@ -96,7 +98,7 @@ mod tests {
         assert_eq!(PerMille::try_from(0), Ok(PerMille(0)));
         assert_eq!(
             PerMille::try_from(1000),
-            Err(LoxError::InvalidPerMille(1000))
+            Err(LoxTimeError::InvalidPerMille(1000))
         );
     }
 
