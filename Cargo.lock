@@ -337,6 +337,13 @@ name = "lox-comms"
 version = "0.1.0"
 
 [[package]]
+name = "lox-ephem"
+version = "0.1.0"
+dependencies = [
+ "nom",
+]
+
+[[package]]
 name = "lox-space"
 version = "0.0.0"
 dependencies = [

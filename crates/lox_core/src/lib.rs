@@ -8,7 +8,6 @@
 
 pub mod bodies;
 pub mod coords;
-pub mod ephemeris;
 pub mod errors;
 pub mod frames;
 pub mod types;

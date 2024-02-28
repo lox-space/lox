@@ -211,8 +211,8 @@ impl Spk {
 
 #[cfg(test)]
 mod test {
-    use crate::ephemeris::daf_spk::parser::parse_daf_spk;
-    use crate::ephemeris::daf_spk::parser::test::{get_expected_segments, FILE_CONTENTS};
+    use crate::spk::parser::parse_daf_spk;
+    use crate::spk::parser::test::{get_expected_segments, FILE_CONTENTS};
 
     use super::*;
 
