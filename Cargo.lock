@@ -336,8 +336,20 @@ dependencies = [
 name = "lox-space"
 version = "0.0.0"
 dependencies = [
+ "lox-time",
  "lox_core",
- "lox_time",
+]
+
+[[package]]
+name = "lox-time"
+version = "0.1.0"
+dependencies = [
+ "float_eq",
+ "mockall",
+ "num",
+ "proptest",
+ "rstest",
+ "thiserror",
 ]
 
 [[package]]
@@ -349,7 +361,7 @@ dependencies = [
  "fast_polynomial",
  "float_eq",
  "glam",
- "lox_time",
+ "lox-time",
  "nom",
  "proptest",
  "rstest",
@@ -368,21 +380,9 @@ name = "lox_py"
 version = "0.1.0"
 dependencies = [
  "float_eq",
+ "lox-time",
  "lox_core",
- "lox_time",
  "pyo3",
- "rstest",
- "thiserror",
-]
-
-[[package]]
-name = "lox_time"
-version = "0.1.0"
-dependencies = [
- "float_eq",
- "mockall",
- "num",
- "proptest",
  "rstest",
  "thiserror",
 ]

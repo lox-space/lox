@@ -9,4 +9,4 @@ rust-version.workspace = true
 
 [dependencies]
 lox_core.workspace = true
-lox_time.workspace = true
+lox-time.workspace = true

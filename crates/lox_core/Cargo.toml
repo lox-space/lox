@@ -10,7 +10,7 @@ glam = "0.25.0"
 nom = "7.1.3"
 fast_polynomial = "0.1.0"
 dyn-clone = "1.0.16"
-lox_time.workspace = true
+lox-time.workspace = true
 
 [dev-dependencies]
 proptest.workspace = true
