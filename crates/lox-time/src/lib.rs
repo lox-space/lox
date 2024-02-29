@@ -7,6 +7,7 @@
  */
 
 use crate::errors::LoxTimeError;
+use float_eq::float_eq;
 use num::ToPrimitive;
 use std::fmt;
 use std::fmt::{Display, Formatter};
@@ -32,11 +33,17 @@ pub trait WallClock {
     fn femtosecond(&self) -> i64;
 }
 
-/// An f64 value in the range [0.0, 1.0) representing a fraction of a second.
-// Subsecond is an input format used to prevent users from accidentally violating time
-// invariants.
-#[derive(Debug, Default, Copy, Clone, PartialEq, PartialOrd)]
+/// An f64 value in the range [0.0, 1.0) representing a fraction of a second with femtosecond
+/// resolution.
+#[derive(Debug, Default, Copy, Clone, PartialOrd)]
 pub struct Subsecond(f64);
+
+/// Two Subseconds are considered equal if their difference is less than 1 femtosecond.
+impl PartialEq for Subsecond {
+    fn eq(&self, other: &Self) -> bool {
+        float_eq!(self.0, other.0, abs <= 1e-15)
+    }
+}
 
 // The underlying f64 is guaranteed to be in the range [0.0, 1.0).
 impl Eq for Subsecond {}

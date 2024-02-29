@@ -9,8 +9,8 @@
 //! Module transform provides a trait for transforming between pairs of timescales, together
 //! with a default implementation for the most commonly used time scale pairs.
 
-use crate::constants::u64::FEMTOSECONDS_PER_MILLISECOND;
 use crate::continuous::{Time, TimeDelta, TimeScale, TAI, TT};
+use crate::Subsecond;
 use mockall::automock;
 
 /// TransformTimeScale transforms a [Time] in [TimeScale] `T` to the corresponding [Time] in
@@ -34,7 +34,7 @@ pub struct TimeScaleTransformer {}
 /// The constant offset between TAI and TT.
 pub const D_TAI_TT: TimeDelta = TimeDelta {
     seconds: 32,
-    femtoseconds: 184 * FEMTOSECONDS_PER_MILLISECOND,
+    subsecond: Subsecond(0.184),
 };
 
 impl TransformTimeScale<TAI, TT> for &TimeScaleTransformer {
@@ -54,22 +54,23 @@ impl TransformTimeScale<TT, TAI> for &TimeScaleTransformer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Subsecond;
 
     #[test]
     fn test_transform_tai_tt() {
         let transformer = &TimeScaleTransformer {};
-        let tai = Time::new(TAI, 0, 0);
+        let tai = Time::new(TAI, 0, Subsecond::default());
         let tt = transformer.transform(tai);
-        let expected = Time::new(TT, 32, 184 * FEMTOSECONDS_PER_MILLISECOND);
+        let expected = Time::new(TT, 32, Subsecond(0.184));
         assert_eq!(expected, tt);
     }
 
     #[test]
     fn test_transform_tt_tai() {
         let transformer = &TimeScaleTransformer {};
-        let tt = Time::new(TT, 32, 184 * FEMTOSECONDS_PER_MILLISECOND);
+        let tt = Time::new(TT, 32, Subsecond(0.184));
         let tai = transformer.transform(tt);
-        let expected = Time::new(TAI, 0, 0);
+        let expected = Time::new(TAI, 0, Subsecond::default());
         assert_eq!(expected, tai);
     }
 }

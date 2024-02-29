@@ -41,10 +41,10 @@ pub mod julian_dates;
 /// `BaseTime` is the base time representation for time scales without leap seconds. It is measured
 /// relative to J2000. `BaseTime::default()` represents the epoch itself.
 ///
-/// `BaseTime` has femtosecond precision, and supports times within 292 billion years either side of
-/// the epoch.
+/// `BaseTime` guarantees femtosecond precision, and supports times within 292 billion years either
+/// side of the epoch.
 pub struct BaseTime {
-    // The sign of the time is determined exclusively by the sign of the `second` field. `subsecond`
+    // The sign of the time is determined exclusively by the sign of the `seconds` field. `subsecond`
     // is always the positive fraction of a second since the last whole second. For example, one
     // femtosecond before the epoch is represented as
     // ```
@@ -117,46 +117,47 @@ impl Display for BaseTime {
         )
     }
 }
-//
-// impl Add<TimeDelta> for BaseTime {
-//     type Output = Self;
-//
-//     /// The implementation of [Add] for [BaseTime] follows the default Rust rules for integer overflow, which
-//     /// should be sufficient for all practical purposes.
-//     fn add(self, rhs: TimeDelta) -> Self::Output {
-//         let mut femtoseconds = self.subsecond + rhs.femtoseconds;
-//         let mut seconds = self.seconds + rhs.seconds as i64;
-//         if femtoseconds >= FEMTOSECONDS_PER_SECOND {
-//             seconds += 1;
-//             femtoseconds -= FEMTOSECONDS_PER_SECOND;
-//         }
-//         Self {
-//             seconds,
-//             subsecond: femtoseconds,
-//         }
-//     }
-// }
-//
-// impl Sub<TimeDelta> for BaseTime {
-//     type Output = Self;
-//
-//     /// The implementation of [Sub] for [BaseTime] follows the default Rust rules for integer overflow, which
-//     /// should be sufficient for all practical purposes.
-//     fn sub(self, rhs: TimeDelta) -> Self::Output {
-//         let mut seconds = self.seconds - rhs.seconds as i64;
-//         let mut femtoseconds = self.subsecond;
-//         if rhs.femtoseconds > self.subsecond {
-//             seconds -= 1;
-//             femtoseconds = FEMTOSECONDS_PER_SECOND - (rhs.femtoseconds - self.subsecond);
-//         } else {
-//             femtoseconds -= rhs.femtoseconds;
-//         }
-//         Self {
-//             seconds,
-//             subsecond: femtoseconds,
-//         }
-//     }
-// }
+
+impl Add<TimeDelta> for BaseTime {
+    type Output = Self;
+
+    /// The implementation of [Add] for [BaseTime] follows the default Rust rules for integer overflow, which
+    /// should be sufficient for all practical purposes.
+    fn add(self, rhs: TimeDelta) -> Self::Output {
+        if rhs.is_negative() {
+            return self - (-rhs);
+        }
+
+        let subsec_and_carry = self.subsecond.0 + rhs.subsecond.0;
+        let seconds = subsec_and_carry.trunc().to_i64().unwrap() + self.seconds + rhs.seconds;
+        Self {
+            seconds,
+            subsecond: Subsecond(subsec_and_carry.fract()),
+        }
+    }
+}
+
+impl Sub<TimeDelta> for BaseTime {
+    type Output = Self;
+
+    /// The implementation of [Sub] for [BaseTime] follows the default Rust rules for integer overflow, which
+    /// should be sufficient for all practical purposes.
+    fn sub(self, rhs: TimeDelta) -> Self::Output {
+        if rhs.is_negative() {
+            return self + (-rhs);
+        }
+
+        let subsec = self.subsecond.0 - rhs.subsecond.0;
+        let mut seconds = self.seconds - rhs.seconds;
+        if subsec.is_sign_negative() {
+            seconds -= 1;
+        }
+        Self {
+            seconds,
+            subsecond: Subsecond(subsec.abs()),
+        }
+    }
+}
 
 impl WallClock for BaseTime {
     fn hour(&self) -> i64 {
@@ -511,7 +512,7 @@ mod tests {
         };
         assert_eq!(time.subsecond(), 0.123);
     }
-    
+
     const MAX_FEMTOSECONDS: Subsecond = Subsecond(0.999_999_999_999_999);
 
     #[rstest]
@@ -630,65 +631,15 @@ mod tests {
     }
 
     #[rstest]
-    #[case::positive_time_no_femtosecond_wrap(
-    TimeDelta {
-    seconds: 1,
-    subsecond: Subsecond(1.0)
-    },
-    BaseTime {
-    seconds: 1,
-    subsecond: Subsecond(0.0)
-    },
-    BaseTime {
-    seconds: 2,
-    subsecond: Subsecond(1.0),
-    }
-    )]
-    #[case::positive_time_femtosecond_wrap(
-    TimeDelta {
-    seconds: 1,
-    subsecond: Subsecond(2.0),
-    },
-    BaseTime {
-    seconds: 1,
-    subsecond: MAX_FEMTOSECONDS,
-    },
-    BaseTime {
-    seconds: 3,
-    subsecond: Subsecond(1.0)
-    }
-    )]
-    #[case::negative_time_no_femtosecond_wrap(
-    TimeDelta {
-    seconds: 1,
-    subsecond: Subsecond(1.0)
-    },
-    BaseTime {
-    seconds: - 1,
-    subsecond: Subsecond(0.0)
-    },
-    BaseTime {
-    seconds: 0,
-    subsecond: Subsecond(1.0)
-    }
-    )]
-    #[case::negative_time_femtosecond_wrap(
-    TimeDelta {
-    seconds: 1,
-    subsecond: Subsecond(2.0)
-    },
-    BaseTime {
-    seconds: - 1,
-    subsecond: MAX_FEMTOSECONDS,
-    },
-    BaseTime {
-    seconds: 1,
-    subsecond: Subsecond(1.0),
-    }
-    )]
+    #[rstest]
+    #[case::zero_delta(BaseTime::default(), TimeDelta::default(), BaseTime::default())]
+    #[case::pos_delta_no_carry(BaseTime { seconds: 1, subsecond: Subsecond(0.9) }, TimeDelta { seconds: 1, subsecond: Subsecond(0.3) }, BaseTime { seconds: 0, subsecond: Subsecond(0.6) })]
+    #[case::pos_delta_with_carry(BaseTime { seconds: 1, subsecond: Subsecond(0.3) }, TimeDelta { seconds: 1, subsecond: Subsecond(0.4) }, BaseTime { seconds: -1, subsecond: Subsecond(0.9) })]
+    #[case::neg_delta_no_carry(BaseTime { seconds: 1, subsecond: Subsecond(0.6) }, TimeDelta { seconds: -1, subsecond: Subsecond(0.3) }, BaseTime { seconds: 2, subsecond: Subsecond(0.9) })]
+    #[case::neg_delta_with_carry(BaseTime { seconds: 1, subsecond: Subsecond(0.9) }, TimeDelta { seconds: -1, subsecond: Subsecond(0.3) }, BaseTime { seconds: 3, subsecond: Subsecond(0.2) })]
     fn test_base_time_add_time_delta(
-        #[case] delta: TimeDelta,
         #[case] time: BaseTime,
+        #[case] delta: TimeDelta,
         #[case] expected: BaseTime,
     ) {
         let actual = time + delta;
@@ -696,79 +647,14 @@ mod tests {
     }
 
     #[rstest]
-    #[case::positive_time_no_femtosecond_wrap(
-    TimeDelta {
-    seconds: 1,
-    subsecond: 1
-    },
-    BaseTime {
-    seconds: 2,
-    subsecond: 2
-    },
-    BaseTime {
-    seconds: 1,
-    subsecond: 1
-    }
-    )]
-    #[case::positive_time_femtosecond_wrap(
-    TimeDelta {
-    seconds: 1,
-    subsecond: 2
-    },
-    BaseTime {
-    seconds: 2,
-    subsecond: 1
-    },
-    BaseTime {
-    seconds: 0,
-    subsecond: MAX_FEMTOSECONDS,
-    }
-    )]
-    #[case::negative_time_no_femtosecond_wrap(
-    TimeDelta {
-    seconds: 1,
-    subsecond: 1
-    },
-    BaseTime {
-    seconds: - 1,
-    subsecond: 2
-    },
-    BaseTime {
-    seconds: - 2,
-    subsecond: 1
-    }
-    )]
-    #[case::negative_time_femtosecond_wrap(
-    TimeDelta {
-    seconds: 1,
-    subsecond: 2
-    },
-    BaseTime {
-    seconds: - 1,
-    subsecond: 1
-    },
-    BaseTime {
-    seconds: - 3,
-    subsecond: MAX_FEMTOSECONDS,
-    }
-    )]
-    #[case::transition_from_positive_to_negative_time(
-    TimeDelta {
-    seconds: 1,
-    subsecond: 2
-    },
-    BaseTime {
-    seconds: 0,
-    subsecond: 1
-    },
-    BaseTime {
-    seconds: - 2,
-    subsecond: MAX_FEMTOSECONDS,
-    }
-    )]
+    #[case::zero_delta(BaseTime::default(), TimeDelta::default(), BaseTime::default())]
+    #[case::pos_delta_no_carry(BaseTime { seconds: 1, subsecond: Subsecond(0.9) }, TimeDelta { seconds: 1, subsecond: Subsecond(0.3) }, BaseTime { seconds: 0, subsecond: Subsecond(0.6) })]
+    #[case::pos_delta_with_carry(BaseTime { seconds: 1, subsecond: Subsecond(0.3) }, TimeDelta { seconds: 1, subsecond: Subsecond(0.4) }, BaseTime { seconds: -1, subsecond: Subsecond(0.9) })]
+    #[case::neg_delta_no_carry(BaseTime { seconds: 1, subsecond: Subsecond(0.6) }, TimeDelta { seconds: -1, subsecond: Subsecond(0.3) }, BaseTime { seconds: 2, subsecond: Subsecond(0.9) })]
+    #[case::neg_delta_with_carry(BaseTime { seconds: 1, subsecond: Subsecond(0.9) }, TimeDelta { seconds: -1, subsecond: Subsecond(0.3) }, BaseTime { seconds: 3, subsecond: Subsecond(0.2) })]
     fn test_base_time_sub_time_delta(
-        #[case] delta: TimeDelta,
         #[case] time: BaseTime,
+        #[case] delta: TimeDelta,
         #[case] expected: BaseTime,
     ) {
         let actual = time - delta;
@@ -780,21 +666,21 @@ mod tests {
     #[case::exactly_one_day_after_the_epoch(
     BaseTime {
     seconds: SECONDS_PER_DAY,
-    subsecond: 0
+    subsecond: Subsecond::default(),
     },
     1.0
     )]
     #[case::exactly_one_day_before_the_epoch(
     BaseTime {
     seconds: - SECONDS_PER_DAY,
-    subsecond: 0
+    subsecond: Subsecond::default(),
     },
     - 1.0
     )]
     #[case::a_partial_number_of_days_after_the_epoch(
     BaseTime {
     seconds: (SECONDS_PER_DAY / 2) * 3,
-    subsecond: FEMTOSECONDS_PER_SECOND / 2
+    subsecond: Subsecond(0.5),
     },
     1.5000057870370371
     )]
@@ -808,21 +694,21 @@ mod tests {
     #[case::exactly_one_century_after_the_epoch(
     BaseTime {
     seconds: SECONDS_PER_JULIAN_CENTURY,
-    subsecond: 0
+    subsecond: Subsecond::default(),
     },
     1.0
     )]
     #[case::exactly_one_century_before_the_epoch(
     BaseTime {
     seconds: - SECONDS_PER_JULIAN_CENTURY,
-    subsecond: 0
+    subsecond: Subsecond::default(),
     },
     - 1.0
     )]
     #[case::a_partial_number_of_centuries_after_the_epoch(
     BaseTime {
     seconds: (SECONDS_PER_JULIAN_CENTURY / 2) * 3,
-    subsecond: FEMTOSECONDS_PER_SECOND / 2
+    subsecond: Subsecond::default(),
     },
     1.5000000001584404
     )]
@@ -835,7 +721,7 @@ mod tests {
     fn test_time_new() {
         let scale = TAI;
         let seconds = 1234567890;
-        let subsecond = 9876543210;
+        let subsecond = Subsecond(0.9876543210);
         let expected = Time {
             scale,
             timestamp: BaseTime {
@@ -850,7 +736,7 @@ mod tests {
     #[test]
     fn test_time_from_date_and_utc_timestamp() {
         let date = Date::new_unchecked(Gregorian, 2021, 1, 1);
-        let utc = UTC::new(12, 34, 56).expect("time should be valid");
+        let utc = UTC::new(12, 34, 56, Subsecond::default()).expect("time should be valid");
         let datetime = UTCDateTime::new(date, utc);
         let actual = Time::from_date_and_utc_timestamp(TAI, date, utc);
         let expected = Time::from_utc_datetime(TAI, datetime);
@@ -860,7 +746,7 @@ mod tests {
     #[test]
     fn test_time_display() {
         let time = Time::j2000(TAI);
-        let expected = "12:00:00.000.000.000.000.000.000 TAI".to_string();
+        let expected = "12:00:00.000.000.000.000.000 TAI".to_string();
         let actual = time.to_string();
         assert_eq!(expected, actual);
     }
@@ -882,7 +768,7 @@ mod tests {
             TAI,
             BaseTime {
                 seconds: -211813488000,
-                subsecond: 0,
+                subsecond: Subsecond::default(),
             },
         );
         assert_eq!(expected, actual);
@@ -890,7 +776,7 @@ mod tests {
 
     #[test]
     fn test_time_seconds() {
-        let time = Time::new(TAI, 1234567890, 9876543210);
+        let time = Time::new(TAI, 1234567890, Subsecond(0.9876543210));
         let expected = 1234567890;
         let actual = time.seconds();
         assert_eq!(
@@ -902,8 +788,8 @@ mod tests {
 
     #[test]
     fn test_time_subsecond() {
-        let time = Time::new(TAI, 1234567890, 9876543210);
-        let expected = 9876543210;
+        let time = Time::new(TAI, 1234567890, Subsecond(0.9876543210));
+        let expected = 0.9876543210;
         let actual = time.subsecond();
         assert_eq!(
             expected, actual,
@@ -916,7 +802,7 @@ mod tests {
     fn test_time_days_since_j2000() {
         let base_time = BaseTime {
             seconds: 1234567890,
-            subsecond: 9876543210,
+            subsecond: Subsecond(0.9876543210),
         };
         let expected = base_time.days_since_j2000();
         let actual = Time::from_base_time(TAI, base_time).days_since_j2000();
@@ -934,7 +820,7 @@ mod tests {
     fn test_time_centuries_since_j2000() {
         let base_time = BaseTime {
             seconds: 1234567890,
-            subsecond: 9876543210,
+            subsecond: Subsecond(0.9876543210),
         };
         let expected = base_time.centuries_since_j2000();
         let actual = Time::from_base_time(TAI, base_time).centuries_since_j2000();
@@ -952,7 +838,7 @@ mod tests {
     fn test_time_wall_clock_hour() {
         let base_time = BaseTime {
             seconds: 1234567890,
-            subsecond: 9876543210,
+            subsecond: Subsecond(0.9876543210),
         };
         let expected = base_time.hour();
         let actual = Time::from_base_time(TAI, base_time).hour();
@@ -967,7 +853,7 @@ mod tests {
     fn test_time_wall_clock_minute() {
         let base_time = BaseTime {
             seconds: 1234567890,
-            subsecond: 9876543210,
+            subsecond: Subsecond(0.9876543210),
         };
         let expected = base_time.minute();
         let actual = Time::from_base_time(TAI, base_time).minute();
@@ -982,7 +868,7 @@ mod tests {
     fn test_time_wall_clock_second() {
         let base_time = BaseTime {
             seconds: 1234567890,
-            subsecond: 9876543210,
+            subsecond: Subsecond(0.9876543210),
         };
         let expected = base_time.second();
         let actual = Time::from_base_time(TAI, base_time).second();
@@ -997,7 +883,7 @@ mod tests {
     fn test_time_wall_clock_millisecond() {
         let base_time = BaseTime {
             seconds: 1234567890,
-            subsecond: 9876543210,
+            subsecond: Subsecond(0.9876543210),
         };
         let expected = base_time.millisecond();
         let actual = Time::from_base_time(TAI, base_time).millisecond();
@@ -1012,7 +898,7 @@ mod tests {
     fn test_time_wall_clock_microsecond() {
         let base_time = BaseTime {
             seconds: 1234567890,
-            subsecond: 9876543210,
+            subsecond: Subsecond(0.9876543210),
         };
         let expected = base_time.microsecond();
         let actual = Time::from_base_time(TAI, base_time).microsecond();
@@ -1027,7 +913,7 @@ mod tests {
     fn test_time_wall_clock_nanosecond() {
         let base_time = BaseTime {
             seconds: 1234567890,
-            subsecond: 9876543210,
+            subsecond: Subsecond(0.9876543210),
         };
         let expected = base_time.nanosecond();
         let actual = Time::from_base_time(TAI, base_time).nanosecond();
@@ -1042,7 +928,7 @@ mod tests {
     fn test_time_wall_clock_picosecond() {
         let base_time = BaseTime {
             seconds: 1234567890,
-            subsecond: 9876543210,
+            subsecond: Subsecond(0.9876543210),
         };
         let expected = base_time.picosecond();
         let actual = Time::from_base_time(TAI, base_time).picosecond();
@@ -1057,7 +943,7 @@ mod tests {
     fn test_time_wall_clock_femtosecond() {
         let base_time = BaseTime {
             seconds: 1234567890,
-            subsecond: 9876543210,
+            subsecond: Subsecond(0.9876543210),
         };
         let expected = base_time.femtosecond();
         let actual = Time::from_base_time(TAI, base_time).femtosecond();
@@ -1137,7 +1023,7 @@ mod tests {
     #[test]
     fn test_j2100() {
         let date = Date::new_unchecked(Gregorian, 2100, 1, 1);
-        let utc = UTC::new(12, 0, 0).expect("should be valid");
+        let utc = UTC::new(12, 0, 0, Subsecond::default()).expect("should be valid");
         let time = Time::from_date_and_utc_timestamp(TDB, date, utc);
         assert_eq!(time.julian_date(Epoch::J2000, Unit::Days), 36525.0);
         assert_eq!(time.seconds_since_j2000(), 3155760000.0);
@@ -1148,7 +1034,7 @@ mod tests {
     #[test]
     fn test_two_part_julian_date() {
         let date = Date::new_unchecked(Gregorian, 2100, 1, 2);
-        let utc = UTC::new(0, 0, 0).expect("should be valid");
+        let utc = UTC::new(0, 0, 0, Subsecond::default()).expect("should be valid");
         let time = Time::from_date_and_utc_timestamp(TDB, date, utc);
         let (jd1, jd2) = time.two_part_julian_date();
         assert_eq!(jd1, 2451545.0 + 36525.0);

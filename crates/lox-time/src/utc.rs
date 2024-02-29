@@ -1,7 +1,5 @@
 use std::fmt::Display;
 
-use num::ToPrimitive;
-
 use crate::dates::Date;
 use crate::errors::LoxTimeError;
 use crate::{Subsecond, WallClock};

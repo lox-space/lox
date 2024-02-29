@@ -6,13 +6,13 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use std::ops::Neg;
 use crate::{debug_panic, Subsecond};
 use num::ToPrimitive;
 
 use crate::constants::f64;
-use crate::constants::u128;
 
-/// A signed, continuous time difference with femtosecond precision.
+/// A signed, continuous time difference with at least femtosecond precision.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
 pub struct TimeDelta {
     // Like `BaseTime`, the sign of the delta is determined by the sign of the `seconds` field.
@@ -90,12 +90,43 @@ impl TimeDelta {
     pub fn to_decimal_seconds(&self) -> f64 {
         self.subsecond.0 + self.seconds.to_f64().unwrap()
     }
+    
+    pub fn is_negative(&self) -> bool {
+        self.seconds < 0
+    }
+    
+    pub fn is_zero(&self) -> bool {
+        self.seconds == 0 && self.subsecond.0 == 0.0
+    }
+    
+    pub fn is_positive(&self) -> bool {
+        self.seconds > 0 || self.seconds == 0 && self.subsecond.0 > 0.0
+    }
+}
+
+impl Neg for TimeDelta {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        if self.subsecond.0 == 0.0 {
+            return Self {
+                seconds: -self.seconds,
+                subsecond: Subsecond::default(),
+            };
+        }
+        
+        Self {
+            seconds: -self.seconds - 1,
+            subsecond: Subsecond(1.0 - self.subsecond.0),
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use float_eq::assert_float_eq;
     use proptest::prelude::*;
+    use rstest::rstest;
 
     use super::*;
 
@@ -196,5 +227,12 @@ mod tests {
                 assert_float_eq!(delta.to_decimal_seconds(), exp, abs <= 1e-15);
             }
         }
+    }
+    
+    #[rstest]
+    #[case::zero_subsecond(TimeDelta { seconds: 1, subsecond: Subsecond(0.0) }, TimeDelta { seconds: -1, subsecond: Subsecond(0.0) })]
+    #[case::nonzero_subsecond(TimeDelta { seconds: 0, subsecond: Subsecond(0.3) }, TimeDelta { seconds: -1, subsecond: Subsecond(0.7) })]
+    fn test_time_delta_neg(#[case] delta: TimeDelta, #[case] expected: TimeDelta) {
+        assert_eq!(expected, -delta);
     }
 }
