@@ -13,7 +13,7 @@ use crate::{Subsecond, WallClock};
 /// component to 60. However, it has no awareness of whether a user-specified leap second is valid.
 /// It is intended strictly as an IO time format which must be converted to a continuous time format
 /// to be used in calculations.
-#[derive(Debug, Copy, Clone, Default, PartialEq)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]
 pub struct UTC {
     hour: u8,
     minute: u8,
@@ -39,23 +39,22 @@ impl UTC {
             })
         }
     }
+
+    pub fn subsecond(&self) -> Subsecond {
+        self.subsecond
+    }
 }
 
 impl Display for UTC {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{:02}:{:02}:{:02}.{}.{}.{}.{}.{} UTC",
+            "{:02}:{:02}:{:02}.{} UTC",
             self.hour,
             self.minute,
             self.second,
-            self.subsecond.millisecond(),
-            self.subsecond.microsecond(),
-            self.subsecond.nanosecond(),
-            self.subsecond.picosecond(),
-            self.subsecond.femtosecond(),
-        )?;
-        Ok(())
+            self.subsecond
+        )
     }
 }
 
@@ -93,7 +92,7 @@ impl WallClock for UTC {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct UTCDateTime {
     date: Date,
     time: UTC,

@@ -38,6 +38,9 @@ pub trait WallClock {
 #[derive(Debug, Default, Copy, Clone, PartialEq, PartialOrd)]
 pub struct Subsecond(f64);
 
+// The underlying f64 is guaranteed to be in the range [0.0, 1.0).
+impl Eq for Subsecond {}
+
 impl Subsecond {
     pub fn new(subsecond: f64) -> Result<Self, LoxTimeError> {
         if !(0.0..1.0).contains(&subsecond) {
@@ -70,5 +73,19 @@ impl Subsecond {
     /// The number of femtoseconds since the last picosecond.
     pub fn femtosecond(&self) -> i64 {
         (self.0 * 1e15).trunc().to_i64().unwrap() % 1_000_000_000_000
+    }
+}
+
+impl Display for Subsecond {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{:03}.{:03}.{:03}.{:03}.{:03}",
+            self.millisecond(),
+            self.microsecond(),
+            self.nanosecond(),
+            self.picosecond(),
+            self.femtosecond()
+        )
     }
 }
