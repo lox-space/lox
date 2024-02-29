@@ -10,7 +10,7 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;
 
-use lox_core::bodies::*;
+use lox_bodies::*;
 
 use crate::LoxPyError;
 

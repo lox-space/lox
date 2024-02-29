@@ -6,10 +6,6 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-pub use lox_core::bodies::*;
-
-pub use lox_core::coords::two_body::{Cartesian, Keplerian};
-pub use lox_core::coords::DVec3;
-pub use lox_core::frames::*;
-pub use lox_time::continuous::*;
-pub use lox_time::dates::*;
+pub use lox_bodies::*;
+pub use lox_coords::*;
+pub use lox_time::*;

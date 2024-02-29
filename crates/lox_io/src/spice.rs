@@ -6,17 +6,18 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use std::collections::HashMap;
+
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take_until, take_while, take_while1};
 use nom::character::complete::{alpha1, line_ending, multispace0, one_of};
 use nom::combinator::{map, map_res, recognize, rest};
+use nom::IResult;
 use nom::multi::{fold_many1, many0, many1};
 use nom::number::complete::{double, float};
 use nom::sequence::{delimited, preceded, separated_pair, terminated, tuple};
-use nom::IResult;
-use std::collections::HashMap;
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 enum Value {
     Double(f64),
     String(String),
@@ -24,6 +25,7 @@ enum Value {
     StringArray(Vec<String>),
 }
 
+#[derive(Clone, Debug, PartialEq)]
 pub struct Kernel {
     type_id: String,
     items: HashMap<String, Value>,

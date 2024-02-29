@@ -12,9 +12,12 @@ name = "lox_space"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = "0.20.2"
-lox_core.workspace = true
+lox-bodies.workspace = true
+lox-coords.workspace = true
+lox-core.workspace = true
 lox-time.workspace = true
+
+pyo3 = "0.20.2"
 float_eq.workspace = true
 thiserror.workspace = true
 

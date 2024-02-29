@@ -9,6 +9,7 @@ authors.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+lox-core.workspace = true
 thiserror.workspace = true
 num = "0.4.1"
 float_eq.workspace = true

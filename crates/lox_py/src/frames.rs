@@ -9,9 +9,9 @@
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
-use lox_core::bodies::{Earth, Jupiter, Mars, Mercury, Neptune, Pluto, Saturn, Uranus, Venus};
-use lox_core::frames::iau::BodyFixed;
-use lox_core::frames::Icrf;
+use lox_bodies::{Earth, Jupiter, Mars, Mercury, Neptune, Pluto, Saturn, Uranus, Venus};
+use lox_coords::frames::iau::BodyFixed;
+use lox_coords::frames::Icrf;
 
 use crate::LoxPyError;
 

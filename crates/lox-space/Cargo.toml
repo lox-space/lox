@@ -8,5 +8,6 @@ license.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-lox_core.workspace = true
+lox-bodies.workspace = true
+lox-coords.workspace = true
 lox-time.workspace = true

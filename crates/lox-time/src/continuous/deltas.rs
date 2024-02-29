@@ -6,8 +6,9 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::debug_panic;
 use num::ToPrimitive;
+
+use lox_core::debug_panic;
 
 use crate::constants::f64;
 use crate::constants::u128;

@@ -10,9 +10,9 @@ use std::str::FromStr;
 
 use pyo3::prelude::*;
 
-use lox_core::bodies::PointMass;
-use lox_core::coords::base::{BaseCartesian, BaseKeplerian, BaseTwoBody};
-use lox_core::coords::DVec3;
+use lox_bodies::PointMass;
+use lox_coords::base::{BaseCartesian, BaseKeplerian, BaseTwoBody};
+use lox_coords::DVec3;
 
 use crate::bodies::PyBody;
 use crate::frames::PyFrame;
