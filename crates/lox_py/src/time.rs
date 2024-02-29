@@ -206,7 +206,7 @@ mod tests {
             Some(456),
         )
         .expect("time should be valid");
-        assert_eq!(time.timestamp.femtoseconds(), 123456789123456);
+        assert_eq!(time.timestamp.subsecond(), 123456789123456);
         assert_float_eq!(time.days_since_j2000(), 8765.542374114084, rel <= 1e-8);
         assert_eq!(time.scale(), PyTimeScale::TDB);
     }

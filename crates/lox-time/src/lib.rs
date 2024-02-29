@@ -7,6 +7,7 @@
  */
 
 use crate::errors::LoxTimeError;
+use num::ToPrimitive;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 
@@ -31,79 +32,43 @@ pub trait WallClock {
     fn femtosecond(&self) -> i64;
 }
 
-/// Newtype wrapper for thousandths of an SI-prefixed subsecond (milli, micro, nano, etc.).
-#[repr(transparent)]
-#[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct PerMille(u16);
+/// An f64 value in the range [0.0, 1.0) representing a fraction of a second.
+// Subsecond is an input format used to prevent users from accidentally violating time
+// invariants.
+#[derive(Debug, Default, Copy, Clone, PartialEq, PartialOrd)]
+pub struct Subsecond(f64);
 
-impl PerMille {
-    pub fn new(per_mille: u16) -> Result<Self, LoxTimeError> {
-        if !(0..1000).contains(&per_mille) {
-            Err(LoxTimeError::InvalidPerMille(per_mille))
+impl Subsecond {
+    pub fn new(subsecond: f64) -> Result<Self, LoxTimeError> {
+        if !(0.0..1.0).contains(&subsecond) {
+            Err(LoxTimeError::InvalidSubsecond(subsecond))
         } else {
-            Ok(Self(per_mille))
+            Ok(Self(subsecond))
         }
     }
-}
 
-impl Display for PerMille {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{:03}", self.0)
-    }
-}
-
-impl TryFrom<u16> for PerMille {
-    type Error = LoxTimeError;
-
-    fn try_from(per_mille: u16) -> Result<Self, Self::Error> {
-        Self::new(per_mille)
-    }
-}
-
-#[allow(clippy::from_over_into)] // the Into conversion is infallible, but From is not
-impl Into<i64> for PerMille {
-    fn into(self) -> i64 {
-        self.0 as i64
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::errors::LoxTimeError;
-    use crate::PerMille;
-    use rstest::rstest;
-
-    #[rstest]
-    #[case::on_lower_bound(0, Ok(PerMille(0)))]
-    #[case::between_bounds(1, Ok(PerMille(1)))]
-    #[case::on_upper_bound(999, Ok(PerMille(999)))]
-    #[case::above_upper_bound(1000, Err(LoxTimeError::InvalidPerMille(1000)))]
-    fn test_per_mille_new(#[case] input: u16, #[case] expected: Result<PerMille, LoxTimeError>) {
-        let actual = PerMille::new(input);
-        assert_eq!(expected, actual);
+    /// The number of milliseconds in the subsecond.
+    pub fn millisecond(&self) -> i64 {
+        (self.0 * 1e3).trunc().to_i64().unwrap()
     }
 
-    #[rstest]
-    #[case::zero(PerMille(0), "000")]
-    #[case::one_digit(PerMille(1), "001")]
-    #[case::two_digits(PerMille(11), "011")]
-    #[case::three_digts(PerMille(111), "111")]
-    fn test_per_mille_display(#[case] input: PerMille, #[case] expected: &str) {
-        let actual = input.to_string();
-        assert_eq!(expected, actual);
+    /// The number of microseconds since the last millisecond.
+    pub fn microsecond(&self) -> i64 {
+        (self.0 * 1e6).trunc().to_i64().unwrap() % 1_000
     }
 
-    #[test]
-    fn test_per_mille_try_from() {
-        assert_eq!(PerMille::try_from(0), Ok(PerMille(0)));
-        assert_eq!(
-            PerMille::try_from(1000),
-            Err(LoxTimeError::InvalidPerMille(1000))
-        );
+    /// The number of nanoseconds since the last microsecond.
+    pub fn nanosecond(&self) -> i64 {
+        (self.0 * 1e9).trunc().to_i64().unwrap() % 1_000_000
     }
 
-    #[test]
-    fn test_per_mille_into_i64() {
-        assert_eq!(Into::<i64>::into(PerMille(0)), 0i64);
+    /// The number of picoseconds since the last nanosecond.
+    pub fn picosecond(&self) -> i64 {
+        (self.0 * 1e12).trunc().to_i64().unwrap() % 1_000_000_000
+    }
+
+    /// The number of femtoseconds since the last picosecond.
+    pub fn femtosecond(&self) -> i64 {
+        (self.0 * 1e15).trunc().to_i64().unwrap() % 1_000_000_000_000
     }
 }
