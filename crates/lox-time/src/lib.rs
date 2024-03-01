@@ -21,7 +21,8 @@ pub mod intervals;
 pub mod leap_seconds;
 pub mod utc;
 
-/// `WallClock` is the trait by which high-precision time representations expose human-readable time components.
+/// `WallClock` is the trait by which high-precision time representations expose human-readable time
+/// components.
 pub trait WallClock {
     fn hour(&self) -> i64;
     fn minute(&self) -> i64;
@@ -41,7 +42,7 @@ pub struct Subsecond(f64);
 /// Two Subseconds are considered equal if their difference is less than 1 femtosecond.
 impl PartialEq for Subsecond {
     fn eq(&self, other: &Self) -> bool {
-        float_eq!(self.0, other.0, abs <= 1e-15)
+        (self.0 * 1e15).round() == (other.0 * 1e15).round()
     }
 }
 
@@ -69,17 +70,17 @@ impl Subsecond {
 
     /// The number of nanoseconds since the last microsecond.
     pub fn nanosecond(&self) -> i64 {
-        (self.0 * 1e9).trunc().to_i64().unwrap() % 1_000_000
+        (self.0 * 1e9).trunc().to_i64().unwrap() % 1_000
     }
 
     /// The number of picoseconds since the last nanosecond.
     pub fn picosecond(&self) -> i64 {
-        (self.0 * 1e12).trunc().to_i64().unwrap() % 1_000_000_000
+        (self.0 * 1e12).trunc().to_i64().unwrap() % 1_000
     }
 
     /// The number of femtoseconds since the last picosecond.
     pub fn femtosecond(&self) -> i64 {
-        (self.0 * 1e15).trunc().to_i64().unwrap() % 1_000_000_000_000
+        (self.0 * 1e15).trunc().to_i64().unwrap() % 1_000
     }
 }
 
@@ -94,5 +95,73 @@ impl Display for Subsecond {
             self.picosecond(),
             self.femtosecond()
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use rstest::rstest;
+
+    use super::*;
+
+    #[rstest]
+    #[case::below_lower_bound(-1e-15, Err(LoxTimeError::InvalidSubsecond(-1e-15)))]
+    #[case::on_lower_bound(0.0, Ok(Subsecond(0.0)))]
+    #[case::between_bounds(0.5, Ok(Subsecond(0.5)))]
+    #[case::on_upper_bound(1.0, Err(LoxTimeError::InvalidSubsecond(1.0)))]
+    #[case::above_upper_bound(1.5, Err(LoxTimeError::InvalidSubsecond(1.5)))]
+    fn test_subsecond_new(#[case] raw: f64, #[case] expected: Result<Subsecond, LoxTimeError>) {
+        assert_eq!(expected, Subsecond::new(raw));
+    }
+
+    #[test]
+    fn test_subsecond_millisecond() {
+        let subsecond = Subsecond(0.123456789876543);
+        assert_eq!(123, subsecond.millisecond());
+    }
+
+    #[test]
+    fn test_subsecond_microsecond() {
+        let subsecond = Subsecond(0.123456789876543);
+        assert_eq!(456, subsecond.microsecond());
+    }
+
+    #[test]
+    fn test_subsecond_nanosecond() {
+        let subsecond = Subsecond(0.123456789876543);
+        assert_eq!(789, subsecond.nanosecond());
+    }
+
+    #[test]
+    fn test_subsecond_picosecond() {
+        let subsecond = Subsecond(0.123456789876543);
+        assert_eq!(876, subsecond.picosecond());
+    }
+
+    #[test]
+    fn test_subsecond_femtosecond() {
+        let subsecond = Subsecond(0.123456789876543);
+        assert_eq!(543, subsecond.femtosecond());
+    }
+
+    #[rstest]
+    #[case::exactly_equal(Subsecond(0.0), Subsecond(0.0), true)]
+    #[case::one_femtosecond_difference(Subsecond(0.0), Subsecond(1e-15), false)]
+    #[case::more_than_one_femtosecond_difference(Subsecond(0.0), Subsecond(2e-15), false)]
+    // Neither of the following values can be exactly represented as an f64, covering the edge case
+    // where 1e-16 < δ < 1e-15, which using `float_eq` with `abs <= 1e-16` would consider unequal.
+    #[case::less_than_one_femtosecond_difference(
+        Subsecond(0.6),
+        Subsecond(0.600_000_000_000_000_1),
+        true
+    )]
+    fn test_subsecond_eq(#[case] lhs: Subsecond, #[case] rhs: Subsecond, #[case] expected: bool) {
+        assert_eq!(expected, lhs == rhs);
+    }
+
+    #[test]
+    fn test_subsecond_display() {
+        let subsecond = Subsecond(0.123456789876543);
+        assert_eq!("123.456.789.876.543", subsecond.to_string());
     }
 }

@@ -48,10 +48,7 @@ impl Display for UTC {
         write!(
             f,
             "{:02}:{:02}:{:02}.{} UTC",
-            self.hour,
-            self.minute,
-            self.second,
-            self.subsecond
+            self.hour, self.minute, self.second, self.subsecond
         )
     }
 }
@@ -70,23 +67,23 @@ impl WallClock for UTC {
     }
 
     fn millisecond(&self) -> i64 {
-        self.millisecond()
+        self.subsecond.millisecond()
     }
 
     fn microsecond(&self) -> i64 {
-        self.microsecond()
+        self.subsecond.microsecond()
     }
 
     fn nanosecond(&self) -> i64 {
-        self.nanosecond()
+        self.subsecond.nanosecond()
     }
 
     fn picosecond(&self) -> i64 {
-        self.picosecond()
+        self.subsecond.picosecond()
     }
 
     fn femtosecond(&self) -> i64 {
-        self.femtosecond()
+        self.subsecond.femtosecond()
     }
 }
 

@@ -58,7 +58,7 @@ pub struct BaseTime {
 }
 
 impl BaseTime {
-    pub fn new(mut seconds: i64, subsecond: Subsecond) -> Self {
+    pub fn new(seconds: i64, subsecond: Subsecond) -> Self {
         Self { seconds, subsecond }
     }
 
@@ -147,14 +147,15 @@ impl Sub<TimeDelta> for BaseTime {
             return self + (-rhs);
         }
 
-        let subsec = self.subsecond.0 - rhs.subsecond.0;
+        let mut subsec = self.subsecond.0 - rhs.subsecond.0;
         let mut seconds = self.seconds - rhs.seconds;
         if subsec.is_sign_negative() {
             seconds -= 1;
+            subsec += 1.0;
         }
         Self {
             seconds,
-            subsecond: Subsecond(subsec.abs()),
+            subsecond: Subsecond(subsec),
         }
     }
 }
