@@ -6,14 +6,14 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::errors::LoxTimeError;
 use std::fmt;
 use std::fmt::{Display, Formatter};
+
+use crate::errors::LoxTimeError;
 
 pub mod constants;
 pub mod continuous;
 pub mod dates;
-mod debug_panic;
 pub mod errors;
 pub mod intervals;
 pub mod leap_seconds;
@@ -69,9 +69,10 @@ impl Into<i64> for PerMille {
 
 #[cfg(test)]
 mod tests {
+    use rstest::rstest;
+
     use crate::errors::LoxTimeError;
     use crate::PerMille;
-    use rstest::rstest;
 
     #[rstest]
     #[case::on_lower_bound(0, Ok(PerMille(0)))]

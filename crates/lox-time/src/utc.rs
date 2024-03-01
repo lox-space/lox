@@ -1,3 +1,7 @@
+use std::fmt::Display;
+
+use num::ToPrimitive;
+
 use crate::constants::u64::{
     FEMTOSECONDS_PER_MICROSECOND, FEMTOSECONDS_PER_MILLISECOND, FEMTOSECONDS_PER_NANOSECOND,
     FEMTOSECONDS_PER_PICOSECOND,
@@ -5,8 +9,6 @@ use crate::constants::u64::{
 use crate::dates::Date;
 use crate::errors::LoxTimeError;
 use crate::{PerMille, WallClock};
-use num::ToPrimitive;
-use std::fmt::Display;
 
 /// A UTC timestamp with additional support for fractional seconds represented with femtosecond
 /// precision.
@@ -164,9 +166,11 @@ impl UTCDateTime {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::dates::Calendar::Gregorian;
     use proptest::{prop_assert, proptest};
+
+    use crate::dates::Calendar::Gregorian;
+
+    use super::*;
 
     const TIME: UTC = UTC {
         hour: 12,

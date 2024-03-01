@@ -7,22 +7,28 @@
   </component>
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
-      <sourceFolder url="file://$MODULE_DIR$/crates/lox_core/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/lox_core/src/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/lox_core/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/lox_io/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/lox_io/tests" isTestSource="true" />
-      <sourceFolder url="file://$MODULE_DIR$/tools/lox_gen/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/lox-space/examples" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/lox-space/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/lox_py/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/lox_core/benches" isTestSource="true" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/lox_py/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/lox-space/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/lox-time/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/lox-comms/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/lox-bodies/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/lox-coords/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/lox-earth/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/lox-ephem/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/lox-time/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/tools/foo/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/lox-io/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/lox-io/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/lox-space/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/lox-space/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/lox-utils/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/lox-utils/src/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/tools/lox-gen/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
-      <excludeFolder url="file://$MODULE_DIR$/tools/lox_gen/target" />
       <excludeFolder url="file://$MODULE_DIR$/venv" />
+      <excludeFolder url="file://$MODULE_DIR$/tools/lox-gen/target" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

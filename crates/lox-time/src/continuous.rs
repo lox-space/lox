@@ -20,6 +20,7 @@ use num::{abs, ToPrimitive};
 
 use deltas::TimeDelta;
 
+use crate::constants;
 use crate::constants::i64::{
     SECONDS_PER_DAY, SECONDS_PER_HALF_DAY, SECONDS_PER_HOUR, SECONDS_PER_MINUTE,
 };
@@ -34,7 +35,7 @@ use crate::continuous::julian_dates::{Epoch, JulianDate, Unit};
 use crate::continuous::transform::TransformTimeScale;
 use crate::dates::Date;
 use crate::utc::{UTCDateTime, UTC};
-use crate::{constants, WallClock};
+use crate::WallClock;
 
 pub mod transform;
 
