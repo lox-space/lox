@@ -24,6 +24,7 @@ jobs:
     strategy:
       matrix:
         target: [ x86_64, x86, aarch64, armv7, s390x, ppc64le ]
+        python-version: [ '3.7', '3.8', '3.9', '3.10', '3.11', '3.12' ]
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
@@ -34,7 +35,7 @@ jobs:
         with:
           target: ${{ matrix.target }}
           working-directory: ./crates/lox-space
-          args: --release --out dist --find-interpreter
+          args: --release --out dist -i ${{ matrix.python-version }}
           sccache: 'true'
           manylinux: auto
       - name: Upload wheels
