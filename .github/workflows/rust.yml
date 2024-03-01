@@ -32,7 +32,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           command: develop
-          working-directory: ./crates/lox_py
+          working-directory: ./crates/lox-py
           args: --extras dev
       - name: Run test
         run: |

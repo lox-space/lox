@@ -15,12 +15,16 @@ authors = ["Helge Eichhorn and the lox-space contributors"]
 
 [workspace.dependencies]
 lox-bodies = { path = "crates/lox-bodies" }
-lox-core = { path = "crates/lox-core" }
 lox-comms = { path = "crates/lox-comms" }
 lox-coords = { path = "crates/lox-coords" }
+lox-core = { path = "crates/lox-core" }
 lox-earth = { path = "crates/lox-earth" }
 lox-ephem = { path = "crates/lox-ephem" }
+lox-io = { path = "crates/lox-io" }
+lox-py = { path = "crates/lox-py" }
+lox-space = { path = "crates/lox-space" }
 lox-time = { path = "crates/lox-time" }
+
 dyn-clone = "1.0.17"
 fast_polynomial = "0.1.0"
 float_eq = "1.0.1"

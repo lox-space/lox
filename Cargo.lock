@@ -390,6 +390,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "lox-io"
+version = "0.0.0"
+dependencies = [
+ "nom",
+]
+
+[[package]]
 name = "lox-space"
 version = "0.0.0"
 dependencies = [
@@ -409,13 +416,6 @@ dependencies = [
  "proptest",
  "rstest",
  "thiserror",
-]
-
-[[package]]
-name = "lox_io"
-version = "0.0.0"
-dependencies = [
- "nom",
 ]
 
 [[package]]
