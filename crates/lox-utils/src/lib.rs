@@ -7,6 +7,5 @@
  */
 
 pub mod debug_panic;
-pub mod errors;
 pub mod math;
 pub mod types;

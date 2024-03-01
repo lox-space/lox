@@ -341,6 +341,7 @@ dependencies = [
  "float_eq",
  "lox-time",
  "lox-utils",
+ "thiserror",
 ]
 
 [[package]]
@@ -418,7 +419,6 @@ name = "lox-utils"
 version = "0.1.0"
 dependencies = [
  "float_eq",
- "thiserror",
 ]
 
 [[package]]

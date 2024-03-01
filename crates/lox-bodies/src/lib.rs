@@ -18,6 +18,7 @@ pub use generated::satellites::*;
 pub use generated::sun::*;
 use lox_time::constants::f64::{SECONDS_PER_DAY, SECONDS_PER_JULIAN_CENTURY};
 
+pub mod errors;
 pub mod fundamental;
 mod generated;
 

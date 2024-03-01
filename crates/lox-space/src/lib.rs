@@ -10,8 +10,8 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use thiserror::Error;
 
+use lox_bodies::errors::LoxBodiesError;
 use lox_time::errors::LoxTimeError;
-use lox_utils::errors::LoxError;
 
 use crate::bodies::{PyBarycenter, PyMinorBody, PyPlanet, PySatellite, PySun};
 use crate::coords::{PyCartesian, PyKeplerian};
@@ -31,7 +31,7 @@ pub enum LoxPyError {
     #[error("unknown frame `{0}`")]
     InvalidFrame(String),
     #[error(transparent)]
-    LoxError(#[from] LoxError),
+    LoxBodiesError(#[from] LoxBodiesError),
     #[error(transparent)]
     LoxTimeError(#[from] LoxTimeError),
     #[error(transparent)]
@@ -44,7 +44,7 @@ impl From<LoxPyError> for PyErr {
             LoxPyError::InvalidTimeScale(_)
             | LoxPyError::InvalidFrame(_)
             | LoxPyError::InvalidBody(_) => PyValueError::new_err(value.to_string()),
-            LoxPyError::LoxError(value) => PyValueError::new_err(value.to_string()),
+            LoxPyError::LoxBodiesError(value) => PyValueError::new_err(value.to_string()),
             LoxPyError::LoxTimeError(value) => PyValueError::new_err(value.to_string()),
             LoxPyError::PyError(value) => value,
         }

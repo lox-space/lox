@@ -14,6 +14,7 @@ lox-utils.workspace = true
 
 dyn-clone.workspace = true
 fast_polynomial.workspace = true
+thiserror.workspace = true
 
 [dev-dependencies]
 float_eq.workspace = true

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023. Helge Eichhorn and the LOX contributors
+ * Copyright (c) 2023-2024. Helge Eichhorn and the LOX contributors
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -9,7 +9,7 @@
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
-pub enum LoxError {
+pub enum LoxBodiesError {
     #[error("unknown body `{0}`")]
     UnknownBody(String),
 }
