@@ -23,7 +23,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        target: [ x86_64, x86, aarch64, armv7, s390x, ppc64le ]
+        target: [ x86_64, x86, aarch64, armv7 ]
+        python-version: [ '3.7', '3.8', '3.9', '3.10', '3.11', '3.12' ]
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
@@ -33,15 +34,15 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          working-directory: ./crates/lox_py
-          args: --release --out dist --find-interpreter
+          working-directory: ./crates/lox-space
+          args: --release --out dist -i ${{ matrix.python-version }}
           sccache: 'true'
           manylinux: auto
       - name: Upload wheels
         uses: actions/upload-artifact@v3
         with:
           name: wheels
-          path: ./crates/lox_py/dist
+          path: ./crates/lox-space/dist
 
   windows:
     runs-on: windows-latest
@@ -58,14 +59,14 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          working-directory: ./crates/lox_py
+          working-directory: ./crates/lox-space
           args: --release --out dist --find-interpreter
           sccache: 'true'
       - name: Upload wheels
         uses: actions/upload-artifact@v3
         with:
           name: wheels
-          path: ./crates/lox_py/dist
+          path: ./crates/lox-space/dist
 
   macos:
     runs-on: macos-latest
@@ -81,14 +82,14 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          working-directory: ./crates/lox_py
+          working-directory: ./crates/lox-space
           args: --release --out dist --find-interpreter
           sccache: 'true'
       - name: Upload wheels
         uses: actions/upload-artifact@v3
         with:
           name: wheels
-          path: ./crates/lox_py/dist
+          path: ./crates/lox-space/dist
 
   sdist:
     runs-on: ubuntu-latest
@@ -97,14 +98,14 @@ jobs:
       - name: Build sdist
         uses: PyO3/maturin-action@v1
         with:
-          working-directory: ./crates/lox_py
+          working-directory: ./crates/lox-space
           command: sdist
           args: --out dist
       - name: Upload sdist
         uses: actions/upload-artifact@v3
         with:
           name: wheels
-          path: ./crates/lox_py/dist
+          path: ./crates/lox-space/dist
 
   release:
     name: Release
@@ -120,6 +121,6 @@ jobs:
         env:
           MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         with:
-          working-directory: ./crates/lox_py
+          working-directory: ./crates/lox-space
           command: upload
           args: --non-interactive --skip-existing *

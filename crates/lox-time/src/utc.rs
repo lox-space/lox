@@ -113,6 +113,10 @@ mod tests {
 
     use super::*;
 
+    use crate::dates::Calendar::Gregorian;
+
+    use super::*;
+
     const TIME: UTC = UTC {
         hour: 12,
         minute: 34,

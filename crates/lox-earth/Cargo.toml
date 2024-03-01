@@ -1,0 +1,21 @@
+[package]
+name = "lox-earth"
+version = "0.1.0"
+rust-version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+lox-bodies.workspace = true
+lox-time.workspace = true
+lox-utils.workspace = true
+
+fast_polynomial.workspace = true
+glam.workspace = true
+
+[dev-dependencies]
+float_eq.workspace = true
+rstest.workspace = true

@@ -6,9 +6,11 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use std::ops::Neg;
-use crate::{debug_panic, Subsecond};
+use crate::Subsecond;
 use num::ToPrimitive;
+use std::ops::Neg;
+
+use lox_utils::debug_panic;
 
 use crate::constants::f64;
 
@@ -90,15 +92,15 @@ impl TimeDelta {
     pub fn to_decimal_seconds(&self) -> f64 {
         self.subsecond.0 + self.seconds.to_f64().unwrap()
     }
-    
+
     pub fn is_negative(&self) -> bool {
         self.seconds < 0
     }
-    
+
     pub fn is_zero(&self) -> bool {
         self.seconds == 0 && self.subsecond.0 == 0.0
     }
-    
+
     pub fn is_positive(&self) -> bool {
         self.seconds > 0 || self.seconds == 0 && self.subsecond.0 > 0.0
     }
@@ -114,7 +116,7 @@ impl Neg for TimeDelta {
                 subsecond: Subsecond::default(),
             };
         }
-        
+
         Self {
             seconds: -self.seconds - 1,
             subsecond: Subsecond(1.0 - self.subsecond.0),
@@ -228,7 +230,7 @@ mod tests {
             }
         }
     }
-    
+
     #[rstest]
     #[case::zero_subsecond(TimeDelta { seconds: 1, subsecond: Subsecond(0.0) }, TimeDelta { seconds: -1, subsecond: Subsecond(0.0) })]
     #[case::nonzero_subsecond(TimeDelta { seconds: 0, subsecond: Subsecond(0.3) }, TimeDelta { seconds: -1, subsecond: Subsecond(0.7) })]

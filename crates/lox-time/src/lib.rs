@@ -6,16 +6,15 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::errors::LoxTimeError;
-use float_eq::float_eq;
 use num::ToPrimitive;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 
+use crate::errors::LoxTimeError;
+
 pub mod constants;
 pub mod continuous;
 pub mod dates;
-mod debug_panic;
 pub mod errors;
 pub mod intervals;
 pub mod leap_seconds;

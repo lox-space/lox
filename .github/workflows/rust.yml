@@ -32,12 +32,12 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           command: develop
-          working-directory: ./crates/lox_py
+          working-directory: ./crates/lox-space
           args: --extras dev
       - name: Run test
         run: |
           source .venv/bin/activate
-          pytest crates/lox_py/tests
+          pytest crates/lox-space/tests
 
   fmt:
     name: Rustfmt
