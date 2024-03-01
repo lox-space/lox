@@ -12,7 +12,7 @@ use thiserror::Error;
 
 use lox_io::spice::Kernel;
 
-/// Converts [lox_utils::bodies::PolynomialCoefficients] into a TokenStream.
+/// Converts [lox_bodies::PolynomialCoefficients] into a TokenStream.
 pub struct TokenizeablePolynomialCoefficients(f64, f64, f64, Vec<f64>);
 
 impl ToTokens for TokenizeablePolynomialCoefficients {
@@ -23,7 +23,7 @@ impl ToTokens for TokenizeablePolynomialCoefficients {
     }
 }
 
-/// Converts [lox_utils::bodies::NutationPrecessionCoefficients] into a TokenStream.
+/// Converts [lox_bodies::NutationPrecessionCoefficients] into a TokenStream.
 #[derive(Default)]
 pub struct TokenizeableNutPrecCoefficients((Vec<f64>, Vec<f64>));
 
@@ -70,7 +70,7 @@ impl<'a> RotationalElements<'a> {
         })
     }
 
-    /// Returns the TokenStream corresponding to the [lox_utils::bodies::BodyRotationalElements] impl.
+    /// Returns the TokenStream corresponding to the [lox_bodies::BodyRotationalElements] impl.
     pub(crate) fn code_tokens(&self) -> TokenStream {
         let ident = self.ident;
         let barycenter_nut_prec = &self.barycenter_nut_prec_coefficients;
@@ -89,7 +89,7 @@ impl<'a> RotationalElements<'a> {
         }
     }
 
-    /// Returns the TokenStream testing the [lox_utils::bodies::BodyRotationalElements] impl.
+    /// Returns the TokenStream testing the [lox_bodies::BodyRotationalElements] impl.
     pub(crate) fn test_tokens(&self) -> TokenStream {
         let ident = self.ident;
         let barycenter_nut_prec = &self.barycenter_nut_prec_coefficients;
