@@ -149,7 +149,7 @@ mod tests {
     #[case::one_femtosecond_difference(Subsecond(0.0), Subsecond(1e-15), false)]
     #[case::more_than_one_femtosecond_difference(Subsecond(0.0), Subsecond(2e-15), false)]
     // Neither of the following values can be exactly represented as an f64, covering the edge case
-    // where 1e-16 < δ < 1e-15, which using `float_eq` with `abs <= 1e-16` would consider unequal.
+    // where 1e-16 < δ < 1e-15, which `float_eq!` with `abs <= 1e-16` would consider unequal.
     #[case::less_than_one_femtosecond_difference(
         Subsecond(0.6),
         Subsecond(0.600_000_000_000_000_1),

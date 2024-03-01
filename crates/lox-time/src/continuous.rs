@@ -632,12 +632,11 @@ mod tests {
     }
 
     #[rstest]
-    #[rstest]
     #[case::zero_delta(BaseTime::default(), TimeDelta::default(), BaseTime::default())]
-    #[case::pos_delta_no_carry(BaseTime { seconds: 1, subsecond: Subsecond(0.9) }, TimeDelta { seconds: 1, subsecond: Subsecond(0.3) }, BaseTime { seconds: 0, subsecond: Subsecond(0.6) })]
-    #[case::pos_delta_with_carry(BaseTime { seconds: 1, subsecond: Subsecond(0.3) }, TimeDelta { seconds: 1, subsecond: Subsecond(0.4) }, BaseTime { seconds: -1, subsecond: Subsecond(0.9) })]
-    #[case::neg_delta_no_carry(BaseTime { seconds: 1, subsecond: Subsecond(0.6) }, TimeDelta { seconds: -1, subsecond: Subsecond(0.3) }, BaseTime { seconds: 2, subsecond: Subsecond(0.9) })]
-    #[case::neg_delta_with_carry(BaseTime { seconds: 1, subsecond: Subsecond(0.9) }, TimeDelta { seconds: -1, subsecond: Subsecond(0.3) }, BaseTime { seconds: 3, subsecond: Subsecond(0.2) })]
+    #[case::pos_delta_no_carry(BaseTime { seconds: 1, subsecond: Subsecond(0.3) }, TimeDelta { seconds: 1, subsecond: Subsecond(0.6) }, BaseTime { seconds: 2, subsecond: Subsecond(0.9) })]
+    #[case::pos_delta_with_carry(BaseTime { seconds: 1, subsecond: Subsecond(0.3) }, TimeDelta { seconds: 1, subsecond: Subsecond(0.9) }, BaseTime { seconds: 3, subsecond: Subsecond(0.2) })]
+    #[case::neg_delta_no_carry(BaseTime { seconds: 1, subsecond: Subsecond(0.6) }, TimeDelta { seconds: -2, subsecond: Subsecond(0.7) }, BaseTime { seconds: 0, subsecond: Subsecond(0.3) })]
+    #[case::neg_delta_with_carry(BaseTime { seconds: 1, subsecond: Subsecond(0.6) }, TimeDelta { seconds: -2, subsecond: Subsecond(0.3) }, BaseTime { seconds: -1, subsecond: Subsecond(0.9) })]
     fn test_base_time_add_time_delta(
         #[case] time: BaseTime,
         #[case] delta: TimeDelta,
@@ -651,8 +650,8 @@ mod tests {
     #[case::zero_delta(BaseTime::default(), TimeDelta::default(), BaseTime::default())]
     #[case::pos_delta_no_carry(BaseTime { seconds: 1, subsecond: Subsecond(0.9) }, TimeDelta { seconds: 1, subsecond: Subsecond(0.3) }, BaseTime { seconds: 0, subsecond: Subsecond(0.6) })]
     #[case::pos_delta_with_carry(BaseTime { seconds: 1, subsecond: Subsecond(0.3) }, TimeDelta { seconds: 1, subsecond: Subsecond(0.4) }, BaseTime { seconds: -1, subsecond: Subsecond(0.9) })]
-    #[case::neg_delta_no_carry(BaseTime { seconds: 1, subsecond: Subsecond(0.6) }, TimeDelta { seconds: -1, subsecond: Subsecond(0.3) }, BaseTime { seconds: 2, subsecond: Subsecond(0.9) })]
-    #[case::neg_delta_with_carry(BaseTime { seconds: 1, subsecond: Subsecond(0.9) }, TimeDelta { seconds: -1, subsecond: Subsecond(0.3) }, BaseTime { seconds: 3, subsecond: Subsecond(0.2) })]
+    #[case::neg_delta_no_carry(BaseTime { seconds: 1, subsecond: Subsecond(0.6) }, TimeDelta { seconds: -1, subsecond: Subsecond(0.7) }, BaseTime { seconds: 1, subsecond: Subsecond(0.9) })]
+    #[case::neg_delta_with_carry(BaseTime { seconds: 1, subsecond: Subsecond(0.9) }, TimeDelta { seconds: -1, subsecond: Subsecond(0.3) }, BaseTime { seconds: 2, subsecond: Subsecond(0.6) })]
     fn test_base_time_sub_time_delta(
         #[case] time: BaseTime,
         #[case] delta: TimeDelta,
@@ -709,7 +708,7 @@ mod tests {
     #[case::a_partial_number_of_centuries_after_the_epoch(
     BaseTime {
     seconds: (SECONDS_PER_JULIAN_CENTURY / 2) * 3,
-    subsecond: Subsecond::default(),
+    subsecond: Subsecond(0.5),
     },
     1.5000000001584404
     )]
