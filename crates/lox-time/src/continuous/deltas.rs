@@ -295,6 +295,30 @@ mod tests {
     }
 
     #[rstest]
+    #[case::positive(TimeDelta { seconds: 1, subsecond: Subsecond(0.0) }, true)]
+    #[case::negative(TimeDelta { seconds: -1, subsecond: Subsecond(0.0) }, false)]
+    #[case::zero(TimeDelta { seconds: 0, subsecond: Subsecond(0.0) }, false)]
+    fn test_is_positive(#[case] delta: TimeDelta, #[case] expected: bool) {
+        assert_eq!(expected, delta.is_positive());
+    }
+
+    #[rstest]
+    #[case::positive(TimeDelta { seconds: 1, subsecond: Subsecond(0.0) }, false)]
+    #[case::negative(TimeDelta { seconds: -1, subsecond: Subsecond(0.0) }, true)]
+    #[case::zero(TimeDelta { seconds: 0, subsecond: Subsecond(0.0) }, false)]
+    fn test_is_negative(#[case] delta: TimeDelta, #[case] expected: bool) {
+        assert_eq!(expected, delta.is_negative());
+    }
+
+    #[rstest]
+    #[case::positive(TimeDelta { seconds: 1, subsecond: Subsecond(0.0) }, false)]
+    #[case::negative(TimeDelta { seconds: -1, subsecond: Subsecond(0.0) }, false)]
+    #[case::zero(TimeDelta { seconds: 0, subsecond: Subsecond(0.0) }, true)]
+    fn test_is_zero(#[case] delta: TimeDelta, #[case] expected: bool) {
+        assert_eq!(expected, delta.is_zero());
+    }
+
+    #[rstest]
     #[case::zero_subsecond(TimeDelta { seconds: 1, subsecond: Subsecond(0.0) }, TimeDelta { seconds: -1, subsecond: Subsecond(0.0) })]
     #[case::nonzero_subsecond(TimeDelta { seconds: 0, subsecond: Subsecond(0.3) }, TimeDelta { seconds: -1, subsecond: Subsecond(0.7) })]
     fn test_time_delta_neg(#[case] delta: TimeDelta, #[case] expected: TimeDelta) {
