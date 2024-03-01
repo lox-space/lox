@@ -6,7 +6,7 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use lox_core::time::continuous::deltas::TimeDelta;
+use lox_time::continuous::deltas::TimeDelta;
 
 fn main() {
     // Run registered benchmarks.

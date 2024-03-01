@@ -11,11 +11,3 @@ thiserror.workspace = true
 proptest.workspace = true
 rstest.workspace = true
 divan = "0.1.11"
-
-[[bench]]
-name = "iau_frames"
-harness = false
-
-[[bench]]
-name = "time_delta"
-harness = false

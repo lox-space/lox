@@ -7,11 +7,11 @@
  */
 
 use divan::Bencher;
-use glam::DVec3;
 
-use lox_coords::frames::{FromFrame, Icrf, Rotation};
+use lox_bodies::{Jupiter, RotationalElements};
 use lox_coords::frames::iau::BodyFixed;
-use lox_core::bodies::{Jupiter, RotationalElements};
+use lox_coords::frames::{FromFrame, Icrf, Rotation};
+use lox_coords::DVec3;
 
 fn main() {
     // Run registered benchmarks.

@@ -398,11 +398,17 @@ dependencies = [
 
 [[package]]
 name = "lox-space"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
+ "divan",
+ "float_eq",
  "lox-bodies",
  "lox-coords",
+ "lox-core",
  "lox-time",
+ "pyo3",
+ "rstest",
+ "thiserror",
 ]
 
 [[package]]
@@ -414,20 +420,6 @@ dependencies = [
  "mockall",
  "num",
  "proptest",
- "rstest",
- "thiserror",
-]
-
-[[package]]
-name = "lox_py"
-version = "0.1.0"
-dependencies = [
- "float_eq",
- "lox-bodies",
- "lox-coords",
- "lox-core",
- "lox-time",
- "pyo3",
  "rstest",
  "thiserror",
 ]

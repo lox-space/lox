@@ -10,11 +10,11 @@
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/lox-space/examples" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/lox-space/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/lox-space/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/lox-time/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/lox-comms/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/lox-bodies/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/lox-coords/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/lox-core/benches" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/crates/lox-core/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/lox-core/src/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/lox-earth/src" isTestSource="false" />
@@ -23,8 +23,8 @@
       <sourceFolder url="file://$MODULE_DIR$/tools/foo/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/lox-io/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/lox-io/tests" isTestSource="true" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/lox-py/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/lox-py/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/lox-space/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/lox-space/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/tools/lox-gen/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
       <excludeFolder url="file://$MODULE_DIR$/venv" />
