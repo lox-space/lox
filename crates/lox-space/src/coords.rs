@@ -180,7 +180,7 @@ mod tests {
     use float_eq::assert_float_eq;
 
     use crate::bodies::PyPlanet;
-    use crate::time::PyTimeScale;
+    use crate::time::{PySubsecond, PyTimeScale};
 
     use super::*;
 
@@ -194,11 +194,7 @@ mod tests {
             Some(21),
             Some(8),
             Some(0),
-            Some(0),
-            Some(0),
-            Some(0),
-            Some(0),
-            Some(0),
+            Some(PySubsecond::default()),
         )
         .expect("time should be valid");
         let body = Python::with_gil(|py| {
@@ -257,11 +253,7 @@ mod tests {
             Some(21),
             Some(8),
             Some(0),
-            Some(0),
-            Some(0),
-            Some(0),
-            Some(0),
-            Some(0),
+            Some(PySubsecond::default()),
         )
         .expect("time should be valid");
         let body = Python::with_gil(|py| {

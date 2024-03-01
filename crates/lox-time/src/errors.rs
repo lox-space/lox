@@ -8,7 +8,7 @@
 
 use thiserror::Error;
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Clone, Error, Debug, PartialEq)]
 pub enum LoxTimeError {
     #[error("invalid date `{0}-{1}-{2}`")]
     InvalidDate(i64, i64, i64),

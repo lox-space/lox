@@ -14,24 +14,28 @@ use lox_utils::debug_panic;
 
 use crate::constants::f64;
 
-/// A signed, continuous time difference with at least femtosecond precision.
+/// A signed, continuous time difference supporting femtosecond precision.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
 pub struct TimeDelta {
     // Like `BaseTime`, the sign of the delta is determined by the sign of the `seconds` field.
     pub seconds: i64,
 
-    // The positive subseconds since the last whole second. For example, a delta of -0.5 s would be
+    // The positive subsecond since the last whole second. For example, a delta of -0.25 s would be
     // represented as
     // ```
     // let delta = TimeDelta {
     //     seconds: -1,
-    //     femtoseconds: Subsecond(0.5),
+    //     femtoseconds: Subsecond(0.75),
     // }
     // ```
     pub subsecond: Subsecond,
 }
 
 impl TimeDelta {
+    pub fn new(seconds: i64, subsecond: Subsecond) -> Self {
+        Self { seconds, subsecond }
+    }
+
     pub fn from_seconds(seconds: i64) -> Self {
         Self {
             seconds,
@@ -39,6 +43,11 @@ impl TimeDelta {
         }
     }
 
+    /// Create a [TimeDelta] from a floating-point number of seconds.
+    ///
+    /// As the magnitude of the input's significand grows, the precision of the resulting
+    /// `TimeDelta` falls. Applications requiring precision guarantees should use `TimeDelta::new`
+    /// instead.
     pub fn from_decimal_seconds(value: f64) -> Self {
         if value.is_nan() {
             debug_panic!(
@@ -46,45 +55,79 @@ impl TimeDelta {
             );
             return Self::default();
         }
-        if value.is_infinite() {
+        if value >= (i64::MAX as f64) {
             debug_panic!(
-                "TimeDelta seconds component was infinite, which will return a TimeDelta with a saturated `seconds` component in production"
+                "TimeDelta seconds component was >= i64::MAX, which will saturate in production"
             );
-            return if value.is_sign_positive() {
-                TimeDelta {
-                    seconds: i64::MAX,
-                    subsecond: Subsecond::default(),
-                }
-            } else {
-                TimeDelta {
-                    seconds: i64::MIN,
-                    subsecond: Subsecond::default(),
-                }
+            return TimeDelta {
+                seconds: i64::MAX,
+                subsecond: Subsecond(value.fract()),
+            };
+        }
+        if value <= (i64::MIN as f64) {
+            debug_panic!(
+                "TimeDelta seconds component was <= i64::MIN, which will saturate in production"
+            );
+            return TimeDelta {
+                seconds: i64::MIN,
+                subsecond: Subsecond(value.fract()),
             };
         }
 
-        Self {
-            seconds: value.trunc() as i64,
-            subsecond: Subsecond(value.fract()),
+        if value.is_sign_negative() {
+            Self {
+                seconds: (value as i64) - 1,
+                subsecond: Subsecond(1.0 + value.fract()),
+            }
+        } else {
+            Self {
+                seconds: value as i64,
+                subsecond: Subsecond(value.fract()),
+            }
         }
     }
 
+    /// Create a [TimeDelta] from a floating-point number of minutes.
+    ///
+    /// As the magnitude of the input's significand grows, the resolution of the resulting
+    /// `TimeDelta` falls. Applications requiring precision guarantees should use `TimeDelta::new`
+    /// instead.
     pub fn from_minutes(value: f64) -> Self {
         Self::from_decimal_seconds(value * f64::SECONDS_PER_MINUTE)
     }
 
+    /// Create a [TimeDelta] from a floating-point number of hours.
+    ///
+    /// As the magnitude of the input's significand grows, the resolution of the resulting
+    /// `TimeDelta` falls. Applications requiring precision guarantees should use `TimeDelta::new`
+    /// instead.
     pub fn from_hours(value: f64) -> Self {
         Self::from_decimal_seconds(value * f64::SECONDS_PER_HOUR)
     }
 
+    /// Create a [TimeDelta] from a floating-point number of days.
+    ///
+    /// As the magnitude of the input's significand grows, the resolution of the resulting
+    /// `TimeDelta` falls. Applications requiring precision guarantees should use `TimeDelta::new`
+    /// instead.
     pub fn from_days(value: f64) -> Self {
         Self::from_decimal_seconds(value * f64::SECONDS_PER_DAY)
     }
 
+    /// Create a [TimeDelta] from a floating-point number of Julian years.
+    ///
+    /// As the magnitude of the input's significand grows, the resolution of the resulting
+    /// `TimeDelta` falls. Applications requiring precision guarantees should use `TimeDelta::new`
+    /// instead.
     pub fn from_julian_years(value: f64) -> Self {
         Self::from_decimal_seconds(value * f64::SECONDS_PER_JULIAN_YEAR)
     }
 
+    /// Create a [TimeDelta] from a floating-point number of Julian centuries.
+    ///
+    /// As the magnitude of the input's significand grows, the resolution of the resulting
+    /// `TimeDelta` falls. Applications requiring precision guarantees should use `TimeDelta::new`
+    /// instead.
     pub fn from_julian_centuries(value: f64) -> Self {
         Self::from_decimal_seconds(value * f64::SECONDS_PER_JULIAN_CENTURY)
     }
@@ -133,90 +176,110 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_seconds() {
+    fn test_from_seconds() {
         let dt = TimeDelta::from_seconds(60);
-        assert_eq!(dt.seconds, 60);
-        assert_eq!(dt.subsecond, Subsecond::default());
+        let expected = TimeDelta {
+            seconds: 60,
+            subsecond: Subsecond::default(),
+        };
+        assert_eq!(expected, dt);
     }
 
-    #[test]
-    fn test_decimal_seconds() {
-        let dt = TimeDelta::from_decimal_seconds(60.3);
-        assert_eq!(dt.seconds, 60);
-        assert_eq!(dt.subsecond, Subsecond(0.3));
+    #[rstest]
+    #[case::simple(0.2, TimeDelta { seconds: 0, subsecond: Subsecond(0.2) })]
+    #[case::no_fraction(60.0, TimeDelta { seconds: 60, subsecond: Subsecond::default() })]
+    #[case::loss_of_precision(60.3, TimeDelta { seconds: 60, subsecond: Subsecond(0.29999999999999716) })]
+    fn test_decimal_seconds(#[case] seconds: f64, #[case] expected: TimeDelta) {
+        let actual = TimeDelta::from_decimal_seconds(seconds);
+        assert_eq!(expected, actual);
     }
 
-    #[test]
-    fn test_decimal_seconds_without_fraction() {
-        let dt = TimeDelta::from_decimal_seconds(60.0);
-        assert_eq!(dt.seconds, 60);
-        assert_eq!(dt.subsecond, Subsecond::default());
-    }
-
-    #[test]
-    fn test_decimal_seconds_below_resolution() {
-        let dt = TimeDelta::from_decimal_seconds(1e-18);
-        assert_eq!(dt.seconds, 0);
-        assert_eq!(dt.subsecond, Subsecond::default());
-    }
-
-    #[test]
+    #[rstest]
     #[should_panic(expected = "saturate in production")]
-    fn test_decimal_seconds_exceeds_max() {
-        TimeDelta::from_decimal_seconds(f64::MAX);
-    }
-
-    #[test]
+    #[case::positive_infinity(f64::INFINITY)]
+    #[should_panic(expected = "saturate in production")]
+    #[case::negative_infinity(f64::NEG_INFINITY)]
+    #[should_panic(expected = "saturate in production")]
+    #[case::greater_than_i64_max(i64::MAX as f64 + 1.0)]
+    #[should_panic(expected = "saturate in production")]
+    #[case::less_than_i64_min(i64::MIN as f64 - 1.0)]
     #[should_panic(expected = "zero in production")]
-    fn test_decimal_seconds_is_nan() {
-        TimeDelta::from_decimal_seconds(f64::NAN);
+    #[case::nan(f64::NAN)]
+    fn test_from_decimal_seconds_panics(#[case] value: f64) {
+        TimeDelta::from_decimal_seconds(value);
     }
 
     #[test]
-    fn test_minutes() {
+    fn test_from_minutes() {
         let dt = TimeDelta::from_minutes(1.0);
-        assert_eq!(dt.seconds, 60);
-        assert_eq!(dt.subsecond, Subsecond::default());
+        let expected = TimeDelta {
+            seconds: 60,
+            subsecond: Subsecond::default(),
+        };
+        assert_eq!(expected, dt);
     }
 
     #[test]
-    fn test_hours() {
+    fn test_from_hours() {
         let dt = TimeDelta::from_hours(1.0);
-        assert_eq!(dt.seconds, 3600);
-        assert_eq!(dt.subsecond, Subsecond::default());
+        let expected = TimeDelta {
+            seconds: 3600,
+            subsecond: Subsecond::default(),
+        };
+        assert_eq!(expected, dt);
     }
 
     #[test]
-    fn test_days() {
+    fn test_from_days() {
         let dt = TimeDelta::from_days(1.0);
-        assert_eq!(dt.seconds, 86400);
-        assert_eq!(dt.subsecond, Subsecond::default());
+        let expected = TimeDelta {
+            seconds: 86400,
+            subsecond: Subsecond::default(),
+        };
+        assert_eq!(expected, dt);
     }
 
     #[test]
-    fn test_years() {
+    fn test_from_years() {
         let dt = TimeDelta::from_julian_years(1.0);
-        assert_eq!(dt.seconds, 31557600);
-        assert_eq!(dt.subsecond, Subsecond::default());
+        let expected = TimeDelta {
+            seconds: 31557600,
+            subsecond: Subsecond::default(),
+        };
+        assert_eq!(expected, dt);
     }
 
     #[test]
-    fn test_centuries() {
+    fn test_from_centuries() {
         let dt = TimeDelta::from_julian_centuries(1.0);
-        assert_eq!(dt.seconds, 3155760000);
-        assert_eq!(dt.subsecond, Subsecond::default());
+        let expected = TimeDelta {
+            seconds: 3155760000,
+            subsecond: Subsecond::default(),
+        };
+        assert_eq!(expected, dt);
     }
 
     #[test]
-    fn test_attosecond() {
-        let dt = TimeDelta::from_decimal_seconds(f64::SECONDS_PER_FEMTOSECOND);
-        assert_eq!(dt.seconds, 0);
-        assert_eq!(dt.subsecond, Subsecond(0.000_000_000_000_001));
+    fn test_second() {
+        let dt = TimeDelta {
+            seconds: 1,
+            subsecond: Subsecond::default(),
+        };
+        assert_eq!(1, dt.seconds);
+    }
+
+    #[test]
+    fn test_subsecond() {
+        let dt = TimeDelta {
+            seconds: 0,
+            subsecond: Subsecond(0.3),
+        };
+        assert_eq!(Subsecond(0.3), dt.subsecond);
     }
 
     proptest! {
         #[test]
-        fn prop_seconds_roundtrip(s in 0.0..u64::MAX as f64) {
+        fn prop_seconds_roundtrip(s in 0.0..i64::MAX as f64) {
             let exp = if s < f64::SECONDS_PER_FEMTOSECOND {
                 0.0
             } else {
@@ -224,9 +287,9 @@ mod tests {
             };
             let delta = TimeDelta::from_decimal_seconds(s);
             if s > 1.0 {
-                assert_float_eq!(delta.to_decimal_seconds(), exp, rel <= 1e-15);
+                assert_float_eq!(delta.to_decimal_seconds(), exp, rel <= 1e-15, "input {} was not roundtrippable", s);
             } else {
-                assert_float_eq!(delta.to_decimal_seconds(), exp, abs <= 1e-15);
+                assert_float_eq!(delta.to_decimal_seconds(), exp, abs <= 1e-15, "input {} was not roundtrippable", s);
             }
         }
     }

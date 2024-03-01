@@ -14,7 +14,7 @@ use lox_time::continuous::julian_dates::JulianDate;
 use lox_time::continuous::{BaseTime, Time, TAI, TCB, TCG, TDB, TT, UT1};
 use lox_time::dates::Date;
 use lox_time::utc::UTC;
-use lox_time::PerMille;
+use lox_time::Subsecond;
 
 use crate::LoxPyError;
 
@@ -75,6 +75,30 @@ pub struct PyTime {
     pub timestamp: BaseTime,
 }
 
+#[pyclass(name = "Subsecond")]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
+pub struct PySubsecond {
+    subsecond: Subsecond,
+}
+
+#[pymethods]
+impl PySubsecond {
+    #[new]
+    pub fn new(subsecond: f64) -> Result<Self, LoxPyError> {
+        Ok(PySubsecond {
+            subsecond: Subsecond::new(subsecond)?,
+        })
+    }
+
+    fn __repr__(&self) -> String {
+        format!("Subsecond(\"{}\")", Into::<f64>::into(self.subsecond))
+    }
+
+    fn __str__(&self) -> String {
+        self.subsecond.to_string()
+    }
+}
+
 #[pymethods]
 impl PyTime {
     #[allow(clippy::too_many_arguments)]
@@ -86,11 +110,7 @@ impl PyTime {
     hour = 0,
     minute = 0,
     second = 0,
-    milli = 0,
-    micro = 0,
-    nano = 0,
-    pico = 0,
-    femto = 0,
+    subsecond = PySubsecond::default()
     ))]
     #[new]
     pub fn new(
@@ -101,34 +121,14 @@ impl PyTime {
         hour: Option<u8>,
         minute: Option<u8>,
         second: Option<u8>,
-        milli: Option<u16>,
-        micro: Option<u16>,
-        nano: Option<u16>,
-        pico: Option<u16>,
-        femto: Option<u16>,
+        subsecond: Option<PySubsecond>,
     ) -> Result<Self, LoxPyError> {
         let date = Date::new(year, month, day)?;
-
-        let hour = hour.unwrap_or(0);
-        let minute = minute.unwrap_or(0);
-        let second = second.unwrap_or(0);
-        let mut utc = UTC::new(hour, minute, second)?;
-        if let Some(milli) = milli {
-            utc.milli = PerMille::new(milli)?;
-        }
-        if let Some(micro) = micro {
-            utc.micro = PerMille::new(micro)?;
-        }
-        if let Some(nano) = nano {
-            utc.nano = PerMille::new(nano)?;
-        }
-        if let Some(pico) = pico {
-            utc.pico = PerMille::new(pico)?;
-        }
-        if let Some(femto) = femto {
-            utc.femto = PerMille::new(femto)?;
-        }
-
+        let hour = hour.unwrap_or_default();
+        let minute = minute.unwrap_or_default();
+        let second = second.unwrap_or_default();
+        let subsecond = subsecond.unwrap_or_default();
+        let utc = UTC::new(hour, minute, second, subsecond.subsecond)?;
         Ok(pytime_from_date_and_utc_timestamp(scale, date, utc))
     }
 
@@ -199,14 +199,10 @@ mod tests {
             Some(1),
             Some(1),
             Some(1),
-            Some(123),
-            Some(456),
-            Some(789),
-            Some(123),
-            Some(456),
+            Some(PySubsecond::new(0.123456789123456).unwrap()),
         )
         .expect("time should be valid");
-        assert_eq!(time.timestamp.subsecond(), 123456789123456);
+        assert_eq!(time.timestamp.subsecond(), 0.123456789123456);
         assert_float_eq!(time.days_since_j2000(), 8765.542374114084, rel <= 1e-8);
         assert_eq!(time.scale(), PyTimeScale::TDB);
     }

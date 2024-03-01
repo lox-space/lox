@@ -97,6 +97,13 @@ impl Display for Subsecond {
     }
 }
 
+#[allow(clippy::from_over_into)] // infallible in one direction only
+impl Into<f64> for Subsecond {
+    fn into(self) -> f64 {
+        self.0
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use rstest::rstest;
@@ -162,5 +169,11 @@ mod tests {
     fn test_subsecond_display() {
         let subsecond = Subsecond(0.123456789876543);
         assert_eq!("123.456.789.876.543", subsecond.to_string());
+    }
+
+    #[test]
+    fn test_subsecond_into_f64() {
+        let subsecond = Subsecond(0.0);
+        assert_eq!(0.0, subsecond.into());
     }
 }
