@@ -4,7 +4,7 @@ pub(crate) use iau2000a::nutation_iau2000a;
 pub(crate) use iau2000b::nutation_iau2000b;
 use lox_time::intervals::TDBJulianCenturiesSinceJ2000;
 
-use crate::nutation::{Nutation, point1_microarcsec_to_rad};
+use crate::nutation::{point1_microarcsec_to_rad, Nutation};
 
 mod iau2000a;
 mod iau2000b;

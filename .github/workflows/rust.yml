@@ -37,7 +37,7 @@ jobs:
       - name: Run test
         run: |
           source .venv/bin/activate
-          pytest crates/lox_py/tests
+          pytest crates/lox-space/tests
 
   fmt:
     name: Rustfmt

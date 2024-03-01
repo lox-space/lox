@@ -12,7 +12,7 @@
 use mockall::automock;
 
 use crate::constants::u64::FEMTOSECONDS_PER_MILLISECOND;
-use crate::continuous::{TAI, Time, TimeDelta, TimeScale, TT};
+use crate::continuous::{Time, TimeDelta, TimeScale, TAI, TT};
 
 /// TransformTimeScale transforms a [Time] in [TimeScale] `T` to the corresponding [Time] in
 /// [TimeScale] `U`.

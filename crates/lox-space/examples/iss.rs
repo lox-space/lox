@@ -7,11 +7,11 @@
  */
 
 use lox_bodies::Earth;
-use lox_coords::DVec3;
 use lox_coords::frames::Icrf;
 use lox_coords::two_body::{Cartesian, Keplerian};
-use lox_time::continuous::{TDB, Time};
+use lox_coords::DVec3;
 use lox_time::continuous::julian_dates::JulianDate;
+use lox_time::continuous::{Time, TDB};
 use lox_time::dates::Date;
 use lox_time::utc::UTC;
 

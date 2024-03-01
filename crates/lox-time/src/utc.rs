@@ -2,13 +2,13 @@ use std::fmt::Display;
 
 use num::ToPrimitive;
 
-use crate::{PerMille, WallClock};
 use crate::constants::u64::{
     FEMTOSECONDS_PER_MICROSECOND, FEMTOSECONDS_PER_MILLISECOND, FEMTOSECONDS_PER_NANOSECOND,
     FEMTOSECONDS_PER_PICOSECOND,
 };
 use crate::dates::Date;
 use crate::errors::LoxTimeError;
+use crate::{PerMille, WallClock};
 
 /// A UTC timestamp with additional support for fractional seconds represented with femtosecond
 /// precision.

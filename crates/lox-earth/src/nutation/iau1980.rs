@@ -4,7 +4,7 @@ use lox_time::intervals::TDBJulianCenturiesSinceJ2000;
 use lox_utils::math::{arcsec_to_rad, normalize_two_pi};
 use lox_utils::types::{Arcsec, Radians};
 
-use crate::nutation::{Nutation, point1_milliarcsec_to_rad};
+use crate::nutation::{point1_milliarcsec_to_rad, Nutation};
 
 struct Coefficients {
     /// Coefficients of l, l', F, D and Ω.

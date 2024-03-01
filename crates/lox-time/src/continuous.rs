@@ -34,7 +34,7 @@ use crate::constants::u64::{
 use crate::continuous::julian_dates::{Epoch, JulianDate, Unit};
 use crate::continuous::transform::TransformTimeScale;
 use crate::dates::Date;
-use crate::utc::{UTC, UTCDateTime};
+use crate::utc::{UTCDateTime, UTC};
 use crate::WallClock;
 
 pub mod transform;

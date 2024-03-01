@@ -12,8 +12,8 @@ use lox_bodies::PointMass;
 use lox_time::continuous::{Time, TimeScale};
 
 use crate::base::{BaseCartesian, BaseKeplerian, BaseTwoBody};
-use crate::CoordinateSystem;
 use crate::frames::{InertialFrame, ReferenceFrame};
+use crate::CoordinateSystem;
 
 pub trait TwoBody<T, O, F>
 where
@@ -261,7 +261,7 @@ mod tests {
     use float_eq::assert_float_eq;
 
     use lox_bodies::Earth;
-    use lox_time::continuous::{TDB, Time};
+    use lox_time::continuous::{Time, TDB};
     use lox_time::dates::Date;
     use lox_time::utc::UTC;
 

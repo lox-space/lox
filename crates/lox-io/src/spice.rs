@@ -12,10 +12,10 @@ use nom::branch::alt;
 use nom::bytes::complete::{tag, take_until, take_while, take_while1};
 use nom::character::complete::{alpha1, line_ending, multispace0, one_of};
 use nom::combinator::{map, map_res, recognize, rest};
-use nom::IResult;
 use nom::multi::{fold_many1, many0, many1};
 use nom::number::complete::{double, float};
 use nom::sequence::{delimited, preceded, separated_pair, terminated, tuple};
+use nom::IResult;
 
 #[derive(Clone, Debug, PartialEq)]
 enum Value {

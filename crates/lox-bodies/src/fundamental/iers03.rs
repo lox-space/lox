@@ -157,7 +157,7 @@ mod tests {
 
     use super::*;
 
-// Note that all expected values are outputs from the equivalent ERFA functions.
+    // Note that all expected values are outputs from the equivalent ERFA functions.
 
     // Relative error tolerance for float_eq assertions.
     // This is somewhat loose, being based on observations of how closely our implementations

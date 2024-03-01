@@ -11,8 +11,8 @@
 
 use std::ops::Add;
 
-use lox_time::continuous::{TDB, Time};
 use lox_time::continuous::julian_dates::JulianDate;
+use lox_time::continuous::{Time, TDB};
 use lox_utils::math::RADIANS_IN_ARCSECOND;
 use lox_utils::types::Radians;
 
