@@ -11,7 +11,7 @@
 
 use glam::{DMat3, DVec2};
 
-use lox_core::types::Radians;
+use lox_utils::types::Radians;
 
 /// The spherical angles E and d.
 struct SphericalAngles {

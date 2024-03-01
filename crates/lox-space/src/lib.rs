@@ -10,8 +10,8 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use thiserror::Error;
 
-use lox_core::errors::LoxError;
 use lox_time::errors::LoxTimeError;
+use lox_utils::errors::LoxError;
 
 use crate::bodies::{PyBarycenter, PyMinorBody, PyPlanet, PySatellite, PySun};
 use crate::coords::{PyCartesian, PyKeplerian};

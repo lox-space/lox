@@ -10,8 +10,8 @@ authors.workspace = true
 
 [dependencies]
 lox-bodies.workspace = true
-lox-core.workspace = true
 lox-time.workspace = true
+lox-utils.workspace = true
 
 float_eq.workspace = true
 glam.workspace = true

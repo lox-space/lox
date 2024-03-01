@@ -11,8 +11,8 @@
 use std::f64::consts::TAU;
 
 use lox_bodies::Earth;
-use lox_core::types::Radians;
 use lox_time::intervals::UT1DaysSinceJ2000;
+use lox_utils::types::Radians;
 
 pub trait RotationAngle {
     /// Computes the Earth Rotation Angle (ERA) in radians using the IAU 2000 model.

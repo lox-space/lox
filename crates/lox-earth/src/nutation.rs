@@ -11,10 +11,10 @@
 
 use std::ops::Add;
 
-use lox_core::math::RADIANS_IN_ARCSECOND;
-use lox_core::types::Radians;
 use lox_time::continuous::{TDB, Time};
 use lox_time::continuous::julian_dates::JulianDate;
+use lox_utils::math::RADIANS_IN_ARCSECOND;
+use lox_utils::types::Radians;
 
 use crate::nutation::iau1980::nutation_iau1980;
 use crate::nutation::iau2000::nutation_iau2000a;

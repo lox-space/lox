@@ -6,7 +6,7 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use lox_core::math::RADIANS_IN_ARCSECOND;
+use lox_utils::math::RADIANS_IN_ARCSECOND;
 
 use crate::nutation::Nutation;
 

@@ -339,8 +339,8 @@ dependencies = [
  "dyn-clone",
  "fast_polynomial",
  "float_eq",
- "lox-core",
  "lox-time",
+ "lox-utils",
 ]
 
 [[package]]
@@ -354,19 +354,8 @@ dependencies = [
  "float_eq",
  "glam",
  "lox-bodies",
- "lox-core",
  "lox-time",
-]
-
-[[package]]
-name = "lox-core"
-version = "0.1.0"
-dependencies = [
- "divan",
- "float_eq",
- "proptest",
- "rstest",
- "thiserror",
+ "lox-utils",
 ]
 
 [[package]]
@@ -377,8 +366,8 @@ dependencies = [
  "float_eq",
  "glam",
  "lox-bodies",
- "lox-core",
  "lox-time",
+ "lox-utils",
  "rstest",
 ]
 
@@ -404,8 +393,8 @@ dependencies = [
  "float_eq",
  "lox-bodies",
  "lox-coords",
- "lox-core",
  "lox-time",
+ "lox-utils",
  "pyo3",
  "rstest",
  "thiserror",
@@ -416,11 +405,19 @@ name = "lox-time"
 version = "0.1.0"
 dependencies = [
  "float_eq",
- "lox-core",
+ "lox-utils",
  "mockall",
  "num",
  "proptest",
  "rstest",
+ "thiserror",
+]
+
+[[package]]
+name = "lox-utils"
+version = "0.1.0"
+dependencies = [
+ "float_eq",
  "thiserror",
 ]
 

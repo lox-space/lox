@@ -14,8 +14,8 @@ crate-type = ["lib", "cdylib"]
 [dependencies]
 lox-bodies.workspace = true
 lox-coords.workspace = true
-lox-core.workspace = true
 lox-time.workspace = true
+lox-utils.workspace = true
 
 float_eq.workspace = true
 pyo3.workspace = true

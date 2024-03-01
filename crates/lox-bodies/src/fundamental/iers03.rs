@@ -11,9 +11,9 @@
 
 use std::f64::consts::TAU;
 
-use lox_core::math::arcsec_to_rad_two_pi;
-use lox_core::types::Radians;
 use lox_time::intervals::TDBJulianCenturiesSinceJ2000;
+use lox_utils::math::arcsec_to_rad_two_pi;
+use lox_utils::types::Radians;
 
 use crate::{Earth, Jupiter, Mars, Mercury, Moon, Neptune, Saturn, Sun, Uranus, Venus};
 

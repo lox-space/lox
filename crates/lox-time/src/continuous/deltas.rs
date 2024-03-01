@@ -8,7 +8,7 @@
 
 use num::ToPrimitive;
 
-use lox_core::debug_panic;
+use lox_utils::debug_panic;
 
 use crate::constants::f64;
 use crate::constants::u128;

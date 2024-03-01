@@ -1,10 +1,10 @@
 use std::f64::consts::TAU;
 
-use lox_core::math::{arcsec_to_rad, normalize_two_pi};
-use lox_core::types::{Arcsec, Radians};
 use lox_time::intervals::TDBJulianCenturiesSinceJ2000;
+use lox_utils::math::{arcsec_to_rad, normalize_two_pi};
+use lox_utils::types::{Arcsec, Radians};
 
-use crate::nutation::{point1_milliarcsec_to_rad, Nutation};
+use crate::nutation::{Nutation, point1_milliarcsec_to_rad};
 
 struct Coefficients {
     /// Coefficients of l, l', F, D and Ω.

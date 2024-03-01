@@ -9,7 +9,7 @@
 use float_eq::float_eq;
 use glam::{DMat3, DVec3};
 
-use lox_core::math::{mod_two_pi, normalize_two_pi};
+use lox_utils::math::{mod_two_pi, normalize_two_pi};
 
 use crate::anomalies::{eccentric_to_true, hyperbolic_to_true};
 
