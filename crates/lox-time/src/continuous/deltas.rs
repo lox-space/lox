@@ -13,6 +13,7 @@ use std::ops::Neg;
 use lox_utils::debug_panic;
 
 use crate::constants::f64;
+use crate::errors::LoxTimeError;
 
 /// A signed, continuous time difference supporting femtosecond precision.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
@@ -48,33 +49,27 @@ impl TimeDelta {
     /// As the magnitude of the input's significand grows, the precision of the resulting
     /// `TimeDelta` falls. Applications requiring precision guarantees should use `TimeDelta::new`
     /// instead.
-    pub fn from_decimal_seconds(value: f64) -> Self {
+    pub fn from_decimal_seconds(value: f64) -> Result<Self, LoxTimeError> {
         if value.is_nan() {
-            debug_panic!(
-                "TimeDelta seconds component was NaN, which will be set to zero in production"
-            );
-            return Self::default();
+            return Err(LoxTimeError::InvalidTimeDelta {
+                raw: value,
+                detail: "NaN is unrepresentable".to_string(),
+            });
         }
         if value >= (i64::MAX as f64) {
-            debug_panic!(
-                "TimeDelta seconds component was >= i64::MAX, which will saturate in production"
-            );
-            return TimeDelta {
-                seconds: i64::MAX,
-                subsecond: Subsecond(value.fract()),
-            };
+            return Err(LoxTimeError::InvalidTimeDelta {
+                raw: value,
+                detail: "input seconds cannot exceed the maximum value of an i64".to_string(),
+            });
         }
         if value <= (i64::MIN as f64) {
-            debug_panic!(
-                "TimeDelta seconds component was <= i64::MIN, which will saturate in production"
-            );
-            return TimeDelta {
-                seconds: i64::MIN,
-                subsecond: Subsecond(value.fract()),
-            };
+            return Err(LoxTimeError::InvalidTimeDelta {
+                raw: value,
+                detail: "input seconds cannot be less than the minimum value of an i64".to_string(),
+            });
         }
 
-        if value.is_sign_negative() {
+        let result = if value.is_sign_negative() {
             Self {
                 seconds: (value as i64) - 1,
                 subsecond: Subsecond(1.0 + value.fract()),
@@ -84,7 +79,8 @@ impl TimeDelta {
                 seconds: value as i64,
                 subsecond: Subsecond(value.fract()),
             }
-        }
+        };
+        Ok(result)
     }
 
     /// Create a [TimeDelta] from a floating-point number of minutes.
@@ -92,7 +88,7 @@ impl TimeDelta {
     /// As the magnitude of the input's significand grows, the resolution of the resulting
     /// `TimeDelta` falls. Applications requiring precision guarantees should use `TimeDelta::new`
     /// instead.
-    pub fn from_minutes(value: f64) -> Self {
+    pub fn from_minutes(value: f64) -> Result<Self, LoxTimeError> {
         Self::from_decimal_seconds(value * f64::SECONDS_PER_MINUTE)
     }
 
@@ -101,7 +97,7 @@ impl TimeDelta {
     /// As the magnitude of the input's significand grows, the resolution of the resulting
     /// `TimeDelta` falls. Applications requiring precision guarantees should use `TimeDelta::new`
     /// instead.
-    pub fn from_hours(value: f64) -> Self {
+    pub fn from_hours(value: f64) -> Result<Self, LoxTimeError> {
         Self::from_decimal_seconds(value * f64::SECONDS_PER_HOUR)
     }
 
@@ -110,7 +106,7 @@ impl TimeDelta {
     /// As the magnitude of the input's significand grows, the resolution of the resulting
     /// `TimeDelta` falls. Applications requiring precision guarantees should use `TimeDelta::new`
     /// instead.
-    pub fn from_days(value: f64) -> Self {
+    pub fn from_days(value: f64) -> Result<Self, LoxTimeError> {
         Self::from_decimal_seconds(value * f64::SECONDS_PER_DAY)
     }
 
@@ -119,7 +115,7 @@ impl TimeDelta {
     /// As the magnitude of the input's significand grows, the resolution of the resulting
     /// `TimeDelta` falls. Applications requiring precision guarantees should use `TimeDelta::new`
     /// instead.
-    pub fn from_julian_years(value: f64) -> Self {
+    pub fn from_julian_years(value: f64) -> Result<Self, LoxTimeError> {
         Self::from_decimal_seconds(value * f64::SECONDS_PER_JULIAN_YEAR)
     }
 
@@ -128,7 +124,7 @@ impl TimeDelta {
     /// As the magnitude of the input's significand grows, the resolution of the resulting
     /// `TimeDelta` falls. Applications requiring precision guarantees should use `TimeDelta::new`
     /// instead.
-    pub fn from_julian_centuries(value: f64) -> Self {
+    pub fn from_julian_centuries(value: f64) -> Result<Self, LoxTimeError> {
         Self::from_decimal_seconds(value * f64::SECONDS_PER_JULIAN_CENTURY)
     }
 
@@ -176,6 +172,16 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_new() {
+        let dt = TimeDelta::new(1, Subsecond(0.3));
+        let expected = TimeDelta {
+            seconds: 1,
+            subsecond: Subsecond(0.3),
+        };
+        assert_eq!(expected, dt);
+    }
+
+    #[test]
     fn test_from_seconds() {
         let dt = TimeDelta::from_seconds(60);
         let expected = TimeDelta {
@@ -186,76 +192,67 @@ mod tests {
     }
 
     #[rstest]
-    #[case::simple(0.2, TimeDelta { seconds: 0, subsecond: Subsecond(0.2) })]
-    #[case::no_fraction(60.0, TimeDelta { seconds: 60, subsecond: Subsecond::default() })]
-    #[case::loss_of_precision(60.3, TimeDelta { seconds: 60, subsecond: Subsecond(0.29999999999999716) })]
-    fn test_decimal_seconds(#[case] seconds: f64, #[case] expected: TimeDelta) {
+    #[case::simple(0.2, Ok(TimeDelta { seconds: 0, subsecond: Subsecond(0.2) }))]
+    #[case::no_fraction(60.0, Ok(TimeDelta { seconds: 60, subsecond: Subsecond::default() }))]
+    #[case::loss_of_precision(60.3, Ok(TimeDelta { seconds: 60, subsecond: Subsecond(0.29999999999999716) }))]
+    #[case::nan(f64::NAN, Err(LoxTimeError::InvalidTimeDelta { raw: f64::NAN, detail: "NaN is unrepresentable".to_string() }))]
+    #[case::greater_than_i64_max(i64::MAX as f64 + 1.0, Err(LoxTimeError::InvalidTimeDelta { raw: i64::MAX as f64 + 1.0, detail: "input seconds cannot exceed the maximum value of an i64".to_string() }))]
+    #[case::less_than_i64_min(i64::MIN as f64 - 1.0, Err(LoxTimeError::InvalidTimeDelta { raw: i64::MIN as f64 - 1.0, detail: "input seconds cannot be less than the minimum value of an i64".to_string() }))]
+    fn test_from_decimal_seconds(
+        #[case] seconds: f64,
+        #[case] expected: Result<TimeDelta, LoxTimeError>,
+    ) {
         let actual = TimeDelta::from_decimal_seconds(seconds);
         assert_eq!(expected, actual);
-    }
-
-    #[rstest]
-    #[should_panic(expected = "saturate in production")]
-    #[case::positive_infinity(f64::INFINITY)]
-    #[should_panic(expected = "saturate in production")]
-    #[case::negative_infinity(f64::NEG_INFINITY)]
-    #[should_panic(expected = "saturate in production")]
-    #[case::greater_than_i64_max(i64::MAX as f64 + 1.0)]
-    #[should_panic(expected = "saturate in production")]
-    #[case::less_than_i64_min(i64::MIN as f64 - 1.0)]
-    #[should_panic(expected = "zero in production")]
-    #[case::nan(f64::NAN)]
-    fn test_from_decimal_seconds_panics(#[case] value: f64) {
-        TimeDelta::from_decimal_seconds(value);
     }
 
     #[test]
     fn test_from_minutes() {
         let dt = TimeDelta::from_minutes(1.0);
-        let expected = TimeDelta {
+        let expected = Ok(TimeDelta {
             seconds: 60,
             subsecond: Subsecond::default(),
-        };
+        });
         assert_eq!(expected, dt);
     }
 
     #[test]
     fn test_from_hours() {
         let dt = TimeDelta::from_hours(1.0);
-        let expected = TimeDelta {
+        let expected = Ok(TimeDelta {
             seconds: 3600,
             subsecond: Subsecond::default(),
-        };
+        });
         assert_eq!(expected, dt);
     }
 
     #[test]
     fn test_from_days() {
         let dt = TimeDelta::from_days(1.0);
-        let expected = TimeDelta {
+        let expected = Ok(TimeDelta {
             seconds: 86400,
             subsecond: Subsecond::default(),
-        };
+        });
         assert_eq!(expected, dt);
     }
 
     #[test]
     fn test_from_years() {
         let dt = TimeDelta::from_julian_years(1.0);
-        let expected = TimeDelta {
+        let expected = Ok(TimeDelta {
             seconds: 31557600,
             subsecond: Subsecond::default(),
-        };
+        });
         assert_eq!(expected, dt);
     }
 
     #[test]
     fn test_from_centuries() {
         let dt = TimeDelta::from_julian_centuries(1.0);
-        let expected = TimeDelta {
+        let expected = Ok(TimeDelta {
             seconds: 3155760000,
             subsecond: Subsecond::default(),
-        };
+        });
         assert_eq!(expected, dt);
     }
 

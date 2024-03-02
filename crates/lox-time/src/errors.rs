@@ -18,8 +18,8 @@ pub enum LoxTimeError {
     InvalidSeconds(f64),
     #[error("subsecond must be in the range [0.0, 1.0), but was `{0}`")]
     InvalidSubsecond(f64),
-    #[error("PerMille value must be in the range [0, 999], but was `{0}`")]
-    InvalidPerMille(u16),
     #[error("day of year cannot be 366 for a non-leap year")]
     NonLeapYear,
+    #[error("`{raw:?}` cannot be represented as a `TimeDelta`")]
+    InvalidTimeDelta { raw: f64, detail: String },
 }
