@@ -1,4 +1,4 @@
-# LOX
+# Lox
 
 [![codecov](https://codecov.io/gh/lox-space/lox/graph/badge.svg?token=R1W6HLN2N2)](https://codecov.io/gh/lox-space/lox)
 
