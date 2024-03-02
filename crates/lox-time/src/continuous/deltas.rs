@@ -10,8 +10,6 @@ use crate::Subsecond;
 use num::ToPrimitive;
 use std::ops::Neg;
 
-use lox_utils::debug_panic;
-
 use crate::constants::f64;
 use crate::errors::LoxTimeError;
 
@@ -282,7 +280,7 @@ mod tests {
             } else {
                 s
             };
-            let delta = TimeDelta::from_decimal_seconds(s);
+            let delta = TimeDelta::from_decimal_seconds(s).unwrap();
             if s > 1.0 {
                 assert_float_eq!(delta.to_decimal_seconds(), exp, rel <= 1e-15, "input {} was not roundtrippable", s);
             } else {
