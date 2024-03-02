@@ -91,7 +91,7 @@ impl PySubsecond {
     }
 
     fn __repr__(&self) -> String {
-        format!("Subsecond(\"{}\")", Into::<f64>::into(self.subsecond))
+        format!("Subsecond({})", Into::<f64>::into(self.subsecond))
     }
 
     fn __str__(&self) -> String {
@@ -165,6 +165,7 @@ fn base_time_from_date_and_utc_timestamp(scale: PyTimeScale, date: Date, utc: UT
 #[cfg(test)]
 mod tests {
     use float_eq::assert_float_eq;
+    use lox_time::continuous::TimeScale;
     use rstest::rstest;
 
     use super::*;
@@ -183,6 +184,98 @@ mod tests {
         assert_eq!(py_scale.__repr__(), format!("TimeScale(\"{}\")", name));
     }
 
+    // Due to the conversion between enum PyTimeScale and generic Rust TimeScales, the following
+    // time_new tests can't be parameterized with rstest.
+    #[test]
+    fn test_time_new_tai() {
+        let actual = PyTime::new(PyTimeScale::TAI, 2024, 1, 1, None, None, None, None).unwrap();
+        let expected = PyTime {
+            scale: PyTimeScale::TAI,
+            timestamp: Time::from_date_and_utc_timestamp(
+                TAI,
+                Date::new(2024, 1, 1).unwrap(),
+                UTC::new(0, 0, 0, Subsecond::default()).unwrap(),
+            )
+            .base_time(),
+        };
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_time_new_tcb() {
+        let actual = PyTime::new(PyTimeScale::TCB, 2024, 1, 1, None, None, None, None).unwrap();
+        let expected = PyTime {
+            scale: PyTimeScale::TCB,
+            timestamp: Time::from_date_and_utc_timestamp(
+                TCB,
+                Date::new(2024, 1, 1).unwrap(),
+                UTC::new(0, 0, 0, Subsecond::default()).unwrap(),
+            )
+            .base_time(),
+        };
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_time_new_tcg() {
+        let actual = PyTime::new(PyTimeScale::TCG, 2024, 1, 1, None, None, None, None).unwrap();
+        let expected = PyTime {
+            scale: PyTimeScale::TCG,
+            timestamp: Time::from_date_and_utc_timestamp(
+                TCG,
+                Date::new(2024, 1, 1).unwrap(),
+                UTC::new(0, 0, 0, Subsecond::default()).unwrap(),
+            )
+            .base_time(),
+        };
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_time_new_tdb() {
+        let actual = PyTime::new(PyTimeScale::TDB, 2024, 1, 1, None, None, None, None).unwrap();
+        let expected = PyTime {
+            scale: PyTimeScale::TDB,
+            timestamp: Time::from_date_and_utc_timestamp(
+                TDB,
+                Date::new(2024, 1, 1).unwrap(),
+                UTC::new(0, 0, 0, Subsecond::default()).unwrap(),
+            )
+            .base_time(),
+        };
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_time_new_tt() {
+        let actual = PyTime::new(PyTimeScale::TT, 2024, 1, 1, None, None, None, None).unwrap();
+        let expected = PyTime {
+            scale: PyTimeScale::TT,
+            timestamp: Time::from_date_and_utc_timestamp(
+                TT,
+                Date::new(2024, 1, 1).unwrap(),
+                UTC::new(0, 0, 0, Subsecond::default()).unwrap(),
+            )
+            .base_time(),
+        };
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_time_new_ut1() {
+        let actual = PyTime::new(PyTimeScale::UT1, 2024, 1, 1, None, None, None, None).unwrap();
+        let expected = PyTime {
+            scale: PyTimeScale::UT1,
+            timestamp: Time::from_date_and_utc_timestamp(
+                UT1,
+                Date::new(2024, 1, 1).unwrap(),
+                UTC::new(0, 0, 0, Subsecond::default()).unwrap(),
+            )
+            .base_time(),
+        };
+        assert_eq!(expected, actual);
+    }
+
     #[test]
     fn test_invalid_scale() {
         let py_scale = PyTimeScale::new("disco time");
@@ -190,7 +283,7 @@ mod tests {
     }
 
     #[test]
-    fn test_time() {
+    fn test_time_days_since_j2000() {
         let time = PyTime::new(
             PyTimeScale::TDB,
             2024,
@@ -199,11 +292,52 @@ mod tests {
             Some(1),
             Some(1),
             Some(1),
-            Some(PySubsecond::new(0.123456789123456).unwrap()),
+            Some(PySubsecond::new(0.123456789123456).expect("PySubsecond should be valid")),
         )
-        .expect("time should be valid");
-        assert_eq!(time.timestamp.subsecond(), 0.123456789123456);
-        assert_float_eq!(time.days_since_j2000(), 8765.542374114084, rel <= 1e-8);
-        assert_eq!(time.scale(), PyTimeScale::TDB);
+        .expect("PyTime should be valid");
+        assert_float_eq!(8765.542374114084, time.days_since_j2000(), rel <= 1e-8);
+    }
+
+    #[test]
+    fn test_time_scale() {
+        let time = PyTime::new(
+            PyTimeScale::TDB,
+            2024,
+            1,
+            1,
+            Some(1),
+            Some(1),
+            Some(1),
+            Some(PySubsecond::new(0.123456789123456).expect("PySubsecond should be valid")),
+        )
+        .expect("PyTime should be valid");
+        assert_eq!(PyTimeScale::TDB, time.scale());
+    }
+
+    #[test]
+    fn test_py_subsecond_new() {
+        let actual = PySubsecond::new(0.123).expect("subsecond should be valid");
+        let expected = PySubsecond {
+            subsecond: Subsecond::new(0.123).expect("subsecond should be valid"),
+        };
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_py_subsecond_repr() {
+        let actual = PySubsecond::new(0.123456789123456)
+            .expect("subsecond should be valid")
+            .__repr__();
+        let expected = "Subsecond(0.123456789123456)";
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_py_subsecond_str() {
+        let actual = PySubsecond::new(0.123456789123456)
+            .expect("subsecond should be valid")
+            .__str__();
+        let expected = "123.456.789.123.456";
+        assert_eq!(expected, actual);
     }
 }
