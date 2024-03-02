@@ -14,10 +14,11 @@ use lox_time::continuous::julian_dates::JulianDate;
 use lox_time::continuous::{Time, TDB};
 use lox_time::dates::Date;
 use lox_time::utc::UTC;
+use lox_time::Subsecond;
 
 fn main() {
     let date = Date::new(2016, 5, 30).unwrap();
-    let utc = UTC::new(12, 0, 0).unwrap();
+    let utc = UTC::new(12, 0, 0, Subsecond::default()).unwrap();
     let time = Time::from_date_and_utc_timestamp(TDB, date, utc);
     let position = DVec3::new(6068.27927, -1692.84394, -2516.61918);
     let velocity = DVec3::new(-0.660415582, 5.495938726, -5.303093233);

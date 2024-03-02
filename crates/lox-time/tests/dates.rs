@@ -10,6 +10,7 @@ use rstest::rstest;
 
 use lox_time::dates::Date;
 use lox_time::utc::UTC;
+use lox_time::Subsecond;
 
 #[rstest]
 #[case(-4713, 12, 31, -2451546)]
@@ -49,7 +50,7 @@ fn test_illegal_dates() {
 
 #[test]
 fn test_illegal_times() {
-    assert!(UTC::from_fractional_seconds(24, 59, 59.0).is_err());
-    assert!(UTC::from_fractional_seconds(23, 60, 59.0).is_err());
-    assert!(UTC::from_fractional_seconds(23, 59, 61.0).is_err());
+    assert!(UTC::new(24, 59, 59, Subsecond::default()).is_err());
+    assert!(UTC::new(23, 60, 59, Subsecond::default()).is_err());
+    assert!(UTC::new(23, 59, 61, Subsecond::default()).is_err());
 }
