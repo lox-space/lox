@@ -165,7 +165,6 @@ fn base_time_from_date_and_utc_timestamp(scale: PyTimeScale, date: Date, utc: UT
 #[cfg(test)]
 mod tests {
     use float_eq::assert_float_eq;
-    use lox_time::continuous::TimeScale;
     use rstest::rstest;
 
     use super::*;
