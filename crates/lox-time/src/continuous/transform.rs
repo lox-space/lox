@@ -11,7 +11,7 @@
 
 use mockall::automock;
 
-use crate::continuous::{Time, TimeDelta, TimeScale, TAI, TT};
+use crate::continuous::{BaseTime, Time, TimeDelta, TimeScale, TAI, TCG, TT};
 use crate::Subsecond;
 
 /// TransformTimeScale transforms a [Time] in [TimeScale] `T` to the corresponding [Time] in
@@ -52,6 +52,37 @@ impl TransformTimeScale<TT, TAI> for &TimeScaleTransformer {
     }
 }
 
+/// The difference between J2000 and TT at 1977 January 1.0 TAI.
+const J77_TT: TimeDelta = TimeDelta {
+    seconds: -725803167,
+    subsecond: Subsecond(0.816),
+};
+
+/// The rate of change of TCG with respect to TT.
+const LG_RATE: f64 = 6.969290134e-10;
+
+/// The rate of change of TT with respect to TCG.
+const REV_LG_RATE: f64 = LG_RATE / (1.0 - LG_RATE);
+
+impl TransformTimeScale<TT, TCG> for &TimeScaleTransformer {
+    fn transform(&self, time: Time<TT>) -> Time<TCG> {
+        let delta = tt_tcg_delta(time);
+        Time::from_base_time(TCG, time.base_time() + delta)
+    }
+}
+
+fn tt_tcg_delta(time: Time<TT>) -> TimeDelta {
+    let time = time.base_time().to_f64();
+    let offset = REV_LG_RATE * (time - -7.25803167816e8); // f64 literal approach matches ERFA to 15 dp
+                                                          // let offset = REV_LG_RATE * (time - J77_TT).base_time().to_f64(); // Time const approach matches ERFA to only 8 dp
+    TimeDelta::from_decimal_seconds(offset).unwrap_or_else(|err| {
+        panic!(
+            "Calculated TT to TCG offset `{}` could not be converted to `TimeDelta`: {}",
+            offset, err
+        );
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -73,5 +104,14 @@ mod tests {
         let tai = transformer.transform(tt);
         let expected = Time::new(TAI, 0, Subsecond::default());
         assert_eq!(expected, tai);
+    }
+
+    #[test]
+    fn test_transform_tt_tcg() {
+        let transformer = &TimeScaleTransformer {};
+        let tt = Time::new(TT, 0, Subsecond::default());
+        let tcg = transformer.transform(tt);
+        let expected = Time::new(TCG, 0, Subsecond(0.505833286021129));
+        assert_eq!(expected, tcg);
     }
 }

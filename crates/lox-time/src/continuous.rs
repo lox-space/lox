@@ -103,6 +103,11 @@ impl BaseTime {
             Epoch::J2000 => self.seconds,
         }
     }
+
+    /// Convert self to a single f64, potentially with loss of precision.
+    fn to_f64(&self) -> f64 {
+        self.seconds as f64 + self.subsecond.0
+    }
 }
 
 impl Display for BaseTime {
