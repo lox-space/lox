@@ -58,7 +58,7 @@ pub struct BaseTime {
 }
 
 impl BaseTime {
-    pub fn new(seconds: i64, subsecond: Subsecond) -> Self {
+    pub const fn new(seconds: i64, subsecond: Subsecond) -> Self {
         Self { seconds, subsecond }
     }
 
@@ -102,6 +102,11 @@ impl BaseTime {
             Epoch::J1950 => self.seconds + SECONDS_BETWEEN_J1950_AND_J2000,
             Epoch::J2000 => self.seconds,
         }
+    }
+
+    /// Convert self to a single f64, potentially with loss of precision.
+    fn to_f64(self) -> f64 {
+        self.subsecond.0 + self.seconds as f64
     }
 }
 
@@ -715,6 +720,17 @@ mod tests {
     fn test_base_time_centuries_since_j2000(#[case] time: BaseTime, #[case] expected: f64) {
         let actual = time.centuries_since_j2000();
         assert_float_eq!(expected, actual, abs <= 1e-12,);
+    }
+
+    #[test]
+    fn test_base_time_to_f64() {
+        let time = BaseTime {
+            seconds: 123,
+            subsecond: Subsecond(0.123),
+        };
+        let expected = 123.123;
+        let actual = time.to_f64();
+        assert_float_eq!(expected, actual, abs <= 1e-15);
     }
 
     #[test]
