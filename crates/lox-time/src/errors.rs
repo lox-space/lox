@@ -20,7 +20,7 @@ pub enum LoxTimeError {
     InvalidSubsecond(f64),
     #[error("day of year cannot be 366 for a non-leap year")]
     NonLeapYear,
-    #[error("`{raw:?}` cannot be represented as a `TimeDelta`")]
+    #[error("`{raw}` cannot be represented as a `TimeDelta`: {detail}")]
     InvalidTimeDelta { raw: f64, detail: String },
 }
 
