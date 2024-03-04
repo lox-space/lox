@@ -58,7 +58,7 @@ pub struct BaseTime {
 }
 
 impl BaseTime {
-    pub fn new(seconds: i64, subsecond: Subsecond) -> Self {
+    pub const fn new(seconds: i64, subsecond: Subsecond) -> Self {
         Self { seconds, subsecond }
     }
 
