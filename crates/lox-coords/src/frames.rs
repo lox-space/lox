@@ -9,11 +9,10 @@
 use std::fmt::{Debug, Display, Formatter};
 
 use glam::{DMat3, DVec3};
+use lox_time::continuous::{Time, TimeScale};
+use crate::base::BaseCartesian;
 
 pub mod iau;
-
-// TODO: Replace with proper `Epoch` type
-type Epoch = f64;
 
 pub trait ReferenceFrame {}
 
@@ -57,8 +56,6 @@ pub fn rotation_matrix_derivative(m: DMat3, v: DVec3) -> DMat3 {
     -s * m
 }
 
-type State = (DVec3, DVec3);
-
 pub struct Rotation {
     m: DMat3,
     dm: DMat3,
@@ -85,40 +82,30 @@ impl Rotation {
         Self { m, dm }
     }
 
-    pub fn apply(&self, (pos, vel): State) -> State {
-        (self.m * pos, self.dm * pos + self.m * vel)
+    pub fn apply(&self, state: BaseCartesian) -> BaseCartesian {
+        BaseCartesian::new(self.m * state.position(), self.dm * state.position() + self.m * state.velocity())
     }
 }
 
-pub trait FromFrame<T: ReferenceFrame> {
-    fn rotation_from(&self, frame: T, t: Epoch) -> Rotation;
-
-    fn transform_from(&self, frame: T, t: Epoch, state: State) -> State {
-        let rotation = self.rotation_from(frame, t);
-        rotation.apply(state)
-    }
+pub trait RotationFrom<R: ReferenceFrame, T: TimeScale + Copy> {
+    fn rotation_from(&self, frame: R, t: Time<T>) -> Rotation;
 }
 
-impl<T: ReferenceFrame> FromFrame<T> for T {
-    fn rotation_from(&self, _: T, _: Epoch) -> Rotation {
+impl<R: ReferenceFrame, T: TimeScale + Copy> RotationFrom<R, T> for R {
+    fn rotation_from(&self, _: R, _: Time<T>) -> Rotation {
         Rotation::new(DMat3::IDENTITY)
     }
 }
 
-pub trait IntoFrame<T: ReferenceFrame> {
-    fn rotation_into(&self, frame: T, t: Epoch) -> Rotation;
-
-    fn transform_into(&self, frame: T, t: Epoch, state: State) -> State {
-        let rotation = self.rotation_into(frame, t);
-        rotation.apply(state)
-    }
+pub trait RotationInto<R: ReferenceFrame, T: TimeScale + Copy> {
+    fn rotation_into(&self, frame: R, t: Time<T>) -> Rotation;
 }
 
-impl<T, U: ReferenceFrame> IntoFrame<U> for T
+impl<T, R: ReferenceFrame, S: TimeScale + Copy> RotationInto<R, S> for T
 where
-    T: FromFrame<U>,
+    T: RotationFrom<R,S>,
 {
-    fn rotation_into(&self, frame: U, t: Epoch) -> Rotation {
+    fn rotation_into(&self, frame: R, t: Time<S>) -> Rotation {
         self.rotation_from(frame, t).transpose()
     }
 }

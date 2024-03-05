@@ -10,7 +10,7 @@ use divan::Bencher;
 
 use lox_bodies::{Jupiter, RotationalElements};
 use lox_coords::frames::iau::BodyFixed;
-use lox_coords::frames::{FromFrame, Icrf, Rotation};
+use lox_coords::frames::{RotationFrom, Icrf, Rotation};
 use lox_coords::DVec3;
 
 fn main() {

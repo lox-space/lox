@@ -17,6 +17,8 @@ pub use generated::planets::*;
 pub use generated::satellites::*;
 pub use generated::sun::*;
 use lox_time::constants::f64::{SECONDS_PER_DAY, SECONDS_PER_JULIAN_CENTURY};
+use lox_time::continuous::{TDB, Time};
+use lox_time::continuous::julian_dates::JulianDate;
 
 pub mod errors;
 pub mod fundamental;
@@ -320,7 +322,8 @@ pub trait RotationalElements: Body {
         theta
     }
 
-    fn right_ascension(t: f64) -> f64 {
+    fn right_ascension(t: Time<TDB>) -> f64 {
+        let t = t.centuries_since_j2000();
         let dt = SECONDS_PER_JULIAN_CENTURY;
         let (c0, c1, c2, c) = Self::RIGHT_ASCENSION_COEFFICIENTS;
         let theta = Self::theta(t);
@@ -334,7 +337,8 @@ pub trait RotationalElements: Body {
         c0 + c1 * t / dt + c2 * t.powi(2) / dt.powi(2) + c_trig
     }
 
-    fn right_ascension_dot(t: f64) -> f64 {
+    fn right_ascension_dot(t: Time<TDB>) -> f64 {
+        let t = t.centuries_since_j2000();
         let dt = SECONDS_PER_JULIAN_CENTURY;
         let (_, c1, c2, c) = Self::RIGHT_ASCENSION_COEFFICIENTS;
         let (_, theta1) = Self::NUTATION_PRECESSION_COEFFICIENTS;
@@ -349,7 +353,8 @@ pub trait RotationalElements: Body {
         c1 / dt + 2.0 * c2 * t / dt.powi(2) + c_trig
     }
 
-    fn declination(t: f64) -> f64 {
+    fn declination(t: Time<TDB>) -> f64 {
+        let t = t.centuries_since_j2000();
         let dt = SECONDS_PER_JULIAN_CENTURY;
         let (c0, c1, c2, c) = Self::DECLINATION_COEFFICIENTS;
         let theta = Self::theta(t);
@@ -363,7 +368,8 @@ pub trait RotationalElements: Body {
         c0 + c1 * t / dt + c2 * t.powi(2) / dt.powi(2) + c_trig
     }
 
-    fn declination_dot(t: f64) -> f64 {
+    fn declination_dot(t: Time<TDB>) -> f64 {
+        let t = t.centuries_since_j2000();
         let dt = SECONDS_PER_JULIAN_CENTURY;
         let (_, c1, c2, c) = Self::DECLINATION_COEFFICIENTS;
         let (_, theta1) = Self::NUTATION_PRECESSION_COEFFICIENTS;
@@ -378,7 +384,8 @@ pub trait RotationalElements: Body {
         c1 / dt + 2.0 * c2 * t / dt.powi(2) - c_trig
     }
 
-    fn prime_meridian(t: f64) -> f64 {
+    fn prime_meridian(t: Time<TDB>) -> f64 {
+        let t = t.days_since_j2000();
         let dt = SECONDS_PER_DAY;
         let (c0, c1, c2, c) = Self::PRIME_MERIDIAN_COEFFICIENTS;
         let theta = Self::theta(t);
@@ -392,7 +399,8 @@ pub trait RotationalElements: Body {
         c0 + c1 * t / dt + c2 * t.powi(2) / dt.powi(2) + c_trig
     }
 
-    fn prime_meridian_dot(t: f64) -> f64 {
+    fn prime_meridian_dot(t: Time<TDB>) -> f64 {
+        let t = t.days_since_j2000();
         let dt = SECONDS_PER_DAY;
         let (_, c1, c2, c) = Self::PRIME_MERIDIAN_COEFFICIENTS;
         let (_, theta1) = Self::NUTATION_PRECESSION_COEFFICIENTS;
@@ -407,7 +415,7 @@ pub trait RotationalElements: Body {
         c1 / dt + 2.0 * c2 * t / dt.powi(2) + c_trig
     }
 
-    fn rotational_elements(t: f64) -> Elements {
+    fn rotational_elements(t: Time<TDB>) -> Elements {
         (
             Self::right_ascension(t) + PI / 2.0,
             PI / 2.0 - Self::declination(t),
@@ -415,7 +423,7 @@ pub trait RotationalElements: Body {
         )
     }
 
-    fn rotational_element_rates(t: f64) -> Elements {
+    fn rotational_element_rates(t: Time<TDB>) -> Elements {
         (
             Self::right_ascension_dot(t),
             -Self::declination_dot(t),
@@ -426,6 +434,7 @@ pub trait RotationalElements: Body {
 #[cfg(test)]
 mod tests {
     use float_eq::assert_float_eq;
+    use lox_time::Subsecond;
 
     use super::*;
 
@@ -580,8 +589,9 @@ mod tests {
 
     #[test]
     fn test_rotational_elements_right_ascension() {
+        let t = Time::new(TDB, 0, Subsecond::default());
         assert_float_eq!(
-            Jupiter::right_ascension(0.0),
+            Jupiter::right_ascension(t),
             4.678480799964803,
             rel <= 1e-8
         );
@@ -589,8 +599,9 @@ mod tests {
 
     #[test]
     fn test_rotational_elements_right_ascension_dot() {
+        let t = Time::new(TDB, 0, Subsecond::default());
         assert_float_eq!(
-            Jupiter::right_ascension_dot(0.0),
+            Jupiter::right_ascension_dot(t),
             -1.3266588500099516e-13,
             rel <= 1e-8
         );
@@ -598,13 +609,15 @@ mod tests {
 
     #[test]
     fn test_rotational_elements_declination() {
-        assert_float_eq!(Jupiter::declination(0.0), 1.1256642372977634, rel <= 1e-8);
+        let t = Time::new(TDB, 0, Subsecond::default());
+        assert_float_eq!(Jupiter::declination(t), 1.1256642372977634, rel <= 1e-8);
     }
 
     #[test]
     fn test_rotational_elements_declination_dot() {
+        let t = Time::new(TDB, 0, Subsecond::default());
         assert_float_eq!(
-            Jupiter::declination_dot(0.0),
+            Jupiter::declination_dot(t),
             3.004482367136341e-15,
             rel <= 1e-8
         );
@@ -612,13 +625,15 @@ mod tests {
 
     #[test]
     fn test_rotational_elements_prime_meridian() {
-        assert_float_eq!(Jupiter::prime_meridian(0.0), 4.973315703557842, rel <= 1e-8);
+        let t = Time::new(TDB, 0, Subsecond::default());
+        assert_float_eq!(Jupiter::prime_meridian(t), 4.973315703557842, rel <= 1e-8);
     }
 
     #[test]
     fn test_rotational_elements_prime_meridian_dot() {
+        let t = Time::new(TDB, 0, Subsecond::default());
         assert_float_eq!(
-            Jupiter::prime_meridian_dot(0.0),
+            Jupiter::prime_meridian_dot(t),
             0.00017585323445765458,
             rel <= 1e-8
         );
@@ -626,7 +641,8 @@ mod tests {
 
     #[test]
     fn test_rotational_elements_rotational_elements() {
-        let (ra, dec, pm) = Jupiter::rotational_elements(0.0);
+        let t = Time::new(TDB, 0, Subsecond::default());
+        let (ra, dec, pm) = Jupiter::rotational_elements(t);
         let (expected_ra, expected_dec, expected_pm) =
             (6.249277121030398, 0.44513208936761073, 4.973315703557842);
 
@@ -658,7 +674,8 @@ mod tests {
 
     #[test]
     fn test_rotational_elements_rotational_element_rates() {
-        let (ra_dot, dec_dot, pm_dot) = Jupiter::rotational_element_rates(0.0);
+        let t = Time::new(TDB, 0, Subsecond::default());
+        let (ra_dot, dec_dot, pm_dot) = Jupiter::rotational_element_rates(t);
         let (expected_ra_dot, expected_dec_dot, expected_pm_dot) = (
             -1.3266588500099516e-13,
             -3.004482367136341e-15,

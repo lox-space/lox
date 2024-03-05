@@ -11,8 +11,9 @@ use std::fmt::{Debug, Display, Formatter};
 use glam::{DMat3, DVec3};
 
 use lox_bodies::RotationalElements;
+use lox_time::continuous::{TDB, Time};
 
-use crate::frames::{Epoch, FromFrame, Icrf, ReferenceFrame, RotatingFrame, Rotation};
+use crate::frames::{RotationFrom, Icrf, ReferenceFrame, RotatingFrame, Rotation};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct BodyFixed<T: RotationalElements>(pub T);
@@ -26,8 +27,8 @@ impl<T: RotationalElements> Display for BodyFixed<T> {
 impl<T: RotationalElements> ReferenceFrame for BodyFixed<T> {}
 impl<T: RotationalElements> RotatingFrame for BodyFixed<T> {}
 
-impl<T: RotationalElements> FromFrame<Icrf> for BodyFixed<T> {
-    fn rotation_from(&self, _: Icrf, t: Epoch) -> Rotation {
+impl<T: RotationalElements> RotationFrom<Icrf, TDB> for BodyFixed<T> {
+    fn rotation_from(&self, _: Icrf, t: Time<TDB>) -> Rotation {
         let (right_ascension, declination, prime_meridian) = T::rotational_elements(t);
         let (right_ascension_rate, declination_rate, prime_meridian_rate) =
             T::rotational_element_rates(t);
@@ -46,8 +47,10 @@ mod tests {
     use glam::DVec3;
 
     use lox_bodies::Jupiter;
+    use lox_time::Subsecond;
+    use crate::base::BaseCartesian;
 
-    use crate::frames::{Icrf, IntoFrame};
+    use crate::frames::{Icrf, RotationInto};
 
     use super::*;
 
@@ -58,49 +61,33 @@ mod tests {
         assert!(!iau_jupiter.is_inertial());
         assert!(iau_jupiter.is_rotating());
 
-        let from_icrf = iau_jupiter.rotation_from(Icrf, 0.0);
-        let to_icrf = iau_jupiter.rotation_into(Icrf, 0.0);
+        let t = Time::new(TDB, 0, Subsecond::default());
+        let from_icrf = iau_jupiter.rotation_from(Icrf, t);
+        let to_icrf = iau_jupiter.rotation_into(Icrf, t);
 
         let r0 = DVec3::new(6068279.27e-3, -1692843.94e-3, -2516619.18e-3);
         let v0 = DVec3::new(-660.415582e-3, 5495.938726e-3, -5303.093233e-3);
         let r1 = DVec3::new(3922.220687351738, 5289.381014412637, -1631.4837924820245);
         let v1 = DVec3::new(-1.852284168309543, -0.8227941105651749, -7.14175174489828);
 
-        let rv0_exp = (r0, v0);
-        let rv1_exp = (r1, v1);
+        let rv0_exp = BaseCartesian::new(r0, v0);
+        let rv1_exp = BaseCartesian::new(r1, v1);
 
         let rv1_act = from_icrf.apply(rv0_exp);
         let rv0_act = to_icrf.apply(rv1_exp);
 
-        assert_float_eq!(rv1_act.0.x, rv1_exp.0.x, rel <= 1e-8);
-        assert_float_eq!(rv1_act.0.y, rv1_exp.0.y, rel <= 1e-8);
-        assert_float_eq!(rv1_act.0.z, rv1_exp.0.z, rel <= 1e-8);
-        assert_float_eq!(rv1_act.1.x, rv1_exp.1.x, rel <= 1e-8);
-        assert_float_eq!(rv1_act.1.y, rv1_exp.1.y, rel <= 1e-8);
-        assert_float_eq!(rv1_act.1.z, rv1_exp.1.z, rel <= 1e-8);
+        assert_float_eq!(rv1_act.position().x, rv1_exp.position().x, rel <= 1e-8);
+        assert_float_eq!(rv1_act.position().y, rv1_exp.position().y, rel <= 1e-8);
+        assert_float_eq!(rv1_act.position().z, rv1_exp.position().z, rel <= 1e-8);
+        assert_float_eq!(rv1_act.velocity().x, rv1_exp.velocity().x, rel <= 1e-8);
+        assert_float_eq!(rv1_act.velocity().y, rv1_exp.velocity().y, rel <= 1e-8);
+        assert_float_eq!(rv1_act.velocity().z, rv1_exp.velocity().z, rel <= 1e-8);
 
-        assert_float_eq!(rv0_act.0.x, rv0_exp.0.x, rel <= 1e-8);
-        assert_float_eq!(rv0_act.0.y, rv0_exp.0.y, rel <= 1e-8);
-        assert_float_eq!(rv0_act.0.z, rv0_exp.0.z, rel <= 1e-8);
-        assert_float_eq!(rv0_act.1.x, rv0_exp.1.x, rel <= 1e-8);
-        assert_float_eq!(rv0_act.1.y, rv0_exp.1.y, rel <= 1e-8);
-        assert_float_eq!(rv0_act.1.z, rv0_exp.1.z, rel <= 1e-8);
-
-        let rv1_act = iau_jupiter.transform_from(Icrf, 0.0, rv0_exp);
-        let rv0_act = iau_jupiter.transform_into(Icrf, 0.0, rv1_exp);
-
-        assert_float_eq!(rv1_act.0.x, rv1_exp.0.x, rel <= 1e-8);
-        assert_float_eq!(rv1_act.0.y, rv1_exp.0.y, rel <= 1e-8);
-        assert_float_eq!(rv1_act.0.z, rv1_exp.0.z, rel <= 1e-8);
-        assert_float_eq!(rv1_act.1.x, rv1_exp.1.x, rel <= 1e-8);
-        assert_float_eq!(rv1_act.1.y, rv1_exp.1.y, rel <= 1e-8);
-        assert_float_eq!(rv1_act.1.z, rv1_exp.1.z, rel <= 1e-8);
-
-        assert_float_eq!(rv0_act.0.x, rv0_exp.0.x, rel <= 1e-8);
-        assert_float_eq!(rv0_act.0.y, rv0_exp.0.y, rel <= 1e-8);
-        assert_float_eq!(rv0_act.0.z, rv0_exp.0.z, rel <= 1e-8);
-        assert_float_eq!(rv0_act.1.x, rv0_exp.1.x, rel <= 1e-8);
-        assert_float_eq!(rv0_act.1.y, rv0_exp.1.y, rel <= 1e-8);
-        assert_float_eq!(rv0_act.1.z, rv0_exp.1.z, rel <= 1e-8);
+        assert_float_eq!(rv0_act.position().x, rv0_exp.position().x, rel <= 1e-8);
+        assert_float_eq!(rv0_act.position().y, rv0_exp.position().y, rel <= 1e-8);
+        assert_float_eq!(rv0_act.position().z, rv0_exp.position().z, rel <= 1e-8);
+        assert_float_eq!(rv0_act.velocity().x, rv0_exp.velocity().x, rel <= 1e-8);
+        assert_float_eq!(rv0_act.velocity().y, rv0_exp.velocity().y, rel <= 1e-8);
+        assert_float_eq!(rv0_act.velocity().z, rv0_exp.velocity().z, rel <= 1e-8);
     }
 }
