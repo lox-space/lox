@@ -109,16 +109,6 @@ impl BaseTime {
         self.subsecond.0 + self.seconds as f64
     }
 
-    fn scale(&self, factor: f64) -> Self {
-        let mut seconds = factor * self.seconds as f64;
-        let mut fraction = self.subsecond.0 * factor;
-        seconds += fraction.trunc();
-        Self {
-            seconds: seconds as i64,
-            subsecond: Subsecond(fraction.fract()),
-        }
-    }
-
     /// Returns the `TimeDelta` between `self` and `other`.
     pub fn delta(&self, other: &Self) -> TimeDelta {
         let mut seconds = self.seconds - other.seconds;
