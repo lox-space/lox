@@ -9,9 +9,11 @@
 //! Module transform provides a trait for transforming between pairs of timescales, together
 //! with a default implementation for the most commonly used time scale pairs.
 
+use crate::constants::julian_dates::J77;
 use mockall::automock;
 
-use crate::continuous::{Time, TimeDelta, TimeScale, TAI, TCG, TT};
+use crate::continuous::julian_dates::JulianDate;
+use crate::continuous::{BaseTime, Time, TimeDelta, TimeScale, TAI, TCB, TCG, TDB, TT};
 use crate::Subsecond;
 
 /// TransformTimeScale transforms a [Time] in [TimeScale] `T` to the corresponding [Time] in
@@ -55,6 +57,15 @@ impl TransformTimeScale<TT, TAI> for &TimeScaleTransformer {
 /// The difference between J2000 TT and 1977 January 1.0 TAI as TT.
 const J77_TT: f64 = -7.25803167816e8;
 
+/// 1977 January 1.0 TAI as TT
+const TT_0: Time<TT> = Time::from_base_time(
+    TT,
+    BaseTime {
+        seconds: J77.seconds + 32,
+        subsecond: Subsecond(0.184),
+    },
+);
+
 /// The rate of change of TCG with respect to TT.
 const LG: f64 = 6.969290134e-10;
 
@@ -70,6 +81,18 @@ impl TransformTimeScale<TT, TCG> for &TimeScaleTransformer {
 impl TransformTimeScale<TCG, TT> for &TimeScaleTransformer {
     fn transform(&self, time: Time<TCG>) -> Time<TT> {
         Time::from_base_time(TT, time.base_time() + delta_tcg_tt(time))
+    }
+}
+
+impl TransformTimeScale<TCB, TDB> for &TimeScaleTransformer {
+    fn transform(&self, time: Time<TCB>) -> Time<TDB> {
+        Time::from_base_time(TDB, time.base_time() + delta_tcb_tdb(time))
+    }
+}
+
+impl TransformTimeScale<TDB, TCB> for &TimeScaleTransformer {
+    fn transform(&self, time: Time<TDB>) -> Time<TCB> {
+        Time::from_base_time(TCB, time.base_time() + delta_tdb_tcb(time))
     }
 }
 
@@ -95,12 +118,37 @@ fn delta_tcg_tt(time: Time<TCG>) -> TimeDelta {
     })
 }
 
+/// The rate of change of TDB with respect to TCB.
+const LB: f64 = 1.550519768e-8;
+
+/// The rate of change of TCB with respect to TDB.
+const INV_LB: f64 = LB / (1.0 - LB);
+
+/// Constant term of TDB − TT formula of Fairhead & Bretagnon (1990).
+const TDB_0: TimeDelta = TimeDelta {
+    seconds: -1,
+    subsecond: Subsecond(1.0 - 6.55e-5),
+};
+
+fn delta_tcb_tdb(time: Time<TCB>) -> TimeDelta {
+    let time = time.base_time();
+    let tt0 = &TT_0.base_time();
+    time.delta(tt0).scale(-LB) + TDB_0
+}
+
+fn delta_tdb_tcb(time: Time<TDB>) -> TimeDelta {
+    let time = time.base_time();
+    let tt0 = TT_0.base_time();
+    // ...
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::constants::julian_dates::{J0, SECONDS_BETWEEN_JD_AND_J2000};
     use crate::continuous::BaseTime;
     use crate::Subsecond;
+    use float_eq::assert_float_eq;
     use rstest::rstest;
 
     // Transformations are tested for agreement with both ERFA and AstroTime.jl.
@@ -148,5 +196,32 @@ mod tests {
         let transformer = &TimeScaleTransformer {};
         let tt = transformer.transform(tcg);
         assert_eq!(expected, tt);
+    }
+
+    #[rstest]
+    #[case::j0(
+        Time::from_base_time(TCB, J0),
+        Time::from_base_time(TDB, BaseTime::new(-SECONDS_BETWEEN_JD_AND_J2000 + 3272, Subsecond(0.956_215_636_550_950)))
+    )]
+    #[case::j2000(Time::j2000(TCB), Time::new(TDB, -12, Subsecond(0.7462129062427061)))]
+    fn test_transform_tcb_tdb(#[case] tcb: Time<TCB>, #[case] expected: Time<TDB>) {
+        let transformer = &TimeScaleTransformer {};
+        let tdb = transformer.transform(tcb);
+        assert_eq!(expected.seconds(), tdb.seconds());
+        // Lox and ERFA agree to the picosecond. If the use case arises, it may be worth
+        // investigating the size of the errors in both libraries and whether greater accuracy is
+        // possible.
+        assert_float_eq!(expected.subsecond(), tdb.subsecond(), rel <= 1e-12);
+    }
+
+    #[rstest]
+    #[case::j2000(
+        Time::j2000(TDB),
+        Time::new(TCB, 11, Subsecond(0.25378726824948927288))
+    )]
+    fn test_transform_tdb_tcb(#[case] tdb: Time<TDB>, #[case] expected: Time<TCB>) {
+        let transformer = &TimeScaleTransformer {};
+        let tcb = transformer.transform(tdb);
+        assert_eq!(expected, tcb);
     }
 }
