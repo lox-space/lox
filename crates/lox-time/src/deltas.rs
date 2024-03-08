@@ -6,7 +6,7 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::Subsecond;
+use crate::subsecond::Subsecond;
 use num::ToPrimitive;
 use std::ops::{Add, Neg, Sub};
 

@@ -12,12 +12,12 @@
 use crate::constants::julian_dates::J77;
 use mockall::automock;
 
-use crate::continuous::base_time::BaseTime;
-use crate::continuous::deltas::TimeDelta;
-use crate::continuous::time_scales::{TimeScale, TAI, TCB, TCG, TDB, TT};
-use crate::continuous::Time;
+use crate::base_time::BaseTime;
+use crate::deltas::TimeDelta;
+use crate::time_scales::{TimeScale, TAI, TCB, TCG, TDB, TT};
+use crate::Time;
 
-use crate::Subsecond;
+use crate::subsecond::Subsecond;
 
 /// TransformTimeScale transforms a [Time] in [TimeScale] `T` to the corresponding [Time] in
 /// [TimeScale] `U`.
@@ -149,8 +149,8 @@ fn delta_tdb_tcb(time: Time<TDB>) -> TimeDelta {
 mod tests {
     use super::*;
     use crate::constants::julian_dates::{J0, SECONDS_BETWEEN_JD_AND_J2000};
-    use crate::continuous::BaseTime;
-    use crate::Subsecond;
+    use crate::subsecond::Subsecond;
+    use crate::BaseTime;
     use float_eq::assert_float_eq;
     use rstest::rstest;
 

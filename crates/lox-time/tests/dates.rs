@@ -8,9 +8,9 @@
 
 use rstest::rstest;
 
-use lox_time::dates::Date;
+use lox_time::calendar_dates::Date;
+use lox_time::subsecond::Subsecond;
 use lox_time::utc::UTC;
-use lox_time::Subsecond;
 
 #[rstest]
 #[case(-4713, 12, 31, -2451546)]

@@ -6,15 +6,7 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-/*
- * Copyright (c) 2023. Helge Eichhorn and the LOX contributors
- *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, you can obtain one at https://mozilla.org/MPL/2.0/.
- */
-
-//! Module `time_scale` provides a marker trait with associated constants denoting a continuous
+//! Module `time_scales` provides a marker trait with associated constants denoting a continuous
 //! astronomical time scale, along with zero-sized implementations for the most commonly used
 //! scales.
 

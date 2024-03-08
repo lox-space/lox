@@ -10,12 +10,12 @@ use lox_bodies::Earth;
 use lox_coords::frames::Icrf;
 use lox_coords::two_body::{Cartesian, Keplerian};
 use lox_coords::DVec3;
-use lox_time::continuous::julian_dates::JulianDate;
-use lox_time::continuous::time_scales::TDB;
-use lox_time::continuous::Time;
-use lox_time::dates::Date;
+use lox_time::calendar_dates::Date;
+use lox_time::julian_dates::JulianDate;
+use lox_time::subsecond::Subsecond;
+use lox_time::time_scales::TDB;
 use lox_time::utc::UTC;
-use lox_time::Subsecond;
+use lox_time::Time;
 
 fn main() {
     let date = Date::new(2016, 5, 30).unwrap();

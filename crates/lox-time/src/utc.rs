@@ -1,8 +1,9 @@
 use std::fmt::Display;
 
-use crate::dates::Date;
+use crate::calendar_dates::Date;
 use crate::errors::LoxTimeError;
-use crate::{Subsecond, WallClock};
+use crate::subsecond::Subsecond;
+use crate::wall_clock::WallClock;
 
 /// A UTC timestamp with additional support for fractional seconds represented with femtosecond
 /// precision.
@@ -109,7 +110,7 @@ impl UTCDateTime {
 
 #[cfg(test)]
 mod tests {
-    use crate::dates::Calendar::Gregorian;
+    use crate::calendar_dates::Calendar::Gregorian;
 
     use super::*;
 
