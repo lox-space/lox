@@ -12,7 +12,11 @@
 use crate::constants::julian_dates::J77;
 use mockall::automock;
 
-use crate::continuous::{BaseTime, Time, TimeDelta, TimeScale, TAI, TCB, TCG, TDB, TT};
+use crate::continuous::base_time::BaseTime;
+use crate::continuous::deltas::TimeDelta;
+use crate::continuous::time_scales::{TimeScale, TAI, TCB, TCG, TDB, TT};
+use crate::continuous::Time;
+
 use crate::Subsecond;
 
 /// TransformTimeScale transforms a [Time] in [TimeScale] `T` to the corresponding [Time] in
