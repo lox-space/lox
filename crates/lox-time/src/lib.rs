@@ -6,10 +6,10 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-//! lox-time provides structs and functions for working with astronomical time scales.
+//! lox-time provides structs and functions for working with instants in astronomical time scales.
 //!
-//! The main struct is [Time], which represents an instant in time in generic over a continuous time
-//! scale without leap seconds.
+//! The main struct is [Time], which represents an instant in time generic over a [TimeScale]
+//! without leap seconds.
 //!
 //! [UTC] and [Date] are used strictly as an I/O formats, avoiding much of the complexity inherent
 //! in working with leap seconds.
