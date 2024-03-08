@@ -108,6 +108,22 @@ impl BaseTime {
     fn to_f64(self) -> f64 {
         self.subsecond.0 + self.seconds as f64
     }
+
+    /// Returns the `TimeDelta` between `self` and `other`.
+    pub fn delta(&self, other: &Self) -> TimeDelta {
+        let mut seconds = self.seconds - other.seconds;
+        let subsecond = if self.subsecond < other.subsecond {
+            seconds -= 1;
+            self.subsecond.0 - other.subsecond.0 + 1.0
+        } else {
+            self.subsecond.0 - other.subsecond.0
+        };
+
+        TimeDelta {
+            seconds,
+            subsecond: Subsecond(subsecond),
+        }
+    }
 }
 
 impl Display for BaseTime {
@@ -308,7 +324,7 @@ impl<T: TimeScale + Copy> Time<T> {
     }
 
     /// Instantiates a [Time] in the given scale from a [BaseTime].
-    pub fn from_base_time(scale: T, timestamp: BaseTime) -> Self {
+    pub const fn from_base_time(scale: T, timestamp: BaseTime) -> Self {
         Self { scale, timestamp }
     }
 
@@ -517,6 +533,18 @@ mod tests {
             subsecond: Subsecond(0.123),
         };
         assert_eq!(time.subsecond(), 0.123);
+    }
+
+    #[rstest]
+    #[case::zero_delta(BaseTime::default(), BaseTime::default(), TimeDelta::default())]
+    #[case::positive_delta(BaseTime::default(), BaseTime { seconds: 1, subsecond: Subsecond::default() }, TimeDelta { seconds: -1, subsecond: Subsecond::default() })]
+    #[case::negative_delta(BaseTime::default(), BaseTime { seconds: -1, subsecond: Subsecond::default() }, TimeDelta { seconds: 1, subsecond: Subsecond::default() })]
+    fn test_base_time_delta(
+        #[case] lhs: BaseTime,
+        #[case] rhs: BaseTime,
+        #[case] expected: TimeDelta,
+    ) {
+        assert_eq!(expected, lhs.delta(&rhs));
     }
 
     const MAX_FEMTOSECONDS: Subsecond = Subsecond(0.999_999_999_999_999);

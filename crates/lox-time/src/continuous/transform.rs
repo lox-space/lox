@@ -9,9 +9,10 @@
 //! Module transform provides a trait for transforming between pairs of timescales, together
 //! with a default implementation for the most commonly used time scale pairs.
 
+use crate::constants::julian_dates::J77;
 use mockall::automock;
 
-use crate::continuous::{Time, TimeDelta, TimeScale, TAI, TCG, TT};
+use crate::continuous::{BaseTime, Time, TimeDelta, TimeScale, TAI, TCB, TCG, TDB, TT};
 use crate::Subsecond;
 
 /// TransformTimeScale transforms a [Time] in [TimeScale] `T` to the corresponding [Time] in
@@ -73,6 +74,18 @@ impl TransformTimeScale<TCG, TT> for &TimeScaleTransformer {
     }
 }
 
+impl TransformTimeScale<TCB, TDB> for &TimeScaleTransformer {
+    fn transform(&self, time: Time<TCB>) -> Time<TDB> {
+        Time::from_base_time(TDB, time.base_time() + delta_tcb_tdb(time))
+    }
+}
+
+impl TransformTimeScale<TDB, TCB> for &TimeScaleTransformer {
+    fn transform(&self, time: Time<TDB>) -> Time<TCB> {
+        Time::from_base_time(TCB, time.base_time() + delta_tdb_tcb(time))
+    }
+}
+
 fn delta_tt_tcg(time: Time<TT>) -> TimeDelta {
     let time = time.base_time().to_f64();
     let raw_delta = INV_LG * (time - J77_TT);
@@ -95,12 +108,46 @@ fn delta_tcg_tt(time: Time<TCG>) -> TimeDelta {
     })
 }
 
+/// 1977 January 1.0 TAI as TT.
+const TT_0: Time<TT> = Time::from_base_time(
+    TT,
+    BaseTime {
+        seconds: J77.seconds + D_TAI_TT.seconds,
+        subsecond: D_TAI_TT.subsecond,
+    },
+);
+
+/// The rate of change of TDB with respect to TCB.
+const LB: f64 = 1.550519768e-8;
+
+/// The rate of change of TCB with respect to TDB.
+const INV_LB: f64 = LB / (1.0 - LB);
+
+/// Constant term of TDB − TT formula of Fairhead & Bretagnon (1990).
+const TDB_0: TimeDelta = TimeDelta {
+    seconds: -1,
+    subsecond: Subsecond(1.0 - 6.55e-5),
+};
+
+fn delta_tcb_tdb(time: Time<TCB>) -> TimeDelta {
+    let time = time.base_time();
+    let tt0 = &TT_0.base_time();
+    time.delta(tt0).scale(-LB) + TDB_0
+}
+
+fn delta_tdb_tcb(time: Time<TDB>) -> TimeDelta {
+    let time = time.base_time();
+    let tt0 = &TT_0.base_time();
+    time.delta(tt0).scale(INV_LB) - TDB_0
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::constants::julian_dates::{J0, SECONDS_BETWEEN_JD_AND_J2000};
     use crate::continuous::BaseTime;
     use crate::Subsecond;
+    use float_eq::assert_float_eq;
     use rstest::rstest;
 
     // Transformations are tested for agreement with both ERFA and AstroTime.jl.
@@ -148,5 +195,34 @@ mod tests {
         let transformer = &TimeScaleTransformer {};
         let tt = transformer.transform(tcg);
         assert_eq!(expected, tt);
+    }
+
+    #[rstest]
+    #[case::j0(
+        Time::from_base_time(TCB, J0),
+        Time::from_base_time(TDB, BaseTime::new(-SECONDS_BETWEEN_JD_AND_J2000 + 3272, Subsecond(0.956_215_636_550_950)))
+    )]
+    #[case::j2000(Time::j2000(TCB), Time::new(TDB, -12, Subsecond(0.7462129062427061)))]
+    fn test_transform_tcb_tdb(#[case] tcb: Time<TCB>, #[case] expected: Time<TDB>) {
+        let transformer = &TimeScaleTransformer {};
+        let tdb = transformer.transform(tcb);
+        assert_eq!(expected.seconds(), tdb.seconds());
+        // Lox and ERFA agree to the picosecond. However, the paper from which these formulae derive
+        // (Fairhead & Bretagnon, 1990) provide coefficients for transformations with only
+        // nanosecond accuracy. Chasing greater accuracy may not be practical or useful.
+        assert_float_eq!(expected.subsecond(), tdb.subsecond(), abs <= 1e-12);
+    }
+
+    #[rstest]
+    #[case::j0(
+        Time::from_base_time(TDB, J0),
+        Time::from_base_time(TCB, BaseTime::new(-SECONDS_BETWEEN_JD_AND_J2000 - 3273, Subsecond(0.04373361561511046)))
+    )]
+    #[case::j2000(Time::j2000(TDB), Time::new(TCB, 11, Subsecond(0.2537872682494892)))]
+    fn test_transform_tdb_tcb(#[case] tdb: Time<TDB>, #[case] expected: Time<TCB>) {
+        let transformer = &TimeScaleTransformer {};
+        let tcb = transformer.transform(tdb);
+        assert_eq!(expected.seconds(), tcb.seconds());
+        assert_float_eq!(expected.subsecond(), tcb.subsecond(), abs <= 1e-11)
     }
 }

@@ -8,7 +8,7 @@
 
 use crate::Subsecond;
 use num::ToPrimitive;
-use std::ops::Neg;
+use std::ops::{Add, Neg, Sub};
 
 use crate::constants::f64;
 use crate::errors::LoxTimeError;
@@ -141,6 +141,48 @@ impl TimeDelta {
     pub fn is_positive(&self) -> bool {
         self.seconds > 0 || self.seconds == 0 && self.subsecond.0 > 0.0
     }
+
+    pub fn scale(mut self, mut factor: f64) -> Self {
+        // Treating both `Self` and `factor` as positive and then correcting the sign at the end
+        // substantially simplifies the implementation.
+        let mut sign = 1;
+        if self.is_negative() {
+            if factor.is_sign_negative() {
+                self = -self;
+                factor = factor.abs();
+            } else {
+                self = -self;
+                sign = -sign;
+            }
+        } else if self.is_positive() && factor.is_sign_negative() {
+            sign = -sign;
+            factor = factor.abs();
+        }
+
+        // Various accuracy-preserving optimisations for floating-point algebra appear to have
+        // no effect on the result of this function for the expected inputs. This is possibly
+        // because we rarely scale beyond one order of magnitude's difference.
+        let seconds_f64 = self.seconds as f64;
+        let mut scaled_seconds = seconds_f64 * factor;
+        let mut scaled_subsecond = self.subsecond.0.mul_add(factor, scaled_seconds.fract());
+        if scaled_subsecond >= 1.0 {
+            scaled_subsecond = scaled_subsecond.fract();
+            scaled_seconds += scaled_subsecond.trunc();
+        }
+
+        let result = Self {
+            seconds: scaled_seconds
+                .to_i64()
+                .expect("scaled seconds field was not representable as an i64"),
+            subsecond: Subsecond(scaled_subsecond),
+        };
+
+        if sign < 0 {
+            -result
+        } else {
+            result
+        }
+    }
 }
 
 impl Neg for TimeDelta {
@@ -157,6 +199,48 @@ impl Neg for TimeDelta {
         Self {
             seconds: -self.seconds - 1,
             subsecond: Subsecond(1.0 - self.subsecond.0),
+        }
+    }
+}
+
+impl Add for TimeDelta {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        if rhs.is_negative() {
+            return self - (-rhs);
+        }
+
+        let mut sum_seconds = self.seconds + rhs.seconds;
+        let mut sum_subsecond = self.subsecond.0 + rhs.subsecond.0;
+        if sum_subsecond >= 1.0 {
+            sum_subsecond = sum_subsecond.fract();
+            sum_seconds += 1;
+        }
+        Self {
+            seconds: sum_seconds,
+            subsecond: Subsecond(sum_subsecond),
+        }
+    }
+}
+
+impl Sub for TimeDelta {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        if rhs.is_negative() {
+            return self + (-rhs);
+        }
+
+        let mut diff_seconds = self.seconds - rhs.seconds;
+        let mut diff_subsecond = self.subsecond.0 - rhs.subsecond.0;
+        if diff_subsecond < 0.0 {
+            diff_subsecond += 1.0;
+            diff_seconds -= 1;
+        }
+        Self {
+            seconds: diff_seconds,
+            subsecond: Subsecond(diff_subsecond),
         }
     }
 }
@@ -291,7 +375,7 @@ mod tests {
 
     #[rstest]
     #[case::positive(TimeDelta { seconds: 1, subsecond: Subsecond(0.0) }, true)]
-    #[case::negative(TimeDelta { seconds: -1, subsecond: Subsecond(0.0) }, false)]
+    #[case::negative(TimeDelta { seconds: - 1, subsecond: Subsecond(0.0) }, false)]
     #[case::zero(TimeDelta { seconds: 0, subsecond: Subsecond(0.0) }, false)]
     fn test_is_positive(#[case] delta: TimeDelta, #[case] expected: bool) {
         assert_eq!(expected, delta.is_positive());
@@ -299,7 +383,7 @@ mod tests {
 
     #[rstest]
     #[case::positive(TimeDelta { seconds: 1, subsecond: Subsecond(0.0) }, false)]
-    #[case::negative(TimeDelta { seconds: -1, subsecond: Subsecond(0.0) }, true)]
+    #[case::negative(TimeDelta { seconds: - 1, subsecond: Subsecond(0.0) }, true)]
     #[case::zero(TimeDelta { seconds: 0, subsecond: Subsecond(0.0) }, false)]
     fn test_is_negative(#[case] delta: TimeDelta, #[case] expected: bool) {
         assert_eq!(expected, delta.is_negative());
@@ -307,16 +391,64 @@ mod tests {
 
     #[rstest]
     #[case::positive(TimeDelta { seconds: 1, subsecond: Subsecond(0.0) }, false)]
-    #[case::negative(TimeDelta { seconds: -1, subsecond: Subsecond(0.0) }, false)]
+    #[case::negative(TimeDelta { seconds: - 1, subsecond: Subsecond(0.0) }, false)]
     #[case::zero(TimeDelta { seconds: 0, subsecond: Subsecond(0.0) }, true)]
     fn test_is_zero(#[case] delta: TimeDelta, #[case] expected: bool) {
         assert_eq!(expected, delta.is_zero());
     }
 
     #[rstest]
-    #[case::zero_subsecond(TimeDelta { seconds: 1, subsecond: Subsecond(0.0) }, TimeDelta { seconds: -1, subsecond: Subsecond(0.0) })]
-    #[case::nonzero_subsecond(TimeDelta { seconds: 0, subsecond: Subsecond(0.3) }, TimeDelta { seconds: -1, subsecond: Subsecond(0.7) })]
+    #[case::zero_subsecond(TimeDelta { seconds: 1, subsecond: Subsecond(0.0) }, TimeDelta { seconds: - 1, subsecond: Subsecond(0.0) })]
+    #[case::nonzero_subsecond(TimeDelta { seconds: 0, subsecond: Subsecond(0.3) }, TimeDelta { seconds: - 1, subsecond: Subsecond(0.7) })]
     fn test_time_delta_neg(#[case] delta: TimeDelta, #[case] expected: TimeDelta) {
         assert_eq!(expected, -delta);
+    }
+
+    #[rstest]
+    #[case::zero(TimeDelta { seconds: 1, subsecond: Subsecond(0.0) }, 0.0, TimeDelta { seconds: 0, subsecond: Subsecond(0.0) })]
+    #[case::one(TimeDelta { seconds: 1, subsecond: Subsecond(0.0) }, 1.0, TimeDelta { seconds: 1, subsecond: Subsecond(0.0) })]
+    #[case::two(TimeDelta { seconds: 1, subsecond: Subsecond(0.0) }, 2.0, TimeDelta { seconds: 2, subsecond: Subsecond(0.0) })]
+    #[case::half(TimeDelta { seconds: 1, subsecond: Subsecond(0.0) }, 0.5, TimeDelta { seconds: 0, subsecond: Subsecond(0.5) })]
+    #[case::pos_delta_neg_factor(TimeDelta { seconds: 0, subsecond: Subsecond(0.3) }, - 1.0, TimeDelta { seconds: - 1, subsecond: Subsecond(0.7) })]
+    #[case::neg_delta_pos_factor(TimeDelta { seconds: - 1, subsecond: Subsecond(0.3) }, 1.0, TimeDelta { seconds: - 1, subsecond: Subsecond(0.3) })]
+    #[case::neg_delta_neg_factor(TimeDelta { seconds: - 1, subsecond: Subsecond(0.3) }, - 1.0, TimeDelta { seconds: 0, subsecond: Subsecond(0.7) })]
+    fn test_time_delta_scale(
+        #[case] delta: TimeDelta,
+        #[case] factor: f64,
+        #[case] expected: TimeDelta,
+    ) {
+        assert_eq!(expected, delta.scale(factor));
+    }
+
+    #[rstest]
+    #[case::zero_zero(TimeDelta { seconds: 0, subsecond: Subsecond(0.0) }, TimeDelta { seconds: 0, subsecond: Subsecond(0.0) }, TimeDelta { seconds: 0, subsecond: Subsecond(0.0) })]
+    #[case::pos_lhs_pos_rhs(TimeDelta { seconds: 1, subsecond: Subsecond(0.5) }, TimeDelta { seconds: 1, subsecond: Subsecond(0.5) }, TimeDelta { seconds: 3, subsecond: Subsecond(0.0) })]
+    #[case::pos_lhs_neg_rhs(TimeDelta { seconds: 1, subsecond: Subsecond(0.2) }, TimeDelta { seconds: - 1, subsecond: Subsecond(0.5) }, TimeDelta { seconds: 0, subsecond: Subsecond(0.7) })]
+    #[case::neg_lhs_pos_rhs(TimeDelta { seconds: - 1, subsecond: Subsecond(0.2) }, TimeDelta { seconds: 1, subsecond: Subsecond(0.5) }, TimeDelta { seconds: 0, subsecond: Subsecond(0.7) })]
+    #[case::neg_lhs_neg_rhs(TimeDelta { seconds: - 1, subsecond: Subsecond(0.5) }, TimeDelta { seconds: - 1, subsecond: Subsecond(0.5) }, TimeDelta { seconds: - 1, subsecond: Subsecond(0.0) })]
+    #[case::sign_change_pos_to_neg(TimeDelta { seconds: 0, subsecond: Subsecond(0.2) }, TimeDelta { seconds: - 1, subsecond: Subsecond(0.7) }, TimeDelta { seconds: - 1, subsecond: Subsecond(0.9) })]
+    #[case::sign_change_neg_to_pos(TimeDelta { seconds: - 1, subsecond: Subsecond(0.7) }, TimeDelta { seconds: 0, subsecond: Subsecond(0.5) }, TimeDelta { seconds: 0, subsecond: Subsecond(0.2) })]
+    fn test_time_delta_add(
+        #[case] lhs: TimeDelta,
+        #[case] rhs: TimeDelta,
+        #[case] expected: TimeDelta,
+    ) {
+        assert_eq!(expected, lhs + rhs);
+    }
+
+    #[rstest]
+    #[case::zero_zero(TimeDelta { seconds: 0, subsecond: Subsecond(0.0) }, TimeDelta { seconds: 0, subsecond: Subsecond(0.0) }, TimeDelta { seconds: 0, subsecond: Subsecond(0.0) })]
+    #[case::pos_lhs_pos_rhs(TimeDelta { seconds: 1, subsecond: Subsecond(0.5) }, TimeDelta { seconds: 1, subsecond: Subsecond(0.5) }, TimeDelta { seconds: 0, subsecond: Subsecond(0.0) })]
+    #[case::pos_lhs_neg_rhs(TimeDelta { seconds: 1, subsecond: Subsecond(0.2) }, TimeDelta { seconds: -1, subsecond: Subsecond(0.5) }, TimeDelta { seconds: 1, subsecond: Subsecond(0.7) })]
+    #[case::neg_lhs_pos_rhs(TimeDelta { seconds: -1, subsecond: Subsecond(0.2) }, TimeDelta { seconds: 1, subsecond: Subsecond(0.5) }, TimeDelta { seconds: -3, subsecond: Subsecond(0.7) })]
+    #[case::neg_lhs_neg_rhs(TimeDelta { seconds: -2, subsecond: Subsecond(0.5) }, TimeDelta { seconds: -1, subsecond: Subsecond(0.5) }, TimeDelta { seconds: -1, subsecond: Subsecond(0.0) })]
+    #[case::sign_change_pos_to_neg(TimeDelta { seconds: 0, subsecond: Subsecond(0.2) }, TimeDelta { seconds: 0, subsecond: Subsecond(0.3) }, TimeDelta { seconds: -1, subsecond: Subsecond(0.9) })]
+    #[case::sign_change_neg_to_pos(TimeDelta { seconds: -1, subsecond: Subsecond(0.7) }, TimeDelta { seconds: -1, subsecond: Subsecond(0.5) }, TimeDelta { seconds: 0, subsecond: Subsecond(0.2) })]
+    fn test_time_delta_sub(
+        #[case] lhs: TimeDelta,
+        #[case] rhs: TimeDelta,
+        #[case] expected: TimeDelta,
+    ) {
+        assert_eq!(expected, lhs - rhs);
     }
 }
