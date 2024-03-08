@@ -20,6 +20,6 @@ pub const J0: BaseTime = BaseTime::new(-SECONDS_BETWEEN_JD_AND_J2000, Subsecond(
 /// 1977 January 1 00:00, at which the following are equal:
 /// * 1977-01-01T00:00:00.000 TAI
 /// * 1977-01-01T00:00:32.184 TT
-///  * 1977-01-01T00:00:32.184 TCG
-///  * 1977-01-01T00:00:32.184 TCB
+/// * 1977-01-01T00:00:32.184 TCG
+/// * 1977-01-01T00:00:32.184 TCB
 pub const J77: BaseTime = BaseTime::new(-SECONDS_BETWEEN_J1977_AND_J2000, Subsecond(0.0));
