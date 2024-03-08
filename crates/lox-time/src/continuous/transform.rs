@@ -12,7 +12,6 @@
 use crate::constants::julian_dates::J77;
 use mockall::automock;
 
-use crate::continuous::julian_dates::JulianDate;
 use crate::continuous::{BaseTime, Time, TimeDelta, TimeScale, TAI, TCB, TCG, TDB, TT};
 use crate::Subsecond;
 
@@ -56,15 +55,6 @@ impl TransformTimeScale<TT, TAI> for &TimeScaleTransformer {
 
 /// The difference between J2000 TT and 1977 January 1.0 TAI as TT.
 const J77_TT: f64 = -7.25803167816e8;
-
-/// 1977 January 1.0 TAI as TT
-const TT_0: Time<TT> = Time::from_base_time(
-    TT,
-    BaseTime {
-        seconds: J77.seconds + 32,
-        subsecond: Subsecond(0.184),
-    },
-);
 
 /// The rate of change of TCG with respect to TT.
 const LG: f64 = 6.969290134e-10;
@@ -118,6 +108,15 @@ fn delta_tcg_tt(time: Time<TCG>) -> TimeDelta {
     })
 }
 
+/// 1977 January 1.0 TAI as TT.
+const TT_0: Time<TT> = Time::from_base_time(
+    TT,
+    BaseTime {
+        seconds: J77.seconds + D_TAI_TT.seconds,
+        subsecond: D_TAI_TT.subsecond,
+    },
+);
+
 /// The rate of change of TDB with respect to TCB.
 const LB: f64 = 1.550519768e-8;
 
@@ -138,8 +137,8 @@ fn delta_tcb_tdb(time: Time<TCB>) -> TimeDelta {
 
 fn delta_tdb_tcb(time: Time<TDB>) -> TimeDelta {
     let time = time.base_time();
-    let tt0 = TT_0.base_time();
-    // ...
+    let tt0 = &TT_0.base_time();
+    time.delta(tt0).scale(INV_LB) - TDB_0
 }
 
 #[cfg(test)]
@@ -211,17 +210,19 @@ mod tests {
         // Lox and ERFA agree to the picosecond. If the use case arises, it may be worth
         // investigating the size of the errors in both libraries and whether greater accuracy is
         // possible.
-        assert_float_eq!(expected.subsecond(), tdb.subsecond(), rel <= 1e-12);
+        assert_float_eq!(expected.subsecond(), tdb.subsecond(), abs <= 1e-12);
     }
 
     #[rstest]
-    #[case::j2000(
-        Time::j2000(TDB),
-        Time::new(TCB, 11, Subsecond(0.25378726824948927288))
+    #[case::j0(
+        Time::from_base_time(TDB, J0),
+        Time::from_base_time(TCB, BaseTime::new(-SECONDS_BETWEEN_JD_AND_J2000 - 3273, Subsecond(0.04373361561511046)))
     )]
+    #[case::j2000(Time::j2000(TDB), Time::new(TCB, 11, Subsecond(0.2537872682494892)))]
     fn test_transform_tdb_tcb(#[case] tdb: Time<TDB>, #[case] expected: Time<TCB>) {
         let transformer = &TimeScaleTransformer {};
         let tcb = transformer.transform(tdb);
-        assert_eq!(expected, tcb);
+        assert_eq!(expected.seconds(), tcb.seconds());
+        assert_float_eq!(expected.subsecond(), tcb.subsecond(), abs <= 1e-11)
     }
 }
