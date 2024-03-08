@@ -191,9 +191,14 @@ fn j2000(calendar: Calendar, year: i64, month: i64, day: i64) -> i64 {
     d1 + d2
 }
 
+/// CalendarDate allows continuous time formats to report their date in their respective calendar.
+pub trait CalendarDate {
+    fn date(&self) -> Date;
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::dates::{Calendar, Date};
+    use crate::calendar_dates::{Calendar, Date};
 
     #[test]
     fn test_date_new_unchecked() {

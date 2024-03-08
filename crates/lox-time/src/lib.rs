@@ -6,174 +6,541 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use num::ToPrimitive;
+//! lox-time provides structs and functions for working with instants in astronomical time scales.
+//!
+//! The main struct is [Time], which represents an instant in time generic over a [TimeScale]
+//! without leap seconds.
+//!
+//! [UTC] and [Date] are used strictly as an I/O formats, avoiding much of the complexity inherent
+//! in working with leap seconds.
+
+use crate::base_time::BaseTime;
+use crate::calendar_dates::Date;
+use crate::constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HOUR, SECONDS_PER_MINUTE};
+use crate::deltas::TimeDelta;
+use crate::julian_dates::{Epoch, JulianDate, Unit};
+use crate::subsecond::Subsecond;
+use crate::time_scales::TimeScale;
+use crate::transformations::TransformTimeScale;
+use crate::utc::{UTCDateTime, UTC};
+use crate::wall_clock::WallClock;
 use std::fmt;
 use std::fmt::{Display, Formatter};
+use std::ops::{Add, Sub};
 
-use crate::errors::LoxTimeError;
-
+pub mod base_time;
+pub mod calendar_dates;
 pub mod constants;
-pub mod continuous;
-pub mod dates;
+pub mod deltas;
 pub mod errors;
 pub mod intervals;
+pub mod julian_dates;
 pub mod leap_seconds;
+pub mod subsecond;
+pub mod time_scales;
+pub mod transformations;
 pub mod utc;
+pub mod wall_clock;
 
-/// `WallClock` is the trait by which high-precision time representations expose human-readable time
-/// components.
-pub trait WallClock {
-    fn hour(&self) -> i64;
-    fn minute(&self) -> i64;
-    fn second(&self) -> i64;
-    fn millisecond(&self) -> i64;
-    fn microsecond(&self) -> i64;
-    fn nanosecond(&self) -> i64;
-    fn picosecond(&self) -> i64;
-    fn femtosecond(&self) -> i64;
+/// An instant in time in a given [TimeScale].
+///
+/// `Time` supports femtosecond precision, but be aware that many algorithms operating on `Time`s
+/// are not accurate to this level of precision.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct Time<T: TimeScale + Copy> {
+    scale: T,
+    timestamp: BaseTime,
 }
 
-/// An f64 value in the range [0.0, 1.0) representing a fraction of a second with femtosecond
-/// resolution.
-#[derive(Debug, Default, Copy, Clone, PartialOrd)]
-pub struct Subsecond(f64);
-
-/// Two Subseconds are considered equal if their difference is less than 1 femtosecond.
-impl PartialEq for Subsecond {
-    fn eq(&self, other: &Self) -> bool {
-        (self.0 * 1e15).round() == (other.0 * 1e15).round()
-    }
-}
-
-// The underlying f64 is guaranteed to be in the range [0.0, 1.0).
-impl Eq for Subsecond {}
-
-impl Subsecond {
-    pub fn new(subsecond: f64) -> Result<Self, LoxTimeError> {
-        if !(0.0..1.0).contains(&subsecond) {
-            Err(LoxTimeError::InvalidSubsecond(subsecond))
-        } else {
-            Ok(Self(subsecond))
+impl<T: TimeScale + Copy> Time<T> {
+    /// Instantiates a [Time] in the given scale from seconds and femtoseconds since the epoch.
+    pub fn new(scale: T, seconds: i64, subsecond: Subsecond) -> Self {
+        Self {
+            scale,
+            timestamp: BaseTime::new(seconds, subsecond),
         }
     }
 
-    /// The number of milliseconds in the subsecond.
-    pub fn millisecond(&self) -> i64 {
-        (self.0 * 1e3).trunc().to_i64().unwrap()
+    /// Instantiates a [Time] in the given scale from a [BaseTime].
+    pub const fn from_base_time(scale: T, timestamp: BaseTime) -> Self {
+        Self { scale, timestamp }
     }
 
-    /// The number of microseconds since the last millisecond.
-    pub fn microsecond(&self) -> i64 {
-        (self.0 * 1e6).trunc().to_i64().unwrap() % 1_000
+    /// Instantiates a [Time] in the given scale from a date and UTC timestamp.
+    pub fn from_date_and_utc_timestamp(scale: T, date: Date, time: UTC) -> Self {
+        let day_in_seconds = date.j2000() * SECONDS_PER_DAY - SECONDS_PER_DAY / 2;
+        let hour_in_seconds = time.hour() * SECONDS_PER_HOUR;
+        let minute_in_seconds = time.minute() * SECONDS_PER_MINUTE;
+        let seconds = day_in_seconds + hour_in_seconds + minute_in_seconds + time.second();
+        let base_time = BaseTime {
+            seconds,
+            subsecond: time.subsecond(),
+        };
+        Self::from_base_time(scale, base_time)
     }
 
-    /// The number of nanoseconds since the last microsecond.
-    pub fn nanosecond(&self) -> i64 {
-        (self.0 * 1e9).trunc().to_i64().unwrap() % 1_000
+    /// Instantiates a [Time] in the given scale from a UTC datetime.
+    pub fn from_utc_datetime(scale: T, dt: UTCDateTime) -> Self {
+        Self::from_date_and_utc_timestamp(scale, dt.date(), dt.time())
     }
 
-    /// The number of picoseconds since the last nanosecond.
-    pub fn picosecond(&self) -> i64 {
-        (self.0 * 1e12).trunc().to_i64().unwrap() % 1_000
+    /// Returns the epoch for the given [Epoch] in the given timescale.
+    pub fn from_epoch(scale: T, epoch: Epoch) -> Self {
+        let timestamp = BaseTime::from_epoch(epoch);
+        Self { scale, timestamp }
     }
 
-    /// The number of femtoseconds since the last picosecond.
-    pub fn femtosecond(&self) -> i64 {
-        (self.0 * 1e15).trunc().to_i64().unwrap() % 1_000
+    /// Returns, as an epoch in the given timescale, midday on the first day of the proleptic Julian
+    /// calendar.
+    pub fn jd0(scale: T) -> Self {
+        Self::from_epoch(scale, Epoch::JulianDate)
+    }
+
+    /// Returns the epoch of the Modified Julian Date in the given timescale.
+    pub fn mjd0(scale: T) -> Self {
+        Self::from_epoch(scale, Epoch::ModifiedJulianDate)
+    }
+
+    /// Returns the J1950 epoch in the given timescale.
+    pub fn j1950(scale: T) -> Self {
+        Self::from_epoch(scale, Epoch::J1950)
+    }
+
+    /// Returns the J2000 epoch in the given timescale.
+    pub fn j2000(scale: T) -> Self {
+        Self::from_epoch(scale, Epoch::J2000)
+    }
+
+    /// The underlying base timestamp.
+    pub fn base_time(&self) -> BaseTime {
+        self.timestamp
+    }
+
+    /// The number of whole seconds since J2000.
+    pub fn seconds(&self) -> i64 {
+        self.timestamp.seconds
+    }
+
+    /// The number of femtoseconds from the last whole second.
+    pub fn subsecond(&self) -> f64 {
+        self.timestamp.subsecond.into()
+    }
+
+    /// Given a `Time` in [TimeScale] `S`, and a transformer from `S` to `T`, returns a new Time in
+    /// [TimeScale] `T`.
+    pub fn from_scale<S: TimeScale + Copy>(
+        time: Time<S>,
+        transformer: impl TransformTimeScale<S, T>,
+    ) -> Self {
+        transformer.transform(time)
+    }
+
+    /// Given a transformer from `T` to `S`, returns a new `Time` in [TimeScale] `S`.
+    pub fn into_scale<S: TimeScale + Copy>(
+        self,
+        transformer: impl TransformTimeScale<T, S>,
+    ) -> Time<S> {
+        Time::from_scale(self, transformer)
     }
 }
 
-impl Display for Subsecond {
+impl<T: TimeScale + Copy> JulianDate for Time<T> {
+    fn julian_date(&self, epoch: Epoch, unit: Unit) -> f64 {
+        self.timestamp.julian_date(epoch, unit)
+    }
+
+    fn two_part_julian_date(&self) -> (f64, f64) {
+        self.timestamp.two_part_julian_date()
+    }
+}
+
+impl<T: TimeScale + Copy> Display for Time<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{:03}.{:03}.{:03}.{:03}.{:03}",
-            self.millisecond(),
-            self.microsecond(),
-            self.nanosecond(),
-            self.picosecond(),
-            self.femtosecond()
-        )
+        write!(f, "{} {}", self.timestamp, T::ABBREVIATION)
     }
 }
 
-#[allow(clippy::from_over_into)] // infallible in one direction only
-impl Into<f64> for Subsecond {
-    fn into(self) -> f64 {
-        self.0
+impl<T: TimeScale + Copy> Add<TimeDelta> for Time<T> {
+    type Output = Self;
+
+    fn add(self, rhs: TimeDelta) -> Self::Output {
+        Self::from_base_time(self.scale, self.timestamp + rhs)
+    }
+}
+
+impl<T: TimeScale + Copy> Sub<TimeDelta> for Time<T> {
+    type Output = Self;
+
+    fn sub(self, rhs: TimeDelta) -> Self::Output {
+        Self::from_base_time(self.scale, self.timestamp - rhs)
+    }
+}
+
+impl<T: TimeScale + Copy> WallClock for Time<T> {
+    fn hour(&self) -> i64 {
+        self.timestamp.hour()
+    }
+
+    fn minute(&self) -> i64 {
+        self.timestamp.minute()
+    }
+
+    fn second(&self) -> i64 {
+        self.timestamp.second()
+    }
+
+    fn millisecond(&self) -> i64 {
+        self.timestamp.millisecond()
+    }
+
+    fn microsecond(&self) -> i64 {
+        self.timestamp.microsecond()
+    }
+
+    fn nanosecond(&self) -> i64 {
+        self.timestamp.nanosecond()
+    }
+
+    fn picosecond(&self) -> i64 {
+        self.timestamp.picosecond()
+    }
+
+    fn femtosecond(&self) -> i64 {
+        self.timestamp.femtosecond()
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use rstest::rstest;
+    use crate::calendar_dates::Calendar::Gregorian;
+    use float_eq::assert_float_eq;
+    use mockall::predicate;
 
     use super::*;
 
-    #[rstest]
-    #[case::below_lower_bound(-1e-15, Err(LoxTimeError::InvalidSubsecond(-1e-15)))]
-    #[case::on_lower_bound(0.0, Ok(Subsecond(0.0)))]
-    #[case::between_bounds(0.5, Ok(Subsecond(0.5)))]
-    #[case::on_upper_bound(1.0, Err(LoxTimeError::InvalidSubsecond(1.0)))]
-    #[case::above_upper_bound(1.5, Err(LoxTimeError::InvalidSubsecond(1.5)))]
-    fn test_subsecond_new(#[case] raw: f64, #[case] expected: Result<Subsecond, LoxTimeError>) {
-        assert_eq!(expected, Subsecond::new(raw));
+    use crate::time_scales::{TAI, TDB, TT};
+    use crate::transformations::MockTransformTimeScale;
+    use crate::utc::{UTCDateTime, UTC};
+    use crate::Time;
+
+    #[test]
+    fn test_time_new() {
+        let scale = TAI;
+        let seconds = 1234567890;
+        let subsecond = Subsecond(0.9876543210);
+        let expected = Time {
+            scale,
+            timestamp: BaseTime { seconds, subsecond },
+        };
+        let actual = Time::new(scale, seconds, subsecond);
+        assert_eq!(expected, actual);
     }
 
     #[test]
-    fn test_subsecond_millisecond() {
-        let subsecond = Subsecond(0.123456789876543);
-        assert_eq!(123, subsecond.millisecond());
+    fn test_time_from_date_and_utc_timestamp() {
+        let date = Date::new_unchecked(Gregorian, 2021, 1, 1);
+        let utc = UTC::new(12, 34, 56, Subsecond::default()).expect("time should be valid");
+        let datetime = UTCDateTime::new(date, utc);
+        let actual = Time::from_date_and_utc_timestamp(TAI, date, utc);
+        let expected = Time::from_utc_datetime(TAI, datetime);
+        assert_eq!(expected, actual);
     }
 
     #[test]
-    fn test_subsecond_microsecond() {
-        let subsecond = Subsecond(0.123456789876543);
-        assert_eq!(456, subsecond.microsecond());
+    fn test_time_display() {
+        let time = Time::j2000(TAI);
+        let expected = "12:00:00.000.000.000.000.000 TAI".to_string();
+        let actual = time.to_string();
+        assert_eq!(expected, actual);
     }
 
     #[test]
-    fn test_subsecond_nanosecond() {
-        let subsecond = Subsecond(0.123456789876543);
-        assert_eq!(789, subsecond.nanosecond());
+    fn test_time_j2000() {
+        let actual = Time::j2000(TAI);
+        let expected = Time {
+            scale: TAI,
+            timestamp: BaseTime::default(),
+        };
+        assert_eq!(expected, actual);
     }
 
     #[test]
-    fn test_subsecond_picosecond() {
-        let subsecond = Subsecond(0.123456789876543);
-        assert_eq!(876, subsecond.picosecond());
+    fn test_time_jd0() {
+        let actual = Time::jd0(TAI);
+        let expected = Time::from_base_time(
+            TAI,
+            BaseTime {
+                seconds: -211813488000,
+                subsecond: Subsecond::default(),
+            },
+        );
+        assert_eq!(expected, actual);
     }
 
     #[test]
-    fn test_subsecond_femtosecond() {
-        let subsecond = Subsecond(0.123456789876543);
-        assert_eq!(543, subsecond.femtosecond());
-    }
-
-    #[rstest]
-    #[case::exactly_equal(Subsecond(0.0), Subsecond(0.0), true)]
-    #[case::one_femtosecond_difference(Subsecond(0.0), Subsecond(1e-15), false)]
-    #[case::more_than_one_femtosecond_difference(Subsecond(0.0), Subsecond(2e-15), false)]
-    // Neither of the following values can be exactly represented as an f64, covering the edge case
-    // where 1e-16 < δ < 1e-15, which `float_eq!` with `abs <= 1e-16` would consider unequal.
-    #[case::less_than_one_femtosecond_difference(
-        Subsecond(0.6),
-        Subsecond(0.600_000_000_000_000_1),
-        true
-    )]
-    fn test_subsecond_eq(#[case] lhs: Subsecond, #[case] rhs: Subsecond, #[case] expected: bool) {
-        assert_eq!(expected, lhs == rhs);
+    fn test_time_seconds() {
+        let time = Time::new(TAI, 1234567890, Subsecond(0.9876543210));
+        let expected = 1234567890;
+        let actual = time.seconds();
+        assert_eq!(
+            expected, actual,
+            "expected Time to have {} seconds, but got {}",
+            expected, actual
+        );
     }
 
     #[test]
-    fn test_subsecond_display() {
-        let subsecond = Subsecond(0.123456789876543);
-        assert_eq!("123.456.789.876.543", subsecond.to_string());
+    fn test_time_subsecond() {
+        let time = Time::new(TAI, 1234567890, Subsecond(0.9876543210));
+        let expected = 0.9876543210;
+        let actual = time.subsecond();
+        assert_eq!(
+            expected, actual,
+            "expected Time to have {} subsecond, but got {}",
+            expected, actual
+        );
     }
 
     #[test]
-    fn test_subsecond_into_f64() {
-        let subsecond = Subsecond(0.0);
-        assert_eq!(0.0, subsecond.into());
+    fn test_time_days_since_j2000() {
+        let base_time = BaseTime {
+            seconds: 1234567890,
+            subsecond: Subsecond(0.9876543210),
+        };
+        let expected = base_time.days_since_j2000();
+        let actual = Time::from_base_time(TAI, base_time).days_since_j2000();
+        assert_float_eq!(
+            actual,
+            expected,
+            rel <= 1e-15,
+            "expected {} days since J2000, but got {}",
+            expected,
+            actual
+        );
+    }
+
+    #[test]
+    fn test_time_centuries_since_j2000() {
+        let base_time = BaseTime {
+            seconds: 1234567890,
+            subsecond: Subsecond(0.9876543210),
+        };
+        let expected = base_time.centuries_since_j2000();
+        let actual = Time::from_base_time(TAI, base_time).centuries_since_j2000();
+        assert_float_eq!(
+            actual,
+            expected,
+            rel <= 1e-15,
+            "expected {} centuries since J2000, but got {}",
+            expected,
+            actual
+        );
+    }
+
+    #[test]
+    fn test_time_wall_clock_hour() {
+        let base_time = BaseTime {
+            seconds: 1234567890,
+            subsecond: Subsecond(0.9876543210),
+        };
+        let expected = base_time.hour();
+        let actual = Time::from_base_time(TAI, base_time).hour();
+        assert_eq!(
+            expected, actual,
+            "expected Time to have hour {}, but got {}",
+            expected, actual
+        );
+    }
+
+    #[test]
+    fn test_time_wall_clock_minute() {
+        let base_time = BaseTime {
+            seconds: 1234567890,
+            subsecond: Subsecond(0.9876543210),
+        };
+        let expected = base_time.minute();
+        let actual = Time::from_base_time(TAI, base_time).minute();
+        assert_eq!(
+            expected, actual,
+            "expected Time to have minute {}, but got {}",
+            expected, actual,
+        );
+    }
+
+    #[test]
+    fn test_time_wall_clock_second() {
+        let base_time = BaseTime {
+            seconds: 1234567890,
+            subsecond: Subsecond(0.9876543210),
+        };
+        let expected = base_time.second();
+        let actual = Time::from_base_time(TAI, base_time).second();
+        assert_eq!(
+            expected, actual,
+            "expected Time to have second {}, but got {}",
+            expected, actual,
+        );
+    }
+
+    #[test]
+    fn test_time_wall_clock_millisecond() {
+        let base_time = BaseTime {
+            seconds: 1234567890,
+            subsecond: Subsecond(0.9876543210),
+        };
+        let expected = base_time.millisecond();
+        let actual = Time::from_base_time(TAI, base_time).millisecond();
+        assert_eq!(
+            expected, actual,
+            "expected Time to have millisecond {}, but got {}",
+            expected, actual,
+        );
+    }
+
+    #[test]
+    fn test_time_wall_clock_microsecond() {
+        let base_time = BaseTime {
+            seconds: 1234567890,
+            subsecond: Subsecond(0.9876543210),
+        };
+        let expected = base_time.microsecond();
+        let actual = Time::from_base_time(TAI, base_time).microsecond();
+        assert_eq!(
+            expected, actual,
+            "expected Time to have microsecond {}, but got {}",
+            expected, actual,
+        );
+    }
+
+    #[test]
+    fn test_time_wall_clock_nanosecond() {
+        let base_time = BaseTime {
+            seconds: 1234567890,
+            subsecond: Subsecond(0.9876543210),
+        };
+        let expected = base_time.nanosecond();
+        let actual = Time::from_base_time(TAI, base_time).nanosecond();
+        assert_eq!(
+            expected, actual,
+            "expected Time to have nanosecond {}, but got {}",
+            expected, actual,
+        );
+    }
+
+    #[test]
+    fn test_time_wall_clock_picosecond() {
+        let base_time = BaseTime {
+            seconds: 1234567890,
+            subsecond: Subsecond(0.9876543210),
+        };
+        let expected = base_time.picosecond();
+        let actual = Time::from_base_time(TAI, base_time).picosecond();
+        assert_eq!(
+            expected, actual,
+            "expected Time to have picosecond {}, but got {}",
+            expected, actual,
+        );
+    }
+
+    #[test]
+    fn test_time_wall_clock_femtosecond() {
+        let base_time = BaseTime {
+            seconds: 1234567890,
+            subsecond: Subsecond(0.9876543210),
+        };
+        let expected = base_time.femtosecond();
+        let actual = Time::from_base_time(TAI, base_time).femtosecond();
+        assert_eq!(
+            expected, actual,
+            "expected Time to have femtosecond {}, but got {}",
+            expected, actual,
+        );
+    }
+
+    #[test]
+    fn test_from_scale() {
+        let time = Time::j2000(TAI);
+        let mut transformer = MockTransformTimeScale::<TAI, TT>::new();
+        let expected = Time::j2000(TT);
+
+        transformer
+            .expect_transform()
+            .with(predicate::eq(time))
+            .return_const(expected);
+
+        let actual = Time::from_scale(time, transformer);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_into_scale() {
+        let time = Time::j2000(TAI);
+        let mut transformer = MockTransformTimeScale::<TAI, TT>::new();
+        let expected = Time::j2000(TT);
+
+        transformer
+            .expect_transform()
+            .with(predicate::eq(time))
+            .return_const(expected);
+
+        let actual = time.into_scale(transformer);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_julian_date() {
+        let time = Time::jd0(TDB);
+        assert_eq!(time.julian_date(Epoch::JulianDate, Unit::Days), 0.0);
+        assert_eq!(time.seconds_since_julian_epoch(), 0.0);
+        assert_eq!(time.days_since_julian_epoch(), 0.0);
+        assert_eq!(time.centuries_since_julian_epoch(), 0.0);
+    }
+
+    #[test]
+    fn test_modified_julian_date() {
+        let time = Time::mjd0(TDB);
+        assert_eq!(time.julian_date(Epoch::ModifiedJulianDate, Unit::Days), 0.0);
+        assert_eq!(time.seconds_since_modified_julian_epoch(), 0.0);
+        assert_eq!(time.days_since_modified_julian_epoch(), 0.0);
+        assert_eq!(time.centuries_since_modified_julian_epoch(), 0.0);
+    }
+
+    #[test]
+    fn test_j1950() {
+        let time = Time::j1950(TDB);
+        assert_eq!(time.julian_date(Epoch::J1950, Unit::Days), 0.0);
+        assert_eq!(time.seconds_since_j1950(), 0.0);
+        assert_eq!(time.days_since_j1950(), 0.0);
+        assert_eq!(time.centuries_since_j1950(), 0.0);
+    }
+
+    #[test]
+    fn test_j2000() {
+        let time = Time::j2000(TDB);
+        assert_eq!(time.julian_date(Epoch::J2000, Unit::Days), 0.0);
+        assert_eq!(time.seconds_since_j2000(), 0.0);
+        assert_eq!(time.days_since_j2000(), 0.0);
+        assert_eq!(time.centuries_since_j2000(), 0.0);
+    }
+
+    #[test]
+    fn test_j2100() {
+        let date = Date::new_unchecked(Gregorian, 2100, 1, 1);
+        let utc = UTC::new(12, 0, 0, Subsecond::default()).expect("should be valid");
+        let time = Time::from_date_and_utc_timestamp(TDB, date, utc);
+        assert_eq!(time.julian_date(Epoch::J2000, Unit::Days), 36525.0);
+        assert_eq!(time.seconds_since_j2000(), 3155760000.0);
+        assert_eq!(time.days_since_j2000(), 36525.0);
+        assert_eq!(time.centuries_since_j2000(), 1.0);
+    }
+
+    #[test]
+    fn test_two_part_julian_date() {
+        let date = Date::new_unchecked(Gregorian, 2100, 1, 2);
+        let utc = UTC::new(0, 0, 0, Subsecond::default()).expect("should be valid");
+        let time = Time::from_date_and_utc_timestamp(TDB, date, utc);
+        let (jd1, jd2) = time.two_part_julian_date();
+        assert_eq!(jd1, 2451545.0 + 36525.0);
+        assert_eq!(jd2, 0.5);
     }
 }

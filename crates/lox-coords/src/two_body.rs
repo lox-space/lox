@@ -9,7 +9,8 @@
 use glam::DVec3;
 
 use lox_bodies::PointMass;
-use lox_time::continuous::{Time, TimeScale};
+use lox_time::time_scales::TimeScale;
+use lox_time::Time;
 
 use crate::base::{BaseCartesian, BaseKeplerian, BaseTwoBody};
 use crate::frames::{InertialFrame, ReferenceFrame};
@@ -261,10 +262,11 @@ mod tests {
     use float_eq::assert_float_eq;
 
     use lox_bodies::Earth;
-    use lox_time::continuous::{Time, TDB};
-    use lox_time::dates::Date;
+    use lox_time::calendar_dates::Date;
+    use lox_time::subsecond::Subsecond;
+    use lox_time::time_scales::TDB;
     use lox_time::utc::UTC;
-    use lox_time::Subsecond;
+    use lox_time::Time;
 
     use crate::frames::Icrf;
 

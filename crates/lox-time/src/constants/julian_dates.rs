@@ -6,8 +6,8 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::continuous::BaseTime;
-use crate::Subsecond;
+use crate::base_time::BaseTime;
+use crate::subsecond::Subsecond;
 
 pub const SECONDS_BETWEEN_JD_AND_J2000: i64 = 211813488000;
 pub const SECONDS_BETWEEN_MJD_AND_J2000: i64 = 4453444800;
