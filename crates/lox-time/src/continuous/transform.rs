@@ -207,9 +207,9 @@ mod tests {
         let transformer = &TimeScaleTransformer {};
         let tdb = transformer.transform(tcb);
         assert_eq!(expected.seconds(), tdb.seconds());
-        // Lox and ERFA agree to the picosecond. If the use case arises, it may be worth
-        // investigating the size of the errors in both libraries and whether greater accuracy is
-        // possible.
+        // Lox and ERFA agree to the picosecond. However, the paper from which these formulae derive
+        // (Fairhead & Bretagnon, 1990) provide coefficients for transformations with only
+        // nanosecond accuracy. Chasing greater accuracy may not be practical or useful.
         assert_float_eq!(expected.subsecond(), tdb.subsecond(), abs <= 1e-12);
     }
 

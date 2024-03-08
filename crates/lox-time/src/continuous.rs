@@ -535,6 +535,18 @@ mod tests {
         assert_eq!(time.subsecond(), 0.123);
     }
 
+    #[rstest]
+    #[case::zero_delta(BaseTime::default(), BaseTime::default(), TimeDelta::default())]
+    #[case::positive_delta(BaseTime::default(), BaseTime { seconds: 1, subsecond: Subsecond::default() }, TimeDelta { seconds: -1, subsecond: Subsecond::default() })]
+    #[case::negative_delta(BaseTime::default(), BaseTime { seconds: -1, subsecond: Subsecond::default() }, TimeDelta { seconds: 1, subsecond: Subsecond::default() })]
+    fn test_base_time_delta(
+        #[case] lhs: BaseTime,
+        #[case] rhs: BaseTime,
+        #[case] expected: TimeDelta,
+    ) {
+        assert_eq!(expected, lhs.delta(&rhs));
+    }
+
     const MAX_FEMTOSECONDS: Subsecond = Subsecond(0.999_999_999_999_999);
 
     #[rstest]

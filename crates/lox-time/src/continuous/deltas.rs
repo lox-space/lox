@@ -160,7 +160,8 @@ impl TimeDelta {
         }
 
         // Various accuracy-preserving optimisations for floating-point algebra appear to have
-        // no effect on the result of this function for the expected inputs.
+        // no effect on the result of this function for the expected inputs. This is possibly
+        // because we rarely scale beyond one order of magnitude's difference.
         let seconds_f64 = self.seconds as f64;
         let mut scaled_seconds = seconds_f64 * factor;
         let mut scaled_subsecond = self.subsecond.0.mul_add(factor, scaled_seconds.fract());
