@@ -210,6 +210,11 @@ mod tests {
 
     // Transformations are tested for agreement with both ERFA and AstroTime.jl.
 
+    const PANIC_INDUCING_BASE_TIME: BaseTime = BaseTime {
+        seconds: 0,
+        subsecond: Subsecond(f64::NAN),
+    };
+
     #[test]
     fn test_transform_tai_tt() {
         let transformer = &TimeScaleTransformer {};
@@ -237,6 +242,14 @@ mod tests {
         Time::new(TT, 0, Subsecond::default()),
         Time::new(TCG, 0, Subsecond(0.505_833_286_021_129))
     )]
+    #[should_panic]
+    #[case::unrepresentable(
+        Time {
+            timestamp: PANIC_INDUCING_BASE_TIME,
+            scale: TT,
+        },
+        Time::default(),
+    )]
     fn test_transform_tt_tcg(#[case] tt: Time<TT>, #[case] expected: Time<TCG>) {
         let transformer = &TimeScaleTransformer {};
         let tcg = transformer.transform(tt);
@@ -249,6 +262,14 @@ mod tests {
         Time::from_base_time(TT, BaseTime::new(-211813487853, Subsecond(0.113_131_930_984_139)))
     )]
     #[case::j2000(Time::new(TCG, 0, Subsecond::default()), Time::new(TT, -1, Subsecond(0.494_166_714_331_400)))]
+    #[should_panic]
+    #[case::unrepresentable(
+        Time {
+            timestamp: PANIC_INDUCING_BASE_TIME,
+            scale: TCG,
+        },
+        Time::default(),
+    )]
     fn test_transform_tcg_tt(#[case] tcg: Time<TCG>, #[case] expected: Time<TT>) {
         let transformer = &TimeScaleTransformer {};
         let tt = transformer.transform(tcg);
@@ -287,6 +308,14 @@ mod tests {
     #[rstest]
     #[case::j0(Time::from_base_time(TT, J0), Time::from_base_time(TDB, BaseTime::new(-SECONDS_BETWEEN_JD_AND_J2000, Subsecond(0.001_600_955_458_249))))]
     #[case::j2000(Time::j2000(TT), Time::from_base_time(TDB, BaseTime::new(-1, Subsecond(0.999_927_263_223_809))))]
+    #[should_panic]
+    #[case::unrepresentable(
+        Time {
+            timestamp: PANIC_INDUCING_BASE_TIME,
+            scale: TT,
+        },
+    Time::default(),
+    )]
     fn test_transform_tt_tdb(#[case] tt: Time<TT>, #[case] expected: Time<TDB>) {
         let transformer = &TimeScaleTransformer {};
         let tdb: Time<TDB> = transformer.transform(tt);
@@ -298,6 +327,14 @@ mod tests {
     #[case::j2000(
         Time::j2000(TDB),
         Time::from_base_time(TT, BaseTime::new(0, Subsecond(0.000_072_736_776_166)))
+    )]
+    #[should_panic]
+    #[case::unrepresentable(
+        Time {
+            timestamp: PANIC_INDUCING_BASE_TIME,
+            scale: TDB,
+        },
+    Time::default(),
     )]
     fn test_transform_tdb_tt(#[case] tdb: Time<TDB>, #[case] expected: Time<TT>) {
         let transformer = &TimeScaleTransformer {};
