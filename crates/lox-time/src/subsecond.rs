@@ -6,11 +6,12 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::errors::LoxTimeError;
-use float_eq::float_eq;
-use num::ToPrimitive;
 use std::fmt;
 use std::fmt::{Display, Formatter};
+
+use num::ToPrimitive;
+
+use crate::errors::LoxTimeError;
 
 /// An f64 value in the range [0.0, 1.0) representing a fraction of a second with femtosecond
 /// precision.
@@ -85,9 +86,10 @@ impl Into<f64> for Subsecond {
 
 #[cfg(test)]
 mod tests {
+    use rstest::rstest;
+
     use crate::errors::LoxTimeError;
     use crate::subsecond::Subsecond;
-    use rstest::rstest;
 
     #[rstest]
     #[case::below_lower_bound(-1e-15, Err(LoxTimeError::InvalidSubsecond(-1e-15)))]
