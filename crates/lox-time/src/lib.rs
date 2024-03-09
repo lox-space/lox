@@ -543,4 +543,28 @@ mod tests {
         assert_eq!(jd1, 2451545.0 + 36525.0);
         assert_eq!(jd2, 0.5);
     }
+
+    #[test]
+    fn test_time_add_time_delta() {
+        let time = Time::j2000(TAI);
+        let delta = TimeDelta::from_decimal_seconds(1.5).unwrap();
+        let expected = Time {
+            scale: TAI,
+            timestamp: time.timestamp + delta,
+        };
+        let actual = Time::j2000(TAI) + delta;
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_time_sub_time_delta() {
+        let time = Time::j2000(TAI);
+        let delta = TimeDelta::from_decimal_seconds(1.5).unwrap();
+        let expected = Time {
+            scale: TAI,
+            timestamp: time.timestamp - delta,
+        };
+        let actual = Time::j2000(TAI) - delta;
+        assert_eq!(expected, actual);
+    }
 }
