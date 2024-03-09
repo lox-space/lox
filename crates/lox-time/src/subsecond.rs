@@ -6,20 +6,22 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::errors::LoxTimeError;
-use num::ToPrimitive;
 use std::fmt;
 use std::fmt::{Display, Formatter};
+
+use num::ToPrimitive;
+
+use crate::errors::LoxTimeError;
 
 /// An f64 value in the range [0.0, 1.0) representing a fraction of a second with femtosecond
 /// precision.
 #[derive(Debug, Default, Copy, Clone, PartialOrd)]
 pub struct Subsecond(pub(crate) f64);
 
-/// Two Subseconds are considered equal if their difference is less than 1 femtosecond.
+/// Two Subseconds are considered equal if their absolute difference is less than 1 femtosecond.
 impl PartialEq for Subsecond {
     fn eq(&self, other: &Self) -> bool {
-        (self.0 * 1e15).round() == (other.0 * 1e15).round()
+        self.0 == other.0 || (self.0 - other.0).abs() < 1e-15
     }
 }
 
@@ -84,9 +86,10 @@ impl Into<f64> for Subsecond {
 
 #[cfg(test)]
 mod tests {
+    use rstest::rstest;
+
     use crate::errors::LoxTimeError;
     use crate::subsecond::Subsecond;
-    use rstest::rstest;
 
     #[rstest]
     #[case::below_lower_bound(-1e-15, Err(LoxTimeError::InvalidSubsecond(-1e-15)))]
