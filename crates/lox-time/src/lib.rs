@@ -142,6 +142,14 @@ impl<T: TimeScale + Copy> Time<T> {
     ) -> Time<S> {
         Time::from_scale(self, transformer)
     }
+
+    /// Returns `self` as a [TimeDelta] from the epoch.
+    fn to_delta(self) -> TimeDelta {
+        TimeDelta {
+            seconds: self.timestamp.seconds,
+            subsecond: self.timestamp.subsecond,
+        }
+    }
 }
 
 impl<T: TimeScale + Copy> JulianDate for Time<T> {

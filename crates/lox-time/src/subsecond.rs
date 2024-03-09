@@ -7,6 +7,7 @@
  */
 
 use crate::errors::LoxTimeError;
+use float_eq::float_eq;
 use num::ToPrimitive;
 use std::fmt;
 use std::fmt::{Display, Formatter};
@@ -16,10 +17,10 @@ use std::fmt::{Display, Formatter};
 #[derive(Debug, Default, Copy, Clone, PartialOrd)]
 pub struct Subsecond(pub(crate) f64);
 
-/// Two Subseconds are considered equal if their difference is less than 1 femtosecond.
+/// Two Subseconds are considered equal if their absolute difference is less than 1 femtosecond.
 impl PartialEq for Subsecond {
     fn eq(&self, other: &Self) -> bool {
-        (self.0 * 1e15).round() == (other.0 * 1e15).round()
+        self.0 == other.0 || (self.0 - other.0).abs() < 1e-15
     }
 }
 
