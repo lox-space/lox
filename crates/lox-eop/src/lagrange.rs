@@ -40,7 +40,7 @@ pub struct Arguments {
 }
 
 impl Arguments {
-    fn new(
+    pub fn new(
         x: Vec<Arcsec>,
         y: Vec<Arcsec>,
         t: Vec<Seconds>,
@@ -69,7 +69,7 @@ impl Arguments {
 pub struct Interpolation {
     x: Arcsec,
     y: Arcsec,
-    t: Seconds,
+    t: MJD,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
