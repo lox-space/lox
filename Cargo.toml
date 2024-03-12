@@ -3,7 +3,7 @@ members = [
     "crates/*"
 ]
 exclude = [
-    "tools/lox_gen"
+    "tools/lox-gen"
 ]
 resolver = "2"
 
@@ -14,9 +14,26 @@ license = "MPL-2.0"
 authors = ["Helge Eichhorn and the lox-space contributors"]
 
 [workspace.dependencies]
-lox_core = { path = "./crates/lox_core" }
+lox-bodies = { path = "crates/lox-bodies" }
+lox-comms = { path = "crates/lox-comms" }
+lox-coords = { path = "crates/lox-coords" }
+lox-utils = { path = "crates/lox-utils" }
+lox-earth = { path = "crates/lox-earth" }
+lox-ephem = { path = "crates/lox-ephem" }
+lox-io = { path = "crates/lox-io" }
+lox-space = { path = "crates/lox-space" }
+lox-time = { path = "crates/lox-time" }
+
+divan = "0.1.14"
+dyn-clone = "1.0.17"
+fast_polynomial = "0.1.0"
 float_eq = "1.0.1"
+glam = "0.25.0"
+mockall = "0.12.1"
+nom = "7.1.3"
+num = "0.4.1"
 proptest = "1.4.0"
+pyo3 = "0.20.3"
 rstest = "0.18.2"
 thiserror = "1.0"
 

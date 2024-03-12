@@ -6,13 +6,21 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use lox_core::time::utc::UTC;
-use lox_space::prelude::*;
+use lox_bodies::Earth;
+use lox_coords::frames::Icrf;
+use lox_coords::two_body::{Cartesian, Keplerian};
+use lox_coords::DVec3;
+use lox_time::calendar_dates::Date;
+use lox_time::julian_dates::JulianDate;
+use lox_time::subsecond::Subsecond;
+use lox_time::time_scales::TDB;
+use lox_time::utc::UTC;
+use lox_time::Time;
 
 fn main() {
     let date = Date::new(2016, 5, 30).unwrap();
-    let utc = UTC::new(12, 0, 0).unwrap();
-    let time = Time::from_date_and_utc_timestamp(TimeScale::TDB, date, utc);
+    let utc = UTC::new(12, 0, 0, Subsecond::default()).unwrap();
+    let time = Time::from_date_and_utc_timestamp(TDB, date, utc);
     let position = DVec3::new(6068.27927, -1692.84394, -2516.61918);
     let velocity = DVec3::new(-0.660415582, 5.495938726, -5.303093233);
     let iss_cartesian = Cartesian::new(time, Earth, Icrf, position, velocity);

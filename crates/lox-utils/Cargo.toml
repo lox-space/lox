@@ -1,0 +1,9 @@
+[package]
+name = "lox-utils"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+
+[dev-dependencies]
+float_eq.workspace = true

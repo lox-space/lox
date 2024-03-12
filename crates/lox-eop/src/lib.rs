@@ -16,6 +16,7 @@ use thiserror::Error;
 use crate::akima::{Akima, AkimaError};
 
 mod akima;
+mod lagrange;
 
 #[derive(Error, Debug)]
 enum LoxEopError {
