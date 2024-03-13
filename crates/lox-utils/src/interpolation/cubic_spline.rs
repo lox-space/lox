@@ -22,7 +22,7 @@ pub enum LoxCubicSplineError {
     Unsolvable,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct CubicSpline {
     n: usize,
     x: Vec<f64>,
@@ -174,10 +174,10 @@ mod tests {
         let spl = CubicSpline::new(&x, &y);
         assert!(spl.is_ok());
 
-        let spl = CubicSpline::new(&x, &y[0..3]).expect_err("should fail");
-        assert_eq!(spl, LoxCubicSplineError::DimensionMismatch(4, 3));
+        let spl = CubicSpline::new(&x, &y[0..3]);
+        assert_eq!(spl, Err(LoxCubicSplineError::DimensionMismatch(4, 3)));
 
-        let spl = CubicSpline::new(&x[0..3], &y[0..3]).expect_err("should fail");
-        assert_eq!(spl, LoxCubicSplineError::InsufficientPoints(3));
+        let spl = CubicSpline::new(&x[0..3], &y[0..3]);
+        assert_eq!(spl, Err(LoxCubicSplineError::InsufficientPoints(3)));
     }
 }

@@ -18,7 +18,7 @@ pub struct LoxTridiagonalError(usize, usize, usize);
 type Idx = (usize, usize);
 
 /// A tridiagonal matrix representation
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Tridiagonal<'a> {
     dl: &'a [f64],
     d: &'a [f64],
@@ -118,9 +118,9 @@ mod tests {
         let du = vec![1.0, 2.0];
         let d = vec![3.0, 4.0, 5.0];
         let dl = vec![6.0];
-        let tri = Tridiagonal::new(&dl, &d, &du).expect_err("should fail");
+        let tri = Tridiagonal::new(&dl, &d, &du);
 
-        assert_eq!(tri, LoxTridiagonalError(2, 1, 2));
+        assert_eq!(tri, Err(LoxTridiagonalError(2, 1, 2)));
     }
 
     #[test]
