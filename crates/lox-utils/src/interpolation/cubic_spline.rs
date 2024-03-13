@@ -112,13 +112,14 @@ impl CubicSpline {
     }
 
     pub fn interpolate(&self, x0: f64) -> f64 {
-        let idx = self.x.partition_point(|val| x0 >= *val) - 1;
+        let mut idx = self.x.partition_point(|val| x0 >= *val);
         if idx == 0 {
             return *self.y.first().unwrap();
         }
         if idx == self.n {
             return *self.y.last().unwrap();
         }
+        idx -= 1;
         let x = x0 - self.x[idx];
         poly_array(x, &[self.c1[idx], self.c2[idx], self.c3[idx], self.c4[idx]])
     }
@@ -160,6 +161,8 @@ mod tests {
         let spl = CubicSpline::new(&x, &y).expect("should be valid");
 
         assert_float_eq!(spl.interpolate(1.0), -0.07321713407025687, rel <= 1e-8);
+        assert_eq!(spl.interpolate(-5.0), y[0]);
+        assert_eq!(spl.interpolate(5.0), y[9]);
     }
 
     #[test]
