@@ -7,9 +7,20 @@
  */
 
 use fast_polynomial::poly_array;
+use thiserror::Error;
 
 use crate::linear_algebra::tridiagonal::Tridiagonal;
 use crate::vector_traits::Diff;
+
+#[derive(Clone, Debug, Error)]
+pub enum LoxCubicSplineError {
+    #[error("`x` and `y` must have the same length but were {0} and {1}")]
+    DimensionMismatch(usize, usize),
+    #[error("length of `x` and `y` must at least 4 but was {0}")]
+    InsufficientPoints(usize),
+    #[error("linear system could not be solved")]
+    Unsolvable,
+}
 
 pub struct CubicSpline {
     n: usize,
@@ -22,8 +33,16 @@ pub struct CubicSpline {
 }
 
 impl CubicSpline {
-    pub fn new(x: &[f64], y: &[f64]) -> Result<Self, &'static str> {
+    pub fn new(x: &[f64], y: &[f64]) -> Result<Self, LoxCubicSplineError> {
         let n = x.len();
+
+        if y.len() != n {
+            return Err(LoxCubicSplineError::DimensionMismatch(n, y.len()));
+        }
+
+        if n < 4 {
+            return Err(LoxCubicSplineError::InsufficientPoints(n));
+        }
 
         let dx = x.diff();
         let nd = dx.len();
@@ -64,8 +83,8 @@ impl CubicSpline {
                 / delta,
         );
 
-        let tri = Tridiagonal::new(&dl, &d, &du)?;
-        let s = tri.solve(&b).ok_or("could not be solved")?;
+        let tri = Tridiagonal::new(&dl, &d, &du).expect("should be valid");
+        let s = tri.solve(&b).ok_or(LoxCubicSplineError::Unsolvable)?;
         let t: Vec<f64> = s[0..n - 1]
             .iter()
             .enumerate()
@@ -113,7 +132,7 @@ mod tests {
 
     #[test]
     fn test_cubic_spline() {
-        let x: Vec<f64> = vec![
+        let x = vec![
             -1.45971551,
             -1.27401241,
             -1.24858571,
@@ -125,7 +144,7 @@ mod tests {
             0.82698527,
             1.18579896,
         ];
-        let y: Vec<f64> = vec![
+        let y = vec![
             -1.12016875,
             0.53793553,
             -0.32205336,
@@ -141,5 +160,20 @@ mod tests {
         let spl = CubicSpline::new(&x, &y).expect("should be valid");
 
         assert_float_eq!(spl.interpolate(1.0), -0.07321713407025687, rel <= 1e-8);
+    }
+
+    #[test]
+    fn test_cubic_spline_errors() {
+        let x = vec![1.0, 2.0, 3.0, 4.0];
+        let y = vec![1.0, 2.0, 3.0, 4.0];
+
+        let spl = CubicSpline::new(&x, &y[0..3]);
+        assert!(spl.is_err());
+
+        let spl = CubicSpline::new(&x[0..3], &y[0..3]);
+        assert!(spl.is_err());
+
+        let spl = CubicSpline::new(&x, &y);
+        assert!(spl.is_ok());
     }
 }

@@ -436,6 +436,7 @@ dependencies = [
  "fast_polynomial",
  "float_eq",
  "nalgebra",
+ "thiserror",
 ]
 
 [[package]]
