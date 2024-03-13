@@ -6,23 +6,22 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use std::ops::{Index, IndexMut};
+use std::ops::Index;
 
-use nalgebra::{DMatrix, DVector, RealField};
+use nalgebra::{DMatrix, DVector};
 
 type Idx = (usize, usize);
 
 /// A tridiagonal matrix representation
 #[derive(Clone, Debug)]
-pub struct Tridiagonal<T: RealField> {
-    zero: T,
-    dl: DVector<T>,
-    d: DVector<T>,
-    du: DVector<T>,
+pub struct Tridiagonal {
+    dl: Vec<f64>,
+    d: Vec<f64>,
+    du: Vec<f64>,
 }
 
-impl<T: RealField> Tridiagonal<T> {
-    pub fn new(dl: DVector<T>, d: DVector<T>, du: DVector<T>) -> Result<Self, &'static str> {
+impl Tridiagonal {
+    pub fn new(dl: &[f64], d: &[f64], du: &[f64]) -> Result<Self, &'static str> {
         let n = d.len();
         if (dl.len() != n - 1 || du.len() != n - 1)
             && !(d.is_empty() && dl.is_empty() && du.is_empty())
@@ -30,10 +29,9 @@ impl<T: RealField> Tridiagonal<T> {
             return Err("wrong");
         }
         Ok(Self {
-            zero: T::zero(),
-            dl,
-            d,
-            du,
+            dl: dl.to_vec(),
+            d: d.to_vec(),
+            du: du.to_vec(),
         })
     }
 
@@ -41,21 +39,22 @@ impl<T: RealField> Tridiagonal<T> {
         (self.d.len(), self.d.len())
     }
 
-    pub fn solve(&self, b: &DVector<T>) -> Option<DVector<T>> {
-        let m: DMatrix<T> = self.clone().into();
-        m.lu().solve(b)
+    pub fn solve(&self, b: &[f64]) -> Option<Vec<f64>> {
+        let b: DVector<f64> = b.to_vec().into();
+        let m: DMatrix<f64> = self.clone().into();
+        m.lu().solve(&b).map(|x| x.data.into())
     }
 }
 
-impl<T: RealField> From<Tridiagonal<T>> for DMatrix<T> {
-    fn from(value: Tridiagonal<T>) -> Self {
+impl From<Tridiagonal> for DMatrix<f64> {
+    fn from(value: Tridiagonal) -> Self {
         let n = value.d.len();
-        DMatrix::from_fn(n, n, |i, j| value[(i, j)].clone())
+        DMatrix::from_fn(n, n, |i, j| value[(i, j)])
     }
 }
 
-impl<T: RealField> Index<Idx> for Tridiagonal<T> {
-    type Output = T;
+impl Index<Idx> for Tridiagonal {
+    type Output = f64;
 
     fn index(&self, (i, j): Idx) -> &Self::Output {
         let n = self.d.len();
@@ -69,25 +68,7 @@ impl<T: RealField> Index<Idx> for Tridiagonal<T> {
         } else if i + 1 == j {
             &self.du[i]
         } else {
-            &self.zero
-        }
-    }
-}
-
-impl<T: RealField> IndexMut<Idx> for Tridiagonal<T> {
-    fn index_mut(&mut self, (i, j): Idx) -> &mut T {
-        let n = self.d.len();
-        if i >= n || j >= n {
-            panic!("Index out of bounds")
-        }
-        if i == j {
-            &mut self.d[i]
-        } else if i == j + 1 {
-            &mut self.dl[j]
-        } else if i + 1 == j {
-            &mut self.du[i]
-        } else {
-            &mut self.zero
+            &0.0
         }
     }
 }
@@ -98,10 +79,10 @@ mod tests {
 
     #[test]
     fn test_tridiagonal() {
-        let du: DVector<f64> = vec![1.0, 2.0].into();
-        let d: DVector<f64> = vec![3.0, 4.0, 5.0].into();
-        let dl: DVector<f64> = vec![6.0, 7.0].into();
-        let tri = Tridiagonal::new(dl, d, du).expect("should be valid");
+        let du: Vec<f64> = vec![1.0, 2.0];
+        let d: Vec<f64> = vec![3.0, 4.0, 5.0];
+        let dl: Vec<f64> = vec![6.0, 7.0];
+        let tri = Tridiagonal::new(&dl, &d, &du).expect("should be valid");
 
         assert_eq!(tri.shape(), (3, 3));
 

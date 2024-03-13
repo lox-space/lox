@@ -7,77 +7,84 @@
  */
 
 use fast_polynomial::poly_array;
-use nalgebra::DVector;
 
 use crate::linear_algebra::tridiagonal::Tridiagonal;
-use crate::vector_traits::{Diff, SetSlice};
+use crate::vector_traits::Diff;
 
 pub struct CubicSpline {
     n: usize,
-    x: DVector<f64>,
-    y: DVector<f64>,
-    c1: DVector<f64>,
-    c2: DVector<f64>,
-    c3: DVector<f64>,
-    c4: DVector<f64>,
+    x: Vec<f64>,
+    y: Vec<f64>,
+    c1: Vec<f64>,
+    c2: Vec<f64>,
+    c3: Vec<f64>,
+    c4: Vec<f64>,
 }
 
 impl CubicSpline {
-    pub fn new(x: &DVector<f64>, y: &DVector<f64>) -> Result<Self, &'static str> {
+    pub fn new(x: &[f64], y: &[f64]) -> Result<Self, &'static str> {
         let n = x.len();
-        let mut dl: DVector<f64> = DVector::zeros(n - 1);
-        let mut d: DVector<f64> = DVector::zeros(n);
-        let mut du: DVector<f64> = DVector::zeros(n - 1);
-        let mut b: DVector<f64> = DVector::zeros(n);
 
         let dx = x.diff();
         let nd = dx.len();
-        let slope = y.diff().component_div(&dx);
+        let slope: Vec<f64> = y
+            .diff()
+            .iter()
+            .enumerate()
+            .map(|(idx, y)| y / dx[idx])
+            .collect();
 
-        let dx1 = dx.rows(0, nd - 1).clone_owned();
-        let dx2 = dx.rows(1, nd - 1).clone_owned();
-        let slope1 = slope.rows(0, nd - 1).clone_owned();
-        let slope2 = slope.rows(1, nd - 1).clone_owned();
-
-        d.set_slice(1, &(&dx1 + &dx2).scale(2.0));
-        du.set_slice(1, &dx1);
-        dl.set_slice(0, &dx2);
-        b.set_slice(
-            1,
-            &(&dx2.component_mul(&slope1) + &dx1.component_mul(&slope2)).scale(3.0),
-        );
+        let mut d: Vec<f64> = dx[0..nd - 1]
+            .iter()
+            .enumerate()
+            .map(|(idx, dxi)| 2.0 * (dxi + dx[idx + 1]))
+            .collect();
+        let mut du: Vec<f64> = dx[0..nd - 1].to_vec();
+        let mut dl: Vec<f64> = dx[1..].to_vec();
+        let mut b: Vec<f64> = dx[0..nd - 1]
+            .iter()
+            .enumerate()
+            .map(|(idx, dxi)| 3.0 * (dx[idx + 1] * slope[idx] + dxi * slope[idx + 1]))
+            .collect();
 
         // Not-a-knot boundary condition
-        d[0] = dx[1];
-        du[0] = x[2] - x[0];
+        d.insert(0, dx[1]);
+        du.insert(0, x[2] - x[0]);
         let delta = x[2] - x[0];
-        b[0] = ((dx[0] + 2.0 * delta) * dx[1] * slope[0] + dx[0].powi(2) * slope[1]) / delta;
-        d[n - 1] = dx[nd - 1];
+        b.insert(
+            0,
+            ((dx[0] + 2.0 * delta) * dx[1] * slope[0] + dx[0].powi(2) * slope[1]) / delta,
+        );
+        d.push(dx[nd - 2]);
         let delta = x[n - 1] - x[n - 3];
-        dl[nd - 1] = delta;
-        b[n - 1] = (dx[nd - 1].powi(2) * slope[nd - 2]
-            + (2.0 * delta + dx[nd - 1]) * dx[nd - 2] * slope[nd - 1])
-            / delta;
+        dl.push(delta);
+        b.push(
+            (dx[nd - 1].powi(2) * slope[nd - 2]
+                + (2.0 * delta + dx[nd - 1]) * dx[nd - 2] * slope[nd - 1])
+                / delta,
+        );
 
-        println!("{:?}", dx);
-        println!("{:?}", d);
-        println!("{:?}", b);
-
-        let tri = Tridiagonal::new(dl, d, du)?;
+        let tri = Tridiagonal::new(&dl, &d, &du)?;
         let s = tri.solve(&b).ok_or("could not be solved")?;
-        let s1 = s.rows(0, n - 1).clone_owned();
-        let s2 = s.rows(1, n - 1).clone_owned();
-        let t = (&s1 + &s2 - &slope.scale(2.0)).component_div(&dx);
+        let t: Vec<f64> = s[0..n - 1]
+            .iter()
+            .enumerate()
+            .map(|(idx, si)| (si + s[idx + 1] - 2.0 * slope[idx]) / dx[idx])
+            .collect();
 
-        let c1 = y.rows(0, n - 1).clone_owned();
-        let c2 = s1.clone();
-        let c3 = (&slope - &s1).component_div(&(&dx - &t));
-        let c4 = t.component_div(&dx);
+        let c1 = y[0..n - 1].to_vec();
+        let c2 = s[0..n - 1].to_vec();
+        let c3: Vec<f64> = slope
+            .iter()
+            .enumerate()
+            .map(|(idx, si)| (si - s[idx]) / dx[idx] - t[idx])
+            .collect();
+        let c4: Vec<f64> = t.iter().enumerate().map(|(idx, ti)| ti / dx[idx]).collect();
 
         Ok(Self {
             n,
-            x: x.clone(),
-            y: y.clone(),
+            x: x.to_vec(),
+            y: y.to_vec(),
             c1,
             c2,
             c3,
@@ -86,32 +93,27 @@ impl CubicSpline {
     }
 
     pub fn interpolate(&self, x0: f64) -> f64 {
-        println!("{:?}", self.c2);
-        let x: Vec<&f64> = self.x.iter().collect();
-        let idx = x.binary_search_by(|val| val.partial_cmp(&&x0).unwrap());
-        match idx {
-            Ok(idx) => {
-                let x = x0 - self.x[idx];
-                poly_array(x, &[self.c1[idx], self.c2[idx], self.c3[idx], self.c4[idx]])
-            }
-            Err(idx) => match idx {
-                0 => self.y[0],
-                _ => self.y[self.n - 1],
-            },
+        let idx = self.x.partition_point(|val| x0 >= *val) - 1;
+        if idx == 0 {
+            return *self.y.first().unwrap();
         }
+        if idx == self.n {
+            return *self.y.last().unwrap();
+        }
+        let x = x0 - self.x[idx];
+        poly_array(x, &[self.c1[idx], self.c2[idx], self.c3[idx], self.c4[idx]])
     }
 }
 
 #[cfg(test)]
 mod tests {
     use float_eq::assert_float_eq;
-    use nalgebra::DVector;
 
     use super::*;
 
     #[test]
     fn test_cubic_spline() {
-        let x: DVector<f64> = vec![
+        let x: Vec<f64> = vec![
             -1.45971551,
             -1.27401241,
             -1.24858571,
@@ -122,9 +124,8 @@ mod tests {
             0.20519359,
             0.82698527,
             1.18579896,
-        ]
-        .into();
-        let y: DVector<f64> = vec![
+        ];
+        let y: Vec<f64> = vec![
             -1.12016875,
             0.53793553,
             -0.32205336,
@@ -135,8 +136,7 @@ mod tests {
             0.2450982,
             -0.68313154,
             0.52273895,
-        ]
-        .into();
+        ];
 
         let spl = CubicSpline::new(&x, &y).expect("should be valid");
 
