@@ -11,39 +11,29 @@ use std::ops::Index;
 use nalgebra::{DMatrix, DVector};
 use thiserror::Error;
 
-#[derive(Clone, Debug, Error)]
-pub enum LoxTridiagonalError {
-    #[error("lengths of `dl` and `du` must be `d.len() - 1 = {0}` but was {1} and {2}")]
-    DimensionMismatch(usize, usize, usize),
-}
+#[derive(Clone, Debug, Error, Eq, PartialEq)]
+#[error("lengths of `dl` and `du` must be `d.len() - 1 = {0}` but was {1} and {2}")]
+pub struct LoxTridiagonalError(usize, usize, usize);
 
 type Idx = (usize, usize);
 
 /// A tridiagonal matrix representation
 #[derive(Clone, Debug)]
-pub struct Tridiagonal {
-    dl: Vec<f64>,
-    d: Vec<f64>,
-    du: Vec<f64>,
+pub struct Tridiagonal<'a> {
+    dl: &'a [f64],
+    d: &'a [f64],
+    du: &'a [f64],
 }
 
-impl Tridiagonal {
-    pub fn new(dl: &[f64], d: &[f64], du: &[f64]) -> Result<Self, LoxTridiagonalError> {
+impl<'a> Tridiagonal<'a> {
+    pub fn new(dl: &'a [f64], d: &'a [f64], du: &'a [f64]) -> Result<Self, LoxTridiagonalError> {
         let n = d.len();
         if (dl.len() != n - 1 || du.len() != n - 1)
             && !(d.is_empty() && dl.is_empty() && du.is_empty())
         {
-            return Err(LoxTridiagonalError::DimensionMismatch(
-                n - 1,
-                dl.len(),
-                du.len(),
-            ));
+            return Err(LoxTridiagonalError(n - 1, dl.len(), du.len()));
         }
-        Ok(Self {
-            dl: dl.to_vec(),
-            d: d.to_vec(),
-            du: du.to_vec(),
-        })
+        Ok(Self { dl, d, du })
     }
 
     pub fn shape(&self) -> (usize, usize) {
@@ -57,14 +47,14 @@ impl Tridiagonal {
     }
 }
 
-impl From<Tridiagonal> for DMatrix<f64> {
+impl<'a> From<Tridiagonal<'a>> for DMatrix<f64> {
     fn from(value: Tridiagonal) -> Self {
         let n = value.d.len();
         DMatrix::from_fn(n, n, |i, j| value[(i, j)])
     }
 }
 
-impl Index<Idx> for Tridiagonal {
+impl<'a> Index<Idx> for Tridiagonal<'a> {
     type Output = f64;
 
     fn index(&self, (i, j): Idx) -> &Self::Output {
@@ -130,7 +120,7 @@ mod tests {
         let dl = vec![6.0];
         let tri = Tridiagonal::new(&dl, &d, &du);
 
-        assert!(tri.is_err())
+        assert_eq!(tri.expect_err("should fail"), LoxTridiagonalError(2, 1, 2));
     }
 
     #[test]
