@@ -16,6 +16,9 @@ use thiserror::Error;
 
 type MJD = f64;
 
+/// A polynomial function which may be executed repeatedly for arbitrary values of `x`.
+type Polynomial1D = fn(x: f64) -> f64;
+
 #[derive(Debug, Error)]
 #[error("sizes of `x`, `y`, `t` and `epochs` must match, but were x: {nx}, y: {ny}, t: {nt}, epochs: {nepochs}")]
 pub struct ArgumentSizeMismatchError {
