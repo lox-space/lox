@@ -7,5 +7,3 @@
  */
 
 pub mod cubic_spline;
-
-pub trait Interpolator {}
