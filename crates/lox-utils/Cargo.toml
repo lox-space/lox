@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+fast_polynomial.workspace = true
+nalgebra.workspace = true
 
 [dev-dependencies]
 float_eq.workspace = true
