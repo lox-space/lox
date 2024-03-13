@@ -6,20 +6,29 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use std::f64::consts::TAU;
+
+use thiserror::Error;
+
 use lox_bodies::fundamental::iers03::mean_moon_sun_elongation_iers03;
 use lox_bodies::{Moon, Sun};
-use lox_time::constants::f64::DAYS_PER_JULIAN_CENTURY; // todo: Circular dependency. Need to hoist constants.
+use lox_time::constants::f64::DAYS_PER_JULIAN_CENTURY;
+// todo: Impending circular dependency. Need to hoist constants.
+use lox_time::constants::julian_dates::MJD_J2000;
 use lox_time::intervals::TDBJulianCenturiesSinceJ2000;
+use lox_utils::math::arcsec_to_rad_two_pi;
 use lox_utils::types::{Arcsec, Radians, Seconds};
-use std::f64::consts::{FRAC_PI_2, PI, TAU};
-use thiserror::Error;
+
+use crate::lagrange::constants::{LUNI_SOLAR_TIDAL_TERMS, OCEANIC_TIDAL_TERMS};
+
+mod constants;
 
 type MJD = f64;
 
 /// A polynomial function which may be executed repeatedly for arbitrary values of `x`.
 type Polynomial1D = fn(x: f64) -> f64;
 
-#[derive(Debug, Error)]
+#[derive(Clone, Copy, Debug, Error, PartialEq)]
 #[error("sizes of `x`, `y`, `t` and `epochs` must match, but were x: {nx}, y: {ny}, t: {nt}, epochs: {nepochs}")]
 pub struct ArgumentSizeMismatchError {
     nx: usize,
@@ -108,10 +117,13 @@ impl Lagrange {
         let x = interpolate(&self.epochs, &self.x, self.target_epoch);
         let y = interpolate(&self.epochs, &self.y, self.target_epoch);
         let t = interpolate(&self.epochs, &self.t, self.target_epoch);
-        let tidal_correction = ray(self.target_epoch);
+        let centuries = julian_centuries_since_j2000(self.target_epoch);
+        let tidal_args = tidal_args(julian_centuries_since_j2000(self.target_epoch));
+        let tidal_correction = oceanic_tidal_correction(centuries, &tidal_args);
+        let lunisolar_correction = luni_solar_tidal_correction(centuries, &tidal_args);
         Interpolation {
-            x: x + tidal_correction.x,
-            y: y + tidal_correction.y,
+            x: x + tidal_correction.x + lunisolar_correction.x,
+            y: y + tidal_correction.y + lunisolar_correction.y,
             t: t + tidal_correction.t,
         }
     }
@@ -120,137 +132,156 @@ impl Lagrange {
 /// Perform Lagrangian interpolation within a set of (x, y) pairs, returning the y-value
 /// corresponding to `target_x`
 fn interpolate(x: &[f64], y: &[f64], target_x: f64) -> f64 {
-    let n = x.len();
     let mut result = 0.0;
     let mut k = 0usize;
-    for i in 0..(n - 1) {
+    for i in 0..(x.len() - 1) {
         if target_x >= x[i] && target_x < x[i + 1] {
             k = i;
-            break; // todo: break or continue?
+            break;
         }
     }
 
-    if k < 2 {
-        k = 2;
+    if k < 1 {
+        k = 1;
     }
-    if k > (n - 3) {
-        k = n - 3
+    if k > x.len() - 3 {
+        k = x.len() - 3;
     }
 
-    for m in k - 1..k + 2 {
+    for m in (k - 1)..(k + 3) {
         let mut term = y[m];
-        for j in k - 1..k + 2 {
+        for j in (k - 1)..(k + 3) {
             if m != j {
                 term *= (target_x - x[j]) / (x[m] - x[j]);
             }
         }
-        result += term
+        result += term;
     }
 
-    return result;
+    result
 }
 
-struct TidalCorrection {
+/// χ (GMST + π) followed by Delaunay arguments l, l', F, D, Ω.
+type TidalArgs = [Arcsec; 6];
+
+fn tidal_args(t: TDBJulianCenturiesSinceJ2000) -> TidalArgs {
+    [
+        chi(t),
+        Moon.mean_anomaly_iers03(t),
+        Sun.mean_anomaly_iers03(t),
+        Moon.mean_longitude_minus_ascending_node_mean_longitude_iers03(t),
+        mean_moon_sun_elongation_iers03(t),
+        Moon.ascending_node_mean_longitude_iers03(t),
+    ]
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+struct OceanicTidalCorrection {
     x: Arcsec,
     y: Arcsec,
     t: Seconds,
 }
 
-/// Implements the Ray model for diurnal/subdiurnal tides.
-fn ray(target_epoch: MJD) -> TidalCorrection {
-    let t = (target_epoch - 51544.0) / DAYS_PER_JULIAN_CENTURY;
+type MicroArcsec = f64;
 
-    // Fundamental arguments.
-    // TODO: Fortran implementation gives these in Arcseconds, but the lox implementations are
-    // converted to radians. We'd need implementations returning Arcseconds to use the same
-    // approach for calculating args1-8.
-    let l = Moon.mean_anomaly_iers03(t);
-    let lp = Sun.mean_anomaly_iers03(t); // todo: LPRIME is defined but not used by Fortran implementation?
-    let f = Moon.mean_longitude_minus_ascending_node_mean_longitude_iers03(t);
-    let d = mean_moon_sun_elongation_iers03(t);
-    let omega = Moon.ascending_node_mean_longitude_iers03(t);
-    let theta = theta(t);
+struct OceanicTidalTerm {
+    /// Coefficients of fundamental arguments χ (GMST + π), l, l', F, D, Ω
+    coefficients: [i8; 6],
+    x_sin: MicroArcsec,
+    x_cos: MicroArcsec,
+    y_sin: MicroArcsec,
+    y_cos: MicroArcsec,
+    t_sin: MicroArcsec,
+    t_cos: MicroArcsec,
+}
 
-    // todo: this implementation can't be copied directly, since Lox funadamental args are already
-    // in radians.
-    const RADIANS_PER_ARCSECOND: Radians = PI / 648000.0;
-    let arg7 = ((-l - 2.0 * f - 2.0 * omega + theta) * RADIANS_PER_ARCSECOND) % TAU - FRAC_PI_2; // todo: proper names for consts and pre-calculate where possible
-    let arg1 = ((-2.0 * f - 2.0 * omega + theta) * RADIANS_PER_ARCSECOND) % TAU - FRAC_PI_2;
-    let arg2 =
-        ((-2.0 * f + 2.0 * d - 2.0 * omega + theta) * RADIANS_PER_ARCSECOND) % TAU + FRAC_PI_2;
-    let arg3 = (theta * RADIANS_PER_ARCSECOND) % TAU + FRAC_PI_2;
-    let arg4 = ((-L - 2.0 * f - 2.0 * omega + 2.0 * theta) * RADIANS_PER_ARCSECOND) % TAU;
-    let arg5 = ((-2.0 * f - 2.0 * omega + 2.0 * theta) * RADIANS_PER_ARCSECOND) % TAU;
-    let arg6 = ((-2.0 * f + 2.0 * d - 2.0 * omega + 2.0 * theta) * RADIANS_PER_ARCSECOND) % TAU;
-    let arg8 = (-2.0 * theta * PI / 648000) % TAU;
+type RadiansPerDay = f64;
 
-    let (sin_arg7, cos_arg7) = arg7.sin_cos();
-    let (sin_arg1, cos_arg1) = arg1.sin_cos();
-    let (sin_arg2, cos_arg2) = arg2.sin_cos();
-    let (sin_arg3, cos_arg3) = arg3.sin_cos();
-    let (sin_arg4, cos_arg4) = arg4.sin_cos();
-    let (sin_arg5, cos_arg5) = arg5.sin_cos();
-    let (sin_arg6, cos_arg6) = arg6.sin_cos();
-    let (sin_arg8, cos_arg8) = arg8.sin_cos();
+/// Returns the diurnal/subdiurnal oceanic tidal effects on polar motion and UT1-UTC. Based on
+/// Bizouard (2002), Gambis (1997) and Eanes (1997).
+fn oceanic_tidal_correction(
+    t: TDBJulianCenturiesSinceJ2000,
+    tidal_args: &TidalArgs,
+) -> OceanicTidalCorrection {
+    // χ (GMST + π), l, l', F, D, Ω
+    let tidal_args_dt: [RadiansPerDay; 6] =
+        [chi_dt(t), l_dt(t), lp_dt(t), f_dt(t), d_dt(t), omega_dt(t)];
 
-    let x = -0.026 * sin_arg7 + 0.006 * cos_arg7 - 0.133 * sin_arg1 + 0.049 * cos_arg1
-        - 0.050 * sin_arg2
-        + 0.025 * cos_arg2
-        - 0.152 * sin_arg3
-        + 0.078 * cos_arg3
-        - 0.057 * sin_arg4
-        - 0.013 * cos_arg4
-        - 0.330 * sin_arg5
-        - 0.028 * cos_arg5
-        - 0.145 * sin_arg6
-        + 0.064 * cos_arg6
-        - 0.036 * sin_arg8
-        + 0.017 * cos_arg8;
+    let mut x = 0.0;
+    let mut y = 0.0;
+    let mut t = 0.0;
 
-    let y = -0.006 * sin_arg7
-        - 0.026 * cos_arg7
-        - 0.049 * sin_arg1
-        - 0.133 * cos_arg1
-        - 0.025 * sin_arg2
-        - 0.050 * cos_arg2
-        - 0.078 * sin_arg3
-        - 0.152 * cos_arg3
-        + 0.011 * sin_arg4
-        + 0.033 * cos_arg4
-        + 0.037 * sin_arg5
-        + 0.196 * cos_arg5
-        + 0.059 * sin_arg6
-        + 0.087 * cos_arg6
-        + 0.018 * sin_arg8
-        + 0.022 * cos_arg8;
+    for term in OCEANIC_TIDAL_TERMS {
+        let mut agg = 0.0;
+        let mut dt_agg = 0.0;
+        for i in 0..6 {
+            let coeff = term.coefficients[i] as f64;
+            agg += coeff * tidal_args[i];
+            dt_agg += coeff * tidal_args_dt[i];
+        }
+        agg %= TAU;
 
-    let t = 0.0245 * sin_arg7
-        + 0.0503 * cos_arg7
-        + 0.1210 * sin_arg1
-        + 0.1605 * cos_arg1
-        + 0.0286 * sin_arg2
-        + 0.0516 * cos_arg2
-        + 0.0864 * sin_arg3
-        + 0.1771 * cos_arg3
-        - 0.0380 * sin_arg4
-        - 0.0154 * cos_arg4
-        - 0.1617 * sin_arg5
-        - 0.0720 * cos_arg5
-        - 0.0759 * sin_arg6
-        - 0.0004 * cos_arg6
-        - 0.0196 * sin_arg8
-        - 0.0038 * cos_arg8;
+        let (sin_agg, cos_agg) = agg.sin_cos();
+        x += term.x_sin * sin_agg + term.x_cos * cos_agg;
+        y += term.y_sin * sin_agg + term.y_cos * cos_agg;
+        t += term.t_sin * sin_agg + term.t_cos * cos_agg;
+    }
 
-    TidalCorrection {
-        x: x * 1e-3,
-        y: y * 1e-3,
-        t: t * 1e-4,
+    OceanicTidalCorrection {
+        x: x * 1e-6,
+        y: y * 1e-6,
+        t: t * 1e-6,
     }
 }
 
-// todo: figure out where this should live
-fn theta(t: TDBJulianCenturiesSinceJ2000) -> Radians {
-    fast_polynomial::poly_array(
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+struct LuniSolarTidalCorrection {
+    x: Arcsec,
+    y: Arcsec,
+}
+
+struct LuniSolarTidalTerm {
+    /// Coefficients of fundamental arguments χ (GMST + π), l, l', F, D, Ω
+    coefficients: [i8; 6],
+    x_sin: MicroArcsec,
+    x_cos: MicroArcsec,
+    y_sin: MicroArcsec,
+    y_cos: MicroArcsec,
+}
+
+/// Returns the luni-solar correction to polar motion.
+fn luni_solar_tidal_correction(
+    t: TDBJulianCenturiesSinceJ2000,
+    tidal_args: &TidalArgs,
+) -> LuniSolarTidalCorrection {
+    let mut x = 0.0;
+    let mut y = 0.0;
+
+    for term in LUNI_SOLAR_TIDAL_TERMS {
+        let mut agg = 0.0;
+        for i in 0..6 {
+            agg += term.coefficients[i] as f64 * tidal_args[i];
+        }
+        agg %= TAU;
+
+        let (sin_agg, cos_agg) = agg.sin_cos();
+        x += term.x_sin * sin_agg + term.x_cos * cos_agg;
+        y += term.y_sin * sin_agg + term.y_cos * cos_agg;
+    }
+
+    LuniSolarTidalCorrection {
+        x: x * 1e-6,
+        y: y * 1e-6,
+    }
+}
+
+fn julian_centuries_since_j2000(mjd: MJD) -> TDBJulianCenturiesSinceJ2000 {
+    (mjd - MJD_J2000) / DAYS_PER_JULIAN_CENTURY
+}
+
+/// GMST + π.
+fn chi(t: TDBJulianCenturiesSinceJ2000) -> Radians {
+    let arcsec = fast_polynomial::poly_array(
         t,
         &[
             67310.54841,
@@ -259,5 +290,130 @@ fn theta(t: TDBJulianCenturiesSinceJ2000) -> Radians {
             -6.2e-6,
         ],
     ) * 15.0
-        + 648000.0
+        + 648000.0;
+    arcsec_to_rad_two_pi(arcsec)
+}
+
+fn chi_dt(t: TDBJulianCenturiesSinceJ2000) -> RadiansPerDay {
+    let arcsec = fast_polynomial::poly_array(
+        t,
+        &[
+            (876600.0 * 3600.0 + 8640184.812866),
+            2.0 * 0.093104,
+            -3.0 * 6.2e-6,
+        ],
+    ) * 15.0;
+    arcsec_to_radians_per_day(arcsec)
+}
+
+fn l_dt(t: TDBJulianCenturiesSinceJ2000) -> RadiansPerDay {
+    let arcsec = fast_polynomial::poly_array(
+        t,
+        &[
+            1717915923.2178,
+            2.0 * 31.8792,
+            3.0 * 0.051635,
+            -4.0 * 0.00024470,
+        ],
+    );
+    arcsec_to_radians_per_day(arcsec)
+}
+
+fn lp_dt(t: TDBJulianCenturiesSinceJ2000) -> RadiansPerDay {
+    let arcsec = fast_polynomial::poly_array(
+        t,
+        &[
+            129596581.0481,
+            -2.0 * 0.5532,
+            -3.0 * 0.000136,
+            -4.0 * 0.00001149,
+        ],
+    );
+    arcsec_to_radians_per_day(arcsec)
+}
+
+fn f_dt(t: TDBJulianCenturiesSinceJ2000) -> RadiansPerDay {
+    let arcsec = fast_polynomial::poly_array(
+        t,
+        &[
+            1739527262.8478,
+            -2.0 * 12.7512,
+            -3.0 * 0.001037,
+            4.0 * 0.00000417,
+        ],
+    );
+    arcsec_to_radians_per_day(arcsec)
+}
+
+fn d_dt(t: TDBJulianCenturiesSinceJ2000) -> RadiansPerDay {
+    let arcsec = fast_polynomial::poly_array(
+        t,
+        &[
+            1602961601.2090,
+            -2.0 * 6.3706,
+            3.0 * 0.006593,
+            -4.0 * 0.00003169,
+        ],
+    );
+    arcsec_to_radians_per_day(arcsec)
+}
+
+fn omega_dt(t: TDBJulianCenturiesSinceJ2000) -> RadiansPerDay {
+    let arcsec = fast_polynomial::poly_array(
+        t,
+        &[
+            -6962890.2665,
+            2.0 * 7.4722,
+            3.0 * 0.007702,
+            -4.0 * 0.00005939,
+        ],
+    );
+    arcsec_to_radians_per_day(arcsec)
+}
+
+#[inline]
+fn arcsec_to_radians_per_day(arcsec: Arcsec) -> RadiansPerDay {
+    arcsec_to_rad_two_pi(arcsec) / DAYS_PER_JULIAN_CENTURY
+}
+
+#[cfg(test)]
+mod tests {
+    use rstest::{fixture, rstest};
+
+    use super::*;
+
+    #[rstest]
+    #[case::vec_sizes_match(vec![], vec![], vec![], vec![], 0.0, Ok(Arguments::default()))]
+    #[case::x_size_mismatch(vec![0.0], vec![], vec![], vec![], 0.0, Err(ArgumentSizeMismatchError { nx: 1, ny: 0, nt: 0, nepochs: 0 }))]
+    #[case::y_size_mismatch(vec![], vec![0.0], vec![], vec![], 0.0, Err(ArgumentSizeMismatchError { nx: 0, ny: 1, nt: 0, nepochs: 0 }))]
+    #[case::t_size_mismatch(vec![], vec![], vec![0.0], vec![], 0.0, Err(ArgumentSizeMismatchError { nx: 0, ny: 0, nt: 1, nepochs: 0 }))]
+    #[case::epochs_size_mismatch(vec![], vec![], vec![], vec![0.0], 0.0, Err(ArgumentSizeMismatchError { nx: 0, ny: 0, nt: 0, nepochs: 1 }))]
+    fn test_arguments_new(
+        #[case] x: Vec<Arcsec>,
+        #[case] y: Vec<Arcsec>,
+        #[case] t: Vec<Seconds>,
+        #[case] epochs: Vec<MJD>,
+        #[case] target_epoch: MJD,
+        #[case] expected: Result<Arguments, ArgumentSizeMismatchError>,
+    ) {
+        let actual = Arguments::new(x, y, t, epochs, target_epoch);
+        assert_eq!(expected, actual);
+    }
+
+    #[fixture]
+    fn eop_data() -> Arguments {
+        Arguments::default()
+    }
+
+    #[rstest]
+    fn test_lagrangian_interpolate(
+        eop_data: Arguments,
+        #[case] target_epoch: MJD,
+        #[case] expected: Interpolation,
+    ) {
+        let args = Arguments::default();
+        let lagrange = Lagrange::new(args);
+        let interpolation = lagrange.interpolate();
+        assert_eq!(Interpolation::default(), interpolation);
+    }
 }

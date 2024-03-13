@@ -404,11 +404,13 @@ name = "lox-eop"
 version = "0.1.0"
 dependencies = [
  "csv",
+ "fast_polynomial",
  "float_eq",
  "lox-bodies",
  "lox-time",
  "lox-utils",
  "num-traits",
+ "rstest",
  "serde",
  "thiserror",
 ]

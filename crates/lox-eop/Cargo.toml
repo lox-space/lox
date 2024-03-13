@@ -16,6 +16,9 @@ thiserror.workspace = true
 lox-utils.workspace = true
 lox-time.workspace = true
 lox-bodies.workspace = true
+fast_polynomial.workspace = true
 
 [dev-dependencies]
 float_eq = "1.0.1"
+rstest.workspace = true
+
