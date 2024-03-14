@@ -345,7 +345,7 @@ mod tests {
         assert_eq!(expected, actual);
     }
 
-    const FINALS2000A_PATH: &str = "tests/fixtures/finals2000A.all.csv";
+    const FINALS2000A_PATH: &str = "../../data/finals2000A.all.csv";
 
     struct UnwrappedEOPData {
         x_pole: Vec<Arcsec>,
