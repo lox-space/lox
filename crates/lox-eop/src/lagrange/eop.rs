@@ -78,7 +78,8 @@ pub struct Interpolation {
 }
 
 /// Perform Lagrangian interpolation of Earth Orientation Parameters (EOP), returning polar x- and
-/// y- values and UT1-UTC at the target epoch.
+/// y- values and UT1-UTC at the target epoch. The result is corrected for oceanic and luni-solar
+/// tidal effects.
 pub fn interpolate(args: Arguments) -> Interpolation {
     let x = crate::lagrange::interpolate(&args.epochs, &args.x, args.target_epoch);
     let y = crate::lagrange::interpolate(&args.epochs, &args.y, args.target_epoch);
