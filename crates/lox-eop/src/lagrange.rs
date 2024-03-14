@@ -78,6 +78,7 @@ impl Arguments {
     }
 }
 
+#[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct Interpolation {
     x: Arcsec,
     y: Arcsec,
@@ -120,7 +121,7 @@ impl Lagrange {
         let centuries = julian_centuries_since_j2000(self.target_epoch);
         let tidal_args = tidal_args(julian_centuries_since_j2000(self.target_epoch));
         let tidal_correction = oceanic_tidal_correction(centuries, &tidal_args);
-        let lunisolar_correction = luni_solar_tidal_correction(centuries, &tidal_args);
+        let lunisolar_correction = luni_solar_tidal_correction(&tidal_args);
         Interpolation {
             x: x + tidal_correction.x + lunisolar_correction.x,
             y: y + tidal_correction.y + lunisolar_correction.y,
@@ -250,17 +251,14 @@ struct LuniSolarTidalTerm {
 }
 
 /// Returns the luni-solar correction to polar motion.
-fn luni_solar_tidal_correction(
-    t: TDBJulianCenturiesSinceJ2000,
-    tidal_args: &TidalArgs,
-) -> LuniSolarTidalCorrection {
+fn luni_solar_tidal_correction(tidal_args: &TidalArgs) -> LuniSolarTidalCorrection {
     let mut x = 0.0;
     let mut y = 0.0;
 
     for term in LUNI_SOLAR_TIDAL_TERMS {
         let mut agg = 0.0;
-        for i in 0..6 {
-            agg += term.coefficients[i] as f64 * tidal_args[i];
+        for (i, arg) in tidal_args.iter().enumerate() {
+            agg += term.coefficients[i] as f64 * arg;
         }
         agg %= TAU;
 
@@ -285,7 +283,7 @@ fn chi(t: TDBJulianCenturiesSinceJ2000) -> Radians {
         t,
         &[
             67310.54841,
-            (876600.0 * 3600.0 + 8640184.812866),
+            876600.0 * 3600.0 + 8640184.812866,
             0.093104,
             -6.2e-6,
         ],
@@ -298,7 +296,7 @@ fn chi_dt(t: TDBJulianCenturiesSinceJ2000) -> RadiansPerDay {
     let arcsec = fast_polynomial::poly_array(
         t,
         &[
-            (876600.0 * 3600.0 + 8640184.812866),
+            876600.0 * 3600.0 + 8640184.812866,
             2.0 * 0.093104,
             -3.0 * 6.2e-6,
         ],
@@ -378,7 +376,13 @@ fn arcsec_to_radians_per_day(arcsec: Arcsec) -> RadiansPerDay {
 
 #[cfg(test)]
 mod tests {
+    use float_eq::assert_float_eq;
+    use std::path::Path;
+
+    use num_traits::ToPrimitive;
     use rstest::{fixture, rstest};
+
+    use crate::{read_records, Records};
 
     use super::*;
 
@@ -400,20 +404,92 @@ mod tests {
         assert_eq!(expected, actual);
     }
 
+    const FINALS2000A_PATH: &str = "tests/fixtures/finals2000A.all.csv";
+
+    struct UnwrappedEOPData {
+        x_pole: Vec<Arcsec>,
+        y_pole: Vec<Arcsec>,
+        delta_ut1_utc: Vec<Seconds>,
+        mjd: Vec<MJD>,
+    }
+
     #[fixture]
-    fn eop_data() -> Arguments {
-        Arguments::default()
+    fn eop_data() -> UnwrappedEOPData {
+        let fixture_path = Path::new(FINALS2000A_PATH);
+
+        let records: Records = read_records(FINALS2000A_PATH)
+            .unwrap_or_else(|err| {
+                panic!(
+                    "failed to read test fixture at {}: {}",
+                    fixture_path.to_str().unwrap(),
+                    err,
+                )
+            })
+            .into();
+
+        let x_pole: Vec<f64> = records
+            .x_pole
+            .iter()
+            .map(|opt| opt.expect("x_pole value should not be None"))
+            .collect();
+        let y_pole = records
+            .y_pole
+            .iter()
+            .map(|opt| opt.expect("y_pole value should not be None"))
+            .collect();
+        let delta_ut1_utc = records
+            .delta_ut1_utc
+            .iter()
+            .map(|opt| opt.expect("delta_ut1_utc value should not be None"))
+            .collect();
+        let mjd = records
+            .modified_julian_date
+            .iter()
+            .map(|date| {
+                date.to_f64().unwrap_or_else(|| {
+                    panic!("fixture MJD `{}` could not be represented as an f64", date)
+                })
+            })
+            .collect();
+
+        UnwrappedEOPData {
+            x_pole,
+            y_pole,
+            delta_ut1_utc,
+            mjd,
+        }
     }
 
     #[rstest]
+    #[case::mjd_j2000(MJD_J2000, Interpolation {
+        x: 4.325128997437056e-2,
+        y: 0.3779536211567663,
+        t: 0.35498904611828275,
+    })]
+    #[case::mjd_0(0.0, Interpolation {
+        x: 12072321.700398155,
+        y: -24142704.67775462,
+        t: 778638165.7968734,
+    })]
     fn test_lagrangian_interpolate(
-        eop_data: Arguments,
+        eop_data: UnwrappedEOPData,
         #[case] target_epoch: MJD,
         #[case] expected: Interpolation,
-    ) {
-        let args = Arguments::default();
+    ) -> Result<(), ArgumentSizeMismatchError> {
+        let args = Arguments::new(
+            eop_data.x_pole,
+            eop_data.y_pole,
+            eop_data.delta_ut1_utc,
+            eop_data.mjd,
+            target_epoch,
+        )?;
         let lagrange = Lagrange::new(args);
         let interpolation = lagrange.interpolate();
-        assert_eq!(Interpolation::default(), interpolation);
+
+        assert_float_eq!(expected.x, interpolation.x, rel <= 1e-9);
+        assert_float_eq!(expected.y, interpolation.y, rel <= 1e-9);
+        assert_float_eq!(expected.t, interpolation.t, rel <= 1e-9);
+
+        Ok(())
     }
 }
