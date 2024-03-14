@@ -626,7 +626,7 @@ mod tests {
             EopFields::SigmaDeltaY,
         ] {
             let eop = match field {
-                (EopFields::Xpole
+                EopFields::Xpole
                 | EopFields::SigmaXpole
                 | EopFields::Ypole
                 | EopFields::SigmaYpole
@@ -637,7 +637,7 @@ mod tests {
                 | EopFields::DeltaPsi
                 | EopFields::SigmaDeltaPsi
                 | EopFields::DeltaEpsilon
-                | EopFields::SigmaDeltaEpsilon) => &eop1980,
+                | EopFields::SigmaDeltaEpsilon => &eop1980,
                 (EopFields::DeltaX
                 | EopFields::SigmaDeltaX
                 | EopFields::DeltaY
