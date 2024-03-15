@@ -12,6 +12,8 @@ use std::path::Path;
 use serde::Deserialize;
 use thiserror::Error;
 
+mod lagrange;
+
 #[derive(Error, Debug)]
 enum LoxEopError {
     #[error(transparent)]
