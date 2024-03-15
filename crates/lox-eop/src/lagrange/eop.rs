@@ -313,10 +313,17 @@ mod tests {
     y: 0.3779536211567663,
     d_ut1_utc: 0.35498904611828275,
     })]
+    // The following two test cases are far outside the range of IERS data, but are included to
+    // establish consistency with the Bizouard F90 implementation at the extremes.
     #[case::mjd_0(0.0, Interpolation {
     x: 12072321.700398155,
     y: -24142704.67775462,
     d_ut1_utc: 778638165.7968734,
+    })]
+    #[case::mjd_j2100(88069.5, Interpolation {
+    x: -16632958.650911978,
+    y: 33267845.857896354,
+    d_ut1_utc: -1072847942.5702964,
     })]
     fn test_lagrangian_interpolate(
         eop_data: UnwrappedEOPData,
