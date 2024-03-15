@@ -313,6 +313,13 @@ mod tests {
     y: 0.3779536211567663,
     d_ut1_utc: 0.35498904611828275,
     })]
+    // Used to test the interpolator branch where the target date is less than two from the end of
+    // the dataset.
+    #[case::mjd_60615(60615.0, Interpolation {
+    x: 0.2663521255926306,
+    y: 0.298694318830590,
+    d_ut1_utc: 4.7103969541161944e-2,
+    })]
     // The following two test cases are far outside the range of IERS data, but are included to
     // establish consistency with the Bizouard F90 implementation at the extremes.
     #[case::mjd_0(0.0, Interpolation {
