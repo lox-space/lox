@@ -21,7 +21,6 @@ fn interpolate(x: &[f64], y: &[f64], target_x: f64) -> f64 {
     for i in 0..(x.len() - 1) {
         if target_x >= x[i] && target_x < x[i + 1] {
             k = i;
-            break;
         }
     }
 

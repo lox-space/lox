@@ -6,14 +6,17 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::lagrange::eop::constants::{LUNI_SOLAR_TIDAL_TERMS, MJD_J2000, OCEANIC_TIDAL_TERMS};
-use lox_bodies::fundamental::iers03::mean_moon_sun_elongation_iers03;
-use lox_bodies::{Moon, Sun};
+use std::f64::consts::TAU;
+
+use thiserror::Error;
+
+use lox_bodies::Moon;
 use lox_time::constants::f64::DAYS_PER_JULIAN_CENTURY;
+use lox_time::intervals::TDBJulianCenturiesSinceJ2000;
 use lox_utils::math::arcsec_to_rad_two_pi;
 use lox_utils::types::{Arcsec, Radians, Seconds};
-use std::f64::consts::TAU;
-use thiserror::Error;
+
+use crate::lagrange::eop::constants::{LUNI_SOLAR_TIDAL_TERMS, MJD_J2000, OCEANIC_TIDAL_TERMS};
 
 mod constants;
 
@@ -101,12 +104,12 @@ fn tidal_args(julian_centuries_since_j2000: f64) -> TidalArgs {
     [
         chi(julian_centuries_since_j2000),
         Moon.mean_anomaly_iers03(julian_centuries_since_j2000),
-        Sun.mean_anomaly_iers03(julian_centuries_since_j2000),
+        lp(julian_centuries_since_j2000),
         Moon.mean_longitude_minus_ascending_node_mean_longitude_iers03(
             julian_centuries_since_j2000,
         ),
-        mean_moon_sun_elongation_iers03(julian_centuries_since_j2000),
-        Moon.ascending_node_mean_longitude_iers03(julian_centuries_since_j2000),
+        d(julian_centuries_since_j2000),
+        omega(julian_centuries_since_j2000),
     ]
 }
 
@@ -142,7 +145,8 @@ fn oceanic_tidal_correction(tidal_args: &TidalArgs) -> OceanicTidalCorrection {
     for term in OCEANIC_TIDAL_TERMS {
         let mut agg = 0.0;
         for (i, arg) in tidal_args.iter().enumerate() {
-            agg += term.coefficients[i] as f64 * arg;
+            let coeff = term.coefficients[i] as f64;
+            agg = arg.mul_add(coeff, agg);
         }
         agg %= TAU;
 
@@ -203,22 +207,60 @@ fn julian_centuries_since_j2000(mjd: Mjd) -> f64 {
 
 /// GMST + π.
 fn chi(julian_centuries_since_j2000: f64) -> Radians {
-    let arcsec = fast_polynomial::poly_array(
+    let mut arcsec = fast_polynomial::poly_array(
         julian_centuries_since_j2000,
         &[
             67310.54841,
-            876600.0 * 3600.0 + 8640184.812866,
+            876600.0f64.mul_add(3600.0, 8640184.812866),
             0.093104,
             -6.2e-6,
         ],
-    ) * 15.0
-        + 648000.0;
+    );
+    arcsec = arcsec.mul_add(15.0, 648000.0);
     arcsec_to_rad_two_pi(arcsec)
 }
 
-#[inline]
-fn arcsec_to_radians_per_day(arcsec: Arcsec) -> RadiansPerDay {
-    arcsec_to_rad_two_pi(arcsec) / DAYS_PER_JULIAN_CENTURY
+// These fundamental arguments are used only by the EOP interpolation, and differ subtly from the
+// corresponding functions in lox_bodies::fundamental::iers03 and
+// lox_bodies::fundamental::simon1994.
+
+/// Mean longitude of the sun.
+fn lp(t: TDBJulianCenturiesSinceJ2000) -> Radians {
+    let arcsec: f64 = fast_polynomial::poly_array(
+        t,
+        &[
+            1287104.79305,
+            129596581.0481,
+            -0.5532,
+            0.000136,
+            -0.00001149,
+        ],
+    );
+    arcsec_to_rad_two_pi(arcsec)
+}
+
+/// Mean elongation of the Moon from the Sun.
+fn d(t: TDBJulianCenturiesSinceJ2000) -> Radians {
+    let arcsec: f64 = fast_polynomial::poly_array(
+        t,
+        &[
+            1072260.70369,
+            1602961601.2090,
+            -6.3706,
+            0.006593,
+            -0.00003169,
+        ],
+    );
+    arcsec_to_rad_two_pi(arcsec)
+}
+
+/// Mean longitude of the Moon's ascending node.
+fn omega(julian_centuries_since_j2000: f64) -> Radians {
+    let arcsec = fast_polynomial::poly_array(
+        julian_centuries_since_j2000,
+        &[450160.398036, -6962890.2665, 7.4722, 0.007702, -0.00005939],
+    );
+    arcsec_to_rad_two_pi(arcsec)
 }
 
 #[cfg(test)]
