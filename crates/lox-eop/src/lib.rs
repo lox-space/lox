@@ -82,6 +82,7 @@ fn read_records<P: AsRef<Path>>(path: P) -> Result<Vec<Record>, LoxEopError> {
     Ok(records)
 }
 
+#[derive(Clone, Debug, Default, PartialEq)]
 struct Records {
     modified_julian_date: Vec<i32>,
     x_pole: Vec<Option<f64>>,
@@ -103,28 +104,6 @@ struct Records {
 }
 
 impl Records {
-    fn new() -> Self {
-        Self {
-            modified_julian_date: vec![],
-            x_pole: vec![],
-            sigma_x_pole: vec![],
-            y_pole: vec![],
-            sigma_y_pole: vec![],
-            delta_ut1_utc: vec![],
-            sigma_delta_ut1_utc: vec![],
-            lod: vec![],
-            sigma_lod: vec![],
-            delta_psi: vec![],
-            sigma_delta_psi: vec![],
-            delta_epsilon: vec![],
-            sigma_delta_epsilon: vec![],
-            delta_x: vec![],
-            sigma_delta_x: vec![],
-            delta_y: vec![],
-            sigma_delta_y: vec![],
-        }
-    }
-
     fn push(&mut self, record: &Record) {
         self.modified_julian_date.push(record.modified_julian_date);
         self.x_pole.push(record.x_pole);
@@ -148,7 +127,7 @@ impl Records {
 
 impl From<Vec<Record>> for Records {
     fn from(record_vec: Vec<Record>) -> Self {
-        let mut records = Records::new();
+        let mut records = Records::default();
         record_vec
             .iter()
             .filter(|record| record.x_pole.is_some())
@@ -164,6 +143,95 @@ mod tests {
     use super::*;
 
     const TEST_DATA_DIR: &str = "../../data";
+
+    #[test]
+    fn test_records_push() {
+        let record = Record {
+            modified_julian_date: 0,
+            x_pole: Some(0.0),
+            sigma_x_pole: Some(0.0),
+            y_pole: Some(0.0),
+            sigma_y_pole: Some(0.0),
+            delta_ut1_utc: Some(0.0),
+            sigma_delta_ut1_utc: Some(0.0),
+            lod: Some(0.0),
+            sigma_lod: Some(0.0),
+            delta_psi: Some(0.0),
+            sigma_delta_psi: Some(0.0),
+            delta_epsilon: Some(0.0),
+            sigma_delta_epsilon: Some(0.0),
+            delta_x: Some(0.0),
+            sigma_delta_x: Some(0.0),
+            delta_y: Some(0.0),
+            sigma_delta_y: Some(0.0),
+        };
+        let mut records = Records::default();
+        records.push(&record);
+        let expected = Records {
+            modified_julian_date: vec![0],
+            x_pole: vec![Some(0.0)],
+            sigma_x_pole: vec![Some(0.0)],
+            y_pole: vec![Some(0.0)],
+            sigma_y_pole: vec![Some(0.0)],
+            delta_ut1_utc: vec![Some(0.0)],
+            sigma_delta_ut1_utc: vec![Some(0.0)],
+            lod: vec![Some(0.0)],
+            sigma_lod: vec![Some(0.0)],
+            delta_psi: vec![Some(0.0)],
+            sigma_delta_psi: vec![Some(0.0)],
+            delta_epsilon: vec![Some(0.0)],
+            sigma_delta_epsilon: vec![Some(0.0)],
+            delta_x: vec![Some(0.0)],
+            sigma_delta_x: vec![Some(0.0)],
+            delta_y: vec![Some(0.0)],
+            sigma_delta_y: vec![Some(0.0)],
+        };
+        assert_eq!(records, expected);
+    }
+
+    #[test]
+    fn test_records_from_vec_record() {
+        let record = Record {
+            modified_julian_date: 0,
+            x_pole: Some(0.0),
+            sigma_x_pole: Some(0.0),
+            y_pole: Some(0.0),
+            sigma_y_pole: Some(0.0),
+            delta_ut1_utc: Some(0.0),
+            sigma_delta_ut1_utc: Some(0.0),
+            lod: Some(0.0),
+            sigma_lod: Some(0.0),
+            delta_psi: Some(0.0),
+            sigma_delta_psi: Some(0.0),
+            delta_epsilon: Some(0.0),
+            sigma_delta_epsilon: Some(0.0),
+            delta_x: Some(0.0),
+            sigma_delta_x: Some(0.0),
+            delta_y: Some(0.0),
+            sigma_delta_y: Some(0.0),
+        };
+        let records = Records::from(vec![record]);
+        let expected = Records {
+            modified_julian_date: vec![0],
+            x_pole: vec![Some(0.0)],
+            sigma_x_pole: vec![Some(0.0)],
+            y_pole: vec![Some(0.0)],
+            sigma_y_pole: vec![Some(0.0)],
+            delta_ut1_utc: vec![Some(0.0)],
+            sigma_delta_ut1_utc: vec![Some(0.0)],
+            lod: vec![Some(0.0)],
+            sigma_lod: vec![Some(0.0)],
+            delta_psi: vec![Some(0.0)],
+            sigma_delta_psi: vec![Some(0.0)],
+            delta_epsilon: vec![Some(0.0)],
+            sigma_delta_epsilon: vec![Some(0.0)],
+            delta_x: vec![Some(0.0)],
+            sigma_delta_x: vec![Some(0.0)],
+            delta_y: vec![Some(0.0)],
+            sigma_delta_y: vec![Some(0.0)],
+        };
+        assert_eq!(records, expected);
+    }
 
     #[test]
     fn test_csv() {
