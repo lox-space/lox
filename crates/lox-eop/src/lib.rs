@@ -64,6 +64,7 @@ struct Record {
     sigma_delta_y: Option<f64>,
 }
 
+// TODO: This is currently used only in tests, but will be used by the public interface in future.
 #[allow(dead_code)]
 fn read_records<P: AsRef<Path>>(path: P) -> Result<Vec<Record>, LoxEopError> {
     let contents = fs::read_to_string(path)?
