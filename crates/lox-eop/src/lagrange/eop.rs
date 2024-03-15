@@ -6,14 +6,17 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::lagrange::eop::constants::{LUNI_SOLAR_TIDAL_TERMS, MJD_J2000, OCEANIC_TIDAL_TERMS};
-use lox_bodies::fundamental::iers03::mean_moon_sun_elongation_iers03;
-use lox_bodies::{Moon, Sun};
+use std::f64::consts::TAU;
+
+use thiserror::Error;
+
+use lox_bodies::Moon;
 use lox_time::constants::f64::DAYS_PER_JULIAN_CENTURY;
+use lox_time::intervals::TDBJulianCenturiesSinceJ2000;
 use lox_utils::math::arcsec_to_rad_two_pi;
 use lox_utils::types::{Arcsec, Radians, Seconds};
-use std::f64::consts::TAU;
-use thiserror::Error;
+
+use crate::lagrange::eop::constants::{LUNI_SOLAR_TIDAL_TERMS, MJD_J2000, OCEANIC_TIDAL_TERMS};
 
 mod constants;
 
@@ -84,9 +87,8 @@ pub fn interpolate(args: Arguments) -> Interpolation {
     let x = crate::lagrange::interpolate(&args.epochs, &args.x, args.target_epoch);
     let y = crate::lagrange::interpolate(&args.epochs, &args.y, args.target_epoch);
     let t = crate::lagrange::interpolate(&args.epochs, &args.t, args.target_epoch);
-    let centuries = julian_centuries_since_j2000(args.target_epoch);
     let tidal_args = tidal_args(julian_centuries_since_j2000(args.target_epoch));
-    let tidal_correction = oceanic_tidal_correction(centuries, &tidal_args);
+    let tidal_correction = oceanic_tidal_correction(&tidal_args);
     let lunisolar_correction = luni_solar_tidal_correction(&tidal_args);
     Interpolation {
         x: x + tidal_correction.x + lunisolar_correction.x,
@@ -102,12 +104,12 @@ fn tidal_args(julian_centuries_since_j2000: f64) -> TidalArgs {
     [
         chi(julian_centuries_since_j2000),
         Moon.mean_anomaly_iers03(julian_centuries_since_j2000),
-        Sun.mean_anomaly_iers03(julian_centuries_since_j2000),
+        lp(julian_centuries_since_j2000),
         Moon.mean_longitude_minus_ascending_node_mean_longitude_iers03(
             julian_centuries_since_j2000,
         ),
-        mean_moon_sun_elongation_iers03(julian_centuries_since_j2000),
-        Moon.ascending_node_mean_longitude_iers03(julian_centuries_since_j2000),
+        d(julian_centuries_since_j2000),
+        omega(julian_centuries_since_j2000),
     ]
 }
 
@@ -135,31 +137,16 @@ type RadiansPerDay = f64;
 
 /// Returns the diurnal/subdiurnal oceanic tidal effects on polar motion and UT1-UTC. Based on
 /// Bizouard (2002), Gambis (1997) and Eanes (1997).
-fn oceanic_tidal_correction(
-    julian_centuries_since_j2000: f64,
-    tidal_args: &TidalArgs,
-) -> OceanicTidalCorrection {
-    // χ (GMST + π), l, l', F, D, Ω
-    let tidal_args_dt: [RadiansPerDay; 6] = [
-        chi_dt(julian_centuries_since_j2000),
-        l_dt(julian_centuries_since_j2000),
-        lp_dt(julian_centuries_since_j2000),
-        f_dt(julian_centuries_since_j2000),
-        d_dt(julian_centuries_since_j2000),
-        omega_dt(julian_centuries_since_j2000),
-    ];
-
+fn oceanic_tidal_correction(tidal_args: &TidalArgs) -> OceanicTidalCorrection {
     let mut x = 0.0;
     let mut y = 0.0;
     let mut t = 0.0;
 
     for term in OCEANIC_TIDAL_TERMS {
         let mut agg = 0.0;
-        let mut dt_agg = 0.0;
-        for i in 0..6 {
+        for (i, arg) in tidal_args.iter().enumerate() {
             let coeff = term.coefficients[i] as f64;
-            agg += coeff * tidal_args[i];
-            dt_agg += coeff * tidal_args_dt[i];
+            agg = arg.mul_add(coeff, agg);
         }
         agg %= TAU;
 
@@ -220,99 +207,60 @@ fn julian_centuries_since_j2000(mjd: Mjd) -> f64 {
 
 /// GMST + π.
 fn chi(julian_centuries_since_j2000: f64) -> Radians {
-    let arcsec = fast_polynomial::poly_array(
+    let mut arcsec = fast_polynomial::poly_array(
         julian_centuries_since_j2000,
         &[
             67310.54841,
-            876600.0 * 3600.0 + 8640184.812866,
+            876600.0f64.mul_add(3600.0, 8640184.812866),
             0.093104,
             -6.2e-6,
         ],
-    ) * 15.0
-        + 648000.0;
+    );
+    arcsec = arcsec.mul_add(15.0, 648000.0);
     arcsec_to_rad_two_pi(arcsec)
 }
 
-fn chi_dt(julian_centuries_since_j2000: f64) -> RadiansPerDay {
-    let arcsec = fast_polynomial::poly_array(
-        julian_centuries_since_j2000,
-        &[
-            876600.0 * 3600.0 + 8640184.812866,
-            2.0 * 0.093104,
-            -3.0 * 6.2e-6,
-        ],
-    ) * 15.0;
-    arcsec_to_radians_per_day(arcsec)
-}
+// These fundamental arguments are used only by the EOP interpolation, and differ subtly from the
+// corresponding functions in lox_bodies::fundamental::iers03 and
+// lox_bodies::fundamental::simon1994.
 
-fn l_dt(julian_centuries_since_j2000: f64) -> RadiansPerDay {
-    let arcsec = fast_polynomial::poly_array(
-        julian_centuries_since_j2000,
+/// Mean longitude of the sun.
+fn lp(t: TDBJulianCenturiesSinceJ2000) -> Radians {
+    let arcsec: f64 = fast_polynomial::poly_array(
+        t,
         &[
-            1717915923.2178,
-            2.0 * 31.8792,
-            3.0 * 0.051635,
-            -4.0 * 0.00024470,
-        ],
-    );
-    arcsec_to_radians_per_day(arcsec)
-}
-
-fn lp_dt(julian_centuries_since_j2000: f64) -> RadiansPerDay {
-    let arcsec = fast_polynomial::poly_array(
-        julian_centuries_since_j2000,
-        &[
+            1287104.79305,
             129596581.0481,
-            -2.0 * 0.5532,
-            -3.0 * 0.000136,
-            -4.0 * 0.00001149,
+            -0.5532,
+            0.000136,
+            -0.00001149,
         ],
     );
-    arcsec_to_radians_per_day(arcsec)
+    arcsec_to_rad_two_pi(arcsec)
 }
 
-fn f_dt(julian_centuries_since_j2000: f64) -> RadiansPerDay {
-    let arcsec = fast_polynomial::poly_array(
-        julian_centuries_since_j2000,
+/// Mean elongation of the Moon from the Sun.
+fn d(t: TDBJulianCenturiesSinceJ2000) -> Radians {
+    let arcsec: f64 = fast_polynomial::poly_array(
+        t,
         &[
-            1739527262.8478,
-            -2.0 * 12.7512,
-            -3.0 * 0.001037,
-            4.0 * 0.00000417,
-        ],
-    );
-    arcsec_to_radians_per_day(arcsec)
-}
-
-fn d_dt(julian_centuries_since_j2000: f64) -> RadiansPerDay {
-    let arcsec = fast_polynomial::poly_array(
-        julian_centuries_since_j2000,
-        &[
+            1072260.70369,
             1602961601.2090,
-            -2.0 * 6.3706,
-            3.0 * 0.006593,
-            -4.0 * 0.00003169,
+            -6.3706,
+            0.006593,
+            -0.00003169,
         ],
     );
-    arcsec_to_radians_per_day(arcsec)
+    arcsec_to_rad_two_pi(arcsec)
 }
 
-fn omega_dt(julian_centuries_since_j2000: f64) -> RadiansPerDay {
+/// Mean longitude of the Moon's ascending node.
+fn omega(julian_centuries_since_j2000: f64) -> Radians {
     let arcsec = fast_polynomial::poly_array(
         julian_centuries_since_j2000,
-        &[
-            -6962890.2665,
-            2.0 * 7.4722,
-            3.0 * 0.007702,
-            -4.0 * 0.00005939,
-        ],
+        &[450160.398036, -6962890.2665, 7.4722, 0.007702, -0.00005939],
     );
-    arcsec_to_radians_per_day(arcsec)
-}
-
-#[inline]
-fn arcsec_to_radians_per_day(arcsec: Arcsec) -> RadiansPerDay {
-    arcsec_to_rad_two_pi(arcsec) / DAYS_PER_JULIAN_CENTURY
+    arcsec_to_rad_two_pi(arcsec)
 }
 
 #[cfg(test)]
@@ -407,10 +355,24 @@ mod tests {
     y: 0.3779536211567663,
     d_ut1_utc: 0.35498904611828275,
     })]
+    // Used to test the interpolator branch where the target date is less than two from the end of
+    // the dataset.
+    #[case::mjd_60615(60615.0, Interpolation {
+    x: 0.2663521255926306,
+    y: 0.298694318830590,
+    d_ut1_utc: 4.7103969541161944e-2,
+    })]
+    // The following two test cases are far outside the range of IERS data, but are included to
+    // establish consistency with the Bizouard F90 implementation at the extremes.
     #[case::mjd_0(0.0, Interpolation {
     x: 12072321.700398155,
     y: -24142704.67775462,
     d_ut1_utc: 778638165.7968734,
+    })]
+    #[case::mjd_j2100(88069.5, Interpolation {
+    x: -16632958.650911978,
+    y: 33267845.857896354,
+    d_ut1_utc: -1072847942.5702964,
     })]
     fn test_lagrangian_interpolate(
         eop_data: UnwrappedEOPData,
