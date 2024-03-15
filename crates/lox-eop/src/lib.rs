@@ -168,7 +168,7 @@ mod tests {
     #[test]
     fn test_csv() {
         let finals1980 = Path::new(TEST_DATA_DIR).join("finals.all.csv");
-        let finals2000a = Path::new(TEST_DATA_DIR).join("finals2000a.all.csv");
+        let finals2000a = Path::new(TEST_DATA_DIR).join("finals2000A.all.csv");
         let records_1980 = read_records(finals1980).expect("file should be readable");
         let records_2000a = read_records(finals2000a).expect("file should be readable");
         let first_1980 = records_1980.first();
