@@ -10,9 +10,9 @@ use std::f64::consts::TAU;
 
 use thiserror::Error;
 
-use lox_bodies::Moon;
+use lox_bodies::fundamental::iers03::mean_moon_sun_elongation_iers03;
+use lox_bodies::{Moon, Sun};
 use lox_time::constants::f64::DAYS_PER_JULIAN_CENTURY;
-use lox_time::intervals::TDBJulianCenturiesSinceJ2000;
 use lox_utils::math::arcsec_to_rad_two_pi;
 use lox_utils::types::{Arcsec, Radians, Seconds};
 
@@ -104,12 +104,12 @@ fn tidal_args(julian_centuries_since_j2000: f64) -> TidalArgs {
     [
         chi(julian_centuries_since_j2000),
         Moon.mean_anomaly_iers03(julian_centuries_since_j2000),
-        lp(julian_centuries_since_j2000),
+        Sun.mean_anomaly_iers03(julian_centuries_since_j2000),
         Moon.mean_longitude_minus_ascending_node_mean_longitude_iers03(
             julian_centuries_since_j2000,
         ),
-        d(julian_centuries_since_j2000),
-        omega(julian_centuries_since_j2000),
+        mean_moon_sun_elongation_iers03(julian_centuries_since_j2000),
+        Moon.ascending_node_mean_longitude_iers03(julian_centuries_since_j2000),
     ]
 }
 
@@ -220,49 +220,6 @@ fn chi(julian_centuries_since_j2000: f64) -> Radians {
     arcsec_to_rad_two_pi(arcsec)
 }
 
-// These fundamental arguments are used only by the EOP interpolation, and differ subtly from the
-// corresponding functions in lox_bodies::fundamental::iers03 and
-// lox_bodies::fundamental::simon1994.
-
-/// Mean longitude of the sun.
-fn lp(t: TDBJulianCenturiesSinceJ2000) -> Radians {
-    let arcsec: f64 = fast_polynomial::poly_array(
-        t,
-        &[
-            1287104.79305,
-            129596581.0481,
-            -0.5532,
-            0.000136,
-            -0.00001149,
-        ],
-    );
-    arcsec_to_rad_two_pi(arcsec)
-}
-
-/// Mean elongation of the Moon from the Sun.
-fn d(t: TDBJulianCenturiesSinceJ2000) -> Radians {
-    let arcsec: f64 = fast_polynomial::poly_array(
-        t,
-        &[
-            1072260.70369,
-            1602961601.2090,
-            -6.3706,
-            0.006593,
-            -0.00003169,
-        ],
-    );
-    arcsec_to_rad_two_pi(arcsec)
-}
-
-/// Mean longitude of the Moon's ascending node.
-fn omega(julian_centuries_since_j2000: f64) -> Radians {
-    let arcsec = fast_polynomial::poly_array(
-        julian_centuries_since_j2000,
-        &[450160.398036, -6962890.2665, 7.4722, 0.007702, -0.00005939],
-    );
-    arcsec_to_rad_two_pi(arcsec)
-}
-
 #[cfg(test)]
 mod tests {
     use std::path::Path;
@@ -358,7 +315,7 @@ mod tests {
     // Used to test the interpolator branch where the target date is less than two from the end of
     // the dataset.
     #[case::mjd_60615(60615.0, Interpolation {
-    x: 0.2663521255926306,
+    x: 0.2663521252106578,
     y: 0.298694318830590,
     d_ut1_utc: 4.7103969541161944e-2,
     })]
