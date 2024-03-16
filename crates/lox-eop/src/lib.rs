@@ -15,7 +15,7 @@ use thiserror::Error;
 mod lagrange;
 
 #[derive(Error, Debug)]
-enum LoxEopError {
+pub enum LoxEopError {
     #[error(transparent)]
     Csv(#[from] csv::Error),
     #[error(transparent)]

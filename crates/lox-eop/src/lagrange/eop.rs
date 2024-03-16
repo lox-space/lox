@@ -12,7 +12,6 @@ use thiserror::Error;
 
 use lox_bodies::fundamental::iers03::mean_moon_sun_elongation_iers03;
 use lox_bodies::{Moon, Sun};
-use lox_time::constants::f64::DAYS_PER_JULIAN_CENTURY;
 use lox_utils::math::arcsec_to_rad_two_pi;
 use lox_utils::types::{Arcsec, Radians, Seconds};
 
@@ -21,6 +20,9 @@ use crate::lagrange::eop::constants::{LUNI_SOLAR_TIDAL_TERMS, MJD_J2000, OCEANIC
 mod constants;
 
 type Mjd = f64;
+
+// TODO: Hoist to lox-constants.
+const DAYS_PER_JULIAN_CENTURY: f64 = 36525.0;
 
 #[derive(Clone, Copy, Debug, Error, PartialEq)]
 #[error("sizes of `x`, `y`, `t` and `epochs` must match, but were x: {nx}, y: {ny}, t: {nt}, epochs: {nepochs}")]

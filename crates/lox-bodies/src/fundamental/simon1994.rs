@@ -1,10 +1,10 @@
 //! Functions for calculating fundamental astronomical parameters as proposed by Simon et al.
 //! (1994).
 
-use lox_time::intervals::TDBJulianCenturiesSinceJ2000;
 use lox_utils::math::arcsec_to_rad_two_pi;
 use lox_utils::types::{Arcsec, Radians};
 
+use crate::fundamental::TDBJulianCenturiesSinceJ2000;
 use crate::{Moon, Sun};
 
 pub fn mean_moon_sun_elongation_simon1994(t: TDBJulianCenturiesSinceJ2000) -> Radians {

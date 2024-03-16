@@ -14,7 +14,6 @@ num-traits = "0.2.17"
 serde = { version = "1.0.190", features = ["derive"] }
 thiserror.workspace = true
 lox-utils.workspace = true
-lox-time.workspace = true
 lox-bodies.workspace = true
 fast_polynomial.workspace = true
 

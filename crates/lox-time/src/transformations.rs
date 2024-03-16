@@ -10,14 +10,19 @@
 //! with a default implementation for the most commonly used time scale pairs.
 
 use crate::constants::julian_dates::J77;
+use lox_eop::LoxEopError;
 use mockall::automock;
 
 use crate::base_time::BaseTime;
 use crate::deltas::TimeDelta;
-use crate::time_scales::{TimeScale, TAI, TCB, TCG, TDB, TT};
+use crate::errors::LoxTimeError;
+use crate::julian_dates::JulianDate;
+use crate::time_scales::{TimeScale, TAI, TCB, TCG, TDB, TT, UT1};
 use crate::Time;
 
 use crate::subsecond::Subsecond;
+use crate::utc::UTC;
+use crate::wall_clock::WallClock;
 
 /// TransformTimeScale transforms a [Time] in [TimeScale] `T` to the corresponding [Time] in
 /// [TimeScale] `U`.
@@ -197,6 +202,66 @@ fn delta_tdb_tt(time: Time<TDB>) -> TimeDelta {
             raw_delta, err,
         )
     })
+}
+
+pub trait TransformUTCInto<T>
+where
+    T: TimeScale + Copy,
+{
+    fn transform_utc_into(&self, time: Time<T>) -> Result<UTC, LoxTimeError>;
+}
+
+pub trait TransformIntoUTC<T>
+where
+    T: TimeScale + Copy,
+{
+    fn transform_into_utc(&self, time: UTC) -> Result<Time<T>, LoxTimeError>;
+}
+
+// The sole purpose of DeltaUt1UtcFromMjd is to allow the
+// eventual lox-eop delta provider to be mocked (which we definitely want to do across crate
+// boundaries).
+//
+// I considered making it a generic trait with a JulianDate parameter so we could accept anything
+// that can be transformed into an MJD, but we'd lose object safety, and honestly I don't see this
+// being used beyond our own UTCTransformer implementation.
+trait DeltaUt1UtcFromMjd {
+    fn delta_ut1_utc(&self, mjd: f64) -> Result<f64, LoxEopError>;
+}
+
+struct UTCTransformer<T: DeltaUt1UtcFromMjd> {
+    delta_provider: T,
+}
+
+impl<T: DeltaUt1UtcFromMjd> TransformUTCInto<UT1> for UTCTransformer<T> {
+    fn transform_utc_into(&self, time: Time<UT1>) -> Result<UTC, LoxTimeError> {
+        let mjd = time.days_since_modified_julian_epoch();
+        let delta_ut1_utc = self
+            .delta_provider
+            .delta_ut1_utc(mjd)
+            .map_err(LoxTimeError::from)
+            .map(TimeDelta::from_decimal_seconds)??;
+        let base_time = time.base_time() - delta_ut1_utc;
+        // TODO: Leap seconds (joy)
+        UTC::new(
+            base_time.hour() as u8,
+            base_time.minute() as u8,
+            base_time.second() as u8,
+            base_time.subsecond,
+        )
+    }
+}
+
+impl<T: DeltaUt1UtcFromMjd> TransformIntoUTC<UT1> for UTCTransformer<T> {
+    fn transform_into_utc(&self, time: UTC) -> Result<Time<UT1>, LoxTimeError> {
+        todo!()
+    }
+}
+
+impl From<LoxEopError> for LoxTimeError {
+    fn from(value: LoxEopError) -> Self {
+        todo!()
+    }
 }
 
 #[cfg(test)]

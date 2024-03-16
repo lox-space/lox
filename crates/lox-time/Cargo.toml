@@ -10,6 +10,7 @@ authors.workspace = true
 
 [dependencies]
 lox-utils.workspace = true
+lox-eop.workspace = true
 
 float_eq.workspace = true
 mockall.workspace = true
