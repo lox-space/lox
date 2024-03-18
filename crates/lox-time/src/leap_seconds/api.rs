@@ -7,6 +7,7 @@
  */
 
 use crate::leap_seconds::gen::{LEAP_SECONDS, LS_EPOCHS};
+use thiserror::Error;
 
 const MJD_EPOCH: f64 = 2400000.5;
 const SECONDS_PER_DAY: f64 = 86400.0;
@@ -37,10 +38,11 @@ const DRIFT_RATES: [f64; 14] = [
     0.0012960, 0.0012960, 0.0012960, 0.0012960, 0.0025920, 0.0025920,
 ];
 
-#[derive(PartialEq, Debug)]
+#[derive(Clone, Debug, Error, PartialEq)]
 pub enum LeapSecondError {
-    // UTC is not defined for dates before 1960-01-01.
+    #[error("UTC is not defined for dates before 1960-01-01")]
     UTCDateBefore1960,
+    #[error("UTC date is out of range")]
     UTCDateOutOfRange,
 }
 
@@ -108,7 +110,7 @@ pub fn offset_utc_tai(utc_date_time: &TwoPartDateTime) -> Result<f64, LeapSecond
         return Ok(-offset);
     }
 
-    let mut offset = 0 as f64;
+    let mut offset = 0.0;
     for _ in 1..=3 {
         offset = leap_seconds(mjd + offset / SECONDS_PER_DAY)?;
     }

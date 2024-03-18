@@ -15,7 +15,7 @@ use std::ops::{Add, Sub};
 
 use num::{abs, ToPrimitive};
 
-use crate::constants;
+use crate::calendar_dates::Date;
 use crate::constants::i64::{
     SECONDS_PER_DAY, SECONDS_PER_HALF_DAY, SECONDS_PER_HOUR, SECONDS_PER_MINUTE,
 };
@@ -25,7 +25,9 @@ use crate::constants::julian_dates::{
 use crate::deltas::TimeDelta;
 use crate::julian_dates::{Epoch, JulianDate, Unit};
 use crate::subsecond::Subsecond;
+use crate::utc::{UTCDateTime, UTC};
 use crate::wall_clock::WallClock;
+use crate::{constants, Time};
 
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
 /// `BaseTime` is the base time representation for time scales without leap seconds. It is measured
@@ -50,6 +52,23 @@ pub struct BaseTime {
 impl BaseTime {
     pub const fn new(seconds: i64, subsecond: Subsecond) -> Self {
         Self { seconds, subsecond }
+    }
+
+    /// Instantiates a [BaseTime] from a date and UTC timestamp.
+    pub fn from_date_and_utc_timestamp(date: Date, time: UTC) -> Self {
+        let day_in_seconds = date.j2000() * SECONDS_PER_DAY - SECONDS_PER_DAY / 2;
+        let hour_in_seconds = time.hour() * SECONDS_PER_HOUR;
+        let minute_in_seconds = time.minute() * SECONDS_PER_MINUTE;
+        let seconds = day_in_seconds + hour_in_seconds + minute_in_seconds + time.second();
+        BaseTime {
+            seconds,
+            subsecond: time.subsecond(),
+        }
+    }
+
+    /// Instantiates a [BaseTime] from a UTC datetime.
+    pub fn from_utc_datetime(dt: UTCDateTime) -> Self {
+        Self::from_date_and_utc_timestamp(dt.date(), dt.time())
     }
 
     pub fn from_epoch(epoch: Epoch) -> Self {
@@ -239,6 +258,7 @@ impl JulianDate for BaseTime {
 
 #[cfg(test)]
 mod tests {
+    use crate::calendar_dates::Calendar::Gregorian;
     use float_eq::assert_float_eq;
     use rstest::rstest;
 
@@ -252,6 +272,29 @@ mod tests {
         let subsecond = Subsecond(0.123_456_789_012_345);
         let expected = BaseTime { seconds, subsecond };
         let actual = BaseTime::new(seconds, subsecond);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_base_time_from_utc_datetime() {
+        let date = Date::new_unchecked(Gregorian, 2021, 1, 1);
+        let utc = UTC::new(12, 34, 56, Subsecond::default()).expect("time should be valid");
+        let datetime = UTCDateTime::new(date, utc);
+        let actual = BaseTime::from_utc_datetime(datetime);
+        let expected = BaseTime {
+            seconds: 662776496,
+            subsecond: Subsecond::default(),
+        };
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_base_time_from_date_and_utc_timestamp() {
+        let date = Date::new_unchecked(Gregorian, 2021, 1, 1);
+        let utc = UTC::new(12, 34, 56, Subsecond::default()).expect("time should be valid");
+        let datetime = UTCDateTime::new(date, utc);
+        let actual = BaseTime::from_date_and_utc_timestamp(date, utc);
+        let expected = BaseTime::from_utc_datetime(datetime);
         assert_eq!(expected, actual);
     }
 

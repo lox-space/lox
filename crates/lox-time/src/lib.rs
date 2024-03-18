@@ -66,24 +66,6 @@ impl<T: TimeScale + Copy> Time<T> {
         Self { scale, timestamp }
     }
 
-    /// Instantiates a [Time] in the given scale from a date and UTC timestamp.
-    pub fn from_date_and_utc_timestamp(scale: T, date: Date, time: UTC) -> Self {
-        let day_in_seconds = date.j2000() * SECONDS_PER_DAY - SECONDS_PER_DAY / 2;
-        let hour_in_seconds = time.hour() * SECONDS_PER_HOUR;
-        let minute_in_seconds = time.minute() * SECONDS_PER_MINUTE;
-        let seconds = day_in_seconds + hour_in_seconds + minute_in_seconds + time.second();
-        let base_time = BaseTime {
-            seconds,
-            subsecond: time.subsecond(),
-        };
-        Self::from_base_time(scale, base_time)
-    }
-
-    /// Instantiates a [Time] in the given scale from a UTC datetime.
-    pub fn from_utc_datetime(scale: T, dt: UTCDateTime) -> Self {
-        Self::from_date_and_utc_timestamp(scale, dt.date(), dt.time())
-    }
-
     /// Returns the epoch for the given [Epoch] in the given timescale.
     pub fn from_epoch(scale: T, epoch: Epoch) -> Self {
         let timestamp = BaseTime::from_epoch(epoch);
@@ -233,16 +215,6 @@ mod tests {
             timestamp: BaseTime { seconds, subsecond },
         };
         let actual = Time::new(scale, seconds, subsecond);
-        assert_eq!(expected, actual);
-    }
-
-    #[test]
-    fn test_time_from_date_and_utc_timestamp() {
-        let date = Date::new_unchecked(Gregorian, 2021, 1, 1);
-        let utc = UTC::new(12, 34, 56, Subsecond::default()).expect("time should be valid");
-        let datetime = UTCDateTime::new(date, utc);
-        let actual = Time::from_date_and_utc_timestamp(TAI, date, utc);
-        let expected = Time::from_utc_datetime(TAI, datetime);
         assert_eq!(expected, actual);
     }
 
@@ -527,7 +499,10 @@ mod tests {
     fn test_j2100() {
         let date = Date::new_unchecked(Gregorian, 2100, 1, 1);
         let utc = UTC::new(12, 0, 0, Subsecond::default()).expect("should be valid");
-        let time = Time::from_date_and_utc_timestamp(TDB, date, utc);
+        let time = Time {
+            scale: TDB,
+            timestamp: BaseTime::from_date_and_utc_timestamp(date, utc),
+        };
         assert_eq!(time.julian_date(Epoch::J2000, Unit::Days), 36525.0);
         assert_eq!(time.seconds_since_j2000(), 3155760000.0);
         assert_eq!(time.days_since_j2000(), 36525.0);
@@ -538,7 +513,10 @@ mod tests {
     fn test_two_part_julian_date() {
         let date = Date::new_unchecked(Gregorian, 2100, 1, 2);
         let utc = UTC::new(0, 0, 0, Subsecond::default()).expect("should be valid");
-        let time = Time::from_date_and_utc_timestamp(TDB, date, utc);
+        let time = Time {
+            scale: TDB,
+            timestamp: BaseTime::from_date_and_utc_timestamp(date, utc),
+        };
         let (jd1, jd2) = time.two_part_julian_date();
         assert_eq!(jd1, 2451545.0 + 36525.0);
         assert_eq!(jd2, 0.5);

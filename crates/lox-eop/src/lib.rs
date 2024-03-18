@@ -14,12 +14,41 @@ use thiserror::Error;
 
 mod lagrange;
 
-#[derive(Error, Debug)]
+#[derive(Clone, Debug, Error, PartialEq)]
 pub enum LoxEopError {
-    #[error(transparent)]
-    Csv(#[from] csv::Error),
-    #[error(transparent)]
-    Io(#[from] std::io::Error),
+    #[error("{0}")]
+    Csv(String),
+    #[error("{0}")]
+    Io(String),
+}
+
+// Neither csv::Error nor std::io::Error are clone due to some sophisticated inner workings
+// involving trait objects (at least in the case of io::Error), but there's no good reason that Lox
+// error types shouldn't be cloneable. Otherwise, the whole chain of errors based on LoxEopError
+// become non-Clone.
+impl From<csv::Error> for LoxEopError {
+    fn from(err: csv::Error) -> Self {
+        LoxEopError::Csv(err.to_string())
+    }
+}
+
+impl From<std::io::Error> for LoxEopError {
+    fn from(err: std::io::Error) -> Self {
+        LoxEopError::Io(err.to_string())
+    }
+}
+
+type Mjd = f64;
+
+// The sole purpose of DeltaUt1UtcFromMjd is to allow the
+// eventual lox-eop delta provider to be mocked (which we definitely want to do across crate
+// boundaries).
+//
+// I considered making it a generic trait with a JulianDate parameter so we could accept anything
+// that can be transformed into an MJD, but we'd lose object safety, and honestly I don't see this
+// being used beyond our own UTCTransformer implementation.
+pub trait DeltaUt1UtcProvider {
+    fn delta_ut1_utc(&self, mjd: Mjd) -> Result<f64, LoxEopError>;
 }
 
 #[derive(Debug, Deserialize)]

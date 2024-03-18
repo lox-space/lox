@@ -16,10 +16,9 @@ use lox_utils::math::arcsec_to_rad_two_pi;
 use lox_utils::types::{Arcsec, Radians, Seconds};
 
 use crate::lagrange::eop::constants::{LUNI_SOLAR_TIDAL_TERMS, MJD_J2000, OCEANIC_TIDAL_TERMS};
+use crate::Mjd;
 
 mod constants;
-
-type Mjd = f64;
 
 // TODO: Hoist to lox-constants.
 const DAYS_PER_JULIAN_CENTURY: f64 = 36525.0;

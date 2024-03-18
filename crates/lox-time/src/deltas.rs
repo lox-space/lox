@@ -9,9 +9,17 @@
 use crate::subsecond::Subsecond;
 use num::ToPrimitive;
 use std::ops::{Add, Neg, Sub};
+use thiserror::Error;
 
 use crate::constants::f64;
 use crate::errors::LoxTimeError;
+
+#[derive(Clone, Debug, Default, Error, PartialEq)]
+#[error("`{raw}` cannot be represented as a `TimeDelta`: {detail}")]
+pub struct TimeDeltaError {
+    pub raw: f64,
+    pub detail: String,
+}
 
 /// A signed, continuous time difference supporting femtosecond precision.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
@@ -47,21 +55,21 @@ impl TimeDelta {
     /// As the magnitude of the input's significand grows, the precision of the resulting
     /// `TimeDelta` falls. Applications requiring precision guarantees should use `TimeDelta::new`
     /// instead.
-    pub fn from_decimal_seconds(value: f64) -> Result<Self, LoxTimeError> {
+    pub fn from_decimal_seconds(value: f64) -> Result<Self, TimeDeltaError> {
         if value.is_nan() {
-            return Err(LoxTimeError::InvalidTimeDelta {
+            return Err(TimeDeltaError {
                 raw: value,
                 detail: "NaN is unrepresentable".to_string(),
             });
         }
         if value >= (i64::MAX as f64) {
-            return Err(LoxTimeError::InvalidTimeDelta {
+            return Err(TimeDeltaError {
                 raw: value,
                 detail: "input seconds cannot exceed the maximum value of an i64".to_string(),
             });
         }
         if value <= (i64::MIN as f64) {
-            return Err(LoxTimeError::InvalidTimeDelta {
+            return Err(TimeDeltaError {
                 raw: value,
                 detail: "input seconds cannot be less than the minimum value of an i64".to_string(),
             });
@@ -86,7 +94,7 @@ impl TimeDelta {
     /// As the magnitude of the input's significand grows, the resolution of the resulting
     /// `TimeDelta` falls. Applications requiring precision guarantees should use `TimeDelta::new`
     /// instead.
-    pub fn from_minutes(value: f64) -> Result<Self, LoxTimeError> {
+    pub fn from_minutes(value: f64) -> Result<Self, TimeDeltaError> {
         Self::from_decimal_seconds(value * f64::SECONDS_PER_MINUTE)
     }
 
@@ -95,7 +103,7 @@ impl TimeDelta {
     /// As the magnitude of the input's significand grows, the resolution of the resulting
     /// `TimeDelta` falls. Applications requiring precision guarantees should use `TimeDelta::new`
     /// instead.
-    pub fn from_hours(value: f64) -> Result<Self, LoxTimeError> {
+    pub fn from_hours(value: f64) -> Result<Self, TimeDeltaError> {
         Self::from_decimal_seconds(value * f64::SECONDS_PER_HOUR)
     }
 
@@ -104,7 +112,7 @@ impl TimeDelta {
     /// As the magnitude of the input's significand grows, the resolution of the resulting
     /// `TimeDelta` falls. Applications requiring precision guarantees should use `TimeDelta::new`
     /// instead.
-    pub fn from_days(value: f64) -> Result<Self, LoxTimeError> {
+    pub fn from_days(value: f64) -> Result<Self, TimeDeltaError> {
         Self::from_decimal_seconds(value * f64::SECONDS_PER_DAY)
     }
 
@@ -113,7 +121,7 @@ impl TimeDelta {
     /// As the magnitude of the input's significand grows, the resolution of the resulting
     /// `TimeDelta` falls. Applications requiring precision guarantees should use `TimeDelta::new`
     /// instead.
-    pub fn from_julian_years(value: f64) -> Result<Self, LoxTimeError> {
+    pub fn from_julian_years(value: f64) -> Result<Self, TimeDeltaError> {
         Self::from_decimal_seconds(value * f64::SECONDS_PER_JULIAN_YEAR)
     }
 
@@ -122,7 +130,7 @@ impl TimeDelta {
     /// As the magnitude of the input's significand grows, the resolution of the resulting
     /// `TimeDelta` falls. Applications requiring precision guarantees should use `TimeDelta::new`
     /// instead.
-    pub fn from_julian_centuries(value: f64) -> Result<Self, LoxTimeError> {
+    pub fn from_julian_centuries(value: f64) -> Result<Self, TimeDeltaError> {
         Self::from_decimal_seconds(value * f64::SECONDS_PER_JULIAN_CENTURY)
     }
 
@@ -277,12 +285,12 @@ mod tests {
     #[case::simple(0.2, Ok(TimeDelta { seconds: 0, subsecond: Subsecond(0.2) }))]
     #[case::no_fraction(60.0, Ok(TimeDelta { seconds: 60, subsecond: Subsecond::default() }))]
     #[case::loss_of_precision(60.3, Ok(TimeDelta { seconds: 60, subsecond: Subsecond(0.29999999999999716) }))]
-    #[case::nan(f64::NAN, Err(LoxTimeError::InvalidTimeDelta { raw: f64::NAN, detail: "NaN is unrepresentable".to_string() }))]
-    #[case::greater_than_i64_max(i64::MAX as f64 + 1.0, Err(LoxTimeError::InvalidTimeDelta { raw: i64::MAX as f64 + 1.0, detail: "input seconds cannot exceed the maximum value of an i64".to_string() }))]
-    #[case::less_than_i64_min(i64::MIN as f64 - 1.0, Err(LoxTimeError::InvalidTimeDelta { raw: i64::MIN as f64 - 1.0, detail: "input seconds cannot be less than the minimum value of an i64".to_string() }))]
+    #[case::nan(f64::NAN, Err(TimeDeltaError { raw: f64::NAN, detail: "NaN is unrepresentable".to_string() }))]
+    #[case::greater_than_i64_max(i64::MAX as f64 + 1.0, Err(TimeDeltaError { raw: i64::MAX as f64 + 1.0, detail: "input seconds cannot exceed the maximum value of an i64".to_string() }))]
+    #[case::less_than_i64_min(i64::MIN as f64 - 1.0, Err(TimeDeltaError { raw: i64::MIN as f64 - 1.0, detail: "input seconds cannot be less than the minimum value of an i64".to_string() }))]
     fn test_from_decimal_seconds(
         #[case] seconds: f64,
-        #[case] expected: Result<TimeDelta, LoxTimeError>,
+        #[case] expected: Result<TimeDelta, TimeDeltaError>,
     ) {
         let actual = TimeDelta::from_decimal_seconds(seconds);
         assert_eq!(expected, actual);

@@ -1,7 +1,10 @@
+use lox_eop::LoxEopError;
 use std::fmt::Display;
+use thiserror::Error;
 
 use crate::calendar_dates::Date;
 use crate::errors::LoxTimeError;
+use crate::leap_seconds::api::LeapSecondError;
 use crate::subsecond::Subsecond;
 use crate::wall_clock::WallClock;
 
