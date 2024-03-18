@@ -37,6 +37,20 @@ where
     fn transform(&self, time: Time<T>) -> Time<U>;
 }
 
+pub trait TransformUTCInto<T>
+where
+    T: TimeScale + Copy,
+{
+    fn transform_utc_into(&self, time: UTCDateTime) -> Result<Time<T>, UTCTransformationError>;
+}
+
+pub trait TransformIntoUTC<T>
+where
+    T: TimeScale + Copy,
+{
+    fn transform_into_utc(&self, time: Time<T>) -> Result<UTC, UTCTransformationError>;
+}
+
 /// TimeScaleTransformer provides default implementations TransformTimeScale for all commonly used
 /// time scale pairs.
 ///
@@ -206,25 +220,7 @@ fn delta_tdb_tt(time: Time<TDB>) -> TimeDelta {
     })
 }
 
-pub trait TransformUTCInto<T>
-where
-    T: TimeScale + Copy,
-{
-    fn transform_utc_into(&self, time: UTCDateTime) -> Result<Time<T>, UTCTransformationError>;
-}
-
-pub trait TransformIntoUTC<T>
-where
-    T: TimeScale + Copy,
-{
-    fn transform_into_utc(&self, time: Time<T>) -> Result<UTC, UTCTransformationError>;
-}
-
-struct UTCTransformer<T: DeltaUt1UtcProvider> {
-    delta_provider: T,
-}
-
-impl<T: DeltaUt1UtcProvider> TransformUTCInto<TAI> for UTCTransformer<T> {
+impl TransformUTCInto<TAI> for TimeScaleTransformer {
     fn transform_utc_into(
         &self,
         datetime: UTCDateTime,
@@ -237,11 +233,12 @@ impl<T: DeltaUt1UtcProvider> TransformUTCInto<TAI> for UTCTransformer<T> {
     }
 }
 
-impl<T: DeltaUt1UtcProvider> TransformIntoUTC<TAI> for UTCTransformer<T> {
+impl TransformIntoUTC<TAI> for TimeScaleTransformer {
     fn transform_into_utc(&self, time: Time<TAI>) -> Result<UTC, UTCTransformationError> {
         let mjd = time.days_since_modified_julian_epoch();
         let offset = offset_utc_tai(&mjd.into()).map(TimeDelta::from_decimal_seconds)??;
         let base_time = time.base_time() - offset;
+        Ok(UTC::from_base_time(base_time))
     }
 }
 
