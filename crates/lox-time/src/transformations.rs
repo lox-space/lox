@@ -15,8 +15,8 @@ use mockall::automock;
 use thiserror::Error;
 
 use crate::base_time::BaseTime;
+use crate::calendar_dates::Date;
 use crate::deltas::{TimeDelta, TimeDeltaError};
-use crate::errors::LoxTimeError;
 use crate::julian_dates::JulianDate;
 use crate::leap_seconds::api::{offset_utc_tai, LeapSecondError};
 use crate::time_scales::{TimeScale, TAI, TCB, TCG, TDB, TT, UT1};
@@ -227,20 +227,21 @@ impl TransformUTCInto<TAI> for TimeScaleTransformer {
     ) -> Result<Time<TAI>, UTCTransformationError> {
         let base = BaseTime::from_utc_datetime(datetime);
         let jd = base.two_part_julian_date();
-        let offset = offset_utc_tai(&jd.into()).map(TimeDelta::from_decimal_seconds)??;
-        let tai = Time::from_base_time(TAI, base + offset);
+        let offset = offset_utc_tai(&jd.into());
+        let mapped_offset = offset.map(TimeDelta::from_decimal_seconds)??;
+        let tai = Time::from_base_time(TAI, base + mapped_offset);
         Ok(tai)
     }
 }
 
-impl TransformIntoUTC<TAI> for TimeScaleTransformer {
-    fn transform_into_utc(&self, time: Time<TAI>) -> Result<UTC, UTCTransformationError> {
-        let mjd = time.days_since_modified_julian_epoch();
-        let offset = offset_utc_tai(&mjd.into()).map(TimeDelta::from_decimal_seconds)??;
-        let base_time = time.base_time() - offset;
-        Ok(UTC::from_base_time(base_time))
-    }
-}
+// impl TransformIntoUTC<TAI> for TimeScaleTransformer {
+//     fn transform_into_utc(&self, time: Time<TAI>) -> Result<UTC, UTCTransformationError> {
+//         let mjd = time.days_since_modified_julian_epoch();
+//         let offset = offset_utc_tai(&mjd.into()).map(TimeDelta::from_decimal_seconds)??;
+//         let base_time = time.base_time() - offset;
+//         Ok(UTC::from_base_time(base_time))
+//     }
+// }
 
 #[derive(Clone, Debug, Error, PartialEq)]
 pub enum UTCTransformationError {
@@ -327,6 +328,7 @@ mod tests {
         let transformer = &TimeScaleTransformer {};
         let tt = transformer.transform(tcg);
         assert_eq!(expected.seconds(), tt.seconds());
+        assert_float_eq!(expected.subsecond(), tt.subsecond(), abs <= 1e-12)
     }
 
     #[rstest]
@@ -393,5 +395,26 @@ mod tests {
         let transformer = &TimeScaleTransformer {};
         let tt: Time<TT> = transformer.transform(tdb);
         assert_eq!(expected, tt)
+    }
+
+    // julia> from_utc(2016, 12, 31, 23, 59, 60, 0.0)
+    // 2017-01-01T00:00:36.000 TAI
+
+    #[rstest]
+    #[case::leap_second(
+        UTCDateTime::new(
+            Date::new(2016, 12, 31).unwrap(),
+            UTC::new(23, 59, 60, Subsecond(0.0)).unwrap()
+        ),
+        // 2017-01-01T00:00:36.000 TAI
+        Ok(Time::new(TAI, 536500836, Subsecond::default()))
+    )]
+    fn test_transform_utc_tai(
+        #[case] utc: UTCDateTime,
+        #[case] expected: Result<Time<TAI>, UTCTransformationError>,
+    ) {
+        let transformer = &TimeScaleTransformer {};
+        let tai = transformer.transform_utc_into(utc);
+        assert_eq!(expected, tai);
     }
 }

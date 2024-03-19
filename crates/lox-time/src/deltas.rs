@@ -14,11 +14,20 @@ use thiserror::Error;
 use crate::constants::f64;
 use crate::errors::LoxTimeError;
 
-#[derive(Clone, Debug, Default, Error, PartialEq)]
+#[derive(Clone, Debug, Default, Error)]
 #[error("`{raw}` cannot be represented as a `TimeDelta`: {detail}")]
 pub struct TimeDeltaError {
     pub raw: f64,
     pub detail: String,
+}
+
+// Manual implementation of PartialEq to handle NaNs, which are not equal to themselves, but
+// errors resulting from NaNs should be.
+impl PartialEq for TimeDeltaError {
+    fn eq(&self, other: &Self) -> bool {
+        self.detail == other.detail
+            && (self.raw.is_nan() && other.raw.is_nan() || self.raw == other.raw)
+    }
 }
 
 /// A signed, continuous time difference supporting femtosecond precision.
@@ -76,9 +85,16 @@ impl TimeDelta {
         }
 
         let result = if value.is_sign_negative() {
-            Self {
-                seconds: (value as i64) - 1,
-                subsecond: Subsecond(1.0 + value.fract()),
+            if value.fract() == 0.0 {
+                Self {
+                    seconds: value as i64,
+                    subsecond: Subsecond::default(),
+                }
+            } else {
+                Self {
+                    seconds: (value as i64) - 1,
+                    subsecond: Subsecond(1.0 - value.fract()),
+                }
             }
         } else {
             Self {
@@ -86,6 +102,7 @@ impl TimeDelta {
                 subsecond: Subsecond(value.fract()),
             }
         };
+
         Ok(result)
     }
 
@@ -283,7 +300,8 @@ mod tests {
 
     #[rstest]
     #[case::simple(0.2, Ok(TimeDelta { seconds: 0, subsecond: Subsecond(0.2) }))]
-    #[case::no_fraction(60.0, Ok(TimeDelta { seconds: 60, subsecond: Subsecond::default() }))]
+    #[case::pos_no_fraction(60.0, Ok(TimeDelta { seconds: 60, subsecond: Subsecond::default() }))]
+    #[case::neg_no_fraction(-60.0, Ok(TimeDelta { seconds: -60, subsecond: Subsecond::default() }))]
     #[case::loss_of_precision(60.3, Ok(TimeDelta { seconds: 60, subsecond: Subsecond(0.29999999999999716) }))]
     #[case::nan(f64::NAN, Err(TimeDeltaError { raw: f64::NAN, detail: "NaN is unrepresentable".to_string() }))]
     #[case::greater_than_i64_max(i64::MAX as f64 + 1.0, Err(TimeDeltaError { raw: i64::MAX as f64 + 1.0, detail: "input seconds cannot exceed the maximum value of an i64".to_string() }))]

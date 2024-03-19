@@ -171,6 +171,10 @@ pub mod test {
             offset_utc_tai(&TwoPartDateTime::from((2.4515445e6, 0f64))),
             Ok(-32.0)
         );
+        assert_eq!(
+            offset_utc_tai(&TwoPartDateTime::from((2.4577545e6, 0f64))),
+            Ok(-36.0)
+        );
         // datetime2julian(DateTime(2020, 1, 1))
         assert_eq!(
             offset_utc_tai(&TwoPartDateTime::from((2.4577545e6, 0f64))),
