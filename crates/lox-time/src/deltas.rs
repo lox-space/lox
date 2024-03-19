@@ -93,7 +93,7 @@ impl TimeDelta {
             } else {
                 Self {
                     seconds: (value as i64) - 1,
-                    subsecond: Subsecond(1.0 - value.fract()),
+                    subsecond: Subsecond(1.0 + value.fract()),
                 }
             }
         } else {
