@@ -299,7 +299,8 @@ mod tests {
     }
 
     #[rstest]
-    #[case::simple(0.2, Ok(TimeDelta { seconds: 0, subsecond: Subsecond(0.2) }))]
+    #[case::pos_fraction(1.2, Ok(TimeDelta { seconds: 1, subsecond: Subsecond(0.2) }))]
+    #[case::neg_fraction(-1.2, Ok(TimeDelta { seconds: -2, subsecond: Subsecond(0.8) }))]
     #[case::pos_no_fraction(60.0, Ok(TimeDelta { seconds: 60, subsecond: Subsecond::default() }))]
     #[case::neg_no_fraction(-60.0, Ok(TimeDelta { seconds: -60, subsecond: Subsecond::default() }))]
     #[case::loss_of_precision(60.3, Ok(TimeDelta { seconds: 60, subsecond: Subsecond(0.29999999999999716) }))]
