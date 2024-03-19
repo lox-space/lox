@@ -68,9 +68,16 @@ impl TimeDelta {
         }
 
         let result = if value.is_sign_negative() {
-            Self {
-                seconds: (value as i64) - 1,
-                subsecond: Subsecond(1.0 + value.fract()),
+            if value.fract() == 0.0 {
+                Self {
+                    seconds: value as i64,
+                    subsecond: Subsecond::default(),
+                }
+            } else {
+                Self {
+                    seconds: (value as i64) - 1,
+                    subsecond: Subsecond(1.0 + value.fract()),
+                }
             }
         } else {
             Self {
@@ -274,8 +281,10 @@ mod tests {
     }
 
     #[rstest]
-    #[case::simple(0.2, Ok(TimeDelta { seconds: 0, subsecond: Subsecond(0.2) }))]
-    #[case::no_fraction(60.0, Ok(TimeDelta { seconds: 60, subsecond: Subsecond::default() }))]
+    #[case::pos_fraction(1.2, Ok(TimeDelta { seconds: 1, subsecond: Subsecond(0.2) }))]
+    #[case::neg_fraction(-1.2, Ok(TimeDelta { seconds: -2, subsecond: Subsecond(0.8) }))]
+    #[case::pos_no_fraction(60.0, Ok(TimeDelta { seconds: 60, subsecond: Subsecond::default() }))]
+    #[case::neg_no_fraction(-60.0, Ok(TimeDelta { seconds: -60, subsecond: Subsecond::default() }))]
     #[case::loss_of_precision(60.3, Ok(TimeDelta { seconds: 60, subsecond: Subsecond(0.29999999999999716) }))]
     #[case::nan(f64::NAN, Err(LoxTimeError::InvalidTimeDelta { raw: f64::NAN, detail: "NaN is unrepresentable".to_string() }))]
     #[case::greater_than_i64_max(i64::MAX as f64 + 1.0, Err(LoxTimeError::InvalidTimeDelta { raw: i64::MAX as f64 + 1.0, detail: "input seconds cannot exceed the maximum value of an i64".to_string() }))]
