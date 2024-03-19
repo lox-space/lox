@@ -18,7 +18,7 @@ use crate::base_time::BaseTime;
 use crate::calendar_dates::Date;
 use crate::deltas::{TimeDelta, TimeDeltaError};
 use crate::julian_dates::JulianDate;
-use crate::leap_seconds::api::{offset_utc_tai, LeapSecondError};
+use crate::leap_seconds::api::{offset_tai_utc, offset_utc_tai, LeapSecondError};
 use crate::time_scales::{TimeScale, TAI, TCB, TCG, TDB, TT, UT1};
 use crate::Time;
 
@@ -227,7 +227,7 @@ impl TransformUTCInto<TAI> for TimeScaleTransformer {
     ) -> Result<Time<TAI>, UTCTransformationError> {
         let base = BaseTime::from_utc_datetime(datetime);
         let jd = base.two_part_julian_date();
-        let offset = offset_utc_tai(&jd.into());
+        let offset = offset_tai_utc(&jd.into());
         let mapped_offset = offset.map(TimeDelta::from_decimal_seconds)??;
         let tai = Time::from_base_time(TAI, base + mapped_offset);
         Ok(tai)
