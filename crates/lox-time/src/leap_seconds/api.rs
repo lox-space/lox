@@ -171,7 +171,7 @@ pub mod test {
             offset_utc_tai(&TwoPartDateTime::from((2.4515445e6, 0f64))),
             Ok(-32.0)
         );
-        // datetime2julian(DateTime(2020, 1, 1)) <- This is 2016-12-31 23:59:60, which should have an offset of -36.
+        // datetime2julian(DateTime(2020, 1, 1)) <- This two-part date is actually 2016-12-31 23:59:60, which should have an offset of -36 according to AstroTime.jl.
         assert_eq!(
             offset_utc_tai(&TwoPartDateTime::from((2.4577545e6, 0f64))),
             Ok(-37.0)
@@ -192,7 +192,7 @@ pub mod test {
             offset_tai_utc(&TwoPartDateTime::from((2.4515445e6, 0f64))),
             Ok(32.0)
         );
-        // datetime2julian(DateTime(2020, 1, 1)) <- This is 2016-12-31 23:59:60, which should have an offset of 36.
+        // datetime2julian(DateTime(2020, 1, 1)) <- This two-part date is actually 2016-12-31 23:59:60, which should have an offset of 36 according to AstroTime.jl.
         assert_eq!(
             offset_tai_utc(&TwoPartDateTime::from((2.4577545e6, 0f64))),
             Ok(37.0)
