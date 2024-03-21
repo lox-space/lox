@@ -279,7 +279,7 @@ mod tests {
     fn test_base_time_from_utc_datetime() {
         let date = Date::new_unchecked(Gregorian, 2021, 1, 1);
         let utc = UTC::new(12, 34, 56, Subsecond::default()).expect("time should be valid");
-        let datetime = UTCDateTime::new(date, utc);
+        let datetime = UTCDateTime::new(date, utc).unwrap();
         let actual = BaseTime::from_utc_datetime(datetime);
         let expected = BaseTime {
             seconds: 662776496,
@@ -292,7 +292,7 @@ mod tests {
     fn test_base_time_from_date_and_utc_timestamp() {
         let date = Date::new_unchecked(Gregorian, 2021, 1, 1);
         let utc = UTC::new(12, 34, 56, Subsecond::default()).expect("time should be valid");
-        let datetime = UTCDateTime::new(date, utc);
+        let datetime = UTCDateTime::new(date, utc).unwrap();
         let actual = BaseTime::from_date_and_utc_timestamp(date, utc);
         let expected = BaseTime::from_utc_datetime(datetime);
         assert_eq!(expected, actual);

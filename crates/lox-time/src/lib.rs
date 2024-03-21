@@ -35,7 +35,6 @@ pub mod deltas;
 pub mod errors;
 pub mod intervals;
 pub mod julian_dates;
-pub mod leap_seconds;
 pub mod subsecond;
 pub mod time_scales;
 pub mod transformations;

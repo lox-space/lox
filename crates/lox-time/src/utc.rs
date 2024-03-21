@@ -1,12 +1,14 @@
-use lox_eop::LoxEopError;
 use std::fmt::Display;
+
 use thiserror::Error;
 
 use crate::calendar_dates::Date;
 use crate::errors::LoxTimeError;
-use crate::leap_seconds::api::LeapSecondError;
+use crate::julian_dates::JulianDate;
 use crate::subsecond::Subsecond;
 use crate::wall_clock::WallClock;
+
+mod transformations;
 
 /// A UTC timestamp with additional support for fractional seconds represented with femtosecond
 /// precision.
@@ -97,9 +99,19 @@ pub struct UTCDateTime {
     time: UTC,
 }
 
+#[derive(Clone, Copy, Debug, Error, PartialEq)]
+#[error("UTC is not defined for dates before 1960-01-01")]
+pub struct UTCUndefinedError;
+
 impl UTCDateTime {
-    pub fn new(date: Date, time: UTC) -> Self {
-        Self { date, time }
+    pub fn new(date: Date, time: UTC) -> Result<Self, UTCUndefinedError> {
+        // TODO: This is a naïve check that assumes the input calendar is Gregorian. We need the
+        // ability to convert dates between calendars to make this check more robust.
+        if date.year() <= 1959 {
+            Err(UTCUndefinedError)
+        } else {
+            Ok(Self { date, time })
+        }
     }
 
     pub fn date(&self) -> Date {
@@ -113,7 +125,7 @@ impl UTCDateTime {
 
 #[cfg(test)]
 mod tests {
-    use crate::calendar_dates::Calendar::Gregorian;
+    use rstest::rstest;
 
     use super::*;
 
@@ -169,11 +181,30 @@ mod tests {
         assert_eq!(TIME.femtosecond(), 123);
     }
 
-    #[test]
-    fn test_utc_datetime_new() {
-        let date = Date::new_unchecked(Gregorian, 2021, 1, 1);
-        let time = UTC::new(12, 34, 56, Subsecond::default()).expect("time should be valid");
-        let expected = UTCDateTime { date, time };
+    #[rstest]
+    #[case::ok(
+        Date::new(2021, 1, 1).unwrap(),
+        Ok(UTCDateTime {
+            date: Date::new(2021, 1, 1).unwrap(),
+            time: UTC::default(),
+        }),
+    )]
+    #[case::y1960(
+        Date::new(1960, 1, 1).unwrap(),
+        Ok(UTCDateTime {
+            date: Date::new(1960, 1, 1).unwrap(),
+            time: UTC::default(),
+        }),
+    )]
+    #[case::before_1960(
+        Date::new(1959, 12, 31).unwrap(),
+        Err(UTCUndefinedError(Date::new(1959, 12, 31).unwrap())),
+    )]
+    fn test_utc_datetime_new(
+        #[case] date: Date,
+        #[case] expected: Result<UTCDateTime, UTCUndefinedError>,
+    ) {
+        let time = UTC::default();
         let actual = UTCDateTime::new(date, time);
         assert_eq!(expected, actual);
     }

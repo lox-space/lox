@@ -9,22 +9,22 @@
 //! Module transform provides a trait for transforming between pairs of timescales, together
 //! with a default implementation for the most commonly used time scale pairs.
 
-use crate::constants::julian_dates::J77;
-use lox_eop::{DeltaUt1UtcProvider, LoxEopError};
 use mockall::automock;
-use thiserror::Error;
+
+use lox_eop::DeltaUt1UtcProvider;
 
 use crate::base_time::BaseTime;
 use crate::calendar_dates::Date;
-use crate::deltas::{TimeDelta, TimeDeltaError};
+use crate::constants::julian_dates::J77;
+use crate::deltas::TimeDelta;
+use crate::julian_dates::Epoch::ModifiedJulianDate;
 use crate::julian_dates::JulianDate;
-use crate::leap_seconds::api::{offset_tai_utc, offset_utc_tai, LeapSecondError};
-use crate::time_scales::{TimeScale, TAI, TCB, TCG, TDB, TT, UT1};
-use crate::Time;
-
+use crate::julian_dates::Unit::Days;
 use crate::subsecond::Subsecond;
+use crate::time_scales::{TimeScale, TAI, TCB, TCG, TDB, TT};
 use crate::utc::{UTCDateTime, UTC};
 use crate::wall_clock::WallClock;
+use crate::Time;
 
 /// TransformTimeScale transforms a [Time] in [TimeScale] `T` to the corresponding [Time] in
 /// [TimeScale] `U`.
@@ -35,20 +35,6 @@ where
     U: TimeScale + Copy,
 {
     fn transform(&self, time: Time<T>) -> Time<U>;
-}
-
-pub trait TransformUTCInto<T>
-where
-    T: TimeScale + Copy,
-{
-    fn transform_utc_into(&self, time: UTCDateTime) -> Result<Time<T>, UTCTransformationError>;
-}
-
-pub trait TransformIntoUTC<T>
-where
-    T: TimeScale + Copy,
-{
-    fn transform_into_utc(&self, time: Time<T>) -> Result<UTC, UTCTransformationError>;
 }
 
 /// TimeScaleTransformer provides default implementations TransformTimeScale for all commonly used
@@ -220,47 +206,32 @@ fn delta_tdb_tt(time: Time<TDB>) -> TimeDelta {
     })
 }
 
-impl TransformUTCInto<TAI> for TimeScaleTransformer {
-    fn transform_utc_into(
-        &self,
-        datetime: UTCDateTime,
-    ) -> Result<Time<TAI>, UTCTransformationError> {
-        let base = BaseTime::from_utc_datetime(datetime);
-        let jd = base.two_part_julian_date();
-        let offset = offset_tai_utc(&jd.into());
-        let mapped_offset = offset.map(TimeDelta::from_decimal_seconds)??;
-        let tai = Time::from_base_time(TAI, base + mapped_offset);
-        Ok(tai)
-    }
-}
-
-// impl TransformIntoUTC<TAI> for TimeScaleTransformer {
-//     fn transform_into_utc(&self, time: Time<TAI>) -> Result<UTC, UTCTransformationError> {
-//         let mjd = time.days_since_modified_julian_epoch();
-//         let offset = offset_utc_tai(&mjd.into()).map(TimeDelta::from_decimal_seconds)??;
-//         let base_time = time.base_time() - offset;
-//         Ok(UTC::from_base_time(base_time))
+// impl TryFrom<UTCDateTime> for Time<TAI> {
+//     type Error = UTCTransformationError;
+//
+//     fn try_from(utc: UTCDateTime) -> Result<Self, Self::Error> {
+//         let base = BaseTime::from_utc_datetime(utc);
+//         let mjd = base.julian_date(ModifiedJulianDate, Days);
+//         let delta = if (utc.time().second() == 60) {
+//             delta_tai_leap_second_utc(mjd)
+//         } else {
+//             delta_tai_utc(mjd)
+//         }?;
+//         let tai = Time::from_base_time(TAI, base + delta);
+//         Ok(tai)
 //     }
 // }
 
-#[derive(Clone, Debug, Error, PartialEq)]
-pub enum UTCTransformationError {
-    #[error(transparent)]
-    LeapSecondError(#[from] LeapSecondError),
-    #[error(transparent)]
-    DeltaUt1UtcProviderError(#[from] LoxEopError),
-    #[error(transparent)]
-    TimeDeltaError(#[from] TimeDeltaError),
-}
-
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use float_eq::assert_float_eq;
+    use rstest::rstest;
+
     use crate::constants::julian_dates::{J0, SECONDS_BETWEEN_JD_AND_J2000};
     use crate::subsecond::Subsecond;
     use crate::BaseTime;
-    use float_eq::assert_float_eq;
-    use rstest::rstest;
+
+    use super::*;
 
     // Transformations are tested for agreement with both ERFA and AstroTime.jl.
 
@@ -397,24 +368,37 @@ mod tests {
         assert_eq!(expected, tt)
     }
 
-    // julia> from_utc(2016, 12, 31, 23, 59, 60, 0.0)
-    // 2017-01-01T00:00:36.000 TAI
-
-    #[rstest]
-    #[case::leap_second(
-        UTCDateTime::new(
-            Date::new(2016, 12, 31).unwrap(),
-            UTC::new(23, 59, 60, Subsecond(0.0)).unwrap()
-        ),
-        // 2017-01-01T00:00:36.000 TAI
-        Ok(Time::new(TAI, 536500836, Subsecond::default()))
-    )]
-    fn test_transform_utc_tai(
-        #[case] utc: UTCDateTime,
-        #[case] expected: Result<Time<TAI>, UTCTransformationError>,
-    ) {
-        let transformer = &TimeScaleTransformer {};
-        let tai = transformer.transform_utc_into(utc);
-        assert_eq!(expected, tai);
-    }
+    // #[rstest]
+    // #[case::before_leap_second(
+    //     UTCDateTime::new(
+    //         Date::new(2016, 12, 31).unwrap(),
+    //         UTC::new(23, 59, 59, Subsecond(0.0)).unwrap()
+    //     ),
+    // // 2017-01-01T00:00:35.000 TAI
+    // Ok(Time::new(TAI, 536500835, Subsecond::default()))
+    // )]
+    // #[case::during_leap_second(
+    //     UTCDateTime::new(
+    //         Date::new(2016, 12, 31).unwrap(),
+    //         UTC::new(23, 59, 60, Subsecond(0.0)).unwrap()
+    //     ),
+    //     // TODO: it doesn't seem possible to create a TAI time of 36 seconds. But we have two 37-second times...
+    //     // 2017-01-01T00:00:36.000 TAI
+    //     Ok(Time::new(TAI, 536500836, Subsecond::default()))
+    // )]
+    // #[case::after_leap_second(
+    //     UTCDateTime::new(
+    //         Date::new(2017, 1, 1).unwrap(),
+    //         UTC::new(0, 0, 0, Subsecond(0.0)).unwrap()
+    //     ),
+    //     // 2017-01-01T00:00:37.000 TAI
+    //     Ok(Time::new(TAI, 536500837, Subsecond::default()))
+    // )]
+    // fn test_transform_tai_try_from_utc(
+    //     #[case] utc: UTCDateTime,
+    //     #[case] expected: Result<Time<TAI>, UTCTransformationError>,
+    // ) {
+    //     let tai: Result<Time<TAI>, UTCTransformationError> = utc.try_into();
+    //     assert_eq!(expected, tai);
+    // }
 }
