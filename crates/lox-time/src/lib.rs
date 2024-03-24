@@ -15,7 +15,7 @@
 //! in working with leap seconds.
 
 use crate::base_time::BaseTime;
-use crate::calendar_dates::Date;
+use crate::calendar_dates::{CalendarDate, Date};
 use crate::constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HOUR, SECONDS_PER_MINUTE};
 use crate::deltas::TimeDelta;
 use crate::julian_dates::{Epoch, JulianDate, Unit};
@@ -188,6 +188,12 @@ impl<T: TimeScale + Copy> WallClock for Time<T> {
 
     fn femtosecond(&self) -> i64 {
         self.timestamp.femtosecond()
+    }
+}
+
+impl<T: TimeScale + Copy> CalendarDate for Time<T> {
+    fn calendar_date(&self) -> Date {
+        self.timestamp.calendar_date()
     }
 }
 
@@ -542,6 +548,15 @@ mod tests {
             timestamp: time.timestamp - delta,
         };
         let actual = Time::j2000(TAI) - delta;
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_time_calendar_date() {
+        let base_time = BaseTime::default();
+        let expected = base_time.calendar_date();
+        let tai = Time::from_base_time(TAI, base_time);
+        let actual = tai.calendar_date();
         assert_eq!(expected, actual);
     }
 }
