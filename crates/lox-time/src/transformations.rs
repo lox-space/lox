@@ -206,22 +206,6 @@ fn delta_tdb_tt(time: Time<TDB>) -> TimeDelta {
     })
 }
 
-// impl TryFrom<UTCDateTime> for Time<TAI> {
-//     type Error = UTCTransformationError;
-//
-//     fn try_from(utc: UTCDateTime) -> Result<Self, Self::Error> {
-//         let base = BaseTime::from_utc_datetime(utc);
-//         let mjd = base.julian_date(ModifiedJulianDate, Days);
-//         let delta = if (utc.time().second() == 60) {
-//             delta_tai_leap_second_utc(mjd)
-//         } else {
-//             delta_tai_utc(mjd)
-//         }?;
-//         let tai = Time::from_base_time(TAI, base + delta);
-//         Ok(tai)
-//     }
-// }
-
 #[cfg(test)]
 mod tests {
     use float_eq::assert_float_eq;
@@ -367,38 +351,4 @@ mod tests {
         let tt: Time<TT> = transformer.transform(tdb);
         assert_eq!(expected, tt)
     }
-
-    // #[rstest]
-    // #[case::before_leap_second(
-    //     UTCDateTime::new(
-    //         Date::new(2016, 12, 31).unwrap(),
-    //         UTC::new(23, 59, 59, Subsecond(0.0)).unwrap()
-    //     ),
-    // // 2017-01-01T00:00:35.000 TAI
-    // Ok(Time::new(TAI, 536500835, Subsecond::default()))
-    // )]
-    // #[case::during_leap_second(
-    //     UTCDateTime::new(
-    //         Date::new(2016, 12, 31).unwrap(),
-    //         UTC::new(23, 59, 60, Subsecond(0.0)).unwrap()
-    //     ),
-    //     // TODO: it doesn't seem possible to create a TAI time of 36 seconds. But we have two 37-second times...
-    //     // 2017-01-01T00:00:36.000 TAI
-    //     Ok(Time::new(TAI, 536500836, Subsecond::default()))
-    // )]
-    // #[case::after_leap_second(
-    //     UTCDateTime::new(
-    //         Date::new(2017, 1, 1).unwrap(),
-    //         UTC::new(0, 0, 0, Subsecond(0.0)).unwrap()
-    //     ),
-    //     // 2017-01-01T00:00:37.000 TAI
-    //     Ok(Time::new(TAI, 536500837, Subsecond::default()))
-    // )]
-    // fn test_transform_tai_try_from_utc(
-    //     #[case] utc: UTCDateTime,
-    //     #[case] expected: Result<Time<TAI>, UTCTransformationError>,
-    // ) {
-    //     let tai: Result<Time<TAI>, UTCTransformationError> = utc.try_into();
-    //     assert_eq!(expected, tai);
-    // }
 }

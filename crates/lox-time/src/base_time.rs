@@ -15,7 +15,7 @@ use std::ops::{Add, Sub};
 
 use num::{abs, ToPrimitive};
 
-use crate::calendar_dates::Date;
+use crate::calendar_dates::{CalendarDate, Date};
 use crate::constants::i64::{
     SECONDS_PER_DAY, SECONDS_PER_HALF_DAY, SECONDS_PER_HOUR, SECONDS_PER_MINUTE,
 };
@@ -256,13 +256,34 @@ impl JulianDate for BaseTime {
     }
 }
 
+impl CalendarDate for BaseTime {
+    /// Convert a `BaseTime` to a `Date` using the Gregorian calendar. This implementation has no
+    /// awareness of leap seconds. If required, callers must account for leap seconds manually,
+    /// or use the higher-level conversions from UTC to continuous timescales, which provide this
+    /// functionality.
+    fn calendar_date(&self) -> Date {
+        // Add half a day to get a time measured from midnight rather than midday.
+        let seconds = self.seconds + SECONDS_PER_HALF_DAY;
+        let mut time = seconds % SECONDS_PER_DAY;
+        if time < 0 {
+            time += SECONDS_PER_DAY;
+        }
+        let days = (seconds - time) / SECONDS_PER_DAY;
+        Date::from_days(days).unwrap_or_else(|err| {
+            // The only error arising from this function relates to non-leap years with > 365 days,
+            // which should not be possible for a `BaseTime` input.
+            panic!("BaseTime `{}` is unrepresentable as a date: {}", self, err)
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::calendar_dates::Calendar::Gregorian;
     use float_eq::assert_float_eq;
     use rstest::rstest;
 
-    use crate::constants::i64::SECONDS_PER_JULIAN_CENTURY;
+    use crate::constants::i64::{SECONDS_PER_JULIAN_CENTURY, SECONDS_PER_JULIAN_YEAR};
 
     use super::*;
 
@@ -559,5 +580,16 @@ mod tests {
         let expected = 123.123;
         let actual = time.to_f64();
         assert_float_eq!(expected, actual, abs <= 1e-15);
+    }
+
+    #[rstest]
+    #[case::j2000(BaseTime::default(), Date::new(2000, 1, 1).unwrap())]
+    #[case::next_day(BaseTime { seconds: SECONDS_PER_DAY, subsecond: Subsecond::default()}, Date::new(2000, 1, 2).unwrap())]
+    #[case::leap_year(BaseTime { seconds: SECONDS_PER_DAY * 366, subsecond: Subsecond::default()}, Date::new(2001, 1, 1).unwrap())]
+    #[case::non_leap_year(BaseTime { seconds: SECONDS_PER_DAY * (366 + 365), subsecond: Subsecond::default()}, Date::new(2002, 1, 1).unwrap())]
+    #[case::negative_time(BaseTime { seconds: -SECONDS_PER_DAY, subsecond: Subsecond::default()}, Date::new(1999, 12, 31).unwrap())]
+    fn test_base_time_calendar_date(#[case] base_time: BaseTime, #[case] expected: Date) {
+        let actual = base_time.calendar_date();
+        assert_eq!(expected, actual);
     }
 }

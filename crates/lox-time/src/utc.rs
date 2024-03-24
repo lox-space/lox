@@ -1,8 +1,9 @@
 use std::fmt::Display;
 
+use crate::base_time::BaseTime;
 use thiserror::Error;
 
-use crate::calendar_dates::Date;
+use crate::calendar_dates::{CalendarDate, Date};
 use crate::errors::LoxTimeError;
 use crate::julian_dates::JulianDate;
 use crate::subsecond::Subsecond;
@@ -114,6 +115,17 @@ impl UTCDateTime {
         }
     }
 
+    fn from_base_time(base_time: BaseTime) -> Result<Self, UTCUndefinedError> {
+        let time = UTC {
+            hour: base_time.hour() as u8,
+            minute: base_time.minute() as u8,
+            second: base_time.second() as u8,
+            subsecond: base_time.subsecond,
+        };
+        let date = base_time.calendar_date();
+        Self::new(date, time)
+    }
+
     pub fn date(&self) -> Date {
         self.date
     }
@@ -198,7 +210,7 @@ mod tests {
     )]
     #[case::before_1960(
         Date::new(1959, 12, 31).unwrap(),
-        Err(UTCUndefinedError(Date::new(1959, 12, 31).unwrap())),
+        Err(UTCUndefinedError),
     )]
     fn test_utc_datetime_new(
         #[case] date: Date,

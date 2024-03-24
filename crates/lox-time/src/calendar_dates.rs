@@ -193,7 +193,7 @@ fn j2000(calendar: Calendar, year: i64, month: i64, day: i64) -> i64 {
 
 /// CalendarDate allows continuous time formats to report their date in their respective calendar.
 pub trait CalendarDate {
-    fn date(&self) -> Date;
+    fn calendar_date(&self) -> Date;
 }
 
 #[cfg(test)]
