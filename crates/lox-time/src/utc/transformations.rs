@@ -289,7 +289,6 @@ pub mod test {
 
     use crate::base_time::BaseTime;
     use crate::calendar_dates::Date;
-    use crate::julian_dates::JulianDate;
     use crate::subsecond::Subsecond;
     use crate::utc::UTCDateTime;
     use crate::utc::UTC;
@@ -313,6 +312,7 @@ pub mod test {
     #[case::before_leap_second(tai_1s_before_2016_leap_second(), Ok(*utc_1s_before_2016_leap_second()))]
     #[case::during_leap_second(tai_during_2016_leap_second(), Ok(*utc_during_2016_leap_second()))]
     #[case::after_leap_second(tai_1s_after_2016_leap_second(), Ok(*utc_1s_after_2016_leap_second()))]
+    #[case::illegal_utc_datetime(tai_before_utc_defined(), Err(UTCUndefinedError))]
     fn test_utc_try_from_tai(
         #[case] tai: &Time<TAI>,
         #[case] expected: Result<UTCDateTime, UTCUndefinedError>,
@@ -412,5 +412,11 @@ pub mod test {
             date: Date::new(1959, 12, 31).unwrap(),
             time: UTC::default(),
         })
+    }
+
+    // 1959-12-31T23:59:59.000 TAI
+    fn tai_before_utc_defined() -> &'static Time<TAI> {
+        static TAI_BEFORE_UTC_DEFINED: OnceLock<Time<TAI>> = OnceLock::new();
+        TAI_BEFORE_UTC_DEFINED.get_or_init(|| Time::new(TAI, -1_262_347_201, Subsecond::default()))
     }
 }
