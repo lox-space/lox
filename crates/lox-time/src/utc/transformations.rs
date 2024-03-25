@@ -56,7 +56,7 @@ impl TryFrom<Time<TAI>> for UTCDateTime {
     type Error = UTCUndefinedError;
 
     fn try_from(tai: Time<TAI>) -> Result<Self, Self::Error> {
-        let idx = ls_epochs_j2000()
+        let idx = tai_leap_second_instants()
             .iter()
             .rposition(|item| *item <= tai.seconds());
 
@@ -69,13 +69,21 @@ impl TryFrom<Time<TAI>> for UTCDateTime {
             delta_tai_utc(mjd)?
         };
 
-        let base_time = tai.base_time() - delta; // TODO: Check sign of operation.
+        let base_time = tai.base_time() - delta;
         let mut utc = UTCDateTime::from_base_time(base_time)?;
-        if tai_leap_second_instants().contains(&tai.seconds()) {
-            utc.time.second = 60;
+        if tai.is_leap_second() {
+            utc.time.second += 1;
         }
 
         Ok(utc)
+    }
+}
+
+impl Time<TAI> {
+    fn is_leap_second(&self) -> bool {
+        tai_leap_second_instants()
+            .binary_search(&self.seconds())
+            .is_ok()
     }
 }
 
@@ -108,15 +116,15 @@ fn ls_epochs_j2000() -> &'static [i64; 28] {
     })
 }
 
-/// The counts of seconds relative to J2000 TAI at which leap seconds occur.
-fn tai_leap_second_instants() -> &'static HashSet<i64> {
-    static TAI_LS_INSTANTS: OnceLock<HashSet<i64>> = OnceLock::new();
+fn tai_leap_second_instants() -> &'static [i64; 28] {
+    static TAI_LS_INSTANTS: OnceLock<[i64; 28]> = OnceLock::new();
     TAI_LS_INSTANTS.get_or_init(|| {
+        let mut instants = [0i64; 28];
         ls_epochs_j2000()
             .iter()
             .enumerate()
-            .map(|(i, epoch)| epoch + LEAP_SECONDS[i] as i64 - 1)
-            .collect()
+            .for_each(|(i, epoch)| instants[i] = epoch + LEAP_SECONDS[i] as i64 - 1);
+        instants
     })
 }
 
@@ -289,7 +297,7 @@ pub mod test {
     use super::*;
 
     #[rstest]
-    #[case::before_1972(utc_1971_01_01(), tai_1971_01_01())]
+    #[case::before_1972(utc_1971_01_01(), tai_at_utc_1971_01_01())]
     #[case::before_leap_second(utc_1s_before_2016_leap_second(), tai_1s_before_2016_leap_second())]
     #[case::during_leap_second(utc_during_2016_leap_second(), tai_during_2016_leap_second())]
     #[case::after_leap_second(utc_1s_after_2016_leap_second(), tai_1s_after_2016_leap_second())]
@@ -301,7 +309,10 @@ pub mod test {
     }
 
     #[rstest]
-    #[case::before_1972(tai_1971_01_01(), Ok(*utc_1971_01_01()))]
+    #[case::before_1972(tai_at_utc_1971_01_01(), Ok(*utc_1971_01_01()))]
+    #[case::before_leap_second(tai_1s_before_2016_leap_second(), Ok(*utc_1s_before_2016_leap_second()))]
+    #[case::during_leap_second(tai_during_2016_leap_second(), Ok(*utc_during_2016_leap_second()))]
+    #[case::after_leap_second(tai_1s_after_2016_leap_second(), Ok(*utc_1s_after_2016_leap_second()))]
     fn test_utc_try_from_tai(
         #[case] tai: &Time<TAI>,
         #[case] expected: Result<UTCDateTime, UTCUndefinedError>,
@@ -323,7 +334,7 @@ pub mod test {
         })
     }
 
-    fn tai_1971_01_01() -> &'static Time<TAI> {
+    fn tai_at_utc_1971_01_01() -> &'static Time<TAI> {
         const DELTA: TimeDelta = TimeDelta {
             seconds: 8,
             // Note the substantial rounding error inherent in converting between single-f64 MJDs.
@@ -331,8 +342,8 @@ pub mod test {
             subsecond: Subsecond(0.9461620000000011),
         };
 
-        static TAI_1971_01_01: OnceLock<Time<TAI>> = OnceLock::new();
-        TAI_1971_01_01.get_or_init(|| {
+        static TAI_AT_UTC_1971_01_01: OnceLock<Time<TAI>> = OnceLock::new();
+        TAI_AT_UTC_1971_01_01.get_or_init(|| {
             let utc = utc_1971_01_01();
             let base = BaseTime::from_utc_datetime(*utc);
             Time::from_base_time(TAI, base + DELTA)
