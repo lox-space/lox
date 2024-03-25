@@ -193,26 +193,39 @@ impl Sub<TimeDelta> for BaseTime {
 impl WallClock for BaseTime {
     fn hour(&self) -> i64 {
         // Since J2000 is taken from midday, we offset by half a day to get the wall clock hour.
-        let day_seconds: i64 = if self.is_negative() {
-            SECONDS_PER_DAY - (abs(self.seconds) + SECONDS_PER_HALF_DAY) % SECONDS_PER_DAY
+        let seconds_after_midnight: i64 = if self.is_negative() {
+            let seconds_before_midnight =
+                (abs(self.seconds) + SECONDS_PER_HALF_DAY) % SECONDS_PER_DAY;
+            if seconds_before_midnight == 0 {
+                return 0;
+            }
+            SECONDS_PER_DAY - seconds_before_midnight
         } else {
             (self.seconds + SECONDS_PER_HALF_DAY) % SECONDS_PER_DAY
         };
-        day_seconds / SECONDS_PER_HOUR
+        seconds_after_midnight / SECONDS_PER_HOUR
     }
 
     fn minute(&self) -> i64 {
-        let hour_seconds: i64 = if self.is_negative() {
-            SECONDS_PER_HOUR - abs(self.seconds) % SECONDS_PER_HOUR
+        let seconds_after_hour: i64 = if self.is_negative() {
+            let seconds_before_hour = abs(self.seconds) % SECONDS_PER_HOUR;
+            if seconds_before_hour == 0 {
+                return 0;
+            }
+            SECONDS_PER_HOUR - seconds_before_hour
         } else {
             self.seconds % SECONDS_PER_HOUR
         };
-        hour_seconds / SECONDS_PER_MINUTE
+        seconds_after_hour / SECONDS_PER_MINUTE
     }
 
     fn second(&self) -> i64 {
         if self.is_negative() {
-            SECONDS_PER_MINUTE - abs(self.seconds) % SECONDS_PER_MINUTE
+            let seconds_before_minute = abs(self.seconds) % SECONDS_PER_MINUTE;
+            if seconds_before_minute == 0 {
+                return 0;
+            }
+            SECONDS_PER_MINUTE - seconds_before_minute
         } else {
             self.seconds % SECONDS_PER_MINUTE
         }
@@ -374,11 +387,14 @@ mod tests {
     #[case::zero_value(BaseTime { seconds: 0, subsecond: Subsecond::default() }, 12)]
     #[case::one_femtosecond_less_than_an_hour(BaseTime { seconds: SECONDS_PER_HOUR - 1, subsecond: MAX_FEMTOSECONDS, }, 12)]
     #[case::exactly_one_hour(BaseTime { seconds: SECONDS_PER_HOUR, subsecond: Subsecond::default() }, 13)]
+    #[case::half_day(BaseTime { seconds: SECONDS_PER_DAY / 2, subsecond: Subsecond::default() }, 0)]
+    #[case::negative_half_day(BaseTime { seconds: -SECONDS_PER_DAY / 2, subsecond: Subsecond::default() }, 0)]
     #[case::one_day_and_one_hour(BaseTime { seconds: SECONDS_PER_HOUR * 25, subsecond: Subsecond::default() }, 13)]
     #[case::one_femtosecond_less_than_the_epoch(BaseTime { seconds: - 1, subsecond: MAX_FEMTOSECONDS, }, 11)]
     #[case::one_hour_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_HOUR, subsecond: Subsecond::default() }, 11)]
     #[case::one_hour_and_one_femtosecond_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_HOUR - 1, subsecond: MAX_FEMTOSECONDS, }, 10)]
     #[case::one_day_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_DAY, subsecond: Subsecond::default() }, 12)]
+    #[case::one_day_and_one_hour_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_DAY - SECONDS_PER_HOUR, subsecond: Subsecond::default() }, 11)]
     #[case::two_days_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_DAY * 2, subsecond: Subsecond::default() }, 12)]
     fn test_base_time_wall_clock_hour(#[case] time: BaseTime, #[case] expected: i64) {
         let actual = time.hour();
@@ -392,6 +408,7 @@ mod tests {
     #[case::one_femtosecond_less_than_an_hour(BaseTime { seconds: SECONDS_PER_HOUR - 1, subsecond: MAX_FEMTOSECONDS, }, 59)]
     #[case::exactly_one_hour(BaseTime { seconds: SECONDS_PER_HOUR, subsecond: Subsecond::default() }, 0)]
     #[case::one_hour_and_one_minute(BaseTime { seconds: SECONDS_PER_HOUR + SECONDS_PER_MINUTE, subsecond: Subsecond::default() }, 1)]
+    #[case::one_hour_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_HOUR, subsecond: Subsecond::default() }, 0)]
     #[case::one_femtosecond_less_than_the_epoch(BaseTime { seconds: - 1, subsecond: MAX_FEMTOSECONDS, }, 59)]
     #[case::one_minute_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_MINUTE, subsecond: Subsecond::default() }, 59)]
     #[case::one_minute_and_one_femtosecond_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_MINUTE - 1, subsecond: MAX_FEMTOSECONDS, }, 58)]
@@ -410,6 +427,7 @@ mod tests {
     #[case::one_femtosecond_less_than_the_epoch(BaseTime { seconds: - 1, subsecond: MAX_FEMTOSECONDS, }, 59)]
     #[case::one_second_less_than_the_epoch(BaseTime { seconds: - 1, subsecond: Subsecond::default() }, 59)]
     #[case::one_second_and_one_femtosecond_less_than_the_epoch(BaseTime { seconds: - 2, subsecond: MAX_FEMTOSECONDS, }, 58)]
+    #[case::one_minute_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_MINUTE, subsecond: Subsecond::default() }, 0)]
     fn test_base_time_wall_clock_second(#[case] time: BaseTime, #[case] expected: i64) {
         let actual = time.second();
         assert_eq!(expected, actual);

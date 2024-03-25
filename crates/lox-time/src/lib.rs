@@ -14,19 +14,19 @@
 //! [UTC] and [Date] are used strictly as an I/O formats, avoiding much of the complexity inherent
 //! in working with leap seconds.
 
+use std::fmt;
+use std::fmt::{Display, Formatter};
+use std::ops::{Add, Sub};
+
 use crate::base_time::BaseTime;
 use crate::calendar_dates::{CalendarDate, Date};
-use crate::constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HOUR, SECONDS_PER_MINUTE};
 use crate::deltas::TimeDelta;
 use crate::julian_dates::{Epoch, JulianDate, Unit};
 use crate::subsecond::Subsecond;
 use crate::time_scales::TimeScale;
 use crate::transformations::TransformTimeScale;
-use crate::utc::{UTCDateTime, UTC};
+use crate::utc::UTC;
 use crate::wall_clock::WallClock;
-use std::fmt;
-use std::fmt::{Display, Formatter};
-use std::ops::{Add, Sub};
 
 pub mod base_time;
 pub mod calendar_dates;
@@ -199,16 +199,16 @@ impl<T: TimeScale + Copy> CalendarDate for Time<T> {
 
 #[cfg(test)]
 mod tests {
-    use crate::calendar_dates::Calendar::Gregorian;
     use float_eq::assert_float_eq;
     use mockall::predicate;
 
-    use super::*;
-
+    use crate::calendar_dates::Calendar::Gregorian;
     use crate::time_scales::{TAI, TDB, TT};
     use crate::transformations::MockTransformTimeScale;
-    use crate::utc::{UTCDateTime, UTC};
+    use crate::utc::UTC;
     use crate::Time;
+
+    use super::*;
 
     #[test]
     fn test_time_new() {
