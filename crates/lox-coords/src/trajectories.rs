@@ -36,24 +36,11 @@ pub enum LoxTrajectoryError {
     CubicSplineError(#[from] LoxCubicSplineError),
 }
 
-pub trait Trajectory {
-    type Time: TimeScale + Copy;
-    type Origin: PointMass + Copy;
-    type Frame: ReferenceFrame + Copy;
-
-    fn state_at_epoch(
-        &self,
-        epoch: Time<Self::Time>,
-    ) -> Result<Cartesian<Self::Time, Self::Origin, Self::Frame>, LoxTrajectoryError>;
-    fn state_after_delta(
-        &self,
-        delta: TimeDelta,
-    ) -> Result<Cartesian<Self::Time, Self::Origin, Self::Frame>, LoxTrajectoryError>;
-    fn field_at_epoch(
-        &self,
-        field: &str,
-        epoch: Time<Self::Time>,
-    ) -> Result<f64, LoxTrajectoryError>;
+pub trait Trajectory<T: TimeScale + Copy, O: PointMass + Copy, F: ReferenceFrame + Copy> {
+    fn state_at_epoch(&self, epoch: Time<T>) -> Result<Cartesian<T, O, F>, LoxTrajectoryError>;
+    fn state_after_delta(&self, delta: TimeDelta)
+        -> Result<Cartesian<T, O, F>, LoxTrajectoryError>;
+    fn field_at_epoch(&self, field: &str, epoch: Time<T>) -> Result<f64, LoxTrajectoryError>;
     fn field_after_delta(&self, field: &str, delta: TimeDelta) -> Result<f64, LoxTrajectoryError>;
 }
 
@@ -192,22 +179,13 @@ where
     }
 }
 
-impl<T, O, F> Trajectory for CubicSplineTrajectory<T, O, F>
+impl<T, O, F> Trajectory<T, O, F> for CubicSplineTrajectory<T, O, F>
 where
     T: TimeScale + Copy,
     O: PointMass + Copy,
     F: ReferenceFrame + Copy,
 {
-    type Time = T;
-
-    type Origin = O;
-
-    type Frame = F;
-
-    fn state_at_epoch(
-        &self,
-        epoch: Time<Self::Time>,
-    ) -> Result<Cartesian<Self::Time, Self::Origin, Self::Frame>, LoxTrajectoryError> {
+    fn state_at_epoch(&self, epoch: Time<T>) -> Result<Cartesian<T, O, F>, LoxTrajectoryError> {
         let dt = self
             .time_delta(epoch)
             .ok_or(LoxTrajectoryError::EpochOutOfRange(
@@ -221,7 +199,7 @@ where
     fn state_after_delta(
         &self,
         delta: TimeDelta,
-    ) -> Result<Cartesian<Self::Time, Self::Origin, Self::Frame>, LoxTrajectoryError> {
+    ) -> Result<Cartesian<T, O, F>, LoxTrajectoryError> {
         if delta.is_negative() || delta > self.dt_max {
             return Err(LoxTrajectoryError::DeltaOutOfRange(
                 self.dt_max.to_decimal_seconds().to_string(),
@@ -240,11 +218,7 @@ where
         ))
     }
 
-    fn field_at_epoch(
-        &self,
-        field: &str,
-        epoch: Time<Self::Time>,
-    ) -> Result<f64, LoxTrajectoryError> {
+    fn field_at_epoch(&self, field: &str, epoch: Time<T>) -> Result<f64, LoxTrajectoryError> {
         let dt = self
             .time_delta(epoch)
             .ok_or(LoxTrajectoryError::EpochOutOfRange(
