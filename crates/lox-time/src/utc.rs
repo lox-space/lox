@@ -123,7 +123,7 @@ mod tests {
 
     #[test]
     fn test_time_display() {
-        assert_eq!("12:34:56.789.123.456.789.123 UTC", TIME.to_string());
+        assert_eq!("12:34:56.789 UTC", TIME.to_string());
     }
 
     #[test]

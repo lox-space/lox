@@ -15,3 +15,4 @@ lox-utils.workspace = true
 
 float_eq.workspace = true
 glam.workspace = true
+thiserror.workspace = true

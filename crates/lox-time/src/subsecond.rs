@@ -65,15 +65,7 @@ impl Subsecond {
 
 impl Display for Subsecond {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{:03}.{:03}.{:03}.{:03}.{:03}",
-            self.millisecond(),
-            self.microsecond(),
-            self.nanosecond(),
-            self.picosecond(),
-            self.femtosecond()
-        )
+        write!(f, "{:03}", self.millisecond(),)
     }
 }
 
@@ -149,7 +141,7 @@ mod tests {
     #[test]
     fn test_subsecond_display() {
         let subsecond = Subsecond(0.123456789876543);
-        assert_eq!("123.456.789.876.543", subsecond.to_string());
+        assert_eq!("123", subsecond.to_string());
     }
 
     #[test]

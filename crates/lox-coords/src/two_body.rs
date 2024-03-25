@@ -67,7 +67,7 @@ where
     }
 
     pub fn velocity(&self) -> DVec3 {
-        self.state.position()
+        self.state.velocity()
     }
 }
 

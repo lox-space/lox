@@ -23,31 +23,33 @@ pub enum LoxCubicSplineError {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct CubicSpline {
+pub struct CubicSpline<TX: AsRef<[f64]>, TY: AsRef<[f64]>> {
     n: usize,
-    x: Vec<f64>,
-    y: Vec<f64>,
+    x: TX,
+    y: TY,
     c1: Vec<f64>,
     c2: Vec<f64>,
     c3: Vec<f64>,
     c4: Vec<f64>,
 }
 
-impl CubicSpline {
-    pub fn new(x: &[f64], y: &[f64]) -> Result<Self, LoxCubicSplineError> {
-        let n = x.len();
+impl<TX: AsRef<[f64]>, TY: AsRef<[f64]>> CubicSpline<TX, TY> {
+    pub fn new(x: TX, y: TY) -> Result<Self, LoxCubicSplineError> {
+        let xr = x.as_ref();
+        let yr = y.as_ref();
+        let n = xr.len();
 
-        if y.len() != n {
-            return Err(LoxCubicSplineError::DimensionMismatch(n, y.len()));
+        if yr.len() != n {
+            return Err(LoxCubicSplineError::DimensionMismatch(n, yr.len()));
         }
 
         if n < 4 {
             return Err(LoxCubicSplineError::InsufficientPoints(n));
         }
 
-        let dx = x.diff();
+        let dx = xr.diff();
         let nd = dx.len();
-        let slope: Vec<f64> = y
+        let slope: Vec<f64> = yr
             .diff()
             .iter()
             .enumerate()
@@ -69,14 +71,14 @@ impl CubicSpline {
 
         // Not-a-knot boundary condition
         d.insert(0, dx[1]);
-        du.insert(0, x[2] - x[0]);
-        let delta = x[2] - x[0];
+        du.insert(0, xr[2] - xr[0]);
+        let delta = xr[2] - xr[0];
         b.insert(
             0,
             ((dx[0] + 2.0 * delta) * dx[1] * slope[0] + dx[0].powi(2) * slope[1]) / delta,
         );
         d.push(dx[nd - 2]);
-        let delta = x[n - 1] - x[n - 3];
+        let delta = xr[n - 1] - xr[n - 3];
         dl.push(delta);
         b.push(
             (dx[nd - 1].powi(2) * slope[nd - 2]
@@ -92,7 +94,7 @@ impl CubicSpline {
             .map(|(idx, si)| (si + s[idx + 1] - 2.0 * slope[idx]) / dx[idx])
             .collect();
 
-        let c1 = y[0..n - 1].to_vec();
+        let c1 = yr[0..n - 1].to_vec();
         let c2 = s[0..n - 1].to_vec();
         let c3: Vec<f64> = slope
             .iter()
@@ -103,8 +105,8 @@ impl CubicSpline {
 
         Ok(Self {
             n,
-            x: x.to_vec(),
-            y: y.to_vec(),
+            x,
+            y,
             c1,
             c2,
             c3,
@@ -113,15 +115,17 @@ impl CubicSpline {
     }
 
     pub fn interpolate(&self, x0: f64) -> f64 {
-        let mut idx = self.x.partition_point(|val| x0 >= *val);
+        let x = self.x.as_ref();
+        let y = self.y.as_ref();
+        let mut idx = x.partition_point(|val| x0 >= *val);
         if idx == 0 {
-            return *self.y.first().unwrap();
+            return *y.first().unwrap();
         }
         if idx == self.n {
-            return *self.y.last().unwrap();
+            return *y.last().unwrap();
         }
         idx -= 1;
-        let x = x0 - self.x[idx];
+        let x = x0 - x[idx];
         poly_array(x, &[self.c1[idx], self.c2[idx], self.c3[idx], self.c4[idx]])
     }
 }
