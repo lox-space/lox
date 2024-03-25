@@ -8,6 +8,7 @@
 
 use crate::subsecond::Subsecond;
 use num::ToPrimitive;
+use std::cmp::Ordering;
 use std::ops::{Add, Neg, Sub};
 
 use crate::constants::f64;
@@ -241,6 +242,21 @@ impl Sub for TimeDelta {
         Self {
             seconds: diff_seconds,
             subsecond: Subsecond(diff_subsecond),
+        }
+    }
+}
+
+impl PartialOrd for TimeDelta {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for TimeDelta {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.seconds.cmp(&other.seconds) {
+            Ordering::Equal => self.subsecond.0.partial_cmp(&other.subsecond.0).unwrap(),
+            ordering => ordering,
         }
     }
 }

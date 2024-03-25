@@ -372,6 +372,7 @@ dependencies = [
  "lox-bodies",
  "lox-time",
  "lox-utils",
+ "thiserror",
 ]
 
 [[package]]

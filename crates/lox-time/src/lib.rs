@@ -14,6 +14,10 @@
 //! [UTC] and [Date] are used strictly as an I/O formats, avoiding much of the complexity inherent
 //! in working with leap seconds.
 
+use std::fmt;
+use std::fmt::{Display, Formatter};
+use std::ops::{Add, Sub};
+
 use crate::base_time::BaseTime;
 use crate::calendar_dates::Date;
 use crate::constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HOUR, SECONDS_PER_MINUTE};
@@ -24,9 +28,6 @@ use crate::time_scales::TimeScale;
 use crate::transformations::TransformTimeScale;
 use crate::utc::{UTCDateTime, UTC};
 use crate::wall_clock::WallClock;
-use std::fmt;
-use std::fmt::{Display, Formatter};
-use std::ops::{Add, Sub};
 
 pub mod base_time;
 pub mod calendar_dates;
@@ -176,6 +177,14 @@ impl<T: TimeScale + Copy> Sub<TimeDelta> for Time<T> {
     }
 }
 
+impl<T: TimeScale + Copy> Sub<Time<T>> for Time<T> {
+    type Output = TimeDelta;
+
+    fn sub(self, rhs: Time<T>) -> Self::Output {
+        self.timestamp - rhs.timestamp
+    }
+}
+
 impl<T: TimeScale + Copy> WallClock for Time<T> {
     fn hour(&self) -> i64 {
         self.timestamp.hour()
@@ -212,16 +221,16 @@ impl<T: TimeScale + Copy> WallClock for Time<T> {
 
 #[cfg(test)]
 mod tests {
-    use crate::calendar_dates::Calendar::Gregorian;
     use float_eq::assert_float_eq;
     use mockall::predicate;
 
-    use super::*;
-
+    use crate::calendar_dates::Calendar::Gregorian;
     use crate::time_scales::{TAI, TDB, TT};
     use crate::transformations::MockTransformTimeScale;
     use crate::utc::{UTCDateTime, UTC};
     use crate::Time;
+
+    use super::*;
 
     #[test]
     fn test_time_new() {
@@ -249,7 +258,7 @@ mod tests {
     #[test]
     fn test_time_display() {
         let time = Time::j2000(TAI);
-        let expected = "12:00:00.000.000.000.000.000 TAI".to_string();
+        let expected = "12:00:00.000 TAI".to_string();
         let actual = time.to_string();
         assert_eq!(expected, actual);
     }
@@ -566,5 +575,14 @@ mod tests {
         };
         let actual = Time::j2000(TAI) - delta;
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_time_sub_time() {
+        let t0 = Time::j2000(TAI);
+        let delta = TimeDelta::from_decimal_seconds(1.5).unwrap();
+        let t1 = t0 + delta;
+        let actual = t1 - t0;
+        assert_eq!(delta, actual);
     }
 }

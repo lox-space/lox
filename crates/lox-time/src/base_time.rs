@@ -171,6 +171,23 @@ impl Sub<TimeDelta> for BaseTime {
     }
 }
 
+impl Sub<BaseTime> for BaseTime {
+    type Output = TimeDelta;
+
+    fn sub(self, rhs: BaseTime) -> Self::Output {
+        let mut subsec = self.subsecond.0 - rhs.subsecond.0;
+        let mut seconds = self.seconds - rhs.seconds;
+        if subsec.is_sign_negative() {
+            seconds -= 1;
+            subsec += 1.0;
+        }
+        TimeDelta {
+            seconds,
+            subsecond: Subsecond(subsec),
+        }
+    }
+}
+
 impl WallClock for BaseTime {
     fn hour(&self) -> i64 {
         // Since J2000 is taken from midday, we offset by half a day to get the wall clock hour.
@@ -448,6 +465,21 @@ mod tests {
         #[case] expected: BaseTime,
     ) {
         let actual = time - delta;
+        assert_eq!(expected, actual);
+    }
+
+    #[rstest]
+    #[case::zero_delta(BaseTime::default(), BaseTime::default(), TimeDelta::default())]
+    #[case::pos_delta_no_carry(BaseTime { seconds: 1, subsecond: Subsecond(0.9) }, BaseTime { seconds: 1, subsecond: Subsecond(0.3) }, TimeDelta { seconds: 0, subsecond: Subsecond(0.6) })]
+    #[case::pos_delta_with_carry(BaseTime { seconds: 1, subsecond: Subsecond(0.3) }, BaseTime { seconds: 1, subsecond: Subsecond(0.4) }, TimeDelta { seconds: -1, subsecond: Subsecond(0.9) })]
+    #[case::neg_delta_no_carry(BaseTime { seconds: 1, subsecond: Subsecond(0.6) }, BaseTime { seconds: -1, subsecond: Subsecond(0.7) }, TimeDelta { seconds: 1, subsecond: Subsecond(0.9) })]
+    #[case::neg_delta_with_carry(BaseTime { seconds: 1, subsecond: Subsecond(0.9) }, BaseTime { seconds: -1, subsecond: Subsecond(0.3) }, TimeDelta { seconds: 2, subsecond: Subsecond(0.6) })]
+    fn test_base_time_sub_base_time(
+        #[case] t1: BaseTime,
+        #[case] t0: BaseTime,
+        #[case] expected: TimeDelta,
+    ) {
+        let actual = t1 - t0;
         assert_eq!(expected, actual);
     }
 
