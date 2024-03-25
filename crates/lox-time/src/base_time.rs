@@ -29,7 +29,7 @@ use crate::utc::{UTCDateTime, UTC};
 use crate::wall_clock::WallClock;
 use crate::{constants, Time};
 
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd)]
 /// `BaseTime` is the base time representation for time scales without leap seconds. It is measured
 /// relative to J2000. `BaseTime::default()` represents the epoch itself.
 ///

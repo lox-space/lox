@@ -123,6 +123,10 @@ impl<T: TimeScale + Copy> Time<T> {
     ) -> Time<S> {
         Time::from_scale(self, transformer)
     }
+
+    pub fn is_before(&self, other: Time<T>) -> bool {
+        self.timestamp < other.timestamp
+    }
 }
 
 impl<T: TimeScale + Copy> JulianDate for Time<T> {
@@ -201,6 +205,7 @@ impl<T: TimeScale + Copy> CalendarDate for Time<T> {
 mod tests {
     use float_eq::assert_float_eq;
     use mockall::predicate;
+    use rstest::rstest;
 
     use crate::calendar_dates::Calendar::Gregorian;
     use crate::time_scales::{TAI, TDB, TT};
@@ -312,6 +317,19 @@ mod tests {
             expected,
             actual
         );
+    }
+
+    #[rstest]
+    #[case::equal(Time::j2000(TAI), Time::j2000(TAI), false)]
+    #[case::before(Time::j2000(TAI), Time::j2000(TAI) + TimeDelta::from_seconds(1), true)]
+    #[case::after(Time::j2000(TAI), Time::j2000(TAI) - TimeDelta::from_seconds(1), false)]
+    fn test_time_is_before(
+        #[case] time: Time<TAI>,
+        #[case] other: Time<TAI>,
+        #[case] expected: bool,
+    ) {
+        let actual = time.is_before(other);
+        assert_eq!(expected, actual);
     }
 
     #[test]
