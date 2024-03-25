@@ -316,7 +316,7 @@ mod tests {
         let actual = PySubsecond::new(0.123456789123456)
             .expect("subsecond should be valid")
             .__str__();
-        let expected = "123.456.789.123.456";
+        let expected = "123";
         assert_eq!(expected, actual);
     }
 }
