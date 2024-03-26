@@ -51,28 +51,24 @@ pub struct BaseCubicSplineTrajectory {
 }
 
 impl BaseCubicSplineTrajectory {
-    pub fn new(times: &[BaseTime], states: &[BaseCartesian]) -> Result<Self, LoxTrajectoryError> {
-        let n = times.len();
-        if n != states.len() {
-            return Err(LoxTrajectoryError::DimensionMismatch(n, states.len()));
-        }
-        if n < 4 {
+    pub fn new(states: &[BaseState]) -> Result<Self, LoxTrajectoryError> {
+        if states.len() < 4 {
             return Err(LoxTrajectoryError::TooFewStates(states.len()));
         }
-        let t0 = *times.first().unwrap();
-        let t1 = *times.last().unwrap();
+        let (t0, _) = *states.first().unwrap();
+        let (t1, _) = *states.last().unwrap();
         let dt_max = t1 - t0;
-        let t: Vec<f64> = times
+        let t: Vec<f64> = states
             .iter()
-            .map(|&t| (t - t0).to_decimal_seconds())
+            .map(|&(t, _)| (t - t0).to_decimal_seconds())
             .collect();
         let t = RcVecF64(Rc::new(t));
-        let x: Vec<f64> = states.iter().map(|s| s.position().x).collect();
-        let y: Vec<f64> = states.iter().map(|s| s.position().y).collect();
-        let z: Vec<f64> = states.iter().map(|s| s.position().z).collect();
-        let vx: Vec<f64> = states.iter().map(|s| s.velocity().x).collect();
-        let vy: Vec<f64> = states.iter().map(|s| s.velocity().y).collect();
-        let vz: Vec<f64> = states.iter().map(|s| s.velocity().z).collect();
+        let x: Vec<f64> = states.iter().map(|&(_, s)| s.position().x).collect();
+        let y: Vec<f64> = states.iter().map(|&(_, s)| s.position().y).collect();
+        let z: Vec<f64> = states.iter().map(|&(_, s)| s.position().z).collect();
+        let vx: Vec<f64> = states.iter().map(|&(_, s)| s.velocity().x).collect();
+        let vy: Vec<f64> = states.iter().map(|&(_, s)| s.velocity().y).collect();
+        let vz: Vec<f64> = states.iter().map(|&(_, s)| s.velocity().z).collect();
         let x = CubicSpline::new(t.clone(), x)?;
         let y = CubicSpline::new(t.clone(), y)?;
         let z = CubicSpline::new(t.clone(), z)?;

@@ -6,7 +6,6 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use lox_time::base_time::BaseTime;
 use thiserror::Error;
 
 use lox_bodies::PointMass;
@@ -15,7 +14,7 @@ use lox_time::time_scales::TimeScale;
 use lox_time::Time;
 use lox_utils::interpolation::cubic_spline::LoxCubicSplineError;
 
-use crate::base::BaseCartesian;
+use crate::base::BaseState;
 use crate::frames::ReferenceFrame;
 use crate::two_body::Cartesian;
 use crate::CoordinateSystem;
@@ -69,15 +68,23 @@ where
             return Err(LoxTrajectoryError::TooFewStates(states.len()));
         }
         let s0 = states.first().unwrap();
-        let times: Vec<BaseTime> = states.iter().map(|&s| s.time().base_time()).collect();
-        let states: Vec<BaseCartesian> = states.iter().map(|&s| s.base()).collect();
-        let base = BaseCubicSplineTrajectory::new(&times, &states)?;
+        let states: Vec<BaseState> = states.iter().map(|&s| s.base()).collect();
+        let base = BaseCubicSplineTrajectory::new(&states)?;
         Ok(Self {
             scale: s0.time().scale(),
             origin: s0.origin(),
             frame: s0.reference_frame(),
             base,
         })
+    }
+
+    pub fn from_base(scale: T, origin: O, frame: F, base: BaseCubicSplineTrajectory) -> Self {
+        Self {
+            scale,
+            origin,
+            frame,
+            base,
+        }
     }
 
     pub fn scale(&self) -> T {

@@ -21,6 +21,7 @@ lox-utils = { path = "crates/lox-utils" }
 lox-earth = { path = "crates/lox-earth" }
 lox-ephem = { path = "crates/lox-ephem" }
 lox-io = { path = "crates/lox-io" }
+lox-propagators = { path = "crates/lox-propagators" }
 lox-space = { path = "crates/lox-space" }
 lox-time = { path = "crates/lox-time" }
 
@@ -29,6 +30,7 @@ dyn-clone = "1.0.17"
 fast_polynomial = "0.1.0"
 float_eq = "1.0.1"
 glam = "0.25.0"
+libm = "0.2.1"
 mockall = "0.12.1"
 nalgebra = "0.32.4"
 nom = "7.1.3"
