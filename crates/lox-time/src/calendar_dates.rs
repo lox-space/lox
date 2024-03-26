@@ -7,6 +7,7 @@
  */
 
 use crate::errors::LoxTimeError;
+use std::cmp::Ordering;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Calendar {
@@ -21,6 +22,26 @@ pub struct Date {
     year: i64,
     month: i64,
     day: i64,
+}
+
+impl PartialOrd for Date {
+    /// Naive implementation of PartialOrd which does not account for the different calendars.
+    // TODO: Implement a proper PartialOrd that accounts for the different calendars.
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        match self.year.partial_cmp(&other.year) {
+            Some(Ordering::Equal) => match self.month.partial_cmp(&other.month) {
+                Some(Ordering::Equal) => self.day.partial_cmp(&other.day),
+                other => other,
+            },
+            other => other,
+        }
+    }
+}
+
+impl Ord for Date {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap()
+    }
 }
 
 const LAST_PROLEPTIC_JULIAN_DAY_J2K: i64 = -730122;

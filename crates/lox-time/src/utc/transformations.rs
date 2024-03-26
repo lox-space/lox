@@ -8,21 +8,11 @@
 
 use std::sync::OnceLock;
 
-use num::ToPrimitive;
-
 use crate::base_time::BaseTime;
 use crate::calendar_dates::Date;
 use crate::deltas::TimeDelta;
-use crate::julian_dates::Epoch::ModifiedJulianDate;
-use crate::julian_dates::JulianDate;
-use crate::julian_dates::Unit::Days;
-use crate::subsecond::Subsecond;
 use crate::time_scales::TAI;
-use crate::utc::transformations::from1972::{
-    j2000_tai_leap_second_epochs, leap_seconds_for_mjd, LEAP_SECONDS,
-};
 use crate::utc::{UTCDateTime, UTCUndefinedError, UTC};
-use crate::wall_clock::WallClock;
 use crate::Time;
 
 mod before1972;
@@ -32,29 +22,21 @@ impl From<UTCDateTime> for Time<TAI> {
     /// Converts a `UTCDateTime` to `TAI`, accounting for leap seconds. Infallible for all valid
     /// values of UTC.
     fn from(utc: UTCDateTime) -> Self {
-        let base = BaseTime::from_utc_datetime(utc);
-        let mjd = base.julian_date(ModifiedJulianDate, Days);
-        //
-        // let idx = j2000_utc_leap_second_epochs()
-        //     .iter()
-        //     .rposition(|item| *item <= base.seconds);
-
-        let delta = if !is_before_1972(mjd) {
-            // TODO: Reverse this condition
-            let mut delta = leap_seconds_for_mjd(mjd) as i64; // TODO: Make integer
-            if utc.time.second() == 60 {
-                delta -= 1;
-            }
-            TimeDelta::from_seconds(delta)
+        let delta = if utc < *utc_1972_01_01() {
+            before1972::delta_utc_tai(utc)
         } else {
-            let delta = delta_utc_tai(mjd).unwrap_or_else(|err| {
-                // Impossible, since UTCDateTime objects are always in range.
-                panic!("{}", err)
-            });
-            -delta
-        };
+            from1972::delta_utc_tai(utc)
+        }
+        .unwrap_or_else(|| {
+            // Impossible, since UTCDateTime objects are always in range.
+            panic!(
+                "failed to calculate UTC-TAI delta for UTCDateTime `{:?}`",
+                utc
+            );
+        });
 
-        Time::from_base_time(TAI, base + delta)
+        let base = BaseTime::from_utc_datetime(utc);
+        Time::from_base_time(TAI, base - delta)
     }
 }
 
@@ -62,7 +44,7 @@ impl TryFrom<Time<TAI>> for UTCDateTime {
     type Error = UTCUndefinedError;
 
     /// Attempts to convert a `Time<TAI>` to a `UTCDateTime`, accounting for leap seconds. Returns
-    /// [UTCUndefinedError] if the input `Time<TAI>` is before 1960-01-01, when UTC begins.
+    /// [UTCUndefinedError] if the input `Time<TAI>` is before 1960-01-01 UTC, when UTC begins.
     fn try_from(tai: Time<TAI>) -> Result<Self, Self::Error> {
         let delta = if tai.is_before(*tai_at_utc_1972_01_01()) {
             before1972::delta_tai_utc(tai)
@@ -74,59 +56,28 @@ impl TryFrom<Time<TAI>> for UTCDateTime {
         let base_time = tai.base_time() - delta;
         let mut utc = UTCDateTime::from_base_time(base_time)?;
         if tai.is_leap_second() {
-            utc.time.second += 1;
+            utc.time.second = 60;
         }
 
         Ok(utc)
     }
 }
 
-/// Given an input UTC datetime expressed as a pseudo-MJD, returns the difference between UTC and
-/// TAI. The result is always negative, as TAI is ahead of UTC.
-fn delta_utc_tai(mjd: f64) -> Result<TimeDelta, UTCUndefinedError> {
-    if !utc_is_defined_for(mjd) {
-        return Err(UTCUndefinedError);
-    }
-
-    let raw_delta = if is_before_1972(mjd) {
-        before1972::delta_utc_tai(mjd)
-    } else {
-        from1972::delta_utc_tai(mjd)
-    };
-
-    let delta = TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|_| {
-        panic!(
-            "calculation of UTC-TAI delta produced an invalid TimeDelta: raw_delta={}",
-            raw_delta,
-        )
-    });
-
-    Ok(-delta)
+fn utc_1972_01_01() -> &'static UTCDateTime {
+    static UTC_1972: OnceLock<UTCDateTime> = OnceLock::new();
+    UTC_1972
+        .get_or_init(|| UTCDateTime::new(Date::new(1972, 1, 1).unwrap(), UTC::default()).unwrap())
 }
-
-// 1960-01-01
-const MJD_UTC_DEFINED: f64 = 36934.0;
-
-fn utc_is_defined_for(mjd: f64) -> bool {
-    mjd >= MJD_UTC_DEFINED
-}
-
-const MJD_1972: f64 = 41317.0;
-
-const LEAP_SECONDS_1972: i64 = 10;
 
 fn tai_at_utc_1972_01_01() -> &'static Time<TAI> {
+    const LEAP_SECONDS_1972: i64 = 10;
     static TAI_AT_UTC_1972_01_01: OnceLock<Time<TAI>> = OnceLock::new();
     TAI_AT_UTC_1972_01_01.get_or_init(|| {
-        let utc = UTCDateTime::new(Date::new(1972, 1, 1).unwrap(), UTC::default()).unwrap();
-        let base_time = BaseTime::from_utc_datetime(utc);
+        let utc = utc_1972_01_01();
+        let base_time = BaseTime::from_utc_datetime(*utc);
         let leap_seconds = TimeDelta::from_seconds(LEAP_SECONDS_1972);
         Time::from_base_time(TAI, base_time + leap_seconds)
     })
-}
-
-fn is_before_1972(mjd: f64) -> bool {
-    mjd < MJD_1972
 }
 
 #[cfg(test)]
@@ -194,13 +145,6 @@ pub mod test {
             let utc = utc_1971_01_01();
             let base = BaseTime::from_utc_datetime(*utc);
             Time::from_base_time(TAI, base + DELTA)
-        })
-    }
-
-    fn utc_1972_01_01() -> &'static UTCDateTime {
-        static UTC_1972: OnceLock<UTCDateTime> = OnceLock::new();
-        UTC_1972.get_or_init(|| {
-            UTCDateTime::new(Date::new(1972, 1, 1).unwrap(), UTC::default()).unwrap()
         })
     }
 

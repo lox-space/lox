@@ -6,6 +6,7 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use std::cmp::Ordering;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 
@@ -27,6 +28,13 @@ impl PartialEq for Subsecond {
 
 // The underlying f64 is guaranteed to be in the range [0.0, 1.0).
 impl Eq for Subsecond {}
+
+// The underlying f64 is guaranteed to be in the range [0.0, 1.0), and hence has a total ordering.
+impl Ord for Subsecond {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap()
+    }
+}
 
 impl Subsecond {
     pub fn new(subsecond: f64) -> Result<Self, LoxTimeError> {

@@ -5,7 +5,7 @@ use thiserror::Error;
 
 use crate::calendar_dates::{CalendarDate, Date};
 use crate::errors::LoxTimeError;
-use crate::julian_dates::JulianDate;
+use crate::julian_dates::{Epoch, JulianDate, Unit};
 use crate::subsecond::Subsecond;
 use crate::wall_clock::WallClock;
 
@@ -18,7 +18,7 @@ mod transformations;
 /// component to 60. However, it has no awareness of whether a user-specified leap second is valid.
 /// It is intended strictly as an IO time format which must be converted to a continuous time format
 /// to be used in calculations.
-#[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct UTC {
     hour: u8,
     minute: u8,
@@ -94,7 +94,7 @@ impl WallClock for UTC {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct UTCDateTime {
     date: Date,
     time: UTC,
@@ -102,6 +102,8 @@ pub struct UTCDateTime {
 
 #[derive(Clone, Copy, Debug, Error, PartialEq)]
 #[error("UTC is not defined for dates before 1960-01-01")]
+/// UTC is not defined for dates before 1960-01-01. Attempting to create a `UTCDateTime` with such
+/// a date results in this error.
 pub struct UTCUndefinedError;
 
 impl UTCDateTime {
@@ -132,6 +134,24 @@ impl UTCDateTime {
 
     pub fn time(&self) -> UTC {
         self.time
+    }
+}
+
+/// Since Julian dates are unable to represent leap seconds unambiguously, this implementation
+/// returns pseudo-Julian dates following the ERFA convention such that, if the input is a leap
+/// second, the Julian date is the same as the previous second.
+impl JulianDate for UTCDateTime {
+    fn julian_date(&self, epoch: Epoch, unit: Unit) -> f64 {
+        let mut base_time = BaseTime::from_utc_datetime(*self);
+        if self.time.second == 60 {
+            base_time.seconds -= 1;
+        }
+        base_time.julian_date(epoch, unit)
+    }
+
+    fn two_part_julian_date(&self) -> (f64, f64) {
+        let jd = self.julian_date(Epoch::JulianDate, Unit::Days);
+        (jd.trunc(), jd.fract())
     }
 }
 

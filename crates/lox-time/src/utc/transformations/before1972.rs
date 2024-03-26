@@ -18,9 +18,9 @@ use crate::julian_dates::Epoch::ModifiedJulianDate;
 use crate::julian_dates::JulianDate;
 use crate::julian_dates::Unit::Days;
 use crate::time_scales::TAI;
+use crate::utc::UTCDateTime;
 use crate::Time;
 use lox_utils::slices::is_sorted_asc;
-use lox_utils::types::Seconds;
 
 const EPOCHS: [u64; 14] = [
     36934, 37300, 37512, 37665, 38334, 38395, 38486, 38639, 38761, 38820, 38942, 39004, 39126,
@@ -42,19 +42,25 @@ const DRIFT_RATES: [f64; 14] = [
     0.0012960, 0.0012960, 0.0012960, 0.0012960, 0.0025920, 0.0025920,
 ];
 
-/// UTC minus TAI.
-pub fn delta_utc_tai(mjd: f64) -> Seconds {
+/// UTC minus TAI. Returns [None] if the input is before 1960-01-01, when UTC is defined from,
+/// although this is impossible for all properly constructed [UTCDateTime] instances.
+pub fn delta_utc_tai(utc: UTCDateTime) -> Option<TimeDelta> {
     // Invariant: EPOCHS must be sorted for the search below to work
     debug_assert!(is_sorted_asc(&EPOCHS));
 
+    let mjd = utc.julian_date(ModifiedJulianDate, Days);
     let threshold = mjd.floor() as u64;
-    let position = EPOCHS
-        .iter()
-        .rposition(|item| item <= &threshold)
-        // Thanks to the 1960 check, rustc knows this result is always Some statically.
-        .expect("EPOCHS contains no epoch less than or equal to MJD");
+    let position = EPOCHS.iter().rposition(|item| item <= &threshold)?;
+    let raw_delta =
+        OFFSETS[position] + (mjd - DRIFT_EPOCHS[position] as f64) * DRIFT_RATES[position];
+    let delta = TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|_| {
+        panic!(
+            "calculation of UTC-TAI delta produced an invalid TimeDelta: raw_delta={}",
+            raw_delta,
+        )
+    });
 
-    OFFSETS[position] + (mjd - DRIFT_EPOCHS[position] as f64) * DRIFT_RATES[position]
+    Some(-delta)
 }
 
 /// TAI minus UTC.
