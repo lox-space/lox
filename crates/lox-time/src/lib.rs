@@ -103,6 +103,11 @@ impl<T: TimeScale + Copy> Time<T> {
         Self::from_epoch(scale, Epoch::J2000)
     }
 
+    /// Returns the timescale
+    pub fn scale(&self) -> T {
+        self.scale
+    }
+
     /// The underlying base timestamp.
     pub fn base_time(&self) -> BaseTime {
         self.timestamp
