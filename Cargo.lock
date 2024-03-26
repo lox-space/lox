@@ -445,6 +445,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "lox-propagators"
+version = "0.1.0"
+dependencies = [
+ "float_eq",
+ "libm",
+ "lox-bodies",
+ "lox-coords",
+ "lox-time",
+ "thiserror",
+]
+
+[[package]]
 name = "lox-space"
 version = "0.1.0"
 dependencies = [

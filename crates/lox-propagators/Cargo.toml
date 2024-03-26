@@ -1,0 +1,16 @@
+[package]
+name = "lox-propagators"
+version = "0.1.0"
+rust-version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+lox-bodies.workspace = true
+lox-coords.workspace = true
+lox-time.workspace = true
+
+float_eq.workspace = true
+libm.workspace = true
+thiserror.workspace = true

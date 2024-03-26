@@ -6,13 +6,15 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use std::f64::consts::TAU;
+
 use glam::DVec3;
 
 use lox_bodies::PointMass;
 use lox_time::time_scales::TimeScale;
 use lox_time::Time;
 
-use crate::base::{BaseCartesian, BaseKeplerian, BaseTwoBody};
+use crate::base::{BaseCartesian, BaseKeplerian, BaseState, BaseTwoBody};
 use crate::frames::{InertialFrame, ReferenceFrame};
 use crate::CoordinateSystem;
 
@@ -58,6 +60,16 @@ where
         }
     }
 
+    pub fn from_base(scale: T, origin: O, frame: F, (time, state): BaseState) -> Self {
+        let time = Time::from_base_time(scale, time);
+        Self {
+            time,
+            state,
+            origin,
+            frame,
+        }
+    }
+
     pub fn time(&self) -> Time<T> {
         self.time
     }
@@ -70,8 +82,8 @@ where
         self.state.velocity()
     }
 
-    pub fn base(&self) -> BaseCartesian {
-        self.state
+    pub fn base(&self) -> BaseState {
+        (self.time.base_time(), self.state)
     }
 }
 
@@ -203,6 +215,12 @@ where
 
     pub fn true_anomaly(&self) -> f64 {
         self.state.true_anomaly()
+    }
+
+    pub fn orbital_period(&self) -> f64 {
+        let mu = self.origin().gravitational_parameter();
+        let a = self.semi_major_axis();
+        TAU * (a.powi(3) / mu).sqrt()
     }
 }
 
