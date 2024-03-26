@@ -20,7 +20,7 @@ use crate::Mjd;
 
 mod constants;
 
-// TODO: Hoist to lox-constants.
+// TODO: Hoist.
 const DAYS_PER_JULIAN_CENTURY: f64 = 36525.0;
 
 #[derive(Clone, Copy, Debug, Error, PartialEq)]

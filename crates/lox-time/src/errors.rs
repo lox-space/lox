@@ -40,26 +40,6 @@ impl PartialEq for LoxTimeError {
                 f1 == f2
             }
             (NonLeapYear, NonLeapYear) => true,
-            // (
-            //     InvalidTimeDelta {
-            //         raw: r1,
-            //         detail: d1,
-            //     },
-            //     InvalidTimeDelta {
-            //         raw: r2,
-            //         detail: d2,
-            //     },
-            // ) => {
-            //     if d1 != d2 {
-            //         return false;
-            //     }
-            //
-            //     if r1.is_nan() && r2.is_nan() {
-            //         return true;
-            //     }
-            //
-            //     r1 == r2
-            // }
             _ => false,
         }
     }
@@ -88,11 +68,6 @@ mod tests {
     #[case(InvalidSubsecond(f64::NAN), InvalidSubsecond(f64::NAN), true)]
     #[case(InvalidSubsecond(1.0), InvalidSubsecond(0.0), false)]
     #[case(InvalidSubsecond(1.0), NonLeapYear, false)]
-    // #[case(InvalidTimeDelta { raw: 1.0, detail: "foo".to_string() }, InvalidTimeDelta { raw: 1.0, detail: "foo".to_string() }, true)]
-    // #[case(InvalidTimeDelta { raw: f64::NAN, detail: "foo".to_string() }, InvalidTimeDelta { raw: f64::NAN, detail: "foo".to_string() }, true)]
-    // #[case(InvalidTimeDelta { raw: 1.0, detail: "foo".to_string() }, InvalidTimeDelta { raw: 2.0, detail: "foo".to_string() }, false)]
-    // #[case(InvalidTimeDelta { raw: 1.0, detail: "foo".to_string() }, InvalidTimeDelta { raw: 1.0, detail: "bar".to_string() }, false)]
-    // #[case(InvalidTimeDelta { raw: 1.0, detail: "foo".to_string() }, NonLeapYear, false)]
     fn test_lox_time_error_eq(
         #[case] lhs: LoxTimeError,
         #[case] rhs: LoxTimeError,

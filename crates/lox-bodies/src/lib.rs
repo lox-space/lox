@@ -21,7 +21,7 @@ pub mod errors;
 pub mod fundamental;
 mod generated;
 
-// TODO: Hoist to lox-constants.
+// TODO: Hoist.
 const SECONDS_PER_DAY: f64 = 86400.0;
 const SECONDS_PER_JULIAN_CENTURY: f64 = 36525.0 * SECONDS_PER_DAY;
 
