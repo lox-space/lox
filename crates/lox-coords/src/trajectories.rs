@@ -27,8 +27,6 @@ pub mod base;
 pub enum LoxTrajectoryError {
     #[error("time delta must be between 0.0 seconds and {0} seconds but was {1} seconds")]
     DeltaOutOfRange(String, String),
-    #[error("`times` and `states` must have the same length but were {0} and {1}")]
-    DimensionMismatch(usize, usize),
     #[error("epoch must be between {0} and {1} but was {2}")]
     EpochOutOfRange(String, String, String),
     #[error("unknown field `{0}`")]
