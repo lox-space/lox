@@ -69,6 +69,10 @@ where
     pub fn velocity(&self) -> DVec3 {
         self.state.velocity()
     }
+
+    pub fn base(&self) -> BaseCartesian {
+        self.state
+    }
 }
 
 impl<T, O, F> TwoBody<T, O, F> for Cartesian<T, O, F>
