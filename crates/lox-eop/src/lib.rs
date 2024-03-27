@@ -38,7 +38,8 @@ impl From<std::io::Error> for LoxEopError {
     }
 }
 
-type Mjd = f64;
+// TODO: Hoist.
+type ModifiedJulianDate = f64;
 
 #[derive(Debug, Deserialize)]
 enum ValueType {

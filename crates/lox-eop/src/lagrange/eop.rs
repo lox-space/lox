@@ -16,7 +16,7 @@ use lox_utils::math::arcsec_to_rad_two_pi;
 use lox_utils::types::{Arcsec, Radians, Seconds};
 
 use crate::lagrange::eop::constants::{LUNI_SOLAR_TIDAL_TERMS, MJD_J2000, OCEANIC_TIDAL_TERMS};
-use crate::Mjd;
+use crate::ModifiedJulianDate;
 
 mod constants;
 
@@ -41,9 +41,9 @@ pub struct Arguments {
     /// UT1-UTC.
     t: Vec<Seconds>,
     /// Epochs of the data.
-    epochs: Vec<Mjd>,
+    epochs: Vec<ModifiedJulianDate>,
     /// Epoch of the interpolated data.
-    target_epoch: Mjd,
+    target_epoch: ModifiedJulianDate,
 }
 
 impl Arguments {
@@ -51,8 +51,8 @@ impl Arguments {
         x: Vec<Arcsec>,
         y: Vec<Arcsec>,
         t: Vec<Seconds>,
-        epochs: Vec<Mjd>,
-        target_epoch: Mjd,
+        epochs: Vec<ModifiedJulianDate>,
+        target_epoch: ModifiedJulianDate,
     ) -> Result<Arguments, ArgumentSizeMismatchError> {
         if x.len() != y.len() || x.len() != t.len() || x.len() != epochs.len() {
             return Err(ArgumentSizeMismatchError {
@@ -78,7 +78,7 @@ impl Arguments {
 pub struct Interpolation {
     x: Arcsec,
     y: Arcsec,
-    d_ut1_utc: Mjd,
+    d_ut1_utc: ModifiedJulianDate,
 }
 
 /// Perform Lagrangian interpolation of Earth Orientation Parameters (EOP), returning polar x- and
@@ -202,7 +202,7 @@ fn luni_solar_tidal_correction(tidal_args: &TidalArgs) -> LuniSolarTidalCorrecti
     }
 }
 
-fn julian_centuries_since_j2000(mjd: Mjd) -> f64 {
+fn julian_centuries_since_j2000(mjd: ModifiedJulianDate) -> f64 {
     (mjd - MJD_J2000) / DAYS_PER_JULIAN_CENTURY
 }
 
@@ -243,8 +243,8 @@ mod tests {
         #[case] x: Vec<Arcsec>,
         #[case] y: Vec<Arcsec>,
         #[case] t: Vec<Seconds>,
-        #[case] epochs: Vec<Mjd>,
-        #[case] target_epoch: Mjd,
+        #[case] epochs: Vec<ModifiedJulianDate>,
+        #[case] target_epoch: ModifiedJulianDate,
         #[case] expected: Result<Arguments, ArgumentSizeMismatchError>,
     ) {
         let actual = Arguments::new(x, y, t, epochs, target_epoch);
@@ -257,7 +257,7 @@ mod tests {
         x_pole: Vec<Arcsec>,
         y_pole: Vec<Arcsec>,
         delta_ut1_utc: Vec<Seconds>,
-        mjd: Vec<Mjd>,
+        mjd: Vec<ModifiedJulianDate>,
     }
 
     #[fixture]
@@ -334,7 +334,7 @@ mod tests {
     })]
     fn test_lagrangian_interpolate(
         eop_data: UnwrappedEOPData,
-        #[case] target_epoch: Mjd,
+        #[case] target_epoch: ModifiedJulianDate,
         #[case] expected: Interpolation,
     ) -> Result<(), ArgumentSizeMismatchError> {
         let args = Arguments::new(
