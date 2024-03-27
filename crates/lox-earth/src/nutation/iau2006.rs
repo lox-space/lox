@@ -11,7 +11,7 @@ use lox_bodies::Earth;
 use crate::nutation::iau2000::nutation_iau2000a;
 use crate::nutation::Nutation;
 
-use lox_utils::types::units::{, JulianCenturies};
+use lox_utils::types::units::JulianCenturies;
 
 /// The IAU 2000A nutation model adjusted to match the IAU 2006 precession model per
 /// Wallace & Capitaine, 2006.
@@ -43,13 +43,13 @@ mod tests {
 
     use super::nutation_iau2006a;
 
-    use lox_utils::types::units::{, JulianCenturies};
+    use lox_utils::types::units::JulianCenturies;
 
     const TOLERANCE: f64 = 1e-11;
 
     #[test]
     fn test_nutation_iau2006a_jd0() {
-        let jd0: JulianCenturies =-67.11964407939767;
+        let jd0: JulianCenturies = -67.11964407939767;
         let actual = nutation_iau2006a(jd0);
         assert_float_eq!(0.00000737285641780423, actual.longitude, rel <= TOLERANCE);
         assert_float_eq!(0.00004132905772755788, actual.obliquity, rel <= TOLERANCE);
@@ -57,7 +57,7 @@ mod tests {
 
     #[test]
     fn test_nutation_iau2006a_j2000() {
-        let j2000: JulianCenturies =0.0;
+        let j2000: JulianCenturies = 0.0;
         let actual = nutation_iau2006a(j2000);
         assert_float_eq!(-0.00006754425598969513, actual.longitude, rel <= TOLERANCE);
         assert_float_eq!(-0.00002797083119237414, actual.obliquity, rel <= TOLERANCE);
@@ -65,7 +65,7 @@ mod tests {
 
     #[test]
     fn test_nutation_iau2006a_j2100() {
-        let j2100: JulianCenturies =1.0;
+        let j2100: JulianCenturies = 1.0;
         let actual = nutation_iau2006a(j2100);
         assert_float_eq!(0.00001585983730501046, actual.longitude, rel <= TOLERANCE);
         assert_float_eq!(0.00004162315218980551, actual.obliquity, rel <= TOLERANCE);

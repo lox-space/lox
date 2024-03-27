@@ -8,8 +8,6 @@
 
 use crate::lagrange::eop::{LuniSolarTidalTerm, OceanicTidalTerm};
 
-pub const MJD_J2000: f64 = 51544.5;
-
 pub const OCEANIC_TIDAL_TERMS: [OceanicTidalTerm; 71] = [
     OceanicTidalTerm {
         coefficients: [1, -1, 0, -2, -2, -2],

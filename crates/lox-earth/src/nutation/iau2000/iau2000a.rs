@@ -13,7 +13,6 @@ use lox_bodies::fundamental::mhb2000::{
     mean_moon_sun_elongation_mhb2000_luni_solar, mean_moon_sun_elongation_mhb2000_planetary,
 };
 use lox_bodies::*;
-use lox_time::intervals::JulianCenturies;
 use lox_utils::types::units::JulianCenturies;
 
 use crate::nutation::iau2000::{luni_solar_nutation, DelaunayArguments};

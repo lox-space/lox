@@ -12,9 +12,9 @@
 //!
 //! Data sourced from ftp://maia.usno.navy.mil/ser7/tai-utc.dat.
 
+use lox_utils::constants::f64::time::SECONDS_PER_DAY;
 use lox_utils::slices::is_sorted_asc;
 
-use crate::constants::f64::SECONDS_PER_DAY;
 use crate::deltas::TimeDelta;
 use crate::julian_dates::Epoch::ModifiedJulianDate;
 use crate::julian_dates::JulianDate;

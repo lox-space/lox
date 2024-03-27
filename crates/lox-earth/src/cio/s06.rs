@@ -11,10 +11,10 @@
 
 use glam::DVec2;
 
-use lox_bodies::{Earth, Moon, Sun, Venus};
 use lox_bodies::fundamental::iers03::{
     general_accum_precession_in_longitude_iers03, mean_moon_sun_elongation_iers03,
 };
+use lox_bodies::{Earth, Moon, Sun, Venus};
 use lox_utils::math::arcsec_to_rad;
 use lox_utils::types::units::{JulianCenturies, Radians};
 
@@ -83,34 +83,32 @@ mod tests {
 
     use super::*;
 
-    use lox_utils::types::units::;
-
     const TOLERANCE: f64 = 1e-11;
 
     #[test]
     fn test_s_jd0() {
-        let jd0: JulianCenturies =-67.11964407939767;
+        let jd0: JulianCenturies = -67.11964407939767;
         let xy = xy(jd0);
         assert_float_eq!(s(jd0, xy), -0.0723985415686306, rel <= TOLERANCE);
     }
 
     #[test]
     fn test_s_j2000() {
-        let j2000: JulianCenturies =0.0;
+        let j2000: JulianCenturies = 0.0;
         let xy = xy(j2000);
         assert_float_eq!(s(j2000, xy), -0.00000001013396519178, rel <= TOLERANCE);
     }
 
     #[test]
     fn test_s_j2100() {
-        let j2100: JulianCenturies =1.0;
+        let j2100: JulianCenturies = 1.0;
         let xy = xy(j2100);
         assert_float_eq!(s(j2100, xy), -0.00000000480511934533, rel <= TOLERANCE);
     }
 
     #[test]
     fn test_fundamental_args_ordering() {
-        let j2000: JulianCenturies =0.0;
+        let j2000: JulianCenturies = 0.0;
         let actual = fundamental_args(j2000);
         let expected = [
             Moon.mean_anomaly_iers03(j2000),

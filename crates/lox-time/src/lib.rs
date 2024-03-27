@@ -211,6 +211,7 @@ impl<T: TimeScale + Copy> CalendarDate for Time<T> {
 #[cfg(test)]
 mod tests {
     use float_eq::assert_float_eq;
+    use lox_utils::constants::f64::time::DAYS_PER_JULIAN_CENTURY;
     use mockall::predicate;
 
     use crate::calendar_dates::Calendar::Gregorian;
@@ -544,9 +545,12 @@ mod tests {
             scale: TDB,
             timestamp: BaseTime::from_date_and_utc_timestamp(date, utc),
         };
-        assert_eq!(time.julian_date(Epoch::J2000, Unit::Days), 36525.0);
+        assert_eq!(
+            time.julian_date(Epoch::J2000, Unit::Days),
+            DAYS_PER_JULIAN_CENTURY
+        );
         assert_eq!(time.seconds_since_j2000(), 3155760000.0);
-        assert_eq!(time.days_since_j2000(), 36525.0);
+        assert_eq!(time.days_since_j2000(), DAYS_PER_JULIAN_CENTURY);
         assert_eq!(time.centuries_since_j2000(), 1.0);
     }
 
@@ -559,7 +563,7 @@ mod tests {
             timestamp: BaseTime::from_date_and_utc_timestamp(date, utc),
         };
         let (jd1, jd2) = time.two_part_julian_date();
-        assert_eq!(jd1, 2451545.0 + 36525.0);
+        assert_eq!(jd1, 2451545.0 + DAYS_PER_JULIAN_CENTURY);
         assert_eq!(jd2, 0.5);
     }
 

@@ -6,7 +6,7 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use super::MicroArcsecond;
+use lox_utils::types::units::Microarcseconds;
 
 /// Indices into amplitude [COEFFICIENTS].
 #[rustfmt::skip]
@@ -148,7 +148,7 @@ pub(crate) const INDICES: [usize; 1309] = [
 #[rustfmt::skip]
 // @formatter:off (sometimes RustRover ignores the rustfmt skip)
 #[allow(clippy::approx_constant)]
-pub(crate) const COEFFICIENTS: [MicroArcsecond; 4755] = [
+pub(crate) const COEFFICIENTS: [Microarcseconds; 4755] = [
     -6844318.44,     9205236.26,1328.67,1538.18,      205833.11,
     153041.79,       -3309.73, 853.32,2037.98,       -2301.27,
     81.46, 120.56, -20.39, -15.22,   1.73,  -1.61,  -0.10,   0.11,

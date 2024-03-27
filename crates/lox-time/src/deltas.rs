@@ -8,10 +8,13 @@
 
 use std::ops::{Add, Neg, Sub};
 
+use lox_utils::constants::f64::time::{
+    SECONDS_PER_DAY, SECONDS_PER_HOUR, SECONDS_PER_JULIAN_CENTURY, SECONDS_PER_JULIAN_YEAR,
+    SECONDS_PER_MINUTE,
+};
 use num::ToPrimitive;
 use thiserror::Error;
 
-use crate::constants::f64;
 use crate::subsecond::Subsecond;
 
 #[derive(Clone, Debug, Default, Error)]
@@ -112,7 +115,7 @@ impl TimeDelta {
     /// `TimeDelta` falls. Applications requiring precision guarantees should use `TimeDelta::new`
     /// instead.
     pub fn from_minutes(value: f64) -> Result<Self, TimeDeltaError> {
-        Self::from_decimal_seconds(value * f64::SECONDS_PER_MINUTE)
+        Self::from_decimal_seconds(value * SECONDS_PER_MINUTE)
     }
 
     /// Create a [TimeDelta] from a floating-point number of hours.
@@ -121,7 +124,7 @@ impl TimeDelta {
     /// `TimeDelta` falls. Applications requiring precision guarantees should use `TimeDelta::new`
     /// instead.
     pub fn from_hours(value: f64) -> Result<Self, TimeDeltaError> {
-        Self::from_decimal_seconds(value * f64::SECONDS_PER_HOUR)
+        Self::from_decimal_seconds(value * SECONDS_PER_HOUR)
     }
 
     /// Create a [TimeDelta] from a floating-point number of days.
@@ -130,7 +133,7 @@ impl TimeDelta {
     /// `TimeDelta` falls. Applications requiring precision guarantees should use `TimeDelta::new`
     /// instead.
     pub fn from_days(value: f64) -> Result<Self, TimeDeltaError> {
-        Self::from_decimal_seconds(value * f64::SECONDS_PER_DAY)
+        Self::from_decimal_seconds(value * SECONDS_PER_DAY)
     }
 
     /// Create a [TimeDelta] from a floating-point number of Julian years.
@@ -139,7 +142,7 @@ impl TimeDelta {
     /// `TimeDelta` falls. Applications requiring precision guarantees should use `TimeDelta::new`
     /// instead.
     pub fn from_julian_years(value: f64) -> Result<Self, TimeDeltaError> {
-        Self::from_decimal_seconds(value * f64::SECONDS_PER_JULIAN_YEAR)
+        Self::from_decimal_seconds(value * SECONDS_PER_JULIAN_YEAR)
     }
 
     /// Create a [TimeDelta] from a floating-point number of Julian centuries.
@@ -148,7 +151,7 @@ impl TimeDelta {
     /// `TimeDelta` falls. Applications requiring precision guarantees should use `TimeDelta::new`
     /// instead.
     pub fn from_julian_centuries(value: f64) -> Result<Self, TimeDeltaError> {
-        Self::from_decimal_seconds(value * f64::SECONDS_PER_JULIAN_CENTURY)
+        Self::from_decimal_seconds(value * SECONDS_PER_JULIAN_CENTURY)
     }
 
     pub fn to_decimal_seconds(&self) -> f64 {
@@ -272,6 +275,7 @@ impl Sub for TimeDelta {
 
 #[cfg(test)]
 mod tests {
+    use crate::constants::f64::SECONDS_PER_FEMTOSECOND;
     use float_eq::assert_float_eq;
     use proptest::prelude::*;
     use rstest::rstest;
@@ -386,7 +390,7 @@ mod tests {
     proptest! {
         #[test]
         fn prop_seconds_roundtrip(s in 0.0..i64::MAX as f64) {
-            let exp = if s < f64::SECONDS_PER_FEMTOSECOND {
+            let exp = if s < SECONDS_PER_FEMTOSECOND {
                 0.0
             } else {
                 s

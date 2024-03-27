@@ -6,4 +6,6 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-pub const FEMTOSECONDS_PER_SECOND: u128 = 1_000_000_000_000_000;
+//! Module `f64` exposes f64 constants shared between Lox crates.
+
+pub mod time;
