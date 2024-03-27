@@ -25,7 +25,7 @@ use crate::julian_dates::{Epoch, JulianDate, Unit};
 use crate::subsecond::Subsecond;
 use crate::time_scales::TimeScale;
 use crate::transformations::TransformTimeScale;
-use crate::utc::UTC;
+use crate::utc::{UTCDateTime, UTC};
 use crate::wall_clock::WallClock;
 
 pub mod base_time;
@@ -45,7 +45,7 @@ pub mod wall_clock;
 ///
 /// `Time` supports femtosecond precision, but be aware that many algorithms operating on `Time`s
 /// are not accurate to this level of precision.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
 pub struct Time<T: TimeScale + Copy> {
     scale: T,
     timestamp: BaseTime,
@@ -62,6 +62,18 @@ impl<T: TimeScale + Copy> Time<T> {
 
     /// Instantiates a [Time] in the given scale from a [BaseTime].
     pub const fn from_base_time(scale: T, timestamp: BaseTime) -> Self {
+        Self { scale, timestamp }
+    }
+
+    /// Instantiates a [Time] in the given scale from a [UTCDateTime].
+    pub fn from_utc_datetime(scale: T, datetime: UTCDateTime) -> Self {
+        let timestamp = BaseTime::from_utc_datetime(datetime);
+        Self { scale, timestamp }
+    }
+
+    /// Instantiates a [Time] in the given scale from a [Date] and [UTC] instance.
+    pub fn from_date_and_utc_timestamp(scale: T, date: Date, utc: UTC) -> Self {
+        let timestamp = BaseTime::from_date_and_utc_timestamp(date, utc);
         Self { scale, timestamp }
     }
 
@@ -122,10 +134,6 @@ impl<T: TimeScale + Copy> Time<T> {
         transformer: impl TransformTimeScale<T, S>,
     ) -> Time<S> {
         Time::from_scale(self, transformer)
-    }
-
-    pub fn is_before(&self, other: Time<T>) -> bool {
-        self.timestamp < other.timestamp
     }
 }
 
@@ -205,7 +213,6 @@ impl<T: TimeScale + Copy> CalendarDate for Time<T> {
 mod tests {
     use float_eq::assert_float_eq;
     use mockall::predicate;
-    use rstest::rstest;
 
     use crate::calendar_dates::Calendar::Gregorian;
     use crate::time_scales::{TAI, TDB, TT};
@@ -225,6 +232,31 @@ mod tests {
             timestamp: BaseTime { seconds, subsecond },
         };
         let actual = Time::new(scale, seconds, subsecond);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_time_from_utc_datetime() {
+        let scale = TAI;
+        let datetime = UTCDateTime::new(Date::new(2023, 1, 1).unwrap(), UTC::default()).unwrap();
+        let expected = Time {
+            scale,
+            timestamp: BaseTime::from_utc_datetime(datetime),
+        };
+        let actual = Time::from_utc_datetime(scale, datetime);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_time_from_date_and_utc_timestamp() {
+        let scale = TAI;
+        let date = Date::new(2023, 1, 1).unwrap();
+        let utc = UTC::new(12, 0, 0, Subsecond::default()).unwrap();
+        let expected = Time {
+            scale,
+            timestamp: BaseTime::from_date_and_utc_timestamp(date, utc),
+        };
+        let actual = Time::from_date_and_utc_timestamp(scale, date, utc);
         assert_eq!(expected, actual);
     }
 
@@ -317,19 +349,6 @@ mod tests {
             expected,
             actual
         );
-    }
-
-    #[rstest]
-    #[case::equal(Time::j2000(TAI), Time::j2000(TAI), false)]
-    #[case::before(Time::j2000(TAI), Time::j2000(TAI) + TimeDelta::from_seconds(1), true)]
-    #[case::after(Time::j2000(TAI), Time::j2000(TAI) - TimeDelta::from_seconds(1), false)]
-    fn test_time_is_before(
-        #[case] time: Time<TAI>,
-        #[case] other: Time<TAI>,
-        #[case] expected: bool,
-    ) {
-        let actual = time.is_before(other);
-        assert_eq!(expected, actual);
     }
 
     #[test]

@@ -46,7 +46,7 @@ impl TryFrom<Time<TAI>> for UTCDateTime {
     /// Attempts to convert a `Time<TAI>` to a `UTCDateTime`, accounting for leap seconds. Returns
     /// [UTCUndefinedError] if the input `Time<TAI>` is before 1960-01-01 UTC, when UTC begins.
     fn try_from(tai: Time<TAI>) -> Result<Self, Self::Error> {
-        let delta = if tai.is_before(*tai_at_utc_1972_01_01()) {
+        let delta = if tai < *tai_at_utc_1972_01_01() {
             before1972::delta_tai_utc(tai)
         } else {
             from1972::delta_tai_utc(tai)

@@ -16,7 +16,7 @@ use crate::errors::LoxTimeError;
 
 /// An f64 value in the range [0.0, 1.0) representing a fraction of a second with femtosecond
 /// precision.
-#[derive(Debug, Default, Copy, Clone, PartialOrd)]
+#[derive(Debug, Default, Copy, Clone)]
 pub struct Subsecond(pub(crate) f64);
 
 /// Two Subseconds are considered equal if their absolute difference is less than 1 femtosecond.
@@ -29,10 +29,19 @@ impl PartialEq for Subsecond {
 // The underlying f64 is guaranteed to be in the range [0.0, 1.0).
 impl Eq for Subsecond {}
 
+impl PartialOrd for Subsecond {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 // The underlying f64 is guaranteed to be in the range [0.0, 1.0), and hence has a total ordering.
 impl Ord for Subsecond {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(other).unwrap()
+        match self.0.partial_cmp(&other.0) {
+            Some(ordering) => ordering,
+            None => unreachable!(),
+        }
     }
 }
 

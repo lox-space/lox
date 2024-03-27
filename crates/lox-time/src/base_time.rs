@@ -16,6 +16,7 @@ use std::ops::{Add, Sub};
 use num::{abs, ToPrimitive};
 
 use crate::calendar_dates::{CalendarDate, Date};
+use crate::constants;
 use crate::constants::i64::{
     SECONDS_PER_DAY, SECONDS_PER_HALF_DAY, SECONDS_PER_HOUR, SECONDS_PER_MINUTE,
 };
@@ -27,9 +28,8 @@ use crate::julian_dates::{Epoch, JulianDate, Unit};
 use crate::subsecond::Subsecond;
 use crate::utc::{UTCDateTime, UTC};
 use crate::wall_clock::WallClock;
-use crate::{constants, Time};
 
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
 /// `BaseTime` is the base time representation for time scales without leap seconds. It is measured
 /// relative to J2000. `BaseTime::default()` represents the epoch itself.
 ///
@@ -292,11 +292,11 @@ impl CalendarDate for BaseTime {
 
 #[cfg(test)]
 mod tests {
-    use crate::calendar_dates::Calendar::Gregorian;
     use float_eq::assert_float_eq;
     use rstest::rstest;
 
-    use crate::constants::i64::{SECONDS_PER_JULIAN_CENTURY, SECONDS_PER_JULIAN_YEAR};
+    use crate::calendar_dates::Calendar::Gregorian;
+    use crate::constants::i64::SECONDS_PER_JULIAN_CENTURY;
 
     use super::*;
 

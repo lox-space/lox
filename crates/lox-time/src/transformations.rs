@@ -11,18 +11,12 @@
 
 use mockall::automock;
 
-use lox_eop::DeltaUt1UtcProvider;
-
 use crate::base_time::BaseTime;
-use crate::calendar_dates::Date;
 use crate::constants::julian_dates::J77;
 use crate::deltas::TimeDelta;
-use crate::julian_dates::Epoch::ModifiedJulianDate;
 use crate::julian_dates::JulianDate;
-use crate::julian_dates::Unit::Days;
 use crate::subsecond::Subsecond;
 use crate::time_scales::{TimeScale, TAI, TCB, TCG, TDB, TT};
-use crate::utc::{UTCDateTime, UTC};
 use crate::wall_clock::WallClock;
 use crate::Time;
 

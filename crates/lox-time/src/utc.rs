@@ -9,7 +9,7 @@ use crate::julian_dates::{Epoch, JulianDate, Unit};
 use crate::subsecond::Subsecond;
 use crate::wall_clock::WallClock;
 
-mod transformations;
+pub mod transformations;
 
 /// A UTC timestamp with additional support for fractional seconds represented with femtosecond
 /// precision.
@@ -157,6 +157,7 @@ impl JulianDate for UTCDateTime {
 
 #[cfg(test)]
 mod tests {
+    use float_eq::assert_float_eq;
     use rstest::rstest;
 
     use super::*;
@@ -239,5 +240,19 @@ mod tests {
         let time = UTC::default();
         let actual = UTCDateTime::new(date, time);
         assert_eq!(expected, actual);
+    }
+
+    #[rstest]
+    #[case::non_leap_second(
+        UTCDateTime::new(Date::new(2000, 1, 1).unwrap(), UTC::default()).unwrap(),
+        2451544.5,
+    )]
+    #[case::leap_second(
+        UTCDateTime::new(Date::new(1999, 12, 31).unwrap(), UTC::new(23, 59, 60, Subsecond::default()).unwrap()).unwrap(),
+        2451544.499988426,
+    )]
+    fn test_utc_datetime_julian_date(#[case] datetime: UTCDateTime, #[case] expected: f64) {
+        let actual = datetime.julian_date(Epoch::JulianDate, Unit::Days);
+        assert_float_eq!(expected, actual, rel <= 1e-9);
     }
 }

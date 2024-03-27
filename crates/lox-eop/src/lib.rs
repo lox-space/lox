@@ -40,17 +40,6 @@ impl From<std::io::Error> for LoxEopError {
 
 type Mjd = f64;
 
-// The sole purpose of DeltaUt1UtcFromMjd is to allow the
-// eventual lox-eop delta provider to be mocked (which we definitely want to do across crate
-// boundaries).
-//
-// I considered making it a generic trait with a JulianDate parameter so we could accept anything
-// that can be transformed into an MJD, but we'd lose object safety, and honestly I don't see this
-// being used beyond our own UTCTransformer implementation.
-pub trait DeltaUt1UtcProvider {
-    fn delta_ut1_utc(&self, mjd: Mjd) -> Result<f64, LoxEopError>;
-}
-
 #[derive(Debug, Deserialize)]
 enum ValueType {
     #[serde(rename = "prediction")]
