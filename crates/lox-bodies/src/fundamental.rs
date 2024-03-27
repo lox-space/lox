@@ -11,5 +11,3 @@
 pub mod iers03;
 pub mod mhb2000;
 pub mod simon1994;
-
-type TDBJulianCenturiesSinceJ2000 = f64;

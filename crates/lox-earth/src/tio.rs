@@ -9,7 +9,7 @@
 //! Module tio exposes functions for calculating the Terrestrial Intermediate Origin (TIO) locator,
 //! s', which places the TIO on the equator of the Celestial Intermediate Pole (CIP).
 
-use lox_time::intervals::TTJulianCenturiesSinceJ2000;
+use lox_time::intervals::TTSinceJ2000;
 use lox_utils::math::RADIANS_IN_ARCSECOND;
 use lox_utils::types::Radians;
 
@@ -21,7 +21,7 @@ const SECULAR_DRIFT: ArcsecondsPerCentury = -47e-6;
 
 /// Approximate the TIO locator, s', in radians using the IAU 2000 model.
 #[inline]
-pub fn sp_00(t: TTJulianCenturiesSinceJ2000) -> Radians {
+pub fn sp_00(t: TTSinceJ2000) -> Radians {
     SECULAR_DRIFT * t * RADIANS_IN_ARCSECOND
 }
 

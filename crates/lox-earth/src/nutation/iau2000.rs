@@ -2,7 +2,7 @@ use std::f64::consts::TAU;
 
 pub(crate) use iau2000a::nutation_iau2000a;
 pub(crate) use iau2000b::nutation_iau2000b;
-use lox_time::intervals::TDBJulianCenturiesSinceJ2000;
+use lox_utils::types::units::JulianCenturies;
 
 use crate::nutation::{point1_microarcsec_to_rad, Nutation};
 
@@ -40,7 +40,7 @@ struct DelaunayArguments {
 /// Calculate the luni-solar nutation for `t` given `args` and coefficients for either models A or
 /// B.
 fn luni_solar_nutation(
-    t: TDBJulianCenturiesSinceJ2000,
+    centuries_since_j2000_tdb: JulianCenturies,
     args: &DelaunayArguments,
     coeffs: &[LuniSolarCoefficients],
 ) -> Nutation {
@@ -61,10 +61,12 @@ fn luni_solar_nutation(
             // Accumulate current term.
             let sin_arg = arg.sin();
             let cos_arg = arg.cos();
-            nut.longitude +=
-                (coeff.sin_psi + coeff.sin_psi_t * t) * sin_arg + coeff.cos_psi * cos_arg;
-            nut.obliquity +=
-                (coeff.cos_eps + coeff.cos_eps_t * t) * cos_arg + coeff.sin_eps * sin_arg;
+            nut.longitude += (coeff.sin_psi + coeff.sin_psi_t * centuries_since_j2000_tdb)
+                * sin_arg
+                + coeff.cos_psi * cos_arg;
+            nut.obliquity += (coeff.cos_eps + coeff.cos_eps_t * centuries_since_j2000_tdb)
+                * cos_arg
+                + coeff.sin_eps * sin_arg;
 
             nut
         });

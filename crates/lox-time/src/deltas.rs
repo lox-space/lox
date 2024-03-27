@@ -6,13 +6,13 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::subsecond::Subsecond;
-use num::ToPrimitive;
 use std::ops::{Add, Neg, Sub};
+
+use num::ToPrimitive;
 use thiserror::Error;
 
 use crate::constants::f64;
-
+use crate::subsecond::Subsecond;
 
 #[derive(Clone, Debug, Default, Error)]
 #[error("`{raw}` cannot be represented as a `TimeDelta`: {detail}")]

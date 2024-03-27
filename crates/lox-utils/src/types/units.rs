@@ -6,5 +6,14 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-pub mod julian_dates;
-pub mod units;
+//! Mod `units` exposes shared type aliases representing a variety of physical units.
+
+pub type Arcseconds = f64;
+
+pub type Microarcseconds = f64;
+
+pub type Radians = f64;
+
+pub type Seconds = f64;
+
+pub type JulianCenturies = f64;

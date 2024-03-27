@@ -8,11 +8,12 @@
 
 use std::collections::HashMap;
 
+use lox_utils::types::julian_dates::Epoch;
+
 use super::parser::{DafSpkError, Spk, SpkSegment, SpkType2Array, SpkType2Coefficients};
 
 type Position = (f64, f64, f64);
 type Velocity = (f64, f64, f64);
-type Epoch = f64;
 type Body = i32;
 
 impl Spk {

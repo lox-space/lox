@@ -47,9 +47,10 @@ impl PartialEq for LoxTimeError {
 
 #[cfg(test)]
 mod tests {
+    use rstest::rstest;
+
     use super::LoxTimeError::*;
     use super::*;
-    use rstest::rstest;
 
     #[rstest]
     #[case(InvalidDate(2024, 2, 30), InvalidDate(2024, 2, 30), true)]

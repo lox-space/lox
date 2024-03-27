@@ -12,6 +12,8 @@
 //!
 //! Data sourced from ftp://maia.usno.navy.mil/ser7/tai-utc.dat.
 
+use lox_utils::slices::is_sorted_asc;
+
 use crate::constants::f64::SECONDS_PER_DAY;
 use crate::deltas::TimeDelta;
 use crate::julian_dates::Epoch::ModifiedJulianDate;
@@ -20,7 +22,6 @@ use crate::julian_dates::Unit::Days;
 use crate::time_scales::TAI;
 use crate::utc::UTCDateTime;
 use crate::Time;
-use lox_utils::slices::is_sorted_asc;
 
 const EPOCHS: [u64; 14] = [
     36934, 37300, 37512, 37665, 38334, 38395, 38486, 38639, 38761, 38820, 38942, 39004, 39126,

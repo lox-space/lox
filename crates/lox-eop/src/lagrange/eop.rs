@@ -8,15 +8,16 @@
 
 use std::f64::consts::TAU;
 
+use num_traits::real::Real;
 use thiserror::Error;
 
 use lox_bodies::fundamental::iers03::mean_moon_sun_elongation_iers03;
 use lox_bodies::{Moon, Sun};
 use lox_utils::math::arcsec_to_rad_two_pi;
-use lox_utils::types::{Arcsec, Radians, Seconds};
+use lox_utils::types::julian_dates::ModifiedJulianDate;
+use lox_utils::types::units::{Arcseconds, Microarcseconds, Radians, Seconds};
 
 use crate::lagrange::eop::constants::{LUNI_SOLAR_TIDAL_TERMS, MJD_J2000, OCEANIC_TIDAL_TERMS};
-use crate::ModifiedJulianDate;
 
 mod constants;
 
@@ -35,9 +36,9 @@ pub struct ArgumentSizeMismatchError {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Arguments {
     /// x polar motion.
-    x: Vec<Arcsec>,
+    x: Vec<Arcseconds>,
     /// y polar motion.
-    y: Vec<Arcsec>,
+    y: Vec<Arcseconds>,
     /// UT1-UTC.
     t: Vec<Seconds>,
     /// Epochs of the data.
@@ -48,8 +49,8 @@ pub struct Arguments {
 
 impl Arguments {
     pub fn new(
-        x: Vec<Arcsec>,
-        y: Vec<Arcsec>,
+        x: Vec<Arcseconds>,
+        y: Vec<Arcseconds>,
         t: Vec<Seconds>,
         epochs: Vec<ModifiedJulianDate>,
         target_epoch: ModifiedJulianDate,
@@ -76,8 +77,8 @@ impl Arguments {
 /// The result of the Lagrangian interpolation of polar motion and UT1-UTC.
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct Interpolation {
-    x: Arcsec,
-    y: Arcsec,
+    x: Arcseconds,
+    y: Arcseconds,
     d_ut1_utc: ModifiedJulianDate,
 }
 
@@ -99,7 +100,7 @@ pub fn interpolate(args: Arguments) -> Interpolation {
 }
 
 /// χ (GMST + π) followed by Delaunay arguments l, l', F, D, Ω.
-type TidalArgs = [Arcsec; 6];
+type TidalArgs = [Arcseconds; 6];
 
 fn tidal_args(julian_centuries_since_j2000: f64) -> TidalArgs {
     [
@@ -116,22 +117,20 @@ fn tidal_args(julian_centuries_since_j2000: f64) -> TidalArgs {
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 struct OceanicTidalCorrection {
-    x: Arcsec,
-    y: Arcsec,
+    x: Arcseconds,
+    y: Arcseconds,
     t: Seconds,
 }
-
-type MicroArcsec = f64;
 
 struct OceanicTidalTerm {
     /// Coefficients of fundamental arguments χ (GMST + π), l, l', F, D, Ω
     coefficients: [i8; 6],
-    x_sin: MicroArcsec,
-    x_cos: MicroArcsec,
-    y_sin: MicroArcsec,
-    y_cos: MicroArcsec,
-    t_sin: MicroArcsec,
-    t_cos: MicroArcsec,
+    x_sin: Microarcseconds,
+    x_cos: Microarcseconds,
+    y_sin: Microarcseconds,
+    y_cos: Microarcseconds,
+    t_sin: Microarcseconds,
+    t_cos: Microarcseconds,
 }
 
 type RadiansPerDay = f64;
@@ -166,17 +165,17 @@ fn oceanic_tidal_correction(tidal_args: &TidalArgs) -> OceanicTidalCorrection {
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 struct LuniSolarTidalCorrection {
-    x: Arcsec,
-    y: Arcsec,
+    x: Arcseconds,
+    y: Arcseconds,
 }
 
 struct LuniSolarTidalTerm {
     /// Coefficients of fundamental arguments χ (GMST + π), l, l', F, D, Ω
     coefficients: [i8; 6],
-    x_sin: MicroArcsec,
-    x_cos: MicroArcsec,
-    y_sin: MicroArcsec,
-    y_cos: MicroArcsec,
+    x_sin: Microarcseconds,
+    x_cos: Microarcseconds,
+    y_sin: Microarcseconds,
+    y_cos: Microarcseconds,
 }
 
 /// Returns the luni-solar correction to polar motion.
@@ -240,8 +239,8 @@ mod tests {
     #[case::t_size_mismatch(vec![], vec![], vec![0.0], vec![], 0.0, Err(ArgumentSizeMismatchError { nx: 0, ny: 0, nt: 1, nepochs: 0 }))]
     #[case::epochs_size_mismatch(vec![], vec![], vec![], vec![0.0], 0.0, Err(ArgumentSizeMismatchError { nx: 0, ny: 0, nt: 0, nepochs: 1 }))]
     fn test_arguments_new(
-        #[case] x: Vec<Arcsec>,
-        #[case] y: Vec<Arcsec>,
+        #[case] x: Vec<Arcseconds>,
+        #[case] y: Vec<Arcseconds>,
         #[case] t: Vec<Seconds>,
         #[case] epochs: Vec<ModifiedJulianDate>,
         #[case] target_epoch: ModifiedJulianDate,
@@ -254,8 +253,8 @@ mod tests {
     const FINALS2000A_PATH: &str = "../../data/finals2000A.all.csv";
 
     struct UnwrappedEOPData {
-        x_pole: Vec<Arcsec>,
-        y_pole: Vec<Arcsec>,
+        x_pole: Vec<Arcseconds>,
+        y_pole: Vec<Arcseconds>,
         delta_ut1_utc: Vec<Seconds>,
         mjd: Vec<ModifiedJulianDate>,
     }

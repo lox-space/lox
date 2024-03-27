@@ -10,3 +10,4 @@ authors.workspace = true
 
 [dependencies]
 nom.workspace = true
+lox-utils.workspace = true

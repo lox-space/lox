@@ -8,9 +8,9 @@
 
 use std::fmt::{Display, Formatter};
 
-use lox_time::base_time::BaseTime;
 use pyo3::{pyclass, pymethods};
 
+use lox_time::base_time::BaseTime;
 use lox_time::calendar_dates::Date;
 use lox_time::julian_dates::JulianDate;
 use lox_time::subsecond::Subsecond;

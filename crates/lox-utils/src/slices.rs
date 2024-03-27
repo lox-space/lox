@@ -15,8 +15,9 @@ pub fn is_sorted_asc<T: Ord>(slice: &[T]) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use rstest::rstest;
+
+    use super::*;
 
     #[rstest]
     #[case(&[1, 2, 3, 4, 5], true)]

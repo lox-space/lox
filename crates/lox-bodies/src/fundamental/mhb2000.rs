@@ -14,14 +14,14 @@
 use std::f64::consts::TAU;
 
 use lox_utils::math::arcsec_to_rad_two_pi;
-use lox_utils::types::{Arcsec, Radians};
 
-use crate::fundamental::TDBJulianCenturiesSinceJ2000;
 use crate::{Moon, Neptune, Sun};
 
-pub fn mean_moon_sun_elongation_mhb2000_luni_solar(t: TDBJulianCenturiesSinceJ2000) -> Radians {
-    let arcsec: Arcsec = fast_polynomial::poly_array(
-        t,
+use lox_utils::types::units::{Arcseconds, , Radians};
+
+pub fn mean_moon_sun_elongation_mhb2000_luni_solar(centuries_since_j2000_tdb: JulianCenturies) -> Radians {
+    let arcsec: Arcseconds = fast_polynomial::poly_array(
+        centuries_since_j2000_tdb,
         &[
             1072260.70369,
             1602961601.2090,
@@ -33,14 +33,14 @@ pub fn mean_moon_sun_elongation_mhb2000_luni_solar(t: TDBJulianCenturiesSinceJ20
     arcsec_to_rad_two_pi(arcsec)
 }
 
-pub fn mean_moon_sun_elongation_mhb2000_planetary(t: TDBJulianCenturiesSinceJ2000) -> Radians {
-    fast_polynomial::poly_array(t, &[5.198466741, 7771.3771468121]) % TAU
+pub fn mean_moon_sun_elongation_mhb2000_planetary(centuries_since_j2000_tdb: JulianCenturies) -> Radians {
+    fast_polynomial::poly_array(centuries_since_j2000_tdb, &[5.198466741, 7771.3771468121]) % TAU
 }
 
 impl Sun {
-    pub fn mean_anomaly_mhb2000(&self, t: TDBJulianCenturiesSinceJ2000) -> Radians {
-        let arcsec: Arcsec = fast_polynomial::poly_array(
-            t,
+    pub fn mean_anomaly_mhb2000(&self, centuries_since_j2000_tdb: JulianCenturies) -> Radians {
+        let arcsec: Arcseconds = fast_polynomial::poly_array(
+            centuries_since_j2000_tdb,
             &[
                 1287104.79305,
                 129596581.0481,
@@ -54,28 +54,28 @@ impl Sun {
 }
 
 impl Moon {
-    pub fn mean_anomaly_mhb2000(&self, t: TDBJulianCenturiesSinceJ2000) -> Radians {
-        fast_polynomial::poly_array(t, &[2.35555598, 8328.6914269554]) % TAU
+    pub fn mean_anomaly_mhb2000(&self, centuries_since_j2000_tdb: JulianCenturies) -> Radians {
+        fast_polynomial::poly_array(centuries_since_j2000_tdb, &[2.35555598, 8328.6914269554]) % TAU
     }
 
     pub fn mean_longitude_minus_ascending_node_mean_longitude_mhb2000(
         &self,
-        t: TDBJulianCenturiesSinceJ2000,
+        centuries_since_j2000_tdb: JulianCenturies,
     ) -> Radians {
-        fast_polynomial::poly_array(t, &[1.627905234, 8433.466158131]) % TAU
+        fast_polynomial::poly_array(centuries_since_j2000_tdb, &[1.627905234, 8433.466158131]) % TAU
     }
 
     pub fn ascending_node_mean_longitude_mhb2000(
         &self,
-        t: TDBJulianCenturiesSinceJ2000,
+        centuries_since_j2000_tdb: JulianCenturies,
     ) -> Radians {
-        fast_polynomial::poly_array(t, &[2.18243920, -33.757045]) % TAU
+        fast_polynomial::poly_array(centuries_since_j2000_tdb, &[2.18243920, -33.757045]) % TAU
     }
 }
 
 impl Neptune {
-    pub fn mean_longitude_mhb2000(&self, t: TDBJulianCenturiesSinceJ2000) -> Radians {
-        fast_polynomial::poly_array(t, &[5.3211590, 3.81277740]) % TAU
+    pub fn mean_longitude_mhb2000(&self, centuries_since_j2000_tdb: JulianCenturies) -> Radians {
+        fast_polynomial::poly_array(centuries_since_j2000_tdb, &[5.3211590, 3.81277740]) % TAU
     }
 }
 
@@ -83,9 +83,11 @@ impl Neptune {
 mod tests {
     use float_eq::assert_float_eq;
 
+    use lox_utils::types::units::JulianCenturies;
+
     use super::*;
 
-    // Note that all expected values are outputs from the equivalent ERFA functions.
+// Note that all expected values are outputs from the equivalent ERFA functions.
 
     // Relative error tolerance for float_eq assertions.
     // This is somewhat loose, being based on observations of how closely our implementations
@@ -94,9 +96,9 @@ mod tests {
     const TOLERANCE: f64 = 1e-11;
 
     // Test cases for t.
-    const T_ZERO: TDBJulianCenturiesSinceJ2000 = 0.0;
-    const T_POSITIVE: TDBJulianCenturiesSinceJ2000 = 1.23456789;
-    const T_NEGATIVE: TDBJulianCenturiesSinceJ2000 = -1.23456789;
+    const T_ZERO: JulianCenturies =0.0;
+    const T_POSITIVE: JulianCenturies =1.23456789;
+    const T_NEGATIVE: JulianCenturies =-1.23456789;
 
     #[test]
     fn test_mean_moon_sun_elongation_mhb2000_luni_solar() {
