@@ -17,9 +17,11 @@ use lox_utils::math::arcsec_to_rad_two_pi;
 
 use crate::{Moon, Neptune, Sun};
 
-use lox_utils::types::units::{Arcseconds, , Radians};
+use lox_utils::types::units::{Arcseconds, JulianCenturies, Radians};
 
-pub fn mean_moon_sun_elongation_mhb2000_luni_solar(centuries_since_j2000_tdb: JulianCenturies) -> Radians {
+pub fn mean_moon_sun_elongation_mhb2000_luni_solar(
+    centuries_since_j2000_tdb: JulianCenturies,
+) -> Radians {
     let arcsec: Arcseconds = fast_polynomial::poly_array(
         centuries_since_j2000_tdb,
         &[
@@ -33,7 +35,9 @@ pub fn mean_moon_sun_elongation_mhb2000_luni_solar(centuries_since_j2000_tdb: Ju
     arcsec_to_rad_two_pi(arcsec)
 }
 
-pub fn mean_moon_sun_elongation_mhb2000_planetary(centuries_since_j2000_tdb: JulianCenturies) -> Radians {
+pub fn mean_moon_sun_elongation_mhb2000_planetary(
+    centuries_since_j2000_tdb: JulianCenturies,
+) -> Radians {
     fast_polynomial::poly_array(centuries_since_j2000_tdb, &[5.198466741, 7771.3771468121]) % TAU
 }
 
@@ -87,7 +91,7 @@ mod tests {
 
     use super::*;
 
-// Note that all expected values are outputs from the equivalent ERFA functions.
+    // Note that all expected values are outputs from the equivalent ERFA functions.
 
     // Relative error tolerance for float_eq assertions.
     // This is somewhat loose, being based on observations of how closely our implementations
@@ -96,9 +100,9 @@ mod tests {
     const TOLERANCE: f64 = 1e-11;
 
     // Test cases for t.
-    const T_ZERO: JulianCenturies =0.0;
-    const T_POSITIVE: JulianCenturies =1.23456789;
-    const T_NEGATIVE: JulianCenturies =-1.23456789;
+    const T_ZERO: JulianCenturies = 0.0;
+    const T_POSITIVE: JulianCenturies = 1.23456789;
+    const T_NEGATIVE: JulianCenturies = -1.23456789;
 
     #[test]
     fn test_mean_moon_sun_elongation_mhb2000_luni_solar() {

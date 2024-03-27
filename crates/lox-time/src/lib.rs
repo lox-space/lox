@@ -33,7 +33,6 @@ pub mod calendar_dates;
 pub mod constants;
 pub mod deltas;
 pub mod errors;
-pub mod intervals;
 pub mod julian_dates;
 pub mod subsecond;
 pub mod time_scales;

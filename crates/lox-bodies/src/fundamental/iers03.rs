@@ -15,7 +15,7 @@ use lox_utils::math::arcsec_to_rad_two_pi;
 
 use crate::{Earth, Jupiter, Mars, Mercury, Moon, Neptune, Saturn, Sun, Uranus, Venus};
 
-use lox_utils::types::units::{, Radians};
+use lox_utils::types::units::{JulianCenturies, Radians};
 
 /// General accumulated precession in longitude.
 pub fn general_accum_precession_in_longitude_iers03(
@@ -165,7 +165,7 @@ mod tests {
 
     use super::*;
 
-// Note that all expected values are outputs from the equivalent ERFA functions.
+    // Note that all expected values are outputs from the equivalent ERFA functions.
 
     // Relative error tolerance for float_eq assertions.
     // This is somewhat loose, being based on observations of how closely our implementations
@@ -174,9 +174,9 @@ mod tests {
     const TOLERANCE: f64 = 1e-11;
 
     // Test cases for t.
-    const T_ZERO: JulianCenturies =0.0;
-    const T_POSITIVE: JulianCenturies =1.23456789;
-    const T_NEGATIVE: JulianCenturies =-1.23456789;
+    const T_ZERO: JulianCenturies = 0.0;
+    const T_POSITIVE: JulianCenturies = 1.23456789;
+    const T_NEGATIVE: JulianCenturies = -1.23456789;
 
     #[test]
     fn test_general_accum_precession_in_longitude() {

@@ -17,3 +17,5 @@ pub type Radians = f64;
 pub type Seconds = f64;
 
 pub type JulianCenturies = f64;
+
+pub type Days = f64;
