@@ -255,4 +255,12 @@ mod tests {
         let actual = datetime.julian_date(Epoch::JulianDate, Unit::Days);
         assert_float_eq!(expected, actual, rel <= 1e-9);
     }
+
+    #[test]
+    fn test_utc_datetime_two_part_julian_date() {
+        let datetime = UTCDateTime::new(Date::new(2000, 1, 1).unwrap(), UTC::default()).unwrap();
+        let (jd, fd) = datetime.two_part_julian_date();
+        assert_float_eq!(2451544.0, jd, rel <= 1e-9);
+        assert_float_eq!(0.5, fd, rel <= 1e-9);
+    }
 }

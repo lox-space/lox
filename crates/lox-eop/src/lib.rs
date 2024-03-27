@@ -160,6 +160,7 @@ impl From<Vec<Record>> for Records {
 
 #[cfg(test)]
 mod tests {
+    use std::io;
     use std::path::Path;
 
     use super::*;
@@ -281,5 +282,24 @@ mod tests {
         assert!(first_2000a.unwrap().sigma_delta_psi.is_none());
         assert!(first_2000a.unwrap().delta_epsilon.is_none());
         assert!(first_2000a.unwrap().sigma_delta_epsilon.is_none());
+    }
+
+    #[test]
+    fn test_lox_eop_error_from_csv_error() {
+        // The csv::Error constructor is private, but we can create one using its implementation of
+        // From<io::Error>.
+        let io_error = io::Error::new(io::ErrorKind::NotFound, "file not found");
+        let csv_error = csv::Error::from(io_error);
+        let lox_eop_error = LoxEopError::from(csv_error);
+        let expected = LoxEopError::Csv("file not found".to_string());
+        assert_eq!(lox_eop_error, expected);
+    }
+
+    #[test]
+    fn test_lox_eop_error_from_io_error() {
+        let io_error = io::Error::new(io::ErrorKind::NotFound, "file not found");
+        let lox_eop_error = LoxEopError::from(io_error);
+        let expected = LoxEopError::Io("file not found".to_string());
+        assert_eq!(lox_eop_error, expected);
     }
 }
