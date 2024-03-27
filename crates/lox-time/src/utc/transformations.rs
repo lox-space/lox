@@ -28,8 +28,8 @@ impl From<UTCDateTime> for Time<TAI> {
             from1972::delta_utc_tai(utc)
         }
         .unwrap_or_else(|| {
-            // Impossible, since UTCDateTime objects are always in range.
-            panic!(
+            // UTCDateTime objects are always in range.
+            unreachable!(
                 "failed to calculate UTC-TAI delta for UTCDateTime `{:?}`",
                 utc
             );

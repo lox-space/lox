@@ -40,7 +40,7 @@ fn j2000_utc_leap_second_epochs() -> &'static [i64; 28] {
         MJD_LEAP_SECOND_EPOCHS.iter().enumerate().for_each(|(i, epoch)| {
             let j2000_epoch = ((*epoch as f64 - MJD_J2000) * SECONDS_PER_DAY).to_i64()
                 .unwrap_or_else(|| {
-                    panic!("cannot express leap second epoch `{}` relative to J2000 in seconds as an i64", epoch)
+                    unreachable!("cannot express leap second epoch `{}` relative to J2000 in seconds as an i64", epoch)
                 });
             j2000_epochs[i] = j2000_epoch;
         });

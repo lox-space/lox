@@ -220,6 +220,9 @@ pub trait CalendarDate {
 #[cfg(test)]
 mod tests {
     use crate::calendar_dates::{Calendar, Date};
+    use rstest::rstest;
+
+    use super::*;
 
     #[test]
     fn test_date_new_unchecked() {
@@ -228,5 +231,18 @@ mod tests {
         assert_eq!(2021, date.year);
         assert_eq!(1, date.month);
         assert_eq!(1, date.day);
+    }
+
+    #[rstest]
+    #[case::equal_same_calendar(Date { calendar: Calendar::Gregorian, year: 2000, month: 1, day: 1}, Date { calendar: Calendar::Gregorian, year: 2000, month: 1, day: 1}, Ordering::Equal)]
+    #[case::equal_different_calendar(Date { calendar: Calendar::Gregorian, year: 2000, month: 1, day: 1}, Date { calendar: Calendar::Julian, year: 2000, month: 1, day: 1}, Ordering::Equal)]
+    #[case::less_than_year(Date { calendar: Calendar::Gregorian, year: 1999, month: 1, day: 1}, Date { calendar: Calendar::Gregorian, year: 2000, month: 1, day: 1}, Ordering::Less)]
+    #[case::less_than_month(Date { calendar: Calendar::Gregorian, year: 2000, month: 1, day: 1}, Date { calendar: Calendar::Gregorian, year: 2000, month: 2, day: 1}, Ordering::Less)]
+    #[case::less_than_day(Date { calendar: Calendar::Gregorian, year: 2000, month: 1, day: 1}, Date { calendar: Calendar::Gregorian, year: 2000, month: 1, day: 2}, Ordering::Less)]
+    #[case::greater_than_year(Date { calendar: Calendar::Gregorian, year: 2001, month: 1, day: 1}, Date { calendar: Calendar::Gregorian, year: 2000, month: 1, day: 1}, Ordering::Greater)]
+    #[case::greater_than_month(Date { calendar: Calendar::Gregorian, year: 2000, month: 2, day: 1}, Date { calendar: Calendar::Gregorian, year: 2000, month: 1, day: 1}, Ordering::Greater)]
+    #[case::greater_than_day(Date { calendar: Calendar::Gregorian, year: 2000, month: 1, day: 2}, Date { calendar: Calendar::Gregorian, year: 2000, month: 1, day: 1}, Ordering::Greater)]
+    fn test_date_ord(#[case] lhs: Date, #[case] rhs: Date, #[case] expected: Ordering) {
+        assert_eq!(expected, lhs.cmp(&rhs));
     }
 }

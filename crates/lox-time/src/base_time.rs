@@ -285,7 +285,7 @@ impl CalendarDate for BaseTime {
         Date::from_days(days).unwrap_or_else(|err| {
             // The only error arising from this function relates to non-leap years with > 365 days,
             // which should not be possible for a `BaseTime` input.
-            panic!("BaseTime `{}` is unrepresentable as a date: {}", self, err)
+            unreachable!("BaseTime `{}` is unrepresentable as a date: {}", self, err)
         })
     }
 }

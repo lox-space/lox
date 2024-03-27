@@ -54,7 +54,7 @@ pub fn delta_utc_tai(utc: UTCDateTime) -> Option<TimeDelta> {
     let raw_delta =
         OFFSETS[position] + (mjd - DRIFT_EPOCHS[position] as f64) * DRIFT_RATES[position];
     let delta = TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|_| {
-        panic!(
+        unreachable!(
             "calculation of UTC-TAI delta produced an invalid TimeDelta: raw_delta={}",
             raw_delta,
         )
@@ -77,7 +77,7 @@ pub fn delta_tai_utc(tai: Time<TAI>) -> Option<TimeDelta> {
     let dt = mjd - DRIFT_EPOCHS[position] as f64 - offset / SECONDS_PER_DAY;
     let raw_delta = offset + dt * rate_tai;
     let delta = TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|_| {
-        panic!(
+        unreachable!(
             "calculation of TAI-UTC delta produced an invalid TimeDelta: raw_delta={}",
             raw_delta,
         )
