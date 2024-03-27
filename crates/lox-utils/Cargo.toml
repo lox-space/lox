@@ -10,3 +10,4 @@ thiserror.workspace = true
 
 [dev-dependencies]
 float_eq.workspace = true
+rstest.workspace = true

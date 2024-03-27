@@ -7,6 +7,7 @@
  */
 
 use crate::errors::LoxTimeError;
+use std::cmp::Ordering;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Calendar {
@@ -21,6 +22,26 @@ pub struct Date {
     year: i64,
     month: i64,
     day: i64,
+}
+
+impl PartialOrd for Date {
+    /// Naive implementation of PartialOrd which does not account for the different calendars.
+    // TODO: Implement a proper PartialOrd that accounts for the different calendars.
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Date {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.year.cmp(&other.year) {
+            Ordering::Equal => match self.month.cmp(&other.month) {
+                Ordering::Equal => self.day.cmp(&other.day),
+                other => other,
+            },
+            other => other,
+        }
+    }
 }
 
 const LAST_PROLEPTIC_JULIAN_DAY_J2K: i64 = -730122;
@@ -193,12 +214,15 @@ fn j2000(calendar: Calendar, year: i64, month: i64, day: i64) -> i64 {
 
 /// CalendarDate allows continuous time formats to report their date in their respective calendar.
 pub trait CalendarDate {
-    fn date(&self) -> Date;
+    fn calendar_date(&self) -> Date;
 }
 
 #[cfg(test)]
 mod tests {
     use crate::calendar_dates::{Calendar, Date};
+    use rstest::rstest;
+
+    use super::*;
 
     #[test]
     fn test_date_new_unchecked() {
@@ -207,5 +231,18 @@ mod tests {
         assert_eq!(2021, date.year);
         assert_eq!(1, date.month);
         assert_eq!(1, date.day);
+    }
+
+    #[rstest]
+    #[case::equal_same_calendar(Date { calendar: Calendar::Gregorian, year: 2000, month: 1, day: 1}, Date { calendar: Calendar::Gregorian, year: 2000, month: 1, day: 1}, Ordering::Equal)]
+    #[case::equal_different_calendar(Date { calendar: Calendar::Gregorian, year: 2000, month: 1, day: 1}, Date { calendar: Calendar::Julian, year: 2000, month: 1, day: 1}, Ordering::Equal)]
+    #[case::less_than_year(Date { calendar: Calendar::Gregorian, year: 1999, month: 1, day: 1}, Date { calendar: Calendar::Gregorian, year: 2000, month: 1, day: 1}, Ordering::Less)]
+    #[case::less_than_month(Date { calendar: Calendar::Gregorian, year: 2000, month: 1, day: 1}, Date { calendar: Calendar::Gregorian, year: 2000, month: 2, day: 1}, Ordering::Less)]
+    #[case::less_than_day(Date { calendar: Calendar::Gregorian, year: 2000, month: 1, day: 1}, Date { calendar: Calendar::Gregorian, year: 2000, month: 1, day: 2}, Ordering::Less)]
+    #[case::greater_than_year(Date { calendar: Calendar::Gregorian, year: 2001, month: 1, day: 1}, Date { calendar: Calendar::Gregorian, year: 2000, month: 1, day: 1}, Ordering::Greater)]
+    #[case::greater_than_month(Date { calendar: Calendar::Gregorian, year: 2000, month: 2, day: 1}, Date { calendar: Calendar::Gregorian, year: 2000, month: 1, day: 1}, Ordering::Greater)]
+    #[case::greater_than_day(Date { calendar: Calendar::Gregorian, year: 2000, month: 1, day: 2}, Date { calendar: Calendar::Gregorian, year: 2000, month: 1, day: 1}, Ordering::Greater)]
+    fn test_date_ord(#[case] lhs: Date, #[case] rhs: Date, #[case] expected: Ordering) {
+        assert_eq!(expected, lhs.cmp(&rhs));
     }
 }

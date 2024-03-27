@@ -17,7 +17,7 @@ pub trait TimeScale {
 }
 
 /// International Atomic Time.
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
 pub struct TAI;
 
 impl TimeScale for TAI {
@@ -26,7 +26,7 @@ impl TimeScale for TAI {
 }
 
 /// Barycentric Coordinate Time.
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
 pub struct TCB;
 
 impl TimeScale for TCB {
@@ -35,7 +35,7 @@ impl TimeScale for TCB {
 }
 
 /// Geocentric Coordinate Time.
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
 pub struct TCG;
 
 impl TimeScale for TCG {
@@ -44,7 +44,7 @@ impl TimeScale for TCG {
 }
 
 /// Barycentric Dynamical Time.
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
 pub struct TDB;
 
 impl TimeScale for TDB {
@@ -53,7 +53,7 @@ impl TimeScale for TDB {
 }
 
 /// Terrestrial Time.
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
 pub struct TT;
 
 impl TimeScale for TT {
@@ -62,7 +62,7 @@ impl TimeScale for TT {
 }
 
 /// Universal Time.
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
 pub struct UT1;
 
 impl TimeScale for UT1 {

@@ -14,9 +14,12 @@
 //! [UTC] and [Date] are used strictly as an I/O formats, avoiding much of the complexity inherent
 //! in working with leap seconds.
 
+use std::fmt;
+use std::fmt::{Display, Formatter};
+use std::ops::{Add, Sub};
+
 use crate::base_time::BaseTime;
-use crate::calendar_dates::Date;
-use crate::constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HOUR, SECONDS_PER_MINUTE};
+use crate::calendar_dates::{CalendarDate, Date};
 use crate::deltas::TimeDelta;
 use crate::julian_dates::{Epoch, JulianDate, Unit};
 use crate::subsecond::Subsecond;
@@ -24,9 +27,6 @@ use crate::time_scales::TimeScale;
 use crate::transformations::TransformTimeScale;
 use crate::utc::{UTCDateTime, UTC};
 use crate::wall_clock::WallClock;
-use std::fmt;
-use std::fmt::{Display, Formatter};
-use std::ops::{Add, Sub};
 
 pub mod base_time;
 pub mod calendar_dates;
@@ -35,7 +35,6 @@ pub mod deltas;
 pub mod errors;
 pub mod intervals;
 pub mod julian_dates;
-pub mod leap_seconds;
 pub mod subsecond;
 pub mod time_scales;
 pub mod transformations;
@@ -46,7 +45,7 @@ pub mod wall_clock;
 ///
 /// `Time` supports femtosecond precision, but be aware that many algorithms operating on `Time`s
 /// are not accurate to this level of precision.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
 pub struct Time<T: TimeScale + Copy> {
     scale: T,
     timestamp: BaseTime,
@@ -66,22 +65,16 @@ impl<T: TimeScale + Copy> Time<T> {
         Self { scale, timestamp }
     }
 
-    /// Instantiates a [Time] in the given scale from a date and UTC timestamp.
-    pub fn from_date_and_utc_timestamp(scale: T, date: Date, time: UTC) -> Self {
-        let day_in_seconds = date.j2000() * SECONDS_PER_DAY - SECONDS_PER_DAY / 2;
-        let hour_in_seconds = time.hour() * SECONDS_PER_HOUR;
-        let minute_in_seconds = time.minute() * SECONDS_PER_MINUTE;
-        let seconds = day_in_seconds + hour_in_seconds + minute_in_seconds + time.second();
-        let base_time = BaseTime {
-            seconds,
-            subsecond: time.subsecond(),
-        };
-        Self::from_base_time(scale, base_time)
+    /// Instantiates a [Time] in the given scale from a [UTCDateTime].
+    pub fn from_utc_datetime(scale: T, datetime: UTCDateTime) -> Self {
+        let timestamp = BaseTime::from_utc_datetime(datetime);
+        Self { scale, timestamp }
     }
 
-    /// Instantiates a [Time] in the given scale from a UTC datetime.
-    pub fn from_utc_datetime(scale: T, dt: UTCDateTime) -> Self {
-        Self::from_date_and_utc_timestamp(scale, dt.date(), dt.time())
+    /// Instantiates a [Time] in the given scale from a [Date] and [UTC] instance.
+    pub fn from_date_and_utc_timestamp(scale: T, date: Date, utc: UTC) -> Self {
+        let timestamp = BaseTime::from_date_and_utc_timestamp(date, utc);
+        Self { scale, timestamp }
     }
 
     /// Returns the epoch for the given [Epoch] in the given timescale.
@@ -210,18 +203,24 @@ impl<T: TimeScale + Copy> WallClock for Time<T> {
     }
 }
 
+impl<T: TimeScale + Copy> CalendarDate for Time<T> {
+    fn calendar_date(&self) -> Date {
+        self.timestamp.calendar_date()
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::calendar_dates::Calendar::Gregorian;
     use float_eq::assert_float_eq;
     use mockall::predicate;
 
-    use super::*;
-
+    use crate::calendar_dates::Calendar::Gregorian;
     use crate::time_scales::{TAI, TDB, TT};
     use crate::transformations::MockTransformTimeScale;
-    use crate::utc::{UTCDateTime, UTC};
+    use crate::utc::UTC;
     use crate::Time;
+
+    use super::*;
 
     #[test]
     fn test_time_new() {
@@ -237,12 +236,27 @@ mod tests {
     }
 
     #[test]
+    fn test_time_from_utc_datetime() {
+        let scale = TAI;
+        let datetime = UTCDateTime::new(Date::new(2023, 1, 1).unwrap(), UTC::default()).unwrap();
+        let expected = Time {
+            scale,
+            timestamp: BaseTime::from_utc_datetime(datetime),
+        };
+        let actual = Time::from_utc_datetime(scale, datetime);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
     fn test_time_from_date_and_utc_timestamp() {
-        let date = Date::new_unchecked(Gregorian, 2021, 1, 1);
-        let utc = UTC::new(12, 34, 56, Subsecond::default()).expect("time should be valid");
-        let datetime = UTCDateTime::new(date, utc);
-        let actual = Time::from_date_and_utc_timestamp(TAI, date, utc);
-        let expected = Time::from_utc_datetime(TAI, datetime);
+        let scale = TAI;
+        let date = Date::new(2023, 1, 1).unwrap();
+        let utc = UTC::new(12, 0, 0, Subsecond::default()).unwrap();
+        let expected = Time {
+            scale,
+            timestamp: BaseTime::from_date_and_utc_timestamp(date, utc),
+        };
+        let actual = Time::from_date_and_utc_timestamp(scale, date, utc);
         assert_eq!(expected, actual);
     }
 
@@ -527,7 +541,10 @@ mod tests {
     fn test_j2100() {
         let date = Date::new_unchecked(Gregorian, 2100, 1, 1);
         let utc = UTC::new(12, 0, 0, Subsecond::default()).expect("should be valid");
-        let time = Time::from_date_and_utc_timestamp(TDB, date, utc);
+        let time = Time {
+            scale: TDB,
+            timestamp: BaseTime::from_date_and_utc_timestamp(date, utc),
+        };
         assert_eq!(time.julian_date(Epoch::J2000, Unit::Days), 36525.0);
         assert_eq!(time.seconds_since_j2000(), 3155760000.0);
         assert_eq!(time.days_since_j2000(), 36525.0);
@@ -538,7 +555,10 @@ mod tests {
     fn test_two_part_julian_date() {
         let date = Date::new_unchecked(Gregorian, 2100, 1, 2);
         let utc = UTC::new(0, 0, 0, Subsecond::default()).expect("should be valid");
-        let time = Time::from_date_and_utc_timestamp(TDB, date, utc);
+        let time = Time {
+            scale: TDB,
+            timestamp: BaseTime::from_date_and_utc_timestamp(date, utc),
+        };
         let (jd1, jd2) = time.two_part_julian_date();
         assert_eq!(jd1, 2451545.0 + 36525.0);
         assert_eq!(jd2, 0.5);
@@ -565,6 +585,15 @@ mod tests {
             timestamp: time.timestamp - delta,
         };
         let actual = Time::j2000(TAI) - delta;
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_time_calendar_date() {
+        let base_time = BaseTime::default();
+        let expected = base_time.calendar_date();
+        let tai = Time::from_base_time(TAI, base_time);
+        let actual = tai.calendar_date();
         assert_eq!(expected, actual);
     }
 }

@@ -23,3 +23,5 @@ pub const J0: BaseTime = BaseTime::new(-SECONDS_BETWEEN_JD_AND_J2000, Subsecond(
 /// * 1977-01-01T00:00:32.184 TCG
 /// * 1977-01-01T00:00:32.184 TCB
 pub const J77: BaseTime = BaseTime::new(-SECONDS_BETWEEN_J1977_AND_J2000, Subsecond(0.0));
+
+pub const MJD_OFFSET: f64 = 2400000.5;

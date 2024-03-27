@@ -381,7 +381,6 @@ dependencies = [
  "dyn-clone",
  "fast_polynomial",
  "float_eq",
- "lox-time",
  "lox-utils",
  "thiserror",
 ]
@@ -422,7 +421,6 @@ dependencies = [
  "fast_polynomial",
  "float_eq",
  "lox-bodies",
- "lox-time",
  "lox-utils",
  "num-traits",
  "rstest",
@@ -464,6 +462,7 @@ name = "lox-time"
 version = "0.1.0"
 dependencies = [
  "float_eq",
+ "lox-eop",
  "lox-utils",
  "mockall",
  "num",
@@ -479,6 +478,7 @@ dependencies = [
  "fast_polynomial",
  "float_eq",
  "nalgebra",
+ "rstest",
  "thiserror",
 ]
 

@@ -13,10 +13,10 @@
 
 use std::f64::consts::TAU;
 
-use lox_time::intervals::TDBJulianCenturiesSinceJ2000;
 use lox_utils::math::arcsec_to_rad_two_pi;
 use lox_utils::types::{Arcsec, Radians};
 
+use crate::fundamental::TDBJulianCenturiesSinceJ2000;
 use crate::{Moon, Neptune, Sun};
 
 pub fn mean_moon_sun_elongation_mhb2000_luni_solar(t: TDBJulianCenturiesSinceJ2000) -> Radians {

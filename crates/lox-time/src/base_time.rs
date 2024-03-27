@@ -15,6 +15,7 @@ use std::ops::{Add, Sub};
 
 use num::{abs, ToPrimitive};
 
+use crate::calendar_dates::{CalendarDate, Date};
 use crate::constants;
 use crate::constants::i64::{
     SECONDS_PER_DAY, SECONDS_PER_HALF_DAY, SECONDS_PER_HOUR, SECONDS_PER_MINUTE,
@@ -25,9 +26,10 @@ use crate::constants::julian_dates::{
 use crate::deltas::TimeDelta;
 use crate::julian_dates::{Epoch, JulianDate, Unit};
 use crate::subsecond::Subsecond;
+use crate::utc::{UTCDateTime, UTC};
 use crate::wall_clock::WallClock;
 
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
 /// `BaseTime` is the base time representation for time scales without leap seconds. It is measured
 /// relative to J2000. `BaseTime::default()` represents the epoch itself.
 ///
@@ -50,6 +52,23 @@ pub struct BaseTime {
 impl BaseTime {
     pub const fn new(seconds: i64, subsecond: Subsecond) -> Self {
         Self { seconds, subsecond }
+    }
+
+    /// Instantiates a [BaseTime] from a date and UTC timestamp.
+    pub fn from_date_and_utc_timestamp(date: Date, time: UTC) -> Self {
+        let day_in_seconds = date.j2000() * SECONDS_PER_DAY - SECONDS_PER_DAY / 2;
+        let hour_in_seconds = time.hour() * SECONDS_PER_HOUR;
+        let minute_in_seconds = time.minute() * SECONDS_PER_MINUTE;
+        let seconds = day_in_seconds + hour_in_seconds + minute_in_seconds + time.second();
+        BaseTime {
+            seconds,
+            subsecond: time.subsecond(),
+        }
+    }
+
+    /// Instantiates a [BaseTime] from a UTC datetime.
+    pub fn from_utc_datetime(dt: UTCDateTime) -> Self {
+        Self::from_date_and_utc_timestamp(dt.date(), dt.time())
     }
 
     pub fn from_epoch(epoch: Epoch) -> Self {
@@ -174,26 +193,39 @@ impl Sub<TimeDelta> for BaseTime {
 impl WallClock for BaseTime {
     fn hour(&self) -> i64 {
         // Since J2000 is taken from midday, we offset by half a day to get the wall clock hour.
-        let day_seconds: i64 = if self.is_negative() {
-            SECONDS_PER_DAY - (abs(self.seconds) + SECONDS_PER_HALF_DAY) % SECONDS_PER_DAY
+        let seconds_after_midnight: i64 = if self.is_negative() {
+            let seconds_before_midnight =
+                (abs(self.seconds) + SECONDS_PER_HALF_DAY) % SECONDS_PER_DAY;
+            if seconds_before_midnight == 0 {
+                return 0;
+            }
+            SECONDS_PER_DAY - seconds_before_midnight
         } else {
             (self.seconds + SECONDS_PER_HALF_DAY) % SECONDS_PER_DAY
         };
-        day_seconds / SECONDS_PER_HOUR
+        seconds_after_midnight / SECONDS_PER_HOUR
     }
 
     fn minute(&self) -> i64 {
-        let hour_seconds: i64 = if self.is_negative() {
-            SECONDS_PER_HOUR - abs(self.seconds) % SECONDS_PER_HOUR
+        let seconds_after_hour: i64 = if self.is_negative() {
+            let seconds_before_hour = abs(self.seconds) % SECONDS_PER_HOUR;
+            if seconds_before_hour == 0 {
+                return 0;
+            }
+            SECONDS_PER_HOUR - seconds_before_hour
         } else {
             self.seconds % SECONDS_PER_HOUR
         };
-        hour_seconds / SECONDS_PER_MINUTE
+        seconds_after_hour / SECONDS_PER_MINUTE
     }
 
     fn second(&self) -> i64 {
         if self.is_negative() {
-            SECONDS_PER_MINUTE - abs(self.seconds) % SECONDS_PER_MINUTE
+            let seconds_before_minute = abs(self.seconds) % SECONDS_PER_MINUTE;
+            if seconds_before_minute == 0 {
+                return 0;
+            }
+            SECONDS_PER_MINUTE - seconds_before_minute
         } else {
             self.seconds % SECONDS_PER_MINUTE
         }
@@ -237,11 +269,33 @@ impl JulianDate for BaseTime {
     }
 }
 
+impl CalendarDate for BaseTime {
+    /// Convert a `BaseTime` to a `Date` using the Gregorian calendar. This implementation has no
+    /// awareness of leap seconds. If required, callers must account for leap seconds manually,
+    /// or use the higher-level conversions from UTC to continuous timescales, which provide this
+    /// functionality.
+    fn calendar_date(&self) -> Date {
+        // Add half a day to get a time measured from midnight rather than midday.
+        let seconds = self.seconds + SECONDS_PER_HALF_DAY;
+        let mut time = seconds % SECONDS_PER_DAY;
+        if time < 0 {
+            time += SECONDS_PER_DAY;
+        }
+        let days = (seconds - time) / SECONDS_PER_DAY;
+        Date::from_days(days).unwrap_or_else(|err| {
+            // The only error arising from this function relates to non-leap years with > 365 days,
+            // which should not be possible for a `BaseTime` input.
+            unreachable!("BaseTime `{}` is unrepresentable as a date: {}", self, err)
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use float_eq::assert_float_eq;
     use rstest::rstest;
 
+    use crate::calendar_dates::Calendar::Gregorian;
     use crate::constants::i64::SECONDS_PER_JULIAN_CENTURY;
 
     use super::*;
@@ -252,6 +306,29 @@ mod tests {
         let subsecond = Subsecond(0.123_456_789_012_345);
         let expected = BaseTime { seconds, subsecond };
         let actual = BaseTime::new(seconds, subsecond);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_base_time_from_utc_datetime() {
+        let date = Date::new_unchecked(Gregorian, 2021, 1, 1);
+        let utc = UTC::new(12, 34, 56, Subsecond::default()).expect("time should be valid");
+        let datetime = UTCDateTime::new(date, utc).unwrap();
+        let actual = BaseTime::from_utc_datetime(datetime);
+        let expected = BaseTime {
+            seconds: 662776496,
+            subsecond: Subsecond::default(),
+        };
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_base_time_from_date_and_utc_timestamp() {
+        let date = Date::new_unchecked(Gregorian, 2021, 1, 1);
+        let utc = UTC::new(12, 34, 56, Subsecond::default()).expect("time should be valid");
+        let datetime = UTCDateTime::new(date, utc).unwrap();
+        let actual = BaseTime::from_date_and_utc_timestamp(date, utc);
+        let expected = BaseTime::from_utc_datetime(datetime);
         assert_eq!(expected, actual);
     }
 
@@ -310,11 +387,14 @@ mod tests {
     #[case::zero_value(BaseTime { seconds: 0, subsecond: Subsecond::default() }, 12)]
     #[case::one_femtosecond_less_than_an_hour(BaseTime { seconds: SECONDS_PER_HOUR - 1, subsecond: MAX_FEMTOSECONDS, }, 12)]
     #[case::exactly_one_hour(BaseTime { seconds: SECONDS_PER_HOUR, subsecond: Subsecond::default() }, 13)]
+    #[case::half_day(BaseTime { seconds: SECONDS_PER_DAY / 2, subsecond: Subsecond::default() }, 0)]
+    #[case::negative_half_day(BaseTime { seconds: -SECONDS_PER_DAY / 2, subsecond: Subsecond::default() }, 0)]
     #[case::one_day_and_one_hour(BaseTime { seconds: SECONDS_PER_HOUR * 25, subsecond: Subsecond::default() }, 13)]
     #[case::one_femtosecond_less_than_the_epoch(BaseTime { seconds: - 1, subsecond: MAX_FEMTOSECONDS, }, 11)]
     #[case::one_hour_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_HOUR, subsecond: Subsecond::default() }, 11)]
     #[case::one_hour_and_one_femtosecond_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_HOUR - 1, subsecond: MAX_FEMTOSECONDS, }, 10)]
     #[case::one_day_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_DAY, subsecond: Subsecond::default() }, 12)]
+    #[case::one_day_and_one_hour_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_DAY - SECONDS_PER_HOUR, subsecond: Subsecond::default() }, 11)]
     #[case::two_days_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_DAY * 2, subsecond: Subsecond::default() }, 12)]
     fn test_base_time_wall_clock_hour(#[case] time: BaseTime, #[case] expected: i64) {
         let actual = time.hour();
@@ -328,6 +408,7 @@ mod tests {
     #[case::one_femtosecond_less_than_an_hour(BaseTime { seconds: SECONDS_PER_HOUR - 1, subsecond: MAX_FEMTOSECONDS, }, 59)]
     #[case::exactly_one_hour(BaseTime { seconds: SECONDS_PER_HOUR, subsecond: Subsecond::default() }, 0)]
     #[case::one_hour_and_one_minute(BaseTime { seconds: SECONDS_PER_HOUR + SECONDS_PER_MINUTE, subsecond: Subsecond::default() }, 1)]
+    #[case::one_hour_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_HOUR, subsecond: Subsecond::default() }, 0)]
     #[case::one_femtosecond_less_than_the_epoch(BaseTime { seconds: - 1, subsecond: MAX_FEMTOSECONDS, }, 59)]
     #[case::one_minute_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_MINUTE, subsecond: Subsecond::default() }, 59)]
     #[case::one_minute_and_one_femtosecond_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_MINUTE - 1, subsecond: MAX_FEMTOSECONDS, }, 58)]
@@ -346,6 +427,7 @@ mod tests {
     #[case::one_femtosecond_less_than_the_epoch(BaseTime { seconds: - 1, subsecond: MAX_FEMTOSECONDS, }, 59)]
     #[case::one_second_less_than_the_epoch(BaseTime { seconds: - 1, subsecond: Subsecond::default() }, 59)]
     #[case::one_second_and_one_femtosecond_less_than_the_epoch(BaseTime { seconds: - 2, subsecond: MAX_FEMTOSECONDS, }, 58)]
+    #[case::one_minute_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_MINUTE, subsecond: Subsecond::default() }, 0)]
     fn test_base_time_wall_clock_second(#[case] time: BaseTime, #[case] expected: i64) {
         let actual = time.second();
         assert_eq!(expected, actual);
@@ -516,5 +598,16 @@ mod tests {
         let expected = 123.123;
         let actual = time.to_f64();
         assert_float_eq!(expected, actual, abs <= 1e-15);
+    }
+
+    #[rstest]
+    #[case::j2000(BaseTime::default(), Date::new(2000, 1, 1).unwrap())]
+    #[case::next_day(BaseTime { seconds: SECONDS_PER_DAY, subsecond: Subsecond::default()}, Date::new(2000, 1, 2).unwrap())]
+    #[case::leap_year(BaseTime { seconds: SECONDS_PER_DAY * 366, subsecond: Subsecond::default()}, Date::new(2001, 1, 1).unwrap())]
+    #[case::non_leap_year(BaseTime { seconds: SECONDS_PER_DAY * (366 + 365), subsecond: Subsecond::default()}, Date::new(2002, 1, 1).unwrap())]
+    #[case::negative_time(BaseTime { seconds: -SECONDS_PER_DAY, subsecond: Subsecond::default()}, Date::new(1999, 12, 31).unwrap())]
+    fn test_base_time_calendar_date(#[case] base_time: BaseTime, #[case] expected: Date) {
+        let actual = base_time.calendar_date();
+        assert_eq!(expected, actual);
     }
 }

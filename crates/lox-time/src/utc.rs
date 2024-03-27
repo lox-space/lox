@@ -1,9 +1,15 @@
 use std::fmt::Display;
 
-use crate::calendar_dates::Date;
+use crate::base_time::BaseTime;
+use thiserror::Error;
+
+use crate::calendar_dates::{CalendarDate, Date};
 use crate::errors::LoxTimeError;
+use crate::julian_dates::{Epoch, JulianDate, Unit};
 use crate::subsecond::Subsecond;
 use crate::wall_clock::WallClock;
+
+pub mod transformations;
 
 /// A UTC timestamp with additional support for fractional seconds represented with femtosecond
 /// precision.
@@ -12,7 +18,7 @@ use crate::wall_clock::WallClock;
 /// component to 60. However, it has no awareness of whether a user-specified leap second is valid.
 /// It is intended strictly as an IO time format which must be converted to a continuous time format
 /// to be used in calculations.
-#[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct UTC {
     hour: u8,
     minute: u8,
@@ -88,15 +94,38 @@ impl WallClock for UTC {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct UTCDateTime {
     date: Date,
     time: UTC,
 }
 
+#[derive(Clone, Copy, Debug, Error, PartialEq)]
+#[error("UTC is not defined for dates before 1960-01-01")]
+/// UTC is not defined for dates before 1960-01-01. Attempting to create a `UTCDateTime` with such
+/// a date results in this error.
+pub struct UTCUndefinedError;
+
 impl UTCDateTime {
-    pub fn new(date: Date, time: UTC) -> Self {
-        Self { date, time }
+    pub fn new(date: Date, time: UTC) -> Result<Self, UTCUndefinedError> {
+        // TODO: This is a naïve check that assumes the input calendar is Gregorian. We need the
+        // ability to convert dates between calendars to make this check more robust.
+        if date.year() <= 1959 {
+            Err(UTCUndefinedError)
+        } else {
+            Ok(Self { date, time })
+        }
+    }
+
+    fn from_base_time(base_time: BaseTime) -> Result<Self, UTCUndefinedError> {
+        let time = UTC {
+            hour: base_time.hour() as u8,
+            minute: base_time.minute() as u8,
+            second: base_time.second() as u8,
+            subsecond: base_time.subsecond,
+        };
+        let date = base_time.calendar_date();
+        Self::new(date, time)
     }
 
     pub fn date(&self) -> Date {
@@ -108,9 +137,28 @@ impl UTCDateTime {
     }
 }
 
+/// Since Julian dates are unable to represent leap seconds unambiguously, this implementation
+/// returns pseudo-Julian dates following the ERFA convention such that, if the input is a leap
+/// second, the Julian date is the same as the previous second.
+impl JulianDate for UTCDateTime {
+    fn julian_date(&self, epoch: Epoch, unit: Unit) -> f64 {
+        let mut base_time = BaseTime::from_utc_datetime(*self);
+        if self.time.second == 60 {
+            base_time.seconds -= 1;
+        }
+        base_time.julian_date(epoch, unit)
+    }
+
+    fn two_part_julian_date(&self) -> (f64, f64) {
+        let jd = self.julian_date(Epoch::JulianDate, Unit::Days);
+        (jd.trunc(), jd.fract())
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::calendar_dates::Calendar::Gregorian;
+    use float_eq::assert_float_eq;
+    use rstest::rstest;
 
     use super::*;
 
@@ -166,12 +214,53 @@ mod tests {
         assert_eq!(TIME.femtosecond(), 123);
     }
 
-    #[test]
-    fn test_utc_datetime_new() {
-        let date = Date::new_unchecked(Gregorian, 2021, 1, 1);
-        let time = UTC::new(12, 34, 56, Subsecond::default()).expect("time should be valid");
-        let expected = UTCDateTime { date, time };
+    #[rstest]
+    #[case::ok(
+        Date::new(2021, 1, 1).unwrap(),
+        Ok(UTCDateTime {
+            date: Date::new(2021, 1, 1).unwrap(),
+            time: UTC::default(),
+        }),
+    )]
+    #[case::y1960(
+        Date::new(1960, 1, 1).unwrap(),
+        Ok(UTCDateTime {
+            date: Date::new(1960, 1, 1).unwrap(),
+            time: UTC::default(),
+        }),
+    )]
+    #[case::before_1960(
+        Date::new(1959, 12, 31).unwrap(),
+        Err(UTCUndefinedError),
+    )]
+    fn test_utc_datetime_new(
+        #[case] date: Date,
+        #[case] expected: Result<UTCDateTime, UTCUndefinedError>,
+    ) {
+        let time = UTC::default();
         let actual = UTCDateTime::new(date, time);
         assert_eq!(expected, actual);
+    }
+
+    #[rstest]
+    #[case::non_leap_second(
+        UTCDateTime::new(Date::new(2000, 1, 1).unwrap(), UTC::default()).unwrap(),
+        2451544.5,
+    )]
+    #[case::leap_second(
+        UTCDateTime::new(Date::new(1999, 12, 31).unwrap(), UTC::new(23, 59, 60, Subsecond::default()).unwrap()).unwrap(),
+        2451544.499988426,
+    )]
+    fn test_utc_datetime_julian_date(#[case] datetime: UTCDateTime, #[case] expected: f64) {
+        let actual = datetime.julian_date(Epoch::JulianDate, Unit::Days);
+        assert_float_eq!(expected, actual, rel <= 1e-9);
+    }
+
+    #[test]
+    fn test_utc_datetime_two_part_julian_date() {
+        let datetime = UTCDateTime::new(Date::new(2000, 1, 1).unwrap(), UTC::default()).unwrap();
+        let (jd, fd) = datetime.two_part_julian_date();
+        assert_float_eq!(2451544.0, jd, rel <= 1e-9);
+        assert_float_eq!(0.5, fd, rel <= 1e-9);
     }
 }
