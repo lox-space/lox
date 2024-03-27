@@ -5,9 +5,9 @@ edition = "2021"
 
 [dependencies]
 fast_polynomial.workspace = true
+float_eq.workspace = true
 nalgebra.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
-float_eq.workspace = true
 rstest.workspace = true
