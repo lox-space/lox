@@ -15,9 +15,8 @@ use lox_bodies::fundamental::iers03::{
     general_accum_precession_in_longitude_iers03, mean_moon_sun_elongation_iers03,
 };
 use lox_bodies::{Earth, Moon, Sun, Venus};
-use lox_time::intervals::TDBJulianCenturiesSinceJ2000;
 use lox_utils::math::arcsec_to_rad;
-use lox_utils::types::Radians;
+use lox_utils::types::units::{JulianCenturies, Radians};
 
 mod terms;
 
@@ -26,26 +25,26 @@ type FundamentalArgs = [Radians; 8];
 
 /// Computes the Celestial Intermediate Origin (CIO) locator s, in radians, given the (X, Y)
 /// coordinates of the Celestial Intermediate Pole (CIP).
-pub fn s(t: TDBJulianCenturiesSinceJ2000, xy: DVec2) -> Radians {
-    let fundamental_args = fundamental_args(t);
+pub fn s(centuries_since_j2000_tdb: JulianCenturies, xy: DVec2) -> Radians {
+    let fundamental_args = fundamental_args(centuries_since_j2000_tdb);
     let evaluated_terms = evaluate_terms(&fundamental_args);
-    let arcsec = fast_polynomial::poly_array(t, &evaluated_terms);
+    let arcsec = fast_polynomial::poly_array(centuries_since_j2000_tdb, &evaluated_terms);
     let radians = arcsec_to_rad(arcsec);
     radians - xy[0] * xy[1] / 2.0
 }
 
-fn fundamental_args(t: TDBJulianCenturiesSinceJ2000) -> FundamentalArgs {
+fn fundamental_args(centuries_since_j2000_tdb: JulianCenturies) -> FundamentalArgs {
     // The output of the CIO calculation is dependent on the ordering of these arguments. DO NOT
     // EDIT.
     [
-        Moon.mean_anomaly_iers03(t),
-        Sun.mean_anomaly_iers03(t),
-        Moon.mean_longitude_minus_ascending_node_mean_longitude_iers03(t),
-        mean_moon_sun_elongation_iers03(t),
-        Moon.ascending_node_mean_longitude_iers03(t),
-        Venus.mean_longitude_iers03(t),
-        Earth.mean_longitude_iers03(t),
-        general_accum_precession_in_longitude_iers03(t),
+        Moon.mean_anomaly_iers03(centuries_since_j2000_tdb),
+        Sun.mean_anomaly_iers03(centuries_since_j2000_tdb),
+        Moon.mean_longitude_minus_ascending_node_mean_longitude_iers03(centuries_since_j2000_tdb),
+        mean_moon_sun_elongation_iers03(centuries_since_j2000_tdb),
+        Moon.ascending_node_mean_longitude_iers03(centuries_since_j2000_tdb),
+        Venus.mean_longitude_iers03(centuries_since_j2000_tdb),
+        Earth.mean_longitude_iers03(centuries_since_j2000_tdb),
+        general_accum_precession_in_longitude_iers03(centuries_since_j2000_tdb),
     ]
 }
 
@@ -88,28 +87,28 @@ mod tests {
 
     #[test]
     fn test_s_jd0() {
-        let jd0: TDBJulianCenturiesSinceJ2000 = -67.11964407939767;
+        let jd0: JulianCenturies = -67.11964407939767;
         let xy = xy(jd0);
         assert_float_eq!(s(jd0, xy), -0.0723985415686306, rel <= TOLERANCE);
     }
 
     #[test]
     fn test_s_j2000() {
-        let j2000: TDBJulianCenturiesSinceJ2000 = 0.0;
+        let j2000: JulianCenturies = 0.0;
         let xy = xy(j2000);
         assert_float_eq!(s(j2000, xy), -0.00000001013396519178, rel <= TOLERANCE);
     }
 
     #[test]
     fn test_s_j2100() {
-        let j2100: TDBJulianCenturiesSinceJ2000 = 1.0;
+        let j2100: JulianCenturies = 1.0;
         let xy = xy(j2100);
         assert_float_eq!(s(j2100, xy), -0.00000000480511934533, rel <= TOLERANCE);
     }
 
     #[test]
     fn test_fundamental_args_ordering() {
-        let j2000: TDBJulianCenturiesSinceJ2000 = 0.0;
+        let j2000: JulianCenturies = 0.0;
         let actual = fundamental_args(j2000);
         let expected = [
             Moon.mean_anomaly_iers03(j2000),

@@ -10,10 +10,9 @@ use std::fmt::{Debug, Display, Formatter};
 
 use glam::{DMat3, DVec3};
 
-pub mod iau;
+use lox_utils::types::julian_dates::Epoch;
 
-// TODO: Replace with proper `Epoch` type
-type Epoch = f64;
+pub mod iau;
 
 pub trait ReferenceFrame {}
 

@@ -12,20 +12,25 @@
 use std::f64::consts::TAU;
 
 use lox_utils::math::arcsec_to_rad_two_pi;
-use lox_utils::types::Radians;
 
-use crate::fundamental::TDBJulianCenturiesSinceJ2000;
 use crate::{Earth, Jupiter, Mars, Mercury, Moon, Neptune, Saturn, Sun, Uranus, Venus};
 
+use lox_utils::types::units::{JulianCenturies, Radians};
+
 /// General accumulated precession in longitude.
-pub fn general_accum_precession_in_longitude_iers03(t: TDBJulianCenturiesSinceJ2000) -> Radians {
-    fast_polynomial::poly_array(t, &[0.0, 0.024381750, 0.00000538691])
+pub fn general_accum_precession_in_longitude_iers03(
+    centuries_since_j2000_tdb: JulianCenturies,
+) -> Radians {
+    fast_polynomial::poly_array(
+        centuries_since_j2000_tdb,
+        &[0.0, 0.024381750, 0.00000538691],
+    )
 }
 
 /// Mean elongation of the Moon from the Sun.
-pub fn mean_moon_sun_elongation_iers03(t: TDBJulianCenturiesSinceJ2000) -> Radians {
+pub fn mean_moon_sun_elongation_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Radians {
     let arcsec: f64 = fast_polynomial::poly_array(
-        t,
+        centuries_since_j2000_tdb,
         &[
             1072260.703692,
             1602961601.2090,
@@ -38,9 +43,9 @@ pub fn mean_moon_sun_elongation_iers03(t: TDBJulianCenturiesSinceJ2000) -> Radia
 }
 
 impl Sun {
-    pub fn mean_anomaly_iers03(&self, t: TDBJulianCenturiesSinceJ2000) -> Radians {
+    pub fn mean_anomaly_iers03(&self, centuries_since_j2000_tdb: JulianCenturies) -> Radians {
         let arcsec: f64 = fast_polynomial::poly_array(
-            t,
+            centuries_since_j2000_tdb,
             &[
                 1287104.793048,
                 129596581.0481,
@@ -54,9 +59,9 @@ impl Sun {
 }
 
 impl Moon {
-    pub fn mean_anomaly_iers03(&self, t: TDBJulianCenturiesSinceJ2000) -> Radians {
+    pub fn mean_anomaly_iers03(&self, centuries_since_j2000_tdb: JulianCenturies) -> Radians {
         let arcsec: f64 = fast_polynomial::poly_array(
-            t,
+            centuries_since_j2000_tdb,
             &[
                 485868.249036,
                 1717915923.2178,
@@ -70,10 +75,10 @@ impl Moon {
 
     pub fn mean_longitude_minus_ascending_node_mean_longitude_iers03(
         &self,
-        t: TDBJulianCenturiesSinceJ2000,
+        centuries_since_j2000_tdb: JulianCenturies,
     ) -> Radians {
         let arcsec = fast_polynomial::poly_array(
-            t,
+            centuries_since_j2000_tdb,
             &[
                 335779.526232,
                 1739527262.8478,
@@ -85,9 +90,12 @@ impl Moon {
         arcsec_to_rad_two_pi(arcsec)
     }
 
-    pub fn ascending_node_mean_longitude_iers03(&self, t: TDBJulianCenturiesSinceJ2000) -> Radians {
+    pub fn ascending_node_mean_longitude_iers03(
+        &self,
+        centuries_since_j2000_tdb: JulianCenturies,
+    ) -> Radians {
         let arcsec = fast_polynomial::poly_array(
-            t,
+            centuries_since_j2000_tdb,
             &[450160.398036, -6962890.5431, 7.4722, 0.007702, -0.00005939],
         );
         arcsec_to_rad_two_pi(arcsec)
@@ -96,57 +104,57 @@ impl Moon {
 
 impl Mercury {
     #[inline]
-    pub fn mean_longitude_iers03(&self, t: TDBJulianCenturiesSinceJ2000) -> Radians {
-        (4.402608842 + 2608.7903141574 * t) % TAU
+    pub fn mean_longitude_iers03(&self, centuries_since_j2000_tdb: JulianCenturies) -> Radians {
+        (4.402608842 + 2608.7903141574 * centuries_since_j2000_tdb) % TAU
     }
 }
 
 impl Venus {
     #[inline]
-    pub fn mean_longitude_iers03(&self, t: TDBJulianCenturiesSinceJ2000) -> Radians {
-        (3.176146697 + 1021.3285546211 * t) % TAU
+    pub fn mean_longitude_iers03(&self, centuries_since_j2000_tdb: JulianCenturies) -> Radians {
+        (3.176146697 + 1021.3285546211 * centuries_since_j2000_tdb) % TAU
     }
 }
 
 impl Earth {
     #[inline]
-    pub fn mean_longitude_iers03(&self, t: TDBJulianCenturiesSinceJ2000) -> Radians {
-        (1.753470314 + 628.3075849991 * t) % TAU
+    pub fn mean_longitude_iers03(&self, centuries_since_j2000_tdb: JulianCenturies) -> Radians {
+        (1.753470314 + 628.3075849991 * centuries_since_j2000_tdb) % TAU
     }
 }
 
 impl Mars {
     #[inline]
-    pub fn mean_longitude_iers03(&self, t: TDBJulianCenturiesSinceJ2000) -> Radians {
-        (6.203480913 + 334.0612426700 * t) % TAU
+    pub fn mean_longitude_iers03(&self, centuries_since_j2000_tdb: JulianCenturies) -> Radians {
+        (6.203480913 + 334.0612426700 * centuries_since_j2000_tdb) % TAU
     }
 }
 
 impl Jupiter {
     #[inline]
-    pub fn mean_longitude_iers03(&self, t: TDBJulianCenturiesSinceJ2000) -> Radians {
-        (0.599546497 + 52.9690962641 * t) % TAU
+    pub fn mean_longitude_iers03(&self, centuries_since_j2000_tdb: JulianCenturies) -> Radians {
+        (0.599546497 + 52.9690962641 * centuries_since_j2000_tdb) % TAU
     }
 }
 
 impl Saturn {
     #[inline]
-    pub fn mean_longitude_iers03(&self, t: TDBJulianCenturiesSinceJ2000) -> Radians {
-        (0.874016757 + 21.3299104960 * t) % TAU
+    pub fn mean_longitude_iers03(&self, centuries_since_j2000_tdb: JulianCenturies) -> Radians {
+        (0.874016757 + 21.3299104960 * centuries_since_j2000_tdb) % TAU
     }
 }
 
 impl Neptune {
     #[inline]
-    pub fn mean_longitude_iers03(&self, t: TDBJulianCenturiesSinceJ2000) -> Radians {
-        (5.311886287 + 3.8133035638 * t) % TAU
+    pub fn mean_longitude_iers03(&self, centuries_since_j2000_tdb: JulianCenturies) -> Radians {
+        (5.311886287 + 3.8133035638 * centuries_since_j2000_tdb) % TAU
     }
 }
 
 impl Uranus {
     #[inline]
-    pub fn mean_longitude_iers03(&self, t: TDBJulianCenturiesSinceJ2000) -> Radians {
-        (5.481293872 + 7.4781598567 * t) % TAU
+    pub fn mean_longitude_iers03(&self, centuries_since_j2000_tdb: JulianCenturies) -> Radians {
+        (5.481293872 + 7.4781598567 * centuries_since_j2000_tdb) % TAU
     }
 }
 
@@ -166,9 +174,9 @@ mod tests {
     const TOLERANCE: f64 = 1e-11;
 
     // Test cases for t.
-    const T_ZERO: TDBJulianCenturiesSinceJ2000 = 0.0;
-    const T_POSITIVE: TDBJulianCenturiesSinceJ2000 = 1.23456789;
-    const T_NEGATIVE: TDBJulianCenturiesSinceJ2000 = -1.23456789;
+    const T_ZERO: JulianCenturies = 0.0;
+    const T_POSITIVE: JulianCenturies = 1.23456789;
+    const T_NEGATIVE: JulianCenturies = -1.23456789;
 
     #[test]
     fn test_general_accum_precession_in_longitude() {

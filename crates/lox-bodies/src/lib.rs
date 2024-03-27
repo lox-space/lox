@@ -16,14 +16,11 @@ pub use generated::minor::*;
 pub use generated::planets::*;
 pub use generated::satellites::*;
 pub use generated::sun::*;
+use lox_utils::constants::f64::time::{SECONDS_PER_DAY, SECONDS_PER_JULIAN_CENTURY};
 
 pub mod errors;
 pub mod fundamental;
 mod generated;
-
-// TODO: Hoist.
-const SECONDS_PER_DAY: f64 = 86400.0;
-const SECONDS_PER_JULIAN_CENTURY: f64 = 36525.0 * SECONDS_PER_DAY;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[repr(transparent)]

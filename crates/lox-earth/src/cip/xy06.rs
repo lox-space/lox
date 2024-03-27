@@ -15,9 +15,8 @@ use lox_bodies::fundamental::iers03::{
     general_accum_precession_in_longitude_iers03, mean_moon_sun_elongation_iers03,
 };
 use lox_bodies::{Earth, Jupiter, Mars, Mercury, Moon, Neptune, Saturn, Sun, Uranus, Venus};
-use lox_time::intervals::TDBJulianCenturiesSinceJ2000;
 use lox_utils::math::arcsec_to_rad;
-use lox_utils::types::Radians;
+use lox_utils::types::units::{JulianCenturies, Radians};
 
 mod amplitudes;
 mod luni_solar;
@@ -30,8 +29,6 @@ type PowersOfT = [f64; MAX_POWER_OF_T + 1];
 
 type FundamentalArgs = [Radians; 14];
 
-type MicroArcsecond = f64;
-
 #[derive(Debug, Default)]
 struct NutationComponents {
     planetary: DVec2,
@@ -40,42 +37,42 @@ struct NutationComponents {
 
 /// Calculates the (X, Y) coordinates of the Celestial Intermediate Pole (CIP) using the the IAU
 /// 2006 precession and IAU 2000A nutation models.
-pub fn xy(t: TDBJulianCenturiesSinceJ2000) -> DVec2 {
-    let powers_of_t = powers_of_t(t);
-    let fundamental_args = fundamental_args(t);
+pub fn xy(centuries_since_j2000_tdb: JulianCenturies) -> DVec2 {
+    let powers_of_t = powers_of_t(centuries_since_j2000_tdb);
+    let fundamental_args = fundamental_args(centuries_since_j2000_tdb);
     let polynomial_components = polynomial_components(&powers_of_t);
     let nutation_components = nutation_components(&powers_of_t, &fundamental_args);
     calculate_cip_unit_vector(&polynomial_components, &nutation_components)
 }
 
-fn powers_of_t(t: TDBJulianCenturiesSinceJ2000) -> PowersOfT {
+fn powers_of_t(centuries_since_j2000_tdb: JulianCenturies) -> PowersOfT {
     let mut tn: f64 = 1.0;
     let mut powers_of_t = PowersOfT::default();
     for pow in powers_of_t.iter_mut() {
         *pow = tn;
-        tn *= t;
+        tn *= centuries_since_j2000_tdb;
     }
     powers_of_t
 }
 
-fn fundamental_args(t: TDBJulianCenturiesSinceJ2000) -> FundamentalArgs {
+fn fundamental_args(centuries_since_j2000_tdb: JulianCenturies) -> FundamentalArgs {
     // The output of the CIP calculation is dependent on the ordering of these arguments. DO NOT
     // EDIT.
     [
-        Moon.mean_anomaly_iers03(t),
-        Sun.mean_anomaly_iers03(t),
-        Moon.mean_longitude_minus_ascending_node_mean_longitude_iers03(t),
-        mean_moon_sun_elongation_iers03(t),
-        Moon.ascending_node_mean_longitude_iers03(t),
-        Mercury.mean_longitude_iers03(t),
-        Venus.mean_longitude_iers03(t),
-        Earth.mean_longitude_iers03(t),
-        Mars.mean_longitude_iers03(t),
-        Jupiter.mean_longitude_iers03(t),
-        Saturn.mean_longitude_iers03(t),
-        Uranus.mean_longitude_iers03(t),
-        Neptune.mean_longitude_iers03(t),
-        general_accum_precession_in_longitude_iers03(t),
+        Moon.mean_anomaly_iers03(centuries_since_j2000_tdb),
+        Sun.mean_anomaly_iers03(centuries_since_j2000_tdb),
+        Moon.mean_longitude_minus_ascending_node_mean_longitude_iers03(centuries_since_j2000_tdb),
+        mean_moon_sun_elongation_iers03(centuries_since_j2000_tdb),
+        Moon.ascending_node_mean_longitude_iers03(centuries_since_j2000_tdb),
+        Mercury.mean_longitude_iers03(centuries_since_j2000_tdb),
+        Venus.mean_longitude_iers03(centuries_since_j2000_tdb),
+        Earth.mean_longitude_iers03(centuries_since_j2000_tdb),
+        Mars.mean_longitude_iers03(centuries_since_j2000_tdb),
+        Jupiter.mean_longitude_iers03(centuries_since_j2000_tdb),
+        Saturn.mean_longitude_iers03(centuries_since_j2000_tdb),
+        Uranus.mean_longitude_iers03(centuries_since_j2000_tdb),
+        Neptune.mean_longitude_iers03(centuries_since_j2000_tdb),
+        general_accum_precession_in_longitude_iers03(centuries_since_j2000_tdb),
     ]
 }
 
@@ -190,7 +187,7 @@ mod tests {
 
     #[test]
     fn test_cip_xy_jd0() {
-        let jd0: TDBJulianCenturiesSinceJ2000 = -67.11964407939767;
+        let jd0: JulianCenturies = -67.11964407939767;
         let xy = xy(jd0);
         assert_float_eq!(xy[0], -0.4088355637476968, rel <= TOLERANCE);
         assert_float_eq!(xy[1], -0.38359667445777073, rel <= TOLERANCE);
@@ -198,7 +195,7 @@ mod tests {
 
     #[test]
     fn test_cip_xy_j2000() {
-        let j2000: TDBJulianCenturiesSinceJ2000 = 0.0;
+        let j2000: JulianCenturies = 0.0;
         let xy = xy(j2000);
         assert_float_eq!(xy[0], -0.0000269463795685740, rel <= TOLERANCE);
         assert_float_eq!(xy[1], -0.00002800472282281282, rel <= TOLERANCE);
@@ -206,7 +203,7 @@ mod tests {
 
     #[test]
     fn test_cip_xy_j2100() {
-        let j2100: TDBJulianCenturiesSinceJ2000 = 1.0;
+        let j2100: JulianCenturies = 1.0;
         let xy = xy(j2100);
         assert_float_eq!(xy[0], 0.00972070446172924, rel <= TOLERANCE);
         assert_float_eq!(xy[1], -0.0000673058699616719, rel <= TOLERANCE);
@@ -214,7 +211,7 @@ mod tests {
 
     #[test]
     fn test_fundamental_args_ordering() {
-        let j2000: TDBJulianCenturiesSinceJ2000 = 0.0;
+        let j2000: JulianCenturies = 0.0;
         let actual = fundamental_args(j2000);
         let expected = [
             Moon.mean_anomaly_iers03(j2000),

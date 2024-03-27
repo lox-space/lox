@@ -1,6 +1,6 @@
 use std::f64::consts::{PI, TAU};
 
-use crate::types::{Arcsec, Radians};
+use crate::types::units::{Arcseconds, Radians};
 
 /// Module math provides common mathematical functions shared by many parts of the library.
 
@@ -15,12 +15,12 @@ pub const RADIANS_IN_ARCSECOND: Radians = TAU / ARCSECONDS_IN_CIRCLE;
 
 /// Converts arcseconds to radians, modulo 2π.
 #[inline]
-pub fn arcsec_to_rad_two_pi(arcsec: Arcsec) -> Radians {
+pub fn arcsec_to_rad_two_pi(arcsec: Arcseconds) -> Radians {
     arcsec_to_rad(arcsec % ARCSECONDS_IN_CIRCLE)
 }
 
 #[inline]
-pub fn arcsec_to_rad(arcsec: Arcsec) -> Radians {
+pub fn arcsec_to_rad(arcsec: Arcseconds) -> Radians {
     arcsec * RADIANS_IN_ARCSECOND
 }
 

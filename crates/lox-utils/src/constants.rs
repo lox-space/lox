@@ -6,5 +6,6 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-pub mod julian_dates;
-pub mod units;
+//! Module `constants` exposes constants shared between Lox crates.
+
+pub mod f64;

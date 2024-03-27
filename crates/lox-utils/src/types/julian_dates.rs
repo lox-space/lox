@@ -6,5 +6,8 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-pub mod julian_dates;
-pub mod units;
+//! Mod `types` exposes shared type aliases and utility functions for working with Julian dates.
+
+pub type Epoch = f64;
+
+pub type ModifiedJulianDate = f64;

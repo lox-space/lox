@@ -9,9 +9,8 @@
 use std::collections::HashMap;
 use std::iter::zip;
 
-use nom::error::ErrorKind;
-
 use nom::bytes::complete as nb;
+use nom::error::ErrorKind;
 use nom::number::complete as nn;
 
 type BodyId = i32;

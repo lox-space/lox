@@ -432,6 +432,7 @@ dependencies = [
 name = "lox-ephem"
 version = "0.1.0"
 dependencies = [
+ "lox-utils",
  "nom",
 ]
 

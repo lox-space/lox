@@ -2,39 +2,52 @@
 //! (1994).
 
 use lox_utils::math::arcsec_to_rad_two_pi;
-use lox_utils::types::{Arcsec, Radians};
+use lox_utils::types::units::{Arcseconds, JulianCenturies, Radians};
 
-use crate::fundamental::TDBJulianCenturiesSinceJ2000;
 use crate::{Moon, Sun};
 
-pub fn mean_moon_sun_elongation_simon1994(t: TDBJulianCenturiesSinceJ2000) -> Radians {
-    let arcsec: Arcsec = fast_polynomial::poly_array(t, &[1072260.70369, 1602961601.2090]);
+pub fn mean_moon_sun_elongation_simon1994(centuries_since_j2000_tdb: JulianCenturies) -> Radians {
+    let arcsec: Arcseconds =
+        fast_polynomial::poly_array(centuries_since_j2000_tdb, &[1072260.70369, 1602961601.2090]);
     arcsec_to_rad_two_pi(arcsec)
 }
 
 impl Sun {
-    pub fn mean_anomaly_simon1994(&self, t: TDBJulianCenturiesSinceJ2000) -> Radians {
-        let arcsec: Arcsec = fast_polynomial::poly_array(t, &[1287104.79305, 129596581.0481]);
+    pub fn mean_anomaly_simon1994(&self, centuries_since_j2000_tdb: JulianCenturies) -> Radians {
+        let arcsec: Arcseconds = fast_polynomial::poly_array(
+            centuries_since_j2000_tdb,
+            &[1287104.79305, 129596581.0481],
+        );
         arcsec_to_rad_two_pi(arcsec)
     }
 }
 
 impl Moon {
-    pub fn mean_anomaly_simon1994(&self, t: TDBJulianCenturiesSinceJ2000) -> Radians {
-        let arcsec: Arcsec = fast_polynomial::poly_array(t, &[485868.249036, 1717915923.2178]);
+    pub fn mean_anomaly_simon1994(&self, centuries_since_j2000_tdb: JulianCenturies) -> Radians {
+        let arcsec: Arcseconds = fast_polynomial::poly_array(
+            centuries_since_j2000_tdb,
+            &[485868.249036, 1717915923.2178],
+        );
         arcsec_to_rad_two_pi(arcsec)
     }
 
-    pub fn mean_argument_of_latitude_simon1994(&self, t: TDBJulianCenturiesSinceJ2000) -> Radians {
-        let arcsec: Arcsec = fast_polynomial::poly_array(t, &[335779.526232, 1739527262.8478]);
+    pub fn mean_argument_of_latitude_simon1994(
+        &self,
+        centuries_since_j2000_tdb: JulianCenturies,
+    ) -> Radians {
+        let arcsec: Arcseconds = fast_polynomial::poly_array(
+            centuries_since_j2000_tdb,
+            &[335779.526232, 1739527262.8478],
+        );
         arcsec_to_rad_two_pi(arcsec)
     }
 
     pub fn ascending_node_mean_longitude_simon1994(
         &self,
-        t: TDBJulianCenturiesSinceJ2000,
+        centuries_since_j2000_tdb: JulianCenturies,
     ) -> Radians {
-        let arcsec: Arcsec = fast_polynomial::poly_array(t, &[450160.398036, -6962890.5431]);
+        let arcsec: Arcseconds =
+            fast_polynomial::poly_array(centuries_since_j2000_tdb, &[450160.398036, -6962890.5431]);
         arcsec_to_rad_two_pi(arcsec)
     }
 }
@@ -54,9 +67,9 @@ mod tests {
     const TOLERANCE: f64 = 1e-12;
 
     // Test cases for t.
-    const T_ZERO: TDBJulianCenturiesSinceJ2000 = 0.0;
-    const T_POSITIVE: TDBJulianCenturiesSinceJ2000 = 1.23456789;
-    const T_NEGATIVE: TDBJulianCenturiesSinceJ2000 = -1.23456789;
+    const T_ZERO: JulianCenturies = 0.0;
+    const T_POSITIVE: JulianCenturies = 1.23456789;
+    const T_NEGATIVE: JulianCenturies = -1.23456789;
 
     #[test]
     fn test_mean_moon_sun_elongation_simon1994() {

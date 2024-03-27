@@ -6,8 +6,9 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::errors::LoxTimeError;
 use std::cmp::Ordering;
+
+use crate::errors::LoxTimeError;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Calendar {
@@ -219,8 +220,9 @@ pub trait CalendarDate {
 
 #[cfg(test)]
 mod tests {
-    use crate::calendar_dates::{Calendar, Date};
     use rstest::rstest;
+
+    use crate::calendar_dates::{Calendar, Date};
 
     use super::*;
 

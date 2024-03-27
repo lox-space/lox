@@ -13,10 +13,11 @@ use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, Sub};
 
+use lox_utils::constants::f64::time;
+use lox_utils::constants::f64::time::SECONDS_PER_JULIAN_CENTURY;
 use num::{abs, ToPrimitive};
 
 use crate::calendar_dates::{CalendarDate, Date};
-use crate::constants;
 use crate::constants::i64::{
     SECONDS_PER_DAY, SECONDS_PER_HALF_DAY, SECONDS_PER_HOUR, SECONDS_PER_MINUTE,
 };
@@ -258,8 +259,8 @@ impl JulianDate for BaseTime {
         decimal_seconds += self.subsecond.0;
         match unit {
             Unit::Seconds => decimal_seconds,
-            Unit::Days => decimal_seconds / constants::f64::SECONDS_PER_DAY,
-            Unit::Centuries => decimal_seconds / constants::f64::SECONDS_PER_JULIAN_CENTURY,
+            Unit::Days => decimal_seconds / time::SECONDS_PER_DAY,
+            Unit::Centuries => decimal_seconds / SECONDS_PER_JULIAN_CENTURY,
         }
     }
 

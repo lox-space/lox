@@ -11,19 +11,16 @@
 
 use std::sync::OnceLock;
 
+use lox_utils::constants::f64::time::{MJD_J2000, SECONDS_PER_DAY};
 use num::ToPrimitive;
 
 use lox_utils::slices::is_sorted_asc;
 
 use crate::base_time::BaseTime;
-use crate::constants::f64::SECONDS_PER_DAY;
 use crate::deltas::TimeDelta;
 use crate::time_scales::TAI;
 use crate::utc::UTCDateTime;
 use crate::Time;
-
-/// TODO: Hoist.
-const MJD_J2000: f64 = 51544.5;
 
 /// MJDs corresponding to the start of each leap second epoch from 1972-01-01 onwards.
 const MJD_LEAP_SECOND_EPOCHS: [u64; 28] = [
