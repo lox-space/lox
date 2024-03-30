@@ -11,17 +11,17 @@ use std::sync::OnceLock;
 use crate::base_time::BaseTime;
 use crate::calendar_dates::Date;
 use crate::deltas::TimeDelta;
-use crate::time_scales::TAI;
-use crate::utc::{UTCDateTime, UTCUndefinedError, UTC};
+use crate::time_scales::Tai;
+use crate::utc::{Utc, UtcDateTime, UtcUndefinedError};
 use crate::Time;
 
 mod before1972;
 mod from1972;
 
-impl From<UTCDateTime> for Time<TAI> {
+impl From<UtcDateTime> for Time<Tai> {
     /// Converts a `UTCDateTime` to `TAI`, accounting for leap seconds. Infallible for all valid
     /// values of UTC.
-    fn from(utc: UTCDateTime) -> Self {
+    fn from(utc: UtcDateTime) -> Self {
         let delta = if utc < *utc_1972_01_01() {
             before1972::delta_utc_tai(utc)
         } else {
@@ -36,25 +36,25 @@ impl From<UTCDateTime> for Time<TAI> {
         });
 
         let base = BaseTime::from_utc_datetime(utc);
-        Time::from_base_time(TAI, base - delta)
+        Time::from_base_time(Tai, base - delta)
     }
 }
 
-impl TryFrom<Time<TAI>> for UTCDateTime {
-    type Error = UTCUndefinedError;
+impl TryFrom<Time<Tai>> for UtcDateTime {
+    type Error = UtcUndefinedError;
 
     /// Attempts to convert a `Time<TAI>` to a `UTCDateTime`, accounting for leap seconds. Returns
-    /// [UTCUndefinedError] if the input `Time<TAI>` is before 1960-01-01 UTC, when UTC begins.
-    fn try_from(tai: Time<TAI>) -> Result<Self, Self::Error> {
+    /// [UtcUndefinedError] if the input `Time<TAI>` is before 1960-01-01 UTC, when UTC begins.
+    fn try_from(tai: Time<Tai>) -> Result<Self, Self::Error> {
         let delta = if tai < *tai_at_utc_1972_01_01() {
             before1972::delta_tai_utc(tai)
         } else {
             from1972::delta_tai_utc(tai)
         }
-        .ok_or(UTCUndefinedError)?;
+        .ok_or(UtcUndefinedError)?;
 
         let base_time = tai.base_time() - delta;
-        let mut utc = UTCDateTime::from_base_time(base_time)?;
+        let mut utc = UtcDateTime::from_base_time(base_time)?;
         if tai.is_leap_second() {
             utc.time.second = 60;
         }
@@ -63,20 +63,20 @@ impl TryFrom<Time<TAI>> for UTCDateTime {
     }
 }
 
-fn utc_1972_01_01() -> &'static UTCDateTime {
-    static UTC_1972: OnceLock<UTCDateTime> = OnceLock::new();
+fn utc_1972_01_01() -> &'static UtcDateTime {
+    static UTC_1972: OnceLock<UtcDateTime> = OnceLock::new();
     UTC_1972
-        .get_or_init(|| UTCDateTime::new(Date::new(1972, 1, 1).unwrap(), UTC::default()).unwrap())
+        .get_or_init(|| UtcDateTime::new(Date::new(1972, 1, 1).unwrap(), Utc::default()).unwrap())
 }
 
-fn tai_at_utc_1972_01_01() -> &'static Time<TAI> {
+fn tai_at_utc_1972_01_01() -> &'static Time<Tai> {
     const LEAP_SECONDS_1972: i64 = 10;
-    static TAI_AT_UTC_1972_01_01: OnceLock<Time<TAI>> = OnceLock::new();
+    static TAI_AT_UTC_1972_01_01: OnceLock<Time<Tai>> = OnceLock::new();
     TAI_AT_UTC_1972_01_01.get_or_init(|| {
         let utc = utc_1972_01_01();
         let base_time = BaseTime::from_utc_datetime(*utc);
         let leap_seconds = TimeDelta::from_seconds(LEAP_SECONDS_1972);
-        Time::from_base_time(TAI, base_time + leap_seconds)
+        Time::from_base_time(Tai, base_time + leap_seconds)
     })
 }
 
@@ -87,8 +87,8 @@ pub mod test {
     use crate::base_time::BaseTime;
     use crate::calendar_dates::Date;
     use crate::subsecond::Subsecond;
-    use crate::utc::UTCDateTime;
-    use crate::utc::UTC;
+    use crate::utc::Utc;
+    use crate::utc::UtcDateTime;
 
     use super::*;
 
@@ -99,7 +99,7 @@ pub mod test {
     #[case::after_leap_second(utc_1s_after_2016_leap_second(), tai_1s_after_2016_leap_second())]
     #[should_panic]
     #[case::illegal_utc_datetime(unconstructable_utc_datetime(), &Time::new(TAI, 0, Subsecond::default()))]
-    fn test_tai_from_utc(#[case] utc: &UTCDateTime, #[case] expected: &Time<TAI>) {
+    fn test_tai_from_utc(#[case] utc: &UtcDateTime, #[case] expected: &Time<Tai>) {
         let actual = (*utc).into();
         assert_eq!(*expected, actual);
     }
@@ -112,10 +112,10 @@ pub mod test {
     #[case::after_leap_second(tai_1s_after_2016_leap_second(), Ok(*utc_1s_after_2016_leap_second()))]
     #[case::utc_undefined(tai_before_utc_defined(), Err(UTCUndefinedError))]
     fn test_utc_try_from_tai(
-        #[case] tai: &Time<TAI>,
-        #[case] expected: Result<UTCDateTime, UTCUndefinedError>,
+        #[case] tai: &Time<Tai>,
+        #[case] expected: Result<UtcDateTime, UtcUndefinedError>,
     ) {
-        let actual = UTCDateTime::try_from(*tai);
+        let actual = UtcDateTime::try_from(*tai);
         assert_eq!(expected, actual);
     }
 
@@ -125,14 +125,14 @@ pub mod test {
         observed outputs. The latter case is marked with a comment.
     */
 
-    fn utc_1971_01_01() -> &'static UTCDateTime {
-        static UTC_1971: OnceLock<UTCDateTime> = OnceLock::new();
+    fn utc_1971_01_01() -> &'static UtcDateTime {
+        static UTC_1971: OnceLock<UtcDateTime> = OnceLock::new();
         UTC_1971.get_or_init(|| {
-            UTCDateTime::new(Date::new(1971, 1, 1).unwrap(), UTC::default()).unwrap()
+            UtcDateTime::new(Date::new(1971, 1, 1).unwrap(), Utc::default()).unwrap()
         })
     }
 
-    fn tai_at_utc_1971_01_01() -> &'static Time<TAI> {
+    fn tai_at_utc_1971_01_01() -> &'static Time<Tai> {
         const DELTA: TimeDelta = TimeDelta {
             seconds: 8,
             // Note the substantial rounding error inherent in converting between single-f64 MJDs.
@@ -140,81 +140,81 @@ pub mod test {
             subsecond: Subsecond(0.9461620000000011),
         };
 
-        static TAI_AT_UTC_1971_01_01: OnceLock<Time<TAI>> = OnceLock::new();
+        static TAI_AT_UTC_1971_01_01: OnceLock<Time<Tai>> = OnceLock::new();
         TAI_AT_UTC_1971_01_01.get_or_init(|| {
             let utc = utc_1971_01_01();
             let base = BaseTime::from_utc_datetime(*utc);
-            Time::from_base_time(TAI, base + DELTA)
+            Time::from_base_time(Tai, base + DELTA)
         })
     }
 
     // 2016-12-31T23:59:59.000 UTC
-    fn utc_1s_before_2016_leap_second() -> &'static UTCDateTime {
-        static BEFORE_LEAP_SECOND: OnceLock<UTCDateTime> = OnceLock::new();
+    fn utc_1s_before_2016_leap_second() -> &'static UtcDateTime {
+        static BEFORE_LEAP_SECOND: OnceLock<UtcDateTime> = OnceLock::new();
         BEFORE_LEAP_SECOND.get_or_init(|| {
-            UTCDateTime::new(
+            UtcDateTime::new(
                 Date::new(2016, 12, 31).unwrap(),
-                UTC::new(23, 59, 59, Subsecond(0.0)).unwrap(),
+                Utc::new(23, 59, 59, Subsecond(0.0)).unwrap(),
             )
             .unwrap()
         })
     }
 
     // 2017-01-01T00:00:35.000 TAI
-    fn tai_1s_before_2016_leap_second() -> &'static Time<TAI> {
-        static BEFORE_LEAP_SECOND: OnceLock<Time<TAI>> = OnceLock::new();
-        BEFORE_LEAP_SECOND.get_or_init(|| Time::new(TAI, 536500835, Subsecond::default()))
+    fn tai_1s_before_2016_leap_second() -> &'static Time<Tai> {
+        static BEFORE_LEAP_SECOND: OnceLock<Time<Tai>> = OnceLock::new();
+        BEFORE_LEAP_SECOND.get_or_init(|| Time::new(Tai, 536500835, Subsecond::default()))
     }
 
     // 2016-12-31T23:59:60.000 UTC
-    fn utc_during_2016_leap_second() -> &'static UTCDateTime {
-        static DURING_LEAP_SECOND: OnceLock<UTCDateTime> = OnceLock::new();
+    fn utc_during_2016_leap_second() -> &'static UtcDateTime {
+        static DURING_LEAP_SECOND: OnceLock<UtcDateTime> = OnceLock::new();
         DURING_LEAP_SECOND.get_or_init(|| {
-            UTCDateTime::new(
+            UtcDateTime::new(
                 Date::new(2016, 12, 31).unwrap(),
-                UTC::new(23, 59, 60, Subsecond(0.0)).unwrap(),
+                Utc::new(23, 59, 60, Subsecond(0.0)).unwrap(),
             )
             .unwrap()
         })
     }
 
     // 2017-01-01T00:00:36.000 TAI
-    fn tai_during_2016_leap_second() -> &'static Time<TAI> {
-        static DURING_LEAP_SECOND: OnceLock<Time<TAI>> = OnceLock::new();
-        DURING_LEAP_SECOND.get_or_init(|| Time::new(TAI, 536500836, Subsecond::default()))
+    fn tai_during_2016_leap_second() -> &'static Time<Tai> {
+        static DURING_LEAP_SECOND: OnceLock<Time<Tai>> = OnceLock::new();
+        DURING_LEAP_SECOND.get_or_init(|| Time::new(Tai, 536500836, Subsecond::default()))
     }
 
     // 2017-01-01T00:00:00.000 UTC
-    fn utc_1s_after_2016_leap_second() -> &'static UTCDateTime {
-        static AFTER_LEAP_SECOND: OnceLock<UTCDateTime> = OnceLock::new();
+    fn utc_1s_after_2016_leap_second() -> &'static UtcDateTime {
+        static AFTER_LEAP_SECOND: OnceLock<UtcDateTime> = OnceLock::new();
         AFTER_LEAP_SECOND.get_or_init(|| {
-            UTCDateTime::new(
+            UtcDateTime::new(
                 Date::new(2017, 1, 1).unwrap(),
-                UTC::new(0, 0, 0, Subsecond(0.0)).unwrap(),
+                Utc::new(0, 0, 0, Subsecond(0.0)).unwrap(),
             )
             .unwrap()
         })
     }
 
     // 2017-01-01T00:00:37.000 TAI
-    fn tai_1s_after_2016_leap_second() -> &'static Time<TAI> {
-        static AFTER_LEAP_SECOND: OnceLock<Time<TAI>> = OnceLock::new();
-        AFTER_LEAP_SECOND.get_or_init(|| Time::new(TAI, 536500837, Subsecond::default()))
+    fn tai_1s_after_2016_leap_second() -> &'static Time<Tai> {
+        static AFTER_LEAP_SECOND: OnceLock<Time<Tai>> = OnceLock::new();
+        AFTER_LEAP_SECOND.get_or_init(|| Time::new(Tai, 536500837, Subsecond::default()))
     }
 
     // Bypasses the UTCDateTime constructor's range check to create an illegal UTCDateTime.
     // Used for testing panics.
-    fn unconstructable_utc_datetime() -> &'static UTCDateTime {
-        static ILLEGAL_UTC: OnceLock<UTCDateTime> = OnceLock::new();
-        ILLEGAL_UTC.get_or_init(|| UTCDateTime {
+    fn unconstructable_utc_datetime() -> &'static UtcDateTime {
+        static ILLEGAL_UTC: OnceLock<UtcDateTime> = OnceLock::new();
+        ILLEGAL_UTC.get_or_init(|| UtcDateTime {
             date: Date::new(1959, 12, 31).unwrap(),
-            time: UTC::default(),
+            time: Utc::default(),
         })
     }
 
     // 1959-12-31T23:59:59.000 TAI
-    fn tai_before_utc_defined() -> &'static Time<TAI> {
-        static TAI_BEFORE_UTC_DEFINED: OnceLock<Time<TAI>> = OnceLock::new();
-        TAI_BEFORE_UTC_DEFINED.get_or_init(|| Time::new(TAI, -1_262_347_201, Subsecond::default()))
+    fn tai_before_utc_defined() -> &'static Time<Tai> {
+        static TAI_BEFORE_UTC_DEFINED: OnceLock<Time<Tai>> = OnceLock::new();
+        TAI_BEFORE_UTC_DEFINED.get_or_init(|| Time::new(Tai, -1_262_347_201, Subsecond::default()))
     }
 }

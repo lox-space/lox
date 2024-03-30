@@ -18,54 +18,54 @@ pub trait TimeScale {
 
 /// International Atomic Time.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
-pub struct TAI;
+pub struct Tai;
 
-impl TimeScale for TAI {
+impl TimeScale for Tai {
     const ABBREVIATION: &'static str = "TAI";
     const NAME: &'static str = "International Atomic Time";
 }
 
 /// Barycentric Coordinate Time.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
-pub struct TCB;
+pub struct Tcb;
 
-impl TimeScale for TCB {
+impl TimeScale for Tcb {
     const ABBREVIATION: &'static str = "TCB";
     const NAME: &'static str = "Barycentric Coordinate Time";
 }
 
 /// Geocentric Coordinate Time.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
-pub struct TCG;
+pub struct Tcg;
 
-impl TimeScale for TCG {
+impl TimeScale for Tcg {
     const ABBREVIATION: &'static str = "TCG";
     const NAME: &'static str = "Geocentric Coordinate Time";
 }
 
 /// Barycentric Dynamical Time.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
-pub struct TDB;
+pub struct Tdb;
 
-impl TimeScale for TDB {
+impl TimeScale for Tdb {
     const ABBREVIATION: &'static str = "TDB";
     const NAME: &'static str = "Barycentric Dynamical Time";
 }
 
 /// Terrestrial Time.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
-pub struct TT;
+pub struct Tt;
 
-impl TimeScale for TT {
+impl TimeScale for Tt {
     const ABBREVIATION: &'static str = "TT";
     const NAME: &'static str = "Terrestrial Time";
 }
 
 /// Universal Time.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
-pub struct UT1;
+pub struct Ut1;
 
-impl TimeScale for UT1 {
+impl TimeScale for Ut1 {
     const ABBREVIATION: &'static str = "UT1";
     const NAME: &'static str = "Universal Time";
 }

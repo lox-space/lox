@@ -12,7 +12,7 @@
 use std::ops::Add;
 
 use lox_time::julian_dates::JulianDate;
-use lox_time::time_scales::TDB;
+use lox_time::time_scales::Tdb;
 use lox_time::Time;
 use lox_utils::math::RADIANS_IN_ARCSECOND;
 use lox_utils::types::units::Radians;
@@ -66,7 +66,7 @@ impl Add<&Self> for Nutation {
 }
 
 /// Calculate nutation coefficients at `time` using the given [Model].
-pub fn nutation(model: Model, time: Time<TDB>) -> Nutation {
+pub fn nutation(model: Model, time: Time<Tdb>) -> Nutation {
     let t = time.centuries_since_j2000();
     match model {
         Model::IAU1980 => nutation_iau1980(t),
@@ -108,7 +108,7 @@ mod tests {
 
     #[test]
     fn test_nutation_iau1980() {
-        let time = Time::j2000(TDB);
+        let time = Time::j2000(Tdb);
         let expected = Nutation {
             longitude: -0.00006750247617532478,
             obliquity: -0.00002799221238377013,
@@ -119,7 +119,7 @@ mod tests {
     }
     #[test]
     fn test_nutation_iau2000a() {
-        let time = Time::j2000(TDB);
+        let time = Time::j2000(Tdb);
         let expected = Nutation {
             longitude: -0.00006754422426417299,
             obliquity: -0.00002797083119237414,
@@ -131,7 +131,7 @@ mod tests {
 
     #[test]
     fn test_nutation_iau2000b() {
-        let time = Time::j2000(TDB);
+        let time = Time::j2000(Tdb);
         let expected = Nutation {
             longitude: -0.00006754261253992235,
             obliquity: -0.00002797092331098565,
@@ -143,7 +143,7 @@ mod tests {
 
     #[test]
     fn test_nutation_iau2006a() {
-        let time = Time::j2000(TDB);
+        let time = Time::j2000(Tdb);
         let expected = Nutation {
             longitude: -0.00006754425598969513,
             obliquity: -0.00002797083119237414,

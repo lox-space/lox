@@ -187,7 +187,7 @@ mod tests {
     #[test]
     fn test_cartesian() {
         let time = PyTime::new(
-            PyTimeScale::TDB,
+            PyTimeScale::Tdb,
             2023,
             3,
             25,
@@ -246,7 +246,7 @@ mod tests {
     #[test]
     fn test_keplerian() {
         let time = PyTime::new(
-            PyTimeScale::TDB,
+            PyTimeScale::Tdb,
             2023,
             3,
             25,
