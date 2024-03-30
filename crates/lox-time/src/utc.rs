@@ -102,7 +102,7 @@ pub struct UtcDateTime {
 
 #[derive(Clone, Copy, Debug, Error, PartialEq)]
 #[error("UTC is not defined for dates before 1960-01-01")]
-/// UTC is not defined for dates before 1960-01-01. Attempting to create a `UTCDateTime` with such
+/// UTC is not defined for dates before 1960-01-01. Attempting to create a `UtcDateTime` with such
 /// a date results in this error.
 pub struct UtcUndefinedError;
 
@@ -217,21 +217,21 @@ mod tests {
     #[rstest]
     #[case::ok(
         Date::new(2021, 1, 1).unwrap(),
-        Ok(UTCDateTime {
+        Ok(UtcDateTime {
             date: Date::new(2021, 1, 1).unwrap(),
-            time: UTC::default(),
+            time: Utc::default(),
         }),
     )]
     #[case::y1960(
         Date::new(1960, 1, 1).unwrap(),
-        Ok(UTCDateTime {
+        Ok(UtcDateTime {
             date: Date::new(1960, 1, 1).unwrap(),
-            time: UTC::default(),
+            time: Utc::default(),
         }),
     )]
     #[case::before_1960(
         Date::new(1959, 12, 31).unwrap(),
-        Err(UTCUndefinedError),
+        Err(UtcUndefinedError),
     )]
     fn test_utc_datetime_new(
         #[case] date: Date,
@@ -244,11 +244,11 @@ mod tests {
 
     #[rstest]
     #[case::non_leap_second(
-        UTCDateTime::new(Date::new(2000, 1, 1).unwrap(), UTC::default()).unwrap(),
+        UtcDateTime::new(Date::new(2000, 1, 1).unwrap(), Utc::default()).unwrap(),
         2451544.5,
     )]
     #[case::leap_second(
-        UTCDateTime::new(Date::new(1999, 12, 31).unwrap(), UTC::new(23, 59, 60, Subsecond::default()).unwrap()).unwrap(),
+        UtcDateTime::new(Date::new(1999, 12, 31).unwrap(), Utc::new(23, 59, 60, Subsecond::default()).unwrap()).unwrap(),
         2451544.499988426,
     )]
     fn test_utc_datetime_julian_date(#[case] datetime: UtcDateTime, #[case] expected: f64) {

@@ -19,7 +19,7 @@ mod before1972;
 mod from1972;
 
 impl From<UtcDateTime> for Time<Tai> {
-    /// Converts a `UTCDateTime` to `TAI`, accounting for leap seconds. Infallible for all valid
+    /// Converts a `UtcDateTime` to `TAI`, accounting for leap seconds. Infallible for all valid
     /// values of UTC.
     fn from(utc: UtcDateTime) -> Self {
         let delta = if utc < *utc_1972_01_01() {
@@ -28,9 +28,9 @@ impl From<UtcDateTime> for Time<Tai> {
             from1972::delta_utc_tai(utc)
         }
         .unwrap_or_else(|| {
-            // UTCDateTime objects are always in range.
+            // UtcDateTime objects are always in range.
             unreachable!(
-                "failed to calculate UTC-TAI delta for UTCDateTime `{:?}`",
+                "failed to calculate UTC-TAI delta for UtcDateTime `{:?}`",
                 utc
             );
         });
@@ -43,7 +43,7 @@ impl From<UtcDateTime> for Time<Tai> {
 impl TryFrom<Time<Tai>> for UtcDateTime {
     type Error = UtcUndefinedError;
 
-    /// Attempts to convert a `Time<TAI>` to a `UTCDateTime`, accounting for leap seconds. Returns
+    /// Attempts to convert a `Time<TAI>` to a `UtcDateTime`, accounting for leap seconds. Returns
     /// [UtcUndefinedError] if the input `Time<TAI>` is before 1960-01-01 UTC, when UTC begins.
     fn try_from(tai: Time<Tai>) -> Result<Self, Self::Error> {
         let delta = if tai < *tai_at_utc_1972_01_01() {
@@ -98,7 +98,7 @@ pub mod test {
     #[case::during_leap_second(utc_during_2016_leap_second(), tai_during_2016_leap_second())]
     #[case::after_leap_second(utc_1s_after_2016_leap_second(), tai_1s_after_2016_leap_second())]
     #[should_panic]
-    #[case::illegal_utc_datetime(unconstructable_utc_datetime(), &Time::new(TAI, 0, Subsecond::default()))]
+    #[case::illegal_utc_datetime(unconstructable_utc_datetime(), &Time::new(Tai, 0, Subsecond::default()))]
     fn test_tai_from_utc(#[case] utc: &UtcDateTime, #[case] expected: &Time<Tai>) {
         let actual = (*utc).into();
         assert_eq!(*expected, actual);
@@ -110,7 +110,7 @@ pub mod test {
     #[case::before_leap_second(tai_1s_before_2016_leap_second(), Ok(*utc_1s_before_2016_leap_second()))]
     #[case::during_leap_second(tai_during_2016_leap_second(), Ok(*utc_during_2016_leap_second()))]
     #[case::after_leap_second(tai_1s_after_2016_leap_second(), Ok(*utc_1s_after_2016_leap_second()))]
-    #[case::utc_undefined(tai_before_utc_defined(), Err(UTCUndefinedError))]
+    #[case::utc_undefined(tai_before_utc_defined(), Err(UtcUndefinedError))]
     fn test_utc_try_from_tai(
         #[case] tai: &Time<Tai>,
         #[case] expected: Result<UtcDateTime, UtcUndefinedError>,
@@ -202,7 +202,7 @@ pub mod test {
         AFTER_LEAP_SECOND.get_or_init(|| Time::new(Tai, 536500837, Subsecond::default()))
     }
 
-    // Bypasses the UTCDateTime constructor's range check to create an illegal UTCDateTime.
+    // Bypasses the UtcDateTime constructor's range check to create an illegal UtcDateTime.
     // Used for testing panics.
     fn unconstructable_utc_datetime() -> &'static UtcDateTime {
         static ILLEGAL_UTC: OnceLock<UtcDateTime> = OnceLock::new();

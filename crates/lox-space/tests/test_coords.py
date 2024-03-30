@@ -8,7 +8,7 @@ import lox_space as lox
 
 
 def test_coords():
-    time = lox.Time(lox.TimeScale.TDB, 2016, 5, 30, 12)
+    time = lox.Time(lox.TimeScale.Tdb, 2016, 5, 30, 12)
     x = 6068.27927
     y = -1692.84394
     z = -2516.61918

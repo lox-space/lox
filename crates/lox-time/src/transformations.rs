@@ -237,11 +237,11 @@ mod tests {
     #[rstest]
     #[case::j0(
         Time::from_base_time(Tt, J0),
-        Time::from_base_time(TCG, BaseTime::new(-211813488148, Subsecond(0.886_867_966_488_467)))
+        Time::from_base_time(Tcg, BaseTime::new(-211813488148, Subsecond(0.886_867_966_488_467)))
     )]
     #[case::j2000(
         Time::new(Tt, 0, Subsecond::default()),
-        Time::new(TCG, 0, Subsecond(0.505_833_286_021_129))
+        Time::new(Tcg, 0, Subsecond(0.505_833_286_021_129))
     )]
     #[should_panic]
     #[case::unrepresentable(
@@ -259,15 +259,15 @@ mod tests {
 
     #[rstest]
     #[case::j0(
-        Time::from_base_time(TCG, J0),
+        Time::from_base_time(Tcg, J0),
         Time::from_base_time(Tt, BaseTime::new(-211813487853, Subsecond(0.113_131_930_984_139)))
     )]
-    #[case::j2000(Time::new(TCG, 0, Subsecond::default()), Time::new(Tt, -1, Subsecond(0.494_166_714_331_400)))]
+    #[case::j2000(Time::new(Tcg, 0, Subsecond::default()), Time::new(Tt, -1, Subsecond(0.494_166_714_331_400)))]
     #[should_panic]
     #[case::unrepresentable(
         Time {
             timestamp: PANIC_INDUCING_BASE_TIME,
-            scale: TCG,
+            scale: Tcg,
         },
         Time::default(),
     )]
@@ -280,10 +280,10 @@ mod tests {
 
     #[rstest]
     #[case::j0(
-        Time::from_base_time(TCB, J0),
-        Time::from_base_time(TDB, BaseTime::new(-SECONDS_BETWEEN_JD_AND_J2000 + 3272, Subsecond(0.956_215_636_550_950)))
+        Time::from_base_time(Tcb, J0),
+        Time::from_base_time(Tdb, BaseTime::new(-SECONDS_BETWEEN_JD_AND_J2000 + 3272, Subsecond(0.956_215_636_550_950)))
     )]
-    #[case::j2000(Time::j2000(TCB), Time::new(TDB, -12, Subsecond(0.746_212_906_242_706)))]
+    #[case::j2000(Time::j2000(Tcb), Time::new(Tdb, -12, Subsecond(0.746_212_906_242_706)))]
     fn test_transform_tcb_tdb(#[case] tcb: Time<Tcb>, #[case] expected: Time<Tdb>) {
         let transformer = &TimeScaleTransformer {};
         let tdb = transformer.transform(tcb);
@@ -296,10 +296,10 @@ mod tests {
 
     #[rstest]
     #[case::j0(
-        Time::from_base_time(TDB, J0),
-        Time::from_base_time(TCB, BaseTime::new(-SECONDS_BETWEEN_JD_AND_J2000 - 3273, Subsecond(0.043_733_615_615_110)))
+        Time::from_base_time(Tdb, J0),
+        Time::from_base_time(Tcb, BaseTime::new(-SECONDS_BETWEEN_JD_AND_J2000 - 3273, Subsecond(0.043_733_615_615_110)))
     )]
-    #[case::j2000(Time::j2000(TDB), Time::new(TCB, 11, Subsecond(0.253_787_268_249_489)))]
+    #[case::j2000(Time::j2000(Tdb), Time::new(Tcb, 11, Subsecond(0.253_787_268_249_489)))]
     fn test_transform_tdb_tcb(#[case] tdb: Time<Tdb>, #[case] expected: Time<Tcb>) {
         let transformer = &TimeScaleTransformer {};
         let tcb: Time<Tcb> = transformer.transform(tdb);
@@ -308,8 +308,8 @@ mod tests {
     }
 
     #[rstest]
-    #[case::j0(Time::from_base_time(Tt, J0), Time::from_base_time(TDB, BaseTime::new(-SECONDS_BETWEEN_JD_AND_J2000, Subsecond(0.001_600_955_458_249))))]
-    #[case::j2000(Time::j2000(Tt), Time::from_base_time(TDB, BaseTime::new(-1, Subsecond(0.999_927_263_223_809))))]
+    #[case::j0(Time::from_base_time(Tt, J0), Time::from_base_time(Tdb, BaseTime::new(-SECONDS_BETWEEN_JD_AND_J2000, Subsecond(0.001_600_955_458_249))))]
+    #[case::j2000(Time::j2000(Tt), Time::from_base_time(Tdb, BaseTime::new(-1, Subsecond(0.999_927_263_223_809))))]
     #[should_panic]
     #[case::unrepresentable(
         Time {
@@ -325,16 +325,16 @@ mod tests {
     }
 
     #[rstest]
-    #[case::j0(Time::from_base_time(TDB, J0), Time::from_base_time(Tt, BaseTime::new(-SECONDS_BETWEEN_JD_AND_J2000 - 1, Subsecond(0.998_399_044_541_884))))]
+    #[case::j0(Time::from_base_time(Tdb, J0), Time::from_base_time(Tt, BaseTime::new(-SECONDS_BETWEEN_JD_AND_J2000 - 1, Subsecond(0.998_399_044_541_884))))]
     #[case::j2000(
-        Time::j2000(TDB),
+        Time::j2000(Tdb),
         Time::from_base_time(Tt, BaseTime::new(0, Subsecond(0.000_072_736_776_166)))
     )]
     #[should_panic]
     #[case::unrepresentable(
         Time {
             timestamp: PANIC_INDUCING_BASE_TIME,
-            scale: TDB,
+            scale: Tdb,
         },
     Time::default(),
     )]

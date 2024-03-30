@@ -200,12 +200,7 @@ mod tests {
         let actual = PyTime::new(PyTimeScale::Tai, 2024, 1, 1, None, None, None, None).unwrap();
         let expected = PyTime {
             scale: PyTimeScale::Tai,
-            timestamp: Time::from_base_time(
-                Tai,
-                Date::new(2024, 1, 1).unwrap(),
-                Utc::new(0, 0, 0, Subsecond::default()).unwrap(),
-            )
-            .base_time(),
+            timestamp: Time::from_base_time(Tai, *base_time_2024_1_1()).base_time(),
         };
         assert_eq!(expected, actual);
     }
@@ -215,12 +210,7 @@ mod tests {
         let actual = PyTime::new(PyTimeScale::Tcb, 2024, 1, 1, None, None, None, None).unwrap();
         let expected = PyTime {
             scale: PyTimeScale::Tcb,
-            timestamp: Time::from_base_time(
-                Tcb,
-                Date::new(2024, 1, 1).unwrap(),
-                Utc::new(0, 0, 0, Subsecond::default()).unwrap(),
-            )
-            .base_time(),
+            timestamp: Time::from_base_time(Tcb, *base_time_2024_1_1()).base_time(),
         };
         assert_eq!(expected, actual);
     }
@@ -230,12 +220,7 @@ mod tests {
         let actual = PyTime::new(PyTimeScale::Tcg, 2024, 1, 1, None, None, None, None).unwrap();
         let expected = PyTime {
             scale: PyTimeScale::Tcg,
-            timestamp: Time::from_base_time(
-                Tcg,
-                Date::new(2024, 1, 1).unwrap(),
-                Utc::new(0, 0, 0, Subsecond::default()).unwrap(),
-            )
-            .base_time(),
+            timestamp: Time::from_base_time(Tcg, *base_time_2024_1_1()).base_time(),
         };
         assert_eq!(expected, actual);
     }
