@@ -18,8 +18,8 @@ use lox_utils::slices::is_sorted_asc;
 
 use crate::base_time::BaseTime;
 use crate::deltas::TimeDelta;
-use crate::time_scales::TAI;
-use crate::utc::UTCDateTime;
+use crate::time_scales::Tai;
+use crate::utc::UtcDateTime;
 use crate::Time;
 
 /// MJDs corresponding to the start of each leap second epoch from 1972-01-01 onwards.
@@ -69,7 +69,7 @@ pub const LEAP_SECONDS: [i64; 28] = [
 
 /// For dates from 1972-01-01, returns a [TimeDelta] representing the count of leap seconds between
 /// TAI and UTC. Returns `None` for dates before 1972.
-pub fn delta_tai_utc(tai: Time<TAI>) -> Option<TimeDelta> {
+pub fn delta_tai_utc(tai: Time<Tai>) -> Option<TimeDelta> {
     j2000_tai_leap_second_epochs()
         .iter()
         .rev()
@@ -84,7 +84,7 @@ pub fn delta_tai_utc(tai: Time<TAI>) -> Option<TimeDelta> {
 }
 
 /// UTC minus TAI. Calculates the correct leap second count for dates after 1972 by simple lookup.
-pub fn delta_utc_tai(utc: UTCDateTime) -> Option<TimeDelta> {
+pub fn delta_utc_tai(utc: UtcDateTime) -> Option<TimeDelta> {
     let base_time = BaseTime::from_utc_datetime(utc);
     j2000_utc_leap_second_epochs()
         .iter()
@@ -105,7 +105,7 @@ pub fn delta_utc_tai(utc: UTCDateTime) -> Option<TimeDelta> {
         })
 }
 
-impl Time<TAI> {
+impl Time<Tai> {
     /// Returns true if the TAI timestamp corresponds to a UTC leap second since 1972.
     pub fn is_leap_second(&self) -> bool {
         j2000_tai_leap_second_epochs()

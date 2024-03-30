@@ -14,8 +14,8 @@ use lox_time::base_time::BaseTime;
 use lox_time::calendar_dates::Date;
 use lox_time::julian_dates::JulianDate;
 use lox_time::subsecond::Subsecond;
-use lox_time::time_scales::{TAI, TCB, TCG, TDB, TT, UT1};
-use lox_time::utc::UTC;
+use lox_time::time_scales::{Tai, Tcb, Tcg, Tdb, Tt, Ut1};
+use lox_time::utc::Utc;
 use lox_time::Time;
 
 use crate::LoxPyError;
@@ -24,12 +24,12 @@ use crate::LoxPyError;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[allow(clippy::upper_case_acronyms)]
 pub enum PyTimeScale {
-    TAI,
-    TCB,
-    TCG,
-    TDB,
-    TT,
-    UT1,
+    Tai,
+    Tcb,
+    Tcg,
+    Tdb,
+    Tt,
+    Ut1,
 }
 
 #[pymethods]
@@ -37,12 +37,12 @@ impl PyTimeScale {
     #[new]
     fn new(name: &str) -> Result<Self, LoxPyError> {
         match name {
-            "TAI" => Ok(PyTimeScale::TAI),
-            "TCB" => Ok(PyTimeScale::TCB),
-            "TCG" => Ok(PyTimeScale::TCG),
-            "TDB" => Ok(PyTimeScale::TDB),
-            "TT" => Ok(PyTimeScale::TT),
-            "UT1" => Ok(PyTimeScale::UT1),
+            "TAI" => Ok(PyTimeScale::Tai),
+            "TCB" => Ok(PyTimeScale::Tcb),
+            "TCG" => Ok(PyTimeScale::Tcg),
+            "TDB" => Ok(PyTimeScale::Tdb),
+            "TT" => Ok(PyTimeScale::Tt),
+            "UT1" => Ok(PyTimeScale::Ut1),
             _ => Err(LoxPyError::InvalidTimeScale(name.to_string())),
         }
     }
@@ -59,12 +59,12 @@ impl PyTimeScale {
 impl Display for PyTimeScale {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let s = match self {
-            PyTimeScale::TAI => "TAI",
-            PyTimeScale::TCB => "TCB",
-            PyTimeScale::TCG => "TCG",
-            PyTimeScale::TDB => "TDB",
-            PyTimeScale::TT => "TT",
-            PyTimeScale::UT1 => "UT1",
+            PyTimeScale::Tai => "TAI",
+            PyTimeScale::Tcb => "TCB",
+            PyTimeScale::Tcg => "TCG",
+            PyTimeScale::Tdb => "TDB",
+            PyTimeScale::Tt => "TT",
+            PyTimeScale::Ut1 => "UT1",
         };
         write!(f, "{}", s)
     }
@@ -130,7 +130,7 @@ impl PyTime {
         let minute = minute.unwrap_or_default();
         let second = second.unwrap_or_default();
         let subsecond = subsecond.unwrap_or_default();
-        let utc = UTC::new(hour, minute, second, subsecond.subsecond)?;
+        let utc = Utc::new(hour, minute, second, subsecond.subsecond)?;
         Ok(pytime_from_date_and_utc_timestamp(scale, date, utc))
     }
 
@@ -143,7 +143,7 @@ impl PyTime {
     }
 }
 
-fn pytime_from_date_and_utc_timestamp(scale: PyTimeScale, date: Date, utc: UTC) -> PyTime {
+fn pytime_from_date_and_utc_timestamp(scale: PyTimeScale, date: Date, utc: Utc) -> PyTime {
     PyTime {
         timestamp: base_time_from_date_and_utc_timestamp(scale, date, utc),
         scale,
@@ -153,14 +153,14 @@ fn pytime_from_date_and_utc_timestamp(scale: PyTimeScale, date: Date, utc: UTC) 
 /// Invokes the appropriate [Time::from_date_and_utc_timestamp] method based on the time scale, and returns the
 /// result as a [BaseTime]. The Rust time library performs the appropriate transformation while keeping
 /// generics out of the Python interface.
-fn base_time_from_date_and_utc_timestamp(scale: PyTimeScale, date: Date, utc: UTC) -> BaseTime {
+fn base_time_from_date_and_utc_timestamp(scale: PyTimeScale, date: Date, utc: Utc) -> BaseTime {
     match scale {
-        PyTimeScale::TAI => Time::from_date_and_utc_timestamp(TAI, date, utc).base_time(),
-        PyTimeScale::TCB => Time::from_date_and_utc_timestamp(TCB, date, utc).base_time(),
-        PyTimeScale::TCG => Time::from_date_and_utc_timestamp(TCG, date, utc).base_time(),
-        PyTimeScale::TDB => Time::from_date_and_utc_timestamp(TDB, date, utc).base_time(),
-        PyTimeScale::TT => Time::from_date_and_utc_timestamp(TT, date, utc).base_time(),
-        PyTimeScale::UT1 => Time::from_date_and_utc_timestamp(UT1, date, utc).base_time(),
+        PyTimeScale::Tai => Time::from_date_and_utc_timestamp(Tai, date, utc).base_time(),
+        PyTimeScale::Tcb => Time::from_date_and_utc_timestamp(Tcb, date, utc).base_time(),
+        PyTimeScale::Tcg => Time::from_date_and_utc_timestamp(Tcg, date, utc).base_time(),
+        PyTimeScale::Tdb => Time::from_date_and_utc_timestamp(Tdb, date, utc).base_time(),
+        PyTimeScale::Tt => Time::from_date_and_utc_timestamp(Tt, date, utc).base_time(),
+        PyTimeScale::Ut1 => Time::from_date_and_utc_timestamp(Ut1, date, utc).base_time(),
     }
 }
 
@@ -168,16 +168,24 @@ fn base_time_from_date_and_utc_timestamp(scale: PyTimeScale, date: Date, utc: UT
 mod tests {
     use float_eq::assert_float_eq;
     use rstest::rstest;
+    use std::sync::OnceLock;
 
     use super::*;
 
+    fn base_time_2024_1_1() -> &'static BaseTime {
+        static BASE_TIME: OnceLock<BaseTime> = OnceLock::new();
+        BASE_TIME.get_or_init(|| {
+            BaseTime::from_date_and_utc_timestamp(Date::new(2024, 1, 1).unwrap(), Utc::default())
+        })
+    }
+
     #[rstest]
-    #[case("TAI", PyTimeScale::TAI)]
-    #[case("TCB", PyTimeScale::TCB)]
-    #[case("TCG", PyTimeScale::TCG)]
-    #[case("TDB", PyTimeScale::TDB)]
-    #[case("TT", PyTimeScale::TT)]
-    #[case("UT1", PyTimeScale::UT1)]
+    #[case("TAI", PyTimeScale::Tai)]
+    #[case("TCB", PyTimeScale::Tcb)]
+    #[case("TCG", PyTimeScale::Tcg)]
+    #[case("TDB", PyTimeScale::Tdb)]
+    #[case("TT", PyTimeScale::Tt)]
+    #[case("UT1", PyTimeScale::Ut1)]
     fn test_scale(#[case] name: &str, #[case] scale: PyTimeScale) {
         let py_scale = PyTimeScale::new(name).expect("time scale should be valid");
         assert_eq!(py_scale, scale);
@@ -189,90 +197,60 @@ mod tests {
     // time_new tests can't be parameterized with rstest.
     #[test]
     fn test_time_new_tai() {
-        let actual = PyTime::new(PyTimeScale::TAI, 2024, 1, 1, None, None, None, None).unwrap();
+        let actual = PyTime::new(PyTimeScale::Tai, 2024, 1, 1, None, None, None, None).unwrap();
         let expected = PyTime {
-            scale: PyTimeScale::TAI,
-            timestamp: Time::from_date_and_utc_timestamp(
-                TAI,
-                Date::new(2024, 1, 1).unwrap(),
-                UTC::new(0, 0, 0, Subsecond::default()).unwrap(),
-            )
-            .base_time(),
+            scale: PyTimeScale::Tai,
+            timestamp: Time::from_base_time(Tai, *base_time_2024_1_1()).base_time(),
         };
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn test_time_new_tcb() {
-        let actual = PyTime::new(PyTimeScale::TCB, 2024, 1, 1, None, None, None, None).unwrap();
+        let actual = PyTime::new(PyTimeScale::Tcb, 2024, 1, 1, None, None, None, None).unwrap();
         let expected = PyTime {
-            scale: PyTimeScale::TCB,
-            timestamp: Time::from_date_and_utc_timestamp(
-                TCB,
-                Date::new(2024, 1, 1).unwrap(),
-                UTC::new(0, 0, 0, Subsecond::default()).unwrap(),
-            )
-            .base_time(),
+            scale: PyTimeScale::Tcb,
+            timestamp: Time::from_base_time(Tcb, *base_time_2024_1_1()).base_time(),
         };
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn test_time_new_tcg() {
-        let actual = PyTime::new(PyTimeScale::TCG, 2024, 1, 1, None, None, None, None).unwrap();
+        let actual = PyTime::new(PyTimeScale::Tcg, 2024, 1, 1, None, None, None, None).unwrap();
         let expected = PyTime {
-            scale: PyTimeScale::TCG,
-            timestamp: Time::from_date_and_utc_timestamp(
-                TCG,
-                Date::new(2024, 1, 1).unwrap(),
-                UTC::new(0, 0, 0, Subsecond::default()).unwrap(),
-            )
-            .base_time(),
+            scale: PyTimeScale::Tcg,
+            timestamp: Time::from_base_time(Tcg, *base_time_2024_1_1()).base_time(),
         };
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn test_time_new_tdb() {
-        let actual = PyTime::new(PyTimeScale::TDB, 2024, 1, 1, None, None, None, None).unwrap();
+        let actual = PyTime::new(PyTimeScale::Tdb, 2024, 1, 1, None, None, None, None).unwrap();
         let expected = PyTime {
-            scale: PyTimeScale::TDB,
-            timestamp: Time::from_date_and_utc_timestamp(
-                TDB,
-                Date::new(2024, 1, 1).unwrap(),
-                UTC::new(0, 0, 0, Subsecond::default()).unwrap(),
-            )
-            .base_time(),
+            scale: PyTimeScale::Tdb,
+            timestamp: Time::from_base_time(Tdb, *base_time_2024_1_1()).base_time(),
         };
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn test_time_new_tt() {
-        let actual = PyTime::new(PyTimeScale::TT, 2024, 1, 1, None, None, None, None).unwrap();
+        let actual = PyTime::new(PyTimeScale::Tt, 2024, 1, 1, None, None, None, None).unwrap();
         let expected = PyTime {
-            scale: PyTimeScale::TT,
-            timestamp: Time::from_date_and_utc_timestamp(
-                TT,
-                Date::new(2024, 1, 1).unwrap(),
-                UTC::new(0, 0, 0, Subsecond::default()).unwrap(),
-            )
-            .base_time(),
+            scale: PyTimeScale::Tt,
+            timestamp: Time::from_base_time(Tt, *base_time_2024_1_1()).base_time(),
         };
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn test_time_new_ut1() {
-        let actual = PyTime::new(PyTimeScale::UT1, 2024, 1, 1, None, None, None, None).unwrap();
+        let actual = PyTime::new(PyTimeScale::Ut1, 2024, 1, 1, None, None, None, None).unwrap();
         let expected = PyTime {
-            scale: PyTimeScale::UT1,
-            timestamp: Time::from_date_and_utc_timestamp(
-                UT1,
-                Date::new(2024, 1, 1).unwrap(),
-                UTC::new(0, 0, 0, Subsecond::default()).unwrap(),
-            )
-            .base_time(),
+            scale: PyTimeScale::Ut1,
+            timestamp: Time::from_base_time(Ut1, *base_time_2024_1_1()).base_time(),
         };
         assert_eq!(expected, actual);
     }
@@ -286,7 +264,7 @@ mod tests {
     #[test]
     fn test_time_days_since_j2000() {
         let time = PyTime::new(
-            PyTimeScale::TDB,
+            PyTimeScale::Tdb,
             2024,
             1,
             1,
@@ -302,7 +280,7 @@ mod tests {
     #[test]
     fn test_time_scale() {
         let time = PyTime::new(
-            PyTimeScale::TDB,
+            PyTimeScale::Tdb,
             2024,
             1,
             1,
@@ -312,7 +290,7 @@ mod tests {
             Some(PySubsecond::new(0.123456789123456).expect("PySubsecond should be valid")),
         )
         .expect("PyTime should be valid");
-        assert_eq!(PyTimeScale::TDB, time.scale());
+        assert_eq!(PyTimeScale::Tdb, time.scale());
     }
 
     #[test]

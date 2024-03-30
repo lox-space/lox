@@ -11,7 +11,7 @@
 //! The main struct is [Time], which represents an instant in time generic over a [TimeScale]
 //! without leap seconds.
 //!
-//! [UTC] and [Date] are used strictly as an I/O formats, avoiding much of the complexity inherent
+//! [Utc] and [Date] are used strictly as an I/O formats, avoiding much of the complexity inherent
 //! in working with leap seconds.
 
 use std::fmt;
@@ -25,7 +25,7 @@ use crate::julian_dates::{Epoch, JulianDate, Unit};
 use crate::subsecond::Subsecond;
 use crate::time_scales::TimeScale;
 use crate::transformations::TransformTimeScale;
-use crate::utc::{UTCDateTime, UTC};
+use crate::utc::{Utc, UtcDateTime};
 use crate::wall_clock::WallClock;
 
 pub mod base_time;
@@ -64,14 +64,14 @@ impl<T: TimeScale + Copy> Time<T> {
         Self { scale, timestamp }
     }
 
-    /// Instantiates a [Time] in the given scale from a [UTCDateTime].
-    pub fn from_utc_datetime(scale: T, datetime: UTCDateTime) -> Self {
+    /// Instantiates a [Time] in the given scale from a [UtcDateTime].
+    pub fn from_utc_datetime(scale: T, datetime: UtcDateTime) -> Self {
         let timestamp = BaseTime::from_utc_datetime(datetime);
         Self { scale, timestamp }
     }
 
-    /// Instantiates a [Time] in the given scale from a [Date] and [UTC] instance.
-    pub fn from_date_and_utc_timestamp(scale: T, date: Date, utc: UTC) -> Self {
+    /// Instantiates a [Time] in the given scale from a [Date] and [Utc] instance.
+    pub fn from_date_and_utc_timestamp(scale: T, date: Date, utc: Utc) -> Self {
         let timestamp = BaseTime::from_date_and_utc_timestamp(date, utc);
         Self { scale, timestamp }
     }
@@ -215,16 +215,16 @@ mod tests {
     use mockall::predicate;
 
     use crate::calendar_dates::Calendar::Gregorian;
-    use crate::time_scales::{TAI, TDB, TT};
+    use crate::time_scales::{Tai, Tdb, Tt};
     use crate::transformations::MockTransformTimeScale;
-    use crate::utc::UTC;
+    use crate::utc::Utc;
     use crate::Time;
 
     use super::*;
 
     #[test]
     fn test_time_new() {
-        let scale = TAI;
+        let scale = Tai;
         let seconds = 1234567890;
         let subsecond = Subsecond(0.9876543210);
         let expected = Time {
@@ -237,8 +237,8 @@ mod tests {
 
     #[test]
     fn test_time_from_utc_datetime() {
-        let scale = TAI;
-        let datetime = UTCDateTime::new(Date::new(2023, 1, 1).unwrap(), UTC::default()).unwrap();
+        let scale = Tai;
+        let datetime = UtcDateTime::new(Date::new(2023, 1, 1).unwrap(), Utc::default()).unwrap();
         let expected = Time {
             scale,
             timestamp: BaseTime::from_utc_datetime(datetime),
@@ -249,9 +249,9 @@ mod tests {
 
     #[test]
     fn test_time_from_date_and_utc_timestamp() {
-        let scale = TAI;
+        let scale = Tai;
         let date = Date::new(2023, 1, 1).unwrap();
-        let utc = UTC::new(12, 0, 0, Subsecond::default()).unwrap();
+        let utc = Utc::new(12, 0, 0, Subsecond::default()).unwrap();
         let expected = Time {
             scale,
             timestamp: BaseTime::from_date_and_utc_timestamp(date, utc),
@@ -262,7 +262,7 @@ mod tests {
 
     #[test]
     fn test_time_display() {
-        let time = Time::j2000(TAI);
+        let time = Time::j2000(Tai);
         let expected = "12:00:00.000.000.000.000.000 TAI".to_string();
         let actual = time.to_string();
         assert_eq!(expected, actual);
@@ -270,9 +270,9 @@ mod tests {
 
     #[test]
     fn test_time_j2000() {
-        let actual = Time::j2000(TAI);
+        let actual = Time::j2000(Tai);
         let expected = Time {
-            scale: TAI,
+            scale: Tai,
             timestamp: BaseTime::default(),
         };
         assert_eq!(expected, actual);
@@ -280,9 +280,9 @@ mod tests {
 
     #[test]
     fn test_time_jd0() {
-        let actual = Time::jd0(TAI);
+        let actual = Time::jd0(Tai);
         let expected = Time::from_base_time(
-            TAI,
+            Tai,
             BaseTime {
                 seconds: -211813488000,
                 subsecond: Subsecond::default(),
@@ -293,7 +293,7 @@ mod tests {
 
     #[test]
     fn test_time_seconds() {
-        let time = Time::new(TAI, 1234567890, Subsecond(0.9876543210));
+        let time = Time::new(Tai, 1234567890, Subsecond(0.9876543210));
         let expected = 1234567890;
         let actual = time.seconds();
         assert_eq!(
@@ -305,7 +305,7 @@ mod tests {
 
     #[test]
     fn test_time_subsecond() {
-        let time = Time::new(TAI, 1234567890, Subsecond(0.9876543210));
+        let time = Time::new(Tai, 1234567890, Subsecond(0.9876543210));
         let expected = 0.9876543210;
         let actual = time.subsecond();
         assert_eq!(
@@ -322,7 +322,7 @@ mod tests {
             subsecond: Subsecond(0.9876543210),
         };
         let expected = base_time.days_since_j2000();
-        let actual = Time::from_base_time(TAI, base_time).days_since_j2000();
+        let actual = Time::from_base_time(Tai, base_time).days_since_j2000();
         assert_float_eq!(
             actual,
             expected,
@@ -340,7 +340,7 @@ mod tests {
             subsecond: Subsecond(0.9876543210),
         };
         let expected = base_time.centuries_since_j2000();
-        let actual = Time::from_base_time(TAI, base_time).centuries_since_j2000();
+        let actual = Time::from_base_time(Tai, base_time).centuries_since_j2000();
         assert_float_eq!(
             actual,
             expected,
@@ -358,7 +358,7 @@ mod tests {
             subsecond: Subsecond(0.9876543210),
         };
         let expected = base_time.hour();
-        let actual = Time::from_base_time(TAI, base_time).hour();
+        let actual = Time::from_base_time(Tai, base_time).hour();
         assert_eq!(
             expected, actual,
             "expected Time to have hour {}, but got {}",
@@ -373,7 +373,7 @@ mod tests {
             subsecond: Subsecond(0.9876543210),
         };
         let expected = base_time.minute();
-        let actual = Time::from_base_time(TAI, base_time).minute();
+        let actual = Time::from_base_time(Tai, base_time).minute();
         assert_eq!(
             expected, actual,
             "expected Time to have minute {}, but got {}",
@@ -388,7 +388,7 @@ mod tests {
             subsecond: Subsecond(0.9876543210),
         };
         let expected = base_time.second();
-        let actual = Time::from_base_time(TAI, base_time).second();
+        let actual = Time::from_base_time(Tai, base_time).second();
         assert_eq!(
             expected, actual,
             "expected Time to have second {}, but got {}",
@@ -403,7 +403,7 @@ mod tests {
             subsecond: Subsecond(0.9876543210),
         };
         let expected = base_time.millisecond();
-        let actual = Time::from_base_time(TAI, base_time).millisecond();
+        let actual = Time::from_base_time(Tai, base_time).millisecond();
         assert_eq!(
             expected, actual,
             "expected Time to have millisecond {}, but got {}",
@@ -418,7 +418,7 @@ mod tests {
             subsecond: Subsecond(0.9876543210),
         };
         let expected = base_time.microsecond();
-        let actual = Time::from_base_time(TAI, base_time).microsecond();
+        let actual = Time::from_base_time(Tai, base_time).microsecond();
         assert_eq!(
             expected, actual,
             "expected Time to have microsecond {}, but got {}",
@@ -433,7 +433,7 @@ mod tests {
             subsecond: Subsecond(0.9876543210),
         };
         let expected = base_time.nanosecond();
-        let actual = Time::from_base_time(TAI, base_time).nanosecond();
+        let actual = Time::from_base_time(Tai, base_time).nanosecond();
         assert_eq!(
             expected, actual,
             "expected Time to have nanosecond {}, but got {}",
@@ -448,7 +448,7 @@ mod tests {
             subsecond: Subsecond(0.9876543210),
         };
         let expected = base_time.picosecond();
-        let actual = Time::from_base_time(TAI, base_time).picosecond();
+        let actual = Time::from_base_time(Tai, base_time).picosecond();
         assert_eq!(
             expected, actual,
             "expected Time to have picosecond {}, but got {}",
@@ -463,7 +463,7 @@ mod tests {
             subsecond: Subsecond(0.9876543210),
         };
         let expected = base_time.femtosecond();
-        let actual = Time::from_base_time(TAI, base_time).femtosecond();
+        let actual = Time::from_base_time(Tai, base_time).femtosecond();
         assert_eq!(
             expected, actual,
             "expected Time to have femtosecond {}, but got {}",
@@ -473,9 +473,9 @@ mod tests {
 
     #[test]
     fn test_from_scale() {
-        let time = Time::j2000(TAI);
-        let mut transformer = MockTransformTimeScale::<TAI, TT>::new();
-        let expected = Time::j2000(TT);
+        let time = Time::j2000(Tai);
+        let mut transformer = MockTransformTimeScale::<Tai, Tt>::new();
+        let expected = Time::j2000(Tt);
 
         transformer
             .expect_transform()
@@ -488,9 +488,9 @@ mod tests {
 
     #[test]
     fn test_into_scale() {
-        let time = Time::j2000(TAI);
-        let mut transformer = MockTransformTimeScale::<TAI, TT>::new();
-        let expected = Time::j2000(TT);
+        let time = Time::j2000(Tai);
+        let mut transformer = MockTransformTimeScale::<Tai, Tt>::new();
+        let expected = Time::j2000(Tt);
 
         transformer
             .expect_transform()
@@ -503,7 +503,7 @@ mod tests {
 
     #[test]
     fn test_julian_date() {
-        let time = Time::jd0(TDB);
+        let time = Time::jd0(Tdb);
         assert_eq!(time.julian_date(Epoch::JulianDate, Unit::Days), 0.0);
         assert_eq!(time.seconds_since_julian_epoch(), 0.0);
         assert_eq!(time.days_since_julian_epoch(), 0.0);
@@ -512,7 +512,7 @@ mod tests {
 
     #[test]
     fn test_modified_julian_date() {
-        let time = Time::mjd0(TDB);
+        let time = Time::mjd0(Tdb);
         assert_eq!(time.julian_date(Epoch::ModifiedJulianDate, Unit::Days), 0.0);
         assert_eq!(time.seconds_since_modified_julian_epoch(), 0.0);
         assert_eq!(time.days_since_modified_julian_epoch(), 0.0);
@@ -521,7 +521,7 @@ mod tests {
 
     #[test]
     fn test_j1950() {
-        let time = Time::j1950(TDB);
+        let time = Time::j1950(Tdb);
         assert_eq!(time.julian_date(Epoch::J1950, Unit::Days), 0.0);
         assert_eq!(time.seconds_since_j1950(), 0.0);
         assert_eq!(time.days_since_j1950(), 0.0);
@@ -530,7 +530,7 @@ mod tests {
 
     #[test]
     fn test_j2000() {
-        let time = Time::j2000(TDB);
+        let time = Time::j2000(Tdb);
         assert_eq!(time.julian_date(Epoch::J2000, Unit::Days), 0.0);
         assert_eq!(time.seconds_since_j2000(), 0.0);
         assert_eq!(time.days_since_j2000(), 0.0);
@@ -540,9 +540,9 @@ mod tests {
     #[test]
     fn test_j2100() {
         let date = Date::new_unchecked(Gregorian, 2100, 1, 1);
-        let utc = UTC::new(12, 0, 0, Subsecond::default()).expect("should be valid");
+        let utc = Utc::new(12, 0, 0, Subsecond::default()).expect("should be valid");
         let time = Time {
-            scale: TDB,
+            scale: Tdb,
             timestamp: BaseTime::from_date_and_utc_timestamp(date, utc),
         };
         assert_eq!(
@@ -557,9 +557,9 @@ mod tests {
     #[test]
     fn test_two_part_julian_date() {
         let date = Date::new_unchecked(Gregorian, 2100, 1, 2);
-        let utc = UTC::new(0, 0, 0, Subsecond::default()).expect("should be valid");
+        let utc = Utc::new(0, 0, 0, Subsecond::default()).expect("should be valid");
         let time = Time {
-            scale: TDB,
+            scale: Tdb,
             timestamp: BaseTime::from_date_and_utc_timestamp(date, utc),
         };
         let (jd1, jd2) = time.two_part_julian_date();
@@ -569,25 +569,25 @@ mod tests {
 
     #[test]
     fn test_time_add_time_delta() {
-        let time = Time::j2000(TAI);
+        let time = Time::j2000(Tai);
         let delta = TimeDelta::from_decimal_seconds(1.5).unwrap();
         let expected = Time {
-            scale: TAI,
+            scale: Tai,
             timestamp: time.timestamp + delta,
         };
-        let actual = Time::j2000(TAI) + delta;
+        let actual = Time::j2000(Tai) + delta;
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn test_time_sub_time_delta() {
-        let time = Time::j2000(TAI);
+        let time = Time::j2000(Tai);
         let delta = TimeDelta::from_decimal_seconds(1.5).unwrap();
         let expected = Time {
-            scale: TAI,
+            scale: Tai,
             timestamp: time.timestamp - delta,
         };
-        let actual = Time::j2000(TAI) - delta;
+        let actual = Time::j2000(Tai) - delta;
         assert_eq!(expected, actual);
     }
 
@@ -595,7 +595,7 @@ mod tests {
     fn test_time_calendar_date() {
         let base_time = BaseTime::default();
         let expected = base_time.calendar_date();
-        let tai = Time::from_base_time(TAI, base_time);
+        let tai = Time::from_base_time(Tai, base_time);
         let actual = tai.calendar_date();
         assert_eq!(expected, actual);
     }
