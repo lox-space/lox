@@ -214,7 +214,6 @@ mod tests {
     use lox_utils::constants::f64::time::DAYS_PER_JULIAN_CENTURY;
     use mockall::predicate;
 
-    use crate::calendar_dates::Calendar::Gregorian;
     use crate::time_scales::{Tai, Tdb, Tt};
     use crate::transformations::MockTransformTimeScale;
     use crate::utc::Utc;
@@ -539,7 +538,7 @@ mod tests {
 
     #[test]
     fn test_j2100() {
-        let date = Date::new_unchecked(Gregorian, 2100, 1, 1);
+        let date = Date::new(2100, 1, 1).unwrap();
         let utc = Utc::new(12, 0, 0, Subsecond::default()).expect("should be valid");
         let time = Time {
             scale: Tdb,
@@ -556,7 +555,7 @@ mod tests {
 
     #[test]
     fn test_two_part_julian_date() {
-        let date = Date::new_unchecked(Gregorian, 2100, 1, 2);
+        let date = Date::new(2100, 1, 2).unwrap();
         let utc = Utc::new(0, 0, 0, Subsecond::default()).expect("should be valid");
         let time = Time {
             scale: Tdb,

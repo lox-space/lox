@@ -108,8 +108,6 @@ pub struct UtcUndefinedError;
 
 impl UtcDateTime {
     pub fn new(date: Date, time: Utc) -> Result<Self, UtcUndefinedError> {
-        // TODO: This is a naïve check that assumes the input calendar is Gregorian. We need the
-        // ability to convert dates between calendars to make this check more robust.
         if date.year() <= 1959 {
             Err(UtcUndefinedError)
         } else {

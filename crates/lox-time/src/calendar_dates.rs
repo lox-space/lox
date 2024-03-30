@@ -26,14 +26,18 @@ pub struct Date {
 }
 
 impl PartialOrd for Date {
-    /// Naive implementation of PartialOrd which does not account for the different calendars.
-    // TODO: Implement a proper PartialOrd that accounts for the different calendars.
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
 impl Ord for Date {
+    // The implementation of `Ord` for `Date` assumes that the `Calendar`s of the inputs date are
+    // the same. This assumption is true at 2024-03-30, since the `Date` constructor doesn't allow
+    // the creation of overlapping dates in different calendars, and `Date`s are immutable.
+    //
+    // If this changes, the implementation of `Ord` for `Date` must be updated too.
+    // See https://github.com/lox-space/lox/issues/87.
     fn cmp(&self, other: &Self) -> Ordering {
         match self.year.cmp(&other.year) {
             Ordering::Equal => match self.month.cmp(&other.month) {
@@ -49,18 +53,6 @@ const LAST_PROLEPTIC_JULIAN_DAY_J2K: i64 = -730122;
 const LAST_JULIAN_DAY_J2K: i64 = -152384;
 
 impl Date {
-    /// Create a Date from raw parts. This is particularly useful for generating test dates that
-    /// are known to be correct, without exposing the internals of the Date struct.
-    #[cfg(test)]
-    pub(crate) fn new_unchecked(calendar: Calendar, year: i64, month: i64, day: i64) -> Self {
-        Self {
-            calendar,
-            year,
-            month,
-            day,
-        }
-    }
-
     pub fn calendar(&self) -> Calendar {
         self.calendar
     }
@@ -225,15 +217,6 @@ mod tests {
     use crate::calendar_dates::{Calendar, Date};
 
     use super::*;
-
-    #[test]
-    fn test_date_new_unchecked() {
-        let date = Date::new_unchecked(Calendar::Gregorian, 2021, 1, 1);
-        assert_eq!(Calendar::Gregorian, date.calendar);
-        assert_eq!(2021, date.year);
-        assert_eq!(1, date.month);
-        assert_eq!(1, date.day);
-    }
 
     #[rstest]
     #[case::equal_same_calendar(Date { calendar: Calendar::Gregorian, year: 2000, month: 1, day: 1}, Date { calendar: Calendar::Gregorian, year: 2000, month: 1, day: 1}, Ordering::Equal)]

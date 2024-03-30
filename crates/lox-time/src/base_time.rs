@@ -13,9 +13,10 @@ use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, Sub};
 
+use num::{abs, ToPrimitive};
+
 use lox_utils::constants::f64::time;
 use lox_utils::constants::f64::time::SECONDS_PER_JULIAN_CENTURY;
-use num::{abs, ToPrimitive};
 
 use crate::calendar_dates::{CalendarDate, Date};
 use crate::constants::i64::{
@@ -296,7 +297,6 @@ mod tests {
     use float_eq::assert_float_eq;
     use rstest::rstest;
 
-    use crate::calendar_dates::Calendar::Gregorian;
     use crate::constants::i64::SECONDS_PER_JULIAN_CENTURY;
 
     use super::*;
@@ -312,7 +312,7 @@ mod tests {
 
     #[test]
     fn test_base_time_from_utc_datetime() {
-        let date = Date::new_unchecked(Gregorian, 2021, 1, 1);
+        let date = Date::new(2021, 1, 1).unwrap();
         let utc = Utc::new(12, 34, 56, Subsecond::default()).expect("time should be valid");
         let datetime = UtcDateTime::new(date, utc).unwrap();
         let actual = BaseTime::from_utc_datetime(datetime);
@@ -325,7 +325,7 @@ mod tests {
 
     #[test]
     fn test_base_time_from_date_and_utc_timestamp() {
-        let date = Date::new_unchecked(Gregorian, 2021, 1, 1);
+        let date = Date::new(2021, 1, 1).unwrap();
         let utc = Utc::new(12, 34, 56, Subsecond::default()).expect("time should be valid");
         let datetime = UtcDateTime::new(date, utc).unwrap();
         let actual = BaseTime::from_date_and_utc_timestamp(date, utc);
