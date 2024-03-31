@@ -33,7 +33,7 @@ fn parse_kvn_line<'a>(
 
     let kvn = ns::separated_pair(nb::tag(key), equals, value);
 
-    let mut kvn_line = ns::delimited(nc::space0, kvn, nc::multispace0);
+    let mut kvn_line = ns::delimited(nc::space0, kvn, nc::space0);
 
     let (remaining, result) = kvn_line(input).map_err(|e| KvnLineParserErr::ParseError(e))?;
 
@@ -77,7 +77,7 @@ mod test {
         // 7.5.1 A non-empty value field must be assigned to each mandatory keyword except for *‘_START’ and *‘_STOP’ keyword values
         // 7.4.6 Any white space immediately preceding or following the ‘equals’ sign shall not be significant.
         assert_eq!(
-            parse_kvn_line("ASD", "ASD = ASDFG\n", true),
+            parse_kvn_line("ASD", "ASD = ASDFG", true),
             Ok((
                 "",
                 KvnValue {
@@ -87,7 +87,7 @@ mod test {
             ))
         );
         assert_eq!(
-            parse_kvn_line("ASD", "ASD    =   ASDFG\n", true),
+            parse_kvn_line("ASD", "ASD    =   ASDFG", true),
             Ok((
                 "",
                 KvnValue {
@@ -97,7 +97,7 @@ mod test {
             ))
         );
         assert_eq!(
-            parse_kvn_line("ASD", "ASD    = ASDFG\n", true),
+            parse_kvn_line("ASD", "ASD    = ASDFG", true),
             Ok((
                 "",
                 KvnValue {
@@ -107,21 +107,21 @@ mod test {
             ))
         );
         assert_eq!(
-            parse_kvn_line("ASD", "ASD =    \n", true),
+            parse_kvn_line("ASD", "ASD =    ", true),
             Err(KvnLineParserErr::EmptyValue)
         );
         assert_eq!(
-            parse_kvn_line("ASD", "ASD = \n", true),
+            parse_kvn_line("ASD", "ASD = ", true),
             Err(KvnLineParserErr::EmptyValue)
         );
         assert_eq!(
-            parse_kvn_line("ASD", "ASD =\n", true),
+            parse_kvn_line("ASD", "ASD =", true),
             Err(KvnLineParserErr::EmptyValue)
         );
 
         // 7.4.7 Any white space immediately preceding the end of line shall not be significant.
         assert_eq!(
-            parse_kvn_line("ASD", "ASD = ASDFG          \n", true),
+            parse_kvn_line("ASD", "ASD = ASDFG          ", true),
             Ok((
                 "",
                 KvnValue {
@@ -134,7 +134,7 @@ mod test {
         // a) there must be at least one blank character between the value and the units text;
         // b) the units must be enclosed within square brackets (e.g., ‘[m]’);
         assert_eq!(
-            parse_kvn_line("ASD", "ASD = ASDFG [km]\n", true),
+            parse_kvn_line("ASD", "ASD = ASDFG [km]", true),
             Ok((
                 "",
                 KvnValue {
@@ -144,7 +144,7 @@ mod test {
             ))
         );
         assert_eq!(
-            parse_kvn_line("ASD", "ASD = ASDFG             [km]\n", true),
+            parse_kvn_line("ASD", "ASD = ASDFG             [km]", true),
             Ok((
                 "",
                 KvnValue {
@@ -155,24 +155,24 @@ mod test {
         );
 
         assert_eq!(
-            parse_kvn_line("ASD", "ASD =  [km]\n", true),
+            parse_kvn_line("ASD", "ASD =  [km]", true),
             Err(KvnLineParserErr::EmptyValue)
         );
 
         assert_eq!(
-            parse_kvn_line("ASD", "ASD   [km]\n", true),
+            parse_kvn_line("ASD", "ASD   [km]", true),
             Err(KvnLineParserErr::ParseError(nom::Err::Error(
                 nom::error::Error {
-                    input: "[km]\n",
+                    input: "[km]",
                     code: nom::error::ErrorKind::Char
                 }
             )))
         );
         assert_eq!(
-            parse_kvn_line("ASD", " =  [km]\n", true),
+            parse_kvn_line("ASD", " =  [km]", true),
             Err(KvnLineParserErr::ParseError(nom::Err::Error(
                 nom::error::Error {
-                    input: "=  [km]\n",
+                    input: "=  [km]",
                     code: nom::error::ErrorKind::Tag
                 }
             )))
@@ -180,7 +180,7 @@ mod test {
 
         // 7.4.5 Any white space immediately preceding or following the keyword shall not be significant.
         assert_eq!(
-            parse_kvn_line("ASD", "  ASD  = ASDFG\n", true),
+            parse_kvn_line("ASD", "  ASD  = ASDFG", true),
             Ok((
                 "",
                 KvnValue {
