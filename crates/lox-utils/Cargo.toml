@@ -13,6 +13,7 @@ serde = { version = "1.0.194", features = ["serde_derive"] }
 serde_json = "1.0.113"
 error = "0.1.9"
 serde-aux = "4.5.0"
+regex = "1.10.4"
 
 [dev-dependencies]
 float_eq.workspace = true

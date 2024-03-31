@@ -3,6 +3,7 @@
 use nom::bytes::complete as nb;
 use nom::character::complete as nc;
 use nom::sequence as ns;
+use regex::Regex;
 
 #[derive(PartialEq, Debug)]
 pub enum KvnParserErr<I> {
@@ -20,6 +21,7 @@ pub struct KvnValue<V, U> {
 fn parse_kvn_line<'a>(
     key: &'a str,
     input: &'a str,
+    with_unit: bool,
 ) -> Result<(&'a str, KvnValue<&'a str, &'a str>), KvnParserErr<&'a str>> {
     let equals = ns::tuple((
         nc::space0::<_, nom::error::Error<_>>,
@@ -35,26 +37,47 @@ fn parse_kvn_line<'a>(
 
     let (remaining, result) = kvn_line(input).map_err(|e| KvnParserErr::NomError(e))?;
 
-    let value = result.1;
+    let parsed_right_hand_side = result.1;
 
-    if value.len() == 0 {
+    let (parsed_value, parsed_unit) = if with_unit {
+        // This unwrap is okay here because this regex never changes after testing
+        let re = Regex::new(r"(.*?)(\[(.*)\])?$").unwrap();
+
+        // This unwrap is okay because .* will always match
+        let captures = re.captures(parsed_right_hand_side).unwrap();
+
+        (
+            captures.get(1).unwrap().as_str(),
+            captures.get(3).map(|f| f.as_str()),
+        )
+    } else {
+        (parsed_right_hand_side, None)
+    };
+
+    if parsed_value.len() == 0 {
         return Err(KvnParserErr::EmptyValue);
     }
 
-    let value = value.trim_end();
+    let parsed_value = parsed_value.trim_end();
 
-    Ok((remaining, KvnValue { value, unit: None }))
+    Ok((
+        remaining,
+        KvnValue {
+            value: parsed_value,
+            unit: parsed_unit,
+        },
+    ))
 }
 
 mod test {
     use super::*;
 
     #[test]
-    fn test_kvn_line_parse() {
+    fn test_parse_kvn_line() {
         // 7.5.1 A non-empty value field must be assigned to each mandatory keyword except for *‘_START’ and *‘_STOP’ keyword values
         // 7.4.6 Any white space immediately preceding or following the ‘equals’ sign shall not be significant.
         assert_eq!(
-            parse_kvn_line("ASD", "ASD = ASDFG\n"),
+            parse_kvn_line("ASD", "ASD = ASDFG\n", true),
             Ok((
                 "",
                 KvnValue {
@@ -64,7 +87,7 @@ mod test {
             ))
         );
         assert_eq!(
-            parse_kvn_line("ASD", "ASD    =   ASDFG\n"),
+            parse_kvn_line("ASD", "ASD    =   ASDFG\n", true),
             Ok((
                 "",
                 KvnValue {
@@ -74,7 +97,7 @@ mod test {
             ))
         );
         assert_eq!(
-            parse_kvn_line("ASD", "ASD    = ASDFG\n"),
+            parse_kvn_line("ASD", "ASD    = ASDFG\n", true),
             Ok((
                 "",
                 KvnValue {
@@ -84,21 +107,21 @@ mod test {
             ))
         );
         assert_eq!(
-            parse_kvn_line("ASD", "ASD =    \n"),
+            parse_kvn_line("ASD", "ASD =    \n", true),
             Err(KvnParserErr::EmptyValue)
         );
         assert_eq!(
-            parse_kvn_line("ASD", "ASD = \n"),
+            parse_kvn_line("ASD", "ASD = \n", true),
             Err(KvnParserErr::EmptyValue)
         );
         assert_eq!(
-            parse_kvn_line("ASD", "ASD =\n"),
+            parse_kvn_line("ASD", "ASD =\n", true),
             Err(KvnParserErr::EmptyValue)
         );
 
         // 7.4.7 Any white space immediately preceding the end of line shall not be significant.
         assert_eq!(
-            parse_kvn_line("ASD", "ASD = ASDFG          \n"),
+            parse_kvn_line("ASD", "ASD = ASDFG          \n", true),
             Ok((
                 "",
                 KvnValue {
@@ -108,10 +131,33 @@ mod test {
             ))
         );
 
-        // assert_eq!(parse_kvn_line("ASD", "ASD = ASDFG [km]\n"), Ok(("", "ASDFG")));
-        // assert_eq!(parse_kvn_line("ASD", "ASD =  [km]\n"), Ok(("", "ASDFG"))); //@TODO unit
+        assert_eq!(
+            parse_kvn_line("ASD", "ASD = ASDFG [km]\n", true),
+            Ok((
+                "",
+                KvnValue {
+                    value: "ASDFG",
+                    unit: Some("km")
+                }
+            ))
+        );
+        assert_eq!(
+            parse_kvn_line("ASD", "ASD = ASDFG             [km]\n", true),
+            Ok((
+                "",
+                KvnValue {
+                    value: "ASDFG",
+                    unit: Some("km")
+                }
+            ))
+        );
+
+        assert_eq!(
+            parse_kvn_line("ASD", "ASD =  [km]\n", true),
+            Err(KvnParserErr::EmptyValue)
+        );
         // assert_eq!(
-        //     parse_kvn_line("ASD", "ASD   [km]\n"),
+        //     parse_kvn_line("ASD", "ASD   [km]\n", true),
         //     Err(KvnParserErr::EmptyValue)
         // );
         // assert_eq!(parse_kvn_line("ASD", " =  [km]\n"), Ok(("", "ASDFG"))); //@TODO
