@@ -33,7 +33,7 @@ fn parse_kvn_line<'a>(
 
     let kvn = ns::separated_pair(nb::tag(key), equals, value);
 
-    let mut kvn_line = ns::terminated(kvn, nc::multispace0);
+    let mut kvn_line = ns::delimited(nc::space0, kvn, nc::multispace0);
 
     let (remaining, result) = kvn_line(input).map_err(|e| KvnLineParserErr::ParseError(e))?;
 
@@ -172,14 +172,25 @@ mod test {
             parse_kvn_line("ASD", " =  [km]\n", true),
             Err(KvnLineParserErr::ParseError(nom::Err::Error(
                 nom::error::Error {
-                    input: " =  [km]\n",
+                    input: "=  [km]\n",
                     code: nom::error::ErrorKind::Tag
                 }
             )))
         );
 
-        // 7.4.4 Keywords must be uppercase and must not contain blanks
         // 7.4.5 Any white space immediately preceding or following the keyword shall not be significant.
+        assert_eq!(
+            parse_kvn_line("ASD", "  ASD  = ASDFG\n", true),
+            Ok((
+                "",
+                KvnValue {
+                    value: "ASDFG",
+                    unit: None
+                }
+            ))
+        );
+
+        // 7.4.4 Keywords must be uppercase and must not contain blanks
         //@TODO parse dates and floats and integers
     }
 
