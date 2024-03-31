@@ -79,3 +79,10 @@ A collection of utilities used across the Lox ecosystem.
 ![The Ephemerista logo](public/ephemerista-logo.webp)
 
 A next-generation, open-source space mission simulator commissioned by the European Space Agency.
+
+## Why "Lox"?
+
+> Liquid oxygen—abbreviated LOx, LOX or Lox in the aerospace, submarine and gas industries—is the liquid form of
+> molecular oxygen. It was used as the _oxidizer_ in the first liquid-fueled rocket invented in 1926 by Robert H.
+> Goddard,
+> an application which has continued to the present. [Wikipedia](https://en.wikipedia.org/wiki/Liquid_oxygen)
