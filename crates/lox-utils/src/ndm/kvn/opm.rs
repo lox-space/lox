@@ -6,8 +6,8 @@ use nom::sequence as ns;
 use regex::Regex;
 
 #[derive(PartialEq, Debug)]
-pub enum KvnParserErr<I> {
-    NomError(nom::Err<nom::error::Error<I>>),
+pub enum KvnLineParserErr<I> {
+    ParseError(nom::Err<nom::error::Error<I>>),
     EmptyValue,
     EmptyKey,
 }
@@ -22,7 +22,7 @@ fn parse_kvn_line<'a>(
     key: &'a str,
     input: &'a str,
     with_unit: bool,
-) -> Result<(&'a str, KvnValue<&'a str, &'a str>), KvnParserErr<&'a str>> {
+) -> Result<(&'a str, KvnValue<&'a str, &'a str>), KvnLineParserErr<&'a str>> {
     let equals = ns::tuple((
         nc::space0::<_, nom::error::Error<_>>,
         nc::char('='),
@@ -35,7 +35,7 @@ fn parse_kvn_line<'a>(
 
     let mut kvn_line = ns::terminated(kvn, nc::multispace0);
 
-    let (remaining, result) = kvn_line(input).map_err(|e| KvnParserErr::NomError(e))?;
+    let (remaining, result) = kvn_line(input).map_err(|e| KvnLineParserErr::ParseError(e))?;
 
     let parsed_right_hand_side = result.1;
 
@@ -55,7 +55,7 @@ fn parse_kvn_line<'a>(
     };
 
     if parsed_value.len() == 0 {
-        return Err(KvnParserErr::EmptyValue);
+        return Err(KvnLineParserErr::EmptyValue);
     }
 
     let parsed_value = parsed_value.trim_end();
@@ -108,15 +108,15 @@ mod test {
         );
         assert_eq!(
             parse_kvn_line("ASD", "ASD =    \n", true),
-            Err(KvnParserErr::EmptyValue)
+            Err(KvnLineParserErr::EmptyValue)
         );
         assert_eq!(
             parse_kvn_line("ASD", "ASD = \n", true),
-            Err(KvnParserErr::EmptyValue)
+            Err(KvnLineParserErr::EmptyValue)
         );
         assert_eq!(
             parse_kvn_line("ASD", "ASD =\n", true),
-            Err(KvnParserErr::EmptyValue)
+            Err(KvnLineParserErr::EmptyValue)
         );
 
         // 7.4.7 Any white space immediately preceding the end of line shall not be significant.
@@ -131,6 +131,8 @@ mod test {
             ))
         );
 
+        // a) there must be at least one blank character between the value and the units text;
+        // b) the units must be enclosed within square brackets (e.g., ‘[m]’);
         assert_eq!(
             parse_kvn_line("ASD", "ASD = ASDFG [km]\n", true),
             Ok((
@@ -154,13 +156,27 @@ mod test {
 
         assert_eq!(
             parse_kvn_line("ASD", "ASD =  [km]\n", true),
-            Err(KvnParserErr::EmptyValue)
+            Err(KvnLineParserErr::EmptyValue)
         );
-        // assert_eq!(
-        //     parse_kvn_line("ASD", "ASD   [km]\n", true),
-        //     Err(KvnParserErr::EmptyValue)
-        // );
-        // assert_eq!(parse_kvn_line("ASD", " =  [km]\n"), Ok(("", "ASDFG"))); //@TODO
+
+        assert_eq!(
+            parse_kvn_line("ASD", "ASD   [km]\n", true),
+            Err(KvnLineParserErr::ParseError(nom::Err::Error(
+                nom::error::Error {
+                    input: "[km]\n",
+                    code: nom::error::ErrorKind::Char
+                }
+            )))
+        );
+        assert_eq!(
+            parse_kvn_line("ASD", " =  [km]\n", true),
+            Err(KvnLineParserErr::ParseError(nom::Err::Error(
+                nom::error::Error {
+                    input: " =  [km]\n",
+                    code: nom::error::ErrorKind::Tag
+                }
+            )))
+        );
 
         // 7.4.4 Keywords must be uppercase and must not contain blanks
         // 7.4.5 Any white space immediately preceding or following the keyword shall not be significant.
