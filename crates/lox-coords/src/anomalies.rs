@@ -6,14 +6,34 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-pub fn hyperbolic_to_true(hyperbolic_anomaly: f64, eccentricity: f64) -> f64 {
+use lox_utils::types::Radians;
+
+// Hyperbolic Anomaly <-> True Anomaly
+
+pub fn hyperbolic_to_true(hyperbolic_anomaly: Radians, eccentricity: Radians) -> Radians {
     2.0 * (((1.0 + eccentricity) / (eccentricity - 1.0)).sqrt() * (hyperbolic_anomaly / 2.0).tanh())
         .atan()
 }
 
-pub fn eccentric_to_true(eccentric_anomaly: f64, eccentricity: f64) -> f64 {
+// Eccentric Anomaly <-> True Anomaly
+
+pub fn eccentric_to_true(eccentric_anomaly: Radians, eccentricity: Radians) -> Radians {
     2.0 * (((1.0 + eccentricity) / (1.0 - eccentricity)).sqrt() * (eccentric_anomaly / 2.0).tan())
         .atan()
+}
+
+pub fn true_to_eccentric(true_anomaly: Radians, eccentricity: Radians) -> Radians {
+    2.0 * (((1.0 - eccentricity) / (1.0 + eccentricity)).sqrt() * (true_anomaly / 2.0).tan()).atan()
+}
+
+// Parabolic Anomaly <-> True Anomaly
+
+pub fn parabolic_to_true(parabolic_anomaly: Radians) -> Radians {
+    2.0 * parabolic_anomaly.tan().atan()
+}
+
+pub fn true_to_parabolic(true_anomaly: Radians) -> Radians {
+    (true_anomaly / 2.0).tan()
 }
 
 #[cfg(test)]
