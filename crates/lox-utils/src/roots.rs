@@ -186,13 +186,13 @@ where
             fpre = fcur;
 
             if scur.abs() > tol {
-                xcur = xcur + scur
+                xcur += scur
             } else {
                 if sbis > 0.0 {
-                    xcur = xcur + tol
+                    xcur += tol
                 }
                 if sbis < 0.0 {
-                    xcur = xcur - tol
+                    xcur -= tol
                 }
             }
 
