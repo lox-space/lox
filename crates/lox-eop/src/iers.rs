@@ -8,6 +8,8 @@
 
 //! Parse [EarthOrientationParams] from IERS CSV data.
 
+#![cfg(test)]
+
 use std::path::Path;
 
 use serde::Deserialize;
@@ -15,37 +17,13 @@ use serde::Deserialize;
 use crate::{EarthOrientationParams, LoxEopError};
 
 #[derive(Debug, Deserialize)]
-pub struct Record {
+struct Record {
     #[serde(rename = "MJD")]
     modified_julian_date: i32,
     x_pole: Option<f64>,
-    sigma_x_pole: Option<f64>,
     y_pole: Option<f64>,
-    sigma_y_pole: Option<f64>,
     #[serde(rename = "UT1-UTC")]
     delta_ut1_utc: Option<f64>,
-    #[serde(rename = "sigma_UT1-UTC")]
-    sigma_delta_ut1_utc: Option<f64>,
-    #[serde(rename = "LOD")]
-    lod: Option<f64>,
-    #[serde(rename = "sigma_LOD")]
-    sigma_lod: Option<f64>,
-    #[serde(rename = "dPsi")]
-    delta_psi: Option<f64>,
-    #[serde(rename = "sigma_dPsi")]
-    sigma_delta_psi: Option<f64>,
-    #[serde(rename = "dEpsilon")]
-    delta_epsilon: Option<f64>,
-    #[serde(rename = "sigma_dEpsilon")]
-    sigma_delta_epsilon: Option<f64>,
-    #[serde(rename = "dX")]
-    delta_x: Option<f64>,
-    #[serde(rename = "sigma_dX")]
-    sigma_delta_x: Option<f64>,
-    #[serde(rename = "dY")]
-    delta_y: Option<f64>,
-    #[serde(rename = "sigma_dY")]
-    sigma_delta_y: Option<f64>,
 }
 
 pub fn parse_finals_csv<P: AsRef<Path>>(path: P) -> Result<EarthOrientationParams, LoxEopError> {

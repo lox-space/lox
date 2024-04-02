@@ -7,7 +7,6 @@
  */
 
 use lox_utils::types::julian_dates::ModifiedJulianDate;
-use lox_utils::types::units::Seconds;
 use thiserror::Error;
 
 mod iers;
