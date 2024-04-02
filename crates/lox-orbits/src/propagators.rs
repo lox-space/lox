@@ -1,7 +1,7 @@
+use crate::frames::ReferenceFrame;
+use crate::trajectories::Trajectory;
+use crate::two_body::Cartesian;
 use lox_bodies::PointMass;
-use lox_coords::frames::ReferenceFrame;
-use lox_coords::trajectories::Trajectory;
-use lox_coords::two_body::Cartesian;
 use lox_time::deltas::TimeDelta;
 use lox_time::time_scales::TimeScale;
 use lox_time::Time;

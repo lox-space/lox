@@ -11,8 +11,8 @@ use std::str::FromStr;
 use pyo3::prelude::*;
 
 use lox_bodies::PointMass;
-use lox_coords::base::{BaseCartesian, BaseKeplerian, BaseTwoBody};
-use lox_coords::DVec3;
+use lox_orbits::base::{BaseCartesian, BaseKeplerian, BaseTwoBody};
+use lox_orbits::DVec3;
 
 use crate::bodies::PyBody;
 use crate::frames::PyFrame;

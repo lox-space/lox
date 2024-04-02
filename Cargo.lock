@@ -390,18 +390,6 @@ name = "lox-comms"
 version = "0.1.0"
 
 [[package]]
-name = "lox-coords"
-version = "0.1.0"
-dependencies = [
- "float_eq",
- "glam",
- "lox-bodies",
- "lox-time",
- "lox-utils",
- "thiserror",
-]
-
-[[package]]
 name = "lox-earth"
 version = "0.1.0"
 dependencies = [
@@ -445,14 +433,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "lox-propagators"
+name = "lox-orbits"
 version = "0.1.0"
 dependencies = [
  "float_eq",
+ "glam",
  "libm",
  "lox-bodies",
- "lox-coords",
  "lox-time",
+ "lox-utils",
  "thiserror",
 ]
 
@@ -463,7 +452,7 @@ dependencies = [
  "divan",
  "float_eq",
  "lox-bodies",
- "lox-coords",
+ "lox-orbits",
  "lox-time",
  "lox-utils",
  "pyo3",

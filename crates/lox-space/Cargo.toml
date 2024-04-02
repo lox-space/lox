@@ -13,7 +13,7 @@ crate-type = ["lib", "cdylib"]
 
 [dependencies]
 lox-bodies.workspace = true
-lox-coords.workspace = true
+lox-orbits.workspace = true
 lox-time.workspace = true
 lox-utils.workspace = true
 

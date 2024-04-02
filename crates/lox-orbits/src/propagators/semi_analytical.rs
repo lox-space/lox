@@ -8,18 +8,19 @@
 
 use thiserror::Error;
 
+use crate::base::{BaseCartesian, BaseState, BaseTwoBody};
+use crate::frames::ReferenceFrame;
+use crate::trajectories::base::BaseCubicSplineTrajectory;
+use crate::trajectories::{CubicSplineTrajectory, LoxTrajectoryError, Trajectory};
+use crate::two_body::Cartesian;
+use crate::CoordinateSystem;
 use lox_bodies::{Earth, PointMass};
-use lox_coords::base::{BaseCartesian, BaseState, BaseTwoBody};
-use lox_coords::frames::ReferenceFrame;
-use lox_coords::trajectories::base::BaseCubicSplineTrajectory;
-use lox_coords::trajectories::{CubicSplineTrajectory, LoxTrajectoryError, Trajectory};
-use lox_coords::two_body::Cartesian;
-use lox_coords::CoordinateSystem;
 use lox_time::base_time::BaseTime;
 use lox_time::deltas::TimeDelta;
 use lox_time::time_scales::TimeScale;
 
-use crate::{base::BasePropagator, stumpff, Propagator};
+use super::base::BasePropagator;
+use super::{stumpff, Propagator};
 
 #[derive(Debug, Error, Eq, PartialEq)]
 pub enum LoxValladoError {
@@ -248,8 +249,8 @@ where
 mod tests {
     use float_eq::assert_float_eq;
 
-    use lox_coords::frames::Icrf;
-    use lox_coords::two_body::{Keplerian, TwoBody};
+    use crate::frames::Icrf;
+    use crate::two_body::{Keplerian, TwoBody};
     use lox_time::calendar_dates::Date;
     use lox_time::subsecond::Subsecond;
     use lox_time::time_scales::Tdb;

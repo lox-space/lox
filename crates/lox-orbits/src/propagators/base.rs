@@ -6,8 +6,8 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use lox_coords::base::{BaseState, BaseTwoBody};
-use lox_coords::trajectories::base::BaseTrajectory;
+use crate::base::{BaseState, BaseTwoBody};
+use crate::trajectories::base::BaseTrajectory;
 use lox_time::base_time::BaseTime;
 use lox_time::deltas::TimeDelta;
 

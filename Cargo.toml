@@ -1,10 +1,6 @@
 [workspace]
-members = [
-    "crates/*"
-]
-exclude = [
-    "tools/lox-gen"
-]
+members = ["crates/*"]
+exclude = ["tools/lox-gen"]
 resolver = "2"
 
 [workspace.package]
@@ -16,15 +12,14 @@ authors = ["Helge Eichhorn and the lox-space contributors"]
 [workspace.dependencies]
 lox-bodies = { path = "crates/lox-bodies" }
 lox-comms = { path = "crates/lox-comms" }
-lox-coords = { path = "crates/lox-coords" }
-lox-eop = { path = "crates/lox-eop" }
-lox-utils = { path = "crates/lox-utils" }
 lox-earth = { path = "crates/lox-earth" }
+lox-eop = { path = "crates/lox-eop" }
 lox-ephem = { path = "crates/lox-ephem" }
 lox-io = { path = "crates/lox-io" }
-lox-propagators = { path = "crates/lox-propagators" }
+lox-orbits = { path = "crates/lox-orbits" }
 lox-space = { path = "crates/lox-space" }
 lox-time = { path = "crates/lox-time" }
+lox-utils = { path = "crates/lox-utils" }
 
 divan = "0.1.14"
 dyn-clone = "1.0.17"
@@ -40,4 +35,3 @@ proptest = "1.4.0"
 pyo3 = "0.20.3"
 rstest = "0.18.2"
 thiserror = "1.0"
-

@@ -7,9 +7,9 @@
  */
 
 use lox_bodies::Earth;
-use lox_coords::frames::Icrf;
-use lox_coords::two_body::{Cartesian, Keplerian};
-use lox_coords::DVec3;
+use lox_orbits::frames::Icrf;
+use lox_orbits::two_body::{Cartesian, Keplerian};
+use lox_orbits::DVec3;
 use lox_time::calendar_dates::Date;
 use lox_time::julian_dates::JulianDate;
 use lox_time::subsecond::Subsecond;

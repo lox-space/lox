@@ -9,9 +9,9 @@
 use divan::Bencher;
 
 use lox_bodies::{Jupiter, RotationalElements};
-use lox_coords::frames::iau::BodyFixed;
-use lox_coords::frames::{FromFrame, Icrf, Rotation};
-use lox_coords::DVec3;
+use lox_orbits::frames::iau::BodyFixed;
+use lox_orbits::frames::{FromFrame, Icrf, Rotation};
+use lox_orbits::DVec3;
 
 fn main() {
     // Run registered benchmarks.
