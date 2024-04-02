@@ -9,6 +9,8 @@
 use std::fs;
 use std::path::Path;
 
+use lox_utils::types::julian_dates::ModifiedJulianDate;
+use lox_utils::types::units::Seconds;
 use serde::Deserialize;
 use thiserror::Error;
 
@@ -36,6 +38,12 @@ impl From<std::io::Error> for LoxEopError {
     fn from(err: std::io::Error) -> Self {
         LoxEopError::Io(err.to_string())
     }
+}
+
+/// Implementors of [DeltaUt1Tai] provide the difference between UT1 and TAI as a floating-point
+/// number of seconds.
+pub trait DeltaUt1Tai {
+    fn delta_ut1_tai(&self, mjd: ModifiedJulianDate) -> Seconds;
 }
 
 #[derive(Debug, Deserialize)]
