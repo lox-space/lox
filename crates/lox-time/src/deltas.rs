@@ -34,7 +34,7 @@ impl PartialEq for TimeDeltaError {
 }
 
 /// A signed, continuous time difference supporting femtosecond precision.
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
 pub struct TimeDelta {
     // Like `BaseTime`, the sign of the delta is determined by the sign of the `seconds` field.
     pub seconds: i64,

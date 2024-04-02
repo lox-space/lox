@@ -173,6 +173,14 @@ impl<T: TimeScale + Copy> Sub<TimeDelta> for Time<T> {
     }
 }
 
+impl<T: TimeScale + Copy> Sub<Time<T>> for Time<T> {
+    type Output = TimeDelta;
+
+    fn sub(self, rhs: Time<T>) -> Self::Output {
+        self.timestamp - rhs.timestamp
+    }
+}
+
 impl<T: TimeScale + Copy> WallClock for Time<T> {
     fn hour(&self) -> i64 {
         self.timestamp.hour()
@@ -267,7 +275,7 @@ mod tests {
     #[test]
     fn test_time_display() {
         let time = Time::j2000(Tai);
-        let expected = "12:00:00.000.000.000.000.000 TAI".to_string();
+        let expected = "12:00:00.000 TAI".to_string();
         let actual = time.to_string();
         assert_eq!(expected, actual);
     }
@@ -602,5 +610,14 @@ mod tests {
         let tai = Time::from_base_time(Tai, base_time);
         let actual = tai.calendar_date();
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_time_sub_time() {
+        let t0 = Time::j2000(Tai);
+        let delta = TimeDelta::from_decimal_seconds(1.5).unwrap();
+        let t1 = t0 + delta;
+        let actual = t1 - t0;
+        assert_eq!(delta, actual);
     }
 }

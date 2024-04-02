@@ -252,8 +252,8 @@ mod tests {
     use lox_coords::two_body::{Keplerian, TwoBody};
     use lox_time::calendar_dates::Date;
     use lox_time::subsecond::Subsecond;
-    use lox_time::time_scales::TDB;
-    use lox_time::utc::UTC;
+    use lox_time::time_scales::Tdb;
+    use lox_time::utc::Utc;
     use lox_time::Time;
 
     use super::*;
@@ -261,8 +261,8 @@ mod tests {
     #[test]
     fn test_vallado_propagator() {
         let date = Date::new(2023, 3, 25).expect("Date should be valid");
-        let utc = UTC::new(21, 8, 0, Subsecond::new(0.0).unwrap()).expect("Time should be valid");
-        let time = Time::from_date_and_utc_timestamp(TDB, date, utc);
+        let utc = Utc::new(21, 8, 0, Subsecond::new(0.0).unwrap()).expect("Time should be valid");
+        let time = Time::from_date_and_utc_timestamp(Tdb, date, utc);
         let semi_major = 24464560.0e-3;
         let eccentricity = 0.7311;
         let inclination = 0.122138;
