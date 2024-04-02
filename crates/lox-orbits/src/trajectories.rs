@@ -166,7 +166,7 @@ mod tests {
 
     #[test]
     fn test_trajectory() {
-        let states: Vec<Cartesian<Tai, Earth, Icrf>> = vec![1.0, 2.0, 3.0, 4.0]
+        let states: Vec<Cartesian<Tai, Earth, Icrf>> = [1.0, 2.0, 3.0, 4.0]
             .iter()
             .map(|&i| {
                 let position = DVec3::new(i, i, i) * 1.0e3;
@@ -193,7 +193,7 @@ mod tests {
 
     #[test]
     fn test_trajectory_field() {
-        let states: Vec<Cartesian<Tai, Earth, Icrf>> = vec![1.0, 2.0, 3.0, 4.0]
+        let states: Vec<Cartesian<Tai, Earth, Icrf>> = [1.0, 2.0, 3.0, 4.0]
             .iter()
             .map(|&i| {
                 let position = DVec3::new(i, i, i) * 1.0e3;
@@ -217,7 +217,7 @@ mod tests {
 
     #[test]
     fn test_trajectory_too_few_states() {
-        let states: Vec<Cartesian<Tai, Earth, Icrf>> = vec![1.0, 2.0, 3.0]
+        let states: Vec<Cartesian<Tai, Earth, Icrf>> = [1.0, 2.0, 3.0]
             .iter()
             .map(|&i| {
                 let position = DVec3::new(i, i, i) * 1.0e3;
@@ -236,7 +236,7 @@ mod tests {
 
     #[test]
     fn test_trajectory_unknown_field() {
-        let states: Vec<Cartesian<Tai, Earth, Icrf>> = vec![1.0, 2.0, 3.0, 4.0]
+        let states: Vec<Cartesian<Tai, Earth, Icrf>> = [1.0, 2.0, 3.0, 4.0]
             .iter()
             .map(|&i| {
                 let position = DVec3::new(i, i, i) * 1.0e3;
@@ -257,7 +257,7 @@ mod tests {
 
     #[test]
     fn test_trajectory_delta_out_of_range() {
-        let states: Vec<Cartesian<Tai, Earth, Icrf>> = vec![1.0, 2.0, 3.0, 4.0]
+        let states: Vec<Cartesian<Tai, Earth, Icrf>> = [1.0, 2.0, 3.0, 4.0]
             .iter()
             .map(|&i| {
                 let position = DVec3::new(i, i, i) * 1.0e3;
@@ -308,7 +308,7 @@ mod tests {
 
     #[test]
     fn test_trajectory_epoch_out_of_range() {
-        let states: Vec<Cartesian<Tai, Earth, Icrf>> = vec![1.0, 2.0, 3.0, 4.0]
+        let states: Vec<Cartesian<Tai, Earth, Icrf>> = [1.0, 2.0, 3.0, 4.0]
             .iter()
             .map(|&i| {
                 let position = DVec3::new(i, i, i) * 1.0e3;
