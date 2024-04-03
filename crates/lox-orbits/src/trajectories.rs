@@ -9,9 +9,9 @@
 use thiserror::Error;
 
 use lox_bodies::PointMass;
-use lox_time::deltas::TimeDelta;
 use lox_time::time_scales::TimeScale;
 use lox_time::Time;
+use lox_time::{deltas::TimeDelta, TimeSystem};
 use lox_utils::interpolation::cubic_spline::LoxCubicSplineError;
 
 use crate::base::BaseState;
@@ -86,6 +86,19 @@ where
     }
 
     pub fn scale(&self) -> T {
+        self.scale
+    }
+}
+
+impl<T, O, F> TimeSystem for CubicSplineTrajectory<T, O, F>
+where
+    T: TimeScale + Copy,
+    O: PointMass + Copy,
+    F: ReferenceFrame + Copy,
+{
+    type Scale = T;
+
+    fn scale(&self) -> Self::Scale {
         self.scale
     }
 }

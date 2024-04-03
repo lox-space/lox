@@ -9,6 +9,7 @@
 pub use glam::DVec3;
 
 use lox_bodies::PointMass;
+use lox_time::TimeSystem;
 
 use crate::frames::ReferenceFrame;
 
@@ -20,7 +21,7 @@ pub mod propagators;
 pub mod trajectories;
 pub mod two_body;
 
-pub trait CoordinateSystem {
+pub trait CoordinateSystem: TimeSystem {
     type Origin: PointMass;
     type Frame: ReferenceFrame;
 

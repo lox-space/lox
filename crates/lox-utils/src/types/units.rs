@@ -10,6 +10,10 @@
 
 pub type Arcseconds = f64;
 
+pub type Dimensionless = f64;
+
+pub type Kilometers = f64;
+
 pub type Microarcseconds = f64;
 
 pub type Radians = f64;

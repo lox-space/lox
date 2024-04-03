@@ -480,6 +480,7 @@ version = "0.1.0"
 dependencies = [
  "fast_polynomial",
  "float_eq",
+ "glam",
  "nalgebra",
  "rstest",
  "thiserror",

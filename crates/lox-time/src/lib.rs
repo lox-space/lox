@@ -40,6 +40,12 @@ pub mod transformations;
 pub mod utc;
 pub mod wall_clock;
 
+pub trait TimeSystem {
+    type Scale: TimeScale;
+
+    fn scale(&self) -> Self::Scale;
+}
+
 /// An instant in time in a given [TimeScale].
 ///
 /// `Time` supports femtosecond precision, but be aware that many algorithms operating on `Time`s
@@ -103,11 +109,6 @@ impl<T: TimeScale + Copy> Time<T> {
         Self::from_epoch(scale, Epoch::J2000)
     }
 
-    /// Returns the timescale
-    pub fn scale(&self) -> T {
-        self.scale
-    }
-
     /// The underlying base timestamp.
     pub fn base_time(&self) -> BaseTime {
         self.timestamp
@@ -138,6 +139,17 @@ impl<T: TimeScale + Copy> Time<T> {
         transformer: impl TransformTimeScale<T, S>,
     ) -> Time<S> {
         Time::from_scale(self, transformer)
+    }
+}
+
+impl<T> TimeSystem for Time<T>
+where
+    T: TimeScale + Copy,
+{
+    type Scale = T;
+
+    fn scale(&self) -> Self::Scale {
+        self.scale
     }
 }
 

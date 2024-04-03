@@ -6,6 +6,7 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use lox_time::TimeSystem;
 use thiserror::Error;
 
 use crate::base::{BaseCartesian, BaseState, BaseTwoBody};

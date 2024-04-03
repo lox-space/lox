@@ -6,13 +6,16 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+pub mod cartesian;
+pub mod keplerian;
+
 use std::f64::consts::TAU;
 
 use glam::DVec3;
 
 use lox_bodies::PointMass;
 use lox_time::time_scales::TimeScale;
-use lox_time::Time;
+use lox_time::{Time, TimeSystem};
 
 use crate::base::{BaseCartesian, BaseKeplerian, BaseState, BaseTwoBody};
 use crate::frames::{InertialFrame, ReferenceFrame};
@@ -103,6 +106,19 @@ where
 
     fn to_keplerian(&self) -> Keplerian<T, O, F> {
         Keplerian::from(*self)
+    }
+}
+
+impl<T, O, F> TimeSystem for Cartesian<T, O, F>
+where
+    T: TimeScale + Copy,
+    O: PointMass + Copy,
+    F: ReferenceFrame + Copy,
+{
+    type Scale = T;
+
+    fn scale(&self) -> Self::Scale {
+        self.time.scale()
     }
 }
 
@@ -240,6 +256,19 @@ where
 
     fn to_keplerian(&self) -> Keplerian<T, O, F> {
         *self
+    }
+}
+
+impl<T, O, F> TimeSystem for Keplerian<T, O, F>
+where
+    T: TimeScale + Copy,
+    O: PointMass + Copy,
+    F: InertialFrame + Copy,
+{
+    type Scale = T;
+
+    fn scale(&self) -> Self::Scale {
+        self.time.scale()
     }
 }
 
