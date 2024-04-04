@@ -71,6 +71,7 @@ mod tests {
 
     const TEST_DATA_DIR: &str = "../../data";
 
+    #[derive(Default)]
     struct ExpectedRecord {
         mjd: ModifiedJulianDate,
         x_pole: f64,
@@ -110,6 +111,22 @@ mod tests {
             y_pole: 0.295733,
             delta_ut1_utc: 0.0117914,
         }
+    )]
+    #[should_panic(expected = "finals CSV record 1 is missing y_pole despite present x_pole")]
+    #[case::missing_y_pole(
+        "iers_missing_y_pole.csv",
+        0,
+        ExpectedRecord::default(),
+        ExpectedRecord::default()
+    )]
+    #[should_panic(
+        expected = "finals CSV record 1 is missing delta_ut1_utc despite present x_pole"
+    )]
+    #[case::missing_delta_ut1_utc(
+        "iers_missing_delta_ut1_utc.csv",
+        0,
+        ExpectedRecord::default(),
+        ExpectedRecord::default()
     )]
     fn test_parse_finals_csv(
         #[case] path: &str,
