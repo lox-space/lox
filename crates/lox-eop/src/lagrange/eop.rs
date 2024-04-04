@@ -221,11 +221,11 @@ fn chi(julian_centuries_since_j2000: f64) -> Radians {
 mod tests {
     use std::path::Path;
 
+    use crate::EarthOrientationParams;
     use float_eq::assert_float_eq;
-    use num_traits::ToPrimitive;
     use rstest::{fixture, rstest};
 
-    use crate::{read_records, Records};
+    use crate::iers::parse_finals_csv;
 
     use super::*;
 
@@ -249,58 +249,16 @@ mod tests {
 
     const FINALS2000A_PATH: &str = "../../data/finals2000A.all.csv";
 
-    struct UnwrappedEOPData {
-        x_pole: Vec<Arcseconds>,
-        y_pole: Vec<Arcseconds>,
-        delta_ut1_utc: Vec<Seconds>,
-        mjd: Vec<ModifiedJulianDate>,
-    }
-
     #[fixture]
-    fn eop_data() -> UnwrappedEOPData {
+    fn eop_data() -> EarthOrientationParams {
         let fixture_path = Path::new(FINALS2000A_PATH);
-
-        let records: Records = read_records(FINALS2000A_PATH)
-            .unwrap_or_else(|err| {
-                panic!(
-                    "failed to read test fixture at {}: {}",
-                    fixture_path.to_str().unwrap(),
-                    err,
-                )
-            })
-            .into();
-
-        let x_pole: Vec<f64> = records
-            .x_pole
-            .iter()
-            .map(|opt| opt.expect("x_pole value should not be None"))
-            .collect();
-        let y_pole = records
-            .y_pole
-            .iter()
-            .map(|opt| opt.expect("y_pole value should not be None"))
-            .collect();
-        let delta_ut1_utc = records
-            .delta_ut1_utc
-            .iter()
-            .map(|opt| opt.expect("delta_ut1_utc value should not be None"))
-            .collect();
-        let mjd = records
-            .modified_julian_date
-            .iter()
-            .map(|date| {
-                date.to_f64().unwrap_or_else(|| {
-                    panic!("fixture MJD `{}` could not be represented as an f64", date)
-                })
-            })
-            .collect();
-
-        UnwrappedEOPData {
-            x_pole,
-            y_pole,
-            delta_ut1_utc,
-            mjd,
-        }
+        parse_finals_csv(fixture_path).unwrap_or_else(|err| {
+            panic!(
+                "failed to parse test fixture at {}: {}",
+                fixture_path.to_str().unwrap(),
+                err,
+            )
+        })
     }
 
     #[rstest]
@@ -329,7 +287,7 @@ mod tests {
     d_ut1_utc: -1072847942.5702964,
     })]
     fn test_lagrangian_interpolate(
-        eop_data: UnwrappedEOPData,
+        eop_data: EarthOrientationParams,
         #[case] target_epoch: ModifiedJulianDate,
         #[case] expected: Interpolation,
     ) -> Result<(), ArgumentSizeMismatchError> {
