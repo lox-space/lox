@@ -7,40 +7,100 @@
  */
 
 use lox_utils::types::julian_dates::ModifiedJulianDate;
+use lox_utils::types::units::Seconds;
 use thiserror::Error;
 
 mod iers;
 mod lagrange;
 
-#[derive(Clone, Debug, Error, PartialEq)]
-pub enum LoxEopError {
-    #[error("{0}")]
-    Csv(String),
-    #[error("{0}")]
-    Io(String),
-}
-
-// Neither csv::Error nor std::io::Error are clone due to some sophisticated inner workings
-// involving trait objects (at least in the case of io::Error), but there's no good reason that Lox
-// error types shouldn't be cloneable. Otherwise, the whole chain of errors based on LoxEopError
-// become non-Clone.
-impl From<csv::Error> for LoxEopError {
-    fn from(err: csv::Error) -> Self {
-        LoxEopError::Csv(err.to_string())
-    }
-}
-
-impl From<std::io::Error> for LoxEopError {
-    fn from(err: std::io::Error) -> Self {
-        LoxEopError::Io(err.to_string())
-    }
+#[derive(Copy, Clone, Debug, Error, PartialEq, Eq)]
+pub enum EopError {
+    #[error("input vectors for EarthOrientationParams must have equal lengths, but got mjd={len_mjd}, x_pole={len_x_pole}, y_pole={len_y_pole}, delta_ut1_utc={len_delta_ut1_utc}")]
+    DimensionMismatch {
+        len_mjd: usize,
+        len_x_pole: usize,
+        len_y_pole: usize,
+        len_delta_ut1_utc: usize,
+    },
+    #[error("EarthOrientationParams cannot be empty, but empty input vectors were provided")]
+    NoData,
 }
 
 /// A representation of observed Earth orientation parameters, independent of input format.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct EarthOrientationParams {
     mjd: Vec<ModifiedJulianDate>,
     x_pole: Vec<f64>,
     y_pole: Vec<f64>,
     delta_ut1_utc: Vec<f64>,
 }
+
+impl EarthOrientationParams {
+    pub fn new(
+        mjd: Vec<ModifiedJulianDate>,
+        x_pole: Vec<f64>,
+        y_pole: Vec<f64>,
+        delta_ut1_utc: Vec<f64>,
+    ) -> Result<Self, EopError> {
+        if mjd.len() != x_pole.len()
+            || mjd.len() != y_pole.len()
+            || mjd.len() != delta_ut1_utc.len()
+        {
+            return Err(EopError::DimensionMismatch {
+                len_mjd: mjd.len(),
+                len_x_pole: x_pole.len(),
+                len_y_pole: y_pole.len(),
+                len_delta_ut1_utc: delta_ut1_utc.len(),
+            });
+        }
+
+        if mjd.is_empty() {
+            return Err(EopError::NoData);
+        }
+
+        Ok(EarthOrientationParams {
+            mjd,
+            x_pole,
+            y_pole,
+            delta_ut1_utc,
+        })
+    }
+}
+
+#[derive(Copy, Clone, Debug, Error, PartialEq)]
+pub enum DateError {
+    #[error("input MJD {input} is before earliest EOP data MJD {earliest}")]
+    BeforeData {
+        input: ModifiedJulianDate,
+        earliest: ModifiedJulianDate,
+    },
+    #[error("input MJD {input} is after latest EOP data MJD {latest}")]
+    AfterData {
+        input: ModifiedJulianDate,
+        latest: ModifiedJulianDate,
+    },
+}
+
+/// Implementers of [DeltaUt1Tai] provide the difference between UT1 and TAI as a floating-point
+/// number of seconds.  
+pub trait DeltaUt1Tai {
+    fn delta_ut1_tai(&self, mjd: ModifiedJulianDate) -> Result<Seconds, DateError>;
+}
+
+// impl DeltaUt1Tai for EarthOrientationParams {
+//     fn delta_ut1_tai(&self, mjd: ModifiedJulianDate) -> Result<Seconds, DateError> {
+//         // getΔUT1(eop, date; args...) = interpolate(eop, :ΔUT1, date; args...)
+//         if mjd < *self.mjd.first().unwrap() {
+//             return Err(DateError::BeforeData {
+//                 input: mjd,
+//                 earliest: self.mjd[0],
+//             });
+//         }
+//
+//         if mjd > *self.mjd.last().unwrap() {
+//             || mjd > self.mjd[self.mjd.len() - 1] {
+//             Err()
+//         }
+//         Ok(0.0)
+//     }
+// }

@@ -10,11 +10,32 @@
 
 #![cfg(test)]
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
+use thiserror::Error;
 
-use crate::{EarthOrientationParams, LoxEopError};
+use crate::{EarthOrientationParams, EopError};
+
+#[derive(Clone, Debug, Error, PartialEq)]
+pub enum ParseFinalsCsvError {
+    #[error("{0}")]
+    Csv(String),
+    #[error("finals CSV at `{path}` contains invalid rows: row {row} is missing y_pole field despite present x_pole field")]
+    MissingYPole { path: PathBuf, row: usize },
+    #[error("finals CSV at `{path}` contains invalid rows: row {row} is missing delta_ut1_utc field despite present x_pole field")]
+    MissingDeltaUt1Utc { path: PathBuf, row: usize },
+    #[error("CSV file at `{path}` contains invalid data: {source}")]
+    InvalidEop { path: PathBuf, source: EopError },
+}
+
+// csv::Error is not Clone, but there's no good reason that Lox error types shouldn't be
+// cloneable. Otherwise, the whole chain of errors based on LoxEopError become non-Clone.
+impl From<csv::Error> for ParseFinalsCsvError {
+    fn from(err: csv::Error) -> Self {
+        ParseFinalsCsvError::Csv(err.to_string())
+    }
+}
 
 #[derive(Debug, Deserialize)]
 struct Record {
@@ -26,36 +47,48 @@ struct Record {
     delta_ut1_utc: Option<f64>,
 }
 
-pub fn parse_finals_csv<P: AsRef<Path>>(path: P) -> Result<EarthOrientationParams, LoxEopError> {
-    let mut reader = csv::ReaderBuilder::new().delimiter(b';').from_path(path)?;
-    let mut eop = EarthOrientationParams::default();
+pub fn parse_finals_csv<P: AsRef<Path>>(
+    path: P,
+) -> Result<EarthOrientationParams, ParseFinalsCsvError> {
+    let mut reader = csv::ReaderBuilder::new().delimiter(b';').from_path(&path)?;
+    let mut mjd = Vec::new();
+    let mut x_pole = Vec::new();
+    let mut y_pole = Vec::new();
+    let mut delta_ut1_utc = Vec::new();
+
     for (i, result) in reader.deserialize().enumerate() {
         let record: Record = result?;
         if record.x_pole.is_none() {
             continue;
         }
 
-        let x_pole = record.x_pole.unwrap();
-        let y_pole = record.y_pole.unwrap_or_else(|| {
-            panic!(
-                "finals CSV record {} is missing y_pole despite present x_pole",
-                i + 1,
-            )
-        });
-        let delta_ut1_utc = record.delta_ut1_utc.unwrap_or_else(|| {
-            panic!(
-                "finals CSV record {} is missing delta_ut1_utc despite present x_pole",
-                i + 1,
-            )
-        });
+        let record_x_pole = record.x_pole.unwrap();
+        let record_y_pole = record
+            .y_pole
+            .ok_or_else(|| ParseFinalsCsvError::MissingYPole {
+                path: path.as_ref().to_path_buf(),
+                row: i + 1,
+            })?;
+        let record_delta_ut1_utc =
+            record
+                .delta_ut1_utc
+                .ok_or_else(|| ParseFinalsCsvError::MissingDeltaUt1Utc {
+                    path: path.as_ref().to_path_buf(),
+                    row: i + 1,
+                })?;
 
-        eop.mjd.push(record.modified_julian_date as f64);
-        eop.x_pole.push(x_pole);
-        eop.y_pole.push(y_pole);
-        eop.delta_ut1_utc.push(delta_ut1_utc);
+        mjd.push(record.modified_julian_date as f64);
+        x_pole.push(record_x_pole);
+        y_pole.push(record_y_pole);
+        delta_ut1_utc.push(record_delta_ut1_utc);
     }
 
-    Ok(eop)
+    EarthOrientationParams::new(mjd, x_pole, y_pole, delta_ut1_utc).map_err(|e| {
+        ParseFinalsCsvError::InvalidEop {
+            path: path.as_ref().to_path_buf(),
+            source: e,
+        }
+    })
 }
 
 #[cfg(test)]
@@ -64,8 +97,6 @@ mod tests {
     use rstest::rstest;
     use std::io;
     use std::path::Path;
-
-    use crate::LoxEopError;
 
     use super::*;
 
@@ -112,23 +143,7 @@ mod tests {
             delta_ut1_utc: 0.0117914,
         }
     )]
-    #[should_panic(expected = "finals CSV record 1 is missing y_pole despite present x_pole")]
-    #[case::missing_y_pole(
-        "iers_missing_y_pole.csv",
-        0,
-        ExpectedRecord::default(),
-        ExpectedRecord::default()
-    )]
-    #[should_panic(
-        expected = "finals CSV record 1 is missing delta_ut1_utc despite present x_pole"
-    )]
-    #[case::missing_delta_ut1_utc(
-        "iers_missing_delta_ut1_utc.csv",
-        0,
-        ExpectedRecord::default(),
-        ExpectedRecord::default()
-    )]
-    fn test_parse_finals_csv(
+    fn test_parse_finals_csv_success(
         #[case] path: &str,
         #[case] expected_count: usize,
         #[case] expected_first_record: ExpectedRecord,
@@ -216,22 +231,33 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_lox_eop_error_from_csv_error() {
-        // The csv::Error constructor is private, but we can create one using its implementation of
-        // From<io::Error>.
-        let io_error = io::Error::new(io::ErrorKind::NotFound, "file not found");
-        let csv_error = csv::Error::from(io_error);
-        let lox_eop_error = LoxEopError::from(csv_error);
-        let expected = LoxEopError::Csv("file not found".to_string());
-        assert_eq!(lox_eop_error, expected);
-    }
-
-    #[test]
-    fn test_lox_eop_error_from_io_error() {
-        let io_error = io::Error::new(io::ErrorKind::NotFound, "file not found");
-        let lox_eop_error = LoxEopError::from(io_error);
-        let expected = LoxEopError::Io("file not found".to_string());
-        assert_eq!(lox_eop_error, expected);
+    #[rstest]
+    #[case::csv_no_such_file("missing.csv", ParseFinalsCsvError::Csv("No such file or directory (os error 2)".to_string()))]
+    #[case::csv_parse_failure("finals_type_error.csv", ParseFinalsCsvError::Csv("CSV deserialize error: record 1 (line: 2, byte: 265): field 0: invalid digit found in string".to_string()))]
+    #[case::missing_y_pole(
+        "finals_missing_y_pole.csv",
+        ParseFinalsCsvError::MissingYPole {
+            path: Path::new(TEST_DATA_DIR).join(Path::new("finals_missing_y_pole.csv")),
+            row: 1,
+        },
+    )]
+    #[case::missing_delta_ut1_utc(
+        "finals_missing_delta_ut1_utc.csv",
+        ParseFinalsCsvError::MissingDeltaUt1Utc {
+            path: Path::new(TEST_DATA_DIR).join(Path::new("finals_missing_delta_ut1_utc.csv")),
+            row: 1,
+        },
+    )]
+    #[case::no_data(
+        "finals_no_data.csv",
+        ParseFinalsCsvError::InvalidEop {
+            path: Path::new(TEST_DATA_DIR).join(Path::new("finals_no_data.csv")),
+            source: EopError::NoData,
+        },
+    )]
+    fn test_parse_finals_csv_errors(#[case] path: &str, #[case] expected: ParseFinalsCsvError) {
+        let path = Path::new(TEST_DATA_DIR).join(path);
+        let result = parse_finals_csv(path);
+        assert_eq!(result, Err(expected));
     }
 }
