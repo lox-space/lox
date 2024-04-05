@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+lox-derive.workspace = true
+
 fast_polynomial.workspace = true
 float_eq.workspace = true
 glam.workspace = true

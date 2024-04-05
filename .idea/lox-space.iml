@@ -27,6 +27,8 @@
       <sourceFolder url="file://$MODULE_DIR$/crates/lox-utils/src/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/lox-eop/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/lox-propagators/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/lox-orbits/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/lox-derive/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/tools/lox-gen/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
       <excludeFolder url="file://$MODULE_DIR$/venv" />

@@ -12,6 +12,7 @@ authors = ["Helge Eichhorn and the lox-space contributors"]
 [workspace.dependencies]
 lox-bodies = { path = "crates/lox-bodies" }
 lox-comms = { path = "crates/lox-comms" }
+lox-derive = { path = "crates/lox-derive" }
 lox-earth = { path = "crates/lox-earth" }
 lox-eop = { path = "crates/lox-eop" }
 lox-ephem = { path = "crates/lox-ephem" }

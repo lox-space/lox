@@ -12,6 +12,7 @@ pub mod interpolation;
 pub mod linear_algebra;
 pub mod math;
 pub mod roots;
+pub mod singleton;
 pub mod slices;
 pub mod types;
 pub mod vector_traits;
