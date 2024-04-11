@@ -6,7 +6,11 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use lox_eop::EarthOrientationParams;
+use lox_utils::types::julian_dates::ModifiedJulianDate;
+use lox_utils::types::units::Seconds;
 use std::sync::OnceLock;
+use thiserror::Error;
 
 use crate::base_time::BaseTime;
 use crate::calendar_dates::Date;
@@ -79,6 +83,71 @@ fn tai_at_utc_1972_01_01() -> &'static Time<Tai> {
         Time::from_base_time(Tai, base_time + leap_seconds)
     })
 }
+
+// pub struct DeltaUt1TaiProvider<'a> {
+//     eop: &'a EarthOrientationParams,
+//     delta_ut1_tai: Vec<TimeDelta>,
+// }
+//
+// impl<'a> DeltaUt1TaiProvider<'a> {
+//     pub fn new(eop: &'a EarthOrientationParams) -> Self {
+//         let delta_ut1_tai = eop
+//             .mjd()
+//             .iter()
+//             .zip(eop.delta_ut1_utc())
+//             .map(|mjd, delta| {})
+//             .map(|mjd| {
+//                 let tai = Time::from_base_time(Tai, BaseTime::from_day)
+//                 eop.delta_ut1_utc()
+//                     .iter()
+//                     .map(|delta| delta + 1.0)
+//                     .collect()
+//             })
+//             .collect();
+//         Self { eop, delta_ut1_tai }
+//     }
+// }
+
+#[derive(Copy, Clone, Debug, Error, PartialEq)]
+pub enum TargetDateError {
+    #[error("input MJD {input} is before earliest EOP data MJD {earliest}")]
+    BeforeEopData {
+        input: ModifiedJulianDate,
+        earliest: ModifiedJulianDate,
+    },
+    #[error("input MJD {input} is after latest EOP data MJD {latest}")]
+    AfterEopData {
+        input: ModifiedJulianDate,
+        latest: ModifiedJulianDate,
+    },
+}
+
+/// Implementers of [DeltaUt1Tai] provide the difference between UT1 and TAI as a floating-point
+/// number of seconds.  
+// pub trait DeltaUt1Tai {
+//     fn delta_ut1_tai(&self, mjd: ModifiedJulianDate) -> Result<Seconds, TargetDateError>;
+// }
+//
+// impl DeltaUt1Tai for EarthOrientationParams {
+//     fn delta_ut1_tai(&self, mjd: ModifiedJulianDate) -> Result<Seconds, TargetDateError> {
+//         // getΔUT1(eop, date; args...) = interpolate(eop, :ΔUT1, date; args...)
+//         if mjd < *self.mjd.first().unwrap() {
+//             return Err(TargetDateError::BeforeEopData {
+//                 input: mjd,
+//                 earliest: self.mjd[0],
+//             });
+//         }
+//
+//         if mjd > *self.mjd.last().unwrap() {
+//             return Err(TargetDateError::AfterEopData {
+//                 input: mjd,
+//                 latest: self.mjd[self.mjd.len() - 1],
+//             });
+//         }
+//
+//         Ok(0.0)
+//     }
+// }
 
 #[cfg(test)]
 pub mod test {

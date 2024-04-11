@@ -65,42 +65,126 @@ impl EarthOrientationParams {
             delta_ut1_utc,
         })
     }
+
+    pub fn mjd(&self) -> &[ModifiedJulianDate] {
+        &self.mjd
+    }
+
+    pub fn x_pole(&self) -> &[f64] {
+        &self.x_pole
+    }
+
+    pub fn y_pole(&self) -> &[f64] {
+        &self.y_pole
+    }
+
+    pub fn delta_ut1_utc(&self) -> &[f64] {
+        &self.delta_ut1_utc
+    }
 }
 
-#[derive(Copy, Clone, Debug, Error, PartialEq)]
-pub enum DateError {
-    #[error("input MJD {input} is before earliest EOP data MJD {earliest}")]
-    BeforeData {
-        input: ModifiedJulianDate,
-        earliest: ModifiedJulianDate,
-    },
-    #[error("input MJD {input} is after latest EOP data MJD {latest}")]
-    AfterData {
-        input: ModifiedJulianDate,
-        latest: ModifiedJulianDate,
-    },
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rstest::rstest;
 
-/// Implementers of [DeltaUt1Tai] provide the difference between UT1 and TAI as a floating-point
-/// number of seconds.  
-pub trait DeltaUt1Tai {
-    fn delta_ut1_tai(&self, mjd: ModifiedJulianDate) -> Result<Seconds, DateError>;
-}
+    struct EopInputs {
+        mjd: Vec<ModifiedJulianDate>,
+        x_pole: Vec<f64>,
+        y_pole: Vec<f64>,
+        delta_ut1_utc: Vec<f64>,
+    }
 
-// impl DeltaUt1Tai for EarthOrientationParams {
-//     fn delta_ut1_tai(&self, mjd: ModifiedJulianDate) -> Result<Seconds, DateError> {
-//         // getΔUT1(eop, date; args...) = interpolate(eop, :ΔUT1, date; args...)
-//         if mjd < *self.mjd.first().unwrap() {
-//             return Err(DateError::BeforeData {
-//                 input: mjd,
-//                 earliest: self.mjd[0],
-//             });
-//         }
-//
-//         if mjd > *self.mjd.last().unwrap() {
-//             || mjd > self.mjd[self.mjd.len() - 1] {
-//             Err()
-//         }
-//         Ok(0.0)
-//     }
-// }
+    #[rstest]
+    #[case::valid_inputs(
+        EopInputs {
+            mjd: vec![0.0],
+            x_pole: vec![0.0],
+            y_pole: vec![0.0],
+            delta_ut1_utc: vec![0.0],
+        },
+        Ok(EarthOrientationParams {
+            mjd: vec![0.0],
+            x_pole: vec![0.0],
+            y_pole: vec![0.0],
+            delta_ut1_utc: vec![0.0],
+        })
+    )]
+    #[case::extra_mjd(
+        EopInputs {
+            mjd: vec![0.0, 1.0],
+            x_pole: vec![0.0],
+            y_pole: vec![0.0],
+            delta_ut1_utc: vec![0.0],
+        },
+        Err(EopError::DimensionMismatch {
+            len_mjd: 2,
+            len_x_pole: 1,
+            len_y_pole: 1,
+            len_delta_ut1_utc: 1,
+        })
+    )]
+    #[case::extra_x_pole(
+        EopInputs {
+            mjd: vec![0.0],
+            x_pole: vec![0.0, 1.0],
+            y_pole: vec![0.0],
+            delta_ut1_utc: vec![0.0],
+        },
+        Err(EopError::DimensionMismatch {
+            len_mjd: 1,
+            len_x_pole: 2,
+            len_y_pole: 1,
+            len_delta_ut1_utc: 1,
+        })
+    )]
+    #[case::extra_y_pole(
+        EopInputs {
+            mjd: vec![0.0],
+            x_pole: vec![0.0],
+            y_pole: vec![0.0, 1.0],
+            delta_ut1_utc: vec![0.0],
+        },
+        Err(EopError::DimensionMismatch {
+            len_mjd: 1,
+            len_x_pole: 1,
+            len_y_pole: 2,
+            len_delta_ut1_utc: 1,
+        })
+    )]
+    #[case::extra_delta_ut1_utc(
+        EopInputs {
+            mjd: vec![0.0],
+            x_pole: vec![0.0],
+            y_pole: vec![0.0],
+            delta_ut1_utc: vec![0.0, 1.0],
+        },
+        Err(EopError::DimensionMismatch {
+            len_mjd: 1,
+            len_x_pole: 1,
+            len_y_pole: 1,
+            len_delta_ut1_utc: 2,
+        })
+    )]
+    #[case::empty_inputs(
+        EopInputs {
+            mjd: vec![],
+            x_pole: vec![],
+            y_pole: vec![],
+            delta_ut1_utc: vec![],
+        },
+        Err(EopError::NoData)
+    )]
+    fn test_earth_orientation_params_new(
+        #[case] inputs: EopInputs,
+        #[case] expected: Result<EarthOrientationParams, EopError>,
+    ) {
+        let actual = EarthOrientationParams::new(
+            inputs.mjd,
+            inputs.x_pole,
+            inputs.y_pole,
+            inputs.delta_ut1_utc,
+        );
+        assert_eq!(actual, expected);
+    }
+}
