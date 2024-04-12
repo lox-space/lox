@@ -77,7 +77,7 @@ pub fn parse_finals_csv<P: AsRef<Path>>(
                     row: i + 1,
                 })?;
 
-        mjd.push(record.modified_julian_date as f64);
+        mjd.push(record.modified_julian_date);
         x_pole.push(record_x_pole);
         y_pole.push(record_y_pole);
         delta_ut1_utc.push(record_delta_ut1_utc);
@@ -93,7 +93,7 @@ pub fn parse_finals_csv<P: AsRef<Path>>(
 
 #[cfg(test)]
 mod tests {
-    use lox_utils::types::julian_dates::ModifiedJulianDate;
+    use lox_utils::types::julian_dates::{ModifiedJulianDate, ModifiedJulianDayNumber};
     use rstest::rstest;
     use std::io;
     use std::path::Path;
@@ -104,7 +104,7 @@ mod tests {
 
     #[derive(Default)]
     struct ExpectedRecord {
-        mjd: ModifiedJulianDate,
+        mjd: ModifiedJulianDayNumber,
         x_pole: f64,
         y_pole: f64,
         delta_ut1_utc: f64,
@@ -115,13 +115,13 @@ mod tests {
         "finals.all.csv",
         18933,
         ExpectedRecord {
-            mjd: 41684.0,
+            mjd: 41684,
             x_pole: 0.120733,
             y_pole: 0.136966,
             delta_ut1_utc: 0.8084178,
         },
         ExpectedRecord {
-            mjd: 60616.0,
+            mjd: 60616,
             x_pole: 0.236027,
             y_pole: 0.320683,
             delta_ut1_utc: 0.0428756,
@@ -131,13 +131,13 @@ mod tests {
         "finals2000A.all.csv",
         19066,
         ExpectedRecord {
-            mjd: 41684.0,
+            mjd: 41684,
             x_pole: 0.120733,
             y_pole: 0.136966,
             delta_ut1_utc: 0.8084178,
         },
         ExpectedRecord {
-            mjd: 60749.0,
+            mjd: 60749,
             x_pole: 0.072472,
             y_pole: 0.295733,
             delta_ut1_utc: 0.0117914,

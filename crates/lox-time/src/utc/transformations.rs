@@ -14,7 +14,8 @@ use thiserror::Error;
 
 use crate::base_time::BaseTime;
 use crate::calendar_dates::Date;
-use crate::deltas::TimeDelta;
+use crate::deltas::{TimeDelta, TimeDeltaError};
+use crate::julian_dates::Epoch;
 use crate::time_scales::Tai;
 use crate::utc::{Utc, UtcDateTime, UtcUndefinedError};
 use crate::Time;
@@ -84,18 +85,22 @@ fn tai_at_utc_1972_01_01() -> &'static Time<Tai> {
     })
 }
 
-// pub struct DeltaUt1TaiProvider<'a> {
+// pub struct EopTimeScaleTransformer<'a> {
 //     eop: &'a EarthOrientationParams,
 //     delta_ut1_tai: Vec<TimeDelta>,
 // }
 //
-// impl<'a> DeltaUt1TaiProvider<'a> {
-//     pub fn new(eop: &'a EarthOrientationParams) -> Self {
+// impl<'a> EopTimeScaleTransformer<'a> {
+//     pub fn new(eop: &'a EarthOrientationParams) -> Result<Self, TimeDeltaError> {
 //         let delta_ut1_tai = eop
 //             .mjd()
 //             .iter()
 //             .zip(eop.delta_ut1_utc())
-//             .map(|mjd, delta| {})
+//             .map(|(mjd, delta_ut1_utc)| {
+//                 let tai = Time::from_base_time(Tai, BaseTime::from_julian_day_number(*mjd as i32, Epoch::ModifiedJulianDate));
+//                 let delta_ut1_utc = TimeDelta::from_decimal_seconds(*delta_ut1_utc)?;
+//                 (tai, delta_ut1_utc)
+//             })
 //             .map(|mjd| {
 //                 let tai = Time::from_base_time(Tai, BaseTime::from_day)
 //                 eop.delta_ut1_utc()

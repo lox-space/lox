@@ -295,7 +295,7 @@ mod tests {
             eop_data.x_pole,
             eop_data.y_pole,
             eop_data.delta_ut1_utc,
-            eop_data.mjd,
+            eop_data.mjd.iter().map(|&mjd| mjd.into()).collect(),
             target_epoch,
         )?;
         let result = interpolate(args);

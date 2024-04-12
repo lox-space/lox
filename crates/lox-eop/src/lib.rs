@@ -6,7 +6,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-use lox_utils::types::julian_dates::ModifiedJulianDate;
+use lox_utils::types::julian_dates::{ModifiedJulianDate, ModifiedJulianDayNumber};
 use lox_utils::types::units::Seconds;
 use thiserror::Error;
 
@@ -29,7 +29,7 @@ pub enum EopError {
 /// A representation of observed Earth orientation parameters, independent of input format.
 #[derive(Clone, Debug, PartialEq)]
 pub struct EarthOrientationParams {
-    mjd: Vec<ModifiedJulianDate>,
+    mjd: Vec<ModifiedJulianDayNumber>,
     x_pole: Vec<f64>,
     y_pole: Vec<f64>,
     delta_ut1_utc: Vec<f64>,
@@ -37,7 +37,7 @@ pub struct EarthOrientationParams {
 
 impl EarthOrientationParams {
     pub fn new(
-        mjd: Vec<ModifiedJulianDate>,
+        mjd: Vec<ModifiedJulianDayNumber>,
         x_pole: Vec<f64>,
         y_pole: Vec<f64>,
         delta_ut1_utc: Vec<f64>,
@@ -66,7 +66,7 @@ impl EarthOrientationParams {
         })
     }
 
-    pub fn mjd(&self) -> &[ModifiedJulianDate] {
+    pub fn mjd(&self) -> &[ModifiedJulianDayNumber] {
         &self.mjd
     }
 
@@ -89,7 +89,7 @@ mod tests {
     use rstest::rstest;
 
     struct EopInputs {
-        mjd: Vec<ModifiedJulianDate>,
+        mjd: Vec<ModifiedJulianDayNumber>,
         x_pole: Vec<f64>,
         y_pole: Vec<f64>,
         delta_ut1_utc: Vec<f64>,
@@ -98,13 +98,13 @@ mod tests {
     #[rstest]
     #[case::valid_inputs(
         EopInputs {
-            mjd: vec![0.0],
+            mjd: vec![0],
             x_pole: vec![0.0],
             y_pole: vec![0.0],
             delta_ut1_utc: vec![0.0],
         },
         Ok(EarthOrientationParams {
-            mjd: vec![0.0],
+            mjd: vec![0],
             x_pole: vec![0.0],
             y_pole: vec![0.0],
             delta_ut1_utc: vec![0.0],
@@ -112,7 +112,7 @@ mod tests {
     )]
     #[case::extra_mjd(
         EopInputs {
-            mjd: vec![0.0, 1.0],
+            mjd: vec![0, 1],
             x_pole: vec![0.0],
             y_pole: vec![0.0],
             delta_ut1_utc: vec![0.0],
@@ -126,7 +126,7 @@ mod tests {
     )]
     #[case::extra_x_pole(
         EopInputs {
-            mjd: vec![0.0],
+            mjd: vec![0],
             x_pole: vec![0.0, 1.0],
             y_pole: vec![0.0],
             delta_ut1_utc: vec![0.0],
@@ -140,7 +140,7 @@ mod tests {
     )]
     #[case::extra_y_pole(
         EopInputs {
-            mjd: vec![0.0],
+            mjd: vec![0],
             x_pole: vec![0.0],
             y_pole: vec![0.0, 1.0],
             delta_ut1_utc: vec![0.0],
@@ -154,7 +154,7 @@ mod tests {
     )]
     #[case::extra_delta_ut1_utc(
         EopInputs {
-            mjd: vec![0.0],
+            mjd: vec![0],
             x_pole: vec![0.0],
             y_pole: vec![0.0],
             delta_ut1_utc: vec![0.0, 1.0],
