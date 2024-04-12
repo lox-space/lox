@@ -221,11 +221,11 @@ fn chi(julian_centuries_since_j2000: f64) -> Radians {
 mod tests {
     use std::path::Path;
 
-    use crate::EarthOrientationParams;
     use float_eq::assert_float_eq;
     use rstest::{fixture, rstest};
 
     use crate::iers::parse_finals_csv;
+    use crate::EarthOrientationParams;
 
     use super::*;
 

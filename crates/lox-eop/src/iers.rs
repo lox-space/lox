@@ -93,10 +93,12 @@ pub fn parse_finals_csv<P: AsRef<Path>>(
 
 #[cfg(test)]
 mod tests {
-    use lox_utils::types::julian_dates::{ModifiedJulianDate, ModifiedJulianDayNumber};
-    use rstest::rstest;
     use std::io;
     use std::path::Path;
+
+    use rstest::rstest;
+
+    use lox_utils::types::julian_dates::{ModifiedJulianDate, ModifiedJulianDayNumber};
 
     use super::*;
 

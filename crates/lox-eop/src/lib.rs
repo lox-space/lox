@@ -6,9 +6,9 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-use lox_utils::types::julian_dates::{ModifiedJulianDate, ModifiedJulianDayNumber};
-use lox_utils::types::units::Seconds;
 use thiserror::Error;
+
+use lox_utils::types::julian_dates::ModifiedJulianDayNumber;
 
 mod iers;
 mod lagrange;
@@ -85,8 +85,9 @@ impl EarthOrientationParams {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use rstest::rstest;
+
+    use super::*;
 
     struct EopInputs {
         mjd: Vec<ModifiedJulianDayNumber>,
