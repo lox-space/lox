@@ -17,7 +17,6 @@ use num::{abs, ToPrimitive};
 
 use lox_utils::constants::f64::time;
 use lox_utils::constants::f64::time::SECONDS_PER_JULIAN_CENTURY;
-use lox_utils::types::julian_dates::ModifiedJulianDate;
 
 use crate::calendar_dates::{CalendarDate, Date};
 use crate::constants::i64::{
@@ -72,22 +71,6 @@ impl BaseTime {
     /// Instantiates a [BaseTime] from a UTC datetime.
     pub fn from_utc_datetime(dt: UtcDateTime) -> Self {
         Self::from_date_and_utc_timestamp(dt.date(), dt.time())
-    }
-
-    /// Instantiates a [BaseTime] from a Modified Julian Date.
-    // TODO: This panics if the f64 MJD NAN or INF. We should consider treating MJD as a true newtype with
-    // validations to ensure it remains within the correct range.
-    pub fn from_modified_julian_date(mjd: ModifiedJulianDate) -> Self {
-        let seconds = mjd * time::SECONDS_PER_DAY;
-        let mut time = Self::from_epoch(Epoch::ModifiedJulianDate);
-        time.seconds += seconds.to_i64().unwrap();
-        let raw_subsecond = seconds.fract();
-        if time.is_negative() && raw_subsecond > 0.0 {
-            time.subsecond = Subsecond(1.0 - raw_subsecond);
-        } else {
-            time.subsecond = Subsecond(raw_subsecond);
-        }
-        time
     }
 
     /// Instantiates a [BaseTime] from a Julian Day Number.

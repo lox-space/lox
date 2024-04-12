@@ -134,6 +134,11 @@ impl<T: TimeScale + Copy> Time<T> {
     ) -> Time<S> {
         Time::from_scale(self, transformer)
     }
+
+    pub fn from_julian_day_number(scale: T, day_number: i32, epoch: Epoch) -> Self {
+        let timestamp = BaseTime::from_julian_day_number(day_number, epoch);
+        Self { scale, timestamp }
+    }
 }
 
 impl<T: TimeScale + Copy> JulianDate for Time<T> {
@@ -214,6 +219,7 @@ mod tests {
     use mockall::predicate;
 
     use lox_utils::constants::f64::time::DAYS_PER_JULIAN_CENTURY;
+    use lox_utils::constants::i32::time::JD_J2000;
 
     use crate::time_scales::{Tai, Tdb, Tt};
     use crate::transformations::MockTransformTimeScale;
@@ -257,6 +263,13 @@ mod tests {
             timestamp: BaseTime::from_date_and_utc_timestamp(date, utc),
         };
         let actual = Time::from_date_and_utc_timestamp(scale, date, utc);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_time_from_julian_day_number() {
+        let expected: Time<Tai> = Time::default();
+        let actual = Time::from_julian_day_number(Tai, JD_J2000, Epoch::JulianDate);
         assert_eq!(expected, actual);
     }
 

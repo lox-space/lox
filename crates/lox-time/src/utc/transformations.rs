@@ -12,7 +12,6 @@ use std::sync::OnceLock;
 use thiserror::Error;
 
 use lox_eop::EarthOrientationParams;
-use lox_utils::types::julian_dates::ModifiedJulianDate;
 
 use crate::base_time::BaseTime;
 use crate::calendar_dates::Date;
@@ -166,10 +165,7 @@ fn calculate_delta_ut1_tai_from_eop(
         .zip(eop.delta_ut1_utc())
         .enumerate()
         .map(|(i, (mjd, delta_ut1_utc))| {
-            let tai = Time::from_base_time(
-                Tai,
-                BaseTime::from_julian_day_number(*mjd, Epoch::ModifiedJulianDate),
-            );
+            let tai = Time::from_julian_day_number(Tai, *mjd, Epoch::ModifiedJulianDate);
             let delta_ut1_utc = TimeDelta::from_decimal_seconds(*delta_ut1_utc).map_err(|err| {
                 EarthOrientationParamsError {
                     position: i,
@@ -184,20 +180,6 @@ fn calculate_delta_ut1_tai_from_eop(
             Ok(delta_ut1_utc - delta_tai_utc)
         })
         .collect()
-}
-
-#[derive(Copy, Clone, Debug, Error, PartialEq)]
-pub enum TargetDateError {
-    #[error("input MJD {input} is before earliest EOP data MJD {earliest}")]
-    BeforeEopData {
-        input: ModifiedJulianDate,
-        earliest: ModifiedJulianDate,
-    },
-    #[error("input MJD {input} is after latest EOP data MJD {latest}")]
-    AfterEopData {
-        input: ModifiedJulianDate,
-        latest: ModifiedJulianDate,
-    },
 }
 
 #[cfg(test)]
