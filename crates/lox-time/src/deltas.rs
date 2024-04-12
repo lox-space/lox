@@ -8,12 +8,13 @@
 
 use std::ops::{Add, Neg, Sub};
 
+use num::ToPrimitive;
+use thiserror::Error;
+
 use lox_utils::constants::f64::time::{
     SECONDS_PER_DAY, SECONDS_PER_HOUR, SECONDS_PER_JULIAN_CENTURY, SECONDS_PER_JULIAN_YEAR,
     SECONDS_PER_MINUTE,
 };
-use num::ToPrimitive;
-use thiserror::Error;
 
 use crate::subsecond::Subsecond;
 
@@ -275,10 +276,11 @@ impl Sub for TimeDelta {
 
 #[cfg(test)]
 mod tests {
-    use crate::constants::f64::SECONDS_PER_FEMTOSECOND;
     use float_eq::assert_float_eq;
     use proptest::prelude::*;
     use rstest::rstest;
+
+    use crate::constants::f64::SECONDS_PER_FEMTOSECOND;
 
     use super::*;
 

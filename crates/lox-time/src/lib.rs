@@ -211,8 +211,9 @@ impl<T: TimeScale + Copy> CalendarDate for Time<T> {
 #[cfg(test)]
 mod tests {
     use float_eq::assert_float_eq;
-    use lox_utils::constants::f64::time::DAYS_PER_JULIAN_CENTURY;
     use mockall::predicate;
+
+    use lox_utils::constants::f64::time::DAYS_PER_JULIAN_CENTURY;
 
     use crate::time_scales::{Tai, Tdb, Tt};
     use crate::transformations::MockTransformTimeScale;
