@@ -12,8 +12,8 @@
 
 /// Marker trait with associated constants denoting a continuous astronomical time scale.
 pub trait TimeScale {
-    const ABBREVIATION: &'static str;
-    const NAME: &'static str;
+    fn abbreviation(&self) -> &'static str;
+    fn name(&self) -> &'static str;
 }
 
 /// International Atomic Time.
@@ -21,8 +21,12 @@ pub trait TimeScale {
 pub struct Tai;
 
 impl TimeScale for Tai {
-    const ABBREVIATION: &'static str = "TAI";
-    const NAME: &'static str = "International Atomic Time";
+    fn abbreviation(&self) -> &'static str {
+        "TAI"
+    }
+    fn name(&self) -> &'static str {
+        "International Atomic Time"
+    }
 }
 
 /// Barycentric Coordinate Time.
@@ -30,8 +34,12 @@ impl TimeScale for Tai {
 pub struct Tcb;
 
 impl TimeScale for Tcb {
-    const ABBREVIATION: &'static str = "TCB";
-    const NAME: &'static str = "Barycentric Coordinate Time";
+    fn abbreviation(&self) -> &'static str {
+        "TCB"
+    }
+    fn name(&self) -> &'static str {
+        "Barycentric Coordinate Time"
+    }
 }
 
 /// Geocentric Coordinate Time.
@@ -39,8 +47,12 @@ impl TimeScale for Tcb {
 pub struct Tcg;
 
 impl TimeScale for Tcg {
-    const ABBREVIATION: &'static str = "TCG";
-    const NAME: &'static str = "Geocentric Coordinate Time";
+    fn abbreviation(&self) -> &'static str {
+        "TCG"
+    }
+    fn name(&self) -> &'static str {
+        "Geocentric Coordinate Time"
+    }
 }
 
 /// Barycentric Dynamical Time.
@@ -48,8 +60,12 @@ impl TimeScale for Tcg {
 pub struct Tdb;
 
 impl TimeScale for Tdb {
-    const ABBREVIATION: &'static str = "TDB";
-    const NAME: &'static str = "Barycentric Dynamical Time";
+    fn abbreviation(&self) -> &'static str {
+        "TDB"
+    }
+    fn name(&self) -> &'static str {
+        "Barycentric Dynamical Time"
+    }
 }
 
 /// Terrestrial Time.
@@ -57,8 +73,12 @@ impl TimeScale for Tdb {
 pub struct Tt;
 
 impl TimeScale for Tt {
-    const ABBREVIATION: &'static str = "TT";
-    const NAME: &'static str = "Terrestrial Time";
+    fn abbreviation(&self) -> &'static str {
+        "TT"
+    }
+    fn name(&self) -> &'static str {
+        "Terrestrial Time"
+    }
 }
 
 /// Universal Time.
@@ -66,6 +86,10 @@ impl TimeScale for Tt {
 pub struct Ut1;
 
 impl TimeScale for Ut1 {
-    const ABBREVIATION: &'static str = "UT1";
-    const NAME: &'static str = "Universal Time";
+    fn abbreviation(&self) -> &'static str {
+        "UT1"
+    }
+    fn name(&self) -> &'static str {
+        "Universal Time"
+    }
 }

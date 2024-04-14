@@ -34,6 +34,8 @@ pub mod constants;
 pub mod deltas;
 pub mod errors;
 pub mod julian_dates;
+#[cfg(feature = "python")]
+pub mod python;
 pub mod subsecond;
 pub mod time_scales;
 pub mod transformations;
@@ -80,6 +82,16 @@ impl<T: TimeScale + Copy> Time<T> {
     pub fn from_epoch(scale: T, epoch: Epoch) -> Self {
         let timestamp = BaseTime::from_epoch(epoch);
         Self { scale, timestamp }
+    }
+
+    /// Returns the timescale
+    pub fn scale(&self) -> T {
+        self.scale
+    }
+
+    /// Returns a new [Time] with [scale] without changing the underlying timestamp.
+    pub fn override_scale<S: TimeScale + Copy>(&self, scale: S) -> Time<S> {
+        Time::from_base_time(scale, self.timestamp)
     }
 
     /// Returns, as an epoch in the given timescale, midday on the first day of the proleptic Julian
@@ -153,7 +165,7 @@ impl<T: TimeScale + Copy> JulianDate for Time<T> {
 
 impl<T: TimeScale + Copy> Display for Time<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{} {}", self.timestamp, T::ABBREVIATION)
+        write!(f, "{} {}", self.timestamp, self.scale.abbreviation())
     }
 }
 

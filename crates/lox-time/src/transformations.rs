@@ -15,7 +15,7 @@ use crate::base_time::BaseTime;
 use crate::constants::julian_dates::J77;
 use crate::deltas::TimeDelta;
 use crate::subsecond::Subsecond;
-use crate::time_scales::{Tai, Tcb, Tcg, Tdb, TimeScale, Tt};
+use crate::time_scales::{Tai, Tcb, Tcg, Tdb, TimeScale, Tt, Ut1};
 use crate::Time;
 
 /// TransformTimeScale transforms a [Time] in [TimeScale] `T` to the corresponding [Time] in
@@ -34,7 +34,8 @@ where
 ///
 /// Users with custom time scales, pairings, data sources, or who require specific transformation
 /// algorithms should implement `TransformTimeScale` for their particular use case.
-pub struct TimeScaleTransformer {}
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
+pub struct TimeScaleTransformer;
 
 /// The constant offset between TAI and TT.
 pub const D_TAI_TT: TimeDelta = TimeDelta {
@@ -42,14 +43,14 @@ pub const D_TAI_TT: TimeDelta = TimeDelta {
     subsecond: Subsecond(0.184),
 };
 
-impl TransformTimeScale<Tai, Tt> for &TimeScaleTransformer {
+impl TransformTimeScale<Tai, Tt> for TimeScaleTransformer {
     fn transform(&self, time: Time<Tai>) -> Time<Tt> {
         let base_time = time.base_time() + D_TAI_TT;
         Time::from_base_time(Tt, base_time)
     }
 }
 
-impl TransformTimeScale<Tt, Tai> for &TimeScaleTransformer {
+impl TransformTimeScale<Tt, Tai> for TimeScaleTransformer {
     fn transform(&self, time: Time<Tt>) -> Time<Tai> {
         let base_time = time.base_time() - D_TAI_TT;
         Time::from_base_time(Tai, base_time)
@@ -65,25 +66,25 @@ const LG: f64 = 6.969290134e-10;
 /// The rate of change of TT with respect to TCG.
 const INV_LG: f64 = LG / (1.0 - LG);
 
-impl TransformTimeScale<Tt, Tcg> for &TimeScaleTransformer {
+impl TransformTimeScale<Tt, Tcg> for TimeScaleTransformer {
     fn transform(&self, time: Time<Tt>) -> Time<Tcg> {
         Time::from_base_time(Tcg, time.base_time() + delta_tt_tcg(time))
     }
 }
 
-impl TransformTimeScale<Tcg, Tt> for &TimeScaleTransformer {
+impl TransformTimeScale<Tcg, Tt> for TimeScaleTransformer {
     fn transform(&self, time: Time<Tcg>) -> Time<Tt> {
         Time::from_base_time(Tt, time.base_time() + delta_tcg_tt(time))
     }
 }
 
-impl TransformTimeScale<Tcb, Tdb> for &TimeScaleTransformer {
+impl TransformTimeScale<Tcb, Tdb> for TimeScaleTransformer {
     fn transform(&self, time: Time<Tcb>) -> Time<Tdb> {
         Time::from_base_time(Tdb, time.base_time() + delta_tcb_tdb(time))
     }
 }
 
-impl TransformTimeScale<Tdb, Tcb> for &TimeScaleTransformer {
+impl TransformTimeScale<Tdb, Tcb> for TimeScaleTransformer {
     fn transform(&self, time: Time<Tdb>) -> Time<Tcb> {
         Time::from_base_time(Tcb, time.base_time() + delta_tdb_tcb(time))
     }
@@ -92,7 +93,7 @@ impl TransformTimeScale<Tdb, Tcb> for &TimeScaleTransformer {
 /// An accurate transformation between TDB and TT depends on the trajectory of the observer. For two
 /// observers fixed on Earth's surface, the quantity TDB-TT can differ by as much as ~4 µs.
 /// Users requiring greater accuracy should implement TransformTimeScale<TT, TDB> manually.
-impl TransformTimeScale<Tt, Tdb> for &TimeScaleTransformer {
+impl TransformTimeScale<Tt, Tdb> for TimeScaleTransformer {
     fn transform(&self, time: Time<Tt>) -> Time<Tdb> {
         Time::from_base_time(Tdb, time.base_time() + delta_tt_tdb(time))
     }
@@ -101,7 +102,7 @@ impl TransformTimeScale<Tt, Tdb> for &TimeScaleTransformer {
 /// An accurate transformation between TDB and TT depends on the trajectory of the observer. For two
 /// observers fixed on Earth's surface, the quantity TDB-TT can differ by as much as ~4 µs.
 /// Users requiring greater accuracy should implement TransformTimeScale<TT, TDB> manually.
-impl TransformTimeScale<Tdb, Tt> for &TimeScaleTransformer {
+impl TransformTimeScale<Tdb, Tt> for TimeScaleTransformer {
     fn transform(&self, time: Time<Tdb>) -> Time<Tt> {
         Time::from_base_time(Tt, time.base_time() + delta_tdb_tt(time))
     }
@@ -198,6 +199,198 @@ fn delta_tdb_tt(time: Time<Tdb>) -> TimeDelta {
     })
 }
 
+impl Time<Tai> {
+    /// Transforms the [Time] to the [Tai] scale.
+    pub fn to_tai(self) -> Time<Tai> {
+        self
+    }
+
+    /// Transforms the [Time] to the [Tt] scale.
+    pub fn to_tt(self) -> Time<Tt> {
+        TimeScaleTransformer.transform(self)
+    }
+
+    /// Transforms the [Time] to the [Tcb] scale.
+    pub fn to_tcb(self) -> Time<Tcb> {
+        TimeScaleTransformer.transform(self.to_tdb())
+    }
+
+    /// Transforms the [Time] to the [Tcg] scale.
+    pub fn to_tcg(self) -> Time<Tcg> {
+        TimeScaleTransformer.transform(self.to_tt())
+    }
+
+    /// Transforms the [Time] to the [Tdb] scale.
+    pub fn to_tdb(self) -> Time<Tdb> {
+        TimeScaleTransformer.transform(self.to_tt())
+    }
+
+    /// Transforms the [Time] to the [Ut1] scale.
+    pub fn to_ut1(self, transformer: impl TransformTimeScale<Tai, Ut1>) -> Time<Ut1> {
+        transformer.transform(self)
+    }
+}
+
+impl Time<Tcb> {
+    /// Transforms the [Time] to the [Tai] scale.
+    pub fn to_tai(self) -> Time<Tai> {
+        TimeScaleTransformer.transform(self.to_tt())
+    }
+
+    /// Transforms the [Time] to the [Tt] scale.
+    pub fn to_tt(self) -> Time<Tt> {
+        TimeScaleTransformer.transform(self.to_tdb())
+    }
+
+    /// Transforms the [Time] to the [Tcb] scale.
+    pub fn to_tcb(self) -> Time<Tcb> {
+        self
+    }
+
+    /// Transforms the [Time] to the [Tcg] scale.
+    pub fn to_tcg(self) -> Time<Tcg> {
+        TimeScaleTransformer.transform(self.to_tt())
+    }
+
+    /// Transforms the [Time] to the [Tdb] scale.
+    pub fn to_tdb(self) -> Time<Tdb> {
+        TimeScaleTransformer.transform(self)
+    }
+
+    /// Transforms the [Time] to the [Ut1] scale.
+    pub fn to_ut1(self, transformer: impl TransformTimeScale<Tai, Ut1>) -> Time<Ut1> {
+        transformer.transform(self.to_tai())
+    }
+}
+
+impl Time<Tcg> {
+    /// Transforms the [Time] to the [Tai] scale.
+    pub fn to_tai(self) -> Time<Tai> {
+        TimeScaleTransformer.transform(self.to_tt())
+    }
+
+    /// Transforms the [Time] to the [Tt] scale.
+    pub fn to_tt(self) -> Time<Tt> {
+        TimeScaleTransformer.transform(self)
+    }
+
+    /// Transforms the [Time] to the [Tcb] scale.
+    pub fn to_tcb(self) -> Time<Tcb> {
+        TimeScaleTransformer.transform(self.to_tdb())
+    }
+
+    /// Transforms the [Time] to the [Tcg] scale.
+    pub fn to_tcg(self) -> Time<Tcg> {
+        self
+    }
+
+    /// Transforms the [Time] to the [Tdb] scale.
+    pub fn to_tdb(self) -> Time<Tdb> {
+        TimeScaleTransformer.transform(self.to_tt())
+    }
+
+    /// Transforms the [Time] to the [Ut1] scale.
+    pub fn to_ut1(self, transformer: impl TransformTimeScale<Tai, Ut1>) -> Time<Ut1> {
+        transformer.transform(self.to_tai())
+    }
+}
+
+impl Time<Tdb> {
+    /// Transforms the [Time] to the [Tai] scale.
+    pub fn to_tai(self) -> Time<Tai> {
+        TimeScaleTransformer.transform(self.to_tt())
+    }
+
+    /// Transforms the [Time] to the [Tt] scale.
+    pub fn to_tt(self) -> Time<Tt> {
+        TimeScaleTransformer.transform(self)
+    }
+
+    /// Transforms the [Time] to the [Tcb] scale.
+    pub fn to_tcb(self) -> Time<Tcb> {
+        TimeScaleTransformer.transform(self)
+    }
+
+    /// Transforms the [Time] to the [Tcg] scale.
+    pub fn to_tcg(self) -> Time<Tcg> {
+        TimeScaleTransformer.transform(self.to_tt())
+    }
+
+    /// Transforms the [Time] to the [Tdb] scale.
+    pub fn to_tdb(self) -> Time<Tdb> {
+        self
+    }
+
+    /// Transforms the [Time] to the [Ut1] scale.
+    pub fn to_ut1(self, transformer: impl TransformTimeScale<Tai, Ut1>) -> Time<Ut1> {
+        transformer.transform(self.to_tai())
+    }
+}
+
+impl Time<Tt> {
+    /// Transforms the [Time] to the [Tai] scale.
+    pub fn to_tai(self) -> Time<Tai> {
+        TimeScaleTransformer.transform(self)
+    }
+
+    /// Transforms the [Time] to the [Tt] scale.
+    pub fn to_tt(self) -> Time<Tt> {
+        self
+    }
+
+    /// Transforms the [Time] to the [Tcb] scale.
+    pub fn to_tcb(self) -> Time<Tcb> {
+        TimeScaleTransformer.transform(self.to_tdb())
+    }
+
+    /// Transforms the [Time] to the [Tcg] scale.
+    pub fn to_tcg(self) -> Time<Tcg> {
+        TimeScaleTransformer.transform(self)
+    }
+
+    /// Transforms the [Time] to the [Tdb] scale.
+    pub fn to_tdb(self) -> Time<Tdb> {
+        TimeScaleTransformer.transform(self.to_tt())
+    }
+
+    /// Transforms the [Time] to the [Ut1] scale.
+    pub fn to_ut1(self, transformer: impl TransformTimeScale<Tai, Ut1>) -> Time<Ut1> {
+        transformer.transform(self.to_tai())
+    }
+}
+
+impl Time<Ut1> {
+    /// Transforms the [Time] to the [Tai] scale.
+    pub fn to_tai(self, transformer: impl TransformTimeScale<Ut1, Tai>) -> Time<Tai> {
+        transformer.transform(self)
+    }
+
+    /// Transforms the [Time] to the [Tt] scale.
+    pub fn to_tt(self, transformer: impl TransformTimeScale<Ut1, Tai>) -> Time<Tt> {
+        TimeScaleTransformer.transform(self.to_tai(transformer))
+    }
+
+    /// Transforms the [Time] to the [Tcb] scale.
+    pub fn to_tcb(self, transformer: impl TransformTimeScale<Ut1, Tai>) -> Time<Tcb> {
+        TimeScaleTransformer.transform(self.to_tdb(transformer))
+    }
+
+    /// Transforms the [Time] to the [Tcg] scale.
+    pub fn to_tcg(self, transformer: impl TransformTimeScale<Ut1, Tai>) -> Time<Tcg> {
+        TimeScaleTransformer.transform(self.to_tt(transformer))
+    }
+
+    /// Transforms the [Time] to the [Tdb] scale.
+    pub fn to_tdb(self, transformer: impl TransformTimeScale<Ut1, Tai>) -> Time<Tdb> {
+        TimeScaleTransformer.transform(self.to_tt(transformer))
+    }
+
+    /// Transforms the [Time] to the [Ut1] scale.
+    pub fn to_ut1(self, _: impl TransformTimeScale<Ut1, Tai>) -> Time<Ut1> {
+        self
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use float_eq::assert_float_eq;
@@ -223,6 +416,8 @@ mod tests {
         let tt = transformer.transform(tai);
         let expected = Time::new(Tt, 32, Subsecond(0.184));
         assert_eq!(expected, tt);
+        let tt = tai.to_tt();
+        assert_eq!(expected, tt);
     }
 
     #[test]
@@ -231,6 +426,8 @@ mod tests {
         let tt = Time::new(Tt, 32, Subsecond(0.184));
         let tai = transformer.transform(tt);
         let expected = Time::new(Tai, 0, Subsecond::default());
+        assert_eq!(expected, tai);
+        let tai = tt.to_tai();
         assert_eq!(expected, tai);
     }
 
@@ -255,6 +452,8 @@ mod tests {
         let transformer = &TimeScaleTransformer {};
         let tcg = transformer.transform(tt);
         assert_eq!(expected, tcg);
+        let tcg = tt.to_tcg();
+        assert_eq!(expected, tcg);
     }
 
     #[rstest]
@@ -275,7 +474,10 @@ mod tests {
         let transformer = &TimeScaleTransformer {};
         let tt = transformer.transform(tcg);
         assert_eq!(expected.seconds(), tt.seconds());
-        assert_float_eq!(expected.subsecond(), tt.subsecond(), abs <= 1e-12)
+        assert_float_eq!(expected.subsecond(), tt.subsecond(), abs <= 1e-12);
+        let tt = tcg.to_tt();
+        assert_eq!(expected.seconds(), tt.seconds());
+        assert_float_eq!(expected.subsecond(), tt.subsecond(), abs <= 1e-12);
     }
 
     #[rstest]
@@ -292,6 +494,9 @@ mod tests {
         // (Fairhead & Bretagnon, 1990) provide coefficients for transformations with only
         // nanosecond accuracy. Chasing greater accuracy may not be practical or useful.
         assert_float_eq!(expected.subsecond(), tdb.subsecond(), abs <= 1e-12);
+        let tdb = tcb.to_tdb();
+        assert_eq!(expected.seconds(), tdb.seconds());
+        assert_float_eq!(expected.subsecond(), tdb.subsecond(), abs <= 1e-12);
     }
 
     #[rstest]
@@ -304,7 +509,10 @@ mod tests {
         let transformer = &TimeScaleTransformer {};
         let tcb: Time<Tcb> = transformer.transform(tdb);
         assert_eq!(expected.seconds(), tcb.seconds());
-        assert_float_eq!(expected.subsecond(), tcb.subsecond(), abs <= 1e-11)
+        assert_float_eq!(expected.subsecond(), tcb.subsecond(), abs <= 1e-11);
+        let tcb = tdb.to_tcb();
+        assert_eq!(expected.seconds(), tcb.seconds());
+        assert_float_eq!(expected.subsecond(), tcb.subsecond(), abs <= 1e-11);
     }
 
     #[rstest]
@@ -321,7 +529,9 @@ mod tests {
     fn test_transform_tt_tdb(#[case] tt: Time<Tt>, #[case] expected: Time<Tdb>) {
         let transformer = &TimeScaleTransformer {};
         let tdb: Time<Tdb> = transformer.transform(tt);
-        assert_eq!(expected, tdb)
+        assert_eq!(expected, tdb);
+        let tdb = tt.to_tdb();
+        assert_eq!(expected, tdb);
     }
 
     #[rstest]
@@ -341,6 +551,8 @@ mod tests {
     fn test_transform_tdb_tt(#[case] tdb: Time<Tdb>, #[case] expected: Time<Tt>) {
         let transformer = &TimeScaleTransformer {};
         let tt: Time<Tt> = transformer.transform(tdb);
-        assert_eq!(expected, tt)
+        assert_eq!(expected, tt);
+        let tt = tdb.to_tt();
+        assert_eq!(expected, tt);
     }
 }
