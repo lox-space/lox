@@ -40,7 +40,7 @@ impl PySun {
     fn __getnewargs__(&self) -> Py<PyTuple> {
         // A unit return type would be converted to `None` on the Python side,
         // but we actually want an empty tuple here.
-        Python::with_gil(|py| PyTuple::empty(py).into_py(py))
+        Python::with_gil(|py| PyTuple::empty_bound(py).into_py(py))
     }
 
     pub fn id(&self) -> i32 {
@@ -458,7 +458,7 @@ mod tests {
         assert_eq!(sun.equatorial_radius(), Sun.equatorial_radius());
         assert!(sun.__eq__(&sun));
         let sun_args = sun.__getnewargs__();
-        let empty: Py<PyTuple> = Python::with_gil(|py| PyTuple::empty(py).into_py(py));
+        let empty: Py<PyTuple> = Python::with_gil(|py| PyTuple::empty_bound(py).into_py(py));
         assert!(sun_args.is(&empty));
     }
 

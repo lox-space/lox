@@ -52,7 +52,7 @@ impl From<LoxPyError> for PyErr {
 }
 
 #[pymodule]
-fn lox_space(_py: Python, m: &PyModule) -> PyResult<()> {
+fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyTimeScale>()?;
     m.add_class::<PyTime>()?;
     m.add_class::<PySun>()?;
