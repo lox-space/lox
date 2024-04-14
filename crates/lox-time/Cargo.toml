@@ -6,8 +6,6 @@ edition.workspace = true
 license.workspace = true
 authors.workspace = true
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 lox-utils.workspace = true
 lox-eop.workspace = true
@@ -15,8 +13,12 @@ lox-eop.workspace = true
 float_eq.workspace = true
 mockall.workspace = true
 num.workspace = true
+pyo3 = { workspace = true, optional = true }
 thiserror.workspace = true
 
 [dev-dependencies]
 proptest.workspace = true
 rstest.workspace = true
+
+[features]
+python = ["dep:pyo3"]
