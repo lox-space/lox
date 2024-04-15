@@ -86,6 +86,7 @@ impl EarthOrientationParams {
 #[cfg(test)]
 mod tests {
     use rstest::rstest;
+    use std::sync::OnceLock;
 
     use super::*;
 
@@ -187,5 +188,42 @@ mod tests {
             inputs.delta_ut1_utc,
         );
         assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_eop_mjd() {
+        let eop = eop_fixture();
+        assert_eq!(eop.mjd(), &[0, 1, 2]);
+    }
+
+    #[test]
+    fn test_eop_x_pole() {
+        let eop = eop_fixture();
+        assert_eq!(eop.x_pole(), &[0.0, 1.0, 2.0]);
+    }
+
+    #[test]
+    fn test_eop_y_pole() {
+        let eop = eop_fixture();
+        assert_eq!(eop.y_pole(), &[3.0, 4.0, 5.0]);
+    }
+
+    #[test]
+    fn test_eop_delta_ut1_utc() {
+        let eop = eop_fixture();
+        assert_eq!(eop.delta_ut1_utc(), &[6.0, 7.0, 8.0]);
+    }
+
+    fn eop_fixture() -> &'static EarthOrientationParams {
+        static EOP: OnceLock<EarthOrientationParams> = OnceLock::new();
+        EOP.get_or_init(|| {
+            EarthOrientationParams::new(
+                vec![0, 1, 2],
+                vec![0.0, 1.0, 2.0],
+                vec![3.0, 4.0, 5.0],
+                vec![6.0, 7.0, 8.0],
+            )
+            .unwrap()
+        })
     }
 }
