@@ -11,9 +11,9 @@
 
 use std::sync::OnceLock;
 
-use lox_utils::constants::f64::time::{MJD_J2000, SECONDS_PER_DAY};
 use num::ToPrimitive;
 
+use lox_utils::constants::f64::time::{MJD_J2000, SECONDS_PER_DAY};
 use lox_utils::slices::is_sorted_asc;
 
 use crate::base_time::BaseTime;

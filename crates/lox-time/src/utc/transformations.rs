@@ -6,11 +6,17 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use std::fmt::Display;
 use std::sync::OnceLock;
+
+use thiserror::Error;
+
+use lox_eop::EarthOrientationParams;
 
 use crate::base_time::BaseTime;
 use crate::calendar_dates::Date;
-use crate::deltas::TimeDelta;
+use crate::deltas::{TimeDelta, TimeDeltaError};
+use crate::julian_dates::Epoch;
 use crate::time_scales::Tai;
 use crate::utc::{Utc, UtcDateTime, UtcUndefinedError};
 use crate::Time;
@@ -22,22 +28,25 @@ impl From<UtcDateTime> for Time<Tai> {
     /// Converts a `UtcDateTime` to `TAI`, accounting for leap seconds. Infallible for all valid
     /// values of UTC.
     fn from(utc: UtcDateTime) -> Self {
-        let delta = if utc < *utc_1972_01_01() {
-            before1972::delta_utc_tai(utc)
-        } else {
-            from1972::delta_utc_tai(utc)
-        }
-        .unwrap_or_else(|| {
-            // UtcDateTime objects are always in range.
-            unreachable!(
-                "failed to calculate UTC-TAI delta for UtcDateTime `{:?}`",
-                utc
-            );
-        });
-
+        let delta = delta_utc_tai(utc);
         let base = BaseTime::from_utc_datetime(utc);
         Time::from_base_time(Tai, base - delta)
     }
+}
+
+fn delta_utc_tai(utc: UtcDateTime) -> TimeDelta {
+    if utc < *utc_1972_01_01() {
+        before1972::delta_utc_tai(utc)
+    } else {
+        from1972::delta_utc_tai(utc)
+    }
+    .unwrap_or_else(|| {
+        // UtcDateTime objects are always in range.
+        unreachable!(
+            "failed to calculate UTC-TAI delta for UtcDateTime `{:?}`",
+            utc
+        );
+    })
 }
 
 impl TryFrom<Time<Tai>> for UtcDateTime {
@@ -46,13 +55,7 @@ impl TryFrom<Time<Tai>> for UtcDateTime {
     /// Attempts to convert a `Time<TAI>` to a `UtcDateTime`, accounting for leap seconds. Returns
     /// [UtcUndefinedError] if the input `Time<TAI>` is before 1960-01-01 UTC, when UTC begins.
     fn try_from(tai: Time<Tai>) -> Result<Self, Self::Error> {
-        let delta = if tai < *tai_at_utc_1972_01_01() {
-            before1972::delta_tai_utc(tai)
-        } else {
-            from1972::delta_tai_utc(tai)
-        }
-        .ok_or(UtcUndefinedError)?;
-
+        let delta = delta_tai_utc(tai)?;
         let base_time = tai.base_time() - delta;
         let mut utc = UtcDateTime::from_base_time(base_time)?;
         if tai.is_leap_second() {
@@ -61,6 +64,15 @@ impl TryFrom<Time<Tai>> for UtcDateTime {
 
         Ok(utc)
     }
+}
+
+fn delta_tai_utc(tai: Time<Tai>) -> Result<TimeDelta, UtcUndefinedError> {
+    if tai < *tai_at_utc_1972_01_01() {
+        before1972::delta_tai_utc(tai)
+    } else {
+        from1972::delta_tai_utc(tai)
+    }
+    .ok_or(UtcUndefinedError)
 }
 
 fn utc_1972_01_01() -> &'static UtcDateTime {
@@ -78,6 +90,96 @@ fn tai_at_utc_1972_01_01() -> &'static Time<Tai> {
         let leap_seconds = TimeDelta::from_seconds(LEAP_SECONDS_1972);
         Time::from_base_time(Tai, base_time + leap_seconds)
     })
+}
+
+/// EarthOrientationParamsError indicates that provided [EarthOrientationParams] were invalid for
+/// the construction of an [EopTimeScaleTransformer].
+#[derive(Clone, Debug, Error, PartialEq)]
+#[error("EarthOrientationParams contain invalid data at position {position}: {details}")]
+pub struct EarthOrientationParamsError {
+    position: usize,
+    details: EopErrorDetails,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum EopErrorDetails {
+    /// Arises when a [ModifiedJulianDayNumber] in [EarthOrientationParams] is before
+    /// 1960-01-01 UTC.
+    InvalidMjd(UtcUndefinedError),
+    /// Arises when a ΔUT1-UTC value in [EarthOrientationParams] cannot be represented as a
+    /// [TimeDelta].
+    InvalidDeltaUt1Utc(TimeDeltaError),
+}
+
+impl Display for EopErrorDetails {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidMjd(err) => write!(f, "invalid Modified Julian Day Number: {}", err),
+            Self::InvalidDeltaUt1Utc(err) => write!(f, "invalid ΔUT1-UTC value: {}", err),
+        }
+    }
+}
+
+impl From<UtcUndefinedError> for EopErrorDetails {
+    fn from(err: UtcUndefinedError) -> Self {
+        Self::InvalidMjd(err)
+    }
+}
+
+impl From<TimeDeltaError> for EopErrorDetails {
+    fn from(err: TimeDeltaError) -> Self {
+        Self::InvalidDeltaUt1Utc(err)
+    }
+}
+
+/// Transform between [TimeScale]s which require observed data in the form of
+/// [EarthOrientationParams], namely conversions involving [UT1].
+///
+/// [EopTimeScaleTransformer] is suitable only for transformations from 1960-01-01 UTC, when UTC
+/// was defined.
+#[derive(Clone, Debug, PartialEq)]
+pub struct EopTimeScaleTransformer<'a> {
+    eop: &'a EarthOrientationParams,
+    delta_ut1_tai: Vec<TimeDelta>,
+}
+
+impl<'a> EopTimeScaleTransformer<'a> {
+    /// Instantiates a new [EopTimeScaleTransformer] with the provided [EarthOrientationParams].
+    ///
+    /// Returns [EarthOrientationParamsError] if the input data contains a [ModifiedJulianDayNumber]
+    /// before 1960-01-01 UTC, or a ΔUT1-UTC value which cannot be represented as a [TimeDelta].
+    /// These errors should not arise in [EarthOrientationParams] derived from valid IERS data.
+    pub fn new(eop: &'a EarthOrientationParams) -> Result<Self, EarthOrientationParamsError> {
+        Ok(Self {
+            eop,
+            delta_ut1_tai: calculate_delta_ut1_tai_from_eop(eop)?,
+        })
+    }
+}
+
+fn calculate_delta_ut1_tai_from_eop(
+    eop: &EarthOrientationParams,
+) -> Result<Vec<TimeDelta>, EarthOrientationParamsError> {
+    eop.mjd()
+        .iter()
+        .zip(eop.delta_ut1_utc())
+        .enumerate()
+        .map(|(i, (mjd, delta_ut1_utc))| {
+            let tai = Time::from_julian_day_number(Tai, *mjd, Epoch::ModifiedJulianDate);
+            let delta_ut1_utc = TimeDelta::from_decimal_seconds(*delta_ut1_utc).map_err(|err| {
+                EarthOrientationParamsError {
+                    position: i,
+                    details: EopErrorDetails::InvalidDeltaUt1Utc(err),
+                }
+            })?;
+            let delta_tai_utc = delta_tai_utc(tai).map_err(|err| EarthOrientationParamsError {
+                position: i,
+                details: EopErrorDetails::InvalidMjd(err),
+            })?;
+
+            Ok(delta_ut1_utc - delta_tai_utc)
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -116,6 +218,53 @@ pub mod test {
         #[case] expected: Result<UtcDateTime, UtcUndefinedError>,
     ) {
         let actual = UtcDateTime::try_from(*tai);
+        assert_eq!(expected, actual);
+    }
+
+    #[rstest]
+    #[case::invalid_mjd(EopErrorDetails::InvalidMjd(UtcUndefinedError), format!("invalid Modified Julian Day Number: {}", UtcUndefinedError))]
+    #[case::invalid_delta_ut1_utc(EopErrorDetails::InvalidDeltaUt1Utc(any_time_delta_error()), format!("invalid ΔUT1-UTC value: {}", any_time_delta_error()))]
+    fn test_eop_error_details_display(#[case] variant: EopErrorDetails, #[case] expected: String) {
+        assert_eq!(expected, variant.to_string());
+    }
+
+    #[test]
+    fn test_eop_error_details_from_utc_undefined_error() {
+        let expected = EopErrorDetails::InvalidMjd(UtcUndefinedError);
+        let actual: EopErrorDetails = UtcUndefinedError.into();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_eop_error_details_from_time_delta_error() {
+        let expected = EopErrorDetails::InvalidDeltaUt1Utc(any_time_delta_error());
+        let actual: EopErrorDetails = any_time_delta_error().into();
+        assert_eq!(expected, actual);
+    }
+
+    type EopTransformResult = Result<EopTimeScaleTransformer<'static>, EarthOrientationParamsError>;
+
+    #[rstest]
+    #[case::valid_eop(eop_1972_01_02(), Ok(EopTimeScaleTransformer {
+        eop: eop_1972_01_02(),
+        delta_ut1_tai: vec![TimeDelta::from_decimal_seconds(-11.1915822).unwrap()],
+    }))]
+    #[case::invalid_mjd(eop_with_invalid_mjd(), Err(EarthOrientationParamsError {
+        position: 0,
+        details: EopErrorDetails::InvalidMjd(UtcUndefinedError),
+    }))]
+    #[case::invalid_delta_ut1_utc(eop_with_invalid_delta_ut1_utc(), Err(EarthOrientationParamsError {
+        position: 0,
+        details: EopErrorDetails::InvalidDeltaUt1Utc(TimeDeltaError {
+            raw: f64::NAN,
+            detail: "NaN is unrepresentable".to_string(),
+        }),
+    }))]
+    fn test_eop_time_scale_transformer_new(
+        #[case] eop: &EarthOrientationParams,
+        #[case] expected: EopTransformResult,
+    ) {
+        let actual = EopTimeScaleTransformer::new(eop);
         assert_eq!(expected, actual);
     }
 
@@ -216,5 +365,40 @@ pub mod test {
     fn tai_before_utc_defined() -> &'static Time<Tai> {
         static TAI_BEFORE_UTC_DEFINED: OnceLock<Time<Tai>> = OnceLock::new();
         TAI_BEFORE_UTC_DEFINED.get_or_init(|| Time::new(Tai, -1_262_347_201, Subsecond::default()))
+    }
+
+    fn any_time_delta_error() -> TimeDeltaError {
+        TimeDeltaError {
+            raw: f64::NAN,
+            detail: String::default(),
+        }
+    }
+
+    fn eop_1972_01_02() -> &'static EarthOrientationParams {
+        static EOP_1972_01_02: OnceLock<EarthOrientationParams> = OnceLock::new();
+        EOP_1972_01_02.get_or_init(|| {
+            EarthOrientationParams::new(
+                vec![41684],
+                vec![0.120733],
+                vec![0.136966],
+                vec![0.8084178],
+            )
+            .unwrap()
+        })
+    }
+
+    fn eop_with_invalid_mjd() -> &'static EarthOrientationParams {
+        static EOP_INVALID_MJD: OnceLock<EarthOrientationParams> = OnceLock::new();
+        EOP_INVALID_MJD.get_or_init(|| {
+            EarthOrientationParams::new(vec![0], vec![0.0], vec![0.0], vec![0.0]).unwrap()
+        })
+    }
+
+    fn eop_with_invalid_delta_ut1_utc() -> &'static EarthOrientationParams {
+        static EOP_INVALID_DELTA_UT1_UTC: OnceLock<EarthOrientationParams> = OnceLock::new();
+        EOP_INVALID_DELTA_UT1_UTC.get_or_init(|| {
+            EarthOrientationParams::new(vec![41684], vec![0.120733], vec![0.136966], vec![f64::NAN])
+                .unwrap()
+        })
     }
 }

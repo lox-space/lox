@@ -73,6 +73,21 @@ impl BaseTime {
         Self::from_date_and_utc_timestamp(dt.date(), dt.time())
     }
 
+    /// Instantiates a [BaseTime] from a Julian Day Number.
+    pub fn from_julian_day_number(day_number: i32, epoch: Epoch) -> Self {
+        let seconds = day_number as i64 * SECONDS_PER_DAY;
+        let epoch_adjustment = match epoch {
+            Epoch::JulianDate => SECONDS_BETWEEN_JD_AND_J2000,
+            Epoch::ModifiedJulianDate => SECONDS_BETWEEN_MJD_AND_J2000,
+            Epoch::J1950 => SECONDS_BETWEEN_J1950_AND_J2000,
+            Epoch::J2000 => 0,
+        };
+        BaseTime {
+            seconds: seconds - epoch_adjustment,
+            subsecond: Subsecond::default(),
+        }
+    }
+
     pub fn from_epoch(epoch: Epoch) -> Self {
         match epoch {
             Epoch::JulianDate => BaseTime {
@@ -330,6 +345,26 @@ mod tests {
         let datetime = UtcDateTime::new(date, utc).unwrap();
         let actual = BaseTime::from_date_and_utc_timestamp(date, utc);
         let expected = BaseTime::from_utc_datetime(datetime);
+        assert_eq!(expected, actual);
+    }
+
+    #[rstest]
+    #[case::mjd0(
+        0,
+        Epoch::ModifiedJulianDate,
+        BaseTime::from_epoch(Epoch::ModifiedJulianDate)
+    )]
+    #[case::mjd_pre_j2000(51544, Epoch::ModifiedJulianDate, BaseTime { seconds: -(SECONDS_PER_DAY / 2), subsecond: Subsecond::default() })]
+    #[case::mjd_post_j2000(51545, Epoch::ModifiedJulianDate, BaseTime { seconds: SECONDS_PER_DAY / 2, subsecond: Subsecond::default() })]
+    #[case::jd0(0, Epoch::JulianDate, BaseTime::from_epoch(Epoch::JulianDate))]
+    #[case::j1950(0, Epoch::J1950, BaseTime::from_epoch(Epoch::J1950))]
+    #[case::j1977(0, Epoch::J2000, BaseTime::from_epoch(Epoch::J2000))]
+    fn test_base_time_from_julian_day_number(
+        #[case] day_number: i32,
+        #[case] epoch: Epoch,
+        #[case] expected: BaseTime,
+    ) {
+        let actual = BaseTime::from_julian_day_number(day_number, epoch);
         assert_eq!(expected, actual);
     }
 

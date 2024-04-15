@@ -11,3 +11,5 @@
 pub type Epoch = f64;
 
 pub type ModifiedJulianDate = f64;
+
+pub type ModifiedJulianDayNumber = i32;
