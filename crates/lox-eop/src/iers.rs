@@ -21,10 +21,8 @@ use crate::{EarthOrientationParams, EopError};
 pub enum ParseFinalsCsvError {
     #[error("{0}")]
     Csv(String),
-    #[error("finals CSV at `{path}` contains invalid rows: row {row} is missing y_pole field despite present x_pole field")]
-    MissingYPole { path: PathBuf, row: usize },
-    #[error("finals CSV at `{path}` contains invalid rows: row {row} is missing delta_ut1_utc field despite present x_pole field")]
-    MissingDeltaUt1Utc { path: PathBuf, row: usize },
+    #[error("finals CSV at `{path}` is missing data from row {row}")]
+    MissingData { path: PathBuf, row: usize },
     #[error("CSV file at `{path}` contains invalid data: {source}")]
     InvalidEop { path: PathBuf, source: EopError },
 }
@@ -65,14 +63,14 @@ pub fn parse_finals_csv<P: AsRef<Path>>(
         let record_x_pole = record.x_pole.unwrap();
         let record_y_pole = record
             .y_pole
-            .ok_or_else(|| ParseFinalsCsvError::MissingYPole {
+            .ok_or_else(|| ParseFinalsCsvError::MissingData {
                 path: path.as_ref().to_path_buf(),
                 row: i + 1,
             })?;
         let record_delta_ut1_utc =
             record
                 .delta_ut1_utc
-                .ok_or_else(|| ParseFinalsCsvError::MissingDeltaUt1Utc {
+                .ok_or_else(|| ParseFinalsCsvError::MissingData {
                     path: path.as_ref().to_path_buf(),
                     row: i + 1,
                 })?;
@@ -238,14 +236,14 @@ mod tests {
     #[case::csv_parse_failure("finals_type_error.csv", ParseFinalsCsvError::Csv("CSV deserialize error: record 1 (line: 2, byte: 265): field 0: invalid digit found in string".to_string()))]
     #[case::missing_y_pole(
         "finals_missing_y_pole.csv",
-        ParseFinalsCsvError::MissingYPole {
+        ParseFinalsCsvError::MissingData {
             path: Path::new(TEST_DATA_DIR).join(Path::new("finals_missing_y_pole.csv")),
             row: 1,
         },
     )]
     #[case::missing_delta_ut1_utc(
         "finals_missing_delta_ut1_utc.csv",
-        ParseFinalsCsvError::MissingDeltaUt1Utc {
+        ParseFinalsCsvError::MissingData {
             path: Path::new(TEST_DATA_DIR).join(Path::new("finals_missing_delta_ut1_utc.csv")),
             row: 1,
         },

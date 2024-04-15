@@ -15,7 +15,7 @@ mod lagrange;
 
 #[derive(Copy, Clone, Debug, Error, PartialEq, Eq)]
 pub enum EopError {
-    #[error("input vectors for EarthOrientationParams must have equal lengths, but got mjd={len_mjd}, x_pole={len_x_pole}, y_pole={len_y_pole}, delta_ut1_utc={len_delta_ut1_utc}")]
+    #[error("input vectors for EarthOrientationParams must have equal lengths, but got mjd.len()={len_mjd}, x_pole.len()={len_x_pole}, y_pole.len()={len_y_pole}, delta_ut1_utc.len()={len_delta_ut1_utc}")]
     DimensionMismatch {
         len_mjd: usize,
         len_x_pole: usize,
