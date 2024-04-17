@@ -17,7 +17,8 @@ use crate::base_time::BaseTime;
 use crate::calendar_dates::Date;
 use crate::deltas::{TimeDelta, TimeDeltaError};
 use crate::julian_dates::Epoch;
-use crate::time_scales::Tai;
+use crate::time_scales::{Tai, Ut1};
+use crate::transformations::TransformTimeScale;
 use crate::utc::{Utc, UtcDateTime, UtcUndefinedError};
 use crate::Time;
 
@@ -150,36 +151,8 @@ impl<'a> EopTimeScaleTransformer<'a> {
     /// before 1960-01-01 UTC, or a ΔUT1-UTC value which cannot be represented as a [TimeDelta].
     /// These errors should not arise in [EarthOrientationParams] derived from valid IERS data.
     pub fn new(eop: &'a EarthOrientationParams) -> Result<Self, EarthOrientationParamsError> {
-        Ok(Self {
-            eop,
-            delta_ut1_tai: calculate_delta_ut1_tai_from_eop(eop)?,
-        })
+        todo!()
     }
-}
-
-fn calculate_delta_ut1_tai_from_eop(
-    eop: &EarthOrientationParams,
-) -> Result<Vec<TimeDelta>, EarthOrientationParamsError> {
-    eop.mjd()
-        .iter()
-        .zip(eop.delta_ut1_utc())
-        .enumerate()
-        .map(|(i, (mjd, delta_ut1_utc))| {
-            let tai = Time::from_julian_day_number(Tai, *mjd, Epoch::ModifiedJulianDate);
-            let delta_ut1_utc = TimeDelta::from_decimal_seconds(*delta_ut1_utc).map_err(|err| {
-                EarthOrientationParamsError {
-                    position: i,
-                    details: EopErrorDetails::InvalidDeltaUt1Utc(err),
-                }
-            })?;
-            let delta_tai_utc = delta_tai_utc(tai).map_err(|err| EarthOrientationParamsError {
-                position: i,
-                details: EopErrorDetails::InvalidMjd(err),
-            })?;
-
-            Ok(delta_ut1_utc - delta_tai_utc)
-        })
-        .collect()
 }
 
 #[cfg(test)]
@@ -239,32 +212,6 @@ pub mod test {
     fn test_eop_error_details_from_time_delta_error() {
         let expected = EopErrorDetails::InvalidDeltaUt1Utc(any_time_delta_error());
         let actual: EopErrorDetails = any_time_delta_error().into();
-        assert_eq!(expected, actual);
-    }
-
-    type EopTransformResult = Result<EopTimeScaleTransformer<'static>, EarthOrientationParamsError>;
-
-    #[rstest]
-    #[case::valid_eop(eop_1972_01_02(), Ok(EopTimeScaleTransformer {
-        eop: eop_1972_01_02(),
-        delta_ut1_tai: vec![TimeDelta::from_decimal_seconds(-11.1915822).unwrap()],
-    }))]
-    #[case::invalid_mjd(eop_with_invalid_mjd(), Err(EarthOrientationParamsError {
-        position: 0,
-        details: EopErrorDetails::InvalidMjd(UtcUndefinedError),
-    }))]
-    #[case::invalid_delta_ut1_utc(eop_with_invalid_delta_ut1_utc(), Err(EarthOrientationParamsError {
-        position: 0,
-        details: EopErrorDetails::InvalidDeltaUt1Utc(TimeDeltaError {
-            raw: f64::NAN,
-            detail: "NaN is unrepresentable".to_string(),
-        }),
-    }))]
-    fn test_eop_time_scale_transformer_new(
-        #[case] eop: &EarthOrientationParams,
-        #[case] expected: EopTransformResult,
-    ) {
-        let actual = EopTimeScaleTransformer::new(eop);
         assert_eq!(expected, actual);
     }
 
@@ -372,33 +319,5 @@ pub mod test {
             raw: f64::NAN,
             detail: String::default(),
         }
-    }
-
-    fn eop_1972_01_02() -> &'static EarthOrientationParams {
-        static EOP_1972_01_02: OnceLock<EarthOrientationParams> = OnceLock::new();
-        EOP_1972_01_02.get_or_init(|| {
-            EarthOrientationParams::new(
-                vec![41684],
-                vec![0.120733],
-                vec![0.136966],
-                vec![0.8084178],
-            )
-            .unwrap()
-        })
-    }
-
-    fn eop_with_invalid_mjd() -> &'static EarthOrientationParams {
-        static EOP_INVALID_MJD: OnceLock<EarthOrientationParams> = OnceLock::new();
-        EOP_INVALID_MJD.get_or_init(|| {
-            EarthOrientationParams::new(vec![0], vec![0.0], vec![0.0], vec![0.0]).unwrap()
-        })
-    }
-
-    fn eop_with_invalid_delta_ut1_utc() -> &'static EarthOrientationParams {
-        static EOP_INVALID_DELTA_UT1_UTC: OnceLock<EarthOrientationParams> = OnceLock::new();
-        EOP_INVALID_DELTA_UT1_UTC.get_or_init(|| {
-            EarthOrientationParams::new(vec![41684], vec![0.120733], vec![0.136966], vec![f64::NAN])
-                .unwrap()
-        })
     }
 }

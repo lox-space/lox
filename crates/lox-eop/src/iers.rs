@@ -75,7 +75,7 @@ pub fn parse_finals_csv<P: AsRef<Path>>(
                     row: i + 1,
                 })?;
 
-        mjd.push(record.modified_julian_date);
+        mjd.push(record.modified_julian_date as f64);
         x_pole.push(record_x_pole);
         y_pole.push(record_y_pole);
         delta_ut1_utc.push(record_delta_ut1_utc);
@@ -104,7 +104,7 @@ mod tests {
 
     #[derive(Default)]
     struct ExpectedRecord {
-        mjd: ModifiedJulianDayNumber,
+        mjd: ModifiedJulianDate,
         x_pole: f64,
         y_pole: f64,
         delta_ut1_utc: f64,
@@ -115,13 +115,13 @@ mod tests {
         "finals.all.csv",
         18933,
         ExpectedRecord {
-            mjd: 41684,
+            mjd: 41684.0,
             x_pole: 0.120733,
             y_pole: 0.136966,
             delta_ut1_utc: 0.8084178,
         },
         ExpectedRecord {
-            mjd: 60616,
+            mjd: 60616.0,
             x_pole: 0.236027,
             y_pole: 0.320683,
             delta_ut1_utc: 0.0428756,
@@ -131,13 +131,13 @@ mod tests {
         "finals2000A.all.csv",
         19066,
         ExpectedRecord {
-            mjd: 41684,
+            mjd: 41684.0,
             x_pole: 0.120733,
             y_pole: 0.136966,
             delta_ut1_utc: 0.8084178,
         },
         ExpectedRecord {
-            mjd: 60749,
+            mjd: 60749.0,
             x_pole: 0.072472,
             y_pole: 0.295733,
             delta_ut1_utc: 0.0117914,

@@ -31,27 +31,27 @@ pub struct ArgumentSizeMismatchError {
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct Arguments {
+pub struct Arguments<'a> {
     /// x polar motion.
-    x: Vec<Arcseconds>,
+    x: &'a [Arcseconds],
     /// y polar motion.
-    y: Vec<Arcseconds>,
+    y: &'a [Arcseconds],
     /// UT1-UTC.
-    t: Vec<Seconds>,
+    t: &'a [Seconds],
     /// Epochs of the data.
-    epochs: Vec<ModifiedJulianDate>,
+    epochs: &'a [ModifiedJulianDate],
     /// Epoch of the interpolated data.
     target_epoch: ModifiedJulianDate,
 }
 
-impl Arguments {
+impl<'a> Arguments<'_> {
     pub fn new(
-        x: Vec<Arcseconds>,
-        y: Vec<Arcseconds>,
-        t: Vec<Seconds>,
-        epochs: Vec<ModifiedJulianDate>,
+        x: &'a [Arcseconds],
+        y: &'a [Arcseconds],
+        t: &'a [Seconds],
+        epochs: &'a [ModifiedJulianDate],
         target_epoch: ModifiedJulianDate,
-    ) -> Result<Arguments, ArgumentSizeMismatchError> {
+    ) -> Result<Arguments<'a>, ArgumentSizeMismatchError> {
         if x.len() != y.len() || x.len() != t.len() || x.len() != epochs.len() {
             return Err(ArgumentSizeMismatchError {
                 nx: x.len(),
@@ -76,7 +76,7 @@ impl Arguments {
 pub struct Interpolation {
     x: Arcseconds,
     y: Arcseconds,
-    d_ut1_utc: ModifiedJulianDate,
+    d_ut1_utc: Seconds,
 }
 
 /// Perform Lagrangian interpolation of Earth Orientation Parameters (EOP), returning polar x- and
@@ -243,7 +243,7 @@ mod tests {
         #[case] target_epoch: ModifiedJulianDate,
         #[case] expected: Result<Arguments, ArgumentSizeMismatchError>,
     ) {
-        let actual = Arguments::new(x, y, t, epochs, target_epoch);
+        let actual = Arguments::new(&x, &y, &t, &epochs, target_epoch);
         assert_eq!(expected, actual);
     }
 
@@ -292,10 +292,10 @@ mod tests {
         #[case] expected: Interpolation,
     ) -> Result<(), ArgumentSizeMismatchError> {
         let args = Arguments::new(
-            eop_data.x_pole,
-            eop_data.y_pole,
-            eop_data.delta_ut1_utc,
-            eop_data.mjd.iter().map(|&mjd| mjd.into()).collect(),
+            &eop_data.x_pole,
+            &eop_data.y_pole,
+            &eop_data.delta_ut1_utc,
+            &eop_data.mjd,
             target_epoch,
         )?;
         let result = interpolate(args);

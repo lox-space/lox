@@ -6,9 +6,14 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+use std::error::Error;
+
+use num_traits::ToPrimitive;
 use thiserror::Error;
 
-use lox_utils::types::julian_dates::ModifiedJulianDayNumber;
+use crate::lagrange::eop::Arguments;
+use lox_utils::types::julian_dates::{ModifiedJulianDate, ModifiedJulianDayNumber};
+use lox_utils::types::units::Seconds;
 
 mod iers;
 mod lagrange;
@@ -29,7 +34,7 @@ pub enum EopError {
 /// A representation of observed Earth orientation parameters, independent of input format.
 #[derive(Clone, Debug, PartialEq)]
 pub struct EarthOrientationParams {
-    mjd: Vec<ModifiedJulianDayNumber>,
+    mjd: Vec<ModifiedJulianDate>,
     x_pole: Vec<f64>,
     y_pole: Vec<f64>,
     delta_ut1_utc: Vec<f64>,
@@ -37,7 +42,7 @@ pub struct EarthOrientationParams {
 
 impl EarthOrientationParams {
     pub fn new(
-        mjd: Vec<ModifiedJulianDayNumber>,
+        mjd: Vec<ModifiedJulianDate>,
         x_pole: Vec<f64>,
         y_pole: Vec<f64>,
         delta_ut1_utc: Vec<f64>,
@@ -66,7 +71,7 @@ impl EarthOrientationParams {
         })
     }
 
-    pub fn mjd(&self) -> &[ModifiedJulianDayNumber] {
+    pub fn mjd(&self) -> &[ModifiedJulianDate] {
         &self.mjd
     }
 
@@ -83,15 +88,68 @@ impl EarthOrientationParams {
     }
 }
 
+/// Provides the difference between UT1 and UTC for the given [ModifiedJulianDate].
+// pub trait DeltaUt1Utc {
+//     type Error: Error;
+//
+//     fn delta_ut1_utc(&self, mjd: ModifiedJulianDate) -> Result<Seconds, Self::Error>;
+// }
+//
+// #[derive(Copy, Clone, Debug, Error, PartialEq)]
+// pub enum TargetDateError {
+//     #[error("input MJD was {input}, which predates the earliest available data (MJD {earliest})")]
+//     BeforeEopData {
+//         input: ModifiedJulianDate,
+//         earliest: ModifiedJulianDayNumber,
+//     },
+//     #[error("input MJD was {input}, which is after the latest available data (MJD {latest})")]
+//     AfterEopData {
+//         input: ModifiedJulianDate,
+//         latest: ModifiedJulianDayNumber,
+//     },
+// }
+//
+// impl DeltaUt1Utc for EarthOrientationParams {
+//     type Error = TargetDateError;
+//
+//     fn delta_ut1_utc(&self, mjd: ModifiedJulianDate) -> Result<Seconds, Self::Error> {
+//         let target_day = mjd.to_i32().unwrap();
+//         if target_day < self.mjd[0] {
+//             return Err(TargetDateError::BeforeEopData {
+//                 input: mjd,
+//                 earliest: self.mjd[0],
+//             });
+//         }
+//
+//         if target_day > self.mjd[self.mjd.len() - 1] {
+//             return Err(TargetDateError::AfterEopData {
+//                 input: mjd,
+//                 latest: self.mjd[self.mjd.len() - 1],
+//             });
+//         }
+//
+//         let lagrange_args = Arguments::new(
+//             &self.mjd(),
+//
+//         )
+//         let interpolation = interp
+//
+//
+//
+//         Ok()
+//     }
+// }
+
 #[cfg(test)]
 mod tests {
-    use rstest::rstest;
     use std::sync::OnceLock;
+
+    use rstest::rstest;
 
     use super::*;
 
     struct EopInputs {
-        mjd: Vec<ModifiedJulianDayNumber>,
+        mjd: Vec<ModifiedJulianDate>,
         x_pole: Vec<f64>,
         y_pole: Vec<f64>,
         delta_ut1_utc: Vec<f64>,
@@ -100,13 +158,13 @@ mod tests {
     #[rstest]
     #[case::valid_inputs(
         EopInputs {
-            mjd: vec![0],
+            mjd: vec![0.0],
             x_pole: vec![0.0],
             y_pole: vec![0.0],
             delta_ut1_utc: vec![0.0],
         },
         Ok(EarthOrientationParams {
-            mjd: vec![0],
+            mjd: vec![0.0],
             x_pole: vec![0.0],
             y_pole: vec![0.0],
             delta_ut1_utc: vec![0.0],
@@ -114,7 +172,7 @@ mod tests {
     )]
     #[case::extra_mjd(
         EopInputs {
-            mjd: vec![0, 1],
+            mjd: vec![0.0, 1.0],
             x_pole: vec![0.0],
             y_pole: vec![0.0],
             delta_ut1_utc: vec![0.0],
@@ -128,7 +186,7 @@ mod tests {
     )]
     #[case::extra_x_pole(
         EopInputs {
-            mjd: vec![0],
+            mjd: vec![0.0],
             x_pole: vec![0.0, 1.0],
             y_pole: vec![0.0],
             delta_ut1_utc: vec![0.0],
@@ -142,7 +200,7 @@ mod tests {
     )]
     #[case::extra_y_pole(
         EopInputs {
-            mjd: vec![0],
+            mjd: vec![0.0],
             x_pole: vec![0.0],
             y_pole: vec![0.0, 1.0],
             delta_ut1_utc: vec![0.0],
@@ -156,7 +214,7 @@ mod tests {
     )]
     #[case::extra_delta_ut1_utc(
         EopInputs {
-            mjd: vec![0],
+            mjd: vec![0.0],
             x_pole: vec![0.0],
             y_pole: vec![0.0],
             delta_ut1_utc: vec![0.0, 1.0],
@@ -193,35 +251,35 @@ mod tests {
     #[test]
     fn test_eop_mjd() {
         let eop = eop_fixture();
-        assert_eq!(eop.mjd(), &[0, 1, 2]);
+        assert_eq!(eop.mjd(), &[0.0, 1.0, 2.0]);
     }
 
     #[test]
     fn test_eop_x_pole() {
         let eop = eop_fixture();
-        assert_eq!(eop.x_pole(), &[0.0, 1.0, 2.0]);
+        assert_eq!(eop.x_pole(), &[3.0, 4.0, 5.0]);
     }
 
     #[test]
     fn test_eop_y_pole() {
         let eop = eop_fixture();
-        assert_eq!(eop.y_pole(), &[3.0, 4.0, 5.0]);
+        assert_eq!(eop.y_pole(), &[6.0, 7.0, 8.0]);
     }
 
     #[test]
     fn test_eop_delta_ut1_utc() {
         let eop = eop_fixture();
-        assert_eq!(eop.delta_ut1_utc(), &[6.0, 7.0, 8.0]);
+        assert_eq!(eop.delta_ut1_utc(), &[9.0, 0.0, 1.0]);
     }
 
     fn eop_fixture() -> &'static EarthOrientationParams {
         static EOP: OnceLock<EarthOrientationParams> = OnceLock::new();
         EOP.get_or_init(|| {
             EarthOrientationParams::new(
-                vec![0, 1, 2],
                 vec![0.0, 1.0, 2.0],
                 vec![3.0, 4.0, 5.0],
                 vec![6.0, 7.0, 8.0],
+                vec![9.0, 0.0, 1.0],
             )
             .unwrap()
         })
