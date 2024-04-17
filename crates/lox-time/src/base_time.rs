@@ -58,7 +58,8 @@ impl BaseTime {
 
     /// Instantiates a [BaseTime] from a date and UTC timestamp.
     pub fn from_date_and_utc_timestamp(date: Date, time: Utc) -> Self {
-        let day_in_seconds = date.j2000() * SECONDS_PER_DAY - SECONDS_PER_DAY / 2;
+        let day_in_seconds =
+            date.days_since_j2000().to_i64().unwrap() * SECONDS_PER_DAY - SECONDS_PER_DAY / 2;
         let hour_in_seconds = time.hour() * SECONDS_PER_HOUR;
         let minute_in_seconds = time.minute() * SECONDS_PER_MINUTE;
         let seconds = day_in_seconds + hour_in_seconds + minute_in_seconds + time.second();
@@ -299,11 +300,7 @@ impl CalendarDate for BaseTime {
             time += SECONDS_PER_DAY;
         }
         let days = (seconds - time) / SECONDS_PER_DAY;
-        Date::from_days(days).unwrap_or_else(|err| {
-            // The only error arising from this function relates to non-leap years with > 365 days,
-            // which should not be possible for a `BaseTime` input.
-            unreachable!("BaseTime `{}` is unrepresentable as a date: {}", self, err)
-        })
+        Date::from_days_since_j2000(days)
     }
 }
 

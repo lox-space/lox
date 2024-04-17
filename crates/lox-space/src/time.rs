@@ -8,6 +8,7 @@
 
 use std::fmt::{Display, Formatter};
 
+use pyo3::exceptions::PyValueError;
 use pyo3::{pyclass, pymethods};
 
 use lox_time::base_time::BaseTime;
@@ -77,30 +78,6 @@ pub struct PyTime {
     pub timestamp: BaseTime,
 }
 
-#[pyclass(name = "Subsecond")]
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
-pub struct PySubsecond {
-    subsecond: Subsecond,
-}
-
-#[pymethods]
-impl PySubsecond {
-    #[new]
-    pub fn new(subsecond: f64) -> Result<Self, LoxPyError> {
-        Ok(PySubsecond {
-            subsecond: Subsecond::new(subsecond)?,
-        })
-    }
-
-    fn __repr__(&self) -> String {
-        format!("Subsecond({})", Into::<f64>::into(self.subsecond))
-    }
-
-    fn __str__(&self) -> String {
-        self.subsecond.to_string()
-    }
-}
-
 #[pymethods]
 impl PyTime {
     #[allow(clippy::too_many_arguments)]
@@ -112,7 +89,6 @@ impl PyTime {
     hour = 0,
     minute = 0,
     second = 0,
-    subsecond = PySubsecond::default()
     ))]
     #[new]
     pub fn new(
@@ -123,14 +99,15 @@ impl PyTime {
         hour: Option<u8>,
         minute: Option<u8>,
         second: Option<u8>,
-        subsecond: Option<PySubsecond>,
     ) -> Result<Self, LoxPyError> {
-        let date = Date::new(year, month, day)?;
+        let date =
+            Date::new(year, month, day).map_err(|_| PyValueError::new_err("invalid date"))?;
         let hour = hour.unwrap_or_default();
         let minute = minute.unwrap_or_default();
         let second = second.unwrap_or_default();
-        let subsecond = subsecond.unwrap_or_default();
-        let utc = Utc::new(hour, minute, second, subsecond.subsecond)?;
+        let subsecond = Subsecond::default();
+        let utc = Utc::new(hour, minute, second, subsecond)
+            .map_err(|_| PyValueError::new_err("invalid time"))?;
         Ok(pytime_from_date_and_utc_timestamp(scale, date, utc))
     }
 
@@ -197,7 +174,7 @@ mod tests {
     // time_new tests can't be parameterized with rstest.
     #[test]
     fn test_time_new_tai() {
-        let actual = PyTime::new(PyTimeScale::Tai, 2024, 1, 1, None, None, None, None).unwrap();
+        let actual = PyTime::new(PyTimeScale::Tai, 2024, 1, 1, None, None, None).unwrap();
         let expected = PyTime {
             scale: PyTimeScale::Tai,
             timestamp: Time::from_base_time(Tai, *base_time_2024_1_1()).base_time(),
@@ -207,7 +184,7 @@ mod tests {
 
     #[test]
     fn test_time_new_tcb() {
-        let actual = PyTime::new(PyTimeScale::Tcb, 2024, 1, 1, None, None, None, None).unwrap();
+        let actual = PyTime::new(PyTimeScale::Tcb, 2024, 1, 1, None, None, None).unwrap();
         let expected = PyTime {
             scale: PyTimeScale::Tcb,
             timestamp: Time::from_base_time(Tcb, *base_time_2024_1_1()).base_time(),
@@ -217,7 +194,7 @@ mod tests {
 
     #[test]
     fn test_time_new_tcg() {
-        let actual = PyTime::new(PyTimeScale::Tcg, 2024, 1, 1, None, None, None, None).unwrap();
+        let actual = PyTime::new(PyTimeScale::Tcg, 2024, 1, 1, None, None, None).unwrap();
         let expected = PyTime {
             scale: PyTimeScale::Tcg,
             timestamp: Time::from_base_time(Tcg, *base_time_2024_1_1()).base_time(),
@@ -227,7 +204,7 @@ mod tests {
 
     #[test]
     fn test_time_new_tdb() {
-        let actual = PyTime::new(PyTimeScale::Tdb, 2024, 1, 1, None, None, None, None).unwrap();
+        let actual = PyTime::new(PyTimeScale::Tdb, 2024, 1, 1, None, None, None).unwrap();
         let expected = PyTime {
             scale: PyTimeScale::Tdb,
             timestamp: Time::from_base_time(Tdb, *base_time_2024_1_1()).base_time(),
@@ -237,7 +214,7 @@ mod tests {
 
     #[test]
     fn test_time_new_tt() {
-        let actual = PyTime::new(PyTimeScale::Tt, 2024, 1, 1, None, None, None, None).unwrap();
+        let actual = PyTime::new(PyTimeScale::Tt, 2024, 1, 1, None, None, None).unwrap();
         let expected = PyTime {
             scale: PyTimeScale::Tt,
             timestamp: Time::from_base_time(Tt, *base_time_2024_1_1()).base_time(),
@@ -247,7 +224,7 @@ mod tests {
 
     #[test]
     fn test_time_new_ut1() {
-        let actual = PyTime::new(PyTimeScale::Ut1, 2024, 1, 1, None, None, None, None).unwrap();
+        let actual = PyTime::new(PyTimeScale::Ut1, 2024, 1, 1, None, None, None).unwrap();
         let expected = PyTime {
             scale: PyTimeScale::Ut1,
             timestamp: Time::from_base_time(Ut1, *base_time_2024_1_1()).base_time(),
@@ -263,60 +240,15 @@ mod tests {
 
     #[test]
     fn test_time_days_since_j2000() {
-        let time = PyTime::new(
-            PyTimeScale::Tdb,
-            2024,
-            1,
-            1,
-            Some(1),
-            Some(1),
-            Some(1),
-            Some(PySubsecond::new(0.123456789123456).expect("PySubsecond should be valid")),
-        )
-        .expect("PyTime should be valid");
+        let time = PyTime::new(PyTimeScale::Tdb, 2024, 1, 1, Some(1), Some(1), Some(1))
+            .expect("PyTime should be valid");
         assert_float_eq!(8765.542374114084, time.days_since_j2000(), rel <= 1e-8);
     }
 
     #[test]
     fn test_time_scale() {
-        let time = PyTime::new(
-            PyTimeScale::Tdb,
-            2024,
-            1,
-            1,
-            Some(1),
-            Some(1),
-            Some(1),
-            Some(PySubsecond::new(0.123456789123456).expect("PySubsecond should be valid")),
-        )
-        .expect("PyTime should be valid");
+        let time = PyTime::new(PyTimeScale::Tdb, 2024, 1, 1, Some(1), Some(1), Some(1))
+            .expect("PyTime should be valid");
         assert_eq!(PyTimeScale::Tdb, time.scale());
-    }
-
-    #[test]
-    fn test_py_subsecond_new() {
-        let actual = PySubsecond::new(0.123).expect("subsecond should be valid");
-        let expected = PySubsecond {
-            subsecond: Subsecond::new(0.123).expect("subsecond should be valid"),
-        };
-        assert_eq!(expected, actual);
-    }
-
-    #[test]
-    fn test_py_subsecond_repr() {
-        let actual = PySubsecond::new(0.123456789123456)
-            .expect("subsecond should be valid")
-            .__repr__();
-        let expected = "Subsecond(0.123456789123456)";
-        assert_eq!(expected, actual);
-    }
-
-    #[test]
-    fn test_py_subsecond_str() {
-        let actual = PySubsecond::new(0.123456789123456)
-            .expect("subsecond should be valid")
-            .__str__();
-        let expected = "123.456.789.123.456";
-        assert_eq!(expected, actual);
     }
 }

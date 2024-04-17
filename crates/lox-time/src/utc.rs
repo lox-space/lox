@@ -4,7 +4,6 @@ use thiserror::Error;
 
 use crate::base_time::BaseTime;
 use crate::calendar_dates::{CalendarDate, Date};
-use crate::errors::LoxTimeError;
 use crate::julian_dates::{Epoch, JulianDate, Unit};
 use crate::subsecond::Subsecond;
 use crate::wall_clock::WallClock;
@@ -32,9 +31,9 @@ impl Utc {
         minute: u8,
         second: u8,
         subsecond: Subsecond,
-    ) -> Result<Self, LoxTimeError> {
+    ) -> Result<Self, &'static str> {
         if !(0..24).contains(&hour) || !(0..60).contains(&minute) || !(0..61).contains(&second) {
-            Err(LoxTimeError::InvalidTime(hour, minute, second))
+            Err("invalid time")
         } else {
             Ok(Self {
                 hour,

@@ -180,23 +180,14 @@ mod tests {
     use float_eq::assert_float_eq;
 
     use crate::bodies::PyPlanet;
-    use crate::time::{PySubsecond, PyTimeScale};
+    use crate::time::PyTimeScale;
 
     use super::*;
 
     #[test]
     fn test_cartesian() {
-        let time = PyTime::new(
-            PyTimeScale::Tdb,
-            2023,
-            3,
-            25,
-            Some(21),
-            Some(8),
-            Some(0),
-            Some(PySubsecond::default()),
-        )
-        .expect("time should be valid");
+        let time = PyTime::new(PyTimeScale::Tdb, 2023, 3, 25, Some(21), Some(8), Some(0))
+            .expect("time should be valid");
         let body = Python::with_gil(|py| {
             PyPlanet::new("Earth")
                 .expect("body should be valid")
@@ -245,17 +236,8 @@ mod tests {
 
     #[test]
     fn test_keplerian() {
-        let time = PyTime::new(
-            PyTimeScale::Tdb,
-            2023,
-            3,
-            25,
-            Some(21),
-            Some(8),
-            Some(0),
-            Some(PySubsecond::default()),
-        )
-        .expect("time should be valid");
+        let time = PyTime::new(PyTimeScale::Tdb, 2023, 3, 25, Some(21), Some(8), Some(0))
+            .expect("time should be valid");
         let body = Python::with_gil(|py| {
             PyPlanet::new("Earth")
                 .expect("body should be valid")

@@ -31,12 +31,14 @@ use crate::wall_clock::WallClock;
 pub mod base_time;
 pub mod calendar_dates;
 pub mod constants;
+pub mod datetime;
 pub mod deltas;
-pub mod errors;
 pub mod julian_dates;
+pub mod prelude;
 #[cfg(feature = "python")]
 pub mod python;
 pub mod subsecond;
+pub mod time_of_day;
 pub mod time_scales;
 pub mod transformations;
 pub mod utc;
