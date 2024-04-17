@@ -94,8 +94,8 @@ impl PyTime {
     pub fn new(
         scale: PyTimeScale,
         year: i64,
-        month: i64,
-        day: i64,
+        month: u8,
+        day: u16,
         hour: Option<u8>,
         minute: Option<u8>,
         second: Option<u8>,

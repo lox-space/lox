@@ -32,7 +32,7 @@ fn iso_regex() -> &'static Regex {
 #[derive(Debug, Clone, Error, PartialEq, Eq, PartialOrd, Ord)]
 pub enum DateError {
     #[error("invalid date `{0}-{1}-{2}`")]
-    InvalidDate(i64, i64, i64),
+    InvalidDate(i64, u8, u16),
     #[error("invalid ISO string `{0}`")]
     InvalidIsoString(String),
     #[error("day of year cannot be 366 for a non-leap year")]
@@ -50,8 +50,8 @@ pub enum Calendar {
 pub struct Date {
     calendar: Calendar,
     year: i64,
-    month: i64,
-    day: i64,
+    month: u8,
+    day: u16,
 }
 
 impl Display for Date {
@@ -107,15 +107,15 @@ impl Date {
         self.year
     }
 
-    pub fn month(&self) -> i64 {
+    pub fn month(&self) -> u8 {
         self.month
     }
 
-    pub fn day(&self) -> i64 {
+    pub fn day(&self) -> u16 {
         self.day
     }
 
-    pub fn new(year: i64, month: i64, day: i64) -> Result<Self, DateError> {
+    pub fn new(year: i64, month: u8, day: u16) -> Result<Self, DateError> {
         if !(1..=12).contains(&month) {
             Err(DateError::InvalidDate(year, month, day))
         } else {
@@ -151,9 +151,9 @@ impl Date {
         Date::new(year, month, day)
     }
 
-    pub fn from_days_since_j2000(offset: i64) -> Self {
-        let calendar = if offset < LAST_JULIAN_DAY_J2K {
-            if offset > LAST_PROLEPTIC_JULIAN_DAY_J2K {
+    pub fn from_days_since_j2000(days: i64) -> Self {
+        let calendar = if days < LAST_JULIAN_DAY_J2K {
+            if days > LAST_PROLEPTIC_JULIAN_DAY_J2K {
                 Calendar::Julian
             } else {
                 Calendar::ProlepticJulian
@@ -162,9 +162,9 @@ impl Date {
             Calendar::Gregorian
         };
 
-        let year = find_year(calendar, offset);
-        let leap = is_leap(calendar, year);
-        let day_of_year = offset - last_day_of_year_j2k(calendar, year - 1);
+        let year = find_year(calendar, days);
+        let leap = is_leap_year(calendar, year);
+        let day_of_year = (days - last_day_of_year_j2k(calendar, year - 1)) as u16;
         let month = find_month(day_of_year, leap);
         let day = find_day(day_of_year, month, leap)
             .unwrap_or_else(|_| unreachable!("day of year should be valid"));
@@ -177,9 +177,9 @@ impl Date {
         }
     }
 
-    pub fn from_day_of_year(year: i64, day_of_year: i64) -> Result<Self, DateError> {
+    pub fn from_day_of_year(year: i64, day_of_year: u16) -> Result<Self, DateError> {
         let calendar = calendar(year, 1, 1);
-        let leap = is_leap(calendar, year);
+        let leap = is_leap_year(calendar, year);
         let month = find_month(day_of_year, leap);
         let day = find_day(day_of_year, month, leap)?;
 
@@ -202,7 +202,9 @@ impl JulianDate for Date {
             Epoch::J1950 => seconds + SECONDS_BETWEEN_J1950_AND_J2000,
             Epoch::J2000 => seconds,
         };
-        let seconds = seconds.to_f64().unwrap();
+        let seconds = seconds
+            .to_f64()
+            .unwrap_or_else(|| unreachable!("should be representable as f64"));
 
         match unit {
             Unit::Seconds => seconds,
@@ -239,28 +241,30 @@ fn last_day_of_year_j2k(calendar: Calendar, year: i64) -> i64 {
     }
 }
 
-fn is_leap(calendar: Calendar, year: i64) -> bool {
+fn is_leap_year(calendar: Calendar, year: i64) -> bool {
     match calendar {
         Calendar::ProlepticJulian | Calendar::Julian => year % 4 == 0,
         Calendar::Gregorian => year % 4 == 0 && (year % 400 == 0 || year % 100 != 0),
     }
 }
 
-const PREVIOUS_MONTH_END_DAY_LEAP: [i64; 12] =
+const PREVIOUS_MONTH_END_DAY_LEAP: [u16; 12] =
     [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335];
 
-const PREVIOUS_MONTH_END_DAY: [i64; 12] = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+const PREVIOUS_MONTH_END_DAY: [u16; 12] = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
 
-fn find_month(day_in_year: i64, is_leap: bool) -> i64 {
+fn find_month(day_in_year: u16, is_leap: bool) -> u8 {
     let offset = if is_leap { 313 } else { 323 };
     if day_in_year < 32 {
         1
     } else {
-        (10 * day_in_year + offset) / 306
+        ((10 * day_in_year + offset) / 306)
+            .to_u8()
+            .unwrap_or_else(|| unreachable!("should be representable as u8"))
     }
 }
 
-fn find_day(day_in_year: i64, month: i64, is_leap: bool) -> Result<i64, DateError> {
+fn find_day(day_in_year: u16, month: u8, is_leap: bool) -> Result<u16, DateError> {
     if !is_leap && day_in_year > 365 {
         Err(DateError::NonLeapYear)
     } else {
@@ -273,7 +277,7 @@ fn find_day(day_in_year: i64, month: i64, is_leap: bool) -> Result<i64, DateErro
     }
 }
 
-fn find_day_in_year(month: i64, day: i64, is_leap: bool) -> i64 {
+fn find_day_in_year(month: u8, day: u16, is_leap: bool) -> u16 {
     let previous_days = if is_leap {
         PREVIOUS_MONTH_END_DAY_LEAP
     } else {
@@ -282,7 +286,7 @@ fn find_day_in_year(month: i64, day: i64, is_leap: bool) -> i64 {
     day + previous_days[(month - 1) as usize]
 }
 
-fn calendar(year: i64, month: i64, day: i64) -> Calendar {
+fn calendar(year: i64, month: u8, day: u16) -> Calendar {
     if year < 1583 {
         if year < 1 {
             Calendar::ProlepticJulian
@@ -296,10 +300,10 @@ fn calendar(year: i64, month: i64, day: i64) -> Calendar {
     }
 }
 
-fn days_since_j2000(calendar: Calendar, year: i64, month: i64, day: i64) -> i64 {
+fn days_since_j2000(calendar: Calendar, year: i64, month: u8, day: u16) -> i64 {
     let d1 = last_day_of_year_j2k(calendar, year - 1);
-    let d2 = find_day_in_year(month, day, is_leap(calendar, year));
-    d1 + d2
+    let d2 = find_day_in_year(month, day, is_leap_year(calendar, year));
+    d1 + d2 as i64
 }
 
 /// CalendarDate allows continuous time formats to report their date in their respective calendar.
