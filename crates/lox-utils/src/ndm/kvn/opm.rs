@@ -9,13 +9,30 @@ use regex::Regex;
 pub enum KvnLineParserErr<I> {
     ParseError(nom::Err<nom::error::Error<I>>),
     EmptyValue,
-    EmptyKey,
+}
+
+#[derive(PartialEq, Debug)]
+pub enum KvnDateTimeParserErr<I> {
+    ParseError(nom::Err<nom::error::Error<I>>),
+    InvalidDateFormat,
+    EmptyValue,
 }
 
 #[derive(PartialEq, Debug)]
 pub struct KvnValue<V, U> {
     pub value: V,
     pub unit: Option<U>,
+}
+
+#[derive(PartialEq, Debug)]
+pub struct KvnDateTimeValue {
+    year: u16,
+    month: u8,
+    day: u8,
+    hour: u8,
+    minute: u8,
+    second: u8,
+    fractional_second: f64,
 }
 
 fn comment_line<'a>(input: &'a str) -> nom::IResult<&'a str, &'a str> {
@@ -40,7 +57,7 @@ fn kvn_line<'a>(key: &'a str, input: &'a str) -> nom::IResult<&'a str, (&'a str,
     ns::delimited(nc::space0, kvn, nc::space0)(input)
 }
 
-fn parse_kvn_line<'a>(
+fn parse_kvn_string_line<'a>(
     key: &'a str,
     input: &'a str,
     with_unit: bool,
@@ -91,15 +108,95 @@ fn parse_kvn_line<'a>(
     ))
 }
 
+fn parse_kvn_datetime_line<'a>(
+    key: &'a str,
+    input: &'a str,
+) -> Result<(&'a str, KvnDateTimeValue), KvnDateTimeParserErr<&'a str>> {
+    let (_, result) = kvn_line(key, input).map_err(|e| KvnDateTimeParserErr::ParseError(e))?;
+
+    let parsed_value = result.1;
+
+    if parsed_value.len() == 0 {
+        return Err(KvnDateTimeParserErr::EmptyValue);
+    }
+
+    let parsed_value = parsed_value.trim_end();
+
+    // Taken from CCSDS 502.0-B-3 Figure F-5: Regex Pattern for CCSDS Timecode
+    // This unwrap is okay here because this regex never changes after testing
+    let re = Regex::new(
+        r"^(?<yr>(?:\d{4}))-(?<mo>(?:\d{1,2}))-(?<dy>(?:\d{1,2}))T(?<hr>(?:\d{1,2})):(?<mn>(?:\d{1,2})):(?<sc>(?:\d{0,2}(?:\.\d*)?))$",
+    )
+    .unwrap();
+
+    let captures = re
+        .captures(parsed_value)
+        .ok_or(KvnDateTimeParserErr::InvalidDateFormat)?;
+
+    // yr is a mandatory decimal in the regex so we expect the capture to be
+    // always there and unwrap is fine
+    let year = captures
+        .name("yr")
+        .unwrap()
+        .as_str()
+        .parse::<u16>()
+        .unwrap();
+
+    // We don't do full validation of the date values. We only care if they
+    // have the expected number of digits
+
+    // mo is a mandatory decimal in the regex so we expect the capture to be
+    // always there and unwrap is fine
+    let month = captures.name("mo").unwrap().as_str().parse::<u8>().unwrap();
+
+    // day is a mandatory decimal in the regex so we expect the capture to be
+    // always there and unwrap is fine
+    let day = captures.name("dy").unwrap().as_str().parse::<u8>().unwrap();
+
+    // hr is a mandatory decimal in the regex so we expect the capture to be
+    // always there and unwrap is fine
+    let hour = captures.name("hr").unwrap().as_str().parse::<u8>().unwrap();
+
+    // mn is a mandatory decimal in the regex so we expect the capture to be
+    // always there and unwrap is fine
+    let minute = captures.name("mn").unwrap().as_str().parse::<u8>().unwrap();
+
+    // sc is a mandatory decimal in the regex so we expect the capture to be
+    // always there and unwrap is fine
+    let full_second = captures
+        .name("sc")
+        .unwrap()
+        .as_str()
+        .parse::<f64>()
+        .unwrap();
+
+    let second = full_second.floor() as u8;
+
+    let fractional_second = full_second.fract();
+
+    Ok((
+        "",
+        KvnDateTimeValue {
+            year,
+            month,
+            day,
+            hour,
+            minute,
+            second,
+            fractional_second,
+        },
+    ))
+}
+
 mod test {
     use super::*;
 
     #[test]
-    fn test_parse_kvn_line() {
+    fn test_parse_kvn_string_line() {
         // 7.5.1 A non-empty value field must be assigned to each mandatory keyword except for *‘_START’ and *‘_STOP’ keyword values
         // 7.4.6 Any white space immediately preceding or following the ‘equals’ sign shall not be significant.
         assert_eq!(
-            parse_kvn_line("ASD", "ASD = ASDFG", true),
+            parse_kvn_string_line("ASD", "ASD = ASDFG", true),
             Ok((
                 "",
                 KvnValue {
@@ -109,7 +206,7 @@ mod test {
             ))
         );
         assert_eq!(
-            parse_kvn_line("ASD", "ASD    =   ASDFG", true),
+            parse_kvn_string_line("ASD", "ASD    =   ASDFG", true),
             Ok((
                 "",
                 KvnValue {
@@ -119,7 +216,7 @@ mod test {
             ))
         );
         assert_eq!(
-            parse_kvn_line("ASD", "ASD    = ASDFG", true),
+            parse_kvn_string_line("ASD", "ASD    = ASDFG", true),
             Ok((
                 "",
                 KvnValue {
@@ -129,21 +226,21 @@ mod test {
             ))
         );
         assert_eq!(
-            parse_kvn_line("ASD", "ASD =    ", true),
+            parse_kvn_string_line("ASD", "ASD =    ", true),
             Err(KvnLineParserErr::EmptyValue)
         );
         assert_eq!(
-            parse_kvn_line("ASD", "ASD = ", true),
+            parse_kvn_string_line("ASD", "ASD = ", true),
             Err(KvnLineParserErr::EmptyValue)
         );
         assert_eq!(
-            parse_kvn_line("ASD", "ASD =", true),
+            parse_kvn_string_line("ASD", "ASD =", true),
             Err(KvnLineParserErr::EmptyValue)
         );
 
         // 7.4.7 Any white space immediately preceding the end of line shall not be significant.
         assert_eq!(
-            parse_kvn_line("ASD", "ASD = ASDFG          ", true),
+            parse_kvn_string_line("ASD", "ASD = ASDFG          ", true),
             Ok((
                 "",
                 KvnValue {
@@ -156,7 +253,7 @@ mod test {
         // a) there must be at least one blank character between the value and the units text;
         // b) the units must be enclosed within square brackets (e.g., ‘[m]’);
         assert_eq!(
-            parse_kvn_line("ASD", "ASD = ASDFG [km]", true),
+            parse_kvn_string_line("ASD", "ASD = ASDFG [km]", true),
             Ok((
                 "",
                 KvnValue {
@@ -166,7 +263,7 @@ mod test {
             ))
         );
         assert_eq!(
-            parse_kvn_line("ASD", "ASD = ASDFG             [km]", true),
+            parse_kvn_string_line("ASD", "ASD = ASDFG             [km]", true),
             Ok((
                 "",
                 KvnValue {
@@ -177,12 +274,12 @@ mod test {
         );
 
         assert_eq!(
-            parse_kvn_line("ASD", "ASD =  [km]", true),
+            parse_kvn_string_line("ASD", "ASD =  [km]", true),
             Err(KvnLineParserErr::EmptyValue)
         );
 
         assert_eq!(
-            parse_kvn_line("ASD", "ASD   [km]", true),
+            parse_kvn_string_line("ASD", "ASD   [km]", true),
             Err(KvnLineParserErr::ParseError(nom::Err::Error(
                 nom::error::Error {
                     input: "[km]",
@@ -191,7 +288,7 @@ mod test {
             )))
         );
         assert_eq!(
-            parse_kvn_line("ASD", " =  [km]", true),
+            parse_kvn_string_line("ASD", " =  [km]", true),
             Err(KvnLineParserErr::ParseError(nom::Err::Error(
                 nom::error::Error {
                     input: "=  [km]",
@@ -202,7 +299,7 @@ mod test {
 
         // 7.4.5 Any white space immediately preceding or following the keyword shall not be significant.
         assert_eq!(
-            parse_kvn_line("ASD", "  ASD  = ASDFG", true),
+            parse_kvn_string_line("ASD", "  ASD  = ASDFG", true),
             Ok((
                 "",
                 KvnValue {
@@ -216,7 +313,7 @@ mod test {
         // [...] White space shall be retained (shall be significant) in comment values.
 
         assert_eq!(
-            parse_kvn_line("COMMENT", "  COMMENT asd a    asd a ads as ", true),
+            parse_kvn_string_line("COMMENT", "  COMMENT asd a    asd a ads as ", true),
             Ok((
                 "",
                 KvnValue {
@@ -227,7 +324,7 @@ mod test {
         );
 
         assert_eq!(
-            parse_kvn_line("COMMENT", "  COMMENT ", true),
+            parse_kvn_string_line("COMMENT", "  COMMENT ", true),
             Ok((
                 "",
                 KvnValue {
@@ -243,11 +340,61 @@ mod test {
     }
 
     #[test]
+    fn test_parse_kvn_datetime_line() {
+        assert_eq!(
+            parse_kvn_datetime_line("CREATION_DATE", "CREATION_DATE = 2021-06-03T05:33:00.123"),
+            Ok((
+                "",
+                KvnDateTimeValue {
+                    year: 2021,
+                    month: 6,
+                    day: 3,
+                    hour: 5,
+                    minute: 33,
+                    second: 0,
+                    fractional_second: 0.123,
+                },
+            ))
+        );
+
+        assert_eq!(
+            parse_kvn_datetime_line("CREATION_DATE", "CREATION_DATE = 2021-06-03T05:33:01"),
+            Ok((
+                "",
+                KvnDateTimeValue {
+                    year: 2021,
+                    month: 6,
+                    day: 3,
+                    hour: 5,
+                    minute: 33,
+                    second: 1,
+                    fractional_second: 0.0,
+                },
+            ))
+        );
+
+        assert_eq!(
+            parse_kvn_datetime_line("CREATION_DATE", "CREATION_DATE = 2021,06,03Q05!33!00-123"),
+            Err(KvnDateTimeParserErr::InvalidDateFormat)
+        );
+
+        assert_eq!(
+            parse_kvn_datetime_line("CREATION_DATE", "CREATION_DATE = asdffggg"),
+            Err(KvnDateTimeParserErr::InvalidDateFormat)
+        );
+
+        assert_eq!(
+            parse_kvn_datetime_line("CREATION_DATE", "CREATION_DATE = "),
+            Err(KvnDateTimeParserErr::EmptyValue)
+        );
+    }
+
+    #[test]
     fn test_parse_json() {
         let kvn = r#"CCSDS_OPM_VERS = 3.0
 COMMENT Generated by GSOC, R. Kiehling
 COMMENT Current intermediate orbit IO2 and maneuver planning data
-CREATION_DATE = 2021-06-03T05:33:00.000
+CREATION_DATE = 2021-06-03T05:33:00.123
 ORIGINATOR = GSOC
 OBJECT_NAME = EUTELSAT W4
 OBJECT_ID = 2021-028A
@@ -299,7 +446,7 @@ MAN_DV_3 = 0.00000000 [km/s]"#;
         let mut lines = kvn.lines();
 
         assert_eq!(
-            parse_kvn_line("CCSDS_OPM_VERS", lines.next().unwrap(), false),
+            parse_kvn_string_line("CCSDS_OPM_VERS", lines.next().unwrap(), false),
             Ok((
                 "",
                 KvnValue {
@@ -310,7 +457,7 @@ MAN_DV_3 = 0.00000000 [km/s]"#;
         );
 
         assert_eq!(
-            parse_kvn_line("COMMENT", lines.next().unwrap(), false),
+            parse_kvn_string_line("COMMENT", lines.next().unwrap(), false),
             Ok((
                 "",
                 KvnValue {
@@ -318,6 +465,33 @@ MAN_DV_3 = 0.00000000 [km/s]"#;
                     unit: None,
                 },
             ),)
+        );
+
+        assert_eq!(
+            parse_kvn_string_line("COMMENT", lines.next().unwrap(), false),
+            Ok((
+                "",
+                KvnValue {
+                    value: "Current intermediate orbit IO2 and maneuver planning data",
+                    unit: None,
+                },
+            ),)
+        );
+
+        assert_eq!(
+            parse_kvn_datetime_line("CREATION_DATE", lines.next().unwrap()),
+            Ok((
+                "",
+                KvnDateTimeValue {
+                    year: 2021,
+                    month: 6,
+                    day: 3,
+                    hour: 5,
+                    minute: 33,
+                    second: 0,
+                    fractional_second: 0.123,
+                },
+            ))
         );
     }
 }
