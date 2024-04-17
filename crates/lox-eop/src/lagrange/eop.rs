@@ -74,18 +74,18 @@ impl<'a> Arguments<'_> {
 /// The result of the Lagrangian interpolation of polar motion and UT1-UTC.
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct Interpolation {
-    x: Arcseconds,
-    y: Arcseconds,
-    d_ut1_utc: Seconds,
+    pub x: Arcseconds,
+    pub y: Arcseconds,
+    pub d_ut1_utc: Seconds,
 }
 
 /// Perform Lagrangian interpolation of Earth Orientation Parameters (EOP), returning polar x- and
 /// y- values and UT1-UTC at the target epoch. The result is corrected for oceanic and luni-solar
 /// tidal effects.
-pub fn interpolate(args: Arguments) -> Interpolation {
-    let x = crate::lagrange::interpolate(&args.epochs, &args.x, args.target_epoch);
-    let y = crate::lagrange::interpolate(&args.epochs, &args.y, args.target_epoch);
-    let t = crate::lagrange::interpolate(&args.epochs, &args.t, args.target_epoch);
+pub fn interpolate(args: &Arguments) -> Interpolation {
+    let x = crate::lagrange::interpolate(args.epochs, args.x, args.target_epoch);
+    let y = crate::lagrange::interpolate(args.epochs, args.y, args.target_epoch);
+    let t = crate::lagrange::interpolate(args.epochs, args.t, args.target_epoch);
     let tidal_args = tidal_args(julian_centuries_since_j2000(args.target_epoch));
     let tidal_correction = oceanic_tidal_correction(&tidal_args);
     let lunisolar_correction = luni_solar_tidal_correction(&tidal_args);
@@ -298,7 +298,7 @@ mod tests {
             &eop_data.mjd,
             target_epoch,
         )?;
-        let result = interpolate(args);
+        let result = interpolate(&args);
 
         assert_float_eq!(expected.x, result.x, rel <= 1e-9);
         assert_float_eq!(expected.y, result.y, rel <= 1e-9);

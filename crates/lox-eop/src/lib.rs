@@ -11,7 +11,7 @@ use std::error::Error;
 use num_traits::ToPrimitive;
 use thiserror::Error;
 
-use crate::lagrange::eop::Arguments;
+use crate::lagrange::eop::{interpolate, Arguments};
 use lox_utils::types::julian_dates::{ModifiedJulianDate, ModifiedJulianDayNumber};
 use lox_utils::types::units::Seconds;
 
@@ -89,56 +89,61 @@ impl EarthOrientationParams {
 }
 
 /// Provides the difference between UT1 and UTC for the given [ModifiedJulianDate].
-// pub trait DeltaUt1Utc {
-//     type Error: Error;
-//
-//     fn delta_ut1_utc(&self, mjd: ModifiedJulianDate) -> Result<Seconds, Self::Error>;
-// }
-//
-// #[derive(Copy, Clone, Debug, Error, PartialEq)]
-// pub enum TargetDateError {
-//     #[error("input MJD was {input}, which predates the earliest available data (MJD {earliest})")]
-//     BeforeEopData {
-//         input: ModifiedJulianDate,
-//         earliest: ModifiedJulianDayNumber,
-//     },
-//     #[error("input MJD was {input}, which is after the latest available data (MJD {latest})")]
-//     AfterEopData {
-//         input: ModifiedJulianDate,
-//         latest: ModifiedJulianDayNumber,
-//     },
-// }
-//
-// impl DeltaUt1Utc for EarthOrientationParams {
-//     type Error = TargetDateError;
-//
-//     fn delta_ut1_utc(&self, mjd: ModifiedJulianDate) -> Result<Seconds, Self::Error> {
-//         let target_day = mjd.to_i32().unwrap();
-//         if target_day < self.mjd[0] {
-//             return Err(TargetDateError::BeforeEopData {
-//                 input: mjd,
-//                 earliest: self.mjd[0],
-//             });
-//         }
-//
-//         if target_day > self.mjd[self.mjd.len() - 1] {
-//             return Err(TargetDateError::AfterEopData {
-//                 input: mjd,
-//                 latest: self.mjd[self.mjd.len() - 1],
-//             });
-//         }
-//
-//         let lagrange_args = Arguments::new(
-//             &self.mjd(),
-//
-//         )
-//         let interpolation = interp
-//
-//
-//
-//         Ok()
-//     }
-// }
+pub trait DeltaUt1Utc {
+    fn delta_ut1_utc(&self, mjd: ModifiedJulianDate) -> Result<Seconds, TargetDateError>;
+}
+
+#[derive(Copy, Clone, Debug, Error, PartialEq)]
+pub enum TargetDateError {
+    #[error("input MJD was {input}, which predates the earliest available data (MJD {earliest})")]
+    BeforeEopData {
+        input: ModifiedJulianDate,
+        earliest: ModifiedJulianDate,
+    },
+    #[error("input MJD was {input}, which is after the latest available data (MJD {latest})")]
+    AfterEopData {
+        input: ModifiedJulianDate,
+        latest: ModifiedJulianDate,
+    },
+}
+
+/// Performs Lagrangian interpolation for the target MJD, returning the difference between UT1 and
+/// UTC, or `[TargetDateError]` if the target MJD is outside the range of available data.
+impl DeltaUt1Utc for &EarthOrientationParams {
+    fn delta_ut1_utc(&self, mjd: ModifiedJulianDate) -> Result<Seconds, TargetDateError> {
+        if mjd < self.mjd[0] {
+            return Err(TargetDateError::BeforeEopData {
+                input: mjd,
+                earliest: self.mjd[0],
+            });
+        }
+
+        if mjd > self.mjd[self.mjd.len() - 1] {
+            return Err(TargetDateError::AfterEopData {
+                input: mjd,
+                latest: self.mjd[self.mjd.len() - 1],
+            });
+        }
+
+        let lagrange_args = Arguments::new(
+            &self.x_pole,
+            &self.y_pole,
+            &self.mjd,
+            &self.delta_ut1_utc,
+            mjd,
+        )
+        .unwrap_or_else(|err| {
+            // Unreachable for properly constructed `EarthOrientationParams`.
+            panic!(
+                "failed to create `Arguments` from `EarthOrientationParams`: {}",
+                err
+            )
+        });
+
+        let interpolation = interpolate(&lagrange_args);
+        Ok(interpolation.d_ut1_utc)
+    }
+}
 
 #[cfg(test)]
 mod tests {

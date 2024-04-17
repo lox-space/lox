@@ -20,14 +20,18 @@ use crate::Time;
 
 /// TransformTimeScale transforms a [Time] in [TimeScale] `T` to the corresponding [Time] in
 /// [TimeScale] `U`.
-#[automock]
+#[automock(type Error = ();)]
 pub trait TransformTimeScale<T, U>
 where
     T: TimeScale + Copy,
     U: TimeScale + Copy,
 {
-    fn transform(&self, time: Time<T>) -> Time<U>;
+    type Error;
+
+    fn transform(&self, time: Time<T>) -> Result<Time<U>, Self::Error>;
 }
+
+pub type Infallible<T: TimeScale> = Result<Time<T>, ()>;
 
 /// TimeScaleTransformer provides default implementations TransformTimeScale for all commonly used
 /// time scale pairs.
@@ -43,16 +47,20 @@ pub const D_TAI_TT: TimeDelta = TimeDelta {
 };
 
 impl TransformTimeScale<Tai, Tt> for &TimeScaleTransformer {
-    fn transform(&self, time: Time<Tai>) -> Time<Tt> {
+    type Error = ();
+
+    fn transform(&self, time: Time<Tai>) -> Infallible<Tt> {
         let base_time = time.base_time() + D_TAI_TT;
-        Time::from_base_time(Tt, base_time)
+        Ok(Time::from_base_time(Tt, base_time))
     }
 }
 
 impl TransformTimeScale<Tt, Tai> for &TimeScaleTransformer {
-    fn transform(&self, time: Time<Tt>) -> Time<Tai> {
+    type Error = ();
+
+    fn transform(&self, time: Time<Tt>) -> Infallible<Tai> {
         let base_time = time.base_time() - D_TAI_TT;
-        Time::from_base_time(Tai, base_time)
+        Ok(Time::from_base_time(Tai, base_time))
     }
 }
 
@@ -66,26 +74,46 @@ const LG: f64 = 6.969290134e-10;
 const INV_LG: f64 = LG / (1.0 - LG);
 
 impl TransformTimeScale<Tt, Tcg> for &TimeScaleTransformer {
-    fn transform(&self, time: Time<Tt>) -> Time<Tcg> {
-        Time::from_base_time(Tcg, time.base_time() + delta_tt_tcg(time))
+    type Error = ();
+
+    fn transform(&self, time: Time<Tt>) -> Infallible<Tcg> {
+        Ok(Time::from_base_time(
+            Tcg,
+            time.base_time() + delta_tt_tcg(time),
+        ))
     }
 }
 
 impl TransformTimeScale<Tcg, Tt> for &TimeScaleTransformer {
-    fn transform(&self, time: Time<Tcg>) -> Time<Tt> {
-        Time::from_base_time(Tt, time.base_time() + delta_tcg_tt(time))
+    type Error = ();
+
+    fn transform(&self, time: Time<Tcg>) -> Infallible<Tt> {
+        Ok(Time::from_base_time(
+            Tt,
+            time.base_time() + delta_tcg_tt(time),
+        ))
     }
 }
 
 impl TransformTimeScale<Tcb, Tdb> for &TimeScaleTransformer {
-    fn transform(&self, time: Time<Tcb>) -> Time<Tdb> {
-        Time::from_base_time(Tdb, time.base_time() + delta_tcb_tdb(time))
+    type Error = ();
+
+    fn transform(&self, time: Time<Tcb>) -> Infallible<Tdb> {
+        Ok(Time::from_base_time(
+            Tdb,
+            time.base_time() + delta_tcb_tdb(time),
+        ))
     }
 }
 
 impl TransformTimeScale<Tdb, Tcb> for &TimeScaleTransformer {
-    fn transform(&self, time: Time<Tdb>) -> Time<Tcb> {
-        Time::from_base_time(Tcb, time.base_time() + delta_tdb_tcb(time))
+    type Error = ();
+
+    fn transform(&self, time: Time<Tdb>) -> Infallible<Tcb> {
+        Ok(Time::from_base_time(
+            Tcb,
+            time.base_time() + delta_tdb_tcb(time),
+        ))
     }
 }
 
@@ -93,8 +121,13 @@ impl TransformTimeScale<Tdb, Tcb> for &TimeScaleTransformer {
 /// observers fixed on Earth's surface, the quantity TDB-TT can differ by as much as ~4 µs.
 /// Users requiring greater accuracy should implement TransformTimeScale<TT, TDB> manually.
 impl TransformTimeScale<Tt, Tdb> for &TimeScaleTransformer {
-    fn transform(&self, time: Time<Tt>) -> Time<Tdb> {
-        Time::from_base_time(Tdb, time.base_time() + delta_tt_tdb(time))
+    type Error = ();
+
+    fn transform(&self, time: Time<Tt>) -> Infallible<Tdb> {
+        Ok(Time::from_base_time(
+            Tdb,
+            time.base_time() + delta_tt_tdb(time),
+        ))
     }
 }
 
@@ -102,8 +135,13 @@ impl TransformTimeScale<Tt, Tdb> for &TimeScaleTransformer {
 /// observers fixed on Earth's surface, the quantity TDB-TT can differ by as much as ~4 µs.
 /// Users requiring greater accuracy should implement TransformTimeScale<TT, TDB> manually.
 impl TransformTimeScale<Tdb, Tt> for &TimeScaleTransformer {
-    fn transform(&self, time: Time<Tdb>) -> Time<Tt> {
-        Time::from_base_time(Tt, time.base_time() + delta_tdb_tt(time))
+    type Error = ();
+
+    fn transform(&self, time: Time<Tdb>) -> Infallible<Tt> {
+        Ok(Time::from_base_time(
+            Tt,
+            time.base_time() + delta_tdb_tt(time),
+        ))
     }
 }
 
@@ -222,7 +260,7 @@ mod tests {
         let tai = Time::new(Tai, 0, Subsecond::default());
         let tt = transformer.transform(tai);
         let expected = Time::new(Tt, 32, Subsecond(0.184));
-        assert_eq!(expected, tt);
+        assert_eq!(expected, tt.unwrap());
     }
 
     #[test]
@@ -231,7 +269,7 @@ mod tests {
         let tt = Time::new(Tt, 32, Subsecond(0.184));
         let tai = transformer.transform(tt);
         let expected = Time::new(Tai, 0, Subsecond::default());
-        assert_eq!(expected, tai);
+        assert_eq!(expected, tai.unwrap());
     }
 
     #[rstest]
@@ -254,7 +292,7 @@ mod tests {
     fn test_transform_tt_tcg(#[case] tt: Time<Tt>, #[case] expected: Time<Tcg>) {
         let transformer = &TimeScaleTransformer {};
         let tcg = transformer.transform(tt);
-        assert_eq!(expected, tcg);
+        assert_eq!(expected, tcg.unwrap());
     }
 
     #[rstest]
@@ -273,7 +311,7 @@ mod tests {
     )]
     fn test_transform_tcg_tt(#[case] tcg: Time<Tcg>, #[case] expected: Time<Tt>) {
         let transformer = &TimeScaleTransformer {};
-        let tt = transformer.transform(tcg);
+        let tt = transformer.transform(tcg).unwrap();
         assert_eq!(expected.seconds(), tt.seconds());
         assert_float_eq!(expected.subsecond(), tt.subsecond(), abs <= 1e-12)
     }
@@ -286,7 +324,7 @@ mod tests {
     #[case::j2000(Time::j2000(Tcb), Time::new(Tdb, -12, Subsecond(0.746_212_906_242_706)))]
     fn test_transform_tcb_tdb(#[case] tcb: Time<Tcb>, #[case] expected: Time<Tdb>) {
         let transformer = &TimeScaleTransformer {};
-        let tdb = transformer.transform(tcb);
+        let tdb = transformer.transform(tcb).unwrap();
         assert_eq!(expected.seconds(), tdb.seconds());
         // Lox and ERFA agree to the picosecond. However, the paper from which these formulae derive
         // (Fairhead & Bretagnon, 1990) provide coefficients for transformations with only
@@ -302,7 +340,7 @@ mod tests {
     #[case::j2000(Time::j2000(Tdb), Time::new(Tcb, 11, Subsecond(0.253_787_268_249_489)))]
     fn test_transform_tdb_tcb(#[case] tdb: Time<Tdb>, #[case] expected: Time<Tcb>) {
         let transformer = &TimeScaleTransformer {};
-        let tcb: Time<Tcb> = transformer.transform(tdb);
+        let tcb: Time<Tcb> = transformer.transform(tdb).unwrap();
         assert_eq!(expected.seconds(), tcb.seconds());
         assert_float_eq!(expected.subsecond(), tcb.subsecond(), abs <= 1e-11)
     }
@@ -320,7 +358,7 @@ mod tests {
     )]
     fn test_transform_tt_tdb(#[case] tt: Time<Tt>, #[case] expected: Time<Tdb>) {
         let transformer = &TimeScaleTransformer {};
-        let tdb: Time<Tdb> = transformer.transform(tt);
+        let tdb: Time<Tdb> = transformer.transform(tt).unwrap();
         assert_eq!(expected, tdb)
     }
 
@@ -340,7 +378,7 @@ mod tests {
     )]
     fn test_transform_tdb_tt(#[case] tdb: Time<Tdb>, #[case] expected: Time<Tt>) {
         let transformer = &TimeScaleTransformer {};
-        let tt: Time<Tt> = transformer.transform(tdb);
+        let tt: Time<Tt> = transformer.transform(tdb).unwrap();
         assert_eq!(expected, tt)
     }
 }

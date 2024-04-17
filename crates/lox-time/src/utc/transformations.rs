@@ -11,14 +11,16 @@ use std::sync::OnceLock;
 
 use thiserror::Error;
 
-use lox_eop::EarthOrientationParams;
+use lox_eop::{DeltaUt1Utc, EarthOrientationParams, TargetDateError};
 
 use crate::base_time::BaseTime;
 use crate::calendar_dates::Date;
 use crate::deltas::{TimeDelta, TimeDeltaError};
-use crate::julian_dates::Epoch;
+use crate::julian_dates::Epoch::ModifiedJulianDate;
+use crate::julian_dates::Unit::Days;
+use crate::julian_dates::{Epoch, JulianDate};
 use crate::time_scales::{Tai, Ut1};
-use crate::transformations::TransformTimeScale;
+use crate::transformations::{TimeScaleTransformer, TransformTimeScale};
 use crate::utc::{Utc, UtcDateTime, UtcUndefinedError};
 use crate::Time;
 
@@ -94,7 +96,7 @@ fn tai_at_utc_1972_01_01() -> &'static Time<Tai> {
 }
 
 /// EarthOrientationParamsError indicates that provided [EarthOrientationParams] were invalid for
-/// the construction of an [EopTimeScaleTransformer].
+/// the construction of an [ObservedDataTimeScaleTransformer].
 #[derive(Clone, Debug, Error, PartialEq)]
 #[error("EarthOrientationParams contain invalid data at position {position}: {details}")]
 pub struct EarthOrientationParamsError {
@@ -133,25 +135,47 @@ impl From<TimeDeltaError> for EopErrorDetails {
     }
 }
 
-/// Transform between [TimeScale]s which require observed data in the form of
-/// [EarthOrientationParams], namely conversions involving [UT1].
+/// Transform between [TimeScale]s which require observed data, namely the delta between UT1 and
+/// UTC.
 ///
-/// [EopTimeScaleTransformer] is suitable only for transformations from 1960-01-01 UTC, when UTC
-/// was defined.
+/// [ObservedDataTimeScaleTransformer] is suitable only for transformations from 1960-01-01 UTC,
+/// when UTC was defined.
 #[derive(Clone, Debug, PartialEq)]
-pub struct EopTimeScaleTransformer<'a> {
-    eop: &'a EarthOrientationParams,
-    delta_ut1_tai: Vec<TimeDelta>,
+pub struct ObservedDataTimeScaleTransformer<D: DeltaUt1Utc> {
+    d_ut1_utc_provider: D,
 }
 
-impl<'a> EopTimeScaleTransformer<'a> {
-    /// Instantiates a new [EopTimeScaleTransformer] with the provided [EarthOrientationParams].
-    ///
-    /// Returns [EarthOrientationParamsError] if the input data contains a [ModifiedJulianDayNumber]
-    /// before 1960-01-01 UTC, or a ΔUT1-UTC value which cannot be represented as a [TimeDelta].
-    /// These errors should not arise in [EarthOrientationParams] derived from valid IERS data.
-    pub fn new(eop: &'a EarthOrientationParams) -> Result<Self, EarthOrientationParamsError> {
-        todo!()
+impl<D: DeltaUt1Utc> ObservedDataTimeScaleTransformer<D> {
+    pub fn new(d_ut1_utc_provider: D) -> Self {
+        Self { d_ut1_utc_provider }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Error)]
+pub enum ObservedDataTimeScaleTransformationError {
+    #[error(transparent)]
+    TargetDateError(#[from] TargetDateError),
+    #[error(transparent)]
+    TimeDeltaError(#[from] TimeDeltaError),
+}
+
+impl<D: DeltaUt1Utc> TransformTimeScale<Tai, Ut1> for &ObservedDataTimeScaleTransformer<D> {
+    type Error = ObservedDataTimeScaleTransformationError;
+
+    fn transform(&self, time: Time<Tai>) -> Result<Time<Ut1>, Self::Error> {
+        let mjd = time.julian_date(ModifiedJulianDate, Days);
+        let d_ut1_utc = self.d_ut1_utc_provider.delta_ut1_utc(mjd)?;
+        let d_ut1_utc = TimeDelta::from_decimal_seconds(d_ut1_utc)?;
+        let d_tai_utc = delta_tai_utc(time).unwrap_or_else(|err| {
+            // If the date is in range for `d_ut1_utc`, it will be in range for `d_tai_utc`.
+            unreachable!(
+                "failed to calculate TAI-UTC delta for Time<TAI> `{:?}`: {}",
+                time, err
+            )
+        });
+        let delta = d_ut1_utc - d_tai_utc;
+        let ut1 = Time::from_base_time(Ut1, time.base_time() + delta);
+        Ok(ut1)
     }
 }
 
