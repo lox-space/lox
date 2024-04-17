@@ -17,7 +17,9 @@ use lox_utils::constants::f64::time::{MJD_J2000, SECONDS_PER_DAY};
 use lox_utils::slices::is_sorted_asc;
 
 use crate::base_time::BaseTime;
+use crate::calendar_dates::Date;
 use crate::deltas::TimeDelta;
+use crate::julian_dates::JulianDate;
 use crate::time_scales::Tai;
 use crate::utc::UtcDateTime;
 use crate::Time;
@@ -28,6 +30,16 @@ const MJD_LEAP_SECOND_EPOCHS: [u64; 28] = [
     46247, 47161, 47892, 48257, 48804, 49169, 49534, 50083, 50630, 51179, 53736, 54832, 56109,
     57204, 57754,
 ];
+
+impl Date {
+    pub fn is_leap_second_date(&self) -> bool {
+        let mjd = (self.days_since_modified_julian_epoch() + 0.5).to_u64();
+        if let Some(mjd) = mjd {
+            return MJD_LEAP_SECOND_EPOCHS.contains(&mjd);
+        }
+        false
+    }
+}
 
 /// Leap second epochs in seconds relative to J2000 UTC.
 fn j2000_utc_leap_second_epochs() -> &'static [i64; 28] {
