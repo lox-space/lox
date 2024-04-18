@@ -3,12 +3,64 @@ use std::fmt::Display;
 use thiserror::Error;
 
 use crate::base_time::BaseTime;
-use crate::calendar_dates::{CalendarDate, Date};
+use crate::calendar_dates::{CalendarDate, Date, DateError};
 use crate::julian_dates::{Epoch, JulianDate, Unit};
 use crate::subsecond::Subsecond;
-use crate::wall_clock::WallClock;
+use crate::time_of_day::{CivilTime, TimeOfDay, TimeOfDayError};
 
 pub mod transformations;
+
+#[derive(Debug, Clone, Error, PartialEq, Eq, PartialOrd, Ord)]
+pub enum UtcError {
+    #[error(transparent)]
+    DateError(#[from] DateError),
+    #[error(transparent)]
+    TimeError(#[from] TimeOfDayError),
+    #[error("no leap second on {0}")]
+    NonLeapSecondDate(Date),
+    #[error("UTC is not defined for dates before 1960-01-01")]
+    UtcUndefined,
+}
+
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Utc {
+    date: Date,
+    time: TimeOfDay,
+}
+
+impl Utc {
+    pub fn new(year: i64, month: u8, day: u8) -> Result<Self, UtcError> {
+        if year < 1960 {
+            return Err(UtcError::UtcUndefined);
+        }
+        let date = Date::new(year, month, day)?;
+        Ok(Self {
+            date,
+            time: TimeOfDay::default(),
+        })
+    }
+
+    pub fn with_time_of_day(mut self, time: TimeOfDay) -> Result<Self, UtcError> {
+        if time.second() == 60 && !self.date.is_leap_second_date() {
+            return Err(UtcError::NonLeapSecondDate(self.date));
+        }
+        self.time = time;
+        Ok(self)
+    }
+
+    pub fn with_hms(self, hour: u8, minute: u8, seconds: f64) -> Result<Self, UtcError> {
+        let time = TimeOfDay::from_hms_decimal(hour, minute, seconds)?;
+        self.with_time_of_day(time)
+    }
+
+    pub fn date(&self) -> Date {
+        self.date
+    }
+
+    pub fn time(&self) -> TimeOfDay {
+        self.time
+    }
+}
 
 /// A UTC timestamp with additional support for fractional seconds represented with femtosecond
 /// precision.
@@ -18,14 +70,14 @@ pub mod transformations;
 /// It is intended strictly as an IO time format which must be converted to a continuous time format
 /// to be used in calculations.
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Utc {
+pub struct UtcOld {
     hour: u8,
     minute: u8,
     second: u8,
     subsecond: Subsecond,
 }
 
-impl Utc {
+impl UtcOld {
     pub fn new(
         hour: u8,
         minute: u8,
@@ -49,7 +101,7 @@ impl Utc {
     }
 }
 
-impl Display for Utc {
+impl Display for UtcOld {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -59,17 +111,17 @@ impl Display for Utc {
     }
 }
 
-impl WallClock for Utc {
-    fn hour(&self) -> i64 {
-        self.hour as i64
+impl CivilTime for UtcOld {
+    fn hour(&self) -> u8 {
+        self.hour
     }
 
-    fn minute(&self) -> i64 {
-        self.minute as i64
+    fn minute(&self) -> u8 {
+        self.minute
     }
 
-    fn second(&self) -> i64 {
-        self.second as i64
+    fn second(&self) -> u8 {
+        self.second
     }
 
     fn millisecond(&self) -> i64 {
@@ -96,7 +148,7 @@ impl WallClock for Utc {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct UtcDateTime {
     date: Date,
-    time: Utc,
+    time: UtcOld,
 }
 
 #[derive(Clone, Copy, Debug, Error, PartialEq)]
@@ -106,7 +158,7 @@ pub struct UtcDateTime {
 pub struct UtcUndefinedError;
 
 impl UtcDateTime {
-    pub fn new(date: Date, time: Utc) -> Result<Self, UtcUndefinedError> {
+    pub fn new(date: Date, time: UtcOld) -> Result<Self, UtcUndefinedError> {
         if date.year() <= 1959 {
             Err(UtcUndefinedError)
         } else {
@@ -115,7 +167,7 @@ impl UtcDateTime {
     }
 
     fn from_base_time(base_time: BaseTime) -> Result<Self, UtcUndefinedError> {
-        let time = Utc {
+        let time = UtcOld {
             hour: base_time.hour() as u8,
             minute: base_time.minute() as u8,
             second: base_time.second() as u8,
@@ -129,7 +181,7 @@ impl UtcDateTime {
         self.date
     }
 
-    pub fn time(&self) -> Utc {
+    pub fn time(&self) -> UtcOld {
         self.time
     }
 }
@@ -159,7 +211,7 @@ mod tests {
 
     use super::*;
 
-    const TIME: Utc = Utc {
+    const TIME: UtcOld = UtcOld {
         hour: 12,
         minute: 34,
         second: 56,
@@ -173,17 +225,17 @@ mod tests {
 
     #[test]
     fn test_utc_wall_clock_hour() {
-        assert_eq!(TIME.hour(), TIME.hour as i64);
+        assert_eq!(TIME.hour(), TIME.hour);
     }
 
     #[test]
     fn test_utc_wall_clock_minute() {
-        assert_eq!(TIME.minute(), TIME.minute as i64);
+        assert_eq!(TIME.minute(), TIME.minute);
     }
 
     #[test]
     fn test_utc_wall_clock_second() {
-        assert_eq!(TIME.second(), TIME.second as i64);
+        assert_eq!(TIME.second(), TIME.second);
     }
 
     #[test]
@@ -216,14 +268,14 @@ mod tests {
         Date::new(2021, 1, 1).unwrap(),
         Ok(UtcDateTime {
             date: Date::new(2021, 1, 1).unwrap(),
-            time: Utc::default(),
+            time: UtcOld::default(),
         }),
     )]
     #[case::y1960(
         Date::new(1960, 1, 1).unwrap(),
         Ok(UtcDateTime {
             date: Date::new(1960, 1, 1).unwrap(),
-            time: Utc::default(),
+            time: UtcOld::default(),
         }),
     )]
     #[case::before_1960(
@@ -234,18 +286,18 @@ mod tests {
         #[case] date: Date,
         #[case] expected: Result<UtcDateTime, UtcUndefinedError>,
     ) {
-        let time = Utc::default();
+        let time = UtcOld::default();
         let actual = UtcDateTime::new(date, time);
         assert_eq!(expected, actual);
     }
 
     #[rstest]
     #[case::non_leap_second(
-        UtcDateTime::new(Date::new(2000, 1, 1).unwrap(), Utc::default()).unwrap(),
+        UtcDateTime::new(Date::new(2000, 1, 1).unwrap(), UtcOld::default()).unwrap(),
         2451544.5,
     )]
     #[case::leap_second(
-        UtcDateTime::new(Date::new(1999, 12, 31).unwrap(), Utc::new(23, 59, 60, Subsecond::default()).unwrap()).unwrap(),
+        UtcDateTime::new(Date::new(1999, 12, 31).unwrap(), UtcOld::new(23, 59, 60, Subsecond::default()).unwrap()).unwrap(),
         2451544.499988426,
     )]
     fn test_utc_datetime_julian_date(#[case] datetime: UtcDateTime, #[case] expected: f64) {
@@ -255,7 +307,7 @@ mod tests {
 
     #[test]
     fn test_utc_datetime_two_part_julian_date() {
-        let datetime = UtcDateTime::new(Date::new(2000, 1, 1).unwrap(), Utc::default()).unwrap();
+        let datetime = UtcDateTime::new(Date::new(2000, 1, 1).unwrap(), UtcOld::default()).unwrap();
         let (jd, fd) = datetime.two_part_julian_date();
         assert_float_eq!(2451544.0, jd, rel <= 1e-9);
         assert_float_eq!(0.5, fd, rel <= 1e-9);

@@ -9,6 +9,6 @@ fn main() {
     println!("TT: {}", tt);
     println!("TDB: {}", tdb);
 
-    let date = Date::new(2000, 1, 1).unwrap();
-    let dt = date.with_hms_utc(12, 0, 0).unwrap();
+    println!("{}", tdb.date());
+    println!("{}", tdb.time());
 }

@@ -11,7 +11,7 @@ use rstest::rstest;
 
 use lox_time::calendar_dates::Date;
 use lox_time::subsecond::Subsecond;
-use lox_time::utc::Utc;
+use lox_time::utc::UtcOld;
 
 #[rstest]
 #[case(-4713, 12, 31, -2451546)]
@@ -37,7 +37,7 @@ use lox_time::utc::Utc;
 #[case(2000, 2, 28, 58)]
 #[case(2000, 2, 29, 59)]
 #[case(2000, 3, 1, 60)]
-fn test_dates(#[case] year: i64, #[case] month: u8, #[case] day: u16, #[case] exp: i64) {
+fn test_dates(#[case] year: i64, #[case] month: u8, #[case] day: u8, #[case] exp: i64) {
     use lox_time::julian_dates::JulianDate;
 
     let date = Date::new(year, month, day).expect("date should be valid");
@@ -53,7 +53,7 @@ fn test_illegal_dates() {
 
 #[test]
 fn test_illegal_times() {
-    assert!(Utc::new(24, 59, 59, Subsecond::default()).is_err());
-    assert!(Utc::new(23, 60, 59, Subsecond::default()).is_err());
-    assert!(Utc::new(23, 59, 61, Subsecond::default()).is_err());
+    assert!(UtcOld::new(24, 59, 59, Subsecond::default()).is_err());
+    assert!(UtcOld::new(23, 60, 59, Subsecond::default()).is_err());
+    assert!(UtcOld::new(23, 59, 61, Subsecond::default()).is_err());
 }

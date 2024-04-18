@@ -18,6 +18,12 @@ use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, Sub};
 
+use calendar_dates::DateError;
+use constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY, SECONDS_PER_HOUR, SECONDS_PER_MINUTE};
+use time_of_day::{CivilTime, TimeOfDay, TimeOfDayError};
+
+use thiserror::Error;
+
 use crate::base_time::BaseTime;
 use crate::calendar_dates::{CalendarDate, Date};
 use crate::deltas::TimeDelta;
@@ -25,13 +31,11 @@ use crate::julian_dates::{Epoch, JulianDate, Unit};
 use crate::subsecond::Subsecond;
 use crate::time_scales::TimeScale;
 use crate::transformations::TransformTimeScale;
-use crate::utc::{Utc, UtcDateTime};
-use crate::wall_clock::WallClock;
+use crate::utc::{UtcDateTime, UtcOld};
 
 pub mod base_time;
 pub mod calendar_dates;
 pub mod constants;
-pub mod datetime;
 pub mod deltas;
 pub mod julian_dates;
 pub mod prelude;
@@ -42,7 +46,16 @@ pub mod time_of_day;
 pub mod time_scales;
 pub mod transformations;
 pub mod utc;
-pub mod wall_clock;
+
+#[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord)]
+pub enum TimeError {
+    #[error(transparent)]
+    DateError(#[from] DateError),
+    #[error(transparent)]
+    TimeError(#[from] TimeOfDayError),
+    #[error("leap seconds do not exist in continuous time scales. Use Utc instead.")]
+    LeapSecondOutsideUtc,
+}
 
 /// An instant in time in a given [TimeScale].
 ///
@@ -55,8 +68,20 @@ pub struct Time<T: TimeScale + Copy> {
 }
 
 impl<T: TimeScale + Copy> Time<T> {
-    /// Instantiates a [Time] in the given scale from seconds and femtoseconds since the epoch.
-    pub fn new(scale: T, seconds: i64, subsecond: Subsecond) -> Self {
+    pub fn new(scale: T, year: i64, month: u8, day: u8) -> Result<Self, TimeError> {
+        let date = Date::new(year, month, day)?;
+        Ok(Self::from_date(scale, date))
+    }
+
+    pub fn from_date(scale: T, date: Date) -> Self {
+        let seconds = date.julian_day_number_j2000() * SECONDS_PER_DAY;
+        let timestamp = BaseTime::new(seconds, Subsecond::default());
+        Self { scale, timestamp }
+    }
+
+    /// Instantiates a [Time] in the given scale from seconds since J2000 subdived into integral
+    /// seconds and [Subsecond].
+    pub fn from_seconds(scale: T, seconds: i64, subsecond: Subsecond) -> Self {
         Self {
             scale,
             timestamp: BaseTime::new(seconds, subsecond),
@@ -75,7 +100,7 @@ impl<T: TimeScale + Copy> Time<T> {
     }
 
     /// Instantiates a [Time] in the given scale from a [Date] and [Utc] instance.
-    pub fn from_date_and_utc_timestamp(scale: T, date: Date, utc: Utc) -> Self {
+    pub fn from_date_and_utc_timestamp(scale: T, date: Date, utc: UtcOld) -> Self {
         let timestamp = BaseTime::from_date_and_utc_timestamp(date, utc);
         Self { scale, timestamp }
     }
@@ -86,9 +111,39 @@ impl<T: TimeScale + Copy> Time<T> {
         Self { scale, timestamp }
     }
 
+    pub fn with_time_of_day(mut self, time: TimeOfDay) -> Result<Self, TimeError> {
+        if time.second() == 60 {
+            return Err(TimeError::LeapSecondOutsideUtc);
+        }
+        let seconds = self.base_time().seconds()
+            + time.hour() as i64 * SECONDS_PER_HOUR
+            + time.minute() as i64 * SECONDS_PER_MINUTE
+            + time.second() as i64;
+        let base = BaseTime::new(seconds, time.subsecond());
+        self.timestamp = base;
+        Ok(self)
+    }
+
+    pub fn with_hms(self, hour: u8, minute: u8, seconds: f64) -> Result<Self, TimeError> {
+        let time = TimeOfDay::from_hms_decimal(hour, minute, seconds)?;
+        self.with_time_of_day(time)
+    }
+
     /// Returns the timescale
     pub fn scale(&self) -> T {
         self.scale
+    }
+
+    pub fn date(&self) -> Date {
+        Date::from_days_since_j2000(self.timestamp.seconds() / SECONDS_PER_DAY)
+    }
+
+    pub fn time(&self) -> TimeOfDay {
+        TimeOfDay::from_second_of_day(
+            (self.timestamp.seconds() % SECONDS_PER_DAY + SECONDS_PER_HALF_DAY) as u64,
+        )
+        .unwrap_or_else(|_| unreachable!("seconds should be within range"))
+        .with_subsecond(self.timestamp.subsecond)
     }
 
     /// Returns a new [Time] with [scale] without changing the underlying timestamp.
@@ -187,16 +242,16 @@ impl<T: TimeScale + Copy> Sub<TimeDelta> for Time<T> {
     }
 }
 
-impl<T: TimeScale + Copy> WallClock for Time<T> {
-    fn hour(&self) -> i64 {
+impl<T: TimeScale + Copy> CivilTime for Time<T> {
+    fn hour(&self) -> u8 {
         self.timestamp.hour()
     }
 
-    fn minute(&self) -> i64 {
+    fn minute(&self) -> u8 {
         self.timestamp.minute()
     }
 
-    fn second(&self) -> i64 {
+    fn second(&self) -> u8 {
         self.timestamp.second()
     }
 
@@ -227,6 +282,31 @@ impl<T: TimeScale + Copy> CalendarDate for Time<T> {
     }
 }
 
+#[macro_export]
+macro_rules! time {
+    ($scale:ident, $year:literal, $month:literal, $day:literal) => {
+        Time::new($scale, $year, $month, $day)
+    };
+    ($scale:ident, $year:literal, $month:literal, $day:literal, $hour:literal) => {
+        match Time::new($scale, $year, $month, $day) {
+            Ok(time) => time.with_hms($hour, 0, 0.0),
+            Err(e) => Err(e),
+        }
+    };
+    ($scale:ident, $year:literal, $month:literal, $day:literal, $hour:literal, $minute:literal) => {
+        match Time::new($scale, $year, $month, $day) {
+            Ok(time) => time.with_hms($hour, $minute, 0.0),
+            Err(e) => Err(e),
+        }
+    };
+    ($scale:ident, $year:literal, $month:literal, $day:literal, $hour:literal, $minute:literal, $second:literal) => {
+        match Time::new($scale, $year, $month, $day) {
+            Ok(time) => time.with_hms($hour, $minute, $second),
+            Err(e) => Err(e),
+        }
+    };
+}
+
 #[cfg(test)]
 mod tests {
     use float_eq::assert_float_eq;
@@ -237,7 +317,7 @@ mod tests {
 
     use crate::time_scales::{Tai, Tdb, Tt};
     use crate::transformations::MockTransformTimeScale;
-    use crate::utc::Utc;
+    use crate::utc::UtcOld;
     use crate::Time;
 
     use super::*;
@@ -251,14 +331,14 @@ mod tests {
             scale,
             timestamp: BaseTime { seconds, subsecond },
         };
-        let actual = Time::new(scale, seconds, subsecond);
+        let actual = Time::from_seconds(scale, seconds, subsecond);
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn test_time_from_utc_datetime() {
         let scale = Tai;
-        let datetime = UtcDateTime::new(Date::new(2023, 1, 1).unwrap(), Utc::default()).unwrap();
+        let datetime = UtcDateTime::new(Date::new(2023, 1, 1).unwrap(), UtcOld::default()).unwrap();
         let expected = Time {
             scale,
             timestamp: BaseTime::from_utc_datetime(datetime),
@@ -271,7 +351,7 @@ mod tests {
     fn test_time_from_date_and_utc_timestamp() {
         let scale = Tai;
         let date = Date::new(2023, 1, 1).unwrap();
-        let utc = Utc::new(12, 0, 0, Subsecond::default()).unwrap();
+        let utc = UtcOld::new(12, 0, 0, Subsecond::default()).unwrap();
         let expected = Time {
             scale,
             timestamp: BaseTime::from_date_and_utc_timestamp(date, utc),
@@ -320,7 +400,7 @@ mod tests {
 
     #[test]
     fn test_time_seconds() {
-        let time = Time::new(Tai, 1234567890, Subsecond(0.9876543210));
+        let time = Time::from_seconds(Tai, 1234567890, Subsecond(0.9876543210));
         let expected = 1234567890;
         let actual = time.seconds();
         assert_eq!(
@@ -332,7 +412,7 @@ mod tests {
 
     #[test]
     fn test_time_subsecond() {
-        let time = Time::new(Tai, 1234567890, Subsecond(0.9876543210));
+        let time = Time::from_seconds(Tai, 1234567890, Subsecond(0.9876543210));
         let expected = 0.9876543210;
         let actual = time.subsecond();
         assert_eq!(
@@ -567,7 +647,7 @@ mod tests {
     #[test]
     fn test_j2100() {
         let date = Date::new(2100, 1, 1).unwrap();
-        let utc = Utc::new(12, 0, 0, Subsecond::default()).expect("should be valid");
+        let utc = UtcOld::new(12, 0, 0, Subsecond::default()).expect("should be valid");
         let time = Time {
             scale: Tdb,
             timestamp: BaseTime::from_date_and_utc_timestamp(date, utc),
@@ -584,7 +664,7 @@ mod tests {
     #[test]
     fn test_two_part_julian_date() {
         let date = Date::new(2100, 1, 2).unwrap();
-        let utc = Utc::new(0, 0, 0, Subsecond::default()).expect("should be valid");
+        let utc = UtcOld::new(0, 0, 0, Subsecond::default()).expect("should be valid");
         let time = Time {
             scale: Tdb,
             timestamp: BaseTime::from_date_and_utc_timestamp(date, utc),
@@ -625,5 +705,20 @@ mod tests {
         let tai = Time::from_base_time(Tai, base_time);
         let actual = tai.calendar_date();
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_time_macro() {
+        let time = time!(Tai, 2000, 1, 1).unwrap();
+        assert_eq!(time.seconds(), 0);
+        let time = time!(Tai, 2000, 1, 1, 0).unwrap();
+        assert_eq!(time.seconds(), 0);
+        let time = time!(Tai, 2000, 1, 1, 0, 0).unwrap();
+        assert_eq!(time.seconds(), 0);
+        let time = time!(Tai, 2000, 1, 1, 0, 0, 0.0).unwrap();
+        assert_eq!(time.seconds(), 0);
+        let time = time!(Tai, 2000, 1, 1, 0, 0, 0.123).unwrap();
+        assert_eq!(time.seconds(), 0);
+        assert_eq!(time.subsecond(), 0.123);
     }
 }

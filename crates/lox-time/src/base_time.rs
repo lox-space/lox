@@ -28,8 +28,8 @@ use crate::constants::julian_dates::{
 use crate::deltas::TimeDelta;
 use crate::julian_dates::{Epoch, JulianDate, Unit};
 use crate::subsecond::Subsecond;
-use crate::utc::{Utc, UtcDateTime};
-use crate::wall_clock::WallClock;
+use crate::time_of_day::CivilTime;
+use crate::utc::{UtcDateTime, UtcOld};
 
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
 /// `BaseTime` is the base time representation for time scales without leap seconds. It is measured
@@ -57,12 +57,12 @@ impl BaseTime {
     }
 
     /// Instantiates a [BaseTime] from a date and UTC timestamp.
-    pub fn from_date_and_utc_timestamp(date: Date, time: Utc) -> Self {
+    pub fn from_date_and_utc_timestamp(date: Date, time: UtcOld) -> Self {
         let day_in_seconds =
             date.days_since_j2000().to_i64().unwrap() * SECONDS_PER_DAY - SECONDS_PER_DAY / 2;
-        let hour_in_seconds = time.hour() * SECONDS_PER_HOUR;
-        let minute_in_seconds = time.minute() * SECONDS_PER_MINUTE;
-        let seconds = day_in_seconds + hour_in_seconds + minute_in_seconds + time.second();
+        let hour_in_seconds = time.hour() as i64 * SECONDS_PER_HOUR;
+        let minute_in_seconds = time.minute() as i64 * SECONDS_PER_MINUTE;
+        let seconds = day_in_seconds + hour_in_seconds + minute_in_seconds + time.second() as i64;
         BaseTime {
             seconds,
             subsecond: time.subsecond(),
@@ -208,8 +208,8 @@ impl Sub<TimeDelta> for BaseTime {
     }
 }
 
-impl WallClock for BaseTime {
-    fn hour(&self) -> i64 {
+impl CivilTime for BaseTime {
+    fn hour(&self) -> u8 {
         // Since J2000 is taken from midday, we offset by half a day to get the wall clock hour.
         let seconds_after_midnight: i64 = if self.is_negative() {
             let seconds_before_midnight =
@@ -221,10 +221,10 @@ impl WallClock for BaseTime {
         } else {
             (self.seconds + SECONDS_PER_HALF_DAY) % SECONDS_PER_DAY
         };
-        seconds_after_midnight / SECONDS_PER_HOUR
+        (seconds_after_midnight / SECONDS_PER_HOUR) as u8
     }
 
-    fn minute(&self) -> i64 {
+    fn minute(&self) -> u8 {
         let seconds_after_hour: i64 = if self.is_negative() {
             let seconds_before_hour = abs(self.seconds) % SECONDS_PER_HOUR;
             if seconds_before_hour == 0 {
@@ -234,18 +234,18 @@ impl WallClock for BaseTime {
         } else {
             self.seconds % SECONDS_PER_HOUR
         };
-        seconds_after_hour / SECONDS_PER_MINUTE
+        (seconds_after_hour / SECONDS_PER_MINUTE) as u8
     }
 
-    fn second(&self) -> i64 {
+    fn second(&self) -> u8 {
         if self.is_negative() {
             let seconds_before_minute = abs(self.seconds) % SECONDS_PER_MINUTE;
             if seconds_before_minute == 0 {
                 return 0;
             }
-            SECONDS_PER_MINUTE - seconds_before_minute
+            (SECONDS_PER_MINUTE - seconds_before_minute) as u8
         } else {
-            self.seconds % SECONDS_PER_MINUTE
+            (self.seconds % SECONDS_PER_MINUTE) as u8
         }
     }
 
@@ -309,7 +309,7 @@ mod tests {
     use float_eq::assert_float_eq;
     use rstest::rstest;
 
-    use crate::constants::i64::SECONDS_PER_JULIAN_CENTURY;
+    use crate::{constants::i64::SECONDS_PER_JULIAN_CENTURY, time_of_day::CivilTime};
 
     use super::*;
 
@@ -325,7 +325,7 @@ mod tests {
     #[test]
     fn test_base_time_from_utc_datetime() {
         let date = Date::new(2021, 1, 1).unwrap();
-        let utc = Utc::new(12, 34, 56, Subsecond::default()).expect("time should be valid");
+        let utc = UtcOld::new(12, 34, 56, Subsecond::default()).expect("time should be valid");
         let datetime = UtcDateTime::new(date, utc).unwrap();
         let actual = BaseTime::from_utc_datetime(datetime);
         let expected = BaseTime {
@@ -338,7 +338,7 @@ mod tests {
     #[test]
     fn test_base_time_from_date_and_utc_timestamp() {
         let date = Date::new(2021, 1, 1).unwrap();
-        let utc = Utc::new(12, 34, 56, Subsecond::default()).expect("time should be valid");
+        let utc = UtcOld::new(12, 34, 56, Subsecond::default()).expect("time should be valid");
         let datetime = UtcDateTime::new(date, utc).unwrap();
         let actual = BaseTime::from_date_and_utc_timestamp(date, utc);
         let expected = BaseTime::from_utc_datetime(datetime);
@@ -429,7 +429,7 @@ mod tests {
     #[case::one_day_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_DAY, subsecond: Subsecond::default() }, 12)]
     #[case::one_day_and_one_hour_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_DAY - SECONDS_PER_HOUR, subsecond: Subsecond::default() }, 11)]
     #[case::two_days_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_DAY * 2, subsecond: Subsecond::default() }, 12)]
-    fn test_base_time_wall_clock_hour(#[case] time: BaseTime, #[case] expected: i64) {
+    fn test_base_time_wall_clock_hour(#[case] time: BaseTime, #[case] expected: u8) {
         let actual = time.hour();
         assert_eq!(expected, actual);
     }
@@ -445,7 +445,7 @@ mod tests {
     #[case::one_femtosecond_less_than_the_epoch(BaseTime { seconds: - 1, subsecond: MAX_FEMTOSECONDS, }, 59)]
     #[case::one_minute_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_MINUTE, subsecond: Subsecond::default() }, 59)]
     #[case::one_minute_and_one_femtosecond_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_MINUTE - 1, subsecond: MAX_FEMTOSECONDS, }, 58)]
-    fn test_base_time_wall_clock_minute(#[case] time: BaseTime, #[case] expected: i64) {
+    fn test_base_time_wall_clock_minute(#[case] time: BaseTime, #[case] expected: u8) {
         let actual = time.minute();
         assert_eq!(expected, actual);
     }
@@ -461,7 +461,7 @@ mod tests {
     #[case::one_second_less_than_the_epoch(BaseTime { seconds: - 1, subsecond: Subsecond::default() }, 59)]
     #[case::one_second_and_one_femtosecond_less_than_the_epoch(BaseTime { seconds: - 2, subsecond: MAX_FEMTOSECONDS, }, 58)]
     #[case::one_minute_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_MINUTE, subsecond: Subsecond::default() }, 0)]
-    fn test_base_time_wall_clock_second(#[case] time: BaseTime, #[case] expected: i64) {
+    fn test_base_time_wall_clock_second(#[case] time: BaseTime, #[case] expected: u8) {
         let actual = time.second();
         assert_eq!(expected, actual);
     }
@@ -479,52 +479,52 @@ mod tests {
     #[rstest]
     #[case::positive_time_millisecond(
         POSITIVE_BASE_TIME_SUBSECONDS_FIXTURE,
-        WallClock::millisecond,
+        CivilTime::millisecond,
         123
     )]
     #[case::positive_time_microsecond(
         POSITIVE_BASE_TIME_SUBSECONDS_FIXTURE,
-        WallClock::microsecond,
+        CivilTime::microsecond,
         456
     )]
     #[case::positive_time_nanosecond(
         POSITIVE_BASE_TIME_SUBSECONDS_FIXTURE,
-        WallClock::nanosecond,
+        CivilTime::nanosecond,
         789
     )]
     #[case::positive_time_picosecond(
         POSITIVE_BASE_TIME_SUBSECONDS_FIXTURE,
-        WallClock::picosecond,
+        CivilTime::picosecond,
         12
     )]
     #[case::positive_time_femtosecond(
         POSITIVE_BASE_TIME_SUBSECONDS_FIXTURE,
-        WallClock::femtosecond,
+        CivilTime::femtosecond,
         345
     )]
     #[case::negative_time_millisecond(
         NEGATIVE_BASE_TIME_SUBSECONDS_FIXTURE,
-        WallClock::millisecond,
+        CivilTime::millisecond,
         123
     )]
     #[case::negative_time_microsecond(
         NEGATIVE_BASE_TIME_SUBSECONDS_FIXTURE,
-        WallClock::microsecond,
+        CivilTime::microsecond,
         456
     )]
     #[case::negative_time_nanosecond(
         NEGATIVE_BASE_TIME_SUBSECONDS_FIXTURE,
-        WallClock::nanosecond,
+        CivilTime::nanosecond,
         789
     )]
     #[case::negative_time_picosecond(
         NEGATIVE_BASE_TIME_SUBSECONDS_FIXTURE,
-        WallClock::picosecond,
+        CivilTime::picosecond,
         12
     )]
     #[case::negative_time_femtosecond(
         NEGATIVE_BASE_TIME_SUBSECONDS_FIXTURE,
-        WallClock::femtosecond,
+        CivilTime::femtosecond,
         345
     )]
     fn test_base_time_subseconds(

@@ -412,9 +412,9 @@ mod tests {
     #[test]
     fn test_transform_tai_tt() {
         let transformer = &TimeScaleTransformer {};
-        let tai = Time::new(Tai, 0, Subsecond::default());
+        let tai = Time::from_seconds(Tai, 0, Subsecond::default());
         let tt = transformer.transform(tai);
-        let expected = Time::new(Tt, 32, Subsecond(0.184));
+        let expected = Time::from_seconds(Tt, 32, Subsecond(0.184));
         assert_eq!(expected, tt);
         let tt = tai.to_tt();
         assert_eq!(expected, tt);
@@ -423,9 +423,9 @@ mod tests {
     #[test]
     fn test_transform_tt_tai() {
         let transformer = &TimeScaleTransformer {};
-        let tt = Time::new(Tt, 32, Subsecond(0.184));
+        let tt = Time::from_seconds(Tt, 32, Subsecond(0.184));
         let tai = transformer.transform(tt);
-        let expected = Time::new(Tai, 0, Subsecond::default());
+        let expected = Time::from_seconds(Tai, 0, Subsecond::default());
         assert_eq!(expected, tai);
         let tai = tt.to_tai();
         assert_eq!(expected, tai);
@@ -437,8 +437,8 @@ mod tests {
         Time::from_base_time(Tcg, BaseTime::new(-211813488148, Subsecond(0.886_867_966_488_467)))
     )]
     #[case::j2000(
-        Time::new(Tt, 0, Subsecond::default()),
-        Time::new(Tcg, 0, Subsecond(0.505_833_286_021_129))
+        Time::from_seconds(Tt, 0, Subsecond::default()),
+        Time::from_seconds(Tcg, 0, Subsecond(0.505_833_286_021_129))
     )]
     #[should_panic]
     #[case::unrepresentable(
@@ -461,7 +461,7 @@ mod tests {
         Time::from_base_time(Tcg, J0),
         Time::from_base_time(Tt, BaseTime::new(-211813487853, Subsecond(0.113_131_930_984_139)))
     )]
-    #[case::j2000(Time::new(Tcg, 0, Subsecond::default()), Time::new(Tt, -1, Subsecond(0.494_166_714_331_400)))]
+    #[case::j2000(Time::from_seconds(Tcg, 0, Subsecond::default()), Time::from_seconds(Tt, -1, Subsecond(0.494_166_714_331_400)))]
     #[should_panic]
     #[case::unrepresentable(
         Time {
@@ -485,7 +485,7 @@ mod tests {
         Time::from_base_time(Tcb, J0),
         Time::from_base_time(Tdb, BaseTime::new(-SECONDS_BETWEEN_JD_AND_J2000 + 3272, Subsecond(0.956_215_636_550_950)))
     )]
-    #[case::j2000(Time::j2000(Tcb), Time::new(Tdb, -12, Subsecond(0.746_212_906_242_706)))]
+    #[case::j2000(Time::j2000(Tcb), Time::from_seconds(Tdb, -12, Subsecond(0.746_212_906_242_706)))]
     fn test_transform_tcb_tdb(#[case] tcb: Time<Tcb>, #[case] expected: Time<Tdb>) {
         let transformer = &TimeScaleTransformer {};
         let tdb = transformer.transform(tcb);
@@ -504,7 +504,10 @@ mod tests {
         Time::from_base_time(Tdb, J0),
         Time::from_base_time(Tcb, BaseTime::new(-SECONDS_BETWEEN_JD_AND_J2000 - 3273, Subsecond(0.043_733_615_615_110)))
     )]
-    #[case::j2000(Time::j2000(Tdb), Time::new(Tcb, 11, Subsecond(0.253_787_268_249_489)))]
+    #[case::j2000(
+        Time::j2000(Tdb),
+        Time::from_seconds(Tcb, 11, Subsecond(0.253_787_268_249_489))
+    )]
     fn test_transform_tdb_tcb(#[case] tdb: Time<Tdb>, #[case] expected: Time<Tcb>) {
         let transformer = &TimeScaleTransformer {};
         let tcb: Time<Tcb> = transformer.transform(tdb);

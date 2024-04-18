@@ -33,7 +33,7 @@ const MJD_LEAP_SECOND_EPOCHS: [u64; 28] = [
 
 impl Date {
     pub fn is_leap_second_date(&self) -> bool {
-        let mjd = (self.days_since_modified_julian_epoch() + 0.5).to_u64();
+        let mjd = (self.days_since_modified_julian_epoch().ceil()).to_u64();
         if let Some(mjd) = mjd {
             return MJD_LEAP_SECOND_EPOCHS.contains(&mjd);
         }

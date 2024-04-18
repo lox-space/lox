@@ -16,7 +16,7 @@ use lox_time::calendar_dates::Date;
 use lox_time::julian_dates::JulianDate;
 use lox_time::subsecond::Subsecond;
 use lox_time::time_scales::{Tai, Tcb, Tcg, Tdb, Tt, Ut1};
-use lox_time::utc::Utc;
+use lox_time::utc::UtcOld;
 use lox_time::Time;
 
 use crate::LoxPyError;
@@ -95,7 +95,7 @@ impl PyTime {
         scale: PyTimeScale,
         year: i64,
         month: u8,
-        day: u16,
+        day: u8,
         hour: Option<u8>,
         minute: Option<u8>,
         second: Option<u8>,
@@ -106,7 +106,7 @@ impl PyTime {
         let minute = minute.unwrap_or_default();
         let second = second.unwrap_or_default();
         let subsecond = Subsecond::default();
-        let utc = Utc::new(hour, minute, second, subsecond)
+        let utc = UtcOld::new(hour, minute, second, subsecond)
             .map_err(|_| PyValueError::new_err("invalid time"))?;
         Ok(pytime_from_date_and_utc_timestamp(scale, date, utc))
     }
@@ -120,7 +120,7 @@ impl PyTime {
     }
 }
 
-fn pytime_from_date_and_utc_timestamp(scale: PyTimeScale, date: Date, utc: Utc) -> PyTime {
+fn pytime_from_date_and_utc_timestamp(scale: PyTimeScale, date: Date, utc: UtcOld) -> PyTime {
     PyTime {
         timestamp: base_time_from_date_and_utc_timestamp(scale, date, utc),
         scale,
@@ -130,7 +130,7 @@ fn pytime_from_date_and_utc_timestamp(scale: PyTimeScale, date: Date, utc: Utc) 
 /// Invokes the appropriate [Time::from_date_and_utc_timestamp] method based on the time scale, and returns the
 /// result as a [BaseTime]. The Rust time library performs the appropriate transformation while keeping
 /// generics out of the Python interface.
-fn base_time_from_date_and_utc_timestamp(scale: PyTimeScale, date: Date, utc: Utc) -> BaseTime {
+fn base_time_from_date_and_utc_timestamp(scale: PyTimeScale, date: Date, utc: UtcOld) -> BaseTime {
     match scale {
         PyTimeScale::Tai => Time::from_date_and_utc_timestamp(Tai, date, utc).base_time(),
         PyTimeScale::Tcb => Time::from_date_and_utc_timestamp(Tcb, date, utc).base_time(),
@@ -152,7 +152,7 @@ mod tests {
     fn base_time_2024_1_1() -> &'static BaseTime {
         static BASE_TIME: OnceLock<BaseTime> = OnceLock::new();
         BASE_TIME.get_or_init(|| {
-            BaseTime::from_date_and_utc_timestamp(Date::new(2024, 1, 1).unwrap(), Utc::default())
+            BaseTime::from_date_and_utc_timestamp(Date::new(2024, 1, 1).unwrap(), UtcOld::default())
         })
     }
 

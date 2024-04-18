@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::subsecond::{InvalidSubsecond, Subsecond};
 
 use thiserror::Error;
@@ -8,14 +10,10 @@ pub enum TimeOfDayError {
     InvalidHour(u8),
     #[error("minute must be in the range [0..60) but was {0}")]
     InvalidMinute(u8),
-    #[error("second must be in the range [0..60) but was {0}")]
+    #[error("second must be in the range [0..61) but was {0}")]
     InvalidSecond(u8),
-    #[error("second must be in the range [0.0..60.0) but was {0}")]
-    InvalidSecondUtc(u8),
-    #[error("second must be in the range [0..86400) but was {0}")]
+    #[error("second must be in the range [0..86401) but was {0}")]
     InvalidSecondOfDay(u64),
-    #[error("second must be in the range [0.0..86401) but was {0}")]
-    InvalidSecondOfDayUtc(u64),
     #[error("leap seconds are only valid at the end of the day")]
     InvalidLeapSecond,
     #[error(transparent)]
@@ -51,7 +49,7 @@ impl TimeOfDay {
         if !(0..60).contains(&minute) {
             return Err(TimeOfDayError::InvalidMinute(minute));
         }
-        if !(0..60).contains(&second) {
+        if !(0..61).contains(&second) {
             return Err(TimeOfDayError::InvalidSecond(second));
         }
         Ok(Self {
@@ -63,7 +61,7 @@ impl TimeOfDay {
     }
 
     pub fn from_second_of_day(second_of_day: u64) -> Result<Self, TimeOfDayError> {
-        if second_of_day > 86399 {
+        if !(0..86401).contains(&second_of_day) {
             return Err(TimeOfDayError::InvalidSecondOfDay(second_of_day));
         }
         let (hour, minute, second) = hms_from_second_of_day(second_of_day);
@@ -79,6 +77,10 @@ impl TimeOfDay {
     pub fn with_subsecond(&mut self, subsecond: Subsecond) -> Self {
         self.subsecond = subsecond;
         *self
+    }
+
+    pub fn subsecond(&self) -> Subsecond {
+        self.subsecond
     }
 }
 
@@ -116,88 +118,13 @@ impl CivilTime for TimeOfDay {
     }
 }
 
-#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct TimeOfDayUtc {
-    hour: u8,
-    minute: u8,
-    second: u8,
-    subsecond: Subsecond,
-}
-
-impl TimeOfDayUtc {
-    pub fn new(hour: u8, minute: u8, second: u8) -> Result<Self, TimeOfDayError> {
-        if !(0..24).contains(&hour) {
-            return Err(TimeOfDayError::InvalidHour(hour));
-        }
-        if !(0..60).contains(&minute) {
-            return Err(TimeOfDayError::InvalidMinute(minute));
-        }
-        if !(0..61).contains(&second) {
-            return Err(TimeOfDayError::InvalidSecond(second));
-        }
-        if second == 60 && (hour != 23 || minute != 59) {
-            return Err(TimeOfDayError::InvalidLeapSecond);
-        }
-        Ok(Self {
-            hour,
-            minute,
-            second,
-            subsecond: Subsecond::default(),
-        })
-    }
-
-    pub fn from_hms_decimal(hour: u8, minute: u8, seconds: f64) -> Result<Self, TimeOfDayError> {
-        let (second, fraction) = split_decimal_seconds(seconds);
-        let subsecond = Subsecond::new(fraction)
-            .unwrap_or_else(|_| unreachable!("fraction should be in the range [0.0..1.0)"));
-        Ok(Self::new(hour, minute, second)?.with_subsecond(subsecond))
-    }
-
-    pub fn from_second_of_day(second_of_day: u64) -> Result<Self, TimeOfDayError> {
-        if second_of_day > 86400 {
-            return Err(TimeOfDayError::InvalidSecondOfDayUtc(second_of_day));
-        }
-        let (hour, minute, second) = hms_from_second_of_day(second_of_day);
-        Self::new(hour, minute, second)
-    }
-
-    pub fn with_subsecond(&mut self, subsecond: Subsecond) -> Self {
-        self.subsecond = subsecond;
-        *self
-    }
-}
-
-impl CivilTime for TimeOfDayUtc {
-    fn hour(&self) -> u8 {
-        self.hour
-    }
-
-    fn minute(&self) -> u8 {
-        self.minute
-    }
-
-    fn second(&self) -> u8 {
-        self.second
-    }
-
-    fn millisecond(&self) -> i64 {
-        self.subsecond.millisecond()
-    }
-
-    fn microsecond(&self) -> i64 {
-        self.subsecond.microsecond()
-    }
-
-    fn nanosecond(&self) -> i64 {
-        self.subsecond.nanosecond()
-    }
-
-    fn picosecond(&self) -> i64 {
-        self.subsecond.picosecond()
-    }
-
-    fn femtosecond(&self) -> i64 {
-        self.subsecond.femtosecond()
+impl Display for TimeOfDay {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{:02}:{:02}:{:02}.{}",
+            self.hour, self.minute, self.second, self.subsecond
+        )
     }
 }
 
