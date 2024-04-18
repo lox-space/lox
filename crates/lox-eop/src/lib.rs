@@ -292,6 +292,18 @@ mod tests {
         assert_eq!(actual, expected);
     }
 
+    #[rstest]
+    #[case::before_data(-1.0, TargetDateError::BeforeEopData { input: -1.0, earliest: 0.0 })]
+    #[case::after_data(4.0, TargetDateError::AfterEopData { input: 4.0, latest: 3.0 })]
+    fn test_eop_delta_ut1_utc_errors(
+        #[case] mjd: ModifiedJulianDate,
+        #[case] expected: TargetDateError,
+    ) {
+        let eop = eop_fixture();
+        let actual = eop.delta_ut1_utc(mjd);
+        assert_eq!(actual, Err(expected));
+    }
+
     fn eop_fixture() -> &'static EarthOrientationParams {
         static EOP: OnceLock<EarthOrientationParams> = OnceLock::new();
         EOP.get_or_init(|| {
