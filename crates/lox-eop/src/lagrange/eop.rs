@@ -18,19 +18,27 @@ use lox_utils::types::julian_dates::ModifiedJulianDate;
 use lox_utils::types::units::{Arcseconds, Microarcseconds, Radians, Seconds};
 
 use crate::lagrange::eop::constants::{LUNI_SOLAR_TIDAL_TERMS, OCEANIC_TIDAL_TERMS};
+use crate::lagrange::WINDOW_SIZE;
 
 mod constants;
 
 #[derive(Clone, Copy, Debug, Error, PartialEq)]
-#[error("sizes of `x`, `y`, `t` and `epochs` must match, but were x: {nx}, y: {ny}, t: {nt}, epochs: {nepochs}")]
-pub struct ArgumentSizeMismatchError {
-    nx: usize,
-    ny: usize,
-    nt: usize,
-    nepochs: usize,
+pub enum ArgumentsError {
+    #[error("lengths of `x`, `y`, `t` and `epochs` must match, but were x.len()={nx}, y.len()={ny}, t.len()={nt}, epochs.len()={nepochs}")]
+    DimensionMismatch {
+        nx: usize,
+        ny: usize,
+        nt: usize,
+        nepochs: usize,
+    },
+    #[error(
+        "at least {} datapoints are required for interpolation, but only {0} were provided",
+        WINDOW_SIZE
+    )]
+    TooFewDataPoints(usize),
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Arguments<'a> {
     /// x polar motion.
     x: &'a [Arcseconds],
@@ -51,14 +59,18 @@ impl<'a> Arguments<'_> {
         t: &'a [Seconds],
         epochs: &'a [ModifiedJulianDate],
         target_epoch: ModifiedJulianDate,
-    ) -> Result<Arguments<'a>, ArgumentSizeMismatchError> {
+    ) -> Result<Arguments<'a>, ArgumentsError> {
         if x.len() != y.len() || x.len() != t.len() || x.len() != epochs.len() {
-            return Err(ArgumentSizeMismatchError {
+            return Err(ArgumentsError::DimensionMismatch {
                 nx: x.len(),
                 ny: y.len(),
                 nt: t.len(),
                 nepochs: epochs.len(),
             });
+        }
+
+        if x.len() < WINDOW_SIZE {
+            return Err(ArgumentsError::TooFewDataPoints(x.len()));
         }
 
         Ok(Arguments {
@@ -230,18 +242,28 @@ mod tests {
     use super::*;
 
     #[rstest]
-    #[case::vec_sizes_match(vec![], vec![], vec![], vec![], 0.0, Ok(Arguments::default()))]
-    #[case::x_size_mismatch(vec![0.0], vec![], vec![], vec![], 0.0, Err(ArgumentSizeMismatchError { nx: 1, ny: 0, nt: 0, nepochs: 0 }))]
-    #[case::y_size_mismatch(vec![], vec![0.0], vec![], vec![], 0.0, Err(ArgumentSizeMismatchError { nx: 0, ny: 1, nt: 0, nepochs: 0 }))]
-    #[case::t_size_mismatch(vec![], vec![], vec![0.0], vec![], 0.0, Err(ArgumentSizeMismatchError { nx: 0, ny: 0, nt: 1, nepochs: 0 }))]
-    #[case::epochs_size_mismatch(vec![], vec![], vec![], vec![0.0], 0.0, Err(ArgumentSizeMismatchError { nx: 0, ny: 0, nt: 0, nepochs: 1 }))]
+    #[case::valid(
+        vec![0.0, 1.0, 2.0, 3.0], vec![0.0, 1.0, 2.0, 3.0], vec![0.0, 1.0, 2.0, 3.0], vec![0.0, 1.0, 2.0, 3.0], 0.0,
+        Ok(Arguments {
+            x: &[0.0, 1.0, 2.0, 3.0],
+            y: &[0.0, 1.0, 2.0, 3.0],
+            t: &[0.0, 1.0, 2.0, 3.0],
+            epochs: &[0.0, 1.0, 2.0, 3.0],
+            target_epoch: 0.0,
+        })
+    )]
+    #[case::x_size_mismatch(vec![0.0], vec![], vec![], vec![], 0.0, Err(ArgumentsError::DimensionMismatch { nx: 1, ny: 0, nt: 0, nepochs: 0 }))]
+    #[case::y_size_mismatch(vec![], vec![0.0], vec![], vec![], 0.0, Err(ArgumentsError::DimensionMismatch { nx: 0, ny: 1, nt: 0, nepochs: 0 }))]
+    #[case::t_size_mismatch(vec![], vec![], vec![0.0], vec![], 0.0, Err(ArgumentsError::DimensionMismatch { nx: 0, ny: 0, nt: 1, nepochs: 0 }))]
+    #[case::epochs_size_mismatch(vec![], vec![], vec![], vec![0.0], 0.0, Err(ArgumentsError::DimensionMismatch { nx: 0, ny: 0, nt: 0, nepochs: 1 }))]
+    #[case::too_few_datapoints(vec![0.0, 1.0, 2.0], vec![0.0, 1.0, 2.0], vec![0.0, 1.0, 2.0], vec![0.0, 1.0, 2.0], 0.0, Err(ArgumentsError::TooFewDataPoints(3)))]
     fn test_arguments_new(
         #[case] x: Vec<Arcseconds>,
         #[case] y: Vec<Arcseconds>,
         #[case] t: Vec<Seconds>,
         #[case] epochs: Vec<ModifiedJulianDate>,
         #[case] target_epoch: ModifiedJulianDate,
-        #[case] expected: Result<Arguments, ArgumentSizeMismatchError>,
+        #[case] expected: Result<Arguments, ArgumentsError>,
     ) {
         let actual = Arguments::new(&x, &y, &t, &epochs, target_epoch);
         assert_eq!(expected, actual);
@@ -290,7 +312,7 @@ mod tests {
         eop_data: EarthOrientationParams,
         #[case] target_epoch: ModifiedJulianDate,
         #[case] expected: Interpolation,
-    ) -> Result<(), ArgumentSizeMismatchError> {
+    ) -> Result<(), ArgumentsError> {
         let args = Arguments::new(
             &eop_data.x_pole,
             &eop_data.y_pole,

@@ -11,10 +11,15 @@
 
 pub mod eop;
 
+/// The size of the window used for Lagrangian interpolation.
+pub const WINDOW_SIZE: usize = 4;
+
 /// Perform Lagrangian interpolation within a set of (x, y) pairs, returning the y-value
 /// corresponding to `target_x`.
 fn interpolate(x: &[f64], y: &[f64], target_x: f64) -> f64 {
-    debug_assert_eq!(x.len(), y.len()); // upstream functions should ensure this invariant
+    // Upstream functions should ensure these invariants.
+    debug_assert!(x.len() >= 4); // there must be at least as many elements as the window size
+    debug_assert_eq!(x.len(), y.len());
 
     let mut result = 0.0;
     let mut k = 0usize;
@@ -24,13 +29,18 @@ fn interpolate(x: &[f64], y: &[f64], target_x: f64) -> f64 {
         }
     }
 
+    // The minimum value of k is 1.
     if k < 1 {
         k = 1;
     }
-    if k > x.len() - 3 {
-        k = x.len() - 3;
+
+    // The maximum value of k is the third-to-last index.
+    let max_k = x.len() as isize - 3;
+    if max_k > 0 && k as isize > max_k {
+        k = max_k as usize;
     }
 
+    // Iterate over a four-element window around k.
     for m in (k - 1)..(k + 3) {
         let mut term = y[m];
         for j in (k - 1)..(k + 3) {

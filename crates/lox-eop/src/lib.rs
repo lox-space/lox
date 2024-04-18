@@ -11,9 +11,10 @@ use std::error::Error;
 use num_traits::ToPrimitive;
 use thiserror::Error;
 
-use crate::lagrange::eop::{interpolate, Arguments};
-use lox_utils::types::julian_dates::{ModifiedJulianDate, ModifiedJulianDayNumber};
+use lox_utils::types::julian_dates::ModifiedJulianDate;
 use lox_utils::types::units::Seconds;
+
+use crate::lagrange::eop::{interpolate, Arguments};
 
 mod iers;
 mod lagrange;
@@ -71,19 +72,19 @@ impl EarthOrientationParams {
         })
     }
 
-    pub fn mjd(&self) -> &[ModifiedJulianDate] {
+    pub fn dates(&self) -> &[ModifiedJulianDate] {
         &self.mjd
     }
 
-    pub fn x_pole(&self) -> &[f64] {
+    pub fn x_pole_series(&self) -> &[f64] {
         &self.x_pole
     }
 
-    pub fn y_pole(&self) -> &[f64] {
+    pub fn y_pole_series(&self) -> &[f64] {
         &self.y_pole
     }
 
-    pub fn delta_ut1_utc(&self) -> &[f64] {
+    pub fn delta_ut1_utc_series(&self) -> &[f64] {
         &self.delta_ut1_utc
     }
 }
@@ -254,27 +255,44 @@ mod tests {
     }
 
     #[test]
-    fn test_eop_mjd() {
+    fn test_eop_dates() {
         let eop = eop_fixture();
-        assert_eq!(eop.mjd(), &[0.0, 1.0, 2.0]);
+        assert_eq!(eop.dates(), &[0.0, 1.0, 2.0]);
     }
 
     #[test]
-    fn test_eop_x_pole() {
+    fn test_eop_x_pole_series() {
         let eop = eop_fixture();
-        assert_eq!(eop.x_pole(), &[3.0, 4.0, 5.0]);
+        assert_eq!(eop.x_pole_series(), &[3.0, 4.0, 5.0]);
     }
 
     #[test]
-    fn test_eop_y_pole() {
+    fn test_eop_y_pole_series() {
         let eop = eop_fixture();
-        assert_eq!(eop.y_pole(), &[6.0, 7.0, 8.0]);
+        assert_eq!(eop.y_pole_series(), &[6.0, 7.0, 8.0]);
     }
 
     #[test]
-    fn test_eop_delta_ut1_utc() {
+    fn test_eop_delta_ut1_utc_series() {
         let eop = eop_fixture();
-        assert_eq!(eop.delta_ut1_utc(), &[9.0, 0.0, 1.0]);
+        assert_eq!(eop.delta_ut1_utc_series(), &[0.1, 0.2, 0.3]);
+    }
+
+    #[test]
+    fn test_eop_delta_ut1_utc_ok() {
+        let eop = eop_fixture();
+        let mjd = 1.0;
+        let args = Arguments::new(
+            eop.x_pole_series(),
+            eop.y_pole_series(),
+            eop.dates(),
+            eop.delta_ut1_utc_series(),
+            mjd,
+        )
+        .unwrap();
+        let expected: Result<Seconds, TargetDateError> = Ok(interpolate(&args).d_ut1_utc);
+        let actual = eop.delta_ut1_utc(mjd);
+        assert_eq!(actual, expected);
     }
 
     fn eop_fixture() -> &'static EarthOrientationParams {
@@ -284,7 +302,7 @@ mod tests {
                 vec![0.0, 1.0, 2.0],
                 vec![3.0, 4.0, 5.0],
                 vec![6.0, 7.0, 8.0],
-                vec![9.0, 0.0, 1.0],
+                vec![0.1, 0.2, 0.3],
             )
             .unwrap()
         })
