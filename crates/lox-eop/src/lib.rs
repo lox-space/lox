@@ -6,9 +6,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-use std::error::Error;
-
-use num_traits::ToPrimitive;
 use thiserror::Error;
 
 use lox_utils::types::julian_dates::ModifiedJulianDate;
@@ -257,25 +254,25 @@ mod tests {
     #[test]
     fn test_eop_dates() {
         let eop = eop_fixture();
-        assert_eq!(eop.dates(), &[0.0, 1.0, 2.0]);
+        assert_eq!(eop.dates(), &[0.0, 1.0, 2.0, 3.0]);
     }
 
     #[test]
     fn test_eop_x_pole_series() {
         let eop = eop_fixture();
-        assert_eq!(eop.x_pole_series(), &[3.0, 4.0, 5.0]);
+        assert_eq!(eop.x_pole_series(), &[4.0, 5.0, 6.0, 7.0]);
     }
 
     #[test]
     fn test_eop_y_pole_series() {
         let eop = eop_fixture();
-        assert_eq!(eop.y_pole_series(), &[6.0, 7.0, 8.0]);
+        assert_eq!(eop.y_pole_series(), &[8.0, 9.0, 10.0, 11.0]);
     }
 
     #[test]
     fn test_eop_delta_ut1_utc_series() {
         let eop = eop_fixture();
-        assert_eq!(eop.delta_ut1_utc_series(), &[0.1, 0.2, 0.3]);
+        assert_eq!(eop.delta_ut1_utc_series(), &[0.1, 0.2, 0.3, 0.4]);
     }
 
     #[test]
@@ -299,10 +296,10 @@ mod tests {
         static EOP: OnceLock<EarthOrientationParams> = OnceLock::new();
         EOP.get_or_init(|| {
             EarthOrientationParams::new(
-                vec![0.0, 1.0, 2.0],
-                vec![3.0, 4.0, 5.0],
-                vec![6.0, 7.0, 8.0],
-                vec![0.1, 0.2, 0.3],
+                vec![0.0, 1.0, 2.0, 3.0],
+                vec![4.0, 5.0, 6.0, 7.0],
+                vec![8.0, 9.0, 10.0, 11.0],
+                vec![0.1, 0.2, 0.3, 0.4],
             )
             .unwrap()
         })

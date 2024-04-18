@@ -142,8 +142,6 @@ struct OceanicTidalTerm {
     t_cos: Microarcseconds,
 }
 
-type RadiansPerDay = f64;
-
 /// Returns the diurnal/subdiurnal oceanic tidal effects on polar motion and UT1-UTC. Based on
 /// Bizouard (2002), Gambis (1997) and Eanes (1997).
 fn oceanic_tidal_correction(tidal_args: &TidalArgs) -> OceanicTidalCorrection {

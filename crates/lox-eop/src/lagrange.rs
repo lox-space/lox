@@ -6,13 +6,10 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-// TODO: Remove this once Lagrangian interpolation is used by lox-eop public interface.
-#![allow(dead_code)]
-
 pub mod eop;
 
 /// The size of the window used for Lagrangian interpolation.
-pub const WINDOW_SIZE: usize = 4;
+const WINDOW_SIZE: usize = 4;
 
 /// Perform Lagrangian interpolation within a set of (x, y) pairs, returning the y-value
 /// corresponding to `target_x`.
