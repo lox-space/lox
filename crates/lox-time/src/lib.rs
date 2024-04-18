@@ -20,6 +20,8 @@ use std::ops::{Add, Sub};
 
 use calendar_dates::DateError;
 use constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY, SECONDS_PER_HOUR, SECONDS_PER_MINUTE};
+use lox_utils::constants::f64::time;
+use num::ToPrimitive;
 use time_of_day::{CivilTime, TimeOfDay, TimeOfDayError};
 
 use thiserror::Error;
@@ -74,7 +76,9 @@ impl<T: TimeScale + Copy> Time<T> {
     }
 
     pub fn from_date(scale: T, date: Date) -> Self {
-        let seconds = date.julian_day_number_j2000() * SECONDS_PER_DAY;
+        let seconds = (date.days_since_j2000() * time::SECONDS_PER_DAY)
+            .to_i64()
+            .unwrap_or_else(|| unreachable!("should be representable as i64"));
         let timestamp = BaseTime::new(seconds, Subsecond::default());
         Self { scale, timestamp }
     }
@@ -459,7 +463,7 @@ mod tests {
     }
 
     #[test]
-    fn test_time_wall_clock_hour() {
+    fn test_time_civil_time_hour() {
         let base_time = BaseTime {
             seconds: 1234567890,
             subsecond: Subsecond(0.9876543210),
@@ -474,7 +478,7 @@ mod tests {
     }
 
     #[test]
-    fn test_time_wall_clock_minute() {
+    fn test_time_civil_time_minute() {
         let base_time = BaseTime {
             seconds: 1234567890,
             subsecond: Subsecond(0.9876543210),
@@ -489,7 +493,7 @@ mod tests {
     }
 
     #[test]
-    fn test_time_wall_clock_second() {
+    fn test_time_civil_time_second() {
         let base_time = BaseTime {
             seconds: 1234567890,
             subsecond: Subsecond(0.9876543210),
@@ -504,7 +508,7 @@ mod tests {
     }
 
     #[test]
-    fn test_time_wall_clock_millisecond() {
+    fn test_time_civil_time_millisecond() {
         let base_time = BaseTime {
             seconds: 1234567890,
             subsecond: Subsecond(0.9876543210),
@@ -519,7 +523,7 @@ mod tests {
     }
 
     #[test]
-    fn test_time_wall_clock_microsecond() {
+    fn test_time_civil_time_microsecond() {
         let base_time = BaseTime {
             seconds: 1234567890,
             subsecond: Subsecond(0.9876543210),
@@ -534,7 +538,7 @@ mod tests {
     }
 
     #[test]
-    fn test_time_wall_clock_nanosecond() {
+    fn test_time_civil_time_nanosecond() {
         let base_time = BaseTime {
             seconds: 1234567890,
             subsecond: Subsecond(0.9876543210),
@@ -549,7 +553,7 @@ mod tests {
     }
 
     #[test]
-    fn test_time_wall_clock_picosecond() {
+    fn test_time_civil_time_picosecond() {
         let base_time = BaseTime {
             seconds: 1234567890,
             subsecond: Subsecond(0.9876543210),
@@ -564,7 +568,7 @@ mod tests {
     }
 
     #[test]
-    fn test_time_wall_clock_femtosecond() {
+    fn test_time_civil_time_femtosecond() {
         let base_time = BaseTime {
             seconds: 1234567890,
             subsecond: Subsecond(0.9876543210),

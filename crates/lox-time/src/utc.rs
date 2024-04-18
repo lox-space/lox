@@ -224,42 +224,42 @@ mod tests {
     }
 
     #[test]
-    fn test_utc_wall_clock_hour() {
+    fn test_utc_civil_time_hour() {
         assert_eq!(TIME.hour(), TIME.hour);
     }
 
     #[test]
-    fn test_utc_wall_clock_minute() {
+    fn test_utc_civil_time_minute() {
         assert_eq!(TIME.minute(), TIME.minute);
     }
 
     #[test]
-    fn test_utc_wall_clock_second() {
+    fn test_utc_civil_time_second() {
         assert_eq!(TIME.second(), TIME.second);
     }
 
     #[test]
-    fn test_utc_wall_clock_millisecond() {
+    fn test_utc_civil_time_millisecond() {
         assert_eq!(TIME.millisecond(), 789);
     }
 
     #[test]
-    fn test_utc_wall_clock_microsecond() {
+    fn test_utc_civil_time_microsecond() {
         assert_eq!(TIME.microsecond(), 123);
     }
 
     #[test]
-    fn test_utc_wall_clock_nanosecond() {
+    fn test_utc_civil_time_nanosecond() {
         assert_eq!(TIME.nanosecond(), 456);
     }
 
     #[test]
-    fn test_utc_wall_clock_picosecond() {
+    fn test_utc_civil_time_picosecond() {
         assert_eq!(TIME.picosecond(), 789);
     }
 
     #[test]
-    fn test_utc_wall_clock_femtosecond() {
+    fn test_utc_civil_time_femtosecond() {
         assert_eq!(TIME.femtosecond(), 123);
     }
 

@@ -429,7 +429,7 @@ mod tests {
     #[case::one_day_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_DAY, subsecond: Subsecond::default() }, 12)]
     #[case::one_day_and_one_hour_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_DAY - SECONDS_PER_HOUR, subsecond: Subsecond::default() }, 11)]
     #[case::two_days_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_DAY * 2, subsecond: Subsecond::default() }, 12)]
-    fn test_base_time_wall_clock_hour(#[case] time: BaseTime, #[case] expected: u8) {
+    fn test_base_time_civil_time_hour(#[case] time: BaseTime, #[case] expected: u8) {
         let actual = time.hour();
         assert_eq!(expected, actual);
     }
@@ -445,7 +445,7 @@ mod tests {
     #[case::one_femtosecond_less_than_the_epoch(BaseTime { seconds: - 1, subsecond: MAX_FEMTOSECONDS, }, 59)]
     #[case::one_minute_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_MINUTE, subsecond: Subsecond::default() }, 59)]
     #[case::one_minute_and_one_femtosecond_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_MINUTE - 1, subsecond: MAX_FEMTOSECONDS, }, 58)]
-    fn test_base_time_wall_clock_minute(#[case] time: BaseTime, #[case] expected: u8) {
+    fn test_base_time_civil_time_minute(#[case] time: BaseTime, #[case] expected: u8) {
         let actual = time.minute();
         assert_eq!(expected, actual);
     }
@@ -461,7 +461,7 @@ mod tests {
     #[case::one_second_less_than_the_epoch(BaseTime { seconds: - 1, subsecond: Subsecond::default() }, 59)]
     #[case::one_second_and_one_femtosecond_less_than_the_epoch(BaseTime { seconds: - 2, subsecond: MAX_FEMTOSECONDS, }, 58)]
     #[case::one_minute_less_than_the_epoch(BaseTime { seconds: - SECONDS_PER_MINUTE, subsecond: Subsecond::default() }, 0)]
-    fn test_base_time_wall_clock_second(#[case] time: BaseTime, #[case] expected: u8) {
+    fn test_base_time_civil_time_second(#[case] time: BaseTime, #[case] expected: u8) {
         let actual = time.second();
         assert_eq!(expected, actual);
     }

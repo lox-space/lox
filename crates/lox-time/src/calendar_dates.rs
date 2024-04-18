@@ -190,10 +190,6 @@ impl Date {
             day,
         })
     }
-
-    pub fn julian_day_number_j2000(&self) -> i64 {
-        days_since_j2000(self.calendar, self.year, self.month, self.day)
-    }
 }
 
 impl JulianDate for Date {
