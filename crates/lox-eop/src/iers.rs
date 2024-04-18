@@ -8,8 +8,6 @@
 
 //! Parse [EarthOrientationParams] from IERS CSV data.
 
-#![cfg(test)]
-
 use std::path::{Path, PathBuf};
 
 use serde::Deserialize;

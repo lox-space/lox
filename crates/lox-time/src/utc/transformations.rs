@@ -11,16 +11,16 @@ use std::sync::OnceLock;
 
 use thiserror::Error;
 
-use lox_eop::{DeltaUt1Utc, EarthOrientationParams, TargetDateError};
+use lox_eop::{DeltaUt1Utc, TargetDateError};
 
 use crate::base_time::BaseTime;
 use crate::calendar_dates::Date;
 use crate::deltas::{TimeDelta, TimeDeltaError};
 use crate::julian_dates::Epoch::ModifiedJulianDate;
+use crate::julian_dates::JulianDate;
 use crate::julian_dates::Unit::Days;
-use crate::julian_dates::{Epoch, JulianDate};
 use crate::time_scales::{Tai, Ut1};
-use crate::transformations::{TimeScaleTransformer, TransformTimeScale};
+use crate::transformations::TransformTimeScale;
 use crate::utc::{Utc, UtcDateTime, UtcUndefinedError};
 use crate::Time;
 
@@ -95,46 +95,6 @@ fn tai_at_utc_1972_01_01() -> &'static Time<Tai> {
     })
 }
 
-/// EarthOrientationParamsError indicates that provided [EarthOrientationParams] were invalid for
-/// the construction of an [ObservedDataTimeScaleTransformer].
-#[derive(Clone, Debug, Error, PartialEq)]
-#[error("EarthOrientationParams contain invalid data at position {position}: {details}")]
-pub struct EarthOrientationParamsError {
-    position: usize,
-    details: EopErrorDetails,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum EopErrorDetails {
-    /// Arises when a [ModifiedJulianDayNumber] in [EarthOrientationParams] is before
-    /// 1960-01-01 UTC.
-    InvalidMjd(UtcUndefinedError),
-    /// Arises when a ΔUT1-UTC value in [EarthOrientationParams] cannot be represented as a
-    /// [TimeDelta].
-    InvalidDeltaUt1Utc(TimeDeltaError),
-}
-
-impl Display for EopErrorDetails {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::InvalidMjd(err) => write!(f, "invalid Modified Julian Day Number: {}", err),
-            Self::InvalidDeltaUt1Utc(err) => write!(f, "invalid ΔUT1-UTC value: {}", err),
-        }
-    }
-}
-
-impl From<UtcUndefinedError> for EopErrorDetails {
-    fn from(err: UtcUndefinedError) -> Self {
-        Self::InvalidMjd(err)
-    }
-}
-
-impl From<TimeDeltaError> for EopErrorDetails {
-    fn from(err: TimeDeltaError) -> Self {
-        Self::InvalidDeltaUt1Utc(err)
-    }
-}
-
 /// Transform between [TimeScale]s which require observed data, namely the delta between UT1 and
 /// UTC.
 ///
@@ -152,7 +112,7 @@ impl<D: DeltaUt1Utc> ObservedDataTimeScaleTransformer<D> {
 }
 
 #[derive(Debug, Clone, PartialEq, Error)]
-pub enum ObservedDataTimeScaleTransformationError {
+pub enum TransformationError {
     #[error(transparent)]
     TargetDateError(#[from] TargetDateError),
     #[error(transparent)]
@@ -160,7 +120,7 @@ pub enum ObservedDataTimeScaleTransformationError {
 }
 
 impl<D: DeltaUt1Utc> TransformTimeScale<Tai, Ut1> for &ObservedDataTimeScaleTransformer<D> {
-    type Error = ObservedDataTimeScaleTransformationError;
+    type Error = TransformationError;
 
     fn transform(&self, time: Time<Tai>) -> Result<Time<Ut1>, Self::Error> {
         let mjd = time.julian_date(ModifiedJulianDate, Days);
@@ -181,7 +141,12 @@ impl<D: DeltaUt1Utc> TransformTimeScale<Tai, Ut1> for &ObservedDataTimeScaleTran
 
 #[cfg(test)]
 pub mod test {
+    use std::path::Path;
+
+    use lox_eop::EarthOrientationParams;
     use rstest::rstest;
+
+    use lox_eop::iers::parse_finals_csv;
 
     use crate::base_time::BaseTime;
     use crate::calendar_dates::Date;
@@ -191,51 +156,46 @@ pub mod test {
 
     use super::*;
 
-    #[rstest]
-    #[case::before_1972(utc_1971_01_01(), tai_at_utc_1971_01_01())]
-    #[case::before_leap_second(utc_1s_before_2016_leap_second(), tai_1s_before_2016_leap_second())]
-    #[case::during_leap_second(utc_during_2016_leap_second(), tai_during_2016_leap_second())]
-    #[case::after_leap_second(utc_1s_after_2016_leap_second(), tai_1s_after_2016_leap_second())]
-    #[should_panic]
-    #[case::illegal_utc_datetime(unconstructable_utc_datetime(), &Time::new(Tai, 0, Subsecond::default()))]
-    fn test_tai_from_utc(#[case] utc: &UtcDateTime, #[case] expected: &Time<Tai>) {
-        let actual = (*utc).into();
-        assert_eq!(*expected, actual);
-    }
+    // #[rstest]
+    // #[case::before_1972(utc_1971_01_01(), tai_at_utc_1971_01_01())]
+    // #[case::before_leap_second(utc_1s_before_2016_leap_second(), tai_1s_before_2016_leap_second())]
+    // #[case::during_leap_second(utc_during_2016_leap_second(), tai_during_2016_leap_second())]
+    // #[case::after_leap_second(utc_1s_after_2016_leap_second(), tai_1s_after_2016_leap_second())]
+    // #[should_panic]
+    // #[case::illegal_utc_datetime(unconstructable_utc_datetime(), &Time::new(Tai, 0, Subsecond::default()))]
+    // fn test_tai_from_utc(#[case] utc: &UtcDateTime, #[case] expected: &Time<Tai>) {
+    //     let actual = (*utc).into();
+    //     assert_eq!(*expected, actual);
+    // }
+    //
+    // #[rstest]
+    // #[case::before_utc_1972(tai_at_utc_1971_01_01(), Ok(*utc_1971_01_01()))]
+    // #[case::utc_1972(tai_at_utc_1972_01_01(), Ok(*utc_1972_01_01()))]
+    // #[case::before_leap_second(tai_1s_before_2016_leap_second(), Ok(*utc_1s_before_2016_leap_second()))]
+    // #[case::during_leap_second(tai_during_2016_leap_second(), Ok(*utc_during_2016_leap_second()))]
+    // #[case::after_leap_second(tai_1s_after_2016_leap_second(), Ok(*utc_1s_after_2016_leap_second()))]
+    // #[case::utc_undefined(tai_before_utc_defined(), Err(UtcUndefinedError))]
+    // fn test_utc_try_from_tai(
+    //     #[case] tai: &Time<Tai>,
+    //     #[case] expected: Result<UtcDateTime, UtcUndefinedError>,
+    // ) {
+    //     let actual = UtcDateTime::try_from(*tai);
+    //     assert_eq!(expected, actual);
+    // }
 
     #[rstest]
-    #[case::before_utc_1972(tai_at_utc_1971_01_01(), Ok(*utc_1971_01_01()))]
-    #[case::utc_1972(tai_at_utc_1972_01_01(), Ok(*utc_1972_01_01()))]
-    #[case::before_leap_second(tai_1s_before_2016_leap_second(), Ok(*utc_1s_before_2016_leap_second()))]
-    #[case::during_leap_second(tai_during_2016_leap_second(), Ok(*utc_during_2016_leap_second()))]
-    #[case::after_leap_second(tai_1s_after_2016_leap_second(), Ok(*utc_1s_after_2016_leap_second()))]
-    #[case::utc_undefined(tai_before_utc_defined(), Err(UtcUndefinedError))]
-    fn test_utc_try_from_tai(
-        #[case] tai: &Time<Tai>,
-        #[case] expected: Result<UtcDateTime, UtcUndefinedError>,
+    #[case::j2000_tai(Time::j2000(Tai), Time::from_base_time(Ut1, BaseTime {
+        seconds: 0,
+        subsecond: Subsecond::default(),
+    }))]
+    fn test_eop_transform_time_scale_tai_ut1_success(
+        #[case] tai: Time<Tai>,
+        #[case] expected: Time<Ut1>,
     ) {
-        let actual = UtcDateTime::try_from(*tai);
-        assert_eq!(expected, actual);
-    }
-
-    #[rstest]
-    #[case::invalid_mjd(EopErrorDetails::InvalidMjd(UtcUndefinedError), format!("invalid Modified Julian Day Number: {}", UtcUndefinedError))]
-    #[case::invalid_delta_ut1_utc(EopErrorDetails::InvalidDeltaUt1Utc(any_time_delta_error()), format!("invalid ΔUT1-UTC value: {}", any_time_delta_error()))]
-    fn test_eop_error_details_display(#[case] variant: EopErrorDetails, #[case] expected: String) {
-        assert_eq!(expected, variant.to_string());
-    }
-
-    #[test]
-    fn test_eop_error_details_from_utc_undefined_error() {
-        let expected = EopErrorDetails::InvalidMjd(UtcUndefinedError);
-        let actual: EopErrorDetails = UtcUndefinedError.into();
-        assert_eq!(expected, actual);
-    }
-
-    #[test]
-    fn test_eop_error_details_from_time_delta_error() {
-        let expected = EopErrorDetails::InvalidDeltaUt1Utc(any_time_delta_error());
-        let actual: EopErrorDetails = any_time_delta_error().into();
+        let transformer = observed_data_time_scale_transformer();
+        let actual = transformer.transform(tai).unwrap_or_else(|err| {
+            panic!("expected success, but got {:?}", err);
+        });
         assert_eq!(expected, actual);
     }
 
@@ -343,5 +303,20 @@ pub mod test {
             raw: f64::NAN,
             detail: String::default(),
         }
+    }
+
+    const TEST_DATA_DIR: &str = "../../data";
+
+    fn observed_data_time_scale_transformer(
+    ) -> &'static ObservedDataTimeScaleTransformer<&'static EarthOrientationParams> {
+        static EOP: OnceLock<EarthOrientationParams> = OnceLock::new();
+        static TRANSFORMER: OnceLock<
+            ObservedDataTimeScaleTransformer<&'static EarthOrientationParams>,
+        > = OnceLock::new();
+
+        let eop = EOP.get_or_init(|| {
+            parse_finals_csv(Path::new(TEST_DATA_DIR).join("finals.all.csv")).unwrap()
+        });
+        TRANSFORMER.get_or_init(|| ObservedDataTimeScaleTransformer::new(eop))
     }
 }

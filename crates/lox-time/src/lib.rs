@@ -120,18 +120,20 @@ impl<T: TimeScale + Copy> Time<T> {
 
     /// Given a `Time` in [TimeScale] `S`, and a transformer from `S` to `T`, returns a new Time in
     /// [TimeScale] `T`.
-    pub fn from_scale<S: TimeScale + Copy>(
-        time: Time<S>,
-        transformer: impl TransformTimeScale<S, T>,
-    ) -> Self {
+    pub fn from_scale<S, U>(time: Time<S>, transformer: U) -> Result<Self, U::Error>
+    where
+        S: TimeScale + Copy,
+        U: TransformTimeScale<S, T>,
+    {
         transformer.transform(time)
     }
 
     /// Given a transformer from `T` to `S`, returns a new `Time` in [TimeScale] `S`.
-    pub fn into_scale<S: TimeScale + Copy>(
-        self,
-        transformer: impl TransformTimeScale<T, S>,
-    ) -> Time<S> {
+    pub fn into_scale<S, U>(self, transformer: U) -> Result<Time<S>, U::Error>
+    where
+        S: TimeScale + Copy,
+        U: TransformTimeScale<T, S>,
+    {
         Time::from_scale(self, transformer)
     }
 
@@ -488,7 +490,7 @@ mod tests {
     fn test_from_scale() {
         let time = Time::j2000(Tai);
         let mut transformer = MockTransformTimeScale::<Tai, Tt>::new();
-        let expected = Time::j2000(Tt);
+        let expected = Ok(Time::j2000(Tt));
 
         transformer
             .expect_transform()
@@ -503,7 +505,7 @@ mod tests {
     fn test_into_scale() {
         let time = Time::j2000(Tai);
         let mut transformer = MockTransformTimeScale::<Tai, Tt>::new();
-        let expected = Time::j2000(Tt);
+        let expected = Ok(Time::j2000(Tt));
 
         transformer
             .expect_transform()

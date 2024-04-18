@@ -13,7 +13,7 @@ use lox_utils::types::units::Seconds;
 
 use crate::lagrange::eop::{interpolate, Arguments};
 
-mod iers;
+pub mod iers;
 mod lagrange;
 
 #[derive(Copy, Clone, Debug, Error, PartialEq, Eq)]

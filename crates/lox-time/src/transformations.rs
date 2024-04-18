@@ -31,7 +31,7 @@ where
     fn transform(&self, time: Time<T>) -> Result<Time<U>, Self::Error>;
 }
 
-pub type Infallible<T: TimeScale> = Result<Time<T>, ()>;
+type Infallible<T> = Result<Time<T>, ()>;
 
 /// TimeScaleTransformer provides default implementations TransformTimeScale for all commonly used
 /// time scale pairs.
