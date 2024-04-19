@@ -20,13 +20,15 @@ use std::ops::{Add, Sub};
 
 use calendar_dates::DateError;
 
+use constants::julian_dates::{
+    SECONDS_BETWEEN_J1950_AND_J2000, SECONDS_BETWEEN_JD_AND_J2000, SECONDS_BETWEEN_MJD_AND_J2000,
+};
 use lox_utils::constants::f64::time;
 use num::ToPrimitive;
 use time_of_day::{CivilTime, TimeOfDay, TimeOfDayError};
 
 use thiserror::Error;
 
-use crate::base_time::BaseTime;
 use crate::calendar_dates::{CalendarDate, Date};
 use crate::deltas::TimeDelta;
 use crate::julian_dates::{Epoch, JulianDate, Unit};
@@ -34,7 +36,6 @@ use crate::subsecond::Subsecond;
 use crate::time_scales::TimeScale;
 use crate::transformations::TransformTimeScale;
 
-pub mod base_time;
 pub mod calendar_dates;
 pub mod constants;
 pub mod deltas;
@@ -65,7 +66,8 @@ pub enum TimeError {
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
 pub struct Time<T: TimeScale + Copy> {
     scale: T,
-    timestamp: BaseTime,
+    seconds: i64,
+    subsecond: Subsecond,
 }
 
 impl<T: TimeScale + Copy> Time<T> {
@@ -78,8 +80,7 @@ impl<T: TimeScale + Copy> Time<T> {
         let seconds = ((date.days_since_j2000() - 0.5) * time::SECONDS_PER_DAY)
             .to_i64()
             .unwrap_or_else(|| unreachable!("should be representable as i64"));
-        let timestamp = BaseTime::new(seconds, Subsecond::default());
-        Self { scale, timestamp }
+        Self::from_seconds(scale, seconds, Subsecond::default())
     }
 
     /// Instantiates a [Time] in the given scale from seconds since J2000 subdived into integral
@@ -87,40 +88,58 @@ impl<T: TimeScale + Copy> Time<T> {
     pub fn from_seconds(scale: T, seconds: i64, subsecond: Subsecond) -> Self {
         Self {
             scale,
-            timestamp: BaseTime::new(seconds, subsecond),
+            seconds,
+            subsecond,
         }
     }
 
     pub fn from_delta(scale: T, delta: TimeDelta) -> Self {
-        let timestamp = BaseTime::new(delta.seconds, delta.subsecond);
-        Self { scale, timestamp }
+        Self {
+            scale,
+            seconds: delta.seconds,
+            subsecond: delta.subsecond,
+        }
     }
 
     pub fn to_delta(self) -> TimeDelta {
         TimeDelta {
-            seconds: self.timestamp.seconds(),
-            subsecond: self.timestamp.subsecond,
+            seconds: self.seconds,
+            subsecond: self.subsecond,
         }
-    }
-
-    /// Instantiates a [Time] in the given scale from a [BaseTime].
-    pub const fn from_base_time(scale: T, timestamp: BaseTime) -> Self {
-        Self { scale, timestamp }
     }
 
     /// Returns the epoch for the given [Epoch] in the given timescale.
     pub fn from_epoch(scale: T, epoch: Epoch) -> Self {
-        let timestamp = BaseTime::from_epoch(epoch);
-        Self { scale, timestamp }
+        match epoch {
+            Epoch::JulianDate => Self {
+                scale,
+                seconds: -SECONDS_BETWEEN_JD_AND_J2000,
+                subsecond: Subsecond::default(),
+            },
+            Epoch::ModifiedJulianDate => Self {
+                scale,
+                seconds: -SECONDS_BETWEEN_MJD_AND_J2000,
+                subsecond: Subsecond::default(),
+            },
+            Epoch::J1950 => Self {
+                scale,
+                seconds: -SECONDS_BETWEEN_J1950_AND_J2000,
+                subsecond: Subsecond::default(),
+            },
+            Epoch::J2000 => Self {
+                scale,
+                seconds: 0,
+                subsecond: Subsecond::default(),
+            },
+        }
     }
 
     pub fn with_time_of_day(mut self, time: TimeOfDay) -> Result<Self, TimeError> {
         if time.second() == 60 {
             return Err(TimeError::LeapSecondOutsideUtc);
         }
-        let seconds = self.base_time().seconds() + time.second_of_day();
-        let base = BaseTime::new(seconds, time.subsecond());
-        self.timestamp = base;
+        self.seconds += time.second_of_day();
+        self.subsecond = time.subsecond();
         Ok(self)
     }
 
@@ -136,7 +155,7 @@ impl<T: TimeScale + Copy> Time<T> {
 
     /// Returns a new [Time] with [scale] without changing the underlying timestamp.
     pub fn override_scale<S: TimeScale + Copy>(&self, scale: S) -> Time<S> {
-        Time::from_base_time(scale, self.timestamp)
+        Time::from_seconds(scale, self.seconds, self.subsecond)
     }
 
     /// Returns, as an epoch in the given timescale, midday on the first day of the proleptic Julian
@@ -160,19 +179,23 @@ impl<T: TimeScale + Copy> Time<T> {
         Self::from_epoch(scale, Epoch::J2000)
     }
 
-    /// The underlying base timestamp.
-    pub fn base_time(&self) -> BaseTime {
-        self.timestamp
-    }
-
     /// The number of whole seconds since J2000.
     pub fn seconds(&self) -> i64 {
-        self.timestamp.seconds
+        self.seconds
     }
 
     /// The number of femtoseconds from the last whole second.
     pub fn subsecond(&self) -> f64 {
-        self.timestamp.subsecond.into()
+        self.subsecond.into()
+    }
+
+    pub fn seconds_from_epoch(&self, epoch: Epoch) -> i64 {
+        match epoch {
+            Epoch::JulianDate => self.seconds + SECONDS_BETWEEN_JD_AND_J2000,
+            Epoch::ModifiedJulianDate => self.seconds + SECONDS_BETWEEN_MJD_AND_J2000,
+            Epoch::J1950 => self.seconds + SECONDS_BETWEEN_J1950_AND_J2000,
+            Epoch::J2000 => self.seconds,
+        }
     }
 
     /// Given a `Time` in [TimeScale] `S`, and a transformer from `S` to `T`, returns a new Time in
@@ -200,11 +223,18 @@ impl<T: TimeScale + Copy> Time<T> {
 
 impl<T: TimeScale + Copy> JulianDate for Time<T> {
     fn julian_date(&self, epoch: Epoch, unit: Unit) -> f64 {
-        self.timestamp.julian_date(epoch, unit)
+        let mut decimal_seconds = self.seconds_from_epoch(epoch).to_f64().unwrap();
+        decimal_seconds += self.subsecond.0;
+        match unit {
+            Unit::Seconds => decimal_seconds,
+            Unit::Days => decimal_seconds / time::SECONDS_PER_DAY,
+            Unit::Centuries => decimal_seconds / time::SECONDS_PER_JULIAN_CENTURY,
+        }
     }
 
     fn two_part_julian_date(&self) -> (f64, f64) {
-        self.timestamp.two_part_julian_date()
+        let days = self.julian_date(Epoch::JulianDate, Unit::Days);
+        (days.trunc(), days.fract())
     }
 }
 
@@ -225,29 +255,65 @@ impl<T: TimeScale + Copy> Display for Time<T> {
 impl<T: TimeScale + Copy> Add<TimeDelta> for Time<T> {
     type Output = Self;
 
+    /// The implementation of [Add] for [Time] follows the default Rust rules for integer overflow, which
+    /// should be sufficient for all practical purposes.
     fn add(self, rhs: TimeDelta) -> Self::Output {
-        Self::from_base_time(self.scale, self.timestamp + rhs)
+        if rhs.is_negative() {
+            return self - (-rhs);
+        }
+
+        let subsec_and_carry = self.subsecond.0 + rhs.subsecond.0;
+        let seconds = subsec_and_carry.trunc().to_i64().unwrap() + self.seconds + rhs.seconds;
+        Self::from_seconds(self.scale, seconds, Subsecond(subsec_and_carry.fract()))
     }
 }
 
 impl<T: TimeScale + Copy> Sub<TimeDelta> for Time<T> {
     type Output = Self;
 
+    /// The implementation of [Sub] for [Time] follows the default Rust rules for integer overflow, which
+    /// should be sufficient for all practical purposes.
     fn sub(self, rhs: TimeDelta) -> Self::Output {
-        Self::from_base_time(self.scale, self.timestamp - rhs)
+        if rhs.is_negative() {
+            return self + (-rhs);
+        }
+
+        let mut subsec = self.subsecond.0 - rhs.subsecond.0;
+        let mut seconds = self.seconds - rhs.seconds;
+        if subsec.is_sign_negative() {
+            seconds -= 1;
+            subsec += 1.0;
+        }
+        Self::from_seconds(self.scale, seconds, Subsecond(subsec))
+    }
+}
+
+impl<T: TimeScale + Copy> Sub<Time<T>> for Time<T> {
+    type Output = TimeDelta;
+
+    fn sub(self, rhs: Time<T>) -> Self::Output {
+        let mut subsec = self.subsecond.0 - rhs.subsecond.0;
+        let mut seconds = self.seconds - rhs.seconds;
+        if subsec.is_sign_negative() {
+            seconds -= 1;
+            subsec += 1.0;
+        }
+        TimeDelta {
+            seconds,
+            subsecond: Subsecond(subsec),
+        }
     }
 }
 
 impl<T: TimeScale + Copy> CivilTime for Time<T> {
     fn time(&self) -> TimeOfDay {
-        TimeOfDay::from_seconds_since_j2000(self.timestamp.seconds)
-            .with_subsecond(self.timestamp.subsecond)
+        TimeOfDay::from_seconds_since_j2000(self.seconds).with_subsecond(self.subsecond)
     }
 }
 
 impl<T: TimeScale + Copy> CalendarDate for Time<T> {
     fn date(&self) -> Date {
-        Date::from_seconds_since_j2000(self.timestamp.seconds)
+        Date::from_seconds_since_j2000(self.seconds)
     }
 }
 
@@ -280,6 +346,7 @@ macro_rules! time {
 mod tests {
     use float_eq::assert_float_eq;
     use mockall::predicate;
+    use rstest::rstest;
 
     use crate::constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
     use lox_utils::constants::f64::time::DAYS_PER_JULIAN_CENTURY;
@@ -288,6 +355,8 @@ mod tests {
     use crate::time_scales::{Tai, Tdb, Tt};
     use crate::transformations::MockTransformTimeScale;
     use crate::Time;
+
+    use self::constants::i64::{SECONDS_PER_HOUR, SECONDS_PER_JULIAN_CENTURY, SECONDS_PER_MINUTE};
 
     use super::*;
 
@@ -306,7 +375,8 @@ mod tests {
         let subsecond = Subsecond(0.9876543210);
         let expected = Time {
             scale,
-            timestamp: BaseTime { seconds, subsecond },
+            seconds,
+            subsecond,
         };
         let actual = Time::from_seconds(scale, seconds, subsecond);
         assert_eq!(expected, actual);
@@ -344,7 +414,7 @@ mod tests {
         let actual = Time::j2000(Tai);
         let expected = Time {
             scale: Tai,
-            timestamp: BaseTime::default(),
+            ..Default::default()
         };
         assert_eq!(expected, actual);
     }
@@ -352,13 +422,11 @@ mod tests {
     #[test]
     fn test_time_jd0() {
         let actual = Time::jd0(Tai);
-        let expected = Time::from_base_time(
-            Tai,
-            BaseTime {
-                seconds: -211813488000,
-                subsecond: Subsecond::default(),
-            },
-        );
+        let expected = Time {
+            scale: Tai,
+            seconds: -211813488000,
+            subsecond: Subsecond::default(),
+        };
         assert_eq!(expected, actual);
     }
 
@@ -374,173 +442,125 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_time_subsecond() {
-        let time = Time::from_seconds(Tai, 1234567890, Subsecond(0.9876543210));
-        let expected = 0.9876543210;
-        let actual = time.subsecond();
-        assert_eq!(
-            expected, actual,
-            "expected Time to have {} subsecond, but got {}",
-            expected, actual
-        );
-    }
+    // #[test]
+    // fn test_time_civil_time_hour() {
+    //     let base_time = Time {
+    //         seconds: 1234567890,
+    //         subsecond: Subsecond(0.9876543210),
+    //     };
+    //     let expected = base_time.hour();
+    //     let actual = Time::from_base_time(Tai, base_time).hour();
+    //     assert_eq!(
+    //         expected, actual,
+    //         "expected Time to have hour {}, but got {}",
+    //         expected, actual
+    //     );
+    // }
 
-    #[test]
-    fn test_time_days_since_j2000() {
-        let base_time = BaseTime {
-            seconds: 1234567890,
-            subsecond: Subsecond(0.9876543210),
-        };
-        let expected = base_time.days_since_j2000();
-        let actual = Time::from_base_time(Tai, base_time).days_since_j2000();
-        assert_float_eq!(
-            actual,
-            expected,
-            rel <= 1e-15,
-            "expected {} days since J2000, but got {}",
-            expected,
-            actual
-        );
-    }
+    // #[test]
+    // fn test_time_civil_time_minute() {
+    //     let base_time = BaseTime {
+    //         seconds: 1234567890,
+    //         subsecond: Subsecond(0.9876543210),
+    //     };
+    //     let expected = base_time.minute();
+    //     let actual = Time::from_base_time(Tai, base_time).minute();
+    //     assert_eq!(
+    //         expected, actual,
+    //         "expected Time to have minute {}, but got {}",
+    //         expected, actual,
+    //     );
+    // }
 
-    #[test]
-    fn test_time_centuries_since_j2000() {
-        let base_time = BaseTime {
-            seconds: 1234567890,
-            subsecond: Subsecond(0.9876543210),
-        };
-        let expected = base_time.centuries_since_j2000();
-        let actual = Time::from_base_time(Tai, base_time).centuries_since_j2000();
-        assert_float_eq!(
-            actual,
-            expected,
-            rel <= 1e-15,
-            "expected {} centuries since J2000, but got {}",
-            expected,
-            actual
-        );
-    }
+    // #[test]
+    // fn test_time_civil_time_second() {
+    //     let base_time = BaseTime {
+    //         seconds: 1234567890,
+    //         subsecond: Subsecond(0.9876543210),
+    //     };
+    //     let expected = base_time.second();
+    //     let actual = Time::from_base_time(Tai, base_time).second();
+    //     assert_eq!(
+    //         expected, actual,
+    //         "expected Time to have second {}, but got {}",
+    //         expected, actual,
+    //     );
+    // }
 
-    #[test]
-    fn test_time_civil_time_hour() {
-        let base_time = BaseTime {
-            seconds: 1234567890,
-            subsecond: Subsecond(0.9876543210),
-        };
-        let expected = base_time.hour();
-        let actual = Time::from_base_time(Tai, base_time).hour();
-        assert_eq!(
-            expected, actual,
-            "expected Time to have hour {}, but got {}",
-            expected, actual
-        );
-    }
+    // #[test]
+    // fn test_time_civil_time_millisecond() {
+    //     let base_time = BaseTime {
+    //         seconds: 1234567890,
+    //         subsecond: Subsecond(0.9876543210),
+    //     };
+    //     let expected = base_time.millisecond();
+    //     let actual = Time::from_base_time(Tai, base_time).millisecond();
+    //     assert_eq!(
+    //         expected, actual,
+    //         "expected Time to have millisecond {}, but got {}",
+    //         expected, actual,
+    //     );
+    // }
 
-    #[test]
-    fn test_time_civil_time_minute() {
-        let base_time = BaseTime {
-            seconds: 1234567890,
-            subsecond: Subsecond(0.9876543210),
-        };
-        let expected = base_time.minute();
-        let actual = Time::from_base_time(Tai, base_time).minute();
-        assert_eq!(
-            expected, actual,
-            "expected Time to have minute {}, but got {}",
-            expected, actual,
-        );
-    }
+    // #[test]
+    // fn test_time_civil_time_microsecond() {
+    //     let base_time = BaseTime {
+    //         seconds: 1234567890,
+    //         subsecond: Subsecond(0.9876543210),
+    //     };
+    //     let expected = base_time.microsecond();
+    //     let actual = Time::from_base_time(Tai, base_time).microsecond();
+    //     assert_eq!(
+    //         expected, actual,
+    //         "expected Time to have microsecond {}, but got {}",
+    //         expected, actual,
+    //     );
+    // }
 
-    #[test]
-    fn test_time_civil_time_second() {
-        let base_time = BaseTime {
-            seconds: 1234567890,
-            subsecond: Subsecond(0.9876543210),
-        };
-        let expected = base_time.second();
-        let actual = Time::from_base_time(Tai, base_time).second();
-        assert_eq!(
-            expected, actual,
-            "expected Time to have second {}, but got {}",
-            expected, actual,
-        );
-    }
+    // #[test]
+    // fn test_time_civil_time_nanosecond() {
+    //     let base_time = BaseTime {
+    //         seconds: 1234567890,
+    //         subsecond: Subsecond(0.9876543210),
+    //     };
+    //     let expected = base_time.nanosecond();
+    //     let actual = Time::from_base_time(Tai, base_time).nanosecond();
+    //     assert_eq!(
+    //         expected, actual,
+    //         "expected Time to have nanosecond {}, but got {}",
+    //         expected, actual,
+    //     );
+    // }
 
-    #[test]
-    fn test_time_civil_time_millisecond() {
-        let base_time = BaseTime {
-            seconds: 1234567890,
-            subsecond: Subsecond(0.9876543210),
-        };
-        let expected = base_time.millisecond();
-        let actual = Time::from_base_time(Tai, base_time).millisecond();
-        assert_eq!(
-            expected, actual,
-            "expected Time to have millisecond {}, but got {}",
-            expected, actual,
-        );
-    }
+    // #[test]
+    // fn test_time_civil_time_picosecond() {
+    //     let base_time = BaseTime {
+    //         seconds: 1234567890,
+    //         subsecond: Subsecond(0.9876543210),
+    //     };
+    //     let expected = base_time.picosecond();
+    //     let actual = Time::from_base_time(Tai, base_time).picosecond();
+    //     assert_eq!(
+    //         expected, actual,
+    //         "expected Time to have picosecond {}, but got {}",
+    //         expected, actual,
+    //     );
+    // }
 
-    #[test]
-    fn test_time_civil_time_microsecond() {
-        let base_time = BaseTime {
-            seconds: 1234567890,
-            subsecond: Subsecond(0.9876543210),
-        };
-        let expected = base_time.microsecond();
-        let actual = Time::from_base_time(Tai, base_time).microsecond();
-        assert_eq!(
-            expected, actual,
-            "expected Time to have microsecond {}, but got {}",
-            expected, actual,
-        );
-    }
-
-    #[test]
-    fn test_time_civil_time_nanosecond() {
-        let base_time = BaseTime {
-            seconds: 1234567890,
-            subsecond: Subsecond(0.9876543210),
-        };
-        let expected = base_time.nanosecond();
-        let actual = Time::from_base_time(Tai, base_time).nanosecond();
-        assert_eq!(
-            expected, actual,
-            "expected Time to have nanosecond {}, but got {}",
-            expected, actual,
-        );
-    }
-
-    #[test]
-    fn test_time_civil_time_picosecond() {
-        let base_time = BaseTime {
-            seconds: 1234567890,
-            subsecond: Subsecond(0.9876543210),
-        };
-        let expected = base_time.picosecond();
-        let actual = Time::from_base_time(Tai, base_time).picosecond();
-        assert_eq!(
-            expected, actual,
-            "expected Time to have picosecond {}, but got {}",
-            expected, actual,
-        );
-    }
-
-    #[test]
-    fn test_time_civil_time_femtosecond() {
-        let base_time = BaseTime {
-            seconds: 1234567890,
-            subsecond: Subsecond(0.9876543210),
-        };
-        let expected = base_time.femtosecond();
-        let actual = Time::from_base_time(Tai, base_time).femtosecond();
-        assert_eq!(
-            expected, actual,
-            "expected Time to have femtosecond {}, but got {}",
-            expected, actual,
-        );
-    }
+    // #[test]
+    // fn test_time_civil_time_femtosecond() {
+    //     let base_time = BaseTime {
+    //         seconds: 1234567890,
+    //         subsecond: Subsecond(0.9876543210),
+    //     };
+    //     let expected = base_time.femtosecond();
+    //     let actual = Time::from_base_time(Tai, base_time).femtosecond();
+    //     assert_eq!(
+    //         expected, actual,
+    //         "expected Time to have femtosecond {}, but got {}",
+    //         expected, actual,
+    //     );
+    // }
 
     #[test]
     fn test_from_scale() {
@@ -634,38 +654,38 @@ mod tests {
         assert_eq!(jd2, 0.5);
     }
 
-    #[test]
-    fn test_time_add_time_delta() {
-        let time = Time::j2000(Tai);
-        let delta = TimeDelta::from_decimal_seconds(1.5).unwrap();
-        let expected = Time {
-            scale: Tai,
-            timestamp: time.timestamp + delta,
-        };
-        let actual = Time::j2000(Tai) + delta;
-        assert_eq!(expected, actual);
-    }
+    // #[test]
+    // fn test_time_add_time_delta() {
+    //     let time = Time::j2000(Tai);
+    //     let delta = TimeDelta::from_decimal_seconds(1.5).unwrap();
+    //     let expected = Time {
+    //         scale: Tai,
+    //         timestamp: time.timestamp + delta,
+    //     };
+    //     let actual = Time::j2000(Tai) + delta;
+    //     assert_eq!(expected, actual);
+    // }
 
-    #[test]
-    fn test_time_sub_time_delta() {
-        let time = Time::j2000(Tai);
-        let delta = TimeDelta::from_decimal_seconds(1.5).unwrap();
-        let expected = Time {
-            scale: Tai,
-            timestamp: time.timestamp - delta,
-        };
-        let actual = Time::j2000(Tai) - delta;
-        assert_eq!(expected, actual);
-    }
+    // #[test]
+    // fn test_time_sub_time_delta() {
+    //     let time = Time::j2000(Tai);
+    //     let delta = TimeDelta::from_decimal_seconds(1.5).unwrap();
+    //     let expected = Time {
+    //         scale: Tai,
+    //         timestamp: time.timestamp - delta,
+    //     };
+    //     let actual = Time::j2000(Tai) - delta;
+    //     assert_eq!(expected, actual);
+    // }
 
-    #[test]
-    fn test_time_calendar_date() {
-        let base_time = BaseTime::default();
-        let expected = base_time.date();
-        let tai = Time::from_base_time(Tai, base_time);
-        let actual = tai.date();
-        assert_eq!(expected, actual);
-    }
+    // #[test]
+    // fn test_time_calendar_date() {
+    //     let base_time = BaseTime::default();
+    //     let expected = base_time.date();
+    //     let tai = Time::from_base_time(Tai, base_time);
+    //     let actual = tai.date();
+    //     assert_eq!(expected, actual);
+    // }
 
     #[test]
     fn test_time_macro() {
@@ -680,5 +700,282 @@ mod tests {
         let time = time!(Tai, 2000, 1, 1, 12, 0, 0.123).unwrap();
         assert_eq!(time.seconds(), 0);
         assert_eq!(time.subsecond(), 0.123);
+    }
+
+    // #[test]
+    // fn test_base_time_is_negative() {
+    //     assert!(BaseTime {
+    //         seconds: -1,
+    //         subsecond: Subsecond::default(),
+    //     }
+    //     .is_negative());
+    //     assert!(!BaseTime {
+    //         seconds: 0,
+    //         subsecond: Subsecond::default(),
+    //     }
+    //     .is_negative());
+    //     assert!(!BaseTime {
+    //         seconds: 1,
+    //         subsecond: Subsecond::default(),
+    //     }
+    //     .is_negative());
+    // }
+
+    // #[test]
+    // fn test_base_time_seconds() {
+    //     let time = BaseTime {
+    //         seconds: 123,
+    //         subsecond: Subsecond::default(),
+    //     };
+    //     assert_eq!(time.seconds(), 123);
+    // }
+
+    #[test]
+    fn test_time_subsecond() {
+        let time = Time {
+            scale: Tai,
+            seconds: 0,
+            subsecond: Subsecond(0.123),
+        };
+        assert_eq!(time.subsecond(), 0.123);
+    }
+
+    #[rstest]
+    #[case::zero_delta(Time::default(), Time::default(), TimeDelta::default())]
+    #[case::positive_delta(Time::default(), Time {scale: Tai, seconds: 1, subsecond: Subsecond::default() }, TimeDelta { seconds: -1, subsecond: Subsecond::default() })]
+    #[case::negative_delta(Time::default(), Time {scale: Tai, seconds: -1, subsecond: Subsecond::default() }, TimeDelta { seconds: 1, subsecond: Subsecond::default() })]
+    fn test_time_delta(
+        #[case] lhs: Time<Tai>,
+        #[case] rhs: Time<Tai>,
+        #[case] expected: TimeDelta,
+    ) {
+        assert_eq!(expected, lhs - rhs);
+    }
+
+    const MAX_FEMTOSECONDS: Subsecond = Subsecond(0.999_999_999_999_999);
+
+    #[rstest]
+    #[case::zero_value(Time {scale: Tai, seconds: 0, subsecond: Subsecond::default() }, 12)]
+    #[case::one_femtosecond_less_than_an_hour(Time {scale: Tai, seconds: SECONDS_PER_HOUR - 1, subsecond: MAX_FEMTOSECONDS, }, 12)]
+    #[case::exactly_one_hour(Time {scale: Tai, seconds: SECONDS_PER_HOUR, subsecond: Subsecond::default() }, 13)]
+    #[case::half_day(Time {scale: Tai, seconds: SECONDS_PER_DAY / 2, subsecond: Subsecond::default() }, 0)]
+    #[case::negative_half_day(Time {scale: Tai, seconds: -SECONDS_PER_DAY / 2, subsecond: Subsecond::default() }, 0)]
+    #[case::one_day_and_one_hour(Time {scale: Tai, seconds: SECONDS_PER_HOUR * 25, subsecond: Subsecond::default() }, 13)]
+    #[case::one_femtosecond_less_than_the_epoch(Time {scale: Tai, seconds: - 1, subsecond: MAX_FEMTOSECONDS, }, 11)]
+    #[case::one_hour_less_than_the_epoch(Time {scale: Tai, seconds: - SECONDS_PER_HOUR, subsecond: Subsecond::default() }, 11)]
+    #[case::one_hour_and_one_femtosecond_less_than_the_epoch(Time {scale: Tai, seconds: - SECONDS_PER_HOUR - 1, subsecond: MAX_FEMTOSECONDS, }, 10)]
+    #[case::one_day_less_than_the_epoch(Time {scale: Tai, seconds: - SECONDS_PER_DAY, subsecond: Subsecond::default() }, 12)]
+    #[case::one_day_and_one_hour_less_than_the_epoch(Time {scale: Tai, seconds: - SECONDS_PER_DAY - SECONDS_PER_HOUR, subsecond: Subsecond::default() }, 11)]
+    #[case::two_days_less_than_the_epoch(Time {scale: Tai, seconds: - SECONDS_PER_DAY * 2, subsecond: Subsecond::default() }, 12)]
+    fn test_time_civil_time_hour(#[case] time: Time<Tai>, #[case] expected: u8) {
+        let actual = time.hour();
+        assert_eq!(expected, actual);
+    }
+
+    #[rstest]
+    #[case::zero_value(Time {scale: Tai, seconds: 0, subsecond: Subsecond::default() }, 0)]
+    #[case::one_femtosecond_less_than_one_minute(Time {scale: Tai, seconds: SECONDS_PER_MINUTE - 1, subsecond: MAX_FEMTOSECONDS, }, 0)]
+    #[case::one_minute(Time {scale: Tai, seconds: SECONDS_PER_MINUTE, subsecond: Subsecond::default() }, 1)]
+    #[case::one_femtosecond_less_than_an_hour(Time {scale: Tai, seconds: SECONDS_PER_HOUR - 1, subsecond: MAX_FEMTOSECONDS, }, 59)]
+    #[case::exactly_one_hour(Time {scale: Tai, seconds: SECONDS_PER_HOUR, subsecond: Subsecond::default() }, 0)]
+    #[case::one_hour_and_one_minute(Time {scale: Tai, seconds: SECONDS_PER_HOUR + SECONDS_PER_MINUTE, subsecond: Subsecond::default() }, 1)]
+    #[case::one_hour_less_than_the_epoch(Time {scale: Tai, seconds: - SECONDS_PER_HOUR, subsecond: Subsecond::default() }, 0)]
+    #[case::one_femtosecond_less_than_the_epoch(Time {scale: Tai, seconds: - 1, subsecond: MAX_FEMTOSECONDS, }, 59)]
+    #[case::one_minute_less_than_the_epoch(Time {scale: Tai, seconds: - SECONDS_PER_MINUTE, subsecond: Subsecond::default() }, 59)]
+    #[case::one_minute_and_one_femtosecond_less_than_the_epoch(Time {scale: Tai, seconds: - SECONDS_PER_MINUTE - 1, subsecond: MAX_FEMTOSECONDS, }, 58)]
+    fn test_time_civil_time_minute(#[case] time: Time<Tai>, #[case] expected: u8) {
+        let actual = time.minute();
+        assert_eq!(expected, actual);
+    }
+
+    #[rstest]
+    #[case::zero_value(Time {scale: Tai, seconds: 0, subsecond: Subsecond::default() }, 0)]
+    #[case::one_femtosecond_less_than_one_second(Time {scale: Tai, seconds: 0, subsecond: MAX_FEMTOSECONDS, }, 0)]
+    #[case::one_second(Time {scale: Tai, seconds: 1, subsecond: Subsecond::default() }, 1)]
+    #[case::one_femtosecond_less_than_a_minute(Time {scale: Tai, seconds: SECONDS_PER_MINUTE - 1, subsecond: MAX_FEMTOSECONDS, }, 59)]
+    #[case::exactly_one_minute(Time {scale: Tai, seconds: SECONDS_PER_MINUTE, subsecond: Subsecond::default() }, 0)]
+    #[case::one_minute_and_one_second(Time {scale: Tai, seconds: SECONDS_PER_MINUTE + 1, subsecond: Subsecond::default() }, 1)]
+    #[case::one_femtosecond_less_than_the_epoch(Time {scale: Tai, seconds: - 1, subsecond: MAX_FEMTOSECONDS, }, 59)]
+    #[case::one_second_less_than_the_epoch(Time {scale: Tai, seconds: - 1, subsecond: Subsecond::default() }, 59)]
+    #[case::one_second_and_one_femtosecond_less_than_the_epoch(Time {scale: Tai, seconds: - 2, subsecond: MAX_FEMTOSECONDS, }, 58)]
+    #[case::one_minute_less_than_the_epoch(Time {scale: Tai, seconds: - SECONDS_PER_MINUTE, subsecond: Subsecond::default() }, 0)]
+    fn test_time_civil_time_second(#[case] time: Time<Tai>, #[case] expected: u8) {
+        let actual = time.second();
+        assert_eq!(expected, actual);
+    }
+
+    const POSITIVE_BASE_TIME_SUBSECONDS_FIXTURE: Time<Tai> = Time {
+        scale: Tai,
+        seconds: 0,
+        subsecond: Subsecond(0.123_456_789_012_345),
+    };
+
+    const NEGATIVE_BASE_TIME_SUBSECONDS_FIXTURE: Time<Tai> = Time {
+        scale: Tai,
+        seconds: -1,
+        subsecond: Subsecond(0.123_456_789_012_345),
+    };
+
+    #[rstest]
+    #[case::positive_time_millisecond(
+        POSITIVE_BASE_TIME_SUBSECONDS_FIXTURE,
+        CivilTime::millisecond,
+        123
+    )]
+    #[case::positive_time_microsecond(
+        POSITIVE_BASE_TIME_SUBSECONDS_FIXTURE,
+        CivilTime::microsecond,
+        456
+    )]
+    #[case::positive_time_nanosecond(
+        POSITIVE_BASE_TIME_SUBSECONDS_FIXTURE,
+        CivilTime::nanosecond,
+        789
+    )]
+    #[case::positive_time_picosecond(
+        POSITIVE_BASE_TIME_SUBSECONDS_FIXTURE,
+        CivilTime::picosecond,
+        12
+    )]
+    #[case::positive_time_femtosecond(
+        POSITIVE_BASE_TIME_SUBSECONDS_FIXTURE,
+        CivilTime::femtosecond,
+        345
+    )]
+    #[case::negative_time_millisecond(
+        NEGATIVE_BASE_TIME_SUBSECONDS_FIXTURE,
+        CivilTime::millisecond,
+        123
+    )]
+    #[case::negative_time_microsecond(
+        NEGATIVE_BASE_TIME_SUBSECONDS_FIXTURE,
+        CivilTime::microsecond,
+        456
+    )]
+    #[case::negative_time_nanosecond(
+        NEGATIVE_BASE_TIME_SUBSECONDS_FIXTURE,
+        CivilTime::nanosecond,
+        789
+    )]
+    #[case::negative_time_picosecond(
+        NEGATIVE_BASE_TIME_SUBSECONDS_FIXTURE,
+        CivilTime::picosecond,
+        12
+    )]
+    #[case::negative_time_femtosecond(
+        NEGATIVE_BASE_TIME_SUBSECONDS_FIXTURE,
+        CivilTime::femtosecond,
+        345
+    )]
+    fn test_time_subseconds(
+        #[case] time: Time<Tai>,
+        #[case] f: fn(&Time<Tai>) -> i64,
+        #[case] expected: i64,
+    ) {
+        let actual = f(&time);
+        assert_eq!(expected, actual);
+    }
+
+    #[rstest]
+    #[case::zero_delta(Time::default(), TimeDelta::default(), Time::default())]
+    #[case::pos_delta_no_carry(Time {scale: Tai, seconds: 1, subsecond: Subsecond(0.3) }, TimeDelta { seconds: 1, subsecond: Subsecond(0.6) }, Time {scale: Tai, seconds: 2, subsecond: Subsecond(0.9) })]
+    #[case::pos_delta_with_carry(Time {scale: Tai, seconds: 1, subsecond: Subsecond(0.3) }, TimeDelta { seconds: 1, subsecond: Subsecond(0.9) }, Time {scale: Tai, seconds: 3, subsecond: Subsecond(0.2) })]
+    #[case::neg_delta_no_carry(Time {scale: Tai, seconds: 1, subsecond: Subsecond(0.6) }, TimeDelta { seconds: -2, subsecond: Subsecond(0.7) }, Time {scale: Tai, seconds: 0, subsecond: Subsecond(0.3) })]
+    #[case::neg_delta_with_carry(Time {scale: Tai, seconds: 1, subsecond: Subsecond(0.6) }, TimeDelta { seconds: -2, subsecond: Subsecond(0.3) }, Time { scale: Tai,seconds: -1, subsecond: Subsecond(0.9) })]
+    fn test_time_add_time_delta(
+        #[case] time: Time<Tai>,
+        #[case] delta: TimeDelta,
+        #[case] expected: Time<Tai>,
+    ) {
+        let actual = time + delta;
+        assert_eq!(expected, actual);
+    }
+
+    #[rstest]
+    #[case::zero_delta(Time::default(), TimeDelta::default(), Time::default())]
+    #[case::pos_delta_no_carry(Time {scale: Tai, seconds: 1, subsecond: Subsecond(0.9) }, TimeDelta { seconds: 1, subsecond: Subsecond(0.3) }, Time {scale: Tai,  seconds: 0, subsecond: Subsecond(0.6) })]
+    #[case::pos_delta_with_carry(Time {scale: Tai, seconds: 1, subsecond: Subsecond(0.3) }, TimeDelta { seconds: 1, subsecond: Subsecond(0.4) }, Time {scale: Tai,  seconds: -1, subsecond: Subsecond(0.9) })]
+    #[case::neg_delta_no_carry(Time {scale: Tai, seconds: 1, subsecond: Subsecond(0.6) }, TimeDelta { seconds: -1, subsecond: Subsecond(0.7) }, Time {scale: Tai, seconds: 1, subsecond: Subsecond(0.9) })]
+    #[case::neg_delta_with_carry(Time {scale: Tai, seconds: 1, subsecond: Subsecond(0.9) }, TimeDelta { seconds: -1, subsecond: Subsecond(0.3) }, Time {scale: Tai, seconds: 2, subsecond: Subsecond(0.6) })]
+    fn test_time_sub_time_delta(
+        #[case] time: Time<Tai>,
+        #[case] delta: TimeDelta,
+        #[case] expected: Time<Tai>,
+    ) {
+        let actual = time - delta;
+        assert_eq!(expected, actual);
+    }
+
+    #[rstest]
+    #[case::at_the_epoch(Time::default(), 0.0)]
+    #[case::exactly_one_day_after_the_epoch(
+    Time {
+        scale: Tai,
+    seconds: SECONDS_PER_DAY,
+    subsecond: Subsecond::default(),
+    },
+    1.0
+    )]
+    #[case::exactly_one_day_before_the_epoch(
+    Time {
+        scale   : Tai,
+    seconds: - SECONDS_PER_DAY,
+    subsecond: Subsecond::default(),
+    },
+    - 1.0
+    )]
+    #[case::a_partial_number_of_days_after_the_epoch(
+    Time {
+        scale   : Tai,
+    seconds: (SECONDS_PER_DAY / 2) * 3,
+    subsecond: Subsecond(0.5),
+    },
+    1.5000057870370371
+    )]
+    fn test_time_days_since_j2000(#[case] time: Time<Tai>, #[case] expected: f64) {
+        let actual = time.days_since_j2000();
+        assert_float_eq!(expected, actual, abs <= 1e-12);
+    }
+
+    #[rstest]
+    #[case::at_the_epoch(Time::default(), 0.0)]
+    #[case::exactly_one_century_after_the_epoch(
+    Time {
+        scale   : Tai,
+    seconds: SECONDS_PER_JULIAN_CENTURY,
+    subsecond: Subsecond::default(),
+    },
+    1.0
+    )]
+    #[case::exactly_one_century_before_the_epoch(
+    Time {
+        scale   : Tai,
+    seconds: - SECONDS_PER_JULIAN_CENTURY,
+    subsecond: Subsecond::default(),
+    },
+    - 1.0
+    )]
+    #[case::a_partial_number_of_centuries_after_the_epoch(
+    Time {
+        scale   : Tai,
+    seconds: (SECONDS_PER_JULIAN_CENTURY / 2) * 3,
+    subsecond: Subsecond(0.5),
+    },
+    1.5000000001584404
+    )]
+    fn test_time_centuries_since_j2000(#[case] time: Time<Tai>, #[case] expected: f64) {
+        let actual = time.centuries_since_j2000();
+        assert_float_eq!(expected, actual, abs <= 1e-12,);
+    }
+
+    #[rstest]
+    #[case::j2000(Time::default(), Date::new(2000, 1, 1).unwrap())]
+    #[case::next_day(Time {scale: Tai, seconds: SECONDS_PER_DAY, subsecond: Subsecond::default()}, Date::new(2000, 1, 2).unwrap())]
+    #[case::leap_year(Time {scale: Tai, seconds: SECONDS_PER_DAY * 366, subsecond: Subsecond::default()}, Date::new(2001, 1, 1).unwrap())]
+    #[case::non_leap_year(Time {scale: Tai, seconds: SECONDS_PER_DAY * (366 + 365), subsecond: Subsecond::default()}, Date::new(2002, 1, 1).unwrap())]
+    #[case::negative_time(Time {scale: Tai, seconds: -SECONDS_PER_DAY, subsecond: Subsecond::default()}, Date::new(1999, 12, 31).unwrap())]
+    fn test_base_time_calendar_date(#[case] base_time: Time<Tai>, #[case] expected: Date) {
+        let actual = base_time.date();
+        assert_eq!(expected, actual);
     }
 }

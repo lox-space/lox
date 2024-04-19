@@ -11,7 +11,6 @@
 
 use mockall::automock;
 
-use crate::base_time::BaseTime;
 use crate::constants::julian_dates::J77;
 use crate::deltas::TimeDelta;
 use crate::subsecond::Subsecond;
@@ -45,15 +44,15 @@ pub const D_TAI_TT: TimeDelta = TimeDelta {
 
 impl TransformTimeScale<Tai, Tt> for TimeScaleTransformer {
     fn transform(&self, time: Time<Tai>) -> Time<Tt> {
-        let base_time = time.base_time() + D_TAI_TT;
-        Time::from_base_time(Tt, base_time)
+        let delta = time.to_delta() + D_TAI_TT;
+        Time::from_delta(Tt, delta)
     }
 }
 
 impl TransformTimeScale<Tt, Tai> for TimeScaleTransformer {
     fn transform(&self, time: Time<Tt>) -> Time<Tai> {
-        let base_time = time.base_time() - D_TAI_TT;
-        Time::from_base_time(Tai, base_time)
+        let delta = time.to_delta() - D_TAI_TT;
+        Time::from_delta(Tai, delta)
     }
 }
 
@@ -68,25 +67,25 @@ const INV_LG: f64 = LG / (1.0 - LG);
 
 impl TransformTimeScale<Tt, Tcg> for TimeScaleTransformer {
     fn transform(&self, time: Time<Tt>) -> Time<Tcg> {
-        Time::from_base_time(Tcg, time.base_time() + delta_tt_tcg(time))
+        Time::from_delta(Tcg, time.to_delta() + delta_tt_tcg(time))
     }
 }
 
 impl TransformTimeScale<Tcg, Tt> for TimeScaleTransformer {
     fn transform(&self, time: Time<Tcg>) -> Time<Tt> {
-        Time::from_base_time(Tt, time.base_time() + delta_tcg_tt(time))
+        Time::from_delta(Tt, time.to_delta() + delta_tcg_tt(time))
     }
 }
 
 impl TransformTimeScale<Tcb, Tdb> for TimeScaleTransformer {
     fn transform(&self, time: Time<Tcb>) -> Time<Tdb> {
-        Time::from_base_time(Tdb, time.base_time() + delta_tcb_tdb(time))
+        Time::from_delta(Tdb, time.to_delta() + delta_tcb_tdb(time))
     }
 }
 
 impl TransformTimeScale<Tdb, Tcb> for TimeScaleTransformer {
     fn transform(&self, time: Time<Tdb>) -> Time<Tcb> {
-        Time::from_base_time(Tcb, time.base_time() + delta_tdb_tcb(time))
+        Time::from_delta(Tcb, time.to_delta() + delta_tdb_tcb(time))
     }
 }
 
@@ -95,7 +94,7 @@ impl TransformTimeScale<Tdb, Tcb> for TimeScaleTransformer {
 /// Users requiring greater accuracy should implement TransformTimeScale<TT, TDB> manually.
 impl TransformTimeScale<Tt, Tdb> for TimeScaleTransformer {
     fn transform(&self, time: Time<Tt>) -> Time<Tdb> {
-        Time::from_base_time(Tdb, time.base_time() + delta_tt_tdb(time))
+        Time::from_delta(Tdb, time.to_delta() + delta_tt_tdb(time))
     }
 }
 
@@ -104,12 +103,12 @@ impl TransformTimeScale<Tt, Tdb> for TimeScaleTransformer {
 /// Users requiring greater accuracy should implement TransformTimeScale<TT, TDB> manually.
 impl TransformTimeScale<Tdb, Tt> for TimeScaleTransformer {
     fn transform(&self, time: Time<Tdb>) -> Time<Tt> {
-        Time::from_base_time(Tt, time.base_time() + delta_tdb_tt(time))
+        Time::from_delta(Tt, time.to_delta() + delta_tdb_tt(time))
     }
 }
 
 fn delta_tt_tcg(time: Time<Tt>) -> TimeDelta {
-    let time = time.base_time().to_f64();
+    let time = time.to_delta().to_decimal_seconds();
     let raw_delta = INV_LG * (time - J77_TT);
     TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
         panic!(
@@ -120,7 +119,7 @@ fn delta_tt_tcg(time: Time<Tt>) -> TimeDelta {
 }
 
 fn delta_tcg_tt(time: Time<Tcg>) -> TimeDelta {
-    let time = time.base_time().to_f64();
+    let time = time.to_delta().to_decimal_seconds();
     let raw_delta = -LG * (time - J77_TT);
     TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
         panic!(
@@ -131,13 +130,11 @@ fn delta_tcg_tt(time: Time<Tcg>) -> TimeDelta {
 }
 
 /// 1977 January 1.0 TAI as TT.
-const TT_0: Time<Tt> = Time::from_base_time(
-    Tt,
-    BaseTime {
-        seconds: J77.seconds + D_TAI_TT.seconds,
-        subsecond: D_TAI_TT.subsecond,
-    },
-);
+const TT_0: Time<Tt> = Time {
+    scale: Tt,
+    seconds: J77.seconds + D_TAI_TT.seconds,
+    subsecond: D_TAI_TT.subsecond,
+};
 
 /// The rate of change of TDB with respect to TCB.
 const LB: f64 = 1.550519768e-8;
@@ -152,15 +149,15 @@ const TDB_0: TimeDelta = TimeDelta {
 };
 
 fn delta_tcb_tdb(time: Time<Tcb>) -> TimeDelta {
-    let time = time.base_time();
-    let tt0 = &TT_0.base_time();
-    time.delta(tt0).scale(-LB) + TDB_0
+    let time = time.to_delta();
+    let tt0 = TT_0.to_delta();
+    (time - tt0).scale(-LB) + TDB_0
 }
 
 fn delta_tdb_tcb(time: Time<Tdb>) -> TimeDelta {
-    let time = time.base_time();
-    let tt0 = &TT_0.base_time();
-    time.delta(tt0).scale(INV_LB) - TDB_0
+    let time = time.to_delta();
+    let tt0 = TT_0.to_delta();
+    (time - tt0).scale(INV_LB) - TDB_0
 }
 
 // TT <-> TDB constants.
@@ -170,7 +167,7 @@ const M_0: f64 = 6.239996;
 const M_1: f64 = 1.99096871e-7;
 
 fn delta_tt_tdb(time: Time<Tt>) -> TimeDelta {
-    let tt = time.timestamp.to_f64();
+    let tt = time.to_delta().to_decimal_seconds();
     let g = M_0 + M_1 * tt;
     let raw_delta = K * (g + EB * g.sin()).sin();
     TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
@@ -182,7 +179,7 @@ fn delta_tt_tdb(time: Time<Tt>) -> TimeDelta {
 }
 
 fn delta_tdb_tt(time: Time<Tdb>) -> TimeDelta {
-    let tdb = time.timestamp.to_f64();
+    let tdb = time.to_delta().to_decimal_seconds();
     let mut tt = tdb;
     let mut raw_delta = 0.0;
     for _ in 1..3 {
@@ -398,13 +395,12 @@ mod tests {
 
     use crate::constants::julian_dates::{J0, SECONDS_BETWEEN_JD_AND_J2000};
     use crate::subsecond::Subsecond;
-    use crate::BaseTime;
 
     use super::*;
 
     // Transformations are tested for agreement with both ERFA and AstroTime.jl.
 
-    const PANIC_INDUCING_BASE_TIME: BaseTime = BaseTime {
+    const PANIC_INDUCING_DELTA: TimeDelta = TimeDelta {
         seconds: 0,
         subsecond: Subsecond(f64::NAN),
     };
@@ -433,21 +429,15 @@ mod tests {
 
     #[rstest]
     #[case::j0(
-        Time::from_base_time(Tt, J0),
-        Time::from_base_time(Tcg, BaseTime::new(-211813488148, Subsecond(0.886_867_966_488_467)))
+        Time::from_delta(Tt, J0),
+        Time::from_delta(Tcg, TimeDelta::new(-211813488148, Subsecond(0.886_867_966_488_467)))
     )]
     #[case::j2000(
         Time::from_seconds(Tt, 0, Subsecond::default()),
         Time::from_seconds(Tcg, 0, Subsecond(0.505_833_286_021_129))
     )]
     #[should_panic]
-    #[case::unrepresentable(
-        Time {
-            timestamp: PANIC_INDUCING_BASE_TIME,
-            scale: Tt,
-        },
-        Time::default(),
-    )]
+    #[case::unrepresentable(Time::from_delta(Tt, PANIC_INDUCING_DELTA), Time::default())]
     fn test_transform_tt_tcg(#[case] tt: Time<Tt>, #[case] expected: Time<Tcg>) {
         let transformer = &TimeScaleTransformer {};
         let tcg = transformer.transform(tt);
@@ -458,18 +448,12 @@ mod tests {
 
     #[rstest]
     #[case::j0(
-        Time::from_base_time(Tcg, J0),
-        Time::from_base_time(Tt, BaseTime::new(-211813487853, Subsecond(0.113_131_930_984_139)))
+        Time::from_delta(Tcg, J0),
+        Time::from_delta(Tt, TimeDelta::new(-211813487853, Subsecond(0.113_131_930_984_139)))
     )]
     #[case::j2000(Time::from_seconds(Tcg, 0, Subsecond::default()), Time::from_seconds(Tt, -1, Subsecond(0.494_166_714_331_400)))]
     #[should_panic]
-    #[case::unrepresentable(
-        Time {
-            timestamp: PANIC_INDUCING_BASE_TIME,
-            scale: Tcg,
-        },
-        Time::default(),
-    )]
+    #[case::unrepresentable(Time::from_delta(Tcg, PANIC_INDUCING_DELTA), Time::default())]
     fn test_transform_tcg_tt(#[case] tcg: Time<Tcg>, #[case] expected: Time<Tt>) {
         let transformer = &TimeScaleTransformer {};
         let tt = transformer.transform(tcg);
@@ -482,8 +466,8 @@ mod tests {
 
     #[rstest]
     #[case::j0(
-        Time::from_base_time(Tcb, J0),
-        Time::from_base_time(Tdb, BaseTime::new(-SECONDS_BETWEEN_JD_AND_J2000 + 3272, Subsecond(0.956_215_636_550_950)))
+        Time::from_delta(Tcb, J0),
+        Time::from_delta(Tdb, TimeDelta::new(-SECONDS_BETWEEN_JD_AND_J2000 + 3272, Subsecond(0.956_215_636_550_950)))
     )]
     #[case::j2000(Time::j2000(Tcb), Time::from_seconds(Tdb, -12, Subsecond(0.746_212_906_242_706)))]
     fn test_transform_tcb_tdb(#[case] tcb: Time<Tcb>, #[case] expected: Time<Tdb>) {
@@ -501,8 +485,8 @@ mod tests {
 
     #[rstest]
     #[case::j0(
-        Time::from_base_time(Tdb, J0),
-        Time::from_base_time(Tcb, BaseTime::new(-SECONDS_BETWEEN_JD_AND_J2000 - 3273, Subsecond(0.043_733_615_615_110)))
+        Time::from_delta(Tdb, J0),
+        Time::from_delta(Tcb, TimeDelta::new(-SECONDS_BETWEEN_JD_AND_J2000 - 3273, Subsecond(0.043_733_615_615_110)))
     )]
     #[case::j2000(
         Time::j2000(Tdb),
@@ -519,16 +503,10 @@ mod tests {
     }
 
     #[rstest]
-    #[case::j0(Time::from_base_time(Tt, J0), Time::from_base_time(Tdb, BaseTime::new(-SECONDS_BETWEEN_JD_AND_J2000, Subsecond(0.001_600_955_458_249))))]
-    #[case::j2000(Time::j2000(Tt), Time::from_base_time(Tdb, BaseTime::new(-1, Subsecond(0.999_927_263_223_809))))]
+    #[case::j0(Time::from_delta(Tt, J0), Time::from_delta(Tdb, TimeDelta::new(-SECONDS_BETWEEN_JD_AND_J2000, Subsecond(0.001_600_955_458_249))))]
+    #[case::j2000(Time::j2000(Tt), Time::from_delta(Tdb, TimeDelta::new(-1, Subsecond(0.999_927_263_223_809))))]
     #[should_panic]
-    #[case::unrepresentable(
-        Time {
-            timestamp: PANIC_INDUCING_BASE_TIME,
-            scale: Tt,
-        },
-    Time::default(),
-    )]
+    #[case::unrepresentable(Time::from_delta(Tt, PANIC_INDUCING_DELTA), Time::default())]
     fn test_transform_tt_tdb(#[case] tt: Time<Tt>, #[case] expected: Time<Tdb>) {
         let transformer = &TimeScaleTransformer {};
         let tdb: Time<Tdb> = transformer.transform(tt);
@@ -538,19 +516,13 @@ mod tests {
     }
 
     #[rstest]
-    #[case::j0(Time::from_base_time(Tdb, J0), Time::from_base_time(Tt, BaseTime::new(-SECONDS_BETWEEN_JD_AND_J2000 - 1, Subsecond(0.998_399_044_541_884))))]
+    #[case::j0(Time::from_delta(Tdb, J0), Time::from_delta(Tt, TimeDelta::new(-SECONDS_BETWEEN_JD_AND_J2000 - 1, Subsecond(0.998_399_044_541_884))))]
     #[case::j2000(
         Time::j2000(Tdb),
-        Time::from_base_time(Tt, BaseTime::new(0, Subsecond(0.000_072_736_776_166)))
+        Time::from_delta(Tt, TimeDelta::new(0, Subsecond(0.000_072_736_776_166)))
     )]
     #[should_panic]
-    #[case::unrepresentable(
-        Time {
-            timestamp: PANIC_INDUCING_BASE_TIME,
-            scale: Tdb,
-        },
-    Time::default(),
-    )]
+    #[case::unrepresentable(Time::from_delta(Tdb, PANIC_INDUCING_DELTA), Time::default())]
     fn test_transform_tdb_tt(#[case] tdb: Time<Tdb>, #[case] expected: Time<Tt>) {
         let transformer = &TimeScaleTransformer {};
         let tt: Time<Tt> = transformer.transform(tdb);
