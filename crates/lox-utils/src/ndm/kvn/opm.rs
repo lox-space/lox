@@ -12,7 +12,7 @@ pub enum KvnStringLineParserErr<I> {
 }
 
 #[derive(PartialEq, Debug)]
-pub enum KvnIntegerLineParserErr<I> {
+pub enum KvnNumberLineParserErr<I> {
     ParseError(nom::Err<nom::error::Error<I>>),
     EmptyValue,
     InvalidFormat,
@@ -121,18 +121,42 @@ fn parse_kvn_integer_line<'a>(
     key: &'a str,
     input: &'a str,
     with_unit: bool,
-) -> Result<(&'a str, KvnValue<i32, &'a str>), KvnIntegerLineParserErr<&'a str>> {
+) -> Result<(&'a str, KvnValue<i32, &'a str>), KvnNumberLineParserErr<&'a str>> {
     parse_kvn_string_line(key, input, with_unit)
         .map_err(|e| match e {
-            KvnStringLineParserErr::EmptyValue => KvnIntegerLineParserErr::EmptyValue,
-            KvnStringLineParserErr::ParseError(e) => KvnIntegerLineParserErr::ParseError(e),
+            KvnStringLineParserErr::EmptyValue => KvnNumberLineParserErr::EmptyValue,
+            KvnStringLineParserErr::ParseError(e) => KvnNumberLineParserErr::ParseError(e),
         })
         .and_then(|result| {
             let value = result
                 .1
                 .value
                 .parse::<i32>()
-                .map_err(|_| KvnIntegerLineParserErr::InvalidFormat)?;
+                .map_err(|_| KvnNumberLineParserErr::InvalidFormat)?;
+
+            Ok((
+                "",
+                KvnValue {
+                    value,
+                    unit: result.1.unit,
+                },
+            ))
+        })
+}
+
+fn parse_kvn_numeric_line<'a>(
+    key: &'a str,
+    input: &'a str,
+    with_unit: bool,
+) -> Result<(&'a str, KvnValue<f64, &'a str>), KvnNumberLineParserErr<&'a str>> {
+    parse_kvn_string_line(key, input, with_unit)
+        .map_err(|e| match e {
+            KvnStringLineParserErr::EmptyValue => KvnNumberLineParserErr::EmptyValue,
+            KvnStringLineParserErr::ParseError(e) => KvnNumberLineParserErr::ParseError(e),
+        })
+        .and_then(|result| {
+            let value = fast_float::parse(result.1.value)
+                .map_err(|_| KvnNumberLineParserErr::InvalidFormat)?;
 
             Ok((
                 "",
@@ -439,12 +463,48 @@ mod test {
 
         assert_eq!(
             parse_kvn_integer_line("SCLK_OFFSET_AT_EPOCH", "SCLK_OFFSET_AT_EPOCH = -asd", true),
-            Err(KvnIntegerLineParserErr::InvalidFormat)
+            Err(KvnNumberLineParserErr::InvalidFormat)
         );
 
         assert_eq!(
             parse_kvn_integer_line("SCLK_OFFSET_AT_EPOCH", "SCLK_OFFSET_AT_EPOCH = [s]", true),
-            Err(KvnIntegerLineParserErr::EmptyValue)
+            Err(KvnNumberLineParserErr::EmptyValue)
+        );
+    }
+
+    #[test]
+    fn test_parse_kvn_numeric_line() {
+        assert_eq!(
+            parse_kvn_numeric_line("X", "X = 66559942 [km]", true),
+            Ok((
+                "",
+                KvnValue {
+                    value: 66559942f64,
+                    unit: Some("km")
+                },
+            ))
+        );
+
+        assert_eq!(
+            parse_kvn_numeric_line("X", "X = 6655.9942 [km]", true),
+            Ok((
+                "",
+                KvnValue {
+                    value: 6655.9942,
+                    unit: Some("km")
+                },
+            ))
+        );
+
+        assert_eq!(
+            parse_kvn_numeric_line("CX_X", "CX_X =  5.801003223606e-05", true),
+            Ok((
+                "",
+                KvnValue {
+                    value: 5.801003223606e-05,
+                    unit: None
+                },
+            ))
         );
     }
 
@@ -481,6 +541,8 @@ mod test {
                 },
             ))
         );
+
+        // @TODO add support for ddd format
 
         assert_eq!(
             parse_kvn_datetime_line("CREATION_DATE", "CREATION_DATE = 2021,06,03Q05!33!00-123"),
