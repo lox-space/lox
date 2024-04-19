@@ -95,6 +95,31 @@ impl CivilTime for Utc {
     }
 }
 
+#[macro_export]
+macro_rules! utc {
+    ($year:literal, $month:literal, $day:literal) => {
+        Utc::new($year, $month, $day)
+    };
+    ($year:literal, $month:literal, $day:literal, $hour:literal) => {
+        match Utc::new($year, $month, $day) {
+            Ok(utc) => utc.with_hms($hour, 0, 0.0),
+            Err(e) => Err(e),
+        }
+    };
+    ($year:literal, $month:literal, $day:literal, $hour:literal, $minute:literal) => {
+        match Utc::new($year, $month, $day) {
+            Ok(utc) => utc.with_hms($hour, $minute, 0.0),
+            Err(e) => Err(e),
+        }
+    };
+    ($year:literal, $month:literal, $day:literal, $hour:literal, $minute:literal, $second:literal) => {
+        match Utc::new($year, $month, $day) {
+            Ok(utc) => utc.with_hms($hour, $minute, $second),
+            Err(e) => Err(e),
+        }
+    };
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -108,5 +133,32 @@ mod tests {
         let expected = "2000-01-01T00:00:00.000000000000000 UTC".to_string();
         let actual = format!("{:.15}", utc);
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_utc_macro() {
+        let utc = utc!(2000, 1, 1).unwrap();
+        assert_eq!(utc.year(), 2000);
+        assert_eq!(utc.month(), 1);
+        assert_eq!(utc.day(), 1);
+        let utc = utc!(2000, 1, 1, 12).unwrap();
+        assert_eq!(utc.year(), 2000);
+        assert_eq!(utc.month(), 1);
+        assert_eq!(utc.day(), 1);
+        assert_eq!(utc.hour(), 12);
+        let utc = utc!(2000, 1, 1, 12, 13).unwrap();
+        assert_eq!(utc.year(), 2000);
+        assert_eq!(utc.month(), 1);
+        assert_eq!(utc.day(), 1);
+        assert_eq!(utc.hour(), 12);
+        assert_eq!(utc.minute(), 13);
+        let utc = utc!(2000, 1, 1, 12, 13, 14.15).unwrap();
+        assert_eq!(utc.year(), 2000);
+        assert_eq!(utc.month(), 1);
+        assert_eq!(utc.day(), 1);
+        assert_eq!(utc.hour(), 12);
+        assert_eq!(utc.minute(), 13);
+        assert_eq!(utc.second(), 14);
+        assert_eq!(utc.millisecond(), 150);
     }
 }
