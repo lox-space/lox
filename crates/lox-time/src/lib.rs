@@ -442,126 +442,6 @@ mod tests {
         );
     }
 
-    // #[test]
-    // fn test_time_civil_time_hour() {
-    //     let base_time = Time {
-    //         seconds: 1234567890,
-    //         subsecond: Subsecond(0.9876543210),
-    //     };
-    //     let expected = base_time.hour();
-    //     let actual = Time::from_base_time(Tai, base_time).hour();
-    //     assert_eq!(
-    //         expected, actual,
-    //         "expected Time to have hour {}, but got {}",
-    //         expected, actual
-    //     );
-    // }
-
-    // #[test]
-    // fn test_time_civil_time_minute() {
-    //     let base_time = BaseTime {
-    //         seconds: 1234567890,
-    //         subsecond: Subsecond(0.9876543210),
-    //     };
-    //     let expected = base_time.minute();
-    //     let actual = Time::from_base_time(Tai, base_time).minute();
-    //     assert_eq!(
-    //         expected, actual,
-    //         "expected Time to have minute {}, but got {}",
-    //         expected, actual,
-    //     );
-    // }
-
-    // #[test]
-    // fn test_time_civil_time_second() {
-    //     let base_time = BaseTime {
-    //         seconds: 1234567890,
-    //         subsecond: Subsecond(0.9876543210),
-    //     };
-    //     let expected = base_time.second();
-    //     let actual = Time::from_base_time(Tai, base_time).second();
-    //     assert_eq!(
-    //         expected, actual,
-    //         "expected Time to have second {}, but got {}",
-    //         expected, actual,
-    //     );
-    // }
-
-    // #[test]
-    // fn test_time_civil_time_millisecond() {
-    //     let base_time = BaseTime {
-    //         seconds: 1234567890,
-    //         subsecond: Subsecond(0.9876543210),
-    //     };
-    //     let expected = base_time.millisecond();
-    //     let actual = Time::from_base_time(Tai, base_time).millisecond();
-    //     assert_eq!(
-    //         expected, actual,
-    //         "expected Time to have millisecond {}, but got {}",
-    //         expected, actual,
-    //     );
-    // }
-
-    // #[test]
-    // fn test_time_civil_time_microsecond() {
-    //     let base_time = BaseTime {
-    //         seconds: 1234567890,
-    //         subsecond: Subsecond(0.9876543210),
-    //     };
-    //     let expected = base_time.microsecond();
-    //     let actual = Time::from_base_time(Tai, base_time).microsecond();
-    //     assert_eq!(
-    //         expected, actual,
-    //         "expected Time to have microsecond {}, but got {}",
-    //         expected, actual,
-    //     );
-    // }
-
-    // #[test]
-    // fn test_time_civil_time_nanosecond() {
-    //     let base_time = BaseTime {
-    //         seconds: 1234567890,
-    //         subsecond: Subsecond(0.9876543210),
-    //     };
-    //     let expected = base_time.nanosecond();
-    //     let actual = Time::from_base_time(Tai, base_time).nanosecond();
-    //     assert_eq!(
-    //         expected, actual,
-    //         "expected Time to have nanosecond {}, but got {}",
-    //         expected, actual,
-    //     );
-    // }
-
-    // #[test]
-    // fn test_time_civil_time_picosecond() {
-    //     let base_time = BaseTime {
-    //         seconds: 1234567890,
-    //         subsecond: Subsecond(0.9876543210),
-    //     };
-    //     let expected = base_time.picosecond();
-    //     let actual = Time::from_base_time(Tai, base_time).picosecond();
-    //     assert_eq!(
-    //         expected, actual,
-    //         "expected Time to have picosecond {}, but got {}",
-    //         expected, actual,
-    //     );
-    // }
-
-    // #[test]
-    // fn test_time_civil_time_femtosecond() {
-    //     let base_time = BaseTime {
-    //         seconds: 1234567890,
-    //         subsecond: Subsecond(0.9876543210),
-    //     };
-    //     let expected = base_time.femtosecond();
-    //     let actual = Time::from_base_time(Tai, base_time).femtosecond();
-    //     assert_eq!(
-    //         expected, actual,
-    //         "expected Time to have femtosecond {}, but got {}",
-    //         expected, actual,
-    //     );
-    // }
-
     #[test]
     fn test_from_scale() {
         let time = Time::j2000(Tai);
@@ -654,39 +534,6 @@ mod tests {
         assert_eq!(jd2, 0.5);
     }
 
-    // #[test]
-    // fn test_time_add_time_delta() {
-    //     let time = Time::j2000(Tai);
-    //     let delta = TimeDelta::from_decimal_seconds(1.5).unwrap();
-    //     let expected = Time {
-    //         scale: Tai,
-    //         timestamp: time.timestamp + delta,
-    //     };
-    //     let actual = Time::j2000(Tai) + delta;
-    //     assert_eq!(expected, actual);
-    // }
-
-    // #[test]
-    // fn test_time_sub_time_delta() {
-    //     let time = Time::j2000(Tai);
-    //     let delta = TimeDelta::from_decimal_seconds(1.5).unwrap();
-    //     let expected = Time {
-    //         scale: Tai,
-    //         timestamp: time.timestamp - delta,
-    //     };
-    //     let actual = Time::j2000(Tai) - delta;
-    //     assert_eq!(expected, actual);
-    // }
-
-    // #[test]
-    // fn test_time_calendar_date() {
-    //     let base_time = BaseTime::default();
-    //     let expected = base_time.date();
-    //     let tai = Time::from_base_time(Tai, base_time);
-    //     let actual = tai.date();
-    //     assert_eq!(expected, actual);
-    // }
-
     #[test]
     fn test_time_macro() {
         let time = time!(Tai, 2000, 1, 1).unwrap();
@@ -701,34 +548,6 @@ mod tests {
         assert_eq!(time.seconds(), 0);
         assert_eq!(time.subsecond(), 0.123);
     }
-
-    // #[test]
-    // fn test_base_time_is_negative() {
-    //     assert!(BaseTime {
-    //         seconds: -1,
-    //         subsecond: Subsecond::default(),
-    //     }
-    //     .is_negative());
-    //     assert!(!BaseTime {
-    //         seconds: 0,
-    //         subsecond: Subsecond::default(),
-    //     }
-    //     .is_negative());
-    //     assert!(!BaseTime {
-    //         seconds: 1,
-    //         subsecond: Subsecond::default(),
-    //     }
-    //     .is_negative());
-    // }
-
-    // #[test]
-    // fn test_base_time_seconds() {
-    //     let time = BaseTime {
-    //         seconds: 123,
-    //         subsecond: Subsecond::default(),
-    //     };
-    //     assert_eq!(time.seconds(), 123);
-    // }
 
     #[test]
     fn test_time_subsecond() {
