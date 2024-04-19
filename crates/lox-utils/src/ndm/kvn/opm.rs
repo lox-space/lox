@@ -438,6 +438,11 @@ mod test {
         );
 
         assert_eq!(
+            parse_kvn_integer_line("SCLK_OFFSET_AT_EPOCH", "SCLK_OFFSET_AT_EPOCH = -asd", true),
+            Err(KvnIntegerLineParserErr::InvalidFormat)
+        );
+
+        assert_eq!(
             parse_kvn_integer_line("SCLK_OFFSET_AT_EPOCH", "SCLK_OFFSET_AT_EPOCH = [s]", true),
             Err(KvnIntegerLineParserErr::EmptyValue)
         );
