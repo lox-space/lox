@@ -6,12 +6,10 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use lox_time::time_of_day::TimeOfDay;
 use num::ToPrimitive;
 use rstest::rstest;
 
 use lox_time::calendar_dates::Date;
-use lox_time::subsecond::Subsecond;
 
 #[rstest]
 #[case(-4713, 12, 31, -2451546)]

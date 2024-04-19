@@ -19,9 +19,7 @@ use lox_utils::constants::f64::time;
 use lox_utils::constants::f64::time::SECONDS_PER_JULIAN_CENTURY;
 
 use crate::calendar_dates::{CalendarDate, Date};
-use crate::constants::i64::{
-    SECONDS_PER_DAY, SECONDS_PER_HALF_DAY, SECONDS_PER_HOUR, SECONDS_PER_MINUTE,
-};
+use crate::constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 use crate::constants::julian_dates::{
     SECONDS_BETWEEN_J1950_AND_J2000, SECONDS_BETWEEN_JD_AND_J2000, SECONDS_BETWEEN_MJD_AND_J2000,
 };
@@ -252,7 +250,7 @@ mod tests {
     use float_eq::assert_float_eq;
     use rstest::rstest;
 
-    use crate::constants::i64::SECONDS_PER_JULIAN_CENTURY;
+    use crate::constants::i64::{SECONDS_PER_HOUR, SECONDS_PER_JULIAN_CENTURY, SECONDS_PER_MINUTE};
     use crate::time_of_day::CivilTime;
 
     use super::*;

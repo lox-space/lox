@@ -15,7 +15,6 @@
 use lox_utils::constants::f64::time::SECONDS_PER_DAY;
 use lox_utils::slices::is_sorted_asc;
 
-use crate::calendar_dates::CalendarDate;
 use crate::deltas::TimeDelta;
 use crate::julian_dates::Epoch::ModifiedJulianDate;
 use crate::julian_dates::JulianDate;
@@ -50,7 +49,7 @@ pub fn delta_utc_tai(utc: Utc) -> Option<TimeDelta> {
     // Invariant: EPOCHS must be sorted for the search below to work
     debug_assert!(is_sorted_asc(&EPOCHS));
 
-    let mjd = utc.date().days_since_j2000() + 51544.5;
+    let mjd = utc.to_delta().days_since_modified_julian_epoch();
     let threshold = mjd.floor() as u64;
     let position = EPOCHS.iter().rposition(|item| item <= &threshold)?;
     let raw_delta =

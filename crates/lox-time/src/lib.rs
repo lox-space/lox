@@ -19,7 +19,7 @@ use std::fmt::{Display, Formatter};
 use std::ops::{Add, Sub};
 
 use calendar_dates::DateError;
-use constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY, SECONDS_PER_HOUR, SECONDS_PER_MINUTE};
+
 use lox_utils::constants::f64::time;
 use num::ToPrimitive;
 use time_of_day::{CivilTime, TimeOfDay, TimeOfDayError};
@@ -281,6 +281,7 @@ mod tests {
     use float_eq::assert_float_eq;
     use mockall::predicate;
 
+    use crate::constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
     use lox_utils::constants::f64::time::DAYS_PER_JULIAN_CENTURY;
     use lox_utils::constants::i32::time::JD_J2000;
 

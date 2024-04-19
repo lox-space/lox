@@ -10,10 +10,10 @@ use std::fmt::Display;
 use std::sync::OnceLock;
 
 use crate::deltas::TimeDelta;
+use crate::time_of_day::CivilTime;
 use crate::time_of_day::TimeOfDay;
 use crate::time_scales::Tai;
 use crate::Time;
-use crate::{base_time::BaseTime, time_of_day::CivilTime};
 
 use super::{Utc, UtcError};
 

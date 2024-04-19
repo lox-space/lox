@@ -16,7 +16,14 @@ use lox_utils::constants::f64::time::{
     SECONDS_PER_MINUTE,
 };
 
-use crate::subsecond::Subsecond;
+use crate::{
+    constants::julian_dates::{
+        SECONDS_BETWEEN_J1950_AND_J2000, SECONDS_BETWEEN_JD_AND_J2000,
+        SECONDS_BETWEEN_MJD_AND_J2000,
+    },
+    julian_dates::{Epoch, JulianDate, Unit},
+    subsecond::Subsecond,
+};
 
 #[derive(Clone, Debug, Default, Error)]
 #[error("`{raw}` cannot be represented as a `TimeDelta`: {detail}")]
@@ -211,6 +218,32 @@ impl TimeDelta {
         } else {
             result
         }
+    }
+
+    pub fn seconds_from_epoch(&self, epoch: Epoch) -> i64 {
+        match epoch {
+            Epoch::JulianDate => self.seconds + SECONDS_BETWEEN_JD_AND_J2000,
+            Epoch::ModifiedJulianDate => self.seconds + SECONDS_BETWEEN_MJD_AND_J2000,
+            Epoch::J1950 => self.seconds + SECONDS_BETWEEN_J1950_AND_J2000,
+            Epoch::J2000 => self.seconds,
+        }
+    }
+}
+
+impl JulianDate for TimeDelta {
+    fn julian_date(&self, epoch: Epoch, unit: Unit) -> f64 {
+        let mut decimal_seconds = self.seconds_from_epoch(epoch).to_f64().unwrap();
+        decimal_seconds += self.subsecond.0;
+        match unit {
+            Unit::Seconds => decimal_seconds,
+            Unit::Days => decimal_seconds / SECONDS_PER_DAY,
+            Unit::Centuries => decimal_seconds / SECONDS_PER_JULIAN_CENTURY,
+        }
+    }
+
+    fn two_part_julian_date(&self) -> (f64, f64) {
+        let days = self.julian_date(Epoch::JulianDate, Unit::Days);
+        (days.trunc(), days.fract())
     }
 }
 

@@ -262,8 +262,6 @@ mod tests {
     use float_eq::assert_float_eq;
 
     use lox_bodies::Earth;
-    use lox_time::calendar_dates::Date;
-    use lox_time::subsecond::Subsecond;
     use lox_time::time_scales::Tdb;
     use lox_time::{time, Time};
 
