@@ -6,6 +6,7 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use std::error::Error;
 use std::fmt::Display;
 use std::sync::OnceLock;
 
@@ -19,7 +20,7 @@ use crate::deltas::{TimeDelta, TimeDeltaError};
 use crate::julian_dates::Epoch::ModifiedJulianDate;
 use crate::julian_dates::JulianDate;
 use crate::julian_dates::Unit::Days;
-use crate::time_scales::{Tai, Ut1};
+use crate::time_scales::{Tai, TimeScale, Ut1};
 use crate::transformations::TransformTimeScale;
 use crate::utc::{Utc, UtcDateTime, UtcUndefinedError};
 use crate::Time;
@@ -95,6 +96,16 @@ fn tai_at_utc_1972_01_01() -> &'static Time<Tai> {
     })
 }
 
+pub trait TryTransformTimeScale<T, U>
+where
+    T: TimeScale + Copy,
+    U: TimeScale + Copy,
+{
+    type Error: Error;
+
+    fn try_transform(&self, time: Time<T>) -> Result<Time<U>, Self::Error>;
+}
+
 /// Transform between [TimeScale]s which require observed data, namely the delta between UT1 and
 /// UTC.
 ///
@@ -119,10 +130,10 @@ pub enum TransformationError {
     TimeDeltaError(#[from] TimeDeltaError),
 }
 
-impl<D: DeltaUt1Utc> TransformTimeScale<Tai, Ut1> for &ObservedDataTimeScaleTransformer<D> {
+impl<D: DeltaUt1Utc> TryTransformTimeScale<Tai, Ut1> for &ObservedDataTimeScaleTransformer<D> {
     type Error = TransformationError;
 
-    fn transform(&self, time: Time<Tai>) -> Result<Time<Ut1>, Self::Error> {
+    fn try_transform(&self, time: Time<Tai>) -> Result<Time<Ut1>, Self::Error> {
         let mjd = time.julian_date(ModifiedJulianDate, Days);
         let d_ut1_utc = self.d_ut1_utc_provider.delta_ut1_utc(mjd)?;
         let d_ut1_utc = TimeDelta::from_decimal_seconds(d_ut1_utc)?;
