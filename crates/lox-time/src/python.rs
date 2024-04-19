@@ -83,14 +83,14 @@ impl Display for PyTimeScale {
 pub struct PyTimeScaleTransformer(TimeScaleTransformer);
 
 #[pyclass(name = "Time")]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 struct PyTime(Time<PyTimeScale>);
 
 #[pymethods]
 impl PyTime {
     fn to_tai(&self, _transformer: Option<PyTimeScaleTransformer>) -> Result<Self, PyErr> {
         match self.0.scale() {
-            PyTimeScale::Tai => Ok(*self),
+            PyTimeScale::Tai => Ok(self.clone()),
             PyTimeScale::Tcb => {
                 let tcb = self.0.override_scale(Tcb);
                 let tai = tcb.to_tai().override_scale(PyTimeScale::Tai);
@@ -150,7 +150,7 @@ impl PyTime {
                 let tt = tai.to_tt().override_scale(PyTimeScale::Tt);
                 Ok(PyTime(tt))
             }
-            PyTimeScale::Tt => Ok(*self),
+            PyTimeScale::Tt => Ok(self.clone()),
             PyTimeScale::Ut1 => {
                 unimplemented!()
                 // if let Some(transformer) = transformer {
@@ -175,7 +175,7 @@ impl PyTime {
                 let tcb = tdb.to_tcb().override_scale(PyTimeScale::Tcb);
                 Ok(PyTime(tcb))
             }
-            PyTimeScale::Tcb => Ok(*self),
+            PyTimeScale::Tcb => Ok(self.clone()),
             PyTimeScale::Tcg => {
                 let tcg = self.0.override_scale(Tcg);
                 let tt = tcg.to_tt();
@@ -226,7 +226,7 @@ impl PyTime {
                 let tcg = tt.to_tcg().override_scale(PyTimeScale::Tcg);
                 Ok(PyTime(tcg))
             }
-            PyTimeScale::Tcg => Ok(*self),
+            PyTimeScale::Tcg => Ok(self.clone()),
             PyTimeScale::Tdb => {
                 let tdb = self.0.override_scale(Tdb);
                 let tt = tdb.to_tt();
@@ -273,7 +273,7 @@ impl PyTime {
                 let tdb = tt.to_tdb().override_scale(PyTimeScale::Tdb);
                 Ok(PyTime(tdb))
             }
-            PyTimeScale::Tdb => Ok(*self),
+            PyTimeScale::Tdb => Ok(self.clone()),
             PyTimeScale::Tt => {
                 let tt = self.0.override_scale(Tt);
                 let tdb = tt.to_tdb().override_scale(PyTimeScale::Tdb);
