@@ -311,7 +311,19 @@ fn days_since_j2000(calendar: Calendar, year: i64, month: u8, day: u8) -> i64 {
 
 /// CalendarDate allows continuous time formats to report their date in their respective calendar.
 pub trait CalendarDate {
-    fn calendar_date(&self) -> Date;
+    fn date(&self) -> Date;
+
+    fn year(&self) -> i64 {
+        self.date().year()
+    }
+
+    fn month(&self) -> u8 {
+        self.date().month()
+    }
+
+    fn day(&self) -> u8 {
+        self.date().day()
+    }
 }
 
 #[cfg(test)]

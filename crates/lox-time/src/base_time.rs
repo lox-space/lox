@@ -13,7 +13,7 @@ use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, Sub};
 
-use num::{abs, ToPrimitive};
+use num::ToPrimitive;
 
 use lox_utils::constants::f64::time;
 use lox_utils::constants::f64::time::SECONDS_PER_JULIAN_CENTURY;
@@ -28,7 +28,7 @@ use crate::constants::julian_dates::{
 use crate::deltas::TimeDelta;
 use crate::julian_dates::{Epoch, JulianDate, Unit};
 use crate::subsecond::Subsecond;
-use crate::time_of_day::CivilTime;
+use crate::time_of_day::{CivilTime, TimeOfDay};
 use crate::utc::{UtcDateTime, UtcOld};
 
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
@@ -110,7 +110,7 @@ impl BaseTime {
         }
     }
 
-    fn is_negative(&self) -> bool {
+    pub fn is_negative(&self) -> bool {
         self.seconds < 0
     }
 
@@ -209,64 +209,18 @@ impl Sub<TimeDelta> for BaseTime {
 }
 
 impl CivilTime for BaseTime {
-    fn hour(&self) -> u8 {
-        // Since J2000 is taken from midday, we offset by half a day to get the wall clock hour.
-        let seconds_after_midnight: i64 = if self.is_negative() {
-            let seconds_before_midnight =
-                (abs(self.seconds) + SECONDS_PER_HALF_DAY) % SECONDS_PER_DAY;
-            if seconds_before_midnight == 0 {
-                return 0;
-            }
-            SECONDS_PER_DAY - seconds_before_midnight
-        } else {
-            (self.seconds + SECONDS_PER_HALF_DAY) % SECONDS_PER_DAY
-        };
-        (seconds_after_midnight / SECONDS_PER_HOUR) as u8
-    }
-
-    fn minute(&self) -> u8 {
-        let seconds_after_hour: i64 = if self.is_negative() {
-            let seconds_before_hour = abs(self.seconds) % SECONDS_PER_HOUR;
-            if seconds_before_hour == 0 {
-                return 0;
-            }
-            SECONDS_PER_HOUR - seconds_before_hour
-        } else {
-            self.seconds % SECONDS_PER_HOUR
-        };
-        (seconds_after_hour / SECONDS_PER_MINUTE) as u8
-    }
-
-    fn second(&self) -> u8 {
-        if self.is_negative() {
-            let seconds_before_minute = abs(self.seconds) % SECONDS_PER_MINUTE;
-            if seconds_before_minute == 0 {
-                return 0;
-            }
-            (SECONDS_PER_MINUTE - seconds_before_minute) as u8
-        } else {
-            (self.seconds % SECONDS_PER_MINUTE) as u8
+    fn time(&self) -> TimeOfDay {
+        let mut second_of_day = (self.seconds + SECONDS_PER_HALF_DAY) % SECONDS_PER_DAY;
+        if second_of_day.is_negative() {
+            second_of_day += SECONDS_PER_DAY;
         }
-    }
-
-    fn millisecond(&self) -> i64 {
-        self.subsecond.millisecond()
-    }
-
-    fn microsecond(&self) -> i64 {
-        self.subsecond.microsecond()
-    }
-
-    fn nanosecond(&self) -> i64 {
-        self.subsecond.nanosecond()
-    }
-
-    fn picosecond(&self) -> i64 {
-        self.subsecond.picosecond()
-    }
-
-    fn femtosecond(&self) -> i64 {
-        self.subsecond.femtosecond()
+        TimeOfDay::from_second_of_day(
+            second_of_day
+                .to_u64()
+                .unwrap_or_else(|| unreachable!("second of day should be positive")),
+        )
+        .unwrap_or_else(|_| unreachable!("second of day should be in range"))
+        .with_subsecond(self.subsecond)
     }
 }
 
@@ -292,7 +246,7 @@ impl CalendarDate for BaseTime {
     /// awareness of leap seconds. If required, callers must account for leap seconds manually,
     /// or use the higher-level conversions from UTC to continuous timescales, which provide this
     /// functionality.
-    fn calendar_date(&self) -> Date {
+    fn date(&self) -> Date {
         // Add half a day to get a time measured from midnight rather than midday.
         let seconds = self.seconds + SECONDS_PER_HALF_DAY;
         let mut time = seconds % SECONDS_PER_DAY;
@@ -309,7 +263,8 @@ mod tests {
     use float_eq::assert_float_eq;
     use rstest::rstest;
 
-    use crate::{constants::i64::SECONDS_PER_JULIAN_CENTURY, time_of_day::CivilTime};
+    use crate::constants::i64::SECONDS_PER_JULIAN_CENTURY;
+    use crate::time_of_day::CivilTime;
 
     use super::*;
 
@@ -640,7 +595,7 @@ mod tests {
     #[case::non_leap_year(BaseTime { seconds: SECONDS_PER_DAY * (366 + 365), subsecond: Subsecond::default()}, Date::new(2002, 1, 1).unwrap())]
     #[case::negative_time(BaseTime { seconds: -SECONDS_PER_DAY, subsecond: Subsecond::default()}, Date::new(1999, 12, 31).unwrap())]
     fn test_base_time_calendar_date(#[case] base_time: BaseTime, #[case] expected: Date) {
-        let actual = base_time.calendar_date();
+        let actual = base_time.date();
         assert_eq!(expected, actual);
     }
 }

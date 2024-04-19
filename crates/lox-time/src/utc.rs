@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::fmt::{self, Display, Formatter};
 
 use thiserror::Error;
 
@@ -52,12 +52,23 @@ impl Utc {
         let time = TimeOfDay::from_hms_decimal(hour, minute, seconds)?;
         self.with_time_of_day(time)
     }
+}
 
-    pub fn date(&self) -> Date {
+impl Display for Utc {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let precision = f.precision().unwrap_or(3);
+        write!(f, "{}T{:.*} UTC", self.date(), precision, self.time(),)
+    }
+}
+
+impl CalendarDate for Utc {
+    fn date(&self) -> Date {
         self.date
     }
+}
 
-    pub fn time(&self) -> TimeOfDay {
+impl CivilTime for Utc {
+    fn time(&self) -> TimeOfDay {
         self.time
     }
 }
@@ -112,36 +123,10 @@ impl Display for UtcOld {
 }
 
 impl CivilTime for UtcOld {
-    fn hour(&self) -> u8 {
-        self.hour
-    }
-
-    fn minute(&self) -> u8 {
-        self.minute
-    }
-
-    fn second(&self) -> u8 {
-        self.second
-    }
-
-    fn millisecond(&self) -> i64 {
-        self.subsecond.millisecond()
-    }
-
-    fn microsecond(&self) -> i64 {
-        self.subsecond.microsecond()
-    }
-
-    fn nanosecond(&self) -> i64 {
-        self.subsecond.nanosecond()
-    }
-
-    fn picosecond(&self) -> i64 {
-        self.subsecond.picosecond()
-    }
-
-    fn femtosecond(&self) -> i64 {
-        self.subsecond.femtosecond()
+    fn time(&self) -> TimeOfDay {
+        TimeOfDay::new(self.hour, self.minute, self.second)
+            .unwrap()
+            .with_subsecond(self.subsecond)
     }
 }
 
@@ -173,7 +158,7 @@ impl UtcDateTime {
             second: base_time.second() as u8,
             subsecond: base_time.subsecond,
         };
-        let date = base_time.calendar_date();
+        let date = base_time.date();
         Self::new(date, time)
     }
 
@@ -219,8 +204,14 @@ mod tests {
     };
 
     #[test]
-    fn test_time_display() {
-        assert_eq!("12:34:56.789.123.456.789.123 UTC", TIME.to_string());
+    fn test_utc_display() {
+        let utc = Utc::default();
+        let expected = "2000-01-01T00:00:00.000 UTC".to_string();
+        let actual = utc.to_string();
+        assert_eq!(expected, actual);
+        let expected = "2000-01-01T00:00:00.000000000000000 UTC".to_string();
+        let actual = format!("{:.15}", utc);
+        assert_eq!(expected, actual);
     }
 
     #[test]

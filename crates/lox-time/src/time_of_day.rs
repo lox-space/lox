@@ -23,14 +23,39 @@ pub enum TimeOfDayError {
 /// `CivilTime` is the trait by which high-precision time representations expose human-readable time
 /// components.
 pub trait CivilTime {
-    fn hour(&self) -> u8;
-    fn minute(&self) -> u8;
-    fn second(&self) -> u8;
-    fn millisecond(&self) -> i64;
-    fn microsecond(&self) -> i64;
-    fn nanosecond(&self) -> i64;
-    fn picosecond(&self) -> i64;
-    fn femtosecond(&self) -> i64;
+    fn time(&self) -> TimeOfDay;
+
+    fn hour(&self) -> u8 {
+        self.time().hour()
+    }
+
+    fn minute(&self) -> u8 {
+        self.time().minute()
+    }
+
+    fn second(&self) -> u8 {
+        self.time().second()
+    }
+
+    fn millisecond(&self) -> i64 {
+        self.time().subsecond().millisecond()
+    }
+
+    fn microsecond(&self) -> i64 {
+        self.time().subsecond().microsecond()
+    }
+
+    fn nanosecond(&self) -> i64 {
+        self.time().subsecond().nanosecond()
+    }
+
+    fn picosecond(&self) -> i64 {
+        self.time().subsecond().picosecond()
+    }
+
+    fn femtosecond(&self) -> i64 {
+        self.time().subsecond().femtosecond()
+    }
 }
 
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
@@ -79,51 +104,33 @@ impl TimeOfDay {
         *self
     }
 
+    pub fn hour(&self) -> u8 {
+        self.hour
+    }
+
+    pub fn minute(&self) -> u8 {
+        self.minute
+    }
+
+    pub fn second(&self) -> u8 {
+        self.second
+    }
+
     pub fn subsecond(&self) -> Subsecond {
         self.subsecond
     }
 }
 
-impl CivilTime for TimeOfDay {
-    fn hour(&self) -> u8 {
-        self.hour
-    }
-
-    fn minute(&self) -> u8 {
-        self.minute
-    }
-
-    fn second(&self) -> u8 {
-        self.second
-    }
-
-    fn millisecond(&self) -> i64 {
-        self.subsecond.millisecond()
-    }
-
-    fn microsecond(&self) -> i64 {
-        self.subsecond.microsecond()
-    }
-
-    fn nanosecond(&self) -> i64 {
-        self.subsecond.nanosecond()
-    }
-
-    fn picosecond(&self) -> i64 {
-        self.subsecond.picosecond()
-    }
-
-    fn femtosecond(&self) -> i64 {
-        self.subsecond.femtosecond()
-    }
-}
-
 impl Display for TimeOfDay {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let precision = f.precision().unwrap_or(3);
         write!(
             f,
-            "{:02}:{:02}:{:02}.{}",
-            self.hour, self.minute, self.second, self.subsecond
+            "{:02}:{:02}:{:02}{}",
+            self.hour,
+            self.minute,
+            self.second,
+            format!("{:.*}", precision, self.subsecond).trim_start_matches('0')
         )
     }
 }
@@ -153,5 +160,13 @@ mod tests {
         assert_eq!(hms_from_second_of_day(43201), (12, 0, 1));
         assert_eq!(hms_from_second_of_day(86399), (23, 59, 59));
         assert_eq!(hms_from_second_of_day(86400), (23, 59, 60));
+    }
+
+    #[test]
+    fn test_time_of_day_display() {
+        let subsecond = Subsecond::new(0.123456789123456).unwrap();
+        let time = TimeOfDay::new(12, 0, 0).unwrap().with_subsecond(subsecond);
+        assert_eq!(format!("{}", time), "12:00:00.123");
+        assert_eq!(format!("{:.15}", time), "12:00:00.123456789123456");
     }
 }

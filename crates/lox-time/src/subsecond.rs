@@ -14,9 +14,15 @@ use num::ToPrimitive;
 
 use thiserror::Error;
 
-#[derive(Debug, Copy, Clone, Error, PartialOrd)]
+#[derive(Debug, Copy, Clone, Error)]
 #[error("subsecond must be in the range [0.0, 1.0), but was `{0}`")]
 pub struct InvalidSubsecond(f64);
+
+impl PartialOrd for InvalidSubsecond {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
 
 impl Ord for InvalidSubsecond {
     fn cmp(&self, other: &Self) -> Ordering {
@@ -100,15 +106,8 @@ impl Subsecond {
 
 impl Display for Subsecond {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{:03}.{:03}.{:03}.{:03}.{:03}",
-            self.millisecond(),
-            self.microsecond(),
-            self.nanosecond(),
-            self.picosecond(),
-            self.femtosecond()
-        )
+        let precision = f.precision().unwrap_or(3);
+        write!(f, "{:.*}", precision, self.0,)
     }
 }
 
@@ -183,7 +182,8 @@ mod tests {
     #[test]
     fn test_subsecond_display() {
         let subsecond = Subsecond(0.123456789876543);
-        assert_eq!("123.456.789.876.543", subsecond.to_string());
+        assert_eq!("0.123", subsecond.to_string());
+        assert_eq!(format!("{:.15}", subsecond), "0.123456789876543");
     }
 
     #[test]

@@ -138,18 +138,6 @@ impl<T: TimeScale + Copy> Time<T> {
         self.scale
     }
 
-    pub fn date(&self) -> Date {
-        Date::from_days_since_j2000(self.timestamp.seconds() / SECONDS_PER_DAY)
-    }
-
-    pub fn time(&self) -> TimeOfDay {
-        TimeOfDay::from_second_of_day(
-            (self.timestamp.seconds() % SECONDS_PER_DAY + SECONDS_PER_HALF_DAY) as u64,
-        )
-        .unwrap_or_else(|_| unreachable!("seconds should be within range"))
-        .with_subsecond(self.timestamp.subsecond)
-    }
-
     /// Returns a new [Time] with [scale] without changing the underlying timestamp.
     pub fn override_scale<S: TimeScale + Copy>(&self, scale: S) -> Time<S> {
         Time::from_base_time(scale, self.timestamp)
@@ -226,7 +214,15 @@ impl<T: TimeScale + Copy> JulianDate for Time<T> {
 
 impl<T: TimeScale + Copy> Display for Time<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{} {}", self.timestamp, self.scale.abbreviation())
+        let precision = f.precision().unwrap_or(3);
+        write!(
+            f,
+            "{}T{:.*} {}",
+            self.date(),
+            precision,
+            self.time(),
+            self.scale.abbreviation()
+        )
     }
 }
 
@@ -247,42 +243,24 @@ impl<T: TimeScale + Copy> Sub<TimeDelta> for Time<T> {
 }
 
 impl<T: TimeScale + Copy> CivilTime for Time<T> {
-    fn hour(&self) -> u8 {
-        self.timestamp.hour()
-    }
-
-    fn minute(&self) -> u8 {
-        self.timestamp.minute()
-    }
-
-    fn second(&self) -> u8 {
-        self.timestamp.second()
-    }
-
-    fn millisecond(&self) -> i64 {
-        self.timestamp.millisecond()
-    }
-
-    fn microsecond(&self) -> i64 {
-        self.timestamp.microsecond()
-    }
-
-    fn nanosecond(&self) -> i64 {
-        self.timestamp.nanosecond()
-    }
-
-    fn picosecond(&self) -> i64 {
-        self.timestamp.picosecond()
-    }
-
-    fn femtosecond(&self) -> i64 {
-        self.timestamp.femtosecond()
+    fn time(&self) -> TimeOfDay {
+        let mut second_of_day = (self.timestamp.seconds + SECONDS_PER_HALF_DAY) % SECONDS_PER_DAY;
+        if second_of_day.is_negative() {
+            second_of_day += SECONDS_PER_DAY;
+        }
+        TimeOfDay::from_second_of_day(
+            second_of_day
+                .to_u64()
+                .unwrap_or_else(|| unreachable!("second of day should be positive")),
+        )
+        .unwrap_or_else(|_| unreachable!("second of day should be in range"))
+        .with_subsecond(self.timestamp.subsecond)
     }
 }
 
 impl<T: TimeScale + Copy> CalendarDate for Time<T> {
-    fn calendar_date(&self) -> Date {
-        self.timestamp.calendar_date()
+    fn date(&self) -> Date {
+        self.timestamp.date()
     }
 }
 
@@ -374,8 +352,11 @@ mod tests {
     #[test]
     fn test_time_display() {
         let time = Time::j2000(Tai);
-        let expected = "12:00:00.000.000.000.000.000 TAI".to_string();
+        let expected = "2000-01-01T12:00:00.000 TAI".to_string();
         let actual = time.to_string();
+        assert_eq!(expected, actual);
+        let expected = "2000-01-01T12:00:00.000000000000000 TAI".to_string();
+        let actual = format!("{:.15}", time);
         assert_eq!(expected, actual);
     }
 
@@ -705,9 +686,9 @@ mod tests {
     #[test]
     fn test_time_calendar_date() {
         let base_time = BaseTime::default();
-        let expected = base_time.calendar_date();
+        let expected = base_time.date();
         let tai = Time::from_base_time(Tai, base_time);
-        let actual = tai.calendar_date();
+        let actual = tai.date();
         assert_eq!(expected, actual);
     }
 
