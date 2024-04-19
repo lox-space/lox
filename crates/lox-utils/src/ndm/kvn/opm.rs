@@ -6,9 +6,16 @@ use nom::sequence as ns;
 use regex::Regex;
 
 #[derive(PartialEq, Debug)]
-pub enum KvnLineParserErr<I> {
+pub enum KvnStringLineParserErr<I> {
     ParseError(nom::Err<nom::error::Error<I>>),
     EmptyValue,
+}
+
+#[derive(PartialEq, Debug)]
+pub enum KvnIntegerLineParserErr<I> {
+    ParseError(nom::Err<nom::error::Error<I>>),
+    EmptyValue,
+    InvalidFormat,
 }
 
 #[derive(PartialEq, Debug)]
@@ -61,9 +68,10 @@ fn parse_kvn_string_line<'a>(
     key: &'a str,
     input: &'a str,
     with_unit: bool,
-) -> Result<(&'a str, KvnValue<&'a str, &'a str>), KvnLineParserErr<&'a str>> {
+) -> Result<(&'a str, KvnValue<&'a str, &'a str>), KvnStringLineParserErr<&'a str>> {
     if key == "COMMENT" {
-        let (_, comment) = comment_line(input).map_err(|e| KvnLineParserErr::ParseError(e))?;
+        let (_, comment) =
+            comment_line(input).map_err(|e| KvnStringLineParserErr::ParseError(e))?;
 
         return Ok((
             "",
@@ -74,7 +82,8 @@ fn parse_kvn_string_line<'a>(
         ));
     }
 
-    let (remaining, result) = kvn_line(key, input).map_err(|e| KvnLineParserErr::ParseError(e))?;
+    let (remaining, result) =
+        kvn_line(key, input).map_err(|e| KvnStringLineParserErr::ParseError(e))?;
 
     let parsed_right_hand_side = result.1;
 
@@ -94,7 +103,7 @@ fn parse_kvn_string_line<'a>(
     };
 
     if parsed_value.len() == 0 {
-        return Err(KvnLineParserErr::EmptyValue);
+        return Err(KvnStringLineParserErr::EmptyValue);
     }
 
     let parsed_value = parsed_value.trim_end();
@@ -106,6 +115,33 @@ fn parse_kvn_string_line<'a>(
             unit: parsed_unit,
         },
     ))
+}
+
+fn parse_kvn_integer_line<'a>(
+    key: &'a str,
+    input: &'a str,
+    with_unit: bool,
+) -> Result<(&'a str, KvnValue<i32, &'a str>), KvnIntegerLineParserErr<&'a str>> {
+    parse_kvn_string_line(key, input, with_unit)
+        .map_err(|e| match e {
+            KvnStringLineParserErr::EmptyValue => KvnIntegerLineParserErr::EmptyValue,
+            KvnStringLineParserErr::ParseError(e) => KvnIntegerLineParserErr::ParseError(e),
+        })
+        .and_then(|result| {
+            let value = result
+                .1
+                .value
+                .parse::<i32>()
+                .map_err(|_| KvnIntegerLineParserErr::InvalidFormat)?;
+
+            Ok((
+                "",
+                KvnValue {
+                    value,
+                    unit: result.1.unit,
+                },
+            ))
+        })
 }
 
 fn parse_kvn_datetime_line<'a>(
@@ -227,15 +263,15 @@ mod test {
         );
         assert_eq!(
             parse_kvn_string_line("ASD", "ASD =    ", true),
-            Err(KvnLineParserErr::EmptyValue)
+            Err(KvnStringLineParserErr::EmptyValue)
         );
         assert_eq!(
             parse_kvn_string_line("ASD", "ASD = ", true),
-            Err(KvnLineParserErr::EmptyValue)
+            Err(KvnStringLineParserErr::EmptyValue)
         );
         assert_eq!(
             parse_kvn_string_line("ASD", "ASD =", true),
-            Err(KvnLineParserErr::EmptyValue)
+            Err(KvnStringLineParserErr::EmptyValue)
         );
 
         // 7.4.7 Any white space immediately preceding the end of line shall not be significant.
@@ -275,12 +311,12 @@ mod test {
 
         assert_eq!(
             parse_kvn_string_line("ASD", "ASD =  [km]", true),
-            Err(KvnLineParserErr::EmptyValue)
+            Err(KvnStringLineParserErr::EmptyValue)
         );
 
         assert_eq!(
             parse_kvn_string_line("ASD", "ASD   [km]", true),
-            Err(KvnLineParserErr::ParseError(nom::Err::Error(
+            Err(KvnStringLineParserErr::ParseError(nom::Err::Error(
                 nom::error::Error {
                     input: "[km]",
                     code: nom::error::ErrorKind::Char
@@ -289,7 +325,7 @@ mod test {
         );
         assert_eq!(
             parse_kvn_string_line("ASD", " =  [km]", true),
-            Err(KvnLineParserErr::ParseError(nom::Err::Error(
+            Err(KvnStringLineParserErr::ParseError(nom::Err::Error(
                 nom::error::Error {
                     input: "=  [km]",
                     code: nom::error::ErrorKind::Tag
@@ -337,6 +373,74 @@ mod test {
         // 7.4.4 Keywords must be uppercase and must not contain blanks
         //@TODO parse dates and floats and integers
         //@TODO return error code when the key doesn't exist
+    }
+
+    #[test]
+    fn test_parse_kvn_integer_line() {
+        assert_eq!(
+            parse_kvn_integer_line(
+                "SCLK_OFFSET_AT_EPOCH",
+                "SCLK_OFFSET_AT_EPOCH = 28800 [s]",
+                true
+            ),
+            Ok((
+                "",
+                KvnValue {
+                    value: 28800,
+                    unit: Some("s")
+                },
+            ))
+        );
+
+        assert_eq!(
+            parse_kvn_integer_line(
+                "SCLK_OFFSET_AT_EPOCH",
+                "SCLK_OFFSET_AT_EPOCH = 00028800 [s]",
+                true
+            ),
+            Ok((
+                "",
+                KvnValue {
+                    value: 28800,
+                    unit: Some("s")
+                },
+            ))
+        );
+
+        assert_eq!(
+            parse_kvn_integer_line(
+                "SCLK_OFFSET_AT_EPOCH",
+                "SCLK_OFFSET_AT_EPOCH = -28800 [s]",
+                true
+            ),
+            Ok((
+                "",
+                KvnValue {
+                    value: -28800,
+                    unit: Some("s")
+                },
+            ))
+        );
+
+        assert_eq!(
+            parse_kvn_integer_line(
+                "SCLK_OFFSET_AT_EPOCH",
+                "SCLK_OFFSET_AT_EPOCH = -28800",
+                true
+            ),
+            Ok((
+                "",
+                KvnValue {
+                    value: -28800,
+                    unit: None
+                },
+            ))
+        );
+
+        assert_eq!(
+            parse_kvn_integer_line("SCLK_OFFSET_AT_EPOCH", "SCLK_OFFSET_AT_EPOCH = [s]", true),
+            Err(KvnIntegerLineParserErr::EmptyValue)
+        );
     }
 
     #[test]
