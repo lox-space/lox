@@ -1,7 +1,11 @@
 use std::fmt::Display;
 
-use crate::subsecond::{InvalidSubsecond, Subsecond};
+use crate::{
+    constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY, SECONDS_PER_HOUR, SECONDS_PER_MINUTE},
+    subsecond::{InvalidSubsecond, Subsecond},
+};
 
+use num::ToPrimitive;
 use thiserror::Error;
 
 #[derive(Debug, Copy, Clone, Error, PartialEq, Eq, PartialOrd, Ord)]
@@ -85,6 +89,12 @@ impl TimeOfDay {
         })
     }
 
+    pub fn from_hms(hour: u8, minute: u8, seconds: f64) -> Result<Self, TimeOfDayError> {
+        let (second, fraction) = split_decimal_seconds(seconds);
+        let subsecond = Subsecond::new(fraction).unwrap();
+        Ok(Self::new(hour, minute, second)?.with_subsecond(subsecond))
+    }
+
     pub fn from_second_of_day(second_of_day: u64) -> Result<Self, TimeOfDayError> {
         if !(0..86401).contains(&second_of_day) {
             return Err(TimeOfDayError::InvalidSecondOfDay(second_of_day));
@@ -93,10 +103,17 @@ impl TimeOfDay {
         Self::new(hour, minute, second)
     }
 
-    pub fn from_hms_decimal(hour: u8, minute: u8, seconds: f64) -> Result<Self, TimeOfDayError> {
-        let (second, fraction) = split_decimal_seconds(seconds);
-        let subsecond = Subsecond::new(fraction).unwrap();
-        Ok(Self::new(hour, minute, second)?.with_subsecond(subsecond))
+    pub fn from_seconds_since_j2000(seconds: i64) -> Self {
+        let mut second_of_day = (seconds + SECONDS_PER_HALF_DAY) % SECONDS_PER_DAY;
+        if second_of_day.is_negative() {
+            second_of_day += SECONDS_PER_DAY;
+        }
+        Self::from_second_of_day(
+            second_of_day
+                .to_u64()
+                .unwrap_or_else(|| unreachable!("second of day should be positive")),
+        )
+        .unwrap_or_else(|_| unreachable!("second of day should be in range"))
     }
 
     pub fn with_subsecond(&mut self, subsecond: Subsecond) -> Self {
@@ -118,6 +135,12 @@ impl TimeOfDay {
 
     pub fn subsecond(&self) -> Subsecond {
         self.subsecond
+    }
+
+    pub fn second_of_day(&self) -> i64 {
+        self.hour as i64 * SECONDS_PER_HOUR
+            + self.minute as i64 * SECONDS_PER_MINUTE
+            + self.second as i64
     }
 }
 

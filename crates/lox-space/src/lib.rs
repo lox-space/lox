@@ -13,13 +13,8 @@ use thiserror::Error;
 use lox_bodies::errors::LoxBodiesError;
 
 use crate::bodies::{PyBarycenter, PyMinorBody, PyPlanet, PySatellite, PySun};
-use crate::coords::{PyCartesian, PyKeplerian};
-use crate::time::{PyTime, PyTimeScale};
 
 mod bodies;
-mod coords;
-mod frames;
-mod time;
 
 #[derive(Error, Debug)]
 pub enum LoxPyError {
@@ -49,14 +44,10 @@ impl From<LoxPyError> for PyErr {
 
 #[pymodule]
 fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_class::<PyTimeScale>()?;
-    m.add_class::<PyTime>()?;
     m.add_class::<PySun>()?;
     m.add_class::<PyBarycenter>()?;
     m.add_class::<PyPlanet>()?;
     m.add_class::<PySatellite>()?;
     m.add_class::<PyMinorBody>()?;
-    m.add_class::<PyCartesian>()?;
-    m.add_class::<PyKeplerian>()?;
     Ok(())
 }

@@ -18,7 +18,7 @@ use thiserror::Error;
 
 use regex::Regex;
 
-use crate::constants::i64::SECONDS_PER_DAY;
+use crate::constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 use crate::constants::julian_dates::{
     SECONDS_BETWEEN_J1950_AND_J2000, SECONDS_BETWEEN_JD_AND_J2000, SECONDS_BETWEEN_MJD_AND_J2000,
 };
@@ -175,6 +175,16 @@ impl Date {
             month,
             day,
         }
+    }
+
+    pub fn from_seconds_since_j2000(seconds: i64) -> Self {
+        let seconds = seconds + SECONDS_PER_HALF_DAY;
+        let mut time = seconds % SECONDS_PER_DAY;
+        if time < 0 {
+            time += SECONDS_PER_DAY;
+        }
+        let days = (seconds - time) / SECONDS_PER_DAY;
+        Self::from_days_since_j2000(days)
     }
 
     pub fn from_day_of_year(year: i64, day_of_year: u16) -> Result<Self, DateError> {

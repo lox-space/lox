@@ -29,7 +29,6 @@ use crate::deltas::TimeDelta;
 use crate::julian_dates::{Epoch, JulianDate, Unit};
 use crate::subsecond::Subsecond;
 use crate::time_of_day::{CivilTime, TimeOfDay};
-use crate::utc::{UtcDateTime, UtcOld};
 
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
 /// `BaseTime` is the base time representation for time scales without leap seconds. It is measured
@@ -210,17 +209,7 @@ impl Sub<TimeDelta> for BaseTime {
 
 impl CivilTime for BaseTime {
     fn time(&self) -> TimeOfDay {
-        let mut second_of_day = (self.seconds + SECONDS_PER_HALF_DAY) % SECONDS_PER_DAY;
-        if second_of_day.is_negative() {
-            second_of_day += SECONDS_PER_DAY;
-        }
-        TimeOfDay::from_second_of_day(
-            second_of_day
-                .to_u64()
-                .unwrap_or_else(|| unreachable!("second of day should be positive")),
-        )
-        .unwrap_or_else(|_| unreachable!("second of day should be in range"))
-        .with_subsecond(self.subsecond)
+        TimeOfDay::from_seconds_since_j2000(self.seconds).with_subsecond(self.subsecond)
     }
 }
 
