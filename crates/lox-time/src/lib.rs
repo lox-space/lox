@@ -120,7 +120,7 @@ impl<T: TimeScale + Copy> Time<T> {
 
     /// Given a `Time` in [TimeScale] `S`, and a transformer from `S` to `T`, returns a new Time in
     /// [TimeScale] `T`.
-    pub fn from_scale<S, U>(time: Time<S>, transformer: U) -> Result<Self, U::Error>
+    pub fn from_scale<S, U>(time: Time<S>, transformer: U) -> Self
     where
         S: TimeScale + Copy,
         U: TransformTimeScale<S, T>,
@@ -129,7 +129,7 @@ impl<T: TimeScale + Copy> Time<T> {
     }
 
     /// Given a transformer from `T` to `S`, returns a new `Time` in [TimeScale] `S`.
-    pub fn into_scale<S, U>(self, transformer: U) -> Result<Time<S>, U::Error>
+    pub fn into_scale<S, U>(self, transformer: U) -> Time<S>
     where
         S: TimeScale + Copy,
         U: TransformTimeScale<T, S>,
@@ -490,7 +490,7 @@ mod tests {
     fn test_from_scale() {
         let time = Time::j2000(Tai);
         let mut transformer = MockTransformTimeScale::<Tai, Tt>::new();
-        let expected = Ok(Time::j2000(Tt));
+        let expected = Time::j2000(Tt);
 
         transformer
             .expect_transform()
@@ -505,7 +505,7 @@ mod tests {
     fn test_into_scale() {
         let time = Time::j2000(Tai);
         let mut transformer = MockTransformTimeScale::<Tai, Tt>::new();
-        let expected = Ok(Time::j2000(Tt));
+        let expected = Time::j2000(Tt);
 
         transformer
             .expect_transform()

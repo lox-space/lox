@@ -161,6 +161,7 @@ pub mod test {
 
     use crate::base_time::BaseTime;
     use crate::calendar_dates::Date;
+    use crate::julian_dates::Epoch;
     use crate::subsecond::Subsecond;
     use crate::utc::Utc;
     use crate::utc::UtcDateTime;
@@ -195,16 +196,41 @@ pub mod test {
     // }
 
     #[rstest]
-    #[case::j2000_tai(Time::j2000(Tai), Time::from_base_time(Ut1, BaseTime {
-        seconds: 0,
-        subsecond: Subsecond::default(),
-    }))]
+    #[case::j2000_tai(
+        Time::j2000(Tai),
+        Time::from_base_time(Ut1, BaseTime {
+            seconds: -32,
+            subsecond: Subsecond(1.0 - 0.644974644349812),
+        })
+    )]
+    #[case::mjd_41684(
+        Time::from_julian_day_number(
+            Tai,
+            41684,
+            ModifiedJulianDate
+        ),
+        Time::from_base_time(Ut1, BaseTime {
+            seconds: -851947212,
+            subsecond: Subsecond(0.8084178),
+        })
+    )]
+    #[case::mjd_60791(
+        Time::from_julian_day_number(
+            Tai,
+            60791,
+            ModifiedJulianDate
+        ),
+        Time::from_base_time(Ut1, BaseTime {
+            seconds: 798897563,
+            subsecond: Subsecond(0.0017368),
+        })
+    )]
     fn test_eop_transform_time_scale_tai_ut1_success(
         #[case] tai: Time<Tai>,
         #[case] expected: Time<Ut1>,
     ) {
         let transformer = observed_data_time_scale_transformer();
-        let actual = transformer.transform(tai).unwrap_or_else(|err| {
+        let actual = transformer.try_transform(tai).unwrap_or_else(|err| {
             panic!("expected success, but got {:?}", err);
         });
         assert_eq!(expected, actual);
@@ -326,7 +352,7 @@ pub mod test {
         > = OnceLock::new();
 
         let eop = EOP.get_or_init(|| {
-            parse_finals_csv(Path::new(TEST_DATA_DIR).join("finals.all.csv")).unwrap()
+            parse_finals_csv(Path::new(TEST_DATA_DIR).join("finals.all.2024-04-19.csv")).unwrap()
         });
         TRANSFORMER.get_or_init(|| ObservedDataTimeScaleTransformer::new(eop))
     }

@@ -126,8 +126,8 @@ impl DeltaUt1Utc for &EarthOrientationParams {
         let lagrange_args = Arguments::new(
             &self.x_pole,
             &self.y_pole,
-            &self.mjd,
             &self.delta_ut1_utc,
+            &self.mjd,
             mjd,
         )
         .unwrap_or_else(|err| {
