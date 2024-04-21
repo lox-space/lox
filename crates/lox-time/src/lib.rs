@@ -799,8 +799,21 @@ mod tests {
     #[case::leap_year(Time {scale: Tai, seconds: SECONDS_PER_DAY * 366, subsecond: Subsecond::default()}, Date::new(2001, 1, 1).unwrap())]
     #[case::non_leap_year(Time {scale: Tai, seconds: SECONDS_PER_DAY * (366 + 365), subsecond: Subsecond::default()}, Date::new(2002, 1, 1).unwrap())]
     #[case::negative_time(Time {scale: Tai, seconds: -SECONDS_PER_DAY, subsecond: Subsecond::default()}, Date::new(1999, 12, 31).unwrap())]
-    fn test_base_time_calendar_date(#[case] base_time: Time<Tai>, #[case] expected: Date) {
+    fn test_time_calendar_date(#[case] base_time: Time<Tai>, #[case] expected: Date) {
         let actual = base_time.date();
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_time_scale() {
+        let time: Time<Tai> = Time::default();
+        assert_eq!(time.scale(), Tai);
+    }
+
+    #[test]
+    fn test_time_override_scale() {
+        let time: Time<Tai> = Time::default();
+        let time = time.override_scale(Tt);
+        assert_eq!(time.scale(), Tt);
     }
 }
