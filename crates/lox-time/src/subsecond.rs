@@ -191,4 +191,14 @@ mod tests {
         let subsecond = Subsecond(0.0);
         assert_eq!(0.0, subsecond.into());
     }
+
+    #[test]
+    fn test_invalid_subsecond_ord() {
+        let actual = InvalidSubsecond(-f64::NAN).partial_cmp(&InvalidSubsecond(f64::NAN));
+        let expected = Some(Ordering::Less);
+        assert_eq!(actual, expected);
+        let actual = InvalidSubsecond(-f64::NAN).cmp(&InvalidSubsecond(f64::NAN));
+        let expected = Ordering::Less;
+        assert_eq!(actual, expected);
+    }
 }
