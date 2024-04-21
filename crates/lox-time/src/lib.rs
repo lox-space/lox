@@ -242,11 +242,6 @@ impl<T: TimeScale + Copy> JulianDate for Time<T> {
             Unit::Centuries => decimal_seconds / time::SECONDS_PER_JULIAN_CENTURY,
         }
     }
-
-    fn two_part_julian_date(&self) -> (f64, f64) {
-        let days = self.julian_date(Epoch::JulianDate, Unit::Days);
-        (days.trunc(), days.fract())
-    }
 }
 
 impl<T: TimeScale + Copy> Display for Time<T> {

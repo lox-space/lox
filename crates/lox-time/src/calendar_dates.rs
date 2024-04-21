@@ -222,10 +222,6 @@ impl JulianDate for Date {
             Unit::Centuries => seconds / SECONDS_PER_JULIAN_CENTURY,
         }
     }
-
-    fn two_part_julian_date(&self) -> (f64, f64) {
-        (self.julian_date(Epoch::JulianDate, Unit::Days), 0.0)
-    }
 }
 
 fn find_year(calendar: Calendar, j2000day: i64) -> i64 {
@@ -338,6 +334,7 @@ pub trait CalendarDate {
 
 #[cfg(test)]
 mod tests {
+    use lox_utils::constants::f64::time::DAYS_PER_JULIAN_CENTURY;
     use rstest::rstest;
 
     use crate::calendar_dates::{Calendar, Date};
@@ -363,5 +360,34 @@ mod tests {
     fn test_date_iso(#[case] str: &str, #[case] expected: Date) {
         let actual = Date::from_iso(str).expect("date should parse");
         assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_date_from_day_of_year() {
+        let date = Date::from_day_of_year(2000, 366).unwrap();
+        assert_eq!(date.year(), 2000);
+        assert_eq!(date.month(), 12);
+        assert_eq!(date.day(), 31);
+    }
+
+    #[test]
+    fn test_date_from_invalid_day_of_year() {
+        let actual = Date::from_day_of_year(2001, 366);
+        let expected = Err(DateError::NonLeapYear);
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_date_julian_date() {
+        let date = Date::new(2100, 1, 1).unwrap();
+        assert_eq!(date.seconds_since_j2000(), SECONDS_PER_JULIAN_CENTURY);
+        assert_eq!(date.days_since_j2000(), DAYS_PER_JULIAN_CENTURY);
+        assert_eq!(date.centuries_since_j2000(), 1.0);
+        assert_eq!(date.centuries_since_j1950(), 1.5);
+        assert_eq!(
+            date.centuries_since_modified_julian_epoch(),
+            2.411211498973306
+        );
+        assert_eq!(date.centuries_since_julian_epoch(), 68.11964407939767);
     }
 }

@@ -240,11 +240,6 @@ impl JulianDate for TimeDelta {
             Unit::Centuries => decimal_seconds / SECONDS_PER_JULIAN_CENTURY,
         }
     }
-
-    fn two_part_julian_date(&self) -> (f64, f64) {
-        let days = self.julian_date(Epoch::JulianDate, Unit::Days);
-        (days.trunc(), days.fract())
-    }
 }
 
 impl Neg for TimeDelta {
