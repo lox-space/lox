@@ -3,7 +3,6 @@ use std::fmt::{Display, Formatter};
 use pyo3::{exceptions::PyValueError, pyclass, pymethods, PyErr};
 
 use crate::time_scales::TimeScale;
-use crate::transformations::TimeScaleTransformer;
 use crate::{
     julian_dates::JulianDate,
     time_scales::{Tai, Tcb, Tcg, Tdb, Tt, Ut1},
@@ -78,13 +77,16 @@ impl Display for PyTimeScale {
     }
 }
 
-#[pyclass(name = "TimeScaleTransformer")]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct PyTimeScaleTransformer(TimeScaleTransformer);
-
 #[pyclass(name = "Time")]
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct PyTime(Time<PyTimeScale>);
+
+#[pymethods]
+impl PyTime {
+    fn scale(&self) -> PyTimeScale {
+        self.0.scale()
+    }
+}
 
 impl JulianDate for PyTime {
     fn julian_date(
@@ -94,8 +96,40 @@ impl JulianDate for PyTime {
     ) -> f64 {
         self.0.julian_date(epoch, unit)
     }
+}
 
-    fn two_part_julian_date(&self) -> (f64, f64) {
-        self.0.two_part_julian_date()
+#[cfg(test)]
+mod tests {
+    use rstest::rstest;
+
+    use super::*;
+
+    #[rstest]
+    #[case("TAI", "International Atomic Time")]
+    #[case("TT", "Terrestrial Time")]
+    #[case("TCG", "Geocentric Coordinate Time")]
+    #[case("TCB", "Barycentric Coordinate Time")]
+    #[case("TDB", "Barycentric Dynamical Time")]
+    #[case("UT1", "Universal Time")]
+    #[should_panic(expected = "invalid timescale: NotATimeScale")]
+    #[case("NotATimeScale", "not a timescale")]
+    fn test_pytimescale(#[case] abbreviation: &'static str, #[case] name: &'static str) {
+        let scale = PyTimeScale::new(abbreviation).unwrap();
+        assert_eq!(scale.abbreviation(), abbreviation);
+        assert_eq!(scale.name(), name);
+        assert_eq!(scale.__repr__(), format!("TimeScale(\"{}\")", abbreviation));
+        assert_eq!(scale.__str__(), abbreviation);
+    }
+
+    #[test]
+    fn test_pytime() {
+        let time = PyTime(
+            Time::new(PyTimeScale::Tai, 2000, 1, 1)
+                .unwrap()
+                .with_hms(12, 0, 0.0)
+                .unwrap(),
+        );
+        assert_eq!(time.seconds_since_j2000(), 0.0);
+        assert_eq!(time.scale(), PyTimeScale::Tai);
     }
 }
