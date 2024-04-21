@@ -9,7 +9,12 @@
 use std::fmt::Display;
 use std::sync::OnceLock;
 
+use lox_eop::EarthOrientationParams;
+use thiserror::Error;
+
 use crate::deltas::TimeDelta;
+use crate::deltas::TimeDeltaError;
+use crate::julian_dates::Epoch;
 use crate::time_of_day::CivilTime;
 use crate::time_of_day::TimeOfDay;
 use crate::time_scales::Tai;
@@ -64,13 +69,13 @@ impl TryFrom<Time<Tai>> for Utc {
     }
 }
 
-fn delta_tai_utc(tai: Time<Tai>) -> Result<TimeDelta, UtcUndefinedError> {
+fn delta_tai_utc(tai: Time<Tai>) -> Result<TimeDelta, UtcError> {
     if tai < *tai_at_utc_1972_01_01() {
         before1972::delta_tai_utc(tai)
     } else {
         from1972::delta_tai_utc(tai)
     }
-    .ok_or(UtcUndefinedError)
+    .ok_or(UtcError::UtcUndefined)
 }
 
 fn utc_1972_01_01() -> &'static Utc {
@@ -102,7 +107,7 @@ pub struct EarthOrientationParamsError {
 pub enum EopErrorDetails {
     /// Arises when a [ModifiedJulianDayNumber] in [EarthOrientationParams] is before
     /// 1960-01-01 UTC.
-    InvalidMjd(UtcUndefinedError),
+    InvalidMjd(UtcError),
     /// Arises when a ΔUT1-UTC value in [EarthOrientationParams] cannot be represented as a
     /// [TimeDelta].
     InvalidDeltaUt1Utc(TimeDeltaError),
@@ -117,8 +122,8 @@ impl Display for EopErrorDetails {
     }
 }
 
-impl From<UtcUndefinedError> for EopErrorDetails {
-    fn from(err: UtcUndefinedError) -> Self {
+impl From<UtcError> for EopErrorDetails {
+    fn from(err: UtcError) -> Self {
         Self::InvalidMjd(err)
     }
 }
@@ -212,7 +217,7 @@ pub mod test {
     }
 
     #[rstest]
-    #[case::invalid_mjd(EopErrorDetails::InvalidMjd(UtcUndefinedError), format!("invalid Modified Julian Day Number: {}", UtcUndefinedError))]
+    #[case::invalid_mjd(EopErrorDetails::InvalidMjd(UtcError::UtcUndefined), format!("invalid Modified Julian Day Number: {}", UtcError::UtcUndefined))]
     #[case::invalid_delta_ut1_utc(EopErrorDetails::InvalidDeltaUt1Utc(any_time_delta_error()), format!("invalid ΔUT1-UTC value: {}", any_time_delta_error()))]
     fn test_eop_error_details_display(#[case] variant: EopErrorDetails, #[case] expected: String) {
         assert_eq!(expected, variant.to_string());
@@ -220,8 +225,8 @@ pub mod test {
 
     #[test]
     fn test_eop_error_details_from_utc_undefined_error() {
-        let expected = EopErrorDetails::InvalidMjd(UtcUndefinedError);
-        let actual: EopErrorDetails = UtcUndefinedError.into();
+        let expected = EopErrorDetails::InvalidMjd(UtcError::UtcUndefined);
+        let actual: EopErrorDetails = UtcError::UtcUndefined.into();
         assert_eq!(expected, actual);
     }
 
@@ -241,7 +246,7 @@ pub mod test {
     }))]
     #[case::invalid_mjd(eop_with_invalid_mjd(), Err(EarthOrientationParamsError {
         position: 0,
-        details: EopErrorDetails::InvalidMjd(UtcUndefinedError),
+        details: EopErrorDetails::InvalidMjd(UtcError::UtcUndefined),
     }))]
     #[case::invalid_delta_ut1_utc(eop_with_invalid_delta_ut1_utc(), Err(EarthOrientationParamsError {
         position: 0,

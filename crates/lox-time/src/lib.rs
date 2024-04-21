@@ -20,6 +20,7 @@ use std::ops::{Add, Sub};
 
 use calendar_dates::DateError;
 
+use constants::i64::SECONDS_PER_DAY;
 use constants::julian_dates::{
     SECONDS_BETWEEN_J1950_AND_J2000, SECONDS_BETWEEN_JD_AND_J2000, SECONDS_BETWEEN_MJD_AND_J2000,
 };
@@ -216,8 +217,18 @@ impl<T: TimeScale + Copy> Time<T> {
     }
 
     pub fn from_julian_day_number(scale: T, day_number: i32, epoch: Epoch) -> Self {
-        let timestamp = BaseTime::from_julian_day_number(day_number, epoch);
-        Self { scale, timestamp }
+        let seconds = day_number as i64 * SECONDS_PER_DAY;
+        let epoch_adjustment = match epoch {
+            Epoch::JulianDate => SECONDS_BETWEEN_JD_AND_J2000,
+            Epoch::ModifiedJulianDate => SECONDS_BETWEEN_MJD_AND_J2000,
+            Epoch::J1950 => SECONDS_BETWEEN_J1950_AND_J2000,
+            Epoch::J2000 => 0,
+        };
+        Self {
+            scale,
+            seconds: seconds - epoch_adjustment,
+            subsecond: Subsecond::default(),
+        }
     }
 }
 
