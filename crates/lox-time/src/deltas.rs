@@ -305,6 +305,7 @@ impl Sub for TimeDelta {
 #[cfg(test)]
 mod tests {
     use float_eq::assert_float_eq;
+    use lox_utils::constants::f64::time::DAYS_PER_JULIAN_CENTURY;
     use proptest::prelude::*;
     use rstest::rstest;
 
@@ -511,5 +512,22 @@ mod tests {
         #[case] expected: TimeDelta,
     ) {
         assert_eq!(expected, lhs - rhs);
+    }
+
+    #[test]
+    fn test_delta_julian_date() {
+        let delta = TimeDelta::new(
+            crate::constants::i64::SECONDS_PER_JULIAN_CENTURY,
+            Subsecond::default(),
+        );
+        assert_eq!(delta.seconds_since_j2000(), SECONDS_PER_JULIAN_CENTURY);
+        assert_eq!(delta.days_since_j2000(), DAYS_PER_JULIAN_CENTURY);
+        assert_eq!(delta.centuries_since_j2000(), 1.0);
+        assert_eq!(delta.centuries_since_j1950(), 1.5);
+        assert_eq!(
+            delta.centuries_since_modified_julian_epoch(),
+            2.411211498973306
+        );
+        assert_eq!(delta.centuries_since_julian_epoch(), 68.11964407939767);
     }
 }
