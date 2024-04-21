@@ -188,7 +188,7 @@ fn calculate_delta_ut1_tai_from_eop(
 pub mod test {
     use rstest::rstest;
 
-    use crate::subsecond::Subsecond;
+    use crate::{calendar_dates::Date, subsecond::Subsecond};
 
     use super::*;
 
@@ -261,6 +261,14 @@ pub mod test {
     ) {
         let actual = EopTimeScaleTransformer::new(eop);
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_date_leap_second_date() {
+        let date = Date::new(2000, 12, 31).unwrap();
+        assert!(!date.is_leap_second_date());
+        let date = Date::new(2016, 12, 31).unwrap();
+        assert!(date.is_leap_second_date());
     }
 
     /*
