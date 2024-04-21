@@ -93,3 +93,24 @@ impl TimeScale for Ut1 {
         "Universal Time"
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_time_scales() {
+        assert_eq!(Tai.abbreviation(), "TAI");
+        assert_eq!(Tai.name(), "International Atomic Time");
+        assert_eq!(Tcb.abbreviation(), "TCB");
+        assert_eq!(Tcb.name(), "Barycentric Coordinate Time");
+        assert_eq!(Tcg.abbreviation(), "TCG");
+        assert_eq!(Tcg.name(), "Geocentric Coordinate Time");
+        assert_eq!(Tdb.abbreviation(), "TDB");
+        assert_eq!(Tdb.name(), "Barycentric Dynamical Time");
+        assert_eq!(Tt.abbreviation(), "TT");
+        assert_eq!(Tt.name(), "Terrestrial Time");
+        assert_eq!(Ut1.abbreviation(), "UT1");
+        assert_eq!(Ut1.name(), "Universal Time");
+    }
+}
