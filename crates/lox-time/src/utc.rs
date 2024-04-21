@@ -161,4 +161,19 @@ mod tests {
         assert_eq!(utc.second(), 14);
         assert_eq!(utc.millisecond(), 150);
     }
+
+    #[test]
+    fn test_utc_non_leap_second_date() {
+        let utc = Utc::new(2000, 1, 1).unwrap();
+        let actual = utc.with_hms(23, 59, 60.0);
+        let expected = Err(UtcError::NonLeapSecondDate(utc.date()));
+        assert_eq!(actual, expected)
+    }
+
+    #[test]
+    fn test_utc_undefined() {
+        let actual = Utc::new(1959, 1, 1);
+        let expected = Err(UtcError::UtcUndefined);
+        assert_eq!(actual, expected)
+    }
 }
