@@ -192,4 +192,24 @@ mod tests {
         assert_eq!(format!("{}", time), "12:00:00.123");
         assert_eq!(format!("{:.15}", time), "12:00:00.123456789123456");
     }
+
+    #[test]
+    fn test_time_of_day_error() {
+        assert_eq!(
+            TimeOfDay::new(24, 0, 0),
+            Err(TimeOfDayError::InvalidHour(24))
+        );
+        assert_eq!(
+            TimeOfDay::new(0, 60, 0),
+            Err(TimeOfDayError::InvalidMinute(60))
+        );
+        assert_eq!(
+            TimeOfDay::new(0, 0, 61),
+            Err(TimeOfDayError::InvalidSecond(61))
+        );
+        assert_eq!(
+            TimeOfDay::from_second_of_day(86401),
+            Err(TimeOfDayError::InvalidSecondOfDay(86401))
+        );
+    }
 }
