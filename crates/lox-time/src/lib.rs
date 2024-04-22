@@ -816,4 +816,12 @@ mod tests {
         let time = time.override_scale(Tt);
         assert_eq!(time.scale(), Tt);
     }
+
+    #[test]
+    fn test_time_leap_second_outside_utc() {
+        let time = Time::new(Tai, 2000, 1, 1).unwrap();
+        let actual = time.with_hms(23, 59, 60.0);
+        let expected = Err(TimeError::LeapSecondOutsideUtc);
+        assert_eq!(actual, expected);
+    }
 }
