@@ -424,7 +424,6 @@ macro_rules! time {
 mod tests {
     use float_eq::assert_float_eq;
     use mockall::predicate;
-    use num::traits::Inv;
     use rstest::rstest;
 
     use lox_utils::constants::f64::time::DAYS_PER_JULIAN_CENTURY;
@@ -817,6 +816,22 @@ mod tests {
     ) {
         let actual = time - delta;
         assert_eq!(expected, actual);
+    }
+
+    #[rstest]
+    #[case(Time::default(), Time::default())]
+    #[case(Time::default(), Time::new(Tai, 1, Subsecond(0.9)))]
+    #[case(Time::new(Tai, 0, Subsecond(0.9)), Time::new(Tai, 1, Subsecond(0.6)))]
+    #[case(Time::new(Tai, 1, Subsecond(0.9)), Time::default())]
+    #[case(Time::new(Tai, 1, Subsecond(0.6)), Time::new(Tai, 0, Subsecond(0.9)))]
+    #[case(Time::new(Tai, 1, Subsecond(0.6)), Time::new(Tai, -1, Subsecond(0.9)), )]
+    #[case(Time::new(Tai, -1, Subsecond(0.9)), Time::new(Tai, 1, Subsecond(0.6)), )]
+    #[case(Time::new(Tai, 1, Subsecond(0.9)), Time::new(Tai, -1, Subsecond(0.6)), )]
+    #[case(Time::new(Tai, -1, Subsecond(0.6)), Time::new(Tai, 1, Subsecond(0.9)), )]
+    fn test_time_sub_time(#[case] time1: Time<Tai>, #[case] time2: Time<Tai>) {
+        let delta = time2 - time1;
+        let actual = time1 + delta;
+        assert_eq!(actual, time2);
     }
 
     #[rstest]
