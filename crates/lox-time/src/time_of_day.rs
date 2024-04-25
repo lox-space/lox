@@ -1,13 +1,13 @@
 use std::cmp::Ordering;
 use std::fmt::Display;
 
+use num::ToPrimitive;
+use thiserror::Error;
+
 use crate::{
     constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY, SECONDS_PER_HOUR, SECONDS_PER_MINUTE},
     subsecond::{InvalidSubsecond, Subsecond},
 };
-
-use num::ToPrimitive;
-use thiserror::Error;
 
 #[derive(Debug, Copy, Clone, Error)]
 #[error("seconds must be in the range [0.0..86401.0) but was {0}")]
@@ -180,22 +180,6 @@ impl TimeOfDay {
     }
 }
 
-trait WithSubsecond {
-    fn with_subsecond(self, subsecond: Subsecond) -> Self;
-}
-
-impl WithSubsecond for Result<TimeOfDay, TimeOfDayError> {
-    fn with_subsecond(self, subsecond: Subsecond) -> Self {
-        match self {
-            Ok(mut time) => {
-                time.subsecond = subsecond;
-                Ok(time)
-            }
-            Err(err) => Err(err),
-        }
-    }
-}
-
 impl Display for TimeOfDay {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let precision = f.precision().unwrap_or(3);
@@ -212,8 +196,9 @@ impl Display for TimeOfDay {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use rstest::rstest;
+
+    use super::*;
 
     #[rstest]
     #[case(43201, TimeOfDay::new(12, 0, 1))]
