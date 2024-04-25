@@ -235,6 +235,7 @@ mod tests {
     ) {
         assert_eq!(actual, expected);
     }
+
     #[test]
     fn test_invalid_seconds_ord() {
         let actual = InvalidSeconds(-f64::NAN).partial_cmp(&InvalidSeconds(f64::NAN));

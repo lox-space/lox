@@ -162,7 +162,7 @@ fn calculate_delta_ut1_tai_from_eop(
         .zip(eop.delta_ut1_utc())
         .enumerate()
         .map(|(i, (mjd, delta_ut1_utc))| {
-            let tai = Time::from_julian_day_number(Tai, *mjd, Epoch::ModifiedJulianDate);
+            let tai = Time::from_julian_date(Tai, *mjd as f64, Epoch::ModifiedJulianDate).unwrap();
             let delta_ut1_utc = TimeDelta::from_decimal_seconds(*delta_ut1_utc).map_err(|err| {
                 EarthOrientationParamsError {
                     position: i,

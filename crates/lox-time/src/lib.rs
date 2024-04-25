@@ -14,6 +14,7 @@
 //! [Utc] and [Date] are used strictly as an I/O formats, avoiding much of the complexity inherent
 //! in working with leap seconds.
 
+use std::cmp::Ordering;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, Sub};
@@ -22,11 +23,11 @@ use num::ToPrimitive;
 use thiserror::Error;
 
 use calendar_dates::DateError;
-use constants::i64::SECONDS_PER_DAY;
 use constants::julian_dates::{
     SECONDS_BETWEEN_J1950_AND_J2000, SECONDS_BETWEEN_JD_AND_J2000, SECONDS_BETWEEN_MJD_AND_J2000,
 };
 use lox_utils::constants::f64::time;
+use lox_utils::types::units::Days;
 use time_of_day::{CivilTime, TimeOfDay, TimeOfDayError};
 
 use crate::calendar_dates::{CalendarDate, Date};
@@ -49,6 +50,34 @@ pub mod time_scales;
 pub mod transformations;
 pub mod utc;
 
+#[derive(Clone, Debug, Error)]
+#[error(
+    "Julian date must be between {} and {} seconds since J2000 but was {0}",
+    i64::MIN,
+    i64::MAX
+)]
+pub struct JulianDateOutOfRange(f64);
+
+impl PartialOrd for JulianDateOutOfRange {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for JulianDateOutOfRange {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.0.total_cmp(&other.0)
+    }
+}
+
+impl PartialEq for JulianDateOutOfRange {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.total_cmp(&other.0) == Ordering::Equal
+    }
+}
+
+impl Eq for JulianDateOutOfRange {}
+
 #[derive(Clone, Debug, Error, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TimeError {
     #[error(transparent)]
@@ -57,6 +86,8 @@ pub enum TimeError {
     TimeError(#[from] TimeOfDayError),
     #[error("leap seconds do not exist in continuous time scales; use `Utc` instead")]
     LeapSecondOutsideUtc,
+    #[error(transparent)]
+    JulianDateOutOfRange(#[from] JulianDateOutOfRange),
 }
 
 /// An instant in time in a given [TimeScale].
@@ -139,6 +170,30 @@ impl<T: TimeScale + Copy> Time<T> {
         }
     }
 
+    /// Instantiates a [Time] in the given scale from a `julian_date` with the given `epoch`.
+    pub fn from_julian_date(scale: T, julian_date: Days, epoch: Epoch) -> Result<Self, TimeError> {
+        let seconds = julian_date * time::SECONDS_PER_DAY;
+        if !(i64::MIN as f64..=i64::MAX as f64).contains(&seconds) {
+            return Err(TimeError::JulianDateOutOfRange(JulianDateOutOfRange(
+                seconds,
+            )));
+        }
+        let subsecond = Subsecond::new(seconds.fract()).unwrap();
+        let seconds = seconds.to_i64().unwrap_or_else(|| {
+            unreachable!(
+                "seconds since J2000 for Julian date {} are not representable as i64: {}",
+                julian_date, seconds
+            )
+        });
+        let seconds = match epoch {
+            Epoch::JulianDate => seconds - SECONDS_BETWEEN_JD_AND_J2000,
+            Epoch::ModifiedJulianDate => seconds - SECONDS_BETWEEN_MJD_AND_J2000,
+            Epoch::J1950 => seconds - SECONDS_BETWEEN_J1950_AND_J2000,
+            Epoch::J2000 => seconds,
+        };
+        Ok(Self::new(scale, seconds, subsecond))
+    }
+
     pub fn builder_with_scale(scale: T) -> TimeBuilder<T> {
         TimeBuilder::new(scale)
     }
@@ -208,21 +263,6 @@ impl<T: TimeScale + Copy> Time<T> {
         transformer: impl TransformTimeScale<T, S>,
     ) -> Time<S> {
         Time::from_scale(self, transformer)
-    }
-
-    pub fn from_julian_day_number(scale: T, day_number: i32, epoch: Epoch) -> Self {
-        let seconds = day_number as i64 * SECONDS_PER_DAY;
-        let epoch_adjustment = match epoch {
-            Epoch::JulianDate => SECONDS_BETWEEN_JD_AND_J2000,
-            Epoch::ModifiedJulianDate => SECONDS_BETWEEN_MJD_AND_J2000,
-            Epoch::J1950 => SECONDS_BETWEEN_J1950_AND_J2000,
-            Epoch::J2000 => 0,
-        };
-        Self {
-            scale,
-            seconds: seconds - epoch_adjustment,
-            subsecond: Subsecond::default(),
-        }
     }
 }
 
@@ -384,10 +424,10 @@ macro_rules! time {
 mod tests {
     use float_eq::assert_float_eq;
     use mockall::predicate;
+    use num::traits::Inv;
     use rstest::rstest;
 
     use lox_utils::constants::f64::time::DAYS_PER_JULIAN_CENTURY;
-    use lox_utils::constants::i32::time::JD_J2000;
 
     use crate::constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
     use crate::time_scales::{Tai, Tdb, Tt};
@@ -427,11 +467,35 @@ mod tests {
         assert_eq!(expected, actual);
     }
 
+    #[rstest]
+    #[case(Epoch::JulianDate, -SECONDS_BETWEEN_JD_AND_J2000)]
+    #[case(Epoch::ModifiedJulianDate, -SECONDS_BETWEEN_MJD_AND_J2000)]
+    #[case(Epoch::J1950, -SECONDS_BETWEEN_J1950_AND_J2000)]
+    #[case(Epoch::J2000, 0)]
+    fn test_time_from_julian_date(#[case] epoch: Epoch, #[case] seconds: i64) {
+        let time = Time::from_julian_date(Tai, 0.0, epoch).unwrap();
+        assert_eq!(time.seconds(), seconds);
+    }
+
     #[test]
-    fn test_time_from_julian_day_number() {
-        let expected: Time<Tai> = Time::default();
-        let actual = Time::from_julian_day_number(Tai, JD_J2000, Epoch::JulianDate);
-        assert_eq!(expected, actual);
+    fn test_time_from_julian_date_subsecond() {
+        let time = Time::from_julian_date(Tai, 0.3 / time::SECONDS_PER_DAY, Epoch::J2000).unwrap();
+        assert_float_eq!(time.subsecond(), 0.3, abs <= 1e-15);
+    }
+
+    #[rstest]
+    #[case(f64::INFINITY)]
+    #[case(-f64::INFINITY)]
+    #[case(f64::NAN)]
+    #[case(-f64::NAN)]
+    #[case(i64::MAX as f64 / time::SECONDS_PER_DAY + 1.0)]
+    #[case(i64::MIN as f64 / time::SECONDS_PER_DAY - 1.0)]
+    fn test_time_from_julian_date_invalid(#[case] julian_date: f64) {
+        let expected = Err(TimeError::JulianDateOutOfRange(JulianDateOutOfRange(
+            julian_date * time::SECONDS_PER_DAY,
+        )));
+        let actual = Time::from_julian_date(Tai, julian_date, Epoch::J2000);
+        assert_eq!(actual, expected);
     }
 
     #[test]
@@ -847,6 +911,16 @@ mod tests {
     fn test_time_leap_second_outside_utc() {
         let actual = time!(Tai, 2000, 1, 1, 23, 59, 60.0);
         let expected = Err(TimeError::LeapSecondOutsideUtc);
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_julian_date_out_of_range_ord() {
+        let actual = JulianDateOutOfRange(-f64::NAN).partial_cmp(&JulianDateOutOfRange(f64::NAN));
+        let expected = Some(Ordering::Less);
+        assert_eq!(actual, expected);
+        let actual = JulianDateOutOfRange(-f64::NAN).cmp(&JulianDateOutOfRange(f64::NAN));
+        let expected = Ordering::Less;
         assert_eq!(actual, expected);
     }
 }
