@@ -213,9 +213,7 @@ impl JulianDate for Date {
             Epoch::J1950 => seconds + SECONDS_BETWEEN_J1950_AND_J2000,
             Epoch::J2000 => seconds,
         };
-        let seconds = seconds
-            .to_f64()
-            .unwrap_or_else(|| unreachable!("should be representable as f64"));
+        let seconds = seconds as f64;
 
         match unit {
             Unit::Seconds => seconds,
@@ -262,13 +260,14 @@ const PREVIOUS_MONTH_END_DAY: [u16; 12] = [0, 31, 59, 90, 120, 151, 181, 212, 24
 
 fn find_month(day_in_year: u16, is_leap: bool) -> u8 {
     let offset = if is_leap { 313 } else { 323 };
-    if day_in_year < 32 {
+    let month = if day_in_year < 32 {
         1
     } else {
-        ((10 * day_in_year + offset) / 306)
-            .to_u8()
-            .unwrap_or_else(|| unreachable!("should be representable as u8"))
-    }
+        (10 * day_in_year + offset) / 306
+    };
+    month
+        .to_u8()
+        .unwrap_or_else(|| unreachable!("month could not be represented as u8: {}", month))
 }
 
 fn find_day(day_in_year: u16, month: u8, is_leap: bool) -> Result<u8, DateError> {
@@ -283,7 +282,7 @@ fn find_day(day_in_year: u16, month: u8, is_leap: bool) -> Result<u8, DateError>
         let day = day_in_year - previous_days[(month - 1) as usize];
         Ok(day
             .to_u8()
-            .unwrap_or_else(|| unreachable!("should be representable as u8")))
+            .unwrap_or_else(|| unreachable!("day could not be represented as u8: {}", day)))
     }
 }
 
