@@ -2,6 +2,7 @@ use std::fmt::{Display, Formatter};
 
 use pyo3::{exceptions::PyValueError, pyclass, pymethods, PyErr};
 
+use crate::julian_dates::{Epoch, Unit};
 use crate::time_scales::TimeScale;
 use crate::{
     julian_dates::JulianDate,
@@ -89,17 +90,14 @@ impl PyTime {
 }
 
 impl JulianDate for PyTime {
-    fn julian_date(
-        &self,
-        epoch: crate::julian_dates::Epoch,
-        unit: crate::julian_dates::Unit,
-    ) -> f64 {
+    fn julian_date(&self, epoch: Epoch, unit: Unit) -> f64 {
         self.0.julian_date(epoch, unit)
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::time;
     use rstest::rstest;
 
     use super::*;
@@ -122,14 +120,14 @@ mod tests {
     }
 
     #[test]
-    fn test_pytime() {
-        let time = PyTime(
-            Time::new(PyTimeScale::Tai, 2000, 1, 1)
-                .unwrap()
-                .with_hms(12, 0, 0.0)
-                .unwrap(),
-        );
-        assert_eq!(time.seconds_since_j2000(), 0.0);
+    fn test_pytime_scale() {
+        let time = PyTime(time!(PyTimeScale::Tai, 2000, 1, 1, 12).unwrap());
         assert_eq!(time.scale(), PyTimeScale::Tai);
+    }
+
+    #[test]
+    fn test_pytime_julian_date() {
+        let time = PyTime(time!(PyTimeScale::Tai, 2000, 1, 1, 12).unwrap());
+        assert_eq!(time.seconds_since_j2000(), 0.0);
     }
 }

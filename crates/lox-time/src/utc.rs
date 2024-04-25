@@ -30,15 +30,18 @@ pub struct Utc {
 }
 
 impl Utc {
-    pub fn new(year: i64, month: u8, day: u8) -> Result<Self, UtcError> {
-        if year < 1960 {
+    pub fn new(date: Date, time: TimeOfDay) -> Result<Self, UtcError> {
+        if date.year() < 1960 {
             return Err(UtcError::UtcUndefined);
         }
-        let date = Date::new(year, month, day)?;
-        Ok(Self {
-            date,
-            time: TimeOfDay::default(),
-        })
+        if time.second() == 60 && !date.is_leap_second_date() {
+            return Err(UtcError::NonLeapSecondDate(date));
+        }
+        Ok(Self { date, time })
+    }
+
+    pub fn builder() -> UtcBuilder {
+        UtcBuilder::default()
     }
 
     pub fn from_delta(delta: TimeDelta) -> Self {
@@ -48,26 +51,14 @@ impl Utc {
         Self { date, time }
     }
 
-    pub fn with_time_of_day(mut self, time: TimeOfDay) -> Result<Self, UtcError> {
-        if time.second() == 60 && !self.date.is_leap_second_date() {
-            return Err(UtcError::NonLeapSecondDate(self.date));
-        }
-        self.time = time;
-        Ok(self)
-    }
-
-    pub fn with_hms(self, hour: u8, minute: u8, seconds: f64) -> Result<Self, UtcError> {
-        let time = TimeOfDay::from_hms(hour, minute, seconds)?;
-        self.with_time_of_day(time)
-    }
-
     pub fn to_delta(&self) -> TimeDelta {
-        let seconds = self
-            .date
-            .seconds_since_j2000()
-            .to_i64()
-            .unwrap_or_else(|| unreachable!("should be representable as i64"))
-            + self.time.second_of_day()
+        let seconds = self.date.seconds_since_j2000().to_i64().unwrap_or_else(|| {
+            unreachable!(
+                "seconds since J2000 for date {} are not representable as i64: {}",
+                self,
+                self.date.seconds_since_j2000()
+            )
+        }) + self.time.second_of_day()
             - SECONDS_PER_HALF_DAY;
         TimeDelta {
             seconds,
@@ -79,7 +70,7 @@ impl Utc {
 impl Display for Utc {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let precision = f.precision().unwrap_or(3);
-        write!(f, "{}T{:.*} UTC", self.date(), precision, self.time(),)
+        write!(f, "{}T{:.*} UTC", self.date(), precision, self.time())
     }
 }
 
@@ -95,34 +86,72 @@ impl CivilTime for Utc {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct UtcBuilder {
+    date: Result<Date, DateError>,
+    time: Option<Result<TimeOfDay, TimeOfDayError>>,
+}
+
+impl Default for UtcBuilder {
+    fn default() -> Self {
+        Self {
+            date: Ok(Date::default()),
+            time: None,
+        }
+    }
+}
+
+impl UtcBuilder {
+    pub fn with_ymd(self, year: i64, month: u8, day: u8) -> Self {
+        Self {
+            date: Date::new(year, month, day),
+            ..self
+        }
+    }
+
+    pub fn with_hms(self, hour: u8, minute: u8, seconds: f64) -> Self {
+        Self {
+            time: Some(TimeOfDay::from_hms(hour, minute, seconds)),
+            ..self
+        }
+    }
+
+    pub fn build(self) -> Result<Utc, UtcError> {
+        let date = self.date?;
+        let time = self.time.unwrap_or_else(|| Ok(TimeOfDay::default()))?;
+        Utc::new(date, time)
+    }
+}
+
 #[macro_export]
 macro_rules! utc {
     ($year:literal, $month:literal, $day:literal) => {
-        Utc::new($year, $month, $day)
+        Utc::builder().with_ymd($year, $month, $day).build()
     };
     ($year:literal, $month:literal, $day:literal, $hour:literal) => {
-        match Utc::new($year, $month, $day) {
-            Ok(utc) => utc.with_hms($hour, 0, 0.0),
-            Err(e) => Err(e),
-        }
+        Utc::builder()
+            .with_ymd($year, $month, $day)
+            .with_hms($hour, 0, 0.0)
+            .build()
     };
     ($year:literal, $month:literal, $day:literal, $hour:literal, $minute:literal) => {
-        match Utc::new($year, $month, $day) {
-            Ok(utc) => utc.with_hms($hour, $minute, 0.0),
-            Err(e) => Err(e),
-        }
+        Utc::builder()
+            .with_ymd($year, $month, $day)
+            .with_hms($hour, $minute, 0.0)
+            .build()
     };
     ($year:literal, $month:literal, $day:literal, $hour:literal, $minute:literal, $second:literal) => {
-        match Utc::new($year, $month, $day) {
-            Ok(utc) => utc.with_hms($hour, $minute, $second),
-            Err(e) => Err(e),
-        }
+        Utc::builder()
+            .with_ymd($year, $month, $day)
+            .with_hms($hour, $minute, $second)
+            .build()
     };
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rstest::rstest;
 
     #[test]
     fn test_utc_display() {
@@ -135,44 +164,31 @@ mod tests {
         assert_eq!(expected, actual);
     }
 
-    #[test]
-    fn test_utc_macro() {
-        let utc = utc!(2000, 1, 1).unwrap();
-        assert_eq!(utc.year(), 2000);
-        assert_eq!(utc.month(), 1);
-        assert_eq!(utc.day(), 1);
-        let utc = utc!(2000, 1, 1, 12).unwrap();
-        assert_eq!(utc.year(), 2000);
-        assert_eq!(utc.month(), 1);
-        assert_eq!(utc.day(), 1);
-        assert_eq!(utc.hour(), 12);
-        let utc = utc!(2000, 1, 1, 12, 13).unwrap();
-        assert_eq!(utc.year(), 2000);
-        assert_eq!(utc.month(), 1);
-        assert_eq!(utc.day(), 1);
-        assert_eq!(utc.hour(), 12);
-        assert_eq!(utc.minute(), 13);
-        let utc = utc!(2000, 1, 1, 12, 13, 14.15).unwrap();
-        assert_eq!(utc.year(), 2000);
-        assert_eq!(utc.month(), 1);
-        assert_eq!(utc.day(), 1);
-        assert_eq!(utc.hour(), 12);
-        assert_eq!(utc.minute(), 13);
-        assert_eq!(utc.second(), 14);
-        assert_eq!(utc.millisecond(), 150);
+    #[rstest]
+    #[case(utc!(2000, 1, 1), Utc::builder().with_ymd(2000, 1, 1).build())]
+    #[case(utc!(2000, 1, 1, 12), Utc::builder().with_ymd(2000, 1, 1).with_hms(12, 0, 0.0).build())]
+    #[case(utc!(2000, 1, 1, 12, 13), Utc::builder().with_ymd(2000, 1, 1).with_hms(12, 13, 0.0).build())]
+    #[case(utc!(2000, 1, 1, 12, 13, 14.15), Utc::builder().with_ymd(2000, 1, 1).with_hms(12, 13, 14.15).build())]
+    fn test_utc_macro(
+        #[case] actual: Result<Utc, UtcError>,
+        #[case] expected: Result<Utc, UtcError>,
+    ) {
+        assert_eq!(actual, expected)
     }
 
     #[test]
     fn test_utc_non_leap_second_date() {
-        let utc = Utc::new(2000, 1, 1).unwrap();
-        let actual = utc.with_hms(23, 59, 60.0);
-        let expected = Err(UtcError::NonLeapSecondDate(utc.date()));
+        let actual = Utc::builder()
+            .with_ymd(2000, 1, 1)
+            .with_hms(23, 59, 60.0)
+            .build();
+        let expected = Err(UtcError::NonLeapSecondDate(Date::new(2000, 1, 1).unwrap()));
         assert_eq!(actual, expected)
     }
 
     #[test]
     fn test_utc_undefined() {
-        let actual = Utc::new(1959, 1, 1);
+        let actual = Utc::builder().with_ymd(1959, 12, 31).build();
         let expected = Err(UtcError::UtcUndefined);
         assert_eq!(actual, expected)
     }

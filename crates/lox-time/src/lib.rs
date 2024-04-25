@@ -18,17 +18,16 @@ use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, Sub};
 
-use calendar_dates::DateError;
+use num::ToPrimitive;
+use thiserror::Error;
 
+use calendar_dates::DateError;
 use constants::i64::SECONDS_PER_DAY;
 use constants::julian_dates::{
     SECONDS_BETWEEN_J1950_AND_J2000, SECONDS_BETWEEN_JD_AND_J2000, SECONDS_BETWEEN_MJD_AND_J2000,
 };
 use lox_utils::constants::f64::time;
-use num::ToPrimitive;
 use time_of_day::{CivilTime, TimeOfDay, TimeOfDayError};
-
-use thiserror::Error;
 
 use crate::calendar_dates::{CalendarDate, Date};
 use crate::deltas::TimeDelta;
@@ -56,7 +55,7 @@ pub enum TimeError {
     DateError(#[from] DateError),
     #[error(transparent)]
     TimeError(#[from] TimeOfDayError),
-    #[error("leap seconds do not exist in continuous time scales. Use Utc instead.")]
+    #[error("leap seconds do not exist in continuous time scales; use `Utc` instead")]
     LeapSecondOutsideUtc,
 }
 
@@ -72,26 +71,36 @@ pub struct Time<T: TimeScale + Copy> {
 }
 
 impl<T: TimeScale + Copy> Time<T> {
-    pub fn new(scale: T, year: i64, month: u8, day: u8) -> Result<Self, TimeError> {
-        let date = Date::new(year, month, day)?;
-        Ok(Self::from_date(scale, date))
-    }
-
-    pub fn from_date(scale: T, date: Date) -> Self {
-        let seconds = ((date.days_since_j2000() - 0.5) * time::SECONDS_PER_DAY)
-            .to_i64()
-            .unwrap_or_else(|| unreachable!("should be representable as i64"));
-        Self::from_seconds(scale, seconds, Subsecond::default())
-    }
-
-    /// Instantiates a [Time] in the given scale from seconds since J2000 subdived into integral
+    /// Instantiates a [Time] in the given scale from seconds since J2000 subdivided into integral
     /// seconds and [Subsecond].
-    pub fn from_seconds(scale: T, seconds: i64, subsecond: Subsecond) -> Self {
+    pub fn new(scale: T, seconds: i64, subsecond: Subsecond) -> Self {
         Self {
             scale,
             seconds,
             subsecond,
         }
+    }
+
+    pub fn new_old(scale: T, year: i64, month: u8, day: u8) -> Result<Self, TimeError> {
+        let date = Date::new(year, month, day)?;
+        Self::from_date_and_time(scale, date, TimeOfDay::default())
+    }
+
+    pub fn from_date_and_time(scale: T, date: Date, time: TimeOfDay) -> Result<Self, TimeError> {
+        let mut seconds = ((date.days_since_j2000() - 0.5) * time::SECONDS_PER_DAY)
+            .to_i64()
+            .unwrap_or_else(|| {
+                unreachable!(
+                    "seconds since J2000 for date {} are not representable as i64: {}",
+                    date,
+                    date.days_since_j2000()
+                )
+            });
+        if time.second() == 60 {
+            return Err(TimeError::LeapSecondOutsideUtc);
+        }
+        seconds += time.second_of_day();
+        Ok(Self::new(scale, seconds, time.subsecond()))
     }
 
     pub fn from_delta(scale: T, delta: TimeDelta) -> Self {
@@ -135,18 +144,8 @@ impl<T: TimeScale + Copy> Time<T> {
         }
     }
 
-    pub fn with_time_of_day(mut self, time: TimeOfDay) -> Result<Self, TimeError> {
-        if time.second() == 60 {
-            return Err(TimeError::LeapSecondOutsideUtc);
-        }
-        self.seconds += time.second_of_day();
-        self.subsecond = time.subsecond();
-        Ok(self)
-    }
-
-    pub fn with_hms(self, hour: u8, minute: u8, seconds: f64) -> Result<Self, TimeError> {
-        let time = TimeOfDay::from_hms(hour, minute, seconds)?;
-        self.with_time_of_day(time)
+    pub fn builder_with_scale(scale: T) -> TimeBuilder<T> {
+        TimeBuilder::new(scale)
     }
 
     /// Returns the timescale
@@ -154,9 +153,9 @@ impl<T: TimeScale + Copy> Time<T> {
         self.scale
     }
 
-    /// Returns a new [Time] with [scale] without changing the underlying timestamp.
-    pub fn override_scale<S: TimeScale + Copy>(&self, scale: S) -> Time<S> {
-        Time::from_seconds(scale, self.seconds, self.subsecond)
+    /// Returns a new [Time] with `scale` without changing the underlying timestamp.
+    pub fn with_scale<S: TimeScale + Copy>(&self, scale: S) -> Time<S> {
+        Time::new(scale, self.seconds, self.subsecond)
     }
 
     /// Returns, as an epoch in the given timescale, midday on the first day of the proleptic Julian
@@ -270,7 +269,7 @@ impl<T: TimeScale + Copy> Add<TimeDelta> for Time<T> {
 
         let subsec_and_carry = self.subsecond.0 + rhs.subsecond.0;
         let seconds = subsec_and_carry.trunc().to_i64().unwrap() + self.seconds + rhs.seconds;
-        Self::from_seconds(self.scale, seconds, Subsecond(subsec_and_carry.fract()))
+        Self::new(self.scale, seconds, Subsecond(subsec_and_carry.fract()))
     }
 }
 
@@ -290,7 +289,7 @@ impl<T: TimeScale + Copy> Sub<TimeDelta> for Time<T> {
             seconds -= 1;
             subsec += 1.0;
         }
-        Self::from_seconds(self.scale, seconds, Subsecond(subsec))
+        Self::new(self.scale, seconds, Subsecond(subsec))
     }
 }
 
@@ -322,29 +321,67 @@ impl<T: TimeScale + Copy> CalendarDate for Time<T> {
         Date::from_seconds_since_j2000(self.seconds)
     }
 }
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct TimeBuilder<T: TimeScale> {
+    scale: T,
+    date: Result<Date, DateError>,
+    time: Option<Result<TimeOfDay, TimeOfDayError>>,
+}
+
+impl<T: TimeScale + Copy> TimeBuilder<T> {
+    pub fn new(scale: T) -> Self {
+        Self {
+            scale,
+            date: Ok(Date::default()),
+            time: None,
+        }
+    }
+
+    pub fn with_ymd(self, year: i64, month: u8, day: u8) -> Self {
+        Self {
+            date: Date::new(year, month, day),
+            ..self
+        }
+    }
+
+    pub fn with_hms(self, hour: u8, minute: u8, seconds: f64) -> Self {
+        Self {
+            time: Some(TimeOfDay::from_hms(hour, minute, seconds)),
+            ..self
+        }
+    }
+
+    pub fn build(self) -> Result<Time<T>, TimeError> {
+        let date = self.date?;
+        let time = self.time.unwrap_or_else(|| Ok(TimeOfDay::default()))?;
+        Time::from_date_and_time(self.scale, date, time)
+    }
+}
 
 #[macro_export]
 macro_rules! time {
-    ($scale:ident, $year:literal, $month:literal, $day:literal) => {
-        Time::new($scale, $year, $month, $day)
+    ($scale:expr, $year:literal, $month:literal, $day:literal) => {
+        Time::builder_with_scale($scale)
+            .with_ymd($year, $month, $day)
+            .build()
     };
-    ($scale:ident, $year:literal, $month:literal, $day:literal, $hour:literal) => {
-        match Time::new($scale, $year, $month, $day) {
-            Ok(time) => time.with_hms($hour, 0, 0.0),
-            Err(e) => Err(e),
-        }
+    ($scale:expr, $year:literal, $month:literal, $day:literal, $hour:literal) => {
+        Time::builder_with_scale($scale)
+            .with_ymd($year, $month, $day)
+            .with_hms($hour, 0, 0.0)
+            .build()
     };
-    ($scale:ident, $year:literal, $month:literal, $day:literal, $hour:literal, $minute:literal) => {
-        match Time::new($scale, $year, $month, $day) {
-            Ok(time) => time.with_hms($hour, $minute, 0.0),
-            Err(e) => Err(e),
-        }
+    ($scale:expr, $year:literal, $month:literal, $day:literal, $hour:literal, $minute:literal) => {
+        Time::builder_with_scale($scale)
+            .with_ymd($year, $month, $day)
+            .with_hms($hour, $minute, 0.0)
+            .build()
     };
-    ($scale:ident, $year:literal, $month:literal, $day:literal, $hour:literal, $minute:literal, $second:literal) => {
-        match Time::new($scale, $year, $month, $day) {
-            Ok(time) => time.with_hms($hour, $minute, $second),
-            Err(e) => Err(e),
-        }
+    ($scale:expr, $year:literal, $month:literal, $day:literal, $hour:literal, $minute:literal, $second:literal) => {
+        Time::builder_with_scale($scale)
+            .with_ymd($year, $month, $day)
+            .with_hms($hour, $minute, $second)
+            .build()
     };
 }
 
@@ -354,24 +391,31 @@ mod tests {
     use mockall::predicate;
     use rstest::rstest;
 
-    use crate::constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
     use lox_utils::constants::f64::time::DAYS_PER_JULIAN_CENTURY;
     use lox_utils::constants::i32::time::JD_J2000;
 
+    use crate::constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
     use crate::time_scales::{Tai, Tdb, Tt};
     use crate::transformations::MockTransformTimeScale;
     use crate::Time;
 
-    use self::constants::i64::{SECONDS_PER_HOUR, SECONDS_PER_JULIAN_CENTURY, SECONDS_PER_MINUTE};
-
     use super::*;
 
+    use self::constants::i64::{SECONDS_PER_HOUR, SECONDS_PER_JULIAN_CENTURY, SECONDS_PER_MINUTE};
+
     #[test]
-    fn test_time_new() {
-        let time = Time::new(Tai, 2000, 1, 2).unwrap();
-        assert_eq!(time.seconds(), SECONDS_PER_HALF_DAY);
-        let time = time.with_hms(12, 0, 0.0).unwrap();
-        assert_eq!(time.seconds(), SECONDS_PER_DAY);
+    fn test_time_builder() {
+        let time = Time::builder_with_scale(Tai)
+            .with_ymd(2000, 1, 1)
+            .build()
+            .unwrap();
+        assert_eq!(time.seconds(), -SECONDS_PER_HALF_DAY);
+        let time = Time::builder_with_scale(Tai)
+            .with_ymd(2000, 1, 1)
+            .with_hms(12, 0, 0.0)
+            .build()
+            .unwrap();
+        assert_eq!(time.seconds(), 0);
     }
 
     #[test]
@@ -384,17 +428,8 @@ mod tests {
             seconds,
             subsecond,
         };
-        let actual = Time::from_seconds(scale, seconds, subsecond);
+        let actual = Time::new(scale, seconds, subsecond);
         assert_eq!(expected, actual);
-    }
-
-    #[test]
-    fn test_time_hms() {
-        let tai = Time::new(Tai, 2000, 1, 1)
-            .unwrap()
-            .with_hms(12, 0, 0.0)
-            .unwrap();
-        assert_eq!(tai.seconds(), 0);
     }
 
     #[test]
@@ -438,7 +473,7 @@ mod tests {
 
     #[test]
     fn test_time_seconds() {
-        let time = Time::from_seconds(Tai, 1234567890, Subsecond(0.9876543210));
+        let time = Time::new(Tai, 1234567890, Subsecond(0.9876543210));
         let expected = 1234567890;
         let actual = time.seconds();
         assert_eq!(
@@ -516,10 +551,7 @@ mod tests {
 
     #[test]
     fn test_j2100() {
-        let time = Time::new(Tai, 2100, 1, 1)
-            .unwrap()
-            .with_hms(12, 0, 0.0)
-            .unwrap();
+        let time = time!(Tdb, 2100, 1, 1, 12).unwrap();
         assert_eq!(
             time.julian_date(Epoch::J2000, Unit::Days),
             DAYS_PER_JULIAN_CENTURY
@@ -531,10 +563,7 @@ mod tests {
 
     #[test]
     fn test_two_part_julian_date() {
-        let time = Time::new(Tdb, 2100, 1, 2)
-            .unwrap()
-            .with_hms(0, 0, 0.0)
-            .unwrap();
+        let time = time!(Tdb, 2100, 1, 2).unwrap();
         let (jd1, jd2) = time.two_part_julian_date();
         assert_eq!(jd1, 2451545.0 + DAYS_PER_JULIAN_CENTURY);
         assert_eq!(jd2, 0.5);
@@ -813,14 +842,13 @@ mod tests {
     #[test]
     fn test_time_override_scale() {
         let time: Time<Tai> = Time::default();
-        let time = time.override_scale(Tt);
+        let time = time.with_scale(Tt);
         assert_eq!(time.scale(), Tt);
     }
 
     #[test]
     fn test_time_leap_second_outside_utc() {
-        let time = Time::new(Tai, 2000, 1, 1).unwrap();
-        let actual = time.with_hms(23, 59, 60.0);
+        let actual = time!(Tai, 2000, 1, 1, 23, 59, 60.0);
         let expected = Err(TimeError::LeapSecondOutsideUtc);
         assert_eq!(actual, expected);
     }

@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::fmt::Display;
 
 use crate::{
@@ -7,6 +8,30 @@ use crate::{
 
 use num::ToPrimitive;
 use thiserror::Error;
+
+#[derive(Debug, Copy, Clone, Error)]
+#[error("seconds must be in the range [0.0..86401.0) but was {0}")]
+pub struct InvalidSeconds(f64);
+
+impl PartialOrd for InvalidSeconds {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for InvalidSeconds {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.0.total_cmp(&other.0)
+    }
+}
+
+impl PartialEq for InvalidSeconds {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.total_cmp(&other.0) == Ordering::Equal
+    }
+}
+
+impl Eq for InvalidSeconds {}
 
 #[derive(Debug, Copy, Clone, Error, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TimeOfDayError {
@@ -18,6 +43,8 @@ pub enum TimeOfDayError {
     InvalidSecond(u8),
     #[error("second must be in the range [0..86401) but was {0}")]
     InvalidSecondOfDay(u64),
+    #[error(transparent)]
+    InvalidSeconds(#[from] InvalidSeconds),
     #[error("leap seconds are only valid at the end of the day")]
     InvalidLeapSecond,
     #[error(transparent)]
@@ -90,7 +117,11 @@ impl TimeOfDay {
     }
 
     pub fn from_hms(hour: u8, minute: u8, seconds: f64) -> Result<Self, TimeOfDayError> {
-        let (second, fraction) = split_decimal_seconds(seconds);
+        if !(0.0..86401.0).contains(&seconds) {
+            return Err(TimeOfDayError::InvalidSeconds(InvalidSeconds(seconds)));
+        }
+        let second = seconds.trunc() as u8;
+        let fraction = seconds.fract();
         let subsecond = Subsecond::new(fraction).unwrap();
         Ok(Self::new(hour, minute, second)?.with_subsecond(subsecond))
     }
@@ -99,7 +130,12 @@ impl TimeOfDay {
         if !(0..86401).contains(&second_of_day) {
             return Err(TimeOfDayError::InvalidSecondOfDay(second_of_day));
         }
-        let (hour, minute, second) = hms_from_second_of_day(second_of_day);
+        if second_of_day == SECONDS_PER_DAY as u64 {
+            return Self::new(23, 59, 60);
+        }
+        let hour = (second_of_day / 3600) as u8;
+        let minute = ((second_of_day % 3600) / 60) as u8;
+        let second = (second_of_day % 60) as u8;
         Self::new(hour, minute, second)
     }
 
@@ -144,6 +180,22 @@ impl TimeOfDay {
     }
 }
 
+trait WithSubsecond {
+    fn with_subsecond(self, subsecond: Subsecond) -> Self;
+}
+
+impl WithSubsecond for Result<TimeOfDay, TimeOfDayError> {
+    fn with_subsecond(self, subsecond: Subsecond) -> Self {
+        match self {
+            Ok(mut time) => {
+                time.subsecond = subsecond;
+                Ok(time)
+            }
+            Err(err) => Err(err),
+        }
+    }
+}
+
 impl Display for TimeOfDay {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let precision = f.precision().unwrap_or(3);
@@ -158,31 +210,21 @@ impl Display for TimeOfDay {
     }
 }
 
-fn split_decimal_seconds(value: f64) -> (u8, f64) {
-    let whole = value.trunc() as u8;
-    let fraction = value.fract();
-    (whole, fraction)
-}
-
-fn hms_from_second_of_day(second_of_day: u64) -> (u8, u8, u8) {
-    if second_of_day == 86400 {
-        return (23, 59, 60);
-    }
-    let hour = (second_of_day / 3600) as u8;
-    let minute = ((second_of_day % 3600) / 60) as u8;
-    let second = (second_of_day % 60) as u8;
-    (hour, minute, second)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rstest::rstest;
 
-    #[test]
-    fn test_hms_from_second_of_day() {
-        assert_eq!(hms_from_second_of_day(43201), (12, 0, 1));
-        assert_eq!(hms_from_second_of_day(86399), (23, 59, 59));
-        assert_eq!(hms_from_second_of_day(86400), (23, 59, 60));
+    #[rstest]
+    #[case(43201, TimeOfDay::new(12, 0, 1))]
+    #[case(86399, TimeOfDay::new(23, 59, 59))]
+    #[case(86400, TimeOfDay::new(23, 59, 60))]
+    fn test_time_of_day_from_second_of_day(
+        #[case] second_of_day: u64,
+        #[case] expected: Result<TimeOfDay, TimeOfDayError>,
+    ) {
+        let actual = TimeOfDay::from_second_of_day(second_of_day);
+        assert_eq!(actual, expected);
     }
 
     #[test]
@@ -193,23 +235,19 @@ mod tests {
         assert_eq!(format!("{:.15}", time), "12:00:00.123456789123456");
     }
 
-    #[test]
-    fn test_time_of_day_error() {
-        assert_eq!(
-            TimeOfDay::new(24, 0, 0),
-            Err(TimeOfDayError::InvalidHour(24))
-        );
-        assert_eq!(
-            TimeOfDay::new(0, 60, 0),
-            Err(TimeOfDayError::InvalidMinute(60))
-        );
-        assert_eq!(
-            TimeOfDay::new(0, 0, 61),
-            Err(TimeOfDayError::InvalidSecond(61))
-        );
-        assert_eq!(
-            TimeOfDay::from_second_of_day(86401),
-            Err(TimeOfDayError::InvalidSecondOfDay(86401))
-        );
+    #[rstest]
+    #[case(TimeOfDay::new(24, 0, 0), Err(TimeOfDayError::InvalidHour(24)))]
+    #[case(TimeOfDay::new(0, 60, 0), Err(TimeOfDayError::InvalidMinute(60)))]
+    #[case(TimeOfDay::new(0, 0, 61), Err(TimeOfDayError::InvalidSecond(61)))]
+    #[case(
+        TimeOfDay::from_second_of_day(86401),
+        Err(TimeOfDayError::InvalidSecondOfDay(86401))
+    )]
+    #[case(TimeOfDay::from_hms(12, 0, -0.123), Err(TimeOfDayError::InvalidSeconds(InvalidSeconds(-0.123))))]
+    fn test_time_of_day_error(
+        #[case] actual: Result<TimeOfDay, TimeOfDayError>,
+        #[case] expected: Result<TimeOfDay, TimeOfDayError>,
+    ) {
+        assert_eq!(actual, expected);
     }
 }

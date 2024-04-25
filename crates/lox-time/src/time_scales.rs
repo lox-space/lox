@@ -97,20 +97,21 @@ impl TimeScale for Ut1 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rstest::rstest;
 
-    #[test]
-    fn test_time_scales() {
-        assert_eq!(Tai.abbreviation(), "TAI");
-        assert_eq!(Tai.name(), "International Atomic Time");
-        assert_eq!(Tcb.abbreviation(), "TCB");
-        assert_eq!(Tcb.name(), "Barycentric Coordinate Time");
-        assert_eq!(Tcg.abbreviation(), "TCG");
-        assert_eq!(Tcg.name(), "Geocentric Coordinate Time");
-        assert_eq!(Tdb.abbreviation(), "TDB");
-        assert_eq!(Tdb.name(), "Barycentric Dynamical Time");
-        assert_eq!(Tt.abbreviation(), "TT");
-        assert_eq!(Tt.name(), "Terrestrial Time");
-        assert_eq!(Ut1.abbreviation(), "UT1");
-        assert_eq!(Ut1.name(), "Universal Time");
+    #[rstest]
+    #[case(Tai, "TAI", "International Atomic Time")]
+    #[case(Tcb, "TCB", "Barycentric Coordinate Time")]
+    #[case(Tcg, "TCG", "Geocentric Coordinate Time")]
+    #[case(Tdb, "TDB", "Barycentric Dynamical Time")]
+    #[case(Tt, "TT", "Terrestrial Time")]
+    #[case(Ut1, "UT1", "Universal Time")]
+    fn test_time_scales<T: TimeScale>(
+        #[case] scale: T,
+        #[case] abbreviation: &'static str,
+        #[case] name: &'static str,
+    ) {
+        assert_eq!(scale.abbreviation(), abbreviation);
+        assert_eq!(scale.name(), name);
     }
 }

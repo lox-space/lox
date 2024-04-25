@@ -107,7 +107,7 @@ impl Subsecond {
 impl Display for Subsecond {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let precision = f.precision().unwrap_or(3);
-        write!(f, "{:.*}", precision, self.0,)
+        write!(f, "{:.*}", precision, self.0)
     }
 }
 

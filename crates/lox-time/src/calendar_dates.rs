@@ -166,8 +166,9 @@ impl Date {
         let leap = is_leap_year(calendar, year);
         let day_of_year = (days - last_day_of_year_j2k(calendar, year - 1)) as u16;
         let month = find_month(day_of_year, leap);
-        let day = find_day(day_of_year, month, leap)
-            .unwrap_or_else(|_| unreachable!("day of year should be valid"));
+        let day = find_day(day_of_year, month, leap).unwrap_or_else(|err| {
+            unreachable!("{} is not a valid day of the year: {}", day_of_year, err)
+        });
 
         Date {
             calendar,
