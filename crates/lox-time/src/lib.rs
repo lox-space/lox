@@ -81,11 +81,6 @@ impl<T: TimeScale + Copy> Time<T> {
         }
     }
 
-    pub fn new_old(scale: T, year: i64, month: u8, day: u8) -> Result<Self, TimeError> {
-        let date = Date::new(year, month, day)?;
-        Self::from_date_and_time(scale, date, TimeOfDay::default())
-    }
-
     pub fn from_date_and_time(scale: T, date: Date, time: TimeOfDay) -> Result<Self, TimeError> {
         let mut seconds = ((date.days_since_j2000() - 0.5) * time::SECONDS_PER_DAY)
             .to_i64()
