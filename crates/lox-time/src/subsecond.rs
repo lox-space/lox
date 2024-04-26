@@ -12,7 +12,31 @@ use std::fmt::{Display, Formatter};
 
 use num::ToPrimitive;
 
-use crate::errors::LoxTimeError;
+use thiserror::Error;
+
+#[derive(Debug, Copy, Clone, Error)]
+#[error("subsecond must be in the range [0.0, 1.0), but was `{0}`")]
+pub struct InvalidSubsecond(f64);
+
+impl PartialOrd for InvalidSubsecond {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for InvalidSubsecond {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.0.total_cmp(&other.0)
+    }
+}
+
+impl PartialEq for InvalidSubsecond {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.total_cmp(&other.0) == Ordering::Equal
+    }
+}
+
+impl Eq for InvalidSubsecond {}
 
 /// An f64 value in the range [0.0, 1.0) representing a fraction of a second with femtosecond
 /// precision.
@@ -46,9 +70,9 @@ impl Ord for Subsecond {
 }
 
 impl Subsecond {
-    pub fn new(subsecond: f64) -> Result<Self, LoxTimeError> {
+    pub fn new(subsecond: f64) -> Result<Self, InvalidSubsecond> {
         if !(0.0..1.0).contains(&subsecond) {
-            Err(LoxTimeError::InvalidSubsecond(subsecond))
+            Err(InvalidSubsecond(subsecond))
         } else {
             Ok(Self(subsecond))
         }
@@ -82,15 +106,8 @@ impl Subsecond {
 
 impl Display for Subsecond {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{:03}.{:03}.{:03}.{:03}.{:03}",
-            self.millisecond(),
-            self.microsecond(),
-            self.nanosecond(),
-            self.picosecond(),
-            self.femtosecond()
-        )
+        let precision = f.precision().unwrap_or(3);
+        write!(f, "{:.*}", precision, self.0)
     }
 }
 
@@ -105,16 +122,15 @@ impl Into<f64> for Subsecond {
 mod tests {
     use rstest::rstest;
 
-    use crate::errors::LoxTimeError;
-    use crate::subsecond::Subsecond;
+    use super::*;
 
     #[rstest]
-    #[case::below_lower_bound(-1e-15, Err(LoxTimeError::InvalidSubsecond(-1e-15)))]
+    #[case::below_lower_bound(-1e-15, Err(InvalidSubsecond(-1e-15)))]
     #[case::on_lower_bound(0.0, Ok(Subsecond(0.0)))]
     #[case::between_bounds(0.5, Ok(Subsecond(0.5)))]
-    #[case::on_upper_bound(1.0, Err(LoxTimeError::InvalidSubsecond(1.0)))]
-    #[case::above_upper_bound(1.5, Err(LoxTimeError::InvalidSubsecond(1.5)))]
-    fn test_subsecond_new(#[case] raw: f64, #[case] expected: Result<Subsecond, LoxTimeError>) {
+    #[case::on_upper_bound(1.0, Err(InvalidSubsecond(1.0)))]
+    #[case::above_upper_bound(1.5, Err(InvalidSubsecond(1.5)))]
+    fn test_subsecond_new(#[case] raw: f64, #[case] expected: Result<Subsecond, InvalidSubsecond>) {
         assert_eq!(expected, Subsecond::new(raw));
     }
 
@@ -166,12 +182,23 @@ mod tests {
     #[test]
     fn test_subsecond_display() {
         let subsecond = Subsecond(0.123456789876543);
-        assert_eq!("123.456.789.876.543", subsecond.to_string());
+        assert_eq!("0.123", subsecond.to_string());
+        assert_eq!(format!("{:.15}", subsecond), "0.123456789876543");
     }
 
     #[test]
     fn test_subsecond_into_f64() {
         let subsecond = Subsecond(0.0);
         assert_eq!(0.0, subsecond.into());
+    }
+
+    #[test]
+    fn test_invalid_subsecond_ord() {
+        let actual = InvalidSubsecond(-f64::NAN).partial_cmp(&InvalidSubsecond(f64::NAN));
+        let expected = Some(Ordering::Less);
+        assert_eq!(actual, expected);
+        let actual = InvalidSubsecond(-f64::NAN).cmp(&InvalidSubsecond(f64::NAN));
+        let expected = Ordering::Less;
+        assert_eq!(actual, expected);
     }
 }

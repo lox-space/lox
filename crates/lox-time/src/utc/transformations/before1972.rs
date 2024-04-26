@@ -20,7 +20,7 @@ use crate::julian_dates::Epoch::ModifiedJulianDate;
 use crate::julian_dates::JulianDate;
 use crate::julian_dates::Unit::Days;
 use crate::time_scales::Tai;
-use crate::utc::UtcDateTime;
+use crate::utc::Utc;
 use crate::Time;
 
 const EPOCHS: [u64; 14] = [
@@ -45,11 +45,11 @@ const DRIFT_RATES: [f64; 14] = [
 
 /// UTC minus TAI. Returns [None] if the input is before 1960-01-01, when UTC is defined from,
 /// although this is impossible for all properly constructed [UtcDateTime] instances.
-pub fn delta_utc_tai(utc: UtcDateTime) -> Option<TimeDelta> {
+pub fn delta_utc_tai(utc: Utc) -> Option<TimeDelta> {
     // Invariant: EPOCHS must be sorted for the search below to work
     debug_assert!(is_sorted_asc(&EPOCHS));
 
-    let mjd = utc.julian_date(ModifiedJulianDate, Days);
+    let mjd = utc.to_delta().days_since_modified_julian_epoch();
     let threshold = mjd.floor() as u64;
     let position = EPOCHS.iter().rposition(|item| item <= &threshold)?;
     let raw_delta =

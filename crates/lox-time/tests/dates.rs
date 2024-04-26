@@ -6,11 +6,10 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use num::ToPrimitive;
 use rstest::rstest;
 
 use lox_time::calendar_dates::Date;
-use lox_time::subsecond::Subsecond;
-use lox_time::utc::Utc;
 
 #[rstest]
 #[case(-4713, 12, 31, -2451546)]
@@ -36,9 +35,11 @@ use lox_time::utc::Utc;
 #[case(2000, 2, 28, 58)]
 #[case(2000, 2, 29, 59)]
 #[case(2000, 3, 1, 60)]
-fn test_dates(#[case] year: i64, #[case] month: i64, #[case] day: i64, #[case] exp: i64) {
+fn test_dates(#[case] year: i64, #[case] month: u8, #[case] day: u8, #[case] exp: i64) {
+    use lox_time::julian_dates::JulianDate;
+
     let date = Date::new(year, month, day).expect("date should be valid");
-    assert_eq!(exp, date.j2000())
+    assert_eq!(exp, date.days_since_j2000().to_i64().unwrap());
 }
 
 #[test]
@@ -46,11 +47,4 @@ fn test_illegal_dates() {
     assert!(Date::new(2018, 2, 29).is_err());
     assert!(Date::new(2018, 0, 1).is_err());
     assert!(Date::new(2018, 13, 1).is_err());
-}
-
-#[test]
-fn test_illegal_times() {
-    assert!(Utc::new(24, 59, 59, Subsecond::default()).is_err());
-    assert!(Utc::new(23, 60, 59, Subsecond::default()).is_err());
-    assert!(Utc::new(23, 59, 61, Subsecond::default()).is_err());
 }

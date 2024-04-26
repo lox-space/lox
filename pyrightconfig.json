@@ -1,0 +1,4 @@
+{
+  "venvPath": "./crates/lox-space",
+  "venv": ".venv"
+}

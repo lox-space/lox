@@ -14,7 +14,7 @@ crate-type = ["lib", "cdylib"]
 [dependencies]
 lox-bodies.workspace = true
 lox-coords.workspace = true
-lox-time.workspace = true
+lox-time = { workspace = true, features = ["python"] }
 lox-utils.workspace = true
 
 float_eq.workspace = true
@@ -22,7 +22,7 @@ pyo3.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
-pyo3 = { version = "0.20.2", features = ["auto-initialize"] }
+pyo3 = { workspace = true, features = ["auto-initialize"] }
 divan.workspace = true
 rstest.workspace = true
 

@@ -16,7 +16,14 @@ use lox_utils::constants::f64::time::{
     SECONDS_PER_MINUTE,
 };
 
-use crate::subsecond::Subsecond;
+use crate::{
+    constants::julian_dates::{
+        SECONDS_BETWEEN_J1950_AND_J2000, SECONDS_BETWEEN_JD_AND_J2000,
+        SECONDS_BETWEEN_MJD_AND_J2000,
+    },
+    julian_dates::{Epoch, JulianDate, Unit},
+    subsecond::Subsecond,
+};
 
 #[derive(Clone, Debug, Default, Error)]
 #[error("`{raw}` cannot be represented as a `TimeDelta`: {detail}")]
@@ -212,6 +219,27 @@ impl TimeDelta {
             result
         }
     }
+
+    pub fn seconds_from_epoch(&self, epoch: Epoch) -> i64 {
+        match epoch {
+            Epoch::JulianDate => self.seconds + SECONDS_BETWEEN_JD_AND_J2000,
+            Epoch::ModifiedJulianDate => self.seconds + SECONDS_BETWEEN_MJD_AND_J2000,
+            Epoch::J1950 => self.seconds + SECONDS_BETWEEN_J1950_AND_J2000,
+            Epoch::J2000 => self.seconds,
+        }
+    }
+}
+
+impl JulianDate for TimeDelta {
+    fn julian_date(&self, epoch: Epoch, unit: Unit) -> f64 {
+        let mut decimal_seconds = self.seconds_from_epoch(epoch).to_f64().unwrap();
+        decimal_seconds += self.subsecond.0;
+        match unit {
+            Unit::Seconds => decimal_seconds,
+            Unit::Days => decimal_seconds / SECONDS_PER_DAY,
+            Unit::Centuries => decimal_seconds / SECONDS_PER_JULIAN_CENTURY,
+        }
+    }
 }
 
 impl Neg for TimeDelta {
@@ -277,6 +305,7 @@ impl Sub for TimeDelta {
 #[cfg(test)]
 mod tests {
     use float_eq::assert_float_eq;
+    use lox_utils::constants::f64::time::DAYS_PER_JULIAN_CENTURY;
     use proptest::prelude::*;
     use rstest::rstest;
 
@@ -483,5 +512,22 @@ mod tests {
         #[case] expected: TimeDelta,
     ) {
         assert_eq!(expected, lhs - rhs);
+    }
+
+    #[test]
+    fn test_delta_julian_date() {
+        let delta = TimeDelta::new(
+            crate::constants::i64::SECONDS_PER_JULIAN_CENTURY,
+            Subsecond::default(),
+        );
+        assert_eq!(delta.seconds_since_j2000(), SECONDS_PER_JULIAN_CENTURY);
+        assert_eq!(delta.days_since_j2000(), DAYS_PER_JULIAN_CENTURY);
+        assert_eq!(delta.centuries_since_j2000(), 1.0);
+        assert_eq!(delta.centuries_since_j1950(), 1.5);
+        assert_eq!(
+            delta.centuries_since_modified_julian_epoch(),
+            2.411211498973306
+        );
+        assert_eq!(delta.centuries_since_julian_epoch(), 68.11964407939767);
     }
 }

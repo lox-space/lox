@@ -22,7 +22,10 @@ pub enum Unit {
 pub trait JulianDate {
     fn julian_date(&self, epoch: Epoch, unit: Unit) -> f64;
 
-    fn two_part_julian_date(&self) -> (f64, f64);
+    fn two_part_julian_date(&self) -> (f64, f64) {
+        let jd = self.julian_date(Epoch::JulianDate, Unit::Days);
+        (jd.trunc(), jd.fract())
+    }
 
     fn seconds_since_julian_epoch(&self) -> f64 {
         self.julian_date(Epoch::JulianDate, Unit::Seconds)
