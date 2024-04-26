@@ -89,14 +89,14 @@ impl CivilTime for Utc {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct UtcBuilder {
     date: Result<Date, DateError>,
-    time: Option<Result<TimeOfDay, TimeOfDayError>>,
+    time: Result<TimeOfDay, TimeOfDayError>,
 }
 
 impl Default for UtcBuilder {
     fn default() -> Self {
         Self {
             date: Ok(Date::default()),
-            time: None,
+            time: Ok(TimeOfDay::default()),
         }
     }
 }
@@ -111,14 +111,14 @@ impl UtcBuilder {
 
     pub fn with_hms(self, hour: u8, minute: u8, seconds: f64) -> Self {
         Self {
-            time: Some(TimeOfDay::from_hms(hour, minute, seconds)),
+            time: TimeOfDay::from_hms(hour, minute, seconds),
             ..self
         }
     }
 
     pub fn build(self) -> Result<Utc, UtcError> {
         let date = self.date?;
-        let time = self.time.unwrap_or_else(|| Ok(TimeOfDay::default()))?;
+        let time = self.time?;
         Utc::new(date, time)
     }
 }

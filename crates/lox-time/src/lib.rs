@@ -362,7 +362,7 @@ impl<T: TimeScale + Copy> CalendarDate for Time<T> {
 pub struct TimeBuilder<T: TimeScale> {
     scale: T,
     date: Result<Date, DateError>,
-    time: Option<Result<TimeOfDay, TimeOfDayError>>,
+    time: Result<TimeOfDay, TimeOfDayError>,
 }
 
 impl<T: TimeScale + Copy> TimeBuilder<T> {
@@ -370,7 +370,7 @@ impl<T: TimeScale + Copy> TimeBuilder<T> {
         Self {
             scale,
             date: Ok(Date::default()),
-            time: None,
+            time: Ok(TimeOfDay::default()),
         }
     }
 
@@ -385,7 +385,7 @@ impl<T: TimeScale + Copy> TimeBuilder<T> {
     /// Sets the `hour`, `minute`, and decimal `seconds` of the [Time] under construction.
     pub fn with_hms(self, hour: u8, minute: u8, seconds: f64) -> Self {
         Self {
-            time: Some(TimeOfDay::from_hms(hour, minute, seconds)),
+            time: TimeOfDay::from_hms(hour, minute, seconds),
             ..self
         }
     }
@@ -393,7 +393,7 @@ impl<T: TimeScale + Copy> TimeBuilder<T> {
     /// Builds the [Time] instance.
     pub fn build(self) -> Result<Time<T>, TimeError> {
         let date = self.date?;
-        let time = self.time.unwrap_or_else(|| Ok(TimeOfDay::default()))?;
+        let time = self.time?;
         Time::from_date_and_time(self.scale, date, time)
     }
 }
