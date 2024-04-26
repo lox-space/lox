@@ -112,6 +112,7 @@ impl<T: TimeScale + Copy> Time<T> {
         }
     }
 
+    /// Instantiates a [Time] in the given `scale` from a [Date] and a [TimeOfDay].
     pub fn from_date_and_time(scale: T, date: Date, time: TimeOfDay) -> Result<Self, TimeError> {
         let mut seconds = ((date.days_since_j2000() - 0.5) * time::SECONDS_PER_DAY)
             .to_i64()
@@ -129,6 +130,7 @@ impl<T: TimeScale + Copy> Time<T> {
         Ok(Self::new(scale, seconds, time.subsecond()))
     }
 
+    /// Instantiates a [Time] in the given `scale` from an offset from the J2000 epoch given as a [TimeDelta].
     pub fn from_delta(scale: T, delta: TimeDelta) -> Self {
         Self {
             scale,
@@ -137,6 +139,7 @@ impl<T: TimeScale + Copy> Time<T> {
         }
     }
 
+    /// Returns the offset from the J2000 epoch as a [TimeDelta].
     pub fn to_delta(self) -> TimeDelta {
         TimeDelta {
             seconds: self.seconds,
@@ -194,6 +197,7 @@ impl<T: TimeScale + Copy> Time<T> {
         Ok(Self::new(scale, seconds, subsecond))
     }
 
+    /// Returns a [TimeBuilder] for constructing a new [Time] in the given `scale`.
     pub fn builder_with_scale(scale: T) -> TimeBuilder<T> {
         TimeBuilder::new(scale)
     }
@@ -239,15 +243,6 @@ impl<T: TimeScale + Copy> Time<T> {
         self.subsecond.into()
     }
 
-    pub fn seconds_from_epoch(&self, epoch: Epoch) -> i64 {
-        match epoch {
-            Epoch::JulianDate => self.seconds + SECONDS_BETWEEN_JD_AND_J2000,
-            Epoch::ModifiedJulianDate => self.seconds + SECONDS_BETWEEN_MJD_AND_J2000,
-            Epoch::J1950 => self.seconds + SECONDS_BETWEEN_J1950_AND_J2000,
-            Epoch::J2000 => self.seconds,
-        }
-    }
-
     /// Given a `Time` in [TimeScale] `S`, and a transformer from `S` to `T`, returns a new Time in
     /// [TimeScale] `T`.
     pub fn from_scale<S: TimeScale + Copy>(
@@ -268,7 +263,14 @@ impl<T: TimeScale + Copy> Time<T> {
 
 impl<T: TimeScale + Copy> JulianDate for Time<T> {
     fn julian_date(&self, epoch: Epoch, unit: Unit) -> f64 {
-        let mut decimal_seconds = self.seconds_from_epoch(epoch).to_f64().unwrap();
+        let mut decimal_seconds = (match epoch {
+            Epoch::JulianDate => self.seconds + SECONDS_BETWEEN_JD_AND_J2000,
+            Epoch::ModifiedJulianDate => self.seconds + SECONDS_BETWEEN_MJD_AND_J2000,
+            Epoch::J1950 => self.seconds + SECONDS_BETWEEN_J1950_AND_J2000,
+            Epoch::J2000 => self.seconds,
+        })
+        .to_f64()
+        .unwrap();
         decimal_seconds += self.subsecond.0;
         match unit {
             Unit::Seconds => decimal_seconds,
@@ -372,6 +374,7 @@ impl<T: TimeScale + Copy> TimeBuilder<T> {
         }
     }
 
+    /// Sets the `year`, `month`, and `day` of the [Time] under construction.
     pub fn with_ymd(self, year: i64, month: u8, day: u8) -> Self {
         Self {
             date: Date::new(year, month, day),
@@ -379,6 +382,7 @@ impl<T: TimeScale + Copy> TimeBuilder<T> {
         }
     }
 
+    /// Sets the `hour`, `minute`, and decimal `seconds` of the [Time] under construction.
     pub fn with_hms(self, hour: u8, minute: u8, seconds: f64) -> Self {
         Self {
             time: Some(TimeOfDay::from_hms(hour, minute, seconds)),
@@ -386,6 +390,7 @@ impl<T: TimeScale + Copy> TimeBuilder<T> {
         }
     }
 
+    /// Builds the [Time] instance.
     pub fn build(self) -> Result<Time<T>, TimeError> {
         let date = self.date?;
         let time = self.time.unwrap_or_else(|| Ok(TimeOfDay::default()))?;
