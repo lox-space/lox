@@ -441,6 +441,7 @@ name = "lox-io"
 version = "0.0.0"
 dependencies = [
  "nom",
+ "thiserror",
 ]
 
 [[package]]
