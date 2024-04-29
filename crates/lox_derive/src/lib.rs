@@ -93,6 +93,9 @@ pub fn derive_kvn_deserialize(item: proc_macro::TokenStream) -> proc_macro::Toke
     let (impl_generics, type_generics, where_clause) = item.generics.split_for_impl();
 
     let deserializer = quote! {
+        use crate::ndm::kvn::parser::{KvnDeserializer, KvnDeserializerErr};
+        use crate::ndm::kvn::parser::{parse_kvn_string_line, parse_kvn_datetime_line, parse_kvn_numeric_line, parse_kvn_integer_line};
+
         impl #impl_generics KvnDeserializer<#name> for #name #type_generics
         #where_clause
         {
