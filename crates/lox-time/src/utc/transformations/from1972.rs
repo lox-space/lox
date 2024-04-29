@@ -19,8 +19,8 @@ use lox_utils::slices::is_sorted_asc;
 use crate::calendar_dates::Date;
 use crate::deltas::TimeDelta;
 use crate::julian_dates::JulianDate;
-use crate::time_of_day::CivilTime;
 use crate::time_scales::Tai;
+use crate::utc::leap_seconds::{BuiltinLeapSeconds, LeapSecondsProvider};
 use crate::utc::Utc;
 use crate::Time;
 
@@ -33,7 +33,7 @@ const MJD_LEAP_SECOND_EPOCHS: [u64; 28] = [
 
 impl Date {
     pub fn is_leap_second_date(&self) -> bool {
-        let mjd = (self.days_since_modified_julian_epoch().ceil()).to_u64();
+        let mjd = (self.days_since_modified_julian_epoch() + 1.0).to_u64();
         if let Some(mjd) = mjd {
             return MJD_LEAP_SECOND_EPOCHS.contains(&mjd);
         }
@@ -82,39 +82,12 @@ pub const LEAP_SECONDS: [i64; 28] = [
 /// For dates from 1972-01-01, returns a [TimeDelta] representing the count of leap seconds between
 /// TAI and UTC. Returns `None` for dates before 1972.
 pub fn delta_tai_utc(tai: Time<Tai>) -> Option<TimeDelta> {
-    j2000_tai_leap_second_epochs()
-        .iter()
-        .rev()
-        .zip(LEAP_SECONDS.iter().rev())
-        .find_map(|(&epoch, &leap_seconds)| {
-            if epoch <= tai.seconds() {
-                Some(TimeDelta::from_seconds(leap_seconds))
-            } else {
-                None
-            }
-        })
+    BuiltinLeapSeconds.delta_tai_utc(tai)
 }
 
 /// UTC minus TAI. Calculates the correct leap second count for dates after 1972 by simple lookup.
 pub fn delta_utc_tai(utc: Utc) -> Option<TimeDelta> {
-    let base_time = utc.to_delta();
-    j2000_utc_leap_second_epochs()
-        .iter()
-        .rev()
-        .zip(LEAP_SECONDS.iter().rev())
-        .find_map(|(&epoch, &leap_seconds)| {
-            if epoch <= base_time.seconds {
-                Some(TimeDelta::from_seconds(leap_seconds))
-            } else {
-                None
-            }
-        })
-        .map(|mut delta| {
-            if utc.second() == 60 {
-                delta.seconds -= 1;
-            }
-            -delta
-        })
+    BuiltinLeapSeconds.delta_utc_tai(utc)
 }
 
 impl Time<Tai> {
