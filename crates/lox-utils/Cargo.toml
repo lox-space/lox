@@ -15,6 +15,7 @@ error = "0.1.9"
 serde-aux = "4.5.0"
 regex = "1.10.4"
 fast-float = "0.2.0"
+lox_derive.workspace = true
 
 [dev-dependencies]
 float_eq.workspace = true
