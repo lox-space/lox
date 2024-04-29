@@ -6,7 +6,6 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use num::ToPrimitive;
 use rstest::rstest;
 
 use lox_time::calendar_dates::Date;
