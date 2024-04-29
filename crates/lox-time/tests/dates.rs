@@ -36,10 +36,8 @@ use lox_time::calendar_dates::Date;
 #[case(2000, 2, 29, 59)]
 #[case(2000, 3, 1, 60)]
 fn test_dates(#[case] year: i64, #[case] month: u8, #[case] day: u8, #[case] exp: i64) {
-    use lox_time::julian_dates::JulianDate;
-
     let date = Date::new(year, month, day).expect("date should be valid");
-    assert_eq!(exp, date.days_since_j2000().to_i64().unwrap());
+    assert_eq!(exp, date.j2000_day_number());
 }
 
 #[test]
