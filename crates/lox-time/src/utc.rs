@@ -4,11 +4,11 @@ use num::ToPrimitive;
 use thiserror::Error;
 
 use crate::calendar_dates::{CalendarDate, Date, DateError};
-use crate::constants::i64::SECONDS_PER_HALF_DAY;
 use crate::deltas::TimeDelta;
 use crate::julian_dates::JulianDate;
 use crate::time_of_day::{CivilTime, TimeOfDay, TimeOfDayError};
 
+pub mod leap_seconds;
 pub mod transformations;
 
 #[derive(Debug, Clone, Error, PartialEq, Eq, PartialOrd, Ord)]
@@ -58,8 +58,7 @@ impl Utc {
                 self,
                 self.date.seconds_since_j2000()
             )
-        }) + self.time.second_of_day()
-            - SECONDS_PER_HALF_DAY;
+        }) + self.time.second_of_day();
         TimeDelta {
             seconds,
             subsecond: self.time.subsecond(),

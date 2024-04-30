@@ -120,7 +120,7 @@ impl Date {
             Err(DateError::InvalidDate(year, month, day))
         } else {
             let calendar = calendar(year, month, day);
-            let check = Date::from_days_since_j2000(days_since_j2000(calendar, year, month, day));
+            let check = Date::from_days_since_j2000(j2000_day_number(calendar, year, month, day));
 
             if check.year() != year || check.month() != month || check.day() != day {
                 Err(DateError::InvalidDate(year, month, day))
@@ -201,12 +201,17 @@ impl Date {
             day,
         })
     }
+
+    pub fn j2000_day_number(&self) -> i64 {
+        j2000_day_number(self.calendar, self.year, self.month, self.day)
+    }
 }
 
 impl JulianDate for Date {
     fn julian_date(&self, epoch: Epoch, unit: Unit) -> f64 {
-        let mut seconds =
-            days_since_j2000(self.calendar, self.year, self.month, self.day) * SECONDS_PER_DAY;
+        let mut seconds = j2000_day_number(self.calendar, self.year, self.month, self.day)
+            * SECONDS_PER_DAY
+            - SECONDS_PER_HALF_DAY;
         seconds = match epoch {
             Epoch::JulianDate => seconds + SECONDS_BETWEEN_JD_AND_J2000,
             Epoch::ModifiedJulianDate => seconds + SECONDS_BETWEEN_MJD_AND_J2000,
@@ -309,7 +314,7 @@ fn calendar(year: i64, month: u8, day: u8) -> Calendar {
     }
 }
 
-fn days_since_j2000(calendar: Calendar, year: i64, month: u8, day: u8) -> i64 {
+fn j2000_day_number(calendar: Calendar, year: i64, month: u8, day: u8) -> i64 {
     let d1 = last_day_of_year_j2k(calendar, year - 1);
     let d2 = find_day_in_year(month, day, is_leap_year(calendar, year));
     d1 + d2 as i64
@@ -378,16 +383,34 @@ mod tests {
     }
 
     #[test]
+    fn test_date_jd_epoch() {
+        let date = Date::default();
+        assert_eq!(date.days_since_julian_epoch(), 2451544.5);
+    }
+
+    #[test]
     fn test_date_julian_date() {
         let date = Date::new(2100, 1, 1).unwrap();
-        assert_eq!(date.seconds_since_j2000(), SECONDS_PER_JULIAN_CENTURY);
-        assert_eq!(date.days_since_j2000(), DAYS_PER_JULIAN_CENTURY);
-        assert_eq!(date.centuries_since_j2000(), 1.0);
-        assert_eq!(date.centuries_since_j1950(), 1.5);
+        assert_eq!(
+            date.seconds_since_j2000(),
+            SECONDS_PER_JULIAN_CENTURY - SECONDS_PER_HALF_DAY as f64
+        );
+        assert_eq!(date.days_since_j2000(), DAYS_PER_JULIAN_CENTURY - 0.5);
+        assert_eq!(
+            date.centuries_since_j2000(),
+            1.0 - 0.5 / DAYS_PER_JULIAN_CENTURY
+        );
+        assert_eq!(
+            date.centuries_since_j1950(),
+            1.5 - 0.5 / DAYS_PER_JULIAN_CENTURY
+        );
         assert_eq!(
             date.centuries_since_modified_julian_epoch(),
-            2.411211498973306
+            2.411211498973306 - 0.5 / DAYS_PER_JULIAN_CENTURY
         );
-        assert_eq!(date.centuries_since_julian_epoch(), 68.11964407939767);
+        assert_eq!(
+            date.centuries_since_julian_epoch(),
+            68.11964407939767 - 0.5 / DAYS_PER_JULIAN_CENTURY
+        );
     }
 }

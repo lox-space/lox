@@ -114,7 +114,7 @@ impl<T: TimeScale + Copy> Time<T> {
 
     /// Instantiates a [Time] in the given `scale` from a [Date] and a [TimeOfDay].
     pub fn from_date_and_time(scale: T, date: Date, time: TimeOfDay) -> Result<Self, TimeError> {
-        let mut seconds = ((date.days_since_j2000() - 0.5) * time::SECONDS_PER_DAY)
+        let mut seconds = (date.days_since_j2000() * time::SECONDS_PER_DAY)
             .to_i64()
             .unwrap_or_else(|| {
                 unreachable!(

@@ -15,6 +15,7 @@ use crate::constants::julian_dates::J77;
 use crate::deltas::TimeDelta;
 use crate::subsecond::Subsecond;
 use crate::time_scales::{Tai, Tcb, Tcg, Tdb, TimeScale, Tt};
+use crate::utc::Utc;
 use crate::Time;
 
 /// TransformTimeScale transforms a [Time] in [TimeScale] `T` to the corresponding [Time] in
@@ -194,6 +195,12 @@ fn delta_tdb_tt(time: Time<Tdb>) -> TimeDelta {
             raw_delta, err,
         )
     })
+}
+
+pub trait LeapSecondsProvider {
+    fn delta_tai_utc(&self, tai: Time<Tai>) -> Option<TimeDelta>;
+
+    fn delta_utc_tai(&self, utc: Utc) -> Option<TimeDelta>;
 }
 
 #[cfg(test)]

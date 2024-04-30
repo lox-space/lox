@@ -465,6 +465,7 @@ version = "0.1.0"
 dependencies = [
  "float_eq",
  "lox-eop",
+ "lox-io",
  "lox-utils",
  "mockall",
  "num",
