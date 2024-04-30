@@ -8,6 +8,9 @@
 
 use crate::calendar_dates::{Date, DateError};
 use crate::constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
+use crate::deltas::TimeDelta;
+use crate::prelude::{CivilTime, Tai};
+use crate::Time;
 use lox_io::spice::{Kernel, KernelError};
 use std::fs::read_to_string;
 use std::num::ParseIntError;
@@ -15,6 +18,7 @@ use std::path::Path;
 use thiserror::Error;
 
 use crate::transformations::LeapSecondsProvider;
+use crate::utc::Utc;
 
 const LEAP_SECONDS_KERNEL_KEY: &str = "DELTET/DELTA_AT";
 
@@ -40,16 +44,12 @@ const LEAP_SECONDS: [i64; 28] = [
 pub struct BuiltinLeapSeconds;
 
 impl LeapSecondsProvider for BuiltinLeapSeconds {
-    fn epochs_utc(&self) -> &[i64] {
-        &LEAP_SECOND_EPOCHS_UTC
+    fn delta_tai_utc(&self, tai: Time<Tai>) -> Option<TimeDelta> {
+        find_leap_seconds_tai(&LEAP_SECOND_EPOCHS_TAI, &LEAP_SECONDS, tai)
     }
 
-    fn epochs_tai(&self) -> &[i64] {
-        &LEAP_SECOND_EPOCHS_TAI
-    }
-
-    fn leap_seconds(&self) -> &[i64] {
-        &LEAP_SECONDS
+    fn delta_utc_tai(&self, utc: Utc) -> Option<TimeDelta> {
+        find_leap_seconds_utc(&LEAP_SECOND_EPOCHS_UTC, &LEAP_SECONDS, utc)
     }
 }
 
@@ -113,17 +113,39 @@ impl LeapSecondsKernel {
 }
 
 impl LeapSecondsProvider for LeapSecondsKernel {
-    fn epochs_utc(&self) -> &[i64] {
-        &self.epochs_utc
+    fn delta_tai_utc(&self, tai: Time<Tai>) -> Option<TimeDelta> {
+        find_leap_seconds_tai(&self.epochs_tai, &self.leap_seconds, tai)
     }
 
-    fn epochs_tai(&self) -> &[i64] {
-        &self.epochs_tai
+    fn delta_utc_tai(&self, utc: Utc) -> Option<TimeDelta> {
+        find_leap_seconds_utc(&self.epochs_utc, &self.leap_seconds, utc)
     }
+}
 
-    fn leap_seconds(&self) -> &[i64] {
-        &self.leap_seconds
+fn find_leap_seconds(epochs: &[i64], leap_seconds: &[i64], seconds: i64) -> Option<TimeDelta> {
+    if seconds < epochs[0] {
+        return None;
     }
+    let idx = epochs.partition_point(|&epoch| epoch <= seconds) - 1;
+    let seconds = leap_seconds[idx];
+    Some(TimeDelta::from_seconds(seconds))
+}
+
+fn find_leap_seconds_tai(
+    epochs: &[i64],
+    leap_seconds: &[i64],
+    tai: Time<Tai>,
+) -> Option<TimeDelta> {
+    find_leap_seconds(epochs, leap_seconds, tai.seconds())
+}
+
+fn find_leap_seconds_utc(epochs: &[i64], leap_seconds: &[i64], utc: Utc) -> Option<TimeDelta> {
+    find_leap_seconds(epochs, leap_seconds, utc.to_delta().seconds).map(|mut ls| {
+        if utc.second() == 60 {
+            ls.seconds -= 1;
+        }
+        -ls
+    })
 }
 
 #[cfg(test)]
@@ -189,11 +211,12 @@ mod tests {
     #[test]
     fn test_leap_seconds_kernel() {
         let lsk = kernel();
-        assert_eq!(lsk.epochs_utc().len(), 28);
-        assert_eq!(lsk.epochs_tai().len(), 28);
-        assert_eq!(lsk.leap_seconds().len(), 28);
-        assert_eq!(lsk.epochs_utc(), &LEAP_SECOND_EPOCHS_UTC);
-        assert_eq!(lsk.epochs_tai(), &LEAP_SECOND_EPOCHS_TAI);
+        assert_eq!(lsk.leap_seconds.len(), 28);
+        assert_eq!(lsk.epochs_utc.len(), 28);
+        assert_eq!(lsk.epochs_tai.len(), 28);
+        assert_eq!(lsk.leap_seconds, &LEAP_SECONDS);
+        assert_eq!(lsk.epochs_utc, &LEAP_SECOND_EPOCHS_UTC);
+        assert_eq!(lsk.epochs_tai, &LEAP_SECOND_EPOCHS_TAI);
     }
 
     const KERNEL: &str = "KPL/LSK
