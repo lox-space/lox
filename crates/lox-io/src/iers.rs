@@ -8,14 +8,81 @@
 
 //! Parse [EarthOrientationParams] from IERS CSV data.
 
-#![cfg(test)]
-
 use std::path::{Path, PathBuf};
 
+use lox_utils::types::julian_dates::ModifiedJulianDayNumber;
 use serde::Deserialize;
 use thiserror::Error;
 
-use crate::{EarthOrientationParams, EopError};
+#[derive(Copy, Clone, Debug, Error, PartialEq, Eq)]
+pub enum EopError {
+    #[error("input vectors for EarthOrientationParams must have equal lengths, but got mjd.len()={len_mjd}, x_pole.len()={len_x_pole}, y_pole.len()={len_y_pole}, delta_ut1_utc.len()={len_delta_ut1_utc}")]
+    DimensionMismatch {
+        len_mjd: usize,
+        len_x_pole: usize,
+        len_y_pole: usize,
+        len_delta_ut1_utc: usize,
+    },
+    #[error("EarthOrientationParams cannot be empty, but empty input vectors were provided")]
+    NoData,
+}
+
+/// A representation of observed Earth orientation parameters, independent of input format.
+#[derive(Clone, Debug, PartialEq)]
+pub struct EarthOrientationParams {
+    mjd: Vec<ModifiedJulianDayNumber>,
+    x_pole: Vec<f64>,
+    y_pole: Vec<f64>,
+    delta_ut1_utc: Vec<f64>,
+}
+
+impl EarthOrientationParams {
+    pub fn new(
+        mjd: Vec<ModifiedJulianDayNumber>,
+        x_pole: Vec<f64>,
+        y_pole: Vec<f64>,
+        delta_ut1_utc: Vec<f64>,
+    ) -> Result<Self, EopError> {
+        if mjd.len() != x_pole.len()
+            || mjd.len() != y_pole.len()
+            || mjd.len() != delta_ut1_utc.len()
+        {
+            return Err(EopError::DimensionMismatch {
+                len_mjd: mjd.len(),
+                len_x_pole: x_pole.len(),
+                len_y_pole: y_pole.len(),
+                len_delta_ut1_utc: delta_ut1_utc.len(),
+            });
+        }
+
+        if mjd.is_empty() {
+            return Err(EopError::NoData);
+        }
+
+        Ok(EarthOrientationParams {
+            mjd,
+            x_pole,
+            y_pole,
+            delta_ut1_utc,
+        })
+    }
+
+    pub fn mjd(&self) -> &[ModifiedJulianDayNumber] {
+        &self.mjd
+    }
+
+    pub fn x_pole(&self) -> &[f64] {
+        &self.x_pole
+    }
+
+    pub fn y_pole(&self) -> &[f64] {
+        &self.y_pole
+    }
+
+    pub fn delta_ut1_utc(&self) -> &[f64] {
+        &self.delta_ut1_utc
+    }
+}
 
 #[derive(Clone, Debug, Error, PartialEq)]
 pub enum ParseFinalsCsvError {

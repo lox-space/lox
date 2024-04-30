@@ -10,11 +10,13 @@ authors.workspace = true
 
 [dependencies]
 lox-bodies.workspace = true
+lox-io.workspace = true
 lox-time.workspace = true
 lox-utils.workspace = true
 
 fast_polynomial.workspace = true
 glam.workspace = true
+thiserror.workspace = true
 
 [dev-dependencies]
 float_eq.workspace = true

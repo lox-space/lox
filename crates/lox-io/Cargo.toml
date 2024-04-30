@@ -8,5 +8,12 @@ license.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+lox-utils.workspace = true
+
+csv.workspace = true
 nom.workspace = true
+serde.workspace = true
 thiserror.workspace = true
+
+[dev-dependencies]
+rstest.workspace = true
