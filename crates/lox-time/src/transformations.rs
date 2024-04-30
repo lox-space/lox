@@ -13,8 +13,10 @@ use mockall::automock;
 
 use crate::constants::julian_dates::J77;
 use crate::deltas::TimeDelta;
+use crate::prelude::CivilTime;
 use crate::subsecond::Subsecond;
 use crate::time_scales::{Tai, Tcb, Tcg, Tdb, TimeScale, Tt};
+use crate::utc::Utc;
 use crate::Time;
 
 /// TransformTimeScale transforms a [Time] in [TimeScale] `T` to the corresponding [Time] in
@@ -194,6 +196,35 @@ fn delta_tdb_tt(time: Time<Tdb>) -> TimeDelta {
             raw_delta, err,
         )
     })
+}
+
+pub trait LeapSecondsProvider {
+    fn epochs_utc(&self) -> &[i64];
+    fn epochs_tai(&self) -> &[i64];
+    fn leap_seconds(&self) -> &[i64];
+
+    fn find_leap_seconds(&self, epochs: &[i64], seconds: i64) -> Option<TimeDelta> {
+        if seconds < epochs[0] {
+            return None;
+        }
+        let idx = epochs.partition_point(|&epoch| epoch <= seconds) - 1;
+        let seconds = self.leap_seconds()[idx];
+        Some(TimeDelta::from_seconds(seconds))
+    }
+
+    fn delta_tai_utc(&self, tai: Time<Tai>) -> Option<TimeDelta> {
+        self.find_leap_seconds(self.epochs_tai(), tai.seconds())
+    }
+
+    fn delta_utc_tai(&self, utc: Utc) -> Option<TimeDelta> {
+        self.find_leap_seconds(self.epochs_utc(), utc.to_delta().seconds)
+            .map(|mut ls| {
+                if utc.second() == 60 {
+                    ls.seconds -= 1;
+                }
+                -ls
+            })
+    }
 }
 
 #[cfg(test)]

@@ -6,9 +6,9 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use lox_time::utc::leap_seconds::Lsk;
+use lox_time::utc::leap_seconds::LeapSecondsKernel;
 
 #[test]
 fn test_lsk_from_file() {
-    assert!(Lsk::from_file("../../data/naif0012.tls").is_ok());
+    assert!(LeapSecondsKernel::from_file("../../data/naif0012.tls").is_ok());
 }

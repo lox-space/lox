@@ -383,10 +383,13 @@ mod tests {
     }
 
     #[test]
-    fn test_date_julian_date() {
+    fn test_date_jd_epoch() {
         let date = Date::default();
         assert_eq!(date.days_since_julian_epoch(), 2451544.5);
+    }
 
+    #[test]
+    fn test_date_julian_date() {
         let date = Date::new(2100, 1, 1).unwrap();
         assert_eq!(
             date.seconds_since_j2000(),

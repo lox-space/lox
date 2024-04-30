@@ -20,7 +20,8 @@ use crate::calendar_dates::Date;
 use crate::deltas::TimeDelta;
 use crate::julian_dates::JulianDate;
 use crate::time_scales::Tai;
-use crate::utc::leap_seconds::{BuiltinLeapSeconds, LeapSecondsProvider};
+use crate::transformations::LeapSecondsProvider;
+use crate::utc::leap_seconds::BuiltinLeapSeconds;
 use crate::utc::Utc;
 use crate::Time;
 
