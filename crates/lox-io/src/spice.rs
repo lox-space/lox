@@ -10,19 +10,27 @@ use std::collections::HashMap;
 
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take_until, take_while, take_while1};
-use nom::character::complete::{alpha1, line_ending, multispace0, one_of};
+use nom::character::complete::{alpha1, digit1, line_ending, multispace0, one_of};
 use nom::combinator::{map, map_res, recognize, rest};
+use nom::error::Error;
 use nom::multi::{fold_many1, many0, many1};
 use nom::number::complete::{double, float};
 use nom::sequence::{delimited, preceded, separated_pair, terminated, tuple};
-use nom::IResult;
+use nom::{Finish, IResult};
+use thiserror::Error;
+
+#[derive(Debug, Error, PartialEq)]
+#[error(transparent)]
+pub struct KernelError(#[from] Error<String>);
 
 #[derive(Clone, Debug, PartialEq)]
 enum Value {
     Double(f64),
     String(String),
+    Timestamp(String),
     DoubleArray(Vec<f64>),
     StringArray(Vec<String>),
+    TimestampArray(Vec<String>),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -34,14 +42,14 @@ pub struct Kernel {
 type Entries = Vec<(String, Value)>;
 
 impl Kernel {
-    pub fn from_string(input: &str) -> Result<Self, &'static str> {
-        if let Ok(("", (type_id, entries, _))) = kernel(input) {
-            Ok(Self {
+    pub fn from_string(input: &str) -> Result<Self, KernelError> {
+        let result = kernel(input).map_err(|e| e.to_owned()).finish();
+        match result {
+            Ok((_, (type_id, entries, _))) => Ok(Self {
                 type_id: type_id.to_string(),
                 items: entries.into_iter().collect(),
-            })
-        } else {
-            Err("kernel parsing failed")
+            }),
+            Err(err) => Err(KernelError(err)),
         }
     }
 
@@ -61,6 +69,15 @@ impl Kernel {
     pub fn get_double_array(&self, key: &str) -> Option<&Vec<f64>> {
         let value = self.items.get(key)?;
         if let Value::DoubleArray(v) = value {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    pub fn get_timestamp_array(&self, key: &str) -> Option<&Vec<String>> {
+        let value = self.items.get(key)?;
+        if let Value::TimestampArray(v) = value {
             Some(v)
         } else {
             None
@@ -120,8 +137,26 @@ fn spice_string(s: &str) -> IResult<&str, String> {
     parser(s)
 }
 
+fn timestamp(s: &str) -> IResult<&str, String> {
+    let mut parser = map(
+        // NASA NAIF's LSK kernels break their own rules and mix timestamps with integers within a
+        // single array.
+        // See: https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/req/kernel.html#Variable%20Value%20Rules
+        alt((
+            preceded(tag("@"), take_while1(|c| !is_separator(c))),
+            digit1,
+        )),
+        String::from,
+    );
+    parser(s)
+}
+
+fn is_separator(c: char) -> bool {
+    c.is_whitespace() || c == ','
+}
+
 fn separator(s: &str) -> IResult<&str, &str> {
-    take_while1(|x: char| x.is_whitespace() || x == ',')(s)
+    take_while1(is_separator)(s)
 }
 
 fn double_array(s: &str) -> IResult<&str, Value> {
@@ -148,6 +183,18 @@ fn string_array(s: &str) -> IResult<&str, Value> {
     parser(s)
 }
 
+fn timestamp_array(s: &str) -> IResult<&str, Value> {
+    let mut parser = map(
+        delimited(
+            terminated(tag("("), separator),
+            many1(terminated(timestamp, separator)),
+            tag(")"),
+        ),
+        Value::TimestampArray,
+    );
+    parser(s)
+}
+
 fn double_value(s: &str) -> IResult<&str, Value> {
     let mut parser = map(spice_double, Value::Double);
     parser(s)
@@ -158,8 +205,13 @@ fn string_value(s: &str) -> IResult<&str, Value> {
     parser(s)
 }
 
+fn timestamp_value(s: &str) -> IResult<&str, Value> {
+    let mut parser = map(timestamp, Value::Timestamp);
+    parser(s)
+}
+
 fn array_value(s: &str) -> IResult<&str, Value> {
-    let mut parser = alt((double_array, string_array));
+    let mut parser = alt((double_array, string_array, timestamp_array));
     parser(s)
 }
 
@@ -171,7 +223,7 @@ fn key_value(s: &str) -> IResult<&str, (String, Value)> {
                 take_while(char::is_whitespace),
             ),
             terminated(tag("="), take_while1(char::is_whitespace)),
-            alt((double_value, string_value, array_value)),
+            alt((double_value, string_value, timestamp_value, array_value)),
         ),
         |kv: (&str, Value)| (kv.0.to_string(), kv.1),
     );
@@ -244,6 +296,11 @@ mod tests {
     }
 
     #[test]
+    fn test_timestamp() {
+        assert_eq!(timestamp("@1972-JAN-1"), Ok(("", "1972-JAN-1".to_string())));
+    }
+
+    #[test]
     fn test_separator() {
         assert_eq!(separator("   "), Ok(("", "   ")));
         assert_eq!(separator(" , "), Ok(("", " , ")));
@@ -284,6 +341,23 @@ mod tests {
                     "KILOMETERS".to_string(),
                     "SECONDS".to_string(),
                     "KILOMETERS/SECOND".to_string()
+                ))
+            ))
+        );
+    }
+
+    #[test]
+    fn test_timestamp_array() {
+        let input = "( @1972-JAN-1,@1972-JAN-1 \
+            @1972-JAN-1 )";
+        assert_eq!(
+            timestamp_array(input),
+            Ok((
+                "",
+                Value::TimestampArray(vec!(
+                    "1972-JAN-1".to_string(),
+                    "1972-JAN-1".to_string(),
+                    "1972-JAN-1".to_string()
                 ))
             ))
         );
