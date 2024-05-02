@@ -17,7 +17,7 @@ use lox_utils::math::arcsec_to_rad_two_pi;
 use lox_utils::types::julian_dates::ModifiedJulianDate;
 use lox_utils::types::units::{Arcseconds, Microarcseconds, Radians, Seconds};
 
-use crate::lagrange::eop::constants::{LUNI_SOLAR_TIDAL_TERMS, OCEANIC_TIDAL_TERMS};
+use crate::tides::constants::{LUNI_SOLAR_TIDAL_TERMS, OCEANIC_TIDAL_TERMS};
 
 mod constants;
 
@@ -77,23 +77,6 @@ pub struct Interpolation {
     x: Arcseconds,
     y: Arcseconds,
     d_ut1_utc: ModifiedJulianDate,
-}
-
-/// Perform Lagrangian interpolation of Earth Orientation Parameters (EOP), returning polar x- and
-/// y- values and UT1-UTC at the target epoch. The result is corrected for oceanic and luni-solar
-/// tidal effects.
-pub fn interpolate(args: Arguments) -> Interpolation {
-    let x = crate::lagrange::interpolate(&args.epochs, &args.x, args.target_epoch);
-    let y = crate::lagrange::interpolate(&args.epochs, &args.y, args.target_epoch);
-    let t = crate::lagrange::interpolate(&args.epochs, &args.t, args.target_epoch);
-    let tidal_args = tidal_args(julian_centuries_since_j2000(args.target_epoch));
-    let tidal_correction = oceanic_tidal_correction(&tidal_args);
-    let lunisolar_correction = luni_solar_tidal_correction(&tidal_args);
-    Interpolation {
-        x: x + tidal_correction.x + lunisolar_correction.x,
-        y: y + tidal_correction.y + lunisolar_correction.y,
-        d_ut1_utc: t + tidal_correction.t,
-    }
 }
 
 /// χ (GMST + π) followed by Delaunay arguments l, l', F, D, Ω.
@@ -221,11 +204,10 @@ fn chi(julian_centuries_since_j2000: f64) -> Radians {
 mod tests {
     use std::path::Path;
 
-    use float_eq::assert_float_eq;
     use rstest::{fixture, rstest};
 
-    use crate::iers::parse_finals_csv;
-    use crate::EarthOrientationParams;
+    use lox_io::iers::parse_finals_csv;
+    use lox_io::iers::EarthOrientationParams;
 
     use super::*;
 
@@ -259,51 +241,5 @@ mod tests {
                 err,
             )
         })
-    }
-
-    #[rstest]
-    #[case::mjd_j2000(MJD_J2000, Interpolation {
-    x: 4.325128997437056e-2,
-    y: 0.3779536211567663,
-    d_ut1_utc: 0.35498904611828275,
-    })]
-    // Used to test the interpolator branch where the target date is less than two from the end of
-    // the dataset.
-    #[case::mjd_60615(60615.0, Interpolation {
-    x: 0.2663521252106578,
-    y: 0.298694318830590,
-    d_ut1_utc: 4.7103969541161944e-2,
-    })]
-    // The following two test cases are far outside the range of IERS data, but are included to
-    // establish consistency with the Bizouard F90 implementation at the extremes.
-    #[case::mjd_0(0.0, Interpolation {
-    x: 12072321.700398155,
-    y: -24142704.67775462,
-    d_ut1_utc: 778638165.7968734,
-    })]
-    #[case::mjd_j2100(88069.5, Interpolation {
-    x: -16632958.650911978,
-    y: 33267845.857896354,
-    d_ut1_utc: -1072847942.5702964,
-    })]
-    fn test_lagrangian_interpolate(
-        eop_data: EarthOrientationParams,
-        #[case] target_epoch: ModifiedJulianDate,
-        #[case] expected: Interpolation,
-    ) -> Result<(), ArgumentSizeMismatchError> {
-        let args = Arguments::new(
-            eop_data.x_pole,
-            eop_data.y_pole,
-            eop_data.delta_ut1_utc,
-            eop_data.mjd.iter().map(|&mjd| mjd.into()).collect(),
-            target_epoch,
-        )?;
-        let result = interpolate(args);
-
-        assert_float_eq!(expected.x, result.x, rel <= 1e-9);
-        assert_float_eq!(expected.y, result.y, rel <= 1e-9);
-        assert_float_eq!(expected.d_ut1_utc, result.d_ut1_utc, rel <= 1e-9);
-
-        Ok(())
     }
 }

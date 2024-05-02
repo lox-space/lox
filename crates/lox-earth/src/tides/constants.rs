@@ -6,7 +6,7 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::lagrange::eop::{LuniSolarTidalTerm, OceanicTidalTerm};
+use crate::tides::{LuniSolarTidalTerm, OceanicTidalTerm};
 
 pub const OCEANIC_TIDAL_TERMS: [OceanicTidalTerm; 71] = [
     OceanicTidalTerm {
