@@ -10,6 +10,7 @@
 
 use nom::bytes::complete as nb;
 use nom::character::complete as nc;
+use nom::error::{ErrorKind, ParseError};
 use nom::sequence as ns;
 use regex::Regex;
 
@@ -17,32 +18,114 @@ pub type KvnStringValue = KvnValue<String, String>;
 pub type KvnIntegerValue = KvnValue<i32, String>;
 pub type KvnNumericValue = KvnValue<f64, String>;
 
-#[derive(PartialEq, Debug)]
-pub enum KvnStringLineParserErr<I> {
-    ParseError(nom::Err<nom::error::Error<I>>),
+#[derive(Debug, PartialEq)]
+pub enum KvnParserErr<I> {
+    KeywordNotFound,
     EmptyValue,
+    ParserError(I, ErrorKind),
 }
 
 #[derive(PartialEq, Debug)]
 pub enum KvnNumberLineParserErr<I> {
-    ParseError(nom::Err<nom::error::Error<I>>),
+    ParserError(I, ErrorKind),
+    KeywordNotFound,
     EmptyValue,
     InvalidFormat,
 }
 
 #[derive(PartialEq, Debug)]
 pub enum KvnDateTimeParserErr<I> {
-    ParseError(nom::Err<nom::error::Error<I>>),
-    InvalidDateFormat,
+    ParserError(I, ErrorKind),
+    KeywordNotFound,
     EmptyValue,
+    InvalidFormat,
 }
 
 #[derive(PartialEq, Debug)]
 pub enum KvnDeserializerErr<I> {
-    String(KvnStringLineParserErr<I>),
-    DateTime(KvnDateTimeParserErr<I>),
-    Number(KvnNumberLineParserErr<I>),
+    InvalidDateTimeFormat,
+    InvalidNumberFormat,
+    KeywordNotFound,
+    EmptyValue,
     UnexpectedEndOfInput,
+    GeneralParserError(I, ErrorKind),
+}
+
+impl<I> From<nom::Err<KvnParserErr<I>>> for KvnDeserializerErr<I> {
+    fn from(value: nom::Err<KvnParserErr<I>>) -> Self {
+        match value {
+            nom::Err::Error(KvnParserErr::EmptyValue)
+            | nom::Err::Failure(KvnParserErr::EmptyValue) => KvnDeserializerErr::EmptyValue,
+            nom::Err::Error(KvnParserErr::KeywordNotFound)
+            | nom::Err::Failure(KvnParserErr::KeywordNotFound) => {
+                KvnDeserializerErr::KeywordNotFound
+            }
+            nom::Err::Error(KvnParserErr::ParserError(i, k))
+            | nom::Err::Failure(KvnParserErr::ParserError(i, k)) => {
+                KvnDeserializerErr::GeneralParserError(i, k)
+            }
+            // We don't use streaming deserialization
+            nom::Err::Incomplete(_) => unimplemented!(),
+        }
+    }
+}
+
+impl<I> From<nom::Err<KvnDateTimeParserErr<I>>> for KvnDeserializerErr<I> {
+    fn from(value: nom::Err<KvnDateTimeParserErr<I>>) -> Self {
+        match value {
+            nom::Err::Error(KvnDateTimeParserErr::EmptyValue)
+            | nom::Err::Failure(KvnDateTimeParserErr::EmptyValue) => KvnDeserializerErr::EmptyValue,
+            nom::Err::Error(KvnDateTimeParserErr::KeywordNotFound)
+            | nom::Err::Failure(KvnDateTimeParserErr::KeywordNotFound) => {
+                KvnDeserializerErr::KeywordNotFound
+            }
+            nom::Err::Error(KvnDateTimeParserErr::InvalidFormat)
+            | nom::Err::Failure(KvnDateTimeParserErr::InvalidFormat) => {
+                KvnDeserializerErr::InvalidDateTimeFormat
+            }
+            nom::Err::Error(KvnDateTimeParserErr::ParserError(i, k))
+            | nom::Err::Failure(KvnDateTimeParserErr::ParserError(i, k)) => {
+                KvnDeserializerErr::GeneralParserError(i, k)
+            }
+            // We don't use streaming deserialization
+            nom::Err::Incomplete(_) => unimplemented!(),
+        }
+    }
+}
+
+impl<I> From<nom::Err<KvnNumberLineParserErr<I>>> for KvnDeserializerErr<I> {
+    fn from(value: nom::Err<KvnNumberLineParserErr<I>>) -> Self {
+        match value {
+            nom::Err::Error(KvnNumberLineParserErr::EmptyValue)
+            | nom::Err::Failure(KvnNumberLineParserErr::EmptyValue) => {
+                KvnDeserializerErr::EmptyValue
+            }
+            nom::Err::Error(KvnNumberLineParserErr::KeywordNotFound)
+            | nom::Err::Failure(KvnNumberLineParserErr::KeywordNotFound) => {
+                KvnDeserializerErr::KeywordNotFound
+            }
+            nom::Err::Error(KvnNumberLineParserErr::InvalidFormat)
+            | nom::Err::Failure(KvnNumberLineParserErr::InvalidFormat) => {
+                KvnDeserializerErr::InvalidNumberFormat
+            }
+            nom::Err::Error(KvnNumberLineParserErr::ParserError(i, k))
+            | nom::Err::Failure(KvnNumberLineParserErr::ParserError(i, k)) => {
+                KvnDeserializerErr::GeneralParserError(i, k)
+            }
+            // We don't use streaming deserialization
+            nom::Err::Incomplete(_) => unimplemented!(),
+        }
+    }
+}
+
+impl<I> ParseError<I> for KvnParserErr<I> {
+    fn from_error_kind(input: I, kind: ErrorKind) -> Self {
+        KvnParserErr::ParserError(input, kind)
+    }
+
+    fn append(_: I, _: ErrorKind, other: Self) -> Self {
+        other
+    }
 }
 
 #[derive(PartialEq, Debug, Default)]
@@ -64,11 +147,11 @@ pub struct KvnDateTimeValue {
 
 pub trait KvnDeserializer<T> {
     fn deserialize<'a>(
-        lines: &mut dyn Iterator<Item = &'a str>,
+        lines: &mut std::iter::Peekable<impl Iterator<Item = &'a str>>,
     ) -> Result<T, KvnDeserializerErr<&'a str>>;
 }
 
-fn comment_line<'a>(input: &'a str) -> nom::IResult<&'a str, &'a str> {
+fn comment_line<'a>(input: &'a str) -> nom::IResult<&'a str, &'a str, KvnParserErr<&'a str>> {
     let (input, _) = nc::space0(input)?;
 
     let (remaining, _) = nb::tag("COMMENT ")(input)?;
@@ -76,12 +159,28 @@ fn comment_line<'a>(input: &'a str) -> nom::IResult<&'a str, &'a str> {
     Ok(("", remaining))
 }
 
-fn kvn_line<'a>(key: &'a str, input: &'a str) -> nom::IResult<&'a str, (&'a str, &'a str)> {
-    let equals = ns::tuple((
-        nc::space0::<_, nom::error::Error<_>>,
-        nc::char('='),
-        nc::space0,
-    ));
+pub fn kvn_line_matches_key<'a>(key: &'a str, input: &'a str) -> bool {
+    let mut equals = ns::tuple((nc::space0::<_, nom::error::Error<_>>, nc::char('=')));
+
+    // This function should return true in the case of malformed lines which
+    // are missing the keyword
+    if equals(input).is_ok() {
+        return true;
+    }
+
+    ns::delimited(nc::space0, nb::tag(key), equals)(input).is_ok()
+}
+
+fn kvn_line<'a>(
+    key: &'a str,
+    input: &'a str,
+) -> nom::IResult<&'a str, (&'a str, &'a str), KvnParserErr<&'a str>> {
+    let mut equals = ns::tuple((nc::space0::<_, KvnParserErr<_>>, nc::char('='), nc::space0));
+
+    match equals(input) {
+        Ok(_) => return Err(nom::Err::Failure(KvnParserErr::KeywordNotFound)),
+        Err(_) => (),
+    }
 
     let value = nc::not_line_ending;
 
@@ -94,10 +193,9 @@ pub fn parse_kvn_string_line<'a>(
     key: &'a str,
     input: &'a str,
     with_unit: bool,
-) -> Result<(&'a str, KvnStringValue), KvnStringLineParserErr<&'a str>> {
+) -> nom::IResult<&'a str, KvnStringValue, KvnParserErr<&'a str>> {
     if key == "COMMENT" {
-        let (_, comment) =
-            comment_line(input).map_err(|e| KvnStringLineParserErr::ParseError(e))?;
+        let (_, comment) = comment_line(input)?;
 
         return Ok((
             "",
@@ -108,8 +206,7 @@ pub fn parse_kvn_string_line<'a>(
         ));
     }
 
-    let (remaining, result) =
-        kvn_line(key, input).map_err(|e| KvnStringLineParserErr::ParseError(e))?;
+    let (remaining, result) = kvn_line(key, input)?;
 
     let parsed_right_hand_side = result.1;
 
@@ -129,7 +226,7 @@ pub fn parse_kvn_string_line<'a>(
     };
 
     if parsed_value.len() == 0 {
-        return Err(KvnStringLineParserErr::EmptyValue);
+        return Err(nom::Err::Failure(KvnParserErr::EmptyValue));
     }
 
     let parsed_value = parsed_value.trim_end();
@@ -147,18 +244,35 @@ pub fn parse_kvn_integer_line<'a>(
     key: &'a str,
     input: &'a str,
     with_unit: bool,
-) -> Result<(&'a str, KvnIntegerValue), KvnNumberLineParserErr<&'a str>> {
+) -> nom::IResult<&'a str, KvnIntegerValue, KvnNumberLineParserErr<&'a str>> {
     parse_kvn_string_line(key, input, with_unit)
         .map_err(|e| match e {
-            KvnStringLineParserErr::EmptyValue => KvnNumberLineParserErr::EmptyValue,
-            KvnStringLineParserErr::ParseError(e) => KvnNumberLineParserErr::ParseError(e),
+            nom::Err::Failure(KvnParserErr::EmptyValue) => {
+                nom::Err::Failure(KvnNumberLineParserErr::EmptyValue)
+            }
+            nom::Err::Error(KvnParserErr::EmptyValue) => {
+                nom::Err::Error(KvnNumberLineParserErr::EmptyValue)
+            }
+            nom::Err::Failure(KvnParserErr::ParserError(input, code)) => {
+                nom::Err::Failure(KvnNumberLineParserErr::ParserError(input, code))
+            }
+            nom::Err::Error(KvnParserErr::ParserError(input, code)) => {
+                nom::Err::Error(KvnNumberLineParserErr::ParserError(input, code))
+            }
+            nom::Err::Failure(KvnParserErr::KeywordNotFound) => {
+                nom::Err::Failure(KvnNumberLineParserErr::KeywordNotFound)
+            }
+            nom::Err::Error(KvnParserErr::KeywordNotFound) => {
+                nom::Err::Error(KvnNumberLineParserErr::KeywordNotFound)
+            }
+            nom::Err::Incomplete(needed) => nom::Err::Incomplete(needed),
         })
         .and_then(|result| {
             let value = result
                 .1
                 .value
                 .parse::<i32>()
-                .map_err(|_| KvnNumberLineParserErr::InvalidFormat)?;
+                .map_err(|_| nom::Err::Failure(KvnNumberLineParserErr::InvalidFormat))?;
 
             Ok((
                 "",
@@ -174,15 +288,32 @@ pub fn parse_kvn_numeric_line<'a>(
     key: &'a str,
     input: &'a str,
     with_unit: bool,
-) -> Result<(&'a str, KvnNumericValue), KvnNumberLineParserErr<&'a str>> {
+) -> nom::IResult<&'a str, KvnNumericValue, KvnNumberLineParserErr<&'a str>> {
     parse_kvn_string_line(key, input, with_unit)
         .map_err(|e| match e {
-            KvnStringLineParserErr::EmptyValue => KvnNumberLineParserErr::EmptyValue,
-            KvnStringLineParserErr::ParseError(e) => KvnNumberLineParserErr::ParseError(e),
+            nom::Err::Failure(KvnParserErr::EmptyValue) => {
+                nom::Err::Failure(KvnNumberLineParserErr::EmptyValue)
+            }
+            nom::Err::Error(KvnParserErr::EmptyValue) => {
+                nom::Err::Error(KvnNumberLineParserErr::EmptyValue)
+            }
+            nom::Err::Failure(KvnParserErr::ParserError(input, code)) => {
+                nom::Err::Failure(KvnNumberLineParserErr::ParserError(input, code))
+            }
+            nom::Err::Error(KvnParserErr::ParserError(input, code)) => {
+                nom::Err::Error(KvnNumberLineParserErr::ParserError(input, code))
+            }
+            nom::Err::Failure(KvnParserErr::KeywordNotFound) => {
+                nom::Err::Failure(KvnNumberLineParserErr::KeywordNotFound)
+            }
+            nom::Err::Error(KvnParserErr::KeywordNotFound) => {
+                nom::Err::Error(KvnNumberLineParserErr::KeywordNotFound)
+            }
+            nom::Err::Incomplete(needed) => nom::Err::Incomplete(needed),
         })
         .and_then(|result| {
             let value = fast_float::parse(result.1.value)
-                .map_err(|_| KvnNumberLineParserErr::InvalidFormat)?;
+                .map_err(|_| nom::Err::Failure(KvnNumberLineParserErr::InvalidFormat))?;
 
             Ok((
                 "",
@@ -197,13 +328,33 @@ pub fn parse_kvn_numeric_line<'a>(
 pub fn parse_kvn_datetime_line<'a>(
     key: &'a str,
     input: &'a str,
-) -> Result<(&'a str, KvnDateTimeValue), KvnDateTimeParserErr<&'a str>> {
-    let (_, result) = kvn_line(key, input).map_err(|e| KvnDateTimeParserErr::ParseError(e))?;
+) -> nom::IResult<&'a str, KvnDateTimeValue, KvnDateTimeParserErr<&'a str>> {
+    let (_, result) = kvn_line(key, input).map_err(|e| match e {
+        nom::Err::Failure(KvnParserErr::EmptyValue) => {
+            nom::Err::Failure(KvnDateTimeParserErr::EmptyValue)
+        }
+        nom::Err::Error(KvnParserErr::EmptyValue) => {
+            nom::Err::Error(KvnDateTimeParserErr::EmptyValue)
+        }
+        nom::Err::Failure(KvnParserErr::ParserError(input, code)) => {
+            nom::Err::Failure(KvnDateTimeParserErr::ParserError(input, code))
+        }
+        nom::Err::Error(KvnParserErr::ParserError(input, code)) => {
+            nom::Err::Error(KvnDateTimeParserErr::ParserError(input, code))
+        }
+        nom::Err::Failure(KvnParserErr::KeywordNotFound) => {
+            nom::Err::Failure(KvnDateTimeParserErr::KeywordNotFound)
+        }
+        nom::Err::Error(KvnParserErr::KeywordNotFound) => {
+            nom::Err::Error(KvnDateTimeParserErr::KeywordNotFound)
+        }
+        nom::Err::Incomplete(needed) => nom::Err::Incomplete(needed),
+    })?;
 
     let parsed_value = result.1;
 
     if parsed_value.len() == 0 {
-        return Err(KvnDateTimeParserErr::EmptyValue);
+        return Err(nom::Err::Failure(KvnDateTimeParserErr::EmptyValue));
     }
 
     let parsed_value = parsed_value.trim_end();
@@ -217,7 +368,7 @@ pub fn parse_kvn_datetime_line<'a>(
 
     let captures = re
         .captures(parsed_value)
-        .ok_or(KvnDateTimeParserErr::InvalidDateFormat)?;
+        .ok_or(nom::Err::Failure(KvnDateTimeParserErr::InvalidFormat))?;
 
     // yr is a mandatory decimal in the regex so we expect the capture to be
     // always there and unwrap is fine
@@ -275,7 +426,17 @@ pub fn parse_kvn_datetime_line<'a>(
 }
 
 mod test {
+    use lox_derive::KvnDeserialize;
+
     use super::*;
+
+    #[test]
+    fn test_kvn_line_matches_key() {
+        assert!(!kvn_line_matches_key("ASD", "AAAAAD123 = ASDFG"));
+        assert!(kvn_line_matches_key("ASD", "ASD = ASDFG"));
+        assert!(!kvn_line_matches_key("ASD", "ASD ASD = ASDFG"));
+        assert!(kvn_line_matches_key("ASD", "= ASDFG"));
+    }
 
     #[test]
     fn test_parse_kvn_string_line() {
@@ -313,15 +474,15 @@ mod test {
         );
         assert_eq!(
             parse_kvn_string_line("ASD", "ASD =    ", true),
-            Err(KvnStringLineParserErr::EmptyValue)
+            Err(nom::Err::Failure(KvnParserErr::EmptyValue))
         );
         assert_eq!(
             parse_kvn_string_line("ASD", "ASD = ", true),
-            Err(KvnStringLineParserErr::EmptyValue)
+            Err(nom::Err::Failure(KvnParserErr::EmptyValue))
         );
         assert_eq!(
             parse_kvn_string_line("ASD", "ASD =", true),
-            Err(KvnStringLineParserErr::EmptyValue)
+            Err(nom::Err::Failure(KvnParserErr::EmptyValue))
         );
 
         // 7.4.7 Any white space immediately preceding the end of line shall not be significant.
@@ -361,26 +522,19 @@ mod test {
 
         assert_eq!(
             parse_kvn_string_line("ASD", "ASD =  [km]", true),
-            Err(KvnStringLineParserErr::EmptyValue)
+            Err(nom::Err::Failure(KvnParserErr::EmptyValue))
         );
 
         assert_eq!(
             parse_kvn_string_line("ASD", "ASD   [km]", true),
-            Err(KvnStringLineParserErr::ParseError(nom::Err::Error(
-                nom::error::Error {
-                    input: "[km]",
-                    code: nom::error::ErrorKind::Char
-                }
+            Err(nom::Err::Error(KvnParserErr::ParserError(
+                "[km]",
+                nom::error::ErrorKind::Char
             )))
         );
         assert_eq!(
             parse_kvn_string_line("ASD", " =  [km]", true),
-            Err(KvnStringLineParserErr::ParseError(nom::Err::Error(
-                nom::error::Error {
-                    input: "=  [km]",
-                    code: nom::error::ErrorKind::Tag
-                }
-            )))
+            Err(nom::Err::Failure(KvnParserErr::KeywordNotFound))
         );
 
         // 7.4.5 Any white space immediately preceding or following the keyword shall not be significant.
@@ -489,12 +643,12 @@ mod test {
 
         assert_eq!(
             parse_kvn_integer_line("SCLK_OFFSET_AT_EPOCH", "SCLK_OFFSET_AT_EPOCH = -asd", true),
-            Err(KvnNumberLineParserErr::InvalidFormat)
+            Err(nom::Err::Failure(KvnNumberLineParserErr::InvalidFormat))
         );
 
         assert_eq!(
             parse_kvn_integer_line("SCLK_OFFSET_AT_EPOCH", "SCLK_OFFSET_AT_EPOCH = [s]", true),
-            Err(KvnNumberLineParserErr::EmptyValue)
+            Err(nom::Err::Failure(KvnNumberLineParserErr::EmptyValue))
         );
     }
 
@@ -572,17 +726,118 @@ mod test {
 
         assert_eq!(
             parse_kvn_datetime_line("CREATION_DATE", "CREATION_DATE = 2021,06,03Q05!33!00-123"),
-            Err(KvnDateTimeParserErr::InvalidDateFormat)
+            Err(nom::Err::Failure(KvnDateTimeParserErr::InvalidFormat))
         );
 
         assert_eq!(
             parse_kvn_datetime_line("CREATION_DATE", "CREATION_DATE = asdffggg"),
-            Err(KvnDateTimeParserErr::InvalidDateFormat)
+            Err(nom::Err::Failure(KvnDateTimeParserErr::InvalidFormat))
         );
 
         assert_eq!(
             parse_kvn_datetime_line("CREATION_DATE", "CREATION_DATE = "),
-            Err(KvnDateTimeParserErr::EmptyValue)
+            Err(nom::Err::Failure(KvnDateTimeParserErr::EmptyValue))
+        );
+    }
+
+    #[derive(KvnDeserialize, Default, Debug, PartialEq)]
+    pub struct KvnStruct {
+        comment: KvnStringValue,
+        string_value: KvnStringValue,
+        date_value: KvnDateTimeValue,
+        numeric_value: KvnNumericValue,
+        option_numeric_value: Option<KvnNumericValue>,
+        integer_value: KvnIntegerValue,
+        option_date_value: Option<KvnDateTimeValue>,
+    }
+
+    #[test]
+    fn test_parse_whole_struct() {
+        let kvn = r#"COMMENT Generated by GSOC, R. Kiehling
+STRING_VALUE = EUTELSAT W4
+DATE_VALUE = 2021-06-03T05:33:00.123
+NUMERIC_VALUE = 6655.9942 [km]
+INTEGER_VALUE = 123 [km]
+OPTION_DATE_VALUE = 2021-06-03T05:33:00.123"#;
+
+        assert_eq!(
+            KvnStruct::deserialize(&mut kvn.lines().peekable()),
+            Ok(KvnStruct {
+                comment: KvnValue {
+                    value: "Generated by GSOC, R. Kiehling".to_string(),
+                    unit: None
+                },
+                string_value: KvnValue {
+                    value: "EUTELSAT W4".to_string(),
+                    unit: None
+                },
+                date_value: KvnDateTimeValue {
+                    year: 2021,
+                    month: 6,
+                    day: 3,
+                    hour: 5,
+                    minute: 33,
+                    second: 0,
+                    fractional_second: 0.123
+                },
+                numeric_value: KvnValue {
+                    value: 6655.9942,
+                    unit: Some("km".to_string())
+                },
+                option_numeric_value: None,
+                integer_value: KvnValue {
+                    value: 123,
+                    unit: Some("km".to_string())
+                },
+                option_date_value: Some(KvnDateTimeValue {
+                    year: 2021,
+                    month: 6,
+                    day: 3,
+                    hour: 5,
+                    minute: 33,
+                    second: 0,
+                    fractional_second: 0.123
+                })
+            })
+        );
+
+        let kvn = r#"COMMENT Generated by GSOC, R. Kiehling
+STRING_VALUE = EUTELSAT W4
+DATE_VALUE = 2021-06-03T05:33:00.123
+NUMERIC_VALUE = 6655.9942 [km]
+INTEGER_VALUE = 123 [km]"#;
+
+        assert_eq!(
+            KvnStruct::deserialize(&mut kvn.lines().peekable()),
+            Ok(KvnStruct {
+                comment: KvnValue {
+                    value: "Generated by GSOC, R. Kiehling".to_string(),
+                    unit: None
+                },
+                string_value: KvnValue {
+                    value: "EUTELSAT W4".to_string(),
+                    unit: None
+                },
+                date_value: KvnDateTimeValue {
+                    year: 2021,
+                    month: 6,
+                    day: 3,
+                    hour: 5,
+                    minute: 33,
+                    second: 0,
+                    fractional_second: 0.123
+                },
+                numeric_value: KvnValue {
+                    value: 6655.9942,
+                    unit: Some("km".to_string())
+                },
+                option_numeric_value: None,
+                integer_value: KvnValue {
+                    value: 123,
+                    unit: Some("km".to_string())
+                },
+                option_date_value: None
+            })
         );
     }
 }

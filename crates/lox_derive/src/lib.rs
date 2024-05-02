@@ -7,7 +7,96 @@
  */
 
 use quote::quote;
-use syn::spanned::Spanned;
+use syn::{spanned::Spanned, Field};
+
+fn generate_call_to_deserializer_for_kvn_type(
+    type_name: &str,
+    expected_kvn_name: &str,
+    field: &Field,
+) -> Result<proc_macro2::TokenStream, proc_macro::TokenStream> {
+    match type_name {
+        "KvnDateTimeValue" => Ok(quote! {
+            parse_kvn_datetime_line(
+                #expected_kvn_name,
+                line,
+            ).map_err(|x| KvnDeserializerErr::from(x))
+            .map(|x| x.1)
+        }),
+        "KvnStringValue" => Ok(quote! {
+            parse_kvn_string_line(
+                #expected_kvn_name,
+                line,
+                true
+            ).map_err(|x| KvnDeserializerErr::from(x))
+            .map(|x| x.1)
+        }),
+        "KvnNumericValue" => Ok(quote! {
+            parse_kvn_numeric_line(
+                #expected_kvn_name,
+                line,
+                true
+            ).map_err(|x| KvnDeserializerErr::from(x))
+            .map(|x| x.1)
+        }),
+        "KvnIntegerValue" => Ok(quote! {
+            parse_kvn_integer_line(
+                #expected_kvn_name,
+                line,
+                true
+            ).map_err(|x| KvnDeserializerErr::from(x))
+            .map(|x| x.1)
+        }),
+        _ => Err(syn::Error::new_spanned(
+            &field,
+            "unsupported field type for `#[derive(KvnDeserialize)]`",
+        )
+        .into_compile_error()
+        .into()),
+    }
+}
+
+fn generate_call_to_deserializer_for_option_type(
+    expected_kvn_name: &str,
+    field: &Field,
+) -> Result<proc_macro2::TokenStream, proc_macro::TokenStream> {
+    if let syn::Type::Path(type_path) = &field.ty {
+        let path_part = type_path.path.segments.first();
+        if let Some(path_part) = path_part {
+            if let syn::PathArguments::AngleBracketed(type_argument) = &path_part.arguments {
+                let type_name = type_argument
+                    .args
+                    .first()
+                    .unwrap()
+                    .span()
+                    .source_text()
+                    .unwrap();
+
+                let deserializer_for_kvn_type = generate_call_to_deserializer_for_kvn_type(
+                    &type_name.as_ref(),
+                    &expected_kvn_name,
+                    &field,
+                )?;
+
+                return Ok(quote! {
+                    lines.next_if(|line|
+                        kvn_line_matches_key(
+                            #expected_kvn_name,
+                            line
+                        )
+                    ).map(|line| {
+                        #deserializer_for_kvn_type
+                    }).transpose()?
+                });
+            }
+        }
+    }
+
+    return Err(
+        syn::Error::new_spanned(&field, "Malformed type for `#[derive(KvnDeserialize)]`")
+            .into_compile_error()
+            .into(),
+    );
+}
 
 #[proc_macro_derive(KvnDeserialize)]
 pub fn derive_kvn_deserialize(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
@@ -47,47 +136,37 @@ pub fn derive_kvn_deserialize(item: proc_macro::TokenStream) -> proc_macro::Toke
             // Unwrap is okay because we expect this span to come from the source code
             let field_type = field.ty.span().source_text().unwrap();
 
-            let (parser_function, parser_error_type, parser_unit_parameter) =
-                match field_type.as_str() {
-                    "KvnDateTimeValue" => (
-                        quote! { parse_kvn_datetime_line },
-                        quote! { KvnDeserializerErr::DateTime},
-                        quote! {},
-                    ),
-                    "KvnStringValue" => (
-                        quote! { parse_kvn_string_line },
-                        quote! { KvnDeserializerErr::String },
-                        //@TODO make unit dynamic according to the definition
-                        quote! { ,true },
-                    ),
-                    "KvnNumericValue" => (
-                        quote! { parse_kvn_numeric_line },
-                        quote! { KvnDeserializerErr::Number },
-                        //@TODO make unit dynamic according to the definition
-                        quote! { ,true },
-                    ),
-                    "KvnIntegerValue" => (
-                        quote! { parse_kvn_integer_line },
-                        quote! { KvnDeserializerErr::Number },
-                        //@TODO make unit dynamic according to the definition
-                        quote! { ,true },
-                    ),
-                    _ => {
-                        return Err(syn::Error::new_spanned(
-                            &field,
-                            "unsupported field type for `#[derive(KvnDeserialize)]`",
-                        )
-                        .into_compile_error()
-                        .into());
+            let parser = match field_type.as_str() {
+                "KvnDateTimeValue" | "KvnStringValue" | "KvnNumericValue" | "KvnIntegerValue" => {
+                    let deserializer_for_kvn_type = generate_call_to_deserializer_for_kvn_type(
+                        &field_type,
+                        &expected_kvn_name,
+                        &field,
+                    )?;
+
+                    quote! {
+                        lines.next().map_or_else(
+                            || Err(KvnDeserializerErr::<&str>::UnexpectedEndOfInput),
+                            |line| {
+                                #deserializer_for_kvn_type
+                        })?
                     }
-                };
+                }
+                "Option" => {
+                    generate_call_to_deserializer_for_option_type(&expected_kvn_name, &field)?
+                }
+                _ => {
+                    return Err(syn::Error::new_spanned(
+                        &field,
+                        "unsupported field type for `#[derive(KvnDeserialize)]`",
+                    )
+                    .into_compile_error()
+                    .into());
+                }
+            };
 
             Ok(quote! {
-                #field_name: #parser_function(
-                    #expected_kvn_name,
-                    lines.next().ok_or(KvnDeserializerErr::UnexpectedEndOfInput)?
-                    #parser_unit_parameter
-                ).map_err(|x| #parser_error_type(x))?.1,
+                #field_name: #parser,
             })
         })
         .collect();
@@ -101,13 +180,23 @@ pub fn derive_kvn_deserialize(item: proc_macro::TokenStream) -> proc_macro::Toke
     let (impl_generics, type_generics, where_clause) = item.generics.split_for_impl();
 
     let deserializer = quote! {
+        use std::iter::Peekable;
+
         use crate::ndm::kvn::parser::{KvnDeserializer, KvnDeserializerErr};
-        use crate::ndm::kvn::parser::{parse_kvn_string_line, parse_kvn_datetime_line, parse_kvn_numeric_line, parse_kvn_integer_line};
+        use crate::ndm::kvn::parser::{
+            kvn_line_matches_key,
+            parse_kvn_string_line,
+            parse_kvn_datetime_line,
+            parse_kvn_numeric_line,
+            parse_kvn_integer_line
+        };
 
         impl #impl_generics KvnDeserializer<#name> for #name #type_generics
         #where_clause
         {
-            fn deserialize<'a>(lines: &mut dyn Iterator<Item = &'a str>) -> Result<#name, KvnDeserializerErr<&'a str>> {
+            fn deserialize<'a>(lines: &mut std::iter::Peekable<impl Iterator<Item = &'a str>>)
+            -> Result<#name, KvnDeserializerErr<&'a str>> {
+
                 Ok(#name {
                     #(#field_initializers)*
                 })

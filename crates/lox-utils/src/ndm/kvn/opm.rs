@@ -21,7 +21,6 @@ pub struct Opm {
     object_id: KvnStringValue,
     center_name: KvnStringValue,
     ref_frame: KvnStringValue,
-    // ref_frame_epoch: KvnDateTimeValue,
     time_system: KvnStringValue,
     // comment: KvnStringValue,
     epoch: KvnDateTimeValue,
@@ -161,9 +160,7 @@ MAN_DV_1 = 0.00101500 [km/s]
 MAN_DV_2 = -0.00187300 [km/s]
 MAN_DV_3 = 0.00000000 [km/s]"#;
 
-        let mut lines = kvn.lines();
-
-        let opm = Opm::deserialize(&mut lines);
+        let opm = Opm::deserialize(&mut kvn.lines().peekable());
 
         assert_eq!(
             opm,
