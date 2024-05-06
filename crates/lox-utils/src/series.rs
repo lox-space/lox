@@ -264,6 +264,7 @@ mod tests {
     #[case(Series::new(Arc::new(vec![1.0]), vec![1.0]), Err(SeriesError::InsufficientPoints(1, 2)))]
     #[case(Series::with_cubic_spline(Arc::new(vec![1.0]), vec![1.0]), Err(SeriesError::InsufficientPoints(1, 4)))]
     #[case(Series::new(Arc::new(vec![1.0, 2.0]), vec![1.0]), Err(SeriesError::DimensionMismatch(2, 1)))]
+    #[case(Series::with_cubic_spline(Arc::new(vec![1.0, 2.0]), vec![1.0]), Err(SeriesError::DimensionMismatch(2, 1)))]
     fn test_series_errors(
         #[case] actual: Result<Series, SeriesError>,
         #[case] expected: Result<Series, SeriesError>,
