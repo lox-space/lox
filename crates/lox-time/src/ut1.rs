@@ -20,7 +20,6 @@ use crate::Time;
 use lox_io::iers::{parse_finals_csv, ParseFinalsCsvError};
 use lox_utils::series::{Series, SeriesError};
 use std::path::Path;
-use std::sync::Arc;
 
 pub trait DeltaUt1TaiProvider {
     fn delta_ut1_tai(&self, tai: Time<Tai>) -> Option<TimeDelta>;
@@ -28,7 +27,7 @@ pub trait DeltaUt1TaiProvider {
 }
 
 #[derive(Clone, Debug, Error)]
-pub enum FooError {
+pub enum DeltaUt1TaiError {
     #[error(transparent)]
     Csv(#[from] ParseFinalsCsvError),
     #[error(transparent)]
@@ -36,10 +35,13 @@ pub enum FooError {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct DeltaUt1Tai(Series);
+pub struct DeltaUt1Tai(Series<Vec<f64>>);
 
 impl DeltaUt1Tai {
-    pub fn new<P: AsRef<Path>>(path: P, ls: impl LeapSecondsProvider) -> Result<Self, FooError> {
+    pub fn new<P: AsRef<Path>>(
+        path: P,
+        ls: impl LeapSecondsProvider,
+    ) -> Result<Self, DeltaUt1TaiError> {
         let eop = parse_finals_csv(path)?;
         let deltas: Vec<TimeDelta> = eop
             .mjd()
@@ -60,7 +62,7 @@ impl DeltaUt1Tai {
             })
             .collect();
         let seconds: Vec<f64> = deltas.iter().map(|dt| dt.to_decimal_seconds()).collect();
-        let series = Series::with_cubic_spline(Arc::new(seconds), delta_ut1_tai)?;
+        let series = Series::with_cubic_spline(seconds, delta_ut1_tai)?;
         Ok(Self(series))
     }
 }
@@ -183,7 +185,7 @@ mod tests {
     #[case(536498400, -36.40867421674706)]
     #[case(536499400, -36.40868580909562)]
     #[case(536500400, -36.40869742010849)]
-    fn test_ut1_orekit(#[case] seconds: i64, #[case] expected: f64) {
+    fn test_delta_ut1_tai_orekit(#[case] seconds: i64, #[case] expected: f64) {
         let tai = Time::new(Tai, seconds, Subsecond::default());
         let ut1 = Time::new(Ut1, seconds, Subsecond::default());
         let provider =
@@ -192,5 +194,11 @@ mod tests {
         assert_float_eq!(actual, expected, rel <= 1e-6);
         let actual = provider.delta_tai_ut1(ut1).unwrap().to_decimal_seconds();
         assert_float_eq!(actual, -expected, rel <= 1e-6);
+    }
+
+    #[test]
+    fn test_delta_ut1_tai_edge_cases() {
+        let provider =
+            DeltaUt1Tai::new("../../data/finals2000A.all.csv", BuiltinLeapSeconds).unwrap();
     }
 }

@@ -9,7 +9,6 @@
 use crate::linear_algebra::tridiagonal::Tridiagonal;
 use crate::vector_traits::Diff;
 use fast_polynomial::poly_array;
-use std::sync::Arc;
 use thiserror::Error;
 
 const MIN_POINTS_LINEAR: usize = 2;
@@ -30,18 +29,19 @@ pub enum Interpolation {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Series {
-    x: Arc<Vec<f64>>,
+pub struct Series<T: AsRef<[f64]>> {
+    x: T,
     y: Vec<f64>,
     interpolation: Interpolation,
 }
 
-impl Series {
-    pub fn new(x: Arc<Vec<f64>>, y: Vec<f64>) -> Result<Self, SeriesError> {
-        let n = x.len();
+impl<T: AsRef<[f64]>> Series<T> {
+    pub fn new(x: T, y: Vec<f64>) -> Result<Self, SeriesError> {
+        let x_ref = x.as_ref();
+        let n = x_ref.len();
 
         if y.len() != n {
-            return Err(SeriesError::DimensionMismatch(x.len(), y.len()));
+            return Err(SeriesError::DimensionMismatch(n, y.len()));
         }
 
         if n < MIN_POINTS_LINEAR {
@@ -55,8 +55,9 @@ impl Series {
         })
     }
 
-    pub fn with_cubic_spline(x: Arc<Vec<f64>>, y: Vec<f64>) -> Result<Self, SeriesError> {
-        let n = x.len();
+    pub fn with_cubic_spline(x: T, y: Vec<f64>) -> Result<Self, SeriesError> {
+        let x_ref = x.as_ref();
+        let n = x_ref.len();
 
         if y.len() != n {
             return Err(SeriesError::DimensionMismatch(n, y.len()));
@@ -66,7 +67,7 @@ impl Series {
             return Err(SeriesError::InsufficientPoints(n, MIN_POINTS_SPLINE));
         }
 
-        let dx = x.diff();
+        let dx = x_ref.diff();
         let nd = dx.len();
         let slope: Vec<f64> = y
             .diff()
@@ -90,14 +91,14 @@ impl Series {
 
         // Not-a-knot boundary condition
         d.insert(0, dx[1]);
-        du.insert(0, x[2] - x[0]);
-        let delta = x[2] - x[0];
+        du.insert(0, x_ref[2] - x_ref[0]);
+        let delta = x_ref[2] - x_ref[0];
         b.insert(
             0,
             ((dx[0] + 2.0 * delta) * dx[1] * slope[0] + dx[0].powi(2) * slope[1]) / delta,
         );
         d.push(dx[nd - 2]);
-        let delta = x[n - 1] - x[n - 3];
+        let delta = x_ref[n - 1] - x_ref[n - 3];
         dl.push(delta);
         b.push(
             (dx[nd - 1].powi(2) * slope[nd - 2]
@@ -135,35 +136,36 @@ impl Series {
     }
 
     pub fn interpolate(&self, xp: f64) -> f64 {
-        let x0 = *self.x.first().unwrap();
-        let xn = *self.x.last().unwrap();
+        let x = self.x.as_ref();
+        let x0 = *x.first().unwrap();
+        let xn = *x.last().unwrap();
         let idx = if xp <= x0 {
             0
         } else if xp >= xn {
-            self.x.len() - 2
+            x.len() - 2
         } else {
-            self.x.partition_point(|&val| xp > val) - 1
+            x.partition_point(|&val| xp > val) - 1
         };
         match &self.interpolation {
             Interpolation::Linear => {
-                let x0 = self.x[idx];
-                let x1 = self.x[idx + 1];
+                let x0 = x[idx];
+                let x1 = x[idx + 1];
                 let y0 = self.y[idx];
                 let y1 = self.y[idx + 1];
                 y0 + (y1 - y0) * (xp - x0) / (x1 - x0)
             }
             Interpolation::CubicSpline(c1, c2, c3, c4) => {
-                poly_array(xp - self.x[idx], &[c1[idx], c2[idx], c3[idx], c4[idx]])
+                poly_array(xp - x[idx], &[c1[idx], c2[idx], c3[idx], c4[idx]])
             }
         }
     }
 
     pub fn first(&self) -> (f64, f64) {
-        (*self.x.first().unwrap(), *self.y.first().unwrap())
+        (*self.x.as_ref().first().unwrap(), *self.y.first().unwrap())
     }
 
     pub fn last(&self) -> (f64, f64) {
-        (*self.x.last().unwrap(), *self.y.last().unwrap())
+        (*self.x.as_ref().last().unwrap(), *self.y.last().unwrap())
     }
 }
 
@@ -180,7 +182,7 @@ mod tests {
     #[case(2.5, 2.5)]
     #[case(5.5, 5.5)]
     fn test_series_linear(#[case] xp: f64, #[case] expected: f64) {
-        let x = Arc::new(vec![1.0, 2.0, 3.0, 4.0, 5.0]);
+        let x = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let y = vec![1.0, 2.0, 3.0, 4.0, 5.0];
 
         let s = Series::new(x, y).unwrap();
@@ -252,7 +254,7 @@ mod tests {
     #[case(5.9, -5.065809897367678)]
     #[case(6.0, -5.965065033067472)]
     fn test_series_spline(#[case] xp: f64, #[case] expected: f64) {
-        let x = Arc::new(vec![1.0, 2.0, 3.0, 4.0, 5.0]);
+        let x = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let y = vec![
             0.08138419591321655,
             1.6543878900257172,
@@ -267,13 +269,13 @@ mod tests {
     }
 
     #[rstest]
-    #[case(Series::new(Arc::new(vec![1.0]), vec![1.0]), Err(SeriesError::InsufficientPoints(1, 2)))]
-    #[case(Series::with_cubic_spline(Arc::new(vec![1.0]), vec![1.0]), Err(SeriesError::InsufficientPoints(1, 4)))]
-    #[case(Series::new(Arc::new(vec![1.0, 2.0]), vec![1.0]), Err(SeriesError::DimensionMismatch(2, 1)))]
-    #[case(Series::with_cubic_spline(Arc::new(vec![1.0, 2.0]), vec![1.0]), Err(SeriesError::DimensionMismatch(2, 1)))]
+    #[case(Series::new(vec![1.0], vec![1.0]), Err(SeriesError::InsufficientPoints(1, 2)))]
+    #[case(Series::with_cubic_spline(vec![1.0], vec![1.0]), Err(SeriesError::InsufficientPoints(1, 4)))]
+    #[case(Series::new(vec![1.0, 2.0], vec![1.0]), Err(SeriesError::DimensionMismatch(2, 1)))]
+    #[case(Series::with_cubic_spline(vec![1.0, 2.0], vec![1.0]), Err(SeriesError::DimensionMismatch(2, 1)))]
     fn test_series_errors(
-        #[case] actual: Result<Series, SeriesError>,
-        #[case] expected: Result<Series, SeriesError>,
+        #[case] actual: Result<Series<Vec<f64>>, SeriesError>,
+        #[case] expected: Result<Series<Vec<f64>>, SeriesError>,
     ) {
         assert_eq!(actual, expected);
     }
