@@ -111,9 +111,7 @@ impl Series {
                 err
             )
         });
-        let s = tri
-            .solve(&b)
-            .unwrap_or_else(|| unreachable!("linear system should be solvable"));
+        let s = tri.solve(&b);
         let t: Vec<f64> = s[0..n - 1]
             .iter()
             .enumerate()
