@@ -17,7 +17,7 @@ use crate::time_scales::{Tai, Ut1};
 use crate::transformations::LeapSecondsProvider;
 use crate::utc::Utc;
 use crate::Time;
-use lox_io::iers::{parse_finals_csv, ParseFinalsCsvError};
+use lox_io::iers::{EarthOrientationParams, ParseFinalsCsvError};
 use lox_utils::series::{Series, SeriesError};
 use std::path::Path;
 
@@ -42,7 +42,7 @@ impl DeltaUt1Tai {
         path: P,
         ls: impl LeapSecondsProvider,
     ) -> Result<Self, DeltaUt1TaiError> {
-        let eop = parse_finals_csv(path)?;
+        let eop = EarthOrientationParams::parse_finals_csv(path)?;
         let deltas: Vec<TimeDelta> = eop
             .mjd()
             .iter()
@@ -93,6 +93,7 @@ impl DeltaUt1TaiProvider for DeltaUt1Tai {
 mod tests {
     use super::*;
     use crate::subsecond::Subsecond;
+    use crate::time;
     use crate::utc::leap_seconds::BuiltinLeapSeconds;
     use float_eq::assert_float_eq;
     use rstest::rstest;
@@ -200,5 +201,15 @@ mod tests {
     fn test_delta_ut1_tai_edge_cases() {
         let provider =
             DeltaUt1Tai::new("../../data/finals2000A.all.csv", BuiltinLeapSeconds).unwrap();
+        assert_eq!(provider.delta_ut1_tai(Time::jd0(Tai)), None);
+        assert_eq!(
+            provider.delta_ut1_tai(time!(Tai, 2100, 1, 1).unwrap()),
+            None
+        );
+        assert_eq!(provider.delta_tai_ut1(Time::jd0(Ut1)), None);
+        assert_eq!(
+            provider.delta_tai_ut1(time!(Ut1, 2100, 1, 1).unwrap()),
+            None
+        );
     }
 }

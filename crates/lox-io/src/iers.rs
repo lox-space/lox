@@ -67,6 +67,46 @@ impl EarthOrientationParams {
         })
     }
 
+    pub fn parse_finals_csv<P: AsRef<Path>>(path: P) -> Result<Self, ParseFinalsCsvError> {
+        let mut reader = csv::ReaderBuilder::new().delimiter(b';').from_path(&path)?;
+        let mut mjd = Vec::new();
+        let mut x_pole = Vec::new();
+        let mut y_pole = Vec::new();
+        let mut delta_ut1_utc = Vec::new();
+
+        for (i, result) in reader.deserialize().enumerate() {
+            let record: Record = result?;
+            if record.x_pole.is_none() {
+                continue;
+            }
+
+            let record_x_pole = record.x_pole.unwrap();
+            let record_y_pole = record
+                .y_pole
+                .ok_or_else(|| ParseFinalsCsvError::MissingData {
+                    path: path.as_ref().to_path_buf(),
+                    row: i + 1,
+                })?;
+            let record_delta_ut1_utc =
+                record
+                    .delta_ut1_utc
+                    .ok_or_else(|| ParseFinalsCsvError::MissingData {
+                        path: path.as_ref().to_path_buf(),
+                        row: i + 1,
+                    })?;
+
+            mjd.push(record.modified_julian_date);
+            x_pole.push(record_x_pole);
+            y_pole.push(record_y_pole);
+            delta_ut1_utc.push(record_delta_ut1_utc);
+        }
+
+        Self::new(mjd, x_pole, y_pole, delta_ut1_utc).map_err(|e| ParseFinalsCsvError::InvalidEop {
+            path: path.as_ref().to_path_buf(),
+            source: e,
+        })
+    }
+
     pub fn mjd(&self) -> &[ModifiedJulianDayNumber] {
         &self.mjd
     }
@@ -110,50 +150,6 @@ struct Record {
     y_pole: Option<f64>,
     #[serde(rename = "UT1-UTC")]
     delta_ut1_utc: Option<f64>,
-}
-
-pub fn parse_finals_csv<P: AsRef<Path>>(
-    path: P,
-) -> Result<EarthOrientationParams, ParseFinalsCsvError> {
-    let mut reader = csv::ReaderBuilder::new().delimiter(b';').from_path(&path)?;
-    let mut mjd = Vec::new();
-    let mut x_pole = Vec::new();
-    let mut y_pole = Vec::new();
-    let mut delta_ut1_utc = Vec::new();
-
-    for (i, result) in reader.deserialize().enumerate() {
-        let record: Record = result?;
-        if record.x_pole.is_none() {
-            continue;
-        }
-
-        let record_x_pole = record.x_pole.unwrap();
-        let record_y_pole = record
-            .y_pole
-            .ok_or_else(|| ParseFinalsCsvError::MissingData {
-                path: path.as_ref().to_path_buf(),
-                row: i + 1,
-            })?;
-        let record_delta_ut1_utc =
-            record
-                .delta_ut1_utc
-                .ok_or_else(|| ParseFinalsCsvError::MissingData {
-                    path: path.as_ref().to_path_buf(),
-                    row: i + 1,
-                })?;
-
-        mjd.push(record.modified_julian_date);
-        x_pole.push(record_x_pole);
-        y_pole.push(record_y_pole);
-        delta_ut1_utc.push(record_delta_ut1_utc);
-    }
-
-    EarthOrientationParams::new(mjd, x_pole, y_pole, delta_ut1_utc).map_err(|e| {
-        ParseFinalsCsvError::InvalidEop {
-            path: path.as_ref().to_path_buf(),
-            source: e,
-        }
-    })
 }
 
 #[cfg(test)]
@@ -216,7 +212,7 @@ mod tests {
         #[case] expected_last_record: ExpectedRecord,
     ) {
         let path = Path::new(TEST_DATA_DIR).join(path);
-        let eop = parse_finals_csv(path).unwrap();
+        let eop = EarthOrientationParams::parse_finals_csv(path).unwrap();
         assert_eq!(
             eop.mjd.len(),
             expected_count,
@@ -323,7 +319,7 @@ mod tests {
     )]
     fn test_parse_finals_csv_errors(#[case] path: &str, #[case] expected: ParseFinalsCsvError) {
         let path = Path::new(TEST_DATA_DIR).join(path);
-        let result = parse_finals_csv(path);
+        let result = EarthOrientationParams::parse_finals_csv(path);
         assert_eq!(result, Err(expected));
     }
 }

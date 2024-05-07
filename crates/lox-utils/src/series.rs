@@ -160,12 +160,20 @@ impl<T: AsRef<[f64]>> Series<T> {
         }
     }
 
+    pub fn x(&self) -> &[f64] {
+        self.x.as_ref()
+    }
+
+    pub fn y(&self) -> &[f64] {
+        &self.y
+    }
+
     pub fn first(&self) -> (f64, f64) {
-        (*self.x.as_ref().first().unwrap(), *self.y.first().unwrap())
+        (*self.x().first().unwrap(), *self.y().first().unwrap())
     }
 
     pub fn last(&self) -> (f64, f64) {
-        (*self.x.as_ref().last().unwrap(), *self.y.last().unwrap())
+        (*self.x().last().unwrap(), *self.y().last().unwrap())
     }
 }
 
