@@ -1,0 +1,196 @@
+/*
+ * Copyright (c) 2024. Helge Eichhorn and the LOX contributors
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, you can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
+use std::iter::zip;
+use thiserror::Error;
+
+use crate::constants::i64::SECONDS_PER_DAY;
+use crate::constants::julian_dates::SECONDS_BETWEEN_MJD_AND_J2000;
+use crate::deltas::TimeDelta;
+use crate::julian_dates::JulianDate;
+use crate::time_scales::{Tai, Ut1};
+use crate::transformations::LeapSecondsProvider;
+use crate::utc::Utc;
+use crate::Time;
+use lox_io::iers::{parse_finals_csv, ParseFinalsCsvError};
+use lox_utils::series::{Series, SeriesError};
+use std::path::Path;
+use std::sync::Arc;
+
+pub trait DeltaUt1TaiProvider {
+    fn delta_ut1_tai(&self, tai: Time<Tai>) -> Option<TimeDelta>;
+    fn delta_tai_ut1(&self, ut1: Time<Ut1>) -> Option<TimeDelta>;
+}
+
+#[derive(Clone, Debug, Error)]
+pub enum FooError {
+    #[error(transparent)]
+    Csv(#[from] ParseFinalsCsvError),
+    #[error(transparent)]
+    Series(#[from] SeriesError),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct DeltaUt1Tai(Series);
+
+impl DeltaUt1Tai {
+    pub fn new<P: AsRef<Path>>(path: P, ls: impl LeapSecondsProvider) -> Result<Self, FooError> {
+        let eop = parse_finals_csv(path)?;
+        let deltas: Vec<TimeDelta> = eop
+            .mjd()
+            .iter()
+            .map(|&mjd| {
+                TimeDelta::from_seconds(
+                    mjd as i64 * SECONDS_PER_DAY - SECONDS_BETWEEN_MJD_AND_J2000,
+                )
+            })
+            .collect();
+        let delta_ut1_tai: Vec<f64> = zip(deltas.clone(), eop.delta_ut1_utc().iter())
+            .map(|(delta, &delta_ut1_utc)| {
+                let utc = Utc::from_delta(delta);
+                let delta_utc_tai = ls.delta_utc_tai(utc).unwrap();
+                let delta_ut1_tai =
+                    TimeDelta::from_decimal_seconds(delta_ut1_utc).unwrap() + delta_utc_tai;
+                delta_ut1_tai.to_decimal_seconds()
+            })
+            .collect();
+        let seconds: Vec<f64> = deltas.iter().map(|dt| dt.to_decimal_seconds()).collect();
+        let series = Series::with_cubic_spline(Arc::new(seconds), delta_ut1_tai)?;
+        Ok(Self(series))
+    }
+}
+
+impl DeltaUt1TaiProvider for DeltaUt1Tai {
+    fn delta_ut1_tai(&self, tai: Time<Tai>) -> Option<TimeDelta> {
+        let seconds = tai.seconds_since_j2000();
+        let (t0, _) = self.0.first();
+        let (tn, _) = self.0.last();
+        if seconds < t0 || seconds > tn {
+            return None;
+        }
+        Some(TimeDelta::from_decimal_seconds(self.0.interpolate(seconds)).unwrap())
+    }
+
+    fn delta_tai_ut1(&self, ut1: Time<Ut1>) -> Option<TimeDelta> {
+        let seconds = ut1.seconds_since_j2000();
+        let (t0, _) = self.0.first();
+        let (tn, _) = self.0.last();
+        if seconds < t0 || seconds > tn {
+            return None;
+        }
+        Some(-TimeDelta::from_decimal_seconds(self.0.interpolate(seconds)).unwrap())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::subsecond::Subsecond;
+    use crate::utc::leap_seconds::BuiltinLeapSeconds;
+    use float_eq::assert_float_eq;
+    use rstest::rstest;
+
+    #[rstest]
+    #[case(536414400, -36.40775963091942)]
+    #[case(536415400, -36.40776991477994)]
+    #[case(536416400, -36.407780212136835)]
+    #[case(536417400, -36.40779052210695)]
+    #[case(536418400, -36.407800844763194)]
+    #[case(536419400, -36.407811180178484)]
+    #[case(536420400, -36.40782152842571)]
+    #[case(536421400, -36.40783188957778)]
+    #[case(536422400, -36.4078422637076)]
+    #[case(536423400, -36.407852650888074)]
+    #[case(536424400, -36.4078630511921)]
+    #[case(536425400, -36.4078734646926)]
+    #[case(536426400, -36.40788389146246)]
+    #[case(536427400, -36.407894331574596)]
+    #[case(536428400, -36.407904785101906)]
+    #[case(536429400, -36.40791525211729)]
+    #[case(536430400, -36.40792573269367)]
+    #[case(536431400, -36.407936226903935)]
+    #[case(536432400, -36.40794673482099)]
+    #[case(536433400, -36.40795725651775)]
+    #[case(536434400, -36.407967792067105)]
+    #[case(536435400, -36.40797834154198)]
+    #[case(536436400, -36.40798890501525)]
+    #[case(536437400, -36.407999482559845)]
+    #[case(536438400, -36.40801007424866)]
+    #[case(536439400, -36.4080206801546)]
+    #[case(536440400, -36.40803130035057)]
+    #[case(536441400, -36.40804193490947)]
+    #[case(536442400, -36.408052583904215)]
+    #[case(536443400, -36.408063247407696)]
+    #[case(536444400, -36.40807392549283)]
+    #[case(536445400, -36.408084618232515)]
+    #[case(536446400, -36.40809532569965)]
+    #[case(536447400, -36.40810604796715)]
+    #[case(536448400, -36.408116785107914)]
+    #[case(536449400, -36.408127537194844)]
+    #[case(536450400, -36.408138304300856)]
+    #[case(536451400, -36.40814908649884)]
+    #[case(536452400, -36.40815988386171)]
+    #[case(536453400, -36.40817069646236)]
+    #[case(536454400, -36.40818152437371)]
+    #[case(536455400, -36.408192367668654)]
+    #[case(536456400, -36.4082032264201)]
+    #[case(536457400, -36.408214100700945)]
+    #[case(536458400, -36.4082249905841)]
+    #[case(536459400, -36.40823589614247)]
+    #[case(536460400, -36.40824681744896)]
+    #[case(536461400, -36.408257754576475)]
+    #[case(536462400, -36.40826870759791)]
+    #[case(536463400, -36.40827967658618)]
+    #[case(536464400, -36.408290661614195)]
+    #[case(536465400, -36.40830166275484)]
+    #[case(536466400, -36.40831268008103)]
+    #[case(536467400, -36.40832371366567)]
+    #[case(536468400, -36.40833476358167)]
+    #[case(536469400, -36.408345829901926)]
+    #[case(536470400, -36.40835691269934)]
+    #[case(536471400, -36.40836801204682)]
+    #[case(536472400, -36.40837912801728)]
+    #[case(536473400, -36.40839026068361)]
+    #[case(536474400, -36.40840141011872)]
+    #[case(536475400, -36.40841257639551)]
+    #[case(536476400, -36.4084237595869)]
+    #[case(536477400, -36.40843495976578)]
+    #[case(536478400, -36.408446177005054)]
+    #[case(536479400, -36.40845741137764)]
+    #[case(536480400, -36.40846866295642)]
+    #[case(536481400, -36.40847993181432)]
+    #[case(536482400, -36.40849121802424)]
+    #[case(536483400, -36.408502521659074)]
+    #[case(536484400, -36.40851384279173)]
+    #[case(536485400, -36.40852518149512)]
+    #[case(536486400, -36.40853653784214)]
+    #[case(536487400, -36.4085479119057)]
+    #[case(536488400, -36.40855930375871)]
+    #[case(536489400, -36.408570713474056)]
+    #[case(536490400, -36.40858214112466)]
+    #[case(536491400, -36.40859358678342)]
+    #[case(536492400, -36.408605050523235)]
+    #[case(536493400, -36.408616532417014)]
+    #[case(536494400, -36.40862803253767)]
+    #[case(536495400, -36.40863955095809)]
+    #[case(536496400, -36.408651087751196)]
+    #[case(536497400, -36.40866264298989)]
+    #[case(536498400, -36.40867421674706)]
+    #[case(536499400, -36.40868580909562)]
+    #[case(536500400, -36.40869742010849)]
+    fn test_ut1_orekit(#[case] seconds: i64, #[case] expected: f64) {
+        let tai = Time::new(Tai, seconds, Subsecond::default());
+        let ut1 = Time::new(Ut1, seconds, Subsecond::default());
+        let provider =
+            DeltaUt1Tai::new("../../data/finals2000A.all.csv", BuiltinLeapSeconds).unwrap();
+        let actual = provider.delta_ut1_tai(tai).unwrap().to_decimal_seconds();
+        assert_float_eq!(actual, expected, rel <= 1e-6);
+        let actual = provider.delta_tai_ut1(ut1).unwrap().to_decimal_seconds();
+        assert_float_eq!(actual, -expected, rel <= 1e-6);
+    }
+}

@@ -157,6 +157,14 @@ impl Series {
             }
         }
     }
+
+    pub fn first(&self) -> (f64, f64) {
+        (*self.x.first().unwrap(), *self.y.first().unwrap())
+    }
+
+    pub fn last(&self) -> (f64, f64) {
+        (*self.x.last().unwrap(), *self.y.last().unwrap())
+    }
 }
 
 #[cfg(test)]

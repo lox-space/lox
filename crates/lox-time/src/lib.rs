@@ -48,6 +48,7 @@ pub mod subsecond;
 pub mod time_of_day;
 pub mod time_scales;
 pub mod transformations;
+pub mod ut1;
 pub mod utc;
 
 #[derive(Clone, Debug, Error)]
