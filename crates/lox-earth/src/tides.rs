@@ -206,7 +206,6 @@ mod tests {
 
     use rstest::{fixture, rstest};
 
-    use lox_io::iers::parse_finals_csv;
     use lox_io::iers::EarthOrientationParams;
 
     use super::*;
@@ -234,7 +233,7 @@ mod tests {
     #[fixture]
     fn eop_data() -> EarthOrientationParams {
         let fixture_path = Path::new(FINALS2000A_PATH);
-        parse_finals_csv(fixture_path).unwrap_or_else(|err| {
+        EarthOrientationParams::parse_finals_csv(fixture_path).unwrap_or_else(|err| {
             panic!(
                 "failed to parse test fixture at {}: {}",
                 fixture_path.to_str().unwrap(),

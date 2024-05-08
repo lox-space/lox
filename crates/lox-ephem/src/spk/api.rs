@@ -43,7 +43,7 @@ impl Spk {
             .last()
             .ok_or(DafSpkError::UnableToFindMatchingSegment)?;
 
-        Ok((&segment, sign))
+        Ok((segment, sign))
     }
 
     fn find_record<'a>(

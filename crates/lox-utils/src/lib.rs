@@ -7,9 +7,9 @@
  */
 
 pub mod constants;
-pub mod interpolation;
 pub mod linear_algebra;
 pub mod math;
+pub mod series;
 pub mod slices;
 pub mod types;
 pub mod vector_traits;

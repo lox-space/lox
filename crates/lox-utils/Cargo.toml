@@ -5,7 +5,6 @@ edition = "2021"
 
 [dependencies]
 fast_polynomial.workspace = true
-nalgebra.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]

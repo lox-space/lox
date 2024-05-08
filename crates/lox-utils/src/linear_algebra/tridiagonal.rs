@@ -8,7 +8,6 @@
 
 use std::ops::Index;
 
-use nalgebra::{DMatrix, DVector};
 use thiserror::Error;
 
 #[derive(Clone, Debug, Error, Eq, PartialEq)]
@@ -40,17 +39,31 @@ impl<'a> Tridiagonal<'a> {
         (self.d.len(), self.d.len())
     }
 
-    pub fn solve(&self, b: &[f64]) -> Option<Vec<f64>> {
-        let b: DVector<f64> = b.to_vec().into();
-        let m: DMatrix<f64> = self.clone().into();
-        m.lu().solve(&b).map(|x| x.data.into())
-    }
-}
+    pub fn solve(&self, d: &[f64]) -> Vec<f64> {
+        let n = self.d.len();
+        let a = self.dl;
+        let b = self.d;
+        let c = self.du;
 
-impl<'a> From<Tridiagonal<'a>> for DMatrix<f64> {
-    fn from(value: Tridiagonal) -> Self {
-        let n = value.d.len();
-        DMatrix::from_fn(n, n, |i, j| value[(i, j)])
+        let mut w = vec![0.0; n - 1];
+        let mut g = vec![0.0; n];
+        let mut p = vec![0.0; n];
+
+        w[0] = c[0] / b[0];
+        g[0] = d[0] / b[0];
+
+        for i in 1..n - 1 {
+            w[i] = c[i] / (b[i] - a[i - 1] * w[i - 1]);
+        }
+        for i in 1..n {
+            g[i] = (d[i] - a[i - 1] * g[i - 1]) / (b[i] - a[i - 1] * w[i - 1]);
+        }
+        p[n - 1] = g[n - 1];
+        for i in (1..n).rev() {
+            p[i - 1] = g[i - 1] - w[i - 1] * p[i];
+        }
+
+        p
     }
 }
 
@@ -107,10 +120,6 @@ mod tests {
         assert_eq!(&tri[(0, 2)], &0.0);
         assert_eq!(&tri[(1, 2)], &2.0);
         assert_eq!(&tri[(2, 2)], &5.0);
-
-        let m: DMatrix<f64> = tri.into();
-        let exp = DMatrix::from_row_slice(3, 3, &[3.0, 1.0, 0.0, 6.0, 4.0, 2.0, 0.0, 7.0, 5.0]);
-        assert_eq!(m, exp);
     }
 
     #[test]
@@ -131,12 +140,12 @@ mod tests {
         let tri = Tridiagonal::new(&dl, &d, &du).expect("should be valid");
 
         let b = vec![1.0, 2.0, 3.0];
-        let x = tri.solve(&b).expect("should be solvable");
-        let exp = [-0.1666666666666666, 1.4999999999999996, -1.4999999999999993];
+        let x = tri.solve(&b);
+        let exp = [-0.1666666666666666, 1.5, -1.5];
 
-        assert_float_eq!(x[0], exp[0], rel <= 1e-8);
-        assert_float_eq!(x[1], exp[1], rel <= 1e-8);
-        assert_float_eq!(x[2], exp[2], rel <= 1e-8);
+        assert_float_eq!(x[0], exp[0], rel <= 1e-14);
+        assert_float_eq!(x[1], exp[1], rel <= 1e-14);
+        assert_float_eq!(x[2], exp[2], rel <= 1e-14);
     }
 
     #[test]
