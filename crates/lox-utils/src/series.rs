@@ -29,19 +29,20 @@ pub enum Interpolation {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Series<T: AsRef<[f64]>> {
+pub struct Series<T: AsRef<[f64]>, U: AsRef<[f64]>> {
     x: T,
-    y: Vec<f64>,
+    y: U,
     interpolation: Interpolation,
 }
 
-impl<T: AsRef<[f64]>> Series<T> {
-    pub fn new(x: T, y: Vec<f64>) -> Result<Self, SeriesError> {
+impl<T: AsRef<[f64]>, U: AsRef<[f64]>> Series<T, U> {
+    pub fn new(x: T, y: U) -> Result<Self, SeriesError> {
         let x_ref = x.as_ref();
+        let y_ref = y.as_ref();
         let n = x_ref.len();
 
-        if y.len() != n {
-            return Err(SeriesError::DimensionMismatch(n, y.len()));
+        if y_ref.len() != n {
+            return Err(SeriesError::DimensionMismatch(n, y_ref.len()));
         }
 
         if n < MIN_POINTS_LINEAR {
@@ -55,12 +56,13 @@ impl<T: AsRef<[f64]>> Series<T> {
         })
     }
 
-    pub fn with_cubic_spline(x: T, y: Vec<f64>) -> Result<Self, SeriesError> {
+    pub fn with_cubic_spline(x: T, y: U) -> Result<Self, SeriesError> {
         let x_ref = x.as_ref();
+        let y_ref = y.as_ref();
         let n = x_ref.len();
 
-        if y.len() != n {
-            return Err(SeriesError::DimensionMismatch(n, y.len()));
+        if y_ref.len() != n {
+            return Err(SeriesError::DimensionMismatch(n, y_ref.len()));
         }
 
         if n < MIN_POINTS_SPLINE {
@@ -69,7 +71,7 @@ impl<T: AsRef<[f64]>> Series<T> {
 
         let dx = x_ref.diff();
         let nd = dx.len();
-        let slope: Vec<f64> = y
+        let slope: Vec<f64> = y_ref
             .diff()
             .iter()
             .enumerate()
@@ -119,7 +121,7 @@ impl<T: AsRef<[f64]>> Series<T> {
             .map(|(idx, si)| (si + s[idx + 1] - 2.0 * slope[idx]) / dx[idx])
             .collect();
 
-        let c1 = y[0..n - 1].to_vec();
+        let c1 = y_ref[0..n - 1].to_vec();
         let c2 = s[0..n - 1].to_vec();
         let c3: Vec<f64> = slope
             .iter()
@@ -137,6 +139,7 @@ impl<T: AsRef<[f64]>> Series<T> {
 
     pub fn interpolate(&self, xp: f64) -> f64 {
         let x = self.x.as_ref();
+        let y = self.y.as_ref();
         let x0 = *x.first().unwrap();
         let xn = *x.last().unwrap();
         let idx = if xp <= x0 {
@@ -150,8 +153,8 @@ impl<T: AsRef<[f64]>> Series<T> {
             Interpolation::Linear => {
                 let x0 = x[idx];
                 let x1 = x[idx + 1];
-                let y0 = self.y[idx];
-                let y1 = self.y[idx + 1];
+                let y0 = y[idx];
+                let y1 = y[idx + 1];
                 y0 + (y1 - y0) * (xp - x0) / (x1 - x0)
             }
             Interpolation::CubicSpline(c1, c2, c3, c4) => {
@@ -165,7 +168,7 @@ impl<T: AsRef<[f64]>> Series<T> {
     }
 
     pub fn y(&self) -> &[f64] {
-        &self.y
+        self.y.as_ref()
     }
 
     pub fn first(&self) -> (f64, f64) {
@@ -282,8 +285,8 @@ mod tests {
     #[case(Series::new(vec![1.0, 2.0], vec![1.0]), Err(SeriesError::DimensionMismatch(2, 1)))]
     #[case(Series::with_cubic_spline(vec![1.0, 2.0], vec![1.0]), Err(SeriesError::DimensionMismatch(2, 1)))]
     fn test_series_errors(
-        #[case] actual: Result<Series<Vec<f64>>, SeriesError>,
-        #[case] expected: Result<Series<Vec<f64>>, SeriesError>,
+        #[case] actual: Result<Series<Vec<f64>, Vec<f64>>, SeriesError>,
+        #[case] expected: Result<Series<Vec<f64>, Vec<f64>>, SeriesError>,
     ) {
         assert_eq!(actual, expected);
     }

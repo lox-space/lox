@@ -63,7 +63,7 @@ impl ExtrapolatedDeltaUt1Tai {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct DeltaUt1Tai(Series<Vec<f64>>);
+pub struct DeltaUt1Tai(Series<Vec<f64>, Vec<f64>>);
 
 impl DeltaUt1Tai {
     pub fn new<P: AsRef<Path>>(
