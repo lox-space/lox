@@ -9,21 +9,26 @@
 use std::iter::zip;
 use thiserror::Error;
 
+use crate::calendar_dates::{CalendarDate, Date};
 use crate::constants::i64::SECONDS_PER_DAY;
 use crate::constants::julian_dates::SECONDS_BETWEEN_MJD_AND_J2000;
 use crate::deltas::TimeDelta;
 use crate::julian_dates::JulianDate;
+use crate::subsecond::Subsecond;
 use crate::time_scales::{Tai, Ut1};
 use crate::transformations::LeapSecondsProvider;
 use crate::utc::Utc;
 use crate::Time;
 use lox_io::iers::{EarthOrientationParams, ParseFinalsCsvError};
 use lox_utils::series::{Series, SeriesError};
+use num::ToPrimitive;
 use std::path::Path;
 
 pub trait DeltaUt1TaiProvider {
-    fn delta_ut1_tai(&self, tai: Time<Tai>) -> Option<TimeDelta>;
-    fn delta_tai_ut1(&self, ut1: Time<Ut1>) -> Option<TimeDelta>;
+    type Error;
+
+    fn delta_ut1_tai(&self, tai: Time<Tai>) -> Result<TimeDelta, Self::Error>;
+    fn delta_tai_ut1(&self, ut1: Time<Ut1>) -> Result<TimeDelta, Self::Error>;
 }
 
 #[derive(Clone, Debug, Error)]
@@ -32,6 +37,41 @@ pub enum DeltaUt1TaiError {
     Csv(#[from] ParseFinalsCsvError),
     #[error(transparent)]
     Series(#[from] SeriesError),
+}
+
+#[derive(Clone, Debug, Error)]
+#[error("UT1-TAI is only available between {min_date} and {max_date}; value for {req_date} was extrapolated")]
+pub struct ExtrapolatedDeltaUt1Tai {
+    req_date: Date,
+    min_date: Date,
+    max_date: Date,
+    pub extrapolated_value: f64,
+}
+
+impl PartialEq for ExtrapolatedDeltaUt1Tai {
+    fn eq(&self, other: &Self) -> bool {
+        self.req_date == other.req_date
+            && self.min_date == other.min_date
+            && self.max_date == other.max_date
+            && self.extrapolated_value.total_cmp(&other.extrapolated_value)
+                == std::cmp::Ordering::Equal
+    }
+}
+
+impl Eq for ExtrapolatedDeltaUt1Tai {}
+
+impl ExtrapolatedDeltaUt1Tai {
+    pub fn new(t0: f64, tn: f64, t: f64, val: f64) -> Self {
+        let min_date = Time::new(Tai, t0.to_i64().unwrap(), Subsecond::default());
+        let max_date = Time::new(Tai, tn.to_i64().unwrap(), Subsecond::default());
+        let req_date = Time::new(Tai, t.to_i64().unwrap(), Subsecond::default());
+        Self {
+            req_date: req_date.date(),
+            min_date: min_date.date(),
+            max_date: max_date.date(),
+            extrapolated_value: val,
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -68,24 +108,28 @@ impl DeltaUt1Tai {
 }
 
 impl DeltaUt1TaiProvider for DeltaUt1Tai {
-    fn delta_ut1_tai(&self, tai: Time<Tai>) -> Option<TimeDelta> {
+    type Error = ExtrapolatedDeltaUt1Tai;
+
+    fn delta_ut1_tai(&self, tai: Time<Tai>) -> Result<TimeDelta, Self::Error> {
         let seconds = tai.seconds_since_j2000();
         let (t0, _) = self.0.first();
         let (tn, _) = self.0.last();
+        let val = self.0.interpolate(seconds);
         if seconds < t0 || seconds > tn {
-            return None;
+            return Err(ExtrapolatedDeltaUt1Tai::new(t0, tn, seconds, val));
         }
-        Some(TimeDelta::from_decimal_seconds(self.0.interpolate(seconds)).unwrap())
+        Ok(TimeDelta::from_decimal_seconds(val).unwrap())
     }
 
-    fn delta_tai_ut1(&self, ut1: Time<Ut1>) -> Option<TimeDelta> {
+    fn delta_tai_ut1(&self, ut1: Time<Ut1>) -> Result<TimeDelta, Self::Error> {
         let seconds = ut1.seconds_since_j2000();
         let (t0, _) = self.0.first();
         let (tn, _) = self.0.last();
+        let val = self.0.interpolate(seconds);
         if seconds < t0 || seconds > tn {
-            return None;
+            return Err(ExtrapolatedDeltaUt1Tai::new(t0, tn, seconds, val));
         }
-        Some(-TimeDelta::from_decimal_seconds(self.0.interpolate(seconds)).unwrap())
+        Ok(-TimeDelta::from_decimal_seconds(val).unwrap())
     }
 }
 
@@ -197,19 +241,29 @@ mod tests {
         assert_float_eq!(actual, -expected, rel <= 1e-6);
     }
 
-    #[test]
-    fn test_delta_ut1_tai_edge_cases() {
+    #[rstest]
+    #[case(time!(Tai, 1973, 1, 1).unwrap(), Err(ExtrapolatedDeltaUt1Tai {
+        req_date: Date::new(1973, 1, 1).unwrap(),
+        min_date: Date::new(1973, 1, 2).unwrap(),
+        max_date: Date::new(2025, 3, 15).unwrap(),
+        extrapolated_value: -11.188739245677642,
+    }))]
+    #[case(time!(Tai, 2025, 3, 16).unwrap(), Err(ExtrapolatedDeltaUt1Tai {
+        req_date: Date::new(2025, 3, 16).unwrap(),
+        min_date: Date::new(1973, 1, 2).unwrap(),
+        max_date: Date::new(2025, 3, 15).unwrap(),
+        extrapolated_value: -36.98893121380733,
+    }))]
+    fn test_delta_ut1_tai_extrapolation(
+        #[case] time: Time<Tai>,
+        #[case] expected: Result<TimeDelta, ExtrapolatedDeltaUt1Tai>,
+    ) {
         let provider =
             DeltaUt1Tai::new("../../data/finals2000A.all.csv", BuiltinLeapSeconds).unwrap();
-        assert_eq!(provider.delta_ut1_tai(Time::jd0(Tai)), None);
-        assert_eq!(
-            provider.delta_ut1_tai(time!(Tai, 2100, 1, 1).unwrap()),
-            None
-        );
-        assert_eq!(provider.delta_tai_ut1(Time::jd0(Ut1)), None);
-        assert_eq!(
-            provider.delta_tai_ut1(time!(Ut1, 2100, 1, 1).unwrap()),
-            None
-        );
+        let actual = provider.delta_ut1_tai(time);
+        assert_eq!(actual, expected);
+        let ut1 = time.with_scale(Ut1);
+        let actual = provider.delta_tai_ut1(ut1);
+        assert_eq!(actual, expected);
     }
 }
