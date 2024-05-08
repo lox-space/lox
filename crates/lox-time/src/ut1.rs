@@ -39,26 +39,14 @@ pub enum DeltaUt1TaiError {
     Series(#[from] SeriesError),
 }
 
-#[derive(Clone, Debug, Error)]
+#[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[error("UT1-TAI is only available between {min_date} and {max_date}; value for {req_date} was extrapolated")]
 pub struct ExtrapolatedDeltaUt1Tai {
     req_date: Date,
     min_date: Date,
     max_date: Date,
-    pub extrapolated_value: f64,
+    pub extrapolated_value: TimeDelta,
 }
-
-impl PartialEq for ExtrapolatedDeltaUt1Tai {
-    fn eq(&self, other: &Self) -> bool {
-        self.req_date == other.req_date
-            && self.min_date == other.min_date
-            && self.max_date == other.max_date
-            && self.extrapolated_value.total_cmp(&other.extrapolated_value)
-                == std::cmp::Ordering::Equal
-    }
-}
-
-impl Eq for ExtrapolatedDeltaUt1Tai {}
 
 impl ExtrapolatedDeltaUt1Tai {
     pub fn new(t0: f64, tn: f64, t: f64, val: f64) -> Self {
@@ -69,7 +57,7 @@ impl ExtrapolatedDeltaUt1Tai {
             req_date: req_date.date(),
             min_date: min_date.date(),
             max_date: max_date.date(),
-            extrapolated_value: val,
+            extrapolated_value: TimeDelta::from_decimal_seconds(val).unwrap(),
         }
     }
 }
@@ -246,13 +234,13 @@ mod tests {
         req_date: Date::new(1973, 1, 1).unwrap(),
         min_date: Date::new(1973, 1, 2).unwrap(),
         max_date: Date::new(2025, 3, 15).unwrap(),
-        extrapolated_value: -11.188739245677642,
+        extrapolated_value: TimeDelta::from_decimal_seconds(-11.188739245677642).unwrap(),
     }))]
     #[case(time!(Tai, 2025, 3, 16).unwrap(), Err(ExtrapolatedDeltaUt1Tai {
         req_date: Date::new(2025, 3, 16).unwrap(),
         min_date: Date::new(1973, 1, 2).unwrap(),
         max_date: Date::new(2025, 3, 15).unwrap(),
-        extrapolated_value: -36.98893121380733,
+        extrapolated_value: TimeDelta::from_decimal_seconds(-36.98893121380733).unwrap(),
     }))]
     fn test_delta_ut1_tai_extrapolation(
         #[case] time: Time<Tai>,
