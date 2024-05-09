@@ -171,9 +171,8 @@ fn generate_call_to_deserializer_for_vec_type(
 
                             match result {
                                 Ok(item) => items.push(item),
-                                Err(
-                                    crate::ndm::kvn::parser::KvnDeserializerErr::UnexpectedKeyword,
-                                ) => break,
+                                Err(crate::ndm::kvn::parser::KvnDeserializerErr::UnexpectedKeyword) |
+                                Err(crate::ndm::kvn::parser::KvnDeserializerErr::UnexpectedEndOfInput) => break,
                                 Err(e) => Err(e)?,
                             }
                         }

@@ -754,10 +754,17 @@ mod test {
     }
 
     #[derive(KvnDeserialize, Default, Debug, PartialEq)]
+    pub struct KvnOptionChildStruct {
+        option_child_date_value: KvnDateTimeValue,
+        option_child_numeric_value: KvnNumericValue,
+    }
+
+    #[derive(KvnDeserialize, Default, Debug, PartialEq)]
     pub struct KvnStruct {
         comment: Vec<KvnStringValue>,
         string_value: KvnStringValue,
         date_value: KvnDateTimeValue,
+        option_child_struct: Option<KvnOptionChildStruct>,
         numeric_value: KvnNumericValue,
         option_numeric_value: Option<KvnNumericValue>,
         integer_value: KvnIntegerValue,
@@ -771,6 +778,8 @@ mod test {
 COMMENT asdsda a1 adsd
 STRING_VALUE = EUTELSAT W4
 DATE_VALUE = 2021-06-03T05:33:00.123
+OPTION_CHILD_DATE_VALUE = 2021-06-03T05:33:00.123
+OPTION_CHILD_NUMERIC_VALUE = 6655.9942 [km]
 NUMERIC_VALUE = 6655.9942 [km]
 INTEGER_VALUE = 123 [km]
 OPTION_DATE_VALUE = 2021-06-03T05:33:00.123
@@ -805,6 +814,21 @@ CHILD_NUMERIC_VALUE = 1122.9942 [km]"#;
                     second: 0,
                     fractional_second: 0.123,
                 },
+                option_child_struct: Some(KvnOptionChildStruct {
+                    option_child_date_value: KvnDateTimeValue {
+                        year: 2021,
+                        month: 6,
+                        day: 3,
+                        hour: 5,
+                        minute: 33,
+                        second: 0,
+                        fractional_second: 0.123,
+                    },
+                    option_child_numeric_value: KvnValue {
+                        value: 6655.9942,
+                        unit: Some("km".to_string(),),
+                    },
+                }),
                 numeric_value: KvnValue {
                     value: 6655.9942,
                     unit: Some("km".to_string(),),
@@ -892,6 +916,7 @@ OPTION_DATE_VALUE = 2021-06-03T05:33:00.123"#;
                     second: 0,
                     fractional_second: 0.123,
                 },
+                option_child_struct: None,
                 numeric_value: KvnValue {
                     value: 6655.9942,
                     unit: Some("km".to_string(),),
@@ -939,6 +964,7 @@ OPTION_DATE_VALUE = 2021-06-03T05:33:00.123"#;
                     second: 0,
                     fractional_second: 0.123,
                 },
+                option_child_struct: None,
                 numeric_value: KvnValue {
                     value: 6655.9942,
                     unit: Some("km".to_string(),),
