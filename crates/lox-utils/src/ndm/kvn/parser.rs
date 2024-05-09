@@ -776,8 +776,8 @@ INTEGER_VALUE = 123 [km]
 OPTION_DATE_VALUE = 2021-06-03T05:33:00.123
 CHILD_DATE_VALUE = 2021-06-03T05:33:00.123
 CHILD_NUMERIC_VALUE = 6655.9942 [km]
-CHILD_DATE_VALUE = 2021-06-03T05:33:00.123
-CHILD_NUMERIC_VALUE = 6655.9942 [km]"#;
+CHILD_DATE_VALUE = 2021-02-03T05:33:00.123
+CHILD_NUMERIC_VALUE = 1122.9942 [km]"#;
 
         assert_eq!(
             KvnStruct::deserialize(&mut kvn.lines().peekable()),
@@ -842,7 +842,7 @@ CHILD_NUMERIC_VALUE = 6655.9942 [km]"#;
                     KvnChildStruct {
                         child_date_value: KvnDateTimeValue {
                             year: 2021,
-                            month: 6,
+                            month: 2,
                             day: 3,
                             hour: 5,
                             minute: 33,
@@ -850,7 +850,7 @@ CHILD_NUMERIC_VALUE = 6655.9942 [km]"#;
                             fractional_second: 0.123,
                         },
                         child_numeric_value: KvnValue {
-                            value: 6655.9942,
+                            value: 1122.9942,
                             unit: Some("km".to_string(),),
                         },
                     },
@@ -913,11 +913,14 @@ OPTION_DATE_VALUE = 2021-06-03T05:33:00.123"#;
                 vec_child_struct: vec![],
             },)
         );
+    }
 
+    #[test]
+    fn test_parse_whole_struct_with_empty_vec_and_option() {
         let kvn = r#"STRING_VALUE = EUTELSAT W4
-DATE_VALUE = 2021-06-03T05:33:00.123
-NUMERIC_VALUE = 6655.9942 [km]
-INTEGER_VALUE = 123 [km]"#;
+        DATE_VALUE = 2021-06-03T05:33:00.123
+        NUMERIC_VALUE = 6655.9942 [km]
+        INTEGER_VALUE = 123 [km]"#;
 
         assert_eq!(
             KvnStruct::deserialize(&mut kvn.lines().peekable()),
