@@ -85,7 +85,7 @@ fn generate_call_to_deserializer_for_kvn_type(
                     let result = if has_next_line {
                         #type_ident::deserialize(lines)
                     } else {
-                        break;
+                        Err(crate::ndm::kvn::parser::KvnDeserializerErr::UnexpectedEndOfInput)
                     };
 
                     result
@@ -229,6 +229,8 @@ pub fn derive_kvn_deserialize(item: proc_macro::TokenStream) -> proc_macro::Toke
             // Unwrap is okay because we expect this span to come from the source code
             let field_type = field.ty.span().source_text().unwrap();
 
+            let type_ident = syn::Ident::new(&field_type, Span::call_site());
+
             let parser = match field_type.as_str() {
                 "KvnDateTimeValue" | "KvnStringValue" | "KvnNumericValue" | "KvnIntegerValue" => {
                     let deserializer_for_kvn_type = generate_call_to_deserializer_for_kvn_type(
@@ -245,12 +247,9 @@ pub fn derive_kvn_deserialize(item: proc_macro::TokenStream) -> proc_macro::Toke
                 }
                 "Vec" => generate_call_to_deserializer_for_vec_type(&expected_kvn_name, &field)?,
                 _ => {
-                    return Err(syn::Error::new_spanned(
-                        &field,
-                        "unsupported field type for `#[derive(KvnDeserialize)]`",
-                    )
-                    .into_compile_error()
-                    .into());
+                    quote! {
+                        #type_ident::deserialize(lines)?
+                    }
                 }
             };
 
