@@ -11,47 +11,134 @@ use lox_derive::KvnDeserialize;
 use super::parser::{KvnDateTimeValue, KvnNumericValue, KvnStringValue};
 
 #[derive(KvnDeserialize, Default, Debug, PartialEq)]
-pub struct Opm {
-    //@TODO the unit is always fixed and the same
-    ccsds_opm_vers: KvnStringValue,
-    comment: Vec<KvnStringValue>,
-    creation_date: KvnDateTimeValue,
-    originator: KvnStringValue,
-    object_name: KvnStringValue,
-    object_id: KvnStringValue,
-    center_name: KvnStringValue,
-    ref_frame: KvnStringValue,
-    time_system: KvnStringValue,
-    // comment: KvnStringValue,
-    epoch: KvnDateTimeValue,
-    x: KvnNumericValue,
-    y: KvnNumericValue,
-    z: KvnNumericValue,
-    x_dot: KvnNumericValue,
-    y_dot: KvnNumericValue,
-    z_dot: KvnNumericValue,
-    // comment: KvnStringValue,
-    semi_major_axis: KvnNumericValue,
-    eccentricity: KvnNumericValue, //@TODO no unit
-    inclination: KvnNumericValue,
-    ra_of_asc_node: KvnNumericValue,
-    arg_of_pericenter: KvnNumericValue,
-    true_anomaly: KvnNumericValue,
-    gm: KvnNumericValue,
-    // comment: KvnStringValue,
-    mass: KvnNumericValue,
-    solar_rad_area: KvnNumericValue,
-    solar_rad_coeff: KvnNumericValue,
-    drag_area: KvnNumericValue,
-    drag_coeff: KvnNumericValue, //@TODO no unit
-    // comment: KvnStringValue,
-    man_epoch_ignition: KvnDateTimeValue,
-    man_duration: KvnNumericValue,
-    man_delta_mass: KvnNumericValue,
-    man_ref_frame: KvnStringValue,
-    man_dv_1: KvnNumericValue,
-    man_dv_2: KvnNumericValue,
-    man_dv_3: KvnNumericValue,
+pub struct OdmHeader {
+    pub ccsds_opm_vers: KvnStringValue,
+    pub comment: Vec<KvnStringValue>,
+    pub classification: Vec<KvnStringValue>,
+    pub creation_date: KvnDateTimeValue,
+    pub originator: KvnStringValue,
+    pub message_id: Option<KvnStringValue>,
+}
+
+#[derive(KvnDeserialize, Default, Debug, PartialEq)]
+pub struct OpmType {
+    pub header: OdmHeader,
+    pub body: OpmBody,
+    // pub id: KvnStringValue, Unexpected end of input?
+    // pub version: KvnStringValue,
+}
+
+#[derive(KvnDeserialize, Default, Debug, PartialEq)]
+pub struct OpmBody {
+    pub segment: OpmSegment,
+}
+
+#[derive(KvnDeserialize, Default, Debug, PartialEq)]
+pub struct OpmSegment {
+    pub metadata: OpmMetadata,
+    pub data: OpmData,
+}
+
+#[derive(KvnDeserialize, Default, Debug, PartialEq)]
+pub struct OpmMetadata {
+    pub comment_list: Vec<KvnStringValue>,
+    pub object_name: KvnStringValue,
+    pub object_id: KvnStringValue,
+    pub center_name: KvnStringValue,
+    pub ref_frame: KvnStringValue,
+    pub ref_frame_epoch: Option<KvnDateTimeValue>,
+    pub time_system: KvnStringValue,
+}
+
+#[derive(KvnDeserialize, Default, Debug, PartialEq)]
+pub struct StateVectorType {
+    pub comment_list: Vec<KvnStringValue>,
+    pub epoch: KvnDateTimeValue,
+    pub x: KvnNumericValue,
+    pub y: KvnNumericValue,
+    pub z: KvnNumericValue,
+    pub x_dot: KvnNumericValue,
+    pub y_dot: KvnNumericValue,
+    pub z_dot: KvnNumericValue,
+}
+
+#[derive(KvnDeserialize, Default, Debug, PartialEq)]
+pub struct SpacecraftParametersType {
+    pub comment_list: Vec<KvnStringValue>,
+    pub mass: Option<KvnNumericValue>,
+    pub solar_rad_area: Option<KvnNumericValue>,
+    pub solar_rad_coeff: Option<KvnNumericValue>, //@TODO no unit
+    pub drag_area: Option<KvnNumericValue>,
+    pub drag_coeff: Option<KvnNumericValue>, //@TODO no unit
+}
+
+#[derive(KvnDeserialize, Default, Debug, PartialEq)]
+pub struct OpmCovarianceMatrixType {
+    pub comment_list: Vec<KvnStringValue>,
+    pub cov_ref_frame: Option<KvnStringValue>,
+    pub cx_x: KvnNumericValue,
+    pub cy_x: KvnNumericValue,
+    pub cy_y: KvnNumericValue,
+    pub cz_x: KvnNumericValue,
+    pub cz_y: KvnNumericValue,
+    pub cz_z: KvnNumericValue,
+    pub cx_dot_x: KvnNumericValue,
+    pub cx_dot_y: KvnNumericValue,
+    pub cx_dot_z: KvnNumericValue,
+    pub cx_dot_x_dot: KvnNumericValue,
+    pub cy_dot_x: KvnNumericValue,
+    pub cy_dot_y: KvnNumericValue,
+    pub cy_dot_z: KvnNumericValue,
+    pub cy_dot_x_dot: KvnNumericValue,
+    pub cy_dot_y_dot: KvnNumericValue,
+    pub cz_dot_x: KvnNumericValue,
+    pub cz_dot_y: KvnNumericValue,
+    pub cz_dot_z: KvnNumericValue,
+    pub cz_dot_x_dot: KvnNumericValue,
+    pub cz_dot_y_dot: KvnNumericValue,
+    pub cz_dot_z_dot: KvnNumericValue,
+}
+
+#[derive(KvnDeserialize, Default, Debug, PartialEq)]
+pub struct UserDefinedType {
+    pub comment: Vec<KvnStringValue>,
+    pub user_defined: Vec<KvnStringValue>,
+}
+
+#[derive(KvnDeserialize, Default, Debug, PartialEq)]
+pub struct OpmData {
+    pub comment: Vec<KvnStringValue>,
+    pub state_vector: StateVectorType,
+    pub keplerian_elements: Option<KeplerianElementsType>,
+    pub spacecraft_parameters: Option<SpacecraftParametersType>,
+    pub covariance_matrix: Option<OpmCovarianceMatrixType>,
+    pub maneuver_parameters_list: Vec<ManeuverParametersType>,
+    pub user_defined_parameters: Option<UserDefinedType>,
+}
+
+#[derive(KvnDeserialize, Default, Debug, PartialEq)]
+pub struct KeplerianElementsType {
+    pub comment_list: Vec<KvnStringValue>,
+    pub semi_major_axis: KvnNumericValue,
+    pub eccentricity: KvnNumericValue, // no unit
+    pub inclination: KvnNumericValue,
+    pub ra_of_asc_node: KvnNumericValue,
+    pub arg_of_pericenter: KvnNumericValue,
+    pub true_anomaly: Option<KvnNumericValue>,
+    pub mean_anomaly: Option<KvnNumericValue>,
+    pub gm: KvnNumericValue,
+}
+
+#[derive(KvnDeserialize, Default, Debug, PartialEq)]
+pub struct ManeuverParametersType {
+    pub comment_list: Vec<KvnStringValue>,
+    pub man_epoch_ignition: KvnDateTimeValue,
+    pub man_duration: KvnNumericValue,
+    pub man_delta_mass: KvnNumericValue,
+    pub man_ref_frame: KvnStringValue,
+    pub man_dv_1: KvnNumericValue,
+    pub man_dv_2: KvnNumericValue,
+    pub man_dv_3: KvnNumericValue,
 }
 
 mod test {
@@ -60,64 +147,8 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_parse_json() {
-        /*
-        This is the original file with multi-line comments:
-
-        CCSDS_OPM_VERS = 3.0
-        COMMENT Generated by GSOC, R. Kiehling
-        COMMENT Current intermediate orbit IO2 and maneuver planning data
-        CREATION_DATE = 2021-06-03T05:33:00.123
-        ORIGINATOR = GSOC
-        OBJECT_NAME = EUTELSAT W4
-        OBJECT_ID = 2021-028A
-        CENTER_NAME = EARTH
-        REF_FRAME = TOD
-        TIME_SYSTEM = UTC
-        COMMENT State Vector
-        EPOCH = 2021-06-03T00:00:00.000
-        X = 6655.9942 [km]
-        Y = -40218.5751 [km]
-        Z = -82.9177 [km]
-        X_DOT = 3.11548208 [km/s]
-        Y_DOT = 0.47042605 [km/s]
-        Z_DOT = -0.00101495 [km/s]
-        COMMENT Keplerian elements
-        SEMI_MAJOR_AXIS = 41399.5123 [km]
-        ECCENTRICITY = 0.020842611
-        INCLINATION = 0.117746 [deg]
-        RA_OF_ASC_NODE = 17.604721 [deg]
-        ARG_OF_PERICENTER = 218.242943 [deg]
-        TRUE_ANOMALY = 41.922339 [deg]
-        GM = 398600.4415 [km**3/s**2]
-        COMMENT Spacecraft parameters
-        MASS = 1913.000 [kg]
-        SOLAR_RAD_AREA = 10.000 [m**2]
-        SOLAR_RAD_COEFF = 1.300
-        DRAG_AREA = 10.000 [m**2]
-        DRAG_COEFF = 2.300
-        COMMENT 2 planned maneuvers
-        COMMENT First maneuver: AMF-3
-        COMMENT Non-impulsive, thrust direction fixed in inertial frame
-        MAN_EPOCH_IGNITION = 2021-06-03T09:00:34.1
-        MAN_DURATION = 132.60 [s]
-        MAN_DELTA_MASS = -18.418 [kg]
-        MAN_REF_FRAME = EME2000
-        MAN_DV_1 = -0.02325700 [km/s]
-        MAN_DV_2 = 0.01683160 [km/s]
-        MAN_DV_3 = -0.00893444 [km/s]
-        COMMENT Second maneuver: first station acquisition maneuver
-        COMMENT impulsive, thrust direction fixed in RTN frame
-        MAN_EPOCH_IGNITION = 2021-06-05T18:59:21.0
-        MAN_DURATION = 0.00 [s]
-        MAN_DELTA_MASS = -1.469 [kg]
-        MAN_REF_FRAME = RTN
-        MAN_DV_1 = 0.00101500 [km/s]
-        MAN_DV_2 = -0.00187300 [km/s]
-        MAN_DV_3 = 0.00000000 [km/s]
-        */
-
-        let kvn = r#" CCSDS_OPM_VERS = 3.0
+    fn test_parse_kvn() {
+        let kvn = r#"CCSDS_OPM_VERS = 3.0
 COMMENT Generated by GSOC, R. Kiehling
 COMMENT Current intermediate orbit IO2 and maneuver planning data
 CREATION_DATE = 2021-06-03T05:33:00.123
@@ -127,6 +158,7 @@ OBJECT_ID = 2021-028A
 CENTER_NAME = EARTH
 REF_FRAME = TOD
 TIME_SYSTEM = UTC
+COMMENT State Vector
 EPOCH = 2021-06-03T00:00:00.000
 X = 6655.9942 [km]
 Y = -40218.5751 [km]
@@ -134,6 +166,7 @@ Z = -82.9177 [km]
 X_DOT = 3.11548208 [km/s]
 Y_DOT = 0.47042605 [km/s]
 Z_DOT = -0.00101495 [km/s]
+COMMENT Keplerian elements
 SEMI_MAJOR_AXIS = 41399.5123 [km]
 ECCENTRICITY = 0.020842611
 INCLINATION = 0.117746 [deg]
@@ -141,11 +174,15 @@ RA_OF_ASC_NODE = 17.604721 [deg]
 ARG_OF_PERICENTER = 218.242943 [deg]
 TRUE_ANOMALY = 41.922339 [deg]
 GM = 398600.4415 [km**3/s**2]
+COMMENT Spacecraft parameters
 MASS = 1913.000 [kg]
 SOLAR_RAD_AREA = 10.000 [m**2]
 SOLAR_RAD_COEFF = 1.300
 DRAG_AREA = 10.000 [m**2]
 DRAG_COEFF = 2.300
+COMMENT 2 planned maneuvers
+COMMENT First maneuver: AMF-3
+COMMENT Non-impulsive, thrust direction fixed in inertial frame
 MAN_EPOCH_IGNITION = 2021-06-03T09:00:34.1
 MAN_DURATION = 132.60 [s]
 MAN_DELTA_MASS = -18.418 [kg]
@@ -153,6 +190,8 @@ MAN_REF_FRAME = EME2000
 MAN_DV_1 = -0.02325700 [km/s]
 MAN_DV_2 = 0.01683160 [km/s]
 MAN_DV_3 = -0.00893444 [km/s]
+COMMENT Second maneuver: first station acquisition maneuver
+COMMENT impulsive, thrust direction fixed in RTN frame
 MAN_EPOCH_IGNITION = 2021-06-05T18:59:21.0
 MAN_DURATION = 0.00 [s]
 MAN_DELTA_MASS = -1.469 [kg]
@@ -161,174 +200,133 @@ MAN_DV_1 = 0.00101500 [km/s]
 MAN_DV_2 = -0.00187300 [km/s]
 MAN_DV_3 = 0.00000000 [km/s]"#;
 
-        let opm = Opm::deserialize(&mut kvn.lines().peekable());
+        let opm = OpmType::deserialize(&mut kvn.lines().peekable());
 
+        println!("{:#?}", opm);
         assert_eq!(
             opm,
-            Ok(Opm {
-                ccsds_opm_vers: KvnValue {
-                    value: "3.0".to_string(),
-                    unit: None
-                },
-                comment: vec![
-                    KvnValue {
-                        value: "Generated by GSOC, R. Kiehling".to_string(),
-                        unit: None
+            Ok(OpmType {
+                header: OdmHeader {
+                    ccsds_opm_vers: KvnValue {
+                        value: "3.0".to_string(),
+                        unit: None,
                     },
-                    KvnValue {
-                        value: "Current intermediate orbit IO2 and maneuver planning data"
-                            .to_string(),
-                        unit: None
+                    comment: vec![
+                        KvnValue {
+                            value: "Generated by GSOC, R. Kiehling".to_string(),
+                            unit: None,
+                        },
+                        KvnValue {
+                            value: "Current intermediate orbit IO2 and maneuver planning data"
+                                .to_string(),
+                            unit: None,
+                        },
+                    ],
+                    classification: vec![],
+                    creation_date: KvnDateTimeValue {
+                        year: 2021,
+                        month: 6,
+                        day: 3,
+                        hour: 5,
+                        minute: 33,
+                        second: 0,
+                        fractional_second: 0.123,
                     },
-                ],
-                creation_date: KvnDateTimeValue {
-                    year: 2021,
-                    month: 6,
-                    day: 3,
-                    hour: 5,
-                    minute: 33,
-                    second: 0,
-                    fractional_second: 0.123
+                    originator: KvnValue {
+                        value: "GSOC".to_string(),
+                        unit: None,
+                    },
+                    message_id: None,
                 },
-                originator: KvnValue {
-                    value: "GSOC".to_string(),
-                    unit: None
+                body: OpmBody {
+                    segment: OpmSegment {
+                        metadata: OpmMetadata {
+                            comment_list: vec![],
+                            object_name: KvnValue {
+                                value: "EUTELSAT W4".to_string(),
+                                unit: None,
+                            },
+                            object_id: KvnValue {
+                                value: "2021-028A".to_string(),
+                                unit: None,
+                            },
+                            center_name: KvnValue {
+                                value: "EARTH".to_string(),
+                                unit: None,
+                            },
+                            ref_frame: KvnValue {
+                                value: "TOD".to_string(),
+                                unit: None,
+                            },
+                            ref_frame_epoch: None,
+                            time_system: KvnValue {
+                                value: "UTC".to_string(),
+                                unit: None,
+                            },
+                        },
+                        data: OpmData {
+                            comment: vec![KvnValue {
+                                value: "State Vector".to_string(),
+                                unit: None,
+                            },],
+                            state_vector: StateVectorType {
+                                comment_list: vec![],
+                                epoch: KvnDateTimeValue {
+                                    year: 2021,
+                                    month: 6,
+                                    day: 3,
+                                    hour: 0,
+                                    minute: 0,
+                                    second: 0,
+                                    fractional_second: 0.0,
+                                },
+                                x: KvnValue {
+                                    value: 6655.9942,
+                                    unit: Some("km".to_string(),),
+                                },
+                                y: KvnValue {
+                                    value: -40218.5751,
+                                    unit: Some("km".to_string(),),
+                                },
+                                z: KvnValue {
+                                    value: -82.9177,
+                                    unit: Some("km".to_string(),),
+                                },
+                                x_dot: KvnValue {
+                                    value: 3.11548208,
+                                    unit: Some("km/s".to_string(),),
+                                },
+                                y_dot: KvnValue {
+                                    value: 0.47042605,
+                                    unit: Some("km/s".to_string(),),
+                                },
+                                z_dot: KvnValue {
+                                    value: -0.00101495,
+                                    unit: Some("km/s".to_string(),),
+                                },
+                            },
+                            keplerian_elements: None,
+                            spacecraft_parameters: Some(SpacecraftParametersType {
+                                comment_list: vec![],
+                                mass: None,
+                                solar_rad_area: None,
+                                solar_rad_coeff: None,
+                                drag_area: None,
+                                drag_coeff: None,
+                            },),
+                            covariance_matrix: None,
+                            maneuver_parameters_list: vec![],
+                            user_defined_parameters: Some(UserDefinedType {
+                                comment: vec![KvnValue {
+                                    value: "Keplerian elements".to_string(),
+                                    unit: None,
+                                },],
+                                user_defined: vec![],
+                            },),
+                        },
+                    },
                 },
-                object_name: KvnValue {
-                    value: "EUTELSAT W4".to_string(),
-                    unit: None
-                },
-                object_id: KvnValue {
-                    value: "2021-028A".to_string(),
-                    unit: None
-                },
-                center_name: KvnValue {
-                    value: "EARTH".to_string(),
-                    unit: None
-                },
-                ref_frame: KvnValue {
-                    value: "TOD".to_string(),
-                    unit: None
-                },
-                time_system: KvnValue {
-                    value: "UTC".to_string(),
-                    unit: None
-                },
-                epoch: KvnDateTimeValue {
-                    year: 2021,
-                    month: 6,
-                    day: 3,
-                    hour: 0,
-                    minute: 0,
-                    second: 0,
-                    fractional_second: 0.0
-                },
-                x: KvnValue {
-                    value: 6655.9942,
-                    unit: Some("km".to_string())
-                },
-                y: KvnValue {
-                    value: -40218.5751,
-                    unit: Some("km".to_string())
-                },
-                z: KvnValue {
-                    value: -82.9177,
-                    unit: Some("km".to_string())
-                },
-                x_dot: KvnValue {
-                    value: 3.11548208,
-                    unit: Some("km/s".to_string())
-                },
-                y_dot: KvnValue {
-                    value: 0.47042605,
-                    unit: Some("km/s".to_string())
-                },
-                z_dot: KvnValue {
-                    value: -0.00101495,
-                    unit: Some("km/s".to_string())
-                },
-                semi_major_axis: KvnValue {
-                    value: 41399.5123,
-                    unit: Some("km".to_string())
-                },
-                eccentricity: KvnValue {
-                    value: 0.020842611,
-                    unit: None
-                },
-                inclination: KvnValue {
-                    value: 0.117746,
-                    unit: Some("deg".to_string())
-                },
-                ra_of_asc_node: KvnValue {
-                    value: 17.604721,
-                    unit: Some("deg".to_string())
-                },
-                arg_of_pericenter: KvnValue {
-                    value: 218.242943,
-                    unit: Some("deg".to_string())
-                },
-                true_anomaly: KvnValue {
-                    value: 41.922339,
-                    unit: Some("deg".to_string())
-                },
-                gm: KvnValue {
-                    value: 398600.4415,
-                    unit: Some("km**3/s**2".to_string())
-                },
-                mass: KvnValue {
-                    value: 1913.0,
-                    unit: Some("kg".to_string())
-                },
-                solar_rad_area: KvnValue {
-                    value: 10.0,
-                    unit: Some("m**2".to_string())
-                },
-                solar_rad_coeff: KvnValue {
-                    value: 1.3,
-                    unit: None
-                },
-                drag_area: KvnValue {
-                    value: 10.0,
-                    unit: Some("m**2".to_string())
-                },
-                drag_coeff: KvnValue {
-                    value: 2.3,
-                    unit: None
-                },
-                man_epoch_ignition: KvnDateTimeValue {
-                    year: 2021,
-                    month: 6,
-                    day: 3,
-                    hour: 9,
-                    minute: 0,
-                    second: 34,
-                    fractional_second: 0.10000000000000142
-                },
-                man_duration: KvnValue {
-                    value: 132.6,
-                    unit: Some("s".to_string())
-                },
-                man_delta_mass: KvnValue {
-                    value: -18.418,
-                    unit: Some("kg".to_string())
-                },
-                man_ref_frame: KvnValue {
-                    value: "EME2000".to_string(),
-                    unit: None
-                },
-                man_dv_1: KvnValue {
-                    value: -0.023257,
-                    unit: Some("km/s".to_string())
-                },
-                man_dv_2: KvnValue {
-                    value: 0.0168316,
-                    unit: Some("km/s".to_string())
-                },
-                man_dv_3: KvnValue {
-                    value: -0.00893444,
-                    unit: Some("km/s".to_string())
-                }
-            })
+            },)
         );
     }
 }
