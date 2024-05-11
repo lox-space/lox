@@ -20,46 +20,48 @@ pub type KvnNumericValue = KvnValue<f64, String>;
 
 #[derive(Debug, PartialEq)]
 pub enum KvnParserErr<I> {
-    KeywordNotFound,
-    EmptyValue,
+    KeywordNotFound { expected: I },
+    EmptyValue { keyword: I },
     ParserError(I, ErrorKind),
 }
 
 #[derive(PartialEq, Debug)]
 pub enum KvnNumberLineParserErr<I> {
     ParserError(I, ErrorKind),
-    KeywordNotFound,
-    EmptyValue,
-    InvalidFormat,
+    KeywordNotFound { expected: I },
+    EmptyValue { keyword: I },
+    InvalidFormat { keyword: I },
 }
 
 #[derive(PartialEq, Debug)]
 pub enum KvnDateTimeParserErr<I> {
     ParserError(I, ErrorKind),
-    KeywordNotFound,
-    EmptyValue,
-    InvalidFormat,
+    KeywordNotFound { expected: I },
+    EmptyValue { keyword: I },
+    InvalidFormat { keyword: I },
 }
 
 #[derive(PartialEq, Debug)]
 pub enum KvnDeserializerErr<I> {
-    InvalidDateTimeFormat,
-    InvalidNumberFormat,
-    KeywordNotFound,
-    UnexpectedKeyword,
-    EmptyValue,
-    UnexpectedEndOfInput,
+    InvalidDateTimeFormat { keyword: I },
+    InvalidNumberFormat { keyword: I },
+    KeywordNotFound { expected: I },
+    UnexpectedKeyword { found: I, expected: I },
+    EmptyValue { keyword: I },
+    UnexpectedEndOfInput { keyword: I },
     GeneralParserError(I, ErrorKind),
 }
 
 impl<I> From<nom::Err<KvnParserErr<I>>> for KvnDeserializerErr<I> {
     fn from(value: nom::Err<KvnParserErr<I>>) -> Self {
         match value {
-            nom::Err::Error(KvnParserErr::EmptyValue)
-            | nom::Err::Failure(KvnParserErr::EmptyValue) => KvnDeserializerErr::EmptyValue,
-            nom::Err::Error(KvnParserErr::KeywordNotFound)
-            | nom::Err::Failure(KvnParserErr::KeywordNotFound) => {
-                KvnDeserializerErr::KeywordNotFound
+            nom::Err::Error(KvnParserErr::EmptyValue { keyword })
+            | nom::Err::Failure(KvnParserErr::EmptyValue { keyword }) => {
+                KvnDeserializerErr::EmptyValue { keyword }
+            }
+            nom::Err::Error(KvnParserErr::KeywordNotFound { expected })
+            | nom::Err::Failure(KvnParserErr::KeywordNotFound { expected }) => {
+                KvnDeserializerErr::KeywordNotFound { expected }
             }
             nom::Err::Error(KvnParserErr::ParserError(i, k))
             | nom::Err::Failure(KvnParserErr::ParserError(i, k)) => {
@@ -74,15 +76,17 @@ impl<I> From<nom::Err<KvnParserErr<I>>> for KvnDeserializerErr<I> {
 impl<I> From<nom::Err<KvnDateTimeParserErr<I>>> for KvnDeserializerErr<I> {
     fn from(value: nom::Err<KvnDateTimeParserErr<I>>) -> Self {
         match value {
-            nom::Err::Error(KvnDateTimeParserErr::EmptyValue)
-            | nom::Err::Failure(KvnDateTimeParserErr::EmptyValue) => KvnDeserializerErr::EmptyValue,
-            nom::Err::Error(KvnDateTimeParserErr::KeywordNotFound)
-            | nom::Err::Failure(KvnDateTimeParserErr::KeywordNotFound) => {
-                KvnDeserializerErr::KeywordNotFound
+            nom::Err::Error(KvnDateTimeParserErr::EmptyValue { keyword })
+            | nom::Err::Failure(KvnDateTimeParserErr::EmptyValue { keyword }) => {
+                KvnDeserializerErr::EmptyValue { keyword }
             }
-            nom::Err::Error(KvnDateTimeParserErr::InvalidFormat)
-            | nom::Err::Failure(KvnDateTimeParserErr::InvalidFormat) => {
-                KvnDeserializerErr::InvalidDateTimeFormat
+            nom::Err::Error(KvnDateTimeParserErr::KeywordNotFound { expected })
+            | nom::Err::Failure(KvnDateTimeParserErr::KeywordNotFound { expected }) => {
+                KvnDeserializerErr::KeywordNotFound { expected }
+            }
+            nom::Err::Error(KvnDateTimeParserErr::InvalidFormat { keyword })
+            | nom::Err::Failure(KvnDateTimeParserErr::InvalidFormat { keyword }) => {
+                KvnDeserializerErr::InvalidDateTimeFormat { keyword }
             }
             nom::Err::Error(KvnDateTimeParserErr::ParserError(i, k))
             | nom::Err::Failure(KvnDateTimeParserErr::ParserError(i, k)) => {
@@ -97,17 +101,17 @@ impl<I> From<nom::Err<KvnDateTimeParserErr<I>>> for KvnDeserializerErr<I> {
 impl<I> From<nom::Err<KvnNumberLineParserErr<I>>> for KvnDeserializerErr<I> {
     fn from(value: nom::Err<KvnNumberLineParserErr<I>>) -> Self {
         match value {
-            nom::Err::Error(KvnNumberLineParserErr::EmptyValue)
-            | nom::Err::Failure(KvnNumberLineParserErr::EmptyValue) => {
-                KvnDeserializerErr::EmptyValue
+            nom::Err::Error(KvnNumberLineParserErr::EmptyValue { keyword })
+            | nom::Err::Failure(KvnNumberLineParserErr::EmptyValue { keyword }) => {
+                KvnDeserializerErr::EmptyValue { keyword }
             }
-            nom::Err::Error(KvnNumberLineParserErr::KeywordNotFound)
-            | nom::Err::Failure(KvnNumberLineParserErr::KeywordNotFound) => {
-                KvnDeserializerErr::KeywordNotFound
+            nom::Err::Error(KvnNumberLineParserErr::KeywordNotFound { expected })
+            | nom::Err::Failure(KvnNumberLineParserErr::KeywordNotFound { expected }) => {
+                KvnDeserializerErr::KeywordNotFound { expected }
             }
-            nom::Err::Error(KvnNumberLineParserErr::InvalidFormat)
-            | nom::Err::Failure(KvnNumberLineParserErr::InvalidFormat) => {
-                KvnDeserializerErr::InvalidNumberFormat
+            nom::Err::Error(KvnNumberLineParserErr::InvalidFormat { keyword })
+            | nom::Err::Failure(KvnNumberLineParserErr::InvalidFormat { keyword }) => {
+                KvnDeserializerErr::InvalidDateTimeFormat { keyword }
             }
             nom::Err::Error(KvnNumberLineParserErr::ParserError(i, k))
             | nom::Err::Failure(KvnNumberLineParserErr::ParserError(i, k)) => {
@@ -185,7 +189,11 @@ fn kvn_line<'a>(
     let mut equals = ns::tuple((nc::space0::<_, KvnParserErr<_>>, nc::char('='), nc::space0));
 
     match equals(input) {
-        Ok(_) => return Err(nom::Err::Failure(KvnParserErr::KeywordNotFound)),
+        Ok(_) => {
+            return Err(nom::Err::Failure(KvnParserErr::KeywordNotFound {
+                expected: key,
+            }))
+        }
         Err(_) => (),
     }
 
@@ -233,7 +241,7 @@ pub fn parse_kvn_string_line<'a>(
     };
 
     if parsed_value.len() == 0 {
-        return Err(nom::Err::Failure(KvnParserErr::EmptyValue));
+        return Err(nom::Err::Failure(KvnParserErr::EmptyValue { keyword: key }));
     }
 
     let parsed_value = parsed_value.trim_end();
@@ -254,11 +262,11 @@ pub fn parse_kvn_integer_line<'a>(
 ) -> nom::IResult<&'a str, KvnIntegerValue, KvnNumberLineParserErr<&'a str>> {
     parse_kvn_string_line(key, input, with_unit)
         .map_err(|e| match e {
-            nom::Err::Failure(KvnParserErr::EmptyValue) => {
-                nom::Err::Failure(KvnNumberLineParserErr::EmptyValue)
+            nom::Err::Failure(KvnParserErr::EmptyValue { keyword }) => {
+                nom::Err::Failure(KvnNumberLineParserErr::EmptyValue { keyword })
             }
-            nom::Err::Error(KvnParserErr::EmptyValue) => {
-                nom::Err::Error(KvnNumberLineParserErr::EmptyValue)
+            nom::Err::Error(KvnParserErr::EmptyValue { keyword }) => {
+                nom::Err::Error(KvnNumberLineParserErr::EmptyValue { keyword })
             }
             nom::Err::Failure(KvnParserErr::ParserError(input, code)) => {
                 nom::Err::Failure(KvnNumberLineParserErr::ParserError(input, code))
@@ -266,20 +274,18 @@ pub fn parse_kvn_integer_line<'a>(
             nom::Err::Error(KvnParserErr::ParserError(input, code)) => {
                 nom::Err::Error(KvnNumberLineParserErr::ParserError(input, code))
             }
-            nom::Err::Failure(KvnParserErr::KeywordNotFound) => {
-                nom::Err::Failure(KvnNumberLineParserErr::KeywordNotFound)
+            nom::Err::Failure(KvnParserErr::KeywordNotFound { expected }) => {
+                nom::Err::Failure(KvnNumberLineParserErr::KeywordNotFound { expected })
             }
-            nom::Err::Error(KvnParserErr::KeywordNotFound) => {
-                nom::Err::Error(KvnNumberLineParserErr::KeywordNotFound)
+            nom::Err::Error(KvnParserErr::KeywordNotFound { expected }) => {
+                nom::Err::Error(KvnNumberLineParserErr::KeywordNotFound { expected })
             }
             nom::Err::Incomplete(needed) => nom::Err::Incomplete(needed),
         })
         .and_then(|result| {
-            let value = result
-                .1
-                .value
-                .parse::<i32>()
-                .map_err(|_| nom::Err::Failure(KvnNumberLineParserErr::InvalidFormat))?;
+            let value = result.1.value.parse::<i32>().map_err(|_| {
+                nom::Err::Failure(KvnNumberLineParserErr::InvalidFormat { keyword: key })
+            })?;
 
             Ok((
                 "",
@@ -298,11 +304,11 @@ pub fn parse_kvn_numeric_line<'a>(
 ) -> nom::IResult<&'a str, KvnNumericValue, KvnNumberLineParserErr<&'a str>> {
     parse_kvn_string_line(key, input, with_unit)
         .map_err(|e| match e {
-            nom::Err::Failure(KvnParserErr::EmptyValue) => {
-                nom::Err::Failure(KvnNumberLineParserErr::EmptyValue)
+            nom::Err::Failure(KvnParserErr::EmptyValue { keyword }) => {
+                nom::Err::Failure(KvnNumberLineParserErr::EmptyValue { keyword })
             }
-            nom::Err::Error(KvnParserErr::EmptyValue) => {
-                nom::Err::Error(KvnNumberLineParserErr::EmptyValue)
+            nom::Err::Error(KvnParserErr::EmptyValue { keyword }) => {
+                nom::Err::Error(KvnNumberLineParserErr::EmptyValue { keyword })
             }
             nom::Err::Failure(KvnParserErr::ParserError(input, code)) => {
                 nom::Err::Failure(KvnNumberLineParserErr::ParserError(input, code))
@@ -310,17 +316,18 @@ pub fn parse_kvn_numeric_line<'a>(
             nom::Err::Error(KvnParserErr::ParserError(input, code)) => {
                 nom::Err::Error(KvnNumberLineParserErr::ParserError(input, code))
             }
-            nom::Err::Failure(KvnParserErr::KeywordNotFound) => {
-                nom::Err::Failure(KvnNumberLineParserErr::KeywordNotFound)
+            nom::Err::Failure(KvnParserErr::KeywordNotFound { expected }) => {
+                nom::Err::Failure(KvnNumberLineParserErr::KeywordNotFound { expected })
             }
-            nom::Err::Error(KvnParserErr::KeywordNotFound) => {
-                nom::Err::Error(KvnNumberLineParserErr::KeywordNotFound)
+            nom::Err::Error(KvnParserErr::KeywordNotFound { expected }) => {
+                nom::Err::Error(KvnNumberLineParserErr::KeywordNotFound { expected })
             }
             nom::Err::Incomplete(needed) => nom::Err::Incomplete(needed),
         })
         .and_then(|result| {
-            let value = fast_float::parse(result.1.value)
-                .map_err(|_| nom::Err::Failure(KvnNumberLineParserErr::InvalidFormat))?;
+            let value = fast_float::parse(result.1.value).map_err(|_| {
+                nom::Err::Failure(KvnNumberLineParserErr::InvalidFormat { keyword: key })
+            })?;
 
             Ok((
                 "",
@@ -337,11 +344,11 @@ pub fn parse_kvn_datetime_line<'a>(
     input: &'a str,
 ) -> nom::IResult<&'a str, KvnDateTimeValue, KvnDateTimeParserErr<&'a str>> {
     let (_, result) = kvn_line(key, input).map_err(|e| match e {
-        nom::Err::Failure(KvnParserErr::EmptyValue) => {
-            nom::Err::Failure(KvnDateTimeParserErr::EmptyValue)
+        nom::Err::Failure(KvnParserErr::EmptyValue { keyword }) => {
+            nom::Err::Failure(KvnDateTimeParserErr::EmptyValue { keyword })
         }
-        nom::Err::Error(KvnParserErr::EmptyValue) => {
-            nom::Err::Error(KvnDateTimeParserErr::EmptyValue)
+        nom::Err::Error(KvnParserErr::EmptyValue { keyword }) => {
+            nom::Err::Error(KvnDateTimeParserErr::EmptyValue { keyword })
         }
         nom::Err::Failure(KvnParserErr::ParserError(input, code)) => {
             nom::Err::Failure(KvnDateTimeParserErr::ParserError(input, code))
@@ -349,11 +356,11 @@ pub fn parse_kvn_datetime_line<'a>(
         nom::Err::Error(KvnParserErr::ParserError(input, code)) => {
             nom::Err::Error(KvnDateTimeParserErr::ParserError(input, code))
         }
-        nom::Err::Failure(KvnParserErr::KeywordNotFound) => {
-            nom::Err::Failure(KvnDateTimeParserErr::KeywordNotFound)
+        nom::Err::Failure(KvnParserErr::KeywordNotFound { expected }) => {
+            nom::Err::Failure(KvnDateTimeParserErr::KeywordNotFound { expected })
         }
-        nom::Err::Error(KvnParserErr::KeywordNotFound) => {
-            nom::Err::Error(KvnDateTimeParserErr::KeywordNotFound)
+        nom::Err::Error(KvnParserErr::KeywordNotFound { expected }) => {
+            nom::Err::Error(KvnDateTimeParserErr::KeywordNotFound { expected })
         }
         nom::Err::Incomplete(needed) => nom::Err::Incomplete(needed),
     })?;
@@ -361,7 +368,9 @@ pub fn parse_kvn_datetime_line<'a>(
     let parsed_value = result.1;
 
     if parsed_value.len() == 0 {
-        return Err(nom::Err::Failure(KvnDateTimeParserErr::EmptyValue));
+        return Err(nom::Err::Failure(KvnDateTimeParserErr::EmptyValue {
+            keyword: key,
+        }));
     }
 
     let parsed_value = parsed_value.trim_end();
@@ -373,9 +382,9 @@ pub fn parse_kvn_datetime_line<'a>(
     )
     .unwrap();
 
-    let captures = re
-        .captures(parsed_value)
-        .ok_or(nom::Err::Failure(KvnDateTimeParserErr::InvalidFormat))?;
+    let captures = re.captures(parsed_value).ok_or(nom::Err::Failure(
+        KvnDateTimeParserErr::InvalidFormat { keyword: key },
+    ))?;
 
     // yr is a mandatory decimal in the regex so we expect the capture to be
     // always there and unwrap is fine
@@ -481,15 +490,21 @@ mod test {
         );
         assert_eq!(
             parse_kvn_string_line("ASD", "ASD =    ", true),
-            Err(nom::Err::Failure(KvnParserErr::EmptyValue))
+            Err(nom::Err::Failure(KvnParserErr::EmptyValue {
+                keyword: "ASD"
+            }))
         );
         assert_eq!(
             parse_kvn_string_line("ASD", "ASD = ", true),
-            Err(nom::Err::Failure(KvnParserErr::EmptyValue))
+            Err(nom::Err::Failure(KvnParserErr::EmptyValue {
+                keyword: "ASD"
+            }))
         );
         assert_eq!(
             parse_kvn_string_line("ASD", "ASD =", true),
-            Err(nom::Err::Failure(KvnParserErr::EmptyValue))
+            Err(nom::Err::Failure(KvnParserErr::EmptyValue {
+                keyword: "ASD"
+            }))
         );
 
         // 7.4.7 Any white space immediately preceding the end of line shall not be significant.
@@ -529,7 +544,9 @@ mod test {
 
         assert_eq!(
             parse_kvn_string_line("ASD", "ASD =  [km]", true),
-            Err(nom::Err::Failure(KvnParserErr::EmptyValue))
+            Err(nom::Err::Failure(KvnParserErr::EmptyValue {
+                keyword: "ASD"
+            }))
         );
 
         assert_eq!(
@@ -541,7 +558,9 @@ mod test {
         );
         assert_eq!(
             parse_kvn_string_line("ASD", " =  [km]", true),
-            Err(nom::Err::Failure(KvnParserErr::KeywordNotFound))
+            Err(nom::Err::Failure(KvnParserErr::KeywordNotFound {
+                expected: "ASD"
+            }))
         );
 
         // 7.4.5 Any white space immediately preceding or following the keyword shall not be significant.
@@ -650,12 +669,16 @@ mod test {
 
         assert_eq!(
             parse_kvn_integer_line("SCLK_OFFSET_AT_EPOCH", "SCLK_OFFSET_AT_EPOCH = -asd", true),
-            Err(nom::Err::Failure(KvnNumberLineParserErr::InvalidFormat))
+            Err(nom::Err::Failure(KvnNumberLineParserErr::InvalidFormat {
+                keyword: "SCLK_OFFSET_AT_EPOCH"
+            }))
         );
 
         assert_eq!(
             parse_kvn_integer_line("SCLK_OFFSET_AT_EPOCH", "SCLK_OFFSET_AT_EPOCH = [s]", true),
-            Err(nom::Err::Failure(KvnNumberLineParserErr::EmptyValue))
+            Err(nom::Err::Failure(KvnNumberLineParserErr::EmptyValue {
+                keyword: "SCLK_OFFSET_AT_EPOCH"
+            }))
         );
     }
 
@@ -733,17 +756,23 @@ mod test {
 
         assert_eq!(
             parse_kvn_datetime_line("CREATION_DATE", "CREATION_DATE = 2021,06,03Q05!33!00-123"),
-            Err(nom::Err::Failure(KvnDateTimeParserErr::InvalidFormat))
+            Err(nom::Err::Failure(KvnDateTimeParserErr::InvalidFormat {
+                keyword: "CREATION_DATE"
+            }))
         );
 
         assert_eq!(
             parse_kvn_datetime_line("CREATION_DATE", "CREATION_DATE = asdffggg"),
-            Err(nom::Err::Failure(KvnDateTimeParserErr::InvalidFormat))
+            Err(nom::Err::Failure(KvnDateTimeParserErr::InvalidFormat {
+                keyword: "CREATION_DATE"
+            }))
         );
 
         assert_eq!(
             parse_kvn_datetime_line("CREATION_DATE", "CREATION_DATE = "),
-            Err(nom::Err::Failure(KvnDateTimeParserErr::EmptyValue))
+            Err(nom::Err::Failure(KvnDateTimeParserErr::EmptyValue {
+                keyword: "CREATION_DATE"
+            }))
         );
     }
 

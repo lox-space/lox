@@ -54,7 +54,9 @@ fn generate_call_to_deserializer_for_kvn_type(
 
             Ok(quote! {
                 match lines.peek() {
-                    None => Err(crate::ndm::kvn::parser::KvnDeserializerErr::<&str>::UnexpectedEndOfInput),
+                    None => Err(crate::ndm::kvn::parser::KvnDeserializerErr::<&str>::UnexpectedEndOfInput {
+                        keyword: #expected_kvn_name
+                    }),
                     Some(next_line) => {
                         let line_matches = crate::ndm::kvn::parser::kvn_line_matches_key(
                             #expected_kvn_name,
@@ -66,7 +68,10 @@ fn generate_call_to_deserializer_for_kvn_type(
 
                             Ok(#parser)
                         } else {
-                            Err(crate::ndm::kvn::parser::KvnDeserializerErr::<&str>::UnexpectedKeyword)
+                            Err(crate::ndm::kvn::parser::KvnDeserializerErr::<&str>::UnexpectedKeyword {
+                                found: next_line,
+                                expected: #expected_kvn_name,
+                            })
                         };
 
                         result
@@ -85,7 +90,9 @@ fn generate_call_to_deserializer_for_kvn_type(
                     let result = if has_next_line {
                         #type_ident::deserialize(lines)
                     } else {
-                        Err(crate::ndm::kvn::parser::KvnDeserializerErr::UnexpectedEndOfInput)
+                        Err(crate::ndm::kvn::parser::KvnDeserializerErr::UnexpectedEndOfInput {
+                            keyword: #expected_kvn_name
+                        })
                     };
 
                     result
@@ -122,8 +129,8 @@ fn generate_call_to_deserializer_for_option_type(
 
                         match result {
                             Ok(item) => Some(item),
-                            Err(crate::ndm::kvn::parser::KvnDeserializerErr::UnexpectedKeyword) |
-                            Err(crate::ndm::kvn::parser::KvnDeserializerErr::UnexpectedEndOfInput) => None,
+                            Err(crate::ndm::kvn::parser::KvnDeserializerErr::UnexpectedKeyword { .. }) |
+                            Err(crate::ndm::kvn::parser::KvnDeserializerErr::UnexpectedEndOfInput { .. }) => None,
                             Err(e) => Err(e)?,
                         }
                     }
@@ -173,8 +180,8 @@ fn generate_call_to_deserializer_for_vec_type(
 
                             match result {
                                 Ok(item) => items.push(item),
-                                Err(crate::ndm::kvn::parser::KvnDeserializerErr::UnexpectedKeyword) |
-                                Err(crate::ndm::kvn::parser::KvnDeserializerErr::UnexpectedEndOfInput) => break,
+                                Err(crate::ndm::kvn::parser::KvnDeserializerErr::UnexpectedKeyword { .. }) |
+                                Err(crate::ndm::kvn::parser::KvnDeserializerErr::UnexpectedEndOfInput { .. }) => break,
                                 Err(e) => Err(e)?,
                             }
                         }
