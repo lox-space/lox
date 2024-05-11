@@ -13,8 +13,8 @@ use super::parser::{KvnDateTimeValue, KvnNumericValue, KvnStringValue};
 #[derive(KvnDeserialize, Default, Debug, PartialEq)]
 pub struct OdmHeader {
     pub ccsds_opm_vers: KvnStringValue,
-    pub comment: Vec<KvnStringValue>,
-    pub classification: Vec<KvnStringValue>,
+    pub comment_list: Vec<KvnStringValue>,
+    pub classification_list: Vec<KvnStringValue>,
     pub creation_date: KvnDateTimeValue,
     pub originator: KvnStringValue,
     pub message_id: Option<KvnStringValue>,
@@ -101,13 +101,13 @@ pub struct OpmCovarianceMatrixType {
 
 #[derive(KvnDeserialize, Default, Debug, PartialEq)]
 pub struct UserDefinedType {
-    pub comment: Vec<KvnStringValue>,
-    pub user_defined: Vec<KvnStringValue>,
+    pub comment_list: Vec<KvnStringValue>,
+    pub user_defined_list: Vec<KvnStringValue>,
 }
 
 #[derive(KvnDeserialize, Default, Debug, PartialEq)]
 pub struct OpmData {
-    pub comment: Vec<KvnStringValue>,
+    pub comment_list: Vec<KvnStringValue>,
     pub state_vector: StateVectorType,
     pub keplerian_elements: Option<KeplerianElementsType>,
     pub spacecraft_parameters: Option<SpacecraftParametersType>,
