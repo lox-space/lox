@@ -155,6 +155,8 @@ fn generate_call_to_deserializer_for_vec_type(
                     .source_text()
                     .unwrap();
 
+                let expected_kvn_name = expected_kvn_name.trim_end_matches("_LIST");
+
                 let deserializer_for_kvn_type = generate_call_to_deserializer_for_kvn_type(
                     &type_name.as_ref(),
                     &expected_kvn_name,
