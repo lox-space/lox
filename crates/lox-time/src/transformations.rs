@@ -206,6 +206,95 @@ impl ToScale<Tt> for Time<Tdb> {
 
 impl ToTt for Time<Tdb> {}
 
+// Multi-step transformations
+
+// Concrete implementation to avoid conflicting implementation errors
+impl ToScale<Tdb> for Time<Tai> {
+    fn offset(&self, _scale: Tdb) -> TimeDelta {
+        let tdb = ToScale::<Tdb>::to_scale(self, Tdb);
+        tdb.to_delta() - self.to_delta()
+    }
+
+    fn to_scale(&self, _scale: Tdb) -> Time<Tdb> {
+        self.to_tt().to_tdb()
+    }
+}
+
+impl ToTdb for Time<Tai> {}
+
+// Concrete implementation to avoid conflicting implementation errors
+impl ToScale<Tdb> for Time<Tcg> {
+    fn offset(&self, _scale: Tdb) -> TimeDelta {
+        let tdb = ToScale::<Tdb>::to_scale(self, Tdb);
+        tdb.to_delta() - self.to_delta()
+    }
+
+    fn to_scale(&self, _scale: Tdb) -> Time<Tdb> {
+        self.to_tt().to_tdb()
+    }
+}
+
+impl ToTdb for Time<Tcg> {}
+
+impl<U: ToTt + ToDelta> ToScale<Tai> for U {
+    fn offset(&self, _scale: Tai) -> TimeDelta {
+        let tdb = ToScale::<Tai>::to_scale(self, Tai);
+        tdb.to_delta() - self.to_delta()
+    }
+
+    fn to_scale(&self, _scale: Tai) -> Time<Tai> {
+        self.to_tt().to_tai()
+    }
+}
+
+impl ToTai for Time<Tcg> {}
+impl ToTai for Time<Tdb> {}
+
+impl<U: ToTt + ToDelta> ToScale<Tcg> for U {
+    fn offset(&self, _scale: Tcg) -> TimeDelta {
+        let tdb = ToScale::<Tcg>::to_scale(self, Tcg);
+        tdb.to_delta() - self.to_delta()
+    }
+
+    fn to_scale(&self, _scale: Tcg) -> Time<Tcg> {
+        self.to_tt().to_tcg()
+    }
+}
+
+impl ToTcg for Time<Tai> {}
+impl ToTcg for Time<Tdb> {}
+
+impl<U: ToTdb + ToDelta> ToScale<Tcb> for U {
+    fn offset(&self, _scale: Tcb) -> TimeDelta {
+        let tdb = ToScale::<Tcb>::to_scale(self, Tcb);
+        tdb.to_delta() - self.to_delta()
+    }
+
+    fn to_scale(&self, _scale: Tcb) -> Time<Tcb> {
+        self.to_tdb().to_tcb()
+    }
+}
+
+impl ToTcb for Time<Tai> {}
+impl ToTcb for Time<Tcg> {}
+impl ToTcb for Time<Tt> {}
+
+// Concrete implementation to avoid conflicting implementation errors
+impl ToScale<Tt> for Time<Tcb> {
+    fn offset(&self, _scale: Tt) -> TimeDelta {
+        let tt = self.to_scale(Tt);
+        tt.to_delta() - self.to_delta()
+    }
+
+    fn to_scale(&self, _scale: Tt) -> Time<Tt> {
+        self.to_tdb().to_tt()
+    }
+}
+
+impl ToTai for Time<Tcb> {}
+impl ToTt for Time<Tcb> {}
+impl ToTcg for Time<Tcb> {}
+
 pub trait LeapSecondsProvider {
     fn delta_tai_utc(&self, tai: Time<Tai>) -> Option<TimeDelta>;
 
@@ -228,6 +317,65 @@ mod tests {
         seconds: 0,
         subsecond: Subsecond(f64::NAN),
     };
+
+    #[test]
+    fn test_transform_all() {
+        let tai_exp = Time::new(Tai, 0, Subsecond::default());
+        let tt_exp = tai_exp.to_tt();
+        let tcg_exp = tt_exp.to_tcg();
+        let tdb_exp = tt_exp.to_tdb();
+        let tcb_exp = tdb_exp.to_tcb();
+
+        let tt_act = tai_exp.to_tt();
+        let tcg_act = tai_exp.to_tcg();
+        let tdb_act = tai_exp.to_tdb();
+        let tcb_act = tai_exp.to_tcb();
+
+        assert_eq!(tt_exp, tt_act);
+        assert_eq!(tcg_exp, tcg_act);
+        assert_eq!(tdb_exp, tdb_act);
+        assert_eq!(tcb_exp, tcb_act);
+
+        let tai_act = tt_exp.to_tai();
+        let tcg_act = tt_exp.to_tcg();
+        let tdb_act = tt_exp.to_tdb();
+        let tcb_act = tt_exp.to_tcb();
+
+        assert_eq!(tai_exp, tai_act);
+        assert_eq!(tcg_exp, tcg_act);
+        assert_eq!(tdb_exp, tdb_act);
+        assert_eq!(tcb_exp, tcb_act);
+
+        let tai_act = tcg_exp.to_tai();
+        let tt_act = tcg_exp.to_tt();
+        let tdb_act = tcg_exp.to_tdb();
+        let tcb_act = tcg_exp.to_tcb();
+
+        assert_eq!(tai_exp, tai_act);
+        assert_eq!(tt_exp, tt_act);
+        assert_eq!(tdb_exp, tdb_act);
+        assert_eq!(tcb_exp, tcb_act);
+
+        let tai_act = tdb_exp.to_tai();
+        let tt_act = tdb_exp.to_tt();
+        let tcg_act = tdb_exp.to_tcg();
+        let tcb_act = tdb_exp.to_tcb();
+
+        assert_eq!(tai_exp, tai_act);
+        assert_eq!(tt_exp, tt_act);
+        assert_eq!(tcg_exp, tcg_act);
+        assert_eq!(tcb_exp, tcb_act);
+
+        let tai_act = tcb_exp.to_tai();
+        let tt_act = tcb_exp.to_tt();
+        let tcg_act = tcb_exp.to_tcg();
+        let tdb_act = tcb_exp.to_tdb();
+
+        assert_eq!(tai_exp, tai_act);
+        assert_eq!(tt_exp, tt_act);
+        assert_eq!(tcg_exp, tcg_act);
+        assert_eq!(tdb_exp, tdb_act);
+    }
 
     #[test]
     fn test_transform_tai_tt() {
