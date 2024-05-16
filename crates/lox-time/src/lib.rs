@@ -35,7 +35,6 @@ use crate::deltas::{TimeDelta, ToDelta};
 use crate::julian_dates::{Epoch, JulianDate, Unit};
 use crate::subsecond::Subsecond;
 use crate::time_scales::TimeScale;
-use crate::transformations::TransformTimeScale;
 
 pub mod calendar_dates;
 pub mod constants;
@@ -243,23 +242,6 @@ impl<T: TimeScale + Copy> Time<T> {
     pub fn subsecond(&self) -> f64 {
         self.subsecond.into()
     }
-
-    /// Given a `Time` in [TimeScale] `S`, and a transformer from `S` to `T`, returns a new Time in
-    /// [TimeScale] `T`.
-    pub fn from_scale<S: TimeScale + Copy>(
-        time: Time<S>,
-        transformer: impl TransformTimeScale<S, T>,
-    ) -> Self {
-        transformer.transform(time)
-    }
-
-    /// Given a transformer from `T` to `S`, returns a new `Time` in [TimeScale] `S`.
-    pub fn into_scale<S: TimeScale + Copy>(
-        self,
-        transformer: impl TransformTimeScale<T, S>,
-    ) -> Time<S> {
-        Time::from_scale(self, transformer)
-    }
 }
 
 impl<T: TimeScale + Copy> ToDelta for Time<T> {
@@ -438,14 +420,12 @@ macro_rules! time {
 #[cfg(test)]
 mod tests {
     use float_eq::assert_float_eq;
-    use mockall::predicate;
     use rstest::rstest;
 
     use lox_utils::constants::f64::time::DAYS_PER_JULIAN_CENTURY;
 
     use crate::constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
     use crate::time_scales::{Tai, Tdb, Tt};
-    use crate::transformations::MockTransformTimeScale;
     use crate::Time;
 
     use super::*;
@@ -554,36 +534,6 @@ mod tests {
             "expected Time to have {} seconds, but got {}",
             expected, actual
         );
-    }
-
-    #[test]
-    fn test_from_scale() {
-        let time = Time::j2000(Tai);
-        let mut transformer = MockTransformTimeScale::<Tai, Tt>::new();
-        let expected = Time::j2000(Tt);
-
-        transformer
-            .expect_transform()
-            .with(predicate::eq(time))
-            .return_const(expected);
-
-        let actual = Time::from_scale(time, transformer);
-        assert_eq!(expected, actual);
-    }
-
-    #[test]
-    fn test_into_scale() {
-        let time = Time::j2000(Tai);
-        let mut transformer = MockTransformTimeScale::<Tai, Tt>::new();
-        let expected = Time::j2000(Tt);
-
-        transformer
-            .expect_transform()
-            .with(predicate::eq(time))
-            .return_const(expected);
-
-        let actual = time.into_scale(transformer);
-        assert_eq!(expected, actual);
     }
 
     #[test]
