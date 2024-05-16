@@ -31,7 +31,7 @@ use lox_utils::types::units::Days;
 use time_of_day::{CivilTime, TimeOfDay, TimeOfDayError};
 
 use crate::calendar_dates::{CalendarDate, Date};
-use crate::deltas::TimeDelta;
+use crate::deltas::{TimeDelta, ToDelta};
 use crate::julian_dates::{Epoch, JulianDate, Unit};
 use crate::subsecond::Subsecond;
 use crate::time_scales::TimeScale;
@@ -259,6 +259,15 @@ impl<T: TimeScale + Copy> Time<T> {
         transformer: impl TransformTimeScale<T, S>,
     ) -> Time<S> {
         Time::from_scale(self, transformer)
+    }
+}
+
+impl<T: TimeScale + Copy> ToDelta for Time<T> {
+    fn to_delta(&self) -> TimeDelta {
+        TimeDelta {
+            seconds: self.seconds,
+            subsecond: self.subsecond,
+        }
     }
 }
 
@@ -942,6 +951,14 @@ mod tests {
         assert_eq!(actual, expected);
         let actual = JulianDateOutOfRange(-f64::NAN).cmp(&JulianDateOutOfRange(f64::NAN));
         let expected = Ordering::Less;
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_time_to_delta() {
+        let time = time!(Tai, 2000, 1, 1, 12, 0, 0.0).unwrap();
+        let actual = time.to_delta();
+        let expected = TimeDelta::from_seconds(0);
         assert_eq!(actual, expected);
     }
 }

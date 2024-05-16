@@ -25,6 +25,11 @@ use crate::{
     subsecond::Subsecond,
 };
 
+pub trait ToDelta {
+    /// Transforms the value into a [TimeDelta].
+    fn to_delta(&self) -> TimeDelta;
+}
+
 #[derive(Clone, Debug, Default, Error)]
 #[error("`{raw}` cannot be represented as a `TimeDelta`: {detail}")]
 pub struct TimeDeltaError {

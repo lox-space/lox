@@ -9,6 +9,7 @@
 use std::sync::OnceLock;
 
 use crate::deltas::TimeDelta;
+use crate::deltas::ToDelta;
 use crate::time_of_day::CivilTime;
 use crate::time_of_day::TimeOfDay;
 use crate::time_scales::Tai;

@@ -8,7 +8,7 @@
 
 use crate::calendar_dates::{Date, DateError};
 use crate::constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
-use crate::deltas::TimeDelta;
+use crate::deltas::{TimeDelta, ToDelta};
 use crate::prelude::{CivilTime, Tai};
 use crate::Time;
 use lox_io::spice::{Kernel, KernelError};

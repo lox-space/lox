@@ -4,7 +4,7 @@ use num::ToPrimitive;
 use thiserror::Error;
 
 use crate::calendar_dates::{CalendarDate, Date, DateError};
-use crate::deltas::TimeDelta;
+use crate::deltas::{TimeDelta, ToDelta};
 use crate::julian_dates::JulianDate;
 use crate::time_of_day::{CivilTime, TimeOfDay, TimeOfDayError};
 
@@ -50,8 +50,10 @@ impl Utc {
             TimeOfDay::from_seconds_since_j2000(delta.seconds).with_subsecond(delta.subsecond);
         Self { date, time }
     }
+}
 
-    pub fn to_delta(&self) -> TimeDelta {
+impl ToDelta for Utc {
+    fn to_delta(&self) -> TimeDelta {
         let seconds = self.date.seconds_since_j2000().to_i64().unwrap_or_else(|| {
             unreachable!(
                 "seconds since J2000 for date {} are not representable as i64: {}",
