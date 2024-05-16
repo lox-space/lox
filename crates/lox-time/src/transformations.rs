@@ -122,12 +122,8 @@ impl ToTt for Time<Tcg> {}
 
 // TDB <-> TCB
 
-/// 1977 January 1.0 TAI as TT.
-const TT_0: Time<Tt> = Time {
-    scale: Tt,
-    seconds: J77.seconds + D_TAI_TT.seconds,
-    subsecond: D_TAI_TT.subsecond,
-};
+/// 1977 January 1.0 TAI
+const TT_0: f64 = J77.seconds as f64 + D_TAI_TT.seconds as f64 + D_TAI_TT.subsecond.0;
 
 /// The rate of change of TDB with respect to TCB.
 const LB: f64 = 1.550519768e-8;
@@ -136,16 +132,14 @@ const LB: f64 = 1.550519768e-8;
 const INV_LB: f64 = LB / (1.0 - LB);
 
 /// Constant term of TDB − TT formula of Fairhead & Bretagnon (1990).
-const TDB_0: TimeDelta = TimeDelta {
-    seconds: -1,
-    subsecond: Subsecond(1.0 - 6.55e-5),
-};
+const TDB_00: f64 = -6.55e-5;
+
+const TCB_77: f64 = TDB_00 + LB * TT_0;
 
 impl ToScale<Tcb> for Time<Tdb> {
     fn offset(&self, _scale: Tcb) -> TimeDelta {
-        let time = self.to_delta();
-        let tt0 = TT_0.to_delta();
-        (time - tt0).scale(INV_LB) - TDB_0
+        let dt = self.to_delta().to_decimal_seconds();
+        TimeDelta::from_decimal_seconds(-TCB_77 / (1.0 - LB) + INV_LB * dt).unwrap()
     }
 }
 
@@ -153,9 +147,8 @@ impl ToTcb for Time<Tdb> {}
 
 impl ToScale<Tdb> for Time<Tcb> {
     fn offset(&self, _scale: Tdb) -> TimeDelta {
-        let time = self.to_delta();
-        let tt0 = TT_0.to_delta();
-        (time - tt0).scale(-LB) + TDB_0
+        let dt = self.to_delta().to_decimal_seconds();
+        TimeDelta::from_decimal_seconds(TCB_77 - LB * dt).unwrap()
     }
 }
 
@@ -435,7 +428,7 @@ mod tests {
         // Lox and ERFA agree to the picosecond. However, the paper from which these formulae derive
         // (Fairhead & Bretagnon, 1990) provide coefficients for transformations with only
         // nanosecond accuracy. Chasing greater accuracy may not be practical or useful.
-        assert_float_eq!(expected.subsecond(), tdb.subsecond(), abs <= 1e-12);
+        assert_float_eq!(expected.subsecond(), tdb.subsecond(), abs <= 1e-15);
     }
 
     #[rstest]
@@ -447,7 +440,7 @@ mod tests {
     fn test_transform_tdb_tcb(#[case] tdb: Time<Tdb>, #[case] expected: Time<Tcb>) {
         let tcb = tdb.to_tcb();
         assert_eq!(expected.seconds(), tcb.seconds());
-        assert_float_eq!(expected.subsecond(), tcb.subsecond(), abs <= 1e-11);
+        assert_float_eq!(expected.subsecond(), tcb.subsecond(), abs <= 1e-12);
     }
 
     #[rstest]
