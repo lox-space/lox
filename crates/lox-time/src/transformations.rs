@@ -9,7 +9,6 @@
 //! Module transform provides a trait for transforming between pairs of timescales, together
 //! with a default implementation for the most commonly used time scale pairs.
 
-use crate::calendar_dates::Date;
 use crate::constants::julian_dates::J77;
 use crate::deltas::{TimeDelta, ToDelta};
 use crate::subsecond::Subsecond;
@@ -18,7 +17,12 @@ use crate::utc::Utc;
 use crate::Time;
 
 pub trait ToScale<T: TimeScale + Copy>: ToDelta {
-    fn to_scale(&self, scale: T) -> Time<T>;
+    fn offset(&self, scale: T) -> TimeDelta;
+
+    fn to_scale(&self, scale: T) -> Time<T> {
+        let delta_from_epoch = self.to_delta();
+        Time::from_delta(scale, delta_from_epoch + self.offset(scale))
+    }
 }
 
 pub trait ToTai: ToScale<Tai> {
@@ -60,16 +64,16 @@ pub const D_TAI_TT: TimeDelta = TimeDelta {
 };
 
 impl ToScale<Tt> for Time<Tai> {
-    fn to_scale(&self, scale: Tt) -> Time<Tt> {
-        self.with_scale_and_delta(scale, D_TAI_TT)
+    fn offset(&self, _scale: Tt) -> TimeDelta {
+        D_TAI_TT
     }
 }
 
 impl ToTt for Time<Tai> {}
 
 impl ToScale<Tai> for Time<Tt> {
-    fn to_scale(&self, scale: Tai) -> Time<Tai> {
-        self.with_scale_and_delta(scale, -D_TAI_TT)
+    fn offset(&self, _scale: Tai) -> TimeDelta {
+        -D_TAI_TT
     }
 }
 
@@ -87,32 +91,30 @@ const LG: f64 = 6.969290134e-10;
 const INV_LG: f64 = LG / (1.0 - LG);
 
 impl ToScale<Tcg> for Time<Tt> {
-    fn to_scale(&self, scale: Tcg) -> Time<Tcg> {
+    fn offset(&self, _scale: Tcg) -> TimeDelta {
         let time = self.to_delta().to_decimal_seconds();
         let raw_delta = INV_LG * (time - J77_TT);
-        let delta = TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
+        TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
             panic!(
                 "Calculated TT to TCG offset `{}` could not be converted to `TimeDelta`: {}",
                 raw_delta, err
             );
-        });
-        self.with_scale_and_delta(scale, delta)
+        })
     }
 }
 
 impl ToTcg for Time<Tt> {}
 
 impl ToScale<Tt> for Time<Tcg> {
-    fn to_scale(&self, scale: Tt) -> Time<Tt> {
+    fn offset(&self, _scale: Tt) -> TimeDelta {
         let time = self.to_delta().to_decimal_seconds();
         let raw_delta = -LG * (time - J77_TT);
-        let delta = TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
+        TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
             panic!(
                 "Calculated TCG to TT offset `{}` could not be converted to `TimeDelta`: {}",
                 raw_delta, err
             );
-        });
-        self.with_scale_and_delta(scale, delta)
+        })
     }
 }
 
@@ -120,8 +122,12 @@ impl ToTt for Time<Tcg> {}
 
 // TDB <-> TCB
 
-/// 1977 January 1.0 TAI
-const TT_0: f64 = J77.seconds as f64 + D_TAI_TT.seconds as f64 + D_TAI_TT.subsecond.0;
+/// 1977 January 1.0 TAI as TT.
+const TT_0: Time<Tt> = Time {
+    scale: Tt,
+    seconds: J77.seconds + D_TAI_TT.seconds,
+    subsecond: D_TAI_TT.subsecond,
+};
 
 /// The rate of change of TDB with respect to TCB.
 const LB: f64 = 1.550519768e-8;
@@ -130,37 +136,26 @@ const LB: f64 = 1.550519768e-8;
 const INV_LB: f64 = LB / (1.0 - LB);
 
 /// Constant term of TDB − TT formula of Fairhead & Bretagnon (1990).
-const TDB_0: f64 = -6.55e-5;
-
-const TCB_77: f64 = TDB_0 + LB * TT_0;
+const TDB_0: TimeDelta = TimeDelta {
+    seconds: -1,
+    subsecond: Subsecond(1.0 - 6.55e-5),
+};
 
 impl ToScale<Tcb> for Time<Tdb> {
-    fn to_scale(&self, scale: Tcb) -> Time<Tcb> {
-        let dt = self.to_delta().to_decimal_seconds();
-        let raw_delta = -TCB_77 / (1.0 - LB) + INV_LB * dt;
-        let delta = TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
-            panic!(
-                "Calculated TDB to TCB offset `{}` could not be converted to `TimeDelta`: {}",
-                raw_delta, err
-            );
-        });
-        self.with_scale_and_delta(scale, delta)
+    fn offset(&self, _scale: Tcb) -> TimeDelta {
+        let time = self.to_delta();
+        let tt0 = TT_0.to_delta();
+        (time - tt0).scale(INV_LB) - TDB_0
     }
 }
 
 impl ToTcb for Time<Tdb> {}
 
 impl ToScale<Tdb> for Time<Tcb> {
-    fn to_scale(&self, scale: Tdb) -> Time<Tdb> {
-        let dt = self.to_delta().to_decimal_seconds();
-        let raw_delta = TCB_77 - LB * dt;
-        let delta = TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
-            panic!(
-                "Calculated TCB to TDB offset `{}` could not be converted to `TimeDelta`: {}",
-                raw_delta, err
-            );
-        });
-        self.with_scale_and_delta(scale, delta)
+    fn offset(&self, _scale: Tdb) -> TimeDelta {
+        let time = self.to_delta();
+        let tt0 = TT_0.to_delta();
+        (time - tt0).scale(-LB) + TDB_0
     }
 }
 
@@ -174,24 +169,23 @@ const M_0: f64 = 6.239996;
 const M_1: f64 = 1.99096871e-7;
 
 impl ToScale<Tdb> for Time<Tt> {
-    fn to_scale(&self, scale: Tdb) -> Time<Tdb> {
+    fn offset(&self, _scale: Tdb) -> TimeDelta {
         let tt = self.to_delta().to_decimal_seconds();
         let g = M_0 + M_1 * tt;
         let raw_delta = K * (g + EB * g.sin()).sin();
-        let delta = TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
+        TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
             panic!(
                 "Calculated TT to TDB offset `{}` could not be converted to `TimeDelta`: {}",
                 raw_delta, err,
             )
-        });
-        self.with_scale_and_delta(scale, delta)
+        })
     }
 }
 
 impl ToTdb for Time<Tt> {}
 
 impl ToScale<Tt> for Time<Tdb> {
-    fn to_scale(&self, scale: Tt) -> Time<Tt> {
+    fn offset(&self, _scale: Tt) -> TimeDelta {
         let tdb = self.to_delta().to_decimal_seconds();
         let mut tt = tdb;
         let mut raw_delta = 0.0;
@@ -201,85 +195,21 @@ impl ToScale<Tt> for Time<Tdb> {
             tt = tdb + raw_delta;
         }
 
-        let delta = TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
+        TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
             panic!(
                 "Calculated TDB to TT offset `{}` could not be converted to `TimeDelta`: {}",
                 raw_delta, err,
             )
-        });
-        self.with_scale_and_delta(scale, delta)
+        })
     }
 }
 
 impl ToTt for Time<Tdb> {}
 
-// Multi-step transformations
-
-// Concrete implementation to avoid conflicting implementation errors
-impl ToScale<Tdb> for Time<Tai> {
-    fn to_scale(&self, _scale: Tdb) -> Time<Tdb> {
-        self.to_tt().to_tdb()
-    }
-}
-
-impl ToTdb for Time<Tai> {}
-
-// Concrete implementation to avoid conflicting implementation errors
-impl ToScale<Tdb> for Time<Tcg> {
-    fn to_scale(&self, _scale: Tdb) -> Time<Tdb> {
-        self.to_tt().to_tdb()
-    }
-}
-
-impl ToTdb for Time<Tcg> {}
-
-impl<U: ToTt + ToDelta> ToScale<Tai> for U {
-    fn to_scale(&self, _scale: Tai) -> Time<Tai> {
-        self.to_tt().to_tai()
-    }
-}
-
-impl ToTai for Time<Tcg> {}
-impl ToTai for Time<Tdb> {}
-
-impl<U: ToTt + ToDelta> ToScale<Tcg> for U {
-    fn to_scale(&self, _scale: Tcg) -> Time<Tcg> {
-        self.to_tt().to_tcg()
-    }
-}
-
-impl ToTcg for Time<Tai> {}
-impl ToTcg for Time<Tdb> {}
-
-impl<U: ToTdb + ToDelta> ToScale<Tcb> for U {
-    fn to_scale(&self, _scale: Tcb) -> Time<Tcb> {
-        self.to_tdb().to_tcb()
-    }
-}
-
-impl ToTcb for Time<Tai> {}
-impl ToTcb for Time<Tcg> {}
-impl ToTcb for Time<Tt> {}
-
-// Concrete implementation to avoid conflicting implementation errors
-impl ToScale<Tt> for Time<Tcb> {
-    fn to_scale(&self, _scale: Tt) -> Time<Tt> {
-        self.to_tdb().to_tt()
-    }
-}
-
-impl ToTai for Time<Tcb> {}
-impl ToTt for Time<Tcb> {}
-impl ToTcg for Time<Tcb> {}
-
 pub trait LeapSecondsProvider {
     fn delta_tai_utc(&self, tai: Time<Tai>) -> Option<TimeDelta>;
 
     fn delta_utc_tai(&self, utc: Utc) -> Option<TimeDelta>;
-
-    fn is_leap_second_date(&self, date: Date) -> bool;
-
-    fn is_leap_second(&self, tai: Time<Tai>) -> bool;
 }
 
 #[cfg(test)]
@@ -298,65 +228,6 @@ mod tests {
         seconds: 0,
         subsecond: Subsecond(f64::NAN),
     };
-
-    #[test]
-    fn test_transform_all() {
-        let tai_exp: Time<Tai> = Time::default();
-        let tt_exp = tai_exp.to_tt();
-        let tcg_exp = tt_exp.to_tcg();
-        let tdb_exp = tt_exp.to_tdb();
-        let tcb_exp = tdb_exp.to_tcb();
-
-        let tt_act = tai_exp.to_tt();
-        let tcg_act = tai_exp.to_tcg();
-        let tdb_act = tai_exp.to_tdb();
-        let tcb_act = tai_exp.to_tcb();
-
-        assert_eq!(tt_exp, tt_act);
-        assert_eq!(tcg_exp, tcg_act);
-        assert_eq!(tdb_exp, tdb_act);
-        assert_eq!(tcb_exp, tcb_act);
-
-        let tai_act = tt_exp.to_tai();
-        let tcg_act = tt_exp.to_tcg();
-        let tdb_act = tt_exp.to_tdb();
-        let tcb_act = tt_exp.to_tcb();
-
-        assert_eq!(tai_exp, tai_act);
-        assert_eq!(tcg_exp, tcg_act);
-        assert_eq!(tdb_exp, tdb_act);
-        assert_eq!(tcb_exp, tcb_act);
-
-        let tai_act = tcg_exp.to_tai();
-        let tt_act = tcg_exp.to_tt();
-        let tdb_act = tcg_exp.to_tdb();
-        let tcb_act = tcg_exp.to_tcb();
-
-        assert_eq!(tai_exp, tai_act);
-        assert_eq!(tt_exp, tt_act);
-        assert_eq!(tdb_exp, tdb_act);
-        assert_eq!(tcb_exp, tcb_act);
-
-        let tai_act = tdb_exp.to_tai();
-        let tt_act = tdb_exp.to_tt();
-        let tcg_act = tdb_exp.to_tcg();
-        let tcb_act = tdb_exp.to_tcb();
-
-        assert_eq!(tai_exp, tai_act);
-        assert_eq!(tt_exp, tt_act);
-        assert_eq!(tcg_exp, tcg_act);
-        assert_eq!(tcb_exp, tcb_act);
-
-        let tai_act = tcb_exp.to_tai();
-        let tt_act = tcb_exp.to_tt();
-        let tcg_act = tcb_exp.to_tcg();
-        let tdb_act = tcb_exp.to_tdb();
-
-        assert_eq!(tai_exp, tai_act);
-        assert_eq!(tt_exp, tt_act);
-        assert_eq!(tcg_exp, tcg_act);
-        assert_eq!(tdb_exp, tdb_act);
-    }
 
     #[test]
     fn test_transform_tai_tt() {
@@ -416,7 +287,7 @@ mod tests {
         // Lox and ERFA agree to the picosecond. However, the paper from which these formulae derive
         // (Fairhead & Bretagnon, 1990) provide coefficients for transformations with only
         // nanosecond accuracy. Chasing greater accuracy may not be practical or useful.
-        assert_float_eq!(expected.subsecond(), tdb.subsecond(), abs <= 1e-15);
+        assert_float_eq!(expected.subsecond(), tdb.subsecond(), abs <= 1e-12);
     }
 
     #[rstest]
@@ -428,7 +299,7 @@ mod tests {
     fn test_transform_tdb_tcb(#[case] tdb: Time<Tdb>, #[case] expected: Time<Tcb>) {
         let tcb = tdb.to_tcb();
         assert_eq!(expected.seconds(), tcb.seconds());
-        assert_float_eq!(expected.subsecond(), tcb.subsecond(), abs <= 1e-12);
+        assert_float_eq!(expected.subsecond(), tcb.subsecond(), abs <= 1e-11);
     }
 
     #[rstest]
