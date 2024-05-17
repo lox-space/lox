@@ -41,15 +41,24 @@ const LEAP_SECONDS: [i64; 28] = [
     34, 35, 36, 37,
 ];
 
+#[derive(Debug)]
 pub struct BuiltinLeapSeconds;
 
 impl LeapSecondsProvider for BuiltinLeapSeconds {
-    fn delta_tai_utc(&self, tai: Time<Tai>) -> Option<TimeDelta> {
+    fn delta_tai_utc(&self, tai: &Time<Tai>) -> Option<TimeDelta> {
         find_leap_seconds_tai(&LEAP_SECOND_EPOCHS_TAI, &LEAP_SECONDS, tai)
     }
 
-    fn delta_utc_tai(&self, utc: Utc) -> Option<TimeDelta> {
+    fn delta_utc_tai(&self, utc: &Utc) -> Option<TimeDelta> {
         find_leap_seconds_utc(&LEAP_SECOND_EPOCHS_UTC, &LEAP_SECONDS, utc)
+    }
+
+    fn is_leap_second_date(&self, date: &Date) -> bool {
+        is_leap_second_date(&LEAP_SECOND_EPOCHS_UTC, date)
+    }
+
+    fn is_leap_second(&self, tai: &Time<Tai>) -> bool {
+        is_leap_second(&LEAP_SECOND_EPOCHS_TAI, tai)
     }
 }
 
@@ -70,6 +79,7 @@ pub enum LeapSecondsKernelError {
     DateError(#[from] DateError),
 }
 
+#[derive(Debug)]
 pub struct LeapSecondsKernel {
     epochs_utc: Vec<i64>,
     epochs_tai: Vec<i64>,
@@ -113,12 +123,20 @@ impl LeapSecondsKernel {
 }
 
 impl LeapSecondsProvider for LeapSecondsKernel {
-    fn delta_tai_utc(&self, tai: Time<Tai>) -> Option<TimeDelta> {
+    fn delta_tai_utc(&self, tai: &Time<Tai>) -> Option<TimeDelta> {
         find_leap_seconds_tai(&self.epochs_tai, &self.leap_seconds, tai)
     }
 
-    fn delta_utc_tai(&self, utc: Utc) -> Option<TimeDelta> {
+    fn delta_utc_tai(&self, utc: &Utc) -> Option<TimeDelta> {
         find_leap_seconds_utc(&self.epochs_utc, &self.leap_seconds, utc)
+    }
+
+    fn is_leap_second_date(&self, date: &Date) -> bool {
+        is_leap_second_date(&self.epochs_tai, date)
+    }
+
+    fn is_leap_second(&self, tai: &Time<Tai>) -> bool {
+        is_leap_second(&self.epochs_tai, tai)
     }
 }
 
@@ -134,18 +152,31 @@ fn find_leap_seconds(epochs: &[i64], leap_seconds: &[i64], seconds: i64) -> Opti
 fn find_leap_seconds_tai(
     epochs: &[i64],
     leap_seconds: &[i64],
-    tai: Time<Tai>,
+    tai: &Time<Tai>,
 ) -> Option<TimeDelta> {
     find_leap_seconds(epochs, leap_seconds, tai.seconds())
 }
 
-fn find_leap_seconds_utc(epochs: &[i64], leap_seconds: &[i64], utc: Utc) -> Option<TimeDelta> {
+fn find_leap_seconds_utc(epochs: &[i64], leap_seconds: &[i64], utc: &Utc) -> Option<TimeDelta> {
     find_leap_seconds(epochs, leap_seconds, utc.to_delta().seconds).map(|mut ls| {
         if utc.second() == 60 {
             ls.seconds -= 1;
         }
         -ls
     })
+}
+
+fn is_leap_second_date(epochs: &[i64], date: &Date) -> bool {
+    let epochs: Vec<i64> = epochs
+        .iter()
+        .map(|&epoch| epoch / SECONDS_PER_DAY)
+        .collect();
+    let day_number = date.j2000_day_number();
+    epochs.binary_search(&day_number).is_ok()
+}
+
+fn is_leap_second(epochs: &[i64], tai: &Time<Tai>) -> bool {
+    epochs.binary_search(&tai.seconds).is_ok()
 }
 
 #[cfg(test)]
@@ -168,8 +199,8 @@ mod tests {
     #[case::new_year_2017(time!(Tai, 2017, 1, 1, 0, 0, 37.0).unwrap(), utc!(2017, 1, 1, 0, 0, 0.0).unwrap(), 37)]
     #[case::new_year_2024(time!(Tai, 2024, 1, 1).unwrap(), utc!(2024, 1, 1).unwrap(), 37)]
     fn test_builtin_leap_seconds(#[case] tai: Time<Tai>, #[case] utc: Utc, #[case] expected: i64) {
-        let ls_tai = BuiltinLeapSeconds.delta_tai_utc(tai).unwrap();
-        let ls_utc = BuiltinLeapSeconds.delta_utc_tai(utc).unwrap();
+        let ls_tai = BuiltinLeapSeconds.delta_tai_utc(&tai).unwrap();
+        let ls_utc = BuiltinLeapSeconds.delta_utc_tai(&utc).unwrap();
         assert_eq!(ls_tai, TimeDelta::from_seconds(expected));
         assert_eq!(ls_utc, TimeDelta::from_seconds(-expected));
     }
@@ -202,8 +233,8 @@ mod tests {
         #[case] expected: Option<TimeDelta>,
     ) {
         let lsk = kernel();
-        let ls_tai = lsk.delta_tai_utc(tai);
-        let ls_utc = lsk.delta_utc_tai(utc);
+        let ls_tai = lsk.delta_tai_utc(&tai);
+        let ls_utc = lsk.delta_utc_tai(&utc);
         assert_eq!(ls_tai, expected);
         assert_eq!(ls_utc, expected.map(|ls| -ls));
     }

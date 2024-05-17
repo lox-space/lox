@@ -45,7 +45,7 @@ const DRIFT_RATES: [f64; 14] = [
 
 /// UTC minus TAI. Returns [None] if the input is before 1960-01-01, when UTC is defined from,
 /// although this is impossible for all properly constructed [UtcDateTime] instances.
-pub fn delta_utc_tai(utc: Utc) -> Option<TimeDelta> {
+pub fn delta_utc_tai(utc: &Utc) -> Option<TimeDelta> {
     // Invariant: EPOCHS must be sorted for the search below to work
     debug_assert!(is_sorted_asc(&EPOCHS));
 
@@ -65,7 +65,7 @@ pub fn delta_utc_tai(utc: Utc) -> Option<TimeDelta> {
 }
 
 /// TAI minus UTC.
-pub fn delta_tai_utc(tai: Time<Tai>) -> Option<TimeDelta> {
+pub fn delta_tai_utc(tai: &Time<Tai>) -> Option<TimeDelta> {
     // Invariant: EPOCHS must be sorted for the search below to work
     debug_assert!(is_sorted_asc(&EPOCHS));
 

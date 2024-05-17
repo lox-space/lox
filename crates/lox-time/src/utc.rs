@@ -7,6 +7,9 @@ use crate::calendar_dates::{CalendarDate, Date, DateError};
 use crate::deltas::{TimeDelta, ToDelta};
 use crate::julian_dates::JulianDate;
 use crate::time_of_day::{CivilTime, TimeOfDay, TimeOfDayError};
+use crate::transformations::LeapSecondsProvider;
+
+use self::leap_seconds::BuiltinLeapSeconds;
 
 pub mod leap_seconds;
 pub mod transformations;
@@ -30,11 +33,15 @@ pub struct Utc {
 }
 
 impl Utc {
-    pub fn new(date: Date, time: TimeOfDay) -> Result<Self, UtcError> {
+    pub fn new(
+        date: Date,
+        time: TimeOfDay,
+        provider: &impl LeapSecondsProvider,
+    ) -> Result<Self, UtcError> {
         if date.year() < 1960 {
             return Err(UtcError::UtcUndefined);
         }
-        if time.second() == 60 && !date.is_leap_second_date() {
+        if time.second() == 60 && !provider.is_leap_second_date(&date) {
             return Err(UtcError::NonLeapSecondDate(date));
         }
         Ok(Self { date, time })
@@ -120,7 +127,13 @@ impl UtcBuilder {
     pub fn build(self) -> Result<Utc, UtcError> {
         let date = self.date?;
         let time = self.time?;
-        Utc::new(date, time)
+        Utc::new(date, time, &BuiltinLeapSeconds)
+    }
+
+    pub fn build_with_provider(self, provider: &impl LeapSecondsProvider) -> Result<Utc, UtcError> {
+        let date = self.date?;
+        let time = self.time?;
+        Utc::new(date, time, provider)
     }
 }
 
@@ -192,5 +205,15 @@ mod tests {
         let actual = Utc::builder().with_ymd(1959, 12, 31).build();
         let expected = Err(UtcError::UtcUndefined);
         assert_eq!(actual, expected)
+    }
+
+    #[test]
+    fn test_utc_builder_with_provider() {
+        let exp = utc!(2000, 1, 1).unwrap();
+        let act = Utc::builder()
+            .with_ymd(2000, 1, 1)
+            .build_with_provider(&BuiltinLeapSeconds)
+            .unwrap();
+        assert_eq!(exp, act)
     }
 }
