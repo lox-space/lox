@@ -212,6 +212,11 @@ impl<T: TimeScale + Copy> Time<T> {
         Time::new(scale, self.seconds, self.subsecond)
     }
 
+    /// Returns a new [Time] with `scale` with its offset adjusted by `delta`.
+    pub fn with_scale_and_delta<S: TimeScale + Copy>(&self, scale: S, delta: TimeDelta) -> Time<S> {
+        Time::from_delta(scale, self.to_delta() + delta)
+    }
+
     /// Returns, as an epoch in the given timescale, midday on the first day of the proleptic Julian
     /// calendar.
     pub fn jd0(scale: T) -> Self {

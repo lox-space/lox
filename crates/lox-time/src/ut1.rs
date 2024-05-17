@@ -263,10 +263,7 @@ mod tests {
             .extrapolated_value
             .to_decimal_seconds();
         assert_float_eq!(actual, expected, rel <= 1e-8);
-        let ut1 = Time::from_delta(
-            Ut1,
-            time.to_delta() + TimeDelta::from_decimal_seconds(actual).unwrap(),
-        );
+        let ut1 = time.with_scale_and_delta(Ut1, TimeDelta::from_decimal_seconds(actual).unwrap());
         let actual = provider
             .delta_tai_ut1(&ut1)
             .unwrap_err()

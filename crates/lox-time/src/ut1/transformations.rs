@@ -13,7 +13,7 @@ pub trait ToUt1<T: DeltaUt1TaiProvider> {
 impl<T: DeltaUt1TaiProvider> ToUt1<T> for Time<Tai> {
     fn to_ut1(&self, provider: &T) -> Result<Time<Ut1>, T::Error> {
         let delta = provider.delta_ut1_tai(self)?;
-        Ok(Time::from_delta(Ut1, self.to_delta() + delta))
+        Ok(self.with_scale_and_delta(Ut1, delta))
     }
 }
 
@@ -26,7 +26,7 @@ impl<T: DeltaUt1TaiProvider, U: ToTai> ToUt1<T> for U {
 impl Time<Ut1> {
     pub fn to_tai<T: DeltaUt1TaiProvider>(&self, provider: &T) -> Result<Time<Tai>, T::Error> {
         let delta = provider.delta_tai_ut1(self)?;
-        Ok(Time::from_delta(Tai, self.to_delta() + delta))
+        Ok(self.with_scale_and_delta(Tai, delta))
     }
 }
 
