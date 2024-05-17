@@ -102,7 +102,6 @@ pub mod test {
     use crate::transformations::{ToTcb, ToTcg, ToTdb, ToTt};
     use rstest::rstest;
 
-    use crate::calendar_dates::Date;
     use crate::subsecond::Subsecond;
 
     use super::*;
@@ -147,14 +146,6 @@ pub mod test {
         let tdb = tai.to_tdb();
         let act = tdb.to_utc().unwrap();
         assert_eq!(act, exp);
-    }
-
-    #[test]
-    fn test_date_leap_second_date() {
-        let date = Date::new(2000, 12, 31).unwrap();
-        assert!(!BuiltinLeapSeconds.is_leap_second_date(&date));
-        let date = Date::new(2016, 12, 31).unwrap();
-        assert!(BuiltinLeapSeconds.is_leap_second_date(&date));
     }
 
     /*

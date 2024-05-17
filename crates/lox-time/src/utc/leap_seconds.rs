@@ -239,6 +239,34 @@ mod tests {
         assert_eq!(ls_utc, expected.map(|ls| -ls));
     }
 
+    #[rstest]
+    #[case(&BuiltinLeapSeconds, Date::new(2000, 12, 31).unwrap(), false)]
+    #[case(&BuiltinLeapSeconds, Date::new(2016, 12, 31).unwrap(), true)]
+    #[case(kernel(), Date::new(2000, 12, 31).unwrap(), false)]
+    #[case(kernel(), Date::new(2016, 12, 31).unwrap(), true)]
+    fn test_is_leap_second_date(
+        #[case] provider: &impl LeapSecondsProvider,
+        #[case] date: Date,
+        #[case] expected: bool,
+    ) {
+        let actual = provider.is_leap_second_date(&date);
+        assert_eq!(actual, expected);
+    }
+
+    #[rstest]
+    #[case(&BuiltinLeapSeconds, time!(Tai, 2017, 1, 1, 0, 0, 35.0).unwrap(), false)]
+    #[case(&BuiltinLeapSeconds, time!(Tai, 2017, 1, 1, 0, 0, 36.0).unwrap(), true)]
+    #[case(kernel(), time!(Tai, 2017, 1, 1, 0, 0, 35.0).unwrap(), false)]
+    #[case(kernel(), time!(Tai, 2017, 1, 1, 0, 0, 36.0).unwrap(), true)]
+    fn test_is_leap_second(
+        #[case] provider: &impl LeapSecondsProvider,
+        #[case] tai: Time<Tai>,
+        #[case] expected: bool,
+    ) {
+        let actual = provider.is_leap_second(&tai);
+        assert_eq!(actual, expected);
+    }
+
     #[test]
     fn test_leap_seconds_kernel() {
         let lsk = kernel();
