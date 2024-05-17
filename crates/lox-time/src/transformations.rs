@@ -17,12 +17,7 @@ use crate::utc::Utc;
 use crate::Time;
 
 pub trait ToScale<T: TimeScale + Copy>: ToDelta {
-    fn offset(&self, scale: T) -> TimeDelta;
-
-    fn to_scale(&self, scale: T) -> Time<T> {
-        let delta_from_epoch = self.to_delta();
-        Time::from_delta(scale, delta_from_epoch + self.offset(scale))
-    }
+    fn to_scale(&self, scale: T) -> Time<T>;
 }
 
 pub trait ToTai: ToScale<Tai> {
@@ -64,16 +59,16 @@ pub const D_TAI_TT: TimeDelta = TimeDelta {
 };
 
 impl ToScale<Tt> for Time<Tai> {
-    fn offset(&self, _scale: Tt) -> TimeDelta {
-        D_TAI_TT
+    fn to_scale(&self, scale: Tt) -> Time<Tt> {
+        Time::from_delta(scale, self.to_delta() + D_TAI_TT)
     }
 }
 
 impl ToTt for Time<Tai> {}
 
 impl ToScale<Tai> for Time<Tt> {
-    fn offset(&self, _scale: Tai) -> TimeDelta {
-        -D_TAI_TT
+    fn to_scale(&self, scale: Tai) -> Time<Tai> {
+        Time::from_delta(scale, self.to_delta() - D_TAI_TT)
     }
 }
 
@@ -91,30 +86,32 @@ const LG: f64 = 6.969290134e-10;
 const INV_LG: f64 = LG / (1.0 - LG);
 
 impl ToScale<Tcg> for Time<Tt> {
-    fn offset(&self, _scale: Tcg) -> TimeDelta {
+    fn to_scale(&self, scale: Tcg) -> Time<Tcg> {
         let time = self.to_delta().to_decimal_seconds();
         let raw_delta = INV_LG * (time - J77_TT);
-        TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
+        let delta = TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
             panic!(
                 "Calculated TT to TCG offset `{}` could not be converted to `TimeDelta`: {}",
                 raw_delta, err
             );
-        })
+        });
+        Time::from_delta(scale, self.to_delta() + delta)
     }
 }
 
 impl ToTcg for Time<Tt> {}
 
 impl ToScale<Tt> for Time<Tcg> {
-    fn offset(&self, _scale: Tt) -> TimeDelta {
+    fn to_scale(&self, scale: Tt) -> Time<Tt> {
         let time = self.to_delta().to_decimal_seconds();
         let raw_delta = -LG * (time - J77_TT);
-        TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
+        let delta = TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
             panic!(
                 "Calculated TCG to TT offset `{}` could not be converted to `TimeDelta`: {}",
                 raw_delta, err
             );
-        })
+        });
+        Time::from_delta(scale, self.to_delta() + delta)
     }
 }
 
@@ -132,23 +129,37 @@ const LB: f64 = 1.550519768e-8;
 const INV_LB: f64 = LB / (1.0 - LB);
 
 /// Constant term of TDB − TT formula of Fairhead & Bretagnon (1990).
-const TDB_00: f64 = -6.55e-5;
+const TDB_0: f64 = -6.55e-5;
 
-const TCB_77: f64 = TDB_00 + LB * TT_0;
+const TCB_77: f64 = TDB_0 + LB * TT_0;
 
 impl ToScale<Tcb> for Time<Tdb> {
-    fn offset(&self, _scale: Tcb) -> TimeDelta {
+    fn to_scale(&self, scale: Tcb) -> Time<Tcb> {
         let dt = self.to_delta().to_decimal_seconds();
-        TimeDelta::from_decimal_seconds(-TCB_77 / (1.0 - LB) + INV_LB * dt).unwrap()
+        let raw_delta = -TCB_77 / (1.0 - LB) + INV_LB * dt;
+        let delta = TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
+            panic!(
+                "Calculated TDB to TCB offset `{}` could not be converted to `TimeDelta`: {}",
+                raw_delta, err
+            );
+        });
+        Time::from_delta(scale, self.to_delta() + delta)
     }
 }
 
 impl ToTcb for Time<Tdb> {}
 
 impl ToScale<Tdb> for Time<Tcb> {
-    fn offset(&self, _scale: Tdb) -> TimeDelta {
+    fn to_scale(&self, scale: Tdb) -> Time<Tdb> {
         let dt = self.to_delta().to_decimal_seconds();
-        TimeDelta::from_decimal_seconds(TCB_77 - LB * dt).unwrap()
+        let raw_delta = TCB_77 - LB * dt;
+        let delta = TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
+            panic!(
+                "Calculated TCB to TDB offset `{}` could not be converted to `TimeDelta`: {}",
+                raw_delta, err
+            );
+        });
+        Time::from_delta(scale, self.to_delta() + delta)
     }
 }
 
@@ -162,23 +173,24 @@ const M_0: f64 = 6.239996;
 const M_1: f64 = 1.99096871e-7;
 
 impl ToScale<Tdb> for Time<Tt> {
-    fn offset(&self, _scale: Tdb) -> TimeDelta {
+    fn to_scale(&self, scale: Tdb) -> Time<Tdb> {
         let tt = self.to_delta().to_decimal_seconds();
         let g = M_0 + M_1 * tt;
         let raw_delta = K * (g + EB * g.sin()).sin();
-        TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
+        let delta = TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
             panic!(
                 "Calculated TT to TDB offset `{}` could not be converted to `TimeDelta`: {}",
                 raw_delta, err,
             )
-        })
+        });
+        Time::from_delta(scale, self.to_delta() + delta)
     }
 }
 
 impl ToTdb for Time<Tt> {}
 
 impl ToScale<Tt> for Time<Tdb> {
-    fn offset(&self, _scale: Tt) -> TimeDelta {
+    fn to_scale(&self, scale: Tt) -> Time<Tt> {
         let tdb = self.to_delta().to_decimal_seconds();
         let mut tt = tdb;
         let mut raw_delta = 0.0;
@@ -188,12 +200,13 @@ impl ToScale<Tt> for Time<Tdb> {
             tt = tdb + raw_delta;
         }
 
-        TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
+        let delta = TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
             panic!(
                 "Calculated TDB to TT offset `{}` could not be converted to `TimeDelta`: {}",
                 raw_delta, err,
             )
-        })
+        });
+        Time::from_delta(scale, self.to_delta() + delta)
     }
 }
 
@@ -203,11 +216,6 @@ impl ToTt for Time<Tdb> {}
 
 // Concrete implementation to avoid conflicting implementation errors
 impl ToScale<Tdb> for Time<Tai> {
-    fn offset(&self, _scale: Tdb) -> TimeDelta {
-        let tdb = ToScale::<Tdb>::to_scale(self, Tdb);
-        tdb.to_delta() - self.to_delta()
-    }
-
     fn to_scale(&self, _scale: Tdb) -> Time<Tdb> {
         self.to_tt().to_tdb()
     }
@@ -217,11 +225,6 @@ impl ToTdb for Time<Tai> {}
 
 // Concrete implementation to avoid conflicting implementation errors
 impl ToScale<Tdb> for Time<Tcg> {
-    fn offset(&self, _scale: Tdb) -> TimeDelta {
-        let tdb = ToScale::<Tdb>::to_scale(self, Tdb);
-        tdb.to_delta() - self.to_delta()
-    }
-
     fn to_scale(&self, _scale: Tdb) -> Time<Tdb> {
         self.to_tt().to_tdb()
     }
@@ -230,11 +233,6 @@ impl ToScale<Tdb> for Time<Tcg> {
 impl ToTdb for Time<Tcg> {}
 
 impl<U: ToTt + ToDelta> ToScale<Tai> for U {
-    fn offset(&self, _scale: Tai) -> TimeDelta {
-        let tdb = ToScale::<Tai>::to_scale(self, Tai);
-        tdb.to_delta() - self.to_delta()
-    }
-
     fn to_scale(&self, _scale: Tai) -> Time<Tai> {
         self.to_tt().to_tai()
     }
@@ -244,11 +242,6 @@ impl ToTai for Time<Tcg> {}
 impl ToTai for Time<Tdb> {}
 
 impl<U: ToTt + ToDelta> ToScale<Tcg> for U {
-    fn offset(&self, _scale: Tcg) -> TimeDelta {
-        let tdb = ToScale::<Tcg>::to_scale(self, Tcg);
-        tdb.to_delta() - self.to_delta()
-    }
-
     fn to_scale(&self, _scale: Tcg) -> Time<Tcg> {
         self.to_tt().to_tcg()
     }
@@ -258,11 +251,6 @@ impl ToTcg for Time<Tai> {}
 impl ToTcg for Time<Tdb> {}
 
 impl<U: ToTdb + ToDelta> ToScale<Tcb> for U {
-    fn offset(&self, _scale: Tcb) -> TimeDelta {
-        let tdb = ToScale::<Tcb>::to_scale(self, Tcb);
-        tdb.to_delta() - self.to_delta()
-    }
-
     fn to_scale(&self, _scale: Tcb) -> Time<Tcb> {
         self.to_tdb().to_tcb()
     }
@@ -274,11 +262,6 @@ impl ToTcb for Time<Tt> {}
 
 // Concrete implementation to avoid conflicting implementation errors
 impl ToScale<Tt> for Time<Tcb> {
-    fn offset(&self, _scale: Tt) -> TimeDelta {
-        let tt = self.to_scale(Tt);
-        tt.to_delta() - self.to_delta()
-    }
-
     fn to_scale(&self, _scale: Tt) -> Time<Tt> {
         self.to_tdb().to_tt()
     }
@@ -313,7 +296,7 @@ mod tests {
 
     #[test]
     fn test_transform_all() {
-        let tai_exp = Time::new(Tai, 0, Subsecond::default());
+        let tai_exp: Time<Tai> = Time::default();
         let tt_exp = tai_exp.to_tt();
         let tcg_exp = tt_exp.to_tcg();
         let tdb_exp = tt_exp.to_tdb();
