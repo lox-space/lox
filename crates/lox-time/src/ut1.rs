@@ -27,8 +27,8 @@ use std::path::Path;
 pub trait DeltaUt1TaiProvider {
     type Error;
 
-    fn delta_ut1_tai(&self, tai: Time<Tai>) -> Result<TimeDelta, Self::Error>;
-    fn delta_tai_ut1(&self, ut1: Time<Ut1>) -> Result<TimeDelta, Self::Error>;
+    fn delta_ut1_tai(&self, tai: &Time<Tai>) -> Result<TimeDelta, Self::Error>;
+    fn delta_tai_ut1(&self, ut1: &Time<Ut1>) -> Result<TimeDelta, Self::Error>;
 }
 
 #[derive(Clone, Debug, Error)]
@@ -98,7 +98,7 @@ impl DeltaUt1Tai {
 impl DeltaUt1TaiProvider for DeltaUt1Tai {
     type Error = ExtrapolatedDeltaUt1Tai;
 
-    fn delta_ut1_tai(&self, tai: Time<Tai>) -> Result<TimeDelta, Self::Error> {
+    fn delta_ut1_tai(&self, tai: &Time<Tai>) -> Result<TimeDelta, Self::Error> {
         let seconds = tai.seconds_since_j2000();
         let (t0, _) = self.0.first();
         let (tn, _) = self.0.last();
@@ -109,7 +109,7 @@ impl DeltaUt1TaiProvider for DeltaUt1Tai {
         Ok(TimeDelta::from_decimal_seconds(val).unwrap())
     }
 
-    fn delta_tai_ut1(&self, ut1: Time<Ut1>) -> Result<TimeDelta, Self::Error> {
+    fn delta_tai_ut1(&self, ut1: &Time<Ut1>) -> Result<TimeDelta, Self::Error> {
         let seconds = ut1.seconds_since_j2000();
         let (t0, _) = self.0.first();
         let (tn, _) = self.0.last();
@@ -123,6 +123,8 @@ impl DeltaUt1TaiProvider for DeltaUt1Tai {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::OnceLock;
+
     use super::*;
     use crate::subsecond::Subsecond;
     use crate::time;
@@ -221,11 +223,10 @@ mod tests {
     fn test_delta_ut1_tai_orekit(#[case] seconds: i64, #[case] expected: f64) {
         let tai = Time::new(Tai, seconds, Subsecond::default());
         let ut1 = Time::new(Ut1, seconds, Subsecond::default());
-        let provider =
-            DeltaUt1Tai::new("../../data/finals2000A.all.csv", BuiltinLeapSeconds).unwrap();
-        let actual = provider.delta_ut1_tai(tai).unwrap().to_decimal_seconds();
+        let provider = delta_ut1_tai();
+        let actual = provider.delta_ut1_tai(&tai).unwrap().to_decimal_seconds();
         assert_float_eq!(actual, expected, rel <= 1e-6);
-        let actual = provider.delta_tai_ut1(ut1).unwrap().to_decimal_seconds();
+        let actual = provider.delta_tai_ut1(&ut1).unwrap().to_decimal_seconds();
         assert_float_eq!(actual, -expected, rel <= 1e-6);
     }
 
@@ -246,12 +247,25 @@ mod tests {
         #[case] time: Time<Tai>,
         #[case] expected: Result<TimeDelta, ExtrapolatedDeltaUt1Tai>,
     ) {
-        let provider =
-            DeltaUt1Tai::new("../../data/finals2000A.all.csv", BuiltinLeapSeconds).unwrap();
-        let actual = provider.delta_ut1_tai(time);
+        let provider = delta_ut1_tai();
+        let actual = provider.delta_ut1_tai(&time);
         assert_eq!(actual, expected);
         let ut1 = time.with_scale(Ut1);
-        let actual = provider.delta_tai_ut1(ut1);
+        let actual = provider.delta_tai_ut1(&ut1);
         assert_eq!(actual, expected);
+    }
+
+    fn delta_ut1_tai() -> &'static DeltaUt1Tai {
+        static PROVIDER: OnceLock<DeltaUt1Tai> = OnceLock::new();
+        PROVIDER.get_or_init(|| {
+            DeltaUt1Tai::new(
+                format!(
+                    "{}/../../data/finals2000A.all.csv",
+                    env!("CARGO_MANIFEST_DIR")
+                ),
+                BuiltinLeapSeconds,
+            )
+            .unwrap()
+        })
     }
 }
