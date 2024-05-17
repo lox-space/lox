@@ -61,7 +61,7 @@ pub const D_TAI_TT: TimeDelta = TimeDelta {
 
 impl ToScale<Tt> for Time<Tai> {
     fn to_scale(&self, scale: Tt) -> Time<Tt> {
-        Time::from_delta(scale, self.to_delta() + D_TAI_TT)
+        self.with_scale_and_delta(scale, D_TAI_TT)
     }
 }
 
@@ -69,7 +69,7 @@ impl ToTt for Time<Tai> {}
 
 impl ToScale<Tai> for Time<Tt> {
     fn to_scale(&self, scale: Tai) -> Time<Tai> {
-        Time::from_delta(scale, self.to_delta() - D_TAI_TT)
+        self.with_scale_and_delta(scale, -D_TAI_TT)
     }
 }
 
@@ -96,7 +96,7 @@ impl ToScale<Tcg> for Time<Tt> {
                 raw_delta, err
             );
         });
-        Time::from_delta(scale, self.to_delta() + delta)
+        self.with_scale_and_delta(scale, delta)
     }
 }
 
@@ -112,7 +112,7 @@ impl ToScale<Tt> for Time<Tcg> {
                 raw_delta, err
             );
         });
-        Time::from_delta(scale, self.to_delta() + delta)
+        self.with_scale_and_delta(scale, delta)
     }
 }
 
@@ -144,7 +144,7 @@ impl ToScale<Tcb> for Time<Tdb> {
                 raw_delta, err
             );
         });
-        Time::from_delta(scale, self.to_delta() + delta)
+        self.with_scale_and_delta(scale, delta)
     }
 }
 
@@ -160,7 +160,7 @@ impl ToScale<Tdb> for Time<Tcb> {
                 raw_delta, err
             );
         });
-        Time::from_delta(scale, self.to_delta() + delta)
+        self.with_scale_and_delta(scale, delta)
     }
 }
 
@@ -184,7 +184,7 @@ impl ToScale<Tdb> for Time<Tt> {
                 raw_delta, err,
             )
         });
-        Time::from_delta(scale, self.to_delta() + delta)
+        self.with_scale_and_delta(scale, delta)
     }
 }
 
@@ -207,7 +207,7 @@ impl ToScale<Tt> for Time<Tdb> {
                 raw_delta, err,
             )
         });
-        Time::from_delta(scale, self.to_delta() + delta)
+        self.with_scale_and_delta(scale, delta)
     }
 }
 
