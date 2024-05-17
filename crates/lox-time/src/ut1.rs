@@ -24,6 +24,8 @@ use lox_utils::series::{Series, SeriesError};
 use num::ToPrimitive;
 use std::path::Path;
 
+pub mod transformations;
+
 pub trait DeltaUt1TaiProvider {
     type Error;
 
@@ -113,9 +115,12 @@ impl DeltaUt1TaiProvider for DeltaUt1Tai {
         let seconds = ut1.seconds_since_j2000();
         let (t0, _) = self.0.first();
         let (tn, _) = self.0.last();
-        let val = self.0.interpolate(seconds);
+        // Use the UT1 offset as an initial guess even though the table is based on TAI
+        let mut val = self.0.interpolate(seconds);
+        // Interpolate again with the adjusted offset
+        val = self.0.interpolate(seconds - val);
         if seconds < t0 || seconds > tn {
-            return Err(ExtrapolatedDeltaUt1Tai::new(t0, tn, seconds, val));
+            return Err(ExtrapolatedDeltaUt1Tai::new(t0, tn, seconds, -val));
         }
         Ok(-TimeDelta::from_decimal_seconds(val).unwrap())
     }
@@ -248,11 +253,26 @@ mod tests {
         #[case] expected: Result<TimeDelta, ExtrapolatedDeltaUt1Tai>,
     ) {
         let provider = delta_ut1_tai();
-        let actual = provider.delta_ut1_tai(&time);
-        assert_eq!(actual, expected);
-        let ut1 = time.with_scale(Ut1);
-        let actual = provider.delta_tai_ut1(&ut1);
-        assert_eq!(actual, expected);
+        let expected = expected
+            .unwrap_err()
+            .extrapolated_value
+            .to_decimal_seconds();
+        let actual = provider
+            .delta_ut1_tai(&time)
+            .unwrap_err()
+            .extrapolated_value
+            .to_decimal_seconds();
+        assert_float_eq!(actual, expected, rel <= 1e-8);
+        let ut1 = Time::from_delta(
+            Ut1,
+            time.to_delta() + TimeDelta::from_decimal_seconds(actual).unwrap(),
+        );
+        let actual = provider
+            .delta_tai_ut1(&ut1)
+            .unwrap_err()
+            .extrapolated_value
+            .to_decimal_seconds();
+        assert_float_eq!(actual, -expected, rel <= 1e-8);
     }
 
     fn delta_ut1_tai() -> &'static DeltaUt1Tai {
