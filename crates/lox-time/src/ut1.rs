@@ -285,4 +285,18 @@ mod tests {
             .unwrap()
         })
     }
+
+    fn delta_ut1_tai() -> &'static DeltaUt1Tai {
+        static PROVIDER: OnceLock<DeltaUt1Tai> = OnceLock::new();
+        PROVIDER.get_or_init(|| {
+            DeltaUt1Tai::new(
+                format!(
+                    "{}/../../data/finals2000A.all.csv",
+                    env!("CARGO_MANIFEST_DIR")
+                ),
+                BuiltinLeapSeconds,
+            )
+            .unwrap()
+        })
+    }
 }
