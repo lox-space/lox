@@ -36,11 +36,11 @@ impl ToUtc for Time<Tai> {
         let delta = if self < tai_at_utc_1972_01_01() {
             before1972::delta_tai_utc(self)
         } else {
-            provider.delta_tai_utc(*self)
+            provider.delta_tai_utc(self)
         }
         .ok_or(UtcError::UtcUndefined)?;
         let mut utc = Utc::from_delta(self.to_delta() - delta);
-        if provider.is_leap_second(*self) {
+        if provider.is_leap_second(self) {
             utc.time = TimeOfDay::new(utc.hour(), utc.minute(), 60)
                 .unwrap()
                 .with_subsecond(utc.time.subsecond());
@@ -60,7 +60,7 @@ impl Utc {
         let delta = if self < utc_1972_01_01() {
             before1972::delta_utc_tai(self)
         } else {
-            provider.delta_utc_tai(*self)
+            provider.delta_utc_tai(self)
         }
         .unwrap_or_else(|| {
             // Utc objects are always in range.
@@ -102,6 +102,7 @@ pub mod test {
     use crate::transformations::{ToTcb, ToTcg, ToTdb, ToTt};
     use rstest::rstest;
 
+    use crate::calendar_dates::Date;
     use crate::subsecond::Subsecond;
 
     use super::*;
@@ -146,6 +147,14 @@ pub mod test {
         let tdb = tai.to_tdb();
         let act = tdb.to_utc().unwrap();
         assert_eq!(act, exp);
+    }
+
+    #[test]
+    fn test_date_leap_second_date() {
+        let date = Date::new(2000, 12, 31).unwrap();
+        assert!(!BuiltinLeapSeconds.is_leap_second_date(&date));
+        let date = Date::new(2016, 12, 31).unwrap();
+        assert!(BuiltinLeapSeconds.is_leap_second_date(&date));
     }
 
     /*

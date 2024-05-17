@@ -85,7 +85,7 @@ impl DeltaUt1Tai {
         let delta_ut1_tai: Vec<f64> = zip(deltas.clone(), eop.delta_ut1_utc().iter())
             .map(|(delta, &delta_ut1_utc)| {
                 let utc = Utc::from_delta(delta);
-                let delta_utc_tai = ls.delta_utc_tai(utc).unwrap();
+                let delta_utc_tai = ls.delta_utc_tai(&utc).unwrap();
                 let delta_ut1_tai =
                     TimeDelta::from_decimal_seconds(delta_ut1_utc).unwrap() + delta_utc_tai;
                 delta_ut1_tai.to_decimal_seconds()

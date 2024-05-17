@@ -9,6 +9,7 @@
 //! Module transform provides a trait for transforming between pairs of timescales, together
 //! with a default implementation for the most commonly used time scale pairs.
 
+use crate::calendar_dates::Date;
 use crate::constants::julian_dates::J77;
 use crate::deltas::{TimeDelta, ToDelta};
 use crate::subsecond::Subsecond;
@@ -272,9 +273,13 @@ impl ToTt for Time<Tcb> {}
 impl ToTcg for Time<Tcb> {}
 
 pub trait LeapSecondsProvider {
-    fn delta_tai_utc(&self, tai: Time<Tai>) -> Option<TimeDelta>;
+    fn delta_tai_utc(&self, tai: &Time<Tai>) -> Option<TimeDelta>;
 
-    fn delta_utc_tai(&self, utc: Utc) -> Option<TimeDelta>;
+    fn delta_utc_tai(&self, utc: &Utc) -> Option<TimeDelta>;
+
+    fn is_leap_second_date(&self, date: &Date) -> bool;
+
+    fn is_leap_second(&self, tai: &Time<Tai>) -> bool;
 }
 
 #[cfg(test)]
