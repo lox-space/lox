@@ -296,7 +296,7 @@ impl Sub for TimeDelta {
 
         let mut diff_seconds = self.seconds - rhs.seconds;
         let mut diff_subsecond = self.subsecond.0 - rhs.subsecond.0;
-        if diff_subsecond < 0.0 {
+        if diff_subsecond.abs() > f64::EPSILON && diff_subsecond < 0.0 {
             diff_subsecond += 1.0;
             diff_seconds -= 1;
         }
