@@ -6,6 +6,7 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use std::convert::Infallible;
 use std::sync::OnceLock;
 
 use crate::deltas::TimeDelta;
@@ -14,8 +15,8 @@ use crate::time_of_day::CivilTime;
 use crate::time_of_day::TimeOfDay;
 use crate::time_scales::Tai;
 use crate::transformations::LeapSecondsProvider;
-use crate::transformations::ToScale;
 use crate::transformations::ToTai;
+use crate::transformations::TryToScale;
 use crate::{utc, Time};
 
 use super::leap_seconds::BuiltinLeapSeconds;
@@ -72,9 +73,25 @@ impl Utc {
     }
 }
 
-impl ToScale<Tai> for Utc {
-    fn to_scale(&self, _scale: Tai) -> Time<Tai> {
-        self.to_tai_with_provider(&BuiltinLeapSeconds)
+impl<T: LeapSecondsProvider> TryToScale<Tai, T> for Utc {
+    fn try_to_scale(&self, _scale: Tai, provider: &T) -> Result<Time<Tai>, Infallible> {
+        let delta = if self < utc_1972_01_01() {
+            before1972::delta_utc_tai(self)
+        } else {
+            provider.delta_utc_tai(self)
+        }
+        .unwrap_or_else(|| {
+            // Utc objects are always in range.
+            unreachable!("failed to calculate UTC-TAI delta for Utc `{:?}`", self);
+        });
+
+        Ok(Time::from_delta(Tai, self.to_delta() - delta))
+    }
+}
+
+impl TryToScale<Tai> for Utc {
+    fn try_to_scale(&self, scale: Tai, _provider: &()) -> Result<Time<Tai>, Infallible> {
+        self.try_to_scale(scale, &BuiltinLeapSeconds)
     }
 }
 
