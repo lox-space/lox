@@ -17,7 +17,7 @@ use crate::time_scales::{Tai, Tcb, Tcg, Tdb, TimeScale, Tt};
 use crate::utc::Utc;
 use crate::Time;
 
-pub trait ToScale<T: TimeScale + Copy>: ToDelta {
+pub trait ToScale<T: TimeScale>: ToDelta {
     fn to_scale(&self, scale: T) -> Time<T>;
 }
 

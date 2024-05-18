@@ -95,13 +95,13 @@ pub enum TimeError {
 /// `Time` supports femtosecond precision, but be aware that many algorithms operating on `Time`s
 /// are not accurate to this level of precision.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
-pub struct Time<T: TimeScale + Copy> {
+pub struct Time<T: TimeScale> {
     scale: T,
     seconds: i64,
     subsecond: Subsecond,
 }
 
-impl<T: TimeScale + Copy> Time<T> {
+impl<T: TimeScale> Time<T> {
     /// Instantiates a [Time] in the given scale from seconds since J2000 subdivided into integral
     /// seconds and [Subsecond].
     pub fn new(scale: T, seconds: i64, subsecond: Subsecond) -> Self {
@@ -136,14 +136,6 @@ impl<T: TimeScale + Copy> Time<T> {
             scale,
             seconds: delta.seconds,
             subsecond: delta.subsecond,
-        }
-    }
-
-    /// Returns the offset from the J2000 epoch as a [TimeDelta].
-    pub fn to_delta(self) -> TimeDelta {
-        TimeDelta {
-            seconds: self.seconds,
-            subsecond: self.subsecond,
         }
     }
 
@@ -203,17 +195,20 @@ impl<T: TimeScale + Copy> Time<T> {
     }
 
     /// Returns the timescale
-    pub fn scale(&self) -> T {
-        self.scale
+    pub fn scale(&self) -> T
+    where
+        T: Clone,
+    {
+        self.scale.clone()
     }
 
     /// Returns a new [Time] with `scale` without changing the underlying timestamp.
-    pub fn with_scale<S: TimeScale + Copy>(&self, scale: S) -> Time<S> {
+    pub fn with_scale<S: TimeScale>(&self, scale: S) -> Time<S> {
         Time::new(scale, self.seconds, self.subsecond)
     }
 
     /// Returns a new [Time] with `scale` with its offset adjusted by `delta`.
-    pub fn with_scale_and_delta<S: TimeScale + Copy>(&self, scale: S, delta: TimeDelta) -> Time<S> {
+    pub fn with_scale_and_delta<S: TimeScale>(&self, scale: S, delta: TimeDelta) -> Time<S> {
         Time::from_delta(scale, self.to_delta() + delta)
     }
 
@@ -249,7 +244,7 @@ impl<T: TimeScale + Copy> Time<T> {
     }
 }
 
-impl<T: TimeScale + Copy> ToDelta for Time<T> {
+impl<T: TimeScale> ToDelta for Time<T> {
     fn to_delta(&self) -> TimeDelta {
         TimeDelta {
             seconds: self.seconds,
@@ -267,7 +262,7 @@ impl<T: TimeScale + Copy> ToDelta for Time<T> {
     }
 }
 
-impl<T: TimeScale + Copy> JulianDate for Time<T> {
+impl<T: TimeScale> JulianDate for Time<T> {
     fn julian_date(&self, epoch: Epoch, unit: Unit) -> f64 {
         let mut decimal_seconds = (match epoch {
             Epoch::JulianDate => self.seconds + SECONDS_BETWEEN_JD_AND_J2000,
@@ -286,7 +281,7 @@ impl<T: TimeScale + Copy> JulianDate for Time<T> {
     }
 }
 
-impl<T: TimeScale + Copy> Display for Time<T> {
+impl<T: TimeScale> Display for Time<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let precision = f.precision().unwrap_or(3);
         write!(
@@ -300,7 +295,7 @@ impl<T: TimeScale + Copy> Display for Time<T> {
     }
 }
 
-impl<T: TimeScale + Copy> Add<TimeDelta> for Time<T> {
+impl<T: TimeScale> Add<TimeDelta> for Time<T> {
     type Output = Self;
 
     /// The implementation of [Add] for [Time] follows the default Rust rules for integer overflow, which
@@ -316,7 +311,7 @@ impl<T: TimeScale + Copy> Add<TimeDelta> for Time<T> {
     }
 }
 
-impl<T: TimeScale + Copy> Sub<TimeDelta> for Time<T> {
+impl<T: TimeScale> Sub<TimeDelta> for Time<T> {
     type Output = Self;
 
     /// The implementation of [Sub] for [Time] follows the default Rust rules for integer overflow, which
@@ -336,7 +331,7 @@ impl<T: TimeScale + Copy> Sub<TimeDelta> for Time<T> {
     }
 }
 
-impl<T: TimeScale + Copy> Sub<Time<T>> for Time<T> {
+impl<T: TimeScale> Sub<Time<T>> for Time<T> {
     type Output = TimeDelta;
 
     fn sub(self, rhs: Time<T>) -> Self::Output {
@@ -353,13 +348,13 @@ impl<T: TimeScale + Copy> Sub<Time<T>> for Time<T> {
     }
 }
 
-impl<T: TimeScale + Copy> CivilTime for Time<T> {
+impl<T: TimeScale> CivilTime for Time<T> {
     fn time(&self) -> TimeOfDay {
         TimeOfDay::from_seconds_since_j2000(self.seconds).with_subsecond(self.subsecond)
     }
 }
 
-impl<T: TimeScale + Copy> CalendarDate for Time<T> {
+impl<T: TimeScale> CalendarDate for Time<T> {
     fn date(&self) -> Date {
         Date::from_seconds_since_j2000(self.seconds)
     }
@@ -371,7 +366,7 @@ pub struct TimeBuilder<T: TimeScale> {
     time: Result<TimeOfDay, TimeOfDayError>,
 }
 
-impl<T: TimeScale + Copy> TimeBuilder<T> {
+impl<T: TimeScale> TimeBuilder<T> {
     pub fn new(scale: T) -> Self {
         Self {
             scale,
