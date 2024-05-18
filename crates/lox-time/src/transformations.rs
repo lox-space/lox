@@ -268,7 +268,7 @@ impl TryToScale<Tdb> for Time<Tcg> {
 
 impl ToTdb for Time<Tcg> {}
 
-impl<U: ToTt + ToDelta> TryToScale<Tai> for U {
+impl<U: ToTt> TryToScale<Tai> for U {
     fn try_to_scale(&self, _scale: Tai, _provider: &()) -> Result<Time<Tai>, Infallible> {
         Ok(self.to_tt().to_tai())
     }
@@ -277,7 +277,7 @@ impl<U: ToTt + ToDelta> TryToScale<Tai> for U {
 impl ToTai for Time<Tcg> {}
 impl ToTai for Time<Tdb> {}
 
-impl<U: ToTt + ToDelta> TryToScale<Tcg> for U {
+impl<U: ToTt> TryToScale<Tcg> for U {
     fn try_to_scale(&self, _scale: Tcg, _provider: &()) -> Result<Time<Tcg>, Infallible> {
         Ok(self.to_tt().to_tcg())
     }
@@ -286,7 +286,7 @@ impl<U: ToTt + ToDelta> TryToScale<Tcg> for U {
 impl ToTcg for Time<Tdb> {}
 impl ToTcg for Time<Tai> {}
 
-impl<U: ToTdb + ToDelta> TryToScale<Tcb> for U {
+impl<U: ToTdb> TryToScale<Tcb> for U {
     fn try_to_scale(&self, _scale: Tcb, _provider: &()) -> Result<Time<Tcb>, Infallible> {
         Ok(self.to_tdb().to_tcb())
     }
