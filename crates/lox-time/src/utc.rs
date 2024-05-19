@@ -124,16 +124,14 @@ impl UtcBuilder {
         }
     }
 
-    pub fn build(self) -> Result<Utc, UtcError> {
-        let date = self.date?;
-        let time = self.time?;
-        Utc::new(date, time, &BuiltinLeapSeconds)
-    }
-
     pub fn build_with_provider(self, provider: &impl LeapSecondsProvider) -> Result<Utc, UtcError> {
         let date = self.date?;
         let time = self.time?;
         Utc::new(date, time, provider)
+    }
+
+    pub fn build(self) -> Result<Utc, UtcError> {
+        self.build_with_provider(&BuiltinLeapSeconds)
     }
 }
 
