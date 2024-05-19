@@ -535,4 +535,12 @@ mod tests {
         );
         assert_eq!(delta.centuries_since_julian_epoch(), 68.11964407939767);
     }
+
+    #[test]
+    fn test_delta_sub_epsilon() {
+        let delta0 = TimeDelta::default();
+        let delta1 = TimeDelta::new(0, Subsecond(1e-17));
+        let delta = delta0 - delta1;
+        assert_ne!(delta.subsecond.0, 1.0)
+    }
 }
