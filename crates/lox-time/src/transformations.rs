@@ -320,14 +320,42 @@ impl<T: DeltaUt1TaiProvider> ToUt1<T> for Time<Tcg> {}
 impl<T: DeltaUt1TaiProvider> ToUt1<T> for Time<Tcb> {}
 impl<T: DeltaUt1TaiProvider> ToUt1<T> for Time<Tdb> {}
 
+impl<T: DeltaUt1TaiProvider> TryToScale<Tt, T, T::Error> for Time<Ut1> {
+    fn try_to_scale(&self, _scale: Tt, provider: &T) -> Result<Time<Tt>, T::Error> {
+        let tai = self.try_to_scale(Tai, provider)?;
+        Ok(tai.to_tt())
+    }
+}
+
+impl<T: DeltaUt1TaiProvider> TryToScale<Tcg, T, T::Error> for Time<Ut1> {
+    fn try_to_scale(&self, _scale: Tcg, provider: &T) -> Result<Time<Tcg>, T::Error> {
+        let tai = self.try_to_scale(Tai, provider)?;
+        Ok(tai.to_tcg())
+    }
+}
+
+impl<T: DeltaUt1TaiProvider> TryToScale<Tcb, T, T::Error> for Time<Ut1> {
+    fn try_to_scale(&self, _scale: Tcb, provider: &T) -> Result<Time<Tcb>, T::Error> {
+        let tai = self.try_to_scale(Tai, provider)?;
+        Ok(tai.to_tcb())
+    }
+}
+
+impl<T: DeltaUt1TaiProvider> TryToScale<Tdb, T, T::Error> for Time<Ut1> {
+    fn try_to_scale(&self, _scale: Tdb, provider: &T) -> Result<Time<Tdb>, T::Error> {
+        let tai = self.try_to_scale(Tai, provider)?;
+        Ok(tai.to_tdb())
+    }
+}
+
 pub trait LeapSecondsProvider {
-    fn delta_tai_utc(&self, tai: &Time<Tai>) -> Option<TimeDelta>;
+    fn delta_tai_utc(&self, tai: Time<Tai>) -> Option<TimeDelta>;
 
-    fn delta_utc_tai(&self, utc: &Utc) -> Option<TimeDelta>;
+    fn delta_utc_tai(&self, utc: Utc) -> Option<TimeDelta>;
 
-    fn is_leap_second_date(&self, date: &Date) -> bool;
+    fn is_leap_second_date(&self, date: Date) -> bool;
 
-    fn is_leap_second(&self, tai: &Time<Tai>) -> bool;
+    fn is_leap_second(&self, tai: Time<Tai>) -> bool;
 }
 
 #[cfg(test)]

@@ -253,15 +253,6 @@ impl<T: TimeScale> ToDelta for Time<T> {
     }
 }
 
-impl<T: TimeScale + Copy> ToDelta for Time<T> {
-    fn to_delta(&self) -> TimeDelta {
-        TimeDelta {
-            seconds: self.seconds,
-            subsecond: self.subsecond,
-        }
-    }
-}
-
 impl<T: TimeScale> JulianDate for Time<T> {
     fn julian_date(&self, epoch: Epoch, unit: Unit) -> f64 {
         let mut decimal_seconds = (match epoch {

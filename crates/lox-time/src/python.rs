@@ -8,7 +8,7 @@ use crate::deltas::{TimeDelta, ToDelta};
 use crate::julian_dates::{Epoch, Unit};
 use crate::time_of_day::{CivilTime, TimeOfDay};
 use crate::time_scales::TimeScale;
-use crate::transformations::{ToTai, TryToScale};
+use crate::transformations::{ToTai, ToTt, TryToScale};
 use crate::ut1::{DeltaUt1Tai, ExtrapolatedDeltaUt1Tai};
 use crate::utc::Utc;
 use crate::{
@@ -110,6 +110,22 @@ impl PyTime {
         };
         Ok(PyTime(time.with_scale(PyTimeScale::Tai)))
     }
+
+    fn to_tt(&self, provider: Option<PyDeltaUt1Tai>) -> Result<PyTime, PyErr> {
+        let time = match provider {
+            Some(provider) => self
+                .try_to_scale(Tt, &provider.0)
+                .map_err(|_| PyValueError::new_err("unable to convert to Tt"))?,
+            None => {
+                if self.scale() == PyTimeScale::Ut1 {
+                    return Err(PyValueError::new_err("missing UT1 provider"));
+                }
+                self.try_to_scale(Tt, &())
+                    .map_err(|_| PyValueError::new_err("unable to convert to Tt"))?
+            }
+        };
+        Ok(PyTime(time.with_scale(PyTimeScale::Tt)))
+    }
 }
 
 impl ToDelta for PyTime {
@@ -143,6 +159,36 @@ impl TryToScale<Tai> for PyTime {
             PyTimeScale::Tcg => Ok(self.0.with_scale(Tcg).to_tai()),
             PyTimeScale::Tdb => Ok(self.0.with_scale(Tdb).to_tai()),
             PyTimeScale::Tt => Ok(self.0.with_scale(Tt).to_tai()),
+            PyTimeScale::Ut1 => unreachable!("invalid for UT1"),
+        }
+    }
+}
+
+impl TryToScale<Tt, DeltaUt1Tai, ExtrapolatedDeltaUt1Tai> for PyTime {
+    fn try_to_scale(
+        &self,
+        _scale: Tt,
+        provider: &DeltaUt1Tai,
+    ) -> Result<Time<Tt>, ExtrapolatedDeltaUt1Tai> {
+        match self.scale() {
+            PyTimeScale::Tai => Ok(self.0.with_scale(Tai).to_tt()),
+            PyTimeScale::Tcb => Ok(self.0.with_scale(Tcb).to_tt()),
+            PyTimeScale::Tcg => Ok(self.0.with_scale(Tcg).to_tt()),
+            PyTimeScale::Tdb => Ok(self.0.with_scale(Tdb).to_tt()),
+            PyTimeScale::Tt => Ok(self.0.with_scale(Tt)),
+            PyTimeScale::Ut1 => self.0.with_scale(Ut1).try_to_scale(Tt, provider),
+        }
+    }
+}
+
+impl TryToScale<Tt> for PyTime {
+    fn try_to_scale(&self, _scale: Tt, _provider: &()) -> Result<Time<Tt>, Infallible> {
+        match self.scale() {
+            PyTimeScale::Tai => Ok(self.0.with_scale(Tai).to_tt()),
+            PyTimeScale::Tcb => Ok(self.0.with_scale(Tcb).to_tt()),
+            PyTimeScale::Tcg => Ok(self.0.with_scale(Tcg).to_tt()),
+            PyTimeScale::Tdb => Ok(self.0.with_scale(Tdb).to_tt()),
+            PyTimeScale::Tt => Ok(self.0.with_scale(Tt)),
             PyTimeScale::Ut1 => unreachable!("invalid for UT1"),
         }
     }
