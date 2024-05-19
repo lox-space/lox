@@ -482,6 +482,15 @@ mod tests {
         assert_float_eq!(time.subsecond(), 0.3, abs <= 1e-15);
     }
 
+    #[test]
+    fn test_time_with_scale_and_delta() {
+        let tai: Time<Tai> = Time::default();
+        let delta = TimeDelta::from_seconds(20);
+        let tdb = tai.with_scale_and_delta(Tdb, delta);
+        assert_eq!(tdb.scale(), Tdb);
+        assert_eq!(tdb.seconds(), tai.seconds() + 20);
+    }
+
     #[rstest]
     #[case(f64::INFINITY)]
     #[case(-f64::INFINITY)]
