@@ -68,6 +68,10 @@ pub trait CivilTime {
         self.time().second()
     }
 
+    fn seconds(&self) -> f64 {
+        self.time().second() as f64 + self.time().subsecond().0
+    }
+
     fn millisecond(&self) -> i64 {
         self.time().subsecond().millisecond()
     }

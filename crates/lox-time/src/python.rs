@@ -224,6 +224,43 @@ impl CivilTime for PyTime {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PyUtc(Utc);
 
+#[pymethods]
+impl PyUtc {
+    #[new]
+    #[pyo3(signature = (year, month, day, hour = 0, minute = 0, seconds = 0.0))]
+    fn new(
+        year: i64,
+        month: u8,
+        day: u8,
+        hour: u8,
+        minute: u8,
+        seconds: f64,
+    ) -> Result<PyUtc, PyErr> {
+        let utc = Utc::builder()
+            .with_ymd(year, month, day)
+            .with_hms(hour, minute, seconds)
+            .build()
+            .map_err(|err| PyValueError::new_err(format!("{}", err)))?;
+        Ok(PyUtc(utc))
+    }
+
+    fn __str__(&self) -> String {
+        format!("{}", self.0)
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "UTC({}, {}, {}, {}, {}, {})",
+            self.0.year(),
+            self.0.month(),
+            self.0.day(),
+            self.0.hour(),
+            self.0.minute(),
+            self.0.seconds()
+        )
+    }
+}
+
 #[pyclass(name = "DeltaUT1TAI", module = "lox_space")]
 #[derive(Clone, Debug, PartialEq)]
 pub struct PyDeltaUt1Tai(DeltaUt1Tai);

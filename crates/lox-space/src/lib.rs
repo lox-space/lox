@@ -6,7 +6,7 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use lox_time::python::{PyTime, PyTimeScale};
+use lox_time::python::{PyTime, PyTimeScale, PyUtc};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use thiserror::Error;
@@ -52,5 +52,6 @@ fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyMinorBody>()?;
     m.add_class::<PyTimeScale>()?;
     m.add_class::<PyTime>()?;
+    m.add_class::<PyUtc>()?;
     Ok(())
 }
