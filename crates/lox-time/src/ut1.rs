@@ -16,7 +16,7 @@ use crate::deltas::TimeDelta;
 use crate::julian_dates::JulianDate;
 use crate::subsecond::Subsecond;
 use crate::time_scales::{Tai, Ut1};
-use crate::transformations::LeapSecondsProvider;
+use crate::transformations::{LeapSecondsProvider, OffsetProvider};
 use crate::utc::Utc;
 use crate::Time;
 use lox_io::iers::{EarthOrientationParams, ParseFinalsCsvError};
@@ -24,7 +24,7 @@ use lox_utils::series::{Series, SeriesError};
 use num::ToPrimitive;
 use std::path::Path;
 
-pub trait DeltaUt1TaiProvider {
+pub trait DeltaUt1TaiProvider: OffsetProvider {
     type Error;
 
     fn delta_ut1_tai(&self, tai: &Time<Tai>) -> Result<TimeDelta, Self::Error>;
@@ -94,6 +94,8 @@ impl DeltaUt1Tai {
         Ok(Self(series))
     }
 }
+
+impl OffsetProvider for DeltaUt1Tai {}
 
 impl DeltaUt1TaiProvider for DeltaUt1Tai {
     type Error = ExtrapolatedDeltaUt1Tai;

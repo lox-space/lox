@@ -17,7 +17,7 @@ use std::num::ParseIntError;
 use std::path::Path;
 use thiserror::Error;
 
-use crate::transformations::LeapSecondsProvider;
+use crate::transformations::{LeapSecondsProvider, OffsetProvider};
 use crate::utc::Utc;
 
 const LEAP_SECONDS_KERNEL_KEY: &str = "DELTET/DELTA_AT";
@@ -43,6 +43,8 @@ const LEAP_SECONDS: [i64; 28] = [
 
 #[derive(Debug)]
 pub struct BuiltinLeapSeconds;
+
+impl OffsetProvider for BuiltinLeapSeconds {}
 
 impl LeapSecondsProvider for BuiltinLeapSeconds {
     fn delta_tai_utc(&self, tai: Time<Tai>) -> Option<TimeDelta> {
@@ -121,6 +123,8 @@ impl LeapSecondsKernel {
         Self::from_string(kernel)
     }
 }
+
+impl OffsetProvider for LeapSecondsKernel {}
 
 impl LeapSecondsProvider for LeapSecondsKernel {
     fn delta_tai_utc(&self, tai: Time<Tai>) -> Option<TimeDelta> {

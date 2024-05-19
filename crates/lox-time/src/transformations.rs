@@ -20,17 +20,26 @@ use crate::ut1::DeltaUt1TaiProvider;
 use crate::utc::Utc;
 use crate::Time;
 
-pub trait TryToScale<T: TimeScale, U = (), E = Infallible>: ToDelta {
+pub trait OffsetProvider {}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub struct NoOpOffsetProvider;
+
+impl OffsetProvider for NoOpOffsetProvider {}
+
+pub trait TryToScale<T: TimeScale, U: OffsetProvider = NoOpOffsetProvider, E = Infallible>:
+    ToDelta
+{
     fn try_to_scale(&self, scale: T, provider: &U) -> Result<Time<T>, E>;
 }
 
-pub trait ToScale<T: TimeScale>: TryToScale<T, (), Infallible> {
+pub trait ToScale<T: TimeScale>: TryToScale<T, NoOpOffsetProvider, Infallible> {
     fn to_scale(&self, scale: T) -> Time<T> {
-        self.try_to_scale(scale, &()).unwrap()
+        self.try_to_scale(scale, &NoOpOffsetProvider).unwrap()
     }
 }
 
-impl<T: TimeScale, U: TryToScale<T, ()>> ToScale<T> for U {}
+impl<T: TimeScale, U: TryToScale<T, NoOpOffsetProvider>> ToScale<T> for U {}
 
 pub trait ToTai: ToScale<Tai> {
     fn to_tai(&self) -> Time<Tai> {
@@ -77,7 +86,11 @@ pub const D_TAI_TT: TimeDelta = TimeDelta {
 };
 
 impl TryToScale<Tt> for Time<Tai> {
-    fn try_to_scale(&self, scale: Tt, _provider: &()) -> Result<Time<Tt>, Infallible> {
+    fn try_to_scale(
+        &self,
+        scale: Tt,
+        _provider: &NoOpOffsetProvider,
+    ) -> Result<Time<Tt>, Infallible> {
         Ok(self.with_scale_and_delta(scale, D_TAI_TT))
     }
 }
@@ -85,7 +98,11 @@ impl TryToScale<Tt> for Time<Tai> {
 impl ToTt for Time<Tai> {}
 
 impl TryToScale<Tai> for Time<Tt> {
-    fn try_to_scale(&self, scale: Tai, _provider: &()) -> Result<Time<Tai>, Infallible> {
+    fn try_to_scale(
+        &self,
+        scale: Tai,
+        _provider: &NoOpOffsetProvider,
+    ) -> Result<Time<Tai>, Infallible> {
         Ok(self.with_scale_and_delta(scale, -D_TAI_TT))
     }
 }
@@ -104,7 +121,11 @@ const LG: f64 = 6.969290134e-10;
 const INV_LG: f64 = LG / (1.0 - LG);
 
 impl TryToScale<Tcg> for Time<Tt> {
-    fn try_to_scale(&self, scale: Tcg, _provider: &()) -> Result<Time<Tcg>, Infallible> {
+    fn try_to_scale(
+        &self,
+        scale: Tcg,
+        _provider: &NoOpOffsetProvider,
+    ) -> Result<Time<Tcg>, Infallible> {
         let time = self.to_delta().to_decimal_seconds();
         let raw_delta = INV_LG * (time - J77_TT);
         let delta = TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
@@ -120,7 +141,11 @@ impl TryToScale<Tcg> for Time<Tt> {
 impl ToTcg for Time<Tt> {}
 
 impl TryToScale<Tt> for Time<Tcg> {
-    fn try_to_scale(&self, scale: Tt, _provider: &()) -> Result<Time<Tt>, Infallible> {
+    fn try_to_scale(
+        &self,
+        scale: Tt,
+        _provider: &NoOpOffsetProvider,
+    ) -> Result<Time<Tt>, Infallible> {
         let time = self.to_delta().to_decimal_seconds();
         let raw_delta = -LG * (time - J77_TT);
         let delta = TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
@@ -152,7 +177,11 @@ const TDB_0: f64 = -6.55e-5;
 const TCB_77: f64 = TDB_0 + LB * TT_0;
 
 impl TryToScale<Tcb> for Time<Tdb> {
-    fn try_to_scale(&self, scale: Tcb, _provider: &()) -> Result<Time<Tcb>, Infallible> {
+    fn try_to_scale(
+        &self,
+        scale: Tcb,
+        _provider: &NoOpOffsetProvider,
+    ) -> Result<Time<Tcb>, Infallible> {
         let dt = self.to_delta().to_decimal_seconds();
         let raw_delta = -TCB_77 / (1.0 - LB) + INV_LB * dt;
         let delta = TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
@@ -168,7 +197,11 @@ impl TryToScale<Tcb> for Time<Tdb> {
 impl ToTcb for Time<Tdb> {}
 
 impl TryToScale<Tdb> for Time<Tcb> {
-    fn try_to_scale(&self, scale: Tdb, _provider: &()) -> Result<Time<Tdb>, Infallible> {
+    fn try_to_scale(
+        &self,
+        scale: Tdb,
+        _provider: &NoOpOffsetProvider,
+    ) -> Result<Time<Tdb>, Infallible> {
         let dt = self.to_delta().to_decimal_seconds();
         let raw_delta = TCB_77 - LB * dt;
         let delta = TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
@@ -191,7 +224,11 @@ const M_0: f64 = 6.239996;
 const M_1: f64 = 1.99096871e-7;
 
 impl TryToScale<Tdb> for Time<Tt> {
-    fn try_to_scale(&self, scale: Tdb, _provider: &()) -> Result<Time<Tdb>, Infallible> {
+    fn try_to_scale(
+        &self,
+        scale: Tdb,
+        _provider: &NoOpOffsetProvider,
+    ) -> Result<Time<Tdb>, Infallible> {
         let tt = self.to_delta().to_decimal_seconds();
         let g = M_0 + M_1 * tt;
         let raw_delta = K * (g + EB * g.sin()).sin();
@@ -208,7 +245,11 @@ impl TryToScale<Tdb> for Time<Tt> {
 impl ToTdb for Time<Tt> {}
 
 impl TryToScale<Tt> for Time<Tdb> {
-    fn try_to_scale(&self, scale: Tt, _provider: &()) -> Result<Time<Tt>, Infallible> {
+    fn try_to_scale(
+        &self,
+        scale: Tt,
+        _provider: &NoOpOffsetProvider,
+    ) -> Result<Time<Tt>, Infallible> {
         let tdb = self.to_delta().to_decimal_seconds();
         let mut tt = tdb;
         let mut raw_delta = 0.0;
@@ -252,7 +293,11 @@ impl<T: DeltaUt1TaiProvider> TryToScale<Tai, T, T::Error> for Time<Ut1> {
 
 // Concrete implementation to avoid conflicting implementation errors
 impl TryToScale<Tdb> for Time<Tai> {
-    fn try_to_scale(&self, _scale: Tdb, _provider: &()) -> Result<Time<Tdb>, Infallible> {
+    fn try_to_scale(
+        &self,
+        _scale: Tdb,
+        _provider: &NoOpOffsetProvider,
+    ) -> Result<Time<Tdb>, Infallible> {
         Ok(self.to_tt().to_tdb())
     }
 }
@@ -261,7 +306,11 @@ impl ToTdb for Time<Tai> {}
 
 // Concrete implementation to avoid conflicting implementation errors
 impl TryToScale<Tdb> for Time<Tcg> {
-    fn try_to_scale(&self, _scale: Tdb, _provider: &()) -> Result<Time<Tdb>, Infallible> {
+    fn try_to_scale(
+        &self,
+        _scale: Tdb,
+        _provider: &NoOpOffsetProvider,
+    ) -> Result<Time<Tdb>, Infallible> {
         Ok(self.to_tt().to_tdb())
     }
 }
@@ -269,7 +318,11 @@ impl TryToScale<Tdb> for Time<Tcg> {
 impl ToTdb for Time<Tcg> {}
 
 impl<U: ToTt> TryToScale<Tai> for U {
-    fn try_to_scale(&self, _scale: Tai, _provider: &()) -> Result<Time<Tai>, Infallible> {
+    fn try_to_scale(
+        &self,
+        _scale: Tai,
+        _provider: &NoOpOffsetProvider,
+    ) -> Result<Time<Tai>, Infallible> {
         Ok(self.to_tt().to_tai())
     }
 }
@@ -278,7 +331,11 @@ impl ToTai for Time<Tcg> {}
 impl ToTai for Time<Tdb> {}
 
 impl<U: ToTt> TryToScale<Tcg> for U {
-    fn try_to_scale(&self, _scale: Tcg, _provider: &()) -> Result<Time<Tcg>, Infallible> {
+    fn try_to_scale(
+        &self,
+        _scale: Tcg,
+        _provider: &NoOpOffsetProvider,
+    ) -> Result<Time<Tcg>, Infallible> {
         Ok(self.to_tt().to_tcg())
     }
 }
@@ -287,7 +344,11 @@ impl ToTcg for Time<Tdb> {}
 impl ToTcg for Time<Tai> {}
 
 impl<U: ToTdb> TryToScale<Tcb> for U {
-    fn try_to_scale(&self, _scale: Tcb, _provider: &()) -> Result<Time<Tcb>, Infallible> {
+    fn try_to_scale(
+        &self,
+        _scale: Tcb,
+        _provider: &NoOpOffsetProvider,
+    ) -> Result<Time<Tcb>, Infallible> {
         Ok(self.to_tdb().to_tcb())
     }
 }
@@ -298,7 +359,11 @@ impl ToTcb for Time<Tt> {}
 
 // Concrete implementation to avoid conflicting implementation errors
 impl TryToScale<Tt> for Time<Tcb> {
-    fn try_to_scale(&self, _scale: Tt, _provider: &()) -> Result<Time<Tt>, Infallible> {
+    fn try_to_scale(
+        &self,
+        _scale: Tt,
+        _provider: &NoOpOffsetProvider,
+    ) -> Result<Time<Tt>, Infallible> {
         Ok(self.to_tdb().to_tt())
     }
 }
@@ -348,7 +413,7 @@ impl<T: DeltaUt1TaiProvider> TryToScale<Tdb, T, T::Error> for Time<Ut1> {
     }
 }
 
-pub trait LeapSecondsProvider {
+pub trait LeapSecondsProvider: OffsetProvider {
     fn delta_tai_utc(&self, tai: Time<Tai>) -> Option<TimeDelta>;
 
     fn delta_utc_tai(&self, utc: Utc) -> Option<TimeDelta>;

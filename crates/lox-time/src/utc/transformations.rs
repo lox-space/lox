@@ -15,6 +15,7 @@ use crate::time_of_day::CivilTime;
 use crate::time_of_day::TimeOfDay;
 use crate::time_scales::Tai;
 use crate::transformations::LeapSecondsProvider;
+use crate::transformations::NoOpOffsetProvider;
 use crate::transformations::ToTai;
 use crate::transformations::TryToScale;
 use crate::{utc, Time};
@@ -90,7 +91,11 @@ impl<T: LeapSecondsProvider> TryToScale<Tai, T> for Utc {
 }
 
 impl TryToScale<Tai> for Utc {
-    fn try_to_scale(&self, scale: Tai, _provider: &()) -> Result<Time<Tai>, Infallible> {
+    fn try_to_scale(
+        &self,
+        scale: Tai,
+        _provider: &NoOpOffsetProvider,
+    ) -> Result<Time<Tai>, Infallible> {
         self.try_to_scale(scale, &BuiltinLeapSeconds)
     }
 }

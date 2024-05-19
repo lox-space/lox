@@ -8,7 +8,7 @@ use crate::deltas::{TimeDelta, ToDelta};
 use crate::julian_dates::{Epoch, Unit};
 use crate::time_of_day::{CivilTime, TimeOfDay};
 use crate::time_scales::TimeScale;
-use crate::transformations::{ToTai, ToTt, TryToScale};
+use crate::transformations::{NoOpOffsetProvider, ToTai, ToTt, TryToScale};
 use crate::ut1::{DeltaUt1Tai, ExtrapolatedDeltaUt1Tai};
 use crate::utc::Utc;
 use crate::{
@@ -104,7 +104,7 @@ impl PyTime {
                 if self.scale() == PyTimeScale::Ut1 {
                     return Err(PyValueError::new_err("missing UT1 provider"));
                 }
-                self.try_to_scale(Tai, &())
+                self.try_to_scale(Tai, &NoOpOffsetProvider)
                     .map_err(|_| PyValueError::new_err("unable to convert to TAI"))?
             }
         };
@@ -120,7 +120,7 @@ impl PyTime {
                 if self.scale() == PyTimeScale::Ut1 {
                     return Err(PyValueError::new_err("missing UT1 provider"));
                 }
-                self.try_to_scale(Tt, &())
+                self.try_to_scale(Tt, &NoOpOffsetProvider)
                     .map_err(|_| PyValueError::new_err("unable to convert to Tt"))?
             }
         };
@@ -152,7 +152,11 @@ impl TryToScale<Tai, DeltaUt1Tai, ExtrapolatedDeltaUt1Tai> for PyTime {
 }
 
 impl TryToScale<Tai> for PyTime {
-    fn try_to_scale(&self, _scale: Tai, _provider: &()) -> Result<Time<Tai>, Infallible> {
+    fn try_to_scale(
+        &self,
+        _scale: Tai,
+        _provider: &NoOpOffsetProvider,
+    ) -> Result<Time<Tai>, Infallible> {
         match self.scale() {
             PyTimeScale::Tai => Ok(self.0.with_scale(Tai)),
             PyTimeScale::Tcb => Ok(self.0.with_scale(Tcb).to_tai()),
@@ -182,7 +186,11 @@ impl TryToScale<Tt, DeltaUt1Tai, ExtrapolatedDeltaUt1Tai> for PyTime {
 }
 
 impl TryToScale<Tt> for PyTime {
-    fn try_to_scale(&self, _scale: Tt, _provider: &()) -> Result<Time<Tt>, Infallible> {
+    fn try_to_scale(
+        &self,
+        _scale: Tt,
+        _provider: &NoOpOffsetProvider,
+    ) -> Result<Time<Tt>, Infallible> {
         match self.scale() {
             PyTimeScale::Tai => Ok(self.0.with_scale(Tai).to_tt()),
             PyTimeScale::Tcb => Ok(self.0.with_scale(Tcb).to_tt()),
