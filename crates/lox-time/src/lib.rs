@@ -31,11 +31,10 @@ use lox_utils::types::units::Days;
 use time_of_day::{CivilTime, TimeOfDay, TimeOfDayError};
 
 use crate::calendar_dates::{CalendarDate, Date};
-use crate::deltas::TimeDelta;
+use crate::deltas::{TimeDelta, ToDelta};
 use crate::julian_dates::{Epoch, JulianDate, Unit};
 use crate::subsecond::Subsecond;
 use crate::time_scales::TimeScale;
-use crate::transformations::TransformTimeScale;
 
 pub mod calendar_dates;
 pub mod constants;
@@ -213,6 +212,11 @@ impl<T: TimeScale + Copy> Time<T> {
         Time::new(scale, self.seconds, self.subsecond)
     }
 
+    /// Returns a new [Time] with `scale` with its offset adjusted by `delta`.
+    pub fn with_scale_and_delta<S: TimeScale + Copy>(&self, scale: S, delta: TimeDelta) -> Time<S> {
+        Time::from_delta(scale, self.to_delta() + delta)
+    }
+
     /// Returns, as an epoch in the given timescale, midday on the first day of the proleptic Julian
     /// calendar.
     pub fn jd0(scale: T) -> Self {
@@ -243,22 +247,14 @@ impl<T: TimeScale + Copy> Time<T> {
     pub fn subsecond(&self) -> f64 {
         self.subsecond.into()
     }
+}
 
-    /// Given a `Time` in [TimeScale] `S`, and a transformer from `S` to `T`, returns a new Time in
-    /// [TimeScale] `T`.
-    pub fn from_scale<S: TimeScale + Copy>(
-        time: Time<S>,
-        transformer: impl TransformTimeScale<S, T>,
-    ) -> Self {
-        transformer.transform(time)
-    }
-
-    /// Given a transformer from `T` to `S`, returns a new `Time` in [TimeScale] `S`.
-    pub fn into_scale<S: TimeScale + Copy>(
-        self,
-        transformer: impl TransformTimeScale<T, S>,
-    ) -> Time<S> {
-        Time::from_scale(self, transformer)
+impl<T: TimeScale + Copy> ToDelta for Time<T> {
+    fn to_delta(&self) -> TimeDelta {
+        TimeDelta {
+            seconds: self.seconds,
+            subsecond: self.subsecond,
+        }
     }
 }
 
@@ -429,14 +425,12 @@ macro_rules! time {
 #[cfg(test)]
 mod tests {
     use float_eq::assert_float_eq;
-    use mockall::predicate;
     use rstest::rstest;
 
     use lox_utils::constants::f64::time::DAYS_PER_JULIAN_CENTURY;
 
     use crate::constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
     use crate::time_scales::{Tai, Tdb, Tt};
-    use crate::transformations::MockTransformTimeScale;
     use crate::Time;
 
     use super::*;
@@ -486,6 +480,15 @@ mod tests {
     fn test_time_from_julian_date_subsecond() {
         let time = Time::from_julian_date(Tai, 0.3 / time::SECONDS_PER_DAY, Epoch::J2000).unwrap();
         assert_float_eq!(time.subsecond(), 0.3, abs <= 1e-15);
+    }
+
+    #[test]
+    fn test_time_with_scale_and_delta() {
+        let tai: Time<Tai> = Time::default();
+        let delta = TimeDelta::from_seconds(20);
+        let tdb = tai.with_scale_and_delta(Tdb, delta);
+        assert_eq!(tdb.scale(), Tdb);
+        assert_eq!(tdb.seconds(), tai.seconds() + 20);
     }
 
     #[rstest]
@@ -545,36 +548,6 @@ mod tests {
             "expected Time to have {} seconds, but got {}",
             expected, actual
         );
-    }
-
-    #[test]
-    fn test_from_scale() {
-        let time = Time::j2000(Tai);
-        let mut transformer = MockTransformTimeScale::<Tai, Tt>::new();
-        let expected = Time::j2000(Tt);
-
-        transformer
-            .expect_transform()
-            .with(predicate::eq(time))
-            .return_const(expected);
-
-        let actual = Time::from_scale(time, transformer);
-        assert_eq!(expected, actual);
-    }
-
-    #[test]
-    fn test_into_scale() {
-        let time = Time::j2000(Tai);
-        let mut transformer = MockTransformTimeScale::<Tai, Tt>::new();
-        let expected = Time::j2000(Tt);
-
-        transformer
-            .expect_transform()
-            .with(predicate::eq(time))
-            .return_const(expected);
-
-        let actual = time.into_scale(transformer);
-        assert_eq!(expected, actual);
     }
 
     #[test]
@@ -942,6 +915,14 @@ mod tests {
         assert_eq!(actual, expected);
         let actual = JulianDateOutOfRange(-f64::NAN).cmp(&JulianDateOutOfRange(f64::NAN));
         let expected = Ordering::Less;
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_time_to_delta() {
+        let time = time!(Tai, 2000, 1, 1, 12, 0, 0.0).unwrap();
+        let actual = time.to_delta();
+        let expected = TimeDelta::from_seconds(0);
         assert_eq!(actual, expected);
     }
 }

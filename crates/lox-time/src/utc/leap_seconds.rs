@@ -8,7 +8,7 @@
 
 use crate::calendar_dates::{Date, DateError};
 use crate::constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
-use crate::deltas::TimeDelta;
+use crate::deltas::{TimeDelta, ToDelta};
 use crate::prelude::{CivilTime, Tai};
 use crate::Time;
 use lox_io::spice::{Kernel, KernelError};
@@ -41,6 +41,7 @@ const LEAP_SECONDS: [i64; 28] = [
     34, 35, 36, 37,
 ];
 
+#[derive(Debug)]
 pub struct BuiltinLeapSeconds;
 
 impl LeapSecondsProvider for BuiltinLeapSeconds {
@@ -50,6 +51,14 @@ impl LeapSecondsProvider for BuiltinLeapSeconds {
 
     fn delta_utc_tai(&self, utc: Utc) -> Option<TimeDelta> {
         find_leap_seconds_utc(&LEAP_SECOND_EPOCHS_UTC, &LEAP_SECONDS, utc)
+    }
+
+    fn is_leap_second_date(&self, date: Date) -> bool {
+        is_leap_second_date(&LEAP_SECOND_EPOCHS_UTC, date)
+    }
+
+    fn is_leap_second(&self, tai: Time<Tai>) -> bool {
+        is_leap_second(&LEAP_SECOND_EPOCHS_TAI, tai)
     }
 }
 
@@ -70,6 +79,7 @@ pub enum LeapSecondsKernelError {
     DateError(#[from] DateError),
 }
 
+#[derive(Debug)]
 pub struct LeapSecondsKernel {
     epochs_utc: Vec<i64>,
     epochs_tai: Vec<i64>,
@@ -120,6 +130,14 @@ impl LeapSecondsProvider for LeapSecondsKernel {
     fn delta_utc_tai(&self, utc: Utc) -> Option<TimeDelta> {
         find_leap_seconds_utc(&self.epochs_utc, &self.leap_seconds, utc)
     }
+
+    fn is_leap_second_date(&self, date: Date) -> bool {
+        is_leap_second_date(&self.epochs_tai, date)
+    }
+
+    fn is_leap_second(&self, tai: Time<Tai>) -> bool {
+        is_leap_second(&self.epochs_tai, tai)
+    }
 }
 
 fn find_leap_seconds(epochs: &[i64], leap_seconds: &[i64], seconds: i64) -> Option<TimeDelta> {
@@ -146,6 +164,19 @@ fn find_leap_seconds_utc(epochs: &[i64], leap_seconds: &[i64], utc: Utc) -> Opti
         }
         -ls
     })
+}
+
+fn is_leap_second_date(epochs: &[i64], date: Date) -> bool {
+    let epochs: Vec<i64> = epochs
+        .iter()
+        .map(|&epoch| epoch / SECONDS_PER_DAY)
+        .collect();
+    let day_number = date.j2000_day_number();
+    epochs.binary_search(&day_number).is_ok()
+}
+
+fn is_leap_second(epochs: &[i64], tai: Time<Tai>) -> bool {
+    epochs.binary_search(&tai.seconds).is_ok()
 }
 
 #[cfg(test)]
@@ -206,6 +237,34 @@ mod tests {
         let ls_utc = lsk.delta_utc_tai(utc);
         assert_eq!(ls_tai, expected);
         assert_eq!(ls_utc, expected.map(|ls| -ls));
+    }
+
+    #[rstest]
+    #[case(&BuiltinLeapSeconds, Date::new(2000, 12, 31).unwrap(), false)]
+    #[case(&BuiltinLeapSeconds, Date::new(2016, 12, 31).unwrap(), true)]
+    #[case(kernel(), Date::new(2000, 12, 31).unwrap(), false)]
+    #[case(kernel(), Date::new(2016, 12, 31).unwrap(), true)]
+    fn test_is_leap_second_date(
+        #[case] provider: &impl LeapSecondsProvider,
+        #[case] date: Date,
+        #[case] expected: bool,
+    ) {
+        let actual = provider.is_leap_second_date(date);
+        assert_eq!(actual, expected);
+    }
+
+    #[rstest]
+    #[case(&BuiltinLeapSeconds, time!(Tai, 2017, 1, 1, 0, 0, 35.0).unwrap(), false)]
+    #[case(&BuiltinLeapSeconds, time!(Tai, 2017, 1, 1, 0, 0, 36.0).unwrap(), true)]
+    #[case(kernel(), time!(Tai, 2017, 1, 1, 0, 0, 35.0).unwrap(), false)]
+    #[case(kernel(), time!(Tai, 2017, 1, 1, 0, 0, 36.0).unwrap(), true)]
+    fn test_is_leap_second(
+        #[case] provider: &impl LeapSecondsProvider,
+        #[case] tai: Time<Tai>,
+        #[case] expected: bool,
+    ) {
+        let actual = provider.is_leap_second(tai);
+        assert_eq!(actual, expected);
     }
 
     #[test]

@@ -25,6 +25,11 @@ use crate::{
     subsecond::Subsecond,
 };
 
+pub trait ToDelta {
+    /// Transforms the value into a [TimeDelta].
+    fn to_delta(&self) -> TimeDelta;
+}
+
 #[derive(Clone, Debug, Default, Error)]
 #[error("`{raw}` cannot be represented as a `TimeDelta`: {detail}")]
 pub struct TimeDeltaError {
@@ -291,7 +296,7 @@ impl Sub for TimeDelta {
 
         let mut diff_seconds = self.seconds - rhs.seconds;
         let mut diff_subsecond = self.subsecond.0 - rhs.subsecond.0;
-        if diff_subsecond < 0.0 {
+        if diff_subsecond.abs() > f64::EPSILON && diff_subsecond < 0.0 {
             diff_subsecond += 1.0;
             diff_seconds -= 1;
         }
@@ -529,5 +534,13 @@ mod tests {
             2.411211498973306
         );
         assert_eq!(delta.centuries_since_julian_epoch(), 68.11964407939767);
+    }
+
+    #[test]
+    fn test_delta_sub_epsilon() {
+        let delta0 = TimeDelta::default();
+        let delta1 = TimeDelta::new(0, Subsecond(1e-17));
+        let delta = delta0 - delta1;
+        assert_ne!(delta.subsecond.0, 1.0)
     }
 }

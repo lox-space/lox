@@ -11,7 +11,6 @@ lox-io.workspace = true
 lox-utils.workspace = true
 
 float_eq.workspace = true
-mockall.workspace = true
 num.workspace = true
 pyo3 = { workspace = true, optional = true }
 regex.workspace = true

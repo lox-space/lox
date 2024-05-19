@@ -9,63 +9,76 @@
 use std::sync::OnceLock;
 
 use crate::deltas::TimeDelta;
+use crate::deltas::ToDelta;
 use crate::time_of_day::CivilTime;
 use crate::time_of_day::TimeOfDay;
 use crate::time_scales::Tai;
+use crate::transformations::LeapSecondsProvider;
+use crate::transformations::ToScale;
+use crate::transformations::ToTai;
 use crate::{utc, Time};
 
+use super::leap_seconds::BuiltinLeapSeconds;
 use super::{Utc, UtcError};
 
 mod before1972;
-mod from1972;
 
-impl From<Utc> for Time<Tai> {
-    /// Converts a `Utc` to `TAI`, accounting for leap seconds. Infallible for all valid
-    /// values of UTC.
-    fn from(utc: Utc) -> Self {
-        let delta = if utc < *utc_1972_01_01() {
-            before1972::delta_utc_tai(utc)
-        } else {
-            from1972::delta_utc_tai(utc)
-        }
-        .unwrap_or_else(|| {
-            // Utc objects are always in range.
-            unreachable!("failed to calculate UTC-TAI delta for Utc `{:?}`", utc);
-        });
+pub trait ToUtc {
+    fn to_utc_with_provider(&self, provider: &impl LeapSecondsProvider) -> Result<Utc, UtcError>;
 
-        let base = utc.to_delta();
-        Time::from_delta(Tai, base - delta)
+    fn to_utc(&self) -> Result<Utc, UtcError> {
+        self.to_utc_with_provider(&BuiltinLeapSeconds)
     }
 }
 
-impl TryFrom<Time<Tai>> for Utc {
-    type Error = UtcError;
-
-    /// Attempts to convert a `Time<TAI>` to a `Utc`, accounting for leap seconds. Returns
-    /// [UtcUndefinedError] if the input `Time<TAI>` is before 1960-01-01 UTC, when UTC begins.
-    fn try_from(tai: Time<Tai>) -> Result<Self, Self::Error> {
-        let delta = delta_tai_utc(tai)?;
-
-        let base_time = tai.to_delta() - delta;
-        let mut utc = Utc::from_delta(base_time);
-        if tai.is_leap_second() {
+impl ToUtc for Time<Tai> {
+    fn to_utc_with_provider(&self, provider: &impl LeapSecondsProvider) -> Result<Utc, UtcError> {
+        let delta = if self < tai_at_utc_1972_01_01() {
+            before1972::delta_tai_utc(self)
+        } else {
+            provider.delta_tai_utc(*self)
+        }
+        .ok_or(UtcError::UtcUndefined)?;
+        let mut utc = Utc::from_delta(self.to_delta() - delta);
+        if provider.is_leap_second(*self) {
             utc.time = TimeOfDay::new(utc.hour(), utc.minute(), 60)
                 .unwrap()
                 .with_subsecond(utc.time.subsecond());
         }
-
         Ok(utc)
     }
 }
 
-fn delta_tai_utc(tai: Time<Tai>) -> Result<TimeDelta, UtcError> {
-    if tai < *tai_at_utc_1972_01_01() {
-        before1972::delta_tai_utc(tai)
-    } else {
-        from1972::delta_tai_utc(tai)
+impl<T: ToTai> ToUtc for T {
+    fn to_utc_with_provider(&self, provider: &impl LeapSecondsProvider) -> Result<Utc, UtcError> {
+        self.to_tai().to_utc_with_provider(provider)
     }
-    .ok_or(UtcError::UtcUndefined)
 }
+
+impl Utc {
+    pub fn to_tai_with_provider(&self, provider: &impl LeapSecondsProvider) -> Time<Tai> {
+        let delta = if self < utc_1972_01_01() {
+            before1972::delta_utc_tai(self)
+        } else {
+            provider.delta_utc_tai(*self)
+        }
+        .unwrap_or_else(|| {
+            // Utc objects are always in range.
+            unreachable!("failed to calculate UTC-TAI delta for Utc `{:?}`", self);
+        });
+
+        let base = self.to_delta();
+        Time::from_delta(Tai, base - delta)
+    }
+}
+
+impl ToScale<Tai> for Utc {
+    fn to_scale(&self, _scale: Tai) -> Time<Tai> {
+        self.to_tai_with_provider(&BuiltinLeapSeconds)
+    }
+}
+
+impl ToTai for Utc {}
 
 fn utc_1972_01_01() -> &'static Utc {
     static UTC_1972: OnceLock<Utc> = OnceLock::new();
@@ -85,9 +98,10 @@ fn tai_at_utc_1972_01_01() -> &'static Time<Tai> {
 
 #[cfg(test)]
 pub mod test {
+    use crate::time;
+    use crate::transformations::{ToTcb, ToTcg, ToTdb, ToTt};
     use rstest::rstest;
 
-    use crate::calendar_dates::Date;
     use crate::subsecond::Subsecond;
 
     use super::*;
@@ -99,8 +113,8 @@ pub mod test {
     #[case::after_leap_second(utc_1s_after_2016_leap_second(), tai_1s_after_2016_leap_second())]
     #[should_panic]
     #[case::illegal_utc_datetime(unconstructable_utc_datetime(), &Time::new(Tai, 0, Subsecond::default()))]
-    fn test_tai_from_utc(#[case] utc: &Utc, #[case] expected: &Time<Tai>) {
-        let actual = (*utc).into();
+    fn test_utc_to_tai(#[case] utc: &Utc, #[case] expected: &Time<Tai>) {
+        let actual = utc.to_tai();
         assert_eq!(*expected, actual);
     }
 
@@ -111,17 +125,27 @@ pub mod test {
     #[case::during_leap_second(tai_during_2016_leap_second(), Ok(*utc_during_2016_leap_second()))]
     #[case::after_leap_second(tai_1s_after_2016_leap_second(), Ok(*utc_1s_after_2016_leap_second()))]
     #[case::utc_undefined(tai_before_utc_defined(), Err(UtcError::UtcUndefined))]
-    fn test_utc_try_from_tai(#[case] tai: &Time<Tai>, #[case] expected: Result<Utc, UtcError>) {
-        let actual = Utc::try_from(*tai);
+    fn test_tai_to_utc(#[case] tai: &Time<Tai>, #[case] expected: Result<Utc, UtcError>) {
+        let actual = tai.to_utc();
         assert_eq!(expected, actual);
     }
 
     #[test]
-    fn test_date_leap_second_date() {
-        let date = Date::new(2000, 12, 31).unwrap();
-        assert!(!date.is_leap_second_date());
-        let date = Date::new(2016, 12, 31).unwrap();
-        assert!(date.is_leap_second_date());
+    fn test_all_scales_to_utc() {
+        let tai = time!(Tai, 2024, 5, 17, 12, 13, 14.0).unwrap();
+        let exp = tai.to_utc().unwrap();
+        let tt = tai.to_tt();
+        let act = tt.to_utc().unwrap();
+        assert_eq!(act, exp);
+        let tcg = tai.to_tcg();
+        let act = tcg.to_utc().unwrap();
+        assert_eq!(act, exp);
+        let tcb = tai.to_tcb();
+        let act = tcb.to_utc().unwrap();
+        assert_eq!(act, exp);
+        let tdb = tai.to_tdb();
+        let act = tdb.to_utc().unwrap();
+        assert_eq!(act, exp);
     }
 
     /*

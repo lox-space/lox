@@ -2,3 +2,4 @@
 /tools/*/target/
 .venv/
 .DS_Store
+flamegraph.svg
