@@ -273,13 +273,13 @@ impl ToTt for Time<Tcb> {}
 impl ToTcg for Time<Tcb> {}
 
 pub trait LeapSecondsProvider {
-    fn delta_tai_utc(&self, tai: &Time<Tai>) -> Option<TimeDelta>;
+    fn delta_tai_utc(&self, tai: Time<Tai>) -> Option<TimeDelta>;
 
-    fn delta_utc_tai(&self, utc: &Utc) -> Option<TimeDelta>;
+    fn delta_utc_tai(&self, utc: Utc) -> Option<TimeDelta>;
 
-    fn is_leap_second_date(&self, date: &Date) -> bool;
+    fn is_leap_second_date(&self, date: Date) -> bool;
 
-    fn is_leap_second(&self, tai: &Time<Tai>) -> bool;
+    fn is_leap_second(&self, tai: Time<Tai>) -> bool;
 }
 
 #[cfg(test)]

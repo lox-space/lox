@@ -36,11 +36,11 @@ impl ToUtc for Time<Tai> {
         let delta = if self < tai_at_utc_1972_01_01() {
             before1972::delta_tai_utc(self)
         } else {
-            provider.delta_tai_utc(self)
+            provider.delta_tai_utc(*self)
         }
         .ok_or(UtcError::UtcUndefined)?;
         let mut utc = Utc::from_delta(self.to_delta() - delta);
-        if provider.is_leap_second(self) {
+        if provider.is_leap_second(*self) {
             utc.time = TimeOfDay::new(utc.hour(), utc.minute(), 60)
                 .unwrap()
                 .with_subsecond(utc.time.subsecond());
@@ -60,7 +60,7 @@ impl Utc {
         let delta = if self < utc_1972_01_01() {
             before1972::delta_utc_tai(self)
         } else {
-            provider.delta_utc_tai(self)
+            provider.delta_utc_tai(*self)
         }
         .unwrap_or_else(|| {
             // Utc objects are always in range.

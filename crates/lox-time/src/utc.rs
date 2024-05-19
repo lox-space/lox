@@ -41,7 +41,7 @@ impl Utc {
         if date.year() < 1960 {
             return Err(UtcError::UtcUndefined);
         }
-        if time.second() == 60 && !provider.is_leap_second_date(&date) {
+        if time.second() == 60 && !provider.is_leap_second_date(date) {
             return Err(UtcError::NonLeapSecondDate(date));
         }
         Ok(Self { date, time })
