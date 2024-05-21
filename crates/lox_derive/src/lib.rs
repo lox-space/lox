@@ -8,7 +8,7 @@
 
 use proc_macro2::Span;
 use quote::quote;
-use syn::{spanned::Spanned, Field};
+use syn::{spanned::Spanned, DeriveInput, Field};
 
 fn generate_call_to_deserializer_for_kvn_type(
     type_name: &str,
@@ -92,6 +92,67 @@ fn generate_call_to_deserializer_for_kvn_type(
                     } else {
                         Err(crate::ndm::kvn::parser::KvnDeserializerErr::UnexpectedEndOfInput {
                             keyword: #expected_kvn_name
+                        })
+                    };
+
+                    result
+                }
+            })
+        }
+    }
+}
+
+fn generate_call_to_deserializer_for_kvn_type_new(
+    type_name: &str,
+) -> Result<proc_macro2::TokenStream, proc_macro::TokenStream> {
+    match type_name {
+        "KvnDateTimeValue" | "f64" | "String" | "i32" => {
+            let parser = match type_name {
+                "KvnDateTimeValue" => quote! { //@TODO
+                    crate::ndm::kvn::parser::parse_kvn_datetime_line_new(
+                        lines.next().unwrap(),
+                    ).map_err(|x| crate::ndm::kvn::parser::KvnDeserializerErr::from(x))
+                    .map(|x| x.1)?
+                },
+                "String" => quote! {
+                    crate::ndm::kvn::parser::parse_kvn_string_line_new(
+                        lines.next().unwrap(),
+                        true
+                    ).map_err(|x| crate::ndm::kvn::parser::KvnDeserializerErr::from(x))
+                    .map(|x| x.1)?
+                },
+                "f64" => quote! {
+                    crate::ndm::kvn::parser::parse_kvn_numeric_line_new(
+                        lines.next().unwrap(),
+                        true
+                    ).map_err(|x| crate::ndm::kvn::parser::KvnDeserializerErr::from(x))
+                    .map(|x| x.1)?
+                },
+                "i32" => quote! {
+                    crate::ndm::kvn::parser::parse_kvn_integer_line_new(
+                        lines.next().unwrap(),
+                        true
+                    ).map_err(|x| crate::ndm::kvn::parser::KvnDeserializerErr::from(x))
+                    .map(|x| x.1)?
+                },
+                // Assumes the match list here exhaustively matches the one from above
+                _ => unreachable!(),
+            };
+
+            Ok(parser)
+        },
+        type_value => {
+            let type_ident = syn::Ident::new(&type_value, Span::call_site());
+
+            Ok(quote! {
+                {
+                    let has_next_line = lines.peek().is_some();
+
+                    let result = if has_next_line {
+                        #type_ident::deserialize(lines)
+                    } else {
+                        Err(crate::ndm::kvn::parser::KvnDeserializerErr::UnexpectedEndOfInput {
+                            keyword: "Blala" //@TODO
                         })
                     };
 
@@ -200,10 +261,33 @@ fn generate_call_to_deserializer_for_vec_type(
     );
 }
 
-#[proc_macro_derive(KvnDeserialize)]
+fn is_value_unit_struct(item: &DeriveInput) -> bool {
+    for attr in item.attrs.iter() {
+        if attr.path().is_ident("kvn") {
+            if attr
+                .parse_nested_meta(|meta| {
+                    if meta.path.is_ident("value_unit_struct") {
+                        Ok(())
+                    } else {
+                        Err(meta.error("unsupported attribute"))
+                    }
+                })
+                .is_ok()
+            {
+                return true;
+            }
+        }
+    }
+
+
+    false
+}
+
+#[proc_macro_derive(KvnDeserialize, attributes(kvn))]
 pub fn derive_kvn_deserialize(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let item = syn::parse_macro_input!(item as syn::DeriveInput);
     let name = &item.ident;
+    let is_value_unit_struct = is_value_unit_struct(&item);
 
     let syn::Data::Struct(strukt) = item.data else {
         return syn::Error::new_spanned(
@@ -226,53 +310,166 @@ pub fn derive_kvn_deserialize(item: proc_macro::TokenStream) -> proc_macro::Toke
         }
     };
 
-    let field_initializers: Result<Vec<_>, _> = fields
-        .iter()
-        .enumerate()
-        .map(|(_, field)| {
-            let field_name = field.ident.as_ref().unwrap();
+    let deserializer = if is_value_unit_struct {
+        let mut deserializer = None;
+
+        for (index, field) in fields.iter().enumerate() {
+            let field_name_ident = field.ident.as_ref().unwrap();
 
             // Unwrap is okay because we only support named structs
-            let expected_kvn_name = field_name.span().source_text().unwrap().to_uppercase();
+            let field_name = field_name_ident.span().source_text().unwrap();
 
-            // Unwrap is okay because we expect this span to come from the source code
-            let field_type = field.ty.span().source_text().unwrap();
-
-            let type_ident = syn::Ident::new(&field_type, Span::call_site());
-
-            let parser = match field_type.as_str() {
-                "KvnDateTimeValue" | "KvnStringValue" | "KvnNumericValue" | "KvnIntegerValue" => {
-                    let deserializer_for_kvn_type = generate_call_to_deserializer_for_kvn_type(
-                        &field_type,
-                        &expected_kvn_name,
-                    )?;
-
-                    quote! {
-                        #deserializer_for_kvn_type?
+            match index {
+                0 => {
+                    if field_name.as_str() != "base" {
+                        return syn::Error::new_spanned(
+                            &field,
+                    "The first field in a value unit struct should be called \"base\"",
+                        )
+                        .into_compile_error()
+                        .into()
                     }
-                }
-                "Option" => {
-                    generate_call_to_deserializer_for_option_type(&expected_kvn_name, &field)?
-                }
-                "Vec" => generate_call_to_deserializer_for_vec_type(&expected_kvn_name, &field)?,
-                _ => {
-                    quote! {
-                        #type_ident::deserialize(lines)?
-                    }
-                }
-            };
 
-            Ok(quote! {
-                #field_name: #parser,
+                    // Unwrap is okay because we expect this span to come from the source code
+                    let field_type = field.ty.span().source_text().unwrap();
+
+                    
+                    match field_type.as_str() {
+                        "KvnDateTimeValue" | "String" | "f64" | "i32" => {
+                            match generate_call_to_deserializer_for_kvn_type_new(&field_type) {
+                                Ok(deserializer_for_kvn_type) => deserializer = Some(deserializer_for_kvn_type),
+                                Err(e) => return e,
+                            }
+                        },
+                        
+                        _ => return syn::Error::new_spanned(
+                            &field,
+                    "Unsupported field type for deserializer",
+                        )
+                        .into_compile_error()
+                        .into()
+                    }
+                },
+                1 => if field_name.as_str() != "units" {
+                    return syn::Error::new_spanned(
+                        &field,
+                "The second field in a value unit struct should be called \"units\"",
+                    )
+                    .into_compile_error()
+                    .into()
+                },
+                _ => return syn::Error::new_spanned(
+                        &field,
+                "Only two fields \"base\" and \"units\" are called",
+                    )
+                    .into_compile_error()
+                    .into()
+            }
+
+            
+        }
+        
+        match deserializer { 
+            None => return syn::Error::new_spanned(
+                    &fields,
+            "Unable to create deserializer for struct",
+                )
+                .into_compile_error()
+                .into(),
+            Some(deserializer) => quote! {
+                let kvn_value = #deserializer;
+                Ok(#name {
+                    base: kvn_value.value,
+                    units: kvn_value.unit,
+                })
+            }
+        }
+    } else {
+        let field_initializers: Result<Vec<_>, _> = fields
+            .iter()
+            .enumerate()
+            .map(|(_, field)| {
+                let field_name = field.ident.as_ref().unwrap();
+
+                // Unwrap is okay because we only support named structs
+                let expected_kvn_name = field_name.span().source_text().unwrap().to_uppercase();
+
+                // Unwrap is okay because we expect this span to come from the source code
+                let field_type = field.ty.span().source_text().unwrap();
+
+                let type_ident = syn::Ident::new(&field_type, Span::call_site());
+
+                let parser = match field_type.as_str() {
+                    "KvnDateTimeValue" | "KvnStringValue" | "KvnNumericValue" | "KvnIntegerValue" => {
+                        let deserializer_for_kvn_type = generate_call_to_deserializer_for_kvn_type(
+                            &field_type,
+                            &expected_kvn_name,
+                        )?;
+
+                        quote! {
+                            #deserializer_for_kvn_type?
+                        }
+                    }
+                    "Option" => {
+                        generate_call_to_deserializer_for_option_type(&expected_kvn_name, &field)?
+                    }
+                    "Vec" => generate_call_to_deserializer_for_vec_type(&expected_kvn_name, &field)?,
+                    _ => {
+                        quote! {
+                            {
+                                match lines.peek() {
+                                    None => Err(
+                                        crate::ndm::kvn::parser::KvnDeserializerErr::<&str>::UnexpectedEndOfInput {
+                                            keyword: #expected_kvn_name,
+                                        },
+                                    )?,
+                                    Some(next_line) => {
+                                        let line_matches = crate::ndm::kvn::parser::kvn_line_matches_key_new(
+                                            #expected_kvn_name,
+                                            next_line,
+                                        );
+                
+                                        match line_matches {
+                                            Ok(true) => #type_ident::deserialize(lines),
+                                            Ok(false) => Err(
+                                                crate::ndm::kvn::parser::KvnDeserializerErr::<&str>::UnexpectedKeyword {
+                                                    found: next_line,
+                                                    expected: #expected_kvn_name,
+                                                },
+                                            ),
+                                            Err(crate::ndm::kvn::parser::KvnKeyMatchErr::KeywordNotFound { expected }) => Err(
+                                                crate::ndm::kvn::parser::KvnDeserializerErr::<&str>::KeywordNotFound {
+                                                    expected,
+                                                },
+                                            ),
+                                        }?
+                                    }
+                                }
+                            }
+                        }
+                    }
+                };
+
+                Ok(quote! {
+                    #field_name: #parser,
+                })
             })
-        })
-        .collect();
+            .collect();
 
-    if let Err(e) = field_initializers {
-        return e;
-    }
+        if let Err(e) = field_initializers {
+            return e;
+        } 
+        
+        let field_initializers = field_initializers.unwrap();
+            
+        quote! {
+            Ok(#name {
+                #(#field_initializers)*
+            })
+        }
+    };
 
-    let field_initializers = field_initializers.unwrap();
+
 
     let (impl_generics, type_generics, where_clause) = item.generics.split_for_impl();
 
@@ -283,9 +480,7 @@ pub fn derive_kvn_deserialize(item: proc_macro::TokenStream) -> proc_macro::Toke
             fn deserialize<'a>(lines: &mut ::std::iter::Peekable<impl Iterator<Item = &'a str>>)
             -> Result<#name, crate::ndm::kvn::parser::KvnDeserializerErr<&'a str>> {
 
-                Ok(#name {
-                    #(#field_initializers)*
-                })
+                #deserializer
             }
         }
     };
