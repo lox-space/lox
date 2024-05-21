@@ -163,48 +163,58 @@ fn generate_call_to_deserializer_for_kvn_type_new(
     }
 }
 
-fn generate_call_to_deserializer_for_option_type(
-    expected_kvn_name: &str,
-    field: &Field,
-) -> Result<proc_macro2::TokenStream, proc_macro::TokenStream> {
+fn get_generic_type_argument(field: &Field) -> Option<String> {
     if let syn::Type::Path(type_path) = &field.ty {
         let path_part = type_path.path.segments.first();
         if let Some(path_part) = path_part {
             if let syn::PathArguments::AngleBracketed(type_argument) = &path_part.arguments {
-                let type_name = type_argument
+                return Some(type_argument
                     .args
                     .first()
                     .unwrap()
                     .span()
                     .source_text()
-                    .unwrap();
-
-                let deserializer_for_kvn_type = generate_call_to_deserializer_for_kvn_type(
-                    &type_name.as_ref(),
-                    &expected_kvn_name,
-                )?;
-
-                return Ok(quote! {
-                    {
-                        let result = #deserializer_for_kvn_type;
-
-                        match result {
-                            Ok(item) => Some(item),
-                            Err(crate::ndm::kvn::parser::KvnDeserializerErr::UnexpectedKeyword { .. }) |
-                            Err(crate::ndm::kvn::parser::KvnDeserializerErr::UnexpectedEndOfInput { .. }) => None,
-                            Err(e) => Err(e)?,
-                        }
-                    }
-                });
+                    .unwrap());
             }
         }
     }
 
-    return Err(
-        syn::Error::new_spanned(&field, "Malformed type for `#[derive(KvnDeserialize)]`")
-            .into_compile_error()
-            .into(),
-    );
+    None
+}
+
+fn generate_call_to_deserializer_for_option_type(
+    expected_kvn_name: &str,
+    field: &Field,
+) -> Result<proc_macro2::TokenStream, proc_macro::TokenStream> {
+    let type_name = get_generic_type_argument(field);
+
+    match type_name {
+        None =>     return Err(
+            syn::Error::new_spanned(&field, "Malformed type for `#[derive(KvnDeserialize)]`")
+                .into_compile_error()
+                .into(),
+        ),
+
+        Some(type_name) => {
+            let deserializer_for_kvn_type = generate_call_to_deserializer_for_kvn_type(
+                &type_name.as_ref(),
+                &expected_kvn_name,
+            )?;
+        
+            return Ok(quote! {
+                {
+                    let result = #deserializer_for_kvn_type;
+        
+                    match result {
+                        Ok(item) => Some(item),
+                        Err(crate::ndm::kvn::parser::KvnDeserializerErr::UnexpectedKeyword { .. }) |
+                        Err(crate::ndm::kvn::parser::KvnDeserializerErr::UnexpectedEndOfInput { .. }) => None,
+                        Err(e) => Err(e)?,
+                    }
+                }
+            });
+        }
+    }
 }
 
 fn generate_call_to_deserializer_for_vec_type(
@@ -312,6 +322,7 @@ pub fn derive_kvn_deserialize(item: proc_macro::TokenStream) -> proc_macro::Toke
 
     let deserializer = if is_value_unit_struct {
         let mut deserializer = None;
+        let mut unit_type: Option<String> = None;
 
         for (index, field) in fields.iter().enumerate() {
             let field_name_ident = field.ident.as_ref().unwrap();
@@ -350,13 +361,17 @@ pub fn derive_kvn_deserialize(item: proc_macro::TokenStream) -> proc_macro::Toke
                         .into()
                     }
                 },
-                1 => if field_name.as_str() != "units" {
-                    return syn::Error::new_spanned(
-                        &field,
-                "The second field in a value unit struct should be called \"units\"",
-                    )
-                    .into_compile_error()
-                    .into()
+                1 => {
+                    if field_name.as_str() != "units" {
+                        return syn::Error::new_spanned(
+                            &field,
+                    "The second field in a value unit struct should be called \"units\"",
+                        )
+                        .into_compile_error()
+                        .into()
+                    }
+
+                    unit_type = get_generic_type_argument(field);
                 },
                 _ => return syn::Error::new_spanned(
                         &field,
@@ -364,10 +379,13 @@ pub fn derive_kvn_deserialize(item: proc_macro::TokenStream) -> proc_macro::Toke
                     )
                     .into_compile_error()
                     .into()
-            }
-
-            
+            }   
         }
+
+        // This unwrap is okay because we know the field exists. If it didn't exist we would've thrown an error.
+        let unit_type = unit_type.unwrap();
+
+        let unit_type_ident = syn::Ident::new(&unit_type, Span::call_site());
         
         match deserializer { 
             None => return syn::Error::new_spanned(
@@ -380,7 +398,7 @@ pub fn derive_kvn_deserialize(item: proc_macro::TokenStream) -> proc_macro::Toke
                 let kvn_value = #deserializer;
                 Ok(#name {
                     base: kvn_value.value,
-                    units: kvn_value.unit,
+                    units: kvn_value.unit.map(|unit| #unit_type_ident (unit)),
                 })
             }
         }

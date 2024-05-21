@@ -1540,16 +1540,14 @@ OPTION_DATE_VALUE = 2021-06-03T05:33:00.123"#;
         );
     }
 
-    //@TODO
-    // #[derive(KvnDeserialize, Default, Debug, PartialEq)]
-    // pub struct PositionUnits(pub std::string::String);
+    #[derive(Default, Debug, PartialEq)]
+    pub struct PositionUnits(pub std::string::String);
 
     #[derive(KvnDeserialize, Default, Debug, PartialEq)]
     #[kvn(value_unit_struct)]
     pub struct DistanceType {
         pub base: f64,
-        // @TODO pub units: Option<PositionUnits>,
-        pub units: Option<String>,
+        pub units: Option<PositionUnits>,
     }
 
     #[derive(KvnDeserialize, Default, Debug, PartialEq)]
@@ -1566,7 +1564,7 @@ OPTION_DATE_VALUE = 2021-06-03T05:33:00.123"#;
             Ok(KvnWithUnitStruct {
                 semi_major_axis: DistanceType {
                     base: 41399.5123,
-                    units: Some("km".to_string(),),
+                    units: Some(PositionUnits("km".to_string(),)),
                 },
             },)
         )
