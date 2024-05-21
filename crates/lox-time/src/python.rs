@@ -133,7 +133,7 @@ impl PyTime {
             self.0.day(),
             self.0.hour(),
             self.0.minute(),
-            CivilTime::seconds(&self.0),
+            self.0.decimal_seconds(),
         )
     }
 
@@ -458,7 +458,7 @@ impl PyUtc {
             self.0.day(),
             self.0.hour(),
             self.0.minute(),
-            self.0.seconds()
+            self.0.decimal_seconds()
         )
     }
 }
