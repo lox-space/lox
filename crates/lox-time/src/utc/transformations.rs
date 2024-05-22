@@ -23,7 +23,9 @@ use crate::transformations::ToTcb;
 use crate::transformations::ToTcg;
 use crate::transformations::ToTdb;
 use crate::transformations::ToTt;
+use crate::transformations::ToUt1;
 use crate::transformations::TryToScale;
+use crate::ut1::DeltaUt1TaiProvider;
 use crate::{utc, Time};
 
 use super::leap_seconds::BuiltinLeapSeconds;
@@ -134,6 +136,8 @@ impl ToTdb for Utc {}
 
 impl ToTcb for Utc {}
 impl ToTcg for Utc {}
+
+impl<T: DeltaUt1TaiProvider> ToUt1<T> for Utc {}
 
 fn utc_1972_01_01() -> &'static Utc {
     static UTC_1972: OnceLock<Utc> = OnceLock::new();

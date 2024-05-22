@@ -1,6 +1,7 @@
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
+use pyo3::PyResult;
 use pyo3::{exceptions::PyValueError, pyclass, pymethods, PyErr};
 
 use crate::calendar_dates::{CalendarDate, Date};
@@ -8,8 +9,11 @@ use crate::deltas::{TimeDelta, ToDelta};
 use crate::julian_dates::{Epoch, Unit};
 use crate::time_of_day::{CivilTime, TimeOfDay};
 use crate::time_scales::TimeScale;
-use crate::transformations::{NoOpOffsetProvider, ToTai, ToTcb, ToTcg, ToTdb, ToTt, TryToScale};
+use crate::transformations::{
+    NoOpOffsetProvider, ToTai, ToTcb, ToTcg, ToTdb, ToTt, ToUt1, TryToScale,
+};
 use crate::ut1::{DeltaUt1Tai, ExtrapolatedDeltaUt1Tai};
+use crate::utc::transformations::ToUtc;
 use crate::utc::{Utc, UtcError};
 use crate::TimeError;
 use crate::{
@@ -111,7 +115,7 @@ impl PyTime {
         hour: u8,
         minute: u8,
         seconds: f64,
-    ) -> Result<PyTime, PyErr> {
+    ) -> PyResult<PyTime> {
         let scale = PyTimeScale::from_str(scale)?;
         let time = Time::builder_with_scale(scale)
             .with_ymd(year, month, day)
@@ -141,7 +145,7 @@ impl PyTime {
         self.0.scale().abbreviation()
     }
 
-    fn to_tai(&self, provider: Option<PyDeltaUt1Tai>) -> Result<PyTime, PyErr> {
+    fn to_tai(&self, provider: Option<PyDeltaUt1Tai>) -> PyResult<PyTime> {
         let time = match provider {
             Some(provider) => self.try_to_scale(Tai, &provider.0)?,
             None => self.try_to_scale(Tai, &NoOpOffsetProvider)?,
@@ -149,7 +153,7 @@ impl PyTime {
         Ok(PyTime(time.with_scale(PyTimeScale::Tai)))
     }
 
-    fn to_tcb(&self, provider: Option<PyDeltaUt1Tai>) -> Result<PyTime, PyErr> {
+    fn to_tcb(&self, provider: Option<PyDeltaUt1Tai>) -> PyResult<PyTime> {
         let time = match provider {
             Some(provider) => self.try_to_scale(Tcb, &provider.0)?,
             None => self.try_to_scale(Tcb, &NoOpOffsetProvider)?,
@@ -157,7 +161,7 @@ impl PyTime {
         Ok(PyTime(time.with_scale(PyTimeScale::Tcb)))
     }
 
-    fn to_tcg(&self, provider: Option<PyDeltaUt1Tai>) -> Result<PyTime, PyErr> {
+    fn to_tcg(&self, provider: Option<PyDeltaUt1Tai>) -> PyResult<PyTime> {
         let time = match provider {
             Some(provider) => self.try_to_scale(Tcg, &provider.0)?,
             None => self.try_to_scale(Tcg, &NoOpOffsetProvider)?,
@@ -165,7 +169,7 @@ impl PyTime {
         Ok(PyTime(time.with_scale(PyTimeScale::Tcg)))
     }
 
-    fn to_tdb(&self, provider: Option<PyDeltaUt1Tai>) -> Result<PyTime, PyErr> {
+    fn to_tdb(&self, provider: Option<PyDeltaUt1Tai>) -> PyResult<PyTime> {
         let time = match provider {
             Some(provider) => self.try_to_scale(Tdb, &provider.0)?,
             None => self.try_to_scale(Tdb, &NoOpOffsetProvider)?,
@@ -173,7 +177,7 @@ impl PyTime {
         Ok(PyTime(time.with_scale(PyTimeScale::Tdb)))
     }
 
-    fn to_tt(&self, provider: Option<PyDeltaUt1Tai>) -> Result<PyTime, PyErr> {
+    fn to_tt(&self, provider: Option<PyDeltaUt1Tai>) -> PyResult<PyTime> {
         let time = match provider {
             Some(provider) => self.try_to_scale(Tt, &provider.0)?,
             None => self.try_to_scale(Tt, &NoOpOffsetProvider)?,
@@ -181,12 +185,20 @@ impl PyTime {
         Ok(PyTime(time.with_scale(PyTimeScale::Tt)))
     }
 
-    fn to_ut1(&self, provider: Option<PyDeltaUt1Tai>) -> Result<PyTime, PyErr> {
+    fn to_ut1(&self, provider: Option<PyDeltaUt1Tai>) -> PyResult<PyTime> {
         let time = match provider {
             Some(provider) => self.try_to_scale(Ut1, &provider.0)?,
             None => self.try_to_scale(Ut1, &NoOpOffsetProvider)?,
         };
         Ok(PyTime(time.with_scale(PyTimeScale::Ut1)))
+    }
+
+    fn to_utc(&self, provider: Option<PyDeltaUt1Tai>) -> PyResult<PyUtc> {
+        let tai = match provider {
+            Some(provider) => self.try_to_scale(Tai, &provider.0)?,
+            None => self.try_to_scale(Tai, &NoOpOffsetProvider)?,
+        };
+        Ok(PyUtc(tai.to_utc()?))
     }
 }
 
@@ -214,11 +226,7 @@ impl TryToScale<Tai, DeltaUt1Tai, ExtrapolatedDeltaUt1Tai> for PyTime {
 }
 
 impl TryToScale<Tai, NoOpOffsetProvider, PyErr> for PyTime {
-    fn try_to_scale(
-        &self,
-        _scale: Tai,
-        _provider: &NoOpOffsetProvider,
-    ) -> Result<Time<Tai>, PyErr> {
+    fn try_to_scale(&self, _scale: Tai, _provider: &NoOpOffsetProvider) -> PyResult<Time<Tai>> {
         match self.0.scale() {
             PyTimeScale::Tai => Ok(self.0.with_scale(Tai)),
             PyTimeScale::Tcb => Ok(self.0.with_scale(Tcb).to_tai()),
@@ -250,11 +258,7 @@ impl TryToScale<Tcg, DeltaUt1Tai, ExtrapolatedDeltaUt1Tai> for PyTime {
 }
 
 impl TryToScale<Tcg, NoOpOffsetProvider, PyErr> for PyTime {
-    fn try_to_scale(
-        &self,
-        _scale: Tcg,
-        _provider: &NoOpOffsetProvider,
-    ) -> Result<Time<Tcg>, PyErr> {
+    fn try_to_scale(&self, _scale: Tcg, _provider: &NoOpOffsetProvider) -> PyResult<Time<Tcg>> {
         match self.0.scale() {
             PyTimeScale::Tai => Ok(self.0.with_scale(Tai).to_tcg()),
             PyTimeScale::Tcb => Ok(self.0.with_scale(Tcb).to_tcg()),
@@ -286,11 +290,7 @@ impl TryToScale<Tcb, DeltaUt1Tai, ExtrapolatedDeltaUt1Tai> for PyTime {
 }
 
 impl TryToScale<Tcb, NoOpOffsetProvider, PyErr> for PyTime {
-    fn try_to_scale(
-        &self,
-        _scale: Tcb,
-        _provider: &NoOpOffsetProvider,
-    ) -> Result<Time<Tcb>, PyErr> {
+    fn try_to_scale(&self, _scale: Tcb, _provider: &NoOpOffsetProvider) -> PyResult<Time<Tcb>> {
         match self.0.scale() {
             PyTimeScale::Tai => Ok(self.0.with_scale(Tai).to_tcb()),
             PyTimeScale::Tcb => Ok(self.0.with_scale(Tcb)),
@@ -322,11 +322,7 @@ impl TryToScale<Tdb, DeltaUt1Tai, ExtrapolatedDeltaUt1Tai> for PyTime {
 }
 
 impl TryToScale<Tdb, NoOpOffsetProvider, PyErr> for PyTime {
-    fn try_to_scale(
-        &self,
-        _scale: Tdb,
-        _provider: &NoOpOffsetProvider,
-    ) -> Result<Time<Tdb>, PyErr> {
+    fn try_to_scale(&self, _scale: Tdb, _provider: &NoOpOffsetProvider) -> PyResult<Time<Tdb>> {
         match self.0.scale() {
             PyTimeScale::Tai => Ok(self.0.with_scale(Tai).to_tdb()),
             PyTimeScale::Tcb => Ok(self.0.with_scale(Tcb).to_tdb()),
@@ -358,7 +354,7 @@ impl TryToScale<Tt, DeltaUt1Tai, ExtrapolatedDeltaUt1Tai> for PyTime {
 }
 
 impl TryToScale<Tt, NoOpOffsetProvider, PyErr> for PyTime {
-    fn try_to_scale(&self, _scale: Tt, _provider: &NoOpOffsetProvider) -> Result<Time<Tt>, PyErr> {
+    fn try_to_scale(&self, _scale: Tt, _provider: &NoOpOffsetProvider) -> PyResult<Time<Tt>> {
         match self.0.scale() {
             PyTimeScale::Tai => Ok(self.0.with_scale(Tai).to_tt()),
             PyTimeScale::Tcb => Ok(self.0.with_scale(Tcb).to_tt()),
@@ -390,11 +386,7 @@ impl TryToScale<Ut1, DeltaUt1Tai, ExtrapolatedDeltaUt1Tai> for PyTime {
 }
 
 impl TryToScale<Ut1, NoOpOffsetProvider, PyErr> for PyTime {
-    fn try_to_scale(
-        &self,
-        _scale: Ut1,
-        _provider: &NoOpOffsetProvider,
-    ) -> Result<Time<Ut1>, PyErr> {
+    fn try_to_scale(&self, _scale: Ut1, _provider: &NoOpOffsetProvider) -> PyResult<Time<Ut1>> {
         match self.0.scale() {
             PyTimeScale::Ut1 => Ok(self.0.with_scale(Ut1)),
             _ => Err(PyValueError::new_err(
@@ -430,14 +422,7 @@ pub struct PyUtc(Utc);
 impl PyUtc {
     #[new]
     #[pyo3(signature = (year, month, day, hour = 0, minute = 0, seconds = 0.0))]
-    fn new(
-        year: i64,
-        month: u8,
-        day: u8,
-        hour: u8,
-        minute: u8,
-        seconds: f64,
-    ) -> Result<PyUtc, PyErr> {
+    fn new(year: i64, month: u8, day: u8, hour: u8, minute: u8, seconds: f64) -> PyResult<PyUtc> {
         let utc = Utc::builder()
             .with_ymd(year, month, day)
             .with_hms(hour, minute, seconds)
@@ -446,7 +431,7 @@ impl PyUtc {
     }
 
     fn __str__(&self) -> String {
-        format!("{}", self.0)
+        self.0.to_string()
     }
 
     fn __repr__(&self) -> String {
@@ -459,6 +444,82 @@ impl PyUtc {
             self.0.minute(),
             self.0.decimal_seconds()
         )
+    }
+
+    fn year(&self) -> i64 {
+        self.0.year()
+    }
+
+    fn month(&self) -> u8 {
+        self.0.month()
+    }
+
+    fn day(&self) -> u8 {
+        self.0.day()
+    }
+
+    fn hour(&self) -> u8 {
+        self.0.hour()
+    }
+
+    fn minute(&self) -> u8 {
+        self.0.minute()
+    }
+
+    fn second(&self) -> u8 {
+        self.0.second()
+    }
+
+    fn millisecond(&self) -> i64 {
+        self.0.millisecond()
+    }
+
+    fn microsecond(&self) -> i64 {
+        self.0.microsecond()
+    }
+
+    fn nanosecond(&self) -> i64 {
+        self.0.nanosecond()
+    }
+
+    fn picosecond(&self) -> i64 {
+        self.0.picosecond()
+    }
+
+    fn decimal_seconds(&self) -> f64 {
+        self.0.decimal_seconds()
+    }
+
+    fn to_tai(&self) -> PyTime {
+        PyTime(self.0.to_tai().with_scale(PyTimeScale::Tai))
+    }
+
+    fn to_tcb(&self) -> PyTime {
+        PyTime(self.0.to_tcb().with_scale(PyTimeScale::Tcb))
+    }
+
+    fn to_tcg(&self) -> PyTime {
+        PyTime(self.0.to_tcg().with_scale(PyTimeScale::Tcg))
+    }
+
+    fn to_tdb(&self) -> PyTime {
+        PyTime(self.0.to_tdb().with_scale(PyTimeScale::Tdb))
+    }
+
+    fn to_tt(&self) -> PyTime {
+        PyTime(self.0.to_tt().with_scale(PyTimeScale::Tt))
+    }
+
+    fn to_ut1(&self, provider: Option<PyDeltaUt1Tai>) -> PyResult<PyTime> {
+        if let Some(provider) = provider {
+            Ok(PyTime(
+                self.0.try_to_ut1(&provider.0)?.with_scale(PyTimeScale::Ut1),
+            ))
+        } else {
+            Err(PyValueError::new_err(
+                "`provider` argument needs to be present for UT1 transformations",
+            ))
+        }
     }
 }
 
