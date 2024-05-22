@@ -441,8 +441,7 @@ impl PyUtc {
         let utc = Utc::builder()
             .with_ymd(year, month, day)
             .with_hms(hour, minute, seconds)
-            .build()
-            .map_err(|err| PyValueError::new_err(format!("{}", err)))?;
+            .build()?;
         Ok(PyUtc(utc))
     }
 
