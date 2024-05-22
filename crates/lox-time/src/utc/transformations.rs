@@ -14,9 +14,15 @@ use crate::deltas::ToDelta;
 use crate::time_of_day::CivilTime;
 use crate::time_of_day::TimeOfDay;
 use crate::time_scales::Tai;
+use crate::time_scales::Tdb;
+use crate::time_scales::Tt;
 use crate::transformations::LeapSecondsProvider;
 use crate::transformations::NoOpOffsetProvider;
 use crate::transformations::ToTai;
+use crate::transformations::ToTcb;
+use crate::transformations::ToTcg;
+use crate::transformations::ToTdb;
+use crate::transformations::ToTt;
 use crate::transformations::TryToScale;
 use crate::{utc, Time};
 
@@ -101,6 +107,33 @@ impl TryToScale<Tai> for Utc {
 }
 
 impl ToTai for Utc {}
+
+impl TryToScale<Tt> for Utc {
+    fn try_to_scale(
+        &self,
+        scale: Tt,
+        provider: &NoOpOffsetProvider,
+    ) -> Result<Time<Tt>, Infallible> {
+        self.to_tai().try_to_scale(scale, provider)
+    }
+}
+
+impl ToTt for Utc {}
+
+impl TryToScale<Tdb> for Utc {
+    fn try_to_scale(
+        &self,
+        scale: Tdb,
+        provider: &NoOpOffsetProvider,
+    ) -> Result<Time<Tdb>, Infallible> {
+        self.to_tt().try_to_scale(scale, provider)
+    }
+}
+
+impl ToTdb for Utc {}
+
+impl ToTcb for Utc {}
+impl ToTcg for Utc {}
 
 fn utc_1972_01_01() -> &'static Utc {
     static UTC_1972: OnceLock<Utc> = OnceLock::new();
