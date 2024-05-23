@@ -69,7 +69,7 @@ pub trait CivilTime {
     }
 
     fn decimal_seconds(&self) -> f64 {
-        self.time().second() as f64 + self.time().subsecond().0
+        self.time().subsecond().0 + self.time().second() as f64
     }
 
     fn millisecond(&self) -> i64 {

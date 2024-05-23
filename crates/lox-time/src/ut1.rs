@@ -68,7 +68,7 @@ pub struct DeltaUt1Tai(Series<Vec<f64>, Vec<f64>>);
 impl DeltaUt1Tai {
     pub fn new<P: AsRef<Path>>(
         path: P,
-        ls: impl LeapSecondsProvider,
+        ls: &impl LeapSecondsProvider,
     ) -> Result<Self, DeltaUt1TaiError> {
         let eop = EarthOrientationParams::parse_finals_csv(path)?;
         let deltas: Vec<TimeDelta> = eop
@@ -117,8 +117,10 @@ impl DeltaUt1TaiProvider for DeltaUt1Tai {
         let (tn, _) = self.0.last();
         // Use the UT1 offset as an initial guess even though the table is based on TAI
         let mut val = self.0.interpolate(seconds);
-        // Interpolate again with the adjusted offset
-        val = self.0.interpolate(seconds - val);
+        // Interpolate again with the adjusted offsets
+        for _ in 0..2 {
+            val = self.0.interpolate(seconds - val);
+        }
         if seconds < t0 || seconds > tn {
             return Err(ExtrapolatedDeltaUt1Tai::new(t0, tn, seconds, -val));
         }
@@ -280,7 +282,7 @@ mod tests {
                     "{}/../../data/finals2000A.all.csv",
                     env!("CARGO_MANIFEST_DIR")
                 ),
-                BuiltinLeapSeconds,
+                &BuiltinLeapSeconds,
             )
             .unwrap()
         })

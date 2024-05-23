@@ -478,16 +478,14 @@ pub trait LeapSecondsProvider: OffsetProvider {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::OnceLock;
 
     use float_eq::assert_float_eq;
     use rstest::rstest;
 
     use crate::constants::julian_dates::{J0, SECONDS_BETWEEN_JD_AND_J2000};
     use crate::subsecond::Subsecond;
+    use crate::test_helpers::delta_ut1_tai;
     use crate::time;
-    use crate::ut1::DeltaUt1Tai;
-    use crate::utc::leap_seconds::BuiltinLeapSeconds;
 
     use super::*;
 
@@ -684,19 +682,5 @@ mod tests {
     fn test_transform_tdb_tt(#[case] tdb: Time<Tdb>, #[case] expected: Time<Tt>) {
         let tt = tdb.to_tt();
         assert_eq!(expected, tt);
-    }
-
-    fn delta_ut1_tai() -> &'static DeltaUt1Tai {
-        static PROVIDER: OnceLock<DeltaUt1Tai> = OnceLock::new();
-        PROVIDER.get_or_init(|| {
-            DeltaUt1Tai::new(
-                format!(
-                    "{}/../../data/finals2000A.all.csv",
-                    env!("CARGO_MANIFEST_DIR")
-                ),
-                BuiltinLeapSeconds,
-            )
-            .unwrap()
-        })
     }
 }

@@ -44,6 +44,8 @@ pub mod prelude;
 #[cfg(feature = "python")]
 pub mod python;
 pub mod subsecond;
+#[cfg(test)]
+pub(crate) mod test_helpers;
 pub mod time_of_day;
 pub mod time_scales;
 pub mod transformations;

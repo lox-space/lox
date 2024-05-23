@@ -157,6 +157,7 @@ fn tai_at_utc_1972_01_01() -> &'static Time<Tai> {
 
 #[cfg(test)]
 pub mod test {
+    use crate::test_helpers::delta_ut1_tai;
     use crate::time;
     use crate::transformations::{ToTcb, ToTcg, ToTdb, ToTt};
     use rstest::rstest;
@@ -204,6 +205,13 @@ pub mod test {
         assert_eq!(act, exp);
         let tdb = tai.to_tdb();
         let act = tdb.to_utc().unwrap();
+        assert_eq!(act, exp);
+        let ut1 = tai.try_to_ut1(delta_ut1_tai()).unwrap();
+        let act = ut1
+            .try_to_scale(Tai, delta_ut1_tai())
+            .unwrap()
+            .to_utc()
+            .unwrap();
         assert_eq!(act, exp);
     }
 

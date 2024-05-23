@@ -1,27 +1,89 @@
 class Time:
     def __init__(
-            self,
-            scale: str,
-            year: int,
-            month: int,
-            day: int,
-            hour: int = 0,
-            minute: int = 0,
-            second: int = 0,
-            milli: int = 0,
-            micro: int = 0,
-            nano: int = 0,
-            pico: int = 0,
-            femto: int = 0,
+        self,
+        scale: str,
+        year: int,
+        month: int,
+        day: int,
+        hour: int = 0,
+        minute: int = 0,
+        second: int = 0,
+        milli: int = 0,
+        micro: int = 0,
+        nano: int = 0,
+        pico: int = 0,
+        femto: int = 0,
     ): ...
-
-    def days_since_j2000(self) -> float: ...
 
     def scale(self) -> str: ...
 
+    def to_tai(self, provider: UT1Provider | None = None) -> Time: ...
+
+    def to_tcb(self, provider: UT1Provider | None = None) -> Time: ...
+
+    def to_tcg(self, provider: UT1Provider | None = None) -> Time: ...
+
+    def to_tdb(self, provider: UT1Provider | None = None) -> Time: ...
+
+    def to_tt(self, provider: UT1Provider | None = None) -> Time: ...
+
+    def to_ut1(self, provider: UT1Provider | None = None) -> Time: ...
+
+    def to_utc(self, provider: UT1Provider | None = None) -> UTC: ...
+
+
+class UTC:
+    def __new__(
+        cls,
+        year: int,
+        month: int,
+        day: int,
+        hour: int = 0,
+        minute: int = 0,
+        seconds: float = 0.0,
+    ): ...
+
+    def year(self) -> int: ...
+
+    def month(self) -> int: ...
+
+    def day(self) -> int: ...
+
+    def hour(self) -> int: ...
+
+    def minute(self) -> int: ...
+
+    def second(self) -> int: ...
+
+    def millisecond(self) -> int: ...
+
+    def microsecond(self) -> int: ...
+
+    def nanosecond(self) -> int: ...
+
+    def picosecond(self) -> int: ...
+
+    def decimal_seconds(self) -> float: ...
+
+    def to_tai(self) -> Time: ...
+
+    def to_tcb(self) -> Time: ...
+
+    def to_tcg(self) -> Time: ...
+
+    def to_tdb(self) -> Time: ...
+
+    def to_tt(self) -> Time: ...
+
+    def to_ut1(self, provider: UT1Provider) -> Time: ...
+
+
+class UT1Provider:
+    def __new__(cls, path: str): ...
+
 
 class Sun:
-    def __init__(self): ...
+    def __new__(cls): ...
 
     def id(self) -> int: ...
 
@@ -37,7 +99,7 @@ class Sun:
 
 
 class Barycenter:
-    def __init__(self, name: str): ...
+    def __new__(cls, name: str): ...
 
     def id(self) -> int: ...
 
@@ -47,7 +109,7 @@ class Barycenter:
 
 
 class Planet:
-    def __init__(self, name: str): ...
+    def __new__(cls, name: str): ...
 
     def id(self) -> int: ...
 
@@ -63,7 +125,7 @@ class Planet:
 
 
 class Satellite:
-    def __init__(self, name: str): ...
+    def __new__(cls, name: str): ...
 
     def id(self) -> int: ...
 
@@ -81,7 +143,7 @@ class Satellite:
 
 
 class MinorBody:
-    def __init__(self, name: str): ...
+    def __new__(cls, name: str): ...
 
     def id(self) -> int: ...
 
@@ -99,20 +161,20 @@ class MinorBody:
 
 
 class Cartesian:
-    def __init__(
-            self,
-            time: Epoch,
-            body: Sun | Barycenter | Planet | Satellite | MinorBody,
-            frame: str,
-            x: float,
-            y: float,
-            z: float,
-            vx: float,
-            vy: float,
-            vz: float,
+    def __new__(
+        cls,
+        time: Time,
+        body: Sun | Barycenter | Planet | Satellite | MinorBody,
+        frame: str,
+        x: float,
+        y: float,
+        z: float,
+        vx: float,
+        vy: float,
+        vz: float,
     ): ...
 
-    def time(self) -> Epoch: ...
+    def time(self) -> Time: ...
 
     def reference_frame(self) -> str: ...
 
@@ -126,20 +188,20 @@ class Cartesian:
 
 
 class Keplerian:
-    def __init__(
-            self,
-            time: Epoch,
-            body: Sun | Barycenter | Planet | Satellite | MinorBody,
-            frame: str,
-            semi_major_axis: float,
-            eccentricity: float,
-            inclination: float,
-            ascending_node: float,
-            periapsis_argument: float,
-            true_anomaly: float,
+    def __new__(
+        cls,
+        time: Time,
+        body: Sun | Barycenter | Planet | Satellite | MinorBody,
+        frame: str,
+        semi_major_axis: float,
+        eccentricity: float,
+        inclination: float,
+        ascending_node: float,
+        periapsis_argument: float,
+        true_anomaly: float,
     ): ...
 
-    def time(self) -> Epoch: ...
+    def time(self) -> Time: ...
 
     def reference_frame(self) -> str: ...
 
