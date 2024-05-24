@@ -34,3 +34,5 @@ def test_time_delta():
     assert str(delta + delta) == "3 seconds"
     assert str(delta - delta) == "0 seconds"
     assert str(-delta) == "-1.5 seconds"
+    with pytest.raises(ValueError):
+        lox.TimeDelta(float("nan"))

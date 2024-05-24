@@ -137,4 +137,10 @@ mod tests {
             assert_eq!(td.to_decimal_seconds(), 6311520000.0);
         })
     }
+
+    #[test]
+    #[should_panic(expected = "NaN is unrepresentable")]
+    fn test_pytimedelta_error() {
+        PyTimeDelta::new(f64::NAN).unwrap();
+    }
 }
