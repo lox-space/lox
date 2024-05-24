@@ -17,6 +17,7 @@ regex.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
+pyo3 = { workspace = true, features = ["auto-initialize"] }
 proptest.workspace = true
 rstest.workspace = true
 

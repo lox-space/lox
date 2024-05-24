@@ -23,6 +23,8 @@ use crate::{
     Time,
 };
 
+pub mod deltas;
+
 impl From<TimeError> for PyErr {
     fn from(value: TimeError) -> Self {
         PyValueError::new_err(value.to_string())
