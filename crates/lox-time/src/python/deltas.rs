@@ -1,3 +1,11 @@
+/*
+ * Copyright (c) 2024. Helge Eichhorn and the LOX contributors
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, you can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 use pyo3::exceptions::PyValueError;
 use pyo3::types::PyType;
 use pyo3::{pyclass, pymethods, Bound, PyErr, PyResult};
@@ -11,7 +19,7 @@ impl From<TimeDeltaError> for PyErr {
 }
 
 #[pyclass(name = "TimeDelta", module = "lox_space")]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PyTimeDelta(pub TimeDelta);
 
 #[pymethods]
@@ -106,8 +114,8 @@ mod tests {
     fn test_pytimedelta_ops() {
         let td1 = PyTimeDelta::new(123.456).unwrap();
         let td2 = PyTimeDelta::new(654.321).unwrap();
-        assert_eq!(td1.__add__(td2).to_decimal_seconds(), 777.777);
-        assert_eq!(td1.__sub__(td2).to_decimal_seconds(), -530.865);
+        assert_eq!(td1.__add__(td2.clone()).to_decimal_seconds(), 777.777);
+        assert_eq!(td1.__sub__(td2.clone()).to_decimal_seconds(), -530.865);
         assert_eq!(td1.__neg__().to_decimal_seconds(), -123.456);
         assert_eq!(td1.__float__(), 123.456);
     }
