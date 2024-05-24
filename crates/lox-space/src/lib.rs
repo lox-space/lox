@@ -7,12 +7,14 @@
  */
 
 use lox_time::python::deltas::PyTimeDelta;
-use lox_time::python::{PyTime, PyUt1Provider, PyUtc};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use thiserror::Error;
 
 use lox_bodies::errors::LoxBodiesError;
+use lox_time::python::time::PyTime;
+use lox_time::python::ut1::PyUt1Provider;
+use lox_time::python::utc::PyUtc;
 
 use crate::bodies::{PyBarycenter, PyMinorBody, PyPlanet, PySatellite, PySun};
 
