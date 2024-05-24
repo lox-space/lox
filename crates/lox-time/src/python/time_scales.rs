@@ -89,5 +89,6 @@ mod tests {
         let scale = PyTimeScale::from_str(abbreviation).unwrap();
         assert_eq!(scale.abbreviation(), abbreviation);
         assert_eq!(scale.name(), name);
+        assert_eq!(scale.to_string(), abbreviation);
     }
 }

@@ -65,23 +65,6 @@ impl<T: ToTai> ToUtc for T {
     }
 }
 
-impl Utc {
-    pub fn to_tai_with_provider(&self, provider: &impl LeapSecondsProvider) -> Time<Tai> {
-        let delta = if self < utc_1972_01_01() {
-            before1972::delta_utc_tai(self)
-        } else {
-            provider.delta_utc_tai(*self)
-        }
-        .unwrap_or_else(|| {
-            // Utc objects are always in range.
-            unreachable!("failed to calculate UTC-TAI delta for Utc `{:?}`", self);
-        });
-
-        let base = self.to_delta();
-        Time::from_delta(Tai, base - delta)
-    }
-}
-
 impl<T: LeapSecondsProvider> TryToScale<Tai, T> for Utc {
     fn try_to_scale(&self, _scale: Tai, provider: &T) -> Result<Time<Tai>, Infallible> {
         let delta = if self < utc_1972_01_01() {
