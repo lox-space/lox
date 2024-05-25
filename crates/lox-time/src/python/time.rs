@@ -73,55 +73,55 @@ impl PyTime {
         self.0.scale().abbreviation()
     }
 
-    pub fn to_tai(&self, provider: Option<PyUt1Provider>) -> PyResult<PyTime> {
+    pub fn to_tai<'py>(&self, provider: Option<&Bound<'py, PyUt1Provider>>) -> PyResult<PyTime> {
         let time = match provider {
-            Some(provider) => self.try_to_scale(Tai, &provider.0)?,
+            Some(provider) => self.try_to_scale(Tai, &provider.borrow().0)?,
             None => self.try_to_scale(Tai, &NoOpOffsetProvider)?,
         };
         Ok(PyTime(time.with_scale(PyTimeScale::Tai)))
     }
 
-    pub fn to_tcb(&self, provider: Option<PyUt1Provider>) -> PyResult<PyTime> {
+    pub fn to_tcb<'py>(&self, provider: Option<&Bound<'py, PyUt1Provider>>) -> PyResult<PyTime> {
         let time = match provider {
-            Some(provider) => self.try_to_scale(Tcb, &provider.0)?,
+            Some(provider) => self.try_to_scale(Tcb, &provider.borrow().0)?,
             None => self.try_to_scale(Tcb, &NoOpOffsetProvider)?,
         };
         Ok(PyTime(time.with_scale(PyTimeScale::Tcb)))
     }
 
-    pub fn to_tcg(&self, provider: Option<PyUt1Provider>) -> PyResult<PyTime> {
+    pub fn to_tcg<'py>(&self, provider: Option<&Bound<'py, PyUt1Provider>>) -> PyResult<PyTime> {
         let time = match provider {
-            Some(provider) => self.try_to_scale(Tcg, &provider.0)?,
+            Some(provider) => self.try_to_scale(Tcg, &provider.borrow().0)?,
             None => self.try_to_scale(Tcg, &NoOpOffsetProvider)?,
         };
         Ok(PyTime(time.with_scale(PyTimeScale::Tcg)))
     }
 
-    pub fn to_tdb(&self, provider: Option<PyUt1Provider>) -> PyResult<PyTime> {
+    pub fn to_tdb<'py>(&self, provider: Option<&Bound<'py, PyUt1Provider>>) -> PyResult<PyTime> {
         let time = match provider {
-            Some(provider) => self.try_to_scale(Tdb, &provider.0)?,
+            Some(provider) => self.try_to_scale(Tdb, &provider.borrow().0)?,
             None => self.try_to_scale(Tdb, &NoOpOffsetProvider)?,
         };
         Ok(PyTime(time.with_scale(PyTimeScale::Tdb)))
     }
 
-    pub fn to_tt(&self, provider: Option<PyUt1Provider>) -> PyResult<PyTime> {
+    pub fn to_tt<'py>(&self, provider: Option<&Bound<'py, PyUt1Provider>>) -> PyResult<PyTime> {
         let time = match provider {
-            Some(provider) => self.try_to_scale(Tt, &provider.0)?,
+            Some(provider) => self.try_to_scale(Tt, &provider.borrow().0)?,
             None => self.try_to_scale(Tt, &NoOpOffsetProvider)?,
         };
         Ok(PyTime(time.with_scale(PyTimeScale::Tt)))
     }
 
-    pub fn to_ut1(&self, provider: Option<PyUt1Provider>) -> PyResult<PyTime> {
+    pub fn to_ut1<'py>(&self, provider: Option<&Bound<'py, PyUt1Provider>>) -> PyResult<PyTime> {
         let time = match provider {
-            Some(provider) => self.try_to_scale(Ut1, &provider.0)?,
+            Some(provider) => self.try_to_scale(Ut1, &provider.borrow().0)?,
             None => self.try_to_scale(Ut1, &NoOpOffsetProvider)?,
         };
         Ok(PyTime(time.with_scale(PyTimeScale::Ut1)))
     }
 
-    pub fn to_utc(&self, provider: Option<&Bound<'_, PyUt1Provider>>) -> PyResult<PyUtc> {
+    pub fn to_utc<'py>(&self, provider: Option<&Bound<'py, PyUt1Provider>>) -> PyResult<PyUtc> {
         let tai = match provider {
             Some(provider) => self.try_to_scale(Tai, &provider.borrow().0)?,
             None => self.try_to_scale(Tai, &NoOpOffsetProvider)?,
