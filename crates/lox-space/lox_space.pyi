@@ -7,12 +7,7 @@ class Time:
         day: int,
         hour: int = 0,
         minute: int = 0,
-        second: int = 0,
-        milli: int = 0,
-        micro: int = 0,
-        nano: int = 0,
-        pico: int = 0,
-        femto: int = 0,
+        seconds: float = 0.0,
     ): ...
 
     def scale(self) -> str: ...

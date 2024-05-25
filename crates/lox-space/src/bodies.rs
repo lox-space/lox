@@ -386,6 +386,7 @@ impl From<PyBody> for PyObject {
 impl TryFrom<PyObject> for PyBody {
     type Error = PyErr;
 
+    // TODO: Use `Bound` API
     fn try_from(body: PyObject) -> Result<Self, Self::Error> {
         Python::with_gil(|py| {
             if let Ok(body) = body.extract::<PyBarycenter>(py) {

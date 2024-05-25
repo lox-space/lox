@@ -9,6 +9,9 @@ DATA_DIR = pathlib.Path(__file__).parents[3].joinpath("data")
 def provider():
     return lox.UT1Provider(str(DATA_DIR.joinpath("finals2000A.all.csv")))
 
+def test_time(provider):
+    time_exp = lox.Time("TAI", 2000, 1, 1)
+
 
 def test_utc(provider):
     utc_exp = lox.UTC(2000, 1, 1)

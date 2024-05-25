@@ -10,6 +10,7 @@ use crate::calendar_dates::CalendarDate;
 use crate::deltas::{TimeDelta, ToDelta};
 use crate::julian_dates::{Epoch, JulianDate, Unit};
 use crate::prelude::{CivilTime, Tai, Tcb, Tcg, Tdb, TimeScale, Tt, Ut1};
+use crate::python::deltas::PyTimeDelta;
 use crate::python::time_scales::PyTimeScale;
 use crate::python::ut1::PyUt1Provider;
 use crate::python::utc::PyUtc;
@@ -17,9 +18,9 @@ use crate::transformations::{NoOpOffsetProvider, ToTai, ToTcb, ToTcg, ToTdb, ToT
 use crate::ut1::{DeltaUt1Tai, ExtrapolatedDeltaUt1Tai};
 use crate::utc::transformations::ToUtc;
 use crate::{Time, TimeError};
-use pyo3::exceptions::PyValueError;
-use pyo3::types::PyType;
-use pyo3::{pyclass, pymethods, Bound, PyErr, PyResult};
+use pyo3::exceptions::{PyTypeError, PyValueError};
+use pyo3::types::{PyAnyMethods, PyType};
+use pyo3::{pyclass, pymethods, Bound, PyAny, PyErr, PyResult, Python};
 use std::str::FromStr;
 
 impl From<TimeError> for PyErr {
@@ -110,6 +111,35 @@ impl PyTime {
         )
     }
 
+    pub fn __add__(&self, delta: PyTimeDelta) -> Self {
+        PyTime(self.0 + delta.0)
+    }
+
+    pub fn __sub__<'py>(
+        &self,
+        py: Python<'py>,
+        rhs: &Bound<'py, PyAny>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        if let Ok(delta) = rhs.extract::<PyTimeDelta>() {
+            Ok(Bound::new(py, PyTime(self.0 - delta.0))?.into_any())
+        } else if let Ok(rhs) = rhs.extract::<PyTime>() {
+            if self.scale() != rhs.scale() {
+                return Err(PyValueError::new_err(
+                    "cannot subtract `Time` objects with different time scales",
+                ));
+            }
+            Ok(Bound::new(py, PyTimeDelta(self.0 - rhs.0))?.into_any())
+        } else {
+            Err(PyTypeError::new_err(
+                "`rhs` must be either a `Time` or a `TimeDelta` object",
+            ))
+        }
+    }
+
+    pub fn __eq__(&self, rhs: PyTime) -> bool {
+        self.0 == rhs.0
+    }
+
     #[pyo3(signature = (epoch = "jd", unit = "days"))]
     pub fn julian_date(&self, epoch: &str, unit: &str) -> PyResult<f64> {
         let epoch: Epoch = epoch.parse()?;
@@ -143,6 +173,30 @@ impl PyTime {
 
     pub fn second(&self) -> u8 {
         self.0.second()
+    }
+
+    pub fn millisecond(&self) -> i64 {
+        self.0.millisecond()
+    }
+
+    pub fn microsecond(&self) -> i64 {
+        self.0.microsecond()
+    }
+
+    pub fn nanosecond(&self) -> i64 {
+        self.0.nanosecond()
+    }
+
+    pub fn picosecond(&self) -> i64 {
+        self.0.picosecond()
+    }
+
+    pub fn femtosecond(&self) -> i64 {
+        self.0.femtosecond()
+    }
+
+    pub fn decimal_seconds(&self) -> f64 {
+        self.0.decimal_seconds()
     }
 
     pub fn to_tai<'py>(&self, provider: Option<&Bound<'py, PyUt1Provider>>) -> PyResult<PyTime> {
@@ -401,12 +455,14 @@ mod tests {
     use pyo3::Python;
 
     use super::*;
-    use crate::time;
 
     #[test]
-    fn test_pytime_scale() {
-        let time = PyTime(time!(PyTimeScale::Tai, 2000, 1, 1, 12).unwrap());
+    fn test_pytime() {
+        let time = PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap();
+        assert_eq!(time.__repr__(), "Time(\"TAI\", 2000, 1, 1, 0, 0, 0)");
+        assert_eq!(time.__str__(), "2000-01-01T00:00:00.000 TAI");
         assert_eq!(time.scale(), "TAI".to_string());
+        assert_eq!(time.year(), 2000);
     }
 
     #[test]
