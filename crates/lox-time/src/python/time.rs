@@ -18,7 +18,7 @@ use crate::ut1::{DeltaUt1Tai, ExtrapolatedDeltaUt1Tai};
 use crate::utc::transformations::ToUtc;
 use crate::{Time, TimeError};
 use pyo3::exceptions::PyValueError;
-use pyo3::{pyclass, pymethods, PyErr, PyResult};
+use pyo3::{pyclass, pymethods, Bound, PyErr, PyResult};
 use std::str::FromStr;
 
 impl From<TimeError> for PyErr {
@@ -35,7 +35,7 @@ pub struct PyTime(pub Time<PyTimeScale>);
 impl PyTime {
     #[new]
     #[pyo3(signature=(scale, year, month, day, hour = 0, minute = 0, seconds = 0.0))]
-    fn new(
+    pub fn new(
         scale: &str,
         year: i64,
         month: u8,
@@ -52,11 +52,11 @@ impl PyTime {
         Ok(PyTime(time))
     }
 
-    fn __str__(&self) -> String {
+    pub fn __str__(&self) -> String {
         self.0.to_string()
     }
 
-    fn __repr__(&self) -> String {
+    pub fn __repr__(&self) -> String {
         format!(
             "Time({}, {}, {}, {}, {}, {}, {})",
             self.scale(),
@@ -69,11 +69,11 @@ impl PyTime {
         )
     }
 
-    fn scale(&self) -> &'static str {
+    pub fn scale(&self) -> &'static str {
         self.0.scale().abbreviation()
     }
 
-    fn to_tai(&self, provider: Option<PyUt1Provider>) -> PyResult<PyTime> {
+    pub fn to_tai(&self, provider: Option<PyUt1Provider>) -> PyResult<PyTime> {
         let time = match provider {
             Some(provider) => self.try_to_scale(Tai, &provider.0)?,
             None => self.try_to_scale(Tai, &NoOpOffsetProvider)?,
@@ -81,7 +81,7 @@ impl PyTime {
         Ok(PyTime(time.with_scale(PyTimeScale::Tai)))
     }
 
-    fn to_tcb(&self, provider: Option<PyUt1Provider>) -> PyResult<PyTime> {
+    pub fn to_tcb(&self, provider: Option<PyUt1Provider>) -> PyResult<PyTime> {
         let time = match provider {
             Some(provider) => self.try_to_scale(Tcb, &provider.0)?,
             None => self.try_to_scale(Tcb, &NoOpOffsetProvider)?,
@@ -89,7 +89,7 @@ impl PyTime {
         Ok(PyTime(time.with_scale(PyTimeScale::Tcb)))
     }
 
-    fn to_tcg(&self, provider: Option<PyUt1Provider>) -> PyResult<PyTime> {
+    pub fn to_tcg(&self, provider: Option<PyUt1Provider>) -> PyResult<PyTime> {
         let time = match provider {
             Some(provider) => self.try_to_scale(Tcg, &provider.0)?,
             None => self.try_to_scale(Tcg, &NoOpOffsetProvider)?,
@@ -97,7 +97,7 @@ impl PyTime {
         Ok(PyTime(time.with_scale(PyTimeScale::Tcg)))
     }
 
-    fn to_tdb(&self, provider: Option<PyUt1Provider>) -> PyResult<PyTime> {
+    pub fn to_tdb(&self, provider: Option<PyUt1Provider>) -> PyResult<PyTime> {
         let time = match provider {
             Some(provider) => self.try_to_scale(Tdb, &provider.0)?,
             None => self.try_to_scale(Tdb, &NoOpOffsetProvider)?,
@@ -105,7 +105,7 @@ impl PyTime {
         Ok(PyTime(time.with_scale(PyTimeScale::Tdb)))
     }
 
-    fn to_tt(&self, provider: Option<PyUt1Provider>) -> PyResult<PyTime> {
+    pub fn to_tt(&self, provider: Option<PyUt1Provider>) -> PyResult<PyTime> {
         let time = match provider {
             Some(provider) => self.try_to_scale(Tt, &provider.0)?,
             None => self.try_to_scale(Tt, &NoOpOffsetProvider)?,
@@ -113,7 +113,7 @@ impl PyTime {
         Ok(PyTime(time.with_scale(PyTimeScale::Tt)))
     }
 
-    fn to_ut1(&self, provider: Option<PyUt1Provider>) -> PyResult<PyTime> {
+    pub fn to_ut1(&self, provider: Option<PyUt1Provider>) -> PyResult<PyTime> {
         let time = match provider {
             Some(provider) => self.try_to_scale(Ut1, &provider.0)?,
             None => self.try_to_scale(Ut1, &NoOpOffsetProvider)?,
@@ -121,9 +121,9 @@ impl PyTime {
         Ok(PyTime(time.with_scale(PyTimeScale::Ut1)))
     }
 
-    fn to_utc(&self, provider: Option<PyUt1Provider>) -> PyResult<PyUtc> {
+    pub fn to_utc(&self, provider: Option<&Bound<'_, PyUt1Provider>>) -> PyResult<PyUtc> {
         let tai = match provider {
-            Some(provider) => self.try_to_scale(Tai, &provider.0)?,
+            Some(provider) => self.try_to_scale(Tai, &provider.borrow().0)?,
             None => self.try_to_scale(Tai, &NoOpOffsetProvider)?,
         };
         Ok(PyUtc(tai.to_utc()?))

@@ -30,7 +30,7 @@ pub struct PyUt1Provider(pub DeltaUt1Tai);
 #[pymethods]
 impl PyUt1Provider {
     #[new]
-    fn new(path: &str) -> PyResult<PyUt1Provider> {
+    pub fn new(path: &str) -> PyResult<PyUt1Provider> {
         let provider = DeltaUt1Tai::new(path, &BuiltinLeapSeconds)?;
         Ok(PyUt1Provider(provider))
     }

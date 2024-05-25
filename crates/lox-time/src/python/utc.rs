@@ -14,7 +14,7 @@ use crate::python::ut1::PyUt1Provider;
 use crate::transformations::{ToTai, ToTcb, ToTcg, ToTdb, ToTt, ToUt1};
 use crate::utc::{Utc, UtcError};
 use pyo3::exceptions::PyValueError;
-use pyo3::{pyclass, pymethods, PyErr, PyResult};
+use pyo3::{pyclass, pymethods, Bound, PyErr, PyResult};
 
 impl From<UtcError> for PyErr {
     fn from(value: UtcError) -> Self {
@@ -30,7 +30,14 @@ pub struct PyUtc(pub Utc);
 impl PyUtc {
     #[new]
     #[pyo3(signature = (year, month, day, hour = 0, minute = 0, seconds = 0.0))]
-    fn new(year: i64, month: u8, day: u8, hour: u8, minute: u8, seconds: f64) -> PyResult<PyUtc> {
+    pub fn new(
+        year: i64,
+        month: u8,
+        day: u8,
+        hour: u8,
+        minute: u8,
+        seconds: f64,
+    ) -> PyResult<PyUtc> {
         let utc = Utc::builder()
             .with_ymd(year, month, day)
             .with_hms(hour, minute, seconds)
@@ -38,11 +45,11 @@ impl PyUtc {
         Ok(PyUtc(utc))
     }
 
-    fn __str__(&self) -> String {
+    pub fn __str__(&self) -> String {
         self.0.to_string()
     }
 
-    fn __repr__(&self) -> String {
+    pub fn __repr__(&self) -> String {
         format!(
             "UTC({}, {}, {}, {}, {}, {})",
             self.0.year(),
@@ -54,77 +61,142 @@ impl PyUtc {
         )
     }
 
-    fn __eq__(&self, other: PyUtc) -> bool {
+    pub fn __eq__(&self, other: PyUtc) -> bool {
         self.0 == other.0
     }
 
-    fn year(&self) -> i64 {
+    pub fn year(&self) -> i64 {
         self.0.year()
     }
 
-    fn month(&self) -> u8 {
+    pub fn month(&self) -> u8 {
         self.0.month()
     }
 
-    fn day(&self) -> u8 {
+    pub fn day(&self) -> u8 {
         self.0.day()
     }
 
-    fn hour(&self) -> u8 {
+    pub fn hour(&self) -> u8 {
         self.0.hour()
     }
 
-    fn minute(&self) -> u8 {
+    pub fn minute(&self) -> u8 {
         self.0.minute()
     }
 
-    fn second(&self) -> u8 {
+    pub fn second(&self) -> u8 {
         self.0.second()
     }
 
-    fn millisecond(&self) -> i64 {
+    pub fn millisecond(&self) -> i64 {
         self.0.millisecond()
     }
 
-    fn microsecond(&self) -> i64 {
+    pub fn microsecond(&self) -> i64 {
         self.0.microsecond()
     }
 
-    fn nanosecond(&self) -> i64 {
+    pub fn nanosecond(&self) -> i64 {
         self.0.nanosecond()
     }
 
-    fn picosecond(&self) -> i64 {
+    pub fn picosecond(&self) -> i64 {
         self.0.picosecond()
     }
 
-    fn decimal_seconds(&self) -> f64 {
+    pub fn decimal_seconds(&self) -> f64 {
         self.0.decimal_seconds()
     }
 
-    fn to_tai(&self) -> PyTime {
+    pub fn to_tai(&self) -> PyTime {
         PyTime(self.0.to_tai().with_scale(PyTimeScale::Tai))
     }
 
-    fn to_tcb(&self) -> PyTime {
+    pub fn to_tcb(&self) -> PyTime {
         PyTime(self.0.to_tcb().with_scale(PyTimeScale::Tcb))
     }
 
-    fn to_tcg(&self) -> PyTime {
+    pub fn to_tcg(&self) -> PyTime {
         PyTime(self.0.to_tcg().with_scale(PyTimeScale::Tcg))
     }
 
-    fn to_tdb(&self) -> PyTime {
+    pub fn to_tdb(&self) -> PyTime {
         PyTime(self.0.to_tdb().with_scale(PyTimeScale::Tdb))
     }
 
-    fn to_tt(&self) -> PyTime {
+    pub fn to_tt(&self) -> PyTime {
         PyTime(self.0.to_tt().with_scale(PyTimeScale::Tt))
     }
 
-    fn to_ut1(&self, provider: PyUt1Provider) -> PyResult<PyTime> {
+    pub fn to_ut1(&self, provider: &Bound<'_, PyUt1Provider>) -> PyResult<PyTime> {
         Ok(PyTime(
-            self.0.try_to_ut1(&provider.0)?.with_scale(PyTimeScale::Ut1),
+            self.0
+                .try_to_ut1(&provider.borrow().0)?
+                .with_scale(PyTimeScale::Ut1),
         ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use pyo3::{Bound, Python};
+
+    use crate::test_helpers::data_dir;
+
+    use super::*;
+
+    #[test]
+    fn test_pyutc() {
+        let utc = PyUtc::new(2000, 1, 1, 12, 13, 14.123456789123).unwrap();
+        assert_eq!(utc.year(), 2000);
+        assert_eq!(utc.month(), 1);
+        assert_eq!(utc.day(), 1);
+        assert_eq!(utc.hour(), 12);
+        assert_eq!(utc.minute(), 13);
+        assert_eq!(utc.second(), 14);
+        assert_eq!(utc.millisecond(), 123);
+        assert_eq!(utc.microsecond(), 456);
+        assert_eq!(utc.nanosecond(), 789);
+        assert_eq!(utc.picosecond(), 123);
+        assert_eq!(utc.decimal_seconds(), 14.123456789123);
+        assert_eq!(utc.__str__(), "2000-01-01T12:13:14.123 UTC");
+        assert_eq!(utc.__repr__(), "UTC(2000, 1, 1, 12, 13, 14.123456789123)");
+        assert!(utc.__eq__(utc.clone()));
+    }
+
+    #[test]
+    #[should_panic(expected = "invalid date")]
+    fn test_pyutc_error() {
+        PyUtc::new(2000, 0, 1, 0, 0, 0.0).unwrap();
+    }
+
+    #[test]
+    fn test_pyutc_transformations() {
+        Python::with_gil(|py| {
+            let provider = Bound::new(
+                py,
+                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
+                    .unwrap(),
+            )
+            .unwrap();
+            let utc_exp = PyUtc::new(2000, 1, 1, 0, 0, 0.0).unwrap();
+            let utc_act = utc_exp.to_tai().to_utc(Some(&provider)).unwrap();
+            assert_eq!(utc_act, utc_exp);
+            let utc_act = utc_exp.to_tcb().to_utc(Some(&provider)).unwrap();
+            assert_eq!(utc_act, utc_exp);
+            let utc_act = utc_exp.to_tcg().to_utc(Some(&provider)).unwrap();
+            assert_eq!(utc_act, utc_exp);
+            let utc_act = utc_exp.to_tdb().to_utc(Some(&provider)).unwrap();
+            assert_eq!(utc_act, utc_exp);
+            let utc_act = utc_exp.to_tt().to_utc(Some(&provider)).unwrap();
+            assert_eq!(utc_act, utc_exp);
+            let utc_act = utc_exp
+                .to_ut1(&provider)
+                .unwrap()
+                .to_utc(Some(&provider))
+                .unwrap();
+            assert_eq!(utc_act, utc_exp);
+        });
     }
 }
