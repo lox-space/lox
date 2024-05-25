@@ -6,10 +6,10 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::calendar_dates::{CalendarDate, Date};
+use crate::calendar_dates::CalendarDate;
 use crate::deltas::{TimeDelta, ToDelta};
 use crate::julian_dates::{Epoch, JulianDate, Unit};
-use crate::prelude::{CivilTime, Tai, Tcb, Tcg, Tdb, TimeOfDay, TimeScale, Tt, Ut1};
+use crate::prelude::{CivilTime, Tai, Tcb, Tcg, Tdb, TimeScale, Tt, Ut1};
 use crate::python::time_scales::PyTimeScale;
 use crate::python::ut1::PyUt1Provider;
 use crate::python::utc::PyUtc;
@@ -18,12 +18,40 @@ use crate::ut1::{DeltaUt1Tai, ExtrapolatedDeltaUt1Tai};
 use crate::utc::transformations::ToUtc;
 use crate::{Time, TimeError};
 use pyo3::exceptions::PyValueError;
+use pyo3::types::PyType;
 use pyo3::{pyclass, pymethods, Bound, PyErr, PyResult};
 use std::str::FromStr;
 
 impl From<TimeError> for PyErr {
     fn from(value: TimeError) -> Self {
         PyValueError::new_err(value.to_string())
+    }
+}
+
+impl FromStr for Epoch {
+    type Err = PyErr;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "jd" | "JD" => Ok(Epoch::JulianDate),
+            "mjd" | "MJD" => Ok(Epoch::ModifiedJulianDate),
+            "j1950" | "J1950" => Ok(Epoch::J1950),
+            "j2000" | "J2000" => Ok(Epoch::J2000),
+            _ => Err(PyValueError::new_err(format!("unknown epoch: {}", s))),
+        }
+    }
+}
+
+impl FromStr for Unit {
+    type Err = PyErr;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "seconds" => Ok(Unit::Seconds),
+            "days" => Ok(Unit::Days),
+            "centuries" => Ok(Unit::Centuries),
+            _ => Err(PyValueError::new_err(format!("unknown unit: {}", s))),
+        }
     }
 }
 
@@ -44,12 +72,25 @@ impl PyTime {
         minute: u8,
         seconds: f64,
     ) -> PyResult<PyTime> {
-        let scale = PyTimeScale::from_str(scale)?;
+        let scale: PyTimeScale = scale.parse()?;
         let time = Time::builder_with_scale(scale)
             .with_ymd(year, month, day)
             .with_hms(hour, minute, seconds)
             .build()?;
         Ok(PyTime(time))
+    }
+
+    #[classmethod]
+    #[pyo3(signature = (scale, jd, epoch = "jd"))]
+    pub fn from_julian_date(
+        _cls: &Bound<'_, PyType>,
+        scale: &str,
+        jd: f64,
+        epoch: &str,
+    ) -> PyResult<Self> {
+        let scale: PyTimeScale = scale.parse()?;
+        let epoch: Epoch = epoch.parse()?;
+        Ok(Self(Time::from_julian_date(scale, jd, epoch)?))
     }
 
     pub fn __str__(&self) -> String {
@@ -58,7 +99,7 @@ impl PyTime {
 
     pub fn __repr__(&self) -> String {
         format!(
-            "Time({}, {}, {}, {}, {}, {}, {})",
+            "Time(\"{}\", {}, {}, {}, {}, {}, {})",
             self.scale(),
             self.0.year(),
             self.0.month(),
@@ -69,8 +110,39 @@ impl PyTime {
         )
     }
 
+    #[pyo3(signature = (epoch = "jd", unit = "days"))]
+    pub fn julian_date(&self, epoch: &str, unit: &str) -> PyResult<f64> {
+        let epoch: Epoch = epoch.parse()?;
+        let unit: Unit = unit.parse()?;
+        Ok(self.0.julian_date(epoch, unit))
+    }
+
     pub fn scale(&self) -> &'static str {
         self.0.scale().abbreviation()
+    }
+
+    pub fn year(&self) -> i64 {
+        self.0.year()
+    }
+
+    pub fn month(&self) -> u8 {
+        self.0.month()
+    }
+
+    pub fn day(&self) -> u8 {
+        self.0.day()
+    }
+
+    pub fn hour(&self) -> u8 {
+        self.0.hour()
+    }
+
+    pub fn minute(&self) -> u8 {
+        self.0.minute()
+    }
+
+    pub fn second(&self) -> u8 {
+        self.0.second()
     }
 
     pub fn to_tai<'py>(&self, provider: Option<&Bound<'py, PyUt1Provider>>) -> PyResult<PyTime> {
@@ -324,26 +396,10 @@ impl TryToScale<Ut1, NoOpOffsetProvider, PyErr> for PyTime {
     }
 }
 
-impl JulianDate for PyTime {
-    fn julian_date(&self, epoch: Epoch, unit: Unit) -> f64 {
-        self.0.julian_date(epoch, unit)
-    }
-}
-
-impl CalendarDate for PyTime {
-    fn date(&self) -> Date {
-        self.0.date()
-    }
-}
-
-impl CivilTime for PyTime {
-    fn time(&self) -> TimeOfDay {
-        self.0.time()
-    }
-}
-
 #[cfg(test)]
 mod tests {
+    use pyo3::Python;
+
     use super::*;
     use crate::time;
 
@@ -355,7 +411,21 @@ mod tests {
 
     #[test]
     fn test_pytime_julian_date() {
-        let time = PyTime(time!(PyTimeScale::Tai, 2000, 1, 1, 12).unwrap());
-        assert_eq!(time.seconds_since_j2000(), 0.0);
+        Python::with_gil(|py| {
+            let cls = PyType::new_bound::<PyTime>(py);
+            let time = PyTime::from_julian_date(&cls, "TAI", 0.0, "j2000").unwrap();
+            assert_eq!(time.julian_date("j2000", "seconds").unwrap(), 0.0);
+            assert_eq!(time.julian_date("j2000", "days").unwrap(), 0.0);
+            assert_eq!(time.julian_date("j2000", "centuries").unwrap(), 0.0);
+            assert_eq!(time.julian_date("jd", "days").unwrap(), 2451545.0);
+            assert_eq!(time.julian_date("mjd", "days").unwrap(), 51544.5);
+            assert_eq!(time.julian_date("j1950", "days").unwrap(), 18262.5);
+            let time = PyTime::from_julian_date(&cls, "TAI", 0.0, "j1950").unwrap();
+            assert_eq!(time.julian_date("j1950", "days").unwrap(), 0.0);
+            let time = PyTime::from_julian_date(&cls, "TAI", 0.0, "mjd").unwrap();
+            assert_eq!(time.julian_date("mjd", "days").unwrap(), 0.0);
+            let time = PyTime::from_julian_date(&cls, "TAI", 0.0, "jd").unwrap();
+            assert_eq!(time.julian_date("jd", "days").unwrap(), 0.0);
+        })
     }
 }
