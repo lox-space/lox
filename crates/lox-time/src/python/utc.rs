@@ -129,7 +129,7 @@ impl PyUtc {
         PyTime(self.0.to_tt().with_scale(PyTimeScale::Tt))
     }
 
-    pub fn to_ut1<'py>(&self, provider: &Bound<'py, PyUt1Provider>) -> PyResult<PyTime> {
+    pub fn to_ut1(&self, provider: &Bound<'_, PyUt1Provider>) -> PyResult<PyTime> {
         Ok(PyTime(
             self.0
                 .try_to_ut1(&provider.borrow().0)?
