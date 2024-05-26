@@ -679,7 +679,7 @@ mod tests {
             let tai_act = tcb.to_tai(None).unwrap();
             assert_close!(tai_act, tai_exp);
             let tcb = tai_exp.to_tcb(Some(&provider)).unwrap();
-            let tai_act = tcb.to_tai(None).unwrap();
+            let tai_act = tcb.to_tai(Some(&provider)).unwrap();
             assert_close!(tai_act, tai_exp);
         })
     }
@@ -698,7 +698,7 @@ mod tests {
             let tai_act = tcg.to_tai(None).unwrap();
             assert_close!(tai_act, tai_exp);
             let tcg = tai_exp.to_tcg(Some(&provider)).unwrap();
-            let tai_act = tcg.to_tai(None).unwrap();
+            let tai_act = tcg.to_tai(Some(&provider)).unwrap();
             assert_close!(tai_act, tai_exp);
         })
     }
@@ -717,7 +717,7 @@ mod tests {
             let tai_act = tdb.to_tai(None).unwrap();
             assert_close!(tai_act, tai_exp);
             let tdb = tai_exp.to_tdb(Some(&provider)).unwrap();
-            let tai_act = tdb.to_tai(None).unwrap();
+            let tai_act = tdb.to_tai(Some(&provider)).unwrap();
             assert_close!(tai_act, tai_exp);
         })
     }
@@ -736,7 +736,7 @@ mod tests {
             let tai_act = tt.to_tai(None).unwrap();
             assert_close!(tai_act, tai_exp);
             let tt = tai_exp.to_tt(Some(&provider)).unwrap();
-            let tai_act = tt.to_tai(None).unwrap();
+            let tai_act = tt.to_tai(Some(&provider)).unwrap();
             assert_close!(tai_act, tai_exp);
         })
     }
@@ -755,7 +755,7 @@ mod tests {
             let tcb_act = tcg.to_tcb(None).unwrap();
             assert_close!(tcb_act, tcb_exp);
             let tcg = tcb_exp.to_tcg(Some(&provider)).unwrap();
-            let tcb_act = tcg.to_tcb(None).unwrap();
+            let tcb_act = tcg.to_tcb(Some(&provider)).unwrap();
             assert_close!(tcb_act, tcb_exp);
         })
     }
@@ -774,7 +774,7 @@ mod tests {
             let tcb_act = tdb.to_tcb(None).unwrap();
             assert_close!(tcb_act, tcb_exp);
             let tdb = tcb_exp.to_tdb(Some(&provider)).unwrap();
-            let tcb_act = tdb.to_tcb(None).unwrap();
+            let tcb_act = tdb.to_tcb(Some(&provider)).unwrap();
             assert_close!(tcb_act, tcb_exp);
         })
     }
@@ -793,7 +793,7 @@ mod tests {
             let tcb_act = tt.to_tcb(None).unwrap();
             assert_close!(tcb_act, tcb_exp);
             let tt = tcb_exp.to_tt(Some(&provider)).unwrap();
-            let tcb_act = tt.to_tcb(None).unwrap();
+            let tcb_act = tt.to_tcb(Some(&provider)).unwrap();
             assert_close!(tcb_act, tcb_exp);
         })
     }
@@ -812,7 +812,7 @@ mod tests {
             let tcg_act = tdb.to_tcg(None).unwrap();
             assert_close!(tcg_act, tcg_exp);
             let tdb = tcg_exp.to_tdb(Some(&provider)).unwrap();
-            let tcg_act = tdb.to_tcg(None).unwrap();
+            let tcg_act = tdb.to_tcg(Some(&provider)).unwrap();
             assert_close!(tcg_act, tcg_exp);
         })
     }
@@ -831,7 +831,7 @@ mod tests {
             let tcg_act = tt.to_tcg(None).unwrap();
             assert_close!(tcg_act, tcg_exp);
             let tt = tcg_exp.to_tt(Some(&provider)).unwrap();
-            let tcg_act = tt.to_tcg(None).unwrap();
+            let tcg_act = tt.to_tcg(Some(&provider)).unwrap();
             assert_close!(tcg_act, tcg_exp);
         })
     }
@@ -850,7 +850,7 @@ mod tests {
             let tdb_act = tt.to_tdb(None).unwrap();
             assert_close!(tdb_act, tdb_exp);
             let tt = tdb_exp.to_tt(Some(&provider)).unwrap();
-            let tdb_act = tt.to_tdb(None).unwrap();
+            let tdb_act = tt.to_tdb(Some(&provider)).unwrap();
             assert_close!(tdb_act, tdb_exp);
         })
     }
