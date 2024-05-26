@@ -452,17 +452,45 @@ impl TryToScale<Ut1, NoOpOffsetProvider, PyErr> for PyTime {
 
 #[cfg(test)]
 mod tests {
-    use pyo3::Python;
+    use float_eq::assert_float_eq;
+    use pyo3::{types::PyDict, Python};
 
     use super::*;
 
     #[test]
     fn test_pytime() {
-        let time = PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap();
-        assert_eq!(time.__repr__(), "Time(\"TAI\", 2000, 1, 1, 0, 0, 0)");
-        assert_eq!(time.__str__(), "2000-01-01T00:00:00.000 TAI");
+        let time = PyTime::new("TAI", 2000, 1, 1, 0, 0, 12.123456789123).unwrap();
+        dbg!(&time);
+        assert_eq!(
+            time.__repr__(),
+            "Time(\"TAI\", 2000, 1, 1, 0, 0, 12.123456789123)"
+        );
+        assert_eq!(time.__str__(), "2000-01-01T00:00:12.123 TAI");
         assert_eq!(time.scale(), "TAI".to_string());
         assert_eq!(time.year(), 2000);
+        assert_eq!(time.month(), 1);
+        assert_eq!(time.day(), 1);
+        assert_eq!(time.hour(), 0);
+        assert_eq!(time.minute(), 0);
+        assert_eq!(time.second(), 12);
+        assert_eq!(time.millisecond(), 123);
+        assert_eq!(time.microsecond(), 456);
+        assert_eq!(time.nanosecond(), 789);
+        assert_eq!(time.picosecond(), 123);
+        assert_eq!(time.femtosecond(), 0);
+        assert_float_eq!(time.decimal_seconds(), 12.123456789123, rel <= 1e-15);
+    }
+
+    #[test]
+    #[should_panic(expected = "invalid date")]
+    fn test_pytime_invalid_date() {
+        PyTime::new("TAI", 2000, 13, 1, 0, 0, 0.0).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "hour must be in the range")]
+    fn test_pytime_invalid_time() {
+        PyTime::new("TAI", 2000, 12, 1, 24, 0, 0.0).unwrap();
     }
 
     #[test]
@@ -486,6 +514,26 @@ mod tests {
                 .extract::<PyTimeDelta>()
                 .unwrap()
                 .__eq__(dt.clone()));
+        });
+    }
+
+    #[test]
+    #[should_panic(expected = "cannot subtract `Time` objects with different time scales")]
+    fn test_pytime_ops_different_scales() {
+        Python::with_gil(|py| {
+            let t1 = PyTime::new("TAI", 2000, 1, 1, 0, 0, 1.0).unwrap();
+            let t0 = Bound::new(py, PyTime::new("TT", 2000, 1, 1, 0, 0, 1.0).unwrap()).unwrap();
+            t1.__sub__(py, &t0).unwrap();
+        });
+    }
+
+    #[test]
+    #[should_panic(expected = "`rhs` must be either a `Time` or a `TimeDelta` object")]
+    fn test_pytime_ops_invalid_rhs() {
+        Python::with_gil(|py| {
+            let t1 = PyTime::new("TAI", 2000, 1, 1, 0, 0, 1.0).unwrap();
+            let invalid = PyDict::new_bound(py);
+            t1.__sub__(py, &invalid).unwrap();
         });
     }
 
