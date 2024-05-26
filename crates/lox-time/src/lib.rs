@@ -19,6 +19,7 @@ use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, Sub};
 
+use lox_utils::isclose::IsClose;
 use num::ToPrimitive;
 use thiserror::Error;
 
@@ -243,6 +244,18 @@ impl<T: TimeScale> Time<T> {
     /// The number of femtoseconds from the last whole second.
     pub fn subsecond(&self) -> f64 {
         self.subsecond.into()
+    }
+}
+
+impl<T: TimeScale> IsClose for Time<T> {
+    const DEFAULT_RELATIVE: f64 = 1e-12;
+
+    const DEFAULT_ABSOLUTE: f64 = 1e-14;
+
+    fn is_close_with_tolerances(&self, rhs: &Self, rel_tol: f64, abs_tol: f64) -> bool {
+        let a = self.to_delta().to_decimal_seconds();
+        let b = rhs.to_delta().to_decimal_seconds();
+        a.is_close_with_tolerances(&b, rel_tol, abs_tol)
     }
 }
 

@@ -18,6 +18,7 @@ use crate::transformations::{NoOpOffsetProvider, ToTai, ToTcb, ToTcg, ToTdb, ToT
 use crate::ut1::{DeltaUt1Tai, ExtrapolatedDeltaUt1Tai};
 use crate::utc::transformations::ToUtc;
 use crate::{Time, TimeError};
+use lox_utils::isclose::IsClose;
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::types::{PyAnyMethods, PyType};
 use pyo3::{pyclass, pymethods, Bound, PyAny, PyErr, PyResult, Python};
@@ -138,6 +139,16 @@ impl PyTime {
 
     pub fn __eq__(&self, rhs: PyTime) -> bool {
         self.0 == rhs.0
+    }
+
+    #[pyo3(signature = (rhs, rel_tol = 1e-8, abs_tol = 1e-14))]
+    pub fn isclose(&self, rhs: PyTime, rel_tol: f64, abs_tol: f64) -> PyResult<bool> {
+        if self.scale() != rhs.scale() {
+            return Err(PyValueError::new_err(
+                "cannot compare `Time` objects with different time scales",
+            ));
+        }
+        Ok(self.0.is_close_with_tolerances(&rhs.0, rel_tol, abs_tol))
     }
 
     #[pyo3(signature = (epoch = "jd", unit = "days"))]
@@ -450,10 +461,23 @@ impl TryToScale<Ut1, NoOpOffsetProvider, PyErr> for PyTime {
     }
 }
 
+impl IsClose for PyTime {
+    const DEFAULT_RELATIVE: f64 = 1e-10;
+
+    const DEFAULT_ABSOLUTE: f64 = 1e-14;
+
+    fn is_close_with_tolerances(&self, rhs: &Self, rel_tol: f64, abs_tol: f64) -> bool {
+        self.0.is_close_with_tolerances(&rhs.0, rel_tol, abs_tol)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use float_eq::assert_float_eq;
+    use lox_utils::assert_close;
     use pyo3::{types::PyDict, Python};
+
+    use crate::test_helpers::data_dir;
 
     use super::*;
 
@@ -639,5 +663,195 @@ mod tests {
     fn test_pytime_tt_ut1_no_provider() {
         let time = PyTime::new("TT", 2000, 1, 1, 0, 0, 0.0).unwrap();
         time.to_ut1(None).unwrap();
+    }
+
+    #[test]
+    fn test_pytime_tai_tcb() {
+        Python::with_gil(|py| {
+            let provider = Bound::new(
+                py,
+                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
+                    .unwrap(),
+            )
+            .unwrap();
+            let tai_exp = PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap();
+            let tcb = tai_exp.to_tcb(None).unwrap();
+            let tai_act = tcb.to_tai(None).unwrap();
+            assert_close!(tai_act, tai_exp);
+            let tcb = tai_exp.to_tcb(Some(&provider)).unwrap();
+            let tai_act = tcb.to_tai(None).unwrap();
+            assert_close!(tai_act, tai_exp);
+        })
+    }
+
+    #[test]
+    fn test_pytime_tai_tcg() {
+        Python::with_gil(|py| {
+            let provider = Bound::new(
+                py,
+                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
+                    .unwrap(),
+            )
+            .unwrap();
+            let tai_exp = PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap();
+            let tcg = tai_exp.to_tcg(None).unwrap();
+            let tai_act = tcg.to_tai(None).unwrap();
+            assert_close!(tai_act, tai_exp);
+            let tcg = tai_exp.to_tcg(Some(&provider)).unwrap();
+            let tai_act = tcg.to_tai(None).unwrap();
+            assert_close!(tai_act, tai_exp);
+        })
+    }
+
+    #[test]
+    fn test_pytime_tai_tdb() {
+        Python::with_gil(|py| {
+            let provider = Bound::new(
+                py,
+                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
+                    .unwrap(),
+            )
+            .unwrap();
+            let tai_exp = PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap();
+            let tdb = tai_exp.to_tdb(None).unwrap();
+            let tai_act = tdb.to_tai(None).unwrap();
+            assert_close!(tai_act, tai_exp);
+            let tdb = tai_exp.to_tdb(Some(&provider)).unwrap();
+            let tai_act = tdb.to_tai(None).unwrap();
+            assert_close!(tai_act, tai_exp);
+        })
+    }
+
+    #[test]
+    fn test_pytime_tai_tt() {
+        Python::with_gil(|py| {
+            let provider = Bound::new(
+                py,
+                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
+                    .unwrap(),
+            )
+            .unwrap();
+            let tai_exp = PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap();
+            let tt = tai_exp.to_tt(None).unwrap();
+            let tai_act = tt.to_tai(None).unwrap();
+            assert_close!(tai_act, tai_exp);
+            let tt = tai_exp.to_tt(Some(&provider)).unwrap();
+            let tai_act = tt.to_tai(None).unwrap();
+            assert_close!(tai_act, tai_exp);
+        })
+    }
+
+    #[test]
+    fn test_pytime_tcb_tcg() {
+        Python::with_gil(|py| {
+            let provider = Bound::new(
+                py,
+                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
+                    .unwrap(),
+            )
+            .unwrap();
+            let tcb_exp = PyTime::new("TCB", 2000, 1, 1, 0, 0, 0.0).unwrap();
+            let tcg = tcb_exp.to_tcg(None).unwrap();
+            let tcb_act = tcg.to_tcb(None).unwrap();
+            assert_close!(tcb_act, tcb_exp);
+            let tcg = tcb_exp.to_tcg(Some(&provider)).unwrap();
+            let tcb_act = tcg.to_tcb(None).unwrap();
+            assert_close!(tcb_act, tcb_exp);
+        })
+    }
+
+    #[test]
+    fn test_pytime_tcb_tdb() {
+        Python::with_gil(|py| {
+            let provider = Bound::new(
+                py,
+                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
+                    .unwrap(),
+            )
+            .unwrap();
+            let tcb_exp = PyTime::new("TCB", 2000, 1, 1, 0, 0, 0.0).unwrap();
+            let tdb = tcb_exp.to_tdb(None).unwrap();
+            let tcb_act = tdb.to_tcb(None).unwrap();
+            assert_close!(tcb_act, tcb_exp);
+            let tdb = tcb_exp.to_tdb(Some(&provider)).unwrap();
+            let tcb_act = tdb.to_tcb(None).unwrap();
+            assert_close!(tcb_act, tcb_exp);
+        })
+    }
+
+    #[test]
+    fn test_pytime_tcb_tt() {
+        Python::with_gil(|py| {
+            let provider = Bound::new(
+                py,
+                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
+                    .unwrap(),
+            )
+            .unwrap();
+            let tcb_exp = PyTime::new("TCB", 2000, 1, 1, 0, 0, 0.0).unwrap();
+            let tt = tcb_exp.to_tt(None).unwrap();
+            let tcb_act = tt.to_tcb(None).unwrap();
+            assert_close!(tcb_act, tcb_exp);
+            let tt = tcb_exp.to_tt(Some(&provider)).unwrap();
+            let tcb_act = tt.to_tcb(None).unwrap();
+            assert_close!(tcb_act, tcb_exp);
+        })
+    }
+
+    #[test]
+    fn test_pytime_tcg_tdb() {
+        Python::with_gil(|py| {
+            let provider = Bound::new(
+                py,
+                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
+                    .unwrap(),
+            )
+            .unwrap();
+            let tcg_exp = PyTime::new("TCG", 2000, 1, 1, 0, 0, 0.0).unwrap();
+            let tdb = tcg_exp.to_tdb(None).unwrap();
+            let tcg_act = tdb.to_tcg(None).unwrap();
+            assert_close!(tcg_act, tcg_exp);
+            let tdb = tcg_exp.to_tdb(Some(&provider)).unwrap();
+            let tcg_act = tdb.to_tcg(None).unwrap();
+            assert_close!(tcg_act, tcg_exp);
+        })
+    }
+
+    #[test]
+    fn test_pytime_tcg_tt() {
+        Python::with_gil(|py| {
+            let provider = Bound::new(
+                py,
+                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
+                    .unwrap(),
+            )
+            .unwrap();
+            let tcg_exp = PyTime::new("TCG", 2000, 1, 1, 0, 0, 0.0).unwrap();
+            let tt = tcg_exp.to_tt(None).unwrap();
+            let tcg_act = tt.to_tcg(None).unwrap();
+            assert_close!(tcg_act, tcg_exp);
+            let tt = tcg_exp.to_tt(Some(&provider)).unwrap();
+            let tcg_act = tt.to_tcg(None).unwrap();
+            assert_close!(tcg_act, tcg_exp);
+        })
+    }
+
+    #[test]
+    fn test_pytime_tdb_tt() {
+        Python::with_gil(|py| {
+            let provider = Bound::new(
+                py,
+                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
+                    .unwrap(),
+            )
+            .unwrap();
+            let tdb_exp = PyTime::new("TDB", 2000, 1, 1, 0, 0, 0.0).unwrap();
+            let tt = tdb_exp.to_tt(None).unwrap();
+            let tdb_act = tt.to_tdb(None).unwrap();
+            assert_close!(tdb_act, tdb_exp);
+            let tt = tdb_exp.to_tt(Some(&provider)).unwrap();
+            let tdb_act = tt.to_tdb(None).unwrap();
+            assert_close!(tdb_act, tdb_exp);
+        })
     }
 }
