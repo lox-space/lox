@@ -25,73 +25,77 @@ pub struct PyTimeDelta(pub TimeDelta);
 #[pymethods]
 impl PyTimeDelta {
     #[new]
-    fn new(seconds: f64) -> PyResult<Self> {
+    pub fn new(seconds: f64) -> PyResult<Self> {
         Ok(Self(TimeDelta::from_decimal_seconds(seconds)?))
     }
 
-    fn __repr__(&self) -> String {
+    pub fn __repr__(&self) -> String {
         format!("TimeDelta({})", self.to_decimal_seconds())
     }
 
-    fn __str__(&self) -> String {
+    pub fn __str__(&self) -> String {
         format!("{} seconds", self.to_decimal_seconds())
     }
 
-    fn __float__(&self) -> f64 {
+    pub fn __float__(&self) -> f64 {
         self.to_decimal_seconds()
     }
 
-    fn __neg__(&self) -> Self {
+    pub fn __neg__(&self) -> Self {
         Self(-self.0)
     }
 
-    fn __add__(&self, other: PyTimeDelta) -> Self {
+    pub fn __add__(&self, other: PyTimeDelta) -> Self {
         Self(self.0 + other.0)
     }
 
-    fn __sub__(&self, other: PyTimeDelta) -> Self {
+    pub fn __sub__(&self, other: PyTimeDelta) -> Self {
         Self(self.0 - other.0)
     }
 
-    fn seconds(&self) -> i64 {
+    pub fn __eq__(&self, other: PyTimeDelta) -> bool {
+        self.0 == other.0
+    }
+
+    pub fn seconds(&self) -> i64 {
         self.0.seconds
     }
 
-    fn subsecond(&self) -> f64 {
+    pub fn subsecond(&self) -> f64 {
         self.0.subsecond.0
     }
 
     #[classmethod]
-    fn from_seconds(_cls: &Bound<'_, PyType>, seconds: i64) -> Self {
+    pub fn from_seconds(_cls: &Bound<'_, PyType>, seconds: i64) -> Self {
         Self(TimeDelta::from_seconds(seconds))
     }
 
     #[classmethod]
-    fn from_minutes(_cls: &Bound<'_, PyType>, minutes: f64) -> PyResult<Self> {
+    pub fn from_minutes(_cls: &Bound<'_, PyType>, minutes: f64) -> PyResult<Self> {
         Ok(Self(TimeDelta::from_minutes(minutes)?))
     }
 
     #[classmethod]
-    fn from_hours(_cls: &Bound<'_, PyType>, hours: f64) -> PyResult<Self> {
+    pub fn from_hours(_cls: &Bound<'_, PyType>, hours: f64) -> PyResult<Self> {
         Ok(Self(TimeDelta::from_hours(hours)?))
     }
 
     #[classmethod]
-    fn from_days(_cls: &Bound<'_, PyType>, days: f64) -> PyResult<Self> {
+    pub fn from_days(_cls: &Bound<'_, PyType>, days: f64) -> PyResult<Self> {
         Ok(Self(TimeDelta::from_days(days)?))
     }
 
     #[classmethod]
-    fn from_julian_years(_cls: &Bound<'_, PyType>, years: f64) -> PyResult<Self> {
+    pub fn from_julian_years(_cls: &Bound<'_, PyType>, years: f64) -> PyResult<Self> {
         Ok(Self(TimeDelta::from_julian_years(years)?))
     }
 
     #[classmethod]
-    fn from_julian_centuries(_cls: &Bound<'_, PyType>, centuries: f64) -> PyResult<Self> {
+    pub fn from_julian_centuries(_cls: &Bound<'_, PyType>, centuries: f64) -> PyResult<Self> {
         Ok(Self(TimeDelta::from_julian_centuries(centuries)?))
     }
 
-    fn to_decimal_seconds(&self) -> f64 {
+    pub fn to_decimal_seconds(&self) -> f64 {
         self.0.to_decimal_seconds()
     }
 }

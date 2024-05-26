@@ -466,6 +466,30 @@ mod tests {
     }
 
     #[test]
+    fn test_pytime_ops() {
+        Python::with_gil(|py| {
+            let t0 = PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap();
+            let dt = PyTimeDelta::new(1.0).unwrap();
+            let t1 = PyTime::new("TAI", 2000, 1, 1, 0, 0, 1.0).unwrap();
+            assert!(t0.__add__(dt.clone()).__eq__(t1.clone()));
+            let dtb = Bound::new(py, PyTimeDelta::new(1.0).unwrap()).unwrap();
+            assert!(t1
+                .__sub__(py, &dtb)
+                .unwrap()
+                .extract::<PyTime>()
+                .unwrap()
+                .__eq__(t0));
+            let t0b = Bound::new(py, PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap()).unwrap();
+            assert!(t1
+                .__sub__(py, &t0b)
+                .unwrap()
+                .extract::<PyTimeDelta>()
+                .unwrap()
+                .__eq__(dt.clone()));
+        });
+    }
+
+    #[test]
     fn test_pytime_julian_date() {
         Python::with_gil(|py| {
             let cls = PyType::new_bound::<PyTime>(py);
@@ -483,5 +507,19 @@ mod tests {
             let time = PyTime::from_julian_date(&cls, "TAI", 0.0, "jd").unwrap();
             assert_eq!(time.julian_date("jd", "days").unwrap(), 0.0);
         })
+    }
+
+    #[test]
+    #[should_panic(expected = "unknown epoch: unknown")]
+    fn test_pytime_invalid_epoch() {
+        let time = PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap();
+        time.julian_date("unknown", "days").unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "unknown unit: unknown")]
+    fn test_pytime_invalid_unit() {
+        let time = PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap();
+        time.julian_date("jd", "unknown").unwrap();
     }
 }
