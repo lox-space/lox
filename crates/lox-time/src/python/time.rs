@@ -19,9 +19,10 @@ use crate::ut1::{DeltaUt1Tai, ExtrapolatedDeltaUt1Tai};
 use crate::utc::transformations::ToUtc;
 use crate::{Time, TimeError};
 use lox_utils::is_close::IsClose;
+use pyo3::basic::CompareOp;
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::types::{PyAnyMethods, PyType};
-use pyo3::{pyclass, pymethods, Bound, PyAny, PyErr, PyResult, Python};
+use pyo3::{pyclass, pymethods, Bound, PyAny, PyErr, PyObject, PyResult, Python};
 use std::str::FromStr;
 
 impl From<TimeError> for PyErr {
@@ -95,6 +96,9 @@ impl PyTime {
         Ok(Self(Time::from_julian_date(scale, jd, epoch)?))
     }
 
+    #[classattr]
+    const __hash__: Option<PyObject> = None;
+
     pub fn __str__(&self) -> String {
         self.0.to_string()
     }
@@ -137,8 +141,8 @@ impl PyTime {
         }
     }
 
-    pub fn __eq__(&self, rhs: PyTime) -> bool {
-        self.0 == rhs.0
+    fn __richcmp__(&self, other: PyTime, op: CompareOp) -> bool {
+        op.matches(self.0.cmp(&other.0))
     }
 
     #[pyo3(signature = (rhs, rel_tol = 1e-8, abs_tol = 1e-14))]
@@ -523,21 +527,20 @@ mod tests {
             let t0 = PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap();
             let dt = PyTimeDelta::new(1.0).unwrap();
             let t1 = PyTime::new("TAI", 2000, 1, 1, 0, 0, 1.0).unwrap();
-            assert!(t0.__add__(dt.clone()).__eq__(t1.clone()));
+            assert_eq!(t0.__add__(dt.clone()), t1.clone());
             let dtb = Bound::new(py, PyTimeDelta::new(1.0).unwrap()).unwrap();
-            assert!(t1
-                .__sub__(py, &dtb)
-                .unwrap()
-                .extract::<PyTime>()
-                .unwrap()
-                .__eq__(t0));
+            assert_eq!(
+                t1.__sub__(py, &dtb).unwrap().extract::<PyTime>().unwrap(),
+                t0
+            );
             let t0b = Bound::new(py, PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap()).unwrap();
-            assert!(t1
-                .__sub__(py, &t0b)
-                .unwrap()
-                .extract::<PyTimeDelta>()
-                .unwrap()
-                .__eq__(dt.clone()));
+            assert_eq!(
+                t1.__sub__(py, &t0b)
+                    .unwrap()
+                    .extract::<PyTimeDelta>()
+                    .unwrap(),
+                dt.clone()
+            );
         });
     }
 
@@ -559,6 +562,17 @@ mod tests {
             let invalid = PyDict::new_bound(py);
             t1.__sub__(py, &invalid).unwrap();
         });
+    }
+
+    #[test]
+    fn test_pytime_richcmp() {
+        let t0 = PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap();
+        let t1 = PyTime::new("TAI", 2000, 1, 1, 0, 0, 1.0).unwrap();
+        assert!(t0.__richcmp__(t1.clone(), CompareOp::Lt));
+        assert!(t0.__richcmp__(t1.clone(), CompareOp::Le));
+        assert!(t0.__richcmp__(t1.clone(), CompareOp::Ne));
+        assert!(t1.__richcmp__(t0.clone(), CompareOp::Gt));
+        assert!(t1.__richcmp__(t0.clone(), CompareOp::Ge));
     }
 
     #[test]

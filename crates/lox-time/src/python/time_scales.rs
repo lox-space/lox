@@ -12,7 +12,7 @@ use pyo3::PyErr;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Ord)]
 pub enum PyTimeScale {
     Tai,
     Tcb,

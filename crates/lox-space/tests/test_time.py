@@ -9,8 +9,33 @@ DATA_DIR = pathlib.Path(__file__).parents[3].joinpath("data")
 def provider():
     return lox.UT1Provider(str(DATA_DIR.joinpath("finals2000A.all.csv")))
 
+
 def test_time(provider):
-    time_exp = lox.Time("TAI", 2000, 1, 1)
+    tai_exp = lox.Time("TAI", 2000, 1, 1)
+    tai_act = tai_exp.to_tai()
+    assert tai_exp == tai_act
+    tai_act = tai_exp.to_tcb().to_tai()
+    assert tai_exp.isclose(tai_act)
+    tai_act = tai_exp.to_tcg().to_tai()
+    assert tai_exp.isclose(tai_act)
+    tai_act = tai_exp.to_tdb().to_tai()
+    assert tai_exp.isclose(tai_act)
+    tai_act = tai_exp.to_tt().to_tai()
+    assert tai_exp.isclose(tai_act)
+    tai_act = tai_exp.to_ut1(provider).to_tai(provider)
+    assert tai_exp.isclose(tai_act)
+    with pytest.raises(ValueError):
+        tai_exp.to_ut1()
+    tai1 = lox.Time("TAI", 2000, 1, 1, 0, 0, 0.5)
+    assert tai1 > tai_exp
+    assert tai1 >= tai_exp
+    assert tai_exp < tai1
+    assert tai_exp <= tai1
+    assert tai_exp != tai1
+    dt = lox.TimeDelta(0.5)
+    assert tai_exp + dt == tai1
+    assert tai1 - dt == tai_exp
+    assert tai1 - tai_exp == dt
 
 
 def test_utc(provider):
