@@ -666,6 +666,23 @@ mod tests {
     }
 
     #[test]
+    fn test_pytime_tai_noop() {
+        Python::with_gil(|py| {
+            let provider = Bound::new(
+                py,
+                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
+                    .unwrap(),
+            )
+            .unwrap();
+            let tai_exp = PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap();
+            let tai_act = tai_exp.to_tai(None).unwrap();
+            assert_close!(tai_act, tai_exp);
+            let tai_act = tai_exp.to_tai(Some(&provider)).unwrap();
+            assert_close!(tai_act, tai_exp);
+        })
+    }
+
+    #[test]
     fn test_pytime_tai_tcb() {
         Python::with_gil(|py| {
             let provider = Bound::new(
