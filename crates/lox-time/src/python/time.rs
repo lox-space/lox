@@ -562,6 +562,12 @@ mod tests {
     }
 
     #[test]
+    fn test_pytime_to_delta() {
+        let t = PyTime::new("TAI", 2000, 1, 1, 12, 0, 0.3).unwrap();
+        assert_eq!(t.to_delta(), t.0.to_delta())
+    }
+
+    #[test]
     fn test_pytime_julian_date() {
         Python::with_gil(|py| {
             let cls = PyType::new_bound::<PyTime>(py);
@@ -593,76 +599,6 @@ mod tests {
     fn test_pytime_invalid_unit() {
         let time = PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap();
         time.julian_date("jd", "unknown").unwrap();
-    }
-
-    #[test]
-    #[should_panic(expected = "`provider` argument needs to be present for UT1 transformations")]
-    fn test_pytime_ut1_tai_no_provider() {
-        let time = PyTime::new("UT1", 2000, 1, 1, 0, 0, 0.0).unwrap();
-        time.to_tai(None).unwrap();
-    }
-
-    #[test]
-    #[should_panic(expected = "`provider` argument needs to be present for UT1 transformations")]
-    fn test_pytime_ut1_tcb_no_provider() {
-        let time = PyTime::new("UT1", 2000, 1, 1, 0, 0, 0.0).unwrap();
-        time.to_tcb(None).unwrap();
-    }
-
-    #[test]
-    #[should_panic(expected = "`provider` argument needs to be present for UT1 transformations")]
-    fn test_pytime_ut1_tcg_no_provider() {
-        let time = PyTime::new("UT1", 2000, 1, 1, 0, 0, 0.0).unwrap();
-        time.to_tcg(None).unwrap();
-    }
-
-    #[test]
-    #[should_panic(expected = "`provider` argument needs to be present for UT1 transformations")]
-    fn test_pytime_ut1_tdb_no_provider() {
-        let time = PyTime::new("UT1", 2000, 1, 1, 0, 0, 0.0).unwrap();
-        time.to_tdb(None).unwrap();
-    }
-
-    #[test]
-    #[should_panic(expected = "`provider` argument needs to be present for UT1 transformations")]
-    fn test_pytime_ut1_tt_no_provider() {
-        let time = PyTime::new("UT1", 2000, 1, 1, 0, 0, 0.0).unwrap();
-        time.to_tt(None).unwrap();
-    }
-
-    #[test]
-    #[should_panic(expected = "`provider` argument needs to be present for UT1 transformations")]
-    fn test_pytime_tai_ut1_no_provider() {
-        let time = PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap();
-        time.to_ut1(None).unwrap();
-    }
-
-    #[test]
-    #[should_panic(expected = "`provider` argument needs to be present for UT1 transformations")]
-    fn test_pytime_tcb_ut1_no_provider() {
-        let time = PyTime::new("TCB", 2000, 1, 1, 0, 0, 0.0).unwrap();
-        time.to_ut1(None).unwrap();
-    }
-
-    #[test]
-    #[should_panic(expected = "`provider` argument needs to be present for UT1 transformations")]
-    fn test_pytime_tcg_ut1_no_provider() {
-        let time = PyTime::new("TCG", 2000, 1, 1, 0, 0, 0.0).unwrap();
-        time.to_ut1(None).unwrap();
-    }
-
-    #[test]
-    #[should_panic(expected = "`provider` argument needs to be present for UT1 transformations")]
-    fn test_pytime_tdb_ut1_no_provider() {
-        let time = PyTime::new("TDB", 2000, 1, 1, 0, 0, 0.0).unwrap();
-        time.to_ut1(None).unwrap();
-    }
-
-    #[test]
-    #[should_panic(expected = "`provider` argument needs to be present for UT1 transformations")]
-    fn test_pytime_tt_ut1_no_provider() {
-        let time = PyTime::new("TT", 2000, 1, 1, 0, 0, 0.0).unwrap();
-        time.to_ut1(None).unwrap();
     }
 
     #[test]
@@ -844,6 +780,22 @@ mod tests {
     }
 
     #[test]
+    fn test_pytime_tai_ut1() {
+        Python::with_gil(|py| {
+            let provider = Bound::new(
+                py,
+                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
+                    .unwrap(),
+            )
+            .unwrap();
+            let tai_exp = PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap();
+            let ut1 = tai_exp.to_ut1(Some(&provider)).unwrap();
+            let tai_act = ut1.to_tai(Some(&provider)).unwrap();
+            assert_close!(tai_act, tai_exp);
+        })
+    }
+
+    #[test]
     fn test_pytime_tcb_tcg() {
         Python::with_gil(|py| {
             let provider = Bound::new(
@@ -901,6 +853,22 @@ mod tests {
     }
 
     #[test]
+    fn test_pytime_tcb_ut1() {
+        Python::with_gil(|py| {
+            let provider = Bound::new(
+                py,
+                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
+                    .unwrap(),
+            )
+            .unwrap();
+            let tcb_exp = PyTime::new("TCB", 2000, 1, 1, 0, 0, 0.0).unwrap();
+            let ut1 = tcb_exp.to_ut1(Some(&provider)).unwrap();
+            let tcb_act = ut1.to_tcb(Some(&provider)).unwrap();
+            assert_close!(tcb_act, tcb_exp);
+        })
+    }
+
+    #[test]
     fn test_pytime_tcg_tdb() {
         Python::with_gil(|py| {
             let provider = Bound::new(
@@ -939,6 +907,22 @@ mod tests {
     }
 
     #[test]
+    fn test_pytime_tcg_ut1() {
+        Python::with_gil(|py| {
+            let provider = Bound::new(
+                py,
+                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
+                    .unwrap(),
+            )
+            .unwrap();
+            let tcg_exp = PyTime::new("TCG", 2000, 1, 1, 0, 0, 0.0).unwrap();
+            let ut1 = tcg_exp.to_ut1(Some(&provider)).unwrap();
+            let tcg_act = ut1.to_tcg(Some(&provider)).unwrap();
+            assert_close!(tcg_act, tcg_exp);
+        })
+    }
+
+    #[test]
     fn test_pytime_tdb_tt() {
         Python::with_gil(|py| {
             let provider = Bound::new(
@@ -955,5 +939,107 @@ mod tests {
             let tdb_act = tt.to_tdb(Some(&provider)).unwrap();
             assert_close!(tdb_act, tdb_exp);
         })
+    }
+
+    #[test]
+    fn test_pytime_tdb_ut1() {
+        Python::with_gil(|py| {
+            let provider = Bound::new(
+                py,
+                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
+                    .unwrap(),
+            )
+            .unwrap();
+            let tdb_exp = PyTime::new("TDB", 2000, 1, 1, 0, 0, 0.0).unwrap();
+            let ut1 = tdb_exp.to_ut1(Some(&provider)).unwrap();
+            let tdb_act = ut1.to_tdb(Some(&provider)).unwrap();
+            assert_close!(tdb_act, tdb_exp);
+        })
+    }
+
+    #[test]
+    fn test_pytime_tt_ut1() {
+        Python::with_gil(|py| {
+            let provider = Bound::new(
+                py,
+                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
+                    .unwrap(),
+            )
+            .unwrap();
+            let tt_exp = PyTime::new("TT", 2000, 1, 1, 0, 0, 0.0).unwrap();
+            let ut1 = tt_exp.to_ut1(Some(&provider)).unwrap();
+            let tt_act = ut1.to_tt(Some(&provider)).unwrap();
+            assert_close!(tt_act, tt_exp);
+        })
+    }
+
+    #[test]
+    #[should_panic(expected = "`provider` argument needs to be present for UT1 transformations")]
+    fn test_pytime_ut1_tai_no_provider() {
+        let time = PyTime::new("UT1", 2000, 1, 1, 0, 0, 0.0).unwrap();
+        time.to_tai(None).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "`provider` argument needs to be present for UT1 transformations")]
+    fn test_pytime_ut1_tcb_no_provider() {
+        let time = PyTime::new("UT1", 2000, 1, 1, 0, 0, 0.0).unwrap();
+        time.to_tcb(None).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "`provider` argument needs to be present for UT1 transformations")]
+    fn test_pytime_ut1_tcg_no_provider() {
+        let time = PyTime::new("UT1", 2000, 1, 1, 0, 0, 0.0).unwrap();
+        time.to_tcg(None).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "`provider` argument needs to be present for UT1 transformations")]
+    fn test_pytime_ut1_tdb_no_provider() {
+        let time = PyTime::new("UT1", 2000, 1, 1, 0, 0, 0.0).unwrap();
+        time.to_tdb(None).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "`provider` argument needs to be present for UT1 transformations")]
+    fn test_pytime_ut1_tt_no_provider() {
+        let time = PyTime::new("UT1", 2000, 1, 1, 0, 0, 0.0).unwrap();
+        time.to_tt(None).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "`provider` argument needs to be present for UT1 transformations")]
+    fn test_pytime_tai_ut1_no_provider() {
+        let time = PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap();
+        time.to_ut1(None).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "`provider` argument needs to be present for UT1 transformations")]
+    fn test_pytime_tcb_ut1_no_provider() {
+        let time = PyTime::new("TCB", 2000, 1, 1, 0, 0, 0.0).unwrap();
+        time.to_ut1(None).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "`provider` argument needs to be present for UT1 transformations")]
+    fn test_pytime_tcg_ut1_no_provider() {
+        let time = PyTime::new("TCG", 2000, 1, 1, 0, 0, 0.0).unwrap();
+        time.to_ut1(None).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "`provider` argument needs to be present for UT1 transformations")]
+    fn test_pytime_tdb_ut1_no_provider() {
+        let time = PyTime::new("TDB", 2000, 1, 1, 0, 0, 0.0).unwrap();
+        time.to_ut1(None).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "`provider` argument needs to be present for UT1 transformations")]
+    fn test_pytime_tt_ut1_no_provider() {
+        let time = PyTime::new("TT", 2000, 1, 1, 0, 0, 0.0).unwrap();
+        time.to_ut1(None).unwrap();
     }
 }
