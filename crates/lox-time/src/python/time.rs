@@ -562,6 +562,21 @@ mod tests {
     }
 
     #[test]
+    fn test_pytime_is_close() {
+        let t0 = PyTime::new("TAI", 1999, 12, 31, 23, 59, 59.999999999999).unwrap();
+        let t1 = PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0000000000001).unwrap();
+        assert!(t0.isclose(t1, 1e-8, 1e-13).unwrap());
+    }
+
+    #[test]
+    #[should_panic(expected = "cannot compare `Time` objects with different time scales")]
+    fn test_pytime_is_close_different_scales() {
+        let t0 = PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap();
+        let t1 = PyTime::new("TT", 2000, 1, 1, 0, 0, 0.0).unwrap();
+        t0.isclose(t1, 1e-8, 1e-13).unwrap();
+    }
+
+    #[test]
     fn test_pytime_to_delta() {
         let t = PyTime::new("TAI", 2000, 1, 1, 12, 0, 0.3).unwrap();
         assert_eq!(t.to_delta(), t.0.to_delta())
@@ -1041,5 +1056,12 @@ mod tests {
     fn test_pytime_tt_ut1_no_provider() {
         let time = PyTime::new("TT", 2000, 1, 1, 0, 0, 0.0).unwrap();
         time.to_ut1(None).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "`provider` argument needs to be present for UT1 transformations")]
+    fn test_pytime_ut1_utc_no_provider() {
+        let time = PyTime::new("UT1", 2000, 1, 1, 0, 0, 0.0).unwrap();
+        time.to_utc(None).unwrap();
     }
 }
