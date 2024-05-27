@@ -683,6 +683,91 @@ mod tests {
     }
 
     #[test]
+    fn test_pytime_tcb_noop() {
+        Python::with_gil(|py| {
+            let provider = Bound::new(
+                py,
+                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
+                    .unwrap(),
+            )
+            .unwrap();
+            let tcb_exp = PyTime::new("TCB", 2000, 1, 1, 0, 0, 0.0).unwrap();
+            let tcb_act = tcb_exp.to_tcb(None).unwrap();
+            assert_close!(tcb_act, tcb_exp);
+            let tcb_act = tcb_exp.to_tcb(Some(&provider)).unwrap();
+            assert_close!(tcb_act, tcb_exp);
+        })
+    }
+
+    #[test]
+    fn test_pytime_tcg_noop() {
+        Python::with_gil(|py| {
+            let provider = Bound::new(
+                py,
+                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
+                    .unwrap(),
+            )
+            .unwrap();
+            let tcg_exp = PyTime::new("TCG", 2000, 1, 1, 0, 0, 0.0).unwrap();
+            let tcg_act = tcg_exp.to_tcg(None).unwrap();
+            assert_close!(tcg_act, tcg_exp);
+            let tcg_act = tcg_exp.to_tcg(Some(&provider)).unwrap();
+            assert_close!(tcg_act, tcg_exp);
+        })
+    }
+
+    #[test]
+    fn test_pytime_tdb_noop() {
+        Python::with_gil(|py| {
+            let provider = Bound::new(
+                py,
+                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
+                    .unwrap(),
+            )
+            .unwrap();
+            let tdb_exp = PyTime::new("TDB", 2000, 1, 1, 0, 0, 0.0).unwrap();
+            let tdb_act = tdb_exp.to_tdb(None).unwrap();
+            assert_close!(tdb_act, tdb_exp);
+            let tdb_act = tdb_exp.to_tdb(Some(&provider)).unwrap();
+            assert_close!(tdb_act, tdb_exp);
+        })
+    }
+
+    #[test]
+    fn test_pytime_tt_noop() {
+        Python::with_gil(|py| {
+            let provider = Bound::new(
+                py,
+                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
+                    .unwrap(),
+            )
+            .unwrap();
+            let tt_exp = PyTime::new("TT", 2000, 1, 1, 0, 0, 0.0).unwrap();
+            let tt_act = tt_exp.to_tt(None).unwrap();
+            assert_close!(tt_act, tt_exp);
+            let tt_act = tt_exp.to_tt(Some(&provider)).unwrap();
+            assert_close!(tt_act, tt_exp);
+        })
+    }
+
+    #[test]
+    fn test_pytime_ut1_noop() {
+        Python::with_gil(|py| {
+            let provider = Bound::new(
+                py,
+                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
+                    .unwrap(),
+            )
+            .unwrap();
+            let ut1_exp = PyTime::new("UT1", 2000, 1, 1, 0, 0, 0.0).unwrap();
+            let ut1_act = ut1_exp.to_ut1(None).unwrap();
+            assert_close!(ut1_act, ut1_exp);
+            let ut1_act = ut1_exp.to_ut1(Some(&provider)).unwrap();
+            assert_close!(ut1_act, ut1_exp);
+        })
+    }
+
+    #[test]
     fn test_pytime_tai_tcb() {
         Python::with_gil(|py| {
             let provider = Bound::new(
