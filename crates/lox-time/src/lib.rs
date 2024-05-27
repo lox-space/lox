@@ -19,7 +19,7 @@ use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, Sub};
 
-use lox_utils::isclose::IsClose;
+use lox_utils::is_close::IsClose;
 use num::ToPrimitive;
 use thiserror::Error;
 

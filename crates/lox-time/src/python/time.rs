@@ -18,7 +18,7 @@ use crate::transformations::{NoOpOffsetProvider, ToTai, ToTcb, ToTcg, ToTdb, ToT
 use crate::ut1::{DeltaUt1Tai, ExtrapolatedDeltaUt1Tai};
 use crate::utc::transformations::ToUtc;
 use crate::{Time, TimeError};
-use lox_utils::isclose::IsClose;
+use lox_utils::is_close::IsClose;
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::types::{PyAnyMethods, PyType};
 use pyo3::{pyclass, pymethods, Bound, PyAny, PyErr, PyResult, Python};

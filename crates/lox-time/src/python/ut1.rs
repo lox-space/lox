@@ -35,3 +35,33 @@ impl PyUt1Provider {
         Ok(PyUt1Provider(provider))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use pyo3::{Bound, Python};
+
+    use crate::{python::time::PyTime, test_helpers::data_dir};
+
+    use super::*;
+
+    #[test]
+    #[should_panic(expected = "No such file")]
+    fn test_ut1_provider_invalid_path() {
+        let _provider = PyUt1Provider::new("invalid_path").unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "extrapolated")]
+    fn test_ut1_provider_extrapolated() {
+        Python::with_gil(|py| {
+            let provider = Bound::new(
+                py,
+                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
+                    .unwrap(),
+            )
+            .unwrap();
+            let tai = PyTime::new("TAI", 2100, 1, 1, 0, 0, 0.0).unwrap();
+            let _ut1 = tai.to_ut1(Some(&provider)).unwrap();
+        })
+    }
+}
