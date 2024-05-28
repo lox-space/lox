@@ -1,5 +1,7 @@
 use std::fmt::{self, Display, Formatter};
+use std::str::FromStr;
 
+use itertools::Itertools;
 use num::ToPrimitive;
 use thiserror::Error;
 
@@ -24,6 +26,8 @@ pub enum UtcError {
     NonLeapSecondDate(Date),
     #[error("UTC is not defined for dates before 1960-01-01")]
     UtcUndefined,
+    #[error("invalid ISO string `{0}`")]
+    InvalidIsoString(String),
 }
 
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
@@ -49,6 +53,35 @@ impl Utc {
 
     pub fn builder() -> UtcBuilder {
         UtcBuilder::default()
+    }
+
+    pub fn from_iso_with_provider<T: LeapSecondsProvider>(
+        iso: &str,
+        provider: &T,
+    ) -> Result<Self, UtcError> {
+        let _ = iso.strip_suffix('Z');
+
+        let Some((date, time_and_scale)) = iso.split_once('T') else {
+            return Err(UtcError::InvalidIsoString(iso.to_owned()));
+        };
+
+        let (time, scale_abbrv) = time_and_scale
+            .split_whitespace()
+            .collect_tuple()
+            .unwrap_or((time_and_scale, ""));
+
+        if !scale_abbrv.is_empty() && scale_abbrv != "UTC" {
+            return Err(UtcError::InvalidIsoString(iso.to_owned()));
+        }
+
+        let date: Date = date.parse()?;
+        let time: TimeOfDay = time.parse()?;
+
+        Ok(Utc::new(date, time, provider)?)
+    }
+
+    pub fn from_iso(iso: &str) -> Result<Self, UtcError> {
+        Self::from_iso_with_provider(iso, &BuiltinLeapSeconds)
     }
 
     pub fn from_delta(delta: TimeDelta) -> Self {
@@ -79,6 +112,14 @@ impl Display for Utc {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let precision = f.precision().unwrap_or(3);
         write!(f, "{}T{:.*} UTC", self.date(), precision, self.time())
+    }
+}
+
+impl FromStr for Utc {
+    type Err = UtcError;
+
+    fn from_str(iso: &str) -> Result<Self, Self::Err> {
+        Self::from_iso(iso)
     }
 }
 
@@ -213,5 +254,18 @@ mod tests {
             .build_with_provider(&BuiltinLeapSeconds)
             .unwrap();
         assert_eq!(exp, act)
+    }
+
+    #[rstest]
+    #[case("2000-01-01T00:00:00", Ok(utc!(2000, 1, 1).unwrap()))]
+    #[case("2000-01-01T00:00:00 UTC", Ok(utc!(2000, 1, 1).unwrap()))]
+    #[case("2000-01-01T00:00:00.000Z", Ok(utc!(2000, 1, 1).unwrap()))]
+    #[case("2000-1-01T00:00:00", Err(UtcError::DateError(DateError::InvalidIsoString("2000-1-01".to_string()))))]
+    #[case("2000-01-01T0:00:00", Err(UtcError::TimeError(TimeOfDayError::InvalidIsoString("0:00:00".to_string()))))]
+    #[case("2000-01-01-00:00:00", Err(UtcError::InvalidIsoString("2000-01-01-00:00:00".to_string())))]
+    #[case("2000-01-01T00:00:00 TAI", Err(UtcError::InvalidIsoString("2000-01-01T00:00:00 TAI".to_string())))]
+    fn test_utc_from_str(#[case] iso: &str, #[case] expected: Result<Utc, UtcError>) {
+        let actual: Result<Utc, UtcError> = iso.parse();
+        assert_eq!(actual, expected)
     }
 }

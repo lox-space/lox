@@ -12,6 +12,7 @@ def provider():
 
 def test_time(provider):
     tai_exp = lox.Time("TAI", 2000, 1, 1)
+    tai_act = lox.Time.from_iso("2000-01-01T00:00:00.000 TAI")
     tai_act = tai_exp.to_tai()
     assert tai_exp == tai_act
     tai_act = tai_exp.to_tcb().to_tai()
@@ -40,6 +41,12 @@ def test_time(provider):
 
 def test_utc(provider):
     utc_exp = lox.UTC(2000, 1, 1)
+    utc_act = lox.UTC.from_iso("2000-01-01T00:00:00.000")
+    assert utc_exp == utc_act
+    utc_act = lox.UTC.from_iso("2000-01-01T00:00:00.000Z")
+    assert utc_exp == utc_act
+    utc_act = lox.UTC.from_iso("2000-01-01T00:00:00.000 UTC")
+    assert utc_exp == utc_act
     utc_act = utc_exp.to_tai().to_utc()
     assert utc_exp == utc_act
     utc_act = utc_exp.to_tcb().to_utc()

@@ -34,7 +34,7 @@ impl FromStr for PyTimeScale {
             "TT" => Ok(PyTimeScale::Tt),
             "UT1" => Ok(PyTimeScale::Ut1),
             _ => Err(PyValueError::new_err(format!(
-                "invalid timescale: {}",
+                "invalid time scale: {}",
                 name
             ))),
         }
@@ -83,8 +83,8 @@ mod tests {
     #[case("TCB", "Barycentric Coordinate Time")]
     #[case("TDB", "Barycentric Dynamical Time")]
     #[case("UT1", "Universal Time")]
-    #[should_panic(expected = "invalid timescale: NotATimeScale")]
-    #[case("NotATimeScale", "not a timescale")]
+    #[should_panic(expected = "invalid time scale: NotATimeScale")]
+    #[case("NotATimeScale", "not a time scale")]
     fn test_pytimescale(#[case] abbreviation: &'static str, #[case] name: &'static str) {
         let scale = PyTimeScale::from_str(abbreviation).unwrap();
         assert_eq!(scale.abbreviation(), abbreviation);

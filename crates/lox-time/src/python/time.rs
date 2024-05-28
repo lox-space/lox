@@ -96,6 +96,19 @@ impl PyTime {
         Ok(Self(Time::from_julian_date(scale, jd, epoch)?))
     }
 
+    #[classmethod]
+    pub fn from_iso(_cls: &Bound<'_, PyType>, iso: &str, scale: Option<&str>) -> PyResult<PyTime> {
+        let scale: PyTimeScale = match scale {
+            Some(scale) => scale.parse()?,
+            None => match iso.split_once(char::is_whitespace) {
+                Some((_, scale)) => scale.parse()?,
+                None => PyTimeScale::Tai,
+            },
+        };
+        let time = Time::from_iso(scale, iso)?;
+        Ok(PyTime(time))
+    }
+
     #[classattr]
     const __hash__: Option<PyObject> = None;
 
@@ -594,6 +607,47 @@ mod tests {
     fn test_pytime_to_delta() {
         let t = PyTime::new("TAI", 2000, 1, 1, 12, 0, 0.3).unwrap();
         assert_eq!(t.to_delta(), t.0.to_delta())
+    }
+
+    #[test]
+    fn test_pytime_from_iso() {
+        Python::with_gil(|py| {
+            let cls = PyType::new_bound::<PyTime>(py);
+            let expected = PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap();
+            let actual = PyTime::from_iso(&cls, "2000-01-01T00:00:00 TAI", None).unwrap();
+            assert_eq!(actual, expected);
+            let actual = PyTime::from_iso(&cls, "2000-01-01T00:00:00", None).unwrap();
+            assert_eq!(actual, expected);
+            let actual = PyTime::from_iso(&cls, "2000-01-01T00:00:00", Some("TAI")).unwrap();
+            assert_eq!(actual, expected);
+        })
+    }
+
+    #[test]
+    #[should_panic(expected = "invalid ISO")]
+    fn test_pytime_from_iso_invalid() {
+        Python::with_gil(|py| {
+            let cls = PyType::new_bound::<PyTime>(py);
+            let _ = PyTime::from_iso(&cls, "2000-01-01X00:00:00 TAI", None).unwrap();
+        })
+    }
+
+    #[test]
+    #[should_panic(expected = "invalid time scale")]
+    fn test_pytime_from_iso_invalid_scale() {
+        Python::with_gil(|py| {
+            let cls = PyType::new_bound::<PyTime>(py);
+            let _ = PyTime::from_iso(&cls, "2000-01-01T00:00:00 UTC", None).unwrap();
+        })
+    }
+
+    #[test]
+    #[should_panic(expected = "invalid time scale")]
+    fn test_pytime_from_iso_invalid_scale_arg() {
+        Python::with_gil(|py| {
+            let cls = PyType::new_bound::<PyTime>(py);
+            let _ = PyTime::from_iso(&cls, "2000-01-01T00:00:00 TAI", Some("UTC")).unwrap();
+        })
     }
 
     #[test]

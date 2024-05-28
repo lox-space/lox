@@ -9,6 +9,7 @@
 use std::{
     cmp::Ordering,
     fmt::{Display, Formatter},
+    str::FromStr,
     sync::OnceLock,
 };
 
@@ -57,6 +58,14 @@ pub struct Date {
 impl Display for Date {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}-{:02}-{:02}", self.year, self.month, self.day)
+    }
+}
+
+impl FromStr for Date {
+    type Err = DateError;
+
+    fn from_str(iso: &str) -> Result<Self, Self::Err> {
+        Self::from_iso(iso)
     }
 }
 

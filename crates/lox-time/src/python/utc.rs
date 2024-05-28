@@ -14,6 +14,7 @@ use crate::python::ut1::PyUt1Provider;
 use crate::transformations::{ToTai, ToTcb, ToTcg, ToTdb, ToTt, ToUt1};
 use crate::utc::{Utc, UtcError};
 use pyo3::exceptions::PyValueError;
+use pyo3::types::PyType;
 use pyo3::{pyclass, pymethods, Bound, PyErr, PyResult};
 
 impl From<UtcError> for PyErr {
@@ -43,6 +44,11 @@ impl PyUtc {
             .with_hms(hour, minute, seconds)
             .build()?;
         Ok(PyUtc(utc))
+    }
+
+    #[classmethod]
+    pub fn from_iso(_cls: &Bound<'_, PyType>, iso: &str) -> PyResult<PyUtc> {
+        Ok(PyUtc(iso.parse()?))
     }
 
     pub fn __str__(&self) -> String {
@@ -169,6 +175,29 @@ mod tests {
     #[should_panic(expected = "invalid date")]
     fn test_pyutc_error() {
         PyUtc::new(2000, 0, 1, 0, 0, 0.0).unwrap();
+    }
+
+    #[test]
+    fn test_pytime_from_iso() {
+        Python::with_gil(|py| {
+            let cls = PyType::new_bound::<PyUtc>(py);
+            let expected = PyUtc::new(2000, 1, 1, 0, 0, 0.0).unwrap();
+            let actual = PyUtc::from_iso(&cls, "2000-01-01T00:00:00 UTC").unwrap();
+            assert_eq!(actual, expected);
+            let actual = PyUtc::from_iso(&cls, "2000-01-01T00:00:00Z").unwrap();
+            assert_eq!(actual, expected);
+            let actual = PyUtc::from_iso(&cls, "2000-01-01T00:00:00").unwrap();
+            assert_eq!(actual, expected);
+        })
+    }
+
+    #[test]
+    #[should_panic(expected = "invalid ISO")]
+    fn test_pytime_from_iso_invalid() {
+        Python::with_gil(|py| {
+            let cls = PyType::new_bound::<PyUtc>(py);
+            let _ = PyUtc::from_iso(&cls, "2000-01-01X00:00:00 UTC").unwrap();
+        })
     }
 
     #[test]

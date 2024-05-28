@@ -1,13 +1,22 @@
-use std::cmp::Ordering;
 use std::fmt::Display;
+use std::str::FromStr;
+use std::{cmp::Ordering, sync::OnceLock};
 
 use num::ToPrimitive;
+use regex::Regex;
 use thiserror::Error;
 
 use crate::{
     constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY, SECONDS_PER_HOUR, SECONDS_PER_MINUTE},
     subsecond::{InvalidSubsecond, Subsecond},
 };
+
+fn iso_regex() -> &'static Regex {
+    static ISO: OnceLock<Regex> = OnceLock::new();
+    ISO.get_or_init(|| {
+        Regex::new(r"(?<hour>\d{2}):(?<minute>\d{2}):(?<second>\d{2})(?<subsecond>\.\d+)?").unwrap()
+    })
+}
 
 #[derive(Debug, Copy, Clone, Error)]
 #[error("seconds must be in the range [0.0..86401.0) but was {0}")]
@@ -33,7 +42,7 @@ impl PartialEq for InvalidSeconds {
 
 impl Eq for InvalidSeconds {}
 
-#[derive(Debug, Copy, Clone, Error, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Error, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TimeOfDayError {
     #[error("hour must be in the range [0..24) but was {0}")]
     InvalidHour(u8),
@@ -49,6 +58,8 @@ pub enum TimeOfDayError {
     InvalidLeapSecond,
     #[error(transparent)]
     InvalidSubsecond(#[from] InvalidSubsecond),
+    #[error("invalid ISO string `{0}`")]
+    InvalidIsoString(String),
 }
 
 /// `CivilTime` is the trait by which high-precision time representations expose human-readable time
@@ -118,6 +129,30 @@ impl TimeOfDay {
             second,
             subsecond: Subsecond::default(),
         })
+    }
+
+    pub fn from_iso(iso: &str) -> Result<Self, TimeOfDayError> {
+        let caps = iso_regex()
+            .captures(iso)
+            .ok_or(TimeOfDayError::InvalidIsoString(iso.to_owned()))?;
+        let hour: u8 = caps["hour"]
+            .parse()
+            .map_err(|_| TimeOfDayError::InvalidIsoString(iso.to_owned()))?;
+        let minute: u8 = caps["minute"]
+            .parse()
+            .map_err(|_| TimeOfDayError::InvalidIsoString(iso.to_owned()))?;
+        let second: u8 = caps["second"]
+            .parse()
+            .map_err(|_| TimeOfDayError::InvalidIsoString(iso.to_owned()))?;
+        let mut time = TimeOfDay::new(hour, minute, second)?;
+        if let Some(subsecond) = caps.name("subsecond") {
+            let subsecond: f64 = subsecond
+                .as_str()
+                .parse()
+                .map_err(|_| TimeOfDayError::InvalidIsoString(iso.to_owned()))?;
+            time.with_subsecond(Subsecond(subsecond));
+        }
+        Ok(time)
     }
 
     pub fn from_hms(hour: u8, minute: u8, seconds: f64) -> Result<Self, TimeOfDayError> {
@@ -198,6 +233,14 @@ impl Display for TimeOfDay {
     }
 }
 
+impl FromStr for TimeOfDay {
+    type Err = TimeOfDayError;
+
+    fn from_str(iso: &str) -> Result<Self, Self::Err> {
+        Self::from_iso(iso)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use rstest::rstest;
@@ -238,6 +281,20 @@ mod tests {
         #[case] expected: Result<TimeOfDay, TimeOfDayError>,
     ) {
         assert_eq!(actual, expected);
+    }
+
+    #[rstest]
+    #[case("12:13:14", Ok(TimeOfDay::new(12, 13, 14).unwrap()))]
+    #[case("12:13:14.123", Ok(TimeOfDay::new(12, 13, 14).unwrap().with_subsecond(Subsecond(0.123))))]
+    #[case("2:13:14.123", Err(TimeOfDayError::InvalidIsoString("2:13:14.123".to_string())))]
+    #[case("12:3:14.123", Err(TimeOfDayError::InvalidIsoString("12:3:14.123".to_string())))]
+    #[case("12:13:4.123", Err(TimeOfDayError::InvalidIsoString("12:13:4.123".to_string())))]
+    fn test_time_of_day_from_string(
+        #[case] iso: &str,
+        #[case] expected: Result<TimeOfDay, TimeOfDayError>,
+    ) {
+        let actual: Result<TimeOfDay, TimeOfDayError> = iso.parse();
+        assert_eq!(actual, expected)
     }
 
     #[test]
