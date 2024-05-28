@@ -240,28 +240,6 @@ fn kvn_line<'a>(
     ns::delimited(nc::space0, kvn, nc::space0)(input)
 }
 
-// fn kvn_line_new<'a>(
-//     input: &'a str,
-// ) -> nom::IResult<&'a str, (&'a str, &'a str), KvnParserErr<&'a str>> {
-//     let mut equals = ns::tuple((nc::space0::<_, KvnParserErr<_>>, nc::char('='), nc::space0));
-
-//     match equals(input) {
-//         Ok(_) => {
-//             return Err(nom::Err::Failure(KvnParserErr::KeywordNotFound {
-//                 //@TODO
-//                 expected: "blalalal",
-//             }))
-//         }
-//         Err(_) => (),
-//     }
-
-//     let value = nc::not_line_ending;
-
-//     let kvn = ns::separated_pair(nb::tag(key), equals, value);
-
-//     ns::delimited(nc::space0, kvn, nc::space0)(input)
-// }
-
 pub fn parse_kvn_string_line<'a>(
     key: &'a str,
     input: &'a str,
