@@ -172,6 +172,8 @@ pub trait KvnDeserializer {
     ) -> Result<Self, KvnDeserializerErr<&'a str>>
     where
         Self: Sized;
+
+    fn should_check_key_match() -> bool;
 }
 
 //@TODO remove _new suffix
