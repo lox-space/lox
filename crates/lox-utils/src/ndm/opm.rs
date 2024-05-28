@@ -228,8 +228,6 @@ mod test {
 
         let message: OpmType = from_str(xml).unwrap();
 
-        println!("{:#?}", message);
-
         assert_eq!(
             message,
             OpmType {
