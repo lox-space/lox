@@ -18,9 +18,11 @@ pub struct OpmType {
     #[serde(rename = "body")]
     pub body: OpmBody,
     #[serde(rename = "@id")]
-    pub id: String,
+    // Marked as option for the KVN deserializer
+    pub id: Option<String>,
     #[serde(rename = "@version")]
-    pub version: String,
+    // Marked as option for the KVN deserializer
+    pub version: Option<String>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -475,8 +477,8 @@ mod test {
                         },
                     },
                 },
-                id: "CCSDS_OPM_VERS".to_string(),
-                version: "3.0".to_string(),
+                id: Some("CCSDS_OPM_VERS".to_string()),
+                version: Some("3.0".to_string()),
             }
         );
     }

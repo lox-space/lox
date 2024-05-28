@@ -641,8 +641,8 @@ mod test {
                                 },
                             },
                         },
-                        id: "CCSDS_OPM_VERS".to_string(),
-                        version: "2.0".to_string(),
+                        id: Some("CCSDS_OPM_VERS".to_string()),
+                        version: Some("2.0".to_string()),
                     },),
                     NdmChildChoice::Opm(opm::OpmType {
                         header: common::OdmHeader {
@@ -743,8 +743,8 @@ mod test {
                                 },
                             },
                         },
-                        id: "CCSDS_OPM_VERS".to_string(),
-                        version: "2.0".to_string(),
+                        id: Some("CCSDS_OPM_VERS".to_string()),
+                        version: Some("2.0".to_string()),
                     },),
                     NdmChildChoice::Oem(oem::OemType {
                         header: common::OdmHeader {
