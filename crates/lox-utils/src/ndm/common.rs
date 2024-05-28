@@ -10,11 +10,11 @@ use serde;
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct AccUnits(#[serde(rename = "$text")] pub std::string::String);
+pub struct AccUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct AngleUnits(#[serde(rename = "$text")] pub std::string::String);
+pub struct AngleUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
@@ -22,11 +22,11 @@ pub struct AngleRange(#[serde(rename = "$text")] pub f64);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct AngleRateUnits(#[serde(rename = "$text")] pub std::string::String);
+pub struct AngleRateUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct AngMomentumUnits(#[serde(rename = "$text")] pub std::string::String);
+pub struct AngMomentumUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
@@ -34,19 +34,19 @@ pub struct AngVelFrameType(#[serde(rename = "$text")] pub f64);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct AreaUnits(#[serde(rename = "$text")] pub std::string::String);
+pub struct AreaUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct DayIntervalUnits(#[serde(rename = "$text")] pub std::string::String);
+pub struct DayIntervalUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct FrequencyUnits(#[serde(rename = "$text")] pub std::string::String);
+pub struct FrequencyUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct GmUnits(#[serde(rename = "$text")] pub std::string::String);
+pub struct GmUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
@@ -54,47 +54,47 @@ pub struct InclinationRange(#[serde(rename = "$text")] pub f64);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct LengthUnits(#[serde(rename = "$text")] pub std::string::String);
+pub struct LengthUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct MassUnits(#[serde(rename = "$text")] pub std::string::String);
+pub struct MassUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct MomentUnits(#[serde(rename = "$text")] pub std::string::String);
+pub struct MomentUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct WkgUnits(#[serde(rename = "$text")] pub std::string::String);
+pub struct WkgUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct ObjectDescriptionType(#[serde(rename = "$text")] pub std::string::String);
+pub struct ObjectDescriptionType(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct Ms2Units(#[serde(rename = "$text")] pub std::string::String);
+pub struct Ms2Units(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct Km2Units(#[serde(rename = "$text")] pub std::string::String);
+pub struct Km2Units(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct Km2sUnits(#[serde(rename = "$text")] pub std::string::String);
+pub struct Km2sUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct Km2s2Units(#[serde(rename = "$text")] pub std::string::String);
+pub struct Km2s2Units(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct PositionUnits(#[serde(rename = "$text")] pub std::string::String);
+pub struct PositionUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct VelocityUnits(#[serde(rename = "$text")] pub std::string::String);
+pub struct VelocityUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct VecDouble {
@@ -115,15 +115,15 @@ pub struct Vec9Double(#[serde(rename = "$text")] pub f64);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct EpochType(#[serde(rename = "$text")] pub std::string::String);
+pub struct EpochType(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct TimeUnits(#[serde(rename = "$text")] pub std::string::String);
+pub struct TimeUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct TimeSystemType(#[serde(rename = "$text")] pub std::string::String);
+pub struct TimeSystemType(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
@@ -135,11 +135,11 @@ pub struct NonNegativeDouble(#[serde(rename = "$text")] pub f64);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct NonPositiveDouble(#[serde(rename = "$text")] pub std::string::String);
+pub struct NonPositiveDouble(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct PercentType(#[serde(rename = "$text")] pub std::string::String);
+pub struct PercentType(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
@@ -147,139 +147,139 @@ pub struct PositiveDouble(#[serde(rename = "$text")] pub f64);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct Range100Type(#[serde(rename = "$text")] pub std::string::String);
+pub struct Range100Type(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct ProbabilityType(#[serde(rename = "$text")] pub std::string::String);
+pub struct ProbabilityType(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct PercentageUnits(#[serde(rename = "$text")] pub std::string::String);
+pub struct PercentageUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct YesNoType(#[serde(rename = "$text")] pub std::string::String);
+pub struct YesNoType(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct TrajBasisType(#[serde(rename = "$text")] pub std::string::String);
+pub struct TrajBasisType(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct RevNumBasisType(#[serde(rename = "$text")] pub std::string::String);
+pub struct RevNumBasisType(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct CovBasisType(#[serde(rename = "$text")] pub std::string::String);
+pub struct CovBasisType(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct ManBasisType(#[serde(rename = "$text")] pub std::string::String);
+pub struct ManBasisType(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct ManDcType(#[serde(rename = "$text")] pub std::string::String);
+pub struct ManDcType(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct NumPerYearUnits(#[serde(rename = "$text")] pub std::string::String);
+pub struct NumPerYearUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct ThrustUnits(#[serde(rename = "$text")] pub std::string::String);
+pub struct ThrustUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct CovOrderType(#[serde(rename = "$text")] pub std::string::String);
+pub struct CovOrderType(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct GeomagUnits(#[serde(rename = "$text")] pub std::string::String);
+pub struct GeomagUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct SolarFluxUnits(#[serde(rename = "$text")] pub std::string::String);
+pub struct SolarFluxUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct PositionCovarianceUnits(#[serde(rename = "$text")] pub std::string::String);
+pub struct PositionCovarianceUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct VelocityCovarianceUnits(#[serde(rename = "$text")] pub std::string::String);
+pub struct VelocityCovarianceUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct PositionVelocityCovarianceUnits(#[serde(rename = "$text")] pub std::string::String);
+pub struct PositionVelocityCovarianceUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct BallisticCoeffUnitsType(#[serde(rename = "$text")] pub std::string::String);
+pub struct BallisticCoeffUnitsType(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct LatRange(#[serde(rename = "$text")] pub std::string::String);
+pub struct LatRange(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct AltRange(#[serde(rename = "$text")] pub std::string::String);
+pub struct AltRange(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct LonRange(#[serde(rename = "$text")] pub std::string::String);
+pub struct LonRange(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct LatLonUnits(#[serde(rename = "$text")] pub std::string::String);
+pub struct LatLonUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct ControlledType(#[serde(rename = "$text")] pub std::string::String);
+pub struct ControlledType(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct DisintegrationType(#[serde(rename = "$text")] pub std::string::String);
+pub struct DisintegrationType(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct ImpactUncertaintyType(#[serde(rename = "$text")] pub std::string::String);
+pub struct ImpactUncertaintyType(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct ReentryUncertaintyMethodType(#[serde(rename = "$text")] pub std::string::String);
+pub struct ReentryUncertaintyMethodType(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct QuaternionComponentType(#[serde(rename = "$text")] pub std::string::String);
+pub struct QuaternionComponentType(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct QuaternionDotUnits(#[serde(rename = "$text")] pub std::string::String);
+pub struct QuaternionDotUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct RotDirectionType(#[serde(rename = "$text")] pub std::string::String);
+pub struct RotDirectionType(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct RotseqType(#[serde(rename = "$text")] pub std::string::String);
+pub struct RotseqType(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct AngleKeywordType(#[serde(rename = "$text")] pub std::string::String);
+pub struct AngleKeywordType(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct AngleRateKeywordType(#[serde(rename = "$text")] pub std::string::String);
+pub struct AngleRateKeywordType(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct ApmRateFrameType(#[serde(rename = "$text")] pub std::string::String);
+pub struct ApmRateFrameType(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct TorqueUnits(#[serde(rename = "$text")] pub std::string::String);
+pub struct TorqueUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
