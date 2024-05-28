@@ -155,7 +155,7 @@ impl<T: TimeScale> Time<T> {
         let date: Date = date.parse()?;
         let time: TimeOfDay = time.parse()?;
 
-        Ok(Self::from_date_and_time(scale, date, time)?)
+        Self::from_date_and_time(scale, date, time)
     }
 
     /// Instantiates a [Time] in the given `scale` from an offset from the J2000 epoch given as a [TimeDelta].

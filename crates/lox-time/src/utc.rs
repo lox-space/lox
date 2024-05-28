@@ -77,7 +77,7 @@ impl Utc {
         let date: Date = date.parse()?;
         let time: TimeOfDay = time.parse()?;
 
-        Ok(Utc::new(date, time, provider)?)
+        Utc::new(date, time, provider)
     }
 
     pub fn from_iso(iso: &str) -> Result<Self, UtcError> {
