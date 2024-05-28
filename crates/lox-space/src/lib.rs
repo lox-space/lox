@@ -6,11 +6,15 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use lox_time::python::deltas::PyTimeDelta;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use thiserror::Error;
 
 use lox_bodies::errors::LoxBodiesError;
+use lox_time::python::time::PyTime;
+use lox_time::python::ut1::PyUt1Provider;
+use lox_time::python::utc::PyUtc;
 
 use crate::bodies::{PyBarycenter, PyMinorBody, PyPlanet, PySatellite, PySun};
 
@@ -49,5 +53,9 @@ fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyPlanet>()?;
     m.add_class::<PySatellite>()?;
     m.add_class::<PyMinorBody>()?;
+    m.add_class::<PyTime>()?;
+    m.add_class::<PyTimeDelta>()?;
+    m.add_class::<PyUtc>()?;
+    m.add_class::<PyUt1Provider>()?;
     Ok(())
 }

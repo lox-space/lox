@@ -11,12 +11,14 @@ lox-io.workspace = true
 lox-utils.workspace = true
 
 float_eq.workspace = true
+itertools.workspace = true
 num.workspace = true
 pyo3 = { workspace = true, optional = true }
 regex.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
+pyo3 = { workspace = true, features = ["auto-initialize"] }
 proptest.workspace = true
 rstest.workspace = true
 

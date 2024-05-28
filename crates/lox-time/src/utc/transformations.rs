@@ -6,6 +6,7 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use std::convert::Infallible;
 use std::sync::OnceLock;
 
 use crate::deltas::TimeDelta;
@@ -13,9 +14,18 @@ use crate::deltas::ToDelta;
 use crate::time_of_day::CivilTime;
 use crate::time_of_day::TimeOfDay;
 use crate::time_scales::Tai;
+use crate::time_scales::Tdb;
+use crate::time_scales::Tt;
 use crate::transformations::LeapSecondsProvider;
-use crate::transformations::ToScale;
+use crate::transformations::NoOpOffsetProvider;
 use crate::transformations::ToTai;
+use crate::transformations::ToTcb;
+use crate::transformations::ToTcg;
+use crate::transformations::ToTdb;
+use crate::transformations::ToTt;
+use crate::transformations::ToUt1;
+use crate::transformations::TryToScale;
+use crate::ut1::DeltaUt1TaiProvider;
 use crate::{utc, Time};
 
 use super::leap_seconds::BuiltinLeapSeconds;
@@ -55,8 +65,8 @@ impl<T: ToTai> ToUtc for T {
     }
 }
 
-impl Utc {
-    pub fn to_tai_with_provider(&self, provider: &impl LeapSecondsProvider) -> Time<Tai> {
+impl<T: LeapSecondsProvider> TryToScale<Tai, T> for Utc {
+    fn try_to_scale(&self, _scale: Tai, provider: &T) -> Result<Time<Tai>, Infallible> {
         let delta = if self < utc_1972_01_01() {
             before1972::delta_utc_tai(self)
         } else {
@@ -67,18 +77,50 @@ impl Utc {
             unreachable!("failed to calculate UTC-TAI delta for Utc `{:?}`", self);
         });
 
-        let base = self.to_delta();
-        Time::from_delta(Tai, base - delta)
+        Ok(Time::from_delta(Tai, self.to_delta() - delta))
     }
 }
 
-impl ToScale<Tai> for Utc {
-    fn to_scale(&self, _scale: Tai) -> Time<Tai> {
-        self.to_tai_with_provider(&BuiltinLeapSeconds)
+impl TryToScale<Tai> for Utc {
+    fn try_to_scale(
+        &self,
+        scale: Tai,
+        _provider: &NoOpOffsetProvider,
+    ) -> Result<Time<Tai>, Infallible> {
+        self.try_to_scale(scale, &BuiltinLeapSeconds)
     }
 }
 
 impl ToTai for Utc {}
+
+impl TryToScale<Tt> for Utc {
+    fn try_to_scale(
+        &self,
+        scale: Tt,
+        provider: &NoOpOffsetProvider,
+    ) -> Result<Time<Tt>, Infallible> {
+        self.to_tai().try_to_scale(scale, provider)
+    }
+}
+
+impl ToTt for Utc {}
+
+impl TryToScale<Tdb> for Utc {
+    fn try_to_scale(
+        &self,
+        scale: Tdb,
+        provider: &NoOpOffsetProvider,
+    ) -> Result<Time<Tdb>, Infallible> {
+        self.to_tt().try_to_scale(scale, provider)
+    }
+}
+
+impl ToTdb for Utc {}
+
+impl ToTcb for Utc {}
+impl ToTcg for Utc {}
+
+impl<T: DeltaUt1TaiProvider> ToUt1<T> for Utc {}
 
 fn utc_1972_01_01() -> &'static Utc {
     static UTC_1972: OnceLock<Utc> = OnceLock::new();
@@ -98,6 +140,7 @@ fn tai_at_utc_1972_01_01() -> &'static Time<Tai> {
 
 #[cfg(test)]
 pub mod test {
+    use crate::test_helpers::delta_ut1_tai;
     use crate::time;
     use crate::transformations::{ToTcb, ToTcg, ToTdb, ToTt};
     use rstest::rstest;
@@ -145,6 +188,13 @@ pub mod test {
         assert_eq!(act, exp);
         let tdb = tai.to_tdb();
         let act = tdb.to_utc().unwrap();
+        assert_eq!(act, exp);
+        let ut1 = tai.try_to_ut1(delta_ut1_tai()).unwrap();
+        let act = ut1
+            .try_to_scale(Tai, delta_ut1_tai())
+            .unwrap()
+            .to_utc()
+            .unwrap();
         assert_eq!(act, exp);
     }
 

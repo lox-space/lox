@@ -18,7 +18,10 @@ use std::cmp::Ordering;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, Sub};
+use std::str::FromStr;
 
+use itertools::Itertools;
+use lox_utils::is_close::IsClose;
 use num::ToPrimitive;
 use thiserror::Error;
 
@@ -29,6 +32,7 @@ use constants::julian_dates::{
 use lox_utils::constants::f64::time;
 use lox_utils::types::units::Days;
 use time_of_day::{CivilTime, TimeOfDay, TimeOfDayError};
+use time_scales::{Tai, Tcb, Tcg, Tdb, Tt, Ut1};
 
 use crate::calendar_dates::{CalendarDate, Date};
 use crate::deltas::{TimeDelta, ToDelta};
@@ -44,6 +48,8 @@ pub mod prelude;
 #[cfg(feature = "python")]
 pub mod python;
 pub mod subsecond;
+#[cfg(test)]
+pub(crate) mod test_helpers;
 pub mod time_of_day;
 pub mod time_scales;
 pub mod transformations;
@@ -88,6 +94,8 @@ pub enum TimeError {
     LeapSecondOutsideUtc,
     #[error(transparent)]
     JulianDateOutOfRange(#[from] JulianDateOutOfRange),
+    #[error("invalid ISO string `{0}`")]
+    InvalidIsoString(String),
 }
 
 /// An instant in time in a given [TimeScale].
@@ -95,13 +103,13 @@ pub enum TimeError {
 /// `Time` supports femtosecond precision, but be aware that many algorithms operating on `Time`s
 /// are not accurate to this level of precision.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
-pub struct Time<T: TimeScale + Copy> {
+pub struct Time<T: TimeScale> {
     scale: T,
     seconds: i64,
     subsecond: Subsecond,
 }
 
-impl<T: TimeScale + Copy> Time<T> {
+impl<T: TimeScale> Time<T> {
     /// Instantiates a [Time] in the given scale from seconds since J2000 subdivided into integral
     /// seconds and [Subsecond].
     pub fn new(scale: T, seconds: i64, subsecond: Subsecond) -> Self {
@@ -130,20 +138,32 @@ impl<T: TimeScale + Copy> Time<T> {
         Ok(Self::new(scale, seconds, time.subsecond()))
     }
 
+    pub fn from_iso(scale: T, iso: &str) -> Result<Self, TimeError> {
+        let Some((date, time_and_scale)) = iso.split_once('T') else {
+            return Err(TimeError::InvalidIsoString(iso.to_owned()));
+        };
+
+        let (time, scale_abbrv) = time_and_scale
+            .split_whitespace()
+            .collect_tuple()
+            .unwrap_or((time_and_scale, ""));
+
+        if !scale_abbrv.is_empty() && scale_abbrv != scale.abbreviation() {
+            return Err(TimeError::InvalidIsoString(iso.to_owned()));
+        }
+
+        let date: Date = date.parse()?;
+        let time: TimeOfDay = time.parse()?;
+
+        Self::from_date_and_time(scale, date, time)
+    }
+
     /// Instantiates a [Time] in the given `scale` from an offset from the J2000 epoch given as a [TimeDelta].
     pub fn from_delta(scale: T, delta: TimeDelta) -> Self {
         Self {
             scale,
             seconds: delta.seconds,
             subsecond: delta.subsecond,
-        }
-    }
-
-    /// Returns the offset from the J2000 epoch as a [TimeDelta].
-    pub fn to_delta(self) -> TimeDelta {
-        TimeDelta {
-            seconds: self.seconds,
-            subsecond: self.subsecond,
         }
     }
 
@@ -203,17 +223,20 @@ impl<T: TimeScale + Copy> Time<T> {
     }
 
     /// Returns the timescale
-    pub fn scale(&self) -> T {
-        self.scale
+    pub fn scale(&self) -> T
+    where
+        T: Clone,
+    {
+        self.scale.clone()
     }
 
     /// Returns a new [Time] with `scale` without changing the underlying timestamp.
-    pub fn with_scale<S: TimeScale + Copy>(&self, scale: S) -> Time<S> {
+    pub fn with_scale<S: TimeScale>(&self, scale: S) -> Time<S> {
         Time::new(scale, self.seconds, self.subsecond)
     }
 
     /// Returns a new [Time] with `scale` with its offset adjusted by `delta`.
-    pub fn with_scale_and_delta<S: TimeScale + Copy>(&self, scale: S, delta: TimeDelta) -> Time<S> {
+    pub fn with_scale_and_delta<S: TimeScale>(&self, scale: S, delta: TimeDelta) -> Time<S> {
         Time::from_delta(scale, self.to_delta() + delta)
     }
 
@@ -249,7 +272,19 @@ impl<T: TimeScale + Copy> Time<T> {
     }
 }
 
-impl<T: TimeScale + Copy> ToDelta for Time<T> {
+impl<T: TimeScale> IsClose for Time<T> {
+    const DEFAULT_RELATIVE: f64 = 1e-12;
+
+    const DEFAULT_ABSOLUTE: f64 = 1e-14;
+
+    fn is_close_with_tolerances(&self, rhs: &Self, rel_tol: f64, abs_tol: f64) -> bool {
+        let a = self.to_delta().to_decimal_seconds();
+        let b = rhs.to_delta().to_decimal_seconds();
+        a.is_close_with_tolerances(&b, rel_tol, abs_tol)
+    }
+}
+
+impl<T: TimeScale> ToDelta for Time<T> {
     fn to_delta(&self) -> TimeDelta {
         TimeDelta {
             seconds: self.seconds,
@@ -258,7 +293,7 @@ impl<T: TimeScale + Copy> ToDelta for Time<T> {
     }
 }
 
-impl<T: TimeScale + Copy> JulianDate for Time<T> {
+impl<T: TimeScale> JulianDate for Time<T> {
     fn julian_date(&self, epoch: Epoch, unit: Unit) -> f64 {
         let mut decimal_seconds = (match epoch {
             Epoch::JulianDate => self.seconds + SECONDS_BETWEEN_JD_AND_J2000,
@@ -277,7 +312,7 @@ impl<T: TimeScale + Copy> JulianDate for Time<T> {
     }
 }
 
-impl<T: TimeScale + Copy> Display for Time<T> {
+impl<T: TimeScale> Display for Time<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let precision = f.precision().unwrap_or(3);
         write!(
@@ -291,7 +326,55 @@ impl<T: TimeScale + Copy> Display for Time<T> {
     }
 }
 
-impl<T: TimeScale + Copy> Add<TimeDelta> for Time<T> {
+impl FromStr for Time<Tai> {
+    type Err = TimeError;
+
+    fn from_str(iso: &str) -> Result<Self, Self::Err> {
+        Self::from_iso(Tai, iso)
+    }
+}
+
+impl FromStr for Time<Tcb> {
+    type Err = TimeError;
+
+    fn from_str(iso: &str) -> Result<Self, Self::Err> {
+        Self::from_iso(Tcb, iso)
+    }
+}
+
+impl FromStr for Time<Tcg> {
+    type Err = TimeError;
+
+    fn from_str(iso: &str) -> Result<Self, Self::Err> {
+        Self::from_iso(Tcg, iso)
+    }
+}
+
+impl FromStr for Time<Tdb> {
+    type Err = TimeError;
+
+    fn from_str(iso: &str) -> Result<Self, Self::Err> {
+        Self::from_iso(Tdb, iso)
+    }
+}
+
+impl FromStr for Time<Tt> {
+    type Err = TimeError;
+
+    fn from_str(iso: &str) -> Result<Self, Self::Err> {
+        Self::from_iso(Tt, iso)
+    }
+}
+
+impl FromStr for Time<Ut1> {
+    type Err = TimeError;
+
+    fn from_str(iso: &str) -> Result<Self, Self::Err> {
+        Self::from_iso(Ut1, iso)
+    }
+}
+
+impl<T: TimeScale> Add<TimeDelta> for Time<T> {
     type Output = Self;
 
     /// The implementation of [Add] for [Time] follows the default Rust rules for integer overflow, which
@@ -307,7 +390,7 @@ impl<T: TimeScale + Copy> Add<TimeDelta> for Time<T> {
     }
 }
 
-impl<T: TimeScale + Copy> Sub<TimeDelta> for Time<T> {
+impl<T: TimeScale> Sub<TimeDelta> for Time<T> {
     type Output = Self;
 
     /// The implementation of [Sub] for [Time] follows the default Rust rules for integer overflow, which
@@ -327,7 +410,7 @@ impl<T: TimeScale + Copy> Sub<TimeDelta> for Time<T> {
     }
 }
 
-impl<T: TimeScale + Copy> Sub<Time<T>> for Time<T> {
+impl<T: TimeScale> Sub<Time<T>> for Time<T> {
     type Output = TimeDelta;
 
     fn sub(self, rhs: Time<T>) -> Self::Output {
@@ -344,13 +427,13 @@ impl<T: TimeScale + Copy> Sub<Time<T>> for Time<T> {
     }
 }
 
-impl<T: TimeScale + Copy> CivilTime for Time<T> {
+impl<T: TimeScale> CivilTime for Time<T> {
     fn time(&self) -> TimeOfDay {
         TimeOfDay::from_seconds_since_j2000(self.seconds).with_subsecond(self.subsecond)
     }
 }
 
-impl<T: TimeScale + Copy> CalendarDate for Time<T> {
+impl<T: TimeScale> CalendarDate for Time<T> {
     fn date(&self) -> Date {
         Date::from_seconds_since_j2000(self.seconds)
     }
@@ -362,7 +445,7 @@ pub struct TimeBuilder<T: TimeScale> {
     time: Result<TimeOfDay, TimeOfDayError>,
 }
 
-impl<T: TimeScale + Copy> TimeBuilder<T> {
+impl<T: TimeScale> TimeBuilder<T> {
     pub fn new(scale: T) -> Self {
         Self {
             scale,
@@ -504,6 +587,78 @@ mod tests {
         )));
         let actual = Time::from_julian_date(Tai, julian_date, Epoch::J2000);
         assert_eq!(actual, expected);
+    }
+
+    #[rstest]
+    #[case("2000-01-01T00:00:00", Ok(time!(Tai, 2000, 1, 1).unwrap()))]
+    #[case("2000-01-01T00:00:00 TAI", Ok(time!(Tai, 2000, 1, 1).unwrap()))]
+    #[case("2000-1-01T00:00:00", Err(TimeError::DateError(DateError::InvalidIsoString("2000-1-01".to_string()))))]
+    #[case("2000-01-01T0:00:00", Err(TimeError::TimeError(TimeOfDayError::InvalidIsoString("0:00:00".to_string()))))]
+    #[case("2000-01-01-00:00:00", Err(TimeError::InvalidIsoString("2000-01-01-00:00:00".to_string())))]
+    #[case("2000-01-01T00:00:00 UTC", Err(TimeError::InvalidIsoString("2000-01-01T00:00:00 UTC".to_string())))]
+    fn test_time_from_str_tai(#[case] iso: &str, #[case] expected: Result<Time<Tai>, TimeError>) {
+        let actual: Result<Time<Tai>, TimeError> = iso.parse();
+        assert_eq!(actual, expected)
+    }
+
+    #[rstest]
+    #[case("2000-01-01T00:00:00", Ok(time!(Tcb, 2000, 1, 1).unwrap()))]
+    #[case("2000-01-01T00:00:00 TCB", Ok(time!(Tcb, 2000, 1, 1).unwrap()))]
+    #[case("2000-1-01T00:00:00", Err(TimeError::DateError(DateError::InvalidIsoString("2000-1-01".to_string()))))]
+    #[case("2000-01-01T0:00:00", Err(TimeError::TimeError(TimeOfDayError::InvalidIsoString("0:00:00".to_string()))))]
+    #[case("2000-01-01-00:00:00", Err(TimeError::InvalidIsoString("2000-01-01-00:00:00".to_string())))]
+    #[case("2000-01-01T00:00:00 UTC", Err(TimeError::InvalidIsoString("2000-01-01T00:00:00 UTC".to_string())))]
+    fn test_time_from_str_tcb(#[case] iso: &str, #[case] expected: Result<Time<Tcb>, TimeError>) {
+        let actual: Result<Time<Tcb>, TimeError> = iso.parse();
+        assert_eq!(actual, expected)
+    }
+
+    #[rstest]
+    #[case("2000-01-01T00:00:00", Ok(time!(Tcg, 2000, 1, 1).unwrap()))]
+    #[case("2000-01-01T00:00:00 TCG", Ok(time!(Tcg, 2000, 1, 1).unwrap()))]
+    #[case("2000-1-01T00:00:00", Err(TimeError::DateError(DateError::InvalidIsoString("2000-1-01".to_string()))))]
+    #[case("2000-01-01T0:00:00", Err(TimeError::TimeError(TimeOfDayError::InvalidIsoString("0:00:00".to_string()))))]
+    #[case("2000-01-01-00:00:00", Err(TimeError::InvalidIsoString("2000-01-01-00:00:00".to_string())))]
+    #[case("2000-01-01T00:00:00 UTC", Err(TimeError::InvalidIsoString("2000-01-01T00:00:00 UTC".to_string())))]
+    fn test_time_from_str_tcg(#[case] iso: &str, #[case] expected: Result<Time<Tcg>, TimeError>) {
+        let actual: Result<Time<Tcg>, TimeError> = iso.parse();
+        assert_eq!(actual, expected)
+    }
+
+    #[rstest]
+    #[case("2000-01-01T00:00:00", Ok(time!(Tdb, 2000, 1, 1).unwrap()))]
+    #[case("2000-01-01T00:00:00 TDB", Ok(time!(Tdb, 2000, 1, 1).unwrap()))]
+    #[case("2000-1-01T00:00:00", Err(TimeError::DateError(DateError::InvalidIsoString("2000-1-01".to_string()))))]
+    #[case("2000-01-01T0:00:00", Err(TimeError::TimeError(TimeOfDayError::InvalidIsoString("0:00:00".to_string()))))]
+    #[case("2000-01-01-00:00:00", Err(TimeError::InvalidIsoString("2000-01-01-00:00:00".to_string())))]
+    #[case("2000-01-01T00:00:00 UTC", Err(TimeError::InvalidIsoString("2000-01-01T00:00:00 UTC".to_string())))]
+    fn test_time_from_str_tdb(#[case] iso: &str, #[case] expected: Result<Time<Tdb>, TimeError>) {
+        let actual: Result<Time<Tdb>, TimeError> = iso.parse();
+        assert_eq!(actual, expected)
+    }
+
+    #[rstest]
+    #[case("2000-01-01T00:00:00", Ok(time!(Tt, 2000, 1, 1).unwrap()))]
+    #[case("2000-01-01T00:00:00 TT", Ok(time!(Tt, 2000, 1, 1).unwrap()))]
+    #[case("2000-1-01T00:00:00", Err(TimeError::DateError(DateError::InvalidIsoString("2000-1-01".to_string()))))]
+    #[case("2000-01-01T0:00:00", Err(TimeError::TimeError(TimeOfDayError::InvalidIsoString("0:00:00".to_string()))))]
+    #[case("2000-01-01-00:00:00", Err(TimeError::InvalidIsoString("2000-01-01-00:00:00".to_string())))]
+    #[case("2000-01-01T00:00:00 UTC", Err(TimeError::InvalidIsoString("2000-01-01T00:00:00 UTC".to_string())))]
+    fn test_time_from_str_tt(#[case] iso: &str, #[case] expected: Result<Time<Tt>, TimeError>) {
+        let actual: Result<Time<Tt>, TimeError> = iso.parse();
+        assert_eq!(actual, expected)
+    }
+
+    #[rstest]
+    #[case("2000-01-01T00:00:00", Ok(time!(Ut1, 2000, 1, 1).unwrap()))]
+    #[case("2000-01-01T00:00:00 UT1", Ok(time!(Ut1, 2000, 1, 1).unwrap()))]
+    #[case("2000-1-01T00:00:00", Err(TimeError::DateError(DateError::InvalidIsoString("2000-1-01".to_string()))))]
+    #[case("2000-01-01T0:00:00", Err(TimeError::TimeError(TimeOfDayError::InvalidIsoString("0:00:00".to_string()))))]
+    #[case("2000-01-01-00:00:00", Err(TimeError::InvalidIsoString("2000-01-01-00:00:00".to_string())))]
+    #[case("2000-01-01T00:00:00 UTC", Err(TimeError::InvalidIsoString("2000-01-01T00:00:00 UTC".to_string())))]
+    fn test_time_from_str_ut1(#[case] iso: &str, #[case] expected: Result<Time<Ut1>, TimeError>) {
+        let actual: Result<Time<Ut1>, TimeError> = iso.parse();
+        assert_eq!(actual, expected)
     }
 
     #[test]

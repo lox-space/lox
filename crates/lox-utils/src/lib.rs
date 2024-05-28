@@ -7,6 +7,7 @@
  */
 
 pub mod constants;
+pub mod is_close;
 pub mod linear_algebra;
 pub mod math;
 pub mod series;
