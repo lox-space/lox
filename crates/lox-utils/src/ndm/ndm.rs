@@ -403,19 +403,19 @@ mod test {
                                         mean_motion: None,
                                         eccentricity: common::NonNegativeDouble(0.0),
                                         inclination: common::InclinationType {
-                                            base: common::InclinationRange(0.0),
+                                            base: 0.0,
                                             units: None,
                                         },
                                         ra_of_asc_node: common::AngleType {
-                                            base: common::AngleRange(0.0),
+                                            base: 0.0,
                                             units: None,
                                         },
                                         arg_of_pericenter: common::AngleType {
-                                            base: common::AngleRange(0.0),
+                                            base: 0.0,
                                             units: None,
                                         },
                                         mean_anomaly: common::AngleType {
-                                            base: common::AngleRange(0.0),
+                                            base: 0.0,
                                             units: None,
                                         },
                                         gm: None,
@@ -464,19 +464,19 @@ mod test {
                                         }),
                                         eccentricity: common::NonNegativeDouble(0.001178),
                                         inclination: common::InclinationType {
-                                            base: common::InclinationRange(97.409),
+                                            base: 97.409,
                                             units: None,
                                         },
                                         ra_of_asc_node: common::AngleType {
-                                            base: common::AngleRange(71.7453),
+                                            base: 71.7453,
                                             units: None,
                                         },
                                         arg_of_pericenter: common::AngleType {
-                                            base: common::AngleRange(193.9419),
+                                            base: 193.9419,
                                             units: None,
                                         },
                                         mean_anomaly: common::AngleType {
-                                            base: common::AngleRange(272.1492),
+                                            base: 272.1492,
                                             units: None,
                                         },
                                         gm: None,
@@ -571,19 +571,19 @@ mod test {
                                         },
                                         eccentricity: common::NonNegativeDouble(0.0,),
                                         inclination: common::InclinationType {
-                                            base: common::InclinationRange(45.0,),
+                                            base: 45.0,
                                             units: Some(common::AngleUnits("deg".to_string(),),),
                                         },
                                         ra_of_asc_node: common::AngleType {
-                                            base: common::AngleRange(0.0,),
+                                            base: 0.0,
                                             units: Some(common::AngleUnits("deg".to_string(),),),
                                         },
                                         arg_of_pericenter: common::AngleType {
-                                            base: common::AngleRange(15.0,),
+                                            base: 15.0,
                                             units: Some(common::AngleUnits("deg".to_string(),),),
                                         },
                                         true_anomaly: Some(common::AngleType {
-                                            base: common::AngleRange(15.0,),
+                                            base: 15.0,
                                             units: Some(common::AngleUnits("deg".to_string(),),),
                                         },),
                                         mean_anomaly: None,
@@ -928,19 +928,19 @@ mod test {
                                         }),
                                         eccentricity: common::NonNegativeDouble(0.0009574),
                                         inclination: common::InclinationType {
-                                            base: common::InclinationRange(97.2663),
+                                            base: 97.2663,
                                             units: None,
                                         },
                                         ra_of_asc_node: common::AngleType {
-                                            base: common::AngleRange(51.2167),
+                                            base: 51.2167,
                                             units: None,
                                         },
                                         arg_of_pericenter: common::AngleType {
-                                            base: common::AngleRange(149.8567),
+                                            base: 149.8567,
                                             units: None,
                                         },
                                         mean_anomaly: common::AngleType {
-                                            base: common::AngleRange(322.5146),
+                                            base: 322.5146,
                                             units: None,
                                         },
                                         gm: None,
@@ -1012,19 +1012,19 @@ mod test {
                                         }),
                                         eccentricity: common::NonNegativeDouble(0.0009674),
                                         inclination: common::InclinationType {
-                                            base: common::InclinationRange(97.2671),
+                                            base: 97.2671,
                                             units: None,
                                         },
                                         ra_of_asc_node: common::AngleType {
-                                            base: common::AngleRange(51.3486),
+                                            base: 51.3486,
                                             units: None,
                                         },
                                         arg_of_pericenter: common::AngleType {
-                                            base: common::AngleRange(160.8608),
+                                            base: 160.8608,
                                             units: None,
                                         },
                                         mean_anomaly: common::AngleType {
-                                            base: common::AngleRange(302.2789),
+                                            base: 302.2789,
                                             units: None,
                                         },
                                         gm: None,
@@ -1096,19 +1096,19 @@ mod test {
                                         }),
                                         eccentricity: common::NonNegativeDouble(0.0009024),
                                         inclination: common::InclinationType {
-                                            base: common::InclinationRange(97.2666),
+                                            base: 97.2666,
                                             units: None,
                                         },
                                         ra_of_asc_node: common::AngleType {
-                                            base: common::AngleRange(51.2301),
+                                            base: 51.2301,
                                             units: None,
                                         },
                                         arg_of_pericenter: common::AngleType {
-                                            base: common::AngleRange(167.2057),
+                                            base: 167.2057,
                                             units: None,
                                         },
                                         mean_anomaly: common::AngleType {
-                                            base: common::AngleRange(304.5569),
+                                            base: 304.5569,
                                             units: None,
                                         },
                                         gm: None,

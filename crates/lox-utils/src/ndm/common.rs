@@ -18,10 +18,6 @@ pub struct AngleUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct AngleRange(#[serde(rename = "$text")] pub f64);
-
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
-#[serde(default)]
 pub struct AngleRateUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -47,10 +43,6 @@ pub struct FrequencyUnits(#[serde(rename = "$text")] pub String);
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 pub struct GmUnits(#[serde(rename = "$text")] pub String);
-
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
-#[serde(default)]
-pub struct InclinationRange(#[serde(rename = "$text")] pub f64);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
