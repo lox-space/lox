@@ -163,6 +163,7 @@ pub struct KvnDateTimeValue {
     pub minute: u8,
     pub second: u8,
     pub fractional_second: f64,
+    pub full_value: String,
 }
 
 pub trait KvnDeserializer {
@@ -525,12 +526,9 @@ pub fn parse_kvn_datetime_line<'a>(
 
     let parsed_value = parsed_value.trim_end();
 
-    // Taken from CCSDS 502.0-B-3 Figure F-5: Regex Pattern for CCSDS Timecode
     // This unwrap is okay here because this regex never changes after testing
-    let re = Regex::new(
-        r"^(?<yr>(?:\d{4}))-(?<mo>(?:\d{1,2}))-(?<dy>(?:\d{1,2}))T(?<hr>(?:\d{1,2})):(?<mn>(?:\d{1,2})):(?<sc>(?:\d{0,2}(?:\.\d*)?))$",
-    )
-    .unwrap();
+    // Modified from Figure F-5: CCSDS 502.0-B-3
+    let re = Regex::new(r"^(?:\s*)?(?<keyword>[0-9A-Z_]*)(?:\s*)?=(?:\s*)?(?<keyword>(?<yr>(?:\d{4}))-(?<mo>(?:\d{1,2}))-(?<dy>(?:\d{1,2}))T(?<hr>(?:\d{1,2})):(?<mn>(?:\d{1,2})):(?<sc>(?:\d{0,2}(?:\.\d*)?)))(?:\s*)?$").unwrap();
 
     let captures = re.captures(parsed_value).ok_or(nom::Err::Failure(
         KvnDateTimeParserErr::InvalidFormat { keyword: key },
@@ -577,6 +575,8 @@ pub fn parse_kvn_datetime_line<'a>(
 
     let fractional_second = full_second.fract();
 
+    let full_value = captures.name("value").unwrap().as_str().to_owned();
+
     Ok((
         "",
         KvnDateTimeValue {
@@ -587,6 +587,7 @@ pub fn parse_kvn_datetime_line<'a>(
             minute,
             second,
             fractional_second,
+            full_value,
         },
     ))
 }
@@ -601,8 +602,8 @@ pub fn parse_kvn_datetime_line_new<'a>(
         }))?
     };
 
-    // Figure F-5: CCSDS 502.0-B-3
-    let re = Regex::new(r"^(?:\s*)?(?<keyword>[0-9A-Z_]*)(?:\s*)?=(?:\s*)?(?<yr>(?:\d{4}))-(?<mo>(?:\d{1,2}))-(?<dy>(?:\d{1,2}))T(?<hr>(?:\d{1,2})):(?<mn>(?:\d{1,2})):(?<sc>(?:\d{0,2}(?:\.\d*)?))(?:\s*)?$").unwrap();
+    // Modified from Figure F-5: CCSDS 502.0-B-3
+    let re = Regex::new(r"^(?:\s*)?(?<keyword>[0-9A-Z_]*)(?:\s*)?=(?:\s*)?(?<value>(?<yr>(?:\d{4}))-(?<mo>(?:\d{1,2}))-(?<dy>(?:\d{1,2}))T(?<hr>(?:\d{1,2})):(?<mn>(?:\d{1,2})):(?<sc>(?:\d{0,2}(?:\.\d*)?)))(?:\s*)?$").unwrap();
 
     let captures =
         re.captures(input)
@@ -652,6 +653,8 @@ pub fn parse_kvn_datetime_line_new<'a>(
 
     let fractional_second = full_second.fract();
 
+    let full_value = captures.name("value").unwrap().as_str().to_owned();
+
     Ok((
         "",
         KvnDateTimeValue {
@@ -662,6 +665,7 @@ pub fn parse_kvn_datetime_line_new<'a>(
             minute,
             second,
             fractional_second,
+            full_value,
         },
     ))
 }
@@ -1183,6 +1187,7 @@ mod test {
                     minute: 33,
                     second: 0,
                     fractional_second: 0.123,
+                    full_value: "2021-06-03T05:33:00.123".to_string(),
                 },
             ))
         );
@@ -1199,6 +1204,7 @@ mod test {
                     minute: 33,
                     second: 1,
                     fractional_second: 0.0,
+                    full_value: "2021-06-03T05:33:01".to_string()
                 },
             ))
         );
@@ -1241,6 +1247,7 @@ mod test {
                     minute: 33,
                     second: 0,
                     fractional_second: 0.123,
+                    full_value: "2021-06-03T05:33:00.123".to_string(),
                 },
             ))
         );
@@ -1257,6 +1264,7 @@ mod test {
                     minute: 33,
                     second: 1,
                     fractional_second: 0.0,
+                    full_value: "2021-06-03T05:33:01".to_string(),
                 },
             ))
         );
