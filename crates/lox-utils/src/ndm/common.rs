@@ -105,7 +105,15 @@ pub struct Vec6Double(#[serde(rename = "$text")] pub f64);
 #[serde(default)]
 pub struct Vec9Double(#[serde(rename = "$text")] pub f64);
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct EpochType(#[serde(rename = "$text")] pub String);
 
@@ -121,7 +129,15 @@ pub struct TimeSystemType(#[serde(rename = "$text")] pub String);
 #[serde(default)]
 pub struct NegativeDouble(#[serde(rename = "$text")] pub f64);
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct NonNegativeDouble(#[serde(rename = "$text")] pub f64);
 
@@ -297,7 +313,15 @@ pub struct AdmHeader {
     pub message_id: Option<String>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct OdmHeader {
     #[serde(rename = "COMMENT")]
@@ -312,8 +336,17 @@ pub struct OdmHeader {
     pub message_id: Option<String>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
+#[kvn(value_unit_struct)]
 pub struct AccType {
     #[serde(rename = "$text")]
     pub base: f64,
@@ -321,17 +354,35 @@ pub struct AccType {
     pub units: Option<AccUnits>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
+#[kvn(value_unit_struct)]
 pub struct AngleType {
     #[serde(rename = "$text")]
-    pub base: AngleRange,
+    pub base: f64,
     #[serde(rename = "@units")]
     pub units: Option<AngleUnits>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
+#[kvn(value_unit_struct)]
 pub struct AngleRateType {
     #[serde(rename = "$text")]
     pub base: f64,
@@ -348,8 +399,17 @@ pub struct AngMomentumType {
     pub units: AngMomentumUnits,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
+#[kvn(value_unit_struct)]
 pub struct AngVelComponentType {
     #[serde(rename = "$text")]
     pub base: f64,
@@ -376,7 +436,15 @@ pub struct AngVelStateType {
     pub angvel_z: AngVelComponentType,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct AngVelType {
     #[serde(rename = "ANGVEL_X")]
@@ -387,8 +455,17 @@ pub struct AngVelType {
     pub angvel_z: AngVelComponentType,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
+#[kvn(value_unit_struct)]
 pub struct AreaType {
     #[serde(rename = "$text")]
     pub base: NonNegativeDouble,
@@ -414,8 +491,17 @@ pub struct OcmDayIntervalType {
     pub units: Option<DayIntervalUnits>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
+#[kvn(value_unit_struct)]
 pub struct DeltamassType {
     #[serde(rename = "$text")]
     pub base: NegativeDouble,
@@ -441,8 +527,17 @@ pub struct FrequencyType {
     pub units: Option<FrequencyUnits>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
+#[kvn(value_unit_struct)]
 pub struct GmType {
     #[serde(rename = "$text")]
     pub base: PositiveDouble,
@@ -450,11 +545,20 @@ pub struct GmType {
     pub units: Option<GmUnits>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
+#[kvn(value_unit_struct)]
 pub struct InclinationType {
     #[serde(rename = "$text")]
-    pub base: InclinationRange,
+    pub base: f64,
     #[serde(rename = "@units")]
     pub units: Option<AngleUnits>,
 }
@@ -477,8 +581,17 @@ pub struct OcmLengthType {
     pub units: Option<LengthUnits>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
+#[kvn(value_unit_struct)]
 pub struct MassType {
     #[serde(rename = "$text")]
     pub base: NonNegativeDouble,
@@ -486,8 +599,17 @@ pub struct MassType {
     pub units: Option<MassUnits>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
+#[kvn(value_unit_struct)]
 pub struct MomentType {
     #[serde(rename = "$text")]
     pub base: f64,
@@ -531,7 +653,15 @@ pub struct OdParametersType {
     pub weighted_rms: Option<NonNegativeDouble>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct SpacecraftParametersType {
     #[serde(rename = "COMMENT")]
@@ -548,7 +678,15 @@ pub struct SpacecraftParametersType {
     pub drag_coeff: Option<NonNegativeDouble>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct StateVectorType {
     #[serde(rename = "COMMENT")]
@@ -603,8 +741,17 @@ pub struct Ms2Type {
     pub units: Ms2Units,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
+#[kvn(value_unit_struct)]
 pub struct Km2Type {
     #[serde(rename = "$text")]
     pub base: f64,
@@ -612,8 +759,17 @@ pub struct Km2Type {
     pub units: Option<Km2Units>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
+#[kvn(value_unit_struct)]
 pub struct Km2sType {
     #[serde(rename = "$text")]
     pub base: f64,
@@ -621,8 +777,17 @@ pub struct Km2sType {
     pub units: Option<Km2sUnits>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
+#[kvn(value_unit_struct)]
 pub struct Km2s2Type {
     #[serde(rename = "$text")]
     pub base: f64,
@@ -630,8 +795,17 @@ pub struct Km2s2Type {
     pub units: Option<Km2s2Units>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
+#[kvn(value_unit_struct)]
 pub struct DistanceType {
     #[serde(rename = "$text")]
     pub base: f64,
@@ -639,8 +813,17 @@ pub struct DistanceType {
     pub units: Option<PositionUnits>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
+#[kvn(value_unit_struct)]
 pub struct PositionType {
     #[serde(rename = "$text")]
     pub base: f64,
@@ -655,8 +838,17 @@ pub struct RdmPositionType {
     pub base: String,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
+#[kvn(value_unit_struct)]
 pub struct VelocityType {
     #[serde(rename = "$text")]
     pub base: f64,
@@ -671,8 +863,17 @@ pub struct RdmVelocityType {
     pub base: String,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
+#[kvn(value_unit_struct)]
 pub struct DurationType {
     #[serde(rename = "$text")]
     pub base: NonNegativeDouble,
@@ -796,7 +997,15 @@ pub struct OemCovarianceMatrixType {
     pub cz_dot_z_dot: VelocityCovarianceType,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct OpmCovarianceMatrixType {
     #[serde(rename = "COMMENT")]
@@ -847,8 +1056,17 @@ pub struct OpmCovarianceMatrixType {
     pub cz_dot_z_dot: VelocityCovarianceType,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
+#[kvn(value_unit_struct)]
 pub struct PositionCovarianceType {
     #[serde(rename = "$text")]
     pub base: f64,
@@ -856,8 +1074,17 @@ pub struct PositionCovarianceType {
     pub units: Option<PositionCovarianceUnits>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
+#[kvn(value_unit_struct)]
 pub struct VelocityCovarianceType {
     #[serde(rename = "$text")]
     pub base: f64,
@@ -865,8 +1092,17 @@ pub struct VelocityCovarianceType {
     pub units: Option<VelocityCovarianceUnits>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
+#[kvn(value_unit_struct)]
 pub struct PositionVelocityCovarianceType {
     #[serde(rename = "$text")]
     pub base: f64,
@@ -1027,7 +1263,15 @@ pub struct LonType {
     pub units: LatLonUnits,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct UserDefinedType {
     #[serde(rename = "COMMENT")]
@@ -1036,7 +1280,15 @@ pub struct UserDefinedType {
     pub user_defined_list: Vec<UserDefinedParameterType>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct UserDefinedParameterType {
     #[serde(rename = "$text")]
@@ -1081,14 +1333,14 @@ pub struct RotationAngleComponentTypeold {
     #[serde(rename = "@angle")]
     pub angle: AngleKeywordType,
     #[serde(rename = "@value")]
-    pub value: AngleRange,
+    pub value: f64,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 pub struct RotationAngleComponentType {
     #[serde(rename = "$text")]
-    pub base: AngleRange,
+    pub base: f64,
     #[serde(rename = "@angle")]
     pub angle: AngleKeywordType,
     #[serde(rename = "@units")]
