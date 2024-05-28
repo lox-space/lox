@@ -307,6 +307,21 @@ pub fn parse_kvn_string_line_new<'a>(
     //         },
     //     ));
     // }
+    if input.trim_start().starts_with("COMMENT") {
+        //@TODO
+
+        return Ok((
+            "",
+            KvnValue {
+                value: input
+                    .trim_start()
+                    .trim_start_matches("COMMENT")
+                    .trim_start()
+                    .to_owned(),
+                unit: None,
+            },
+        ));
+    }
 
     // Figure F-8: CCSDS 502.0-B-3
     let re = if relaxed {
