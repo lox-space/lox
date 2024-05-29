@@ -6,13 +6,26 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use crate::{
+    Adrastea, Amalthea, Ariel, Atlas, Callisto, Ceres, Davida, Deimos, Dione, Enceladus,
+    Epimetheus, Eros, Europa, Ganymede, Helene, Himalia, Hyperion, Iapetus, Io, Janus, Mercury,
+    Metis, Mimas, Moon, NaifId, Pandora, Phobos, Phoebe, Prometheus, Psyche, Rhea, Tethys, Thebe,
+    Titan, Titania, Umbriel, Vesta,
+};
+use crate::{
+    Barycenter, Body, EarthBarycenter, Ellipsoid, JupiterBarycenter, MarsBarycenter,
+    MercuryBarycenter, NeptuneBarycenter, PlutoBarycenter, PointMass, SaturnBarycenter,
+    SolarSystemBarycenter, Spheroid, Sun, UranusBarycenter, VenusBarycenter,
+};
+use crate::{
+    Charon, Despina, Galatea, Larissa, Miranda, Naiad, Oberon, Planet, Proteus, Thalassa, Triton,
+};
+use crate::{Earth, Jupiter, Neptune, Pluto, Saturn, Uranus};
+use crate::{Mars, Satellite};
+use crate::{MinorBody, Venus};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;
-
-use lox_bodies::*;
-
-use crate::LoxPyError;
 
 #[pyclass(name = "Sun", module = "lox_space")]
 #[derive(Clone, Default)]
@@ -75,7 +88,7 @@ pub struct PyBarycenter(Box<dyn Barycenter + Send>);
 #[pymethods]
 impl PyBarycenter {
     #[new]
-    pub fn new(name: &str) -> Result<Self, LoxPyError> {
+    pub fn new(name: &str) -> PyResult<Self> {
         let barycenter: Option<Box<dyn Barycenter + Send>> = match name {
             "ssb" | "SSB" | "solar system barycenter" | "Solar System Barycenter" => {
                 Some(Box::new(SolarSystemBarycenter))
@@ -93,7 +106,10 @@ impl PyBarycenter {
         };
         match barycenter {
             Some(barycenter) => Ok(Self(barycenter)),
-            None => Err(LoxPyError::InvalidBody(name.to_string())),
+            None => Err(PyValueError::new_err(format!(
+                "unknown barycenter: {}",
+                name
+            ))),
         }
     }
 
@@ -133,7 +149,7 @@ pub struct PyPlanet(Box<dyn Planet + Send>);
 #[pymethods]
 impl PyPlanet {
     #[new]
-    pub fn new(name: &str) -> Result<Self, LoxPyError> {
+    pub fn new(name: &str) -> PyResult<Self> {
         let planet: Option<Box<dyn Planet + Send>> = match name {
             "mercury" | "Mercury" => Some(Box::new(Mercury)),
             "venus" | "Venus" => Some(Box::new(Venus)),
@@ -148,7 +164,7 @@ impl PyPlanet {
         };
         match planet {
             Some(planet) => Ok(Self(planet)),
-            None => Err(LoxPyError::InvalidBody(name.to_string())),
+            None => Err(PyValueError::new_err(format!("unknown planet: {}", name))),
         }
     }
 
@@ -200,7 +216,7 @@ pub struct PySatellite(Box<dyn Satellite + Send>);
 #[pymethods]
 impl PySatellite {
     #[new]
-    pub fn new(name: &str) -> Result<Self, LoxPyError> {
+    pub fn new(name: &str) -> PyResult<Self> {
         let satellite: Option<Box<dyn Satellite + Send>> = match name {
             "moon" | "Moon" | "luna" | "Luna" => Some(Box::new(Moon)),
             "phobos" | "Phobos" => Some(Box::new(Phobos)),
@@ -246,7 +262,10 @@ impl PySatellite {
         };
         match satellite {
             Some(satellite) => Ok(Self(satellite)),
-            None => Err(LoxPyError::InvalidBody(name.to_string())),
+            None => Err(PyValueError::new_err(format!(
+                "unknown satellite: {}",
+                name
+            ))),
         }
     }
 
@@ -302,7 +321,7 @@ pub struct PyMinorBody(Box<dyn MinorBody + Send>);
 #[pymethods]
 impl PyMinorBody {
     #[new]
-    pub fn new(name: &str) -> Result<Self, LoxPyError> {
+    pub fn new(name: &str) -> PyResult<Self> {
         let minor: Option<Box<dyn MinorBody + Send>> = match name {
             "ceres" | "Ceres" => Some(Box::new(Ceres)),
             "vesta" | "Vesta" => Some(Box::new(Vesta)),
@@ -313,7 +332,10 @@ impl PyMinorBody {
         };
         match minor {
             Some(minor) => Ok(Self(minor)),
-            None => Err(LoxPyError::InvalidBody(name.to_string())),
+            None => Err(PyValueError::new_err(format!(
+                "unknown minor body: {}",
+                name
+            ))),
         }
     }
 
