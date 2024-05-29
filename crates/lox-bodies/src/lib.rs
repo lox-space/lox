@@ -21,6 +21,8 @@ use lox_utils::constants::f64::time::{SECONDS_PER_DAY, SECONDS_PER_JULIAN_CENTUR
 pub mod errors;
 pub mod fundamental;
 mod generated;
+#[cfg(feature = "python")]
+pub mod python;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[repr(transparent)]

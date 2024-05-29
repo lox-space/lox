@@ -6,45 +6,13 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use lox_time::python::deltas::PyTimeDelta;
-use pyo3::exceptions::PyValueError;
+use lox_bodies::python::{PyBarycenter, PyMinorBody, PyPlanet, PySatellite, PySun};
 use pyo3::prelude::*;
-use thiserror::Error;
 
-use lox_bodies::errors::LoxBodiesError;
+use lox_time::python::deltas::PyTimeDelta;
 use lox_time::python::time::PyTime;
 use lox_time::python::ut1::PyUt1Provider;
 use lox_time::python::utc::PyUtc;
-
-use crate::bodies::{PyBarycenter, PyMinorBody, PyPlanet, PySatellite, PySun};
-
-mod bodies;
-
-#[derive(Error, Debug)]
-pub enum LoxPyError {
-    #[error("unknown time scale `{0}`")]
-    InvalidTimeScale(String),
-    #[error("unknown body `{0}`")]
-    InvalidBody(String),
-    #[error("unknown frame `{0}`")]
-    InvalidFrame(String),
-    #[error(transparent)]
-    LoxBodiesError(#[from] LoxBodiesError),
-    #[error(transparent)]
-    PyError(#[from] PyErr),
-}
-
-impl From<LoxPyError> for PyErr {
-    fn from(value: LoxPyError) -> Self {
-        match value {
-            LoxPyError::InvalidTimeScale(_)
-            | LoxPyError::InvalidFrame(_)
-            | LoxPyError::InvalidBody(_) => PyValueError::new_err(value.to_string()),
-            LoxPyError::LoxBodiesError(value) => PyValueError::new_err(value.to_string()),
-            LoxPyError::PyError(value) => value,
-        }
-    }
-}
 
 #[pymodule]
 fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {

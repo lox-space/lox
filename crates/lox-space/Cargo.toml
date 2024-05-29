@@ -12,19 +12,12 @@ name = "lox_space"
 crate-type = ["lib", "cdylib"]
 
 [dependencies]
-lox-bodies.workspace = true
+lox-bodies = { workspace = true, features = ["python"] }
 lox-coords.workspace = true
 lox-time = { workspace = true, features = ["python"] }
 lox-utils.workspace = true
 
-float_eq.workspace = true
 pyo3.workspace = true
-thiserror.workspace = true
-
-[dev-dependencies]
-pyo3 = { workspace = true, features = ["auto-initialize"] }
-divan.workspace = true
-rstest.workspace = true
 
 [[bench]]
 name = "iau_frames"
