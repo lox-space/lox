@@ -12,12 +12,22 @@ name = "lox_space"
 crate-type = ["lib", "cdylib"]
 
 [dependencies]
-lox-bodies = { workspace = true, features = ["python"] }
+lox-bodies.workspace = true
 lox-coords.workspace = true
-lox-time = { workspace = true, features = ["python"] }
+lox-orbits.workspace = true
+lox-time.workspace = true
 lox-utils.workspace = true
 
-pyo3.workspace = true
+pyo3 = { workspace = true, optional = true }
+
+[features]
+default = ["python"]
+python = [
+    "dep:pyo3",
+    "lox-bodies/python",
+    "lox-orbits/python",
+    "lox-time/python",
+]
 
 [dev-dependencies]
 divan.workspace = true

@@ -1,0 +1,20 @@
+[package]
+name = "lox-orbits"
+version = "0.1.0"
+rust-version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+lox-bodies.workspace = true
+lox-time.workspace = true
+
+glam.workspace = true
+pyo3 = { workspace = true, optional = true }
+
+[dev-dependencies]
+pyo3 = { workspace = true, features = ["auto-initialize"] }
+
+[features]
+python = ["dep:pyo3", "lox-bodies/python", "lox-time/python"]

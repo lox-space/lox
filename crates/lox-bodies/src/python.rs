@@ -6,26 +6,20 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::{
-    Adrastea, Amalthea, Ariel, Atlas, Callisto, Ceres, Davida, Deimos, Dione, Enceladus,
-    Epimetheus, Eros, Europa, Ganymede, Helene, Himalia, Hyperion, Iapetus, Io, Janus, Mercury,
-    Metis, Mimas, Moon, NaifId, Pandora, Phobos, Phoebe, Prometheus, Psyche, Rhea, Tethys, Thebe,
-    Titan, Titania, Umbriel, Vesta,
-};
-use crate::{
-    Barycenter, Body, EarthBarycenter, Ellipsoid, JupiterBarycenter, MarsBarycenter,
-    MercuryBarycenter, NeptuneBarycenter, PlutoBarycenter, PointMass, SaturnBarycenter,
-    SolarSystemBarycenter, Spheroid, Sun, UranusBarycenter, VenusBarycenter,
-};
-use crate::{
-    Charon, Despina, Galatea, Larissa, Miranda, Naiad, Oberon, Planet, Proteus, Thalassa, Triton,
-};
-use crate::{Earth, Jupiter, Neptune, Pluto, Saturn, Uranus};
-use crate::{Mars, Satellite};
-use crate::{MinorBody, Venus};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;
+
+use crate::{
+    Adrastea, Amalthea, Ariel, Atlas, Barycenter, Body, Callisto, Ceres, Charon, Davida, Deimos,
+    Despina, Dione, Earth, EarthBarycenter, Ellipsoid, Enceladus, Epimetheus, Eros, Europa,
+    Galatea, Ganymede, Helene, Himalia, Hyperion, Iapetus, Io, Janus, Jupiter, JupiterBarycenter,
+    Larissa, Mars, MarsBarycenter, Mercury, MercuryBarycenter, Metis, Mimas, MinorBody, Miranda,
+    Moon, Naiad, NaifId, Neptune, NeptuneBarycenter, Oberon, Pandora, Phobos, Phoebe, Planet,
+    Pluto, PlutoBarycenter, PointMass, Prometheus, Proteus, Psyche, Rhea, Satellite, Saturn,
+    SaturnBarycenter, SolarSystemBarycenter, Spheroid, Sun, Tethys, Thalassa, Thebe, Titan,
+    Titania, Triton, Umbriel, Uranus, UranusBarycenter, Venus, VenusBarycenter, Vesta,
+};
 
 #[pyclass(name = "Sun", module = "lox_space")]
 #[derive(Clone, Default)]
