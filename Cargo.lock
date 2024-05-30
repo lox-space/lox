@@ -422,6 +422,7 @@ dependencies = [
  "divan",
  "lox-bodies",
  "lox-coords",
+ "lox-orbits",
  "lox-time",
  "lox-utils",
  "pyo3",
