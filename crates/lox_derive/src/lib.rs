@@ -20,8 +20,7 @@
              let parser = match type_name {
                  "String" => quote! {
                      crate::ndm::kvn::parser::parse_kvn_string_line_new(
-                         next_line,
-                         false
+                         next_line
                      ).map_err(|x| crate::ndm::kvn::parser::KvnDeserializerErr::from(x))
                      .map(|x| x.1)?
                  },
@@ -151,17 +150,14 @@
  fn generate_call_to_deserializer_for_kvn_type_new(
      type_name: &str,
      type_name_new: &syn::Path,
-     parent_type_name: &syn::Ident,
  ) -> Result<proc_macro2::TokenStream, proc_macro::TokenStream> {
      match type_name {
          "f64" | "String" | "i32" | "NonNegativeDouble" | "NegativeDouble" | "PositiveDouble" => {
              let parser = match type_name {
                  "String" => {
-                     let relaxed = parent_type_name.span().unwrap().source_text().unwrap().as_str() == "EpochType";
- 
                      quote! {
                          crate::ndm::kvn::parser::parse_kvn_string_line_new(
-                             lines.next().unwrap(), #relaxed
+                             lines.next().unwrap()
                          ).map_err(|x| crate::ndm::kvn::parser::KvnDeserializerErr::from(x))
                          .map(|x| x.1)?
                      }
@@ -437,7 +433,6 @@
                              match generate_call_to_deserializer_for_kvn_type_new(
                                  &local_field_type,
                                  &local_field_type_new,
-                                 type_name,
                              ) {
                                  Ok(deserializer_for_kvn_type) => {
                                      deserializer = Some(deserializer_for_kvn_type)
@@ -611,7 +606,7 @@
              let field_type_new = extract_type_path(&field.ty).unwrap();
  
              let deserializer_for_kvn_type =
-                 generate_call_to_deserializer_for_kvn_type_new(&field_type, field_type_new, type_name)?;
+                 generate_call_to_deserializer_for_kvn_type_new(&field_type, field_type_new)?;
  
              Ok(quote! {
                  #deserializer_for_kvn_type.value,

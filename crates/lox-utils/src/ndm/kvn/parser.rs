@@ -199,7 +199,6 @@ pub fn kvn_line_matches_key_new<'a>(
 
 pub fn parse_kvn_string_line_new<'a>(
     input: &'a str,
-    relaxed: bool,
 ) -> nom::IResult<&'a str, KvnStringValue, KvnParserErr<&'a str>> {
     if input.trim_start().starts_with("COMMENT") {
         //@TODO
@@ -217,13 +216,11 @@ pub fn parse_kvn_string_line_new<'a>(
         ));
     }
 
-    // Figure F-8: CCSDS 502.0-B-3
-    let re = if relaxed {
+    // Inspired by figure F-8: CCSDS 502.0-B-3, but accepts a more relaxed input. Orekit seems to suggest that there
+    // are quite a few messages being used which are not strictly compliant.
+    let re =
         Regex::new(r"^(?:\s*)(?<keyword>[0-9A-Z_]*)(?:\s*)=(?:\s*)(?<value>(?:(?:.*)))(?:\s*)$")
-            .unwrap()
-    } else {
-        Regex::new(r"^(?:\s*)(?<keyword>[0-9A-Z_]*)(?:\s*)=(?:\s*)(?<value>(?:(?:[0-9A-Z_\.\- ]*)|(?:[0-9a-z_\.\- ]*)))(?:\s*)$").unwrap()
-    };
+            .unwrap();
 
     // @TODO unwrap
     let captures = re.captures(input).unwrap();
@@ -432,7 +429,7 @@ mod test {
         // 7.5.1 A non-empty value field must be assigned to each mandatory keyword except for *‘_START’ and *‘_STOP’ keyword values
         // 7.4.6 Any white space immediately preceding or following the ‘equals’ sign shall not be significant.
         assert_eq!(
-            parse_kvn_string_line_new("ASD = ASDFG", false),
+            parse_kvn_string_line_new("ASD = ASDFG"),
             Ok((
                 "",
                 KvnValue {
@@ -442,7 +439,7 @@ mod test {
             ))
         );
         assert_eq!(
-            parse_kvn_string_line_new("ASD    =   ASDFG", false),
+            parse_kvn_string_line_new("ASD    =   ASDFG"),
             Ok((
                 "",
                 KvnValue {
@@ -452,7 +449,7 @@ mod test {
             ))
         );
         assert_eq!(
-            parse_kvn_string_line_new("ASD    = ASDFG", false),
+            parse_kvn_string_line_new("ASD    = ASDFG"),
             Ok((
                 "",
                 KvnValue {
@@ -462,19 +459,19 @@ mod test {
             ))
         );
         assert_eq!(
-            parse_kvn_string_line_new("ASD =    ", false),
+            parse_kvn_string_line_new("ASD =    "),
             Err(nom::Err::Failure(KvnParserErr::EmptyValue {
                 keyword: "ASD"
             }))
         );
         assert_eq!(
-            parse_kvn_string_line_new("ASD = ", false),
+            parse_kvn_string_line_new("ASD = "),
             Err(nom::Err::Failure(KvnParserErr::EmptyValue {
                 keyword: "ASD"
             }))
         );
         assert_eq!(
-            parse_kvn_string_line_new("ASD =", false),
+            parse_kvn_string_line_new("ASD ="),
             Err(nom::Err::Failure(KvnParserErr::EmptyValue {
                 keyword: "ASD"
             }))
@@ -482,7 +479,7 @@ mod test {
 
         // 7.4.7 Any white space immediately preceding the end of line shall not be significant.
         assert_eq!(
-            parse_kvn_string_line_new("ASD = ASDFG          ", false),
+            parse_kvn_string_line_new("ASD = ASDFG          "),
             Ok((
                 "",
                 KvnValue {
@@ -539,7 +536,7 @@ mod test {
 
         // 7.4.5 Any white space immediately preceding or following the keyword shall not be significant.
         assert_eq!(
-            parse_kvn_string_line_new("  ASD  = ASDFG", false),
+            parse_kvn_string_line_new("  ASD  = ASDFG"),
             Ok((
                 "",
                 KvnValue {
