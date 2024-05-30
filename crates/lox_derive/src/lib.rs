@@ -16,7 +16,7 @@
      expected_kvn_name: &str,
  ) -> Result<proc_macro2::TokenStream, proc_macro::TokenStream> {
      match type_name {
-         "f64" | "String" | "i32" => {
+         "f64" | "String" | "i32" | "u64" => {
              let parser = match type_name {
                  "String" => quote! {
                      crate::ndm::kvn::parser::parse_kvn_string_line_new(
@@ -28,12 +28,14 @@
                  "f64" => quote! {
                      crate::ndm::kvn::parser::parse_kvn_numeric_line_new(
                          next_line,
+                         true,
                      ).map_err(|x| crate::ndm::kvn::parser::KvnDeserializerErr::from(x))
                      .map(|x| x.1)?
                  },
-                 "i32" => quote! {
+                 "i32" | "u64" => quote! {
                      crate::ndm::kvn::parser::parse_kvn_integer_line_new(
                          next_line,
+                         true,
                      ).map_err(|x| crate::ndm::kvn::parser::KvnDeserializerErr::from(x))
                      .map(|x| x.1)?
                  },
@@ -267,7 +269,7 @@
              )?;
  
              let condition_shortcut = match type_name.as_str() {
-                 "String" => quote! {},
+                 "String" | "f64" | "i32" | "u64" => quote! {},
                  _ => quote! { ! #type_name_new::should_check_key_match() || },
              };
  

@@ -15,7 +15,6 @@ use nom::sequence as ns;
 use regex::Regex;
 
 pub type KvnStringValue = KvnValue<String, String>;
-pub type KvnIntegerValue = KvnValue<i32, String>;
 pub type KvnNumericValue = KvnValue<f64, String>;
 
 #[derive(Debug, PartialEq)]
@@ -247,10 +246,13 @@ pub fn parse_kvn_string_line_new<'a>(
     Ok(("", KvnValue { value, unit: None }))
 }
 
-pub fn parse_kvn_integer_line_new<'a>(
+pub fn parse_kvn_integer_line_new<'a, T>(
     input: &'a str,
     with_unit: bool,
-) -> nom::IResult<&'a str, KvnIntegerValue, KvnNumberLineParserErr<&'a str>> {
+) -> nom::IResult<&'a str, KvnValue<T, String>, KvnNumberLineParserErr<&'a str>>
+where
+    T: std::str::FromStr,
+{
     if is_empty_value(input) {
         Err(nom::Err::Failure(KvnNumberLineParserErr::EmptyValue {
             //@TODO
@@ -274,7 +276,7 @@ pub fn parse_kvn_integer_line_new<'a>(
     let value = captures.name("value").unwrap().as_str();
     let unit = captures.name("unit").map(|x| x.as_str().to_owned());
 
-    let value = value.parse::<i32>().map_err(|_| {
+    let value = value.parse::<T>().map_err(|_| {
         nom::Err::Failure(KvnNumberLineParserErr::InvalidFormat {
             //@TODO
             keyword: "SCLK_OFFSET_AT_EPOCH",
@@ -621,14 +623,14 @@ mod test {
         );
 
         assert_eq!(
-            parse_kvn_integer_line_new("SCLK_OFFSET_AT_EPOCH = -asd", true),
+            parse_kvn_integer_line_new::<u32>("SCLK_OFFSET_AT_EPOCH = -asd", true),
             Err(nom::Err::Failure(KvnNumberLineParserErr::InvalidFormat {
                 keyword: "SCLK_OFFSET_AT_EPOCH"
             }))
         );
 
         assert_eq!(
-            parse_kvn_integer_line_new("SCLK_OFFSET_AT_EPOCH = [s]", true),
+            parse_kvn_integer_line_new::<u32>("SCLK_OFFSET_AT_EPOCH = [s]", true),
             Err(nom::Err::Failure(KvnNumberLineParserErr::EmptyValue {
                 keyword: "SCLK_OFFSET_AT_EPOCH"
             }))

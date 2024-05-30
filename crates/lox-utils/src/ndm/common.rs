@@ -32,7 +32,15 @@ pub struct AngVelFrameType(#[serde(rename = "$text")] pub f64);
 #[serde(default)]
 pub struct AreaUnits(#[serde(rename = "$text")] pub String);
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct DayIntervalUnits(#[serde(rename = "$text")] pub String);
 
@@ -44,7 +52,15 @@ pub struct FrequencyUnits(#[serde(rename = "$text")] pub String);
 #[serde(default)]
 pub struct GmUnits(#[serde(rename = "$text")] pub String);
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct LengthUnits(#[serde(rename = "$text")] pub String);
 
@@ -56,11 +72,27 @@ pub struct MassUnits(#[serde(rename = "$text")] pub String);
 #[serde(default)]
 pub struct MomentUnits(#[serde(rename = "$text")] pub String);
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct WkgUnits(#[serde(rename = "$text")] pub String);
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct ObjectDescriptionType(#[serde(rename = "$text")] pub String);
 
@@ -93,7 +125,15 @@ pub struct VecDouble {
     pub items: Vec<f64>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct Vec3Double(#[serde(rename = "$text")] pub f64);
 
@@ -117,7 +157,15 @@ pub struct Vec9Double(#[serde(rename = "$text")] pub f64);
 #[serde(default)]
 pub struct EpochType(#[serde(rename = "$text")] pub String);
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct TimeUnits(#[serde(rename = "$text")] pub String);
 
@@ -149,19 +197,51 @@ pub struct NonPositiveDouble(#[serde(rename = "$text")] pub String);
 #[serde(default)]
 pub struct PercentType(#[serde(rename = "$text")] pub String);
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct PositiveDouble(#[serde(rename = "$text")] pub f64);
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct Range100Type(#[serde(rename = "$text")] pub String);
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct ProbabilityType(#[serde(rename = "$text")] pub String);
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct PercentageUnits(#[serde(rename = "$text")] pub String);
 
@@ -169,43 +249,123 @@ pub struct PercentageUnits(#[serde(rename = "$text")] pub String);
 #[serde(default)]
 pub struct YesNoType(#[serde(rename = "$text")] pub String);
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct TrajBasisType(#[serde(rename = "$text")] pub String);
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct RevNumBasisType(#[serde(rename = "$text")] pub String);
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct CovBasisType(#[serde(rename = "$text")] pub String);
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct ManBasisType(#[serde(rename = "$text")] pub String);
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct ManDcType(#[serde(rename = "$text")] pub String);
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct NumPerYearUnits(#[serde(rename = "$text")] pub String);
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct ThrustUnits(#[serde(rename = "$text")] pub String);
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct CovOrderType(#[serde(rename = "$text")] pub String);
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct GeomagUnits(#[serde(rename = "$text")] pub String);
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct SolarFluxUnits(#[serde(rename = "$text")] pub String);
 
@@ -482,7 +642,15 @@ pub struct DayIntervalType {
     pub units: DayIntervalUnits,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct OcmDayIntervalType {
     #[serde(rename = "$text")]
@@ -572,7 +740,15 @@ pub struct LengthType {
     pub units: LengthUnits,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct OcmLengthType {
     #[serde(rename = "$text")]
@@ -617,7 +793,15 @@ pub struct MomentType {
     pub units: Option<MomentUnits>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct WkgType {
     #[serde(rename = "$text")]
@@ -890,7 +1074,15 @@ pub struct RelTimeType {
     pub units: Option<TimeUnits>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct TimeOffsetType {
     #[serde(rename = "$text")]
@@ -899,7 +1091,15 @@ pub struct TimeOffsetType {
     pub units: Option<TimeUnits>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct PercentageType {
     #[serde(rename = "$text")]
@@ -908,7 +1108,15 @@ pub struct PercentageType {
     pub units: Option<PercentageUnits>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct ManeuverFreqType {
     #[serde(rename = "$text")]
@@ -917,7 +1125,15 @@ pub struct ManeuverFreqType {
     pub units: Option<NumPerYearUnits>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct ThrustType {
     #[serde(rename = "$text")]
@@ -926,7 +1142,15 @@ pub struct ThrustType {
     pub units: Option<ThrustUnits>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct GeomagType {
     #[serde(rename = "$text")]
@@ -935,7 +1159,15 @@ pub struct GeomagType {
     pub units: Option<GeomagUnits>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct SolarFluxType {
     #[serde(rename = "$text")]
