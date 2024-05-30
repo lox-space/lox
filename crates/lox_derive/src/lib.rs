@@ -27,14 +27,14 @@
                  "f64" => quote! {
                      crate::ndm::kvn::parser::parse_kvn_numeric_line_new(
                          next_line,
-                         true,
+                         true, //@TODO
                      ).map_err(|x| crate::ndm::kvn::parser::KvnDeserializerErr::from(x))
                      .map(|x| x.1)?
                  },
                  "i32" | "u64" => quote! {
                      crate::ndm::kvn::parser::parse_kvn_integer_line_new(
                          next_line,
-                         true,
+                         true, //@TODO
                      ).map_err(|x| crate::ndm::kvn::parser::KvnDeserializerErr::from(x))
                      .map(|x| x.1)?
                  },
