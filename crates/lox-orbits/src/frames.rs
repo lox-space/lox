@@ -9,8 +9,8 @@
 use lox_bodies::RotationalElements;
 
 pub trait ReferenceFrame {
-    fn name(&self) -> &str;
-    fn abbreviation(&self) -> &str;
+    fn name(&self) -> String;
+    fn abbreviation(&self) -> String;
 }
 
 pub trait TryToFrame<T: ReferenceFrame> {
@@ -23,12 +23,12 @@ pub trait TryToFrame<T: ReferenceFrame> {
 pub struct Icrf;
 
 impl ReferenceFrame for Icrf {
-    fn name(&self) -> &str {
-        "International Celestial Reference Frame"
+    fn name(&self) -> String {
+        "International Celestial Reference Frame".to_string()
     }
 
-    fn abbreviation(&self) -> &str {
-        "ICRF"
+    fn abbreviation(&self) -> String {
+        "ICRF".to_string()
     }
 }
 
@@ -36,11 +36,16 @@ impl ReferenceFrame for Icrf {
 pub struct Bodyfixed<T: RotationalElements>(T);
 
 impl<T: RotationalElements> ReferenceFrame for Bodyfixed<T> {
-    fn name(&self) -> &str {
-        todo!()
+    fn name(&self) -> String {
+        let body = self.0.name();
+        match body {
+            "Sun" | "Moon" => format!("IAU Body-Fixed Reference Frame for the {}", body),
+            _ => format!("IAU Body-Fixed Reference Frame for {}", body),
+        }
     }
 
-    fn abbreviation(&self) -> &str {
-        todo!()
+    fn abbreviation(&self) -> String {
+        let body = self.0.name().replace([' ', '-'], "_").to_uppercase();
+        format!("IAU_{}", body)
     }
 }
