@@ -101,6 +101,20 @@ pub trait ToUt1<T: DeltaUt1TaiProvider>: TryToScale<Ut1, T, T::Error> {
     }
 }
 
+// No-ops
+
+impl TryToScale<Tdb> for Time<Tdb> {
+    fn try_to_scale(
+        &self,
+        _scale: Tdb,
+        _provider: &NoOpOffsetProvider,
+    ) -> Result<Time<Tdb>, Infallible> {
+        Ok(*self)
+    }
+}
+
+impl ToTdb for Time<Tdb> {}
+
 // TAI <-> TT
 
 /// The constant offset between TAI and TT.
