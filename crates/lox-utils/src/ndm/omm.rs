@@ -124,7 +124,7 @@ pub struct OmmType {
     #[serde(rename = "body")]
     pub body: OmmBody,
     #[serde(rename = "@id")]
-    pub id: String,
+    pub id: Option<String>,
     #[serde(rename = "@version")]
     pub version: String,
 }
@@ -608,7 +608,7 @@ mod test {
                         },
                     },
                 },
-                id: "CCSDS_OMM_VERS".to_string(),
+                id: Some("CCSDS_OMM_VERS".to_string()),
                 version: "2.0".to_string(),
             });
     }
@@ -741,7 +741,7 @@ mod test {
                         },
                     },
                 },
-                id: "CCSDS_OMM_VERS".to_string(),
+                id: Some("CCSDS_OMM_VERS".to_string()),
                 version: "2.0".to_string(),
             }
         );
@@ -990,7 +990,7 @@ mod test {
                         },
                     },
                 },
-                id: "CCSDS_OMM_VERS".to_string(),
+                id: Some("CCSDS_OMM_VERS".to_string()),
                 version: "3.0".to_string(),
             }
         );
@@ -1242,7 +1242,7 @@ mod test {
                         },
                     },
                 },
-                id: "CCSDS_OMM_VERS".to_string(),
+                id: Some("CCSDS_OMM_VERS".to_string()),
                 version: "3.0".to_string(),
             }
         );
@@ -1392,7 +1392,7 @@ mod test {
                         },
                     },
                 },
-                id: "CCSDS_OMM_VERS".to_string(),
+                id: Some("CCSDS_OMM_VERS".to_string()),
                 version: "2.0".to_string(),
             }
         );
@@ -1430,9 +1430,9 @@ mod test {
 
     #[test]
     fn test_parse_omm_message_kvn() {
-        //@TODO add back: CCSDS_OPM_VERS = 3.0
         //@TOOD add back user defined stuff
-        let kvn = r#"COMMENT this is a comment
+        let kvn = r#"CCSDS_OMM_VERS = 3.0
+COMMENT this is a comment
 COMMENT here is another one
 CREATION_DATE = 2007-065T16:00:00
 ORIGINATOR = NOAA/USA

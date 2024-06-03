@@ -991,21 +991,27 @@ mod test {
     }
 
     #[derive(KvnDeserialize, Default, Debug, PartialEq)]
-    struct KvnWithUnitStruct {
-        semi_major_axis: DistanceType,
+    struct AsdType {
+        pub semi_major_axis: DistanceType,
+        pub asdfg: f64,
+        pub version: String,
     }
 
     #[test]
     fn test_parse_with_unit_struct() {
-        let kvn = r#"SEMI_MAJOR_AXIS = 41399.5123 [km]"#;
+        let kvn = r#"CCSDS_ASD_VERS = 3.0
+        SEMI_MAJOR_AXIS = 41399.5123 [km]
+        ASDFG = 12333.5123"#;
 
         assert_eq!(
-            KvnWithUnitStruct::deserialize(&mut kvn.lines().peekable()),
-            Ok(KvnWithUnitStruct {
+            AsdType::deserialize(&mut kvn.lines().peekable()),
+            Ok(AsdType {
                 semi_major_axis: DistanceType {
                     base: 41399.5123,
                     units: Some(PositionUnits("km".to_string(),)),
                 },
+                asdfg: 12333.5123f64,
+                version: "3.0".to_string(),
             },)
         )
     }
