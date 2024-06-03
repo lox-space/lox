@@ -221,6 +221,10 @@ pub fn parse_kvn_string_line_new<'a>(
         ));
     }
 
+    if is_empty_value(input) {
+        Err(nom::Err::Failure(KvnStringParserErr::EmptyValue { input }))?
+    };
+
     // Inspired by figure F-8: CCSDS 502.0-B-3, but accepts a more relaxed input. Orekit seems to suggest that there
     // are quite a few messages being used which are not strictly compliant.
     let re =
@@ -519,9 +523,9 @@ mod test {
             }))
         );
         assert_eq!(
-            parse_kvn_string_line_new(" =  [km]"),
+            parse_kvn_string_line_new(" = asd [km]"),
             Err(nom::Err::Failure(KvnStringParserErr::EmptyKeyword {
-                input: " =  [km]"
+                input: " = asd [km]"
             }))
         );
 
