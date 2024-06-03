@@ -31,9 +31,9 @@ pub enum KvnKeyMatchErr<I> {
 }
 
 #[derive(PartialEq, Debug)]
-pub enum KvnNumberLineParserErr<I> {
+pub enum KvnNumberParserErr<I> {
     ParserError(I, ErrorKind),
-    KeywordNotFound { expected: I },
+    EmptyKeyword { input: I },
     EmptyValue { input: I },
     InvalidFormat { input: I },
 }
@@ -109,23 +109,23 @@ impl<I> From<nom::Err<KvnDateTimeParserErr<I>>> for KvnDeserializerErr<I> {
     }
 }
 
-impl<I> From<nom::Err<KvnNumberLineParserErr<I>>> for KvnDeserializerErr<I> {
-    fn from(value: nom::Err<KvnNumberLineParserErr<I>>) -> Self {
+impl<I> From<nom::Err<KvnNumberParserErr<I>>> for KvnDeserializerErr<I> {
+    fn from(value: nom::Err<KvnNumberParserErr<I>>) -> Self {
         match value {
-            nom::Err::Error(KvnNumberLineParserErr::EmptyValue { input })
-            | nom::Err::Failure(KvnNumberLineParserErr::EmptyValue { input }) => {
+            nom::Err::Error(KvnNumberParserErr::EmptyValue { input })
+            | nom::Err::Failure(KvnNumberParserErr::EmptyValue { input }) => {
                 KvnDeserializerErr::EmptyValue { input }
             }
-            nom::Err::Error(KvnNumberLineParserErr::KeywordNotFound { expected })
-            | nom::Err::Failure(KvnNumberLineParserErr::KeywordNotFound { expected }) => {
-                KvnDeserializerErr::KeywordNotFound { expected }
+            nom::Err::Error(KvnNumberParserErr::EmptyKeyword { input })
+            | nom::Err::Failure(KvnNumberParserErr::EmptyKeyword { input }) => {
+                KvnDeserializerErr::EmptyKeyword { input }
             }
-            nom::Err::Error(KvnNumberLineParserErr::InvalidFormat { input })
-            | nom::Err::Failure(KvnNumberLineParserErr::InvalidFormat { input }) => {
+            nom::Err::Error(KvnNumberParserErr::InvalidFormat { input })
+            | nom::Err::Failure(KvnNumberParserErr::InvalidFormat { input }) => {
                 KvnDeserializerErr::InvalidDateTimeFormat { input }
             }
-            nom::Err::Error(KvnNumberLineParserErr::ParserError(i, k))
-            | nom::Err::Failure(KvnNumberLineParserErr::ParserError(i, k)) => {
+            nom::Err::Error(KvnNumberParserErr::ParserError(i, k))
+            | nom::Err::Failure(KvnNumberParserErr::ParserError(i, k)) => {
                 KvnDeserializerErr::GeneralParserError(i, k)
             }
             // We don't use streaming deserialization
@@ -265,14 +265,12 @@ pub fn parse_kvn_string_line_new<'a>(
 pub fn parse_kvn_integer_line_new<'a, T>(
     input: &'a str,
     with_unit: bool,
-) -> nom::IResult<&'a str, KvnValue<T, String>, KvnNumberLineParserErr<&'a str>>
+) -> nom::IResult<&'a str, KvnValue<T, String>, KvnNumberParserErr<&'a str>>
 where
     T: std::str::FromStr,
 {
     if is_empty_value(input) {
-        Err(nom::Err::Failure(KvnNumberLineParserErr::EmptyValue {
-            input,
-        }))?
+        Err(nom::Err::Failure(KvnNumberParserErr::EmptyValue { input }))?
     };
 
     // Modified from Figure F-9: CCSDS 502.0-B-3
@@ -281,9 +279,23 @@ where
 
     let captures =
         re.captures(input)
-            .ok_or(nom::Err::Failure(KvnNumberLineParserErr::InvalidFormat {
+            .ok_or(nom::Err::Failure(KvnNumberParserErr::InvalidFormat {
                 input,
             }))?;
+
+    // @TODO unwrap
+    let keyword = captures
+        .name("keyword")
+        .unwrap()
+        .as_str()
+        .trim_end()
+        .to_owned();
+
+    if keyword.len() == 0 {
+        return Err(nom::Err::Failure(KvnNumberParserErr::EmptyKeyword {
+            input,
+        }));
+    }
 
     // @TODO unwrap
     let value = captures.name("value").unwrap().as_str();
@@ -291,7 +303,7 @@ where
 
     let value = value
         .parse::<T>()
-        .map_err(|_| nom::Err::Failure(KvnNumberLineParserErr::InvalidFormat { input }))?;
+        .map_err(|_| nom::Err::Failure(KvnNumberParserErr::InvalidFormat { input }))?;
 
     Ok(("", KvnValue { value, unit }))
 }
@@ -308,25 +320,40 @@ fn is_empty_value(input: &str) -> bool {
 pub fn parse_kvn_numeric_line_new<'a>(
     input: &'a str,
     with_unit: bool,
-) -> nom::IResult<&'a str, KvnNumericValue, KvnNumberLineParserErr<&'a str>> {
+) -> nom::IResult<&'a str, KvnNumericValue, KvnNumberParserErr<&'a str>> {
     if is_empty_value(input) {
-        Err(nom::Err::Failure(KvnNumberLineParserErr::EmptyValue {
-            input,
-        }))?
+        Err(nom::Err::Failure(KvnNumberParserErr::EmptyValue { input }))?
     };
 
     // Figure F-9: CCSDS 502.0-B-3
     let re = Regex::new(r"^(?:\s*)(?<keyword>[0-9A-Za-z_]*)(?:\s*)=(?:\s*)(?<value>(?:[-+]?)(?:[0-9]+)(?:\.\d*)?(?:[eE][+-]?(?:\d+))?)(?:(?:\s*)(?:\[(?<unit>[0-9A-Za-z/_*]*)\]?))?(?:\s*)?$").unwrap();
 
+    let captures =
+        re.captures(input)
+            .ok_or(nom::Err::Failure(KvnNumberParserErr::InvalidFormat {
+                input,
+            }))?;
+
     // @TODO unwrap
-    let captures = re.captures(input).unwrap();
+    let keyword = captures
+        .name("keyword")
+        .unwrap()
+        .as_str()
+        .trim_end()
+        .to_owned();
+
+    if keyword.len() == 0 {
+        return Err(nom::Err::Failure(KvnNumberParserErr::EmptyKeyword {
+            input,
+        }));
+    }
 
     // @TODO unwrap
     let value = captures.name("value").unwrap().as_str();
     let unit = captures.name("unit").map(|x| x.as_str().to_owned());
 
     let value = fast_float::parse(value)
-        .map_err(|_| nom::Err::Failure(KvnNumberLineParserErr::InvalidFormat { input }))?;
+        .map_err(|_| nom::Err::Failure(KvnNumberParserErr::InvalidFormat { input }))?;
 
     Ok(("", KvnValue { value, unit }))
 }
@@ -550,6 +577,8 @@ mod test {
 
     #[test]
     fn test_parse_kvn_integer_line_new() {
+        // a) there must be at least one blank character between the value and the units text;
+        // b) the units must be enclosed within square brackets (e.g., ‘[m]’);
         assert_eq!(
             parse_kvn_integer_line_new("SCLK_OFFSET_AT_EPOCH = 28800 [s]", true),
             Ok((
@@ -558,6 +587,43 @@ mod test {
                     value: 28800,
                     unit: Some("s".to_string())
                 },
+            ))
+        );
+
+        // 7.4.7 Any white space immediately preceding the end of line shall not be significant.
+
+        assert_eq!(
+            parse_kvn_integer_line_new("SCLK_OFFSET_AT_EPOCH = 28800             [s]", true),
+            Ok((
+                "",
+                KvnValue {
+                    value: 28800,
+                    unit: Some("s".to_string())
+                }
+            ))
+        );
+
+        assert_eq!(
+            parse_kvn_integer_line_new("SCLK_OFFSET_AT_EPOCH = 28800             ", false),
+            Ok((
+                "",
+                KvnValue {
+                    value: 28800,
+                    unit: None
+                }
+            ))
+        );
+
+        // 7.4.5 Any white space immediately preceding or following the keyword shall not be significant.
+
+        assert_eq!(
+            parse_kvn_integer_line_new("          SCLK_OFFSET_AT_EPOCH = 28800", false),
+            Ok((
+                "",
+                KvnValue {
+                    value: 28800,
+                    unit: None
+                }
             ))
         );
 
@@ -595,22 +661,67 @@ mod test {
         );
 
         assert_eq!(
+            parse_kvn_integer_line_new("SCLK_OFFSET_AT_EPOCH = 28800 [s]", false),
+            Ok((
+                "",
+                KvnValue {
+                    value: 28800,
+                    unit: Some("s".to_string())
+                },
+            ))
+        );
+
+        assert_eq!(
             parse_kvn_integer_line_new::<u32>("SCLK_OFFSET_AT_EPOCH = -asd", true),
-            Err(nom::Err::Failure(KvnNumberLineParserErr::InvalidFormat {
+            Err(nom::Err::Failure(KvnNumberParserErr::InvalidFormat {
                 input: "SCLK_OFFSET_AT_EPOCH = -asd"
             }))
         );
 
         assert_eq!(
             parse_kvn_integer_line_new::<u32>("SCLK_OFFSET_AT_EPOCH = [s]", true),
-            Err(nom::Err::Failure(KvnNumberLineParserErr::EmptyValue {
+            Err(nom::Err::Failure(KvnNumberParserErr::EmptyValue {
                 input: "SCLK_OFFSET_AT_EPOCH = [s]"
+            }))
+        );
+
+        assert_eq!(
+            parse_kvn_integer_line_new::<u32>("SCLK_OFFSET_AT_EPOCH =    ", false),
+            Err(nom::Err::Failure(KvnNumberParserErr::EmptyValue {
+                input: "SCLK_OFFSET_AT_EPOCH =    "
+            }))
+        );
+        assert_eq!(
+            parse_kvn_integer_line_new::<u32>("SCLK_OFFSET_AT_EPOCH = ", false),
+            Err(nom::Err::Failure(KvnNumberParserErr::EmptyValue {
+                input: "SCLK_OFFSET_AT_EPOCH = "
+            }))
+        );
+        assert_eq!(
+            parse_kvn_integer_line_new::<u32>("SCLK_OFFSET_AT_EPOCH =", false),
+            Err(nom::Err::Failure(KvnNumberParserErr::EmptyValue {
+                input: "SCLK_OFFSET_AT_EPOCH ="
+            }))
+        );
+
+        assert_eq!(
+            parse_kvn_integer_line_new::<u32>("SCLK_OFFSET_AT_EPOCH   [km]", true),
+            Err(nom::Err::Failure(KvnNumberParserErr::InvalidFormat {
+                input: "SCLK_OFFSET_AT_EPOCH   [km]"
+            }))
+        );
+        assert_eq!(
+            parse_kvn_integer_line_new::<u32>(" = 123 [km]", true),
+            Err(nom::Err::Failure(KvnNumberParserErr::EmptyKeyword {
+                input: " = 123 [km]"
             }))
         );
     }
 
     #[test]
     fn test_parse_kvn_numeric_line_new() {
+        // a) there must be at least one blank character between the value and the units text;
+        // b) the units must be enclosed within square brackets (e.g., ‘[m]’);
         assert_eq!(
             parse_kvn_numeric_line_new("X = 66559942 [km]", true),
             Ok((
@@ -619,6 +730,43 @@ mod test {
                     value: 66559942f64,
                     unit: Some("km".to_string())
                 },
+            ))
+        );
+
+        // 7.4.7 Any white space immediately preceding the end of line shall not be significant.
+
+        assert_eq!(
+            parse_kvn_numeric_line_new("X = 66559942             [km]", true),
+            Ok((
+                "",
+                KvnValue {
+                    value: 66559942f64,
+                    unit: Some("km".to_string())
+                }
+            ))
+        );
+
+        assert_eq!(
+            parse_kvn_numeric_line_new("X = 66559942             ", false),
+            Ok((
+                "",
+                KvnValue {
+                    value: 66559942f64,
+                    unit: None
+                }
+            ))
+        );
+
+        // 7.4.5 Any white space immediately preceding or following the keyword shall not be significant.
+
+        assert_eq!(
+            parse_kvn_numeric_line_new("          X = 66559942", false),
+            Ok((
+                "",
+                KvnValue {
+                    value: 66559942f64,
+                    unit: None
+                }
             ))
         );
 
@@ -642,6 +790,52 @@ mod test {
                     unit: None
                 },
             ))
+        );
+
+        assert_eq!(
+            parse_kvn_numeric_line_new("X = -asd", true),
+            Err(nom::Err::Failure(KvnNumberParserErr::InvalidFormat {
+                input: "X = -asd"
+            }))
+        );
+
+        assert_eq!(
+            parse_kvn_numeric_line_new("X = [s]", true),
+            Err(nom::Err::Failure(KvnNumberParserErr::EmptyValue {
+                input: "X = [s]"
+            }))
+        );
+
+        assert_eq!(
+            parse_kvn_numeric_line_new("X =    ", false),
+            Err(nom::Err::Failure(KvnNumberParserErr::EmptyValue {
+                input: "X =    "
+            }))
+        );
+        assert_eq!(
+            parse_kvn_numeric_line_new("X = ", false),
+            Err(nom::Err::Failure(KvnNumberParserErr::EmptyValue {
+                input: "X = "
+            }))
+        );
+        assert_eq!(
+            parse_kvn_numeric_line_new("X =", false),
+            Err(nom::Err::Failure(KvnNumberParserErr::EmptyValue {
+                input: "X ="
+            }))
+        );
+
+        assert_eq!(
+            parse_kvn_numeric_line_new("X   [km]", true),
+            Err(nom::Err::Failure(KvnNumberParserErr::InvalidFormat {
+                input: "X   [km]"
+            }))
+        );
+        assert_eq!(
+            parse_kvn_numeric_line_new(" = 123 [km]", true),
+            Err(nom::Err::Failure(KvnNumberParserErr::EmptyKeyword {
+                input: " = 123 [km]"
+            }))
         );
     }
 
