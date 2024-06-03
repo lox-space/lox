@@ -6,18 +6,25 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use std::convert::Infallible;
+
+use glam::{DMat3, DVec3};
 use lox_bodies::RotationalElements;
+use lox_time::{julian_dates::JulianDate, transformations::ToTdb};
+
+use crate::rotations::Rotation;
 
 pub trait ReferenceFrame {
     fn name(&self) -> String;
     fn abbreviation(&self) -> String;
 }
 
-pub trait TryToFrame<T: ReferenceFrame> {
-    type Error;
+pub trait FrameTransformationProvider {}
 
-    fn try_to_frame(&self, frame: T) -> Result<T, Self::Error>;
-}
+#[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
+pub struct NoOpFrameTransformationProvider;
+
+impl FrameTransformationProvider for NoOpFrameTransformationProvider {}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Ord, PartialOrd)]
 pub struct Icrf;
@@ -33,9 +40,24 @@ impl ReferenceFrame for Icrf {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Ord, PartialOrd)]
-pub struct Bodyfixed<T: RotationalElements>(T);
+pub struct BodyFixed<T: RotationalElements>(pub T);
 
-impl<T: RotationalElements> ReferenceFrame for Bodyfixed<T> {
+impl<T: RotationalElements> BodyFixed<T> {
+    pub fn rotation<U: ToTdb + JulianDate>(&self, time: U) -> Rotation {
+        let seconds = time.to_tdb().seconds_since_j2000();
+        let (right_ascension, declination, prime_meridian) = T::rotational_elements(seconds);
+        let (right_ascension_rate, declination_rate, prime_meridian_rate) =
+            T::rotational_element_rates(seconds);
+        let m1 = DMat3::from_rotation_z(-right_ascension);
+        let m2 = DMat3::from_rotation_x(-declination);
+        let m3 = DMat3::from_rotation_z(-prime_meridian);
+        let m = m3 * m2 * m1;
+        let v = DVec3::new(right_ascension_rate, declination_rate, prime_meridian_rate);
+        Rotation::new(m).with_angular_velocity(v)
+    }
+}
+
+impl<T: RotationalElements> ReferenceFrame for BodyFixed<T> {
     fn name(&self) -> String {
         let body = self.0.name();
         match body {

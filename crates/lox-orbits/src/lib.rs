@@ -9,4 +9,5 @@
 pub mod frames;
 #[cfg(feature = "python")]
 pub mod python;
+pub mod rotations;
 pub mod states;
