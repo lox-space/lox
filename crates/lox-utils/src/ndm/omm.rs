@@ -1482,7 +1482,216 @@ CZ_DOT_X_DOT = 1.869263192954590e-10
 CZ_DOT_Y_DOT = 1.008862586240695e-10
 CZ_DOT_Z_DOT = 6.224444338635500e-10"#;
 
-        println!("{:#?}", OmmType::deserialize(&mut kvn.lines().peekable()));
-        // assert_eq!(OmmType::deserialize(&mut kvn.lines().peekable()), Ok());
+        assert_eq!(OmmType::deserialize(&mut kvn.lines().peekable()), Ok(
+            OmmType {
+                header: common::OdmHeader {
+                    comment_list: vec![
+                        "this is a comment".to_string(),
+                        "here is another one".to_string(),
+                    ],
+                    classification_list: vec![],
+                    creation_date: common::EpochType(
+                        "2007-065T16:00:00".to_string(),
+                    ),
+                    originator: "NOAA/USA".to_string(),
+                    message_id: None,
+                },
+                body: OmmBody {
+                    segment: OmmSegment {
+                        metadata: OmmMetadata {
+                            comment_list: vec![
+                                "this comment doesn't say much".to_string(),
+                            ],
+                            object_name: "GOES 9".to_string(),
+                            object_id: "1995-025A".to_string(),
+                            center_name: "EARTH".to_string(),
+                            ref_frame: "TOD".to_string(),
+                            ref_frame_epoch: Some(
+                                common::EpochType(
+                                    "2000-003T10:34:00".to_string(),
+                                ),
+                            ),
+                            time_system: "MRT".to_string(),
+                            mean_element_theory: "SOME THEORY".to_string(),
+                        },
+                        data: OmmData {
+                            comment_list: vec![
+                                "the following data is what we're looking for".to_string(),
+                            ],
+                            mean_elements: MeanElementsType {
+                                comment_list: vec![],
+                                epoch: common::EpochType(
+                                    "2000-005T10:00:00".to_string(),
+                                ),
+                                semi_major_axis: Some(
+                                    common::DistanceType {
+                                        base: 6800.0,
+                                        units: None,
+                                    },
+                                ),
+                                mean_motion: None,
+                                eccentricity: common::NonNegativeDouble(
+                                    0.0005013,
+                                ),
+                                inclination: common::InclinationType {
+                                    base: 3.0539,
+                                    units: None,
+                                },
+                                ra_of_asc_node: common::AngleType {
+                                    base: 81.7939,
+                                    units: None,
+                                },
+                                arg_of_pericenter: common::AngleType {
+                                    base: 249.2363,
+                                    units: None,
+                                },
+                                mean_anomaly: common::AngleType {
+                                    base: 150.1602,
+                                    units: None,
+                                },
+                                gm: None,
+                            },
+                            spacecraft_parameters: Some(
+                                common::SpacecraftParametersType {
+                                    comment_list: vec![
+                                        "spacecraft data".to_string(),
+                                    ],
+                                    mass: Some(
+                                        common::MassType {
+                                            base: common::NonNegativeDouble(
+                                                300.0,
+                                            ),
+                                            units: None,
+                                        },
+                                    ),
+                                    solar_rad_area: Some(
+                                        common::AreaType {
+                                            base: common::NonNegativeDouble(
+                                                5.0,
+                                            ),
+                                            units: None,
+                                        },
+                                    ),
+                                    solar_rad_coeff: Some(
+                                        common::NonNegativeDouble(
+                                            0.001,
+                                        ),
+                                    ),
+                                    drag_area: Some(
+                                        common::AreaType {
+                                            base: common::NonNegativeDouble(
+                                                4.0,
+                                            ),
+                                            units: None,
+                                        },
+                                    ),
+                                    drag_coeff: Some(
+                                        common::NonNegativeDouble(
+                                            0.002,
+                                        ),
+                                    ),
+                                },
+                            ),
+                            tle_parameters: None,
+                            covariance_matrix: Some(
+                                common::OpmCovarianceMatrixType {
+                                    comment_list: vec![],
+                                    cov_ref_frame: Some(
+                                        "TNW".to_string(),
+                                    ),
+                                    cx_x: common::PositionCovarianceType {
+                                        base: 0.0003331349476038534,
+                                        units: None,
+                                    },
+                                    cy_x: common::PositionCovarianceType {
+                                        base: 0.0004618927349220216,
+                                        units: None,
+                                    },
+                                    cy_y: common::PositionCovarianceType {
+                                        base: 0.0006782421679971363,
+                                        units: None,
+                                    },
+                                    cz_x: common::PositionCovarianceType {
+                                        base: -0.0003070007847730449,
+                                        units: None,
+                                    },
+                                    cz_y: common::PositionCovarianceType {
+                                        base: -0.0004221234189514228,
+                                        units: None,
+                                    },
+                                    cz_z: common::PositionCovarianceType {
+                                        base: 0.0003231931992380369,
+                                        units: None,
+                                    },
+                                    cx_dot_x: common::PositionVelocityCovarianceType {
+                                        base: -3.34936503392263e-7,
+                                        units: None,
+                                    },
+                                    cx_dot_y: common::PositionVelocityCovarianceType {
+                                        base: -4.686084221046758e-7,
+                                        units: None,
+                                    },
+                                    cx_dot_z: common::PositionVelocityCovarianceType {
+                                        base: 2.484949578400095e-7,
+                                        units: None,
+                                    },
+                                    cx_dot_x_dot: common::VelocityCovarianceType {
+                                        base: 4.29602280558729e-10,
+                                        units: None,
+                                    },
+                                    cy_dot_x: common::PositionVelocityCovarianceType {
+                                        base: -2.211832501084875e-7,
+                                        units: None,
+                                    },
+                                    cy_dot_y: common::PositionVelocityCovarianceType {
+                                        base: -2.864186892102733e-7,
+                                        units: None,
+                                    },
+                                    cy_dot_z: common::PositionVelocityCovarianceType {
+                                        base: 1.798098699846038e-7,
+                                        units: None,
+                                    },
+                                    cy_dot_x_dot: common::VelocityCovarianceType {
+                                        base: 2.608899201686016e-10,
+                                        units: None,
+                                    },
+                                    cy_dot_y_dot: common::VelocityCovarianceType {
+                                        base: 1.767514756338532e-10,
+                                        units: None,
+                                    },
+                                    cz_dot_x: common::PositionVelocityCovarianceType {
+                                        base: -3.041346050686871e-7,
+                                        units: None,
+                                    },
+                                    cz_dot_y: common::PositionVelocityCovarianceType {
+                                        base: -4.989496988610662e-7,
+                                        units: None,
+                                    },
+                                    cz_dot_z: common::PositionVelocityCovarianceType {
+                                        base: 3.540310904497689e-7,
+                                        units: None,
+                                    },
+                                    cz_dot_x_dot: common::VelocityCovarianceType {
+                                        base: 1.86926319295459e-10,
+                                        units: None,
+                                    },
+                                    cz_dot_y_dot: common::VelocityCovarianceType {
+                                        base: 1.008862586240695e-10,
+                                        units: None,
+                                    },
+                                    cz_dot_z_dot: common::VelocityCovarianceType {
+                                        base: 6.2244443386355e-10,
+                                        units: None,
+                                    },
+                                },
+                            ),
+                            user_defined_parameters: None,
+                        },
+                    },
+                },
+                id: None,
+                version: "3.0".to_string(),
+            },
+        ));
     }
 }
