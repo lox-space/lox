@@ -363,16 +363,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lox-orbits"
-version = "0.1.0"
-dependencies = [
- "glam",
- "lox-bodies",
- "lox-time",
- "pyo3",
-]
-
-[[package]]
 name = "lox-space"
 version = "0.1.0"
 dependencies = [

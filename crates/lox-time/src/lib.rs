@@ -6,13 +6,29 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-//! lox-time provides structs and functions for working with instants in astronomical time scales.
+//! `lox-time` defines an API for working with instants in astronomical time scales.
 //!
-//! The main struct is [Time], which represents an instant in time generic over a [TimeScale]
-//! without leap seconds.
+//! # Overview
 //!
-//! [Utc] and [Date] are used strictly as an I/O formats, avoiding much of the complexity inherent
-//! in working with leap seconds.
+//! `lox_time` exposes:
+//! * the marker trait [TimeScale] and zero-sized implementations representing the most common,
+//! continuous astronomical time scales;
+//! * the concrete type [Time] representing an instant in a [TimeScale];
+//! * [Utc], the only discontinuous time representation supported by Lox;
+//! * the [TryToScale] and [ToScale] traits, supporting transformations between pairs of time
+//! scales;
+//! * standard implementations of the most common time scale transformations.
+//!
+//! # Continuous vs discontinuous timescales
+//!
+//! Internally, Lox uses only continuous time scales (i.e. time scales without leap seconds). An
+//! instance of [Time] represents an instant in time generic over a continuous [TimeScale].
+//!
+//! [Utc] is used strictly as an I/O time format, which must be transformed into a continuous time
+//! scale before use in the wider Lox ecosystem.
+//!
+//! This separation minimises the complexity in working with leap seconds, confining these transformations
+//! to the crate boundaries.
 
 use std::cmp::Ordering;
 use std::fmt;
@@ -98,7 +114,7 @@ pub enum TimeError {
     InvalidIsoString(String),
 }
 
-/// An instant in time in a given [TimeScale].
+/// An instant in time in a given [TimeScale], relative to J2000.
 ///
 /// `Time` supports femtosecond precision, but be aware that many algorithms operating on `Time`s
 /// are not accurate to this level of precision.
@@ -110,8 +126,8 @@ pub struct Time<T: TimeScale> {
 }
 
 impl<T: TimeScale> Time<T> {
-    /// Instantiates a [Time] in the given scale from seconds since J2000 subdivided into integral
-    /// seconds and [Subsecond].
+    /// Instantiates a [Time] in the given [TimeScale] from the count of seconds since J2000, subdivided
+    /// into integral seconds and [Subsecond].
     pub fn new(scale: T, seconds: i64, subsecond: Subsecond) -> Self {
         Self {
             scale,
@@ -120,7 +136,12 @@ impl<T: TimeScale> Time<T> {
         }
     }
 
-    /// Instantiates a [Time] in the given `scale` from a [Date] and a [TimeOfDay].
+    /// Instantiates a [Time] in the given [TimeScale] from a [Date] and a [TimeOfDay].
+    ///
+    /// # Errors
+    ///
+    /// * Returns `TimeError::LeapSecondsOutsideUtc` if `time` is a leap second, since leap seconds
+    /// cannot be unambiguously represented by a continuous time format.
     pub fn from_date_and_time(scale: T, date: Date, time: TimeOfDay) -> Result<Self, TimeError> {
         let mut seconds = (date.days_since_j2000() * time::SECONDS_PER_DAY)
             .to_i64()
@@ -138,6 +159,11 @@ impl<T: TimeScale> Time<T> {
         Ok(Self::new(scale, seconds, time.subsecond()))
     }
 
+    /// Instantiates a [Time] in the given [TimeScale] from an ISO 8601 string.
+    ///
+    /// # Errors
+    ///
+    /// * Returns `TimeError::InvalidIsoString` if `iso` is not a valid ISO 8601 timestamp.
     pub fn from_iso(scale: T, iso: &str) -> Result<Self, TimeError> {
         let Some((date, time_and_scale)) = iso.split_once('T') else {
             return Err(TimeError::InvalidIsoString(iso.to_owned()));
@@ -158,7 +184,7 @@ impl<T: TimeScale> Time<T> {
         Self::from_date_and_time(scale, date, time)
     }
 
-    /// Instantiates a [Time] in the given `scale` from an offset from the J2000 epoch given as a [TimeDelta].
+    /// Instantiates a [Time] in the given [TimeScale] and a [TimeDelta] relative to J2000.
     pub fn from_delta(scale: T, delta: TimeDelta) -> Self {
         Self {
             scale,
@@ -167,7 +193,10 @@ impl<T: TimeScale> Time<T> {
         }
     }
 
-    /// Returns the epoch for the given [Epoch] in the given timescale.
+    /// Returns the [Time] at `epoch` in the given [TimeScale].
+    ///
+    /// Since [Time] is defined relative to J2000, this is equivalent to the delta between
+    /// J2000 and `epoch`.
     pub fn from_epoch(scale: T, epoch: Epoch) -> Self {
         match epoch {
             Epoch::JulianDate => Self {
@@ -193,7 +222,12 @@ impl<T: TimeScale> Time<T> {
         }
     }
 
-    /// Instantiates a [Time] in the given scale from a `julian_date` with the given `epoch`.
+    /// Given a Julian date, instantiates a [Time] in the specified [TimeScale], relative to
+    /// `epoch`.
+    ///
+    /// # Errors
+    ///
+    /// * Returns `TimeError::JulianDateOutOfRange` if `julian_date` is NaN or ±infinity.
     pub fn from_julian_date(scale: T, julian_date: Days, epoch: Epoch) -> Result<Self, TimeError> {
         let seconds = julian_date * time::SECONDS_PER_DAY;
         if !(i64::MIN as f64..=i64::MAX as f64).contains(&seconds) {
@@ -217,7 +251,7 @@ impl<T: TimeScale> Time<T> {
         Ok(Self::new(scale, seconds, subsecond))
     }
 
-    /// Returns a [TimeBuilder] for constructing a new [Time] in the given `scale`.
+    /// Returns a [TimeBuilder] for constructing a new [Time] in the given [TimeScale].
     pub fn builder_with_scale(scale: T) -> TimeBuilder<T> {
         TimeBuilder::new(scale)
     }
@@ -230,43 +264,47 @@ impl<T: TimeScale> Time<T> {
         self.scale.clone()
     }
 
-    /// Returns a new [Time] with `scale` without changing the underlying timestamp.
+    /// Returns a new [Time] with the delta of `self` but time scale `scale`.
+    ///
+    /// Note that the underlying delta is simply copied – no time scale transformation takes place.
     pub fn with_scale<S: TimeScale>(&self, scale: S) -> Time<S> {
         Time::new(scale, self.seconds, self.subsecond)
     }
 
-    /// Returns a new [Time] with `scale` with its offset adjusted by `delta`.
+    /// Returns a new [Time] with the delta of `self` adjusted by `delta`, and time scale `scale`.
+    ///
+    /// Note that no time scale transformation takes place beyond the adjustment specified by
+    /// `delta`.
     pub fn with_scale_and_delta<S: TimeScale>(&self, scale: S, delta: TimeDelta) -> Time<S> {
         Time::from_delta(scale, self.to_delta() + delta)
     }
 
-    /// Returns, as an epoch in the given timescale, midday on the first day of the proleptic Julian
-    /// calendar.
+    /// Returns the Julian epoch as a [Time] in the given [TimeScale].
     pub fn jd0(scale: T) -> Self {
         Self::from_epoch(scale, Epoch::JulianDate)
     }
 
-    /// Returns the epoch of the Modified Julian Date in the given timescale.
+    /// Returns the modified Julian epoch as a [Time] in the given [TimeScale].
     pub fn mjd0(scale: T) -> Self {
         Self::from_epoch(scale, Epoch::ModifiedJulianDate)
     }
 
-    /// Returns the J1950 epoch in the given timescale.
+    /// Returns the J1950 epoch as a [Time] in the given [TimeScale].
     pub fn j1950(scale: T) -> Self {
         Self::from_epoch(scale, Epoch::J1950)
     }
 
-    /// Returns the J2000 epoch in the given timescale.
+    /// Returns the J2000 epoch as a [Time] in the given [TimeScale].
     pub fn j2000(scale: T) -> Self {
         Self::from_epoch(scale, Epoch::J2000)
     }
 
-    /// The number of whole seconds since J2000.
+    /// Returns the number of whole seconds since J2000.
     pub fn seconds(&self) -> i64 {
         self.seconds
     }
 
-    /// The number of femtoseconds from the last whole second.
+    /// Returns the number of femtoseconds from the last whole second.
     pub fn subsecond(&self) -> f64 {
         self.subsecond.into()
     }
@@ -377,8 +415,8 @@ impl FromStr for Time<Ut1> {
 impl<T: TimeScale> Add<TimeDelta> for Time<T> {
     type Output = Self;
 
-    /// The implementation of [Add] for [Time] follows the default Rust rules for integer overflow, which
-    /// should be sufficient for all practical purposes.
+    /// The implementation of [Add] for [Time] follows the default Rust rules for integer overflow,
+    /// which should be sufficient for all practical purposes.
     fn add(self, rhs: TimeDelta) -> Self::Output {
         if rhs.is_negative() {
             return self - (-rhs);
@@ -438,6 +476,8 @@ impl<T: TimeScale> CalendarDate for Time<T> {
         Date::from_seconds_since_j2000(self.seconds)
     }
 }
+
+/// `TimeBuilder` supports the construction of [Time] instances piecewise using the builder pattern.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TimeBuilder<T: TimeScale> {
     scale: T,
@@ -446,6 +486,7 @@ pub struct TimeBuilder<T: TimeScale> {
 }
 
 impl<T: TimeScale> TimeBuilder<T> {
+    /// Returns a new [TimeBuilder], equivalent to a [Time] at J2000 in the given [TimeScale].
     pub fn new(scale: T) -> Self {
         Self {
             scale,
@@ -471,6 +512,12 @@ impl<T: TimeScale> TimeBuilder<T> {
     }
 
     /// Builds the [Time] instance.
+    ///
+    /// # Errors
+    ///
+    /// * [DateError] if `ymd` data passed into the builder did not correspond to a valid date;
+    /// * [TimeOfDayError] if `hms` data passed into the builder did not correspond to a valid time
+    /// of day.
     pub fn build(self) -> Result<Time<T>, TimeError> {
         let date = self.date?;
         let time = self.time?;
@@ -478,6 +525,21 @@ impl<T: TimeScale> TimeBuilder<T> {
     }
 }
 
+/// Convenience macro to simplify the construction of [Time] instances.
+///
+/// # Examples
+///
+/// ```
+/// use lox_time::Time;
+/// use lox_time::time;
+/// use lox_time::time_scales::Tai;
+///
+///
+/// time!(Tai, 2020, 1, 2); // 2020-01-02T00:00:00.000 TAI
+/// time!(Tai, 2020, 1, 2, 3) ; // 2020-01-02T03:00:00.000 TAI
+/// time!(Tai, 2020, 1, 2, 3, 4); // 2020-01-02T03:04:00.000 TAI
+/// time!(Tai, 2020, 1, 2, 3, 4, 5.006); // 2020-01-02T03:04:05.006 TAI
+/// ```
 #[macro_export]
 macro_rules! time {
     ($scale:expr, $year:literal, $month:literal, $day:literal) => {
