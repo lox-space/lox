@@ -41,7 +41,7 @@ pub enum KvnNumberParserErr<I> {
 #[derive(PartialEq, Debug)]
 pub enum KvnDateTimeParserErr<I> {
     ParserError(I, ErrorKind),
-    KeywordNotFound { expected: I },
+    EmptyKeyword { input: I },
     EmptyValue { input: I },
     InvalidFormat { input: I },
 }
@@ -91,9 +91,9 @@ impl<I> From<nom::Err<KvnDateTimeParserErr<I>>> for KvnDeserializerErr<I> {
             | nom::Err::Failure(KvnDateTimeParserErr::EmptyValue { input }) => {
                 KvnDeserializerErr::EmptyValue { input }
             }
-            nom::Err::Error(KvnDateTimeParserErr::KeywordNotFound { expected })
-            | nom::Err::Failure(KvnDateTimeParserErr::KeywordNotFound { expected }) => {
-                KvnDeserializerErr::KeywordNotFound { expected }
+            nom::Err::Error(KvnDateTimeParserErr::EmptyKeyword { input })
+            | nom::Err::Failure(KvnDateTimeParserErr::EmptyKeyword { input }) => {
+                KvnDeserializerErr::EmptyKeyword { input }
             }
             nom::Err::Error(KvnDateTimeParserErr::InvalidFormat { input })
             | nom::Err::Failure(KvnDateTimeParserErr::InvalidFormat { input }) => {
@@ -379,6 +379,20 @@ pub fn parse_kvn_datetime_line_new<'a>(
             .ok_or(nom::Err::Failure(KvnDateTimeParserErr::InvalidFormat {
                 input,
             }))?;
+
+    // @TODO unwrap
+    let keyword = captures
+        .name("keyword")
+        .unwrap()
+        .as_str()
+        .trim_end()
+        .to_owned();
+
+    if keyword.len() == 0 {
+        return Err(nom::Err::Failure(KvnDateTimeParserErr::EmptyKeyword {
+            input,
+        }));
+    }
 
     // yr is a mandatory decimal in the regex so we expect the capture to be
     // always there and unwrap is fine
@@ -879,6 +893,44 @@ mod test {
             ))
         );
 
+        // 7.4.7 Any white space immediately preceding the end of line shall not be significant.
+
+        assert_eq!(
+            parse_kvn_datetime_line_new("CREATION_DATE = 2021-06-03T05:33:01           "),
+            Ok((
+                "",
+                KvnDateTimeValue {
+                    year: 2021,
+                    month: 6,
+                    day: 3,
+                    hour: 5,
+                    minute: 33,
+                    second: 1,
+                    fractional_second: 0.0,
+                    full_value: "2021-06-03T05:33:01".to_string(),
+                },
+            ))
+        );
+
+        // 7.4.5 Any white space immediately preceding or following the keyword shall not be significant.
+
+        assert_eq!(
+            parse_kvn_datetime_line_new("          CREATION_DATE = 2021-06-03T05:33:01"),
+            Ok((
+                "",
+                KvnDateTimeValue {
+                    year: 2021,
+                    month: 6,
+                    day: 3,
+                    hour: 5,
+                    minute: 33,
+                    second: 1,
+                    fractional_second: 0.0,
+                    full_value: "2021-06-03T05:33:01".to_string(),
+                },
+            ))
+        );
+
         // @TODO add support for ddd format
 
         assert_eq!(
@@ -899,6 +951,33 @@ mod test {
             parse_kvn_datetime_line_new("CREATION_DATE = "),
             Err(nom::Err::Failure(KvnDateTimeParserErr::EmptyValue {
                 input: "CREATION_DATE = "
+            }))
+        );
+
+        assert_eq!(
+            parse_kvn_datetime_line_new("CREATION_DATE =    "),
+            Err(nom::Err::Failure(KvnDateTimeParserErr::EmptyValue {
+                input: "CREATION_DATE =    "
+            }))
+        );
+
+        assert_eq!(
+            parse_kvn_datetime_line_new("CREATION_DATE ="),
+            Err(nom::Err::Failure(KvnDateTimeParserErr::EmptyValue {
+                input: "CREATION_DATE ="
+            }))
+        );
+
+        assert_eq!(
+            parse_kvn_datetime_line_new("CREATION_DATE     "),
+            Err(nom::Err::Failure(KvnDateTimeParserErr::InvalidFormat {
+                input: "CREATION_DATE     "
+            }))
+        );
+        assert_eq!(
+            parse_kvn_datetime_line_new(" = 2021-06-03T05:33:01"),
+            Err(nom::Err::Failure(KvnDateTimeParserErr::EmptyKeyword {
+                input: " = 2021-06-03T05:33:01"
             }))
         );
     }
