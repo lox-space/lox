@@ -67,6 +67,14 @@ where
     {
         self.frame.clone()
     }
+
+    pub fn position(&self) -> DVec3 {
+        self.position
+    }
+
+    pub fn velocity(&self) -> DVec3 {
+        self.velocity
+    }
 }
 
 impl<T, O, R> TryToFrame<T, O, BodyFixed<R>> for State<T, O, Icrf>
@@ -105,6 +113,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    use float_eq::assert_float_eq;
     use lox_bodies::Jupiter;
     use lox_time::{time, time_scales::Tdb, Time};
 
@@ -120,7 +129,26 @@ mod tests {
         let v1 = DVec3::new(-1.852284168309543, -0.8227941105651749, -7.14175174489828);
 
         let tdb = time!(Tdb, 2000, 1, 1, 12).unwrap();
-        let s0 = State::new(tdb, Jupiter, Icrf, r0, v0);
-        let s1 = s0.try_to_frame(iau_jupiter, &NoOpFrameTransformationProvider);
+        let s = State::new(tdb, Jupiter, Icrf, r0, v0);
+        let s1 = s
+            .try_to_frame(iau_jupiter, &NoOpFrameTransformationProvider)
+            .unwrap();
+        let s0 = s1
+            .try_to_frame(Icrf, &NoOpFrameTransformationProvider)
+            .unwrap();
+
+        assert_float_eq!(s0.position().x, r0.x, rel <= 1e-8);
+        assert_float_eq!(s0.position().y, r0.y, rel <= 1e-8);
+        assert_float_eq!(s0.position().z, r0.z, rel <= 1e-8);
+        assert_float_eq!(s0.velocity().x, v0.x, rel <= 1e-8);
+        assert_float_eq!(s0.velocity().y, v0.y, rel <= 1e-8);
+        assert_float_eq!(s0.velocity().z, v0.z, rel <= 1e-8);
+
+        assert_float_eq!(s1.position().x, r1.x, rel <= 1e-8);
+        assert_float_eq!(s1.position().y, r1.y, rel <= 1e-8);
+        assert_float_eq!(s1.position().z, r1.z, rel <= 1e-8);
+        assert_float_eq!(s1.velocity().x, v1.x, rel <= 1e-8);
+        assert_float_eq!(s1.velocity().y, v1.y, rel <= 1e-8);
+        assert_float_eq!(s1.velocity().z, v1.z, rel <= 1e-8);
     }
 }

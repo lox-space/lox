@@ -14,6 +14,7 @@ glam.workspace = true
 pyo3 = { workspace = true, optional = true }
 
 [dev-dependencies]
+float_eq.workspace = true
 pyo3 = { workspace = true, features = ["auto-initialize"] }
 
 [features]
