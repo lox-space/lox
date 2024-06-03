@@ -103,6 +103,42 @@ pub trait ToUt1<T: DeltaUt1TaiProvider>: TryToScale<Ut1, T, T::Error> {
 
 // No-ops
 
+impl TryToScale<Tai> for Time<Tai> {
+    fn try_to_scale(
+        &self,
+        _scale: Tai,
+        _provider: &NoOpOffsetProvider,
+    ) -> Result<Time<Tai>, Infallible> {
+        Ok(*self)
+    }
+}
+
+impl ToTai for Time<Tai> {}
+
+impl TryToScale<Tcb> for Time<Tcb> {
+    fn try_to_scale(
+        &self,
+        _scale: Tcb,
+        _provider: &NoOpOffsetProvider,
+    ) -> Result<Time<Tcb>, Infallible> {
+        Ok(*self)
+    }
+}
+
+impl ToTcb for Time<Tcb> {}
+
+impl TryToScale<Tcg> for Time<Tcg> {
+    fn try_to_scale(
+        &self,
+        _scale: Tcg,
+        _provider: &NoOpOffsetProvider,
+    ) -> Result<Time<Tcg>, Infallible> {
+        Ok(*self)
+    }
+}
+
+impl ToTcg for Time<Tcg> {}
+
 impl TryToScale<Tdb> for Time<Tdb> {
     fn try_to_scale(
         &self,
@@ -114,6 +150,26 @@ impl TryToScale<Tdb> for Time<Tdb> {
 }
 
 impl ToTdb for Time<Tdb> {}
+
+impl TryToScale<Tt> for Time<Tt> {
+    fn try_to_scale(
+        &self,
+        _scale: Tt,
+        _provider: &NoOpOffsetProvider,
+    ) -> Result<Time<Tt>, Infallible> {
+        Ok(*self)
+    }
+}
+
+impl ToTt for Time<Tt> {}
+
+impl<T: DeltaUt1TaiProvider> TryToScale<Ut1, T, T::Error> for Time<Ut1> {
+    fn try_to_scale(&self, _scale: Ut1, _provider: &T) -> Result<Time<Ut1>, T::Error> {
+        Ok(*self)
+    }
+}
+
+impl<T: DeltaUt1TaiProvider> ToUt1<T> for Time<Ut1> {}
 
 // TAI <-> TT
 
@@ -328,40 +384,6 @@ impl<T: DeltaUt1TaiProvider> TryToScale<Tai, T, T::Error> for Time<Ut1> {
 }
 
 // Multi-step transformations
-// ==========================
-//
-// The following diagram shows the possible direct transformations between time scales.
-//
-//    ┌─────┐
-//    │ UT1 │
-//    └─────┘
-//       ▲
-//       │
-//       ▼
-//    ┌─────┐    ┌─────┐
-//    │ TAI │◀──▶│ UTC │
-//    └─────┘    └─────┘
-//       ▲
-//       │
-//       ▼
-//    ┌─────┐    ┌─────┐
-//    │ TT  │◀──▶│ TCG │
-//    └─────┘    └─────┘
-//       ▲
-//       │
-//       ▼
-//    ┌─────┐
-//    │ TDB │
-//    └─────┘
-//       ▲
-//       │
-//       ▼
-//    ┌─────┐
-//    │ TCB │
-//    └─────┘
-//
-// For leaf nodes (i.e. TCB, TCG, UTC, UT1), we can implement multi-step transformations as blanket implementations.
-// For intermediate nodes, the transformations need to be implemented manually to avoid conflicts.
 
 impl TryToScale<Tai> for Time<Tdb> {
     fn try_to_scale(
@@ -387,7 +409,7 @@ impl TryToScale<Tdb> for Time<Tai> {
 
 impl ToTdb for Time<Tai> {}
 
-impl<T: ToTt> TryToScale<Tcg> for T {
+impl TryToScale<Tcg> for Time<Tdb> {
     fn try_to_scale(
         &self,
         scale: Tcg,
@@ -398,6 +420,17 @@ impl<T: ToTt> TryToScale<Tcg> for T {
 }
 
 impl ToTcg for Time<Tdb> {}
+
+impl TryToScale<Tcg> for Time<Tai> {
+    fn try_to_scale(
+        &self,
+        scale: Tcg,
+        provider: &NoOpOffsetProvider,
+    ) -> Result<Time<Tcg>, Infallible> {
+        self.to_tt().try_to_scale(scale, provider)
+    }
+}
+
 impl ToTcg for Time<Tai> {}
 
 impl TryToScale<Tai> for Time<Tcg> {
@@ -424,7 +457,7 @@ impl TryToScale<Tdb> for Time<Tcg> {
 
 impl ToTdb for Time<Tcg> {}
 
-impl<T: ToTdb> TryToScale<Tcb> for T {
+impl TryToScale<Tcb> for Time<Tt> {
     fn try_to_scale(
         &self,
         scale: Tcb,
@@ -435,7 +468,29 @@ impl<T: ToTdb> TryToScale<Tcb> for T {
 }
 
 impl ToTcb for Time<Tt> {}
+
+impl TryToScale<Tcb> for Time<Tai> {
+    fn try_to_scale(
+        &self,
+        scale: Tcb,
+        provider: &NoOpOffsetProvider,
+    ) -> Result<Time<Tcb>, Infallible> {
+        self.to_tdb().try_to_scale(scale, provider)
+    }
+}
+
 impl ToTcb for Time<Tai> {}
+
+impl TryToScale<Tcb> for Time<Tcg> {
+    fn try_to_scale(
+        &self,
+        scale: Tcb,
+        provider: &NoOpOffsetProvider,
+    ) -> Result<Time<Tcb>, Infallible> {
+        self.to_tdb().try_to_scale(scale, provider)
+    }
+}
+
 impl ToTcb for Time<Tcg> {}
 
 impl TryToScale<Tt> for Time<Tcb> {
@@ -449,6 +504,17 @@ impl TryToScale<Tt> for Time<Tcb> {
 }
 
 impl ToTt for Time<Tcb> {}
+
+impl TryToScale<Tcg> for Time<Tcb> {
+    fn try_to_scale(
+        &self,
+        scale: Tcg,
+        provider: &NoOpOffsetProvider,
+    ) -> Result<Time<Tcg>, Infallible> {
+        self.to_tdb().try_to_scale(scale, provider)
+    }
+}
+
 impl ToTcg for Time<Tcb> {}
 
 impl TryToScale<Tai> for Time<Tcb> {
@@ -463,7 +529,37 @@ impl TryToScale<Tai> for Time<Tcb> {
 
 impl ToTai for Time<Tcb> {}
 
-impl<T: DeltaUt1TaiProvider, U: ToTai> TryToScale<Ut1, T, T::Error> for U {
+impl<T: DeltaUt1TaiProvider> TryToScale<Ut1, T, T::Error> for Time<Tcb> {
+    fn try_to_scale(&self, scale: Ut1, provider: &T) -> Result<Time<Ut1>, T::Error> {
+        let tai = self.to_tai();
+        let delta_ut1_tai = provider.delta_ut1_tai(&tai)?;
+        Ok(tai.with_scale_and_delta(scale, delta_ut1_tai))
+    }
+}
+
+impl<T: DeltaUt1TaiProvider> ToUt1<T> for Time<Tcb> {}
+
+impl<T: DeltaUt1TaiProvider> TryToScale<Ut1, T, T::Error> for Time<Tcg> {
+    fn try_to_scale(&self, scale: Ut1, provider: &T) -> Result<Time<Ut1>, T::Error> {
+        let tai = self.to_tai();
+        let delta_ut1_tai = provider.delta_ut1_tai(&tai)?;
+        Ok(tai.with_scale_and_delta(scale, delta_ut1_tai))
+    }
+}
+
+impl<T: DeltaUt1TaiProvider> ToUt1<T> for Time<Tcg> {}
+
+impl<T: DeltaUt1TaiProvider> TryToScale<Ut1, T, T::Error> for Time<Tdb> {
+    fn try_to_scale(&self, scale: Ut1, provider: &T) -> Result<Time<Ut1>, T::Error> {
+        let tai = self.to_tai();
+        let delta_ut1_tai = provider.delta_ut1_tai(&tai)?;
+        Ok(tai.with_scale_and_delta(scale, delta_ut1_tai))
+    }
+}
+
+impl<T: DeltaUt1TaiProvider> ToUt1<T> for Time<Tdb> {}
+
+impl<T: DeltaUt1TaiProvider> TryToScale<Ut1, T, T::Error> for Time<Tt> {
     fn try_to_scale(&self, scale: Ut1, provider: &T) -> Result<Time<Ut1>, T::Error> {
         let tai = self.to_tai();
         let delta_ut1_tai = provider.delta_ut1_tai(&tai)?;
@@ -472,9 +568,6 @@ impl<T: DeltaUt1TaiProvider, U: ToTai> TryToScale<Ut1, T, T::Error> for U {
 }
 
 impl<T: DeltaUt1TaiProvider> ToUt1<T> for Time<Tt> {}
-impl<T: DeltaUt1TaiProvider> ToUt1<T> for Time<Tcg> {}
-impl<T: DeltaUt1TaiProvider> ToUt1<T> for Time<Tcb> {}
-impl<T: DeltaUt1TaiProvider> ToUt1<T> for Time<Tdb> {}
 
 impl<T: DeltaUt1TaiProvider> TryToScale<Tt, T, T::Error> for Time<Ut1> {
     fn try_to_scale(&self, _scale: Tt, provider: &T) -> Result<Time<Tt>, T::Error> {
@@ -597,6 +690,22 @@ mod tests {
         assert_eq!(tt_exp, tt_act);
         assert_eq!(tcg_exp, tcg_act);
         assert_eq!(tdb_exp, tdb_act);
+    }
+
+    #[test]
+    fn test_time_no_ops() {
+        let tai = time!(Tai, 2000, 1, 1).unwrap();
+        assert_eq!(tai, tai.to_tai());
+        let tcb = time!(Tcb, 2000, 1, 1).unwrap();
+        assert_eq!(tcb, tcb.to_tcb());
+        let tcg = time!(Tcg, 2000, 1, 1).unwrap();
+        assert_eq!(tcg, tcg.to_tcg());
+        let tdb = time!(Tdb, 2000, 1, 1).unwrap();
+        assert_eq!(tdb, tdb.to_tdb());
+        let tt = time!(Tt, 2000, 1, 1).unwrap();
+        assert_eq!(tt, tt.to_tt());
+        let ut1 = time!(Ut1, 2000, 1, 1).unwrap();
+        assert_eq!(ut1, ut1.try_to_ut1(delta_ut1_tai()).unwrap());
     }
 
     #[test]
