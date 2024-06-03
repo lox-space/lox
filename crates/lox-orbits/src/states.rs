@@ -11,7 +11,11 @@ use crate::frames::{
 };
 use glam::DVec3;
 use lox_bodies::RotationalElements;
-use lox_time::{julian_dates::JulianDate, transformations::ToTdb};
+use lox_time::{
+    julian_dates::JulianDate,
+    time_scales::Tdb,
+    transformations::{ToTdb, TryToScale},
+};
 use std::convert::Infallible;
 
 pub trait TryToFrame<
@@ -47,6 +51,34 @@ where
         }
     }
 
+    pub fn with_frame<U: ReferenceFrame>(&self, frame: U) -> State<T, O, U>
+    where
+        T: Clone,
+        O: Clone,
+    {
+        State::new(
+            self.time(),
+            self.origin(),
+            frame,
+            self.position,
+            self.velocity,
+        )
+    }
+
+    pub fn with_time<U>(&self, time: U) -> State<U, O, R>
+    where
+        O: Clone,
+        R: Clone,
+    {
+        State::new(
+            time,
+            self.origin(),
+            self.reference_frame(),
+            self.position,
+            self.velocity,
+        )
+    }
+
     pub fn time(&self) -> T
     where
         T: Clone,
@@ -66,6 +98,14 @@ where
         R: Clone,
     {
         self.frame.clone()
+    }
+
+    pub fn position(&self) -> DVec3 {
+        self.position
+    }
+
+    pub fn velocity(&self) -> DVec3 {
+        self.velocity
     }
 }
 
@@ -105,6 +145,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    use float_eq::assert_float_eq;
     use lox_bodies::Jupiter;
     use lox_time::{time, time_scales::Tdb, Time};
 
@@ -120,7 +161,26 @@ mod tests {
         let v1 = DVec3::new(-1.852284168309543, -0.8227941105651749, -7.14175174489828);
 
         let tdb = time!(Tdb, 2000, 1, 1, 12).unwrap();
-        let s0 = State::new(tdb, Jupiter, Icrf, r0, v0);
-        let s1 = s0.try_to_frame(iau_jupiter, &NoOpFrameTransformationProvider);
+        let s = State::new(tdb, Jupiter, Icrf, r0, v0);
+        let s1 = s
+            .try_to_frame(iau_jupiter, &NoOpFrameTransformationProvider)
+            .unwrap();
+        let s0 = s1
+            .try_to_frame(Icrf, &NoOpFrameTransformationProvider)
+            .unwrap();
+
+        assert_float_eq!(s0.position().x, r0.x, rel <= 1e-8);
+        assert_float_eq!(s0.position().y, r0.y, rel <= 1e-8);
+        assert_float_eq!(s0.position().z, r0.z, rel <= 1e-8);
+        assert_float_eq!(s0.velocity().x, v0.x, rel <= 1e-8);
+        assert_float_eq!(s0.velocity().y, v0.y, rel <= 1e-8);
+        assert_float_eq!(s0.velocity().z, v0.z, rel <= 1e-8);
+
+        assert_float_eq!(s1.position().x, r1.x, rel <= 1e-8);
+        assert_float_eq!(s1.position().y, r1.y, rel <= 1e-8);
+        assert_float_eq!(s1.position().z, r1.z, rel <= 1e-8);
+        assert_float_eq!(s1.velocity().x, v1.x, rel <= 1e-8);
+        assert_float_eq!(s1.velocity().y, v1.y, rel <= 1e-8);
+        assert_float_eq!(s1.velocity().z, v1.z, rel <= 1e-8);
     }
 }

@@ -6,14 +6,15 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::states::State;
+use crate::{frames::BodyFixed, states::State};
 use lox_bodies::python::PyBody;
 use lox_time::python::time::PyTime;
-use pyo3::pyclass;
+use pyo3::{pyclass, pymethods};
 
 mod generated;
 
 #[pyclass]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub enum PyFrame {
     Icrf,
     IauSun,
@@ -199,4 +200,7 @@ pub enum PyFrame {
 }
 
 #[pyclass(name = "State", module = "lox_space")]
-pub struct PyState(State<PyTime, PyBody, PyFrame>);
+pub struct PyState(pub State<PyTime, PyBody, PyFrame>);
+
+#[pymethods]
+impl PyState {}
