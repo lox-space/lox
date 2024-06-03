@@ -465,8 +465,6 @@ mod test {
         );
         assert_eq!(kvn_line_matches_key_new("ASD", "ASD = ASDFG"), Ok(true));
 
-        // 7.4.4 Keywords must be uppercase and must not contain blanks
-        // @TODO
         assert_eq!(
             kvn_line_matches_key_new("ASD", "ASD ASD = ASDFG"),
             Ok(false)

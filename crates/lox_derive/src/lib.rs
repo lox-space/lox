@@ -515,6 +515,7 @@
                  let field_name = field.ident.as_ref().unwrap();
  
                  // Unwrap is okay because we only support named structs
+                 // 7.4.4 Keywords must be uppercase and must not contain blanks
                  let expected_kvn_name = field_name.span().source_text().unwrap().to_uppercase();
  
                  // Unwrap is okay because we expect this span to come from the source code
