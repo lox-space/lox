@@ -237,9 +237,9 @@ pub fn parse_kvn_string_line_new<'a>(
                 input,
             }))?;
 
-    // @TODO unwrap
     let keyword = captures
         .name("keyword")
+        // This unwrap is okay because the keyword uses * so it will always capture
         .unwrap()
         .as_str()
         .trim_end()
@@ -251,9 +251,9 @@ pub fn parse_kvn_string_line_new<'a>(
         }));
     }
 
-    // @TODO unwrap
     let value = captures
         .name("value")
+        // This unwrap is okay because the value uses * so it will always capture
         .unwrap()
         .as_str()
         .trim_end()
@@ -287,9 +287,9 @@ where
                 input,
             }))?;
 
-    // @TODO unwrap
     let keyword = captures
         .name("keyword")
+        // This unwrap is okay because the keyword is marked as * so it will always capture
         .unwrap()
         .as_str()
         .trim_end()
@@ -301,7 +301,7 @@ where
         }));
     }
 
-    // @TODO unwrap
+    // This unwrap is okay because the value uses * so it will always capture
     let value = captures.name("value").unwrap().as_str();
     let unit = captures.name("unit").map(|x| x.as_str().to_owned());
 
@@ -338,9 +338,9 @@ pub fn parse_kvn_numeric_line_new<'a>(
                 input,
             }))?;
 
-    // @TODO unwrap
     let keyword = captures
         .name("keyword")
+        // This unwrap is okay because the keyword is marked as * so it will always capture
         .unwrap()
         .as_str()
         .trim_end()
@@ -352,7 +352,7 @@ pub fn parse_kvn_numeric_line_new<'a>(
         }));
     }
 
-    // @TODO unwrap
+    // This unwrap is okay because the value uses * so it will always capture
     let value = captures.name("value").unwrap().as_str();
     let unit = captures.name("unit").map(|x| x.as_str().to_owned());
 
@@ -380,8 +380,8 @@ pub fn parse_kvn_datetime_line_new<'a>(
                 input,
             }))?;
 
-    // @TODO unwrap
     let keyword = captures
+        // This unwrap is okay because the keyword is marked as * so it will always capture
         .name("keyword")
         .unwrap()
         .as_str()
