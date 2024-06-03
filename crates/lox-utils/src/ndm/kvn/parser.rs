@@ -18,9 +18,10 @@ pub type KvnStringValue = KvnValue<String, String>;
 pub type KvnNumericValue = KvnValue<f64, String>;
 
 #[derive(Debug, PartialEq)]
-pub enum KvnParserErr<I> {
-    KeywordNotFound { expected: I },
+pub enum KvnStringParserErr<I> {
+    EmptyKeyword { input: I },
     EmptyValue { input: I },
+    InvalidFormat { input: I },
     ParserError(I, ErrorKind),
 }
 
@@ -49,26 +50,32 @@ pub enum KvnDateTimeParserErr<I> {
 pub enum KvnDeserializerErr<I> {
     InvalidDateTimeFormat { input: I },
     InvalidNumberFormat { input: I },
+    InvalidStringFormat { input: I },
     KeywordNotFound { expected: I },
     UnexpectedKeyword { found: I, expected: I },
+    EmptyKeyword { input: I },
     EmptyValue { input: I },
     UnexpectedEndOfInput { keyword: I },
     GeneralParserError(I, ErrorKind),
 }
 
-impl<I> From<nom::Err<KvnParserErr<I>>> for KvnDeserializerErr<I> {
-    fn from(value: nom::Err<KvnParserErr<I>>) -> Self {
+impl<I> From<nom::Err<KvnStringParserErr<I>>> for KvnDeserializerErr<I> {
+    fn from(value: nom::Err<KvnStringParserErr<I>>) -> Self {
         match value {
-            nom::Err::Error(KvnParserErr::EmptyValue { input })
-            | nom::Err::Failure(KvnParserErr::EmptyValue { input }) => {
+            nom::Err::Error(KvnStringParserErr::EmptyValue { input })
+            | nom::Err::Failure(KvnStringParserErr::EmptyValue { input }) => {
                 KvnDeserializerErr::EmptyValue { input }
             }
-            nom::Err::Error(KvnParserErr::KeywordNotFound { expected })
-            | nom::Err::Failure(KvnParserErr::KeywordNotFound { expected }) => {
-                KvnDeserializerErr::KeywordNotFound { expected }
+            nom::Err::Error(KvnStringParserErr::EmptyKeyword { input })
+            | nom::Err::Failure(KvnStringParserErr::EmptyKeyword { input }) => {
+                KvnDeserializerErr::EmptyKeyword { input }
             }
-            nom::Err::Error(KvnParserErr::ParserError(i, k))
-            | nom::Err::Failure(KvnParserErr::ParserError(i, k)) => {
+            nom::Err::Error(KvnStringParserErr::InvalidFormat { input })
+            | nom::Err::Failure(KvnStringParserErr::InvalidFormat { input }) => {
+                KvnDeserializerErr::InvalidStringFormat { input }
+            }
+            nom::Err::Error(KvnStringParserErr::ParserError(i, k))
+            | nom::Err::Failure(KvnStringParserErr::ParserError(i, k)) => {
                 KvnDeserializerErr::GeneralParserError(i, k)
             }
             // We don't use streaming deserialization
@@ -137,9 +144,9 @@ impl<I> From<KvnKeyMatchErr<I>> for KvnDeserializerErr<I> {
     }
 }
 
-impl<I> ParseError<I> for KvnParserErr<I> {
+impl<I> ParseError<I> for KvnStringParserErr<I> {
     fn from_error_kind(input: I, kind: ErrorKind) -> Self {
-        KvnParserErr::ParserError(input, kind)
+        KvnStringParserErr::ParserError(input, kind)
     }
 
     fn append(_: I, _: ErrorKind, other: Self) -> Self {
@@ -199,7 +206,7 @@ pub fn kvn_line_matches_key_new<'a>(
 
 pub fn parse_kvn_string_line_new<'a>(
     input: &'a str,
-) -> nom::IResult<&'a str, KvnStringValue, KvnParserErr<&'a str>> {
+) -> nom::IResult<&'a str, KvnStringValue, KvnStringParserErr<&'a str>> {
     if input.trim_start().starts_with("COMMENT") {
         return Ok((
             "",
@@ -220,8 +227,25 @@ pub fn parse_kvn_string_line_new<'a>(
         Regex::new(r"^(?:\s*)(?<keyword>[0-9A-Z_]*)(?:\s*)=(?:\s*)(?<value>(?:(?:.*)))(?:\s*)$")
             .unwrap();
 
+    let captures =
+        re.captures(input)
+            .ok_or(nom::Err::Failure(KvnStringParserErr::InvalidFormat {
+                input,
+            }))?;
+
     // @TODO unwrap
-    let captures = re.captures(input).unwrap();
+    let keyword = captures
+        .name("keyword")
+        .unwrap()
+        .as_str()
+        .trim_end()
+        .to_owned();
+
+    if keyword.len() == 0 {
+        return Err(nom::Err::Failure(KvnStringParserErr::EmptyKeyword {
+            input,
+        }));
+    }
 
     // @TODO unwrap
     let value = captures
@@ -232,7 +256,7 @@ pub fn parse_kvn_string_line_new<'a>(
         .to_owned();
 
     if value.len() == 0 {
-        return Err(nom::Err::Failure(KvnParserErr::EmptyValue { input }));
+        return Err(nom::Err::Failure(KvnStringParserErr::EmptyValue { input }));
     }
 
     Ok(("", KvnValue { value, unit: None }))
@@ -444,20 +468,33 @@ mod test {
         );
         assert_eq!(
             parse_kvn_string_line_new("ASD =    "),
-            Err(nom::Err::Failure(KvnParserErr::EmptyValue {
+            Err(nom::Err::Failure(KvnStringParserErr::EmptyValue {
                 input: "ASD =    "
             }))
         );
         assert_eq!(
             parse_kvn_string_line_new("ASD = "),
-            Err(nom::Err::Failure(KvnParserErr::EmptyValue {
+            Err(nom::Err::Failure(KvnStringParserErr::EmptyValue {
                 input: "ASD = "
             }))
         );
         assert_eq!(
             parse_kvn_string_line_new("ASD ="),
-            Err(nom::Err::Failure(KvnParserErr::EmptyValue {
+            Err(nom::Err::Failure(KvnStringParserErr::EmptyValue {
                 input: "ASD ="
+            }))
+        );
+
+        assert_eq!(
+            parse_kvn_string_line_new("ASD   [km]"),
+            Err(nom::Err::Failure(KvnStringParserErr::InvalidFormat {
+                input: "ASD   [km]"
+            }))
+        );
+        assert_eq!(
+            parse_kvn_string_line_new(" =  [km]"),
+            Err(nom::Err::Failure(KvnStringParserErr::EmptyKeyword {
+                input: " =  [km]"
             }))
         );
 
@@ -472,51 +509,6 @@ mod test {
                 }
             ))
         );
-
-        //@TODO move to numeric test
-        // a) there must be at least one blank character between the value and the units text;
-        // b) the units must be enclosed within square brackets (e.g., ‘[m]’);
-        // assert_eq!(
-        //     parse_kvn_string_line_new("ASD = ASDFG [km]"),
-        //     Ok((
-        //         "",
-        //         KvnValue {
-        //             value: "ASDFG".to_string(),
-        //             unit: Some("km".to_string())
-        //         }
-        //     ))
-        // );
-        // assert_eq!(
-        //     parse_kvn_string_line_new("ASD = ASDFG             [km]"),
-        //     Ok((
-        //         "",
-        //         KvnValue {
-        //             value: "ASDFG".to_string(),
-        //             unit: Some("km".to_string())
-        //         }
-        //     ))
-        // );
-
-        // assert_eq!(
-        //     parse_kvn_string_line_new("ASD =  [km]"),
-        //     Err(nom::Err::Failure(KvnParserErr::EmptyValue {
-        //         keyword: "ASD"
-        //     }))
-        // );
-
-        // assert_eq!(
-        //     parse_kvn_string_line_new("ASD   [km]"),
-        //     Err(nom::Err::Error(KvnParserErr::ParserError(
-        //         "[km]",
-        //         nom::error::ErrorKind::Char
-        //     )))
-        // );
-        // assert_eq!(
-        //     parse_kvn_string_line_new(" =  [km]"),
-        //     Err(nom::Err::Failure(KvnParserErr::KeywordNotFound {
-        //         expected: "ASD"
-        //     }))
-        // );
 
         // 7.4.5 Any white space immediately preceding or following the keyword shall not be significant.
         assert_eq!(
