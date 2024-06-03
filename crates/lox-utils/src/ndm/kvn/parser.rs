@@ -201,8 +201,6 @@ pub fn parse_kvn_string_line_new<'a>(
     input: &'a str,
 ) -> nom::IResult<&'a str, KvnStringValue, KvnParserErr<&'a str>> {
     if input.trim_start().starts_with("COMMENT") {
-        //@TODO
-
         return Ok((
             "",
             KvnValue {
@@ -546,31 +544,30 @@ mod test {
             ))
         );
 
-        //@TODO implement COMMENT
         // 7.8.5 All comment lines shall begin with the ‘COMMENT’ keyword followed by at least one space.
         // [...] White space shall be retained (shall be significant) in comment values.
 
-        // assert_eq!(
-        //     parse_kvn_string_line_new("  COMMENT asd a    asd a ads as "),
-        //     Ok((
-        //         "",
-        //         KvnValue {
-        //             value: "asd a    asd a ads as ".to_string(),
-        //             unit: None
-        //         }
-        //     ))
-        // );
+        assert_eq!(
+            parse_kvn_string_line_new("  COMMENT asd a    asd a ads as "),
+            Ok((
+                "",
+                KvnValue {
+                    value: "asd a    asd a ads as ".to_string(),
+                    unit: None
+                }
+            ))
+        );
 
-        // assert_eq!(
-        //     parse_kvn_string_line_new("  COMMENT "),
-        //     Ok((
-        //         "",
-        //         KvnValue {
-        //             value: "".to_string(),
-        //             unit: None
-        //         }
-        //     ))
-        // );
+        assert_eq!(
+            parse_kvn_string_line_new("  COMMENT "),
+            Ok((
+                "",
+                KvnValue {
+                    value: "".to_string(),
+                    unit: None
+                }
+            ))
+        );
     }
 
     #[test]
