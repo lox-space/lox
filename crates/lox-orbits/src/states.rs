@@ -15,18 +15,12 @@ use lox_time::{
     julian_dates::JulianDate,
     time_scales::Tdb,
     transformations::{ToTdb, TryToScale},
+    ut1::DeltaUt1TaiProvider,
 };
 use std::convert::Infallible;
 
-pub trait TryToFrame<
-    T,
-    O,
-    R: ReferenceFrame,
-    P: FrameTransformationProvider = NoOpFrameTransformationProvider,
-    E = Infallible,
->
-{
-    fn try_to_frame(&self, frame: R, provider: &P) -> Result<State<T, O, R>, E>;
+pub trait TryToFrame<T, O, R: ReferenceFrame, P: FrameTransformationProvider> {
+    fn try_to_frame(&self, frame: R, provider: &P) -> Result<State<T, O, R>, P::Error>;
 }
 
 pub struct State<T, O, R: ReferenceFrame> {
@@ -109,24 +103,47 @@ where
     }
 }
 
-impl<T, O, R> TryToFrame<T, O, BodyFixed<R>> for State<T, O, Icrf>
+impl<T, O, R, U> TryToFrame<T, O, BodyFixed<R>, U> for State<T, O, Icrf>
 where
-    T: ToTdb + JulianDate + Clone,
+    T: TryToScale<Tdb, U> + JulianDate + Clone,
     O: Clone,
     R: RotationalElements,
+    U: FrameTransformationProvider,
 {
     fn try_to_frame(
         &self,
         frame: BodyFixed<R>,
-        _: &NoOpFrameTransformationProvider,
-    ) -> Result<State<T, O, BodyFixed<R>>, Infallible> {
-        let rot = frame.rotation(self.time());
+        provider: &U,
+    ) -> Result<State<T, O, BodyFixed<R>>, U::Error> {
+        let seconds = self
+            .time()
+            .try_to_scale(Tdb, provider)?
+            .seconds_since_j2000();
+        let rot = frame.rotation(seconds);
         let (pos, vel) = rot.apply(self.position, self.velocity);
         Ok(State::new(self.time(), self.origin(), frame, pos, vel))
     }
 }
 
-impl<T, O, R> TryToFrame<T, O, Icrf> for State<T, O, BodyFixed<R>>
+impl<T, O, R, U> TryToFrame<T, O, Icrf, U> for State<T, O, BodyFixed<R>>
+where
+    T: TryToScale<Tdb, U> + JulianDate + Clone,
+    O: Clone,
+    R: RotationalElements,
+    U: DeltaUt1TaiProvider + FrameTransformationProvider,
+{
+    fn try_to_frame(&self, frame: Icrf, provider: &U) -> Result<State<T, O, Icrf>, U::Error> {
+        let seconds = self
+            .time()
+            .try_to_scale(Tdb, provider)?
+            .seconds_since_j2000();
+        let rot = self.frame.rotation(seconds).transpose();
+        let (pos, vel) = rot.apply(self.position, self.velocity);
+        Ok(State::new(self.time(), self.origin(), frame, pos, vel))
+    }
+}
+
+impl<T, O, R> TryToFrame<T, O, Icrf, NoOpFrameTransformationProvider> for State<T, O, BodyFixed<R>>
 where
     T: ToTdb + JulianDate + Clone,
     O: Clone,
@@ -135,9 +152,10 @@ where
     fn try_to_frame(
         &self,
         frame: Icrf,
-        _: &NoOpFrameTransformationProvider,
+        _provider: &NoOpFrameTransformationProvider,
     ) -> Result<State<T, O, Icrf>, Infallible> {
-        let rot = self.frame.rotation(self.time()).transpose();
+        let seconds = self.time().to_tdb().seconds_since_j2000();
+        let rot = self.frame.rotation(seconds).transpose();
         let (pos, vel) = rot.apply(self.position, self.velocity);
         Ok(State::new(self.time(), self.origin(), frame, pos, vel))
     }
