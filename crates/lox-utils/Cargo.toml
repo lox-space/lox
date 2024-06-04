@@ -6,14 +6,6 @@ edition = "2021"
 [dependencies]
 fast_polynomial.workspace = true
 thiserror.workspace = true
-nom.workspace = true
-quick-xml.workspace = true
-serde.workspace = true
-serde_json.workspace = true
-serde-aux.workspace = true
-regex.workspace = true
-fast-float.workspace = true
-lox-derive.workspace = true
 
 [dev-dependencies]
 float_eq.workspace = true

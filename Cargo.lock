@@ -516,10 +516,16 @@ name = "lox-io"
 version = "0.0.0"
 dependencies = [
  "csv",
+ "fast-float",
+ "lox-derive",
  "lox-utils",
  "nom",
+ "quick-xml",
+ "regex",
  "rstest",
  "serde",
+ "serde-aux",
+ "serde_json",
  "thiserror",
 ]
 
@@ -555,17 +561,9 @@ dependencies = [
 name = "lox-utils"
 version = "0.1.0"
 dependencies = [
- "fast-float",
  "fast_polynomial",
  "float_eq",
- "lox-derive",
- "nom",
- "quick-xml",
- "regex",
  "rstest",
- "serde",
- "serde-aux",
- "serde_json",
  "thiserror",
 ]
 
