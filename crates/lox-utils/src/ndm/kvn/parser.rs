@@ -188,7 +188,8 @@ pub fn kvn_line_matches_key_new<'a>(
     input: &'a str,
 ) -> Result<bool, KvnKeyMatchErr<&'a str>> {
     if key == "COMMENT" {
-        ns::tuple((nc::space0::<_, nom::error::Error<_>>, nb::tag(key)))(input).map(|_| true)
+        ns::tuple((nc::space0::<_, nom::error::Error<_>>, nb::tag(key)))(input)
+            .map(|_| true)
             .or(Ok(false))
     } else {
         let mut equals = ns::tuple((nc::space0::<_, nom::error::Error<_>>, nc::char('=')));
@@ -197,7 +198,8 @@ pub fn kvn_line_matches_key_new<'a>(
             return Err(KvnKeyMatchErr::KeywordNotFound { expected: key });
         }
 
-        ns::delimited(nc::space0, nb::tag(key), equals)(input).map(|_| true)
+        ns::delimited(nc::space0, nb::tag(key), equals)(input)
+            .map(|_| true)
             .or(Ok(false))
     }
 }

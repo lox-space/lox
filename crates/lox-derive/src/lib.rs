@@ -603,7 +603,7 @@ fn deserializer_for_struct_with_named_fields(
                             "String" => quote! {},
                             _ => quote! { ! #field_type_new::should_check_key_match() || },
                         };
-            
+
                         quote! {
                             match lines.peek() {
                                 None => Err(crate::ndm::kvn::parser::KvnDeserializerErr::<&str>::UnexpectedEndOfInput {
@@ -614,7 +614,7 @@ fn deserializer_for_struct_with_named_fields(
                                         #expected_kvn_name,
                                         next_line,
                                     )?;
-            
+
                                     if #condition_shortcut line_matches {
                                         #field_type_new::deserialize(lines)?
                                     } else {

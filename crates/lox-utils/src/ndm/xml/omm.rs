@@ -282,7 +282,7 @@ mod test {
 
         let message: OmmType = from_str(xml).unwrap();
 
-        assert_eq!(message, 
+        assert_eq!(message,
             OmmType {
                 header: common::OdmHeader {
                     comment_list: vec![
