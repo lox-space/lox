@@ -6,6 +6,7 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use crate::transformations::OffsetProvider;
 use crate::ut1::{DeltaUt1Tai, DeltaUt1TaiError, ExtrapolatedDeltaUt1Tai};
 use crate::utc::leap_seconds::BuiltinLeapSeconds;
 use pyo3::exceptions::PyValueError;
@@ -21,6 +22,12 @@ impl From<DeltaUt1TaiError> for PyErr {
     fn from(value: DeltaUt1TaiError) -> Self {
         PyValueError::new_err(value.to_string())
     }
+}
+
+pub struct PyNoOpOffsetProvider;
+
+impl OffsetProvider for PyNoOpOffsetProvider {
+    type Error = PyErr;
 }
 
 #[pyclass(name = "UT1Provider", module = "lox_space")]

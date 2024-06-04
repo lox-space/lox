@@ -93,7 +93,7 @@ impl ToUtc for Time<Tt> {
 }
 
 impl<T: LeapSecondsProvider> TryToScale<Tai, T> for Utc {
-    fn try_to_scale(&self, _scale: Tai, provider: &T) -> Result<Time<Tai>, Infallible> {
+    fn try_to_scale(&self, _scale: Tai, provider: &T) -> Result<Time<Tai>, T::Error> {
         let delta = if self < utc_1972_01_01() {
             before1972::delta_utc_tai(self)
         } else {
@@ -108,7 +108,7 @@ impl<T: LeapSecondsProvider> TryToScale<Tai, T> for Utc {
     }
 }
 
-impl TryToScale<Tai> for Utc {
+impl TryToScale<Tai, NoOpOffsetProvider> for Utc {
     fn try_to_scale(
         &self,
         scale: Tai,
@@ -120,7 +120,7 @@ impl TryToScale<Tai> for Utc {
 
 impl ToTai for Utc {}
 
-impl TryToScale<Tt> for Utc {
+impl TryToScale<Tt, NoOpOffsetProvider> for Utc {
     fn try_to_scale(
         &self,
         scale: Tt,
@@ -132,7 +132,7 @@ impl TryToScale<Tt> for Utc {
 
 impl ToTt for Utc {}
 
-impl TryToScale<Tdb> for Utc {
+impl TryToScale<Tdb, NoOpOffsetProvider> for Utc {
     fn try_to_scale(
         &self,
         scale: Tdb,
@@ -144,7 +144,7 @@ impl TryToScale<Tdb> for Utc {
 
 impl ToTdb for Utc {}
 
-impl TryToScale<Tcb> for Utc {
+impl TryToScale<Tcb, NoOpOffsetProvider> for Utc {
     fn try_to_scale(
         &self,
         scale: Tcb,
@@ -156,7 +156,7 @@ impl TryToScale<Tcb> for Utc {
 
 impl ToTcb for Utc {}
 
-impl TryToScale<Tcg> for Utc {
+impl TryToScale<Tcg, NoOpOffsetProvider> for Utc {
     fn try_to_scale(
         &self,
         scale: Tcg,
@@ -168,7 +168,7 @@ impl TryToScale<Tcg> for Utc {
 
 impl ToTcg for Utc {}
 
-impl<T: DeltaUt1TaiProvider> TryToScale<Ut1, T, T::Error> for Utc {
+impl<T: DeltaUt1TaiProvider> TryToScale<Ut1, T> for Utc {
     fn try_to_scale(&self, scale: Ut1, provider: &T) -> Result<Time<Ut1>, T::Error> {
         self.to_tai().try_to_scale(scale, provider)
     }

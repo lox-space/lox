@@ -6,9 +6,12 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use std::convert::Infallible;
+
 use glam::{DMat3, DVec3};
 use lox_bodies::RotationalElements;
-use lox_time::{julian_dates::JulianDate, transformations::ToTdb};
+use lox_time::transformations::OffsetProvider;
+use lox_utils::types::units::Seconds;
 
 use crate::rotations::Rotation;
 
@@ -17,12 +20,21 @@ pub trait ReferenceFrame {
     fn abbreviation(&self) -> String;
 }
 
-pub trait FrameTransformationProvider {}
+pub trait FrameTransformationProvider: OffsetProvider {}
 
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct NoOpFrameTransformationProvider;
 
+impl OffsetProvider for NoOpFrameTransformationProvider {
+    type Error = Infallible;
+}
 impl FrameTransformationProvider for NoOpFrameTransformationProvider {}
+
+pub trait TryToFrame<T, O, R: ReferenceFrame, P: FrameTransformationProvider> {
+    type Output;
+
+    fn try_to_frame(&self, frame: R, provider: &P) -> Result<Self::Output, P::Error>;
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Ord, PartialOrd)]
 pub struct Icrf;
@@ -41,8 +53,7 @@ impl ReferenceFrame for Icrf {
 pub struct BodyFixed<T: RotationalElements>(pub T);
 
 impl<T: RotationalElements> BodyFixed<T> {
-    pub fn rotation<U: ToTdb + JulianDate>(&self, time: U) -> Rotation {
-        let seconds = time.to_tdb().seconds_since_j2000();
+    pub fn rotation(&self, seconds: Seconds) -> Rotation {
         let (right_ascension, declination, prime_meridian) = T::rotational_elements(seconds);
         let (right_ascension_rate, declination_rate, prime_meridian_rate) =
             T::rotational_element_rates(seconds);
