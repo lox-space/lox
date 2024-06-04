@@ -188,9 +188,8 @@ pub fn kvn_line_matches_key_new<'a>(
     input: &'a str,
 ) -> Result<bool, KvnKeyMatchErr<&'a str>> {
     if key == "COMMENT" {
-        ns::tuple((nc::space0::<_, nom::error::Error<_>>, nb::tag(key)))(input)
-            .and_then(|_| Ok(true))
-            .or_else(|_| Ok(false))
+        ns::tuple((nc::space0::<_, nom::error::Error<_>>, nb::tag(key)))(input).map(|_| true)
+            .or(Ok(false))
     } else {
         let mut equals = ns::tuple((nc::space0::<_, nom::error::Error<_>>, nc::char('=')));
 
@@ -198,15 +197,14 @@ pub fn kvn_line_matches_key_new<'a>(
             return Err(KvnKeyMatchErr::KeywordNotFound { expected: key });
         }
 
-        ns::delimited(nc::space0, nb::tag(key), equals)(input)
-            .and_then(|_| Ok(true))
-            .or_else(|_| Ok(false))
+        ns::delimited(nc::space0, nb::tag(key), equals)(input).map(|_| true)
+            .or(Ok(false))
     }
 }
 
-pub fn parse_kvn_string_line_new<'a>(
-    input: &'a str,
-) -> nom::IResult<&'a str, KvnStringValue, KvnStringParserErr<&'a str>> {
+pub fn parse_kvn_string_line_new(
+    input: &str,
+) -> nom::IResult<&str, KvnStringValue, KvnStringParserErr<&str>> {
     if input.trim_start().starts_with("COMMENT") {
         return Ok((
             "",
@@ -245,7 +243,7 @@ pub fn parse_kvn_string_line_new<'a>(
         .trim_end()
         .to_owned();
 
-    if keyword.len() == 0 {
+    if keyword.is_empty() {
         return Err(nom::Err::Failure(KvnStringParserErr::EmptyKeyword {
             input,
         }));
@@ -259,17 +257,17 @@ pub fn parse_kvn_string_line_new<'a>(
         .trim_end()
         .to_owned();
 
-    if value.len() == 0 {
+    if value.is_empty() {
         return Err(nom::Err::Failure(KvnStringParserErr::EmptyValue { input }));
     }
 
     Ok(("", KvnValue { value, unit: None }))
 }
 
-pub fn parse_kvn_integer_line_new<'a, T>(
-    input: &'a str,
+pub fn parse_kvn_integer_line_new<T>(
+    input: &str,
     with_unit: bool,
-) -> nom::IResult<&'a str, KvnValue<T, String>, KvnNumberParserErr<&'a str>>
+) -> nom::IResult<&str, KvnValue<T, String>, KvnNumberParserErr<&str>>
 where
     T: std::str::FromStr,
 {
@@ -295,7 +293,7 @@ where
         .trim_end()
         .to_owned();
 
-    if keyword.len() == 0 {
+    if keyword.is_empty() {
         return Err(nom::Err::Failure(KvnNumberParserErr::EmptyKeyword {
             input,
         }));
@@ -321,10 +319,10 @@ fn is_empty_value(input: &str) -> bool {
     re.is_match(input)
 }
 
-pub fn parse_kvn_numeric_line_new<'a>(
-    input: &'a str,
+pub fn parse_kvn_numeric_line_new(
+    input: &str,
     with_unit: bool,
-) -> nom::IResult<&'a str, KvnNumericValue, KvnNumberParserErr<&'a str>> {
+) -> nom::IResult<&str, KvnNumericValue, KvnNumberParserErr<&str>> {
     if is_empty_value(input) {
         Err(nom::Err::Failure(KvnNumberParserErr::EmptyValue { input }))?
     };
@@ -346,7 +344,7 @@ pub fn parse_kvn_numeric_line_new<'a>(
         .trim_end()
         .to_owned();
 
-    if keyword.len() == 0 {
+    if keyword.is_empty() {
         return Err(nom::Err::Failure(KvnNumberParserErr::EmptyKeyword {
             input,
         }));
@@ -362,9 +360,9 @@ pub fn parse_kvn_numeric_line_new<'a>(
     Ok(("", KvnValue { value, unit }))
 }
 
-pub fn parse_kvn_datetime_line_new<'a>(
-    input: &'a str,
-) -> nom::IResult<&'a str, KvnDateTimeValue, KvnDateTimeParserErr<&'a str>> {
+pub fn parse_kvn_datetime_line_new(
+    input: &str,
+) -> nom::IResult<&str, KvnDateTimeValue, KvnDateTimeParserErr<&str>> {
     if is_empty_value(input) {
         Err(nom::Err::Failure(KvnDateTimeParserErr::EmptyValue {
             input,
@@ -388,7 +386,7 @@ pub fn parse_kvn_datetime_line_new<'a>(
         .trim_end()
         .to_owned();
 
-    if keyword.len() == 0 {
+    if keyword.is_empty() {
         return Err(nom::Err::Failure(KvnDateTimeParserErr::EmptyKeyword {
             input,
         }));
