@@ -64,6 +64,8 @@ fn generate_transform(target: &Frame, frames: &[Frame], code: &mut TokenStream) 
         where
             T: FrameTransformationProvider + DeltaUt1TaiProvider,
         {
+            type Output = State<PyTime, PyBody, #target_type>;
+
             fn try_to_frame(
                 &self,
                 frame: #target_type,
@@ -125,10 +127,10 @@ pub fn generate_code(frames: &[Frame]) -> String {
 
     let module = quote! {
         use crate::frames::{
-            BodyFixed, FrameTransformationProvider, Icrf, ReferenceFrame,
+            BodyFixed, FrameTransformationProvider, Icrf, ReferenceFrame, TryToFrame,
         };
         use crate::python::{PyFrame, PyState};
-        use crate::states::{State, TryToFrame};
+        use crate::states::State;
         use lox_bodies::python::PyBody;
         use lox_bodies::*;
         use lox_time::python::time::PyTime;

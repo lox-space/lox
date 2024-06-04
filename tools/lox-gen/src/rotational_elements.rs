@@ -199,7 +199,7 @@ enum PolynomialCoefficientType {
 
 impl PolynomialCoefficientType {
     /// Returns the pair of kernel keys required to retrieve the trig and non-trig coefficients for
-    /// a given body and coefficient type.  
+    /// a given body and coefficient type.
     fn keys(&self, id: u32) -> (String, String) {
         match self {
             PolynomialCoefficientType::RightAscension => (
@@ -331,7 +331,7 @@ impl<'a> CoefficientKernel<'a> {
     }
 }
 
-fn unpair(vec: &Vec<f64>) -> (Vec<f64>, Vec<f64>) {
+fn unpair(vec: &[f64]) -> (Vec<f64>, Vec<f64>) {
     let mut a: Vec<f64> = Vec::with_capacity(vec.len() / 2);
     let mut b: Vec<f64> = Vec::with_capacity(vec.len() / 2);
     for (i, coefficient) in vec.iter().enumerate() {

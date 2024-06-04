@@ -8,6 +8,7 @@
 
 use crate::frames::{
     BodyFixed, FrameTransformationProvider, Icrf, NoOpFrameTransformationProvider, ReferenceFrame,
+    TryToFrame,
 };
 use glam::DVec3;
 use lox_bodies::RotationalElements;
@@ -18,10 +19,6 @@ use lox_time::{
     ut1::DeltaUt1TaiProvider,
 };
 use std::convert::Infallible;
-
-pub trait TryToFrame<T, O, R: ReferenceFrame, P: FrameTransformationProvider> {
-    fn try_to_frame(&self, frame: R, provider: &P) -> Result<State<T, O, R>, P::Error>;
-}
 
 pub struct State<T, O, R: ReferenceFrame> {
     time: T,
@@ -110,11 +107,9 @@ where
     R: RotationalElements,
     U: FrameTransformationProvider,
 {
-    fn try_to_frame(
-        &self,
-        frame: BodyFixed<R>,
-        provider: &U,
-    ) -> Result<State<T, O, BodyFixed<R>>, U::Error> {
+    type Output = State<T, O, BodyFixed<R>>;
+
+    fn try_to_frame(&self, frame: BodyFixed<R>, provider: &U) -> Result<Self::Output, U::Error> {
         let seconds = self
             .time()
             .try_to_scale(Tdb, provider)?
@@ -132,7 +127,9 @@ where
     R: RotationalElements,
     U: DeltaUt1TaiProvider + FrameTransformationProvider,
 {
-    fn try_to_frame(&self, frame: Icrf, provider: &U) -> Result<State<T, O, Icrf>, U::Error> {
+    type Output = State<T, O, Icrf>;
+
+    fn try_to_frame(&self, frame: Icrf, provider: &U) -> Result<Self::Output, U::Error> {
         let seconds = self
             .time()
             .try_to_scale(Tdb, provider)?
@@ -149,11 +146,13 @@ where
     O: Clone,
     R: RotationalElements,
 {
+    type Output = State<T, O, Icrf>;
+
     fn try_to_frame(
         &self,
         frame: Icrf,
         _provider: &NoOpFrameTransformationProvider,
-    ) -> Result<State<T, O, Icrf>, Infallible> {
+    ) -> Result<Self::Output, Infallible> {
         let seconds = self.time().to_tdb().seconds_since_j2000();
         let rot = self.frame.rotation(seconds).transpose();
         let (pos, vel) = rot.apply(self.position, self.velocity);
