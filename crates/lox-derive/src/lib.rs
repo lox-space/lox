@@ -514,16 +514,23 @@ fn deserializer_for_struct_with_named_fields(
                 let field_name = field.ident.as_ref().unwrap();
 
                 field_name == "version"
-            }).map(|field| {
+            })
+            .map(|field| {
                 let string_type_name = type_name.to_string();
 
-                if ! string_type_name.ends_with("Type") {
-                    return Err(syn::Error::new_spanned(&fields, "Types with \"version\" field should be of the form SomethingType")
+                if !string_type_name.ends_with("Type") {
+                    return Err(syn::Error::new_spanned(
+                        &fields,
+                        "Types with \"version\" field should be of the form SomethingType",
+                    )
                     .into_compile_error()
                     .into());
                 }
 
-                let message_type_name = string_type_name.trim_end_matches("Type").to_owned().to_uppercase();
+                let message_type_name = string_type_name
+                    .trim_end_matches("Type")
+                    .to_owned()
+                    .to_uppercase();
 
                 let field_name = field.ident.as_ref().unwrap();
 
@@ -531,9 +538,12 @@ fn deserializer_for_struct_with_named_fields(
                 let expected_kvn_name = format!("CCSDS_{}_VERS", message_type_name);
 
                 // Unwrap is okay because we expect this span to come from the source code
-                let field_type = extract_type_path(&field.ty).unwrap().span().source_text().unwrap();
+                let field_type = extract_type_path(&field.ty)
+                    .unwrap()
+                    .span()
+                    .source_text()
+                    .unwrap();
                 let field_type_new = extract_type_path(&field.ty).unwrap();
-
 
                 let parser = generate_call_to_deserializer_for_kvn_type(
                     &field_type,
@@ -544,12 +554,13 @@ fn deserializer_for_struct_with_named_fields(
                 Ok(quote! {
                     #field_name: #parser?,
                 })
-            }).collect();
-        
+            })
+            .collect();
+
         if let Err(e) = version_field_deserializers {
             return e;
         }
-    
+
         let version_field_deserializers = version_field_deserializers.unwrap();
 
         let other_field_deserializers: Result<Vec<_>, _> = fields

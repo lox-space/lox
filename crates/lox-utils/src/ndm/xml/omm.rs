@@ -500,14 +500,13 @@ mod test {
 
         let message: OmmType = from_str(xml).unwrap();
 
-        assert_eq!(message, 
+        assert_eq!(
+            message,
             OmmType {
                 header: common::OdmHeader {
                     comment_list: vec![],
                     classification_list: vec![],
-                    creation_date: common::EpochType(
-                        "2021-03-24T23:00:00.000".to_string(),
-                    ),
+                    creation_date: common::EpochType("2021-03-24T23:00:00.000".to_string(),),
                     originator: "CelesTrak".to_string(),
                     message_id: None,
                 },
@@ -527,86 +526,54 @@ mod test {
                             comment_list: vec![],
                             mean_elements: MeanElementsType {
                                 comment_list: vec![],
-                                epoch: common::EpochType(
-                                    "2021-03-22T13:21:09.224928".to_string(),
-                                ),
+                                epoch: common::EpochType("2021-03-22T13:21:09.224928".to_string(),),
                                 semi_major_axis: None,
-                                mean_motion: Some(
-                                    RevType {
-                                        base: 13.82309053,
-                                        units: None,
-                                    },
-                                ),
-                                eccentricity: common::NonNegativeDouble(
-                                    0.0205751,
-                                ),
+                                mean_motion: Some(RevType {
+                                    base: 13.82309053,
+                                    units: None,
+                                },),
+                                eccentricity: common::NonNegativeDouble(0.0205751,),
                                 inclination: common::InclinationType {
-                                    base: common::InclinationRange(
-                                        49.8237,
-                                    ),
+                                    base: common::InclinationRange(49.8237,),
                                     units: None,
                                 },
                                 ra_of_asc_node: common::AngleType {
-                                    base: common::AngleRange(
-                                        93.8140,
-                                    ),
+                                    base: common::AngleRange(93.8140,),
                                     units: None,
                                 },
                                 arg_of_pericenter: common::AngleType {
-                                    base: common::AngleRange(
-                                        224.8348,
-                                    ),
+                                    base: common::AngleRange(224.8348,),
                                     units: None,
                                 },
                                 mean_anomaly: common::AngleType {
-                                    base: common::AngleRange(
-                                        133.5761,
-                                    ),
+                                    base: common::AngleRange(133.5761,),
                                     units: None,
                                 },
                                 gm: None,
                             },
                             spacecraft_parameters: None,
-                            tle_parameters: Some(
-                                TleParametersType {
-                                    comment_list: vec![],
-                                    ephemeris_type: Some(
-                                        0,
-                                    ),
-                                    classification_type: Some(
-                                        "U".to_string(),
-                                    ),
-                                    norad_cat_id: Some(
-                                        7646,
-                                    ),
-                                    element_set_no: Some(
-                                        ElementSetNoType(
-                                            "999".to_string(),
-                                        ),
-                                    ),
-                                    rev_at_epoch: Some(
-                                        32997,
-                                    ),
-                                    bstar: Some(
-                                        BStarType {
-                                            base: -4.7102e-6,
-                                            units: None,
-                                        },
-                                    ),
-                                    bterm: None,
-                                    mean_motion_dot: DRevType {
-                                        base: -1.47e-6,
-                                        units: None,
-                                    },
-                                    mean_motion_ddot: Some(
-                                        DRevType {
-                                            base: 0.0,
-                                            units: None,
-                                        },
-                                    ),
-                                    agom: None,
+                            tle_parameters: Some(TleParametersType {
+                                comment_list: vec![],
+                                ephemeris_type: Some(0,),
+                                classification_type: Some("U".to_string(),),
+                                norad_cat_id: Some(7646,),
+                                element_set_no: Some(ElementSetNoType("999".to_string(),),),
+                                rev_at_epoch: Some(32997,),
+                                bstar: Some(BStarType {
+                                    base: -4.7102e-6,
+                                    units: None,
+                                },),
+                                bterm: None,
+                                mean_motion_dot: DRevType {
+                                    base: -1.47e-6,
+                                    units: None,
                                 },
-                            ),
+                                mean_motion_ddot: Some(DRevType {
+                                    base: 0.0,
+                                    units: None,
+                                },),
+                                agom: None,
+                            },),
                             covariance_matrix: None,
                             user_defined_parameters: None,
                         },
@@ -614,7 +581,8 @@ mod test {
                 },
                 id: "CCSDS_OMM_VERS".to_string(),
                 version: "2.0".to_string(),
-            });
+            }
+        );
     }
 
     #[test]
@@ -691,20 +659,15 @@ mod test {
 
         let message: OmmType = from_str(xml).unwrap();
 
-        assert_eq!(message, 
+        assert_eq!(
+            message,
             OmmType {
                 header: common::OdmHeader {
-                    comment_list: vec![
-                        "THIS IS AN XML VERSION OF THE OMM".to_string(),
-                    ],
+                    comment_list: vec!["THIS IS AN XML VERSION OF THE OMM".to_string(),],
                     classification_list: vec![],
-                    creation_date: common::EpochType(
-                        "2007-065T16:00:00".to_string(),
-                    ),
+                    creation_date: common::EpochType("2007-065T16:00:00".to_string(),),
                     originator: "NOAA".to_string(),
-                    message_id: Some(
-                        "OMM 201113719185".to_string(),
-                    ),
+                    message_id: Some("OMM 201113719185".to_string(),),
                 },
                 body: OmmBody {
                     segment: OmmSegment {
@@ -722,188 +685,153 @@ mod test {
                             comment_list: vec![],
                             mean_elements: MeanElementsType {
                                 comment_list: vec![],
-                                epoch: common::EpochType(
-                                    "2007-064T10:34:41.4264".to_string(),
-                                ),
+                                epoch: common::EpochType("2007-064T10:34:41.4264".to_string(),),
                                 semi_major_axis: None,
-                                mean_motion: Some(
-                                    RevType {
-                                        base: 1.00273272,
-                                        units: None,
-                                    },
-                                ),
-                                eccentricity: common::NonNegativeDouble(
-                                    0.0005013,
-                                ),
+                                mean_motion: Some(RevType {
+                                    base: 1.00273272,
+                                    units: None,
+                                },),
+                                eccentricity: common::NonNegativeDouble(0.0005013,),
                                 inclination: common::InclinationType {
-                                    base: common::InclinationRange(
-                                        3.0539,
-                                    ),
+                                    base: common::InclinationRange(3.0539,),
                                     units: None,
                                 },
                                 ra_of_asc_node: common::AngleType {
-                                    base: common::AngleRange(
-                                        81.7939,
-                                    ),
+                                    base: common::AngleRange(81.7939,),
                                     units: None,
                                 },
                                 arg_of_pericenter: common::AngleType {
-                                    base: common::AngleRange(
-                                        249.2363,
-                                    ),
+                                    base: common::AngleRange(249.2363,),
                                     units: None,
                                 },
                                 mean_anomaly: common::AngleType {
-                                    base: common::AngleRange(
-                                        150.1602,
-                                    ),
+                                    base: common::AngleRange(150.1602,),
                                     units: None,
                                 },
-                                gm: Some(
-                                    common::GmType {
-                                        base: common::PositiveDouble(
-                                            398600.8,
-                                        ),
-                                        units: None,
-                                    },
-                                ),
+                                gm: Some(common::GmType {
+                                    base: common::PositiveDouble(398600.8,),
+                                    units: None,
+                                },),
                             },
                             spacecraft_parameters: None,
-                            tle_parameters: Some(
-                                TleParametersType {
-                                    comment_list: vec![],
-                                    ephemeris_type: None,
-                                    classification_type: None,
-                                    norad_cat_id: Some(
-                                        23581,
-                                    ),
-                                    element_set_no: Some(
-                                        ElementSetNoType(
-                                            "0925".to_string(),
-                                        ),
-                                    ),
-                                    rev_at_epoch: Some(
-                                        4316,
-                                    ),
-                                    bstar: Some(
-                                        BStarType {
-                                            base: 0.0001,
-                                            units: None,
-                                        },
-                                    ),
-                                    bterm: None,
-                                    mean_motion_dot: DRevType {
-                                        base: -1.13e-6,
-                                        units: None,
-                                    },
-                                    mean_motion_ddot: Some(
-                                        DRevType {
-                                            base: 0.0,
-                                            units: None,
-                                        },
-                                    ),
-                                    agom: None,
+                            tle_parameters: Some(TleParametersType {
+                                comment_list: vec![],
+                                ephemeris_type: None,
+                                classification_type: None,
+                                norad_cat_id: Some(23581,),
+                                element_set_no: Some(ElementSetNoType("0925".to_string(),),),
+                                rev_at_epoch: Some(4316,),
+                                bstar: Some(BStarType {
+                                    base: 0.0001,
+                                    units: None,
+                                },),
+                                bterm: None,
+                                mean_motion_dot: DRevType {
+                                    base: -1.13e-6,
+                                    units: None,
                                 },
-                            ),
-                            covariance_matrix: Some(
-                                common::OpmCovarianceMatrixType {
-                                    comment_list: vec![],
-                                    cov_ref_frame: Some(
-                                        "TEME".to_string(),
-                                    ),
-                                    cx_x: common::PositionCovarianceType {
-                                        base: 0.0003331349476038534,
-                                        units: None,
-                                    },
-                                    cy_x: common::PositionCovarianceType {
-                                        base: 0.0004618927349220216,
-                                        units: None,
-                                    },
-                                    cy_y: common::PositionCovarianceType {
-                                        base: 0.0006782421679971363,
-                                        units: None,
-                                    },
-                                    cz_x: common::PositionCovarianceType {
-                                        base: -0.0003070007847730449,
-                                        units: None,
-                                    },
-                                    cz_y: common::PositionCovarianceType {
-                                        base: -0.0004221234189514228,
-                                        units: None,
-                                    },
-                                    cz_z: common::PositionCovarianceType {
-                                        base: 0.0003231931992380369,
-                                        units: None,
-                                    },
-                                    cx_dot_x: common::PositionVelocityCovarianceType {
-                                        base: -3.34936503392263e-7,
-                                        units: None,
-                                    },
-                                    cx_dot_y: common::PositionVelocityCovarianceType {
-                                        base: -4.686084221046758e-7,
-                                        units: None,
-                                    },
-                                    cx_dot_z: common::PositionVelocityCovarianceType {
-                                        base: 2.484949578400095e-7,
-                                        units: None,
-                                    },
-                                    cx_dot_x_dot: common::VelocityCovarianceType {
-                                        base: 4.29602280558729e-10,
-                                        units: None,
-                                    },
-                                    cy_dot_x: common::PositionVelocityCovarianceType {
-                                        base: -2.211832501084875e-7,
-                                        units: None,
-                                    },
-                                    cy_dot_y: common::PositionVelocityCovarianceType {
-                                        base: -2.864186892102733e-7,
-                                        units: None,
-                                    },
-                                    cy_dot_z: common::PositionVelocityCovarianceType {
-                                        base: 1.798098699846038e-7,
-                                        units: None,
-                                    },
-                                    cy_dot_x_dot: common::VelocityCovarianceType {
-                                        base: 2.608899201686016e-10,
-                                        units: None,
-                                    },
-                                    cy_dot_y_dot: common::VelocityCovarianceType {
-                                        base: 1.767514756338532e-10,
-                                        units: None,
-                                    },
-                                    cz_dot_x: common::PositionVelocityCovarianceType {
-                                        base: -3.041346050686871e-7,
-                                        units: None,
-                                    },
-                                    cz_dot_y: common::PositionVelocityCovarianceType {
-                                        base: -4.989496988610662e-7,
-                                        units: None,
-                                    },
-                                    cz_dot_z: common::PositionVelocityCovarianceType {
-                                        base: 3.540310904497689e-7,
-                                        units: None,
-                                    },
-                                    cz_dot_x_dot: common::VelocityCovarianceType {
-                                        base: 1.86926319295459e-10,
-                                        units: None,
-                                    },
-                                    cz_dot_y_dot: common::VelocityCovarianceType {
-                                        base: 1.008862586240695e-10,
-                                        units: None,
-                                    },
-                                    cz_dot_z_dot: common::VelocityCovarianceType {
-                                        base: 6.2244443386355e-10,
-                                        units: None,
-                                    },
+                                mean_motion_ddot: Some(DRevType {
+                                    base: 0.0,
+                                    units: None,
+                                },),
+                                agom: None,
+                            },),
+                            covariance_matrix: Some(common::OpmCovarianceMatrixType {
+                                comment_list: vec![],
+                                cov_ref_frame: Some("TEME".to_string(),),
+                                cx_x: common::PositionCovarianceType {
+                                    base: 0.0003331349476038534,
+                                    units: None,
                                 },
-                            ),
+                                cy_x: common::PositionCovarianceType {
+                                    base: 0.0004618927349220216,
+                                    units: None,
+                                },
+                                cy_y: common::PositionCovarianceType {
+                                    base: 0.0006782421679971363,
+                                    units: None,
+                                },
+                                cz_x: common::PositionCovarianceType {
+                                    base: -0.0003070007847730449,
+                                    units: None,
+                                },
+                                cz_y: common::PositionCovarianceType {
+                                    base: -0.0004221234189514228,
+                                    units: None,
+                                },
+                                cz_z: common::PositionCovarianceType {
+                                    base: 0.0003231931992380369,
+                                    units: None,
+                                },
+                                cx_dot_x: common::PositionVelocityCovarianceType {
+                                    base: -3.34936503392263e-7,
+                                    units: None,
+                                },
+                                cx_dot_y: common::PositionVelocityCovarianceType {
+                                    base: -4.686084221046758e-7,
+                                    units: None,
+                                },
+                                cx_dot_z: common::PositionVelocityCovarianceType {
+                                    base: 2.484949578400095e-7,
+                                    units: None,
+                                },
+                                cx_dot_x_dot: common::VelocityCovarianceType {
+                                    base: 4.29602280558729e-10,
+                                    units: None,
+                                },
+                                cy_dot_x: common::PositionVelocityCovarianceType {
+                                    base: -2.211832501084875e-7,
+                                    units: None,
+                                },
+                                cy_dot_y: common::PositionVelocityCovarianceType {
+                                    base: -2.864186892102733e-7,
+                                    units: None,
+                                },
+                                cy_dot_z: common::PositionVelocityCovarianceType {
+                                    base: 1.798098699846038e-7,
+                                    units: None,
+                                },
+                                cy_dot_x_dot: common::VelocityCovarianceType {
+                                    base: 2.608899201686016e-10,
+                                    units: None,
+                                },
+                                cy_dot_y_dot: common::VelocityCovarianceType {
+                                    base: 1.767514756338532e-10,
+                                    units: None,
+                                },
+                                cz_dot_x: common::PositionVelocityCovarianceType {
+                                    base: -3.041346050686871e-7,
+                                    units: None,
+                                },
+                                cz_dot_y: common::PositionVelocityCovarianceType {
+                                    base: -4.989496988610662e-7,
+                                    units: None,
+                                },
+                                cz_dot_z: common::PositionVelocityCovarianceType {
+                                    base: 3.540310904497689e-7,
+                                    units: None,
+                                },
+                                cz_dot_x_dot: common::VelocityCovarianceType {
+                                    base: 1.86926319295459e-10,
+                                    units: None,
+                                },
+                                cz_dot_y_dot: common::VelocityCovarianceType {
+                                    base: 1.008862586240695e-10,
+                                    units: None,
+                                },
+                                cz_dot_z_dot: common::VelocityCovarianceType {
+                                    base: 6.2244443386355e-10,
+                                    units: None,
+                                },
+                            },),
                             user_defined_parameters: None,
                         },
                     },
                 },
                 id: "CCSDS_OMM_VERS".to_string(),
                 version: "3.0".to_string(),
-            });
+            }
+        );
     }
 
     #[test]
@@ -982,21 +910,16 @@ mod test {
 </omm>"#;
 
         let message: OmmType = from_str(xml).unwrap();
-        
-        assert_eq!(message, 
+
+        assert_eq!(
+            message,
             OmmType {
                 header: common::OdmHeader {
-                    comment_list: vec![
-                        "THIS IS AN XML VERSION OF THE OMM".to_string(),
-                    ],
+                    comment_list: vec!["THIS IS AN XML VERSION OF THE OMM".to_string(),],
                     classification_list: vec![],
-                    creation_date: common::EpochType(
-                        "2007-065T16:00:00".to_string(),
-                    ),
+                    creation_date: common::EpochType("2007-065T16:00:00".to_string(),),
                     originator: "NOAA".to_string(),
-                    message_id: Some(
-                        "OMM 201113719185".to_string(),
-                    ),
+                    message_id: Some("OMM 201113719185".to_string(),),
                 },
                 body: OmmBody {
                     segment: OmmSegment {
@@ -1013,229 +936,155 @@ mod test {
                         data: OmmData {
                             comment_list: vec![],
                             mean_elements: MeanElementsType {
-                                comment_list: vec![
-                                    "mean Elements".to_string(),
-                                ],
-                                epoch: common::EpochType(
-                                    "2007-064T10:34:41.4264".to_string(),
-                                ),
+                                comment_list: vec!["mean Elements".to_string(),],
+                                epoch: common::EpochType("2007-064T10:34:41.4264".to_string(),),
                                 semi_major_axis: None,
-                                mean_motion: Some(
-                                    RevType {
-                                        base: 1.00273272,
-                                        units: Some(
-                                            RevUnits(
-                                                "rev/day".to_string(),
-                                            ),
-                                        ),
-                                    },
-                                ),
-                                eccentricity: common::NonNegativeDouble(
-                                    0.0005013,
-                                ),
+                                mean_motion: Some(RevType {
+                                    base: 1.00273272,
+                                    units: Some(RevUnits("rev/day".to_string(),),),
+                                },),
+                                eccentricity: common::NonNegativeDouble(0.0005013,),
                                 inclination: common::InclinationType {
-                                    base: common::InclinationRange(
-                                        3.0539,
-                                    ),
-                                    units: Some(
-                                        common::AngleUnits(
-                                            "deg".to_string(),
-                                        ),
-                                    ),
+                                    base: common::InclinationRange(3.0539,),
+                                    units: Some(common::AngleUnits("deg".to_string(),),),
                                 },
                                 ra_of_asc_node: common::AngleType {
-                                    base: common::AngleRange(
-                                        81.7939,
-                                    ),
-                                    units: Some(
-                                        common::AngleUnits(
-                                            "deg".to_string(),
-                                        ),
-                                    ),
+                                    base: common::AngleRange(81.7939,),
+                                    units: Some(common::AngleUnits("deg".to_string(),),),
                                 },
                                 arg_of_pericenter: common::AngleType {
-                                    base: common::AngleRange(
-                                        249.2363,
-                                    ),
-                                    units: Some(
-                                        common::AngleUnits(
-                                            "deg".to_string(),
-                                        ),
-                                    ),
+                                    base: common::AngleRange(249.2363,),
+                                    units: Some(common::AngleUnits("deg".to_string(),),),
                                 },
                                 mean_anomaly: common::AngleType {
-                                    base: common::AngleRange(
-                                        150.1602,
-                                    ),
-                                    units: Some(
-                                        common::AngleUnits(
-                                            "deg".to_string(),
-                                        ),
-                                    ),
+                                    base: common::AngleRange(150.1602,),
+                                    units: Some(common::AngleUnits("deg".to_string(),),),
                                 },
-                                gm: Some(
-                                    common::GmType {
-                                        base: common::PositiveDouble(
-                                            398600.8,
-                                        ),
-                                        units: None,
-                                    },
-                                ),
+                                gm: Some(common::GmType {
+                                    base: common::PositiveDouble(398600.8,),
+                                    units: None,
+                                },),
                             },
                             spacecraft_parameters: None,
-                            tle_parameters: Some(
-                                TleParametersType {
-                                    comment_list: vec![
-                                        "tle Parameters".to_string(),
-                                    ],
-                                    ephemeris_type: None,
-                                    classification_type: None,
-                                    norad_cat_id: Some(
-                                        23581,
-                                    ),
-                                    element_set_no: Some(
-                                        ElementSetNoType(
-                                            "0925".to_string(),
-                                        ),
-                                    ),
-                                    rev_at_epoch: Some(
-                                        4316,
-                                    ),
-                                    bstar: Some(
-                                        BStarType {
-                                            base: 0.0001,
-                                            units: Some(
-                                                BStarUnits(
-                                                    "1/ER".to_string(),
-                                                ),
-                                            ),
-                                        },
-                                    ),
-                                    bterm: None,
-                                    mean_motion_dot: DRevType {
-                                        base: -1.13e-6,
-                                        units: Some(
-                                            DRevUnits(
-                                                "rev/day**2".to_string(),
-                                            ),
-                                        ),
-                                    },
-                                    mean_motion_ddot: Some(
-                                        DRevType {
-                                            base: 0.0,
-                                            units: Some(
-                                                DRevUnits(
-                                                    "rev/day**3".to_string(),
-                                                ),
-                                            ),
-                                        },
-                                    ),
-                                    agom: None,
+                            tle_parameters: Some(TleParametersType {
+                                comment_list: vec!["tle Parameters".to_string(),],
+                                ephemeris_type: None,
+                                classification_type: None,
+                                norad_cat_id: Some(23581,),
+                                element_set_no: Some(ElementSetNoType("0925".to_string(),),),
+                                rev_at_epoch: Some(4316,),
+                                bstar: Some(BStarType {
+                                    base: 0.0001,
+                                    units: Some(BStarUnits("1/ER".to_string(),),),
+                                },),
+                                bterm: None,
+                                mean_motion_dot: DRevType {
+                                    base: -1.13e-6,
+                                    units: Some(DRevUnits("rev/day**2".to_string(),),),
                                 },
-                            ),
-                            covariance_matrix: Some(
-                                common::OpmCovarianceMatrixType {
-                                    comment_list: vec![
-                                        "covariance Matrix".to_string(),
-                                    ],
-                                    cov_ref_frame: Some(
-                                        "TEME".to_string(),
-                                    ),
-                                    cx_x: common::PositionCovarianceType {
-                                        base: 0.0003331349476038534,
-                                        units: None,
-                                    },
-                                    cy_x: common::PositionCovarianceType {
-                                        base: 0.0004618927349220216,
-                                        units: None,
-                                    },
-                                    cy_y: common::PositionCovarianceType {
-                                        base: 0.0006782421679971363,
-                                        units: None,
-                                    },
-                                    cz_x: common::PositionCovarianceType {
-                                        base: -0.0003070007847730449,
-                                        units: None,
-                                    },
-                                    cz_y: common::PositionCovarianceType {
-                                        base: -0.0004221234189514228,
-                                        units: None,
-                                    },
-                                    cz_z: common::PositionCovarianceType {
-                                        base: 0.0003231931992380369,
-                                        units: None,
-                                    },
-                                    cx_dot_x: common::PositionVelocityCovarianceType {
-                                        base: -3.34936503392263e-7,
-                                        units: None,
-                                    },
-                                    cx_dot_y: common::PositionVelocityCovarianceType {
-                                        base: -4.686084221046758e-7,
-                                        units: None,
-                                    },
-                                    cx_dot_z: common::PositionVelocityCovarianceType {
-                                        base: 2.484949578400095e-7,
-                                        units: None,
-                                    },
-                                    cx_dot_x_dot: common::VelocityCovarianceType {
-                                        base: 4.29602280558729e-10,
-                                        units: None,
-                                    },
-                                    cy_dot_x: common::PositionVelocityCovarianceType {
-                                        base: -2.211832501084875e-7,
-                                        units: None,
-                                    },
-                                    cy_dot_y: common::PositionVelocityCovarianceType {
-                                        base: -2.864186892102733e-7,
-                                        units: None,
-                                    },
-                                    cy_dot_z: common::PositionVelocityCovarianceType {
-                                        base: 1.798098699846038e-7,
-                                        units: None,
-                                    },
-                                    cy_dot_x_dot: common::VelocityCovarianceType {
-                                        base: 2.608899201686016e-10,
-                                        units: None,
-                                    },
-                                    cy_dot_y_dot: common::VelocityCovarianceType {
-                                        base: 1.767514756338532e-10,
-                                        units: None,
-                                    },
-                                    cz_dot_x: common::PositionVelocityCovarianceType {
-                                        base: -3.041346050686871e-7,
-                                        units: None,
-                                    },
-                                    cz_dot_y: common::PositionVelocityCovarianceType {
-                                        base: -4.989496988610662e-7,
-                                        units: None,
-                                    },
-                                    cz_dot_z: common::PositionVelocityCovarianceType {
-                                        base: 3.540310904497689e-7,
-                                        units: None,
-                                    },
-                                    cz_dot_x_dot: common::VelocityCovarianceType {
-                                        base: 1.86926319295459e-10,
-                                        units: None,
-                                    },
-                                    cz_dot_y_dot: common::VelocityCovarianceType {
-                                        base: 1.008862586240695e-10,
-                                        units: None,
-                                    },
-                                    cz_dot_z_dot: common::VelocityCovarianceType {
-                                        base: 6.2244443386355e-10,
-                                        units: None,
-                                    },
+                                mean_motion_ddot: Some(DRevType {
+                                    base: 0.0,
+                                    units: Some(DRevUnits("rev/day**3".to_string(),),),
+                                },),
+                                agom: None,
+                            },),
+                            covariance_matrix: Some(common::OpmCovarianceMatrixType {
+                                comment_list: vec!["covariance Matrix".to_string(),],
+                                cov_ref_frame: Some("TEME".to_string(),),
+                                cx_x: common::PositionCovarianceType {
+                                    base: 0.0003331349476038534,
+                                    units: None,
                                 },
-                            ),
+                                cy_x: common::PositionCovarianceType {
+                                    base: 0.0004618927349220216,
+                                    units: None,
+                                },
+                                cy_y: common::PositionCovarianceType {
+                                    base: 0.0006782421679971363,
+                                    units: None,
+                                },
+                                cz_x: common::PositionCovarianceType {
+                                    base: -0.0003070007847730449,
+                                    units: None,
+                                },
+                                cz_y: common::PositionCovarianceType {
+                                    base: -0.0004221234189514228,
+                                    units: None,
+                                },
+                                cz_z: common::PositionCovarianceType {
+                                    base: 0.0003231931992380369,
+                                    units: None,
+                                },
+                                cx_dot_x: common::PositionVelocityCovarianceType {
+                                    base: -3.34936503392263e-7,
+                                    units: None,
+                                },
+                                cx_dot_y: common::PositionVelocityCovarianceType {
+                                    base: -4.686084221046758e-7,
+                                    units: None,
+                                },
+                                cx_dot_z: common::PositionVelocityCovarianceType {
+                                    base: 2.484949578400095e-7,
+                                    units: None,
+                                },
+                                cx_dot_x_dot: common::VelocityCovarianceType {
+                                    base: 4.29602280558729e-10,
+                                    units: None,
+                                },
+                                cy_dot_x: common::PositionVelocityCovarianceType {
+                                    base: -2.211832501084875e-7,
+                                    units: None,
+                                },
+                                cy_dot_y: common::PositionVelocityCovarianceType {
+                                    base: -2.864186892102733e-7,
+                                    units: None,
+                                },
+                                cy_dot_z: common::PositionVelocityCovarianceType {
+                                    base: 1.798098699846038e-7,
+                                    units: None,
+                                },
+                                cy_dot_x_dot: common::VelocityCovarianceType {
+                                    base: 2.608899201686016e-10,
+                                    units: None,
+                                },
+                                cy_dot_y_dot: common::VelocityCovarianceType {
+                                    base: 1.767514756338532e-10,
+                                    units: None,
+                                },
+                                cz_dot_x: common::PositionVelocityCovarianceType {
+                                    base: -3.041346050686871e-7,
+                                    units: None,
+                                },
+                                cz_dot_y: common::PositionVelocityCovarianceType {
+                                    base: -4.989496988610662e-7,
+                                    units: None,
+                                },
+                                cz_dot_z: common::PositionVelocityCovarianceType {
+                                    base: 3.540310904497689e-7,
+                                    units: None,
+                                },
+                                cz_dot_x_dot: common::VelocityCovarianceType {
+                                    base: 1.86926319295459e-10,
+                                    units: None,
+                                },
+                                cz_dot_y_dot: common::VelocityCovarianceType {
+                                    base: 1.008862586240695e-10,
+                                    units: None,
+                                },
+                                cz_dot_z_dot: common::VelocityCovarianceType {
+                                    base: 6.2244443386355e-10,
+                                    units: None,
+                                },
+                            },),
                             user_defined_parameters: None,
                         },
                     },
                 },
                 id: "CCSDS_OMM_VERS".to_string(),
                 version: "3.0".to_string(),
-            });
+            }
+        );
     }
-
 
     #[test]
     fn test_parse_omm_message3() {
@@ -1287,14 +1136,13 @@ mod test {
 
         let message: OmmType = from_str(xml).unwrap();
 
-        assert_eq!(message, 
+        assert_eq!(
+            message,
             OmmType {
                 header: common::OdmHeader {
                     comment_list: vec![],
                     classification_list: vec![],
-                    creation_date: common::EpochType(
-                        "2021-03-24T23:00:00.000".to_string(),
-                    ),
+                    creation_date: common::EpochType("2021-03-24T23:00:00.000".to_string(),),
                     originator: "CelesTrak".to_string(),
                     message_id: None,
                 },
@@ -1314,141 +1162,79 @@ mod test {
                             comment_list: vec![],
                             mean_elements: MeanElementsType {
                                 comment_list: vec![],
-                                epoch: common::EpochType(
-                                    "2008-09-20T12:25:40.104192".to_string(),
-                                ),
+                                epoch: common::EpochType("2008-09-20T12:25:40.104192".to_string(),),
                                 semi_major_axis: None,
-                                mean_motion: Some(
-                                    RevType {
-                                        base: 15.72125391,
-                                        units: Some(
-                                            RevUnits(
-                                                "rev/day".to_string(),
-                                            ),
-                                        ),
-                                    },
-                                ),
-                                eccentricity: common::NonNegativeDouble(
-                                    0.0006703,
-                                ),
+                                mean_motion: Some(RevType {
+                                    base: 15.72125391,
+                                    units: Some(RevUnits("rev/day".to_string(),),),
+                                },),
+                                eccentricity: common::NonNegativeDouble(0.0006703,),
                                 inclination: common::InclinationType {
-                                    base: common::InclinationRange(
-                                        51.6416,
-                                    ),
-                                    units: Some(
-                                        common::AngleUnits(
-                                            "deg".to_string(),
-                                        ),
-                                    ),
+                                    base: common::InclinationRange(51.6416,),
+                                    units: Some(common::AngleUnits("deg".to_string(),),),
                                 },
                                 ra_of_asc_node: common::AngleType {
-                                    base: common::AngleRange(
-                                        247.4627,
-                                    ),
-                                    units: Some(
-                                        common::AngleUnits(
-                                            "deg".to_string(),
-                                        ),
-                                    ),
+                                    base: common::AngleRange(247.4627,),
+                                    units: Some(common::AngleUnits("deg".to_string(),),),
                                 },
                                 arg_of_pericenter: common::AngleType {
-                                    base: common::AngleRange(
-                                        130.536,
-                                    ),
-                                    units: Some(
-                                        common::AngleUnits(
-                                            "deg".to_string(),
-                                        ),
-                                    ),
+                                    base: common::AngleRange(130.536,),
+                                    units: Some(common::AngleUnits("deg".to_string(),),),
                                 },
                                 mean_anomaly: common::AngleType {
-                                    base: common::AngleRange(
-                                        325.0288,
-                                    ),
-                                    units: Some(
-                                        common::AngleUnits(
-                                            "deg".to_string(),
-                                        ),
-                                    ),
+                                    base: common::AngleRange(325.0288,),
+                                    units: Some(common::AngleUnits("deg".to_string(),),),
                                 },
-                                gm: Some(
-                                    common::GmType {
-                                        base: common::PositiveDouble(
-                                            398600.8,
-                                        ),
-                                        units: Some(
-                                            common::GmUnits(
-                                                "km**3/s**2".to_string(),
-                                            ),
-                                        ),
-                                    },
-                                ),
+                                gm: Some(common::GmType {
+                                    base: common::PositiveDouble(398600.8,),
+                                    units: Some(common::GmUnits("km**3/s**2".to_string(),),),
+                                },),
                             },
                             spacecraft_parameters: None,
-                            tle_parameters: Some(
-                                TleParametersType {
-                                    comment_list: vec![],
-                                    ephemeris_type: Some(
-                                        0,
-                                    ),
-                                    classification_type: Some(
-                                        "U".to_string(),
-                                    ),
-                                    norad_cat_id: Some(
-                                        7646,
-                                    ),
-                                    element_set_no: Some(
-                                        ElementSetNoType(
-                                            "999".to_string(),
-                                        ),
-                                    ),
-                                    rev_at_epoch: Some(
-                                        32997,
-                                    ),
-                                    bstar: Some(
-                                        BStarType {
-                                            base: -4.7102e-6,
-                                            units: None,
-                                        },
-                                    ),
-                                    bterm: None,
-                                    mean_motion_dot: DRevType {
-                                        base: -1.47e-6,
-                                        units: None,
-                                    },
-                                    mean_motion_ddot: Some(
-                                        DRevType {
-                                            base: 0.0,
-                                            units: None,
-                                        },
-                                    ),
-                                    agom: None,
+                            tle_parameters: Some(TleParametersType {
+                                comment_list: vec![],
+                                ephemeris_type: Some(0,),
+                                classification_type: Some("U".to_string(),),
+                                norad_cat_id: Some(7646,),
+                                element_set_no: Some(ElementSetNoType("999".to_string(),),),
+                                rev_at_epoch: Some(32997,),
+                                bstar: Some(BStarType {
+                                    base: -4.7102e-6,
+                                    units: None,
+                                },),
+                                bterm: None,
+                                mean_motion_dot: DRevType {
+                                    base: -1.47e-6,
+                                    units: None,
                                 },
-                            ),
+                                mean_motion_ddot: Some(DRevType {
+                                    base: 0.0,
+                                    units: None,
+                                },),
+                                agom: None,
+                            },),
                             covariance_matrix: None,
-                            user_defined_parameters: Some(
-                                common::UserDefinedType {
-                                    comment_list: vec![],
-                                    user_defined_list: vec![
-                                        common::UserDefinedParameterType {
-                                            base: "foo enters".to_string(),
-                                            parameter: "FOO".to_string(),
-                                        },
-                                        common::UserDefinedParameterType {
-                                            base: "a bar".to_string(),
-                                            parameter: "BAR".to_string(),
-                                        },
-                                    ],
-                                },
-                            ),
+                            user_defined_parameters: Some(common::UserDefinedType {
+                                comment_list: vec![],
+                                user_defined_list: vec![
+                                    common::UserDefinedParameterType {
+                                        base: "foo enters".to_string(),
+                                        parameter: "FOO".to_string(),
+                                    },
+                                    common::UserDefinedParameterType {
+                                        base: "a bar".to_string(),
+                                        parameter: "BAR".to_string(),
+                                    },
+                                ],
+                            },),
                         },
                     },
                 },
                 id: "CCSDS_OMM_VERS".to_string(),
                 version: "2.0".to_string(),
-            });
+            }
+        );
     }
-
 
     #[test]
     fn test_parse_omm_message_spurious() {
@@ -1479,5 +1265,4 @@ mod test {
 
         assert!(message.is_err());
     }
-
 }
