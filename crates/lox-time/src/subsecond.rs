@@ -189,7 +189,8 @@ mod tests {
     #[test]
     fn test_subsecond_into_f64() {
         let subsecond = Subsecond(0.0);
-        assert_eq!(0.0, subsecond.into());
+        let as_f64: f64 = subsecond.into();
+        assert_eq!(0.0, as_f64);
     }
 
     #[test]
