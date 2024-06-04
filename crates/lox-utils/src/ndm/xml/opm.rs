@@ -121,6 +121,7 @@ pub struct ManeuverParametersType {
     pub man_dv_3: common::VelocityType,
 }
 
+#[cfg(test)]
 mod test {
     use super::*;
 

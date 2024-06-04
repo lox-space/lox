@@ -545,6 +545,7 @@ pub struct OcmOdParametersType {
     pub data_types: Option<String>,
 }
 
+#[cfg(test)]
 mod test {
     use super::*;
 

@@ -31,6 +31,7 @@ pub struct NdmType {
     pub child_list: Vec<NdmChildChoice>,
 }
 
+#[cfg(test)]
 mod test {
     use super::super::common;
     use super::*;

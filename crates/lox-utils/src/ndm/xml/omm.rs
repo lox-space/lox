@@ -215,6 +215,7 @@ pub struct DdRevType {
     pub units: Option<DdRevUnits>,
 }
 
+#[cfg(test)]
 mod test {
     use super::*;
 

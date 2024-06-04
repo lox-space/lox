@@ -452,6 +452,7 @@ pub fn parse_kvn_datetime_line_new<'a>(
     ))
 }
 
+#[cfg(test)]
 mod test {
     use lox_derive::KvnDeserialize;
 

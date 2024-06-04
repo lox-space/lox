@@ -287,6 +287,7 @@ pub struct OmmType {
     pub user_defined_parameters: HashMap<String, Option<String>>,
 }
 
+#[cfg(test)]
 mod test {
     use super::*;
 
