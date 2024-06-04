@@ -423,6 +423,7 @@ dependencies = [
  "glam",
  "lox-bodies",
  "lox-time",
+ "lox-utils",
  "pyo3",
 ]
 

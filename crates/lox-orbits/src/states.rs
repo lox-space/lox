@@ -11,7 +11,11 @@ use crate::frames::{
 };
 use glam::DVec3;
 use lox_bodies::RotationalElements;
-use lox_time::{julian_dates::JulianDate, transformations::ToTdb};
+use lox_time::{
+    julian_dates::JulianDate,
+    time_scales::Tdb,
+    transformations::{ToTdb, TryToScale},
+};
 use std::convert::Infallible;
 
 pub trait TryToFrame<
@@ -45,6 +49,34 @@ where
             position,
             velocity,
         }
+    }
+
+    pub fn with_frame<U: ReferenceFrame>(&self, frame: U) -> State<T, O, U>
+    where
+        T: Clone,
+        O: Clone,
+    {
+        State::new(
+            self.time(),
+            self.origin(),
+            frame,
+            self.position,
+            self.velocity,
+        )
+    }
+
+    pub fn with_time<U>(&self, time: U) -> State<U, O, R>
+    where
+        O: Clone,
+        R: Clone,
+    {
+        State::new(
+            time,
+            self.origin(),
+            self.reference_frame(),
+            self.position,
+            self.velocity,
+        )
     }
 
     pub fn time(&self) -> T

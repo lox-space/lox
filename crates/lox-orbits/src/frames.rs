@@ -6,8 +6,6 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use std::convert::Infallible;
-
 use glam::{DMat3, DVec3};
 use lox_bodies::RotationalElements;
 use lox_time::{julian_dates::JulianDate, transformations::ToTdb};
