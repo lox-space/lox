@@ -480,6 +480,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "lox-derive"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "lox-earth"
 version = "0.1.0"
 dependencies = [
@@ -549,7 +558,7 @@ dependencies = [
  "fast-float",
  "fast_polynomial",
  "float_eq",
- "lox_derive",
+ "lox-derive",
  "nom",
  "quick-xml",
  "regex",
@@ -558,15 +567,6 @@ dependencies = [
  "serde-aux",
  "serde_json",
  "thiserror",
-]
-
-[[package]]
-name = "lox_derive"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]
