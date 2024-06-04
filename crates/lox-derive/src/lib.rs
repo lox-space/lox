@@ -128,7 +128,7 @@ fn generate_call_to_deserializer_for_kvn_type(
             })
         }
 
-        type_value => Ok(quote! {
+        _ => Ok(quote! {
             {
                 let has_next_line = lines.peek().is_some();
 
@@ -182,7 +182,7 @@ fn generate_call_to_deserializer_for_kvn_type_new(
 
             Ok(parser)
         }
-        type_value => {
+        _ => {
             Ok(quote! {
                 {
                     let has_next_line = lines.peek().is_some();
