@@ -24,6 +24,7 @@ lox_derive = { path = "./crates/lox_derive" }
 csv = "1.3.0"
 divan = "0.1.14"
 dyn-clone = "1.0.17"
+fast-float = "0.2.0"
 fast_polynomial = "0.1.0"
 float_eq = "1.0.1"
 glam = "0.25.0"
@@ -32,7 +33,10 @@ nom = "7.1.3"
 num = "0.4.1"
 proptest = "1.4.0"
 pyo3 = "0.21.1"
+quick-xml = { version = "0.31.0", features = ["serde", "serialize"] }
 regex = "1.10.4"
 rstest = "0.18.2"
 serde = { version = "1.0.199", features = ["derive"] }
+serde-aux = "4.5.0"
+serde_json = "1.0.113"
 thiserror = "1.0"
