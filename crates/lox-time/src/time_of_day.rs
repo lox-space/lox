@@ -117,7 +117,6 @@ pub struct TimeOfDay {
 }
 
 impl TimeOfDay {
-
     /// Constructs a new `TimeOfDay` instance from the given hour, minute, and second components.
     ///
     /// # Errors

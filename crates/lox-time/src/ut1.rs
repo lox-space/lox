@@ -82,7 +82,6 @@ impl ExtrapolatedDeltaUt1Tai {
 pub struct DeltaUt1Tai(Series<Vec<f64>, Vec<f64>>);
 
 impl DeltaUt1Tai {
-
     /// Instantiates a new [DeltaUt1Tai] provider from a path to an IERS Earth Orientation
     /// Parameters finals CSV and a [LeapSecondsProvider].
     ///

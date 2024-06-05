@@ -39,7 +39,6 @@ pub struct Utc {
 }
 
 impl Utc {
-
     /// Creates a new [Utc] instance from the given [Date] and [TimeOfDay], with leap second
     /// validation provided by the [LeapSecondsProvider].
     ///
