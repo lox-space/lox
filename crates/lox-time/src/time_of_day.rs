@@ -18,6 +18,8 @@ fn iso_regex() -> &'static Regex {
     })
 }
 
+/// Error type returned when attempting to construct a [TimeOfDay] with a greater number of
+/// floating-point seconds than are in a day.
 #[derive(Debug, Copy, Clone, Error)]
 #[error("seconds must be in the range [0.0..86401.0) but was {0}")]
 pub struct InvalidSeconds(f64);
@@ -42,6 +44,7 @@ impl PartialEq for InvalidSeconds {
 
 impl Eq for InvalidSeconds {}
 
+/// Error type returned when attempting to construct a [TimeOfDay] from invalid components.
 #[derive(Debug, Clone, Error, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TimeOfDayError {
     #[error("hour must be in the range [0..24) but was {0}")]
@@ -104,6 +107,7 @@ pub trait CivilTime {
     }
 }
 
+/// A human-readable time representation with support for representing leap seconds.
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TimeOfDay {
     hour: u8,
@@ -113,6 +117,14 @@ pub struct TimeOfDay {
 }
 
 impl TimeOfDay {
+
+    /// Constructs a new `TimeOfDay` instance from the given hour, minute, and second components.
+    ///
+    /// # Errors
+    ///
+    /// - [TimeOfDayError::InvalidHour] if `hour` is not in the range `0..24`.
+    /// - [TimeOfDayError::InvalidMinute] if `minute` is not in the range `0..60`.
+    /// - [TimeOfDayError::InvalidSecond] if `second` is not in the range `0..61`.
     pub fn new(hour: u8, minute: u8, second: u8) -> Result<Self, TimeOfDayError> {
         if !(0..24).contains(&hour) {
             return Err(TimeOfDayError::InvalidHour(hour));
@@ -131,6 +143,15 @@ impl TimeOfDay {
         })
     }
 
+    /// Constructs a new `TimeOfDay` instance from an ISO 8601 time string.
+    ///
+    /// # Errors
+    ///
+    /// - [TimeOfDayError::InvalidIsoString] if the input string is not a valid ISO 8601 time
+    ///   string.
+    /// - [TimeOfDayError::InvalidHour] if the hour component is not in the range `0..24`.
+    /// - [TimeOfDayError::InvalidMinute] if the minute component is not in the range `0..60`.
+    /// - [TimeOfDayError::InvalidSecond] if the second component is not in the range `0..61`.
     pub fn from_iso(iso: &str) -> Result<Self, TimeOfDayError> {
         let caps = iso_regex()
             .captures(iso)
@@ -155,6 +176,14 @@ impl TimeOfDay {
         Ok(time)
     }
 
+    /// Constructs a new `TimeOfDay` instance from the given hour, minute, and floating-point second
+    /// components.
+    ///
+    /// # Errors
+    ///
+    /// - [TimeOfDayError::InvalidHour] if `hour` is not in the range `0..24`.
+    /// - [TimeOfDayError::InvalidMinute] if `minute` is not in the range `0..60`.
+    /// - [TimeOfDayError::InvalidSeconds] if `seconds` is not in the range `0.0..86401.0`.
     pub fn from_hms(hour: u8, minute: u8, seconds: f64) -> Result<Self, TimeOfDayError> {
         if !(0.0..86401.0).contains(&seconds) {
             return Err(TimeOfDayError::InvalidSeconds(InvalidSeconds(seconds)));
@@ -165,6 +194,11 @@ impl TimeOfDay {
         Ok(Self::new(hour, minute, second)?.with_subsecond(subsecond))
     }
 
+    /// Constructs a new `TimeOfDay` instance from the given second of a day.
+    ///
+    /// # Errors
+    ///
+    /// - [TimeOfDayError::InvalidSecondOfDay] if `second_of_day` is not in the range `0..86401`.
     pub fn from_second_of_day(second_of_day: u64) -> Result<Self, TimeOfDayError> {
         if !(0..86401).contains(&second_of_day) {
             return Err(TimeOfDayError::InvalidSecondOfDay(second_of_day));
@@ -178,6 +212,9 @@ impl TimeOfDay {
         Self::new(hour, minute, second)
     }
 
+    /// Constructs a new `TimeOfDay` instance from an integral number of seconds since J2000.
+    ///
+    /// Note that this constructor is not leap-second aware.
     pub fn from_seconds_since_j2000(seconds: i64) -> Self {
         let mut second_of_day = (seconds + SECONDS_PER_HALF_DAY) % SECONDS_PER_DAY;
         if second_of_day.is_negative() {
@@ -191,6 +228,7 @@ impl TimeOfDay {
         .unwrap_or_else(|_| unreachable!("second of day should be in range"))
     }
 
+    /// Sets the [TimeOfDay]'s subsecond component.
     pub fn with_subsecond(&mut self, subsecond: Subsecond) -> Self {
         self.subsecond = subsecond;
         *self
@@ -212,6 +250,7 @@ impl TimeOfDay {
         self.subsecond
     }
 
+    /// Returns the number of integral seconds since the start of the day.
     pub fn second_of_day(&self) -> i64 {
         self.hour as i64 * SECONDS_PER_HOUR
             + self.minute as i64 * SECONDS_PER_MINUTE
