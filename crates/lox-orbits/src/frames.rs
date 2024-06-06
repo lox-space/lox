@@ -35,7 +35,7 @@ impl OffsetProvider for NoOpFrameTransformationProvider {
 impl FrameTransformationProvider for NoOpFrameTransformationProvider {}
 
 pub trait TryToFrame<T, O, R: ReferenceFrame, P: FrameTransformationProvider> {
-    type Output;
+    type Output: CoordinateSystem<R>;
 
     fn try_to_frame(&self, frame: R, provider: &P) -> Result<Self::Output, P::Error>;
 }

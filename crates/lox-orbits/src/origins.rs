@@ -1,6 +1,9 @@
-enum OriginType {
-    CelestialBody,
-}
+use lox_bodies::Body;
 
 pub trait Origin {}
-pub trait CoordinateOrigin {}
+
+impl<U: Body> Origin for U {}
+
+pub trait CoordinateOrigin<T: Origin> {
+    fn origin(&self) -> T;
+}

@@ -127,7 +127,7 @@ pub fn generate_code(frames: &[Frame]) -> String {
 
     let module = quote! {
         use crate::frames::{
-            BodyFixed, FrameTransformationProvider, Icrf, ReferenceFrame, TryToFrame,
+            BodyFixed, CoordinateSystem, FrameTransformationProvider, Icrf, ReferenceFrame, TryToFrame,
         };
         use crate::python::{PyFrame, PyState};
         use crate::states::State;
