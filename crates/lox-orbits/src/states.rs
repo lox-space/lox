@@ -6,9 +6,12 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::frames::{
-    BodyFixed, FrameTransformationProvider, Icrf, NoOpFrameTransformationProvider, ReferenceFrame,
-    TryToFrame,
+use crate::{
+    frames::{
+        BodyFixed, CoordinateSystem, FrameTransformationProvider, Icrf,
+        NoOpFrameTransformationProvider, ReferenceFrame, TryToFrame,
+    },
+    origins::{CoordinateOrigin, Origin},
 };
 use glam::DVec3;
 use lox_bodies::RotationalElements;
@@ -20,7 +23,7 @@ use lox_time::{
 };
 use std::convert::Infallible;
 
-pub struct State<T, O, R: ReferenceFrame> {
+pub struct State<T, O: Origin, R: ReferenceFrame> {
     time: T,
     origin: O,
     frame: R,
@@ -30,6 +33,7 @@ pub struct State<T, O, R: ReferenceFrame> {
 
 impl<T, O, R> State<T, O, R>
 where
+    O: Origin,
     R: ReferenceFrame,
 {
     pub fn new(time: T, origin: O, frame: R, position: DVec3, velocity: DVec3) -> Self {
@@ -56,39 +60,11 @@ where
         )
     }
 
-    pub fn with_time<U>(&self, time: U) -> State<U, O, R>
-    where
-        O: Clone,
-        R: Clone,
-    {
-        State::new(
-            time,
-            self.origin(),
-            self.reference_frame(),
-            self.position,
-            self.velocity,
-        )
-    }
-
     pub fn time(&self) -> T
     where
         T: Clone,
     {
         self.time.clone()
-    }
-
-    pub fn origin(&self) -> O
-    where
-        O: Clone,
-    {
-        self.origin.clone()
-    }
-
-    pub fn reference_frame(&self) -> R
-    where
-        R: Clone,
-    {
-        self.frame.clone()
     }
 
     pub fn position(&self) -> DVec3 {
@@ -100,11 +76,31 @@ where
     }
 }
 
+impl<T, O, R> CoordinateSystem<R> for State<T, O, R>
+where
+    O: Origin,
+    R: ReferenceFrame + Clone,
+{
+    fn reference_frame(&self) -> R {
+        self.frame.clone()
+    }
+}
+
+impl<T, O, R> CoordinateOrigin<O> for State<T, O, R>
+where
+    O: Origin + Clone,
+    R: ReferenceFrame,
+{
+    fn origin(&self) -> O {
+        self.origin.clone()
+    }
+}
+
 impl<T, O, R, U> TryToFrame<T, O, BodyFixed<R>, U> for State<T, O, Icrf>
 where
     T: TryToScale<Tdb, U> + JulianDate + Clone,
-    O: Clone,
-    R: RotationalElements,
+    O: Origin + Clone,
+    R: RotationalElements + Clone,
     U: FrameTransformationProvider,
 {
     type Output = State<T, O, BodyFixed<R>>;
@@ -123,7 +119,7 @@ where
 impl<T, O, R, U> TryToFrame<T, O, Icrf, U> for State<T, O, BodyFixed<R>>
 where
     T: TryToScale<Tdb, U> + JulianDate + Clone,
-    O: Clone,
+    O: Origin + Clone,
     R: RotationalElements,
     U: DeltaUt1TaiProvider + FrameTransformationProvider,
 {
@@ -143,7 +139,7 @@ where
 impl<T, O, R> TryToFrame<T, O, Icrf, NoOpFrameTransformationProvider> for State<T, O, BodyFixed<R>>
 where
     T: ToTdb + JulianDate + Clone,
-    O: Clone,
+    O: Origin + Clone,
     R: RotationalElements,
 {
     type Output = State<T, O, Icrf>;
