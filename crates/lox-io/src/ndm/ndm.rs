@@ -387,7 +387,6 @@ mod test {
 
         let message: NdmType = from_str(xml).unwrap();
 
-        println!("{:#?}", message);
         assert_eq!(
             message,
             NdmType {
