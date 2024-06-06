@@ -14,6 +14,8 @@ use nom::error::{ErrorKind, ParseError};
 use nom::sequence as ns;
 use regex::Regex;
 
+use super::deserializer::KvnDeserializerErr;
+
 #[derive(Debug, PartialEq)]
 pub enum KvnStringParserErr<I> {
     EmptyKeyword { input: I },
@@ -41,19 +43,6 @@ pub enum KvnDateTimeParserErr<I> {
     EmptyKeyword { input: I },
     EmptyValue { input: I },
     InvalidFormat { input: I },
-}
-
-#[derive(PartialEq, Debug)]
-pub enum KvnDeserializerErr<I> {
-    InvalidDateTimeFormat { input: I },
-    InvalidNumberFormat { input: I },
-    InvalidStringFormat { input: I },
-    KeywordNotFound { expected: I },
-    UnexpectedKeyword { found: I, expected: I },
-    EmptyKeyword { input: I },
-    EmptyValue { input: I },
-    UnexpectedEndOfInput { keyword: I },
-    GeneralParserError(I, ErrorKind),
 }
 
 impl<I> From<nom::Err<KvnStringParserErr<I>>> for KvnDeserializerErr<I> {
@@ -167,16 +156,6 @@ pub struct KvnDateTimeValue {
     pub second: u8,
     pub fractional_second: f64,
     pub full_value: String,
-}
-
-pub trait KvnDeserializer {
-    fn deserialize<'a>(
-        lines: &mut std::iter::Peekable<impl Iterator<Item = &'a str>>,
-    ) -> Result<Self, KvnDeserializerErr<&'a str>>
-    where
-        Self: Sized;
-
-    fn should_check_key_match() -> bool;
 }
 
 //@TODO remove _new suffix
