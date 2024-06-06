@@ -248,20 +248,18 @@ fn generate_call_to_deserializer_for_option_type(
     let type_name_new = get_generic_type_argument_new(field).unwrap();
 
     match type_name {
-        None => {
-            return Err(syn::Error::new_spanned(
-                &field,
-                "Malformed type for `#[derive(KvnDeserialize)]`",
-            )
-            .into_compile_error()
-            .into())
-        }
+        None => Err(syn::Error::new_spanned(
+            field,
+            "Malformed type for `#[derive(KvnDeserialize)]`",
+        )
+        .into_compile_error()
+        .into()),
 
         Some(type_name) => {
             let deserializer_for_kvn_type = generate_call_to_deserializer_for_kvn_type(
-                &type_name.as_ref(),
-                &type_name_new,
-                &expected_kvn_name,
+                type_name.as_ref(),
+                type_name_new,
+                expected_kvn_name,
             )?;
 
             let condition_shortcut = match type_name.as_str() {
@@ -269,7 +267,7 @@ fn generate_call_to_deserializer_for_option_type(
                 _ => quote! { ! #type_name_new::should_check_key_match() || },
             };
 
-            return Ok(quote! {
+            Ok(quote! {
                 match lines.peek() {
                     None => None,
                     Some(next_line) => {
@@ -292,7 +290,7 @@ fn generate_call_to_deserializer_for_option_type(
                         }
                     }
                 }
-            });
+            })
         }
     }
 }
@@ -319,9 +317,9 @@ fn generate_call_to_deserializer_for_vec_type(
                 let expected_kvn_name = expected_kvn_name.trim_end_matches("_LIST");
 
                 let deserializer_for_kvn_type = generate_call_to_deserializer_for_kvn_type(
-                    &type_name.as_ref(),
-                    &bla,
-                    &expected_kvn_name,
+                    type_name.as_ref(),
+                    bla,
+                    expected_kvn_name,
                 )?;
 
                 let type_ident = syn::Ident::new(&type_name, Span::call_site());
@@ -348,17 +346,17 @@ fn generate_call_to_deserializer_for_vec_type(
         }
     }
 
-    return Err(
-        syn::Error::new_spanned(&field, "Malformed type for `#[derive(KvnDeserialize)]`")
+    Err(
+        syn::Error::new_spanned(field, "Malformed type for `#[derive(KvnDeserialize)]`")
             .into_compile_error()
             .into(),
-    );
+    )
 }
 
 fn is_value_unit_struct(item: &DeriveInput) -> bool {
     for attr in item.attrs.iter() {
-        if attr.path().is_ident("kvn") {
-            if attr
+        if attr.path().is_ident("kvn")
+            && attr
                 .parse_nested_meta(|meta| {
                     if meta.path.is_ident("value_unit_struct") {
                         Ok(())
@@ -367,9 +365,8 @@ fn is_value_unit_struct(item: &DeriveInput) -> bool {
                     }
                 })
                 .is_ok()
-            {
-                return true;
-            }
+        {
+            return true;
         }
     }
 
@@ -388,7 +385,7 @@ fn deserializer_for_struct_with_named_fields(
     fields: &syn::punctuated::Punctuated<syn::Field, syn::token::Comma>,
     is_value_unit_struct: bool,
 ) -> proc_macro2::TokenStream {
-    if type_name.to_string() == "UserDefinedType" {
+    if &type_name.to_string() == "UserDefinedType" {
         //@TODO
         return quote! {
             Ok(Default::default())
@@ -412,11 +409,10 @@ fn deserializer_for_struct_with_named_fields(
                 0 => {
                     if field_name.as_str() != "base" {
                         return syn::Error::new_spanned(
-                            &field,
+                            field,
                             "The first field in a value unit struct should be called \"base\"",
                         )
-                        .into_compile_error()
-                        .into();
+                        .into_compile_error();
                     }
 
                     // Unwrap is okay because we expect this span to come from the source code
@@ -427,12 +423,12 @@ fn deserializer_for_struct_with_named_fields(
                         .unwrap();
                     let local_field_type_new = extract_type_path(&field.ty).unwrap();
 
-                    let deserializer = match local_field_type.as_str() {
+                    match local_field_type.as_str() {
                         "KvnDateTimeValue" | "String" | "f64" | "i32" | "NonNegativeDouble"
                         | "NegativeDouble" | "PositiveDouble" => {
                             match generate_call_to_deserializer_for_kvn_type_new(
                                 &local_field_type,
-                                &local_field_type_new,
+                                local_field_type_new,
                             ) {
                                 Ok(deserializer_for_kvn_type) => {
                                     deserializer = Some(deserializer_for_kvn_type)
@@ -443,27 +439,23 @@ fn deserializer_for_struct_with_named_fields(
 
                         _ => {
                             return syn::Error::new_spanned(
-                                &field,
+                                field,
                                 "Unsupported field type for deserializer",
                             )
                             .into_compile_error()
-                            .into()
                         }
                     };
 
                     field_type = Some(local_field_type);
                     field_type_new = Some(local_field_type_new);
-
-                    deserializer
                 }
                 1 => {
                     if field_name.as_str() != "units" && field_name.as_str() != "parameter" {
                         return syn::Error::new_spanned(
-                             &field,
+                             field,
                              "The second field in a value unit struct should be called \"units\" or \"parameter\"",
                          )
-                         .into_compile_error()
-                         .into();
+                         .into_compile_error();
                     }
 
                     unit_type = get_generic_type_argument(field);
@@ -471,11 +463,10 @@ fn deserializer_for_struct_with_named_fields(
                 }
                 _ => {
                     return syn::Error::new_spanned(
-                        &field,
+                        field,
                         "Only two fields are allowed: \"base\" and (\"units\" or \"parameters\"",
                     )
                     .into_compile_error()
-                    .into()
                 }
             }
         }
@@ -496,9 +487,8 @@ fn deserializer_for_struct_with_named_fields(
         };
 
         match deserializer {
-            None => syn::Error::new_spanned(&fields, "Unable to create deserializer for struct")
-                .into_compile_error()
-                .into(),
+            None => syn::Error::new_spanned(fields, "Unable to create deserializer for struct")
+                .into_compile_error(),
             Some(deserializer) => quote! {
                 let kvn_value = #deserializer;
                 Ok(#type_name {
@@ -520,11 +510,10 @@ fn deserializer_for_struct_with_named_fields(
 
                 if !string_type_name.ends_with("Type") {
                     return Err(syn::Error::new_spanned(
-                        &fields,
+                        fields,
                         "Types with \"version\" field should be of the form SomethingType",
                     )
-                    .into_compile_error()
-                    .into());
+                    .into_compile_error());
                 }
 
                 let message_type_name = string_type_name
@@ -594,9 +583,9 @@ fn deserializer_for_struct_with_named_fields(
                         }
                     }
                     "Option" => {
-                        generate_call_to_deserializer_for_option_type(&expected_kvn_name, &field)?
+                        generate_call_to_deserializer_for_option_type(&expected_kvn_name, field)?
                     }
-                    "Vec" => generate_call_to_deserializer_for_vec_type(&expected_kvn_name, &field)?,
+                    "Vec" => generate_call_to_deserializer_for_vec_type(&expected_kvn_name, field)?,
                     _ => {
 
                         let condition_shortcut = match field_type.as_str() {

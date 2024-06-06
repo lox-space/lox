@@ -4,6 +4,7 @@ use super::{ocm, oem, omm, opm};
 
 #[derive(Clone, Debug, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde()]
+#[allow(clippy::large_enum_variant)]
 pub enum NdmChildChoice {
     #[serde(rename = "ocm")]
     Ocm(ocm::OcmType),
