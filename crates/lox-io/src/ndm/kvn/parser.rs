@@ -277,9 +277,14 @@ where
         Err(nom::Err::Failure(KvnNumberParserErr::EmptyValue { input }))?
     };
 
+    let regex_pattern = if with_unit {
+        r"^(?:\s*)(?<keyword>[0-9A-Za-z_]*)(?:\s*)=(?:\s*)(?<value>(?:[-+]?)(?:[0-9]+)(?:\.\d*)?)(?:(?:\s*)(?:\[(?<unit>[0-9A-Za-z/_*]*)\]?))?(?:\s*)?$"
+    } else {
+        r"^(?:\s*)(?<keyword>[0-9A-Za-z_]*)(?:\s*)=(?:\s*)(?<value>(?:[-+]?)(?:[0-9]+)(?:\.\d*)?)(?:\s*)$"
+    };
+
     // Modified from Figure F-9: CCSDS 502.0-B-3
-    let re = Regex::new(r"^(?:\s*)(?<keyword>[0-9A-Za-z_]*)(?:\s*)=(?:\s*)(?<value>(?:[-+]?)(?:[0-9]+)(?:\.\d*)?)(?:(?:\s*)(?:\[(?<unit>[0-9A-Za-z/_*]*)\]?))?(?:\s*)?$")
-    .unwrap();
+    let re = Regex::new(regex_pattern).unwrap();
 
     let captures =
         re.captures(input)
@@ -329,8 +334,14 @@ pub fn parse_kvn_numeric_line_new(
         Err(nom::Err::Failure(KvnNumberParserErr::EmptyValue { input }))?
     };
 
-    // Figure F-9: CCSDS 502.0-B-3
-    let re = Regex::new(r"^(?:\s*)(?<keyword>[0-9A-Za-z_]*)(?:\s*)=(?:\s*)(?<value>(?:[-+]?)(?:[0-9]+)(?:\.\d*)?(?:[eE][+-]?(?:\d+))?)(?:(?:\s*)(?:\[(?<unit>[0-9A-Za-z/_*]*)\]?))?(?:\s*)?$").unwrap();
+    let regex_pattern = if with_unit {
+        // Figure F-9: CCSDS 502.0-B-3
+        r"^(?:\s*)(?<keyword>[0-9A-Za-z_]*)(?:\s*)=(?:\s*)(?<value>(?:[-+]?)(?:[0-9]+)(?:\.\d*)?(?:[eE][+-]?(?:\d+))?)(?:(?:\s*)(?:\[(?<unit>[0-9A-Za-z/_*]*)\]?))?(?:\s*)?$"
+    } else {
+        r"^(?:\s*)(?<keyword>[0-9A-Za-z_]*)(?:\s*)=(?:\s*)(?<value>(?:[-+]?)(?:[0-9]+)(?:\.\d*)?(?:[eE][+-]?(?:\d+))?)(?:\s*)?$"
+    };
+
+    let re = Regex::new(regex_pattern).unwrap();
 
     let captures =
         re.captures(input)
@@ -678,7 +689,7 @@ mod test {
         );
 
         assert_eq!(
-            parse_kvn_integer_line_new("SCLK_OFFSET_AT_EPOCH = 28800 [s]", false),
+            parse_kvn_integer_line_new("SCLK_OFFSET_AT_EPOCH = 28800 [s]", true),
             Ok((
                 "",
                 KvnValue {
@@ -686,6 +697,13 @@ mod test {
                     unit: Some("s".to_string())
                 },
             ))
+        );
+
+        assert_eq!(
+            parse_kvn_integer_line_new::<u32>("SCLK_OFFSET_AT_EPOCH = 28800 [s]", false),
+            Err(nom::Err::Failure(KvnNumberParserErr::InvalidFormat {
+                input: "SCLK_OFFSET_AT_EPOCH = 28800 [s]"
+            }))
         );
 
         assert_eq!(
