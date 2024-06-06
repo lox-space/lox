@@ -14,9 +14,6 @@ use nom::error::{ErrorKind, ParseError};
 use nom::sequence as ns;
 use regex::Regex;
 
-pub type KvnStringValue = KvnValue<String, String>;
-pub type KvnNumericValue = KvnValue<f64, String>;
-
 #[derive(Debug, PartialEq)]
 pub enum KvnStringParserErr<I> {
     EmptyKeyword { input: I },
@@ -206,7 +203,7 @@ pub fn kvn_line_matches_key_new<'a>(
 
 pub fn parse_kvn_string_line_new(
     input: &str,
-) -> nom::IResult<&str, KvnStringValue, KvnStringParserErr<&str>> {
+) -> nom::IResult<&str, KvnValue<String, String>, KvnStringParserErr<&str>> {
     if input.trim_start().starts_with("COMMENT") {
         return Ok((
             "",
@@ -329,7 +326,7 @@ fn is_empty_value(input: &str) -> bool {
 pub fn parse_kvn_numeric_line_new(
     input: &str,
     with_unit: bool,
-) -> nom::IResult<&str, KvnNumericValue, KvnNumberParserErr<&str>> {
+) -> nom::IResult<&str, KvnValue<f64, String>, KvnNumberParserErr<&str>> {
     if is_empty_value(input) {
         Err(nom::Err::Failure(KvnNumberParserErr::EmptyValue { input }))?
     };
