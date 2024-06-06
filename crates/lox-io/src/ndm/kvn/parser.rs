@@ -975,6 +975,8 @@ mod test {
         );
     }
 
+    use super::super::KvnDeserializer;
+
     #[derive(Default, Debug, PartialEq)]
     pub struct PositionUnits(pub std::string::String);
 

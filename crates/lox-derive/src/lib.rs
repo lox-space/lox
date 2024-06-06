@@ -21,21 +21,21 @@ fn generate_call_to_deserializer_for_kvn_type(
                 "String" => quote! {
                     crate::ndm::kvn::parser::parse_kvn_string_line_new(
                         next_line
-                    ).map_err(|x| crate::ndm::kvn::parser::KvnDeserializerErr::from(x))
+                    ).map_err(|x| crate::ndm::kvn::KvnDeserializerErr::from(x))
                     .map(|x| x.1)?
                 },
                 "f64" => quote! {
                     crate::ndm::kvn::parser::parse_kvn_numeric_line_new(
                         next_line,
                         true, //@TODO
-                    ).map_err(|x| crate::ndm::kvn::parser::KvnDeserializerErr::from(x))
+                    ).map_err(|x| crate::ndm::kvn::KvnDeserializerErr::from(x))
                     .map(|x| x.1)?
                 },
                 "i32" | "u64" => quote! {
                     crate::ndm::kvn::parser::parse_kvn_integer_line_new(
                         next_line,
                         true, //@TODO
-                    ).map_err(|x| crate::ndm::kvn::parser::KvnDeserializerErr::from(x))
+                    ).map_err(|x| crate::ndm::kvn::KvnDeserializerErr::from(x))
                     .map(|x| x.1)?
                 },
                 // Assumes the match list here exhaustively matches the one from above
@@ -44,7 +44,7 @@ fn generate_call_to_deserializer_for_kvn_type(
 
             Ok(quote! {
                 match lines.peek() {
-                    None => Err(crate::ndm::kvn::parser::KvnDeserializerErr::<&str>::UnexpectedEndOfInput {
+                    None => Err(crate::ndm::kvn::KvnDeserializerErr::<&str>::UnexpectedEndOfInput {
                         keyword: #expected_kvn_name
                     }),
                     Some(next_line) => {
@@ -58,7 +58,7 @@ fn generate_call_to_deserializer_for_kvn_type(
 
                             Ok(#parser.value)
                         } else {
-                            Err(crate::ndm::kvn::parser::KvnDeserializerErr::<&str>::UnexpectedKeyword {
+                            Err(crate::ndm::kvn::KvnDeserializerErr::<&str>::UnexpectedKeyword {
                                 found: next_line,
                                 expected: #expected_kvn_name,
                             })
@@ -77,7 +77,7 @@ fn generate_call_to_deserializer_for_kvn_type(
                         #expected_kvn_name,
                         next_line,
                         true
-                    ).map_err(|x| crate::ndm::kvn::parser::KvnDeserializerErr::from(x))
+                    ).map_err(|x| crate::ndm::kvn::KvnDeserializerErr::from(x))
                     .map(|x| x.1)?
                 },
                 "KvnNumericValue" => quote! {
@@ -85,7 +85,7 @@ fn generate_call_to_deserializer_for_kvn_type(
                         #expected_kvn_name,
                         next_line,
                         true
-                    ).map_err(|x| crate::ndm::kvn::parser::KvnDeserializerErr::from(x))
+                    ).map_err(|x| crate::ndm::kvn::KvnDeserializerErr::from(x))
                     .map(|x| x.1)?
                 },
                 "KvnIntegerValue" => quote! {
@@ -93,7 +93,7 @@ fn generate_call_to_deserializer_for_kvn_type(
                         #expected_kvn_name,
                         next_line,
                         true
-                    ).map_err(|x| crate::ndm::kvn::parser::KvnDeserializerErr::from(x))
+                    ).map_err(|x| crate::ndm::kvn::KvnDeserializerErr::from(x))
                     .map(|x| x.1)?
                 },
                 // Assumes the match list here exhaustively matches the one from above
@@ -102,7 +102,7 @@ fn generate_call_to_deserializer_for_kvn_type(
 
             Ok(quote! {
                 match lines.peek() {
-                    None => Err(crate::ndm::kvn::parser::KvnDeserializerErr::<&str>::UnexpectedEndOfInput {
+                    None => Err(crate::ndm::kvn::KvnDeserializerErr::<&str>::UnexpectedEndOfInput {
                         keyword: #expected_kvn_name
                     }),
                     Some(next_line) => {
@@ -116,7 +116,7 @@ fn generate_call_to_deserializer_for_kvn_type(
 
                             Ok(#parser)
                         } else {
-                            Err(crate::ndm::kvn::parser::KvnDeserializerErr::<&str>::UnexpectedKeyword {
+                            Err(crate::ndm::kvn::KvnDeserializerErr::<&str>::UnexpectedKeyword {
                                 found: next_line,
                                 expected: #expected_kvn_name,
                             })
@@ -135,7 +135,7 @@ fn generate_call_to_deserializer_for_kvn_type(
                 let result = if has_next_line {
                     #type_name_new::deserialize(lines)
                 } else {
-                    Err(crate::ndm::kvn::parser::KvnDeserializerErr::UnexpectedEndOfInput {
+                    Err(crate::ndm::kvn::KvnDeserializerErr::UnexpectedEndOfInput {
                         keyword: #expected_kvn_name
                     })
                 };
@@ -158,7 +158,7 @@ fn generate_call_to_deserializer_for_kvn_type_new(
                     quote! {
                         crate::ndm::kvn::parser::parse_kvn_string_line_new(
                             lines.next().unwrap()
-                        ).map_err(|x| crate::ndm::kvn::parser::KvnDeserializerErr::from(x))
+                        ).map_err(|x| crate::ndm::kvn::KvnDeserializerErr::from(x))
                         .map(|x| x.1)?
                     }
                 }
@@ -166,14 +166,14 @@ fn generate_call_to_deserializer_for_kvn_type_new(
                     crate::ndm::kvn::parser::parse_kvn_numeric_line_new(
                         lines.next().unwrap(),
                         true
-                    ).map_err(|x| crate::ndm::kvn::parser::KvnDeserializerErr::from(x))
+                    ).map_err(|x| crate::ndm::kvn::KvnDeserializerErr::from(x))
                     .map(|x| x.1)?
                 },
                 "i32" => quote! {
                     crate::ndm::kvn::parser::parse_kvn_integer_line_new(
                         lines.next().unwrap(),
                         true
-                    ).map_err(|x| crate::ndm::kvn::parser::KvnDeserializerErr::from(x))
+                    ).map_err(|x| crate::ndm::kvn::KvnDeserializerErr::from(x))
                     .map(|x| x.1)?
                 },
                 // Assumes the match list here exhaustively matches the one from above
@@ -190,7 +190,7 @@ fn generate_call_to_deserializer_for_kvn_type_new(
                     let result = if has_next_line {
                         #type_name_new::deserialize(lines)
                     } else {
-                        Err(crate::ndm::kvn::parser::KvnDeserializerErr::UnexpectedEndOfInput {
+                        Err(crate::ndm::kvn::KvnDeserializerErr::UnexpectedEndOfInput {
                             keyword: "Blala" //@TODO
                         })
                     };
@@ -281,8 +281,8 @@ fn generate_call_to_deserializer_for_option_type(
 
                             match result {
                                 Ok(item) => Some(item),
-                                Err(crate::ndm::kvn::parser::KvnDeserializerErr::UnexpectedKeyword { .. }) |
-                                Err(crate::ndm::kvn::parser::KvnDeserializerErr::UnexpectedEndOfInput { .. }) => None,
+                                Err(crate::ndm::kvn::KvnDeserializerErr::UnexpectedKeyword { .. }) |
+                                Err(crate::ndm::kvn::KvnDeserializerErr::UnexpectedEndOfInput { .. }) => None,
                                 Err(e) => Err(e)?,
                             }
                         } else {
@@ -333,8 +333,8 @@ fn generate_call_to_deserializer_for_vec_type(
 
                             match result {
                                 Ok(item) => items.push(item),
-                                Err(crate::ndm::kvn::parser::KvnDeserializerErr::UnexpectedKeyword { .. }) |
-                                Err(crate::ndm::kvn::parser::KvnDeserializerErr::UnexpectedEndOfInput { .. }) => break,
+                                Err(crate::ndm::kvn::KvnDeserializerErr::UnexpectedKeyword { .. }) |
+                                Err(crate::ndm::kvn::KvnDeserializerErr::UnexpectedEndOfInput { .. }) => break,
                                 Err(e) => Err(e)?,
                             }
                         }
@@ -595,7 +595,7 @@ fn deserializer_for_struct_with_named_fields(
 
                         quote! {
                             match lines.peek() {
-                                None => Err(crate::ndm::kvn::parser::KvnDeserializerErr::<&str>::UnexpectedEndOfInput {
+                                None => Err(crate::ndm::kvn::KvnDeserializerErr::<&str>::UnexpectedEndOfInput {
                                     keyword: #expected_kvn_name
                                 })?,
                                 Some(next_line) => {
@@ -607,7 +607,7 @@ fn deserializer_for_struct_with_named_fields(
                                     if #condition_shortcut line_matches {
                                         #field_type_new::deserialize(lines)?
                                     } else {
-                                        Err(crate::ndm::kvn::parser::KvnDeserializerErr::<&str>::UnexpectedKeyword {
+                                        Err(crate::ndm::kvn::KvnDeserializerErr::<&str>::UnexpectedKeyword {
                                             found: next_line,
                                             expected: #expected_kvn_name,
                                         })?
@@ -714,11 +714,11 @@ pub fn derive_kvn_deserialize(item: proc_macro::TokenStream) -> proc_macro::Toke
     let (impl_generics, type_generics, where_clause) = item.generics.split_for_impl();
 
     let struct_deserializer = quote! {
-        impl #impl_generics crate::ndm::kvn::parser::KvnDeserializer for #type_name #type_generics
+        impl #impl_generics crate::ndm::kvn::KvnDeserializer for #type_name #type_generics
         #where_clause
         {
             fn deserialize<'a>(lines: &mut ::std::iter::Peekable<impl Iterator<Item = &'a str>>)
-            -> Result<#type_name, crate::ndm::kvn::parser::KvnDeserializerErr<&'a str>> {
+            -> Result<#type_name, crate::ndm::kvn::KvnDeserializerErr<&'a str>> {
 
                 #struct_deserializer
             }
