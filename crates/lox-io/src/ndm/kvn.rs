@@ -1,3 +1,5 @@
+//! The public interface for the `KvnDeserializer` type
+
 mod deserializer;
 mod parser;
 

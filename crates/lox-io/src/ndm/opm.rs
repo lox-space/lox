@@ -11,9 +11,7 @@
 //! To deserialize an XML message:
 //!
 //! ```
-//! use quick_xml::de::from_str;
-//!
-//! let message: OpmType = from_str(xml).unwrap();
+//! let message: OpmType = quick_xml::de::from_str(xml).unwrap();
 //! ```
 
 use serde;

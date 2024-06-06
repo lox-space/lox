@@ -6,6 +6,20 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+//! Deserializers for JSON CCSDS Orbit Mean Elements Message
+//!
+//! To deserialize a JSON message:
+//!
+//! ```
+//! let message: OmmType = serde_json::de::from_str(json).unwrap();
+//! ```
+//!
+//! To deserialize a list of JSON messages:
+//!
+//! ```
+//! let message: Vec<OmmType> = serde_json::de::from_str(json).unwrap();
+//! ```
+
 use serde_aux::prelude::*;
 use std::collections::HashMap;
 
