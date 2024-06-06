@@ -6,6 +6,16 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+//! Deserializers for XML and KVN CCSDS Orbit Parameter Message
+//!
+//! To deserialize an XML message:
+//!
+//! ```
+//! use quick_xml::de::from_str;
+//!
+//! let message: OpmType = from_str(xml).unwrap();
+//! ```
+
 use serde;
 
 use super::common;

@@ -1,3 +1,13 @@
+//! Deserializers for XML CCSDS Navigation Data Message Combined Instantiation
+//!
+//! To deserialize an XML message:
+//!
+//! ```
+//! use quick_xml::de::from_str;
+//!
+//! let message: NdmType = from_str(xml).unwrap();
+//! ```
+
 use serde;
 
 use super::{ocm, oem, omm, opm};
