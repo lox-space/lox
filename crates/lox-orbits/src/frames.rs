@@ -20,6 +20,10 @@ pub trait ReferenceFrame {
     fn abbreviation(&self) -> String;
 }
 
+pub trait CoordinateSystem<T: ReferenceFrame> {
+    fn reference_frame(&self) -> T;
+}
+
 pub trait FrameTransformationProvider: OffsetProvider {}
 
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
