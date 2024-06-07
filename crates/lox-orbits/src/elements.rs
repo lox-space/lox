@@ -40,6 +40,7 @@ where
     T: Datetime,
     O: PointMass,
 {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         time: T,
         origin: O,
