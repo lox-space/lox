@@ -20,35 +20,35 @@ use super::common;
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct BStarUnits(#[serde(rename = "$text")] pub std::string::String);
+pub struct BStarUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct BTermUnits(#[serde(rename = "$text")] pub std::string::String);
+pub struct BTermUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct AgomUnits(#[serde(rename = "$text")] pub std::string::String);
+pub struct AgomUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct ElementSetNoType(#[serde(rename = "$text")] pub std::string::String);
+pub struct ElementSetNoType(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct RevUnits(#[serde(rename = "$text")] pub std::string::String);
+pub struct RevUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct DRevUnits(#[serde(rename = "$text")] pub std::string::String);
+pub struct DRevUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct DdRevUnits(#[serde(rename = "$text")] pub std::string::String);
+pub struct DdRevUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct SpacewarnType(#[serde(rename = "$text")] pub std::string::String);
+pub struct SpacewarnType(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
