@@ -183,7 +183,7 @@ pub fn kvn_line_matches_key_new<'a>(
 pub fn parse_kvn_string_line_new(
     input: &str,
 ) -> nom::IResult<&str, KvnValue<String, String>, KvnStringParserErr<&str>> {
-    if input.trim_start().starts_with("COMMENT") {
+    if input.trim_start().starts_with("COMMENT ") {
         return Ok((
             "",
             KvnValue {
