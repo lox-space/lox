@@ -1490,18 +1490,18 @@ mod test {
         let kvn = r#"CCSDS_OMM_VERS = 3.0
  COMMENT this is a comment
  COMMENT here is another one
- CREATION_DATE = 2007-065T16:00:00
+ CREATION_DATE = 2007-06-05T16:00:00
  ORIGINATOR = NOAA/USA
  COMMENT this comment doesn't say much
  OBJECT_NAME = GOES 9
  OBJECT_ID = 1995-025A
  CENTER_NAME = EARTH
  REF_FRAME = TOD
- REF_FRAME_EPOCH = 2000-003T10:34:00
+ REF_FRAME_EPOCH = 2000-01-03T10:34:00
  TIME_SYSTEM = MRT
  MEAN_ELEMENT_THEORY = SOME THEORY
  COMMENT the following data is what we're looking for
- EPOCH = 2000-005T10:00:00
+ EPOCH = 2000-01-05T10:00:00
  SEMI_MAJOR_AXIS = 6800
  ECCENTRICITY = 0.0005013
  INCLINATION = 3.0539
@@ -1547,7 +1547,7 @@ mod test {
                         "here is another one".to_string(),
                     ],
                     classification_list: vec![],
-                    creation_date: common::EpochType("2007-065T16:00:00".to_string(),),
+                    creation_date: common::EpochType("2007-06-05T16:00:00".to_string(),),
                     originator: "NOAA/USA".to_string(),
                     message_id: None,
                 },
@@ -1560,7 +1560,7 @@ mod test {
                             center_name: "EARTH".to_string(),
                             ref_frame: "TOD".to_string(),
                             ref_frame_epoch: Some(common::EpochType(
-                                "2000-003T10:34:00".to_string(),
+                                "2000-01-03T10:34:00".to_string(),
                             ),),
                             time_system: "MRT".to_string(),
                             mean_element_theory: "SOME THEORY".to_string(),
@@ -1571,7 +1571,7 @@ mod test {
                             ],
                             mean_elements: MeanElementsType {
                                 comment_list: vec![],
-                                epoch: common::EpochType("2000-005T10:00:00".to_string(),),
+                                epoch: common::EpochType("2000-01-05T10:00:00".to_string(),),
                                 semi_major_axis: Some(common::DistanceType {
                                     base: 6800.0,
                                     units: None,
