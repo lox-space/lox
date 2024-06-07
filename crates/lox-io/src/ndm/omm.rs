@@ -130,7 +130,8 @@ pub struct OmmType {
     #[serde(rename = "body")]
     pub body: OmmBody,
     #[serde(rename = "@id")]
-    pub id: String,
+    // Marked as option for the KVN deserializer
+    pub id: Option<String>,
     #[serde(rename = "@version")]
     pub version: String,
 }
@@ -615,7 +616,7 @@ mod test {
                         },
                     },
                 },
-                id: "CCSDS_OMM_VERS".to_string(),
+                id: Some("CCSDS_OMM_VERS".to_string()),
                 version: "2.0".to_string(),
             });
     }
@@ -748,7 +749,7 @@ mod test {
                         },
                     },
                 },
-                id: "CCSDS_OMM_VERS".to_string(),
+                id: Some("CCSDS_OMM_VERS".to_string()),
                 version: "2.0".to_string(),
             }
         );
@@ -997,7 +998,7 @@ mod test {
                         },
                     },
                 },
-                id: "CCSDS_OMM_VERS".to_string(),
+                id: Some("CCSDS_OMM_VERS".to_string()),
                 version: "3.0".to_string(),
             }
         );
@@ -1249,7 +1250,7 @@ mod test {
                         },
                     },
                 },
-                id: "CCSDS_OMM_VERS".to_string(),
+                id: Some("CCSDS_OMM_VERS".to_string()),
                 version: "3.0".to_string(),
             }
         );
@@ -1399,7 +1400,7 @@ mod test {
                         },
                     },
                 },
-                id: "CCSDS_OMM_VERS".to_string(),
+                id: Some("CCSDS_OMM_VERS".to_string()),
                 version: "2.0".to_string(),
             }
         );
