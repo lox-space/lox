@@ -425,6 +425,7 @@ dependencies = [
  "lox-time",
  "lox-utils",
  "pyo3",
+ "thiserror",
 ]
 
 [[package]]

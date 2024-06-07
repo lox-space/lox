@@ -6,7 +6,7 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::calendar_dates::CalendarDate;
+use crate::calendar_dates::{CalendarDate, Date};
 use crate::deltas::{TimeDelta, ToDelta};
 use crate::julian_dates::{Epoch, JulianDate, Unit};
 use crate::prelude::{CivilTime, Tai, Tcb, Tcg, Tdb, TimeScale, Tt, Ut1};
@@ -14,15 +14,17 @@ use crate::python::deltas::PyTimeDelta;
 use crate::python::time_scales::PyTimeScale;
 use crate::python::ut1::PyUt1Provider;
 use crate::python::utc::PyUtc;
+use crate::time_of_day::TimeOfDay;
 use crate::transformations::{ToTai, ToTcb, ToTcg, ToTdb, ToTt, TryToScale};
 use crate::ut1::{DeltaUt1Tai, DeltaUt1TaiProvider, ExtrapolatedDeltaUt1Tai};
 use crate::utc::transformations::ToUtc;
-use crate::{Time, TimeError};
+use crate::{Datetime, Time, TimeError};
 use lox_utils::is_close::IsClose;
 use pyo3::basic::CompareOp;
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::types::{PyAnyMethods, PyType};
 use pyo3::{pyclass, pymethods, Bound, PyAny, PyErr, PyObject, PyResult, Python};
+use std::ops::{Add, Sub};
 use std::str::FromStr;
 
 use super::ut1::PyNoOpOffsetProvider;
@@ -297,6 +299,44 @@ impl JulianDate for PyTime {
         self.0.julian_date(epoch, unit)
     }
 }
+
+impl Add<TimeDelta> for PyTime {
+    type Output = PyTime;
+
+    fn add(self, rhs: TimeDelta) -> Self::Output {
+        PyTime(self.0 + rhs)
+    }
+}
+
+impl Sub<TimeDelta> for PyTime {
+    type Output = PyTime;
+
+    fn sub(self, rhs: TimeDelta) -> Self::Output {
+        PyTime(self.0 - rhs)
+    }
+}
+
+impl Sub<PyTime> for PyTime {
+    type Output = TimeDelta;
+
+    fn sub(self, rhs: PyTime) -> TimeDelta {
+        self.0 - rhs.0
+    }
+}
+
+impl CalendarDate for PyTime {
+    fn date(&self) -> Date {
+        self.0.date()
+    }
+}
+
+impl CivilTime for PyTime {
+    fn time(&self) -> TimeOfDay {
+        self.0.time()
+    }
+}
+
+impl Datetime for PyTime {}
 
 impl TryToScale<Tai, DeltaUt1Tai> for PyTime {
     fn try_to_scale(

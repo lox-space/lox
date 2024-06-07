@@ -275,11 +275,11 @@ pub trait PointMass: Body {
 }
 
 // Planets.
-pub trait Planet: PointMass + Spheroid + DynClone {}
+pub trait Planet: PointMass + Spheroid + DynClone + std::fmt::Debug {}
 clone_trait_object!(Planet);
 
 // Barycenters.
-pub trait Barycenter: PointMass + DynClone {}
+pub trait Barycenter: PointMass + DynClone + std::fmt::Debug {}
 clone_trait_object!(Barycenter);
 
 impl PointMass for SolarSystemBarycenter {
@@ -289,11 +289,11 @@ impl PointMass for SolarSystemBarycenter {
 }
 
 // Satellites.
-pub trait Satellite: PointMass + TriAxial + DynClone {}
+pub trait Satellite: PointMass + TriAxial + DynClone + std::fmt::Debug {}
 clone_trait_object!(Satellite);
 
 // Minor bodies.
-pub trait MinorBody: PointMass + TriAxial + DynClone {}
+pub trait MinorBody: PointMass + TriAxial + DynClone + std::fmt::Debug {}
 clone_trait_object!(MinorBody);
 
 pub type PolynomialCoefficients = (f64, f64, f64, &'static [f64]);

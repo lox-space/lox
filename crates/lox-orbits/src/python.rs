@@ -6,11 +6,21 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::{frames::FrameTransformationProvider, states::State};
+use crate::{
+    frames::FrameTransformationProvider,
+    states::State,
+    trajectories::{Trajectory, TrajectoryError},
+};
+use glam::DVec3;
 use lox_bodies::*;
 use lox_time::{python::time::PyTime, ut1::DeltaUt1Tai};
-use pyo3::{pyclass, pymethods};
-use python::PyBody;
+use pyo3::{
+    exceptions::PyValueError,
+    pyclass, pymethods,
+    types::{PyAnyMethods, PyList},
+    Bound, PyAny, PyErr, PyResult,
+};
+use python::{PyBody, PyPlanet};
 
 mod generated;
 
@@ -203,7 +213,48 @@ pub enum PyFrame {
 impl FrameTransformationProvider for DeltaUt1Tai {}
 
 #[pyclass(name = "State", module = "lox_space")]
+#[derive(Debug, Clone)]
 pub struct PyState(pub State<PyTime, PyBody, PyFrame>);
 
 #[pymethods]
-impl PyState {}
+impl PyState {
+    #[new]
+    #[pyo3(signature = (time, position, velocity, origin = "Earth", frame = "ICRF"))]
+    fn new(
+        time: PyTime,
+        position: (f64, f64, f64),
+        velocity: (f64, f64, f64),
+        origin: &str,
+        frame: &str,
+    ) -> PyResult<Self> {
+        let origin: PyBody = origin.parse()?;
+        let frame: PyFrame = frame.parse()?;
+
+        Ok(PyState(State::new(
+            time,
+            origin,
+            frame,
+            DVec3::new(position.0, position.1, position.2),
+            DVec3::new(velocity.0, velocity.1, velocity.2),
+        )))
+    }
+}
+
+#[pyclass(name = "Trajectory", module = "lox_space")]
+pub struct PyTrajectory(pub Trajectory<PyTime, PyBody, PyFrame>);
+
+impl From<TrajectoryError> for PyErr {
+    fn from(err: TrajectoryError) -> Self {
+        PyValueError::new_err(err.to_string())
+    }
+}
+
+#[pymethods]
+impl PyTrajectory {
+    #[new]
+    fn new(states: &Bound<'_, PyList>) -> PyResult<Self> {
+        let states: Vec<PyState> = states.extract()?;
+        let states: Vec<State<PyTime, PyBody, PyFrame>> = states.into_iter().map(|s| s.0).collect();
+        Ok(PyTrajectory(Trajectory::new(&states)?))
+    }
+}

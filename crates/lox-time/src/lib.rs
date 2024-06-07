@@ -479,6 +479,19 @@ impl<T: TimeScale> CalendarDate for Time<T> {
     }
 }
 
+pub trait Datetime:
+    Sized
+    + CivilTime
+    + CalendarDate
+    + Sub<Output = TimeDelta>
+    + Add<TimeDelta>
+    + Sub<TimeDelta>
+    + JulianDate
+{
+}
+
+impl<T: TimeScale> Datetime for Time<T> {}
+
 /// `TimeBuilder` supports the construction of [Time] instances piecewise using the builder pattern.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TimeBuilder<T: TimeScale> {
