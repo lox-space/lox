@@ -545,7 +545,6 @@ mod tests {
     #[test]
     fn test_pytime() {
         let time = PyTime::new("TAI", 2000, 1, 1, 0, 0, 12.123456789123).unwrap();
-        dbg!(&time);
         assert_eq!(
             time.__repr__(),
             "Time(\"TAI\", 2000, 1, 1, 0, 0, 12.123456789123)"

@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 fast_polynomial.workspace = true
+glam.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]

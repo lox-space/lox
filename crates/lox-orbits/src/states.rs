@@ -6,18 +6,10 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::anomalies::{eccentric_to_true, hyperbolic_to_true};
-use crate::elements::{
-    azimuth, eccentricity_vector, is_circular, is_equatorial, Keplerian, ToKeplerian,
-};
-use crate::{
-    frames::{
-        BodyFixed, CoordinateSystem, FrameTransformationProvider, Icrf,
-        NoOpFrameTransformationProvider, ReferenceFrame, TryToFrame,
-    },
-    origins::{CoordinateOrigin, Origin},
-};
+use std::convert::Infallible;
+
 use glam::DVec3;
+
 use lox_bodies::{PointMass, RotationalElements};
 use lox_time::{
     julian_dates::JulianDate,
@@ -26,7 +18,18 @@ use lox_time::{
     ut1::DeltaUt1TaiProvider,
     Datetime,
 };
-use std::convert::Infallible;
+use lox_utils::glam::Azimuth;
+use lox_utils::math::{mod_two_pi, normalize_two_pi};
+
+use crate::anomalies::{eccentric_to_true, hyperbolic_to_true};
+use crate::elements::{is_circular, is_equatorial, Keplerian, ToKeplerian};
+use crate::{
+    frames::{
+        BodyFixed, CoordinateSystem, FrameTransformationProvider, Icrf,
+        NoOpFrameTransformationProvider, ReferenceFrame, TryToFrame,
+    },
+    origins::{CoordinateOrigin, Origin},
+};
 
 pub trait ToCartesian<T: Datetime, O: Origin, R: ReferenceFrame> {
     fn to_cartesian(&self) -> State<T, O, R>;
@@ -84,6 +87,25 @@ where
 
     pub fn velocity(&self) -> DVec3 {
         self.velocity
+    }
+}
+
+impl<T, O, R> State<T, O, R>
+where
+    T: Datetime,
+    O: PointMass,
+    R: ReferenceFrame,
+{
+    fn eccentricity_vector(&self) -> DVec3 {
+        let r = self.position();
+        let v = self.velocity();
+        let mu = self.origin.gravitational_parameter();
+
+        let rm = r.length();
+        let v2 = v.dot(v);
+        let rv = r.dot(v);
+
+        ((v2 - mu / rm) * r - rv * v) / mu
     }
 }
 
@@ -176,66 +198,68 @@ where
     R: ReferenceFrame,
 {
     fn to_keplerian(&self) -> Keplerian<T, O> {
-        let grav_param = self.origin.gravitational_parameter();
-        let r = self.position.length();
-        let v = self.velocity.length();
-        let h = self.position.cross(self.velocity);
+        let mu = self.origin.gravitational_parameter();
+        let r = self.position();
+        let v = self.velocity();
+        let rm = r.length();
+        let vm = v.length();
+        let h = r.cross(v);
         let hm = h.length();
         let node = DVec3::Z.cross(h);
-        let e = eccentricity_vector(grav_param, self.position, self.velocity);
+        let e = self.eccentricity_vector();
         let eccentricity = e.length();
         let inclination = h.angle_between(DVec3::Z);
 
         let equatorial = is_equatorial(inclination);
         let circular = is_circular(eccentricity);
 
-        let semi_major = if circular {
-            hm.powi(2) / grav_param
+        let semi_major_axis = if circular {
+            hm.powi(2) / mu
         } else {
-            -grav_param / (2.0 * (v.powi(2) / 2.0 - grav_param / r))
+            -mu / (2.0 * (vm.powi(2) / 2.0 - mu / rm))
         };
 
-        let ascending_node;
-        let periapsis_arg;
+        let longitude_of_ascending_node;
+        let argument_of_periapsis;
         let true_anomaly;
         if equatorial && !circular {
-            ascending_node = 0.0;
-            periapsis_arg = azimuth(e);
-            true_anomaly = (h.dot(e.cross(self.position)) / hm).atan2(self.position.dot(e));
+            longitude_of_ascending_node = 0.0;
+            argument_of_periapsis = e.azimuth();
+            true_anomaly = (h.dot(e.cross(r)) / hm).atan2(r.dot(e));
         } else if !equatorial && circular {
-            ascending_node = azimuth(node);
-            periapsis_arg = 0.0;
-            true_anomaly = (self.position.dot(h.cross(node)) / hm).atan2(self.position.dot(node));
+            longitude_of_ascending_node = node.azimuth();
+            argument_of_periapsis = 0.0;
+            true_anomaly = (r.dot(h.cross(node)) / hm).atan2(r.dot(node));
         } else if equatorial && circular {
-            ascending_node = 0.0;
-            periapsis_arg = 0.0;
-            true_anomaly = azimuth(self.position);
+            longitude_of_ascending_node = 0.0;
+            argument_of_periapsis = 0.0;
+            true_anomaly = r.azimuth();
         } else {
-            if semi_major > 0.0 {
-                let e_se = self.position.dot(self.velocity) / (grav_param * semi_major).sqrt();
-                let e_ce = (r * v.powi(2)) / grav_param - 1.0;
+            if semi_major_axis > 0.0 {
+                let e_se = r.dot(v) / (mu * semi_major_axis).sqrt();
+                let e_ce = (rm * vm.powi(2)) / mu - 1.0;
                 true_anomaly = eccentric_to_true(e_se.atan2(e_ce), eccentricity);
             } else {
-                let e_sh = self.position.dot(self.velocity) / (-grav_param * semi_major).sqrt();
-                let e_ch = (r * v.powi(2)) / grav_param - 1.0;
+                let e_sh = r.dot(v) / (-mu * semi_major_axis).sqrt();
+                let e_ch = (rm * vm.powi(2)) / mu - 1.0;
                 true_anomaly =
                     hyperbolic_to_true(((e_ch + e_sh) / (e_ch - e_sh)).ln() / 2.0, eccentricity);
             }
-            ascending_node = azimuth(node);
-            let px = self.position.dot(node);
-            let py = self.position.dot(h.cross(node)) / hm;
-            periapsis_arg = py.atan2(px) - true_anomaly;
+            longitude_of_ascending_node = node.azimuth();
+            let px = r.dot(node);
+            let py = r.dot(h.cross(node)) / hm;
+            argument_of_periapsis = py.atan2(px) - true_anomaly;
         }
 
         Keplerian::new(
             self.time(),
             self.origin(),
-            semi_major,
+            semi_major_axis,
             eccentricity,
             inclination,
-            ascending_node,
-            periapsis_arg,
-            true_anomaly,
+            mod_two_pi(longitude_of_ascending_node),
+            mod_two_pi(argument_of_periapsis),
+            normalize_two_pi(true_anomaly, 0.0),
         )
     }
 }
@@ -243,7 +267,8 @@ where
 #[cfg(test)]
 mod tests {
     use float_eq::assert_float_eq;
-    use lox_bodies::Jupiter;
+
+    use lox_bodies::{Earth, Jupiter};
     use lox_time::{time, time_scales::Tdb, Time};
 
     use super::*;
@@ -279,5 +304,34 @@ mod tests {
         assert_float_eq!(s1.velocity().x, v1.x, rel <= 1e-8);
         assert_float_eq!(s1.velocity().y, v1.y, rel <= 1e-8);
         assert_float_eq!(s1.velocity().z, v1.z, rel <= 1e-8);
+    }
+
+    #[test]
+    fn test_state_to_keplerian_roundtrip() {
+        let time = time!(Tdb, 2023, 3, 25, 21, 8, 0.0).expect("time should be valid");
+        let pos = DVec3::new(
+            -0.107622532467967e7,
+            -0.676589636432773e7,
+            -0.332308783350379e6,
+        ) * 1e-3;
+        let vel = DVec3::new(
+            0.935685775154103e4,
+            -0.331234775037644e4,
+            -0.118801577532701e4,
+        ) * 1e-3;
+
+        let cartesian = State::new(time, Earth, Icrf, pos, vel);
+        let cartesian1 = cartesian.to_keplerian().to_cartesian();
+
+        assert_eq!(cartesian1.time(), time);
+        assert_eq!(cartesian1.origin(), Earth);
+        assert_eq!(cartesian1.reference_frame(), Icrf);
+
+        assert_float_eq!(cartesian.position().x, cartesian1.position().x, rel <= 1e-8);
+        assert_float_eq!(cartesian.position().y, cartesian1.position().y, rel <= 1e-8);
+        assert_float_eq!(cartesian.position().z, cartesian1.position().z, rel <= 1e-8);
+        assert_float_eq!(cartesian.velocity().x, cartesian1.velocity().x, rel <= 1e-6);
+        assert_float_eq!(cartesian.velocity().y, cartesian1.velocity().y, rel <= 1e-6);
+        assert_float_eq!(cartesian.velocity().z, cartesian1.velocity().z, rel <= 1e-6);
     }
 }

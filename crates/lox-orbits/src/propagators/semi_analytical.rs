@@ -164,7 +164,7 @@ mod tests {
     fn test_vallado_propagator() {
         let utc = utc!(2023, 3, 25, 21, 8, 0.0).unwrap();
         let time = utc.to_tdb();
-        let semi_major = 24464560.0e-3;
+        let semi_major = 24464.560;
         let eccentricity = 0.7311;
         let inclination = 0.122138;
         let ascending_node = 1.00681;
@@ -194,8 +194,12 @@ mod tests {
         assert_float_eq!(k1.semi_major_axis(), semi_major, rel <= 1e-8);
         assert_float_eq!(k1.eccentricity(), eccentricity, rel <= 1e-8);
         assert_float_eq!(k1.inclination(), inclination, rel <= 1e-8);
-        assert_float_eq!(k1.ascending_node(), ascending_node, rel <= 1e-8);
-        assert_float_eq!(k1.periapsis_argument(), periapsis_arg, rel <= 1e-8);
+        assert_float_eq!(
+            k1.longitude_of_ascending_node(),
+            ascending_node,
+            rel <= 1e-8
+        );
+        assert_float_eq!(k1.argument_of_periapsis(), periapsis_arg, rel <= 1e-8);
         assert_float_eq!(k1.true_anomaly(), true_anomaly, rel <= 1e-8);
     }
 }

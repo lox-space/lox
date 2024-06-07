@@ -8,7 +8,7 @@ mod stumpff;
 
 pub trait Propagator<T, O, R>
 where
-    T: Datetime,
+    T: Datetime + Clone,
     O: Origin,
     R: ReferenceFrame,
 {
@@ -26,7 +26,8 @@ where
         initial_state: State<T, O, R>,
         time: T,
     ) -> Result<State<T, O, R>, Self::Error> {
-        self.state_from_delta(initial_state, time.to_delta())
+        let dt = time - initial_state.time();
+        self.state_from_delta(initial_state, dt)
     }
     // Takes a slice of `TimeDelta` and returns a `BaseTrajectory` implementation
     fn trajectory_from_deltas(
@@ -40,9 +41,13 @@ where
         initial_state: State<T, O, R>,
         times: &[T],
     ) -> Result<Trajectory<T, O, R>, Self::Error> {
+        let t0 = initial_state.time();
         self.trajectory_from_deltas(
             initial_state,
-            &times.iter().map(|t| t.to_delta()).collect::<Vec<_>>(),
+            &times
+                .iter()
+                .map(|t| t.clone() - t0.clone())
+                .collect::<Vec<_>>(),
         )
     }
 }
