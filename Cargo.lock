@@ -525,6 +525,7 @@ version = "0.1.0"
 dependencies = [
  "float_eq",
  "glam",
+ "libm",
  "lox-bodies",
  "lox-time",
  "lox-utils",

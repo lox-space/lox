@@ -484,9 +484,10 @@ pub trait Datetime:
     + CivilTime
     + CalendarDate
     + Sub<Output = TimeDelta>
-    + Add<TimeDelta>
-    + Sub<TimeDelta>
+    + Add<TimeDelta, Output = Self>
+    + Sub<TimeDelta, Output = Self>
     + JulianDate
+    + ToDelta
 {
 }
 
