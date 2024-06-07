@@ -6,8 +6,11 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+pub mod anomalies;
+pub mod elements;
 pub mod frames;
 pub mod origins;
+pub mod propagators;
 #[cfg(feature = "python")]
 pub mod python;
 pub mod rotations;

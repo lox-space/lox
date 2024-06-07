@@ -6,6 +6,7 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use crate::elements::Keplerian;
 use crate::{
     frames::FrameTransformationProvider,
     states::State,
@@ -239,6 +240,9 @@ impl PyState {
         )))
     }
 }
+
+#[pyclass(name = "Keplerian", module = "lox_space")]
+pub struct PyKeplerian(pub Keplerian<PyTime, PyBody>);
 
 #[pyclass(name = "Trajectory", module = "lox_space")]
 pub struct PyTrajectory(pub Trajectory<PyTime, PyBody, PyFrame>);

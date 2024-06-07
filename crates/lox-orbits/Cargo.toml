@@ -11,12 +11,13 @@ lox-bodies.workspace = true
 lox-time.workspace = true
 lox-utils.workspace = true
 
+float_eq.workspace = true
 glam.workspace = true
+libm.workspace = true
 pyo3 = { workspace = true, optional = true }
 thiserror.workspace = true
 
 [dev-dependencies]
-float_eq.workspace = true
 pyo3 = { workspace = true, features = ["auto-initialize"] }
 
 [features]
