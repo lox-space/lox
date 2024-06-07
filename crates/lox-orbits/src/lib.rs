@@ -6,6 +6,8 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+pub use glam::DVec3;
+
 pub mod anomalies;
 pub mod elements;
 pub mod frames;

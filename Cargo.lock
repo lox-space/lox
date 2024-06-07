@@ -459,17 +459,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lox-coords"
-version = "0.1.0"
-dependencies = [
- "float_eq",
- "glam",
- "lox-bodies",
- "lox-time",
- "lox-utils",
-]
-
-[[package]]
 name = "lox-derive"
 version = "0.1.0"
 dependencies = [
@@ -539,7 +528,6 @@ version = "0.1.0"
 dependencies = [
  "divan",
  "lox-bodies",
- "lox-coords",
  "lox-orbits",
  "lox-time",
  "lox-utils",
