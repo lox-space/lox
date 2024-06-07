@@ -630,36 +630,31 @@ fn deserializers_for_struct_with_unnamed_fields(
     type_name: &proc_macro2::Ident,
     fields: &syn::punctuated::Punctuated<Field, syn::token::Comma>,
 ) -> proc_macro2::TokenStream {
-    let field_deserializers: Result<Vec<_>, _> = fields
-        .iter()
-        .enumerate()
-        .map(|(_, field)| {
-            // Unwrap is okay because we expect this span to come from the source code
-            let field_type = extract_type_path(&field.ty)
-                .unwrap()
-                .span()
-                .source_text()
-                .unwrap();
-            let field_type_new = extract_type_path(&field.ty).unwrap();
+    let field = fields
+        .first()
+        .expect("We expect exactly one item in structs with unnamed fields");
 
-            let deserializer_for_kvn_type =
-                generate_call_to_deserializer_for_kvn_type_new(&field_type, field_type_new)?;
+    // Unwrap is okay because we expect this span to come from the source code
+    let field_type = extract_type_path(&field.ty)
+        .unwrap()
+        .span()
+        .source_text()
+        .unwrap();
+    let field_type_new = extract_type_path(&field.ty).unwrap();
 
-            Ok(quote! {
-                #deserializer_for_kvn_type.value,
-            })
-        })
-        .collect();
+    let deserializer_for_kvn_type =
+        generate_call_to_deserializer_for_kvn_type_new(&field_type, field_type_new);
 
-    if let Err(e) = field_deserializers {
-        return e;
-    }
-
-    let field_deserializers = field_deserializers.unwrap();
+    let deserializer_for_kvn_type = match deserializer_for_kvn_type {
+        Ok(deserializer_for_kvn_type) => quote! {
+            #deserializer_for_kvn_type.value,
+        },
+        Err(e) => return e.into(),
+    };
 
     quote! {
         Ok(#type_name (
-            #(#field_deserializers)*
+            #deserializer_for_kvn_type
         ))
     }
 }
