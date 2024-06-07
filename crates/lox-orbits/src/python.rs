@@ -18,9 +18,9 @@ use pyo3::{
     exceptions::PyValueError,
     pyclass, pymethods,
     types::{PyAnyMethods, PyList},
-    Bound, PyAny, PyErr, PyResult,
+    Bound, PyErr, PyResult,
 };
-use python::{PyBody, PyPlanet};
+use python::PyBody;
 
 mod generated;
 
