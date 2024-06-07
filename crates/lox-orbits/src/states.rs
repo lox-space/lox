@@ -23,6 +23,7 @@ use lox_time::{
 };
 use std::convert::Infallible;
 
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct State<T, O: Origin, R: ReferenceFrame> {
     time: T,
     origin: O,

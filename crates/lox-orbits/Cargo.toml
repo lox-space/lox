@@ -13,6 +13,7 @@ lox-utils.workspace = true
 
 glam.workspace = true
 pyo3 = { workspace = true, optional = true }
+thiserror.workspace = true
 
 [dev-dependencies]
 float_eq.workspace = true

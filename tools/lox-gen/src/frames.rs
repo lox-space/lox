@@ -85,17 +85,22 @@ pub fn generate_code(frames: &[Frame]) -> String {
 
     let mut match_arms_name = quote! {};
     let mut match_arms_abbreviation = quote! {};
+    let mut match_arms_from_str = quote! {};
 
     frames.iter().for_each(|f| {
         let ident = f.ident();
         let test_ident = format_ident!("test_reference_frame_{}", f.abbreviation.to_lowercase());
         let name = f.name;
         let abbreviation = f.abbreviation;
+        let abbreviation_lowercase = abbreviation.to_lowercase();
         match_arms_name.extend(quote! {
             PyFrame::#ident => #name.to_string(),
         });
         match_arms_abbreviation.extend(quote! {
             PyFrame::#ident => #abbreviation.to_string(),
+        });
+        match_arms_from_str.extend(quote! {
+            #abbreviation | #abbreviation_lowercase => Ok(PyFrame::#ident),
         });
 
         generate_transform(f, frames, &mut code);
@@ -123,9 +128,21 @@ pub fn generate_code(frames: &[Frame]) -> String {
                 }
             }
         }
+
+        impl FromStr for PyFrame {
+            type Err = PyErr;
+
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                match s {
+                    #match_arms_from_str
+                    _ => Err(PyValueError::new_err("unknown reference frame")),
+                }
+            }
+        }
     });
 
     let module = quote! {
+        use std::str::FromStr;
         use crate::frames::{
             BodyFixed, CoordinateSystem, FrameTransformationProvider, Icrf, ReferenceFrame, TryToFrame,
         };
@@ -135,6 +152,8 @@ pub fn generate_code(frames: &[Frame]) -> String {
         use lox_bodies::*;
         use lox_time::python::time::PyTime;
         use lox_time::ut1::DeltaUt1TaiProvider;
+        use pyo3::PyErr;
+        use pyo3::exceptions::PyValueError;
 
         #code
 
