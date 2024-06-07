@@ -11,6 +11,104 @@
 //! To deserialize an XML message:
 //!
 //! ```
+//! # let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+//! # <opm  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+//! # xsi:noNamespaceSchemaLocation="http://sanaregistry.org/r/ndmxml/ndmxml-1.0-master.xsd"
+//! # id="CCSDS_OPM_VERS" version="3.0">
+//! #
+//! # <header>
+//! # <COMMENT>THIS IS AN XML VERSION OF THE OPM</COMMENT>
+//! # <CREATION_DATE>2001-11-06T09:23:57</CREATION_DATE>
+//! # <ORIGINATOR>JAXA</ORIGINATOR>
+//! # <MESSAGE_ID>OPM 201113719185</MESSAGE_ID>
+//! # </header>
+//! # <body>
+//! # <segment>
+//! # <metadata>
+//! #     <COMMENT>GEOCENTRIC, CARTESIAN, EARTH FIXED</COMMENT>
+//! #     <OBJECT_NAME>OSPREY 5</OBJECT_NAME>
+//! #     <OBJECT_ID>1998-999A</OBJECT_ID>
+//! #     <CENTER_NAME>EARTH</CENTER_NAME>
+//! #     <REF_FRAME>TOD</REF_FRAME>
+//! #     <REF_FRAME_EPOCH>1998-12-18T14:28:15.1172</REF_FRAME_EPOCH>
+//! #     <TIME_SYSTEM>UTC</TIME_SYSTEM>
+//! # </metadata>
+//! # <data>
+//! #     <stateVector>
+//! #         <EPOCH>2008-09-20T12:25:40.104192</EPOCH>
+//! #         <X units="km">4086.147180</X>
+//! #         <Y units="km">-994.936814</Y>
+//! #         <Z units="km">5250.678791</Z>
+//! #         <X_DOT units="km/s">2.511071</X_DOT>
+//! #         <Y_DOT units="km/s">7.255240</Y_DOT>
+//! #         <Z_DOT units="km/s">-0.583165</Z_DOT>
+//! #     </stateVector>
+//! #     <keplerianElements>
+//! #         <SEMI_MAJOR_AXIS units="km">6730.96</SEMI_MAJOR_AXIS>
+//! #         <ECCENTRICITY>0.0006703</ECCENTRICITY>
+//! #         <INCLINATION units="deg">51.6416</INCLINATION>
+//! #         <RA_OF_ASC_NODE units="deg">247.463</RA_OF_ASC_NODE>
+//! #         <ARG_OF_PERICENTER units="deg">130.536</ARG_OF_PERICENTER>
+//! #         <TRUE_ANOMALY units="deg">324.985</TRUE_ANOMALY>
+//! #         <GM units="km**3/s**2">398600.9368</GM>
+//! #     </keplerianElements>
+//! #     <spacecraftParameters>
+//! #         <MASS>3000.000000</MASS>
+//! #         <SOLAR_RAD_AREA>18.770000</SOLAR_RAD_AREA>
+//! #         <SOLAR_RAD_COEFF>1.000000</SOLAR_RAD_COEFF>
+//! #         <DRAG_AREA>18.770000</DRAG_AREA>
+//! #         <DRAG_COEFF>2.500000</DRAG_COEFF>
+//! #     </spacecraftParameters>
+//! #     <covarianceMatrix>
+//! #         <COV_REF_FRAME>ITRF1997</COV_REF_FRAME>
+//! #         <CX_X>0.316</CX_X>
+//! #         <CY_X>0.722</CY_X>
+//! #         <CY_Y>0.518</CY_Y>
+//! #         <CZ_X>0.202</CZ_X>
+//! #         <CZ_Y>0.715</CZ_Y>
+//! #         <CZ_Z>0.002</CZ_Z>
+//! #         <CX_DOT_X>0.912</CX_DOT_X>
+//! #         <CX_DOT_Y>0.306</CX_DOT_Y>
+//! #         <CX_DOT_Z>0.276</CX_DOT_Z>
+//! #         <CX_DOT_X_DOT>0.797</CX_DOT_X_DOT>
+//! #         <CY_DOT_X>0.562</CY_DOT_X>
+//! #         <CY_DOT_Y>0.899</CY_DOT_Y>
+//! #         <CY_DOT_Z>0.022</CY_DOT_Z>
+//! #         <CY_DOT_X_DOT>0.079</CY_DOT_X_DOT>
+//! #         <CY_DOT_Y_DOT>0.415</CY_DOT_Y_DOT>
+//! #         <CZ_DOT_X>0.245</CZ_DOT_X>
+//! #         <CZ_DOT_Y>0.965</CZ_DOT_Y>
+//! #         <CZ_DOT_Z>0.950</CZ_DOT_Z>
+//! #         <CZ_DOT_X_DOT>0.435</CZ_DOT_X_DOT>
+//! #         <CZ_DOT_Y_DOT>0.621</CZ_DOT_Y_DOT>
+//! #         <CZ_DOT_Z_DOT>0.991</CZ_DOT_Z_DOT>
+//! #     </covarianceMatrix>
+//! #     <maneuverParameters>
+//! #         <COMMENT>Maneuver 1</COMMENT>
+//! #         <MAN_EPOCH_IGNITION>2008-09-20T12:41:09.984493</MAN_EPOCH_IGNITION>
+//! #         <MAN_DURATION units="s">180.000</MAN_DURATION>
+//! #         <MAN_DELTA_MASS units="kg">-0.001</MAN_DELTA_MASS>
+//! #         <MAN_REF_FRAME>RSW</MAN_REF_FRAME>
+//! #         <MAN_DV_1 units="km/s">0.000000</MAN_DV_1>
+//! #         <MAN_DV_2 units="km/s">0.280000</MAN_DV_2>
+//! #         <MAN_DV_3 units="km/s">0.000000</MAN_DV_3>
+//! #     </maneuverParameters>
+//! #     <maneuverParameters>
+//! #         <MAN_EPOCH_IGNITION>2008-09-20T13:33:11.374985</MAN_EPOCH_IGNITION>
+//! #         <MAN_DURATION units="s">180.000</MAN_DURATION>
+//! #         <MAN_DELTA_MASS units="kg">-0.001</MAN_DELTA_MASS>
+//! #         <MAN_REF_FRAME>RSW</MAN_REF_FRAME>
+//! #         <MAN_DV_1 units="km/s">0.000000</MAN_DV_1>
+//! #         <MAN_DV_2 units="km/s">0.270000</MAN_DV_2>
+//! #         <MAN_DV_3 units="km/s">0.000000</MAN_DV_3>
+//! #     </maneuverParameters>
+//! # </data>
+//! # </segment>
+//! # </body>
+//! # </opm>"#;
+//! #
+//! # use lox_io::ndm::opm::OpmType;
+//! #
 //! let message: OpmType = quick_xml::de::from_str(xml).unwrap();
 //! ```
 

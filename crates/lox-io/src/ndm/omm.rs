@@ -11,6 +11,54 @@
 //! To deserialize an XML message:
 //!
 //! ```
+//! # let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+//! # <omm id="CCSDS_OMM_VERS" version="2.0">
+//! # <header>
+//! #     <CREATION_DATE>2021-03-24T23:00:00.000</CREATION_DATE>
+//! #     <ORIGINATOR>CelesTrak</ORIGINATOR>
+//! # </header>
+//! # <body>
+//! # <segment>
+//! #     <metadata>
+//! #         <OBJECT_NAME>STARLETTE</OBJECT_NAME>
+//! #         <OBJECT_ID>1975-010A</OBJECT_ID>
+//! #         <CENTER_NAME>EARTH</CENTER_NAME>
+//! #         <REF_FRAME>TEME</REF_FRAME>
+//! #         <TIME_SYSTEM>UTC</TIME_SYSTEM>
+//! #         <MEAN_ELEMENT_THEORY>SGP4</MEAN_ELEMENT_THEORY>
+//! #     </metadata>
+//! #     <data>
+//! #         <meanElements>
+//! #             <EPOCH>2008-09-20T12:25:40.104192</EPOCH>
+//! #             <MEAN_MOTION units="rev/day">15.72125391</MEAN_MOTION>
+//! #             <ECCENTRICITY>0.0006703</ECCENTRICITY>
+//! #             <INCLINATION units="deg">51.6416</INCLINATION>
+//! #             <RA_OF_ASC_NODE units="deg">247.4627</RA_OF_ASC_NODE>
+//! #             <ARG_OF_PERICENTER units="deg">130.5360</ARG_OF_PERICENTER>
+//! #             <MEAN_ANOMALY units="deg">325.0288</MEAN_ANOMALY>
+//! #             <GM units="km**3/s**2">398600.8</GM>
+//! #         </meanElements>
+//! #         <tleParameters>
+//! #             <EPHEMERIS_TYPE>0</EPHEMERIS_TYPE>
+//! #             <CLASSIFICATION_TYPE>U</CLASSIFICATION_TYPE>
+//! #             <NORAD_CAT_ID>7646</NORAD_CAT_ID>
+//! #             <ELEMENT_SET_NO>999</ELEMENT_SET_NO>
+//! #             <REV_AT_EPOCH>32997</REV_AT_EPOCH>
+//! #             <BSTAR>-.47102E-5</BSTAR>
+//! #             <MEAN_MOTION_DOT>-.147E-5</MEAN_MOTION_DOT>
+//! #             <MEAN_MOTION_DDOT>0</MEAN_MOTION_DDOT>
+//! #         </tleParameters>
+//! #         <userDefinedParameters>
+//! #             <USER_DEFINED parameter="FOO">foo enters</USER_DEFINED>
+//! #             <USER_DEFINED parameter="BAR">a bar</USER_DEFINED>
+//! #         </userDefinedParameters>
+//! #     </data>
+//! # </segment>
+//! # </body>
+//! # </omm>"#;
+//! #
+//! # use lox_io::ndm::omm::OmmType;
+//! #
 //! let message: OmmType = quick_xml::de::from_str(xml).unwrap();
 //! ```
 

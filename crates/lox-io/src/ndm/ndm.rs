@@ -11,6 +11,162 @@
 //! To deserialize an XML message:
 //!
 //! ```
+//! # let xml = r#"<ndm xsi:noNamespaceSchemaLocation="https://sanaregistry.org/r/ndmxml/ndmxml-1.0-master.xsd">
+//! # <MESSAGE_ID>bla</MESSAGE_ID>
+//! # <COMMENT>asdfg</COMMENT>
+//! # <omm id="CCSDS_OMM_VERS" version="2.0">
+//! #     <header>
+//! #         <CREATION_DATE/>
+//! #         <ORIGINATOR/>
+//! #     </header>
+//! #     <body>
+//! #         <segment>
+//! #         </segment>
+//! #     </body>
+//! # </omm>
+//! # <opm id="CCSDS_OPM_VERS" version="2.0">
+//! # <header>
+//! #    <CREATION_DATE>2004-281T17:26:06</CREATION_DATE>
+//! #    <ORIGINATOR>me</ORIGINATOR>
+//! # </header>
+//! # <body>
+//! #    <segment>
+//! #       <metadata>
+//! #          <OBJECT_NAME>Cassini</OBJECT_NAME>
+//! #          <OBJECT_ID>1997-061A</OBJECT_ID>
+//! #          <CENTER_NAME>Saturn</CENTER_NAME>
+//! #          <REF_FRAME>IAU-Saturn</REF_FRAME>
+//! #          <TIME_SYSTEM>UTC</TIME_SYSTEM>
+//! #       </metadata>
+//! #       <data>
+//! #          <stateVector>
+//! #             <COMMENT>this is a comment</COMMENT>
+//! #             <EPOCH>2004-100T00:00:00</EPOCH>
+//! #             <X>1</X>
+//! #             <Y>1</Y>
+//! #             <Z>1</Z>
+//! #             <X_DOT>1</X_DOT>
+//! #             <Y_DOT>1</Y_DOT>
+//! #             <Z_DOT>1</Z_DOT>
+//! #          </stateVector>
+//! #          <spacecraftParameters>
+//! #             <COMMENT>This is a COMMENT</COMMENT>
+//! #             <MASS>100</MASS>
+//! #             <SOLAR_RAD_AREA>2</SOLAR_RAD_AREA>
+//! #             <SOLAR_RAD_COEFF>1</SOLAR_RAD_COEFF>
+//! #             <DRAG_AREA units="m**2">2</DRAG_AREA>
+//! #             <DRAG_COEFF>2.0</DRAG_COEFF>
+//! #          </spacecraftParameters>
+//! #          <maneuverParameters>
+//! #             <COMMENT>This is a COMMENT</COMMENT>
+//! #             <MAN_EPOCH_IGNITION>2004-125T00:00:00</MAN_EPOCH_IGNITION>
+//! #             <MAN_DURATION units="s">0</MAN_DURATION>
+//! #             <MAN_DELTA_MASS units="kg">-1</MAN_DELTA_MASS>
+//! #             <MAN_REF_FRAME>GRC</MAN_REF_FRAME>
+//! #             <MAN_DV_1>1</MAN_DV_1>
+//! #             <MAN_DV_2>1</MAN_DV_2>
+//! #             <MAN_DV_3>1</MAN_DV_3>
+//! #          </maneuverParameters>
+//! #       </data>
+//! #    </segment>
+//! # </body>
+//! # </opm>
+//! #
+//! #
+//! # <oem id="CCSDS_OEM_VERS" version="2.0">
+//! # <header>
+//! #    <CREATION_DATE>2004-281T17:26:06</CREATION_DATE>
+//! #    <ORIGINATOR>me</ORIGINATOR>
+//! # </header>
+//! # <body>
+//! #    <segment>
+//! #       <metadata>
+//! #          <OBJECT_NAME>Cassini</OBJECT_NAME>
+//! #          <OBJECT_ID>1997-061A</OBJECT_ID>
+//! #          <CENTER_NAME>Saturn</CENTER_NAME>
+//! #          <REF_FRAME>IAU-Saturn</REF_FRAME>
+//! #          <TIME_SYSTEM>UTC</TIME_SYSTEM>
+//! #          <START_TIME>2004-100T00:00:00.000000</START_TIME>
+//! #          <STOP_TIME>2004-100T01:00:00.000000</STOP_TIME>
+//! #          <INTERPOLATION>Hermite</INTERPOLATION>
+//! #          <INTERPOLATION_DEGREE>1</INTERPOLATION_DEGREE>
+//! #       </metadata>
+//! #       <data>
+//! #          <stateVector>
+//! #             <EPOCH>2004-100T00:00:00</EPOCH>
+//! #             <X units="km">1</X>
+//! #             <Y>1</Y>
+//! #             <Z>1</Z>
+//! #             <X_DOT units="km/s">1</X_DOT>
+//! #             <Y_DOT>1</Y_DOT>
+//! #             <Z_DOT>1</Z_DOT>
+//! #          </stateVector>
+//! #          <stateVector>
+//! #             <EPOCH>2004-100T00:00:00</EPOCH>
+//! #             <X>1</X>
+//! #             <Y units="km">1</Y>
+//! #             <Z>1</Z>
+//! #             <X_DOT>1</X_DOT>
+//! #             <Y_DOT units="km/s">1</Y_DOT>
+//! #             <Z_DOT>1</Z_DOT>
+//! #          </stateVector>
+//! #          <stateVector>
+//! #             <EPOCH>2004-100T00:00:00</EPOCH>
+//! #             <X>1</X>
+//! #             <Y>1</Y>
+//! #             <Z units="km">1</Z>
+//! #             <X_DOT>1</X_DOT>
+//! #             <Y_DOT>1</Y_DOT>
+//! #             <Z_DOT units="km/s">1</Z_DOT>
+//! #          </stateVector>
+//! #       </data>
+//! #    </segment>
+//! # </body>
+//! # </oem>
+//! # <omm id="CCSDS_OMM_VERS" version="2.0">
+//! #     <header>
+//! #         <CREATION_DATE/>
+//! #         <ORIGINATOR/>
+//! #     </header>
+//! #     <body>
+//! #         <segment>
+//! #             <metadata>
+//! #                 <OBJECT_NAME>NUSAT-13 (EMMY)</OBJECT_NAME>
+//! #                 <OBJECT_ID>2020-079G</OBJECT_ID>
+//! #                 <CENTER_NAME>EARTH</CENTER_NAME>
+//! #                 <REF_FRAME>TEME</REF_FRAME>
+//! #                 <TIME_SYSTEM>UTC</TIME_SYSTEM>
+//! #                 <MEAN_ELEMENT_THEORY>SGP4</MEAN_ELEMENT_THEORY>
+//! #             </metadata>
+//! #             <data>
+//! #                 <meanElements>
+//! #                     <EPOCH>2020-12-04T13:30:01.539648</EPOCH>
+//! #                     <MEAN_MOTION>15.31433655</MEAN_MOTION>
+//! #                     <ECCENTRICITY>.0009574</ECCENTRICITY>
+//! #                     <INCLINATION>97.2663</INCLINATION>
+//! #                     <RA_OF_ASC_NODE>51.2167</RA_OF_ASC_NODE>
+//! #                     <ARG_OF_PERICENTER>149.8567</ARG_OF_PERICENTER>
+//! #                     <MEAN_ANOMALY>322.5146</MEAN_ANOMALY>
+//! #                 </meanElements>
+//! #                 <tleParameters>
+//! #                     <EPHEMERIS_TYPE>0</EPHEMERIS_TYPE>
+//! #                     <CLASSIFICATION_TYPE>U</CLASSIFICATION_TYPE>
+//! #                     <NORAD_CAT_ID>46833</NORAD_CAT_ID>
+//! #                     <ELEMENT_SET_NO>999</ELEMENT_SET_NO>
+//! #                     <REV_AT_EPOCH>434</REV_AT_EPOCH>
+//! #                     <BSTAR>.14401E-3</BSTAR>
+//! #                     <MEAN_MOTION_DOT>4.301E-5</MEAN_MOTION_DOT>
+//! #                     <MEAN_MOTION_DDOT>0</MEAN_MOTION_DDOT>
+//! #                 </tleParameters>
+//! #             </data>
+//! #         </segment>
+//! #     </body>
+//! # </omm>
+//! #
+//! # </ndm>"#;
+//! #
+//! # use lox_io::ndm::ndm::NdmType;
+//! #
 //! let message: NdmType = quick_xml::de::from_str(xml).unwrap();
 //! ```
 

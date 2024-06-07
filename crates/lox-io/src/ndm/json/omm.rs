@@ -11,12 +11,101 @@
 //! To deserialize a JSON message:
 //!
 //! ```
+//! # use lox_io::ndm::json::omm::OmmType;
+//!
+//! # let json = r#"{
+//! #     "CCSDS_OMM_VERS": "2.0",
+//! #     "COMMENT": "GENERATED VIA SPACE-TRACK.ORG API",
+//! #     "CREATION_DATE": "2020-12-29T06:26:10",
+//! #     "ORIGINATOR": "18 SPCS",
+//! #     "OBJECT_NAME": "NUSAT-8 (MARIE)",
+//! #     "OBJECT_ID": "2020-003C",
+//! #     "CENTER_NAME": "EARTH",
+//! #     "REF_FRAME": "TEME",
+//! #     "TIME_SYSTEM": "UTC",
+//! #     "MEAN_ELEMENT_THEORY": "SGP4",
+//! #     "EPOCH": "2020-12-29T03:57:59.406624",
+//! #     "MEAN_MOTION": "15.27989249",
+//! #     "ECCENTRICITY": "0.00133560",
+//! #     "INCLINATION": "97.2970",
+//! #     "RA_OF_ASC_NODE": "66.4161",
+//! #     "ARG_OF_PERICENTER": "110.6345",
+//! #     "MEAN_ANOMALY": "334.7107",
+//! #     "EPHEMERIS_TYPE": "0",
+//! #     "CLASSIFICATION_TYPE": "U",
+//! #     "NORAD_CAT_ID": "45018",
+//! #     "ELEMENT_SET_NO": "999",
+//! #     "REV_AT_EPOCH": "5327",
+//! #     "BSTAR": "0.00008455300000",
+//! #     "MEAN_MOTION_DOT": "0.00002241",
+//! #     "MEAN_MOTION_DDOT": "0.0000000000000",
+//! #     "SEMIMAJOR_AXIS": "6859.961",
+//! #     "PERIOD": "94.242",
+//! #     "APOAPSIS": "490.988",
+//! #     "PERIAPSIS": "472.664",
+//! #     "OBJECT_TYPE": "PAYLOAD",
+//! #     "RCS_SIZE": "MEDIUM",
+//! #     "COUNTRY_CODE": "ARGN",
+//! #     "LAUNCH_DATE": "2020-01-15",
+//! #     "SITE": "TSC",
+//! #     "DECAY_DATE": null,
+//! #     "FILE": "2911831",
+//! #     "GP_ID": "168552672",
+//! #     "TLE_LINE0": "0 NUSAT-8 (MARIE)",
+//! #     "TLE_LINE1": "1 45018U 20003C   20364.16527091  .00002241  00000-0  84553-4 0  9997",
+//! #     "TLE_LINE2": "2 45018  97.2970  66.4161 0013356 110.6345 334.7107 15.27989249 53274"
+//! # }"#;
+//! #
 //! let message: OmmType = serde_json::de::from_str(json).unwrap();
 //! ```
 //!
 //! To deserialize a list of JSON messages:
 //!
 //! ```
+//! # use lox_io::ndm::json::omm::OmmType;
+//! # let json = r#"[{
+//! #     "CCSDS_OMM_VERS": "2.0",
+//! #     "COMMENT": "GENERATED VIA SPACE-TRACK.ORG API",
+//! #     "CREATION_DATE": "2020-12-29T06:26:10",
+//! #     "ORIGINATOR": "18 SPCS",
+//! #     "OBJECT_NAME": "NUSAT-8 (MARIE)",
+//! #     "OBJECT_ID": "2020-003C",
+//! #     "CENTER_NAME": "EARTH",
+//! #     "REF_FRAME": "TEME",
+//! #     "TIME_SYSTEM": "UTC",
+//! #     "MEAN_ELEMENT_THEORY": "SGP4",
+//! #     "EPOCH": "2020-12-29T03:57:59.406624",
+//! #     "MEAN_MOTION": "15.27989249",
+//! #     "ECCENTRICITY": "0.00133560",
+//! #     "INCLINATION": "97.2970",
+//! #     "RA_OF_ASC_NODE": "66.4161",
+//! #     "ARG_OF_PERICENTER": "110.6345",
+//! #     "MEAN_ANOMALY": "334.7107",
+//! #     "EPHEMERIS_TYPE": "0",
+//! #     "CLASSIFICATION_TYPE": "U",
+//! #     "NORAD_CAT_ID": "45018",
+//! #     "ELEMENT_SET_NO": "999",
+//! #     "REV_AT_EPOCH": "5327",
+//! #     "BSTAR": "0.00008455300000",
+//! #     "MEAN_MOTION_DOT": "0.00002241",
+//! #     "MEAN_MOTION_DDOT": "0.0000000000000",
+//! #     "SEMIMAJOR_AXIS": "6859.961",
+//! #     "PERIOD": "94.242",
+//! #     "APOAPSIS": "490.988",
+//! #     "PERIAPSIS": "472.664",
+//! #     "OBJECT_TYPE": "PAYLOAD",
+//! #     "RCS_SIZE": "MEDIUM",
+//! #     "COUNTRY_CODE": "ARGN",
+//! #     "LAUNCH_DATE": "2020-01-15",
+//! #     "SITE": "TSC",
+//! #     "DECAY_DATE": null,
+//! #     "FILE": "2911831",
+//! #     "GP_ID": "168552672",
+//! #     "TLE_LINE0": "0 NUSAT-8 (MARIE)",
+//! #     "TLE_LINE1": "1 45018U 20003C   20364.16527091  .00002241  00000-0  84553-4 0  9997",
+//! #     "TLE_LINE2": "2 45018  97.2970  66.4161 0013356 110.6345 334.7107 15.27989249 53274"
+//! # }]"#;
+//! #
 //! let message: Vec<OmmType> = serde_json::de::from_str(json).unwrap();
 //! ```
 

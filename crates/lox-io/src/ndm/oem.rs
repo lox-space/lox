@@ -11,6 +11,63 @@
 //! To deserialize an XML message:
 //!
 //! ```
+//! # let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+//! # <oem xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+//! # xsi:noNamespaceSchemaLocation="http://cwe.ccsds.org/moims/docs/MOIMS-NAV/Schemas/ndmxml-1.0-master.xsd"
+//! # id="CCSDS_OEM_VERS" version="2.0">
+//! #
+//! # <header>
+//! # <CREATION_DATE>2004-281T17:26:06</CREATION_DATE>
+//! # <ORIGINATOR>me</ORIGINATOR>
+//! # </header>
+//! # <body>
+//! # <segment>
+//! #     <metadata>
+//! #         <OBJECT_NAME>Cassini</OBJECT_NAME>
+//! #         <OBJECT_ID>1997-061A</OBJECT_ID>
+//! #         <CENTER_NAME>Saturn</CENTER_NAME>
+//! #         <REF_FRAME>IAU-Saturn</REF_FRAME>
+//! #         <TIME_SYSTEM>UTC</TIME_SYSTEM>
+//! #         <START_TIME>2004-100T00:00:00.000000</START_TIME>
+//! #         <STOP_TIME>2004-100T01:00:00.000000</STOP_TIME>
+//! #         <INTERPOLATION>Hermite</INTERPOLATION>
+//! #         <INTERPOLATION_DEGREE>1</INTERPOLATION_DEGREE>
+//! #     </metadata>
+//! #     <data>
+//! #         <stateVector>
+//! #             <EPOCH>2004-100T00:00:00</EPOCH>
+//! #             <X units="km">1</X>
+//! #             <Y>1</Y>
+//! #             <Z>1</Z>
+//! #             <X_DOT units="km/s">1</X_DOT>
+//! #             <Y_DOT>1</Y_DOT>
+//! #             <Z_DOT>1</Z_DOT>
+//! #         </stateVector>
+//! #         <stateVector>
+//! #             <EPOCH>2004-100T00:00:00</EPOCH>
+//! #             <X>1</X>
+//! #             <Y units="km">1</Y>
+//! #             <Z>1</Z>
+//! #             <X_DOT>1</X_DOT>
+//! #             <Y_DOT units="km/s">1</Y_DOT>
+//! #             <Z_DOT>1</Z_DOT>
+//! #         </stateVector>
+//! #         <stateVector>
+//! #             <EPOCH>2004-100T00:00:00</EPOCH>
+//! #             <X>1</X>
+//! #             <Y>1</Y>
+//! #             <Z units="km">1</Z>
+//! #             <X_DOT>1</X_DOT>
+//! #             <Y_DOT>1</Y_DOT>
+//! #             <Z_DOT units="km/s">1</Z_DOT>
+//! #         </stateVector>
+//! #     </data>
+//! # </segment>
+//! # </body>
+//! # </oem>"#;
+//! #
+//! # use lox_io::ndm::oem::OemType;
+//! #
 //! let message: OemType = quick_xml::de::from_str(xml).unwrap();
 //! ```
 

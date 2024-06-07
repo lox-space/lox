@@ -11,7 +11,77 @@
 //! To deserialize an XML message:
 //!
 //! ```
+//! # use lox_io::ndm::ocm::OcmType;
 //!
+//! # let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+//! # <ocm  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+//! # xsi:noNamespaceSchemaLocation="http://sanaregistry.org/r/ndmxml/ndmxml-1.0-master.xsd"
+//! # id="CCSDS_OCM_VERS" version="3.0">
+//! # <header>
+//! # <COMMENT>ODM V.3 Example G-2</COMMENT>
+//! # <COMMENT>OCM example with space object characteristics and perturbations.</COMMENT>
+//! # <COMMENT>This OCM reflects the latest conditions post-maneuver A67Z</COMMENT>
+//! # <COMMENT>This example shows the specification of multiple comment lines</COMMENT>
+//! # <CREATION_DATE>1998-11-06T09:23:57</CREATION_DATE>
+//! # <ORIGINATOR>JAXA</ORIGINATOR>
+//! # <MESSAGE_ID>OCM 201113719185</MESSAGE_ID>
+//! # </header>
+//! # <body>
+//! # <segment>
+//! # <metadata>
+//! #   <INTERNATIONAL_DESIGNATOR>1998-999A</INTERNATIONAL_DESIGNATOR>
+//! #   <ORIGINATOR_POC>R. Rabbit</ORIGINATOR_POC>
+//! #   <ORIGINATOR_POSITION>Flight Dynamics Mission Design Lead</ORIGINATOR_POSITION>
+//! #   <ORIGINATOR_PHONE>(719)555-1234</ORIGINATOR_PHONE>
+//! #   <TECH_POC>Mr. Rodgers</TECH_POC>
+//! #   <TECH_PHONE>(719)555-1234</TECH_PHONE>
+//! #   <TECH_ADDRESS>email@email.XXX</TECH_ADDRESS>
+//! #   <TIME_SYSTEM>UT1</TIME_SYSTEM>
+//! #   <EPOCH_TZERO>1998-12-18T00:00:00.0000</EPOCH_TZERO>
+//! #   <TAIMUTC_AT_TZERO units="s">36</TAIMUTC_AT_TZERO>
+//! #   <UT1MUTC_AT_TZERO units="s">.357</UT1MUTC_AT_TZERO>
+//! # </metadata>
+//! # <data>
+//! #   <traj>
+//! #      <COMMENT>GEOCENTRIC, CARTESIAN, EARTH FIXED</COMMENT>
+//! #      <COMMENT>THIS IS MY SECOND COMMENT LINE</COMMENT>
+//! #      <TRAJ_BASIS>PREDICTED</TRAJ_BASIS >
+//! #      <TRAJ_REF_FRAME>EFG</TRAJ_REF_FRAME>
+//! #      <TRAJ_TYPE>CARTPVA</TRAJ_TYPE>
+//! #      <trajLine>0.0  2854.5 -2916.2 -5360.7 5.90 4.86 0.52 0.0037 -0.0038 -0.0070</trajLine>
+//! #   </traj>
+//! #   <phys>
+//! #      <COMMENT>Spacecraft Physical Characteristics</COMMENT>
+//! #      <WET_MASS units="kg">100.0</WET_MASS>
+//! #      <OEB_Q1>0.03123</OEB_Q1>
+//! #      <OEB_Q2>0.78543</OEB_Q2>
+//! #      <OEB_Q3>0.39158</OEB_Q3>
+//! #      <OEB_QC>0.47832</OEB_QC>
+//! #      <OEB_MAX units="m">2.0</OEB_MAX>
+//! #      <OEB_INT units="m">1.0</OEB_INT>
+//! #      <OEB_MIN units="m">0.5</OEB_MIN>
+//! #      <AREA_ALONG_OEB_MAX units="m**2">0.15</AREA_ALONG_OEB_MAX>
+//! #      <AREA_ALONG_OEB_INT units="m**2">0.3</AREA_ALONG_OEB_INT>
+//! #      <AREA_ALONG_OEB_MIN units="m**2">0.5</AREA_ALONG_OEB_MIN>
+//! #   </phys>
+//! #   <pert>
+//! #      <COMMENT>Perturbations Specification</COMMENT>
+//! #      <ATMOSPHERIC_MODEL>NRLMSIS00</ATMOSPHERIC_MODEL>
+//! #      <GRAVITY_MODEL>EGM-96: 36D 36O</GRAVITY_MODEL>
+//! #      <GM units="km**3/s**2">398600.4415</GM>
+//! #      <N_BODY_PERTURBATIONS>MOON, SUN</N_BODY_PERTURBATIONS>
+//! #      <FIXED_GEOMAG_KP>12.0</FIXED_GEOMAG_KP>
+//! #      <FIXED_F10P7>105.0</FIXED_F10P7>
+//! #      <FIXED_F10P7_MEAN>120.0</FIXED_F10P7_MEAN>
+//! #   </pert>
+//! #   <user>
+//! #      <USER_DEFINED parameter="EARTH_MODEL">WGS-84</USER_DEFINED>
+//! #   </user>
+//! # </data>
+//! # </segment>
+//! # </body>
+//! # </ocm>"#;
+//! #
 //! let message: OcmType = quick_xml::de::from_str(xml).unwrap();
 //! ```
 
