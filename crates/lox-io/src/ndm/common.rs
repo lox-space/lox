@@ -20,10 +20,6 @@ pub struct AngleUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub struct AngleRange(#[serde(rename = "$text")] pub f64);
-
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
-#[serde(default)]
 pub struct AngleRateUnits(#[serde(rename = "$text")] pub String);
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -57,10 +53,6 @@ pub struct FrequencyUnits(#[serde(rename = "$text")] pub String);
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 pub struct GmUnits(#[serde(rename = "$text")] pub String);
-
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
-#[serde(default)]
-pub struct InclinationRange(#[serde(rename = "$text")] pub f64);
 
 #[derive(
     Clone,
@@ -736,7 +728,7 @@ pub struct GmType {
 #[kvn(value_unit_struct)]
 pub struct InclinationType {
     #[serde(rename = "$text")]
-    pub base: InclinationRange,
+    pub base: f64,
     #[serde(rename = "@units")]
     pub units: Option<AngleUnits>,
 }
@@ -1575,14 +1567,14 @@ pub struct RotationAngleComponentTypeold {
     #[serde(rename = "@angle")]
     pub angle: AngleKeywordType,
     #[serde(rename = "@value")]
-    pub value: AngleRange,
+    pub value: f64,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 pub struct RotationAngleComponentType {
     #[serde(rename = "$text")]
-    pub base: AngleRange,
+    pub base: f64,
     #[serde(rename = "@angle")]
     pub angle: AngleKeywordType,
     #[serde(rename = "@units")]
