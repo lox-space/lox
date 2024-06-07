@@ -975,8 +975,6 @@ mod test {
         );
     }
 
-    use super::super::KvnDeserializer;
-
     #[derive(Default, Debug, PartialEq)]
     pub struct PositionUnits(pub std::string::String);
 
@@ -1001,7 +999,7 @@ mod test {
         ASDFG = 12333.5123"#;
 
         assert_eq!(
-            AsdType::deserialize(&mut kvn.lines().peekable()),
+            crate::ndm::kvn::KvnDeserializer::deserialize(&mut kvn.lines().peekable()),
             Ok(AsdType {
                 semi_major_axis: DistanceType {
                     base: 41399.5123,
