@@ -152,7 +152,7 @@ fn generate_call_to_deserializer_for_kvn_type_new(
     type_name_new: &syn::Path,
 ) -> Result<proc_macro2::TokenStream, proc_macro::TokenStream> {
     match type_name {
-        "f64" | "String" | "i32" | "NonNegativeDouble" | "NegativeDouble" | "PositiveDouble" => {
+        "String" | "f64" | "NonNegativeDouble" | "NegativeDouble" | "PositiveDouble" | "i32" => {
             let parser = match type_name {
                 "String" => {
                     quote! {
