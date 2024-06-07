@@ -18,39 +18,111 @@ use serde;
 
 use super::common;
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct BStarUnits(#[serde(rename = "$text")] pub String);
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct BTermUnits(#[serde(rename = "$text")] pub String);
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct AgomUnits(#[serde(rename = "$text")] pub String);
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct ElementSetNoType(#[serde(rename = "$text")] pub String);
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct RevUnits(#[serde(rename = "$text")] pub String);
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct DRevUnits(#[serde(rename = "$text")] pub String);
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct DdRevUnits(#[serde(rename = "$text")] pub String);
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct SpacewarnType(#[serde(rename = "$text")] pub String);
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct OmmType {
     #[serde(rename = "header")]
@@ -63,14 +135,30 @@ pub struct OmmType {
     pub version: String,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct OmmBody {
     #[serde(rename = "segment")]
     pub segment: OmmSegment,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct OmmSegment {
     #[serde(rename = "metadata")]
@@ -79,7 +167,15 @@ pub struct OmmSegment {
     pub data: OmmData,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct OmmMetadata {
     #[serde(rename = "COMMENT")]
@@ -100,7 +196,15 @@ pub struct OmmMetadata {
     pub mean_element_theory: String,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct OmmData {
     #[serde(rename = "COMMENT")]
@@ -117,7 +221,15 @@ pub struct OmmData {
     pub user_defined_parameters: Option<common::UserDefinedType>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct MeanElementsType {
     #[serde(rename = "COMMENT")]
@@ -142,7 +254,15 @@ pub struct MeanElementsType {
     pub gm: Option<common::GmType>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct TleParametersType {
     #[serde(rename = "COMMENT")]
@@ -169,7 +289,15 @@ pub struct TleParametersType {
     pub agom: Option<AgomType>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct BStarType {
     #[serde(rename = "$text")]
@@ -178,7 +306,15 @@ pub struct BStarType {
     pub units: Option<BStarUnits>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct BTermType {
     #[serde(rename = "$text")]
@@ -187,7 +323,15 @@ pub struct BTermType {
     pub units: Option<BTermUnits>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct AgomType {
     #[serde(rename = "$text")]
@@ -196,7 +340,15 @@ pub struct AgomType {
     pub units: Option<AgomUnits>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct RevType {
     #[serde(rename = "$text")]
@@ -205,7 +357,15 @@ pub struct RevType {
     pub units: Option<RevUnits>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct DRevType {
     #[serde(rename = "$text")]
@@ -214,7 +374,15 @@ pub struct DRevType {
     pub units: Option<DRevUnits>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct DdRevType {
     #[serde(rename = "$text")]

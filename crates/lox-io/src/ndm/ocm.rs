@@ -19,7 +19,15 @@ use serde;
 
 use super::common;
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct OcmType {
     #[serde(rename = "header")]
@@ -32,14 +40,30 @@ pub struct OcmType {
     pub version: String,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct OcmBody {
     #[serde(rename = "segment")]
     pub segment: OcmSegment,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct OcmSegment {
     #[serde(rename = "metadata")]
@@ -48,7 +72,15 @@ pub struct OcmSegment {
     pub data: OcmData,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct OcmMetadata {
     #[serde(rename = "COMMENT")]
@@ -149,7 +181,15 @@ pub struct OcmMetadata {
     pub celestial_source: Option<String>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct OcmData {
     #[serde(rename = "traj")]
@@ -168,7 +208,15 @@ pub struct OcmData {
     pub user: Option<common::UserDefinedType>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct OcmTrajStateType {
     #[serde(rename = "COMMENT")]
@@ -213,7 +261,15 @@ pub struct OcmTrajStateType {
     pub traj_line_list: Vec<String>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct OcmPhysicalDescriptionType {
     #[serde(rename = "COMMENT")]
@@ -320,7 +376,15 @@ pub struct OcmPhysicalDescriptionType {
     pub iyz: Option<common::MomentType>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct OcmCovarianceMatrixType {
     #[serde(rename = "COMMENT")]
@@ -355,7 +419,15 @@ pub struct OcmCovarianceMatrixType {
     pub cov_line_list: Vec<String>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct OcmManeuverParametersType {
     #[serde(rename = "COMMENT")]
@@ -424,7 +496,15 @@ pub struct OcmManeuverParametersType {
     pub man_line_list: Vec<String>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct OcmPerturbationsType {
     #[serde(rename = "COMMENT")]
@@ -489,7 +569,15 @@ pub struct OcmPerturbationsType {
     pub fixed_y10p7_mean: Option<common::SolarFluxType>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct OcmOdParametersType {
     #[serde(rename = "COMMENT")]
