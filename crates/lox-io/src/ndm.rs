@@ -14,7 +14,7 @@ pub mod json;
 pub mod kvn;
 
 pub mod common;
-pub mod ndm;
+pub mod ndm_ci;
 pub mod ocm;
 pub mod oem;
 pub mod omm;

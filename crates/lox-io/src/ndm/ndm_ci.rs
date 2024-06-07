@@ -165,7 +165,7 @@
 //! #
 //! # </ndm>"#;
 //! #
-//! # use lox_io::ndm::ndm::NdmType;
+//! # use lox_io::ndm::ndm_ci::NdmType;
 //! #
 //! let message: NdmType = quick_xml::de::from_str(xml).unwrap();
 //! ```
