@@ -173,15 +173,15 @@ pub struct SpacewarnType(#[serde(rename = "$text")] pub String);
 )]
 #[serde(default)]
 pub struct OmmType {
-    #[serde(rename = "header")]
-    pub header: common::OdmHeader,
-    #[serde(rename = "body")]
-    pub body: OmmBody,
     #[serde(rename = "@id")]
     // Marked as option for the KVN deserializer
     pub id: Option<String>,
     #[serde(rename = "@version")]
     pub version: String,
+    #[serde(rename = "header")]
+    pub header: common::OdmHeader,
+    #[serde(rename = "body")]
+    pub body: OmmBody,
 }
 
 #[derive(

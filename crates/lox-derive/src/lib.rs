@@ -380,6 +380,49 @@ fn extract_type_path(ty: &syn::Type) -> Option<&syn::Path> {
     }
 }
 
+fn handle_version_field(
+    type_name: &proc_macro2::Ident,
+    field: &syn::Field,
+) -> Result<proc_macro2::TokenStream, proc_macro2::TokenStream> {
+    let string_type_name = type_name.to_string();
+
+    if !string_type_name.ends_with("Type") {
+        return Err(syn::Error::new_spanned(
+            type_name,
+            "Types with \"version\" field should be of the form SomethingType",
+        )
+        .into_compile_error());
+    }
+
+    let message_type_name = string_type_name
+        .trim_end_matches("Type")
+        .to_owned()
+        .to_uppercase();
+
+    let field_name = field.ident.as_ref().unwrap();
+
+    // 7.4.4 Keywords must be uppercase and must not contain blanks
+    let expected_kvn_name = format!("CCSDS_{}_VERS", message_type_name);
+
+    // Unwrap is okay because we expect this span to come from the source code
+    let field_type = extract_type_path(&field.ty)
+        .unwrap()
+        .span()
+        .source_text()
+        .unwrap();
+    let field_type_new = extract_type_path(&field.ty).unwrap();
+
+    let parser = generate_call_to_deserializer_for_kvn_type(
+        &field_type,
+        field_type_new,
+        &expected_kvn_name,
+    )?;
+
+    Ok(quote! {
+        #field_name: #parser?,
+    })
+}
+
 fn deserializer_for_struct_with_named_fields(
     type_name: &proc_macro2::Ident,
     fields: &syn::punctuated::Punctuated<syn::Field, syn::token::Comma>,
@@ -498,67 +541,8 @@ fn deserializer_for_struct_with_named_fields(
             },
         }
     } else {
-        let version_field_deserializers: Result<Vec<_>, _> = fields
-            .iter()
-            .filter(|field| {
-                let field_name = field.ident.as_ref().unwrap();
-
-                field_name == "version"
-            })
-            .map(|field| {
-                let string_type_name = type_name.to_string();
-
-                if !string_type_name.ends_with("Type") {
-                    return Err(syn::Error::new_spanned(
-                        fields,
-                        "Types with \"version\" field should be of the form SomethingType",
-                    )
-                    .into_compile_error());
-                }
-
-                let message_type_name = string_type_name
-                    .trim_end_matches("Type")
-                    .to_owned()
-                    .to_uppercase();
-
-                let field_name = field.ident.as_ref().unwrap();
-
-                // 7.4.4 Keywords must be uppercase and must not contain blanks
-                let expected_kvn_name = format!("CCSDS_{}_VERS", message_type_name);
-
-                // Unwrap is okay because we expect this span to come from the source code
-                let field_type = extract_type_path(&field.ty)
-                    .unwrap()
-                    .span()
-                    .source_text()
-                    .unwrap();
-                let field_type_new = extract_type_path(&field.ty).unwrap();
-
-                let parser = generate_call_to_deserializer_for_kvn_type(
-                    &field_type,
-                    field_type_new,
-                    &expected_kvn_name,
-                )?;
-
-                Ok(quote! {
-                    #field_name: #parser?,
-                })
-            })
-            .collect();
-
-        if let Err(e) = version_field_deserializers {
-            return e;
-        }
-
-        let version_field_deserializers = version_field_deserializers.unwrap();
-
         let other_field_deserializers: Result<Vec<_>, _> = fields
              .iter()
-             .filter(|field| {
-                let field_name = field.ident.as_ref().unwrap();
-
-                field_name != "version"
-            })
              .map(|field| {
                 let field_name = field.ident.as_ref().unwrap();
 
@@ -569,6 +553,10 @@ fn deserializer_for_struct_with_named_fields(
                 // Unwrap is okay because we expect this span to come from the source code
                 let field_type = extract_type_path(&field.ty).unwrap().span().source_text().unwrap();
                 let field_type_new = extract_type_path(&field.ty).unwrap();
+
+                if field_name == "version" {
+                    return handle_version_field(type_name, field);
+                }
 
                 let parser = match field_type.as_str() {
                     "KvnStringValue" | "KvnNumericValue" | "KvnIntegerValue" | "String" | "f64" | "i32" => {
@@ -632,7 +620,6 @@ fn deserializer_for_struct_with_named_fields(
 
         quote! {
             Ok(#type_name {
-                #(#version_field_deserializers)*
                 #(#other_field_deserializers)*
             })
         }

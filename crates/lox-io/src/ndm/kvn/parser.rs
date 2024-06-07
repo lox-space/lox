@@ -987,9 +987,9 @@ mod test {
 
     #[derive(KvnDeserialize, Default, Debug, PartialEq)]
     struct AsdType {
+        pub version: String,
         pub semi_major_axis: DistanceType,
         pub asdfg: f64,
-        pub version: String,
     }
 
     #[test]

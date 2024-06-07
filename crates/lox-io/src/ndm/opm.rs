@@ -127,15 +127,15 @@ use super::common;
 )]
 #[serde(default)]
 pub struct OpmType {
-    #[serde(rename = "header")]
-    pub header: common::OdmHeader,
-    #[serde(rename = "body")]
-    pub body: OpmBody,
     #[serde(rename = "@id")]
     // Marked as option for the KVN deserializer
     pub id: Option<String>,
     #[serde(rename = "@version")]
     pub version: String,
+    #[serde(rename = "header")]
+    pub header: common::OdmHeader,
+    #[serde(rename = "body")]
+    pub body: OpmBody,
 }
 
 #[derive(
