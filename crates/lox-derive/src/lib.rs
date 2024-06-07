@@ -571,7 +571,7 @@ fn deserializer_for_struct_with_named_fields(
                 let field_type_new = extract_type_path(&field.ty).unwrap();
 
                 let parser = match field_type.as_str() {
-                    "EpochType" | "KvnStringValue" | "KvnNumericValue" | "KvnIntegerValue" | "String" | "f64" | "i32" => {
+                    "KvnStringValue" | "KvnNumericValue" | "KvnIntegerValue" | "String" | "f64" | "i32" => {
                         let deserializer_for_kvn_type = generate_call_to_deserializer_for_kvn_type(
                             &field_type,
                             field_type_new,
