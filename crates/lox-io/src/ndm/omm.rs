@@ -61,6 +61,65 @@
 //! #
 //! let message: OmmType = quick_xml::de::from_str(xml).unwrap();
 //! ```
+//!
+//! To deserialize a KVN message:
+//! ```
+//! # let kvn = r#"CCSDS_OMM_VERS = 3.0
+//! # COMMENT this is a comment
+//! # COMMENT here is another one
+//! # CREATION_DATE = 2007-06-05T16:00:00
+//! # ORIGINATOR = NOAA/USA
+//! # COMMENT this comment doesn't say much
+//! # OBJECT_NAME = GOES 9
+//! # OBJECT_ID = 1995-025A
+//! # CENTER_NAME = EARTH
+//! # REF_FRAME = TOD
+//! # REF_FRAME_EPOCH = 2000-01-03T10:34:00
+//! # TIME_SYSTEM = MRT
+//! # MEAN_ELEMENT_THEORY = SOME THEORY
+//! # COMMENT the following data is what we're looking for
+//! # EPOCH = 2000-01-05T10:00:00
+//! # SEMI_MAJOR_AXIS = 6800
+//! # ECCENTRICITY = 0.0005013
+//! # INCLINATION = 3.0539
+//! # RA_OF_ASC_NODE = 81.7939
+//! # ARG_OF_PERICENTER = 249.2363
+//! # MEAN_ANOMALY = 150.1602
+//! # COMMENT spacecraft data
+//! # MASS = 300
+//! # SOLAR_RAD_AREA = 5
+//! # SOLAR_RAD_COEFF = 0.001
+//! # DRAG_AREA = 4
+//! # DRAG_COEFF = 0.002
+//! # COMMENT Covariance matrix
+//! # COV_REF_FRAME = TNW
+//! # CX_X = 3.331349476038534e-04
+//! # CY_X = 4.618927349220216e-04
+//! # CY_Y = 6.782421679971363e-04
+//! # CZ_X = -3.070007847730449e-04
+//! # CZ_Y = -4.221234189514228e-04
+//! # CZ_Z = 3.231931992380369e-04
+//! # CX_DOT_X = -3.349365033922630e-07
+//! # CX_DOT_Y = -4.686084221046758e-07
+//! # CX_DOT_Z = 2.484949578400095e-07
+//! # CX_DOT_X_DOT = 4.296022805587290e-10
+//! # CY_DOT_X = -2.211832501084875e-07
+//! # CY_DOT_Y = -2.864186892102733e-07
+//! # CY_DOT_Z = 1.798098699846038e-07
+//! # CY_DOT_X_DOT = 2.608899201686016e-10
+//! # CY_DOT_Y_DOT = 1.767514756338532e-10
+//! # CZ_DOT_X = -3.041346050686871e-07
+//! # CZ_DOT_Y = -4.989496988610662e-07
+//! # CZ_DOT_Z = 3.540310904497689e-07
+//! # CZ_DOT_X_DOT = 1.869263192954590e-10
+//! # CZ_DOT_Y_DOT = 1.008862586240695e-10
+//! # CZ_DOT_Z_DOT = 6.224444338635500e-10"#;
+//! #
+//! # use lox_io::ndm::kvn::KvnDeserializer;
+//! # use lox_io::ndm::omm::OmmType;
+//! #
+//! let message: OmmType = KvnDeserializer::deserialize(&mut kvn.lines().peekable()).unwrap();
+//! ```
 
 use serde;
 
