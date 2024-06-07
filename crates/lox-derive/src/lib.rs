@@ -634,6 +634,17 @@ fn deserializers_for_struct_with_unnamed_fields(
         .first()
         .expect("We expect exactly one item in structs with unnamed fields");
 
+    if &type_name.to_string() == "EpochType" {
+        return quote! {
+            Ok(#type_name (
+                crate::ndm::kvn::parser::parse_kvn_datetime_line_new(
+                    lines.next().unwrap()
+                ).map_err(|x| crate::ndm::kvn::KvnDeserializerErr::from(x))
+                .map(|x| x.1)?.full_value
+            ))
+        };
+    }
+
     // Unwrap is okay because we expect this span to come from the source code
     let field_type = extract_type_path(&field.ty)
         .unwrap()
@@ -646,15 +657,13 @@ fn deserializers_for_struct_with_unnamed_fields(
         generate_call_to_deserializer_for_kvn_type_new(&field_type, field_type_new);
 
     let deserializer_for_kvn_type = match deserializer_for_kvn_type {
-        Ok(deserializer_for_kvn_type) => quote! {
-            #deserializer_for_kvn_type.value,
-        },
+        Ok(deserializer_for_kvn_type) => deserializer_for_kvn_type,
         Err(e) => return e.into(),
     };
 
     quote! {
         Ok(#type_name (
-            #deserializer_for_kvn_type
+            #deserializer_for_kvn_type.value
         ))
     }
 }
