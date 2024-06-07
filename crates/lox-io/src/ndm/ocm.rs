@@ -12,7 +12,7 @@
 //!
 //! ```
 //! # use lox_io::ndm::ocm::OcmType;
-//!
+//! #
 //! # let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
 //! # <ocm  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 //! # xsi:noNamespaceSchemaLocation="http://sanaregistry.org/r/ndmxml/ndmxml-1.0-master.xsd"
