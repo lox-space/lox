@@ -6,6 +6,11 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+/*!
+    `calendar_dates` exposes a concrete [Date] struct and the [CalendarDate] trait for working with
+    human-readable dates.
+*/
+
 use std::{
     cmp::Ordering,
     fmt::{Display, Formatter},

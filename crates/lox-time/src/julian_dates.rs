@@ -6,6 +6,11 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+/*!
+    Module `julian_dates` exposes the [JulianDate] trait for expressing arbitrary time
+    representations as Julian dates relative to standard [Epoch]s and in a variety of [Unit]s.
+*/
+
 /// The Julian epochs supported by Lox.
 pub enum Epoch {
     JulianDate,

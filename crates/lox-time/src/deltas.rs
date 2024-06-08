@@ -6,6 +6,16 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+/*!
+    Module `deltas` contains [TimeDelta], the key primitive of the `lox-time` crate.
+
+    [TimeDelta] is a signed, unscaled delta relative to an arbitrary epoch. This forms the basis
+    of instants in all continuous time scales.
+
+    The [ToDelta] trait specifies the method by which such scaled time representations should
+    expose their underlying [TimeDelta].
+*/
+
 use std::ops::{Add, Neg, Sub};
 
 use num::ToPrimitive;

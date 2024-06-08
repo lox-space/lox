@@ -6,6 +6,14 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+/*!
+    Module `ut1` exposes [DeltaUt1TaiProvider], which describes an API for providing the delta
+    between UT1 and TAI at a time of interest.
+
+    [DeltaUt1Tai] is `lox-time`'s default implementation of [DeltaUt1TaiProvider], which parses
+    Earth Orientation Parameters from an IERS CSV file.
+*/
+
 use std::iter::zip;
 use thiserror::Error;
 

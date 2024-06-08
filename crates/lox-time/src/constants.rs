@@ -6,6 +6,8 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+//! Module `constants` aggregates constants for a variety of time primitives and use cases.
+
 pub mod f64;
 pub mod i64;
 pub mod julian_dates;

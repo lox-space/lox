@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2024. Helge Eichhorn and the LOX contributors
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, you can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
+/*!
+    Module `time_of_day` exposes the concrete representation of a time of day with leap second
+    support, [TimeOfDay].
+
+    The [CivilTime] trait supports arbitrary time representations to express themselves as a
+    human-readable time of day.
+*/
+
 use std::fmt::Display;
 use std::str::FromStr;
 use std::{cmp::Ordering, sync::OnceLock};

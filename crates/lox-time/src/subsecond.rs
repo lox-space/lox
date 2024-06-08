@@ -6,6 +6,8 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+//! Module `subsecond` exposes the [Subsecond] newtype for working with fractions of seconds.
+
 use std::cmp::Ordering;
 use std::fmt;
 use std::fmt::{Display, Formatter};
