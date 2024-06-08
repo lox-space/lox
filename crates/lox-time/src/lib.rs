@@ -19,7 +19,7 @@
     - the [TryToScale] and [ToScale] traits, supporting transformations between pairs of time
       scales;
     - standard implementations of the most common time scale transformations.
-    
+
     # Continuous vs discontinuous timescales
 
     Internally, Lox uses only continuous time scales (i.e. time scales without leap seconds). An

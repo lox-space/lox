@@ -139,7 +139,7 @@ fn tai_at_utc_1972_01_01() -> &'static Time<Tai> {
 }
 
 #[cfg(test)]
-pub mod test {
+mod test {
     use crate::test_helpers::delta_ut1_tai;
     use crate::time;
     use crate::transformations::{ToTcb, ToTcg, ToTdb, ToTt};

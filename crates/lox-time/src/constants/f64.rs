@@ -6,4 +6,6 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+//! Module `f64` exposes time-related `f64` constants.
+
 pub const SECONDS_PER_FEMTOSECOND: f64 = 1e-15;

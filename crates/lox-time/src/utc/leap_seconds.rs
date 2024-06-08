@@ -6,6 +6,15 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+/*!
+    Module `leap_seconds` exposes the [LeapSecondsProvider] trait for defining sources of leap
+    second data. Lox's standard implementation, [BuiltinLeapSeconds], is suitable for most
+    applications.
+
+    `leap_seconds` additionally exposes the lower-level [LeapSecondsKernel] for working directly
+    with NAIF Leap Seconds Kernel data.
+*/
+
 use crate::calendar_dates::{Date, DateError};
 use crate::constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 use crate::deltas::{TimeDelta, ToDelta};
@@ -41,6 +50,12 @@ const LEAP_SECONDS: [i64; 28] = [
     34, 35, 36, 37,
 ];
 
+/// `lox-time`'s default [LeapSecondsProvider], suitable for most applications.
+///
+/// `BuiltinLeapSeconds` relies on a hard-coded table of leap second data. As new leap seconds are
+/// announced, `lox-time` will be updated to include the new data, reflected by a minor version
+/// change. If this is unsuitable for your use case, we recommend implementing [LeapSecondsProvider]
+/// manually.
 #[derive(Debug)]
 pub struct BuiltinLeapSeconds;
 
@@ -64,6 +79,7 @@ impl LeapSecondsProvider for BuiltinLeapSeconds {
     }
 }
 
+/// Error type related to parsing leap seconds data from a NAIF Leap Seconds Kernel.
 #[derive(Debug, Error)]
 pub enum LeapSecondsKernelError {
     #[error(transparent)]
@@ -81,6 +97,10 @@ pub enum LeapSecondsKernelError {
     DateError(#[from] DateError),
 }
 
+/// In-memory representation of a NAIF Leap Seconds Kernel.
+///
+/// Most users should prefer [BuiltinLeapSeconds] to implementing their own [LeapSecondsProvider]
+/// using the kernel.
 #[derive(Debug)]
 pub struct LeapSecondsKernel {
     epochs_utc: Vec<i64>,
@@ -89,6 +109,16 @@ pub struct LeapSecondsKernel {
 }
 
 impl LeapSecondsKernel {
+    /// Parse a NAIF Leap Seconds Kernel from a string.
+    ///
+    /// # Errors
+    ///
+    /// - [LeapSecondsKernelError::Kernel] if the kernel format is unparseable.
+    /// - [LeapSecondsKernelError::NoLeapSeconds] if the kernel contains no leap second data.
+    /// - [LeapSecondsKernelError::ParseInt] if a leap second entry in the kernel can't be
+    ///   represented as an i64.
+    /// - [LeapSecondsKernelError::DateError] if a date contained within the kernel is not
+    ///   represented as a valid ISO 8601 string.
     pub fn from_string(kernel: impl AsRef<str>) -> Result<Self, LeapSecondsKernelError> {
         let kernel = Kernel::from_string(kernel.as_ref())?;
         let data = kernel
@@ -117,6 +147,17 @@ impl LeapSecondsKernel {
         })
     }
 
+    /// Parse a NAIF Leap Seconds Kernel located at `path`.
+    ///
+    /// # Errors
+    ///
+    /// - [LeapSecondsKernelError::Io] if the file at `path` can't be read.
+    /// - [LeapSecondsKernelError::Kernel] if the kernel format is unparseable.
+    /// - [LeapSecondsKernelError::NoLeapSeconds] if the kernel contains no leap second data.
+    /// - [LeapSecondsKernelError::ParseInt] if a leap second entry in the kernel can't be
+    ///   represented as an i64.
+    /// - [LeapSecondsKernelError::DateError] if a date contained within the kernel is not
+    ///   represented as a valid ISO 8601 string.
     pub fn from_file(path: impl AsRef<Path>) -> Result<Self, LeapSecondsKernelError> {
         let path = path.as_ref();
         let kernel = read_to_string(path)?;
