@@ -8,7 +8,7 @@
 
 /*!
     Module `julian_dates` exposes constants related to standard Julian epochs and dates in a variety
-    of formats .
+    of formats.
 */
 
 use crate::deltas::TimeDelta;
