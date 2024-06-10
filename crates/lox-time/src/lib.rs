@@ -306,7 +306,7 @@ impl<T: TimeScale> Time<T> {
         self.seconds
     }
 
-    /// Returns the number of femtoseconds from the last whole second.
+    /// Returns the fraction of a second from the last whole second as an `f64`.
     pub fn subsecond(&self) -> f64 {
         self.subsecond.into()
     }
