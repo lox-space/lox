@@ -361,7 +361,7 @@ fn j2000_day_number(calendar: Calendar, year: i64, month: u8, day: u8) -> i64 {
     d1 + d2 as i64
 }
 
-/// `CalendarDate` allows any datetime format to report its date in a human-readable way.
+/// `CalendarDate` allows any date-time format to report its date in a human-readable way.
 pub trait CalendarDate {
     fn date(&self) -> Date;
 
