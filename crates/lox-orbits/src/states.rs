@@ -16,7 +16,7 @@ use lox_time::{
     time_scales::Tdb,
     transformations::{ToTdb, TryToScale},
     ut1::DeltaUt1TaiProvider,
-    Datetime,
+    TimeLike,
 };
 use lox_utils::glam::Azimuth;
 use lox_utils::math::{mod_two_pi, normalize_two_pi};
@@ -31,12 +31,12 @@ use crate::{
     origins::{CoordinateOrigin, Origin},
 };
 
-pub trait ToCartesian<T: Datetime, O: Origin, R: ReferenceFrame> {
+pub trait ToCartesian<T: TimeLike, O: Origin, R: ReferenceFrame> {
     fn to_cartesian(&self) -> State<T, O, R>;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct State<T: Datetime, O: Origin, R: ReferenceFrame> {
+pub struct State<T: TimeLike, O: Origin, R: ReferenceFrame> {
     time: T,
     origin: O,
     frame: R,
@@ -46,7 +46,7 @@ pub struct State<T: Datetime, O: Origin, R: ReferenceFrame> {
 
 impl<T, O, R> State<T, O, R>
 where
-    T: Datetime,
+    T: TimeLike,
     O: Origin,
     R: ReferenceFrame,
 {
@@ -92,7 +92,7 @@ where
 
 impl<T, O, R> State<T, O, R>
 where
-    T: Datetime,
+    T: TimeLike,
     O: PointMass,
     R: ReferenceFrame,
 {
@@ -111,7 +111,7 @@ where
 
 impl<T, O, R> CoordinateSystem<R> for State<T, O, R>
 where
-    T: Datetime,
+    T: TimeLike,
     O: Origin,
     R: ReferenceFrame + Clone,
 {
@@ -122,7 +122,7 @@ where
 
 impl<T, O, R> CoordinateOrigin<O> for State<T, O, R>
 where
-    T: Datetime,
+    T: TimeLike,
     O: Origin + Clone,
     R: ReferenceFrame,
 {
@@ -133,7 +133,7 @@ where
 
 impl<T, O, R, U> TryToFrame<T, O, BodyFixed<R>, U> for State<T, O, Icrf>
 where
-    T: TryToScale<Tdb, U> + Datetime + Clone,
+    T: TryToScale<Tdb, U> + TimeLike + Clone,
     O: Origin + Clone,
     R: RotationalElements + Clone,
     U: FrameTransformationProvider,
@@ -153,7 +153,7 @@ where
 
 impl<T, O, R, U> TryToFrame<T, O, Icrf, U> for State<T, O, BodyFixed<R>>
 where
-    T: TryToScale<Tdb, U> + Datetime + Clone,
+    T: TryToScale<Tdb, U> + TimeLike + Clone,
     O: Origin + Clone,
     R: RotationalElements,
     U: DeltaUt1TaiProvider + FrameTransformationProvider,
@@ -173,7 +173,7 @@ where
 
 impl<T, O, R> TryToFrame<T, O, Icrf, NoOpFrameTransformationProvider> for State<T, O, BodyFixed<R>>
 where
-    T: ToTdb + Datetime + Clone,
+    T: ToTdb + TimeLike + Clone,
     O: Origin + Clone,
     R: RotationalElements,
 {
@@ -193,7 +193,7 @@ where
 
 impl<T, O, R> ToKeplerian<T, O> for State<T, O, R>
 where
-    T: Datetime + Clone,
+    T: TimeLike + Clone,
     O: PointMass + Clone,
     R: ReferenceFrame,
 {

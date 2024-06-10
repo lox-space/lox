@@ -1,5 +1,5 @@
 use lox_time::deltas::TimeDelta;
-use lox_time::Datetime;
+use lox_time::TimeLike;
 
 use crate::{frames::ReferenceFrame, origins::Origin, states::State, trajectories::Trajectory};
 
@@ -8,7 +8,7 @@ mod stumpff;
 
 pub trait Propagator<T, O, R>
 where
-    T: Datetime + Clone,
+    T: TimeLike + Clone,
     O: Origin,
     R: ReferenceFrame,
 {

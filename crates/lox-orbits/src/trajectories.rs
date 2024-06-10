@@ -5,7 +5,7 @@ use crate::{
     origins::{CoordinateOrigin, Origin},
     states::State,
 };
-use lox_time::{deltas::TimeDelta, Datetime};
+use lox_time::{deltas::TimeDelta, TimeLike};
 use lox_utils::series::{Series, SeriesError};
 use thiserror::Error;
 
@@ -44,7 +44,7 @@ pub struct Trajectory<T, O: Origin, R: ReferenceFrame> {
 
 impl<T, O, R> Trajectory<T, O, R>
 where
-    T: Datetime + Clone,
+    T: TimeLike + Clone,
     O: Origin + Clone,
     R: ReferenceFrame + Clone,
 {

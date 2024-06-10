@@ -10,7 +10,7 @@ use thiserror::Error;
 
 use lox_bodies::PointMass;
 use lox_time::deltas::TimeDelta;
-use lox_time::Datetime;
+use lox_time::TimeLike;
 
 use crate::frames::{CoordinateSystem, Icrf};
 use crate::origins::{CoordinateOrigin, Origin};
@@ -60,7 +60,7 @@ impl<O: Origin + PointMass> Vallado<O> {
 
 impl<T, O> Propagator<T, O, Icrf> for Vallado<O>
 where
-    T: Datetime + Clone,
+    T: TimeLike + Clone,
     O: Origin + PointMass + Clone,
 {
     type Error = ValladoError;
