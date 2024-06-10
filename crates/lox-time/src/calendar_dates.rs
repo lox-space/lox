@@ -78,7 +78,7 @@ impl FromStr for Date {
 }
 
 impl Default for Date {
-    /// [Date] defaults to 2020-01-01 of the Gregorian calendar.
+    /// [Date] defaults to 2000-01-01 of the Gregorian calendar.
     fn default() -> Self {
         Self {
             calendar: Calendar::Gregorian,
