@@ -18,7 +18,7 @@ use crate::time_of_day::TimeOfDay;
 use crate::transformations::{ToTai, ToTcb, ToTcg, ToTdb, ToTt, TryToScale};
 use crate::ut1::{DeltaUt1Tai, DeltaUt1TaiProvider, ExtrapolatedDeltaUt1Tai};
 use crate::utc::transformations::ToUtc;
-use crate::{Datetime, Time, TimeError};
+use crate::{TimeLike, Time, TimeError};
 use lox_utils::is_close::IsClose;
 use pyo3::basic::CompareOp;
 use pyo3::exceptions::{PyTypeError, PyValueError};
@@ -336,7 +336,7 @@ impl CivilTime for PyTime {
     }
 }
 
-impl Datetime for PyTime {}
+impl TimeLike for PyTime {}
 
 impl TryToScale<Tai, DeltaUt1Tai> for PyTime {
     fn try_to_scale(

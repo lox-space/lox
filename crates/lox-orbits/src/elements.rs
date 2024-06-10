@@ -13,18 +13,18 @@ use glam::{DMat3, DVec3};
 
 use lox_bodies::PointMass;
 use lox_time::deltas::TimeDelta;
-use lox_time::Datetime;
+use lox_time::TimeLike;
 
 use crate::frames::{CoordinateSystem, Icrf};
 use crate::origins::CoordinateOrigin;
 use crate::states::{State, ToCartesian};
 
-pub trait ToKeplerian<T: Datetime, O: PointMass> {
+pub trait ToKeplerian<T: TimeLike, O: PointMass> {
     fn to_keplerian(&self) -> Keplerian<T, O>;
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Keplerian<T: Datetime, O: PointMass> {
+pub struct Keplerian<T: TimeLike, O: PointMass> {
     time: T,
     origin: O,
     semi_major_axis: f64,
@@ -37,7 +37,7 @@ pub struct Keplerian<T: Datetime, O: PointMass> {
 
 impl<T, O> Keplerian<T, O>
 where
-    T: Datetime,
+    T: TimeLike,
     O: PointMass,
 {
     #[allow(clippy::too_many_arguments)]
@@ -122,13 +122,13 @@ where
     }
 }
 
-impl<T: Datetime, O: PointMass + Clone> CoordinateOrigin<O> for Keplerian<T, O> {
+impl<T: TimeLike, O: PointMass + Clone> CoordinateOrigin<O> for Keplerian<T, O> {
     fn origin(&self) -> O {
         self.origin.clone()
     }
 }
 
-impl<T: Datetime, O: PointMass> CoordinateSystem<Icrf> for Keplerian<T, O> {
+impl<T: TimeLike, O: PointMass> CoordinateSystem<Icrf> for Keplerian<T, O> {
     fn reference_frame(&self) -> Icrf {
         Icrf
     }
@@ -136,7 +136,7 @@ impl<T: Datetime, O: PointMass> CoordinateSystem<Icrf> for Keplerian<T, O> {
 
 impl<T, O> ToCartesian<T, O, Icrf> for Keplerian<T, O>
 where
-    T: Datetime + Clone,
+    T: TimeLike + Clone,
     O: PointMass + Clone,
 {
     fn to_cartesian(&self) -> State<T, O, Icrf> {
