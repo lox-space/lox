@@ -20,7 +20,6 @@ and `lox-coords` provide tools for advanced users and scientific computing.
 * Python bindings for easy integration with industry standard tools.
 * Tools for working with time in UTC, TAI, UT1, TT, TCB, TCG and TDB, in wall clock, Julian and high-precision
   representations.
-* An RF communication toolkit.
 * Work with fixed and rotating frames in Cartesian and Keplerian coordinate systems.
 * Ephemeris, size and shape data for all major celestial bodies.
 * Ingest and interpolate Earth orientation parameters with ease.
@@ -42,10 +41,6 @@ representations. Offers leap-second aware conversion from UTC to continuous time
 
 Provides structs representing all major celestial bodies, conveniently categorized by a variety of traits exposing
 SPICE-dervied data.
-
-### lox-comms
-
-Tools for planning and analysing RF communication links between spacecraft and ground stations.
 
 ### lox-coords
 
