@@ -19,6 +19,9 @@ lox-utils.workspace = true
 
 pyo3.workspace = true
 
+[dev-dependencies]
+divan.workspace = true
+
 [[bench]]
 name = "iau_frames"
 harness = false
