@@ -6,6 +6,14 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+/*!
+    Module `ut1` exposes [DeltaUt1TaiProvider], which describes an API for providing the delta
+    between UT1 and TAI at a time of interest.
+
+    [DeltaUt1Tai] is `lox-time`'s default implementation of [DeltaUt1TaiProvider], which parses
+    Earth Orientation Parameters from an IERS CSV file.
+*/
+
 use std::iter::zip;
 use thiserror::Error;
 
@@ -24,13 +32,22 @@ use lox_utils::series::{Series, SeriesError};
 use num::ToPrimitive;
 use std::path::Path;
 
+/// Implementers of `DeltaUt1TaiProvider` provide the difference between UT1 and TAI at an instant
+/// in either time scale.
+///
+/// This crate provides a standard implementation over IERS Earth Orientation Parameters in
+/// [DeltaUt1Tai].
 pub trait DeltaUt1TaiProvider: OffsetProvider {
     type Error;
 
+    /// Returns the difference between UT1 and TAI at the given TAI instant.
     fn delta_ut1_tai(&self, tai: &Time<Tai>) -> Result<TimeDelta, Self::Error>;
+
+    /// Returns the difference between TAI and UT1 at the given UT1 instant.
     fn delta_tai_ut1(&self, ut1: &Time<Ut1>) -> Result<TimeDelta, Self::Error>;
 }
 
+/// Error type returned when [DeltaUt1Tai] instantiation fails.
 #[derive(Clone, Debug, Error)]
 pub enum DeltaUt1TaiError {
     #[error(transparent)]
@@ -39,6 +56,11 @@ pub enum DeltaUt1TaiError {
     Series(#[from] SeriesError),
 }
 
+/// Error type indicating that an input date to [DeltaUt1Tai] was outside the range of available
+/// Earth Orientation Parameters.
+///
+/// It includes an extrapolated value for the input date which is unlikely to be accurate and should
+/// be used with great caution.
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[error("UT1-TAI is only available between {min_date} and {max_date}; value for {req_date} was extrapolated")]
 pub struct ExtrapolatedDeltaUt1Tai {
@@ -49,7 +71,7 @@ pub struct ExtrapolatedDeltaUt1Tai {
 }
 
 impl ExtrapolatedDeltaUt1Tai {
-    pub fn new(t0: f64, tn: f64, t: f64, val: f64) -> Self {
+    fn new(t0: f64, tn: f64, t: f64, val: f64) -> Self {
         let min_date = Time::new(Tai, t0.to_i64().unwrap(), Subsecond::default());
         let max_date = Time::new(Tai, tn.to_i64().unwrap(), Subsecond::default());
         let req_date = Time::new(Tai, t.to_i64().unwrap(), Subsecond::default());
@@ -62,10 +84,21 @@ impl ExtrapolatedDeltaUt1Tai {
     }
 }
 
+/// Provides a standard implementation of [DeltaUt1TaiProvider] based on cubic spline interpolation
+/// of the target time over IERS Earth Orientation Parameters.
 #[derive(Clone, Debug, PartialEq)]
 pub struct DeltaUt1Tai(Series<Vec<f64>, Vec<f64>>);
 
 impl DeltaUt1Tai {
+    /// Instantiates a new [DeltaUt1Tai] provider from a path to an IERS Earth Orientation
+    /// Parameters finals CSV and a [LeapSecondsProvider].
+    ///
+    /// `ls` should provide leap second data for the full range of the EOP data.
+    ///
+    /// # Errors
+    ///
+    /// - [DeltaUt1TaiError::Csv] if the CSV file could not be parsed.
+    /// - [DeltaUt1TaiError::Series] if construction of a cubic spline from the input series fails.
     pub fn new<P: AsRef<Path>>(
         path: P,
         ls: &impl LeapSecondsProvider,

@@ -1,3 +1,18 @@
+/*
+ * Copyright (c) 2023. Helge Eichhorn and the LOX contributors
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, you can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
+/*!
+    Module `utc` exposes [Utc], a leap-second aware representation for UTC datetimes.
+
+    Due to the complexity inherent in working with leap seconds, it is intentionally segregated
+    from the continuous time formats, and is used exclusively as an input format to Lox.
+*/
+
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
@@ -16,6 +31,7 @@ use self::leap_seconds::BuiltinLeapSeconds;
 pub mod leap_seconds;
 pub mod transformations;
 
+/// Error type returned when attempting to construct a [Utc] instance from invalid inputs.
 #[derive(Debug, Clone, Error, PartialEq, Eq, PartialOrd, Ord)]
 pub enum UtcError {
     #[error(transparent)]
@@ -30,6 +46,7 @@ pub enum UtcError {
     InvalidIsoString(String),
 }
 
+/// Coordinated Universal Time.
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Utc {
     date: Date,
@@ -37,6 +54,14 @@ pub struct Utc {
 }
 
 impl Utc {
+    /// Creates a new [Utc] instance from the given [Date] and [TimeOfDay], with leap second
+    /// validation provided by the [LeapSecondsProvider].
+    ///
+    /// # Errors
+    ///
+    /// - [UtcError::UtcUndefined] if the date is before 1960-01-01.
+    /// - [UtcError::NonLeapSecondDate] if `time.seconds` is 60 seconds and the date is not a leap
+    ///   second date.
     pub fn new(
         date: Date,
         time: TimeOfDay,
@@ -51,10 +76,22 @@ impl Utc {
         Ok(Self { date, time })
     }
 
+    /// Returns a new [UtcBuilder].
     pub fn builder() -> UtcBuilder {
         UtcBuilder::default()
     }
 
+    /// Constructs a new [Utc] instance from the given ISO 8601 string, with leap second validation
+    /// provided by the [LeapSecondsProvider].
+    ///
+    /// # Errors
+    ///
+    /// - [UtcError::InvalidIsoString] if the input string is not a valid ISO 8601 string.
+    /// - [UtcError::DateError] if the date component of the string is invalid.
+    /// - [UtcError::TimeError] if the time component of the string is invalid.
+    /// - [UtcError::UtcUndefined] if the date is before 1960-01-01.
+    /// - [UtcError::NonLeapSecondDate] if the time component is 60 seconds and the date is not a
+    ///   leap second date.
     pub fn from_iso_with_provider<T: LeapSecondsProvider>(
         iso: &str,
         provider: &T,
@@ -80,10 +117,15 @@ impl Utc {
         Utc::new(date, time, provider)
     }
 
+    /// Constructs a new [Utc] instance from the given ISO 8601 string, with leap second validation
+    /// provided by [BuiltinLeapSeconds].
     pub fn from_iso(iso: &str) -> Result<Self, UtcError> {
         Self::from_iso_with_provider(iso, &BuiltinLeapSeconds)
     }
 
+    /// Constructs a new [Utc] instance from a [TimeDelta] relative to J2000.
+    ///
+    /// Note that this constructor is not leap-second aware.
     pub fn from_delta(delta: TimeDelta) -> Self {
         let date = Date::from_seconds_since_j2000(delta.seconds);
         let time =
@@ -135,6 +177,7 @@ impl CivilTime for Utc {
     }
 }
 
+/// A builder for constructing [Utc] instances piecewise.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct UtcBuilder {
     date: Result<Date, DateError>,
@@ -142,6 +185,7 @@ pub struct UtcBuilder {
 }
 
 impl Default for UtcBuilder {
+    /// Returns a new [UtcBuilder] at 2000-01-01T00:00:00.000 UTC.
     fn default() -> Self {
         Self {
             date: Ok(Date::default()),
@@ -151,6 +195,7 @@ impl Default for UtcBuilder {
 }
 
 impl UtcBuilder {
+    /// Sets the year, month and day fields of the [Utc] instance being built.
     pub fn with_ymd(self, year: i64, month: u8, day: u8) -> Self {
         Self {
             date: Date::new(year, month, day),
@@ -158,6 +203,7 @@ impl UtcBuilder {
         }
     }
 
+    /// Sets the hour, minute, second and subsecond fields of the [Utc] instance being built.
     pub fn with_hms(self, hour: u8, minute: u8, seconds: f64) -> Self {
         Self {
             time: TimeOfDay::from_hms(hour, minute, seconds),
@@ -165,17 +211,33 @@ impl UtcBuilder {
         }
     }
 
+    /// Constructs the [Utc] instance with leap second validation provided by the given
+    /// [LeapSecondsProvider].
     pub fn build_with_provider(self, provider: &impl LeapSecondsProvider) -> Result<Utc, UtcError> {
         let date = self.date?;
         let time = self.time?;
         Utc::new(date, time, provider)
     }
 
+    /// Constructs the [Utc] instance with leap second validation provided by [BuiltinLeapSeconds].
     pub fn build(self) -> Result<Utc, UtcError> {
         self.build_with_provider(&BuiltinLeapSeconds)
     }
 }
 
+/// The `utc` macro simplifies the creation of [Utc] instances.
+///
+/// # Examples
+///
+/// ```rust
+/// use lox_time::utc;
+/// use lox_time::utc::Utc;
+///
+/// utc!(2000, 1, 2); // 2000-01-02T00:00:00.000 UTC
+/// utc!(2000, 1, 2, 3); // 2000-01-01T03:00:00.000 UTC
+/// utc!(2000, 1, 2, 3, 4); // 2000-01-01T03:04:00.000 UTC
+/// utc!(2000, 1, 2, 3, 4, 5.6); // 2000-01-01T03:04:05.600 UTC
+/// ```
 #[macro_export]
 macro_rules! utc {
     ($year:literal, $month:literal, $day:literal) => {

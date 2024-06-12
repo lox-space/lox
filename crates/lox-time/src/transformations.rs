@@ -6,8 +6,10 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-//! Module transform provides a trait for transforming between pairs of timescales, together
-//! with a default implementation for the most commonly used time scale pairs.
+/*!
+    Module `transformations` provides traits for transforming between pairs of [TimeScale]s, together
+    with default implementations for the most commonly used time scale pairs.
+*/
 
 use std::convert::Infallible;
 
@@ -20,57 +22,79 @@ use crate::ut1::DeltaUt1TaiProvider;
 use crate::utc::Utc;
 use crate::Time;
 
+/// Marker trait denoting a type that returns an offset between a pair of [TimeScale]s.
 pub trait OffsetProvider {}
 
+/// A no-op [OffsetProvider] equivalent to `()`, used to guide the type system when implementing
+/// transformations with constant offsets.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct NoOpOffsetProvider;
 
 impl OffsetProvider for NoOpOffsetProvider {}
 
+/// The base trait underlying all time scale transformations.
+///
+/// By default, `TryToScale` assumes that no [OffsetProvider] is required and that the
+/// transformation is infallible.
 pub trait TryToScale<T: TimeScale, U: OffsetProvider = NoOpOffsetProvider, E = Infallible>:
     ToDelta
 {
     fn try_to_scale(&self, scale: T, provider: &U) -> Result<Time<T>, E>;
 }
 
+/// `ToScale` narrows [TryToScale] for the case where no [OffsetProvider] is required and the
+/// transformation is infallible.
 pub trait ToScale<T: TimeScale>: TryToScale<T, NoOpOffsetProvider, Infallible> {
     fn to_scale(&self, scale: T) -> Time<T> {
         self.try_to_scale(scale, &NoOpOffsetProvider).unwrap()
     }
 }
 
+/// Blanket implementation of [ToScale] for all types that implement [TryToScale] infallibly with
+/// no [OffsetProvider].
 impl<T: TimeScale, U: TryToScale<T, NoOpOffsetProvider>> ToScale<T> for U {}
 
+/// Convenience trait and default implementation for infallible conversions to [Tai] in terms of
+/// [ToScale].
 pub trait ToTai: ToScale<Tai> {
     fn to_tai(&self) -> Time<Tai> {
         self.to_scale(Tai)
     }
 }
 
+/// Convenience trait and default implementation for infallible conversions to [Tt] in terms of
+/// [ToScale].
 pub trait ToTt: ToScale<Tt> {
     fn to_tt(&self) -> Time<Tt> {
         self.to_scale(Tt)
     }
 }
 
+/// Convenience trait and default implementation for infallible conversions to [Tcg] in terms of
+/// [ToScale].
 pub trait ToTcg: ToScale<Tcg> {
     fn to_tcg(&self) -> Time<Tcg> {
         self.to_scale(Tcg)
     }
 }
 
+/// Convenience trait and default implementation for infallible conversions to [Tcb] in terms of
+/// [ToScale].
 pub trait ToTcb: ToScale<Tcb> {
     fn to_tcb(&self) -> Time<Tcb> {
         self.to_scale(Tcb)
     }
 }
 
+/// Convenience trait and default implementation for infallible conversions to [Tdb] in terms of
+/// [ToScale].
 pub trait ToTdb: ToScale<Tdb> {
     fn to_tdb(&self) -> Time<Tdb> {
         self.to_scale(Tdb)
     }
 }
 
+/// Convenience trait and default implementation for conversions to [Ut1] in terms of [TryToScale].
 pub trait ToUt1<T: DeltaUt1TaiProvider>: TryToScale<Ut1, T, T::Error> {
     fn try_to_ut1(&self, provider: &T) -> Result<Time<Ut1>, T::Error> {
         self.try_to_scale(Ut1, provider)
@@ -466,13 +490,19 @@ impl<T: DeltaUt1TaiProvider> TryToScale<Tdb, T, T::Error> for Time<Ut1> {
     }
 }
 
+/// Implementers of `LeapSecondsProvider` provide the offset between TAI and UTC in leap seconds at
+/// an instant in either time scale.
 pub trait LeapSecondsProvider: OffsetProvider {
+    /// The difference in leap seconds between TAI and UTC at the given TAI instant.
     fn delta_tai_utc(&self, tai: Time<Tai>) -> Option<TimeDelta>;
 
+    /// The difference in leap seconds between UTC and TAI at the given UTC instant.
     fn delta_utc_tai(&self, utc: Utc) -> Option<TimeDelta>;
 
+    /// Returns `true` if a leap second occurs on `date`.
     fn is_leap_second_date(&self, date: Date) -> bool;
 
+    /// Returns `true` if a leap second occurs at `tai`.
     fn is_leap_second(&self, tai: Time<Tai>) -> bool;
 }
 

@@ -6,6 +6,8 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+//! Module `subsecond` exposes the [Subsecond] newtype for working with fractions of seconds.
+
 use std::cmp::Ordering;
 use std::fmt;
 use std::fmt::{Display, Formatter};
@@ -14,6 +16,7 @@ use num::ToPrimitive;
 
 use thiserror::Error;
 
+/// Error type returned when attempting to construct a [Subsecond] from an invalid `f64`.
 #[derive(Debug, Copy, Clone, Error)]
 #[error("subsecond must be in the range [0.0, 1.0), but was `{0}`")]
 pub struct InvalidSubsecond(f64);
@@ -38,7 +41,7 @@ impl PartialEq for InvalidSubsecond {
 
 impl Eq for InvalidSubsecond {}
 
-/// An f64 value in the range [0.0, 1.0) representing a fraction of a second with femtosecond
+/// An `f64` value in the range `[0.0, 1.0)` representing a fraction of a second with femtosecond
 /// precision.
 #[derive(Debug, Default, Copy, Clone)]
 pub struct Subsecond(pub(crate) f64);
@@ -189,7 +192,8 @@ mod tests {
     #[test]
     fn test_subsecond_into_f64() {
         let subsecond = Subsecond(0.0);
-        assert_eq!(0.0, subsecond.into());
+        let as_f64: f64 = subsecond.into();
+        assert_eq!(0.0, as_f64);
     }
 
     #[test]

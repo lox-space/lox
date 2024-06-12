@@ -6,6 +6,11 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+/*!
+    Module `julian_dates` exposes constants related to standard Julian epochs and dates in a variety
+    of formats.
+*/
+
 use crate::deltas::TimeDelta;
 use crate::subsecond::Subsecond;
 

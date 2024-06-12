@@ -6,6 +6,8 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+//! Module `i64` exposes time-related `i64` constants.
+
 pub const SECONDS_PER_MINUTE: i64 = 60;
 
 pub const SECONDS_PER_HOUR: i64 = 60 * SECONDS_PER_MINUTE;

@@ -6,6 +6,16 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+/*!
+    Module `deltas` contains [TimeDelta], the key primitive of the `lox-time` crate.
+
+    [TimeDelta] is a signed, unscaled delta relative to an arbitrary epoch. This forms the basis
+    of instants in all continuous time scales.
+
+    The [ToDelta] trait specifies the method by which such scaled time representations should
+    expose their underlying [TimeDelta].
+*/
+
 use std::ops::{Add, Neg, Sub};
 
 use num::ToPrimitive;
@@ -25,11 +35,13 @@ use crate::{
     subsecond::Subsecond,
 };
 
+/// A unifying trait for types that can be converted into a [TimeDelta].
 pub trait ToDelta {
     /// Transforms the value into a [TimeDelta].
     fn to_delta(&self) -> TimeDelta;
 }
 
+/// Error type returned when attempting to construct a [TimeDelta] from an invalid `f64`.
 #[derive(Clone, Debug, Default, Error)]
 #[error("`{raw}` cannot be represented as a `TimeDelta`: {detail}")]
 pub struct TimeDeltaError {
@@ -49,7 +61,7 @@ impl PartialEq for TimeDeltaError {
 /// A signed, continuous time difference supporting femtosecond precision.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
 pub struct TimeDelta {
-    // Like `BaseTime`, the sign of the delta is determined by the sign of the `seconds` field.
+    // The sign of the delta is determined by the sign of the `seconds` field.
     pub seconds: i64,
 
     // The positive subsecond since the last whole second. For example, a delta of -0.25 s would be
@@ -64,10 +76,12 @@ pub struct TimeDelta {
 }
 
 impl TimeDelta {
+    /// Construct a new [TimeDelta] from a number of seconds and a [Subsecond].
     pub fn new(seconds: i64, subsecond: Subsecond) -> Self {
         Self { seconds, subsecond }
     }
 
+    /// Construct a [TimeDelta] from an integral number of seconds.
     pub fn from_seconds(seconds: i64) -> Self {
         Self {
             seconds,
@@ -75,11 +89,15 @@ impl TimeDelta {
         }
     }
 
-    /// Create a [TimeDelta] from a floating-point number of seconds.
+    /// Construct a [TimeDelta] from a floating-point number of seconds.
     ///
     /// As the magnitude of the input's significand grows, the precision of the resulting
-    /// `TimeDelta` falls. Applications requiring precision guarantees should use `TimeDelta::new`
+    /// `TimeDelta` falls. Applications requiring precision guarantees should use [TimeDelta::new]
     /// instead.
+    ///
+    /// # Errors
+    ///
+    /// - [TimeDeltaError] if the input is NaN or ±infinity.
     pub fn from_decimal_seconds(value: f64) -> Result<Self, TimeDeltaError> {
         if value.is_nan() {
             return Err(TimeDeltaError {
@@ -122,51 +140,72 @@ impl TimeDelta {
         Ok(result)
     }
 
-    /// Create a [TimeDelta] from a floating-point number of minutes.
+    /// Construct a [TimeDelta] from a floating-point number of minutes.
     ///
     /// As the magnitude of the input's significand grows, the resolution of the resulting
-    /// `TimeDelta` falls. Applications requiring precision guarantees should use `TimeDelta::new`
+    /// `TimeDelta` falls. Applications requiring precision guarantees should use [TimeDelta::new]
     /// instead.
+    ///
+    /// # Errors
+    ///
+    /// - [TimeDeltaError] if the input is NaN or ±infinity.
     pub fn from_minutes(value: f64) -> Result<Self, TimeDeltaError> {
         Self::from_decimal_seconds(value * SECONDS_PER_MINUTE)
     }
 
-    /// Create a [TimeDelta] from a floating-point number of hours.
+    /// Construct a [TimeDelta] from a floating-point number of hours.
     ///
     /// As the magnitude of the input's significand grows, the resolution of the resulting
-    /// `TimeDelta` falls. Applications requiring precision guarantees should use `TimeDelta::new`
+    /// `TimeDelta` falls. Applications requiring precision guarantees should use [TimeDelta::new]
     /// instead.
+    ///
+    /// # Errors
+    ///
+    /// - [TimeDeltaError] if the input is NaN or ±infinity.
     pub fn from_hours(value: f64) -> Result<Self, TimeDeltaError> {
         Self::from_decimal_seconds(value * SECONDS_PER_HOUR)
     }
 
-    /// Create a [TimeDelta] from a floating-point number of days.
+    /// Construct a [TimeDelta] from a floating-point number of days.
     ///
     /// As the magnitude of the input's significand grows, the resolution of the resulting
-    /// `TimeDelta` falls. Applications requiring precision guarantees should use `TimeDelta::new`
+    /// `TimeDelta` falls. Applications requiring precision guarantees should use [TimeDelta::new]
     /// instead.
+    ///
+    /// # Errors
+    ///
+    /// - [TimeDeltaError] if the input is NaN or ±infinity.
     pub fn from_days(value: f64) -> Result<Self, TimeDeltaError> {
         Self::from_decimal_seconds(value * SECONDS_PER_DAY)
     }
 
-    /// Create a [TimeDelta] from a floating-point number of Julian years.
+    /// Construct a [TimeDelta] from a floating-point number of Julian years.
     ///
     /// As the magnitude of the input's significand grows, the resolution of the resulting
-    /// `TimeDelta` falls. Applications requiring precision guarantees should use `TimeDelta::new`
+    /// `TimeDelta` falls. Applications requiring precision guarantees should use [TimeDelta::new]
     /// instead.
+    ///
+    /// # Errors
+    ///
+    /// - [TimeDeltaError] if the input is NaN or ±infinity.
     pub fn from_julian_years(value: f64) -> Result<Self, TimeDeltaError> {
         Self::from_decimal_seconds(value * SECONDS_PER_JULIAN_YEAR)
     }
 
-    /// Create a [TimeDelta] from a floating-point number of Julian centuries.
+    /// Construct a [TimeDelta] from a floating-point number of Julian centuries.
     ///
     /// As the magnitude of the input's significand grows, the resolution of the resulting
-    /// `TimeDelta` falls. Applications requiring precision guarantees should use `TimeDelta::new`
+    /// `TimeDelta` falls. Applications requiring precision guarantees should use [TimeDelta::new]
     /// instead.
+    ///
+    /// # Errors
+    ///
+    /// - [TimeDeltaError] if the input is NaN or ±infinity.
     pub fn from_julian_centuries(value: f64) -> Result<Self, TimeDeltaError> {
         Self::from_decimal_seconds(value * SECONDS_PER_JULIAN_CENTURY)
     }
 
+    /// Express `&self` as a floating-point number of seconds, with potential loss of precision.
     pub fn to_decimal_seconds(&self) -> f64 {
         self.subsecond.0 + self.seconds.to_f64().unwrap()
     }
@@ -183,6 +222,7 @@ impl TimeDelta {
         self.seconds > 0 || self.seconds == 0 && self.subsecond.0 > 0.0
     }
 
+    /// Scale the [TimeDelta] by `factor`, with possible loss of precision.
     pub fn scale(mut self, mut factor: f64) -> Self {
         // Treating both `Self` and `factor` as positive and then correcting the sign at the end
         // substantially simplifies the implementation.
@@ -225,6 +265,7 @@ impl TimeDelta {
         }
     }
 
+    /// Express the [TimeDelta] as an integral number of seconds since the given [Epoch].
     pub fn seconds_from_epoch(&self, epoch: Epoch) -> i64 {
         match epoch {
             Epoch::JulianDate => self.seconds + SECONDS_BETWEEN_JD_AND_J2000,

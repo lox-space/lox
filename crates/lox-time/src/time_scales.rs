@@ -6,11 +6,17 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-//! Module `time_scales` provides a marker trait with associated constants denoting a continuous
-//! astronomical time scale, along with zero-sized implementations for the most commonly used
-//! scales.
+/*!
+    Module `time_scales` provides a marker trait denoting a continuous astronomical time scale,
+    along with zero-sized implementations for the most commonly used scales.
 
-/// Marker trait with associated constants denoting a continuous astronomical time scale.
+    # Utc
+
+    As a discontinuous time scale, [Utc] does not implement [TimeScale] and is treated by Lox
+    exclusively as an IO format.
+*/
+
+/// Marker trait denoting a continuous astronomical time scale.
 pub trait TimeScale {
     fn abbreviation(&self) -> &'static str;
     fn name(&self) -> &'static str;

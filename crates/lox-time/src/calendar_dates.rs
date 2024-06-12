@@ -6,6 +6,11 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+/*!
+    `calendar_dates` exposes a concrete [Date] struct and the [CalendarDate] trait for working with
+    human-readable dates.
+*/
+
 use std::{
     cmp::Ordering,
     fmt::{Display, Formatter},
@@ -30,6 +35,7 @@ fn iso_regex() -> &'static Regex {
     ISO.get_or_init(|| Regex::new(r"(?<year>-?\d{4,})-(?<month>\d{2})-(?<day>\d{2})").unwrap())
 }
 
+/// Error type returned when attempting to construct a [Date] from invalid inputs.
 #[derive(Debug, Clone, Error, PartialEq, Eq, PartialOrd, Ord)]
 pub enum DateError {
     #[error("invalid date `{0}-{1}-{2}`")]
@@ -40,6 +46,7 @@ pub enum DateError {
     NonLeapYear,
 }
 
+/// The calendars supported by Lox.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Calendar {
     ProlepticJulian,
@@ -47,6 +54,7 @@ pub enum Calendar {
     Gregorian,
 }
 
+/// A calendar date.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Date {
     calendar: Calendar,
@@ -70,6 +78,7 @@ impl FromStr for Date {
 }
 
 impl Default for Date {
+    /// [Date] defaults to 2000-01-01 of the Gregorian calendar.
     fn default() -> Self {
         Self {
             calendar: Calendar::Gregorian,
@@ -124,6 +133,12 @@ impl Date {
         self.day
     }
 
+    /// Construct a new [Date] from a year, month and day. The [Calendar] is inferred from the input
+    /// fields.
+    ///
+    /// # Errors
+    ///
+    /// - [DateError::InvalidDate] if the input fields do not represent a valid date.
     pub fn new(year: i64, month: u8, day: u8) -> Result<Self, DateError> {
         if !(1..=12).contains(&month) {
             Err(DateError::InvalidDate(year, month, day))
@@ -144,6 +159,12 @@ impl Date {
         }
     }
 
+    /// Constructs a new [Date] from an ISO 8601 string.
+    ///
+    /// # Errors
+    ///
+    /// - [DateError::InvalidIsoString] if the input string does not contain a valid ISO 8601 date.
+    /// - [DateError::InvalidDate] if the date parsed from the ISO 8601 string is invalid.
     pub fn from_iso(iso: &str) -> Result<Self, DateError> {
         let caps = iso_regex()
             .captures(iso)
@@ -160,6 +181,8 @@ impl Date {
         Date::new(year, month, day)
     }
 
+    /// Constructs a new [Date] from a signed number of days since J2000. The [Calendar] is
+    /// inferred.
     pub fn from_days_since_j2000(days: i64) -> Self {
         let calendar = if days < LAST_JULIAN_DAY_J2K {
             if days > LAST_PROLEPTIC_JULIAN_DAY_J2K {
@@ -187,6 +210,8 @@ impl Date {
         }
     }
 
+    /// Constructs a new [Date] from a signed number of seconds since J2000. The [Calendar] is
+    /// inferred.
     pub fn from_seconds_since_j2000(seconds: i64) -> Self {
         let seconds = seconds + SECONDS_PER_HALF_DAY;
         let mut time = seconds % SECONDS_PER_DAY;
@@ -197,6 +222,12 @@ impl Date {
         Self::from_days_since_j2000(days)
     }
 
+    /// Constructs a new [Date] from a year and a day number within that year. The [Calendar] is
+    /// inferred.
+    ///
+    /// # Errors
+    ///
+    /// - [DateError::NonLeapYear] if the input day number is 366 and the year is not a leap year.
     pub fn from_day_of_year(year: i64, day_of_year: u16) -> Result<Self, DateError> {
         let calendar = calendar(year, 1, 1);
         let leap = is_leap_year(calendar, year);
@@ -211,6 +242,7 @@ impl Date {
         })
     }
 
+    /// Returns the day number of `self` relative to J2000.
     pub fn j2000_day_number(&self) -> i64 {
         j2000_day_number(self.calendar, self.year, self.month, self.day)
     }
@@ -329,7 +361,7 @@ fn j2000_day_number(calendar: Calendar, year: i64, month: u8, day: u8) -> i64 {
     d1 + d2 as i64
 }
 
-/// CalendarDate allows continuous time formats to report their date in their respective calendar.
+/// `CalendarDate` allows any date-time format to report its date in a human-readable way.
 pub trait CalendarDate {
     fn date(&self) -> Date;
 
