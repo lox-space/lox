@@ -13,7 +13,7 @@
 
     `leap_seconds` additionally exposes the lower-level [LeapSecondsKernel] for working directly
     with [NAIF Leap Seconds Kernel][LSK] data.
-    
+
     [LSK]: https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/req/time.html#The%20Leapseconds%20Kernel%20LSK
 */
 
