@@ -336,7 +336,7 @@ pub struct OpmCovarianceMatrixType {
 #[serde(default)]
 pub struct OmmMetadata {
     #[serde(rename = "COMMENT")]
-    pub comment: Vec<String>,
+    pub comment_list: Vec<String>,
     #[serde(rename = "OBJECT_NAME")]
     pub object_name: String,
     #[serde(rename = "OBJECT_ID")]
@@ -454,7 +454,7 @@ mod test {
                     message_id: None,
                 },
                 metadata: OmmMetadata {
-                    comment: vec![],
+                    comment_list: vec![],
                     object_name: "NUSAT-8 (MARIE)".to_string(),
                     object_id: "2020-003C".to_string(),
                     center_name: "EARTH".to_string(),
