@@ -7,6 +7,7 @@
  */
 
 use crate::elements::Keplerian;
+use crate::frames::{Icrf, NoOpFrameTransformationProvider, TryToFrame};
 use crate::{
     frames::FrameTransformationProvider,
     states::State,
@@ -14,6 +15,7 @@ use crate::{
 };
 use glam::DVec3;
 use lox_bodies::*;
+use lox_time::python::ut1::{PyNoOpOffsetProvider, PyUt1Provider};
 use lox_time::{python::time::PyTime, ut1::DeltaUt1Tai};
 use pyo3::{
     exceptions::PyValueError,
@@ -25,7 +27,7 @@ use python::PyBody;
 
 mod generated;
 
-#[pyclass]
+#[pyclass(frozen)]
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub enum PyFrame {
     Icrf,
@@ -212,6 +214,7 @@ pub enum PyFrame {
 }
 
 impl FrameTransformationProvider for DeltaUt1Tai {}
+impl FrameTransformationProvider for PyNoOpOffsetProvider {}
 
 #[pyclass(name = "State", module = "lox_space")]
 #[derive(Debug, Clone)]
@@ -238,6 +241,208 @@ impl PyState {
             DVec3::new(position.0, position.1, position.2),
             DVec3::new(velocity.0, velocity.1, velocity.2),
         )))
+    }
+
+    fn to_frame(
+        &self,
+        frame: &Bound<'_, PyFrame>,
+        provider: Option<&Bound<'_, PyUt1Provider>>,
+    ) -> PyResult<Self> {
+        let frame = frame.get();
+        match frame {
+            PyFrame::Icrf => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(Icrf, &provider.borrow().0)
+                        .map_err(|err| PyValueError::new_err(format!("{}", err)))?
+                        .with_frame(PyFrame::Icrf),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(Icrf, &PyNoOpOffsetProvider)
+                        .map_err(|err| PyValueError::new_err(format!("{}", err)))?
+                        .with_frame(PyFrame::Icrf),
+                )),
+            },
+            PyFrame::Sun => todo!(),
+            PyFrame::Mercury => todo!(),
+            PyFrame::Venus => todo!(),
+            PyFrame::Earth => todo!(),
+            PyFrame::Mars => todo!(),
+            PyFrame::Jupiter => todo!(),
+            PyFrame::Saturn => todo!(),
+            PyFrame::Uranus => todo!(),
+            PyFrame::Neptune => todo!(),
+            PyFrame::Pluto => todo!(),
+            PyFrame::Moon => todo!(),
+            PyFrame::Phobos => todo!(),
+            PyFrame::Deimos => todo!(),
+            PyFrame::Io => todo!(),
+            PyFrame::Europa => todo!(),
+            PyFrame::Ganymede => todo!(),
+            PyFrame::Callisto => todo!(),
+            PyFrame::Amalthea => todo!(),
+            PyFrame::Himalia => todo!(),
+            PyFrame::Elara => todo!(),
+            PyFrame::Pasiphae => todo!(),
+            PyFrame::Sinope => todo!(),
+            PyFrame::Lysithea => todo!(),
+            PyFrame::Carme => todo!(),
+            PyFrame::Ananke => todo!(),
+            PyFrame::Leda => todo!(),
+            PyFrame::Thebe => todo!(),
+            PyFrame::Adrastea => todo!(),
+            PyFrame::Metis => todo!(),
+            PyFrame::Callirrhoe => todo!(),
+            PyFrame::Themisto => todo!(),
+            PyFrame::Magaclite => todo!(),
+            PyFrame::Taygete => todo!(),
+            PyFrame::Chaldene => todo!(),
+            PyFrame::Harpalyke => todo!(),
+            PyFrame::Kalyke => todo!(),
+            PyFrame::Iocaste => todo!(),
+            PyFrame::Erinome => todo!(),
+            PyFrame::Isonoe => todo!(),
+            PyFrame::Praxidike => todo!(),
+            PyFrame::Autonoe => todo!(),
+            PyFrame::Thyone => todo!(),
+            PyFrame::Hermippe => todo!(),
+            PyFrame::Aitne => todo!(),
+            PyFrame::Eurydome => todo!(),
+            PyFrame::Euanthe => todo!(),
+            PyFrame::Euporie => todo!(),
+            PyFrame::Orthosie => todo!(),
+            PyFrame::Sponde => todo!(),
+            PyFrame::Kale => todo!(),
+            PyFrame::Pasithee => todo!(),
+            PyFrame::Hegemone => todo!(),
+            PyFrame::Mneme => todo!(),
+            PyFrame::Aoede => todo!(),
+            PyFrame::Thelxinoe => todo!(),
+            PyFrame::Arche => todo!(),
+            PyFrame::Kallichore => todo!(),
+            PyFrame::Helike => todo!(),
+            PyFrame::Carpo => todo!(),
+            PyFrame::Eukelade => todo!(),
+            PyFrame::Cyllene => todo!(),
+            PyFrame::Kore => todo!(),
+            PyFrame::Herse => todo!(),
+            PyFrame::Dia => todo!(),
+            PyFrame::Mimas => todo!(),
+            PyFrame::Enceladus => todo!(),
+            PyFrame::Tethys => todo!(),
+            PyFrame::Dione => todo!(),
+            PyFrame::Rhea => todo!(),
+            PyFrame::Titan => todo!(),
+            PyFrame::Hyperion => todo!(),
+            PyFrame::Iapetus => todo!(),
+            PyFrame::Phoebe => todo!(),
+            PyFrame::Janus => todo!(),
+            PyFrame::Epimetheus => todo!(),
+            PyFrame::Helene => todo!(),
+            PyFrame::Telesto => todo!(),
+            PyFrame::Calypso => todo!(),
+            PyFrame::Atlas => todo!(),
+            PyFrame::Prometheus => todo!(),
+            PyFrame::Pandora => todo!(),
+            PyFrame::Pan => todo!(),
+            PyFrame::Ymir => todo!(),
+            PyFrame::Paaliaq => todo!(),
+            PyFrame::Tarvos => todo!(),
+            PyFrame::Ijiraq => todo!(),
+            PyFrame::Suttungr => todo!(),
+            PyFrame::Kiviuq => todo!(),
+            PyFrame::Mundilfari => todo!(),
+            PyFrame::Albiorix => todo!(),
+            PyFrame::Skathi => todo!(),
+            PyFrame::Erriapus => todo!(),
+            PyFrame::Siarnaq => todo!(),
+            PyFrame::Thrymr => todo!(),
+            PyFrame::Narvi => todo!(),
+            PyFrame::Methone => todo!(),
+            PyFrame::Pallene => todo!(),
+            PyFrame::Polydeuces => todo!(),
+            PyFrame::Daphnis => todo!(),
+            PyFrame::Aegir => todo!(),
+            PyFrame::Bebhionn => todo!(),
+            PyFrame::Bergelmir => todo!(),
+            PyFrame::Bestla => todo!(),
+            PyFrame::Farbauti => todo!(),
+            PyFrame::Fenrir => todo!(),
+            PyFrame::Fornjot => todo!(),
+            PyFrame::Hati => todo!(),
+            PyFrame::Hyrrokkin => todo!(),
+            PyFrame::Kari => todo!(),
+            PyFrame::Loge => todo!(),
+            PyFrame::Skoll => todo!(),
+            PyFrame::Surtur => todo!(),
+            PyFrame::Anthe => todo!(),
+            PyFrame::Jarnsaxa => todo!(),
+            PyFrame::Greip => todo!(),
+            PyFrame::Tarqeq => todo!(),
+            PyFrame::Aegaeon => todo!(),
+            PyFrame::Ariel => todo!(),
+            PyFrame::Umbriel => todo!(),
+            PyFrame::Titania => todo!(),
+            PyFrame::Oberon => todo!(),
+            PyFrame::Miranda => todo!(),
+            PyFrame::Cordelia => todo!(),
+            PyFrame::Ophelia => todo!(),
+            PyFrame::Bianca => todo!(),
+            PyFrame::Cressida => todo!(),
+            PyFrame::Desdemona => todo!(),
+            PyFrame::Juliet => todo!(),
+            PyFrame::Portia => todo!(),
+            PyFrame::Rosalind => todo!(),
+            PyFrame::Belinda => todo!(),
+            PyFrame::Puck => todo!(),
+            PyFrame::Caliban => todo!(),
+            PyFrame::Sycorax => todo!(),
+            PyFrame::Prospero => todo!(),
+            PyFrame::Setebos => todo!(),
+            PyFrame::Stephano => todo!(),
+            PyFrame::Trinculo => todo!(),
+            PyFrame::Francisco => todo!(),
+            PyFrame::Margaret => todo!(),
+            PyFrame::Ferdinand => todo!(),
+            PyFrame::Perdita => todo!(),
+            PyFrame::Mab => todo!(),
+            PyFrame::Cupid => todo!(),
+            PyFrame::Triton => todo!(),
+            PyFrame::Nereid => todo!(),
+            PyFrame::Naiad => todo!(),
+            PyFrame::Thalassa => todo!(),
+            PyFrame::Despina => todo!(),
+            PyFrame::Galatea => todo!(),
+            PyFrame::Larissa => todo!(),
+            PyFrame::Proteus => todo!(),
+            PyFrame::Halimede => todo!(),
+            PyFrame::Psamathe => todo!(),
+            PyFrame::Sao => todo!(),
+            PyFrame::Laomedeia => todo!(),
+            PyFrame::Neso => todo!(),
+            PyFrame::Charon => todo!(),
+            PyFrame::Nix => todo!(),
+            PyFrame::Hydra => todo!(),
+            PyFrame::Kerberos => todo!(),
+            PyFrame::Styx => todo!(),
+            PyFrame::Gaspra => todo!(),
+            PyFrame::Ida => todo!(),
+            PyFrame::Dactyl => todo!(),
+            PyFrame::Ceres => todo!(),
+            PyFrame::Pallas => todo!(),
+            PyFrame::Vesta => todo!(),
+            PyFrame::Psyche => todo!(),
+            PyFrame::Lutetia => todo!(),
+            PyFrame::Kleopatra => todo!(),
+            PyFrame::Eros => todo!(),
+            PyFrame::Davida => todo!(),
+            PyFrame::Mathilde => todo!(),
+            PyFrame::Steins => todo!(),
+            PyFrame::Braille => todo!(),
+            PyFrame::WilsonHarrington => todo!(),
+            PyFrame::Toutatis => todo!(),
+            PyFrame::Itokawa => todo!(),
+            PyFrame::Bennu => todo!(),
+        }
     }
 }
 
