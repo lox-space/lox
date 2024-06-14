@@ -45,24 +45,30 @@ pub enum KvnDateTimeParserErr<I> {
     InvalidFormat { input: I },
 }
 
-impl<I> From<nom::Err<KvnStringParserErr<I>>> for KvnDeserializerErr<I> {
-    fn from(value: nom::Err<KvnStringParserErr<I>>) -> Self {
+impl From<nom::Err<KvnStringParserErr<&str>>> for KvnDeserializerErr<String> {
+    fn from(value: nom::Err<KvnStringParserErr<&str>>) -> Self {
         match value {
             nom::Err::Error(KvnStringParserErr::EmptyValue { input })
             | nom::Err::Failure(KvnStringParserErr::EmptyValue { input }) => {
-                KvnDeserializerErr::EmptyValue { input }
+                KvnDeserializerErr::EmptyValue {
+                    input: input.to_string(),
+                }
             }
             nom::Err::Error(KvnStringParserErr::EmptyKeyword { input })
             | nom::Err::Failure(KvnStringParserErr::EmptyKeyword { input }) => {
-                KvnDeserializerErr::EmptyKeyword { input }
+                KvnDeserializerErr::EmptyKeyword {
+                    input: input.to_string(),
+                }
             }
             nom::Err::Error(KvnStringParserErr::InvalidFormat { input })
             | nom::Err::Failure(KvnStringParserErr::InvalidFormat { input }) => {
-                KvnDeserializerErr::InvalidStringFormat { input }
+                KvnDeserializerErr::InvalidStringFormat {
+                    input: input.to_string(),
+                }
             }
             nom::Err::Error(KvnStringParserErr::ParserError(i, k))
             | nom::Err::Failure(KvnStringParserErr::ParserError(i, k)) => {
-                KvnDeserializerErr::GeneralParserError(i, k)
+                KvnDeserializerErr::GeneralParserError(i.to_string(), k)
             }
             // We don't use streaming deserialization
             nom::Err::Incomplete(_) => unimplemented!(),
@@ -70,24 +76,30 @@ impl<I> From<nom::Err<KvnStringParserErr<I>>> for KvnDeserializerErr<I> {
     }
 }
 
-impl<I> From<nom::Err<KvnDateTimeParserErr<I>>> for KvnDeserializerErr<I> {
-    fn from(value: nom::Err<KvnDateTimeParserErr<I>>) -> Self {
+impl From<nom::Err<KvnDateTimeParserErr<&str>>> for KvnDeserializerErr<String> {
+    fn from(value: nom::Err<KvnDateTimeParserErr<&str>>) -> Self {
         match value {
             nom::Err::Error(KvnDateTimeParserErr::EmptyValue { input })
             | nom::Err::Failure(KvnDateTimeParserErr::EmptyValue { input }) => {
-                KvnDeserializerErr::EmptyValue { input }
+                KvnDeserializerErr::EmptyValue {
+                    input: input.to_string(),
+                }
             }
             nom::Err::Error(KvnDateTimeParserErr::EmptyKeyword { input })
             | nom::Err::Failure(KvnDateTimeParserErr::EmptyKeyword { input }) => {
-                KvnDeserializerErr::EmptyKeyword { input }
+                KvnDeserializerErr::EmptyKeyword {
+                    input: input.to_string(),
+                }
             }
             nom::Err::Error(KvnDateTimeParserErr::InvalidFormat { input })
             | nom::Err::Failure(KvnDateTimeParserErr::InvalidFormat { input }) => {
-                KvnDeserializerErr::InvalidDateTimeFormat { input }
+                KvnDeserializerErr::InvalidDateTimeFormat {
+                    input: input.to_string(),
+                }
             }
             nom::Err::Error(KvnDateTimeParserErr::ParserError(i, k))
             | nom::Err::Failure(KvnDateTimeParserErr::ParserError(i, k)) => {
-                KvnDeserializerErr::GeneralParserError(i, k)
+                KvnDeserializerErr::GeneralParserError(i.to_string(), k)
             }
             // We don't use streaming deserialization
             nom::Err::Incomplete(_) => unimplemented!(),
@@ -95,24 +107,30 @@ impl<I> From<nom::Err<KvnDateTimeParserErr<I>>> for KvnDeserializerErr<I> {
     }
 }
 
-impl<I> From<nom::Err<KvnNumberParserErr<I>>> for KvnDeserializerErr<I> {
-    fn from(value: nom::Err<KvnNumberParserErr<I>>) -> Self {
+impl From<nom::Err<KvnNumberParserErr<&str>>> for KvnDeserializerErr<String> {
+    fn from(value: nom::Err<KvnNumberParserErr<&str>>) -> Self {
         match value {
             nom::Err::Error(KvnNumberParserErr::EmptyValue { input })
             | nom::Err::Failure(KvnNumberParserErr::EmptyValue { input }) => {
-                KvnDeserializerErr::EmptyValue { input }
+                KvnDeserializerErr::EmptyValue {
+                    input: input.to_string(),
+                }
             }
             nom::Err::Error(KvnNumberParserErr::EmptyKeyword { input })
             | nom::Err::Failure(KvnNumberParserErr::EmptyKeyword { input }) => {
-                KvnDeserializerErr::EmptyKeyword { input }
+                KvnDeserializerErr::EmptyKeyword {
+                    input: input.to_string(),
+                }
             }
             nom::Err::Error(KvnNumberParserErr::InvalidFormat { input })
             | nom::Err::Failure(KvnNumberParserErr::InvalidFormat { input }) => {
-                KvnDeserializerErr::InvalidDateTimeFormat { input }
+                KvnDeserializerErr::InvalidDateTimeFormat {
+                    input: input.to_string(),
+                }
             }
             nom::Err::Error(KvnNumberParserErr::ParserError(i, k))
             | nom::Err::Failure(KvnNumberParserErr::ParserError(i, k)) => {
-                KvnDeserializerErr::GeneralParserError(i, k)
+                KvnDeserializerErr::GeneralParserError(i.to_string(), k)
             }
             // We don't use streaming deserialization
             nom::Err::Incomplete(_) => unimplemented!(),
@@ -120,12 +138,12 @@ impl<I> From<nom::Err<KvnNumberParserErr<I>>> for KvnDeserializerErr<I> {
     }
 }
 
-impl<I> From<KvnKeyMatchErr<I>> for KvnDeserializerErr<I> {
-    fn from(value: KvnKeyMatchErr<I>) -> Self {
+impl From<KvnKeyMatchErr<&str>> for KvnDeserializerErr<String> {
+    fn from(value: KvnKeyMatchErr<&str>) -> Self {
         match value {
-            KvnKeyMatchErr::KeywordNotFound { expected } => {
-                KvnDeserializerErr::KeywordNotFound { expected }
-            }
+            KvnKeyMatchErr::KeywordNotFound { expected } => KvnDeserializerErr::KeywordNotFound {
+                expected: expected.to_string(),
+            },
         }
     }
 }
@@ -191,7 +209,7 @@ pub fn parse_kvn_string_line_new(
                     .trim_start()
                     .trim_start_matches("COMMENT")
                     .trim_start()
-                    .to_owned(),
+                    .to_string(),
                 unit: None,
             },
         ));
@@ -219,7 +237,7 @@ pub fn parse_kvn_string_line_new(
         .unwrap()
         .as_str()
         .trim_end()
-        .to_owned();
+        .to_string();
 
     if keyword.is_empty() {
         return Err(nom::Err::Failure(KvnStringParserErr::EmptyKeyword {
@@ -233,7 +251,7 @@ pub fn parse_kvn_string_line_new(
         .unwrap()
         .as_str()
         .trim_end()
-        .to_owned();
+        .to_string();
 
     if value.is_empty() {
         return Err(nom::Err::Failure(KvnStringParserErr::EmptyValue { input }));
@@ -274,7 +292,7 @@ where
         .unwrap()
         .as_str()
         .trim_end()
-        .to_owned();
+        .to_string();
 
     if keyword.is_empty() {
         return Err(nom::Err::Failure(KvnNumberParserErr::EmptyKeyword {
@@ -284,7 +302,7 @@ where
 
     // This unwrap is okay because the value uses * so it will always capture
     let value = captures.name("value").unwrap().as_str();
-    let unit = captures.name("unit").map(|x| x.as_str().to_owned());
+    let unit = captures.name("unit").map(|x| x.as_str().to_string());
 
     let value = value
         .parse::<T>()
@@ -331,7 +349,7 @@ pub fn parse_kvn_numeric_line_new(
         .unwrap()
         .as_str()
         .trim_end()
-        .to_owned();
+        .to_string();
 
     if keyword.is_empty() {
         return Err(nom::Err::Failure(KvnNumberParserErr::EmptyKeyword {
@@ -341,7 +359,7 @@ pub fn parse_kvn_numeric_line_new(
 
     // This unwrap is okay because the value uses * so it will always capture
     let value = captures.name("value").unwrap().as_str();
-    let unit = captures.name("unit").map(|x| x.as_str().to_owned());
+    let unit = captures.name("unit").map(|x| x.as_str().to_string());
 
     let value = fast_float::parse(value)
         .map_err(|_| nom::Err::Failure(KvnNumberParserErr::InvalidFormat { input }))?;
@@ -373,7 +391,7 @@ pub fn parse_kvn_datetime_line_new(
         .unwrap()
         .as_str()
         .trim_end()
-        .to_owned();
+        .to_string();
 
     if keyword.is_empty() {
         return Err(nom::Err::Failure(KvnDateTimeParserErr::EmptyKeyword {
@@ -422,7 +440,7 @@ pub fn parse_kvn_datetime_line_new(
 
     let fractional_second = full_second.fract();
 
-    let full_value = captures.name("value").unwrap().as_str().to_owned();
+    let full_value = captures.name("value").unwrap().as_str().to_string();
 
     Ok((
         "",

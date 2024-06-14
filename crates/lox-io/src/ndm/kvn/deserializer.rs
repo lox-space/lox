@@ -11,7 +11,7 @@ use nom::error::ErrorKind;
 pub trait KvnDeserializer {
     fn deserialize<'a>(
         lines: &mut std::iter::Peekable<impl Iterator<Item = &'a str>>,
-    ) -> Result<Self, KvnDeserializerErr<&'a str>>
+    ) -> Result<Self, KvnDeserializerErr<String>>
     where
         Self: Sized;
 
