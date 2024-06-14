@@ -25,8 +25,8 @@ pub enum KvnStringParserErr<I> {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum KvnKeyMatchErr<I> {
-    KeywordNotFound { expected: I },
+pub struct KvnKeywordNotFoundErr<I> {
+    expected: I,
 }
 
 #[derive(PartialEq, Debug)]
@@ -138,12 +138,10 @@ impl From<nom::Err<KvnNumberParserErr<&str>>> for KvnDeserializerErr<String> {
     }
 }
 
-impl From<KvnKeyMatchErr<&str>> for KvnDeserializerErr<String> {
-    fn from(value: KvnKeyMatchErr<&str>) -> Self {
-        match value {
-            KvnKeyMatchErr::KeywordNotFound { expected } => KvnDeserializerErr::KeywordNotFound {
-                expected: expected.to_string(),
-            },
+impl From<KvnKeywordNotFoundErr<&str>> for KvnDeserializerErr<String> {
+    fn from(value: KvnKeywordNotFoundErr<&str>) -> Self {
+        KvnDeserializerErr::KeywordNotFound {
+            expected: value.expected.to_string(),
         }
     }
 }
@@ -180,7 +178,7 @@ pub struct KvnDateTimeValue {
 pub fn kvn_line_matches_key_new<'a>(
     key: &'a str,
     input: &'a str,
-) -> Result<bool, KvnKeyMatchErr<&'a str>> {
+) -> Result<bool, KvnKeywordNotFoundErr<&'a str>> {
     if key == "COMMENT" {
         ns::tuple((nc::space0::<_, nom::error::Error<_>>, nb::tag(key)))(input)
             .map(|_| true)
@@ -189,7 +187,7 @@ pub fn kvn_line_matches_key_new<'a>(
         let mut equals = ns::tuple((nc::space0::<_, nom::error::Error<_>>, nc::char('=')));
 
         if equals(input).is_ok() {
-            return Err(KvnKeyMatchErr::KeywordNotFound { expected: key });
+            return Err(KvnKeywordNotFoundErr { expected: key });
         }
 
         ns::delimited(nc::space0, nb::tag(key), equals)(input)
@@ -477,7 +475,7 @@ mod test {
         );
         assert_eq!(
             kvn_line_matches_key_new("ASD", "= ASDFG"),
-            Err(KvnKeyMatchErr::KeywordNotFound { expected: "ASD" })
+            Err(KvnKeywordNotFoundErr { expected: "ASD" })
         );
     }
 
