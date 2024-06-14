@@ -123,7 +123,7 @@ where
 pub enum TrajectoryTransformationError {
     #[error(transparent)]
     TrajectoryError(#[from] TrajectoryError),
-    #[error("state tranformation failed: {0}")]
+    #[error("state transformation failed: {0}")]
     StateTransformationError(String),
 }
 
