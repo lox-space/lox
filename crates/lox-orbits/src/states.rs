@@ -131,7 +131,7 @@ where
     }
 }
 
-impl<T, O, R, U> TryToFrame<T, O, BodyFixed<R>, U> for State<T, O, Icrf>
+impl<T, O, R, U> TryToFrame<BodyFixed<R>, U> for State<T, O, Icrf>
 where
     T: TryToScale<Tdb, U> + TimeLike + Clone,
     O: Origin + Clone,
@@ -139,6 +139,7 @@ where
     U: FrameTransformationProvider,
 {
     type Output = State<T, O, BodyFixed<R>>;
+    type Error = U::Error;
 
     fn try_to_frame(&self, frame: BodyFixed<R>, provider: &U) -> Result<Self::Output, U::Error> {
         let seconds = self
@@ -151,7 +152,7 @@ where
     }
 }
 
-impl<T, O, R, U> TryToFrame<T, O, Icrf, U> for State<T, O, BodyFixed<R>>
+impl<T, O, R, U> TryToFrame<Icrf, U> for State<T, O, BodyFixed<R>>
 where
     T: TryToScale<Tdb, U> + TimeLike + Clone,
     O: Origin + Clone,
@@ -159,6 +160,7 @@ where
     U: DeltaUt1TaiProvider + FrameTransformationProvider,
 {
     type Output = State<T, O, Icrf>;
+    type Error = U::Error;
 
     fn try_to_frame(&self, frame: Icrf, provider: &U) -> Result<Self::Output, U::Error> {
         let seconds = self
@@ -171,13 +173,14 @@ where
     }
 }
 
-impl<T, O, R> TryToFrame<T, O, Icrf, NoOpFrameTransformationProvider> for State<T, O, BodyFixed<R>>
+impl<T, O, R> TryToFrame<Icrf, NoOpFrameTransformationProvider> for State<T, O, BodyFixed<R>>
 where
     T: ToTdb + TimeLike + Clone,
     O: Origin + Clone,
     R: RotationalElements,
 {
     type Output = State<T, O, Icrf>;
+    type Error = Infallible;
 
     fn try_to_frame(
         &self,

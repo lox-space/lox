@@ -37,11 +37,15 @@ pub trait PyDeltaUt1Provider: DeltaUt1TaiProvider + OffsetProvider<Error = PyErr
 
 impl DeltaUt1TaiProvider for PyNoOpOffsetProvider {
     fn delta_ut1_tai(&self, _tai: &Time<Tai>) -> PyResult<TimeDelta> {
-        Err(PyValueError::new_err("extrapolated"))
+        Err(PyValueError::new_err(
+            "`provider` argument needs to be present for UT1 transformations",
+        ))
     }
 
     fn delta_tai_ut1(&self, _ut1: &Time<Ut1>) -> PyResult<TimeDelta> {
-        Err(PyValueError::new_err("extrapolated"))
+        Err(PyValueError::new_err(
+            "`provider` argument needs to be present for UT1 transformations",
+        ))
     }
 }
 

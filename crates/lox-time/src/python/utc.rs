@@ -23,7 +23,7 @@ impl From<UtcError> for PyErr {
     }
 }
 
-#[pyclass(name = "UTC", module = "lox_space")]
+#[pyclass(name = "UTC", module = "lox_space", frozen)]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PyUtc(pub Utc);
 

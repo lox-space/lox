@@ -16,15 +16,16 @@ use crate::states::State;
 use lox_bodies::python::PyBody;
 use lox_bodies::*;
 use lox_time::python::time::PyTime;
-use lox_time::ut1::DeltaUt1TaiProvider;
+use lox_time::python::ut1::PyDeltaUt1Provider;
 use pyo3::exceptions::PyValueError;
 use pyo3::PyErr;
 use std::str::FromStr;
-impl<T> TryToFrame<PyTime, PyBody, Icrf, T> for PyState
+impl<T> TryToFrame<Icrf, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, Icrf>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: Icrf,
@@ -755,11 +756,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Sun>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Sun>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Sun>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Sun>,
@@ -774,11 +776,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Mercury>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Mercury>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Mercury>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Mercury>,
@@ -793,11 +796,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Venus>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Venus>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Venus>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Venus>,
@@ -812,11 +816,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Earth>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Earth>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Earth>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Earth>,
@@ -831,11 +836,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Mars>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Mars>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Mars>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Mars>,
@@ -850,11 +856,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Jupiter>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Jupiter>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Jupiter>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Jupiter>,
@@ -869,11 +876,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Saturn>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Saturn>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Saturn>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Saturn>,
@@ -888,11 +896,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Uranus>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Uranus>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Uranus>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Uranus>,
@@ -907,11 +916,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Neptune>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Neptune>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Neptune>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Neptune>,
@@ -926,11 +936,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Pluto>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Pluto>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Pluto>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Pluto>,
@@ -945,11 +956,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Moon>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Moon>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Moon>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Moon>,
@@ -964,11 +976,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Phobos>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Phobos>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Phobos>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Phobos>,
@@ -983,11 +996,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Deimos>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Deimos>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Deimos>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Deimos>,
@@ -1002,11 +1016,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Io>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Io>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Io>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Io>,
@@ -1021,11 +1036,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Europa>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Europa>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Europa>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Europa>,
@@ -1040,11 +1056,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Ganymede>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Ganymede>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Ganymede>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Ganymede>,
@@ -1059,11 +1076,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Callisto>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Callisto>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Callisto>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Callisto>,
@@ -1078,11 +1096,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Amalthea>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Amalthea>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Amalthea>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Amalthea>,
@@ -1097,11 +1116,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Himalia>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Himalia>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Himalia>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Himalia>,
@@ -1116,11 +1136,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Elara>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Elara>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Elara>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Elara>,
@@ -1135,11 +1156,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Pasiphae>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Pasiphae>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Pasiphae>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Pasiphae>,
@@ -1154,11 +1176,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Sinope>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Sinope>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Sinope>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Sinope>,
@@ -1173,11 +1196,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Lysithea>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Lysithea>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Lysithea>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Lysithea>,
@@ -1192,11 +1216,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Carme>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Carme>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Carme>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Carme>,
@@ -1211,11 +1236,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Ananke>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Ananke>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Ananke>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Ananke>,
@@ -1230,11 +1256,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Leda>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Leda>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Leda>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Leda>,
@@ -1249,11 +1276,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Thebe>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Thebe>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Thebe>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Thebe>,
@@ -1268,11 +1296,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Adrastea>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Adrastea>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Adrastea>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Adrastea>,
@@ -1287,11 +1316,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Metis>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Metis>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Metis>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Metis>,
@@ -1306,11 +1336,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Callirrhoe>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Callirrhoe>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Callirrhoe>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Callirrhoe>,
@@ -1325,11 +1356,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Themisto>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Themisto>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Themisto>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Themisto>,
@@ -1344,11 +1376,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Magaclite>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Magaclite>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Magaclite>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Magaclite>,
@@ -1363,11 +1396,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Taygete>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Taygete>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Taygete>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Taygete>,
@@ -1382,11 +1416,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Chaldene>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Chaldene>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Chaldene>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Chaldene>,
@@ -1401,11 +1436,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Harpalyke>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Harpalyke>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Harpalyke>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Harpalyke>,
@@ -1420,11 +1456,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Kalyke>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Kalyke>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Kalyke>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Kalyke>,
@@ -1439,11 +1476,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Iocaste>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Iocaste>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Iocaste>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Iocaste>,
@@ -1458,11 +1496,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Erinome>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Erinome>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Erinome>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Erinome>,
@@ -1477,11 +1516,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Isonoe>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Isonoe>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Isonoe>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Isonoe>,
@@ -1496,11 +1536,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Praxidike>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Praxidike>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Praxidike>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Praxidike>,
@@ -1515,11 +1556,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Autonoe>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Autonoe>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Autonoe>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Autonoe>,
@@ -1534,11 +1576,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Thyone>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Thyone>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Thyone>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Thyone>,
@@ -1553,11 +1596,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Hermippe>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Hermippe>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Hermippe>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Hermippe>,
@@ -1572,11 +1616,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Aitne>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Aitne>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Aitne>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Aitne>,
@@ -1591,11 +1636,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Eurydome>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Eurydome>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Eurydome>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Eurydome>,
@@ -1610,11 +1656,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Euanthe>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Euanthe>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Euanthe>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Euanthe>,
@@ -1629,11 +1676,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Euporie>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Euporie>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Euporie>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Euporie>,
@@ -1648,11 +1696,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Orthosie>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Orthosie>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Orthosie>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Orthosie>,
@@ -1667,11 +1716,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Sponde>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Sponde>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Sponde>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Sponde>,
@@ -1686,11 +1736,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Kale>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Kale>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Kale>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Kale>,
@@ -1705,11 +1756,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Pasithee>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Pasithee>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Pasithee>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Pasithee>,
@@ -1724,11 +1776,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Hegemone>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Hegemone>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Hegemone>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Hegemone>,
@@ -1743,11 +1796,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Mneme>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Mneme>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Mneme>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Mneme>,
@@ -1762,11 +1816,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Aoede>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Aoede>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Aoede>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Aoede>,
@@ -1781,11 +1836,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Thelxinoe>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Thelxinoe>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Thelxinoe>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Thelxinoe>,
@@ -1800,11 +1856,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Arche>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Arche>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Arche>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Arche>,
@@ -1819,11 +1876,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Kallichore>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Kallichore>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Kallichore>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Kallichore>,
@@ -1838,11 +1896,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Helike>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Helike>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Helike>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Helike>,
@@ -1857,11 +1916,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Carpo>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Carpo>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Carpo>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Carpo>,
@@ -1876,11 +1936,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Eukelade>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Eukelade>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Eukelade>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Eukelade>,
@@ -1895,11 +1956,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Cyllene>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Cyllene>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Cyllene>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Cyllene>,
@@ -1914,11 +1976,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Kore>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Kore>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Kore>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Kore>,
@@ -1933,11 +1996,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Herse>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Herse>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Herse>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Herse>,
@@ -1952,11 +2016,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Dia>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Dia>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Dia>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Dia>,
@@ -1971,11 +2036,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Mimas>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Mimas>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Mimas>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Mimas>,
@@ -1990,11 +2056,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Enceladus>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Enceladus>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Enceladus>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Enceladus>,
@@ -2009,11 +2076,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Tethys>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Tethys>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Tethys>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Tethys>,
@@ -2028,11 +2096,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Dione>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Dione>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Dione>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Dione>,
@@ -2047,11 +2116,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Rhea>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Rhea>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Rhea>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Rhea>,
@@ -2066,11 +2136,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Titan>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Titan>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Titan>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Titan>,
@@ -2085,11 +2156,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Hyperion>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Hyperion>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Hyperion>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Hyperion>,
@@ -2104,11 +2176,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Iapetus>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Iapetus>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Iapetus>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Iapetus>,
@@ -2123,11 +2196,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Phoebe>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Phoebe>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Phoebe>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Phoebe>,
@@ -2142,11 +2216,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Janus>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Janus>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Janus>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Janus>,
@@ -2161,11 +2236,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Epimetheus>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Epimetheus>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Epimetheus>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Epimetheus>,
@@ -2180,11 +2256,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Helene>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Helene>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Helene>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Helene>,
@@ -2199,11 +2276,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Telesto>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Telesto>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Telesto>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Telesto>,
@@ -2218,11 +2296,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Calypso>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Calypso>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Calypso>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Calypso>,
@@ -2237,11 +2316,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Atlas>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Atlas>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Atlas>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Atlas>,
@@ -2256,11 +2336,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Prometheus>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Prometheus>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Prometheus>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Prometheus>,
@@ -2275,11 +2356,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Pandora>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Pandora>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Pandora>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Pandora>,
@@ -2294,11 +2376,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Pan>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Pan>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Pan>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Pan>,
@@ -2313,11 +2396,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Ymir>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Ymir>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Ymir>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Ymir>,
@@ -2332,11 +2416,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Paaliaq>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Paaliaq>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Paaliaq>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Paaliaq>,
@@ -2351,11 +2436,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Tarvos>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Tarvos>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Tarvos>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Tarvos>,
@@ -2370,11 +2456,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Ijiraq>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Ijiraq>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Ijiraq>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Ijiraq>,
@@ -2389,11 +2476,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Suttungr>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Suttungr>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Suttungr>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Suttungr>,
@@ -2408,11 +2496,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Kiviuq>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Kiviuq>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Kiviuq>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Kiviuq>,
@@ -2427,11 +2516,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Mundilfari>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Mundilfari>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Mundilfari>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Mundilfari>,
@@ -2446,11 +2536,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Albiorix>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Albiorix>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Albiorix>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Albiorix>,
@@ -2465,11 +2556,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Skathi>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Skathi>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Skathi>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Skathi>,
@@ -2484,11 +2576,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Erriapus>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Erriapus>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Erriapus>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Erriapus>,
@@ -2503,11 +2596,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Siarnaq>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Siarnaq>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Siarnaq>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Siarnaq>,
@@ -2522,11 +2616,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Thrymr>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Thrymr>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Thrymr>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Thrymr>,
@@ -2541,11 +2636,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Narvi>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Narvi>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Narvi>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Narvi>,
@@ -2560,11 +2656,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Methone>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Methone>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Methone>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Methone>,
@@ -2579,11 +2676,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Pallene>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Pallene>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Pallene>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Pallene>,
@@ -2598,11 +2696,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Polydeuces>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Polydeuces>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Polydeuces>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Polydeuces>,
@@ -2617,11 +2716,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Daphnis>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Daphnis>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Daphnis>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Daphnis>,
@@ -2636,11 +2736,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Aegir>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Aegir>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Aegir>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Aegir>,
@@ -2655,11 +2756,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Bebhionn>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Bebhionn>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Bebhionn>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Bebhionn>,
@@ -2674,11 +2776,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Bergelmir>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Bergelmir>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Bergelmir>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Bergelmir>,
@@ -2693,11 +2796,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Bestla>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Bestla>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Bestla>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Bestla>,
@@ -2712,11 +2816,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Farbauti>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Farbauti>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Farbauti>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Farbauti>,
@@ -2731,11 +2836,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Fenrir>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Fenrir>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Fenrir>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Fenrir>,
@@ -2750,11 +2856,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Fornjot>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Fornjot>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Fornjot>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Fornjot>,
@@ -2769,11 +2876,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Hati>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Hati>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Hati>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Hati>,
@@ -2788,11 +2896,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Hyrrokkin>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Hyrrokkin>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Hyrrokkin>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Hyrrokkin>,
@@ -2807,11 +2916,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Kari>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Kari>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Kari>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Kari>,
@@ -2826,11 +2936,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Loge>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Loge>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Loge>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Loge>,
@@ -2845,11 +2956,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Skoll>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Skoll>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Skoll>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Skoll>,
@@ -2864,11 +2976,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Surtur>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Surtur>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Surtur>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Surtur>,
@@ -2883,11 +2996,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Anthe>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Anthe>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Anthe>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Anthe>,
@@ -2902,11 +3016,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Jarnsaxa>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Jarnsaxa>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Jarnsaxa>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Jarnsaxa>,
@@ -2921,11 +3036,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Greip>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Greip>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Greip>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Greip>,
@@ -2940,11 +3056,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Tarqeq>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Tarqeq>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Tarqeq>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Tarqeq>,
@@ -2959,11 +3076,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Aegaeon>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Aegaeon>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Aegaeon>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Aegaeon>,
@@ -2978,11 +3096,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Ariel>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Ariel>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Ariel>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Ariel>,
@@ -2997,11 +3116,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Umbriel>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Umbriel>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Umbriel>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Umbriel>,
@@ -3016,11 +3136,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Titania>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Titania>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Titania>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Titania>,
@@ -3035,11 +3156,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Oberon>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Oberon>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Oberon>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Oberon>,
@@ -3054,11 +3176,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Miranda>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Miranda>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Miranda>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Miranda>,
@@ -3073,11 +3196,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Cordelia>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Cordelia>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Cordelia>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Cordelia>,
@@ -3092,11 +3216,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Ophelia>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Ophelia>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Ophelia>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Ophelia>,
@@ -3111,11 +3236,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Bianca>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Bianca>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Bianca>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Bianca>,
@@ -3130,11 +3256,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Cressida>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Cressida>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Cressida>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Cressida>,
@@ -3149,11 +3276,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Desdemona>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Desdemona>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Desdemona>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Desdemona>,
@@ -3168,11 +3296,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Juliet>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Juliet>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Juliet>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Juliet>,
@@ -3187,11 +3316,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Portia>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Portia>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Portia>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Portia>,
@@ -3206,11 +3336,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Rosalind>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Rosalind>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Rosalind>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Rosalind>,
@@ -3225,11 +3356,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Belinda>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Belinda>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Belinda>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Belinda>,
@@ -3244,11 +3376,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Puck>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Puck>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Puck>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Puck>,
@@ -3263,11 +3396,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Caliban>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Caliban>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Caliban>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Caliban>,
@@ -3282,11 +3416,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Sycorax>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Sycorax>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Sycorax>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Sycorax>,
@@ -3301,11 +3436,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Prospero>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Prospero>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Prospero>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Prospero>,
@@ -3320,11 +3456,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Setebos>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Setebos>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Setebos>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Setebos>,
@@ -3339,11 +3476,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Stephano>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Stephano>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Stephano>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Stephano>,
@@ -3358,11 +3496,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Trinculo>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Trinculo>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Trinculo>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Trinculo>,
@@ -3377,11 +3516,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Francisco>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Francisco>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Francisco>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Francisco>,
@@ -3396,11 +3536,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Margaret>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Margaret>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Margaret>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Margaret>,
@@ -3415,11 +3556,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Ferdinand>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Ferdinand>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Ferdinand>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Ferdinand>,
@@ -3434,11 +3576,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Perdita>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Perdita>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Perdita>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Perdita>,
@@ -3453,11 +3596,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Mab>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Mab>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Mab>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Mab>,
@@ -3472,11 +3616,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Cupid>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Cupid>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Cupid>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Cupid>,
@@ -3491,11 +3636,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Triton>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Triton>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Triton>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Triton>,
@@ -3510,11 +3656,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Nereid>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Nereid>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Nereid>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Nereid>,
@@ -3529,11 +3676,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Naiad>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Naiad>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Naiad>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Naiad>,
@@ -3548,11 +3696,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Thalassa>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Thalassa>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Thalassa>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Thalassa>,
@@ -3567,11 +3716,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Despina>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Despina>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Despina>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Despina>,
@@ -3586,11 +3736,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Galatea>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Galatea>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Galatea>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Galatea>,
@@ -3605,11 +3756,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Larissa>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Larissa>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Larissa>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Larissa>,
@@ -3624,11 +3776,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Proteus>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Proteus>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Proteus>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Proteus>,
@@ -3643,11 +3796,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Halimede>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Halimede>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Halimede>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Halimede>,
@@ -3662,11 +3816,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Psamathe>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Psamathe>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Psamathe>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Psamathe>,
@@ -3681,11 +3836,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Sao>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Sao>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Sao>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Sao>,
@@ -3700,11 +3856,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Laomedeia>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Laomedeia>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Laomedeia>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Laomedeia>,
@@ -3719,11 +3876,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Neso>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Neso>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Neso>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Neso>,
@@ -3738,11 +3896,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Charon>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Charon>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Charon>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Charon>,
@@ -3757,11 +3916,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Nix>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Nix>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Nix>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Nix>,
@@ -3776,11 +3936,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Hydra>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Hydra>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Hydra>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Hydra>,
@@ -3795,11 +3956,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Kerberos>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Kerberos>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Kerberos>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Kerberos>,
@@ -3814,11 +3976,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Styx>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Styx>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Styx>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Styx>,
@@ -3833,11 +3996,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Gaspra>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Gaspra>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Gaspra>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Gaspra>,
@@ -3852,11 +4016,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Ida>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Ida>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Ida>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Ida>,
@@ -3871,11 +4036,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Dactyl>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Dactyl>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Dactyl>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Dactyl>,
@@ -3890,11 +4056,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Ceres>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Ceres>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Ceres>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Ceres>,
@@ -3909,11 +4076,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Pallas>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Pallas>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Pallas>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Pallas>,
@@ -3928,11 +4096,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Vesta>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Vesta>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Vesta>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Vesta>,
@@ -3947,11 +4116,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Psyche>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Psyche>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Psyche>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Psyche>,
@@ -3966,11 +4136,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Lutetia>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Lutetia>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Lutetia>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Lutetia>,
@@ -3985,11 +4156,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Kleopatra>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Kleopatra>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Kleopatra>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Kleopatra>,
@@ -4004,11 +4176,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Eros>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Eros>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Eros>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Eros>,
@@ -4023,11 +4196,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Davida>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Davida>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Davida>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Davida>,
@@ -4042,11 +4216,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Mathilde>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Mathilde>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Mathilde>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Mathilde>,
@@ -4061,11 +4236,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Steins>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Steins>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Steins>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Steins>,
@@ -4080,11 +4256,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Braille>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Braille>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Braille>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Braille>,
@@ -4099,11 +4276,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<WilsonHarrington>, T> for PyState
+impl<T> TryToFrame<BodyFixed<WilsonHarrington>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<WilsonHarrington>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<WilsonHarrington>,
@@ -4118,11 +4296,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Toutatis>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Toutatis>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Toutatis>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Toutatis>,
@@ -4137,11 +4316,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Itokawa>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Itokawa>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Itokawa>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Itokawa>,
@@ -4156,11 +4336,12 @@ where
         }
     }
 }
-impl<T> TryToFrame<PyTime, PyBody, BodyFixed<Bennu>, T> for PyState
+impl<T> TryToFrame<BodyFixed<Bennu>, T> for PyState
 where
-    T: FrameTransformationProvider + DeltaUt1TaiProvider,
+    T: FrameTransformationProvider + PyDeltaUt1Provider,
 {
     type Output = State<PyTime, PyBody, BodyFixed<Bennu>>;
+    type Error = T::Error;
     fn try_to_frame(
         &self,
         frame: BodyFixed<Bennu>,

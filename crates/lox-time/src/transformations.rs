@@ -24,7 +24,7 @@ use crate::Time;
 
 /// Marker trait denoting a type that returns an offset between a pair of [TimeScale]s.
 pub trait OffsetProvider {
-    type Error;
+    type Error: std::error::Error;
 }
 
 /// A no-op [OffsetProvider] equivalent to `()`, used to guide the type system when implementing

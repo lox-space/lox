@@ -23,7 +23,7 @@ use crate::{
     Titania, Triton, Umbriel, Uranus, UranusBarycenter, Venus, VenusBarycenter, Vesta,
 };
 
-#[pyclass(name = "Sun", module = "lox_space")]
+#[pyclass(name = "Sun", module = "lox_space", frozen)]
 #[derive(Clone, Debug, Default)]
 pub struct PySun;
 
@@ -77,7 +77,7 @@ impl PySun {
     }
 }
 
-#[pyclass(name = "Barycenter", module = "lox_space")]
+#[pyclass(name = "Barycenter", module = "lox_space", frozen)]
 #[derive(Debug, Clone)]
 pub struct PyBarycenter(Box<dyn Barycenter + Send>);
 
@@ -138,7 +138,7 @@ impl PyBarycenter {
     }
 }
 
-#[pyclass(name = "Planet", module = "lox_space")]
+#[pyclass(name = "Planet", module = "lox_space", frozen)]
 #[derive(Clone, Debug)]
 pub struct PyPlanet(Box<dyn Planet + Send>);
 
@@ -205,7 +205,7 @@ impl PyPlanet {
     }
 }
 
-#[pyclass(name = "Satellite", module = "lox_space")]
+#[pyclass(name = "Satellite", module = "lox_space", frozen)]
 #[derive(Clone, Debug)]
 pub struct PySatellite(Box<dyn Satellite + Send>);
 
@@ -310,7 +310,7 @@ impl PySatellite {
     }
 }
 
-#[pyclass(name = "MinorBody", module = "lox_space")]
+#[pyclass(name = "MinorBody", module = "lox_space", frozen)]
 #[derive(Clone, Debug)]
 pub struct PyMinorBody(Box<dyn MinorBody + Send>);
 
