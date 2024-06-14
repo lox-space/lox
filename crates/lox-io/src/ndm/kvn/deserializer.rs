@@ -18,7 +18,7 @@ pub trait KvnDeserializer {
     fn should_check_key_match() -> bool;
 }
 
-#[derive(PartialEq, Clone, Debug)]
+#[derive(PartialEq, Clone, thiserror::Error, Debug)]
 pub enum KvnDeserializerErr<I> {
     InvalidDateTimeFormat { input: I },
     InvalidNumberFormat { input: I },
