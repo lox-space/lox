@@ -2,3 +2,4 @@ ignore:
   # This code is tested indirectly with high coverage but coverage tools don't
   # handle proc macros
   - "crates/lox-derive/src/lib.rs"
+  
