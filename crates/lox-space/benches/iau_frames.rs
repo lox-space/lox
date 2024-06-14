@@ -6,12 +6,8 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use divan::Bencher;
-
 use lox_bodies::{Jupiter, RotationalElements};
-use lox_coords::frames::iau::BodyFixed;
-use lox_coords::frames::{FromFrame, Icrf, Rotation};
-use lox_coords::DVec3;
+use lox_orbits::{frames::BodyFixed, rotations::Rotation};
 
 fn main() {
     // Run registered benchmarks.
@@ -50,19 +46,5 @@ fn prime_meridian_dot() {
 
 #[divan::bench]
 fn rotation() -> Rotation {
-    BodyFixed(Jupiter).rotation_from(Icrf, divan::black_box(0.0))
-}
-
-#[divan::bench]
-fn transform(bencher: Bencher) {
-    bencher
-        .with_inputs(|| {
-            (
-                DVec3::new(6068279.27e-3, -1692843.94e-3, -2516619.18e-3),
-                DVec3::new(-660.415582e-3, 5495.938726e-3, -5303.093233e-3),
-            )
-        })
-        .bench_values(|rv| {
-            BodyFixed(Jupiter).transform_from(Icrf, divan::black_box(0.0), divan::black_box(rv))
-        })
+    BodyFixed(Jupiter).rotation(divan::black_box(0.0))
 }
