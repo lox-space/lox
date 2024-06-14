@@ -8,7 +8,7 @@
 //! Since Rust XML and JSON deserializers are slightly incompatible, the JSON
 //! deserializer is separate.
 //!
-//! Because there a signficant number of messages out there that do not
+//! Because there are a signficant number of messages out there that do not
 //! strictly comply with the specification, the parsers are relaxed in terms of
 //! input that they accept. Some relaxations:
 //!
