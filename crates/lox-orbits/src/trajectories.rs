@@ -1,10 +1,15 @@
+use std::convert::Infallible;
 use std::sync::Arc;
 
+use crate::frames::{BodyFixed, FrameTransformationProvider, Icrf, TryToFrame};
 use crate::{
     frames::{CoordinateSystem, ReferenceFrame},
     origins::{CoordinateOrigin, Origin},
     states::State,
 };
+use lox_bodies::{Body, RotationalElements};
+use lox_time::time_scales::Tdb;
+use lox_time::transformations::TryToScale;
 use lox_time::{deltas::TimeDelta, TimeLike};
 use lox_utils::series::{Series, SeriesError};
 use thiserror::Error;
@@ -27,7 +32,8 @@ pub enum TrajectoryError {
     SeriesError(#[from] SeriesError),
 }
 
-pub struct Trajectory<T, O: Origin, R: ReferenceFrame> {
+pub struct Trajectory<T: TimeLike, O: Origin, R: ReferenceFrame> {
+    states: Vec<State<T, O, R>>,
     origin: O,
     frame: R,
     t0: T,
@@ -75,6 +81,7 @@ where
         let vy = Series::with_cubic_spline(t.clone(), vy)?;
         let vz = Series::with_cubic_spline(t.clone(), vz)?;
         Ok(Self {
+            states: states.to_vec(),
             origin,
             frame,
             t0,
@@ -93,8 +100,9 @@ where
 
 impl<T, O, R> CoordinateOrigin<O> for Trajectory<T, O, R>
 where
-    R: ReferenceFrame,
+    T: TimeLike,
     O: Origin + Clone,
+    R: ReferenceFrame,
 {
     fn origin(&self) -> O {
         self.origin.clone()
@@ -103,10 +111,39 @@ where
 
 impl<T, O, R> CoordinateSystem<R> for Trajectory<T, O, R>
 where
+    T: TimeLike,
     O: Origin,
     R: ReferenceFrame + Clone,
 {
     fn reference_frame(&self) -> R {
         self.frame.clone()
+    }
+}
+
+#[derive(Error, Debug)]
+pub enum TrajectoryTransformationError {
+    #[error(transparent)]
+    TrajectoryError(#[from] TrajectoryError),
+    #[error(transparent)]
+    Infallible(#[from] Infallible),
+}
+
+impl<T, O, R, P> TryToFrame<BodyFixed<R>, P> for Trajectory<T, O, Icrf>
+where
+    T: TryToScale<Tdb, P> + TimeLike + Clone,
+    O: Body + Clone,
+    R: RotationalElements + Clone,
+    P: FrameTransformationProvider,
+{
+    type Output = Trajectory<T, O, BodyFixed<R>>;
+    type Error = TrajectoryTransformationError;
+
+    fn try_to_frame(&self, frame: BodyFixed<R>, provider: &P) -> Result<Self::Output, Self::Error> {
+        let mut states: Vec<State<T, O, BodyFixed<R>>> = Vec::with_capacity(self.states.len());
+        for state in &self.states {
+            let state = state.try_to_frame(frame.clone(), provider).unwrap();
+            states.push(state)
+        }
+        Ok(Trajectory::new(&states)?)
     }
 }
