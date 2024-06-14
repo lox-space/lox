@@ -60,11 +60,12 @@ fn generate_transform(target: &Frame, frames: &[Frame], code: &mut TokenStream) 
     }
 
     code.extend(quote! {
-        impl<T> TryToFrame<PyTime, PyBody, #target_type, T> for PyState
+        impl<T> TryToFrame<#target_type, T> for PyState
         where
-            T: FrameTransformationProvider + DeltaUt1TaiProvider,
+            T: FrameTransformationProvider + PyDeltaUt1Provider,
         {
             type Output = State<PyTime, PyBody, #target_type>;
+            type Error = T::Error;
 
             fn try_to_frame(
                 &self,
@@ -151,7 +152,7 @@ pub fn generate_code(frames: &[Frame]) -> String {
         use lox_bodies::python::PyBody;
         use lox_bodies::*;
         use lox_time::python::time::PyTime;
-        use lox_time::ut1::DeltaUt1TaiProvider;
+        use lox_time::python::ut1::PyDeltaUt1Provider;
         use pyo3::PyErr;
         use pyo3::exceptions::PyValueError;
 

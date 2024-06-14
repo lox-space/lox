@@ -26,7 +26,6 @@ use crate::python::ut1::{PyDeltaUt1Provider, PyUt1Provider};
 use crate::python::utc::PyUtc;
 use crate::time_of_day::TimeOfDay;
 use crate::transformations::{ToTai, ToTcb, ToTcg, ToTdb, ToTt, TryToScale};
-use crate::ut1::DeltaUt1TaiProvider;
 use crate::utc::transformations::ToUtc;
 use crate::{Time, TimeError, TimeLike};
 
@@ -65,7 +64,7 @@ impl FromStr for Unit {
     }
 }
 
-#[pyclass(name = "Time", module = "lox_space")]
+#[pyclass(name = "Time", module = "lox_space", frozen)]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PyTime(pub Time<PyTimeScale>);
 

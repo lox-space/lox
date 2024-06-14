@@ -1,4 +1,3 @@
-use std::convert::Infallible;
 use std::sync::Arc;
 
 use crate::frames::{BodyFixed, FrameTransformationProvider, Icrf, TryToFrame};
@@ -124,8 +123,8 @@ where
 pub enum TrajectoryTransformationError {
     #[error(transparent)]
     TrajectoryError(#[from] TrajectoryError),
-    #[error(transparent)]
-    Infallible(#[from] Infallible),
+    #[error("state tranformation failed: {0}")]
+    StateTransformationError(String),
 }
 
 impl<T, O, R, P> TryToFrame<BodyFixed<R>, P> for Trajectory<T, O, Icrf>
@@ -141,7 +140,9 @@ where
     fn try_to_frame(&self, frame: BodyFixed<R>, provider: &P) -> Result<Self::Output, Self::Error> {
         let mut states: Vec<State<T, O, BodyFixed<R>>> = Vec::with_capacity(self.states.len());
         for state in &self.states {
-            let state = state.try_to_frame(frame.clone(), provider).unwrap();
+            let state = state.try_to_frame(frame.clone(), provider).map_err(|e| {
+                TrajectoryTransformationError::StateTransformationError(e.to_string())
+            })?;
             states.push(state)
         }
         Ok(Trajectory::new(&states)?)

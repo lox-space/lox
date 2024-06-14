@@ -18,7 +18,7 @@ impl From<TimeDeltaError> for PyErr {
     }
 }
 
-#[pyclass(name = "TimeDelta", module = "lox_space")]
+#[pyclass(name = "TimeDelta", module = "lox_space", frozen)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PyTimeDelta(pub TimeDelta);
 

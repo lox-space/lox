@@ -6,24 +6,26 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::elements::Keplerian;
-use crate::frames::{Icrf, NoOpFrameTransformationProvider, TryToFrame};
-use crate::{
-    frames::FrameTransformationProvider,
-    states::State,
-    trajectories::{Trajectory, TrajectoryError},
-};
 use glam::DVec3;
-use lox_bodies::*;
-use lox_time::python::ut1::{PyNoOpOffsetProvider, PyUt1Provider};
-use lox_time::{python::time::PyTime, ut1::DeltaUt1Tai};
 use pyo3::{
     exceptions::PyValueError,
     pyclass, pymethods,
     types::{PyAnyMethods, PyList},
     Bound, PyErr, PyResult,
 };
+
+use lox_bodies::*;
+use lox_time::python::ut1::{PyNoOpOffsetProvider, PyUt1Provider};
+use lox_time::{python::time::PyTime, ut1::DeltaUt1Tai};
 use python::PyBody;
+
+use crate::elements::Keplerian;
+use crate::frames::{Icrf, TryToFrame};
+use crate::{
+    frames::FrameTransformationProvider,
+    states::State,
+    trajectories::{Trajectory, TrajectoryError},
+};
 
 mod generated;
 
@@ -216,7 +218,9 @@ pub enum PyFrame {
 impl FrameTransformationProvider for DeltaUt1Tai {}
 impl FrameTransformationProvider for PyNoOpOffsetProvider {}
 
-#[pyclass(name = "State", module = "lox_space")]
+impl FrameTransformationProvider for PyUt1Provider {}
+
+#[pyclass(name = "State", module = "lox_space", frozen)]
 #[derive(Debug, Clone)]
 pub struct PyState(pub State<PyTime, PyBody, PyFrame>);
 
@@ -243,22 +247,16 @@ impl PyState {
         )))
     }
 
-    fn to_frame(
-        &self,
-        frame: &Bound<'_, PyFrame>,
-        provider: Option<&Bound<'_, PyUt1Provider>>,
-    ) -> PyResult<Self> {
-        let frame = frame.get();
+    fn to_frame(&self, frame: &str, provider: Option<&Bound<'_, PyUt1Provider>>) -> PyResult<Self> {
+        let frame: PyFrame = frame.parse()?;
         match frame {
             PyFrame::Icrf => match provider {
                 Some(provider) => Ok(PyState(
-                    self.try_to_frame(Icrf, &provider.borrow().0)
-                        .map_err(|err| PyValueError::new_err(format!("{}", err)))?
+                    self.try_to_frame(Icrf, provider.get())?
                         .with_frame(PyFrame::Icrf),
                 )),
                 None => Ok(PyState(
-                    self.try_to_frame(Icrf, &PyNoOpOffsetProvider)
-                        .map_err(|err| PyValueError::new_err(format!("{}", err)))?
+                    self.try_to_frame(Icrf, &PyNoOpOffsetProvider)?
                         .with_frame(PyFrame::Icrf),
                 )),
             },
@@ -446,10 +444,10 @@ impl PyState {
     }
 }
 
-#[pyclass(name = "Keplerian", module = "lox_space")]
+#[pyclass(name = "Keplerian", module = "lox_space", frozen)]
 pub struct PyKeplerian(pub Keplerian<PyTime, PyBody>);
 
-#[pyclass(name = "Trajectory", module = "lox_space")]
+#[pyclass(name = "Trajectory", module = "lox_space", frozen)]
 pub struct PyTrajectory(pub Trajectory<PyTime, PyBody, PyFrame>);
 
 impl From<TrajectoryError> for PyErr {
