@@ -16,9 +16,9 @@ use crate::states::State;
 use lox_bodies::python::PyBody;
 use lox_bodies::*;
 use lox_time::python::time::PyTime;
-use lox_time::python::ut1::PyDeltaUt1Provider;
+use lox_time::python::ut1::{PyDeltaUt1Provider, PyNoOpOffsetProvider, PyUt1Provider};
 use pyo3::exceptions::PyValueError;
-use pyo3::PyErr;
+use pyo3::{Bound, PyErr, PyResult};
 use std::str::FromStr;
 impl<T> TryToFrame<Icrf, T> for PyState
 where
@@ -4353,6 +4353,1827 @@ where
             _ => self
                 .try_to_frame(Icrf, provider)?
                 .try_to_frame(frame, provider),
+        }
+    }
+}
+impl PyState {
+    pub fn to_frame_generated(
+        &self,
+        frame: &str,
+        provider: Option<&Bound<'_, PyUt1Provider>>,
+    ) -> PyResult<Self> {
+        let frame: PyFrame = frame.parse()?;
+        match frame {
+            PyFrame::Icrf => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(Icrf, provider.get())?
+                        .with_frame(PyFrame::Icrf),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(Icrf, &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Icrf),
+                )),
+            },
+            PyFrame::Sun => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Sun), provider.get())?
+                        .with_frame(PyFrame::Sun),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Sun), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Sun),
+                )),
+            },
+            PyFrame::Mercury => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Mercury), provider.get())?
+                        .with_frame(PyFrame::Mercury),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Mercury), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Mercury),
+                )),
+            },
+            PyFrame::Venus => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Venus), provider.get())?
+                        .with_frame(PyFrame::Venus),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Venus), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Venus),
+                )),
+            },
+            PyFrame::Earth => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Earth), provider.get())?
+                        .with_frame(PyFrame::Earth),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Earth), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Earth),
+                )),
+            },
+            PyFrame::Mars => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Mars), provider.get())?
+                        .with_frame(PyFrame::Mars),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Mars), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Mars),
+                )),
+            },
+            PyFrame::Jupiter => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Jupiter), provider.get())?
+                        .with_frame(PyFrame::Jupiter),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Jupiter), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Jupiter),
+                )),
+            },
+            PyFrame::Saturn => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Saturn), provider.get())?
+                        .with_frame(PyFrame::Saturn),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Saturn), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Saturn),
+                )),
+            },
+            PyFrame::Uranus => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Uranus), provider.get())?
+                        .with_frame(PyFrame::Uranus),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Uranus), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Uranus),
+                )),
+            },
+            PyFrame::Neptune => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Neptune), provider.get())?
+                        .with_frame(PyFrame::Neptune),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Neptune), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Neptune),
+                )),
+            },
+            PyFrame::Pluto => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Pluto), provider.get())?
+                        .with_frame(PyFrame::Pluto),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Pluto), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Pluto),
+                )),
+            },
+            PyFrame::Moon => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Moon), provider.get())?
+                        .with_frame(PyFrame::Moon),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Moon), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Moon),
+                )),
+            },
+            PyFrame::Phobos => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Phobos), provider.get())?
+                        .with_frame(PyFrame::Phobos),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Phobos), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Phobos),
+                )),
+            },
+            PyFrame::Deimos => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Deimos), provider.get())?
+                        .with_frame(PyFrame::Deimos),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Deimos), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Deimos),
+                )),
+            },
+            PyFrame::Io => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Io), provider.get())?
+                        .with_frame(PyFrame::Io),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Io), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Io),
+                )),
+            },
+            PyFrame::Europa => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Europa), provider.get())?
+                        .with_frame(PyFrame::Europa),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Europa), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Europa),
+                )),
+            },
+            PyFrame::Ganymede => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Ganymede), provider.get())?
+                        .with_frame(PyFrame::Ganymede),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Ganymede), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Ganymede),
+                )),
+            },
+            PyFrame::Callisto => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Callisto), provider.get())?
+                        .with_frame(PyFrame::Callisto),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Callisto), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Callisto),
+                )),
+            },
+            PyFrame::Amalthea => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Amalthea), provider.get())?
+                        .with_frame(PyFrame::Amalthea),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Amalthea), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Amalthea),
+                )),
+            },
+            PyFrame::Himalia => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Himalia), provider.get())?
+                        .with_frame(PyFrame::Himalia),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Himalia), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Himalia),
+                )),
+            },
+            PyFrame::Elara => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Elara), provider.get())?
+                        .with_frame(PyFrame::Elara),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Elara), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Elara),
+                )),
+            },
+            PyFrame::Pasiphae => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Pasiphae), provider.get())?
+                        .with_frame(PyFrame::Pasiphae),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Pasiphae), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Pasiphae),
+                )),
+            },
+            PyFrame::Sinope => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Sinope), provider.get())?
+                        .with_frame(PyFrame::Sinope),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Sinope), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Sinope),
+                )),
+            },
+            PyFrame::Lysithea => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Lysithea), provider.get())?
+                        .with_frame(PyFrame::Lysithea),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Lysithea), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Lysithea),
+                )),
+            },
+            PyFrame::Carme => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Carme), provider.get())?
+                        .with_frame(PyFrame::Carme),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Carme), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Carme),
+                )),
+            },
+            PyFrame::Ananke => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Ananke), provider.get())?
+                        .with_frame(PyFrame::Ananke),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Ananke), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Ananke),
+                )),
+            },
+            PyFrame::Leda => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Leda), provider.get())?
+                        .with_frame(PyFrame::Leda),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Leda), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Leda),
+                )),
+            },
+            PyFrame::Thebe => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Thebe), provider.get())?
+                        .with_frame(PyFrame::Thebe),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Thebe), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Thebe),
+                )),
+            },
+            PyFrame::Adrastea => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Adrastea), provider.get())?
+                        .with_frame(PyFrame::Adrastea),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Adrastea), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Adrastea),
+                )),
+            },
+            PyFrame::Metis => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Metis), provider.get())?
+                        .with_frame(PyFrame::Metis),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Metis), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Metis),
+                )),
+            },
+            PyFrame::Callirrhoe => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Callirrhoe), provider.get())?
+                        .with_frame(PyFrame::Callirrhoe),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Callirrhoe), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Callirrhoe),
+                )),
+            },
+            PyFrame::Themisto => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Themisto), provider.get())?
+                        .with_frame(PyFrame::Themisto),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Themisto), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Themisto),
+                )),
+            },
+            PyFrame::Magaclite => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Magaclite), provider.get())?
+                        .with_frame(PyFrame::Magaclite),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Magaclite), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Magaclite),
+                )),
+            },
+            PyFrame::Taygete => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Taygete), provider.get())?
+                        .with_frame(PyFrame::Taygete),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Taygete), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Taygete),
+                )),
+            },
+            PyFrame::Chaldene => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Chaldene), provider.get())?
+                        .with_frame(PyFrame::Chaldene),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Chaldene), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Chaldene),
+                )),
+            },
+            PyFrame::Harpalyke => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Harpalyke), provider.get())?
+                        .with_frame(PyFrame::Harpalyke),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Harpalyke), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Harpalyke),
+                )),
+            },
+            PyFrame::Kalyke => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Kalyke), provider.get())?
+                        .with_frame(PyFrame::Kalyke),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Kalyke), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Kalyke),
+                )),
+            },
+            PyFrame::Iocaste => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Iocaste), provider.get())?
+                        .with_frame(PyFrame::Iocaste),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Iocaste), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Iocaste),
+                )),
+            },
+            PyFrame::Erinome => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Erinome), provider.get())?
+                        .with_frame(PyFrame::Erinome),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Erinome), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Erinome),
+                )),
+            },
+            PyFrame::Isonoe => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Isonoe), provider.get())?
+                        .with_frame(PyFrame::Isonoe),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Isonoe), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Isonoe),
+                )),
+            },
+            PyFrame::Praxidike => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Praxidike), provider.get())?
+                        .with_frame(PyFrame::Praxidike),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Praxidike), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Praxidike),
+                )),
+            },
+            PyFrame::Autonoe => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Autonoe), provider.get())?
+                        .with_frame(PyFrame::Autonoe),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Autonoe), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Autonoe),
+                )),
+            },
+            PyFrame::Thyone => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Thyone), provider.get())?
+                        .with_frame(PyFrame::Thyone),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Thyone), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Thyone),
+                )),
+            },
+            PyFrame::Hermippe => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Hermippe), provider.get())?
+                        .with_frame(PyFrame::Hermippe),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Hermippe), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Hermippe),
+                )),
+            },
+            PyFrame::Aitne => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Aitne), provider.get())?
+                        .with_frame(PyFrame::Aitne),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Aitne), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Aitne),
+                )),
+            },
+            PyFrame::Eurydome => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Eurydome), provider.get())?
+                        .with_frame(PyFrame::Eurydome),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Eurydome), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Eurydome),
+                )),
+            },
+            PyFrame::Euanthe => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Euanthe), provider.get())?
+                        .with_frame(PyFrame::Euanthe),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Euanthe), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Euanthe),
+                )),
+            },
+            PyFrame::Euporie => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Euporie), provider.get())?
+                        .with_frame(PyFrame::Euporie),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Euporie), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Euporie),
+                )),
+            },
+            PyFrame::Orthosie => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Orthosie), provider.get())?
+                        .with_frame(PyFrame::Orthosie),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Orthosie), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Orthosie),
+                )),
+            },
+            PyFrame::Sponde => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Sponde), provider.get())?
+                        .with_frame(PyFrame::Sponde),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Sponde), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Sponde),
+                )),
+            },
+            PyFrame::Kale => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Kale), provider.get())?
+                        .with_frame(PyFrame::Kale),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Kale), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Kale),
+                )),
+            },
+            PyFrame::Pasithee => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Pasithee), provider.get())?
+                        .with_frame(PyFrame::Pasithee),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Pasithee), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Pasithee),
+                )),
+            },
+            PyFrame::Hegemone => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Hegemone), provider.get())?
+                        .with_frame(PyFrame::Hegemone),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Hegemone), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Hegemone),
+                )),
+            },
+            PyFrame::Mneme => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Mneme), provider.get())?
+                        .with_frame(PyFrame::Mneme),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Mneme), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Mneme),
+                )),
+            },
+            PyFrame::Aoede => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Aoede), provider.get())?
+                        .with_frame(PyFrame::Aoede),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Aoede), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Aoede),
+                )),
+            },
+            PyFrame::Thelxinoe => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Thelxinoe), provider.get())?
+                        .with_frame(PyFrame::Thelxinoe),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Thelxinoe), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Thelxinoe),
+                )),
+            },
+            PyFrame::Arche => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Arche), provider.get())?
+                        .with_frame(PyFrame::Arche),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Arche), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Arche),
+                )),
+            },
+            PyFrame::Kallichore => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Kallichore), provider.get())?
+                        .with_frame(PyFrame::Kallichore),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Kallichore), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Kallichore),
+                )),
+            },
+            PyFrame::Helike => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Helike), provider.get())?
+                        .with_frame(PyFrame::Helike),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Helike), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Helike),
+                )),
+            },
+            PyFrame::Carpo => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Carpo), provider.get())?
+                        .with_frame(PyFrame::Carpo),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Carpo), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Carpo),
+                )),
+            },
+            PyFrame::Eukelade => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Eukelade), provider.get())?
+                        .with_frame(PyFrame::Eukelade),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Eukelade), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Eukelade),
+                )),
+            },
+            PyFrame::Cyllene => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Cyllene), provider.get())?
+                        .with_frame(PyFrame::Cyllene),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Cyllene), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Cyllene),
+                )),
+            },
+            PyFrame::Kore => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Kore), provider.get())?
+                        .with_frame(PyFrame::Kore),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Kore), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Kore),
+                )),
+            },
+            PyFrame::Herse => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Herse), provider.get())?
+                        .with_frame(PyFrame::Herse),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Herse), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Herse),
+                )),
+            },
+            PyFrame::Dia => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Dia), provider.get())?
+                        .with_frame(PyFrame::Dia),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Dia), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Dia),
+                )),
+            },
+            PyFrame::Mimas => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Mimas), provider.get())?
+                        .with_frame(PyFrame::Mimas),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Mimas), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Mimas),
+                )),
+            },
+            PyFrame::Enceladus => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Enceladus), provider.get())?
+                        .with_frame(PyFrame::Enceladus),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Enceladus), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Enceladus),
+                )),
+            },
+            PyFrame::Tethys => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Tethys), provider.get())?
+                        .with_frame(PyFrame::Tethys),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Tethys), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Tethys),
+                )),
+            },
+            PyFrame::Dione => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Dione), provider.get())?
+                        .with_frame(PyFrame::Dione),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Dione), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Dione),
+                )),
+            },
+            PyFrame::Rhea => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Rhea), provider.get())?
+                        .with_frame(PyFrame::Rhea),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Rhea), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Rhea),
+                )),
+            },
+            PyFrame::Titan => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Titan), provider.get())?
+                        .with_frame(PyFrame::Titan),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Titan), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Titan),
+                )),
+            },
+            PyFrame::Hyperion => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Hyperion), provider.get())?
+                        .with_frame(PyFrame::Hyperion),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Hyperion), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Hyperion),
+                )),
+            },
+            PyFrame::Iapetus => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Iapetus), provider.get())?
+                        .with_frame(PyFrame::Iapetus),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Iapetus), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Iapetus),
+                )),
+            },
+            PyFrame::Phoebe => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Phoebe), provider.get())?
+                        .with_frame(PyFrame::Phoebe),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Phoebe), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Phoebe),
+                )),
+            },
+            PyFrame::Janus => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Janus), provider.get())?
+                        .with_frame(PyFrame::Janus),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Janus), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Janus),
+                )),
+            },
+            PyFrame::Epimetheus => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Epimetheus), provider.get())?
+                        .with_frame(PyFrame::Epimetheus),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Epimetheus), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Epimetheus),
+                )),
+            },
+            PyFrame::Helene => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Helene), provider.get())?
+                        .with_frame(PyFrame::Helene),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Helene), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Helene),
+                )),
+            },
+            PyFrame::Telesto => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Telesto), provider.get())?
+                        .with_frame(PyFrame::Telesto),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Telesto), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Telesto),
+                )),
+            },
+            PyFrame::Calypso => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Calypso), provider.get())?
+                        .with_frame(PyFrame::Calypso),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Calypso), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Calypso),
+                )),
+            },
+            PyFrame::Atlas => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Atlas), provider.get())?
+                        .with_frame(PyFrame::Atlas),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Atlas), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Atlas),
+                )),
+            },
+            PyFrame::Prometheus => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Prometheus), provider.get())?
+                        .with_frame(PyFrame::Prometheus),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Prometheus), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Prometheus),
+                )),
+            },
+            PyFrame::Pandora => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Pandora), provider.get())?
+                        .with_frame(PyFrame::Pandora),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Pandora), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Pandora),
+                )),
+            },
+            PyFrame::Pan => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Pan), provider.get())?
+                        .with_frame(PyFrame::Pan),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Pan), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Pan),
+                )),
+            },
+            PyFrame::Ymir => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Ymir), provider.get())?
+                        .with_frame(PyFrame::Ymir),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Ymir), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Ymir),
+                )),
+            },
+            PyFrame::Paaliaq => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Paaliaq), provider.get())?
+                        .with_frame(PyFrame::Paaliaq),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Paaliaq), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Paaliaq),
+                )),
+            },
+            PyFrame::Tarvos => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Tarvos), provider.get())?
+                        .with_frame(PyFrame::Tarvos),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Tarvos), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Tarvos),
+                )),
+            },
+            PyFrame::Ijiraq => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Ijiraq), provider.get())?
+                        .with_frame(PyFrame::Ijiraq),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Ijiraq), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Ijiraq),
+                )),
+            },
+            PyFrame::Suttungr => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Suttungr), provider.get())?
+                        .with_frame(PyFrame::Suttungr),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Suttungr), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Suttungr),
+                )),
+            },
+            PyFrame::Kiviuq => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Kiviuq), provider.get())?
+                        .with_frame(PyFrame::Kiviuq),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Kiviuq), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Kiviuq),
+                )),
+            },
+            PyFrame::Mundilfari => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Mundilfari), provider.get())?
+                        .with_frame(PyFrame::Mundilfari),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Mundilfari), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Mundilfari),
+                )),
+            },
+            PyFrame::Albiorix => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Albiorix), provider.get())?
+                        .with_frame(PyFrame::Albiorix),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Albiorix), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Albiorix),
+                )),
+            },
+            PyFrame::Skathi => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Skathi), provider.get())?
+                        .with_frame(PyFrame::Skathi),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Skathi), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Skathi),
+                )),
+            },
+            PyFrame::Erriapus => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Erriapus), provider.get())?
+                        .with_frame(PyFrame::Erriapus),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Erriapus), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Erriapus),
+                )),
+            },
+            PyFrame::Siarnaq => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Siarnaq), provider.get())?
+                        .with_frame(PyFrame::Siarnaq),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Siarnaq), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Siarnaq),
+                )),
+            },
+            PyFrame::Thrymr => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Thrymr), provider.get())?
+                        .with_frame(PyFrame::Thrymr),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Thrymr), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Thrymr),
+                )),
+            },
+            PyFrame::Narvi => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Narvi), provider.get())?
+                        .with_frame(PyFrame::Narvi),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Narvi), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Narvi),
+                )),
+            },
+            PyFrame::Methone => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Methone), provider.get())?
+                        .with_frame(PyFrame::Methone),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Methone), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Methone),
+                )),
+            },
+            PyFrame::Pallene => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Pallene), provider.get())?
+                        .with_frame(PyFrame::Pallene),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Pallene), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Pallene),
+                )),
+            },
+            PyFrame::Polydeuces => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Polydeuces), provider.get())?
+                        .with_frame(PyFrame::Polydeuces),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Polydeuces), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Polydeuces),
+                )),
+            },
+            PyFrame::Daphnis => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Daphnis), provider.get())?
+                        .with_frame(PyFrame::Daphnis),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Daphnis), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Daphnis),
+                )),
+            },
+            PyFrame::Aegir => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Aegir), provider.get())?
+                        .with_frame(PyFrame::Aegir),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Aegir), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Aegir),
+                )),
+            },
+            PyFrame::Bebhionn => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Bebhionn), provider.get())?
+                        .with_frame(PyFrame::Bebhionn),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Bebhionn), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Bebhionn),
+                )),
+            },
+            PyFrame::Bergelmir => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Bergelmir), provider.get())?
+                        .with_frame(PyFrame::Bergelmir),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Bergelmir), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Bergelmir),
+                )),
+            },
+            PyFrame::Bestla => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Bestla), provider.get())?
+                        .with_frame(PyFrame::Bestla),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Bestla), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Bestla),
+                )),
+            },
+            PyFrame::Farbauti => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Farbauti), provider.get())?
+                        .with_frame(PyFrame::Farbauti),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Farbauti), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Farbauti),
+                )),
+            },
+            PyFrame::Fenrir => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Fenrir), provider.get())?
+                        .with_frame(PyFrame::Fenrir),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Fenrir), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Fenrir),
+                )),
+            },
+            PyFrame::Fornjot => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Fornjot), provider.get())?
+                        .with_frame(PyFrame::Fornjot),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Fornjot), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Fornjot),
+                )),
+            },
+            PyFrame::Hati => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Hati), provider.get())?
+                        .with_frame(PyFrame::Hati),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Hati), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Hati),
+                )),
+            },
+            PyFrame::Hyrrokkin => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Hyrrokkin), provider.get())?
+                        .with_frame(PyFrame::Hyrrokkin),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Hyrrokkin), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Hyrrokkin),
+                )),
+            },
+            PyFrame::Kari => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Kari), provider.get())?
+                        .with_frame(PyFrame::Kari),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Kari), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Kari),
+                )),
+            },
+            PyFrame::Loge => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Loge), provider.get())?
+                        .with_frame(PyFrame::Loge),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Loge), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Loge),
+                )),
+            },
+            PyFrame::Skoll => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Skoll), provider.get())?
+                        .with_frame(PyFrame::Skoll),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Skoll), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Skoll),
+                )),
+            },
+            PyFrame::Surtur => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Surtur), provider.get())?
+                        .with_frame(PyFrame::Surtur),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Surtur), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Surtur),
+                )),
+            },
+            PyFrame::Anthe => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Anthe), provider.get())?
+                        .with_frame(PyFrame::Anthe),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Anthe), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Anthe),
+                )),
+            },
+            PyFrame::Jarnsaxa => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Jarnsaxa), provider.get())?
+                        .with_frame(PyFrame::Jarnsaxa),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Jarnsaxa), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Jarnsaxa),
+                )),
+            },
+            PyFrame::Greip => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Greip), provider.get())?
+                        .with_frame(PyFrame::Greip),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Greip), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Greip),
+                )),
+            },
+            PyFrame::Tarqeq => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Tarqeq), provider.get())?
+                        .with_frame(PyFrame::Tarqeq),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Tarqeq), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Tarqeq),
+                )),
+            },
+            PyFrame::Aegaeon => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Aegaeon), provider.get())?
+                        .with_frame(PyFrame::Aegaeon),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Aegaeon), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Aegaeon),
+                )),
+            },
+            PyFrame::Ariel => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Ariel), provider.get())?
+                        .with_frame(PyFrame::Ariel),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Ariel), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Ariel),
+                )),
+            },
+            PyFrame::Umbriel => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Umbriel), provider.get())?
+                        .with_frame(PyFrame::Umbriel),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Umbriel), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Umbriel),
+                )),
+            },
+            PyFrame::Titania => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Titania), provider.get())?
+                        .with_frame(PyFrame::Titania),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Titania), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Titania),
+                )),
+            },
+            PyFrame::Oberon => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Oberon), provider.get())?
+                        .with_frame(PyFrame::Oberon),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Oberon), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Oberon),
+                )),
+            },
+            PyFrame::Miranda => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Miranda), provider.get())?
+                        .with_frame(PyFrame::Miranda),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Miranda), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Miranda),
+                )),
+            },
+            PyFrame::Cordelia => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Cordelia), provider.get())?
+                        .with_frame(PyFrame::Cordelia),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Cordelia), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Cordelia),
+                )),
+            },
+            PyFrame::Ophelia => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Ophelia), provider.get())?
+                        .with_frame(PyFrame::Ophelia),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Ophelia), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Ophelia),
+                )),
+            },
+            PyFrame::Bianca => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Bianca), provider.get())?
+                        .with_frame(PyFrame::Bianca),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Bianca), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Bianca),
+                )),
+            },
+            PyFrame::Cressida => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Cressida), provider.get())?
+                        .with_frame(PyFrame::Cressida),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Cressida), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Cressida),
+                )),
+            },
+            PyFrame::Desdemona => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Desdemona), provider.get())?
+                        .with_frame(PyFrame::Desdemona),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Desdemona), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Desdemona),
+                )),
+            },
+            PyFrame::Juliet => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Juliet), provider.get())?
+                        .with_frame(PyFrame::Juliet),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Juliet), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Juliet),
+                )),
+            },
+            PyFrame::Portia => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Portia), provider.get())?
+                        .with_frame(PyFrame::Portia),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Portia), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Portia),
+                )),
+            },
+            PyFrame::Rosalind => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Rosalind), provider.get())?
+                        .with_frame(PyFrame::Rosalind),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Rosalind), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Rosalind),
+                )),
+            },
+            PyFrame::Belinda => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Belinda), provider.get())?
+                        .with_frame(PyFrame::Belinda),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Belinda), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Belinda),
+                )),
+            },
+            PyFrame::Puck => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Puck), provider.get())?
+                        .with_frame(PyFrame::Puck),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Puck), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Puck),
+                )),
+            },
+            PyFrame::Caliban => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Caliban), provider.get())?
+                        .with_frame(PyFrame::Caliban),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Caliban), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Caliban),
+                )),
+            },
+            PyFrame::Sycorax => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Sycorax), provider.get())?
+                        .with_frame(PyFrame::Sycorax),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Sycorax), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Sycorax),
+                )),
+            },
+            PyFrame::Prospero => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Prospero), provider.get())?
+                        .with_frame(PyFrame::Prospero),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Prospero), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Prospero),
+                )),
+            },
+            PyFrame::Setebos => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Setebos), provider.get())?
+                        .with_frame(PyFrame::Setebos),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Setebos), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Setebos),
+                )),
+            },
+            PyFrame::Stephano => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Stephano), provider.get())?
+                        .with_frame(PyFrame::Stephano),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Stephano), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Stephano),
+                )),
+            },
+            PyFrame::Trinculo => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Trinculo), provider.get())?
+                        .with_frame(PyFrame::Trinculo),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Trinculo), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Trinculo),
+                )),
+            },
+            PyFrame::Francisco => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Francisco), provider.get())?
+                        .with_frame(PyFrame::Francisco),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Francisco), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Francisco),
+                )),
+            },
+            PyFrame::Margaret => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Margaret), provider.get())?
+                        .with_frame(PyFrame::Margaret),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Margaret), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Margaret),
+                )),
+            },
+            PyFrame::Ferdinand => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Ferdinand), provider.get())?
+                        .with_frame(PyFrame::Ferdinand),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Ferdinand), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Ferdinand),
+                )),
+            },
+            PyFrame::Perdita => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Perdita), provider.get())?
+                        .with_frame(PyFrame::Perdita),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Perdita), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Perdita),
+                )),
+            },
+            PyFrame::Mab => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Mab), provider.get())?
+                        .with_frame(PyFrame::Mab),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Mab), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Mab),
+                )),
+            },
+            PyFrame::Cupid => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Cupid), provider.get())?
+                        .with_frame(PyFrame::Cupid),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Cupid), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Cupid),
+                )),
+            },
+            PyFrame::Triton => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Triton), provider.get())?
+                        .with_frame(PyFrame::Triton),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Triton), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Triton),
+                )),
+            },
+            PyFrame::Nereid => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Nereid), provider.get())?
+                        .with_frame(PyFrame::Nereid),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Nereid), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Nereid),
+                )),
+            },
+            PyFrame::Naiad => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Naiad), provider.get())?
+                        .with_frame(PyFrame::Naiad),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Naiad), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Naiad),
+                )),
+            },
+            PyFrame::Thalassa => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Thalassa), provider.get())?
+                        .with_frame(PyFrame::Thalassa),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Thalassa), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Thalassa),
+                )),
+            },
+            PyFrame::Despina => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Despina), provider.get())?
+                        .with_frame(PyFrame::Despina),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Despina), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Despina),
+                )),
+            },
+            PyFrame::Galatea => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Galatea), provider.get())?
+                        .with_frame(PyFrame::Galatea),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Galatea), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Galatea),
+                )),
+            },
+            PyFrame::Larissa => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Larissa), provider.get())?
+                        .with_frame(PyFrame::Larissa),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Larissa), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Larissa),
+                )),
+            },
+            PyFrame::Proteus => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Proteus), provider.get())?
+                        .with_frame(PyFrame::Proteus),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Proteus), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Proteus),
+                )),
+            },
+            PyFrame::Halimede => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Halimede), provider.get())?
+                        .with_frame(PyFrame::Halimede),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Halimede), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Halimede),
+                )),
+            },
+            PyFrame::Psamathe => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Psamathe), provider.get())?
+                        .with_frame(PyFrame::Psamathe),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Psamathe), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Psamathe),
+                )),
+            },
+            PyFrame::Sao => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Sao), provider.get())?
+                        .with_frame(PyFrame::Sao),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Sao), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Sao),
+                )),
+            },
+            PyFrame::Laomedeia => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Laomedeia), provider.get())?
+                        .with_frame(PyFrame::Laomedeia),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Laomedeia), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Laomedeia),
+                )),
+            },
+            PyFrame::Neso => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Neso), provider.get())?
+                        .with_frame(PyFrame::Neso),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Neso), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Neso),
+                )),
+            },
+            PyFrame::Charon => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Charon), provider.get())?
+                        .with_frame(PyFrame::Charon),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Charon), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Charon),
+                )),
+            },
+            PyFrame::Nix => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Nix), provider.get())?
+                        .with_frame(PyFrame::Nix),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Nix), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Nix),
+                )),
+            },
+            PyFrame::Hydra => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Hydra), provider.get())?
+                        .with_frame(PyFrame::Hydra),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Hydra), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Hydra),
+                )),
+            },
+            PyFrame::Kerberos => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Kerberos), provider.get())?
+                        .with_frame(PyFrame::Kerberos),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Kerberos), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Kerberos),
+                )),
+            },
+            PyFrame::Styx => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Styx), provider.get())?
+                        .with_frame(PyFrame::Styx),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Styx), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Styx),
+                )),
+            },
+            PyFrame::Gaspra => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Gaspra), provider.get())?
+                        .with_frame(PyFrame::Gaspra),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Gaspra), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Gaspra),
+                )),
+            },
+            PyFrame::Ida => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Ida), provider.get())?
+                        .with_frame(PyFrame::Ida),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Ida), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Ida),
+                )),
+            },
+            PyFrame::Dactyl => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Dactyl), provider.get())?
+                        .with_frame(PyFrame::Dactyl),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Dactyl), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Dactyl),
+                )),
+            },
+            PyFrame::Ceres => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Ceres), provider.get())?
+                        .with_frame(PyFrame::Ceres),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Ceres), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Ceres),
+                )),
+            },
+            PyFrame::Pallas => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Pallas), provider.get())?
+                        .with_frame(PyFrame::Pallas),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Pallas), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Pallas),
+                )),
+            },
+            PyFrame::Vesta => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Vesta), provider.get())?
+                        .with_frame(PyFrame::Vesta),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Vesta), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Vesta),
+                )),
+            },
+            PyFrame::Psyche => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Psyche), provider.get())?
+                        .with_frame(PyFrame::Psyche),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Psyche), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Psyche),
+                )),
+            },
+            PyFrame::Lutetia => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Lutetia), provider.get())?
+                        .with_frame(PyFrame::Lutetia),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Lutetia), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Lutetia),
+                )),
+            },
+            PyFrame::Kleopatra => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Kleopatra), provider.get())?
+                        .with_frame(PyFrame::Kleopatra),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Kleopatra), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Kleopatra),
+                )),
+            },
+            PyFrame::Eros => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Eros), provider.get())?
+                        .with_frame(PyFrame::Eros),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Eros), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Eros),
+                )),
+            },
+            PyFrame::Davida => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Davida), provider.get())?
+                        .with_frame(PyFrame::Davida),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Davida), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Davida),
+                )),
+            },
+            PyFrame::Mathilde => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Mathilde), provider.get())?
+                        .with_frame(PyFrame::Mathilde),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Mathilde), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Mathilde),
+                )),
+            },
+            PyFrame::Steins => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Steins), provider.get())?
+                        .with_frame(PyFrame::Steins),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Steins), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Steins),
+                )),
+            },
+            PyFrame::Braille => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Braille), provider.get())?
+                        .with_frame(PyFrame::Braille),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Braille), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Braille),
+                )),
+            },
+            PyFrame::WilsonHarrington => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(WilsonHarrington), provider.get())?
+                        .with_frame(PyFrame::WilsonHarrington),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(WilsonHarrington), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::WilsonHarrington),
+                )),
+            },
+            PyFrame::Toutatis => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Toutatis), provider.get())?
+                        .with_frame(PyFrame::Toutatis),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Toutatis), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Toutatis),
+                )),
+            },
+            PyFrame::Itokawa => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Itokawa), provider.get())?
+                        .with_frame(PyFrame::Itokawa),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Itokawa), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Itokawa),
+                )),
+            },
+            PyFrame::Bennu => match provider {
+                Some(provider) => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Bennu), provider.get())?
+                        .with_frame(PyFrame::Bennu),
+                )),
+                None => Ok(PyState(
+                    self.try_to_frame(BodyFixed(Bennu), &PyNoOpOffsetProvider)?
+                        .with_frame(PyFrame::Bennu),
+                )),
+            },
         }
     }
 }

@@ -87,6 +87,7 @@ pub fn generate_code(frames: &[Frame]) -> String {
     let mut match_arms_name = quote! {};
     let mut match_arms_abbreviation = quote! {};
     let mut match_arms_from_str = quote! {};
+    let mut match_arms_impl_pystate = quote! {};
 
     frames.iter().for_each(|f| {
         let ident = f.ident();
@@ -103,6 +104,34 @@ pub fn generate_code(frames: &[Frame]) -> String {
         match_arms_from_str.extend(quote! {
             #abbreviation | #abbreviation_lowercase => Ok(PyFrame::#ident),
         });
+        match_arms_impl_pystate.extend(if f.ident == "Icrf" {
+            quote! {
+                PyFrame::#ident => match provider {
+                    Some(provider) => Ok(PyState(
+                        self.try_to_frame(#ident, provider.get())?
+                            .with_frame(PyFrame::#ident),
+                    )),
+                    None => Ok(PyState(
+                        self.try_to_frame(#ident, &PyNoOpOffsetProvider)?
+                            .with_frame(PyFrame::#ident),
+                    )),
+                },
+            }
+        } else {
+            quote! {
+                PyFrame::#ident => match provider {
+                    Some(provider) => Ok(PyState(
+                        self.try_to_frame(BodyFixed(#ident), provider.get())?
+                            .with_frame(PyFrame::#ident),
+                    )),
+                    None => Ok(PyState(
+                        self.try_to_frame(BodyFixed(#ident), &PyNoOpOffsetProvider)?
+                            .with_frame(PyFrame::#ident),
+                    )),
+                },
+
+            }
+        });
 
         generate_transform(f, frames, &mut code);
 
@@ -116,6 +145,19 @@ pub fn generate_code(frames: &[Frame]) -> String {
     });
 
     code.extend(quote! {
+        impl PyState {
+            pub fn to_frame_generated(
+                &self,
+                frame: &str,
+                provider: Option<&Bound<'_, PyUt1Provider>>,
+            ) -> PyResult<Self> {
+                let frame: PyFrame = frame.parse()?;
+                match frame {
+                    #match_arms_impl_pystate
+                }
+            }
+        }
+
         impl ReferenceFrame for PyFrame {
             fn name(&self) -> String {
                 match self {
@@ -143,7 +185,6 @@ pub fn generate_code(frames: &[Frame]) -> String {
     });
 
     let module = quote! {
-        use std::str::FromStr;
         use crate::frames::{
             BodyFixed, CoordinateSystem, FrameTransformationProvider, Icrf, ReferenceFrame, TryToFrame,
         };
@@ -152,9 +193,10 @@ pub fn generate_code(frames: &[Frame]) -> String {
         use lox_bodies::python::PyBody;
         use lox_bodies::*;
         use lox_time::python::time::PyTime;
-        use lox_time::python::ut1::PyDeltaUt1Provider;
-        use pyo3::PyErr;
+        use lox_time::python::ut1::{PyDeltaUt1Provider, PyNoOpOffsetProvider, PyUt1Provider};
         use pyo3::exceptions::PyValueError;
+        use pyo3::{Bound, PyErr, PyResult};
+        use std::str::FromStr;
 
         #code
 
