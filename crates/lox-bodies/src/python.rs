@@ -6,8 +6,6 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use std::str::FromStr;
-
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;
@@ -398,98 +396,6 @@ impl From<PyBody> for PyObject {
             PyBody::Satellite(satellite) => satellite.clone().into_py(py),
             PyBody::MinorBody(minor_body) => minor_body.clone().into_py(py),
         })
-    }
-}
-
-impl FromStr for PyBody {
-    type Err = PyErr;
-
-    fn from_str(name: &str) -> Result<Self, Self::Err> {
-        match name {
-            "sun" | "Sun" => Ok(PyBody::Sun(PySun::new())),
-            "mercury barycenter" | "Mercury Barycenter" => {
-                Ok(PyBody::Barycenter(PyBarycenter::new("mercury")?))
-            }
-            "venus barycenter" | "Venus Barycenter" => {
-                Ok(PyBody::Barycenter(PyBarycenter::new("venus")?))
-            }
-            "earth barycenter" | "Earth Barycenter" => {
-                Ok(PyBody::Barycenter(PyBarycenter::new("earth")?))
-            }
-            "mars barycenter" | "Mars Barycenter" => {
-                Ok(PyBody::Barycenter(PyBarycenter::new("mars")?))
-            }
-            "jupiter barycenter" | "Jupiter Barycenter" => {
-                Ok(PyBody::Barycenter(PyBarycenter::new("jupiter")?))
-            }
-            "saturn barycenter" | "Saturn Barycenter" => {
-                Ok(PyBody::Barycenter(PyBarycenter::new("saturn")?))
-            }
-            "uranus barycenter" | "Uranus Barycenter" => {
-                Ok(PyBody::Barycenter(PyBarycenter::new("uranus")?))
-            }
-            "neptune barycenter" | "Neptune Barycenter" => {
-                Ok(PyBody::Barycenter(PyBarycenter::new("neptune")?))
-            }
-            "pluto barycenter" | "Pluto Barycenter" => {
-                Ok(PyBody::Barycenter(PyBarycenter::new("pluto")?))
-            }
-            "mercury" | "Mercury" => Ok(PyBody::Planet(PyPlanet::new("mercury")?)),
-            "venus" | "Venus" => Ok(PyBody::Planet(PyPlanet::new("venus")?)),
-            "earth" | "Earth" => Ok(PyBody::Planet(PyPlanet::new("earth")?)),
-            "mars" | "Mars" => Ok(PyBody::Planet(PyPlanet::new("mars")?)),
-            "jupiter" | "Jupiter" => Ok(PyBody::Planet(PyPlanet::new("jupiter")?)),
-            "saturn" | "Saturn" => Ok(PyBody::Planet(PyPlanet::new("saturn")?)),
-            "uranus" | "Uranus" => Ok(PyBody::Planet(PyPlanet::new("uranus")?)),
-            "neptune" | "Neptune" => Ok(PyBody::Planet(PyPlanet::new("neptune")?)),
-            "pluto" | "Pluto" => Ok(PyBody::Planet(PyPlanet::new("pluto")?)),
-            "moon" | "Moon" | "luna" | "Luna" => Ok(PyBody::Satellite(PySatellite::new("moon")?)),
-            "phobos" | "Phobos" => Ok(PyBody::Satellite(PySatellite::new("phobos")?)),
-            "deimos" | "Deimos" => Ok(PyBody::Satellite(PySatellite::new("deimos")?)),
-            "io" | "Io" => Ok(PyBody::Satellite(PySatellite::new("io")?)),
-            "europa" | "Europa" => Ok(PyBody::Satellite(PySatellite::new("europa")?)),
-            "ganymede" | "Ganymede" => Ok(PyBody::Satellite(PySatellite::new("ganymede")?)),
-            "callisto" | "Callisto" => Ok(PyBody::Satellite(PySatellite::new("callisto")?)),
-            "amalthea" | "Amalthea" => Ok(PyBody::Satellite(PySatellite::new("amalthea")?)),
-            "himalia" | "Himalia" => Ok(PyBody::Satellite(PySatellite::new("himalia")?)),
-            "thebe" | "Thebe" => Ok(PyBody::Satellite(PySatellite::new("thebe")?)),
-            "adrastea" | "Adrastea" => Ok(PyBody::Satellite(PySatellite::new("adrastea")?)),
-            "metis" | "Metis" => Ok(PyBody::Satellite(PySatellite::new("metis")?)),
-            "mimas" | "Mimas" => Ok(PyBody::Satellite(PySatellite::new("mimas")?)),
-            "enceladus" | "Enceladus" => Ok(PyBody::Satellite(PySatellite::new("enceladus")?)),
-            "tethys" | "Tethys" => Ok(PyBody::Satellite(PySatellite::new("tethys")?)),
-            "dione" | "Dione" => Ok(PyBody::Satellite(PySatellite::new("dione")?)),
-            "rhea" | "Rhea" => Ok(PyBody::Satellite(PySatellite::new("rhea")?)),
-            "titan" | "Titan" => Ok(PyBody::Satellite(PySatellite::new("titan")?)),
-            "hyperion" | "Hyperion" => Ok(PyBody::Satellite(PySatellite::new("hyperion")?)),
-            "iapetus" | "Iapetus" => Ok(PyBody::Satellite(PySatellite::new("iapetus")?)),
-            "phoebe" | "Phoebe" => Ok(PyBody::Satellite(PySatellite::new("phoebe")?)),
-            "janus" | "Janus" => Ok(PyBody::Satellite(PySatellite::new("janus")?)),
-            "epimetheus" | "Epimetheus" => Ok(PyBody::Satellite(PySatellite::new("epimetheus")?)),
-            "helene" | "Helene" => Ok(PyBody::Satellite(PySatellite::new("helene")?)),
-            "atlas" | "Atlas" => Ok(PyBody::Satellite(PySatellite::new("atlas")?)),
-            "prometheus" | "Prometheus" => Ok(PyBody::Satellite(PySatellite::new("prometheus")?)),
-            "pandora" | "Pandora" => Ok(PyBody::Satellite(PySatellite::new("pandora")?)),
-            "ariel" | "Ariel" => Ok(PyBody::Satellite(PySatellite::new("ariel")?)),
-            "umbriel" | "Umbriel" => Ok(PyBody::Satellite(PySatellite::new("umbriel")?)),
-            "titania" | "Titania" => Ok(PyBody::Satellite(PySatellite::new("titania")?)),
-            "oberon" | "Oberon" => Ok(PyBody::Satellite(PySatellite::new("oberon")?)),
-            "miranda" | "Miranda" => Ok(PyBody::Satellite(PySatellite::new("miranda")?)),
-            "triton" | "Triton" => Ok(PyBody::Satellite(PySatellite::new("triton")?)),
-            "naiad" | "Naiad" => Ok(PyBody::Satellite(PySatellite::new("naiad")?)),
-            "thalassa" | "Thalassa" => Ok(PyBody::Satellite(PySatellite::new("thalassa")?)),
-            "despina" | "Despina" => Ok(PyBody::Satellite(PySatellite::new("despina")?)),
-            "galatea" | "Galatea" => Ok(PyBody::Satellite(PySatellite::new("galatea")?)),
-            "larissa" | "Larissa" => Ok(PyBody::Satellite(PySatellite::new("larissa")?)),
-            "proteus" | "Proteus" => Ok(PyBody::Satellite(PySatellite::new("proteus")?)),
-            "charon" | "Charon" => Ok(PyBody::Satellite(PySatellite::new("charon")?)),
-            "ceres" | "Ceres" => Ok(PyBody::MinorBody(PyMinorBody::new("ceres")?)),
-            "vesta" | "Vesta" => Ok(PyBody::MinorBody(PyMinorBody::new("vesta")?)),
-            "psyche" | "Psyche" => Ok(PyBody::MinorBody(PyMinorBody::new("psyche")?)),
-            "eros" | "Eros" => Ok(PyBody::MinorBody(PyMinorBody::new("eros")?)),
-            "davida" | "Davida" => Ok(PyBody::MinorBody(PyMinorBody::new("davida")?)),
-            _ => Err(PyValueError::new_err(format!("unknown body: {}", name))),
-        }
     }
 }
 
