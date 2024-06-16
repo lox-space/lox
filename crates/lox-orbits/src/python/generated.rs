@@ -4359,10 +4359,9 @@ where
 impl PyState {
     pub fn to_frame_generated(
         &self,
-        frame: &str,
+        frame: PyFrame,
         provider: Option<&Bound<'_, PyUt1Provider>>,
     ) -> PyResult<Self> {
-        let frame: PyFrame = frame.parse()?;
         match frame {
             PyFrame::Icrf => match provider {
                 Some(provider) => Ok(PyState(

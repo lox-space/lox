@@ -148,10 +148,9 @@ pub fn generate_code(frames: &[Frame]) -> String {
         impl PyState {
             pub fn to_frame_generated(
                 &self,
-                frame: &str,
+                frame: PyFrame,
                 provider: Option<&Bound<'_, PyUt1Provider>>,
             ) -> PyResult<Self> {
-                let frame: PyFrame = frame.parse()?;
                 match frame {
                     #match_arms_impl_pystate
                 }

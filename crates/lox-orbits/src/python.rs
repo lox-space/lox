@@ -6,20 +6,25 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use std::convert::TryFrom;
+
 use glam::DVec3;
 use pyo3::{
     exceptions::PyValueError,
     pyclass, pymethods,
     types::{PyAnyMethods, PyList},
-    Bound, PyErr, PyResult,
+    Bound, PyAny, PyErr, PyObject, PyResult,
 };
 
+use lox_bodies::python::PyPlanet;
 use lox_bodies::*;
 use lox_time::python::ut1::{PyNoOpOffsetProvider, PyUt1Provider};
 use lox_time::{python::time::PyTime, ut1::DeltaUt1Tai};
 use python::PyBody;
 
-use crate::elements::Keplerian;
+use crate::elements::{Keplerian, ToKeplerian};
+use crate::frames::CoordinateSystem;
+use crate::origins::CoordinateOrigin;
 use crate::{
     frames::FrameTransformationProvider,
     states::State,
@@ -28,7 +33,7 @@ use crate::{
 
 mod generated;
 
-#[pyclass(frozen)]
+#[pyclass(name = "Frame", module = "lox_space", frozen)]
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub enum PyFrame {
     Icrf,
@@ -214,7 +219,16 @@ pub enum PyFrame {
     Bennu,
 }
 
+#[pymethods]
+impl PyFrame {
+    #[new]
+    fn new(name: &str) -> PyResult<Self> {
+        name.parse()
+    }
+}
+
 impl FrameTransformationProvider for DeltaUt1Tai {}
+
 impl FrameTransformationProvider for PyNoOpOffsetProvider {}
 
 impl FrameTransformationProvider for PyUt1Provider {}
@@ -226,16 +240,19 @@ pub struct PyState(pub State<PyTime, PyBody, PyFrame>);
 #[pymethods]
 impl PyState {
     #[new]
-    #[pyo3(signature = (time, position, velocity, origin = "Earth", frame = "ICRF"))]
     fn new(
         time: PyTime,
         position: (f64, f64, f64),
         velocity: (f64, f64, f64),
-        origin: &str,
-        frame: &str,
+        origin: Option<&Bound<'_, PyAny>>,
+        frame: Option<PyFrame>,
     ) -> PyResult<Self> {
-        let origin: PyBody = origin.parse()?;
-        let frame: PyFrame = frame.parse()?;
+        let origin: PyBody = if let Some(origin) = origin {
+            PyBody::try_from(origin)?
+        } else {
+            PyBody::Planet(PyPlanet::new("Earth").unwrap())
+        };
+        let frame = frame.unwrap_or(PyFrame::Icrf);
 
         Ok(PyState(State::new(
             time,
@@ -246,8 +263,43 @@ impl PyState {
         )))
     }
 
-    fn to_frame(&self, frame: &str, provider: Option<&Bound<'_, PyUt1Provider>>) -> PyResult<Self> {
+    fn time(&self) -> PyTime {
+        self.0.time().clone()
+    }
+
+    fn origin(&self) -> PyObject {
+        self.0.origin().into()
+    }
+
+    fn reference_frame(&self) -> PyFrame {
+        self.0.reference_frame()
+    }
+
+    fn position(&self) -> (f64, f64, f64) {
+        let pos = self.0.position();
+        (pos.x, pos.y, pos.z)
+    }
+
+    fn velocity(&self) -> (f64, f64, f64) {
+        let vel = self.0.velocity();
+        (vel.x, vel.y, vel.z)
+    }
+
+    fn to_frame(
+        &self,
+        frame: PyFrame,
+        provider: Option<&Bound<'_, PyUt1Provider>>,
+    ) -> PyResult<Self> {
         self.to_frame_generated(frame, provider)
+    }
+
+    fn to_keplerian(&self) -> PyResult<PyKeplerian> {
+        if self.0.reference_frame() != PyFrame::Icrf {
+            return Err(PyValueError::new_err(
+                "only inertial frames are supported for conversion to Keplerian elements",
+            ));
+        }
+        Ok(PyKeplerian(self.0.to_keplerian()))
     }
 }
 
