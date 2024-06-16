@@ -514,6 +514,7 @@ version = "0.1.0"
 dependencies = [
  "float_eq",
  "glam",
+ "itertools",
  "libm",
  "lox-bodies",
  "lox-time",
