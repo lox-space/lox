@@ -10,6 +10,7 @@ pub use glam::DVec3;
 
 pub mod anomalies;
 pub mod elements;
+pub mod events;
 pub mod frames;
 pub mod origins;
 pub mod propagators;

@@ -13,6 +13,7 @@ lox-utils.workspace = true
 
 float_eq.workspace = true
 glam.workspace = true
+itertools.workspace = true
 libm.workspace = true
 pyo3 = { workspace = true, optional = true }
 thiserror.workspace = true
