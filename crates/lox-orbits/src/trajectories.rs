@@ -140,15 +140,17 @@ where
         self.interpolate(time - self.start_time())
     }
 
-    pub fn find_events<F: Fn(T, DVec3, DVec3) -> f64>(&self, func: F) -> Vec<Event<T>> {
+    pub fn find_events<F: Fn(State<T, O, R>) -> f64>(&self, func: F) -> Vec<Event<T>> {
         let root_finder = Brent::default();
         find_events(
             |t| {
-                func(
+                func(State::new(
                     self.start_time() + TimeDelta::from_decimal_seconds(t).unwrap(),
+                    self.origin(),
+                    self.reference_frame(),
                     self.position(t),
                     self.velocity(t),
-                )
+                ))
             },
             self.start_time(),
             self.t.as_ref(),
@@ -157,15 +159,17 @@ where
         .unwrap_or_default()
     }
 
-    pub fn find_windows<F: Fn(T, DVec3, DVec3) -> f64>(&self, func: F) -> Vec<Window<T>> {
+    pub fn find_windows<F: Fn(State<T, O, R>) -> f64>(&self, func: F) -> Vec<Window<T>> {
         let root_finder = Brent::default();
         find_windows(
             |t| {
-                func(
+                func(State::new(
                     self.start_time() + TimeDelta::from_decimal_seconds(t).unwrap(),
+                    self.origin(),
+                    self.reference_frame(),
                     self.position(t),
                     self.velocity(t),
-                )
+                ))
             },
             self.start_time(),
             self.end_time(),
