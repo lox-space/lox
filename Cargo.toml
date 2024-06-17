@@ -31,6 +31,7 @@ itertools = "0.13.0"
 libm = "0.2.8"
 nom = "7.1.3"
 num = "0.4.1"
+numpy = "0.21.0"
 proptest = "1.4.0"
 pyo3 = "0.21.1"
 quick-xml = { version = "0.31.0", features = ["serde", "serialize"] }

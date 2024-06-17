@@ -16,6 +16,7 @@ float_eq.workspace = true
 glam.workspace = true
 itertools.workspace = true
 libm.workspace = true
+numpy = { workspace = true, optional = true }
 pyo3 = { workspace = true, optional = true }
 thiserror.workspace = true
 
@@ -23,4 +24,4 @@ thiserror.workspace = true
 pyo3 = { workspace = true, features = ["auto-initialize"] }
 
 [features]
-python = ["dep:pyo3", "lox-bodies/python", "lox-time/python"]
+python = ["dep:pyo3", "dep:numpy", "lox-bodies/python", "lox-time/python"]
