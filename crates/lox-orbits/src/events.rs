@@ -59,11 +59,7 @@ impl<T: TimeLike> Event<T> {
     }
 }
 
-pub fn find_events<
-    F: Fn(f64) -> f64 + Copy,
-    T: TimeLike + Clone,
-    R: FindBracketedRoot<F, Error: std::fmt::Debug>,
->(
+pub fn find_events<F: Fn(f64) -> f64 + Copy, T: TimeLike + Clone, R: FindBracketedRoot<F>>(
     func: F,
     start: T,
     steps: &[f64],
@@ -120,11 +116,7 @@ impl<T: TimeLike> Window<T> {
     }
 }
 
-pub fn find_windows<
-    F: Fn(f64) -> f64 + Copy,
-    T: TimeLike + Clone,
-    R: FindBracketedRoot<F, Error: std::fmt::Debug>,
->(
+pub fn find_windows<F: Fn(f64) -> f64 + Copy, T: TimeLike + Clone, R: FindBracketedRoot<F>>(
     func: F,
     start: T,
     end: T,

@@ -18,7 +18,7 @@ pub trait FindRootWithDerivative<F: Fn(f64) -> f64, D: Fn(f64) -> f64> {
 }
 
 pub trait FindBracketedRoot<F: Fn(f64) -> f64> {
-    type Error;
+    type Error: std::fmt::Debug;
 
     fn find_root(&self, f: F, bracket: (f64, f64)) -> Result<f64, Self::Error>;
 }
