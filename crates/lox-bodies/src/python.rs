@@ -419,6 +419,17 @@ impl TryFrom<&Bound<'_, PyAny>> for PyBody {
     }
 }
 
+impl TryFrom<Option<&Bound<'_, PyAny>>> for PyBody {
+    type Error = PyErr;
+
+    fn try_from(body: Option<&Bound<'_, PyAny>>) -> Result<Self, Self::Error> {
+        if let Some(body) = body {
+            return PyBody::try_from(body);
+        }
+        Ok(PyBody::Planet(PyPlanet::new("Earth").unwrap()))
+    }
+}
+
 impl TryFrom<PyObject> for PyBody {
     type Error = PyErr;
 

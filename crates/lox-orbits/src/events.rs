@@ -1,5 +1,6 @@
 use itertools::Itertools;
 use std::collections::VecDeque;
+use std::fmt::Display;
 use std::iter::zip;
 use thiserror::Error;
 
@@ -25,6 +26,15 @@ impl ZeroCrossing {
     }
 }
 
+impl Display for ZeroCrossing {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ZeroCrossing::Up => write!(f, "up"),
+            ZeroCrossing::Down => write!(f, "down"),
+        }
+    }
+}
+
 #[derive(Debug, Error, Clone, Eq, PartialEq)]
 pub enum FindEventError {
     #[error("function is always negative")]
@@ -37,6 +47,16 @@ pub enum FindEventError {
 pub struct Event<T: TimeLike> {
     crossing: ZeroCrossing,
     time: T,
+}
+
+impl<T: TimeLike> Event<T> {
+    pub fn time(&self) -> &T {
+        &self.time
+    }
+
+    pub fn crossing(&self) -> ZeroCrossing {
+        self.crossing
+    }
 }
 
 pub fn find_events<
@@ -88,6 +108,16 @@ pub fn find_events<
 pub struct Window<T: TimeLike> {
     start: T,
     end: T,
+}
+
+impl<T: TimeLike> Window<T> {
+    pub fn start(&self) -> &T {
+        &self.start
+    }
+
+    pub fn end(&self) -> &T {
+        &self.end
+    }
 }
 
 pub fn find_windows<

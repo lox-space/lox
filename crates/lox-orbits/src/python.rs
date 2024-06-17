@@ -18,15 +18,19 @@ use pyo3::{
 
 use lox_bodies::python::PyPlanet;
 use lox_bodies::*;
+use lox_time::deltas::TimeDelta;
+use lox_time::python::deltas::PyTimeDelta;
 use lox_time::python::ut1::{PyNoOpOffsetProvider, PyUt1Provider};
 use lox_time::{python::time::PyTime, ut1::DeltaUt1Tai};
 use python::PyBody;
 
 use crate::elements::{Keplerian, ToKeplerian};
-use crate::events::Event;
-use crate::frames::CoordinateSystem;
+use crate::events::{Event, Window};
+use crate::frames::{CoordinateSystem, Icrf};
 use crate::origins::CoordinateOrigin;
-use crate::propagators::semi_analytical::Vallado;
+use crate::propagators::semi_analytical::{Vallado, ValladoError};
+use crate::propagators::Propagator;
+use crate::states::ToCartesian;
 use crate::{
     frames::FrameTransformationProvider,
     states::State,
@@ -308,6 +312,66 @@ impl PyState {
 #[pyclass(name = "Keplerian", module = "lox_space", frozen)]
 pub struct PyKeplerian(pub Keplerian<PyTime, PyBody>);
 
+#[pymethods]
+impl PyKeplerian {
+    #[new]
+    #[allow(clippy::too_many_arguments)]
+    fn new(
+        time: PyTime,
+        semi_major_axis: f64,
+        eccentricity: f64,
+        inclination: f64,
+        longitude_of_ascending_node: f64,
+        argument_of_periapsis: f64,
+        true_anomaly: f64,
+        origin: Option<&Bound<'_, PyAny>>,
+    ) -> PyResult<Self> {
+        let origin: PyBody = origin.try_into()?;
+        Ok(PyKeplerian(Keplerian::new(
+            time,
+            origin,
+            semi_major_axis,
+            eccentricity,
+            inclination,
+            longitude_of_ascending_node,
+            argument_of_periapsis,
+            true_anomaly,
+        )))
+    }
+
+    fn semi_major_axis(&self) -> f64 {
+        self.0.semi_major_axis()
+    }
+
+    fn eccentricity(&self) -> f64 {
+        self.0.eccentricity()
+    }
+
+    fn inclination(&self) -> f64 {
+        self.0.inclination()
+    }
+
+    fn longitude_of_ascending_node(&self) -> f64 {
+        self.0.longitude_of_ascending_node()
+    }
+
+    fn argument_of_periapsis(&self) -> f64 {
+        self.0.argument_of_periapsis()
+    }
+
+    fn true_anomaly(&self) -> f64 {
+        self.0.true_anomaly()
+    }
+
+    fn to_cartesian(&self) -> PyResult<PyState> {
+        Ok(PyState(self.0.to_cartesian().with_frame(PyFrame::Icrf)))
+    }
+
+    fn orbital_period(&self) -> PyTimeDelta {
+        PyTimeDelta(self.0.orbital_period())
+    }
+}
+
 #[pyclass(name = "Trajectory", module = "lox_space", frozen)]
 pub struct PyTrajectory(pub Trajectory<PyTime, PyBody, PyFrame>);
 
@@ -331,6 +395,7 @@ impl PyTrajectory {
             .0
             .find_events(|time, pos, vel| {
                 func.call((time, (pos.x, pos.y, pos.z), (vel.x, vel.y, vel.z)), None)
+                    // FIXME: Bad idea
                     .unwrap_or(f64::NAN.to_object(py).into_bound(py))
                     .extract()
                     .unwrap_or(f64::NAN)
@@ -339,23 +404,136 @@ impl PyTrajectory {
             .map(PyEvent)
             .collect())
     }
+
+    fn find_windows(&self, py: Python<'_>, func: &Bound<'_, PyAny>) -> PyResult<Vec<PyWindow>> {
+        Ok(self
+            .0
+            .find_windows(|time, pos, vel| {
+                func.call((time, (pos.x, pos.y, pos.z), (vel.x, vel.y, vel.z)), None)
+                    // FIXME: Bad idea
+                    .unwrap_or(f64::NAN.to_object(py).into_bound(py))
+                    .extract()
+                    .unwrap_or(f64::NAN)
+            })
+            .into_iter()
+            .map(PyWindow)
+            .collect())
+    }
+
+    fn interpolate(&self, time: &Bound<'_, PyAny>) -> PyResult<PyState> {
+        if let Ok(delta) = time.extract::<PyTimeDelta>() {
+            return Ok(PyState(self.0.interpolate(delta.0)));
+        }
+        if let Ok(time) = time.extract::<PyTime>() {
+            return Ok(PyState(self.0.interpolate_at(time)));
+        }
+        Err(PyValueError::new_err("invalid time argument"))
+    }
 }
 
 #[pyclass(name = "Event", module = "lox_space", frozen)]
 pub struct PyEvent(pub Event<PyTime>);
 
+#[pymethods]
+impl PyEvent {
+    fn __repr__(&self) -> String {
+        format!("Event({}, {})", self.time().__str__(), self.crossing())
+    }
+
+    fn __str__(&self) -> String {
+        format!(
+            "Event - {}crossing at {}",
+            self.crossing(),
+            self.time().__str__()
+        )
+    }
+    fn time(&self) -> PyTime {
+        self.0.time().clone()
+    }
+
+    fn crossing(&self) -> String {
+        self.0.crossing().to_string()
+    }
+}
+
+#[pyclass(name = "Window", module = "lox_space", frozen)]
+pub struct PyWindow(pub Window<PyTime>);
+
+#[pymethods]
+impl PyWindow {
+    fn __repr__(&self) -> String {
+        format!(
+            "Window({}, {})",
+            self.start().__str__(),
+            self.end().__str__()
+        )
+    }
+
+    fn start(&self) -> PyTime {
+        self.0.start().clone()
+    }
+
+    fn end(&self) -> PyTime {
+        self.0.end().clone()
+    }
+}
+
 #[pyclass(name = "Vallado", module = "lox_space", frozen)]
 pub struct PyVallado(pub Vallado<PyBody>);
+
+impl From<ValladoError> for PyErr {
+    fn from(err: ValladoError) -> Self {
+        // TODO: Use better error type
+        PyValueError::new_err(err.to_string())
+    }
+}
 
 #[pymethods]
 impl PyVallado {
     #[new]
-    fn new(origin: &Bound<'_, PyAny>, max_iter: Option<i32>) -> PyResult<Self> {
+    fn new(origin: Option<&Bound<'_, PyAny>>, max_iter: Option<i32>) -> PyResult<Self> {
         let origin = PyBody::try_from(origin)?;
         let mut vallado = Vallado::new(origin);
         if let Some(max_iter) = max_iter {
             vallado.with_max_iter(max_iter);
         }
         Ok(PyVallado(vallado))
+    }
+
+    fn propagate<'py>(
+        &self,
+        py: Python<'py>,
+        initial_state: &PyState,
+        steps: &Bound<'py, PyAny>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        if initial_state.0.reference_frame() != PyFrame::Icrf {
+            return Err(PyValueError::new_err(
+                "only inertial frames are supported for the Vallado propagator",
+            ));
+        }
+        if let Ok(delta) = steps.extract::<PyTimeDelta>() {
+            return Ok(Bound::new(
+                py,
+                PyState(
+                    self.0
+                        .propagate(&initial_state.0.with_frame(Icrf), delta.0)?
+                        .with_frame(PyFrame::Icrf),
+                ),
+            )?
+            .into_any());
+        }
+        if let Ok(steps) = steps.extract::<Vec<PyTimeDelta>>() {
+            let steps: Vec<TimeDelta> = steps.into_iter().map(|d| d.0).collect();
+            return Ok(Bound::new(
+                py,
+                PyTrajectory(
+                    self.0
+                        .propagate_all(&initial_state.0.with_frame(Icrf), steps)?
+                        .with_frame(PyFrame::Icrf),
+                ),
+            )?
+            .into_any());
+        }
+        Err(PyValueError::new_err("invalid time delta(s)"))
     }
 }

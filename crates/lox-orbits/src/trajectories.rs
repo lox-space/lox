@@ -37,10 +37,6 @@ pub enum TrajectoryError {
 #[derive(Clone, Debug)]
 pub struct Trajectory<T: TimeLike, O: Origin, R: ReferenceFrame> {
     states: Vec<State<T, O, R>>,
-    origin: O,
-    frame: R,
-    start_time: T,
-    end_time: T,
     t: ArcVecF64,
     x: Series<ArcVecF64, Vec<f64>>,
     y: Series<ArcVecF64, Vec<f64>>,
@@ -60,10 +56,7 @@ where
         if states.len() < 2 {
             return Err(TrajectoryError::InsufficientStates(states.len()));
         }
-        let origin = states[0].origin();
-        let frame = states[0].reference_frame();
         let start_time = states[0].time();
-        let end_time = states[states.len() - 1].time();
         let t: Vec<f64> = states
             .iter()
             .map(|s| (s.time() - start_time.clone()).to_decimal_seconds())
@@ -83,10 +76,6 @@ where
         let vz = Series::with_cubic_spline(t.clone(), vz)?;
         Ok(Self {
             states: states.to_vec(),
-            origin,
-            frame,
-            start_time,
-            end_time,
             t,
             x,
             y,
@@ -95,6 +84,23 @@ where
             vy,
             vz,
         })
+    }
+
+    pub fn with_frame<R1: ReferenceFrame + Clone>(&self, frame: R1) -> Trajectory<T, O, R1> {
+        let states: Vec<State<T, O, R1>> = self
+            .states
+            .iter()
+            .map(|s| s.with_frame(frame.clone()))
+            .collect();
+        Trajectory::new(&states).unwrap()
+    }
+
+    pub fn start_time(&self) -> T {
+        self.states[0].time()
+    }
+
+    pub fn end_time(&self) -> T {
+        self.states.last().unwrap().time()
     }
 
     pub fn times(&self) -> Vec<f64> {
@@ -121,18 +127,17 @@ where
 
     pub fn interpolate(&self, dt: TimeDelta) -> State<T, O, R> {
         let t = dt.to_decimal_seconds();
-        dbg!(t);
         State::new(
-            self.start_time.clone() + dt,
-            self.origin.clone(),
-            self.frame.clone(),
+            self.start_time() + dt,
+            self.origin(),
+            self.reference_frame(),
             self.position(t),
             self.velocity(t),
         )
     }
 
     pub fn interpolate_at(&self, time: T) -> State<T, O, R> {
-        self.interpolate(time - self.start_time.clone())
+        self.interpolate(time - self.start_time())
     }
 
     pub fn find_events<F: Fn(T, DVec3, DVec3) -> f64>(&self, func: F) -> Vec<Event<T>> {
@@ -140,12 +145,12 @@ where
         find_events(
             |t| {
                 func(
-                    self.start_time.clone() + TimeDelta::from_decimal_seconds(t).unwrap(),
+                    self.start_time() + TimeDelta::from_decimal_seconds(t).unwrap(),
                     self.position(t),
                     self.velocity(t),
                 )
             },
-            self.start_time.clone(),
+            self.start_time(),
             self.t.as_ref(),
             root_finder,
         )
@@ -157,13 +162,13 @@ where
         find_windows(
             |t| {
                 func(
-                    self.start_time.clone() + TimeDelta::from_decimal_seconds(t).unwrap(),
+                    self.start_time() + TimeDelta::from_decimal_seconds(t).unwrap(),
                     self.position(t),
                     self.velocity(t),
                 )
             },
-            self.start_time.clone(),
-            self.end_time.clone(),
+            self.start_time(),
+            self.end_time(),
             self.t.as_ref(),
             root_finder,
         )
@@ -177,7 +182,7 @@ where
     R: ReferenceFrame,
 {
     fn origin(&self) -> O {
-        self.origin.clone()
+        self.states[0].origin()
     }
 }
 
@@ -188,7 +193,7 @@ where
     R: ReferenceFrame + Clone,
 {
     fn reference_frame(&self) -> R {
-        self.frame.clone()
+        self.states[0].reference_frame()
     }
 }
 
