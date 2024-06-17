@@ -16,7 +16,6 @@
     expose their underlying [TimeDelta].
 */
 
-use std::ops::{Add, Neg, Sub};
 use std::fmt::Display;
 use std::ops::{Add, Neg, RangeInclusive, Sub};
 
