@@ -9,6 +9,7 @@
 use std::convert::TryFrom;
 
 use glam::DVec3;
+use numpy::PyArray1;
 use pyo3::{
     exceptions::PyValueError,
     pyclass, pymethods,
@@ -281,14 +282,14 @@ impl PyState {
         self.0.reference_frame()
     }
 
-    fn position(&self) -> (f64, f64, f64) {
-        let pos = self.0.position();
-        (pos.x, pos.y, pos.z)
+    fn position<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<f64>> {
+        let pos = self.0.position().to_array();
+        PyArray1::from_slice_bound(py, &pos)
     }
 
-    fn velocity(&self) -> (f64, f64, f64) {
-        let vel = self.0.velocity();
-        (vel.x, vel.y, vel.z)
+    fn velocity<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<f64>> {
+        let vel = self.0.velocity().to_array();
+        PyArray1::from_slice_bound(py, &vel)
     }
 
     fn to_frame(

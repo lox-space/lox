@@ -47,9 +47,7 @@ def test_interpolation(orbit, trajectory):
 
 def test_events(trajectory):
     def apsis_pass(s):
-        pos = np.array(s.position())
-        vel = np.array(s.velocity())
-        return pos @ vel
+        return s.position() @ s.velocity()
 
     events = trajectory.find_events(apsis_pass)
     assert len(events) == 2
