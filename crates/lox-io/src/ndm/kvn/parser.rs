@@ -6,7 +6,8 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-// KVN spec section 7.4 of https://public.ccsds.org/Pubs/502x0b3e1.pdf
+// This parser handles the Keyword Value Notation (KVN) defined in section
+// 7.4 of CCSDS 502.0-B-3 (https://public.ccsds.org/Pubs/502x0b3e1.pdf).
 
 use nom::bytes::complete as nb;
 use nom::character::complete as nc;
