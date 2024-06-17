@@ -34,6 +34,7 @@ pub enum TrajectoryError {
     SeriesError(#[from] SeriesError),
 }
 
+#[derive(Clone, Debug)]
 pub struct Trajectory<T: TimeLike, O: Origin, R: ReferenceFrame> {
     states: Vec<State<T, O, R>>,
     origin: O,
@@ -96,6 +97,14 @@ where
         })
     }
 
+    pub fn times(&self) -> Vec<f64> {
+        self.t.as_ref().to_vec()
+    }
+
+    pub fn states(&self) -> Vec<State<T, O, R>> {
+        self.states.clone()
+    }
+
     pub fn position(&self, t: f64) -> DVec3 {
         let x = self.x.interpolate(t);
         let y = self.y.interpolate(t);
@@ -108,6 +117,22 @@ where
         let vy = self.vy.interpolate(t);
         let vz = self.vz.interpolate(t);
         DVec3::new(vx, vy, vz)
+    }
+
+    pub fn interpolate(&self, dt: TimeDelta) -> State<T, O, R> {
+        let t = dt.to_decimal_seconds();
+        dbg!(t);
+        State::new(
+            self.start_time.clone() + dt,
+            self.origin.clone(),
+            self.frame.clone(),
+            self.position(t),
+            self.velocity(t),
+        )
+    }
+
+    pub fn interpolate_at(&self, time: T) -> State<T, O, R> {
+        self.interpolate(time - self.start_time.clone())
     }
 
     pub fn find_events<F: Fn(T, DVec3, DVec3) -> f64>(&self, func: F) -> Vec<Event<T>> {

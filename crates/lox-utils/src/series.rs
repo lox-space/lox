@@ -6,10 +6,11 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::linear_algebra::tridiagonal::Tridiagonal;
-use crate::vector_traits::Diff;
 use fast_polynomial::poly_array;
 use thiserror::Error;
+
+use crate::linear_algebra::tridiagonal::Tridiagonal;
+use crate::vector_traits::Diff;
 
 const MIN_POINTS_LINEAR: usize = 2;
 const MIN_POINTS_SPLINE: usize = 4;
@@ -20,6 +21,8 @@ pub enum SeriesError {
     DimensionMismatch(usize, usize),
     #[error("length of `x` and `y` must at least {1} but was {0}")]
     InsufficientPoints(usize, usize),
+    #[error("x-axis must be strictly monotonic")]
+    NonMonotonic,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -38,6 +41,11 @@ pub struct Series<T: AsRef<[f64]>, U: AsRef<[f64]>> {
 impl<T: AsRef<[f64]>, U: AsRef<[f64]>> Series<T, U> {
     pub fn new(x: T, y: U) -> Result<Self, SeriesError> {
         let x_ref = x.as_ref();
+
+        if !x_ref.diff().iter().all(|&d| d > 0.0) {
+            return Err(SeriesError::NonMonotonic);
+        }
+
         let y_ref = y.as_ref();
         let n = x_ref.len();
 
@@ -58,6 +66,11 @@ impl<T: AsRef<[f64]>, U: AsRef<[f64]>> Series<T, U> {
 
     pub fn with_cubic_spline(x: T, y: U) -> Result<Self, SeriesError> {
         let x_ref = x.as_ref();
+
+        if !x_ref.diff().iter().all(|&d| d > 0.0) {
+            return Err(SeriesError::NonMonotonic);
+        }
+
         let y_ref = y.as_ref();
         let n = x_ref.len();
 
@@ -182,9 +195,10 @@ impl<T: AsRef<[f64]>, U: AsRef<[f64]>> Series<T, U> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use float_eq::assert_float_eq;
     use rstest::rstest;
+
+    use super::*;
 
     #[rstest]
     #[case(0.5, 0.5)]

@@ -65,9 +65,9 @@ where
 {
     type Error = ValladoError;
 
-    fn state_from_delta(
+    fn propagate(
         &self,
-        initial_state: State<T, O, Icrf>,
+        initial_state: &State<T, O, Icrf>,
         delta: TimeDelta,
     ) -> Result<State<T, O, Icrf>, Self::Error> {
         let frame = self.reference_frame();
@@ -130,19 +130,17 @@ where
         Err(ValladoError::NotConverged)
     }
 
-    fn trajectory_from_deltas(
+    fn propagate_all(
         &self,
-        initial_state: State<T, O, Icrf>,
-        deltas: &[TimeDelta],
+        initial_state: &State<T, O, Icrf>,
+        deltas: impl IntoIterator<Item = TimeDelta>,
     ) -> Result<Trajectory<T, O, Icrf>, Self::Error> {
-        let mut s = initial_state.clone();
-        let mut states: Vec<State<T, O, Icrf>> = vec![s.clone()];
-        for &delta in deltas {
-            s = self.state_from_delta(s, delta)?;
-            states.push(s.clone());
+        let mut states = vec![];
+        for delta in deltas {
+            let state = self.propagate(initial_state, delta)?;
+            states.push(state);
         }
-        let trajectory = Trajectory::new(&states)?;
-        Ok(trajectory)
+        Ok(Trajectory::new(&states)?)
     }
 }
 
@@ -155,13 +153,15 @@ mod tests {
     use lox_time::transformations::ToTdb;
     use lox_time::utc;
     use lox_time::utc::Utc;
+    use lox_utils::assert_close;
+    use lox_utils::is_close::IsClose;
 
     use crate::states::ToCartesian;
 
     use super::*;
 
     #[test]
-    fn test_vallado_propagator() {
+    fn test_vallado_propagate() {
         let utc = utc!(2023, 3, 25, 21, 8, 0.0).unwrap();
         let time = utc.to_tdb();
         let semi_major = 24464.560;
@@ -183,14 +183,55 @@ mod tests {
         );
         let s0 = k0.to_cartesian();
         let dt = k0.orbital_period();
-        let t1 = time + dt;
 
         let propagator = Vallado::new(Earth);
         let s1 = propagator
-            .state_from_time(s0, t1)
+            .propagate(&s0, dt)
             .expect("propagator should converge");
 
         let k1 = s1.to_keplerian();
+        assert_float_eq!(k1.semi_major_axis(), semi_major, rel <= 1e-8);
+        assert_float_eq!(k1.eccentricity(), eccentricity, rel <= 1e-8);
+        assert_float_eq!(k1.inclination(), inclination, rel <= 1e-8);
+        assert_float_eq!(
+            k1.longitude_of_ascending_node(),
+            ascending_node,
+            rel <= 1e-8
+        );
+        assert_float_eq!(k1.argument_of_periapsis(), periapsis_arg, rel <= 1e-8);
+        assert_float_eq!(k1.true_anomaly(), true_anomaly, rel <= 1e-8);
+        assert_close!(k1.time(), time + dt);
+    }
+
+    #[test]
+    fn test_vallado_propagate_all() {
+        let utc = utc!(2023, 3, 25, 21, 8, 0.0).unwrap();
+        let time = utc.to_tdb();
+        let semi_major = 24464.560;
+        let eccentricity = 0.7311;
+        let inclination = 0.122138;
+        let ascending_node = 1.00681;
+        let periapsis_arg = 3.10686;
+        let true_anomaly = 0.44369564302687126;
+
+        let k0 = Keplerian::new(
+            time,
+            Earth,
+            semi_major,
+            eccentricity,
+            inclination,
+            ascending_node,
+            periapsis_arg,
+            true_anomaly,
+        );
+        let s0 = k0.to_cartesian();
+        let period = k0.orbital_period();
+        let t_end = period.to_decimal_seconds().ceil() as i64;
+        let steps = TimeDelta::range(0..=t_end);
+        let trajectory = Vallado::new(Earth).propagate_all(&s0, steps).unwrap();
+        let s1 = trajectory.interpolate(period);
+        let k1 = s1.to_keplerian();
+
         assert_float_eq!(k1.semi_major_axis(), semi_major, rel <= 1e-8);
         assert_float_eq!(k1.eccentricity(), eccentricity, rel <= 1e-8);
         assert_float_eq!(k1.inclination(), inclination, rel <= 1e-8);

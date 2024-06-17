@@ -13,7 +13,7 @@ use pyo3::{
     exceptions::PyValueError,
     pyclass, pymethods,
     types::{PyAnyMethods, PyList},
-    Bound, PyAny, PyErr, PyObject, PyResult,
+    Bound, PyAny, PyErr, PyObject, PyResult, Python, ToPyObject,
 };
 
 use lox_bodies::python::PyPlanet;
@@ -23,8 +23,10 @@ use lox_time::{python::time::PyTime, ut1::DeltaUt1Tai};
 use python::PyBody;
 
 use crate::elements::{Keplerian, ToKeplerian};
+use crate::events::Event;
 use crate::frames::CoordinateSystem;
 use crate::origins::CoordinateOrigin;
+use crate::propagators::semi_analytical::Vallado;
 use crate::{
     frames::FrameTransformationProvider,
     states::State,
@@ -322,5 +324,38 @@ impl PyTrajectory {
         let states: Vec<PyState> = states.extract()?;
         let states: Vec<State<PyTime, PyBody, PyFrame>> = states.into_iter().map(|s| s.0).collect();
         Ok(PyTrajectory(Trajectory::new(&states)?))
+    }
+
+    fn find_events(&self, py: Python<'_>, func: &Bound<'_, PyAny>) -> PyResult<Vec<PyEvent>> {
+        Ok(self
+            .0
+            .find_events(|time, pos, vel| {
+                func.call((time, (pos.x, pos.y, pos.z), (vel.x, vel.y, vel.z)), None)
+                    .unwrap_or(f64::NAN.to_object(py).into_bound(py))
+                    .extract()
+                    .unwrap_or(f64::NAN)
+            })
+            .into_iter()
+            .map(PyEvent)
+            .collect())
+    }
+}
+
+#[pyclass(name = "Event", module = "lox_space", frozen)]
+pub struct PyEvent(pub Event<PyTime>);
+
+#[pyclass(name = "Vallado", module = "lox_space", frozen)]
+pub struct PyVallado(pub Vallado<PyBody>);
+
+#[pymethods]
+impl PyVallado {
+    #[new]
+    fn new(origin: &Bound<'_, PyAny>, max_iter: Option<i32>) -> PyResult<Self> {
+        let origin = PyBody::try_from(origin)?;
+        let mut vallado = Vallado::new(origin);
+        if let Some(max_iter) = max_iter {
+            vallado.with_max_iter(max_iter);
+        }
+        Ok(PyVallado(vallado))
     }
 }

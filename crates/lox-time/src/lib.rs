@@ -65,6 +65,7 @@ pub mod julian_dates;
 pub mod prelude;
 #[cfg(feature = "python")]
 pub mod python;
+pub mod ranges;
 pub mod subsecond;
 #[cfg(test)]
 pub(crate) mod test_helpers;

@@ -512,6 +512,7 @@ dependencies = [
 name = "lox-orbits"
 version = "0.1.0"
 dependencies = [
+ "csv",
  "float_eq",
  "glam",
  "itertools",
