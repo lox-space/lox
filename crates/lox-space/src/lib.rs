@@ -7,7 +7,7 @@
  */
 
 use lox_bodies::python::{PyBarycenter, PyMinorBody, PyPlanet, PySatellite, PySun};
-use lox_orbits::python::{PyFrame, PyState, PyTrajectory};
+use lox_orbits::python::{PyFrame, PyKeplerian, PyState, PyTrajectory, PyVallado};
 use pyo3::prelude::*;
 
 use lox_time::python::deltas::PyTimeDelta;
@@ -27,7 +27,9 @@ fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyUtc>()?;
     m.add_class::<PyUt1Provider>()?;
     m.add_class::<PyFrame>()?;
+    m.add_class::<PyKeplerian>()?;
     m.add_class::<PyState>()?;
     m.add_class::<PyTrajectory>()?;
+    m.add_class::<PyVallado>()?;
     Ok(())
 }

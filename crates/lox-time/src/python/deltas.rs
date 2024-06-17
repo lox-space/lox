@@ -95,6 +95,18 @@ impl PyTimeDelta {
         Ok(Self(TimeDelta::from_julian_centuries(centuries)?))
     }
 
+    #[classmethod]
+    pub fn range(
+        _cls: &Bound<'_, PyType>,
+        start: i64,
+        end: i64,
+        step: Option<i64>,
+    ) -> PyResult<Vec<Self>> {
+        let step = TimeDelta::from_seconds(step.unwrap_or(1));
+        let range = TimeDelta::range(start..=end).with_step(step);
+        Ok(range.into_iter().map(Self).collect())
+    }
+
     pub fn to_decimal_seconds(&self) -> f64 {
         self.0.to_decimal_seconds()
     }

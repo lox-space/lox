@@ -17,6 +17,7 @@ dependencies = []
 dev = [
     "black",
     "ipython",
+    "numpy",
     "pytest",
 ]
 
