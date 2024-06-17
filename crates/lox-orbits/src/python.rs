@@ -393,8 +393,8 @@ impl PyTrajectory {
     fn find_events(&self, py: Python<'_>, func: &Bound<'_, PyAny>) -> PyResult<Vec<PyEvent>> {
         Ok(self
             .0
-            .find_events(|time, pos, vel| {
-                func.call((time, (pos.x, pos.y, pos.z), (vel.x, vel.y, vel.z)), None)
+            .find_events(|s| {
+                func.call((PyState(s),), None)
                     // FIXME: Bad idea
                     .unwrap_or(f64::NAN.to_object(py).into_bound(py))
                     .extract()
@@ -408,8 +408,8 @@ impl PyTrajectory {
     fn find_windows(&self, py: Python<'_>, func: &Bound<'_, PyAny>) -> PyResult<Vec<PyWindow>> {
         Ok(self
             .0
-            .find_windows(|time, pos, vel| {
-                func.call((time, (pos.x, pos.y, pos.z), (vel.x, vel.y, vel.z)), None)
+            .find_windows(|s| {
+                func.call((PyState(s),), None)
                     // FIXME: Bad idea
                     .unwrap_or(f64::NAN.to_object(py).into_bound(py))
                     .extract()

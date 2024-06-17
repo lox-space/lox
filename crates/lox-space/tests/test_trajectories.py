@@ -46,9 +46,9 @@ def test_interpolation(orbit, trajectory):
 
 
 def test_events(trajectory):
-    def apsis_pass(_time, pos, vel):
-        pos = np.array(pos)
-        vel = np.array(vel)
+    def apsis_pass(s):
+        pos = np.array(s.position())
+        vel = np.array(s.velocity())
         return pos @ vel
 
     events = trajectory.find_events(apsis_pass)
@@ -60,9 +60,8 @@ def test_events(trajectory):
 
 
 def test_windows(trajectory):
-    def above_equator(_time, pos, _vel):
-        pos = np.array(pos)
-        return pos[2]
+    def above_equator(s):
+        return s.position()[2]
 
     windows = trajectory.find_windows(above_equator)
     assert len(windows) == 1
