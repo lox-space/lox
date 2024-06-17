@@ -782,7 +782,7 @@ mod test {
                 header: common::OdmHeader {
                     comment_list: vec![],
                     classification_list: vec![],
-                    creation_date: common::EpochType("2021-03-24T23:00:00.000".to_string(),),
+                    creation_date: common::EpochType("2021-03-24T23:00:00.000".to_string()),
                     originator: "CelesTrak".to_string(),
                     message_id: None,
                 },
@@ -802,7 +802,7 @@ mod test {
                             comment_list: vec![],
                             mean_elements: MeanElementsType {
                                 comment_list: vec![],
-                                epoch: common::EpochType("2021-03-22T13:21:09.224928".to_string(),),
+                                epoch: common::EpochType("2021-03-22T13:21:09.224928".to_string()),
                                 semi_major_axis: None,
                                 mean_motion: Some(RevType {
                                     base: 13.82309053,
@@ -832,9 +832,9 @@ mod test {
                             tle_parameters: Some(TleParametersType {
                                 comment_list: vec![],
                                 ephemeris_type: Some(0,),
-                                classification_type: Some("U".to_string(),),
+                                classification_type: Some("U".to_string()),
                                 norad_cat_id: Some(7646,),
-                                element_set_no: Some(ElementSetNoType("999".to_string(),),),
+                                element_set_no: Some(ElementSetNoType("999".to_string()),),
                                 rev_at_epoch: Some(32997,),
                                 bstar: Some(BStarType {
                                     base: -4.7102e-6,
@@ -940,11 +940,11 @@ mod test {
             message,
             OmmType {
                 header: common::OdmHeader {
-                    comment_list: vec!["THIS IS AN XML VERSION OF THE OMM".to_string(),],
+                    comment_list: vec!["THIS IS AN XML VERSION OF THE OMM".to_string()],
                     classification_list: vec![],
-                    creation_date: common::EpochType("2007-065T16:00:00".to_string(),),
+                    creation_date: common::EpochType("2007-065T16:00:00".to_string()),
                     originator: "NOAA".to_string(),
-                    message_id: Some("OMM 201113719185".to_string(),),
+                    message_id: Some("OMM 201113719185".to_string()),
                 },
                 body: OmmBody {
                     segment: OmmSegment {
@@ -962,7 +962,7 @@ mod test {
                             comment_list: vec![],
                             mean_elements: MeanElementsType {
                                 comment_list: vec![],
-                                epoch: common::EpochType("2007-064T10:34:41.4264".to_string(),),
+                                epoch: common::EpochType("2007-064T10:34:41.4264".to_string()),
                                 semi_major_axis: None,
                                 mean_motion: Some(RevType {
                                     base: 1.00273272,
@@ -996,7 +996,7 @@ mod test {
                                 ephemeris_type: None,
                                 classification_type: None,
                                 norad_cat_id: Some(23581,),
-                                element_set_no: Some(ElementSetNoType("0925".to_string(),),),
+                                element_set_no: Some(ElementSetNoType("0925".to_string()),),
                                 rev_at_epoch: Some(4316,),
                                 bstar: Some(BStarType {
                                     base: 0.0001,
@@ -1015,7 +1015,7 @@ mod test {
                             },),
                             covariance_matrix: Some(common::OpmCovarianceMatrixType {
                                 comment_list: vec![],
-                                cov_ref_frame: Some("TEME".to_string(),),
+                                cov_ref_frame: Some("TEME".to_string()),
                                 cx_x: common::PositionCovarianceType {
                                     base: 0.0003331349476038534,
                                     units: None,
@@ -1192,11 +1192,11 @@ mod test {
             message,
             OmmType {
                 header: common::OdmHeader {
-                    comment_list: vec!["THIS IS AN XML VERSION OF THE OMM".to_string(),],
+                    comment_list: vec!["THIS IS AN XML VERSION OF THE OMM".to_string()],
                     classification_list: vec![],
-                    creation_date: common::EpochType("2007-065T16:00:00".to_string(),),
+                    creation_date: common::EpochType("2007-065T16:00:00".to_string()),
                     originator: "NOAA".to_string(),
-                    message_id: Some("OMM 201113719185".to_string(),),
+                    message_id: Some("OMM 201113719185".to_string()),
                 },
                 body: OmmBody {
                     segment: OmmSegment {
@@ -1213,29 +1213,29 @@ mod test {
                         data: OmmData {
                             comment_list: vec![],
                             mean_elements: MeanElementsType {
-                                comment_list: vec!["mean Elements".to_string(),],
-                                epoch: common::EpochType("2007-064T10:34:41.4264".to_string(),),
+                                comment_list: vec!["mean Elements".to_string()],
+                                epoch: common::EpochType("2007-064T10:34:41.4264".to_string()),
                                 semi_major_axis: None,
                                 mean_motion: Some(RevType {
                                     base: 1.00273272,
-                                    units: Some(RevUnits("rev/day".to_string(),),),
+                                    units: Some(RevUnits("rev/day".to_string()),),
                                 },),
                                 eccentricity: common::NonNegativeDouble(0.0005013,),
                                 inclination: common::InclinationType {
                                     base: 3.0539,
-                                    units: Some(common::AngleUnits("deg".to_string(),),),
+                                    units: Some(common::AngleUnits("deg".to_string()),),
                                 },
                                 ra_of_asc_node: common::AngleType {
                                     base: 81.7939,
-                                    units: Some(common::AngleUnits("deg".to_string(),),),
+                                    units: Some(common::AngleUnits("deg".to_string()),),
                                 },
                                 arg_of_pericenter: common::AngleType {
                                     base: 249.2363,
-                                    units: Some(common::AngleUnits("deg".to_string(),),),
+                                    units: Some(common::AngleUnits("deg".to_string()),),
                                 },
                                 mean_anomaly: common::AngleType {
                                     base: 150.1602,
-                                    units: Some(common::AngleUnits("deg".to_string(),),),
+                                    units: Some(common::AngleUnits("deg".to_string()),),
                                 },
                                 gm: Some(common::GmType {
                                     base: common::PositiveDouble(398600.8,),
@@ -1244,30 +1244,30 @@ mod test {
                             },
                             spacecraft_parameters: None,
                             tle_parameters: Some(TleParametersType {
-                                comment_list: vec!["tle Parameters".to_string(),],
+                                comment_list: vec!["tle Parameters".to_string()],
                                 ephemeris_type: None,
                                 classification_type: None,
                                 norad_cat_id: Some(23581,),
-                                element_set_no: Some(ElementSetNoType("0925".to_string(),),),
+                                element_set_no: Some(ElementSetNoType("0925".to_string()),),
                                 rev_at_epoch: Some(4316,),
                                 bstar: Some(BStarType {
                                     base: 0.0001,
-                                    units: Some(BStarUnits("1/ER".to_string(),),),
+                                    units: Some(BStarUnits("1/ER".to_string()),),
                                 },),
                                 bterm: None,
                                 mean_motion_dot: DRevType {
                                     base: -1.13e-6,
-                                    units: Some(DRevUnits("rev/day**2".to_string(),),),
+                                    units: Some(DRevUnits("rev/day**2".to_string()),),
                                 },
                                 mean_motion_ddot: Some(DRevType {
                                     base: 0.0,
-                                    units: Some(DRevUnits("rev/day**3".to_string(),),),
+                                    units: Some(DRevUnits("rev/day**3".to_string()),),
                                 },),
                                 agom: None,
                             },),
                             covariance_matrix: Some(common::OpmCovarianceMatrixType {
-                                comment_list: vec!["covariance Matrix".to_string(),],
-                                cov_ref_frame: Some("TEME".to_string(),),
+                                comment_list: vec!["covariance Matrix".to_string()],
+                                cov_ref_frame: Some("TEME".to_string()),
                                 cx_x: common::PositionCovarianceType {
                                     base: 0.0003331349476038534,
                                     units: None,
@@ -1419,7 +1419,7 @@ mod test {
                 header: common::OdmHeader {
                     comment_list: vec![],
                     classification_list: vec![],
-                    creation_date: common::EpochType("2021-03-24T23:00:00.000".to_string(),),
+                    creation_date: common::EpochType("2021-03-24T23:00:00.000".to_string()),
                     originator: "CelesTrak".to_string(),
                     message_id: None,
                 },
@@ -1439,41 +1439,41 @@ mod test {
                             comment_list: vec![],
                             mean_elements: MeanElementsType {
                                 comment_list: vec![],
-                                epoch: common::EpochType("2008-09-20T12:25:40.104192".to_string(),),
+                                epoch: common::EpochType("2008-09-20T12:25:40.104192".to_string()),
                                 semi_major_axis: None,
                                 mean_motion: Some(RevType {
                                     base: 15.72125391,
-                                    units: Some(RevUnits("rev/day".to_string(),),),
+                                    units: Some(RevUnits("rev/day".to_string()),),
                                 },),
                                 eccentricity: common::NonNegativeDouble(0.0006703,),
                                 inclination: common::InclinationType {
                                     base: 51.6416,
-                                    units: Some(common::AngleUnits("deg".to_string(),),),
+                                    units: Some(common::AngleUnits("deg".to_string()),),
                                 },
                                 ra_of_asc_node: common::AngleType {
                                     base: 247.4627,
-                                    units: Some(common::AngleUnits("deg".to_string(),),),
+                                    units: Some(common::AngleUnits("deg".to_string()),),
                                 },
                                 arg_of_pericenter: common::AngleType {
                                     base: 130.536,
-                                    units: Some(common::AngleUnits("deg".to_string(),),),
+                                    units: Some(common::AngleUnits("deg".to_string()),),
                                 },
                                 mean_anomaly: common::AngleType {
                                     base: 325.0288,
-                                    units: Some(common::AngleUnits("deg".to_string(),),),
+                                    units: Some(common::AngleUnits("deg".to_string()),),
                                 },
                                 gm: Some(common::GmType {
                                     base: common::PositiveDouble(398600.8,),
-                                    units: Some(common::GmUnits("km**3/s**2".to_string(),),),
+                                    units: Some(common::GmUnits("km**3/s**2".to_string()),),
                                 },),
                             },
                             spacecraft_parameters: None,
                             tle_parameters: Some(TleParametersType {
                                 comment_list: vec![],
                                 ephemeris_type: Some(0,),
-                                classification_type: Some("U".to_string(),),
+                                classification_type: Some("U".to_string()),
                                 norad_cat_id: Some(7646,),
-                                element_set_no: Some(ElementSetNoType("999".to_string(),),),
+                                element_set_no: Some(ElementSetNoType("999".to_string()),),
                                 rev_at_epoch: Some(32997,),
                                 bstar: Some(BStarType {
                                     base: -4.7102e-6,
@@ -1606,21 +1606,21 @@ mod test {
                         "here is another one".to_string(),
                     ],
                     classification_list: vec![],
-                    creation_date: common::EpochType("2007-06-05T16:00:00".to_string(),),
+                    creation_date: common::EpochType("2007-06-05T16:00:00".to_string()),
                     originator: "NOAA/USA".to_string(),
                     message_id: None,
                 },
                 body: OmmBody {
                     segment: OmmSegment {
                         metadata: OmmMetadata {
-                            comment_list: vec!["this comment doesn't say much".to_string(),],
+                            comment_list: vec!["this comment doesn't say much".to_string()],
                             object_name: "GOES 9".to_string(),
                             object_id: "1995-025A".to_string(),
                             center_name: "EARTH".to_string(),
                             ref_frame: "TOD".to_string(),
                             ref_frame_epoch: Some(common::EpochType(
                                 "2000-01-03T10:34:00".to_string(),
-                            ),),
+                            )),
                             time_system: "MRT".to_string(),
                             mean_element_theory: "SOME THEORY".to_string(),
                         },
@@ -1630,7 +1630,7 @@ mod test {
                             ],
                             mean_elements: MeanElementsType {
                                 comment_list: vec![],
-                                epoch: common::EpochType("2000-01-05T10:00:00".to_string(),),
+                                epoch: common::EpochType("2000-01-05T10:00:00".to_string()),
                                 semi_major_axis: Some(common::DistanceType {
                                     base: 6800.0,
                                     units: None,
@@ -1656,7 +1656,7 @@ mod test {
                                 gm: None,
                             },
                             spacecraft_parameters: Some(common::SpacecraftParametersType {
-                                comment_list: vec!["spacecraft data".to_string(),],
+                                comment_list: vec!["spacecraft data".to_string()],
                                 mass: Some(common::MassType {
                                     base: common::NonNegativeDouble(300.0,),
                                     units: None,
@@ -1665,17 +1665,17 @@ mod test {
                                     base: common::NonNegativeDouble(5.0,),
                                     units: None,
                                 },),
-                                solar_rad_coeff: Some(common::NonNegativeDouble(0.001,),),
+                                solar_rad_coeff: Some(common::NonNegativeDouble(0.001,)),
                                 drag_area: Some(common::AreaType {
                                     base: common::NonNegativeDouble(4.0,),
                                     units: None,
                                 },),
-                                drag_coeff: Some(common::NonNegativeDouble(0.002,),),
+                                drag_coeff: Some(common::NonNegativeDouble(0.002,)),
                             },),
                             tle_parameters: None,
                             covariance_matrix: Some(common::OpmCovarianceMatrixType {
                                 comment_list: vec![],
-                                cov_ref_frame: Some("TNW".to_string(),),
+                                cov_ref_frame: Some("TNW".to_string()),
                                 cx_x: common::PositionCovarianceType {
                                     base: 0.0003331349476038534,
                                     units: None,

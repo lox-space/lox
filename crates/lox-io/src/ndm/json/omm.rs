@@ -483,7 +483,7 @@ mod test {
                 },),
                 tle_parameters: Some(TleParametersType {
                     ephemeris_type: Some(0,),
-                    classification_type: Some("U".to_string(),),
+                    classification_type: Some("U".to_string()),
                     norad_cat_id: Some(45018,),
                     element_set_no: Some(999,),
                     rev_at_epoch: Some(5327,),

@@ -217,7 +217,7 @@ mod test {
                 header: common::OdmHeader {
                     comment_list: vec![],
                     classification_list: vec![],
-                    creation_date: common::EpochType("2004-281T17:26:06".to_string(),),
+                    creation_date: common::EpochType("2004-281T17:26:06".to_string()),
                     originator: "me".to_string(),
                     message_id: None,
                 },
@@ -231,21 +231,21 @@ mod test {
                             ref_frame: "IAU-Saturn".to_string(),
                             ref_frame_epoch: None,
                             time_system: "UTC".to_string(),
-                            start_time: common::EpochType("2004-100T00:00:00.000000".to_string(),),
+                            start_time: common::EpochType("2004-100T00:00:00.000000".to_string()),
                             useable_start_time: None,
                             useable_stop_time: None,
-                            stop_time: common::EpochType("2004-100T01:00:00.000000".to_string(),),
-                            interpolation: Some("Hermite".to_string(),),
+                            stop_time: common::EpochType("2004-100T01:00:00.000000".to_string()),
+                            interpolation: Some("Hermite".to_string()),
                             interpolation_degree: Some(1,),
                         },
                         data: OemData {
                             comment_list: vec![],
                             state_vector_list: vec![
                                 common::StateVectorAccType {
-                                    epoch: common::EpochType("2004-100T00:00:00".to_string(),),
+                                    epoch: common::EpochType("2004-100T00:00:00".to_string()),
                                     x: common::PositionType {
                                         base: 1.0,
-                                        units: Some(common::PositionUnits("km".to_string(),),),
+                                        units: Some(common::PositionUnits("km".to_string()),),
                                     },
                                     y: common::PositionType {
                                         base: 1.0,
@@ -257,7 +257,7 @@ mod test {
                                     },
                                     x_dot: common::VelocityType {
                                         base: 1.0,
-                                        units: Some(common::VelocityUnits("km/s".to_string(),),),
+                                        units: Some(common::VelocityUnits("km/s".to_string()),),
                                     },
                                     y_dot: common::VelocityType {
                                         base: 1.0,
@@ -272,14 +272,14 @@ mod test {
                                     z_ddot: None,
                                 },
                                 common::StateVectorAccType {
-                                    epoch: common::EpochType("2004-100T00:00:00".to_string(),),
+                                    epoch: common::EpochType("2004-100T00:00:00".to_string()),
                                     x: common::PositionType {
                                         base: 1.0,
                                         units: None,
                                     },
                                     y: common::PositionType {
                                         base: 1.0,
-                                        units: Some(common::PositionUnits("km".to_string(),),),
+                                        units: Some(common::PositionUnits("km".to_string()),),
                                     },
                                     z: common::PositionType {
                                         base: 1.0,
@@ -291,7 +291,7 @@ mod test {
                                     },
                                     y_dot: common::VelocityType {
                                         base: 1.0,
-                                        units: Some(common::VelocityUnits("km/s".to_string(),),),
+                                        units: Some(common::VelocityUnits("km/s".to_string()),),
                                     },
                                     z_dot: common::VelocityType {
                                         base: 1.0,
@@ -302,7 +302,7 @@ mod test {
                                     z_ddot: None,
                                 },
                                 common::StateVectorAccType {
-                                    epoch: common::EpochType("2004-100T00:00:00".to_string(),),
+                                    epoch: common::EpochType("2004-100T00:00:00".to_string()),
                                     x: common::PositionType {
                                         base: 1.0,
                                         units: None,
@@ -313,7 +313,7 @@ mod test {
                                     },
                                     z: common::PositionType {
                                         base: 1.0,
-                                        units: Some(common::PositionUnits("km".to_string(),),),
+                                        units: Some(common::PositionUnits("km".to_string()),),
                                     },
                                     x_dot: common::VelocityType {
                                         base: 1.0,
@@ -325,7 +325,7 @@ mod test {
                                     },
                                     z_dot: common::VelocityType {
                                         base: 1.0,
-                                        units: Some(common::VelocityUnits("km/s".to_string(),),),
+                                        units: Some(common::VelocityUnits("km/s".to_string()),),
                                     },
                                     x_ddot: None,
                                     y_ddot: None,
@@ -458,11 +458,11 @@ mod test {
             message,
             OemType {
                 header: common::OdmHeader {
-                    comment_list: vec!["OEM WITH OPTIONAL ACCELERATIONS".to_string(),],
+                    comment_list: vec!["OEM WITH OPTIONAL ACCELERATIONS".to_string()],
                     classification_list: vec![],
-                    creation_date: common::EpochType("1996-11-04T17:22:31".to_string(),),
+                    creation_date: common::EpochType("1996-11-04T17:22:31".to_string()),
                     originator: "NASA/JPL".to_string(),
-                    message_id: Some("OEM 201113719185".to_string(),),
+                    message_id: Some("OEM 201113719185".to_string()),
                 },
                 body: OemBody {
                     segment_list: vec![OemSegment {
@@ -474,15 +474,15 @@ mod test {
                             ref_frame: "J2000".to_string(),
                             ref_frame_epoch: None,
                             time_system: "UTC".to_string(),
-                            start_time: common::EpochType("1996-12-18T12:00:00.331".to_string(),),
+                            start_time: common::EpochType("1996-12-18T12:00:00.331".to_string()),
                             useable_start_time: Some(common::EpochType(
                                 "1996-12-18T12:10:00.331".to_string(),
-                            ),),
+                            )),
                             useable_stop_time: Some(common::EpochType(
                                 "1996-12-28T21:23:00.331".to_string(),
-                            ),),
-                            stop_time: common::EpochType("1996-12-28T21:28:00.331".to_string(),),
-                            interpolation: Some("HERMITE".to_string(),),
+                            )),
+                            stop_time: common::EpochType("1996-12-28T21:28:00.331".to_string()),
+                            interpolation: Some("HERMITE".to_string()),
                             interpolation_degree: Some(7,),
                         },
                         data: OemData {
@@ -493,7 +493,7 @@ mod test {
                             ],
                             state_vector_list: vec![
                                 common::StateVectorAccType {
-                                    epoch: common::EpochType("1996-12-18T12:00:00.331".to_string(),),
+                                    epoch: common::EpochType("1996-12-18T12:00:00.331".to_string()),
                                     x: common::PositionType {
                                         base: 2789.6,
                                         units: None,
@@ -532,7 +532,7 @@ mod test {
                                     },),
                                 },
                                 common::StateVectorAccType {
-                                    epoch: common::EpochType("1996-12-18T12:01:00.331".to_string(),),
+                                    epoch: common::EpochType("1996-12-18T12:01:00.331".to_string()),
                                     x: common::PositionType {
                                         base: 2783.4,
                                         units: None,
@@ -571,7 +571,7 @@ mod test {
                                     },),
                                 },
                                 common::StateVectorAccType {
-                                    epoch: common::EpochType("1996-12-18T12:02:00.331".to_string(),),
+                                    epoch: common::EpochType("1996-12-18T12:02:00.331".to_string()),
                                     x: common::PositionType {
                                         base: 2776.0,
                                         units: None,
@@ -610,7 +610,7 @@ mod test {
                                     },),
                                 },
                                 common::StateVectorAccType {
-                                    epoch: common::EpochType("1996-12-28T21:28:00.331".to_string(),),
+                                    epoch: common::EpochType("1996-12-28T21:28:00.331".to_string()),
                                     x: common::PositionType {
                                         base: -3881.0,
                                         units: None,
@@ -650,9 +650,9 @@ mod test {
                                 },
                             ],
                             covariance_matrix_list: vec![common::OemCovarianceMatrixType {
-                                comment_list: vec!["blabla".to_string(),],
-                                epoch: common::EpochType("1996-12-28T22:28:00.331".to_string(),),
-                                cov_ref_frame: Some("ITRF1997".to_string(),),
+                                comment_list: vec!["blabla".to_string()],
+                                epoch: common::EpochType("1996-12-28T22:28:00.331".to_string()),
+                                cov_ref_frame: Some("ITRF1997".to_string()),
                                 cx_x: common::PositionCovarianceType {
                                     base: 0.316,
                                     units: None,

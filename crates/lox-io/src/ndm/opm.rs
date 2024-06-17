@@ -454,82 +454,82 @@ mod test {
             message,
             OpmType {
                 header: common::OdmHeader {
-                    comment_list: vec!["THIS IS AN XML VERSION OF THE OPM".to_string(),],
+                    comment_list: vec!["THIS IS AN XML VERSION OF THE OPM".to_string()],
                     classification_list: vec![],
-                    creation_date: common::EpochType("2001-11-06T09:23:57".to_string(),),
+                    creation_date: common::EpochType("2001-11-06T09:23:57".to_string()),
                     originator: "JAXA".to_string(),
-                    message_id: Some("OPM 201113719185".to_string(),),
+                    message_id: Some("OPM 201113719185".to_string()),
                 },
                 body: OpmBody {
                     segment: OpmSegment {
                         metadata: OpmMetadata {
-                            comment_list: vec!["GEOCENTRIC, CARTESIAN, EARTH FIXED".to_string(),],
+                            comment_list: vec!["GEOCENTRIC, CARTESIAN, EARTH FIXED".to_string()],
                             object_name: "OSPREY 5".to_string(),
                             object_id: "1998-999A".to_string(),
                             center_name: "EARTH".to_string(),
                             ref_frame: "TOD".to_string(),
                             ref_frame_epoch: Some(common::EpochType(
                                 "1998-12-18T14:28:15.1172".to_string(),
-                            ),),
+                            )),
                             time_system: "UTC".to_string(),
                         },
                         data: OpmData {
                             comment_list: vec![],
                             state_vector: common::StateVectorType {
                                 comment_list: vec![],
-                                epoch: common::EpochType("2008-09-20T12:25:40.104192".to_string(),),
+                                epoch: common::EpochType("2008-09-20T12:25:40.104192".to_string()),
                                 x: common::PositionType {
                                     base: 4086.14718,
-                                    units: Some(common::PositionUnits("km".to_string(),),),
+                                    units: Some(common::PositionUnits("km".to_string()),),
                                 },
                                 y: common::PositionType {
                                     base: -994.936814,
-                                    units: Some(common::PositionUnits("km".to_string(),),),
+                                    units: Some(common::PositionUnits("km".to_string()),),
                                 },
                                 z: common::PositionType {
                                     base: 5250.678791,
-                                    units: Some(common::PositionUnits("km".to_string(),),),
+                                    units: Some(common::PositionUnits("km".to_string()),),
                                 },
                                 x_dot: common::VelocityType {
                                     base: 2.511071,
-                                    units: Some(common::VelocityUnits("km/s".to_string(),),),
+                                    units: Some(common::VelocityUnits("km/s".to_string()),),
                                 },
                                 y_dot: common::VelocityType {
                                     base: 7.25524,
-                                    units: Some(common::VelocityUnits("km/s".to_string(),),),
+                                    units: Some(common::VelocityUnits("km/s".to_string()),),
                                 },
                                 z_dot: common::VelocityType {
                                     base: -0.583165,
-                                    units: Some(common::VelocityUnits("km/s".to_string(),),),
+                                    units: Some(common::VelocityUnits("km/s".to_string()),),
                                 },
                             },
                             keplerian_elements: Some(KeplerianElementsType {
                                 comment_list: vec![],
                                 semi_major_axis: common::DistanceType {
                                     base: 6730.96,
-                                    units: Some(common::PositionUnits("km".to_string(),),),
+                                    units: Some(common::PositionUnits("km".to_string()),),
                                 },
                                 eccentricity: common::NonNegativeDouble(0.0006703,),
                                 inclination: common::InclinationType {
                                     base: 51.6416,
-                                    units: Some(common::AngleUnits("deg".to_string(),),),
+                                    units: Some(common::AngleUnits("deg".to_string()),),
                                 },
                                 ra_of_asc_node: common::AngleType {
                                     base: 247.463,
-                                    units: Some(common::AngleUnits("deg".to_string(),),),
+                                    units: Some(common::AngleUnits("deg".to_string()),),
                                 },
                                 arg_of_pericenter: common::AngleType {
                                     base: 130.536,
-                                    units: Some(common::AngleUnits("deg".to_string(),),),
+                                    units: Some(common::AngleUnits("deg".to_string()),),
                                 },
                                 true_anomaly: Some(common::AngleType {
                                     base: 324.985,
-                                    units: Some(common::AngleUnits("deg".to_string(),),),
+                                    units: Some(common::AngleUnits("deg".to_string()),),
                                 },),
                                 mean_anomaly: None,
                                 gm: common::GmType {
                                     base: common::PositiveDouble(398600.9368,),
-                                    units: Some(common::GmUnits("km**3/s**2".to_string(),),),
+                                    units: Some(common::GmUnits("km**3/s**2".to_string()),),
                                 },
                             },),
                             spacecraft_parameters: Some(common::SpacecraftParametersType {
@@ -542,16 +542,16 @@ mod test {
                                     base: common::NonNegativeDouble(18.77,),
                                     units: None,
                                 },),
-                                solar_rad_coeff: Some(common::NonNegativeDouble(1.0,),),
+                                solar_rad_coeff: Some(common::NonNegativeDouble(1.0,)),
                                 drag_area: Some(common::AreaType {
                                     base: common::NonNegativeDouble(18.77,),
                                     units: None,
                                 },),
-                                drag_coeff: Some(common::NonNegativeDouble(2.5,),),
+                                drag_coeff: Some(common::NonNegativeDouble(2.5,)),
                             },),
                             covariance_matrix: Some(common::OpmCovarianceMatrixType {
                                 comment_list: vec![],
-                                cov_ref_frame: Some("ITRF1997".to_string(),),
+                                cov_ref_frame: Some("ITRF1997".to_string()),
                                 cx_x: common::PositionCovarianceType {
                                     base: 0.316,
                                     units: None,
@@ -639,30 +639,30 @@ mod test {
                             },),
                             maneuver_parameters_list: vec![
                                 ManeuverParametersType {
-                                    comment_list: vec!["Maneuver 1".to_string(),],
+                                    comment_list: vec!["Maneuver 1".to_string()],
                                     man_epoch_ignition: common::EpochType(
                                         "2008-09-20T12:41:09.984493".to_string(),
                                     ),
                                     man_duration: common::DurationType {
                                         base: common::NonNegativeDouble(180.0,),
-                                        units: Some(common::TimeUnits("s".to_string(),),),
+                                        units: Some(common::TimeUnits("s".to_string()),),
                                     },
                                     man_delta_mass: common::DeltamassType {
                                         base: common::NegativeDouble(-0.001,),
-                                        units: Some(common::MassUnits("kg".to_string(),),),
+                                        units: Some(common::MassUnits("kg".to_string()),),
                                     },
                                     man_ref_frame: "RSW".to_string(),
                                     man_dv_1: common::VelocityType {
                                         base: 0.0,
-                                        units: Some(common::VelocityUnits("km/s".to_string(),),),
+                                        units: Some(common::VelocityUnits("km/s".to_string()),),
                                     },
                                     man_dv_2: common::VelocityType {
                                         base: 0.28,
-                                        units: Some(common::VelocityUnits("km/s".to_string(),),),
+                                        units: Some(common::VelocityUnits("km/s".to_string()),),
                                     },
                                     man_dv_3: common::VelocityType {
                                         base: 0.0,
-                                        units: Some(common::VelocityUnits("km/s".to_string(),),),
+                                        units: Some(common::VelocityUnits("km/s".to_string()),),
                                     },
                                 },
                                 ManeuverParametersType {
@@ -672,24 +672,24 @@ mod test {
                                     ),
                                     man_duration: common::DurationType {
                                         base: common::NonNegativeDouble(180.0,),
-                                        units: Some(common::TimeUnits("s".to_string(),),),
+                                        units: Some(common::TimeUnits("s".to_string()),),
                                     },
                                     man_delta_mass: common::DeltamassType {
                                         base: common::NegativeDouble(-0.001,),
-                                        units: Some(common::MassUnits("kg".to_string(),),),
+                                        units: Some(common::MassUnits("kg".to_string()),),
                                     },
                                     man_ref_frame: "RSW".to_string(),
                                     man_dv_1: common::VelocityType {
                                         base: 0.0,
-                                        units: Some(common::VelocityUnits("km/s".to_string(),),),
+                                        units: Some(common::VelocityUnits("km/s".to_string()),),
                                     },
                                     man_dv_2: common::VelocityType {
                                         base: 0.27,
-                                        units: Some(common::VelocityUnits("km/s".to_string(),),),
+                                        units: Some(common::VelocityUnits("km/s".to_string()),),
                                     },
                                     man_dv_3: common::VelocityType {
                                         base: 0.0,
-                                        units: Some(common::VelocityUnits("km/s".to_string(),),),
+                                        units: Some(common::VelocityUnits("km/s".to_string()),),
                                     },
                                 },
                             ],
@@ -803,7 +803,7 @@ MAN_DV_3 = 0.00000000 [km/s]"#;
                         "Current intermediate orbit IO2 and maneuver planning data".to_string(),
                     ],
                     classification_list: vec![],
-                    creation_date: common::EpochType("2021-06-03T05:33:00.123".to_string(),),
+                    creation_date: common::EpochType("2021-06-03T05:33:00.123".to_string()),
                     originator: "GSOC".to_string(),
                     message_id: None,
                 },
@@ -819,80 +819,80 @@ MAN_DV_3 = 0.00000000 [km/s]"#;
                             time_system: "UTC".to_string(),
                         },
                         data: OpmData {
-                            comment_list: vec!["State Vector".to_string(),],
+                            comment_list: vec!["State Vector".to_string()],
                             state_vector: common::StateVectorType {
                                 comment_list: vec![],
-                                epoch: common::EpochType("2021-06-03T00:00:00.000".to_string(),),
+                                epoch: common::EpochType("2021-06-03T00:00:00.000".to_string()),
                                 x: common::PositionType {
                                     base: 6655.9942,
-                                    units: Some(common::PositionUnits("km".to_string(),),),
+                                    units: Some(common::PositionUnits("km".to_string()),),
                                 },
                                 y: common::PositionType {
                                     base: -40218.5751,
-                                    units: Some(common::PositionUnits("km".to_string(),),),
+                                    units: Some(common::PositionUnits("km".to_string()),),
                                 },
                                 z: common::PositionType {
                                     base: -82.9177,
-                                    units: Some(common::PositionUnits("km".to_string(),),),
+                                    units: Some(common::PositionUnits("km".to_string()),),
                                 },
                                 x_dot: common::VelocityType {
                                     base: 3.11548208,
-                                    units: Some(common::VelocityUnits("km/s".to_string(),),),
+                                    units: Some(common::VelocityUnits("km/s".to_string()),),
                                 },
                                 y_dot: common::VelocityType {
                                     base: 0.47042605,
-                                    units: Some(common::VelocityUnits("km/s".to_string(),),),
+                                    units: Some(common::VelocityUnits("km/s".to_string()),),
                                 },
                                 z_dot: common::VelocityType {
                                     base: -0.00101495,
-                                    units: Some(common::VelocityUnits("km/s".to_string(),),),
+                                    units: Some(common::VelocityUnits("km/s".to_string()),),
                                 },
                             },
                             keplerian_elements: Some(KeplerianElementsType {
-                                comment_list: vec!["Keplerian elements".to_string(),],
+                                comment_list: vec!["Keplerian elements".to_string()],
                                 semi_major_axis: common::DistanceType {
                                     base: 41399.5123,
-                                    units: Some(common::PositionUnits("km".to_string(),),),
+                                    units: Some(common::PositionUnits("km".to_string()),),
                                 },
                                 eccentricity: common::NonNegativeDouble(0.020842611,),
                                 inclination: common::InclinationType {
                                     base: 0.117746,
-                                    units: Some(common::AngleUnits("deg".to_string(),),),
+                                    units: Some(common::AngleUnits("deg".to_string()),),
                                 },
                                 ra_of_asc_node: common::AngleType {
                                     base: 17.604721,
-                                    units: Some(common::AngleUnits("deg".to_string(),),),
+                                    units: Some(common::AngleUnits("deg".to_string()),),
                                 },
                                 arg_of_pericenter: common::AngleType {
                                     base: 218.242943,
-                                    units: Some(common::AngleUnits("deg".to_string(),),),
+                                    units: Some(common::AngleUnits("deg".to_string()),),
                                 },
                                 true_anomaly: Some(common::AngleType {
                                     base: 41.922339,
-                                    units: Some(common::AngleUnits("deg".to_string(),),),
+                                    units: Some(common::AngleUnits("deg".to_string()),),
                                 },),
                                 mean_anomaly: None,
                                 gm: common::GmType {
                                     base: common::PositiveDouble(398600.4415,),
-                                    units: Some(common::GmUnits("km**3/s**2".to_string(),),),
+                                    units: Some(common::GmUnits("km**3/s**2".to_string()),),
                                 },
                             },),
                             spacecraft_parameters: Some(common::SpacecraftParametersType {
-                                comment_list: vec!["Spacecraft parameters".to_string(),],
+                                comment_list: vec!["Spacecraft parameters".to_string()],
                                 mass: Some(common::MassType {
                                     base: common::NonNegativeDouble(1913.0,),
-                                    units: Some(common::MassUnits("kg".to_string(),),),
+                                    units: Some(common::MassUnits("kg".to_string()),),
                                 },),
                                 solar_rad_area: Some(common::AreaType {
                                     base: common::NonNegativeDouble(10.0,),
-                                    units: Some(common::AreaUnits("m**2".to_string(),),),
+                                    units: Some(common::AreaUnits("m**2".to_string()),),
                                 },),
-                                solar_rad_coeff: Some(common::NonNegativeDouble(1.3,),),
+                                solar_rad_coeff: Some(common::NonNegativeDouble(1.3,)),
                                 drag_area: Some(common::AreaType {
                                     base: common::NonNegativeDouble(10.0,),
-                                    units: Some(common::AreaUnits("m**2".to_string(),),),
+                                    units: Some(common::AreaUnits("m**2".to_string()),),
                                 },),
-                                drag_coeff: Some(common::NonNegativeDouble(2.3,),),
+                                drag_coeff: Some(common::NonNegativeDouble(2.3,)),
                             },),
                             covariance_matrix: None,
                             maneuver_parameters_list: vec![
@@ -903,24 +903,24 @@ MAN_DV_3 = 0.00000000 [km/s]"#;
                                     ),
                                     man_duration: common::DurationType {
                                         base: common::NonNegativeDouble(132.6,),
-                                        units: Some(common::TimeUnits("s".to_string(),),),
+                                        units: Some(common::TimeUnits("s".to_string()),),
                                     },
                                     man_delta_mass: common::DeltamassType {
                                         base: common::NegativeDouble(-18.418,),
-                                        units: Some(common::MassUnits("kg".to_string(),),),
+                                        units: Some(common::MassUnits("kg".to_string()),),
                                     },
                                     man_ref_frame: "EME2000".to_string(),
                                     man_dv_1: common::VelocityType {
                                         base: -0.023257,
-                                        units: Some(common::VelocityUnits("km/s".to_string(),),),
+                                        units: Some(common::VelocityUnits("km/s".to_string()),),
                                     },
                                     man_dv_2: common::VelocityType {
                                         base: 0.0168316,
-                                        units: Some(common::VelocityUnits("km/s".to_string(),),),
+                                        units: Some(common::VelocityUnits("km/s".to_string()),),
                                     },
                                     man_dv_3: common::VelocityType {
                                         base: -0.00893444,
-                                        units: Some(common::VelocityUnits("km/s".to_string(),),),
+                                        units: Some(common::VelocityUnits("km/s".to_string()),),
                                     },
                                 },
                                 ManeuverParametersType {
@@ -935,24 +935,24 @@ MAN_DV_3 = 0.00000000 [km/s]"#;
                                     ),
                                     man_duration: common::DurationType {
                                         base: common::NonNegativeDouble(0.0,),
-                                        units: Some(common::TimeUnits("s".to_string(),),),
+                                        units: Some(common::TimeUnits("s".to_string()),),
                                     },
                                     man_delta_mass: common::DeltamassType {
                                         base: common::NegativeDouble(-1.469,),
-                                        units: Some(common::MassUnits("kg".to_string(),),),
+                                        units: Some(common::MassUnits("kg".to_string()),),
                                     },
                                     man_ref_frame: "RTN".to_string(),
                                     man_dv_1: common::VelocityType {
                                         base: 0.001015,
-                                        units: Some(common::VelocityUnits("km/s".to_string(),),),
+                                        units: Some(common::VelocityUnits("km/s".to_string()),),
                                     },
                                     man_dv_2: common::VelocityType {
                                         base: -0.001873,
-                                        units: Some(common::VelocityUnits("km/s".to_string(),),),
+                                        units: Some(common::VelocityUnits("km/s".to_string()),),
                                     },
                                     man_dv_3: common::VelocityType {
                                         base: 0.0,
-                                        units: Some(common::VelocityUnits("km/s".to_string(),),),
+                                        units: Some(common::VelocityUnits("km/s".to_string()),),
                                     },
                                 },
                             ],

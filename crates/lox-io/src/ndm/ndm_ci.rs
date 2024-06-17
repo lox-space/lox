@@ -707,10 +707,10 @@ mod test {
                                     time_system: "UTC".to_string(),
                                 },
                                 data: opm::OpmData {
-                                    comment_list: vec!["final COMMENT, I think".to_string(),],
+                                    comment_list: vec!["final COMMENT, I think".to_string()],
                                     state_vector: common::StateVectorType {
                                         comment_list: vec![],
-                                        epoch: common::EpochType("2004-100T00:00:00Z".to_string(),),
+                                        epoch: common::EpochType("2004-100T00:00:00Z".to_string()),
                                         x: common::PositionType {
                                             base: 1.0,
                                             units: None,
@@ -740,47 +740,47 @@ mod test {
                                         comment_list: vec![],
                                         semi_major_axis: common::DistanceType {
                                             base: 1.0,
-                                            units: Some(common::PositionUnits("km".to_string(),),),
+                                            units: Some(common::PositionUnits("km".to_string())),
                                         },
                                         eccentricity: common::NonNegativeDouble(0.0,),
                                         inclination: common::InclinationType {
                                             base: 45.0,
-                                            units: Some(common::AngleUnits("deg".to_string(),),),
+                                            units: Some(common::AngleUnits("deg".to_string())),
                                         },
                                         ra_of_asc_node: common::AngleType {
                                             base: 0.0,
-                                            units: Some(common::AngleUnits("deg".to_string(),),),
+                                            units: Some(common::AngleUnits("deg".to_string())),
                                         },
                                         arg_of_pericenter: common::AngleType {
                                             base: 15.0,
-                                            units: Some(common::AngleUnits("deg".to_string(),),),
+                                            units: Some(common::AngleUnits("deg".to_string())),
                                         },
                                         true_anomaly: Some(common::AngleType {
                                             base: 15.0,
-                                            units: Some(common::AngleUnits("deg".to_string(),),),
+                                            units: Some(common::AngleUnits("deg".to_string())),
                                         },),
                                         mean_anomaly: None,
                                         gm: common::GmType {
                                             base: common::PositiveDouble(398644.0,),
-                                            units: Some(common::GmUnits("km**3/s**2".to_string(),),),
+                                            units: Some(common::GmUnits("km**3/s**2".to_string())),
                                         },
                                     },),
                                     spacecraft_parameters: Some(common::SpacecraftParametersType {
                                         comment_list: vec![],
                                         mass: Some(common::MassType {
                                             base: common::NonNegativeDouble(100.0,),
-                                            units: Some(common::MassUnits("kg".to_string(),),),
+                                            units: Some(common::MassUnits("kg".to_string())),
                                         },),
                                         solar_rad_area: Some(common::AreaType {
                                             base: common::NonNegativeDouble(2.0,),
-                                            units: Some(common::AreaUnits("m**2".to_string(),),),
+                                            units: Some(common::AreaUnits("m**2".to_string())),
                                         },),
-                                        solar_rad_coeff: Some(common::NonNegativeDouble(1.0,),),
+                                        solar_rad_coeff: Some(common::NonNegativeDouble(1.0,)),
                                         drag_area: Some(common::AreaType {
                                             base: common::NonNegativeDouble(2.0,),
-                                            units: Some(common::AreaUnits("m**2".to_string(),),),
+                                            units: Some(common::AreaUnits("m**2".to_string())),
                                         },),
-                                        drag_coeff: Some(common::NonNegativeDouble(2.0,),),
+                                        drag_coeff: Some(common::NonNegativeDouble(2.0,)),
                                     },),
                                     covariance_matrix: None,
                                     maneuver_parameters_list: vec![opm::ManeuverParametersType {
@@ -799,15 +799,15 @@ mod test {
                                         man_ref_frame: "GRC".to_string(),
                                         man_dv_1: common::VelocityType {
                                             base: 1.0,
-                                            units: Some(common::VelocityUnits("km/s".to_string(),),),
+                                            units: Some(common::VelocityUnits("km/s".to_string())),
                                         },
                                         man_dv_2: common::VelocityType {
                                             base: 1.0,
-                                            units: Some(common::VelocityUnits("km/s".to_string(),),),
+                                            units: Some(common::VelocityUnits("km/s".to_string())),
                                         },
                                         man_dv_3: common::VelocityType {
                                             base: 1.0,
-                                            units: Some(common::VelocityUnits("km/s".to_string(),),),
+                                            units: Some(common::VelocityUnits("km/s".to_string())),
                                         },
                                     },],
                                     user_defined_parameters: None,
@@ -821,7 +821,7 @@ mod test {
                         header: common::OdmHeader {
                             comment_list: vec![],
                             classification_list: vec![],
-                            creation_date: common::EpochType("2004-281T17:26:06".to_string(),),
+                            creation_date: common::EpochType("2004-281T17:26:06".to_string()),
                             originator: "me".to_string(),
                             message_id: None,
                         },
@@ -839,8 +839,8 @@ mod test {
                                 data: opm::OpmData {
                                     comment_list: vec![],
                                     state_vector: common::StateVectorType {
-                                        comment_list: vec!["this is a comment".to_string(),],
-                                        epoch: common::EpochType("2004-100T00:00:00".to_string(),),
+                                        comment_list: vec!["this is a comment".to_string()],
+                                        epoch: common::EpochType("2004-100T00:00:00".to_string()),
                                         x: common::PositionType {
                                             base: 1.0,
                                             units: None,
@@ -868,7 +868,7 @@ mod test {
                                     },
                                     keplerian_elements: None,
                                     spacecraft_parameters: Some(common::SpacecraftParametersType {
-                                        comment_list: vec!["This is a COMMENT".to_string(),],
+                                        comment_list: vec!["This is a COMMENT".to_string()],
                                         mass: Some(common::MassType {
                                             base: common::NonNegativeDouble(100.0,),
                                             units: None,
@@ -877,26 +877,26 @@ mod test {
                                             base: common::NonNegativeDouble(2.0,),
                                             units: None,
                                         },),
-                                        solar_rad_coeff: Some(common::NonNegativeDouble(1.0,),),
+                                        solar_rad_coeff: Some(common::NonNegativeDouble(1.0,)),
                                         drag_area: Some(common::AreaType {
                                             base: common::NonNegativeDouble(2.0,),
-                                            units: Some(common::AreaUnits("m**2".to_string(),),),
+                                            units: Some(common::AreaUnits("m**2".to_string())),
                                         },),
-                                        drag_coeff: Some(common::NonNegativeDouble(2.0,),),
+                                        drag_coeff: Some(common::NonNegativeDouble(2.0,)),
                                     },),
                                     covariance_matrix: None,
                                     maneuver_parameters_list: vec![opm::ManeuverParametersType {
-                                        comment_list: vec!["This is a COMMENT".to_string(),],
+                                        comment_list: vec!["This is a COMMENT".to_string()],
                                         man_epoch_ignition: common::EpochType(
                                             "2004-125T00:00:00".to_string(),
                                         ),
                                         man_duration: common::DurationType {
                                             base: common::NonNegativeDouble(0.0,),
-                                            units: Some(common::TimeUnits("s".to_string(),),),
+                                            units: Some(common::TimeUnits("s".to_string())),
                                         },
                                         man_delta_mass: common::DeltamassType {
                                             base: common::NegativeDouble(-1.0,),
-                                            units: Some(common::MassUnits("kg".to_string(),),),
+                                            units: Some(common::MassUnits("kg".to_string())),
                                         },
                                         man_ref_frame: "GRC".to_string(),
                                         man_dv_1: common::VelocityType {
@@ -923,7 +923,7 @@ mod test {
                         header: common::OdmHeader {
                             comment_list: vec![],
                             classification_list: vec![],
-                            creation_date: common::EpochType("2004-281T17:26:06".to_string(),),
+                            creation_date: common::EpochType("2004-281T17:26:06".to_string()),
                             originator: "me".to_string(),
                             message_id: None,
                         },
@@ -945,7 +945,7 @@ mod test {
                                     stop_time: common::EpochType(
                                         "2004-100T01:00:00.000000".to_string(),
                                     ),
-                                    interpolation: Some("Hermite".to_string(),),
+                                    interpolation: Some("Hermite".to_string()),
                                     interpolation_degree: Some(1,),
                                 },
                                 data: oem::OemData {
@@ -959,7 +959,7 @@ mod test {
                                                 base: 1.0,
                                                 units: Some(common::PositionUnits(
                                                     "km".to_string(),
-                                                ),),
+                                                )),
                                             },
                                             y: common::PositionType {
                                                 base: 1.0,
@@ -973,7 +973,7 @@ mod test {
                                                 base: 1.0,
                                                 units: Some(common::VelocityUnits(
                                                     "km/s".to_string(),
-                                                ),),
+                                                )),
                                             },
                                             y_dot: common::VelocityType {
                                                 base: 1.0,
@@ -999,7 +999,7 @@ mod test {
                                                 base: 1.0,
                                                 units: Some(common::PositionUnits(
                                                     "km".to_string(),
-                                                ),),
+                                                )),
                                             },
                                             z: common::PositionType {
                                                 base: 1.0,
@@ -1013,7 +1013,7 @@ mod test {
                                                 base: 1.0,
                                                 units: Some(common::VelocityUnits(
                                                     "km/s".to_string(),
-                                                ),),
+                                                )),
                                             },
                                             z_dot: common::VelocityType {
                                                 base: 1.0,
@@ -1039,7 +1039,7 @@ mod test {
                                                 base: 1.0,
                                                 units: Some(common::PositionUnits(
                                                     "km".to_string(),
-                                                ),),
+                                                )),
                                             },
                                             x_dot: common::VelocityType {
                                                 base: 1.0,
@@ -1053,7 +1053,7 @@ mod test {
                                                 base: 1.0,
                                                 units: Some(common::VelocityUnits(
                                                     "km/s".to_string(),
-                                                ),),
+                                                )),
                                             },
                                             x_ddot: None,
                                             y_ddot: None,
