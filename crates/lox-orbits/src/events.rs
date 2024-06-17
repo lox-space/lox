@@ -92,7 +92,7 @@ pub struct Window<T: TimeLike> {
 
 pub fn find_windows<
     F: Fn(f64) -> f64 + Copy,
-    T: TimeLike + Clone + std::fmt::Debug,
+    T: TimeLike + Clone,
     R: FindBracketedRoot<F, Error: std::fmt::Debug>,
 >(
     func: F,
