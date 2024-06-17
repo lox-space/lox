@@ -1,5 +1,7 @@
+use glam::DVec3;
 use std::sync::Arc;
 
+use crate::events::{find_events, find_windows, Event, Window};
 use crate::frames::{BodyFixed, FrameTransformationProvider, Icrf, TryToFrame};
 use crate::{
     frames::{CoordinateSystem, ReferenceFrame},
@@ -10,6 +12,7 @@ use lox_bodies::{Body, RotationalElements};
 use lox_time::time_scales::Tdb;
 use lox_time::transformations::TryToScale;
 use lox_time::{deltas::TimeDelta, TimeLike};
+use lox_utils::roots::Brent;
 use lox_utils::series::{Series, SeriesError};
 use thiserror::Error;
 
@@ -35,9 +38,8 @@ pub struct Trajectory<T: TimeLike, O: Origin, R: ReferenceFrame> {
     states: Vec<State<T, O, R>>,
     origin: O,
     frame: R,
-    t0: T,
-    t1: T,
-    dt_max: TimeDelta,
+    start_time: T,
+    end_time: T,
     t: ArcVecF64,
     x: Series<ArcVecF64, Vec<f64>>,
     y: Series<ArcVecF64, Vec<f64>>,
@@ -59,12 +61,11 @@ where
         }
         let origin = states[0].origin();
         let frame = states[0].reference_frame();
-        let t0 = states[0].time();
-        let t1 = states[states.len() - 1].time();
-        let dt_max = t1.clone() - t0.clone();
+        let start_time = states[0].time();
+        let end_time = states[states.len() - 1].time();
         let t: Vec<f64> = states
             .iter()
-            .map(|s| (s.time() - t0.clone()).to_decimal_seconds())
+            .map(|s| (s.time() - start_time.clone()).to_decimal_seconds())
             .collect();
         let t = ArcVecF64(Arc::new(t));
         let x: Vec<f64> = states.iter().map(|s| s.position().x).collect();
@@ -83,9 +84,8 @@ where
             states: states.to_vec(),
             origin,
             frame,
-            t0,
-            t1,
-            dt_max,
+            start_time,
+            end_time,
             t,
             x,
             y,
@@ -94,6 +94,54 @@ where
             vy,
             vz,
         })
+    }
+
+    pub fn position(&self, t: f64) -> DVec3 {
+        let x = self.x.interpolate(t);
+        let y = self.y.interpolate(t);
+        let z = self.z.interpolate(t);
+        DVec3::new(x, y, z)
+    }
+
+    pub fn velocity(&self, t: f64) -> DVec3 {
+        let vx = self.vx.interpolate(t);
+        let vy = self.vy.interpolate(t);
+        let vz = self.vz.interpolate(t);
+        DVec3::new(vx, vy, vz)
+    }
+
+    pub fn find_events<F: Fn(T, DVec3, DVec3) -> f64>(&self, func: F) -> Vec<Event<T>> {
+        let root_finder = Brent::default();
+        find_events(
+            |t| {
+                func(
+                    self.start_time.clone() + TimeDelta::from_decimal_seconds(t).unwrap(),
+                    self.position(t),
+                    self.velocity(t),
+                )
+            },
+            self.start_time.clone(),
+            self.t.as_ref(),
+            root_finder,
+        )
+        .unwrap_or_default()
+    }
+
+    pub fn find_windows<F: Fn(T, DVec3, DVec3) -> f64>(&self, func: F) -> Vec<Window<T>> {
+        let root_finder = Brent::default();
+        find_windows(
+            |t| {
+                func(
+                    self.start_time.clone() + TimeDelta::from_decimal_seconds(t).unwrap(),
+                    self.position(t),
+                    self.velocity(t),
+                )
+            },
+            self.start_time.clone(),
+            self.end_time.clone(),
+            self.t.as_ref(),
+            root_finder,
+        )
     }
 }
 
