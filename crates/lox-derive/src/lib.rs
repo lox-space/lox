@@ -354,8 +354,8 @@ fn generate_call_to_deserializer_for_vec_type(
 }
 
 fn is_value_unit_struct(item: &DeriveInput) -> bool {
-    for attr in item.attrs.iter() {
-        if attr.path().is_ident("kvn")
+    item.attrs.iter().any(|attr| {
+        attr.path().is_ident("kvn")
             && attr
                 .parse_nested_meta(|meta| {
                     if meta.path.is_ident("value_unit_struct") {
@@ -365,12 +365,7 @@ fn is_value_unit_struct(item: &DeriveInput) -> bool {
                     }
                 })
                 .is_ok()
-        {
-            return true;
-        }
-    }
-
-    false
+    })
 }
 
 fn extract_type_path(ty: &syn::Type) -> Option<&syn::Path> {
