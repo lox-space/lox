@@ -144,7 +144,7 @@ where
         let rot = DMat3::from_rotation_z(self.longitude_of_ascending_node)
             * DMat3::from_rotation_x(self.inclination)
             * DMat3::from_rotation_z(self.argument_of_periapsis);
-        State::new(self.time(), self.origin(), Icrf, rot * pos, rot * vel)
+        State::new(self.time(), rot * pos, rot * vel, self.origin(), Icrf)
     }
 }
 

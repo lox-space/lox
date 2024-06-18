@@ -12,6 +12,7 @@ pub mod anomalies;
 pub mod elements;
 pub mod events;
 pub mod frames;
+pub mod ground;
 pub mod origins;
 pub mod propagators;
 #[cfg(feature = "python")]

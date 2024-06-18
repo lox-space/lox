@@ -6,18 +6,10 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use std::convert::Infallible;
-
 use glam::DVec3;
 
 use lox_bodies::{PointMass, RotationalElements};
-use lox_time::{
-    julian_dates::JulianDate,
-    time_scales::Tdb,
-    transformations::{ToTdb, TryToScale},
-    ut1::DeltaUt1TaiProvider,
-    TimeLike,
-};
+use lox_time::{julian_dates::JulianDate, time_scales::Tdb, transformations::TryToScale, TimeLike};
 use lox_utils::glam::Azimuth;
 use lox_utils::math::{mod_two_pi, normalize_two_pi};
 
@@ -25,8 +17,7 @@ use crate::anomalies::{eccentric_to_true, hyperbolic_to_true};
 use crate::elements::{is_circular, is_equatorial, Keplerian, ToKeplerian};
 use crate::{
     frames::{
-        BodyFixed, CoordinateSystem, FrameTransformationProvider, Icrf,
-        NoOpFrameTransformationProvider, ReferenceFrame, TryToFrame,
+        BodyFixed, CoordinateSystem, FrameTransformationProvider, Icrf, ReferenceFrame, TryToFrame,
     },
     origins::{CoordinateOrigin, Origin},
 };
@@ -50,7 +41,7 @@ where
     O: Origin,
     R: ReferenceFrame,
 {
-    pub fn new(time: T, origin: O, frame: R, position: DVec3, velocity: DVec3) -> Self {
+    pub fn new(time: T, position: DVec3, velocity: DVec3, origin: O, frame: R) -> Self {
         Self {
             time,
             origin,
@@ -67,11 +58,36 @@ where
     {
         State::new(
             self.time(),
-            self.origin(),
-            frame,
             self.position,
             self.velocity,
+            self.origin(),
+            frame,
         )
+    }
+
+    pub fn with_origin<U: Origin>(&self, origin: U) -> State<T, U, R>
+    where
+        T: Clone,
+        R: Clone,
+    {
+        State::new(
+            self.time(),
+            self.position,
+            self.velocity,
+            origin,
+            self.reference_frame(),
+        )
+    }
+
+    pub fn with_origin_and_frame<U: Origin, V: ReferenceFrame>(
+        &self,
+        origin: U,
+        frame: V,
+    ) -> State<T, U, V>
+    where
+        T: Clone,
+    {
+        State::new(self.time(), self.position, self.velocity, origin, frame)
     }
 
     pub fn time(&self) -> T
@@ -148,7 +164,7 @@ where
             .seconds_since_j2000();
         let rot = frame.rotation(seconds);
         let (pos, vel) = rot.apply(self.position, self.velocity);
-        Ok(State::new(self.time(), self.origin(), frame, pos, vel))
+        Ok(State::new(self.time(), pos, vel, self.origin(), frame))
     }
 }
 
@@ -157,7 +173,7 @@ where
     T: TryToScale<Tdb, U> + TimeLike + Clone,
     O: Origin + Clone,
     R: RotationalElements,
-    U: DeltaUt1TaiProvider + FrameTransformationProvider,
+    U: FrameTransformationProvider,
 {
     type Output = State<T, O, Icrf>;
     type Error = U::Error;
@@ -169,28 +185,7 @@ where
             .seconds_since_j2000();
         let rot = self.frame.rotation(seconds).transpose();
         let (pos, vel) = rot.apply(self.position, self.velocity);
-        Ok(State::new(self.time(), self.origin(), frame, pos, vel))
-    }
-}
-
-impl<T, O, R> TryToFrame<Icrf, NoOpFrameTransformationProvider> for State<T, O, BodyFixed<R>>
-where
-    T: ToTdb + TimeLike + Clone,
-    O: Origin + Clone,
-    R: RotationalElements,
-{
-    type Output = State<T, O, Icrf>;
-    type Error = Infallible;
-
-    fn try_to_frame(
-        &self,
-        frame: Icrf,
-        _provider: &NoOpFrameTransformationProvider,
-    ) -> Result<Self::Output, Infallible> {
-        let seconds = self.time().to_tdb().seconds_since_j2000();
-        let rot = self.frame.rotation(seconds).transpose();
-        let (pos, vel) = rot.apply(self.position, self.velocity);
-        Ok(State::new(self.time(), self.origin(), frame, pos, vel))
+        Ok(State::new(self.time(), pos, vel, self.origin(), frame))
     }
 }
 
@@ -271,6 +266,7 @@ where
 mod tests {
     use float_eq::assert_float_eq;
 
+    use crate::frames::NoOpFrameTransformationProvider;
     use lox_bodies::{Earth, Jupiter};
     use lox_time::{time, time_scales::Tdb, Time};
 
@@ -286,7 +282,7 @@ mod tests {
         let v1 = DVec3::new(-1.852284168309543, -0.8227941105651749, -7.14175174489828);
 
         let tdb = time!(Tdb, 2000, 1, 1, 12).unwrap();
-        let s = State::new(tdb, Jupiter, Icrf, r0, v0);
+        let s = State::new(tdb, r0, v0, Jupiter, Icrf);
         let s1 = s
             .try_to_frame(iau_jupiter, &NoOpFrameTransformationProvider)
             .unwrap();
@@ -323,7 +319,7 @@ mod tests {
             -0.118801577532701e4,
         ) * 1e-3;
 
-        let cartesian = State::new(time, Earth, Icrf, pos, vel);
+        let cartesian = State::new(time, pos, vel, Earth, Icrf);
         let cartesian1 = cartesian.to_keplerian().to_cartesian();
 
         assert_eq!(cartesian1.time(), time);

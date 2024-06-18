@@ -19,7 +19,7 @@ fn main() {
     let time = time!(Tdb, 2016, 5, 30, 12, 0, 0.0).unwrap();
     let position = DVec3::new(6068.27927, -1692.84394, -2516.61918);
     let velocity = DVec3::new(-0.660415582, 5.495938726, -5.303093233);
-    let iss_cartesian = State::new(time, Earth, Icrf, position, velocity);
+    let iss_cartesian = State::new(time, position, velocity, Earth, Icrf);
     let iss = iss_cartesian.to_keplerian();
 
     let title = format!(

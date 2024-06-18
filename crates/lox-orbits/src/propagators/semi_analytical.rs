@@ -9,14 +9,13 @@
 use thiserror::Error;
 
 use lox_bodies::PointMass;
-use lox_time::deltas::TimeDelta;
 use lox_time::TimeLike;
 
 use crate::frames::{CoordinateSystem, Icrf};
-use crate::origins::{CoordinateOrigin, Origin};
+use crate::origins::CoordinateOrigin;
 use crate::propagators::{stumpff, Propagator};
 use crate::states::State;
-use crate::trajectories::{Trajectory, TrajectoryError};
+use crate::trajectories::TrajectoryError;
 
 #[derive(Debug, Error, Eq, PartialEq)]
 pub enum ValladoError {
@@ -27,27 +26,39 @@ pub enum ValladoError {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Vallado<O: Origin> {
-    pub origin: O,
-    pub max_iter: i32,
+pub struct Vallado<T: TimeLike, O: PointMass> {
+    initial_state: State<T, O, Icrf>,
+    max_iter: i32,
 }
 
-impl<O: Origin + Clone> CoordinateOrigin<O> for Vallado<O> {
+impl<T, O> CoordinateOrigin<O> for Vallado<T, O>
+where
+    T: TimeLike,
+    O: PointMass + Clone,
+{
     fn origin(&self) -> O {
-        self.origin.clone()
+        self.initial_state.origin()
     }
 }
 
-impl<O: Origin> CoordinateSystem<Icrf> for Vallado<O> {
+impl<T, O> CoordinateSystem<Icrf> for Vallado<T, O>
+where
+    T: TimeLike,
+    O: PointMass,
+{
     fn reference_frame(&self) -> Icrf {
         Icrf
     }
 }
 
-impl<O: Origin + PointMass> Vallado<O> {
-    pub fn new(origin: O) -> Self {
+impl<T, O> Vallado<T, O>
+where
+    T: TimeLike,
+    O: PointMass,
+{
+    pub fn new(initial_state: State<T, O, Icrf>) -> Self {
         Self {
-            origin,
+            initial_state,
             max_iter: 300,
         }
     }
@@ -58,26 +69,22 @@ impl<O: Origin + PointMass> Vallado<O> {
     }
 }
 
-impl<T, O> Propagator<T, O, Icrf> for Vallado<O>
+impl<T, O> Propagator<T, O, Icrf> for Vallado<T, O>
 where
     T: TimeLike + Clone,
-    O: Origin + PointMass + Clone,
+    O: PointMass + Clone,
 {
     type Error = ValladoError;
 
-    fn propagate(
-        &self,
-        initial_state: &State<T, O, Icrf>,
-        delta: TimeDelta,
-    ) -> Result<State<T, O, Icrf>, Self::Error> {
+    fn propagate(&self, time: T) -> Result<State<T, O, Icrf>, Self::Error> {
         let frame = self.reference_frame();
         let origin = self.origin();
         let mu = origin.gravitational_parameter();
-        let t0 = initial_state.time();
-        let dt = delta.to_decimal_seconds();
+        let t0 = self.initial_state.time();
+        let dt = (time.clone() - t0).to_decimal_seconds();
         let sqrt_mu = mu.sqrt();
-        let p0 = initial_state.position();
-        let v0 = initial_state.velocity();
+        let p0 = self.initial_state.position();
+        let v0 = self.initial_state.velocity();
         let dot_p0v0 = p0.dot(v0);
         let norm_p0 = p0.length();
         let alpha = -v0.dot(v0) / mu + 2.0 / norm_p0;
@@ -121,41 +128,28 @@ where
                 let p = f * p0 + g * v0;
                 let v = fdot * p0 + gdot * v0;
 
-                let t = t0 + delta;
-                return Ok(State::new(t, origin, frame, p, v));
+                return Ok(State::new(time, p, v, origin, frame));
             } else {
                 count += 1
             }
         }
         Err(ValladoError::NotConverged)
     }
-
-    fn propagate_all(
-        &self,
-        initial_state: &State<T, O, Icrf>,
-        deltas: impl IntoIterator<Item = TimeDelta>,
-    ) -> Result<Trajectory<T, O, Icrf>, Self::Error> {
-        let mut states = vec![];
-        for delta in deltas {
-            let state = self.propagate(initial_state, delta)?;
-            states.push(state);
-        }
-        Ok(Trajectory::new(&states)?)
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use float_eq::assert_float_eq;
-    use lox_bodies::Earth;
 
-    use crate::elements::{Keplerian, ToKeplerian};
+    use lox_bodies::Earth;
+    use lox_time::deltas::TimeDelta;
     use lox_time::transformations::ToTdb;
     use lox_time::utc;
     use lox_time::utc::Utc;
     use lox_utils::assert_close;
     use lox_utils::is_close::IsClose;
 
+    use crate::elements::{Keplerian, ToKeplerian};
     use crate::states::ToCartesian;
 
     use super::*;
@@ -182,11 +176,11 @@ mod tests {
             true_anomaly,
         );
         let s0 = k0.to_cartesian();
-        let dt = k0.orbital_period();
+        let t1 = time + k0.orbital_period();
 
-        let propagator = Vallado::new(Earth);
+        let propagator = Vallado::new(s0.clone());
         let s1 = propagator
-            .propagate(&s0, dt)
+            .propagate(t1)
             .expect("propagator should converge");
 
         let k1 = s1.to_keplerian();
@@ -200,7 +194,7 @@ mod tests {
         );
         assert_float_eq!(k1.argument_of_periapsis(), periapsis_arg, rel <= 1e-8);
         assert_float_eq!(k1.true_anomaly(), true_anomaly, rel <= 1e-8);
-        assert_close!(k1.time(), time + dt);
+        assert_close!(k1.time(), t1);
     }
 
     #[test]
@@ -227,8 +221,8 @@ mod tests {
         let s0 = k0.to_cartesian();
         let period = k0.orbital_period();
         let t_end = period.to_decimal_seconds().ceil() as i64;
-        let steps = TimeDelta::range(0..=t_end);
-        let trajectory = Vallado::new(Earth).propagate_all(&s0, steps).unwrap();
+        let steps = TimeDelta::range(0..=t_end).map(|dt| time + dt);
+        let trajectory = Vallado::new(s0.clone()).propagate_all(steps).unwrap();
         let s1 = trajectory.interpolate(period);
         let k1 = s1.to_keplerian();
 

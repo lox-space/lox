@@ -1,6 +1,6 @@
-use lox_time::deltas::TimeDelta;
 use lox_time::TimeLike;
 
+use crate::trajectories::TrajectoryError;
 use crate::{frames::ReferenceFrame, origins::Origin, states::State, trajectories::Trajectory};
 
 pub mod semi_analytical;
@@ -12,17 +12,19 @@ where
     O: Origin + Clone,
     R: ReferenceFrame + Clone,
 {
-    type Error;
+    type Error: From<TrajectoryError>;
 
-    fn propagate(
-        &self,
-        initial_state: &State<T, O, R>,
-        delta: TimeDelta,
-    ) -> Result<State<T, O, R>, Self::Error>;
+    fn propagate(&self, time: T) -> Result<State<T, O, R>, Self::Error>;
 
     fn propagate_all(
         &self,
-        initial_state: &State<T, O, R>,
-        deltas: impl IntoIterator<Item = TimeDelta>,
-    ) -> Result<Trajectory<T, O, R>, Self::Error>;
+        times: impl IntoIterator<Item = T>,
+    ) -> Result<Trajectory<T, O, R>, Self::Error> {
+        let mut states = vec![];
+        for time in times {
+            let state = self.propagate(time)?;
+            states.push(state);
+        }
+        Ok(Trajectory::new(&states)?)
+    }
 }

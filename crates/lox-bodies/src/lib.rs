@@ -262,6 +262,10 @@ pub trait Ellipsoid: Body {
 
 pub trait Spheroid: Ellipsoid {
     fn equatorial_radius(&self) -> f64;
+
+    fn flattening(&self) -> f64 {
+        (self.equatorial_radius() - self.polar_radius()) / self.equatorial_radius()
+    }
 }
 
 pub trait TriAxial: Ellipsoid {
