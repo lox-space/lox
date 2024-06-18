@@ -40,4 +40,5 @@ rstest = "0.21.0"
 serde = { version = "1.0.199", features = ["derive"] }
 serde-aux = "4.5.0"
 serde_json = "1.0.113"
+sgp4 = "2.2.0"
 thiserror = "1.0"

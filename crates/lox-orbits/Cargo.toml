@@ -18,6 +18,7 @@ itertools.workspace = true
 libm.workspace = true
 numpy = { workspace = true, optional = true }
 pyo3 = { workspace = true, optional = true }
+sgp4.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
