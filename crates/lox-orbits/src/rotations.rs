@@ -34,7 +34,15 @@ impl Rotation {
         Self { m, dm }
     }
 
-    pub fn apply(&self, pos: DVec3, vel: DVec3) -> (DVec3, DVec3) {
-        (self.m * pos, self.dm * pos + self.m * vel)
+    pub fn rotate_position(&self, pos: DVec3) -> DVec3 {
+        self.m * pos
+    }
+
+    pub fn rotate_velocity(&self, pos: DVec3, vel: DVec3) -> DVec3 {
+        self.dm * pos + self.m * vel
+    }
+
+    pub fn rotate_state(&self, pos: DVec3, vel: DVec3) -> (DVec3, DVec3) {
+        (self.rotate_position(pos), self.rotate_velocity(pos, vel))
     }
 }

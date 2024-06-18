@@ -6,6 +6,8 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use glam::DVec3;
+
 pub trait IsClose {
     const DEFAULT_RELATIVE: f64;
     const DEFAULT_ABSOLUTE: f64;
@@ -32,6 +34,17 @@ impl IsClose for f64 {
 
     fn is_close_with_tolerances(&self, rhs: &Self, rel_tol: f64, abs_tol: f64) -> bool {
         (self - rhs).abs() <= f64::max(rel_tol * f64::max(self.abs(), rhs.abs()), abs_tol)
+    }
+}
+
+impl IsClose for DVec3 {
+    const DEFAULT_RELATIVE: f64 = 1e-8;
+    const DEFAULT_ABSOLUTE: f64 = 0.0;
+
+    fn is_close_with_tolerances(&self, rhs: &Self, rel_tol: f64, abs_tol: f64) -> bool {
+        self.x.is_close_with_tolerances(&rhs.x, rel_tol, abs_tol)
+            && self.y.is_close_with_tolerances(&rhs.y, rel_tol, abs_tol)
+            && self.z.is_close_with_tolerances(&rhs.z, rel_tol, abs_tol)
     }
 }
 

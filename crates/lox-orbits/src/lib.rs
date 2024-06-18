@@ -8,8 +8,10 @@
 
 pub use glam::DVec3;
 
+pub mod analysis;
 pub mod anomalies;
 pub mod elements;
+pub mod ensembles;
 pub mod events;
 pub mod frames;
 pub mod ground;
