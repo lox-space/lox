@@ -30,7 +30,7 @@ use python::PyBody;
 
 use crate::elements::{Keplerian, ToKeplerian};
 use crate::events::{Event, Window};
-use crate::frames::{CoordinateSystem, Icrf};
+use crate::frames::{CoordinateSystem, Icrf, ReferenceFrame};
 use crate::ground::{GroundLocation, GroundPropagator, GroundPropagatorError};
 use crate::origins::CoordinateOrigin;
 use crate::propagators::semi_analytical::{Vallado, ValladoError};
@@ -236,6 +236,14 @@ impl PyFrame {
     #[new]
     fn new(name: &str) -> PyResult<Self> {
         name.parse()
+    }
+
+    fn name(&self) -> String {
+        ReferenceFrame::name(self)
+    }
+
+    fn abbreviation(&self) -> String {
+        ReferenceFrame::abbreviation(self)
     }
 }
 
