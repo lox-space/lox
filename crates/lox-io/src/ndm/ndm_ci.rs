@@ -191,7 +191,8 @@ pub enum NdmChildChoice {
     Opm(opm::OpmType),
 }
 
-/// Combined instantiation type. Currently does not support AEM, APM, CDM, RDM, TDM
+/// Combined instantiation type. Currently does not support AEM, APM, CDM,
+/// RDM, TDM
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 pub struct NdmType {
