@@ -82,9 +82,9 @@
 //! # </ocm>"#;
 //! #
 //! # use lox_io::ndm::ocm::OcmType;
-//! # use std::str::FromStr;
-//! #
-//! let message = OcmType::from_str(xml).unwrap();
+//! use lox_io::ndm::xml::FromXmlStr;
+//!
+//! let message = OcmType::from_xml_str(xml).unwrap();
 //! ```
 
 use serde;
@@ -112,13 +112,7 @@ pub struct OcmType {
     pub version: String,
 }
 
-impl std::str::FromStr for OcmType {
-    type Err = super::xml::XmlDeserializationError;
-
-    fn from_str(xml: &str) -> Result<Self, Self::Err> {
-        Ok(quick_xml::de::from_str(xml)?)
-    }
-}
+impl crate::ndm::xml::FromXmlStr<'_> for OcmType {}
 
 #[derive(
     Clone,
@@ -724,7 +718,7 @@ pub struct OcmOdParametersType {
 
 #[cfg(test)]
 mod test {
-    use std::str::FromStr;
+    use crate::ndm::xml::FromXmlStr;
 
     use super::*;
 
@@ -799,7 +793,7 @@ mod test {
   </body>
 </ocm>"#;
 
-        let message = OcmType::from_str(xml).unwrap();
+        let message = OcmType::from_xml_str(xml).unwrap();
 
         assert_eq!(message, OcmType {
             header: common::OdmHeader {
