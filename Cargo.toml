@@ -35,4 +35,5 @@ pyo3 = "0.21.1"
 regex = "1.10.4"
 rstest = "0.21.0"
 serde = { version = "1.0.199", features = ["derive"] }
+sgp4 = "2.2.0"
 thiserror = "1.0"

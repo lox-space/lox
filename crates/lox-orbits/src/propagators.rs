@@ -4,6 +4,7 @@ use crate::trajectories::TrajectoryError;
 use crate::{frames::ReferenceFrame, origins::Origin, states::State, trajectories::Trajectory};
 
 pub mod semi_analytical;
+pub mod sgp4;
 mod stumpff;
 
 pub trait Propagator<T, O, R>

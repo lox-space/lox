@@ -16,12 +16,16 @@ use pyo3::{
     types::{PyAnyMethods, PyList},
     Bound, PyAny, PyErr, PyObject, PyResult, Python, ToPyObject,
 };
+use sgp4::Elements;
 
 use lox_bodies::python::PyPlanet;
 use lox_bodies::*;
 use lox_time::python::deltas::PyTimeDelta;
+use lox_time::python::time_scales::PyTimeScale;
 use lox_time::python::ut1::{PyNoOpOffsetProvider, PyUt1Provider};
-use lox_time::{python::time::PyTime, ut1::DeltaUt1Tai};
+use lox_time::time_scales::Tai;
+use lox_time::transformations::TryToScale;
+use lox_time::{python::time::PyTime, ut1::DeltaUt1Tai, Time};
 use python::PyBody;
 
 use crate::elements::{Keplerian, ToKeplerian};
@@ -30,6 +34,7 @@ use crate::frames::{CoordinateSystem, Icrf};
 use crate::ground::{GroundLocation, GroundPropagator, GroundPropagatorError};
 use crate::origins::CoordinateOrigin;
 use crate::propagators::semi_analytical::{Vallado, ValladoError};
+use crate::propagators::sgp4::{Sgp4, Sgp4Error};
 use crate::propagators::Propagator;
 use crate::states::ToCartesian;
 use crate::{
@@ -591,6 +596,102 @@ impl PyGround {
                 ),
             )?
             .into_any());
+        }
+        Err(PyValueError::new_err("invalid time delta(s)"))
+    }
+}
+
+impl From<Sgp4Error> for PyErr {
+    fn from(err: Sgp4Error) -> Self {
+        PyValueError::new_err(err.to_string())
+    }
+}
+
+#[pyclass(name = "SGP4", module = "lox_space", frozen)]
+pub struct PySgp4(pub Sgp4);
+
+#[pymethods]
+impl PySgp4 {
+    #[new]
+    fn new(tle: &str) -> PyResult<Self> {
+        let lines: Vec<&str> = tle.trim().split('\n').collect();
+        let elements = if lines.len() == 3 {
+            Elements::from_tle(
+                Some(lines[0].to_string()),
+                lines[1].as_bytes(),
+                lines[2].as_bytes(),
+            )
+            .map_err(|err| PyValueError::new_err(err.to_string()))?
+        } else if lines.len() == 2 {
+            Elements::from_tle(None, lines[0].as_bytes(), lines[1].as_bytes())
+                .map_err(|err| PyValueError::new_err(err.to_string()))?
+        } else {
+            return Err(PyValueError::new_err("invalid TLE"));
+        };
+        Ok(PySgp4(
+            Sgp4::new(elements).map_err(|err| PyValueError::new_err(err.to_string()))?,
+        ))
+    }
+
+    fn time(&self) -> PyTime {
+        PyTime(self.0.time().with_scale(PyTimeScale::Tai))
+    }
+
+    fn propagate<'py>(
+        &self,
+        py: Python<'py>,
+        steps: &Bound<'py, PyAny>,
+        provider: Option<&Bound<'_, PyUt1Provider>>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        if let Ok(pytime) = steps.extract::<PyTime>() {
+            let time = match provider {
+                None => pytime.try_to_scale(Tai, &PyNoOpOffsetProvider)?,
+                Some(provider) => pytime.try_to_scale(Tai, provider.get())?,
+            };
+            let s1 = self.0.propagate(time)?;
+            return Ok(Bound::new(
+                py,
+                PyState(State::new(
+                    pytime,
+                    s1.position(),
+                    s1.velocity(),
+                    PyBody::Planet(PyPlanet::new("Earth").unwrap()),
+                    PyFrame::Icrf,
+                )),
+            )?
+            .into_any());
+        }
+        if let Ok(pysteps) = steps.extract::<Vec<PyTime>>() {
+            let mut steps: Vec<Time<Tai>> = Vec::with_capacity(pysteps.len());
+            for step in pysteps {
+                let time = match provider {
+                    None => step.try_to_scale(Tai, &PyNoOpOffsetProvider)?,
+                    Some(provider) => step.try_to_scale(Tai, provider.get())?,
+                };
+                steps.push(time);
+            }
+            let trajectory = self
+                .0
+                .propagate_all(steps)?
+                .with_frame(PyFrame::Icrf)
+                .with_origin_and_frame(
+                    PyBody::Planet(PyPlanet::new("Earth").unwrap()),
+                    PyFrame::Icrf,
+                );
+            let states: Vec<State<PyTime, PyBody, PyFrame>> = trajectory
+                .states()
+                .iter()
+                .map(|s| {
+                    State::new(
+                        PyTime(s.time().with_scale(PyTimeScale::Tai)),
+                        s.position(),
+                        s.velocity(),
+                        s.origin(),
+                        s.reference_frame(),
+                    )
+                })
+                .collect();
+            return Ok(Bound::new(py, PyTrajectory(Trajectory::new(&states)?))?.into_any());
         }
         Err(PyValueError::new_err("invalid time delta(s)"))
     }
