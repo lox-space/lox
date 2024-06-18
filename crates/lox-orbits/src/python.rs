@@ -415,6 +415,10 @@ impl PyTrajectory {
         Ok(PyTrajectory(Trajectory::new(&states)?))
     }
 
+    fn states(&self) -> Vec<PyState> {
+        self.0.states().into_iter().map(PyState).collect()
+    }
+
     fn find_events(&self, py: Python<'_>, func: &Bound<'_, PyAny>) -> PyResult<Vec<PyEvent>> {
         Ok(self
             .0
