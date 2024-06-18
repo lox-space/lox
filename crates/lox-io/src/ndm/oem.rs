@@ -67,8 +67,9 @@
 //! # </oem>"#;
 //! #
 //! # use lox_io::ndm::oem::OemType;
+//! # use std::str::FromStr;
 //! #
-//! let message: OemType = quick_xml::de::from_str(xml).unwrap();
+//! let message = OemType::from_str(xml).unwrap();
 //! ```
 
 use serde;
@@ -86,6 +87,14 @@ pub struct OemType {
     pub id: String,
     #[serde(rename = "@version")]
     pub version: String,
+}
+
+impl std::str::FromStr for OemType {
+    type Err = super::xml::XmlDeserializationError;
+
+    fn from_str(xml: &str) -> Result<Self, Self::Err> {
+        Ok(quick_xml::de::from_str(xml)?)
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -148,9 +157,9 @@ pub struct OemData {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::str::FromStr;
 
-    use quick_xml::de::from_str;
+    use super::*;
 
     #[test]
     fn test_parse_oem_message1() {
@@ -209,7 +218,7 @@ mod test {
     </body>
 </oem>"#;
 
-        let message: OemType = from_str(xml).unwrap();
+        let message = OemType::from_str(xml).unwrap();
 
         assert_eq!(
             message,
@@ -452,7 +461,7 @@ mod test {
     </body>
 </oem>"#;
 
-        let message: OemType = from_str(xml).unwrap();
+        let message = OemType::from_str(xml).unwrap();
 
         assert_eq!(
             message,

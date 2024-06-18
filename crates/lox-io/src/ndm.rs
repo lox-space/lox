@@ -35,6 +35,7 @@
 
 pub mod json;
 pub mod kvn;
+pub mod xml;
 
 pub mod common;
 pub mod ndm_ci;

@@ -11,7 +11,6 @@
 //! To deserialize an XML message:
 //!
 //! ```
-//! # use lox_io::ndm::ocm::OcmType;
 //! #
 //! # let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
 //! # <ocm  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -82,7 +81,10 @@
 //! # </body>
 //! # </ocm>"#;
 //! #
-//! let message: OcmType = quick_xml::de::from_str(xml).unwrap();
+//! # use lox_io::ndm::ocm::OcmType;
+//! # use std::str::FromStr;
+//! #
+//! let message = OcmType::from_str(xml).unwrap();
 //! ```
 
 use serde;
@@ -108,6 +110,14 @@ pub struct OcmType {
     pub id: String,
     #[serde(rename = "@version")]
     pub version: String,
+}
+
+impl std::str::FromStr for OcmType {
+    type Err = super::xml::XmlDeserializationError;
+
+    fn from_str(xml: &str) -> Result<Self, Self::Err> {
+        Ok(quick_xml::de::from_str(xml)?)
+    }
 }
 
 #[derive(
@@ -714,9 +724,9 @@ pub struct OcmOdParametersType {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::str::FromStr;
 
-    use quick_xml::de::from_str;
+    use super::*;
 
     #[test]
     fn test_parse_ocm_message() {
@@ -789,7 +799,7 @@ mod test {
   </body>
 </ocm>"#;
 
-        let message: OcmType = from_str(xml).unwrap();
+        let message = OcmType::from_str(xml).unwrap();
 
         assert_eq!(message, OcmType {
             header: common::OdmHeader {

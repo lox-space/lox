@@ -108,6 +108,7 @@
 //! # </opm>"#;
 //! #
 //! # use lox_io::ndm::opm::OpmType;
+//! # use std::str::FromStr;
 //! #
 //! let message: OpmType = quick_xml::de::from_str(xml).unwrap();
 //! ```
@@ -196,6 +197,14 @@ pub struct OpmType {
     pub header: common::OdmHeader,
     #[serde(rename = "body")]
     pub body: OpmBody,
+}
+
+impl std::str::FromStr for OpmType {
+    type Err = super::xml::XmlDeserializationError;
+
+    fn from_str(xml: &str) -> Result<Self, Self::Err> {
+        Ok(quick_xml::de::from_str(xml)?)
+    }
 }
 
 #[derive(
@@ -346,9 +355,9 @@ pub struct ManeuverParametersType {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::str::FromStr;
 
-    use quick_xml::de::from_str;
+    use super::*;
 
     #[test]
     fn test_parse_opm_message_xml() {
@@ -448,7 +457,7 @@ mod test {
     </body>
 </opm>"#;
 
-        let message: OpmType = from_str(xml).unwrap();
+        let message = OpmType::from_str(xml).unwrap();
 
         assert_eq!(
             message,
@@ -734,7 +743,7 @@ mod test {
     </body>
 </opm>"#;
 
-        let message: Result<OpmType, _> = from_str(xml);
+        let message: Result<OpmType, _> = OpmType::from_str(xml);
 
         assert!(message.is_err());
     }

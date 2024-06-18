@@ -166,8 +166,9 @@
 //! # </ndm>"#;
 //! #
 //! # use lox_io::ndm::ndm_ci::NdmType;
+//! # use std::str::FromStr;
 //! #
-//! let message: NdmType = quick_xml::de::from_str(xml).unwrap();
+//! let message = NdmType::from_str(xml).unwrap();
 //! ```
 
 use serde;
@@ -205,12 +206,20 @@ pub struct NdmType {
     pub child_list: Vec<NdmChildChoice>,
 }
 
+impl std::str::FromStr for NdmType {
+    type Err = super::xml::XmlDeserializationError;
+
+    fn from_str(xml: &str) -> Result<Self, Self::Err> {
+        Ok(quick_xml::de::from_str(xml)?)
+    }
+}
+
 #[cfg(test)]
 mod test {
+    use std::str::FromStr;
+
     use super::super::common;
     use super::*;
-
-    use quick_xml::de::from_str;
 
     #[test]
     fn test_parse_combined_ndm() {
@@ -540,7 +549,7 @@ mod test {
 
 </ndm>"#;
 
-        let message: NdmType = from_str(xml).unwrap();
+        let message = NdmType::from_str(xml).unwrap();
 
         assert_eq!(
             message,

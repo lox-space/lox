@@ -58,8 +58,9 @@
 //! # </omm>"#;
 //! #
 //! # use lox_io::ndm::omm::OmmType;
+//! # use std::str::FromStr;
 //! #
-//! let message: OmmType = quick_xml::de::from_str(xml).unwrap();
+//! let message = OmmType::from_str(xml).unwrap();
 //! ```
 //!
 //! To deserialize a KVN message:
@@ -241,6 +242,14 @@ pub struct OmmType {
     pub header: common::OdmHeader,
     #[serde(rename = "body")]
     pub body: OmmBody,
+}
+
+impl std::str::FromStr for OmmType {
+    type Err = super::xml::XmlDeserializationError;
+
+    fn from_str(xml: &str) -> Result<Self, Self::Err> {
+        Ok(quick_xml::de::from_str(xml)?)
+    }
 }
 
 #[derive(
@@ -501,9 +510,9 @@ pub struct DdRevType {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::str::FromStr;
 
-    use quick_xml::de::from_str;
+    use super::*;
 
     #[test]
     fn test_parse_omm_message_xml_1() {
@@ -564,7 +573,7 @@ mod test {
     </body>
 </omm>"#;
 
-        let message: OmmType = from_str(xml).unwrap();
+        let message = OmmType::from_str(xml).unwrap();
 
         assert_eq!(message,
             OmmType {
@@ -774,7 +783,7 @@ mod test {
     </body>
 </omm>"#;
 
-        let message: OmmType = from_str(xml).unwrap();
+        let message = OmmType::from_str(xml).unwrap();
 
         assert_eq!(
             message,
@@ -934,7 +943,7 @@ mod test {
     </body>
 </omm>"#;
 
-        let message: OmmType = from_str(xml).unwrap();
+        let message = OmmType::from_str(xml).unwrap();
 
         assert_eq!(
             message,
@@ -1186,7 +1195,7 @@ mod test {
     </body>
 </omm>"#;
 
-        let message: OmmType = from_str(xml).unwrap();
+        let message = OmmType::from_str(xml).unwrap();
 
         assert_eq!(
             message,
@@ -1411,7 +1420,7 @@ mod test {
     </body>
 </omm>"#;
 
-        let message: OmmType = from_str(xml).unwrap();
+        let message = OmmType::from_str(xml).unwrap();
 
         assert_eq!(
             message,
@@ -1538,7 +1547,7 @@ mod test {
     </body>
 </omm>"#;
 
-        let message: Result<OmmType, _> = from_str(xml);
+        let message = OmmType::from_str(xml);
 
         assert!(message.is_err());
     }
