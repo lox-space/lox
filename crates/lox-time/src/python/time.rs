@@ -115,6 +115,14 @@ impl PyTime {
         Ok(PyTime(time))
     }
 
+    pub fn seconds(&self) -> i64 {
+        self.0.seconds()
+    }
+
+    pub fn subsecond(&self) -> f64 {
+        self.0.subsecond()
+    }
+
     #[classattr]
     const __hash__: Option<PyObject> = None;
 
