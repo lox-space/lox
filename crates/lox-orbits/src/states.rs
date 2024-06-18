@@ -163,7 +163,7 @@ where
             .try_to_scale(Tdb, provider)?
             .seconds_since_j2000();
         let rot = frame.rotation(seconds);
-        let (pos, vel) = rot.apply(self.position, self.velocity);
+        let (pos, vel) = rot.rotate_state(self.position, self.velocity);
         Ok(State::new(self.time(), pos, vel, self.origin(), frame))
     }
 }
@@ -184,7 +184,7 @@ where
             .try_to_scale(Tdb, provider)?
             .seconds_since_j2000();
         let rot = self.frame.rotation(seconds).transpose();
-        let (pos, vel) = rot.apply(self.position, self.velocity);
+        let (pos, vel) = rot.rotate_state(self.position, self.velocity);
         Ok(State::new(self.time(), pos, vel, self.origin(), frame))
     }
 }
