@@ -95,6 +95,28 @@ where
         Trajectory::new(&states).unwrap()
     }
 
+    pub fn with_origin<O1: Origin + Clone>(&self, origin: O1) -> Trajectory<T, O1, R> {
+        let states: Vec<State<T, O1, R>> = self
+            .states
+            .iter()
+            .map(|s| s.with_origin(origin.clone()))
+            .collect();
+        Trajectory::new(&states).unwrap()
+    }
+
+    pub fn with_origin_and_frame<O1: Origin + Clone, R1: ReferenceFrame + Clone>(
+        &self,
+        origin: O1,
+        frame: R1,
+    ) -> Trajectory<T, O1, R1> {
+        let states: Vec<State<T, O1, R1>> = self
+            .states
+            .iter()
+            .map(|s| s.with_origin_and_frame(origin.clone(), frame.clone()))
+            .collect();
+        Trajectory::new(&states).unwrap()
+    }
+
     pub fn start_time(&self) -> T {
         self.states[0].time()
     }
@@ -129,10 +151,10 @@ where
         let t = dt.to_decimal_seconds();
         State::new(
             self.start_time() + dt,
-            self.origin(),
-            self.reference_frame(),
             self.position(t),
             self.velocity(t),
+            self.origin(),
+            self.reference_frame(),
         )
     }
 
@@ -146,10 +168,10 @@ where
             |t| {
                 func(State::new(
                     self.start_time() + TimeDelta::from_decimal_seconds(t).unwrap(),
-                    self.origin(),
-                    self.reference_frame(),
                     self.position(t),
                     self.velocity(t),
+                    self.origin(),
+                    self.reference_frame(),
                 ))
             },
             self.start_time(),
@@ -165,10 +187,10 @@ where
             |t| {
                 func(State::new(
                     self.start_time() + TimeDelta::from_decimal_seconds(t).unwrap(),
-                    self.origin(),
-                    self.reference_frame(),
                     self.position(t),
                     self.velocity(t),
+                    self.origin(),
+                    self.reference_frame(),
                 ))
             },
             self.start_time(),

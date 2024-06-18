@@ -19,7 +19,6 @@ use pyo3::{
 
 use lox_bodies::python::PyPlanet;
 use lox_bodies::*;
-use lox_time::deltas::TimeDelta;
 use lox_time::python::deltas::PyTimeDelta;
 use lox_time::python::ut1::{PyNoOpOffsetProvider, PyUt1Provider};
 use lox_time::{python::time::PyTime, ut1::DeltaUt1Tai};
@@ -28,6 +27,7 @@ use python::PyBody;
 use crate::elements::{Keplerian, ToKeplerian};
 use crate::events::{Event, Window};
 use crate::frames::{CoordinateSystem, Icrf};
+use crate::ground::{GroundLocation, GroundPropagator, GroundPropagatorError};
 use crate::origins::CoordinateOrigin;
 use crate::propagators::semi_analytical::{Vallado, ValladoError};
 use crate::propagators::Propagator;
@@ -263,10 +263,10 @@ impl PyState {
 
         Ok(PyState(State::new(
             time,
-            origin,
-            frame,
             DVec3::new(position.0, position.1, position.2),
             DVec3::new(velocity.0, velocity.1, velocity.2),
+            origin,
+            frame,
         )))
     }
 
@@ -338,6 +338,14 @@ impl PyKeplerian {
             argument_of_periapsis,
             true_anomaly,
         )))
+    }
+
+    fn time(&self) -> PyTime {
+        self.0.time()
+    }
+
+    fn origin(&self) -> PyObject {
+        self.0.origin().into()
     }
 
     fn semi_major_axis(&self) -> f64 {
@@ -480,7 +488,7 @@ impl PyWindow {
 }
 
 #[pyclass(name = "Vallado", module = "lox_space", frozen)]
-pub struct PyVallado(pub Vallado<PyBody>);
+pub struct PyVallado(pub Vallado<PyTime, PyBody>);
 
 impl From<ValladoError> for PyErr {
     fn from(err: ValladoError) -> Self {
@@ -492,9 +500,13 @@ impl From<ValladoError> for PyErr {
 #[pymethods]
 impl PyVallado {
     #[new]
-    fn new(origin: Option<&Bound<'_, PyAny>>, max_iter: Option<i32>) -> PyResult<Self> {
-        let origin = PyBody::try_from(origin)?;
-        let mut vallado = Vallado::new(origin);
+    fn new(initial_state: PyState, max_iter: Option<i32>) -> PyResult<Self> {
+        if initial_state.0.reference_frame() != PyFrame::Icrf {
+            return Err(PyValueError::new_err(
+                "only inertial frames are supported for the Vallado propagator",
+            ));
+        }
+        let mut vallado = Vallado::new(initial_state.0.with_frame(Icrf));
         if let Some(max_iter) = max_iter {
             vallado.with_max_iter(max_iter);
         }
@@ -504,33 +516,78 @@ impl PyVallado {
     fn propagate<'py>(
         &self,
         py: Python<'py>,
-        initial_state: &PyState,
         steps: &Bound<'py, PyAny>,
     ) -> PyResult<Bound<'py, PyAny>> {
-        if initial_state.0.reference_frame() != PyFrame::Icrf {
-            return Err(PyValueError::new_err(
-                "only inertial frames are supported for the Vallado propagator",
-            ));
+        if let Ok(time) = steps.extract::<PyTime>() {
+            return Ok(Bound::new(
+                py,
+                PyState(self.0.propagate(time)?.with_frame(PyFrame::Icrf)),
+            )?
+            .into_any());
         }
-        if let Ok(delta) = steps.extract::<PyTimeDelta>() {
+        if let Ok(steps) = steps.extract::<Vec<PyTime>>() {
+            return Ok(Bound::new(
+                py,
+                PyTrajectory(self.0.propagate_all(steps)?.with_frame(PyFrame::Icrf)),
+            )?
+            .into_any());
+        }
+        Err(PyValueError::new_err("invalid time delta(s)"))
+    }
+}
+
+#[pyclass(name = "GroundLocation", module = "lox_space", frozen)]
+#[derive(Clone)]
+pub struct PyGroundLocation(pub GroundLocation<PyPlanet>);
+
+#[pymethods]
+impl PyGroundLocation {
+    #[new]
+    fn new(planet: PyPlanet, latitude: f64, longitude: f64, altitude: f64) -> Self {
+        PyGroundLocation(GroundLocation::new(latitude, longitude, altitude, planet))
+    }
+}
+
+#[pyclass(name = "Ground", module = "lox_space", frozen)]
+pub struct PyGround(GroundPropagator<PyPlanet, PyUt1Provider>);
+
+impl From<GroundPropagatorError> for PyErr {
+    fn from(err: GroundPropagatorError) -> Self {
+        PyValueError::new_err(err.to_string())
+    }
+}
+
+#[pymethods]
+impl PyGround {
+    #[new]
+    fn new(location: PyGroundLocation, provider: PyUt1Provider) -> Self {
+        PyGround(GroundPropagator::new(location.0, provider))
+    }
+
+    fn propagate<'py>(
+        &self,
+        py: Python<'py>,
+        steps: &Bound<'py, PyAny>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        if let Ok(time) = steps.extract::<PyTime>() {
             return Ok(Bound::new(
                 py,
                 PyState(
                     self.0
-                        .propagate(&initial_state.0.with_frame(Icrf), delta.0)?
-                        .with_frame(PyFrame::Icrf),
+                        .propagate(time)?
+                        .with_origin_and_frame(PyBody::Planet(self.0.origin()), PyFrame::Icrf),
                 ),
             )?
             .into_any());
         }
-        if let Ok(steps) = steps.extract::<Vec<PyTimeDelta>>() {
-            let steps: Vec<TimeDelta> = steps.into_iter().map(|d| d.0).collect();
+        if let Ok(steps) = steps.extract::<Vec<PyTime>>() {
             return Ok(Bound::new(
                 py,
                 PyTrajectory(
                     self.0
-                        .propagate_all(&initial_state.0.with_frame(Icrf), steps)?
-                        .with_frame(PyFrame::Icrf),
+                        .propagate_all(steps)?
+                        .with_frame(PyFrame::Icrf)
+                        .with_origin_and_frame(PyBody::Planet(self.0.origin()), PyFrame::Icrf),
                 ),
             )?
             .into_any());

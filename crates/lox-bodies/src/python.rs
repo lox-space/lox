@@ -15,10 +15,11 @@ use crate::{
     Despina, Dione, Earth, EarthBarycenter, Ellipsoid, Enceladus, Epimetheus, Eros, Europa,
     Galatea, Ganymede, Helene, Himalia, Hyperion, Iapetus, Io, Janus, Jupiter, JupiterBarycenter,
     Larissa, Mars, MarsBarycenter, Mercury, MercuryBarycenter, Metis, Mimas, MinorBody, Miranda,
-    Moon, Naiad, NaifId, Neptune, NeptuneBarycenter, Oberon, Pandora, Phobos, Phoebe, Planet,
-    Pluto, PlutoBarycenter, PointMass, Prometheus, Proteus, Psyche, Rhea, Satellite, Saturn,
-    SaturnBarycenter, SolarSystemBarycenter, Spheroid, Sun, Tethys, Thalassa, Thebe, Titan,
-    Titania, Triton, Umbriel, Uranus, UranusBarycenter, Venus, VenusBarycenter, Vesta,
+    Moon, Naiad, NaifId, Neptune, NeptuneBarycenter, NutationPrecessionCoefficients, Oberon,
+    Pandora, Phobos, Phoebe, Planet, Pluto, PlutoBarycenter, PointMass, PolynomialCoefficients,
+    Prometheus, Proteus, Psyche, Rhea, RotationalElements, Satellite, Saturn, SaturnBarycenter,
+    SolarSystemBarycenter, Spheroid, Sun, Tethys, Thalassa, Thebe, Titan, Titania, Triton, Umbriel,
+    Uranus, UranusBarycenter, Venus, VenusBarycenter, Vesta,
 };
 
 #[pyclass(name = "Sun", module = "lox_space", frozen)]
@@ -201,6 +202,39 @@ impl PyPlanet {
     pub fn equatorial_radius(&self) -> f64 {
         self.0.equatorial_radius()
     }
+}
+
+impl Body for PyPlanet {
+    fn id(&self) -> NaifId {
+        self.0.id()
+    }
+
+    fn name(&self) -> &'static str {
+        self.0.name()
+    }
+}
+
+impl Ellipsoid for PyPlanet {
+    fn polar_radius(&self) -> f64 {
+        self.0.polar_radius()
+    }
+
+    fn mean_radius(&self) -> f64 {
+        self.0.mean_radius()
+    }
+}
+
+impl Spheroid for PyPlanet {
+    fn equatorial_radius(&self) -> f64 {
+        self.0.equatorial_radius()
+    }
+}
+
+impl RotationalElements for PyPlanet {
+    const NUTATION_PRECESSION_COEFFICIENTS: NutationPrecessionCoefficients = (&[], &[]);
+    const RIGHT_ASCENSION_COEFFICIENTS: PolynomialCoefficients = (0.0, 0.0, 0.0, &[]);
+    const DECLINATION_COEFFICIENTS: PolynomialCoefficients = (0.0, 0.0, 0.0, &[]);
+    const PRIME_MERIDIAN_COEFFICIENTS: PolynomialCoefficients = (0.0, 0.0, 0.0, &[]);
 }
 
 #[pyclass(name = "Satellite", module = "lox_space", frozen)]

@@ -27,10 +27,10 @@ def orbit():
 @pytest.fixture
 def trajectory(orbit):
     dt = orbit.orbital_period()
-    rng = lox.TimeDelta.range(0, math.ceil(dt))
+    rng = [orbit.time() + dt for dt in lox.TimeDelta.range(0, math.ceil(dt))]
     s0 = orbit.to_cartesian()
-    prop = lox.Vallado()
-    return prop.propagate(s0, rng)
+    prop = lox.Vallado(s0)
+    return prop.propagate(rng)
 
 
 def test_interpolation(orbit, trajectory):
