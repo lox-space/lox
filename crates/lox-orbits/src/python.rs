@@ -559,8 +559,8 @@ pub struct PyGroundLocation(pub GroundLocation<PyPlanet>);
 #[pymethods]
 impl PyGroundLocation {
     #[new]
-    fn new(planet: PyPlanet, latitude: f64, longitude: f64, altitude: f64) -> Self {
-        PyGroundLocation(GroundLocation::new(latitude, longitude, altitude, planet))
+    fn new(planet: PyPlanet, longitude: f64, latitude: f64, altitude: f64) -> Self {
+        PyGroundLocation(GroundLocation::new(longitude, latitude, altitude, planet))
     }
 }
 
