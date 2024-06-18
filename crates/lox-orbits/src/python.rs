@@ -237,6 +237,9 @@ impl PyFrame {
     fn new(name: &str) -> PyResult<Self> {
         name.parse()
     }
+    fn __getnewargs__(&self) -> (String,) {
+        (self.abbreviation(),)
+    }
 
     fn name(&self) -> String {
         ReferenceFrame::name(self)
