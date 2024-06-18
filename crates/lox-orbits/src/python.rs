@@ -30,7 +30,7 @@ use python::PyBody;
 
 use crate::elements::{Keplerian, ToKeplerian};
 use crate::events::{Event, Window};
-use crate::frames::{CoordinateSystem, Icrf};
+use crate::frames::{CoordinateSystem, Icrf, ReferenceFrame};
 use crate::ground::{GroundLocation, GroundPropagator, GroundPropagatorError};
 use crate::origins::CoordinateOrigin;
 use crate::propagators::semi_analytical::{Vallado, ValladoError};
@@ -237,6 +237,17 @@ impl PyFrame {
     fn new(name: &str) -> PyResult<Self> {
         name.parse()
     }
+    fn __getnewargs__(&self) -> (String,) {
+        (self.abbreviation(),)
+    }
+
+    fn name(&self) -> String {
+        ReferenceFrame::name(self)
+    }
+
+    fn abbreviation(&self) -> String {
+        ReferenceFrame::abbreviation(self)
+    }
 }
 
 impl FrameTransformationProvider for DeltaUt1Tai {}
@@ -404,6 +415,10 @@ impl PyTrajectory {
         Ok(PyTrajectory(Trajectory::new(&states)?))
     }
 
+    fn states(&self) -> Vec<PyState> {
+        self.0.states().into_iter().map(PyState).collect()
+    }
+
     fn find_events(&self, py: Python<'_>, func: &Bound<'_, PyAny>) -> PyResult<Vec<PyEvent>> {
         Ok(self
             .0
@@ -548,13 +563,13 @@ pub struct PyGroundLocation(pub GroundLocation<PyPlanet>);
 #[pymethods]
 impl PyGroundLocation {
     #[new]
-    fn new(planet: PyPlanet, latitude: f64, longitude: f64, altitude: f64) -> Self {
-        PyGroundLocation(GroundLocation::new(latitude, longitude, altitude, planet))
+    fn new(planet: PyPlanet, longitude: f64, latitude: f64, altitude: f64) -> Self {
+        PyGroundLocation(GroundLocation::new(longitude, latitude, altitude, planet))
     }
 }
 
-#[pyclass(name = "Ground", module = "lox_space", frozen)]
-pub struct PyGround(GroundPropagator<PyPlanet, PyUt1Provider>);
+#[pyclass(name = "GroundPropagator", module = "lox_space", frozen)]
+pub struct PyGroundPropagator(GroundPropagator<PyPlanet, PyUt1Provider>);
 
 impl From<GroundPropagatorError> for PyErr {
     fn from(err: GroundPropagatorError) -> Self {
@@ -563,10 +578,10 @@ impl From<GroundPropagatorError> for PyErr {
 }
 
 #[pymethods]
-impl PyGround {
+impl PyGroundPropagator {
     #[new]
     fn new(location: PyGroundLocation, provider: PyUt1Provider) -> Self {
-        PyGround(GroundPropagator::new(location.0, provider))
+        PyGroundPropagator(GroundPropagator::new(location.0, provider))
     }
 
     fn propagate<'py>(

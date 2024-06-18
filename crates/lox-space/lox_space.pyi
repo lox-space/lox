@@ -190,6 +190,7 @@ class UTC:
 class UT1Provider:
     def __new__(cls, path: str): ...
 
+type Origin = Sun | Barycenter | Planet | Satellite | MinorBody
 
 class Sun:
     def __new__(cls): ...
