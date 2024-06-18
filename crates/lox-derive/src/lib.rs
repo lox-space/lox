@@ -705,7 +705,6 @@ pub fn derive_kvn_deserialize(item: proc_macro::TokenStream) -> proc_macro::Toke
         {
             fn deserialize<'a>(lines: &mut ::std::iter::Peekable<impl Iterator<Item = &'a str>>)
             -> Result<#type_name, crate::ndm::kvn::KvnDeserializerErr<String>> {
-
                 #struct_deserializer
             }
 

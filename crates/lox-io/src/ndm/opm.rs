@@ -167,10 +167,10 @@
 //! # MAN_DV_2 = -0.00187300 [km/s]
 //! # MAN_DV_3 = 0.00000000 [km/s]"#;
 //! #
-//! # use lox_io::ndm::kvn::KvnDeserializer;
 //! # use lox_io::ndm::opm::OpmType;
-//! #
-//! let message: OpmType = KvnDeserializer::deserialize(&mut kvn.lines().peekable()).unwrap();
+//! use lox_io::ndm::kvn::KvnDeserializer;
+//!
+//! let message: OpmType = KvnDeserializer::from_kvn_str(&kvn).unwrap();
 //! ```
 
 use serde;
@@ -798,7 +798,7 @@ MAN_DV_2 = -0.00187300 [km/s]
 MAN_DV_3 = 0.00000000 [km/s]"#;
 
         assert_eq!(
-            crate::ndm::kvn::KvnDeserializer::deserialize(&mut kvn.lines().peekable()),
+            crate::ndm::kvn::KvnDeserializer::from_kvn_str(&kvn),
             Ok(OpmType {
                 header: common::OdmHeader {
                     comment_list: vec![

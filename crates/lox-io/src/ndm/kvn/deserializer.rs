@@ -15,6 +15,13 @@ pub trait KvnDeserializer {
     where
         Self: Sized;
 
+    fn from_kvn_str<'a>(kvn: &'a str) -> Result<Self, KvnDeserializerErr<String>>
+    where
+        Self: Sized,
+    {
+        Self::deserialize(&mut kvn.lines().peekable())
+    }
+
     fn should_check_key_match() -> bool;
 }
 

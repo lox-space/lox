@@ -116,10 +116,10 @@
 //! # CZ_DOT_Y_DOT = 1.008862586240695e-10
 //! # CZ_DOT_Z_DOT = 6.224444338635500e-10"#;
 //! #
-//! # use lox_io::ndm::kvn::KvnDeserializer;
 //! # use lox_io::ndm::omm::OmmType;
-//! #
-//! let message: OmmType = KvnDeserializer::deserialize(&mut kvn.lines().peekable()).unwrap();
+//! use lox_io::ndm::kvn::KvnDeserializer;
+//!
+//! let message: OmmType = KvnDeserializer::from_kvn_str(&kvn).unwrap();
 //! ```
 
 use serde;
@@ -1601,7 +1601,7 @@ mod test {
  CZ_DOT_Z_DOT = 6.224444338635500e-10"#;
 
         assert_eq!(
-            crate::ndm::kvn::KvnDeserializer::deserialize(&mut kvn.lines().peekable()),
+            crate::ndm::kvn::KvnDeserializer::from_kvn_str(&kvn),
             Ok(OmmType {
                 header: common::OdmHeader {
                     comment_list: vec![
