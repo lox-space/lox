@@ -564,8 +564,8 @@ impl PyGroundLocation {
     }
 }
 
-#[pyclass(name = "Ground", module = "lox_space", frozen)]
-pub struct PyGround(GroundPropagator<PyPlanet, PyUt1Provider>);
+#[pyclass(name = "GroundPropagator", module = "lox_space", frozen)]
+pub struct PyGroundPropagator(GroundPropagator<PyPlanet, PyUt1Provider>);
 
 impl From<GroundPropagatorError> for PyErr {
     fn from(err: GroundPropagatorError) -> Self {
@@ -574,10 +574,10 @@ impl From<GroundPropagatorError> for PyErr {
 }
 
 #[pymethods]
-impl PyGround {
+impl PyGroundPropagator {
     #[new]
     fn new(location: PyGroundLocation, provider: PyUt1Provider) -> Self {
-        PyGround(GroundPropagator::new(location.0, provider))
+        PyGroundPropagator(GroundPropagator::new(location.0, provider))
     }
 
     fn propagate<'py>(
