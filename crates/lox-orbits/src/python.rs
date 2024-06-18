@@ -245,7 +245,7 @@ impl FrameTransformationProvider for PyNoOpOffsetProvider {}
 
 impl FrameTransformationProvider for PyUt1Provider {}
 
-#[pyclass(name = "Cartesian", module = "lox_space", frozen)]
+#[pyclass(name = "State", module = "lox_space", frozen)]
 #[derive(Debug, Clone)]
 pub struct PyState(pub State<PyTime, PyBody, PyFrame>);
 
