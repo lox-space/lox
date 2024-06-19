@@ -37,6 +37,7 @@ pub fn elevation<
     let r = sc - gs;
     let Ok(tdb) = time.try_to_scale(Tdb, provider) else {
         // FIXME
+        eprintln!("Failed to convert time to TDB");
         return f64::NAN;
     };
     let seconds = tdb.seconds_since_j2000();

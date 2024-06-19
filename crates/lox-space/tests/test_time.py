@@ -1,13 +1,5 @@
 import lox_space as lox
-import pathlib
 import pytest
-
-DATA_DIR = pathlib.Path(__file__).parents[3].joinpath("data")
-
-
-@pytest.fixture
-def provider():
-    return lox.UT1Provider(str(DATA_DIR.joinpath("finals2000A.all.csv")))
 
 
 def test_time(provider):

@@ -231,10 +231,21 @@ impl Spheroid for PyPlanet {
 }
 
 impl RotationalElements for PyPlanet {
-    const NUTATION_PRECESSION_COEFFICIENTS: NutationPrecessionCoefficients = (&[], &[]);
-    const RIGHT_ASCENSION_COEFFICIENTS: PolynomialCoefficients = (0.0, 0.0, 0.0, &[]);
-    const DECLINATION_COEFFICIENTS: PolynomialCoefficients = (0.0, 0.0, 0.0, &[]);
-    const PRIME_MERIDIAN_COEFFICIENTS: PolynomialCoefficients = (0.0, 0.0, 0.0, &[]);
+    fn nutation_precession_coefficients(&self) -> NutationPrecessionCoefficients {
+        self.0.nutation_precession_coefficients()
+    }
+
+    fn right_ascension_coefficients(&self) -> PolynomialCoefficients {
+        self.0.right_ascension_coefficients()
+    }
+
+    fn declination_coefficients(&self) -> PolynomialCoefficients {
+        self.0.declination_coefficients()
+    }
+
+    fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
+        self.0.prime_meridian_coefficients()
+    }
 }
 
 #[pyclass(name = "Satellite", module = "lox_space", frozen)]

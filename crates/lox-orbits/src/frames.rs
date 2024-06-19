@@ -61,9 +61,9 @@ pub struct BodyFixed<T: RotationalElements>(pub T);
 
 impl<T: RotationalElements> BodyFixed<T> {
     pub fn rotation(&self, seconds: Seconds) -> Rotation {
-        let (right_ascension, declination, prime_meridian) = T::rotational_elements(seconds);
+        let (right_ascension, declination, prime_meridian) = self.0.rotational_elements(seconds);
         let (right_ascension_rate, declination_rate, prime_meridian_rate) =
-            T::rotational_element_rates(seconds);
+            self.0.rotational_element_rates(seconds);
         let m1 = DMat3::from_rotation_z(-right_ascension);
         let m2 = DMat3::from_rotation_x(-declination);
         let m3 = DMat3::from_rotation_z(-prime_meridian);
