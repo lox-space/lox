@@ -12,7 +12,7 @@ use glam::DVec3;
 use numpy::PyArray1;
 use pyo3::{
     exceptions::PyValueError,
-    pyclass, pymethods,
+    pyclass, pyfunction, pymethods,
     types::{PyAnyMethods, PyList},
     Bound, PyAny, PyErr, PyObject, PyResult, Python, ToPyObject,
 };
@@ -26,10 +26,11 @@ use lox_time::python::ut1::{PyNoOpOffsetProvider, PyUt1Provider};
 use lox_time::time_scales::Tai;
 use lox_time::transformations::TryToScale;
 use lox_time::{python::time::PyTime, ut1::DeltaUt1Tai, Time};
+use lox_utils::roots::Brent;
 use python::PyBody;
 
 use crate::elements::{Keplerian, ToKeplerian};
-use crate::events::{Event, Window};
+use crate::events::{Event, FindEventError, Window};
 use crate::frames::{CoordinateSystem, Icrf, ReferenceFrame};
 use crate::ground::{GroundLocation, GroundPropagator, GroundPropagatorError};
 use crate::origins::CoordinateOrigin;
@@ -44,6 +45,63 @@ use crate::{
 };
 
 mod generated;
+
+impl From<FindEventError> for PyErr {
+    fn from(err: FindEventError) -> Self {
+        // FIXME: wrong error type
+        PyValueError::new_err(err.to_string())
+    }
+}
+
+#[pyfunction]
+pub fn find_events(
+    py: Python<'_>,
+    func: &Bound<'_, PyAny>,
+    start: PyTime,
+    times: Vec<f64>,
+) -> PyResult<Vec<PyEvent>> {
+    let root_finder = Brent::default();
+    Ok(crate::events::find_events(
+        |t| {
+            func.call((t,), None)
+                .unwrap_or(f64::NAN.to_object(py).into_bound(py))
+                .extract()
+                .unwrap_or(f64::NAN)
+        },
+        start,
+        &times,
+        root_finder,
+    )?
+    .into_iter()
+    .map(PyEvent)
+    .collect())
+}
+
+#[pyfunction]
+pub fn find_windows(
+    py: Python<'_>,
+    func: &Bound<'_, PyAny>,
+    start: PyTime,
+    end: PyTime,
+    times: Vec<f64>,
+) -> PyResult<Vec<PyWindow>> {
+    let root_finder = Brent::default();
+    Ok(crate::events::find_windows(
+        |t| {
+            func.call((t,), None)
+                .unwrap_or(f64::NAN.to_object(py).into_bound(py))
+                .extract()
+                .unwrap_or(f64::NAN)
+        },
+        start,
+        end,
+        &times,
+        root_finder,
+    )
+    .into_iter()
+    .map(PyWindow)
+    .collect())
+}
 
 #[pyclass(name = "Frame", module = "lox_space", frozen)]
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
