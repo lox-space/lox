@@ -1,4 +1,5 @@
 use glam::DVec3;
+use std::error::Error;
 use std::sync::Arc;
 
 use crate::events::{find_events, find_windows, Event, Window};
