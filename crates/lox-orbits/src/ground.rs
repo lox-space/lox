@@ -129,3 +129,37 @@ where
         .map_err(|err| GroundPropagatorError::FrameTransformationError(err.to_string()))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::frames::NoOpFrameTransformationProvider;
+    use lox_bodies::Earth;
+    use lox_time::transformations::ToTai;
+    use lox_time::utc;
+    use lox_time::utc::Utc;
+    use lox_utils::assert_close;
+    use lox_utils::is_close::IsClose;
+
+    #[test]
+    fn test_ground_location_to_body_fixed() {
+        let longitude = -4.3676f64.to_radians();
+        let latitude = 40.4527f64.to_radians();
+        let location = GroundLocation::new(longitude, latitude, 0.0, Earth);
+        let expected = DVec3::new(4846.130017870638, -370.1328551351891, 4116.364272747229);
+        assert_close!(location.to_body_fixed(), expected);
+    }
+
+    #[test]
+    fn test_ground_propagator() {
+        let longitude = -4.3676f64.to_radians();
+        let latitude = 40.4527f64.to_radians();
+        let location = GroundLocation::new(longitude, latitude, 0.0, Earth);
+        let provider = NoOpFrameTransformationProvider;
+        let propagator = GroundPropagator::new(location, provider);
+        let time = utc!(2022, 1, 31, 23).unwrap().to_tai();
+        let expected = DVec3::new(-1765.9535510583582, 4524.585984442561, 4120.189198495323);
+        let state = propagator.propagate(time).unwrap();
+        assert_close!(state.position(), expected);
+    }
+}

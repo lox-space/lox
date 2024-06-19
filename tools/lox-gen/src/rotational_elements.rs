@@ -81,10 +81,18 @@ impl<'a> RotationalElements<'a> {
         quote! {
             #[allow(clippy::approx_constant)]
             impl RotationalElements for #ident {
-                const NUTATION_PRECESSION_COEFFICIENTS: NutationPrecessionCoefficients = #barycenter_nut_prec;
-                const RIGHT_ASCENSION_COEFFICIENTS: PolynomialCoefficients = #right_ascension;
-                const DECLINATION_COEFFICIENTS: PolynomialCoefficients = #declination;
-                const PRIME_MERIDIAN_COEFFICIENTS: PolynomialCoefficients = #prime_meridian;
+                fn nutation_precession_coefficients(&self) -> NutationPrecessionCoefficients {
+                    #barycenter_nut_prec
+                }
+                fn right_ascension_coefficients(&self) -> PolynomialCoefficients {
+                    #right_ascension
+                }
+                fn declination_coefficients(&self) -> PolynomialCoefficients {
+                    #declination
+                }
+                fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
+                    #prime_meridian
+                }
             }
         }
     }
@@ -120,22 +128,22 @@ impl<'a> RotationalElements<'a> {
         quote! {
             #[test]
             fn #barycenter_nut_prec_test_name() {
-                assert_eq!(#barycenter_nut_prec, #ident::NUTATION_PRECESSION_COEFFICIENTS)
+                assert_eq!(#barycenter_nut_prec, #ident.nutation_precession_coefficients())
             }
 
             #[test]
             fn #right_ascension_test_name() {
-                assert_eq!(#right_ascension, #ident::RIGHT_ASCENSION_COEFFICIENTS)
+                assert_eq!(#right_ascension, #ident.right_ascension_coefficients())
             }
 
             #[test]
             fn #declination_test_name() {
-                assert_eq!(#declination, #ident::DECLINATION_COEFFICIENTS)
+                assert_eq!(#declination, #ident.declination_coefficients())
             }
 
             #[test]
             fn #prime_meridian_test_name() {
-                assert_eq!(#prime_meridian, #ident::PRIME_MERIDIAN_COEFFICIENTS)
+                assert_eq!(#prime_meridian, #ident.prime_meridian_coefficients())
             }
         }
     }
