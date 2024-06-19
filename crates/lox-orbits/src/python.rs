@@ -31,7 +31,7 @@ use python::PyBody;
 
 use crate::elements::{Keplerian, ToKeplerian};
 use crate::events::{Event, FindEventError, Window};
-use crate::frames::{CoordinateSystem, Icrf, ReferenceFrame};
+use crate::frames::{CoordinateSystem, Icrf, ReferenceFrame, Topocentric};
 use crate::ground::{GroundLocation, GroundPropagator, GroundPropagatorError};
 use crate::origins::CoordinateOrigin;
 use crate::propagators::semi_analytical::{Vallado, ValladoError};
@@ -456,6 +456,7 @@ impl PyKeplerian {
 }
 
 #[pyclass(name = "Trajectory", module = "lox_space", frozen)]
+#[derive(Debug, Clone)]
 pub struct PyTrajectory(pub Trajectory<PyTime, PyBody, PyFrame>);
 
 impl From<TrajectoryError> for PyErr {
@@ -768,4 +769,46 @@ impl PySgp4 {
         }
         Err(PyValueError::new_err("invalid time delta(s)"))
     }
+}
+
+#[pyfunction]
+pub fn visibility(
+    times: &Bound<'_, PyList>,
+    location: PyGroundLocation,
+    min_elevation: f64,
+    gs: &Bound<'_, PyTrajectory>,
+    sc: &Bound<'_, PyTrajectory>,
+    provider: &Bound<'_, PyUt1Provider>,
+) -> PyResult<Vec<PyWindow>> {
+    let gs = gs.get();
+    let sc = sc.get();
+    if gs.0.reference_frame() != PyFrame::Icrf || sc.0.reference_frame() != PyFrame::Icrf {
+        return Err(PyValueError::new_err(
+            "only inertial frames are supported for visibility analysis",
+        ));
+    }
+    if gs.0.origin().name() != sc.0.origin().name() {
+        return Err(PyValueError::new_err(
+            "ground station and spacecraft must have the same origin",
+        ));
+    }
+    let gs_origin = match gs.0.origin() {
+        PyBody::Planet(planet) => planet,
+        _ => return Err(PyValueError::new_err("invalid origin")),
+    };
+    let sc_origin = match sc.0.origin() {
+        PyBody::Planet(planet) => planet,
+        _ => return Err(PyValueError::new_err("invalid origin")),
+    };
+    let times: Vec<PyTime> = times.extract()?;
+    let frame = Topocentric::new(location.0);
+    let provider = provider.get();
+    let gs = gs.0.with_origin_and_frame(gs_origin, Icrf);
+    let sc = sc.0.with_origin_and_frame(sc_origin, Icrf);
+    Ok(
+        crate::analysis::visibility(&times, &frame, min_elevation, &gs, &sc, provider)
+            .into_iter()
+            .map(PyWindow)
+            .collect(),
+    )
 }
