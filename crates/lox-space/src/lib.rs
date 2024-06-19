@@ -8,8 +8,8 @@
 
 use lox_bodies::python::{PyBarycenter, PyMinorBody, PyPlanet, PySatellite, PySun};
 use lox_orbits::python::{
-    PyFrame, PyGroundLocation, PyGroundPropagator, PyKeplerian, PySgp4, PyState, PyTrajectory,
-    PyVallado,
+    find_events, find_windows, PyFrame, PyGroundLocation, PyGroundPropagator, PyKeplerian, PySgp4,
+    PyState, PyTrajectory, PyVallado,
 };
 use pyo3::prelude::*;
 
@@ -20,6 +20,8 @@ use lox_time::python::utc::PyUtc;
 
 #[pymodule]
 fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(find_events, m)?)?;
+    m.add_function(wrap_pyfunction!(find_windows, m)?)?;
     m.add_class::<PySun>()?;
     m.add_class::<PyBarycenter>()?;
     m.add_class::<PyPlanet>()?;
