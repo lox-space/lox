@@ -812,3 +812,46 @@ pub fn visibility(
             .collect(),
     )
 }
+
+#[pyclass(name = "Topocentric", module = "lox_space", frozen)]
+pub struct PyTopocentric(pub Topocentric<PyPlanet>);
+
+#[pymethods]
+impl PyTopocentric {
+    #[new]
+    fn new(location: PyGroundLocation) -> Self {
+        PyTopocentric(Topocentric::new(location.0))
+    }
+}
+
+#[pyfunction]
+pub fn elevation(
+    time: PyTime,
+    frame: &Bound<'_, PyTopocentric>,
+    gs: &Bound<'_, PyTrajectory>,
+    sc: &Bound<'_, PyTrajectory>,
+    provider: &Bound<'_, PyUt1Provider>,
+) -> f64 {
+    let gs = gs.get();
+    let sc = sc.get();
+    let frame = frame.get();
+    // FIXME
+    if gs.0.reference_frame() != PyFrame::Icrf || sc.0.reference_frame() != PyFrame::Icrf {
+        return f64::NAN;
+    }
+    if gs.0.origin().name() != sc.0.origin().name() {
+        return f64::NAN;
+    }
+    let gs_origin = match gs.0.origin() {
+        PyBody::Planet(planet) => planet,
+        _ => return f64::NAN,
+    };
+    let sc_origin = match sc.0.origin() {
+        PyBody::Planet(planet) => planet,
+        _ => return f64::NAN,
+    };
+    let provider = provider.get();
+    let gs = gs.0.with_origin_and_frame(gs_origin, Icrf);
+    let sc = sc.0.with_origin_and_frame(sc_origin, Icrf);
+    crate::analysis::elevation(time, &frame.0, &gs, &sc, provider)
+}
