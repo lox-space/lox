@@ -24,12 +24,19 @@ use crate::python::deltas::PyTimeDelta;
 use crate::python::time_scales::PyTimeScale;
 use crate::python::ut1::{PyDeltaUt1Provider, PyUt1Provider};
 use crate::python::utc::PyUtc;
+use crate::subsecond::{InvalidSubsecond, Subsecond};
 use crate::time_of_day::TimeOfDay;
 use crate::transformations::{ToTai, ToTcb, ToTcg, ToTdb, ToTt, TryToScale};
 use crate::utc::transformations::ToUtc;
 use crate::{Time, TimeError, TimeLike};
 
 use super::ut1::PyNoOpOffsetProvider;
+
+impl From<InvalidSubsecond> for PyErr {
+    fn from(value: InvalidSubsecond) -> Self {
+        PyValueError::new_err(value.to_string())
+    }
+}
 
 impl From<TimeError> for PyErr {
     fn from(value: TimeError) -> Self {
@@ -112,6 +119,19 @@ impl PyTime {
             },
         };
         let time = Time::from_iso(scale, iso)?;
+        Ok(PyTime(time))
+    }
+
+    #[classmethod]
+    pub fn from_seconds(
+        _cls: &Bound<'_, PyType>,
+        scale: &str,
+        seconds: i64,
+        subsecond: f64,
+    ) -> PyResult<PyTime> {
+        let scale: PyTimeScale = scale.parse()?;
+        let subsecond = Subsecond::new(subsecond)?;
+        let time = Time::new(scale, seconds, subsecond);
         Ok(PyTime(time))
     }
 
