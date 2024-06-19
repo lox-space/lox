@@ -78,13 +78,13 @@ impl PySun {
 
 #[pyclass(name = "Barycenter", module = "lox_space", frozen)]
 #[derive(Debug, Clone)]
-pub struct PyBarycenter(Box<dyn Barycenter + Send>);
+pub struct PyBarycenter(Box<dyn Barycenter + Send + Sync>);
 
 #[pymethods]
 impl PyBarycenter {
     #[new]
     pub fn new(name: &str) -> PyResult<Self> {
-        let barycenter: Option<Box<dyn Barycenter + Send>> = match name {
+        let barycenter: Option<Box<dyn Barycenter + Send + Sync>> = match name {
             "ssb" | "SSB" | "solar system barycenter" | "Solar System Barycenter" => {
                 Some(Box::new(SolarSystemBarycenter))
             }
@@ -139,13 +139,13 @@ impl PyBarycenter {
 
 #[pyclass(name = "Planet", module = "lox_space", frozen)]
 #[derive(Clone, Debug)]
-pub struct PyPlanet(Box<dyn Planet + Send>);
+pub struct PyPlanet(Box<dyn Planet + Send + Sync>);
 
 #[pymethods]
 impl PyPlanet {
     #[new]
     pub fn new(name: &str) -> PyResult<Self> {
-        let planet: Option<Box<dyn Planet + Send>> = match name {
+        let planet: Option<Box<dyn Planet + Send + Sync>> = match name {
             "mercury" | "Mercury" => Some(Box::new(Mercury)),
             "venus" | "Venus" => Some(Box::new(Venus)),
             "earth" | "Earth" => Some(Box::new(Earth)),
@@ -239,13 +239,13 @@ impl RotationalElements for PyPlanet {
 
 #[pyclass(name = "Satellite", module = "lox_space", frozen)]
 #[derive(Clone, Debug)]
-pub struct PySatellite(Box<dyn Satellite + Send>);
+pub struct PySatellite(Box<dyn Satellite + Send + Sync>);
 
 #[pymethods]
 impl PySatellite {
     #[new]
     pub fn new(name: &str) -> PyResult<Self> {
-        let satellite: Option<Box<dyn Satellite + Send>> = match name {
+        let satellite: Option<Box<dyn Satellite + Send + Sync>> = match name {
             "moon" | "Moon" | "luna" | "Luna" => Some(Box::new(Moon)),
             "phobos" | "Phobos" => Some(Box::new(Phobos)),
             "deimos" | "Deimos" => Some(Box::new(Deimos)),
@@ -344,13 +344,13 @@ impl PySatellite {
 
 #[pyclass(name = "MinorBody", module = "lox_space", frozen)]
 #[derive(Clone, Debug)]
-pub struct PyMinorBody(Box<dyn MinorBody + Send>);
+pub struct PyMinorBody(Box<dyn MinorBody + Send + Sync>);
 
 #[pymethods]
 impl PyMinorBody {
     #[new]
     pub fn new(name: &str) -> PyResult<Self> {
-        let minor: Option<Box<dyn MinorBody + Send>> = match name {
+        let minor: Option<Box<dyn MinorBody + Send + Sync>> = match name {
             "ceres" | "Ceres" => Some(Box::new(Ceres)),
             "vesta" | "Vesta" => Some(Box::new(Vesta)),
             "psyche" | "Psyche" => Some(Box::new(Psyche)),
