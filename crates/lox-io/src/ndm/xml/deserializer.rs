@@ -6,6 +6,9 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-pub mod iers;
-pub mod ndm;
-pub mod spice;
+/// Parse an NDM message from a string formatted in XML
+pub trait FromXmlStr<'a>: Sized + serde::Deserialize<'a> {
+    fn from_xml_str(xml: &'a str) -> Result<Self, super::XmlDeserializationError> {
+        Ok(quick_xml::de::from_str(xml)?)
+    }
+}
