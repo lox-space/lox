@@ -6,23 +6,22 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use std::path::{Path, PathBuf};
-
-use lazy_static::lazy_static;
+use std::path::PathBuf;
 
 use lox_io::spice::Kernel;
-use modules::generate_modules;
+
+use crate::frames::generate_frames;
+use crate::modules::generate_modules;
 
 mod bodies;
+mod common;
+mod frames;
 mod generators;
 mod modules;
 mod rotational_elements;
 
-lazy_static! {
-    static ref TARGET_DIR: PathBuf = {
-        let parent = Path::new(file!()).parent().unwrap();
-        parent.join(Path::new("../../../crates/lox-bodies/src/generated/"))
-    };
+fn crates_dir() -> PathBuf {
+    PathBuf::from(format!("{}/../../crates", env!("CARGO_MANIFEST_DIR")))
 }
 
 pub fn main() {
@@ -30,5 +29,8 @@ pub fn main() {
         .expect("parsing should succeed");
     let gm = Kernel::from_string(include_str!("../../../data/gm_de440.tpc"))
         .expect("parsing should succeed");
-    generate_modules(&TARGET_DIR, &pck, &gm);
+    let bodies_target_dir = crates_dir().join("lox-bodies/src/generated/");
+    generate_modules(&bodies_target_dir, &pck, &gm);
+    let frames_target_dir = crates_dir().join("lox-orbits/src/python/");
+    generate_frames(&frames_target_dir);
 }

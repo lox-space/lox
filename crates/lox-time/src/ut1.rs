@@ -38,8 +38,6 @@ use std::path::Path;
 /// This crate provides a standard implementation over IERS Earth Orientation Parameters in
 /// [DeltaUt1Tai].
 pub trait DeltaUt1TaiProvider: OffsetProvider {
-    type Error;
-
     /// Returns the difference between UT1 and TAI at the given TAI instant.
     fn delta_ut1_tai(&self, tai: &Time<Tai>) -> Result<TimeDelta, Self::Error>;
 
@@ -128,11 +126,11 @@ impl DeltaUt1Tai {
     }
 }
 
-impl OffsetProvider for DeltaUt1Tai {}
+impl OffsetProvider for DeltaUt1Tai {
+    type Error = ExtrapolatedDeltaUt1Tai;
+}
 
 impl DeltaUt1TaiProvider for DeltaUt1Tai {
-    type Error = ExtrapolatedDeltaUt1Tai;
-
     fn delta_ut1_tai(&self, tai: &Time<Tai>) -> Result<TimeDelta, Self::Error> {
         let seconds = tai.seconds_since_j2000();
         let (t0, _) = self.0.first();

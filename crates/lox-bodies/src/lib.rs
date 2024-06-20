@@ -262,6 +262,10 @@ pub trait Ellipsoid: Body {
 
 pub trait Spheroid: Ellipsoid {
     fn equatorial_radius(&self) -> f64;
+
+    fn flattening(&self) -> f64 {
+        (self.equatorial_radius() - self.polar_radius()) / self.equatorial_radius()
+    }
 }
 
 pub trait TriAxial: Ellipsoid {
@@ -275,11 +279,11 @@ pub trait PointMass: Body {
 }
 
 // Planets.
-pub trait Planet: PointMass + Spheroid + DynClone {}
+pub trait Planet: RotationalElements + PointMass + Spheroid + DynClone + std::fmt::Debug {}
 clone_trait_object!(Planet);
 
 // Barycenters.
-pub trait Barycenter: PointMass + DynClone {}
+pub trait Barycenter: PointMass + DynClone + std::fmt::Debug {}
 clone_trait_object!(Barycenter);
 
 impl PointMass for SolarSystemBarycenter {
@@ -289,11 +293,11 @@ impl PointMass for SolarSystemBarycenter {
 }
 
 // Satellites.
-pub trait Satellite: PointMass + TriAxial + DynClone {}
+pub trait Satellite: PointMass + TriAxial + DynClone + std::fmt::Debug {}
 clone_trait_object!(Satellite);
 
 // Minor bodies.
-pub trait MinorBody: PointMass + TriAxial + DynClone {}
+pub trait MinorBody: PointMass + TriAxial + DynClone + std::fmt::Debug {}
 clone_trait_object!(MinorBody);
 
 pub type PolynomialCoefficients = (f64, f64, f64, &'static [f64]);
@@ -303,14 +307,14 @@ pub type NutationPrecessionCoefficients = (&'static [f64], &'static [f64]);
 type Elements = (f64, f64, f64);
 
 pub trait RotationalElements: Body {
-    const NUTATION_PRECESSION_COEFFICIENTS: NutationPrecessionCoefficients;
-    const RIGHT_ASCENSION_COEFFICIENTS: PolynomialCoefficients;
-    const DECLINATION_COEFFICIENTS: PolynomialCoefficients;
-    const PRIME_MERIDIAN_COEFFICIENTS: PolynomialCoefficients;
+    fn nutation_precession_coefficients(&self) -> NutationPrecessionCoefficients;
+    fn right_ascension_coefficients(&self) -> PolynomialCoefficients;
+    fn declination_coefficients(&self) -> PolynomialCoefficients;
+    fn prime_meridian_coefficients(&self) -> PolynomialCoefficients;
 
-    fn theta(t: f64) -> Vec<f64> {
+    fn theta(&self, t: f64) -> Vec<f64> {
         let t = t / SECONDS_PER_JULIAN_CENTURY;
-        let (theta0, theta1) = Self::NUTATION_PRECESSION_COEFFICIENTS;
+        let (theta0, theta1) = self.nutation_precession_coefficients();
         let mut theta = vec![0.0; theta0.len()];
         if theta0.is_empty() {
             return theta;
@@ -322,10 +326,10 @@ pub trait RotationalElements: Body {
         theta
     }
 
-    fn right_ascension(t: f64) -> f64 {
+    fn right_ascension(&self, t: f64) -> f64 {
         let dt = SECONDS_PER_JULIAN_CENTURY;
-        let (c0, c1, c2, c) = Self::RIGHT_ASCENSION_COEFFICIENTS;
-        let theta = Self::theta(t);
+        let (c0, c1, c2, c) = self.right_ascension_coefficients();
+        let theta = self.theta(t);
         let mut c_trig = vec![0.0; c.len()];
         if !c.is_empty() {
             for i in 0..c.len() {
@@ -336,11 +340,11 @@ pub trait RotationalElements: Body {
         c0 + c1 * t / dt + c2 * t.powi(2) / dt.powi(2) + c_trig
     }
 
-    fn right_ascension_dot(t: f64) -> f64 {
+    fn right_ascension_dot(&self, t: f64) -> f64 {
         let dt = SECONDS_PER_JULIAN_CENTURY;
-        let (_, c1, c2, c) = Self::RIGHT_ASCENSION_COEFFICIENTS;
-        let (_, theta1) = Self::NUTATION_PRECESSION_COEFFICIENTS;
-        let theta = Self::theta(t);
+        let (_, c1, c2, c) = self.right_ascension_coefficients();
+        let (_, theta1) = self.nutation_precession_coefficients();
+        let theta = self.theta(t);
         let mut c_trig = vec![0.0; c.len()];
         if !c.is_empty() {
             for i in 0..c.len() {
@@ -351,10 +355,10 @@ pub trait RotationalElements: Body {
         c1 / dt + 2.0 * c2 * t / dt.powi(2) + c_trig
     }
 
-    fn declination(t: f64) -> f64 {
+    fn declination(&self, t: f64) -> f64 {
         let dt = SECONDS_PER_JULIAN_CENTURY;
-        let (c0, c1, c2, c) = Self::DECLINATION_COEFFICIENTS;
-        let theta = Self::theta(t);
+        let (c0, c1, c2, c) = self.declination_coefficients();
+        let theta = self.theta(t);
         let mut c_trig = vec![0.0; c.len()];
         if !c.is_empty() {
             for i in 0..c.len() {
@@ -365,11 +369,11 @@ pub trait RotationalElements: Body {
         c0 + c1 * t / dt + c2 * t.powi(2) / dt.powi(2) + c_trig
     }
 
-    fn declination_dot(t: f64) -> f64 {
+    fn declination_dot(&self, t: f64) -> f64 {
         let dt = SECONDS_PER_JULIAN_CENTURY;
-        let (_, c1, c2, c) = Self::DECLINATION_COEFFICIENTS;
-        let (_, theta1) = Self::NUTATION_PRECESSION_COEFFICIENTS;
-        let theta = Self::theta(t);
+        let (_, c1, c2, c) = self.declination_coefficients();
+        let (_, theta1) = self.nutation_precession_coefficients();
+        let theta = self.theta(t);
         let mut c_trig = vec![0.0; c.len()];
         if !c.is_empty() {
             for i in 0..c.len() {
@@ -380,10 +384,10 @@ pub trait RotationalElements: Body {
         c1 / dt + 2.0 * c2 * t / dt.powi(2) - c_trig
     }
 
-    fn prime_meridian(t: f64) -> f64 {
+    fn prime_meridian(&self, t: f64) -> f64 {
         let dt = SECONDS_PER_DAY;
-        let (c0, c1, c2, c) = Self::PRIME_MERIDIAN_COEFFICIENTS;
-        let theta = Self::theta(t);
+        let (c0, c1, c2, c) = self.prime_meridian_coefficients();
+        let theta = self.theta(t);
         let mut c_trig = vec![0.0; c.len()];
         if !c.is_empty() {
             for i in 0..c.len() {
@@ -394,11 +398,11 @@ pub trait RotationalElements: Body {
         c0 + c1 * t / dt + c2 * t.powi(2) / dt.powi(2) + c_trig
     }
 
-    fn prime_meridian_dot(t: f64) -> f64 {
+    fn prime_meridian_dot(&self, t: f64) -> f64 {
         let dt = SECONDS_PER_DAY;
-        let (_, c1, c2, c) = Self::PRIME_MERIDIAN_COEFFICIENTS;
-        let (_, theta1) = Self::NUTATION_PRECESSION_COEFFICIENTS;
-        let theta = Self::theta(t);
+        let (_, c1, c2, c) = self.prime_meridian_coefficients();
+        let (_, theta1) = self.nutation_precession_coefficients();
+        let theta = self.theta(t);
         let mut c_trig = vec![0.0; c.len()];
         if !c.is_empty() {
             for i in 0..c.len() {
@@ -409,19 +413,19 @@ pub trait RotationalElements: Body {
         c1 / dt + 2.0 * c2 * t / dt.powi(2) + c_trig
     }
 
-    fn rotational_elements(t: f64) -> Elements {
+    fn rotational_elements(&self, t: f64) -> Elements {
         (
-            Self::right_ascension(t) + PI / 2.0,
-            PI / 2.0 - Self::declination(t),
-            Self::prime_meridian(t) % (2.0 * PI),
+            self.right_ascension(t) + PI / 2.0,
+            PI / 2.0 - self.declination(t),
+            self.prime_meridian(t) % (2.0 * PI),
         )
     }
 
-    fn rotational_element_rates(t: f64) -> Elements {
+    fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            Self::right_ascension_dot(t),
-            -Self::declination_dot(t),
-            Self::prime_meridian_dot(t),
+            self.right_ascension_dot(t),
+            -self.declination_dot(t),
+            self.prime_meridian_dot(t),
         )
     }
 }
@@ -486,113 +490,117 @@ mod tests {
     }
 
     impl RotationalElements for Jupiter {
-        const NUTATION_PRECESSION_COEFFICIENTS: NutationPrecessionCoefficients = (
-            &[
-                1.2796754075622423f64,
-                0.42970006184100396f64,
-                4.9549897464119015f64,
-                6.2098814785958245f64,
-                2.092649773141201f64,
-                4.010766621082969f64,
-                6.147922290150026f64,
-                1.9783307071355725f64,
-                2.5593508151244846f64,
-                0.8594001236820079f64,
-                1.734171606432425f64,
-                3.0699533280603655f64,
-                5.241627996900319f64,
-                1.9898901100379935f64,
-                0.864134346731335f64,
-            ],
-            &[
-                1596.503281347521f64,
-                787.7927551311844f64,
-                84.66068602648895f64,
-                20.792107379008446f64,
-                4.574507969477138f64,
-                1.1222467090323538f64,
-                41.58421475801689f64,
-                105.9414855960558f64,
-                3193.006562695042f64,
-                1575.5855102623689f64,
-                84.65553032387855f64,
-                20.80363527871787f64,
-                4.582318317879813f64,
-                105.94580703128374f64,
-                1.1222467090323538f64,
-            ],
-        );
+        fn nutation_precession_coefficients(&self) -> NutationPrecessionCoefficients {
+            (
+                &[
+                    1.2796754075622423f64,
+                    0.42970006184100396f64,
+                    4.9549897464119015f64,
+                    6.2098814785958245f64,
+                    2.092649773141201f64,
+                    4.010766621082969f64,
+                    6.147922290150026f64,
+                    1.9783307071355725f64,
+                    2.5593508151244846f64,
+                    0.8594001236820079f64,
+                    1.734171606432425f64,
+                    3.0699533280603655f64,
+                    5.241627996900319f64,
+                    1.9898901100379935f64,
+                    0.864134346731335f64,
+                ],
+                &[
+                    1596.503281347521f64,
+                    787.7927551311844f64,
+                    84.66068602648895f64,
+                    20.792107379008446f64,
+                    4.574507969477138f64,
+                    1.1222467090323538f64,
+                    41.58421475801689f64,
+                    105.9414855960558f64,
+                    3193.006562695042f64,
+                    1575.5855102623689f64,
+                    84.65553032387855f64,
+                    20.80363527871787f64,
+                    4.582318317879813f64,
+                    105.94580703128374f64,
+                    1.1222467090323538f64,
+                ],
+            )
+        }
 
-        const RIGHT_ASCENSION_COEFFICIENTS: PolynomialCoefficients = (
-            4.6784701644349695f64,
-            -0.00011342894808711148f64,
-            0f64,
-            &[
+        fn right_ascension_coefficients(&self) -> PolynomialCoefficients {
+            (
+                4.6784701644349695f64,
+                -0.00011342894808711148f64,
                 0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.0000020420352248333656f64,
-                0.000016371188383706813f64,
-                0.000024993114888558796f64,
-                0.0000005235987755982989f64,
-                0.00003752457891787809f64,
-            ],
-        );
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.0000020420352248333656f64,
+                    0.000016371188383706813f64,
+                    0.000024993114888558796f64,
+                    0.0000005235987755982989f64,
+                    0.00003752457891787809f64,
+                ],
+            )
+        }
 
-        const DECLINATION_COEFFICIENTS: PolynomialCoefficients = (
-            1.1256553894213766f64,
-            0.00004211479485062318f64,
-            0f64,
-            &[
+        fn declination_coefficients(&self) -> PolynomialCoefficients {
+            (
+                1.1256553894213766f64,
+                0.00004211479485062318f64,
                 0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.0000008726646259971648f64,
-                0.000007051130178057092f64,
-                0.000010768681484805013f64,
-                -0.00000022689280275926283f64,
-                0.00001616174887346749f64,
-            ],
-        );
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.0000008726646259971648f64,
+                    0.000007051130178057092f64,
+                    0.000010768681484805013f64,
+                    -0.00000022689280275926283f64,
+                    0.00001616174887346749f64,
+                ],
+            )
+        }
 
-        const PRIME_MERIDIAN_COEFFICIENTS: PolynomialCoefficients = (
-            4.973315703557842f64,
-            15.193719457141356f64,
-            0f64,
-            &[
-                0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+        fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
+            (
+                4.973315703557842f64,
+                15.193719457141356f64,
                 0f64,
-            ],
-        );
+                &[
+                    0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
+                    0f64, 0f64,
+                ],
+            )
+        }
     }
 
     #[test]
     fn test_rotational_elements_right_ascension() {
-        assert_float_eq!(
-            Jupiter::right_ascension(0.0),
-            4.678480799964803,
-            rel <= 1e-8
-        );
+        assert_float_eq!(Jupiter.right_ascension(0.0), 4.678480799964803, rel <= 1e-8);
     }
 
     #[test]
     fn test_rotational_elements_right_ascension_dot() {
         assert_float_eq!(
-            Jupiter::right_ascension_dot(0.0),
+            Jupiter.right_ascension_dot(0.0),
             -1.3266588500099516e-13,
             rel <= 1e-8
         );
@@ -600,13 +608,13 @@ mod tests {
 
     #[test]
     fn test_rotational_elements_declination() {
-        assert_float_eq!(Jupiter::declination(0.0), 1.1256642372977634, rel <= 1e-8);
+        assert_float_eq!(Jupiter.declination(0.0), 1.1256642372977634, rel <= 1e-8);
     }
 
     #[test]
     fn test_rotational_elements_declination_dot() {
         assert_float_eq!(
-            Jupiter::declination_dot(0.0),
+            Jupiter.declination_dot(0.0),
             3.004482367136341e-15,
             rel <= 1e-8
         );
@@ -614,13 +622,13 @@ mod tests {
 
     #[test]
     fn test_rotational_elements_prime_meridian() {
-        assert_float_eq!(Jupiter::prime_meridian(0.0), 4.973315703557842, rel <= 1e-8);
+        assert_float_eq!(Jupiter.prime_meridian(0.0), 4.973315703557842, rel <= 1e-8);
     }
 
     #[test]
     fn test_rotational_elements_prime_meridian_dot() {
         assert_float_eq!(
-            Jupiter::prime_meridian_dot(0.0),
+            Jupiter.prime_meridian_dot(0.0),
             0.00017585323445765458,
             rel <= 1e-8
         );
@@ -628,7 +636,7 @@ mod tests {
 
     #[test]
     fn test_rotational_elements_rotational_elements() {
-        let (ra, dec, pm) = Jupiter::rotational_elements(0.0);
+        let (ra, dec, pm) = Jupiter.rotational_elements(0.0);
         let (expected_ra, expected_dec, expected_pm) =
             (6.249277121030398, 0.44513208936761073, 4.973315703557842);
 
@@ -660,7 +668,7 @@ mod tests {
 
     #[test]
     fn test_rotational_elements_rotational_element_rates() {
-        let (ra_dot, dec_dot, pm_dot) = Jupiter::rotational_element_rates(0.0);
+        let (ra_dot, dec_dot, pm_dot) = Jupiter.rotational_element_rates(0.0);
         let (expected_ra_dot, expected_dec_dot, expected_pm_dot) = (
             -1.3266588500099516e-13,
             -3.004482367136341e-15,

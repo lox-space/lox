@@ -11,12 +11,15 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dynamic = ["version"]
-dependencies = []
+dependencies = [
+    "numpy < 2"
+]
 
 [project.optional-dependencies]
 dev = [
     "black",
     "ipython",
+    "numpy",
     "pytest",
 ]
 

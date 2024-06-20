@@ -23,6 +23,7 @@ use crate::deltas::{TimeDelta, ToDelta};
 use crate::prelude::{CivilTime, Tai};
 use crate::Time;
 use lox_io::spice::{Kernel, KernelError};
+use std::convert::Infallible;
 use std::fs::read_to_string;
 use std::num::ParseIntError;
 use std::path::Path;
@@ -61,7 +62,9 @@ const LEAP_SECONDS: [i64; 28] = [
 #[derive(Debug)]
 pub struct BuiltinLeapSeconds;
 
-impl OffsetProvider for BuiltinLeapSeconds {}
+impl OffsetProvider for BuiltinLeapSeconds {
+    type Error = Infallible;
+}
 
 impl LeapSecondsProvider for BuiltinLeapSeconds {
     fn delta_tai_utc(&self, tai: Time<Tai>) -> Option<TimeDelta> {
@@ -167,7 +170,9 @@ impl LeapSecondsKernel {
     }
 }
 
-impl OffsetProvider for LeapSecondsKernel {}
+impl OffsetProvider for LeapSecondsKernel {
+    type Error = Infallible;
+}
 
 impl LeapSecondsProvider for LeapSecondsKernel {
     fn delta_tai_utc(&self, tai: Time<Tai>) -> Option<TimeDelta> {

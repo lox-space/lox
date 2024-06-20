@@ -8,19 +8,17 @@
 
 pub use glam::DVec3;
 
-use lox_bodies::PointMass;
-
-use crate::frames::ReferenceFrame;
-
+pub mod analysis;
 pub mod anomalies;
-pub mod base;
+pub mod elements;
+pub mod ensembles;
+pub mod events;
 pub mod frames;
-pub mod two_body;
-
-pub trait CoordinateSystem {
-    type Origin: PointMass;
-    type Frame: ReferenceFrame;
-
-    fn origin(&self) -> Self::Origin;
-    fn reference_frame(&self) -> Self::Frame;
-}
+pub mod ground;
+pub mod origins;
+pub mod propagators;
+#[cfg(feature = "python")]
+pub mod python;
+pub mod rotations;
+pub mod states;
+pub mod trajectories;

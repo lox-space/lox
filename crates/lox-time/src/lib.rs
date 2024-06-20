@@ -65,6 +65,7 @@ pub mod julian_dates;
 pub mod prelude;
 #[cfg(feature = "python")]
 pub mod python;
+pub mod ranges;
 pub mod subsecond;
 #[cfg(test)]
 pub(crate) mod test_helpers;
@@ -478,6 +479,20 @@ impl<T: TimeScale> CalendarDate for Time<T> {
         Date::from_seconds_since_j2000(self.seconds)
     }
 }
+
+pub trait TimeLike:
+    Sized
+    + Add<TimeDelta, Output = Self>
+    + CalendarDate
+    + CivilTime
+    + JulianDate
+    + Sub<Output = TimeDelta>
+    + Sub<TimeDelta, Output = Self>
+    + ToDelta
+{
+}
+
+impl<T: TimeScale> TimeLike for Time<T> {}
 
 /// `TimeBuilder` supports the construction of [Time] instances piecewise using the builder pattern.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
