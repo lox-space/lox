@@ -1,5 +1,17 @@
-use glam::DVec3;
 use std::sync::Arc;
+
+use csv::Error;
+use glam::DVec3;
+use thiserror::Error;
+
+use lox_bodies::{Body, RotationalElements};
+use lox_time::time_scales::{Tai, Tdb, TimeScale};
+use lox_time::transformations::{OffsetProvider, TryToScale};
+use lox_time::utc::leap_seconds::BuiltinLeapSeconds;
+use lox_time::utc::Utc;
+use lox_time::{deltas::TimeDelta, Time, TimeLike};
+use lox_utils::roots::Brent;
+use lox_utils::series::{Series, SeriesError};
 
 use crate::events::{find_events, find_windows, Event, Window};
 use crate::frames::{BodyFixed, FrameTransformationProvider, Icrf, TryToFrame};
@@ -8,13 +20,6 @@ use crate::{
     origins::{CoordinateOrigin, Origin},
     states::State,
 };
-use lox_bodies::{Body, RotationalElements};
-use lox_time::time_scales::Tdb;
-use lox_time::transformations::TryToScale;
-use lox_time::{deltas::TimeDelta, TimeLike};
-use lox_utils::roots::Brent;
-use lox_utils::series::{Series, SeriesError};
-use thiserror::Error;
 
 #[derive(Clone, Debug, PartialEq)]
 #[repr(transparent)]
@@ -26,12 +31,20 @@ impl AsRef<[f64]> for ArcVecF64 {
     }
 }
 
+impl From<csv::Error> for TrajectoryError {
+    fn from(err: Error) -> Self {
+        TrajectoryError::CsvError(err.to_string())
+    }
+}
+
 #[derive(Clone, Debug, Error, Eq, PartialEq)]
 pub enum TrajectoryError {
     #[error("`states` must have at least 2 elements but had {0}")]
     InsufficientStates(usize),
     #[error(transparent)]
     SeriesError(#[from] SeriesError),
+    #[error("invalid time scale: {0}")]
+    CsvError(String),
 }
 
 #[derive(Clone, Debug)]
@@ -86,10 +99,54 @@ where
         })
     }
 
-    pub fn with_frame<R1: ReferenceFrame + Clone>(&self, frame: R1) -> Trajectory<T, O, R1> {
+    pub fn from_csv(
+        csv: &str,
+        origin: O,
+        frame: R,
+    ) -> Result<Trajectory<Time<Tai>, O, R>, TrajectoryError> {
+        let mut reader = csv::Reader::from_reader(csv.as_bytes());
+        let mut states = Vec::new();
+        for result in reader.records() {
+            let record = result?;
+            if record.len() != 7 {
+                return Err(TrajectoryError::CsvError(
+                    "invalid record length".to_string(),
+                ));
+            }
+            let time: Time<Tai> = Utc::from_iso(&record.get(0).unwrap())
+                .map_err(|e| TrajectoryError::CsvError(e.to_string()))?
+                .try_to_scale(Tai, &BuiltinLeapSeconds)
+                .map_err(|e| TrajectoryError::CsvError(e.to_string()))?;
+            let x = record.get(1).unwrap().parse().map_err(|e| {
+                TrajectoryError::CsvError(format!("invalid x coordinate: {}", e.to_string()))
+            })?;
+            let y = record.get(2).unwrap().parse().map_err(|e| {
+                TrajectoryError::CsvError(format!("invalid y coordinate: {}", e.to_string()))
+            })?;
+            let z = record.get(3).unwrap().parse().map_err(|e| {
+                TrajectoryError::CsvError(format!("invalid z coordinate: {}", e.to_string()))
+            })?;
+            let position = DVec3::new(x, y, z);
+            let vx = record.get(4).unwrap().parse().map_err(|e| {
+                TrajectoryError::CsvError(format!("invalid x velocity: {}", e.to_string()))
+            })?;
+            let vy = record.get(5).unwrap().parse().map_err(|e| {
+                TrajectoryError::CsvError(format!("invalid y velocity: {}", e.to_string()))
+            })?;
+            let vz = record.get(6).unwrap().parse().map_err(|e| {
+                TrajectoryError::CsvError(format!("invalid z velocity: {}", e.to_string()))
+            })?;
+            let velocity = DVec3::new(vx, vy, vz);
+            let state = State::new(time, position, velocity, origin.clone(), frame.clone());
+            states.push(state);
+        }
+        Trajectory::new(&states)
+    }
+
+    pub fn with_frame<R1: ReferenceFrame + Clone>(self, frame: R1) -> Trajectory<T, O, R1> {
         let states: Vec<State<T, O, R1>> = self
             .states
-            .iter()
+            .into_iter()
             .map(|s| s.with_frame(frame.clone()))
             .collect();
         Trajectory::new(&states).unwrap()
