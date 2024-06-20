@@ -173,6 +173,10 @@
 //! let message: OpmType = KvnDeserializer::from_kvn_str(&kvn).unwrap();
 //! ```
 
+// This file is partially generated with xml-schema-derive from the XSD schema
+// published by CCSDS. Adaptations have been made to simplify the types or
+// allow to simplify the implementation of the KVN parser.
+
 use serde;
 
 use super::common;
