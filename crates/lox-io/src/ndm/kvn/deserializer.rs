@@ -15,7 +15,7 @@ pub trait KvnDeserializer {
     where
         Self: Sized;
 
-    fn from_kvn_str<'a>(kvn: &'a str) -> Result<Self, KvnDeserializerErr<String>>
+    fn from_kvn_str(kvn: &str) -> Result<Self, KvnDeserializerErr<String>>
     where
         Self: Sized,
     {
