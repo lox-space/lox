@@ -80,11 +80,8 @@ pub fn find_events<F: Fn(f64) -> f64 + Copy, T: TimeLike + Clone, R: FindBracket
 
     let mut events = vec![];
 
-    let ts0 = zip(&steps[0..], &signs[0..]);
-    let ts1 = zip(&steps[1..], &signs[1..]);
-
     // Loop over all time step pairs and determine if the sign of the function changes inbetween
-    zip(ts0, ts1).for_each(|((&t0, &s0), (&t1, &s1))| {
+    for ((&t0, s0), (&t1, s1)) in zip(steps, signs).tuple_windows() {
         if let Some(crossing) = ZeroCrossing::new(s0, s1) {
             // If the sign changes, run the root finder to determine the exact point in time when
             // the event occurred
@@ -95,7 +92,7 @@ pub fn find_events<F: Fn(f64) -> f64 + Copy, T: TimeLike + Clone, R: FindBracket
 
             events.push(Event { crossing, time });
         }
-    });
+    }
 
     Ok(events)
 }
@@ -107,6 +104,10 @@ pub struct Window<T: TimeLike> {
 }
 
 impl<T: TimeLike> Window<T> {
+    pub fn new(start: T, end: T) -> Self {
+        Window { start, end }
+    }
+
     pub fn start(&self) -> &T {
         &self.start
     }

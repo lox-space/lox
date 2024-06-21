@@ -96,7 +96,7 @@ impl<B: Spheroid> Topocentric<B> {
         Topocentric(location)
     }
 
-    pub fn from_location(longitude: f64, latitude: f64, altitude: f64, body: B) -> Self {
+    pub fn from_coords(longitude: f64, latitude: f64, altitude: f64, body: B) -> Self {
         let location = GroundLocation::new(longitude, latitude, altitude, body);
         Topocentric(location)
     }
@@ -117,7 +117,7 @@ mod tests {
 
     #[test]
     fn test_topocentric() {
-        let topo = Topocentric::from_location(8.0, 50.0, 0.0, Earth);
+        let topo = Topocentric::from_coords(8.0, 50.0, 0.0, Earth);
         let r = topo.rotation_from_body_fixed();
         let x_axis = DVec3::new(
             0.038175550084451906,

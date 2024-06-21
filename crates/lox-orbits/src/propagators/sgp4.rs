@@ -46,7 +46,7 @@ impl Sgp4 {
     }
 
     pub fn time(&self) -> Time<Tai> {
-        self.time.clone()
+        self.time
     }
 }
 
@@ -54,11 +54,11 @@ impl Propagator<Time<Tai>, Earth, Icrf> for Sgp4 {
     type Error = Sgp4Error;
 
     fn propagate(&self, time: Time<Tai>) -> Result<State<Time<Tai>, Earth, Icrf>, Self::Error> {
-        let dt = (time.clone() - self.time.clone()).to_decimal_seconds() / SECONDS_PER_MINUTE;
+        let dt = (time - self.time).to_decimal_seconds() / SECONDS_PER_MINUTE;
         let prediction = self.constants.propagate(MinutesSinceEpoch(dt))?;
         let position = DVec3::from_array(prediction.position);
         let velocity = DVec3::from_array(prediction.velocity);
-        Ok(State::new(time.clone(), position, velocity, Earth, Icrf))
+        Ok(State::new(time, position, velocity, Earth, Icrf))
     }
 }
 

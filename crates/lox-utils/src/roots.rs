@@ -164,30 +164,34 @@ where
                 fblk = fpre;
             }
 
-            let tol = self.abs_tol + self.rel_tol * xcur.abs();
+            let delta = (self.abs_tol + self.rel_tol * xcur.abs()) / 2.0;
             let sbis = (xblk - xcur) / 2.0;
 
-            if float_eq!(fcur, 0.0, abs <= self.abs_tol) || sbis.abs() < tol {
+            if float_eq!(fcur, 0.0, abs <= self.abs_tol) || sbis.abs() < delta {
                 return Ok(xcur);
             }
 
-            if spre.abs() > tol && fcur.abs() < fpre.abs() {
+            if spre.abs() > delta && fcur.abs() < fpre.abs() {
                 let stry = if float_eq!(xpre, xblk, rmax <= self.rel_tol) {
+                    // interpolate
                     -fcur * (xcur - xpre) / (fcur - fpre)
                 } else {
+                    // extrapolate
                     let dpre = (fpre - fcur) / (xpre - xcur);
                     let dblk = (fblk - fcur) / (xblk - xcur);
                     -fcur * (fblk * dblk - fpre * dpre) / (dblk * dpre * (fblk - fpre))
                 };
 
-                if 2.0 * stry.abs() < spre.abs().min(3.0 * sbis.abs() - tol) {
+                if 2.0 * stry.abs() < spre.abs().min(3.0 * sbis.abs() - delta) {
                     spre = scur;
                     scur = stry;
                 } else {
+                    // bisect
                     spre = sbis;
                     scur = sbis;
                 }
             } else {
+                // bisect
                 spre = sbis;
                 scur = sbis;
             }
@@ -195,15 +199,10 @@ where
             xpre = xcur;
             fpre = fcur;
 
-            if scur.abs() > tol {
+            if scur.abs() > delta {
                 xcur += scur
             } else {
-                if sbis > 0.0 {
-                    xcur += tol
-                }
-                if sbis < 0.0 {
-                    xcur -= tol
-                }
+                xcur += if sbis > 0.0 { delta } else { -delta };
             }
 
             fcur = f(xcur);
