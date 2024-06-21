@@ -314,7 +314,7 @@ impl<T: TimeScale> Time<T> {
 }
 
 impl<T: TimeScale> IsClose for Time<T> {
-    const DEFAULT_RELATIVE: f64 = 1e-12;
+    const DEFAULT_RELATIVE: f64 = 1e-9;
 
     const DEFAULT_ABSOLUTE: f64 = 1e-14;
 

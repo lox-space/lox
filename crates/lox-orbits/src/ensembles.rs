@@ -39,3 +39,14 @@ where
         self.0.get(name)
     }
 }
+
+impl<T, O, R> Default for Ensemble<T, O, R>
+where
+    T: TimeLike + Clone,
+    O: Origin + Clone,
+    R: ReferenceFrame + Clone,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
