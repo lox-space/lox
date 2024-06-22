@@ -38,3 +38,7 @@ harness = false
 [[bench]]
 name = "time_delta"
 harness = false
+
+[[bench]]
+name = "observables"
+harness = false

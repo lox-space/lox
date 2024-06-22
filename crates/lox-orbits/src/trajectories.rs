@@ -5,7 +5,7 @@ use csv::Error;
 use glam::DVec3;
 use thiserror::Error;
 
-use lox_bodies::{Body, RotationalElements};
+use lox_bodies::{Body, RotationalElements, Spheroid};
 use lox_time::time_scales::{Tai, Tdb};
 use lox_time::transformations::TryToScale;
 use lox_time::utc::leap_seconds::BuiltinLeapSeconds;
@@ -16,6 +16,7 @@ use lox_utils::series::{Series, SeriesError};
 
 use crate::events::{find_events, find_windows, Event, Window};
 use crate::frames::{BodyFixed, FrameTransformationProvider, Icrf, TryToFrame};
+use crate::ground::{GroundLocation, Observables};
 use crate::{
     frames::{CoordinateSystem, ReferenceFrame},
     origins::{CoordinateOrigin, Origin},
