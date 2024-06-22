@@ -16,7 +16,8 @@ use lox_utils::roots::Brent;
 use lox_utils::types::units::Radians;
 
 use crate::events::{find_windows, Window};
-use crate::frames::{BodyFixed, FrameTransformationProvider, Icrf, Topocentric};
+use crate::frames::{BodyFixed, FrameTransformationProvider, Icrf, Topocentric, TryToFrame};
+use crate::ground::GroundLocation;
 use crate::origins::{CoordinateOrigin, Origin};
 use crate::trajectories::Trajectory;
 
@@ -48,15 +49,31 @@ pub fn elevation<
     (r_sez.z / r.length()).asin()
 }
 
+pub fn elevation2<
+    T: TimeLike + TryToScale<Tdb, P> + Clone,
+    O: Origin + Spheroid + RotationalElements + Clone,
+    P: FrameTransformationProvider,
+>(
+    time: T,
+    gs: &GroundLocation<O>,
+    sc: &Trajectory<T, O, Icrf>,
+    provider: &P,
+) -> Radians {
+    let body_fixed = BodyFixed(gs.origin());
+    let sc = sc.interpolate_at(time.clone());
+    let sc = sc.try_to_frame(body_fixed, provider).unwrap();
+    let obs = gs.observables(sc);
+    obs.elevation()
+}
+
 pub fn visibility<
     T: TimeLike + TryToScale<Tdb, P> + Clone,
     O: Origin + Spheroid + RotationalElements + Clone,
     P: FrameTransformationProvider,
 >(
     times: &[T],
-    frame: &Topocentric<O>,
     min_elevation: Radians,
-    gs: &Trajectory<T, O, Icrf>,
+    gs: &GroundLocation<O>,
     sc: &Trajectory<T, O, Icrf>,
     provider: &P,
 ) -> Vec<Window<T>> {
@@ -72,9 +89,8 @@ pub fn visibility<
     let root_finder = Brent::default();
     find_windows(
         |t| {
-            elevation(
+            elevation2(
                 start.clone() + TimeDelta::from_decimal_seconds(t).unwrap(),
-                frame,
                 gs,
                 sc,
                 provider,
@@ -131,19 +147,12 @@ mod tests {
 
     #[test]
     fn test_visibility() {
-        let gs = ground_station_trajectory();
+        let gs = location();
         let sc = spacecraft_trajectory();
         let frame = frame();
-        let times: Vec<Time<Tai>> = gs.states().iter().map(|s| s.time().clone()).collect();
+        let times: Vec<Time<Tai>> = sc.states().iter().map(|s| s.time().clone()).collect();
         let expected = contacts();
-        let actual = visibility(
-            &times,
-            &frame,
-            0.0,
-            &gs,
-            &sc,
-            &NoOpFrameTransformationProvider,
-        );
+        let actual = visibility(&times, 0.0, &gs, &sc, &NoOpFrameTransformationProvider);
         assert_eq!(actual.len(), expected.len());
         for (actual, expected) in zip(actual, expected) {
             assert_close!(actual.start(), expected.start(), 0.0, 1e-4);
@@ -167,6 +176,12 @@ mod tests {
             Icrf,
         )
         .unwrap()
+    }
+
+    fn location() -> GroundLocation<Earth> {
+        let longitude = -4.3676f64.to_radians();
+        let latitude = 40.4527f64.to_radians();
+        GroundLocation::new(longitude, latitude, 0.0, Earth)
     }
 
     fn frame() -> Topocentric<Earth> {

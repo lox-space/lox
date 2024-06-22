@@ -119,6 +119,12 @@ impl<B: Spheroid> GroundLocation<B> {
     }
 }
 
+impl<O: Spheroid + Clone> CoordinateOrigin<O> for GroundLocation<O> {
+    fn origin(&self) -> O {
+        self.body.clone()
+    }
+}
+
 #[derive(Debug, Error)]
 pub enum GroundPropagatorError {
     #[error("frame transformation error: {0}")]
