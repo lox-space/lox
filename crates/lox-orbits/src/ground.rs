@@ -6,19 +6,48 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use glam::DVec3;
+use std::f64::consts::FRAC_PI_2;
+
+use glam::{DMat3, DVec3};
 use thiserror::Error;
 
 use lox_bodies::{RotationalElements, Spheroid};
 use lox_time::prelude::Tdb;
 use lox_time::transformations::TryToScale;
 use lox_time::TimeLike;
+use lox_utils::types::units::Radians;
 
 use crate::frames::{BodyFixed, CoordinateSystem, FrameTransformationProvider, Icrf, TryToFrame};
 use crate::origins::CoordinateOrigin;
 use crate::propagators::Propagator;
 use crate::states::State;
 use crate::trajectories::TrajectoryError;
+
+#[derive(Clone, Debug)]
+pub struct Observables {
+    azimuth: Radians,
+    elevation: Radians,
+    range: f64,
+    range_rate: f64,
+}
+
+impl Observables {
+    pub fn azimuth(&self) -> Radians {
+        self.azimuth
+    }
+
+    pub fn elevation(&self) -> Radians {
+        self.elevation
+    }
+
+    pub fn range(&self) -> f64 {
+        self.range
+    }
+
+    pub fn range_rate(&self) -> f64 {
+        self.range_rate
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct GroundLocation<B: Spheroid> {
@@ -50,7 +79,7 @@ impl<B: Spheroid> GroundLocation<B> {
         self.altitude
     }
 
-    pub fn to_body_fixed(&self) -> DVec3 {
+    pub fn body_fixed_position(&self) -> DVec3 {
         let alt = self.altitude;
         let (lon_sin, lon_cos) = self.longitude.sin_cos();
         let (lat_sin, lat_cos) = self.latitude.sin_cos();
@@ -62,6 +91,31 @@ impl<B: Spheroid> GroundLocation<B> {
         let r_delta = (c + alt) * lat_cos;
         let r_kappa = (s + alt) * lat_sin;
         DVec3::new(r_delta * lon_cos, r_delta * lon_sin, r_kappa)
+    }
+
+    pub fn rotation_to_topocentric(&self) -> DMat3 {
+        let rot1 = DMat3::from_rotation_z(self.longitude()).transpose();
+        let rot2 = DMat3::from_rotation_y(FRAC_PI_2 - self.latitude()).transpose();
+        rot2 * rot1
+    }
+
+    pub fn observables<T: TimeLike + Clone>(&self, state: State<T, B, BodyFixed<B>>) -> Observables
+    where
+        B: RotationalElements + Clone,
+    {
+        let rot = self.rotation_to_topocentric();
+        let position = rot * (state.position() - self.body_fixed_position());
+        let velocity = rot * state.velocity();
+        let range = position.length();
+        let range_rate = position.dot(velocity) / range;
+        let elevation = (position.z / range).asin();
+        let azimuth = position.y.atan2(-position.x);
+        Observables {
+            azimuth,
+            elevation,
+            range,
+            range_rate,
+        }
     }
 }
 
@@ -120,7 +174,7 @@ where
     fn propagate(&self, time: T) -> Result<State<T, O, Icrf>, Self::Error> {
         State::new(
             time,
-            self.location.to_body_fixed(),
+            self.location.body_fixed_position(),
             DVec3::ZERO,
             self.location.body.clone(),
             BodyFixed(self.location.body.clone()),
@@ -132,14 +186,18 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::frames::NoOpFrameTransformationProvider;
+    use float_eq::assert_float_eq;
+
     use lox_bodies::Earth;
     use lox_time::transformations::ToTai;
-    use lox_time::utc;
     use lox_time::utc::Utc;
+    use lox_time::{time, utc, Time};
     use lox_utils::assert_close;
     use lox_utils::is_close::IsClose;
+
+    use crate::frames::NoOpFrameTransformationProvider;
+
+    use super::*;
 
     #[test]
     fn test_ground_location_to_body_fixed() {
@@ -147,7 +205,27 @@ mod tests {
         let latitude = 40.4527f64.to_radians();
         let location = GroundLocation::new(longitude, latitude, 0.0, Earth);
         let expected = DVec3::new(4846.130017870638, -370.1328551351891, 4116.364272747229);
-        assert_close!(location.to_body_fixed(), expected);
+        assert_close!(location.body_fixed_position(), expected);
+    }
+
+    #[test]
+    fn test_ground_location_observables() {
+        let longitude = -4f64.to_radians();
+        let latitude = 41f64.to_radians();
+        let location = GroundLocation::new(longitude, latitude, 0.0, Earth);
+        let position = DVec3::new(3359.927, -2398.072, 5153.0);
+        let velocity = DVec3::new(5.0657, 5.485, -0.744);
+        let time = time!(Tdb, 2012, 7, 1).unwrap();
+        let state = State::new(time, position, velocity, Earth, BodyFixed(Earth));
+        let observables = location.observables(state);
+        let expected_range = 2707.7;
+        let expected_range_rate = -7.16;
+        let expected_azimuth = -53.418f64.to_radians();
+        let expected_elevation = -7.077f64.to_radians();
+        assert_float_eq!(observables.range, expected_range, rel <= 1e-2);
+        assert_float_eq!(observables.range_rate, expected_range_rate, rel <= 1e-2);
+        assert_float_eq!(observables.azimuth, expected_azimuth, rel <= 1e-2);
+        assert_float_eq!(observables.elevation, expected_elevation, rel <= 1e-2);
     }
 
     #[test]

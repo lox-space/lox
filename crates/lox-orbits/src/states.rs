@@ -7,6 +7,7 @@
  */
 
 use glam::DVec3;
+use std::ops::Sub;
 
 use lox_bodies::{PointMass, RotationalElements};
 use lox_time::{julian_dates::JulianDate, time_scales::Tdb, transformations::TryToScale, TimeLike};
@@ -103,6 +104,21 @@ where
 
     pub fn velocity(&self) -> DVec3 {
         self.velocity
+    }
+}
+
+impl<T, O, R> Sub for State<T, O, R>
+where
+    T: TimeLike,
+    O: Origin,
+    R: ReferenceFrame,
+{
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        let position = self.position - rhs.position;
+        let velocity = self.velocity - rhs.velocity;
+        State::new(self.time, position, velocity, self.origin, self.frame)
     }
 }
 
