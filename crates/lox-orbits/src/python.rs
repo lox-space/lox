@@ -32,7 +32,7 @@ use python::PyBody;
 use crate::elements::{Keplerian, ToKeplerian};
 use crate::events::{Event, FindEventError, Window};
 use crate::frames::{CoordinateSystem, Icrf, ReferenceFrame, Topocentric};
-use crate::ground::{GroundLocation, GroundPropagator, GroundPropagatorError};
+use crate::ground::{GroundLocation, GroundPropagator, GroundPropagatorError, Observables};
 use crate::origins::CoordinateOrigin;
 use crate::propagators::semi_analytical::{Vallado, ValladoError};
 use crate::propagators::sgp4::{Sgp4, Sgp4Error};
@@ -854,4 +854,26 @@ pub fn elevation(
     let gs = gs.0.with_origin_and_frame(gs_origin, Icrf);
     let sc = sc.0.with_origin_and_frame(sc_origin, Icrf);
     crate::analysis::elevation(time, &frame.0, &gs, &sc, provider)
+}
+
+#[pyclass]
+pub struct PyObservables(pub Observables);
+
+#[pymethods]
+impl PyObservables {
+    fn azimuth(&self) -> f64 {
+        self.0.azimuth()
+    }
+
+    fn elevation(&self) -> f64 {
+        self.0.elevation()
+    }
+
+    fn range(&self) -> f64 {
+        self.0.range()
+    }
+
+    fn range_rate(&self) -> f64 {
+        self.0.range_rate()
+    }
 }
