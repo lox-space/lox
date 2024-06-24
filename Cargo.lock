@@ -584,6 +584,7 @@ dependencies = [
  "fast_polynomial",
  "float_eq",
  "glam",
+ "pyo3",
  "rstest",
  "thiserror",
 ]

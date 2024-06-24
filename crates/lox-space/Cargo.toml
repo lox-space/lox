@@ -26,6 +26,7 @@ python = [
     "lox-bodies/python",
     "lox-orbits/python",
     "lox-time/python",
+    "lox-utils/python",
 ]
 
 [dev-dependencies]
