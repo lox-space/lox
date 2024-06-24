@@ -18,6 +18,7 @@ use lox_time::python::deltas::PyTimeDelta;
 use lox_time::python::time::PyTime;
 use lox_time::python::ut1::PyUt1Provider;
 use lox_time::python::utc::PyUtc;
+use lox_utils::python::PySeries;
 
 #[pymodule]
 fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -45,5 +46,6 @@ fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyEvent>()?;
     m.add_class::<PyWindow>()?;
     m.add_class::<PyTopocentric>()?;
+    m.add_class::<PySeries>()?;
     Ok(())
 }
