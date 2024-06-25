@@ -625,6 +625,25 @@ impl PyGroundLocation {
     fn new(planet: PyPlanet, longitude: f64, latitude: f64, altitude: f64) -> Self {
         PyGroundLocation(GroundLocation::new(longitude, latitude, altitude, planet))
     }
+
+    fn observables(
+        &self,
+        state: PyState,
+        provider: Option<&Bound<'_, PyUt1Provider>>,
+    ) -> PyResult<PyObservables> {
+        // FIXME
+        let state = state.to_frame(PyFrame::Earth, provider)?;
+        let rot = self.0.rotation_to_topocentric();
+        let position = rot * (state.0.position() - self.0.body_fixed_position());
+        let velocity = rot * state.0.velocity();
+        let range = position.length();
+        let range_rate = position.dot(velocity) / range;
+        let elevation = (position.z / range).asin();
+        let azimuth = position.y.atan2(-position.x);
+        Ok(PyObservables(Observables::new(
+            azimuth, elevation, range, range_rate,
+        )))
+    }
 }
 
 #[pyclass(name = "GroundPropagator", module = "lox_space", frozen)]
@@ -843,7 +862,7 @@ pub fn elevation(
     crate::analysis::elevation(time, &frame.0, &gs, &sc, provider)
 }
 
-#[pyclass]
+#[pyclass(name = "Observables", module = "lox_space", frozen)]
 pub struct PyObservables(pub Observables);
 
 #[pymethods]
