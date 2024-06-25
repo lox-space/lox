@@ -32,6 +32,14 @@ pub struct Observables {
 }
 
 impl Observables {
+    pub fn new(azimuth: Radians, elevation: Radians, range: f64, range_rate: f64) -> Self {
+        Observables {
+            azimuth,
+            elevation,
+            range,
+            range_rate,
+        }
+    }
     pub fn azimuth(&self) -> Radians {
         self.azimuth
     }
