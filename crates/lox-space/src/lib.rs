@@ -9,8 +9,8 @@
 use lox_bodies::python::{PyBarycenter, PyMinorBody, PyPlanet, PySatellite, PySun};
 use lox_orbits::python::{
     elevation, find_events, find_windows, visibility, PyEvent, PyFrame, PyGroundLocation,
-    PyGroundPropagator, PyKeplerian, PySgp4, PyState, PyTopocentric, PyTrajectory, PyVallado,
-    PyWindow,
+    PyGroundPropagator, PyKeplerian, PyObservables, PySgp4, PyState, PyTopocentric, PyTrajectory,
+    PyVallado, PyWindow,
 };
 use pyo3::prelude::*;
 
@@ -47,5 +47,6 @@ fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyWindow>()?;
     m.add_class::<PyTopocentric>()?;
     m.add_class::<PySeries>()?;
+    m.add_class::<PyObservables>()?;
     Ok(())
 }
