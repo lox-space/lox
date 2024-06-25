@@ -862,7 +862,7 @@ pub fn elevation(
     crate::analysis::elevation(time, &frame.0, &gs, &sc, provider)
 }
 
-#[pyclass]
+#[pyclass(name = "Observables", module = "lox_space", frozen)]
 pub struct PyObservables(pub Observables);
 
 #[pymethods]
