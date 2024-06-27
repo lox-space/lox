@@ -6,7 +6,7 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use glam::DVec3;
+use glam::{DMat3, DVec3};
 use std::ops::Sub;
 
 use lox_bodies::{PointMass, RotationalElements};
@@ -104,6 +104,21 @@ where
 
     pub fn velocity(&self) -> DVec3 {
         self.velocity
+    }
+}
+
+impl<T, O> State<T, O, Icrf>
+where
+    T: TimeLike,
+    O: Origin,
+{
+    pub fn rotation_lvlh(&self) -> DMat3 {
+        let r = self.position().normalize();
+        let v = self.velocity().normalize();
+        let z = -r;
+        let y = -r.cross(v);
+        let x = y.cross(z);
+        DMat3::from_cols(x, y, z)
     }
 }
 
