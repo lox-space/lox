@@ -134,6 +134,10 @@ pub fn find_windows<F: Fn(f64) -> f64 + Copy, T: TimeLike + Clone, R: FindBracke
         Ok(events) => {
             let mut events: VecDeque<Event<T>> = events.into();
 
+            if events.is_empty() {
+                return vec![];
+            }
+
             // If the first event is a downcrossing, insert an upcrossing at the start
             if events.front().unwrap().crossing == ZeroCrossing::Down {
                 events.push_front(Event {
