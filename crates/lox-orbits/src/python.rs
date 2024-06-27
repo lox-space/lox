@@ -9,7 +9,7 @@
 use std::convert::TryFrom;
 
 use glam::DVec3;
-use numpy::PyArray1;
+use numpy::{PyArray1, PyArray2};
 use pyo3::{
     exceptions::PyValueError,
     pyclass, pyfunction, pymethods,
@@ -381,6 +381,16 @@ impl PyState {
             ));
         }
         Ok(PyKeplerian(self.0.to_keplerian()))
+    }
+
+    fn rotation_lvlh(&self) -> PyResult<[f64; 9]> {
+        if self.reference_frame() != PyFrame::Icrf {
+            return Err(PyValueError::new_err(
+                "only inertial frames are supported for the LVLH rotation matrix",
+            ));
+        }
+        let rot = self.0.with_frame(Icrf).rotation_lvlh();
+        Ok(rot.to_cols_array())
     }
 }
 
