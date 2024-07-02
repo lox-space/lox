@@ -22,21 +22,21 @@ fn generate_call_to_deserializer_for_kvn_type(
                     crate::ndm::kvn::parser::parse_kvn_string_line_new(
                         next_line
                     ).map_err(|x| crate::ndm::kvn::KvnDeserializerErr::from(x))
-                    .map(|x| x.1)?
+                    .map(|x| x)?
                 },
                 "f64" => quote! {
                     crate::ndm::kvn::parser::parse_kvn_numeric_line_new(
                         next_line,
                         true, //@TODO
                     ).map_err(|x| crate::ndm::kvn::KvnDeserializerErr::from(x))
-                    .map(|x| x.1)?
+                    .map(|x| x)?
                 },
                 "i32" | "u64" => quote! {
                     crate::ndm::kvn::parser::parse_kvn_integer_line_new(
                         next_line,
                         true, //@TODO
                     ).map_err(|x| crate::ndm::kvn::KvnDeserializerErr::from(x))
-                    .map(|x| x.1)?
+                    .map(|x| x)?
                 },
                 // Assumes the match list here exhaustively matches the one from above
                 _ => unreachable!(),
@@ -78,7 +78,7 @@ fn generate_call_to_deserializer_for_kvn_type(
                         next_line,
                         true
                     ).map_err(|x| crate::ndm::kvn::KvnDeserializerErr::from(x))
-                    .map(|x| x.1)?
+                    .map(|x| x)?
                 },
                 "KvnNumericValue" => quote! {
                     crate::ndm::kvn::parser::parse_kvn_numeric_line(
@@ -86,7 +86,7 @@ fn generate_call_to_deserializer_for_kvn_type(
                         next_line,
                         true
                     ).map_err(|x| crate::ndm::kvn::KvnDeserializerErr::from(x))
-                    .map(|x| x.1)?
+                    .map(|x| x)?
                 },
                 "KvnIntegerValue" => quote! {
                     crate::ndm::kvn::parser::parse_kvn_integer_line(
@@ -94,7 +94,7 @@ fn generate_call_to_deserializer_for_kvn_type(
                         next_line,
                         true
                     ).map_err(|x| crate::ndm::kvn::KvnDeserializerErr::from(x))
-                    .map(|x| x.1)?
+                    .map(|x| x)?
                 },
                 // Assumes the match list here exhaustively matches the one from above
                 _ => unreachable!(),
@@ -159,7 +159,7 @@ fn generate_call_to_deserializer_for_kvn_type_new(
                         crate::ndm::kvn::parser::parse_kvn_string_line_new(
                             lines.next().unwrap()
                         ).map_err(|x| crate::ndm::kvn::KvnDeserializerErr::from(x))
-                        .map(|x| x.1)?
+                        .map(|x| x)?
                     }
                 }
                 "f64" | "NonNegativeDouble" | "NegativeDouble" | "PositiveDouble" => quote! {
@@ -167,14 +167,14 @@ fn generate_call_to_deserializer_for_kvn_type_new(
                         lines.next().unwrap(),
                         true
                     ).map_err(|x| crate::ndm::kvn::KvnDeserializerErr::from(x))
-                    .map(|x| x.1)?
+                    .map(|x| x)?
                 },
                 "i32" => quote! {
                     crate::ndm::kvn::parser::parse_kvn_integer_line_new(
                         lines.next().unwrap(),
                         true
                     ).map_err(|x| crate::ndm::kvn::KvnDeserializerErr::from(x))
-                    .map(|x| x.1)?
+                    .map(|x| x)?
                 },
                 // Assumes the match list here exhaustively matches the one from above
                 _ => unreachable!(),
@@ -635,7 +635,7 @@ fn deserializers_for_struct_with_unnamed_fields(
                 crate::ndm::kvn::parser::parse_kvn_datetime_line_new(
                     lines.next().unwrap()
                 ).map_err(|x| crate::ndm::kvn::KvnDeserializerErr::from(x))
-                .map(|x| x.1)?.full_value
+                .map(|x| x)?.full_value
             ))
         };
     }
