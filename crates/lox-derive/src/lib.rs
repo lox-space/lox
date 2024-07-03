@@ -613,12 +613,8 @@ fn deserializers_for_struct_with_unnamed_fields(
     }
 
     // Unwrap is okay because we expect this span to come from the source code
-    let field_type = extract_type_path(&field.ty)
-        .unwrap()
-        .span()
-        .source_text()
-        .unwrap();
     let field_type_new = extract_type_path(&field.ty).unwrap();
+    let field_type = field_type_new.span().source_text().unwrap();
 
     let deserializer_for_kvn_type =
         generate_call_to_deserializer_for_kvn_type_new(&field_type, field_type_new);
