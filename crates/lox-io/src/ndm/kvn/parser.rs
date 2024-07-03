@@ -119,8 +119,7 @@ pub struct KvnDateTimeValue {
     pub full_value: String,
 }
 
-//@TODO remove _new suffix
-pub fn kvn_line_matches_key_new<'a>(
+pub fn kvn_line_matches_key<'a>(
     key: &'a str,
     input: &'a str,
 ) -> Result<bool, KvnKeywordNotFoundErr<&'a str>> {
@@ -141,7 +140,7 @@ pub fn kvn_line_matches_key_new<'a>(
     Ok(captured_keyword == key)
 }
 
-pub fn parse_kvn_string_line_new(
+pub fn parse_kvn_string_line(
     input: &str,
 ) -> Result<KvnValue<String, String>, KvnStringParserErr<&str>> {
     if input.trim_start().starts_with("COMMENT ") {
@@ -196,7 +195,7 @@ pub fn parse_kvn_string_line_new(
     Ok(KvnValue { value, unit: None })
 }
 
-pub fn parse_kvn_integer_line_new<T>(
+pub fn parse_kvn_integer_line<T>(
     input: &str,
     with_unit: bool,
 ) -> Result<KvnValue<T, String>, KvnNumberParserErr<&str>>
@@ -252,7 +251,7 @@ fn is_empty_value(input: &str) -> bool {
     re.is_match(input)
 }
 
-pub fn parse_kvn_numeric_line_new(
+pub fn parse_kvn_numeric_line(
     input: &str,
     with_unit: bool,
 ) -> Result<KvnValue<f64, String>, KvnNumberParserErr<&str>> {
@@ -295,7 +294,7 @@ pub fn parse_kvn_numeric_line_new(
     Ok(KvnValue { value, unit })
 }
 
-pub fn parse_kvn_datetime_line_new(
+pub fn parse_kvn_datetime_line(
     input: &str,
 ) -> Result<KvnDateTimeValue, KvnDateTimeParserErr<&str>> {
     if is_empty_value(input) {
@@ -383,51 +382,51 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_parse_kvn_string_line_new() {
+    fn test_parse_kvn_string_line() {
         // 7.5.1 A non-empty value field must be assigned to each mandatory keyword except for *‘_START’ and *‘_STOP’ keyword values
         // 7.4.6 Any white space immediately preceding or following the ‘equals’ sign shall not be significant.
         assert_eq!(
-            parse_kvn_string_line_new("ASD = ASDFG"),
+            parse_kvn_string_line("ASD = ASDFG"),
             Ok(KvnValue {
                 value: "ASDFG".to_string(),
                 unit: None
             })
         );
         assert_eq!(
-            parse_kvn_string_line_new("ASD    =   ASDFG"),
+            parse_kvn_string_line("ASD    =   ASDFG"),
             Ok(KvnValue {
                 value: "ASDFG".to_string(),
                 unit: None
             })
         );
         assert_eq!(
-            parse_kvn_string_line_new("ASD    = ASDFG"),
+            parse_kvn_string_line("ASD    = ASDFG"),
             Ok(KvnValue {
                 value: "ASDFG".to_string(),
                 unit: None
             })
         );
         assert_eq!(
-            parse_kvn_string_line_new("ASD =    "),
+            parse_kvn_string_line("ASD =    "),
             Err(KvnStringParserErr::EmptyValue { input: "ASD =    " })
         );
         assert_eq!(
-            parse_kvn_string_line_new("ASD = "),
+            parse_kvn_string_line("ASD = "),
             Err(KvnStringParserErr::EmptyValue { input: "ASD = " })
         );
         assert_eq!(
-            parse_kvn_string_line_new("ASD ="),
+            parse_kvn_string_line("ASD ="),
             Err(KvnStringParserErr::EmptyValue { input: "ASD =" })
         );
 
         assert_eq!(
-            parse_kvn_string_line_new("ASD   [km]"),
+            parse_kvn_string_line("ASD   [km]"),
             Err(KvnStringParserErr::InvalidFormat {
                 input: "ASD   [km]"
             })
         );
         assert_eq!(
-            parse_kvn_string_line_new(" = asd [km]"),
+            parse_kvn_string_line(" = asd [km]"),
             Err(KvnStringParserErr::EmptyKeyword {
                 input: " = asd [km]"
             })
@@ -435,7 +434,7 @@ mod test {
 
         // 7.4.7 Any white space immediately preceding the end of line shall not be significant.
         assert_eq!(
-            parse_kvn_string_line_new("ASD = ASDFG          "),
+            parse_kvn_string_line("ASD = ASDFG          "),
             Ok(KvnValue {
                 value: "ASDFG".to_string(),
                 unit: None
@@ -444,7 +443,7 @@ mod test {
 
         // 7.4.5 Any white space immediately preceding or following the keyword shall not be significant.
         assert_eq!(
-            parse_kvn_string_line_new("  ASD  = ASDFG"),
+            parse_kvn_string_line("  ASD  = ASDFG"),
             Ok(KvnValue {
                 value: "ASDFG".to_string(),
                 unit: None
@@ -455,7 +454,7 @@ mod test {
         // [...] White space shall be retained (shall be significant) in comment values.
 
         assert_eq!(
-            parse_kvn_string_line_new("  COMMENT asd a    asd a ads as "),
+            parse_kvn_string_line("  COMMENT asd a    asd a ads as "),
             Ok(KvnValue {
                 value: "asd a    asd a ads as ".to_string(),
                 unit: None
@@ -463,7 +462,7 @@ mod test {
         );
 
         assert_eq!(
-            parse_kvn_string_line_new("  COMMENT "),
+            parse_kvn_string_line("  COMMENT "),
             Ok(KvnValue {
                 value: "".to_string(),
                 unit: None
@@ -472,11 +471,11 @@ mod test {
     }
 
     #[test]
-    fn test_parse_kvn_integer_line_new() {
+    fn test_parse_kvn_integer_line() {
         // a) there must be at least one blank character between the value and the units text;
         // b) the units must be enclosed within square brackets (e.g., ‘[m]’);
         assert_eq!(
-            parse_kvn_integer_line_new("SCLK_OFFSET_AT_EPOCH = 28800 [s]", true),
+            parse_kvn_integer_line("SCLK_OFFSET_AT_EPOCH = 28800 [s]", true),
             Ok(KvnValue {
                 value: 28800,
                 unit: Some("s".to_string())
@@ -486,7 +485,7 @@ mod test {
         // 7.4.7 Any white space immediately preceding the end of line shall not be significant.
 
         assert_eq!(
-            parse_kvn_integer_line_new("SCLK_OFFSET_AT_EPOCH = 28800             [s]", true),
+            parse_kvn_integer_line("SCLK_OFFSET_AT_EPOCH = 28800             [s]", true),
             Ok(KvnValue {
                 value: 28800,
                 unit: Some("s".to_string())
@@ -494,7 +493,7 @@ mod test {
         );
 
         assert_eq!(
-            parse_kvn_integer_line_new("SCLK_OFFSET_AT_EPOCH = 28800             ", false),
+            parse_kvn_integer_line("SCLK_OFFSET_AT_EPOCH = 28800             ", false),
             Ok(KvnValue {
                 value: 28800,
                 unit: None
@@ -504,7 +503,7 @@ mod test {
         // 7.4.5 Any white space immediately preceding or following the keyword shall not be significant.
 
         assert_eq!(
-            parse_kvn_integer_line_new("          SCLK_OFFSET_AT_EPOCH = 28800", false),
+            parse_kvn_integer_line("          SCLK_OFFSET_AT_EPOCH = 28800", false),
             Ok(KvnValue {
                 value: 28800,
                 unit: None
@@ -512,7 +511,7 @@ mod test {
         );
 
         assert_eq!(
-            parse_kvn_integer_line_new("SCLK_OFFSET_AT_EPOCH = 00028800 [s]", true),
+            parse_kvn_integer_line("SCLK_OFFSET_AT_EPOCH = 00028800 [s]", true),
             Ok(KvnValue {
                 value: 28800,
                 unit: Some("s".to_string())
@@ -520,7 +519,7 @@ mod test {
         );
 
         assert_eq!(
-            parse_kvn_integer_line_new("SCLK_OFFSET_AT_EPOCH = -28800 [s]", true),
+            parse_kvn_integer_line("SCLK_OFFSET_AT_EPOCH = -28800 [s]", true),
             Ok(KvnValue {
                 value: -28800,
                 unit: Some("s".to_string())
@@ -528,7 +527,7 @@ mod test {
         );
 
         assert_eq!(
-            parse_kvn_integer_line_new("SCLK_OFFSET_AT_EPOCH = -28800", true),
+            parse_kvn_integer_line("SCLK_OFFSET_AT_EPOCH = -28800", true),
             Ok(KvnValue {
                 value: -28800,
                 unit: None
@@ -536,7 +535,7 @@ mod test {
         );
 
         assert_eq!(
-            parse_kvn_integer_line_new("SCLK_OFFSET_AT_EPOCH = 28800 [s]", true),
+            parse_kvn_integer_line("SCLK_OFFSET_AT_EPOCH = 28800 [s]", true),
             Ok(KvnValue {
                 value: 28800,
                 unit: Some("s".to_string())
@@ -544,53 +543,53 @@ mod test {
         );
 
         assert_eq!(
-            parse_kvn_integer_line_new::<u32>("SCLK_OFFSET_AT_EPOCH = 28800 [s]", false),
+            parse_kvn_integer_line::<u32>("SCLK_OFFSET_AT_EPOCH = 28800 [s]", false),
             Err(KvnNumberParserErr::InvalidFormat {
                 input: "SCLK_OFFSET_AT_EPOCH = 28800 [s]"
             })
         );
 
         assert_eq!(
-            parse_kvn_integer_line_new::<u32>("SCLK_OFFSET_AT_EPOCH = -asd", true),
+            parse_kvn_integer_line::<u32>("SCLK_OFFSET_AT_EPOCH = -asd", true),
             Err(KvnNumberParserErr::InvalidFormat {
                 input: "SCLK_OFFSET_AT_EPOCH = -asd"
             })
         );
 
         assert_eq!(
-            parse_kvn_integer_line_new::<u32>("SCLK_OFFSET_AT_EPOCH = [s]", true),
+            parse_kvn_integer_line::<u32>("SCLK_OFFSET_AT_EPOCH = [s]", true),
             Err(KvnNumberParserErr::EmptyValue {
                 input: "SCLK_OFFSET_AT_EPOCH = [s]"
             })
         );
 
         assert_eq!(
-            parse_kvn_integer_line_new::<u32>("SCLK_OFFSET_AT_EPOCH =    ", false),
+            parse_kvn_integer_line::<u32>("SCLK_OFFSET_AT_EPOCH =    ", false),
             Err(KvnNumberParserErr::EmptyValue {
                 input: "SCLK_OFFSET_AT_EPOCH =    "
             })
         );
         assert_eq!(
-            parse_kvn_integer_line_new::<u32>("SCLK_OFFSET_AT_EPOCH = ", false),
+            parse_kvn_integer_line::<u32>("SCLK_OFFSET_AT_EPOCH = ", false),
             Err(KvnNumberParserErr::EmptyValue {
                 input: "SCLK_OFFSET_AT_EPOCH = "
             })
         );
         assert_eq!(
-            parse_kvn_integer_line_new::<u32>("SCLK_OFFSET_AT_EPOCH =", false),
+            parse_kvn_integer_line::<u32>("SCLK_OFFSET_AT_EPOCH =", false),
             Err(KvnNumberParserErr::EmptyValue {
                 input: "SCLK_OFFSET_AT_EPOCH ="
             })
         );
 
         assert_eq!(
-            parse_kvn_integer_line_new::<u32>("SCLK_OFFSET_AT_EPOCH   [km]", true),
+            parse_kvn_integer_line::<u32>("SCLK_OFFSET_AT_EPOCH   [km]", true),
             Err(KvnNumberParserErr::InvalidFormat {
                 input: "SCLK_OFFSET_AT_EPOCH   [km]"
             })
         );
         assert_eq!(
-            parse_kvn_integer_line_new::<u32>(" = 123 [km]", true),
+            parse_kvn_integer_line::<u32>(" = 123 [km]", true),
             Err(KvnNumberParserErr::EmptyKeyword {
                 input: " = 123 [km]"
             })
@@ -598,11 +597,11 @@ mod test {
     }
 
     #[test]
-    fn test_parse_kvn_numeric_line_new() {
+    fn test_parse_kvn_numeric_line() {
         // a) there must be at least one blank character between the value and the units text;
         // b) the units must be enclosed within square brackets (e.g., ‘[m]’);
         assert_eq!(
-            parse_kvn_numeric_line_new("X = 66559942 [km]", true),
+            parse_kvn_numeric_line("X = 66559942 [km]", true),
             Ok(KvnValue {
                 value: 66559942f64,
                 unit: Some("km".to_string())
@@ -612,7 +611,7 @@ mod test {
         // 7.4.7 Any white space immediately preceding the end of line shall not be significant.
 
         assert_eq!(
-            parse_kvn_numeric_line_new("X = 66559942             [km]", true),
+            parse_kvn_numeric_line("X = 66559942             [km]", true),
             Ok(KvnValue {
                 value: 66559942f64,
                 unit: Some("km".to_string())
@@ -620,7 +619,7 @@ mod test {
         );
 
         assert_eq!(
-            parse_kvn_numeric_line_new("X = 66559942             ", false),
+            parse_kvn_numeric_line("X = 66559942             ", false),
             Ok(KvnValue {
                 value: 66559942f64,
                 unit: None
@@ -630,7 +629,7 @@ mod test {
         // 7.4.5 Any white space immediately preceding or following the keyword shall not be significant.
 
         assert_eq!(
-            parse_kvn_numeric_line_new("          X = 66559942", false),
+            parse_kvn_numeric_line("          X = 66559942", false),
             Ok(KvnValue {
                 value: 66559942f64,
                 unit: None
@@ -638,7 +637,7 @@ mod test {
         );
 
         assert_eq!(
-            parse_kvn_numeric_line_new("X = 6655.9942 [km]", true),
+            parse_kvn_numeric_line("X = 6655.9942 [km]", true),
             Ok(KvnValue {
                 value: 6655.9942,
                 unit: Some("km".to_string())
@@ -646,7 +645,7 @@ mod test {
         );
 
         assert_eq!(
-            parse_kvn_numeric_line_new("CX_X =  5.801003223606e-05", true),
+            parse_kvn_numeric_line("CX_X =  5.801003223606e-05", true),
             Ok(KvnValue {
                 value: 5.801003223606e-05,
                 unit: None
@@ -654,34 +653,34 @@ mod test {
         );
 
         assert_eq!(
-            parse_kvn_numeric_line_new("X = -asd", true),
+            parse_kvn_numeric_line("X = -asd", true),
             Err(KvnNumberParserErr::InvalidFormat { input: "X = -asd" })
         );
 
         assert_eq!(
-            parse_kvn_numeric_line_new("X = [s]", true),
+            parse_kvn_numeric_line("X = [s]", true),
             Err(KvnNumberParserErr::EmptyValue { input: "X = [s]" })
         );
 
         assert_eq!(
-            parse_kvn_numeric_line_new("X =    ", false),
+            parse_kvn_numeric_line("X =    ", false),
             Err(KvnNumberParserErr::EmptyValue { input: "X =    " })
         );
         assert_eq!(
-            parse_kvn_numeric_line_new("X = ", false),
+            parse_kvn_numeric_line("X = ", false),
             Err(KvnNumberParserErr::EmptyValue { input: "X = " })
         );
         assert_eq!(
-            parse_kvn_numeric_line_new("X =", false),
+            parse_kvn_numeric_line("X =", false),
             Err(KvnNumberParserErr::EmptyValue { input: "X =" })
         );
 
         assert_eq!(
-            parse_kvn_numeric_line_new("X   [km]", true),
+            parse_kvn_numeric_line("X   [km]", true),
             Err(KvnNumberParserErr::InvalidFormat { input: "X   [km]" })
         );
         assert_eq!(
-            parse_kvn_numeric_line_new(" = 123 [km]", true),
+            parse_kvn_numeric_line(" = 123 [km]", true),
             Err(KvnNumberParserErr::EmptyKeyword {
                 input: " = 123 [km]"
             })
@@ -689,9 +688,9 @@ mod test {
     }
 
     #[test]
-    fn test_parse_kvn_datetime_line_new() {
+    fn test_parse_kvn_datetime_line() {
         assert_eq!(
-            parse_kvn_datetime_line_new("CREATION_DATE = 2021-06-03T05:33:00.123"),
+            parse_kvn_datetime_line("CREATION_DATE = 2021-06-03T05:33:00.123"),
             Ok(KvnDateTimeValue {
                 year: 2021,
                 month: 6,
@@ -705,7 +704,7 @@ mod test {
         );
 
         assert_eq!(
-            parse_kvn_datetime_line_new("CREATION_DATE = 2021-06-03T05:33:01"),
+            parse_kvn_datetime_line("CREATION_DATE = 2021-06-03T05:33:01"),
             Ok(KvnDateTimeValue {
                 year: 2021,
                 month: 6,
@@ -721,7 +720,7 @@ mod test {
         // 7.4.7 Any white space immediately preceding the end of line shall not be significant.
 
         assert_eq!(
-            parse_kvn_datetime_line_new("CREATION_DATE = 2021-06-03T05:33:01           "),
+            parse_kvn_datetime_line("CREATION_DATE = 2021-06-03T05:33:01           "),
             Ok(KvnDateTimeValue {
                 year: 2021,
                 month: 6,
@@ -737,7 +736,7 @@ mod test {
         // 7.4.5 Any white space immediately preceding or following the keyword shall not be significant.
 
         assert_eq!(
-            parse_kvn_datetime_line_new("          CREATION_DATE = 2021-06-03T05:33:01"),
+            parse_kvn_datetime_line("          CREATION_DATE = 2021-06-03T05:33:01"),
             Ok(KvnDateTimeValue {
                 year: 2021,
                 month: 6,
@@ -753,48 +752,48 @@ mod test {
         // @TODO add support for ddd format
 
         assert_eq!(
-            parse_kvn_datetime_line_new("CREATION_DATE = 2021,06,03Q05!33!00-123"),
+            parse_kvn_datetime_line("CREATION_DATE = 2021,06,03Q05!33!00-123"),
             Err(KvnDateTimeParserErr::InvalidFormat {
                 input: "CREATION_DATE = 2021,06,03Q05!33!00-123"
             })
         );
 
         assert_eq!(
-            parse_kvn_datetime_line_new("CREATION_DATE = asdffggg"),
+            parse_kvn_datetime_line("CREATION_DATE = asdffggg"),
             Err(KvnDateTimeParserErr::InvalidFormat {
                 input: "CREATION_DATE = asdffggg"
             })
         );
 
         assert_eq!(
-            parse_kvn_datetime_line_new("CREATION_DATE = "),
+            parse_kvn_datetime_line("CREATION_DATE = "),
             Err(KvnDateTimeParserErr::EmptyValue {
                 input: "CREATION_DATE = "
             })
         );
 
         assert_eq!(
-            parse_kvn_datetime_line_new("CREATION_DATE =    "),
+            parse_kvn_datetime_line("CREATION_DATE =    "),
             Err(KvnDateTimeParserErr::EmptyValue {
                 input: "CREATION_DATE =    "
             })
         );
 
         assert_eq!(
-            parse_kvn_datetime_line_new("CREATION_DATE ="),
+            parse_kvn_datetime_line("CREATION_DATE ="),
             Err(KvnDateTimeParserErr::EmptyValue {
                 input: "CREATION_DATE ="
             })
         );
 
         assert_eq!(
-            parse_kvn_datetime_line_new("CREATION_DATE     "),
+            parse_kvn_datetime_line("CREATION_DATE     "),
             Err(KvnDateTimeParserErr::InvalidFormat {
                 input: "CREATION_DATE     "
             })
         );
         assert_eq!(
-            parse_kvn_datetime_line_new(" = 2021-06-03T05:33:01"),
+            parse_kvn_datetime_line(" = 2021-06-03T05:33:01"),
             Err(KvnDateTimeParserErr::EmptyKeyword {
                 input: " = 2021-06-03T05:33:01"
             })
