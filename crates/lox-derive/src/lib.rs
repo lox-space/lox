@@ -14,6 +14,7 @@ fn generate_call_to_deserializer_for_kvn_type(
     type_name: &str,
     type_name_new: &syn::Path,
     expected_kvn_name: &str,
+    with_keyword_matching: bool,
 ) -> Result<proc_macro2::TokenStream, proc_macro::TokenStream> {
     match type_name {
         "String" | "f64" | "i32" | "u64" => {
@@ -42,32 +43,41 @@ fn generate_call_to_deserializer_for_kvn_type(
                 _ => unreachable!(),
             };
 
-            Ok(quote! {
-                match lines.peek() {
-                    None => Err(crate::ndm::kvn::KvnDeserializerErr::<String>::UnexpectedEndOfInput {
-                        keyword: #expected_kvn_name.to_string()
-                    }),
-                    Some(next_line) => {
-                        let line_matches = crate::ndm::kvn::parser::kvn_line_matches_key(
-                            #expected_kvn_name,
-                            next_line,
-                        )?;
+            if with_keyword_matching {
+                Ok(quote! {
+                    match lines.peek() {
+                        None => Err(crate::ndm::kvn::KvnDeserializerErr::<String>::UnexpectedEndOfInput {
+                            keyword: #expected_kvn_name.to_string()
+                        }),
+                        Some(next_line) => {
+                            let line_matches = crate::ndm::kvn::parser::kvn_line_matches_key(
+                                #expected_kvn_name,
+                                next_line,
+                            )?;
 
-                        let result = if line_matches {
-                            let next_line = lines.next().unwrap();
+                            let result = if line_matches {
+                                let next_line = lines.next().unwrap();
 
-                            Ok(#parser.value)
-                        } else {
-                            Err(crate::ndm::kvn::KvnDeserializerErr::<String>::UnexpectedKeyword {
-                                found: next_line.to_string(),
-                                expected: #expected_kvn_name.to_string(),
-                            })
-                        };
+                                Ok(#parser.value)
+                            } else {
+                                Err(crate::ndm::kvn::KvnDeserializerErr::<String>::UnexpectedKeyword {
+                                    found: next_line.to_string(),
+                                    expected: #expected_kvn_name.to_string(),
+                                })
+                            };
 
-                        result
+                            result
+                        }
                     }
-                }
-            })
+                })
+            } else {
+                Ok(quote! {
+                   {
+                      let next_line = lines.next().unwrap();
+                      #parser.value
+                   }
+                })
+            }
         }
         _ => Ok(quote! {
            {
@@ -176,6 +186,7 @@ fn generate_call_to_deserializer_for_option_type(
         type_name.as_ref(),
         type_name_new,
         expected_kvn_name,
+        true,
     )?;
 
     let condition_shortcut = match type_name.as_str() {
@@ -234,6 +245,7 @@ fn generate_call_to_deserializer_for_vec_type(
                     type_name.as_ref(),
                     bla,
                     expected_kvn_name,
+                    true,
                 )?;
 
                 let type_ident = syn::Ident::new(&type_name, Span::call_site());
@@ -325,6 +337,7 @@ fn handle_version_field(
         &field_type,
         field_type_new,
         &expected_kvn_name,
+        true,
     )?;
 
     Ok(quote! {
@@ -473,6 +486,7 @@ fn deserializer_for_struct_with_named_fields(
                             &field_type,
                             field_type_new,
                             &expected_kvn_name,
+                            true,
                         )?;
 
                         quote! {
@@ -559,7 +573,7 @@ fn deserializers_for_struct_with_unnamed_fields(
     let field_type = field_type_new.span().source_text().unwrap();
 
     let deserializer_for_kvn_type =
-        generate_call_to_deserializer_for_kvn_type_new(&field_type, field_type_new);
+        generate_call_to_deserializer_for_kvn_type(&field_type, field_type_new, "Blalala", false);
 
     let deserializer_for_kvn_type = match deserializer_for_kvn_type {
         Ok(deserializer_for_kvn_type) => deserializer_for_kvn_type,
@@ -568,7 +582,7 @@ fn deserializers_for_struct_with_unnamed_fields(
 
     quote! {
         Ok(#type_name (
-            #deserializer_for_kvn_type.value
+            #deserializer_for_kvn_type
         ))
     }
 }
@@ -623,6 +637,8 @@ pub fn derive_kvn_deserialize(item: proc_macro::TokenStream) -> proc_macro::Toke
             }
         }
     };
+
+    // eprint!("{:#}", struct_deserializer);
 
     struct_deserializer.into()
 }
