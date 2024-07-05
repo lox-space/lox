@@ -75,6 +75,15 @@ impl<B: Spheroid> GroundLocation<B> {
         }
     }
 
+    pub fn with_body<T: Spheroid>(self, body: T) -> GroundLocation<T> {
+        GroundLocation {
+            longitude: self.longitude,
+            latitude: self.latitude,
+            altitude: self.altitude,
+            body,
+        }
+    }
+
     pub fn longitude(&self) -> f64 {
         self.longitude
     }

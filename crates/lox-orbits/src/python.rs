@@ -9,7 +9,7 @@
 use std::convert::TryFrom;
 
 use glam::DVec3;
-use numpy::{PyArray1, PyArray2};
+use numpy::PyArray1;
 use pyo3::{
     exceptions::PyValueError,
     pyclass, pyfunction, pymethods,
@@ -31,7 +31,7 @@ use python::PyBody;
 
 use crate::elements::{Keplerian, ToKeplerian};
 use crate::events::{Event, FindEventError, Window};
-use crate::frames::{CoordinateSystem, Icrf, ReferenceFrame, Topocentric};
+use crate::frames::{BodyFixed, CoordinateSystem, Icrf, ReferenceFrame, Topocentric, TryToFrame};
 use crate::ground::{GroundLocation, GroundPropagator, GroundPropagatorError, Observables};
 use crate::origins::CoordinateOrigin;
 use crate::propagators::semi_analytical::{Vallado, ValladoError};
@@ -392,6 +392,28 @@ impl PyState {
         let rot = self.0.with_frame(Icrf).rotation_lvlh();
         Ok(rot.to_cols_array())
     }
+
+    fn to_ground_location(&self, py: Python<'_>) -> PyResult<PyGroundLocation> {
+        if self.reference_frame() != PyFrame::Icrf {
+            return Err(PyValueError::new_err(
+                "only inertial frames are supported for the ground location transformations",
+            ));
+        }
+        let origin: PyPlanet = self.origin().extract(py)?;
+        if origin.name() != "Earth" {
+            return Err(PyValueError::new_err(
+                "only Earth-based frames are supported for the ground location transformations",
+            ));
+        }
+        Ok(PyGroundLocation(
+            self.0
+                .with_origin_and_frame(Earth, Icrf)
+                .try_to_frame(BodyFixed(Earth), &PyNoOpOffsetProvider)?
+                .to_ground_location()
+                .map_err(|err| PyValueError::new_err(err.to_string()))?
+                .with_body(origin),
+        ))
+    }
 }
 
 #[pyclass(name = "Keplerian", module = "lox_space", frozen)]
@@ -653,6 +675,18 @@ impl PyGroundLocation {
         Ok(PyObservables(Observables::new(
             azimuth, elevation, range, range_rate,
         )))
+    }
+
+    fn longitude(&self) -> f64 {
+        self.0.longitude()
+    }
+
+    fn latitude(&self) -> f64 {
+        self.0.latitude()
+    }
+
+    fn altitude(&self) -> f64 {
+        self.0.altitude()
     }
 }
 

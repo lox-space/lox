@@ -149,8 +149,7 @@ mod tests {
     fn test_visibility() {
         let gs = location();
         let sc = spacecraft_trajectory();
-        let frame = frame();
-        let times: Vec<Time<Tai>> = sc.states().iter().map(|s| s.time().clone()).collect();
+        let times: Vec<Time<Tai>> = sc.states().iter().map(|s| s.time()).collect();
         let expected = contacts();
         let actual = visibility(&times, 0.0, &gs, &sc, &NoOpFrameTransformationProvider);
         assert_eq!(actual.len(), expected.len());

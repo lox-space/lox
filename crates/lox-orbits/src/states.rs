@@ -5,23 +5,24 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
-
 use glam::{DMat3, DVec3};
+use std::f64::consts::{PI, TAU};
 use std::ops::Sub;
-
-use lox_bodies::{PointMass, RotationalElements};
-use lox_time::{julian_dates::JulianDate, time_scales::Tdb, transformations::TryToScale, TimeLike};
-use lox_utils::glam::Azimuth;
-use lox_utils::math::{mod_two_pi, normalize_two_pi};
 
 use crate::anomalies::{eccentric_to_true, hyperbolic_to_true};
 use crate::elements::{is_circular, is_equatorial, Keplerian, ToKeplerian};
+use crate::ground::GroundLocation;
 use crate::{
     frames::{
         BodyFixed, CoordinateSystem, FrameTransformationProvider, Icrf, ReferenceFrame, TryToFrame,
     },
     origins::{CoordinateOrigin, Origin},
 };
+use lox_bodies::{PointMass, RotationalElements, Spheroid};
+use lox_time::{julian_dates::JulianDate, time_scales::Tdb, transformations::TryToScale, TimeLike};
+use lox_utils::glam::Azimuth;
+use lox_utils::math::{mod_two_pi, normalize_two_pi};
+use lox_utils::roots::{FindRoot, NotConverged, Steffensen};
 
 pub trait ToCartesian<T: TimeLike, O: Origin, R: ReferenceFrame> {
     fn to_cartesian(&self) -> State<T, O, R>;
@@ -119,6 +120,49 @@ where
         let y = -r.cross(v);
         let x = y.cross(z);
         DMat3::from_cols(x, y, z)
+    }
+}
+
+impl<T, O> State<T, O, BodyFixed<O>>
+where
+    T: TimeLike,
+    O: Origin + RotationalElements + Spheroid + Clone,
+{
+    pub fn to_ground_location(&self) -> Result<GroundLocation<O>, NotConverged> {
+        let r = self.position();
+        let rm = r.length();
+        let r_delta = (r.x.powi(2) + r.y.powi(2)).sqrt();
+        let mut lon = r.y.atan2(r.x);
+
+        if lon.abs() >= PI {
+            if lon < 0.0 {
+                lon += TAU;
+            } else {
+                lon -= TAU;
+            }
+        }
+
+        let delta = (r.z / rm).asin();
+
+        let root_finder = Steffensen::default();
+        let r_eq = self.origin.equatorial_radius();
+        let f = self.origin.flattening();
+
+        let lat = root_finder.find_root(
+            |lat| {
+                let e = (2.0 * f - f.powi(2)).sqrt();
+                let c = r_eq / (1.0 - e.powi(2) * lat.sin().powi(2)).sqrt();
+                (r.z + c * e.powi(2) * lat.sin()) / r_delta - lat.tan()
+            },
+            delta,
+        )?;
+
+        let e = (2.0 * f - f.powi(2)).sqrt();
+        let c = r_eq / (1.0 - e.powi(2) * lat.sin().powi(2)).sqrt();
+
+        let alt = r_delta / lat.cos() - c;
+
+        Ok(GroundLocation::new(lon, lat, alt, self.origin()))
     }
 }
 
@@ -297,11 +341,11 @@ where
 mod tests {
     use float_eq::assert_float_eq;
 
+    use super::*;
     use crate::frames::NoOpFrameTransformationProvider;
     use lox_bodies::{Earth, Jupiter};
+    use lox_time::time_scales::Tai;
     use lox_time::{time, time_scales::Tdb, Time};
-
-    use super::*;
 
     #[test]
     fn test_bodyfixed() {
@@ -363,5 +407,30 @@ mod tests {
         assert_float_eq!(cartesian.velocity().x, cartesian1.velocity().x, rel <= 1e-6);
         assert_float_eq!(cartesian.velocity().y, cartesian1.velocity().y, rel <= 1e-6);
         assert_float_eq!(cartesian.velocity().z, cartesian1.velocity().z, rel <= 1e-6);
+    }
+
+    #[test]
+    fn test_state_to_ground_location() {
+        let lat_exp = 51.484f64.to_radians();
+        let lon_exp = -35.516f64.to_radians();
+        let alt_exp = 237.434; // km
+
+        let position = DVec3::new(3359.927, -2398.072, 5153.0);
+        let velocity = DVec3::new(5.0657, 5.485, -0.744);
+        let time = time!(Tdb, 2012, 7, 1).unwrap();
+        let state = State::new(time, position, velocity, Earth, BodyFixed(Earth));
+        let ground = state.to_ground_location().unwrap();
+        assert_float_eq!(ground.latitude(), lat_exp, rel <= 1e-4);
+        assert_float_eq!(ground.longitude(), lon_exp, rel <= 1e-4);
+        assert_float_eq!(ground.altitude(), alt_exp, rel <= 1e-4);
+
+        let time = Time::from_iso(Tai, "2024-07-05T09:09:18.173 TAI").unwrap();
+        let position = DVec3::new(-5748.65957138, 3105.63710131, -1863.18265571);
+        let velocity = DVec3::new(1.29534407, -5.02456882, 5.6391936);
+        let state = State::new(time, position, velocity, Earth, Icrf);
+        let state = state
+            .try_to_frame(BodyFixed(Earth), &NoOpFrameTransformationProvider)
+            .unwrap();
+        let ground = state.to_ground_location().unwrap();
     }
 }
