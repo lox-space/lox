@@ -5,9 +5,16 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
-use glam::{DMat3, DVec3};
 use std::f64::consts::{PI, TAU};
 use std::ops::Sub;
+
+use glam::{DMat3, DVec3};
+
+use lox_bodies::{PointMass, RotationalElements, Spheroid};
+use lox_time::{julian_dates::JulianDate, time_scales::Tdb, transformations::TryToScale, TimeLike};
+use lox_utils::glam::Azimuth;
+use lox_utils::math::{mod_two_pi, normalize_two_pi};
+use lox_utils::roots::{BracketError, FindRoot, Secant};
 
 use crate::anomalies::{eccentric_to_true, hyperbolic_to_true};
 use crate::elements::{is_circular, is_equatorial, Keplerian, ToKeplerian};
@@ -18,11 +25,6 @@ use crate::{
     },
     origins::{CoordinateOrigin, Origin},
 };
-use lox_bodies::{PointMass, RotationalElements, Spheroid};
-use lox_time::{julian_dates::JulianDate, time_scales::Tdb, transformations::TryToScale, TimeLike};
-use lox_utils::glam::Azimuth;
-use lox_utils::math::{mod_two_pi, normalize_two_pi};
-use lox_utils::roots::{FindRoot, NotConverged, Steffensen};
 
 pub trait ToCartesian<T: TimeLike, O: Origin, R: ReferenceFrame> {
     fn to_cartesian(&self) -> State<T, O, R>;
@@ -128,7 +130,7 @@ where
     T: TimeLike,
     O: Origin + RotationalElements + Spheroid + Clone,
 {
-    pub fn to_ground_location(&self) -> Result<GroundLocation<O>, NotConverged> {
+    pub fn to_ground_location(&self) -> Result<GroundLocation<O>, BracketError> {
         let r = self.position();
         let rm = r.length();
         let r_delta = (r.x.powi(2) + r.y.powi(2)).sqrt();
@@ -144,11 +146,11 @@ where
 
         let delta = (r.z / rm).asin();
 
-        let root_finder = Steffensen::default();
+        let root_finder = Secant::default();
         let r_eq = self.origin.equatorial_radius();
         let f = self.origin.flattening();
 
-        let lat = root_finder.find_root(
+        let lat = root_finder.find(
             |lat| {
                 let e = (2.0 * f - f.powi(2)).sqrt();
                 let c = r_eq / (1.0 - e.powi(2) * lat.sin().powi(2)).sqrt();
@@ -341,11 +343,13 @@ where
 mod tests {
     use float_eq::assert_float_eq;
 
-    use super::*;
-    use crate::frames::NoOpFrameTransformationProvider;
     use lox_bodies::{Earth, Jupiter};
     use lox_time::time_scales::Tai;
     use lox_time::{time, time_scales::Tdb, Time};
+
+    use crate::frames::NoOpFrameTransformationProvider;
+
+    use super::*;
 
     #[test]
     fn test_bodyfixed() {

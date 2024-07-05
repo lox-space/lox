@@ -86,7 +86,7 @@ pub fn find_events<F: Fn(f64) -> f64 + Copy, T: TimeLike + Clone, R: FindBracket
             // If the sign changes, run the root finder to determine the exact point in time when
             // the event occurred
             let t = root_finder
-                .find_root(func, (t0, t1))
+                .find_in_bracket(func, (t0, t1))
                 .expect("sign changed but root finder failed");
             let time = start.clone() + TimeDelta::from_decimal_seconds(t).unwrap();
 

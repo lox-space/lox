@@ -1,3 +1,4 @@
+use crate::is_close::IsClose;
 use float_eq::float_eq;
 use thiserror::Error;
 
@@ -8,19 +9,24 @@ pub struct NotConverged(u32);
 pub trait FindRoot<F: Fn(f64) -> f64> {
     type Error;
 
-    fn find_root(&self, f: F, initial_guess: f64) -> Result<f64, Self::Error>;
+    fn find(&self, f: F, initial_guess: f64) -> Result<f64, Self::Error>;
 }
 
 pub trait FindRootWithDerivative<F: Fn(f64) -> f64, D: Fn(f64) -> f64> {
     type Error;
 
-    fn find_root(&self, f: F, derivative: D, initial_guess: f64) -> Result<f64, Self::Error>;
+    fn find_with_derivative(
+        &self,
+        f: F,
+        derivative: D,
+        initial_guess: f64,
+    ) -> Result<f64, Self::Error>;
 }
 
 pub trait FindBracketedRoot<F: Fn(f64) -> f64> {
     type Error: std::fmt::Debug;
 
-    fn find_root(&self, f: F, bracket: (f64, f64)) -> Result<f64, Self::Error>;
+    fn find_in_bracket(&self, f: F, bracket: (f64, f64)) -> Result<f64, Self::Error>;
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -44,7 +50,7 @@ where
 {
     type Error = NotConverged;
 
-    fn find_root(&self, f: F, initial_guess: f64) -> Result<f64, Self::Error> {
+    fn find(&self, f: F, initial_guess: f64) -> Result<f64, Self::Error> {
         let mut p0 = initial_guess;
         for _ in 0..self.max_iter {
             let f1 = p0 + f(p0);
@@ -81,7 +87,12 @@ where
 {
     type Error = NotConverged;
 
-    fn find_root(&self, f: F, derivative: D, initial_guess: f64) -> Result<f64, Self::Error> {
+    fn find_with_derivative(
+        &self,
+        f: F,
+        derivative: D,
+        initial_guess: f64,
+    ) -> Result<f64, Self::Error> {
         let mut p0 = initial_guess;
         for _ in 0..self.max_iter {
             let p = p0 - f(p0) / derivative(p0);
@@ -95,7 +106,7 @@ where
 }
 
 #[derive(Clone, Debug, Error, Eq, PartialEq)]
-pub enum BrentError {
+pub enum BracketError {
     #[error(transparent)]
     NotConverged(#[from] NotConverged),
     #[error("root not in bracket")]
@@ -123,9 +134,9 @@ impl<F> FindBracketedRoot<F> for Brent
 where
     F: Fn(f64) -> f64,
 {
-    type Error = BrentError;
+    type Error = BracketError;
 
-    fn find_root(&self, f: F, bracket: (f64, f64)) -> Result<f64, Self::Error> {
+    fn find_in_bracket(&self, f: F, bracket: (f64, f64)) -> Result<f64, Self::Error> {
         let mut fblk = 0.0;
         let mut xblk = 0.0;
         let (mut xpre, mut xcur) = bracket;
@@ -136,7 +147,7 @@ where
         let mut fcur = f(xcur);
 
         if fpre * fcur > 0.0 {
-            return Err(BrentError::NotInBracket);
+            return Err(BracketError::NotInBracket);
         }
 
         if float_eq!(fpre, 0.0, abs <= self.abs_tol) {
@@ -208,7 +219,79 @@ where
             fcur = f(xcur);
         }
 
-        Err(BrentError::NotConverged(NotConverged(self.max_iter)))
+        Err(BracketError::NotConverged(NotConverged(self.max_iter)))
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct Secant {
+    max_iter: u32,
+    rel_tol: f64,
+    abs_tol: f64,
+}
+
+impl Default for Secant {
+    fn default() -> Self {
+        Self {
+            max_iter: 100,
+            rel_tol: f64::EPSILON.sqrt(),
+            abs_tol: 1e-6,
+        }
+    }
+}
+
+impl<F> FindBracketedRoot<F> for Secant
+where
+    F: Fn(f64) -> f64,
+{
+    type Error = BracketError;
+
+    fn find_in_bracket(&self, f: F, bracket: (f64, f64)) -> Result<f64, Self::Error> {
+        let (x0, x1) = bracket;
+        let mut p0 = x0;
+        let mut p1 = x1;
+        let mut q0 = f(p0);
+        let mut q1 = f(p1);
+        if q1.abs() < q0.abs() {
+            std::mem::swap(&mut p0, &mut p1);
+            std::mem::swap(&mut q0, &mut q1);
+        }
+        for i in 0..self.max_iter {
+            if q1 == q0 {
+                if p1 != p0 {
+                    return Err(BracketError::NotConverged(NotConverged(i)));
+                }
+                return Ok((p1 + p0) / 2.0);
+            }
+            let p = if q1.abs() > q0.abs() {
+                (-q0 / q1 * p1 + p0) / (1.0 - q0 / q1)
+            } else {
+                (-q1 / q0 * p0 + p1) / (1.0 - q1 / q0)
+            };
+            if p.is_close_with_tolerances(&p1, self.rel_tol, self.abs_tol) {
+                return Ok(p);
+            }
+            p0 = p1;
+            q0 = q1;
+            p1 = p;
+            q1 = f(p);
+        }
+        Err(BracketError::NotConverged(NotConverged(self.max_iter)))
+    }
+}
+
+impl<F> FindRoot<F> for Secant
+where
+    F: Fn(f64) -> f64,
+{
+    type Error = BracketError;
+
+    fn find(&self, f: F, initial_guess: f64) -> Result<f64, Self::Error> {
+        let x0 = initial_guess;
+        let eps = 1e-4;
+        let mut x1 = x0 * (1.0 + eps);
+        x1 += if x1 > x0 { eps } else { -eps };
+        self.find_in_bracket(f, (x0, x1))
     }
 }
 
@@ -224,7 +307,7 @@ mod tests {
     fn test_newton_kepler() {
         fn mean_to_ecc(mean: f64, eccentricity: f64) -> Result<f64, NotConverged> {
             let newton = Newton::default();
-            newton.find_root(
+            newton.find_with_derivative(
                 |e| e - eccentricity * e.sin() - mean,
                 |e| 1.0 - eccentricity * e.cos(),
                 mean,
@@ -238,7 +321,7 @@ mod tests {
     fn test_newton_cubic() {
         let newton = Newton::default();
         let act = newton
-            .find_root(
+            .find_with_derivative(
                 |x| x.powi(3) + 4.0 * x.powi(2) - 10.0,
                 |x| 2.0 * x.powi(2) + 8.0 * x,
                 1.5,
@@ -251,7 +334,7 @@ mod tests {
     fn test_steffensen_cubic() {
         let steffensen = Steffensen::default();
         let act = steffensen
-            .find_root(|x| x.powi(3) + 4.0 * x.powi(2) - 10.0, 1.5)
+            .find(|x| x.powi(3) + 4.0 * x.powi(2) - 10.0, 1.5)
             .expect("should converge");
         assert_float_eq!(act, 1.3652300134140969, rel <= 1e-8);
     }
@@ -260,7 +343,20 @@ mod tests {
     fn test_brent_cubic() {
         let brent = Brent::default();
         let act = brent
-            .find_root(|x| x.powi(3) + 4.0 * x.powi(2) - 10.0, (1.0, 1.5))
+            .find_in_bracket(|x| x.powi(3) + 4.0 * x.powi(2) - 10.0, (1.0, 1.5))
+            .expect("should converge");
+        assert_float_eq!(act, 1.3652300134140969, rel <= 1e-8);
+    }
+
+    #[test]
+    fn test_secant_cubic() {
+        let secant = Secant::default();
+        let act = secant
+            .find_in_bracket(|x| x.powi(3) + 4.0 * x.powi(2) - 10.0, (1.0, 1.5))
+            .expect("should converge");
+        assert_float_eq!(act, 1.3652300134140969, rel <= 1e-8);
+        let act = secant
+            .find(|x| x.powi(3) + 4.0 * x.powi(2) - 10.0, 1.0)
             .expect("should converge");
         assert_float_eq!(act, 1.3652300134140969, rel <= 1e-8);
     }
