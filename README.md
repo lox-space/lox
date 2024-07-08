@@ -14,13 +14,12 @@
 
 Lox exposes a comprehensive astrodynamics API at varying levels of granularity. The high-level interface offered
 by `lox-space` is designed specifically for mission planning and analysis, while crates like `lox-time`, `lox-earth`
-and `lox-coords` provide tools for advanced users and scientific computing.
+and `lox-orbits` provide tools for advanced users.
 
 * A fully featured space mission simulator backend.
-* Python bindings for easy integration with industry standard tools.
-* Tools for working with time in UTC, TAI, UT1, TT, TCB, TCG and TDB, in wall clock, Julian and high-precision
-  representations.
-* Work with fixed and rotating frames in Cartesian and Keplerian coordinate systems.
+* Python bindings for interactive use.
+* Tools for working with time in astronomical and terrestrial time scales.
+* Define orbits as Keplerian elements or state vectors in different coordinate frames.
 * Ephemeris, size and shape data for all major celestial bodies.
 * Ingest and interpolate Earth orientation parameters with ease.
 * Extensible – bring your own time scales, transformation algorithms, data sources and more.
@@ -34,30 +33,22 @@ and analysis. Also includes Lox's Python bindings.
 
 ### lox-time
 
-Tools for working in all modern astronomical time scales, including wall clock, Julian and high-precision
-representations. Offers leap-second aware conversion from UTC to continuous time scales.
+Tools for working with time in all commonly-used astronomical time scales based on a high-precision timestamp
+representation. Offers leap-second aware conversion from UTC to continuous time scales.
 
 ### lox-bodies
 
 Provides structs representing all major celestial bodies, conveniently categorized by a variety of traits exposing
 SPICE-dervied data.
 
-### lox-coords
-
-Tools for working with fixed and inertial coordinate systems, including transformations between them.
-
 ### lox-earth
 
 Essential algorithms for Earth-centric astrodynamics, including nutation-precession models, Earth rotation angle, CIP
 and CIO locations, and coordinate transformations.
 
-### lox-eop
-
-A dedicated crate for ingesting and interpolating Earth orientation parameters.
-
 ### lox-ephem
 
-Parses ephemeris data from external sources.
+Parses ephemeris data from external sources such as SPICE kernels.
 
 ### lox-io
 
@@ -71,9 +62,9 @@ A collection of utilities used across the Lox ecosystem.
 
 ### Ephemerista
 
-![The Ephemerista logo](public/ephemerista-logo.webp)
+[![The Ephemerista logo](public/ephemerista-logo.webp)][ephemerista]
 
-A next-generation, open-source space mission simulator commissioned by the European Space Agency.
+A next-generation, open-source space mission simulator [commissioned by the European Space Agency][artes].
 
 ## Why "Lox"?
 
@@ -81,3 +72,7 @@ A next-generation, open-source space mission simulator commissioned by the Europ
 > molecular oxygen. It was used as the _oxidizer_ in the first liquid-fueled rocket invented in 1926 by Robert H.
 > Goddard,
 > an application which has continued to the present. [Wikipedia](https://en.wikipedia.org/wiki/Liquid_oxygen)
+
+[ephemerista]: https://gitlab.com/librespacefoundation/ephemerista/ephemerista-simulator
+
+[artes]: https://connectivity.esa.int/projects/ossmisi
