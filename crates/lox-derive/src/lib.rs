@@ -15,29 +15,34 @@ fn generate_call_to_deserializer_for_kvn_type(
     type_name_new: &syn::Path,
     expected_kvn_name: &str,
     with_keyword_matching: bool,
+    unpack_value: bool,
 ) -> Result<proc_macro2::TokenStream, proc_macro::TokenStream> {
+    let unpack_insert = if unpack_value {
+        quote! { .value }
+    } else {
+        quote! {}
+    };
+
     match type_name {
-        "String" | "f64" | "i32" | "u64" => {
+        "String" | "f64" | "i32" | "u64" | "NonNegativeDouble" | "NegativeDouble"
+        | "PositiveDouble" => {
             let parser = match type_name {
                 "String" => quote! {
                     crate::ndm::kvn::parser::parse_kvn_string_line(
                         next_line
-                    ).map_err(|x| crate::ndm::kvn::KvnDeserializerErr::from(x))
-                    .map(|x| x)?
+                    ).map_err(|x| crate::ndm::kvn::KvnDeserializerErr::from(x))?
                 },
-                "f64" => quote! {
+                "f64" | "NonNegativeDouble" | "NegativeDouble" | "PositiveDouble" => quote! {
                     crate::ndm::kvn::parser::parse_kvn_numeric_line(
                         next_line,
                         true, //@TODO
-                    ).map_err(|x| crate::ndm::kvn::KvnDeserializerErr::from(x))
-                    .map(|x| x)?
+                    ).map_err(|x| crate::ndm::kvn::KvnDeserializerErr::from(x))?
                 },
                 "i32" | "u64" => quote! {
                     crate::ndm::kvn::parser::parse_kvn_integer_line(
                         next_line,
                         true, //@TODO
-                    ).map_err(|x| crate::ndm::kvn::KvnDeserializerErr::from(x))
-                    .map(|x| x)?
+                    ).map_err(|x| crate::ndm::kvn::KvnDeserializerErr::from(x))?
                 },
                 // Assumes the match list here exhaustively matches the one from above
                 _ => unreachable!(),
@@ -58,7 +63,7 @@ fn generate_call_to_deserializer_for_kvn_type(
                             let result = if line_matches {
                                 let next_line = lines.next().unwrap();
 
-                                Ok(#parser.value)
+                                Ok(#parser #unpack_insert)
                             } else {
                                 Err(crate::ndm::kvn::KvnDeserializerErr::<String>::UnexpectedKeyword {
                                     found: next_line.to_string(),
@@ -74,7 +79,7 @@ fn generate_call_to_deserializer_for_kvn_type(
                 Ok(quote! {
                    {
                       let next_line = lines.next().unwrap();
-                      #parser.value
+                      #parser #unpack_insert
                    }
                 })
             }
@@ -88,63 +93,6 @@ fn generate_call_to_deserializer_for_kvn_type(
                 } else {
                     Err(crate::ndm::kvn::KvnDeserializerErr::<String>::UnexpectedEndOfInput {
                           keyword: #expected_kvn_name.to_string()
-                    })
-                };
-
-                result
-            }
-        }),
-    }
-}
-
-fn generate_call_to_deserializer_for_kvn_type_new(
-    type_name: &str,
-    type_name_new: &syn::Path,
-) -> Result<proc_macro2::TokenStream, proc_macro::TokenStream> {
-    match type_name {
-        "String" | "f64" | "NonNegativeDouble" | "NegativeDouble" | "PositiveDouble" | "i32"
-        | "u64" => {
-            let parser = match type_name {
-                "String" => quote! {
-                    crate::ndm::kvn::parser::parse_kvn_string_line(
-                        next_line,
-                    ).map_err(|x| crate::ndm::kvn::KvnDeserializerErr::from(x))
-                    .map(|x| x)?
-                },
-                "f64" | "NonNegativeDouble" | "NegativeDouble" | "PositiveDouble" => quote! {
-                    crate::ndm::kvn::parser::parse_kvn_numeric_line(
-                        next_line,
-                        true, //@TODO
-                    ).map_err(|x| crate::ndm::kvn::KvnDeserializerErr::from(x))
-                    .map(|x| x)?
-                },
-                "i32" | "u64" => quote! {
-                    crate::ndm::kvn::parser::parse_kvn_integer_line(
-                        next_line,
-                        true, //@TODO
-                    ).map_err(|x| crate::ndm::kvn::KvnDeserializerErr::from(x))
-                    .map(|x| x)?
-                },
-                // Assumes the match list here exhaustively matches the one from above
-                _ => unreachable!(),
-            };
-
-            Ok(quote! {
-               {
-                  let next_line = lines.next().unwrap();
-                  #parser
-               }
-            })
-        }
-        _ => Ok(quote! {
-           {
-                let has_next_line = lines.peek().is_some();
-
-                let result = if has_next_line {
-                    #type_name_new::deserialize(lines)
-                } else {
-                    Err(crate::ndm::kvn::KvnDeserializerErr::<String>::UnexpectedEndOfInput {
-                          keyword: "Blala".to_string() // @TODO
                     })
                 };
 
@@ -187,11 +135,19 @@ fn generate_call_to_deserializer_for_option_type(
         type_name_new,
         expected_kvn_name,
         true,
+        true,
     )?;
 
     let condition_shortcut = match type_name.as_str() {
         "String" | "f64" | "i32" | "u64" => quote! {},
         _ => quote! { ! #type_name_new::should_check_key_match() || },
+    };
+
+    let value = match type_name.as_ref() {
+        "NonNegativeDouble" | "NegativeDouble" | "PositiveDouble" => {
+            quote! { #type_name_new (item) }
+        }
+        _ => quote! { item },
     };
 
     Ok(quote! {
@@ -207,7 +163,7 @@ fn generate_call_to_deserializer_for_option_type(
                     let result = #deserializer_for_kvn_type;
 
                     match result {
-                        Ok(item) => Some(item),
+                        Ok(item) => Some(#value),
                         Err(crate::ndm::kvn::KvnDeserializerErr::UnexpectedKeyword { .. }) |
                         Err(crate::ndm::kvn::KvnDeserializerErr::UnexpectedEndOfInput { .. }) => None,
                         Err(e) => Err(e)?,
@@ -245,6 +201,7 @@ fn generate_call_to_deserializer_for_vec_type(
                     type_name.as_ref(),
                     bla,
                     expected_kvn_name,
+                    true,
                     true,
                 )?;
 
@@ -338,6 +295,7 @@ fn handle_version_field(
         field_type_new,
         &expected_kvn_name,
         true,
+        true,
     )?;
 
     Ok(quote! {
@@ -391,9 +349,12 @@ fn deserializer_for_struct_with_named_fields(
                     match local_field_type.as_str() {
                         "KvnDateTimeValue" | "String" | "f64" | "i32" | "NonNegativeDouble"
                         | "NegativeDouble" | "PositiveDouble" => {
-                            match generate_call_to_deserializer_for_kvn_type_new(
+                            match generate_call_to_deserializer_for_kvn_type(
                                 &local_field_type,
                                 local_field_type_new,
+                                "Blala",
+                                false,
+                                false,
                             ) {
                                 Ok(deserializer_for_kvn_type) => {
                                     deserializer = Some(deserializer_for_kvn_type)
@@ -487,6 +448,7 @@ fn deserializer_for_struct_with_named_fields(
                             field_type_new,
                             &expected_kvn_name,
                             true,
+                            true,
                         )?;
 
                         quote! {
@@ -494,7 +456,10 @@ fn deserializer_for_struct_with_named_fields(
                         }
                     }
                     "Option" => {
-                        generate_call_to_deserializer_for_option_type(&expected_kvn_name, field)?
+                        generate_call_to_deserializer_for_option_type(
+                            &expected_kvn_name,
+                            field
+                        )?
                     }
                     "Vec" => generate_call_to_deserializer_for_vec_type(&expected_kvn_name, field)?,
                     _ => {
@@ -572,8 +537,13 @@ fn deserializers_for_struct_with_unnamed_fields(
     let field_type_new = extract_type_path(&field.ty).unwrap();
     let field_type = field_type_new.span().source_text().unwrap();
 
-    let deserializer_for_kvn_type =
-        generate_call_to_deserializer_for_kvn_type(&field_type, field_type_new, "Blalala", false);
+    let deserializer_for_kvn_type = generate_call_to_deserializer_for_kvn_type(
+        &field_type,
+        field_type_new,
+        "Blalala",
+        false,
+        true,
+    );
 
     let deserializer_for_kvn_type = match deserializer_for_kvn_type {
         Ok(deserializer_for_kvn_type) => deserializer_for_kvn_type,
@@ -637,8 +607,6 @@ pub fn derive_kvn_deserialize(item: proc_macro::TokenStream) -> proc_macro::Toke
             }
         }
     };
-
-    // eprint!("{:#}", struct_deserializer);
 
     struct_deserializer.into()
 }
