@@ -427,14 +427,5 @@ mod tests {
         assert_float_eq!(ground.latitude(), lat_exp, rel <= 1e-4);
         assert_float_eq!(ground.longitude(), lon_exp, rel <= 1e-4);
         assert_float_eq!(ground.altitude(), alt_exp, rel <= 1e-4);
-
-        let time = Time::from_iso(Tai, "2024-07-05T09:09:18.173 TAI").unwrap();
-        let position = DVec3::new(-5748.65957138, 3105.63710131, -1863.18265571);
-        let velocity = DVec3::new(1.29534407, -5.02456882, 5.6391936);
-        let state = State::new(time, position, velocity, Earth, Icrf);
-        let state = state
-            .try_to_frame(BodyFixed(Earth), &NoOpFrameTransformationProvider)
-            .unwrap();
-        let ground = state.to_ground_location().unwrap();
     }
 }
