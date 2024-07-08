@@ -16,7 +16,8 @@
     expose their underlying [TimeDelta].
 */
 
-use std::ops::{Add, Neg, Sub};
+use std::fmt::Display;
+use std::ops::{Add, Neg, RangeInclusive, Sub};
 
 use num::ToPrimitive;
 use thiserror::Error;
@@ -26,6 +27,7 @@ use lox_utils::constants::f64::time::{
     SECONDS_PER_MINUTE,
 };
 
+use crate::ranges::TimeDeltaRange;
 use crate::{
     constants::julian_dates::{
         SECONDS_BETWEEN_J1950_AND_J2000, SECONDS_BETWEEN_JD_AND_J2000,
@@ -59,7 +61,7 @@ impl PartialEq for TimeDeltaError {
 }
 
 /// A signed, continuous time difference supporting femtosecond precision.
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub struct TimeDelta {
     // The sign of the delta is determined by the sign of the `seconds` field.
     pub seconds: i64,
@@ -274,6 +276,16 @@ impl TimeDelta {
             Epoch::J2000 => self.seconds,
         }
     }
+
+    pub fn range(range: RangeInclusive<i64>) -> TimeDeltaRange {
+        range.into()
+    }
+}
+
+impl Display for TimeDelta {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} s", self.to_decimal_seconds())
+    }
 }
 
 impl JulianDate for TimeDelta {
@@ -345,6 +357,18 @@ impl Sub for TimeDelta {
             seconds: diff_seconds,
             subsecond: Subsecond(diff_subsecond),
         }
+    }
+}
+
+impl From<i64> for TimeDelta {
+    fn from(value: i64) -> Self {
+        TimeDelta::from_seconds(value)
+    }
+}
+
+impl From<i32> for TimeDelta {
+    fn from(value: i32) -> Self {
+        TimeDelta::from_seconds(value as i64)
     }
 }
 
@@ -583,5 +607,13 @@ mod tests {
         let delta1 = TimeDelta::new(0, Subsecond(1e-17));
         let delta = delta0 - delta1;
         assert_ne!(delta.subsecond.0, 1.0)
+    }
+
+    #[test]
+    fn test_delta_from_integer() {
+        let delta: TimeDelta = 4i32.into();
+        assert_eq!(delta.seconds, 4);
+        let delta: TimeDelta = 4i64.into();
+        assert_eq!(delta.seconds, 4);
     }
 }

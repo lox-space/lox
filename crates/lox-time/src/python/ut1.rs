@@ -6,8 +6,12 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::ut1::{DeltaUt1Tai, DeltaUt1TaiError, ExtrapolatedDeltaUt1Tai};
+use crate::deltas::TimeDelta;
+use crate::time_scales::{Tai, Ut1};
+use crate::transformations::OffsetProvider;
+use crate::ut1::{DeltaUt1Tai, DeltaUt1TaiError, DeltaUt1TaiProvider, ExtrapolatedDeltaUt1Tai};
 use crate::utc::leap_seconds::BuiltinLeapSeconds;
+use crate::Time;
 use pyo3::exceptions::PyValueError;
 use pyo3::{pyclass, pymethods, PyErr, PyResult};
 
@@ -23,7 +27,31 @@ impl From<DeltaUt1TaiError> for PyErr {
     }
 }
 
-#[pyclass(name = "UT1Provider", module = "lox_space")]
+pub struct PyNoOpOffsetProvider;
+
+impl OffsetProvider for PyNoOpOffsetProvider {
+    type Error = PyErr;
+}
+
+pub trait PyDeltaUt1Provider: DeltaUt1TaiProvider + OffsetProvider<Error = PyErr> {}
+
+impl DeltaUt1TaiProvider for PyNoOpOffsetProvider {
+    fn delta_ut1_tai(&self, _tai: &Time<Tai>) -> PyResult<TimeDelta> {
+        Err(PyValueError::new_err(
+            "`provider` argument needs to be present for UT1 transformations",
+        ))
+    }
+
+    fn delta_tai_ut1(&self, _ut1: &Time<Ut1>) -> PyResult<TimeDelta> {
+        Err(PyValueError::new_err(
+            "`provider` argument needs to be present for UT1 transformations",
+        ))
+    }
+}
+
+impl PyDeltaUt1Provider for PyNoOpOffsetProvider {}
+
+#[pyclass(name = "UT1Provider", module = "lox_space", frozen)]
 #[derive(Clone, Debug, PartialEq)]
 pub struct PyUt1Provider(pub DeltaUt1Tai);
 
@@ -35,6 +63,22 @@ impl PyUt1Provider {
         Ok(PyUt1Provider(provider))
     }
 }
+
+impl OffsetProvider for PyUt1Provider {
+    type Error = PyErr;
+}
+
+impl DeltaUt1TaiProvider for PyUt1Provider {
+    fn delta_ut1_tai(&self, tai: &Time<Tai>) -> PyResult<TimeDelta> {
+        self.0.delta_ut1_tai(tai).map_err(|err| err.into())
+    }
+
+    fn delta_tai_ut1(&self, ut1: &Time<Ut1>) -> PyResult<TimeDelta> {
+        self.0.delta_tai_ut1(ut1).map_err(|err| err.into())
+    }
+}
+
+impl PyDeltaUt1Provider for PyUt1Provider {}
 
 #[cfg(test)]
 mod tests {

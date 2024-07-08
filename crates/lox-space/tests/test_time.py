@@ -1,18 +1,11 @@
 import lox_space as lox
-import pathlib
 import pytest
-
-DATA_DIR = pathlib.Path(__file__).parents[3].joinpath("data")
-
-
-@pytest.fixture
-def provider():
-    return lox.UT1Provider(str(DATA_DIR.joinpath("finals2000A.all.csv")))
 
 
 def test_time(provider):
     tai_exp = lox.Time("TAI", 2000, 1, 1)
     tai_act = lox.Time.from_iso("2000-01-01T00:00:00.000 TAI")
+    assert tai_exp == tai_act
     tai_act = tai_exp.to_tai()
     assert tai_exp == tai_act
     tai_act = tai_exp.to_tcb().to_tai()

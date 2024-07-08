@@ -18,7 +18,7 @@ impl From<TimeDeltaError> for PyErr {
     }
 }
 
-#[pyclass(name = "TimeDelta", module = "lox_space")]
+#[pyclass(name = "TimeDelta", module = "lox_space", frozen)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PyTimeDelta(pub TimeDelta);
 
@@ -93,6 +93,18 @@ impl PyTimeDelta {
     #[classmethod]
     pub fn from_julian_centuries(_cls: &Bound<'_, PyType>, centuries: f64) -> PyResult<Self> {
         Ok(Self(TimeDelta::from_julian_centuries(centuries)?))
+    }
+
+    #[classmethod]
+    pub fn range(
+        _cls: &Bound<'_, PyType>,
+        start: i64,
+        end: i64,
+        step: Option<i64>,
+    ) -> PyResult<Vec<Self>> {
+        let step = TimeDelta::from_seconds(step.unwrap_or(1));
+        let range = TimeDelta::range(start..=end).with_step(step);
+        Ok(range.into_iter().map(Self).collect())
     }
 
     pub fn to_decimal_seconds(&self) -> f64 {
