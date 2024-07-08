@@ -16,6 +16,8 @@
     exclusively as an IO format.
 */
 
+pub mod transformations;
+
 /// Marker trait denoting a continuous astronomical time scale.
 pub trait TimeScale {
     fn abbreviation(&self) -> &'static str;
@@ -98,6 +100,16 @@ impl TimeScale for Ut1 {
     fn name(&self) -> &'static str {
         "Universal Time"
     }
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
+pub enum DynTimeScale {
+    Tai,
+    Tcb,
+    Tcg,
+    Tdb,
+    Tt,
+    Ut1,
 }
 
 #[cfg(test)]

@@ -17,7 +17,7 @@
 */
 
 use std::fmt::Display;
-use std::ops::{Add, Neg, RangeInclusive, Sub};
+use std::ops::{Add, AddAssign, Neg, RangeInclusive, Sub, SubAssign};
 
 use num::ToPrimitive;
 use thiserror::Error;
@@ -339,6 +339,12 @@ impl Add for TimeDelta {
     }
 }
 
+impl AddAssign for TimeDelta {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs;
+    }
+}
+
 impl Sub for TimeDelta {
     type Output = Self;
 
@@ -357,6 +363,12 @@ impl Sub for TimeDelta {
             seconds: diff_seconds,
             subsecond: Subsecond(diff_subsecond),
         }
+    }
+}
+
+impl SubAssign for TimeDelta {
+    fn sub_assign(&mut self, rhs: Self) {
+        *self = *self - rhs;
     }
 }
 
