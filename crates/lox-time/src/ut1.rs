@@ -15,7 +15,13 @@
 */
 
 use std::iter::zip;
+use std::path::Path;
+
+use num::ToPrimitive;
 use thiserror::Error;
+
+use lox_io::iers::{EarthOrientationParams, ParseFinalsCsvError};
+use lox_utils::series::{Series, SeriesError};
 
 use crate::calendar_dates::{CalendarDate, Date};
 use crate::constants::i64::SECONDS_PER_DAY;
@@ -159,16 +165,46 @@ impl DeltaUt1TaiProvider for DeltaUt1Tai {
     }
 }
 
+impl crate::time_scales::transformations::DeltaUt1TaiProvider for DeltaUt1Tai {
+    type Error = ExtrapolatedDeltaUt1Tai;
+    fn delta_ut1_tai(&self, delta: TimeDelta) -> Result<TimeDelta, Self::Error> {
+        let seconds = delta.to_decimal_seconds();
+        let (t0, _) = self.0.first();
+        let (tn, _) = self.0.last();
+        let val = self.0.interpolate(seconds);
+        if seconds < t0 || seconds > tn {
+            return Err(ExtrapolatedDeltaUt1Tai::new(t0, tn, seconds, val));
+        }
+        Ok(TimeDelta::from_decimal_seconds(val).unwrap())
+    }
+
+    fn delta_tai_ut1(&self, delta: TimeDelta) -> Result<TimeDelta, Self::Error> {
+        let seconds = delta.to_decimal_seconds();
+        let (t0, _) = self.0.first();
+        let (tn, _) = self.0.last();
+        // Use the UT1 offset as an initial guess even though the table is based on TAI
+        let mut val = self.0.interpolate(seconds);
+        // Interpolate again with the adjusted offsets
+        for _ in 0..2 {
+            val = self.0.interpolate(seconds - val);
+        }
+        if seconds < t0 || seconds > tn {
+            return Err(ExtrapolatedDeltaUt1Tai::new(t0, tn, seconds, -val));
+        }
+        Ok(-TimeDelta::from_decimal_seconds(val).unwrap())
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use std::sync::OnceLock;
-
-    use super::*;
-    use crate::subsecond::Subsecond;
-    use crate::time;
-    use crate::utc::leap_seconds::BuiltinLeapSeconds;
     use float_eq::assert_float_eq;
     use rstest::rstest;
+
+    use crate::subsecond::Subsecond;
+    use crate::test_helpers::delta_ut1_tai;
+    use crate::time;
+
+    use super::*;
 
     #[rstest]
     #[case(536414400, -36.40775963091942)]
@@ -303,19 +339,5 @@ mod tests {
             .extrapolated_value
             .to_decimal_seconds();
         assert_float_eq!(actual, -expected, rel <= 1e-8);
-    }
-
-    fn delta_ut1_tai() -> &'static DeltaUt1Tai {
-        static PROVIDER: OnceLock<DeltaUt1Tai> = OnceLock::new();
-        PROVIDER.get_or_init(|| {
-            DeltaUt1Tai::new(
-                format!(
-                    "{}/../../data/finals2000A.all.csv",
-                    env!("CARGO_MANIFEST_DIR")
-                ),
-                &BuiltinLeapSeconds,
-            )
-            .unwrap()
-        })
     }
 }
