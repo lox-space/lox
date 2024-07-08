@@ -112,6 +112,30 @@ pub enum DynTimeScale {
     Ut1,
 }
 
+impl TimeScale for DynTimeScale {
+    fn abbreviation(&self) -> &'static str {
+        match self {
+            DynTimeScale::Tai => Tai.abbreviation(),
+            DynTimeScale::Tcb => Tcb.abbreviation(),
+            DynTimeScale::Tcg => Tcg.abbreviation(),
+            DynTimeScale::Tdb => Tdb.abbreviation(),
+            DynTimeScale::Tt => Tt.abbreviation(),
+            DynTimeScale::Ut1 => Ut1.abbreviation(),
+        }
+    }
+
+    fn name(&self) -> &'static str {
+        match self {
+            DynTimeScale::Tai => Tai.name(),
+            DynTimeScale::Tcb => Tcb.name(),
+            DynTimeScale::Tcg => Tcg.name(),
+            DynTimeScale::Tdb => Tdb.name(),
+            DynTimeScale::Tt => Tt.name(),
+            DynTimeScale::Ut1 => Ut1.name(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
