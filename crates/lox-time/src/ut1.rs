@@ -164,9 +164,11 @@ impl DeltaUt1TaiProvider for DeltaUt1Tai {
         Ok(-TimeDelta::from_decimal_seconds(val).unwrap())
     }
 }
+impl crate::time_scales::transformations::OffsetProvider for DeltaUt1Tai {
+    type Error = ExtrapolatedDeltaUt1Tai;
+}
 
 impl crate::time_scales::transformations::DeltaUt1TaiProvider for DeltaUt1Tai {
-    type Error = ExtrapolatedDeltaUt1Tai;
     fn delta_ut1_tai(&self, delta: TimeDelta) -> Result<TimeDelta, Self::Error> {
         let seconds = delta.to_decimal_seconds();
         let (t0, _) = self.0.first();

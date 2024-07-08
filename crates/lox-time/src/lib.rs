@@ -55,8 +55,10 @@ use time_scales::{Tai, Tcb, Tcg, Tdb, Tt, Ut1};
 use crate::calendar_dates::{CalendarDate, Date};
 use crate::deltas::{TimeDelta, ToDelta};
 use crate::julian_dates::{Epoch, JulianDate, Unit};
+use crate::prelude::transformations::ToScale;
 use crate::subsecond::Subsecond;
-use crate::time_scales::TimeScale;
+use crate::time_scales::transformations::{OffsetProvider, ToTai, TryToScale};
+use crate::time_scales::{DynTimeScale, TimeScale};
 
 pub mod calendar_dates;
 pub mod constants;
@@ -127,6 +129,8 @@ pub struct Time<T: TimeScale> {
     seconds: i64,
     subsecond: Subsecond,
 }
+
+pub type DynTime = Time<DynTimeScale>;
 
 impl<T: TimeScale> Time<T> {
     /// Instantiates a [Time] in the given [TimeScale] from the count of seconds since J2000, subdivided
@@ -344,6 +348,32 @@ impl<T: TimeScale> Time<T> {
     pub fn subsecond(&self) -> f64 {
         self.subsecond.into()
     }
+
+    // pub fn try_to_scale<U, P>(&self, scale: U, provider: &P) -> Result<Time<U>, P::Error>
+    // where
+    //     T: TryToScale<U, P>,
+    //     U: TimeScale,
+    //     P: OffsetProvider,
+    // {
+    //     let delta = self.scale.try_to_scale(&scale, self.to_delta(), provider)?;
+    //     Ok(Time::from_delta(scale, delta))
+    // }
+    //
+    // pub fn to_scale<U: TimeScale>(&self, scale: U) -> Time<U>
+    // where
+    //     T: ToScale<U>,
+    // {
+    //     let delta = self.scale.to_scale(&scale, self.to_delta());
+    //     Time::from_delta(scale, delta)
+    // }
+    //
+    // pub fn to_tai(&self) -> Time<Tai>
+    // where
+    //     T: ToScale<Tai>,
+    // {
+    //     let delta = self.scale.to_tai(self.to_delta());
+    //     Time::from_delta(Tai, delta)
+    // }
 }
 
 impl<T: TimeScale> IsClose for Time<T> {
