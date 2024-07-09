@@ -133,15 +133,14 @@ fn generate_call_to_deserializer_for_option_type(
     expected_kvn_name: &str,
     field: &Field,
 ) -> Result<proc_macro2::TokenStream, proc_macro::TokenStream> {
-    // @TODO
-    let (type_name, type_name_new) = get_generic_type_argument(field).ok_or(
+    let (type_name, type_ident) = get_generic_type_argument(field).ok_or(
         syn::Error::new_spanned(field, "Malformed type for `#[derive(KvnDeserialize)]`")
             .into_compile_error(),
     )?;
 
     let deserializer_for_kvn_type = generate_call_to_deserializer_for_kvn_type(
         type_name.as_ref(),
-        type_name_new,
+        type_ident,
         expected_kvn_name,
         true,
         true,
@@ -149,12 +148,12 @@ fn generate_call_to_deserializer_for_option_type(
 
     let condition_shortcut = match type_name.as_str() {
         "String" | "f64" | "i32" | "u64" => quote! {},
-        _ => quote! { ! #type_name_new::should_check_key_match() || },
+        _ => quote! { ! #type_ident::should_check_key_match() || },
     };
 
     let value = match type_name.as_ref() {
         "NonNegativeDouble" | "NegativeDouble" | "PositiveDouble" => {
-            quote! { #type_name_new (item) }
+            quote! { #type_ident (item) }
         }
         _ => quote! { item },
     };
