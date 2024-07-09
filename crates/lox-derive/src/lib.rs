@@ -180,60 +180,44 @@ fn generate_call_to_deserializer_for_vec_type(
     expected_kvn_name: &str,
     field: &Field,
 ) -> Result<proc_macro2::TokenStream, proc_macro::TokenStream> {
-    if let syn::Type::Path(type_path) = &field.ty {
-        let path_part = type_path.path.segments.first();
-        if let Some(path_part) = path_part {
-            if let syn::PathArguments::AngleBracketed(type_argument) = &path_part.arguments {
-                let type_name = type_argument
-                    .args
-                    .first()
-                    .unwrap()
-                    .span()
-                    .source_text()
-                    .unwrap();
-
-                //@TODO
-                let (_, bla) = get_generic_type_argument(field).unwrap();
-
-                let expected_kvn_name = expected_kvn_name.trim_end_matches("_LIST");
-
-                let deserializer_for_kvn_type = generate_call_to_deserializer_for_kvn_type(
-                    type_name.as_ref(),
-                    bla,
-                    expected_kvn_name,
-                    true,
-                    true,
-                )?;
-
-                let type_ident = syn::Ident::new(&type_name, Span::call_site());
-
-                return Ok(quote! {
-                    {
-                        let mut items: Vec<#type_ident> = Vec::new();
-
-                        loop {
-                            let result = #deserializer_for_kvn_type;
-
-                            match result {
-                                Ok(item) => items.push(item),
-                                Err(crate::ndm::kvn::KvnDeserializerErr::UnexpectedKeyword { .. }) |
-                                Err(crate::ndm::kvn::KvnDeserializerErr::UnexpectedEndOfInput { .. }) => break,
-                                Err(e) => Err(e)?,
-                            }
-                        }
-
-                        items
-                    }
-                });
-            }
-        }
-    }
-
-    Err(
+    let (type_name, _) = get_generic_type_argument(field).ok_or(
         syn::Error::new_spanned(field, "Malformed type for `#[derive(KvnDeserialize)]`")
-            .into_compile_error()
-            .into(),
-    )
+            .into_compile_error(),
+    )?;
+
+    //@TODO
+    let (_, bla) = get_generic_type_argument(field).unwrap();
+
+    let expected_kvn_name = expected_kvn_name.trim_end_matches("_LIST");
+
+    let deserializer_for_kvn_type = generate_call_to_deserializer_for_kvn_type(
+        type_name.as_ref(),
+        bla,
+        expected_kvn_name,
+        true,
+        true,
+    )?;
+
+    let type_ident = syn::Ident::new(&type_name, Span::call_site());
+
+    return Ok(quote! {
+        {
+            let mut items: Vec<#type_ident> = Vec::new();
+
+            loop {
+                let result = #deserializer_for_kvn_type;
+
+                match result {
+                    Ok(item) => items.push(item),
+                    Err(crate::ndm::kvn::KvnDeserializerErr::UnexpectedKeyword { .. }) |
+                    Err(crate::ndm::kvn::KvnDeserializerErr::UnexpectedEndOfInput { .. }) => break,
+                    Err(e) => Err(e)?,
+                }
+            }
+
+            items
+        }
+    });
 }
 
 fn is_value_unit_struct(item: &DeriveInput) -> bool {
