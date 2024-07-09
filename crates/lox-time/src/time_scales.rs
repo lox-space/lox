@@ -16,6 +16,10 @@
     exclusively as an IO format.
 */
 
+use std::str::FromStr;
+
+use thiserror::Error;
+
 pub mod transformations;
 
 /// Marker trait denoting a continuous astronomical time scale.
@@ -136,6 +140,26 @@ impl TimeScale for DynTimeScale {
     }
 }
 
+#[derive(Error, Debug, Clone, Eq, PartialEq, PartialOrd, Ord)]
+#[error("invalid time scale: {0}")]
+pub struct InvalidTimeScale(String);
+
+impl FromStr for DynTimeScale {
+    type Err = InvalidTimeScale;
+
+    fn from_str(name: &str) -> Result<Self, Self::Err> {
+        match name {
+            "TAI" => Ok(DynTimeScale::Tai),
+            "TCB" => Ok(DynTimeScale::Tcb),
+            "TCG" => Ok(DynTimeScale::Tcg),
+            "TDB" => Ok(DynTimeScale::Tdb),
+            "TT" => Ok(DynTimeScale::Tt),
+            "UT1" => Ok(DynTimeScale::Ut1),
+            _ => Err(InvalidTimeScale(name.to_string())),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -153,6 +177,21 @@ mod tests {
         #[case] abbreviation: &'static str,
         #[case] name: &'static str,
     ) {
+        assert_eq!(scale.abbreviation(), abbreviation);
+        assert_eq!(scale.name(), name);
+    }
+
+    #[rstest]
+    #[case("TAI", "International Atomic Time")]
+    #[case("TT", "Terrestrial Time")]
+    #[case("TCG", "Geocentric Coordinate Time")]
+    #[case("TCB", "Barycentric Coordinate Time")]
+    #[case("TDB", "Barycentric Dynamical Time")]
+    #[case("UT1", "Universal Time")]
+    #[should_panic(expected = "invalid time scale: NotATimeScale")]
+    #[case("NotATimeScale", "not a time scale")]
+    fn test_dyn_time_scale(#[case] abbreviation: &'static str, #[case] name: &'static str) {
+        let scale = DynTimeScale::from_str(abbreviation).unwrap();
         assert_eq!(scale.abbreviation(), abbreviation);
         assert_eq!(scale.name(), name);
     }
