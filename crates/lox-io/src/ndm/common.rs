@@ -661,7 +661,15 @@ pub struct StateVectorType {
     pub z_dot: VelocityType,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct StateVectorAccType {
     #[serde(rename = "EPOCH")]
@@ -860,7 +868,15 @@ pub struct SolarFluxType {
     pub units: Option<SolarFluxUnits>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    lox_derive::KvnDeserialize,
+)]
 #[serde(default)]
 pub struct OemCovarianceMatrixType {
     #[serde(rename = "COMMENT")]
