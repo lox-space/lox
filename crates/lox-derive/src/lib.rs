@@ -189,25 +189,20 @@ fn generate_call_to_deserializer_for_vec_type(
     expected_kvn_name: &str,
     field: &Field,
 ) -> Result<proc_macro2::TokenStream, proc_macro::TokenStream> {
-    let (type_name, _) = get_generic_type_argument(field).ok_or(
+    let (type_name, type_ident) = get_generic_type_argument(field).ok_or(
         syn::Error::new_spanned(field, "Malformed type for `#[derive(KvnDeserialize)]`")
             .into_compile_error(),
     )?;
-
-    //@TODO
-    let (_, bla) = get_generic_type_argument(field).unwrap();
 
     let expected_kvn_name = expected_kvn_name.trim_end_matches("_LIST");
 
     let deserializer_for_kvn_type = generate_call_to_deserializer_for_kvn_type(
         type_name.as_ref(),
-        bla,
+        type_ident,
         expected_kvn_name,
         true,
         true,
     )?;
-
-    let type_ident = syn::Ident::new(&type_name, Span::call_site());
 
     return Ok(quote! {
         {
