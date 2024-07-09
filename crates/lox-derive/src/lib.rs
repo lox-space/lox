@@ -108,10 +108,19 @@ fn get_generic_type_argument(field: &Field) -> Option<(String, &syn::Path)> {
         if let Some(path_part) = path_part {
             if let syn::PathArguments::AngleBracketed(type_argument) = &path_part.arguments {
                 if let Some(syn::GenericArgument::Type(r#type)) = &type_argument.args.first() {
-                    return Some((
-                        r#type.span().source_text().unwrap(),
-                        extract_type_path(r#type).unwrap(),
-                    ));
+                    if let syn::Type::Path(r#type) = r#type {
+                        return Some((
+                            r#type
+                                .path
+                                .segments
+                                .clone()
+                                .into_iter()
+                                .map(|ident| ident.span().source_text().unwrap())
+                                .reduce(|a, b| a + "::" + &b)
+                                .unwrap(),
+                            &r#type.path,
+                        ));
+                    }
                 }
             }
         }
