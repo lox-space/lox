@@ -16,6 +16,7 @@ use pyo3::{pyclass, pymethods, Bound, PyAny, PyErr, PyObject, PyResult, Python};
 
 use lox_math::is_close::IsClose;
 
+use super::ut1::PyNoOpOffsetProvider;
 use crate::calendar_dates::{CalendarDate, Date};
 use crate::deltas::{TimeDelta, ToDelta};
 use crate::julian_dates::{Epoch, JulianDate, Unit};
@@ -26,11 +27,16 @@ use crate::python::ut1::{PyDeltaUt1Provider, PyUt1Provider};
 use crate::python::utc::PyUtc;
 use crate::subsecond::{InvalidSubsecond, Subsecond};
 use crate::time_of_day::TimeOfDay;
+use crate::time_scales::{DynTimeScale, InvalidTimeScale};
 use crate::transformations::{ToTai, ToTcb, ToTcg, ToTdb, ToTt, TryToScale};
 use crate::utc::transformations::ToUtc;
-use crate::{Time, TimeError, TimeLike};
+use crate::{DynTime, Time, TimeError, TimeLike};
 
-use super::ut1::PyNoOpOffsetProvider;
+impl From<InvalidTimeScale> for PyErr {
+    fn from(value: InvalidTimeScale) -> Self {
+        PyValueError::new_err(value.to_string())
+    }
+}
 
 impl From<InvalidSubsecond> for PyErr {
     fn from(value: InvalidSubsecond) -> Self {
@@ -73,7 +79,7 @@ impl FromStr for Unit {
 
 #[pyclass(name = "Time", module = "lox_space", frozen)]
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct PyTime(pub Time<PyTimeScale>);
+pub struct PyTime(pub(crate) DynTime);
 
 #[pymethods]
 impl PyTime {
@@ -88,7 +94,7 @@ impl PyTime {
         minute: u8,
         seconds: f64,
     ) -> PyResult<PyTime> {
-        let scale: PyTimeScale = scale.parse()?;
+        let scale: DynTimeScale = scale.parse()?;
         let time = Time::builder_with_scale(scale)
             .with_ymd(year, month, day)
             .with_hms(hour, minute, seconds)
@@ -104,7 +110,7 @@ impl PyTime {
         jd: f64,
         epoch: &str,
     ) -> PyResult<Self> {
-        let scale: PyTimeScale = scale.parse()?;
+        let scale: DynTimeScale = scale.parse()?;
         let epoch: Epoch = epoch.parse()?;
         Ok(Self(Time::from_julian_date(scale, jd, epoch)?))
     }
@@ -142,11 +148,11 @@ impl PyTime {
     #[classmethod]
     #[pyo3(signature = (iso, scale=None))]
     pub fn from_iso(_cls: &Bound<'_, PyType>, iso: &str, scale: Option<&str>) -> PyResult<PyTime> {
-        let scale: PyTimeScale = match scale {
+        let scale: DynTimeScale = match scale {
             Some(scale) => scale.parse()?,
             None => match iso.split_once(char::is_whitespace) {
                 Some((_, scale)) => scale.parse()?,
-                None => PyTimeScale::Tai,
+                None => DynTimeScale::Tai,
             },
         };
         let time = Time::from_iso(scale, iso)?;
@@ -160,7 +166,7 @@ impl PyTime {
         seconds: i64,
         subsecond: f64,
     ) -> PyResult<PyTime> {
-        let scale: PyTimeScale = scale.parse()?;
+        let scale: DynTimeScale = scale.parse()?;
         let subsecond = Subsecond::new(subsecond)?;
         let time = Time::new(scale, seconds, subsecond);
         Ok(PyTime(time))
