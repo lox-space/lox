@@ -18,23 +18,32 @@ use crate::time_scales::Tcb;
 use crate::time_scales::Tcg;
 use crate::time_scales::Tdb;
 use crate::time_scales::Tt;
-use crate::time_scales::Ut1;
-use crate::transformations::LeapSecondsProvider;
-use crate::transformations::NoOpOffsetProvider;
-use crate::transformations::ToTai;
-use crate::transformations::ToTcb;
-use crate::transformations::ToTcg;
-use crate::transformations::ToTdb;
-use crate::transformations::ToTt;
-use crate::transformations::ToUt1;
-use crate::transformations::TryToScale;
-use crate::ut1::DeltaUt1TaiProvider;
+use crate::utc::LeapSecondsProvider;
 use crate::{utc, Time};
 
 use super::leap_seconds::BuiltinLeapSeconds;
 use super::{Utc, UtcError};
 
 mod before1972;
+
+pub fn to_utc_with_provider(
+    time: Time<Tai>,
+    provider: &impl LeapSecondsProvider,
+) -> Result<Utc, UtcError> {
+    let delta = if time < *tai_at_utc_1972_01_01() {
+        before1972::delta_tai_utc(time)
+    } else {
+        provider.delta_tai_utc(time)
+    }
+    .ok_or(UtcError::UtcUndefined)?;
+    let mut utc = Utc::from_delta(time.to_delta() - delta);
+    if provider.is_leap_second(time) {
+        utc.time = TimeOfDay::new(utc.hour(), utc.minute(), 60)
+            .unwrap()
+            .with_subsecond(utc.time.subsecond());
+    }
+    Ok(utc)
+}
 
 pub trait ToUtc {
     fn to_utc_with_provider(&self, provider: &impl LeapSecondsProvider) -> Result<Utc, UtcError>;
@@ -92,90 +101,6 @@ impl ToUtc for Time<Tt> {
     }
 }
 
-impl<T: LeapSecondsProvider> TryToScale<Tai, T> for Utc {
-    fn try_to_scale(&self, _scale: Tai, provider: &T) -> Result<Time<Tai>, T::Error> {
-        let delta = if self < utc_1972_01_01() {
-            before1972::delta_utc_tai(self)
-        } else {
-            provider.delta_utc_tai(*self)
-        }
-        .unwrap_or_else(|| {
-            // Utc objects are always in range.
-            unreachable!("failed to calculate UTC-TAI delta for Utc `{:?}`", self);
-        });
-
-        Ok(Time::from_delta(Tai, self.to_delta() - delta))
-    }
-}
-
-impl TryToScale<Tai, NoOpOffsetProvider> for Utc {
-    fn try_to_scale(
-        &self,
-        scale: Tai,
-        _provider: &NoOpOffsetProvider,
-    ) -> Result<Time<Tai>, Infallible> {
-        self.try_to_scale(scale, &BuiltinLeapSeconds)
-    }
-}
-
-impl ToTai for Utc {}
-
-impl TryToScale<Tt, NoOpOffsetProvider> for Utc {
-    fn try_to_scale(
-        &self,
-        scale: Tt,
-        provider: &NoOpOffsetProvider,
-    ) -> Result<Time<Tt>, Infallible> {
-        self.to_tai().try_to_scale(scale, provider)
-    }
-}
-
-impl ToTt for Utc {}
-
-impl TryToScale<Tdb, NoOpOffsetProvider> for Utc {
-    fn try_to_scale(
-        &self,
-        scale: Tdb,
-        provider: &NoOpOffsetProvider,
-    ) -> Result<Time<Tdb>, Infallible> {
-        self.to_tt().try_to_scale(scale, provider)
-    }
-}
-
-impl ToTdb for Utc {}
-
-impl TryToScale<Tcb, NoOpOffsetProvider> for Utc {
-    fn try_to_scale(
-        &self,
-        scale: Tcb,
-        provider: &NoOpOffsetProvider,
-    ) -> Result<Time<Tcb>, Infallible> {
-        self.to_tdb().try_to_scale(scale, provider)
-    }
-}
-
-impl ToTcb for Utc {}
-
-impl TryToScale<Tcg, NoOpOffsetProvider> for Utc {
-    fn try_to_scale(
-        &self,
-        scale: Tcg,
-        provider: &NoOpOffsetProvider,
-    ) -> Result<Time<Tcg>, Infallible> {
-        self.to_tt().try_to_scale(scale, provider)
-    }
-}
-
-impl ToTcg for Utc {}
-
-impl<T: DeltaUt1TaiProvider> TryToScale<Ut1, T> for Utc {
-    fn try_to_scale(&self, scale: Ut1, provider: &T) -> Result<Time<Ut1>, T::Error> {
-        self.to_tai().try_to_scale(scale, provider)
-    }
-}
-
-impl<T: DeltaUt1TaiProvider> ToUt1<T> for Utc {}
-
 fn utc_1972_01_01() -> &'static Utc {
     static UTC_1972: OnceLock<Utc> = OnceLock::new();
     UTC_1972.get_or_init(|| utc!(1972, 1, 1).unwrap())
@@ -196,7 +121,6 @@ fn tai_at_utc_1972_01_01() -> &'static Time<Tai> {
 mod test {
     use crate::test_helpers::delta_ut1_tai;
     use crate::time;
-    use crate::transformations::{ToTcb, ToTcg, ToTdb, ToTt};
     use rstest::rstest;
 
     use crate::subsecond::Subsecond;

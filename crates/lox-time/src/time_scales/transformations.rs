@@ -10,6 +10,7 @@ use crate::deltas::TimeDelta;
 use crate::prelude::{Tai, Tt};
 use crate::subsecond::Subsecond;
 use crate::time_scales::{DynTimeScale, Tcb, Tcg, Tdb, TimeScale, Ut1};
+use crate::ut1::DeltaUt1TaiProvider;
 
 pub trait OffsetProvider {
     type Error: std::error::Error;
@@ -349,11 +350,6 @@ impl_fallible!(Tdb, Tt);
 /////////////////
 // TAI <-> UT1 //
 /////////////////
-
-pub trait DeltaUt1TaiProvider: OffsetProvider {
-    fn delta_ut1_tai(&self, delta: TimeDelta) -> Result<TimeDelta, Self::Error>;
-    fn delta_tai_ut1(&self, delta: TimeDelta) -> Result<TimeDelta, Self::Error>;
-}
 
 impl<P: DeltaUt1TaiProvider> TryToScale<Ut1, P> for Tai {
     fn try_offset(

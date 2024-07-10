@@ -16,21 +16,19 @@ use pyo3::{pyclass, pymethods, Bound, PyAny, PyErr, PyObject, PyResult, Python};
 
 use lox_math::is_close::IsClose;
 
-use super::ut1::PyNoOpOffsetProvider;
 use crate::calendar_dates::{CalendarDate, Date};
 use crate::deltas::{TimeDelta, ToDelta};
 use crate::julian_dates::{Epoch, JulianDate, Unit};
-use crate::prelude::{CivilTime, Tai, Tcb, Tcg, Tdb, TimeScale, Tt, Ut1};
+use crate::prelude::{CivilTime, TimeScale};
 use crate::python::deltas::PyTimeDelta;
-use crate::python::time_scales::PyTimeScale;
-use crate::python::ut1::{PyDeltaUt1Provider, PyUt1Provider};
+use crate::python::ut1::PyUt1Provider;
 use crate::python::utc::PyUtc;
 use crate::subsecond::{InvalidSubsecond, Subsecond};
 use crate::time_of_day::TimeOfDay;
 use crate::time_scales::{DynTimeScale, InvalidTimeScale};
-use crate::transformations::{ToTai, ToTcb, ToTcg, ToTdb, ToTt, TryToScale};
-use crate::utc::transformations::ToUtc;
 use crate::{DynTime, Time, TimeError, TimeLike};
+
+use super::ut1::PyNoOpOffsetProvider;
 
 impl From<InvalidTimeScale> for PyErr {
     fn from(value: InvalidTimeScale) -> Self {
@@ -307,66 +305,51 @@ impl PyTime {
     }
 
     #[pyo3(signature = (provider=None))]
-    pub fn to_tai(&self, provider: Option<&Bound<'_, PyUt1Provider>>) -> PyResult<PyTime> {
+    pub fn to_scale(
+        &self,
+        scale: &str,
+        provider: Option<&Bound<'_, PyUt1Provider>>,
+    ) -> PyResult<PyTime> {
+        let scale: DynTimeScale = scale.parse()?;
         let time = match provider {
-            Some(provider) => self.try_to_scale(Tai, provider.get())?,
-            None => self.try_to_scale(Tai, &PyNoOpOffsetProvider)?,
+            Some(provider) => self.0.try_to_scale(scale, provider.get())?,
+            None => self.0.try_to_scale(scale, &PyNoOpOffsetProvider)?,
         };
-        Ok(PyTime(time.with_scale(PyTimeScale::Tai)))
+        Ok(PyTime(time))
+    }
+
+    pub fn to_tai(&self, provider: Option<&Bound<'_, PyUt1Provider>>) -> PyResult<PyTime> {
+        self.to_scale("TAI", provider)
     }
 
     #[pyo3(signature = (provider=None))]
     pub fn to_tcb(&self, provider: Option<&Bound<'_, PyUt1Provider>>) -> PyResult<PyTime> {
-        let time = match provider {
-            Some(provider) => self.try_to_scale(Tcb, provider.get())?,
-            None => self.try_to_scale(Tcb, &PyNoOpOffsetProvider)?,
-        };
-        Ok(PyTime(time.with_scale(PyTimeScale::Tcb)))
+        self.to_scale("TCB", provider)
     }
 
     #[pyo3(signature = (provider=None))]
     pub fn to_tcg(&self, provider: Option<&Bound<'_, PyUt1Provider>>) -> PyResult<PyTime> {
-        let time = match provider {
-            Some(provider) => self.try_to_scale(Tcg, provider.get())?,
-            None => self.try_to_scale(Tcg, &PyNoOpOffsetProvider)?,
-        };
-        Ok(PyTime(time.with_scale(PyTimeScale::Tcg)))
+        self.to_scale("TCG", provider)
     }
 
     #[pyo3(signature = (provider=None))]
     pub fn to_tdb(&self, provider: Option<&Bound<'_, PyUt1Provider>>) -> PyResult<PyTime> {
-        let time = match provider {
-            Some(provider) => self.try_to_scale(Tdb, provider.get())?,
-            None => self.try_to_scale(Tdb, &PyNoOpOffsetProvider)?,
-        };
-        Ok(PyTime(time.with_scale(PyTimeScale::Tdb)))
+        self.to_scale("TDB", provider)
     }
 
     #[pyo3(signature = (provider=None))]
     pub fn to_tt(&self, provider: Option<&Bound<'_, PyUt1Provider>>) -> PyResult<PyTime> {
-        let time = match provider {
-            Some(provider) => self.try_to_scale(Tt, provider.get())?,
-            None => self.try_to_scale(Tt, &PyNoOpOffsetProvider)?,
-        };
-        Ok(PyTime(time.with_scale(PyTimeScale::Tt)))
+        self.to_scale("TT", provider)
     }
 
     #[pyo3(signature = (provider=None))]
     pub fn to_ut1(&self, provider: Option<&Bound<'_, PyUt1Provider>>) -> PyResult<PyTime> {
-        let time = match provider {
-            Some(provider) => self.try_to_scale(Ut1, provider.get())?,
-            None => self.try_to_scale(Ut1, &PyNoOpOffsetProvider)?,
-        };
-        Ok(PyTime(time.with_scale(PyTimeScale::Ut1)))
+        self.to_scale("TAI", provider)
     }
 
     #[pyo3(signature = (provider=None))]
-    pub fn to_utc(&self, provider: Option<&Bound<'_, PyUt1Provider>>) -> PyResult<PyUtc> {
-        let tai = match provider {
-            Some(provider) => self.try_to_scale(Tai, provider.get())?,
-            None => self.try_to_scale(Tai, &PyNoOpOffsetProvider)?,
-        };
-        Ok(PyUtc(tai.to_utc()?))
+    pub fn to_utc(&self, _provider: Option<&Bound<'_, PyUt1Provider>>) -> PyResult<PyUtc> {
+        todo!()
     }
 }
 
@@ -419,84 +402,6 @@ impl CivilTime for PyTime {
 }
 
 impl TimeLike for PyTime {}
-
-impl<T: PyDeltaUt1Provider> TryToScale<Tai, T> for PyTime {
-    fn try_to_scale(&self, _scale: Tai, provider: &T) -> PyResult<Time<Tai>> {
-        match self.0.scale() {
-            PyTimeScale::Tai => Ok(self.0.with_scale(Tai)),
-            PyTimeScale::Tcb => Ok(self.0.with_scale(Tcb).to_tai()),
-            PyTimeScale::Tcg => Ok(self.0.with_scale(Tcg).to_tai()),
-            PyTimeScale::Tdb => Ok(self.0.with_scale(Tdb).to_tai()),
-            PyTimeScale::Tt => Ok(self.0.with_scale(Tt).to_tai()),
-            PyTimeScale::Ut1 => self.0.with_scale(Ut1).try_to_scale(Tai, provider),
-        }
-    }
-}
-
-impl<T: PyDeltaUt1Provider> TryToScale<Tcg, T> for PyTime {
-    fn try_to_scale(&self, _scale: Tcg, provider: &T) -> PyResult<Time<Tcg>> {
-        match self.0.scale() {
-            PyTimeScale::Tai => Ok(self.0.with_scale(Tai).to_tcg()),
-            PyTimeScale::Tcb => Ok(self.0.with_scale(Tcb).to_tcg()),
-            PyTimeScale::Tcg => Ok(self.0.with_scale(Tcg)),
-            PyTimeScale::Tdb => Ok(self.0.with_scale(Tdb).to_tcg()),
-            PyTimeScale::Tt => Ok(self.0.with_scale(Tt).to_tcg()),
-            PyTimeScale::Ut1 => self.0.with_scale(Ut1).try_to_scale(Tcg, provider),
-        }
-    }
-}
-
-impl<T: PyDeltaUt1Provider> TryToScale<Tcb, T> for PyTime {
-    fn try_to_scale(&self, _scale: Tcb, provider: &T) -> PyResult<Time<Tcb>> {
-        match self.0.scale() {
-            PyTimeScale::Tai => Ok(self.0.with_scale(Tai).to_tcb()),
-            PyTimeScale::Tcb => Ok(self.0.with_scale(Tcb)),
-            PyTimeScale::Tcg => Ok(self.0.with_scale(Tcg).to_tcb()),
-            PyTimeScale::Tdb => Ok(self.0.with_scale(Tdb).to_tcb()),
-            PyTimeScale::Tt => Ok(self.0.with_scale(Tt).to_tcb()),
-            PyTimeScale::Ut1 => self.0.with_scale(Ut1).try_to_scale(Tcb, provider),
-        }
-    }
-}
-
-impl<T: PyDeltaUt1Provider> TryToScale<Tdb, T> for PyTime {
-    fn try_to_scale(&self, _scale: Tdb, provider: &T) -> Result<Time<Tdb>, T::Error> {
-        match self.0.scale() {
-            PyTimeScale::Tai => Ok(self.0.with_scale(Tai).to_tdb()),
-            PyTimeScale::Tcb => Ok(self.0.with_scale(Tcb).to_tdb()),
-            PyTimeScale::Tcg => Ok(self.0.with_scale(Tcg).to_tdb()),
-            PyTimeScale::Tdb => Ok(self.0.with_scale(Tdb)),
-            PyTimeScale::Tt => Ok(self.0.with_scale(Tt).to_tdb()),
-            PyTimeScale::Ut1 => self.0.with_scale(Ut1).try_to_scale(Tdb, provider),
-        }
-    }
-}
-
-impl<T: PyDeltaUt1Provider> TryToScale<Tt, T> for PyTime {
-    fn try_to_scale(&self, _scale: Tt, provider: &T) -> PyResult<Time<Tt>> {
-        match self.0.scale() {
-            PyTimeScale::Tai => Ok(self.0.with_scale(Tai).to_tt()),
-            PyTimeScale::Tcb => Ok(self.0.with_scale(Tcb).to_tt()),
-            PyTimeScale::Tcg => Ok(self.0.with_scale(Tcg).to_tt()),
-            PyTimeScale::Tdb => Ok(self.0.with_scale(Tdb).to_tt()),
-            PyTimeScale::Tt => Ok(self.0.with_scale(Tt)),
-            PyTimeScale::Ut1 => self.0.with_scale(Ut1).try_to_scale(Tt, provider),
-        }
-    }
-}
-
-impl<T: PyDeltaUt1Provider> TryToScale<Ut1, T> for PyTime {
-    fn try_to_scale(&self, _scale: Ut1, provider: &T) -> PyResult<Time<Ut1>> {
-        match self.0.scale() {
-            PyTimeScale::Tai => self.0.with_scale(Tai).try_to_scale(Ut1, provider),
-            PyTimeScale::Tcb => self.0.with_scale(Tcb).try_to_scale(Ut1, provider),
-            PyTimeScale::Tcg => self.0.with_scale(Tcg).try_to_scale(Ut1, provider),
-            PyTimeScale::Tdb => self.0.with_scale(Tdb).try_to_scale(Ut1, provider),
-            PyTimeScale::Tt => self.0.with_scale(Tt).try_to_scale(Ut1, provider),
-            PyTimeScale::Ut1 => Ok(self.0.with_scale(Ut1)),
-        }
-    }
-}
 
 impl IsClose for PyTime {
     const DEFAULT_RELATIVE: f64 = 1e-10;
