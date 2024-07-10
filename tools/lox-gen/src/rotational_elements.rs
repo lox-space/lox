@@ -225,10 +225,6 @@ impl PolynomialCoefficientType {
     }
 }
 
-fn is_planet(id: u32) -> bool {
-    id.to_string().ends_with("99")
-}
-
 impl GetPolynomialCoefficients for CoefficientKernel<'_> {
     fn get_right_ascension_coefficients_or_default(
         &self,
@@ -255,10 +251,6 @@ impl GetPolynomialCoefficients for CoefficientKernel<'_> {
         &self,
         id: u32,
     ) -> Result<TokenizeableNutPrecCoefficients, Box<CoefficientsError>> {
-        if !is_planet(id) {
-            return Ok(TokenizeableNutPrecCoefficients::default());
-        }
-
         let barycenter_id = id / 100;
 
         let key = format!("BODY{}_NUT_PREC_ANGLES", barycenter_id);
