@@ -254,6 +254,39 @@ impl<T: TimeScale> Time<T> {
         Ok(Self::new(scale, seconds, subsecond))
     }
 
+    pub fn from_two_part_julian_date(scale: T, jd1: Days, jd2: Days) -> Result<Self, TimeError> {
+        let seconds1 = jd1 * time::SECONDS_PER_DAY;
+        let seconds2 = jd2 * time::SECONDS_PER_DAY;
+        let seconds = seconds1 + seconds2;
+        if !(i64::MIN as f64..=i64::MAX as f64).contains(&seconds) {
+            return Err(TimeError::JulianDateOutOfRange(JulianDateOutOfRange(
+                seconds,
+            )));
+        }
+        let mut seconds = seconds.to_i64().unwrap_or_else(|| {
+            unreachable!(
+                "seconds since J2000 for Julian date ({}, {}) are not representable as i64: {}",
+                jd1, jd2, seconds
+            )
+        });
+        let mut f1 = seconds1.fract();
+        let mut f2 = seconds2.fract();
+        if f1 < f2 {
+            std::mem::swap(&mut f1, &mut f2);
+        }
+        let mut f = f2 + f1;
+        if f >= 1.0 {
+            seconds += 1;
+            f -= 1.0;
+        }
+        if f < 0.0 {
+            seconds -= 1;
+            f += 1.0;
+        }
+        let subsecond = Subsecond::new(f).unwrap();
+        Ok(Self::new(scale, seconds, subsecond))
+    }
+
     /// Returns a [TimeBuilder] for constructing a new [Time] in the given [TimeScale].
     pub fn builder_with_scale(scale: T) -> TimeBuilder<T> {
         TimeBuilder::new(scale)
@@ -516,6 +549,13 @@ impl<T: TimeScale> TimeBuilder<T> {
     pub fn with_ymd(self, year: i64, month: u8, day: u8) -> Self {
         Self {
             date: Date::new(year, month, day),
+            ..self
+        }
+    }
+
+    pub fn with_doy(self, year: i64, day: u16) -> Self {
+        Self {
+            date: Date::from_day_of_year(year, day),
             ..self
         }
     }

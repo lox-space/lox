@@ -110,6 +110,36 @@ impl PyTime {
     }
 
     #[classmethod]
+    pub fn from_two_part_julian_date(
+        _cls: &Bound<'_, PyType>,
+        scale: &str,
+        jd1: f64,
+        jd2: f64,
+    ) -> PyResult<Self> {
+        let scale: PyTimeScale = scale.parse()?;
+        Ok(Self(Time::from_two_part_julian_date(scale, jd1, jd2)?))
+    }
+
+    #[classmethod]
+    #[pyo3(signature=(scale, year, day, hour = 0, minute = 0, seconds = 0.0))]
+    pub fn from_day_of_year(
+        _cls: &Bound<'_, PyType>,
+        scale: &str,
+        year: i64,
+        day: u16,
+        hour: u8,
+        minute: u8,
+        seconds: f64,
+    ) -> PyResult<PyTime> {
+        let scale: PyTimeScale = scale.parse()?;
+        let time = Time::builder_with_scale(scale)
+            .with_doy(year, day)
+            .with_hms(hour, minute, seconds)
+            .build()?;
+        Ok(PyTime(time))
+    }
+
+    #[classmethod]
     pub fn from_iso(_cls: &Bound<'_, PyType>, iso: &str, scale: Option<&str>) -> PyResult<PyTime> {
         let scale: PyTimeScale = match scale {
             Some(scale) => scale.parse()?,
@@ -207,6 +237,10 @@ impl PyTime {
         let epoch: Epoch = epoch.parse()?;
         let unit: Unit = unit.parse()?;
         Ok(self.0.julian_date(epoch, unit))
+    }
+
+    pub fn two_part_julian_date(&self) -> (f64, f64) {
+        self.0.two_part_julian_date()
     }
 
     pub fn scale(&self) -> &'static str {
