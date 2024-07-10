@@ -344,7 +344,6 @@ mod tests {
     use float_eq::assert_float_eq;
 
     use lox_bodies::{Earth, Jupiter};
-    use lox_time::time_scales::Tai;
     use lox_time::{time, time_scales::Tdb, Time};
 
     use crate::frames::NoOpFrameTransformationProvider;
