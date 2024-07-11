@@ -257,7 +257,7 @@ impl<T: TimeScale> Time<T> {
     pub fn from_two_part_julian_date(scale: T, jd1: Days, jd2: Days) -> Result<Self, TimeError> {
         let seconds1 = jd1 * time::SECONDS_PER_DAY;
         let seconds2 = jd2 * time::SECONDS_PER_DAY;
-        let seconds = seconds1 + seconds2;
+        let seconds = seconds1.trunc() + seconds2.trunc() - SECONDS_BETWEEN_JD_AND_J2000 as f64;
         if !(i64::MIN as f64..=i64::MAX as f64).contains(&seconds) {
             return Err(TimeError::JulianDateOutOfRange(JulianDateOutOfRange(
                 seconds,
@@ -268,7 +268,7 @@ impl<T: TimeScale> Time<T> {
                 "seconds since J2000 for Julian date ({}, {}) are not representable as i64: {}",
                 jd1, jd2, seconds
             )
-        }) - SECONDS_BETWEEN_JD_AND_J2000;
+        });
         let mut f1 = seconds1.fract();
         let mut f2 = seconds2.fract();
         if f1 < f2 {
@@ -691,6 +691,44 @@ mod tests {
         let (jd1, jd2) = t0.two_part_julian_date();
         let t1 = Time::from_two_part_julian_date(Tai, jd1, jd2).unwrap();
         assert_close!(t0, t1);
+    }
+
+    #[rstest]
+    #[case(i64::MAX as f64, 1.0)]
+    #[case(i64::MIN as f64, -1.0)]
+    fn test_time_from_two_part_julian_date_edge_cases(#[case] jd1: f64, #[case] jd2: f64) {
+        let time = Time::from_two_part_julian_date(Tai, jd1, jd2);
+        assert_eq!(
+            time,
+            Err(TimeError::JulianDateOutOfRange(JulianDateOutOfRange(
+                (jd1 + jd2) * time::SECONDS_PER_DAY - SECONDS_BETWEEN_JD_AND_J2000 as f64
+            )))
+        );
+    }
+
+    #[rstest]
+    #[case(
+        (SECONDS_BETWEEN_JD_AND_J2000 as f64) / time::SECONDS_PER_DAY,
+        0.0,
+        0,
+    )]
+    #[case(
+        (SECONDS_BETWEEN_JD_AND_J2000 as f64 + 0.5) / time::SECONDS_PER_DAY,
+        0.6 / time::SECONDS_PER_DAY,
+        1,
+    )]
+    #[case(
+        (SECONDS_BETWEEN_JD_AND_J2000 as f64 + 0.5) / time::SECONDS_PER_DAY,
+        -0.6 / time::SECONDS_PER_DAY,
+        -1,
+    )]
+    fn test_time_from_two_part_julian_date_adjustments(
+        #[case] jd1: f64,
+        #[case] jd2: f64,
+        #[case] expected: i64,
+    ) {
+        let time = Time::from_two_part_julian_date(Tai, jd1, jd2).unwrap();
+        assert_eq!(time.seconds, expected);
     }
 
     #[test]

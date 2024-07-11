@@ -698,6 +698,16 @@ mod tests {
     }
 
     #[test]
+    fn test_pytime_from_day_of_year() {
+        Python::with_gil(|py| {
+            let cls = PyType::new_bound::<PyTime>(py);
+            let expected = PyTime::new("TAI", 2024, 12, 31, 0, 0, 0.0).unwrap();
+            let actual = PyTime::from_day_of_year(&cls, "TAI", 2024, 366, 0, 0, 0.0).unwrap();
+            assert_eq!(actual, expected);
+        })
+    }
+
+    #[test]
     fn test_pytime_tai_noop() {
         Python::with_gil(|py| {
             let provider = Bound::new(
