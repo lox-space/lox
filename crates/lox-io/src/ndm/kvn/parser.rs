@@ -164,7 +164,7 @@ pub fn parse_kvn_state_vector(
 ) -> Result<KvnStateVectorValue, KvnStateVectorParserErr<&str>> {
     // This line is written in regex hell
     let re = Regex::new(
-        r"^(?<full_date_value>(?:\s*)?(?<yr>(?:\d{4}))-(?<mo>(?:\d{1,2}))-(?<dy>(?:\d{1,2}))T(?<hr>(?:\d{1,2})):(?<mn>(?:\d{1,2})):(?<sc>(?:\d{0,2}(?:\.\d*)?)))(?:\s+)(?<x>(?:(?:[^ ]*)?))(?:\s+)(?<y>(?:(?:[^ ]*)?))(?:\s+)(?<z>(?:(?:[^ ]*)?))(?:\s+)(?<x_dot>(?:(?:[^ ]*)?))(?:\s+)(?<y_dot>(?:(?:[^ ]*)?))(?:\s+)(?<z_dot>(?:(?:[^ ]*)?))((?:\s+)(?<x_ddot>(?:(?:[^ ]*)?))(?:\s+)(?<y_ddot>(?:(?:[^ ]*)?))(?:\s+)(?<z_ddot>(?:(?:[^ ]*)?)))?(?:\s*)$",)
+        r"^(?:\s*)?(?<full_date_value>(?<yr>(?:\d{4}))-(?<mo>(?:\d{1,2}))-(?<dy>(?:\d{1,2}))T(?<hr>(?:\d{1,2})):(?<mn>(?:\d{1,2})):(?<sc>(?:\d{0,2}(?:\.\d*)?)))(?:\s+)(?<x>(?:(?:[^ ]*)?))(?:\s+)(?<y>(?:(?:[^ ]*)?))(?:\s+)(?<z>(?:(?:[^ ]*)?))(?:\s+)(?<x_dot>(?:(?:[^ ]*)?))(?:\s+)(?<y_dot>(?:(?:[^ ]*)?))(?:\s+)(?<z_dot>(?:(?:[^ ]*)?))((?:\s+)(?<x_ddot>(?:(?:[^ ]*)?))(?:\s+)(?<y_ddot>(?:(?:[^ ]*)?))(?:\s+)(?<z_ddot>(?:(?:[^ ]*)?)))?(?:\s*)$",)
     .unwrap();
 
     let captures = re
@@ -989,5 +989,32 @@ mod test {
 
         // 5.2.4.3 At least one space character must be used to separate the
         // items in each ephemeris data line.
+
+        assert_eq!(
+            parse_kvn_state_vector(
+                "          1996-12-28T21:29:07.0             -2432.166         -063.042       1742.754        7.33702        -3.495867       -1.041945       1.234       -2.345        3.455      "
+            ),
+            Ok(KvnStateVectorValue {
+                epoch: KvnDateTimeValue {
+                    year: 1996,
+                    month: 12,
+                    day: 28,
+                    hour: 21,
+                    minute: 29,
+                    second: 7,
+                    fractional_second: 0.0,
+                    full_value: "1996-12-28T21:29:07.0".to_string(),
+                },
+                x: -2432.166,
+                y: -63.042,
+                z: 1742.754,
+                x_dot: 7.33702,
+                y_dot: -3.495867,
+                z_dot: -1.041945,
+                x_ddot: Some(1.234),
+                y_ddot: Some(-2.345),
+                z_ddot: Some(3.455),
+            })
+        );
     }
 }
