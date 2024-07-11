@@ -687,6 +687,17 @@ mod tests {
     }
 
     #[test]
+    fn test_pytime_from_two_part_julian_date() {
+        Python::with_gil(|py| {
+            let cls = PyType::new_bound::<PyTime>(py);
+            let expected = PyTime::new("TAI", 2024, 7, 11, 8, 2, 14.0).unwrap();
+            let (jd1, jd2) = expected.two_part_julian_date();
+            let actual = PyTime::from_two_part_julian_date(&cls, "TAI", jd1, jd2).unwrap();
+            assert_close!(actual.0, expected.0);
+        })
+    }
+
+    #[test]
     fn test_pytime_tai_noop() {
         Python::with_gil(|py| {
             let provider = Bound::new(
