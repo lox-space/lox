@@ -110,6 +110,36 @@ impl PyTime {
     }
 
     #[classmethod]
+    pub fn from_two_part_julian_date(
+        _cls: &Bound<'_, PyType>,
+        scale: &str,
+        jd1: f64,
+        jd2: f64,
+    ) -> PyResult<Self> {
+        let scale: PyTimeScale = scale.parse()?;
+        Ok(Self(Time::from_two_part_julian_date(scale, jd1, jd2)?))
+    }
+
+    #[classmethod]
+    #[pyo3(signature=(scale, year, day, hour = 0, minute = 0, seconds = 0.0))]
+    pub fn from_day_of_year(
+        _cls: &Bound<'_, PyType>,
+        scale: &str,
+        year: i64,
+        day: u16,
+        hour: u8,
+        minute: u8,
+        seconds: f64,
+    ) -> PyResult<PyTime> {
+        let scale: PyTimeScale = scale.parse()?;
+        let time = Time::builder_with_scale(scale)
+            .with_doy(year, day)
+            .with_hms(hour, minute, seconds)
+            .build()?;
+        Ok(PyTime(time))
+    }
+
+    #[classmethod]
     pub fn from_iso(_cls: &Bound<'_, PyType>, iso: &str, scale: Option<&str>) -> PyResult<PyTime> {
         let scale: PyTimeScale = match scale {
             Some(scale) => scale.parse()?,
@@ -207,6 +237,10 @@ impl PyTime {
         let epoch: Epoch = epoch.parse()?;
         let unit: Unit = unit.parse()?;
         Ok(self.0.julian_date(epoch, unit))
+    }
+
+    pub fn two_part_julian_date(&self) -> (f64, f64) {
+        self.0.two_part_julian_date()
     }
 
     pub fn scale(&self) -> &'static str {
@@ -650,6 +684,27 @@ mod tests {
     fn test_pytime_invalid_unit() {
         let time = PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap();
         time.julian_date("jd", "unknown").unwrap();
+    }
+
+    #[test]
+    fn test_pytime_from_two_part_julian_date() {
+        Python::with_gil(|py| {
+            let cls = PyType::new_bound::<PyTime>(py);
+            let expected = PyTime::new("TAI", 2024, 7, 11, 8, 2, 14.0).unwrap();
+            let (jd1, jd2) = expected.two_part_julian_date();
+            let actual = PyTime::from_two_part_julian_date(&cls, "TAI", jd1, jd2).unwrap();
+            assert_close!(actual.0, expected.0);
+        })
+    }
+
+    #[test]
+    fn test_pytime_from_day_of_year() {
+        Python::with_gil(|py| {
+            let cls = PyType::new_bound::<PyTime>(py);
+            let expected = PyTime::new("TAI", 2024, 12, 31, 0, 0, 0.0).unwrap();
+            let actual = PyTime::from_day_of_year(&cls, "TAI", 2024, 366, 0, 0, 0.0).unwrap();
+            assert_eq!(actual, expected);
+        })
     }
 
     #[test]

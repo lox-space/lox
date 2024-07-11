@@ -254,6 +254,39 @@ impl<T: TimeScale> Time<T> {
         Ok(Self::new(scale, seconds, subsecond))
     }
 
+    pub fn from_two_part_julian_date(scale: T, jd1: Days, jd2: Days) -> Result<Self, TimeError> {
+        let seconds1 = jd1 * time::SECONDS_PER_DAY;
+        let seconds2 = jd2 * time::SECONDS_PER_DAY;
+        let seconds = seconds1.trunc() + seconds2.trunc() - SECONDS_BETWEEN_JD_AND_J2000 as f64;
+        if !(i64::MIN as f64..=i64::MAX as f64).contains(&seconds) {
+            return Err(TimeError::JulianDateOutOfRange(JulianDateOutOfRange(
+                seconds,
+            )));
+        }
+        let mut seconds = seconds.to_i64().unwrap_or_else(|| {
+            unreachable!(
+                "seconds since J2000 for Julian date ({}, {}) are not representable as i64: {}",
+                jd1, jd2, seconds
+            )
+        });
+        let mut f1 = seconds1.fract();
+        let mut f2 = seconds2.fract();
+        if f1 < f2 {
+            std::mem::swap(&mut f1, &mut f2);
+        }
+        let mut f = f2 + f1;
+        if f >= 1.0 {
+            seconds += 1;
+            f -= 1.0;
+        }
+        if f < 0.0 {
+            seconds -= 1;
+            f += 1.0;
+        }
+        let subsecond = Subsecond::new(f).unwrap();
+        Ok(Self::new(scale, seconds, subsecond))
+    }
+
     /// Returns a [TimeBuilder] for constructing a new [Time] in the given [TimeScale].
     pub fn builder_with_scale(scale: T) -> TimeBuilder<T> {
         TimeBuilder::new(scale)
@@ -520,6 +553,14 @@ impl<T: TimeScale> TimeBuilder<T> {
         }
     }
 
+    /// Sets the `year` and `day_of_year` of the [Time] under construction.
+    pub fn with_doy(self, year: i64, day_of_year: u16) -> Self {
+        Self {
+            date: Date::from_day_of_year(year, day_of_year),
+            ..self
+        }
+    }
+
     /// Sets the `hour`, `minute`, and decimal `seconds` of the [Time] under construction.
     pub fn with_hms(self, hour: u8, minute: u8, seconds: f64) -> Self {
         Self {
@@ -587,9 +628,9 @@ macro_rules! time {
 #[cfg(test)]
 mod tests {
     use float_eq::assert_float_eq;
-    use rstest::rstest;
-
+    use lox_utils::assert_close;
     use lox_utils::constants::f64::time::DAYS_PER_JULIAN_CENTURY;
+    use rstest::rstest;
 
     use crate::constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
     use crate::time_scales::{Tai, Tdb, Tt};
@@ -642,6 +683,52 @@ mod tests {
     fn test_time_from_julian_date_subsecond() {
         let time = Time::from_julian_date(Tai, 0.3 / time::SECONDS_PER_DAY, Epoch::J2000).unwrap();
         assert_float_eq!(time.subsecond(), 0.3, abs <= 1e-15);
+    }
+
+    #[test]
+    fn test_time_from_two_part_julian_date() {
+        let t0 = time!(Tai, 2024, 7, 11, 8, 2, 14.0).unwrap();
+        let (jd1, jd2) = t0.two_part_julian_date();
+        let t1 = Time::from_two_part_julian_date(Tai, jd1, jd2).unwrap();
+        assert_close!(t0, t1);
+    }
+
+    #[rstest]
+    #[case(i64::MAX as f64, 1.0)]
+    #[case(i64::MIN as f64, -1.0)]
+    fn test_time_from_two_part_julian_date_edge_cases(#[case] jd1: f64, #[case] jd2: f64) {
+        let time = Time::from_two_part_julian_date(Tai, jd1, jd2);
+        assert_eq!(
+            time,
+            Err(TimeError::JulianDateOutOfRange(JulianDateOutOfRange(
+                (jd1 + jd2) * time::SECONDS_PER_DAY - SECONDS_BETWEEN_JD_AND_J2000 as f64
+            )))
+        );
+    }
+
+    #[rstest]
+    #[case(
+        (SECONDS_BETWEEN_JD_AND_J2000 as f64) / time::SECONDS_PER_DAY,
+        0.0,
+        0,
+    )]
+    #[case(
+        (SECONDS_BETWEEN_JD_AND_J2000 as f64 + 0.5) / time::SECONDS_PER_DAY,
+        0.6 / time::SECONDS_PER_DAY,
+        1,
+    )]
+    #[case(
+        (SECONDS_BETWEEN_JD_AND_J2000 as f64 + 0.5) / time::SECONDS_PER_DAY,
+        -0.6 / time::SECONDS_PER_DAY,
+        -1,
+    )]
+    fn test_time_from_two_part_julian_date_adjustments(
+        #[case] jd1: f64,
+        #[case] jd2: f64,
+        #[case] expected: i64,
+    ) {
+        let time = Time::from_two_part_julian_date(Tai, jd1, jd2).unwrap();
+        assert_eq!(time.seconds, expected);
     }
 
     #[test]
