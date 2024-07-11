@@ -21,6 +21,11 @@ pub enum KvnStringParserErr<I> {
 }
 
 #[derive(Debug, PartialEq)]
+pub enum KvnStateVectorParserErr<I> {
+    InvalidFormat { input: I },
+}
+
+#[derive(Debug, PartialEq)]
 pub struct KvnKeywordNotFoundErr<I> {
     expected: I,
 }
@@ -119,6 +124,20 @@ pub struct KvnDateTimeValue {
     pub full_value: String,
 }
 
+#[derive(PartialEq, Debug, Default)]
+pub struct KvnStateVectorValue {
+    pub epoch: KvnDateTimeValue,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+    pub x_dot: f64,
+    pub y_dot: f64,
+    pub z_dot: f64,
+    pub x_ddot: Option<f64>,
+    pub y_ddot: Option<f64>,
+    pub z_ddot: Option<f64>,
+}
+
 pub fn kvn_line_matches_key<'a>(
     key: &'a str,
     input: &'a str,
@@ -138,6 +157,67 @@ pub fn kvn_line_matches_key<'a>(
         .to_string();
 
     Ok(captured_keyword == key)
+}
+
+pub fn parse_kvn_state_vector(
+    input: &str,
+) -> Result<KvnStateVectorValue, KvnStateVectorParserErr<&str>> {
+    // This line is written in regex hell
+    let re = Regex::new(
+        r"^(?<full_date_value>(?:\s*)?(?<yr>(?:\d{4}))-(?<mo>(?:\d{1,2}))-(?<dy>(?:\d{1,2}))T(?<hr>(?:\d{1,2})):(?<mn>(?:\d{1,2})):(?<sc>(?:\d{0,2}(?:\.\d*)?)))(?:\s+)(?<x>(?:(?:[^ ]*)?))(?:\s+)(?<y>(?:(?:[^ ]*)?))(?:\s+)(?<z>(?:(?:[^ ]*)?))(?:\s+)(?<x_dot>(?:(?:[^ ]*)?))(?:\s+)(?<y_dot>(?:(?:[^ ]*)?))(?:\s+)(?<z_dot>(?:(?:[^ ]*)?))((?:\s+)(?<x_ddot>(?:(?:[^ ]*)?))(?:\s+)(?<y_ddot>(?:(?:[^ ]*)?))(?:\s+)(?<z_ddot>(?:(?:[^ ]*)?)))?(?:\s*)$",)
+    .unwrap();
+
+    let captures = re
+        .captures(input)
+        .ok_or(KvnStateVectorParserErr::InvalidFormat { input })?;
+
+    let datetime = handle_datetime_capture(&captures);
+
+    let x = captures.name("x").unwrap().as_str().parse::<f64>().unwrap();
+    let y = captures.name("y").unwrap().as_str().parse::<f64>().unwrap();
+    let z = captures.name("z").unwrap().as_str().parse::<f64>().unwrap();
+
+    let x_dot = captures
+        .name("x_dot")
+        .unwrap()
+        .as_str()
+        .parse::<f64>()
+        .unwrap();
+    let y_dot = captures
+        .name("y_dot")
+        .unwrap()
+        .as_str()
+        .parse::<f64>()
+        .unwrap();
+    let z_dot = captures
+        .name("z_dot")
+        .unwrap()
+        .as_str()
+        .parse::<f64>()
+        .unwrap();
+
+    let x_ddot = captures
+        .name("x_ddot")
+        .map(|x| x.as_str().parse::<f64>().unwrap());
+    let y_ddot = captures
+        .name("y_ddot")
+        .map(|x| x.as_str().parse::<f64>().unwrap());
+    let z_ddot = captures
+        .name("z_ddot")
+        .map(|x| x.as_str().parse::<f64>().unwrap());
+
+    Ok(KvnStateVectorValue {
+        epoch: datetime,
+        x,
+        y,
+        z,
+        x_dot,
+        y_dot,
+        z_dot,
+        x_ddot,
+        y_ddot,
+        z_ddot,
+    })
 }
 
 pub fn parse_kvn_string_line(
@@ -294,32 +374,7 @@ pub fn parse_kvn_numeric_line(
     Ok(KvnValue { value, unit })
 }
 
-pub fn parse_kvn_datetime_line(
-    input: &str,
-) -> Result<KvnDateTimeValue, KvnDateTimeParserErr<&str>> {
-    if is_empty_value(input) {
-        Err(KvnDateTimeParserErr::EmptyValue { input })?
-    };
-
-    // Modified from Figure F-5: CCSDS 502.0-B-3
-    let re = Regex::new(r"^(?:\s*)?(?<keyword>[0-9A-Z_]*)(?:\s*)?=(?:\s*)?(?<value>(?<yr>(?:\d{4}))-(?<mo>(?:\d{1,2}))-(?<dy>(?:\d{1,2}))T(?<hr>(?:\d{1,2})):(?<mn>(?:\d{1,2})):(?<sc>(?:\d{0,2}(?:\.\d*)?)))(?:\s*)?$").unwrap();
-
-    let captures = re
-        .captures(input)
-        .ok_or(KvnDateTimeParserErr::InvalidFormat { input })?;
-
-    let keyword = captures
-        // This unwrap is okay because the keyword is marked as * so it will always capture
-        .name("keyword")
-        .unwrap()
-        .as_str()
-        .trim_end()
-        .to_string();
-
-    if keyword.is_empty() {
-        return Err(KvnDateTimeParserErr::EmptyKeyword { input });
-    }
-
+pub fn handle_datetime_capture(captures: &regex::Captures) -> KvnDateTimeValue {
     // yr is a mandatory decimal in the regex so we expect the capture to be
     // always there and unwrap is fine
     let year = captures
@@ -361,9 +416,13 @@ pub fn parse_kvn_datetime_line(
 
     let fractional_second = full_second.fract();
 
-    let full_value = captures.name("value").unwrap().as_str().to_string();
+    let full_value = captures
+        .name("full_date_value")
+        .unwrap()
+        .as_str()
+        .to_string();
 
-    Ok(KvnDateTimeValue {
+    KvnDateTimeValue {
         year,
         month,
         day,
@@ -372,7 +431,36 @@ pub fn parse_kvn_datetime_line(
         second,
         fractional_second,
         full_value,
-    })
+    }
+}
+
+pub fn parse_kvn_datetime_line(
+    input: &str,
+) -> Result<KvnDateTimeValue, KvnDateTimeParserErr<&str>> {
+    if is_empty_value(input) {
+        Err(KvnDateTimeParserErr::EmptyValue { input })?
+    };
+
+    // Modified from Figure F-5: CCSDS 502.0-B-3
+    let re = Regex::new(r"^(?:\s*)?(?<keyword>[0-9A-Z_]*)(?:\s*)?=(?:\s*)?(?<full_date_value>(?<yr>(?:\d{4}))-(?<mo>(?:\d{1,2}))-(?<dy>(?:\d{1,2}))T(?<hr>(?:\d{1,2})):(?<mn>(?:\d{1,2})):(?<sc>(?:\d{0,2}(?:\.\d*)?)))(?:\s*)?$").unwrap();
+
+    let captures = re
+        .captures(input)
+        .ok_or(KvnDateTimeParserErr::InvalidFormat { input })?;
+
+    let keyword = captures
+        // This unwrap is okay because the keyword is marked as * so it will always capture
+        .name("keyword")
+        .unwrap()
+        .as_str()
+        .trim_end()
+        .to_string();
+
+    if keyword.is_empty() {
+        return Err(KvnDateTimeParserErr::EmptyKeyword { input });
+    }
+
+    Ok(handle_datetime_capture(&captures))
 }
 
 #[cfg(test)]
@@ -834,5 +922,72 @@ mod test {
                 version: "3.0".to_string(),
             },)
         )
+    }
+
+    #[test]
+    fn test_state_vector_parser() {
+        // 5.2.4.1 Each set of ephemeris data, including the time tag, must be
+        // provided on a single line. The order in which data items are given
+        // shall be fixed: Epoch, X, Y, Z, X_DOT, Y_DOT, Z_DOT, X_DDOT, Y_DDOT, Z_DDOT.
+
+        assert_eq!(
+            parse_kvn_state_vector(
+                "1996-12-28T21:29:07.0 -2432.166 -063.042 1742.754 7.33702 -3.495867 -1.041945"
+            ),
+            Ok(KvnStateVectorValue {
+                epoch: KvnDateTimeValue {
+                    year: 1996,
+                    month: 12,
+                    day: 28,
+                    hour: 21,
+                    minute: 29,
+                    second: 7,
+                    fractional_second: 0.0,
+                    full_value: "1996-12-28T21:29:07.0".to_string(),
+                },
+                x: -2432.166,
+                y: -63.042,
+                z: 1742.754,
+                x_dot: 7.33702,
+                y_dot: -3.495867,
+                z_dot: -1.041945,
+                x_ddot: None,
+                y_ddot: None,
+                z_ddot: None
+            })
+        );
+
+        // 5.2.4.2 The position and velocity terms shall be mandatory;
+        // acceleration terms may be provided
+
+        assert_eq!(
+            parse_kvn_state_vector(
+                "1996-12-28T21:29:07.0 -2432.166 -063.042 1742.754 7.33702 -3.495867 -1.041945 1.234 -2.345 3.455"
+            ),
+            Ok(KvnStateVectorValue {
+                epoch: KvnDateTimeValue {
+                    year: 1996,
+                    month: 12,
+                    day: 28,
+                    hour: 21,
+                    minute: 29,
+                    second: 7,
+                    fractional_second: 0.0,
+                    full_value: "1996-12-28T21:29:07.0".to_string(),
+                },
+                x: -2432.166,
+                y: -63.042,
+                z: 1742.754,
+                x_dot: 7.33702,
+                y_dot: -3.495867,
+                z_dot: -1.041945,
+                x_ddot: Some(1.234),
+                y_ddot: Some(-2.345),
+                z_ddot: Some(3.455),
+            })
+        );
+
+        // 5.2.4.3 At least one space character must be used to separate the
+        // items in each ephemeris data line.
     }
 }
