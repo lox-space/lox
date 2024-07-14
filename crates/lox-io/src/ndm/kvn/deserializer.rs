@@ -30,6 +30,8 @@ pub enum KvnDeserializerErr<I> {
     InvalidDateTimeFormat { input: I },
     InvalidNumberFormat { input: I },
     InvalidStringFormat { input: I },
+    InvalidStateVectorFormat { input: I },
+    InvalidCovarianceMatrixFormat { input: I },
     KeywordNotFound { expected: I },
     UnexpectedKeyword { found: I, expected: I },
     EmptyKeyword { input: I },

@@ -27,7 +27,7 @@ pub enum KvnStateVectorParserErr<I> {
 
 #[derive(Debug, PartialEq)]
 pub enum KvnCovarianceMatrixParserErr<I> {
-    InvalidItemCount,
+    InvalidItemCount { input: I },
     InvalidFormat { input: I },
     UnexpectedEndOfInput,
 }
@@ -49,6 +49,36 @@ pub enum KvnDateTimeParserErr<I> {
     EmptyKeyword { input: I },
     EmptyValue { input: I },
     InvalidFormat { input: I },
+}
+
+impl From<KvnStateVectorParserErr<&str>> for KvnDeserializerErr<String> {
+    fn from(value: KvnStateVectorParserErr<&str>) -> Self {
+        match value {
+            KvnStateVectorParserErr::InvalidFormat { input } => {
+                KvnDeserializerErr::InvalidStateVectorFormat {
+                    input: input.to_string(),
+                }
+            }
+        }
+    }
+}
+
+impl From<KvnCovarianceMatrixParserErr<&str>> for KvnDeserializerErr<String> {
+    fn from(value: KvnCovarianceMatrixParserErr<&str>) -> Self {
+        match value {
+            KvnCovarianceMatrixParserErr::InvalidItemCount { input } => {
+                KvnDeserializerErr::InvalidCovarianceMatrixFormat {
+                    input: input.to_string(),
+                }
+            }
+            KvnCovarianceMatrixParserErr::InvalidFormat { input } => {
+                KvnDeserializerErr::InvalidCovarianceMatrixFormat {
+                    input: input.to_string(),
+                }
+            }
+            KvnCovarianceMatrixParserErr::UnexpectedEndOfInput => todo!(),
+        }
+    }
 }
 
 impl From<KvnStringParserErr<&str>> for KvnDeserializerErr<String> {
@@ -271,7 +301,7 @@ pub fn parse_kvn_covariance_matrix_line<'a, T: Iterator<Item = &'a str> + ?Sized
     let result = result?;
 
     if result.len() != expected_count {
-        return Err(KvnCovarianceMatrixParserErr::InvalidItemCount);
+        return Err(KvnCovarianceMatrixParserErr::InvalidItemCount { input: next_line });
     }
 
     Ok(result)
