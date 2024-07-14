@@ -282,7 +282,7 @@ pub fn parse_kvn_state_vector(
     })
 }
 
-pub fn parse_kvn_covariance_matrix_line<'a, T: Iterator<Item = &'a str> + ?Sized>(
+fn parse_kvn_covariance_matrix_line<'a, T: Iterator<Item = &'a str> + ?Sized>(
     input: &mut T,
     expected_count: usize,
 ) -> Result<Vec<f64>, KvnCovarianceMatrixParserErr<&'a str>> {
