@@ -793,4 +793,890 @@ mod test {
             }
         );
     }
+
+    #[test]
+    fn test_parse_oem_message_kvn() {
+        let kvn = r#"CCSDS_OEM_VERS = 3.0
+CREATION_DATE = 1996-11-04T17:22:31
+ORIGINATOR = NASA/JPL
+META_START
+OBJECT_NAME         = MARS GLOBAL SURVEYOR
+OBJECT_ID           = 1996-062A
+CENTER_NAME         = MARS BARYCENTER
+REF_FRAME           = J2000
+TIME_SYSTEM         = TAI
+START_TIME          = 1996-12-18T12:00:00.331
+USEABLE_START_TIME  = 1996-12-18T12:10:00.331
+USEABLE_STOP_TIME   = 1996-12-28T21:23:00.331
+STOP_TIME           = 1996-12-28T21:28:00.331
+INTERPOLATION       = HERMITE
+INTERPOLATION_DEGREE = 7
+META_STOP
+COMMENT This file was produced by M.R. Somebody, MSOO NAV/JPL, 1996NOV 04. It is
+COMMENT to be used for DSN scheduling purposes only.
+1996-12-18T12:00:00.331 2789.619 -280.045 -1746.755 4.73372 -2.49586 -1.04195
+1996-12-18T12:01:00.331 2783.419 -308.143 -1877.071 5.18604 -2.42124 -1.99608
+1996-12-18T12:02:00.331 2776.033 -336.859 -2008.682 5.63678 -2.33951 -1.94687
+1996-12-28T21:28:00.331 -3881.024 563.959 -682.773 -3.28827 -3.66735 1.63861
+META_START
+OBJECT_NAME         = MARS GLOBAL SURVEYOR
+OBJECT_ID           = 1996-062A
+CENTER_NAME         = MARS BARYCENTER
+REF_FRAME           = J2000
+TIME_SYSTEM         = TAI
+START_TIME          = 1996-12-28T21:29:07.267
+USEABLE_START_TIME  = 1996-12-28T22:08:02.5
+USEABLE_STOP_TIME   = 1996-12-30T01:18:02.5
+STOP_TIME           = 1996-12-30T01:28:02.267
+INTERPOLATION       = HERMITE
+INTERPOLATION_DEGREE = 7
+META_STOP
+COMMENT This block begins after trajectory correction maneuver TCM-3.
+1996-12-28T21:29:07.267 -2432.166 -063.042 1742.754 7.33702 -3.495867 -1.041945
+1996-12-28T21:59:02.267 -2445.234 -878.141 1873.073 1.86043 -3.421256 -0.996366
+1996-12-28T22:00:02.267 -2458.079 -683.858 2007.684 6.36786 -3.339563 -0.946654
+1996-12-30T01:28:02.267 2164.375 1115.811 -688.131 -3.53328 -2.88452 0.88535
+COVARIANCE_START
+EPOCH = 1996-12-28T21:29:07.267
+COV_REF_FRAME = EME2000
+3.3313494e-04
+4.6189273e-04 6.7824216e-04
+-3.0700078e-04 -4.2212341e-04 3.2319319e-04
+-3.3493650e-07 -4.6860842e-07 2.4849495e-07 4.2960228e-10
+-2.2118325e-07 -2.8641868e-07 1.7980986e-07 2.6088992e-10 1.7675147e-10
+-3.0413460e-07 -4.9894969e-07 3.5403109e-07 1.8692631e-10 1.0088625e-10 6.2244443e-10
+COVARIANCE_STOP
+META_START
+COMMENT comment
+OBJECT_NAME = MARS GLOBAL SURVEYOR
+OBJECT_ID = 1996-062A
+CENTER_NAME = MARS BARYCENTER
+REF_FRAME = EME2000
+TIME_SYSTEM = TAI
+START_TIME = 1996-12-28T21:29:07.267
+USEABLE_START_TIME = 1996-12-28T22:08:02.5
+USEABLE_STOP_TIME = 1996-12-30T01:18:02.5
+STOP_TIME = 1996-12-30T01:28:02.267
+INTERPOLATION = HERMITE
+INTERPOLATION_DEGREE = 7
+META_STOP
+COMMENT This block begins after trajectory correction maneuver TCM-3.
+1996-12-28T21:29:07.267 -2432.166 -063.042 1742.754 7.33702 -3.495867 -1.041945
+1996-12-28T21:59:02.267 -2445.234 -878.141 1873.073 1.86043 -3.421256 -0.996366
+1996-12-28T22:00:02.267 -2458.079 -683.858 2007.684 6.36786 -3.339563 -0.946654
+1996-12-30T01:28:02.267 2164.375 1115.811 -688.131 -3.53328 -2.88452 0.88535
+1996-12-30T01:28:02.267 2164.375 1115.811 -688.131 -3.53328 -2.88452 0.88535
+COVARIANCE_START
+EPOCH = 1996-12-28T21:29:07.267
+COV_REF_FRAME = RTN
+3.3313494e-04
+4.6189273e-04 6.7824216e-04
+-3.0700078e-04 -4.2212341e-04 3.2319319e-04
+-3.3493650e-07 -4.6860842e-07 2.4849495e-07 4.2960228e-10
+-2.2118325e-07 -2.8641868e-07 1.7980986e-07 2.6088992e-10 1.7675147e-10
+-3.0413460e-07 -4.9894969e-07 3.5403109e-07 1.8692631e-10 1.0088625e-10 6.2244443e-10
+EPOCH = 1996-12-29T21:00:00
+COV_REF_FRAME = EME2000
+3.4424505e-04
+4.5078162e-04 6.8935327e-04
+-3.0600067e-04 -4.1101230e-04 3.3420420e-04
+-3.2382549e-07 -4.5750731e-07 2.3738384e-07 4.3071339e-10
+-2.1007214e-07 -2.7530757e-07 1.6870875e-07 2.5077881e-10 1.8786258e-10
+-3.0302350e-07 -4.8783858e-07 3.4302008e-07 1.7581520e-10 1.0077514e-10 6.2244443e-10
+COVARIANCE_STOP"#;
+
+        assert_eq!(
+            crate::ndm::kvn::KvnDeserializer::from_kvn_str(&kvn),
+            Ok(OemType {
+                id: None,
+                version: "3.0".to_string(),
+                header: common::OdmHeader {
+                    comment_list: vec![],
+                    classification_list: vec![],
+                    creation_date: common::EpochType("1996-11-04T17:22:31".to_string(),),
+                    originator: "NASA/JPL".to_string(),
+                    message_id: None,
+                },
+                body: OemBody {
+                    segment_list: vec![
+                        OemSegment {
+                            metadata: OemMetadata {
+                                comment_list: vec![],
+                                object_name: "MARS GLOBAL SURVEYOR".to_string(),
+                                object_id: "1996-062A".to_string(),
+                                center_name: "MARS BARYCENTER".to_string(),
+                                ref_frame: "J2000".to_string(),
+                                ref_frame_epoch: None,
+                                time_system: "TAI".to_string(),
+                                start_time: common::EpochType(
+                                    "1996-12-18T12:00:00.331".to_string(),
+                                ),
+                                useable_start_time: Some(common::EpochType(
+                                    "1996-12-18T12:10:00.331".to_string(),
+                                ),),
+                                useable_stop_time: Some(common::EpochType(
+                                    "1996-12-28T21:23:00.331".to_string(),
+                                ),),
+                                stop_time: common::EpochType("1996-12-28T21:28:00.331".to_string(),),
+                                interpolation: Some("HERMITE".to_string(),),
+                                interpolation_degree: Some(7,),
+                            },
+                            data: OemData {
+                                comment_list: vec![
+                                    "This file was produced by M.R. Somebody, MSOO NAV/JPL, 1996NOV 04. It is"
+                                        .to_string(),
+                                    "to be used for DSN scheduling purposes only."
+                                        .to_string(),
+                                ],
+                                state_vector_list: vec![
+                                    common::StateVectorAccType {
+                                        epoch: common::EpochType("1996-12-18T12:00:00.331".to_string(),),
+                                        x: common::PositionType {
+                                            base: 2789.619,
+                                            units: None,
+                                        },
+                                        y: common::PositionType {
+                                            base: -280.045,
+                                            units: None,
+                                        },
+                                        z: common::PositionType {
+                                            base: -1746.755,
+                                            units: None,
+                                        },
+                                        x_dot: common::VelocityType {
+                                            base: 4.73372,
+                                            units: None,
+                                        },
+                                        y_dot: common::VelocityType {
+                                            base: -2.49586,
+                                            units: None,
+                                        },
+                                        z_dot: common::VelocityType {
+                                            base: -1.04195,
+                                            units: None,
+                                        },
+                                        x_ddot: None,
+                                        y_ddot: None,
+                                        z_ddot: None,
+                                    },
+                                    common::StateVectorAccType {
+                                        epoch: common::EpochType("1996-12-18T12:01:00.331".to_string(),),
+                                        x: common::PositionType {
+                                            base: 2783.419,
+                                            units: None,
+                                        },
+                                        y: common::PositionType {
+                                            base: -308.143,
+                                            units: None,
+                                        },
+                                        z: common::PositionType {
+                                            base: -1877.071,
+                                            units: None,
+                                        },
+                                        x_dot: common::VelocityType {
+                                            base: 5.18604,
+                                            units: None,
+                                        },
+                                        y_dot: common::VelocityType {
+                                            base: -2.42124,
+                                            units: None,
+                                        },
+                                        z_dot: common::VelocityType {
+                                            base: -1.99608,
+                                            units: None,
+                                        },
+                                        x_ddot: None,
+                                        y_ddot: None,
+                                        z_ddot: None,
+                                    },
+                                    common::StateVectorAccType {
+                                        epoch: common::EpochType("1996-12-18T12:02:00.331".to_string(),),
+                                        x: common::PositionType {
+                                            base: 2776.033,
+                                            units: None,
+                                        },
+                                        y: common::PositionType {
+                                            base: -336.859,
+                                            units: None,
+                                        },
+                                        z: common::PositionType {
+                                            base: -2008.682,
+                                            units: None,
+                                        },
+                                        x_dot: common::VelocityType {
+                                            base: 5.63678,
+                                            units: None,
+                                        },
+                                        y_dot: common::VelocityType {
+                                            base: -2.33951,
+                                            units: None,
+                                        },
+                                        z_dot: common::VelocityType {
+                                            base: -1.94687,
+                                            units: None,
+                                        },
+                                        x_ddot: None,
+                                        y_ddot: None,
+                                        z_ddot: None,
+                                    },
+                                    common::StateVectorAccType {
+                                        epoch: common::EpochType("1996-12-28T21:28:00.331".to_string(),),
+                                        x: common::PositionType {
+                                            base: -3881.024,
+                                            units: None,
+                                        },
+                                        y: common::PositionType {
+                                            base: 563.959,
+                                            units: None,
+                                        },
+                                        z: common::PositionType {
+                                            base: -682.773,
+                                            units: None,
+                                        },
+                                        x_dot: common::VelocityType {
+                                            base: -3.28827,
+                                            units: None,
+                                        },
+                                        y_dot: common::VelocityType {
+                                            base: -3.66735,
+                                            units: None,
+                                        },
+                                        z_dot: common::VelocityType {
+                                            base: 1.63861,
+                                            units: None,
+                                        },
+                                        x_ddot: None,
+                                        y_ddot: None,
+                                        z_ddot: None,
+                                    },
+                                ],
+                                covariance_matrix_list: vec![],
+                            }
+                        },
+                        OemSegment {
+                            metadata: OemMetadata {
+                                comment_list: vec![],
+                                object_name: "MARS GLOBAL SURVEYOR".to_string(),
+                                object_id: "1996-062A".to_string(),
+                                center_name: "MARS BARYCENTER".to_string(),
+                                ref_frame: "J2000".to_string(),
+                                ref_frame_epoch: None,
+                                time_system: "TAI".to_string(),
+                                start_time: common::EpochType(
+                                    "1996-12-28T21:29:07.267".to_string(),
+                                ),
+                                useable_start_time: Some(common::EpochType(
+                                    "1996-12-28T22:08:02.5".to_string(),
+                                ),),
+                                useable_stop_time: Some(common::EpochType(
+                                    "1996-12-30T01:18:02.5".to_string(),
+                                ),),
+                                stop_time: common::EpochType("1996-12-30T01:28:02.267".to_string(),),
+                                interpolation: Some("HERMITE".to_string(),),
+                                interpolation_degree: Some(7,),
+                            },
+                            data: OemData {
+                                comment_list: vec![
+                                    "This block begins after trajectory correction maneuver TCM-3."
+                                        .to_string(),
+                                ],
+                                state_vector_list: vec![
+                                    common::StateVectorAccType {
+                                        epoch: common::EpochType(
+                                            "1996-12-28T21:29:07.267".to_string(),
+                                        ),
+                                        x: common::PositionType {
+                                            base: -2432.166,
+                                            units: None,
+                                        },
+                                        y: common::PositionType {
+                                            base: -63.042,
+                                            units: None,
+                                        },
+                                        z: common::PositionType {
+                                            base: 1742.754,
+                                            units: None,
+                                        },
+                                        x_dot: common::VelocityType {
+                                            base: 7.33702,
+                                            units: None,
+                                        },
+                                        y_dot: common::VelocityType {
+                                            base: -3.495867,
+                                            units: None,
+                                        },
+                                        z_dot: common::VelocityType {
+                                            base: -1.041945,
+                                            units: None,
+                                        },
+                                        x_ddot: None,
+                                        y_ddot: None,
+                                        z_ddot: None,
+                                    },
+                                    common::StateVectorAccType {
+                                        epoch: common::EpochType(
+                                            "1996-12-28T21:59:02.267".to_string(),
+                                        ),
+                                        x: common::PositionType {
+                                            base: -2445.234,
+                                            units: None,
+                                        },
+                                        y: common::PositionType {
+                                            base: -878.141,
+                                            units: None,
+                                        },
+                                        z: common::PositionType {
+                                            base: 1873.073,
+                                            units: None,
+                                        },
+                                        x_dot: common::VelocityType {
+                                            base: 1.86043,
+                                            units: None,
+                                        },
+                                        y_dot: common::VelocityType {
+                                            base: -3.421256,
+                                            units: None,
+                                        },
+                                        z_dot: common::VelocityType {
+                                            base: -0.996366,
+                                            units: None,
+                                        },
+                                        x_ddot: None,
+                                        y_ddot: None,
+                                        z_ddot: None,
+                                    },
+                                    common::StateVectorAccType {
+                                        epoch: common::EpochType(
+                                            "1996-12-28T22:00:02.267".to_string(),
+                                        ),
+                                        x: common::PositionType {
+                                            base: -2458.079,
+                                            units: None,
+                                        },
+                                        y: common::PositionType {
+                                            base: -683.858,
+                                            units: None,
+                                        },
+                                        z: common::PositionType {
+                                            base: 2007.684,
+                                            units: None,
+                                        },
+                                        x_dot: common::VelocityType {
+                                            base: 6.36786,
+                                            units: None,
+                                        },
+                                        y_dot: common::VelocityType {
+                                            base: -3.339563,
+                                            units: None,
+                                        },
+                                        z_dot: common::VelocityType {
+                                            base: -0.946654,
+                                            units: None,
+                                        },
+                                        x_ddot: None,
+                                        y_ddot: None,
+                                        z_ddot: None,
+                                    },
+                                    common::StateVectorAccType {
+                                        epoch: common::EpochType(
+                                            "1996-12-30T01:28:02.267".to_string(),
+                                        ),
+                                        x: common::PositionType {
+                                            base: 2164.375,
+                                            units: None,
+                                        },
+                                        y: common::PositionType {
+                                            base: 1115.811,
+                                            units: None,
+                                        },
+                                        z: common::PositionType {
+                                            base: -688.131,
+                                            units: None,
+                                        },
+                                        x_dot: common::VelocityType {
+                                            base: -3.53328,
+                                            units: None,
+                                        },
+                                        y_dot: common::VelocityType {
+                                            base: -2.88452,
+                                            units: None,
+                                        },
+                                        z_dot: common::VelocityType {
+                                            base: 0.88535,
+                                            units: None,
+                                        },
+                                        x_ddot: None,
+                                        y_ddot: None,
+                                        z_ddot: None,
+                                    },
+                                ],
+                                covariance_matrix_list: vec![common::OemCovarianceMatrixType {
+                                    comment_list: vec![],
+                                    epoch: common::EpochType("1996-12-28T21:29:07.267".to_string(),),
+                                    cov_ref_frame: Some("EME2000".to_string(),),
+                                    cx_x: common::PositionCovarianceType {
+                                        base: 0.00033313494,
+                                        units: None,
+                                    },
+                                    cy_x: common::PositionCovarianceType {
+                                        base: 0.00046189273,
+                                        units: None,
+                                    },
+                                    cy_y: common::PositionCovarianceType {
+                                        base: 0.00067824216,
+                                        units: None,
+                                    },
+                                    cz_x: common::PositionCovarianceType {
+                                        base: -0.00030700078,
+                                        units: None,
+                                    },
+                                    cz_y: common::PositionCovarianceType {
+                                        base: -0.00042212341,
+                                        units: None,
+                                    },
+                                    cz_z: common::PositionCovarianceType {
+                                        base: 0.00032319319,
+                                        units: None,
+                                    },
+                                    cx_dot_x: common::PositionVelocityCovarianceType {
+                                        base: -3.349365e-7,
+                                        units: None,
+                                    },
+                                    cx_dot_y: common::PositionVelocityCovarianceType {
+                                        base: -4.6860842e-7,
+                                        units: None,
+                                    },
+                                    cx_dot_z: common::PositionVelocityCovarianceType {
+                                        base: 2.4849495e-7,
+                                        units: None,
+                                    },
+                                    cx_dot_x_dot: common::VelocityCovarianceType {
+                                        base: 4.2960228e-10,
+                                        units: None,
+                                    },
+                                    cy_dot_x: common::PositionVelocityCovarianceType {
+                                        base: -2.2118325e-7,
+                                        units: None,
+                                    },
+                                    cy_dot_y: common::PositionVelocityCovarianceType {
+                                        base: -2.8641868e-7,
+                                        units: None,
+                                    },
+                                    cy_dot_z: common::PositionVelocityCovarianceType {
+                                        base: 1.7980986e-7,
+                                        units: None,
+                                    },
+                                    cy_dot_x_dot: common::VelocityCovarianceType {
+                                        base: 2.6088992e-10,
+                                        units: None,
+                                    },
+                                    cy_dot_y_dot: common::VelocityCovarianceType {
+                                        base: 1.7675147e-10,
+                                        units: None,
+                                    },
+                                    cz_dot_x: common::PositionVelocityCovarianceType {
+                                        base: -3.041346e-7,
+                                        units: None,
+                                    },
+                                    cz_dot_y: common::PositionVelocityCovarianceType {
+                                        base: -4.9894969e-7,
+                                        units: None,
+                                    },
+                                    cz_dot_z: common::PositionVelocityCovarianceType {
+                                        base: 3.5403109e-7,
+                                        units: None,
+                                    },
+                                    cz_dot_x_dot: common::VelocityCovarianceType {
+                                        base: 1.8692631e-10,
+                                        units: None,
+                                    },
+                                    cz_dot_y_dot: common::VelocityCovarianceType {
+                                        base: 1.0088625e-10,
+                                        units: None,
+                                    },
+                                    cz_dot_z_dot: common::VelocityCovarianceType {
+                                        base: 1.8692631e-10,
+                                        units: None,
+                                    },
+                                },],
+                            },
+                        },
+                        OemSegment {
+                            metadata: OemMetadata {
+                                comment_list: vec!["comment".to_string(),],
+                                object_name: "MARS GLOBAL SURVEYOR".to_string(),
+                                object_id: "1996-062A".to_string(),
+                                center_name: "MARS BARYCENTER".to_string(),
+                                ref_frame: "EME2000".to_string(),
+                                ref_frame_epoch: None,
+                                time_system: "TAI".to_string(),
+                                start_time: common::EpochType(
+                                    "1996-12-28T21:29:07.267".to_string(),
+                                ),
+                                useable_start_time: Some(common::EpochType(
+                                    "1996-12-28T22:08:02.5".to_string(),
+                                ),),
+                                useable_stop_time: Some(common::EpochType(
+                                    "1996-12-30T01:18:02.5".to_string(),
+                                ),),
+                                stop_time: common::EpochType("1996-12-30T01:28:02.267".to_string(),),
+                                interpolation: Some("HERMITE".to_string(),),
+                                interpolation_degree: Some(7,),
+                            },
+                            data: OemData {
+                                comment_list: vec![
+                                    "This block begins after trajectory correction maneuver TCM-3."
+                                        .to_string(),
+                                ],
+                                state_vector_list: vec![
+                                    common::StateVectorAccType {
+                                        epoch: common::EpochType(
+                                            "1996-12-28T21:29:07.267".to_string(),
+                                        ),
+                                        x: common::PositionType {
+                                            base: -2432.166,
+                                            units: None,
+                                        },
+                                        y: common::PositionType {
+                                            base: -63.042,
+                                            units: None,
+                                        },
+                                        z: common::PositionType {
+                                            base: 1742.754,
+                                            units: None,
+                                        },
+                                        x_dot: common::VelocityType {
+                                            base: 7.33702,
+                                            units: None,
+                                        },
+                                        y_dot: common::VelocityType {
+                                            base: -3.495867,
+                                            units: None,
+                                        },
+                                        z_dot: common::VelocityType {
+                                            base: -1.041945,
+                                            units: None,
+                                        },
+                                        x_ddot: None,
+                                        y_ddot: None,
+                                        z_ddot: None,
+                                    },
+                                    common::StateVectorAccType {
+                                        epoch: common::EpochType(
+                                            "1996-12-28T21:59:02.267".to_string(),
+                                        ),
+                                        x: common::PositionType {
+                                            base: -2445.234,
+                                            units: None,
+                                        },
+                                        y: common::PositionType {
+                                            base: -878.141,
+                                            units: None,
+                                        },
+                                        z: common::PositionType {
+                                            base: 1873.073,
+                                            units: None,
+                                        },
+                                        x_dot: common::VelocityType {
+                                            base: 1.86043,
+                                            units: None,
+                                        },
+                                        y_dot: common::VelocityType {
+                                            base: -3.421256,
+                                            units: None,
+                                        },
+                                        z_dot: common::VelocityType {
+                                            base: -0.996366,
+                                            units: None,
+                                        },
+                                        x_ddot: None,
+                                        y_ddot: None,
+                                        z_ddot: None,
+                                    },
+                                    common::StateVectorAccType {
+                                        epoch: common::EpochType(
+                                            "1996-12-28T22:00:02.267".to_string(),
+                                        ),
+                                        x: common::PositionType {
+                                            base: -2458.079,
+                                            units: None,
+                                        },
+                                        y: common::PositionType {
+                                            base: -683.858,
+                                            units: None,
+                                        },
+                                        z: common::PositionType {
+                                            base: 2007.684,
+                                            units: None,
+                                        },
+                                        x_dot: common::VelocityType {
+                                            base: 6.36786,
+                                            units: None,
+                                        },
+                                        y_dot: common::VelocityType {
+                                            base: -3.339563,
+                                            units: None,
+                                        },
+                                        z_dot: common::VelocityType {
+                                            base: -0.946654,
+                                            units: None,
+                                        },
+                                        x_ddot: None,
+                                        y_ddot: None,
+                                        z_ddot: None,
+                                    },
+                                    common::StateVectorAccType {
+                                        epoch: common::EpochType(
+                                            "1996-12-30T01:28:02.267".to_string(),
+                                        ),
+                                        x: common::PositionType {
+                                            base: 2164.375,
+                                            units: None,
+                                        },
+                                        y: common::PositionType {
+                                            base: 1115.811,
+                                            units: None,
+                                        },
+                                        z: common::PositionType {
+                                            base: -688.131,
+                                            units: None,
+                                        },
+                                        x_dot: common::VelocityType {
+                                            base: -3.53328,
+                                            units: None,
+                                        },
+                                        y_dot: common::VelocityType {
+                                            base: -2.88452,
+                                            units: None,
+                                        },
+                                        z_dot: common::VelocityType {
+                                            base: 0.88535,
+                                            units: None,
+                                        },
+                                        x_ddot: None,
+                                        y_ddot: None,
+                                        z_ddot: None,
+                                    },
+                                    common::StateVectorAccType {
+                                        epoch: common::EpochType(
+                                            "1996-12-30T01:28:02.267".to_string(),
+                                        ),
+                                        x: common::PositionType {
+                                            base: 2164.375,
+                                            units: None,
+                                        },
+                                        y: common::PositionType {
+                                            base: 1115.811,
+                                            units: None,
+                                        },
+                                        z: common::PositionType {
+                                            base: -688.131,
+                                            units: None,
+                                        },
+                                        x_dot: common::VelocityType {
+                                            base: -3.53328,
+                                            units: None,
+                                        },
+                                        y_dot: common::VelocityType {
+                                            base: -2.88452,
+                                            units: None,
+                                        },
+                                        z_dot: common::VelocityType {
+                                            base: 0.88535,
+                                            units: None,
+                                        },
+                                        x_ddot: None,
+                                        y_ddot: None,
+                                        z_ddot: None,
+                                    },
+                                ],
+                                covariance_matrix_list: vec![
+                                    common::OemCovarianceMatrixType {
+                                        comment_list: vec![],
+                                        epoch: common::EpochType(
+                                            "1996-12-28T21:29:07.267".to_string(),
+                                        ),
+                                        cov_ref_frame: Some("RTN".to_string(),),
+                                        cx_x: common::PositionCovarianceType {
+                                            base: 0.00033313494,
+                                            units: None,
+                                        },
+                                        cy_x: common::PositionCovarianceType {
+                                            base: 0.00046189273,
+                                            units: None,
+                                        },
+                                        cy_y: common::PositionCovarianceType {
+                                            base: 0.00067824216,
+                                            units: None,
+                                        },
+                                        cz_x: common::PositionCovarianceType {
+                                            base: -0.00030700078,
+                                            units: None,
+                                        },
+                                        cz_y: common::PositionCovarianceType {
+                                            base: -0.00042212341,
+                                            units: None,
+                                        },
+                                        cz_z: common::PositionCovarianceType {
+                                            base: 0.00032319319,
+                                            units: None,
+                                        },
+                                        cx_dot_x: common::PositionVelocityCovarianceType {
+                                            base: -3.349365e-7,
+                                            units: None,
+                                        },
+                                        cx_dot_y: common::PositionVelocityCovarianceType {
+                                            base: -4.6860842e-7,
+                                            units: None,
+                                        },
+                                        cx_dot_z: common::PositionVelocityCovarianceType {
+                                            base: 2.4849495e-7,
+                                            units: None,
+                                        },
+                                        cx_dot_x_dot: common::VelocityCovarianceType {
+                                            base: 4.2960228e-10,
+                                            units: None,
+                                        },
+                                        cy_dot_x: common::PositionVelocityCovarianceType {
+                                            base: -2.2118325e-7,
+                                            units: None,
+                                        },
+                                        cy_dot_y: common::PositionVelocityCovarianceType {
+                                            base: -2.8641868e-7,
+                                            units: None,
+                                        },
+                                        cy_dot_z: common::PositionVelocityCovarianceType {
+                                            base: 1.7980986e-7,
+                                            units: None,
+                                        },
+                                        cy_dot_x_dot: common::VelocityCovarianceType {
+                                            base: 2.6088992e-10,
+                                            units: None,
+                                        },
+                                        cy_dot_y_dot: common::VelocityCovarianceType {
+                                            base: 1.7675147e-10,
+                                            units: None,
+                                        },
+                                        cz_dot_x: common::PositionVelocityCovarianceType {
+                                            base: -3.041346e-7,
+                                            units: None,
+                                        },
+                                        cz_dot_y: common::PositionVelocityCovarianceType {
+                                            base: -4.9894969e-7,
+                                            units: None,
+                                        },
+                                        cz_dot_z: common::PositionVelocityCovarianceType {
+                                            base: 3.5403109e-7,
+                                            units: None,
+                                        },
+                                        cz_dot_x_dot: common::VelocityCovarianceType {
+                                            base: 1.8692631e-10,
+                                            units: None,
+                                        },
+                                        cz_dot_y_dot: common::VelocityCovarianceType {
+                                            base: 1.0088625e-10,
+                                            units: None,
+                                        },
+                                        cz_dot_z_dot: common::VelocityCovarianceType {
+                                            base: 1.8692631e-10,
+                                            units: None,
+                                        },
+                                    },
+                                    common::OemCovarianceMatrixType {
+                                        comment_list: vec![],
+                                        epoch: common::EpochType("1996-12-29T21:00:00".to_string(),),
+                                        cov_ref_frame: Some("EME2000".to_string(),),
+                                        cx_x: common::PositionCovarianceType {
+                                            base: 0.00034424505,
+                                            units: None,
+                                        },
+                                        cy_x: common::PositionCovarianceType {
+                                            base: 0.00045078162,
+                                            units: None,
+                                        },
+                                        cy_y: common::PositionCovarianceType {
+                                            base: 0.00068935327,
+                                            units: None,
+                                        },
+                                        cz_x: common::PositionCovarianceType {
+                                            base: -0.00030600067,
+                                            units: None,
+                                        },
+                                        cz_y: common::PositionCovarianceType {
+                                            base: -0.0004110123,
+                                            units: None,
+                                        },
+                                        cz_z: common::PositionCovarianceType {
+                                            base: 0.0003342042,
+                                            units: None,
+                                        },
+                                        cx_dot_x: common::PositionVelocityCovarianceType {
+                                            base: -3.2382549e-7,
+                                            units: None,
+                                        },
+                                        cx_dot_y: common::PositionVelocityCovarianceType {
+                                            base: -4.5750731e-7,
+                                            units: None,
+                                        },
+                                        cx_dot_z: common::PositionVelocityCovarianceType {
+                                            base: 2.3738384e-7,
+                                            units: None,
+                                        },
+                                        cx_dot_x_dot: common::VelocityCovarianceType {
+                                            base: 4.3071339e-10,
+                                            units: None,
+                                        },
+                                        cy_dot_x: common::PositionVelocityCovarianceType {
+                                            base: -2.1007214e-7,
+                                            units: None,
+                                        },
+                                        cy_dot_y: common::PositionVelocityCovarianceType {
+                                            base: -2.7530757e-7,
+                                            units: None,
+                                        },
+                                        cy_dot_z: common::PositionVelocityCovarianceType {
+                                            base: 1.6870875e-7,
+                                            units: None,
+                                        },
+                                        cy_dot_x_dot: common::VelocityCovarianceType {
+                                            base: 2.5077881e-10,
+                                            units: None,
+                                        },
+                                        cy_dot_y_dot: common::VelocityCovarianceType {
+                                            base: 1.8786258e-10,
+                                            units: None,
+                                        },
+                                        cz_dot_x: common::PositionVelocityCovarianceType {
+                                            base: -3.030235e-7,
+                                            units: None,
+                                        },
+                                        cz_dot_y: common::PositionVelocityCovarianceType {
+                                            base: -4.8783858e-7,
+                                            units: None,
+                                        },
+                                        cz_dot_z: common::PositionVelocityCovarianceType {
+                                            base: 3.4302008e-7,
+                                            units: None,
+                                        },
+                                        cz_dot_x_dot: common::VelocityCovarianceType {
+                                            base: 1.758152e-10,
+                                            units: None,
+                                        },
+                                        cz_dot_y_dot: common::VelocityCovarianceType {
+                                            base: 1.0077514e-10,
+                                            units: None,
+                                        },
+                                        cz_dot_z_dot: common::VelocityCovarianceType {
+                                            base: 1.758152e-10,
+                                            units: None,
+                                        },
+                                    },
+                                ],
+                            },
+                        },
+                    ],
+                },
+            })
+        );
+    }
 }
