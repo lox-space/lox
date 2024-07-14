@@ -26,6 +26,13 @@ pub enum KvnStateVectorParserErr<I> {
 }
 
 #[derive(Debug, PartialEq)]
+pub enum KvnCovarianceMatrixParserErr<I> {
+    InvalidItemCount,
+    InvalidFormat { input: I },
+    UnexpectedEndOfInput,
+}
+
+#[derive(Debug, PartialEq)]
 pub struct KvnKeywordNotFoundErr<I> {
     expected: I,
 }
@@ -138,6 +145,31 @@ pub struct KvnStateVectorValue {
     pub z_ddot: Option<f64>,
 }
 
+#[derive(PartialEq, Debug, Default)]
+pub struct KvnCovarianceMatrixValue {
+    pub cx_x: f64,
+    pub cy_x: f64,
+    pub cy_y: f64,
+    pub cz_x: f64,
+    pub cz_y: f64,
+    pub cz_z: f64,
+    pub cx_dot_x: f64,
+    pub cx_dot_y: f64,
+    pub cx_dot_z: f64,
+    pub cx_dot_x_dot: f64,
+    pub cy_dot_x: f64,
+    pub cy_dot_y: f64,
+    pub cy_dot_z: f64,
+    pub cy_dot_x_dot: f64,
+    pub cy_dot_y_dot: f64,
+    pub cz_dot_x: f64,
+    pub cz_dot_y: f64,
+    pub cz_dot_z: f64,
+    pub cz_dot_x_dot: f64,
+    pub cz_dot_y_dot: f64,
+    pub cz_dot_z_dot: f64,
+}
+
 pub fn kvn_line_matches_key<'a>(
     key: &'a str,
     input: &'a str,
@@ -217,6 +249,110 @@ pub fn parse_kvn_state_vector(
         x_ddot,
         y_ddot,
         z_ddot,
+    })
+}
+
+pub fn parse_kvn_covariance_matrix_line<'a, T: Iterator<Item = &'a str> + ?Sized>(
+    input: &mut T,
+    expected_count: usize,
+) -> Result<Vec<f64>, KvnCovarianceMatrixParserErr<&'a str>> {
+    let next_line = input
+        .next()
+        .ok_or(KvnCovarianceMatrixParserErr::UnexpectedEndOfInput)?;
+
+    let result: Result<Vec<f64>, _> = next_line
+        .split_whitespace()
+        .map(|matrix_element| {
+            fast_float::parse(matrix_element.trim())
+                .map_err(|_| KvnCovarianceMatrixParserErr::InvalidFormat { input: next_line })
+        })
+        .collect();
+
+    let result = result?;
+
+    if result.len() != expected_count {
+        return Err(KvnCovarianceMatrixParserErr::InvalidItemCount);
+    }
+
+    Ok(result)
+}
+
+pub fn parse_kvn_covariance_matrix<'a, T: Iterator<Item = &'a str> + ?Sized>(
+    input: &mut T,
+) -> Result<KvnCovarianceMatrixValue, KvnCovarianceMatrixParserErr<&'a str>> {
+    let tokenized_line = parse_kvn_covariance_matrix_line(input, 1)?;
+
+    // Unwrap is okay because we check the number of elements before
+    let mut iter = tokenized_line.iter();
+    let cx_x = *iter.next().unwrap();
+
+    let tokenized_line = parse_kvn_covariance_matrix_line(input, 2)?;
+
+    // Unwrap is okay because we check the number of elements before
+    let mut iter = tokenized_line.iter();
+    let cy_x = *iter.next().unwrap();
+    let cy_y = *iter.next().unwrap();
+
+    let tokenized_line = parse_kvn_covariance_matrix_line(input, 3)?;
+
+    // Unwrap is okay because we check the number of elements before
+    let mut iter = tokenized_line.iter();
+    let cz_x = *iter.next().unwrap();
+    let cz_y = *iter.next().unwrap();
+    let cz_z = *iter.next().unwrap();
+
+    let tokenized_line = parse_kvn_covariance_matrix_line(input, 4)?;
+
+    // Unwrap is okay because we check the number of elements before
+    let mut iter = tokenized_line.iter();
+    let cx_dot_x = *iter.next().unwrap();
+    let cx_dot_y = *iter.next().unwrap();
+    let cx_dot_z = *iter.next().unwrap();
+    let cx_dot_x_dot = *iter.next().unwrap();
+
+    let tokenized_line = parse_kvn_covariance_matrix_line(input, 5)?;
+
+    // Unwrap is okay because we check the number of elements before
+    let mut iter = tokenized_line.iter();
+    let cy_dot_x = *iter.next().unwrap();
+    let cy_dot_y = *iter.next().unwrap();
+    let cy_dot_z = *iter.next().unwrap();
+    let cy_dot_x_dot = *iter.next().unwrap();
+    let cy_dot_y_dot = *iter.next().unwrap();
+
+    let tokenized_line = parse_kvn_covariance_matrix_line(input, 6)?;
+
+    // Unwrap is okay because we check the number of elements before
+    let mut iter = tokenized_line.iter();
+    let cz_dot_x = *iter.next().unwrap();
+    let cz_dot_y = *iter.next().unwrap();
+    let cz_dot_z = *iter.next().unwrap();
+    let cz_dot_x_dot = *iter.next().unwrap();
+    let cz_dot_y_dot = *iter.next().unwrap();
+    let cz_dot_z_dot = *iter.next().unwrap();
+
+    Ok(KvnCovarianceMatrixValue {
+        cx_x,
+        cy_x,
+        cy_y,
+        cz_x,
+        cz_y,
+        cz_z,
+        cx_dot_x,
+        cx_dot_y,
+        cx_dot_z,
+        cx_dot_x_dot,
+        cy_dot_x,
+        cy_dot_y,
+        cy_dot_z,
+        cy_dot_x_dot,
+        cy_dot_y_dot,
+        cz_dot_x,
+        cz_dot_y,
+        cz_dot_z,
+        cz_dot_x_dot,
+        cz_dot_y_dot,
+        cz_dot_z_dot,
     })
 }
 
@@ -1014,6 +1150,87 @@ mod test {
                 x_ddot: Some(1.234),
                 y_ddot: Some(-2.345),
                 z_ddot: Some(3.455),
+            })
+        );
+    }
+
+    #[test]
+    fn test_covariance_matrix_parser() {
+        // 5.2.5.4 Values in the covariance matrix shall be expressed in the
+        // applicable reference frame (COV_REF_FRAME keyword if used, or
+        // REF_FRAME keyword if not), and shall be presented sequentially from
+        // upper left [1,1] to lower right [6,6], lower triangular form, row by
+        // row left to right. Variance and covariance values shall be expressed
+        // in standard double precision as related in 7.5.
+
+        let kvn = "3.3313494e-04
+4.6189273e-04 6.7824216e-04
+-3.0700078e-04 -4.2212341e-04 3.2319319e-04
+-3.3493650e-07 -4.6860842e-07 2.4849495e-07 4.2960228e-10
+-2.2118325e-07 -2.8641868e-07 1.7980986e-07 2.6088992e-10 1.7675147e-10
+-3.0413460e-07 -4.9894969e-07 3.5403109e-07 1.8692631e-10 1.0088625e-10 6.2244443e-10";
+
+        assert_eq!(
+            parse_kvn_covariance_matrix(&mut kvn.lines()),
+            Ok(KvnCovarianceMatrixValue {
+                cx_x: 3.3313494e-04,
+                cy_x: 4.6189273e-04,
+                cy_y: 6.7824216e-04,
+                cz_x: -3.0700078e-04,
+                cz_y: -4.2212341e-04,
+                cz_z: 3.2319319e-04,
+                cx_dot_x: -3.3493650e-07,
+                cx_dot_y: -4.6860842e-07,
+                cx_dot_z: 2.4849495e-07,
+                cx_dot_x_dot: 4.2960228e-10,
+                cy_dot_x: -2.2118325e-07,
+                cy_dot_y: -2.8641868e-07,
+                cy_dot_z: 1.7980986e-07,
+                cy_dot_x_dot: 2.6088992e-10,
+                cy_dot_y_dot: 1.7675147e-10,
+                cz_dot_x: -3.0413460e-07,
+                cz_dot_y: -4.9894969e-07,
+                cz_dot_z: 3.5403109e-07,
+                cz_dot_x_dot: 1.8692631e-10,
+                cz_dot_y_dot: 1.0088625e-10,
+                cz_dot_z_dot: 6.2244443e-10,
+            })
+        );
+
+        // 5.2.5.5 At least one space character must be used to separate the
+        // items in each covariance matrix data line
+
+        let kvn = "  3.3313494e-04
+  4.6189273e-04     6.7824216e-04   
+-3.0700078e-04     -4.2212341e-04    3.2319319e-04      
+  -3.3493650e-07     -4.6860842e-07   2.4849495e-07  4.2960228e-10
+-2.2118325e-07  -2.8641868e-07     1.7980986e-07    2.6088992e-10   1.7675147e-10           
+  -3.0413460e-07  -4.9894969e-07  3.5403109e-07 1.8692631e-10  1.0088625e-10 6.2244443e-10 ";
+
+        assert_eq!(
+            parse_kvn_covariance_matrix(&mut kvn.lines()),
+            Ok(KvnCovarianceMatrixValue {
+                cx_x: 3.3313494e-04,
+                cy_x: 4.6189273e-04,
+                cy_y: 6.7824216e-04,
+                cz_x: -3.0700078e-04,
+                cz_y: -4.2212341e-04,
+                cz_z: 3.2319319e-04,
+                cx_dot_x: -3.3493650e-07,
+                cx_dot_y: -4.6860842e-07,
+                cx_dot_z: 2.4849495e-07,
+                cx_dot_x_dot: 4.2960228e-10,
+                cy_dot_x: -2.2118325e-07,
+                cy_dot_y: -2.8641868e-07,
+                cy_dot_z: 1.7980986e-07,
+                cy_dot_x_dot: 2.6088992e-10,
+                cy_dot_y_dot: 1.7675147e-10,
+                cz_dot_x: -3.0413460e-07,
+                cz_dot_y: -4.9894969e-07,
+                cz_dot_z: 3.5403109e-07,
+                cz_dot_x_dot: 1.8692631e-10,
+                cz_dot_y_dot: 1.0088625e-10,
+                cz_dot_z_dot: 6.2244443e-10,
             })
         );
     }
