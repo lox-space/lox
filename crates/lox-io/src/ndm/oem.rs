@@ -91,14 +91,14 @@ use super::common;
 )]
 #[serde(default)]
 pub struct OemType {
+    #[serde(rename = "@id")]
+    pub id: Option<String>,
+    #[serde(rename = "@version")]
+    pub version: String,
     #[serde(rename = "header")]
     pub header: common::OdmHeader,
     #[serde(rename = "body")]
     pub body: OemBody,
-    #[serde(rename = "@id")]
-    pub id: String,
-    #[serde(rename = "@version")]
-    pub version: String,
 }
 
 impl crate::ndm::xml::FromXmlStr<'_> for OemType {}
@@ -383,7 +383,7 @@ mod test {
                         },
                     },],
                 },
-                id: "CCSDS_OEM_VERS".to_string(),
+                id: Some("CCSDS_OEM_VERS".to_string()),
                 version: "2.0".to_string(),
             }
         );
@@ -788,7 +788,7 @@ mod test {
                         },
                     },],
                 },
-                id: "CCSDS_OEM_VERS".to_string(),
+                id: Some("CCSDS_OEM_VERS".to_string()),
                 version: "3.0".to_string(),
             }
         );

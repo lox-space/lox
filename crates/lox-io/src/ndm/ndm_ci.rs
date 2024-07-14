@@ -1072,7 +1072,7 @@ mod test {
                                 },
                             },],
                         },
-                        id: "CCSDS_OEM_VERS".to_string(),
+                        id: Some("CCSDS_OEM_VERS".to_string()),
                         version: "2.0".to_string(),
                     },),
                     NdmChildChoice::Omm(omm::OmmType {
