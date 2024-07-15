@@ -29,7 +29,7 @@ pub enum KvnStateVectorParserErr<I> {
 pub enum KvnCovarianceMatrixParserErr<I> {
     InvalidItemCount { input: I },
     InvalidFormat { input: I },
-    UnexpectedEndOfInput,
+    UnexpectedEndOfInput { keyword: I },
 }
 
 #[derive(Debug, PartialEq)]
@@ -76,7 +76,11 @@ impl From<KvnCovarianceMatrixParserErr<&str>> for KvnDeserializerErr<String> {
                     input: input.to_string(),
                 }
             }
-            KvnCovarianceMatrixParserErr::UnexpectedEndOfInput => todo!(),
+            KvnCovarianceMatrixParserErr::UnexpectedEndOfInput { keyword } => {
+                KvnDeserializerErr::UnexpectedEndOfInput {
+                    keyword: keyword.to_string(),
+                }
+            }
         }
     }
 }
@@ -288,7 +292,9 @@ fn parse_kvn_covariance_matrix_line<'a, T: Iterator<Item = &'a str> + ?Sized>(
 ) -> Result<Vec<f64>, KvnCovarianceMatrixParserErr<&'a str>> {
     let next_line = input
         .next()
-        .ok_or(KvnCovarianceMatrixParserErr::UnexpectedEndOfInput)?;
+        .ok_or(KvnCovarianceMatrixParserErr::UnexpectedEndOfInput {
+            keyword: "COVARIANCE_MATRIX ",
+        })?;
 
     let result: Result<Vec<f64>, _> = next_line
         .split_whitespace()
