@@ -103,7 +103,7 @@
 
 use serde;
 
-use super::common;
+use super::{common, kvn::parser::KvnStateVectorValue};
 
 #[derive(
     Clone,
@@ -217,6 +217,50 @@ pub struct OemData {
     pub state_vector_list: Vec<common::StateVectorAccType>,
     #[serde(rename = "covarianceMatrix")]
     pub covariance_matrix_list: Vec<common::OemCovarianceMatrixType>,
+}
+
+impl From<KvnStateVectorValue> for crate::ndm::common::StateVectorAccType {
+    fn from(value: KvnStateVectorValue) -> Self {
+        Self {
+            epoch: crate::ndm::common::EpochType(value.epoch.full_value),
+            x: crate::ndm::common::PositionType {
+                base: value.x,
+                units: None,
+            },
+            y: crate::ndm::common::PositionType {
+                base: value.y,
+                units: None,
+            },
+            z: crate::ndm::common::PositionType {
+                base: value.z,
+                units: None,
+            },
+            x_dot: crate::ndm::common::VelocityType {
+                base: value.x_dot,
+                units: None,
+            },
+            y_dot: crate::ndm::common::VelocityType {
+                base: value.y_dot,
+                units: None,
+            },
+            z_dot: crate::ndm::common::VelocityType {
+                base: value.z_dot,
+                units: None,
+            },
+            x_ddot: value.x_ddot.map(|x_ddot| crate::ndm::common::AccType {
+                base: x_ddot,
+                units: None,
+            }),
+            y_ddot: value.y_ddot.map(|y_ddot| crate::ndm::common::AccType {
+                base: y_ddot,
+                units: None,
+            }),
+            z_ddot: value.z_ddot.map(|z_ddot| crate::ndm::common::AccType {
+                base: z_ddot,
+                units: None,
+            }),
+        }
+    }
 }
 
 #[cfg(test)]
