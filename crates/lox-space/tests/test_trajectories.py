@@ -45,6 +45,8 @@ def test_from_numpy():
     ])
     trajectory = lox.Trajectory.from_numpy(time, states)
     npt.assert_allclose(trajectory.interpolate(time + lox.TimeDelta(1.5)).position(), np.array([2.5e3, 2.5e3, 2.5e3]))
+    states1 = trajectory.to_numpy()
+    npt.assert_allclose(states, states1)
 
 
 def test_interpolation(orbit, trajectory):
