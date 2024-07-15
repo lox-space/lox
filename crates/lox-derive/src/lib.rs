@@ -498,7 +498,7 @@ fn deserializer_for_struct_with_named_fields(
             },
         }
     } else {
-        let other_field_deserializers: Result<Vec<_>, _> = fields
+        let field_deserializers: Result<Vec<_>, _> = fields
              .iter()
              .map(|field| {
                 let field_name = field.ident.as_ref().unwrap();
@@ -577,17 +577,17 @@ fn deserializer_for_struct_with_named_fields(
         let (prefix_keyword_check, postfix_keyword_check) =
             get_prefix_and_postfix_keyword_checks(prefix_and_postfix_keyword);
 
-        if let Err(e) = other_field_deserializers {
+        if let Err(e) = field_deserializers {
             return e;
         }
 
-        let other_field_deserializers = other_field_deserializers.unwrap();
+        let field_deserializers = field_deserializers.unwrap();
 
         quote! {
             #prefix_keyword_check
 
             let result = Ok(#type_name {
-                #(#other_field_deserializers)*
+                #(#field_deserializers)*
             });
 
             #postfix_keyword_check
