@@ -84,6 +84,55 @@ fn generate_call_to_deserializer_for_kvn_type(
                 })
             }
         }
+        "common::StateVectorAccType" => Ok(quote! {
+            match lines.peek() {
+                None => Err(crate::ndm::kvn::KvnDeserializerErr::<String>::UnexpectedEndOfInput {
+                    keyword: #expected_kvn_name.to_string()
+                }),
+                Some(next_line) => {
+                    let result = crate::ndm::kvn::parser::parse_kvn_state_vector(
+                        next_line,
+                    ).map_err(|x| match crate::ndm::kvn::KvnDeserializerErr::from(x) {
+                        crate::ndm::kvn::KvnDeserializerErr::InvalidStateVectorFormat { .. } => crate::ndm::kvn::KvnDeserializerErr::<String>::UnexpectedKeyword {
+                            // This is empty because we just want to tell the
+                            // vector iterator to stop the iteration.
+                            found: "".to_string(),
+                            expected: "".to_string(),
+                        },
+                        e => e,
+                    }).map(|x| x.into())?;
+
+                    let _ = lines.next().unwrap();
+
+                    Ok(result)
+                }
+            }
+        }),
+        "common::OemCovarianceMatrixType" => Ok(quote! {
+            match lines.peek() {
+                None => Err(crate::ndm::kvn::KvnDeserializerErr::<String>::UnexpectedEndOfInput {
+                    keyword: #expected_kvn_name.to_string()
+                }),
+                Some(next_line) => {
+                    let result = crate::ndm::kvn::parser::parse_kvn_covariance_matrix(
+                        next_line,
+                    ).map_err(|x| match crate::ndm::kvn::KvnDeserializerErr::from(x) {
+                        crate::ndm::kvn::KvnDeserializerErr::InvalidCovarianceMatrixFormat { .. } => crate::ndm::kvn::KvnDeserializerErr::<String>::UnexpectedKeyword {
+                            // This is empty because we just want to tell the
+                            // vector iterator to stop the iteration.
+                            found: "".to_string(),
+                            expected: "".to_string(),
+                        },
+                        crate::ndm::kvn::KvnDeserializerErr::UnexpectedEndOfInput { keyword } => crate::ndm::kvn::KvnDeserializerErr::<String>::UnexpectedEndOfInput {
+                            keyword
+                        },
+                        e => e,
+                    }).map(|x| x.into())?;
+
+                    Ok(result)
+                }
+            }
+        }),
         _ => Ok(quote! {
            {
                 let has_next_line = lines.peek().is_some();
