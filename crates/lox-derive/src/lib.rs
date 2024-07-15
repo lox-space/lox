@@ -282,6 +282,33 @@ fn generate_call_to_deserializer_for_vec_type(
     });
 }
 
+fn get_prefix_and_postfix_keyword(item: &DeriveInput) -> Option<(String, String)> {
+    let mut keyword: Option<syn::LitStr> = None;
+
+    for attr in item.attrs.iter() {
+        if !attr.path().is_ident("kvn") {
+            continue;
+        }
+
+        let _ = attr.parse_nested_meta(|meta| {
+            if meta.path.is_ident("prefix_and_postfix_keyword") {
+                let value = meta.value()?;
+                keyword = value.parse()?;
+
+                Ok(())
+            } else {
+                Err(meta.error("unsupported attribute"))
+            }
+        });
+    }
+
+    keyword.map(|keyword| {
+        let keyword = keyword.value().to_uppercase();
+
+        (format!("{}_START", keyword), format!("{}_STOP", keyword))
+    })
+}
+
 fn is_value_unit_struct(item: &DeriveInput) -> bool {
     item.attrs.iter().any(|attr| {
         attr.path().is_ident("kvn")
@@ -353,6 +380,7 @@ fn deserializer_for_struct_with_named_fields(
     type_name: &proc_macro2::Ident,
     fields: &syn::punctuated::Punctuated<syn::Field, syn::token::Comma>,
     is_value_unit_struct: bool,
+    prefix_and_postfix_keyword: Option<(String, String)>,
 ) -> proc_macro2::TokenStream {
     if &type_name.to_string() == "UserDefinedType" {
         //@TODO
@@ -546,6 +574,9 @@ fn deserializer_for_struct_with_named_fields(
              })
              .collect();
 
+        let (prefix_keyword_check, postfix_keyword_check) =
+            get_prefix_and_postfix_keyword_checks(prefix_and_postfix_keyword);
+
         if let Err(e) = other_field_deserializers {
             return e;
         }
@@ -553,10 +584,56 @@ fn deserializer_for_struct_with_named_fields(
         let other_field_deserializers = other_field_deserializers.unwrap();
 
         quote! {
-            Ok(#type_name {
+            #prefix_keyword_check
+
+            let result = Ok(#type_name {
                 #(#other_field_deserializers)*
-            })
+            });
+
+            #postfix_keyword_check
+
+            result
         }
+    }
+}
+
+fn get_keyword_check(keyword: String) -> proc_macro2::TokenStream {
+    quote! {
+        match lines.peek() {
+            None => Err(
+                crate::ndm::kvn::KvnDeserializerErr::<String>::UnexpectedEndOfInput {
+                    keyword: #keyword.to_string(),
+                },
+            )?,
+
+            Some(next_line) => {
+                let line_matches =
+                    crate::ndm::kvn::parser::kvn_line_matches_key(#keyword, next_line)?;
+
+                if line_matches {
+                    lines.next().unwrap();
+                } else {
+                    Err(
+                        crate::ndm::kvn::KvnDeserializerErr::<String>::UnexpectedKeyword {
+                            found: next_line.to_string(),
+                            expected: #keyword.to_string(),
+                        },
+                    )?
+                }
+            }
+        }
+    }
+}
+
+fn get_prefix_and_postfix_keyword_checks(
+    prefix_and_postfix_keyword: Option<(String, String)>,
+) -> (proc_macro2::TokenStream, proc_macro2::TokenStream) {
+    match prefix_and_postfix_keyword {
+        None => (quote! {}, quote! {}),
+        Some((prefix_keyword, postfix_keyword)) => (
+            get_keyword_check(prefix_keyword),
+            get_keyword_check(postfix_keyword),
+        ),
     }
 }
 
@@ -608,6 +685,7 @@ pub fn derive_kvn_deserialize(item: proc_macro::TokenStream) -> proc_macro::Toke
     let item = syn::parse_macro_input!(item as syn::DeriveInput);
     let type_name = &item.ident;
     let is_value_unit_struct = is_value_unit_struct(&item);
+    let prefix_and_postfix_keyword = get_prefix_and_postfix_keyword(&item);
 
     let syn::Data::Struct(strukt) = item.data else {
         return syn::Error::new_spanned(
@@ -620,7 +698,12 @@ pub fn derive_kvn_deserialize(item: proc_macro::TokenStream) -> proc_macro::Toke
 
     let (struct_deserializer, should_check_key_match) = match strukt.fields {
         syn::Fields::Named(syn::FieldsNamed { named, .. }) => (
-            deserializer_for_struct_with_named_fields(type_name, &named, is_value_unit_struct),
+            deserializer_for_struct_with_named_fields(
+                type_name,
+                &named,
+                is_value_unit_struct,
+                prefix_and_postfix_keyword,
+            ),
             is_value_unit_struct,
         ),
         syn::Fields::Unnamed(syn::FieldsUnnamed { unnamed, .. }) => (

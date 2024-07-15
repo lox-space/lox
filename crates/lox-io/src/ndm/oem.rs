@@ -170,6 +170,7 @@ pub struct OemSegment {
     lox_derive::KvnDeserialize,
 )]
 #[serde(default)]
+#[kvn(prefix_and_postfix_keyword="META")]
 pub struct OemMetadata {
     #[serde(rename = "COMMENT")]
     pub comment_list: Vec<String>,
