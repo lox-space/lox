@@ -542,6 +542,14 @@ impl PyTrajectory {
         Ok(PyTrajectory(Trajectory::new(&states)?))
     }
 
+    fn origin(&self) -> PyObject {
+        self.0.origin().into()
+    }
+
+    fn reference_frame(&self) -> PyFrame {
+        self.0.reference_frame()
+    }
+
     fn to_numpy<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyArray2<f64>>> {
         Ok(PyArray2::from_vec2_bound(py, &self.0.to_vec())?)
     }
