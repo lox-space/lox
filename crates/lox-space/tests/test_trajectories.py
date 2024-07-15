@@ -6,6 +6,7 @@
 
 import lox_space as lox
 import numpy as np
+import numpy.testing as npt
 import math
 import pytest
 
@@ -31,6 +32,19 @@ def trajectory(orbit):
     s0 = orbit.to_cartesian()
     prop = lox.Vallado(s0)
     return prop.propagate(rng)
+
+
+def test_from_numpy():
+    utc = lox.UTC(2023, 3, 25, 21, 8, 0.0)
+    time = utc.to_tdb()
+    states = np.array([
+        [0.0, 1e3, 1e3, 1e3, 1.0, 1.0, 1.0],
+        [1.0, 2e3, 2e3, 2e3, 2.0, 2.0, 2.0],
+        [2.0, 3e3, 3e3, 3e3, 3.0, 3.0, 3.0],
+        [3.0, 4e3, 4e3, 4e3, 4.0, 4.0, 4.0],
+    ])
+    trajectory = lox.Trajectory.from_numpy(time, states)
+    npt.assert_allclose(trajectory.interpolate(time + lox.TimeDelta(1.5)).position(), np.array([2.5e3, 2.5e3, 2.5e3]))
 
 
 def test_interpolation(orbit, trajectory):

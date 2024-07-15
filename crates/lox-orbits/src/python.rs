@@ -9,7 +9,8 @@
 use std::convert::TryFrom;
 
 use glam::DVec3;
-use numpy::PyArray1;
+use numpy::{PyArray1, PyArray2, PyArrayMethods};
+use pyo3::types::PyType;
 use pyo3::{
     exceptions::PyValueError,
     pyclass, pyfunction, pymethods,
@@ -20,6 +21,7 @@ use sgp4::Elements;
 
 use lox_bodies::python::PyPlanet;
 use lox_bodies::*;
+use lox_time::deltas::TimeDelta;
 use lox_time::python::deltas::PyTimeDelta;
 use lox_time::python::time_scales::PyTimeScale;
 use lox_time::python::ut1::{PyNoOpOffsetProvider, PyUt1Provider};
@@ -503,6 +505,40 @@ impl PyTrajectory {
     fn new(states: &Bound<'_, PyList>) -> PyResult<Self> {
         let states: Vec<PyState> = states.extract()?;
         let states: Vec<State<PyTime, PyBody, PyFrame>> = states.into_iter().map(|s| s.0).collect();
+        Ok(PyTrajectory(Trajectory::new(&states)?))
+    }
+
+    #[classmethod]
+    fn from_numpy(
+        _cls: &Bound<'_, PyType>,
+        start_time: PyTime,
+        array: &Bound<'_, PyArray2<f64>>,
+        origin: Option<&Bound<'_, PyAny>>,
+        frame: Option<PyFrame>,
+    ) -> PyResult<Self> {
+        let origin: PyBody = if let Some(origin) = origin {
+            PyBody::try_from(origin)?
+        } else {
+            PyBody::Planet(PyPlanet::new("Earth").unwrap())
+        };
+        let frame = frame.unwrap_or(PyFrame::Icrf);
+        let array = array.to_owned_array();
+        if array.ncols() != 7 {
+            return Err(PyValueError::new_err("invalid shape"));
+        }
+        let mut states: Vec<State<PyTime, PyBody, PyFrame>> = Vec::with_capacity(array.nrows());
+        for row in array.rows() {
+            let time = PyTime(start_time.0 + TimeDelta::from_decimal_seconds(row[0]).unwrap());
+            let position = DVec3::new(row[1], row[2], row[3]);
+            let velocity = DVec3::new(row[4], row[5], row[6]);
+            states.push(State::new(
+                time,
+                position,
+                velocity,
+                origin.clone(),
+                frame.clone(),
+            ));
+        }
         Ok(PyTrajectory(Trajectory::new(&states)?))
     }
 
