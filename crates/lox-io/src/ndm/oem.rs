@@ -71,6 +71,31 @@
 //!
 //! let message = OemType::from_xml_str(xml).unwrap();
 //! ```
+//!
+//! To deserialize a KVN message:
+//! ```
+//! # let kvn = r#"CCSDS_OEM_VERS = 3.0
+//! # CREATION_DATE = 1996-11-04T17:22:31
+//! # ORIGINATOR = NASA/JPL
+//! # META_START
+//! # OBJECT_NAME         = MARS GLOBAL SURVEYOR
+//! # OBJECT_ID           = 1996-062A
+//! # CENTER_NAME         = MARS BARYCENTER
+//! # REF_FRAME           = J2000
+//! # TIME_SYSTEM         = TAI
+//! # START_TIME          = 1996-12-18T12:00:00.331
+//! # USEABLE_START_TIME  = 1996-12-18T12:10:00.331
+//! # USEABLE_STOP_TIME   = 1996-12-28T21:23:00.331
+//! # STOP_TIME           = 1996-12-28T21:28:00.331
+//! # INTERPOLATION       = HERMITE
+//! # INTERPOLATION_DEGREE = 7
+//! # META_STOP"#;
+//! #
+//! # use lox_io::ndm::oem::OemType;
+//! use lox_io::ndm::kvn::KvnDeserializer;
+//!
+//! let message: OemType = KvnDeserializer::from_kvn_str(&kvn).unwrap();
+//! ```
 
 // This file is partially generated with xml-schema-derive from the XSD schema
 // published by CCSDS. Adaptations have been made to simplify the types or
