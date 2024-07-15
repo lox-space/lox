@@ -207,13 +207,23 @@ fn generate_call_to_deserializer_for_vec_type(
         {
             let mut items: Vec<#type_ident> = Vec::new();
 
+            let mut is_retry = false;
+
             loop {
                 let result = #deserializer_for_kvn_type;
 
                 match result {
-                    Ok(item) => items.push(item),
+                    Ok(item) => {
+                        is_retry = false;
+                        items.push(item)
+                    },
                     Err(crate::ndm::kvn::KvnDeserializerErr::UnexpectedKeyword { .. }) |
-                    Err(crate::ndm::kvn::KvnDeserializerErr::UnexpectedEndOfInput { .. }) => break,
+                    Err(crate::ndm::kvn::KvnDeserializerErr::UnexpectedEndOfInput { .. }) => if is_retry {
+                        break;
+                    } else {
+                        is_retry = true;
+                        continue;
+                    },
                     Err(e) => Err(e)?,
                 }
             }
