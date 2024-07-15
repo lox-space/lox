@@ -542,6 +542,10 @@ impl PyTrajectory {
         Ok(PyTrajectory(Trajectory::new(&states)?))
     }
 
+    fn to_numpy<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyArray2<f64>>> {
+        Ok(PyArray2::from_vec2_bound(py, &self.0.to_vec())?)
+    }
+
     fn states(&self) -> Vec<PyState> {
         self.0.states().into_iter().map(PyState).collect()
     }

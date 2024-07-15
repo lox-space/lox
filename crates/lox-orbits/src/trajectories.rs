@@ -161,6 +161,23 @@ where
         DVec3::new(vx, vy, vz)
     }
 
+    pub fn to_vec(&self) -> Vec<Vec<f64>> {
+        let times = self.t.clone().0;
+        let mut vec = Vec::with_capacity(times.len());
+        for (i, state) in self.states.iter().enumerate() {
+            vec.push(vec![
+                times[i],
+                state.position().x,
+                state.position().y,
+                state.position().z,
+                state.velocity().x,
+                state.velocity().y,
+                state.velocity().z,
+            ]);
+        }
+        vec
+    }
+
     pub fn interpolate(&self, dt: TimeDelta) -> State<T, O, R> {
         let t = dt.to_decimal_seconds();
         State::new(
