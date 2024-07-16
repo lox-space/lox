@@ -334,7 +334,7 @@ fn extract_type_path(ty: &syn::Type) -> Option<&syn::Path> {
 fn handle_version_field(
     type_name: &proc_macro2::Ident,
     field: &syn::Field,
-) -> Result<proc_macro2::TokenStream, proc_macro2::TokenStream> {
+) -> Result<(proc_macro2::TokenStream, proc_macro2::TokenStream), proc_macro2::TokenStream> {
     let string_type_name = type_name.to_string();
 
     if !string_type_name.ends_with("Type") {
@@ -371,9 +371,10 @@ fn handle_version_field(
         true,
     )?;
 
-    Ok(quote! {
-        #field_name: #parser?,
-    })
+    Ok((
+        quote! { let #field_name = #parser?; },
+        quote! { #field_name, },
+    ))
 }
 
 fn deserializer_for_struct_with_named_fields(
@@ -568,9 +569,10 @@ fn deserializer_for_struct_with_named_fields(
                     }
                 };
 
-                Ok(quote! {
-                    #field_name: #parser,
-                })
+                Ok((
+                    quote! { let #field_name = #parser; },
+                    quote! { #field_name, }
+                ))
              })
              .collect();
 
@@ -581,13 +583,16 @@ fn deserializer_for_struct_with_named_fields(
             return e;
         }
 
-        let field_deserializers = field_deserializers.unwrap();
+        let (field_deserializers, fields): (Vec<_>, Vec<_>) =
+            field_deserializers.unwrap().into_iter().unzip();
 
         quote! {
             #prefix_keyword_check
 
+            #(#field_deserializers)*
+
             let result = Ok(#type_name {
-                #(#field_deserializers)*
+                #(#fields)*
             });
 
             #postfix_keyword_check
