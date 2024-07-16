@@ -10,6 +10,36 @@ use proc_macro2::Span;
 use quote::quote;
 use syn::{spanned::Spanned, DeriveInput, Field};
 
+fn generate_call_to_deserializer_for_covariance_matrix_kvn_type(
+    expected_kvn_name: &str,
+) -> proc_macro2::TokenStream {
+    quote! {
+        match lines.peek() {
+            None => Err(crate::ndm::kvn::KvnDeserializerErr::<String>::UnexpectedEndOfInput {
+                keyword: #expected_kvn_name.to_string()
+            }),
+            Some(next_line) => {
+                let result = crate::ndm::kvn::parser::parse_kvn_covariance_matrix(
+                    lines,
+                ).map_err(|x| match crate::ndm::kvn::KvnDeserializerErr::from(x) {
+                    crate::ndm::kvn::KvnDeserializerErr::InvalidCovarianceMatrixFormat { .. } => crate::ndm::kvn::KvnDeserializerErr::<String>::UnexpectedKeyword {
+                        // This is empty because we just want to tell the
+                        // vector iterator to stop the iteration.
+                        found: "".to_string(),
+                        expected: "".to_string(),
+                    },
+                    crate::ndm::kvn::KvnDeserializerErr::UnexpectedEndOfInput { keyword } => crate::ndm::kvn::KvnDeserializerErr::<String>::UnexpectedEndOfInput {
+                        keyword
+                    },
+                    e => e,
+                })?;
+
+                Ok(result)
+            }
+        }
+    }
+}
+
 fn generate_call_to_deserializer_for_kvn_type(
     type_name: &str,
     type_name_new: &syn::Path,
@@ -103,31 +133,6 @@ fn generate_call_to_deserializer_for_kvn_type(
                     }).map(|x| x.into())?;
 
                     let _ = lines.next().unwrap();
-
-                    Ok(result)
-                }
-            }
-        }),
-        "common::OemCovarianceMatrixType" => Ok(quote! {
-            match lines.peek() {
-                None => Err(crate::ndm::kvn::KvnDeserializerErr::<String>::UnexpectedEndOfInput {
-                    keyword: #expected_kvn_name.to_string()
-                }),
-                Some(next_line) => {
-                    let result = crate::ndm::kvn::parser::parse_kvn_covariance_matrix(
-                        next_line,
-                    ).map_err(|x| match crate::ndm::kvn::KvnDeserializerErr::from(x) {
-                        crate::ndm::kvn::KvnDeserializerErr::InvalidCovarianceMatrixFormat { .. } => crate::ndm::kvn::KvnDeserializerErr::<String>::UnexpectedKeyword {
-                            // This is empty because we just want to tell the
-                            // vector iterator to stop the iteration.
-                            found: "".to_string(),
-                            expected: "".to_string(),
-                        },
-                        crate::ndm::kvn::KvnDeserializerErr::UnexpectedEndOfInput { keyword } => crate::ndm::kvn::KvnDeserializerErr::<String>::UnexpectedEndOfInput {
-                            keyword
-                        },
-                        e => e,
-                    }).map(|x| x.into())?;
 
                     Ok(result)
                 }
@@ -499,9 +504,20 @@ fn deserializer_for_struct_with_named_fields(
             },
         }
     } else {
-        let field_deserializers: Result<Vec<_>, _> = fields
-             .iter()
-             .map(|field| {
+        let field_deserializers: Result<Vec<_>, _> = fields.iter().filter(|field| {
+            // For OemCovarianceMatrixType we filter the types which start with
+            // cx, cy and cz because we populate those differently
+            if type_name != "OemCovarianceMatrixType" {
+                return true
+            }
+
+            // Unwrap is okay because we only support named structs
+            let field_name = field.ident.as_ref().unwrap().span().source_text().unwrap();
+
+            !field_name.starts_with("cx")
+                && !field_name.starts_with("cy")
+                && !field_name.starts_with("cz")
+        }).map(|field| {
                 let field_name = field.ident.as_ref().unwrap();
 
                 // Unwrap is okay because we only support named structs
@@ -509,8 +525,8 @@ fn deserializer_for_struct_with_named_fields(
                 let expected_kvn_name = field_name.span().source_text().unwrap().to_uppercase();
 
                 // Unwrap is okay because we expect this span to come from the source code
-                let field_type = extract_type_path(&field.ty).unwrap().span().source_text().unwrap();
                 let field_type_new = extract_type_path(&field.ty).unwrap();
+                let field_type = field_type_new.span().source_text().unwrap();
 
                 if field_name == "version" {
                     return handle_version_field(type_name, field);
@@ -583,8 +599,57 @@ fn deserializer_for_struct_with_named_fields(
             return e;
         }
 
+        let mut field_deserializers = field_deserializers.unwrap();
+
+        if type_name == "OemCovarianceMatrixType" {
+            let covariance_matrix_parser =
+                generate_call_to_deserializer_for_covariance_matrix_kvn_type("COVARIANCE_MATRIX");
+
+            field_deserializers.push((
+                quote! { let covariance_matrix = #covariance_matrix_parser?; },
+                quote! {},
+            ));
+
+            for (field, field_type) in [
+                ("cx_x", "PositionCovarianceType"),
+                ("cy_x", "PositionCovarianceType"),
+                ("cy_y", "PositionCovarianceType"),
+                ("cz_x", "PositionCovarianceType"),
+                ("cz_y", "PositionCovarianceType"),
+                ("cz_z", "PositionCovarianceType"),
+                ("cx_dot_x", "PositionVelocityCovarianceType"),
+                ("cx_dot_y", "PositionVelocityCovarianceType"),
+                ("cx_dot_z", "PositionVelocityCovarianceType"),
+                ("cx_dot_x_dot", "VelocityCovarianceType"),
+                ("cy_dot_x", "PositionVelocityCovarianceType"),
+                ("cy_dot_y", "PositionVelocityCovarianceType"),
+                ("cy_dot_z", "PositionVelocityCovarianceType"),
+                ("cy_dot_x_dot", "VelocityCovarianceType"),
+                ("cy_dot_y_dot", "VelocityCovarianceType"),
+                ("cz_dot_x", "PositionVelocityCovarianceType"),
+                ("cz_dot_y", "PositionVelocityCovarianceType"),
+                ("cz_dot_z", "PositionVelocityCovarianceType"),
+                ("cz_dot_x_dot", "VelocityCovarianceType"),
+                ("cz_dot_y_dot", "VelocityCovarianceType"),
+                ("cz_dot_z_dot", "VelocityCovarianceType"),
+            ] {
+                let field_ident = syn::Ident::new(field, Span::call_site());
+                let type_ident = syn::Ident::new(field_type, Span::call_site());
+
+                field_deserializers.push((
+                    quote! {},
+                    quote! {
+                        #field_ident: #type_ident {
+                            base: covariance_matrix.#field_ident,
+                            units: None,
+                        },
+                    },
+                ));
+            }
+        }
+
         let (field_deserializers, fields): (Vec<_>, Vec<_>) =
-            field_deserializers.unwrap().into_iter().unzip();
+            field_deserializers.into_iter().unzip();
 
         quote! {
             #prefix_keyword_check
