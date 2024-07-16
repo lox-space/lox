@@ -1365,7 +1365,7 @@ COVARIANCE_STOP"#;
                                         units: None,
                                     },
                                     cz_dot_z_dot: common::VelocityCovarianceType {
-                                        base: 1.8692631e-10,
+                                            base: 6.2244443e-10,
                                         units: None,
                                     },
                                 },],
@@ -1648,7 +1648,7 @@ COVARIANCE_STOP"#;
                                             units: None,
                                         },
                                         cz_dot_z_dot: common::VelocityCovarianceType {
-                                            base: 1.8692631e-10,
+                                            base: 6.2244443e-10,
                                             units: None,
                                         },
                                     },
@@ -1737,7 +1737,7 @@ COVARIANCE_STOP"#;
                                             units: None,
                                         },
                                         cz_dot_z_dot: common::VelocityCovarianceType {
-                                            base: 1.758152e-10,
+                                            base: 6.2244443e-10,
                                             units: None,
                                         },
                                     },
