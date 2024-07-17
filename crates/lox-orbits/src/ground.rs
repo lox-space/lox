@@ -232,6 +232,26 @@ mod tests {
     }
 
     #[test]
+    fn test_ground_location_rotation_to_topocentric() {
+        let longitude = -4.3676f64.to_radians();
+        let latitude = 40.4527f64.to_radians();
+        let location = GroundLocation::new(longitude, latitude, 0.0, Earth);
+        let rot = location.rotation_to_topocentric();
+        let expected = DMat3::from_cols(
+            DVec3::new(0.6469358921661584, 0.07615519584215287, 0.7587320591443464),
+            DVec3::new(
+                -0.049411020334552434,
+                0.9970959763965771,
+                -0.05794967578213965,
+            ),
+            DVec3::new(-0.7609418522440956, 0.0, 0.6488200809957448),
+        );
+        assert_close!(rot.x_axis, expected.x_axis);
+        assert_close!(rot.y_axis, expected.y_axis);
+        assert_close!(rot.z_axis, expected.z_axis);
+    }
+
+    #[test]
     fn test_ground_location_observables() {
         let longitude = -4f64.to_radians();
         let latitude = 41f64.to_radians();
