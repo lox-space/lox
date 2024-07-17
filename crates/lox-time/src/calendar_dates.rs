@@ -376,6 +376,12 @@ pub trait CalendarDate {
     fn day(&self) -> u8 {
         self.date().day()
     }
+
+    fn day_of_year(&self) -> u16 {
+        let date = self.date();
+        let leap = is_leap_year(date.calendar(), date.year());
+        find_day_in_year(date.month(), date.day(), leap)
+    }
 }
 
 #[cfg(test)]

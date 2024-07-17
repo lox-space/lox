@@ -259,6 +259,10 @@ impl PyTime {
         self.0.day()
     }
 
+    pub fn day_of_year(&self) -> u16 {
+        self.0.day_of_year()
+    }
+
     pub fn hour(&self) -> u8 {
         self.0.hour()
     }
