@@ -385,14 +385,15 @@ impl PyState {
         Ok(PyKeplerian(self.0.to_keplerian()))
     }
 
-    fn rotation_lvlh(&self) -> PyResult<[f64; 9]> {
+    fn rotation_lvlh<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyArray2<f64>>> {
         if self.reference_frame() != PyFrame::Icrf {
             return Err(PyValueError::new_err(
                 "only inertial frames are supported for the LVLH rotation matrix",
             ));
         }
         let rot = self.0.with_frame(Icrf).rotation_lvlh();
-        Ok(rot.to_cols_array())
+        let rot: Vec<Vec<f64>> = rot.to_cols_array_2d().iter().map(|v| v.to_vec()).collect();
+        Ok(PyArray2::from_vec2_bound(py, &rot)?)
     }
 
     fn to_ground_location(&self, py: Python<'_>) -> PyResult<PyGroundLocation> {
@@ -723,6 +724,12 @@ impl PyGroundLocation {
         Ok(PyObservables(Observables::new(
             azimuth, elevation, range, range_rate,
         )))
+    }
+
+    fn rotation_to_topocentric<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyArray2<f64>>> {
+        let rot = self.0.rotation_to_topocentric();
+        let rot: Vec<Vec<f64>> = rot.to_cols_array_2d().iter().map(|v| v.to_vec()).collect();
+        Ok(PyArray2::from_vec2_bound(py, &rot)?)
     }
 
     fn longitude(&self) -> f64 {
