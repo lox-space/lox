@@ -170,7 +170,7 @@ pub struct OemSegment {
     lox_derive::KvnDeserialize,
 )]
 #[serde(default)]
-#[kvn(prefix_and_postfix_keyword="META")]
+#[kvn(prefix_and_postfix_keyword = "META")]
 pub struct OemMetadata {
     #[serde(rename = "COMMENT")]
     pub comment_list: Vec<String>,
@@ -216,6 +216,7 @@ pub struct OemData {
     #[serde(rename = "stateVector")]
     pub state_vector_list: Vec<common::StateVectorAccType>,
     #[serde(rename = "covarianceMatrix")]
+    #[kvn(prefix_and_postfix_keyword = "COVARIANCE")]
     pub covariance_matrix_list: Vec<common::OemCovarianceMatrixType>,
 }
 

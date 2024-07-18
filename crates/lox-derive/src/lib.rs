@@ -130,11 +130,13 @@ fn generate_call_to_deserializer_for_kvn_type(
                             expected: "".to_string(),
                         },
                         e => e,
-                    }).map(|x| x.into())?;
+                    }).map(|x| x.into());
 
-                    let _ = lines.next().unwrap();
+                    if result.is_ok() {
+                        let _ = lines.next().unwrap();
+                    }
 
-                    Ok(result)
+                    result
                 }
             }
         }),
@@ -287,10 +289,10 @@ fn generate_call_to_deserializer_for_vec_type(
     });
 }
 
-fn get_prefix_and_postfix_keyword(item: &DeriveInput) -> Option<(String, String)> {
+fn get_prefix_and_postfix_keyword(attrs: &Vec<syn::Attribute>) -> Option<(String, String)> {
     let mut keyword: Option<syn::LitStr> = None;
 
-    for attr in item.attrs.iter() {
+    for attr in attrs.iter() {
         if !attr.path().is_ident("kvn") {
             continue;
         }
@@ -386,7 +388,7 @@ fn deserializer_for_struct_with_named_fields(
     type_name: &proc_macro2::Ident,
     fields: &syn::punctuated::Punctuated<syn::Field, syn::token::Comma>,
     is_value_unit_struct: bool,
-    prefix_and_postfix_keyword: Option<(String, String)>,
+    struct_level_prefix_and_postfix_keyword: Option<(String, String)>,
 ) -> proc_macro2::TokenStream {
     if &type_name.to_string() == "UserDefinedType" {
         //@TODO
@@ -585,15 +587,16 @@ fn deserializer_for_struct_with_named_fields(
                     }
                 };
 
+                let field_prefix_and_postfix_keyword_checks = get_prefix_and_postfix_keyword(&field.attrs);
+
+                let wrapped_parser = add_prefix_and_postfix_keyword_checks(field_prefix_and_postfix_keyword_checks, parser, true);
+
                 Ok((
-                    quote! { let #field_name = #parser; },
+                    quote! { let #field_name = #wrapped_parser; },
                     quote! { #field_name, }
                 ))
              })
              .collect();
-
-        let (prefix_keyword_check, postfix_keyword_check) =
-            get_prefix_and_postfix_keyword_checks(prefix_and_postfix_keyword);
 
         if let Err(e) = field_deserializers {
             return e;
@@ -651,59 +654,101 @@ fn deserializer_for_struct_with_named_fields(
         let (field_deserializers, fields): (Vec<_>, Vec<_>) =
             field_deserializers.into_iter().unzip();
 
-        quote! {
-            #prefix_keyword_check
-
+        let parser_to_wrap = quote! {
             #(#field_deserializers)*
 
-            let result = Ok(#type_name {
+            Ok(#type_name {
                 #(#fields)*
-            });
+            })
+        };
 
-            #postfix_keyword_check
+        let wrapped_parser = add_prefix_and_postfix_keyword_checks(
+            struct_level_prefix_and_postfix_keyword,
+            parser_to_wrap,
+            false,
+        );
 
-            result
+        quote! {
+            #wrapped_parser
         }
     }
 }
 
-fn get_keyword_check(keyword: String) -> proc_macro2::TokenStream {
-    quote! {
-        match lines.peek() {
-            None => Err(
-                crate::ndm::kvn::KvnDeserializerErr::<String>::UnexpectedEndOfInput {
-                    keyword: #keyword.to_string(),
-                },
-            )?,
-
-            Some(next_line) => {
-                let line_matches =
-                    crate::ndm::kvn::parser::kvn_line_matches_key(#keyword, next_line)?;
-
-                if line_matches {
-                    lines.next().unwrap();
-                } else {
+fn add_prefix_and_postfix_keyword_checks(
+    prefix_and_postfix_keyword: Option<(String, String)>,
+    parser_to_wrap: proc_macro2::TokenStream,
+    is_field: bool,
+) -> proc_macro2::TokenStream {
+    match prefix_and_postfix_keyword {
+        None => parser_to_wrap,
+        Some((prefix_keyword, postfix_keyword)) => {
+            let mismatch_handler = if is_field {
+                quote! { Default::default() }
+            } else {
+                quote! {
                     Err(
                         crate::ndm::kvn::KvnDeserializerErr::<String>::UnexpectedKeyword {
                             found: next_line.to_string(),
-                            expected: #keyword.to_string(),
+                            expected: #prefix_keyword.to_string(),
                         },
                     )?
                 }
+            };
+
+            quote! {
+
+                match lines.peek() {
+                    None => Err(
+                        crate::ndm::kvn::KvnDeserializerErr::<String>::UnexpectedEndOfInput {
+                            keyword: #prefix_keyword.to_string(),
+                        },
+                    )?,
+
+                    Some(next_line) => {
+                        let line_matches = crate::ndm::kvn::parser::kvn_line_matches_key(
+                            #prefix_keyword,
+                            next_line,
+                        )?;
+
+                        if line_matches {
+                            lines.next().unwrap();
+
+                            let result = { #parser_to_wrap };
+
+                            match lines.peek() {
+                                None =>  Err(
+                                    crate::ndm::kvn::KvnDeserializerErr::<String>::UnexpectedEndOfInput {
+                                        keyword: #postfix_keyword.to_string(),
+                                    },
+                                )?,
+
+                                Some(next_line) => {
+                                    let line_matches = crate::ndm::kvn::parser::kvn_line_matches_key(
+                                        #postfix_keyword,
+                                        next_line,
+                                    )?;
+
+                                    if line_matches {
+                                        lines.next().unwrap();
+                                    } else {
+                                        Err(
+                                            crate::ndm::kvn::KvnDeserializerErr::<String>::UnexpectedKeyword {
+                                                found: next_line.to_string(),
+                                                expected: #postfix_keyword.to_string(),
+                                            },
+                                        )?
+                                    }
+                                }
+                            };
+
+                            result
+                        } else {
+                            #mismatch_handler
+                        }
+                    }
+                }
             }
         }
-    }
-}
-
-fn get_prefix_and_postfix_keyword_checks(
-    prefix_and_postfix_keyword: Option<(String, String)>,
-) -> (proc_macro2::TokenStream, proc_macro2::TokenStream) {
-    match prefix_and_postfix_keyword {
-        None => (quote! {}, quote! {}),
-        Some((prefix_keyword, postfix_keyword)) => (
-            get_keyword_check(prefix_keyword),
-            get_keyword_check(postfix_keyword),
-        ),
     }
 }
 
@@ -755,7 +800,7 @@ pub fn derive_kvn_deserialize(item: proc_macro::TokenStream) -> proc_macro::Toke
     let item = syn::parse_macro_input!(item as syn::DeriveInput);
     let type_name = &item.ident;
     let is_value_unit_struct = is_value_unit_struct(&item);
-    let prefix_and_postfix_keyword = get_prefix_and_postfix_keyword(&item);
+    let prefix_and_postfix_keyword = get_prefix_and_postfix_keyword(&item.attrs);
 
     let syn::Data::Struct(strukt) = item.data else {
         return syn::Error::new_spanned(
