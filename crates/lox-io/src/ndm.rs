@@ -31,6 +31,9 @@
 //! covariance matrix section. But this will cause the comments for the
 //! following section, the maneuver parameters list, to be discarded.
 //!
+//! The KVN parsing currently does not support user-defined fields and ddd date
+//! format types.
+//!
 //! Check the respective submodules for more information.
 
 pub mod json;

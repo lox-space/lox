@@ -289,7 +289,7 @@ fn generate_call_to_deserializer_for_vec_type(
     });
 }
 
-fn get_prefix_and_postfix_keyword(attrs: &Vec<syn::Attribute>) -> Option<(String, String)> {
+fn get_prefix_and_postfix_keyword(attrs: &[syn::Attribute]) -> Option<(String, String)> {
     let mut keyword: Option<syn::LitStr> = None;
 
     for attr in attrs.iter() {
