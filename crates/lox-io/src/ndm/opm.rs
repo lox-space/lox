@@ -802,7 +802,7 @@ MAN_DV_2 = -0.00187300 [km/s]
 MAN_DV_3 = 0.00000000 [km/s]"#;
 
         assert_eq!(
-            crate::ndm::kvn::KvnDeserializer::from_kvn_str(&kvn),
+            crate::ndm::kvn::KvnDeserializer::from_kvn_str(kvn),
             Ok(OpmType {
                 header: common::OdmHeader {
                     comment_list: vec![

@@ -30,7 +30,10 @@ pub enum KvnDeserializerErr<I> {
     InvalidDateTimeFormat { input: I },
     InvalidNumberFormat { input: I },
     InvalidStringFormat { input: I },
+    InvalidStateVectorFormat { input: I },
+    InvalidCovarianceMatrixFormat { input: I },
     KeywordNotFound { expected: I },
+    // Has a second meaning: it stops the iterator for vector type deserializers
     UnexpectedKeyword { found: I, expected: I },
     EmptyKeyword { input: I },
     EmptyValue { input: I },
