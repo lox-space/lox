@@ -957,7 +957,7 @@ COV_REF_FRAME = EME2000
 COVARIANCE_STOP"#;
 
         assert_eq!(
-            crate::ndm::kvn::KvnDeserializer::from_kvn_str(&kvn),
+            crate::ndm::kvn::KvnDeserializer::from_kvn_str(kvn),
             Ok(OemType {
                 id: None,
                 version: "3.0".to_string(),

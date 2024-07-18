@@ -1605,7 +1605,7 @@ mod test {
  CZ_DOT_Z_DOT = 6.224444338635500e-10"#;
 
         assert_eq!(
-            crate::ndm::kvn::KvnDeserializer::from_kvn_str(&kvn),
+            crate::ndm::kvn::KvnDeserializer::from_kvn_str(kvn),
             Ok(OmmType {
                 header: common::OdmHeader {
                     comment_list: vec![

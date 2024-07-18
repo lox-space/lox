@@ -163,20 +163,20 @@ fn get_generic_type_argument(field: &Field) -> Option<(String, &syn::Path)> {
         let path_part = type_path.path.segments.first();
         if let Some(path_part) = path_part {
             if let syn::PathArguments::AngleBracketed(type_argument) = &path_part.arguments {
-                if let Some(syn::GenericArgument::Type(r#type)) = &type_argument.args.first() {
-                    if let syn::Type::Path(r#type) = r#type {
-                        return Some((
-                            r#type
-                                .path
-                                .segments
-                                .clone()
-                                .into_iter()
-                                .map(|ident| ident.span().source_text().unwrap())
-                                .reduce(|a, b| a + "::" + &b)
-                                .unwrap(),
-                            &r#type.path,
-                        ));
-                    }
+                if let Some(syn::GenericArgument::Type(syn::Type::Path(r#type))) =
+                    &type_argument.args.first()
+                {
+                    return Some((
+                        r#type
+                            .path
+                            .segments
+                            .clone()
+                            .into_iter()
+                            .map(|ident| ident.span().source_text().unwrap())
+                            .reduce(|a, b| a + "::" + &b)
+                            .unwrap(),
+                        &r#type.path,
+                    ));
                 }
             }
         }
@@ -259,7 +259,7 @@ fn generate_call_to_deserializer_for_vec_type(
         true,
     )?;
 
-    return Ok(quote! {
+    Ok(quote! {
         {
             let mut items: Vec<#type_ident> = Vec::new();
 
@@ -286,7 +286,7 @@ fn generate_call_to_deserializer_for_vec_type(
 
             items
         }
-    });
+    })
 }
 
 fn get_prefix_and_postfix_keyword(attrs: &[syn::Attribute]) -> Option<(String, String)> {
