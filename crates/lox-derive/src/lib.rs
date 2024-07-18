@@ -432,7 +432,7 @@ fn deserializer_for_struct_with_named_fields(
                             match generate_call_to_deserializer_for_kvn_type(
                                 &local_field_type,
                                 local_field_type_new,
-                                "Blala",
+                                "undefined",
                                 false,
                                 false,
                             ) {
@@ -733,7 +733,7 @@ fn deserializers_for_struct_with_unnamed_fields(
     let deserializer_for_kvn_type = generate_call_to_deserializer_for_kvn_type(
         &field_type,
         field_type_new,
-        "Blalala",
+        "unnamed field",
         false,
         true,
     );
