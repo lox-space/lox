@@ -994,9 +994,9 @@ COVARIANCE_STOP"#;
                             data: OemData {
                                 comment_list: vec![
                                     "This file was produced by M.R. Somebody, MSOO NAV/JPL, 1996NOV 04. It is"
-                                        .to_string(),
+                                    .to_string(),
                                     "to be used for DSN scheduling purposes only."
-                                        .to_string(),
+                                    .to_string(),
                                 ],
                                 state_vector_list: vec![
                                     common::StateVectorAccType {
@@ -1136,10 +1136,10 @@ COVARIANCE_STOP"#;
                                     "1996-12-28T21:29:07.267".to_string(),
                                 ),
                                 useable_start_time: Some(common::EpochType(
-                                    "1996-12-28T22:08:02.5".to_string(),
+                                        "1996-12-28T22:08:02.5".to_string(),
                                 ),),
                                 useable_stop_time: Some(common::EpochType(
-                                    "1996-12-30T01:18:02.5".to_string(),
+                                        "1996-12-30T01:18:02.5".to_string(),
                                 ),),
                                 stop_time: common::EpochType("1996-12-30T01:28:02.267".to_string(),),
                                 interpolation: Some("HERMITE".to_string(),),
@@ -1148,7 +1148,7 @@ COVARIANCE_STOP"#;
                             data: OemData {
                                 comment_list: vec![
                                     "This block begins after trajectory correction maneuver TCM-3."
-                                        .to_string(),
+                                    .to_string(),
                                 ],
                                 state_vector_list: vec![
                                     common::StateVectorAccType {
@@ -1281,94 +1281,94 @@ COVARIANCE_STOP"#;
                                     },
                                 ],
                                 covariance_matrix_list: vec![common::OemCovarianceMatrixType {
-                                    comment_list: vec![],
-                                    epoch: common::EpochType("1996-12-28T21:29:07.267".to_string(),),
-                                    cov_ref_frame: Some("EME2000".to_string(),),
-                                    cx_x: common::PositionCovarianceType {
-                                        base: 0.00033313494,
-                                        units: None,
-                                    },
-                                    cy_x: common::PositionCovarianceType {
-                                        base: 0.00046189273,
-                                        units: None,
-                                    },
-                                    cy_y: common::PositionCovarianceType {
-                                        base: 0.00067824216,
-                                        units: None,
-                                    },
-                                    cz_x: common::PositionCovarianceType {
-                                        base: -0.00030700078,
-                                        units: None,
-                                    },
-                                    cz_y: common::PositionCovarianceType {
-                                        base: -0.00042212341,
-                                        units: None,
-                                    },
-                                    cz_z: common::PositionCovarianceType {
-                                        base: 0.00032319319,
-                                        units: None,
-                                    },
-                                    cx_dot_x: common::PositionVelocityCovarianceType {
-                                        base: -3.349365e-7,
-                                        units: None,
-                                    },
-                                    cx_dot_y: common::PositionVelocityCovarianceType {
-                                        base: -4.6860842e-7,
-                                        units: None,
-                                    },
-                                    cx_dot_z: common::PositionVelocityCovarianceType {
-                                        base: 2.4849495e-7,
-                                        units: None,
-                                    },
-                                    cx_dot_x_dot: common::VelocityCovarianceType {
-                                        base: 4.2960228e-10,
-                                        units: None,
-                                    },
-                                    cy_dot_x: common::PositionVelocityCovarianceType {
-                                        base: -2.2118325e-7,
-                                        units: None,
-                                    },
-                                    cy_dot_y: common::PositionVelocityCovarianceType {
-                                        base: -2.8641868e-7,
-                                        units: None,
-                                    },
-                                    cy_dot_z: common::PositionVelocityCovarianceType {
-                                        base: 1.7980986e-7,
-                                        units: None,
-                                    },
-                                    cy_dot_x_dot: common::VelocityCovarianceType {
-                                        base: 2.6088992e-10,
-                                        units: None,
-                                    },
-                                    cy_dot_y_dot: common::VelocityCovarianceType {
-                                        base: 1.7675147e-10,
-                                        units: None,
-                                    },
-                                    cz_dot_x: common::PositionVelocityCovarianceType {
-                                        base: -3.041346e-7,
-                                        units: None,
-                                    },
-                                    cz_dot_y: common::PositionVelocityCovarianceType {
-                                        base: -4.9894969e-7,
-                                        units: None,
-                                    },
-                                    cz_dot_z: common::PositionVelocityCovarianceType {
-                                        base: 3.5403109e-7,
-                                        units: None,
-                                    },
-                                    cz_dot_x_dot: common::VelocityCovarianceType {
-                                        base: 1.8692631e-10,
-                                        units: None,
-                                    },
-                                    cz_dot_y_dot: common::VelocityCovarianceType {
-                                        base: 1.0088625e-10,
-                                        units: None,
-                                    },
-                                    cz_dot_z_dot: common::VelocityCovarianceType {
+                                        comment_list: vec![],
+                                        epoch: common::EpochType("1996-12-28T21:29:07.267".to_string(),),
+                                        cov_ref_frame: Some("EME2000".to_string(),),
+                                        cx_x: common::PositionCovarianceType {
+                                            base: 0.00033313494,
+                                            units: None,
+                                        },
+                                        cy_x: common::PositionCovarianceType {
+                                            base: 0.00046189273,
+                                            units: None,
+                                        },
+                                        cy_y: common::PositionCovarianceType {
+                                            base: 0.00067824216,
+                                            units: None,
+                                        },
+                                        cz_x: common::PositionCovarianceType {
+                                            base: -0.00030700078,
+                                            units: None,
+                                        },
+                                        cz_y: common::PositionCovarianceType {
+                                            base: -0.00042212341,
+                                            units: None,
+                                        },
+                                        cz_z: common::PositionCovarianceType {
+                                            base: 0.00032319319,
+                                            units: None,
+                                        },
+                                        cx_dot_x: common::PositionVelocityCovarianceType {
+                                            base: -3.349365e-7,
+                                            units: None,
+                                        },
+                                        cx_dot_y: common::PositionVelocityCovarianceType {
+                                            base: -4.6860842e-7,
+                                            units: None,
+                                        },
+                                        cx_dot_z: common::PositionVelocityCovarianceType {
+                                            base: 2.4849495e-7,
+                                            units: None,
+                                        },
+                                        cx_dot_x_dot: common::VelocityCovarianceType {
+                                            base: 4.2960228e-10,
+                                            units: None,
+                                        },
+                                        cy_dot_x: common::PositionVelocityCovarianceType {
+                                            base: -2.2118325e-7,
+                                            units: None,
+                                        },
+                                        cy_dot_y: common::PositionVelocityCovarianceType {
+                                            base: -2.8641868e-7,
+                                            units: None,
+                                        },
+                                        cy_dot_z: common::PositionVelocityCovarianceType {
+                                            base: 1.7980986e-7,
+                                            units: None,
+                                        },
+                                        cy_dot_x_dot: common::VelocityCovarianceType {
+                                            base: 2.6088992e-10,
+                                            units: None,
+                                        },
+                                        cy_dot_y_dot: common::VelocityCovarianceType {
+                                            base: 1.7675147e-10,
+                                            units: None,
+                                        },
+                                        cz_dot_x: common::PositionVelocityCovarianceType {
+                                            base: -3.041346e-7,
+                                            units: None,
+                                        },
+                                        cz_dot_y: common::PositionVelocityCovarianceType {
+                                            base: -4.9894969e-7,
+                                            units: None,
+                                        },
+                                        cz_dot_z: common::PositionVelocityCovarianceType {
+                                            base: 3.5403109e-7,
+                                            units: None,
+                                        },
+                                        cz_dot_x_dot: common::VelocityCovarianceType {
+                                            base: 1.8692631e-10,
+                                            units: None,
+                                        },
+                                        cz_dot_y_dot: common::VelocityCovarianceType {
+                                            base: 1.0088625e-10,
+                                            units: None,
+                                        },
+                                        cz_dot_z_dot: common::VelocityCovarianceType {
                                             base: 6.2244443e-10,
-                                        units: None,
-                                    },
-                                },],
+                                            units: None,
+                                        },
+                                    },],
                             },
                         },
                         OemSegment {
@@ -1384,10 +1384,10 @@ COVARIANCE_STOP"#;
                                     "1996-12-28T21:29:07.267".to_string(),
                                 ),
                                 useable_start_time: Some(common::EpochType(
-                                    "1996-12-28T22:08:02.5".to_string(),
+                                        "1996-12-28T22:08:02.5".to_string(),
                                 ),),
                                 useable_stop_time: Some(common::EpochType(
-                                    "1996-12-30T01:18:02.5".to_string(),
+                                        "1996-12-30T01:18:02.5".to_string(),
                                 ),),
                                 stop_time: common::EpochType("1996-12-30T01:28:02.267".to_string(),),
                                 interpolation: Some("HERMITE".to_string(),),
@@ -1396,7 +1396,7 @@ COVARIANCE_STOP"#;
                             data: OemData {
                                 comment_list: vec![
                                     "This block begins after trajectory correction maneuver TCM-3."
-                                        .to_string(),
+                                    .to_string(),
                                 ],
                                 state_vector_list: vec![
                                     common::StateVectorAccType {
