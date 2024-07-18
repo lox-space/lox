@@ -21,6 +21,8 @@ use crate::calendar_dates::{Date, DateError};
 use crate::constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 use crate::deltas::{TimeDelta, ToDelta};
 use crate::prelude::{CivilTime, Tai};
+use crate::time_scales::transformations::OffsetProvider;
+use crate::utc::{LeapSecondsProvider, Utc};
 use crate::Time;
 use lox_io::spice::{Kernel, KernelError};
 use std::convert::Infallible;
@@ -28,9 +30,6 @@ use std::fs::read_to_string;
 use std::num::ParseIntError;
 use std::path::Path;
 use thiserror::Error;
-
-use crate::transformations::{LeapSecondsProvider, OffsetProvider};
-use crate::utc::Utc;
 
 const LEAP_SECONDS_KERNEL_KEY: &str = "DELTET/DELTA_AT";
 
@@ -240,8 +239,8 @@ mod tests {
     use crate::deltas::TimeDelta;
     use crate::time;
     use crate::time_scales::Tai;
-    use crate::transformations::LeapSecondsProvider;
     use crate::utc;
+    use crate::utc::LeapSecondsProvider;
     use crate::utc::Utc;
     use crate::Time;
 
