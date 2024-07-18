@@ -204,6 +204,24 @@ pub struct KvnCovarianceMatrixValue {
     pub cz_dot_z_dot: f64,
 }
 
+pub fn get_next_nonempty_line<'a>(
+    lines: &mut std::iter::Peekable<impl Iterator<Item = &'a str>>,
+) -> Option<&'a str> {
+    loop {
+        match lines.peek() {
+            None => return None,
+            Some(next_line) => {
+                if next_line.trim().is_empty() {
+                    lines.next();
+                    continue;
+                } else {
+                    return Some(next_line);
+                }
+            }
+        }
+    }
+}
+
 pub fn kvn_line_matches_key<'a>(
     key: &'a str,
     input: &'a str,

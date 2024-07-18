@@ -14,7 +14,7 @@ fn generate_call_to_deserializer_for_covariance_matrix_kvn_type(
     expected_kvn_name: &str,
 ) -> proc_macro2::TokenStream {
     quote! {
-        match lines.peek() {
+        match crate::ndm::kvn::parser::get_next_nonempty_line(lines) {
             None => Err(crate::ndm::kvn::KvnDeserializerErr::<String>::UnexpectedEndOfInput {
                 keyword: #expected_kvn_name.to_string()
             }),
@@ -80,7 +80,7 @@ fn generate_call_to_deserializer_for_kvn_type(
 
             if with_keyword_matching {
                 Ok(quote! {
-                    match lines.peek() {
+                    match crate::ndm::kvn::parser::get_next_nonempty_line(lines) {
                         None => Err(crate::ndm::kvn::KvnDeserializerErr::<String>::UnexpectedEndOfInput {
                             keyword: #expected_kvn_name.to_string()
                         }),
@@ -115,7 +115,7 @@ fn generate_call_to_deserializer_for_kvn_type(
             }
         }
         "common::StateVectorAccType" => Ok(quote! {
-            match lines.peek() {
+            match crate::ndm::kvn::parser::get_next_nonempty_line(lines) {
                 None => Err(crate::ndm::kvn::KvnDeserializerErr::<String>::UnexpectedEndOfInput {
                     keyword: #expected_kvn_name.to_string()
                 }),
@@ -142,7 +142,7 @@ fn generate_call_to_deserializer_for_kvn_type(
         }),
         _ => Ok(quote! {
            {
-                let has_next_line = lines.peek().is_some();
+                let has_next_line = crate::ndm::kvn::parser::get_next_nonempty_line(lines).is_some();
 
                 let result = if has_next_line {
                     #type_name_new::deserialize(lines)
@@ -215,7 +215,7 @@ fn generate_call_to_deserializer_for_option_type(
     };
 
     Ok(quote! {
-        match lines.peek() {
+        match crate::ndm::kvn::parser::get_next_nonempty_line(lines) {
             None => None,
             Some(next_line) => {
                 let line_matches = crate::ndm::kvn::parser::kvn_line_matches_key(
@@ -563,7 +563,7 @@ fn deserializer_for_struct_with_named_fields(
                         };
 
                         quote! {
-                            match lines.peek() {
+                            match crate::ndm::kvn::parser::get_next_nonempty_line(lines) {
                                 None => Err(crate::ndm::kvn::KvnDeserializerErr::<String>::UnexpectedEndOfInput {
                                     keyword: #expected_kvn_name.to_string()
                                 })?,
@@ -697,7 +697,7 @@ fn add_prefix_and_postfix_keyword_checks(
 
             quote! {
 
-                match lines.peek() {
+                match crate::ndm::kvn::parser::get_next_nonempty_line(lines) {
                     None => Err(
                         crate::ndm::kvn::KvnDeserializerErr::<String>::UnexpectedEndOfInput {
                             keyword: #prefix_keyword.to_string(),
@@ -715,7 +715,7 @@ fn add_prefix_and_postfix_keyword_checks(
 
                             let result = { #parser_to_wrap };
 
-                            match lines.peek() {
+                            match crate::ndm::kvn::parser::get_next_nonempty_line(lines) {
                                 None =>  Err(
                                     crate::ndm::kvn::KvnDeserializerErr::<String>::UnexpectedEndOfInput {
                                         keyword: #postfix_keyword.to_string(),
