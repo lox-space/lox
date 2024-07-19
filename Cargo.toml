@@ -16,9 +16,9 @@ lox-derive = { path = "crates/lox-derive", version = "0.1.0-alpha.0" }
 lox-earth = { path = "crates/lox-earth", version = "0.1.0-alpha.0" }
 lox-ephem = { path = "crates/lox-ephem", version = "0.1.0-alpha.0" }
 lox-io = { path = "crates/lox-io", version = "0.1.0-alpha.0" }
-lox-math = { path = "crates/lox-math", version = "0.1.0-alpha.0" }
+lox-math = { path = "crates/lox-math", version = "0.1.0-alpha.1" }
 lox-orbits = { path = "crates/lox-orbits", version = "0.1.0-alpha.0" }
-lox-space = { path = "crates/lox-space", version = "0.1.0-alpha.0" }
+lox-space = { path = "crates/lox-space", version = "0.1.0-alpha.1" }
 lox-time = { path = "crates/lox-time", version = "0.1.0-alpha.0" }
 
 csv = "1.3.0"
