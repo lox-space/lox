@@ -11,15 +11,15 @@ authors = ["Helge Eichhorn and the lox-space contributors"]
 repository = "https://github.com/lox-space/lox"
 
 [workspace.dependencies]
-lox-bodies = { path = "crates/lox-bodies" }
-lox-derive = { path = "crates/lox-derive" }
-lox-earth = { path = "crates/lox-earth" }
-lox-ephem = { path = "crates/lox-ephem" }
-lox-io = { path = "crates/lox-io" }
-lox-math = { path = "crates/lox-math" }
-lox-orbits = { path = "crates/lox-orbits" }
-lox-space = { path = "crates/lox-space" }
-lox-time = { path = "crates/lox-time" }
+lox-bodies = { path = "crates/lox-bodies", version = "0.1.0-alpha.0" }
+lox-derive = { path = "crates/lox-derive", version = "0.1.0-alpha.0" }
+lox-earth = { path = "crates/lox-earth", version = "0.1.0-alpha.0" }
+lox-ephem = { path = "crates/lox-ephem", version = "0.1.0-alpha.0" }
+lox-io = { path = "crates/lox-io", version = "0.1.0-alpha.0" }
+lox-math = { path = "crates/lox-math", version = "0.1.0-alpha.0" }
+lox-orbits = { path = "crates/lox-orbits", version = "0.1.0-alpha.0" }
+lox-space = { path = "crates/lox-space", version = "0.1.0-alpha.0" }
+lox-time = { path = "crates/lox-time", version = "0.1.0-alpha.0" }
 
 csv = "1.3.0"
 divan = "0.1.14"
