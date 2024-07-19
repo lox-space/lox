@@ -971,6 +971,11 @@ pub struct PyObservables(pub Observables);
 
 #[pymethods]
 impl PyObservables {
+    #[new]
+    fn new(azimuth: f64, elevation: f64, range: f64, range_rate: f64) -> Self {
+        PyObservables(Observables::new(azimuth, elevation, range, range_rate))
+    }
+
     fn azimuth(&self) -> f64 {
         self.0.azimuth()
     }
