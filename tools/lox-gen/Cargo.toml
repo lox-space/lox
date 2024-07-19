@@ -2,6 +2,7 @@
 name = "lox-gen"
 version = "0.1.0"
 edition = "2021"
+publish = false
 
 [dependencies]
 lox-io = { path = "../../crates/lox-io" }
