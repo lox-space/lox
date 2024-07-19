@@ -470,7 +470,7 @@ checksum = "a7a70ba024b9dc04c27ea2f0c0548feb474ec5c54bba33a7f72f873a39d07b24"
 
 [[package]]
 name = "lox-bodies"
-version = "0.1.0"
+version = "0.1.0-alpha.0"
 dependencies = [
  "dyn-clone",
  "fast_polynomial",
@@ -483,7 +483,7 @@ dependencies = [
 
 [[package]]
 name = "lox-derive"
-version = "0.1.0"
+version = "0.1.0-alpha.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -492,7 +492,7 @@ dependencies = [
 
 [[package]]
 name = "lox-earth"
-version = "0.1.0"
+version = "0.1.0-alpha.0"
 dependencies = [
  "fast_polynomial",
  "float_eq",
@@ -507,7 +507,7 @@ dependencies = [
 
 [[package]]
 name = "lox-ephem"
-version = "0.1.0"
+version = "0.1.0-alpha.0"
 dependencies = [
  "lox-utils",
  "nom",
@@ -515,7 +515,7 @@ dependencies = [
 
 [[package]]
 name = "lox-io"
-version = "0.1.0"
+version = "0.1.0-alpha.0"
 dependencies = [
  "csv",
  "fast-float",
@@ -533,7 +533,7 @@ dependencies = [
 
 [[package]]
 name = "lox-orbits"
-version = "0.1.0"
+version = "0.1.0-alpha.0"
 dependencies = [
  "csv",
  "float_eq",
@@ -551,7 +551,7 @@ dependencies = [
 
 [[package]]
 name = "lox-space"
-version = "0.1.0"
+version = "0.1.0-alpha.0"
 dependencies = [
  "divan",
  "lox-bodies",
@@ -563,7 +563,7 @@ dependencies = [
 
 [[package]]
 name = "lox-time"
-version = "0.1.0"
+version = "0.1.0-alpha.0"
 dependencies = [
  "float_eq",
  "itertools",
@@ -579,7 +579,7 @@ dependencies = [
 
 [[package]]
 name = "lox-utils"
-version = "0.1.0"
+version = "0.1.0-alpha.0"
 dependencies = [
  "fast_polynomial",
  "float_eq",
