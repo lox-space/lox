@@ -115,6 +115,13 @@ impl<T: TimeLike> Window<T> {
     pub fn end(&self) -> &T {
         &self.end
     }
+
+    pub fn duration(&self) -> TimeDelta
+    where
+        T: Clone,
+    {
+        self.end.clone() - self.start.clone()
+    }
 }
 
 pub fn find_windows<F: Fn(f64) -> f64 + Copy, T: TimeLike + Clone, R: FindBracketedRoot<F>>(

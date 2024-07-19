@@ -294,9 +294,10 @@ pub enum PyFrame {
 #[pymethods]
 impl PyFrame {
     #[new]
-    fn new(name: &str) -> PyResult<Self> {
-        name.parse()
+    fn new(abbreviation: &str) -> PyResult<Self> {
+        abbreviation.parse()
     }
+
     fn __getnewargs__(&self) -> (String,) {
         (self.abbreviation(),)
     }
@@ -644,6 +645,10 @@ impl PyWindow {
 
     fn end(&self) -> PyTime {
         self.0.end().clone()
+    }
+
+    fn duration(&self) -> PyTimeDelta {
+        PyTimeDelta(self.0.duration())
     }
 }
 

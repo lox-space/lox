@@ -1,7 +1,10 @@
 [package]
 name = "lox-derive"
 version = "0.1.0"
-edition = "2021"
+rust-version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
 
 [lib]
 proc-macro = true
