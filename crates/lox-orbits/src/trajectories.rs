@@ -6,13 +6,13 @@ use glam::DVec3;
 use thiserror::Error;
 
 use lox_bodies::{Body, RotationalElements};
+use lox_math::roots::Brent;
+use lox_math::series::{Series, SeriesError};
 use lox_time::time_scales::{Tai, Tdb};
 use lox_time::transformations::TryToScale;
 use lox_time::utc::leap_seconds::BuiltinLeapSeconds;
 use lox_time::utc::Utc;
 use lox_time::{deltas::TimeDelta, Time, TimeLike};
-use lox_utils::roots::Brent;
-use lox_utils::series::{Series, SeriesError};
 
 use crate::events::{find_events, find_windows, Event, Window};
 use crate::frames::{BodyFixed, FrameTransformationProvider, Icrf, TryToFrame};

@@ -21,6 +21,7 @@ use sgp4::Elements;
 
 use lox_bodies::python::PyPlanet;
 use lox_bodies::*;
+use lox_math::roots::Brent;
 use lox_time::deltas::TimeDelta;
 use lox_time::python::deltas::PyTimeDelta;
 use lox_time::python::time_scales::PyTimeScale;
@@ -28,7 +29,6 @@ use lox_time::python::ut1::{PyNoOpOffsetProvider, PyUt1Provider};
 use lox_time::time_scales::Tai;
 use lox_time::transformations::TryToScale;
 use lox_time::{python::time::PyTime, ut1::DeltaUt1Tai, Time};
-use lox_utils::roots::Brent;
 use python::PyBody;
 
 use crate::elements::{Keplerian, ToKeplerian};

@@ -12,10 +12,10 @@ use thiserror::Error;
 
 use lox_bodies::fundamental::iers03::mean_moon_sun_elongation_iers03;
 use lox_bodies::{Moon, Sun};
-use lox_utils::constants::f64::time::{DAYS_PER_JULIAN_CENTURY, MJD_J2000};
-use lox_utils::math::arcsec_to_rad_two_pi;
-use lox_utils::types::julian_dates::ModifiedJulianDate;
-use lox_utils::types::units::{Arcseconds, Microarcseconds, Radians, Seconds};
+use lox_math::constants::f64::time::{DAYS_PER_JULIAN_CENTURY, MJD_J2000};
+use lox_math::math::arcsec_to_rad_two_pi;
+use lox_math::types::julian_dates::ModifiedJulianDate;
+use lox_math::types::units::{Arcseconds, Microarcseconds, Radians, Seconds};
 
 use crate::tides::constants::{LUNI_SOLAR_TIDAL_TERMS, OCEANIC_TIDAL_TERMS};
 

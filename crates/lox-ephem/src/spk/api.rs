@@ -8,7 +8,7 @@
 
 use std::collections::HashMap;
 
-use lox_utils::types::julian_dates::Epoch;
+use lox_math::types::julian_dates::Epoch;
 
 use super::parser::{DafSpkError, Spk, SpkSegment, SpkType2Array, SpkType2Coefficients};
 

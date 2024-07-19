@@ -199,7 +199,7 @@ dependencies = [
  "csv",
  "fast-float",
  "lox-derive",
- "lox-utils",
+ "lox-math",
  "nom",
  "quick-xml",
  "regex",
@@ -210,7 +210,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "lox-utils"
+name = "lox-math"
 version = "0.1.0-alpha.0"
 dependencies = [
  "fast_polynomial",

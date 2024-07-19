@@ -13,7 +13,7 @@ use lox_bodies::fundamental::mhb2000::{
     mean_moon_sun_elongation_mhb2000_luni_solar, mean_moon_sun_elongation_mhb2000_planetary,
 };
 use lox_bodies::*;
-use lox_utils::types::units::JulianCenturies;
+use lox_math::types::units::JulianCenturies;
 
 use crate::nutation::iau2000::{luni_solar_nutation, DelaunayArguments};
 use crate::nutation::{point1_microarcsec_to_rad, Nutation};
@@ -124,7 +124,7 @@ fn planetary_nutation(
 mod tests {
     use float_eq::assert_float_eq;
 
-    use lox_utils::types::units::JulianCenturies;
+    use lox_math::types::units::JulianCenturies;
 
     use super::nutation_iau2000a;
 

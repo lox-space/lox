@@ -16,7 +16,7 @@ pub use generated::minor::*;
 pub use generated::planets::*;
 pub use generated::satellites::*;
 pub use generated::sun::*;
-use lox_utils::constants::f64::time::{SECONDS_PER_DAY, SECONDS_PER_JULIAN_CENTURY};
+use lox_math::constants::f64::time::{SECONDS_PER_DAY, SECONDS_PER_JULIAN_CENTURY};
 
 pub mod errors;
 pub mod fundamental;

@@ -12,10 +12,10 @@ use glam::{DMat3, DVec3};
 use thiserror::Error;
 
 use lox_bodies::{RotationalElements, Spheroid};
+use lox_math::types::units::Radians;
 use lox_time::prelude::Tdb;
 use lox_time::transformations::TryToScale;
 use lox_time::TimeLike;
-use lox_utils::types::units::Radians;
 
 use crate::frames::{BodyFixed, CoordinateSystem, FrameTransformationProvider, Icrf, TryToFrame};
 use crate::origins::CoordinateOrigin;
@@ -212,11 +212,11 @@ mod tests {
     use float_eq::assert_float_eq;
 
     use lox_bodies::Earth;
+    use lox_math::assert_close;
+    use lox_math::is_close::IsClose;
     use lox_time::transformations::ToTai;
     use lox_time::utc::Utc;
     use lox_time::{time, utc, Time};
-    use lox_utils::assert_close;
-    use lox_utils::is_close::IsClose;
 
     use crate::frames::NoOpFrameTransformationProvider;
 

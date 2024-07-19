@@ -475,7 +475,7 @@ dependencies = [
  "dyn-clone",
  "fast_polynomial",
  "float_eq",
- "lox-utils",
+ "lox-math",
  "pyo3",
  "rstest",
  "thiserror",
@@ -499,8 +499,8 @@ dependencies = [
  "glam",
  "lox-bodies",
  "lox-io",
+ "lox-math",
  "lox-time",
- "lox-utils",
  "rstest",
  "thiserror",
 ]
@@ -509,7 +509,7 @@ dependencies = [
 name = "lox-ephem"
 version = "0.1.0-alpha.0"
 dependencies = [
- "lox-utils",
+ "lox-math",
  "nom",
 ]
 
@@ -520,7 +520,7 @@ dependencies = [
  "csv",
  "fast-float",
  "lox-derive",
- "lox-utils",
+ "lox-math",
  "nom",
  "quick-xml",
  "regex",
@@ -528,6 +528,18 @@ dependencies = [
  "serde",
  "serde-aux",
  "serde_json",
+ "thiserror",
+]
+
+[[package]]
+name = "lox-math"
+version = "0.1.0-alpha.0"
+dependencies = [
+ "fast_polynomial",
+ "float_eq",
+ "glam",
+ "pyo3",
+ "rstest",
  "thiserror",
 ]
 
@@ -541,8 +553,8 @@ dependencies = [
  "itertools",
  "libm",
  "lox-bodies",
+ "lox-math",
  "lox-time",
- "lox-utils",
  "numpy",
  "pyo3",
  "sgp4",
@@ -555,9 +567,9 @@ version = "0.1.0-alpha.0"
 dependencies = [
  "divan",
  "lox-bodies",
+ "lox-math",
  "lox-orbits",
  "lox-time",
- "lox-utils",
  "pyo3",
 ]
 
@@ -568,23 +580,11 @@ dependencies = [
  "float_eq",
  "itertools",
  "lox-io",
- "lox-utils",
+ "lox-math",
  "num",
  "proptest",
  "pyo3",
  "regex",
- "rstest",
- "thiserror",
-]
-
-[[package]]
-name = "lox-utils"
-version = "0.1.0-alpha.0"
-dependencies = [
- "fast_polynomial",
- "float_eq",
- "glam",
- "pyo3",
  "rstest",
  "thiserror",
 ]

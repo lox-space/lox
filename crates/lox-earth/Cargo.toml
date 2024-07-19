@@ -12,7 +12,7 @@ repository.workspace = true
 lox-bodies.workspace = true
 lox-io.workspace = true
 lox-time.workspace = true
-lox-utils.workspace = true
+lox-math.workspace = true
 
 fast_polynomial.workspace = true
 glam.workspace = true
