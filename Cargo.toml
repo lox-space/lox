@@ -8,6 +8,7 @@ rust-version = "1.74"
 edition = "2021"
 license = "MPL-2.0"
 authors = ["Helge Eichhorn and the lox-space contributors"]
+repository = "https://github.com/lox-space/lox"
 
 [workspace.dependencies]
 lox-bodies = { path = "crates/lox-bodies" }
