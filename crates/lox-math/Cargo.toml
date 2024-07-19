@@ -1,6 +1,6 @@
 [package]
-name = "lox-utils"
-description = "Various utilities for the Lox ecosystem"
+name = "lox-math"
+description = "Mathematical utilities for the Lox ecosystem"
 version = "0.1.0-alpha.0"
 rust-version.workspace = true
 edition.workspace = true

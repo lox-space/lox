@@ -12,12 +12,12 @@ use sgp4::{Constants, ElementsError, MinutesSinceEpoch};
 use thiserror::Error;
 
 use lox_bodies::Earth;
+use lox_math::constants::f64::time::SECONDS_PER_MINUTE;
 use lox_time::deltas::TimeDelta;
 use lox_time::time_scales::Tai;
 use lox_time::transformations::ToTai;
 use lox_time::utc::Utc;
 use lox_time::Time;
-use lox_utils::constants::f64::time::SECONDS_PER_MINUTE;
 
 use crate::frames::Icrf;
 use crate::propagators::Propagator;

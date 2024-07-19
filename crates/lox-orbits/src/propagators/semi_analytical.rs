@@ -142,12 +142,12 @@ mod tests {
     use float_eq::assert_float_eq;
 
     use lox_bodies::Earth;
+    use lox_math::assert_close;
+    use lox_math::is_close::IsClose;
     use lox_time::deltas::TimeDelta;
     use lox_time::transformations::ToTdb;
     use lox_time::utc;
     use lox_time::utc::Utc;
-    use lox_utils::assert_close;
-    use lox_utils::is_close::IsClose;
 
     use crate::elements::{Keplerian, ToKeplerian};
     use crate::states::ToCartesian;

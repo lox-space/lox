@@ -13,11 +13,11 @@
 
 use std::f64::consts::TAU;
 
-use lox_utils::math::arcsec_to_rad_two_pi;
+use lox_math::math::arcsec_to_rad_two_pi;
 
 use crate::{Moon, Neptune, Sun};
 
-use lox_utils::types::units::{Arcseconds, JulianCenturies, Radians};
+use lox_math::types::units::{Arcseconds, JulianCenturies, Radians};
 
 pub fn mean_moon_sun_elongation_mhb2000_luni_solar(
     centuries_since_j2000_tdb: JulianCenturies,
@@ -87,7 +87,7 @@ impl Neptune {
 mod tests {
     use float_eq::assert_float_eq;
 
-    use lox_utils::types::units::JulianCenturies;
+    use lox_math::types::units::JulianCenturies;
 
     use super::*;
 

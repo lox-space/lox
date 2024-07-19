@@ -7,13 +7,13 @@
  */
 
 use lox_bodies::{RotationalElements, Spheroid};
+use lox_math::roots::Brent;
+use lox_math::types::units::Radians;
 use lox_time::deltas::TimeDelta;
 use lox_time::julian_dates::JulianDate;
 use lox_time::time_scales::Tdb;
 use lox_time::transformations::TryToScale;
 use lox_time::TimeLike;
-use lox_utils::roots::Brent;
-use lox_utils::types::units::Radians;
 
 use crate::events::{find_windows, Window};
 use crate::frames::{BodyFixed, FrameTransformationProvider, Icrf, Topocentric, TryToFrame};
@@ -106,12 +106,12 @@ pub fn visibility<
 #[cfg(test)]
 mod tests {
     use lox_bodies::Earth;
+    use lox_math::assert_close;
+    use lox_math::is_close::IsClose;
     use lox_time::time_scales::Tai;
     use lox_time::transformations::ToTai;
     use lox_time::utc::Utc;
     use lox_time::Time;
-    use lox_utils::assert_close;
-    use lox_utils::is_close::IsClose;
     use std::iter::zip;
 
     use crate::frames::NoOpFrameTransformationProvider;

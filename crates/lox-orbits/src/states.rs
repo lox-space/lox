@@ -11,10 +11,10 @@ use std::ops::Sub;
 use glam::{DMat3, DVec3};
 
 use lox_bodies::{PointMass, RotationalElements, Spheroid};
+use lox_math::glam::Azimuth;
+use lox_math::math::{mod_two_pi, normalize_two_pi};
+use lox_math::roots::{BracketError, FindRoot, Secant};
 use lox_time::{julian_dates::JulianDate, time_scales::Tdb, transformations::TryToScale, TimeLike};
-use lox_utils::glam::Azimuth;
-use lox_utils::math::{mod_two_pi, normalize_two_pi};
-use lox_utils::roots::{BracketError, FindRoot, Secant};
 
 use crate::anomalies::{eccentric_to_true, hyperbolic_to_true};
 use crate::elements::{is_circular, is_equatorial, Keplerian, ToKeplerian};

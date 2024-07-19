@@ -39,7 +39,7 @@ representation. Offers leap-second aware conversion from UTC to continuous time 
 ### lox-bodies
 
 Provides structs representing all major celestial bodies, conveniently categorized by a variety of traits exposing
-SPICE-dervied data.
+SPICE-derived data.
 
 ### lox-earth
 
@@ -54,9 +54,9 @@ Parses ephemeris data from external sources such as SPICE kernels.
 
 Utilities for reading and writing data in various formats.
 
-### lox-utils
+### lox-math
 
-A collection of utilities used across the Lox ecosystem.
+A collection of mathematical utilities used across the Lox ecosystem.
 
 ## Used by...
 

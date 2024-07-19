@@ -11,7 +11,7 @@ use lox_bodies::Earth;
 use crate::nutation::iau2000::nutation_iau2000a;
 use crate::nutation::Nutation;
 
-use lox_utils::types::units::JulianCenturies;
+use lox_math::types::units::JulianCenturies;
 
 /// The IAU 2000A nutation model adjusted to match the IAU 2006 precession model per
 /// Wallace & Capitaine, 2006.
@@ -43,7 +43,7 @@ mod tests {
 
     use super::nutation_iau2006a;
 
-    use lox_utils::types::units::JulianCenturies;
+    use lox_math::types::units::JulianCenturies;
 
     const TOLERANCE: f64 = 1e-11;
 

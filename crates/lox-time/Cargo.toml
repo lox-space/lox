@@ -10,7 +10,7 @@ repository.workspace = true
 
 [dependencies]
 lox-io.workspace = true
-lox-utils.workspace = true
+lox-math.workspace = true
 
 float_eq.workspace = true
 itertools.workspace = true

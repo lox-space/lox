@@ -14,11 +14,11 @@ use lox_orbits::python::{
 };
 use pyo3::prelude::*;
 
+use lox_math::python::PySeries;
 use lox_time::python::deltas::PyTimeDelta;
 use lox_time::python::time::PyTime;
 use lox_time::python::ut1::PyUt1Provider;
 use lox_time::python::utc::PyUtc;
-use lox_utils::python::PySeries;
 
 #[pymodule]
 fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {

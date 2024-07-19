@@ -15,8 +15,8 @@ use lox_bodies::fundamental::iers03::{
     general_accum_precession_in_longitude_iers03, mean_moon_sun_elongation_iers03,
 };
 use lox_bodies::{Earth, Jupiter, Mars, Mercury, Moon, Neptune, Saturn, Sun, Uranus, Venus};
-use lox_utils::math::arcsec_to_rad;
-use lox_utils::types::units::{JulianCenturies, Radians};
+use lox_math::math::arcsec_to_rad;
+use lox_math::types::units::{JulianCenturies, Radians};
 
 mod amplitudes;
 mod luni_solar;

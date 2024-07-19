@@ -28,7 +28,7 @@ use crate::transformations::{LeapSecondsProvider, OffsetProvider};
 use crate::utc::Utc;
 use crate::Time;
 use lox_io::iers::{EarthOrientationParams, ParseFinalsCsvError};
-use lox_utils::series::{Series, SeriesError};
+use lox_math::series::{Series, SeriesError};
 use num::ToPrimitive;
 use std::path::Path;
 

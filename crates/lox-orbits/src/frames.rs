@@ -12,8 +12,8 @@ use std::f64::consts::FRAC_PI_2;
 use crate::ground::GroundLocation;
 use glam::{DMat3, DVec3};
 use lox_bodies::{RotationalElements, Spheroid};
+use lox_math::types::units::Seconds;
 use lox_time::transformations::OffsetProvider;
-use lox_utils::types::units::Seconds;
 
 use crate::rotations::Rotation;
 
@@ -112,8 +112,8 @@ impl<B: Spheroid> Topocentric<B> {
 mod tests {
     use super::*;
     use lox_bodies::Earth;
-    use lox_utils::assert_close;
-    use lox_utils::is_close::IsClose;
+    use lox_math::assert_close;
+    use lox_math::is_close::IsClose;
 
     #[test]
     fn test_topocentric() {

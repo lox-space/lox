@@ -4,9 +4,9 @@ use std::fmt::Display;
 use std::iter::zip;
 use thiserror::Error;
 
+use lox_math::roots::FindBracketedRoot;
 use lox_time::deltas::TimeDelta;
 use lox_time::TimeLike;
-use lox_utils::roots::FindBracketedRoot;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ZeroCrossing {
@@ -181,11 +181,11 @@ pub fn find_windows<F: Fn(f64) -> f64 + Copy, T: TimeLike + Clone, R: FindBracke
 #[cfg(test)]
 mod tests {
     use super::*;
+    use lox_math::assert_close;
+    use lox_math::is_close::IsClose;
+    use lox_math::roots::Brent;
     use lox_time::time_scales::Tai;
     use lox_time::{time, Time};
-    use lox_utils::assert_close;
-    use lox_utils::is_close::IsClose;
-    use lox_utils::roots::Brent;
     use std::f64::consts::{PI, TAU};
 
     #[test]

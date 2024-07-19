@@ -14,7 +14,7 @@ use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::types::{PyAnyMethods, PyType};
 use pyo3::{pyclass, pymethods, Bound, PyAny, PyErr, PyObject, PyResult, Python};
 
-use lox_utils::is_close::IsClose;
+use lox_math::is_close::IsClose;
 
 use crate::calendar_dates::{CalendarDate, Date};
 use crate::deltas::{TimeDelta, ToDelta};
@@ -499,7 +499,7 @@ mod tests {
     use float_eq::assert_float_eq;
     use pyo3::{types::PyDict, Python};
 
-    use lox_utils::assert_close;
+    use lox_math::assert_close;
 
     use crate::test_helpers::data_dir;
 

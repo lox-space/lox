@@ -1,8 +1,8 @@
 //! Functions for calculating fundamental astronomical parameters as proposed by Simon et al.
 //! (1994).
 
-use lox_utils::math::arcsec_to_rad_two_pi;
-use lox_utils::types::units::{Arcseconds, JulianCenturies, Radians};
+use lox_math::math::arcsec_to_rad_two_pi;
+use lox_math::types::units::{Arcseconds, JulianCenturies, Radians};
 
 use crate::{Moon, Sun};
 

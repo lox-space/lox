@@ -9,7 +9,7 @@ authors.workspace = true
 repository.workspace = true
 
 [dependencies]
-lox-utils.workspace = true
+lox-math.workspace = true
 
 csv.workspace = true
 nom.workspace = true
