@@ -11,7 +11,7 @@ on:
       - main
       - master
     tags:
-      - '*'
+      - lox-space-*
   pull_request:
   workflow_dispatch:
 
@@ -117,11 +117,13 @@ jobs:
     needs: [ linux, windows, macos, sdist ]
     steps:
       - uses: actions/download-artifact@v3
+        id: download-wheels
         with:
           name: wheels
+          path: wheels
       - name: Publish to PyPI
         uses: PyO3/maturin-action@v1
         with:
-          working-directory: ./crates/lox-space
+          working-directory: ${{steps.download-wheels.outputs.download-path}}
           command: upload
           args: --non-interactive --skip-existing *
