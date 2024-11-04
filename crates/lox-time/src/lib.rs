@@ -55,8 +55,13 @@ use time_scales::{Tai, Tcb, Tcg, Tdb, Tt, Ut1};
 use crate::calendar_dates::{CalendarDate, Date};
 use crate::deltas::{TimeDelta, ToDelta};
 use crate::julian_dates::{Epoch, JulianDate, Unit};
+use crate::prelude::transformations::ToScale;
 use crate::subsecond::Subsecond;
-use crate::time_scales::TimeScale;
+use crate::time_scales::transformations::{OffsetProvider, ToTai, TryToScale};
+use crate::time_scales::{DynTimeScale, TimeScale};
+use crate::utc::leap_seconds::BuiltinLeapSeconds;
+use crate::utc::transformations::to_utc_with_provider;
+use crate::utc::{LeapSecondsProvider, Utc, UtcError};
 
 pub mod calendar_dates;
 pub mod constants;
@@ -71,7 +76,6 @@ pub mod subsecond;
 pub(crate) mod test_helpers;
 pub mod time_of_day;
 pub mod time_scales;
-pub mod transformations;
 pub mod ut1;
 pub mod utc;
 
@@ -127,6 +131,8 @@ pub struct Time<T: TimeScale> {
     seconds: i64,
     subsecond: Subsecond,
 }
+
+pub type DynTime = Time<DynTimeScale>;
 
 impl<T: TimeScale> Time<T> {
     /// Instantiates a [Time] in the given [TimeScale] from the count of seconds since J2000, subdivided
@@ -343,6 +349,80 @@ impl<T: TimeScale> Time<T> {
     /// Returns the fraction of a second from the last whole second as an `f64`.
     pub fn subsecond(&self) -> f64 {
         self.subsecond.into()
+    }
+
+    pub fn try_to_scale<U, P>(&self, scale: U, provider: &P) -> Result<Time<U>, P::Error>
+    where
+        T: TryToScale<U, P>,
+        U: TimeScale,
+        P: OffsetProvider,
+    {
+        let delta = self.scale.try_to_scale(&scale, self.to_delta(), provider)?;
+        Ok(Time::from_delta(scale, delta))
+    }
+
+    pub fn to_scale<U: TimeScale>(&self, scale: U) -> Time<U>
+    where
+        T: ToScale<U>,
+    {
+        let delta = self.scale.to_scale(&scale, self.to_delta());
+        Time::from_delta(scale, delta)
+    }
+
+    pub fn to_tai(&self) -> Time<Tai>
+    where
+        T: ToScale<Tai>,
+    {
+        self.to_scale(Tai)
+    }
+
+    pub fn to_tcb(&self) -> Time<Tcb>
+    where
+        T: ToScale<Tcb>,
+    {
+        self.to_scale(Tcb)
+    }
+
+    pub fn to_tcg(&self) -> Time<Tcg>
+    where
+        T: ToScale<Tcg>,
+    {
+        self.to_scale(Tcg)
+    }
+
+    pub fn to_tdb(&self) -> Time<Tdb>
+    where
+        T: ToScale<Tdb>,
+    {
+        self.to_scale(Tdb)
+    }
+
+    pub fn to_tt(&self) -> Time<Tt>
+    where
+        T: ToScale<Tt>,
+    {
+        self.to_scale(Tt)
+    }
+
+    pub fn try_to_ut1<P: OffsetProvider>(&self, provider: &P) -> Result<Time<Ut1>, P::Error>
+    where
+        T: TryToScale<Ut1, P>,
+    {
+        self.try_to_scale(Ut1, provider)
+    }
+
+    pub fn to_utc_with_provider(&self, provider: &impl LeapSecondsProvider) -> Result<Utc, UtcError>
+    where
+        T: ToScale<Tai>,
+    {
+        to_utc_with_provider(self.to_tai(), provider)
+    }
+
+    pub fn to_utc(&self) -> Result<Utc, UtcError>
+    where
+        T: ToScale<Tai>,
+    {
+        self.to_utc_with_provider(&BuiltinLeapSeconds)
     }
 }
 

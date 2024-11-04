@@ -65,7 +65,7 @@ pub fn delta_utc_tai(utc: &Utc) -> Option<TimeDelta> {
 }
 
 /// TAI minus UTC.
-pub fn delta_tai_utc(tai: &Time<Tai>) -> Option<TimeDelta> {
+pub fn delta_tai_utc(tai: Time<Tai>) -> Option<TimeDelta> {
     // Invariant: EPOCHS must be sorted for the search below to work
     debug_assert!(is_sorted_asc(&EPOCHS));
 
