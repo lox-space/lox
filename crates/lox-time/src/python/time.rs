@@ -121,7 +121,7 @@ impl PyTime {
     }
 
     #[classmethod]
-    #[pyo3(signature=(scale, year, day, hour = 0, minute = 0, seconds = 0.0))]
+    #[pyo3(signature=(scale, year, day, hour=0, minute=0, seconds=0.0))]
     pub fn from_day_of_year(
         _cls: &Bound<'_, PyType>,
         scale: &str,
@@ -140,6 +140,7 @@ impl PyTime {
     }
 
     #[classmethod]
+    #[pyo3(signature = (iso, scale=None))]
     pub fn from_iso(_cls: &Bound<'_, PyType>, iso: &str, scale: Option<&str>) -> PyResult<PyTime> {
         let scale: PyTimeScale = match scale {
             Some(scale) => scale.parse()?,
@@ -299,6 +300,7 @@ impl PyTime {
         self.0.decimal_seconds()
     }
 
+    #[pyo3(signature = (provider=None))]
     pub fn to_tai(&self, provider: Option<&Bound<'_, PyUt1Provider>>) -> PyResult<PyTime> {
         let time = match provider {
             Some(provider) => self.try_to_scale(Tai, provider.get())?,
@@ -307,6 +309,7 @@ impl PyTime {
         Ok(PyTime(time.with_scale(PyTimeScale::Tai)))
     }
 
+    #[pyo3(signature = (provider=None))]
     pub fn to_tcb(&self, provider: Option<&Bound<'_, PyUt1Provider>>) -> PyResult<PyTime> {
         let time = match provider {
             Some(provider) => self.try_to_scale(Tcb, provider.get())?,
@@ -315,6 +318,7 @@ impl PyTime {
         Ok(PyTime(time.with_scale(PyTimeScale::Tcb)))
     }
 
+    #[pyo3(signature = (provider=None))]
     pub fn to_tcg(&self, provider: Option<&Bound<'_, PyUt1Provider>>) -> PyResult<PyTime> {
         let time = match provider {
             Some(provider) => self.try_to_scale(Tcg, provider.get())?,
@@ -323,6 +327,7 @@ impl PyTime {
         Ok(PyTime(time.with_scale(PyTimeScale::Tcg)))
     }
 
+    #[pyo3(signature = (provider=None))]
     pub fn to_tdb(&self, provider: Option<&Bound<'_, PyUt1Provider>>) -> PyResult<PyTime> {
         let time = match provider {
             Some(provider) => self.try_to_scale(Tdb, provider.get())?,
@@ -331,6 +336,7 @@ impl PyTime {
         Ok(PyTime(time.with_scale(PyTimeScale::Tdb)))
     }
 
+    #[pyo3(signature = (provider=None))]
     pub fn to_tt(&self, provider: Option<&Bound<'_, PyUt1Provider>>) -> PyResult<PyTime> {
         let time = match provider {
             Some(provider) => self.try_to_scale(Tt, provider.get())?,
@@ -339,6 +345,7 @@ impl PyTime {
         Ok(PyTime(time.with_scale(PyTimeScale::Tt)))
     }
 
+    #[pyo3(signature = (provider=None))]
     pub fn to_ut1(&self, provider: Option<&Bound<'_, PyUt1Provider>>) -> PyResult<PyTime> {
         let time = match provider {
             Some(provider) => self.try_to_scale(Ut1, provider.get())?,
@@ -347,6 +354,7 @@ impl PyTime {
         Ok(PyTime(time.with_scale(PyTimeScale::Ut1)))
     }
 
+    #[pyo3(signature = (provider=None))]
     pub fn to_utc(&self, provider: Option<&Bound<'_, PyUt1Provider>>) -> PyResult<PyUtc> {
         let tai = match provider {
             Some(provider) => self.try_to_scale(Tai, provider.get())?,
