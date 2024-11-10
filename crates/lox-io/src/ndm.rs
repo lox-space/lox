@@ -13,10 +13,10 @@
 //! input that they accept. Some relaxations:
 //!
 //! - The KVN floating point numbers defined in the specification can have only
-//! one character in the integer part of the number, but we accept any regular
-//! float number.
+//!   one character in the integer part of the number, but we accept any regular
+//!   float number.
 //! - The KVN strings are defined in the specification as being either only
-//! lower-case or only upper-case, but we accept any combination of cases.
+//!   lower-case or only upper-case, but we accept any combination of cases.
 //!
 //! The XML deserializer does not perform any validation on the schema types
 //! defined (e.g. non-positive double, lat-long, angle). The validation only
