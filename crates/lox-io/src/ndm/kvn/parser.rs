@@ -317,7 +317,9 @@ fn parse_kvn_covariance_matrix_line<'a, T: Iterator<Item = &'a str> + ?Sized>(
     let result: Result<Vec<f64>, _> = next_line
         .split_whitespace()
         .map(|matrix_element| {
-            fast_float::parse(matrix_element.trim())
+            matrix_element
+                .trim()
+                .parse::<f64>()
                 .map_err(|_| KvnCovarianceMatrixParserErr::InvalidFormat { input: next_line })
         })
         .collect();
@@ -558,8 +560,9 @@ pub fn parse_kvn_numeric_line(
     let value = captures.name("value").unwrap().as_str();
     let unit = captures.name("unit").map(|x| x.as_str().to_string());
 
-    let value =
-        fast_float::parse(value).map_err(|_| KvnNumberParserErr::InvalidFormat { input })?;
+    let value = value
+        .parse::<f64>()
+        .map_err(|_| KvnNumberParserErr::InvalidFormat { input })?;
 
     Ok(KvnValue { value, unit })
 }
