@@ -9,6 +9,7 @@
 use std::convert::TryFrom;
 
 use glam::DVec3;
+use lox_ephem::python::PySpk;
 use numpy::{PyArray1, PyArray2, PyArrayMethods};
 use pyo3::types::PyType;
 use pyo3::{
@@ -40,6 +41,7 @@ use crate::propagators::semi_analytical::{Vallado, ValladoError};
 use crate::propagators::sgp4::{Sgp4, Sgp4Error};
 use crate::propagators::Propagator;
 use crate::states::ToCartesian;
+use crate::trajectories::TrajectoryTransformationError;
 use crate::{
     frames::FrameTransformationProvider,
     states::State,
@@ -47,6 +49,13 @@ use crate::{
 };
 
 mod generated;
+
+impl From<TrajectoryTransformationError> for PyErr {
+    fn from(err: TrajectoryTransformationError) -> Self {
+        // FIXME: wrong error type
+        PyValueError::new_err(err.to_string())
+    }
+}
 
 impl From<FindEventError> for PyErr {
     fn from(err: FindEventError) -> Self {
@@ -380,6 +389,22 @@ impl PyState {
         self.to_frame_generated(frame, provider)
     }
 
+    fn to_origin(&self, target: &Bound<'_, PyAny>, ephemeris: &Bound<'_, PySpk>) -> PyResult<Self> {
+        if self.0.reference_frame() != PyFrame::Icrf {
+            return Err(PyValueError::new_err(
+                "only inertial frames are supported for conversion to Keplerian elements",
+            ));
+        }
+        let target = PyBody::try_from(target)?;
+        let spk = &ephemeris.borrow().0;
+        let s1 = self
+            .0
+            .with_frame(Icrf)
+            .to_origin(target, spk)?
+            .with_frame(PyFrame::Icrf);
+        Ok(Self(s1))
+    }
+
     fn to_keplerian(&self) -> PyResult<PyKeplerian> {
         if self.0.reference_frame() != PyFrame::Icrf {
             return Err(PyValueError::new_err(
@@ -612,6 +637,32 @@ impl PyTrajectory {
             return Ok(PyState(self.0.interpolate_at(time)));
         }
         Err(PyValueError::new_err("invalid time argument"))
+    }
+
+    #[pyo3(signature = (frame, provider=None))]
+    fn to_frame(
+        &self,
+        frame: PyFrame,
+        provider: Option<&Bound<'_, PyUt1Provider>>,
+    ) -> PyResult<Self> {
+        let mut states: Vec<State<PyTime, PyBody, PyFrame>> =
+            Vec::with_capacity(self.0.states().len());
+        for s in self.0.states() {
+            states.push(PyState(s).to_frame(frame.clone(), provider)?.0);
+        }
+        Ok(PyTrajectory(Trajectory::new(&states)?))
+    }
+
+    fn to_origin(&self, target: &Bound<'_, PyAny>, ephemeris: &Bound<'_, PySpk>) -> PyResult<Self> {
+        let target = PyBody::try_from(target)?;
+        let spk = &ephemeris.borrow().0;
+        let s1 = self
+            .0
+            .clone()
+            .with_frame(Icrf)
+            .to_origin(target, spk)?
+            .with_frame(PyFrame::Icrf);
+        Ok(Self(s1))
     }
 }
 

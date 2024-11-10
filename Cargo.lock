@@ -504,6 +504,9 @@ version = "0.1.0-alpha.0"
 dependencies = [
  "lox-math",
  "nom",
+ "numpy",
+ "pyo3",
+ "thiserror",
 ]
 
 [[package]]
@@ -560,6 +563,7 @@ version = "0.1.0-alpha.2"
 dependencies = [
  "divan",
  "lox-bodies",
+ "lox-ephem",
  "lox-math",
  "lox-orbits",
  "lox-time",

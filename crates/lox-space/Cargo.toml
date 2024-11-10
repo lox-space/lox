@@ -14,9 +14,10 @@ crate-type = ["lib", "cdylib"]
 
 [dependencies]
 lox-bodies.workspace = true
+lox-ephem.workspace = true
+lox-math.workspace = true
 lox-orbits.workspace = true
 lox-time.workspace = true
-lox-math.workspace = true
 
 pyo3 = { workspace = true, optional = true }
 
@@ -25,9 +26,10 @@ default = ["python"]
 python = [
     "dep:pyo3",
     "lox-bodies/python",
+    "lox-ephem/python",
+    "lox-math/python",
     "lox-orbits/python",
     "lox-time/python",
-    "lox-math/python",
 ]
 
 [dev-dependencies]

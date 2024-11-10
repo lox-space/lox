@@ -1,5 +1,7 @@
 use lox_math::types::julian_dates::Epoch;
 
+#[cfg(feature = "python")]
+pub mod python;
 pub mod spk;
 
 pub(crate) type Position = (f64, f64, f64);
@@ -7,7 +9,7 @@ pub(crate) type Velocity = (f64, f64, f64);
 pub(crate) type Body = i32;
 
 pub trait Ephemeris {
-    type Error;
+    type Error: std::error::Error;
 
     fn position(&self, epoch: Epoch, origin: Body, target: Body) -> Result<Position, Self::Error>;
     fn velocity(&self, epoch: Epoch, origin: Body, target: Body) -> Result<Velocity, Self::Error>;

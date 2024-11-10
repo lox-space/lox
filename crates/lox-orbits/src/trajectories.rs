@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use csv::Error;
 use glam::DVec3;
+use lox_ephem::Ephemeris;
 use thiserror::Error;
 
 use lox_bodies::{Body, RotationalElements};
@@ -229,6 +230,27 @@ where
             self.t.as_ref(),
             root_finder,
         )
+    }
+}
+
+impl<T, O> Trajectory<T, O, Icrf>
+where
+    T: TimeLike + Clone,
+    O: Origin + Body + Clone,
+{
+    pub fn to_origin<O1: Origin + Body + Clone, E: Ephemeris>(
+        &self,
+        target: O1,
+        ephemeris: &E,
+    ) -> Result<Trajectory<T, O1, Icrf>, TrajectoryTransformationError> {
+        let mut states: Vec<State<T, O1, Icrf>> = Vec::with_capacity(self.states.len());
+        for state in &self.states {
+            let state = state.to_origin(target.clone(), ephemeris).map_err(|e| {
+                TrajectoryTransformationError::StateTransformationError(e.to_string())
+            })?;
+            states.push(state);
+        }
+        Ok(Trajectory::new(&states)?)
     }
 }
 
