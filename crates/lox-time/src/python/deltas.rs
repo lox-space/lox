@@ -96,6 +96,7 @@ impl PyTimeDelta {
     }
 
     #[classmethod]
+    #[pyo3(signature = (start, end, step=None))]
     pub fn range(
         _cls: &Bound<'_, PyType>,
         start: i64,

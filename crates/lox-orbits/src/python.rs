@@ -106,6 +106,7 @@ pub fn find_windows(
 }
 
 #[pyclass(name = "Frame", module = "lox_space", frozen)]
+#[pyo3(eq)]
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub enum PyFrame {
     Icrf,
@@ -324,6 +325,7 @@ pub struct PyState(pub State<PyTime, PyBody, PyFrame>);
 #[pymethods]
 impl PyState {
     #[new]
+    #[pyo3(signature = (time, position, velocity, origin=None, frame=None))]
     fn new(
         time: PyTime,
         position: (f64, f64, f64),
@@ -369,6 +371,7 @@ impl PyState {
         PyArray1::from_slice_bound(py, &vel)
     }
 
+    #[pyo3(signature = (frame, provider=None))]
     fn to_frame(
         &self,
         frame: PyFrame,
@@ -426,6 +429,16 @@ pub struct PyKeplerian(pub Keplerian<PyTime, PyBody>);
 #[pymethods]
 impl PyKeplerian {
     #[new]
+    #[pyo3(signature = (
+        time,
+        semi_major_axis,
+        eccentricity,
+        inclination,
+        longitude_of_ascending_node,
+        argument_of_periapsis,
+        true_anomaly,
+        origin=None,
+    ))]
     #[allow(clippy::too_many_arguments)]
     fn new(
         time: PyTime,
@@ -511,6 +524,7 @@ impl PyTrajectory {
     }
 
     #[classmethod]
+    #[pyo3(signature = (start_time, array, origin=None, frame=None))]
     fn from_numpy(
         _cls: &Bound<'_, PyType>,
         start_time: PyTime,
@@ -665,6 +679,7 @@ impl From<ValladoError> for PyErr {
 #[pymethods]
 impl PyVallado {
     #[new]
+    #[pyo3(signature =(initial_state, max_iter=None))]
     fn new(initial_state: PyState, max_iter: Option<i32>) -> PyResult<Self> {
         if initial_state.0.reference_frame() != PyFrame::Icrf {
             return Err(PyValueError::new_err(
@@ -712,6 +727,7 @@ impl PyGroundLocation {
         PyGroundLocation(GroundLocation::new(longitude, latitude, altitude, planet))
     }
 
+    #[pyo3(signature = (state, provider=None))]
     fn observables(
         &self,
         state: PyState,
@@ -834,6 +850,7 @@ impl PySgp4 {
         PyTime(self.0.time().with_scale(PyTimeScale::Tai))
     }
 
+    #[pyo3(signature = (steps, provider=None))]
     fn propagate<'py>(
         &self,
         py: Python<'py>,
