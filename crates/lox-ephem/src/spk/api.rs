@@ -10,11 +10,9 @@ use std::collections::HashMap;
 
 use lox_math::types::julian_dates::Epoch;
 
-use super::parser::{DafSpkError, Spk, SpkSegment, SpkType2Array, SpkType2Coefficients};
+use crate::{Body, Ephemeris, Position, Velocity};
 
-type Position = (f64, f64, f64);
-type Velocity = (f64, f64, f64);
-type Body = i32;
+use super::parser::{DafSpkError, Spk, SpkSegment, SpkType2Array, SpkType2Coefficients};
 
 impl Spk {
     fn find_segment(
@@ -105,13 +103,12 @@ impl Spk {
 
         Ok((coefficients, record))
     }
+}
 
-    pub fn position(
-        &self,
-        epoch: Epoch,
-        origin: Body,
-        target: Body,
-    ) -> Result<Position, DafSpkError> {
+impl Ephemeris for Spk {
+    type Error = DafSpkError;
+
+    fn position(&self, epoch: Epoch, origin: Body, target: Body) -> Result<Position, DafSpkError> {
         let (segment, sign) = self.find_segment(origin, target)?;
 
         if epoch < segment.initial_epoch || epoch > segment.final_epoch {
@@ -141,12 +138,7 @@ impl Spk {
         Ok((x, y, z))
     }
 
-    pub fn velocity(
-        &self,
-        epoch: Epoch,
-        origin: Body,
-        target: Body,
-    ) -> Result<Velocity, DafSpkError> {
+    fn velocity(&self, epoch: Epoch, origin: Body, target: Body) -> Result<Velocity, DafSpkError> {
         let (segment, sign) = self.find_segment(origin, target)?;
 
         if epoch < segment.initial_epoch || epoch > segment.final_epoch {
@@ -197,7 +189,7 @@ impl Spk {
         Ok((x, y, z))
     }
 
-    pub fn state(
+    fn state(
         &self,
         epoch: Epoch,
         origin: Body,
