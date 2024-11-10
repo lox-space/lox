@@ -178,7 +178,7 @@ mod tests {
         let s0 = k0.to_cartesian();
         let t1 = time + k0.orbital_period();
 
-        let propagator = Vallado::new(s0.clone());
+        let propagator = Vallado::new(s0);
         let s1 = propagator
             .propagate(t1)
             .expect("propagator should converge");
@@ -222,7 +222,7 @@ mod tests {
         let period = k0.orbital_period();
         let t_end = period.to_decimal_seconds().ceil() as i64;
         let steps = TimeDelta::range(0..=t_end).map(|dt| time + dt);
-        let trajectory = Vallado::new(s0.clone()).propagate_all(steps).unwrap();
+        let trajectory = Vallado::new(s0).propagate_all(steps).unwrap();
         let s1 = trajectory.interpolate(period);
         let k1 = s1.to_keplerian();
 

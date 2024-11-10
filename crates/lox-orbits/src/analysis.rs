@@ -132,7 +132,7 @@ mod tests {
             .iter()
             .map(|t| {
                 elevation(
-                    t.clone(),
+                    *t,
                     &frame,
                     &gs,
                     &sc,

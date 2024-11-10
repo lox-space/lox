@@ -144,7 +144,7 @@ impl<T: TimeScale> Time<T> {
     /// # Errors
     ///
     /// * Returns `TimeError::LeapSecondsOutsideUtc` if `time` is a leap second, since leap seconds
-    /// cannot be unambiguously represented by a continuous time format.
+    ///   cannot be unambiguously represented by a continuous time format.
     pub fn from_date_and_time(scale: T, date: Date, time: TimeOfDay) -> Result<Self, TimeError> {
         let mut seconds = (date.days_since_j2000() * time::SECONDS_PER_DAY)
             .to_i64()
@@ -575,7 +575,7 @@ impl<T: TimeScale> TimeBuilder<T> {
     ///
     /// * [DateError] if `ymd` data passed into the builder did not correspond to a valid date;
     /// * [TimeOfDayError] if `hms` data passed into the builder did not correspond to a valid time
-    /// of day.
+    ///   of day.
     pub fn build(self) -> Result<Time<T>, TimeError> {
         let date = self.date?;
         let time = self.time?;
