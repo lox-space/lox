@@ -130,15 +130,7 @@ mod tests {
         let actual: Vec<Radians> = gs
             .times()
             .iter()
-            .map(|t| {
-                elevation(
-                    *t,
-                    &frame,
-                    &gs,
-                    &sc,
-                    &NoOpFrameTransformationProvider,
-                )
-            })
+            .map(|t| elevation(*t, &frame, &gs, &sc, &NoOpFrameTransformationProvider))
             .collect();
         for (actual, expected) in actual.iter().zip(expected.iter()) {
             assert_close!(actual, expected, 1e-1);
