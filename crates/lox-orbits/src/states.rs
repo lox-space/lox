@@ -9,8 +9,10 @@ use std::f64::consts::{PI, TAU};
 use std::ops::Sub;
 
 use glam::{DMat3, DVec3};
+use itertools::Itertools;
 
-use lox_bodies::{PointMass, RotationalElements, Spheroid};
+use lox_bodies::{Body, PointMass, RotationalElements, Spheroid};
+use lox_ephem::{path_from_ids, Ephemeris};
 use lox_math::glam::Azimuth;
 use lox_math::math::{mod_two_pi, normalize_two_pi};
 use lox_math::roots::{BracketError, FindRoot, Secant};
@@ -224,6 +226,37 @@ where
     }
 }
 
+impl<T, O> State<T, O, Icrf>
+where
+    T: TimeLike + Clone,
+    O: Origin + Body + Clone,
+{
+    pub fn to_origin<O1: Origin + Body + Clone, E: Ephemeris>(
+        &self,
+        target: O1,
+        ephemeris: &E,
+    ) -> Result<State<T, O1, Icrf>, E::Error> {
+        let epoch = self.time().seconds_since_j2000();
+        let mut pos = self.position();
+        let mut vel = self.velocity();
+        let mut pos_eph = DVec3::ZERO;
+        let mut vel_eph = DVec3::ZERO;
+        let origin_id = self.origin.id();
+        let target_id = target.id();
+        let path = path_from_ids(origin_id.0, target_id.0);
+        for (origin, target) in path.into_iter().tuple_windows() {
+            let (p, v) = ephemeris.state(epoch, origin, target)?;
+            let p: DVec3 = p.into();
+            let v: DVec3 = v.into();
+            pos_eph += p;
+            vel_eph += v;
+        }
+        pos -= pos_eph;
+        vel -= vel_eph;
+        Ok(State::new(self.time(), pos, vel, target, Icrf))
+    }
+}
+
 impl<T, O, R, U> TryToFrame<BodyFixed<R>, U> for State<T, O, Icrf>
 where
     T: TryToScale<Tdb, U> + TimeLike + Clone,
@@ -341,10 +374,15 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::{path::PathBuf, sync::OnceLock};
+
     use float_eq::assert_float_eq;
 
-    use lox_bodies::{Earth, Jupiter};
-    use lox_time::{time, time_scales::Tdb, Time};
+    use lox_bodies::{Earth, Jupiter, Venus};
+    use lox_ephem::spk::parser::{parse_daf_spk, Spk};
+    use lox_math::assert_close;
+    use lox_math::is_close::IsClose;
+    use lox_time::{time, time_scales::Tdb, transformations::ToTai, utc::Utc, Time};
 
     use crate::frames::NoOpFrameTransformationProvider;
 
@@ -426,5 +464,43 @@ mod tests {
         assert_float_eq!(ground.latitude(), lat_exp, rel <= 1e-4);
         assert_float_eq!(ground.longitude(), lon_exp, rel <= 1e-4);
         assert_float_eq!(ground.altitude(), alt_exp, rel <= 1e-4);
+    }
+
+    pub fn data_dir() -> PathBuf {
+        PathBuf::from(format!("{}/../../data", env!("CARGO_MANIFEST_DIR")))
+    }
+
+    #[test]
+    fn test_state_to_origin() {
+        let r_venus = DVec3::new(
+            1.001977553295792e8,
+            2.200234656010247e8,
+            9.391473630346918e7,
+        );
+        let v_venus = DVec3::new(-59.08617935009049, 22.682387107225292, 12.05029567478702);
+        let r = DVec3::new(6068279.27, -1692843.94, -2516619.18) / 1e3;
+
+        let v = DVec3::new(-660.415582, 5495.938726, -5303.093233) / 1e3;
+
+        let r_exp = r - r_venus;
+        let v_exp = v - v_venus;
+
+        let utc = Utc::from_iso("2016-05-30T12:00:00.000").unwrap();
+        let tai = utc.to_tai();
+
+        let s_earth = State::new(tai, r, v, Earth, Icrf);
+        let s_venus = s_earth.to_origin(Venus, ephemeris()).unwrap();
+
+        let r_act = s_venus.position();
+        let v_act = s_venus.velocity();
+
+        assert_close!(r_act, r_exp);
+        assert_close!(v_act, v_exp);
+    }
+
+    fn ephemeris() -> &'static Spk {
+        let contents = std::fs::read(data_dir().join("de440s.bsp")).unwrap();
+        static EPHEMERIS: OnceLock<Spk> = OnceLock::new();
+        EPHEMERIS.get_or_init(|| parse_daf_spk(&contents).unwrap())
     }
 }

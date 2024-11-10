@@ -10,6 +10,7 @@ repository.workspace = true
 
 [dependencies]
 lox-bodies.workspace = true
+lox-ephem.workspace = true
 lox-time.workspace = true
 lox-math.workspace = true
 

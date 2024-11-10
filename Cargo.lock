@@ -543,6 +543,7 @@ dependencies = [
  "itertools",
  "libm",
  "lox-bodies",
+ "lox-ephem",
  "lox-math",
  "lox-time",
  "numpy",
