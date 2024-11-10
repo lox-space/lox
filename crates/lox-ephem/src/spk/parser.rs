@@ -12,6 +12,7 @@ use std::iter::zip;
 use nom::bytes::complete as nb;
 use nom::error::ErrorKind;
 use nom::number::complete as nn;
+use thiserror::Error;
 
 type BodyId = i32;
 
@@ -47,17 +48,19 @@ pub struct DafSummary {
     pub final_address: usize,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Error)]
 pub enum DafSpkError {
-    // The data type integer value does not match the ones in the spec
+    #[error("the data type integer value does not match the ones in the spec")]
     InvalidSpkSegmentDataType,
-    // The number of DAF components does not match the SPK specification
+    #[error("the number of DAF components does not match the SPK specification")]
     UnexpectedNumberOfComponents,
+    #[error("unable to parse")]
     UnableToParse,
+    #[error("unsupported SPK type {data_type}")]
     UnsupportedSpkArrayType { data_type: i32 },
-    // Unable to find the segment for a given center body and target body
+    #[error("unable to find the segment for a given center body and target body")]
     UnableToFindMatchingSegment,
-    // Unable to find record for a given date
+    #[error("unable to find record for a given date")]
     UnableToFindMatchingRecord,
 }
 

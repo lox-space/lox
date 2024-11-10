@@ -236,6 +236,7 @@ where
         target: O1,
         ephemeris: &E,
     ) -> Result<State<T, O1, Icrf>, E::Error> {
+        // TODO: Fix time scale
         let epoch = self.time().seconds_since_j2000();
         let mut pos = self.position();
         let mut vel = self.velocity();
