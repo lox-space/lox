@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.1](https://github.com/lox-space/lox/compare/lox-time-v0.1.0-alpha.0...lox-time-v0.1.0-alpha.1) - 2024-11-12
+
+### Other
+
+- fix clippy lints
+- update pyo3 and fix deprecations
+
 ## [0.1.0-alpha.0](https://github.com/lox-space/lox/releases/tag/lox-time-v0.1.0-alpha.0) - 2024-07-19
 
 ### Other
