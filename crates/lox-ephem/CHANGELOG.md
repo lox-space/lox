@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.1](https://github.com/lox-space/lox/compare/lox-ephem-v0.1.0-alpha.0...lox-ephem-v0.1.0-alpha.1) - 2024-11-12
+
+### Added
+
+- *(lox-orbits)* implement frame and origin change for Python classes
+- *(lox-orbits)* implement origin change for `State`
+
 ## [0.1.0-alpha.0](https://github.com/lox-space/lox/releases/tag/lox-ephem-v0.1.0-alpha.0) - 2024-07-19
 
 ### Other
