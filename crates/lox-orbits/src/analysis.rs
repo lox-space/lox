@@ -1,3 +1,5 @@
+use std::f64::consts::PI;
+
 /*
  * Copyright (c) 2024. Helge Eichhorn and the LOX contributors
  *
@@ -5,21 +7,60 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
-
 use lox_bodies::{RotationalElements, Spheroid};
 use lox_math::roots::Brent;
+use lox_math::series::{Series, SeriesError};
 use lox_math::types::units::Radians;
 use lox_time::deltas::TimeDelta;
 use lox_time::julian_dates::JulianDate;
 use lox_time::time_scales::Tdb;
 use lox_time::transformations::TryToScale;
 use lox_time::TimeLike;
+use thiserror::Error;
 
 use crate::events::{find_windows, Window};
 use crate::frames::{BodyFixed, FrameTransformationProvider, Icrf, Topocentric, TryToFrame};
 use crate::ground::GroundLocation;
 use crate::origins::{CoordinateOrigin, Origin};
 use crate::trajectories::Trajectory;
+
+#[derive(Debug, Clone, Error, PartialEq)]
+pub enum ElevationMaskError {
+    #[error("invalid azimuth range: {}..{}", .0.to_degrees(), .1.to_degrees())]
+    InvalidAzimuthRange(f64, f64),
+    #[error("series error")]
+    SeriesError(#[from] SeriesError),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ElevationMask {
+    Fixed(f64),
+    Variable(Series<Vec<f64>, Vec<f64>>),
+}
+
+impl ElevationMask {
+    pub fn new(azimuth: Vec<f64>, elevation: Vec<f64>) -> Result<Self, ElevationMaskError> {
+        if !azimuth.is_empty() {
+            let az_min = *azimuth.iter().min_by(|a, b| a.total_cmp(b)).unwrap();
+            let az_max = *azimuth.iter().max_by(|a, b| a.total_cmp(b)).unwrap();
+            if az_min != -PI || az_max != PI {
+                return Err(ElevationMaskError::InvalidAzimuthRange(az_min, az_max));
+            }
+        }
+        Ok(Self::Variable(Series::new(azimuth, elevation)?))
+    }
+
+    pub fn with_fixed_elevation(elevation: f64) -> Self {
+        Self::Fixed(elevation)
+    }
+
+    pub fn min_elevation(&self, azimuth: f64) -> f64 {
+        match self {
+            ElevationMask::Fixed(min_elevation) => *min_elevation,
+            ElevationMask::Variable(series) => series.interpolate(azimuth),
+        }
+    }
+}
 
 pub fn elevation<
     T: TimeLike + TryToScale<Tdb, P> + Clone,
@@ -56,6 +97,7 @@ pub fn elevation2<
 >(
     time: T,
     gs: &GroundLocation<O>,
+    mask: &ElevationMask,
     sc: &Trajectory<T, O, Icrf>,
     provider: &P,
 ) -> Radians {
@@ -63,7 +105,7 @@ pub fn elevation2<
     let sc = sc.interpolate_at(time.clone());
     let sc = sc.try_to_frame(body_fixed, provider).unwrap();
     let obs = gs.observables(sc);
-    obs.elevation()
+    obs.elevation() - mask.min_elevation(obs.azimuth())
 }
 
 pub fn visibility<
@@ -72,8 +114,8 @@ pub fn visibility<
     P: FrameTransformationProvider,
 >(
     times: &[T],
-    min_elevation: Radians,
     gs: &GroundLocation<O>,
+    mask: &ElevationMask,
     sc: &Trajectory<T, O, Icrf>,
     provider: &P,
 ) -> Vec<Window<T>> {
@@ -92,9 +134,10 @@ pub fn visibility<
             elevation2(
                 start.clone() + TimeDelta::from_decimal_seconds(t).unwrap(),
                 gs,
+                mask,
                 sc,
                 provider,
-            ) - min_elevation
+            )
         },
         start.clone(),
         end.clone(),
@@ -138,12 +181,32 @@ mod tests {
     }
 
     #[test]
+    fn test_elevation_mask() {
+        let azimuth = vec![-PI, 0.0, PI];
+        let elevation = vec![-2.0, 0.0, 2.0];
+        let mask = ElevationMask::new(azimuth, elevation).unwrap();
+        assert_eq!(mask.min_elevation(0.0), 0.0);
+    }
+
+    #[test]
+    fn test_elevation_mask_invalid_mask() {
+        let azimuth = vec![-PI, 0.0, PI / 2.0];
+        let elevation = vec![-2.0, 0.0, 2.0];
+        let mask = ElevationMask::new(azimuth, elevation);
+        assert_eq!(
+            mask,
+            Err(ElevationMaskError::InvalidAzimuthRange(-PI, PI / 2.0))
+        )
+    }
+
+    #[test]
     fn test_visibility() {
         let gs = location();
+        let mask = ElevationMask::with_fixed_elevation(0.0);
         let sc = spacecraft_trajectory();
         let times: Vec<Time<Tai>> = sc.states().iter().map(|s| s.time()).collect();
         let expected = contacts();
-        let actual = visibility(&times, 0.0, &gs, &sc, &NoOpFrameTransformationProvider);
+        let actual = visibility(&times, &gs, &mask, &sc, &NoOpFrameTransformationProvider);
         assert_eq!(actual.len(), expected.len());
         for (actual, expected) in zip(actual, expected) {
             assert_close!(actual.start(), expected.start(), 0.0, 1e-4);

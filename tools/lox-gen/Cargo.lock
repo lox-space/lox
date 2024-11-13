@@ -90,12 +90,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fast-float"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95765f67b4b18863968b4a1bd5bb576f732b29a4a28c7cd84c09fa3e2875f33c"
-
-[[package]]
 name = "fast_polynomial"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -194,10 +188,9 @@ dependencies = [
 
 [[package]]
 name = "lox-io"
-version = "0.1.0-alpha.0"
+version = "0.1.0-alpha.1"
 dependencies = [
  "csv",
- "fast-float",
  "lox-derive",
  "lox-math",
  "nom",
@@ -211,7 +204,7 @@ dependencies = [
 
 [[package]]
 name = "lox-math"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.2"
 dependencies = [
  "fast_polynomial",
  "float_eq",

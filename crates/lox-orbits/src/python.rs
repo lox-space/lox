@@ -32,6 +32,7 @@ use lox_time::transformations::TryToScale;
 use lox_time::{python::time::PyTime, ut1::DeltaUt1Tai, Time};
 use python::PyBody;
 
+use crate::analysis::{ElevationMask, ElevationMaskError};
 use crate::elements::{Keplerian, ToKeplerian};
 use crate::events::{Event, FindEventError, Window};
 use crate::frames::{BodyFixed, CoordinateSystem, Icrf, ReferenceFrame, Topocentric, TryToFrame};
@@ -966,7 +967,7 @@ impl PySgp4 {
 pub fn visibility(
     times: &Bound<'_, PyList>,
     gs: PyGroundLocation,
-    min_elevation: f64,
+    mask: &Bound<'_, PyElevationMask>,
     sc: &Bound<'_, PyTrajectory>,
     provider: &Bound<'_, PyUt1Provider>,
 ) -> PyResult<Vec<PyWindow>> {
@@ -982,13 +983,41 @@ pub fn visibility(
     };
     let times: Vec<PyTime> = times.extract()?;
     let provider = provider.get();
+    let mask = &mask.borrow().0;
     let sc = sc.0.with_origin_and_frame(sc_origin, Icrf);
     Ok(
-        crate::analysis::visibility(&times, min_elevation, &gs.0, &sc, provider)
+        crate::analysis::visibility(&times, &gs.0, mask, &sc, provider)
             .into_iter()
             .map(PyWindow)
             .collect(),
     )
+}
+
+impl From<ElevationMaskError> for PyErr {
+    fn from(err: ElevationMaskError) -> Self {
+        PyValueError::new_err(err.to_string())
+    }
+}
+
+#[pyclass(name = "ElevationMask", module = "lox_space", frozen)]
+pub struct PyElevationMask(pub ElevationMask);
+
+#[pymethods]
+impl PyElevationMask {
+    #[new]
+    fn new(
+        azimuth: &Bound<'_, PyArray1<f64>>,
+        elevation: &Bound<'_, PyArray1<f64>>,
+    ) -> PyResult<Self> {
+        let azimuth = azimuth.to_vec()?;
+        let elevation = elevation.to_vec()?;
+        Ok(PyElevationMask(ElevationMask::new(azimuth, elevation)?))
+    }
+
+    #[classmethod]
+    fn fixed(_cls: &Bound<'_, PyType>, min_elevation: f64) -> Self {
+        PyElevationMask(ElevationMask::with_fixed_elevation(min_elevation))
+    }
 }
 
 #[pyclass(name = "Topocentric", module = "lox_space", frozen)]
