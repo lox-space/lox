@@ -26,7 +26,7 @@ jobs:
         target: [ x86_64, x86, aarch64, armv7 ]
         python-version: [ '3.7', '3.8', '3.9', '3.10', '3.11', '3.12' ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
@@ -50,7 +50,7 @@ jobs:
       matrix:
         target: [ x64, x86 ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
@@ -74,7 +74,7 @@ jobs:
       matrix:
         target: [ x86_64, aarch64 ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
@@ -94,7 +94,7 @@ jobs:
   sdist:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Build sdist
         uses: PyO3/maturin-action@v1
         with:
