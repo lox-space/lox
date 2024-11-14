@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.6](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.5...lox-space-v0.1.0-alpha.6) - 2024-11-14
+
+### Fixed
+
+- fix Python CI workflows
+
+## [0.1.0-alpha.5](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.4...lox-space-v0.1.0-alpha.5) - 2024-11-14
+
+### Fixed
+
+- fix Python typings
+
 ## [0.1.0-alpha.4](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.3...lox-space-v0.1.0-alpha.4) - 2024-11-14
 
 ### Other
