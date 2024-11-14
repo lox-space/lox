@@ -7,6 +7,11 @@ type Epoch = Literal["jd", "mjd", "j1950", "j2000"]
 type Unit = Literal["seconds", "days", "centuries"]
 type Vec3 = tuple[float, float, float]
 
+class ElevationMask:
+    def __new__(cls, azimuth: np.ndarray, elevation: np.ndarray): ...
+    @classmethod
+    def fixed(cls, min_elevation: float) -> Self: ...
+
 def find_events(func: Callable[[float], float], start: Time, times: list[float]): ...
 def find_windows(
     func: Callable[[float], float], start: Time, end: Time, times: list[float]
@@ -14,7 +19,7 @@ def find_windows(
 def visibility(
     times: list[Time],
     gs: GroundLocation,
-    min_elevation: float,
+    mask: ElevationMask,
     sc: Trajectory,
     provider: UT1Provider,
 ): ...
