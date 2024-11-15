@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.0-alpha.7](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.6...lox-space-v0.1.0-alpha.7) - 2024-11-15
+## [0.1.0-alpha.8](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.6...lox-space-v0.1.0-alpha.8) - 2024-11-15
 
 ### Fixed
 
