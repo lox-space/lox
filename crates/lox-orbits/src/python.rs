@@ -999,13 +999,40 @@ impl From<ElevationMaskError> for PyErr {
     }
 }
 
-#[pyclass(name = "ElevationMask", module = "lox_space", frozen)]
+#[pyclass(name = "ElevationMask", module = "lox_space", frozen, eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PyElevationMask(pub ElevationMask);
 
 #[pymethods]
 impl PyElevationMask {
     #[new]
+    #[pyo3(signature = (azimuth=None, elevation=None, min_elevation=None))]
     fn new(
+        azimuth: Option<&Bound<'_, PyArray1<f64>>>,
+        elevation: Option<&Bound<'_, PyArray1<f64>>>,
+        min_elevation: Option<f64>,
+    ) -> PyResult<Self> {
+        if let Some(min_elevation) = min_elevation {
+            return Ok(PyElevationMask(ElevationMask::with_fixed_elevation(
+                min_elevation,
+            )));
+        }
+        if let (Some(azimuth), Some(elevation)) = (azimuth, elevation) {
+            let azimuth = azimuth.to_vec()?;
+            let elevation = elevation.to_vec()?;
+            return Ok(PyElevationMask(ElevationMask::new(azimuth, elevation)?));
+        }
+        Err(PyValueError::new_err("invalid argument combination, either `min_elevation` or `azimuth` and `elevation` arrays need to be present"))
+    }
+
+    #[classmethod]
+    fn fixed(_cls: &Bound<'_, PyType>, min_elevation: f64) -> Self {
+        PyElevationMask(ElevationMask::with_fixed_elevation(min_elevation))
+    }
+
+    #[classmethod]
+    fn variable(
+        _cls: &Bound<'_, PyType>,
         azimuth: &Bound<'_, PyArray1<f64>>,
         elevation: &Bound<'_, PyArray1<f64>>,
     ) -> PyResult<Self> {
@@ -1014,9 +1041,29 @@ impl PyElevationMask {
         Ok(PyElevationMask(ElevationMask::new(azimuth, elevation)?))
     }
 
-    #[classmethod]
-    fn fixed(_cls: &Bound<'_, PyType>, min_elevation: f64) -> Self {
-        PyElevationMask(ElevationMask::with_fixed_elevation(min_elevation))
+    fn __getnewargs__(&self) -> (Option<Vec<f64>>, Option<Vec<f64>>, Option<f64>) {
+        (self.azimuth(), self.elevation(), self.min_elevation())
+    }
+
+    fn azimuth(&self) -> Option<Vec<f64>> {
+        match &self.0 {
+            ElevationMask::Fixed(_) => None,
+            ElevationMask::Variable(series) => Some(series.x().to_vec()),
+        }
+    }
+
+    fn elevation(&self) -> Option<Vec<f64>> {
+        match &self.0 {
+            ElevationMask::Fixed(_) => None,
+            ElevationMask::Variable(series) => Some(series.y().to_vec()),
+        }
+    }
+
+    fn min_elevation(&self) -> Option<f64> {
+        match &self.0 {
+            ElevationMask::Fixed(min_elevation) => Some(*min_elevation),
+            ElevationMask::Variable(_) => None,
+        }
     }
 }
 
