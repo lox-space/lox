@@ -16,6 +16,7 @@ import pytest
     lox.Planet("Earth"),
     lox.Satellite("Moon"),
     lox.MinorBody("Ceres"),
+    lox.ElevationMask.fixed(0.0),
 ])
 def test_pickle(obj):
     pickled = pickle.dumps(obj)
