@@ -2,7 +2,7 @@
 
 ### A safe, ergonomic astrodynamics library for the modern space industry
 
-[![codecov](https://codecov.io/gh/lox-space/lox/graph/badge.svg?token=R1W6HLN2N2)](https://codecov.io/gh/lox-space/lox) ![Rust](https://github.com/lox-space/lox/actions/workflows/rust.yml/badge.svg) ![Python](https://github.com/lox-space/lox/actions/workflows/python.yml/badge.svg)
+[![codecov](https://codecov.io/gh/lox-space/lox/graph/badge.svg?token=R1W6HLN2N2)](https://codecov.io/gh/lox-space/lox) ![Rust](https://github.com/lox-space/lox/actions/workflows/rust.yml/badge.svg) ![Python](https://github.com/lox-space/lox/actions/workflows/python.yml/badge.svg) [![CodSpeed Badge](https://img.shields.io/endpoint?url=https://codspeed.io/badge.json)](https://codspeed.io/lox-space/lox)
 
 ![A star chart of a crab constellation](public/crabstellation.webp)
 
