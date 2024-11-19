@@ -17,6 +17,7 @@ dev = [
     "ipython",
     "numpy",
     "pytest",
+    "pytest-codspeed",
 ]
 
 [build-system]
