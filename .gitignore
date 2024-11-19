@@ -4,3 +4,4 @@
 .DS_Store
 flamegraph.svg
 .mise.local.toml
+.codspeed/

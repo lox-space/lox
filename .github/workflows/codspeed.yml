@@ -1,0 +1,31 @@
+name: CodSpeed
+
+on:
+  push:
+    branches:
+      - main # Run on pushes to the main branch
+  pull_request: # Run on all pull requests
+
+jobs:
+  codspeed:
+    name: Run benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Generate virtual environment
+        run: python -m venv .venv
+      - name: Build Python wrapper
+        uses: PyO3/maturin-action@v1
+        with:
+          command: develop
+          args: --release --extras dev -m crates/lox-space/Cargo.toml
+      - uses: CodSpeedHQ/action@v3
+        with:
+          run: |
+            . .venv/bin/activate
+            pytest crates/lox-space/tests/ --codspeed
+          token: ${{ secrets.CODSPEED_TOKEN }} # Optional for public repositories
