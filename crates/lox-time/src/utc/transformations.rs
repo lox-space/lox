@@ -6,7 +6,6 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use std::convert::Infallible;
 use std::sync::OnceLock;
 
 use crate::deltas::TimeDelta;
@@ -62,7 +61,7 @@ impl ToUtc for Utc {
 impl ToUtc for Time<Tai> {
     fn to_utc_with_provider(&self, provider: &impl LeapSecondsProvider) -> Result<Utc, UtcError> {
         let delta = if self < tai_at_utc_1972_01_01() {
-            before1972::delta_tai_utc(self)
+            before1972::delta_tai_utc(*self)
         } else {
             provider.delta_tai_utc(*self)
         }

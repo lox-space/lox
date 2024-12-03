@@ -120,7 +120,7 @@ impl PyTime {
         jd1: f64,
         jd2: f64,
     ) -> PyResult<Self> {
-        let scale: PyTimeScale = scale.parse()?;
+        let scale: DynTimeScale = scale.parse()?;
         Ok(Self(Time::from_two_part_julian_date(scale, jd1, jd2)?))
     }
 
@@ -135,7 +135,7 @@ impl PyTime {
         minute: u8,
         seconds: f64,
     ) -> PyResult<PyTime> {
-        let scale: PyTimeScale = scale.parse()?;
+        let scale: DynTimeScale = scale.parse()?;
         let time = Time::builder_with_scale(scale)
             .with_doy(year, day)
             .with_hms(hour, minute, seconds)
