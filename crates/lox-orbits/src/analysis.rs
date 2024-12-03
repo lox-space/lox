@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::f64::consts::PI;
 
 /*
@@ -144,6 +145,11 @@ pub fn visibility<
         &times,
         root_finder,
     )
+}
+
+pub fn visibility_all<T: TimeLike + TryToScale<Tdb, P> + Clone, P: FrameTransformationProvider>(
+) -> HashMap<String, HashMap<String, Vec<Window<T>>>> {
+    todo!()
 }
 
 #[cfg(test)]
