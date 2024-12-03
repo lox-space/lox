@@ -7,7 +7,7 @@
  */
 
 use lox_bodies::Earth;
-use lox_orbits::analysis::{elevation, elevation2};
+use lox_orbits::analysis::elevation;
 use lox_orbits::frames::{Icrf, NoOpFrameTransformationProvider, Topocentric};
 use lox_orbits::ground::GroundLocation;
 use lox_orbits::trajectories::Trajectory;
@@ -20,22 +20,6 @@ fn main() {
 }
 
 #[divan::bench]
-fn elevation_interpolation(bencher: divan::Bencher) {
-    bencher
-        .with_inputs(|| {
-            (
-                time!(Tai, 2022, 2, 1).unwrap(),
-                ground_station_trajectory(),
-                spacecraft_trajectory(),
-                frame(),
-            )
-        })
-        .bench_values(|(t, gs, sc, frame)| {
-            elevation(t, &frame, &gs, &sc, &NoOpFrameTransformationProvider)
-        });
-}
-
-#[divan::bench]
 fn elevation_rotation(bencher: divan::Bencher) {
     bencher
         .with_inputs(|| {
@@ -45,7 +29,7 @@ fn elevation_rotation(bencher: divan::Bencher) {
                 spacecraft_trajectory(),
             )
         })
-        .bench_values(|(t, gs, sc)| elevation2(t, &gs, &sc, &NoOpFrameTransformationProvider));
+        .bench_values(|(t, gs, sc)| elevation(t, &gs, &sc, &NoOpFrameTransformationProvider));
 }
 
 fn ground_station_trajectory() -> Trajectory<Time<Tai>, Earth, Icrf> {
@@ -64,10 +48,4 @@ fn spacecraft_trajectory() -> Trajectory<Time<Tai>, Earth, Icrf> {
         Icrf,
     )
     .unwrap()
-}
-
-fn frame() -> Topocentric<Earth> {
-    let longitude = -4.3676f64.to_radians();
-    let latitude = 40.4527f64.to_radians();
-    Topocentric::from_coords(longitude, latitude, 0.0, Earth)
 }

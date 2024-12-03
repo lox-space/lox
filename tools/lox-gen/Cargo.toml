@@ -7,7 +7,7 @@ publish = false
 [dependencies]
 lox-io = { path = "../../crates/lox-io" }
 
-lazy_static = "1.4.0"
-proc-macro2 = "1.0.78"
-quote = "1.0.35"
-thiserror = "1.0.57"
+proc-macro2 = "1.0.92"
+quote = "1.0.37"
+syn = "2.0.90"
+prettyplease = "0.2.25"

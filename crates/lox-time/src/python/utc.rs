@@ -180,7 +180,7 @@ mod tests {
     #[test]
     fn test_pytime_from_iso() {
         Python::with_gil(|py| {
-            let cls = PyType::new_bound::<PyUtc>(py);
+            let cls = PyType::new::<PyUtc>(py);
             let expected = PyUtc::new(2000, 1, 1, 0, 0, 0.0).unwrap();
             let actual = PyUtc::from_iso(&cls, "2000-01-01T00:00:00 UTC").unwrap();
             assert_eq!(actual, expected);
@@ -195,7 +195,7 @@ mod tests {
     #[should_panic(expected = "invalid ISO")]
     fn test_pytime_from_iso_invalid() {
         Python::with_gil(|py| {
-            let cls = PyType::new_bound::<PyUtc>(py);
+            let cls = PyType::new::<PyUtc>(py);
             let _ = PyUtc::from_iso(&cls, "2000-01-01X00:00:00 UTC").unwrap();
         })
     }

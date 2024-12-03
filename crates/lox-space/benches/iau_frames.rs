@@ -21,7 +21,7 @@ fn right_ascension() {
 
 #[divan::bench]
 fn right_ascension_dot() {
-    Jupiter.right_ascension_dot(divan::black_box(0.0));
+    Jupiter.right_ascension_rate(divan::black_box(0.0));
 }
 
 #[divan::bench]
@@ -31,17 +31,17 @@ fn declination() {
 
 #[divan::bench]
 fn declination_dot() {
-    Jupiter.declination_dot(divan::black_box(0.0));
+    Jupiter.declination_rate(divan::black_box(0.0));
 }
 
 #[divan::bench]
 fn prime_meridian() {
-    Jupiter.prime_meridian(divan::black_box(0.0));
+    Jupiter.rotation_angle(divan::black_box(0.0));
 }
 
 #[divan::bench]
 fn prime_meridian_dot() {
-    Jupiter.prime_meridian_dot(divan::black_box(0.0));
+    Jupiter.rotation_rate(divan::black_box(0.0));
 }
 
 #[divan::bench]

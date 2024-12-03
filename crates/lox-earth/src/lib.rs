@@ -6,13 +6,11 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-// TODO: Remove this once all module components are actively used.
-#![allow(dead_code)]
-
-mod cio;
-mod cip;
-mod coordinate_transformations;
-mod nutation;
-mod rotation_angle;
-mod tides;
-mod tio;
+pub mod cio;
+pub mod cip;
+pub mod coordinate_transformations;
+pub mod nutation;
+pub mod rotation_angle;
+#[allow(dead_code)]
+pub mod tides;
+pub mod tio;

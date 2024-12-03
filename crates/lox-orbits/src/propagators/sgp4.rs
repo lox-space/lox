@@ -66,8 +66,6 @@ impl Propagator<Time<Tai>, Earth, Icrf> for Sgp4 {
 mod tests {
     use float_eq::assert_float_eq;
 
-    use crate::elements::ToKeplerian;
-
     use super::*;
 
     #[test]

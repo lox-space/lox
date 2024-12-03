@@ -5,32 +5,27 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
-use std::f64::consts::{PI, TAU};
-use std::ops::Sub;
-
 use glam::{DMat3, DVec3};
 use itertools::Itertools;
-
-use lox_bodies::{Body, PointMass, RotationalElements, Spheroid};
+use lox_bodies::{
+    DynOrigin, MaybePointMass, MaybeSpheroid, Origin, PointMass, RotationalElements, Spheroid,
+};
 use lox_ephem::{path_from_ids, Ephemeris};
 use lox_math::glam::Azimuth;
 use lox_math::math::{mod_two_pi, normalize_two_pi};
 use lox_math::roots::{BracketError, FindRoot, Secant};
 use lox_time::{julian_dates::JulianDate, time_scales::Tdb, transformations::TryToScale, TimeLike};
+use std::f64::consts::{PI, TAU};
+use std::ops::Sub;
+use thiserror::Error;
 
 use crate::anomalies::{eccentric_to_true, hyperbolic_to_true};
-use crate::elements::{is_circular, is_equatorial, Keplerian, ToKeplerian};
-use crate::ground::GroundLocation;
-use crate::{
-    frames::{
-        BodyFixed, CoordinateSystem, FrameTransformationProvider, Icrf, ReferenceFrame, TryToFrame,
-    },
-    origins::{CoordinateOrigin, Origin},
+use crate::elements::{is_circular, is_equatorial, DynKeplerian, Keplerian, KeplerianElements};
+use crate::frames::{
+    BodyFixed, CoordinateSystem, DynFrame, FrameTransformationProvider, Icrf, ReferenceFrame,
+    TryToFrame,
 };
-
-pub trait ToCartesian<T: TimeLike, O: Origin, R: ReferenceFrame> {
-    fn to_cartesian(&self) -> State<T, O, R>;
-}
+use crate::ground::{DynGroundLocation, GroundLocation};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct State<T: TimeLike, O: Origin, R: ReferenceFrame> {
@@ -40,6 +35,8 @@ pub struct State<T: TimeLike, O: Origin, R: ReferenceFrame> {
     position: DVec3,
     velocity: DVec3,
 }
+
+pub type DynState<T> = State<T, DynOrigin, DynFrame>;
 
 impl<T, O, R> State<T, O, R>
 where
@@ -57,43 +54,11 @@ where
         }
     }
 
-    pub fn with_frame<U: ReferenceFrame>(&self, frame: U) -> State<T, O, U>
+    pub fn origin(&self) -> O
     where
-        T: Clone,
         O: Clone,
     {
-        State::new(
-            self.time(),
-            self.position,
-            self.velocity,
-            self.origin(),
-            frame,
-        )
-    }
-
-    pub fn with_origin<U: Origin>(&self, origin: U) -> State<T, U, R>
-    where
-        T: Clone,
-        R: Clone,
-    {
-        State::new(
-            self.time(),
-            self.position,
-            self.velocity,
-            origin,
-            self.reference_frame(),
-        )
-    }
-
-    pub fn with_origin_and_frame<U: Origin, V: ReferenceFrame>(
-        &self,
-        origin: U,
-        frame: V,
-    ) -> State<T, U, V>
-    where
-        T: Clone,
-    {
-        State::new(self.time(), self.position, self.velocity, origin, frame)
+        self.origin.clone()
     }
 
     pub fn time(&self) -> T
@@ -112,19 +77,72 @@ where
     }
 }
 
+fn rotation_lvlh(position: DVec3, velocity: DVec3) -> DMat3 {
+    let r = position.normalize();
+    let v = velocity.normalize();
+    let z = -r;
+    let y = -r.cross(v);
+    let x = y.cross(z);
+    DMat3::from_cols(x, y, z)
+}
+
 impl<T, O> State<T, O, Icrf>
 where
     T: TimeLike,
     O: Origin,
 {
     pub fn rotation_lvlh(&self) -> DMat3 {
-        let r = self.position().normalize();
-        let v = self.velocity().normalize();
-        let z = -r;
-        let y = -r.cross(v);
-        let x = y.cross(z);
-        DMat3::from_cols(x, y, z)
+        rotation_lvlh(self.position(), self.velocity())
     }
+}
+
+impl<T> DynState<T>
+where
+    T: TimeLike,
+{
+    pub fn try_rotation_lvlh(&self) -> Result<DMat3, &'static str> {
+        if self.frame != DynFrame::Icrf {
+            // TODO: better error type
+            return Err("only valid for ICRF");
+        }
+        Ok(rotation_lvlh(self.position(), self.velocity()))
+    }
+}
+
+type LonLatAlt = (f64, f64, f64);
+
+fn rv_to_lla(r: DVec3, r_eq: f64, f: f64) -> Result<LonLatAlt, BracketError> {
+    let rm = r.length();
+    let r_delta = (r.x.powi(2) + r.y.powi(2)).sqrt();
+    let mut lon = r.y.atan2(r.x);
+
+    if lon.abs() >= PI {
+        if lon < 0.0 {
+            lon += TAU;
+        } else {
+            lon -= TAU;
+        }
+    }
+
+    let delta = (r.z / rm).asin();
+
+    let root_finder = Secant::default();
+
+    let lat = root_finder.find(
+        |lat| {
+            let e = (2.0 * f - f.powi(2)).sqrt();
+            let c = r_eq / (1.0 - e.powi(2) * lat.sin().powi(2)).sqrt();
+            (r.z + c * e.powi(2) * lat.sin()) / r_delta - lat.tan()
+        },
+        delta,
+    )?;
+
+    let e = (2.0 * f - f.powi(2)).sqrt();
+    let c = r_eq / (1.0 - e.powi(2) * lat.sin().powi(2)).sqrt();
+
+    let alt = r_delta / lat.cos() - c;
+
+    Ok((lon, lat, alt))
 }
 
 impl<T, O> State<T, O, BodyFixed<O>>
@@ -134,39 +152,43 @@ where
 {
     pub fn to_ground_location(&self) -> Result<GroundLocation<O>, BracketError> {
         let r = self.position();
-        let rm = r.length();
-        let r_delta = (r.x.powi(2) + r.y.powi(2)).sqrt();
-        let mut lon = r.y.atan2(r.x);
-
-        if lon.abs() >= PI {
-            if lon < 0.0 {
-                lon += TAU;
-            } else {
-                lon -= TAU;
-            }
-        }
-
-        let delta = (r.z / rm).asin();
-
-        let root_finder = Secant::default();
         let r_eq = self.origin.equatorial_radius();
         let f = self.origin.flattening();
-
-        let lat = root_finder.find(
-            |lat| {
-                let e = (2.0 * f - f.powi(2)).sqrt();
-                let c = r_eq / (1.0 - e.powi(2) * lat.sin().powi(2)).sqrt();
-                (r.z + c * e.powi(2) * lat.sin()) / r_delta - lat.tan()
-            },
-            delta,
-        )?;
-
-        let e = (2.0 * f - f.powi(2)).sqrt();
-        let c = r_eq / (1.0 - e.powi(2) * lat.sin().powi(2)).sqrt();
-
-        let alt = r_delta / lat.cos() - c;
+        let (lon, lat, alt) = rv_to_lla(r, r_eq, f)?;
 
         Ok(GroundLocation::new(lon, lat, alt, self.origin()))
+    }
+}
+
+#[derive(Debug, Clone, Error, Eq, PartialEq)]
+pub enum StateToDynGroundError {
+    #[error("equatorial radius and flattening factor are not available for origin `{}`", .0.name())]
+    UndefinedSpheroid(DynOrigin),
+    #[error(transparent)]
+    BracketError(#[from] BracketError),
+    #[error("not a body-fixed frame {0}")]
+    NonBodyFixedFrame(String),
+}
+
+impl<T: TimeLike + Clone> DynState<T> {
+    pub fn to_dyn_ground_location(&self) -> Result<DynGroundLocation, StateToDynGroundError> {
+        if !self.frame.is_rotating() {
+            return Err(StateToDynGroundError::NonBodyFixedFrame(
+                self.frame.name().to_string(),
+            ));
+        }
+        let r = self.position();
+        // TODO: Check/transform frame
+        let (Some(r_eq), Some(f)) = (
+            self.origin.maybe_equatorial_radius(),
+            self.origin.maybe_flattening(),
+        ) else {
+            return Err(StateToDynGroundError::UndefinedSpheroid(self.origin));
+        };
+
+        let (lon, lat, alt) = rv_to_lla(r, r_eq, f)?;
+
+        Ok(DynGroundLocation::with_dynamic(lon, lat, alt, self.origin).unwrap())
     }
 }
 
@@ -185,23 +207,12 @@ where
     }
 }
 
-impl<T, O, R> State<T, O, R>
-where
-    T: TimeLike,
-    O: PointMass,
-    R: ReferenceFrame,
-{
-    fn eccentricity_vector(&self) -> DVec3 {
-        let r = self.position();
-        let v = self.velocity();
-        let mu = self.origin.gravitational_parameter();
+fn eccentricity_vector(r: DVec3, v: DVec3, mu: f64) -> DVec3 {
+    let rm = r.length();
+    let v2 = v.dot(v);
+    let rv = r.dot(v);
 
-        let rm = r.length();
-        let v2 = v.dot(v);
-        let rv = r.dot(v);
-
-        ((v2 - mu / rm) * r - rv * v) / mu
-    }
+    ((v2 - mu / rm) * r - rv * v) / mu
 }
 
 impl<T, O, R> CoordinateSystem<R> for State<T, O, R>
@@ -215,23 +226,12 @@ where
     }
 }
 
-impl<T, O, R> CoordinateOrigin<O> for State<T, O, R>
-where
-    T: TimeLike,
-    O: Origin + Clone,
-    R: ReferenceFrame,
-{
-    fn origin(&self) -> O {
-        self.origin.clone()
-    }
-}
-
 impl<T, O> State<T, O, Icrf>
 where
     T: TimeLike + Clone,
-    O: Origin + Body + Clone,
+    O: Origin + Clone,
 {
-    pub fn to_origin<O1: Origin + Body + Clone, E: Ephemeris>(
+    pub fn to_origin<O1: Origin + Clone, E: Ephemeris>(
         &self,
         target: O1,
         ephemeris: &E,
@@ -255,6 +255,37 @@ where
         pos -= pos_eph;
         vel -= vel_eph;
         Ok(State::new(self.time(), pos, vel, target, Icrf))
+    }
+}
+
+impl<T> DynState<T>
+where
+    T: TimeLike + Clone,
+{
+    pub fn to_origin_dynamic<O1: Origin + Clone, E: Ephemeris>(
+        &self,
+        target: O1,
+        ephemeris: &E,
+    ) -> Result<State<T, O1, DynFrame>, E::Error> {
+        // TODO: Fix time scale
+        let epoch = self.time().seconds_since_j2000();
+        let mut pos = self.position();
+        let mut vel = self.velocity();
+        let mut pos_eph = DVec3::ZERO;
+        let mut vel_eph = DVec3::ZERO;
+        let origin_id = self.origin.id();
+        let target_id = target.id();
+        let path = path_from_ids(origin_id.0, target_id.0);
+        for (origin, target) in path.into_iter().tuple_windows() {
+            let (p, v) = ephemeris.state(epoch, origin, target)?;
+            let p: DVec3 = p.into();
+            let v: DVec3 = v.into();
+            pos_eph += p;
+            vel_eph += v;
+        }
+        pos -= pos_eph;
+        vel -= vel_eph;
+        Ok(State::new(self.time(), pos, vel, target, DynFrame::Icrf))
     }
 }
 
@@ -300,75 +331,113 @@ where
     }
 }
 
-impl<T, O, R> ToKeplerian<T, O> for State<T, O, R>
+pub(crate) fn rv_to_keplerian(r: DVec3, v: DVec3, mu: f64) -> KeplerianElements {
+    let rm = r.length();
+    let vm = v.length();
+    let h = r.cross(v);
+    let hm = h.length();
+    let node = DVec3::Z.cross(h);
+    let e = eccentricity_vector(r, v, mu);
+    let eccentricity = e.length();
+    let inclination = h.angle_between(DVec3::Z);
+
+    let equatorial = is_equatorial(inclination);
+    let circular = is_circular(eccentricity);
+
+    let semi_major_axis = if circular {
+        hm.powi(2) / mu
+    } else {
+        -mu / (2.0 * (vm.powi(2) / 2.0 - mu / rm))
+    };
+
+    let longitude_of_ascending_node;
+    let argument_of_periapsis;
+    let true_anomaly;
+    if equatorial && !circular {
+        longitude_of_ascending_node = 0.0;
+        argument_of_periapsis = e.azimuth();
+        true_anomaly = (h.dot(e.cross(r)) / hm).atan2(r.dot(e));
+    } else if !equatorial && circular {
+        longitude_of_ascending_node = node.azimuth();
+        argument_of_periapsis = 0.0;
+        true_anomaly = (r.dot(h.cross(node)) / hm).atan2(r.dot(node));
+    } else if equatorial && circular {
+        longitude_of_ascending_node = 0.0;
+        argument_of_periapsis = 0.0;
+        true_anomaly = r.azimuth();
+    } else {
+        if semi_major_axis > 0.0 {
+            let e_se = r.dot(v) / (mu * semi_major_axis).sqrt();
+            let e_ce = (rm * vm.powi(2)) / mu - 1.0;
+            true_anomaly = eccentric_to_true(e_se.atan2(e_ce), eccentricity);
+        } else {
+            let e_sh = r.dot(v) / (-mu * semi_major_axis).sqrt();
+            let e_ch = (rm * vm.powi(2)) / mu - 1.0;
+            true_anomaly =
+                hyperbolic_to_true(((e_ch + e_sh) / (e_ch - e_sh)).ln() / 2.0, eccentricity);
+        }
+        longitude_of_ascending_node = node.azimuth();
+        let px = r.dot(node);
+        let py = r.dot(h.cross(node)) / hm;
+        argument_of_periapsis = py.atan2(px) - true_anomaly;
+    }
+
+    KeplerianElements {
+        semi_major_axis,
+        eccentricity,
+        inclination,
+        longitude_of_ascending_node: mod_two_pi(longitude_of_ascending_node),
+        argument_of_periapsis: mod_two_pi(argument_of_periapsis),
+        true_anomaly: normalize_two_pi(true_anomaly, 0.0),
+    }
+}
+
+impl<T, O> State<T, O, Icrf>
 where
     T: TimeLike + Clone,
     O: PointMass + Clone,
-    R: ReferenceFrame,
 {
-    fn to_keplerian(&self) -> Keplerian<T, O> {
-        let mu = self.origin.gravitational_parameter();
+    pub fn to_keplerian(&self) -> Keplerian<T, O, Icrf> {
         let r = self.position();
         let v = self.velocity();
-        let rm = r.length();
-        let vm = v.length();
-        let h = r.cross(v);
-        let hm = h.length();
-        let node = DVec3::Z.cross(h);
-        let e = self.eccentricity_vector();
-        let eccentricity = e.length();
-        let inclination = h.angle_between(DVec3::Z);
-
-        let equatorial = is_equatorial(inclination);
-        let circular = is_circular(eccentricity);
-
-        let semi_major_axis = if circular {
-            hm.powi(2) / mu
-        } else {
-            -mu / (2.0 * (vm.powi(2) / 2.0 - mu / rm))
-        };
-
-        let longitude_of_ascending_node;
-        let argument_of_periapsis;
-        let true_anomaly;
-        if equatorial && !circular {
-            longitude_of_ascending_node = 0.0;
-            argument_of_periapsis = e.azimuth();
-            true_anomaly = (h.dot(e.cross(r)) / hm).atan2(r.dot(e));
-        } else if !equatorial && circular {
-            longitude_of_ascending_node = node.azimuth();
-            argument_of_periapsis = 0.0;
-            true_anomaly = (r.dot(h.cross(node)) / hm).atan2(r.dot(node));
-        } else if equatorial && circular {
-            longitude_of_ascending_node = 0.0;
-            argument_of_periapsis = 0.0;
-            true_anomaly = r.azimuth();
-        } else {
-            if semi_major_axis > 0.0 {
-                let e_se = r.dot(v) / (mu * semi_major_axis).sqrt();
-                let e_ce = (rm * vm.powi(2)) / mu - 1.0;
-                true_anomaly = eccentric_to_true(e_se.atan2(e_ce), eccentricity);
-            } else {
-                let e_sh = r.dot(v) / (-mu * semi_major_axis).sqrt();
-                let e_ch = (rm * vm.powi(2)) / mu - 1.0;
-                true_anomaly =
-                    hyperbolic_to_true(((e_ch + e_sh) / (e_ch - e_sh)).ln() / 2.0, eccentricity);
-            }
-            longitude_of_ascending_node = node.azimuth();
-            let px = r.dot(node);
-            let py = r.dot(h.cross(node)) / hm;
-            argument_of_periapsis = py.atan2(px) - true_anomaly;
-        }
+        let mu = self.origin.gravitational_parameter();
+        let elements = rv_to_keplerian(r, v, mu);
 
         Keplerian::new(
             self.time(),
             self.origin(),
-            semi_major_axis,
-            eccentricity,
-            inclination,
-            mod_two_pi(longitude_of_ascending_node),
-            mod_two_pi(argument_of_periapsis),
-            normalize_two_pi(true_anomaly, 0.0),
+            elements.semi_major_axis,
+            elements.eccentricity,
+            elements.inclination,
+            elements.longitude_of_ascending_node,
+            elements.argument_of_periapsis,
+            elements.true_anomaly,
+        )
+    }
+}
+
+impl<T> DynState<T>
+where
+    T: TimeLike + Clone,
+{
+    pub fn try_to_keplerian(&self) -> Result<DynKeplerian<T>, &'static str> {
+        let Some(mu) = self.origin.maybe_gravitational_parameter() else {
+            return Err("no gravitational parameter");
+        };
+
+        let r = self.position();
+        let v = self.velocity();
+        let elements = rv_to_keplerian(r, v, mu);
+
+        Keplerian::with_dynamic(
+            self.time(),
+            self.origin(),
+            elements.semi_major_axis,
+            elements.eccentricity,
+            elements.inclination,
+            elements.longitude_of_ascending_node,
+            elements.argument_of_periapsis,
+            elements.true_anomaly,
         )
     }
 }

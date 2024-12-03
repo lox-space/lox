@@ -48,7 +48,7 @@ def estrack():
     ]
     return {
         name: lox.GroundLocation(
-            lox.Planet("Earth"), np.radians(lon), np.radians(lat), 0
+            lox.Origin("Earth"), np.radians(lon), np.radians(lat), 0
         )
         for name, lat, lon in stations
     }

@@ -11,22 +11,28 @@ use std::f64::consts::TAU;
 use float_eq::float_eq;
 use glam::{DMat3, DVec3};
 
-use lox_bodies::PointMass;
+use lox_bodies::{DynOrigin, MaybePointMass, PointMass};
 use lox_time::deltas::TimeDelta;
 use lox_time::TimeLike;
 
-use crate::frames::{CoordinateSystem, Icrf};
-use crate::origins::CoordinateOrigin;
-use crate::states::{State, ToCartesian};
+use crate::frames::{CoordinateSystem, DynFrame, Icrf, ReferenceFrame};
+use crate::states::State;
 
-pub trait ToKeplerian<T: TimeLike, O: PointMass> {
-    fn to_keplerian(&self) -> Keplerian<T, O>;
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct KeplerianElements {
+    pub semi_major_axis: f64,
+    pub eccentricity: f64,
+    pub inclination: f64,
+    pub longitude_of_ascending_node: f64,
+    pub argument_of_periapsis: f64,
+    pub true_anomaly: f64,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Keplerian<T: TimeLike, O: PointMass> {
+pub struct Keplerian<T: TimeLike, O: MaybePointMass, R: ReferenceFrame> {
     time: T,
     origin: O,
+    frame: R,
     semi_major_axis: f64,
     eccentricity: f64,
     inclination: f64,
@@ -35,7 +41,9 @@ pub struct Keplerian<T: TimeLike, O: PointMass> {
     true_anomaly: f64,
 }
 
-impl<T, O> Keplerian<T, O>
+pub type DynKeplerian<T> = Keplerian<T, DynOrigin, DynFrame>;
+
+impl<T, O> Keplerian<T, O, Icrf>
 where
     T: TimeLike,
     O: PointMass,
@@ -54,6 +62,7 @@ where
         Self {
             time,
             origin,
+            frame: Icrf,
             semi_major_axis,
             eccentricity,
             inclination,
@@ -62,12 +71,64 @@ where
             true_anomaly,
         }
     }
+}
+
+impl<T> DynKeplerian<T>
+where
+    T: TimeLike,
+{
+    #[allow(clippy::too_many_arguments)]
+    pub fn with_dynamic(
+        time: T,
+        origin: DynOrigin,
+        semi_major_axis: f64,
+        eccentricity: f64,
+        inclination: f64,
+        longitude_of_ascending_node: f64,
+        argument_of_periapsis: f64,
+        true_anomaly: f64,
+    ) -> Result<Self, &'static str> {
+        if origin.maybe_gravitational_parameter().is_none() {
+            return Err("undefined gravitational parameter");
+        }
+        Ok(Self {
+            time,
+            origin,
+            frame: DynFrame::Icrf,
+            semi_major_axis,
+            eccentricity,
+            inclination,
+            longitude_of_ascending_node,
+            argument_of_periapsis,
+            true_anomaly,
+        })
+    }
+}
+
+impl<T, O, R> Keplerian<T, O, R>
+where
+    T: TimeLike,
+    O: MaybePointMass,
+    R: ReferenceFrame,
+{
+    pub fn origin(&self) -> O
+    where
+        O: Clone,
+    {
+        self.origin.clone()
+    }
 
     pub fn time(&self) -> T
     where
         T: Clone,
     {
         self.time.clone()
+    }
+
+    pub fn gravitational_parameter(&self) -> f64 {
+        self.origin
+            .maybe_gravitational_parameter()
+            .expect("gravitational parameter should be available")
     }
 
     pub fn semi_major_axis(&self) -> f64 {
@@ -101,9 +162,8 @@ where
             self.semi_major_axis * (1.0 - self.eccentricity.powi(2))
         }
     }
-
     pub fn to_perifocal(&self) -> (DVec3, DVec3) {
-        let grav_param = self.origin.gravitational_parameter();
+        let grav_param = self.gravitational_parameter();
         let semiparameter = self.semiparameter();
         let (sin_nu, cos_nu) = self.true_anomaly.sin_cos();
         let sqrt_mu_p = (grav_param / semiparameter).sqrt();
@@ -116,35 +176,38 @@ where
     }
 
     pub fn orbital_period(&self) -> TimeDelta {
-        let mu = self.origin.gravitational_parameter();
+        let mu = self.gravitational_parameter();
         let a = self.semi_major_axis();
         TimeDelta::from_decimal_seconds(TAU * (a.powi(3) / mu).sqrt()).unwrap()
     }
 }
 
-impl<T: TimeLike, O: PointMass + Clone> CoordinateOrigin<O> for Keplerian<T, O> {
-    fn origin(&self) -> O {
-        self.origin.clone()
+impl<T: TimeLike, O: MaybePointMass, R: ReferenceFrame + Clone> CoordinateSystem<R>
+    for Keplerian<T, O, R>
+{
+    fn reference_frame(&self) -> R {
+        self.frame.clone()
     }
 }
 
-impl<T: TimeLike, O: PointMass> CoordinateSystem<Icrf> for Keplerian<T, O> {
-    fn reference_frame(&self) -> Icrf {
-        Icrf
-    }
-}
-
-impl<T, O> ToCartesian<T, O, Icrf> for Keplerian<T, O>
+impl<T, O, R> Keplerian<T, O, R>
 where
     T: TimeLike + Clone,
-    O: PointMass + Clone,
+    O: MaybePointMass + Clone,
+    R: ReferenceFrame + Clone,
 {
-    fn to_cartesian(&self) -> State<T, O, Icrf> {
+    pub(crate) fn to_cartesian(&self) -> State<T, O, R> {
         let (pos, vel) = self.to_perifocal();
         let rot = DMat3::from_rotation_z(self.longitude_of_ascending_node)
             * DMat3::from_rotation_x(self.inclination)
             * DMat3::from_rotation_z(self.argument_of_periapsis);
-        State::new(self.time(), rot * pos, rot * vel, self.origin(), Icrf)
+        State::new(
+            self.time(),
+            rot * pos,
+            rot * vel,
+            self.origin(),
+            self.reference_frame(),
+        )
     }
 }
 

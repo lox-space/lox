@@ -8,4 +8,4 @@
 
 //! Module cio exposes functions for calculating the Celestial Intermediate Origin (CIO) locator, s.
 
-mod s06;
+pub mod s06;

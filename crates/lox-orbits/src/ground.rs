@@ -11,17 +11,20 @@ use std::f64::consts::FRAC_PI_2;
 use glam::{DMat3, DVec3};
 use thiserror::Error;
 
-use lox_bodies::{RotationalElements, Spheroid};
+use lox_bodies::{DynOrigin, MaybeSpheroid, RotationalElements, Spheroid};
 use lox_math::types::units::Radians;
 use lox_time::prelude::Tdb;
 use lox_time::transformations::TryToScale;
 use lox_time::TimeLike;
 
-use crate::frames::{BodyFixed, CoordinateSystem, FrameTransformationProvider, Icrf, TryToFrame};
-use crate::origins::CoordinateOrigin;
+use crate::frames::iau::IcrfToBodyFixedError;
+use crate::frames::{
+    BodyFixed, CoordinateSystem, DynFrame, FrameTransformationProvider, Icrf, ReferenceFrame,
+    TryRotateTo, TryToFrame,
+};
 use crate::propagators::Propagator;
-use crate::states::State;
-use crate::trajectories::TrajectoryError;
+use crate::states::{DynState, State};
+use crate::trajectories::{DynTrajectory, Trajectory, TrajectoryError};
 
 #[derive(Clone, Debug)]
 pub struct Observables {
@@ -58,12 +61,14 @@ impl Observables {
 }
 
 #[derive(Clone, Debug)]
-pub struct GroundLocation<B: Spheroid> {
+pub struct GroundLocation<B: MaybeSpheroid> {
     longitude: f64,
     latitude: f64,
     altitude: f64,
     body: B,
 }
+
+pub type DynGroundLocation = GroundLocation<DynOrigin>;
 
 impl<B: Spheroid> GroundLocation<B> {
     pub fn new(longitude: f64, latitude: f64, altitude: f64, body: B) -> Self {
@@ -74,14 +79,33 @@ impl<B: Spheroid> GroundLocation<B> {
             body,
         }
     }
+}
 
-    pub fn with_body<T: Spheroid>(self, body: T) -> GroundLocation<T> {
-        GroundLocation {
-            longitude: self.longitude,
-            latitude: self.latitude,
-            altitude: self.altitude,
-            body,
+impl DynGroundLocation {
+    pub fn with_dynamic(
+        longitude: f64,
+        latitude: f64,
+        altitude: f64,
+        body: DynOrigin,
+    ) -> Result<Self, &'static str> {
+        if body.maybe_equatorial_radius().is_none() {
+            return Err("no spheroid");
         }
+        Ok(GroundLocation {
+            longitude,
+            latitude,
+            altitude,
+            body,
+        })
+    }
+}
+
+impl<B: MaybeSpheroid> GroundLocation<B> {
+    pub fn origin(&self) -> B
+    where
+        B: Clone,
+    {
+        self.body.clone()
     }
 
     pub fn longitude(&self) -> f64 {
@@ -96,12 +120,24 @@ impl<B: Spheroid> GroundLocation<B> {
         self.altitude
     }
 
+    fn equatorial_radius(&self) -> f64 {
+        self.body
+            .maybe_equatorial_radius()
+            .expect("equatorial radius should be available")
+    }
+
+    fn flattening(&self) -> f64 {
+        self.body
+            .maybe_flattening()
+            .expect("flattening should be available")
+    }
+
     pub fn body_fixed_position(&self) -> DVec3 {
         let alt = self.altitude;
         let (lon_sin, lon_cos) = self.longitude.sin_cos();
         let (lat_sin, lat_cos) = self.latitude.sin_cos();
-        let f = self.body.flattening();
-        let r_eq = self.body.equatorial_radius();
+        let f = self.flattening();
+        let r_eq = self.equatorial_radius();
         let e = (2.0 * f - f.powi(2)).sqrt();
         let c = r_eq / (1.0 - e.powi(2) * lat_sin.powi(2)).sqrt();
         let s = c * (1.0 - e.powi(2));
@@ -134,11 +170,21 @@ impl<B: Spheroid> GroundLocation<B> {
             range_rate,
         }
     }
-}
 
-impl<O: Spheroid + Clone> CoordinateOrigin<O> for GroundLocation<O> {
-    fn origin(&self) -> O {
-        self.body.clone()
+    pub fn observables_dyn<T: TimeLike + Clone>(&self, state: DynState<T>) -> Observables {
+        let rot = self.rotation_to_topocentric();
+        let position = rot * (state.position() - self.body_fixed_position());
+        let velocity = rot * state.velocity();
+        let range = position.length();
+        let range_rate = position.dot(velocity) / range;
+        let elevation = (position.z / range).asin();
+        let azimuth = position.y.atan2(-position.x);
+        Observables {
+            azimuth,
+            elevation,
+            range,
+            range_rate,
+        }
     }
 }
 
@@ -148,45 +194,85 @@ pub enum GroundPropagatorError {
     FrameTransformationError(String),
     #[error(transparent)]
     TrajectoryError(#[from] TrajectoryError),
+    #[error(transparent)]
+    IcrfToBodyFixedError(#[from] IcrfToBodyFixedError),
 }
 
-pub struct GroundPropagator<B: Spheroid, P: FrameTransformationProvider> {
+pub struct GroundPropagator<B: MaybeSpheroid, R: ReferenceFrame, P: FrameTransformationProvider> {
     location: GroundLocation<B>,
+    frame: R,
     // FIXME: We should not take ownership of the provider here
     provider: P,
 }
 
-impl<B, P> GroundPropagator<B, P>
+pub type DynGroundPropagator<P> = GroundPropagator<DynOrigin, DynFrame, P>;
+
+impl<B, P> GroundPropagator<B, Icrf, P>
 where
     B: Spheroid,
     P: FrameTransformationProvider,
 {
     pub fn new(location: GroundLocation<B>, provider: P) -> Self {
-        GroundPropagator { location, provider }
+        GroundPropagator {
+            location,
+            frame: Icrf,
+            provider,
+        }
     }
 }
 
-impl<O, P> CoordinateOrigin<O> for GroundPropagator<O, P>
-where
-    O: Spheroid + Clone,
-    P: FrameTransformationProvider,
-{
-    fn origin(&self) -> O {
-        self.location.body.clone()
+impl<P: FrameTransformationProvider> DynGroundPropagator<P> {
+    pub fn with_dynamic(location: DynGroundLocation, provider: P) -> Self {
+        GroundPropagator {
+            location,
+            frame: DynFrame::Icrf,
+            provider,
+        }
+    }
+
+    pub fn propagate_dyn<T: TimeLike + TryToScale<Tdb, P> + Clone>(
+        &self,
+        time: T,
+    ) -> Result<DynState<T>, GroundPropagatorError> {
+        let s = State::new(
+            time.clone(),
+            self.location.body_fixed_position(),
+            DVec3::ZERO,
+            self.location.body,
+            DynFrame::BodyFixed(self.location.body),
+        );
+        let rot =
+            s.reference_frame()
+                .try_rotation(&DynFrame::Icrf, time.clone(), &self.provider)?;
+        let (r1, v1) = rot.rotate_state(s.position(), s.velocity());
+        Ok(State::new(time, r1, v1, self.location.body, DynFrame::Icrf))
+    }
+
+    pub(crate) fn propagate_all_dyn<T: TimeLike + TryToScale<Tdb, P> + Clone>(
+        &self,
+        times: impl IntoIterator<Item = T>,
+    ) -> Result<DynTrajectory<T>, GroundPropagatorError> {
+        let mut states = vec![];
+        for time in times {
+            let state = self.propagate_dyn(time)?;
+            states.push(state);
+        }
+        Ok(Trajectory::new(&states)?)
     }
 }
 
-impl<O, P> CoordinateSystem<Icrf> for GroundPropagator<O, P>
+impl<O, R, P> CoordinateSystem<R> for GroundPropagator<O, R, P>
 where
     O: Spheroid,
+    R: ReferenceFrame + Clone,
     P: FrameTransformationProvider,
 {
-    fn reference_frame(&self) -> Icrf {
-        Icrf
+    fn reference_frame(&self) -> R {
+        self.frame.clone()
     }
 }
 
-impl<T, O, P> Propagator<T, O, Icrf> for GroundPropagator<O, P>
+impl<T, O, P> Propagator<T, O, Icrf> for GroundPropagator<O, Icrf, P>
 where
     T: TimeLike + TryToScale<Tdb, P> + Clone,
     O: Spheroid + RotationalElements + Clone,
@@ -202,7 +288,7 @@ where
             self.location.body.clone(),
             BodyFixed(self.location.body.clone()),
         )
-        .try_to_frame(Icrf, &self.provider)
+        .try_to_frame(self.frame, &self.provider)
         .map_err(|err| GroundPropagatorError::FrameTransformationError(err.to_string()))
     }
 }

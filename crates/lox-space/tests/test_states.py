@@ -20,14 +20,24 @@ def ephemeris():
 
 
 def test_state_to_ground_location():
-    time = lox.Time.from_iso("2024-07-05T09:09:18.173 TAI")
+    time = lox.UTC.from_iso("2024-07-05T09:09:18.173").to_tai()
     position = (-5530.01774359, -3487.0895338, -1850.03476185)
     velocity = (1.29534407, -5.02456882, 5.6391936)
-    state = lox.State(time, position, velocity, lox.Planet("Earth"), lox.Frame("ICRF"))
+    state = lox.State(
+        time, position, velocity, lox.Origin("Earth"), lox.Frame("ICRF")
+    ).to_frame(lox.Frame("IAU_EARTH"))
+    npt.assert_allclose(
+        state.position(),
+        np.array([-5740.259426667957, 3121.1360727954725, -1863.1826563318027]),
+    )
+    npt.assert_allclose(
+        state.velocity(),
+        np.array([-3.53237875783652, -3.152377656863808, 5.642296713889555]),
+    )
     ground = state.to_ground_location()
-    assert ground.longitude() == pytest.approx(2.646276127963636)
-    assert ground.latitude() == pytest.approx(-0.2794495715104036)
-    assert ground.altitude() == pytest.approx(417.8524158044338)
+    assert ground.longitude() == pytest.approx(2.643578045424445, rel=1e-4)
+    assert ground.latitude() == pytest.approx(-0.2794439537542346, abs=1e-4)
+    assert ground.altitude() == pytest.approx(439.2316688043311, rel=1e-4)
 
 
 def test_state_to_origin(ephemeris):
@@ -49,7 +59,7 @@ def test_state_to_origin(ephemeris):
     tai = utc.to_tai()
 
     s_earth = lox.State(tai, tuple(r), tuple(v))
-    s_venus = s_earth.to_origin(lox.Planet("Venus"), ephemeris)
+    s_venus = s_earth.to_origin(lox.Origin("Venus"), ephemeris)
 
     r_act = s_venus.position()
     v_act = s_venus.velocity()
