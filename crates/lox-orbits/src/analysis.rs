@@ -7,22 +7,23 @@ use std::f64::consts::PI;
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
-use lox_bodies::{RotationalElements, Spheroid};
+use lox_bodies::{MaybeSpheroid, Origin, RotationalElements, Spheroid};
 use lox_math::roots::Brent;
 use lox_math::series::{Series, SeriesError};
 use lox_math::types::units::Radians;
 use lox_time::deltas::TimeDelta;
-use lox_time::julian_dates::JulianDate;
 use lox_time::time_scales::Tdb;
 use lox_time::transformations::TryToScale;
 use lox_time::TimeLike;
 use thiserror::Error;
 
 use crate::events::{find_windows, Window};
-use crate::frames::{BodyFixed, FrameTransformationProvider, Icrf, Topocentric, TryToFrame};
-use crate::ground::GroundLocation;
-use crate::origins::{CoordinateOrigin, Origin};
-use crate::trajectories::Trajectory;
+use crate::frames::{
+    BodyFixed, DynFrame, FrameTransformationProvider, Icrf, TryRotateTo, TryToFrame,
+};
+use crate::ground::{DynGroundLocation, GroundLocation};
+use crate::states::State;
+use crate::trajectories::{DynTrajectory, Trajectory};
 
 #[derive(Debug, Clone, Error, PartialEq)]
 pub enum ElevationMaskError {
@@ -62,37 +63,59 @@ impl ElevationMask {
     }
 }
 
-pub fn elevation<
-    T: TimeLike + TryToScale<Tdb, P> + Clone,
-    O: Origin + Spheroid + RotationalElements + Clone,
-    P: FrameTransformationProvider,
->(
+pub fn elevation_dyn<T: TimeLike + TryToScale<Tdb, P> + Clone, P: FrameTransformationProvider>(
     time: T,
-    frame: &Topocentric<O>,
-    gs: &Trajectory<T, O, Icrf>,
-    sc: &Trajectory<T, O, Icrf>,
+    gs: &DynGroundLocation,
+    mask: &ElevationMask,
+    sc: &DynTrajectory<T>,
     provider: &P,
 ) -> Radians {
-    let body_fixed = BodyFixed(gs.origin());
-    let gs = gs.interpolate_at(time.clone()).position();
-    let sc = sc.interpolate_at(time.clone()).position();
-    let r = sc - gs;
-    let Ok(tdb) = time.try_to_scale(Tdb, provider) else {
-        // FIXME
-        eprintln!("Failed to convert time to TDB");
-        return f64::NAN;
-    };
-    let seconds = tdb.seconds_since_j2000();
-    let rot = body_fixed.rotation(seconds);
-    let r_body = rot.rotate_position(r);
-    let rot = frame.rotation_from_body_fixed();
-    let r_sez = rot * r_body;
-    (r_sez.z / r.length()).asin()
+    let body_fixed = DynFrame::BodyFixed(gs.origin());
+    let sc = sc.interpolate_at(time.clone());
+    let rot = DynFrame::Icrf.try_rotation(&body_fixed, time, provider);
+    let (r1, v1) = rot.unwrap().rotate_state(sc.position(), sc.velocity());
+    let sc = State::new(sc.time(), r1, v1, sc.origin(), body_fixed);
+    let obs = gs.observables_dyn(sc);
+    obs.elevation() - mask.min_elevation(obs.azimuth())
 }
 
-pub fn elevation2<
+pub fn visibility_dyn<T: TimeLike + TryToScale<Tdb, P> + Clone, P: FrameTransformationProvider>(
+    times: &[T],
+    gs: &DynGroundLocation,
+    mask: &ElevationMask,
+    sc: &DynTrajectory<T>,
+    provider: &P,
+) -> Vec<Window<T>> {
+    if times.len() < 2 {
+        return vec![];
+    }
+    let start = times.first().unwrap().clone();
+    let end = times.last().unwrap().clone();
+    let times: Vec<f64> = times
+        .iter()
+        .map(|t| (t.clone() - start.clone()).to_decimal_seconds())
+        .collect();
+    let root_finder = Brent::default();
+    find_windows(
+        |t| {
+            elevation_dyn(
+                start.clone() + TimeDelta::from_decimal_seconds(t).unwrap(),
+                gs,
+                mask,
+                sc,
+                provider,
+            )
+        },
+        start.clone(),
+        end.clone(),
+        &times,
+        root_finder,
+    )
+}
+
+pub fn elevation<
     T: TimeLike + TryToScale<Tdb, P> + Clone,
-    O: Origin + Spheroid + RotationalElements + Clone,
+    O: Origin + MaybeSpheroid + RotationalElements + Clone,
     P: FrameTransformationProvider,
 >(
     time: T,
@@ -131,7 +154,7 @@ pub fn visibility<
     let root_finder = Brent::default();
     find_windows(
         |t| {
-            elevation2(
+            elevation(
                 start.clone() + TimeDelta::from_decimal_seconds(t).unwrap(),
                 gs,
                 mask,
@@ -165,7 +188,7 @@ mod tests {
     fn test_elevation() {
         let gs = ground_station_trajectory();
         let sc = spacecraft_trajectory();
-        let frame = frame();
+        let mask = ElevationMask::with_fixed_elevation(0.0);
         let expected: Vec<Radians> = include_str!("../../../data/elevation.csv")
             .lines()
             .map(|line| line.parse::<f64>().unwrap().to_radians())
@@ -173,7 +196,15 @@ mod tests {
         let actual: Vec<Radians> = gs
             .times()
             .iter()
-            .map(|t| elevation(*t, &frame, &gs, &sc, &NoOpFrameTransformationProvider))
+            .map(|t| {
+                elevation(
+                    *t,
+                    &location(),
+                    &mask,
+                    &sc,
+                    &NoOpFrameTransformationProvider,
+                )
+            })
             .collect();
         for (actual, expected) in actual.iter().zip(expected.iter()) {
             assert_close!(actual, expected, 1e-1);
@@ -236,12 +267,6 @@ mod tests {
         let longitude = -4.3676f64.to_radians();
         let latitude = 40.4527f64.to_radians();
         GroundLocation::new(longitude, latitude, 0.0, Earth)
-    }
-
-    fn frame() -> Topocentric<Earth> {
-        let longitude = -4.3676f64.to_radians();
-        let latitude = 40.4527f64.to_radians();
-        Topocentric::from_coords(longitude, latitude, 0.0, Earth)
     }
 
     fn contacts() -> Vec<Window<Time<Tai>>> {

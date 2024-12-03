@@ -14,6 +14,11 @@ pub struct Rotation {
 }
 
 impl Rotation {
+    pub(crate) const IDENTITY: Self = Self {
+        m: DMat3::IDENTITY,
+        dm: DMat3::ZERO,
+    };
+
     pub fn new(m: DMat3) -> Self {
         Self { m, dm: DMat3::ZERO }
     }
@@ -26,6 +31,21 @@ impl Rotation {
     pub fn with_angular_velocity(mut self, v: DVec3) -> Self {
         self.dm = rotation_matrix_derivative(self.m, v);
         self
+    }
+
+    pub fn position_matrix(&self) -> DMat3 {
+        self.m
+    }
+
+    pub fn velocity_matrix(&self) -> DMat3 {
+        self.dm
+    }
+
+    pub fn compose(&self, other: &Self) -> Self {
+        Self {
+            m: other.m * self.m,
+            dm: other.dm * self.m + other.m * self.dm,
+        }
     }
 
     pub fn transpose(&self) -> Self {

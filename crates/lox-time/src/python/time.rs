@@ -586,7 +586,7 @@ mod tests {
     fn test_pytime_ops_invalid_rhs() {
         Python::with_gil(|py| {
             let t1 = PyTime::new("TAI", 2000, 1, 1, 0, 0, 1.0).unwrap();
-            let invalid = PyDict::new_bound(py);
+            let invalid = PyDict::new(py);
             t1.__sub__(py, &invalid).unwrap();
         });
     }
@@ -626,7 +626,7 @@ mod tests {
     #[test]
     fn test_pytime_from_iso() {
         Python::with_gil(|py| {
-            let cls = PyType::new_bound::<PyTime>(py);
+            let cls = PyType::new::<PyTime>(py);
             let expected = PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap();
             let actual = PyTime::from_iso(&cls, "2000-01-01T00:00:00 TAI", None).unwrap();
             assert_eq!(actual, expected);
@@ -641,7 +641,7 @@ mod tests {
     #[should_panic(expected = "invalid ISO")]
     fn test_pytime_from_iso_invalid() {
         Python::with_gil(|py| {
-            let cls = PyType::new_bound::<PyTime>(py);
+            let cls = PyType::new::<PyTime>(py);
             let _ = PyTime::from_iso(&cls, "2000-01-01X00:00:00 TAI", None).unwrap();
         })
     }
@@ -650,7 +650,7 @@ mod tests {
     #[should_panic(expected = "invalid time scale")]
     fn test_pytime_from_iso_invalid_scale() {
         Python::with_gil(|py| {
-            let cls = PyType::new_bound::<PyTime>(py);
+            let cls = PyType::new::<PyTime>(py);
             let _ = PyTime::from_iso(&cls, "2000-01-01T00:00:00 UTC", None).unwrap();
         })
     }
@@ -659,7 +659,7 @@ mod tests {
     #[should_panic(expected = "invalid time scale")]
     fn test_pytime_from_iso_invalid_scale_arg() {
         Python::with_gil(|py| {
-            let cls = PyType::new_bound::<PyTime>(py);
+            let cls = PyType::new::<PyTime>(py);
             let _ = PyTime::from_iso(&cls, "2000-01-01T00:00:00 TAI", Some("UTC")).unwrap();
         })
     }
@@ -667,7 +667,7 @@ mod tests {
     #[test]
     fn test_pytime_julian_date() {
         Python::with_gil(|py| {
-            let cls = PyType::new_bound::<PyTime>(py);
+            let cls = PyType::new::<PyTime>(py);
             let time = PyTime::from_julian_date(&cls, "TAI", 0.0, "j2000").unwrap();
             assert_eq!(time.julian_date("j2000", "seconds").unwrap(), 0.0);
             assert_eq!(time.julian_date("j2000", "days").unwrap(), 0.0);
@@ -701,7 +701,7 @@ mod tests {
     #[test]
     fn test_pytime_from_two_part_julian_date() {
         Python::with_gil(|py| {
-            let cls = PyType::new_bound::<PyTime>(py);
+            let cls = PyType::new::<PyTime>(py);
             let expected = PyTime::new("TAI", 2024, 7, 11, 8, 2, 14.0).unwrap();
             let (jd1, jd2) = expected.two_part_julian_date();
             let actual = PyTime::from_two_part_julian_date(&cls, "TAI", jd1, jd2).unwrap();
@@ -712,7 +712,7 @@ mod tests {
     #[test]
     fn test_pytime_from_day_of_year() {
         Python::with_gil(|py| {
-            let cls = PyType::new_bound::<PyTime>(py);
+            let cls = PyType::new::<PyTime>(py);
             let expected = PyTime::new("TAI", 2024, 12, 31, 0, 0, 0.0).unwrap();
             let actual = PyTime::from_day_of_year(&cls, "TAI", 2024, 366, 0, 0, 0.0).unwrap();
             assert_eq!(actual, expected);

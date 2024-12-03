@@ -8,13 +8,12 @@
 
 use thiserror::Error;
 
-use lox_bodies::PointMass;
+use lox_bodies::{DynOrigin, MaybePointMass, Origin, PointMass};
 use lox_time::TimeLike;
 
-use crate::frames::{CoordinateSystem, Icrf};
-use crate::origins::CoordinateOrigin;
+use crate::frames::{CoordinateSystem, DynFrame, Icrf, ReferenceFrame};
 use crate::propagators::{stumpff, Propagator};
-use crate::states::State;
+use crate::states::{DynState, State};
 use crate::trajectories::TrajectoryError;
 
 #[derive(Debug, Error, Eq, PartialEq)]
@@ -26,32 +25,49 @@ pub enum ValladoError {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Vallado<T: TimeLike, O: PointMass> {
-    initial_state: State<T, O, Icrf>,
+pub struct Vallado<T: TimeLike, O: Origin, R: ReferenceFrame> {
+    initial_state: State<T, O, R>,
     max_iter: i32,
 }
 
-impl<T, O> CoordinateOrigin<O> for Vallado<T, O>
+impl<T, O, R> CoordinateSystem<R> for Vallado<T, O, R>
 where
     T: TimeLike,
-    O: PointMass + Clone,
+    O: Origin,
+    R: ReferenceFrame + Clone,
 {
-    fn origin(&self) -> O {
+    fn reference_frame(&self) -> R {
+        self.initial_state.reference_frame()
+    }
+}
+
+impl<T, O, R> Vallado<T, O, R>
+where
+    T: TimeLike,
+    O: MaybePointMass + Clone,
+    R: ReferenceFrame,
+{
+    fn gravitational_parameter(&self) -> f64 {
+        self.initial_state
+            .origin()
+            .maybe_gravitational_parameter()
+            .expect("gravitational parameter should be available")
+    }
+
+    pub fn with_max_iter(&mut self, max_iter: i32) -> &mut Self {
+        self.max_iter = max_iter;
+        self
+    }
+
+    pub fn origin(&self) -> O
+    where
+        O: Clone,
+    {
         self.initial_state.origin()
     }
 }
 
-impl<T, O> CoordinateSystem<Icrf> for Vallado<T, O>
-where
-    T: TimeLike,
-    O: PointMass,
-{
-    fn reference_frame(&self) -> Icrf {
-        Icrf
-    }
-}
-
-impl<T, O> Vallado<T, O>
+impl<T, O> Vallado<T, O, Icrf>
 where
     T: TimeLike,
     O: PointMass,
@@ -62,24 +78,41 @@ where
             max_iter: 300,
         }
     }
+}
 
-    pub fn with_max_iter(&mut self, max_iter: i32) -> &mut Self {
-        self.max_iter = max_iter;
-        self
+impl<T> Vallado<T, DynOrigin, DynFrame>
+where
+    T: TimeLike,
+{
+    // TODO: Use better error type
+    pub fn with_dynamic(initial_state: DynState<T>) -> Result<Self, &'static str> {
+        if initial_state
+            .origin()
+            .maybe_gravitational_parameter()
+            .is_none()
+            || initial_state.reference_frame() != DynFrame::Icrf
+        {
+            return Err("invalid frame or origin");
+        }
+        Ok(Self {
+            initial_state,
+            max_iter: 300,
+        })
     }
 }
 
-impl<T, O> Propagator<T, O, Icrf> for Vallado<T, O>
+impl<T, O, R> Propagator<T, O, R> for Vallado<T, O, R>
 where
     T: TimeLike + Clone,
-    O: PointMass + Clone,
+    O: MaybePointMass + Clone,
+    R: ReferenceFrame + Clone,
 {
     type Error = ValladoError;
 
-    fn propagate(&self, time: T) -> Result<State<T, O, Icrf>, Self::Error> {
+    fn propagate(&self, time: T) -> Result<State<T, O, R>, Self::Error> {
         let frame = self.reference_frame();
         let origin = self.origin();
-        let mu = origin.gravitational_parameter();
+        let mu = self.gravitational_parameter();
         let t0 = self.initial_state.time();
         let dt = (time.clone() - t0).to_decimal_seconds();
         let sqrt_mu = mu.sqrt();
@@ -149,8 +182,7 @@ mod tests {
     use lox_time::utc;
     use lox_time::utc::Utc;
 
-    use crate::elements::{Keplerian, ToKeplerian};
-    use crate::states::ToCartesian;
+    use crate::elements::Keplerian;
 
     use super::*;
 

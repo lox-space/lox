@@ -6,12 +6,12 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use lox_bodies::python::{PyBarycenter, PyMinorBody, PyPlanet, PySatellite, PySun};
+use lox_bodies::python::PyOrigin;
 use lox_ephem::python::PySpk;
 use lox_orbits::python::{
-    elevation, find_events, find_windows, visibility, PyElevationMask, PyEvent, PyFrame,
-    PyGroundLocation, PyGroundPropagator, PyKeplerian, PyObservables, PySgp4, PyState,
-    PyTopocentric, PyTrajectory, PyVallado, PyWindow,
+    find_events, find_windows, visibility, PyElevationMask, PyEvent, PyFrame, PyGroundLocation,
+    PyGroundPropagator, PyKeplerian, PyObservables, PySgp4, PyState, PyTrajectory, PyVallado,
+    PyWindow,
 };
 use pyo3::prelude::*;
 
@@ -26,12 +26,7 @@ fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(find_events, m)?)?;
     m.add_function(wrap_pyfunction!(find_windows, m)?)?;
     m.add_function(wrap_pyfunction!(visibility, m)?)?;
-    m.add_function(wrap_pyfunction!(elevation, m)?)?;
-    m.add_class::<PySun>()?;
-    m.add_class::<PyBarycenter>()?;
-    m.add_class::<PyPlanet>()?;
-    m.add_class::<PySatellite>()?;
-    m.add_class::<PyMinorBody>()?;
+    m.add_class::<PyOrigin>()?;
     m.add_class::<PyTime>()?;
     m.add_class::<PyTimeDelta>()?;
     m.add_class::<PyUtc>()?;
@@ -46,7 +41,6 @@ fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyGroundPropagator>()?;
     m.add_class::<PyEvent>()?;
     m.add_class::<PyWindow>()?;
-    m.add_class::<PyTopocentric>()?;
     m.add_class::<PySeries>()?;
     m.add_class::<PyObservables>()?;
     m.add_class::<PySpk>()?;

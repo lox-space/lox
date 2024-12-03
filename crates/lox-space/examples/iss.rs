@@ -7,7 +7,6 @@
  */
 
 use lox_bodies::Earth;
-use lox_orbits::elements::ToKeplerian;
 use lox_orbits::frames::Icrf;
 use lox_orbits::states::State;
 use lox_orbits::DVec3;

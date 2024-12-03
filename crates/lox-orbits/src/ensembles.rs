@@ -7,8 +7,8 @@
  */
 
 use crate::frames::ReferenceFrame;
-use crate::origins::Origin;
 use crate::trajectories::Trajectory;
+use lox_bodies::Origin;
 use lox_time::TimeLike;
 use std::collections::HashMap;
 
