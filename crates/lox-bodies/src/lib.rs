@@ -18,7 +18,6 @@ pub use generated::satellites::*;
 pub use generated::sun::*;
 use lox_math::constants::f64::time::{SECONDS_PER_DAY, SECONDS_PER_JULIAN_CENTURY};
 
-pub mod errors;
 pub mod fundamental;
 mod generated;
 #[cfg(feature = "python")]
