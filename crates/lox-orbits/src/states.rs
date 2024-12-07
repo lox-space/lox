@@ -11,7 +11,7 @@ use std::ops::Sub;
 use glam::{DMat3, DVec3};
 use itertools::Itertools;
 
-use lox_bodies::{Body, PointMass, RotationalElements, Spheroid};
+use lox_bodies::{Origin, PointMass, RotationalElements, Spheroid};
 use lox_ephem::{path_from_ids, Ephemeris};
 use lox_math::glam::Azimuth;
 use lox_math::math::{mod_two_pi, normalize_two_pi};
@@ -229,9 +229,9 @@ where
 impl<T, O> State<T, O, Icrf>
 where
     T: TimeLike + Clone,
-    O: Origin + Body + Clone,
+    O: Origin + Origin + Clone,
 {
-    pub fn to_origin<O1: Origin + Body + Clone, E: Ephemeris>(
+    pub fn to_origin<O1: Origin + Origin + Clone, E: Ephemeris>(
         &self,
         target: O1,
         ephemeris: &E,

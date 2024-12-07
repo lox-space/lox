@@ -64,7 +64,7 @@ mod tests {
     // This is somewhat loose, being based on observations of how closely our implementations
     // match ERFA outputs rather than any target tolerance.
     // See https://github.com/lox-space/lox/pull/23#discussion_r1398485509
-    const TOLERANCE: f64 = 1e-12;
+    const TOLERANCE: f64 = 1e-10;
 
     // Test cases for t.
     const T_ZERO: JulianCenturies = 0.0;

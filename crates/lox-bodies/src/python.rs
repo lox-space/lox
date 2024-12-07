@@ -5,22 +5,74 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
-
-use pyo3::exceptions::PyValueError;
+use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;
+use std::str::FromStr;
 
+use crate::dynamic::{DynOrigin, UnknownOriginId, UnknownOriginName};
 use crate::{
-    Adrastea, Amalthea, Ariel, Atlas, Barycenter, Body, Callisto, Ceres, Charon, Davida, Deimos,
-    Despina, Dione, Earth, EarthBarycenter, Ellipsoid, Enceladus, Epimetheus, Eros, Europa,
-    Galatea, Ganymede, Helene, Himalia, Hyperion, Iapetus, Io, Janus, Jupiter, JupiterBarycenter,
-    Larissa, Mars, MarsBarycenter, Mercury, MercuryBarycenter, Metis, Mimas, MinorBody, Miranda,
-    Moon, Naiad, NaifId, Neptune, NeptuneBarycenter, NutationPrecessionCoefficients, Oberon,
+    Adrastea, Amalthea, Ariel, Atlas, Barycenter, Callisto, Ceres, Charon, Davida, Deimos, Despina,
+    Dione, Earth, EarthBarycenter, Ellipsoid, Enceladus, Epimetheus, Eros, Europa, Galatea,
+    Ganymede, Helene, Himalia, Hyperion, Iapetus, Io, Janus, Jupiter, JupiterBarycenter, Larissa,
+    Mars, MarsBarycenter, Mercury, MercuryBarycenter, Metis, Mimas, MinorBody, Miranda, Moon,
+    Naiad, NaifId, Neptune, NeptuneBarycenter, NutationPrecessionCoefficients, Oberon, Origin,
     Pandora, Phobos, Phoebe, Planet, Pluto, PlutoBarycenter, PointMass, PolynomialCoefficients,
     Prometheus, Proteus, Psyche, Rhea, RotationalElements, Satellite, Saturn, SaturnBarycenter,
     SolarSystemBarycenter, Spheroid, Sun, Tethys, Thalassa, Thebe, Titan, Titania, Triton, Umbriel,
     Uranus, UranusBarycenter, Venus, VenusBarycenter, Vesta,
 };
+
+impl From<UnknownOriginId> for PyErr {
+    fn from(err: UnknownOriginId) -> Self {
+        PyValueError::new_err(err.to_string())
+    }
+}
+
+impl From<UnknownOriginName> for PyErr {
+    fn from(err: UnknownOriginName) -> Self {
+        PyValueError::new_err(err.to_string())
+    }
+}
+
+#[pyclass(name = "Origin", module = "lox_space", frozen, eq)]
+pub struct PyOrigin(DynOrigin);
+
+#[pymethods]
+impl PyOrigin {
+    #[new]
+    fn new(origin: &Bound<'_, PyAny>) -> PyResult<Self> {
+        if let Ok(origin) = origin.extract::<i32>() {
+            return Ok(Self(origin.try_into()?));
+        }
+        if let Ok(origin) = origin.extract::<&str>() {
+            return Ok(Self(DynOrigin::from_str(origin)?));
+        }
+        Err(PyTypeError::new_err(
+            "`origin` must be either a string or an integer",
+        ))
+    }
+
+    fn __repr__(&self) -> String {
+        format!("Origin(\"{}\")", self.name())
+    }
+
+    fn __str__(&self) -> &str {
+        self.name()
+    }
+
+    fn __getnewargs__(&self) -> (&str,) {
+        (self.name(),)
+    }
+
+    pub fn id(&self) -> i32 {
+        self.0.id().0
+    }
+
+    pub fn name(&self) -> &'static str {
+        self.0.name()
+    }
+}
 
 #[pyclass(name = "Sun", module = "lox_space", frozen)]
 #[derive(Clone, Debug, Default)]
@@ -204,7 +256,7 @@ impl PyPlanet {
     }
 }
 
-impl Body for PyPlanet {
+impl Origin for PyPlanet {
     fn id(&self) -> NaifId {
         self.0.id()
     }
@@ -498,7 +550,7 @@ impl TryFrom<PyObject> for PyBody {
     }
 }
 
-impl Body for PyBody {
+impl Origin for PyBody {
     fn id(&self) -> NaifId {
         match &self {
             PyBody::Barycenter(barycenter) => NaifId(barycenter.id()),

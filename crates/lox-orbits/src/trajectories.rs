@@ -6,7 +6,7 @@ use glam::DVec3;
 use lox_ephem::Ephemeris;
 use thiserror::Error;
 
-use lox_bodies::{Body, RotationalElements};
+use lox_bodies::{Origin, RotationalElements};
 use lox_math::roots::Brent;
 use lox_math::series::{Series, SeriesError};
 use lox_time::time_scales::{Tai, Tdb};
@@ -236,9 +236,9 @@ where
 impl<T, O> Trajectory<T, O, Icrf>
 where
     T: TimeLike + Clone,
-    O: Origin + Body + Clone,
+    O: Origin + Origin + Clone,
 {
-    pub fn to_origin<O1: Origin + Body + Clone, E: Ephemeris>(
+    pub fn to_origin<O1: Origin + Origin + Clone, E: Ephemeris>(
         &self,
         target: O1,
         ephemeris: &E,
@@ -361,7 +361,7 @@ pub enum TrajectoryTransformationError {
 impl<T, O, R, P> TryToFrame<BodyFixed<R>, P> for Trajectory<T, O, Icrf>
 where
     T: TryToScale<Tdb, P> + TimeLike + Clone,
-    O: Body + Clone,
+    O: Origin + Clone,
     R: RotationalElements + Clone,
     P: FrameTransformationProvider,
 {
