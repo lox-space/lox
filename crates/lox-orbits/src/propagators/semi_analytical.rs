@@ -12,7 +12,6 @@ use lox_bodies::PointMass;
 use lox_time::TimeLike;
 
 use crate::frames::{CoordinateSystem, Icrf};
-use crate::origins::CoordinateOrigin;
 use crate::propagators::{stumpff, Propagator};
 use crate::states::State;
 use crate::trajectories::TrajectoryError;
@@ -29,16 +28,6 @@ pub enum ValladoError {
 pub struct Vallado<T: TimeLike, O: PointMass> {
     initial_state: State<T, O, Icrf>,
     max_iter: i32,
-}
-
-impl<T, O> CoordinateOrigin<O> for Vallado<T, O>
-where
-    T: TimeLike,
-    O: PointMass + Clone,
-{
-    fn origin(&self) -> O {
-        self.initial_state.origin()
-    }
 }
 
 impl<T, O> CoordinateSystem<Icrf> for Vallado<T, O>

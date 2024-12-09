@@ -19,7 +19,6 @@ use crate::events::{find_events, find_windows, Event, Window};
 use crate::frames::{BodyFixed, FrameTransformationProvider, Icrf, TryToFrame};
 use crate::{
     frames::{CoordinateSystem, ReferenceFrame},
-    origins::{CoordinateOrigin, Origin},
     states::State,
 };
 
@@ -325,17 +324,6 @@ where
             states.push(state);
         }
         Trajectory::new(&states)
-    }
-}
-
-impl<T, O, R> CoordinateOrigin<O> for Trajectory<T, O, R>
-where
-    T: TimeLike,
-    O: Origin + Clone,
-    R: ReferenceFrame,
-{
-    fn origin(&self) -> O {
-        self.states[0].origin()
     }
 }
 

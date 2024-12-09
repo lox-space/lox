@@ -15,7 +15,6 @@ pub mod ensembles;
 pub mod events;
 pub mod frames;
 pub mod ground;
-pub mod origins;
 pub mod propagators;
 #[cfg(feature = "python")]
 pub mod python;

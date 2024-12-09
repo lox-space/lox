@@ -18,7 +18,6 @@ use lox_time::transformations::TryToScale;
 use lox_time::TimeLike;
 
 use crate::frames::{BodyFixed, CoordinateSystem, FrameTransformationProvider, Icrf, TryToFrame};
-use crate::origins::CoordinateOrigin;
 use crate::propagators::Propagator;
 use crate::states::State;
 use crate::trajectories::TrajectoryError;
@@ -136,12 +135,6 @@ impl<B: Spheroid> GroundLocation<B> {
     }
 }
 
-impl<O: Spheroid + Clone> CoordinateOrigin<O> for GroundLocation<O> {
-    fn origin(&self) -> O {
-        self.body.clone()
-    }
-}
-
 #[derive(Debug, Error)]
 pub enum GroundPropagatorError {
     #[error("frame transformation error: {0}")]
@@ -163,16 +156,6 @@ where
 {
     pub fn new(location: GroundLocation<B>, provider: P) -> Self {
         GroundPropagator { location, provider }
-    }
-}
-
-impl<O, P> CoordinateOrigin<O> for GroundPropagator<O, P>
-where
-    O: Spheroid + Clone,
-    P: FrameTransformationProvider,
-{
-    fn origin(&self) -> O {
-        self.location.body.clone()
     }
 }
 

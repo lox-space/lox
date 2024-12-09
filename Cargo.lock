@@ -555,6 +555,7 @@ dependencies = [
  "lox-time",
  "numpy",
  "pyo3",
+ "rstest",
  "sgp4",
  "thiserror",
 ]

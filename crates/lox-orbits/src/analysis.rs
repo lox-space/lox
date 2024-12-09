@@ -7,7 +7,7 @@ use std::f64::consts::PI;
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
-use lox_bodies::{RotationalElements, Spheroid};
+use lox_bodies::{Origin, RotationalElements, Spheroid};
 use lox_math::roots::Brent;
 use lox_math::series::{Series, SeriesError};
 use lox_math::types::units::Radians;
@@ -21,7 +21,6 @@ use thiserror::Error;
 use crate::events::{find_windows, Window};
 use crate::frames::{BodyFixed, FrameTransformationProvider, Icrf, Topocentric, TryToFrame};
 use crate::ground::GroundLocation;
-use crate::origins::{CoordinateOrigin, Origin};
 use crate::trajectories::Trajectory;
 
 #[derive(Debug, Clone, Error, PartialEq)]

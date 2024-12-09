@@ -20,13 +20,10 @@ use lox_time::{julian_dates::JulianDate, time_scales::Tdb, transformations::TryT
 
 use crate::anomalies::{eccentric_to_true, hyperbolic_to_true};
 use crate::elements::{is_circular, is_equatorial, Keplerian, ToKeplerian};
-use crate::ground::GroundLocation;
-use crate::{
-    frames::{
-        BodyFixed, CoordinateSystem, FrameTransformationProvider, Icrf, ReferenceFrame, TryToFrame,
-    },
-    origins::{CoordinateOrigin, Origin},
+use crate::frames::{
+    BodyFixed, CoordinateSystem, FrameTransformationProvider, Icrf, ReferenceFrame, TryToFrame,
 };
+use crate::ground::GroundLocation;
 
 pub trait ToCartesian<T: TimeLike, O: Origin, R: ReferenceFrame> {
     fn to_cartesian(&self) -> State<T, O, R>;
@@ -212,17 +209,6 @@ where
 {
     fn reference_frame(&self) -> R {
         self.frame.clone()
-    }
-}
-
-impl<T, O, R> CoordinateOrigin<O> for State<T, O, R>
-where
-    T: TimeLike,
-    O: Origin + Clone,
-    R: ReferenceFrame,
-{
-    fn origin(&self) -> O {
-        self.origin.clone()
     }
 }
 

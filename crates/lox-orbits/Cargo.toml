@@ -26,6 +26,7 @@ thiserror.workspace = true
 
 [dev-dependencies]
 pyo3 = { workspace = true, features = ["auto-initialize"] }
+rstest.workspace = true
 
 [features]
 python = ["dep:pyo3", "dep:numpy", "lox-bodies/python", "lox-time/python"]

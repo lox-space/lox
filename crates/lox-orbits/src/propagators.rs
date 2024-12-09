@@ -1,7 +1,8 @@
+use lox_bodies::Origin;
 use lox_time::TimeLike;
 
 use crate::trajectories::TrajectoryError;
-use crate::{frames::ReferenceFrame, origins::Origin, states::State, trajectories::Trajectory};
+use crate::{frames::ReferenceFrame, states::State, trajectories::Trajectory};
 
 pub mod semi_analytical;
 pub mod sgp4;

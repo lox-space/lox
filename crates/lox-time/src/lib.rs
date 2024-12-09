@@ -77,9 +77,9 @@ pub mod utc;
 
 #[derive(Clone, Debug, Error)]
 #[error(
-    "Julian date must be between {} and {} seconds since J2000 but was {0}",
-    i64::MIN,
-    i64::MAX
+    "Julian date must be between {min} and {max} seconds since J2000 but was {0}",
+    min = i64::MIN,
+    max = i64::MAX
 )]
 pub struct JulianDateOutOfRange(f64);
 

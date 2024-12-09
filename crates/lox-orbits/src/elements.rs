@@ -16,7 +16,6 @@ use lox_time::deltas::TimeDelta;
 use lox_time::TimeLike;
 
 use crate::frames::{CoordinateSystem, Icrf};
-use crate::origins::CoordinateOrigin;
 use crate::states::{State, ToCartesian};
 
 pub trait ToKeplerian<T: TimeLike, O: PointMass> {
@@ -119,12 +118,6 @@ where
         let mu = self.origin.gravitational_parameter();
         let a = self.semi_major_axis();
         TimeDelta::from_decimal_seconds(TAU * (a.powi(3) / mu).sqrt()).unwrap()
-    }
-}
-
-impl<T: TimeLike, O: PointMass + Clone> CoordinateOrigin<O> for Keplerian<T, O> {
-    fn origin(&self) -> O {
-        self.origin.clone()
     }
 }
 

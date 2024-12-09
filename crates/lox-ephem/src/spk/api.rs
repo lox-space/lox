@@ -49,7 +49,7 @@ impl Spk {
         array: &'a SpkType2Array,
         initial_epoch: Epoch,
         epoch: Epoch,
-    ) -> Result<(&Vec<SpkType2Coefficients>, f64), DafSpkError> {
+    ) -> Result<(&'a Vec<SpkType2Coefficients>, f64), DafSpkError> {
         let seconds_from_record_start = epoch - initial_epoch;
 
         let intlen = array.intlen as f64;
@@ -81,7 +81,7 @@ impl Spk {
         &'a self,
         epoch: Epoch,
         segment: &'a SpkSegment,
-    ) -> Result<(Vec<f64>, &Vec<SpkType2Coefficients>), DafSpkError> {
+    ) -> Result<(Vec<f64>, &'a Vec<SpkType2Coefficients>), DafSpkError> {
         let (coefficients, record) = match &segment.data {
             super::parser::SpkArray::Type2(array) => {
                 let (record, fraction) = self.find_record(array, segment.initial_epoch, epoch)?;
