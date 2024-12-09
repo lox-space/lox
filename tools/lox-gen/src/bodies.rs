@@ -11,201 +11,967 @@ use proc_macro2::Ident;
 use quote::{format_ident, quote};
 use std::path::Path;
 
-const BODIES: [(&str, i32); 190] = [
-    ("Sun", 10),
+struct Origin {
+    name: &'static str,
+    id: i32,
+    mean_radius: Option<f64>,
+}
+
+const ORIGINS: [Origin; 190] = [
+    Origin {
+        name: "Sun",
+        id: 10,
+        mean_radius: None,
+    },
     // Planets.
-    ("Mercury", 199),
-    ("Venus", 299),
-    ("Earth", 399),
-    ("Mars", 499),
-    ("Jupiter", 599),
-    ("Saturn", 699),
-    ("Uranus", 799),
-    ("Neptune", 899),
-    ("Pluto", 999),
+    Origin {
+        name: "Mercury",
+        id: 199,
+        mean_radius: Some(2439.4),
+    },
+    Origin {
+        name: "Venus",
+        id: 299,
+        mean_radius: Some(6051.8),
+    },
+    Origin {
+        name: "Earth",
+        id: 399,
+        mean_radius: Some(6371.0084),
+    },
+    Origin {
+        name: "Mars",
+        id: 499,
+        mean_radius: Some(3389.5),
+    },
+    Origin {
+        name: "Jupiter",
+        id: 599,
+        mean_radius: Some(69911.0),
+    },
+    Origin {
+        name: "Saturn",
+        id: 699,
+        mean_radius: Some(58232.0),
+    },
+    Origin {
+        name: "Uranus",
+        id: 799,
+        mean_radius: Some(25362.0),
+    },
+    Origin {
+        name: "Neptune",
+        id: 899,
+        mean_radius: Some(24622.0),
+    },
+    Origin {
+        name: "Pluto",
+        id: 999,
+        mean_radius: Some(1188.3),
+    },
     // Barycenters.
-    ("Solar System Barycenter", 0),
-    ("Mercury Barycenter", 1),
-    ("Venus Barycenter", 2),
-    ("Earth Barycenter", 3),
-    ("Mars Barycenter", 4),
-    ("Jupiter Barycenter", 5),
-    ("Saturn Barycenter", 6),
-    ("Uranus Barycenter", 7),
-    ("Neptune Barycenter", 8),
-    ("Pluto Barycenter", 9),
+    Origin {
+        name: "Solar System Barycenter",
+        id: 0,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Mercury Barycenter",
+        id: 1,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Venus Barycenter",
+        id: 2,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Earth Barycenter",
+        id: 3,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Mars Barycenter",
+        id: 4,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Jupiter Barycenter",
+        id: 5,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Saturn Barycenter",
+        id: 6,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Uranus Barycenter",
+        id: 7,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Neptune Barycenter",
+        id: 8,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Pluto Barycenter",
+        id: 9,
+        mean_radius: None,
+    },
     // Satellites.
-    ("Moon", 301),
-    ("Phobos", 401),
-    ("Deimos", 402),
-    ("Io", 501),
-    ("Europa", 502),
-    ("Ganymede", 503),
-    ("Callisto", 504),
-    ("Amalthea", 505),
-    ("Himalia", 506),
-    ("Elara", 507),
-    ("Pasiphae", 508),
-    ("Sinope", 509),
-    ("Lysithea", 510),
-    ("Carme", 511),
-    ("Ananke", 512),
-    ("Leda", 513),
-    ("Thebe", 514),
-    ("Adrastea", 515),
-    ("Metis", 516),
-    ("Callirrhoe", 517),
-    ("Themisto", 518),
-    ("Magaclite", 519),
-    ("Taygete", 520),
-    ("Chaldene", 521),
-    ("Harpalyke", 522),
-    ("Kalyke", 523),
-    ("Iocaste", 524),
-    ("Erinome", 525),
-    ("Isonoe", 526),
-    ("Praxidike", 527),
-    ("Autonoe", 528),
-    ("Thyone", 529),
-    ("Hermippe", 530),
-    ("Aitne", 531),
-    ("Eurydome", 532),
-    ("Euanthe", 533),
-    ("Euporie", 534),
-    ("Orthosie", 535),
-    ("Sponde", 536),
-    ("Kale", 537),
-    ("Pasithee", 538),
-    ("Hegemone", 539),
-    ("Mneme", 540),
-    ("Aoede", 541),
-    ("Thelxinoe", 542),
-    ("Arche", 543),
-    ("Kallichore", 544),
-    ("Helike", 545),
-    ("Carpo", 546),
-    ("Eukelade", 547),
-    ("Cyllene", 548),
-    ("Kore", 549),
-    ("Herse", 550),
-    ("Dia", 553),
-    ("Mimas", 601),
-    ("Enceladus", 602),
-    ("Tethys", 603),
-    ("Dione", 604),
-    ("Rhea", 605),
-    ("Titan", 606),
-    ("Hyperion", 607),
-    ("Iapetus", 608),
-    ("Phoebe", 609),
-    ("Janus", 610),
-    ("Epimetheus", 611),
-    ("Helene", 612),
-    ("Telesto", 613),
-    ("Calypso", 614),
-    ("Atlas", 615),
-    ("Prometheus", 616),
-    ("Pandora", 617),
-    ("Pan", 618),
-    ("Ymir", 619),
-    ("Paaliaq", 620),
-    ("Tarvos", 621),
-    ("Ijiraq", 622),
-    ("Suttungr", 623),
-    ("Kiviuq", 624),
-    ("Mundilfari", 625),
-    ("Albiorix", 626),
-    ("Skathi", 627),
-    ("Erriapus", 628),
-    ("Siarnaq", 629),
-    ("Thrymr", 630),
-    ("Narvi", 631),
-    ("Methone", 632),
-    ("Pallene", 633),
-    ("Polydeuces", 634),
-    ("Daphnis", 635),
-    ("Aegir", 636),
-    ("Bebhionn", 637),
-    ("Bergelmir", 638),
-    ("Bestla", 639),
-    ("Farbauti", 640),
-    ("Fenrir", 641),
-    ("Fornjot", 642),
-    ("Hati", 643),
-    ("Hyrrokkin", 644),
-    ("Kari", 645),
-    ("Loge", 646),
-    ("Skoll", 647),
-    ("Surtur", 648),
-    ("Anthe", 649),
-    ("Jarnsaxa", 650),
-    ("Greip", 651),
-    ("Tarqeq", 652),
-    ("Aegaeon", 653),
-    ("Ariel", 701),
-    ("Umbriel", 702),
-    ("Titania", 703),
-    ("Oberon", 704),
-    ("Miranda", 705),
-    ("Cordelia", 706),
-    ("Ophelia", 707),
-    ("Bianca", 708),
-    ("Cressida", 709),
-    ("Desdemona", 710),
-    ("Juliet", 711),
-    ("Portia", 712),
-    ("Rosalind", 713),
-    ("Belinda", 714),
-    ("Puck", 715),
-    ("Caliban", 716),
-    ("Sycorax", 717),
-    ("Prospero", 718),
-    ("Setebos", 719),
-    ("Stephano", 720),
-    ("Trinculo", 721),
-    ("Francisco", 722),
-    ("Margaret", 723),
-    ("Ferdinand", 724),
-    ("Perdita", 725),
-    ("Mab", 726),
-    ("Cupid", 727),
-    ("Triton", 801),
-    ("Nereid", 802),
-    ("Naiad", 803),
-    ("Thalassa", 804),
-    ("Despina", 805),
-    ("Galatea", 806),
-    ("Larissa", 807),
-    ("Proteus", 808),
-    ("Halimede", 809),
-    ("Psamathe", 810),
-    ("Sao", 811),
-    ("Laomedeia", 812),
-    ("Neso", 813),
-    ("Charon", 901),
-    ("Nix", 902),
-    ("Hydra", 903),
-    ("Kerberos", 904),
-    ("Styx", 905),
+    Origin {
+        name: "Moon",
+        id: 301,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Phobos",
+        id: 401,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Deimos",
+        id: 402,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Io",
+        id: 501,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Europa",
+        id: 502,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Ganymede",
+        id: 503,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Callisto",
+        id: 504,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Amalthea",
+        id: 505,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Himalia",
+        id: 506,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Elara",
+        id: 507,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Pasiphae",
+        id: 508,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Sinope",
+        id: 509,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Lysithea",
+        id: 510,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Carme",
+        id: 511,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Ananke",
+        id: 512,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Leda",
+        id: 513,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Thebe",
+        id: 514,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Adrastea",
+        id: 515,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Metis",
+        id: 516,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Callirrhoe",
+        id: 517,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Themisto",
+        id: 518,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Magaclite",
+        id: 519,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Taygete",
+        id: 520,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Chaldene",
+        id: 521,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Harpalyke",
+        id: 522,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Kalyke",
+        id: 523,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Iocaste",
+        id: 524,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Erinome",
+        id: 525,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Isonoe",
+        id: 526,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Praxidike",
+        id: 527,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Autonoe",
+        id: 528,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Thyone",
+        id: 529,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Hermippe",
+        id: 530,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Aitne",
+        id: 531,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Eurydome",
+        id: 532,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Euanthe",
+        id: 533,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Euporie",
+        id: 534,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Orthosie",
+        id: 535,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Sponde",
+        id: 536,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Kale",
+        id: 537,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Pasithee",
+        id: 538,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Hegemone",
+        id: 539,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Mneme",
+        id: 540,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Aoede",
+        id: 541,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Thelxinoe",
+        id: 542,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Arche",
+        id: 543,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Kallichore",
+        id: 544,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Helike",
+        id: 545,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Carpo",
+        id: 546,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Eukelade",
+        id: 547,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Cyllene",
+        id: 548,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Kore",
+        id: 549,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Herse",
+        id: 550,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Dia",
+        id: 553,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Mimas",
+        id: 601,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Enceladus",
+        id: 602,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Tethys",
+        id: 603,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Dione",
+        id: 604,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Rhea",
+        id: 605,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Titan",
+        id: 606,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Hyperion",
+        id: 607,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Iapetus",
+        id: 608,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Phoebe",
+        id: 609,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Janus",
+        id: 610,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Epimetheus",
+        id: 611,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Helene",
+        id: 612,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Telesto",
+        id: 613,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Calypso",
+        id: 614,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Atlas",
+        id: 615,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Prometheus",
+        id: 616,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Pandora",
+        id: 617,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Pan",
+        id: 618,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Ymir",
+        id: 619,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Paaliaq",
+        id: 620,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Tarvos",
+        id: 621,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Ijiraq",
+        id: 622,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Suttungr",
+        id: 623,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Kiviuq",
+        id: 624,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Mundilfari",
+        id: 625,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Albiorix",
+        id: 626,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Skathi",
+        id: 627,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Erriapus",
+        id: 628,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Siarnaq",
+        id: 629,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Thrymr",
+        id: 630,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Narvi",
+        id: 631,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Methone",
+        id: 632,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Pallene",
+        id: 633,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Polydeuces",
+        id: 634,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Daphnis",
+        id: 635,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Aegir",
+        id: 636,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Bebhionn",
+        id: 637,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Bergelmir",
+        id: 638,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Bestla",
+        id: 639,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Farbauti",
+        id: 640,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Fenrir",
+        id: 641,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Fornjot",
+        id: 642,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Hati",
+        id: 643,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Hyrrokkin",
+        id: 644,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Kari",
+        id: 645,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Loge",
+        id: 646,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Skoll",
+        id: 647,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Surtur",
+        id: 648,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Anthe",
+        id: 649,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Jarnsaxa",
+        id: 650,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Greip",
+        id: 651,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Tarqeq",
+        id: 652,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Aegaeon",
+        id: 653,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Ariel",
+        id: 701,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Umbriel",
+        id: 702,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Titania",
+        id: 703,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Oberon",
+        id: 704,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Miranda",
+        id: 705,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Cordelia",
+        id: 706,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Ophelia",
+        id: 707,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Bianca",
+        id: 708,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Cressida",
+        id: 709,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Desdemona",
+        id: 710,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Juliet",
+        id: 711,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Portia",
+        id: 712,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Rosalind",
+        id: 713,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Belinda",
+        id: 714,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Puck",
+        id: 715,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Caliban",
+        id: 716,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Sycorax",
+        id: 717,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Prospero",
+        id: 718,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Setebos",
+        id: 719,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Stephano",
+        id: 720,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Trinculo",
+        id: 721,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Francisco",
+        id: 722,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Margaret",
+        id: 723,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Ferdinand",
+        id: 724,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Perdita",
+        id: 725,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Mab",
+        id: 726,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Cupid",
+        id: 727,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Triton",
+        id: 801,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Nereid",
+        id: 802,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Naiad",
+        id: 803,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Thalassa",
+        id: 804,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Despina",
+        id: 805,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Galatea",
+        id: 806,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Larissa",
+        id: 807,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Proteus",
+        id: 808,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Halimede",
+        id: 809,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Psamathe",
+        id: 810,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Sao",
+        id: 811,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Laomedeia",
+        id: 812,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Neso",
+        id: 813,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Charon",
+        id: 901,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Nix",
+        id: 902,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Hydra",
+        id: 903,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Kerberos",
+        id: 904,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Styx",
+        id: 905,
+        mean_radius: None,
+    },
     // Minor bodies.
-    ("Gaspra", 9511010),
-    ("Ida", 2431010),
-    ("Dactyl", 2431011),
-    ("Ceres", 2000001),
-    ("Pallas", 2000002),
-    ("Vesta", 2000004),
-    ("Psyche", 2000016),
-    ("Lutetia", 2000021),
-    ("Kleopatra", 2000216),
-    ("Eros", 2000433),
-    ("Davida", 2000511),
-    ("Mathilde", 2000253),
-    ("Steins", 2002867),
-    ("Braille", 2009969),
-    ("Wilson-Harrington", 2004015),
-    ("Toutatis", 2004179),
-    ("Itokawa", 2025143),
-    ("Bennu", 2101955),
+    Origin {
+        name: "Gaspra",
+        id: 9511010,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Ida",
+        id: 2431010,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Dactyl",
+        id: 2431011,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Ceres",
+        id: 2000001,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Pallas",
+        id: 2000002,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Vesta",
+        id: 2000004,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Psyche",
+        id: 2000016,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Lutetia",
+        id: 2000021,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Kleopatra",
+        id: 2000216,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Eros",
+        id: 2000433,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Davida",
+        id: 2000511,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Mathilde",
+        id: 2000253,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Steins",
+        id: 2002867,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Braille",
+        id: 2009969,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Wilson-Harrington",
+        id: 2004015,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Toutatis",
+        id: 2004179,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Itokawa",
+        id: 2025143,
+        mean_radius: None,
+    },
+    Origin {
+        name: "Bennu",
+        id: 2101955,
+        mean_radius: None,
+    },
 ];
 
 fn ident(name: &str) -> Ident {
@@ -234,10 +1000,12 @@ fn unpair(vec: &[f64]) -> (Vec<f64>, Vec<f64>) {
 pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
     let mut code = quote! {
         use crate::DynOrigin;
+        use crate::MaybeMeanRadius;
         use crate::MaybePointMass;
         use crate::MaybeRotationalElements;
         use crate::MaybeSpheroid;
         use crate::MaybeTriaxialEllipsoid;
+        use crate::MeanRadius;
         use crate::NaifId;
         use crate::NutationPrecessionCoefficients;
         use crate::Origin;
@@ -252,13 +1020,19 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
     };
 
     let mut point_mass_match_arms = quote! {};
+    let mut mean_radius_match_arms = quote! {};
     let mut ellipsoid_match_arms = quote! {};
     let mut nutation_precession_match_arms = quote! {};
     let mut right_ascension_match_arms = quote! {};
     let mut declination_match_arms = quote! {};
     let mut prime_meridian_match_arms = quote! {};
 
-    for (name, id) in BODIES {
+    for Origin {
+        name,
+        id,
+        mean_radius,
+    } in ORIGINS
+    {
         let ident = ident(name);
 
         code.extend(quote! {
@@ -308,6 +1082,20 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
         // Barycenters do not have cartographic properties
         if id < 10 {
             continue;
+        }
+
+        if let Some(mean_radius) = mean_radius {
+            code.extend(quote! {
+                impl MeanRadius for #ident {
+                    fn mean_radius(&self) -> f64 {
+                        #mean_radius
+                    }
+                }
+            });
+
+            mean_radius_match_arms.extend(quote! {
+                DynOrigin::#ident => Some(#mean_radius),
+            })
         }
 
         // TriaxialEllipsoid / Spheroid
@@ -435,6 +1223,14 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
             fn maybe_gravitational_parameter(&self) -> Option<f64> {
                 match self {
                     #point_mass_match_arms
+                    _ => None,
+                }
+            }
+        }
+        impl MaybeMeanRadius for DynOrigin {
+            fn maybe_mean_radius(&self) -> Option<f64> {
+                match self {
+                    #mean_radius_match_arms
                     _ => None,
                 }
             }
