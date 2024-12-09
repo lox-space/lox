@@ -5,11 +5,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
-use std::f64::consts::{PI, TAU};
-use std::ops::Sub;
-
 use glam::{DMat3, DVec3};
 use itertools::Itertools;
+use std::f64::consts::{PI, TAU};
+use std::ops::Sub;
 
 use lox_bodies::{Origin, PointMass, RotationalElements, Spheroid};
 use lox_ephem::{path_from_ids, Ephemeris};
@@ -52,6 +51,13 @@ where
             position,
             velocity,
         }
+    }
+
+    pub fn origin(&self) -> O
+    where
+        O: Clone,
+    {
+        self.origin.clone()
     }
 
     pub fn with_frame<U: ReferenceFrame>(&self, frame: U) -> State<T, O, U>
@@ -215,9 +221,9 @@ where
 impl<T, O> State<T, O, Icrf>
 where
     T: TimeLike + Clone,
-    O: Origin + Origin + Clone,
+    O: Origin + Clone,
 {
-    pub fn to_origin<O1: Origin + Origin + Clone, E: Ephemeris>(
+    pub fn to_origin<O1: Origin + Clone, E: Ephemeris>(
         &self,
         target: O1,
         ephemeris: &E,

@@ -100,6 +100,10 @@ where
         })
     }
 
+    pub fn origin(&self) -> O {
+        self.states.first().unwrap().origin()
+    }
+
     pub fn with_frame<R1: ReferenceFrame + Clone>(self, frame: R1) -> Trajectory<T, O, R1> {
         let states: Vec<State<T, O, R1>> = self
             .states

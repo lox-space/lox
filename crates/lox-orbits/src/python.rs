@@ -6,8 +6,6 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use std::convert::TryFrom;
-
 use glam::DVec3;
 use lox_ephem::python::PySpk;
 use numpy::{PyArray1, PyArray2, PyArrayMethods};
@@ -18,6 +16,7 @@ use pyo3::{
     types::{PyAnyMethods, PyList},
     Bound, PyAny, PyErr, PyObject, PyResult, Python, ToPyObject,
 };
+use python::PyOrigin;
 use sgp4::Elements;
 
 use lox_bodies::*;
@@ -33,7 +32,10 @@ use lox_time::{python::time::PyTime, ut1::DeltaUt1Tai, Time};
 use crate::analysis::{ElevationMask, ElevationMaskError};
 use crate::elements::{Keplerian, ToKeplerian};
 use crate::events::{Event, FindEventError, Window};
-use crate::frames::{BodyFixed, CoordinateSystem, Icrf, ReferenceFrame, Topocentric, TryToFrame};
+use crate::frames::{
+    BodyFixed, CoordinateSystem, DynFrame, Icrf, ReferenceFrame, Topocentric, TryToFrame,
+    UnknownFrameError,
+};
 use crate::ground::{GroundLocation, GroundPropagator, GroundPropagatorError, Observables};
 use crate::propagators::semi_analytical::{Vallado, ValladoError};
 use crate::propagators::sgp4::{Sgp4, Sgp4Error};
@@ -110,6 +112,12 @@ pub fn find_windows(
     .collect())
 }
 
+impl From<UnknownFrameError> for PyErr {
+    fn from(err: UnknownFrameError) -> Self {
+        PyValueError::new_err(err.to_string())
+    }
+}
+
 #[pyclass(name = "Frame", module = "lox_space", frozen)]
 #[pyo3(eq)]
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
@@ -119,7 +127,7 @@ pub struct PyFrame(DynFrame);
 impl PyFrame {
     #[new]
     fn new(abbreviation: &str) -> PyResult<Self> {
-        abbreviation.parse()
+        Ok(Self(abbreviation.parse()?))
     }
 
     fn __getnewargs__(&self) -> (String,) {
@@ -127,11 +135,17 @@ impl PyFrame {
     }
 
     fn name(&self) -> String {
-        ReferenceFrame::name(self)
+        self.0.name()
     }
 
     fn abbreviation(&self) -> String {
-        ReferenceFrame::abbreviation(self)
+        self.0.abbreviation()
+    }
+}
+
+impl Default for PyFrame {
+    fn default() -> Self {
+        Self(DynFrame::default())
     }
 }
 
@@ -143,7 +157,7 @@ impl FrameTransformationProvider for PyUt1Provider {}
 
 #[pyclass(name = "State", module = "lox_space", frozen)]
 #[derive(Debug, Clone)]
-pub struct PyState(pub State<PyTime, PyBody, PyFrame>);
+pub struct PyState(pub State<PyTime, DynOrigin, DynFrame>);
 
 #[pymethods]
 impl PyState {
@@ -153,22 +167,18 @@ impl PyState {
         time: PyTime,
         position: (f64, f64, f64),
         velocity: (f64, f64, f64),
-        origin: Option<&Bound<'_, PyAny>>,
+        origin: Option<PyOrigin>,
         frame: Option<PyFrame>,
     ) -> PyResult<Self> {
-        let origin: PyBody = if let Some(origin) = origin {
-            PyBody::try_from(origin)?
-        } else {
-            PyBody::Planet(PyPlanet::new("Earth").unwrap())
-        };
-        let frame = frame.unwrap_or(PyFrame::Icrf);
+        let origin = origin.unwrap_or_default();
+        let frame = frame.unwrap_or_default();
 
         Ok(PyState(State::new(
             time,
             DVec3::new(position.0, position.1, position.2),
             DVec3::new(velocity.0, velocity.1, velocity.2),
-            origin,
-            frame,
+            origin.0,
+            frame.0,
         )))
     }
 
@@ -176,12 +186,12 @@ impl PyState {
         self.0.time().clone()
     }
 
-    fn origin(&self) -> PyObject {
-        self.0.origin().into()
+    fn origin(&self) -> PyOrigin {
+        PyOrigin(self.0.origin())
     }
 
     fn reference_frame(&self) -> PyFrame {
-        self.0.reference_frame()
+        PyFrame(self.0.reference_frame())
     }
 
     fn position<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<f64>> {
@@ -200,27 +210,22 @@ impl PyState {
         frame: PyFrame,
         provider: Option<&Bound<'_, PyUt1Provider>>,
     ) -> PyResult<Self> {
-        self.to_frame_generated(frame, provider)
+        todo!()
     }
 
-    fn to_origin(&self, target: &Bound<'_, PyAny>, ephemeris: &Bound<'_, PySpk>) -> PyResult<Self> {
-        if self.0.reference_frame() != PyFrame::Icrf {
+    fn to_origin(&self, target: PyOrigin, ephemeris: &Bound<'_, PySpk>) -> PyResult<Self> {
+        if self.0.reference_frame() != DynFrame::Icrf {
             return Err(PyValueError::new_err(
                 "only inertial frames are supported for conversion to Keplerian elements",
             ));
         }
-        let target = PyBody::try_from(target)?;
         let spk = &ephemeris.borrow().0;
-        let s1 = self
-            .0
-            .with_frame(Icrf)
-            .to_origin(target, spk)?
-            .with_frame(PyFrame::Icrf);
+        let s1 = self.0.to_origin(target.0, spk)?;
         Ok(Self(s1))
     }
 
     fn to_keplerian(&self) -> PyResult<PyKeplerian> {
-        if self.0.reference_frame() != PyFrame::Icrf {
+        if self.0.reference_frame() != DynFrame::Icrf {
             return Err(PyValueError::new_err(
                 "only inertial frames are supported for conversion to Keplerian elements",
             ));
@@ -229,7 +234,7 @@ impl PyState {
     }
 
     fn rotation_lvlh<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyArray2<f64>>> {
-        if self.reference_frame() != PyFrame::Icrf {
+        if self.0.reference_frame() != DynFrame::Icrf {
             return Err(PyValueError::new_err(
                 "only inertial frames are supported for the LVLH rotation matrix",
             ));
@@ -240,7 +245,7 @@ impl PyState {
     }
 
     fn to_ground_location(&self, py: Python<'_>) -> PyResult<PyGroundLocation> {
-        if self.reference_frame() != PyFrame::Icrf {
+        if self.0.reference_frame() != DynFrame::Icrf {
             return Err(PyValueError::new_err(
                 "only inertial frames are supported for the ground location transformations",
             ));
@@ -263,7 +268,7 @@ impl PyState {
 }
 
 #[pyclass(name = "Keplerian", module = "lox_space", frozen)]
-pub struct PyKeplerian(pub Keplerian<PyTime, PyBody>);
+pub struct PyKeplerian(pub Keplerian<PyTime, DynOrigin>);
 
 #[pymethods]
 impl PyKeplerian {
@@ -532,7 +537,7 @@ impl PyWindow {
 }
 
 #[pyclass(name = "Vallado", module = "lox_space", frozen)]
-pub struct PyVallado(pub Vallado<PyTime, PyBody>);
+pub struct PyVallado(pub Vallado<PyTime, DynOrigin>);
 
 impl From<ValladoError> for PyErr {
     fn from(err: ValladoError) -> Self {

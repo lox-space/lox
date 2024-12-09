@@ -13,7 +13,7 @@ pub struct UnknownOriginName(String);
 #[error("no origin with NAIF ID `{0}` is known")]
 pub struct UnknownOriginId(i32);
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, FromPrimitive, ToPrimitive)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, FromPrimitive, ToPrimitive, PartialOrd, Ord)]
 pub enum DynOrigin {
     Sun = 10,
 
@@ -213,6 +213,12 @@ pub enum DynOrigin {
     Toutatis = 2004179,
     Itokawa = 2025143,
     Bennu = 2101955,
+}
+
+impl Default for DynOrigin {
+    fn default() -> Self {
+        DynOrigin::Earth
+    }
 }
 
 impl Origin for DynOrigin {

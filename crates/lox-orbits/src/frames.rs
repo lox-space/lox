@@ -169,13 +169,19 @@ impl<B: Spheroid> Topocentric<B> {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum DynFrame {
     Icrf,
     Cirf,
     Tirf,
     Itrf,
     BodyFixed(DynOrigin),
+}
+
+impl Default for DynFrame {
+    fn default() -> Self {
+        DynFrame::Icrf
+    }
 }
 
 impl ReferenceFrame for DynFrame {

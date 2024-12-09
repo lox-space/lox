@@ -26,7 +26,7 @@ impl From<UnknownOriginName> for PyErr {
 
 #[pyclass(name = "Origin", module = "lox_space", frozen, eq)]
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct PyOrigin(DynOrigin);
+pub struct PyOrigin(pub DynOrigin);
 
 #[pymethods]
 impl PyOrigin {
@@ -61,5 +61,11 @@ impl PyOrigin {
 
     pub fn name(&self) -> &'static str {
         self.0.name()
+    }
+}
+
+impl Default for PyOrigin {
+    fn default() -> Self {
+        Self(DynOrigin::default())
     }
 }

@@ -83,6 +83,13 @@ impl<B: Spheroid> GroundLocation<B> {
         }
     }
 
+    pub fn origin(&self) -> B
+    where
+        B: Clone,
+    {
+        self.body.clone()
+    }
+
     pub fn longitude(&self) -> f64 {
         self.longitude
     }

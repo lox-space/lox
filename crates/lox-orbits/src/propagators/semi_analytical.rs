@@ -56,6 +56,13 @@ where
         self.max_iter = max_iter;
         self
     }
+
+    pub fn origin(&self) -> O
+    where
+        O: Clone,
+    {
+        self.initial_state.origin()
+    }
 }
 
 impl<T, O> Propagator<T, O, Icrf> for Vallado<T, O>

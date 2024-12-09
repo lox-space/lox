@@ -62,6 +62,13 @@ where
         }
     }
 
+    pub fn origin(&self) -> O
+    where
+        O: Clone,
+    {
+        self.origin.clone()
+    }
+
     pub fn time(&self) -> T
     where
         T: Clone,
