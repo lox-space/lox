@@ -8,12 +8,12 @@
 
 use std::path::PathBuf;
 
-use crate::bodies::generate_bodies;
+use crate::origins::generate_bodies;
 use lox_io::spice::Kernel;
 
-mod bodies;
 mod common;
 mod frames;
+mod origins;
 
 fn crates_dir() -> PathBuf {
     PathBuf::from(format!("{}/../../crates", env!("CARGO_MANIFEST_DIR")))

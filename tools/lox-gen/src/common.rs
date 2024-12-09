@@ -21,6 +21,6 @@ pub fn write_file(dir: &Path, file: &str, code: proc_macro2::TokenStream) {
     module.push_str(AUTO_GENERATION_NOTICE);
     module.push_str(&format(code));
 
-    let out = dir.join("generated.rs");
+    let out = dir.join(file);
     fs::write(&out, module).expect("file should be writeable");
 }

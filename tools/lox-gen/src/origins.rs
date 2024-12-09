@@ -124,97 +124,97 @@ const ORIGINS: [Origin; 190] = [
     Origin {
         name: "Moon",
         id: 301,
-        mean_radius: None,
+        mean_radius: Some(1737.4),
     },
     Origin {
         name: "Phobos",
         id: 401,
-        mean_radius: None,
+        mean_radius: Some(11.08),
     },
     Origin {
         name: "Deimos",
         id: 402,
-        mean_radius: None,
+        mean_radius: Some(6.2),
     },
     Origin {
         name: "Io",
         id: 501,
-        mean_radius: None,
+        mean_radius: Some(1821.49),
     },
     Origin {
         name: "Europa",
         id: 502,
-        mean_radius: None,
+        mean_radius: Some(1560.8),
     },
     Origin {
         name: "Ganymede",
         id: 503,
-        mean_radius: None,
+        mean_radius: Some(2631.2),
     },
     Origin {
         name: "Callisto",
         id: 504,
-        mean_radius: None,
+        mean_radius: Some(2410.3),
     },
     Origin {
         name: "Amalthea",
         id: 505,
-        mean_radius: None,
+        mean_radius: Some(83.5),
     },
     Origin {
         name: "Himalia",
         id: 506,
-        mean_radius: None,
+        mean_radius: Some(85.0),
     },
     Origin {
         name: "Elara",
         id: 507,
-        mean_radius: None,
+        mean_radius: Some(40.0),
     },
     Origin {
         name: "Pasiphae",
         id: 508,
-        mean_radius: None,
+        mean_radius: Some(18.0),
     },
     Origin {
         name: "Sinope",
         id: 509,
-        mean_radius: None,
+        mean_radius: Some(14.0),
     },
     Origin {
         name: "Lysithea",
         id: 510,
-        mean_radius: None,
+        mean_radius: Some(12.0),
     },
     Origin {
         name: "Carme",
         id: 511,
-        mean_radius: None,
+        mean_radius: Some(15.0),
     },
     Origin {
         name: "Ananke",
         id: 512,
-        mean_radius: None,
+        mean_radius: Some(10.0),
     },
     Origin {
         name: "Leda",
         id: 513,
-        mean_radius: None,
+        mean_radius: Some(5.0),
     },
     Origin {
         name: "Thebe",
         id: 514,
-        mean_radius: None,
+        mean_radius: Some(49.3),
     },
     Origin {
         name: "Adrastea",
         id: 515,
-        mean_radius: None,
+        mean_radius: Some(8.2),
     },
     Origin {
         name: "Metis",
         id: 516,
-        mean_radius: None,
+        mean_radius: Some(21.5),
     },
     Origin {
         name: "Callirrhoe",
@@ -394,92 +394,92 @@ const ORIGINS: [Origin; 190] = [
     Origin {
         name: "Mimas",
         id: 601,
-        mean_radius: None,
+        mean_radius: Some(198.2),
     },
     Origin {
         name: "Enceladus",
         id: 602,
-        mean_radius: None,
+        mean_radius: Some(252.1),
     },
     Origin {
         name: "Tethys",
         id: 603,
-        mean_radius: None,
+        mean_radius: Some(531.0),
     },
     Origin {
         name: "Dione",
         id: 604,
-        mean_radius: None,
+        mean_radius: Some(561.4),
     },
     Origin {
         name: "Rhea",
         id: 605,
-        mean_radius: None,
+        mean_radius: Some(763.5),
     },
     Origin {
         name: "Titan",
         id: 606,
-        mean_radius: None,
+        mean_radius: Some(2575.0),
     },
     Origin {
         name: "Hyperion",
         id: 607,
-        mean_radius: None,
+        mean_radius: Some(135.0),
     },
     Origin {
         name: "Iapetus",
         id: 608,
-        mean_radius: None,
+        mean_radius: Some(734.3),
     },
     Origin {
         name: "Phoebe",
         id: 609,
-        mean_radius: None,
+        mean_radius: Some(106.5),
     },
     Origin {
         name: "Janus",
         id: 610,
-        mean_radius: None,
+        mean_radius: Some(89.2),
     },
     Origin {
         name: "Epimetheus",
         id: 611,
-        mean_radius: None,
+        mean_radius: Some(58.2),
     },
     Origin {
         name: "Helene",
         id: 612,
-        mean_radius: None,
+        mean_radius: Some(18.0),
     },
     Origin {
         name: "Telesto",
         id: 613,
-        mean_radius: None,
+        mean_radius: Some(12.4),
     },
     Origin {
         name: "Calypso",
         id: 614,
-        mean_radius: None,
+        mean_radius: Some(9.6),
     },
     Origin {
         name: "Atlas",
         id: 615,
-        mean_radius: None,
+        mean_radius: Some(15.1),
     },
     Origin {
         name: "Prometheus",
         id: 616,
-        mean_radius: None,
+        mean_radius: Some(43.1),
     },
     Origin {
         name: "Pandora",
         id: 617,
-        mean_radius: None,
+        mean_radius: Some(40.6),
     },
     Origin {
         name: "Pan",
         id: 618,
-        mean_radius: None,
+        mean_radius: Some(14.0),
     },
     Origin {
         name: "Ymir",
@@ -549,22 +549,22 @@ const ORIGINS: [Origin; 190] = [
     Origin {
         name: "Methone",
         id: 632,
-        mean_radius: None,
+        mean_radius: Some(1.45),
     },
     Origin {
         name: "Pallene",
         id: 633,
-        mean_radius: None,
+        mean_radius: Some(2.23),
     },
     Origin {
         name: "Polydeuces",
         id: 634,
-        mean_radius: None,
+        mean_radius: Some(1.3),
     },
     Origin {
         name: "Daphnis",
         id: 635,
-        mean_radius: None,
+        mean_radius: Some(3.8),
     },
     Origin {
         name: "Aegir",
@@ -634,7 +634,7 @@ const ORIGINS: [Origin; 190] = [
     Origin {
         name: "Anthe",
         id: 649,
-        mean_radius: None,
+        mean_radius: Some(0.5),
     },
     Origin {
         name: "Jarnsaxa",
@@ -654,82 +654,82 @@ const ORIGINS: [Origin; 190] = [
     Origin {
         name: "Aegaeon",
         id: 653,
-        mean_radius: None,
+        mean_radius: Some(0.33),
     },
     Origin {
         name: "Ariel",
         id: 701,
-        mean_radius: None,
+        mean_radius: Some(578.9),
     },
     Origin {
         name: "Umbriel",
         id: 702,
-        mean_radius: None,
+        mean_radius: Some(584.7),
     },
     Origin {
         name: "Titania",
         id: 703,
-        mean_radius: None,
+        mean_radius: Some(788.9),
     },
     Origin {
         name: "Oberon",
         id: 704,
-        mean_radius: None,
+        mean_radius: Some(761.4),
     },
     Origin {
         name: "Miranda",
         id: 705,
-        mean_radius: None,
+        mean_radius: Some(235.8),
     },
     Origin {
         name: "Cordelia",
         id: 706,
-        mean_radius: None,
+        mean_radius: Some(13.0),
     },
     Origin {
         name: "Ophelia",
         id: 707,
-        mean_radius: None,
+        mean_radius: Some(15.0),
     },
     Origin {
         name: "Bianca",
         id: 708,
-        mean_radius: None,
+        mean_radius: Some(21.0),
     },
     Origin {
         name: "Cressida",
         id: 709,
-        mean_radius: None,
+        mean_radius: Some(31.0),
     },
     Origin {
         name: "Desdemona",
         id: 710,
-        mean_radius: None,
+        mean_radius: Some(27.0),
     },
     Origin {
         name: "Juliet",
         id: 711,
-        mean_radius: None,
+        mean_radius: Some(42.0),
     },
     Origin {
         name: "Portia",
         id: 712,
-        mean_radius: None,
+        mean_radius: Some(54.0),
     },
     Origin {
         name: "Rosalind",
         id: 713,
-        mean_radius: None,
+        mean_radius: Some(27.0),
     },
     Origin {
         name: "Belinda",
         id: 714,
-        mean_radius: None,
+        mean_radius: Some(33.0),
     },
     Origin {
         name: "Puck",
         id: 715,
-        mean_radius: None,
+        mean_radius: Some(77.0),
     },
     Origin {
         name: "Caliban",
@@ -794,42 +794,42 @@ const ORIGINS: [Origin; 190] = [
     Origin {
         name: "Triton",
         id: 801,
-        mean_radius: None,
+        mean_radius: Some(1352.6),
     },
     Origin {
         name: "Nereid",
         id: 802,
-        mean_radius: None,
+        mean_radius: Some(170.0),
     },
     Origin {
         name: "Naiad",
         id: 803,
-        mean_radius: None,
+        mean_radius: Some(29.0),
     },
     Origin {
         name: "Thalassa",
         id: 804,
-        mean_radius: None,
+        mean_radius: Some(40.0),
     },
     Origin {
         name: "Despina",
         id: 805,
-        mean_radius: None,
+        mean_radius: Some(74.0),
     },
     Origin {
         name: "Galatea",
         id: 806,
-        mean_radius: None,
+        mean_radius: Some(79.0),
     },
     Origin {
         name: "Larissa",
         id: 807,
-        mean_radius: None,
+        mean_radius: Some(96.0),
     },
     Origin {
         name: "Proteus",
         id: 808,
-        mean_radius: None,
+        mean_radius: Some(208.0),
     },
     Origin {
         name: "Halimede",
@@ -859,7 +859,7 @@ const ORIGINS: [Origin; 190] = [
     Origin {
         name: "Charon",
         id: 901,
-        mean_radius: None,
+        mean_radius: Some(606.0),
     },
     Origin {
         name: "Nix",
@@ -885,12 +885,12 @@ const ORIGINS: [Origin; 190] = [
     Origin {
         name: "Gaspra",
         id: 9511010,
-        mean_radius: None,
+        mean_radius: Some(6.1),
     },
     Origin {
         name: "Ida",
         id: 2431010,
-        mean_radius: None,
+        mean_radius: Some(15.65),
     },
     Origin {
         name: "Dactyl",
@@ -900,7 +900,7 @@ const ORIGINS: [Origin; 190] = [
     Origin {
         name: "Ceres",
         id: 2000001,
-        mean_radius: None,
+        mean_radius: Some(470.0),
     },
     Origin {
         name: "Pallas",
@@ -915,12 +915,12 @@ const ORIGINS: [Origin; 190] = [
     Origin {
         name: "Psyche",
         id: 2000016,
-        mean_radius: None,
+        mean_radius: Some(113.0),
     },
     Origin {
         name: "Lutetia",
         id: 2000021,
-        mean_radius: None,
+        mean_radius: Some(52.5),
     },
     Origin {
         name: "Kleopatra",
@@ -930,22 +930,22 @@ const ORIGINS: [Origin; 190] = [
     Origin {
         name: "Eros",
         id: 2000433,
-        mean_radius: None,
+        mean_radius: Some(8.45),
     },
     Origin {
         name: "Davida",
         id: 2000511,
-        mean_radius: None,
+        mean_radius: Some(150.0),
     },
     Origin {
         name: "Mathilde",
         id: 2000253,
-        mean_radius: None,
+        mean_radius: Some(26.5),
     },
     Origin {
         name: "Steins",
         id: 2002867,
-        mean_radius: None,
+        mean_radius: Some(2.7),
     },
     Origin {
         name: "Braille",

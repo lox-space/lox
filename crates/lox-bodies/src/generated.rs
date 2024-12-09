@@ -137,13 +137,15 @@ impl RotationalElements for Mercury {
             5.752584270622286f64,
             0.10713722462923113f64,
             0f64,
-            Some(&[
-                0.0001862714861495712f64,
-                -0.000019601618296223117f64,
-                -0.00000192684349420174f64,
-                -0.00000044313909708136026f64,
-                -0.00000009965830028887623f64,
-            ]),
+            Some(
+                &[
+                    0.0001862714861495712f64,
+                    -0.000019601618296223117f64,
+                    -0.00000192684349420174f64,
+                    -0.00000044313909708136026f64,
+                    -0.00000009965830028887623f64,
+                ],
+            ),
         )
     }
 }
@@ -391,23 +393,25 @@ impl RotationalElements for Mars {
             5.5373921900749785f64,
             -0.001907216743164288f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.000001186823891356144f64,
-                0.000004153883619746505f64,
-                0.0000009075712110370513f64,
-                0.00000015707963267948966f64,
-                0.007313924403529878f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.000001186823891356144f64,
+                    0.000004153883619746505f64,
+                    0.0000009075712110370513f64,
+                    0.00000015707963267948966f64,
+                    0.007313924403529878f64,
+                ],
+            ),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -415,28 +419,30 @@ impl RotationalElements for Mars {
             0.9500266243444937f64,
             -0.0010170216810942417f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.000000890117918517108f64,
-                0.000002460914245312005f64,
-                0.0000005410520681182422f64,
-                0.00000008726646259971648f64,
-                0.02777297060138025f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.000000890117918517108f64,
+                    0.000002460914245312005f64,
+                    0.0000005410520681182422f64,
+                    0.00000008726646259971648f64,
+                    0.02777297060138025f64,
+                ],
+            ),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -444,34 +450,36 @@ impl RotationalElements for Mars {
             3.0726497570349416f64,
             6.12422041248567f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.000002530727415391778f64,
-                0.0000027401669256310974f64,
-                0.0000006981317007977319f64,
-                0.000000017453292519943295f64,
-                0.000000017453292519943295f64,
-                0.010202182516192693f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.000002530727415391778f64,
+                    0.0000027401669256310974f64,
+                    0.0000006981317007977319f64,
+                    0.000000017453292519943295f64,
+                    0.000000017453292519943295f64,
+                    0.010202182516192693f64,
+                ],
+            ),
         )
     }
 }
@@ -550,23 +558,25 @@ impl RotationalElements for Jupiter {
             4.6784701644349695f64,
             -0.00011342894808711148f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.0000020420352248333656f64,
-                0.000016371188383706813f64,
-                0.000024993114888558796f64,
-                0.0000005235987755982989f64,
-                0.00003752457891787809f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.0000020420352248333656f64,
+                    0.000016371188383706813f64,
+                    0.000024993114888558796f64,
+                    0.0000005235987755982989f64,
+                    0.00003752457891787809f64,
+                ],
+            ),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -574,23 +584,25 @@ impl RotationalElements for Jupiter {
             1.1256553894213766f64,
             0.00004211479485062318f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.0000008726646259971648f64,
-                0.000007051130178057092f64,
-                0.000010768681484805013f64,
-                -0.00000022689280275926283f64,
-                0.00001616174887346749f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.0000008726646259971648f64,
+                    0.000007051130178057092f64,
+                    0.000010768681484805013f64,
+                    -0.00000022689280275926283f64,
+                    0.00001616174887346749f64,
+                ],
+            ),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -598,10 +610,25 @@ impl RotationalElements for Jupiter {
             4.973315703557842f64,
             15.193719457141356f64,
             0f64,
-            Some(&[
-                0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
 }
@@ -836,16 +863,7 @@ impl RotationalElements for Neptune {
             5.224817648770225f64,
             0f64,
             0f64,
-            Some(&[
-                0.012217304763960306f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(&[0.012217304763960306f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64]),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -853,16 +871,7 @@ impl RotationalElements for Neptune {
             0.7585200929167356f64,
             0f64,
             0f64,
-            Some(&[
-                -0.00890117918517108f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(&[-0.00890117918517108f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64]),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -870,16 +879,7 @@ impl RotationalElements for Neptune {
             4.362939157550385f64,
             9.444670799468602f64,
             0f64,
-            Some(&[
-                -0.008377580409572781f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(&[-0.008377580409572781f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64]),
         )
     }
 }
@@ -1148,6 +1148,11 @@ impl PointMass for Moon {
         4902.80011845755f64
     }
 }
+impl MeanRadius for Moon {
+    fn mean_radius(&self) -> f64 {
+        1737.4f64
+    }
+}
 impl TriaxialEllipsoid for Moon {
     fn radii(&self) -> Radii {
         (1737.4f64, 1737.4f64, 1737.4f64)
@@ -1194,21 +1199,23 @@ impl RotationalElements for Moon {
             4.712299968592838f64,
             0.000054105206811824215f64,
             0f64,
-            Some(&[
-                -0.06769608569710406f64,
-                -0.0021013764194011725f64,
-                0.0012217304763960308f64,
-                -0.0003001966313430247f64,
-                0f64,
-                0.0001256637061435917f64,
-                0f64,
-                0f64,
-                0f64,
-                -0.00009075712110370513f64,
-                0f64,
-                0f64,
-                0.00007504915783575618f64,
-            ]),
+            Some(
+                &[
+                    -0.06769608569710406f64,
+                    -0.0021013764194011725f64,
+                    0.0012217304763960308f64,
+                    -0.0003001966313430247f64,
+                    0f64,
+                    0.0001256637061435917f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.00009075712110370513f64,
+                    0f64,
+                    0f64,
+                    0.00007504915783575618f64,
+                ],
+            ),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -1216,21 +1223,23 @@ impl RotationalElements for Moon {
             1.161328121643011f64,
             0.00022689280275926284f64,
             0f64,
-            Some(&[
-                0.02691123173650057f64,
-                0.0004171336912266448f64,
-                -0.00048520153205442357f64,
-                0.0001186823891356144f64,
-                0f64,
-                -0.00005061454830783555f64,
-                0.000015707963267948964f64,
-                0f64,
-                0f64,
-                0.000013962634015954637f64,
-                0f64,
-                0f64,
-                -0.000015707963267948964f64,
-            ]),
+            Some(
+                &[
+                    0.02691123173650057f64,
+                    0.0004171336912266448f64,
+                    -0.00048520153205442357f64,
+                    0.0001186823891356144f64,
+                    0f64,
+                    -0.00005061454830783555f64,
+                    0.000015707963267948964f64,
+                    0f64,
+                    0f64,
+                    0.000013962634015954637f64,
+                    0f64,
+                    0f64,
+                    -0.000015707963267948964f64,
+                ],
+            ),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -1238,21 +1247,23 @@ impl RotationalElements for Moon {
             0.668832858644503f64,
             0.22997083313948888f64,
             -0.000000000000024434609527920614f64,
-            Some(&[
-                0.06215117466351808f64,
-                0.00210835773640915f64,
-                -0.0011205013797803594f64,
-                0.0002757620218151041f64,
-                0.0004398229715025711f64,
-                -0.00011519173063162575f64,
-                -0.00008203047484373349f64,
-                -0.00008028514559173915f64,
-                0.000048869219055841225f64,
-                0.00009075712110370513f64,
-                0.00006981317007977319f64,
-                0.00003316125578789226f64,
-                -0.0000767944870877505f64,
-            ]),
+            Some(
+                &[
+                    0.06215117466351808f64,
+                    0.00210835773640915f64,
+                    -0.0011205013797803594f64,
+                    0.0002757620218151041f64,
+                    0.0004398229715025711f64,
+                    -0.00011519173063162575f64,
+                    -0.00008203047484373349f64,
+                    -0.00008028514559173915f64,
+                    0.000048869219055841225f64,
+                    0.00009075712110370513f64,
+                    0.00006981317007977319f64,
+                    0.00003316125578789226f64,
+                    -0.0000767944870877505f64,
+                ],
+            ),
         )
     }
 }
@@ -1274,6 +1285,11 @@ impl Display for Phobos {
 impl PointMass for Phobos {
     fn gravitational_parameter(&self) -> f64 {
         0.0007087546066894452f64
+    }
+}
+impl MeanRadius for Phobos {
+    fn mean_radius(&self) -> f64 {
+        11.08f64
     }
 }
 impl TriaxialEllipsoid for Phobos {
@@ -1373,12 +1389,14 @@ impl RotationalElements for Phobos {
             5.544399941316208f64,
             -0.001892691938596266f64,
             0f64,
-            Some(&[
-                -0.031141630416121578f64,
-                0.00038621064567151f64,
-                -0.00017946365486924213f64,
-                -0.00008300698656022431f64,
-            ]),
+            Some(
+                &[
+                    -0.031141630416121578f64,
+                    0.00038621064567151f64,
+                    -0.00017946365486924213f64,
+                    -0.00008300698656022431f64,
+                ],
+            ),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -1386,12 +1404,14 @@ impl RotationalElements for Phobos {
             0.9230395870244597f64,
             -0.0010707081834185127f64,
             0f64,
-            Some(&[
-                -0.018765175709923063f64,
-                0.00011669725164439606f64,
-                -0.00011322648989388013f64,
-                0.000049144282945955534f64,
-            ]),
+            Some(
+                &[
+                    -0.018765175709923063f64,
+                    0.00011669725164439606f64,
+                    -0.00011322648989388013f64,
+                    0.000049144282945955534f64,
+                ],
+            ),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -1399,13 +1419,15 @@ impl RotationalElements for Phobos {
             0.6141419961301966f64,
             19.702057793318815f64,
             0.00000000016643698911600935f64,
-            Some(&[
-                0.02485728795564792f64,
-                -0.0003968499982587423f64,
-                0.0000716825922415843f64,
-                0.00011029852554073445f64,
-                -0.019949113350295186f64,
-            ]),
+            Some(
+                &[
+                    0.02485728795564792f64,
+                    -0.0003968499982587423f64,
+                    0.0000716825922415843f64,
+                    0.00011029852554073445f64,
+                    -0.019949113350295186f64,
+                ],
+            ),
         )
     }
 }
@@ -1427,6 +1449,11 @@ impl Display for Deimos {
 impl PointMass for Deimos {
     fn gravitational_parameter(&self) -> f64 {
         0.00009615569648120313f64
+    }
+}
+impl MeanRadius for Deimos {
+    fn mean_radius(&self) -> f64 {
+        6.2f64
     }
 }
 impl TriaxialEllipsoid for Deimos {
@@ -1526,18 +1553,20 @@ impl RotationalElements for Deimos {
             5.526708263174914f64,
             -0.0018357397507085887f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.05396867424229676f64,
-                0.004010877798556321f64,
-                0.0011202666329959662f64,
-                0.00044218562371099577f64,
-                0.00013590791618817245f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.05396867424229676f64,
+                    0.004010877798556321f64,
+                    0.0011202666329959662f64,
+                    0.00044218562371099577f64,
+                    0.00013590791618817245f64,
+                ],
+            ),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -1545,18 +1574,20 @@ impl RotationalElements for Deimos {
             0.9339242922383507f64,
             -0.0010435487658623783f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.032102888827614605f64,
-                0.002500240004017941f64,
-                0.00033360380402252296f64,
-                -0.0002587607695714273f64,
-                0.00003358537079612689f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.032102888827614605f64,
+                    0.002500240004017941f64,
+                    0.00033360380402252296f64,
+                    -0.0002587607695714273f64,
+                    0.00003358537079612689f64,
+                ],
+            ),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -1564,18 +1595,20 @@ impl RotationalElements for Deimos {
             1.3857797243489947f64,
             4.977013864082068f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                -0.047814137677880446f64,
-                -0.006975837721323607f64,
-                -0.0011455047921115052f64,
-                -0.0005084039391304362f64,
-                0.0002965593651818685f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.047814137677880446f64,
+                    -0.006975837721323607f64,
+                    -0.0011455047921115052f64,
+                    -0.0005084039391304362f64,
+                    0.0002965593651818685f64,
+                ],
+            ),
         )
     }
 }
@@ -1597,6 +1630,11 @@ impl Display for Io {
 impl PointMass for Io {
     fn gravitational_parameter(&self) -> f64 {
         5959.915466180539f64
+    }
+}
+impl MeanRadius for Io {
+    fn mean_radius(&self) -> f64 {
+        1821.49f64
     }
 }
 impl TriaxialEllipsoid for Io {
@@ -1648,12 +1686,7 @@ impl RotationalElements for Io {
             4.678355059970801f64,
             -0.00015707963267948965f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0.0016406094968746698f64,
-                0.0004188790204786391f64,
-            ]),
+            Some(&[0f64, 0f64, 0.0016406094968746698f64, 0.0004188790204786391f64]),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -1661,12 +1694,7 @@ impl RotationalElements for Io {
             1.1257373675363425f64,
             0.00005235987755982989f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0.0006981317007977319f64,
-                0.00019198621771937625f64,
-            ]),
+            Some(&[0f64, 0f64, 0.0006981317007977319f64, 0.00019198621771937625f64]),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -1674,12 +1702,7 @@ impl RotationalElements for Io {
             3.4974652880714365f64,
             3.551552235248627f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                -0.0014835298641951802f64,
-                -0.0003839724354387525f64,
-            ]),
+            Some(&[0f64, 0f64, -0.0014835298641951802f64, -0.0003839724354387525f64]),
         )
     }
 }
@@ -1701,6 +1724,11 @@ impl Display for Europa {
 impl PointMass for Europa {
     fn gravitational_parameter(&self) -> f64 {
         3202.712099607295f64
+    }
+}
+impl MeanRadius for Europa {
+    fn mean_radius(&self) -> f64 {
+        1560.8f64
     }
 }
 impl TriaxialEllipsoid for Europa {
@@ -1752,15 +1780,17 @@ impl RotationalElements for Europa {
             4.678878658746398f64,
             -0.00015707963267948965f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0.01895427567665842f64,
-                0.0010471975511965976f64,
-                0.0002617993877991494f64,
-                0.00015707963267948965f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.01895427567665842f64,
+                    0.0010471975511965976f64,
+                    0.0002617993877991494f64,
+                    0.00015707963267948965f64,
+                ],
+            ),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -1768,15 +1798,17 @@ impl RotationalElements for Europa {
             1.125911900461542f64,
             0.00005235987755982989f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0.008168140899333463f64,
-                0.0004537856055185257f64,
-                0.00012217304763960306f64,
-                0.00003490658503988659f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.008168140899333463f64,
+                    0.0004537856055185257f64,
+                    0.00012217304763960306f64,
+                    0.00003490658503988659f64,
+                ],
+            ),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -1784,15 +1816,17 @@ impl RotationalElements for Europa {
             0.6287025031533974f64,
             1.7693227033738699f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                -0.01710422666954443f64,
-                -0.0009424777960769379f64,
-                -0.0002443460952792061f64,
-                -0.00013962634015954637f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.01710422666954443f64,
+                    -0.0009424777960769379f64,
+                    -0.0002443460952792061f64,
+                    -0.00013962634015954637f64,
+                ],
+            ),
         )
     }
 }
@@ -1814,6 +1848,11 @@ impl Display for Ganymede {
 impl PointMass for Ganymede {
     fn gravitational_parameter(&self) -> f64 {
         9887.832752719638f64
+    }
+}
+impl MeanRadius for Ganymede {
+    fn mean_radius(&self) -> f64 {
+        2631.2f64
     }
 }
 impl TriaxialEllipsoid for Ganymede {
@@ -1866,14 +1905,16 @@ impl RotationalElements for Ganymede {
             4.680973053848792f64,
             -0.00015707963267948965f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                -0.0006457718232379018f64,
-                0.0075223690760955605f64,
-                0.0015882496193148398f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.0006457718232379018f64,
+                    0.0075223690760955605f64,
+                    0.0015882496193148398f64,
+                ],
+            ),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -1881,14 +1922,16 @@ impl RotationalElements for Ganymede {
             1.1269590980127384f64,
             0.00005235987755982989f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                -0.00027925268031909274f64,
-                0.003246312408709453f64,
-                0.0006806784082777885f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.00027925268031909274f64,
+                    0.003246312408709453f64,
+                    0.0006806784082777885f64,
+                ],
+            ),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -1896,14 +1939,16 @@ impl RotationalElements for Ganymede {
             0.7690618815987814f64,
             0.8782079330731682f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0.0005759586531581288f64,
-                -0.006789330790257942f64,
-                -0.0014311699866353504f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.0005759586531581288f64,
+                    -0.006789330790257942f64,
+                    -0.0014311699866353504f64,
+                ],
+            ),
         )
     }
 }
@@ -1925,6 +1970,11 @@ impl Display for Callisto {
 impl PointMass for Callisto {
     fn gravitational_parameter(&self) -> f64 {
         7179.283402579837f64
+    }
+}
+impl MeanRadius for Callisto {
+    fn mean_radius(&self) -> f64 {
+        2410.3f64
     }
 }
 impl TriaxialEllipsoid for Callisto {
@@ -1977,16 +2027,18 @@ impl RotationalElements for Callisto {
             4.690048765959163f64,
             -0.00015707963267948965f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                -0.001186823891356144f64,
-                0.010297442586766544f64,
-                0f64,
-                0.00017453292519943296f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.001186823891356144f64,
+                    0.010297442586766544f64,
+                    0f64,
+                    0.00017453292519943296f64,
+                ],
+            ),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -1994,16 +2046,18 @@ impl RotationalElements for Callisto {
             1.1314969540679238f64,
             0.00005235987755982989f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                -0.0005061454830783556f64,
-                0.004433136300065597f64,
-                0f64,
-                -0.00006981317007977319f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.0005061454830783556f64,
+                    0.004433136300065597f64,
+                    0f64,
+                    -0.00006981317007977319f64,
+                ],
+            ),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -2011,16 +2065,18 @@ impl RotationalElements for Callisto {
             4.529303941850484f64,
             0.37648622085811195f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.001064650843716541f64,
-                -0.009302604913129777f64,
-                0f64,
-                -0.00015707963267948965f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.001064650843716541f64,
+                    -0.009302604913129777f64,
+                    0f64,
+                    -0.00015707963267948965f64,
+                ],
+            ),
         )
     }
 }
@@ -2042,6 +2098,11 @@ impl Display for Amalthea {
 impl PointMass for Amalthea {
     fn gravitational_parameter(&self) -> f64 {
         0.1645634534798259f64
+    }
+}
+impl MeanRadius for Amalthea {
+    fn mean_radius(&self) -> f64 {
+        83.5f64
     }
 }
 impl TriaxialEllipsoid for Amalthea {
@@ -2093,18 +2154,20 @@ impl RotationalElements for Amalthea {
             4.678355059970801f64,
             -0.00015707963267948965f64,
             0f64,
-            Some(&[
-                -0.014660765716752368f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.00017453292519943296f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    -0.014660765716752368f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.00017453292519943296f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -2112,18 +2175,20 @@ impl RotationalElements for Amalthea {
             1.125562834611143f64,
             0.00005235987755982989f64,
             0f64,
-            Some(&[
-                -0.006283185307179586f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    -0.006283185307179586f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -2131,18 +2196,20 @@ impl RotationalElements for Amalthea {
             4.043404278095263f64,
             12.612298185680531f64,
             0f64,
-            Some(&[
-                0.013264502315156905f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                -0.00017453292519943296f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0.013264502315156905f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.00017453292519943296f64,
+                    0f64,
+                ],
+            ),
         )
     }
 }
@@ -2166,6 +2233,11 @@ impl PointMass for Himalia {
         0.1515524299611265f64
     }
 }
+impl MeanRadius for Himalia {
+    fn mean_radius(&self) -> f64 {
+        85f64
+    }
+}
 impl TriaxialEllipsoid for Himalia {
     fn radii(&self) -> Radii {
         (85f64, 85f64, 85f64)
@@ -2185,6 +2257,11 @@ impl Origin for Elara {
 impl Display for Elara {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl MeanRadius for Elara {
+    fn mean_radius(&self) -> f64 {
+        40f64
     }
 }
 impl TriaxialEllipsoid for Elara {
@@ -2208,6 +2285,11 @@ impl Display for Pasiphae {
         write!(f, "{}", self.name())
     }
 }
+impl MeanRadius for Pasiphae {
+    fn mean_radius(&self) -> f64 {
+        18f64
+    }
+}
 impl TriaxialEllipsoid for Pasiphae {
     fn radii(&self) -> Radii {
         (18f64, 18f64, 18f64)
@@ -2227,6 +2309,11 @@ impl Origin for Sinope {
 impl Display for Sinope {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl MeanRadius for Sinope {
+    fn mean_radius(&self) -> f64 {
+        14f64
     }
 }
 impl TriaxialEllipsoid for Sinope {
@@ -2250,6 +2337,11 @@ impl Display for Lysithea {
         write!(f, "{}", self.name())
     }
 }
+impl MeanRadius for Lysithea {
+    fn mean_radius(&self) -> f64 {
+        12f64
+    }
+}
 impl TriaxialEllipsoid for Lysithea {
     fn radii(&self) -> Radii {
         (12f64, 12f64, 12f64)
@@ -2269,6 +2361,11 @@ impl Origin for Carme {
 impl Display for Carme {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl MeanRadius for Carme {
+    fn mean_radius(&self) -> f64 {
+        15f64
     }
 }
 impl TriaxialEllipsoid for Carme {
@@ -2292,6 +2389,11 @@ impl Display for Ananke {
         write!(f, "{}", self.name())
     }
 }
+impl MeanRadius for Ananke {
+    fn mean_radius(&self) -> f64 {
+        10f64
+    }
+}
 impl TriaxialEllipsoid for Ananke {
     fn radii(&self) -> Radii {
         (10f64, 10f64, 10f64)
@@ -2311,6 +2413,11 @@ impl Origin for Leda {
 impl Display for Leda {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl MeanRadius for Leda {
+    fn mean_radius(&self) -> f64 {
+        5f64
     }
 }
 impl TriaxialEllipsoid for Leda {
@@ -2337,6 +2444,11 @@ impl Display for Thebe {
 impl PointMass for Thebe {
     fn gravitational_parameter(&self) -> f64 {
         0.030148f64
+    }
+}
+impl MeanRadius for Thebe {
+    fn mean_radius(&self) -> f64 {
+        49.3f64
     }
 }
 impl TriaxialEllipsoid for Thebe {
@@ -2388,18 +2500,20 @@ impl RotationalElements for Thebe {
             4.678355059970801f64,
             -0.00015707963267948965f64,
             0f64,
-            Some(&[
-                0f64,
-                -0.03682644721708035f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.0006981317007977319f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    -0.03682644721708035f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.0006981317007977319f64,
+                ],
+            ),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -2407,18 +2521,20 @@ impl RotationalElements for Thebe {
             1.125562834611143f64,
             0.00005235987755982989f64,
             0f64,
-            Some(&[
-                0f64,
-                -0.0158824961931484f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.00017453292519943296f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    -0.0158824961931484f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.00017453292519943296f64,
+                ],
+            ),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -2426,18 +2542,20 @@ impl RotationalElements for Thebe {
             0.1494001839707146f64,
             9.31482937374367f64,
             0f64,
-            Some(&[
-                0f64,
-                0.033335788713091695f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                -0.0006981317007977319f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0.033335788713091695f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.0006981317007977319f64,
+                ],
+            ),
         )
     }
 }
@@ -2459,6 +2577,11 @@ impl Display for Adrastea {
 impl PointMass for Adrastea {
     fn gravitational_parameter(&self) -> f64 {
         0.000139f64
+    }
+}
+impl MeanRadius for Adrastea {
+    fn mean_radius(&self) -> f64 {
+        8.2f64
     }
 }
 impl TriaxialEllipsoid for Adrastea {
@@ -2533,6 +2656,11 @@ impl Display for Metis {
 impl PointMass for Metis {
     fn gravitational_parameter(&self) -> f64 {
         0.002501f64
+    }
+}
+impl MeanRadius for Metis {
+    fn mean_radius(&self) -> f64 {
+        21.5f64
     }
 }
 impl TriaxialEllipsoid for Metis {
@@ -3134,6 +3262,11 @@ impl PointMass for Mimas {
         2.503488768152587f64
     }
 }
+impl MeanRadius for Mimas {
+    fn mean_radius(&self) -> f64 {
+        198.2f64
+    }
+}
 impl TriaxialEllipsoid for Mimas {
     fn radii(&self) -> Radii {
         (207.8f64, 196.7f64, 190.6f64)
@@ -3169,16 +3302,7 @@ impl RotationalElements for Mimas {
             0.7096508738608943f64,
             -0.0006283185307179586f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0.2366666465704311f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(&[0f64, 0f64, 0.2366666465704311f64, 0f64, 0f64, 0f64, 0f64, 0f64]),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -3186,16 +3310,7 @@ impl RotationalElements for Mimas {
             1.457698991265664f64,
             -0.00006981317007977319f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                -0.026703537555513242f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(&[0f64, 0f64, -0.026703537555513242f64, 0f64, 0f64, 0f64, 0f64, 0f64]),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -3203,16 +3318,18 @@ impl RotationalElements for Mimas {
             5.819974923700291f64,
             6.667062709440567f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                -0.23527038316883564f64,
-                0f64,
-                -0.7827801695194568f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    -0.23527038316883564f64,
+                    0f64,
+                    -0.7827801695194568f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
 }
@@ -3234,6 +3351,11 @@ impl Display for Enceladus {
 impl PointMass for Enceladus {
     fn gravitational_parameter(&self) -> f64 {
         7.210366688598896f64
+    }
+}
+impl MeanRadius for Enceladus {
+    fn mean_radius(&self) -> f64 {
+        252.1f64
     }
 }
 impl TriaxialEllipsoid for Enceladus {
@@ -3296,6 +3418,11 @@ impl PointMass for Tethys {
         41.21352885489587f64
     }
 }
+impl MeanRadius for Tethys {
+    fn mean_radius(&self) -> f64 {
+        531f64
+    }
+}
 impl TriaxialEllipsoid for Tethys {
     fn radii(&self) -> Radii {
         (538.4f64, 528.3f64, 526.3f64)
@@ -3331,16 +3458,7 @@ impl RotationalElements for Tethys {
             0.7096508738608943f64,
             -0.0006283185307179586f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0.16859880574265224f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(&[0f64, 0f64, 0f64, 0.16859880574265224f64, 0f64, 0f64, 0f64, 0f64]),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -3348,16 +3466,7 @@ impl RotationalElements for Tethys {
             1.457698991265664f64,
             -0.00006981317007977319f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                -0.019024088846738195f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(&[0f64, 0f64, 0f64, -0.019024088846738195f64, 0f64, 0f64, 0f64, 0f64]),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -3365,16 +3474,18 @@ impl RotationalElements for Tethys {
             0.1562069680534925f64,
             3.328306379991881f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                -0.16755160819145562f64,
-                0.03892084231947355f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.16755160819145562f64,
+                    0.03892084231947355f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
 }
@@ -3396,6 +3507,11 @@ impl Display for Dione {
 impl PointMass for Dione {
     fn gravitational_parameter(&self) -> f64 {
         73.11607172482067f64
+    }
+}
+impl MeanRadius for Dione {
+    fn mean_radius(&self) -> f64 {
+        561.4f64
     }
 }
 impl TriaxialEllipsoid for Dione {
@@ -3458,6 +3574,11 @@ impl PointMass for Rhea {
         153.9417519146563f64
     }
 }
+impl MeanRadius for Rhea {
+    fn mean_radius(&self) -> f64 {
+        763.5f64
+    }
+}
 impl TriaxialEllipsoid for Rhea {
     fn radii(&self) -> Radii {
         (765f64, 763.1f64, 762.4f64)
@@ -3493,16 +3614,7 @@ impl RotationalElements for Rhea {
             0.7047639519553103f64,
             -0.0006283185307179586f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.054105206811824215f64,
-                0f64,
-                0f64,
-            ]),
+            Some(&[0f64, 0f64, 0f64, 0f64, 0f64, 0.054105206811824215f64, 0f64, 0f64]),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -3510,16 +3622,7 @@ impl RotationalElements for Rhea {
             1.4582225900412622f64,
             -0.00006981317007977319f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                -0.006108652381980153f64,
-                0f64,
-                0f64,
-            ]),
+            Some(&[0f64, 0f64, 0f64, 0f64, 0f64, -0.006108652381980153f64, 0f64, 0f64]),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -3527,16 +3630,7 @@ impl RotationalElements for Rhea {
             4.104316268989865f64,
             1.3908537151816638f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                -0.05375614096142535f64,
-                0f64,
-                0f64,
-            ]),
+            Some(&[0f64, 0f64, 0f64, 0f64, 0f64, -0.05375614096142535f64, 0f64, 0f64]),
         )
     }
 }
@@ -3558,6 +3652,11 @@ impl Display for Titan {
 impl PointMass for Titan {
     fn gravitational_parameter(&self) -> f64 {
         8978.137095521046f64
+    }
+}
+impl MeanRadius for Titan {
+    fn mean_radius(&self) -> f64 {
+        2575f64
     }
 }
 impl TriaxialEllipsoid for Titan {
@@ -3635,6 +3734,11 @@ impl PointMass for Hyperion {
         0.3704913747932265f64
     }
 }
+impl MeanRadius for Hyperion {
+    fn mean_radius(&self) -> f64 {
+        135f64
+    }
+}
 impl TriaxialEllipsoid for Hyperion {
     fn radii(&self) -> Radii {
         (180.1f64, 133f64, 102.7f64)
@@ -3658,6 +3762,11 @@ impl Display for Iapetus {
 impl PointMass for Iapetus {
     fn gravitational_parameter(&self) -> f64 {
         120.5151060137642f64
+    }
+}
+impl MeanRadius for Iapetus {
+    fn mean_radius(&self) -> f64 {
+        734.3f64
     }
 }
 impl TriaxialEllipsoid for Iapetus {
@@ -3721,6 +3830,11 @@ impl PointMass for Phoebe {
         0.5547860052791678f64
     }
 }
+impl MeanRadius for Phoebe {
+    fn mean_radius(&self) -> f64 {
+        106.5f64
+    }
+}
 impl TriaxialEllipsoid for Phoebe {
     fn radii(&self) -> Radii {
         (109.4f64, 108.5f64, 101.8f64)
@@ -3781,6 +3895,11 @@ impl PointMass for Janus {
         0.1265765099012197f64
     }
 }
+impl MeanRadius for Janus {
+    fn mean_radius(&self) -> f64 {
+        89.2f64
+    }
+}
 impl TriaxialEllipsoid for Janus {
     fn radii(&self) -> Radii {
         (101.7f64, 93f64, 76.3f64)
@@ -3816,16 +3935,18 @@ impl RotationalElements for Janus {
             0.7082546104592989f64,
             -0.0006283185307179586f64,
             0f64,
-            Some(&[
-                0f64,
-                -0.028326693759867967f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.0004014257279586958f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    -0.028326693759867967f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.0004014257279586958f64,
+                ],
+            ),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -3833,16 +3954,18 @@ impl RotationalElements for Janus {
             1.457698991265664f64,
             -0.00006981317007977319f64,
             0f64,
-            Some(&[
-                0f64,
-                -0.003193952531149623f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.000017453292519943296f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    -0.003193952531149623f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.000017453292519943296f64,
+                ],
+            ),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -3850,16 +3973,18 @@ impl RotationalElements for Janus {
             1.0267771989482641f64,
             9.044924285944507f64,
             0f64,
-            Some(&[
-                0f64,
-                0.028152160834668535f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                -0.0004014257279586958f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0.028152160834668535f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.0004014257279586958f64,
+                ],
+            ),
         )
     }
 }
@@ -3881,6 +4006,11 @@ impl Display for Epimetheus {
 impl PointMass for Epimetheus {
     fn gravitational_parameter(&self) -> f64 {
         0.03512333288208074f64
+    }
+}
+impl MeanRadius for Epimetheus {
+    fn mean_radius(&self) -> f64 {
+        58.2f64
     }
 }
 impl TriaxialEllipsoid for Epimetheus {
@@ -3918,16 +4048,18 @@ impl RotationalElements for Epimetheus {
             0.7082546104592989f64,
             -0.0006283185307179586f64,
             0f64,
-            Some(&[
-                -0.05503023131538121f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.0015009831567151233f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    -0.05503023131538121f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.0015009831567151233f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -3935,16 +4067,18 @@ impl RotationalElements for Epimetheus {
             1.457698991265664f64,
             -0.00006981317007977319f64,
             0f64,
-            Some(&[
-                -0.006213372137099813f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.00008726646259971648f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    -0.006213372137099813f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.00008726646259971648f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -3952,16 +4086,18 @@ impl RotationalElements for Epimetheus {
             5.128999072835736f64,
             9.049370273103856f64,
             0f64,
-            Some(&[
-                0.05468116546498235f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                -0.0015009831567151233f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0.05468116546498235f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.0015009831567151233f64,
+                    0f64,
+                ],
+            ),
         )
     }
 }
@@ -3983,6 +4119,11 @@ impl Display for Helene {
 impl PointMass for Helene {
     fn gravitational_parameter(&self) -> f64 {
         0.0004757419551776972f64
+    }
+}
+impl MeanRadius for Helene {
+    fn mean_radius(&self) -> f64 {
+        18f64
     }
 }
 impl TriaxialEllipsoid for Helene {
@@ -4019,12 +4160,7 @@ impl RotationalElements for Helene {
         (0.7129669994396837f64, -0.0006283185307179586f64, 0f64, None)
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
-        (
-            1.4545573986120743f64,
-            -0.00006981317007977319f64,
-            0f64,
-            None,
-        )
+        (1.4545573986120743f64, -0.00006981317007977319f64, 0f64, None)
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
         (4.278151062488501f64, 2.297157080652823f64, 0f64, None)
@@ -4043,6 +4179,11 @@ impl Origin for Telesto {
 impl Display for Telesto {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl MeanRadius for Telesto {
+    fn mean_radius(&self) -> f64 {
+        12.4f64
     }
 }
 impl TriaxialEllipsoid for Telesto {
@@ -4079,12 +4220,7 @@ impl RotationalElements for Telesto {
         (0.8815658051823358f64, -0.0006283185307179586f64, 0f64, None)
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
-        (
-            1.4671237692264334f64,
-            -0.00006981317007977319f64,
-            0f64,
-            None,
-        )
+        (1.4671237692264334f64, -0.00006981317007977319f64, 0f64, None)
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
         (0.9927432785343747f64, 3.328306811088206f64, 0f64, None)
@@ -4103,6 +4239,11 @@ impl Origin for Calypso {
 impl Display for Calypso {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl MeanRadius for Calypso {
+    fn mean_radius(&self) -> f64 {
+        9.6f64
     }
 }
 impl TriaxialEllipsoid for Calypso {
@@ -4139,12 +4280,7 @@ impl RotationalElements for Calypso {
         (0.6354743806511354f64, -0.0006283185307179586f64, 0f64, None)
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
-        (
-            1.4842279958959779f64,
-            -0.00006981317007977319f64,
-            0f64,
-            None,
-        )
+        (1.4842279958959779f64, -0.00006981317007977319f64, 0f64, None)
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
         (2.679254934736495f64, 3.327893239613983f64, 0f64, None)
@@ -4168,6 +4304,11 @@ impl Display for Atlas {
 impl PointMass for Atlas {
     fn gravitational_parameter(&self) -> f64 {
         0.0003718871247516475f64
+    }
+}
+impl MeanRadius for Atlas {
+    fn mean_radius(&self) -> f64 {
+        15.1f64
     }
 }
 impl TriaxialEllipsoid for Atlas {
@@ -4204,12 +4345,7 @@ impl RotationalElements for Atlas {
         (0.7082546104592989f64, -0.0006283185307179586f64, 0f64, None)
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
-        (
-            1.4578735241908636f64,
-            -0.00006981317007977319f64,
-            0f64,
-            None,
-        )
+        (1.4578735241908636f64, -0.00006981317007977319f64, 0f64, None)
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
         (2.4064599726497815f64, 10.442409634437194f64, 0f64, None)
@@ -4233,6 +4369,11 @@ impl Display for Prometheus {
 impl PointMass for Prometheus {
     fn gravitational_parameter(&self) -> f64 {
         0.0107520800100761f64
+    }
+}
+impl MeanRadius for Prometheus {
+    fn mean_radius(&self) -> f64 {
+        43.1f64
     }
 }
 impl TriaxialEllipsoid for Prometheus {
@@ -4269,12 +4410,7 @@ impl RotationalElements for Prometheus {
         (0.7082546104592989f64, -0.0006283185307179586f64, 0f64, None)
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
-        (
-            1.4578735241908636f64,
-            -0.00006981317007977319f64,
-            0f64,
-            None,
-        )
+        (1.4578735241908636f64, -0.00006981317007977319f64, 0f64, None)
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
         (5.1686180468560075f64, 10.250126710744977f64, 0f64, None)
@@ -4298,6 +4434,11 @@ impl Display for Pandora {
 impl PointMass for Pandora {
     fn gravitational_parameter(&self) -> f64 {
         0.009290325122028795f64
+    }
+}
+impl MeanRadius for Pandora {
+    fn mean_radius(&self) -> f64 {
+        40.6f64
     }
 }
 impl TriaxialEllipsoid for Pandora {
@@ -4334,12 +4475,7 @@ impl RotationalElements for Pandora {
         (0.7082546104592989f64, -0.0006283185307179586f64, 0f64, None)
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
-        (
-            1.4578735241908636f64,
-            -0.00006981317007977319f64,
-            0f64,
-            None,
-        )
+        (1.4578735241908636f64, -0.00006981317007977319f64, 0f64, None)
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
         (2.8434904173491615f64, 9.997055714535051f64, 0f64, None)
@@ -4358,6 +4494,11 @@ impl Origin for Pan {
 impl Display for Pan {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl MeanRadius for Pan {
+    fn mean_radius(&self) -> f64 {
+        14f64
     }
 }
 impl TriaxialEllipsoid for Pan {
@@ -4610,6 +4751,11 @@ impl Display for Methone {
         write!(f, "{}", self.name())
     }
 }
+impl MeanRadius for Methone {
+    fn mean_radius(&self) -> f64 {
+        1.45f64
+    }
+}
 impl TriaxialEllipsoid for Methone {
     fn radii(&self) -> Radii {
         (1.94f64, 1.29f64, 1.21f64)
@@ -4628,6 +4774,11 @@ impl Origin for Pallene {
 impl Display for Pallene {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl MeanRadius for Pallene {
+    fn mean_radius(&self) -> f64 {
+        2.23f64
     }
 }
 impl TriaxialEllipsoid for Pallene {
@@ -4650,6 +4801,11 @@ impl Display for Polydeuces {
         write!(f, "{}", self.name())
     }
 }
+impl MeanRadius for Polydeuces {
+    fn mean_radius(&self) -> f64 {
+        1.3f64
+    }
+}
 impl TriaxialEllipsoid for Polydeuces {
     fn radii(&self) -> Radii {
         (1.5f64, 1.2f64, 1f64)
@@ -4668,6 +4824,11 @@ impl Origin for Daphnis {
 impl Display for Daphnis {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl MeanRadius for Daphnis {
+    fn mean_radius(&self) -> f64 {
+        3.8f64
     }
 }
 impl TriaxialEllipsoid for Daphnis {
@@ -4885,6 +5046,11 @@ impl Display for Anthe {
         write!(f, "{}", self.name())
     }
 }
+impl MeanRadius for Anthe {
+    fn mean_radius(&self) -> f64 {
+        0.5f64
+    }
+}
 impl TriaxialEllipsoid for Anthe {
     fn radii(&self) -> Radii {
         (0.5f64, 0.5f64, 0.5f64)
@@ -4951,6 +5117,11 @@ impl Display for Aegaeon {
         write!(f, "{}", self.name())
     }
 }
+impl MeanRadius for Aegaeon {
+    fn mean_radius(&self) -> f64 {
+        0.33f64
+    }
+}
 impl TriaxialEllipsoid for Aegaeon {
     fn radii(&self) -> Radii {
         (0.7f64, 0.25f64, 0.2f64)
@@ -4974,6 +5145,11 @@ impl Display for Ariel {
 impl PointMass for Ariel {
     fn gravitational_parameter(&self) -> f64 {
         83.46344431770477f64
+    }
+}
+impl MeanRadius for Ariel {
+    fn mean_radius(&self) -> f64 {
+        578.9f64
     }
 }
 impl TriaxialEllipsoid for Ariel {
@@ -5031,21 +5207,23 @@ impl RotationalElements for Ariel {
             4.493001093409003f64,
             0f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.005061454830783556f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.005061454830783556f64,
+                ],
+            ),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -5053,21 +5231,23 @@ impl RotationalElements for Ariel {
             -0.26354471705114374f64,
             0f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.004886921905584123f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.004886921905584123f64,
+                ],
+            ),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -5075,21 +5255,23 @@ impl RotationalElements for Ariel {
             2.7265533574655416f64,
             -2.492952697630833f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.0008726646259971648f64,
-                0.0013962634015954637f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.0008726646259971648f64,
+                    0.0013962634015954637f64,
+                ],
+            ),
         )
     }
 }
@@ -5111,6 +5293,11 @@ impl Display for Umbriel {
 impl PointMass for Umbriel {
     fn gravitational_parameter(&self) -> f64 {
         85.09338094489388f64
+    }
+}
+impl MeanRadius for Umbriel {
+    fn mean_radius(&self) -> f64 {
+        584.7f64
     }
 }
 impl TriaxialEllipsoid for Umbriel {
@@ -5169,22 +5356,24 @@ impl RotationalElements for Umbriel {
             4.493001093409003f64,
             0f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.003665191429188092f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.003665191429188092f64,
+                ],
+            ),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -5192,22 +5381,24 @@ impl RotationalElements for Umbriel {
             -0.26354471705114374f64,
             0f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.003490658503988659f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.003490658503988659f64,
+                ],
+            ),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -5215,22 +5406,24 @@ impl RotationalElements for Umbriel {
             1.885828256779873f64,
             -1.5161481881953498f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                -0.0015707963267948964f64,
-                0f64,
-                0.0010471975511965976f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.0015707963267948964f64,
+                    0f64,
+                    0.0010471975511965976f64,
+                ],
+            ),
         )
     }
 }
@@ -5252,6 +5445,11 @@ impl Display for Titania {
 impl PointMass for Titania {
     fn gravitational_parameter(&self) -> f64 {
         226.9437003741248f64
+    }
+}
+impl MeanRadius for Titania {
+    fn mean_radius(&self) -> f64 {
+        788.9f64
     }
 }
 impl TriaxialEllipsoid for Titania {
@@ -5310,23 +5508,25 @@ impl RotationalElements for Titania {
             4.493001093409003f64,
             0f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.005061454830783556f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.005061454830783556f64,
+                ],
+            ),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -5334,23 +5534,25 @@ impl RotationalElements for Titania {
             -0.26354471705114374f64,
             0f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.004886921905584123f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.004886921905584123f64,
+                ],
+            ),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -5358,23 +5560,25 @@ impl RotationalElements for Titania {
             1.3568189605003917f64,
             -0.7217186318332268f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.0013962634015954637f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.0013962634015954637f64,
+                ],
+            ),
         )
     }
 }
@@ -5396,6 +5600,11 @@ impl Display for Oberon {
 impl PointMass for Oberon {
     fn gravitational_parameter(&self) -> f64 {
         205.3234302535623f64
+    }
+}
+impl MeanRadius for Oberon {
+    fn mean_radius(&self) -> f64 {
+        761.4f64
     }
 }
 impl TriaxialEllipsoid for Oberon {
@@ -5454,24 +5663,26 @@ impl RotationalElements for Oberon {
             4.493001093409003f64,
             0f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.0027925268031909274f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.0027925268031909274f64,
+                ],
+            ),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -5479,24 +5690,26 @@ impl RotationalElements for Oberon {
             -0.26354471705114374f64,
             0f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.0027925268031909274f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.0027925268031909274f64,
+                ],
+            ),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -5504,24 +5717,26 @@ impl RotationalElements for Oberon {
             0.1181587903600161f64,
             -0.4666921966546346f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.0006981317007977319f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.0006981317007977319f64,
+                ],
+            ),
         )
     }
 }
@@ -5543,6 +5758,11 @@ impl Display for Miranda {
 impl PointMass for Miranda {
     fn gravitational_parameter(&self) -> f64 {
         4.3195168992321f64
+    }
+}
+impl MeanRadius for Miranda {
+    fn mean_radius(&self) -> f64 {
+        235.8f64
     }
 }
 impl TriaxialEllipsoid for Miranda {
@@ -5600,26 +5820,28 @@ impl RotationalElements for Miranda {
             4.493001093409003f64,
             0f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.07696902001294993f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                -0.0006981317007977319f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.07696902001294993f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.0006981317007977319f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -5627,26 +5849,28 @@ impl RotationalElements for Miranda {
             -0.2631956512007449f64,
             0f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.07417649320975901f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                -0.00034906585039886593f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.07417649320975901f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.00034906585039886593f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -5654,26 +5878,28 @@ impl RotationalElements for Miranda {
             0.5358160803622591f64,
             -4.445191100713563f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.02007128639793479f64,
-                -0.022165681500327987f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                -0.0015707963267948964f64,
-                0.002617993877991494f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.02007128639793479f64,
+                    -0.022165681500327987f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.0015707963267948964f64,
+                    0.002617993877991494f64,
+                ],
+            ),
         )
     }
 }
@@ -5690,6 +5916,11 @@ impl Origin for Cordelia {
 impl Display for Cordelia {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl MeanRadius for Cordelia {
+    fn mean_radius(&self) -> f64 {
+        13f64
     }
 }
 impl TriaxialEllipsoid for Cordelia {
@@ -5748,26 +5979,28 @@ impl RotationalElements for Cordelia {
             4.49090669830661f64,
             0f64,
             0f64,
-            Some(&[
-                -0.002617993877991494f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    -0.002617993877991494f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -5775,26 +6008,28 @@ impl RotationalElements for Cordelia {
             -0.2649409804527392f64,
             0f64,
             0f64,
-            Some(&[
-                0.0024434609527920616f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0.0024434609527920616f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -5802,26 +6037,28 @@ impl RotationalElements for Cordelia {
             2.2286109218715593f64,
             -18.753921879266084f64,
             0f64,
-            Some(&[
-                -0.0006981317007977319f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    -0.0006981317007977319f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
 }
@@ -5838,6 +6075,11 @@ impl Origin for Ophelia {
 impl Display for Ophelia {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl MeanRadius for Ophelia {
+    fn mean_radius(&self) -> f64 {
+        15f64
     }
 }
 impl TriaxialEllipsoid for Ophelia {
@@ -5896,26 +6138,28 @@ impl RotationalElements for Ophelia {
             4.49090669830661f64,
             0f64,
             0f64,
-            Some(&[
-                0f64,
-                -0.0015707963267948964f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    -0.0015707963267948964f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -5923,26 +6167,28 @@ impl RotationalElements for Ophelia {
             -0.2649409804527392f64,
             0f64,
             0f64,
-            Some(&[
-                0f64,
-                0.0015707963267948964f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0.0015707963267948964f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -5950,26 +6196,28 @@ impl RotationalElements for Ophelia {
             2.2750366799746087f64,
             -16.692447910262292f64,
             0f64,
-            Some(&[
-                0f64,
-                -0.0005235987755982988f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    -0.0005235987755982988f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
 }
@@ -5986,6 +6234,11 @@ impl Origin for Bianca {
 impl Display for Bianca {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl MeanRadius for Bianca {
+    fn mean_radius(&self) -> f64 {
+        21f64
     }
 }
 impl TriaxialEllipsoid for Bianca {
@@ -6044,26 +6297,28 @@ impl RotationalElements for Bianca {
             4.49090669830661f64,
             0f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                -0.0027925268031909274f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    -0.0027925268031909274f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -6071,26 +6326,28 @@ impl RotationalElements for Bianca {
             -0.2649409804527392f64,
             0f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0.0027925268031909274f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0.0027925268031909274f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -6098,26 +6355,28 @@ impl RotationalElements for Bianca {
             1.8406242291532198f64,
             -14.458158751655587f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                -0.0006981317007977319f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    -0.0006981317007977319f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
 }
@@ -6134,6 +6393,11 @@ impl Origin for Cressida {
 impl Display for Cressida {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl MeanRadius for Cressida {
+    fn mean_radius(&self) -> f64 {
+        31f64
     }
 }
 impl TriaxialEllipsoid for Cressida {
@@ -6192,26 +6456,28 @@ impl RotationalElements for Cressida {
             4.49090669830661f64,
             0f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                -0.0006981317007977319f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.0006981317007977319f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -6219,26 +6485,28 @@ impl RotationalElements for Cressida {
             -0.2649409804527392f64,
             0f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0.0006981317007977319f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.0006981317007977319f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -6246,26 +6514,28 @@ impl RotationalElements for Cressida {
             1.0325367854798453f64,
             -13.553906388910956f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                -0.00017453292519943296f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.00017453292519943296f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
 }
@@ -6282,6 +6552,11 @@ impl Origin for Desdemona {
 impl Display for Desdemona {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl MeanRadius for Desdemona {
+    fn mean_radius(&self) -> f64 {
+        27f64
     }
 }
 impl TriaxialEllipsoid for Desdemona {
@@ -6340,26 +6615,28 @@ impl RotationalElements for Desdemona {
             4.49090669830661f64,
             0f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                -0.0029670597283903604f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.0029670597283903604f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -6367,26 +6644,28 @@ impl RotationalElements for Desdemona {
             -0.2649409804527392f64,
             0f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.0027925268031909274f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.0027925268031909274f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -6394,26 +6673,28 @@ impl RotationalElements for Desdemona {
             1.6594590527962085f64,
             -13.265430289266899f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                -0.0006981317007977319f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.0006981317007977319f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
 }
@@ -6430,6 +6711,11 @@ impl Origin for Juliet {
 impl Display for Juliet {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl MeanRadius for Juliet {
+    fn mean_radius(&self) -> f64 {
+        42f64
     }
 }
 impl TriaxialEllipsoid for Juliet {
@@ -6488,26 +6774,28 @@ impl RotationalElements for Juliet {
             4.49090669830661f64,
             0f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                -0.0010471975511965976f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.0010471975511965976f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -6515,26 +6803,28 @@ impl RotationalElements for Juliet {
             -0.2649409804527392f64,
             0f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.0010471975511965976f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.0010471975511965976f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -6542,26 +6832,28 @@ impl RotationalElements for Juliet {
             5.2806681848340435f64,
             -12.74309158902866f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                -0.00034906585039886593f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.00034906585039886593f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
 }
@@ -6578,6 +6870,11 @@ impl Origin for Portia {
 impl Display for Portia {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl MeanRadius for Portia {
+    fn mean_radius(&self) -> f64 {
+        54f64
     }
 }
 impl TriaxialEllipsoid for Portia {
@@ -6636,26 +6933,28 @@ impl RotationalElements for Portia {
             4.49090669830661f64,
             0f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                -0.0015707963267948964f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.0015707963267948964f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -6663,26 +6962,28 @@ impl RotationalElements for Portia {
             -0.2649409804527392f64,
             0f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.0015707963267948964f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.0015707963267948964f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -6690,26 +6991,28 @@ impl RotationalElements for Portia {
             0.4368559117741807f64,
             -12.243250601727652f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                -0.00034906585039886593f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.00034906585039886593f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
 }
@@ -6726,6 +7029,11 @@ impl Origin for Rosalind {
 impl Display for Rosalind {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl MeanRadius for Rosalind {
+    fn mean_radius(&self) -> f64 {
+        27f64
     }
 }
 impl TriaxialEllipsoid for Rosalind {
@@ -6784,26 +7092,28 @@ impl RotationalElements for Rosalind {
             4.49090669830661f64,
             0f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                -0.005061454830783556f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.005061454830783556f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -6811,26 +7121,28 @@ impl RotationalElements for Rosalind {
             -0.2649409804527392f64,
             0f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.004886921905584123f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.004886921905584123f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -6838,26 +7150,28 @@ impl RotationalElements for Rosalind {
             5.496041814530144f64,
             -11.250935609538423f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                -0.0013962634015954637f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.0013962634015954637f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
 }
@@ -6874,6 +7188,11 @@ impl Origin for Belinda {
 impl Display for Belinda {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl MeanRadius for Belinda {
+    fn mean_radius(&self) -> f64 {
+        33f64
     }
 }
 impl TriaxialEllipsoid for Belinda {
@@ -6932,26 +7251,28 @@ impl RotationalElements for Belinda {
             4.49090669830661f64,
             0f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                -0.0005235987755982988f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.0005235987755982988f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -6959,26 +7280,28 @@ impl RotationalElements for Belinda {
             -0.2649409804527392f64,
             0f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.0005235987755982988f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.0005235987755982988f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -6986,26 +7309,28 @@ impl RotationalElements for Belinda {
             5.191656392982332f64,
             -10.076882135239488f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                -0.00017453292519943296f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.00017453292519943296f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
 }
@@ -7022,6 +7347,11 @@ impl Origin for Puck {
 impl Display for Puck {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl MeanRadius for Puck {
+    fn mean_radius(&self) -> f64 {
+        77f64
     }
 }
 impl TriaxialEllipsoid for Puck {
@@ -7080,26 +7410,28 @@ impl RotationalElements for Puck {
             4.49090669830661f64,
             0f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                -0.005759586531581287f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.005759586531581287f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -7107,26 +7439,28 @@ impl RotationalElements for Puck {
             -0.2649409804527392f64,
             0f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.0054105206811824215f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.0054105206811824215f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -7134,26 +7468,28 @@ impl RotationalElements for Puck {
             1.5924384095196262f64,
             -8.247467318113788f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                -0.0015707963267948964f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.0015707963267948964f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
 }
@@ -7357,6 +7693,11 @@ impl PointMass for Triton {
         1428.495462910464f64
     }
 }
+impl MeanRadius for Triton {
+    fn mean_radius(&self) -> f64 {
+        1352.6f64
+    }
+}
 impl TriaxialEllipsoid for Triton {
     fn radii(&self) -> Radii {
         (1352.6f64, 1352.6f64, 1352.6f64)
@@ -7411,25 +7752,27 @@ impl RotationalElements for Triton {
             5.224817648770225f64,
             0f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                -0.5646140130201657f64,
-                0f64,
-                -0.1096066770252439f64,
-                -0.03630284844148206f64,
-                -0.012915436464758038f64,
-                -0.004886921905584123f64,
-                -0.0019198621771937625f64,
-                -0.0012217304763960308f64,
-                -0.00034906585039886593f64,
-                -0.00017453292519943296f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.5646140130201657f64,
+                    0f64,
+                    -0.1096066770252439f64,
+                    -0.03630284844148206f64,
+                    -0.012915436464758038f64,
+                    -0.004886921905584123f64,
+                    -0.0019198621771937625f64,
+                    -0.0012217304763960308f64,
+                    -0.00034906585039886593f64,
+                    -0.00017453292519943296f64,
+                ],
+            ),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -7437,25 +7780,27 @@ impl RotationalElements for Triton {
             0.7185520530460655f64,
             0f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.3935717463247213f64,
-                0f64,
-                0.03665191429188092f64,
-                0.009599310885968814f64,
-                0.0027925268031909274f64,
-                0.0008726646259971648f64,
-                0.00034906585039886593f64,
-                0.00017453292519943296f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.3935717463247213f64,
+                    0f64,
+                    0.03665191429188092f64,
+                    0.009599310885968814f64,
+                    0.0027925268031909274f64,
+                    0.0008726646259971648f64,
+                    0.00034906585039886593f64,
+                    0.00017453292519943296f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -7463,25 +7808,27 @@ impl RotationalElements for Triton {
             5.175424830938785f64,
             -1.069140942327404f64,
             0f64,
-            Some(&[
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.3883357585687383f64,
-                0f64,
-                0.11746065865921838f64,
-                0.03577924966588375f64,
-                0.012915436464758038f64,
-                0.004886921905584123f64,
-                0.0019198621771937625f64,
-                0.0008726646259971648f64,
-                0.00034906585039886593f64,
-                0.00017453292519943296f64,
-            ]),
+            Some(
+                &[
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.3883357585687383f64,
+                    0f64,
+                    0.11746065865921838f64,
+                    0.03577924966588375f64,
+                    0.012915436464758038f64,
+                    0.004886921905584123f64,
+                    0.0019198621771937625f64,
+                    0.0008726646259971648f64,
+                    0.00034906585039886593f64,
+                    0.00017453292519943296f64,
+                ],
+            ),
         )
     }
 }
@@ -7498,6 +7845,11 @@ impl Origin for Nereid {
 impl Display for Nereid {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl MeanRadius for Nereid {
+    fn mean_radius(&self) -> f64 {
+        170f64
     }
 }
 impl TriaxialEllipsoid for Nereid {
@@ -7524,6 +7876,11 @@ impl Display for Naiad {
 impl PointMass for Naiad {
     fn gravitational_parameter(&self) -> f64 {
         0.008530281246540886f64
+    }
+}
+impl MeanRadius for Naiad {
+    fn mean_radius(&self) -> f64 {
+        29f64
     }
 }
 impl TriaxialEllipsoid for Naiad {
@@ -7580,25 +7937,27 @@ impl RotationalElements for Naiad {
             5.224817648770225f64,
             0f64,
             0f64,
-            Some(&[
-                0.012217304763960306f64,
-                -0.11327186845443199f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.004363323129985824f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0.012217304763960306f64,
+                    -0.11327186845443199f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.004363323129985824f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -7606,25 +7965,27 @@ impl RotationalElements for Naiad {
             0.7567747636647413f64,
             0f64,
             0f64,
-            Some(&[
-                -0.00890117918517108f64,
-                -0.08290313946973066f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.0015707963267948964f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    -0.00890117918517108f64,
+                    -0.08290313946973066f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.0015707963267948964f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -7632,25 +7993,27 @@ impl RotationalElements for Naiad {
             4.434183497616794f64,
             21.342656148360604f64,
             0f64,
-            Some(&[
-                -0.008377580409572781f64,
-                0.07679448708775051f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                -0.00471238898038469f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    -0.008377580409572781f64,
+                    0.07679448708775051f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.00471238898038469f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
 }
@@ -7672,6 +8035,11 @@ impl Display for Thalassa {
 impl PointMass for Thalassa {
     fn gravitational_parameter(&self) -> f64 {
         0.0235887319799217f64
+    }
+}
+impl MeanRadius for Thalassa {
+    fn mean_radius(&self) -> f64 {
+        40f64
     }
 }
 impl TriaxialEllipsoid for Thalassa {
@@ -7728,25 +8096,27 @@ impl RotationalElements for Thalassa {
             5.224817648770225f64,
             0f64,
             0f64,
-            Some(&[
-                0.012217304763960306f64,
-                0f64,
-                -0.004886921905584123f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0.012217304763960306f64,
+                    0f64,
+                    -0.004886921905584123f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -7754,25 +8124,27 @@ impl RotationalElements for Thalassa {
             0.7583455599915362f64,
             0f64,
             0f64,
-            Some(&[
-                -0.00890117918517108f64,
-                0f64,
-                -0.003665191429188092f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    -0.00890117918517108f64,
+                    0f64,
+                    -0.003665191429188092f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -7780,25 +8152,27 @@ impl RotationalElements for Thalassa {
             1.7812830345854127f64,
             20.171739891174827f64,
             0f64,
-            Some(&[
-                -0.008377580409572781f64,
-                0f64,
-                0.0033161255787892262f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    -0.008377580409572781f64,
+                    0f64,
+                    0.0033161255787892262f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
 }
@@ -7820,6 +8194,11 @@ impl Display for Despina {
 impl PointMass for Despina {
     fn gravitational_parameter(&self) -> f64 {
         0.1167318403814998f64
+    }
+}
+impl MeanRadius for Despina {
+    fn mean_radius(&self) -> f64 {
+        74f64
     }
 }
 impl TriaxialEllipsoid for Despina {
@@ -7876,25 +8255,27 @@ impl RotationalElements for Despina {
             5.224817648770225f64,
             0f64,
             0f64,
-            Some(&[
-                0.012217304763960306f64,
-                0f64,
-                0f64,
-                -0.0015707963267948964f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0.012217304763960306f64,
+                    0f64,
+                    0f64,
+                    -0.0015707963267948964f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -7902,25 +8283,27 @@ impl RotationalElements for Despina {
             0.7583455599915362f64,
             0f64,
             0f64,
-            Some(&[
-                -0.00890117918517108f64,
-                0f64,
-                0f64,
-                -0.0012217304763960308f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    -0.00890117918517108f64,
+                    0f64,
+                    0f64,
+                    -0.0012217304763960308f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -7928,25 +8311,27 @@ impl RotationalElements for Despina {
             5.34960869028782f64,
             18.77510290185297f64,
             0f64,
-            Some(&[
-                -0.008552113334772215f64,
-                0f64,
-                0f64,
-                0.0010471975511965976f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    -0.008552113334772215f64,
+                    0f64,
+                    0f64,
+                    0.0010471975511965976f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
 }
@@ -7968,6 +8353,11 @@ impl Display for Galatea {
 impl PointMass for Galatea {
     fn gravitational_parameter(&self) -> f64 {
         0.189898503906069f64
+    }
+}
+impl MeanRadius for Galatea {
+    fn mean_radius(&self) -> f64 {
+        79f64
     }
 }
 impl TriaxialEllipsoid for Galatea {
@@ -8024,25 +8414,27 @@ impl RotationalElements for Galatea {
             5.224817648770225f64,
             0f64,
             0f64,
-            Some(&[
-                0.012217304763960306f64,
-                0f64,
-                0f64,
-                0f64,
-                -0.0012217304763960308f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0.012217304763960306f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.0012217304763960308f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -8050,25 +8442,27 @@ impl RotationalElements for Galatea {
             0.7579964941411373f64,
             0f64,
             0f64,
-            Some(&[
-                -0.00890117918517108f64,
-                0f64,
-                0f64,
-                0f64,
-                -0.0008726646259971648f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    -0.00890117918517108f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.0008726646259971648f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -8076,25 +8470,27 @@ impl RotationalElements for Galatea {
             4.504520266472165f64,
             14.6548275586037f64,
             0f64,
-            Some(&[
-                -0.008377580409572781f64,
-                0f64,
-                0f64,
-                0f64,
-                0.0008726646259971648f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    -0.008377580409572781f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.0008726646259971648f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
 }
@@ -8116,6 +8512,11 @@ impl Display for Larissa {
 impl PointMass for Larissa {
     fn gravitational_parameter(&self) -> f64 {
         0.2548437405693583f64
+    }
+}
+impl MeanRadius for Larissa {
+    fn mean_radius(&self) -> f64 {
+        96f64
     }
 }
 impl TriaxialEllipsoid for Larissa {
@@ -8172,25 +8573,27 @@ impl RotationalElements for Larissa {
             5.224817648770225f64,
             0f64,
             0f64,
-            Some(&[
-                0.012217304763960306f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                -0.00471238898038469f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0.012217304763960306f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.00471238898038469f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -8198,25 +8601,27 @@ impl RotationalElements for Larissa {
             0.7576474282907384f64,
             0f64,
             0f64,
-            Some(&[
-                -0.00890117918517108f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                -0.003490658503988659f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    -0.00890117918517108f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.003490658503988659f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -8224,25 +8629,27 @@ impl RotationalElements for Larissa {
             3.1312952110030268f64,
             11.328119671568512f64,
             0f64,
-            Some(&[
-                -0.008377580409572781f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.0033161255787892262f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    -0.008377580409572781f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.0033161255787892262f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
 }
@@ -8264,6 +8671,11 @@ impl Display for Proteus {
 impl PointMass for Proteus {
     fn gravitational_parameter(&self) -> f64 {
         2.583422379120727f64
+    }
+}
+impl MeanRadius for Proteus {
+    fn mean_radius(&self) -> f64 {
+        208f64
     }
 }
 impl TriaxialEllipsoid for Proteus {
@@ -8319,25 +8731,27 @@ impl RotationalElements for Proteus {
             5.22324685244343f64,
             0f64,
             0f64,
-            Some(&[
-                0.012217304763960306f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                -0.0008726646259971648f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    0.012217304763960306f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.0008726646259971648f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn declination_coefficients(&self) -> PolynomialCoefficients {
@@ -8345,25 +8759,27 @@ impl RotationalElements for Proteus {
             0.7489207820307667f64,
             0f64,
             0f64,
-            Some(&[
-                -0.00890117918517108f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                -0.0006981317007977319f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    -0.00890117918517108f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    -0.0006981317007977319f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
     fn prime_meridian_coefficients(&self) -> PolynomialCoefficients {
@@ -8371,25 +8787,27 @@ impl RotationalElements for Proteus {
             1.6297884555123048f64,
             5.598412754411688f64,
             0f64,
-            Some(&[
-                -0.008377580409572781f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0.0006981317007977319f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-                0f64,
-            ]),
+            Some(
+                &[
+                    -0.008377580409572781f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0.0006981317007977319f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                    0f64,
+                ],
+            ),
         )
     }
 }
@@ -8486,6 +8904,11 @@ impl Display for Charon {
 impl PointMass for Charon {
     fn gravitational_parameter(&self) -> f64 {
         105.8799888601881f64
+    }
+}
+impl MeanRadius for Charon {
+    fn mean_radius(&self) -> f64 {
+        606f64
     }
 }
 impl TriaxialEllipsoid for Charon {
@@ -8603,6 +9026,11 @@ impl Display for Gaspra {
         write!(f, "{}", self.name())
     }
 }
+impl MeanRadius for Gaspra {
+    fn mean_radius(&self) -> f64 {
+        6.1f64
+    }
+}
 impl TriaxialEllipsoid for Gaspra {
     fn radii(&self) -> Radii {
         (9.1f64, 5.2f64, 4.4f64)
@@ -8635,6 +9063,11 @@ impl Origin for Ida {
 impl Display for Ida {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl MeanRadius for Ida {
+    fn mean_radius(&self) -> f64 {
+        15.65f64
     }
 }
 impl TriaxialEllipsoid for Ida {
@@ -8689,6 +9122,11 @@ impl Display for Ceres {
 impl PointMass for Ceres {
     fn gravitational_parameter(&self) -> f64 {
         62.62888864440993f64
+    }
+}
+impl MeanRadius for Ceres {
+    fn mean_radius(&self) -> f64 {
+        470f64
     }
 }
 impl TriaxialEllipsoid for Ceres {
@@ -8804,6 +9242,11 @@ impl PointMass for Psyche {
         1.5896582441709424f64
     }
 }
+impl MeanRadius for Psyche {
+    fn mean_radius(&self) -> f64 {
+        113f64
+    }
+}
 impl TriaxialEllipsoid for Psyche {
     fn radii(&self) -> Radii {
         (139.5f64, 116f64, 94.5f64)
@@ -8822,6 +9265,11 @@ impl Origin for Lutetia {
 impl Display for Lutetia {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl MeanRadius for Lutetia {
+    fn mean_radius(&self) -> f64 {
+        52.5f64
     }
 }
 impl TriaxialEllipsoid for Lutetia {
@@ -8878,6 +9326,11 @@ impl PointMass for Eros {
         0.0004463f64
     }
 }
+impl MeanRadius for Eros {
+    fn mean_radius(&self) -> f64 {
+        8.45f64
+    }
+}
 impl TriaxialEllipsoid for Eros {
     fn radii(&self) -> Radii {
         (17f64, 5.5f64, 5.5f64)
@@ -8917,6 +9370,11 @@ impl PointMass for Davida {
         3.8944831481705644f64
     }
 }
+impl MeanRadius for Davida {
+    fn mean_radius(&self) -> f64 {
+        150f64
+    }
+}
 impl TriaxialEllipsoid for Davida {
     fn radii(&self) -> Radii {
         (180f64, 147f64, 127f64)
@@ -8951,6 +9409,11 @@ impl Display for Mathilde {
         write!(f, "{}", self.name())
     }
 }
+impl MeanRadius for Mathilde {
+    fn mean_radius(&self) -> f64 {
+        26.5f64
+    }
+}
 impl TriaxialEllipsoid for Mathilde {
     fn radii(&self) -> Radii {
         (33f64, 24f64, 23f64)
@@ -8969,6 +9432,11 @@ impl Origin for Steins {
 impl Display for Steins {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl MeanRadius for Steins {
+    fn mean_radius(&self) -> f64 {
+        2.7f64
     }
 }
 impl TriaxialEllipsoid for Steins {
@@ -9178,6 +9646,82 @@ impl MaybeMeanRadius for DynOrigin {
             DynOrigin::Uranus => Some(25362f64),
             DynOrigin::Neptune => Some(24622f64),
             DynOrigin::Pluto => Some(1188.3f64),
+            DynOrigin::Moon => Some(1737.4f64),
+            DynOrigin::Phobos => Some(11.08f64),
+            DynOrigin::Deimos => Some(6.2f64),
+            DynOrigin::Io => Some(1821.49f64),
+            DynOrigin::Europa => Some(1560.8f64),
+            DynOrigin::Ganymede => Some(2631.2f64),
+            DynOrigin::Callisto => Some(2410.3f64),
+            DynOrigin::Amalthea => Some(83.5f64),
+            DynOrigin::Himalia => Some(85f64),
+            DynOrigin::Elara => Some(40f64),
+            DynOrigin::Pasiphae => Some(18f64),
+            DynOrigin::Sinope => Some(14f64),
+            DynOrigin::Lysithea => Some(12f64),
+            DynOrigin::Carme => Some(15f64),
+            DynOrigin::Ananke => Some(10f64),
+            DynOrigin::Leda => Some(5f64),
+            DynOrigin::Thebe => Some(49.3f64),
+            DynOrigin::Adrastea => Some(8.2f64),
+            DynOrigin::Metis => Some(21.5f64),
+            DynOrigin::Mimas => Some(198.2f64),
+            DynOrigin::Enceladus => Some(252.1f64),
+            DynOrigin::Tethys => Some(531f64),
+            DynOrigin::Dione => Some(561.4f64),
+            DynOrigin::Rhea => Some(763.5f64),
+            DynOrigin::Titan => Some(2575f64),
+            DynOrigin::Hyperion => Some(135f64),
+            DynOrigin::Iapetus => Some(734.3f64),
+            DynOrigin::Phoebe => Some(106.5f64),
+            DynOrigin::Janus => Some(89.2f64),
+            DynOrigin::Epimetheus => Some(58.2f64),
+            DynOrigin::Helene => Some(18f64),
+            DynOrigin::Telesto => Some(12.4f64),
+            DynOrigin::Calypso => Some(9.6f64),
+            DynOrigin::Atlas => Some(15.1f64),
+            DynOrigin::Prometheus => Some(43.1f64),
+            DynOrigin::Pandora => Some(40.6f64),
+            DynOrigin::Pan => Some(14f64),
+            DynOrigin::Methone => Some(1.45f64),
+            DynOrigin::Pallene => Some(2.23f64),
+            DynOrigin::Polydeuces => Some(1.3f64),
+            DynOrigin::Daphnis => Some(3.8f64),
+            DynOrigin::Anthe => Some(0.5f64),
+            DynOrigin::Aegaeon => Some(0.33f64),
+            DynOrigin::Ariel => Some(578.9f64),
+            DynOrigin::Umbriel => Some(584.7f64),
+            DynOrigin::Titania => Some(788.9f64),
+            DynOrigin::Oberon => Some(761.4f64),
+            DynOrigin::Miranda => Some(235.8f64),
+            DynOrigin::Cordelia => Some(13f64),
+            DynOrigin::Ophelia => Some(15f64),
+            DynOrigin::Bianca => Some(21f64),
+            DynOrigin::Cressida => Some(31f64),
+            DynOrigin::Desdemona => Some(27f64),
+            DynOrigin::Juliet => Some(42f64),
+            DynOrigin::Portia => Some(54f64),
+            DynOrigin::Rosalind => Some(27f64),
+            DynOrigin::Belinda => Some(33f64),
+            DynOrigin::Puck => Some(77f64),
+            DynOrigin::Triton => Some(1352.6f64),
+            DynOrigin::Nereid => Some(170f64),
+            DynOrigin::Naiad => Some(29f64),
+            DynOrigin::Thalassa => Some(40f64),
+            DynOrigin::Despina => Some(74f64),
+            DynOrigin::Galatea => Some(79f64),
+            DynOrigin::Larissa => Some(96f64),
+            DynOrigin::Proteus => Some(208f64),
+            DynOrigin::Charon => Some(606f64),
+            DynOrigin::Gaspra => Some(6.1f64),
+            DynOrigin::Ida => Some(15.65f64),
+            DynOrigin::Ceres => Some(470f64),
+            DynOrigin::Psyche => Some(113f64),
+            DynOrigin::Lutetia => Some(52.5f64),
+            DynOrigin::Eros => Some(8.45f64),
+            DynOrigin::Davida => Some(150f64),
+            DynOrigin::Mathilde => Some(26.5f64),
+            DynOrigin::Steins => Some(2.7f64),
             _ => None,
         }
     }
@@ -9280,2055 +9824,2171 @@ impl MaybeTriaxialEllipsoid for DynOrigin {
 }
 impl MaybeSpheroid for DynOrigin {}
 impl MaybeRotationalElements for DynOrigin {
-    fn maybe_nutation_precession_coefficients(&self) -> Option<NutationPrecessionCoefficients> {
+    fn maybe_nutation_precession_coefficients(
+        &self,
+    ) -> Option<NutationPrecessionCoefficients> {
         match self {
             DynOrigin::Sun => Some((&[] as &[f64], &[] as &[f64])),
-            DynOrigin::Mercury => Some((
-                &[
-                    3.0506799486005773f64,
-                    6.101359897201155f64,
-                    2.868854538622146f64,
-                    5.919534488968053f64,
-                    2.6870291303890443f64,
-                ],
-                &[
-                    2608.7878923240937f64,
-                    5217.575784648187f64,
-                    7826.363676972282f64,
-                    10435.151569296375f64,
-                    13043.939461620466f64,
-                ],
-            )),
+            DynOrigin::Mercury => {
+                Some((
+                    &[
+                        3.0506799486005773f64,
+                        6.101359897201155f64,
+                        2.868854538622146f64,
+                        5.919534488968053f64,
+                        2.6870291303890443f64,
+                    ],
+                    &[
+                        2608.7878923240937f64,
+                        5217.575784648187f64,
+                        7826.363676972282f64,
+                        10435.151569296375f64,
+                        13043.939461620466f64,
+                    ],
+                ))
+            }
             DynOrigin::Venus => Some((&[] as &[f64], &[] as &[f64])),
-            DynOrigin::Earth => Some((
-                &[
-                    2.1824469631563095f64,
-                    4.364876473020098f64,
-                    4.537995681525416f64,
-                    3.0826877913349846f64,
-                    6.240058221362807f64,
-                    5.438253962996612f64,
-                    2.355548718369107f64,
-                    4.827877416989155f64,
-                    0.5973563897875792f64,
-                    0.2641381289968218f64,
-                    2.0899096062155698f64,
-                    4.188109526378113f64,
-                    0.4372573375021394f64,
-                ],
-                &[
-                    -33.781483888495835f64,
-                    -67.56296777699167f64,
-                    8294.909972626925f64,
-                    8504.459388212737f64,
-                    628.3019668015924f64,
-                    16833.15084472816f64,
-                    8328.69145651542f64,
-                    209.54947933396397f64,
-                    1114.6285779726247f64,
-                    -101.3444516654875f64,
-                    2.301053255936537f64,
-                    104.77473966698199f64,
-                    8261.12848873843f64,
-                ],
-            )),
-            DynOrigin::Mars => Some((
-                &[
-                    3.328804809897935f64,
-                    0f64,
-                    555.6129894920322f64,
-                    5.809517398292802f64,
-                    0f64,
-                    668.125936040531f64,
-                    3.3097152567180146f64,
-                    0.22186491448462606f64,
-                    11.523153020184504f64,
-                    4.032588225058434f64,
-                    0f64,
-                    23.047098122619843f64,
-                    3.8045796985836846f64,
-                    0f64,
-                    334.05316148477937f64,
-                    3.4730520762801462f64,
-                    0f64,
-                    668.1268926511307f64,
-                    4.357448194643978f64,
-                    0f64,
-                    1336.235189496269f64,
-                    1.3857704297725961f64,
-                    0f64,
-                    334.054984682245f64,
-                    0.751510868094019f64,
-                    0f64,
-                    1002.1811764929237f64,
-                    1.3871248750853138f64,
-                    0f64,
-                    0.008801023466045386f64,
-                    2.252727410236719f64,
-                    0f64,
-                    668.130317528175f64,
-                    0.9890544553471146f64,
-                    0f64,
-                    1336.2285297823557f64,
-                    1.8289772979888115f64,
-                    0f64,
-                    0.008801023466045386f64,
-                ],
-                &[
-                    277.80594525842264f64,
-                    0.37470342287773584f64,
-                    0f64,
-                    334.05422022489097f64,
-                    6.892873571600945f64,
-                    0f64,
-                    719340.2120445863f64,
-                    2.120032883264378f64,
-                    0f64,
-                    11.536473384554899f64,
-                    4.387288948439982f64,
-                    0f64,
-                    668.1113614443373f64,
-                    3.424288764152381f64,
-                    0f64,
-                    334.0469780000094f64,
-                    3.9495523217086292f64,
-                    0f64,
-                    1002.1807129125305f64,
-                    4.645778664015252f64,
-                    0f64,
-                    0.008801023466045386f64,
-                    2.136869016190709f64,
-                    0f64,
-                    668.1273150051017f64,
-                    1.0064158213753553f64,
-                    0f64,
-                    1336.2354112473317f64,
-                    2.9029314796567682f64,
-                    0f64,
-                    334.05659172556966f64,
-                    0.6344650043848296f64,
-                    0f64,
-                    1002.1842799588599f64,
-                    1.1757236496733376f64,
-                    0f64,
-                    1670.2877519268022f64,
-                    1.664898441223219f64,
-                    0f64,
-                ],
-            )),
-            DynOrigin::Jupiter => Some((
-                &[
-                    1.2796754075622423f64,
-                    0.42970006184100396f64,
-                    4.9549897464119015f64,
-                    6.2098814785958245f64,
-                    2.092649773141201f64,
-                    4.010766621082969f64,
-                    6.147922290150026f64,
-                    1.9783307071355725f64,
-                    2.5593508151244846f64,
-                    0.8594001236820079f64,
-                    1.734171606432425f64,
-                    3.0699533280603655f64,
-                    5.241627996900319f64,
-                    1.9898901100379935f64,
-                    0.864134346731335f64,
-                ],
-                &[
-                    1596.503281347521f64,
-                    787.7927551311844f64,
-                    84.66068602648895f64,
-                    20.792107379008446f64,
-                    4.574507969477138f64,
-                    1.1222467090323538f64,
-                    41.58421475801689f64,
-                    105.9414855960558f64,
-                    3193.006562695042f64,
-                    1575.5855102623689f64,
-                    84.65553032387855f64,
-                    20.80363527871787f64,
-                    4.582318317879813f64,
-                    105.94580703128374f64,
-                    1.1222467090323538f64,
-                ],
-            )),
-            DynOrigin::Saturn => Some((
-                &[
-                    6.166597313146365f64,
-                    0.5012585611727715f64,
-                    3.0962140930379407f64,
-                    5.235987755982989f64,
-                    5.523094417936056f64,
-                    6.0248765778844255f64,
-                    12.33319462629273f64,
-                    1.002517122345543f64,
-                ],
-                &[
-                    1321.331180819591f64,
-                    1321.331180819591f64,
-                    -637.14117008679f64,
-                    -126.11574641985825f64,
-                    8.834856673595295f64,
-                    -17.73778118801837f64,
-                    2642.662361639182f64,
-                    2642.662361639182f64,
-                ],
-            )),
-            DynOrigin::Uranus => Some((
-                &[
-                    2.0202186091834364f64,
-                    2.4729570171507653f64,
-                    2.356718088967943f64,
-                    1.0780898789568973f64,
-                    4.351454891072263f64,
-                    0.7655014099247129f64,
-                    1.3554226970987964f64,
-                    2.746450110938277f64,
-                    1.776919711455427f64,
-                    2.419724474964938f64,
-                    1.784250094313803f64,
-                    5.522396286235258f64,
-                    5.3059754589879615f64,
-                    5.388005933831694f64,
-                    5.948431156647074f64,
-                    4.522846223618106f64,
-                    3.568500188627606f64,
-                    11.044792572470516f64,
-                ],
-                &[
-                    959.7891933286942f64,
-                    731.077582955928f64,
-                    522.3307938967249f64,
-                    449.1358738582876f64,
-                    427.10754977009157f64,
-                    388.83160660922994f64,
-                    354.1171823199879f64,
-                    290.6454915444109f64,
-                    224.66977689099764f64,
-                    140.70512817020406f64,
-                    -35.32930378471962f64,
-                    49.9855316454168f64,
-                    -0.9065240134858548f64,
-                    -1.626123264083117f64,
-                    -1.314581992602129f64,
-                    -8.810596596992575f64,
-                    -70.65860756943924f64,
-                    99.9710632908336f64,
-                ],
-            )),
-            DynOrigin::Neptune => Some((
-                &[
-                    6.245660728261709f64,
-                    5.653470513060032f64,
-                    3.848625533572696f64,
-                    6.183177941040311f64,
-                    1.3144074596769295f64,
-                    0.6171484235051949f64,
-                    2.4890140462691135f64,
-                    3.104068074671915f64,
-                    11.306941026120064f64,
-                    6.20813614934383f64,
-                    9.312204224015744f64,
-                    12.41627229868766f64,
-                    15.520340373359575f64,
-                    18.624408448031488f64,
-                    21.728476522703406f64,
-                    24.83254459737532f64,
-                    27.936612672047236f64,
-                ],
-                &[
-                    0.9130864514733535f64,
-                    1092.6913034790819f64,
-                    961.0515899766616f64,
-                    812.7038395448996f64,
-                    455.6949957202075f64,
-                    250.02539666519567f64,
-                    49.29857005183183f64,
-                    0.9130864514733535f64,
-                    2185.3826069581637f64,
-                    1.826172902946707f64,
-                    2.7392593544200605f64,
-                    3.652345805893414f64,
-                    4.565432257366767f64,
-                    5.478518708840121f64,
-                    6.391605160313474f64,
-                    7.304691611786828f64,
-                    8.21777806326018f64,
-                ],
-            )),
+            DynOrigin::Earth => {
+                Some((
+                    &[
+                        2.1824469631563095f64,
+                        4.364876473020098f64,
+                        4.537995681525416f64,
+                        3.0826877913349846f64,
+                        6.240058221362807f64,
+                        5.438253962996612f64,
+                        2.355548718369107f64,
+                        4.827877416989155f64,
+                        0.5973563897875792f64,
+                        0.2641381289968218f64,
+                        2.0899096062155698f64,
+                        4.188109526378113f64,
+                        0.4372573375021394f64,
+                    ],
+                    &[
+                        -33.781483888495835f64,
+                        -67.56296777699167f64,
+                        8294.909972626925f64,
+                        8504.459388212737f64,
+                        628.3019668015924f64,
+                        16833.15084472816f64,
+                        8328.69145651542f64,
+                        209.54947933396397f64,
+                        1114.6285779726247f64,
+                        -101.3444516654875f64,
+                        2.301053255936537f64,
+                        104.77473966698199f64,
+                        8261.12848873843f64,
+                    ],
+                ))
+            }
+            DynOrigin::Mars => {
+                Some((
+                    &[
+                        3.328804809897935f64,
+                        0f64,
+                        555.6129894920322f64,
+                        5.809517398292802f64,
+                        0f64,
+                        668.125936040531f64,
+                        3.3097152567180146f64,
+                        0.22186491448462606f64,
+                        11.523153020184504f64,
+                        4.032588225058434f64,
+                        0f64,
+                        23.047098122619843f64,
+                        3.8045796985836846f64,
+                        0f64,
+                        334.05316148477937f64,
+                        3.4730520762801462f64,
+                        0f64,
+                        668.1268926511307f64,
+                        4.357448194643978f64,
+                        0f64,
+                        1336.235189496269f64,
+                        1.3857704297725961f64,
+                        0f64,
+                        334.054984682245f64,
+                        0.751510868094019f64,
+                        0f64,
+                        1002.1811764929237f64,
+                        1.3871248750853138f64,
+                        0f64,
+                        0.008801023466045386f64,
+                        2.252727410236719f64,
+                        0f64,
+                        668.130317528175f64,
+                        0.9890544553471146f64,
+                        0f64,
+                        1336.2285297823557f64,
+                        1.8289772979888115f64,
+                        0f64,
+                        0.008801023466045386f64,
+                    ],
+                    &[
+                        277.80594525842264f64,
+                        0.37470342287773584f64,
+                        0f64,
+                        334.05422022489097f64,
+                        6.892873571600945f64,
+                        0f64,
+                        719340.2120445863f64,
+                        2.120032883264378f64,
+                        0f64,
+                        11.536473384554899f64,
+                        4.387288948439982f64,
+                        0f64,
+                        668.1113614443373f64,
+                        3.424288764152381f64,
+                        0f64,
+                        334.0469780000094f64,
+                        3.9495523217086292f64,
+                        0f64,
+                        1002.1807129125305f64,
+                        4.645778664015252f64,
+                        0f64,
+                        0.008801023466045386f64,
+                        2.136869016190709f64,
+                        0f64,
+                        668.1273150051017f64,
+                        1.0064158213753553f64,
+                        0f64,
+                        1336.2354112473317f64,
+                        2.9029314796567682f64,
+                        0f64,
+                        334.05659172556966f64,
+                        0.6344650043848296f64,
+                        0f64,
+                        1002.1842799588599f64,
+                        1.1757236496733376f64,
+                        0f64,
+                        1670.2877519268022f64,
+                        1.664898441223219f64,
+                        0f64,
+                    ],
+                ))
+            }
+            DynOrigin::Jupiter => {
+                Some((
+                    &[
+                        1.2796754075622423f64,
+                        0.42970006184100396f64,
+                        4.9549897464119015f64,
+                        6.2098814785958245f64,
+                        2.092649773141201f64,
+                        4.010766621082969f64,
+                        6.147922290150026f64,
+                        1.9783307071355725f64,
+                        2.5593508151244846f64,
+                        0.8594001236820079f64,
+                        1.734171606432425f64,
+                        3.0699533280603655f64,
+                        5.241627996900319f64,
+                        1.9898901100379935f64,
+                        0.864134346731335f64,
+                    ],
+                    &[
+                        1596.503281347521f64,
+                        787.7927551311844f64,
+                        84.66068602648895f64,
+                        20.792107379008446f64,
+                        4.574507969477138f64,
+                        1.1222467090323538f64,
+                        41.58421475801689f64,
+                        105.9414855960558f64,
+                        3193.006562695042f64,
+                        1575.5855102623689f64,
+                        84.65553032387855f64,
+                        20.80363527871787f64,
+                        4.582318317879813f64,
+                        105.94580703128374f64,
+                        1.1222467090323538f64,
+                    ],
+                ))
+            }
+            DynOrigin::Saturn => {
+                Some((
+                    &[
+                        6.166597313146365f64,
+                        0.5012585611727715f64,
+                        3.0962140930379407f64,
+                        5.235987755982989f64,
+                        5.523094417936056f64,
+                        6.0248765778844255f64,
+                        12.33319462629273f64,
+                        1.002517122345543f64,
+                    ],
+                    &[
+                        1321.331180819591f64,
+                        1321.331180819591f64,
+                        -637.14117008679f64,
+                        -126.11574641985825f64,
+                        8.834856673595295f64,
+                        -17.73778118801837f64,
+                        2642.662361639182f64,
+                        2642.662361639182f64,
+                    ],
+                ))
+            }
+            DynOrigin::Uranus => {
+                Some((
+                    &[
+                        2.0202186091834364f64,
+                        2.4729570171507653f64,
+                        2.356718088967943f64,
+                        1.0780898789568973f64,
+                        4.351454891072263f64,
+                        0.7655014099247129f64,
+                        1.3554226970987964f64,
+                        2.746450110938277f64,
+                        1.776919711455427f64,
+                        2.419724474964938f64,
+                        1.784250094313803f64,
+                        5.522396286235258f64,
+                        5.3059754589879615f64,
+                        5.388005933831694f64,
+                        5.948431156647074f64,
+                        4.522846223618106f64,
+                        3.568500188627606f64,
+                        11.044792572470516f64,
+                    ],
+                    &[
+                        959.7891933286942f64,
+                        731.077582955928f64,
+                        522.3307938967249f64,
+                        449.1358738582876f64,
+                        427.10754977009157f64,
+                        388.83160660922994f64,
+                        354.1171823199879f64,
+                        290.6454915444109f64,
+                        224.66977689099764f64,
+                        140.70512817020406f64,
+                        -35.32930378471962f64,
+                        49.9855316454168f64,
+                        -0.9065240134858548f64,
+                        -1.626123264083117f64,
+                        -1.314581992602129f64,
+                        -8.810596596992575f64,
+                        -70.65860756943924f64,
+                        99.9710632908336f64,
+                    ],
+                ))
+            }
+            DynOrigin::Neptune => {
+                Some((
+                    &[
+                        6.245660728261709f64,
+                        5.653470513060032f64,
+                        3.848625533572696f64,
+                        6.183177941040311f64,
+                        1.3144074596769295f64,
+                        0.6171484235051949f64,
+                        2.4890140462691135f64,
+                        3.104068074671915f64,
+                        11.306941026120064f64,
+                        6.20813614934383f64,
+                        9.312204224015744f64,
+                        12.41627229868766f64,
+                        15.520340373359575f64,
+                        18.624408448031488f64,
+                        21.728476522703406f64,
+                        24.83254459737532f64,
+                        27.936612672047236f64,
+                    ],
+                    &[
+                        0.9130864514733535f64,
+                        1092.6913034790819f64,
+                        961.0515899766616f64,
+                        812.7038395448996f64,
+                        455.6949957202075f64,
+                        250.02539666519567f64,
+                        49.29857005183183f64,
+                        0.9130864514733535f64,
+                        2185.3826069581637f64,
+                        1.826172902946707f64,
+                        2.7392593544200605f64,
+                        3.652345805893414f64,
+                        4.565432257366767f64,
+                        5.478518708840121f64,
+                        6.391605160313474f64,
+                        7.304691611786828f64,
+                        8.21777806326018f64,
+                    ],
+                ))
+            }
             DynOrigin::Pluto => Some((&[] as &[f64], &[] as &[f64])),
-            DynOrigin::Moon => Some((
-                &[
-                    2.1824469631563095f64,
-                    4.364876473020098f64,
-                    4.537995681525416f64,
-                    3.0826877913349846f64,
-                    6.240058221362807f64,
-                    5.438253962996612f64,
-                    2.355548718369107f64,
-                    4.827877416989155f64,
-                    0.5973563897875792f64,
-                    0.2641381289968218f64,
-                    2.0899096062155698f64,
-                    4.188109526378113f64,
-                    0.4372573375021394f64,
-                ],
-                &[
-                    -33.781483888495835f64,
-                    -67.56296777699167f64,
-                    8294.909972626925f64,
-                    8504.459388212737f64,
-                    628.3019668015924f64,
-                    16833.15084472816f64,
-                    8328.69145651542f64,
-                    209.54947933396397f64,
-                    1114.6285779726247f64,
-                    -101.3444516654875f64,
-                    2.301053255936537f64,
-                    104.77473966698199f64,
-                    8261.12848873843f64,
-                ],
-            )),
-            DynOrigin::Phobos => Some((
-                &[
-                    3.328804809897935f64,
-                    0f64,
-                    555.6129894920322f64,
-                    5.809517398292802f64,
-                    0f64,
-                    668.125936040531f64,
-                    3.3097152567180146f64,
-                    0.22186491448462606f64,
-                    11.523153020184504f64,
-                    4.032588225058434f64,
-                    0f64,
-                    23.047098122619843f64,
-                    3.8045796985836846f64,
-                    0f64,
-                    334.05316148477937f64,
-                    3.4730520762801462f64,
-                    0f64,
-                    668.1268926511307f64,
-                    4.357448194643978f64,
-                    0f64,
-                    1336.235189496269f64,
-                    1.3857704297725961f64,
-                    0f64,
-                    334.054984682245f64,
-                    0.751510868094019f64,
-                    0f64,
-                    1002.1811764929237f64,
-                    1.3871248750853138f64,
-                    0f64,
-                    0.008801023466045386f64,
-                    2.252727410236719f64,
-                    0f64,
-                    668.130317528175f64,
-                    0.9890544553471146f64,
-                    0f64,
-                    1336.2285297823557f64,
-                    1.8289772979888115f64,
-                    0f64,
-                    0.008801023466045386f64,
-                ],
-                &[
-                    277.80594525842264f64,
-                    0.37470342287773584f64,
-                    0f64,
-                    334.05422022489097f64,
-                    6.892873571600945f64,
-                    0f64,
-                    719340.2120445863f64,
-                    2.120032883264378f64,
-                    0f64,
-                    11.536473384554899f64,
-                    4.387288948439982f64,
-                    0f64,
-                    668.1113614443373f64,
-                    3.424288764152381f64,
-                    0f64,
-                    334.0469780000094f64,
-                    3.9495523217086292f64,
-                    0f64,
-                    1002.1807129125305f64,
-                    4.645778664015252f64,
-                    0f64,
-                    0.008801023466045386f64,
-                    2.136869016190709f64,
-                    0f64,
-                    668.1273150051017f64,
-                    1.0064158213753553f64,
-                    0f64,
-                    1336.2354112473317f64,
-                    2.9029314796567682f64,
-                    0f64,
-                    334.05659172556966f64,
-                    0.6344650043848296f64,
-                    0f64,
-                    1002.1842799588599f64,
-                    1.1757236496733376f64,
-                    0f64,
-                    1670.2877519268022f64,
-                    1.664898441223219f64,
-                    0f64,
-                ],
-            )),
-            DynOrigin::Deimos => Some((
-                &[
-                    3.328804809897935f64,
-                    0f64,
-                    555.6129894920322f64,
-                    5.809517398292802f64,
-                    0f64,
-                    668.125936040531f64,
-                    3.3097152567180146f64,
-                    0.22186491448462606f64,
-                    11.523153020184504f64,
-                    4.032588225058434f64,
-                    0f64,
-                    23.047098122619843f64,
-                    3.8045796985836846f64,
-                    0f64,
-                    334.05316148477937f64,
-                    3.4730520762801462f64,
-                    0f64,
-                    668.1268926511307f64,
-                    4.357448194643978f64,
-                    0f64,
-                    1336.235189496269f64,
-                    1.3857704297725961f64,
-                    0f64,
-                    334.054984682245f64,
-                    0.751510868094019f64,
-                    0f64,
-                    1002.1811764929237f64,
-                    1.3871248750853138f64,
-                    0f64,
-                    0.008801023466045386f64,
-                    2.252727410236719f64,
-                    0f64,
-                    668.130317528175f64,
-                    0.9890544553471146f64,
-                    0f64,
-                    1336.2285297823557f64,
-                    1.8289772979888115f64,
-                    0f64,
-                    0.008801023466045386f64,
-                ],
-                &[
-                    277.80594525842264f64,
-                    0.37470342287773584f64,
-                    0f64,
-                    334.05422022489097f64,
-                    6.892873571600945f64,
-                    0f64,
-                    719340.2120445863f64,
-                    2.120032883264378f64,
-                    0f64,
-                    11.536473384554899f64,
-                    4.387288948439982f64,
-                    0f64,
-                    668.1113614443373f64,
-                    3.424288764152381f64,
-                    0f64,
-                    334.0469780000094f64,
-                    3.9495523217086292f64,
-                    0f64,
-                    1002.1807129125305f64,
-                    4.645778664015252f64,
-                    0f64,
-                    0.008801023466045386f64,
-                    2.136869016190709f64,
-                    0f64,
-                    668.1273150051017f64,
-                    1.0064158213753553f64,
-                    0f64,
-                    1336.2354112473317f64,
-                    2.9029314796567682f64,
-                    0f64,
-                    334.05659172556966f64,
-                    0.6344650043848296f64,
-                    0f64,
-                    1002.1842799588599f64,
-                    1.1757236496733376f64,
-                    0f64,
-                    1670.2877519268022f64,
-                    1.664898441223219f64,
-                    0f64,
-                ],
-            )),
-            DynOrigin::Io => Some((
-                &[
-                    1.2796754075622423f64,
-                    0.42970006184100396f64,
-                    4.9549897464119015f64,
-                    6.2098814785958245f64,
-                    2.092649773141201f64,
-                    4.010766621082969f64,
-                    6.147922290150026f64,
-                    1.9783307071355725f64,
-                    2.5593508151244846f64,
-                    0.8594001236820079f64,
-                    1.734171606432425f64,
-                    3.0699533280603655f64,
-                    5.241627996900319f64,
-                    1.9898901100379935f64,
-                    0.864134346731335f64,
-                ],
-                &[
-                    1596.503281347521f64,
-                    787.7927551311844f64,
-                    84.66068602648895f64,
-                    20.792107379008446f64,
-                    4.574507969477138f64,
-                    1.1222467090323538f64,
-                    41.58421475801689f64,
-                    105.9414855960558f64,
-                    3193.006562695042f64,
-                    1575.5855102623689f64,
-                    84.65553032387855f64,
-                    20.80363527871787f64,
-                    4.582318317879813f64,
-                    105.94580703128374f64,
-                    1.1222467090323538f64,
-                ],
-            )),
-            DynOrigin::Europa => Some((
-                &[
-                    1.2796754075622423f64,
-                    0.42970006184100396f64,
-                    4.9549897464119015f64,
-                    6.2098814785958245f64,
-                    2.092649773141201f64,
-                    4.010766621082969f64,
-                    6.147922290150026f64,
-                    1.9783307071355725f64,
-                    2.5593508151244846f64,
-                    0.8594001236820079f64,
-                    1.734171606432425f64,
-                    3.0699533280603655f64,
-                    5.241627996900319f64,
-                    1.9898901100379935f64,
-                    0.864134346731335f64,
-                ],
-                &[
-                    1596.503281347521f64,
-                    787.7927551311844f64,
-                    84.66068602648895f64,
-                    20.792107379008446f64,
-                    4.574507969477138f64,
-                    1.1222467090323538f64,
-                    41.58421475801689f64,
-                    105.9414855960558f64,
-                    3193.006562695042f64,
-                    1575.5855102623689f64,
-                    84.65553032387855f64,
-                    20.80363527871787f64,
-                    4.582318317879813f64,
-                    105.94580703128374f64,
-                    1.1222467090323538f64,
-                ],
-            )),
-            DynOrigin::Ganymede => Some((
-                &[
-                    1.2796754075622423f64,
-                    0.42970006184100396f64,
-                    4.9549897464119015f64,
-                    6.2098814785958245f64,
-                    2.092649773141201f64,
-                    4.010766621082969f64,
-                    6.147922290150026f64,
-                    1.9783307071355725f64,
-                    2.5593508151244846f64,
-                    0.8594001236820079f64,
-                    1.734171606432425f64,
-                    3.0699533280603655f64,
-                    5.241627996900319f64,
-                    1.9898901100379935f64,
-                    0.864134346731335f64,
-                ],
-                &[
-                    1596.503281347521f64,
-                    787.7927551311844f64,
-                    84.66068602648895f64,
-                    20.792107379008446f64,
-                    4.574507969477138f64,
-                    1.1222467090323538f64,
-                    41.58421475801689f64,
-                    105.9414855960558f64,
-                    3193.006562695042f64,
-                    1575.5855102623689f64,
-                    84.65553032387855f64,
-                    20.80363527871787f64,
-                    4.582318317879813f64,
-                    105.94580703128374f64,
-                    1.1222467090323538f64,
-                ],
-            )),
-            DynOrigin::Callisto => Some((
-                &[
-                    1.2796754075622423f64,
-                    0.42970006184100396f64,
-                    4.9549897464119015f64,
-                    6.2098814785958245f64,
-                    2.092649773141201f64,
-                    4.010766621082969f64,
-                    6.147922290150026f64,
-                    1.9783307071355725f64,
-                    2.5593508151244846f64,
-                    0.8594001236820079f64,
-                    1.734171606432425f64,
-                    3.0699533280603655f64,
-                    5.241627996900319f64,
-                    1.9898901100379935f64,
-                    0.864134346731335f64,
-                ],
-                &[
-                    1596.503281347521f64,
-                    787.7927551311844f64,
-                    84.66068602648895f64,
-                    20.792107379008446f64,
-                    4.574507969477138f64,
-                    1.1222467090323538f64,
-                    41.58421475801689f64,
-                    105.9414855960558f64,
-                    3193.006562695042f64,
-                    1575.5855102623689f64,
-                    84.65553032387855f64,
-                    20.80363527871787f64,
-                    4.582318317879813f64,
-                    105.94580703128374f64,
-                    1.1222467090323538f64,
-                ],
-            )),
-            DynOrigin::Amalthea => Some((
-                &[
-                    1.2796754075622423f64,
-                    0.42970006184100396f64,
-                    4.9549897464119015f64,
-                    6.2098814785958245f64,
-                    2.092649773141201f64,
-                    4.010766621082969f64,
-                    6.147922290150026f64,
-                    1.9783307071355725f64,
-                    2.5593508151244846f64,
-                    0.8594001236820079f64,
-                    1.734171606432425f64,
-                    3.0699533280603655f64,
-                    5.241627996900319f64,
-                    1.9898901100379935f64,
-                    0.864134346731335f64,
-                ],
-                &[
-                    1596.503281347521f64,
-                    787.7927551311844f64,
-                    84.66068602648895f64,
-                    20.792107379008446f64,
-                    4.574507969477138f64,
-                    1.1222467090323538f64,
-                    41.58421475801689f64,
-                    105.9414855960558f64,
-                    3193.006562695042f64,
-                    1575.5855102623689f64,
-                    84.65553032387855f64,
-                    20.80363527871787f64,
-                    4.582318317879813f64,
-                    105.94580703128374f64,
-                    1.1222467090323538f64,
-                ],
-            )),
-            DynOrigin::Thebe => Some((
-                &[
-                    1.2796754075622423f64,
-                    0.42970006184100396f64,
-                    4.9549897464119015f64,
-                    6.2098814785958245f64,
-                    2.092649773141201f64,
-                    4.010766621082969f64,
-                    6.147922290150026f64,
-                    1.9783307071355725f64,
-                    2.5593508151244846f64,
-                    0.8594001236820079f64,
-                    1.734171606432425f64,
-                    3.0699533280603655f64,
-                    5.241627996900319f64,
-                    1.9898901100379935f64,
-                    0.864134346731335f64,
-                ],
-                &[
-                    1596.503281347521f64,
-                    787.7927551311844f64,
-                    84.66068602648895f64,
-                    20.792107379008446f64,
-                    4.574507969477138f64,
-                    1.1222467090323538f64,
-                    41.58421475801689f64,
-                    105.9414855960558f64,
-                    3193.006562695042f64,
-                    1575.5855102623689f64,
-                    84.65553032387855f64,
-                    20.80363527871787f64,
-                    4.582318317879813f64,
-                    105.94580703128374f64,
-                    1.1222467090323538f64,
-                ],
-            )),
-            DynOrigin::Adrastea => Some((
-                &[
-                    1.2796754075622423f64,
-                    0.42970006184100396f64,
-                    4.9549897464119015f64,
-                    6.2098814785958245f64,
-                    2.092649773141201f64,
-                    4.010766621082969f64,
-                    6.147922290150026f64,
-                    1.9783307071355725f64,
-                    2.5593508151244846f64,
-                    0.8594001236820079f64,
-                    1.734171606432425f64,
-                    3.0699533280603655f64,
-                    5.241627996900319f64,
-                    1.9898901100379935f64,
-                    0.864134346731335f64,
-                ],
-                &[
-                    1596.503281347521f64,
-                    787.7927551311844f64,
-                    84.66068602648895f64,
-                    20.792107379008446f64,
-                    4.574507969477138f64,
-                    1.1222467090323538f64,
-                    41.58421475801689f64,
-                    105.9414855960558f64,
-                    3193.006562695042f64,
-                    1575.5855102623689f64,
-                    84.65553032387855f64,
-                    20.80363527871787f64,
-                    4.582318317879813f64,
-                    105.94580703128374f64,
-                    1.1222467090323538f64,
-                ],
-            )),
-            DynOrigin::Metis => Some((
-                &[
-                    1.2796754075622423f64,
-                    0.42970006184100396f64,
-                    4.9549897464119015f64,
-                    6.2098814785958245f64,
-                    2.092649773141201f64,
-                    4.010766621082969f64,
-                    6.147922290150026f64,
-                    1.9783307071355725f64,
-                    2.5593508151244846f64,
-                    0.8594001236820079f64,
-                    1.734171606432425f64,
-                    3.0699533280603655f64,
-                    5.241627996900319f64,
-                    1.9898901100379935f64,
-                    0.864134346731335f64,
-                ],
-                &[
-                    1596.503281347521f64,
-                    787.7927551311844f64,
-                    84.66068602648895f64,
-                    20.792107379008446f64,
-                    4.574507969477138f64,
-                    1.1222467090323538f64,
-                    41.58421475801689f64,
-                    105.9414855960558f64,
-                    3193.006562695042f64,
-                    1575.5855102623689f64,
-                    84.65553032387855f64,
-                    20.80363527871787f64,
-                    4.582318317879813f64,
-                    105.94580703128374f64,
-                    1.1222467090323538f64,
-                ],
-            )),
-            DynOrigin::Mimas => Some((
-                &[
-                    6.166597313146365f64,
-                    0.5012585611727715f64,
-                    3.0962140930379407f64,
-                    5.235987755982989f64,
-                    5.523094417936056f64,
-                    6.0248765778844255f64,
-                    12.33319462629273f64,
-                    1.002517122345543f64,
-                ],
-                &[
-                    1321.331180819591f64,
-                    1321.331180819591f64,
-                    -637.14117008679f64,
-                    -126.11574641985825f64,
-                    8.834856673595295f64,
-                    -17.73778118801837f64,
-                    2642.662361639182f64,
-                    2642.662361639182f64,
-                ],
-            )),
-            DynOrigin::Enceladus => Some((
-                &[
-                    6.166597313146365f64,
-                    0.5012585611727715f64,
-                    3.0962140930379407f64,
-                    5.235987755982989f64,
-                    5.523094417936056f64,
-                    6.0248765778844255f64,
-                    12.33319462629273f64,
-                    1.002517122345543f64,
-                ],
-                &[
-                    1321.331180819591f64,
-                    1321.331180819591f64,
-                    -637.14117008679f64,
-                    -126.11574641985825f64,
-                    8.834856673595295f64,
-                    -17.73778118801837f64,
-                    2642.662361639182f64,
-                    2642.662361639182f64,
-                ],
-            )),
-            DynOrigin::Tethys => Some((
-                &[
-                    6.166597313146365f64,
-                    0.5012585611727715f64,
-                    3.0962140930379407f64,
-                    5.235987755982989f64,
-                    5.523094417936056f64,
-                    6.0248765778844255f64,
-                    12.33319462629273f64,
-                    1.002517122345543f64,
-                ],
-                &[
-                    1321.331180819591f64,
-                    1321.331180819591f64,
-                    -637.14117008679f64,
-                    -126.11574641985825f64,
-                    8.834856673595295f64,
-                    -17.73778118801837f64,
-                    2642.662361639182f64,
-                    2642.662361639182f64,
-                ],
-            )),
-            DynOrigin::Dione => Some((
-                &[
-                    6.166597313146365f64,
-                    0.5012585611727715f64,
-                    3.0962140930379407f64,
-                    5.235987755982989f64,
-                    5.523094417936056f64,
-                    6.0248765778844255f64,
-                    12.33319462629273f64,
-                    1.002517122345543f64,
-                ],
-                &[
-                    1321.331180819591f64,
-                    1321.331180819591f64,
-                    -637.14117008679f64,
-                    -126.11574641985825f64,
-                    8.834856673595295f64,
-                    -17.73778118801837f64,
-                    2642.662361639182f64,
-                    2642.662361639182f64,
-                ],
-            )),
-            DynOrigin::Rhea => Some((
-                &[
-                    6.166597313146365f64,
-                    0.5012585611727715f64,
-                    3.0962140930379407f64,
-                    5.235987755982989f64,
-                    5.523094417936056f64,
-                    6.0248765778844255f64,
-                    12.33319462629273f64,
-                    1.002517122345543f64,
-                ],
-                &[
-                    1321.331180819591f64,
-                    1321.331180819591f64,
-                    -637.14117008679f64,
-                    -126.11574641985825f64,
-                    8.834856673595295f64,
-                    -17.73778118801837f64,
-                    2642.662361639182f64,
-                    2642.662361639182f64,
-                ],
-            )),
-            DynOrigin::Titan => Some((
-                &[
-                    6.166597313146365f64,
-                    0.5012585611727715f64,
-                    3.0962140930379407f64,
-                    5.235987755982989f64,
-                    5.523094417936056f64,
-                    6.0248765778844255f64,
-                    12.33319462629273f64,
-                    1.002517122345543f64,
-                ],
-                &[
-                    1321.331180819591f64,
-                    1321.331180819591f64,
-                    -637.14117008679f64,
-                    -126.11574641985825f64,
-                    8.834856673595295f64,
-                    -17.73778118801837f64,
-                    2642.662361639182f64,
-                    2642.662361639182f64,
-                ],
-            )),
-            DynOrigin::Iapetus => Some((
-                &[
-                    6.166597313146365f64,
-                    0.5012585611727715f64,
-                    3.0962140930379407f64,
-                    5.235987755982989f64,
-                    5.523094417936056f64,
-                    6.0248765778844255f64,
-                    12.33319462629273f64,
-                    1.002517122345543f64,
-                ],
-                &[
-                    1321.331180819591f64,
-                    1321.331180819591f64,
-                    -637.14117008679f64,
-                    -126.11574641985825f64,
-                    8.834856673595295f64,
-                    -17.73778118801837f64,
-                    2642.662361639182f64,
-                    2642.662361639182f64,
-                ],
-            )),
-            DynOrigin::Phoebe => Some((
-                &[
-                    6.166597313146365f64,
-                    0.5012585611727715f64,
-                    3.0962140930379407f64,
-                    5.235987755982989f64,
-                    5.523094417936056f64,
-                    6.0248765778844255f64,
-                    12.33319462629273f64,
-                    1.002517122345543f64,
-                ],
-                &[
-                    1321.331180819591f64,
-                    1321.331180819591f64,
-                    -637.14117008679f64,
-                    -126.11574641985825f64,
-                    8.834856673595295f64,
-                    -17.73778118801837f64,
-                    2642.662361639182f64,
-                    2642.662361639182f64,
-                ],
-            )),
-            DynOrigin::Janus => Some((
-                &[
-                    6.166597313146365f64,
-                    0.5012585611727715f64,
-                    3.0962140930379407f64,
-                    5.235987755982989f64,
-                    5.523094417936056f64,
-                    6.0248765778844255f64,
-                    12.33319462629273f64,
-                    1.002517122345543f64,
-                ],
-                &[
-                    1321.331180819591f64,
-                    1321.331180819591f64,
-                    -637.14117008679f64,
-                    -126.11574641985825f64,
-                    8.834856673595295f64,
-                    -17.73778118801837f64,
-                    2642.662361639182f64,
-                    2642.662361639182f64,
-                ],
-            )),
-            DynOrigin::Epimetheus => Some((
-                &[
-                    6.166597313146365f64,
-                    0.5012585611727715f64,
-                    3.0962140930379407f64,
-                    5.235987755982989f64,
-                    5.523094417936056f64,
-                    6.0248765778844255f64,
-                    12.33319462629273f64,
-                    1.002517122345543f64,
-                ],
-                &[
-                    1321.331180819591f64,
-                    1321.331180819591f64,
-                    -637.14117008679f64,
-                    -126.11574641985825f64,
-                    8.834856673595295f64,
-                    -17.73778118801837f64,
-                    2642.662361639182f64,
-                    2642.662361639182f64,
-                ],
-            )),
-            DynOrigin::Helene => Some((
-                &[
-                    6.166597313146365f64,
-                    0.5012585611727715f64,
-                    3.0962140930379407f64,
-                    5.235987755982989f64,
-                    5.523094417936056f64,
-                    6.0248765778844255f64,
-                    12.33319462629273f64,
-                    1.002517122345543f64,
-                ],
-                &[
-                    1321.331180819591f64,
-                    1321.331180819591f64,
-                    -637.14117008679f64,
-                    -126.11574641985825f64,
-                    8.834856673595295f64,
-                    -17.73778118801837f64,
-                    2642.662361639182f64,
-                    2642.662361639182f64,
-                ],
-            )),
-            DynOrigin::Telesto => Some((
-                &[
-                    6.166597313146365f64,
-                    0.5012585611727715f64,
-                    3.0962140930379407f64,
-                    5.235987755982989f64,
-                    5.523094417936056f64,
-                    6.0248765778844255f64,
-                    12.33319462629273f64,
-                    1.002517122345543f64,
-                ],
-                &[
-                    1321.331180819591f64,
-                    1321.331180819591f64,
-                    -637.14117008679f64,
-                    -126.11574641985825f64,
-                    8.834856673595295f64,
-                    -17.73778118801837f64,
-                    2642.662361639182f64,
-                    2642.662361639182f64,
-                ],
-            )),
-            DynOrigin::Calypso => Some((
-                &[
-                    6.166597313146365f64,
-                    0.5012585611727715f64,
-                    3.0962140930379407f64,
-                    5.235987755982989f64,
-                    5.523094417936056f64,
-                    6.0248765778844255f64,
-                    12.33319462629273f64,
-                    1.002517122345543f64,
-                ],
-                &[
-                    1321.331180819591f64,
-                    1321.331180819591f64,
-                    -637.14117008679f64,
-                    -126.11574641985825f64,
-                    8.834856673595295f64,
-                    -17.73778118801837f64,
-                    2642.662361639182f64,
-                    2642.662361639182f64,
-                ],
-            )),
-            DynOrigin::Atlas => Some((
-                &[
-                    6.166597313146365f64,
-                    0.5012585611727715f64,
-                    3.0962140930379407f64,
-                    5.235987755982989f64,
-                    5.523094417936056f64,
-                    6.0248765778844255f64,
-                    12.33319462629273f64,
-                    1.002517122345543f64,
-                ],
-                &[
-                    1321.331180819591f64,
-                    1321.331180819591f64,
-                    -637.14117008679f64,
-                    -126.11574641985825f64,
-                    8.834856673595295f64,
-                    -17.73778118801837f64,
-                    2642.662361639182f64,
-                    2642.662361639182f64,
-                ],
-            )),
-            DynOrigin::Prometheus => Some((
-                &[
-                    6.166597313146365f64,
-                    0.5012585611727715f64,
-                    3.0962140930379407f64,
-                    5.235987755982989f64,
-                    5.523094417936056f64,
-                    6.0248765778844255f64,
-                    12.33319462629273f64,
-                    1.002517122345543f64,
-                ],
-                &[
-                    1321.331180819591f64,
-                    1321.331180819591f64,
-                    -637.14117008679f64,
-                    -126.11574641985825f64,
-                    8.834856673595295f64,
-                    -17.73778118801837f64,
-                    2642.662361639182f64,
-                    2642.662361639182f64,
-                ],
-            )),
-            DynOrigin::Pandora => Some((
-                &[
-                    6.166597313146365f64,
-                    0.5012585611727715f64,
-                    3.0962140930379407f64,
-                    5.235987755982989f64,
-                    5.523094417936056f64,
-                    6.0248765778844255f64,
-                    12.33319462629273f64,
-                    1.002517122345543f64,
-                ],
-                &[
-                    1321.331180819591f64,
-                    1321.331180819591f64,
-                    -637.14117008679f64,
-                    -126.11574641985825f64,
-                    8.834856673595295f64,
-                    -17.73778118801837f64,
-                    2642.662361639182f64,
-                    2642.662361639182f64,
-                ],
-            )),
-            DynOrigin::Pan => Some((
-                &[
-                    6.166597313146365f64,
-                    0.5012585611727715f64,
-                    3.0962140930379407f64,
-                    5.235987755982989f64,
-                    5.523094417936056f64,
-                    6.0248765778844255f64,
-                    12.33319462629273f64,
-                    1.002517122345543f64,
-                ],
-                &[
-                    1321.331180819591f64,
-                    1321.331180819591f64,
-                    -637.14117008679f64,
-                    -126.11574641985825f64,
-                    8.834856673595295f64,
-                    -17.73778118801837f64,
-                    2642.662361639182f64,
-                    2642.662361639182f64,
-                ],
-            )),
-            DynOrigin::Ariel => Some((
-                &[
-                    2.0202186091834364f64,
-                    2.4729570171507653f64,
-                    2.356718088967943f64,
-                    1.0780898789568973f64,
-                    4.351454891072263f64,
-                    0.7655014099247129f64,
-                    1.3554226970987964f64,
-                    2.746450110938277f64,
-                    1.776919711455427f64,
-                    2.419724474964938f64,
-                    1.784250094313803f64,
-                    5.522396286235258f64,
-                    5.3059754589879615f64,
-                    5.388005933831694f64,
-                    5.948431156647074f64,
-                    4.522846223618106f64,
-                    3.568500188627606f64,
-                    11.044792572470516f64,
-                ],
-                &[
-                    959.7891933286942f64,
-                    731.077582955928f64,
-                    522.3307938967249f64,
-                    449.1358738582876f64,
-                    427.10754977009157f64,
-                    388.83160660922994f64,
-                    354.1171823199879f64,
-                    290.6454915444109f64,
-                    224.66977689099764f64,
-                    140.70512817020406f64,
-                    -35.32930378471962f64,
-                    49.9855316454168f64,
-                    -0.9065240134858548f64,
-                    -1.626123264083117f64,
-                    -1.314581992602129f64,
-                    -8.810596596992575f64,
-                    -70.65860756943924f64,
-                    99.9710632908336f64,
-                ],
-            )),
-            DynOrigin::Umbriel => Some((
-                &[
-                    2.0202186091834364f64,
-                    2.4729570171507653f64,
-                    2.356718088967943f64,
-                    1.0780898789568973f64,
-                    4.351454891072263f64,
-                    0.7655014099247129f64,
-                    1.3554226970987964f64,
-                    2.746450110938277f64,
-                    1.776919711455427f64,
-                    2.419724474964938f64,
-                    1.784250094313803f64,
-                    5.522396286235258f64,
-                    5.3059754589879615f64,
-                    5.388005933831694f64,
-                    5.948431156647074f64,
-                    4.522846223618106f64,
-                    3.568500188627606f64,
-                    11.044792572470516f64,
-                ],
-                &[
-                    959.7891933286942f64,
-                    731.077582955928f64,
-                    522.3307938967249f64,
-                    449.1358738582876f64,
-                    427.10754977009157f64,
-                    388.83160660922994f64,
-                    354.1171823199879f64,
-                    290.6454915444109f64,
-                    224.66977689099764f64,
-                    140.70512817020406f64,
-                    -35.32930378471962f64,
-                    49.9855316454168f64,
-                    -0.9065240134858548f64,
-                    -1.626123264083117f64,
-                    -1.314581992602129f64,
-                    -8.810596596992575f64,
-                    -70.65860756943924f64,
-                    99.9710632908336f64,
-                ],
-            )),
-            DynOrigin::Titania => Some((
-                &[
-                    2.0202186091834364f64,
-                    2.4729570171507653f64,
-                    2.356718088967943f64,
-                    1.0780898789568973f64,
-                    4.351454891072263f64,
-                    0.7655014099247129f64,
-                    1.3554226970987964f64,
-                    2.746450110938277f64,
-                    1.776919711455427f64,
-                    2.419724474964938f64,
-                    1.784250094313803f64,
-                    5.522396286235258f64,
-                    5.3059754589879615f64,
-                    5.388005933831694f64,
-                    5.948431156647074f64,
-                    4.522846223618106f64,
-                    3.568500188627606f64,
-                    11.044792572470516f64,
-                ],
-                &[
-                    959.7891933286942f64,
-                    731.077582955928f64,
-                    522.3307938967249f64,
-                    449.1358738582876f64,
-                    427.10754977009157f64,
-                    388.83160660922994f64,
-                    354.1171823199879f64,
-                    290.6454915444109f64,
-                    224.66977689099764f64,
-                    140.70512817020406f64,
-                    -35.32930378471962f64,
-                    49.9855316454168f64,
-                    -0.9065240134858548f64,
-                    -1.626123264083117f64,
-                    -1.314581992602129f64,
-                    -8.810596596992575f64,
-                    -70.65860756943924f64,
-                    99.9710632908336f64,
-                ],
-            )),
-            DynOrigin::Oberon => Some((
-                &[
-                    2.0202186091834364f64,
-                    2.4729570171507653f64,
-                    2.356718088967943f64,
-                    1.0780898789568973f64,
-                    4.351454891072263f64,
-                    0.7655014099247129f64,
-                    1.3554226970987964f64,
-                    2.746450110938277f64,
-                    1.776919711455427f64,
-                    2.419724474964938f64,
-                    1.784250094313803f64,
-                    5.522396286235258f64,
-                    5.3059754589879615f64,
-                    5.388005933831694f64,
-                    5.948431156647074f64,
-                    4.522846223618106f64,
-                    3.568500188627606f64,
-                    11.044792572470516f64,
-                ],
-                &[
-                    959.7891933286942f64,
-                    731.077582955928f64,
-                    522.3307938967249f64,
-                    449.1358738582876f64,
-                    427.10754977009157f64,
-                    388.83160660922994f64,
-                    354.1171823199879f64,
-                    290.6454915444109f64,
-                    224.66977689099764f64,
-                    140.70512817020406f64,
-                    -35.32930378471962f64,
-                    49.9855316454168f64,
-                    -0.9065240134858548f64,
-                    -1.626123264083117f64,
-                    -1.314581992602129f64,
-                    -8.810596596992575f64,
-                    -70.65860756943924f64,
-                    99.9710632908336f64,
-                ],
-            )),
-            DynOrigin::Miranda => Some((
-                &[
-                    2.0202186091834364f64,
-                    2.4729570171507653f64,
-                    2.356718088967943f64,
-                    1.0780898789568973f64,
-                    4.351454891072263f64,
-                    0.7655014099247129f64,
-                    1.3554226970987964f64,
-                    2.746450110938277f64,
-                    1.776919711455427f64,
-                    2.419724474964938f64,
-                    1.784250094313803f64,
-                    5.522396286235258f64,
-                    5.3059754589879615f64,
-                    5.388005933831694f64,
-                    5.948431156647074f64,
-                    4.522846223618106f64,
-                    3.568500188627606f64,
-                    11.044792572470516f64,
-                ],
-                &[
-                    959.7891933286942f64,
-                    731.077582955928f64,
-                    522.3307938967249f64,
-                    449.1358738582876f64,
-                    427.10754977009157f64,
-                    388.83160660922994f64,
-                    354.1171823199879f64,
-                    290.6454915444109f64,
-                    224.66977689099764f64,
-                    140.70512817020406f64,
-                    -35.32930378471962f64,
-                    49.9855316454168f64,
-                    -0.9065240134858548f64,
-                    -1.626123264083117f64,
-                    -1.314581992602129f64,
-                    -8.810596596992575f64,
-                    -70.65860756943924f64,
-                    99.9710632908336f64,
-                ],
-            )),
-            DynOrigin::Cordelia => Some((
-                &[
-                    2.0202186091834364f64,
-                    2.4729570171507653f64,
-                    2.356718088967943f64,
-                    1.0780898789568973f64,
-                    4.351454891072263f64,
-                    0.7655014099247129f64,
-                    1.3554226970987964f64,
-                    2.746450110938277f64,
-                    1.776919711455427f64,
-                    2.419724474964938f64,
-                    1.784250094313803f64,
-                    5.522396286235258f64,
-                    5.3059754589879615f64,
-                    5.388005933831694f64,
-                    5.948431156647074f64,
-                    4.522846223618106f64,
-                    3.568500188627606f64,
-                    11.044792572470516f64,
-                ],
-                &[
-                    959.7891933286942f64,
-                    731.077582955928f64,
-                    522.3307938967249f64,
-                    449.1358738582876f64,
-                    427.10754977009157f64,
-                    388.83160660922994f64,
-                    354.1171823199879f64,
-                    290.6454915444109f64,
-                    224.66977689099764f64,
-                    140.70512817020406f64,
-                    -35.32930378471962f64,
-                    49.9855316454168f64,
-                    -0.9065240134858548f64,
-                    -1.626123264083117f64,
-                    -1.314581992602129f64,
-                    -8.810596596992575f64,
-                    -70.65860756943924f64,
-                    99.9710632908336f64,
-                ],
-            )),
-            DynOrigin::Ophelia => Some((
-                &[
-                    2.0202186091834364f64,
-                    2.4729570171507653f64,
-                    2.356718088967943f64,
-                    1.0780898789568973f64,
-                    4.351454891072263f64,
-                    0.7655014099247129f64,
-                    1.3554226970987964f64,
-                    2.746450110938277f64,
-                    1.776919711455427f64,
-                    2.419724474964938f64,
-                    1.784250094313803f64,
-                    5.522396286235258f64,
-                    5.3059754589879615f64,
-                    5.388005933831694f64,
-                    5.948431156647074f64,
-                    4.522846223618106f64,
-                    3.568500188627606f64,
-                    11.044792572470516f64,
-                ],
-                &[
-                    959.7891933286942f64,
-                    731.077582955928f64,
-                    522.3307938967249f64,
-                    449.1358738582876f64,
-                    427.10754977009157f64,
-                    388.83160660922994f64,
-                    354.1171823199879f64,
-                    290.6454915444109f64,
-                    224.66977689099764f64,
-                    140.70512817020406f64,
-                    -35.32930378471962f64,
-                    49.9855316454168f64,
-                    -0.9065240134858548f64,
-                    -1.626123264083117f64,
-                    -1.314581992602129f64,
-                    -8.810596596992575f64,
-                    -70.65860756943924f64,
-                    99.9710632908336f64,
-                ],
-            )),
-            DynOrigin::Bianca => Some((
-                &[
-                    2.0202186091834364f64,
-                    2.4729570171507653f64,
-                    2.356718088967943f64,
-                    1.0780898789568973f64,
-                    4.351454891072263f64,
-                    0.7655014099247129f64,
-                    1.3554226970987964f64,
-                    2.746450110938277f64,
-                    1.776919711455427f64,
-                    2.419724474964938f64,
-                    1.784250094313803f64,
-                    5.522396286235258f64,
-                    5.3059754589879615f64,
-                    5.388005933831694f64,
-                    5.948431156647074f64,
-                    4.522846223618106f64,
-                    3.568500188627606f64,
-                    11.044792572470516f64,
-                ],
-                &[
-                    959.7891933286942f64,
-                    731.077582955928f64,
-                    522.3307938967249f64,
-                    449.1358738582876f64,
-                    427.10754977009157f64,
-                    388.83160660922994f64,
-                    354.1171823199879f64,
-                    290.6454915444109f64,
-                    224.66977689099764f64,
-                    140.70512817020406f64,
-                    -35.32930378471962f64,
-                    49.9855316454168f64,
-                    -0.9065240134858548f64,
-                    -1.626123264083117f64,
-                    -1.314581992602129f64,
-                    -8.810596596992575f64,
-                    -70.65860756943924f64,
-                    99.9710632908336f64,
-                ],
-            )),
-            DynOrigin::Cressida => Some((
-                &[
-                    2.0202186091834364f64,
-                    2.4729570171507653f64,
-                    2.356718088967943f64,
-                    1.0780898789568973f64,
-                    4.351454891072263f64,
-                    0.7655014099247129f64,
-                    1.3554226970987964f64,
-                    2.746450110938277f64,
-                    1.776919711455427f64,
-                    2.419724474964938f64,
-                    1.784250094313803f64,
-                    5.522396286235258f64,
-                    5.3059754589879615f64,
-                    5.388005933831694f64,
-                    5.948431156647074f64,
-                    4.522846223618106f64,
-                    3.568500188627606f64,
-                    11.044792572470516f64,
-                ],
-                &[
-                    959.7891933286942f64,
-                    731.077582955928f64,
-                    522.3307938967249f64,
-                    449.1358738582876f64,
-                    427.10754977009157f64,
-                    388.83160660922994f64,
-                    354.1171823199879f64,
-                    290.6454915444109f64,
-                    224.66977689099764f64,
-                    140.70512817020406f64,
-                    -35.32930378471962f64,
-                    49.9855316454168f64,
-                    -0.9065240134858548f64,
-                    -1.626123264083117f64,
-                    -1.314581992602129f64,
-                    -8.810596596992575f64,
-                    -70.65860756943924f64,
-                    99.9710632908336f64,
-                ],
-            )),
-            DynOrigin::Desdemona => Some((
-                &[
-                    2.0202186091834364f64,
-                    2.4729570171507653f64,
-                    2.356718088967943f64,
-                    1.0780898789568973f64,
-                    4.351454891072263f64,
-                    0.7655014099247129f64,
-                    1.3554226970987964f64,
-                    2.746450110938277f64,
-                    1.776919711455427f64,
-                    2.419724474964938f64,
-                    1.784250094313803f64,
-                    5.522396286235258f64,
-                    5.3059754589879615f64,
-                    5.388005933831694f64,
-                    5.948431156647074f64,
-                    4.522846223618106f64,
-                    3.568500188627606f64,
-                    11.044792572470516f64,
-                ],
-                &[
-                    959.7891933286942f64,
-                    731.077582955928f64,
-                    522.3307938967249f64,
-                    449.1358738582876f64,
-                    427.10754977009157f64,
-                    388.83160660922994f64,
-                    354.1171823199879f64,
-                    290.6454915444109f64,
-                    224.66977689099764f64,
-                    140.70512817020406f64,
-                    -35.32930378471962f64,
-                    49.9855316454168f64,
-                    -0.9065240134858548f64,
-                    -1.626123264083117f64,
-                    -1.314581992602129f64,
-                    -8.810596596992575f64,
-                    -70.65860756943924f64,
-                    99.9710632908336f64,
-                ],
-            )),
-            DynOrigin::Juliet => Some((
-                &[
-                    2.0202186091834364f64,
-                    2.4729570171507653f64,
-                    2.356718088967943f64,
-                    1.0780898789568973f64,
-                    4.351454891072263f64,
-                    0.7655014099247129f64,
-                    1.3554226970987964f64,
-                    2.746450110938277f64,
-                    1.776919711455427f64,
-                    2.419724474964938f64,
-                    1.784250094313803f64,
-                    5.522396286235258f64,
-                    5.3059754589879615f64,
-                    5.388005933831694f64,
-                    5.948431156647074f64,
-                    4.522846223618106f64,
-                    3.568500188627606f64,
-                    11.044792572470516f64,
-                ],
-                &[
-                    959.7891933286942f64,
-                    731.077582955928f64,
-                    522.3307938967249f64,
-                    449.1358738582876f64,
-                    427.10754977009157f64,
-                    388.83160660922994f64,
-                    354.1171823199879f64,
-                    290.6454915444109f64,
-                    224.66977689099764f64,
-                    140.70512817020406f64,
-                    -35.32930378471962f64,
-                    49.9855316454168f64,
-                    -0.9065240134858548f64,
-                    -1.626123264083117f64,
-                    -1.314581992602129f64,
-                    -8.810596596992575f64,
-                    -70.65860756943924f64,
-                    99.9710632908336f64,
-                ],
-            )),
-            DynOrigin::Portia => Some((
-                &[
-                    2.0202186091834364f64,
-                    2.4729570171507653f64,
-                    2.356718088967943f64,
-                    1.0780898789568973f64,
-                    4.351454891072263f64,
-                    0.7655014099247129f64,
-                    1.3554226970987964f64,
-                    2.746450110938277f64,
-                    1.776919711455427f64,
-                    2.419724474964938f64,
-                    1.784250094313803f64,
-                    5.522396286235258f64,
-                    5.3059754589879615f64,
-                    5.388005933831694f64,
-                    5.948431156647074f64,
-                    4.522846223618106f64,
-                    3.568500188627606f64,
-                    11.044792572470516f64,
-                ],
-                &[
-                    959.7891933286942f64,
-                    731.077582955928f64,
-                    522.3307938967249f64,
-                    449.1358738582876f64,
-                    427.10754977009157f64,
-                    388.83160660922994f64,
-                    354.1171823199879f64,
-                    290.6454915444109f64,
-                    224.66977689099764f64,
-                    140.70512817020406f64,
-                    -35.32930378471962f64,
-                    49.9855316454168f64,
-                    -0.9065240134858548f64,
-                    -1.626123264083117f64,
-                    -1.314581992602129f64,
-                    -8.810596596992575f64,
-                    -70.65860756943924f64,
-                    99.9710632908336f64,
-                ],
-            )),
-            DynOrigin::Rosalind => Some((
-                &[
-                    2.0202186091834364f64,
-                    2.4729570171507653f64,
-                    2.356718088967943f64,
-                    1.0780898789568973f64,
-                    4.351454891072263f64,
-                    0.7655014099247129f64,
-                    1.3554226970987964f64,
-                    2.746450110938277f64,
-                    1.776919711455427f64,
-                    2.419724474964938f64,
-                    1.784250094313803f64,
-                    5.522396286235258f64,
-                    5.3059754589879615f64,
-                    5.388005933831694f64,
-                    5.948431156647074f64,
-                    4.522846223618106f64,
-                    3.568500188627606f64,
-                    11.044792572470516f64,
-                ],
-                &[
-                    959.7891933286942f64,
-                    731.077582955928f64,
-                    522.3307938967249f64,
-                    449.1358738582876f64,
-                    427.10754977009157f64,
-                    388.83160660922994f64,
-                    354.1171823199879f64,
-                    290.6454915444109f64,
-                    224.66977689099764f64,
-                    140.70512817020406f64,
-                    -35.32930378471962f64,
-                    49.9855316454168f64,
-                    -0.9065240134858548f64,
-                    -1.626123264083117f64,
-                    -1.314581992602129f64,
-                    -8.810596596992575f64,
-                    -70.65860756943924f64,
-                    99.9710632908336f64,
-                ],
-            )),
-            DynOrigin::Belinda => Some((
-                &[
-                    2.0202186091834364f64,
-                    2.4729570171507653f64,
-                    2.356718088967943f64,
-                    1.0780898789568973f64,
-                    4.351454891072263f64,
-                    0.7655014099247129f64,
-                    1.3554226970987964f64,
-                    2.746450110938277f64,
-                    1.776919711455427f64,
-                    2.419724474964938f64,
-                    1.784250094313803f64,
-                    5.522396286235258f64,
-                    5.3059754589879615f64,
-                    5.388005933831694f64,
-                    5.948431156647074f64,
-                    4.522846223618106f64,
-                    3.568500188627606f64,
-                    11.044792572470516f64,
-                ],
-                &[
-                    959.7891933286942f64,
-                    731.077582955928f64,
-                    522.3307938967249f64,
-                    449.1358738582876f64,
-                    427.10754977009157f64,
-                    388.83160660922994f64,
-                    354.1171823199879f64,
-                    290.6454915444109f64,
-                    224.66977689099764f64,
-                    140.70512817020406f64,
-                    -35.32930378471962f64,
-                    49.9855316454168f64,
-                    -0.9065240134858548f64,
-                    -1.626123264083117f64,
-                    -1.314581992602129f64,
-                    -8.810596596992575f64,
-                    -70.65860756943924f64,
-                    99.9710632908336f64,
-                ],
-            )),
-            DynOrigin::Puck => Some((
-                &[
-                    2.0202186091834364f64,
-                    2.4729570171507653f64,
-                    2.356718088967943f64,
-                    1.0780898789568973f64,
-                    4.351454891072263f64,
-                    0.7655014099247129f64,
-                    1.3554226970987964f64,
-                    2.746450110938277f64,
-                    1.776919711455427f64,
-                    2.419724474964938f64,
-                    1.784250094313803f64,
-                    5.522396286235258f64,
-                    5.3059754589879615f64,
-                    5.388005933831694f64,
-                    5.948431156647074f64,
-                    4.522846223618106f64,
-                    3.568500188627606f64,
-                    11.044792572470516f64,
-                ],
-                &[
-                    959.7891933286942f64,
-                    731.077582955928f64,
-                    522.3307938967249f64,
-                    449.1358738582876f64,
-                    427.10754977009157f64,
-                    388.83160660922994f64,
-                    354.1171823199879f64,
-                    290.6454915444109f64,
-                    224.66977689099764f64,
-                    140.70512817020406f64,
-                    -35.32930378471962f64,
-                    49.9855316454168f64,
-                    -0.9065240134858548f64,
-                    -1.626123264083117f64,
-                    -1.314581992602129f64,
-                    -8.810596596992575f64,
-                    -70.65860756943924f64,
-                    99.9710632908336f64,
-                ],
-            )),
-            DynOrigin::Triton => Some((
-                &[
-                    6.245660728261709f64,
-                    5.653470513060032f64,
-                    3.848625533572696f64,
-                    6.183177941040311f64,
-                    1.3144074596769295f64,
-                    0.6171484235051949f64,
-                    2.4890140462691135f64,
-                    3.104068074671915f64,
-                    11.306941026120064f64,
-                    6.20813614934383f64,
-                    9.312204224015744f64,
-                    12.41627229868766f64,
-                    15.520340373359575f64,
-                    18.624408448031488f64,
-                    21.728476522703406f64,
-                    24.83254459737532f64,
-                    27.936612672047236f64,
-                ],
-                &[
-                    0.9130864514733535f64,
-                    1092.6913034790819f64,
-                    961.0515899766616f64,
-                    812.7038395448996f64,
-                    455.6949957202075f64,
-                    250.02539666519567f64,
-                    49.29857005183183f64,
-                    0.9130864514733535f64,
-                    2185.3826069581637f64,
-                    1.826172902946707f64,
-                    2.7392593544200605f64,
-                    3.652345805893414f64,
-                    4.565432257366767f64,
-                    5.478518708840121f64,
-                    6.391605160313474f64,
-                    7.304691611786828f64,
-                    8.21777806326018f64,
-                ],
-            )),
-            DynOrigin::Naiad => Some((
-                &[
-                    6.245660728261709f64,
-                    5.653470513060032f64,
-                    3.848625533572696f64,
-                    6.183177941040311f64,
-                    1.3144074596769295f64,
-                    0.6171484235051949f64,
-                    2.4890140462691135f64,
-                    3.104068074671915f64,
-                    11.306941026120064f64,
-                    6.20813614934383f64,
-                    9.312204224015744f64,
-                    12.41627229868766f64,
-                    15.520340373359575f64,
-                    18.624408448031488f64,
-                    21.728476522703406f64,
-                    24.83254459737532f64,
-                    27.936612672047236f64,
-                ],
-                &[
-                    0.9130864514733535f64,
-                    1092.6913034790819f64,
-                    961.0515899766616f64,
-                    812.7038395448996f64,
-                    455.6949957202075f64,
-                    250.02539666519567f64,
-                    49.29857005183183f64,
-                    0.9130864514733535f64,
-                    2185.3826069581637f64,
-                    1.826172902946707f64,
-                    2.7392593544200605f64,
-                    3.652345805893414f64,
-                    4.565432257366767f64,
-                    5.478518708840121f64,
-                    6.391605160313474f64,
-                    7.304691611786828f64,
-                    8.21777806326018f64,
-                ],
-            )),
-            DynOrigin::Thalassa => Some((
-                &[
-                    6.245660728261709f64,
-                    5.653470513060032f64,
-                    3.848625533572696f64,
-                    6.183177941040311f64,
-                    1.3144074596769295f64,
-                    0.6171484235051949f64,
-                    2.4890140462691135f64,
-                    3.104068074671915f64,
-                    11.306941026120064f64,
-                    6.20813614934383f64,
-                    9.312204224015744f64,
-                    12.41627229868766f64,
-                    15.520340373359575f64,
-                    18.624408448031488f64,
-                    21.728476522703406f64,
-                    24.83254459737532f64,
-                    27.936612672047236f64,
-                ],
-                &[
-                    0.9130864514733535f64,
-                    1092.6913034790819f64,
-                    961.0515899766616f64,
-                    812.7038395448996f64,
-                    455.6949957202075f64,
-                    250.02539666519567f64,
-                    49.29857005183183f64,
-                    0.9130864514733535f64,
-                    2185.3826069581637f64,
-                    1.826172902946707f64,
-                    2.7392593544200605f64,
-                    3.652345805893414f64,
-                    4.565432257366767f64,
-                    5.478518708840121f64,
-                    6.391605160313474f64,
-                    7.304691611786828f64,
-                    8.21777806326018f64,
-                ],
-            )),
-            DynOrigin::Despina => Some((
-                &[
-                    6.245660728261709f64,
-                    5.653470513060032f64,
-                    3.848625533572696f64,
-                    6.183177941040311f64,
-                    1.3144074596769295f64,
-                    0.6171484235051949f64,
-                    2.4890140462691135f64,
-                    3.104068074671915f64,
-                    11.306941026120064f64,
-                    6.20813614934383f64,
-                    9.312204224015744f64,
-                    12.41627229868766f64,
-                    15.520340373359575f64,
-                    18.624408448031488f64,
-                    21.728476522703406f64,
-                    24.83254459737532f64,
-                    27.936612672047236f64,
-                ],
-                &[
-                    0.9130864514733535f64,
-                    1092.6913034790819f64,
-                    961.0515899766616f64,
-                    812.7038395448996f64,
-                    455.6949957202075f64,
-                    250.02539666519567f64,
-                    49.29857005183183f64,
-                    0.9130864514733535f64,
-                    2185.3826069581637f64,
-                    1.826172902946707f64,
-                    2.7392593544200605f64,
-                    3.652345805893414f64,
-                    4.565432257366767f64,
-                    5.478518708840121f64,
-                    6.391605160313474f64,
-                    7.304691611786828f64,
-                    8.21777806326018f64,
-                ],
-            )),
-            DynOrigin::Galatea => Some((
-                &[
-                    6.245660728261709f64,
-                    5.653470513060032f64,
-                    3.848625533572696f64,
-                    6.183177941040311f64,
-                    1.3144074596769295f64,
-                    0.6171484235051949f64,
-                    2.4890140462691135f64,
-                    3.104068074671915f64,
-                    11.306941026120064f64,
-                    6.20813614934383f64,
-                    9.312204224015744f64,
-                    12.41627229868766f64,
-                    15.520340373359575f64,
-                    18.624408448031488f64,
-                    21.728476522703406f64,
-                    24.83254459737532f64,
-                    27.936612672047236f64,
-                ],
-                &[
-                    0.9130864514733535f64,
-                    1092.6913034790819f64,
-                    961.0515899766616f64,
-                    812.7038395448996f64,
-                    455.6949957202075f64,
-                    250.02539666519567f64,
-                    49.29857005183183f64,
-                    0.9130864514733535f64,
-                    2185.3826069581637f64,
-                    1.826172902946707f64,
-                    2.7392593544200605f64,
-                    3.652345805893414f64,
-                    4.565432257366767f64,
-                    5.478518708840121f64,
-                    6.391605160313474f64,
-                    7.304691611786828f64,
-                    8.21777806326018f64,
-                ],
-            )),
-            DynOrigin::Larissa => Some((
-                &[
-                    6.245660728261709f64,
-                    5.653470513060032f64,
-                    3.848625533572696f64,
-                    6.183177941040311f64,
-                    1.3144074596769295f64,
-                    0.6171484235051949f64,
-                    2.4890140462691135f64,
-                    3.104068074671915f64,
-                    11.306941026120064f64,
-                    6.20813614934383f64,
-                    9.312204224015744f64,
-                    12.41627229868766f64,
-                    15.520340373359575f64,
-                    18.624408448031488f64,
-                    21.728476522703406f64,
-                    24.83254459737532f64,
-                    27.936612672047236f64,
-                ],
-                &[
-                    0.9130864514733535f64,
-                    1092.6913034790819f64,
-                    961.0515899766616f64,
-                    812.7038395448996f64,
-                    455.6949957202075f64,
-                    250.02539666519567f64,
-                    49.29857005183183f64,
-                    0.9130864514733535f64,
-                    2185.3826069581637f64,
-                    1.826172902946707f64,
-                    2.7392593544200605f64,
-                    3.652345805893414f64,
-                    4.565432257366767f64,
-                    5.478518708840121f64,
-                    6.391605160313474f64,
-                    7.304691611786828f64,
-                    8.21777806326018f64,
-                ],
-            )),
-            DynOrigin::Proteus => Some((
-                &[
-                    6.245660728261709f64,
-                    5.653470513060032f64,
-                    3.848625533572696f64,
-                    6.183177941040311f64,
-                    1.3144074596769295f64,
-                    0.6171484235051949f64,
-                    2.4890140462691135f64,
-                    3.104068074671915f64,
-                    11.306941026120064f64,
-                    6.20813614934383f64,
-                    9.312204224015744f64,
-                    12.41627229868766f64,
-                    15.520340373359575f64,
-                    18.624408448031488f64,
-                    21.728476522703406f64,
-                    24.83254459737532f64,
-                    27.936612672047236f64,
-                ],
-                &[
-                    0.9130864514733535f64,
-                    1092.6913034790819f64,
-                    961.0515899766616f64,
-                    812.7038395448996f64,
-                    455.6949957202075f64,
-                    250.02539666519567f64,
-                    49.29857005183183f64,
-                    0.9130864514733535f64,
-                    2185.3826069581637f64,
-                    1.826172902946707f64,
-                    2.7392593544200605f64,
-                    3.652345805893414f64,
-                    4.565432257366767f64,
-                    5.478518708840121f64,
-                    6.391605160313474f64,
-                    7.304691611786828f64,
-                    8.21777806326018f64,
-                ],
-            )),
+            DynOrigin::Moon => {
+                Some((
+                    &[
+                        2.1824469631563095f64,
+                        4.364876473020098f64,
+                        4.537995681525416f64,
+                        3.0826877913349846f64,
+                        6.240058221362807f64,
+                        5.438253962996612f64,
+                        2.355548718369107f64,
+                        4.827877416989155f64,
+                        0.5973563897875792f64,
+                        0.2641381289968218f64,
+                        2.0899096062155698f64,
+                        4.188109526378113f64,
+                        0.4372573375021394f64,
+                    ],
+                    &[
+                        -33.781483888495835f64,
+                        -67.56296777699167f64,
+                        8294.909972626925f64,
+                        8504.459388212737f64,
+                        628.3019668015924f64,
+                        16833.15084472816f64,
+                        8328.69145651542f64,
+                        209.54947933396397f64,
+                        1114.6285779726247f64,
+                        -101.3444516654875f64,
+                        2.301053255936537f64,
+                        104.77473966698199f64,
+                        8261.12848873843f64,
+                    ],
+                ))
+            }
+            DynOrigin::Phobos => {
+                Some((
+                    &[
+                        3.328804809897935f64,
+                        0f64,
+                        555.6129894920322f64,
+                        5.809517398292802f64,
+                        0f64,
+                        668.125936040531f64,
+                        3.3097152567180146f64,
+                        0.22186491448462606f64,
+                        11.523153020184504f64,
+                        4.032588225058434f64,
+                        0f64,
+                        23.047098122619843f64,
+                        3.8045796985836846f64,
+                        0f64,
+                        334.05316148477937f64,
+                        3.4730520762801462f64,
+                        0f64,
+                        668.1268926511307f64,
+                        4.357448194643978f64,
+                        0f64,
+                        1336.235189496269f64,
+                        1.3857704297725961f64,
+                        0f64,
+                        334.054984682245f64,
+                        0.751510868094019f64,
+                        0f64,
+                        1002.1811764929237f64,
+                        1.3871248750853138f64,
+                        0f64,
+                        0.008801023466045386f64,
+                        2.252727410236719f64,
+                        0f64,
+                        668.130317528175f64,
+                        0.9890544553471146f64,
+                        0f64,
+                        1336.2285297823557f64,
+                        1.8289772979888115f64,
+                        0f64,
+                        0.008801023466045386f64,
+                    ],
+                    &[
+                        277.80594525842264f64,
+                        0.37470342287773584f64,
+                        0f64,
+                        334.05422022489097f64,
+                        6.892873571600945f64,
+                        0f64,
+                        719340.2120445863f64,
+                        2.120032883264378f64,
+                        0f64,
+                        11.536473384554899f64,
+                        4.387288948439982f64,
+                        0f64,
+                        668.1113614443373f64,
+                        3.424288764152381f64,
+                        0f64,
+                        334.0469780000094f64,
+                        3.9495523217086292f64,
+                        0f64,
+                        1002.1807129125305f64,
+                        4.645778664015252f64,
+                        0f64,
+                        0.008801023466045386f64,
+                        2.136869016190709f64,
+                        0f64,
+                        668.1273150051017f64,
+                        1.0064158213753553f64,
+                        0f64,
+                        1336.2354112473317f64,
+                        2.9029314796567682f64,
+                        0f64,
+                        334.05659172556966f64,
+                        0.6344650043848296f64,
+                        0f64,
+                        1002.1842799588599f64,
+                        1.1757236496733376f64,
+                        0f64,
+                        1670.2877519268022f64,
+                        1.664898441223219f64,
+                        0f64,
+                    ],
+                ))
+            }
+            DynOrigin::Deimos => {
+                Some((
+                    &[
+                        3.328804809897935f64,
+                        0f64,
+                        555.6129894920322f64,
+                        5.809517398292802f64,
+                        0f64,
+                        668.125936040531f64,
+                        3.3097152567180146f64,
+                        0.22186491448462606f64,
+                        11.523153020184504f64,
+                        4.032588225058434f64,
+                        0f64,
+                        23.047098122619843f64,
+                        3.8045796985836846f64,
+                        0f64,
+                        334.05316148477937f64,
+                        3.4730520762801462f64,
+                        0f64,
+                        668.1268926511307f64,
+                        4.357448194643978f64,
+                        0f64,
+                        1336.235189496269f64,
+                        1.3857704297725961f64,
+                        0f64,
+                        334.054984682245f64,
+                        0.751510868094019f64,
+                        0f64,
+                        1002.1811764929237f64,
+                        1.3871248750853138f64,
+                        0f64,
+                        0.008801023466045386f64,
+                        2.252727410236719f64,
+                        0f64,
+                        668.130317528175f64,
+                        0.9890544553471146f64,
+                        0f64,
+                        1336.2285297823557f64,
+                        1.8289772979888115f64,
+                        0f64,
+                        0.008801023466045386f64,
+                    ],
+                    &[
+                        277.80594525842264f64,
+                        0.37470342287773584f64,
+                        0f64,
+                        334.05422022489097f64,
+                        6.892873571600945f64,
+                        0f64,
+                        719340.2120445863f64,
+                        2.120032883264378f64,
+                        0f64,
+                        11.536473384554899f64,
+                        4.387288948439982f64,
+                        0f64,
+                        668.1113614443373f64,
+                        3.424288764152381f64,
+                        0f64,
+                        334.0469780000094f64,
+                        3.9495523217086292f64,
+                        0f64,
+                        1002.1807129125305f64,
+                        4.645778664015252f64,
+                        0f64,
+                        0.008801023466045386f64,
+                        2.136869016190709f64,
+                        0f64,
+                        668.1273150051017f64,
+                        1.0064158213753553f64,
+                        0f64,
+                        1336.2354112473317f64,
+                        2.9029314796567682f64,
+                        0f64,
+                        334.05659172556966f64,
+                        0.6344650043848296f64,
+                        0f64,
+                        1002.1842799588599f64,
+                        1.1757236496733376f64,
+                        0f64,
+                        1670.2877519268022f64,
+                        1.664898441223219f64,
+                        0f64,
+                    ],
+                ))
+            }
+            DynOrigin::Io => {
+                Some((
+                    &[
+                        1.2796754075622423f64,
+                        0.42970006184100396f64,
+                        4.9549897464119015f64,
+                        6.2098814785958245f64,
+                        2.092649773141201f64,
+                        4.010766621082969f64,
+                        6.147922290150026f64,
+                        1.9783307071355725f64,
+                        2.5593508151244846f64,
+                        0.8594001236820079f64,
+                        1.734171606432425f64,
+                        3.0699533280603655f64,
+                        5.241627996900319f64,
+                        1.9898901100379935f64,
+                        0.864134346731335f64,
+                    ],
+                    &[
+                        1596.503281347521f64,
+                        787.7927551311844f64,
+                        84.66068602648895f64,
+                        20.792107379008446f64,
+                        4.574507969477138f64,
+                        1.1222467090323538f64,
+                        41.58421475801689f64,
+                        105.9414855960558f64,
+                        3193.006562695042f64,
+                        1575.5855102623689f64,
+                        84.65553032387855f64,
+                        20.80363527871787f64,
+                        4.582318317879813f64,
+                        105.94580703128374f64,
+                        1.1222467090323538f64,
+                    ],
+                ))
+            }
+            DynOrigin::Europa => {
+                Some((
+                    &[
+                        1.2796754075622423f64,
+                        0.42970006184100396f64,
+                        4.9549897464119015f64,
+                        6.2098814785958245f64,
+                        2.092649773141201f64,
+                        4.010766621082969f64,
+                        6.147922290150026f64,
+                        1.9783307071355725f64,
+                        2.5593508151244846f64,
+                        0.8594001236820079f64,
+                        1.734171606432425f64,
+                        3.0699533280603655f64,
+                        5.241627996900319f64,
+                        1.9898901100379935f64,
+                        0.864134346731335f64,
+                    ],
+                    &[
+                        1596.503281347521f64,
+                        787.7927551311844f64,
+                        84.66068602648895f64,
+                        20.792107379008446f64,
+                        4.574507969477138f64,
+                        1.1222467090323538f64,
+                        41.58421475801689f64,
+                        105.9414855960558f64,
+                        3193.006562695042f64,
+                        1575.5855102623689f64,
+                        84.65553032387855f64,
+                        20.80363527871787f64,
+                        4.582318317879813f64,
+                        105.94580703128374f64,
+                        1.1222467090323538f64,
+                    ],
+                ))
+            }
+            DynOrigin::Ganymede => {
+                Some((
+                    &[
+                        1.2796754075622423f64,
+                        0.42970006184100396f64,
+                        4.9549897464119015f64,
+                        6.2098814785958245f64,
+                        2.092649773141201f64,
+                        4.010766621082969f64,
+                        6.147922290150026f64,
+                        1.9783307071355725f64,
+                        2.5593508151244846f64,
+                        0.8594001236820079f64,
+                        1.734171606432425f64,
+                        3.0699533280603655f64,
+                        5.241627996900319f64,
+                        1.9898901100379935f64,
+                        0.864134346731335f64,
+                    ],
+                    &[
+                        1596.503281347521f64,
+                        787.7927551311844f64,
+                        84.66068602648895f64,
+                        20.792107379008446f64,
+                        4.574507969477138f64,
+                        1.1222467090323538f64,
+                        41.58421475801689f64,
+                        105.9414855960558f64,
+                        3193.006562695042f64,
+                        1575.5855102623689f64,
+                        84.65553032387855f64,
+                        20.80363527871787f64,
+                        4.582318317879813f64,
+                        105.94580703128374f64,
+                        1.1222467090323538f64,
+                    ],
+                ))
+            }
+            DynOrigin::Callisto => {
+                Some((
+                    &[
+                        1.2796754075622423f64,
+                        0.42970006184100396f64,
+                        4.9549897464119015f64,
+                        6.2098814785958245f64,
+                        2.092649773141201f64,
+                        4.010766621082969f64,
+                        6.147922290150026f64,
+                        1.9783307071355725f64,
+                        2.5593508151244846f64,
+                        0.8594001236820079f64,
+                        1.734171606432425f64,
+                        3.0699533280603655f64,
+                        5.241627996900319f64,
+                        1.9898901100379935f64,
+                        0.864134346731335f64,
+                    ],
+                    &[
+                        1596.503281347521f64,
+                        787.7927551311844f64,
+                        84.66068602648895f64,
+                        20.792107379008446f64,
+                        4.574507969477138f64,
+                        1.1222467090323538f64,
+                        41.58421475801689f64,
+                        105.9414855960558f64,
+                        3193.006562695042f64,
+                        1575.5855102623689f64,
+                        84.65553032387855f64,
+                        20.80363527871787f64,
+                        4.582318317879813f64,
+                        105.94580703128374f64,
+                        1.1222467090323538f64,
+                    ],
+                ))
+            }
+            DynOrigin::Amalthea => {
+                Some((
+                    &[
+                        1.2796754075622423f64,
+                        0.42970006184100396f64,
+                        4.9549897464119015f64,
+                        6.2098814785958245f64,
+                        2.092649773141201f64,
+                        4.010766621082969f64,
+                        6.147922290150026f64,
+                        1.9783307071355725f64,
+                        2.5593508151244846f64,
+                        0.8594001236820079f64,
+                        1.734171606432425f64,
+                        3.0699533280603655f64,
+                        5.241627996900319f64,
+                        1.9898901100379935f64,
+                        0.864134346731335f64,
+                    ],
+                    &[
+                        1596.503281347521f64,
+                        787.7927551311844f64,
+                        84.66068602648895f64,
+                        20.792107379008446f64,
+                        4.574507969477138f64,
+                        1.1222467090323538f64,
+                        41.58421475801689f64,
+                        105.9414855960558f64,
+                        3193.006562695042f64,
+                        1575.5855102623689f64,
+                        84.65553032387855f64,
+                        20.80363527871787f64,
+                        4.582318317879813f64,
+                        105.94580703128374f64,
+                        1.1222467090323538f64,
+                    ],
+                ))
+            }
+            DynOrigin::Thebe => {
+                Some((
+                    &[
+                        1.2796754075622423f64,
+                        0.42970006184100396f64,
+                        4.9549897464119015f64,
+                        6.2098814785958245f64,
+                        2.092649773141201f64,
+                        4.010766621082969f64,
+                        6.147922290150026f64,
+                        1.9783307071355725f64,
+                        2.5593508151244846f64,
+                        0.8594001236820079f64,
+                        1.734171606432425f64,
+                        3.0699533280603655f64,
+                        5.241627996900319f64,
+                        1.9898901100379935f64,
+                        0.864134346731335f64,
+                    ],
+                    &[
+                        1596.503281347521f64,
+                        787.7927551311844f64,
+                        84.66068602648895f64,
+                        20.792107379008446f64,
+                        4.574507969477138f64,
+                        1.1222467090323538f64,
+                        41.58421475801689f64,
+                        105.9414855960558f64,
+                        3193.006562695042f64,
+                        1575.5855102623689f64,
+                        84.65553032387855f64,
+                        20.80363527871787f64,
+                        4.582318317879813f64,
+                        105.94580703128374f64,
+                        1.1222467090323538f64,
+                    ],
+                ))
+            }
+            DynOrigin::Adrastea => {
+                Some((
+                    &[
+                        1.2796754075622423f64,
+                        0.42970006184100396f64,
+                        4.9549897464119015f64,
+                        6.2098814785958245f64,
+                        2.092649773141201f64,
+                        4.010766621082969f64,
+                        6.147922290150026f64,
+                        1.9783307071355725f64,
+                        2.5593508151244846f64,
+                        0.8594001236820079f64,
+                        1.734171606432425f64,
+                        3.0699533280603655f64,
+                        5.241627996900319f64,
+                        1.9898901100379935f64,
+                        0.864134346731335f64,
+                    ],
+                    &[
+                        1596.503281347521f64,
+                        787.7927551311844f64,
+                        84.66068602648895f64,
+                        20.792107379008446f64,
+                        4.574507969477138f64,
+                        1.1222467090323538f64,
+                        41.58421475801689f64,
+                        105.9414855960558f64,
+                        3193.006562695042f64,
+                        1575.5855102623689f64,
+                        84.65553032387855f64,
+                        20.80363527871787f64,
+                        4.582318317879813f64,
+                        105.94580703128374f64,
+                        1.1222467090323538f64,
+                    ],
+                ))
+            }
+            DynOrigin::Metis => {
+                Some((
+                    &[
+                        1.2796754075622423f64,
+                        0.42970006184100396f64,
+                        4.9549897464119015f64,
+                        6.2098814785958245f64,
+                        2.092649773141201f64,
+                        4.010766621082969f64,
+                        6.147922290150026f64,
+                        1.9783307071355725f64,
+                        2.5593508151244846f64,
+                        0.8594001236820079f64,
+                        1.734171606432425f64,
+                        3.0699533280603655f64,
+                        5.241627996900319f64,
+                        1.9898901100379935f64,
+                        0.864134346731335f64,
+                    ],
+                    &[
+                        1596.503281347521f64,
+                        787.7927551311844f64,
+                        84.66068602648895f64,
+                        20.792107379008446f64,
+                        4.574507969477138f64,
+                        1.1222467090323538f64,
+                        41.58421475801689f64,
+                        105.9414855960558f64,
+                        3193.006562695042f64,
+                        1575.5855102623689f64,
+                        84.65553032387855f64,
+                        20.80363527871787f64,
+                        4.582318317879813f64,
+                        105.94580703128374f64,
+                        1.1222467090323538f64,
+                    ],
+                ))
+            }
+            DynOrigin::Mimas => {
+                Some((
+                    &[
+                        6.166597313146365f64,
+                        0.5012585611727715f64,
+                        3.0962140930379407f64,
+                        5.235987755982989f64,
+                        5.523094417936056f64,
+                        6.0248765778844255f64,
+                        12.33319462629273f64,
+                        1.002517122345543f64,
+                    ],
+                    &[
+                        1321.331180819591f64,
+                        1321.331180819591f64,
+                        -637.14117008679f64,
+                        -126.11574641985825f64,
+                        8.834856673595295f64,
+                        -17.73778118801837f64,
+                        2642.662361639182f64,
+                        2642.662361639182f64,
+                    ],
+                ))
+            }
+            DynOrigin::Enceladus => {
+                Some((
+                    &[
+                        6.166597313146365f64,
+                        0.5012585611727715f64,
+                        3.0962140930379407f64,
+                        5.235987755982989f64,
+                        5.523094417936056f64,
+                        6.0248765778844255f64,
+                        12.33319462629273f64,
+                        1.002517122345543f64,
+                    ],
+                    &[
+                        1321.331180819591f64,
+                        1321.331180819591f64,
+                        -637.14117008679f64,
+                        -126.11574641985825f64,
+                        8.834856673595295f64,
+                        -17.73778118801837f64,
+                        2642.662361639182f64,
+                        2642.662361639182f64,
+                    ],
+                ))
+            }
+            DynOrigin::Tethys => {
+                Some((
+                    &[
+                        6.166597313146365f64,
+                        0.5012585611727715f64,
+                        3.0962140930379407f64,
+                        5.235987755982989f64,
+                        5.523094417936056f64,
+                        6.0248765778844255f64,
+                        12.33319462629273f64,
+                        1.002517122345543f64,
+                    ],
+                    &[
+                        1321.331180819591f64,
+                        1321.331180819591f64,
+                        -637.14117008679f64,
+                        -126.11574641985825f64,
+                        8.834856673595295f64,
+                        -17.73778118801837f64,
+                        2642.662361639182f64,
+                        2642.662361639182f64,
+                    ],
+                ))
+            }
+            DynOrigin::Dione => {
+                Some((
+                    &[
+                        6.166597313146365f64,
+                        0.5012585611727715f64,
+                        3.0962140930379407f64,
+                        5.235987755982989f64,
+                        5.523094417936056f64,
+                        6.0248765778844255f64,
+                        12.33319462629273f64,
+                        1.002517122345543f64,
+                    ],
+                    &[
+                        1321.331180819591f64,
+                        1321.331180819591f64,
+                        -637.14117008679f64,
+                        -126.11574641985825f64,
+                        8.834856673595295f64,
+                        -17.73778118801837f64,
+                        2642.662361639182f64,
+                        2642.662361639182f64,
+                    ],
+                ))
+            }
+            DynOrigin::Rhea => {
+                Some((
+                    &[
+                        6.166597313146365f64,
+                        0.5012585611727715f64,
+                        3.0962140930379407f64,
+                        5.235987755982989f64,
+                        5.523094417936056f64,
+                        6.0248765778844255f64,
+                        12.33319462629273f64,
+                        1.002517122345543f64,
+                    ],
+                    &[
+                        1321.331180819591f64,
+                        1321.331180819591f64,
+                        -637.14117008679f64,
+                        -126.11574641985825f64,
+                        8.834856673595295f64,
+                        -17.73778118801837f64,
+                        2642.662361639182f64,
+                        2642.662361639182f64,
+                    ],
+                ))
+            }
+            DynOrigin::Titan => {
+                Some((
+                    &[
+                        6.166597313146365f64,
+                        0.5012585611727715f64,
+                        3.0962140930379407f64,
+                        5.235987755982989f64,
+                        5.523094417936056f64,
+                        6.0248765778844255f64,
+                        12.33319462629273f64,
+                        1.002517122345543f64,
+                    ],
+                    &[
+                        1321.331180819591f64,
+                        1321.331180819591f64,
+                        -637.14117008679f64,
+                        -126.11574641985825f64,
+                        8.834856673595295f64,
+                        -17.73778118801837f64,
+                        2642.662361639182f64,
+                        2642.662361639182f64,
+                    ],
+                ))
+            }
+            DynOrigin::Iapetus => {
+                Some((
+                    &[
+                        6.166597313146365f64,
+                        0.5012585611727715f64,
+                        3.0962140930379407f64,
+                        5.235987755982989f64,
+                        5.523094417936056f64,
+                        6.0248765778844255f64,
+                        12.33319462629273f64,
+                        1.002517122345543f64,
+                    ],
+                    &[
+                        1321.331180819591f64,
+                        1321.331180819591f64,
+                        -637.14117008679f64,
+                        -126.11574641985825f64,
+                        8.834856673595295f64,
+                        -17.73778118801837f64,
+                        2642.662361639182f64,
+                        2642.662361639182f64,
+                    ],
+                ))
+            }
+            DynOrigin::Phoebe => {
+                Some((
+                    &[
+                        6.166597313146365f64,
+                        0.5012585611727715f64,
+                        3.0962140930379407f64,
+                        5.235987755982989f64,
+                        5.523094417936056f64,
+                        6.0248765778844255f64,
+                        12.33319462629273f64,
+                        1.002517122345543f64,
+                    ],
+                    &[
+                        1321.331180819591f64,
+                        1321.331180819591f64,
+                        -637.14117008679f64,
+                        -126.11574641985825f64,
+                        8.834856673595295f64,
+                        -17.73778118801837f64,
+                        2642.662361639182f64,
+                        2642.662361639182f64,
+                    ],
+                ))
+            }
+            DynOrigin::Janus => {
+                Some((
+                    &[
+                        6.166597313146365f64,
+                        0.5012585611727715f64,
+                        3.0962140930379407f64,
+                        5.235987755982989f64,
+                        5.523094417936056f64,
+                        6.0248765778844255f64,
+                        12.33319462629273f64,
+                        1.002517122345543f64,
+                    ],
+                    &[
+                        1321.331180819591f64,
+                        1321.331180819591f64,
+                        -637.14117008679f64,
+                        -126.11574641985825f64,
+                        8.834856673595295f64,
+                        -17.73778118801837f64,
+                        2642.662361639182f64,
+                        2642.662361639182f64,
+                    ],
+                ))
+            }
+            DynOrigin::Epimetheus => {
+                Some((
+                    &[
+                        6.166597313146365f64,
+                        0.5012585611727715f64,
+                        3.0962140930379407f64,
+                        5.235987755982989f64,
+                        5.523094417936056f64,
+                        6.0248765778844255f64,
+                        12.33319462629273f64,
+                        1.002517122345543f64,
+                    ],
+                    &[
+                        1321.331180819591f64,
+                        1321.331180819591f64,
+                        -637.14117008679f64,
+                        -126.11574641985825f64,
+                        8.834856673595295f64,
+                        -17.73778118801837f64,
+                        2642.662361639182f64,
+                        2642.662361639182f64,
+                    ],
+                ))
+            }
+            DynOrigin::Helene => {
+                Some((
+                    &[
+                        6.166597313146365f64,
+                        0.5012585611727715f64,
+                        3.0962140930379407f64,
+                        5.235987755982989f64,
+                        5.523094417936056f64,
+                        6.0248765778844255f64,
+                        12.33319462629273f64,
+                        1.002517122345543f64,
+                    ],
+                    &[
+                        1321.331180819591f64,
+                        1321.331180819591f64,
+                        -637.14117008679f64,
+                        -126.11574641985825f64,
+                        8.834856673595295f64,
+                        -17.73778118801837f64,
+                        2642.662361639182f64,
+                        2642.662361639182f64,
+                    ],
+                ))
+            }
+            DynOrigin::Telesto => {
+                Some((
+                    &[
+                        6.166597313146365f64,
+                        0.5012585611727715f64,
+                        3.0962140930379407f64,
+                        5.235987755982989f64,
+                        5.523094417936056f64,
+                        6.0248765778844255f64,
+                        12.33319462629273f64,
+                        1.002517122345543f64,
+                    ],
+                    &[
+                        1321.331180819591f64,
+                        1321.331180819591f64,
+                        -637.14117008679f64,
+                        -126.11574641985825f64,
+                        8.834856673595295f64,
+                        -17.73778118801837f64,
+                        2642.662361639182f64,
+                        2642.662361639182f64,
+                    ],
+                ))
+            }
+            DynOrigin::Calypso => {
+                Some((
+                    &[
+                        6.166597313146365f64,
+                        0.5012585611727715f64,
+                        3.0962140930379407f64,
+                        5.235987755982989f64,
+                        5.523094417936056f64,
+                        6.0248765778844255f64,
+                        12.33319462629273f64,
+                        1.002517122345543f64,
+                    ],
+                    &[
+                        1321.331180819591f64,
+                        1321.331180819591f64,
+                        -637.14117008679f64,
+                        -126.11574641985825f64,
+                        8.834856673595295f64,
+                        -17.73778118801837f64,
+                        2642.662361639182f64,
+                        2642.662361639182f64,
+                    ],
+                ))
+            }
+            DynOrigin::Atlas => {
+                Some((
+                    &[
+                        6.166597313146365f64,
+                        0.5012585611727715f64,
+                        3.0962140930379407f64,
+                        5.235987755982989f64,
+                        5.523094417936056f64,
+                        6.0248765778844255f64,
+                        12.33319462629273f64,
+                        1.002517122345543f64,
+                    ],
+                    &[
+                        1321.331180819591f64,
+                        1321.331180819591f64,
+                        -637.14117008679f64,
+                        -126.11574641985825f64,
+                        8.834856673595295f64,
+                        -17.73778118801837f64,
+                        2642.662361639182f64,
+                        2642.662361639182f64,
+                    ],
+                ))
+            }
+            DynOrigin::Prometheus => {
+                Some((
+                    &[
+                        6.166597313146365f64,
+                        0.5012585611727715f64,
+                        3.0962140930379407f64,
+                        5.235987755982989f64,
+                        5.523094417936056f64,
+                        6.0248765778844255f64,
+                        12.33319462629273f64,
+                        1.002517122345543f64,
+                    ],
+                    &[
+                        1321.331180819591f64,
+                        1321.331180819591f64,
+                        -637.14117008679f64,
+                        -126.11574641985825f64,
+                        8.834856673595295f64,
+                        -17.73778118801837f64,
+                        2642.662361639182f64,
+                        2642.662361639182f64,
+                    ],
+                ))
+            }
+            DynOrigin::Pandora => {
+                Some((
+                    &[
+                        6.166597313146365f64,
+                        0.5012585611727715f64,
+                        3.0962140930379407f64,
+                        5.235987755982989f64,
+                        5.523094417936056f64,
+                        6.0248765778844255f64,
+                        12.33319462629273f64,
+                        1.002517122345543f64,
+                    ],
+                    &[
+                        1321.331180819591f64,
+                        1321.331180819591f64,
+                        -637.14117008679f64,
+                        -126.11574641985825f64,
+                        8.834856673595295f64,
+                        -17.73778118801837f64,
+                        2642.662361639182f64,
+                        2642.662361639182f64,
+                    ],
+                ))
+            }
+            DynOrigin::Pan => {
+                Some((
+                    &[
+                        6.166597313146365f64,
+                        0.5012585611727715f64,
+                        3.0962140930379407f64,
+                        5.235987755982989f64,
+                        5.523094417936056f64,
+                        6.0248765778844255f64,
+                        12.33319462629273f64,
+                        1.002517122345543f64,
+                    ],
+                    &[
+                        1321.331180819591f64,
+                        1321.331180819591f64,
+                        -637.14117008679f64,
+                        -126.11574641985825f64,
+                        8.834856673595295f64,
+                        -17.73778118801837f64,
+                        2642.662361639182f64,
+                        2642.662361639182f64,
+                    ],
+                ))
+            }
+            DynOrigin::Ariel => {
+                Some((
+                    &[
+                        2.0202186091834364f64,
+                        2.4729570171507653f64,
+                        2.356718088967943f64,
+                        1.0780898789568973f64,
+                        4.351454891072263f64,
+                        0.7655014099247129f64,
+                        1.3554226970987964f64,
+                        2.746450110938277f64,
+                        1.776919711455427f64,
+                        2.419724474964938f64,
+                        1.784250094313803f64,
+                        5.522396286235258f64,
+                        5.3059754589879615f64,
+                        5.388005933831694f64,
+                        5.948431156647074f64,
+                        4.522846223618106f64,
+                        3.568500188627606f64,
+                        11.044792572470516f64,
+                    ],
+                    &[
+                        959.7891933286942f64,
+                        731.077582955928f64,
+                        522.3307938967249f64,
+                        449.1358738582876f64,
+                        427.10754977009157f64,
+                        388.83160660922994f64,
+                        354.1171823199879f64,
+                        290.6454915444109f64,
+                        224.66977689099764f64,
+                        140.70512817020406f64,
+                        -35.32930378471962f64,
+                        49.9855316454168f64,
+                        -0.9065240134858548f64,
+                        -1.626123264083117f64,
+                        -1.314581992602129f64,
+                        -8.810596596992575f64,
+                        -70.65860756943924f64,
+                        99.9710632908336f64,
+                    ],
+                ))
+            }
+            DynOrigin::Umbriel => {
+                Some((
+                    &[
+                        2.0202186091834364f64,
+                        2.4729570171507653f64,
+                        2.356718088967943f64,
+                        1.0780898789568973f64,
+                        4.351454891072263f64,
+                        0.7655014099247129f64,
+                        1.3554226970987964f64,
+                        2.746450110938277f64,
+                        1.776919711455427f64,
+                        2.419724474964938f64,
+                        1.784250094313803f64,
+                        5.522396286235258f64,
+                        5.3059754589879615f64,
+                        5.388005933831694f64,
+                        5.948431156647074f64,
+                        4.522846223618106f64,
+                        3.568500188627606f64,
+                        11.044792572470516f64,
+                    ],
+                    &[
+                        959.7891933286942f64,
+                        731.077582955928f64,
+                        522.3307938967249f64,
+                        449.1358738582876f64,
+                        427.10754977009157f64,
+                        388.83160660922994f64,
+                        354.1171823199879f64,
+                        290.6454915444109f64,
+                        224.66977689099764f64,
+                        140.70512817020406f64,
+                        -35.32930378471962f64,
+                        49.9855316454168f64,
+                        -0.9065240134858548f64,
+                        -1.626123264083117f64,
+                        -1.314581992602129f64,
+                        -8.810596596992575f64,
+                        -70.65860756943924f64,
+                        99.9710632908336f64,
+                    ],
+                ))
+            }
+            DynOrigin::Titania => {
+                Some((
+                    &[
+                        2.0202186091834364f64,
+                        2.4729570171507653f64,
+                        2.356718088967943f64,
+                        1.0780898789568973f64,
+                        4.351454891072263f64,
+                        0.7655014099247129f64,
+                        1.3554226970987964f64,
+                        2.746450110938277f64,
+                        1.776919711455427f64,
+                        2.419724474964938f64,
+                        1.784250094313803f64,
+                        5.522396286235258f64,
+                        5.3059754589879615f64,
+                        5.388005933831694f64,
+                        5.948431156647074f64,
+                        4.522846223618106f64,
+                        3.568500188627606f64,
+                        11.044792572470516f64,
+                    ],
+                    &[
+                        959.7891933286942f64,
+                        731.077582955928f64,
+                        522.3307938967249f64,
+                        449.1358738582876f64,
+                        427.10754977009157f64,
+                        388.83160660922994f64,
+                        354.1171823199879f64,
+                        290.6454915444109f64,
+                        224.66977689099764f64,
+                        140.70512817020406f64,
+                        -35.32930378471962f64,
+                        49.9855316454168f64,
+                        -0.9065240134858548f64,
+                        -1.626123264083117f64,
+                        -1.314581992602129f64,
+                        -8.810596596992575f64,
+                        -70.65860756943924f64,
+                        99.9710632908336f64,
+                    ],
+                ))
+            }
+            DynOrigin::Oberon => {
+                Some((
+                    &[
+                        2.0202186091834364f64,
+                        2.4729570171507653f64,
+                        2.356718088967943f64,
+                        1.0780898789568973f64,
+                        4.351454891072263f64,
+                        0.7655014099247129f64,
+                        1.3554226970987964f64,
+                        2.746450110938277f64,
+                        1.776919711455427f64,
+                        2.419724474964938f64,
+                        1.784250094313803f64,
+                        5.522396286235258f64,
+                        5.3059754589879615f64,
+                        5.388005933831694f64,
+                        5.948431156647074f64,
+                        4.522846223618106f64,
+                        3.568500188627606f64,
+                        11.044792572470516f64,
+                    ],
+                    &[
+                        959.7891933286942f64,
+                        731.077582955928f64,
+                        522.3307938967249f64,
+                        449.1358738582876f64,
+                        427.10754977009157f64,
+                        388.83160660922994f64,
+                        354.1171823199879f64,
+                        290.6454915444109f64,
+                        224.66977689099764f64,
+                        140.70512817020406f64,
+                        -35.32930378471962f64,
+                        49.9855316454168f64,
+                        -0.9065240134858548f64,
+                        -1.626123264083117f64,
+                        -1.314581992602129f64,
+                        -8.810596596992575f64,
+                        -70.65860756943924f64,
+                        99.9710632908336f64,
+                    ],
+                ))
+            }
+            DynOrigin::Miranda => {
+                Some((
+                    &[
+                        2.0202186091834364f64,
+                        2.4729570171507653f64,
+                        2.356718088967943f64,
+                        1.0780898789568973f64,
+                        4.351454891072263f64,
+                        0.7655014099247129f64,
+                        1.3554226970987964f64,
+                        2.746450110938277f64,
+                        1.776919711455427f64,
+                        2.419724474964938f64,
+                        1.784250094313803f64,
+                        5.522396286235258f64,
+                        5.3059754589879615f64,
+                        5.388005933831694f64,
+                        5.948431156647074f64,
+                        4.522846223618106f64,
+                        3.568500188627606f64,
+                        11.044792572470516f64,
+                    ],
+                    &[
+                        959.7891933286942f64,
+                        731.077582955928f64,
+                        522.3307938967249f64,
+                        449.1358738582876f64,
+                        427.10754977009157f64,
+                        388.83160660922994f64,
+                        354.1171823199879f64,
+                        290.6454915444109f64,
+                        224.66977689099764f64,
+                        140.70512817020406f64,
+                        -35.32930378471962f64,
+                        49.9855316454168f64,
+                        -0.9065240134858548f64,
+                        -1.626123264083117f64,
+                        -1.314581992602129f64,
+                        -8.810596596992575f64,
+                        -70.65860756943924f64,
+                        99.9710632908336f64,
+                    ],
+                ))
+            }
+            DynOrigin::Cordelia => {
+                Some((
+                    &[
+                        2.0202186091834364f64,
+                        2.4729570171507653f64,
+                        2.356718088967943f64,
+                        1.0780898789568973f64,
+                        4.351454891072263f64,
+                        0.7655014099247129f64,
+                        1.3554226970987964f64,
+                        2.746450110938277f64,
+                        1.776919711455427f64,
+                        2.419724474964938f64,
+                        1.784250094313803f64,
+                        5.522396286235258f64,
+                        5.3059754589879615f64,
+                        5.388005933831694f64,
+                        5.948431156647074f64,
+                        4.522846223618106f64,
+                        3.568500188627606f64,
+                        11.044792572470516f64,
+                    ],
+                    &[
+                        959.7891933286942f64,
+                        731.077582955928f64,
+                        522.3307938967249f64,
+                        449.1358738582876f64,
+                        427.10754977009157f64,
+                        388.83160660922994f64,
+                        354.1171823199879f64,
+                        290.6454915444109f64,
+                        224.66977689099764f64,
+                        140.70512817020406f64,
+                        -35.32930378471962f64,
+                        49.9855316454168f64,
+                        -0.9065240134858548f64,
+                        -1.626123264083117f64,
+                        -1.314581992602129f64,
+                        -8.810596596992575f64,
+                        -70.65860756943924f64,
+                        99.9710632908336f64,
+                    ],
+                ))
+            }
+            DynOrigin::Ophelia => {
+                Some((
+                    &[
+                        2.0202186091834364f64,
+                        2.4729570171507653f64,
+                        2.356718088967943f64,
+                        1.0780898789568973f64,
+                        4.351454891072263f64,
+                        0.7655014099247129f64,
+                        1.3554226970987964f64,
+                        2.746450110938277f64,
+                        1.776919711455427f64,
+                        2.419724474964938f64,
+                        1.784250094313803f64,
+                        5.522396286235258f64,
+                        5.3059754589879615f64,
+                        5.388005933831694f64,
+                        5.948431156647074f64,
+                        4.522846223618106f64,
+                        3.568500188627606f64,
+                        11.044792572470516f64,
+                    ],
+                    &[
+                        959.7891933286942f64,
+                        731.077582955928f64,
+                        522.3307938967249f64,
+                        449.1358738582876f64,
+                        427.10754977009157f64,
+                        388.83160660922994f64,
+                        354.1171823199879f64,
+                        290.6454915444109f64,
+                        224.66977689099764f64,
+                        140.70512817020406f64,
+                        -35.32930378471962f64,
+                        49.9855316454168f64,
+                        -0.9065240134858548f64,
+                        -1.626123264083117f64,
+                        -1.314581992602129f64,
+                        -8.810596596992575f64,
+                        -70.65860756943924f64,
+                        99.9710632908336f64,
+                    ],
+                ))
+            }
+            DynOrigin::Bianca => {
+                Some((
+                    &[
+                        2.0202186091834364f64,
+                        2.4729570171507653f64,
+                        2.356718088967943f64,
+                        1.0780898789568973f64,
+                        4.351454891072263f64,
+                        0.7655014099247129f64,
+                        1.3554226970987964f64,
+                        2.746450110938277f64,
+                        1.776919711455427f64,
+                        2.419724474964938f64,
+                        1.784250094313803f64,
+                        5.522396286235258f64,
+                        5.3059754589879615f64,
+                        5.388005933831694f64,
+                        5.948431156647074f64,
+                        4.522846223618106f64,
+                        3.568500188627606f64,
+                        11.044792572470516f64,
+                    ],
+                    &[
+                        959.7891933286942f64,
+                        731.077582955928f64,
+                        522.3307938967249f64,
+                        449.1358738582876f64,
+                        427.10754977009157f64,
+                        388.83160660922994f64,
+                        354.1171823199879f64,
+                        290.6454915444109f64,
+                        224.66977689099764f64,
+                        140.70512817020406f64,
+                        -35.32930378471962f64,
+                        49.9855316454168f64,
+                        -0.9065240134858548f64,
+                        -1.626123264083117f64,
+                        -1.314581992602129f64,
+                        -8.810596596992575f64,
+                        -70.65860756943924f64,
+                        99.9710632908336f64,
+                    ],
+                ))
+            }
+            DynOrigin::Cressida => {
+                Some((
+                    &[
+                        2.0202186091834364f64,
+                        2.4729570171507653f64,
+                        2.356718088967943f64,
+                        1.0780898789568973f64,
+                        4.351454891072263f64,
+                        0.7655014099247129f64,
+                        1.3554226970987964f64,
+                        2.746450110938277f64,
+                        1.776919711455427f64,
+                        2.419724474964938f64,
+                        1.784250094313803f64,
+                        5.522396286235258f64,
+                        5.3059754589879615f64,
+                        5.388005933831694f64,
+                        5.948431156647074f64,
+                        4.522846223618106f64,
+                        3.568500188627606f64,
+                        11.044792572470516f64,
+                    ],
+                    &[
+                        959.7891933286942f64,
+                        731.077582955928f64,
+                        522.3307938967249f64,
+                        449.1358738582876f64,
+                        427.10754977009157f64,
+                        388.83160660922994f64,
+                        354.1171823199879f64,
+                        290.6454915444109f64,
+                        224.66977689099764f64,
+                        140.70512817020406f64,
+                        -35.32930378471962f64,
+                        49.9855316454168f64,
+                        -0.9065240134858548f64,
+                        -1.626123264083117f64,
+                        -1.314581992602129f64,
+                        -8.810596596992575f64,
+                        -70.65860756943924f64,
+                        99.9710632908336f64,
+                    ],
+                ))
+            }
+            DynOrigin::Desdemona => {
+                Some((
+                    &[
+                        2.0202186091834364f64,
+                        2.4729570171507653f64,
+                        2.356718088967943f64,
+                        1.0780898789568973f64,
+                        4.351454891072263f64,
+                        0.7655014099247129f64,
+                        1.3554226970987964f64,
+                        2.746450110938277f64,
+                        1.776919711455427f64,
+                        2.419724474964938f64,
+                        1.784250094313803f64,
+                        5.522396286235258f64,
+                        5.3059754589879615f64,
+                        5.388005933831694f64,
+                        5.948431156647074f64,
+                        4.522846223618106f64,
+                        3.568500188627606f64,
+                        11.044792572470516f64,
+                    ],
+                    &[
+                        959.7891933286942f64,
+                        731.077582955928f64,
+                        522.3307938967249f64,
+                        449.1358738582876f64,
+                        427.10754977009157f64,
+                        388.83160660922994f64,
+                        354.1171823199879f64,
+                        290.6454915444109f64,
+                        224.66977689099764f64,
+                        140.70512817020406f64,
+                        -35.32930378471962f64,
+                        49.9855316454168f64,
+                        -0.9065240134858548f64,
+                        -1.626123264083117f64,
+                        -1.314581992602129f64,
+                        -8.810596596992575f64,
+                        -70.65860756943924f64,
+                        99.9710632908336f64,
+                    ],
+                ))
+            }
+            DynOrigin::Juliet => {
+                Some((
+                    &[
+                        2.0202186091834364f64,
+                        2.4729570171507653f64,
+                        2.356718088967943f64,
+                        1.0780898789568973f64,
+                        4.351454891072263f64,
+                        0.7655014099247129f64,
+                        1.3554226970987964f64,
+                        2.746450110938277f64,
+                        1.776919711455427f64,
+                        2.419724474964938f64,
+                        1.784250094313803f64,
+                        5.522396286235258f64,
+                        5.3059754589879615f64,
+                        5.388005933831694f64,
+                        5.948431156647074f64,
+                        4.522846223618106f64,
+                        3.568500188627606f64,
+                        11.044792572470516f64,
+                    ],
+                    &[
+                        959.7891933286942f64,
+                        731.077582955928f64,
+                        522.3307938967249f64,
+                        449.1358738582876f64,
+                        427.10754977009157f64,
+                        388.83160660922994f64,
+                        354.1171823199879f64,
+                        290.6454915444109f64,
+                        224.66977689099764f64,
+                        140.70512817020406f64,
+                        -35.32930378471962f64,
+                        49.9855316454168f64,
+                        -0.9065240134858548f64,
+                        -1.626123264083117f64,
+                        -1.314581992602129f64,
+                        -8.810596596992575f64,
+                        -70.65860756943924f64,
+                        99.9710632908336f64,
+                    ],
+                ))
+            }
+            DynOrigin::Portia => {
+                Some((
+                    &[
+                        2.0202186091834364f64,
+                        2.4729570171507653f64,
+                        2.356718088967943f64,
+                        1.0780898789568973f64,
+                        4.351454891072263f64,
+                        0.7655014099247129f64,
+                        1.3554226970987964f64,
+                        2.746450110938277f64,
+                        1.776919711455427f64,
+                        2.419724474964938f64,
+                        1.784250094313803f64,
+                        5.522396286235258f64,
+                        5.3059754589879615f64,
+                        5.388005933831694f64,
+                        5.948431156647074f64,
+                        4.522846223618106f64,
+                        3.568500188627606f64,
+                        11.044792572470516f64,
+                    ],
+                    &[
+                        959.7891933286942f64,
+                        731.077582955928f64,
+                        522.3307938967249f64,
+                        449.1358738582876f64,
+                        427.10754977009157f64,
+                        388.83160660922994f64,
+                        354.1171823199879f64,
+                        290.6454915444109f64,
+                        224.66977689099764f64,
+                        140.70512817020406f64,
+                        -35.32930378471962f64,
+                        49.9855316454168f64,
+                        -0.9065240134858548f64,
+                        -1.626123264083117f64,
+                        -1.314581992602129f64,
+                        -8.810596596992575f64,
+                        -70.65860756943924f64,
+                        99.9710632908336f64,
+                    ],
+                ))
+            }
+            DynOrigin::Rosalind => {
+                Some((
+                    &[
+                        2.0202186091834364f64,
+                        2.4729570171507653f64,
+                        2.356718088967943f64,
+                        1.0780898789568973f64,
+                        4.351454891072263f64,
+                        0.7655014099247129f64,
+                        1.3554226970987964f64,
+                        2.746450110938277f64,
+                        1.776919711455427f64,
+                        2.419724474964938f64,
+                        1.784250094313803f64,
+                        5.522396286235258f64,
+                        5.3059754589879615f64,
+                        5.388005933831694f64,
+                        5.948431156647074f64,
+                        4.522846223618106f64,
+                        3.568500188627606f64,
+                        11.044792572470516f64,
+                    ],
+                    &[
+                        959.7891933286942f64,
+                        731.077582955928f64,
+                        522.3307938967249f64,
+                        449.1358738582876f64,
+                        427.10754977009157f64,
+                        388.83160660922994f64,
+                        354.1171823199879f64,
+                        290.6454915444109f64,
+                        224.66977689099764f64,
+                        140.70512817020406f64,
+                        -35.32930378471962f64,
+                        49.9855316454168f64,
+                        -0.9065240134858548f64,
+                        -1.626123264083117f64,
+                        -1.314581992602129f64,
+                        -8.810596596992575f64,
+                        -70.65860756943924f64,
+                        99.9710632908336f64,
+                    ],
+                ))
+            }
+            DynOrigin::Belinda => {
+                Some((
+                    &[
+                        2.0202186091834364f64,
+                        2.4729570171507653f64,
+                        2.356718088967943f64,
+                        1.0780898789568973f64,
+                        4.351454891072263f64,
+                        0.7655014099247129f64,
+                        1.3554226970987964f64,
+                        2.746450110938277f64,
+                        1.776919711455427f64,
+                        2.419724474964938f64,
+                        1.784250094313803f64,
+                        5.522396286235258f64,
+                        5.3059754589879615f64,
+                        5.388005933831694f64,
+                        5.948431156647074f64,
+                        4.522846223618106f64,
+                        3.568500188627606f64,
+                        11.044792572470516f64,
+                    ],
+                    &[
+                        959.7891933286942f64,
+                        731.077582955928f64,
+                        522.3307938967249f64,
+                        449.1358738582876f64,
+                        427.10754977009157f64,
+                        388.83160660922994f64,
+                        354.1171823199879f64,
+                        290.6454915444109f64,
+                        224.66977689099764f64,
+                        140.70512817020406f64,
+                        -35.32930378471962f64,
+                        49.9855316454168f64,
+                        -0.9065240134858548f64,
+                        -1.626123264083117f64,
+                        -1.314581992602129f64,
+                        -8.810596596992575f64,
+                        -70.65860756943924f64,
+                        99.9710632908336f64,
+                    ],
+                ))
+            }
+            DynOrigin::Puck => {
+                Some((
+                    &[
+                        2.0202186091834364f64,
+                        2.4729570171507653f64,
+                        2.356718088967943f64,
+                        1.0780898789568973f64,
+                        4.351454891072263f64,
+                        0.7655014099247129f64,
+                        1.3554226970987964f64,
+                        2.746450110938277f64,
+                        1.776919711455427f64,
+                        2.419724474964938f64,
+                        1.784250094313803f64,
+                        5.522396286235258f64,
+                        5.3059754589879615f64,
+                        5.388005933831694f64,
+                        5.948431156647074f64,
+                        4.522846223618106f64,
+                        3.568500188627606f64,
+                        11.044792572470516f64,
+                    ],
+                    &[
+                        959.7891933286942f64,
+                        731.077582955928f64,
+                        522.3307938967249f64,
+                        449.1358738582876f64,
+                        427.10754977009157f64,
+                        388.83160660922994f64,
+                        354.1171823199879f64,
+                        290.6454915444109f64,
+                        224.66977689099764f64,
+                        140.70512817020406f64,
+                        -35.32930378471962f64,
+                        49.9855316454168f64,
+                        -0.9065240134858548f64,
+                        -1.626123264083117f64,
+                        -1.314581992602129f64,
+                        -8.810596596992575f64,
+                        -70.65860756943924f64,
+                        99.9710632908336f64,
+                    ],
+                ))
+            }
+            DynOrigin::Triton => {
+                Some((
+                    &[
+                        6.245660728261709f64,
+                        5.653470513060032f64,
+                        3.848625533572696f64,
+                        6.183177941040311f64,
+                        1.3144074596769295f64,
+                        0.6171484235051949f64,
+                        2.4890140462691135f64,
+                        3.104068074671915f64,
+                        11.306941026120064f64,
+                        6.20813614934383f64,
+                        9.312204224015744f64,
+                        12.41627229868766f64,
+                        15.520340373359575f64,
+                        18.624408448031488f64,
+                        21.728476522703406f64,
+                        24.83254459737532f64,
+                        27.936612672047236f64,
+                    ],
+                    &[
+                        0.9130864514733535f64,
+                        1092.6913034790819f64,
+                        961.0515899766616f64,
+                        812.7038395448996f64,
+                        455.6949957202075f64,
+                        250.02539666519567f64,
+                        49.29857005183183f64,
+                        0.9130864514733535f64,
+                        2185.3826069581637f64,
+                        1.826172902946707f64,
+                        2.7392593544200605f64,
+                        3.652345805893414f64,
+                        4.565432257366767f64,
+                        5.478518708840121f64,
+                        6.391605160313474f64,
+                        7.304691611786828f64,
+                        8.21777806326018f64,
+                    ],
+                ))
+            }
+            DynOrigin::Naiad => {
+                Some((
+                    &[
+                        6.245660728261709f64,
+                        5.653470513060032f64,
+                        3.848625533572696f64,
+                        6.183177941040311f64,
+                        1.3144074596769295f64,
+                        0.6171484235051949f64,
+                        2.4890140462691135f64,
+                        3.104068074671915f64,
+                        11.306941026120064f64,
+                        6.20813614934383f64,
+                        9.312204224015744f64,
+                        12.41627229868766f64,
+                        15.520340373359575f64,
+                        18.624408448031488f64,
+                        21.728476522703406f64,
+                        24.83254459737532f64,
+                        27.936612672047236f64,
+                    ],
+                    &[
+                        0.9130864514733535f64,
+                        1092.6913034790819f64,
+                        961.0515899766616f64,
+                        812.7038395448996f64,
+                        455.6949957202075f64,
+                        250.02539666519567f64,
+                        49.29857005183183f64,
+                        0.9130864514733535f64,
+                        2185.3826069581637f64,
+                        1.826172902946707f64,
+                        2.7392593544200605f64,
+                        3.652345805893414f64,
+                        4.565432257366767f64,
+                        5.478518708840121f64,
+                        6.391605160313474f64,
+                        7.304691611786828f64,
+                        8.21777806326018f64,
+                    ],
+                ))
+            }
+            DynOrigin::Thalassa => {
+                Some((
+                    &[
+                        6.245660728261709f64,
+                        5.653470513060032f64,
+                        3.848625533572696f64,
+                        6.183177941040311f64,
+                        1.3144074596769295f64,
+                        0.6171484235051949f64,
+                        2.4890140462691135f64,
+                        3.104068074671915f64,
+                        11.306941026120064f64,
+                        6.20813614934383f64,
+                        9.312204224015744f64,
+                        12.41627229868766f64,
+                        15.520340373359575f64,
+                        18.624408448031488f64,
+                        21.728476522703406f64,
+                        24.83254459737532f64,
+                        27.936612672047236f64,
+                    ],
+                    &[
+                        0.9130864514733535f64,
+                        1092.6913034790819f64,
+                        961.0515899766616f64,
+                        812.7038395448996f64,
+                        455.6949957202075f64,
+                        250.02539666519567f64,
+                        49.29857005183183f64,
+                        0.9130864514733535f64,
+                        2185.3826069581637f64,
+                        1.826172902946707f64,
+                        2.7392593544200605f64,
+                        3.652345805893414f64,
+                        4.565432257366767f64,
+                        5.478518708840121f64,
+                        6.391605160313474f64,
+                        7.304691611786828f64,
+                        8.21777806326018f64,
+                    ],
+                ))
+            }
+            DynOrigin::Despina => {
+                Some((
+                    &[
+                        6.245660728261709f64,
+                        5.653470513060032f64,
+                        3.848625533572696f64,
+                        6.183177941040311f64,
+                        1.3144074596769295f64,
+                        0.6171484235051949f64,
+                        2.4890140462691135f64,
+                        3.104068074671915f64,
+                        11.306941026120064f64,
+                        6.20813614934383f64,
+                        9.312204224015744f64,
+                        12.41627229868766f64,
+                        15.520340373359575f64,
+                        18.624408448031488f64,
+                        21.728476522703406f64,
+                        24.83254459737532f64,
+                        27.936612672047236f64,
+                    ],
+                    &[
+                        0.9130864514733535f64,
+                        1092.6913034790819f64,
+                        961.0515899766616f64,
+                        812.7038395448996f64,
+                        455.6949957202075f64,
+                        250.02539666519567f64,
+                        49.29857005183183f64,
+                        0.9130864514733535f64,
+                        2185.3826069581637f64,
+                        1.826172902946707f64,
+                        2.7392593544200605f64,
+                        3.652345805893414f64,
+                        4.565432257366767f64,
+                        5.478518708840121f64,
+                        6.391605160313474f64,
+                        7.304691611786828f64,
+                        8.21777806326018f64,
+                    ],
+                ))
+            }
+            DynOrigin::Galatea => {
+                Some((
+                    &[
+                        6.245660728261709f64,
+                        5.653470513060032f64,
+                        3.848625533572696f64,
+                        6.183177941040311f64,
+                        1.3144074596769295f64,
+                        0.6171484235051949f64,
+                        2.4890140462691135f64,
+                        3.104068074671915f64,
+                        11.306941026120064f64,
+                        6.20813614934383f64,
+                        9.312204224015744f64,
+                        12.41627229868766f64,
+                        15.520340373359575f64,
+                        18.624408448031488f64,
+                        21.728476522703406f64,
+                        24.83254459737532f64,
+                        27.936612672047236f64,
+                    ],
+                    &[
+                        0.9130864514733535f64,
+                        1092.6913034790819f64,
+                        961.0515899766616f64,
+                        812.7038395448996f64,
+                        455.6949957202075f64,
+                        250.02539666519567f64,
+                        49.29857005183183f64,
+                        0.9130864514733535f64,
+                        2185.3826069581637f64,
+                        1.826172902946707f64,
+                        2.7392593544200605f64,
+                        3.652345805893414f64,
+                        4.565432257366767f64,
+                        5.478518708840121f64,
+                        6.391605160313474f64,
+                        7.304691611786828f64,
+                        8.21777806326018f64,
+                    ],
+                ))
+            }
+            DynOrigin::Larissa => {
+                Some((
+                    &[
+                        6.245660728261709f64,
+                        5.653470513060032f64,
+                        3.848625533572696f64,
+                        6.183177941040311f64,
+                        1.3144074596769295f64,
+                        0.6171484235051949f64,
+                        2.4890140462691135f64,
+                        3.104068074671915f64,
+                        11.306941026120064f64,
+                        6.20813614934383f64,
+                        9.312204224015744f64,
+                        12.41627229868766f64,
+                        15.520340373359575f64,
+                        18.624408448031488f64,
+                        21.728476522703406f64,
+                        24.83254459737532f64,
+                        27.936612672047236f64,
+                    ],
+                    &[
+                        0.9130864514733535f64,
+                        1092.6913034790819f64,
+                        961.0515899766616f64,
+                        812.7038395448996f64,
+                        455.6949957202075f64,
+                        250.02539666519567f64,
+                        49.29857005183183f64,
+                        0.9130864514733535f64,
+                        2185.3826069581637f64,
+                        1.826172902946707f64,
+                        2.7392593544200605f64,
+                        3.652345805893414f64,
+                        4.565432257366767f64,
+                        5.478518708840121f64,
+                        6.391605160313474f64,
+                        7.304691611786828f64,
+                        8.21777806326018f64,
+                    ],
+                ))
+            }
+            DynOrigin::Proteus => {
+                Some((
+                    &[
+                        6.245660728261709f64,
+                        5.653470513060032f64,
+                        3.848625533572696f64,
+                        6.183177941040311f64,
+                        1.3144074596769295f64,
+                        0.6171484235051949f64,
+                        2.4890140462691135f64,
+                        3.104068074671915f64,
+                        11.306941026120064f64,
+                        6.20813614934383f64,
+                        9.312204224015744f64,
+                        12.41627229868766f64,
+                        15.520340373359575f64,
+                        18.624408448031488f64,
+                        21.728476522703406f64,
+                        24.83254459737532f64,
+                        27.936612672047236f64,
+                    ],
+                    &[
+                        0.9130864514733535f64,
+                        1092.6913034790819f64,
+                        961.0515899766616f64,
+                        812.7038395448996f64,
+                        455.6949957202075f64,
+                        250.02539666519567f64,
+                        49.29857005183183f64,
+                        0.9130864514733535f64,
+                        2185.3826069581637f64,
+                        1.826172902946707f64,
+                        2.7392593544200605f64,
+                        3.652345805893414f64,
+                        4.565432257366767f64,
+                        5.478518708840121f64,
+                        6.391605160313474f64,
+                        7.304691611786828f64,
+                        8.21777806326018f64,
+                    ],
+                ))
+            }
             DynOrigin::Charon => Some((&[] as &[f64], &[] as &[f64])),
             DynOrigin::Gaspra => Some((&[] as &[f64], &[] as &[f64])),
             DynOrigin::Ida => Some((&[] as &[f64], &[] as &[f64])),
@@ -11346,308 +12006,377 @@ impl MaybeRotationalElements for DynOrigin {
     fn maybe_right_ascension_coefficients(&self) -> Option<PolynomialCoefficients> {
         match self {
             DynOrigin::Sun => Some((4.993910588731375f64, 0f64, 0f64, None)),
-            DynOrigin::Mercury => Some((
-                4.904554967017021f64,
-                -0.0005724679946541401f64,
-                0f64,
-                Some(&[0f64, 0f64, 0f64, 0f64, 0f64]),
-            )),
+            DynOrigin::Mercury => {
+                Some((
+                    4.904554967017021f64,
+                    -0.0005724679946541401f64,
+                    0f64,
+                    Some(&[0f64, 0f64, 0f64, 0f64, 0f64]),
+                ))
+            }
             DynOrigin::Venus => Some((4.760560067739733f64, 0f64, 0f64, None)),
             DynOrigin::Earth => Some((0f64, -0.011187560505283653f64, 0f64, None)),
-            DynOrigin::Mars => Some((
-                5.5373921900749785f64,
-                -0.001907216743164288f64,
-                0f64,
-                Some(&[
+            DynOrigin::Mars => {
+                Some((
+                    5.5373921900749785f64,
+                    -0.001907216743164288f64,
                     0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.000001186823891356144f64,
+                            0.000004153883619746505f64,
+                            0.0000009075712110370513f64,
+                            0.00000015707963267948966f64,
+                            0.007313924403529878f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Jupiter => {
+                Some((
+                    4.6784701644349695f64,
+                    -0.00011342894808711148f64,
                     0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.000001186823891356144f64,
-                    0.000004153883619746505f64,
-                    0.0000009075712110370513f64,
-                    0.00000015707963267948966f64,
-                    0.007313924403529878f64,
-                ]),
-            )),
-            DynOrigin::Jupiter => Some((
-                4.6784701644349695f64,
-                -0.00011342894808711148f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.0000020420352248333656f64,
-                    0.000016371188383706813f64,
-                    0.000024993114888558796f64,
-                    0.0000005235987755982989f64,
-                    0.00003752457891787809f64,
-                ]),
-            )),
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.0000020420352248333656f64,
+                            0.000016371188383706813f64,
+                            0.000024993114888558796f64,
+                            0.0000005235987755982989f64,
+                            0.00003752457891787809f64,
+                        ],
+                    ),
+                ))
+            }
             DynOrigin::Saturn => {
                 Some((0.7084116900919784f64, -0.0006283185307179586f64, 0f64, None))
             }
             DynOrigin::Uranus => Some((4.4909241515991285f64, 0f64, 0f64, None)),
-            DynOrigin::Neptune => Some((
-                5.224817648770225f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0.012217304763960306f64,
+            DynOrigin::Neptune => {
+                Some((
+                    5.224817648770225f64,
                     0f64,
                     0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
+                    Some(
+                        &[
+                            0.012217304763960306f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
             DynOrigin::Pluto => Some((2.3211657321048187f64, 0f64, 0f64, None)),
-            DynOrigin::Moon => Some((
-                4.712299968592838f64,
-                0.000054105206811824215f64,
-                0f64,
-                Some(&[
-                    -0.06769608569710406f64,
-                    -0.0021013764194011725f64,
-                    0.0012217304763960308f64,
-                    -0.0003001966313430247f64,
+            DynOrigin::Moon => {
+                Some((
+                    4.712299968592838f64,
+                    0.000054105206811824215f64,
                     0f64,
-                    0.0001256637061435917f64,
+                    Some(
+                        &[
+                            -0.06769608569710406f64,
+                            -0.0021013764194011725f64,
+                            0.0012217304763960308f64,
+                            -0.0003001966313430247f64,
+                            0f64,
+                            0.0001256637061435917f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.00009075712110370513f64,
+                            0f64,
+                            0f64,
+                            0.00007504915783575618f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Phobos => {
+                Some((
+                    5.544399941316208f64,
+                    -0.001892691938596266f64,
                     0f64,
+                    Some(
+                        &[
+                            -0.031141630416121578f64,
+                            0.00038621064567151f64,
+                            -0.00017946365486924213f64,
+                            -0.00008300698656022431f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Deimos => {
+                Some((
+                    5.526708263174914f64,
+                    -0.0018357397507085887f64,
                     0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.05396867424229676f64,
+                            0.004010877798556321f64,
+                            0.0011202666329959662f64,
+                            0.00044218562371099577f64,
+                            0.00013590791618817245f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Io => {
+                Some((
+                    4.678355059970801f64,
+                    -0.00015707963267948965f64,
                     0f64,
-                    -0.00009075712110370513f64,
+                    Some(
+                        &[0f64, 0f64, 0.0016406094968746698f64, 0.0004188790204786391f64],
+                    ),
+                ))
+            }
+            DynOrigin::Europa => {
+                Some((
+                    4.678878658746398f64,
+                    -0.00015707963267948965f64,
                     0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.01895427567665842f64,
+                            0.0010471975511965976f64,
+                            0.0002617993877991494f64,
+                            0.00015707963267948965f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Ganymede => {
+                Some((
+                    4.680973053848792f64,
+                    -0.00015707963267948965f64,
                     0f64,
-                    0.00007504915783575618f64,
-                ]),
-            )),
-            DynOrigin::Phobos => Some((
-                5.544399941316208f64,
-                -0.001892691938596266f64,
-                0f64,
-                Some(&[
-                    -0.031141630416121578f64,
-                    0.00038621064567151f64,
-                    -0.00017946365486924213f64,
-                    -0.00008300698656022431f64,
-                ]),
-            )),
-            DynOrigin::Deimos => Some((
-                5.526708263174914f64,
-                -0.0018357397507085887f64,
-                0f64,
-                Some(&[
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.0006457718232379018f64,
+                            0.0075223690760955605f64,
+                            0.0015882496193148398f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Callisto => {
+                Some((
+                    4.690048765959163f64,
+                    -0.00015707963267948965f64,
                     0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.001186823891356144f64,
+                            0.010297442586766544f64,
+                            0f64,
+                            0.00017453292519943296f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Amalthea => {
+                Some((
+                    4.678355059970801f64,
+                    -0.00015707963267948965f64,
                     0f64,
+                    Some(
+                        &[
+                            -0.014660765716752368f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.00017453292519943296f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Thebe => {
+                Some((
+                    4.678355059970801f64,
+                    -0.00015707963267948965f64,
                     0f64,
-                    0f64,
-                    0f64,
-                    0.05396867424229676f64,
-                    0.004010877798556321f64,
-                    0.0011202666329959662f64,
-                    0.00044218562371099577f64,
-                    0.00013590791618817245f64,
-                ]),
-            )),
-            DynOrigin::Io => Some((
-                4.678355059970801f64,
-                -0.00015707963267948965f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0.0016406094968746698f64,
-                    0.0004188790204786391f64,
-                ]),
-            )),
-            DynOrigin::Europa => Some((
-                4.678878658746398f64,
-                -0.00015707963267948965f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.01895427567665842f64,
-                    0.0010471975511965976f64,
-                    0.0002617993877991494f64,
-                    0.00015707963267948965f64,
-                ]),
-            )),
-            DynOrigin::Ganymede => Some((
-                4.680973053848792f64,
-                -0.00015707963267948965f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.0006457718232379018f64,
-                    0.0075223690760955605f64,
-                    0.0015882496193148398f64,
-                ]),
-            )),
-            DynOrigin::Callisto => Some((
-                4.690048765959163f64,
-                -0.00015707963267948965f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.001186823891356144f64,
-                    0.010297442586766544f64,
-                    0f64,
-                    0.00017453292519943296f64,
-                ]),
-            )),
-            DynOrigin::Amalthea => Some((
-                4.678355059970801f64,
-                -0.00015707963267948965f64,
-                0f64,
-                Some(&[
-                    -0.014660765716752368f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.00017453292519943296f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Thebe => Some((
-                4.678355059970801f64,
-                -0.00015707963267948965f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    -0.03682644721708035f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.0006981317007977319f64,
-                ]),
-            )),
+                    Some(
+                        &[
+                            0f64,
+                            -0.03682644721708035f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.0006981317007977319f64,
+                        ],
+                    ),
+                ))
+            }
             DynOrigin::Adrastea => {
                 Some((4.678355059970801f64, -0.00015707963267948965f64, 0f64, None))
             }
             DynOrigin::Metis => {
                 Some((4.678355059970801f64, -0.00015707963267948965f64, 0f64, None))
             }
-            DynOrigin::Mimas => Some((
-                0.7096508738608943f64,
-                -0.0006283185307179586f64,
-                0f64,
-                Some(&[
+            DynOrigin::Mimas => {
+                Some((
+                    0.7096508738608943f64,
+                    -0.0006283185307179586f64,
                     0f64,
-                    0f64,
-                    0.2366666465704311f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0.2366666465704311f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
             DynOrigin::Enceladus => {
                 Some((0.7096508738608943f64, -0.0006283185307179586f64, 0f64, None))
             }
-            DynOrigin::Tethys => Some((
-                0.7096508738608943f64,
-                -0.0006283185307179586f64,
-                0f64,
-                Some(&[
+            DynOrigin::Tethys => {
+                Some((
+                    0.7096508738608943f64,
+                    -0.0006283185307179586f64,
                     0f64,
-                    0f64,
-                    0f64,
-                    0.16859880574265224f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.16859880574265224f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
             DynOrigin::Dione => {
                 Some((0.7096508738608943f64, -0.0006283185307179586f64, 0f64, None))
             }
-            DynOrigin::Rhea => Some((
-                0.7047639519553103f64,
-                -0.0006283185307179586f64,
-                0f64,
-                Some(&[
+            DynOrigin::Rhea => {
+                Some((
+                    0.7047639519553103f64,
+                    -0.0006283185307179586f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.054105206811824215f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Titan => {
+                Some((
+                    0.6891031125771652f64,
                     0f64,
                     0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.054105206811824215f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Titan => Some((
-                0.6891031125771652f64,
-                0f64,
-                0f64,
-                Some(&[0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64]),
-            )),
-            DynOrigin::Iapetus => Some((5.552939548145159f64, -0.06892305216125608f64, 0f64, None)),
+                    Some(&[0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64]),
+                ))
+            }
+            DynOrigin::Iapetus => {
+                Some((5.552939548145159f64, -0.06892305216125608f64, 0f64, None))
+            }
             DynOrigin::Phoebe => Some((6.229080100367762f64, 0f64, 0f64, None)),
-            DynOrigin::Janus => Some((
-                0.7082546104592989f64,
-                -0.0006283185307179586f64,
-                0f64,
-                Some(&[
+            DynOrigin::Janus => {
+                Some((
+                    0.7082546104592989f64,
+                    -0.0006283185307179586f64,
                     0f64,
-                    -0.028326693759867967f64,
+                    Some(
+                        &[
+                            0f64,
+                            -0.028326693759867967f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.0004014257279586958f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Epimetheus => {
+                Some((
+                    0.7082546104592989f64,
+                    -0.0006283185307179586f64,
                     0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.0004014257279586958f64,
-                ]),
-            )),
-            DynOrigin::Epimetheus => Some((
-                0.7082546104592989f64,
-                -0.0006283185307179586f64,
-                0f64,
-                Some(&[
-                    -0.05503023131538121f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.0015009831567151233f64,
-                    0f64,
-                ]),
-            )),
+                    Some(
+                        &[
+                            -0.05503023131538121f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.0015009831567151233f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
             DynOrigin::Helene => {
                 Some((0.7129669994396837f64, -0.0006283185307179586f64, 0f64, None))
             }
@@ -11666,536 +12395,626 @@ impl MaybeRotationalElements for DynOrigin {
             DynOrigin::Pandora => {
                 Some((0.7082546104592989f64, -0.0006283185307179586f64, 0f64, None))
             }
-            DynOrigin::Pan => Some((0.7086036763096978f64, -0.0006283185307179586f64, 0f64, None)),
-            DynOrigin::Ariel => Some((
-                4.493001093409003f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.005061454830783556f64,
-                ]),
-            )),
-            DynOrigin::Umbriel => Some((
-                4.493001093409003f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.003665191429188092f64,
-                ]),
-            )),
-            DynOrigin::Titania => Some((
-                4.493001093409003f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.005061454830783556f64,
-                ]),
-            )),
-            DynOrigin::Oberon => Some((
-                4.493001093409003f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.0027925268031909274f64,
-                ]),
-            )),
-            DynOrigin::Miranda => Some((
-                4.493001093409003f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.07696902001294993f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.0006981317007977319f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Cordelia => Some((
-                4.49090669830661f64,
-                0f64,
-                0f64,
-                Some(&[
-                    -0.002617993877991494f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Ophelia => Some((
-                4.49090669830661f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    -0.0015707963267948964f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Bianca => Some((
-                4.49090669830661f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    -0.0027925268031909274f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Cressida => Some((
-                4.49090669830661f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.0006981317007977319f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Desdemona => Some((
-                4.49090669830661f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.0029670597283903604f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Juliet => Some((
-                4.49090669830661f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.0010471975511965976f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Portia => Some((
-                4.49090669830661f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.0015707963267948964f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Rosalind => Some((
-                4.49090669830661f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.005061454830783556f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Belinda => Some((
-                4.49090669830661f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.0005235987755982988f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Puck => Some((
-                4.49090669830661f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.005759586531581287f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Triton => Some((
-                5.224817648770225f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.5646140130201657f64,
-                    0f64,
-                    -0.1096066770252439f64,
-                    -0.03630284844148206f64,
-                    -0.012915436464758038f64,
-                    -0.004886921905584123f64,
-                    -0.0019198621771937625f64,
-                    -0.0012217304763960308f64,
-                    -0.00034906585039886593f64,
-                    -0.00017453292519943296f64,
-                ]),
-            )),
-            DynOrigin::Naiad => Some((
-                5.224817648770225f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0.012217304763960306f64,
-                    -0.11327186845443199f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.004363323129985824f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Thalassa => Some((
-                5.224817648770225f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0.012217304763960306f64,
-                    0f64,
-                    -0.004886921905584123f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Despina => Some((
-                5.224817648770225f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0.012217304763960306f64,
-                    0f64,
-                    0f64,
-                    -0.0015707963267948964f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Galatea => Some((
-                5.224817648770225f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0.012217304763960306f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.0012217304763960308f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Larissa => Some((
-                5.224817648770225f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0.012217304763960306f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.00471238898038469f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Proteus => Some((
-                5.22324685244343f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0.012217304763960306f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.0008726646259971648f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
+            DynOrigin::Pan => {
+                Some((0.7086036763096978f64, -0.0006283185307179586f64, 0f64, None))
+            }
+            DynOrigin::Ariel => {
+                Some((
+                    4.493001093409003f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.005061454830783556f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Umbriel => {
+                Some((
+                    4.493001093409003f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.003665191429188092f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Titania => {
+                Some((
+                    4.493001093409003f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.005061454830783556f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Oberon => {
+                Some((
+                    4.493001093409003f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.0027925268031909274f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Miranda => {
+                Some((
+                    4.493001093409003f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.07696902001294993f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.0006981317007977319f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Cordelia => {
+                Some((
+                    4.49090669830661f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            -0.002617993877991494f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Ophelia => {
+                Some((
+                    4.49090669830661f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            -0.0015707963267948964f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Bianca => {
+                Some((
+                    4.49090669830661f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            -0.0027925268031909274f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Cressida => {
+                Some((
+                    4.49090669830661f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.0006981317007977319f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Desdemona => {
+                Some((
+                    4.49090669830661f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.0029670597283903604f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Juliet => {
+                Some((
+                    4.49090669830661f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.0010471975511965976f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Portia => {
+                Some((
+                    4.49090669830661f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.0015707963267948964f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Rosalind => {
+                Some((
+                    4.49090669830661f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.005061454830783556f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Belinda => {
+                Some((
+                    4.49090669830661f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.0005235987755982988f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Puck => {
+                Some((
+                    4.49090669830661f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.005759586531581287f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Triton => {
+                Some((
+                    5.224817648770225f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.5646140130201657f64,
+                            0f64,
+                            -0.1096066770252439f64,
+                            -0.03630284844148206f64,
+                            -0.012915436464758038f64,
+                            -0.004886921905584123f64,
+                            -0.0019198621771937625f64,
+                            -0.0012217304763960308f64,
+                            -0.00034906585039886593f64,
+                            -0.00017453292519943296f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Naiad => {
+                Some((
+                    5.224817648770225f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0.012217304763960306f64,
+                            -0.11327186845443199f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.004363323129985824f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Thalassa => {
+                Some((
+                    5.224817648770225f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0.012217304763960306f64,
+                            0f64,
+                            -0.004886921905584123f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Despina => {
+                Some((
+                    5.224817648770225f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0.012217304763960306f64,
+                            0f64,
+                            0f64,
+                            -0.0015707963267948964f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Galatea => {
+                Some((
+                    5.224817648770225f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0.012217304763960306f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.0012217304763960308f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Larissa => {
+                Some((
+                    5.224817648770225f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0.012217304763960306f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.00471238898038469f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Proteus => {
+                Some((
+                    5.22324685244343f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0.012217304763960306f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.0008726646259971648f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
             DynOrigin::Charon => Some((2.3211657321048187f64, 0f64, 0f64, None)),
             DynOrigin::Gaspra => Some((0.16528268016386302f64, 0f64, 0f64, None)),
             DynOrigin::Ida => Some((2.9454176456656302f64, 0f64, 0f64, None)),
@@ -12213,879 +13032,1027 @@ impl MaybeRotationalElements for DynOrigin {
     fn maybe_declination_coefficients(&self) -> Option<PolynomialCoefficients> {
         match self {
             DynOrigin::Sun => Some((1.1147417932487782f64, 0f64, 0f64, None)),
-            DynOrigin::Mercury => Some((
-                1.0719026867585775f64,
-                -0.00008552113334772214f64,
-                0f64,
-                Some(&[0f64, 0f64, 0f64, 0f64, 0f64]),
-            )),
+            DynOrigin::Mercury => {
+                Some((
+                    1.0719026867585775f64,
+                    -0.00008552113334772214f64,
+                    0f64,
+                    Some(&[0f64, 0f64, 0f64, 0f64, 0f64]),
+                ))
+            }
             DynOrigin::Venus => Some((1.1721631256393916f64, 0f64, 0f64, None)),
-            DynOrigin::Earth => Some((1.5707963267948966f64, -0.009721483933608416f64, 0f64, None)),
-            DynOrigin::Mars => Some((
-                0.9500266243444937f64,
-                -0.0010170216810942417f64,
-                0f64,
-                Some(&[
+            DynOrigin::Earth => {
+                Some((1.5707963267948966f64, -0.009721483933608416f64, 0f64, None))
+            }
+            DynOrigin::Mars => {
+                Some((
+                    0.9500266243444937f64,
+                    -0.0010170216810942417f64,
                     0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.000000890117918517108f64,
+                            0.000002460914245312005f64,
+                            0.0000005410520681182422f64,
+                            0.00000008726646259971648f64,
+                            0.02777297060138025f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Jupiter => {
+                Some((
+                    1.1256553894213766f64,
+                    0.00004211479485062318f64,
                     0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.000000890117918517108f64,
-                    0.000002460914245312005f64,
-                    0.0000005410520681182422f64,
-                    0.00000008726646259971648f64,
-                    0.02777297060138025f64,
-                ]),
-            )),
-            DynOrigin::Jupiter => Some((
-                1.1256553894213766f64,
-                0.00004211479485062318f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.0000008726646259971648f64,
-                    0.000007051130178057092f64,
-                    0.000010768681484805013f64,
-                    -0.00000022689280275926283f64,
-                    0.00001616174887346749f64,
-                ]),
-            )),
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.0000008726646259971648f64,
+                            0.000007051130178057092f64,
+                            0.000010768681484805013f64,
+                            -0.00000022689280275926283f64,
+                            0.00001616174887346749f64,
+                        ],
+                    ),
+                ))
+            }
             DynOrigin::Saturn => {
                 Some((1.457995697238503f64, -0.00006981317007977319f64, 0f64, None))
             }
             DynOrigin::Uranus => Some((-0.2648537139901395f64, 0f64, 0f64, None)),
-            DynOrigin::Neptune => Some((
-                0.7585200929167356f64,
-                0f64,
-                0f64,
-                Some(&[
-                    -0.00890117918517108f64,
+            DynOrigin::Neptune => {
+                Some((
+                    0.7585200929167356f64,
                     0f64,
                     0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
+                    Some(
+                        &[
+                            -0.00890117918517108f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
             DynOrigin::Pluto => Some((-0.10756464180041053f64, 0f64, 0f64, None)),
-            DynOrigin::Moon => Some((
-                1.161328121643011f64,
-                0.00022689280275926284f64,
-                0f64,
-                Some(&[
-                    0.02691123173650057f64,
-                    0.0004171336912266448f64,
-                    -0.00048520153205442357f64,
-                    0.0001186823891356144f64,
+            DynOrigin::Moon => {
+                Some((
+                    1.161328121643011f64,
+                    0.00022689280275926284f64,
                     0f64,
-                    -0.00005061454830783555f64,
-                    0.000015707963267948964f64,
+                    Some(
+                        &[
+                            0.02691123173650057f64,
+                            0.0004171336912266448f64,
+                            -0.00048520153205442357f64,
+                            0.0001186823891356144f64,
+                            0f64,
+                            -0.00005061454830783555f64,
+                            0.000015707963267948964f64,
+                            0f64,
+                            0f64,
+                            0.000013962634015954637f64,
+                            0f64,
+                            0f64,
+                            -0.000015707963267948964f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Phobos => {
+                Some((
+                    0.9230395870244597f64,
+                    -0.0010707081834185127f64,
                     0f64,
+                    Some(
+                        &[
+                            -0.018765175709923063f64,
+                            0.00011669725164439606f64,
+                            -0.00011322648989388013f64,
+                            0.000049144282945955534f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Deimos => {
+                Some((
+                    0.9339242922383507f64,
+                    -0.0010435487658623783f64,
                     0f64,
-                    0.000013962634015954637f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.032102888827614605f64,
+                            0.002500240004017941f64,
+                            0.00033360380402252296f64,
+                            -0.0002587607695714273f64,
+                            0.00003358537079612689f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Io => {
+                Some((
+                    1.1257373675363425f64,
+                    0.00005235987755982989f64,
                     0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0.0006981317007977319f64,
+                            0.00019198621771937625f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Europa => {
+                Some((
+                    1.125911900461542f64,
+                    0.00005235987755982989f64,
                     0f64,
-                    -0.000015707963267948964f64,
-                ]),
-            )),
-            DynOrigin::Phobos => Some((
-                0.9230395870244597f64,
-                -0.0010707081834185127f64,
-                0f64,
-                Some(&[
-                    -0.018765175709923063f64,
-                    0.00011669725164439606f64,
-                    -0.00011322648989388013f64,
-                    0.000049144282945955534f64,
-                ]),
-            )),
-            DynOrigin::Deimos => Some((
-                0.9339242922383507f64,
-                -0.0010435487658623783f64,
-                0f64,
-                Some(&[
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.008168140899333463f64,
+                            0.0004537856055185257f64,
+                            0.00012217304763960306f64,
+                            0.00003490658503988659f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Ganymede => {
+                Some((
+                    1.1269590980127384f64,
+                    0.00005235987755982989f64,
                     0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.00027925268031909274f64,
+                            0.003246312408709453f64,
+                            0.0006806784082777885f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Callisto => {
+                Some((
+                    1.1314969540679238f64,
+                    0.00005235987755982989f64,
                     0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.0005061454830783556f64,
+                            0.004433136300065597f64,
+                            0f64,
+                            -0.00006981317007977319f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Amalthea => {
+                Some((
+                    1.125562834611143f64,
+                    0.00005235987755982989f64,
                     0f64,
+                    Some(
+                        &[
+                            -0.006283185307179586f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Thebe => {
+                Some((
+                    1.125562834611143f64,
+                    0.00005235987755982989f64,
                     0f64,
-                    0f64,
-                    0.032102888827614605f64,
-                    0.002500240004017941f64,
-                    0.00033360380402252296f64,
-                    -0.0002587607695714273f64,
-                    0.00003358537079612689f64,
-                ]),
-            )),
-            DynOrigin::Io => Some((
-                1.1257373675363425f64,
-                0.00005235987755982989f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0.0006981317007977319f64,
-                    0.00019198621771937625f64,
-                ]),
-            )),
-            DynOrigin::Europa => Some((
-                1.125911900461542f64,
-                0.00005235987755982989f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.008168140899333463f64,
-                    0.0004537856055185257f64,
-                    0.00012217304763960306f64,
-                    0.00003490658503988659f64,
-                ]),
-            )),
-            DynOrigin::Ganymede => Some((
-                1.1269590980127384f64,
-                0.00005235987755982989f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.00027925268031909274f64,
-                    0.003246312408709453f64,
-                    0.0006806784082777885f64,
-                ]),
-            )),
-            DynOrigin::Callisto => Some((
-                1.1314969540679238f64,
-                0.00005235987755982989f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.0005061454830783556f64,
-                    0.004433136300065597f64,
-                    0f64,
-                    -0.00006981317007977319f64,
-                ]),
-            )),
-            DynOrigin::Amalthea => Some((
-                1.125562834611143f64,
-                0.00005235987755982989f64,
-                0f64,
-                Some(&[
-                    -0.006283185307179586f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Thebe => Some((
-                1.125562834611143f64,
-                0.00005235987755982989f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    -0.0158824961931484f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.00017453292519943296f64,
-                ]),
-            )),
+                    Some(
+                        &[
+                            0f64,
+                            -0.0158824961931484f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.00017453292519943296f64,
+                        ],
+                    ),
+                ))
+            }
             DynOrigin::Adrastea => {
                 Some((1.125562834611143f64, 0.00005235987755982989f64, 0f64, None))
             }
-            DynOrigin::Metis => Some((1.125562834611143f64, 0.00005235987755982989f64, 0f64, None)),
-            DynOrigin::Mimas => Some((
-                1.457698991265664f64,
-                -0.00006981317007977319f64,
-                0f64,
-                Some(&[
+            DynOrigin::Metis => {
+                Some((1.125562834611143f64, 0.00005235987755982989f64, 0f64, None))
+            }
+            DynOrigin::Mimas => {
+                Some((
+                    1.457698991265664f64,
+                    -0.00006981317007977319f64,
                     0f64,
-                    0f64,
-                    -0.026703537555513242f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            -0.026703537555513242f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
             DynOrigin::Enceladus => {
                 Some((1.457698991265664f64, -0.00006981317007977319f64, 0f64, None))
             }
-            DynOrigin::Tethys => Some((
-                1.457698991265664f64,
-                -0.00006981317007977319f64,
-                0f64,
-                Some(&[
+            DynOrigin::Tethys => {
+                Some((
+                    1.457698991265664f64,
+                    -0.00006981317007977319f64,
                     0f64,
-                    0f64,
-                    0f64,
-                    -0.019024088846738195f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.019024088846738195f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
             DynOrigin::Dione => {
                 Some((1.457698991265664f64, -0.00006981317007977319f64, 0f64, None))
             }
-            DynOrigin::Rhea => Some((
-                1.4582225900412622f64,
-                -0.00006981317007977319f64,
-                0f64,
-                Some(&[
+            DynOrigin::Rhea => {
+                Some((
+                    1.4582225900412622f64,
+                    -0.00006981317007977319f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.006108652381980153f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Titan => {
+                Some((
+                    1.456091543024577f64,
                     0f64,
                     0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.006108652381980153f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Titan => Some((
-                1.456091543024577f64,
-                0f64,
-                0f64,
-                Some(&[0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64]),
-            )),
+                    Some(&[0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64]),
+                ))
+            }
             DynOrigin::Iapetus => {
                 Some((1.3095205377713455f64, -0.019949113350295186f64, 0f64, None))
             }
             DynOrigin::Phoebe => Some((1.3578661580515883f64, 0f64, 0f64, None)),
-            DynOrigin::Janus => Some((
-                1.457698991265664f64,
-                -0.00006981317007977319f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    -0.003193952531149623f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.000017453292519943296f64,
-                ]),
-            )),
-            DynOrigin::Epimetheus => Some((
-                1.457698991265664f64,
-                -0.00006981317007977319f64,
-                0f64,
-                Some(&[
-                    -0.006213372137099813f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.00008726646259971648f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Helene => Some((
-                1.4545573986120743f64,
-                -0.00006981317007977319f64,
-                0f64,
-                None,
-            )),
-            DynOrigin::Telesto => Some((
-                1.4671237692264334f64,
-                -0.00006981317007977319f64,
-                0f64,
-                None,
-            )),
-            DynOrigin::Calypso => Some((
-                1.4842279958959779f64,
-                -0.00006981317007977319f64,
-                0f64,
-                None,
-            )),
-            DynOrigin::Atlas => Some((
-                1.4578735241908636f64,
-                -0.00006981317007977319f64,
-                0f64,
-                None,
-            )),
-            DynOrigin::Prometheus => Some((
-                1.4578735241908636f64,
-                -0.00006981317007977319f64,
-                0f64,
-                None,
-            )),
-            DynOrigin::Pandora => Some((
-                1.4578735241908636f64,
-                -0.00006981317007977319f64,
-                0f64,
-                None,
-            )),
-            DynOrigin::Pan => Some((1.457349925415265f64, -0.00006981317007977319f64, 0f64, None)),
-            DynOrigin::Ariel => Some((
-                -0.26354471705114374f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.004886921905584123f64,
-                ]),
-            )),
-            DynOrigin::Umbriel => Some((
-                -0.26354471705114374f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.003490658503988659f64,
-                ]),
-            )),
-            DynOrigin::Titania => Some((
-                -0.26354471705114374f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.004886921905584123f64,
-                ]),
-            )),
-            DynOrigin::Oberon => Some((
-                -0.26354471705114374f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.0027925268031909274f64,
-                ]),
-            )),
-            DynOrigin::Miranda => Some((
-                -0.2631956512007449f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.07417649320975901f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.00034906585039886593f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Cordelia => Some((
-                -0.2649409804527392f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0.0024434609527920616f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Ophelia => Some((
-                -0.2649409804527392f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0.0015707963267948964f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Bianca => Some((
-                -0.2649409804527392f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0.0027925268031909274f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Cressida => Some((
-                -0.2649409804527392f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.0006981317007977319f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Desdemona => Some((
-                -0.2649409804527392f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.0027925268031909274f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Juliet => Some((
-                -0.2649409804527392f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.0010471975511965976f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Portia => Some((
-                -0.2649409804527392f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.0015707963267948964f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Rosalind => Some((
-                -0.2649409804527392f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.004886921905584123f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Belinda => Some((
-                -0.2649409804527392f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.0005235987755982988f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Puck => Some((
-                -0.2649409804527392f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.0054105206811824215f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Triton => Some((
-                0.7185520530460655f64,
-                0f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.3935717463247213f64,
-                    0f64,
-                    0.03665191429188092f64,
-                    0.009599310885968814f64,
-                    0.0027925268031909274f64,
-                    0.0008726646259971648f64,
-                    0.00034906585039886593f64,
-                    0.00017453292519943296f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Naiad => Some((
-                0.7567747636647413f64,
-                0f64,
-                0f64,
-                Some(&[
-                    -0.00890117918517108f64,
-                    -0.08290313946973066f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.0015707963267948964f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Thalassa => Some((
-                0.7583455599915362f64,
-                0f64,
-                0f64,
-                Some(&[
-                    -0.00890117918517108f64,
-                    0f64,
-                    -0.003665191429188092f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Despina => Some((
-                0.7583455599915362f64,
-                0f64,
-                0f64,
-                Some(&[
-                    -0.00890117918517108f64,
-                    0f64,
-                    0f64,
-                    -0.0012217304763960308f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Galatea => Some((
-                0.7579964941411373f64,
-                0f64,
-                0f64,
-                Some(&[
-                    -0.00890117918517108f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.0008726646259971648f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Larissa => Some((
-                0.7576474282907384f64,
-                0f64,
-                0f64,
-                Some(&[
-                    -0.00890117918517108f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.003490658503988659f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Proteus => Some((
-                0.7489207820307667f64,
-                0f64,
-                0f64,
-                Some(&[
-                    -0.00890117918517108f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.0006981317007977319f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
+            DynOrigin::Janus => {
+                Some((
+                    1.457698991265664f64,
+                    -0.00006981317007977319f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            -0.003193952531149623f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.000017453292519943296f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Epimetheus => {
+                Some((
+                    1.457698991265664f64,
+                    -0.00006981317007977319f64,
+                    0f64,
+                    Some(
+                        &[
+                            -0.006213372137099813f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.00008726646259971648f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Helene => {
+                Some((1.4545573986120743f64, -0.00006981317007977319f64, 0f64, None))
+            }
+            DynOrigin::Telesto => {
+                Some((1.4671237692264334f64, -0.00006981317007977319f64, 0f64, None))
+            }
+            DynOrigin::Calypso => {
+                Some((1.4842279958959779f64, -0.00006981317007977319f64, 0f64, None))
+            }
+            DynOrigin::Atlas => {
+                Some((1.4578735241908636f64, -0.00006981317007977319f64, 0f64, None))
+            }
+            DynOrigin::Prometheus => {
+                Some((1.4578735241908636f64, -0.00006981317007977319f64, 0f64, None))
+            }
+            DynOrigin::Pandora => {
+                Some((1.4578735241908636f64, -0.00006981317007977319f64, 0f64, None))
+            }
+            DynOrigin::Pan => {
+                Some((1.457349925415265f64, -0.00006981317007977319f64, 0f64, None))
+            }
+            DynOrigin::Ariel => {
+                Some((
+                    -0.26354471705114374f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.004886921905584123f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Umbriel => {
+                Some((
+                    -0.26354471705114374f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.003490658503988659f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Titania => {
+                Some((
+                    -0.26354471705114374f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.004886921905584123f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Oberon => {
+                Some((
+                    -0.26354471705114374f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.0027925268031909274f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Miranda => {
+                Some((
+                    -0.2631956512007449f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.07417649320975901f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.00034906585039886593f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Cordelia => {
+                Some((
+                    -0.2649409804527392f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0.0024434609527920616f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Ophelia => {
+                Some((
+                    -0.2649409804527392f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0.0015707963267948964f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Bianca => {
+                Some((
+                    -0.2649409804527392f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0.0027925268031909274f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Cressida => {
+                Some((
+                    -0.2649409804527392f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.0006981317007977319f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Desdemona => {
+                Some((
+                    -0.2649409804527392f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.0027925268031909274f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Juliet => {
+                Some((
+                    -0.2649409804527392f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.0010471975511965976f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Portia => {
+                Some((
+                    -0.2649409804527392f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.0015707963267948964f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Rosalind => {
+                Some((
+                    -0.2649409804527392f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.004886921905584123f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Belinda => {
+                Some((
+                    -0.2649409804527392f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.0005235987755982988f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Puck => {
+                Some((
+                    -0.2649409804527392f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.0054105206811824215f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Triton => {
+                Some((
+                    0.7185520530460655f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.3935717463247213f64,
+                            0f64,
+                            0.03665191429188092f64,
+                            0.009599310885968814f64,
+                            0.0027925268031909274f64,
+                            0.0008726646259971648f64,
+                            0.00034906585039886593f64,
+                            0.00017453292519943296f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Naiad => {
+                Some((
+                    0.7567747636647413f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            -0.00890117918517108f64,
+                            -0.08290313946973066f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.0015707963267948964f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Thalassa => {
+                Some((
+                    0.7583455599915362f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            -0.00890117918517108f64,
+                            0f64,
+                            -0.003665191429188092f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Despina => {
+                Some((
+                    0.7583455599915362f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            -0.00890117918517108f64,
+                            0f64,
+                            0f64,
+                            -0.0012217304763960308f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Galatea => {
+                Some((
+                    0.7579964941411373f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            -0.00890117918517108f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.0008726646259971648f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Larissa => {
+                Some((
+                    0.7576474282907384f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            -0.00890117918517108f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.003490658503988659f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Proteus => {
+                Some((
+                    0.7489207820307667f64,
+                    0f64,
+                    0f64,
+                    Some(
+                        &[
+                            -0.00890117918517108f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.0006981317007977319f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
             DynOrigin::Charon => Some((-0.10756464180041053f64, 0f64, 0f64, None)),
             DynOrigin::Gaspra => Some((0.46600291028248597f64, 0f64, 0f64, None)),
             DynOrigin::Ida => Some((-1.5205308443374599f64, 0f64, 0f64, None)),
@@ -13102,854 +14069,1083 @@ impl MaybeRotationalElements for DynOrigin {
     }
     fn maybe_prime_meridian_coefficients(&self) -> Option<PolynomialCoefficients> {
         match self {
-            DynOrigin::Sun => Some((1.4691483511587469f64, 0.24756448241988369f64, 0f64, None)),
-            DynOrigin::Mercury => Some((
-                5.752584270622286f64,
-                0.10713722462923113f64,
-                0f64,
-                Some(&[
-                    0.0001862714861495712f64,
-                    -0.000019601618296223117f64,
-                    -0.00000192684349420174f64,
-                    -0.00000044313909708136026f64,
-                    -0.00000009965830028887623f64,
-                ]),
-            )),
-            DynOrigin::Venus => Some((2.7960174616949156f64, -0.025854762996317376f64, 0f64, None)),
-            DynOrigin::Earth => Some((3.3186912127896577f64, 6.3003876824396166f64, 0f64, None)),
-            DynOrigin::Mars => Some((
-                3.0726497570349416f64,
-                6.12422041248567f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.000002530727415391778f64,
-                    0.0000027401669256310974f64,
-                    0.0000006981317007977319f64,
-                    0.000000017453292519943295f64,
-                    0.000000017453292519943295f64,
-                    0.010202182516192693f64,
-                ]),
-            )),
-            DynOrigin::Jupiter => Some((
-                4.973315703557842f64,
-                15.193719457141356f64,
-                0f64,
-                Some(&[
-                    0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
-                    0f64, 0f64,
-                ]),
-            )),
-            DynOrigin::Saturn => Some((0.6789330790257941f64, 14.151023151973554f64, 0f64, None)),
-            DynOrigin::Uranus => Some((3.557155548489643f64, -8.746893698960328f64, 0f64, None)),
-            DynOrigin::Neptune => Some((
-                4.362939157550385f64,
-                9.444670799468602f64,
-                0f64,
-                Some(&[
-                    -0.008377580409572781f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Pluto => Some((5.283024379324235f64, 0.9837115923543857f64, 0f64, None)),
-            DynOrigin::Moon => Some((
-                0.668832858644503f64,
-                0.22997083313948888f64,
-                -0.000000000000024434609527920614f64,
-                Some(&[
-                    0.06215117466351808f64,
-                    0.00210835773640915f64,
-                    -0.0011205013797803594f64,
-                    0.0002757620218151041f64,
-                    0.0004398229715025711f64,
-                    -0.00011519173063162575f64,
-                    -0.00008203047484373349f64,
-                    -0.00008028514559173915f64,
-                    0.000048869219055841225f64,
-                    0.00009075712110370513f64,
-                    0.00006981317007977319f64,
-                    0.00003316125578789226f64,
-                    -0.0000767944870877505f64,
-                ]),
-            )),
-            DynOrigin::Phobos => Some((
-                0.6141419961301966f64,
-                19.702057793318815f64,
-                0.00000000016643698911600935f64,
-                Some(&[
-                    0.02485728795564792f64,
-                    -0.0003968499982587423f64,
-                    0.0000716825922415843f64,
-                    0.00011029852554073445f64,
-                    -0.019949113350295186f64,
-                ]),
-            )),
-            DynOrigin::Deimos => Some((
-                1.3857797243489947f64,
-                4.977013864082068f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.047814137677880446f64,
-                    -0.006975837721323607f64,
-                    -0.0011455047921115052f64,
-                    -0.0005084039391304362f64,
-                    0.0002965593651818685f64,
-                ]),
-            )),
-            DynOrigin::Io => Some((
-                3.4974652880714365f64,
-                3.551552235248627f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    -0.0014835298641951802f64,
-                    -0.0003839724354387525f64,
-                ]),
-            )),
-            DynOrigin::Europa => Some((
-                0.6287025031533974f64,
-                1.7693227033738699f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.01710422666954443f64,
-                    -0.0009424777960769379f64,
-                    -0.0002443460952792061f64,
-                    -0.00013962634015954637f64,
-                ]),
-            )),
-            DynOrigin::Ganymede => Some((
-                0.7690618815987814f64,
-                0.8782079330731682f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.0005759586531581288f64,
-                    -0.006789330790257942f64,
-                    -0.0014311699866353504f64,
-                ]),
-            )),
-            DynOrigin::Callisto => Some((
-                4.529303941850484f64,
-                0.37648622085811195f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.001064650843716541f64,
-                    -0.009302604913129777f64,
-                    0f64,
-                    -0.00015707963267948965f64,
-                ]),
-            )),
-            DynOrigin::Amalthea => Some((
-                4.043404278095263f64,
-                12.612298185680531f64,
-                0f64,
-                Some(&[
-                    0.013264502315156905f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.00017453292519943296f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Thebe => Some((
-                0.1494001839707146f64,
-                9.31482937374367f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0.033335788713091695f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.0006981317007977319f64,
-                ]),
-            )),
-            DynOrigin::Adrastea => Some((0.5810201079889122f64, 21.066100687650238f64, 0f64, None)),
-            DynOrigin::Metis => Some((6.040410008227175f64, 21.3149160457997f64, 0f64, None)),
-            DynOrigin::Mimas => Some((
-                5.819974923700291f64,
-                6.667062709440567f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    -0.23527038316883564f64,
-                    0f64,
-                    -0.7827801695194568f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
+            DynOrigin::Sun => {
+                Some((1.4691483511587469f64, 0.24756448241988369f64, 0f64, None))
+            }
+            DynOrigin::Mercury => {
+                Some((
+                    5.752584270622286f64,
+                    0.10713722462923113f64,
+                    0f64,
+                    Some(
+                        &[
+                            0.0001862714861495712f64,
+                            -0.000019601618296223117f64,
+                            -0.00000192684349420174f64,
+                            -0.00000044313909708136026f64,
+                            -0.00000009965830028887623f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Venus => {
+                Some((2.7960174616949156f64, -0.025854762996317376f64, 0f64, None))
+            }
+            DynOrigin::Earth => {
+                Some((3.3186912127896577f64, 6.3003876824396166f64, 0f64, None))
+            }
+            DynOrigin::Mars => {
+                Some((
+                    3.0726497570349416f64,
+                    6.12422041248567f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.000002530727415391778f64,
+                            0.0000027401669256310974f64,
+                            0.0000006981317007977319f64,
+                            0.000000017453292519943295f64,
+                            0.000000017453292519943295f64,
+                            0.010202182516192693f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Jupiter => {
+                Some((
+                    4.973315703557842f64,
+                    15.193719457141356f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Saturn => {
+                Some((0.6789330790257941f64, 14.151023151973554f64, 0f64, None))
+            }
+            DynOrigin::Uranus => {
+                Some((3.557155548489643f64, -8.746893698960328f64, 0f64, None))
+            }
+            DynOrigin::Neptune => {
+                Some((
+                    4.362939157550385f64,
+                    9.444670799468602f64,
+                    0f64,
+                    Some(
+                        &[
+                            -0.008377580409572781f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Pluto => {
+                Some((5.283024379324235f64, 0.9837115923543857f64, 0f64, None))
+            }
+            DynOrigin::Moon => {
+                Some((
+                    0.668832858644503f64,
+                    0.22997083313948888f64,
+                    -0.000000000000024434609527920614f64,
+                    Some(
+                        &[
+                            0.06215117466351808f64,
+                            0.00210835773640915f64,
+                            -0.0011205013797803594f64,
+                            0.0002757620218151041f64,
+                            0.0004398229715025711f64,
+                            -0.00011519173063162575f64,
+                            -0.00008203047484373349f64,
+                            -0.00008028514559173915f64,
+                            0.000048869219055841225f64,
+                            0.00009075712110370513f64,
+                            0.00006981317007977319f64,
+                            0.00003316125578789226f64,
+                            -0.0000767944870877505f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Phobos => {
+                Some((
+                    0.6141419961301966f64,
+                    19.702057793318815f64,
+                    0.00000000016643698911600935f64,
+                    Some(
+                        &[
+                            0.02485728795564792f64,
+                            -0.0003968499982587423f64,
+                            0.0000716825922415843f64,
+                            0.00011029852554073445f64,
+                            -0.019949113350295186f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Deimos => {
+                Some((
+                    1.3857797243489947f64,
+                    4.977013864082068f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.047814137677880446f64,
+                            -0.006975837721323607f64,
+                            -0.0011455047921115052f64,
+                            -0.0005084039391304362f64,
+                            0.0002965593651818685f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Io => {
+                Some((
+                    3.4974652880714365f64,
+                    3.551552235248627f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            -0.0014835298641951802f64,
+                            -0.0003839724354387525f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Europa => {
+                Some((
+                    0.6287025031533974f64,
+                    1.7693227033738699f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.01710422666954443f64,
+                            -0.0009424777960769379f64,
+                            -0.0002443460952792061f64,
+                            -0.00013962634015954637f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Ganymede => {
+                Some((
+                    0.7690618815987814f64,
+                    0.8782079330731682f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.0005759586531581288f64,
+                            -0.006789330790257942f64,
+                            -0.0014311699866353504f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Callisto => {
+                Some((
+                    4.529303941850484f64,
+                    0.37648622085811195f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.001064650843716541f64,
+                            -0.009302604913129777f64,
+                            0f64,
+                            -0.00015707963267948965f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Amalthea => {
+                Some((
+                    4.043404278095263f64,
+                    12.612298185680531f64,
+                    0f64,
+                    Some(
+                        &[
+                            0.013264502315156905f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.00017453292519943296f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Thebe => {
+                Some((
+                    0.1494001839707146f64,
+                    9.31482937374367f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0.033335788713091695f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.0006981317007977319f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Adrastea => {
+                Some((0.5810201079889122f64, 21.066100687650238f64, 0f64, None))
+            }
+            DynOrigin::Metis => {
+                Some((6.040410008227175f64, 21.3149160457997f64, 0f64, None))
+            }
+            DynOrigin::Mimas => {
+                Some((
+                    5.819974923700291f64,
+                    6.667062709440567f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            -0.23527038316883564f64,
+                            0f64,
+                            -0.7827801695194568f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
             DynOrigin::Enceladus => {
                 Some((0.11030480872604163f64, 4.585536698039173f64, 0f64, None))
             }
-            DynOrigin::Tethys => Some((
-                0.1562069680534925f64,
-                3.328306379991881f64,
-                0f64,
-                Some(&[
+            DynOrigin::Tethys => {
+                Some((
+                    0.1562069680534925f64,
+                    3.328306379991881f64,
                     0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.16755160819145562f64,
+                            0.03892084231947355f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Dione => {
+                Some((6.241297405131723f64, 2.295717637805533f64, 0f64, None))
+            }
+            DynOrigin::Rhea => {
+                Some((
+                    4.104316268989865f64,
+                    1.3908537151816638f64,
                     0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.05375614096142535f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Titan => {
+                Some((
+                    3.2565313114798795f64,
+                    0.39404258030637335f64,
                     0f64,
-                    -0.16755160819145562f64,
-                    0.03892084231947355f64,
+                    Some(&[0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64]),
+                ))
+            }
+            DynOrigin::Iapetus => {
+                Some((6.199409503083858f64, 0.07920229445458282f64, 0f64, None))
+            }
+            DynOrigin::Phoebe => {
+                Some((3.116808978211474f64, 16.26016798998745f64, 0f64, None))
+            }
+            DynOrigin::Janus => {
+                Some((
+                    1.0267771989482641f64,
+                    9.044924285944507f64,
                     0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0.028152160834668535f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.0004014257279586958f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Epimetheus => {
+                Some((
+                    5.128999072835736f64,
+                    9.049370273103856f64,
                     0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Dione => Some((6.241297405131723f64, 2.295717637805533f64, 0f64, None)),
-            DynOrigin::Rhea => Some((
-                4.104316268989865f64,
-                1.3908537151816638f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.05375614096142535f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Titan => Some((
-                3.2565313114798795f64,
-                0.39404258030637335f64,
-                0f64,
-                Some(&[0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64]),
-            )),
-            DynOrigin::Iapetus => Some((6.199409503083858f64, 0.07920229445458282f64, 0f64, None)),
-            DynOrigin::Phoebe => Some((3.116808978211474f64, 16.26016798998745f64, 0f64, None)),
-            DynOrigin::Janus => Some((
-                1.0267771989482641f64,
-                9.044924285944507f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0.028152160834668535f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.0004014257279586958f64,
-                ]),
-            )),
-            DynOrigin::Epimetheus => Some((
-                5.128999072835736f64,
-                9.049370273103856f64,
-                0f64,
-                Some(&[
-                    0.05468116546498235f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.0015009831567151233f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Helene => Some((4.278151062488501f64, 2.297157080652823f64, 0f64, None)),
-            DynOrigin::Telesto => Some((0.9927432785343747f64, 3.328306811088206f64, 0f64, None)),
-            DynOrigin::Calypso => Some((2.679254934736495f64, 3.327893239613983f64, 0f64, None)),
-            DynOrigin::Atlas => Some((2.4064599726497815f64, 10.442409634437194f64, 0f64, None)),
+                    Some(
+                        &[
+                            0.05468116546498235f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.0015009831567151233f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Helene => {
+                Some((4.278151062488501f64, 2.297157080652823f64, 0f64, None))
+            }
+            DynOrigin::Telesto => {
+                Some((0.9927432785343747f64, 3.328306811088206f64, 0f64, None))
+            }
+            DynOrigin::Calypso => {
+                Some((2.679254934736495f64, 3.327893239613983f64, 0f64, None))
+            }
+            DynOrigin::Atlas => {
+                Some((2.4064599726497815f64, 10.442409634437194f64, 0f64, None))
+            }
             DynOrigin::Prometheus => {
                 Some((5.1686180468560075f64, 10.250126710744977f64, 0f64, None))
             }
-            DynOrigin::Pandora => Some((2.8434904173491615f64, 9.997055714535051f64, 0f64, None)),
-            DynOrigin::Pan => Some((0.8517206749732328f64, 10.92652906235538f64, 0f64, None)),
-            DynOrigin::Ariel => Some((
-                2.7265533574655416f64,
-                -2.492952697630833f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.0008726646259971648f64,
-                    0.0013962634015954637f64,
-                ]),
-            )),
-            DynOrigin::Umbriel => Some((
-                1.885828256779873f64,
-                -1.5161481881953498f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.0015707963267948964f64,
-                    0f64,
-                    0.0010471975511965976f64,
-                ]),
-            )),
-            DynOrigin::Titania => Some((
-                1.3568189605003917f64,
-                -0.7217186318332268f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.0013962634015954637f64,
-                ]),
-            )),
-            DynOrigin::Oberon => Some((
-                0.1181587903600161f64,
-                -0.4666921966546346f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.0006981317007977319f64,
-                ]),
-            )),
-            DynOrigin::Miranda => Some((
-                0.5358160803622591f64,
-                -4.445191100713563f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.02007128639793479f64,
-                    -0.022165681500327987f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.0015707963267948964f64,
-                    0.002617993877991494f64,
-                ]),
-            )),
-            DynOrigin::Cordelia => Some((
-                2.2286109218715593f64,
-                -18.753921879266084f64,
-                0f64,
-                Some(&[
-                    -0.0006981317007977319f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Ophelia => Some((
-                2.2750366799746087f64,
-                -16.692447910262292f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    -0.0005235987755982988f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Bianca => Some((
-                1.8406242291532198f64,
-                -14.458158751655587f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    -0.0006981317007977319f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Cressida => Some((
-                1.0325367854798453f64,
-                -13.553906388910956f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.00017453292519943296f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Desdemona => Some((
-                1.6594590527962085f64,
-                -13.265430289266899f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.0006981317007977319f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Juliet => Some((
-                5.2806681848340435f64,
-                -12.74309158902866f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.00034906585039886593f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Portia => Some((
-                0.4368559117741807f64,
-                -12.243250601727652f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.00034906585039886593f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Rosalind => Some((
-                5.496041814530144f64,
-                -11.250935609538423f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.0013962634015954637f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Belinda => Some((
-                5.191656392982332f64,
-                -10.076882135239488f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.00017453292519943296f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Puck => Some((
-                1.5924384095196262f64,
-                -8.247467318113788f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.0015707963267948964f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Triton => Some((
-                5.175424830938785f64,
-                -1.069140942327404f64,
-                0f64,
-                Some(&[
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.3883357585687383f64,
-                    0f64,
-                    0.11746065865921838f64,
-                    0.03577924966588375f64,
-                    0.012915436464758038f64,
-                    0.004886921905584123f64,
-                    0.0019198621771937625f64,
-                    0.0008726646259971648f64,
-                    0.00034906585039886593f64,
-                    0.00017453292519943296f64,
-                ]),
-            )),
-            DynOrigin::Naiad => Some((
-                4.434183497616794f64,
-                21.342656148360604f64,
-                0f64,
-                Some(&[
-                    -0.008377580409572781f64,
-                    0.07679448708775051f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    -0.00471238898038469f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Thalassa => Some((
-                1.7812830345854127f64,
-                20.171739891174827f64,
-                0f64,
-                Some(&[
-                    -0.008377580409572781f64,
-                    0f64,
-                    0.0033161255787892262f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Despina => Some((
-                5.34960869028782f64,
-                18.77510290185297f64,
-                0f64,
-                Some(&[
-                    -0.008552113334772215f64,
-                    0f64,
-                    0f64,
-                    0.0010471975511965976f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Galatea => Some((
-                4.504520266472165f64,
-                14.6548275586037f64,
-                0f64,
-                Some(&[
-                    -0.008377580409572781f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.0008726646259971648f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Larissa => Some((
-                3.1312952110030268f64,
-                11.328119671568512f64,
-                0f64,
-                Some(&[
-                    -0.008377580409572781f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.0033161255787892262f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Proteus => Some((
-                1.6297884555123048f64,
-                5.598412754411688f64,
-                0f64,
-                Some(&[
-                    -0.008377580409572781f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.0006981317007977319f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                ]),
-            )),
-            DynOrigin::Charon => Some((2.1414317257344426f64, 0.9837115923543857f64, 0f64, None)),
-            DynOrigin::Gaspra => Some((1.4603169851436555f64, 21.41364504378302f64, 0f64, None)),
-            DynOrigin::Ida => Some((4.78307481509046f64, 32.54389804704987f64, 0f64, None)),
-            DynOrigin::Ceres => Some((2.9784043685283237f64, 16.618208323400072f64, 0f64, None)),
-            DynOrigin::Pallas => Some((0.6632251157578453f64, 19.299913700406368f64, 0f64, None)),
-            DynOrigin::Vesta => Some((4.980995152266617f64, 28.22778495282912f64, 0f64, None)),
-            DynOrigin::Lutetia => Some((1.6406094968746698f64, 18.4612463429088f64, 0f64, None)),
-            DynOrigin::Eros => Some((5.690995091977911f64, 28.612729617819042f64, 0f64, None)),
-            DynOrigin::Davida => Some((4.679227724596798f64, 29.39866372732388f64, 0f64, None)),
-            DynOrigin::Steins => Some((5.615771401216954f64, 24.925032561498227f64, 0f64, None)),
+            DynOrigin::Pandora => {
+                Some((2.8434904173491615f64, 9.997055714535051f64, 0f64, None))
+            }
+            DynOrigin::Pan => {
+                Some((0.8517206749732328f64, 10.92652906235538f64, 0f64, None))
+            }
+            DynOrigin::Ariel => {
+                Some((
+                    2.7265533574655416f64,
+                    -2.492952697630833f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.0008726646259971648f64,
+                            0.0013962634015954637f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Umbriel => {
+                Some((
+                    1.885828256779873f64,
+                    -1.5161481881953498f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.0015707963267948964f64,
+                            0f64,
+                            0.0010471975511965976f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Titania => {
+                Some((
+                    1.3568189605003917f64,
+                    -0.7217186318332268f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.0013962634015954637f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Oberon => {
+                Some((
+                    0.1181587903600161f64,
+                    -0.4666921966546346f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.0006981317007977319f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Miranda => {
+                Some((
+                    0.5358160803622591f64,
+                    -4.445191100713563f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.02007128639793479f64,
+                            -0.022165681500327987f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.0015707963267948964f64,
+                            0.002617993877991494f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Cordelia => {
+                Some((
+                    2.2286109218715593f64,
+                    -18.753921879266084f64,
+                    0f64,
+                    Some(
+                        &[
+                            -0.0006981317007977319f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Ophelia => {
+                Some((
+                    2.2750366799746087f64,
+                    -16.692447910262292f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            -0.0005235987755982988f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Bianca => {
+                Some((
+                    1.8406242291532198f64,
+                    -14.458158751655587f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            -0.0006981317007977319f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Cressida => {
+                Some((
+                    1.0325367854798453f64,
+                    -13.553906388910956f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.00017453292519943296f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Desdemona => {
+                Some((
+                    1.6594590527962085f64,
+                    -13.265430289266899f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.0006981317007977319f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Juliet => {
+                Some((
+                    5.2806681848340435f64,
+                    -12.74309158902866f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.00034906585039886593f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Portia => {
+                Some((
+                    0.4368559117741807f64,
+                    -12.243250601727652f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.00034906585039886593f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Rosalind => {
+                Some((
+                    5.496041814530144f64,
+                    -11.250935609538423f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.0013962634015954637f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Belinda => {
+                Some((
+                    5.191656392982332f64,
+                    -10.076882135239488f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.00017453292519943296f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Puck => {
+                Some((
+                    1.5924384095196262f64,
+                    -8.247467318113788f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.0015707963267948964f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Triton => {
+                Some((
+                    5.175424830938785f64,
+                    -1.069140942327404f64,
+                    0f64,
+                    Some(
+                        &[
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.3883357585687383f64,
+                            0f64,
+                            0.11746065865921838f64,
+                            0.03577924966588375f64,
+                            0.012915436464758038f64,
+                            0.004886921905584123f64,
+                            0.0019198621771937625f64,
+                            0.0008726646259971648f64,
+                            0.00034906585039886593f64,
+                            0.00017453292519943296f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Naiad => {
+                Some((
+                    4.434183497616794f64,
+                    21.342656148360604f64,
+                    0f64,
+                    Some(
+                        &[
+                            -0.008377580409572781f64,
+                            0.07679448708775051f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            -0.00471238898038469f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Thalassa => {
+                Some((
+                    1.7812830345854127f64,
+                    20.171739891174827f64,
+                    0f64,
+                    Some(
+                        &[
+                            -0.008377580409572781f64,
+                            0f64,
+                            0.0033161255787892262f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Despina => {
+                Some((
+                    5.34960869028782f64,
+                    18.77510290185297f64,
+                    0f64,
+                    Some(
+                        &[
+                            -0.008552113334772215f64,
+                            0f64,
+                            0f64,
+                            0.0010471975511965976f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Galatea => {
+                Some((
+                    4.504520266472165f64,
+                    14.6548275586037f64,
+                    0f64,
+                    Some(
+                        &[
+                            -0.008377580409572781f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.0008726646259971648f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Larissa => {
+                Some((
+                    3.1312952110030268f64,
+                    11.328119671568512f64,
+                    0f64,
+                    Some(
+                        &[
+                            -0.008377580409572781f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.0033161255787892262f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Proteus => {
+                Some((
+                    1.6297884555123048f64,
+                    5.598412754411688f64,
+                    0f64,
+                    Some(
+                        &[
+                            -0.008377580409572781f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0.0006981317007977319f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                            0f64,
+                        ],
+                    ),
+                ))
+            }
+            DynOrigin::Charon => {
+                Some((2.1414317257344426f64, 0.9837115923543857f64, 0f64, None))
+            }
+            DynOrigin::Gaspra => {
+                Some((1.4603169851436555f64, 21.41364504378302f64, 0f64, None))
+            }
+            DynOrigin::Ida => {
+                Some((4.78307481509046f64, 32.54389804704987f64, 0f64, None))
+            }
+            DynOrigin::Ceres => {
+                Some((2.9784043685283237f64, 16.618208323400072f64, 0f64, None))
+            }
+            DynOrigin::Pallas => {
+                Some((0.6632251157578453f64, 19.299913700406368f64, 0f64, None))
+            }
+            DynOrigin::Vesta => {
+                Some((4.980995152266617f64, 28.22778495282912f64, 0f64, None))
+            }
+            DynOrigin::Lutetia => {
+                Some((1.6406094968746698f64, 18.4612463429088f64, 0f64, None))
+            }
+            DynOrigin::Eros => {
+                Some((5.690995091977911f64, 28.612729617819042f64, 0f64, None))
+            }
+            DynOrigin::Davida => {
+                Some((4.679227724596798f64, 29.39866372732388f64, 0f64, None))
+            }
+            DynOrigin::Steins => {
+                Some((5.615771401216954f64, 24.925032561498227f64, 0f64, None))
+            }
             DynOrigin::Itokawa => Some((0f64, 12.429240095029979f64, 0f64, None)),
             _ => None,
         }
