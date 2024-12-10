@@ -11,7 +11,7 @@ use std::f64::consts::TAU;
 use float_eq::float_eq;
 use glam::{DMat3, DVec3};
 
-use lox_bodies::PointMass;
+use lox_bodies::{Origin, PointMass};
 use lox_time::deltas::TimeDelta;
 use lox_time::TimeLike;
 
@@ -23,7 +23,7 @@ pub trait ToKeplerian<T: TimeLike, O: PointMass> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Keplerian<T: TimeLike, O: PointMass> {
+pub struct Keplerian<T: TimeLike, O: Origin> {
     time: T,
     origin: O,
     semi_major_axis: f64,
@@ -37,7 +37,7 @@ pub struct Keplerian<T: TimeLike, O: PointMass> {
 impl<T, O> Keplerian<T, O>
 where
     T: TimeLike,
-    O: PointMass,
+    O: Origin,
 {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
@@ -107,7 +107,13 @@ where
             self.semi_major_axis * (1.0 - self.eccentricity.powi(2))
         }
     }
+}
 
+impl<T, O> Keplerian<T, O>
+where
+    T: TimeLike,
+    O: PointMass,
+{
     pub fn to_perifocal(&self) -> (DVec3, DVec3) {
         let grav_param = self.origin.gravitational_parameter();
         let semiparameter = self.semiparameter();
@@ -154,6 +160,41 @@ pub fn is_equatorial(inclination: f64) -> bool {
 
 pub fn is_circular(eccentricity: f64) -> bool {
     float_eq!(eccentricity, 0.0, abs <= 1e-8)
+}
+
+enum OrbitShape {
+    SemiMajorAndEccentricity {
+        semi_major_axis: f64,
+        eccentricity: f64,
+    },
+    Radii {
+        periapsis_radius: f64,
+        apoapsis_radius: f64,
+    },
+    Altitudes {
+        periapsis_altitude: f64,
+        apoapsis_altitude: f64,
+    },
+}
+
+enum Anomaly {
+    True(f64),
+    Eccentric(f64),
+    Mean(f64),
+}
+
+impl Default for Anomaly {
+    fn default() -> Self {
+        Anomaly::True(0.0)
+    }
+}
+
+pub struct KeplerianBuilder {
+    shape: OrbitShape,
+    inclination: Option<f64>,
+    longitude_of_ascending_node: Option<f64>,
+    argument_of_periapisis: Option<f64>,
+    anomaly: Option<Anomaly>,
 }
 
 #[cfg(test)]

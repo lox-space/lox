@@ -292,9 +292,9 @@ impl PyKeplerian {
         longitude_of_ascending_node: f64,
         argument_of_periapsis: f64,
         true_anomaly: f64,
-        origin: Option<&Bound<'_, PyAny>>,
+        origin: Option<PyOrigin>,
     ) -> PyResult<Self> {
-        let origin: PyBody = origin.try_into()?;
+        let origin = origin.map(|origin| origin.0).unwrap_or_default();
         Ok(PyKeplerian(Keplerian::new(
             time,
             origin,
@@ -311,8 +311,8 @@ impl PyKeplerian {
         self.0.time()
     }
 
-    fn origin(&self) -> PyObject {
-        self.0.origin().into()
+    fn origin(&self) -> PyOrigin {
+        PyOrigin(self.0.origin())
     }
 
     fn semi_major_axis(&self) -> f64 {
@@ -350,7 +350,7 @@ impl PyKeplerian {
 
 #[pyclass(name = "Trajectory", module = "lox_space", frozen)]
 #[derive(Debug, Clone)]
-pub struct PyTrajectory(pub Trajectory<PyTime, PyBody, PyFrame>);
+pub struct PyTrajectory(pub Trajectory<PyTime, DynOrigin, DynFrame>);
 
 impl From<TrajectoryError> for PyErr {
     fn from(err: TrajectoryError) -> Self {
@@ -637,7 +637,7 @@ impl PyGroundLocation {
 }
 
 #[pyclass(name = "GroundPropagator", module = "lox_space", frozen)]
-pub struct PyGroundPropagator(GroundPropagator<PyPlanet, PyUt1Provider>);
+pub struct PyGroundPropagator(GroundPropagator<DynOrigin, PyUt1Provider>);
 
 impl From<GroundPropagatorError> for PyErr {
     fn from(err: GroundPropagatorError) -> Self {
@@ -739,8 +739,8 @@ impl PySgp4 {
                     pytime,
                     s1.position(),
                     s1.velocity(),
-                    PyBody::Planet(PyPlanet::new("Earth").unwrap()),
-                    PyFrame::Icrf,
+                    DynOrigin::default(),
+                    DynFrame::default(),
                 )),
             )?
             .into_any());
@@ -762,7 +762,7 @@ impl PySgp4 {
                     PyBody::Planet(PyPlanet::new("Earth").unwrap()),
                     PyFrame::Icrf,
                 );
-            let states: Vec<State<PyTime, PyBody, PyFrame>> = trajectory
+            let states: Vec<State<PyTime, DynOrigin, DynFrame>> = trajectory
                 .states()
                 .iter()
                 .map(|s| {
@@ -886,7 +886,7 @@ impl PyElevationMask {
 }
 
 #[pyclass(name = "Topocentric", module = "lox_space", frozen)]
-pub struct PyTopocentric(pub Topocentric<PyPlanet>);
+pub struct PyTopocentric(pub Topocentric<DynOrigin>);
 
 #[pymethods]
 impl PyTopocentric {
