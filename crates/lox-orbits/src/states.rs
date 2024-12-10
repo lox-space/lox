@@ -10,7 +10,7 @@ use itertools::Itertools;
 use std::f64::consts::{PI, TAU};
 use std::ops::Sub;
 
-use lox_bodies::{Origin, PointMass, RotationalElements, Spheroid};
+use lox_bodies::{DynOrigin, Origin, PointMass, RotationalElements, Spheroid};
 use lox_ephem::{path_from_ids, Ephemeris};
 use lox_math::glam::Azimuth;
 use lox_math::math::{mod_two_pi, normalize_two_pi};
@@ -20,7 +20,8 @@ use lox_time::{julian_dates::JulianDate, time_scales::Tdb, transformations::TryT
 use crate::anomalies::{eccentric_to_true, hyperbolic_to_true};
 use crate::elements::{is_circular, is_equatorial, Keplerian, ToKeplerian};
 use crate::frames::{
-    BodyFixed, CoordinateSystem, FrameTransformationProvider, Icrf, ReferenceFrame, TryToFrame,
+    BodyFixed, CoordinateSystem, DynFrame, FrameTransformationProvider, Icrf, ReferenceFrame,
+    TryToFrame,
 };
 use crate::ground::GroundLocation;
 
@@ -36,6 +37,8 @@ pub struct State<T: TimeLike, O: Origin, R: ReferenceFrame> {
     position: DVec3,
     velocity: DVec3,
 }
+
+pub type DynState<T> = State<T, DynOrigin, DynFrame>;
 
 impl<T, O, R> State<T, O, R>
 where
@@ -58,45 +61,6 @@ where
         O: Clone,
     {
         self.origin.clone()
-    }
-
-    pub fn with_frame<U: ReferenceFrame>(&self, frame: U) -> State<T, O, U>
-    where
-        T: Clone,
-        O: Clone,
-    {
-        State::new(
-            self.time(),
-            self.position,
-            self.velocity,
-            self.origin(),
-            frame,
-        )
-    }
-
-    pub fn with_origin<U: Origin>(&self, origin: U) -> State<T, U, R>
-    where
-        T: Clone,
-        R: Clone,
-    {
-        State::new(
-            self.time(),
-            self.position,
-            self.velocity,
-            origin,
-            self.reference_frame(),
-        )
-    }
-
-    pub fn with_origin_and_frame<U: Origin, V: ReferenceFrame>(
-        &self,
-        origin: U,
-        frame: V,
-    ) -> State<T, U, V>
-    where
-        T: Clone,
-    {
-        State::new(self.time(), self.position, self.velocity, origin, frame)
     }
 
     pub fn time(&self) -> T

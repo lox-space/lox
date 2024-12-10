@@ -19,7 +19,7 @@ use lox_time::TimeLike;
 use thiserror::Error;
 
 use crate::events::{find_windows, Window};
-use crate::frames::{BodyFixed, FrameTransformationProvider, Icrf, Topocentric, TryToFrame};
+use crate::frames::{BodyFixed, FrameTransformationProvider, Icrf, TryToFrame};
 use crate::ground::GroundLocation;
 use crate::trajectories::Trajectory;
 
@@ -67,34 +67,6 @@ pub fn elevation<
     P: FrameTransformationProvider,
 >(
     time: T,
-    frame: &Topocentric<O>,
-    gs: &Trajectory<T, O, Icrf>,
-    sc: &Trajectory<T, O, Icrf>,
-    provider: &P,
-) -> Radians {
-    let body_fixed = BodyFixed(gs.origin());
-    let gs = gs.interpolate_at(time.clone()).position();
-    let sc = sc.interpolate_at(time.clone()).position();
-    let r = sc - gs;
-    let Ok(tdb) = time.try_to_scale(Tdb, provider) else {
-        // FIXME
-        eprintln!("Failed to convert time to TDB");
-        return f64::NAN;
-    };
-    let seconds = tdb.seconds_since_j2000();
-    let rot = body_fixed.rotation(seconds);
-    let r_body = rot.rotate_position(r);
-    let rot = frame.rotation_from_body_fixed();
-    let r_sez = rot * r_body;
-    (r_sez.z / r.length()).asin()
-}
-
-pub fn elevation2<
-    T: TimeLike + TryToScale<Tdb, P> + Clone,
-    O: Origin + Spheroid + RotationalElements + Clone,
-    P: FrameTransformationProvider,
->(
-    time: T,
     gs: &GroundLocation<O>,
     mask: &ElevationMask,
     sc: &Trajectory<T, O, Icrf>,
@@ -130,7 +102,7 @@ pub fn visibility<
     let root_finder = Brent::default();
     find_windows(
         |t| {
-            elevation2(
+            elevation(
                 start.clone() + TimeDelta::from_decimal_seconds(t).unwrap(),
                 gs,
                 mask,
@@ -164,7 +136,6 @@ mod tests {
     fn test_elevation() {
         let gs = ground_station_trajectory();
         let sc = spacecraft_trajectory();
-        let frame = frame();
         let expected: Vec<Radians> = include_str!("../../../data/elevation.csv")
             .lines()
             .map(|line| line.parse::<f64>().unwrap().to_radians())
@@ -172,7 +143,7 @@ mod tests {
         let actual: Vec<Radians> = gs
             .times()
             .iter()
-            .map(|t| elevation(*t, &frame, &gs, &sc, &NoOpFrameTransformationProvider))
+            .map(|t| elevation(*t, &gs, &sc, &NoOpFrameTransformationProvider))
             .collect();
         for (actual, expected) in actual.iter().zip(expected.iter()) {
             assert_close!(actual, expected, 1e-1);
@@ -235,12 +206,6 @@ mod tests {
         let longitude = -4.3676f64.to_radians();
         let latitude = 40.4527f64.to_radians();
         GroundLocation::new(longitude, latitude, 0.0, Earth)
-    }
-
-    fn frame() -> Topocentric<Earth> {
-        let longitude = -4.3676f64.to_radians();
-        let latitude = 40.4527f64.to_radians();
-        Topocentric::from_coords(longitude, latitude, 0.0, Earth)
     }
 
     fn contacts() -> Vec<Window<Time<Tai>>> {

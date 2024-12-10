@@ -149,25 +149,25 @@ impl<T: RotationalElements> ReferenceFrame for BodyFixed<T> {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct Topocentric<B: Spheroid>(GroundLocation<B>);
+// #[derive(Clone, Debug)]
+// pub struct Topocentric<B: Spheroid>(GroundLocation<B>);
 
-impl<B: Spheroid> Topocentric<B> {
-    pub fn new(location: GroundLocation<B>) -> Self {
-        Topocentric(location)
-    }
-
-    pub fn from_coords(longitude: f64, latitude: f64, altitude: f64, body: B) -> Self {
-        let location = GroundLocation::new(longitude, latitude, altitude, body);
-        Topocentric(location)
-    }
-
-    pub fn rotation_from_body_fixed(&self) -> DMat3 {
-        let r1 = DMat3::from_rotation_z(self.0.longitude()).transpose();
-        let r2 = DMat3::from_rotation_y(FRAC_PI_2 - self.0.latitude()).transpose();
-        r2 * r1
-    }
-}
+// impl<B: Spheroid> Topocentric<B> {
+//     pub fn new(location: GroundLocation<B>) -> Self {
+//         Topocentric(location)
+//     }
+//
+//     pub fn from_coords(longitude: f64, latitude: f64, altitude: f64, body: B) -> Self {
+//         let location = GroundLocation::new(longitude, latitude, altitude, body);
+//         Topocentric(location)
+//     }
+//
+//     pub fn rotation_from_body_fixed(&self) -> DMat3 {
+//         let r1 = DMat3::from_rotation_z(self.0.longitude()).transpose();
+//         let r2 = DMat3::from_rotation_y(FRAC_PI_2 - self.0.latitude()).transpose();
+//         r2 * r1
+//     }
+// }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum DynFrame {
@@ -264,25 +264,25 @@ mod tests {
     use lox_math::is_close::IsClose;
     use rstest::rstest;
 
-    #[test]
-    fn test_topocentric() {
-        let topo = Topocentric::from_coords(8.0, 50.0, 0.0, Earth);
-        let r = topo.rotation_from_body_fixed();
-        let x_axis = DVec3::new(
-            0.038175550084451906,
-            -0.9893582466233818,
-            -0.14040258976976597,
-        );
-        let y_axis = DVec3::new(
-            -0.25958272521858694,
-            -0.14550003380861354,
-            0.9546970980000851,
-        );
-        let z_axis = DVec3::new(-0.9649660284921128, 0.0, -0.2623748537039304);
-        assert_close!(r.x_axis, x_axis);
-        assert_close!(r.y_axis, y_axis);
-        assert_close!(r.z_axis, z_axis);
-    }
+    // #[test]
+    // fn test_topocentric() {
+    //     let topo = Topocentric::from_coords(8.0, 50.0, 0.0, Earth);
+    //     let r = topo.rotation_from_body_fixed();
+    //     let x_axis = DVec3::new(
+    //         0.038175550084451906,
+    //         -0.9893582466233818,
+    //         -0.14040258976976597,
+    //     );
+    //     let y_axis = DVec3::new(
+    //         -0.25958272521858694,
+    //         -0.14550003380861354,
+    //         0.9546970980000851,
+    //     );
+    //     let z_axis = DVec3::new(-0.9649660284921128, 0.0, -0.2623748537039304);
+    //     assert_close!(r.x_axis, x_axis);
+    //     assert_close!(r.y_axis, y_axis);
+    //     assert_close!(r.z_axis, z_axis);
+    // }
 
     #[rstest]
     #[case("IAU_EARTH", Some(DynFrame::BodyFixed(DynOrigin::Earth)))]

@@ -33,14 +33,13 @@ use crate::analysis::{ElevationMask, ElevationMaskError};
 use crate::elements::{Keplerian, ToKeplerian};
 use crate::events::{Event, FindEventError, Window};
 use crate::frames::{
-    BodyFixed, CoordinateSystem, DynFrame, Icrf, ReferenceFrame, Topocentric, TryToFrame,
-    UnknownFrameError,
+    BodyFixed, CoordinateSystem, DynFrame, Icrf, ReferenceFrame, TryToFrame, UnknownFrameError,
 };
 use crate::ground::{GroundLocation, GroundPropagator, GroundPropagatorError, Observables};
 use crate::propagators::semi_analytical::{Vallado, ValladoError};
 use crate::propagators::sgp4::{Sgp4, Sgp4Error};
 use crate::propagators::Propagator;
-use crate::states::ToCartesian;
+use crate::states::{DynState, ToCartesian};
 use crate::trajectories::TrajectoryTransformationError;
 use crate::{
     frames::FrameTransformationProvider,
@@ -239,7 +238,7 @@ impl PyState {
                 "only inertial frames are supported for the LVLH rotation matrix",
             ));
         }
-        let rot = self.0.with_frame(Icrf).rotation_lvlh();
+        let rot = self.0.rotation_lvlh();
         let rot: Vec<Vec<f64>> = rot.to_cols_array_2d().iter().map(|v| v.to_vec()).collect();
         Ok(PyArray2::from_vec2_bound(py, &rot)?)
     }
@@ -258,7 +257,6 @@ impl PyState {
         }
         Ok(PyGroundLocation(
             self.0
-                .with_origin_and_frame(Earth, Icrf)
                 .try_to_frame(BodyFixed(Earth), &PyNoOpOffsetProvider)?
                 .to_ground_location()
                 .map_err(|err| PyValueError::new_err(err.to_string()))?
@@ -340,7 +338,7 @@ impl PyKeplerian {
     }
 
     fn to_cartesian(&self) -> PyResult<PyState> {
-        Ok(PyState(self.0.to_cartesian().with_frame(PyFrame::Icrf)))
+        Ok(PyState(self.0.to_cartesian()))
     }
 
     fn orbital_period(&self) -> PyTimeDelta {
@@ -363,7 +361,7 @@ impl PyTrajectory {
     #[new]
     fn new(states: &Bound<'_, PyList>) -> PyResult<Self> {
         let states: Vec<PyState> = states.extract()?;
-        let states: Vec<State<PyTime, PyBody, PyFrame>> = states.into_iter().map(|s| s.0).collect();
+        let states: Vec<DynState<PyTime>> = states.into_iter().map(|s| s.0).collect();
         Ok(PyTrajectory(Trajectory::new(&states)?))
     }
 
@@ -373,41 +371,31 @@ impl PyTrajectory {
         _cls: &Bound<'_, PyType>,
         start_time: PyTime,
         array: &Bound<'_, PyArray2<f64>>,
-        origin: Option<&Bound<'_, PyAny>>,
+        origin: Option<PyOrigin>,
         frame: Option<PyFrame>,
     ) -> PyResult<Self> {
-        let origin: PyBody = if let Some(origin) = origin {
-            PyBody::try_from(origin)?
-        } else {
-            PyBody::Planet(PyPlanet::new("Earth").unwrap())
-        };
-        let frame = frame.unwrap_or(PyFrame::Icrf);
+        let origin = origin.unwrap_or_default();
+        let frame = frame.unwrap_or_default();
         let array = array.to_owned_array();
         if array.ncols() != 7 {
             return Err(PyValueError::new_err("invalid shape"));
         }
-        let mut states: Vec<State<PyTime, PyBody, PyFrame>> = Vec::with_capacity(array.nrows());
+        let mut states: Vec<DynState<PyTime>> = Vec::with_capacity(array.nrows());
         for row in array.rows() {
             let time = PyTime(start_time.0 + TimeDelta::from_decimal_seconds(row[0]).unwrap());
             let position = DVec3::new(row[1], row[2], row[3]);
             let velocity = DVec3::new(row[4], row[5], row[6]);
-            states.push(State::new(
-                time,
-                position,
-                velocity,
-                origin.clone(),
-                frame.clone(),
-            ));
+            states.push(State::new(time, position, velocity, origin.0, frame.0));
         }
         Ok(PyTrajectory(Trajectory::new(&states)?))
     }
 
-    fn origin(&self) -> PyObject {
-        self.0.origin().into()
+    fn origin(&self) -> PyOrigin {
+        PyOrigin(self.0.origin())
     }
 
     fn reference_frame(&self) -> PyFrame {
-        self.0.reference_frame()
+        PyFrame(self.0.reference_frame())
     }
 
     fn to_numpy<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyArray2<f64>>> {
@@ -464,23 +452,16 @@ impl PyTrajectory {
         frame: PyFrame,
         provider: Option<&Bound<'_, PyUt1Provider>>,
     ) -> PyResult<Self> {
-        let mut states: Vec<State<PyTime, PyBody, PyFrame>> =
-            Vec::with_capacity(self.0.states().len());
+        let mut states: Vec<DynState<PyTime>> = Vec::with_capacity(self.0.states().len());
         for s in self.0.states() {
             states.push(PyState(s).to_frame(frame.clone(), provider)?.0);
         }
         Ok(PyTrajectory(Trajectory::new(&states)?))
     }
 
-    fn to_origin(&self, target: &Bound<'_, PyAny>, ephemeris: &Bound<'_, PySpk>) -> PyResult<Self> {
-        let target = PyBody::try_from(target)?;
+    fn to_origin(&self, target: PyOrigin, ephemeris: &Bound<'_, PySpk>) -> PyResult<Self> {
         let spk = &ephemeris.borrow().0;
-        let s1 = self
-            .0
-            .clone()
-            .with_frame(Icrf)
-            .to_origin(target, spk)?
-            .with_frame(PyFrame::Icrf);
+        let s1 = self.0.clone().to_origin(target, spk)?;
         Ok(Self(s1))
     }
 }
@@ -537,7 +518,7 @@ impl PyWindow {
 }
 
 #[pyclass(name = "Vallado", module = "lox_space", frozen)]
-pub struct PyVallado(pub Vallado<PyTime, DynOrigin>);
+pub struct PyVallado(pub Vallado<PyTime, DynOrigin, DynFrame>);
 
 impl From<ValladoError> for PyErr {
     fn from(err: ValladoError) -> Self {
@@ -551,12 +532,9 @@ impl PyVallado {
     #[new]
     #[pyo3(signature =(initial_state, max_iter=None))]
     fn new(initial_state: PyState, max_iter: Option<i32>) -> PyResult<Self> {
-        if initial_state.0.reference_frame() != PyFrame::Icrf {
-            return Err(PyValueError::new_err(
-                "only inertial frames are supported for the Vallado propagator",
-            ));
-        }
-        let mut vallado = Vallado::new(initial_state.0.with_frame(Icrf));
+        let mut vallado = Vallado::with_dynamic(initial_state.0).map_err(|_| {
+            PyValueError::new_err("only inertial frames are supported for the Vallado propagator")
+        })?;
         if let Some(max_iter) = max_iter {
             vallado.with_max_iter(max_iter);
         }
@@ -569,18 +547,10 @@ impl PyVallado {
         steps: &Bound<'py, PyAny>,
     ) -> PyResult<Bound<'py, PyAny>> {
         if let Ok(time) = steps.extract::<PyTime>() {
-            return Ok(Bound::new(
-                py,
-                PyState(self.0.propagate(time)?.with_frame(PyFrame::Icrf)),
-            )?
-            .into_any());
+            return Ok(Bound::new(py, PyState(self.0.propagate(time)?))?.into_any());
         }
         if let Ok(steps) = steps.extract::<Vec<PyTime>>() {
-            return Ok(Bound::new(
-                py,
-                PyTrajectory(self.0.propagate_all(steps)?.with_frame(PyFrame::Icrf)),
-            )?
-            .into_any());
+            return Ok(Bound::new(py, PyTrajectory(self.0.propagate_all(steps)?))?.into_any());
         }
         Err(PyValueError::new_err("invalid time delta(s)"))
     }
@@ -588,13 +558,13 @@ impl PyVallado {
 
 #[pyclass(name = "GroundLocation", module = "lox_space", frozen)]
 #[derive(Clone)]
-pub struct PyGroundLocation(pub GroundLocation<PyPlanet>);
+pub struct PyGroundLocation(pub GroundLocation<DynOrigin>);
 
 #[pymethods]
 impl PyGroundLocation {
     #[new]
-    fn new(planet: PyPlanet, longitude: f64, latitude: f64, altitude: f64) -> Self {
-        PyGroundLocation(GroundLocation::new(longitude, latitude, altitude, planet))
+    fn new(origin: PyOrigin, longitude: f64, latitude: f64, altitude: f64) -> Self {
+        PyGroundLocation(GroundLocation::new(longitude, latitude, altitude, origin.0))
     }
 
     #[pyo3(signature = (state, provider=None))]
@@ -658,27 +628,10 @@ impl PyGroundPropagator {
         steps: &Bound<'py, PyAny>,
     ) -> PyResult<Bound<'py, PyAny>> {
         if let Ok(time) = steps.extract::<PyTime>() {
-            return Ok(Bound::new(
-                py,
-                PyState(
-                    self.0
-                        .propagate(time)?
-                        .with_origin_and_frame(PyBody::Planet(self.0.origin()), PyFrame::Icrf),
-                ),
-            )?
-            .into_any());
+            return Ok(Bound::new(py, PyState(self.0.propagate(time)?))?.into_any());
         }
         if let Ok(steps) = steps.extract::<Vec<PyTime>>() {
-            return Ok(Bound::new(
-                py,
-                PyTrajectory(
-                    self.0
-                        .propagate_all(steps)?
-                        .with_frame(PyFrame::Icrf)
-                        .with_origin_and_frame(PyBody::Planet(self.0.origin()), PyFrame::Icrf),
-                ),
-            )?
-            .into_any());
+            return Ok(Bound::new(py, PyTrajectory(self.0.propagate_all(steps)?))?.into_any());
         }
         Err(PyValueError::new_err("invalid time delta(s)"))
     }
@@ -754,15 +707,8 @@ impl PySgp4 {
                 };
                 steps.push(time);
             }
-            let trajectory = self
-                .0
-                .propagate_all(steps)?
-                .with_frame(PyFrame::Icrf)
-                .with_origin_and_frame(
-                    PyBody::Planet(PyPlanet::new("Earth").unwrap()),
-                    PyFrame::Icrf,
-                );
-            let states: Vec<State<PyTime, DynOrigin, DynFrame>> = trajectory
+            let trajectory = self.0.propagate_all(steps)?;
+            let states: Vec<DynState<PyTime>> = trajectory
                 .states()
                 .iter()
                 .map(|s| {
@@ -795,16 +741,11 @@ pub fn visibility(
             "ground station and spacecraft must have the same origin",
         ));
     }
-    let sc_origin = match sc.0.origin() {
-        PyBody::Planet(planet) => planet,
-        _ => return Err(PyValueError::new_err("invalid origin")),
-    };
     let times: Vec<PyTime> = times.extract()?;
     let provider = provider.get();
     let mask = &mask.borrow().0;
-    let sc = sc.0.with_origin_and_frame(sc_origin, Icrf);
     Ok(
-        crate::analysis::visibility(&times, &gs.0, mask, &sc, provider)
+        crate::analysis::visibility(&times, &gs.0, mask, &sc.0, provider)
             .into_iter()
             .map(PyWindow)
             .collect(),
@@ -883,49 +824,6 @@ impl PyElevationMask {
             ElevationMask::Variable(_) => None,
         }
     }
-}
-
-#[pyclass(name = "Topocentric", module = "lox_space", frozen)]
-pub struct PyTopocentric(pub Topocentric<DynOrigin>);
-
-#[pymethods]
-impl PyTopocentric {
-    #[new]
-    fn new(location: PyGroundLocation) -> Self {
-        PyTopocentric(Topocentric::new(location.0))
-    }
-}
-
-#[pyfunction]
-pub fn elevation(
-    time: PyTime,
-    frame: &Bound<'_, PyTopocentric>,
-    gs: &Bound<'_, PyTrajectory>,
-    sc: &Bound<'_, PyTrajectory>,
-    provider: &Bound<'_, PyUt1Provider>,
-) -> f64 {
-    let gs = gs.get();
-    let sc = sc.get();
-    let frame = frame.get();
-    // FIXME
-    if gs.0.reference_frame() != PyFrame::Icrf || sc.0.reference_frame() != PyFrame::Icrf {
-        return f64::NAN;
-    }
-    if gs.0.origin().name() != sc.0.origin().name() {
-        return f64::NAN;
-    }
-    let gs_origin = match gs.0.origin() {
-        PyBody::Planet(planet) => planet,
-        _ => return f64::NAN,
-    };
-    let sc_origin = match sc.0.origin() {
-        PyBody::Planet(planet) => planet,
-        _ => return f64::NAN,
-    };
-    let provider = provider.get();
-    let gs = gs.0.with_origin_and_frame(gs_origin, Icrf);
-    let sc = sc.0.with_origin_and_frame(sc_origin, Icrf);
-    crate::analysis::elevation(time, &frame.0, &gs, &sc, provider)
 }
 
 #[pyclass(name = "Observables", module = "lox_space", frozen)]

@@ -6,7 +6,7 @@ use glam::DVec3;
 use lox_ephem::Ephemeris;
 use thiserror::Error;
 
-use lox_bodies::{Origin, RotationalElements};
+use lox_bodies::{DynOrigin, Origin, RotationalElements};
 use lox_math::roots::Brent;
 use lox_math::series::{Series, SeriesError};
 use lox_time::time_scales::{Tai, Tdb};
@@ -16,7 +16,7 @@ use lox_time::utc::Utc;
 use lox_time::{deltas::TimeDelta, Time, TimeLike};
 
 use crate::events::{find_events, find_windows, Event, Window};
-use crate::frames::{BodyFixed, FrameTransformationProvider, Icrf, TryToFrame};
+use crate::frames::{BodyFixed, DynFrame, FrameTransformationProvider, Icrf, TryToFrame};
 use crate::{
     frames::{CoordinateSystem, ReferenceFrame},
     states::State,
@@ -60,6 +60,8 @@ pub struct Trajectory<T: TimeLike, O: Origin, R: ReferenceFrame> {
     vz: Series<ArcVecF64, Vec<f64>>,
 }
 
+pub type DynTrajectory<T> = Trajectory<T, DynOrigin, DynFrame>;
+
 impl<T, O, R> Trajectory<T, O, R>
 where
     T: TimeLike + Clone,
@@ -102,37 +104,6 @@ where
 
     pub fn origin(&self) -> O {
         self.states.first().unwrap().origin()
-    }
-
-    pub fn with_frame<R1: ReferenceFrame + Clone>(self, frame: R1) -> Trajectory<T, O, R1> {
-        let states: Vec<State<T, O, R1>> = self
-            .states
-            .into_iter()
-            .map(|s| s.with_frame(frame.clone()))
-            .collect();
-        Trajectory::new(&states).unwrap()
-    }
-
-    pub fn with_origin<O1: Origin + Clone>(&self, origin: O1) -> Trajectory<T, O1, R> {
-        let states: Vec<State<T, O1, R>> = self
-            .states
-            .iter()
-            .map(|s| s.with_origin(origin.clone()))
-            .collect();
-        Trajectory::new(&states).unwrap()
-    }
-
-    pub fn with_origin_and_frame<O1: Origin + Clone, R1: ReferenceFrame + Clone>(
-        &self,
-        origin: O1,
-        frame: R1,
-    ) -> Trajectory<T, O1, R1> {
-        let states: Vec<State<T, O1, R1>> = self
-            .states
-            .iter()
-            .map(|s| s.with_origin_and_frame(origin.clone(), frame.clone()))
-            .collect();
-        Trajectory::new(&states).unwrap()
     }
 
     pub fn start_time(&self) -> T {

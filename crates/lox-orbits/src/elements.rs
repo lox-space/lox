@@ -11,7 +11,7 @@ use std::f64::consts::TAU;
 use float_eq::float_eq;
 use glam::{DMat3, DVec3};
 
-use lox_bodies::{Origin, PointMass};
+use lox_bodies::{DynOrigin, Origin, PointMass};
 use lox_time::deltas::TimeDelta;
 use lox_time::TimeLike;
 
@@ -33,6 +33,8 @@ pub struct Keplerian<T: TimeLike, O: Origin> {
     argument_of_periapsis: f64,
     true_anomaly: f64,
 }
+
+pub type DynKeplerian<T> = Keplerian<T, DynOrigin>;
 
 impl<T, O> Keplerian<T, O>
 where
