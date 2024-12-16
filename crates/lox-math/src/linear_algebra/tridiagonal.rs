@@ -67,7 +67,7 @@ impl<'a> Tridiagonal<'a> {
     }
 }
 
-impl<'a> Index<Idx> for Tridiagonal<'a> {
+impl Index<Idx> for Tridiagonal<'_> {
     type Output = f64;
 
     fn index(&self, (i, j): Idx) -> &Self::Output {

@@ -6,8 +6,6 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-#![cfg(test)]
-
 use std::{path::PathBuf, sync::OnceLock};
 
 use crate::{ut1::DeltaUt1Tai, utc::leap_seconds::BuiltinLeapSeconds};
