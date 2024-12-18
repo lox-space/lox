@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.2](https://github.com/lox-space/lox/compare/lox-earth-v0.1.0-alpha.1...lox-earth-v0.1.0-alpha.2) - 2024-12-18
+
+### Other
+
+- implement dynamic origin and frame types
+
 ## [0.1.0-alpha.1](https://github.com/lox-space/lox/compare/lox-earth-v0.1.0-alpha.0...lox-earth-v0.1.0-alpha.1) - 2024-11-12
 
 ### Other
