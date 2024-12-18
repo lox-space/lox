@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.5](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.4...lox-orbits-v0.1.0-alpha.5) - 2024-12-18
+
+### Other
+
+- implement dynamic origin and frame types
+
 ## [0.1.0-alpha.4](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.3...lox-orbits-v0.1.0-alpha.4) - 2024-11-15
 
 ### Fixed
