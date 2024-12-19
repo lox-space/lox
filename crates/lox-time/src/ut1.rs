@@ -7,25 +7,30 @@
  */
 
 /*!
-    Module `ut1` exposes [DeltaUt1TaiProvider], which describes an API for providing the delta
+    Module `ut1` exposes [DeltaUt1TaiProviderOld], which describes an API for providing the delta
     between UT1 and TAI at a time of interest.
 
-    [DeltaUt1Tai] is `lox-time`'s default implementation of [DeltaUt1TaiProvider], which parses
+    [DeltaUt1Tai] is `lox-time`'s default implementation of [DeltaUt1TaiProviderOld], which parses
     Earth Orientation Parameters from an IERS CSV file.
 */
 
 use std::iter::zip;
+use std::path::Path;
+
+use num::ToPrimitive;
 use thiserror::Error;
+
+use lox_io::iers::{EarthOrientationParams, ParseFinalsCsvError};
+use lox_utils::series::{Series, SeriesError};
 
 use crate::calendar_dates::{CalendarDate, Date};
 use crate::constants::i64::SECONDS_PER_DAY;
 use crate::constants::julian_dates::SECONDS_BETWEEN_MJD_AND_J2000;
 use crate::deltas::TimeDelta;
-use crate::julian_dates::JulianDate;
 use crate::subsecond::Subsecond;
-use crate::time_scales::{Tai, Ut1};
-use crate::transformations::{LeapSecondsProvider, OffsetProvider};
-use crate::utc::Utc;
+use crate::time_scales::transformations::OffsetProvider;
+use crate::time_scales::Tai;
+use crate::utc::{LeapSecondsProvider, Utc};
 use crate::Time;
 use lox_io::iers::{EarthOrientationParams, ParseFinalsCsvError};
 use lox_math::series::{Series, SeriesError};
@@ -37,12 +42,12 @@ use std::path::Path;
 ///
 /// This crate provides a standard implementation over IERS Earth Orientation Parameters in
 /// [DeltaUt1Tai].
+
 pub trait DeltaUt1TaiProvider: OffsetProvider {
     /// Returns the difference between UT1 and TAI at the given TAI instant.
-    fn delta_ut1_tai(&self, tai: &Time<Tai>) -> Result<TimeDelta, Self::Error>;
-
+    fn delta_ut1_tai(&self, delta: TimeDelta) -> Result<TimeDelta, Self::Error>;
     /// Returns the difference between TAI and UT1 at the given UT1 instant.
-    fn delta_tai_ut1(&self, ut1: &Time<Ut1>) -> Result<TimeDelta, Self::Error>;
+    fn delta_tai_ut1(&self, delta: TimeDelta) -> Result<TimeDelta, Self::Error>;
 }
 
 /// Error type returned when [DeltaUt1Tai] instantiation fails.
@@ -82,7 +87,7 @@ impl ExtrapolatedDeltaUt1Tai {
     }
 }
 
-/// Provides a standard implementation of [DeltaUt1TaiProvider] based on cubic spline interpolation
+/// Provides a standard implementation of [DeltaUt1TaiProviderOld] based on cubic spline interpolation
 /// of the target time over IERS Earth Orientation Parameters.
 #[derive(Clone, Debug, PartialEq)]
 pub struct DeltaUt1Tai(Series<Vec<f64>, Vec<f64>>);
@@ -131,8 +136,8 @@ impl OffsetProvider for DeltaUt1Tai {
 }
 
 impl DeltaUt1TaiProvider for DeltaUt1Tai {
-    fn delta_ut1_tai(&self, tai: &Time<Tai>) -> Result<TimeDelta, Self::Error> {
-        let seconds = tai.seconds_since_j2000();
+    fn delta_ut1_tai(&self, delta: TimeDelta) -> Result<TimeDelta, Self::Error> {
+        let seconds = delta.to_decimal_seconds();
         let (t0, _) = self.0.first();
         let (tn, _) = self.0.last();
         let val = self.0.interpolate(seconds);
@@ -142,8 +147,8 @@ impl DeltaUt1TaiProvider for DeltaUt1Tai {
         Ok(TimeDelta::from_decimal_seconds(val).unwrap())
     }
 
-    fn delta_tai_ut1(&self, ut1: &Time<Ut1>) -> Result<TimeDelta, Self::Error> {
-        let seconds = ut1.seconds_since_j2000();
+    fn delta_tai_ut1(&self, delta: TimeDelta) -> Result<TimeDelta, Self::Error> {
+        let seconds = delta.to_decimal_seconds();
         let (t0, _) = self.0.first();
         let (tn, _) = self.0.last();
         // Use the UT1 offset as an initial guess even though the table is based on TAI
@@ -161,14 +166,15 @@ impl DeltaUt1TaiProvider for DeltaUt1Tai {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::OnceLock;
+    use float_eq::assert_float_eq;
+    use rstest::rstest;
 
     use super::*;
     use crate::subsecond::Subsecond;
+    use crate::test_helpers::delta_ut1_tai;
     use crate::time;
-    use crate::utc::leap_seconds::BuiltinLeapSeconds;
-    use float_eq::assert_float_eq;
-    use rstest::rstest;
+    use crate::time_scales::DynTimeScale::Ut1;
+    use crate::ToDelta;
 
     #[rstest]
     #[case(536414400, -36.40775963091942)]
@@ -259,30 +265,30 @@ mod tests {
     #[case(536499400, -36.40868580909562)]
     #[case(536500400, -36.40869742010849)]
     fn test_delta_ut1_tai_orekit(#[case] seconds: i64, #[case] expected: f64) {
-        let tai = Time::new(Tai, seconds, Subsecond::default());
-        let ut1 = Time::new(Ut1, seconds, Subsecond::default());
+        let tai = TimeDelta::new(seconds, Subsecond::default());
+        let ut1 = TimeDelta::new(seconds, Subsecond::default());
         let provider = delta_ut1_tai();
-        let actual = provider.delta_ut1_tai(&tai).unwrap().to_decimal_seconds();
+        let actual = provider.delta_ut1_tai(tai).unwrap().to_decimal_seconds();
         assert_float_eq!(actual, expected, rel <= 1e-6);
-        let actual = provider.delta_tai_ut1(&ut1).unwrap().to_decimal_seconds();
+        let actual = provider.delta_tai_ut1(ut1).unwrap().to_decimal_seconds();
         assert_float_eq!(actual, -expected, rel <= 1e-6);
     }
 
     #[rstest]
-    #[case(time!(Tai, 1973, 1, 1).unwrap(), Err(ExtrapolatedDeltaUt1Tai {
+    #[case(time!(Tai, 1973, 1, 1).unwrap().to_delta(), Err(ExtrapolatedDeltaUt1Tai {
         req_date: Date::new(1973, 1, 1).unwrap(),
         min_date: Date::new(1973, 1, 2).unwrap(),
         max_date: Date::new(2025, 3, 15).unwrap(),
         extrapolated_value: TimeDelta::from_decimal_seconds(-11.188739245677642).unwrap(),
     }))]
-    #[case(time!(Tai, 2025, 3, 16).unwrap(), Err(ExtrapolatedDeltaUt1Tai {
+    #[case(time!(Tai, 2025, 3, 16).unwrap().to_delta(), Err(ExtrapolatedDeltaUt1Tai {
         req_date: Date::new(2025, 3, 16).unwrap(),
         min_date: Date::new(1973, 1, 2).unwrap(),
         max_date: Date::new(2025, 3, 15).unwrap(),
         extrapolated_value: TimeDelta::from_decimal_seconds(-36.98893121380733).unwrap(),
     }))]
     fn test_delta_ut1_tai_extrapolation(
-        #[case] time: Time<Tai>,
+        #[case] time: TimeDelta,
         #[case] expected: Result<TimeDelta, ExtrapolatedDeltaUt1Tai>,
     ) {
         let provider = delta_ut1_tai();
@@ -291,31 +297,17 @@ mod tests {
             .extrapolated_value
             .to_decimal_seconds();
         let actual = provider
-            .delta_ut1_tai(&time)
+            .delta_ut1_tai(time)
             .unwrap_err()
             .extrapolated_value
             .to_decimal_seconds();
         assert_float_eq!(actual, expected, rel <= 1e-8);
         let ut1 = time.with_scale_and_delta(Ut1, TimeDelta::from_decimal_seconds(actual).unwrap());
         let actual = provider
-            .delta_tai_ut1(&ut1)
+            .delta_tai_ut1(ut1)
             .unwrap_err()
             .extrapolated_value
             .to_decimal_seconds();
         assert_float_eq!(actual, -expected, rel <= 1e-8);
-    }
-
-    fn delta_ut1_tai() -> &'static DeltaUt1Tai {
-        static PROVIDER: OnceLock<DeltaUt1Tai> = OnceLock::new();
-        PROVIDER.get_or_init(|| {
-            DeltaUt1Tai::new(
-                format!(
-                    "{}/../../data/finals2000A.all.csv",
-                    env!("CARGO_MANIFEST_DIR")
-                ),
-                &BuiltinLeapSeconds,
-            )
-            .unwrap()
-        })
     }
 }

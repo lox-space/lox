@@ -20,16 +20,33 @@ use itertools::Itertools;
 use num::ToPrimitive;
 use thiserror::Error;
 
+use self::leap_seconds::BuiltinLeapSeconds;
 use crate::calendar_dates::{CalendarDate, Date, DateError};
 use crate::deltas::{TimeDelta, ToDelta};
 use crate::julian_dates::JulianDate;
+use crate::prelude::Tai;
 use crate::time_of_day::{CivilTime, TimeOfDay, TimeOfDayError};
-use crate::transformations::LeapSecondsProvider;
-
-use self::leap_seconds::BuiltinLeapSeconds;
+use crate::time_scales::transformations::OffsetProvider;
+use crate::Time;
 
 pub mod leap_seconds;
 pub mod transformations;
+
+/// Implementers of `LeapSecondsProvider` provide the offset between TAI and UTC in leap seconds at
+/// an instant in either time scale.
+pub trait LeapSecondsProvider: OffsetProvider {
+    /// The difference in leap seconds between TAI and UTC at the given TAI instant.
+    fn delta_tai_utc(&self, tai: Time<Tai>) -> Option<TimeDelta>;
+
+    /// The difference in leap seconds between UTC and TAI at the given UTC instant.
+    fn delta_utc_tai(&self, utc: Utc) -> Option<TimeDelta>;
+
+    /// Returns `true` if a leap second occurs on `date`.
+    fn is_leap_second_date(&self, date: Date) -> bool;
+
+    /// Returns `true` if a leap second occurs at `tai`.
+    fn is_leap_second(&self, tai: Time<Tai>) -> bool;
+}
 
 /// Error type returned when attempting to construct a [Utc] instance from invalid inputs.
 #[derive(Debug, Clone, Error, PartialEq, Eq, PartialOrd, Ord)]
