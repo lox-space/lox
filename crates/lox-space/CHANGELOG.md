@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.10](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.9...lox-space-v0.1.0-alpha.10) - 2024-12-19
+
+### Other
+
+- updated the following local packages: lox-bodies, lox-orbits
+
 ## [0.1.0-alpha.9](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.8...lox-space-v0.1.0-alpha.9) - 2024-12-18
 
 ### Other

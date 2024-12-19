@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.3](https://github.com/lox-space/lox/compare/lox-bodies-v0.1.0-alpha.2...lox-bodies-v0.1.0-alpha.3) - 2024-12-19
+
+### Other
+
+- prefer `Result` over `Option` for `Origin` props
+
 ## [0.1.0-alpha.2](https://github.com/lox-space/lox/compare/lox-bodies-v0.1.0-alpha.1...lox-bodies-v0.1.0-alpha.2) - 2024-12-18
 
 ### Other
