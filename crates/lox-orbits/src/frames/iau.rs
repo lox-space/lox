@@ -7,7 +7,7 @@
  */
 use crate::rotations::Rotation;
 use glam::{DMat3, DVec3};
-use lox_bodies::{TryRotationalElements, UndefinedRotationalElementsError};
+use lox_bodies::{TryRotationalElements, UndefinedOriginPropertyError};
 use lox_time::julian_dates::JulianDate;
 use lox_time::time_scales::Tdb;
 use lox_time::transformations::{OffsetProvider, TryToScale};
@@ -18,7 +18,7 @@ use thiserror::Error;
 #[derive(Clone, Debug, Error)]
 pub enum IcrfToBodyFixedError {
     #[error(transparent)]
-    UndefinedRotationalElements(#[from] UndefinedRotationalElementsError),
+    UndefinedRotationalElements(#[from] UndefinedOriginPropertyError),
     #[error("time error: {0}")]
     TimeError(String),
 }

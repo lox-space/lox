@@ -245,9 +245,7 @@ impl PyState {
                 "only inertial frames are supported for conversion to Keplerian elements",
             ));
         }
-        Ok(PyKeplerian(
-            self.0.try_to_keplerian().map_err(PyValueError::new_err)?,
-        ))
+        Ok(PyKeplerian(self.0.try_to_keplerian()?))
     }
 
     fn rotation_lvlh<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyArray2<f64>>> {

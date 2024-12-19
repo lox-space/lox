@@ -11,7 +11,7 @@ use std::f64::consts::TAU;
 use float_eq::float_eq;
 use glam::{DMat3, DVec3};
 
-use lox_bodies::{DynOrigin, MaybePointMass, PointMass};
+use lox_bodies::{DynOrigin, PointMass, TryPointMass, UndefinedOriginPropertyError};
 use lox_time::deltas::TimeDelta;
 use lox_time::TimeLike;
 
@@ -29,7 +29,7 @@ pub(crate) struct KeplerianElements {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Keplerian<T: TimeLike, O: MaybePointMass, R: ReferenceFrame> {
+pub struct Keplerian<T: TimeLike, O: TryPointMass, R: ReferenceFrame> {
     time: T,
     origin: O,
     frame: R,
@@ -87,10 +87,8 @@ where
         longitude_of_ascending_node: f64,
         argument_of_periapsis: f64,
         true_anomaly: f64,
-    ) -> Result<Self, &'static str> {
-        if origin.maybe_gravitational_parameter().is_none() {
-            return Err("undefined gravitational parameter");
-        }
+    ) -> Result<Self, UndefinedOriginPropertyError> {
+        let _ = origin.try_gravitational_parameter()?;
         Ok(Self {
             time,
             origin,
@@ -108,7 +106,7 @@ where
 impl<T, O, R> Keplerian<T, O, R>
 where
     T: TimeLike,
-    O: MaybePointMass,
+    O: TryPointMass,
     R: ReferenceFrame,
 {
     pub fn origin(&self) -> O
@@ -127,7 +125,7 @@ where
 
     pub fn gravitational_parameter(&self) -> f64 {
         self.origin
-            .maybe_gravitational_parameter()
+            .try_gravitational_parameter()
             .expect("gravitational parameter should be available")
     }
 
@@ -182,7 +180,7 @@ where
     }
 }
 
-impl<T: TimeLike, O: MaybePointMass, R: ReferenceFrame + Clone> CoordinateSystem<R>
+impl<T: TimeLike, O: TryPointMass, R: ReferenceFrame + Clone> CoordinateSystem<R>
     for Keplerian<T, O, R>
 {
     fn reference_frame(&self) -> R {
@@ -193,7 +191,7 @@ impl<T: TimeLike, O: MaybePointMass, R: ReferenceFrame + Clone> CoordinateSystem
 impl<T, O, R> Keplerian<T, O, R>
 where
     T: TimeLike + Clone,
-    O: MaybePointMass + Clone,
+    O: TryPointMass + Clone,
     R: ReferenceFrame + Clone,
 {
     pub(crate) fn to_cartesian(&self) -> State<T, O, R> {

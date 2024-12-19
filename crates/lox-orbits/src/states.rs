@@ -8,7 +8,8 @@
 use glam::{DMat3, DVec3};
 use itertools::Itertools;
 use lox_bodies::{
-    DynOrigin, MaybePointMass, MaybeSpheroid, Origin, PointMass, RotationalElements, Spheroid,
+    DynOrigin, Origin, PointMass, RotationalElements, Spheroid, TryPointMass, TrySpheroid,
+    UndefinedOriginPropertyError,
 };
 use lox_ephem::{path_from_ids, Ephemeris};
 use lox_math::glam::Azimuth;
@@ -179,9 +180,9 @@ impl<T: TimeLike + Clone> DynState<T> {
         }
         let r = self.position();
         // TODO: Check/transform frame
-        let (Some(r_eq), Some(f)) = (
-            self.origin.maybe_equatorial_radius(),
-            self.origin.maybe_flattening(),
+        let (Ok(r_eq), Ok(f)) = (
+            self.origin.try_equatorial_radius(),
+            self.origin.try_flattening(),
         ) else {
             return Err(StateToDynGroundError::UndefinedSpheroid(self.origin));
         };
@@ -420,10 +421,8 @@ impl<T> DynState<T>
 where
     T: TimeLike + Clone,
 {
-    pub fn try_to_keplerian(&self) -> Result<DynKeplerian<T>, &'static str> {
-        let Some(mu) = self.origin.maybe_gravitational_parameter() else {
-            return Err("no gravitational parameter");
-        };
+    pub fn try_to_keplerian(&self) -> Result<DynKeplerian<T>, UndefinedOriginPropertyError> {
+        let mu = self.origin.try_gravitational_parameter()?;
 
         let r = self.position();
         let v = self.velocity();

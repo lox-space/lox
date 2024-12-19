@@ -7,7 +7,7 @@ use std::f64::consts::PI;
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
-use lox_bodies::{MaybeSpheroid, Origin, RotationalElements, Spheroid};
+use lox_bodies::{Origin, RotationalElements, Spheroid, TrySpheroid};
 use lox_math::roots::Brent;
 use lox_math::series::{Series, SeriesError};
 use lox_math::types::units::Radians;
@@ -115,7 +115,7 @@ pub fn visibility_dyn<T: TimeLike + TryToScale<Tdb, P> + Clone, P: FrameTransfor
 
 pub fn elevation<
     T: TimeLike + TryToScale<Tdb, P> + Clone,
-    O: Origin + MaybeSpheroid + RotationalElements + Clone,
+    O: Origin + TrySpheroid + RotationalElements + Clone,
     P: FrameTransformationProvider,
 >(
     time: T,

@@ -1007,10 +1007,6 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
     let mut code = quote! {
         use crate::DynOrigin;
         use crate::Elements;
-        use crate::MaybeMeanRadius;
-        use crate::MaybePointMass;
-        use crate::MaybeSpheroid;
-        use crate::MaybeTriaxialEllipsoid;
         use crate::MeanRadius;
         use crate::NaifId;
         use crate::NutationPrecessionCoefficients;
@@ -1022,8 +1018,12 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
         use crate::RotationalElements;
         use crate::Spheroid;
         use crate::TriaxialEllipsoid;
+        use crate::TryMeanRadius;
+        use crate::TryPointMass;
         use crate::TryRotationalElements;
-        use crate::UndefinedRotationalElementsError;
+        use crate::TrySpheroid;
+        use crate::TryTriaxialEllipsoid;
+        use crate::UndefinedOriginPropertyError;
         use std::fmt::Display;
         use std::fmt::Formatter;
     };
@@ -1088,7 +1088,7 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
             });
 
             point_mass_match_arms.extend(quote! {
-                DynOrigin::#ident => Some(#gm),
+                DynOrigin::#ident => Ok(#gm),
             });
         };
 
@@ -1107,7 +1107,7 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
             });
 
             mean_radius_match_arms.extend(quote! {
-                DynOrigin::#ident => Some(#mean_radius),
+                DynOrigin::#ident => Ok(#mean_radius),
             })
         }
 
@@ -1130,7 +1130,7 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
             }
 
             ellipsoid_match_arms.extend(quote! {
-                DynOrigin::#ident => Some((#(#radii),*)),
+                DynOrigin::#ident => Ok((#(#radii),*)),
             })
         }
 
@@ -1291,47 +1291,72 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
     code.extend(nut_prec_constants);
 
     code.extend(quote! {
-        impl MaybePointMass for DynOrigin {
-            fn maybe_gravitational_parameter(&self) -> Option<f64> {
+        impl TryPointMass for DynOrigin {
+            fn try_gravitational_parameter(&self) -> Result<f64, UndefinedOriginPropertyError> {
                 match self {
                     #point_mass_match_arms
-                    _ => None,
+                    _ => Err(
+                        UndefinedOriginPropertyError {
+                            origin: self.to_string(),
+                            prop: "gravitational parameter".to_string(),
+                        }
+                    ),
                 }
             }
         }
-        impl MaybeMeanRadius for DynOrigin {
-            fn maybe_mean_radius(&self) -> Option<f64> {
+        impl TryMeanRadius for DynOrigin {
+            fn try_mean_radius(&self) -> Result<f64, UndefinedOriginPropertyError> {
                 match self {
                     #mean_radius_match_arms
-                    _ => None,
+                    _ => Err(
+                        UndefinedOriginPropertyError {
+                            origin: self.to_string(),
+                            prop: "mean radius".to_string(),
+                        }
+                    ),
                 }
             }
         }
-        impl MaybeTriaxialEllipsoid for DynOrigin {
-            fn maybe_radii(&self) -> Option<Radii> {
+        impl TryTriaxialEllipsoid for DynOrigin {
+            fn try_radii(&self) -> Result<Radii, UndefinedOriginPropertyError> {
                 match self {
                     #ellipsoid_match_arms
-                    _ => None,
+                    _ => Err(
+                        UndefinedOriginPropertyError {
+                            origin: self.to_string(),
+                            prop: "radii".to_string(),
+                        }
+                    ),
                 }
             }
         }
-        impl MaybeSpheroid for DynOrigin {}
+        impl TrySpheroid for DynOrigin {}
         impl TryRotationalElements for DynOrigin {
             fn try_rotational_elements(&self, t: f64)
-                -> Result<Elements, UndefinedRotationalElementsError> {
+                -> Result<Elements, UndefinedOriginPropertyError> {
                 match self {
                     #rotational_elements_match_arms
-                    _ => Err(UndefinedRotationalElementsError(self.name().to_string())),
+                    _ => Err(
+                        UndefinedOriginPropertyError {
+                            origin: self.to_string(),
+                            prop: "rotational elements".to_string(),
+                        }
+                    ),
                 }
             }
 
             fn try_rotational_element_rates(
                 &self,
                 t: f64,
-            ) -> Result<Elements, UndefinedRotationalElementsError> {
+            ) -> Result<Elements, UndefinedOriginPropertyError> {
                 match self {
                     #rotational_element_rates_match_arms
-                    _ => Err(UndefinedRotationalElementsError(self.name().to_string())),
+                    _ => Err(
+                        UndefinedOriginPropertyError {
+                            origin: self.to_string(),
+                            prop: "rotational element rates".to_string(),
+                        }
+                    ),
                 }
             }
         }
