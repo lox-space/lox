@@ -5,3 +5,4 @@
 flamegraph.svg
 .mise.local.toml
 .codspeed/
+.idea/
