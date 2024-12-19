@@ -35,9 +35,9 @@ def test_state_to_ground_location():
         np.array([-3.53237875783652, -3.152377656863808, 5.642296713889555]),
     )
     ground = state.to_ground_location()
-    assert ground.longitude() == pytest.approx(2.643578045424445, rel=1e-4)
-    assert ground.latitude() == pytest.approx(-0.2794439537542346, abs=1e-4)
-    assert ground.altitude() == pytest.approx(439.2316688043311, rel=1e-4)
+    assert ground.longitude() == pytest.approx(2.643578045424445)
+    assert ground.latitude() == pytest.approx(-0.27944957125091063)
+    assert ground.altitude() == pytest.approx(417.8524151150059)
 
 
 def test_state_to_origin(ephemeris):

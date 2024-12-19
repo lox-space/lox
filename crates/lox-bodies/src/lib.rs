@@ -78,11 +78,11 @@ pub trait Spheroid: TriaxialEllipsoid {
 
 pub trait TrySpheroid: TryTriaxialEllipsoid {
     fn try_equatorial_radius(&self) -> Result<f64, UndefinedOriginPropertyError> {
-        self.try_radii().map(|radii| radii.2)
+        self.try_radii().map(|radii| radii.0)
     }
 
     fn try_polar_radius(&self) -> Result<f64, UndefinedOriginPropertyError> {
-        self.try_radii().map(|radii| radii.0)
+        self.try_radii().map(|radii| radii.2)
     }
 
     fn try_flattening(&self) -> Result<f64, UndefinedOriginPropertyError> {
