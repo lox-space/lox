@@ -90,6 +90,8 @@ jobs:
             target: x86
     steps:
       - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
       - uses: actions/setup-python@v5
         with:
           python-version: 3.x
@@ -112,8 +114,8 @@ jobs:
           set -e
           python3 -m venv .venv
           source .venv/Scripts/activate
-          pip install lox-space --find-links dist --force-reinstall 
-          pip install pytest pytest-codspeed
+          uv pip install lox-space --find-links dist --force-reinstall 
+          uv pip install pytest pytest-codspeed
           cd crates/lox-space && pytest
 
   macos:
@@ -127,6 +129,8 @@ jobs:
             target: aarch64
     steps:
       - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
       - uses: actions/setup-python@v5
         with:
           python-version: 3.x
@@ -146,8 +150,8 @@ jobs:
           set -e
           python3 -m venv .venv
           source .venv/bin/activate
-          pip install lox-space --find-links dist --force-reinstall 
-          pip install pytest pytest-codspeed
+          uv pip install lox-space --find-links dist --force-reinstall 
+          uv pip install pytest pytest-codspeed
           cd crates/lox-space && pytest
 
   sdist:
