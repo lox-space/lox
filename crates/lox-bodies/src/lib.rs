@@ -35,38 +35,31 @@ pub trait Origin {
     fn name(&self) -> &'static str;
 }
 
+#[derive(Clone, Debug, Error, Eq, PartialEq)]
+#[error("undefined property '{prop}' for origin '{origin}'")]
+pub struct UndefinedOriginPropertyError {
+    origin: String,
+    prop: String,
+}
+
 pub type Radii = (f64, f64, f64);
 
-pub trait MaybeTriaxialEllipsoid: Origin {
-    fn maybe_radii(&self) -> Option<Radii>;
+pub trait TryTriaxialEllipsoid: Origin {
+    fn try_radii(&self) -> Result<Radii, UndefinedOriginPropertyError>;
 }
 
 pub trait TriaxialEllipsoid: Origin {
     fn radii(&self) -> Radii;
 }
 
-impl<T: TriaxialEllipsoid> MaybeTriaxialEllipsoid for T {
-    fn maybe_radii(&self) -> Option<Radii> {
-        Some(self.radii())
+impl<T: TriaxialEllipsoid> TryTriaxialEllipsoid for T {
+    fn try_radii(&self) -> Result<Radii, UndefinedOriginPropertyError> {
+        Ok(self.radii())
     }
 }
 
 fn flattening(equatorial_radius: f64, polar_radius: f64) -> f64 {
     (equatorial_radius - polar_radius) / equatorial_radius
-}
-
-pub trait MaybeSpheroid: MaybeTriaxialEllipsoid {
-    fn maybe_polar_radius(&self) -> Option<f64> {
-        self.maybe_radii().map(|radii| radii.0)
-    }
-
-    fn maybe_equatorial_radius(&self) -> Option<f64> {
-        self.maybe_radii().map(|radii| radii.2)
-    }
-
-    fn maybe_flattening(&self) -> Option<f64> {
-        self.maybe_radii().map(|radii| flattening(radii.0, radii.2))
-    }
 }
 
 pub trait Spheroid: TriaxialEllipsoid {
@@ -83,31 +76,45 @@ pub trait Spheroid: TriaxialEllipsoid {
     }
 }
 
-impl<T: Spheroid> MaybeSpheroid for T {
-    fn maybe_polar_radius(&self) -> Option<f64> {
-        Some(self.polar_radius())
+pub trait TrySpheroid: TryTriaxialEllipsoid {
+    fn try_equatorial_radius(&self) -> Result<f64, UndefinedOriginPropertyError> {
+        self.try_radii().map(|radii| radii.2)
     }
 
-    fn maybe_equatorial_radius(&self) -> Option<f64> {
-        Some(self.equatorial_radius())
+    fn try_polar_radius(&self) -> Result<f64, UndefinedOriginPropertyError> {
+        self.try_radii().map(|radii| radii.0)
     }
 
-    fn maybe_flattening(&self) -> Option<f64> {
-        Some(self.flattening())
+    fn try_flattening(&self) -> Result<f64, UndefinedOriginPropertyError> {
+        self.try_radii().map(|radii| flattening(radii.0, radii.2))
     }
 }
 
-pub trait MaybeMeanRadius: Origin {
-    fn maybe_mean_radius(&self) -> Option<f64>;
+impl<T: Spheroid> TrySpheroid for T {
+    fn try_equatorial_radius(&self) -> Result<f64, UndefinedOriginPropertyError> {
+        Ok(self.equatorial_radius())
+    }
+
+    fn try_polar_radius(&self) -> Result<f64, UndefinedOriginPropertyError> {
+        Ok(self.polar_radius())
+    }
+
+    fn try_flattening(&self) -> Result<f64, UndefinedOriginPropertyError> {
+        Ok(self.flattening())
+    }
+}
+
+pub trait TryMeanRadius: Origin {
+    fn try_mean_radius(&self) -> Result<f64, UndefinedOriginPropertyError>;
 }
 
 pub trait MeanRadius: Origin {
     fn mean_radius(&self) -> f64;
 }
 
-impl<T: MeanRadius> MaybeMeanRadius for T {
-    fn maybe_mean_radius(&self) -> Option<f64> {
-        Some(self.mean_radius())
+impl<T: MeanRadius> TryMeanRadius for T {
+    fn try_mean_radius(&self) -> Result<f64, UndefinedOriginPropertyError> {
+        Ok(self.mean_radius())
     }
 }
 
@@ -115,13 +122,13 @@ pub trait PointMass: Origin {
     fn gravitational_parameter(&self) -> f64;
 }
 
-pub trait MaybePointMass: Origin {
-    fn maybe_gravitational_parameter(&self) -> Option<f64>;
+pub trait TryPointMass: Origin {
+    fn try_gravitational_parameter(&self) -> Result<f64, UndefinedOriginPropertyError>;
 }
 
-impl<T: PointMass> MaybePointMass for T {
-    fn maybe_gravitational_parameter(&self) -> Option<f64> {
-        Some(self.gravitational_parameter())
+impl<T: PointMass> TryPointMass for T {
+    fn try_gravitational_parameter(&self) -> Result<f64, UndefinedOriginPropertyError> {
+        Ok(self.gravitational_parameter())
     }
 }
 
@@ -273,56 +280,48 @@ pub trait RotationalElements: Origin {
     }
 }
 
-#[derive(Clone, Debug, Error, Eq, PartialEq)]
-#[error("no rotational elements defined for origin `{0}`")]
-pub struct UndefinedRotationalElementsError(String);
-
 pub trait TryRotationalElements: Origin {
-    fn try_rotational_elements(&self, t: f64)
-        -> Result<Elements, UndefinedRotationalElementsError>;
+    fn try_rotational_elements(&self, t: f64) -> Result<Elements, UndefinedOriginPropertyError>;
 
     fn try_rotational_element_rates(
         &self,
         t: f64,
-    ) -> Result<Elements, UndefinedRotationalElementsError>;
+    ) -> Result<Elements, UndefinedOriginPropertyError>;
 
-    fn try_right_ascension(&self, t: f64) -> Result<f64, UndefinedRotationalElementsError> {
+    fn try_right_ascension(&self, t: f64) -> Result<f64, UndefinedOriginPropertyError> {
         self.try_rotational_elements(t).map(|r| r.0)
     }
 
-    fn try_right_ascension_rate(&self, t: f64) -> Result<f64, UndefinedRotationalElementsError> {
+    fn try_right_ascension_rate(&self, t: f64) -> Result<f64, UndefinedOriginPropertyError> {
         self.try_rotational_element_rates(t).map(|r| r.0)
     }
 
-    fn try_declination(&self, t: f64) -> Result<f64, UndefinedRotationalElementsError> {
+    fn try_declination(&self, t: f64) -> Result<f64, UndefinedOriginPropertyError> {
         self.try_rotational_elements(t).map(|r| r.1)
     }
 
-    fn try_declination_rate(&self, t: f64) -> Result<f64, UndefinedRotationalElementsError> {
+    fn try_declination_rate(&self, t: f64) -> Result<f64, UndefinedOriginPropertyError> {
         self.try_rotational_element_rates(t).map(|r| r.1)
     }
 
-    fn try_rotation_angle(&self, t: f64) -> Result<f64, UndefinedRotationalElementsError> {
+    fn try_rotation_angle(&self, t: f64) -> Result<f64, UndefinedOriginPropertyError> {
         self.try_rotational_elements(t).map(|r| r.2)
     }
 
-    fn try_rotation_rate(&self, t: f64) -> Result<f64, UndefinedRotationalElementsError> {
+    fn try_rotation_rate(&self, t: f64) -> Result<f64, UndefinedOriginPropertyError> {
         self.try_rotational_element_rates(t).map(|r| r.2)
     }
 }
 
 impl<T: RotationalElements> TryRotationalElements for T {
-    fn try_rotational_elements(
-        &self,
-        t: f64,
-    ) -> Result<Elements, UndefinedRotationalElementsError> {
+    fn try_rotational_elements(&self, t: f64) -> Result<Elements, UndefinedOriginPropertyError> {
         Ok(self.rotational_elements(t))
     }
 
     fn try_rotational_element_rates(
         &self,
         t: f64,
-    ) -> Result<Elements, UndefinedRotationalElementsError> {
+    ) -> Result<Elements, UndefinedOriginPropertyError> {
         Ok(self.rotational_element_rates(t))
     }
 }

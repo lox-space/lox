@@ -11,7 +11,7 @@ use std::f64::consts::FRAC_PI_2;
 use glam::{DMat3, DVec3};
 use thiserror::Error;
 
-use lox_bodies::{DynOrigin, MaybeSpheroid, RotationalElements, Spheroid};
+use lox_bodies::{DynOrigin, RotationalElements, Spheroid, TrySpheroid};
 use lox_math::types::units::Radians;
 use lox_time::prelude::Tdb;
 use lox_time::transformations::TryToScale;
@@ -61,7 +61,7 @@ impl Observables {
 }
 
 #[derive(Clone, Debug)]
-pub struct GroundLocation<B: MaybeSpheroid> {
+pub struct GroundLocation<B: TrySpheroid> {
     longitude: f64,
     latitude: f64,
     altitude: f64,
@@ -88,7 +88,7 @@ impl DynGroundLocation {
         altitude: f64,
         body: DynOrigin,
     ) -> Result<Self, &'static str> {
-        if body.maybe_equatorial_radius().is_none() {
+        if body.try_equatorial_radius().is_err() {
             return Err("no spheroid");
         }
         Ok(GroundLocation {
@@ -100,7 +100,7 @@ impl DynGroundLocation {
     }
 }
 
-impl<B: MaybeSpheroid> GroundLocation<B> {
+impl<B: TrySpheroid> GroundLocation<B> {
     pub fn origin(&self) -> B
     where
         B: Clone,
@@ -122,13 +122,13 @@ impl<B: MaybeSpheroid> GroundLocation<B> {
 
     fn equatorial_radius(&self) -> f64 {
         self.body
-            .maybe_equatorial_radius()
+            .try_equatorial_radius()
             .expect("equatorial radius should be available")
     }
 
     fn flattening(&self) -> f64 {
         self.body
-            .maybe_flattening()
+            .try_flattening()
             .expect("flattening should be available")
     }
 
@@ -198,7 +198,7 @@ pub enum GroundPropagatorError {
     IcrfToBodyFixedError(#[from] IcrfToBodyFixedError),
 }
 
-pub struct GroundPropagator<B: MaybeSpheroid, R: ReferenceFrame, P: FrameTransformationProvider> {
+pub struct GroundPropagator<B: TrySpheroid, R: ReferenceFrame, P: FrameTransformationProvider> {
     location: GroundLocation<B>,
     frame: R,
     // FIXME: We should not take ownership of the provider here

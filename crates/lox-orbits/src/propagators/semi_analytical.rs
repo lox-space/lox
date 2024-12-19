@@ -8,7 +8,7 @@
 
 use thiserror::Error;
 
-use lox_bodies::{DynOrigin, MaybePointMass, Origin, PointMass};
+use lox_bodies::{DynOrigin, Origin, PointMass, TryPointMass};
 use lox_time::TimeLike;
 
 use crate::frames::{CoordinateSystem, DynFrame, Icrf, ReferenceFrame};
@@ -44,13 +44,13 @@ where
 impl<T, O, R> Vallado<T, O, R>
 where
     T: TimeLike,
-    O: MaybePointMass + Clone,
+    O: TryPointMass + Clone,
     R: ReferenceFrame,
 {
     fn gravitational_parameter(&self) -> f64 {
         self.initial_state
             .origin()
-            .maybe_gravitational_parameter()
+            .try_gravitational_parameter()
             .expect("gravitational parameter should be available")
     }
 
@@ -88,8 +88,8 @@ where
     pub fn with_dynamic(initial_state: DynState<T>) -> Result<Self, &'static str> {
         if initial_state
             .origin()
-            .maybe_gravitational_parameter()
-            .is_none()
+            .try_gravitational_parameter()
+            .is_err()
             || initial_state.reference_frame() != DynFrame::Icrf
         {
             return Err("invalid frame or origin");
@@ -104,7 +104,7 @@ where
 impl<T, O, R> Propagator<T, O, R> for Vallado<T, O, R>
 where
     T: TimeLike + Clone,
-    O: MaybePointMass + Clone,
+    O: TryPointMass + Clone,
     R: ReferenceFrame + Clone,
 {
     type Error = ValladoError;
