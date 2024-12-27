@@ -12,7 +12,6 @@ use crate::DynOrigin;
 use crate::Elements;
 use crate::MeanRadius;
 use crate::NaifId;
-use crate::NutationPrecessionCoefficients;
 use crate::Origin;
 use crate::PointMass;
 use crate::Radii;
@@ -60,35 +59,41 @@ const RIGHT_ASCENSION_SUN: RotationalElement<0usize> = RotationalElement {
     c0: 4.993910588731375f64,
     c1: 0f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const DECLINATION_SUN: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 1.1147417932487782f64,
     c1: 0f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const ROTATION_SUN: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 1.4691483511587469f64,
     c1: 0.24756448241988369f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 impl RotationalElements for Sun {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_SUN.angle::<0usize>(None, t),
-            DECLINATION_SUN.angle::<0usize>(None, t),
-            ROTATION_SUN.angle::<0usize>(None, t),
+            RIGHT_ASCENSION_SUN.angle(t),
+            DECLINATION_SUN.angle(t),
+            ROTATION_SUN.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_SUN.angle_dot::<0usize>(None, t),
-            DECLINATION_SUN.angle_dot::<0usize>(None, t),
-            ROTATION_SUN.angle_dot::<0usize>(None, t),
+            RIGHT_ASCENSION_SUN.angle_dot(t),
+            DECLINATION_SUN.angle_dot(t),
+            ROTATION_SUN.angle_dot(t),
         )
     }
 }
@@ -128,41 +133,83 @@ const RIGHT_ASCENSION_MERCURY: RotationalElement<5usize> = RotationalElement {
     c0: 4.904554967017021f64,
     c1: -0.0005724679946541401f64,
     c2: 0f64,
-    c: Some([0f64, 0f64, 0f64, 0f64, 0f64]),
+    c: [0f64, 0f64, 0f64, 0f64, 0f64],
+    theta0: [
+        3.0506799486005773f64,
+        6.101359897201155f64,
+        2.868854538622146f64,
+        5.919534488968053f64,
+        2.6870291303890443f64,
+    ],
+    theta1: [
+        2608.7878923240937f64,
+        5217.575784648187f64,
+        7826.363676972282f64,
+        10435.151569296375f64,
+        13043.939461620466f64,
+    ],
 };
 const DECLINATION_MERCURY: RotationalElement<5usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 1.0719026867585775f64,
     c1: -0.00008552113334772214f64,
     c2: 0f64,
-    c: Some([0f64, 0f64, 0f64, 0f64, 0f64]),
+    c: [0f64, 0f64, 0f64, 0f64, 0f64],
+    theta0: [
+        3.0506799486005773f64,
+        6.101359897201155f64,
+        2.868854538622146f64,
+        5.919534488968053f64,
+        2.6870291303890443f64,
+    ],
+    theta1: [
+        2608.7878923240937f64,
+        5217.575784648187f64,
+        7826.363676972282f64,
+        10435.151569296375f64,
+        13043.939461620466f64,
+    ],
 };
 const ROTATION_MERCURY: RotationalElement<5usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 5.752584270622286f64,
     c1: 0.10713722462923113f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0.0001862714861495712f64,
         -0.000019601618296223117f64,
         -0.00000192684349420174f64,
         -0.00000044313909708136026f64,
         -0.00000009965830028887623f64,
-    ]),
+    ],
+    theta0: [
+        3.0506799486005773f64,
+        6.101359897201155f64,
+        2.868854538622146f64,
+        5.919534488968053f64,
+        2.6870291303890443f64,
+    ],
+    theta1: [
+        2608.7878923240937f64,
+        5217.575784648187f64,
+        7826.363676972282f64,
+        10435.151569296375f64,
+        13043.939461620466f64,
+    ],
 };
 impl RotationalElements for Mercury {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_MERCURY.angle::<5usize>(Some(&NUTATION_PRECESSION_MERCURY), t),
-            DECLINATION_MERCURY.angle::<5usize>(Some(&NUTATION_PRECESSION_MERCURY), t),
-            ROTATION_MERCURY.angle::<5usize>(Some(&NUTATION_PRECESSION_MERCURY), t),
+            RIGHT_ASCENSION_MERCURY.angle(t),
+            DECLINATION_MERCURY.angle(t),
+            ROTATION_MERCURY.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_MERCURY.angle_dot::<5usize>(Some(&NUTATION_PRECESSION_MERCURY), t),
-            DECLINATION_MERCURY.angle_dot::<5usize>(Some(&NUTATION_PRECESSION_MERCURY), t),
-            ROTATION_MERCURY.angle_dot::<5usize>(Some(&NUTATION_PRECESSION_MERCURY), t),
+            RIGHT_ASCENSION_MERCURY.angle_dot(t),
+            DECLINATION_MERCURY.angle_dot(t),
+            ROTATION_MERCURY.angle_dot(t),
         )
     }
 }
@@ -202,35 +249,41 @@ const RIGHT_ASCENSION_VENUS: RotationalElement<0usize> = RotationalElement {
     c0: 4.760560067739733f64,
     c1: 0f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const DECLINATION_VENUS: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 1.1721631256393916f64,
     c1: 0f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const ROTATION_VENUS: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 2.7960174616949156f64,
     c1: -0.025854762996317376f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 impl RotationalElements for Venus {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_VENUS.angle::<0usize>(None, t),
-            DECLINATION_VENUS.angle::<0usize>(None, t),
-            ROTATION_VENUS.angle::<0usize>(None, t),
+            RIGHT_ASCENSION_VENUS.angle(t),
+            DECLINATION_VENUS.angle(t),
+            ROTATION_VENUS.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_VENUS.angle_dot::<0usize>(None, t),
-            DECLINATION_VENUS.angle_dot::<0usize>(None, t),
-            ROTATION_VENUS.angle_dot::<0usize>(None, t),
+            RIGHT_ASCENSION_VENUS.angle_dot(t),
+            DECLINATION_VENUS.angle_dot(t),
+            ROTATION_VENUS.angle_dot(t),
         )
     }
 }
@@ -270,35 +323,41 @@ const RIGHT_ASCENSION_EARTH: RotationalElement<0usize> = RotationalElement {
     c0: 0f64,
     c1: -0.011187560505283653f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const DECLINATION_EARTH: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 1.5707963267948966f64,
     c1: -0.009721483933608416f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const ROTATION_EARTH: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 3.3186912127896577f64,
     c1: 6.3003876824396166f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 impl RotationalElements for Earth {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_EARTH.angle::<13usize>(Some(&NUTATION_PRECESSION_EARTH), t),
-            DECLINATION_EARTH.angle::<13usize>(Some(&NUTATION_PRECESSION_EARTH), t),
-            ROTATION_EARTH.angle::<13usize>(Some(&NUTATION_PRECESSION_EARTH), t),
+            RIGHT_ASCENSION_EARTH.angle(t),
+            DECLINATION_EARTH.angle(t),
+            ROTATION_EARTH.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_EARTH.angle_dot::<13usize>(Some(&NUTATION_PRECESSION_EARTH), t),
-            DECLINATION_EARTH.angle_dot::<13usize>(Some(&NUTATION_PRECESSION_EARTH), t),
-            ROTATION_EARTH.angle_dot::<13usize>(Some(&NUTATION_PRECESSION_EARTH), t),
+            RIGHT_ASCENSION_EARTH.angle_dot(t),
+            DECLINATION_EARTH.angle_dot(t),
+            ROTATION_EARTH.angle_dot(t),
         )
     }
 }
@@ -338,7 +397,7 @@ const RIGHT_ASCENSION_MARS: RotationalElement<15usize> = RotationalElement {
     c0: 5.5373921900749785f64,
     c1: -0.001907216743164288f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -354,14 +413,48 @@ const RIGHT_ASCENSION_MARS: RotationalElement<15usize> = RotationalElement {
         0.0000009075712110370513f64,
         0.00000015707963267948966f64,
         0.007313924403529878f64,
-    ]),
+    ],
+    theta0: [
+        3.328804809897935f64,
+        0.37470342287773584f64,
+        5.809517398292802f64,
+        6.892873571600945f64,
+        3.3097152567180146f64,
+        2.120032883264378f64,
+        4.032588225058434f64,
+        4.387288948439982f64,
+        3.8045796985836846f64,
+        3.424288764152381f64,
+        3.4730520762801462f64,
+        3.9495523217086292f64,
+        4.357448194643978f64,
+        4.645778664015252f64,
+        1.3857704297725961f64,
+    ],
+    theta1: [
+        277.80594525842264f64,
+        555.6129894920322f64,
+        334.05422022489097f64,
+        668.125936040531f64,
+        719340.2120445863f64,
+        11.523153020184504f64,
+        11.536473384554899f64,
+        23.047098122619843f64,
+        668.1113614443373f64,
+        334.05316148477937f64,
+        334.0469780000094f64,
+        668.1268926511307f64,
+        1002.1807129125305f64,
+        1336.235189496269f64,
+        0.008801023466045386f64,
+    ],
 };
 const DECLINATION_MARS: RotationalElement<20usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 0.9500266243444937f64,
     c1: -0.0010170216810942417f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -382,14 +475,58 @@ const DECLINATION_MARS: RotationalElement<20usize> = RotationalElement {
         0.0000005410520681182422f64,
         0.00000008726646259971648f64,
         0.02777297060138025f64,
-    ]),
+    ],
+    theta0: [
+        3.328804809897935f64,
+        0.37470342287773584f64,
+        5.809517398292802f64,
+        6.892873571600945f64,
+        3.3097152567180146f64,
+        2.120032883264378f64,
+        4.032588225058434f64,
+        4.387288948439982f64,
+        3.8045796985836846f64,
+        3.424288764152381f64,
+        3.4730520762801462f64,
+        3.9495523217086292f64,
+        4.357448194643978f64,
+        4.645778664015252f64,
+        1.3857704297725961f64,
+        2.136869016190709f64,
+        0.751510868094019f64,
+        1.0064158213753553f64,
+        1.3871248750853138f64,
+        2.9029314796567682f64,
+    ],
+    theta1: [
+        277.80594525842264f64,
+        555.6129894920322f64,
+        334.05422022489097f64,
+        668.125936040531f64,
+        719340.2120445863f64,
+        11.523153020184504f64,
+        11.536473384554899f64,
+        23.047098122619843f64,
+        668.1113614443373f64,
+        334.05316148477937f64,
+        334.0469780000094f64,
+        668.1268926511307f64,
+        1002.1807129125305f64,
+        1336.235189496269f64,
+        0.008801023466045386f64,
+        334.054984682245f64,
+        668.1273150051017f64,
+        1002.1811764929237f64,
+        1336.2354112473317f64,
+        0.008801023466045386f64,
+    ],
 };
 const ROTATION_MARS: RotationalElement<26usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 3.0726497570349416f64,
     c1: 6.12422041248567f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -416,21 +553,77 @@ const ROTATION_MARS: RotationalElement<26usize> = RotationalElement {
         0.000000017453292519943295f64,
         0.000000017453292519943295f64,
         0.010202182516192693f64,
-    ]),
+    ],
+    theta0: [
+        3.328804809897935f64,
+        0.37470342287773584f64,
+        5.809517398292802f64,
+        6.892873571600945f64,
+        3.3097152567180146f64,
+        2.120032883264378f64,
+        4.032588225058434f64,
+        4.387288948439982f64,
+        3.8045796985836846f64,
+        3.424288764152381f64,
+        3.4730520762801462f64,
+        3.9495523217086292f64,
+        4.357448194643978f64,
+        4.645778664015252f64,
+        1.3857704297725961f64,
+        2.136869016190709f64,
+        0.751510868094019f64,
+        1.0064158213753553f64,
+        1.3871248750853138f64,
+        2.9029314796567682f64,
+        2.252727410236719f64,
+        0.6344650043848296f64,
+        0.9890544553471146f64,
+        1.1757236496733376f64,
+        1.8289772979888115f64,
+        1.664898441223219f64,
+    ],
+    theta1: [
+        277.80594525842264f64,
+        555.6129894920322f64,
+        334.05422022489097f64,
+        668.125936040531f64,
+        719340.2120445863f64,
+        11.523153020184504f64,
+        11.536473384554899f64,
+        23.047098122619843f64,
+        668.1113614443373f64,
+        334.05316148477937f64,
+        334.0469780000094f64,
+        668.1268926511307f64,
+        1002.1807129125305f64,
+        1336.235189496269f64,
+        0.008801023466045386f64,
+        334.054984682245f64,
+        668.1273150051017f64,
+        1002.1811764929237f64,
+        1336.2354112473317f64,
+        0.008801023466045386f64,
+        334.05659172556966f64,
+        668.130317528175f64,
+        1002.1842799588599f64,
+        1336.2285297823557f64,
+        1670.2877519268022f64,
+        0.008801023466045386f64,
+    ],
 };
 impl RotationalElements for Mars {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_MARS.angle::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
-            DECLINATION_MARS.angle::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
-            ROTATION_MARS.angle::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
+            RIGHT_ASCENSION_MARS.angle(t),
+            DECLINATION_MARS.angle(t),
+            ROTATION_MARS.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_MARS.angle_dot::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
-            DECLINATION_MARS.angle_dot::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
-            ROTATION_MARS.angle_dot::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
+            RIGHT_ASCENSION_MARS.angle_dot(t),
+            DECLINATION_MARS.angle_dot(t),
+            ROTATION_MARS.angle_dot(t),
         )
     }
 }
@@ -470,7 +663,7 @@ const RIGHT_ASCENSION_JUPITER: RotationalElement<15usize> = RotationalElement {
     c0: 4.6784701644349695f64,
     c1: -0.00011342894808711148f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -486,14 +679,48 @@ const RIGHT_ASCENSION_JUPITER: RotationalElement<15usize> = RotationalElement {
         0.000024993114888558796f64,
         0.0000005235987755982989f64,
         0.00003752457891787809f64,
-    ]),
+    ],
+    theta0: [
+        1.2796754075622423f64,
+        0.42970006184100396f64,
+        4.9549897464119015f64,
+        6.2098814785958245f64,
+        2.092649773141201f64,
+        4.010766621082969f64,
+        6.147922290150026f64,
+        1.9783307071355725f64,
+        2.5593508151244846f64,
+        0.8594001236820079f64,
+        1.734171606432425f64,
+        3.0699533280603655f64,
+        5.241627996900319f64,
+        1.9898901100379935f64,
+        0.864134346731335f64,
+    ],
+    theta1: [
+        1596.503281347521f64,
+        787.7927551311844f64,
+        84.66068602648895f64,
+        20.792107379008446f64,
+        4.574507969477138f64,
+        1.1222467090323538f64,
+        41.58421475801689f64,
+        105.9414855960558f64,
+        3193.006562695042f64,
+        1575.5855102623689f64,
+        84.65553032387855f64,
+        20.80363527871787f64,
+        4.582318317879813f64,
+        105.94580703128374f64,
+        1.1222467090323538f64,
+    ],
 };
 const DECLINATION_JUPITER: RotationalElement<15usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 1.1256553894213766f64,
     c1: 0.00004211479485062318f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -509,30 +736,98 @@ const DECLINATION_JUPITER: RotationalElement<15usize> = RotationalElement {
         0.000010768681484805013f64,
         -0.00000022689280275926283f64,
         0.00001616174887346749f64,
-    ]),
+    ],
+    theta0: [
+        1.2796754075622423f64,
+        0.42970006184100396f64,
+        4.9549897464119015f64,
+        6.2098814785958245f64,
+        2.092649773141201f64,
+        4.010766621082969f64,
+        6.147922290150026f64,
+        1.9783307071355725f64,
+        2.5593508151244846f64,
+        0.8594001236820079f64,
+        1.734171606432425f64,
+        3.0699533280603655f64,
+        5.241627996900319f64,
+        1.9898901100379935f64,
+        0.864134346731335f64,
+    ],
+    theta1: [
+        1596.503281347521f64,
+        787.7927551311844f64,
+        84.66068602648895f64,
+        20.792107379008446f64,
+        4.574507969477138f64,
+        1.1222467090323538f64,
+        41.58421475801689f64,
+        105.9414855960558f64,
+        3193.006562695042f64,
+        1575.5855102623689f64,
+        84.65553032387855f64,
+        20.80363527871787f64,
+        4.582318317879813f64,
+        105.94580703128374f64,
+        1.1222467090323538f64,
+    ],
 };
 const ROTATION_JUPITER: RotationalElement<15usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 4.973315703557842f64,
     c1: 15.193719457141356f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64,
-    ]),
+    ],
+    theta0: [
+        1.2796754075622423f64,
+        0.42970006184100396f64,
+        4.9549897464119015f64,
+        6.2098814785958245f64,
+        2.092649773141201f64,
+        4.010766621082969f64,
+        6.147922290150026f64,
+        1.9783307071355725f64,
+        2.5593508151244846f64,
+        0.8594001236820079f64,
+        1.734171606432425f64,
+        3.0699533280603655f64,
+        5.241627996900319f64,
+        1.9898901100379935f64,
+        0.864134346731335f64,
+    ],
+    theta1: [
+        1596.503281347521f64,
+        787.7927551311844f64,
+        84.66068602648895f64,
+        20.792107379008446f64,
+        4.574507969477138f64,
+        1.1222467090323538f64,
+        41.58421475801689f64,
+        105.9414855960558f64,
+        3193.006562695042f64,
+        1575.5855102623689f64,
+        84.65553032387855f64,
+        20.80363527871787f64,
+        4.582318317879813f64,
+        105.94580703128374f64,
+        1.1222467090323538f64,
+    ],
 };
 impl RotationalElements for Jupiter {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_JUPITER.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            DECLINATION_JUPITER.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            ROTATION_JUPITER.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+            RIGHT_ASCENSION_JUPITER.angle(t),
+            DECLINATION_JUPITER.angle(t),
+            ROTATION_JUPITER.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_JUPITER.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            DECLINATION_JUPITER.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            ROTATION_JUPITER.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+            RIGHT_ASCENSION_JUPITER.angle_dot(t),
+            DECLINATION_JUPITER.angle_dot(t),
+            ROTATION_JUPITER.angle_dot(t),
         )
     }
 }
@@ -572,35 +867,41 @@ const RIGHT_ASCENSION_SATURN: RotationalElement<0usize> = RotationalElement {
     c0: 0.7084116900919784f64,
     c1: -0.0006283185307179586f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const DECLINATION_SATURN: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 1.457995697238503f64,
     c1: -0.00006981317007977319f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const ROTATION_SATURN: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 0.6789330790257941f64,
     c1: 14.151023151973554f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 impl RotationalElements for Saturn {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_SATURN.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_SATURN.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_SATURN.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_SATURN.angle(t),
+            DECLINATION_SATURN.angle(t),
+            ROTATION_SATURN.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_SATURN.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_SATURN.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_SATURN.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_SATURN.angle_dot(t),
+            DECLINATION_SATURN.angle_dot(t),
+            ROTATION_SATURN.angle_dot(t),
         )
     }
 }
@@ -640,35 +941,41 @@ const RIGHT_ASCENSION_URANUS: RotationalElement<0usize> = RotationalElement {
     c0: 4.4909241515991285f64,
     c1: 0f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const DECLINATION_URANUS: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: -0.2648537139901395f64,
     c1: 0f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const ROTATION_URANUS: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 3.557155548489643f64,
     c1: -8.746893698960328f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 impl RotationalElements for Uranus {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_URANUS.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            DECLINATION_URANUS.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            ROTATION_URANUS.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+            RIGHT_ASCENSION_URANUS.angle(t),
+            DECLINATION_URANUS.angle(t),
+            ROTATION_URANUS.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_URANUS.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            DECLINATION_URANUS.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            ROTATION_URANUS.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+            RIGHT_ASCENSION_URANUS.angle_dot(t),
+            DECLINATION_URANUS.angle_dot(t),
+            ROTATION_URANUS.angle_dot(t),
         )
     }
 }
@@ -708,7 +1015,7 @@ const RIGHT_ASCENSION_NEPTUNE: RotationalElement<8usize> = RotationalElement {
     c0: 5.224817648770225f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0.012217304763960306f64,
         0f64,
         0f64,
@@ -717,14 +1024,34 @@ const RIGHT_ASCENSION_NEPTUNE: RotationalElement<8usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        6.245660728261709f64,
+        5.653470513060032f64,
+        3.848625533572696f64,
+        6.183177941040311f64,
+        1.3144074596769295f64,
+        0.6171484235051949f64,
+        2.4890140462691135f64,
+        3.104068074671915f64,
+    ],
+    theta1: [
+        0.9130864514733535f64,
+        1092.6913034790819f64,
+        961.0515899766616f64,
+        812.7038395448996f64,
+        455.6949957202075f64,
+        250.02539666519567f64,
+        49.29857005183183f64,
+        0.9130864514733535f64,
+    ],
 };
 const DECLINATION_NEPTUNE: RotationalElement<8usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 0.7585200929167356f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         -0.00890117918517108f64,
         0f64,
         0f64,
@@ -733,14 +1060,34 @@ const DECLINATION_NEPTUNE: RotationalElement<8usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        6.245660728261709f64,
+        5.653470513060032f64,
+        3.848625533572696f64,
+        6.183177941040311f64,
+        1.3144074596769295f64,
+        0.6171484235051949f64,
+        2.4890140462691135f64,
+        3.104068074671915f64,
+    ],
+    theta1: [
+        0.9130864514733535f64,
+        1092.6913034790819f64,
+        961.0515899766616f64,
+        812.7038395448996f64,
+        455.6949957202075f64,
+        250.02539666519567f64,
+        49.29857005183183f64,
+        0.9130864514733535f64,
+    ],
 };
 const ROTATION_NEPTUNE: RotationalElement<8usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 4.362939157550385f64,
     c1: 9.444670799468602f64,
     c2: 0f64,
-    c: Some([
+    c: [
         -0.008377580409572781f64,
         0f64,
         0f64,
@@ -749,21 +1096,41 @@ const ROTATION_NEPTUNE: RotationalElement<8usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        6.245660728261709f64,
+        5.653470513060032f64,
+        3.848625533572696f64,
+        6.183177941040311f64,
+        1.3144074596769295f64,
+        0.6171484235051949f64,
+        2.4890140462691135f64,
+        3.104068074671915f64,
+    ],
+    theta1: [
+        0.9130864514733535f64,
+        1092.6913034790819f64,
+        961.0515899766616f64,
+        812.7038395448996f64,
+        455.6949957202075f64,
+        250.02539666519567f64,
+        49.29857005183183f64,
+        0.9130864514733535f64,
+    ],
 };
 impl RotationalElements for Neptune {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_NEPTUNE.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-            DECLINATION_NEPTUNE.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-            ROTATION_NEPTUNE.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
+            RIGHT_ASCENSION_NEPTUNE.angle(t),
+            DECLINATION_NEPTUNE.angle(t),
+            ROTATION_NEPTUNE.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_NEPTUNE.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-            DECLINATION_NEPTUNE.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-            ROTATION_NEPTUNE.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
+            RIGHT_ASCENSION_NEPTUNE.angle_dot(t),
+            DECLINATION_NEPTUNE.angle_dot(t),
+            ROTATION_NEPTUNE.angle_dot(t),
         )
     }
 }
@@ -803,35 +1170,41 @@ const RIGHT_ASCENSION_PLUTO: RotationalElement<0usize> = RotationalElement {
     c0: 2.3211657321048187f64,
     c1: 0f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const DECLINATION_PLUTO: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: -0.10756464180041053f64,
     c1: 0f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const ROTATION_PLUTO: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 5.283024379324235f64,
     c1: 0.9837115923543857f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 impl RotationalElements for Pluto {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_PLUTO.angle::<0usize>(None, t),
-            DECLINATION_PLUTO.angle::<0usize>(None, t),
-            ROTATION_PLUTO.angle::<0usize>(None, t),
+            RIGHT_ASCENSION_PLUTO.angle(t),
+            DECLINATION_PLUTO.angle(t),
+            ROTATION_PLUTO.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_PLUTO.angle_dot::<0usize>(None, t),
-            DECLINATION_PLUTO.angle_dot::<0usize>(None, t),
-            ROTATION_PLUTO.angle_dot::<0usize>(None, t),
+            RIGHT_ASCENSION_PLUTO.angle_dot(t),
+            DECLINATION_PLUTO.angle_dot(t),
+            ROTATION_PLUTO.angle_dot(t),
         )
     }
 }
@@ -1071,7 +1444,7 @@ const RIGHT_ASCENSION_MOON: RotationalElement<13usize> = RotationalElement {
     c0: 4.712299968592838f64,
     c1: 0.000054105206811824215f64,
     c2: 0f64,
-    c: Some([
+    c: [
         -0.06769608569710406f64,
         -0.0021013764194011725f64,
         0.0012217304763960308f64,
@@ -1085,14 +1458,44 @@ const RIGHT_ASCENSION_MOON: RotationalElement<13usize> = RotationalElement {
         0f64,
         0f64,
         0.00007504915783575618f64,
-    ]),
+    ],
+    theta0: [
+        2.1824469631563095f64,
+        4.364876473020098f64,
+        4.537995681525416f64,
+        3.0826877913349846f64,
+        6.240058221362807f64,
+        5.438253962996612f64,
+        2.355548718369107f64,
+        4.827877416989155f64,
+        0.5973563897875792f64,
+        0.2641381289968218f64,
+        2.0899096062155698f64,
+        4.188109526378113f64,
+        0.4372573375021394f64,
+    ],
+    theta1: [
+        -33.781483888495835f64,
+        -67.56296777699167f64,
+        8294.909972626925f64,
+        8504.459388212737f64,
+        628.3019668015924f64,
+        16833.15084472816f64,
+        8328.69145651542f64,
+        209.54947933396397f64,
+        1114.6285779726247f64,
+        -101.3444516654875f64,
+        2.301053255936537f64,
+        104.77473966698199f64,
+        8261.12848873843f64,
+    ],
 };
 const DECLINATION_MOON: RotationalElement<13usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 1.161328121643011f64,
     c1: 0.00022689280275926284f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0.02691123173650057f64,
         0.0004171336912266448f64,
         -0.00048520153205442357f64,
@@ -1106,14 +1509,44 @@ const DECLINATION_MOON: RotationalElement<13usize> = RotationalElement {
         0f64,
         0f64,
         -0.000015707963267948964f64,
-    ]),
+    ],
+    theta0: [
+        2.1824469631563095f64,
+        4.364876473020098f64,
+        4.537995681525416f64,
+        3.0826877913349846f64,
+        6.240058221362807f64,
+        5.438253962996612f64,
+        2.355548718369107f64,
+        4.827877416989155f64,
+        0.5973563897875792f64,
+        0.2641381289968218f64,
+        2.0899096062155698f64,
+        4.188109526378113f64,
+        0.4372573375021394f64,
+    ],
+    theta1: [
+        -33.781483888495835f64,
+        -67.56296777699167f64,
+        8294.909972626925f64,
+        8504.459388212737f64,
+        628.3019668015924f64,
+        16833.15084472816f64,
+        8328.69145651542f64,
+        209.54947933396397f64,
+        1114.6285779726247f64,
+        -101.3444516654875f64,
+        2.301053255936537f64,
+        104.77473966698199f64,
+        8261.12848873843f64,
+    ],
 };
 const ROTATION_MOON: RotationalElement<13usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 0.668832858644503f64,
     c1: 0.22997083313948888f64,
     c2: -0.000000000000024434609527920614f64,
-    c: Some([
+    c: [
         0.06215117466351808f64,
         0.00210835773640915f64,
         -0.0011205013797803594f64,
@@ -1127,21 +1560,51 @@ const ROTATION_MOON: RotationalElement<13usize> = RotationalElement {
         0.00006981317007977319f64,
         0.00003316125578789226f64,
         -0.0000767944870877505f64,
-    ]),
+    ],
+    theta0: [
+        2.1824469631563095f64,
+        4.364876473020098f64,
+        4.537995681525416f64,
+        3.0826877913349846f64,
+        6.240058221362807f64,
+        5.438253962996612f64,
+        2.355548718369107f64,
+        4.827877416989155f64,
+        0.5973563897875792f64,
+        0.2641381289968218f64,
+        2.0899096062155698f64,
+        4.188109526378113f64,
+        0.4372573375021394f64,
+    ],
+    theta1: [
+        -33.781483888495835f64,
+        -67.56296777699167f64,
+        8294.909972626925f64,
+        8504.459388212737f64,
+        628.3019668015924f64,
+        16833.15084472816f64,
+        8328.69145651542f64,
+        209.54947933396397f64,
+        1114.6285779726247f64,
+        -101.3444516654875f64,
+        2.301053255936537f64,
+        104.77473966698199f64,
+        8261.12848873843f64,
+    ],
 };
 impl RotationalElements for Moon {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_MOON.angle::<13usize>(Some(&NUTATION_PRECESSION_EARTH), t),
-            DECLINATION_MOON.angle::<13usize>(Some(&NUTATION_PRECESSION_EARTH), t),
-            ROTATION_MOON.angle::<13usize>(Some(&NUTATION_PRECESSION_EARTH), t),
+            RIGHT_ASCENSION_MOON.angle(t),
+            DECLINATION_MOON.angle(t),
+            ROTATION_MOON.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_MOON.angle_dot::<13usize>(Some(&NUTATION_PRECESSION_EARTH), t),
-            DECLINATION_MOON.angle_dot::<13usize>(Some(&NUTATION_PRECESSION_EARTH), t),
-            ROTATION_MOON.angle_dot::<13usize>(Some(&NUTATION_PRECESSION_EARTH), t),
+            RIGHT_ASCENSION_MOON.angle_dot(t),
+            DECLINATION_MOON.angle_dot(t),
+            ROTATION_MOON.angle_dot(t),
         )
     }
 }
@@ -1180,51 +1643,89 @@ const RIGHT_ASCENSION_PHOBOS: RotationalElement<4usize> = RotationalElement {
     c0: 5.544399941316208f64,
     c1: -0.001892691938596266f64,
     c2: 0f64,
-    c: Some([
+    c: [
         -0.031141630416121578f64,
         0.00038621064567151f64,
         -0.00017946365486924213f64,
         -0.00008300698656022431f64,
-    ]),
+    ],
+    theta0: [
+        3.328804809897935f64,
+        0.37470342287773584f64,
+        5.809517398292802f64,
+        6.892873571600945f64,
+    ],
+    theta1: [
+        277.80594525842264f64,
+        555.6129894920322f64,
+        334.05422022489097f64,
+        668.125936040531f64,
+    ],
 };
 const DECLINATION_PHOBOS: RotationalElement<4usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 0.9230395870244597f64,
     c1: -0.0010707081834185127f64,
     c2: 0f64,
-    c: Some([
+    c: [
         -0.018765175709923063f64,
         0.00011669725164439606f64,
         -0.00011322648989388013f64,
         0.000049144282945955534f64,
-    ]),
+    ],
+    theta0: [
+        3.328804809897935f64,
+        0.37470342287773584f64,
+        5.809517398292802f64,
+        6.892873571600945f64,
+    ],
+    theta1: [
+        277.80594525842264f64,
+        555.6129894920322f64,
+        334.05422022489097f64,
+        668.125936040531f64,
+    ],
 };
 const ROTATION_PHOBOS: RotationalElement<5usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 0.6141419961301966f64,
     c1: 19.702057793318815f64,
     c2: 0.00000000016643698911600935f64,
-    c: Some([
+    c: [
         0.02485728795564792f64,
         -0.0003968499982587423f64,
         0.0000716825922415843f64,
         0.00011029852554073445f64,
         -0.019949113350295186f64,
-    ]),
+    ],
+    theta0: [
+        3.328804809897935f64,
+        0.37470342287773584f64,
+        5.809517398292802f64,
+        6.892873571600945f64,
+        3.3097152567180146f64,
+    ],
+    theta1: [
+        277.80594525842264f64,
+        555.6129894920322f64,
+        334.05422022489097f64,
+        668.125936040531f64,
+        719340.2120445863f64,
+    ],
 };
 impl RotationalElements for Phobos {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_PHOBOS.angle::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
-            DECLINATION_PHOBOS.angle::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
-            ROTATION_PHOBOS.angle::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
+            RIGHT_ASCENSION_PHOBOS.angle(t),
+            DECLINATION_PHOBOS.angle(t),
+            ROTATION_PHOBOS.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_PHOBOS.angle_dot::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
-            DECLINATION_PHOBOS.angle_dot::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
-            ROTATION_PHOBOS.angle_dot::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
+            RIGHT_ASCENSION_PHOBOS.angle_dot(t),
+            DECLINATION_PHOBOS.angle_dot(t),
+            ROTATION_PHOBOS.angle_dot(t),
         )
     }
 }
@@ -1263,7 +1764,7 @@ const RIGHT_ASCENSION_DEIMOS: RotationalElement<10usize> = RotationalElement {
     c0: 5.526708263174914f64,
     c1: -0.0018357397507085887f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -1274,14 +1775,38 @@ const RIGHT_ASCENSION_DEIMOS: RotationalElement<10usize> = RotationalElement {
         0.0011202666329959662f64,
         0.00044218562371099577f64,
         0.00013590791618817245f64,
-    ]),
+    ],
+    theta0: [
+        3.328804809897935f64,
+        0.37470342287773584f64,
+        5.809517398292802f64,
+        6.892873571600945f64,
+        3.3097152567180146f64,
+        2.120032883264378f64,
+        4.032588225058434f64,
+        4.387288948439982f64,
+        3.8045796985836846f64,
+        3.424288764152381f64,
+    ],
+    theta1: [
+        277.80594525842264f64,
+        555.6129894920322f64,
+        334.05422022489097f64,
+        668.125936040531f64,
+        719340.2120445863f64,
+        11.523153020184504f64,
+        11.536473384554899f64,
+        23.047098122619843f64,
+        668.1113614443373f64,
+        334.05316148477937f64,
+    ],
 };
 const DECLINATION_DEIMOS: RotationalElement<10usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 0.9339242922383507f64,
     c1: -0.0010435487658623783f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -1292,14 +1817,38 @@ const DECLINATION_DEIMOS: RotationalElement<10usize> = RotationalElement {
         0.00033360380402252296f64,
         -0.0002587607695714273f64,
         0.00003358537079612689f64,
-    ]),
+    ],
+    theta0: [
+        3.328804809897935f64,
+        0.37470342287773584f64,
+        5.809517398292802f64,
+        6.892873571600945f64,
+        3.3097152567180146f64,
+        2.120032883264378f64,
+        4.032588225058434f64,
+        4.387288948439982f64,
+        3.8045796985836846f64,
+        3.424288764152381f64,
+    ],
+    theta1: [
+        277.80594525842264f64,
+        555.6129894920322f64,
+        334.05422022489097f64,
+        668.125936040531f64,
+        719340.2120445863f64,
+        11.523153020184504f64,
+        11.536473384554899f64,
+        23.047098122619843f64,
+        668.1113614443373f64,
+        334.05316148477937f64,
+    ],
 };
 const ROTATION_DEIMOS: RotationalElement<10usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 1.3857797243489947f64,
     c1: 4.977013864082068f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -1310,21 +1859,45 @@ const ROTATION_DEIMOS: RotationalElement<10usize> = RotationalElement {
         -0.0011455047921115052f64,
         -0.0005084039391304362f64,
         0.0002965593651818685f64,
-    ]),
+    ],
+    theta0: [
+        3.328804809897935f64,
+        0.37470342287773584f64,
+        5.809517398292802f64,
+        6.892873571600945f64,
+        3.3097152567180146f64,
+        2.120032883264378f64,
+        4.032588225058434f64,
+        4.387288948439982f64,
+        3.8045796985836846f64,
+        3.424288764152381f64,
+    ],
+    theta1: [
+        277.80594525842264f64,
+        555.6129894920322f64,
+        334.05422022489097f64,
+        668.125936040531f64,
+        719340.2120445863f64,
+        11.523153020184504f64,
+        11.536473384554899f64,
+        23.047098122619843f64,
+        668.1113614443373f64,
+        334.05316148477937f64,
+    ],
 };
 impl RotationalElements for Deimos {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_DEIMOS.angle::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
-            DECLINATION_DEIMOS.angle::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
-            ROTATION_DEIMOS.angle::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
+            RIGHT_ASCENSION_DEIMOS.angle(t),
+            DECLINATION_DEIMOS.angle(t),
+            ROTATION_DEIMOS.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_DEIMOS.angle_dot::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
-            DECLINATION_DEIMOS.angle_dot::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
-            ROTATION_DEIMOS.angle_dot::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
+            RIGHT_ASCENSION_DEIMOS.angle_dot(t),
+            DECLINATION_DEIMOS.angle_dot(t),
+            ROTATION_DEIMOS.angle_dot(t),
         )
     }
 }
@@ -1363,50 +1936,86 @@ const RIGHT_ASCENSION_IO: RotationalElement<4usize> = RotationalElement {
     c0: 4.678355059970801f64,
     c1: -0.00015707963267948965f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0.0016406094968746698f64,
         0.0004188790204786391f64,
-    ]),
+    ],
+    theta0: [
+        1.2796754075622423f64,
+        0.42970006184100396f64,
+        4.9549897464119015f64,
+        6.2098814785958245f64,
+    ],
+    theta1: [
+        1596.503281347521f64,
+        787.7927551311844f64,
+        84.66068602648895f64,
+        20.792107379008446f64,
+    ],
 };
 const DECLINATION_IO: RotationalElement<4usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 1.1257373675363425f64,
     c1: 0.00005235987755982989f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0.0006981317007977319f64,
         0.00019198621771937625f64,
-    ]),
+    ],
+    theta0: [
+        1.2796754075622423f64,
+        0.42970006184100396f64,
+        4.9549897464119015f64,
+        6.2098814785958245f64,
+    ],
+    theta1: [
+        1596.503281347521f64,
+        787.7927551311844f64,
+        84.66068602648895f64,
+        20.792107379008446f64,
+    ],
 };
 const ROTATION_IO: RotationalElement<4usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 3.4974652880714365f64,
     c1: 3.551552235248627f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         -0.0014835298641951802f64,
         -0.0003839724354387525f64,
-    ]),
+    ],
+    theta0: [
+        1.2796754075622423f64,
+        0.42970006184100396f64,
+        4.9549897464119015f64,
+        6.2098814785958245f64,
+    ],
+    theta1: [
+        1596.503281347521f64,
+        787.7927551311844f64,
+        84.66068602648895f64,
+        20.792107379008446f64,
+    ],
 };
 impl RotationalElements for Io {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_IO.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            DECLINATION_IO.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            ROTATION_IO.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+            RIGHT_ASCENSION_IO.angle(t),
+            DECLINATION_IO.angle(t),
+            ROTATION_IO.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_IO.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            DECLINATION_IO.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            ROTATION_IO.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+            RIGHT_ASCENSION_IO.angle_dot(t),
+            DECLINATION_IO.angle_dot(t),
+            ROTATION_IO.angle_dot(t),
         )
     }
 }
@@ -1445,7 +2054,7 @@ const RIGHT_ASCENSION_EUROPA: RotationalElement<7usize> = RotationalElement {
     c0: 4.678878658746398f64,
     c1: -0.00015707963267948965f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -1453,14 +2062,32 @@ const RIGHT_ASCENSION_EUROPA: RotationalElement<7usize> = RotationalElement {
         0.0010471975511965976f64,
         0.0002617993877991494f64,
         0.00015707963267948965f64,
-    ]),
+    ],
+    theta0: [
+        1.2796754075622423f64,
+        0.42970006184100396f64,
+        4.9549897464119015f64,
+        6.2098814785958245f64,
+        2.092649773141201f64,
+        4.010766621082969f64,
+        6.147922290150026f64,
+    ],
+    theta1: [
+        1596.503281347521f64,
+        787.7927551311844f64,
+        84.66068602648895f64,
+        20.792107379008446f64,
+        4.574507969477138f64,
+        1.1222467090323538f64,
+        41.58421475801689f64,
+    ],
 };
 const DECLINATION_EUROPA: RotationalElement<7usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 1.125911900461542f64,
     c1: 0.00005235987755982989f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -1468,14 +2095,32 @@ const DECLINATION_EUROPA: RotationalElement<7usize> = RotationalElement {
         0.0004537856055185257f64,
         0.00012217304763960306f64,
         0.00003490658503988659f64,
-    ]),
+    ],
+    theta0: [
+        1.2796754075622423f64,
+        0.42970006184100396f64,
+        4.9549897464119015f64,
+        6.2098814785958245f64,
+        2.092649773141201f64,
+        4.010766621082969f64,
+        6.147922290150026f64,
+    ],
+    theta1: [
+        1596.503281347521f64,
+        787.7927551311844f64,
+        84.66068602648895f64,
+        20.792107379008446f64,
+        4.574507969477138f64,
+        1.1222467090323538f64,
+        41.58421475801689f64,
+    ],
 };
 const ROTATION_EUROPA: RotationalElement<7usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 0.6287025031533974f64,
     c1: 1.7693227033738699f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -1483,21 +2128,39 @@ const ROTATION_EUROPA: RotationalElement<7usize> = RotationalElement {
         -0.0009424777960769379f64,
         -0.0002443460952792061f64,
         -0.00013962634015954637f64,
-    ]),
+    ],
+    theta0: [
+        1.2796754075622423f64,
+        0.42970006184100396f64,
+        4.9549897464119015f64,
+        6.2098814785958245f64,
+        2.092649773141201f64,
+        4.010766621082969f64,
+        6.147922290150026f64,
+    ],
+    theta1: [
+        1596.503281347521f64,
+        787.7927551311844f64,
+        84.66068602648895f64,
+        20.792107379008446f64,
+        4.574507969477138f64,
+        1.1222467090323538f64,
+        41.58421475801689f64,
+    ],
 };
 impl RotationalElements for Europa {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_EUROPA.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            DECLINATION_EUROPA.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            ROTATION_EUROPA.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+            RIGHT_ASCENSION_EUROPA.angle(t),
+            DECLINATION_EUROPA.angle(t),
+            ROTATION_EUROPA.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_EUROPA.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            DECLINATION_EUROPA.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            ROTATION_EUROPA.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+            RIGHT_ASCENSION_EUROPA.angle_dot(t),
+            DECLINATION_EUROPA.angle_dot(t),
+            ROTATION_EUROPA.angle_dot(t),
         )
     }
 }
@@ -1537,56 +2200,104 @@ const RIGHT_ASCENSION_GANYMEDE: RotationalElement<6usize> = RotationalElement {
     c0: 4.680973053848792f64,
     c1: -0.00015707963267948965f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
         -0.0006457718232379018f64,
         0.0075223690760955605f64,
         0.0015882496193148398f64,
-    ]),
+    ],
+    theta0: [
+        1.2796754075622423f64,
+        0.42970006184100396f64,
+        4.9549897464119015f64,
+        6.2098814785958245f64,
+        2.092649773141201f64,
+        4.010766621082969f64,
+    ],
+    theta1: [
+        1596.503281347521f64,
+        787.7927551311844f64,
+        84.66068602648895f64,
+        20.792107379008446f64,
+        4.574507969477138f64,
+        1.1222467090323538f64,
+    ],
 };
 const DECLINATION_GANYMEDE: RotationalElement<6usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 1.1269590980127384f64,
     c1: 0.00005235987755982989f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
         -0.00027925268031909274f64,
         0.003246312408709453f64,
         0.0006806784082777885f64,
-    ]),
+    ],
+    theta0: [
+        1.2796754075622423f64,
+        0.42970006184100396f64,
+        4.9549897464119015f64,
+        6.2098814785958245f64,
+        2.092649773141201f64,
+        4.010766621082969f64,
+    ],
+    theta1: [
+        1596.503281347521f64,
+        787.7927551311844f64,
+        84.66068602648895f64,
+        20.792107379008446f64,
+        4.574507969477138f64,
+        1.1222467090323538f64,
+    ],
 };
 const ROTATION_GANYMEDE: RotationalElement<6usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 0.7690618815987814f64,
     c1: 0.8782079330731682f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
         0.0005759586531581288f64,
         -0.006789330790257942f64,
         -0.0014311699866353504f64,
-    ]),
+    ],
+    theta0: [
+        1.2796754075622423f64,
+        0.42970006184100396f64,
+        4.9549897464119015f64,
+        6.2098814785958245f64,
+        2.092649773141201f64,
+        4.010766621082969f64,
+    ],
+    theta1: [
+        1596.503281347521f64,
+        787.7927551311844f64,
+        84.66068602648895f64,
+        20.792107379008446f64,
+        4.574507969477138f64,
+        1.1222467090323538f64,
+    ],
 };
 impl RotationalElements for Ganymede {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_GANYMEDE.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            DECLINATION_GANYMEDE.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            ROTATION_GANYMEDE.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+            RIGHT_ASCENSION_GANYMEDE.angle(t),
+            DECLINATION_GANYMEDE.angle(t),
+            ROTATION_GANYMEDE.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_GANYMEDE.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            DECLINATION_GANYMEDE.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            ROTATION_GANYMEDE.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+            RIGHT_ASCENSION_GANYMEDE.angle_dot(t),
+            DECLINATION_GANYMEDE.angle_dot(t),
+            ROTATION_GANYMEDE.angle_dot(t),
         )
     }
 }
@@ -1626,7 +2337,7 @@ const RIGHT_ASCENSION_CALLISTO: RotationalElement<8usize> = RotationalElement {
     c0: 4.690048765959163f64,
     c1: -0.00015707963267948965f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -1635,14 +2346,34 @@ const RIGHT_ASCENSION_CALLISTO: RotationalElement<8usize> = RotationalElement {
         0.010297442586766544f64,
         0f64,
         0.00017453292519943296f64,
-    ]),
+    ],
+    theta0: [
+        1.2796754075622423f64,
+        0.42970006184100396f64,
+        4.9549897464119015f64,
+        6.2098814785958245f64,
+        2.092649773141201f64,
+        4.010766621082969f64,
+        6.147922290150026f64,
+        1.9783307071355725f64,
+    ],
+    theta1: [
+        1596.503281347521f64,
+        787.7927551311844f64,
+        84.66068602648895f64,
+        20.792107379008446f64,
+        4.574507969477138f64,
+        1.1222467090323538f64,
+        41.58421475801689f64,
+        105.9414855960558f64,
+    ],
 };
 const DECLINATION_CALLISTO: RotationalElement<8usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 1.1314969540679238f64,
     c1: 0.00005235987755982989f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -1651,14 +2382,34 @@ const DECLINATION_CALLISTO: RotationalElement<8usize> = RotationalElement {
         0.004433136300065597f64,
         0f64,
         -0.00006981317007977319f64,
-    ]),
+    ],
+    theta0: [
+        1.2796754075622423f64,
+        0.42970006184100396f64,
+        4.9549897464119015f64,
+        6.2098814785958245f64,
+        2.092649773141201f64,
+        4.010766621082969f64,
+        6.147922290150026f64,
+        1.9783307071355725f64,
+    ],
+    theta1: [
+        1596.503281347521f64,
+        787.7927551311844f64,
+        84.66068602648895f64,
+        20.792107379008446f64,
+        4.574507969477138f64,
+        1.1222467090323538f64,
+        41.58421475801689f64,
+        105.9414855960558f64,
+    ],
 };
 const ROTATION_CALLISTO: RotationalElement<8usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 4.529303941850484f64,
     c1: 0.37648622085811195f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -1667,21 +2418,41 @@ const ROTATION_CALLISTO: RotationalElement<8usize> = RotationalElement {
         -0.009302604913129777f64,
         0f64,
         -0.00015707963267948965f64,
-    ]),
+    ],
+    theta0: [
+        1.2796754075622423f64,
+        0.42970006184100396f64,
+        4.9549897464119015f64,
+        6.2098814785958245f64,
+        2.092649773141201f64,
+        4.010766621082969f64,
+        6.147922290150026f64,
+        1.9783307071355725f64,
+    ],
+    theta1: [
+        1596.503281347521f64,
+        787.7927551311844f64,
+        84.66068602648895f64,
+        20.792107379008446f64,
+        4.574507969477138f64,
+        1.1222467090323538f64,
+        41.58421475801689f64,
+        105.9414855960558f64,
+    ],
 };
 impl RotationalElements for Callisto {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_CALLISTO.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            DECLINATION_CALLISTO.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            ROTATION_CALLISTO.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+            RIGHT_ASCENSION_CALLISTO.angle(t),
+            DECLINATION_CALLISTO.angle(t),
+            ROTATION_CALLISTO.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_CALLISTO.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            DECLINATION_CALLISTO.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            ROTATION_CALLISTO.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+            RIGHT_ASCENSION_CALLISTO.angle_dot(t),
+            DECLINATION_CALLISTO.angle_dot(t),
+            ROTATION_CALLISTO.angle_dot(t),
         )
     }
 }
@@ -1720,7 +2491,7 @@ const RIGHT_ASCENSION_AMALTHEA: RotationalElement<10usize> = RotationalElement {
     c0: 4.678355059970801f64,
     c1: -0.00015707963267948965f64,
     c2: 0f64,
-    c: Some([
+    c: [
         -0.014660765716752368f64,
         0f64,
         0f64,
@@ -1731,14 +2502,38 @@ const RIGHT_ASCENSION_AMALTHEA: RotationalElement<10usize> = RotationalElement {
         0f64,
         0.00017453292519943296f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        1.2796754075622423f64,
+        0.42970006184100396f64,
+        4.9549897464119015f64,
+        6.2098814785958245f64,
+        2.092649773141201f64,
+        4.010766621082969f64,
+        6.147922290150026f64,
+        1.9783307071355725f64,
+        2.5593508151244846f64,
+        0.8594001236820079f64,
+    ],
+    theta1: [
+        1596.503281347521f64,
+        787.7927551311844f64,
+        84.66068602648895f64,
+        20.792107379008446f64,
+        4.574507969477138f64,
+        1.1222467090323538f64,
+        41.58421475801689f64,
+        105.9414855960558f64,
+        3193.006562695042f64,
+        1575.5855102623689f64,
+    ],
 };
 const DECLINATION_AMALTHEA: RotationalElement<10usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 1.125562834611143f64,
     c1: 0.00005235987755982989f64,
     c2: 0f64,
-    c: Some([
+    c: [
         -0.006283185307179586f64,
         0f64,
         0f64,
@@ -1749,14 +2544,38 @@ const DECLINATION_AMALTHEA: RotationalElement<10usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        1.2796754075622423f64,
+        0.42970006184100396f64,
+        4.9549897464119015f64,
+        6.2098814785958245f64,
+        2.092649773141201f64,
+        4.010766621082969f64,
+        6.147922290150026f64,
+        1.9783307071355725f64,
+        2.5593508151244846f64,
+        0.8594001236820079f64,
+    ],
+    theta1: [
+        1596.503281347521f64,
+        787.7927551311844f64,
+        84.66068602648895f64,
+        20.792107379008446f64,
+        4.574507969477138f64,
+        1.1222467090323538f64,
+        41.58421475801689f64,
+        105.9414855960558f64,
+        3193.006562695042f64,
+        1575.5855102623689f64,
+    ],
 };
 const ROTATION_AMALTHEA: RotationalElement<10usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 4.043404278095263f64,
     c1: 12.612298185680531f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0.013264502315156905f64,
         0f64,
         0f64,
@@ -1767,21 +2586,45 @@ const ROTATION_AMALTHEA: RotationalElement<10usize> = RotationalElement {
         0f64,
         -0.00017453292519943296f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        1.2796754075622423f64,
+        0.42970006184100396f64,
+        4.9549897464119015f64,
+        6.2098814785958245f64,
+        2.092649773141201f64,
+        4.010766621082969f64,
+        6.147922290150026f64,
+        1.9783307071355725f64,
+        2.5593508151244846f64,
+        0.8594001236820079f64,
+    ],
+    theta1: [
+        1596.503281347521f64,
+        787.7927551311844f64,
+        84.66068602648895f64,
+        20.792107379008446f64,
+        4.574507969477138f64,
+        1.1222467090323538f64,
+        41.58421475801689f64,
+        105.9414855960558f64,
+        3193.006562695042f64,
+        1575.5855102623689f64,
+    ],
 };
 impl RotationalElements for Amalthea {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_AMALTHEA.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            DECLINATION_AMALTHEA.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            ROTATION_AMALTHEA.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+            RIGHT_ASCENSION_AMALTHEA.angle(t),
+            DECLINATION_AMALTHEA.angle(t),
+            ROTATION_AMALTHEA.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_AMALTHEA.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            DECLINATION_AMALTHEA.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            ROTATION_AMALTHEA.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+            RIGHT_ASCENSION_AMALTHEA.angle_dot(t),
+            DECLINATION_AMALTHEA.angle_dot(t),
+            ROTATION_AMALTHEA.angle_dot(t),
         )
     }
 }
@@ -2033,7 +2876,7 @@ const RIGHT_ASCENSION_THEBE: RotationalElement<10usize> = RotationalElement {
     c0: 4.678355059970801f64,
     c1: -0.00015707963267948965f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         -0.03682644721708035f64,
         0f64,
@@ -2044,14 +2887,38 @@ const RIGHT_ASCENSION_THEBE: RotationalElement<10usize> = RotationalElement {
         0f64,
         0f64,
         0.0006981317007977319f64,
-    ]),
+    ],
+    theta0: [
+        1.2796754075622423f64,
+        0.42970006184100396f64,
+        4.9549897464119015f64,
+        6.2098814785958245f64,
+        2.092649773141201f64,
+        4.010766621082969f64,
+        6.147922290150026f64,
+        1.9783307071355725f64,
+        2.5593508151244846f64,
+        0.8594001236820079f64,
+    ],
+    theta1: [
+        1596.503281347521f64,
+        787.7927551311844f64,
+        84.66068602648895f64,
+        20.792107379008446f64,
+        4.574507969477138f64,
+        1.1222467090323538f64,
+        41.58421475801689f64,
+        105.9414855960558f64,
+        3193.006562695042f64,
+        1575.5855102623689f64,
+    ],
 };
 const DECLINATION_THEBE: RotationalElement<10usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 1.125562834611143f64,
     c1: 0.00005235987755982989f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         -0.0158824961931484f64,
         0f64,
@@ -2062,14 +2929,38 @@ const DECLINATION_THEBE: RotationalElement<10usize> = RotationalElement {
         0f64,
         0f64,
         0.00017453292519943296f64,
-    ]),
+    ],
+    theta0: [
+        1.2796754075622423f64,
+        0.42970006184100396f64,
+        4.9549897464119015f64,
+        6.2098814785958245f64,
+        2.092649773141201f64,
+        4.010766621082969f64,
+        6.147922290150026f64,
+        1.9783307071355725f64,
+        2.5593508151244846f64,
+        0.8594001236820079f64,
+    ],
+    theta1: [
+        1596.503281347521f64,
+        787.7927551311844f64,
+        84.66068602648895f64,
+        20.792107379008446f64,
+        4.574507969477138f64,
+        1.1222467090323538f64,
+        41.58421475801689f64,
+        105.9414855960558f64,
+        3193.006562695042f64,
+        1575.5855102623689f64,
+    ],
 };
 const ROTATION_THEBE: RotationalElement<10usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 0.1494001839707146f64,
     c1: 9.31482937374367f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0.033335788713091695f64,
         0f64,
@@ -2080,21 +2971,45 @@ const ROTATION_THEBE: RotationalElement<10usize> = RotationalElement {
         0f64,
         0f64,
         -0.0006981317007977319f64,
-    ]),
+    ],
+    theta0: [
+        1.2796754075622423f64,
+        0.42970006184100396f64,
+        4.9549897464119015f64,
+        6.2098814785958245f64,
+        2.092649773141201f64,
+        4.010766621082969f64,
+        6.147922290150026f64,
+        1.9783307071355725f64,
+        2.5593508151244846f64,
+        0.8594001236820079f64,
+    ],
+    theta1: [
+        1596.503281347521f64,
+        787.7927551311844f64,
+        84.66068602648895f64,
+        20.792107379008446f64,
+        4.574507969477138f64,
+        1.1222467090323538f64,
+        41.58421475801689f64,
+        105.9414855960558f64,
+        3193.006562695042f64,
+        1575.5855102623689f64,
+    ],
 };
 impl RotationalElements for Thebe {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_THEBE.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            DECLINATION_THEBE.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            ROTATION_THEBE.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+            RIGHT_ASCENSION_THEBE.angle(t),
+            DECLINATION_THEBE.angle(t),
+            ROTATION_THEBE.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_THEBE.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            DECLINATION_THEBE.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            ROTATION_THEBE.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+            RIGHT_ASCENSION_THEBE.angle_dot(t),
+            DECLINATION_THEBE.angle_dot(t),
+            ROTATION_THEBE.angle_dot(t),
         )
     }
 }
@@ -2133,35 +3048,41 @@ const RIGHT_ASCENSION_ADRASTEA: RotationalElement<0usize> = RotationalElement {
     c0: 4.678355059970801f64,
     c1: -0.00015707963267948965f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const DECLINATION_ADRASTEA: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 1.125562834611143f64,
     c1: 0.00005235987755982989f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const ROTATION_ADRASTEA: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 0.5810201079889122f64,
     c1: 21.066100687650238f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 impl RotationalElements for Adrastea {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_ADRASTEA.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            DECLINATION_ADRASTEA.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            ROTATION_ADRASTEA.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+            RIGHT_ASCENSION_ADRASTEA.angle(t),
+            DECLINATION_ADRASTEA.angle(t),
+            ROTATION_ADRASTEA.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_ADRASTEA.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            DECLINATION_ADRASTEA.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            ROTATION_ADRASTEA.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+            RIGHT_ASCENSION_ADRASTEA.angle_dot(t),
+            DECLINATION_ADRASTEA.angle_dot(t),
+            ROTATION_ADRASTEA.angle_dot(t),
         )
     }
 }
@@ -2200,35 +3121,41 @@ const RIGHT_ASCENSION_METIS: RotationalElement<0usize> = RotationalElement {
     c0: 4.678355059970801f64,
     c1: -0.00015707963267948965f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const DECLINATION_METIS: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 1.125562834611143f64,
     c1: 0.00005235987755982989f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const ROTATION_METIS: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 6.040410008227175f64,
     c1: 21.3149160457997f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 impl RotationalElements for Metis {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_METIS.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            DECLINATION_METIS.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            ROTATION_METIS.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+            RIGHT_ASCENSION_METIS.angle(t),
+            DECLINATION_METIS.angle(t),
+            ROTATION_METIS.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_METIS.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            DECLINATION_METIS.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-            ROTATION_METIS.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+            RIGHT_ASCENSION_METIS.angle_dot(t),
+            DECLINATION_METIS.angle_dot(t),
+            ROTATION_METIS.angle_dot(t),
         )
     }
 }
@@ -2792,7 +3719,7 @@ const RIGHT_ASCENSION_MIMAS: RotationalElement<8usize> = RotationalElement {
     c0: 0.7096508738608943f64,
     c1: -0.0006283185307179586f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0.2366666465704311f64,
@@ -2801,14 +3728,34 @@ const RIGHT_ASCENSION_MIMAS: RotationalElement<8usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        6.166597313146365f64,
+        0.5012585611727715f64,
+        3.0962140930379407f64,
+        5.235987755982989f64,
+        5.523094417936056f64,
+        6.0248765778844255f64,
+        12.33319462629273f64,
+        1.002517122345543f64,
+    ],
+    theta1: [
+        1321.331180819591f64,
+        1321.331180819591f64,
+        -637.14117008679f64,
+        -126.11574641985825f64,
+        8.834856673595295f64,
+        -17.73778118801837f64,
+        2642.662361639182f64,
+        2642.662361639182f64,
+    ],
 };
 const DECLINATION_MIMAS: RotationalElement<8usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 1.457698991265664f64,
     c1: -0.00006981317007977319f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         -0.026703537555513242f64,
@@ -2817,14 +3764,34 @@ const DECLINATION_MIMAS: RotationalElement<8usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        6.166597313146365f64,
+        0.5012585611727715f64,
+        3.0962140930379407f64,
+        5.235987755982989f64,
+        5.523094417936056f64,
+        6.0248765778844255f64,
+        12.33319462629273f64,
+        1.002517122345543f64,
+    ],
+    theta1: [
+        1321.331180819591f64,
+        1321.331180819591f64,
+        -637.14117008679f64,
+        -126.11574641985825f64,
+        8.834856673595295f64,
+        -17.73778118801837f64,
+        2642.662361639182f64,
+        2642.662361639182f64,
+    ],
 };
 const ROTATION_MIMAS: RotationalElement<8usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 5.819974923700291f64,
     c1: 6.667062709440567f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         -0.23527038316883564f64,
@@ -2833,21 +3800,41 @@ const ROTATION_MIMAS: RotationalElement<8usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        6.166597313146365f64,
+        0.5012585611727715f64,
+        3.0962140930379407f64,
+        5.235987755982989f64,
+        5.523094417936056f64,
+        6.0248765778844255f64,
+        12.33319462629273f64,
+        1.002517122345543f64,
+    ],
+    theta1: [
+        1321.331180819591f64,
+        1321.331180819591f64,
+        -637.14117008679f64,
+        -126.11574641985825f64,
+        8.834856673595295f64,
+        -17.73778118801837f64,
+        2642.662361639182f64,
+        2642.662361639182f64,
+    ],
 };
 impl RotationalElements for Mimas {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_MIMAS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_MIMAS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_MIMAS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_MIMAS.angle(t),
+            DECLINATION_MIMAS.angle(t),
+            ROTATION_MIMAS.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_MIMAS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_MIMAS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_MIMAS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_MIMAS.angle_dot(t),
+            DECLINATION_MIMAS.angle_dot(t),
+            ROTATION_MIMAS.angle_dot(t),
         )
     }
 }
@@ -2886,35 +3873,41 @@ const RIGHT_ASCENSION_ENCELADUS: RotationalElement<0usize> = RotationalElement {
     c0: 0.7096508738608943f64,
     c1: -0.0006283185307179586f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const DECLINATION_ENCELADUS: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 1.457698991265664f64,
     c1: -0.00006981317007977319f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const ROTATION_ENCELADUS: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 0.11030480872604163f64,
     c1: 4.585536698039173f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 impl RotationalElements for Enceladus {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_ENCELADUS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_ENCELADUS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_ENCELADUS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_ENCELADUS.angle(t),
+            DECLINATION_ENCELADUS.angle(t),
+            ROTATION_ENCELADUS.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_ENCELADUS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_ENCELADUS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_ENCELADUS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_ENCELADUS.angle_dot(t),
+            DECLINATION_ENCELADUS.angle_dot(t),
+            ROTATION_ENCELADUS.angle_dot(t),
         )
     }
 }
@@ -2953,7 +3946,7 @@ const RIGHT_ASCENSION_TETHYS: RotationalElement<8usize> = RotationalElement {
     c0: 0.7096508738608943f64,
     c1: -0.0006283185307179586f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -2962,14 +3955,34 @@ const RIGHT_ASCENSION_TETHYS: RotationalElement<8usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        6.166597313146365f64,
+        0.5012585611727715f64,
+        3.0962140930379407f64,
+        5.235987755982989f64,
+        5.523094417936056f64,
+        6.0248765778844255f64,
+        12.33319462629273f64,
+        1.002517122345543f64,
+    ],
+    theta1: [
+        1321.331180819591f64,
+        1321.331180819591f64,
+        -637.14117008679f64,
+        -126.11574641985825f64,
+        8.834856673595295f64,
+        -17.73778118801837f64,
+        2642.662361639182f64,
+        2642.662361639182f64,
+    ],
 };
 const DECLINATION_TETHYS: RotationalElement<8usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 1.457698991265664f64,
     c1: -0.00006981317007977319f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -2978,14 +3991,34 @@ const DECLINATION_TETHYS: RotationalElement<8usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        6.166597313146365f64,
+        0.5012585611727715f64,
+        3.0962140930379407f64,
+        5.235987755982989f64,
+        5.523094417936056f64,
+        6.0248765778844255f64,
+        12.33319462629273f64,
+        1.002517122345543f64,
+    ],
+    theta1: [
+        1321.331180819591f64,
+        1321.331180819591f64,
+        -637.14117008679f64,
+        -126.11574641985825f64,
+        8.834856673595295f64,
+        -17.73778118801837f64,
+        2642.662361639182f64,
+        2642.662361639182f64,
+    ],
 };
 const ROTATION_TETHYS: RotationalElement<8usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 0.1562069680534925f64,
     c1: 3.328306379991881f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -2994,21 +4027,41 @@ const ROTATION_TETHYS: RotationalElement<8usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        6.166597313146365f64,
+        0.5012585611727715f64,
+        3.0962140930379407f64,
+        5.235987755982989f64,
+        5.523094417936056f64,
+        6.0248765778844255f64,
+        12.33319462629273f64,
+        1.002517122345543f64,
+    ],
+    theta1: [
+        1321.331180819591f64,
+        1321.331180819591f64,
+        -637.14117008679f64,
+        -126.11574641985825f64,
+        8.834856673595295f64,
+        -17.73778118801837f64,
+        2642.662361639182f64,
+        2642.662361639182f64,
+    ],
 };
 impl RotationalElements for Tethys {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_TETHYS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_TETHYS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_TETHYS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_TETHYS.angle(t),
+            DECLINATION_TETHYS.angle(t),
+            ROTATION_TETHYS.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_TETHYS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_TETHYS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_TETHYS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_TETHYS.angle_dot(t),
+            DECLINATION_TETHYS.angle_dot(t),
+            ROTATION_TETHYS.angle_dot(t),
         )
     }
 }
@@ -3047,35 +4100,41 @@ const RIGHT_ASCENSION_DIONE: RotationalElement<0usize> = RotationalElement {
     c0: 0.7096508738608943f64,
     c1: -0.0006283185307179586f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const DECLINATION_DIONE: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 1.457698991265664f64,
     c1: -0.00006981317007977319f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const ROTATION_DIONE: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 6.241297405131723f64,
     c1: 2.295717637805533f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 impl RotationalElements for Dione {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_DIONE.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_DIONE.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_DIONE.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_DIONE.angle(t),
+            DECLINATION_DIONE.angle(t),
+            ROTATION_DIONE.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_DIONE.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_DIONE.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_DIONE.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_DIONE.angle_dot(t),
+            DECLINATION_DIONE.angle_dot(t),
+            ROTATION_DIONE.angle_dot(t),
         )
     }
 }
@@ -3114,7 +4173,7 @@ const RIGHT_ASCENSION_RHEA: RotationalElement<8usize> = RotationalElement {
     c0: 0.7047639519553103f64,
     c1: -0.0006283185307179586f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -3123,14 +4182,34 @@ const RIGHT_ASCENSION_RHEA: RotationalElement<8usize> = RotationalElement {
         0.054105206811824215f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        6.166597313146365f64,
+        0.5012585611727715f64,
+        3.0962140930379407f64,
+        5.235987755982989f64,
+        5.523094417936056f64,
+        6.0248765778844255f64,
+        12.33319462629273f64,
+        1.002517122345543f64,
+    ],
+    theta1: [
+        1321.331180819591f64,
+        1321.331180819591f64,
+        -637.14117008679f64,
+        -126.11574641985825f64,
+        8.834856673595295f64,
+        -17.73778118801837f64,
+        2642.662361639182f64,
+        2642.662361639182f64,
+    ],
 };
 const DECLINATION_RHEA: RotationalElement<8usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 1.4582225900412622f64,
     c1: -0.00006981317007977319f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -3139,14 +4218,34 @@ const DECLINATION_RHEA: RotationalElement<8usize> = RotationalElement {
         -0.006108652381980153f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        6.166597313146365f64,
+        0.5012585611727715f64,
+        3.0962140930379407f64,
+        5.235987755982989f64,
+        5.523094417936056f64,
+        6.0248765778844255f64,
+        12.33319462629273f64,
+        1.002517122345543f64,
+    ],
+    theta1: [
+        1321.331180819591f64,
+        1321.331180819591f64,
+        -637.14117008679f64,
+        -126.11574641985825f64,
+        8.834856673595295f64,
+        -17.73778118801837f64,
+        2642.662361639182f64,
+        2642.662361639182f64,
+    ],
 };
 const ROTATION_RHEA: RotationalElement<8usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 4.104316268989865f64,
     c1: 1.3908537151816638f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -3155,21 +4254,41 @@ const ROTATION_RHEA: RotationalElement<8usize> = RotationalElement {
         -0.05375614096142535f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        6.166597313146365f64,
+        0.5012585611727715f64,
+        3.0962140930379407f64,
+        5.235987755982989f64,
+        5.523094417936056f64,
+        6.0248765778844255f64,
+        12.33319462629273f64,
+        1.002517122345543f64,
+    ],
+    theta1: [
+        1321.331180819591f64,
+        1321.331180819591f64,
+        -637.14117008679f64,
+        -126.11574641985825f64,
+        8.834856673595295f64,
+        -17.73778118801837f64,
+        2642.662361639182f64,
+        2642.662361639182f64,
+    ],
 };
 impl RotationalElements for Rhea {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_RHEA.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_RHEA.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_RHEA.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_RHEA.angle(t),
+            DECLINATION_RHEA.angle(t),
+            ROTATION_RHEA.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_RHEA.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_RHEA.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_RHEA.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_RHEA.angle_dot(t),
+            DECLINATION_RHEA.angle_dot(t),
+            ROTATION_RHEA.angle_dot(t),
         )
     }
 }
@@ -3208,35 +4327,95 @@ const RIGHT_ASCENSION_TITAN: RotationalElement<8usize> = RotationalElement {
     c0: 0.6891031125771652f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64]),
+    c: [0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64],
+    theta0: [
+        6.166597313146365f64,
+        0.5012585611727715f64,
+        3.0962140930379407f64,
+        5.235987755982989f64,
+        5.523094417936056f64,
+        6.0248765778844255f64,
+        12.33319462629273f64,
+        1.002517122345543f64,
+    ],
+    theta1: [
+        1321.331180819591f64,
+        1321.331180819591f64,
+        -637.14117008679f64,
+        -126.11574641985825f64,
+        8.834856673595295f64,
+        -17.73778118801837f64,
+        2642.662361639182f64,
+        2642.662361639182f64,
+    ],
 };
 const DECLINATION_TITAN: RotationalElement<8usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 1.456091543024577f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64]),
+    c: [0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64],
+    theta0: [
+        6.166597313146365f64,
+        0.5012585611727715f64,
+        3.0962140930379407f64,
+        5.235987755982989f64,
+        5.523094417936056f64,
+        6.0248765778844255f64,
+        12.33319462629273f64,
+        1.002517122345543f64,
+    ],
+    theta1: [
+        1321.331180819591f64,
+        1321.331180819591f64,
+        -637.14117008679f64,
+        -126.11574641985825f64,
+        8.834856673595295f64,
+        -17.73778118801837f64,
+        2642.662361639182f64,
+        2642.662361639182f64,
+    ],
 };
 const ROTATION_TITAN: RotationalElement<8usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 3.2565313114798795f64,
     c1: 0.39404258030637335f64,
     c2: 0f64,
-    c: Some([0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64]),
+    c: [0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64, 0f64],
+    theta0: [
+        6.166597313146365f64,
+        0.5012585611727715f64,
+        3.0962140930379407f64,
+        5.235987755982989f64,
+        5.523094417936056f64,
+        6.0248765778844255f64,
+        12.33319462629273f64,
+        1.002517122345543f64,
+    ],
+    theta1: [
+        1321.331180819591f64,
+        1321.331180819591f64,
+        -637.14117008679f64,
+        -126.11574641985825f64,
+        8.834856673595295f64,
+        -17.73778118801837f64,
+        2642.662361639182f64,
+        2642.662361639182f64,
+    ],
 };
 impl RotationalElements for Titan {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_TITAN.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_TITAN.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_TITAN.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_TITAN.angle(t),
+            DECLINATION_TITAN.angle(t),
+            ROTATION_TITAN.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_TITAN.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_TITAN.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_TITAN.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_TITAN.angle_dot(t),
+            DECLINATION_TITAN.angle_dot(t),
+            ROTATION_TITAN.angle_dot(t),
         )
     }
 }
@@ -3306,35 +4485,41 @@ const RIGHT_ASCENSION_IAPETUS: RotationalElement<0usize> = RotationalElement {
     c0: 5.552939548145159f64,
     c1: -0.06892305216125608f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const DECLINATION_IAPETUS: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 1.3095205377713455f64,
     c1: -0.019949113350295186f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const ROTATION_IAPETUS: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 6.199409503083858f64,
     c1: 0.07920229445458282f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 impl RotationalElements for Iapetus {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_IAPETUS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_IAPETUS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_IAPETUS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_IAPETUS.angle(t),
+            DECLINATION_IAPETUS.angle(t),
+            ROTATION_IAPETUS.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_IAPETUS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_IAPETUS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_IAPETUS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_IAPETUS.angle_dot(t),
+            DECLINATION_IAPETUS.angle_dot(t),
+            ROTATION_IAPETUS.angle_dot(t),
         )
     }
 }
@@ -3373,35 +4558,41 @@ const RIGHT_ASCENSION_PHOEBE: RotationalElement<0usize> = RotationalElement {
     c0: 6.229080100367762f64,
     c1: 0f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const DECLINATION_PHOEBE: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 1.3578661580515883f64,
     c1: 0f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const ROTATION_PHOEBE: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 3.116808978211474f64,
     c1: 16.26016798998745f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 impl RotationalElements for Phoebe {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_PHOEBE.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_PHOEBE.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_PHOEBE.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_PHOEBE.angle(t),
+            DECLINATION_PHOEBE.angle(t),
+            ROTATION_PHOEBE.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_PHOEBE.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_PHOEBE.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_PHOEBE.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_PHOEBE.angle_dot(t),
+            DECLINATION_PHOEBE.angle_dot(t),
+            ROTATION_PHOEBE.angle_dot(t),
         )
     }
 }
@@ -3440,7 +4631,7 @@ const RIGHT_ASCENSION_JANUS: RotationalElement<8usize> = RotationalElement {
     c0: 0.7082546104592989f64,
     c1: -0.0006283185307179586f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         -0.028326693759867967f64,
         0f64,
@@ -3449,14 +4640,34 @@ const RIGHT_ASCENSION_JANUS: RotationalElement<8usize> = RotationalElement {
         0f64,
         0f64,
         0.0004014257279586958f64,
-    ]),
+    ],
+    theta0: [
+        6.166597313146365f64,
+        0.5012585611727715f64,
+        3.0962140930379407f64,
+        5.235987755982989f64,
+        5.523094417936056f64,
+        6.0248765778844255f64,
+        12.33319462629273f64,
+        1.002517122345543f64,
+    ],
+    theta1: [
+        1321.331180819591f64,
+        1321.331180819591f64,
+        -637.14117008679f64,
+        -126.11574641985825f64,
+        8.834856673595295f64,
+        -17.73778118801837f64,
+        2642.662361639182f64,
+        2642.662361639182f64,
+    ],
 };
 const DECLINATION_JANUS: RotationalElement<8usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 1.457698991265664f64,
     c1: -0.00006981317007977319f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         -0.003193952531149623f64,
         0f64,
@@ -3465,14 +4676,34 @@ const DECLINATION_JANUS: RotationalElement<8usize> = RotationalElement {
         0f64,
         0f64,
         0.000017453292519943296f64,
-    ]),
+    ],
+    theta0: [
+        6.166597313146365f64,
+        0.5012585611727715f64,
+        3.0962140930379407f64,
+        5.235987755982989f64,
+        5.523094417936056f64,
+        6.0248765778844255f64,
+        12.33319462629273f64,
+        1.002517122345543f64,
+    ],
+    theta1: [
+        1321.331180819591f64,
+        1321.331180819591f64,
+        -637.14117008679f64,
+        -126.11574641985825f64,
+        8.834856673595295f64,
+        -17.73778118801837f64,
+        2642.662361639182f64,
+        2642.662361639182f64,
+    ],
 };
 const ROTATION_JANUS: RotationalElement<8usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 1.0267771989482641f64,
     c1: 9.044924285944507f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0.028152160834668535f64,
         0f64,
@@ -3481,21 +4712,41 @@ const ROTATION_JANUS: RotationalElement<8usize> = RotationalElement {
         0f64,
         0f64,
         -0.0004014257279586958f64,
-    ]),
+    ],
+    theta0: [
+        6.166597313146365f64,
+        0.5012585611727715f64,
+        3.0962140930379407f64,
+        5.235987755982989f64,
+        5.523094417936056f64,
+        6.0248765778844255f64,
+        12.33319462629273f64,
+        1.002517122345543f64,
+    ],
+    theta1: [
+        1321.331180819591f64,
+        1321.331180819591f64,
+        -637.14117008679f64,
+        -126.11574641985825f64,
+        8.834856673595295f64,
+        -17.73778118801837f64,
+        2642.662361639182f64,
+        2642.662361639182f64,
+    ],
 };
 impl RotationalElements for Janus {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_JANUS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_JANUS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_JANUS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_JANUS.angle(t),
+            DECLINATION_JANUS.angle(t),
+            ROTATION_JANUS.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_JANUS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_JANUS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_JANUS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_JANUS.angle_dot(t),
+            DECLINATION_JANUS.angle_dot(t),
+            ROTATION_JANUS.angle_dot(t),
         )
     }
 }
@@ -3534,7 +4785,7 @@ const RIGHT_ASCENSION_EPIMETHEUS: RotationalElement<8usize> = RotationalElement 
     c0: 0.7082546104592989f64,
     c1: -0.0006283185307179586f64,
     c2: 0f64,
-    c: Some([
+    c: [
         -0.05503023131538121f64,
         0f64,
         0f64,
@@ -3543,14 +4794,34 @@ const RIGHT_ASCENSION_EPIMETHEUS: RotationalElement<8usize> = RotationalElement 
         0f64,
         0.0015009831567151233f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        6.166597313146365f64,
+        0.5012585611727715f64,
+        3.0962140930379407f64,
+        5.235987755982989f64,
+        5.523094417936056f64,
+        6.0248765778844255f64,
+        12.33319462629273f64,
+        1.002517122345543f64,
+    ],
+    theta1: [
+        1321.331180819591f64,
+        1321.331180819591f64,
+        -637.14117008679f64,
+        -126.11574641985825f64,
+        8.834856673595295f64,
+        -17.73778118801837f64,
+        2642.662361639182f64,
+        2642.662361639182f64,
+    ],
 };
 const DECLINATION_EPIMETHEUS: RotationalElement<8usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 1.457698991265664f64,
     c1: -0.00006981317007977319f64,
     c2: 0f64,
-    c: Some([
+    c: [
         -0.006213372137099813f64,
         0f64,
         0f64,
@@ -3559,14 +4830,34 @@ const DECLINATION_EPIMETHEUS: RotationalElement<8usize> = RotationalElement {
         0f64,
         0.00008726646259971648f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        6.166597313146365f64,
+        0.5012585611727715f64,
+        3.0962140930379407f64,
+        5.235987755982989f64,
+        5.523094417936056f64,
+        6.0248765778844255f64,
+        12.33319462629273f64,
+        1.002517122345543f64,
+    ],
+    theta1: [
+        1321.331180819591f64,
+        1321.331180819591f64,
+        -637.14117008679f64,
+        -126.11574641985825f64,
+        8.834856673595295f64,
+        -17.73778118801837f64,
+        2642.662361639182f64,
+        2642.662361639182f64,
+    ],
 };
 const ROTATION_EPIMETHEUS: RotationalElement<8usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 5.128999072835736f64,
     c1: 9.049370273103856f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0.05468116546498235f64,
         0f64,
         0f64,
@@ -3575,21 +4866,41 @@ const ROTATION_EPIMETHEUS: RotationalElement<8usize> = RotationalElement {
         0f64,
         -0.0015009831567151233f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        6.166597313146365f64,
+        0.5012585611727715f64,
+        3.0962140930379407f64,
+        5.235987755982989f64,
+        5.523094417936056f64,
+        6.0248765778844255f64,
+        12.33319462629273f64,
+        1.002517122345543f64,
+    ],
+    theta1: [
+        1321.331180819591f64,
+        1321.331180819591f64,
+        -637.14117008679f64,
+        -126.11574641985825f64,
+        8.834856673595295f64,
+        -17.73778118801837f64,
+        2642.662361639182f64,
+        2642.662361639182f64,
+    ],
 };
 impl RotationalElements for Epimetheus {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_EPIMETHEUS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_EPIMETHEUS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_EPIMETHEUS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_EPIMETHEUS.angle(t),
+            DECLINATION_EPIMETHEUS.angle(t),
+            ROTATION_EPIMETHEUS.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_EPIMETHEUS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_EPIMETHEUS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_EPIMETHEUS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_EPIMETHEUS.angle_dot(t),
+            DECLINATION_EPIMETHEUS.angle_dot(t),
+            ROTATION_EPIMETHEUS.angle_dot(t),
         )
     }
 }
@@ -3628,35 +4939,41 @@ const RIGHT_ASCENSION_HELENE: RotationalElement<0usize> = RotationalElement {
     c0: 0.7129669994396837f64,
     c1: -0.0006283185307179586f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const DECLINATION_HELENE: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 1.4545573986120743f64,
     c1: -0.00006981317007977319f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const ROTATION_HELENE: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 4.278151062488501f64,
     c1: 2.297157080652823f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 impl RotationalElements for Helene {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_HELENE.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_HELENE.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_HELENE.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_HELENE.angle(t),
+            DECLINATION_HELENE.angle(t),
+            ROTATION_HELENE.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_HELENE.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_HELENE.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_HELENE.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_HELENE.angle_dot(t),
+            DECLINATION_HELENE.angle_dot(t),
+            ROTATION_HELENE.angle_dot(t),
         )
     }
 }
@@ -3690,35 +5007,41 @@ const RIGHT_ASCENSION_TELESTO: RotationalElement<0usize> = RotationalElement {
     c0: 0.8815658051823358f64,
     c1: -0.0006283185307179586f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const DECLINATION_TELESTO: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 1.4671237692264334f64,
     c1: -0.00006981317007977319f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const ROTATION_TELESTO: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 0.9927432785343747f64,
     c1: 3.328306811088206f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 impl RotationalElements for Telesto {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_TELESTO.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_TELESTO.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_TELESTO.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_TELESTO.angle(t),
+            DECLINATION_TELESTO.angle(t),
+            ROTATION_TELESTO.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_TELESTO.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_TELESTO.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_TELESTO.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_TELESTO.angle_dot(t),
+            DECLINATION_TELESTO.angle_dot(t),
+            ROTATION_TELESTO.angle_dot(t),
         )
     }
 }
@@ -3752,35 +5075,41 @@ const RIGHT_ASCENSION_CALYPSO: RotationalElement<0usize> = RotationalElement {
     c0: 0.6354743806511354f64,
     c1: -0.0006283185307179586f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const DECLINATION_CALYPSO: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 1.4842279958959779f64,
     c1: -0.00006981317007977319f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const ROTATION_CALYPSO: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 2.679254934736495f64,
     c1: 3.327893239613983f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 impl RotationalElements for Calypso {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_CALYPSO.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_CALYPSO.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_CALYPSO.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_CALYPSO.angle(t),
+            DECLINATION_CALYPSO.angle(t),
+            ROTATION_CALYPSO.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_CALYPSO.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_CALYPSO.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_CALYPSO.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_CALYPSO.angle_dot(t),
+            DECLINATION_CALYPSO.angle_dot(t),
+            ROTATION_CALYPSO.angle_dot(t),
         )
     }
 }
@@ -3819,35 +5148,41 @@ const RIGHT_ASCENSION_ATLAS: RotationalElement<0usize> = RotationalElement {
     c0: 0.7082546104592989f64,
     c1: -0.0006283185307179586f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const DECLINATION_ATLAS: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 1.4578735241908636f64,
     c1: -0.00006981317007977319f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const ROTATION_ATLAS: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 2.4064599726497815f64,
     c1: 10.442409634437194f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 impl RotationalElements for Atlas {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_ATLAS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_ATLAS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_ATLAS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_ATLAS.angle(t),
+            DECLINATION_ATLAS.angle(t),
+            ROTATION_ATLAS.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_ATLAS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_ATLAS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_ATLAS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_ATLAS.angle_dot(t),
+            DECLINATION_ATLAS.angle_dot(t),
+            ROTATION_ATLAS.angle_dot(t),
         )
     }
 }
@@ -3886,35 +5221,41 @@ const RIGHT_ASCENSION_PROMETHEUS: RotationalElement<0usize> = RotationalElement 
     c0: 0.7082546104592989f64,
     c1: -0.0006283185307179586f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const DECLINATION_PROMETHEUS: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 1.4578735241908636f64,
     c1: -0.00006981317007977319f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const ROTATION_PROMETHEUS: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 5.1686180468560075f64,
     c1: 10.250126710744977f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 impl RotationalElements for Prometheus {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_PROMETHEUS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_PROMETHEUS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_PROMETHEUS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_PROMETHEUS.angle(t),
+            DECLINATION_PROMETHEUS.angle(t),
+            ROTATION_PROMETHEUS.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_PROMETHEUS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_PROMETHEUS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_PROMETHEUS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_PROMETHEUS.angle_dot(t),
+            DECLINATION_PROMETHEUS.angle_dot(t),
+            ROTATION_PROMETHEUS.angle_dot(t),
         )
     }
 }
@@ -3953,35 +5294,41 @@ const RIGHT_ASCENSION_PANDORA: RotationalElement<0usize> = RotationalElement {
     c0: 0.7082546104592989f64,
     c1: -0.0006283185307179586f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const DECLINATION_PANDORA: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 1.4578735241908636f64,
     c1: -0.00006981317007977319f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const ROTATION_PANDORA: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 2.8434904173491615f64,
     c1: 9.997055714535051f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 impl RotationalElements for Pandora {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_PANDORA.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_PANDORA.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_PANDORA.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_PANDORA.angle(t),
+            DECLINATION_PANDORA.angle(t),
+            ROTATION_PANDORA.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_PANDORA.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_PANDORA.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_PANDORA.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_PANDORA.angle_dot(t),
+            DECLINATION_PANDORA.angle_dot(t),
+            ROTATION_PANDORA.angle_dot(t),
         )
     }
 }
@@ -4015,35 +5362,41 @@ const RIGHT_ASCENSION_PAN: RotationalElement<0usize> = RotationalElement {
     c0: 0.7086036763096978f64,
     c1: -0.0006283185307179586f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const DECLINATION_PAN: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 1.457349925415265f64,
     c1: -0.00006981317007977319f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const ROTATION_PAN: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 0.8517206749732328f64,
     c1: 10.92652906235538f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 impl RotationalElements for Pan {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_PAN.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_PAN.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_PAN.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_PAN.angle(t),
+            DECLINATION_PAN.angle(t),
+            ROTATION_PAN.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_PAN.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            DECLINATION_PAN.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-            ROTATION_PAN.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+            RIGHT_ASCENSION_PAN.angle_dot(t),
+            DECLINATION_PAN.angle_dot(t),
+            ROTATION_PAN.angle_dot(t),
         )
     }
 }
@@ -4668,7 +6021,7 @@ const RIGHT_ASCENSION_ARIEL: RotationalElement<13usize> = RotationalElement {
     c0: 4.493001093409003f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -4682,14 +6035,44 @@ const RIGHT_ASCENSION_ARIEL: RotationalElement<13usize> = RotationalElement {
         0f64,
         0f64,
         0.005061454830783556f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+    ],
 };
 const DECLINATION_ARIEL: RotationalElement<13usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: -0.26354471705114374f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -4703,14 +6086,44 @@ const DECLINATION_ARIEL: RotationalElement<13usize> = RotationalElement {
         0f64,
         0f64,
         0.004886921905584123f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+    ],
 };
 const ROTATION_ARIEL: RotationalElement<13usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 2.7265533574655416f64,
     c1: -2.492952697630833f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -4724,21 +6137,51 @@ const ROTATION_ARIEL: RotationalElement<13usize> = RotationalElement {
         0f64,
         0.0008726646259971648f64,
         0.0013962634015954637f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+    ],
 };
 impl RotationalElements for Ariel {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_ARIEL.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            DECLINATION_ARIEL.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            ROTATION_ARIEL.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+            RIGHT_ASCENSION_ARIEL.angle(t),
+            DECLINATION_ARIEL.angle(t),
+            ROTATION_ARIEL.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_ARIEL.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            DECLINATION_ARIEL.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            ROTATION_ARIEL.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+            RIGHT_ASCENSION_ARIEL.angle_dot(t),
+            DECLINATION_ARIEL.angle_dot(t),
+            ROTATION_ARIEL.angle_dot(t),
         )
     }
 }
@@ -4778,7 +6221,7 @@ const RIGHT_ASCENSION_UMBRIEL: RotationalElement<14usize> = RotationalElement {
     c0: 4.493001093409003f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -4793,14 +6236,46 @@ const RIGHT_ASCENSION_UMBRIEL: RotationalElement<14usize> = RotationalElement {
         0f64,
         0f64,
         0.003665191429188092f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+    ],
 };
 const DECLINATION_UMBRIEL: RotationalElement<14usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: -0.26354471705114374f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -4815,14 +6290,46 @@ const DECLINATION_UMBRIEL: RotationalElement<14usize> = RotationalElement {
         0f64,
         0f64,
         0.003490658503988659f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+    ],
 };
 const ROTATION_UMBRIEL: RotationalElement<14usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 1.885828256779873f64,
     c1: -1.5161481881953498f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -4837,21 +6344,53 @@ const ROTATION_UMBRIEL: RotationalElement<14usize> = RotationalElement {
         -0.0015707963267948964f64,
         0f64,
         0.0010471975511965976f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+    ],
 };
 impl RotationalElements for Umbriel {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_UMBRIEL.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            DECLINATION_UMBRIEL.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            ROTATION_UMBRIEL.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+            RIGHT_ASCENSION_UMBRIEL.angle(t),
+            DECLINATION_UMBRIEL.angle(t),
+            ROTATION_UMBRIEL.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_UMBRIEL.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            DECLINATION_UMBRIEL.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            ROTATION_UMBRIEL.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+            RIGHT_ASCENSION_UMBRIEL.angle_dot(t),
+            DECLINATION_UMBRIEL.angle_dot(t),
+            ROTATION_UMBRIEL.angle_dot(t),
         )
     }
 }
@@ -4891,7 +6430,7 @@ const RIGHT_ASCENSION_TITANIA: RotationalElement<15usize> = RotationalElement {
     c0: 4.493001093409003f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -4907,14 +6446,48 @@ const RIGHT_ASCENSION_TITANIA: RotationalElement<15usize> = RotationalElement {
         0f64,
         0f64,
         0.005061454830783556f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+    ],
 };
 const DECLINATION_TITANIA: RotationalElement<15usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: -0.26354471705114374f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -4930,14 +6503,48 @@ const DECLINATION_TITANIA: RotationalElement<15usize> = RotationalElement {
         0f64,
         0f64,
         0.004886921905584123f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+    ],
 };
 const ROTATION_TITANIA: RotationalElement<15usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 1.3568189605003917f64,
     c1: -0.7217186318332268f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -4953,21 +6560,55 @@ const ROTATION_TITANIA: RotationalElement<15usize> = RotationalElement {
         0f64,
         0f64,
         0.0013962634015954637f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+    ],
 };
 impl RotationalElements for Titania {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_TITANIA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            DECLINATION_TITANIA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            ROTATION_TITANIA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+            RIGHT_ASCENSION_TITANIA.angle(t),
+            DECLINATION_TITANIA.angle(t),
+            ROTATION_TITANIA.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_TITANIA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            DECLINATION_TITANIA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            ROTATION_TITANIA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+            RIGHT_ASCENSION_TITANIA.angle_dot(t),
+            DECLINATION_TITANIA.angle_dot(t),
+            ROTATION_TITANIA.angle_dot(t),
         )
     }
 }
@@ -5007,7 +6648,7 @@ const RIGHT_ASCENSION_OBERON: RotationalElement<16usize> = RotationalElement {
     c0: 4.493001093409003f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -5024,14 +6665,50 @@ const RIGHT_ASCENSION_OBERON: RotationalElement<16usize> = RotationalElement {
         0f64,
         0f64,
         0.0027925268031909274f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+    ],
 };
 const DECLINATION_OBERON: RotationalElement<16usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: -0.26354471705114374f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -5048,14 +6725,50 @@ const DECLINATION_OBERON: RotationalElement<16usize> = RotationalElement {
         0f64,
         0f64,
         0.0027925268031909274f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+    ],
 };
 const ROTATION_OBERON: RotationalElement<16usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 0.1181587903600161f64,
     c1: -0.4666921966546346f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -5072,21 +6785,57 @@ const ROTATION_OBERON: RotationalElement<16usize> = RotationalElement {
         0f64,
         0f64,
         0.0006981317007977319f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+    ],
 };
 impl RotationalElements for Oberon {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_OBERON.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            DECLINATION_OBERON.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            ROTATION_OBERON.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+            RIGHT_ASCENSION_OBERON.angle(t),
+            DECLINATION_OBERON.angle(t),
+            ROTATION_OBERON.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_OBERON.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            DECLINATION_OBERON.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            ROTATION_OBERON.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+            RIGHT_ASCENSION_OBERON.angle_dot(t),
+            DECLINATION_OBERON.angle_dot(t),
+            ROTATION_OBERON.angle_dot(t),
         )
     }
 }
@@ -5125,7 +6874,7 @@ const RIGHT_ASCENSION_MIRANDA: RotationalElement<18usize> = RotationalElement {
     c0: 4.493001093409003f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -5144,14 +6893,54 @@ const RIGHT_ASCENSION_MIRANDA: RotationalElement<18usize> = RotationalElement {
         0f64,
         -0.0006981317007977319f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+        3.568500188627606f64,
+        11.044792572470516f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+        -70.65860756943924f64,
+        99.9710632908336f64,
+    ],
 };
 const DECLINATION_MIRANDA: RotationalElement<18usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: -0.2631956512007449f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -5170,14 +6959,54 @@ const DECLINATION_MIRANDA: RotationalElement<18usize> = RotationalElement {
         0f64,
         -0.00034906585039886593f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+        3.568500188627606f64,
+        11.044792572470516f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+        -70.65860756943924f64,
+        99.9710632908336f64,
+    ],
 };
 const ROTATION_MIRANDA: RotationalElement<18usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 0.5358160803622591f64,
     c1: -4.445191100713563f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -5196,21 +7025,61 @@ const ROTATION_MIRANDA: RotationalElement<18usize> = RotationalElement {
         0f64,
         -0.0015707963267948964f64,
         0.002617993877991494f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+        3.568500188627606f64,
+        11.044792572470516f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+        -70.65860756943924f64,
+        99.9710632908336f64,
+    ],
 };
 impl RotationalElements for Miranda {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_MIRANDA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            DECLINATION_MIRANDA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            ROTATION_MIRANDA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+            RIGHT_ASCENSION_MIRANDA.angle(t),
+            DECLINATION_MIRANDA.angle(t),
+            ROTATION_MIRANDA.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_MIRANDA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            DECLINATION_MIRANDA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            ROTATION_MIRANDA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+            RIGHT_ASCENSION_MIRANDA.angle_dot(t),
+            DECLINATION_MIRANDA.angle_dot(t),
+            ROTATION_MIRANDA.angle_dot(t),
         )
     }
 }
@@ -5245,7 +7114,7 @@ const RIGHT_ASCENSION_CORDELIA: RotationalElement<18usize> = RotationalElement {
     c0: 4.49090669830661f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         -0.002617993877991494f64,
         0f64,
         0f64,
@@ -5264,14 +7133,54 @@ const RIGHT_ASCENSION_CORDELIA: RotationalElement<18usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+        3.568500188627606f64,
+        11.044792572470516f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+        -70.65860756943924f64,
+        99.9710632908336f64,
+    ],
 };
 const DECLINATION_CORDELIA: RotationalElement<18usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: -0.2649409804527392f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0.0024434609527920616f64,
         0f64,
         0f64,
@@ -5290,14 +7199,54 @@ const DECLINATION_CORDELIA: RotationalElement<18usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+        3.568500188627606f64,
+        11.044792572470516f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+        -70.65860756943924f64,
+        99.9710632908336f64,
+    ],
 };
 const ROTATION_CORDELIA: RotationalElement<18usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 2.2286109218715593f64,
     c1: -18.753921879266084f64,
     c2: 0f64,
-    c: Some([
+    c: [
         -0.0006981317007977319f64,
         0f64,
         0f64,
@@ -5316,21 +7265,61 @@ const ROTATION_CORDELIA: RotationalElement<18usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+        3.568500188627606f64,
+        11.044792572470516f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+        -70.65860756943924f64,
+        99.9710632908336f64,
+    ],
 };
 impl RotationalElements for Cordelia {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_CORDELIA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            DECLINATION_CORDELIA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            ROTATION_CORDELIA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+            RIGHT_ASCENSION_CORDELIA.angle(t),
+            DECLINATION_CORDELIA.angle(t),
+            ROTATION_CORDELIA.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_CORDELIA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            DECLINATION_CORDELIA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            ROTATION_CORDELIA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+            RIGHT_ASCENSION_CORDELIA.angle_dot(t),
+            DECLINATION_CORDELIA.angle_dot(t),
+            ROTATION_CORDELIA.angle_dot(t),
         )
     }
 }
@@ -5365,7 +7354,7 @@ const RIGHT_ASCENSION_OPHELIA: RotationalElement<18usize> = RotationalElement {
     c0: 4.49090669830661f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         -0.0015707963267948964f64,
         0f64,
@@ -5384,14 +7373,54 @@ const RIGHT_ASCENSION_OPHELIA: RotationalElement<18usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+        3.568500188627606f64,
+        11.044792572470516f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+        -70.65860756943924f64,
+        99.9710632908336f64,
+    ],
 };
 const DECLINATION_OPHELIA: RotationalElement<18usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: -0.2649409804527392f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0.0015707963267948964f64,
         0f64,
@@ -5410,14 +7439,54 @@ const DECLINATION_OPHELIA: RotationalElement<18usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+        3.568500188627606f64,
+        11.044792572470516f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+        -70.65860756943924f64,
+        99.9710632908336f64,
+    ],
 };
 const ROTATION_OPHELIA: RotationalElement<18usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 2.2750366799746087f64,
     c1: -16.692447910262292f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         -0.0005235987755982988f64,
         0f64,
@@ -5436,21 +7505,61 @@ const ROTATION_OPHELIA: RotationalElement<18usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+        3.568500188627606f64,
+        11.044792572470516f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+        -70.65860756943924f64,
+        99.9710632908336f64,
+    ],
 };
 impl RotationalElements for Ophelia {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_OPHELIA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            DECLINATION_OPHELIA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            ROTATION_OPHELIA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+            RIGHT_ASCENSION_OPHELIA.angle(t),
+            DECLINATION_OPHELIA.angle(t),
+            ROTATION_OPHELIA.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_OPHELIA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            DECLINATION_OPHELIA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            ROTATION_OPHELIA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+            RIGHT_ASCENSION_OPHELIA.angle_dot(t),
+            DECLINATION_OPHELIA.angle_dot(t),
+            ROTATION_OPHELIA.angle_dot(t),
         )
     }
 }
@@ -5485,7 +7594,7 @@ const RIGHT_ASCENSION_BIANCA: RotationalElement<18usize> = RotationalElement {
     c0: 4.49090669830661f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         -0.0027925268031909274f64,
@@ -5504,14 +7613,54 @@ const RIGHT_ASCENSION_BIANCA: RotationalElement<18usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+        3.568500188627606f64,
+        11.044792572470516f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+        -70.65860756943924f64,
+        99.9710632908336f64,
+    ],
 };
 const DECLINATION_BIANCA: RotationalElement<18usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: -0.2649409804527392f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0.0027925268031909274f64,
@@ -5530,14 +7679,54 @@ const DECLINATION_BIANCA: RotationalElement<18usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+        3.568500188627606f64,
+        11.044792572470516f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+        -70.65860756943924f64,
+        99.9710632908336f64,
+    ],
 };
 const ROTATION_BIANCA: RotationalElement<18usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 1.8406242291532198f64,
     c1: -14.458158751655587f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         -0.0006981317007977319f64,
@@ -5556,21 +7745,61 @@ const ROTATION_BIANCA: RotationalElement<18usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+        3.568500188627606f64,
+        11.044792572470516f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+        -70.65860756943924f64,
+        99.9710632908336f64,
+    ],
 };
 impl RotationalElements for Bianca {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_BIANCA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            DECLINATION_BIANCA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            ROTATION_BIANCA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+            RIGHT_ASCENSION_BIANCA.angle(t),
+            DECLINATION_BIANCA.angle(t),
+            ROTATION_BIANCA.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_BIANCA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            DECLINATION_BIANCA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            ROTATION_BIANCA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+            RIGHT_ASCENSION_BIANCA.angle_dot(t),
+            DECLINATION_BIANCA.angle_dot(t),
+            ROTATION_BIANCA.angle_dot(t),
         )
     }
 }
@@ -5605,7 +7834,7 @@ const RIGHT_ASCENSION_CRESSIDA: RotationalElement<18usize> = RotationalElement {
     c0: 4.49090669830661f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -5624,14 +7853,54 @@ const RIGHT_ASCENSION_CRESSIDA: RotationalElement<18usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+        3.568500188627606f64,
+        11.044792572470516f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+        -70.65860756943924f64,
+        99.9710632908336f64,
+    ],
 };
 const DECLINATION_CRESSIDA: RotationalElement<18usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: -0.2649409804527392f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -5650,14 +7919,54 @@ const DECLINATION_CRESSIDA: RotationalElement<18usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+        3.568500188627606f64,
+        11.044792572470516f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+        -70.65860756943924f64,
+        99.9710632908336f64,
+    ],
 };
 const ROTATION_CRESSIDA: RotationalElement<18usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 1.0325367854798453f64,
     c1: -13.553906388910956f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -5676,21 +7985,61 @@ const ROTATION_CRESSIDA: RotationalElement<18usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+        3.568500188627606f64,
+        11.044792572470516f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+        -70.65860756943924f64,
+        99.9710632908336f64,
+    ],
 };
 impl RotationalElements for Cressida {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_CRESSIDA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            DECLINATION_CRESSIDA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            ROTATION_CRESSIDA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+            RIGHT_ASCENSION_CRESSIDA.angle(t),
+            DECLINATION_CRESSIDA.angle(t),
+            ROTATION_CRESSIDA.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_CRESSIDA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            DECLINATION_CRESSIDA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            ROTATION_CRESSIDA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+            RIGHT_ASCENSION_CRESSIDA.angle_dot(t),
+            DECLINATION_CRESSIDA.angle_dot(t),
+            ROTATION_CRESSIDA.angle_dot(t),
         )
     }
 }
@@ -5725,7 +8074,7 @@ const RIGHT_ASCENSION_DESDEMONA: RotationalElement<18usize> = RotationalElement 
     c0: 4.49090669830661f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -5744,14 +8093,54 @@ const RIGHT_ASCENSION_DESDEMONA: RotationalElement<18usize> = RotationalElement 
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+        3.568500188627606f64,
+        11.044792572470516f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+        -70.65860756943924f64,
+        99.9710632908336f64,
+    ],
 };
 const DECLINATION_DESDEMONA: RotationalElement<18usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: -0.2649409804527392f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -5770,14 +8159,54 @@ const DECLINATION_DESDEMONA: RotationalElement<18usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+        3.568500188627606f64,
+        11.044792572470516f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+        -70.65860756943924f64,
+        99.9710632908336f64,
+    ],
 };
 const ROTATION_DESDEMONA: RotationalElement<18usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 1.6594590527962085f64,
     c1: -13.265430289266899f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -5796,21 +8225,61 @@ const ROTATION_DESDEMONA: RotationalElement<18usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+        3.568500188627606f64,
+        11.044792572470516f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+        -70.65860756943924f64,
+        99.9710632908336f64,
+    ],
 };
 impl RotationalElements for Desdemona {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_DESDEMONA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            DECLINATION_DESDEMONA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            ROTATION_DESDEMONA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+            RIGHT_ASCENSION_DESDEMONA.angle(t),
+            DECLINATION_DESDEMONA.angle(t),
+            ROTATION_DESDEMONA.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_DESDEMONA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            DECLINATION_DESDEMONA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            ROTATION_DESDEMONA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+            RIGHT_ASCENSION_DESDEMONA.angle_dot(t),
+            DECLINATION_DESDEMONA.angle_dot(t),
+            ROTATION_DESDEMONA.angle_dot(t),
         )
     }
 }
@@ -5845,7 +8314,7 @@ const RIGHT_ASCENSION_JULIET: RotationalElement<18usize> = RotationalElement {
     c0: 4.49090669830661f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -5864,14 +8333,54 @@ const RIGHT_ASCENSION_JULIET: RotationalElement<18usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+        3.568500188627606f64,
+        11.044792572470516f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+        -70.65860756943924f64,
+        99.9710632908336f64,
+    ],
 };
 const DECLINATION_JULIET: RotationalElement<18usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: -0.2649409804527392f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -5890,14 +8399,54 @@ const DECLINATION_JULIET: RotationalElement<18usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+        3.568500188627606f64,
+        11.044792572470516f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+        -70.65860756943924f64,
+        99.9710632908336f64,
+    ],
 };
 const ROTATION_JULIET: RotationalElement<18usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 5.2806681848340435f64,
     c1: -12.74309158902866f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -5916,21 +8465,61 @@ const ROTATION_JULIET: RotationalElement<18usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+        3.568500188627606f64,
+        11.044792572470516f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+        -70.65860756943924f64,
+        99.9710632908336f64,
+    ],
 };
 impl RotationalElements for Juliet {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_JULIET.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            DECLINATION_JULIET.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            ROTATION_JULIET.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+            RIGHT_ASCENSION_JULIET.angle(t),
+            DECLINATION_JULIET.angle(t),
+            ROTATION_JULIET.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_JULIET.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            DECLINATION_JULIET.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            ROTATION_JULIET.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+            RIGHT_ASCENSION_JULIET.angle_dot(t),
+            DECLINATION_JULIET.angle_dot(t),
+            ROTATION_JULIET.angle_dot(t),
         )
     }
 }
@@ -5965,7 +8554,7 @@ const RIGHT_ASCENSION_PORTIA: RotationalElement<18usize> = RotationalElement {
     c0: 4.49090669830661f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -5984,14 +8573,54 @@ const RIGHT_ASCENSION_PORTIA: RotationalElement<18usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+        3.568500188627606f64,
+        11.044792572470516f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+        -70.65860756943924f64,
+        99.9710632908336f64,
+    ],
 };
 const DECLINATION_PORTIA: RotationalElement<18usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: -0.2649409804527392f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -6010,14 +8639,54 @@ const DECLINATION_PORTIA: RotationalElement<18usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+        3.568500188627606f64,
+        11.044792572470516f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+        -70.65860756943924f64,
+        99.9710632908336f64,
+    ],
 };
 const ROTATION_PORTIA: RotationalElement<18usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 0.4368559117741807f64,
     c1: -12.243250601727652f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -6036,21 +8705,61 @@ const ROTATION_PORTIA: RotationalElement<18usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+        3.568500188627606f64,
+        11.044792572470516f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+        -70.65860756943924f64,
+        99.9710632908336f64,
+    ],
 };
 impl RotationalElements for Portia {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_PORTIA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            DECLINATION_PORTIA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            ROTATION_PORTIA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+            RIGHT_ASCENSION_PORTIA.angle(t),
+            DECLINATION_PORTIA.angle(t),
+            ROTATION_PORTIA.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_PORTIA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            DECLINATION_PORTIA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            ROTATION_PORTIA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+            RIGHT_ASCENSION_PORTIA.angle_dot(t),
+            DECLINATION_PORTIA.angle_dot(t),
+            ROTATION_PORTIA.angle_dot(t),
         )
     }
 }
@@ -6085,7 +8794,7 @@ const RIGHT_ASCENSION_ROSALIND: RotationalElement<18usize> = RotationalElement {
     c0: 4.49090669830661f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -6104,14 +8813,54 @@ const RIGHT_ASCENSION_ROSALIND: RotationalElement<18usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+        3.568500188627606f64,
+        11.044792572470516f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+        -70.65860756943924f64,
+        99.9710632908336f64,
+    ],
 };
 const DECLINATION_ROSALIND: RotationalElement<18usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: -0.2649409804527392f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -6130,14 +8879,54 @@ const DECLINATION_ROSALIND: RotationalElement<18usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+        3.568500188627606f64,
+        11.044792572470516f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+        -70.65860756943924f64,
+        99.9710632908336f64,
+    ],
 };
 const ROTATION_ROSALIND: RotationalElement<18usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 5.496041814530144f64,
     c1: -11.250935609538423f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -6156,21 +8945,61 @@ const ROTATION_ROSALIND: RotationalElement<18usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+        3.568500188627606f64,
+        11.044792572470516f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+        -70.65860756943924f64,
+        99.9710632908336f64,
+    ],
 };
 impl RotationalElements for Rosalind {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_ROSALIND.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            DECLINATION_ROSALIND.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            ROTATION_ROSALIND.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+            RIGHT_ASCENSION_ROSALIND.angle(t),
+            DECLINATION_ROSALIND.angle(t),
+            ROTATION_ROSALIND.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_ROSALIND.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            DECLINATION_ROSALIND.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            ROTATION_ROSALIND.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+            RIGHT_ASCENSION_ROSALIND.angle_dot(t),
+            DECLINATION_ROSALIND.angle_dot(t),
+            ROTATION_ROSALIND.angle_dot(t),
         )
     }
 }
@@ -6205,7 +9034,7 @@ const RIGHT_ASCENSION_BELINDA: RotationalElement<18usize> = RotationalElement {
     c0: 4.49090669830661f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -6224,14 +9053,54 @@ const RIGHT_ASCENSION_BELINDA: RotationalElement<18usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+        3.568500188627606f64,
+        11.044792572470516f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+        -70.65860756943924f64,
+        99.9710632908336f64,
+    ],
 };
 const DECLINATION_BELINDA: RotationalElement<18usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: -0.2649409804527392f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -6250,14 +9119,54 @@ const DECLINATION_BELINDA: RotationalElement<18usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+        3.568500188627606f64,
+        11.044792572470516f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+        -70.65860756943924f64,
+        99.9710632908336f64,
+    ],
 };
 const ROTATION_BELINDA: RotationalElement<18usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 5.191656392982332f64,
     c1: -10.076882135239488f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -6276,21 +9185,61 @@ const ROTATION_BELINDA: RotationalElement<18usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+        3.568500188627606f64,
+        11.044792572470516f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+        -70.65860756943924f64,
+        99.9710632908336f64,
+    ],
 };
 impl RotationalElements for Belinda {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_BELINDA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            DECLINATION_BELINDA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            ROTATION_BELINDA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+            RIGHT_ASCENSION_BELINDA.angle(t),
+            DECLINATION_BELINDA.angle(t),
+            ROTATION_BELINDA.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_BELINDA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            DECLINATION_BELINDA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            ROTATION_BELINDA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+            RIGHT_ASCENSION_BELINDA.angle_dot(t),
+            DECLINATION_BELINDA.angle_dot(t),
+            ROTATION_BELINDA.angle_dot(t),
         )
     }
 }
@@ -6325,7 +9274,7 @@ const RIGHT_ASCENSION_PUCK: RotationalElement<18usize> = RotationalElement {
     c0: 4.49090669830661f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -6344,14 +9293,54 @@ const RIGHT_ASCENSION_PUCK: RotationalElement<18usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+        3.568500188627606f64,
+        11.044792572470516f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+        -70.65860756943924f64,
+        99.9710632908336f64,
+    ],
 };
 const DECLINATION_PUCK: RotationalElement<18usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: -0.2649409804527392f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -6370,14 +9359,54 @@ const DECLINATION_PUCK: RotationalElement<18usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+        3.568500188627606f64,
+        11.044792572470516f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+        -70.65860756943924f64,
+        99.9710632908336f64,
+    ],
 };
 const ROTATION_PUCK: RotationalElement<18usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 1.5924384095196262f64,
     c1: -8.247467318113788f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -6396,21 +9425,61 @@ const ROTATION_PUCK: RotationalElement<18usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        2.0202186091834364f64,
+        2.4729570171507653f64,
+        2.356718088967943f64,
+        1.0780898789568973f64,
+        4.351454891072263f64,
+        0.7655014099247129f64,
+        1.3554226970987964f64,
+        2.746450110938277f64,
+        1.776919711455427f64,
+        2.419724474964938f64,
+        1.784250094313803f64,
+        5.522396286235258f64,
+        5.3059754589879615f64,
+        5.388005933831694f64,
+        5.948431156647074f64,
+        4.522846223618106f64,
+        3.568500188627606f64,
+        11.044792572470516f64,
+    ],
+    theta1: [
+        959.7891933286942f64,
+        731.077582955928f64,
+        522.3307938967249f64,
+        449.1358738582876f64,
+        427.10754977009157f64,
+        388.83160660922994f64,
+        354.1171823199879f64,
+        290.6454915444109f64,
+        224.66977689099764f64,
+        140.70512817020406f64,
+        -35.32930378471962f64,
+        49.9855316454168f64,
+        -0.9065240134858548f64,
+        -1.626123264083117f64,
+        -1.314581992602129f64,
+        -8.810596596992575f64,
+        -70.65860756943924f64,
+        99.9710632908336f64,
+    ],
 };
 impl RotationalElements for Puck {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_PUCK.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            DECLINATION_PUCK.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            ROTATION_PUCK.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+            RIGHT_ASCENSION_PUCK.angle(t),
+            DECLINATION_PUCK.angle(t),
+            ROTATION_PUCK.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_PUCK.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            DECLINATION_PUCK.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-            ROTATION_PUCK.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+            RIGHT_ASCENSION_PUCK.angle_dot(t),
+            DECLINATION_PUCK.angle_dot(t),
+            ROTATION_PUCK.angle_dot(t),
         )
     }
 }
@@ -6630,7 +9699,7 @@ const RIGHT_ASCENSION_TRITON: RotationalElement<17usize> = RotationalElement {
     c0: 5.224817648770225f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -6648,14 +9717,52 @@ const RIGHT_ASCENSION_TRITON: RotationalElement<17usize> = RotationalElement {
         -0.0012217304763960308f64,
         -0.00034906585039886593f64,
         -0.00017453292519943296f64,
-    ]),
+    ],
+    theta0: [
+        6.245660728261709f64,
+        5.653470513060032f64,
+        3.848625533572696f64,
+        6.183177941040311f64,
+        1.3144074596769295f64,
+        0.6171484235051949f64,
+        2.4890140462691135f64,
+        3.104068074671915f64,
+        11.306941026120064f64,
+        6.20813614934383f64,
+        9.312204224015744f64,
+        12.41627229868766f64,
+        15.520340373359575f64,
+        18.624408448031488f64,
+        21.728476522703406f64,
+        24.83254459737532f64,
+        27.936612672047236f64,
+    ],
+    theta1: [
+        0.9130864514733535f64,
+        1092.6913034790819f64,
+        961.0515899766616f64,
+        812.7038395448996f64,
+        455.6949957202075f64,
+        250.02539666519567f64,
+        49.29857005183183f64,
+        0.9130864514733535f64,
+        2185.3826069581637f64,
+        1.826172902946707f64,
+        2.7392593544200605f64,
+        3.652345805893414f64,
+        4.565432257366767f64,
+        5.478518708840121f64,
+        6.391605160313474f64,
+        7.304691611786828f64,
+        8.21777806326018f64,
+    ],
 };
 const DECLINATION_TRITON: RotationalElement<17usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 0.7185520530460655f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -6673,14 +9780,52 @@ const DECLINATION_TRITON: RotationalElement<17usize> = RotationalElement {
         0.00017453292519943296f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        6.245660728261709f64,
+        5.653470513060032f64,
+        3.848625533572696f64,
+        6.183177941040311f64,
+        1.3144074596769295f64,
+        0.6171484235051949f64,
+        2.4890140462691135f64,
+        3.104068074671915f64,
+        11.306941026120064f64,
+        6.20813614934383f64,
+        9.312204224015744f64,
+        12.41627229868766f64,
+        15.520340373359575f64,
+        18.624408448031488f64,
+        21.728476522703406f64,
+        24.83254459737532f64,
+        27.936612672047236f64,
+    ],
+    theta1: [
+        0.9130864514733535f64,
+        1092.6913034790819f64,
+        961.0515899766616f64,
+        812.7038395448996f64,
+        455.6949957202075f64,
+        250.02539666519567f64,
+        49.29857005183183f64,
+        0.9130864514733535f64,
+        2185.3826069581637f64,
+        1.826172902946707f64,
+        2.7392593544200605f64,
+        3.652345805893414f64,
+        4.565432257366767f64,
+        5.478518708840121f64,
+        6.391605160313474f64,
+        7.304691611786828f64,
+        8.21777806326018f64,
+    ],
 };
 const ROTATION_TRITON: RotationalElement<17usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 5.175424830938785f64,
     c1: -1.069140942327404f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0f64,
         0f64,
         0f64,
@@ -6698,21 +9843,59 @@ const ROTATION_TRITON: RotationalElement<17usize> = RotationalElement {
         0.0008726646259971648f64,
         0.00034906585039886593f64,
         0.00017453292519943296f64,
-    ]),
+    ],
+    theta0: [
+        6.245660728261709f64,
+        5.653470513060032f64,
+        3.848625533572696f64,
+        6.183177941040311f64,
+        1.3144074596769295f64,
+        0.6171484235051949f64,
+        2.4890140462691135f64,
+        3.104068074671915f64,
+        11.306941026120064f64,
+        6.20813614934383f64,
+        9.312204224015744f64,
+        12.41627229868766f64,
+        15.520340373359575f64,
+        18.624408448031488f64,
+        21.728476522703406f64,
+        24.83254459737532f64,
+        27.936612672047236f64,
+    ],
+    theta1: [
+        0.9130864514733535f64,
+        1092.6913034790819f64,
+        961.0515899766616f64,
+        812.7038395448996f64,
+        455.6949957202075f64,
+        250.02539666519567f64,
+        49.29857005183183f64,
+        0.9130864514733535f64,
+        2185.3826069581637f64,
+        1.826172902946707f64,
+        2.7392593544200605f64,
+        3.652345805893414f64,
+        4.565432257366767f64,
+        5.478518708840121f64,
+        6.391605160313474f64,
+        7.304691611786828f64,
+        8.21777806326018f64,
+    ],
 };
 impl RotationalElements for Triton {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_TRITON.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-            DECLINATION_TRITON.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-            ROTATION_TRITON.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
+            RIGHT_ASCENSION_TRITON.angle(t),
+            DECLINATION_TRITON.angle(t),
+            ROTATION_TRITON.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_TRITON.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-            DECLINATION_TRITON.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-            ROTATION_TRITON.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
+            RIGHT_ASCENSION_TRITON.angle_dot(t),
+            DECLINATION_TRITON.angle_dot(t),
+            ROTATION_TRITON.angle_dot(t),
         )
     }
 }
@@ -6778,7 +9961,7 @@ const RIGHT_ASCENSION_NAIAD: RotationalElement<17usize> = RotationalElement {
     c0: 5.224817648770225f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0.012217304763960306f64,
         -0.11327186845443199f64,
         0f64,
@@ -6796,14 +9979,52 @@ const RIGHT_ASCENSION_NAIAD: RotationalElement<17usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        6.245660728261709f64,
+        5.653470513060032f64,
+        3.848625533572696f64,
+        6.183177941040311f64,
+        1.3144074596769295f64,
+        0.6171484235051949f64,
+        2.4890140462691135f64,
+        3.104068074671915f64,
+        11.306941026120064f64,
+        6.20813614934383f64,
+        9.312204224015744f64,
+        12.41627229868766f64,
+        15.520340373359575f64,
+        18.624408448031488f64,
+        21.728476522703406f64,
+        24.83254459737532f64,
+        27.936612672047236f64,
+    ],
+    theta1: [
+        0.9130864514733535f64,
+        1092.6913034790819f64,
+        961.0515899766616f64,
+        812.7038395448996f64,
+        455.6949957202075f64,
+        250.02539666519567f64,
+        49.29857005183183f64,
+        0.9130864514733535f64,
+        2185.3826069581637f64,
+        1.826172902946707f64,
+        2.7392593544200605f64,
+        3.652345805893414f64,
+        4.565432257366767f64,
+        5.478518708840121f64,
+        6.391605160313474f64,
+        7.304691611786828f64,
+        8.21777806326018f64,
+    ],
 };
 const DECLINATION_NAIAD: RotationalElement<17usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 0.7567747636647413f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         -0.00890117918517108f64,
         -0.08290313946973066f64,
         0f64,
@@ -6821,14 +10042,52 @@ const DECLINATION_NAIAD: RotationalElement<17usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        6.245660728261709f64,
+        5.653470513060032f64,
+        3.848625533572696f64,
+        6.183177941040311f64,
+        1.3144074596769295f64,
+        0.6171484235051949f64,
+        2.4890140462691135f64,
+        3.104068074671915f64,
+        11.306941026120064f64,
+        6.20813614934383f64,
+        9.312204224015744f64,
+        12.41627229868766f64,
+        15.520340373359575f64,
+        18.624408448031488f64,
+        21.728476522703406f64,
+        24.83254459737532f64,
+        27.936612672047236f64,
+    ],
+    theta1: [
+        0.9130864514733535f64,
+        1092.6913034790819f64,
+        961.0515899766616f64,
+        812.7038395448996f64,
+        455.6949957202075f64,
+        250.02539666519567f64,
+        49.29857005183183f64,
+        0.9130864514733535f64,
+        2185.3826069581637f64,
+        1.826172902946707f64,
+        2.7392593544200605f64,
+        3.652345805893414f64,
+        4.565432257366767f64,
+        5.478518708840121f64,
+        6.391605160313474f64,
+        7.304691611786828f64,
+        8.21777806326018f64,
+    ],
 };
 const ROTATION_NAIAD: RotationalElement<17usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 4.434183497616794f64,
     c1: 21.342656148360604f64,
     c2: 0f64,
-    c: Some([
+    c: [
         -0.008377580409572781f64,
         0.07679448708775051f64,
         0f64,
@@ -6846,21 +10105,59 @@ const ROTATION_NAIAD: RotationalElement<17usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        6.245660728261709f64,
+        5.653470513060032f64,
+        3.848625533572696f64,
+        6.183177941040311f64,
+        1.3144074596769295f64,
+        0.6171484235051949f64,
+        2.4890140462691135f64,
+        3.104068074671915f64,
+        11.306941026120064f64,
+        6.20813614934383f64,
+        9.312204224015744f64,
+        12.41627229868766f64,
+        15.520340373359575f64,
+        18.624408448031488f64,
+        21.728476522703406f64,
+        24.83254459737532f64,
+        27.936612672047236f64,
+    ],
+    theta1: [
+        0.9130864514733535f64,
+        1092.6913034790819f64,
+        961.0515899766616f64,
+        812.7038395448996f64,
+        455.6949957202075f64,
+        250.02539666519567f64,
+        49.29857005183183f64,
+        0.9130864514733535f64,
+        2185.3826069581637f64,
+        1.826172902946707f64,
+        2.7392593544200605f64,
+        3.652345805893414f64,
+        4.565432257366767f64,
+        5.478518708840121f64,
+        6.391605160313474f64,
+        7.304691611786828f64,
+        8.21777806326018f64,
+    ],
 };
 impl RotationalElements for Naiad {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_NAIAD.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-            DECLINATION_NAIAD.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-            ROTATION_NAIAD.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
+            RIGHT_ASCENSION_NAIAD.angle(t),
+            DECLINATION_NAIAD.angle(t),
+            ROTATION_NAIAD.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_NAIAD.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-            DECLINATION_NAIAD.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-            ROTATION_NAIAD.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
+            RIGHT_ASCENSION_NAIAD.angle_dot(t),
+            DECLINATION_NAIAD.angle_dot(t),
+            ROTATION_NAIAD.angle_dot(t),
         )
     }
 }
@@ -6900,7 +10197,7 @@ const RIGHT_ASCENSION_THALASSA: RotationalElement<17usize> = RotationalElement {
     c0: 5.224817648770225f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0.012217304763960306f64,
         0f64,
         -0.004886921905584123f64,
@@ -6918,14 +10215,52 @@ const RIGHT_ASCENSION_THALASSA: RotationalElement<17usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        6.245660728261709f64,
+        5.653470513060032f64,
+        3.848625533572696f64,
+        6.183177941040311f64,
+        1.3144074596769295f64,
+        0.6171484235051949f64,
+        2.4890140462691135f64,
+        3.104068074671915f64,
+        11.306941026120064f64,
+        6.20813614934383f64,
+        9.312204224015744f64,
+        12.41627229868766f64,
+        15.520340373359575f64,
+        18.624408448031488f64,
+        21.728476522703406f64,
+        24.83254459737532f64,
+        27.936612672047236f64,
+    ],
+    theta1: [
+        0.9130864514733535f64,
+        1092.6913034790819f64,
+        961.0515899766616f64,
+        812.7038395448996f64,
+        455.6949957202075f64,
+        250.02539666519567f64,
+        49.29857005183183f64,
+        0.9130864514733535f64,
+        2185.3826069581637f64,
+        1.826172902946707f64,
+        2.7392593544200605f64,
+        3.652345805893414f64,
+        4.565432257366767f64,
+        5.478518708840121f64,
+        6.391605160313474f64,
+        7.304691611786828f64,
+        8.21777806326018f64,
+    ],
 };
 const DECLINATION_THALASSA: RotationalElement<17usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 0.7583455599915362f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         -0.00890117918517108f64,
         0f64,
         -0.003665191429188092f64,
@@ -6943,14 +10278,52 @@ const DECLINATION_THALASSA: RotationalElement<17usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        6.245660728261709f64,
+        5.653470513060032f64,
+        3.848625533572696f64,
+        6.183177941040311f64,
+        1.3144074596769295f64,
+        0.6171484235051949f64,
+        2.4890140462691135f64,
+        3.104068074671915f64,
+        11.306941026120064f64,
+        6.20813614934383f64,
+        9.312204224015744f64,
+        12.41627229868766f64,
+        15.520340373359575f64,
+        18.624408448031488f64,
+        21.728476522703406f64,
+        24.83254459737532f64,
+        27.936612672047236f64,
+    ],
+    theta1: [
+        0.9130864514733535f64,
+        1092.6913034790819f64,
+        961.0515899766616f64,
+        812.7038395448996f64,
+        455.6949957202075f64,
+        250.02539666519567f64,
+        49.29857005183183f64,
+        0.9130864514733535f64,
+        2185.3826069581637f64,
+        1.826172902946707f64,
+        2.7392593544200605f64,
+        3.652345805893414f64,
+        4.565432257366767f64,
+        5.478518708840121f64,
+        6.391605160313474f64,
+        7.304691611786828f64,
+        8.21777806326018f64,
+    ],
 };
 const ROTATION_THALASSA: RotationalElement<17usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 1.7812830345854127f64,
     c1: 20.171739891174827f64,
     c2: 0f64,
-    c: Some([
+    c: [
         -0.008377580409572781f64,
         0f64,
         0.0033161255787892262f64,
@@ -6968,21 +10341,59 @@ const ROTATION_THALASSA: RotationalElement<17usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        6.245660728261709f64,
+        5.653470513060032f64,
+        3.848625533572696f64,
+        6.183177941040311f64,
+        1.3144074596769295f64,
+        0.6171484235051949f64,
+        2.4890140462691135f64,
+        3.104068074671915f64,
+        11.306941026120064f64,
+        6.20813614934383f64,
+        9.312204224015744f64,
+        12.41627229868766f64,
+        15.520340373359575f64,
+        18.624408448031488f64,
+        21.728476522703406f64,
+        24.83254459737532f64,
+        27.936612672047236f64,
+    ],
+    theta1: [
+        0.9130864514733535f64,
+        1092.6913034790819f64,
+        961.0515899766616f64,
+        812.7038395448996f64,
+        455.6949957202075f64,
+        250.02539666519567f64,
+        49.29857005183183f64,
+        0.9130864514733535f64,
+        2185.3826069581637f64,
+        1.826172902946707f64,
+        2.7392593544200605f64,
+        3.652345805893414f64,
+        4.565432257366767f64,
+        5.478518708840121f64,
+        6.391605160313474f64,
+        7.304691611786828f64,
+        8.21777806326018f64,
+    ],
 };
 impl RotationalElements for Thalassa {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_THALASSA.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-            DECLINATION_THALASSA.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-            ROTATION_THALASSA.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
+            RIGHT_ASCENSION_THALASSA.angle(t),
+            DECLINATION_THALASSA.angle(t),
+            ROTATION_THALASSA.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_THALASSA.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-            DECLINATION_THALASSA.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-            ROTATION_THALASSA.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
+            RIGHT_ASCENSION_THALASSA.angle_dot(t),
+            DECLINATION_THALASSA.angle_dot(t),
+            ROTATION_THALASSA.angle_dot(t),
         )
     }
 }
@@ -7022,7 +10433,7 @@ const RIGHT_ASCENSION_DESPINA: RotationalElement<17usize> = RotationalElement {
     c0: 5.224817648770225f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0.012217304763960306f64,
         0f64,
         0f64,
@@ -7040,14 +10451,52 @@ const RIGHT_ASCENSION_DESPINA: RotationalElement<17usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        6.245660728261709f64,
+        5.653470513060032f64,
+        3.848625533572696f64,
+        6.183177941040311f64,
+        1.3144074596769295f64,
+        0.6171484235051949f64,
+        2.4890140462691135f64,
+        3.104068074671915f64,
+        11.306941026120064f64,
+        6.20813614934383f64,
+        9.312204224015744f64,
+        12.41627229868766f64,
+        15.520340373359575f64,
+        18.624408448031488f64,
+        21.728476522703406f64,
+        24.83254459737532f64,
+        27.936612672047236f64,
+    ],
+    theta1: [
+        0.9130864514733535f64,
+        1092.6913034790819f64,
+        961.0515899766616f64,
+        812.7038395448996f64,
+        455.6949957202075f64,
+        250.02539666519567f64,
+        49.29857005183183f64,
+        0.9130864514733535f64,
+        2185.3826069581637f64,
+        1.826172902946707f64,
+        2.7392593544200605f64,
+        3.652345805893414f64,
+        4.565432257366767f64,
+        5.478518708840121f64,
+        6.391605160313474f64,
+        7.304691611786828f64,
+        8.21777806326018f64,
+    ],
 };
 const DECLINATION_DESPINA: RotationalElement<17usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 0.7583455599915362f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         -0.00890117918517108f64,
         0f64,
         0f64,
@@ -7065,14 +10514,52 @@ const DECLINATION_DESPINA: RotationalElement<17usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        6.245660728261709f64,
+        5.653470513060032f64,
+        3.848625533572696f64,
+        6.183177941040311f64,
+        1.3144074596769295f64,
+        0.6171484235051949f64,
+        2.4890140462691135f64,
+        3.104068074671915f64,
+        11.306941026120064f64,
+        6.20813614934383f64,
+        9.312204224015744f64,
+        12.41627229868766f64,
+        15.520340373359575f64,
+        18.624408448031488f64,
+        21.728476522703406f64,
+        24.83254459737532f64,
+        27.936612672047236f64,
+    ],
+    theta1: [
+        0.9130864514733535f64,
+        1092.6913034790819f64,
+        961.0515899766616f64,
+        812.7038395448996f64,
+        455.6949957202075f64,
+        250.02539666519567f64,
+        49.29857005183183f64,
+        0.9130864514733535f64,
+        2185.3826069581637f64,
+        1.826172902946707f64,
+        2.7392593544200605f64,
+        3.652345805893414f64,
+        4.565432257366767f64,
+        5.478518708840121f64,
+        6.391605160313474f64,
+        7.304691611786828f64,
+        8.21777806326018f64,
+    ],
 };
 const ROTATION_DESPINA: RotationalElement<17usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 5.34960869028782f64,
     c1: 18.77510290185297f64,
     c2: 0f64,
-    c: Some([
+    c: [
         -0.008552113334772215f64,
         0f64,
         0f64,
@@ -7090,21 +10577,59 @@ const ROTATION_DESPINA: RotationalElement<17usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        6.245660728261709f64,
+        5.653470513060032f64,
+        3.848625533572696f64,
+        6.183177941040311f64,
+        1.3144074596769295f64,
+        0.6171484235051949f64,
+        2.4890140462691135f64,
+        3.104068074671915f64,
+        11.306941026120064f64,
+        6.20813614934383f64,
+        9.312204224015744f64,
+        12.41627229868766f64,
+        15.520340373359575f64,
+        18.624408448031488f64,
+        21.728476522703406f64,
+        24.83254459737532f64,
+        27.936612672047236f64,
+    ],
+    theta1: [
+        0.9130864514733535f64,
+        1092.6913034790819f64,
+        961.0515899766616f64,
+        812.7038395448996f64,
+        455.6949957202075f64,
+        250.02539666519567f64,
+        49.29857005183183f64,
+        0.9130864514733535f64,
+        2185.3826069581637f64,
+        1.826172902946707f64,
+        2.7392593544200605f64,
+        3.652345805893414f64,
+        4.565432257366767f64,
+        5.478518708840121f64,
+        6.391605160313474f64,
+        7.304691611786828f64,
+        8.21777806326018f64,
+    ],
 };
 impl RotationalElements for Despina {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_DESPINA.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-            DECLINATION_DESPINA.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-            ROTATION_DESPINA.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
+            RIGHT_ASCENSION_DESPINA.angle(t),
+            DECLINATION_DESPINA.angle(t),
+            ROTATION_DESPINA.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_DESPINA.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-            DECLINATION_DESPINA.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-            ROTATION_DESPINA.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
+            RIGHT_ASCENSION_DESPINA.angle_dot(t),
+            DECLINATION_DESPINA.angle_dot(t),
+            ROTATION_DESPINA.angle_dot(t),
         )
     }
 }
@@ -7144,7 +10669,7 @@ const RIGHT_ASCENSION_GALATEA: RotationalElement<17usize> = RotationalElement {
     c0: 5.224817648770225f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0.012217304763960306f64,
         0f64,
         0f64,
@@ -7162,14 +10687,52 @@ const RIGHT_ASCENSION_GALATEA: RotationalElement<17usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        6.245660728261709f64,
+        5.653470513060032f64,
+        3.848625533572696f64,
+        6.183177941040311f64,
+        1.3144074596769295f64,
+        0.6171484235051949f64,
+        2.4890140462691135f64,
+        3.104068074671915f64,
+        11.306941026120064f64,
+        6.20813614934383f64,
+        9.312204224015744f64,
+        12.41627229868766f64,
+        15.520340373359575f64,
+        18.624408448031488f64,
+        21.728476522703406f64,
+        24.83254459737532f64,
+        27.936612672047236f64,
+    ],
+    theta1: [
+        0.9130864514733535f64,
+        1092.6913034790819f64,
+        961.0515899766616f64,
+        812.7038395448996f64,
+        455.6949957202075f64,
+        250.02539666519567f64,
+        49.29857005183183f64,
+        0.9130864514733535f64,
+        2185.3826069581637f64,
+        1.826172902946707f64,
+        2.7392593544200605f64,
+        3.652345805893414f64,
+        4.565432257366767f64,
+        5.478518708840121f64,
+        6.391605160313474f64,
+        7.304691611786828f64,
+        8.21777806326018f64,
+    ],
 };
 const DECLINATION_GALATEA: RotationalElement<17usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 0.7579964941411373f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         -0.00890117918517108f64,
         0f64,
         0f64,
@@ -7187,14 +10750,52 @@ const DECLINATION_GALATEA: RotationalElement<17usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        6.245660728261709f64,
+        5.653470513060032f64,
+        3.848625533572696f64,
+        6.183177941040311f64,
+        1.3144074596769295f64,
+        0.6171484235051949f64,
+        2.4890140462691135f64,
+        3.104068074671915f64,
+        11.306941026120064f64,
+        6.20813614934383f64,
+        9.312204224015744f64,
+        12.41627229868766f64,
+        15.520340373359575f64,
+        18.624408448031488f64,
+        21.728476522703406f64,
+        24.83254459737532f64,
+        27.936612672047236f64,
+    ],
+    theta1: [
+        0.9130864514733535f64,
+        1092.6913034790819f64,
+        961.0515899766616f64,
+        812.7038395448996f64,
+        455.6949957202075f64,
+        250.02539666519567f64,
+        49.29857005183183f64,
+        0.9130864514733535f64,
+        2185.3826069581637f64,
+        1.826172902946707f64,
+        2.7392593544200605f64,
+        3.652345805893414f64,
+        4.565432257366767f64,
+        5.478518708840121f64,
+        6.391605160313474f64,
+        7.304691611786828f64,
+        8.21777806326018f64,
+    ],
 };
 const ROTATION_GALATEA: RotationalElement<17usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 4.504520266472165f64,
     c1: 14.6548275586037f64,
     c2: 0f64,
-    c: Some([
+    c: [
         -0.008377580409572781f64,
         0f64,
         0f64,
@@ -7212,21 +10813,59 @@ const ROTATION_GALATEA: RotationalElement<17usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        6.245660728261709f64,
+        5.653470513060032f64,
+        3.848625533572696f64,
+        6.183177941040311f64,
+        1.3144074596769295f64,
+        0.6171484235051949f64,
+        2.4890140462691135f64,
+        3.104068074671915f64,
+        11.306941026120064f64,
+        6.20813614934383f64,
+        9.312204224015744f64,
+        12.41627229868766f64,
+        15.520340373359575f64,
+        18.624408448031488f64,
+        21.728476522703406f64,
+        24.83254459737532f64,
+        27.936612672047236f64,
+    ],
+    theta1: [
+        0.9130864514733535f64,
+        1092.6913034790819f64,
+        961.0515899766616f64,
+        812.7038395448996f64,
+        455.6949957202075f64,
+        250.02539666519567f64,
+        49.29857005183183f64,
+        0.9130864514733535f64,
+        2185.3826069581637f64,
+        1.826172902946707f64,
+        2.7392593544200605f64,
+        3.652345805893414f64,
+        4.565432257366767f64,
+        5.478518708840121f64,
+        6.391605160313474f64,
+        7.304691611786828f64,
+        8.21777806326018f64,
+    ],
 };
 impl RotationalElements for Galatea {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_GALATEA.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-            DECLINATION_GALATEA.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-            ROTATION_GALATEA.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
+            RIGHT_ASCENSION_GALATEA.angle(t),
+            DECLINATION_GALATEA.angle(t),
+            ROTATION_GALATEA.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_GALATEA.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-            DECLINATION_GALATEA.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-            ROTATION_GALATEA.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
+            RIGHT_ASCENSION_GALATEA.angle_dot(t),
+            DECLINATION_GALATEA.angle_dot(t),
+            ROTATION_GALATEA.angle_dot(t),
         )
     }
 }
@@ -7266,7 +10905,7 @@ const RIGHT_ASCENSION_LARISSA: RotationalElement<17usize> = RotationalElement {
     c0: 5.224817648770225f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0.012217304763960306f64,
         0f64,
         0f64,
@@ -7284,14 +10923,52 @@ const RIGHT_ASCENSION_LARISSA: RotationalElement<17usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        6.245660728261709f64,
+        5.653470513060032f64,
+        3.848625533572696f64,
+        6.183177941040311f64,
+        1.3144074596769295f64,
+        0.6171484235051949f64,
+        2.4890140462691135f64,
+        3.104068074671915f64,
+        11.306941026120064f64,
+        6.20813614934383f64,
+        9.312204224015744f64,
+        12.41627229868766f64,
+        15.520340373359575f64,
+        18.624408448031488f64,
+        21.728476522703406f64,
+        24.83254459737532f64,
+        27.936612672047236f64,
+    ],
+    theta1: [
+        0.9130864514733535f64,
+        1092.6913034790819f64,
+        961.0515899766616f64,
+        812.7038395448996f64,
+        455.6949957202075f64,
+        250.02539666519567f64,
+        49.29857005183183f64,
+        0.9130864514733535f64,
+        2185.3826069581637f64,
+        1.826172902946707f64,
+        2.7392593544200605f64,
+        3.652345805893414f64,
+        4.565432257366767f64,
+        5.478518708840121f64,
+        6.391605160313474f64,
+        7.304691611786828f64,
+        8.21777806326018f64,
+    ],
 };
 const DECLINATION_LARISSA: RotationalElement<17usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 0.7576474282907384f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         -0.00890117918517108f64,
         0f64,
         0f64,
@@ -7309,14 +10986,52 @@ const DECLINATION_LARISSA: RotationalElement<17usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        6.245660728261709f64,
+        5.653470513060032f64,
+        3.848625533572696f64,
+        6.183177941040311f64,
+        1.3144074596769295f64,
+        0.6171484235051949f64,
+        2.4890140462691135f64,
+        3.104068074671915f64,
+        11.306941026120064f64,
+        6.20813614934383f64,
+        9.312204224015744f64,
+        12.41627229868766f64,
+        15.520340373359575f64,
+        18.624408448031488f64,
+        21.728476522703406f64,
+        24.83254459737532f64,
+        27.936612672047236f64,
+    ],
+    theta1: [
+        0.9130864514733535f64,
+        1092.6913034790819f64,
+        961.0515899766616f64,
+        812.7038395448996f64,
+        455.6949957202075f64,
+        250.02539666519567f64,
+        49.29857005183183f64,
+        0.9130864514733535f64,
+        2185.3826069581637f64,
+        1.826172902946707f64,
+        2.7392593544200605f64,
+        3.652345805893414f64,
+        4.565432257366767f64,
+        5.478518708840121f64,
+        6.391605160313474f64,
+        7.304691611786828f64,
+        8.21777806326018f64,
+    ],
 };
 const ROTATION_LARISSA: RotationalElement<17usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 3.1312952110030268f64,
     c1: 11.328119671568512f64,
     c2: 0f64,
-    c: Some([
+    c: [
         -0.008377580409572781f64,
         0f64,
         0f64,
@@ -7334,21 +11049,59 @@ const ROTATION_LARISSA: RotationalElement<17usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        6.245660728261709f64,
+        5.653470513060032f64,
+        3.848625533572696f64,
+        6.183177941040311f64,
+        1.3144074596769295f64,
+        0.6171484235051949f64,
+        2.4890140462691135f64,
+        3.104068074671915f64,
+        11.306941026120064f64,
+        6.20813614934383f64,
+        9.312204224015744f64,
+        12.41627229868766f64,
+        15.520340373359575f64,
+        18.624408448031488f64,
+        21.728476522703406f64,
+        24.83254459737532f64,
+        27.936612672047236f64,
+    ],
+    theta1: [
+        0.9130864514733535f64,
+        1092.6913034790819f64,
+        961.0515899766616f64,
+        812.7038395448996f64,
+        455.6949957202075f64,
+        250.02539666519567f64,
+        49.29857005183183f64,
+        0.9130864514733535f64,
+        2185.3826069581637f64,
+        1.826172902946707f64,
+        2.7392593544200605f64,
+        3.652345805893414f64,
+        4.565432257366767f64,
+        5.478518708840121f64,
+        6.391605160313474f64,
+        7.304691611786828f64,
+        8.21777806326018f64,
+    ],
 };
 impl RotationalElements for Larissa {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_LARISSA.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-            DECLINATION_LARISSA.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-            ROTATION_LARISSA.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
+            RIGHT_ASCENSION_LARISSA.angle(t),
+            DECLINATION_LARISSA.angle(t),
+            ROTATION_LARISSA.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_LARISSA.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-            DECLINATION_LARISSA.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-            ROTATION_LARISSA.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
+            RIGHT_ASCENSION_LARISSA.angle_dot(t),
+            DECLINATION_LARISSA.angle_dot(t),
+            ROTATION_LARISSA.angle_dot(t),
         )
     }
 }
@@ -7387,7 +11140,7 @@ const RIGHT_ASCENSION_PROTEUS: RotationalElement<17usize> = RotationalElement {
     c0: 5.22324685244343f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         0.012217304763960306f64,
         0f64,
         0f64,
@@ -7405,14 +11158,52 @@ const RIGHT_ASCENSION_PROTEUS: RotationalElement<17usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        6.245660728261709f64,
+        5.653470513060032f64,
+        3.848625533572696f64,
+        6.183177941040311f64,
+        1.3144074596769295f64,
+        0.6171484235051949f64,
+        2.4890140462691135f64,
+        3.104068074671915f64,
+        11.306941026120064f64,
+        6.20813614934383f64,
+        9.312204224015744f64,
+        12.41627229868766f64,
+        15.520340373359575f64,
+        18.624408448031488f64,
+        21.728476522703406f64,
+        24.83254459737532f64,
+        27.936612672047236f64,
+    ],
+    theta1: [
+        0.9130864514733535f64,
+        1092.6913034790819f64,
+        961.0515899766616f64,
+        812.7038395448996f64,
+        455.6949957202075f64,
+        250.02539666519567f64,
+        49.29857005183183f64,
+        0.9130864514733535f64,
+        2185.3826069581637f64,
+        1.826172902946707f64,
+        2.7392593544200605f64,
+        3.652345805893414f64,
+        4.565432257366767f64,
+        5.478518708840121f64,
+        6.391605160313474f64,
+        7.304691611786828f64,
+        8.21777806326018f64,
+    ],
 };
 const DECLINATION_PROTEUS: RotationalElement<17usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 0.7489207820307667f64,
     c1: 0f64,
     c2: 0f64,
-    c: Some([
+    c: [
         -0.00890117918517108f64,
         0f64,
         0f64,
@@ -7430,14 +11221,52 @@ const DECLINATION_PROTEUS: RotationalElement<17usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        6.245660728261709f64,
+        5.653470513060032f64,
+        3.848625533572696f64,
+        6.183177941040311f64,
+        1.3144074596769295f64,
+        0.6171484235051949f64,
+        2.4890140462691135f64,
+        3.104068074671915f64,
+        11.306941026120064f64,
+        6.20813614934383f64,
+        9.312204224015744f64,
+        12.41627229868766f64,
+        15.520340373359575f64,
+        18.624408448031488f64,
+        21.728476522703406f64,
+        24.83254459737532f64,
+        27.936612672047236f64,
+    ],
+    theta1: [
+        0.9130864514733535f64,
+        1092.6913034790819f64,
+        961.0515899766616f64,
+        812.7038395448996f64,
+        455.6949957202075f64,
+        250.02539666519567f64,
+        49.29857005183183f64,
+        0.9130864514733535f64,
+        2185.3826069581637f64,
+        1.826172902946707f64,
+        2.7392593544200605f64,
+        3.652345805893414f64,
+        4.565432257366767f64,
+        5.478518708840121f64,
+        6.391605160313474f64,
+        7.304691611786828f64,
+        8.21777806326018f64,
+    ],
 };
 const ROTATION_PROTEUS: RotationalElement<17usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 1.6297884555123048f64,
     c1: 5.598412754411688f64,
     c2: 0f64,
-    c: Some([
+    c: [
         -0.008377580409572781f64,
         0f64,
         0f64,
@@ -7455,21 +11284,59 @@ const ROTATION_PROTEUS: RotationalElement<17usize> = RotationalElement {
         0f64,
         0f64,
         0f64,
-    ]),
+    ],
+    theta0: [
+        6.245660728261709f64,
+        5.653470513060032f64,
+        3.848625533572696f64,
+        6.183177941040311f64,
+        1.3144074596769295f64,
+        0.6171484235051949f64,
+        2.4890140462691135f64,
+        3.104068074671915f64,
+        11.306941026120064f64,
+        6.20813614934383f64,
+        9.312204224015744f64,
+        12.41627229868766f64,
+        15.520340373359575f64,
+        18.624408448031488f64,
+        21.728476522703406f64,
+        24.83254459737532f64,
+        27.936612672047236f64,
+    ],
+    theta1: [
+        0.9130864514733535f64,
+        1092.6913034790819f64,
+        961.0515899766616f64,
+        812.7038395448996f64,
+        455.6949957202075f64,
+        250.02539666519567f64,
+        49.29857005183183f64,
+        0.9130864514733535f64,
+        2185.3826069581637f64,
+        1.826172902946707f64,
+        2.7392593544200605f64,
+        3.652345805893414f64,
+        4.565432257366767f64,
+        5.478518708840121f64,
+        6.391605160313474f64,
+        7.304691611786828f64,
+        8.21777806326018f64,
+    ],
 };
 impl RotationalElements for Proteus {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_PROTEUS.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-            DECLINATION_PROTEUS.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-            ROTATION_PROTEUS.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
+            RIGHT_ASCENSION_PROTEUS.angle(t),
+            DECLINATION_PROTEUS.angle(t),
+            ROTATION_PROTEUS.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_PROTEUS.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-            DECLINATION_PROTEUS.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-            ROTATION_PROTEUS.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
+            RIGHT_ASCENSION_PROTEUS.angle_dot(t),
+            DECLINATION_PROTEUS.angle_dot(t),
+            ROTATION_PROTEUS.angle_dot(t),
         )
     }
 }
@@ -7584,35 +11451,41 @@ const RIGHT_ASCENSION_CHARON: RotationalElement<0usize> = RotationalElement {
     c0: 2.3211657321048187f64,
     c1: 0f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const DECLINATION_CHARON: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: -0.10756464180041053f64,
     c1: 0f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const ROTATION_CHARON: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 2.1414317257344426f64,
     c1: 0.9837115923543857f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 impl RotationalElements for Charon {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_CHARON.angle::<0usize>(None, t),
-            DECLINATION_CHARON.angle::<0usize>(None, t),
-            ROTATION_CHARON.angle::<0usize>(None, t),
+            RIGHT_ASCENSION_CHARON.angle(t),
+            DECLINATION_CHARON.angle(t),
+            ROTATION_CHARON.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_CHARON.angle_dot::<0usize>(None, t),
-            DECLINATION_CHARON.angle_dot::<0usize>(None, t),
-            ROTATION_CHARON.angle_dot::<0usize>(None, t),
+            RIGHT_ASCENSION_CHARON.angle_dot(t),
+            DECLINATION_CHARON.angle_dot(t),
+            ROTATION_CHARON.angle_dot(t),
         )
     }
 }
@@ -7726,35 +11599,41 @@ const RIGHT_ASCENSION_GASPRA: RotationalElement<0usize> = RotationalElement {
     c0: 0.16528268016386302f64,
     c1: 0f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const DECLINATION_GASPRA: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 0.46600291028248597f64,
     c1: 0f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const ROTATION_GASPRA: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 1.4603169851436555f64,
     c1: 21.41364504378302f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 impl RotationalElements for Gaspra {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_GASPRA.angle::<0usize>(None, t),
-            DECLINATION_GASPRA.angle::<0usize>(None, t),
-            ROTATION_GASPRA.angle::<0usize>(None, t),
+            RIGHT_ASCENSION_GASPRA.angle(t),
+            DECLINATION_GASPRA.angle(t),
+            ROTATION_GASPRA.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_GASPRA.angle_dot::<0usize>(None, t),
-            DECLINATION_GASPRA.angle_dot::<0usize>(None, t),
-            ROTATION_GASPRA.angle_dot::<0usize>(None, t),
+            RIGHT_ASCENSION_GASPRA.angle_dot(t),
+            DECLINATION_GASPRA.angle_dot(t),
+            ROTATION_GASPRA.angle_dot(t),
         )
     }
 }
@@ -7788,35 +11667,41 @@ const RIGHT_ASCENSION_IDA: RotationalElement<0usize> = RotationalElement {
     c0: 2.9454176456656302f64,
     c1: 0f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const DECLINATION_IDA: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: -1.5205308443374599f64,
     c1: 0f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const ROTATION_IDA: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 4.78307481509046f64,
     c1: 32.54389804704987f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 impl RotationalElements for Ida {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_IDA.angle::<0usize>(None, t),
-            DECLINATION_IDA.angle::<0usize>(None, t),
-            ROTATION_IDA.angle::<0usize>(None, t),
+            RIGHT_ASCENSION_IDA.angle(t),
+            DECLINATION_IDA.angle(t),
+            ROTATION_IDA.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_IDA.angle_dot::<0usize>(None, t),
-            DECLINATION_IDA.angle_dot::<0usize>(None, t),
-            ROTATION_IDA.angle_dot::<0usize>(None, t),
+            RIGHT_ASCENSION_IDA.angle_dot(t),
+            DECLINATION_IDA.angle_dot(t),
+            ROTATION_IDA.angle_dot(t),
         )
     }
 }
@@ -7871,35 +11756,41 @@ const RIGHT_ASCENSION_CERES: RotationalElement<0usize> = RotationalElement {
     c0: 5.0862035995768355f64,
     c1: 0f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const DECLINATION_CERES: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 1.165251621801494f64,
     c1: 0f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const ROTATION_CERES: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 2.9784043685283237f64,
     c1: 16.618208323400072f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 impl RotationalElements for Ceres {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_CERES.angle::<0usize>(None, t),
-            DECLINATION_CERES.angle::<0usize>(None, t),
-            ROTATION_CERES.angle::<0usize>(None, t),
+            RIGHT_ASCENSION_CERES.angle(t),
+            DECLINATION_CERES.angle(t),
+            ROTATION_CERES.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_CERES.angle_dot::<0usize>(None, t),
-            DECLINATION_CERES.angle_dot::<0usize>(None, t),
-            ROTATION_CERES.angle_dot::<0usize>(None, t),
+            RIGHT_ASCENSION_CERES.angle_dot(t),
+            DECLINATION_CERES.angle_dot(t),
+            ROTATION_CERES.angle_dot(t),
         )
     }
 }
@@ -7928,35 +11819,41 @@ const RIGHT_ASCENSION_PALLAS: RotationalElement<0usize> = RotationalElement {
     c0: 0.5759586531581288f64,
     c1: 0f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const DECLINATION_PALLAS: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: -0.05235987755982989f64,
     c1: 0f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const ROTATION_PALLAS: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 0.6632251157578453f64,
     c1: 19.299913700406368f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 impl RotationalElements for Pallas {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_PALLAS.angle::<0usize>(None, t),
-            DECLINATION_PALLAS.angle::<0usize>(None, t),
-            ROTATION_PALLAS.angle::<0usize>(None, t),
+            RIGHT_ASCENSION_PALLAS.angle(t),
+            DECLINATION_PALLAS.angle(t),
+            ROTATION_PALLAS.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_PALLAS.angle_dot::<0usize>(None, t),
-            DECLINATION_PALLAS.angle_dot::<0usize>(None, t),
-            ROTATION_PALLAS.angle_dot::<0usize>(None, t),
+            RIGHT_ASCENSION_PALLAS.angle_dot(t),
+            DECLINATION_PALLAS.angle_dot(t),
+            ROTATION_PALLAS.angle_dot(t),
         )
     }
 }
@@ -7990,35 +11887,41 @@ const RIGHT_ASCENSION_VESTA: RotationalElement<0usize> = RotationalElement {
     c0: 5.393608440730596f64,
     c1: 0f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const DECLINATION_VESTA: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 0.7371398095798051f64,
     c1: 0f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const ROTATION_VESTA: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 4.980995152266617f64,
     c1: 28.22778495282912f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 impl RotationalElements for Vesta {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_VESTA.angle::<0usize>(None, t),
-            DECLINATION_VESTA.angle::<0usize>(None, t),
-            ROTATION_VESTA.angle::<0usize>(None, t),
+            RIGHT_ASCENSION_VESTA.angle(t),
+            DECLINATION_VESTA.angle(t),
+            ROTATION_VESTA.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_VESTA.angle_dot::<0usize>(None, t),
-            DECLINATION_VESTA.angle_dot::<0usize>(None, t),
-            ROTATION_VESTA.angle_dot::<0usize>(None, t),
+            RIGHT_ASCENSION_VESTA.angle_dot(t),
+            DECLINATION_VESTA.angle_dot(t),
+            ROTATION_VESTA.angle_dot(t),
         )
     }
 }
@@ -8082,35 +11985,41 @@ const RIGHT_ASCENSION_LUTETIA: RotationalElement<0usize> = RotationalElement {
     c0: 0.9075712110370514f64,
     c1: 0f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const DECLINATION_LUTETIA: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 0.20943951023931956f64,
     c1: 0f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const ROTATION_LUTETIA: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 1.6406094968746698f64,
     c1: 18.4612463429088f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 impl RotationalElements for Lutetia {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_LUTETIA.angle::<0usize>(None, t),
-            DECLINATION_LUTETIA.angle::<0usize>(None, t),
-            ROTATION_LUTETIA.angle::<0usize>(None, t),
+            RIGHT_ASCENSION_LUTETIA.angle(t),
+            DECLINATION_LUTETIA.angle(t),
+            ROTATION_LUTETIA.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_LUTETIA.angle_dot::<0usize>(None, t),
-            DECLINATION_LUTETIA.angle_dot::<0usize>(None, t),
-            ROTATION_LUTETIA.angle_dot::<0usize>(None, t),
+            RIGHT_ASCENSION_LUTETIA.angle_dot(t),
+            DECLINATION_LUTETIA.angle_dot(t),
+            ROTATION_LUTETIA.angle_dot(t),
         )
     }
 }
@@ -8164,35 +12073,41 @@ const RIGHT_ASCENSION_EROS: RotationalElement<0usize> = RotationalElement {
     c0: 0.1980948701013564f64,
     c1: 0f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const DECLINATION_EROS: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 0.30054569719342356f64,
     c1: 0f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const ROTATION_EROS: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 5.690995091977911f64,
     c1: 28.612729617819042f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 impl RotationalElements for Eros {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_EROS.angle::<0usize>(None, t),
-            DECLINATION_EROS.angle::<0usize>(None, t),
-            ROTATION_EROS.angle::<0usize>(None, t),
+            RIGHT_ASCENSION_EROS.angle(t),
+            DECLINATION_EROS.angle(t),
+            ROTATION_EROS.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_EROS.angle_dot::<0usize>(None, t),
-            DECLINATION_EROS.angle_dot::<0usize>(None, t),
-            ROTATION_EROS.angle_dot::<0usize>(None, t),
+            RIGHT_ASCENSION_EROS.angle_dot(t),
+            DECLINATION_EROS.angle_dot(t),
+            ROTATION_EROS.angle_dot(t),
         )
     }
 }
@@ -8231,35 +12146,41 @@ const RIGHT_ASCENSION_DAVIDA: RotationalElement<0usize> = RotationalElement {
     c0: 5.183627878423159f64,
     c1: 0f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const DECLINATION_DAVIDA: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: 0.08726646259971647f64,
     c1: 0f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const ROTATION_DAVIDA: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 4.679227724596798f64,
     c1: 29.39866372732388f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 impl RotationalElements for Davida {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_DAVIDA.angle::<0usize>(None, t),
-            DECLINATION_DAVIDA.angle::<0usize>(None, t),
-            ROTATION_DAVIDA.angle::<0usize>(None, t),
+            RIGHT_ASCENSION_DAVIDA.angle(t),
+            DECLINATION_DAVIDA.angle(t),
+            ROTATION_DAVIDA.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_DAVIDA.angle_dot::<0usize>(None, t),
-            DECLINATION_DAVIDA.angle_dot::<0usize>(None, t),
-            ROTATION_DAVIDA.angle_dot::<0usize>(None, t),
+            RIGHT_ASCENSION_DAVIDA.angle_dot(t),
+            DECLINATION_DAVIDA.angle_dot(t),
+            ROTATION_DAVIDA.angle_dot(t),
         )
     }
 }
@@ -8318,35 +12239,41 @@ const RIGHT_ASCENSION_STEINS: RotationalElement<0usize> = RotationalElement {
     c0: 1.5882496193148399f64,
     c1: 0f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const DECLINATION_STEINS: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: -1.0821041362364843f64,
     c1: 0f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const ROTATION_STEINS: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 5.615771401216954f64,
     c1: 24.925032561498227f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 impl RotationalElements for Steins {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_STEINS.angle::<0usize>(None, t),
-            DECLINATION_STEINS.angle::<0usize>(None, t),
-            ROTATION_STEINS.angle::<0usize>(None, t),
+            RIGHT_ASCENSION_STEINS.angle(t),
+            DECLINATION_STEINS.angle(t),
+            ROTATION_STEINS.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_STEINS.angle_dot::<0usize>(None, t),
-            DECLINATION_STEINS.angle_dot::<0usize>(None, t),
-            ROTATION_STEINS.angle_dot::<0usize>(None, t),
+            RIGHT_ASCENSION_STEINS.angle_dot(t),
+            DECLINATION_STEINS.angle_dot(t),
+            ROTATION_STEINS.angle_dot(t),
         )
     }
 }
@@ -8425,35 +12352,41 @@ const RIGHT_ASCENSION_ITOKAWA: RotationalElement<0usize> = RotationalElement {
     c0: 1.5800465718304666f64,
     c1: 0f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const DECLINATION_ITOKAWA: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Declination,
     c0: -1.1571532940722404f64,
     c1: 0f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 const ROTATION_ITOKAWA: RotationalElement<0usize> = RotationalElement {
     typ: RotationalElementType::Rotation,
     c0: 0f64,
     c1: 12.429240095029979f64,
     c2: 0f64,
-    c: None,
+    c: [],
+    theta0: [],
+    theta1: [],
 };
 impl RotationalElements for Itokawa {
     fn rotational_elements(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_ITOKAWA.angle::<0usize>(None, t),
-            DECLINATION_ITOKAWA.angle::<0usize>(None, t),
-            ROTATION_ITOKAWA.angle::<0usize>(None, t),
+            RIGHT_ASCENSION_ITOKAWA.angle(t),
+            DECLINATION_ITOKAWA.angle(t),
+            ROTATION_ITOKAWA.angle(t),
         )
     }
     fn rotational_element_rates(&self, t: f64) -> Elements {
         (
-            RIGHT_ASCENSION_ITOKAWA.angle_dot::<0usize>(None, t),
-            DECLINATION_ITOKAWA.angle_dot::<0usize>(None, t),
-            ROTATION_ITOKAWA.angle_dot::<0usize>(None, t),
+            RIGHT_ASCENSION_ITOKAWA.angle_dot(t),
+            DECLINATION_ITOKAWA.angle_dot(t),
+            ROTATION_ITOKAWA.angle_dot(t),
         )
     }
 }
@@ -8472,259 +12405,6 @@ impl Display for Bennu {
         write!(f, "{}", self.name())
     }
 }
-const NUTATION_PRECESSION_MERCURY: NutationPrecessionCoefficients<5usize> =
-    NutationPrecessionCoefficients {
-        theta0: [
-            3.0506799486005773f64,
-            6.101359897201155f64,
-            2.868854538622146f64,
-            5.919534488968053f64,
-            2.6870291303890443f64,
-        ],
-        theta1: [
-            2608.7878923240937f64,
-            5217.575784648187f64,
-            7826.363676972282f64,
-            10435.151569296375f64,
-            13043.939461620466f64,
-        ],
-    };
-const NUTATION_PRECESSION_EARTH: NutationPrecessionCoefficients<13usize> =
-    NutationPrecessionCoefficients {
-        theta0: [
-            2.1824469631563095f64,
-            4.364876473020098f64,
-            4.537995681525416f64,
-            3.0826877913349846f64,
-            6.240058221362807f64,
-            5.438253962996612f64,
-            2.355548718369107f64,
-            4.827877416989155f64,
-            0.5973563897875792f64,
-            0.2641381289968218f64,
-            2.0899096062155698f64,
-            4.188109526378113f64,
-            0.4372573375021394f64,
-        ],
-        theta1: [
-            -33.781483888495835f64,
-            -67.56296777699167f64,
-            8294.909972626925f64,
-            8504.459388212737f64,
-            628.3019668015924f64,
-            16833.15084472816f64,
-            8328.69145651542f64,
-            209.54947933396397f64,
-            1114.6285779726247f64,
-            -101.3444516654875f64,
-            2.301053255936537f64,
-            104.77473966698199f64,
-            8261.12848873843f64,
-        ],
-    };
-const NUTATION_PRECESSION_MARS: NutationPrecessionCoefficients<26usize> =
-    NutationPrecessionCoefficients {
-        theta0: [
-            3.328804809897935f64,
-            0.37470342287773584f64,
-            5.809517398292802f64,
-            6.892873571600945f64,
-            3.3097152567180146f64,
-            2.120032883264378f64,
-            4.032588225058434f64,
-            4.387288948439982f64,
-            3.8045796985836846f64,
-            3.424288764152381f64,
-            3.4730520762801462f64,
-            3.9495523217086292f64,
-            4.357448194643978f64,
-            4.645778664015252f64,
-            1.3857704297725961f64,
-            2.136869016190709f64,
-            0.751510868094019f64,
-            1.0064158213753553f64,
-            1.3871248750853138f64,
-            2.9029314796567682f64,
-            2.252727410236719f64,
-            0.6344650043848296f64,
-            0.9890544553471146f64,
-            1.1757236496733376f64,
-            1.8289772979888115f64,
-            1.664898441223219f64,
-        ],
-        theta1: [
-            277.80594525842264f64,
-            555.6129894920322f64,
-            334.05422022489097f64,
-            668.125936040531f64,
-            719340.2120445863f64,
-            11.523153020184504f64,
-            11.536473384554899f64,
-            23.047098122619843f64,
-            668.1113614443373f64,
-            334.05316148477937f64,
-            334.0469780000094f64,
-            668.1268926511307f64,
-            1002.1807129125305f64,
-            1336.235189496269f64,
-            0.008801023466045386f64,
-            334.054984682245f64,
-            668.1273150051017f64,
-            1002.1811764929237f64,
-            1336.2354112473317f64,
-            0.008801023466045386f64,
-            334.05659172556966f64,
-            668.130317528175f64,
-            1002.1842799588599f64,
-            1336.2285297823557f64,
-            1670.2877519268022f64,
-            0.008801023466045386f64,
-        ],
-    };
-const NUTATION_PRECESSION_JUPITER: NutationPrecessionCoefficients<15usize> =
-    NutationPrecessionCoefficients {
-        theta0: [
-            1.2796754075622423f64,
-            0.42970006184100396f64,
-            4.9549897464119015f64,
-            6.2098814785958245f64,
-            2.092649773141201f64,
-            4.010766621082969f64,
-            6.147922290150026f64,
-            1.9783307071355725f64,
-            2.5593508151244846f64,
-            0.8594001236820079f64,
-            1.734171606432425f64,
-            3.0699533280603655f64,
-            5.241627996900319f64,
-            1.9898901100379935f64,
-            0.864134346731335f64,
-        ],
-        theta1: [
-            1596.503281347521f64,
-            787.7927551311844f64,
-            84.66068602648895f64,
-            20.792107379008446f64,
-            4.574507969477138f64,
-            1.1222467090323538f64,
-            41.58421475801689f64,
-            105.9414855960558f64,
-            3193.006562695042f64,
-            1575.5855102623689f64,
-            84.65553032387855f64,
-            20.80363527871787f64,
-            4.582318317879813f64,
-            105.94580703128374f64,
-            1.1222467090323538f64,
-        ],
-    };
-const NUTATION_PRECESSION_SATURN: NutationPrecessionCoefficients<8usize> =
-    NutationPrecessionCoefficients {
-        theta0: [
-            6.166597313146365f64,
-            0.5012585611727715f64,
-            3.0962140930379407f64,
-            5.235987755982989f64,
-            5.523094417936056f64,
-            6.0248765778844255f64,
-            12.33319462629273f64,
-            1.002517122345543f64,
-        ],
-        theta1: [
-            1321.331180819591f64,
-            1321.331180819591f64,
-            -637.14117008679f64,
-            -126.11574641985825f64,
-            8.834856673595295f64,
-            -17.73778118801837f64,
-            2642.662361639182f64,
-            2642.662361639182f64,
-        ],
-    };
-const NUTATION_PRECESSION_URANUS: NutationPrecessionCoefficients<18usize> =
-    NutationPrecessionCoefficients {
-        theta0: [
-            2.0202186091834364f64,
-            2.4729570171507653f64,
-            2.356718088967943f64,
-            1.0780898789568973f64,
-            4.351454891072263f64,
-            0.7655014099247129f64,
-            1.3554226970987964f64,
-            2.746450110938277f64,
-            1.776919711455427f64,
-            2.419724474964938f64,
-            1.784250094313803f64,
-            5.522396286235258f64,
-            5.3059754589879615f64,
-            5.388005933831694f64,
-            5.948431156647074f64,
-            4.522846223618106f64,
-            3.568500188627606f64,
-            11.044792572470516f64,
-        ],
-        theta1: [
-            959.7891933286942f64,
-            731.077582955928f64,
-            522.3307938967249f64,
-            449.1358738582876f64,
-            427.10754977009157f64,
-            388.83160660922994f64,
-            354.1171823199879f64,
-            290.6454915444109f64,
-            224.66977689099764f64,
-            140.70512817020406f64,
-            -35.32930378471962f64,
-            49.9855316454168f64,
-            -0.9065240134858548f64,
-            -1.626123264083117f64,
-            -1.314581992602129f64,
-            -8.810596596992575f64,
-            -70.65860756943924f64,
-            99.9710632908336f64,
-        ],
-    };
-const NUTATION_PRECESSION_NEPTUNE: NutationPrecessionCoefficients<17usize> =
-    NutationPrecessionCoefficients {
-        theta0: [
-            6.245660728261709f64,
-            5.653470513060032f64,
-            3.848625533572696f64,
-            6.183177941040311f64,
-            1.3144074596769295f64,
-            0.6171484235051949f64,
-            2.4890140462691135f64,
-            3.104068074671915f64,
-            11.306941026120064f64,
-            6.20813614934383f64,
-            9.312204224015744f64,
-            12.41627229868766f64,
-            15.520340373359575f64,
-            18.624408448031488f64,
-            21.728476522703406f64,
-            24.83254459737532f64,
-            27.936612672047236f64,
-        ],
-        theta1: [
-            0.9130864514733535f64,
-            1092.6913034790819f64,
-            961.0515899766616f64,
-            812.7038395448996f64,
-            455.6949957202075f64,
-            250.02539666519567f64,
-            49.29857005183183f64,
-            0.9130864514733535f64,
-            2185.3826069581637f64,
-            1.826172902946707f64,
-            2.7392593544200605f64,
-            3.652345805893414f64,
-            4.565432257366767f64,
-            5.478518708840121f64,
-            6.391605160313474f64,
-            7.304691611786828f64,
-            8.21777806326018f64,
-        ],
-    };
 impl TryPointMass for DynOrigin {
     fn try_gravitational_parameter(&self) -> Result<f64, UndefinedOriginPropertyError> {
         match self {
@@ -9004,359 +12684,359 @@ impl TryRotationalElements for DynOrigin {
     fn try_rotational_elements(&self, t: f64) -> Result<Elements, UndefinedOriginPropertyError> {
         match self {
             DynOrigin::Sun => Ok((
-                RIGHT_ASCENSION_SUN.angle::<0usize>(None, t),
-                DECLINATION_SUN.angle::<0usize>(None, t),
-                ROTATION_SUN.angle::<0usize>(None, t),
+                RIGHT_ASCENSION_SUN.angle(t),
+                DECLINATION_SUN.angle(t),
+                ROTATION_SUN.angle(t),
             )),
             DynOrigin::Mercury => Ok((
-                RIGHT_ASCENSION_MERCURY.angle::<5usize>(Some(&NUTATION_PRECESSION_MERCURY), t),
-                DECLINATION_MERCURY.angle::<5usize>(Some(&NUTATION_PRECESSION_MERCURY), t),
-                ROTATION_MERCURY.angle::<5usize>(Some(&NUTATION_PRECESSION_MERCURY), t),
+                RIGHT_ASCENSION_MERCURY.angle(t),
+                DECLINATION_MERCURY.angle(t),
+                ROTATION_MERCURY.angle(t),
             )),
             DynOrigin::Venus => Ok((
-                RIGHT_ASCENSION_VENUS.angle::<0usize>(None, t),
-                DECLINATION_VENUS.angle::<0usize>(None, t),
-                ROTATION_VENUS.angle::<0usize>(None, t),
+                RIGHT_ASCENSION_VENUS.angle(t),
+                DECLINATION_VENUS.angle(t),
+                ROTATION_VENUS.angle(t),
             )),
             DynOrigin::Earth => Ok((
-                RIGHT_ASCENSION_EARTH.angle::<13usize>(Some(&NUTATION_PRECESSION_EARTH), t),
-                DECLINATION_EARTH.angle::<13usize>(Some(&NUTATION_PRECESSION_EARTH), t),
-                ROTATION_EARTH.angle::<13usize>(Some(&NUTATION_PRECESSION_EARTH), t),
+                RIGHT_ASCENSION_EARTH.angle(t),
+                DECLINATION_EARTH.angle(t),
+                ROTATION_EARTH.angle(t),
             )),
             DynOrigin::Mars => Ok((
-                RIGHT_ASCENSION_MARS.angle::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
-                DECLINATION_MARS.angle::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
-                ROTATION_MARS.angle::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
+                RIGHT_ASCENSION_MARS.angle(t),
+                DECLINATION_MARS.angle(t),
+                ROTATION_MARS.angle(t),
             )),
             DynOrigin::Jupiter => Ok((
-                RIGHT_ASCENSION_JUPITER.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                DECLINATION_JUPITER.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                ROTATION_JUPITER.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+                RIGHT_ASCENSION_JUPITER.angle(t),
+                DECLINATION_JUPITER.angle(t),
+                ROTATION_JUPITER.angle(t),
             )),
             DynOrigin::Saturn => Ok((
-                RIGHT_ASCENSION_SATURN.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_SATURN.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_SATURN.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_SATURN.angle(t),
+                DECLINATION_SATURN.angle(t),
+                ROTATION_SATURN.angle(t),
             )),
             DynOrigin::Uranus => Ok((
-                RIGHT_ASCENSION_URANUS.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                DECLINATION_URANUS.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                ROTATION_URANUS.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+                RIGHT_ASCENSION_URANUS.angle(t),
+                DECLINATION_URANUS.angle(t),
+                ROTATION_URANUS.angle(t),
             )),
             DynOrigin::Neptune => Ok((
-                RIGHT_ASCENSION_NEPTUNE.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-                DECLINATION_NEPTUNE.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-                ROTATION_NEPTUNE.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
+                RIGHT_ASCENSION_NEPTUNE.angle(t),
+                DECLINATION_NEPTUNE.angle(t),
+                ROTATION_NEPTUNE.angle(t),
             )),
             DynOrigin::Pluto => Ok((
-                RIGHT_ASCENSION_PLUTO.angle::<0usize>(None, t),
-                DECLINATION_PLUTO.angle::<0usize>(None, t),
-                ROTATION_PLUTO.angle::<0usize>(None, t),
+                RIGHT_ASCENSION_PLUTO.angle(t),
+                DECLINATION_PLUTO.angle(t),
+                ROTATION_PLUTO.angle(t),
             )),
             DynOrigin::Moon => Ok((
-                RIGHT_ASCENSION_MOON.angle::<13usize>(Some(&NUTATION_PRECESSION_EARTH), t),
-                DECLINATION_MOON.angle::<13usize>(Some(&NUTATION_PRECESSION_EARTH), t),
-                ROTATION_MOON.angle::<13usize>(Some(&NUTATION_PRECESSION_EARTH), t),
+                RIGHT_ASCENSION_MOON.angle(t),
+                DECLINATION_MOON.angle(t),
+                ROTATION_MOON.angle(t),
             )),
             DynOrigin::Phobos => Ok((
-                RIGHT_ASCENSION_PHOBOS.angle::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
-                DECLINATION_PHOBOS.angle::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
-                ROTATION_PHOBOS.angle::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
+                RIGHT_ASCENSION_PHOBOS.angle(t),
+                DECLINATION_PHOBOS.angle(t),
+                ROTATION_PHOBOS.angle(t),
             )),
             DynOrigin::Deimos => Ok((
-                RIGHT_ASCENSION_DEIMOS.angle::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
-                DECLINATION_DEIMOS.angle::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
-                ROTATION_DEIMOS.angle::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
+                RIGHT_ASCENSION_DEIMOS.angle(t),
+                DECLINATION_DEIMOS.angle(t),
+                ROTATION_DEIMOS.angle(t),
             )),
             DynOrigin::Io => Ok((
-                RIGHT_ASCENSION_IO.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                DECLINATION_IO.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                ROTATION_IO.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+                RIGHT_ASCENSION_IO.angle(t),
+                DECLINATION_IO.angle(t),
+                ROTATION_IO.angle(t),
             )),
             DynOrigin::Europa => Ok((
-                RIGHT_ASCENSION_EUROPA.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                DECLINATION_EUROPA.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                ROTATION_EUROPA.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+                RIGHT_ASCENSION_EUROPA.angle(t),
+                DECLINATION_EUROPA.angle(t),
+                ROTATION_EUROPA.angle(t),
             )),
             DynOrigin::Ganymede => Ok((
-                RIGHT_ASCENSION_GANYMEDE.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                DECLINATION_GANYMEDE.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                ROTATION_GANYMEDE.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+                RIGHT_ASCENSION_GANYMEDE.angle(t),
+                DECLINATION_GANYMEDE.angle(t),
+                ROTATION_GANYMEDE.angle(t),
             )),
             DynOrigin::Callisto => Ok((
-                RIGHT_ASCENSION_CALLISTO.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                DECLINATION_CALLISTO.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                ROTATION_CALLISTO.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+                RIGHT_ASCENSION_CALLISTO.angle(t),
+                DECLINATION_CALLISTO.angle(t),
+                ROTATION_CALLISTO.angle(t),
             )),
             DynOrigin::Amalthea => Ok((
-                RIGHT_ASCENSION_AMALTHEA.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                DECLINATION_AMALTHEA.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                ROTATION_AMALTHEA.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+                RIGHT_ASCENSION_AMALTHEA.angle(t),
+                DECLINATION_AMALTHEA.angle(t),
+                ROTATION_AMALTHEA.angle(t),
             )),
             DynOrigin::Thebe => Ok((
-                RIGHT_ASCENSION_THEBE.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                DECLINATION_THEBE.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                ROTATION_THEBE.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+                RIGHT_ASCENSION_THEBE.angle(t),
+                DECLINATION_THEBE.angle(t),
+                ROTATION_THEBE.angle(t),
             )),
             DynOrigin::Adrastea => Ok((
-                RIGHT_ASCENSION_ADRASTEA.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                DECLINATION_ADRASTEA.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                ROTATION_ADRASTEA.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+                RIGHT_ASCENSION_ADRASTEA.angle(t),
+                DECLINATION_ADRASTEA.angle(t),
+                ROTATION_ADRASTEA.angle(t),
             )),
             DynOrigin::Metis => Ok((
-                RIGHT_ASCENSION_METIS.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                DECLINATION_METIS.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                ROTATION_METIS.angle::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+                RIGHT_ASCENSION_METIS.angle(t),
+                DECLINATION_METIS.angle(t),
+                ROTATION_METIS.angle(t),
             )),
             DynOrigin::Mimas => Ok((
-                RIGHT_ASCENSION_MIMAS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_MIMAS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_MIMAS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_MIMAS.angle(t),
+                DECLINATION_MIMAS.angle(t),
+                ROTATION_MIMAS.angle(t),
             )),
             DynOrigin::Enceladus => Ok((
-                RIGHT_ASCENSION_ENCELADUS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_ENCELADUS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_ENCELADUS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_ENCELADUS.angle(t),
+                DECLINATION_ENCELADUS.angle(t),
+                ROTATION_ENCELADUS.angle(t),
             )),
             DynOrigin::Tethys => Ok((
-                RIGHT_ASCENSION_TETHYS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_TETHYS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_TETHYS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_TETHYS.angle(t),
+                DECLINATION_TETHYS.angle(t),
+                ROTATION_TETHYS.angle(t),
             )),
             DynOrigin::Dione => Ok((
-                RIGHT_ASCENSION_DIONE.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_DIONE.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_DIONE.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_DIONE.angle(t),
+                DECLINATION_DIONE.angle(t),
+                ROTATION_DIONE.angle(t),
             )),
             DynOrigin::Rhea => Ok((
-                RIGHT_ASCENSION_RHEA.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_RHEA.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_RHEA.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_RHEA.angle(t),
+                DECLINATION_RHEA.angle(t),
+                ROTATION_RHEA.angle(t),
             )),
             DynOrigin::Titan => Ok((
-                RIGHT_ASCENSION_TITAN.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_TITAN.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_TITAN.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_TITAN.angle(t),
+                DECLINATION_TITAN.angle(t),
+                ROTATION_TITAN.angle(t),
             )),
             DynOrigin::Iapetus => Ok((
-                RIGHT_ASCENSION_IAPETUS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_IAPETUS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_IAPETUS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_IAPETUS.angle(t),
+                DECLINATION_IAPETUS.angle(t),
+                ROTATION_IAPETUS.angle(t),
             )),
             DynOrigin::Phoebe => Ok((
-                RIGHT_ASCENSION_PHOEBE.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_PHOEBE.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_PHOEBE.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_PHOEBE.angle(t),
+                DECLINATION_PHOEBE.angle(t),
+                ROTATION_PHOEBE.angle(t),
             )),
             DynOrigin::Janus => Ok((
-                RIGHT_ASCENSION_JANUS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_JANUS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_JANUS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_JANUS.angle(t),
+                DECLINATION_JANUS.angle(t),
+                ROTATION_JANUS.angle(t),
             )),
             DynOrigin::Epimetheus => Ok((
-                RIGHT_ASCENSION_EPIMETHEUS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_EPIMETHEUS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_EPIMETHEUS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_EPIMETHEUS.angle(t),
+                DECLINATION_EPIMETHEUS.angle(t),
+                ROTATION_EPIMETHEUS.angle(t),
             )),
             DynOrigin::Helene => Ok((
-                RIGHT_ASCENSION_HELENE.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_HELENE.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_HELENE.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_HELENE.angle(t),
+                DECLINATION_HELENE.angle(t),
+                ROTATION_HELENE.angle(t),
             )),
             DynOrigin::Telesto => Ok((
-                RIGHT_ASCENSION_TELESTO.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_TELESTO.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_TELESTO.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_TELESTO.angle(t),
+                DECLINATION_TELESTO.angle(t),
+                ROTATION_TELESTO.angle(t),
             )),
             DynOrigin::Calypso => Ok((
-                RIGHT_ASCENSION_CALYPSO.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_CALYPSO.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_CALYPSO.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_CALYPSO.angle(t),
+                DECLINATION_CALYPSO.angle(t),
+                ROTATION_CALYPSO.angle(t),
             )),
             DynOrigin::Atlas => Ok((
-                RIGHT_ASCENSION_ATLAS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_ATLAS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_ATLAS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_ATLAS.angle(t),
+                DECLINATION_ATLAS.angle(t),
+                ROTATION_ATLAS.angle(t),
             )),
             DynOrigin::Prometheus => Ok((
-                RIGHT_ASCENSION_PROMETHEUS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_PROMETHEUS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_PROMETHEUS.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_PROMETHEUS.angle(t),
+                DECLINATION_PROMETHEUS.angle(t),
+                ROTATION_PROMETHEUS.angle(t),
             )),
             DynOrigin::Pandora => Ok((
-                RIGHT_ASCENSION_PANDORA.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_PANDORA.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_PANDORA.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_PANDORA.angle(t),
+                DECLINATION_PANDORA.angle(t),
+                ROTATION_PANDORA.angle(t),
             )),
             DynOrigin::Pan => Ok((
-                RIGHT_ASCENSION_PAN.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_PAN.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_PAN.angle::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_PAN.angle(t),
+                DECLINATION_PAN.angle(t),
+                ROTATION_PAN.angle(t),
             )),
             DynOrigin::Ariel => Ok((
-                RIGHT_ASCENSION_ARIEL.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                DECLINATION_ARIEL.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                ROTATION_ARIEL.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+                RIGHT_ASCENSION_ARIEL.angle(t),
+                DECLINATION_ARIEL.angle(t),
+                ROTATION_ARIEL.angle(t),
             )),
             DynOrigin::Umbriel => Ok((
-                RIGHT_ASCENSION_UMBRIEL.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                DECLINATION_UMBRIEL.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                ROTATION_UMBRIEL.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+                RIGHT_ASCENSION_UMBRIEL.angle(t),
+                DECLINATION_UMBRIEL.angle(t),
+                ROTATION_UMBRIEL.angle(t),
             )),
             DynOrigin::Titania => Ok((
-                RIGHT_ASCENSION_TITANIA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                DECLINATION_TITANIA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                ROTATION_TITANIA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+                RIGHT_ASCENSION_TITANIA.angle(t),
+                DECLINATION_TITANIA.angle(t),
+                ROTATION_TITANIA.angle(t),
             )),
             DynOrigin::Oberon => Ok((
-                RIGHT_ASCENSION_OBERON.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                DECLINATION_OBERON.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                ROTATION_OBERON.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+                RIGHT_ASCENSION_OBERON.angle(t),
+                DECLINATION_OBERON.angle(t),
+                ROTATION_OBERON.angle(t),
             )),
             DynOrigin::Miranda => Ok((
-                RIGHT_ASCENSION_MIRANDA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                DECLINATION_MIRANDA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                ROTATION_MIRANDA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+                RIGHT_ASCENSION_MIRANDA.angle(t),
+                DECLINATION_MIRANDA.angle(t),
+                ROTATION_MIRANDA.angle(t),
             )),
             DynOrigin::Cordelia => Ok((
-                RIGHT_ASCENSION_CORDELIA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                DECLINATION_CORDELIA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                ROTATION_CORDELIA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+                RIGHT_ASCENSION_CORDELIA.angle(t),
+                DECLINATION_CORDELIA.angle(t),
+                ROTATION_CORDELIA.angle(t),
             )),
             DynOrigin::Ophelia => Ok((
-                RIGHT_ASCENSION_OPHELIA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                DECLINATION_OPHELIA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                ROTATION_OPHELIA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+                RIGHT_ASCENSION_OPHELIA.angle(t),
+                DECLINATION_OPHELIA.angle(t),
+                ROTATION_OPHELIA.angle(t),
             )),
             DynOrigin::Bianca => Ok((
-                RIGHT_ASCENSION_BIANCA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                DECLINATION_BIANCA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                ROTATION_BIANCA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+                RIGHT_ASCENSION_BIANCA.angle(t),
+                DECLINATION_BIANCA.angle(t),
+                ROTATION_BIANCA.angle(t),
             )),
             DynOrigin::Cressida => Ok((
-                RIGHT_ASCENSION_CRESSIDA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                DECLINATION_CRESSIDA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                ROTATION_CRESSIDA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+                RIGHT_ASCENSION_CRESSIDA.angle(t),
+                DECLINATION_CRESSIDA.angle(t),
+                ROTATION_CRESSIDA.angle(t),
             )),
             DynOrigin::Desdemona => Ok((
-                RIGHT_ASCENSION_DESDEMONA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                DECLINATION_DESDEMONA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                ROTATION_DESDEMONA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+                RIGHT_ASCENSION_DESDEMONA.angle(t),
+                DECLINATION_DESDEMONA.angle(t),
+                ROTATION_DESDEMONA.angle(t),
             )),
             DynOrigin::Juliet => Ok((
-                RIGHT_ASCENSION_JULIET.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                DECLINATION_JULIET.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                ROTATION_JULIET.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+                RIGHT_ASCENSION_JULIET.angle(t),
+                DECLINATION_JULIET.angle(t),
+                ROTATION_JULIET.angle(t),
             )),
             DynOrigin::Portia => Ok((
-                RIGHT_ASCENSION_PORTIA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                DECLINATION_PORTIA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                ROTATION_PORTIA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+                RIGHT_ASCENSION_PORTIA.angle(t),
+                DECLINATION_PORTIA.angle(t),
+                ROTATION_PORTIA.angle(t),
             )),
             DynOrigin::Rosalind => Ok((
-                RIGHT_ASCENSION_ROSALIND.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                DECLINATION_ROSALIND.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                ROTATION_ROSALIND.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+                RIGHT_ASCENSION_ROSALIND.angle(t),
+                DECLINATION_ROSALIND.angle(t),
+                ROTATION_ROSALIND.angle(t),
             )),
             DynOrigin::Belinda => Ok((
-                RIGHT_ASCENSION_BELINDA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                DECLINATION_BELINDA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                ROTATION_BELINDA.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+                RIGHT_ASCENSION_BELINDA.angle(t),
+                DECLINATION_BELINDA.angle(t),
+                ROTATION_BELINDA.angle(t),
             )),
             DynOrigin::Puck => Ok((
-                RIGHT_ASCENSION_PUCK.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                DECLINATION_PUCK.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                ROTATION_PUCK.angle::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+                RIGHT_ASCENSION_PUCK.angle(t),
+                DECLINATION_PUCK.angle(t),
+                ROTATION_PUCK.angle(t),
             )),
             DynOrigin::Triton => Ok((
-                RIGHT_ASCENSION_TRITON.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-                DECLINATION_TRITON.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-                ROTATION_TRITON.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
+                RIGHT_ASCENSION_TRITON.angle(t),
+                DECLINATION_TRITON.angle(t),
+                ROTATION_TRITON.angle(t),
             )),
             DynOrigin::Naiad => Ok((
-                RIGHT_ASCENSION_NAIAD.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-                DECLINATION_NAIAD.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-                ROTATION_NAIAD.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
+                RIGHT_ASCENSION_NAIAD.angle(t),
+                DECLINATION_NAIAD.angle(t),
+                ROTATION_NAIAD.angle(t),
             )),
             DynOrigin::Thalassa => Ok((
-                RIGHT_ASCENSION_THALASSA.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-                DECLINATION_THALASSA.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-                ROTATION_THALASSA.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
+                RIGHT_ASCENSION_THALASSA.angle(t),
+                DECLINATION_THALASSA.angle(t),
+                ROTATION_THALASSA.angle(t),
             )),
             DynOrigin::Despina => Ok((
-                RIGHT_ASCENSION_DESPINA.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-                DECLINATION_DESPINA.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-                ROTATION_DESPINA.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
+                RIGHT_ASCENSION_DESPINA.angle(t),
+                DECLINATION_DESPINA.angle(t),
+                ROTATION_DESPINA.angle(t),
             )),
             DynOrigin::Galatea => Ok((
-                RIGHT_ASCENSION_GALATEA.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-                DECLINATION_GALATEA.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-                ROTATION_GALATEA.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
+                RIGHT_ASCENSION_GALATEA.angle(t),
+                DECLINATION_GALATEA.angle(t),
+                ROTATION_GALATEA.angle(t),
             )),
             DynOrigin::Larissa => Ok((
-                RIGHT_ASCENSION_LARISSA.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-                DECLINATION_LARISSA.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-                ROTATION_LARISSA.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
+                RIGHT_ASCENSION_LARISSA.angle(t),
+                DECLINATION_LARISSA.angle(t),
+                ROTATION_LARISSA.angle(t),
             )),
             DynOrigin::Proteus => Ok((
-                RIGHT_ASCENSION_PROTEUS.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-                DECLINATION_PROTEUS.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-                ROTATION_PROTEUS.angle::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
+                RIGHT_ASCENSION_PROTEUS.angle(t),
+                DECLINATION_PROTEUS.angle(t),
+                ROTATION_PROTEUS.angle(t),
             )),
             DynOrigin::Charon => Ok((
-                RIGHT_ASCENSION_CHARON.angle::<0usize>(None, t),
-                DECLINATION_CHARON.angle::<0usize>(None, t),
-                ROTATION_CHARON.angle::<0usize>(None, t),
+                RIGHT_ASCENSION_CHARON.angle(t),
+                DECLINATION_CHARON.angle(t),
+                ROTATION_CHARON.angle(t),
             )),
             DynOrigin::Gaspra => Ok((
-                RIGHT_ASCENSION_GASPRA.angle::<0usize>(None, t),
-                DECLINATION_GASPRA.angle::<0usize>(None, t),
-                ROTATION_GASPRA.angle::<0usize>(None, t),
+                RIGHT_ASCENSION_GASPRA.angle(t),
+                DECLINATION_GASPRA.angle(t),
+                ROTATION_GASPRA.angle(t),
             )),
             DynOrigin::Ida => Ok((
-                RIGHT_ASCENSION_IDA.angle::<0usize>(None, t),
-                DECLINATION_IDA.angle::<0usize>(None, t),
-                ROTATION_IDA.angle::<0usize>(None, t),
+                RIGHT_ASCENSION_IDA.angle(t),
+                DECLINATION_IDA.angle(t),
+                ROTATION_IDA.angle(t),
             )),
             DynOrigin::Ceres => Ok((
-                RIGHT_ASCENSION_CERES.angle::<0usize>(None, t),
-                DECLINATION_CERES.angle::<0usize>(None, t),
-                ROTATION_CERES.angle::<0usize>(None, t),
+                RIGHT_ASCENSION_CERES.angle(t),
+                DECLINATION_CERES.angle(t),
+                ROTATION_CERES.angle(t),
             )),
             DynOrigin::Pallas => Ok((
-                RIGHT_ASCENSION_PALLAS.angle::<0usize>(None, t),
-                DECLINATION_PALLAS.angle::<0usize>(None, t),
-                ROTATION_PALLAS.angle::<0usize>(None, t),
+                RIGHT_ASCENSION_PALLAS.angle(t),
+                DECLINATION_PALLAS.angle(t),
+                ROTATION_PALLAS.angle(t),
             )),
             DynOrigin::Vesta => Ok((
-                RIGHT_ASCENSION_VESTA.angle::<0usize>(None, t),
-                DECLINATION_VESTA.angle::<0usize>(None, t),
-                ROTATION_VESTA.angle::<0usize>(None, t),
+                RIGHT_ASCENSION_VESTA.angle(t),
+                DECLINATION_VESTA.angle(t),
+                ROTATION_VESTA.angle(t),
             )),
             DynOrigin::Lutetia => Ok((
-                RIGHT_ASCENSION_LUTETIA.angle::<0usize>(None, t),
-                DECLINATION_LUTETIA.angle::<0usize>(None, t),
-                ROTATION_LUTETIA.angle::<0usize>(None, t),
+                RIGHT_ASCENSION_LUTETIA.angle(t),
+                DECLINATION_LUTETIA.angle(t),
+                ROTATION_LUTETIA.angle(t),
             )),
             DynOrigin::Eros => Ok((
-                RIGHT_ASCENSION_EROS.angle::<0usize>(None, t),
-                DECLINATION_EROS.angle::<0usize>(None, t),
-                ROTATION_EROS.angle::<0usize>(None, t),
+                RIGHT_ASCENSION_EROS.angle(t),
+                DECLINATION_EROS.angle(t),
+                ROTATION_EROS.angle(t),
             )),
             DynOrigin::Davida => Ok((
-                RIGHT_ASCENSION_DAVIDA.angle::<0usize>(None, t),
-                DECLINATION_DAVIDA.angle::<0usize>(None, t),
-                ROTATION_DAVIDA.angle::<0usize>(None, t),
+                RIGHT_ASCENSION_DAVIDA.angle(t),
+                DECLINATION_DAVIDA.angle(t),
+                ROTATION_DAVIDA.angle(t),
             )),
             DynOrigin::Steins => Ok((
-                RIGHT_ASCENSION_STEINS.angle::<0usize>(None, t),
-                DECLINATION_STEINS.angle::<0usize>(None, t),
-                ROTATION_STEINS.angle::<0usize>(None, t),
+                RIGHT_ASCENSION_STEINS.angle(t),
+                DECLINATION_STEINS.angle(t),
+                ROTATION_STEINS.angle(t),
             )),
             DynOrigin::Itokawa => Ok((
-                RIGHT_ASCENSION_ITOKAWA.angle::<0usize>(None, t),
-                DECLINATION_ITOKAWA.angle::<0usize>(None, t),
-                ROTATION_ITOKAWA.angle::<0usize>(None, t),
+                RIGHT_ASCENSION_ITOKAWA.angle(t),
+                DECLINATION_ITOKAWA.angle(t),
+                ROTATION_ITOKAWA.angle(t),
             )),
             _ => Err(UndefinedOriginPropertyError {
                 origin: self.to_string(),
@@ -9370,367 +13050,359 @@ impl TryRotationalElements for DynOrigin {
     ) -> Result<Elements, UndefinedOriginPropertyError> {
         match self {
             DynOrigin::Sun => Ok((
-                RIGHT_ASCENSION_SUN.angle_dot::<0usize>(None, t),
-                DECLINATION_SUN.angle_dot::<0usize>(None, t),
-                ROTATION_SUN.angle_dot::<0usize>(None, t),
+                RIGHT_ASCENSION_SUN.angle_dot(t),
+                DECLINATION_SUN.angle_dot(t),
+                ROTATION_SUN.angle_dot(t),
             )),
             DynOrigin::Mercury => Ok((
-                RIGHT_ASCENSION_MERCURY.angle_dot::<5usize>(Some(&NUTATION_PRECESSION_MERCURY), t),
-                DECLINATION_MERCURY.angle_dot::<5usize>(Some(&NUTATION_PRECESSION_MERCURY), t),
-                ROTATION_MERCURY.angle_dot::<5usize>(Some(&NUTATION_PRECESSION_MERCURY), t),
+                RIGHT_ASCENSION_MERCURY.angle_dot(t),
+                DECLINATION_MERCURY.angle_dot(t),
+                ROTATION_MERCURY.angle_dot(t),
             )),
             DynOrigin::Venus => Ok((
-                RIGHT_ASCENSION_VENUS.angle_dot::<0usize>(None, t),
-                DECLINATION_VENUS.angle_dot::<0usize>(None, t),
-                ROTATION_VENUS.angle_dot::<0usize>(None, t),
+                RIGHT_ASCENSION_VENUS.angle_dot(t),
+                DECLINATION_VENUS.angle_dot(t),
+                ROTATION_VENUS.angle_dot(t),
             )),
             DynOrigin::Earth => Ok((
-                RIGHT_ASCENSION_EARTH.angle_dot::<13usize>(Some(&NUTATION_PRECESSION_EARTH), t),
-                DECLINATION_EARTH.angle_dot::<13usize>(Some(&NUTATION_PRECESSION_EARTH), t),
-                ROTATION_EARTH.angle_dot::<13usize>(Some(&NUTATION_PRECESSION_EARTH), t),
+                RIGHT_ASCENSION_EARTH.angle_dot(t),
+                DECLINATION_EARTH.angle_dot(t),
+                ROTATION_EARTH.angle_dot(t),
             )),
             DynOrigin::Mars => Ok((
-                RIGHT_ASCENSION_MARS.angle_dot::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
-                DECLINATION_MARS.angle_dot::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
-                ROTATION_MARS.angle_dot::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
+                RIGHT_ASCENSION_MARS.angle_dot(t),
+                DECLINATION_MARS.angle_dot(t),
+                ROTATION_MARS.angle_dot(t),
             )),
             DynOrigin::Jupiter => Ok((
-                RIGHT_ASCENSION_JUPITER.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                DECLINATION_JUPITER.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                ROTATION_JUPITER.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+                RIGHT_ASCENSION_JUPITER.angle_dot(t),
+                DECLINATION_JUPITER.angle_dot(t),
+                ROTATION_JUPITER.angle_dot(t),
             )),
             DynOrigin::Saturn => Ok((
-                RIGHT_ASCENSION_SATURN.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_SATURN.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_SATURN.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_SATURN.angle_dot(t),
+                DECLINATION_SATURN.angle_dot(t),
+                ROTATION_SATURN.angle_dot(t),
             )),
             DynOrigin::Uranus => Ok((
-                RIGHT_ASCENSION_URANUS.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                DECLINATION_URANUS.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                ROTATION_URANUS.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+                RIGHT_ASCENSION_URANUS.angle_dot(t),
+                DECLINATION_URANUS.angle_dot(t),
+                ROTATION_URANUS.angle_dot(t),
             )),
             DynOrigin::Neptune => Ok((
-                RIGHT_ASCENSION_NEPTUNE.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-                DECLINATION_NEPTUNE.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-                ROTATION_NEPTUNE.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
+                RIGHT_ASCENSION_NEPTUNE.angle_dot(t),
+                DECLINATION_NEPTUNE.angle_dot(t),
+                ROTATION_NEPTUNE.angle_dot(t),
             )),
             DynOrigin::Pluto => Ok((
-                RIGHT_ASCENSION_PLUTO.angle_dot::<0usize>(None, t),
-                DECLINATION_PLUTO.angle_dot::<0usize>(None, t),
-                ROTATION_PLUTO.angle_dot::<0usize>(None, t),
+                RIGHT_ASCENSION_PLUTO.angle_dot(t),
+                DECLINATION_PLUTO.angle_dot(t),
+                ROTATION_PLUTO.angle_dot(t),
             )),
             DynOrigin::Moon => Ok((
-                RIGHT_ASCENSION_MOON.angle_dot::<13usize>(Some(&NUTATION_PRECESSION_EARTH), t),
-                DECLINATION_MOON.angle_dot::<13usize>(Some(&NUTATION_PRECESSION_EARTH), t),
-                ROTATION_MOON.angle_dot::<13usize>(Some(&NUTATION_PRECESSION_EARTH), t),
+                RIGHT_ASCENSION_MOON.angle_dot(t),
+                DECLINATION_MOON.angle_dot(t),
+                ROTATION_MOON.angle_dot(t),
             )),
             DynOrigin::Phobos => Ok((
-                RIGHT_ASCENSION_PHOBOS.angle_dot::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
-                DECLINATION_PHOBOS.angle_dot::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
-                ROTATION_PHOBOS.angle_dot::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
+                RIGHT_ASCENSION_PHOBOS.angle_dot(t),
+                DECLINATION_PHOBOS.angle_dot(t),
+                ROTATION_PHOBOS.angle_dot(t),
             )),
             DynOrigin::Deimos => Ok((
-                RIGHT_ASCENSION_DEIMOS.angle_dot::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
-                DECLINATION_DEIMOS.angle_dot::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
-                ROTATION_DEIMOS.angle_dot::<26usize>(Some(&NUTATION_PRECESSION_MARS), t),
+                RIGHT_ASCENSION_DEIMOS.angle_dot(t),
+                DECLINATION_DEIMOS.angle_dot(t),
+                ROTATION_DEIMOS.angle_dot(t),
             )),
             DynOrigin::Io => Ok((
-                RIGHT_ASCENSION_IO.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                DECLINATION_IO.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                ROTATION_IO.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+                RIGHT_ASCENSION_IO.angle_dot(t),
+                DECLINATION_IO.angle_dot(t),
+                ROTATION_IO.angle_dot(t),
             )),
             DynOrigin::Europa => Ok((
-                RIGHT_ASCENSION_EUROPA.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                DECLINATION_EUROPA.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                ROTATION_EUROPA.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+                RIGHT_ASCENSION_EUROPA.angle_dot(t),
+                DECLINATION_EUROPA.angle_dot(t),
+                ROTATION_EUROPA.angle_dot(t),
             )),
             DynOrigin::Ganymede => Ok((
-                RIGHT_ASCENSION_GANYMEDE
-                    .angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                DECLINATION_GANYMEDE.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                ROTATION_GANYMEDE.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+                RIGHT_ASCENSION_GANYMEDE.angle_dot(t),
+                DECLINATION_GANYMEDE.angle_dot(t),
+                ROTATION_GANYMEDE.angle_dot(t),
             )),
             DynOrigin::Callisto => Ok((
-                RIGHT_ASCENSION_CALLISTO
-                    .angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                DECLINATION_CALLISTO.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                ROTATION_CALLISTO.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+                RIGHT_ASCENSION_CALLISTO.angle_dot(t),
+                DECLINATION_CALLISTO.angle_dot(t),
+                ROTATION_CALLISTO.angle_dot(t),
             )),
             DynOrigin::Amalthea => Ok((
-                RIGHT_ASCENSION_AMALTHEA
-                    .angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                DECLINATION_AMALTHEA.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                ROTATION_AMALTHEA.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+                RIGHT_ASCENSION_AMALTHEA.angle_dot(t),
+                DECLINATION_AMALTHEA.angle_dot(t),
+                ROTATION_AMALTHEA.angle_dot(t),
             )),
             DynOrigin::Thebe => Ok((
-                RIGHT_ASCENSION_THEBE.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                DECLINATION_THEBE.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                ROTATION_THEBE.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+                RIGHT_ASCENSION_THEBE.angle_dot(t),
+                DECLINATION_THEBE.angle_dot(t),
+                ROTATION_THEBE.angle_dot(t),
             )),
             DynOrigin::Adrastea => Ok((
-                RIGHT_ASCENSION_ADRASTEA
-                    .angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                DECLINATION_ADRASTEA.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                ROTATION_ADRASTEA.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+                RIGHT_ASCENSION_ADRASTEA.angle_dot(t),
+                DECLINATION_ADRASTEA.angle_dot(t),
+                ROTATION_ADRASTEA.angle_dot(t),
             )),
             DynOrigin::Metis => Ok((
-                RIGHT_ASCENSION_METIS.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                DECLINATION_METIS.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
-                ROTATION_METIS.angle_dot::<15usize>(Some(&NUTATION_PRECESSION_JUPITER), t),
+                RIGHT_ASCENSION_METIS.angle_dot(t),
+                DECLINATION_METIS.angle_dot(t),
+                ROTATION_METIS.angle_dot(t),
             )),
             DynOrigin::Mimas => Ok((
-                RIGHT_ASCENSION_MIMAS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_MIMAS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_MIMAS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_MIMAS.angle_dot(t),
+                DECLINATION_MIMAS.angle_dot(t),
+                ROTATION_MIMAS.angle_dot(t),
             )),
             DynOrigin::Enceladus => Ok((
-                RIGHT_ASCENSION_ENCELADUS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_ENCELADUS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_ENCELADUS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_ENCELADUS.angle_dot(t),
+                DECLINATION_ENCELADUS.angle_dot(t),
+                ROTATION_ENCELADUS.angle_dot(t),
             )),
             DynOrigin::Tethys => Ok((
-                RIGHT_ASCENSION_TETHYS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_TETHYS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_TETHYS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_TETHYS.angle_dot(t),
+                DECLINATION_TETHYS.angle_dot(t),
+                ROTATION_TETHYS.angle_dot(t),
             )),
             DynOrigin::Dione => Ok((
-                RIGHT_ASCENSION_DIONE.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_DIONE.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_DIONE.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_DIONE.angle_dot(t),
+                DECLINATION_DIONE.angle_dot(t),
+                ROTATION_DIONE.angle_dot(t),
             )),
             DynOrigin::Rhea => Ok((
-                RIGHT_ASCENSION_RHEA.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_RHEA.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_RHEA.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_RHEA.angle_dot(t),
+                DECLINATION_RHEA.angle_dot(t),
+                ROTATION_RHEA.angle_dot(t),
             )),
             DynOrigin::Titan => Ok((
-                RIGHT_ASCENSION_TITAN.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_TITAN.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_TITAN.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_TITAN.angle_dot(t),
+                DECLINATION_TITAN.angle_dot(t),
+                ROTATION_TITAN.angle_dot(t),
             )),
             DynOrigin::Iapetus => Ok((
-                RIGHT_ASCENSION_IAPETUS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_IAPETUS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_IAPETUS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_IAPETUS.angle_dot(t),
+                DECLINATION_IAPETUS.angle_dot(t),
+                ROTATION_IAPETUS.angle_dot(t),
             )),
             DynOrigin::Phoebe => Ok((
-                RIGHT_ASCENSION_PHOEBE.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_PHOEBE.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_PHOEBE.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_PHOEBE.angle_dot(t),
+                DECLINATION_PHOEBE.angle_dot(t),
+                ROTATION_PHOEBE.angle_dot(t),
             )),
             DynOrigin::Janus => Ok((
-                RIGHT_ASCENSION_JANUS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_JANUS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_JANUS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_JANUS.angle_dot(t),
+                DECLINATION_JANUS.angle_dot(t),
+                ROTATION_JANUS.angle_dot(t),
             )),
             DynOrigin::Epimetheus => Ok((
-                RIGHT_ASCENSION_EPIMETHEUS
-                    .angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_EPIMETHEUS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_EPIMETHEUS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_EPIMETHEUS.angle_dot(t),
+                DECLINATION_EPIMETHEUS.angle_dot(t),
+                ROTATION_EPIMETHEUS.angle_dot(t),
             )),
             DynOrigin::Helene => Ok((
-                RIGHT_ASCENSION_HELENE.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_HELENE.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_HELENE.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_HELENE.angle_dot(t),
+                DECLINATION_HELENE.angle_dot(t),
+                ROTATION_HELENE.angle_dot(t),
             )),
             DynOrigin::Telesto => Ok((
-                RIGHT_ASCENSION_TELESTO.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_TELESTO.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_TELESTO.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_TELESTO.angle_dot(t),
+                DECLINATION_TELESTO.angle_dot(t),
+                ROTATION_TELESTO.angle_dot(t),
             )),
             DynOrigin::Calypso => Ok((
-                RIGHT_ASCENSION_CALYPSO.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_CALYPSO.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_CALYPSO.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_CALYPSO.angle_dot(t),
+                DECLINATION_CALYPSO.angle_dot(t),
+                ROTATION_CALYPSO.angle_dot(t),
             )),
             DynOrigin::Atlas => Ok((
-                RIGHT_ASCENSION_ATLAS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_ATLAS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_ATLAS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_ATLAS.angle_dot(t),
+                DECLINATION_ATLAS.angle_dot(t),
+                ROTATION_ATLAS.angle_dot(t),
             )),
             DynOrigin::Prometheus => Ok((
-                RIGHT_ASCENSION_PROMETHEUS
-                    .angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_PROMETHEUS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_PROMETHEUS.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_PROMETHEUS.angle_dot(t),
+                DECLINATION_PROMETHEUS.angle_dot(t),
+                ROTATION_PROMETHEUS.angle_dot(t),
             )),
             DynOrigin::Pandora => Ok((
-                RIGHT_ASCENSION_PANDORA.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_PANDORA.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_PANDORA.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_PANDORA.angle_dot(t),
+                DECLINATION_PANDORA.angle_dot(t),
+                ROTATION_PANDORA.angle_dot(t),
             )),
             DynOrigin::Pan => Ok((
-                RIGHT_ASCENSION_PAN.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                DECLINATION_PAN.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
-                ROTATION_PAN.angle_dot::<8usize>(Some(&NUTATION_PRECESSION_SATURN), t),
+                RIGHT_ASCENSION_PAN.angle_dot(t),
+                DECLINATION_PAN.angle_dot(t),
+                ROTATION_PAN.angle_dot(t),
             )),
             DynOrigin::Ariel => Ok((
-                RIGHT_ASCENSION_ARIEL.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                DECLINATION_ARIEL.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                ROTATION_ARIEL.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+                RIGHT_ASCENSION_ARIEL.angle_dot(t),
+                DECLINATION_ARIEL.angle_dot(t),
+                ROTATION_ARIEL.angle_dot(t),
             )),
             DynOrigin::Umbriel => Ok((
-                RIGHT_ASCENSION_UMBRIEL.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                DECLINATION_UMBRIEL.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                ROTATION_UMBRIEL.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+                RIGHT_ASCENSION_UMBRIEL.angle_dot(t),
+                DECLINATION_UMBRIEL.angle_dot(t),
+                ROTATION_UMBRIEL.angle_dot(t),
             )),
             DynOrigin::Titania => Ok((
-                RIGHT_ASCENSION_TITANIA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                DECLINATION_TITANIA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                ROTATION_TITANIA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+                RIGHT_ASCENSION_TITANIA.angle_dot(t),
+                DECLINATION_TITANIA.angle_dot(t),
+                ROTATION_TITANIA.angle_dot(t),
             )),
             DynOrigin::Oberon => Ok((
-                RIGHT_ASCENSION_OBERON.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                DECLINATION_OBERON.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                ROTATION_OBERON.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+                RIGHT_ASCENSION_OBERON.angle_dot(t),
+                DECLINATION_OBERON.angle_dot(t),
+                ROTATION_OBERON.angle_dot(t),
             )),
             DynOrigin::Miranda => Ok((
-                RIGHT_ASCENSION_MIRANDA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                DECLINATION_MIRANDA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                ROTATION_MIRANDA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+                RIGHT_ASCENSION_MIRANDA.angle_dot(t),
+                DECLINATION_MIRANDA.angle_dot(t),
+                ROTATION_MIRANDA.angle_dot(t),
             )),
             DynOrigin::Cordelia => Ok((
-                RIGHT_ASCENSION_CORDELIA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                DECLINATION_CORDELIA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                ROTATION_CORDELIA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+                RIGHT_ASCENSION_CORDELIA.angle_dot(t),
+                DECLINATION_CORDELIA.angle_dot(t),
+                ROTATION_CORDELIA.angle_dot(t),
             )),
             DynOrigin::Ophelia => Ok((
-                RIGHT_ASCENSION_OPHELIA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                DECLINATION_OPHELIA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                ROTATION_OPHELIA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+                RIGHT_ASCENSION_OPHELIA.angle_dot(t),
+                DECLINATION_OPHELIA.angle_dot(t),
+                ROTATION_OPHELIA.angle_dot(t),
             )),
             DynOrigin::Bianca => Ok((
-                RIGHT_ASCENSION_BIANCA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                DECLINATION_BIANCA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                ROTATION_BIANCA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+                RIGHT_ASCENSION_BIANCA.angle_dot(t),
+                DECLINATION_BIANCA.angle_dot(t),
+                ROTATION_BIANCA.angle_dot(t),
             )),
             DynOrigin::Cressida => Ok((
-                RIGHT_ASCENSION_CRESSIDA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                DECLINATION_CRESSIDA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                ROTATION_CRESSIDA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+                RIGHT_ASCENSION_CRESSIDA.angle_dot(t),
+                DECLINATION_CRESSIDA.angle_dot(t),
+                ROTATION_CRESSIDA.angle_dot(t),
             )),
             DynOrigin::Desdemona => Ok((
-                RIGHT_ASCENSION_DESDEMONA
-                    .angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                DECLINATION_DESDEMONA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                ROTATION_DESDEMONA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+                RIGHT_ASCENSION_DESDEMONA.angle_dot(t),
+                DECLINATION_DESDEMONA.angle_dot(t),
+                ROTATION_DESDEMONA.angle_dot(t),
             )),
             DynOrigin::Juliet => Ok((
-                RIGHT_ASCENSION_JULIET.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                DECLINATION_JULIET.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                ROTATION_JULIET.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+                RIGHT_ASCENSION_JULIET.angle_dot(t),
+                DECLINATION_JULIET.angle_dot(t),
+                ROTATION_JULIET.angle_dot(t),
             )),
             DynOrigin::Portia => Ok((
-                RIGHT_ASCENSION_PORTIA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                DECLINATION_PORTIA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                ROTATION_PORTIA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+                RIGHT_ASCENSION_PORTIA.angle_dot(t),
+                DECLINATION_PORTIA.angle_dot(t),
+                ROTATION_PORTIA.angle_dot(t),
             )),
             DynOrigin::Rosalind => Ok((
-                RIGHT_ASCENSION_ROSALIND.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                DECLINATION_ROSALIND.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                ROTATION_ROSALIND.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+                RIGHT_ASCENSION_ROSALIND.angle_dot(t),
+                DECLINATION_ROSALIND.angle_dot(t),
+                ROTATION_ROSALIND.angle_dot(t),
             )),
             DynOrigin::Belinda => Ok((
-                RIGHT_ASCENSION_BELINDA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                DECLINATION_BELINDA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                ROTATION_BELINDA.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+                RIGHT_ASCENSION_BELINDA.angle_dot(t),
+                DECLINATION_BELINDA.angle_dot(t),
+                ROTATION_BELINDA.angle_dot(t),
             )),
             DynOrigin::Puck => Ok((
-                RIGHT_ASCENSION_PUCK.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                DECLINATION_PUCK.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
-                ROTATION_PUCK.angle_dot::<18usize>(Some(&NUTATION_PRECESSION_URANUS), t),
+                RIGHT_ASCENSION_PUCK.angle_dot(t),
+                DECLINATION_PUCK.angle_dot(t),
+                ROTATION_PUCK.angle_dot(t),
             )),
             DynOrigin::Triton => Ok((
-                RIGHT_ASCENSION_TRITON.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-                DECLINATION_TRITON.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-                ROTATION_TRITON.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
+                RIGHT_ASCENSION_TRITON.angle_dot(t),
+                DECLINATION_TRITON.angle_dot(t),
+                ROTATION_TRITON.angle_dot(t),
             )),
             DynOrigin::Naiad => Ok((
-                RIGHT_ASCENSION_NAIAD.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-                DECLINATION_NAIAD.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-                ROTATION_NAIAD.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
+                RIGHT_ASCENSION_NAIAD.angle_dot(t),
+                DECLINATION_NAIAD.angle_dot(t),
+                ROTATION_NAIAD.angle_dot(t),
             )),
             DynOrigin::Thalassa => Ok((
-                RIGHT_ASCENSION_THALASSA
-                    .angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-                DECLINATION_THALASSA.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-                ROTATION_THALASSA.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
+                RIGHT_ASCENSION_THALASSA.angle_dot(t),
+                DECLINATION_THALASSA.angle_dot(t),
+                ROTATION_THALASSA.angle_dot(t),
             )),
             DynOrigin::Despina => Ok((
-                RIGHT_ASCENSION_DESPINA.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-                DECLINATION_DESPINA.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-                ROTATION_DESPINA.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
+                RIGHT_ASCENSION_DESPINA.angle_dot(t),
+                DECLINATION_DESPINA.angle_dot(t),
+                ROTATION_DESPINA.angle_dot(t),
             )),
             DynOrigin::Galatea => Ok((
-                RIGHT_ASCENSION_GALATEA.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-                DECLINATION_GALATEA.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-                ROTATION_GALATEA.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
+                RIGHT_ASCENSION_GALATEA.angle_dot(t),
+                DECLINATION_GALATEA.angle_dot(t),
+                ROTATION_GALATEA.angle_dot(t),
             )),
             DynOrigin::Larissa => Ok((
-                RIGHT_ASCENSION_LARISSA.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-                DECLINATION_LARISSA.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-                ROTATION_LARISSA.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
+                RIGHT_ASCENSION_LARISSA.angle_dot(t),
+                DECLINATION_LARISSA.angle_dot(t),
+                ROTATION_LARISSA.angle_dot(t),
             )),
             DynOrigin::Proteus => Ok((
-                RIGHT_ASCENSION_PROTEUS.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-                DECLINATION_PROTEUS.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
-                ROTATION_PROTEUS.angle_dot::<17usize>(Some(&NUTATION_PRECESSION_NEPTUNE), t),
+                RIGHT_ASCENSION_PROTEUS.angle_dot(t),
+                DECLINATION_PROTEUS.angle_dot(t),
+                ROTATION_PROTEUS.angle_dot(t),
             )),
             DynOrigin::Charon => Ok((
-                RIGHT_ASCENSION_CHARON.angle_dot::<0usize>(None, t),
-                DECLINATION_CHARON.angle_dot::<0usize>(None, t),
-                ROTATION_CHARON.angle_dot::<0usize>(None, t),
+                RIGHT_ASCENSION_CHARON.angle_dot(t),
+                DECLINATION_CHARON.angle_dot(t),
+                ROTATION_CHARON.angle_dot(t),
             )),
             DynOrigin::Gaspra => Ok((
-                RIGHT_ASCENSION_GASPRA.angle_dot::<0usize>(None, t),
-                DECLINATION_GASPRA.angle_dot::<0usize>(None, t),
-                ROTATION_GASPRA.angle_dot::<0usize>(None, t),
+                RIGHT_ASCENSION_GASPRA.angle_dot(t),
+                DECLINATION_GASPRA.angle_dot(t),
+                ROTATION_GASPRA.angle_dot(t),
             )),
             DynOrigin::Ida => Ok((
-                RIGHT_ASCENSION_IDA.angle_dot::<0usize>(None, t),
-                DECLINATION_IDA.angle_dot::<0usize>(None, t),
-                ROTATION_IDA.angle_dot::<0usize>(None, t),
+                RIGHT_ASCENSION_IDA.angle_dot(t),
+                DECLINATION_IDA.angle_dot(t),
+                ROTATION_IDA.angle_dot(t),
             )),
             DynOrigin::Ceres => Ok((
-                RIGHT_ASCENSION_CERES.angle_dot::<0usize>(None, t),
-                DECLINATION_CERES.angle_dot::<0usize>(None, t),
-                ROTATION_CERES.angle_dot::<0usize>(None, t),
+                RIGHT_ASCENSION_CERES.angle_dot(t),
+                DECLINATION_CERES.angle_dot(t),
+                ROTATION_CERES.angle_dot(t),
             )),
             DynOrigin::Pallas => Ok((
-                RIGHT_ASCENSION_PALLAS.angle_dot::<0usize>(None, t),
-                DECLINATION_PALLAS.angle_dot::<0usize>(None, t),
-                ROTATION_PALLAS.angle_dot::<0usize>(None, t),
+                RIGHT_ASCENSION_PALLAS.angle_dot(t),
+                DECLINATION_PALLAS.angle_dot(t),
+                ROTATION_PALLAS.angle_dot(t),
             )),
             DynOrigin::Vesta => Ok((
-                RIGHT_ASCENSION_VESTA.angle_dot::<0usize>(None, t),
-                DECLINATION_VESTA.angle_dot::<0usize>(None, t),
-                ROTATION_VESTA.angle_dot::<0usize>(None, t),
+                RIGHT_ASCENSION_VESTA.angle_dot(t),
+                DECLINATION_VESTA.angle_dot(t),
+                ROTATION_VESTA.angle_dot(t),
             )),
             DynOrigin::Lutetia => Ok((
-                RIGHT_ASCENSION_LUTETIA.angle_dot::<0usize>(None, t),
-                DECLINATION_LUTETIA.angle_dot::<0usize>(None, t),
-                ROTATION_LUTETIA.angle_dot::<0usize>(None, t),
+                RIGHT_ASCENSION_LUTETIA.angle_dot(t),
+                DECLINATION_LUTETIA.angle_dot(t),
+                ROTATION_LUTETIA.angle_dot(t),
             )),
             DynOrigin::Eros => Ok((
-                RIGHT_ASCENSION_EROS.angle_dot::<0usize>(None, t),
-                DECLINATION_EROS.angle_dot::<0usize>(None, t),
-                ROTATION_EROS.angle_dot::<0usize>(None, t),
+                RIGHT_ASCENSION_EROS.angle_dot(t),
+                DECLINATION_EROS.angle_dot(t),
+                ROTATION_EROS.angle_dot(t),
             )),
             DynOrigin::Davida => Ok((
-                RIGHT_ASCENSION_DAVIDA.angle_dot::<0usize>(None, t),
-                DECLINATION_DAVIDA.angle_dot::<0usize>(None, t),
-                ROTATION_DAVIDA.angle_dot::<0usize>(None, t),
+                RIGHT_ASCENSION_DAVIDA.angle_dot(t),
+                DECLINATION_DAVIDA.angle_dot(t),
+                ROTATION_DAVIDA.angle_dot(t),
             )),
             DynOrigin::Steins => Ok((
-                RIGHT_ASCENSION_STEINS.angle_dot::<0usize>(None, t),
-                DECLINATION_STEINS.angle_dot::<0usize>(None, t),
-                ROTATION_STEINS.angle_dot::<0usize>(None, t),
+                RIGHT_ASCENSION_STEINS.angle_dot(t),
+                DECLINATION_STEINS.angle_dot(t),
+                ROTATION_STEINS.angle_dot(t),
             )),
             DynOrigin::Itokawa => Ok((
-                RIGHT_ASCENSION_ITOKAWA.angle_dot::<0usize>(None, t),
-                DECLINATION_ITOKAWA.angle_dot::<0usize>(None, t),
-                ROTATION_ITOKAWA.angle_dot::<0usize>(None, t),
+                RIGHT_ASCENSION_ITOKAWA.angle_dot(t),
+                DECLINATION_ITOKAWA.angle_dot(t),
+                ROTATION_ITOKAWA.angle_dot(t),
             )),
             _ => Err(UndefinedOriginPropertyError {
                 origin: self.to_string(),

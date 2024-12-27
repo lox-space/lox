@@ -45,6 +45,16 @@ fn prime_meridian_dot() {
 }
 
 #[divan::bench]
+fn rotational_elements() {
+    Jupiter.rotational_elements(divan::black_box(0.0));
+}
+
+#[divan::bench]
+fn rotational_element_rates() {
+    Jupiter.rotational_element_rates(divan::black_box(0.0));
+}
+
+#[divan::bench]
 fn rotation() -> Rotation {
     BodyFixed(Jupiter).rotation(divan::black_box(0.0))
 }

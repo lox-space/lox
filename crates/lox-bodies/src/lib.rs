@@ -169,82 +169,55 @@ impl RotationalElementType {
     }
 }
 
-struct NutationPrecessionCoefficients<const N: usize> {
-    theta0: [f64; N],
-    theta1: [f64; N],
-}
-
 pub(crate) struct RotationalElement<const N: usize> {
     typ: RotationalElementType,
     c0: f64,
     c1: f64,
     c2: f64,
-    c: Option<[f64; N]>,
+    c: [f64; N],
+    theta0: [f64; N],
+    theta1: [f64; N],
 }
 
 impl<const N: usize> RotationalElement<N> {
-    fn trig_term<const M: usize>(
-        &self,
-        nut_prec: Option<&NutationPrecessionCoefficients<M>>,
-        t: f64,
-    ) -> f64 {
-        let Some(nut_prec) = nut_prec else { return 0.0 };
+    fn trig_term(&self, t: f64) -> f64 {
         self.c
-            .map(|c| {
-                c.iter()
-                    .zip(nut_prec.theta0.iter())
-                    .zip(nut_prec.theta1.iter())
-                    .map(|((&c, &theta0), &theta1)| {
-                        c * self
-                            .typ
-                            .sincos(theta0 + theta1 * t / SECONDS_PER_JULIAN_CENTURY)
-                    })
-                    .sum()
+            .iter()
+            .zip(self.theta0.iter())
+            .zip(self.theta1.iter())
+            .map(|((&c, &theta0), &theta1)| {
+                c * self
+                    .typ
+                    .sincos(theta0 + theta1 * t / SECONDS_PER_JULIAN_CENTURY)
             })
-            .unwrap_or_default()
+            .sum()
     }
 
-    fn trig_term_dot<const M: usize>(
-        &self,
-        nut_prec: Option<&NutationPrecessionCoefficients<M>>,
-        t: f64,
-    ) -> f64 {
-        let Some(nut_prec) = nut_prec else { return 0.0 };
+    fn trig_term_dot(&self, t: f64) -> f64 {
         self.c
-            .map(|c| {
-                c.iter()
-                    .zip(nut_prec.theta0.iter())
-                    .zip(nut_prec.theta1.iter())
-                    .map(|((&c, &theta0), &theta1)| {
-                        c * theta1 / SECONDS_PER_JULIAN_CENTURY
-                            * self
-                                .typ
-                                .sincos_dot(theta0 + theta1 * t / SECONDS_PER_JULIAN_CENTURY)
-                    })
-                    .sum()
+            .iter()
+            .zip(self.theta0.iter())
+            .zip(self.theta1.iter())
+            .map(|((&c, &theta0), &theta1)| {
+                c * theta1 / SECONDS_PER_JULIAN_CENTURY
+                    * self
+                        .typ
+                        .sincos_dot(theta0 + theta1 * t / SECONDS_PER_JULIAN_CENTURY)
             })
-            .unwrap_or_default()
+            .sum()
     }
 
-    fn angle<const M: usize>(
-        &self,
-        nut_prec: Option<&NutationPrecessionCoefficients<M>>,
-        t: f64,
-    ) -> f64 {
+    fn angle(&self, t: f64) -> f64 {
         self.c0
             + self.c1 * t / self.typ.dt()
             + self.c2 * t.powi(2) / self.typ.dt().powi(2)
-            + self.trig_term(nut_prec, t)
+            + self.trig_term(t)
     }
 
-    fn angle_dot<const M: usize>(
-        &self,
-        nut_prec: Option<&NutationPrecessionCoefficients<M>>,
-        t: f64,
-    ) -> f64 {
+    fn angle_dot(&self, t: f64) -> f64 {
         self.c1 / self.typ.dt()
             + 2.0 * self.c2 * t / self.typ.dt().powi(2)
-            + self.typ.sign() * self.trig_term_dot(nut_prec, t)
+            + self.typ.sign() * self.trig_term_dot(t)
     }
 }
 
@@ -375,50 +348,12 @@ mod tests {
         assert_eq!(name, "Persephone/Rupert");
     }
 
-    const NUTATION_PRECESSION_JUPITER: NutationPrecessionCoefficients<15> =
-        NutationPrecessionCoefficients {
-            theta0: [
-                1.2796754075622423f64,
-                0.42970006184100396f64,
-                4.9549897464119015f64,
-                6.2098814785958245f64,
-                2.092649773141201f64,
-                4.010766621082969f64,
-                6.147922290150026f64,
-                1.9783307071355725f64,
-                2.5593508151244846f64,
-                0.8594001236820079f64,
-                1.734171606432425f64,
-                3.0699533280603655f64,
-                5.241627996900319f64,
-                1.9898901100379935f64,
-                0.864134346731335f64,
-            ],
-            theta1: [
-                1596.503281347521f64,
-                787.7927551311844f64,
-                84.66068602648895f64,
-                20.792107379008446f64,
-                4.574507969477138f64,
-                1.1222467090323538f64,
-                41.58421475801689f64,
-                105.9414855960558f64,
-                3193.006562695042f64,
-                1575.5855102623689f64,
-                84.65553032387855f64,
-                20.80363527871787f64,
-                4.582318317879813f64,
-                105.94580703128374f64,
-                1.1222467090323538f64,
-            ],
-        };
-
     const RIGHT_ASCENSION_JUPITER: RotationalElement<15> = RotationalElement {
         typ: RotationalElementType::RightAscension,
         c0: 4.6784701644349695f64,
         c1: -0.00011342894808711148f64,
         c2: 0f64,
-        c: Some([
+        c: [
             0f64,
             0f64,
             0f64,
@@ -434,7 +369,41 @@ mod tests {
             0.000024993114888558796f64,
             0.0000005235987755982989f64,
             0.00003752457891787809f64,
-        ]),
+        ],
+        theta0: [
+            1.2796754075622423f64,
+            0.42970006184100396f64,
+            4.9549897464119015f64,
+            6.2098814785958245f64,
+            2.092649773141201f64,
+            4.010766621082969f64,
+            6.147922290150026f64,
+            1.9783307071355725f64,
+            2.5593508151244846f64,
+            0.8594001236820079f64,
+            1.734171606432425f64,
+            3.0699533280603655f64,
+            5.241627996900319f64,
+            1.9898901100379935f64,
+            0.864134346731335f64,
+        ],
+        theta1: [
+            1596.503281347521f64,
+            787.7927551311844f64,
+            84.66068602648895f64,
+            20.792107379008446f64,
+            4.574507969477138f64,
+            1.1222467090323538f64,
+            41.58421475801689f64,
+            105.9414855960558f64,
+            3193.006562695042f64,
+            1575.5855102623689f64,
+            84.65553032387855f64,
+            20.80363527871787f64,
+            4.582318317879813f64,
+            105.94580703128374f64,
+            1.1222467090323538f64,
+        ],
     };
 
     const DECLINATION_JUPITER: RotationalElement<15> = RotationalElement {
@@ -442,7 +411,7 @@ mod tests {
         c0: 1.1256553894213766f64,
         c1: 0.00004211479485062318f64,
         c2: 0f64,
-        c: Some([
+        c: [
             0f64,
             0f64,
             0f64,
@@ -458,31 +427,67 @@ mod tests {
             0.000010768681484805013f64,
             -0.00000022689280275926283f64,
             0.00001616174887346749f64,
-        ]),
+        ],
+        theta0: [
+            1.2796754075622423f64,
+            0.42970006184100396f64,
+            4.9549897464119015f64,
+            6.2098814785958245f64,
+            2.092649773141201f64,
+            4.010766621082969f64,
+            6.147922290150026f64,
+            1.9783307071355725f64,
+            2.5593508151244846f64,
+            0.8594001236820079f64,
+            1.734171606432425f64,
+            3.0699533280603655f64,
+            5.241627996900319f64,
+            1.9898901100379935f64,
+            0.864134346731335f64,
+        ],
+        theta1: [
+            1596.503281347521f64,
+            787.7927551311844f64,
+            84.66068602648895f64,
+            20.792107379008446f64,
+            4.574507969477138f64,
+            1.1222467090323538f64,
+            41.58421475801689f64,
+            105.9414855960558f64,
+            3193.006562695042f64,
+            1575.5855102623689f64,
+            84.65553032387855f64,
+            20.80363527871787f64,
+            4.582318317879813f64,
+            105.94580703128374f64,
+            1.1222467090323538f64,
+        ],
     };
 
-    const ROTATION_JUPITER: RotationalElement<15> = RotationalElement {
+    const ROTATION_JUPITER: RotationalElement<0> = RotationalElement {
         typ: RotationalElementType::Rotation,
         c0: 4.973315703557842f64,
         c1: 15.193719457141356f64,
         c2: 0f64,
-        c: None,
+        c: [],
+        theta0: [],
+        theta1: [],
     };
 
     impl RotationalElements for Jupiter {
         fn rotational_elements(&self, t: f64) -> Elements {
             (
-                RIGHT_ASCENSION_JUPITER.angle(Some(&NUTATION_PRECESSION_JUPITER), t),
-                DECLINATION_JUPITER.angle(Some(&NUTATION_PRECESSION_JUPITER), t),
-                ROTATION_JUPITER.angle(Some(&NUTATION_PRECESSION_JUPITER), t),
+                RIGHT_ASCENSION_JUPITER.angle(t),
+                DECLINATION_JUPITER.angle(t),
+                ROTATION_JUPITER.angle(t),
             )
         }
 
         fn rotational_element_rates(&self, t: f64) -> Elements {
             (
-                RIGHT_ASCENSION_JUPITER.angle_dot(Some(&NUTATION_PRECESSION_JUPITER), t),
-                DECLINATION_JUPITER.angle_dot(Some(&NUTATION_PRECESSION_JUPITER), t),
-                ROTATION_JUPITER.angle_dot(Some(&NUTATION_PRECESSION_JUPITER), t),
+                RIGHT_ASCENSION_JUPITER.angle_dot(t),
+                DECLINATION_JUPITER.angle_dot(t),
+                ROTATION_JUPITER.angle_dot(t),
             )
         }
     }

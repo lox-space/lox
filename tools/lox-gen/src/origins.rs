@@ -7,10 +7,8 @@
  */
 use crate::common::write_file;
 use lox_io::spice::Kernel;
-use proc_macro2::{Ident, TokenStream};
+use proc_macro2::Ident;
 use quote::{format_ident, quote};
-use std::collections::hash_map::Entry::Vacant;
-use std::collections::HashMap;
 use std::path::Path;
 
 struct Origin {
@@ -1009,7 +1007,6 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
         use crate::Elements;
         use crate::MeanRadius;
         use crate::NaifId;
-        use crate::NutationPrecessionCoefficients;
         use crate::Origin;
         use crate::PointMass;
         use crate::Radii;
@@ -1034,10 +1031,6 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
 
     let mut rotational_elements_match_arms = quote! {};
     let mut rotational_element_rates_match_arms = quote! {};
-
-    let mut nut_prec_ids: HashMap<i32, TokenStream> = HashMap::new();
-    let mut nut_prec_lens: HashMap<i32, usize> = HashMap::new();
-    let mut nut_prec_constants = quote! {};
 
     for Origin {
         name,
@@ -1144,49 +1137,23 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
         let nut_prec_id = id / 100;
         let nut_prec_key = format!("BODY{}_NUT_PREC_ANGLES", nut_prec_id);
 
-        if let Vacant(e) = nut_prec_ids.entry(nut_prec_id) {
-            let nut_prec_ident = format_ident!("NUTATION_PRECESSION_{}", ident_upper);
-
-            match get_array_as_radians(pck, &nut_prec_key) {
-                None => {
-                    e.insert(quote! { None });
-                }
-                Some(coeffs) => {
-                    e.insert(quote! { Some(&#nut_prec_ident) });
-
-                    let n = coeffs.len() / 2;
-                    nut_prec_lens.insert(nut_prec_id, n);
-                    let (theta0, theta1) = unpair(&coeffs);
-                    nut_prec_constants.extend(quote! {
-                        const #nut_prec_ident: NutationPrecessionCoefficients<#n> =
-                            NutationPrecessionCoefficients {
-                                theta0: [#(#theta0),*],
-                                theta1: [#(#theta1),*],
-                            };
-                    })
-                }
-            };
-        }
-
         if let (Some(ra), Some(dec), Some(pm)) = (
             get_array_as_radians(pck, &ra_key),
             get_array_as_radians(pck, &dec_key),
             get_array_as_radians(pck, &pm_key),
         ) {
-            let nut_prec_const = nut_prec_ids.get(&nut_prec_id).unwrap();
-            let nut_prec_len = nut_prec_lens.get(&nut_prec_id).unwrap_or(&0);
+            let (theta0, theta1): (Vec<f64>, Vec<f64>) = get_array_as_radians(pck, &nut_prec_key)
+                .as_ref()
+                .map(|nut_prec| unpair(nut_prec))
+                .unwrap_or_default();
 
             let ra1 = ra[0];
             let ra2 = ra[1];
             let ra3 = ra.get(2).copied().unwrap_or_default();
-            let nut_prec_ra = get_array_as_radians(pck, &nut_prec_ra_key);
-            let n = nut_prec_ra.as_ref().map(|v| v.len()).unwrap_or_default();
-            let nut_prec_ra = match nut_prec_ra {
-                None => quote! {None},
-                Some(coeffs) => quote! {
-                    Some([#(#coeffs),*])
-                },
-            };
+            let nut_prec_ra = get_array_as_radians(pck, &nut_prec_ra_key).unwrap_or_default();
+            let n = nut_prec_ra.len();
+            let theta0_ra = &theta0[0..n];
+            let theta1_ra = &theta1[0..n];
 
             let ra_const_ident = format_ident!("RIGHT_ASCENSION_{}", ident_upper);
             let ra_const = quote! {
@@ -1195,27 +1162,25 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
                     c0: #ra1,
                     c1: #ra2,
                     c2: #ra3,
-                    c: #nut_prec_ra,
+                    c: [#(#nut_prec_ra),*],
+                    theta0: [#(#theta0_ra),*],
+                    theta1: [#(#theta1_ra),*],
                 };
             };
             let ra = quote! {
-                #ra_const_ident.angle::<#nut_prec_len>(#nut_prec_const, t)
+                #ra_const_ident.angle(t)
             };
             let ra_dot = quote! {
-                #ra_const_ident.angle_dot::<#nut_prec_len>(#nut_prec_const, t)
+                #ra_const_ident.angle_dot(t)
             };
 
             let dec1 = dec[0];
             let dec2 = dec[1];
             let dec3 = dec.get(2).copied().unwrap_or_default();
-            let nut_prec_dec = get_array_as_radians(pck, &nut_prec_dec_key);
-            let n = nut_prec_dec.as_ref().map(|v| v.len()).unwrap_or_default();
-            let nut_prec_dec = match nut_prec_dec {
-                None => quote! {None},
-                Some(coeffs) => quote! {
-                    Some([#(#coeffs),*])
-                },
-            };
+            let nut_prec_dec = get_array_as_radians(pck, &nut_prec_dec_key).unwrap_or_default();
+            let n = nut_prec_dec.len();
+            let theta0_dec = &theta0[0..n];
+            let theta1_dec = &theta1[0..n];
 
             let dec_const_ident = format_ident!("DECLINATION_{}", ident_upper);
             let dec_const = quote! {
@@ -1224,27 +1189,25 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
                     c0: #dec1,
                     c1: #dec2,
                     c2: #dec3,
-                    c: #nut_prec_dec,
+                    c: [#(#nut_prec_dec),*],
+                    theta0: [#(#theta0_dec),*],
+                    theta1: [#(#theta1_dec),*],
                 };
             };
             let dec = quote! {
-                #dec_const_ident.angle::<#nut_prec_len>(#nut_prec_const, t)
+                #dec_const_ident.angle(t)
             };
             let dec_dot = quote! {
-                #dec_const_ident.angle_dot::<#nut_prec_len>(#nut_prec_const, t)
+                #dec_const_ident.angle_dot(t)
             };
 
             let pm1 = pm[0];
             let pm2 = pm[1];
             let pm3 = pm.get(2).copied().unwrap_or_default();
-            let nut_prec_pm = get_array_as_radians(pck, &nut_prec_pm_key);
-            let n = nut_prec_pm.as_ref().map(|v| v.len()).unwrap_or_default();
-            let nut_prec_pm = match nut_prec_pm {
-                None => quote! {None},
-                Some(coeffs) => quote! {
-                    Some([#(#coeffs),*])
-                },
-            };
+            let nut_prec_pm = get_array_as_radians(pck, &nut_prec_pm_key).unwrap_or_default();
+            let n = nut_prec_pm.len();
+            let theta0_pm = &theta0[0..n];
+            let theta1_pm = &theta1[0..n];
 
             let pm_const_ident = format_ident!("ROTATION_{}", ident_upper);
             let pm_const = quote! {
@@ -1253,14 +1216,16 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
                     c0: #pm1,
                     c1: #pm2,
                     c2: #pm3,
-                    c: #nut_prec_pm,
+                    c: [#(#nut_prec_pm),*],
+                    theta0: [#(#theta0_pm),*],
+                    theta1: [#(#theta1_pm),*],
                 };
             };
             let pm = quote! {
-                #pm_const_ident.angle::<#nut_prec_len>(#nut_prec_const, t)
+                #pm_const_ident.angle(t)
             };
             let pm_dot = quote! {
-                #pm_const_ident.angle_dot::<#nut_prec_len>(#nut_prec_const, t)
+                #pm_const_ident.angle_dot(t)
             };
 
             code.extend(quote! {
@@ -1287,8 +1252,6 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
             });
         }
     }
-
-    code.extend(nut_prec_constants);
 
     code.extend(quote! {
         impl TryPointMass for DynOrigin {
