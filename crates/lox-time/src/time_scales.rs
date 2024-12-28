@@ -16,6 +16,10 @@
     exclusively as an IO format.
 */
 
+use std::{fmt::Display, str::FromStr};
+
+use thiserror::Error;
+
 /// Marker trait denoting a continuous astronomical time scale.
 pub trait TimeScale {
     fn abbreviation(&self) -> &'static str;
@@ -35,6 +39,12 @@ impl TimeScale for Tai {
     }
 }
 
+impl Display for Tai {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.abbreviation())
+    }
+}
+
 /// Barycentric Coordinate Time.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
 pub struct Tcb;
@@ -45,6 +55,12 @@ impl TimeScale for Tcb {
     }
     fn name(&self) -> &'static str {
         "Barycentric Coordinate Time"
+    }
+}
+
+impl Display for Tcb {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.abbreviation())
     }
 }
 
@@ -61,6 +77,12 @@ impl TimeScale for Tcg {
     }
 }
 
+impl Display for Tcg {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.abbreviation())
+    }
+}
+
 /// Barycentric Dynamical Time.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
 pub struct Tdb;
@@ -71,6 +93,12 @@ impl TimeScale for Tdb {
     }
     fn name(&self) -> &'static str {
         "Barycentric Dynamical Time"
+    }
+}
+
+impl Display for Tdb {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.abbreviation())
     }
 }
 
@@ -87,6 +115,12 @@ impl TimeScale for Tt {
     }
 }
 
+impl Display for Tt {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.abbreviation())
+    }
+}
+
 /// Universal Time.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
 pub struct Ut1;
@@ -97,6 +131,73 @@ impl TimeScale for Ut1 {
     }
     fn name(&self) -> &'static str {
         "Universal Time"
+    }
+}
+
+impl Display for Ut1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.abbreviation())
+    }
+}
+
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
+pub enum DynTimeScale {
+    Tai,
+    Tcb,
+    Tcg,
+    #[default]
+    Tdb,
+    Tt,
+    Ut1,
+}
+
+impl TimeScale for DynTimeScale {
+    fn abbreviation(&self) -> &'static str {
+        match self {
+            DynTimeScale::Tai => Tai.abbreviation(),
+            DynTimeScale::Tcb => Tcb.abbreviation(),
+            DynTimeScale::Tcg => Tcg.abbreviation(),
+            DynTimeScale::Tdb => Tdb.abbreviation(),
+            DynTimeScale::Tt => Tt.abbreviation(),
+            DynTimeScale::Ut1 => Ut1.abbreviation(),
+        }
+    }
+
+    fn name(&self) -> &'static str {
+        match self {
+            DynTimeScale::Tai => Tai.name(),
+            DynTimeScale::Tcb => Tcb.name(),
+            DynTimeScale::Tcg => Tcg.name(),
+            DynTimeScale::Tdb => Tdb.name(),
+            DynTimeScale::Tt => Tt.name(),
+            DynTimeScale::Ut1 => Ut1.name(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Error, Eq, PartialEq)]
+#[error("unknown time scale: {0}")]
+pub struct UnknownTimeScaleError(String);
+
+impl FromStr for DynTimeScale {
+    type Err = UnknownTimeScaleError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "tai" | "TAI" => Ok(DynTimeScale::Tai),
+            "tcb" | "TCB" => Ok(DynTimeScale::Tcb),
+            "tcg" | "TCG" => Ok(DynTimeScale::Tcg),
+            "tdb" | "TDB" => Ok(DynTimeScale::Tdb),
+            "tt" | "TT" => Ok(DynTimeScale::Tt),
+            "ut1" | "UT1" => Ok(DynTimeScale::Ut1),
+            _ => Err(UnknownTimeScaleError(s.to_owned())),
+        }
+    }
+}
+
+impl Display for DynTimeScale {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.abbreviation())
     }
 }
 
@@ -112,12 +213,33 @@ mod tests {
     #[case(Tdb, "TDB", "Barycentric Dynamical Time")]
     #[case(Tt, "TT", "Terrestrial Time")]
     #[case(Ut1, "UT1", "Universal Time")]
-    fn test_time_scales<T: TimeScale>(
+    fn test_time_scales<T: TimeScale + ToString>(
         #[case] scale: T,
         #[case] abbreviation: &'static str,
         #[case] name: &'static str,
     ) {
         assert_eq!(scale.abbreviation(), abbreviation);
+        assert_eq!(scale.to_string(), abbreviation);
         assert_eq!(scale.name(), name);
+    }
+
+    #[rstest]
+    #[case("TAI", "International Atomic Time")]
+    #[case("TCB", "Barycentric Coordinate Time")]
+    #[case("TCG", "Geocentric Coordinate Time")]
+    #[case("TDB", "Barycentric Dynamical Time")]
+    #[case("TT", "Terrestrial Time")]
+    #[case("UT1", "Universal Time")]
+    fn test_dyn_time_scale(#[case] abbreviation: &str, #[case] name: &str) {
+        let scale: DynTimeScale = abbreviation.parse().unwrap();
+        assert_eq!(scale.abbreviation(), abbreviation);
+        assert_eq!(scale.to_string(), abbreviation);
+        assert_eq!(scale.name(), name);
+    }
+
+    #[test]
+    fn test_dyn_time_scale_invalid() {
+        let scale: Result<DynTimeScale, UnknownTimeScaleError> = "NTS".parse();
+        assert_eq!(scale, Err(UnknownTimeScaleError("NTS".to_owned())))
     }
 }
