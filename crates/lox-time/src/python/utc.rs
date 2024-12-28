@@ -7,15 +7,14 @@
  */
 
 use crate::calendar_dates::CalendarDate;
-use crate::prelude::CivilTime;
 use crate::python::time::PyTime;
-use crate::python::time_scales::PyTimeScale;
 use crate::python::ut1::PyUt1Provider;
-use crate::transformations::{ToTai, ToTcb, ToTcg, ToTdb, ToTt, ToUt1};
+use crate::time_of_day::CivilTime;
+use crate::time_scales::DynTimeScale;
 use crate::utc::{Utc, UtcError};
 use pyo3::exceptions::PyValueError;
 use pyo3::types::PyType;
-use pyo3::{pyclass, pymethods, Bound, PyErr, PyResult};
+use pyo3::{pyclass, pymethods, Bound, PyAny, PyErr, PyResult};
 
 impl From<UtcError> for PyErr {
     fn from(value: UtcError) -> Self {
@@ -115,38 +114,27 @@ impl PyUtc {
         self.0.decimal_seconds()
     }
 
-    pub fn to_tai(&self) -> PyTime {
-        PyTime(self.0.to_tai().with_scale(PyTimeScale::Tai))
-    }
-
-    pub fn to_tcb(&self) -> PyTime {
-        PyTime(self.0.to_tcb().with_scale(PyTimeScale::Tcb))
-    }
-
-    pub fn to_tcg(&self) -> PyTime {
-        PyTime(self.0.to_tcg().with_scale(PyTimeScale::Tcg))
-    }
-
-    pub fn to_tdb(&self) -> PyTime {
-        PyTime(self.0.to_tdb().with_scale(PyTimeScale::Tdb))
-    }
-
-    pub fn to_tt(&self) -> PyTime {
-        PyTime(self.0.to_tt().with_scale(PyTimeScale::Tt))
-    }
-
-    pub fn to_ut1(&self, provider: &Bound<'_, PyUt1Provider>) -> PyResult<PyTime> {
+    #[pyo3(signature = (scale, provider=None))]
+    pub fn to_scale(
+        &self,
+        scale: &Bound<'_, PyAny>,
+        provider: Option<&Bound<'_, PyUt1Provider>>,
+    ) -> PyResult<PyTime> {
+        let scale: DynTimeScale = scale.try_into()?;
+        let provider = provider.map(|p| &p.get().0);
         Ok(PyTime(
             self.0
-                .try_to_ut1(&provider.borrow().0)?
-                .with_scale(PyTimeScale::Ut1),
+                .to_dyn_time()
+                .try_to_scale(scale, provider)
+                .map_err(|err| PyValueError::new_err(err.to_string()))?,
         ))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use pyo3::{Bound, Python};
+    use pyo3::{Bound, IntoPyObjectExt, Python};
+    use rstest::rstest;
 
     use crate::test_helpers::data_dir;
 
@@ -200,8 +188,14 @@ mod tests {
         })
     }
 
-    #[test]
-    fn test_pyutc_transformations() {
+    #[rstest]
+    #[case("TAI")]
+    #[case("TCB")]
+    #[case("TCG")]
+    #[case("TDB")]
+    #[case("TT")]
+    #[case("UT1")]
+    fn test_pyutc_transformations(#[case] scale: &str) {
         Python::with_gil(|py| {
             let provider = Bound::new(
                 py,
@@ -209,23 +203,14 @@ mod tests {
                     .unwrap(),
             )
             .unwrap();
-            let utc_exp = PyUtc::new(2000, 1, 1, 0, 0, 0.0).unwrap();
-            let utc_act = utc_exp.to_tai().to_utc(Some(&provider)).unwrap();
-            assert_eq!(utc_act, utc_exp);
-            let utc_act = utc_exp.to_tcb().to_utc(Some(&provider)).unwrap();
-            assert_eq!(utc_act, utc_exp);
-            let utc_act = utc_exp.to_tcg().to_utc(Some(&provider)).unwrap();
-            assert_eq!(utc_act, utc_exp);
-            let utc_act = utc_exp.to_tdb().to_utc(Some(&provider)).unwrap();
-            assert_eq!(utc_act, utc_exp);
-            let utc_act = utc_exp.to_tt().to_utc(Some(&provider)).unwrap();
-            assert_eq!(utc_act, utc_exp);
-            let utc_act = utc_exp
-                .to_ut1(&provider)
+            let scale = scale.into_bound_py_any(py).unwrap();
+            let exp = PyUtc::new(2000, 1, 1, 0, 0, 0.0).unwrap();
+            let act = exp
+                .to_scale(&scale, Some(&provider))
                 .unwrap()
                 .to_utc(Some(&provider))
                 .unwrap();
-            assert_eq!(utc_act, utc_exp);
+            assert_eq!(act, exp);
         });
     }
 }

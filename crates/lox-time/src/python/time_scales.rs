@@ -6,89 +6,65 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::prelude::{Tai, Tcb, Tcg, Tdb, TimeScale, Tt, Ut1};
-use pyo3::exceptions::PyValueError;
-use pyo3::PyErr;
-use std::fmt::{Display, Formatter};
-use std::str::FromStr;
+use pyo3::{
+    exceptions::PyValueError, pyclass, pymethods, types::PyAnyMethods, Bound, PyAny, PyErr,
+    PyResult,
+};
+
+use crate::time_scales::{offsets::Ut1Error, DynTimeScale, TimeScale, UnknownTimeScaleError};
+
+impl From<UnknownTimeScaleError> for PyErr {
+    fn from(err: UnknownTimeScaleError) -> Self {
+        PyValueError::new_err(err.to_string())
+    }
+}
+
+impl From<Ut1Error> for PyErr {
+    fn from(err: Ut1Error) -> Self {
+        // FIXME: wrong error type
+        PyValueError::new_err(err.to_string())
+    }
+}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Ord)]
-pub enum PyTimeScale {
-    Tai,
-    Tcb,
-    Tcg,
-    Tdb,
-    Tt,
-    Ut1,
+#[pyclass(name = "TimeScale", module = "lox_space", frozen)]
+pub struct PyTimeScale(pub DynTimeScale);
+
+#[pymethods]
+impl PyTimeScale {
+    #[new]
+    pub fn new(abbreviation: &str) -> PyResult<Self> {
+        Ok(PyTimeScale(abbreviation.parse()?))
+    }
+
+    pub fn __repr__(&self) -> String {
+        format!("TimeScale(\"{}\")", self.0)
+    }
+
+    pub fn __str__(&self) -> String {
+        format!("{}", self.0)
+    }
+
+    pub fn abbreviation(&self) -> String {
+        self.0.abbreviation().to_owned()
+    }
+
+    pub fn name(&self) -> String {
+        self.0.name().to_owned()
+    }
 }
 
-impl FromStr for PyTimeScale {
-    type Err = PyErr;
+impl TryFrom<&Bound<'_, PyAny>> for DynTimeScale {
+    type Error = PyErr;
 
-    fn from_str(name: &str) -> Result<Self, Self::Err> {
-        match name {
-            "TAI" => Ok(PyTimeScale::Tai),
-            "TCB" => Ok(PyTimeScale::Tcb),
-            "TCG" => Ok(PyTimeScale::Tcg),
-            "TDB" => Ok(PyTimeScale::Tdb),
-            "TT" => Ok(PyTimeScale::Tt),
-            "UT1" => Ok(PyTimeScale::Ut1),
-            _ => Err(PyValueError::new_err(format!(
-                "invalid time scale: {}",
-                name
-            ))),
+    fn try_from(value: &Bound<'_, PyAny>) -> Result<Self, Self::Error> {
+        if let Ok(name) = value.extract::<&str>() {
+            return Ok(name.parse()?);
+        } else if let Ok(scale) = value.extract::<PyTimeScale>() {
+            return Ok(scale.0);
         }
-    }
-}
-
-impl TimeScale for PyTimeScale {
-    fn abbreviation(&self) -> &'static str {
-        match self {
-            PyTimeScale::Tai => Tai.abbreviation(),
-            PyTimeScale::Tcb => Tcb.abbreviation(),
-            PyTimeScale::Tcg => Tcg.abbreviation(),
-            PyTimeScale::Tdb => Tdb.abbreviation(),
-            PyTimeScale::Tt => Tt.abbreviation(),
-            PyTimeScale::Ut1 => Ut1.abbreviation(),
-        }
-    }
-
-    fn name(&self) -> &'static str {
-        match self {
-            PyTimeScale::Tai => Tai.name(),
-            PyTimeScale::Tcb => Tcb.name(),
-            PyTimeScale::Tcg => Tcg.name(),
-            PyTimeScale::Tdb => Tdb.name(),
-            PyTimeScale::Tt => Tt.name(),
-            PyTimeScale::Ut1 => Ut1.name(),
-        }
-    }
-}
-
-impl Display for PyTimeScale {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.abbreviation())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use rstest::rstest;
-
-    #[rstest]
-    #[case("TAI", "International Atomic Time")]
-    #[case("TT", "Terrestrial Time")]
-    #[case("TCG", "Geocentric Coordinate Time")]
-    #[case("TCB", "Barycentric Coordinate Time")]
-    #[case("TDB", "Barycentric Dynamical Time")]
-    #[case("UT1", "Universal Time")]
-    #[should_panic(expected = "invalid time scale: NotATimeScale")]
-    #[case("NotATimeScale", "not a time scale")]
-    fn test_pytimescale(#[case] abbreviation: &'static str, #[case] name: &'static str) {
-        let scale = PyTimeScale::from_str(abbreviation).unwrap();
-        assert_eq!(scale.abbreviation(), abbreviation);
-        assert_eq!(scale.name(), name);
-        assert_eq!(scale.to_string(), abbreviation);
+        Err(PyValueError::new_err(
+            "'scale' argument must either a string or a 'TimeScale' instance",
+        ))
     }
 }

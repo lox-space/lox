@@ -5,36 +5,42 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
+
 use crate::rotations::Rotation;
 use glam::{DMat3, DVec3};
+use lox_bodies::RotationalElements;
 use lox_bodies::{TryRotationalElements, UndefinedOriginPropertyError};
-use lox_time::julian_dates::JulianDate;
 use lox_time::time_scales::Tdb;
-use lox_time::transformations::{OffsetProvider, TryToScale};
-use lox_time::TimeLike;
+use lox_time::time_scales::TryToScale;
+use lox_time::Time;
+use lox_time::{julian_dates::JulianDate, time_scales::TimeScale};
 use std::f64::consts::{FRAC_PI_2, TAU};
 use thiserror::Error;
 
-#[derive(Clone, Debug, Error)]
-pub enum IcrfToBodyFixedError {
+use super::Iau;
+use super::Icrf;
+use super::TryRotateTo;
+
+#[derive(Debug, Error)]
+pub enum IauFrameTransformationError {
     #[error(transparent)]
     UndefinedRotationalElements(#[from] UndefinedOriginPropertyError),
-    #[error("time error: {0}")]
-    TimeError(String),
+    #[error("TDB transformation error: {0}")]
+    Tdb(String),
 }
 
-pub(crate) fn icrf_to_bodyfixed<
-    P: OffsetProvider,
-    T: TimeLike + TryToScale<Tdb, P>,
+pub(crate) fn icrf_to_iau<T, O, P>(
+    time: Time<T>,
+    body: O,
+    provider: Option<&P>,
+) -> Result<Rotation, IauFrameTransformationError>
+where
+    T: TimeScale + TryToScale<Tdb, P>,
     O: TryRotationalElements,
->(
-    time: T,
-    body: &O,
-    provider: &P,
-) -> Result<Rotation, IcrfToBodyFixedError> {
+{
     let seconds = time
         .try_to_scale(Tdb, provider)
-        .map_err(|err| IcrfToBodyFixedError::TimeError(err.to_string()))?
+        .map_err(|err| IauFrameTransformationError::Tdb(err.to_string()))?
         .seconds_since_j2000();
     let (right_ascension, declination, rotation_angle) = body.try_rotational_elements(seconds)?;
     let (right_ascension_rate, declination_rate, rotation_rate) =
@@ -47,18 +53,37 @@ pub(crate) fn icrf_to_bodyfixed<
     let v = DVec3::new(right_ascension_rate, -declination_rate, rotation_rate);
     Ok(Rotation::new(m).with_angular_velocity(v))
 }
-//
-// impl<O: RotationalElements, P: FrameTransformationProvider> TryRotateTo<BodyFixed<O>, P> for Icrf {
-//     type Error = ();
-//
-//     fn try_rotation<T: TimeLike>(
-//         &self,
-//         frame: &BodyFixed<O>,
-//         time: T,
-//         _provider: &P,
-//     ) -> Result<Rotation, Self::Error> {
-//         // FIXME
-//         let seconds = time.seconds_since_j2000();
-//         Ok(icrf_to_bodyfixed(&frame.0, seconds).unwrap())
-//     }
-// }
+
+impl<T, O, P> TryRotateTo<T, Iau<O>, P> for Icrf
+where
+    T: TimeScale + TryToScale<Tdb, P>,
+    O: RotationalElements,
+{
+    type Error = IauFrameTransformationError;
+
+    fn try_rotation(
+        &self,
+        frame: Iau<O>,
+        time: Time<T>,
+        provider: Option<&P>,
+    ) -> Result<Rotation, Self::Error> {
+        icrf_to_iau(time, frame.0, provider)
+    }
+}
+
+impl<T, O, P> TryRotateTo<T, Icrf, P> for Iau<O>
+where
+    T: TimeScale + TryToScale<Tdb, P>,
+    O: RotationalElements + Clone,
+{
+    type Error = IauFrameTransformationError;
+
+    fn try_rotation(
+        &self,
+        _frame: Icrf,
+        time: Time<T>,
+        provider: Option<&P>,
+    ) -> Result<Rotation, Self::Error> {
+        Ok(icrf_to_iau(time, self.0.clone(), provider)?.transpose())
+    }
+}

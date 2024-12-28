@@ -20,17 +20,18 @@
 use crate::calendar_dates::{Date, DateError};
 use crate::constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 use crate::deltas::{TimeDelta, ToDelta};
-use crate::prelude::{CivilTime, Tai};
+use crate::time_of_day::CivilTime;
+use crate::time_scales::Tai;
 use crate::Time;
 use lox_io::spice::{Kernel, KernelError};
-use std::convert::Infallible;
 use std::fs::read_to_string;
 use std::num::ParseIntError;
 use std::path::Path;
 use thiserror::Error;
 
-use crate::transformations::{LeapSecondsProvider, OffsetProvider};
 use crate::utc::Utc;
+
+use super::LeapSecondsProvider;
 
 const LEAP_SECONDS_KERNEL_KEY: &str = "DELTET/DELTA_AT";
 
@@ -61,10 +62,6 @@ const LEAP_SECONDS: [i64; 28] = [
 /// manually.
 #[derive(Debug)]
 pub struct BuiltinLeapSeconds;
-
-impl OffsetProvider for BuiltinLeapSeconds {
-    type Error = Infallible;
-}
 
 impl LeapSecondsProvider for BuiltinLeapSeconds {
     fn delta_tai_utc(&self, tai: Time<Tai>) -> Option<TimeDelta> {
@@ -170,10 +167,6 @@ impl LeapSecondsKernel {
     }
 }
 
-impl OffsetProvider for LeapSecondsKernel {
-    type Error = Infallible;
-}
-
 impl LeapSecondsProvider for LeapSecondsKernel {
     fn delta_tai_utc(&self, tai: Time<Tai>) -> Option<TimeDelta> {
         find_leap_seconds_tai(&self.epochs_tai, &self.leap_seconds, tai)
@@ -240,8 +233,8 @@ mod tests {
     use crate::deltas::TimeDelta;
     use crate::time;
     use crate::time_scales::Tai;
-    use crate::transformations::LeapSecondsProvider;
     use crate::utc;
+    use crate::utc::LeapSecondsProvider;
     use crate::utc::Utc;
     use crate::Time;
 

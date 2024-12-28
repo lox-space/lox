@@ -7,11 +7,8 @@
  */
 
 use crate::deltas::TimeDelta;
-use crate::time_scales::{Tai, Ut1};
-use crate::transformations::OffsetProvider;
 use crate::ut1::{DeltaUt1Tai, DeltaUt1TaiError, DeltaUt1TaiProvider, ExtrapolatedDeltaUt1Tai};
 use crate::utc::leap_seconds::BuiltinLeapSeconds;
-use crate::Time;
 use pyo3::exceptions::PyValueError;
 use pyo3::{pyclass, pymethods, PyErr, PyResult};
 
@@ -27,30 +24,6 @@ impl From<DeltaUt1TaiError> for PyErr {
     }
 }
 
-pub struct PyNoOpOffsetProvider;
-
-impl OffsetProvider for PyNoOpOffsetProvider {
-    type Error = PyErr;
-}
-
-pub trait PyDeltaUt1Provider: DeltaUt1TaiProvider + OffsetProvider<Error = PyErr> {}
-
-impl DeltaUt1TaiProvider for PyNoOpOffsetProvider {
-    fn delta_ut1_tai(&self, _tai: &Time<Tai>) -> PyResult<TimeDelta> {
-        Err(PyValueError::new_err(
-            "`provider` argument needs to be present for UT1 transformations",
-        ))
-    }
-
-    fn delta_tai_ut1(&self, _ut1: &Time<Ut1>) -> PyResult<TimeDelta> {
-        Err(PyValueError::new_err(
-            "`provider` argument needs to be present for UT1 transformations",
-        ))
-    }
-}
-
-impl PyDeltaUt1Provider for PyNoOpOffsetProvider {}
-
 #[pyclass(name = "UT1Provider", module = "lox_space", frozen)]
 #[derive(Clone, Debug, PartialEq)]
 pub struct PyUt1Provider(pub DeltaUt1Tai);
@@ -64,25 +37,21 @@ impl PyUt1Provider {
     }
 }
 
-impl OffsetProvider for PyUt1Provider {
-    type Error = PyErr;
-}
-
 impl DeltaUt1TaiProvider for PyUt1Provider {
-    fn delta_ut1_tai(&self, tai: &Time<Tai>) -> PyResult<TimeDelta> {
+    type Error = PyErr;
+
+    fn delta_ut1_tai(&self, tai: TimeDelta) -> Result<TimeDelta, Self::Error> {
         self.0.delta_ut1_tai(tai).map_err(|err| err.into())
     }
 
-    fn delta_tai_ut1(&self, ut1: &Time<Ut1>) -> PyResult<TimeDelta> {
+    fn delta_tai_ut1(&self, ut1: TimeDelta) -> Result<TimeDelta, Self::Error> {
         self.0.delta_tai_ut1(ut1).map_err(|err| err.into())
     }
 }
 
-impl PyDeltaUt1Provider for PyUt1Provider {}
-
 #[cfg(test)]
 mod tests {
-    use pyo3::{Bound, Python};
+    use pyo3::{Bound, IntoPyObjectExt, Python};
 
     use crate::{python::time::PyTime, test_helpers::data_dir};
 
@@ -104,8 +73,11 @@ mod tests {
                     .unwrap(),
             )
             .unwrap();
-            let tai = PyTime::new("TAI", 2100, 1, 1, 0, 0, 0.0).unwrap();
-            let _ut1 = tai.to_ut1(Some(&provider)).unwrap();
+            let tai =
+                PyTime::new(&"TAI".into_bound_py_any(py).unwrap(), 2100, 1, 1, 0, 0, 0.0).unwrap();
+            let _ut1 = tai
+                .to_scale(&"UT1".into_bound_py_any(py).unwrap(), Some(&provider))
+                .unwrap();
         })
     }
 }

@@ -28,7 +28,7 @@ def test_sgp4():
 def test_ground(provider):
     lat = np.radians(40.4527)
     lon = np.radians(-4.3676)
-    tai = lox.UTC.from_iso("2022-01-31T23:00:00").to_tai()
+    tai = lox.UTC.from_iso("2022-01-31T23:00:00").to_scale("TAI")
     loc = lox.GroundLocation(lox.Origin("Earth"), lon, lat, 0.0)
     ground = lox.GroundPropagator(loc, provider)
     expected = np.array([-1765.9535510583582, 4524.585984442561, 4120.189198495323])

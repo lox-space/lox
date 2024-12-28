@@ -9,19 +9,15 @@
 use std::f64::consts::FRAC_PI_2;
 
 use glam::{DMat3, DVec3};
-use thiserror::Error;
-
 use lox_bodies::{DynOrigin, RotationalElements, Spheroid, TrySpheroid};
 use lox_math::types::units::Radians;
-use lox_time::prelude::Tdb;
-use lox_time::transformations::TryToScale;
-use lox_time::TimeLike;
+use lox_time::time_scales::TryToScale;
+use lox_time::time_scales::{Tdb, TimeScale};
+use lox_time::ut1::DeltaUt1TaiProvider;
+use lox_time::{DynTime, Time};
+use thiserror::Error;
 
-use crate::frames::iau::IcrfToBodyFixedError;
-use crate::frames::{
-    BodyFixed, CoordinateSystem, DynFrame, FrameTransformationProvider, Icrf, ReferenceFrame,
-    TryRotateTo, TryToFrame,
-};
+use crate::frames::{DynFrame, Iau, Icrf, TryRotateTo};
 use crate::propagators::Propagator;
 use crate::states::{DynState, State};
 use crate::trajectories::{DynTrajectory, Trajectory, TrajectoryError};
@@ -152,7 +148,7 @@ impl<B: TrySpheroid> GroundLocation<B> {
         rot2 * rot1
     }
 
-    pub fn observables<T: TimeLike + Clone>(&self, state: State<T, B, BodyFixed<B>>) -> Observables
+    pub fn observables<T: TimeScale + Clone>(&self, state: State<T, B, Iau<B>>) -> Observables
     where
         B: RotationalElements + Clone,
     {
@@ -171,7 +167,7 @@ impl<B: TrySpheroid> GroundLocation<B> {
         }
     }
 
-    pub fn observables_dyn<T: TimeLike + Clone>(&self, state: DynState<T>) -> Observables {
+    pub fn observables_dyn(&self, state: DynState) -> Observables {
         let rot = self.rotation_to_topocentric();
         let position = rot * (state.position() - self.body_fixed_position());
         let velocity = rot * state.velocity();
@@ -191,67 +187,53 @@ impl<B: TrySpheroid> GroundLocation<B> {
 #[derive(Debug, Error)]
 pub enum GroundPropagatorError {
     #[error("frame transformation error: {0}")]
-    FrameTransformationError(String),
+    FrameTransformation(String),
     #[error(transparent)]
-    TrajectoryError(#[from] TrajectoryError),
-    #[error(transparent)]
-    IcrfToBodyFixedError(#[from] IcrfToBodyFixedError),
+    Trajectory(#[from] TrajectoryError),
 }
 
-pub struct GroundPropagator<B: TrySpheroid, R: ReferenceFrame, P: FrameTransformationProvider> {
+pub struct GroundPropagator<B: TrySpheroid, P> {
     location: GroundLocation<B>,
-    frame: R,
     // FIXME: We should not take ownership of the provider here
     provider: P,
 }
 
-pub type DynGroundPropagator<P> = GroundPropagator<DynOrigin, DynFrame, P>;
+pub type DynGroundPropagator<P> = GroundPropagator<DynOrigin, P>;
 
-impl<B, P> GroundPropagator<B, Icrf, P>
+impl<B, P> GroundPropagator<B, P>
 where
     B: Spheroid,
-    P: FrameTransformationProvider,
 {
     pub fn new(location: GroundLocation<B>, provider: P) -> Self {
-        GroundPropagator {
-            location,
-            frame: Icrf,
-            provider,
-        }
+        GroundPropagator { location, provider }
     }
 }
 
-impl<P: FrameTransformationProvider> DynGroundPropagator<P> {
+impl<P: DeltaUt1TaiProvider> DynGroundPropagator<P> {
     pub fn with_dynamic(location: DynGroundLocation, provider: P) -> Self {
-        GroundPropagator {
-            location,
-            frame: DynFrame::Icrf,
-            provider,
-        }
+        GroundPropagator { location, provider }
     }
 
-    pub fn propagate_dyn<T: TimeLike + TryToScale<Tdb, P> + Clone>(
-        &self,
-        time: T,
-    ) -> Result<DynState<T>, GroundPropagatorError> {
+    pub fn propagate_dyn(&self, time: DynTime) -> Result<DynState, GroundPropagatorError> {
         let s = State::new(
-            time.clone(),
+            time,
             self.location.body_fixed_position(),
             DVec3::ZERO,
             self.location.body,
-            DynFrame::BodyFixed(self.location.body),
+            DynFrame::Iau(self.location.body),
         );
-        let rot =
-            s.reference_frame()
-                .try_rotation(&DynFrame::Icrf, time.clone(), &self.provider)?;
+        let rot = s
+            .reference_frame()
+            .try_rotation(DynFrame::Icrf, time, Some(&self.provider))
+            .map_err(|err| GroundPropagatorError::FrameTransformation(err.to_string()))?;
         let (r1, v1) = rot.rotate_state(s.position(), s.velocity());
         Ok(State::new(time, r1, v1, self.location.body, DynFrame::Icrf))
     }
 
-    pub(crate) fn propagate_all_dyn<T: TimeLike + TryToScale<Tdb, P> + Clone>(
+    pub(crate) fn propagate_all_dyn(
         &self,
-        times: impl IntoIterator<Item = T>,
-    ) -> Result<DynTrajectory<T>, GroundPropagatorError> {
+        times: impl IntoIterator<Item = DynTime>,
+    ) -> Result<DynTrajectory, GroundPropagatorError> {
         let mut states = vec![];
         for time in times {
             let state = self.propagate_dyn(time)?;
@@ -261,35 +243,27 @@ impl<P: FrameTransformationProvider> DynGroundPropagator<P> {
     }
 }
 
-impl<O, R, P> CoordinateSystem<R> for GroundPropagator<O, R, P>
+impl<T, O, P> Propagator<T, O, Icrf> for GroundPropagator<O, P>
 where
-    O: Spheroid,
-    R: ReferenceFrame + Clone,
-    P: FrameTransformationProvider,
-{
-    fn reference_frame(&self) -> R {
-        self.frame.clone()
-    }
-}
-
-impl<T, O, P> Propagator<T, O, Icrf> for GroundPropagator<O, Icrf, P>
-where
-    T: TimeLike + TryToScale<Tdb, P> + Clone,
+    T: TimeScale + TryToScale<Tdb, P> + Clone,
     O: Spheroid + RotationalElements + Clone,
-    P: FrameTransformationProvider,
 {
     type Error = GroundPropagatorError;
 
-    fn propagate(&self, time: T) -> Result<State<T, O, Icrf>, Self::Error> {
-        State::new(
-            time,
+    fn propagate(&self, time: Time<T>) -> Result<State<T, O, Icrf>, Self::Error> {
+        let s = State::new(
+            time.clone(),
             self.location.body_fixed_position(),
             DVec3::ZERO,
             self.location.body.clone(),
-            BodyFixed(self.location.body.clone()),
-        )
-        .try_to_frame(self.frame, &self.provider)
-        .map_err(|err| GroundPropagatorError::FrameTransformationError(err.to_string()))
+            Iau(self.location.body.clone()),
+        );
+        let rot = s
+            .reference_frame()
+            .try_rotation(Icrf, time.clone(), Some(&self.provider))
+            .map_err(|err| GroundPropagatorError::FrameTransformation(err.to_string()))?;
+        let (r1, v1) = rot.rotate_state(s.position(), s.velocity());
+        Ok(State::new(time, r1, v1, self.location.body.clone(), Icrf))
     }
 }
 
@@ -300,11 +274,8 @@ mod tests {
     use lox_bodies::Earth;
     use lox_math::assert_close;
     use lox_math::is_close::IsClose;
-    use lox_time::transformations::ToTai;
     use lox_time::utc::Utc;
     use lox_time::{time, utc, Time};
-
-    use crate::frames::NoOpFrameTransformationProvider;
 
     use super::*;
 
@@ -345,7 +316,7 @@ mod tests {
         let position = DVec3::new(3359.927, -2398.072, 5153.0);
         let velocity = DVec3::new(5.0657, 5.485, -0.744);
         let time = time!(Tdb, 2012, 7, 1).unwrap();
-        let state = State::new(time, position, velocity, Earth, BodyFixed(Earth));
+        let state = State::new(time, position, velocity, Earth, Iau(Earth));
         let observables = location.observables(state);
         let expected_range = 2707.7;
         let expected_range_rate = -7.16;
@@ -362,9 +333,8 @@ mod tests {
         let longitude = -4.3676f64.to_radians();
         let latitude = 40.4527f64.to_radians();
         let location = GroundLocation::new(longitude, latitude, 0.0, Earth);
-        let provider = NoOpFrameTransformationProvider;
-        let propagator = GroundPropagator::new(location, provider);
-        let time = utc!(2022, 1, 31, 23).unwrap().to_tai();
+        let propagator = GroundPropagator::new(location, ());
+        let time = utc!(2022, 1, 31, 23).unwrap().to_time();
         let expected = DVec3::new(-1765.9535510583582, 4524.585984442561, 4120.189198495323);
         let state = propagator.propagate(time).unwrap();
         assert_close!(state.position(), expected);

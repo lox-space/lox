@@ -6,12 +6,13 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use lox_time::time_scales::{DynTimeScale, TimeScale};
+use lox_time::Time;
 use thiserror::Error;
 
 use lox_bodies::{DynOrigin, Origin, PointMass, TryPointMass};
-use lox_time::TimeLike;
 
-use crate::frames::{CoordinateSystem, DynFrame, Icrf, ReferenceFrame};
+use crate::frames::{DynFrame, Icrf, ReferenceFrame};
 use crate::propagators::{stumpff, Propagator};
 use crate::states::{DynState, State};
 use crate::trajectories::TrajectoryError;
@@ -25,25 +26,16 @@ pub enum ValladoError {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Vallado<T: TimeLike, O: Origin, R: ReferenceFrame> {
+pub struct Vallado<T: TimeScale, O: Origin, R: ReferenceFrame> {
     initial_state: State<T, O, R>,
     max_iter: i32,
 }
 
-impl<T, O, R> CoordinateSystem<R> for Vallado<T, O, R>
-where
-    T: TimeLike,
-    O: Origin,
-    R: ReferenceFrame + Clone,
-{
-    fn reference_frame(&self) -> R {
-        self.initial_state.reference_frame()
-    }
-}
+pub type DynVallado = Vallado<DynTimeScale, DynOrigin, DynFrame>;
 
 impl<T, O, R> Vallado<T, O, R>
 where
-    T: TimeLike,
+    T: TimeScale,
     O: TryPointMass + Clone,
     R: ReferenceFrame,
 {
@@ -65,11 +57,18 @@ where
     {
         self.initial_state.origin()
     }
+
+    pub fn reference_frame(&self) -> R
+    where
+        R: Clone,
+    {
+        self.initial_state.reference_frame()
+    }
 }
 
 impl<T, O> Vallado<T, O, Icrf>
 where
-    T: TimeLike,
+    T: TimeScale,
     O: PointMass,
 {
     pub fn new(initial_state: State<T, O, Icrf>) -> Self {
@@ -80,12 +79,9 @@ where
     }
 }
 
-impl<T> Vallado<T, DynOrigin, DynFrame>
-where
-    T: TimeLike,
-{
+impl DynVallado {
     // TODO: Use better error type
-    pub fn with_dynamic(initial_state: DynState<T>) -> Result<Self, &'static str> {
+    pub fn with_dynamic(initial_state: DynState) -> Result<Self, &'static str> {
         if initial_state
             .origin()
             .try_gravitational_parameter()
@@ -103,13 +99,13 @@ where
 
 impl<T, O, R> Propagator<T, O, R> for Vallado<T, O, R>
 where
-    T: TimeLike + Clone,
+    T: TimeScale + Clone,
     O: TryPointMass + Clone,
     R: ReferenceFrame + Clone,
 {
     type Error = ValladoError;
 
-    fn propagate(&self, time: T) -> Result<State<T, O, R>, Self::Error> {
+    fn propagate(&self, time: Time<T>) -> Result<State<T, O, R>, Self::Error> {
         let frame = self.reference_frame();
         let origin = self.origin();
         let mu = self.gravitational_parameter();
@@ -178,7 +174,7 @@ mod tests {
     use lox_math::assert_close;
     use lox_math::is_close::IsClose;
     use lox_time::deltas::TimeDelta;
-    use lox_time::transformations::ToTdb;
+    use lox_time::time_scales::Tdb;
     use lox_time::utc;
     use lox_time::utc::Utc;
 
@@ -189,7 +185,7 @@ mod tests {
     #[test]
     fn test_vallado_propagate() {
         let utc = utc!(2023, 3, 25, 21, 8, 0.0).unwrap();
-        let time = utc.to_tdb();
+        let time = utc.to_time().to_scale(Tdb);
         let semi_major = 24464.560;
         let eccentricity = 0.7311;
         let inclination = 0.122138;
@@ -232,7 +228,7 @@ mod tests {
     #[test]
     fn test_vallado_propagate_all() {
         let utc = utc!(2023, 3, 25, 21, 8, 0.0).unwrap();
-        let time = utc.to_tdb();
+        let time = utc.to_time().to_scale(Tdb);
         let semi_major = 24464.560;
         let eccentricity = 0.7311;
         let inclination = 0.122138;

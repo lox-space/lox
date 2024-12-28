@@ -18,6 +18,7 @@ use pyo3::prelude::*;
 use lox_math::python::PySeries;
 use lox_time::python::deltas::PyTimeDelta;
 use lox_time::python::time::PyTime;
+use lox_time::python::time_scales::PyTimeScale;
 use lox_time::python::ut1::PyUt1Provider;
 use lox_time::python::utc::PyUtc;
 
@@ -26,24 +27,25 @@ fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(find_events, m)?)?;
     m.add_function(wrap_pyfunction!(find_windows, m)?)?;
     m.add_function(wrap_pyfunction!(visibility, m)?)?;
-    m.add_class::<PyOrigin>()?;
-    m.add_class::<PyTime>()?;
-    m.add_class::<PyTimeDelta>()?;
-    m.add_class::<PyUtc>()?;
-    m.add_class::<PyUt1Provider>()?;
+    m.add_class::<PyElevationMask>()?;
+    m.add_class::<PyEvent>()?;
     m.add_class::<PyFrame>()?;
-    m.add_class::<PyKeplerian>()?;
-    m.add_class::<PyState>()?;
-    m.add_class::<PyTrajectory>()?;
-    m.add_class::<PyVallado>()?;
-    m.add_class::<PySgp4>()?;
     m.add_class::<PyGroundLocation>()?;
     m.add_class::<PyGroundPropagator>()?;
-    m.add_class::<PyEvent>()?;
-    m.add_class::<PyWindow>()?;
-    m.add_class::<PySeries>()?;
+    m.add_class::<PyKeplerian>()?;
     m.add_class::<PyObservables>()?;
+    m.add_class::<PyOrigin>()?;
+    m.add_class::<PySeries>()?;
+    m.add_class::<PySgp4>()?;
     m.add_class::<PySpk>()?;
-    m.add_class::<PyElevationMask>()?;
+    m.add_class::<PyState>()?;
+    m.add_class::<PyTime>()?;
+    m.add_class::<PyTimeDelta>()?;
+    m.add_class::<PyTimeScale>()?;
+    m.add_class::<PyTrajectory>()?;
+    m.add_class::<PyUt1Provider>()?;
+    m.add_class::<PyUtc>()?;
+    m.add_class::<PyVallado>()?;
+    m.add_class::<PyWindow>()?;
     Ok(())
 }

@@ -6,35 +6,65 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use std::convert::Infallible;
 use std::sync::OnceLock;
 
 use crate::deltas::TimeDelta;
 use crate::deltas::ToDelta;
 use crate::time_of_day::CivilTime;
 use crate::time_of_day::TimeOfDay;
-use crate::time_scales::Tai;
-use crate::time_scales::Tcb;
-use crate::time_scales::Tcg;
-use crate::time_scales::Tdb;
-use crate::time_scales::Tt;
-use crate::time_scales::Ut1;
-use crate::transformations::LeapSecondsProvider;
-use crate::transformations::NoOpOffsetProvider;
-use crate::transformations::ToTai;
-use crate::transformations::ToTcb;
-use crate::transformations::ToTcg;
-use crate::transformations::ToTdb;
-use crate::transformations::ToTt;
-use crate::transformations::ToUt1;
-use crate::transformations::TryToScale;
-use crate::ut1::DeltaUt1TaiProvider;
+use crate::time_scales::{DynTimeScale, Tai};
+use crate::time_scales::{FromScale, TimeScale, ToScale, TryFromScale};
+use crate::DynTime;
 use crate::{utc, Time};
 
 use super::leap_seconds::BuiltinLeapSeconds;
+use super::LeapSecondsProvider;
 use super::{Utc, UtcError};
 
 mod before1972;
+
+impl Utc {
+    pub fn offset_tai(&self, provider: &impl LeapSecondsProvider) -> TimeDelta {
+        if self < utc_1972_01_01() {
+            before1972::delta_utc_tai(self)
+        } else {
+            provider.delta_utc_tai(*self)
+        }
+        .expect("Utc objects should always be in range")
+    }
+
+    pub fn to_time_with_provider(&self, provider: &impl LeapSecondsProvider) -> Time<Tai> {
+        let offset = self.offset_tai(provider);
+        Time::from_delta(Tai, self.to_delta() - offset)
+    }
+
+    pub fn to_time(&self) -> Time<Tai> {
+        self.to_time_with_provider(&BuiltinLeapSeconds)
+    }
+
+    pub fn to_dyn_time_with_provider(&self, provider: &impl LeapSecondsProvider) -> DynTime {
+        let offset = self.offset_tai(provider);
+        Time::from_delta(DynTimeScale::Tai, self.to_delta() - offset)
+    }
+
+    pub fn to_dyn_time(&self) -> DynTime {
+        self.to_dyn_time_with_provider(&BuiltinLeapSeconds)
+    }
+
+    pub fn try_to_scale<T, P>(&self, scale: T, provider: Option<&P>) -> Result<Time<T>, T::Error>
+    where
+        T: TimeScale + TryFromScale<Tai, P> + Copy,
+    {
+        Time::try_from_scale(scale, self.to_time(), provider)
+    }
+
+    pub fn to_scale<T>(&self, scale: T) -> Time<T>
+    where
+        T: TimeScale + FromScale<Tai> + Copy,
+    {
+        Time::from_scale(scale, self.to_time())
+    }
+}
 
 pub trait ToUtc {
     fn to_utc_with_provider(&self, provider: &impl LeapSecondsProvider) -> Result<Utc, UtcError>;
@@ -50,16 +80,17 @@ impl ToUtc for Utc {
     }
 }
 
-impl ToUtc for Time<Tai> {
+impl<T: TimeScale + ToScale<Tai>> ToUtc for Time<T> {
     fn to_utc_with_provider(&self, provider: &impl LeapSecondsProvider) -> Result<Utc, UtcError> {
-        let delta = if self < tai_at_utc_1972_01_01() {
-            before1972::delta_tai_utc(self)
+        let tai = self.to_scale(Tai);
+        let delta = if &tai < tai_at_utc_1972_01_01() {
+            before1972::delta_tai_utc(&tai)
         } else {
-            provider.delta_tai_utc(*self)
+            provider.delta_tai_utc(tai)
         }
         .ok_or(UtcError::UtcUndefined)?;
-        let mut utc = Utc::from_delta(self.to_delta() - delta);
-        if provider.is_leap_second(*self) {
+        let mut utc = Utc::from_delta(tai.to_delta() - delta);
+        if provider.is_leap_second(tai) {
             utc.time = TimeOfDay::new(utc.hour(), utc.minute(), 60)
                 .unwrap()
                 .with_subsecond(utc.time.subsecond());
@@ -67,114 +98,6 @@ impl ToUtc for Time<Tai> {
         Ok(utc)
     }
 }
-
-impl ToUtc for Time<Tcb> {
-    fn to_utc_with_provider(&self, provider: &impl LeapSecondsProvider) -> Result<Utc, UtcError> {
-        self.to_tai().to_utc_with_provider(provider)
-    }
-}
-
-impl ToUtc for Time<Tcg> {
-    fn to_utc_with_provider(&self, provider: &impl LeapSecondsProvider) -> Result<Utc, UtcError> {
-        self.to_tai().to_utc_with_provider(provider)
-    }
-}
-
-impl ToUtc for Time<Tdb> {
-    fn to_utc_with_provider(&self, provider: &impl LeapSecondsProvider) -> Result<Utc, UtcError> {
-        self.to_tai().to_utc_with_provider(provider)
-    }
-}
-
-impl ToUtc for Time<Tt> {
-    fn to_utc_with_provider(&self, provider: &impl LeapSecondsProvider) -> Result<Utc, UtcError> {
-        self.to_tai().to_utc_with_provider(provider)
-    }
-}
-
-impl<T: LeapSecondsProvider> TryToScale<Tai, T> for Utc {
-    fn try_to_scale(&self, _scale: Tai, provider: &T) -> Result<Time<Tai>, T::Error> {
-        let delta = if self < utc_1972_01_01() {
-            before1972::delta_utc_tai(self)
-        } else {
-            provider.delta_utc_tai(*self)
-        }
-        .unwrap_or_else(|| {
-            // Utc objects are always in range.
-            unreachable!("failed to calculate UTC-TAI delta for Utc `{:?}`", self);
-        });
-
-        Ok(Time::from_delta(Tai, self.to_delta() - delta))
-    }
-}
-
-impl TryToScale<Tai, NoOpOffsetProvider> for Utc {
-    fn try_to_scale(
-        &self,
-        scale: Tai,
-        _provider: &NoOpOffsetProvider,
-    ) -> Result<Time<Tai>, Infallible> {
-        self.try_to_scale(scale, &BuiltinLeapSeconds)
-    }
-}
-
-impl ToTai for Utc {}
-
-impl TryToScale<Tt, NoOpOffsetProvider> for Utc {
-    fn try_to_scale(
-        &self,
-        scale: Tt,
-        provider: &NoOpOffsetProvider,
-    ) -> Result<Time<Tt>, Infallible> {
-        self.to_tai().try_to_scale(scale, provider)
-    }
-}
-
-impl ToTt for Utc {}
-
-impl TryToScale<Tdb, NoOpOffsetProvider> for Utc {
-    fn try_to_scale(
-        &self,
-        scale: Tdb,
-        provider: &NoOpOffsetProvider,
-    ) -> Result<Time<Tdb>, Infallible> {
-        self.to_tt().try_to_scale(scale, provider)
-    }
-}
-
-impl ToTdb for Utc {}
-
-impl TryToScale<Tcb, NoOpOffsetProvider> for Utc {
-    fn try_to_scale(
-        &self,
-        scale: Tcb,
-        provider: &NoOpOffsetProvider,
-    ) -> Result<Time<Tcb>, Infallible> {
-        self.to_tdb().try_to_scale(scale, provider)
-    }
-}
-
-impl ToTcb for Utc {}
-
-impl TryToScale<Tcg, NoOpOffsetProvider> for Utc {
-    fn try_to_scale(
-        &self,
-        scale: Tcg,
-        provider: &NoOpOffsetProvider,
-    ) -> Result<Time<Tcg>, Infallible> {
-        self.to_tt().try_to_scale(scale, provider)
-    }
-}
-
-impl ToTcg for Utc {}
-
-impl<T: DeltaUt1TaiProvider> TryToScale<Ut1, T> for Utc {
-    fn try_to_scale(&self, scale: Ut1, provider: &T) -> Result<Time<Ut1>, T::Error> {
-        self.to_tai().try_to_scale(scale, provider)
-    }
-}
-
-impl<T: DeltaUt1TaiProvider> ToUt1<T> for Utc {}
 
 fn utc_1972_01_01() -> &'static Utc {
     static UTC_1972: OnceLock<Utc> = OnceLock::new();
@@ -196,7 +119,7 @@ fn tai_at_utc_1972_01_01() -> &'static Time<Tai> {
 mod test {
     use crate::test_helpers::delta_ut1_tai;
     use crate::time;
-    use crate::transformations::{ToTcb, ToTcg, ToTdb, ToTt};
+    use crate::time_scales::{Tcb, Tcg, Tdb, Tt, Ut1};
     use rstest::rstest;
 
     use crate::subsecond::Subsecond;
@@ -218,7 +141,7 @@ mod test {
     #[should_panic]
     #[case::illegal_utc_datetime(unconstructable_utc_datetime(), &Time::new(Tai, 0, Subsecond::default()))]
     fn test_utc_to_tai(#[case] utc: &Utc, #[case] expected: &Time<Tai>) {
-        let actual = utc.to_tai();
+        let actual = utc.to_time();
         assert_eq!(*expected, actual);
     }
 
@@ -238,21 +161,21 @@ mod test {
     fn test_all_scales_to_utc() {
         let tai = time!(Tai, 2024, 5, 17, 12, 13, 14.0).unwrap();
         let exp = tai.to_utc().unwrap();
-        let tt = tai.to_tt();
+        let tt = tai.to_scale(Tt);
         let act = tt.to_utc().unwrap();
         assert_eq!(act, exp);
-        let tcg = tai.to_tcg();
+        let tcg = tai.to_scale(Tcg);
         let act = tcg.to_utc().unwrap();
         assert_eq!(act, exp);
-        let tcb = tai.to_tcb();
+        let tcb = tai.to_scale(Tcb);
         let act = tcb.to_utc().unwrap();
         assert_eq!(act, exp);
-        let tdb = tai.to_tdb();
+        let tdb = tai.to_scale(Tdb);
         let act = tdb.to_utc().unwrap();
         assert_eq!(act, exp);
-        let ut1 = tai.try_to_ut1(delta_ut1_tai()).unwrap();
+        let ut1 = tai.try_to_scale(Ut1, Some(delta_ut1_tai())).unwrap();
         let act = ut1
-            .try_to_scale(Tai, delta_ut1_tai())
+            .try_to_scale(Tai, Some(delta_ut1_tai()))
             .unwrap()
             .to_utc()
             .unwrap();

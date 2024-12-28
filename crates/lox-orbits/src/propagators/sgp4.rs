@@ -15,7 +15,6 @@ use lox_bodies::Earth;
 use lox_math::constants::f64::time::SECONDS_PER_MINUTE;
 use lox_time::deltas::TimeDelta;
 use lox_time::time_scales::Tai;
-use lox_time::transformations::ToTai;
 use lox_time::utc::Utc;
 use lox_time::Time;
 
@@ -40,7 +39,7 @@ pub struct Sgp4 {
 impl Sgp4 {
     pub fn new(initial_state: Elements) -> Result<Self, ElementsError> {
         let epoch = initial_state.epoch();
-        let time = Utc::from_delta(TimeDelta::from_julian_years(epoch).unwrap()).to_tai();
+        let time = Utc::from_delta(TimeDelta::from_julian_years(epoch).unwrap()).to_time();
         let constants = Constants::from_elements(&initial_state)?;
         Ok(Self { constants, time })
     }
@@ -50,10 +49,10 @@ impl Sgp4 {
     }
 }
 
-impl Propagator<Time<Tai>, Earth, Icrf> for Sgp4 {
+impl Propagator<Tai, Earth, Icrf> for Sgp4 {
     type Error = Sgp4Error;
 
-    fn propagate(&self, time: Time<Tai>) -> Result<State<Time<Tai>, Earth, Icrf>, Self::Error> {
+    fn propagate(&self, time: Time<Tai>) -> Result<State<Tai, Earth, Icrf>, Self::Error> {
         let dt = (time - self.time).to_decimal_seconds() / SECONDS_PER_MINUTE;
         let prediction = self.constants.propagate(MinutesSinceEpoch(dt))?;
         let position = DVec3::from_array(prediction.position);
