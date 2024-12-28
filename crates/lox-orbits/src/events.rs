@@ -1,4 +1,6 @@
 use itertools::Itertools;
+use lox_time::time_scales::TimeScale;
+use lox_time::Time;
 use std::collections::VecDeque;
 use std::fmt::Display;
 use std::iter::zip;
@@ -6,7 +8,6 @@ use thiserror::Error;
 
 use lox_math::roots::FindBracketedRoot;
 use lox_time::deltas::TimeDelta;
-use lox_time::TimeLike;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ZeroCrossing {
@@ -44,14 +45,17 @@ pub enum FindEventError {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct Event<T: TimeLike> {
+pub struct Event<T: TimeScale> {
     crossing: ZeroCrossing,
-    time: T,
+    time: Time<T>,
 }
 
-impl<T: TimeLike> Event<T> {
-    pub fn time(&self) -> &T {
-        &self.time
+impl<T: TimeScale> Event<T> {
+    pub fn time(&self) -> Time<T>
+    where
+        T: Copy,
+    {
+        self.time
     }
 
     pub fn crossing(&self) -> ZeroCrossing {
@@ -59,9 +63,9 @@ impl<T: TimeLike> Event<T> {
     }
 }
 
-pub fn find_events<F: Fn(f64) -> f64 + Copy, T: TimeLike + Clone, R: FindBracketedRoot<F>>(
+pub fn find_events<F: Fn(f64) -> f64 + Copy, T: TimeScale + Clone, R: FindBracketedRoot<F>>(
     func: F,
-    start: T,
+    start: Time<T>,
     steps: &[f64],
     root_finder: R,
 ) -> Result<Vec<Event<T>>, FindEventError> {
@@ -88,7 +92,7 @@ pub fn find_events<F: Fn(f64) -> f64 + Copy, T: TimeLike + Clone, R: FindBracket
             let t = root_finder
                 .find_in_bracket(func, (t0, t1))
                 .expect("sign changed but root finder failed");
-            let time = start.clone() + TimeDelta::from_decimal_seconds(t).unwrap();
+            let time = start.clone() + TimeDelta::try_from_decimal_seconds(t).unwrap();
 
             events.push(Event { crossing, time });
         }
@@ -98,36 +102,42 @@ pub fn find_events<F: Fn(f64) -> f64 + Copy, T: TimeLike + Clone, R: FindBracket
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct Window<T: TimeLike> {
-    start: T,
-    end: T,
+pub struct Window<T: TimeScale> {
+    start: Time<T>,
+    end: Time<T>,
 }
 
-impl<T: TimeLike> Window<T> {
-    pub fn new(start: T, end: T) -> Self {
+impl<T: TimeScale> Window<T> {
+    pub fn new(start: Time<T>, end: Time<T>) -> Self {
         Window { start, end }
     }
 
-    pub fn start(&self) -> &T {
-        &self.start
+    pub fn start(&self) -> Time<T>
+    where
+        T: Clone,
+    {
+        self.start.clone()
     }
 
-    pub fn end(&self) -> &T {
-        &self.end
+    pub fn end(&self) -> Time<T>
+    where
+        T: Clone,
+    {
+        self.end.clone()
     }
 
     pub fn duration(&self) -> TimeDelta
     where
         T: Clone,
     {
-        self.end.clone() - self.start.clone()
+        self.end() - self.start()
     }
 }
 
-pub fn find_windows<F: Fn(f64) -> f64 + Copy, T: TimeLike + Clone, R: FindBracketedRoot<F>>(
+pub fn find_windows<F: Fn(f64) -> f64 + Copy, T: TimeScale + Clone, R: FindBracketedRoot<F>>(
     func: F,
-    start: T,
-    end: T,
+    start: Time<T>,
+    end: Time<T>,
     steps: &[f64],
     root_finder: R,
 ) -> Vec<Window<T>> {
@@ -202,13 +212,13 @@ mod tests {
         assert_eq!(events[0].crossing, ZeroCrossing::Down);
         assert_close!(
             events[0].time,
-            start + TimeDelta::from_decimal_seconds(PI).unwrap(),
+            start + TimeDelta::try_from_decimal_seconds(PI).unwrap(),
             1e-6
         );
         assert_eq!(events[1].crossing, ZeroCrossing::Up);
         assert_close!(
             events[1].time,
-            start + TimeDelta::from_decimal_seconds(TAU).unwrap(),
+            start + TimeDelta::try_from_decimal_seconds(TAU).unwrap(),
             1e-6
         );
     }
@@ -228,7 +238,7 @@ mod tests {
         assert_eq!(windows[0].start, start);
         assert_close!(
             windows[0].end,
-            start + TimeDelta::from_decimal_seconds(PI).unwrap(),
+            start + TimeDelta::try_from_decimal_seconds(PI).unwrap(),
             1e-6
         );
     }

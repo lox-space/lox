@@ -34,35 +34,51 @@
 
 use std::cmp::Ordering;
 use std::fmt;
-use std::fmt::{Display, Formatter};
-use std::ops::{Add, Sub};
+use std::fmt::Display;
+use std::fmt::Formatter;
+use std::ops::Add;
+use std::ops::Sub;
 use std::str::FromStr;
 
 use itertools::Itertools;
+use lox_math::constants::f64::time;
 use lox_math::is_close::IsClose;
+use lox_math::types::units::Days;
 use num::ToPrimitive;
 use thiserror::Error;
 
-use calendar_dates::DateError;
-use constants::julian_dates::{
-    SECONDS_BETWEEN_J1950_AND_J2000, SECONDS_BETWEEN_JD_AND_J2000, SECONDS_BETWEEN_MJD_AND_J2000,
-};
-use lox_math::constants::f64::time;
-use lox_math::types::units::Days;
-use time_of_day::{CivilTime, TimeOfDay, TimeOfDayError};
-use time_scales::{Tai, Tcb, Tcg, Tdb, Tt, Ut1};
-
-use crate::calendar_dates::{CalendarDate, Date};
-use crate::deltas::{TimeDelta, ToDelta};
-use crate::julian_dates::{Epoch, JulianDate, Unit};
+use crate::calendar_dates::CalendarDate;
+use crate::calendar_dates::Date;
+use crate::calendar_dates::DateError;
+use crate::constants::julian_dates::SECONDS_BETWEEN_J1950_AND_J2000;
+use crate::constants::julian_dates::SECONDS_BETWEEN_JD_AND_J2000;
+use crate::constants::julian_dates::SECONDS_BETWEEN_MJD_AND_J2000;
+use crate::deltas::TimeDelta;
+use crate::deltas::ToDelta;
+use crate::julian_dates::Epoch;
+use crate::julian_dates::JulianDate;
+use crate::julian_dates::Unit;
 use crate::subsecond::Subsecond;
+use crate::time_of_day::CivilTime;
+use crate::time_of_day::TimeOfDay;
+use crate::time_of_day::TimeOfDayError;
+use crate::time_scales::DynTimeScale;
+use crate::time_scales::FromScale;
+use crate::time_scales::Tai;
+use crate::time_scales::Tcb;
+use crate::time_scales::Tcg;
+use crate::time_scales::Tdb;
 use crate::time_scales::TimeScale;
+use crate::time_scales::ToScale;
+use crate::time_scales::TryFromScale;
+use crate::time_scales::TryToScale;
+use crate::time_scales::Tt;
+use crate::time_scales::Ut1;
 
 pub mod calendar_dates;
 pub mod constants;
 pub mod deltas;
 pub mod julian_dates;
-pub mod prelude;
 #[cfg(feature = "python")]
 pub mod python;
 pub mod ranges;
@@ -71,7 +87,6 @@ pub mod subsecond;
 pub(crate) mod test_helpers;
 pub mod time_of_day;
 pub mod time_scales;
-pub mod transformations;
 pub mod ut1;
 pub mod utc;
 
@@ -127,6 +142,8 @@ pub struct Time<T: TimeScale> {
     seconds: i64,
     subsecond: Subsecond,
 }
+
+pub type DynTime = Time<DynTimeScale>;
 
 impl<T: TimeScale> Time<T> {
     /// Instantiates a [Time] in the given [TimeScale] from the count of seconds since J2000, subdivided
@@ -305,6 +322,53 @@ impl<T: TimeScale> Time<T> {
     /// Note that the underlying delta is simply copied – no time scale transformation takes place.
     pub fn with_scale<S: TimeScale>(&self, scale: S) -> Time<S> {
         Time::new(scale, self.seconds, self.subsecond)
+    }
+
+    pub fn try_from_scale<S, P>(
+        scale: T,
+        time: Time<S>,
+        provider: Option<&P>,
+    ) -> Result<Time<T>, T::Error>
+    where
+        S: TimeScale,
+        T: TimeScale + TryFromScale<S, P> + Copy,
+    {
+        let dt = time.to_delta();
+        Ok(Time::from_delta(
+            scale,
+            dt + scale.try_offset_from(time.scale, dt, provider)?,
+        ))
+    }
+
+    pub fn from_scale<S>(scale: T, time: Time<S>) -> Time<T>
+    where
+        S: TimeScale,
+        T: TimeScale + FromScale<S> + Copy,
+    {
+        let dt = time.to_delta();
+        Time::from_delta(scale, dt + scale.offset_from(time.scale, dt))
+    }
+
+    pub fn try_to_scale<S, P>(
+        &self,
+        scale: S,
+        provider: Option<&P>,
+    ) -> Result<Time<S>, <T as TryToScale<S, P>>::Error>
+    where
+        S: TimeScale + Copy,
+        T: TryToScale<S, P>,
+    {
+        let offset = self.scale.try_offset(scale, self.to_delta(), provider)?;
+        Ok(self.with_scale_and_delta(scale, offset))
+    }
+
+    pub fn to_scale<S>(&self, scale: S) -> Time<S>
+    where
+        S: TimeScale + Copy,
+        T: ToScale<S>,
+    {
+        let offset = self.scale.offset(scale, self.to_delta());
+        self.with_scale_and_delta(scale, offset)
     }
 
     /// Returns a new [Time] with the delta of `self` adjusted by `delta`, and time scale `scale`.
@@ -512,20 +576,6 @@ impl<T: TimeScale> CalendarDate for Time<T> {
         Date::from_seconds_since_j2000(self.seconds)
     }
 }
-
-pub trait TimeLike:
-    Sized
-    + Add<TimeDelta, Output = Self>
-    + CalendarDate
-    + CivilTime
-    + JulianDate
-    + Sub<Output = TimeDelta>
-    + Sub<TimeDelta, Output = Self>
-    + ToDelta
-{
-}
-
-impl<T: TimeScale> TimeLike for Time<T> {}
 
 /// `TimeBuilder` supports the construction of [Time] instances piecewise using the builder pattern.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]

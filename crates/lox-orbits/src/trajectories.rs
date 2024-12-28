@@ -4,23 +4,20 @@ use std::sync::Arc;
 use csv::Error;
 use glam::DVec3;
 use lox_ephem::Ephemeris;
+use lox_time::time_scales::{DynTimeScale, TimeScale};
 use thiserror::Error;
 
-use lox_bodies::{DynOrigin, Origin, RotationalElements};
+use lox_bodies::{DynOrigin, Origin};
 use lox_math::roots::Brent;
 use lox_math::series::{Series, SeriesError};
-use lox_time::time_scales::{Tai, Tdb};
-use lox_time::transformations::TryToScale;
-use lox_time::utc::leap_seconds::BuiltinLeapSeconds;
+use lox_time::time_scales::Tai;
 use lox_time::utc::Utc;
-use lox_time::{deltas::TimeDelta, Time, TimeLike};
+use lox_time::{deltas::TimeDelta, Time};
 
 use crate::events::{find_events, find_windows, Event, Window};
-use crate::frames::{BodyFixed, DynFrame, FrameTransformationProvider, Icrf, TryToFrame};
-use crate::{
-    frames::{CoordinateSystem, ReferenceFrame},
-    states::State,
-};
+use crate::frames::ReferenceFrame;
+use crate::frames::{DynFrame, Icrf};
+use crate::states::State;
 
 #[derive(Clone, Debug, PartialEq)]
 #[repr(transparent)]
@@ -49,7 +46,7 @@ pub enum TrajectoryError {
 }
 
 #[derive(Clone, Debug)]
-pub struct Trajectory<T: TimeLike, O: Origin, R: ReferenceFrame> {
+pub struct Trajectory<T: TimeScale, O: Origin, R: ReferenceFrame> {
     states: Vec<State<T, O, R>>,
     t: ArcVecF64,
     x: Series<ArcVecF64, Vec<f64>>,
@@ -60,11 +57,11 @@ pub struct Trajectory<T: TimeLike, O: Origin, R: ReferenceFrame> {
     vz: Series<ArcVecF64, Vec<f64>>,
 }
 
-pub type DynTrajectory<T> = Trajectory<T, DynOrigin, DynFrame>;
+pub type DynTrajectory = Trajectory<DynTimeScale, DynOrigin, DynFrame>;
 
 impl<T, O, R> Trajectory<T, O, R>
 where
-    T: TimeLike + Clone,
+    T: TimeScale + Clone,
     O: Origin + Clone,
     R: ReferenceFrame + Clone,
 {
@@ -106,15 +103,19 @@ where
         self.states.first().unwrap().origin()
     }
 
-    pub fn start_time(&self) -> T {
+    pub fn reference_frame(&self) -> R {
+        self.states.first().unwrap().reference_frame()
+    }
+
+    pub fn start_time(&self) -> Time<T> {
         self.states[0].time()
     }
 
-    pub fn end_time(&self) -> T {
+    pub fn end_time(&self) -> Time<T> {
         self.states.last().unwrap().time()
     }
 
-    pub fn times(&self) -> Vec<T> {
+    pub fn times(&self) -> Vec<Time<T>> {
         self.states.iter().map(|s| s.time()).collect()
     }
 
@@ -164,7 +165,7 @@ where
         )
     }
 
-    pub fn interpolate_at(&self, time: T) -> State<T, O, R> {
+    pub fn interpolate_at(&self, time: Time<T>) -> State<T, O, R> {
         self.interpolate(time - self.start_time())
     }
 
@@ -173,7 +174,7 @@ where
         find_events(
             |t| {
                 func(State::new(
-                    self.start_time() + TimeDelta::from_decimal_seconds(t).unwrap(),
+                    self.start_time() + TimeDelta::try_from_decimal_seconds(t).unwrap(),
                     self.position(t),
                     self.velocity(t),
                     self.origin(),
@@ -192,7 +193,7 @@ where
         find_windows(
             |t| {
                 func(State::new(
-                    self.start_time() + TimeDelta::from_decimal_seconds(t).unwrap(),
+                    self.start_time() + TimeDelta::try_from_decimal_seconds(t).unwrap(),
                     self.position(t),
                     self.velocity(t),
                     self.origin(),
@@ -209,10 +210,10 @@ where
 
 impl<T, O> Trajectory<T, O, Icrf>
 where
-    T: TimeLike + Clone,
-    O: Origin + Origin + Clone,
+    T: TimeScale + Clone,
+    O: Origin + Clone,
 {
-    pub fn to_origin<O1: Origin + Origin + Clone, E: Ephemeris>(
+    pub fn to_origin<O1: Origin + Clone, E: Ephemeris>(
         &self,
         target: O1,
         ephemeris: &E,
@@ -228,7 +229,7 @@ where
     }
 }
 
-impl<O, R> Trajectory<Time<Tai>, O, R>
+impl<O, R> Trajectory<Tai, O, R>
 where
     O: Origin + Clone,
     R: ReferenceFrame + Clone,
@@ -237,7 +238,7 @@ where
         csv: &str,
         origin: O,
         frame: R,
-    ) -> Result<Trajectory<Time<Tai>, O, R>, TrajectoryError> {
+    ) -> Result<Trajectory<Tai, O, R>, TrajectoryError> {
         let mut reader = csv::Reader::from_reader(csv.as_bytes());
         let mut states = Vec::new();
         for result in reader.records() {
@@ -249,8 +250,7 @@ where
             }
             let time: Time<Tai> = Utc::from_iso(record.get(0).unwrap())
                 .map_err(|e| TrajectoryError::CsvError(e.to_string()))?
-                .try_to_scale(Tai, &BuiltinLeapSeconds)
-                .map_err(|e| TrajectoryError::CsvError(e.to_string()))?;
+                .to_time();
             let x = record
                 .get(1)
                 .unwrap()
@@ -302,43 +302,10 @@ where
     }
 }
 
-impl<T, O, R> CoordinateSystem<R> for Trajectory<T, O, R>
-where
-    T: TimeLike,
-    O: Origin,
-    R: ReferenceFrame + Clone,
-{
-    fn reference_frame(&self) -> R {
-        self.states[0].reference_frame()
-    }
-}
-
 #[derive(Error, Debug)]
 pub enum TrajectoryTransformationError {
     #[error(transparent)]
     TrajectoryError(#[from] TrajectoryError),
     #[error("state transformation failed: {0}")]
     StateTransformationError(String),
-}
-
-impl<T, O, R, P> TryToFrame<BodyFixed<R>, P> for Trajectory<T, O, Icrf>
-where
-    T: TryToScale<Tdb, P> + TimeLike + Clone,
-    O: Origin + Clone,
-    R: RotationalElements + Clone,
-    P: FrameTransformationProvider,
-{
-    type Output = Trajectory<T, O, BodyFixed<R>>;
-    type Error = TrajectoryTransformationError;
-
-    fn try_to_frame(&self, frame: BodyFixed<R>, provider: &P) -> Result<Self::Output, Self::Error> {
-        let mut states: Vec<State<T, O, BodyFixed<R>>> = Vec::with_capacity(self.states.len());
-        for state in &self.states {
-            let state = state.try_to_frame(frame.clone(), provider).map_err(|e| {
-                TrajectoryTransformationError::StateTransformationError(e.to_string())
-            })?;
-            states.push(state)
-        }
-        Ok(Trajectory::new(&states)?)
-    }
 }

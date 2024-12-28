@@ -13,9 +13,10 @@ use glam::{DMat3, DVec3};
 
 use lox_bodies::{DynOrigin, PointMass, TryPointMass, UndefinedOriginPropertyError};
 use lox_time::deltas::TimeDelta;
-use lox_time::TimeLike;
+use lox_time::time_scales::{DynTimeScale, TimeScale};
+use lox_time::{DynTime, Time};
 
-use crate::frames::{CoordinateSystem, DynFrame, Icrf, ReferenceFrame};
+use crate::frames::{DynFrame, Icrf, ReferenceFrame};
 use crate::states::State;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -29,8 +30,8 @@ pub(crate) struct KeplerianElements {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Keplerian<T: TimeLike, O: TryPointMass, R: ReferenceFrame> {
-    time: T,
+pub struct Keplerian<T: TimeScale, O: TryPointMass, R: ReferenceFrame> {
+    time: Time<T>,
     origin: O,
     frame: R,
     semi_major_axis: f64,
@@ -41,16 +42,16 @@ pub struct Keplerian<T: TimeLike, O: TryPointMass, R: ReferenceFrame> {
     true_anomaly: f64,
 }
 
-pub type DynKeplerian<T> = Keplerian<T, DynOrigin, DynFrame>;
+pub type DynKeplerian = Keplerian<DynTimeScale, DynOrigin, DynFrame>;
 
 impl<T, O> Keplerian<T, O, Icrf>
 where
-    T: TimeLike,
+    T: TimeScale,
     O: PointMass,
 {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        time: T,
+        time: Time<T>,
         origin: O,
         semi_major_axis: f64,
         eccentricity: f64,
@@ -73,13 +74,10 @@ where
     }
 }
 
-impl<T> DynKeplerian<T>
-where
-    T: TimeLike,
-{
+impl DynKeplerian {
     #[allow(clippy::too_many_arguments)]
     pub fn with_dynamic(
-        time: T,
+        time: DynTime,
         origin: DynOrigin,
         semi_major_axis: f64,
         eccentricity: f64,
@@ -105,7 +103,7 @@ where
 
 impl<T, O, R> Keplerian<T, O, R>
 where
-    T: TimeLike,
+    T: TimeScale,
     O: TryPointMass,
     R: ReferenceFrame,
 {
@@ -116,7 +114,14 @@ where
         self.origin.clone()
     }
 
-    pub fn time(&self) -> T
+    fn reference_frame(&self) -> R
+    where
+        R: Clone,
+    {
+        self.frame.clone()
+    }
+
+    pub fn time(&self) -> Time<T>
     where
         T: Clone,
     {
@@ -176,21 +181,13 @@ where
     pub fn orbital_period(&self) -> TimeDelta {
         let mu = self.gravitational_parameter();
         let a = self.semi_major_axis();
-        TimeDelta::from_decimal_seconds(TAU * (a.powi(3) / mu).sqrt()).unwrap()
-    }
-}
-
-impl<T: TimeLike, O: TryPointMass, R: ReferenceFrame + Clone> CoordinateSystem<R>
-    for Keplerian<T, O, R>
-{
-    fn reference_frame(&self) -> R {
-        self.frame.clone()
+        TimeDelta::try_from_decimal_seconds(TAU * (a.powi(3) / mu).sqrt()).unwrap()
     }
 }
 
 impl<T, O, R> Keplerian<T, O, R>
 where
-    T: TimeLike + Clone,
+    T: TimeScale + Clone,
     O: TryPointMass + Clone,
     R: ReferenceFrame + Clone,
 {

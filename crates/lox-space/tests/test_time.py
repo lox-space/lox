@@ -6,20 +6,20 @@ def test_time(provider):
     tai_exp = lox.Time("TAI", 2000, 1, 1)
     tai_act = lox.Time.from_iso("2000-01-01T00:00:00.000 TAI")
     assert tai_exp == tai_act
-    tai_act = tai_exp.to_tai()
+    tai_act = tai_exp.to_scale("TAI")
     assert tai_exp == tai_act
-    tai_act = tai_exp.to_tcb().to_tai()
+    tai_act = tai_exp.to_scale("TCB").to_scale("TAI")
     assert tai_exp.isclose(tai_act)
-    tai_act = tai_exp.to_tcg().to_tai()
+    tai_act = tai_exp.to_scale("TCG").to_scale("TAI")
     assert tai_exp.isclose(tai_act)
-    tai_act = tai_exp.to_tdb().to_tai()
+    tai_act = tai_exp.to_scale("TDB").to_scale("TAI")
     assert tai_exp.isclose(tai_act)
-    tai_act = tai_exp.to_tt().to_tai()
+    tai_act = tai_exp.to_scale("TT").to_scale("TAI")
     assert tai_exp.isclose(tai_act)
-    tai_act = tai_exp.to_ut1(provider).to_tai(provider)
+    tai_act = tai_exp.to_scale("UT1", provider).to_scale("TAI", provider)
     assert tai_exp.isclose(tai_act)
     with pytest.raises(ValueError):
-        tai_exp.to_ut1()
+        tai_exp.to_scale("UT1")
     tai1 = lox.Time("TAI", 2000, 1, 1, 0, 0, 0.5)
     assert tai1 > tai_exp
     assert tai1 >= tai_exp
@@ -40,17 +40,17 @@ def test_utc(provider):
     assert utc_exp == utc_act
     utc_act = lox.UTC.from_iso("2000-01-01T00:00:00.000 UTC")
     assert utc_exp == utc_act
-    utc_act = utc_exp.to_tai().to_utc()
+    utc_act = utc_exp.to_scale("TAI").to_utc()
     assert utc_exp == utc_act
-    utc_act = utc_exp.to_tcb().to_utc()
+    utc_act = utc_exp.to_scale("TCB").to_utc()
     assert utc_exp == utc_act
-    utc_act = utc_exp.to_tcg().to_utc()
+    utc_act = utc_exp.to_scale("TCG").to_utc()
     assert utc_exp == utc_act
-    utc_act = utc_exp.to_tdb().to_utc()
+    utc_act = utc_exp.to_scale("TDB").to_utc()
     assert utc_exp == utc_act
-    utc_act = utc_exp.to_tt().to_utc()
+    utc_act = utc_exp.to_scale("TT").to_utc()
     assert utc_exp == utc_act
-    utc_act = utc_exp.to_ut1(provider).to_utc(provider)
+    utc_act = utc_exp.to_scale("UT1", provider).to_utc(provider)
     assert utc_exp == utc_act
 
 

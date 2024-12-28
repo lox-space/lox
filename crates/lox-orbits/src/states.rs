@@ -5,6 +5,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
+
+use std::f64::consts::{PI, TAU};
+use std::ops::Sub;
+
 use glam::{DMat3, DVec3};
 use itertools::Itertools;
 use lox_bodies::{
@@ -12,40 +16,37 @@ use lox_bodies::{
     UndefinedOriginPropertyError,
 };
 use lox_ephem::{path_from_ids, Ephemeris};
-use lox_math::glam::Azimuth;
-use lox_math::math::{mod_two_pi, normalize_two_pi};
-use lox_math::roots::{BracketError, FindRoot, Secant};
-use lox_time::{julian_dates::JulianDate, time_scales::Tdb, transformations::TryToScale, TimeLike};
-use std::f64::consts::{PI, TAU};
-use std::ops::Sub;
+use lox_math::{
+    glam::Azimuth,
+    math::{mod_two_pi, normalize_two_pi},
+    roots::{BracketError, FindRoot, Secant},
+};
+use lox_time::{julian_dates::JulianDate, time_scales::DynTimeScale, time_scales::TimeScale, Time};
 use thiserror::Error;
 
 use crate::anomalies::{eccentric_to_true, hyperbolic_to_true};
 use crate::elements::{is_circular, is_equatorial, DynKeplerian, Keplerian, KeplerianElements};
-use crate::frames::{
-    BodyFixed, CoordinateSystem, DynFrame, FrameTransformationProvider, Icrf, ReferenceFrame,
-    TryToFrame,
-};
+use crate::frames::{DynFrame, Iau, Icrf, ReferenceFrame, TryRotateTo};
 use crate::ground::{DynGroundLocation, GroundLocation};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct State<T: TimeLike, O: Origin, R: ReferenceFrame> {
-    time: T,
+pub struct State<T: TimeScale, O: Origin, R: ReferenceFrame> {
+    time: Time<T>,
     origin: O,
     frame: R,
     position: DVec3,
     velocity: DVec3,
 }
 
-pub type DynState<T> = State<T, DynOrigin, DynFrame>;
+pub type DynState = State<DynTimeScale, DynOrigin, DynFrame>;
 
 impl<T, O, R> State<T, O, R>
 where
-    T: TimeLike,
+    T: TimeScale,
     O: Origin,
     R: ReferenceFrame,
 {
-    pub fn new(time: T, position: DVec3, velocity: DVec3, origin: O, frame: R) -> Self {
+    pub fn new(time: Time<T>, position: DVec3, velocity: DVec3, origin: O, frame: R) -> Self {
         Self {
             time,
             origin,
@@ -62,7 +63,14 @@ where
         self.origin.clone()
     }
 
-    pub fn time(&self) -> T
+    pub fn reference_frame(&self) -> R
+    where
+        R: Clone,
+    {
+        self.frame.clone()
+    }
+
+    pub fn time(&self) -> Time<T>
     where
         T: Clone,
     {
@@ -75,6 +83,24 @@ where
 
     pub fn velocity(&self) -> DVec3 {
         self.velocity
+    }
+
+    pub fn try_to_frame<R1, P>(
+        &self,
+        frame: R1,
+        provider: Option<&P>,
+    ) -> Result<State<T, O, R1>, R::Error>
+    where
+        R: TryRotateTo<T, R1, P>,
+        R1: ReferenceFrame + Clone,
+        O: Clone,
+        T: Clone,
+    {
+        let rot = self
+            .frame
+            .try_rotation(frame.clone(), self.time(), provider)?;
+        let (r1, v1) = rot.rotate_state(self.position, self.velocity);
+        Ok(State::new(self.time(), r1, v1, self.origin(), frame))
     }
 }
 
@@ -89,7 +115,7 @@ fn rotation_lvlh(position: DVec3, velocity: DVec3) -> DMat3 {
 
 impl<T, O> State<T, O, Icrf>
 where
-    T: TimeLike,
+    T: TimeScale,
     O: Origin,
 {
     pub fn rotation_lvlh(&self) -> DMat3 {
@@ -97,10 +123,7 @@ where
     }
 }
 
-impl<T> DynState<T>
-where
-    T: TimeLike,
-{
+impl DynState {
     pub fn try_rotation_lvlh(&self) -> Result<DMat3, &'static str> {
         if self.frame != DynFrame::Icrf {
             // TODO: better error type
@@ -146,9 +169,9 @@ fn rv_to_lla(r: DVec3, r_eq: f64, f: f64) -> Result<LonLatAlt, BracketError> {
     Ok((lon, lat, alt))
 }
 
-impl<T, O> State<T, O, BodyFixed<O>>
+impl<T, O> State<T, O, Iau<O>>
 where
-    T: TimeLike,
+    T: TimeScale,
     O: Origin + RotationalElements + Spheroid + Clone,
 {
     pub fn to_ground_location(&self) -> Result<GroundLocation<O>, BracketError> {
@@ -171,7 +194,7 @@ pub enum StateToDynGroundError {
     NonBodyFixedFrame(String),
 }
 
-impl<T: TimeLike + Clone> DynState<T> {
+impl DynState {
     pub fn to_dyn_ground_location(&self) -> Result<DynGroundLocation, StateToDynGroundError> {
         if !self.frame.is_rotating() {
             return Err(StateToDynGroundError::NonBodyFixedFrame(
@@ -195,7 +218,7 @@ impl<T: TimeLike + Clone> DynState<T> {
 
 impl<T, O, R> Sub for State<T, O, R>
 where
-    T: TimeLike,
+    T: TimeScale,
     O: Origin,
     R: ReferenceFrame,
 {
@@ -216,20 +239,9 @@ fn eccentricity_vector(r: DVec3, v: DVec3, mu: f64) -> DVec3 {
     ((v2 - mu / rm) * r - rv * v) / mu
 }
 
-impl<T, O, R> CoordinateSystem<R> for State<T, O, R>
-where
-    T: TimeLike,
-    O: Origin,
-    R: ReferenceFrame + Clone,
-{
-    fn reference_frame(&self) -> R {
-        self.frame.clone()
-    }
-}
-
 impl<T, O> State<T, O, Icrf>
 where
-    T: TimeLike + Clone,
+    T: TimeScale + Clone,
     O: Origin + Clone,
 {
     pub fn to_origin<O1: Origin + Clone, E: Ephemeris>(
@@ -259,15 +271,12 @@ where
     }
 }
 
-impl<T> DynState<T>
-where
-    T: TimeLike + Clone,
-{
-    pub fn to_origin_dynamic<O1: Origin + Clone, E: Ephemeris>(
+impl DynState {
+    pub fn to_origin_dynamic<E: Ephemeris>(
         &self,
-        target: O1,
+        target: DynOrigin,
         ephemeris: &E,
-    ) -> Result<State<T, O1, DynFrame>, E::Error> {
+    ) -> Result<DynState, E::Error> {
         // TODO: Fix time scale
         let epoch = self.time().seconds_since_j2000();
         let mut pos = self.position();
@@ -287,48 +296,6 @@ where
         pos -= pos_eph;
         vel -= vel_eph;
         Ok(State::new(self.time(), pos, vel, target, DynFrame::Icrf))
-    }
-}
-
-impl<T, O, R, U> TryToFrame<BodyFixed<R>, U> for State<T, O, Icrf>
-where
-    T: TryToScale<Tdb, U> + TimeLike + Clone,
-    O: Origin + Clone,
-    R: RotationalElements + Clone,
-    U: FrameTransformationProvider,
-{
-    type Output = State<T, O, BodyFixed<R>>;
-    type Error = U::Error;
-
-    fn try_to_frame(&self, frame: BodyFixed<R>, provider: &U) -> Result<Self::Output, U::Error> {
-        let seconds = self
-            .time()
-            .try_to_scale(Tdb, provider)?
-            .seconds_since_j2000();
-        let rot = frame.rotation(seconds);
-        let (pos, vel) = rot.rotate_state(self.position, self.velocity);
-        Ok(State::new(self.time(), pos, vel, self.origin(), frame))
-    }
-}
-
-impl<T, O, R, U> TryToFrame<Icrf, U> for State<T, O, BodyFixed<R>>
-where
-    T: TryToScale<Tdb, U> + TimeLike + Clone,
-    O: Origin + Clone,
-    R: RotationalElements,
-    U: FrameTransformationProvider,
-{
-    type Output = State<T, O, Icrf>;
-    type Error = U::Error;
-
-    fn try_to_frame(&self, frame: Icrf, provider: &U) -> Result<Self::Output, U::Error> {
-        let seconds = self
-            .time()
-            .try_to_scale(Tdb, provider)?
-            .seconds_since_j2000();
-        let rot = self.frame.rotation(seconds).transpose();
-        let (pos, vel) = rot.rotate_state(self.position, self.velocity);
-        Ok(State::new(self.time(), pos, vel, self.origin(), frame))
     }
 }
 
@@ -395,7 +362,7 @@ pub(crate) fn rv_to_keplerian(r: DVec3, v: DVec3, mu: f64) -> KeplerianElements 
 
 impl<T, O> State<T, O, Icrf>
 where
-    T: TimeLike + Clone,
+    T: TimeScale + Clone,
     O: PointMass + Clone,
 {
     pub fn to_keplerian(&self) -> Keplerian<T, O, Icrf> {
@@ -417,11 +384,8 @@ where
     }
 }
 
-impl<T> DynState<T>
-where
-    T: TimeLike + Clone,
-{
-    pub fn try_to_keplerian(&self) -> Result<DynKeplerian<T>, UndefinedOriginPropertyError> {
+impl DynState {
+    pub fn try_to_keplerian(&self) -> Result<DynKeplerian, UndefinedOriginPropertyError> {
         let mu = self.origin.try_gravitational_parameter()?;
 
         let r = self.position();
@@ -451,15 +415,13 @@ mod tests {
     use lox_ephem::spk::parser::{parse_daf_spk, Spk};
     use lox_math::assert_close;
     use lox_math::is_close::IsClose;
-    use lox_time::{time, time_scales::Tdb, transformations::ToTai, utc::Utc, Time};
-
-    use crate::frames::NoOpFrameTransformationProvider;
+    use lox_time::{time, time_scales::Tdb, utc::Utc, Time};
 
     use super::*;
 
     #[test]
     fn test_bodyfixed() {
-        let iau_jupiter = BodyFixed(Jupiter);
+        let iau_jupiter = Iau(Jupiter);
 
         let r0 = DVec3::new(6068.27927, -1692.84394, -2516.61918);
         let v0 = DVec3::new(-0.660415582, 5.495938726, -5.303093233);
@@ -468,12 +430,8 @@ mod tests {
 
         let tdb = time!(Tdb, 2000, 1, 1, 12).unwrap();
         let s = State::new(tdb, r0, v0, Jupiter, Icrf);
-        let s1 = s
-            .try_to_frame(iau_jupiter, &NoOpFrameTransformationProvider)
-            .unwrap();
-        let s0 = s1
-            .try_to_frame(Icrf, &NoOpFrameTransformationProvider)
-            .unwrap();
+        let s1 = s.try_to_frame(iau_jupiter, None::<&()>).unwrap();
+        let s0 = s1.try_to_frame(Icrf, None::<&()>).unwrap();
 
         assert_float_eq!(s0.position().x, r0.x, rel <= 1e-8);
         assert_float_eq!(s0.position().y, r0.y, rel <= 1e-8);
@@ -528,7 +486,7 @@ mod tests {
         let position = DVec3::new(3359.927, -2398.072, 5153.0);
         let velocity = DVec3::new(5.0657, 5.485, -0.744);
         let time = time!(Tdb, 2012, 7, 1).unwrap();
-        let state = State::new(time, position, velocity, Earth, BodyFixed(Earth));
+        let state = State::new(time, position, velocity, Earth, Iau(Earth));
         let ground = state.to_ground_location().unwrap();
         assert_float_eq!(ground.latitude(), lat_exp, rel <= 1e-4);
         assert_float_eq!(ground.longitude(), lon_exp, rel <= 1e-4);
@@ -555,7 +513,7 @@ mod tests {
         let v_exp = v - v_venus;
 
         let utc = Utc::from_iso("2016-05-30T12:00:00.000").unwrap();
-        let tai = utc.to_tai();
+        let tai = utc.to_time();
 
         let s_earth = State::new(tai, r, v, Earth, Icrf);
         let s_venus = s_earth.to_origin(Venus, ephemeris()).unwrap();

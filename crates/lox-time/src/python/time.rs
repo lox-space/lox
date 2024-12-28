@@ -19,18 +19,16 @@ use lox_math::is_close::IsClose;
 use crate::calendar_dates::{CalendarDate, Date};
 use crate::deltas::{TimeDelta, ToDelta};
 use crate::julian_dates::{Epoch, JulianDate, Unit};
-use crate::prelude::{CivilTime, Tai, Tcb, Tcg, Tdb, TimeScale, Tt, Ut1};
 use crate::python::deltas::PyTimeDelta;
-use crate::python::time_scales::PyTimeScale;
-use crate::python::ut1::{PyDeltaUt1Provider, PyUt1Provider};
-use crate::python::utc::PyUtc;
+use crate::python::ut1::PyUt1Provider;
 use crate::subsecond::{InvalidSubsecond, Subsecond};
-use crate::time_of_day::TimeOfDay;
-use crate::transformations::{ToTai, ToTcb, ToTcg, ToTdb, ToTt, TryToScale};
+use crate::time_of_day::{CivilTime, TimeOfDay};
+use crate::time_scales::{DynTimeScale, Tai};
 use crate::utc::transformations::ToUtc;
-use crate::{Time, TimeError, TimeLike};
+use crate::{DynTime, Time, TimeError};
 
-use super::ut1::PyNoOpOffsetProvider;
+use super::time_scales::PyTimeScale;
+use super::utc::PyUtc;
 
 impl From<InvalidSubsecond> for PyErr {
     fn from(value: InvalidSubsecond) -> Self {
@@ -73,14 +71,14 @@ impl FromStr for Unit {
 
 #[pyclass(name = "Time", module = "lox_space", frozen)]
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct PyTime(pub Time<PyTimeScale>);
+pub struct PyTime(pub DynTime);
 
 #[pymethods]
 impl PyTime {
     #[new]
     #[pyo3(signature=(scale, year, month, day, hour = 0, minute = 0, seconds = 0.0))]
     pub fn new(
-        scale: &str,
+        scale: &Bound<'_, PyAny>,
         year: i64,
         month: u8,
         day: u8,
@@ -88,7 +86,7 @@ impl PyTime {
         minute: u8,
         seconds: f64,
     ) -> PyResult<PyTime> {
-        let scale: PyTimeScale = scale.parse()?;
+        let scale: DynTimeScale = scale.try_into()?;
         let time = Time::builder_with_scale(scale)
             .with_ymd(year, month, day)
             .with_hms(hour, minute, seconds)
@@ -100,11 +98,11 @@ impl PyTime {
     #[pyo3(signature = (scale, jd, epoch = "jd"))]
     pub fn from_julian_date(
         _cls: &Bound<'_, PyType>,
-        scale: &str,
+        scale: &Bound<'_, PyAny>,
         jd: f64,
         epoch: &str,
     ) -> PyResult<Self> {
-        let scale: PyTimeScale = scale.parse()?;
+        let scale: DynTimeScale = scale.try_into()?;
         let epoch: Epoch = epoch.parse()?;
         Ok(Self(Time::from_julian_date(scale, jd, epoch)?))
     }
@@ -112,11 +110,11 @@ impl PyTime {
     #[classmethod]
     pub fn from_two_part_julian_date(
         _cls: &Bound<'_, PyType>,
-        scale: &str,
+        scale: &Bound<'_, PyAny>,
         jd1: f64,
         jd2: f64,
     ) -> PyResult<Self> {
-        let scale: PyTimeScale = scale.parse()?;
+        let scale: DynTimeScale = scale.try_into()?;
         Ok(Self(Time::from_two_part_julian_date(scale, jd1, jd2)?))
     }
 
@@ -124,14 +122,14 @@ impl PyTime {
     #[pyo3(signature=(scale, year, day, hour=0, minute=0, seconds=0.0))]
     pub fn from_day_of_year(
         _cls: &Bound<'_, PyType>,
-        scale: &str,
+        scale: &Bound<'_, PyAny>,
         year: i64,
         day: u16,
         hour: u8,
         minute: u8,
         seconds: f64,
     ) -> PyResult<PyTime> {
-        let scale: PyTimeScale = scale.parse()?;
+        let scale: DynTimeScale = scale.try_into()?;
         let time = Time::builder_with_scale(scale)
             .with_doy(year, day)
             .with_hms(hour, minute, seconds)
@@ -141,14 +139,13 @@ impl PyTime {
 
     #[classmethod]
     #[pyo3(signature = (iso, scale=None))]
-    pub fn from_iso(_cls: &Bound<'_, PyType>, iso: &str, scale: Option<&str>) -> PyResult<PyTime> {
-        let scale: PyTimeScale = match scale {
-            Some(scale) => scale.parse()?,
-            None => match iso.split_once(char::is_whitespace) {
-                Some((_, scale)) => scale.parse()?,
-                None => PyTimeScale::Tai,
-            },
-        };
+    pub fn from_iso(
+        _cls: &Bound<'_, PyType>,
+        iso: &str,
+        scale: Option<&Bound<'_, PyAny>>,
+    ) -> PyResult<PyTime> {
+        let scale: DynTimeScale =
+            scale.map_or(Ok(DynTimeScale::default()), |scale| scale.try_into())?;
         let time = Time::from_iso(scale, iso)?;
         Ok(PyTime(time))
     }
@@ -156,11 +153,11 @@ impl PyTime {
     #[classmethod]
     pub fn from_seconds(
         _cls: &Bound<'_, PyType>,
-        scale: &str,
+        scale: &Bound<'_, PyAny>,
         seconds: i64,
         subsecond: f64,
     ) -> PyResult<PyTime> {
-        let scale: PyTimeScale = scale.parse()?;
+        let scale: DynTimeScale = scale.try_into()?;
         let subsecond = Subsecond::new(subsecond)?;
         let time = Time::new(scale, seconds, subsecond);
         Ok(PyTime(time))
@@ -184,7 +181,7 @@ impl PyTime {
     pub fn __repr__(&self) -> String {
         format!(
             "Time(\"{}\", {}, {}, {}, {}, {}, {})",
-            self.scale(),
+            self.scale().abbreviation(),
             self.0.year(),
             self.0.month(),
             self.0.day(),
@@ -244,8 +241,8 @@ impl PyTime {
         self.0.two_part_julian_date()
     }
 
-    pub fn scale(&self) -> &'static str {
-        self.0.scale().abbreviation()
+    pub fn scale(&self) -> PyTimeScale {
+        PyTimeScale(self.0.scale())
     }
 
     pub fn year(&self) -> i64 {
@@ -300,67 +297,32 @@ impl PyTime {
         self.0.decimal_seconds()
     }
 
-    #[pyo3(signature = (provider=None))]
-    pub fn to_tai(&self, provider: Option<&Bound<'_, PyUt1Provider>>) -> PyResult<PyTime> {
-        let time = match provider {
-            Some(provider) => self.try_to_scale(Tai, provider.get())?,
-            None => self.try_to_scale(Tai, &PyNoOpOffsetProvider)?,
-        };
-        Ok(PyTime(time.with_scale(PyTimeScale::Tai)))
-    }
-
-    #[pyo3(signature = (provider=None))]
-    pub fn to_tcb(&self, provider: Option<&Bound<'_, PyUt1Provider>>) -> PyResult<PyTime> {
-        let time = match provider {
-            Some(provider) => self.try_to_scale(Tcb, provider.get())?,
-            None => self.try_to_scale(Tcb, &PyNoOpOffsetProvider)?,
-        };
-        Ok(PyTime(time.with_scale(PyTimeScale::Tcb)))
-    }
-
-    #[pyo3(signature = (provider=None))]
-    pub fn to_tcg(&self, provider: Option<&Bound<'_, PyUt1Provider>>) -> PyResult<PyTime> {
-        let time = match provider {
-            Some(provider) => self.try_to_scale(Tcg, provider.get())?,
-            None => self.try_to_scale(Tcg, &PyNoOpOffsetProvider)?,
-        };
-        Ok(PyTime(time.with_scale(PyTimeScale::Tcg)))
-    }
-
-    #[pyo3(signature = (provider=None))]
-    pub fn to_tdb(&self, provider: Option<&Bound<'_, PyUt1Provider>>) -> PyResult<PyTime> {
-        let time = match provider {
-            Some(provider) => self.try_to_scale(Tdb, provider.get())?,
-            None => self.try_to_scale(Tdb, &PyNoOpOffsetProvider)?,
-        };
-        Ok(PyTime(time.with_scale(PyTimeScale::Tdb)))
-    }
-
-    #[pyo3(signature = (provider=None))]
-    pub fn to_tt(&self, provider: Option<&Bound<'_, PyUt1Provider>>) -> PyResult<PyTime> {
-        let time = match provider {
-            Some(provider) => self.try_to_scale(Tt, provider.get())?,
-            None => self.try_to_scale(Tt, &PyNoOpOffsetProvider)?,
-        };
-        Ok(PyTime(time.with_scale(PyTimeScale::Tt)))
-    }
-
-    #[pyo3(signature = (provider=None))]
-    pub fn to_ut1(&self, provider: Option<&Bound<'_, PyUt1Provider>>) -> PyResult<PyTime> {
-        let time = match provider {
-            Some(provider) => self.try_to_scale(Ut1, provider.get())?,
-            None => self.try_to_scale(Ut1, &PyNoOpOffsetProvider)?,
-        };
-        Ok(PyTime(time.with_scale(PyTimeScale::Ut1)))
+    #[pyo3(signature = (scale, provider=None))]
+    pub fn to_scale(
+        &self,
+        scale: &Bound<'_, PyAny>,
+        provider: Option<&Bound<'_, PyUt1Provider>>,
+    ) -> PyResult<PyTime> {
+        let scale: DynTimeScale = scale.try_into()?;
+        let provider = provider.map(|p| &p.get().0);
+        Ok(PyTime(
+            self.0
+                .try_to_scale(scale, provider)
+                // FIXME: Better error type
+                .map_err(|err| PyValueError::new_err(err.to_string()))?,
+        ))
     }
 
     #[pyo3(signature = (provider=None))]
     pub fn to_utc(&self, provider: Option<&Bound<'_, PyUt1Provider>>) -> PyResult<PyUtc> {
-        let tai = match provider {
-            Some(provider) => self.try_to_scale(Tai, provider.get())?,
-            None => self.try_to_scale(Tai, &PyNoOpOffsetProvider)?,
-        };
-        Ok(PyUtc(tai.to_utc()?))
+        let provider = provider.map(|p| &p.get().0);
+        Ok(PyUtc(
+            self.0
+                .try_to_scale(Tai, provider)
+                // FIXME: Better error type
+                .map_err(|err| PyValueError::new_err(err.to_string()))?
+                .to_utc()?,
+        ))
     }
 }
 
@@ -412,86 +374,6 @@ impl CivilTime for PyTime {
     }
 }
 
-impl TimeLike for PyTime {}
-
-impl<T: PyDeltaUt1Provider> TryToScale<Tai, T> for PyTime {
-    fn try_to_scale(&self, _scale: Tai, provider: &T) -> PyResult<Time<Tai>> {
-        match self.0.scale() {
-            PyTimeScale::Tai => Ok(self.0.with_scale(Tai)),
-            PyTimeScale::Tcb => Ok(self.0.with_scale(Tcb).to_tai()),
-            PyTimeScale::Tcg => Ok(self.0.with_scale(Tcg).to_tai()),
-            PyTimeScale::Tdb => Ok(self.0.with_scale(Tdb).to_tai()),
-            PyTimeScale::Tt => Ok(self.0.with_scale(Tt).to_tai()),
-            PyTimeScale::Ut1 => self.0.with_scale(Ut1).try_to_scale(Tai, provider),
-        }
-    }
-}
-
-impl<T: PyDeltaUt1Provider> TryToScale<Tcg, T> for PyTime {
-    fn try_to_scale(&self, _scale: Tcg, provider: &T) -> PyResult<Time<Tcg>> {
-        match self.0.scale() {
-            PyTimeScale::Tai => Ok(self.0.with_scale(Tai).to_tcg()),
-            PyTimeScale::Tcb => Ok(self.0.with_scale(Tcb).to_tcg()),
-            PyTimeScale::Tcg => Ok(self.0.with_scale(Tcg)),
-            PyTimeScale::Tdb => Ok(self.0.with_scale(Tdb).to_tcg()),
-            PyTimeScale::Tt => Ok(self.0.with_scale(Tt).to_tcg()),
-            PyTimeScale::Ut1 => self.0.with_scale(Ut1).try_to_scale(Tcg, provider),
-        }
-    }
-}
-
-impl<T: PyDeltaUt1Provider> TryToScale<Tcb, T> for PyTime {
-    fn try_to_scale(&self, _scale: Tcb, provider: &T) -> PyResult<Time<Tcb>> {
-        match self.0.scale() {
-            PyTimeScale::Tai => Ok(self.0.with_scale(Tai).to_tcb()),
-            PyTimeScale::Tcb => Ok(self.0.with_scale(Tcb)),
-            PyTimeScale::Tcg => Ok(self.0.with_scale(Tcg).to_tcb()),
-            PyTimeScale::Tdb => Ok(self.0.with_scale(Tdb).to_tcb()),
-            PyTimeScale::Tt => Ok(self.0.with_scale(Tt).to_tcb()),
-            PyTimeScale::Ut1 => self.0.with_scale(Ut1).try_to_scale(Tcb, provider),
-        }
-    }
-}
-
-impl<T: PyDeltaUt1Provider> TryToScale<Tdb, T> for PyTime {
-    fn try_to_scale(&self, _scale: Tdb, provider: &T) -> Result<Time<Tdb>, T::Error> {
-        match self.0.scale() {
-            PyTimeScale::Tai => Ok(self.0.with_scale(Tai).to_tdb()),
-            PyTimeScale::Tcb => Ok(self.0.with_scale(Tcb).to_tdb()),
-            PyTimeScale::Tcg => Ok(self.0.with_scale(Tcg).to_tdb()),
-            PyTimeScale::Tdb => Ok(self.0.with_scale(Tdb)),
-            PyTimeScale::Tt => Ok(self.0.with_scale(Tt).to_tdb()),
-            PyTimeScale::Ut1 => self.0.with_scale(Ut1).try_to_scale(Tdb, provider),
-        }
-    }
-}
-
-impl<T: PyDeltaUt1Provider> TryToScale<Tt, T> for PyTime {
-    fn try_to_scale(&self, _scale: Tt, provider: &T) -> PyResult<Time<Tt>> {
-        match self.0.scale() {
-            PyTimeScale::Tai => Ok(self.0.with_scale(Tai).to_tt()),
-            PyTimeScale::Tcb => Ok(self.0.with_scale(Tcb).to_tt()),
-            PyTimeScale::Tcg => Ok(self.0.with_scale(Tcg).to_tt()),
-            PyTimeScale::Tdb => Ok(self.0.with_scale(Tdb).to_tt()),
-            PyTimeScale::Tt => Ok(self.0.with_scale(Tt)),
-            PyTimeScale::Ut1 => self.0.with_scale(Ut1).try_to_scale(Tt, provider),
-        }
-    }
-}
-
-impl<T: PyDeltaUt1Provider> TryToScale<Ut1, T> for PyTime {
-    fn try_to_scale(&self, _scale: Ut1, provider: &T) -> PyResult<Time<Ut1>> {
-        match self.0.scale() {
-            PyTimeScale::Tai => self.0.with_scale(Tai).try_to_scale(Ut1, provider),
-            PyTimeScale::Tcb => self.0.with_scale(Tcb).try_to_scale(Ut1, provider),
-            PyTimeScale::Tcg => self.0.with_scale(Tcg).try_to_scale(Ut1, provider),
-            PyTimeScale::Tdb => self.0.with_scale(Tdb).try_to_scale(Ut1, provider),
-            PyTimeScale::Tt => self.0.with_scale(Tt).try_to_scale(Ut1, provider),
-            PyTimeScale::Ut1 => Ok(self.0.with_scale(Ut1)),
-        }
-    }
-}
-
 impl IsClose for PyTime {
     const DEFAULT_RELATIVE: f64 = 1e-10;
 
@@ -505,23 +387,26 @@ impl IsClose for PyTime {
 #[cfg(test)]
 mod tests {
     use float_eq::assert_float_eq;
-    use pyo3::{types::PyDict, Python};
+    use pyo3::{types::PyDict, IntoPyObjectExt, Python};
 
     use lox_math::assert_close;
+    use rstest::rstest;
 
     use crate::test_helpers::data_dir;
 
     use super::*;
 
     #[test]
-    fn test_pytime() {
-        let time = PyTime::new("TAI", 2000, 1, 1, 0, 0, 12.123456789123).unwrap();
+    fn test_pytimfe() {
+        let time = Python::with_gil(|py| {
+            PyTime::new(&scale_to_any(py, "TAI"), 2000, 1, 1, 0, 0, 12.123456789123).unwrap()
+        });
         assert_eq!(
             time.__repr__(),
             "Time(\"TAI\", 2000, 1, 1, 0, 0, 12.123456789123)"
         );
         assert_eq!(time.__str__(), "2000-01-01T00:00:12.123 TAI");
-        assert_eq!(time.scale(), "TAI".to_string());
+        assert_eq!(time.scale().abbreviation(), "TAI".to_string());
         assert_eq!(time.year(), 2000);
         assert_eq!(time.month(), 1);
         assert_eq!(time.day(), 1);
@@ -539,28 +424,36 @@ mod tests {
     #[test]
     #[should_panic(expected = "invalid date")]
     fn test_pytime_invalid_date() {
-        PyTime::new("TAI", 2000, 13, 1, 0, 0, 0.0).unwrap();
+        Python::with_gil(|py| {
+            PyTime::new(&scale_to_any(py, "TAI"), 2000, 13, 1, 0, 0, 0.0).unwrap()
+        });
     }
 
     #[test]
     #[should_panic(expected = "hour must be in the range")]
     fn test_pytime_invalid_time() {
-        PyTime::new("TAI", 2000, 12, 1, 24, 0, 0.0).unwrap();
+        Python::with_gil(|py| {
+            PyTime::new(&scale_to_any(py, "TAI"), 2000, 12, 1, 24, 0, 0.0).unwrap()
+        });
     }
 
     #[test]
     fn test_pytime_ops() {
         Python::with_gil(|py| {
-            let t0 = PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap();
+            let t0 = PyTime::new(&scale_to_any(py, "TAI"), 2000, 1, 1, 0, 0, 0.0).unwrap();
             let dt = PyTimeDelta::new(1.0).unwrap();
-            let t1 = PyTime::new("TAI", 2000, 1, 1, 0, 0, 1.0).unwrap();
+            let t1 = PyTime::new(&scale_to_any(py, "TAI"), 2000, 1, 1, 0, 0, 1.0).unwrap();
             assert_eq!(t0.__add__(dt.clone()), t1.clone());
             let dtb = Bound::new(py, PyTimeDelta::new(1.0).unwrap()).unwrap();
             assert_eq!(
                 t1.__sub__(py, &dtb).unwrap().extract::<PyTime>().unwrap(),
                 t0
             );
-            let t0b = Bound::new(py, PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap()).unwrap();
+            let t0b = Bound::new(
+                py,
+                PyTime::new(&scale_to_any(py, "TAI"), 2000, 1, 1, 0, 0, 0.0).unwrap(),
+            )
+            .unwrap();
             assert_eq!(
                 t1.__sub__(py, &t0b)
                     .unwrap()
@@ -575,8 +468,12 @@ mod tests {
     #[should_panic(expected = "cannot subtract `Time` objects with different time scales")]
     fn test_pytime_ops_different_scales() {
         Python::with_gil(|py| {
-            let t1 = PyTime::new("TAI", 2000, 1, 1, 0, 0, 1.0).unwrap();
-            let t0 = Bound::new(py, PyTime::new("TT", 2000, 1, 1, 0, 0, 1.0).unwrap()).unwrap();
+            let t1 = PyTime::new(&scale_to_any(py, "TAI"), 2000, 1, 1, 0, 0, 1.0).unwrap();
+            let t0 = Bound::new(
+                py,
+                PyTime::new(&scale_to_any(py, "TT"), 2000, 1, 1, 0, 0, 1.0).unwrap(),
+            )
+            .unwrap();
             t1.__sub__(py, &t0).unwrap();
         });
     }
@@ -585,7 +482,7 @@ mod tests {
     #[should_panic(expected = "`rhs` must be either a `Time` or a `TimeDelta` object")]
     fn test_pytime_ops_invalid_rhs() {
         Python::with_gil(|py| {
-            let t1 = PyTime::new("TAI", 2000, 1, 1, 0, 0, 1.0).unwrap();
+            let t1 = PyTime::new(&scale_to_any(py, "TAI"), 2000, 1, 1, 0, 0, 1.0).unwrap();
             let invalid = PyDict::new(py);
             t1.__sub__(py, &invalid).unwrap();
         });
@@ -593,46 +490,66 @@ mod tests {
 
     #[test]
     fn test_pytime_richcmp() {
-        let t0 = PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap();
-        let t1 = PyTime::new("TAI", 2000, 1, 1, 0, 0, 1.0).unwrap();
-        assert!(t0.__richcmp__(t1.clone(), CompareOp::Lt));
-        assert!(t0.__richcmp__(t1.clone(), CompareOp::Le));
-        assert!(t0.__richcmp__(t1.clone(), CompareOp::Ne));
-        assert!(t1.__richcmp__(t0.clone(), CompareOp::Gt));
-        assert!(t1.__richcmp__(t0.clone(), CompareOp::Ge));
+        Python::with_gil(|py| {
+            let t0 = PyTime::new(&scale_to_any(py, "TAI"), 2000, 1, 1, 0, 0, 0.0).unwrap();
+            let t1 = PyTime::new(&scale_to_any(py, "TAI"), 2000, 1, 1, 0, 0, 1.0).unwrap();
+            assert!(t0.__richcmp__(t1.clone(), CompareOp::Lt));
+            assert!(t0.__richcmp__(t1.clone(), CompareOp::Le));
+            assert!(t0.__richcmp__(t1.clone(), CompareOp::Ne));
+            assert!(t1.__richcmp__(t0.clone(), CompareOp::Gt));
+            assert!(t1.__richcmp__(t0.clone(), CompareOp::Ge));
+        })
     }
 
     #[test]
     fn test_pytime_is_close() {
-        let t0 = PyTime::new("TAI", 1999, 12, 31, 23, 59, 59.999999999999).unwrap();
-        let t1 = PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0000000000001).unwrap();
-        assert!(t0.isclose(t1, 1e-8, 1e-13).unwrap());
+        Python::with_gil(|py| {
+            let t0 = PyTime::new(
+                &scale_to_any(py, "TAI"),
+                1999,
+                12,
+                31,
+                23,
+                59,
+                59.999999999999,
+            )
+            .unwrap();
+            let t1 =
+                PyTime::new(&scale_to_any(py, "TAI"), 2000, 1, 1, 0, 0, 0.0000000000001).unwrap();
+            assert!(t0.isclose(t1, 1e-8, 1e-13).unwrap());
+        })
     }
 
     #[test]
     #[should_panic(expected = "cannot compare `Time` objects with different time scales")]
     fn test_pytime_is_close_different_scales() {
-        let t0 = PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap();
-        let t1 = PyTime::new("TT", 2000, 1, 1, 0, 0, 0.0).unwrap();
-        t0.isclose(t1, 1e-8, 1e-13).unwrap();
+        Python::with_gil(|py| {
+            let t0 = PyTime::new(&scale_to_any(py, "TAI"), 2000, 1, 1, 0, 0, 0.0).unwrap();
+            let t1 = PyTime::new(&scale_to_any(py, "TT"), 2000, 1, 1, 0, 0, 0.0).unwrap();
+            t0.isclose(t1, 1e-8, 1e-13).unwrap();
+        })
     }
 
     #[test]
     fn test_pytime_to_delta() {
-        let t = PyTime::new("TAI", 2000, 1, 1, 12, 0, 0.3).unwrap();
-        assert_eq!(t.to_delta(), t.0.to_delta())
+        Python::with_gil(|py| {
+            let t = PyTime::new(&scale_to_any(py, "TAI"), 2000, 1, 1, 12, 0, 0.3).unwrap();
+            assert_eq!(t.to_delta(), t.0.to_delta())
+        })
     }
 
     #[test]
     fn test_pytime_from_iso() {
         Python::with_gil(|py| {
             let cls = PyType::new::<PyTime>(py);
-            let expected = PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap();
+            let expected = PyTime::new(&scale_to_any(py, "TAI"), 2000, 1, 1, 0, 0, 0.0).unwrap();
             let actual = PyTime::from_iso(&cls, "2000-01-01T00:00:00 TAI", None).unwrap();
             assert_eq!(actual, expected);
             let actual = PyTime::from_iso(&cls, "2000-01-01T00:00:00", None).unwrap();
             assert_eq!(actual, expected);
-            let actual = PyTime::from_iso(&cls, "2000-01-01T00:00:00", Some("TAI")).unwrap();
+            let actual =
+                PyTime::from_iso(&cls, "2000-01-01T00:00:00", Some(&scale_to_any(py, "TAI")))
+                    .unwrap();
             assert_eq!(actual, expected);
         })
     }
@@ -647,7 +564,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "invalid time scale")]
+    #[should_panic(expected = "invalid ISO")]
     fn test_pytime_from_iso_invalid_scale() {
         Python::with_gil(|py| {
             let cls = PyType::new::<PyTime>(py);
@@ -656,11 +573,16 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "invalid time scale")]
+    #[should_panic(expected = "unknown time scale: UTC")]
     fn test_pytime_from_iso_invalid_scale_arg() {
         Python::with_gil(|py| {
             let cls = PyType::new::<PyTime>(py);
-            let _ = PyTime::from_iso(&cls, "2000-01-01T00:00:00 TAI", Some("UTC")).unwrap();
+            let _ = PyTime::from_iso(
+                &cls,
+                "2000-01-01T00:00:00 TAI",
+                Some(&scale_to_any(py, "UTC")),
+            )
+            .unwrap();
         })
     }
 
@@ -668,18 +590,21 @@ mod tests {
     fn test_pytime_julian_date() {
         Python::with_gil(|py| {
             let cls = PyType::new::<PyTime>(py);
-            let time = PyTime::from_julian_date(&cls, "TAI", 0.0, "j2000").unwrap();
+            let time =
+                PyTime::from_julian_date(&cls, &scale_to_any(py, "TAI"), 0.0, "j2000").unwrap();
             assert_eq!(time.julian_date("j2000", "seconds").unwrap(), 0.0);
             assert_eq!(time.julian_date("j2000", "days").unwrap(), 0.0);
             assert_eq!(time.julian_date("j2000", "centuries").unwrap(), 0.0);
             assert_eq!(time.julian_date("jd", "days").unwrap(), 2451545.0);
             assert_eq!(time.julian_date("mjd", "days").unwrap(), 51544.5);
             assert_eq!(time.julian_date("j1950", "days").unwrap(), 18262.5);
-            let time = PyTime::from_julian_date(&cls, "TAI", 0.0, "j1950").unwrap();
+            let time =
+                PyTime::from_julian_date(&cls, &scale_to_any(py, "TAI"), 0.0, "j1950").unwrap();
             assert_eq!(time.julian_date("j1950", "days").unwrap(), 0.0);
-            let time = PyTime::from_julian_date(&cls, "TAI", 0.0, "mjd").unwrap();
+            let time =
+                PyTime::from_julian_date(&cls, &scale_to_any(py, "TAI"), 0.0, "mjd").unwrap();
             assert_eq!(time.julian_date("mjd", "days").unwrap(), 0.0);
-            let time = PyTime::from_julian_date(&cls, "TAI", 0.0, "jd").unwrap();
+            let time = PyTime::from_julian_date(&cls, &scale_to_any(py, "TAI"), 0.0, "jd").unwrap();
             assert_eq!(time.julian_date("jd", "days").unwrap(), 0.0);
         })
     }
@@ -687,24 +612,30 @@ mod tests {
     #[test]
     #[should_panic(expected = "unknown epoch: unknown")]
     fn test_pytime_invalid_epoch() {
-        let time = PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap();
-        time.julian_date("unknown", "days").unwrap();
+        Python::with_gil(|py| {
+            let time = PyTime::new(&scale_to_any(py, "TAI"), 2000, 1, 1, 0, 0, 0.0).unwrap();
+            time.julian_date("unknown", "days").unwrap();
+        })
     }
 
     #[test]
     #[should_panic(expected = "unknown unit: unknown")]
     fn test_pytime_invalid_unit() {
-        let time = PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap();
-        time.julian_date("jd", "unknown").unwrap();
+        Python::with_gil(|py| {
+            let time = PyTime::new(&scale_to_any(py, "TAI"), 2000, 1, 1, 0, 0, 0.0).unwrap();
+            time.julian_date("jd", "unknown").unwrap();
+        })
     }
 
     #[test]
     fn test_pytime_from_two_part_julian_date() {
         Python::with_gil(|py| {
             let cls = PyType::new::<PyTime>(py);
-            let expected = PyTime::new("TAI", 2024, 7, 11, 8, 2, 14.0).unwrap();
+            let expected = PyTime::new(&scale_to_any(py, "TAI"), 2024, 7, 11, 8, 2, 14.0).unwrap();
             let (jd1, jd2) = expected.two_part_julian_date();
-            let actual = PyTime::from_two_part_julian_date(&cls, "TAI", jd1, jd2).unwrap();
+            let actual =
+                PyTime::from_two_part_julian_date(&cls, &scale_to_any(py, "TAI"), jd1, jd2)
+                    .unwrap();
             assert_close!(actual.0, expected.0);
         })
     }
@@ -713,14 +644,52 @@ mod tests {
     fn test_pytime_from_day_of_year() {
         Python::with_gil(|py| {
             let cls = PyType::new::<PyTime>(py);
-            let expected = PyTime::new("TAI", 2024, 12, 31, 0, 0, 0.0).unwrap();
-            let actual = PyTime::from_day_of_year(&cls, "TAI", 2024, 366, 0, 0, 0.0).unwrap();
+            let expected = PyTime::new(&scale_to_any(py, "TAI"), 2024, 12, 31, 0, 0, 0.0).unwrap();
+            let actual =
+                PyTime::from_day_of_year(&cls, &scale_to_any(py, "TAI"), 2024, 366, 0, 0, 0.0)
+                    .unwrap();
             assert_eq!(actual, expected);
         })
     }
 
-    #[test]
-    fn test_pytime_tai_noop() {
+    #[rstest]
+    #[case("TAI", "TAI")]
+    #[case("TAI", "TCB")]
+    #[case("TAI", "TCG")]
+    #[case("TAI", "TDB")]
+    #[case("TAI", "TT")]
+    #[case("TAI", "UT1")]
+    #[case("TCB", "TAI")]
+    #[case("TCB", "TCB")]
+    #[case("TCB", "TCG")]
+    #[case("TCB", "TDB")]
+    #[case("TCB", "TT")]
+    #[case("TCB", "UT1")]
+    #[case("TCG", "TAI")]
+    #[case("TCG", "TCB")]
+    #[case("TCG", "TCG")]
+    #[case("TCG", "TDB")]
+    #[case("TCG", "TT")]
+    #[case("TCG", "UT1")]
+    #[case("TDB", "TAI")]
+    #[case("TDB", "TCB")]
+    #[case("TDB", "TCG")]
+    #[case("TDB", "TDB")]
+    #[case("TDB", "TT")]
+    #[case("TDB", "UT1")]
+    #[case("TT", "TAI")]
+    #[case("TT", "TCB")]
+    #[case("TT", "TCG")]
+    #[case("TT", "TDB")]
+    #[case("TT", "TT")]
+    #[case("TT", "UT1")]
+    #[case("UT1", "TAI")]
+    #[case("UT1", "TCB")]
+    #[case("UT1", "TCG")]
+    #[case("UT1", "TDB")]
+    #[case("UT1", "TT")]
+    #[case("UT1", "UT1")]
+    fn test_pytime_to_scale(#[case] scale1: &str, #[case] scale2: &str) {
         Python::with_gil(|py| {
             let provider = Bound::new(
                 py,
@@ -728,443 +697,28 @@ mod tests {
                     .unwrap(),
             )
             .unwrap();
-            let tai_exp = PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap();
-            let tai_act = tai_exp.to_tai(None).unwrap();
-            assert_close!(tai_act, tai_exp);
-            let tai_act = tai_exp.to_tai(Some(&provider)).unwrap();
-            assert_close!(tai_act, tai_exp);
+            let scale1 = scale_to_any(py, scale1);
+            let scale2 = scale_to_any(py, scale2);
+            let exp = PyTime::new(&scale1, 2000, 1, 1, 0, 0, 0.0).unwrap();
+            let act = exp
+                .to_scale(&scale2, Some(&provider))
+                .unwrap()
+                .to_scale(&scale1, Some(&provider))
+                .unwrap();
+            assert_close!(act, exp)
         })
     }
 
     #[test]
-    fn test_pytime_tcb_noop() {
-        Python::with_gil(|py| {
-            let provider = Bound::new(
-                py,
-                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
-                    .unwrap(),
-            )
-            .unwrap();
-            let tcb_exp = PyTime::new("TCB", 2000, 1, 1, 0, 0, 0.0).unwrap();
-            let tcb_act = tcb_exp.to_tcb(None).unwrap();
-            assert_close!(tcb_act, tcb_exp);
-            let tcb_act = tcb_exp.to_tcb(Some(&provider)).unwrap();
-            assert_close!(tcb_act, tcb_exp);
-        })
-    }
-
-    #[test]
-    fn test_pytime_tcg_noop() {
-        Python::with_gil(|py| {
-            let provider = Bound::new(
-                py,
-                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
-                    .unwrap(),
-            )
-            .unwrap();
-            let tcg_exp = PyTime::new("TCG", 2000, 1, 1, 0, 0, 0.0).unwrap();
-            let tcg_act = tcg_exp.to_tcg(None).unwrap();
-            assert_close!(tcg_act, tcg_exp);
-            let tcg_act = tcg_exp.to_tcg(Some(&provider)).unwrap();
-            assert_close!(tcg_act, tcg_exp);
-        })
-    }
-
-    #[test]
-    fn test_pytime_tdb_noop() {
-        Python::with_gil(|py| {
-            let provider = Bound::new(
-                py,
-                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
-                    .unwrap(),
-            )
-            .unwrap();
-            let tdb_exp = PyTime::new("TDB", 2000, 1, 1, 0, 0, 0.0).unwrap();
-            let tdb_act = tdb_exp.to_tdb(None).unwrap();
-            assert_close!(tdb_act, tdb_exp);
-            let tdb_act = tdb_exp.to_tdb(Some(&provider)).unwrap();
-            assert_close!(tdb_act, tdb_exp);
-        })
-    }
-
-    #[test]
-    fn test_pytime_tt_noop() {
-        Python::with_gil(|py| {
-            let provider = Bound::new(
-                py,
-                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
-                    .unwrap(),
-            )
-            .unwrap();
-            let tt_exp = PyTime::new("TT", 2000, 1, 1, 0, 0, 0.0).unwrap();
-            let tt_act = tt_exp.to_tt(None).unwrap();
-            assert_close!(tt_act, tt_exp);
-            let tt_act = tt_exp.to_tt(Some(&provider)).unwrap();
-            assert_close!(tt_act, tt_exp);
-        })
-    }
-
-    #[test]
-    fn test_pytime_ut1_noop() {
-        Python::with_gil(|py| {
-            let provider = Bound::new(
-                py,
-                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
-                    .unwrap(),
-            )
-            .unwrap();
-            let ut1_exp = PyTime::new("UT1", 2000, 1, 1, 0, 0, 0.0).unwrap();
-            let ut1_act = ut1_exp.to_ut1(None).unwrap();
-            assert_close!(ut1_act, ut1_exp);
-            let ut1_act = ut1_exp.to_ut1(Some(&provider)).unwrap();
-            assert_close!(ut1_act, ut1_exp);
-        })
-    }
-
-    #[test]
-    fn test_pytime_tai_tcb() {
-        Python::with_gil(|py| {
-            let provider = Bound::new(
-                py,
-                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
-                    .unwrap(),
-            )
-            .unwrap();
-            let tai_exp = PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap();
-            let tcb = tai_exp.to_tcb(None).unwrap();
-            let tai_act = tcb.to_tai(None).unwrap();
-            assert_close!(tai_act, tai_exp);
-            let tcb = tai_exp.to_tcb(Some(&provider)).unwrap();
-            let tai_act = tcb.to_tai(Some(&provider)).unwrap();
-            assert_close!(tai_act, tai_exp);
-        })
-    }
-
-    #[test]
-    fn test_pytime_tai_tcg() {
-        Python::with_gil(|py| {
-            let provider = Bound::new(
-                py,
-                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
-                    .unwrap(),
-            )
-            .unwrap();
-            let tai_exp = PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap();
-            let tcg = tai_exp.to_tcg(None).unwrap();
-            let tai_act = tcg.to_tai(None).unwrap();
-            assert_close!(tai_act, tai_exp);
-            let tcg = tai_exp.to_tcg(Some(&provider)).unwrap();
-            let tai_act = tcg.to_tai(Some(&provider)).unwrap();
-            assert_close!(tai_act, tai_exp);
-        })
-    }
-
-    #[test]
-    fn test_pytime_tai_tdb() {
-        Python::with_gil(|py| {
-            let provider = Bound::new(
-                py,
-                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
-                    .unwrap(),
-            )
-            .unwrap();
-            let tai_exp = PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap();
-            let tdb = tai_exp.to_tdb(None).unwrap();
-            let tai_act = tdb.to_tai(None).unwrap();
-            assert_close!(tai_act, tai_exp);
-            let tdb = tai_exp.to_tdb(Some(&provider)).unwrap();
-            let tai_act = tdb.to_tai(Some(&provider)).unwrap();
-            assert_close!(tai_act, tai_exp);
-        })
-    }
-
-    #[test]
-    fn test_pytime_tai_tt() {
-        Python::with_gil(|py| {
-            let provider = Bound::new(
-                py,
-                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
-                    .unwrap(),
-            )
-            .unwrap();
-            let tai_exp = PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap();
-            let tt = tai_exp.to_tt(None).unwrap();
-            let tai_act = tt.to_tai(None).unwrap();
-            assert_close!(tai_act, tai_exp);
-            let tt = tai_exp.to_tt(Some(&provider)).unwrap();
-            let tai_act = tt.to_tai(Some(&provider)).unwrap();
-            assert_close!(tai_act, tai_exp);
-        })
-    }
-
-    #[test]
-    fn test_pytime_tai_ut1() {
-        Python::with_gil(|py| {
-            let provider = Bound::new(
-                py,
-                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
-                    .unwrap(),
-            )
-            .unwrap();
-            let tai_exp = PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap();
-            let ut1 = tai_exp.to_ut1(Some(&provider)).unwrap();
-            let tai_act = ut1.to_tai(Some(&provider)).unwrap();
-            assert_close!(tai_act, tai_exp);
-        })
-    }
-
-    #[test]
-    fn test_pytime_tcb_tcg() {
-        Python::with_gil(|py| {
-            let provider = Bound::new(
-                py,
-                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
-                    .unwrap(),
-            )
-            .unwrap();
-            let tcb_exp = PyTime::new("TCB", 2000, 1, 1, 0, 0, 0.0).unwrap();
-            let tcg = tcb_exp.to_tcg(None).unwrap();
-            let tcb_act = tcg.to_tcb(None).unwrap();
-            assert_close!(tcb_act, tcb_exp);
-            let tcg = tcb_exp.to_tcg(Some(&provider)).unwrap();
-            let tcb_act = tcg.to_tcb(Some(&provider)).unwrap();
-            assert_close!(tcb_act, tcb_exp);
-        })
-    }
-
-    #[test]
-    fn test_pytime_tcb_tdb() {
-        Python::with_gil(|py| {
-            let provider = Bound::new(
-                py,
-                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
-                    .unwrap(),
-            )
-            .unwrap();
-            let tcb_exp = PyTime::new("TCB", 2000, 1, 1, 0, 0, 0.0).unwrap();
-            let tdb = tcb_exp.to_tdb(None).unwrap();
-            let tcb_act = tdb.to_tcb(None).unwrap();
-            assert_close!(tcb_act, tcb_exp);
-            let tdb = tcb_exp.to_tdb(Some(&provider)).unwrap();
-            let tcb_act = tdb.to_tcb(Some(&provider)).unwrap();
-            assert_close!(tcb_act, tcb_exp);
-        })
-    }
-
-    #[test]
-    fn test_pytime_tcb_tt() {
-        Python::with_gil(|py| {
-            let provider = Bound::new(
-                py,
-                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
-                    .unwrap(),
-            )
-            .unwrap();
-            let tcb_exp = PyTime::new("TCB", 2000, 1, 1, 0, 0, 0.0).unwrap();
-            let tt = tcb_exp.to_tt(None).unwrap();
-            let tcb_act = tt.to_tcb(None).unwrap();
-            assert_close!(tcb_act, tcb_exp);
-            let tt = tcb_exp.to_tt(Some(&provider)).unwrap();
-            let tcb_act = tt.to_tcb(Some(&provider)).unwrap();
-            assert_close!(tcb_act, tcb_exp);
-        })
-    }
-
-    #[test]
-    fn test_pytime_tcb_ut1() {
-        Python::with_gil(|py| {
-            let provider = Bound::new(
-                py,
-                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
-                    .unwrap(),
-            )
-            .unwrap();
-            let tcb_exp = PyTime::new("TCB", 2000, 1, 1, 0, 0, 0.0).unwrap();
-            let ut1 = tcb_exp.to_ut1(Some(&provider)).unwrap();
-            let tcb_act = ut1.to_tcb(Some(&provider)).unwrap();
-            assert_close!(tcb_act, tcb_exp);
-        })
-    }
-
-    #[test]
-    fn test_pytime_tcg_tdb() {
-        Python::with_gil(|py| {
-            let provider = Bound::new(
-                py,
-                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
-                    .unwrap(),
-            )
-            .unwrap();
-            let tcg_exp = PyTime::new("TCG", 2000, 1, 1, 0, 0, 0.0).unwrap();
-            let tdb = tcg_exp.to_tdb(None).unwrap();
-            let tcg_act = tdb.to_tcg(None).unwrap();
-            assert_close!(tcg_act, tcg_exp);
-            let tdb = tcg_exp.to_tdb(Some(&provider)).unwrap();
-            let tcg_act = tdb.to_tcg(Some(&provider)).unwrap();
-            assert_close!(tcg_act, tcg_exp);
-        })
-    }
-
-    #[test]
-    fn test_pytime_tcg_tt() {
-        Python::with_gil(|py| {
-            let provider = Bound::new(
-                py,
-                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
-                    .unwrap(),
-            )
-            .unwrap();
-            let tcg_exp = PyTime::new("TCG", 2000, 1, 1, 0, 0, 0.0).unwrap();
-            let tt = tcg_exp.to_tt(None).unwrap();
-            let tcg_act = tt.to_tcg(None).unwrap();
-            assert_close!(tcg_act, tcg_exp);
-            let tt = tcg_exp.to_tt(Some(&provider)).unwrap();
-            let tcg_act = tt.to_tcg(Some(&provider)).unwrap();
-            assert_close!(tcg_act, tcg_exp);
-        })
-    }
-
-    #[test]
-    fn test_pytime_tcg_ut1() {
-        Python::with_gil(|py| {
-            let provider = Bound::new(
-                py,
-                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
-                    .unwrap(),
-            )
-            .unwrap();
-            let tcg_exp = PyTime::new("TCG", 2000, 1, 1, 0, 0, 0.0).unwrap();
-            let ut1 = tcg_exp.to_ut1(Some(&provider)).unwrap();
-            let tcg_act = ut1.to_tcg(Some(&provider)).unwrap();
-            assert_close!(tcg_act, tcg_exp);
-        })
-    }
-
-    #[test]
-    fn test_pytime_tdb_tt() {
-        Python::with_gil(|py| {
-            let provider = Bound::new(
-                py,
-                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
-                    .unwrap(),
-            )
-            .unwrap();
-            let tdb_exp = PyTime::new("TDB", 2000, 1, 1, 0, 0, 0.0).unwrap();
-            let tt = tdb_exp.to_tt(None).unwrap();
-            let tdb_act = tt.to_tdb(None).unwrap();
-            assert_close!(tdb_act, tdb_exp);
-            let tt = tdb_exp.to_tt(Some(&provider)).unwrap();
-            let tdb_act = tt.to_tdb(Some(&provider)).unwrap();
-            assert_close!(tdb_act, tdb_exp);
-        })
-    }
-
-    #[test]
-    fn test_pytime_tdb_ut1() {
-        Python::with_gil(|py| {
-            let provider = Bound::new(
-                py,
-                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
-                    .unwrap(),
-            )
-            .unwrap();
-            let tdb_exp = PyTime::new("TDB", 2000, 1, 1, 0, 0, 0.0).unwrap();
-            let ut1 = tdb_exp.to_ut1(Some(&provider)).unwrap();
-            let tdb_act = ut1.to_tdb(Some(&provider)).unwrap();
-            assert_close!(tdb_act, tdb_exp);
-        })
-    }
-
-    #[test]
-    fn test_pytime_tt_ut1() {
-        Python::with_gil(|py| {
-            let provider = Bound::new(
-                py,
-                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
-                    .unwrap(),
-            )
-            .unwrap();
-            let tt_exp = PyTime::new("TT", 2000, 1, 1, 0, 0, 0.0).unwrap();
-            let ut1 = tt_exp.to_ut1(Some(&provider)).unwrap();
-            let tt_act = ut1.to_tt(Some(&provider)).unwrap();
-            assert_close!(tt_act, tt_exp);
-        })
-    }
-
-    #[test]
-    #[should_panic(expected = "`provider` argument needs to be present for UT1 transformations")]
+    #[should_panic(expected = "a UT1-TAI provider is required")]
     fn test_pytime_ut1_tai_no_provider() {
-        let time = PyTime::new("UT1", 2000, 1, 1, 0, 0, 0.0).unwrap();
-        time.to_tai(None).unwrap();
+        Python::with_gil(|py| {
+            let time = PyTime::new(&scale_to_any(py, "UT1"), 2000, 1, 1, 0, 0, 0.0).unwrap();
+            time.to_scale(&scale_to_any(py, "TAI"), None).unwrap();
+        })
     }
 
-    #[test]
-    #[should_panic(expected = "`provider` argument needs to be present for UT1 transformations")]
-    fn test_pytime_ut1_tcb_no_provider() {
-        let time = PyTime::new("UT1", 2000, 1, 1, 0, 0, 0.0).unwrap();
-        time.to_tcb(None).unwrap();
-    }
-
-    #[test]
-    #[should_panic(expected = "`provider` argument needs to be present for UT1 transformations")]
-    fn test_pytime_ut1_tcg_no_provider() {
-        let time = PyTime::new("UT1", 2000, 1, 1, 0, 0, 0.0).unwrap();
-        time.to_tcg(None).unwrap();
-    }
-
-    #[test]
-    #[should_panic(expected = "`provider` argument needs to be present for UT1 transformations")]
-    fn test_pytime_ut1_tdb_no_provider() {
-        let time = PyTime::new("UT1", 2000, 1, 1, 0, 0, 0.0).unwrap();
-        time.to_tdb(None).unwrap();
-    }
-
-    #[test]
-    #[should_panic(expected = "`provider` argument needs to be present for UT1 transformations")]
-    fn test_pytime_ut1_tt_no_provider() {
-        let time = PyTime::new("UT1", 2000, 1, 1, 0, 0, 0.0).unwrap();
-        time.to_tt(None).unwrap();
-    }
-
-    #[test]
-    #[should_panic(expected = "`provider` argument needs to be present for UT1 transformations")]
-    fn test_pytime_tai_ut1_no_provider() {
-        let time = PyTime::new("TAI", 2000, 1, 1, 0, 0, 0.0).unwrap();
-        time.to_ut1(None).unwrap();
-    }
-
-    #[test]
-    #[should_panic(expected = "`provider` argument needs to be present for UT1 transformations")]
-    fn test_pytime_tcb_ut1_no_provider() {
-        let time = PyTime::new("TCB", 2000, 1, 1, 0, 0, 0.0).unwrap();
-        time.to_ut1(None).unwrap();
-    }
-
-    #[test]
-    #[should_panic(expected = "`provider` argument needs to be present for UT1 transformations")]
-    fn test_pytime_tcg_ut1_no_provider() {
-        let time = PyTime::new("TCG", 2000, 1, 1, 0, 0, 0.0).unwrap();
-        time.to_ut1(None).unwrap();
-    }
-
-    #[test]
-    #[should_panic(expected = "`provider` argument needs to be present for UT1 transformations")]
-    fn test_pytime_tdb_ut1_no_provider() {
-        let time = PyTime::new("TDB", 2000, 1, 1, 0, 0, 0.0).unwrap();
-        time.to_ut1(None).unwrap();
-    }
-
-    #[test]
-    #[should_panic(expected = "`provider` argument needs to be present for UT1 transformations")]
-    fn test_pytime_tt_ut1_no_provider() {
-        let time = PyTime::new("TT", 2000, 1, 1, 0, 0, 0.0).unwrap();
-        time.to_ut1(None).unwrap();
-    }
-
-    #[test]
-    #[should_panic(expected = "`provider` argument needs to be present for UT1 transformations")]
-    fn test_pytime_ut1_utc_no_provider() {
-        let time = PyTime::new("UT1", 2000, 1, 1, 0, 0, 0.0).unwrap();
-        time.to_utc(None).unwrap();
+    fn scale_to_any<'py>(py: Python<'py>, scale: &str) -> Bound<'py, PyAny> {
+        scale.into_bound_py_any(py).unwrap()
     }
 }

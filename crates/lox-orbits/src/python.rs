@@ -8,6 +8,7 @@
 
 use glam::DVec3;
 use lox_ephem::python::PySpk;
+use lox_time::DynTime;
 use numpy::{PyArray1, PyArray2, PyArrayMethods};
 use pyo3::types::PyType;
 use pyo3::{
@@ -23,24 +24,22 @@ use lox_bodies::*;
 use lox_math::roots::Brent;
 use lox_time::deltas::TimeDelta;
 use lox_time::python::deltas::PyTimeDelta;
-use lox_time::python::time_scales::PyTimeScale;
-use lox_time::python::ut1::{PyNoOpOffsetProvider, PyUt1Provider};
-use lox_time::time_scales::Tai;
-use lox_time::transformations::TryToScale;
-use lox_time::{python::time::PyTime, ut1::DeltaUt1Tai};
+use lox_time::python::time::PyTime;
+use lox_time::python::ut1::PyUt1Provider;
+use lox_time::time_scales::{DynTimeScale, Tai};
 
 use crate::analysis::{ElevationMask, ElevationMaskError};
 use crate::elements::{DynKeplerian, Keplerian};
 use crate::events::{Event, FindEventError, Window};
-use crate::frames::{CoordinateSystem, DynFrame, ReferenceFrame, TryRotateTo, UnknownFrameError};
+use crate::frames::iau::IauFrameTransformationError;
+use crate::frames::{DynFrame, ReferenceFrame, TryRotateTo, UnknownFrameError};
 use crate::ground::{DynGroundLocation, DynGroundPropagator, GroundPropagatorError, Observables};
-use crate::propagators::semi_analytical::{Vallado, ValladoError};
+use crate::propagators::semi_analytical::{DynVallado, Vallado, ValladoError};
 use crate::propagators::sgp4::{Sgp4, Sgp4Error};
 use crate::propagators::Propagator;
 use crate::states::DynState;
-use crate::trajectories::TrajectoryTransformationError;
+use crate::trajectories::{DynTrajectory, TrajectoryTransformationError};
 use crate::{
-    frames::FrameTransformationProvider,
     states::State,
     trajectories::{Trajectory, TrajectoryError},
 };
@@ -54,6 +53,13 @@ impl From<TrajectoryTransformationError> for PyErr {
 
 impl From<FindEventError> for PyErr {
     fn from(err: FindEventError) -> Self {
+        // FIXME: wrong error type
+        PyValueError::new_err(err.to_string())
+    }
+}
+
+impl From<IauFrameTransformationError> for PyErr {
+    fn from(err: IauFrameTransformationError) -> Self {
         // FIXME: wrong error type
         PyValueError::new_err(err.to_string())
     }
@@ -74,7 +80,7 @@ pub fn find_events(
                 .extract()
                 .unwrap_or(f64::NAN)
         },
-        start,
+        start.0,
         &times,
         root_finder,
     )?
@@ -99,8 +105,8 @@ pub fn find_windows(
                 .extract()
                 .unwrap_or(f64::NAN)
         },
-        start,
-        end,
+        start.0,
+        end.0,
         &times,
         root_finder,
     )
@@ -140,15 +146,9 @@ impl PyFrame {
     }
 }
 
-impl FrameTransformationProvider for DeltaUt1Tai {}
-
-impl FrameTransformationProvider for PyNoOpOffsetProvider {}
-
-impl FrameTransformationProvider for PyUt1Provider {}
-
 #[pyclass(name = "State", module = "lox_space", frozen)]
 #[derive(Debug, Clone)]
-pub struct PyState(pub State<PyTime, DynOrigin, DynFrame>);
+pub struct PyState(pub DynState);
 
 #[pymethods]
 impl PyState {
@@ -165,7 +165,7 @@ impl PyState {
         let frame = frame.unwrap_or_default();
 
         Ok(PyState(State::new(
-            time,
+            time.0,
             DVec3::new(position.0, position.1, position.2),
             DVec3::new(velocity.0, velocity.1, velocity.2),
             origin.0,
@@ -174,7 +174,7 @@ impl PyState {
     }
 
     fn time(&self) -> PyTime {
-        self.0.time().clone()
+        PyTime(self.0.time())
     }
 
     fn origin(&self) -> PyOrigin {
@@ -201,22 +201,14 @@ impl PyState {
         frame: PyFrame,
         provider: Option<&Bound<'_, PyUt1Provider>>,
     ) -> PyResult<Self> {
-        let rot = match provider {
-            Some(provider) => {
-                self.0
-                    .reference_frame()
-                    .try_rotation(&frame.0, self.0.time(), provider.get())
-            }
-            None => self.0.reference_frame().try_rotation(
-                &frame.0,
-                self.0.time(),
-                &PyNoOpOffsetProvider,
-            ),
-        }
-        .map_err(|err| PyValueError::new_err(err.to_string()))?;
+        let provider = provider.map(|p| &p.get().0);
+        let rot = self
+            .0
+            .reference_frame()
+            .try_rotation(frame.0, self.0.time(), provider)?;
         let (r1, v1) = rot.rotate_state(self.0.position(), self.0.velocity());
         Ok(PyState(State::new(
-            self.time(),
+            self.0.time(),
             r1,
             v1,
             self.0.origin(),
@@ -269,7 +261,7 @@ impl PyState {
 }
 
 #[pyclass(name = "Keplerian", module = "lox_space", frozen)]
-pub struct PyKeplerian(pub DynKeplerian<PyTime>);
+pub struct PyKeplerian(pub DynKeplerian);
 
 #[pymethods]
 impl PyKeplerian {
@@ -298,7 +290,7 @@ impl PyKeplerian {
         let origin = origin.map(|origin| origin.0).unwrap_or_default();
         Ok(PyKeplerian(
             Keplerian::with_dynamic(
-                time,
+                time.0,
                 origin,
                 semi_major_axis,
                 eccentricity,
@@ -312,7 +304,7 @@ impl PyKeplerian {
     }
 
     fn time(&self) -> PyTime {
-        self.0.time()
+        PyTime(self.0.time())
     }
 
     fn origin(&self) -> PyOrigin {
@@ -354,7 +346,7 @@ impl PyKeplerian {
 
 #[pyclass(name = "Trajectory", module = "lox_space", frozen)]
 #[derive(Debug, Clone)]
-pub struct PyTrajectory(pub Trajectory<PyTime, DynOrigin, DynFrame>);
+pub struct PyTrajectory(pub DynTrajectory);
 
 impl From<TrajectoryError> for PyErr {
     fn from(err: TrajectoryError) -> Self {
@@ -367,7 +359,7 @@ impl PyTrajectory {
     #[new]
     fn new(states: &Bound<'_, PyList>) -> PyResult<Self> {
         let states: Vec<PyState> = states.extract()?;
-        let states: Vec<DynState<PyTime>> = states.into_iter().map(|s| s.0).collect();
+        let states: Vec<DynState> = states.into_iter().map(|s| s.0).collect();
         Ok(PyTrajectory(Trajectory::new(&states)?))
     }
 
@@ -386,9 +378,9 @@ impl PyTrajectory {
         if array.ncols() != 7 {
             return Err(PyValueError::new_err("invalid shape"));
         }
-        let mut states: Vec<DynState<PyTime>> = Vec::with_capacity(array.nrows());
+        let mut states: Vec<DynState> = Vec::with_capacity(array.nrows());
         for row in array.rows() {
-            let time = PyTime(start_time.0 + TimeDelta::from_decimal_seconds(row[0])?);
+            let time = start_time.0 + TimeDelta::try_from_decimal_seconds(row[0])?;
             let position = DVec3::new(row[1], row[2], row[3]);
             let velocity = DVec3::new(row[4], row[5], row[6]);
             states.push(State::new(time, position, velocity, origin.0, frame.0));
@@ -447,7 +439,7 @@ impl PyTrajectory {
             return Ok(PyState(self.0.interpolate(delta.0)));
         }
         if let Ok(time) = time.extract::<PyTime>() {
-            return Ok(PyState(self.0.interpolate_at(time)));
+            return Ok(PyState(self.0.interpolate_at(time.0)));
         }
         Err(PyValueError::new_err("invalid time argument"))
     }
@@ -458,7 +450,7 @@ impl PyTrajectory {
         frame: PyFrame,
         provider: Option<&Bound<'_, PyUt1Provider>>,
     ) -> PyResult<Self> {
-        let mut states: Vec<DynState<PyTime>> = Vec::with_capacity(self.0.states().len());
+        let mut states: Vec<DynState> = Vec::with_capacity(self.0.states().len());
         for s in self.0.states() {
             states.push(PyState(s).to_frame(frame.clone(), provider)?.0);
         }
@@ -470,13 +462,13 @@ impl PyTrajectory {
         for s in self.states() {
             states.push(s.to_origin(target.clone(), ephemeris)?)
         }
-        let states: Vec<DynState<PyTime>> = states.into_iter().map(|s| s.0).collect();
+        let states: Vec<DynState> = states.into_iter().map(|s| s.0).collect();
         Ok(Self(Trajectory::new(&states)?))
     }
 }
 
 #[pyclass(name = "Event", module = "lox_space", frozen)]
-pub struct PyEvent(pub Event<PyTime>);
+pub struct PyEvent(pub Event<DynTimeScale>);
 
 #[pymethods]
 impl PyEvent {
@@ -492,7 +484,7 @@ impl PyEvent {
         )
     }
     fn time(&self) -> PyTime {
-        self.0.time().clone()
+        PyTime(self.0.time())
     }
 
     fn crossing(&self) -> String {
@@ -501,7 +493,7 @@ impl PyEvent {
 }
 
 #[pyclass(name = "Window", module = "lox_space", frozen)]
-pub struct PyWindow(pub Window<PyTime>);
+pub struct PyWindow(pub Window<DynTimeScale>);
 
 #[pymethods]
 impl PyWindow {
@@ -514,11 +506,11 @@ impl PyWindow {
     }
 
     fn start(&self) -> PyTime {
-        self.0.start().clone()
+        PyTime(self.0.start())
     }
 
     fn end(&self) -> PyTime {
-        self.0.end().clone()
+        PyTime(self.0.end())
     }
 
     fn duration(&self) -> PyTimeDelta {
@@ -527,7 +519,7 @@ impl PyWindow {
 }
 
 #[pyclass(name = "Vallado", module = "lox_space", frozen)]
-pub struct PyVallado(pub Vallado<PyTime, DynOrigin, DynFrame>);
+pub struct PyVallado(pub DynVallado);
 
 impl From<ValladoError> for PyErr {
     fn from(err: ValladoError) -> Self {
@@ -556,9 +548,10 @@ impl PyVallado {
         steps: &Bound<'py, PyAny>,
     ) -> PyResult<Bound<'py, PyAny>> {
         if let Ok(time) = steps.extract::<PyTime>() {
-            return Ok(Bound::new(py, PyState(self.0.propagate(time)?))?.into_any());
+            return Ok(Bound::new(py, PyState(self.0.propagate(time.0)?))?.into_any());
         }
         if let Ok(steps) = steps.extract::<Vec<PyTime>>() {
+            let steps = steps.into_iter().map(|s| s.0);
             return Ok(Bound::new(py, PyTrajectory(self.0.propagate_all(steps)?))?.into_any());
         }
         Err(PyValueError::new_err("invalid time delta(s)"))
@@ -586,7 +579,7 @@ impl PyGroundLocation {
         provider: Option<&Bound<'_, PyUt1Provider>>,
         frame: Option<PyFrame>,
     ) -> PyResult<PyObservables> {
-        let frame = frame.unwrap_or(PyFrame(DynFrame::BodyFixed(state.0.origin())));
+        let frame = frame.unwrap_or(PyFrame(DynFrame::Iau(state.0.origin())));
         let state = state.to_frame(frame, provider)?;
         let rot = self.0.rotation_to_topocentric();
         let position = rot * (state.0.position() - self.0.body_fixed_position());
@@ -641,9 +634,10 @@ impl PyGroundPropagator {
         steps: &Bound<'py, PyAny>,
     ) -> PyResult<Bound<'py, PyAny>> {
         if let Ok(time) = steps.extract::<PyTime>() {
-            return Ok(Bound::new(py, PyState(self.0.propagate_dyn(time)?))?.into_any());
+            return Ok(Bound::new(py, PyState(self.0.propagate_dyn(time.0)?))?.into_any());
         }
         if let Ok(steps) = steps.extract::<Vec<PyTime>>() {
+            let steps = steps.into_iter().map(|s| s.0);
             return Ok(Bound::new(py, PyTrajectory(self.0.propagate_all_dyn(steps)?))?.into_any());
         }
         Err(PyValueError::new_err("invalid time delta(s)"))
@@ -683,7 +677,12 @@ impl PySgp4 {
     }
 
     fn time(&self) -> PyTime {
-        PyTime(self.0.time().with_scale(PyTimeScale::Tai))
+        PyTime(
+            self.0
+                .time()
+                .try_to_scale(DynTimeScale::Tai, None::<&PyUt1Provider>)
+                .unwrap(),
+        )
     }
 
     #[pyo3(signature = (steps, provider=None))]
@@ -693,16 +692,15 @@ impl PySgp4 {
         steps: &Bound<'py, PyAny>,
         provider: Option<&Bound<'_, PyUt1Provider>>,
     ) -> PyResult<Bound<'py, PyAny>> {
+        let provider = provider.map(|p| &p.get().0);
         if let Ok(pytime) = steps.extract::<PyTime>() {
-            let time = match provider {
-                None => pytime.try_to_scale(Tai, &PyNoOpOffsetProvider)?,
-                Some(provider) => pytime.try_to_scale(Tai, provider.get())?,
-            };
+            let time = pytime.0.try_to_scale(Tai, provider)?;
             let s1 = self.0.propagate(time)?;
+            let time = time.try_to_scale(DynTimeScale::Tai, provider)?;
             return Ok(Bound::new(
                 py,
                 PyState(State::new(
-                    pytime,
+                    time,
                     s1.position(),
                     s1.velocity(),
                     DynOrigin::default(),
@@ -712,15 +710,13 @@ impl PySgp4 {
             .into_any());
         }
         if let Ok(pysteps) = steps.extract::<Vec<PyTime>>() {
-            let mut states: Vec<DynState<PyTime>> = Vec::with_capacity(pysteps.len());
+            let mut states: Vec<DynState> = Vec::with_capacity(pysteps.len());
             for step in pysteps {
-                let time = match provider {
-                    None => step.try_to_scale(Tai, &PyNoOpOffsetProvider)?,
-                    Some(provider) => step.try_to_scale(Tai, provider.get())?,
-                };
+                let time = step.0.try_to_scale(Tai, provider)?;
                 let s = self.0.propagate(time)?;
+                let time = time.try_to_scale(DynTimeScale::Tai, provider)?;
                 let s = State::new(
-                    step,
+                    time,
                     s.position(),
                     s.velocity(),
                     DynOrigin::default(),
@@ -735,12 +731,13 @@ impl PySgp4 {
 }
 
 #[pyfunction]
+#[pyo3(signature = (times, gs, mask, sc, provider = None))]
 pub fn visibility(
     times: &Bound<'_, PyList>,
     gs: PyGroundLocation,
     mask: &Bound<'_, PyElevationMask>,
     sc: &Bound<'_, PyTrajectory>,
-    provider: &Bound<'_, PyUt1Provider>,
+    provider: Option<&Bound<'_, PyUt1Provider>>,
 ) -> PyResult<Vec<PyWindow>> {
     let sc = sc.get();
     if gs.0.origin().name() != sc.0.origin().name() {
@@ -748,8 +745,12 @@ pub fn visibility(
             "ground station and spacecraft must have the same origin",
         ));
     }
-    let times: Vec<PyTime> = times.extract()?;
-    let provider = provider.get();
+    let times: Vec<DynTime> = times
+        .extract::<Vec<PyTime>>()?
+        .into_iter()
+        .map(|s| s.0)
+        .collect();
+    let provider = provider.map(|p| &p.get().0);
     let mask = &mask.borrow().0;
     Ok(
         crate::analysis::visibility_dyn(&times, &gs.0, mask, &sc.0, provider)

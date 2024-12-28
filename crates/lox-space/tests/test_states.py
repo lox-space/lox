@@ -20,7 +20,7 @@ def ephemeris():
 
 
 def test_state_to_ground_location():
-    time = lox.UTC.from_iso("2024-07-05T09:09:18.173").to_tai()
+    time = lox.UTC.from_iso("2024-07-05T09:09:18.173").to_scale("TAI")
     position = (-5530.01774359, -3487.0895338, -1850.03476185)
     velocity = (1.29534407, -5.02456882, 5.6391936)
     state = lox.State(
@@ -56,7 +56,7 @@ def test_state_to_origin(ephemeris):
     r_exp = r - r_venus
     v_exp = v - v_venus
     utc = lox.UTC.from_iso("2016-05-30T12:00:00.000")
-    tai = utc.to_tai()
+    tai = utc.to_scale("TAI")
 
     s_earth = lox.State(tai, tuple(r), tuple(v))
     s_venus = s_earth.to_origin(lox.Origin("Venus"), ephemeris)

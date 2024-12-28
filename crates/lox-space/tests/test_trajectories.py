@@ -14,7 +14,7 @@ import pytest
 @pytest.fixture
 def orbit():
     utc = lox.UTC(2023, 3, 25, 21, 8, 0.0)
-    time = utc.to_tdb()
+    time = utc.to_scale("TDB")
     semi_major_axis = 24464.560
     eccentricity = 0.7311
     inclination = 0.122138
@@ -36,7 +36,7 @@ def trajectory(orbit):
 
 def test_from_numpy():
     utc = lox.UTC(2023, 3, 25, 21, 8, 0.0)
-    time = utc.to_tdb()
+    time = utc.to_scale("TDB")
     states = np.array([
         [0.0, 1e3, 1e3, 1e3, 1.0, 1.0, 1.0],
         [1.0, 2e3, 2e3, 2e3, 2.0, 2.0, 2.0],

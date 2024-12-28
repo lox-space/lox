@@ -1,5 +1,6 @@
 use lox_bodies::Origin;
-use lox_time::TimeLike;
+use lox_time::time_scales::TimeScale;
+use lox_time::Time;
 
 use crate::trajectories::TrajectoryError;
 use crate::{frames::ReferenceFrame, states::State, trajectories::Trajectory};
@@ -10,17 +11,17 @@ mod stumpff;
 
 pub trait Propagator<T, O, R>
 where
-    T: TimeLike + Clone,
+    T: TimeScale + Clone,
     O: Origin + Clone,
     R: ReferenceFrame + Clone,
 {
     type Error: From<TrajectoryError>;
 
-    fn propagate(&self, time: T) -> Result<State<T, O, R>, Self::Error>;
+    fn propagate(&self, time: Time<T>) -> Result<State<T, O, R>, Self::Error>;
 
     fn propagate_all(
         &self,
-        times: impl IntoIterator<Item = T>,
+        times: impl IntoIterator<Item = Time<T>>,
     ) -> Result<Trajectory<T, O, R>, Self::Error> {
         let mut states = vec![];
         for time in times {
