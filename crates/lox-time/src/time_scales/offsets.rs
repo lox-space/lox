@@ -8,25 +8,27 @@ use crate::{
 
 use super::{DynTimeScale, Tai, Tcb, Tcg, Tdb, TimeScale, Tt, Ut1};
 
-/// Marker trait denoting a type that returns an offset between a pair of [TimeScale]s.
-pub trait OffsetProvider {}
-
-pub trait TryToScale<T: TimeScale, P: OffsetProvider> {
-    type Error;
-
-    fn try_offset(
-        &self,
-        scale: T,
-        dt: TimeDelta,
-        provider: Option<&P>,
-    ) -> Result<TimeDelta, Self::Error>;
+pub trait TryToScale<T, P, E>
+where
+    T: TimeScale,
+{
+    fn try_offset(&self, scale: T, dt: TimeDelta, provider: Option<&P>) -> Result<TimeDelta, E>;
 }
 
 pub trait ToScale<T: TimeScale> {
     fn offset(&self, scale: T, dt: TimeDelta) -> TimeDelta;
 }
 
-trait FromScale<T: TimeScale> {
+impl<T> ToScale<T> for T
+where
+    T: TimeScale,
+{
+    fn offset(&self, _scale: T, _dt: TimeDelta) -> TimeDelta {
+        TimeDelta::default()
+    }
+}
+
+pub trait FromScale<T: TimeScale> {
     fn offset_from(&self, scale: T, dt: TimeDelta) -> TimeDelta;
 }
 
@@ -40,52 +42,20 @@ where
     }
 }
 
-macro_rules! impl_fallible {
-    ($in:ident, $out:ident) => {
-        impl<P: OffsetProvider> TryToScale<$out, P> for $in {
-            type Error = Infallible;
-
-            fn try_offset(
-                &self,
-                scale: $out,
-                delta: TimeDelta,
-                _provider: Option<&P>,
-            ) -> Result<TimeDelta, Self::Error> {
-                Ok(self.offset(scale, delta))
-            }
-        }
-    };
+impl<T, P, U> TryToScale<T, P, Infallible> for U
+where
+    T: TimeScale,
+    U: ToScale<T>,
+{
+    fn try_offset(
+        &self,
+        scale: T,
+        delta: TimeDelta,
+        _provider: Option<&P>,
+    ) -> Result<TimeDelta, Infallible> {
+        Ok(self.offset(scale, delta))
+    }
 }
-
-macro_rules! impl_noops {
-    ($scale:ident) => {
-        impl<P: OffsetProvider> TryToScale<$scale, P> for $scale {
-            type Error = Infallible;
-
-            fn try_offset(
-                &self,
-                _scale: $scale,
-                _delta: TimeDelta,
-                _provider: Option<&P>,
-            ) -> Result<TimeDelta, Self::Error> {
-                Ok(TimeDelta::default())
-            }
-        }
-
-        impl ToScale<$scale> for $scale {
-            fn offset(&self, _scale: $scale, _delta: TimeDelta) -> TimeDelta {
-                TimeDelta::default()
-            }
-        }
-    };
-}
-
-impl_noops!(Tai);
-impl_noops!(Tcb);
-impl_noops!(Tcg);
-impl_noops!(Tdb);
-impl_noops!(Tt);
-impl_noops!(Ut1);
 
 // TAI <-> TT
 
@@ -101,15 +71,11 @@ impl ToScale<Tt> for Tai {
     }
 }
 
-impl_fallible!(Tai, Tt);
-
 impl ToScale<Tai> for Tt {
     fn offset(&self, _scale: Tai, _dt: TimeDelta) -> TimeDelta {
         -D_TAI_TT
     }
 }
-
-impl_fallible!(Tt, Tai);
 
 // TT <-> TCG
 
@@ -129,16 +95,12 @@ impl ToScale<Tcg> for Tt {
     }
 }
 
-impl_fallible!(Tt, Tcg);
-
 impl ToScale<Tt> for Tcg {
     fn offset(&self, _scale: Tt, dt: TimeDelta) -> TimeDelta {
         let tcg = dt.to_decimal_seconds();
         TimeDelta::from_decimal_seconds(-LG * (tcg - J77_TT))
     }
 }
-
-impl_fallible!(Tcg, Tt);
 
 // TDB <-> TCB
 
@@ -163,16 +125,12 @@ impl ToScale<Tcb> for Tdb {
     }
 }
 
-impl_fallible!(Tdb, Tcb);
-
 impl ToScale<Tdb> for Tcb {
     fn offset(&self, _scale: Tdb, dt: TimeDelta) -> TimeDelta {
         let tcb = dt.to_decimal_seconds();
         TimeDelta::from_decimal_seconds(TCB_77 - LB * tcb)
     }
 }
-
-impl_fallible!(Tcb, Tdb);
 
 // TT <-> TDB
 
@@ -189,8 +147,6 @@ impl ToScale<Tdb> for Tt {
     }
 }
 
-impl_fallible!(Tt, Tdb);
-
 impl ToScale<Tt> for Tdb {
     fn offset(&self, _scale: Tt, dt: TimeDelta) -> TimeDelta {
         let tdb = dt.to_decimal_seconds();
@@ -203,8 +159,6 @@ impl ToScale<Tt> for Tdb {
     }
 }
 
-impl_fallible!(Tdb, Tt);
-
 // TAI <-> UT1
 
 #[derive(Clone, Debug, Error, Eq, PartialEq)]
@@ -215,36 +169,32 @@ pub enum Ut1Error<T> {
     ProviderError(#[from] T),
 }
 
-impl<P> TryToScale<Ut1, P> for Tai
+impl<P> TryToScale<Ut1, P, Ut1Error<P::Error>> for Tai
 where
-    P: DeltaUt1TaiProvider + OffsetProvider,
+    P: DeltaUt1TaiProvider,
 {
-    type Error = Ut1Error<P::Error>;
-
     fn try_offset(
         &self,
         _scale: Ut1,
         dt: TimeDelta,
         provider: Option<&P>,
-    ) -> Result<TimeDelta, Self::Error> {
+    ) -> Result<TimeDelta, Ut1Error<P::Error>> {
         Ok(provider
             .ok_or(Ut1Error::MissingProvider)?
             .delta_ut1_tai_dt(dt)?)
     }
 }
 
-impl<P> TryToScale<Tai, P> for Ut1
+impl<P> TryToScale<Tai, P, Ut1Error<P::Error>> for Ut1
 where
-    P: DeltaUt1TaiProvider + OffsetProvider,
+    P: DeltaUt1TaiProvider,
 {
-    type Error = Ut1Error<P::Error>;
-
     fn try_offset(
         &self,
         _scale: Tai,
         dt: TimeDelta,
         provider: Option<&P>,
-    ) -> Result<TimeDelta, Self::Error> {
+    ) -> Result<TimeDelta, Ut1Error<P::Error>> {
         Ok(provider
             .ok_or(Ut1Error::MissingProvider)?
             .delta_tai_ut1_dt(dt)?)
@@ -253,6 +203,7 @@ where
 
 // Multi-step transformations
 
+#[inline]
 fn multi_step_offset<
     T1: TimeScale + ToScale<T2>,
     T2: TimeScale + ToScale<T3> + Copy,
@@ -277,15 +228,11 @@ impl ToScale<Tdb> for Tai {
     }
 }
 
-impl_fallible!(Tai, Tdb);
-
 impl ToScale<Tai> for Tdb {
     fn offset(&self, scale: Tai, dt: TimeDelta) -> TimeDelta {
         multi_step_offset(*self, Tt, scale, dt)
     }
 }
-
-impl_fallible!(Tdb, Tai);
 
 // TDB <-> TCG
 
@@ -295,15 +242,11 @@ impl ToScale<Tcg> for Tdb {
     }
 }
 
-impl_fallible!(Tdb, Tcg);
-
 impl ToScale<Tdb> for Tcg {
     fn offset(&self, scale: Tdb, dt: TimeDelta) -> TimeDelta {
         multi_step_offset(*self, Tt, scale, dt)
     }
 }
-
-impl_fallible!(Tcg, Tdb);
 
 // TAI <-> TCG
 
@@ -313,15 +256,11 @@ impl ToScale<Tcg> for Tai {
     }
 }
 
-impl_fallible!(Tai, Tcg);
-
 impl ToScale<Tai> for Tcg {
     fn offset(&self, scale: Tai, dt: TimeDelta) -> TimeDelta {
         multi_step_offset(*self, Tt, scale, dt)
     }
 }
-
-impl_fallible!(Tcg, Tai);
 
 // TAI <-> TCB
 
@@ -331,15 +270,11 @@ impl ToScale<Tcb> for Tai {
     }
 }
 
-impl_fallible!(Tai, Tcb);
-
 impl ToScale<Tai> for Tcb {
     fn offset(&self, scale: Tai, dt: TimeDelta) -> TimeDelta {
         multi_step_offset(*self, Tdb, scale, dt)
     }
 }
-
-impl_fallible!(Tcb, Tai);
 
 // TT <-> TCB
 
@@ -349,15 +284,11 @@ impl ToScale<Tcb> for Tt {
     }
 }
 
-impl_fallible!(Tt, Tcb);
-
 impl ToScale<Tt> for Tcb {
     fn offset(&self, scale: Tt, dt: TimeDelta) -> TimeDelta {
         multi_step_offset(*self, Tdb, scale, dt)
     }
 }
-
-impl_fallible!(Tcb, Tt);
 
 // TCB <-> TCG
 
@@ -367,32 +298,26 @@ impl ToScale<Tcg> for Tcb {
     }
 }
 
-impl_fallible!(Tcb, Tcg);
-
 impl ToScale<Tcb> for Tcg {
     fn offset(&self, scale: Tcb, dt: TimeDelta) -> TimeDelta {
         multi_step_offset(*self, Tdb, scale, dt)
     }
 }
 
-impl_fallible!(Tcg, Tcb);
-
 // UT1
 
 macro_rules! impl_ut1 {
     ($scale:ident) => {
-        impl<P> TryToScale<Ut1, P> for $scale
+        impl<P> TryToScale<Ut1, P, Ut1Error<P::Error>> for $scale
         where
-            P: DeltaUt1TaiProvider + OffsetProvider,
+            P: DeltaUt1TaiProvider,
         {
-            type Error = Ut1Error<P::Error>;
-
             fn try_offset(
                 &self,
                 _scale: Ut1,
                 dt: TimeDelta,
                 provider: Option<&P>,
-            ) -> Result<TimeDelta, Self::Error> {
+            ) -> Result<TimeDelta, Ut1Error<P::Error>> {
                 let mut dt = dt;
                 dt += $scale.offset(Tai, dt);
                 dt += Tai.try_offset(Ut1, dt, provider)?;
@@ -400,18 +325,16 @@ macro_rules! impl_ut1 {
             }
         }
 
-        impl<P> TryToScale<$scale, P> for Ut1
+        impl<P> TryToScale<$scale, P, Ut1Error<P::Error>> for Ut1
         where
-            P: DeltaUt1TaiProvider + OffsetProvider,
+            P: DeltaUt1TaiProvider,
         {
-            type Error = Ut1Error<P::Error>;
-
             fn try_offset(
                 &self,
                 scale: $scale,
                 dt: TimeDelta,
                 provider: Option<&P>,
-            ) -> Result<TimeDelta, Self::Error> {
+            ) -> Result<TimeDelta, Ut1Error<P::Error>> {
                 let mut dt = dt;
                 dt += Ut1.try_offset(Tai, dt, provider)?;
                 dt += scale.offset_from(Tai, dt);
@@ -428,18 +351,16 @@ impl_ut1!(Tt);
 
 // DynTimeScale
 
-impl<P> TryToScale<DynTimeScale, P> for DynTimeScale
+impl<P> TryToScale<DynTimeScale, P, Ut1Error<P::Error>> for DynTimeScale
 where
-    P: DeltaUt1TaiProvider + OffsetProvider,
+    P: DeltaUt1TaiProvider,
 {
-    type Error = Ut1Error<P::Error>;
-
     fn try_offset(
         &self,
         scale: DynTimeScale,
         dt: TimeDelta,
         provider: Option<&P>,
-    ) -> Result<TimeDelta, Self::Error> {
+    ) -> Result<TimeDelta, Ut1Error<P::Error>> {
         match self {
             DynTimeScale::Tai => match scale {
                 DynTimeScale::Tai => Ok(TimeDelta::default()),
@@ -493,98 +414,86 @@ where
     }
 }
 
-impl<P> TryToScale<Tai, P> for DynTimeScale
+impl<P> TryToScale<Tai, P, Ut1Error<P::Error>> for DynTimeScale
 where
-    P: DeltaUt1TaiProvider + OffsetProvider,
+    P: DeltaUt1TaiProvider,
 {
-    type Error = Ut1Error<P::Error>;
-
     fn try_offset(
         &self,
         _scale: Tai,
         dt: TimeDelta,
         provider: Option<&P>,
-    ) -> Result<TimeDelta, Self::Error> {
+    ) -> Result<TimeDelta, Ut1Error<P::Error>> {
         self.try_offset(DynTimeScale::Tai, dt, provider)
     }
 }
 
-impl<P> TryToScale<Tcb, P> for DynTimeScale
+impl<P> TryToScale<Tcb, P, Ut1Error<P::Error>> for DynTimeScale
 where
-    P: DeltaUt1TaiProvider + OffsetProvider,
+    P: DeltaUt1TaiProvider,
 {
-    type Error = Ut1Error<P::Error>;
-
     fn try_offset(
         &self,
         _scale: Tcb,
         dt: TimeDelta,
         provider: Option<&P>,
-    ) -> Result<TimeDelta, Self::Error> {
+    ) -> Result<TimeDelta, Ut1Error<P::Error>> {
         self.try_offset(DynTimeScale::Tcb, dt, provider)
     }
 }
 
-impl<P> TryToScale<Tcg, P> for DynTimeScale
+impl<P> TryToScale<Tcg, P, Ut1Error<P::Error>> for DynTimeScale
 where
-    P: DeltaUt1TaiProvider + OffsetProvider,
+    P: DeltaUt1TaiProvider,
 {
-    type Error = Ut1Error<P::Error>;
-
     fn try_offset(
         &self,
         _scale: Tcg,
         dt: TimeDelta,
         provider: Option<&P>,
-    ) -> Result<TimeDelta, Self::Error> {
+    ) -> Result<TimeDelta, Ut1Error<P::Error>> {
         self.try_offset(DynTimeScale::Tcg, dt, provider)
     }
 }
 
-impl<P> TryToScale<Tdb, P> for DynTimeScale
+impl<P> TryToScale<Tdb, P, Ut1Error<P::Error>> for DynTimeScale
 where
-    P: DeltaUt1TaiProvider + OffsetProvider,
+    P: DeltaUt1TaiProvider,
 {
-    type Error = Ut1Error<P::Error>;
-
     fn try_offset(
         &self,
         _scale: Tdb,
         dt: TimeDelta,
         provider: Option<&P>,
-    ) -> Result<TimeDelta, Self::Error> {
+    ) -> Result<TimeDelta, Ut1Error<P::Error>> {
         self.try_offset(DynTimeScale::Tdb, dt, provider)
     }
 }
 
-impl<P> TryToScale<Tt, P> for DynTimeScale
+impl<P> TryToScale<Tt, P, Ut1Error<P::Error>> for DynTimeScale
 where
-    P: DeltaUt1TaiProvider + OffsetProvider,
+    P: DeltaUt1TaiProvider,
 {
-    type Error = Ut1Error<P::Error>;
-
     fn try_offset(
         &self,
         _scale: Tt,
         dt: TimeDelta,
         provider: Option<&P>,
-    ) -> Result<TimeDelta, Self::Error> {
+    ) -> Result<TimeDelta, Ut1Error<P::Error>> {
         self.try_offset(DynTimeScale::Tt, dt, provider)
     }
 }
 
-impl<P> TryToScale<Ut1, P> for DynTimeScale
+impl<P> TryToScale<Ut1, P, Ut1Error<P::Error>> for DynTimeScale
 where
-    P: DeltaUt1TaiProvider + OffsetProvider,
+    P: DeltaUt1TaiProvider,
 {
-    type Error = Ut1Error<P::Error>;
-
     fn try_offset(
         &self,
         _scale: Ut1,
         dt: TimeDelta,
         provider: Option<&P>,
-    ) -> Result<TimeDelta, Self::Error> {
+    ) -> Result<TimeDelta, Ut1Error<P::Error>> {
         self.try_offset(DynTimeScale::Ut1, dt, provider)
     }
 }
