@@ -192,7 +192,7 @@ impl<T: OffsetProvider> TryToScale<Tcg, T> for Time<Tt> {
     fn try_to_scale(&self, scale: Tcg, _provider: &T) -> Result<Time<Tcg>, T::Error> {
         let time = self.to_delta().to_decimal_seconds();
         let raw_delta = INV_LG * (time - J77_TT);
-        let delta = TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
+        let delta = TimeDelta::try_from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
             panic!(
                 "Calculated TT to TCG offset `{}` could not be converted to `TimeDelta`: {}",
                 raw_delta, err
@@ -208,7 +208,7 @@ impl<T: OffsetProvider> TryToScale<Tt, T> for Time<Tcg> {
     fn try_to_scale(&self, scale: Tt, _provider: &T) -> Result<Time<Tt>, T::Error> {
         let time = self.to_delta().to_decimal_seconds();
         let raw_delta = -LG * (time - J77_TT);
-        let delta = TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
+        let delta = TimeDelta::try_from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
             panic!(
                 "Calculated TCG to TT offset `{}` could not be converted to `TimeDelta`: {}",
                 raw_delta, err
@@ -240,7 +240,7 @@ impl<T: OffsetProvider> TryToScale<Tcb, T> for Time<Tdb> {
     fn try_to_scale(&self, scale: Tcb, _provider: &T) -> Result<Time<Tcb>, T::Error> {
         let dt = self.to_delta().to_decimal_seconds();
         let raw_delta = -TCB_77 / (1.0 - LB) + INV_LB * dt;
-        let delta = TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
+        let delta = TimeDelta::try_from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
             panic!(
                 "Calculated TDB to TCB offset `{}` could not be converted to `TimeDelta`: {}",
                 raw_delta, err
@@ -256,7 +256,7 @@ impl<T: OffsetProvider> TryToScale<Tdb, T> for Time<Tcb> {
     fn try_to_scale(&self, scale: Tdb, _provider: &T) -> Result<Time<Tdb>, T::Error> {
         let dt = self.to_delta().to_decimal_seconds();
         let raw_delta = TCB_77 - LB * dt;
-        let delta = TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
+        let delta = TimeDelta::try_from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
             panic!(
                 "Calculated TCB to TDB offset `{}` could not be converted to `TimeDelta`: {}",
                 raw_delta, err
@@ -280,7 +280,7 @@ impl<T: OffsetProvider> TryToScale<Tdb, T> for Time<Tt> {
         let tt = self.to_delta().to_decimal_seconds();
         let g = M_0 + M_1 * tt;
         let raw_delta = K * (g + EB * g.sin()).sin();
-        let delta = TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
+        let delta = TimeDelta::try_from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
             panic!(
                 "Calculated TT to TDB offset `{}` could not be converted to `TimeDelta`: {}",
                 raw_delta, err,
@@ -303,7 +303,7 @@ impl<T: OffsetProvider> TryToScale<Tt, T> for Time<Tdb> {
             tt = tdb + raw_delta;
         }
 
-        let delta = TimeDelta::from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
+        let delta = TimeDelta::try_from_decimal_seconds(raw_delta).unwrap_or_else(|err| {
             panic!(
                 "Calculated TDB to TT offset `{}` could not be converted to `TimeDelta`: {}",
                 raw_delta, err,

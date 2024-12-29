@@ -47,6 +47,18 @@ impl DeltaUt1TaiProvider for PyNoOpOffsetProvider {
             "`provider` argument needs to be present for UT1 transformations",
         ))
     }
+
+    fn delta_ut1_tai_dt(&self, _tai: TimeDelta) -> Result<TimeDelta, Self::Error> {
+        Err(PyValueError::new_err(
+            "`provider` argument needs to be present for UT1 transformations",
+        ))
+    }
+
+    fn delta_tai_ut1_dt(&self, _ut1: TimeDelta) -> Result<TimeDelta, Self::Error> {
+        Err(PyValueError::new_err(
+            "`provider` argument needs to be present for UT1 transformations",
+        ))
+    }
 }
 
 impl PyDeltaUt1Provider for PyNoOpOffsetProvider {}
@@ -75,6 +87,14 @@ impl DeltaUt1TaiProvider for PyUt1Provider {
 
     fn delta_tai_ut1(&self, ut1: &Time<Ut1>) -> PyResult<TimeDelta> {
         self.0.delta_tai_ut1(ut1).map_err(|err| err.into())
+    }
+
+    fn delta_ut1_tai_dt(&self, tai: TimeDelta) -> Result<TimeDelta, Self::Error> {
+        self.0.delta_ut1_tai_dt(tai).map_err(|err| err.into())
+    }
+
+    fn delta_tai_ut1_dt(&self, ut1: TimeDelta) -> Result<TimeDelta, Self::Error> {
+        self.0.delta_tai_ut1_dt(ut1).map_err(|err| err.into())
     }
 }
 

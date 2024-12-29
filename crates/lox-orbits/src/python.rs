@@ -388,7 +388,7 @@ impl PyTrajectory {
         }
         let mut states: Vec<DynState<PyTime>> = Vec::with_capacity(array.nrows());
         for row in array.rows() {
-            let time = PyTime(start_time.0 + TimeDelta::from_decimal_seconds(row[0])?);
+            let time = PyTime(start_time.0 + TimeDelta::try_from_decimal_seconds(row[0])?);
             let position = DVec3::new(row[1], row[2], row[3]);
             let velocity = DVec3::new(row[4], row[5], row[6]);
             states.push(State::new(time, position, velocity, origin.0, frame.0));

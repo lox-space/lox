@@ -17,7 +17,7 @@
 */
 
 use std::fmt::Display;
-use std::ops::{Add, Neg, RangeInclusive, Sub};
+use std::ops::{Add, AddAssign, Neg, RangeInclusive, Sub, SubAssign};
 
 use num::ToPrimitive;
 use thiserror::Error;
@@ -91,6 +91,11 @@ impl TimeDelta {
         }
     }
 
+    pub fn from_decimal_seconds(value: f64) -> Self {
+        Self::try_from_decimal_seconds(value)
+            .expect("floating point value should be representable as a `TimeDelta`")
+    }
+
     /// Construct a [TimeDelta] from a floating-point number of seconds.
     ///
     /// As the magnitude of the input's significand grows, the precision of the resulting
@@ -100,7 +105,7 @@ impl TimeDelta {
     /// # Errors
     ///
     /// - [TimeDeltaError] if the input is NaN or ±infinity.
-    pub fn from_decimal_seconds(value: f64) -> Result<Self, TimeDeltaError> {
+    pub fn try_from_decimal_seconds(value: f64) -> Result<Self, TimeDeltaError> {
         if value.is_nan() {
             return Err(TimeDeltaError {
                 raw: value,
@@ -152,7 +157,7 @@ impl TimeDelta {
     ///
     /// - [TimeDeltaError] if the input is NaN or ±infinity.
     pub fn from_minutes(value: f64) -> Result<Self, TimeDeltaError> {
-        Self::from_decimal_seconds(value * SECONDS_PER_MINUTE)
+        Self::try_from_decimal_seconds(value * SECONDS_PER_MINUTE)
     }
 
     /// Construct a [TimeDelta] from a floating-point number of hours.
@@ -165,7 +170,7 @@ impl TimeDelta {
     ///
     /// - [TimeDeltaError] if the input is NaN or ±infinity.
     pub fn from_hours(value: f64) -> Result<Self, TimeDeltaError> {
-        Self::from_decimal_seconds(value * SECONDS_PER_HOUR)
+        Self::try_from_decimal_seconds(value * SECONDS_PER_HOUR)
     }
 
     /// Construct a [TimeDelta] from a floating-point number of days.
@@ -178,7 +183,7 @@ impl TimeDelta {
     ///
     /// - [TimeDeltaError] if the input is NaN or ±infinity.
     pub fn from_days(value: f64) -> Result<Self, TimeDeltaError> {
-        Self::from_decimal_seconds(value * SECONDS_PER_DAY)
+        Self::try_from_decimal_seconds(value * SECONDS_PER_DAY)
     }
 
     /// Construct a [TimeDelta] from a floating-point number of Julian years.
@@ -191,7 +196,7 @@ impl TimeDelta {
     ///
     /// - [TimeDeltaError] if the input is NaN or ±infinity.
     pub fn from_julian_years(value: f64) -> Result<Self, TimeDeltaError> {
-        Self::from_decimal_seconds(value * SECONDS_PER_JULIAN_YEAR)
+        Self::try_from_decimal_seconds(value * SECONDS_PER_JULIAN_YEAR)
     }
 
     /// Construct a [TimeDelta] from a floating-point number of Julian centuries.
@@ -204,7 +209,7 @@ impl TimeDelta {
     ///
     /// - [TimeDeltaError] if the input is NaN or ±infinity.
     pub fn from_julian_centuries(value: f64) -> Result<Self, TimeDeltaError> {
-        Self::from_decimal_seconds(value * SECONDS_PER_JULIAN_CENTURY)
+        Self::try_from_decimal_seconds(value * SECONDS_PER_JULIAN_CENTURY)
     }
 
     /// Express `&self` as a floating-point number of seconds, with potential loss of precision.
@@ -339,6 +344,12 @@ impl Add for TimeDelta {
     }
 }
 
+impl AddAssign for TimeDelta {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs
+    }
+}
+
 impl Sub for TimeDelta {
     type Output = Self;
 
@@ -357,6 +368,12 @@ impl Sub for TimeDelta {
             seconds: diff_seconds,
             subsecond: Subsecond(diff_subsecond),
         }
+    }
+}
+
+impl SubAssign for TimeDelta {
+    fn sub_assign(&mut self, rhs: Self) {
+        *self = *self - rhs
     }
 }
 
@@ -416,7 +433,7 @@ mod tests {
         #[case] seconds: f64,
         #[case] expected: Result<TimeDelta, TimeDeltaError>,
     ) {
-        let actual = TimeDelta::from_decimal_seconds(seconds);
+        let actual = TimeDelta::try_from_decimal_seconds(seconds);
         assert_eq!(expected, actual);
     }
 
@@ -496,7 +513,7 @@ mod tests {
             } else {
                 s
             };
-            let delta = TimeDelta::from_decimal_seconds(s).unwrap();
+            let delta = TimeDelta::try_from_decimal_seconds(s).unwrap();
             if s > 1.0 {
                 assert_float_eq!(delta.to_decimal_seconds(), exp, rel <= 1e-15, "input {} was not roundtrippable", s);
             } else {

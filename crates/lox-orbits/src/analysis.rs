@@ -99,7 +99,7 @@ pub fn visibility_dyn<T: TimeLike + TryToScale<Tdb, P> + Clone, P: FrameTransfor
     find_windows(
         |t| {
             elevation_dyn(
-                start.clone() + TimeDelta::from_decimal_seconds(t).unwrap(),
+                start.clone() + TimeDelta::try_from_decimal_seconds(t).unwrap(),
                 gs,
                 mask,
                 sc,
@@ -155,7 +155,7 @@ pub fn visibility<
     find_windows(
         |t| {
             elevation(
-                start.clone() + TimeDelta::from_decimal_seconds(t).unwrap(),
+                start.clone() + TimeDelta::try_from_decimal_seconds(t).unwrap(),
                 gs,
                 mask,
                 sc,

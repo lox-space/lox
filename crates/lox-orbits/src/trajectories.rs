@@ -173,7 +173,7 @@ where
         find_events(
             |t| {
                 func(State::new(
-                    self.start_time() + TimeDelta::from_decimal_seconds(t).unwrap(),
+                    self.start_time() + TimeDelta::try_from_decimal_seconds(t).unwrap(),
                     self.position(t),
                     self.velocity(t),
                     self.origin(),
@@ -192,7 +192,7 @@ where
         find_windows(
             |t| {
                 func(State::new(
-                    self.start_time() + TimeDelta::from_decimal_seconds(t).unwrap(),
+                    self.start_time() + TimeDelta::try_from_decimal_seconds(t).unwrap(),
                     self.position(t),
                     self.velocity(t),
                     self.origin(),

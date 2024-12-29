@@ -40,9 +40,11 @@ use std::path::Path;
 pub trait DeltaUt1TaiProvider: OffsetProvider {
     /// Returns the difference between UT1 and TAI at the given TAI instant.
     fn delta_ut1_tai(&self, tai: &Time<Tai>) -> Result<TimeDelta, Self::Error>;
+    fn delta_ut1_tai_dt(&self, tai: TimeDelta) -> Result<TimeDelta, Self::Error>;
 
     /// Returns the difference between TAI and UT1 at the given UT1 instant.
     fn delta_tai_ut1(&self, ut1: &Time<Ut1>) -> Result<TimeDelta, Self::Error>;
+    fn delta_tai_ut1_dt(&self, ut1: TimeDelta) -> Result<TimeDelta, Self::Error>;
 }
 
 /// Error type returned when [DeltaUt1Tai] instantiation fails.
@@ -77,7 +79,7 @@ impl ExtrapolatedDeltaUt1Tai {
             req_date: req_date.date(),
             min_date: min_date.date(),
             max_date: max_date.date(),
-            extrapolated_value: TimeDelta::from_decimal_seconds(val).unwrap(),
+            extrapolated_value: TimeDelta::try_from_decimal_seconds(val).unwrap(),
         }
     }
 }
@@ -116,7 +118,7 @@ impl DeltaUt1Tai {
                 let utc = Utc::from_delta(delta);
                 let delta_utc_tai = ls.delta_utc_tai(utc).unwrap();
                 let delta_ut1_tai =
-                    TimeDelta::from_decimal_seconds(delta_ut1_utc).unwrap() + delta_utc_tai;
+                    TimeDelta::try_from_decimal_seconds(delta_ut1_utc).unwrap() + delta_utc_tai;
                 delta_ut1_tai.to_decimal_seconds()
             })
             .collect();
@@ -139,7 +141,7 @@ impl DeltaUt1TaiProvider for DeltaUt1Tai {
         if seconds < t0 || seconds > tn {
             return Err(ExtrapolatedDeltaUt1Tai::new(t0, tn, seconds, val));
         }
-        Ok(TimeDelta::from_decimal_seconds(val).unwrap())
+        Ok(TimeDelta::try_from_decimal_seconds(val).unwrap())
     }
 
     fn delta_tai_ut1(&self, ut1: &Time<Ut1>) -> Result<TimeDelta, Self::Error> {
@@ -155,7 +157,34 @@ impl DeltaUt1TaiProvider for DeltaUt1Tai {
         if seconds < t0 || seconds > tn {
             return Err(ExtrapolatedDeltaUt1Tai::new(t0, tn, seconds, -val));
         }
-        Ok(-TimeDelta::from_decimal_seconds(val).unwrap())
+        Ok(-TimeDelta::try_from_decimal_seconds(val).unwrap())
+    }
+
+    fn delta_ut1_tai_dt(&self, tai: TimeDelta) -> Result<TimeDelta, Self::Error> {
+        let seconds = tai.seconds_since_j2000();
+        let (t0, _) = self.0.first();
+        let (tn, _) = self.0.last();
+        let val = self.0.interpolate(seconds);
+        if seconds < t0 || seconds > tn {
+            return Err(ExtrapolatedDeltaUt1Tai::new(t0, tn, seconds, val));
+        }
+        Ok(TimeDelta::try_from_decimal_seconds(val).unwrap())
+    }
+
+    fn delta_tai_ut1_dt(&self, ut1: TimeDelta) -> Result<TimeDelta, Self::Error> {
+        let seconds = ut1.seconds_since_j2000();
+        let (t0, _) = self.0.first();
+        let (tn, _) = self.0.last();
+        // Use the UT1 offset as an initial guess even though the table is based on TAI
+        let mut val = self.0.interpolate(seconds);
+        // Interpolate again with the adjusted offsets
+        for _ in 0..2 {
+            val = self.0.interpolate(seconds - val);
+        }
+        if seconds < t0 || seconds > tn {
+            return Err(ExtrapolatedDeltaUt1Tai::new(t0, tn, seconds, -val));
+        }
+        Ok(-TimeDelta::try_from_decimal_seconds(val).unwrap())
     }
 }
 
@@ -273,13 +302,13 @@ mod tests {
         req_date: Date::new(1973, 1, 1).unwrap(),
         min_date: Date::new(1973, 1, 2).unwrap(),
         max_date: Date::new(2025, 3, 15).unwrap(),
-        extrapolated_value: TimeDelta::from_decimal_seconds(-11.188739245677642).unwrap(),
+        extrapolated_value: TimeDelta::try_from_decimal_seconds(-11.188739245677642).unwrap(),
     }))]
     #[case(time!(Tai, 2025, 3, 16).unwrap(), Err(ExtrapolatedDeltaUt1Tai {
         req_date: Date::new(2025, 3, 16).unwrap(),
         min_date: Date::new(1973, 1, 2).unwrap(),
         max_date: Date::new(2025, 3, 15).unwrap(),
-        extrapolated_value: TimeDelta::from_decimal_seconds(-36.98893121380733).unwrap(),
+        extrapolated_value: TimeDelta::try_from_decimal_seconds(-36.98893121380733).unwrap(),
     }))]
     fn test_delta_ut1_tai_extrapolation(
         #[case] time: Time<Tai>,
@@ -296,7 +325,8 @@ mod tests {
             .extrapolated_value
             .to_decimal_seconds();
         assert_float_eq!(actual, expected, rel <= 1e-8);
-        let ut1 = time.with_scale_and_delta(Ut1, TimeDelta::from_decimal_seconds(actual).unwrap());
+        let ut1 =
+            time.with_scale_and_delta(Ut1, TimeDelta::try_from_decimal_seconds(actual).unwrap());
         let actual = provider
             .delta_tai_ut1(&ut1)
             .unwrap_err()

@@ -26,7 +26,7 @@ pub struct PyTimeDelta(pub TimeDelta);
 impl PyTimeDelta {
     #[new]
     pub fn new(seconds: f64) -> PyResult<Self> {
-        Ok(Self(TimeDelta::from_decimal_seconds(seconds)?))
+        Ok(Self(TimeDelta::try_from_decimal_seconds(seconds)?))
     }
 
     pub fn __repr__(&self) -> String {

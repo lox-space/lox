@@ -88,7 +88,7 @@ pub fn find_events<F: Fn(f64) -> f64 + Copy, T: TimeLike + Clone, R: FindBracket
             let t = root_finder
                 .find_in_bracket(func, (t0, t1))
                 .expect("sign changed but root finder failed");
-            let time = start.clone() + TimeDelta::from_decimal_seconds(t).unwrap();
+            let time = start.clone() + TimeDelta::try_from_decimal_seconds(t).unwrap();
 
             events.push(Event { crossing, time });
         }
@@ -202,13 +202,13 @@ mod tests {
         assert_eq!(events[0].crossing, ZeroCrossing::Down);
         assert_close!(
             events[0].time,
-            start + TimeDelta::from_decimal_seconds(PI).unwrap(),
+            start + TimeDelta::try_from_decimal_seconds(PI).unwrap(),
             1e-6
         );
         assert_eq!(events[1].crossing, ZeroCrossing::Up);
         assert_close!(
             events[1].time,
-            start + TimeDelta::from_decimal_seconds(TAU).unwrap(),
+            start + TimeDelta::try_from_decimal_seconds(TAU).unwrap(),
             1e-6
         );
     }
@@ -228,7 +228,7 @@ mod tests {
         assert_eq!(windows[0].start, start);
         assert_close!(
             windows[0].end,
-            start + TimeDelta::from_decimal_seconds(PI).unwrap(),
+            start + TimeDelta::try_from_decimal_seconds(PI).unwrap(),
             1e-6
         );
     }
