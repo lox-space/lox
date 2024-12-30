@@ -50,7 +50,7 @@ use constants::julian_dates::{
 use lox_math::constants::f64::time;
 use lox_math::types::units::Days;
 use time_of_day::{CivilTime, TimeOfDay, TimeOfDayError};
-use time_scales::{Tai, Tcb, Tcg, Tdb, Tt, Ut1};
+use time_scales::{DynTimeScale, Tai, Tcb, Tcg, Tdb, Tt, Ut1};
 
 use crate::calendar_dates::{CalendarDate, Date};
 use crate::deltas::{TimeDelta, ToDelta};
@@ -127,6 +127,8 @@ pub struct Time<T: TimeScale> {
     seconds: i64,
     subsecond: Subsecond,
 }
+
+pub type DynTime = Time<DynTimeScale>;
 
 impl<T: TimeScale> Time<T> {
     /// Instantiates a [Time] in the given [TimeScale] from the count of seconds since J2000, subdivided
@@ -306,6 +308,26 @@ impl<T: TimeScale> Time<T> {
     pub fn with_scale<S: TimeScale>(&self, scale: S) -> Time<S> {
         Time::new(scale, self.seconds, self.subsecond)
     }
+
+    // pub fn try_to_scale2<S, P, E>(&self, scale: S, provider: Option<&P>) -> Result<Time<S>, E>
+    // where
+    //     S: TimeScale + Copy,
+    //     T: time_scales::offsets::TryToScale<S, P, E>,
+    // {
+    //     let dt = self.to_delta();
+    //     let offset = self.scale.try_offset(scale, dt, provider)?;
+    //     Ok(self.with_scale_and_delta(scale, offset))
+    // }
+    //
+    // pub fn to_scale2<S>(&self, scale: S) -> Time<S>
+    // where
+    //     S: TimeScale + Copy,
+    //     T: time_scales::offsets::ToScale<S>,
+    // {
+    //     let dt = self.to_delta();
+    //     let offset = self.scale.offset(scale, dt);
+    //     self.with_scale_and_delta(scale, offset)
+    // }
 
     /// Returns a new [Time] with the delta of `self` adjusted by `delta`, and time scale `scale`.
     ///

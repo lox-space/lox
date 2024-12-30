@@ -8,10 +8,7 @@ use crate::{
 
 use super::{DynTimeScale, Tai, Tcb, Tcg, Tdb, TimeScale, Tt, Ut1};
 
-/// Marker trait denoting a type that returns an offset between a pair of [TimeScale]s.
-pub trait OffsetProvider {}
-
-pub trait TryToScale<T: TimeScale, P: OffsetProvider> {
+pub trait TryToScale<T: TimeScale, P> {
     type Error;
 
     fn try_offset(
@@ -42,7 +39,7 @@ where
 
 macro_rules! impl_fallible {
     ($in:ident, $out:ident) => {
-        impl<P: OffsetProvider> TryToScale<$out, P> for $in {
+        impl<P> TryToScale<$out, P> for $in {
             type Error = Infallible;
 
             fn try_offset(
@@ -59,7 +56,7 @@ macro_rules! impl_fallible {
 
 macro_rules! impl_noops {
     ($scale:ident) => {
-        impl<P: OffsetProvider> TryToScale<$scale, P> for $scale {
+        impl<P> TryToScale<$scale, P> for $scale {
             type Error = Infallible;
 
             fn try_offset(
@@ -194,12 +191,12 @@ impl_fallible!(Tt, Tdb);
 impl ToScale<Tt> for Tdb {
     fn offset(&self, _scale: Tt, dt: TimeDelta) -> TimeDelta {
         let tdb = dt.to_decimal_seconds();
-        let mut tt = tdb;
+        let mut offset = 0.0;
         for _ in 1..3 {
-            let g = M_0 + M_1 * tt;
-            tt = tdb - K * (g + EB * g.sin()).sin();
+            let g = M_0 + M_1 * (tdb + offset);
+            offset = -K * (g + EB * g.sin()).sin();
         }
-        TimeDelta::from_decimal_seconds(tt)
+        TimeDelta::from_decimal_seconds(offset)
     }
 }
 
@@ -217,7 +214,7 @@ pub enum Ut1Error<T> {
 
 impl<P> TryToScale<Ut1, P> for Tai
 where
-    P: DeltaUt1TaiProvider + OffsetProvider,
+    P: DeltaUt1TaiProvider,
 {
     type Error = Ut1Error<P::Error>;
 
@@ -235,7 +232,7 @@ where
 
 impl<P> TryToScale<Tai, P> for Ut1
 where
-    P: DeltaUt1TaiProvider + OffsetProvider,
+    P: DeltaUt1TaiProvider,
 {
     type Error = Ut1Error<P::Error>;
 
@@ -256,17 +253,16 @@ where
 fn multi_step_offset<
     T1: TimeScale + ToScale<T2>,
     T2: TimeScale + ToScale<T3> + Copy,
-    T3: TimeScale,
+    T3: TimeScale + Copy,
 >(
     origin: T1,
     via: T2,
     target: T3,
     dt: TimeDelta,
 ) -> TimeDelta {
-    let mut dt = dt;
-    dt += origin.offset(via, dt);
-    dt += via.offset(target, dt);
-    dt
+    let mut offset = origin.offset(via, dt);
+    offset += via.offset(target, dt + offset);
+    offset
 }
 
 // TAI <-> TDB
@@ -383,7 +379,7 @@ macro_rules! impl_ut1 {
     ($scale:ident) => {
         impl<P> TryToScale<Ut1, P> for $scale
         where
-            P: DeltaUt1TaiProvider + OffsetProvider,
+            P: DeltaUt1TaiProvider,
         {
             type Error = Ut1Error<P::Error>;
 
@@ -393,16 +389,15 @@ macro_rules! impl_ut1 {
                 dt: TimeDelta,
                 provider: Option<&P>,
             ) -> Result<TimeDelta, Self::Error> {
-                let mut dt = dt;
-                dt += $scale.offset(Tai, dt);
-                dt += Tai.try_offset(Ut1, dt, provider)?;
-                Ok(dt)
+                let mut offset = $scale.offset(Tai, dt);
+                offset += Tai.try_offset(Ut1, dt + offset, provider)?;
+                Ok(offset)
             }
         }
 
         impl<P> TryToScale<$scale, P> for Ut1
         where
-            P: DeltaUt1TaiProvider + OffsetProvider,
+            P: DeltaUt1TaiProvider,
         {
             type Error = Ut1Error<P::Error>;
 
@@ -412,10 +407,9 @@ macro_rules! impl_ut1 {
                 dt: TimeDelta,
                 provider: Option<&P>,
             ) -> Result<TimeDelta, Self::Error> {
-                let mut dt = dt;
-                dt += Ut1.try_offset(Tai, dt, provider)?;
-                dt += scale.offset_from(Tai, dt);
-                Ok(dt)
+                let mut offset = Ut1.try_offset(Tai, dt, provider)?;
+                offset += scale.offset_from(Tai, dt + offset);
+                Ok(offset)
             }
         }
     };
@@ -430,7 +424,7 @@ impl_ut1!(Tt);
 
 impl<P> TryToScale<DynTimeScale, P> for DynTimeScale
 where
-    P: DeltaUt1TaiProvider + OffsetProvider,
+    P: DeltaUt1TaiProvider,
 {
     type Error = Ut1Error<P::Error>;
 
@@ -495,7 +489,7 @@ where
 
 impl<P> TryToScale<Tai, P> for DynTimeScale
 where
-    P: DeltaUt1TaiProvider + OffsetProvider,
+    P: DeltaUt1TaiProvider,
 {
     type Error = Ut1Error<P::Error>;
 
@@ -511,7 +505,7 @@ where
 
 impl<P> TryToScale<Tcb, P> for DynTimeScale
 where
-    P: DeltaUt1TaiProvider + OffsetProvider,
+    P: DeltaUt1TaiProvider,
 {
     type Error = Ut1Error<P::Error>;
 
@@ -527,7 +521,7 @@ where
 
 impl<P> TryToScale<Tcg, P> for DynTimeScale
 where
-    P: DeltaUt1TaiProvider + OffsetProvider,
+    P: DeltaUt1TaiProvider,
 {
     type Error = Ut1Error<P::Error>;
 
@@ -543,7 +537,7 @@ where
 
 impl<P> TryToScale<Tdb, P> for DynTimeScale
 where
-    P: DeltaUt1TaiProvider + OffsetProvider,
+    P: DeltaUt1TaiProvider,
 {
     type Error = Ut1Error<P::Error>;
 
@@ -559,7 +553,7 @@ where
 
 impl<P> TryToScale<Tt, P> for DynTimeScale
 where
-    P: DeltaUt1TaiProvider + OffsetProvider,
+    P: DeltaUt1TaiProvider,
 {
     type Error = Ut1Error<P::Error>;
 
@@ -575,7 +569,7 @@ where
 
 impl<P> TryToScale<Ut1, P> for DynTimeScale
 where
-    P: DeltaUt1TaiProvider + OffsetProvider,
+    P: DeltaUt1TaiProvider,
 {
     type Error = Ut1Error<P::Error>;
 
@@ -591,11 +585,85 @@ where
 
 #[cfg(test)]
 mod tests {
+    use float_eq::assert_float_eq;
+    use rstest::rstest;
+
+    use crate::{
+        calendar_dates::Date, deltas::ToDelta, test_helpers::delta_ut1_tai, time_of_day::TimeOfDay,
+        DynTime,
+    };
+
     use super::*;
 
     #[test]
     fn test_from_scale() {
         let dt = TimeDelta::default();
         assert_eq!(Tai.offset(Tt, dt), Tt.offset_from(Tai, dt))
+    }
+
+    #[rstest]
+    #[case::tai_tai("TAI", "TAI", 0.0, 0.0)]
+    #[case::tai_tcb("TAI", "TCB", 55.66851419888016, -55.66851419888016)]
+    #[case::tai_tcg("TAI", "TCG", 33.239589335894145, -33.239589335894145)]
+    #[case::tai_tdb("TAI", "TDB", 32.183882324981056, -32.183882324981056)]
+    #[case::tai_tt("TAI", "TT", 32.184, -32.184)]
+    #[case::tai_ut1("TAI", "UT1", -36.949521832072996, 36.949521832072996)]
+    #[case::tcb_tai("TCB", "TAI", -55.668513317090046, 55.668513317090046)]
+    #[case::tcb_tcb("TCB", "TCB", 0.0, 0.0)]
+    #[case::tcb_tcg("TCB", "TCG", -22.4289240199929, 22.4289240199929)]
+    #[case::tcb_tdb("TCB", "TDB", -23.484631010747805, 23.484631010747805)]
+    #[case::tcb_tt("TCB", "TT", -23.484513317090048, 23.484513317090048)]
+    #[case::tcb_ut1("TCB", "UT1", -92.61803559995818, 92.61803559995818)]
+    #[case::tcg_tai("TCG", "TAI", -33.23958931272851, 33.23958931272851)]
+    #[case::tcg_tcb("TCG", "TCB", 22.428924359636042, -22.428924359636042)]
+    #[case::tcg_tcg("TCG", "TCG", 0.0, 0.0)]
+    #[case::tcg_tdb("TCG", "TDB", -1.0557069988766656, 1.0557069988766656)]
+    #[case::tcg_tt("TCG", "TT", -1.0555893127285145, 1.0555893127285145)]
+    #[case::tcg_ut1("TCG", "UT1", -70.1891114139689, 70.1891114139689)]
+    #[case::tdb_tai("TDB", "TAI", -32.18388231420531, 32.18388231420531)]
+    #[case::tdb_tcb("TDB", "TCB", 23.48463137488165, -23.48463137488165)]
+    #[case::tdb_tcg("TDB", "TCG", 1.0557069992589518, -1.0557069992589518)]
+    #[case::tdb_tdb("TDB", "TDB", 0.0, 0.0)]
+    #[case::tdb_tt("TDB", "TT", 1.176857946845189E-4, -1.176857946845189E-4)]
+    #[case::tdb_ut1("TDB", "UT1", -69.13340440689674, 69.13340440689674)]
+    #[case::tt_tai("TT", "TAI", -32.184, 32.184)]
+    #[case::tt_tcb("TT", "TCB", 23.484513689085105, -23.484513689085105)]
+    #[case::tt_tcg("TT", "TCG", 1.055589313464182, -1.055589313464182)]
+    #[case::tt_tdb("TT", "TDB", -1.1768579472004603E-4, 1.1768579472004603E-4)]
+    #[case::tt_tt("TT", "TT", 0.0, 0.0)]
+    #[case::tt_ut1("TT", "UT1", -69.13352209269237, 69.13352209269237)]
+    #[case::ut1_tai("UT1", "TAI", 36.949521532869305, -36.949521532869305)]
+    #[case::ut1_tcb("UT1", "TCB", 92.61803631703046, -92.61803631703046)]
+    #[case::ut1_tcg("UT1", "TCG", 70.18911089451464, -70.18911089451464)]
+    #[case::ut1_tdb("UT1", "TDB", 69.13340387022173, -69.13340387022173)]
+    #[case::ut1_tt("UT1", "TT", 69.13352153286931, -69.13352153286931)]
+    #[case::ut1_ut1("UT1", "UT1", 0.0, 0.0)]
+    fn test_dyn_time_scale_offsets(
+        #[case] scale1: &str,
+        #[case] scale2: &str,
+        #[case] exp1: f64,
+        #[case] exp2: f64,
+    ) {
+        let tolerance = 1e-6;
+        let provider = Some(delta_ut1_tai());
+        let scale1: DynTimeScale = scale1.parse().unwrap();
+        let scale2: DynTimeScale = scale2.parse().unwrap();
+        let date = Date::new(2024, 12, 30).unwrap();
+        let time = TimeOfDay::from_hms(10, 27, 13.145).unwrap();
+        let dt = DynTime::from_date_and_time(scale1, date, time)
+            .unwrap()
+            .to_delta();
+        let act1 = scale1
+            .try_offset(scale2, dt, provider)
+            .unwrap()
+            .to_decimal_seconds();
+        let act2 = scale2
+            .try_offset(scale1, dt, provider)
+            .unwrap()
+            .to_decimal_seconds();
+        assert_float_eq!(exp1.abs(), exp2.abs(), rel <= tolerance);
+        assert_float_eq!(act1.abs(), act2.abs(), rel <= tolerance);
+        assert_float_eq!(act1, exp1, rel <= tolerance);
+        assert_float_eq!(act2, exp2, rel <= tolerance);
     }
 }
