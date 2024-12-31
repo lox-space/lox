@@ -176,10 +176,11 @@ impl DeltaUt1TaiProvider for DeltaUt1Tai {
         let (t0, _) = self.0.first();
         let (tn, _) = self.0.last();
         // Use the UT1 offset as an initial guess even though the table is based on TAI
-        let mut val = self.0.interpolate(seconds);
+        let mut val = 0.0;
         // Interpolate again with the adjusted offsets
-        for _ in 0..2 {
-            val = self.0.interpolate(seconds - val);
+        for _ in 0..3 {
+            val = self.0.interpolate(seconds + val);
+            dbg!(val);
         }
         if seconds < t0 || seconds > tn {
             return Err(ExtrapolatedDeltaUt1Tai::new(t0, tn, seconds, -val));
