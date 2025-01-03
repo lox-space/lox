@@ -11,7 +11,6 @@ use crate::prelude::CivilTime;
 use crate::python::time::PyTime;
 use crate::python::time_scales::PyTimeScale;
 use crate::python::ut1::PyUt1Provider;
-use crate::transformations::{ToTai, ToTcb, ToTcg, ToTdb, ToTt, ToUt1};
 use crate::utc::{Utc, UtcError};
 use pyo3::exceptions::PyValueError;
 use pyo3::types::PyType;
@@ -115,33 +114,33 @@ impl PyUtc {
         self.0.decimal_seconds()
     }
 
-    pub fn to_tai(&self) -> PyTime {
-        PyTime(self.0.to_tai().with_scale(PyTimeScale::Tai))
-    }
-
-    pub fn to_tcb(&self) -> PyTime {
-        PyTime(self.0.to_tcb().with_scale(PyTimeScale::Tcb))
-    }
-
-    pub fn to_tcg(&self) -> PyTime {
-        PyTime(self.0.to_tcg().with_scale(PyTimeScale::Tcg))
-    }
-
-    pub fn to_tdb(&self) -> PyTime {
-        PyTime(self.0.to_tdb().with_scale(PyTimeScale::Tdb))
-    }
-
-    pub fn to_tt(&self) -> PyTime {
-        PyTime(self.0.to_tt().with_scale(PyTimeScale::Tt))
-    }
-
-    pub fn to_ut1(&self, provider: &Bound<'_, PyUt1Provider>) -> PyResult<PyTime> {
-        Ok(PyTime(
-            self.0
-                .try_to_ut1(&provider.borrow().0)?
-                .with_scale(PyTimeScale::Ut1),
-        ))
-    }
+    // pub fn to_tai(&self) -> PyTime {
+    //     PyTime(self.0.to_tai().with_scale(PyTimeScale::Tai))
+    // }
+    //
+    // pub fn to_tcb(&self) -> PyTime {
+    //     PyTime(self.0.to_tcb().with_scale(PyTimeScale::Tcb))
+    // }
+    //
+    // pub fn to_tcg(&self) -> PyTime {
+    //     PyTime(self.0.to_tcg().with_scale(PyTimeScale::Tcg))
+    // }
+    //
+    // pub fn to_tdb(&self) -> PyTime {
+    //     PyTime(self.0.to_tdb().with_scale(PyTimeScale::Tdb))
+    // }
+    //
+    // pub fn to_tt(&self) -> PyTime {
+    //     PyTime(self.0.to_tt().with_scale(PyTimeScale::Tt))
+    // }
+    //
+    // pub fn to_ut1(&self, provider: &Bound<'_, PyUt1Provider>) -> PyResult<PyTime> {
+    //     Ok(PyTime(
+    //         self.0
+    //             .try_to_ut1(&provider.borrow().0)?
+    //             .with_scale(PyTimeScale::Ut1),
+    //     ))
+    // }
 }
 
 #[cfg(test)]

@@ -7,11 +7,8 @@
  */
 
 use crate::deltas::TimeDelta;
-use crate::time_scales::{Tai, Ut1};
-use crate::transformations::OffsetProvider;
 use crate::ut1::{DeltaUt1Tai, DeltaUt1TaiError, DeltaUt1TaiProvider, ExtrapolatedDeltaUt1Tai};
 use crate::utc::leap_seconds::BuiltinLeapSeconds;
-use crate::Time;
 use pyo3::exceptions::PyValueError;
 use pyo3::{pyclass, pymethods, PyErr, PyResult};
 
@@ -29,32 +26,18 @@ impl From<DeltaUt1TaiError> for PyErr {
 
 pub struct PyNoOpOffsetProvider;
 
-impl OffsetProvider for PyNoOpOffsetProvider {
-    type Error = PyErr;
-}
-
-pub trait PyDeltaUt1Provider: DeltaUt1TaiProvider + OffsetProvider<Error = PyErr> {}
+pub trait PyDeltaUt1Provider: DeltaUt1TaiProvider {}
 
 impl DeltaUt1TaiProvider for PyNoOpOffsetProvider {
-    fn delta_ut1_tai(&self, _tai: &Time<Tai>) -> PyResult<TimeDelta> {
+    type Error = PyErr;
+
+    fn delta_ut1_tai(&self, _tai: TimeDelta) -> Result<TimeDelta, Self::Error> {
         Err(PyValueError::new_err(
             "`provider` argument needs to be present for UT1 transformations",
         ))
     }
 
-    fn delta_tai_ut1(&self, _ut1: &Time<Ut1>) -> PyResult<TimeDelta> {
-        Err(PyValueError::new_err(
-            "`provider` argument needs to be present for UT1 transformations",
-        ))
-    }
-
-    fn delta_ut1_tai_dt(&self, _tai: TimeDelta) -> Result<TimeDelta, Self::Error> {
-        Err(PyValueError::new_err(
-            "`provider` argument needs to be present for UT1 transformations",
-        ))
-    }
-
-    fn delta_tai_ut1_dt(&self, _ut1: TimeDelta) -> Result<TimeDelta, Self::Error> {
+    fn delta_tai_ut1(&self, _ut1: TimeDelta) -> Result<TimeDelta, Self::Error> {
         Err(PyValueError::new_err(
             "`provider` argument needs to be present for UT1 transformations",
         ))
@@ -76,25 +59,15 @@ impl PyUt1Provider {
     }
 }
 
-impl OffsetProvider for PyUt1Provider {
-    type Error = PyErr;
-}
-
 impl DeltaUt1TaiProvider for PyUt1Provider {
-    fn delta_ut1_tai(&self, tai: &Time<Tai>) -> PyResult<TimeDelta> {
+    type Error = PyErr;
+
+    fn delta_ut1_tai(&self, tai: TimeDelta) -> Result<TimeDelta, Self::Error> {
         self.0.delta_ut1_tai(tai).map_err(|err| err.into())
     }
 
-    fn delta_tai_ut1(&self, ut1: &Time<Ut1>) -> PyResult<TimeDelta> {
+    fn delta_tai_ut1(&self, ut1: TimeDelta) -> Result<TimeDelta, Self::Error> {
         self.0.delta_tai_ut1(ut1).map_err(|err| err.into())
-    }
-
-    fn delta_ut1_tai_dt(&self, tai: TimeDelta) -> Result<TimeDelta, Self::Error> {
-        self.0.delta_ut1_tai_dt(tai).map_err(|err| err.into())
-    }
-
-    fn delta_tai_ut1_dt(&self, ut1: TimeDelta) -> Result<TimeDelta, Self::Error> {
-        self.0.delta_tai_ut1_dt(ut1).map_err(|err| err.into())
     }
 }
 

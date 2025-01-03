@@ -42,6 +42,7 @@ use itertools::Itertools;
 use lox_math::is_close::IsClose;
 use num::ToPrimitive;
 use thiserror::Error;
+use time_scales::offsets::TryToScale;
 
 use calendar_dates::DateError;
 use constants::julian_dates::{
@@ -71,7 +72,6 @@ pub mod subsecond;
 pub(crate) mod test_helpers;
 pub mod time_of_day;
 pub mod time_scales;
-pub mod transformations;
 pub mod ut1;
 pub mod utc;
 
@@ -309,25 +309,27 @@ impl<T: TimeScale> Time<T> {
         Time::new(scale, self.seconds, self.subsecond)
     }
 
-    // pub fn try_to_scale2<S, P, E>(&self, scale: S, provider: Option<&P>) -> Result<Time<S>, E>
-    // where
-    //     S: TimeScale + Copy,
-    //     T: time_scales::offsets::TryToScale<S, P, E>,
-    // {
-    //     let dt = self.to_delta();
-    //     let offset = self.scale.try_offset(scale, dt, provider)?;
-    //     Ok(self.with_scale_and_delta(scale, offset))
-    // }
-    //
-    // pub fn to_scale2<S>(&self, scale: S) -> Time<S>
-    // where
-    //     S: TimeScale + Copy,
-    //     T: time_scales::offsets::ToScale<S>,
-    // {
-    //     let dt = self.to_delta();
-    //     let offset = self.scale.offset(scale, dt);
-    //     self.with_scale_and_delta(scale, offset)
-    // }
+    pub fn try_to_scale<S, P>(
+        &self,
+        scale: S,
+        provider: Option<&P>,
+    ) -> Result<Time<S>, <T as TryToScale<S, P>>::Error>
+    where
+        S: TimeScale + Copy,
+        T: TryToScale<S, P>,
+    {
+        let offset = self.scale.try_offset(scale, self.to_delta(), provider)?;
+        Ok(self.with_scale_and_delta(scale, offset))
+    }
+
+    pub fn to_scale<S>(&self, scale: S) -> Time<S>
+    where
+        S: TimeScale + Copy,
+        T: time_scales::offsets::ToScale<S>,
+    {
+        let offset = self.scale.offset(scale, self.to_delta());
+        self.with_scale_and_delta(scale, offset)
+    }
 
     /// Returns a new [Time] with the delta of `self` adjusted by `delta`, and time scale `scale`.
     ///
@@ -335,6 +337,13 @@ impl<T: TimeScale> Time<T> {
     /// `delta`.
     pub fn with_scale_and_delta<S: TimeScale>(&self, scale: S, delta: TimeDelta) -> Time<S> {
         Time::from_delta(scale, self.to_delta() + delta)
+    }
+
+    pub fn to_delta(&self) -> TimeDelta {
+        TimeDelta {
+            seconds: self.seconds,
+            subsecond: self.subsecond,
+        }
     }
 
     /// Returns the Julian epoch as a [Time] in the given [TimeScale].

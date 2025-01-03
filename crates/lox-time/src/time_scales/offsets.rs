@@ -19,6 +19,34 @@ pub trait TryToScale<T: TimeScale, P> {
     ) -> Result<TimeDelta, Self::Error>;
 }
 
+pub trait TryFromScale<T: TimeScale, P> {
+    type Error;
+
+    fn try_offset_from(
+        &self,
+        scale: T,
+        dt: TimeDelta,
+        provider: Option<&P>,
+    ) -> Result<TimeDelta, Self::Error>;
+}
+
+impl<T, P, U> TryFromScale<U, P> for T
+where
+    T: TimeScale + Copy,
+    U: TimeScale + TryToScale<T, P>,
+{
+    type Error = <U as TryToScale<T, P>>::Error;
+
+    fn try_offset_from(
+        &self,
+        scale: U,
+        dt: TimeDelta,
+        provider: Option<&P>,
+    ) -> Result<TimeDelta, Self::Error> {
+        scale.try_offset(*self, dt, provider)
+    }
+}
+
 pub trait ToScale<T: TimeScale> {
     fn offset(&self, scale: T, dt: TimeDelta) -> TimeDelta;
 }
@@ -226,7 +254,7 @@ where
     ) -> Result<TimeDelta, Self::Error> {
         Ok(provider
             .ok_or(Ut1Error::MissingProvider)?
-            .delta_ut1_tai_dt(dt)?)
+            .delta_ut1_tai(dt)?)
     }
 }
 
@@ -244,7 +272,7 @@ where
     ) -> Result<TimeDelta, Self::Error> {
         Ok(provider
             .ok_or(Ut1Error::MissingProvider)?
-            .delta_tai_ut1_dt(dt)?)
+            .delta_tai_ut1(dt)?)
     }
 }
 
