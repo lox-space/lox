@@ -7,8 +7,8 @@
  */
 
 use proc_macro2::Span;
-use quote::quote;
-use syn::{spanned::Spanned, DeriveInput, Field};
+use quote::{quote, ToTokens};
+use syn::{DeriveInput, Field};
 
 fn generate_call_to_deserializer_for_covariance_matrix_kvn_type(
     expected_kvn_name: &str,
@@ -172,7 +172,7 @@ fn get_generic_type_argument(field: &Field) -> Option<(String, &syn::Path)> {
                             .segments
                             .clone()
                             .into_iter()
-                            .map(|ident| ident.span().source_text().unwrap())
+                            .map(|ident| ident.to_token_stream().to_string())
                             .reduce(|a, b| a + "::" + &b)
                             .unwrap(),
                         &r#type.path,
@@ -362,12 +362,13 @@ fn handle_version_field(
     // 7.4.4 Keywords must be uppercase and must not contain blanks
     let expected_kvn_name = format!("CCSDS_{}_VERS", message_type_name);
 
-    // Unwrap is okay because we expect this span to come from the source code
+    // Unwrap is okay because we expect this to be a well defined type path,
+    // because this is not a general-purpose proc macro, but one that we
+    // control the input to ourselves.
     let field_type = extract_type_path(&field.ty)
         .unwrap()
-        .span()
-        .source_text()
-        .unwrap();
+        .to_token_stream()
+        .to_string();
     let field_type_new = extract_type_path(&field.ty).unwrap();
 
     let parser = generate_call_to_deserializer_for_kvn_type(
@@ -405,10 +406,10 @@ fn deserializer_for_struct_with_named_fields(
         let mut field_type_new: Option<&syn::Path> = None;
 
         for (index, field) in fields.iter().enumerate() {
+            // Unwrap is okay because we only support named structs
             let field_name_ident = field.ident.as_ref().unwrap();
 
-            // Unwrap is okay because we only support named structs
-            let field_name = field_name_ident.span().source_text().unwrap();
+            let field_name = field_name_ident.to_token_stream().to_string();
 
             match index {
                 0 => {
@@ -420,12 +421,13 @@ fn deserializer_for_struct_with_named_fields(
                         .into_compile_error();
                     }
 
-                    // Unwrap is okay because we expect this span to come from the source code
+                    // Unwrap is okay because we expect this to be a well defined type path,
+                    // because this is not a general-purpose proc macro, but one that we
+                    // control the input to ourselves.
                     let local_field_type = extract_type_path(&field.ty)
                         .unwrap()
-                        .span()
-                        .source_text()
-                        .unwrap();
+                        .to_token_stream()
+                        .to_string();
                     let local_field_type_new = extract_type_path(&field.ty).unwrap();
 
                     match local_field_type.as_str() {
@@ -514,7 +516,7 @@ fn deserializer_for_struct_with_named_fields(
             }
 
             // Unwrap is okay because we only support named structs
-            let field_name = field.ident.as_ref().unwrap().span().source_text().unwrap();
+            let field_name = field.ident.as_ref().unwrap().to_token_stream().to_string();
 
             !field_name.starts_with("cx")
                 && !field_name.starts_with("cy")
@@ -524,20 +526,28 @@ fn deserializer_for_struct_with_named_fields(
 
                 // Unwrap is okay because we only support named structs
                 // 7.4.4 Keywords must be uppercase and must not contain blanks
-                let expected_kvn_name = field_name.span().source_text().unwrap().to_uppercase();
+                let expected_kvn_name = field_name.to_token_stream().to_string().to_uppercase();
 
-                // Unwrap is okay because we expect this span to come from the source code
+                // Unwrap is okay because we expect this to be a well defined type path,
+                // because this is not a general-purpose proc macro, but one that we
+                // control the input to ourselves.
                 let field_type_new = extract_type_path(&field.ty).unwrap();
-                let field_type = field_type_new.span().source_text().unwrap();
+
+                // Unwrap is okay becuase we always expect at least one type
+                let field_main_type = field_type_new.segments.iter()
+                    .last()
+                    .unwrap()
+                    .ident
+                    .to_string();
 
                 if field_name == "version" {
                     return handle_version_field(type_name, field);
                 }
 
-                let parser = match field_type.as_str() {
+                let parser = match field_main_type.as_str() {
                     "String" | "f64" | "i32" => {
                         let deserializer_for_kvn_type = generate_call_to_deserializer_for_kvn_type(
-                            &field_type,
+                            &field_main_type,
                             field_type_new,
                             &expected_kvn_name,
                             true,
@@ -557,7 +567,7 @@ fn deserializer_for_struct_with_named_fields(
                     "Vec" => generate_call_to_deserializer_for_vec_type(&expected_kvn_name, field)?,
                     _ => {
 
-                        let condition_shortcut = match field_type.as_str() {
+                        let condition_shortcut = match field_main_type.as_str() {
                             "String" => quote! {},
                             _ => quote! { ! #field_type_new::should_check_key_match() || },
                         };
@@ -771,9 +781,11 @@ fn deserializers_for_struct_with_unnamed_fields(
         };
     }
 
-    // Unwrap is okay because we expect this span to come from the source code
+    // Unwrap is okay because we expect this to be a well defined type path,
+    // because this is not a general-purpose proc macro, but one that we
+    // control the input to ourselves.
     let field_type_new = extract_type_path(&field.ty).unwrap();
-    let field_type = field_type_new.span().source_text().unwrap();
+    let field_type = field_type_new.to_token_stream().to_string();
 
     let deserializer_for_kvn_type = generate_call_to_deserializer_for_kvn_type(
         &field_type,
