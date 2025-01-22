@@ -10,7 +10,7 @@ pub(crate) type PlanetaryFrequencyList = [f64; 14];
 
 #[rustfmt::skip]
 // @formatter:off (sometimes RustRover ignores the rustfmt skip)
-pub(crate) const FREQUENCY_LISTS: [PlanetaryFrequencyList; 656] = [
+pub(crate) static FREQUENCY_LISTS: [PlanetaryFrequencyList; 656] = [
     [0.0,  0.0,  1.0, -1.0,  1.0,  0.0,  0.0, -1.0,  0.0, -2.0,  5.0,  0.0,  0.0,  0.0],
     [0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  2.0, -5.0,  0.0,  0.0, -1.0],
     [0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  3.0, -5.0,  0.0,  0.0,  0.0,  0.0,  0.0, -2.0],
