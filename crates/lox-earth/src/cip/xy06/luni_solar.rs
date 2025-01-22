@@ -12,7 +12,7 @@ pub(crate) const N_FREQUENCY_LISTS: usize = 653;
 
 #[rustfmt::skip]
 // @formatter:off (sometimes RustRover ignores the rustfmt skip)
-pub(crate) const FREQUENCY_LISTS: [LuniSolarFrequencyList; N_FREQUENCY_LISTS] = [
+pub(crate) static FREQUENCY_LISTS: [LuniSolarFrequencyList; N_FREQUENCY_LISTS] = [
     [0.0,   0.0,   0.0,   0.0,   1.0],
     [0.0,   0.0,   2.0,  -2.0,   2.0],
     [0.0,   0.0,   2.0,   0.0,   2.0],
