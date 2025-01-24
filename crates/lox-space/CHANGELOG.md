@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.13](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.12...lox-space-v0.1.0-alpha.13) - 2025-01-24
+
+### Added
+
+- implement `DynTimeScale`
+
+### Other
+
+- simplify rotational elements
+
 ## [0.1.0-alpha.12](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.11...lox-space-v0.1.0-alpha.12) - 2024-12-19
 
 ### Fixed

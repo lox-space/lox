@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.5](https://github.com/lox-space/lox/compare/lox-earth-v0.1.0-alpha.4...lox-earth-v0.1.0-alpha.5) - 2025-01-24
+
+### Other
+
+- Set big arrays as static
+
 ## [0.1.0-alpha.4](https://github.com/lox-space/lox/compare/lox-earth-v0.1.0-alpha.3...lox-earth-v0.1.0-alpha.4) - 2024-12-19
 
 ### Other
