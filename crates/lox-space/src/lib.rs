@@ -9,9 +9,9 @@
 use lox_bodies::python::PyOrigin;
 use lox_ephem::python::PySpk;
 use lox_orbits::python::{
-    find_events, find_windows, visibility, PyElevationMask, PyEvent, PyFrame, PyGroundLocation,
-    PyGroundPropagator, PyKeplerian, PyObservables, PySgp4, PyState, PyTrajectory, PyVallado,
-    PyWindow,
+    find_events, find_windows, visibility, visibility_all, PyElevationMask, PyEnsemble, PyEvent,
+    PyFrame, PyGroundLocation, PyGroundPropagator, PyKeplerian, PyObservables, PySgp4, PyState,
+    PyTrajectory, PyVallado, PyWindow,
 };
 use pyo3::prelude::*;
 
@@ -27,7 +27,9 @@ fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(find_events, m)?)?;
     m.add_function(wrap_pyfunction!(find_windows, m)?)?;
     m.add_function(wrap_pyfunction!(visibility, m)?)?;
+    m.add_function(wrap_pyfunction!(visibility_all, m)?)?;
     m.add_class::<PyElevationMask>()?;
+    m.add_class::<PyEnsemble>()?;
     m.add_class::<PyEvent>()?;
     m.add_class::<PyFrame>()?;
     m.add_class::<PyGroundLocation>()?;

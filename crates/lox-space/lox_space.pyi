@@ -23,6 +23,12 @@ def visibility(
     sc: Trajectory,
     provider: UT1Provider,
 ): ...
+def visibility_all(
+    times: list[Time],
+    ground_stations: dict[str,tuple[GroundLocation,ElevationMask]],
+    sc: dict[str,Trajectory],
+    provider: UT1Provider | None,
+): ...
 
 class Origin:
     def __new__(cls, origin: str | int): ...

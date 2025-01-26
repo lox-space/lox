@@ -22,11 +22,11 @@ lox-space = { path = "crates/lox-space", version = "0.1.0-alpha.13" }
 lox-time = { path = "crates/lox-time", version = "0.1.0-alpha.3" }
 
 csv = "1.3.0"
-divan = "0.1.14"
 dyn-clone = "1.0.17"
 fast_polynomial = "0.3.0"
 float_eq = "1.0.1"
 glam = "0.29.2"
+hashbrown = {version = "0.15", features = ["rayon"]}
 itertools = "0.13.0"
 libm = "0.2.8"
 nom = "7.1.3"
@@ -35,8 +35,9 @@ num-derive = "0.4.2"
 num-traits = "0.2.19"
 numpy = "0.23.0"
 proptest = "1.4.0"
-pyo3 = "0.23.3"
+pyo3 = {version = "0.23.3", features = ["hashbrown"]}
 quick-xml = { version = "0.31.0", features = ["serde", "serialize"] }
+rayon = "1.10.0"
 regex = "1.10.4"
 rstest = "0.23.0"
 serde = { version = "1.0.199", features = ["derive"] }

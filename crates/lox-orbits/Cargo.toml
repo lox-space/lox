@@ -18,10 +18,12 @@ lox-math.workspace = true
 csv.workspace = true
 float_eq.workspace = true
 glam.workspace = true
+hashbrown.workspace = true
 itertools.workspace = true
 libm.workspace = true
 numpy = { workspace = true, optional = true }
 pyo3 = { workspace = true, optional = true }
+rayon.workspace = true
 sgp4.workspace = true
 thiserror.workspace = true
 
