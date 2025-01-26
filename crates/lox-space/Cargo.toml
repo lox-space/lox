@@ -31,18 +31,3 @@ python = [
     "lox-orbits/python",
     "lox-time/python",
 ]
-
-[dev-dependencies]
-divan.workspace = true
-
-[[bench]]
-name = "iau_frames"
-harness = false
-
-[[bench]]
-name = "time_delta"
-harness = false
-
-[[bench]]
-name = "observables"
-harness = false

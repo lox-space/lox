@@ -1,5 +1,4 @@
 use std::num::ParseFloatError;
-use std::sync::Arc;
 
 use csv::Error;
 use glam::DVec3;
@@ -18,16 +17,6 @@ use crate::events::{find_events, find_windows, Event, Window};
 use crate::frames::ReferenceFrame;
 use crate::frames::{DynFrame, Icrf};
 use crate::states::State;
-
-#[derive(Clone, Debug, PartialEq)]
-#[repr(transparent)]
-struct ArcVecF64(Arc<Vec<f64>>);
-
-impl AsRef<[f64]> for ArcVecF64 {
-    fn as_ref(&self) -> &[f64] {
-        self.0.as_ref()
-    }
-}
 
 impl From<csv::Error> for TrajectoryError {
     fn from(err: Error) -> Self {
@@ -48,13 +37,13 @@ pub enum TrajectoryError {
 #[derive(Clone, Debug)]
 pub struct Trajectory<T: TimeScale, O: Origin, R: ReferenceFrame> {
     states: Vec<State<T, O, R>>,
-    t: ArcVecF64,
-    x: Series<ArcVecF64, Vec<f64>>,
-    y: Series<ArcVecF64, Vec<f64>>,
-    z: Series<ArcVecF64, Vec<f64>>,
-    vy: Series<ArcVecF64, Vec<f64>>,
-    vx: Series<ArcVecF64, Vec<f64>>,
-    vz: Series<ArcVecF64, Vec<f64>>,
+    t: Vec<f64>,
+    x: Series<Vec<f64>, Vec<f64>>,
+    y: Series<Vec<f64>, Vec<f64>>,
+    z: Series<Vec<f64>, Vec<f64>>,
+    vy: Series<Vec<f64>, Vec<f64>>,
+    vx: Series<Vec<f64>, Vec<f64>>,
+    vz: Series<Vec<f64>, Vec<f64>>,
 }
 
 pub type DynTrajectory = Trajectory<DynTimeScale, DynOrigin, DynFrame>;
@@ -74,7 +63,7 @@ where
             .iter()
             .map(|s| (s.time() - start_time.clone()).to_decimal_seconds())
             .collect();
-        let t = ArcVecF64(Arc::new(t));
+        // let t = ArcVecF64(Arc::new(t));
         let x: Vec<f64> = states.iter().map(|s| s.position().x).collect();
         let y: Vec<f64> = states.iter().map(|s| s.position().y).collect();
         let z: Vec<f64> = states.iter().map(|s| s.position().z).collect();
@@ -138,7 +127,7 @@ where
     }
 
     pub fn to_vec(&self) -> Vec<Vec<f64>> {
-        let times = self.t.clone().0;
+        let times = self.t.clone();
         let mut vec = Vec::with_capacity(times.len());
         for (i, state) in self.states.iter().enumerate() {
             vec.push(vec![

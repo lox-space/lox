@@ -6,7 +6,10 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use rayon::prelude::*;
+
 use glam::DVec3;
+use hashbrown::HashMap;
 use lox_ephem::python::PySpk;
 use lox_time::DynTime;
 use numpy::{PyArray1, PyArray2, PyArrayMethods};
@@ -28,7 +31,7 @@ use lox_time::python::time::PyTime;
 use lox_time::python::ut1::PyUt1Provider;
 use lox_time::time_scales::{DynTimeScale, Tai};
 
-use crate::analysis::{ElevationMask, ElevationMaskError};
+use crate::analysis::{visibility_dyn, ElevationMask, ElevationMaskError};
 use crate::elements::{DynKeplerian, Keplerian};
 use crate::events::{Event, FindEventError, Window};
 use crate::frames::iau::IauFrameTransformationError;
@@ -468,6 +471,7 @@ impl PyTrajectory {
 }
 
 #[pyclass(name = "Event", module = "lox_space", frozen)]
+#[derive(Clone, Debug)]
 pub struct PyEvent(pub Event<DynTimeScale>);
 
 #[pymethods]
@@ -493,6 +497,7 @@ impl PyEvent {
 }
 
 #[pyclass(name = "Window", module = "lox_space", frozen)]
+#[derive(Clone, Debug)]
 pub struct PyWindow(pub Window<DynTimeScale>);
 
 #[pymethods]
@@ -519,6 +524,7 @@ impl PyWindow {
 }
 
 #[pyclass(name = "Vallado", module = "lox_space", frozen)]
+#[derive(Clone, Debug)]
 pub struct PyVallado(pub DynVallado);
 
 impl From<ValladoError> for PyErr {
@@ -559,7 +565,7 @@ impl PyVallado {
 }
 
 #[pyclass(name = "GroundLocation", module = "lox_space", frozen)]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PyGroundLocation(pub DynGroundLocation);
 
 #[pymethods]
@@ -758,6 +764,71 @@ pub fn visibility(
             .map(PyWindow)
             .collect(),
     )
+}
+
+#[pyclass(name = "Ensemble", module = "lox_space", frozen)]
+pub struct PyEnsemble(pub HashMap<String, DynTrajectory>);
+
+#[pymethods]
+impl PyEnsemble {
+    #[new]
+    pub fn new(ensemble: HashMap<String, PyTrajectory>) -> Self {
+        Self(
+            ensemble
+                .into_iter()
+                .map(|(name, trajectory)| (name, trajectory.0))
+                .collect(),
+        )
+    }
+}
+
+#[pyfunction]
+#[pyo3(signature = (times, ground_stations, spacecraft, provider=None))]
+pub fn visibility_all(
+    py: Python<'_>,
+    times: &Bound<'_, PyList>,
+    ground_stations: HashMap<String, (PyGroundLocation, PyElevationMask)>,
+    spacecraft: &Bound<'_, PyEnsemble>,
+    provider: Option<&Bound<'_, PyUt1Provider>>,
+) -> PyResult<HashMap<String, HashMap<String, Vec<PyWindow>>>> {
+    let times: Vec<DynTime> = times
+        .extract::<Vec<PyTime>>()?
+        .into_iter()
+        .map(|s| s.0)
+        .collect();
+    let provider = provider.map(|p| &p.get().0);
+    let spacecraft = &spacecraft.get().0;
+    Ok(py.allow_threads(|| {
+        ground_stations.iter().fold(
+            HashMap::with_capacity(ground_stations.len()),
+            |mut passes, (gs_name, (gs, mask))| {
+                passes.insert(
+                    gs_name.clone(),
+                    spacecraft
+                        .par_iter()
+                        .fold(HashMap::new, |mut passes, (sc_name, sc)| {
+                            passes.insert(
+                                sc_name.clone(),
+                                visibility_dyn(&times, &gs.0, &mask.0, sc, provider)
+                                    .into_iter()
+                                    .map(PyWindow)
+                                    .collect(),
+                            );
+
+                            passes
+                        })
+                        .reduce(
+                            || HashMap::with_capacity(spacecraft.len()),
+                            |mut p1, p2| {
+                                p1.extend(p2);
+                                p1
+                            },
+                        ),
+                );
+                passes
+            },
+        )
+    }))
 }
 
 impl From<ElevationMaskError> for PyErr {

@@ -47,8 +47,8 @@ def estrack():
         ("New Norcia", -30.9855, 116.2041),
     ]
     return {
-        name: lox.GroundLocation(
+        name: (lox.GroundLocation(
             lox.Origin("Earth"), np.radians(lon), np.radians(lat), 0
-        )
+        ), lox.ElevationMask.fixed(0))
         for name, lat, lon in stations
     }
