@@ -31,7 +31,7 @@ use lox_time::python::time::PyTime;
 use lox_time::python::ut1::PyUt1Provider;
 use lox_time::time_scales::{DynTimeScale, Tai};
 
-use crate::analysis::{visibility_dyn, ElevationMask, ElevationMaskError};
+use crate::analysis::{visibility_combined, ElevationMask, ElevationMaskError};
 use crate::elements::{DynKeplerian, Keplerian};
 use crate::events::{Event, FindEventError, Window};
 use crate::frames::iau::IauFrameTransformationError;
@@ -630,7 +630,8 @@ impl From<GroundPropagatorError> for PyErr {
 #[pymethods]
 impl PyGroundPropagator {
     #[new]
-    fn new(location: PyGroundLocation, provider: PyUt1Provider) -> Self {
+    #[pyo3(signature = (location, provider=None))]
+    fn new(location: PyGroundLocation, provider: Option<PyUt1Provider>) -> Self {
         PyGroundPropagator(DynGroundPropagator::with_dynamic(location.0, provider))
     }
 
@@ -783,12 +784,21 @@ impl PyEnsemble {
 }
 
 #[pyfunction]
-#[pyo3(signature = (times, ground_stations, spacecraft, provider=None))]
+#[pyo3(signature = (
+    times,
+    ground_stations,
+    spacecraft,
+    ephemeris,
+    bodies=None,
+    provider=None,
+))]
 pub fn visibility_all(
     py: Python<'_>,
     times: &Bound<'_, PyList>,
     ground_stations: HashMap<String, (PyGroundLocation, PyElevationMask)>,
     spacecraft: &Bound<'_, PyEnsemble>,
+    ephemeris: &Bound<'_, PySpk>,
+    bodies: Option<Vec<PyOrigin>>,
     provider: Option<&Bound<'_, PyUt1Provider>>,
 ) -> PyResult<HashMap<String, HashMap<String, Vec<PyWindow>>>> {
     let times: Vec<DynTime> = times
@@ -796,8 +806,14 @@ pub fn visibility_all(
         .into_iter()
         .map(|s| s.0)
         .collect();
+    let bodies: Vec<DynOrigin> = bodies
+        .unwrap_or_default()
+        .into_iter()
+        .map(|b| b.0)
+        .collect();
     let provider = provider.map(|p| &p.get().0);
     let spacecraft = &spacecraft.get().0;
+    let ephemeris = &ephemeris.get().0;
     Ok(py.allow_threads(|| {
         ground_stations.iter().fold(
             HashMap::with_capacity(ground_stations.len()),
@@ -809,10 +825,12 @@ pub fn visibility_all(
                         .fold(HashMap::new, |mut passes, (sc_name, sc)| {
                             passes.insert(
                                 sc_name.clone(),
-                                visibility_dyn(&times, &gs.0, &mask.0, sc, provider)
-                                    .into_iter()
-                                    .map(PyWindow)
-                                    .collect(),
+                                visibility_combined(
+                                    &times, &gs.0, &mask.0, &bodies, sc, ephemeris, provider,
+                                )
+                                .into_iter()
+                                .map(PyWindow)
+                                .collect(),
                             );
 
                             passes

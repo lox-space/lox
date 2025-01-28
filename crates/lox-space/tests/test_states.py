@@ -8,15 +8,6 @@ import lox_space as lox
 import numpy as np
 import numpy.testing as npt
 import pytest
-from pathlib import Path
-
-
-@pytest.fixture
-def ephemeris():
-    spk = (
-        Path(__file__).parent.joinpath("..", "..", "..", "data", "de440s.bsp").resolve()
-    )
-    return lox.SPK(str(spk))
 
 
 def test_state_to_ground_location():
