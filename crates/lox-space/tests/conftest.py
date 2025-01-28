@@ -5,6 +5,8 @@
 #  file, you can obtain one at https://mozilla.org/MPL/2.0/.
 
 import pathlib
+from pathlib import Path
+
 import numpy as np
 
 import pytest
@@ -28,7 +30,7 @@ def oneweb():
 
     trajectories = []
     for i in range(0, len(lines), 3):
-        tle = lines[i : i + 3]
+        tle = lines[i: i + 3]
         name = tle[0].strip()
         trajectory = lox.SGP4("".join(tle)).propagate(times)
         trajectories.append((name, trajectory))
@@ -52,3 +54,11 @@ def estrack():
         ), lox.ElevationMask.fixed(0))
         for name, lat, lon in stations
     }
+
+
+@pytest.fixture(scope="session")
+def ephemeris():
+    spk = (
+        Path(__file__).parent.joinpath("..", "..", "..", "data", "de440s.bsp").resolve()
+    )
+    return lox.SPK(str(spk))

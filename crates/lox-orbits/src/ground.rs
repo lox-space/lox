@@ -195,7 +195,7 @@ pub enum GroundPropagatorError {
 pub struct GroundPropagator<B: TrySpheroid, P> {
     location: GroundLocation<B>,
     // FIXME: We should not take ownership of the provider here
-    provider: P,
+    provider: Option<P>,
 }
 
 pub type DynGroundPropagator<P> = GroundPropagator<DynOrigin, P>;
@@ -204,13 +204,13 @@ impl<B, P> GroundPropagator<B, P>
 where
     B: Spheroid,
 {
-    pub fn new(location: GroundLocation<B>, provider: P) -> Self {
+    pub fn new(location: GroundLocation<B>, provider: Option<P>) -> Self {
         GroundPropagator { location, provider }
     }
 }
 
 impl<P: DeltaUt1TaiProvider> DynGroundPropagator<P> {
-    pub fn with_dynamic(location: DynGroundLocation, provider: P) -> Self {
+    pub fn with_dynamic(location: DynGroundLocation, provider: Option<P>) -> Self {
         GroundPropagator { location, provider }
     }
 
@@ -224,7 +224,7 @@ impl<P: DeltaUt1TaiProvider> DynGroundPropagator<P> {
         );
         let rot = s
             .reference_frame()
-            .try_rotation(DynFrame::Icrf, time, Some(&self.provider))
+            .try_rotation(DynFrame::Icrf, time, self.provider.as_ref())
             .map_err(|err| GroundPropagatorError::FrameTransformation(err.to_string()))?;
         let (r1, v1) = rot.rotate_state(s.position(), s.velocity());
         Ok(State::new(time, r1, v1, self.location.body, DynFrame::Icrf))
@@ -260,7 +260,7 @@ where
         );
         let rot = s
             .reference_frame()
-            .try_rotation(Icrf, time.clone(), Some(&self.provider))
+            .try_rotation(Icrf, time.clone(), self.provider.as_ref())
             .map_err(|err| GroundPropagatorError::FrameTransformation(err.to_string()))?;
         let (r1, v1) = rot.rotate_state(s.position(), s.velocity());
         Ok(State::new(time, r1, v1, self.location.body.clone(), Icrf))
@@ -333,7 +333,7 @@ mod tests {
         let longitude = -4.3676f64.to_radians();
         let latitude = 40.4527f64.to_radians();
         let location = GroundLocation::new(longitude, latitude, 0.0, Earth);
-        let propagator = GroundPropagator::new(location, ());
+        let propagator = GroundPropagator::new(location, None::<()>);
         let time = utc!(2022, 1, 31, 23).unwrap().to_time();
         let expected = DVec3::new(-1765.9535510583582, 4524.585984442561, 4120.189198495323);
         let state = propagator.propagate(time).unwrap();

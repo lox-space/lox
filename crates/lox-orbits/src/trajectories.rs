@@ -4,6 +4,7 @@ use csv::Error;
 use glam::DVec3;
 use lox_ephem::Ephemeris;
 use lox_time::time_scales::{DynTimeScale, TimeScale};
+use lox_time::DynTime;
 use thiserror::Error;
 
 use lox_bodies::{DynOrigin, Origin};
@@ -285,6 +286,75 @@ where
                 })?;
             let velocity = DVec3::new(vx, vy, vz);
             let state = State::new(time, position, velocity, origin.clone(), frame.clone());
+            states.push(state);
+        }
+        Trajectory::new(&states)
+    }
+}
+
+impl DynTrajectory {
+    pub fn from_csv_dyn(
+        csv: &str,
+        origin: DynOrigin,
+        frame: DynFrame,
+    ) -> Result<DynTrajectory, TrajectoryError> {
+        let mut reader = csv::Reader::from_reader(csv.as_bytes());
+        let mut states = Vec::new();
+        for result in reader.records() {
+            let record = result?;
+            if record.len() != 7 {
+                return Err(TrajectoryError::CsvError(
+                    "invalid record length".to_string(),
+                ));
+            }
+            let time: DynTime = Utc::from_iso(record.get(0).unwrap())
+                .map_err(|e| TrajectoryError::CsvError(e.to_string()))?
+                .to_dyn_time();
+            let x = record
+                .get(1)
+                .unwrap()
+                .parse()
+                .map_err(|e: ParseFloatError| {
+                    TrajectoryError::CsvError(format!("invalid x coordinate: {}", e))
+                })?;
+            let y = record
+                .get(2)
+                .unwrap()
+                .parse()
+                .map_err(|e: ParseFloatError| {
+                    TrajectoryError::CsvError(format!("invalid y coordinate: {}", e))
+                })?;
+            let z = record
+                .get(3)
+                .unwrap()
+                .parse()
+                .map_err(|e: ParseFloatError| {
+                    TrajectoryError::CsvError(format!("invalid z coordinate: {}", e))
+                })?;
+            let position = DVec3::new(x, y, z);
+            let vx = record
+                .get(4)
+                .unwrap()
+                .parse()
+                .map_err(|e: ParseFloatError| {
+                    TrajectoryError::CsvError(format!("invalid x velocity: {}", e))
+                })?;
+            let vy = record
+                .get(5)
+                .unwrap()
+                .parse()
+                .map_err(|e: ParseFloatError| {
+                    TrajectoryError::CsvError(format!("invalid y velocity: {}", e))
+                })?;
+            let vz = record
+                .get(6)
+                .unwrap()
+                .parse()
+                .map_err(|e: ParseFloatError| {
+                    TrajectoryError::CsvError(format!("invalid z velocity: {}", e))
+                })?;
+            let velocity = DVec3::new(vx, vy, vz);
+            let state = State::new(time, position, velocity, origin, frame);
             states.push(state);
         }
         Trajectory::new(&states)

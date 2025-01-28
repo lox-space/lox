@@ -132,6 +132,39 @@ impl<T: TimeScale> Window<T> {
     {
         self.end() - self.start()
     }
+
+    fn contains(&self, other: &Self) -> bool
+    where
+        // FIXME: Manually implement `Ord` on `Time`
+        T: Ord,
+    {
+        self.start <= other.start && self.end >= other.end
+    }
+
+    fn intersect(&self, other: &Self) -> Option<Self>
+    where
+        T: Clone + Ord,
+    {
+        if self.contains(other) {
+            return Some(other.clone());
+        }
+        if other.contains(self) {
+            return Some(self.clone());
+        }
+        if other.start < self.end && other.end > self.end {
+            return Some(Window {
+                start: other.start.clone(),
+                end: self.end.clone(),
+            });
+        }
+        if self.start < other.end && self.end > other.end {
+            return Some(Window {
+                start: self.start.clone(),
+                end: other.end.clone(),
+            });
+        }
+        None
+    }
 }
 
 pub fn find_windows<F: Fn(f64) -> f64 + Copy, T: TimeScale + Clone, R: FindBracketedRoot<F>>(
@@ -186,6 +219,21 @@ pub fn find_windows<F: Fn(f64) -> f64 + Copy, T: TimeScale + Clone, R: FindBrack
             windows
         }
     }
+}
+
+pub fn intersect_windows<T>(w1: &[Window<T>], w2: &[Window<T>]) -> Vec<Window<T>>
+where
+    T: TimeScale + Ord + Clone,
+{
+    let mut output = vec![];
+    for w1 in w1 {
+        for w2 in w2 {
+            if let Some(w) = w1.intersect(w2) {
+                output.push(w)
+            }
+        }
+    }
+    output
 }
 
 #[cfg(test)]
