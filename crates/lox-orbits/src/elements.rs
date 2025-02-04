@@ -20,13 +20,43 @@ use crate::frames::{DynFrame, Icrf, ReferenceFrame};
 use crate::states::State;
 
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) struct KeplerianElements {
+pub struct KeplerianElements {
     pub semi_major_axis: f64,
     pub eccentricity: f64,
     pub inclination: f64,
     pub longitude_of_ascending_node: f64,
     pub argument_of_periapsis: f64,
     pub true_anomaly: f64,
+}
+
+impl KeplerianElements {
+    pub fn semi_parameter(&self) -> f64 {
+        if is_circular(self.eccentricity) {
+            self.semi_major_axis
+        } else {
+            self.semi_major_axis * (1.0 - self.eccentricity.powi(2))
+        }
+    }
+
+    pub fn to_perifocal(&self, grav_param: f64) -> (DVec3, DVec3) {
+        let semiparameter = self.semi_parameter();
+        let (sin_nu, cos_nu) = self.true_anomaly.sin_cos();
+        let sqrt_mu_p = (grav_param / semiparameter).sqrt();
+
+        let pos =
+            DVec3::new(cos_nu, sin_nu, 0.0) * (semiparameter / (1.0 + self.eccentricity * cos_nu));
+        let vel = DVec3::new(-sin_nu, self.eccentricity + cos_nu, 0.0) * sqrt_mu_p;
+
+        (pos, vel)
+    }
+
+    pub fn to_cartesian(&self, grav_param: f64) -> (DVec3, DVec3) {
+        let (pos, vel) = self.to_perifocal(grav_param);
+        let rot = DMat3::from_rotation_z(self.longitude_of_ascending_node)
+            * DMat3::from_rotation_x(self.inclination)
+            * DMat3::from_rotation_z(self.argument_of_periapsis);
+        (rot * pos, rot * vel)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -165,6 +195,7 @@ where
             self.semi_major_axis * (1.0 - self.eccentricity.powi(2))
         }
     }
+
     pub fn to_perifocal(&self) -> (DVec3, DVec3) {
         let grav_param = self.gravitational_parameter();
         let semiparameter = self.semiparameter();
@@ -191,7 +222,7 @@ where
     O: TryPointMass + Clone,
     R: ReferenceFrame + Clone,
 {
-    pub(crate) fn to_cartesian(&self) -> State<T, O, R> {
+    pub fn to_cartesian(&self) -> State<T, O, R> {
         let (pos, vel) = self.to_perifocal();
         let rot = DMat3::from_rotation_z(self.longitude_of_ascending_node)
             * DMat3::from_rotation_x(self.inclination)
