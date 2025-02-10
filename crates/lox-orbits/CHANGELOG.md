@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.9](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.8...lox-orbits-v0.1.0-alpha.9) - 2025-02-10
+
+### Added
+
+- *(lox-orbits)* implement line-of-sight calculations
+
+### Other
+
+- *(lox-orbits)* expose concrete `KeplerianElements`
+- *(lox-orbits)* parallelise visibility
+
 ## [0.1.0-alpha.8](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.7...lox-orbits-v0.1.0-alpha.8) - 2025-01-24
 
 ### Added
