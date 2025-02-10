@@ -30,7 +30,7 @@ def oneweb():
 
     trajectories = []
     for i in range(0, len(lines), 3):
-        tle = lines[i: i + 3]
+        tle = lines[i : i + 3]
         name = tle[0].strip()
         trajectory = lox.SGP4("".join(tle)).propagate(times)
         trajectories.append((name, trajectory))
@@ -49,9 +49,12 @@ def estrack():
         ("New Norcia", -30.9855, 116.2041),
     ]
     return {
-        name: (lox.GroundLocation(
-            lox.Origin("Earth"), np.radians(lon), np.radians(lat), 0
-        ), lox.ElevationMask.fixed(0))
+        name: (
+            lox.GroundLocation(
+                lox.Origin("Earth"), np.radians(lon), np.radians(lat), 0
+            ),
+            lox.ElevationMask.fixed(0),
+        )
         for name, lat, lon in stations
     }
 

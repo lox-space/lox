@@ -21,8 +21,15 @@ def orbit():
     longitude_of_ascending_node = 1.00681
     argument_of_periapsis = 3.10686
     true_anomaly = 0.44369564302687126
-    return lox.Keplerian(time, semi_major_axis, eccentricity, inclination, longitude_of_ascending_node,
-                         argument_of_periapsis, true_anomaly)
+    return lox.Keplerian(
+        time,
+        semi_major_axis,
+        eccentricity,
+        inclination,
+        longitude_of_ascending_node,
+        argument_of_periapsis,
+        true_anomaly,
+    )
 
 
 @pytest.fixture
@@ -37,14 +44,19 @@ def trajectory(orbit):
 def test_from_numpy():
     utc = lox.UTC(2023, 3, 25, 21, 8, 0.0)
     time = utc.to_scale("TDB")
-    states = np.array([
-        [0.0, 1e3, 1e3, 1e3, 1.0, 1.0, 1.0],
-        [1.0, 2e3, 2e3, 2e3, 2.0, 2.0, 2.0],
-        [2.0, 3e3, 3e3, 3e3, 3.0, 3.0, 3.0],
-        [3.0, 4e3, 4e3, 4e3, 4.0, 4.0, 4.0],
-    ])
+    states = np.array(
+        [
+            [0.0, 1e3, 1e3, 1e3, 1.0, 1.0, 1.0],
+            [1.0, 2e3, 2e3, 2e3, 2.0, 2.0, 2.0],
+            [2.0, 3e3, 3e3, 3e3, 3.0, 3.0, 3.0],
+            [3.0, 4e3, 4e3, 4e3, 4.0, 4.0, 4.0],
+        ]
+    )
     trajectory = lox.Trajectory.from_numpy(time, states)
-    npt.assert_allclose(trajectory.interpolate(time + lox.TimeDelta(1.5)).position(), np.array([2.5e3, 2.5e3, 2.5e3]))
+    npt.assert_allclose(
+        trajectory.interpolate(time + lox.TimeDelta(1.5)).position(),
+        np.array([2.5e3, 2.5e3, 2.5e3]),
+    )
     states1 = trajectory.to_numpy()
     npt.assert_allclose(states, states1)
 
@@ -56,8 +68,12 @@ def test_interpolation(orbit, trajectory):
     assert orbit.semi_major_axis() == pytest.approx(k1.semi_major_axis(), rel=1e-8)
     assert orbit.eccentricity() == pytest.approx(k1.eccentricity(), rel=1e-8)
     assert orbit.inclination() == pytest.approx(k1.inclination(), rel=1e-8)
-    assert orbit.longitude_of_ascending_node() == pytest.approx(k1.longitude_of_ascending_node(), rel=1e-8)
-    assert orbit.argument_of_periapsis() == pytest.approx(k1.argument_of_periapsis(), rel=1e-8)
+    assert orbit.longitude_of_ascending_node() == pytest.approx(
+        k1.longitude_of_ascending_node(), rel=1e-8
+    )
+    assert orbit.argument_of_periapsis() == pytest.approx(
+        k1.argument_of_periapsis(), rel=1e-8
+    )
     assert orbit.true_anomaly() == pytest.approx(k1.true_anomaly(), rel=1e-8)
 
 
