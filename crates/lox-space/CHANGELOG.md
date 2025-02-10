@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.16](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.15...lox-space-v0.1.0-alpha.16) - 2025-02-10
+
+### Other
+
+- *(lox-orbits)* switch loop order for visibility
+
 ## [0.1.0-alpha.15](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.14...lox-space-v0.1.0-alpha.15) - 2025-02-10
 
 ### Other
