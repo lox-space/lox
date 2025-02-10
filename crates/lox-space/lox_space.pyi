@@ -15,17 +15,19 @@ class ElevationMask:
     @classmethod
     def fixed(cls, min_elevation: float) -> Self: ...
 
-def find_events(func: Callable[[float], float], start: Time, times: list[float]): ...
+def find_events(
+    func: Callable[[float], float], start: Time, times: list[float]
+) -> list[Event]: ...
 def find_windows(
     func: Callable[[float], float], start: Time, end: Time, times: list[float]
-): ...
+) -> list[Window]: ...
 def visibility(
     times: list[Time],
     gs: GroundLocation,
     mask: ElevationMask,
     sc: Trajectory,
     provider: UT1Provider,
-): ...
+) -> list[Window]: ...
 def visibility_all(
     times: list[Time],
     ground_stations: dict[str, tuple[GroundLocation, ElevationMask]],
@@ -33,7 +35,7 @@ def visibility_all(
     ephemeris: SPK,
     bodies: list[Origin] | None = None,
     provider: UT1Provider | None = None,
-): ...
+) -> dict[str, dict[str, list[Window]]]: ...
 
 class Origin:
     def __new__(cls, origin: str | int): ...
@@ -322,6 +324,9 @@ class UT1Provider:
 
 class Series:
     def __new__(
-        cls, x: list[float], y: list[float], method: Literal["linear", "cubic_spline"]
+        cls,
+        x: list[float],
+        y: list[float],
+        method: Literal["linear", "cubic_spline"] = "linear",
     ): ...
     def interpolate(self, xp: float) -> float: ...
