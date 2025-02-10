@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.14](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.13...lox-space-v0.1.0-alpha.14) - 2025-02-10
+
+### Added
+
+- *(lox-orbits)* implement line-of-sight calculations
+
+### Other
+
+- *(lox-space)* update Python type stubs
+- *(lox-orbits)* parallelise visibility
+
 ## [0.1.0-alpha.13](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.12...lox-space-v0.1.0-alpha.13) - 2025-01-24
 
 ### Added
