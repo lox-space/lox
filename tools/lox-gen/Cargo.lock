@@ -182,7 +182,7 @@ dependencies = [
 
 [[package]]
 name = "lox-io"
-version = "0.1.0-alpha.3"
+version = "0.1.0-alpha.4"
 dependencies = [
  "csv",
  "lox-derive",
@@ -198,7 +198,7 @@ dependencies = [
 
 [[package]]
 name = "lox-math"
-version = "0.1.0-alpha.3"
+version = "0.1.0-alpha.4"
 dependencies = [
  "fast_polynomial",
  "float_eq",
