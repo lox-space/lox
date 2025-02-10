@@ -54,10 +54,10 @@ jobs:
         shell: bash
         run: |
           set -e
-          python3 -m venv .venv
+          uv venv --python 3.12
+          uv pip install pytest pytest-codspeed numpy
+          uv pip install lox-space --offline --find-links dist --force-reinstall
           source .venv/bin/activate
-          uv pip install lox-space --find-links dist --force-reinstall
-          uv pip install pytest pytest-codspeed
           cd crates/lox-space && pytest
       - name: pytest
         if: ${{ !startsWith(matrix.platform.target, 'x86') && matrix.platform.target != 'ppc64' }}
@@ -74,8 +74,8 @@ jobs:
             set -e
             source $HOME/.local/bin/env
             uv venv --python 3.12
-            uv pip install pytest pytest-codspeed
-            uv pip install lox-space --find-links dist --force-reinstall
+            uv pip install pytest pytest-codspeed numpy
+            uv pip install lox-space --offline --find-links dist --force-reinstall
             source .venv/bin/activate
             cd crates/lox-space && pytest
 
@@ -112,10 +112,11 @@ jobs:
         shell: bash
         run: |
           set -e
+          # We cannot use `uv` here because it will always install a 64-bit interpreter
           python3 -m venv .venv
+          uv pip install pytest pytest-codspeed numpy
+          uv pip install lox-space --offline --find-links dist --force-reinstall
           source .venv/Scripts/activate
-          uv pip install lox-space --find-links dist --force-reinstall 
-          uv pip install pytest pytest-codspeed
           cd crates/lox-space && pytest
 
   macos:
@@ -148,10 +149,10 @@ jobs:
       - name: pytest
         run: |
           set -e
-          python3 -m venv .venv
+          uv venv --python 3.12
+          uv pip install pytest pytest-codspeed numpy
+          uv pip install lox-space --offline --find-links dist --force-reinstall
           source .venv/bin/activate
-          uv pip install lox-space --find-links dist --force-reinstall 
-          uv pip install pytest pytest-codspeed
           cd crates/lox-space && pytest
 
   sdist:
