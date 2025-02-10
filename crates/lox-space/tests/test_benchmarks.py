@@ -23,6 +23,6 @@ def ensemble(oneweb):
 @pytest.mark.benchmark()
 def test_visibility_benchmark(estrack, ensemble, oneweb, provider, times, ephemeris):
     passes = lox.visibility_all(times, estrack, ensemble, ephemeris, provider=provider)
-    assert len(passes) == len(estrack)
+    assert len(passes) == len(oneweb)
     for sc_passes in passes.values():
-        assert len(sc_passes) == len(oneweb)
+        assert len(sc_passes) == len(estrack)
