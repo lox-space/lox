@@ -815,16 +815,16 @@ pub fn visibility_all(
     let spacecraft = &spacecraft.get().0;
     let ephemeris = &ephemeris.get().0;
     Ok(py.allow_threads(|| {
-        ground_stations.iter().fold(
-            HashMap::with_capacity(ground_stations.len()),
-            |mut passes, (gs_name, (gs, mask))| {
+        spacecraft.iter().fold(
+            HashMap::with_capacity(spacecraft.len()),
+            |mut passes, (sc_name, sc)| {
                 passes.insert(
-                    gs_name.clone(),
-                    spacecraft
+                    sc_name.clone(),
+                    ground_stations
                         .par_iter()
-                        .fold(HashMap::new, |mut passes, (sc_name, sc)| {
+                        .fold(HashMap::new, |mut passes, (gs_name, (gs, mask))| {
                             passes.insert(
-                                sc_name.clone(),
+                                gs_name.clone(),
                                 visibility_combined(
                                     &times, &gs.0, &mask.0, &bodies, sc, ephemeris, provider,
                                 )
