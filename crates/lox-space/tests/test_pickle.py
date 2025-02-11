@@ -13,12 +13,11 @@ import pytest
 @pytest.mark.parametrize(
     "obj",
     [
-        # lox.Sun(),
-        # lox.Barycenter("Solar System Barycenter"),
-        # lox.Planet("Earth"),
-        # lox.Satellite("Moon"),
-        # lox.MinorBody("Ceres"),
+        lox.Origin("Earth"),
+        lox.Frame("ICRF"),
         lox.ElevationMask.fixed(0.0),
+        lox.TimeScale("TAI"),
+        lox.Time("TAI", 2000, 1, 1),
     ],
 )
 def test_pickle(obj):
