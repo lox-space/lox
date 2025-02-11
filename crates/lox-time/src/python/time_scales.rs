@@ -27,7 +27,7 @@ impl From<Ut1Error> for PyErr {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Ord)]
-#[pyclass(name = "TimeScale", module = "lox_space", frozen)]
+#[pyclass(name = "TimeScale", module = "lox_space", frozen, eq)]
 pub struct PyTimeScale(pub DynTimeScale);
 
 #[pymethods]
@@ -35,6 +35,9 @@ impl PyTimeScale {
     #[new]
     pub fn new(abbreviation: &str) -> PyResult<Self> {
         Ok(PyTimeScale(abbreviation.parse()?))
+    }
+    fn __getnewargs__(&self) -> (String,) {
+        (self.abbreviation(),)
     }
 
     pub fn __repr__(&self) -> String {

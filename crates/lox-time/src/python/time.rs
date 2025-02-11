@@ -12,7 +12,7 @@ use std::str::FromStr;
 use pyo3::basic::CompareOp;
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::types::{PyAnyMethods, PyType};
-use pyo3::{pyclass, pymethods, Bound, PyAny, PyErr, PyObject, PyResult, Python};
+use pyo3::{pyclass, pymethods, Bound, IntoPyObjectExt, PyAny, PyErr, PyObject, PyResult, Python};
 
 use lox_math::is_close::IsClose;
 
@@ -92,6 +92,21 @@ impl PyTime {
             .with_hms(hour, minute, seconds)
             .build()?;
         Ok(PyTime(time))
+    }
+
+    fn __getnewargs__<'py>(
+        &self,
+        py: Python<'py>,
+    ) -> (Bound<'py, PyAny>, i64, u8, u8, u8, u8, f64) {
+        (
+            self.scale().into_bound_py_any(py).unwrap(),
+            self.0.year(),
+            self.0.month(),
+            self.0.day(),
+            self.0.hour(),
+            self.0.minute(),
+            self.0.decimal_seconds(),
+        )
     }
 
     #[classmethod]
