@@ -26,7 +26,9 @@ def visibility(
     gs: GroundLocation,
     mask: ElevationMask,
     sc: Trajectory,
-    provider: UT1Provider,
+    ephemeris: SPK,
+    bodies: list[Origin] | None = None,
+    provider: UT1Provider | None = None,
 ) -> list[Window]: ...
 def visibility_all(
     times: list[Time],

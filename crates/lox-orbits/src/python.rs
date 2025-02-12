@@ -738,12 +738,14 @@ impl PySgp4 {
 }
 
 #[pyfunction]
-#[pyo3(signature = (times, gs, mask, sc, provider = None))]
+#[pyo3(signature = (times, gs, mask, sc, ephemeris, bodies=None, provider=None))]
 pub fn visibility(
     times: &Bound<'_, PyList>,
     gs: PyGroundLocation,
     mask: &Bound<'_, PyElevationMask>,
     sc: &Bound<'_, PyTrajectory>,
+    ephemeris: &Bound<'_, PySpk>,
+    bodies: Option<Vec<PyOrigin>>,
     provider: Option<&Bound<'_, PyUt1Provider>>,
 ) -> PyResult<Vec<PyWindow>> {
     let sc = sc.get();
@@ -759,12 +761,18 @@ pub fn visibility(
         .collect();
     let provider = provider.map(|p| &p.get().0);
     let mask = &mask.borrow().0;
-    Ok(
-        crate::analysis::visibility_dyn(&times, &gs.0, mask, &sc.0, provider)
-            .into_iter()
-            .map(PyWindow)
-            .collect(),
+    let ephemeris = &ephemeris.get().0;
+    let bodies: Vec<DynOrigin> = bodies
+        .unwrap_or_default()
+        .into_iter()
+        .map(|b| b.0)
+        .collect();
+    Ok(crate::analysis::visibility_combined(
+        &times, &gs.0, mask, &bodies, &sc.0, ephemeris, provider,
     )
+    .into_iter()
+    .map(PyWindow)
+    .collect())
 }
 
 #[pyclass(name = "Ensemble", module = "lox_space", frozen)]
