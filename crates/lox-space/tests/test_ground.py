@@ -20,3 +20,10 @@ def test_observables():
     assert observables.range_rate() == pytest.approx(expected_range_rate, rel=1e-2)
     assert observables.azimuth() == pytest.approx(expected_azimuth, rel=1e-2)
     assert observables.elevation() == pytest.approx(expected_elevation, rel=1e-2)
+
+
+def test_elevation_mask():
+    mask = lox.ElevationMask.variable(
+        np.array([-np.pi, 0.0, np.pi]), np.array([0.0, 5.0, 0.0])
+    )
+    assert mask.min_elevation(np.pi / 2) == 2.5

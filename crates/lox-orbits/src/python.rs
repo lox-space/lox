@@ -906,7 +906,7 @@ impl PyElevationMask {
     }
 
     fn __getnewargs__(&self) -> (Option<Vec<f64>>, Option<Vec<f64>>, Option<f64>) {
-        (self.azimuth(), self.elevation(), self.min_elevation())
+        (self.azimuth(), self.elevation(), self.fixed_elevation())
     }
 
     fn azimuth(&self) -> Option<Vec<f64>> {
@@ -923,11 +923,15 @@ impl PyElevationMask {
         }
     }
 
-    fn min_elevation(&self) -> Option<f64> {
+    fn fixed_elevation(&self) -> Option<f64> {
         match &self.0 {
             ElevationMask::Fixed(min_elevation) => Some(*min_elevation),
             ElevationMask::Variable(_) => None,
         }
+    }
+
+    fn min_elevation(&self, azimuth: f64) -> f64 {
+        self.0.min_elevation(azimuth)
     }
 }
 
