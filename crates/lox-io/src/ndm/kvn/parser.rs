@@ -153,11 +153,23 @@ pub struct KvnValue<V, U> {
     pub unit: Option<U>,
 }
 
+#[derive(PartialEq, Debug)]
+pub enum DateOfYear {
+    DayOfMonth { month: u8, day: u8 },
+    DayOfYear { day: u16 },
+}
+
+impl Default for DateOfYear {
+    fn default() -> Self {
+        DateOfYear::DayOfMonth { month: 0, day: 0 }
+    }
+}
+
 #[derive(PartialEq, Debug, Default)]
 pub struct KvnDateTimeValue {
     pub year: u16,
-    pub month: u8,
-    pub day: u8,
+    pub date_in_year: DateOfYear,
+
     pub hour: u8,
     pub minute: u8,
     pub second: u8,
@@ -580,13 +592,21 @@ pub fn handle_datetime_capture(captures: &regex::Captures) -> KvnDateTimeValue {
     // We don't do full validation of the date values. We only care if they
     // have the expected number of digits
 
-    // mo is a mandatory decimal in the regex so we expect the capture to be
-    // always there and unwrap is fine
-    let month = captures.name("mo").unwrap().as_str().parse::<u8>().unwrap();
+    let date_in_year = if let Some(day) = captures.name("ddd") {
+        let day = day.as_str().parse::<u16>().unwrap();
 
-    // day is a mandatory decimal in the regex so we expect the capture to be
-    // always there and unwrap is fine
-    let day = captures.name("dy").unwrap().as_str().parse::<u8>().unwrap();
+        DateOfYear::DayOfYear { day }
+    } else {
+        // mo is a mandatory decimal in the regex so we expect the capture to be
+        // always there and unwrap is fine
+        let month = captures.name("mo").unwrap().as_str().parse::<u8>().unwrap();
+
+        // day is a mandatory decimal in the regex so we expect the capture to be
+        // always there and unwrap is fine
+        let day = captures.name("dy").unwrap().as_str().parse::<u8>().unwrap();
+
+        DateOfYear::DayOfMonth { month, day }
+    };
 
     // hr is a mandatory decimal in the regex so we expect the capture to be
     // always there and unwrap is fine
@@ -617,8 +637,7 @@ pub fn handle_datetime_capture(captures: &regex::Captures) -> KvnDateTimeValue {
 
     KvnDateTimeValue {
         year,
-        month,
-        day,
+        date_in_year,
         hour,
         minute,
         second,
@@ -634,8 +653,8 @@ pub fn parse_kvn_datetime_line(
         Err(KvnDateTimeParserErr::EmptyValue { input })?
     };
 
-    // Modified from Figure F-5: CCSDS 502.0-B-3
-    let re = Regex::new(r"^(?:\s*)?(?<keyword>[0-9A-Z_]*)(?:\s*)?=(?:\s*)?(?<full_date_value>(?<yr>(?:\d{4}))-(?<mo>(?:\d{1,2}))-(?<dy>(?:\d{1,2}))T(?<hr>(?:\d{1,2})):(?<mn>(?:\d{1,2})):(?<sc>(?:\d{0,2}(?:\.\d*)?)))(?:\s*)?$").unwrap();
+    // Modified from Figure F-5: CCSDS 502.0-B-3 with extension for ddd
+    let re = Regex::new(r"^(?:\s*)?(?<keyword>[0-9A-Z_]*)(?:\s*)?=(?:\s*)?(?<full_date_value>(?<yr>(?:\d{4}))-((?<mo>(?:\d{1,2}))-(?<dy>(?:\d{1,2})))?(?<ddd>(?:\d{3}))?T(?<hr>(?:\d{1,2})):(?<mn>(?:\d{1,2})):(?<sc>(?:\d{0,2}(?:\.\d*)?)))(?:\s*)?$").unwrap();
 
     let captures = re
         .captures(input)
@@ -974,8 +993,7 @@ mod test {
             parse_kvn_datetime_line("CREATION_DATE = 2021-06-03T05:33:00.123"),
             Ok(KvnDateTimeValue {
                 year: 2021,
-                month: 6,
-                day: 3,
+                date_in_year: DateOfYear::DayOfMonth { month: 6, day: 3 },
                 hour: 5,
                 minute: 33,
                 second: 0,
@@ -988,8 +1006,7 @@ mod test {
             parse_kvn_datetime_line("CREATION_DATE = 2021-06-03T05:33:01"),
             Ok(KvnDateTimeValue {
                 year: 2021,
-                month: 6,
-                day: 3,
+                date_in_year: DateOfYear::DayOfMonth { month: 6, day: 3 },
                 hour: 5,
                 minute: 33,
                 second: 1,
@@ -1004,8 +1021,7 @@ mod test {
             parse_kvn_datetime_line("CREATION_DATE = 2021-06-03T05:33:01           "),
             Ok(KvnDateTimeValue {
                 year: 2021,
-                month: 6,
-                day: 3,
+                date_in_year: DateOfYear::DayOfMonth { month: 6, day: 3 },
                 hour: 5,
                 minute: 33,
                 second: 1,
@@ -1020,8 +1036,7 @@ mod test {
             parse_kvn_datetime_line("          CREATION_DATE = 2021-06-03T05:33:01"),
             Ok(KvnDateTimeValue {
                 year: 2021,
-                month: 6,
-                day: 3,
+                date_in_year: DateOfYear::DayOfMonth { month: 6, day: 3 },
                 hour: 5,
                 minute: 33,
                 second: 1,
@@ -1030,7 +1045,31 @@ mod test {
             })
         );
 
-        // @TODO add support for ddd format
+        assert_eq!(
+            parse_kvn_datetime_line("CREATION_DATE = 2021-090T05:33:01"),
+            Ok(KvnDateTimeValue {
+                year: 2021,
+                date_in_year: DateOfYear::DayOfYear { day: 90 },
+                hour: 5,
+                minute: 33,
+                second: 1,
+                fractional_second: 0.0,
+                full_value: "2021-090T05:33:01".to_string(),
+            })
+        );
+
+        assert_eq!(
+            parse_kvn_datetime_line("CREATION_DATE = 2021-366T05:33:01"),
+            Ok(KvnDateTimeValue {
+                year: 2021,
+                date_in_year: DateOfYear::DayOfYear { day: 366 },
+                hour: 5,
+                minute: 33,
+                second: 1,
+                fractional_second: 0.0,
+                full_value: "2021-366T05:33:01".to_string(),
+            })
+        );
 
         assert_eq!(
             parse_kvn_datetime_line("CREATION_DATE = 2021,06,03Q05!33!00-123"),
@@ -1130,8 +1169,7 @@ mod test {
             Ok(KvnStateVectorValue {
                 epoch: KvnDateTimeValue {
                     year: 1996,
-                    month: 12,
-                    day: 28,
+                    date_in_year: DateOfYear::DayOfMonth { month: 12, day: 28 },
                     hour: 21,
                     minute: 29,
                     second: 7,
@@ -1160,8 +1198,7 @@ mod test {
             Ok(KvnStateVectorValue {
                 epoch: KvnDateTimeValue {
                     year: 1996,
-                    month: 12,
-                    day: 28,
+                    date_in_year: DateOfYear::DayOfMonth { month: 12, day: 28 },
                     hour: 21,
                     minute: 29,
                     second: 7,
@@ -1190,8 +1227,7 @@ mod test {
             Ok(KvnStateVectorValue {
                 epoch: KvnDateTimeValue {
                     year: 1996,
-                    month: 12,
-                    day: 28,
+                    date_in_year: DateOfYear::DayOfMonth { month: 12, day: 28 },
                     hour: 21,
                     minute: 29,
                     second: 7,
