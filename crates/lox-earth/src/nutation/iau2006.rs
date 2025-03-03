@@ -8,8 +8,8 @@
 
 use lox_bodies::Earth;
 
-use crate::nutation::iau2000::nutation_iau2000a;
 use crate::nutation::Nutation;
+use crate::nutation::iau2000::nutation_iau2000a;
 
 use lox_math::types::units::JulianCenturies;
 

@@ -22,7 +22,9 @@ use crate::tides::constants::{LUNI_SOLAR_TIDAL_TERMS, OCEANIC_TIDAL_TERMS};
 mod constants;
 
 #[derive(Clone, Copy, Debug, Error, PartialEq)]
-#[error("sizes of `x`, `y`, `t` and `epochs` must match, but were x: {nx}, y: {ny}, t: {nt}, epochs: {nepochs}")]
+#[error(
+    "sizes of `x`, `y`, `t` and `epochs` must match, but were x: {nx}, y: {ny}, t: {nt}, epochs: {nepochs}"
+)]
 pub struct ArgumentSizeMismatchError {
     nx: usize,
     ny: usize,

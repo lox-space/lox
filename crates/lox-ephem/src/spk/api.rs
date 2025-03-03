@@ -205,7 +205,7 @@ impl Ephemeris for Spk {
 #[cfg(test)]
 mod test {
     use crate::spk::parser::parse_daf_spk;
-    use crate::spk::parser::test::{get_expected_segments, FILE_CONTENTS};
+    use crate::spk::parser::test::{FILE_CONTENTS, get_expected_segments};
 
     use super::*;
 

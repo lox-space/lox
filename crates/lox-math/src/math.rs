@@ -27,11 +27,7 @@ pub fn arcsec_to_rad(arcsec: Arcseconds) -> Radians {
 /// Modulus after division by 2π, returning in the range [0,2π).
 pub fn mod_two_pi(a: f64) -> f64 {
     let w = a % (2.0 * PI);
-    if w < 0.0 {
-        w + 2.0 * PI
-    } else {
-        w
-    }
+    if w < 0.0 { w + 2.0 * PI } else { w }
 }
 
 #[cfg(test)]

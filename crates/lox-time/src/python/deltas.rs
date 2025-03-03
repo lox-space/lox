@@ -8,7 +8,7 @@
 
 use pyo3::exceptions::PyValueError;
 use pyo3::types::PyType;
-use pyo3::{pyclass, pymethods, Bound, PyErr, PyResult};
+use pyo3::{Bound, PyErr, PyResult, pyclass, pymethods};
 
 use crate::deltas::{TimeDelta, TimeDeltaError};
 

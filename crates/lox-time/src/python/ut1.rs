@@ -10,7 +10,7 @@ use crate::deltas::TimeDelta;
 use crate::ut1::{DeltaUt1Tai, DeltaUt1TaiError, DeltaUt1TaiProvider, ExtrapolatedDeltaUt1Tai};
 use crate::utc::leap_seconds::BuiltinLeapSeconds;
 use pyo3::exceptions::PyValueError;
-use pyo3::{pyclass, pymethods, PyErr, PyResult};
+use pyo3::{PyErr, PyResult, pyclass, pymethods};
 
 impl From<ExtrapolatedDeltaUt1Tai> for PyErr {
     fn from(value: ExtrapolatedDeltaUt1Tai) -> Self {

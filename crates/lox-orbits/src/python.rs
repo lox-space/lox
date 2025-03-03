@@ -15,10 +15,10 @@ use lox_time::DynTime;
 use numpy::{PyArray1, PyArray2, PyArrayMethods};
 use pyo3::types::PyType;
 use pyo3::{
+    Bound, IntoPyObjectExt, PyAny, PyErr, PyResult, Python,
     exceptions::PyValueError,
     pyclass, pyfunction, pymethods,
     types::{PyAnyMethods, PyList},
-    Bound, IntoPyObjectExt, PyAny, PyErr, PyResult, Python,
 };
 use python::PyOrigin;
 use sgp4::Elements;
@@ -31,15 +31,15 @@ use lox_time::python::time::PyTime;
 use lox_time::python::ut1::PyUt1Provider;
 use lox_time::time_scales::{DynTimeScale, Tai};
 
-use crate::analysis::{visibility_combined, ElevationMask, ElevationMaskError};
+use crate::analysis::{ElevationMask, ElevationMaskError, visibility_combined};
 use crate::elements::{DynKeplerian, Keplerian};
 use crate::events::{Event, FindEventError, Window};
 use crate::frames::iau::IauFrameTransformationError;
 use crate::frames::{DynFrame, ReferenceFrame, TryRotateTo, UnknownFrameError};
 use crate::ground::{DynGroundLocation, DynGroundPropagator, GroundPropagatorError, Observables};
+use crate::propagators::Propagator;
 use crate::propagators::semi_analytical::{DynVallado, Vallado, ValladoError};
 use crate::propagators::sgp4::{Sgp4, Sgp4Error};
-use crate::propagators::Propagator;
 use crate::states::DynState;
 use crate::trajectories::{DynTrajectory, TrajectoryTransformationError};
 use crate::{
@@ -886,7 +886,9 @@ impl PyElevationMask {
             let elevation = elevation.to_vec()?;
             return Ok(PyElevationMask(ElevationMask::new(azimuth, elevation)?));
         }
-        Err(PyValueError::new_err("invalid argument combination, either `min_elevation` or `azimuth` and `elevation` arrays need to be present"))
+        Err(PyValueError::new_err(
+            "invalid argument combination, either `min_elevation` or `azimuth` and `elevation` arrays need to be present",
+        ))
     }
 
     #[classmethod]

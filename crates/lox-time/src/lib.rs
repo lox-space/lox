@@ -682,9 +682,9 @@ mod tests {
     use lox_math::constants::f64::time::DAYS_PER_JULIAN_CENTURY;
     use rstest::rstest;
 
+    use crate::Time;
     use crate::constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
     use crate::time_scales::{Tai, Tdb, Tt};
-    use crate::Time;
 
     use super::*;
 

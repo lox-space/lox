@@ -15,13 +15,13 @@
 use lox_math::constants::f64::time::SECONDS_PER_DAY;
 use lox_math::slices::is_sorted_asc;
 
+use crate::Time;
 use crate::deltas::{TimeDelta, ToDelta};
 use crate::julian_dates::Epoch::ModifiedJulianDate;
 use crate::julian_dates::JulianDate;
 use crate::julian_dates::Unit::Days;
 use crate::time_scales::Tai;
 use crate::utc::Utc;
-use crate::Time;
 
 const EPOCHS: [u64; 14] = [
     36934, 37300, 37512, 37665, 38334, 38395, 38486, 38639, 38761, 38820, 38942, 39004, 39126,

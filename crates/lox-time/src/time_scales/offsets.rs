@@ -656,8 +656,8 @@ mod tests {
     use super::*;
     use crate::time_scales::{FromScale, ToScale};
     use crate::{
-        calendar_dates::Date, deltas::ToDelta, test_helpers::delta_ut1_tai, time_of_day::TimeOfDay,
-        DynTime,
+        DynTime, calendar_dates::Date, deltas::ToDelta, test_helpers::delta_ut1_tai,
+        time_of_day::TimeOfDay,
     };
     use lox_math::is_close::IsClose;
 

@@ -12,7 +12,7 @@ use std::str::FromStr;
 use pyo3::basic::CompareOp;
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::types::{PyAnyMethods, PyType};
-use pyo3::{pyclass, pymethods, Bound, IntoPyObjectExt, PyAny, PyErr, PyObject, PyResult, Python};
+use pyo3::{Bound, IntoPyObjectExt, PyAny, PyErr, PyObject, PyResult, Python, pyclass, pymethods};
 
 use lox_math::is_close::IsClose;
 
@@ -402,7 +402,7 @@ impl IsClose for PyTime {
 #[cfg(test)]
 mod tests {
     use float_eq::assert_float_eq;
-    use pyo3::{types::PyDict, IntoPyObjectExt, Python};
+    use pyo3::{IntoPyObjectExt, Python, types::PyDict};
 
     use lox_math::assert_close;
     use rstest::rstest;

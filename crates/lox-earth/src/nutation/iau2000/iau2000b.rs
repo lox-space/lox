@@ -10,8 +10,8 @@ use lox_bodies::fundamental::simon1994::mean_moon_sun_elongation_simon1994;
 use lox_bodies::*;
 use lox_math::types::units::JulianCenturies;
 
-use crate::nutation::iau2000::{luni_solar_nutation, DelaunayArguments};
 use crate::nutation::Nutation;
+use crate::nutation::iau2000::{DelaunayArguments, luni_solar_nutation};
 
 mod luni_solar;
 mod planetary;

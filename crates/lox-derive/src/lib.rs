@@ -7,7 +7,7 @@
  */
 
 use proc_macro2::Span;
-use quote::{quote, ToTokens};
+use quote::{ToTokens, quote};
 use syn::{DeriveInput, Field};
 
 fn generate_call_to_deserializer_for_covariance_matrix_kvn_type(
@@ -452,7 +452,7 @@ fn deserializer_for_struct_with_named_fields(
                                 field,
                                 "Unsupported field type for deserializer",
                             )
-                            .into_compile_error()
+                            .into_compile_error();
                         }
                     };
 
@@ -476,7 +476,7 @@ fn deserializer_for_struct_with_named_fields(
                         field,
                         "Only two fields are allowed: \"base\" and (\"units\" or \"parameters\"",
                     )
-                    .into_compile_error()
+                    .into_compile_error();
                 }
             }
         }
@@ -843,7 +843,7 @@ pub fn derive_kvn_deserialize(item: proc_macro::TokenStream) -> proc_macro::Toke
                 "only named fields are supported for `#[derive(KvnDeserialize)]`",
             )
             .into_compile_error()
-            .into()
+            .into();
         }
     };
 

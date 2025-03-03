@@ -20,12 +20,12 @@ use itertools::Itertools;
 use num::ToPrimitive;
 use thiserror::Error;
 
+use crate::Time;
 use crate::calendar_dates::{CalendarDate, Date, DateError};
 use crate::deltas::{TimeDelta, ToDelta};
 use crate::julian_dates::JulianDate;
 use crate::time_of_day::{CivilTime, TimeOfDay, TimeOfDayError};
 use crate::time_scales::Tai;
-use crate::Time;
 
 use self::leap_seconds::BuiltinLeapSeconds;
 

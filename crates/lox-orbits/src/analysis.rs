@@ -12,7 +12,7 @@ use lox_bodies::{
     DynOrigin, Origin, RotationalElements, Spheroid, TryMeanRadius, TrySpheroid,
     UndefinedOriginPropertyError,
 };
-use lox_ephem::{path_from_ids, Ephemeris};
+use lox_ephem::{Ephemeris, path_from_ids};
 use lox_math::roots::Brent;
 use lox_math::series::{Series, SeriesError};
 use lox_math::types::units::Radians;
@@ -26,7 +26,7 @@ use rayon::prelude::*;
 use std::f64::consts::PI;
 use thiserror::Error;
 
-use crate::events::{find_windows, intersect_windows, Window};
+use crate::events::{Window, find_windows, intersect_windows};
 use crate::frames::{DynFrame, Iau, Icrf, TryRotateTo};
 use crate::ground::{DynGroundLocation, DynGroundPropagator, GroundLocation};
 use crate::states::State;
@@ -289,13 +289,13 @@ pub fn visibility<
 #[cfg(test)]
 mod tests {
     use lox_bodies::Earth;
-    use lox_ephem::spk::parser::{parse_daf_spk, Spk};
+    use lox_ephem::spk::parser::{Spk, parse_daf_spk};
     use lox_math::assert_close;
     use lox_math::is_close::IsClose;
+    use lox_time::Time;
     use lox_time::time_scales::Tai;
     use lox_time::ut1::DeltaUt1Tai;
     use lox_time::utc::Utc;
-    use lox_time::Time;
     use std::iter::zip;
     use std::path::PathBuf;
     use std::sync::OnceLock;

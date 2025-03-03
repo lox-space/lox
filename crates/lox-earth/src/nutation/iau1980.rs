@@ -3,7 +3,7 @@ use std::f64::consts::TAU;
 use lox_math::math::{arcsec_to_rad, normalize_two_pi};
 use lox_math::types::units::{Arcseconds, JulianCenturies, Radians};
 
-use crate::nutation::{point1_milliarcsec_to_rad, Nutation};
+use crate::nutation::{Nutation, point1_milliarcsec_to_rad};
 
 struct Coefficients {
     /// Coefficients of l, l', F, D and Ω.

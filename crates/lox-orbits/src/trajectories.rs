@@ -3,8 +3,8 @@ use std::num::ParseFloatError;
 use csv::Error;
 use glam::DVec3;
 use lox_ephem::Ephemeris;
-use lox_time::time_scales::{DynTimeScale, TimeScale};
 use lox_time::DynTime;
+use lox_time::time_scales::{DynTimeScale, TimeScale};
 use thiserror::Error;
 
 use lox_bodies::{DynOrigin, Origin};
@@ -12,9 +12,9 @@ use lox_math::roots::Brent;
 use lox_math::series::{Series, SeriesError};
 use lox_time::time_scales::Tai;
 use lox_time::utc::Utc;
-use lox_time::{deltas::TimeDelta, Time};
+use lox_time::{Time, deltas::TimeDelta};
 
-use crate::events::{find_events, find_windows, Event, Window};
+use crate::events::{Event, Window, find_events, find_windows};
 use crate::frames::ReferenceFrame;
 use crate::frames::{DynFrame, Icrf};
 use crate::states::State;

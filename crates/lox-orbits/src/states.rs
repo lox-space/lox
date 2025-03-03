@@ -15,17 +15,17 @@ use lox_bodies::{
     DynOrigin, Origin, PointMass, RotationalElements, Spheroid, TryPointMass, TrySpheroid,
     UndefinedOriginPropertyError,
 };
-use lox_ephem::{path_from_ids, Ephemeris};
+use lox_ephem::{Ephemeris, path_from_ids};
 use lox_math::{
     glam::Azimuth,
     math::{mod_two_pi, normalize_two_pi},
     roots::{BracketError, FindRoot, Secant},
 };
-use lox_time::{julian_dates::JulianDate, time_scales::DynTimeScale, time_scales::TimeScale, Time};
+use lox_time::{Time, julian_dates::JulianDate, time_scales::DynTimeScale, time_scales::TimeScale};
 use thiserror::Error;
 
 use crate::anomalies::{eccentric_to_true, hyperbolic_to_true};
-use crate::elements::{is_circular, is_equatorial, DynKeplerian, Keplerian, KeplerianElements};
+use crate::elements::{DynKeplerian, Keplerian, KeplerianElements, is_circular, is_equatorial};
 use crate::frames::{DynFrame, Iau, Icrf, ReferenceFrame, TryRotateTo};
 use crate::ground::{DynGroundLocation, GroundLocation};
 
@@ -412,10 +412,10 @@ mod tests {
     use float_eq::assert_float_eq;
 
     use lox_bodies::{Earth, Jupiter, Venus};
-    use lox_ephem::spk::parser::{parse_daf_spk, Spk};
+    use lox_ephem::spk::parser::{Spk, parse_daf_spk};
     use lox_math::assert_close;
     use lox_math::is_close::IsClose;
-    use lox_time::{time, time_scales::Tdb, utc::Utc, Time};
+    use lox_time::{Time, time, time_scales::Tdb, utc::Utc};
 
     use super::*;
 

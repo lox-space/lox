@@ -17,6 +17,7 @@
 use std::iter::zip;
 use thiserror::Error;
 
+use crate::Time;
 use crate::calendar_dates::{CalendarDate, Date};
 use crate::constants::i64::SECONDS_PER_DAY;
 use crate::constants::julian_dates::SECONDS_BETWEEN_MJD_AND_J2000;
@@ -25,7 +26,6 @@ use crate::julian_dates::JulianDate;
 use crate::subsecond::Subsecond;
 use crate::time_scales::Tai;
 use crate::utc::{LeapSecondsProvider, Utc};
-use crate::Time;
 use lox_io::iers::{EarthOrientationParams, ParseFinalsCsvError};
 use lox_math::series::{Series, SeriesError};
 use num::ToPrimitive;
@@ -61,7 +61,9 @@ pub enum DeltaUt1TaiError {
 /// It includes an extrapolated value for the input date which is unlikely to be accurate and should
 /// be used with great caution.
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
-#[error("UT1-TAI is only available between {min_date} and {max_date}; value for {req_date} was extrapolated")]
+#[error(
+    "UT1-TAI is only available between {min_date} and {max_date}; value for {req_date} was extrapolated"
+)]
 pub struct ExtrapolatedDeltaUt1Tai {
     req_date: Date,
     min_date: Date,
