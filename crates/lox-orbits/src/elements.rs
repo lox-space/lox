@@ -252,7 +252,7 @@ mod tests {
     use float_eq::assert_float_eq;
     use lox_bodies::Earth;
     use lox_time::time_scales::Tdb;
-    use lox_time::{time, Time};
+    use lox_time::{Time, time};
 
     #[test]
     fn test_keplerian() {

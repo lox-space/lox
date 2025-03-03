@@ -17,12 +17,12 @@
     [LSK]: https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/req/time.html#The%20Leapseconds%20Kernel%20LSK
 */
 
+use crate::Time;
 use crate::calendar_dates::{Date, DateError};
 use crate::constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 use crate::deltas::{TimeDelta, ToDelta};
 use crate::time_of_day::CivilTime;
 use crate::time_scales::Tai;
-use crate::Time;
 use lox_io::spice::{Kernel, KernelError};
 use std::fs::read_to_string;
 use std::num::ParseIntError;
@@ -230,13 +230,13 @@ mod tests {
     use rstest::rstest;
     use std::sync::OnceLock;
 
+    use crate::Time;
     use crate::deltas::TimeDelta;
     use crate::time;
     use crate::time_scales::Tai;
     use crate::utc;
     use crate::utc::LeapSecondsProvider;
     use crate::utc::Utc;
-    use crate::Time;
 
     #[rstest]
     #[case::j2000(Time::default(), Utc::default(), 32)]

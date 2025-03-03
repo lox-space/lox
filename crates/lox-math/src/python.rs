@@ -8,7 +8,7 @@
 
 use crate::series::{Series, SeriesError};
 use pyo3::exceptions::PyValueError;
-use pyo3::{pyclass, pymethods, PyErr, PyResult};
+use pyo3::{PyErr, PyResult, pyclass, pymethods};
 
 impl From<SeriesError> for PyErr {
     fn from(err: SeriesError) -> Self {

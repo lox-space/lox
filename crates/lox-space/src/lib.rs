@@ -9,9 +9,9 @@
 use lox_bodies::python::PyOrigin;
 use lox_ephem::python::PySpk;
 use lox_orbits::python::{
-    find_events, find_windows, visibility, visibility_all, PyElevationMask, PyEnsemble, PyEvent,
-    PyFrame, PyGroundLocation, PyGroundPropagator, PyKeplerian, PyObservables, PySgp4, PyState,
-    PyTrajectory, PyVallado, PyWindow,
+    PyElevationMask, PyEnsemble, PyEvent, PyFrame, PyGroundLocation, PyGroundPropagator,
+    PyKeplerian, PyObservables, PySgp4, PyState, PyTrajectory, PyVallado, PyWindow, find_events,
+    find_windows, visibility, visibility_all,
 };
 use pyo3::prelude::*;
 

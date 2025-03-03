@@ -1,6 +1,6 @@
-use pyo3::{exceptions::PyValueError, pyclass, pymethods, PyErr, PyResult};
+use pyo3::{PyErr, PyResult, exceptions::PyValueError, pyclass, pymethods};
 
-use crate::spk::parser::{parse_daf_spk, DafSpkError, Spk};
+use crate::spk::parser::{DafSpkError, Spk, parse_daf_spk};
 
 impl From<DafSpkError> for PyErr {
     fn from(err: DafSpkError) -> Self {

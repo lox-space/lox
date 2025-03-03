@@ -265,11 +265,7 @@ impl TimeDelta {
             subsecond: Subsecond(scaled_subsecond),
         };
 
-        if sign < 0 {
-            -result
-        } else {
-            result
-        }
+        if sign < 0 { -result } else { result }
     }
 
     /// Express the [TimeDelta] as an integral number of seconds since the given [Epoch].

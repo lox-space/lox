@@ -274,7 +274,7 @@ mod tests {
     use lox_math::assert_close;
     use lox_math::is_close::IsClose;
     use lox_time::utc::Utc;
-    use lox_time::{time, utc, Time};
+    use lox_time::{Time, time, utc};
 
     use super::*;
 

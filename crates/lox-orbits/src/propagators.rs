@@ -1,6 +1,6 @@
 use lox_bodies::Origin;
-use lox_time::time_scales::TimeScale;
 use lox_time::Time;
+use lox_time::time_scales::TimeScale;
 
 use crate::trajectories::TrajectoryError;
 use crate::{frames::ReferenceFrame, states::State, trajectories::Trajectory};

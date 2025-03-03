@@ -8,17 +8,17 @@
 
 use std::sync::OnceLock;
 
+use crate::DynTime;
 use crate::deltas::TimeDelta;
 use crate::deltas::ToDelta;
 use crate::time_of_day::CivilTime;
 use crate::time_of_day::TimeOfDay;
 use crate::time_scales::{DynTimeScale, Tai};
 use crate::time_scales::{FromScale, TimeScale, ToScale, TryFromScale};
-use crate::DynTime;
-use crate::{utc, Time};
+use crate::{Time, utc};
 
-use super::leap_seconds::BuiltinLeapSeconds;
 use super::LeapSecondsProvider;
+use super::leap_seconds::BuiltinLeapSeconds;
 use super::{Utc, UtcError};
 
 mod before1972;

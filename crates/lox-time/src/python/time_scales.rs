@@ -7,11 +7,11 @@
  */
 
 use pyo3::{
-    exceptions::PyValueError, pyclass, pymethods, types::PyAnyMethods, Bound, PyAny, PyErr,
-    PyResult,
+    Bound, PyAny, PyErr, PyResult, exceptions::PyValueError, pyclass, pymethods,
+    types::PyAnyMethods,
 };
 
-use crate::time_scales::{offsets::Ut1Error, DynTimeScale, TimeScale, UnknownTimeScaleError};
+use crate::time_scales::{DynTimeScale, TimeScale, UnknownTimeScaleError, offsets::Ut1Error};
 
 impl From<UnknownTimeScaleError> for PyErr {
     fn from(err: UnknownTimeScaleError) -> Self {

@@ -6,14 +6,14 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use lox_time::time_scales::{DynTimeScale, TimeScale};
 use lox_time::Time;
+use lox_time::time_scales::{DynTimeScale, TimeScale};
 use thiserror::Error;
 
 use lox_bodies::{DynOrigin, Origin, PointMass, TryPointMass};
 
 use crate::frames::{DynFrame, Icrf, ReferenceFrame};
-use crate::propagators::{stumpff, Propagator};
+use crate::propagators::{Propagator, stumpff};
 use crate::states::{DynState, State};
 use crate::trajectories::TrajectoryError;
 

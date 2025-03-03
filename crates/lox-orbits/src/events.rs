@@ -1,6 +1,6 @@
 use itertools::Itertools;
-use lox_time::time_scales::TimeScale;
 use lox_time::Time;
+use lox_time::time_scales::TimeScale;
 use std::collections::VecDeque;
 use std::fmt::Display;
 use std::iter::zip;
@@ -243,7 +243,7 @@ mod tests {
     use lox_math::is_close::IsClose;
     use lox_math::roots::Brent;
     use lox_time::time_scales::Tai;
-    use lox_time::{time, Time};
+    use lox_time::{Time, time};
     use std::f64::consts::{PI, TAU};
 
     #[test]

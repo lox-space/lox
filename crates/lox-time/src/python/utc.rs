@@ -14,7 +14,7 @@ use crate::time_scales::DynTimeScale;
 use crate::utc::{Utc, UtcError};
 use pyo3::exceptions::PyValueError;
 use pyo3::types::PyType;
-use pyo3::{pyclass, pymethods, Bound, PyAny, PyErr, PyResult};
+use pyo3::{Bound, PyAny, PyErr, PyResult, pyclass, pymethods};
 
 impl From<UtcError> for PyErr {
     fn from(value: UtcError) -> Self {
