@@ -4,8 +4,8 @@ exclude = ["tools/lox-gen"]
 resolver = "2"
 
 [workspace.package]
-rust-version = "1.74"
-edition = "2021"
+rust-version = "1.85"
+edition = "2024"
 license = "MPL-2.0"
 authors = ["Helge Eichhorn and the lox-space contributors"]
 repository = "https://github.com/lox-space/lox"
