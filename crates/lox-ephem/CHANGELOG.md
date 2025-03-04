@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.4](https://github.com/lox-space/lox/compare/lox-ephem-v0.1.0-alpha.3...lox-ephem-v0.1.0-alpha.4) - 2025-03-04
+
+### Other
+
+- update formatting
+
 ## [0.1.0-alpha.3](https://github.com/lox-space/lox/compare/lox-ephem-v0.1.0-alpha.2...lox-ephem-v0.1.0-alpha.3) - 2025-02-10
 
 ### Other
