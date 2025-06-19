@@ -10,8 +10,8 @@ use rayon::prelude::*;
 
 use glam::DVec3;
 use hashbrown::HashMap;
-use lox_ephem::python::PySpk;
 use lox_ephem::Ephemeris;
+use lox_ephem::python::PySpk;
 use lox_time::DynTime;
 use lox_time::ut1::DeltaUt1TaiProvider;
 use numpy::{PyArray1, PyArray2, PyArrayMethods};
@@ -826,20 +826,35 @@ pub fn visibility_all(
     let ephemeris = &ephemeris.get().0;
 
     let _total_combinations = spacecraft.len() * ground_stations.len();
-    
+
     // Adaptive strategy based on workload size
     if should_use_parallel(spacecraft.len(), ground_stations.len()) {
-        visibility_all_parallel_optimized(_py, &times, &ground_stations, spacecraft, ephemeris, &bodies, provider)
+        visibility_all_parallel_optimized(
+            _py,
+            &times,
+            &ground_stations,
+            spacecraft,
+            ephemeris,
+            &bodies,
+            provider,
+        )
     } else {
-        visibility_all_sequential_optimized(_py, &times, &ground_stations, spacecraft, ephemeris, &bodies, provider)
+        visibility_all_sequential_optimized(
+            _py,
+            &times,
+            &ground_stations,
+            spacecraft,
+            ephemeris,
+            &bodies,
+            provider,
+        )
     }
 }
-
 
 /// Determine if parallel processing should be used based on workload characteristics
 fn should_use_parallel(spacecraft_count: usize, ground_station_count: usize) -> bool {
     let total_combinations = spacecraft_count * ground_station_count;
-    
+
     // Use parallel processing if:
     // 1. We have enough work to justify overhead (>100 combinations)
     // 2. AND either enough spacecraft (>10) OR enough ground stations (>8)
@@ -848,7 +863,7 @@ fn should_use_parallel(spacecraft_count: usize, ground_station_count: usize) -> 
 
 /// Sequential implementation optimized for small workloads
 fn visibility_all_sequential_optimized<P, E>(
-    py: Python<'_>,
+    _py: Python<'_>,
     times: &[DynTime],
     ground_stations: &HashMap<String, (PyGroundLocation, PyElevationMask)>,
     spacecraft: &HashMap<String, DynTrajectory>,
@@ -862,28 +877,31 @@ where
 {
     // Pre-allocate result with known capacity
     let mut result = HashMap::with_capacity(spacecraft.len());
-    
+
     for (sc_name, sc_trajectory) in spacecraft {
         let mut gs_results = HashMap::with_capacity(ground_stations.len());
-        
+
         for (gs_name, (gs_location, gs_mask)) in ground_stations {
             let windows = visibility_combined(
-                times, &gs_location.0, &gs_mask.0, bodies, sc_trajectory, ephemeris, provider,
+                times,
+                &gs_location.0,
+                &gs_mask.0,
+                bodies,
+                sc_trajectory,
+                ephemeris,
+                provider,
             );
-            
+
             if !windows.is_empty() {
-                gs_results.insert(
-                    gs_name.clone(),
-                    windows.into_iter().map(PyWindow).collect(),
-                );
+                gs_results.insert(gs_name.clone(), windows.into_iter().map(PyWindow).collect());
             } else {
                 gs_results.insert(gs_name.clone(), Vec::new());
             }
         }
-        
+
         result.insert(sc_name.clone(), gs_results);
     }
-    
+
     Ok(result)
 }
 
@@ -905,34 +923,45 @@ where
     let combinations: Vec<_> = spacecraft
         .iter()
         .flat_map(|(sc_name, sc_trajectory)| {
-            ground_stations.iter().map(move |(gs_name, (gs_location, gs_mask))| {
-                (sc_name, sc_trajectory, gs_name, gs_location, gs_mask)
-            })
+            ground_stations
+                .iter()
+                .map(move |(gs_name, (gs_location, gs_mask))| {
+                    (sc_name, sc_trajectory, gs_name, gs_location, gs_mask)
+                })
         })
         .collect();
 
     // Determine optimal chunk size based on number of combinations and available cores
     let num_threads = rayon::current_num_threads();
-    let chunk_size = (combinations.len() / (num_threads * 2)).max(1).min(50);
+    let chunk_size = (combinations.len() / (num_threads * 2)).clamp(1, 50);
 
     // Process combinations in chunks with periodic GIL release
     let results: Vec<_> = py.allow_threads(|| {
         combinations
             .par_chunks(chunk_size)
             .map(|chunk| {
-                chunk.iter().map(|(sc_name, sc_trajectory, gs_name, gs_location, gs_mask)| {
-                    let windows = visibility_combined(
-                        times, &gs_location.0, &gs_mask.0, bodies, sc_trajectory, ephemeris, provider,
-                    );
-                    
-                    let py_windows = if !windows.is_empty() {
-                        windows.into_iter().map(PyWindow).collect()
-                    } else {
-                        Vec::new()
-                    };
-                    
-                    ((*sc_name).clone(), (*gs_name).clone(), py_windows)
-                }).collect::<Vec<_>>()
+                chunk
+                    .iter()
+                    .map(|(sc_name, sc_trajectory, gs_name, gs_location, gs_mask)| {
+                        let windows = visibility_combined(
+                            times,
+                            &gs_location.0,
+                            &gs_mask.0,
+                            bodies,
+                            sc_trajectory,
+                            ephemeris,
+                            provider,
+                        );
+
+                        let py_windows = if !windows.is_empty() {
+                            windows.into_iter().map(PyWindow).collect()
+                        } else {
+                            Vec::new()
+                        };
+
+                        ((*sc_name).clone(), (*gs_name).clone(), py_windows)
+                    })
+                    .collect::<Vec<_>>()
             })
             .flatten()
             .collect()
@@ -940,19 +969,22 @@ where
 
     // Efficiently merge results using pre-allocated structures
     let mut final_result = HashMap::with_capacity(spacecraft.len());
-    
+
     // Pre-allocate inner HashMaps
     for sc_name in spacecraft.keys() {
-        final_result.insert(sc_name.clone(), HashMap::with_capacity(ground_stations.len()));
+        final_result.insert(
+            sc_name.clone(),
+            HashMap::with_capacity(ground_stations.len()),
+        );
     }
-    
+
     // Populate results
     for (sc_name, gs_name, windows) in results {
         if let Some(gs_map) = final_result.get_mut(&sc_name) {
             gs_map.insert(gs_name, windows);
         }
     }
-    
+
     Ok(final_result)
 }
 
