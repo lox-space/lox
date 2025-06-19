@@ -5,7 +5,7 @@ build-pyo3 *FLAGS:
     maturin develop -E dev -m crates/lox-space/Cargo.toml {{FLAGS}}
 
 pytest *FLAGS: build-pyo3
-    pytest {{FLAGS}}
+    pytest {{FLAGS}} crates/lox-space/tests
 
 rstest *FLAGS:
     cargo nextest run --all-features {{FLAGS}}
