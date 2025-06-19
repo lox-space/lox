@@ -275,7 +275,7 @@ pub fn parse_daf_summary_and_name_record_pair(
     let summary_record_input = input;
     let mut name_record_input = &input[RECORD_SIZE as usize..];
 
-    let nc = 8 * (nd + (ni + 1) / 2);
+    let nc = 8 * (nd + ni.div_ceil(2));
 
     // 1. The record number of the next summary record in the file. (Zero if this is
     // the final summary record.)

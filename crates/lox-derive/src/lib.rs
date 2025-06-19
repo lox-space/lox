@@ -535,7 +535,7 @@ fn deserializer_for_struct_with_named_fields(
 
                 // Unwrap is okay becuase we always expect at least one type
                 let field_main_type = field_type_new.segments.iter()
-                    .last()
+                    .next_back()
                     .unwrap()
                     .ident
                     .to_string();
