@@ -393,7 +393,7 @@ mod tests {
             &times,
             &gs,
             &mask,
-            &vec![DynOrigin::Moon],
+            &[DynOrigin::Moon],
             &sc,
             ephemeris(),
             None::<&DeltaUt1Tai>,
