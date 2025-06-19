@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.8](https://github.com/lox-space/lox/compare/lox-bodies-v0.1.0-alpha.7...lox-bodies-v0.1.0-alpha.8) - 2025-06-19
+
+### Other
+
+- update Cargo.toml dependencies
+
 ## [0.1.0-alpha.7](https://github.com/lox-space/lox/compare/lox-bodies-v0.1.0-alpha.6...lox-bodies-v0.1.0-alpha.7) - 2025-03-04
 
 ### Other
