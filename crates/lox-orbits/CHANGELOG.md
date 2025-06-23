@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.16](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.15...lox-orbits-v0.1.0-alpha.16) - 2025-06-23
+
+### Added
+
+- add Pass struct
+
 ## [0.1.0-alpha.15](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.14...lox-orbits-v0.1.0-alpha.15) - 2025-06-19
 
 ### Other

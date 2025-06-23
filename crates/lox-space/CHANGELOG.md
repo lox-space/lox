@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.22](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.21...lox-space-v0.1.0-alpha.22) - 2025-06-23
+
+### Added
+
+- add Pass struct
+
 ## [0.1.0-alpha.21](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.20...lox-space-v0.1.0-alpha.21) - 2025-06-19
 
 ### Other
