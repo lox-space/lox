@@ -27,13 +27,14 @@ use sgp4::Elements;
 
 use lox_bodies::*;
 use lox_math::roots::Brent;
+use lox_math::series::SeriesError;
 use lox_time::deltas::TimeDelta;
 use lox_time::python::deltas::PyTimeDelta;
 use lox_time::python::time::PyTime;
 use lox_time::python::ut1::PyUt1Provider;
 use lox_time::time_scales::{DynTimeScale, Tai};
 
-use crate::analysis::{ElevationMask, ElevationMaskError, visibility_combined};
+use crate::analysis::{DynPass, ElevationMask, ElevationMaskError, Pass, visibility_combined};
 use crate::elements::{DynKeplerian, Keplerian};
 use crate::events::{Event, FindEventError, Window};
 use crate::frames::iau::IauFrameTransformationError;
@@ -749,7 +750,7 @@ pub fn visibility(
     ephemeris: &Bound<'_, PySpk>,
     bodies: Option<Vec<PyOrigin>>,
     provider: Option<&Bound<'_, PyUt1Provider>>,
-) -> PyResult<Vec<PyWindow>> {
+) -> PyResult<Vec<PyPass>> {
     let sc = sc.get();
     if gs.0.origin().name() != sc.0.origin().name() {
         return Err(PyValueError::new_err(
@@ -771,9 +772,9 @@ pub fn visibility(
         .collect();
     Ok(crate::analysis::visibility_combined(
         &times, &gs.0, mask, &bodies, &sc.0, ephemeris, provider,
-    )
+    )?
     .into_iter()
-    .map(PyWindow)
+    .map(PyPass)
     .collect())
 }
 
@@ -810,7 +811,7 @@ pub fn visibility_all(
     ephemeris: &Bound<'_, PySpk>,
     bodies: Option<Vec<PyOrigin>>,
     provider: Option<&Bound<'_, PyUt1Provider>>,
-) -> PyResult<HashMap<String, HashMap<String, Vec<PyWindow>>>> {
+) -> PyResult<HashMap<String, HashMap<String, Vec<PyPass>>>> {
     let times: Vec<DynTime> = times
         .extract::<Vec<PyTime>>()?
         .into_iter()
@@ -870,7 +871,7 @@ fn visibility_all_sequential_optimized<P, E>(
     ephemeris: &E,
     bodies: &[DynOrigin],
     provider: Option<&P>,
-) -> PyResult<HashMap<String, HashMap<String, Vec<PyWindow>>>>
+) -> PyResult<HashMap<String, HashMap<String, Vec<PyPass>>>>
 where
     P: DeltaUt1TaiProvider + Clone + Send + Sync,
     E: Ephemeris + Send + Sync,
@@ -882,7 +883,7 @@ where
         let mut gs_results = HashMap::with_capacity(ground_stations.len());
 
         for (gs_name, (gs_location, gs_mask)) in ground_stations {
-            let windows = visibility_combined(
+            let passes = visibility_combined(
                 times,
                 &gs_location.0,
                 &gs_mask.0,
@@ -890,13 +891,9 @@ where
                 sc_trajectory,
                 ephemeris,
                 provider,
-            );
+            )?;
 
-            if !windows.is_empty() {
-                gs_results.insert(gs_name.clone(), windows.into_iter().map(PyWindow).collect());
-            } else {
-                gs_results.insert(gs_name.clone(), Vec::new());
-            }
+            gs_results.insert(gs_name.clone(), passes.into_iter().map(PyPass).collect());
         }
 
         result.insert(sc_name.clone(), gs_results);
@@ -914,7 +911,7 @@ fn visibility_all_parallel_optimized<P, E>(
     ephemeris: &E,
     bodies: &[DynOrigin],
     provider: Option<&P>,
-) -> PyResult<HashMap<String, HashMap<String, Vec<PyWindow>>>>
+) -> PyResult<HashMap<String, HashMap<String, Vec<PyPass>>>>
 where
     P: DeltaUt1TaiProvider + Clone + Send + Sync,
     E: Ephemeris + Send + Sync,
@@ -936,14 +933,14 @@ where
     let chunk_size = (combinations.len() / (num_threads * 2)).clamp(1, 50);
 
     // Process combinations in chunks with periodic GIL release
-    let results: Vec<_> = py.allow_threads(|| {
+    let results: Result<Vec<_>, _> = py.allow_threads(|| {
         combinations
             .par_chunks(chunk_size)
             .map(|chunk| {
                 chunk
                     .iter()
                     .map(|(sc_name, sc_trajectory, gs_name, gs_location, gs_mask)| {
-                        let windows = visibility_combined(
+                        let passes = visibility_combined(
                             times,
                             &gs_location.0,
                             &gs_mask.0,
@@ -951,38 +948,25 @@ where
                             sc_trajectory,
                             ephemeris,
                             provider,
-                        );
+                        )?;
 
-                        let py_windows = if !windows.is_empty() {
-                            windows.into_iter().map(PyWindow).collect()
-                        } else {
-                            Vec::new()
-                        };
-
-                        ((*sc_name).clone(), (*gs_name).clone(), py_windows)
+                        let py_passes = passes.into_iter().map(PyPass).collect();
+                        Ok(((*sc_name).clone(), (*gs_name).clone(), py_passes))
                     })
-                    .collect::<Vec<_>>()
+                    .collect::<Result<Vec<_>, SeriesError>>()
             })
-            .flatten()
             .collect()
     });
 
-    // Efficiently merge results using pre-allocated structures
-    let mut final_result = HashMap::with_capacity(spacecraft.len());
+    // Convert the flat results to nested hashmap structure
+    let flat_results: Vec<_> = results?.into_iter().flatten().collect();
+    let mut final_result: HashMap<String, HashMap<String, Vec<PyPass>>> = HashMap::new();
 
-    // Pre-allocate inner HashMaps
-    for sc_name in spacecraft.keys() {
-        final_result.insert(
-            sc_name.clone(),
-            HashMap::with_capacity(ground_stations.len()),
-        );
-    }
-
-    // Populate results
-    for (sc_name, gs_name, windows) in results {
-        if let Some(gs_map) = final_result.get_mut(&sc_name) {
-            gs_map.insert(gs_name, windows);
-        }
+    for (sc_name, gs_name, passes) in flat_results {
+        final_result
+            .entry(sc_name)
+            .or_insert_with(HashMap::new)
+            .insert(gs_name, passes);
     }
 
     Ok(final_result)
@@ -1069,6 +1053,7 @@ impl PyElevationMask {
 }
 
 #[pyclass(name = "Observables", module = "lox_space", frozen)]
+#[derive(Clone, Debug)]
 pub struct PyObservables(pub Observables);
 
 #[pymethods]
@@ -1092,5 +1077,57 @@ impl PyObservables {
 
     fn range_rate(&self) -> f64 {
         self.0.range_rate()
+    }
+}
+
+#[pyclass(name = "Pass", module = "lox_space", frozen)]
+#[derive(Debug, Clone)]
+pub struct PyPass(pub DynPass);
+
+#[pymethods]
+impl PyPass {
+    #[new]
+    fn new(
+        window: PyWindow,
+        times: Vec<PyTime>,
+        observables: Vec<PyObservables>,
+    ) -> PyResult<Self> {
+        let times: Vec<DynTime> = times.into_iter().map(|t| t.0).collect();
+        let observables: Vec<Observables> = observables.into_iter().map(|o| o.0).collect();
+
+        let pass = Pass::new(window.0, times, observables)
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+
+        Ok(PyPass(pass))
+    }
+
+    fn window(&self) -> PyWindow {
+        PyWindow(*self.0.window())
+    }
+
+    fn times(&self) -> Vec<PyTime> {
+        self.0.times().iter().map(|&t| PyTime(t)).collect()
+    }
+
+    fn observables(&self) -> Vec<PyObservables> {
+        self.0
+            .observables()
+            .iter()
+            .map(|o| PyObservables(o.clone()))
+            .collect()
+    }
+
+    fn interpolate(&self, time: PyTime) -> Option<PyObservables> {
+        self.0.interpolate(time.0).map(PyObservables)
+    }
+
+    fn __repr__(&self) -> String {
+        let window = self.0.window();
+        format!(
+            "Pass(window=Window({}, {}), {} observables)",
+            window.start(),
+            window.end(),
+            self.0.observables().len()
+        )
     }
 }

@@ -28,7 +28,7 @@ use thiserror::Error;
 
 use crate::events::{Window, find_windows, intersect_windows};
 use crate::frames::{DynFrame, Iau, Icrf, TryRotateTo};
-use crate::ground::{DynGroundLocation, DynGroundPropagator, GroundLocation};
+use crate::ground::{DynGroundLocation, DynGroundPropagator, GroundLocation, Observables};
 use crate::states::State;
 use crate::trajectories::{DynTrajectory, Trajectory};
 
@@ -105,6 +105,131 @@ impl ElevationMask {
             ElevationMask::Fixed(min_elevation) => *min_elevation,
             ElevationMask::Variable(series) => series.interpolate(azimuth),
         }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Pass<T: TimeScale> {
+    window: Window<T>,
+    times: Vec<Time<T>>,
+    observables: Vec<Observables>,
+    // Series for interpolation
+    azimuth_series: Series<Vec<f64>, Vec<f64>>,
+    elevation_series: Series<Vec<f64>, Vec<f64>>,
+    range_series: Series<Vec<f64>, Vec<f64>>,
+    range_rate_series: Series<Vec<f64>, Vec<f64>>,
+}
+
+pub type DynPass = Pass<DynTimeScale>;
+
+impl<T: TimeScale> Pass<T> {
+    pub fn new(
+        window: Window<T>,
+        times: Vec<Time<T>>,
+        observables: Vec<Observables>,
+    ) -> Result<Self, SeriesError>
+    where
+        T: Clone,
+    {
+        // If we have less than 2 points, we can't create a proper Series
+        // We'll create dummy series with duplicate points for Series compatibility
+        let (time_seconds, azimuths, elevations, ranges, range_rates) = if times.len() < 2 {
+            if times.is_empty() {
+                // Create default points at window start and end
+                let start_seconds = 0.0;
+                let end_seconds = window.duration().to_decimal_seconds();
+                let default_obs = observables
+                    .first()
+                    .cloned()
+                    .unwrap_or_else(|| Observables::new(0.0, 0.0, 0.0, 0.0));
+                (
+                    vec![start_seconds, end_seconds],
+                    vec![default_obs.azimuth(), default_obs.azimuth()],
+                    vec![default_obs.elevation(), default_obs.elevation()],
+                    vec![default_obs.range(), default_obs.range()],
+                    vec![default_obs.range_rate(), default_obs.range_rate()],
+                )
+            } else {
+                // Duplicate the single point
+                let time_sec = (times[0].clone() - window.start()).to_decimal_seconds();
+                let obs = &observables[0];
+                (
+                    vec![time_sec, time_sec + 1.0], // Add 1 second offset for second point
+                    vec![obs.azimuth(), obs.azimuth()],
+                    vec![obs.elevation(), obs.elevation()],
+                    vec![obs.range(), obs.range()],
+                    vec![obs.range_rate(), obs.range_rate()],
+                )
+            }
+        } else {
+            // Normal case with multiple points
+            let time_seconds: Vec<f64> = times
+                .iter()
+                .map(|t| (t.clone() - window.start()).to_decimal_seconds())
+                .collect();
+
+            // Extract observable arrays
+            let azimuths: Vec<f64> = observables.iter().map(|o| o.azimuth()).collect();
+            let elevations: Vec<f64> = observables.iter().map(|o| o.elevation()).collect();
+            let ranges: Vec<f64> = observables.iter().map(|o| o.range()).collect();
+            let range_rates: Vec<f64> = observables.iter().map(|o| o.range_rate()).collect();
+
+            (time_seconds, azimuths, elevations, ranges, range_rates)
+        };
+
+        // Create series for each observable
+        let azimuth_series = Series::new(time_seconds.clone(), azimuths)?;
+        let elevation_series = Series::new(time_seconds.clone(), elevations)?;
+        let range_series = Series::new(time_seconds.clone(), ranges)?;
+        let range_rate_series = Series::new(time_seconds, range_rates)?;
+
+        Ok(Pass {
+            window,
+            times,
+            observables,
+            azimuth_series,
+            elevation_series,
+            range_series,
+            range_rate_series,
+        })
+    }
+
+    pub fn window(&self) -> &Window<T> {
+        &self.window
+    }
+
+    pub fn times(&self) -> &[Time<T>] {
+        &self.times
+    }
+
+    pub fn observables(&self) -> &[Observables] {
+        &self.observables
+    }
+
+    pub fn interpolate(&self, time: Time<T>) -> Option<Observables>
+    where
+        T: Clone + PartialOrd,
+    {
+        // Check if the time is within the window
+        if time < self.window.start() || time > self.window.end() {
+            return None;
+        }
+
+        // If we have no data points, return None
+        if self.times.is_empty() {
+            return None;
+        }
+
+        // Convert time to seconds since window start for interpolation
+        let target_seconds = (time - self.window.start()).to_decimal_seconds();
+
+        // Use Series interpolation for each observable
+        let azimuth = self.azimuth_series.interpolate(target_seconds);
+        let elevation = self.elevation_series.interpolate(target_seconds);
+        let range = self.range_series.interpolate(target_seconds);
+        let range_rate = self.range_rate_series.interpolate(target_seconds);
+
+        Some(Observables::new(azimuth, elevation, range, range_rate))
     }
 }
 
@@ -217,17 +342,40 @@ pub fn visibility_combined<
     sc: &DynTrajectory,
     ephem: &E,
     provider: Option<&P>,
-) -> Vec<Window<DynTimeScale>> {
+) -> Result<Vec<DynPass>, SeriesError> {
     let w1 = visibility_dyn(times, gs, mask, sc, provider);
     let wb: Vec<Vec<Window<DynTimeScale>>> = bodies
         .par_iter()
         .map(|&body| visibility_los(times, gs, body, sc, ephem, provider))
         .collect();
-    let mut w = w1;
+    let mut windows = w1;
     for w2 in wb {
-        w = intersect_windows(&w, &w2);
+        windows = intersect_windows(&windows, &w2);
     }
-    w
+
+    // Convert windows to passes
+    let mut passes = Vec::new();
+    for window in windows {
+        // Collect times and observables for this window
+        let mut window_times = Vec::new();
+        let mut window_observables = Vec::new();
+
+        for time in times {
+            if *time >= window.start() && *time <= window.end() {
+                window_times.push(*time);
+                let state = sc.interpolate_at(*time);
+                let obs = gs.observables_dyn(state);
+                window_observables.push(obs);
+            }
+        }
+
+        if !window_times.is_empty() {
+            let pass = Pass::new(window, window_times, window_observables)?;
+            passes.push(pass);
+        }
+    }
+
+    Ok(passes)
 }
 
 pub fn elevation<
@@ -397,11 +545,12 @@ mod tests {
             &sc,
             ephemeris(),
             None::<&DeltaUt1Tai>,
-        );
+        )
+        .unwrap();
         assert_eq!(actual.len(), expected.len());
         for (actual, expected) in zip(actual, expected) {
-            assert_close!(actual.start(), expected.start(), 0.0, 1e-4);
-            assert_close!(actual.end(), expected.end(), 0.0, 1e-4);
+            assert_close!(actual.window().start(), expected.start(), 0.0, 1e-4);
+            assert_close!(actual.window().end(), expected.end(), 0.0, 1e-4);
         }
     }
 
