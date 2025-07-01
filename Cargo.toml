@@ -11,15 +11,15 @@ authors = ["Helge Eichhorn and the lox-space contributors"]
 repository = "https://github.com/lox-space/lox"
 
 [workspace.dependencies]
-lox-bodies = { path = "crates/lox-bodies", version = "0.1.0-alpha.8" }
-lox-derive = { path = "crates/lox-derive", version = "0.1.0-alpha.3" }
-lox-earth = { path = "crates/lox-earth", version = "0.1.0-alpha.9" }
-lox-ephem = { path = "crates/lox-ephem", version = "0.1.0-alpha.5" }
-lox-io = { path = "crates/lox-io", version = "0.1.0-alpha.6" }
-lox-math = { path = "crates/lox-math", version = "0.1.0-alpha.6" }
-lox-orbits = { path = "crates/lox-orbits", version = "0.1.0-alpha.16" }
-lox-space = { path = "crates/lox-space", version = "0.1.0-alpha.22" }
-lox-time = { path = "crates/lox-time", version = "0.1.0-alpha.7" }
+lox-bodies = { path = "crates/lox-bodies", version = "0.1.0-alpha.9" }
+lox-derive = { path = "crates/lox-derive", version = "0.1.0-alpha.4" }
+lox-earth = { path = "crates/lox-earth", version = "0.1.0-alpha.10" }
+lox-ephem = { path = "crates/lox-ephem", version = "0.1.0-alpha.6" }
+lox-io = { path = "crates/lox-io", version = "0.1.0-alpha.7" }
+lox-math = { path = "crates/lox-math", version = "0.1.0-alpha.7" }
+lox-orbits = { path = "crates/lox-orbits", version = "0.1.0-alpha.17" }
+lox-space = { path = "crates/lox-space", version = "0.1.0-alpha.23" }
+lox-time = { path = "crates/lox-time", version = "0.1.0-alpha.8" }
 
 csv = "1.3.0"
 dyn-clone = "1.0.17"

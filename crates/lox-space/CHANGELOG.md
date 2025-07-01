@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.23](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.22...lox-space-v0.1.0-alpha.23) - 2025-07-01
+
+### Other
+
+- fix clippy lints
+
 ## [0.1.0-alpha.22](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.21...lox-space-v0.1.0-alpha.22) - 2025-06-23
 
 ### Added
