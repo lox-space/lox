@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.7](https://github.com/lox-space/lox/compare/lox-math-v0.1.0-alpha.6...lox-math-v0.1.0-alpha.7) - 2025-07-01
+
+### Other
+
+- fix clippy lints
+
 ## [0.1.0-alpha.6](https://github.com/lox-space/lox/compare/lox-math-v0.1.0-alpha.5...lox-math-v0.1.0-alpha.6) - 2025-06-19
 
 ### Other
