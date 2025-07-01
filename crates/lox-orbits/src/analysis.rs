@@ -29,7 +29,7 @@ use thiserror::Error;
 use crate::events::{Window, find_windows, intersect_windows};
 use crate::frames::{DynFrame, Iau, Icrf, TryRotateTo};
 use crate::ground::{DynGroundLocation, DynGroundPropagator, GroundLocation, Observables};
-use crate::states::State;
+use crate::states::{DynState, State};
 use crate::trajectories::{DynTrajectory, Trajectory};
 
 // Salvatore Alfano, David Negron, Jr., and Jennifer L. Moore
@@ -121,6 +121,54 @@ pub struct Pass<T: TimeScale> {
 }
 
 pub type DynPass = Pass<DynTimeScale>;
+
+impl DynPass {
+    /// Create a Pass from a window, calculating observables for times when the satellite is above the elevation mask
+    pub fn from_window<P: DeltaUt1TaiProvider>(
+        window: Window<DynTimeScale>,
+        time_resolution: TimeDelta,
+        gs: &DynGroundLocation,
+        mask: &ElevationMask,
+        sc: &DynTrajectory,
+        provider: Option<&P>,
+    ) -> Result<DynPass, SeriesError> {
+        let mut pass_times = Vec::new();
+        let mut pass_observables = Vec::new();
+
+        // Generate times at the specified resolution within the window
+        let mut current_time = window.start();
+
+        while current_time <= window.end() {
+            let state = sc.interpolate_at(current_time);
+
+            // Transform to body-fixed frame like elevation_dyn does
+            let body_fixed = DynFrame::Iau(gs.origin());
+            let rot = DynFrame::Icrf.try_rotation(body_fixed, current_time, provider);
+            let (r1, v1) = rot
+                .unwrap()
+                .rotate_state(state.position(), state.velocity());
+            let state_bf = DynState::new(state.time(), r1, v1, state.origin(), body_fixed);
+
+            let obs = gs.observables_dyn(state_bf);
+
+            // Check if satellite is above the elevation mask
+            let min_elev = mask.min_elevation(obs.azimuth());
+            if obs.elevation() >= min_elev {
+                pass_times.push(current_time);
+                pass_observables.push(obs);
+            }
+
+            current_time = current_time + time_resolution;
+        }
+
+        // Only create a pass if we have valid observations
+        if pass_times.is_empty() {
+            return Err(SeriesError::InsufficientPoints(0, 2));
+        }
+
+        Pass::new(window, pass_times, pass_observables)
+    }
+}
 
 impl<T: TimeScale> Pass<T> {
     pub fn new(
@@ -355,23 +403,24 @@ pub fn visibility_combined<
 
     // Convert windows to passes
     let mut passes = Vec::new();
+
+    // Calculate time resolution from the provided times array
+    let time_resolution = if times.len() >= 2 {
+        times[1] - times[0]
+    } else {
+        // Default to 60 seconds if we don't have enough times
+        TimeDelta::try_from_decimal_seconds(60.0).expect("60 seconds should be valid")
+    };
+
     for window in windows {
-        // Collect times and observables for this window
-        let mut window_times = Vec::new();
-        let mut window_observables = Vec::new();
-
-        for time in times {
-            if *time >= window.start() && *time <= window.end() {
-                window_times.push(*time);
-                let state = sc.interpolate_at(*time);
-                let obs = gs.observables_dyn(state);
-                window_observables.push(obs);
+        // Use the new from_window constructor to properly calculate observables
+        match DynPass::from_window(window, time_resolution, gs, mask, sc, provider) {
+            Ok(pass) => passes.push(pass),
+            Err(SeriesError::InsufficientPoints(_, _)) => {
+                // Skip windows where the satellite never rises above the elevation mask
+                continue;
             }
-        }
-
-        if !window_times.is_empty() {
-            let pass = Pass::new(window, window_times, window_observables)?;
-            passes.push(pass);
+            Err(e) => return Err(e),
         }
     }
 
@@ -551,6 +600,40 @@ mod tests {
         for (actual, expected) in zip(actual, expected) {
             assert_close!(actual.window().start(), expected.start(), 0.0, 1e-4);
             assert_close!(actual.window().end(), expected.end(), 0.0, 1e-4);
+        }
+    }
+
+    #[test]
+    fn test_pass_observables_above_mask() {
+        // Test that all observables in a Pass are above the elevation mask
+        let gs = location_dyn();
+        let mask = ElevationMask::with_fixed_elevation(10.0_f64.to_radians()); // 10 degree mask
+        let sc = spacecraft_trajectory_dyn();
+        let times: Vec<DynTime> = sc.states().iter().map(|s| s.time()).collect();
+
+        let passes = visibility_combined(
+            &times,
+            &gs,
+            &mask,
+            &[], // No occluding bodies for this test
+            &sc,
+            ephemeris(),
+            None::<&DeltaUt1Tai>,
+        )
+        .unwrap();
+
+        // For each pass, verify all observables have elevation >= mask minimum
+        for pass in passes {
+            for obs in pass.observables() {
+                let min_elevation = mask.min_elevation(obs.azimuth());
+                assert!(
+                    obs.elevation() >= min_elevation,
+                    "Observable elevation {:.2}° is below mask minimum {:.2}° at azimuth {:.2}°",
+                    obs.elevation().to_degrees(),
+                    min_elevation.to_degrees(),
+                    obs.azimuth().to_degrees()
+                );
+            }
         }
     }
 
