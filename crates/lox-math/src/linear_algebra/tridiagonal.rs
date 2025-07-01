@@ -73,16 +73,10 @@ impl Index<Idx> for Tridiagonal<'_> {
     fn index(&self, (i, j): Idx) -> &Self::Output {
         let n = self.d.len();
         if i >= n {
-            panic!(
-                "row index out of bounds: the number of rows is {} but the index is {}",
-                n, i
-            )
+            panic!("row index out of bounds: the number of rows is {n} but the index is {i}")
         }
         if j >= n {
-            panic!(
-                "column index out of bounds: the number of columns is {} but the index is {}",
-                n, j
-            )
+            panic!("column index out of bounds: the number of columns is {n} but the index is {j}")
         }
         if i == j {
             &self.d[i]

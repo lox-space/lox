@@ -292,7 +292,7 @@ mod tests {
         let actual = utc.to_string();
         assert_eq!(expected, actual);
         let expected = "2000-01-01T00:00:00.000000000000000 UTC".to_string();
-        let actual = format!("{:.15}", utc);
+        let actual = format!("{utc:.15}");
         assert_eq!(expected, actual);
     }
 
