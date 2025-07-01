@@ -148,14 +148,14 @@ where
     fn name(&self) -> String {
         let body = self.0.name();
         match body {
-            "Sun" | "Moon" => format!("IAU Body-Fixed Reference Frame for the {}", body),
-            _ => format!("IAU Body-Fixed Reference Frame for {}", body),
+            "Sun" | "Moon" => format!("IAU Body-Fixed Reference Frame for the {body}"),
+            _ => format!("IAU Body-Fixed Reference Frame for {body}"),
         }
     }
 
     fn abbreviation(&self) -> String {
         let body = self.0.name().replace([' ', '-'], "_").to_uppercase();
-        format!("IAU_{}", body)
+        format!("IAU_{body}")
     }
 
     fn is_rotating(&self) -> bool {
@@ -183,8 +183,8 @@ impl ReferenceFrame for DynFrame {
             DynFrame::Iau(dyn_origin) => {
                 let body = dyn_origin.name();
                 match body {
-                    "Sun" | "Moon" => format!("IAU Body-Fixed Reference Frame for the {}", body),
-                    _ => format!("IAU Body-Fixed Reference Frame for {}", body),
+                    "Sun" | "Moon" => format!("IAU Body-Fixed Reference Frame for the {body}"),
+                    _ => format!("IAU Body-Fixed Reference Frame for {body}"),
                 }
             }
         }
@@ -198,7 +198,7 @@ impl ReferenceFrame for DynFrame {
             DynFrame::Itrf => Itrf.abbreviation(),
             DynFrame::Iau(dyn_origin) => {
                 let body = dyn_origin.name().replace([' ', '-'], "_").to_uppercase();
-                format!("IAU_{}", body)
+                format!("IAU_{body}")
             }
         }
     }

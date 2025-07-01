@@ -1822,7 +1822,7 @@ name is "19_spk") available from the NAIF website (http://naif.jpl.nasa.gov/tuto
         directory_data[size_of_f64 * 3..size_of_f64 * 4].copy_from_slice(&14f64.to_le_bytes()); // n
 
         for item in contents.iter().take(10240) {
-            print!("0x{:02X}u8, ", item);
+            print!("0x{item:02X}u8, ");
         }
     }
 

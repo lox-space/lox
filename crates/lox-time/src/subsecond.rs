@@ -186,7 +186,7 @@ mod tests {
     fn test_subsecond_display() {
         let subsecond = Subsecond(0.123456789876543);
         assert_eq!("0.123", subsecond.to_string());
-        assert_eq!(format!("{:.15}", subsecond), "0.123456789876543");
+        assert_eq!(format!("{subsecond:.15}"), "0.123456789876543");
     }
 
     #[test]
