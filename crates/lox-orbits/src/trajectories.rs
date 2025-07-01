@@ -246,21 +246,21 @@ where
                 .unwrap()
                 .parse()
                 .map_err(|e: ParseFloatError| {
-                    TrajectoryError::CsvError(format!("invalid x coordinate: {}", e))
+                    TrajectoryError::CsvError(format!("invalid x coordinate: {e}"))
                 })?;
             let y = record
                 .get(2)
                 .unwrap()
                 .parse()
                 .map_err(|e: ParseFloatError| {
-                    TrajectoryError::CsvError(format!("invalid y coordinate: {}", e))
+                    TrajectoryError::CsvError(format!("invalid y coordinate: {e}"))
                 })?;
             let z = record
                 .get(3)
                 .unwrap()
                 .parse()
                 .map_err(|e: ParseFloatError| {
-                    TrajectoryError::CsvError(format!("invalid z coordinate: {}", e))
+                    TrajectoryError::CsvError(format!("invalid z coordinate: {e}"))
                 })?;
             let position = DVec3::new(x, y, z);
             let vx = record
@@ -268,21 +268,21 @@ where
                 .unwrap()
                 .parse()
                 .map_err(|e: ParseFloatError| {
-                    TrajectoryError::CsvError(format!("invalid x velocity: {}", e))
+                    TrajectoryError::CsvError(format!("invalid x velocity: {e}"))
                 })?;
             let vy = record
                 .get(5)
                 .unwrap()
                 .parse()
                 .map_err(|e: ParseFloatError| {
-                    TrajectoryError::CsvError(format!("invalid y velocity: {}", e))
+                    TrajectoryError::CsvError(format!("invalid y velocity: {e}"))
                 })?;
             let vz = record
                 .get(6)
                 .unwrap()
                 .parse()
                 .map_err(|e: ParseFloatError| {
-                    TrajectoryError::CsvError(format!("invalid z velocity: {}", e))
+                    TrajectoryError::CsvError(format!("invalid z velocity: {e}"))
                 })?;
             let velocity = DVec3::new(vx, vy, vz);
             let state = State::new(time, position, velocity, origin.clone(), frame.clone());
@@ -315,21 +315,21 @@ impl DynTrajectory {
                 .unwrap()
                 .parse()
                 .map_err(|e: ParseFloatError| {
-                    TrajectoryError::CsvError(format!("invalid x coordinate: {}", e))
+                    TrajectoryError::CsvError(format!("invalid x coordinate: {e}"))
                 })?;
             let y = record
                 .get(2)
                 .unwrap()
                 .parse()
                 .map_err(|e: ParseFloatError| {
-                    TrajectoryError::CsvError(format!("invalid y coordinate: {}", e))
+                    TrajectoryError::CsvError(format!("invalid y coordinate: {e}"))
                 })?;
             let z = record
                 .get(3)
                 .unwrap()
                 .parse()
                 .map_err(|e: ParseFloatError| {
-                    TrajectoryError::CsvError(format!("invalid z coordinate: {}", e))
+                    TrajectoryError::CsvError(format!("invalid z coordinate: {e}"))
                 })?;
             let position = DVec3::new(x, y, z);
             let vx = record
@@ -337,21 +337,21 @@ impl DynTrajectory {
                 .unwrap()
                 .parse()
                 .map_err(|e: ParseFloatError| {
-                    TrajectoryError::CsvError(format!("invalid x velocity: {}", e))
+                    TrajectoryError::CsvError(format!("invalid x velocity: {e}"))
                 })?;
             let vy = record
                 .get(5)
                 .unwrap()
                 .parse()
                 .map_err(|e: ParseFloatError| {
-                    TrajectoryError::CsvError(format!("invalid y velocity: {}", e))
+                    TrajectoryError::CsvError(format!("invalid y velocity: {e}"))
                 })?;
             let vz = record
                 .get(6)
                 .unwrap()
                 .parse()
                 .map_err(|e: ParseFloatError| {
-                    TrajectoryError::CsvError(format!("invalid z velocity: {}", e))
+                    TrajectoryError::CsvError(format!("invalid z velocity: {e}"))
                 })?;
             let velocity = DVec3::new(vx, vy, vz);
             let state = State::new(time, position, velocity, origin, frame);

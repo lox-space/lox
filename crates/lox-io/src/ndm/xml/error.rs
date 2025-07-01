@@ -27,17 +27,17 @@ pub enum XmlDeserializationError {
 impl std::fmt::Display for XmlDeserializationError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            XmlDeserializationError::Custom(s) => write!(f, "{}", s),
-            XmlDeserializationError::InvalidXml(s) => write!(f, "{}", s),
-            XmlDeserializationError::InvalidInt(s) => write!(f, "{}", s),
-            XmlDeserializationError::InvalidFloat(s) => write!(f, "{}", s),
-            XmlDeserializationError::InvalidBoolean(s) => write!(f, "{}", s),
-            XmlDeserializationError::KeyNotRead(s) => write!(f, "{}", s),
-            XmlDeserializationError::UnexpectedStart(s) => write!(f, "{}", s),
-            XmlDeserializationError::UnexpectedEnd(s) => write!(f, "{}", s),
-            XmlDeserializationError::UnexpectedEof(s) => write!(f, "{}", s),
-            XmlDeserializationError::ExpectedStart(s) => write!(f, "{}", s),
-            XmlDeserializationError::Unsupported(s) => write!(f, "{}", s),
+            XmlDeserializationError::Custom(s) => write!(f, "{s}"),
+            XmlDeserializationError::InvalidXml(s) => write!(f, "{s}"),
+            XmlDeserializationError::InvalidInt(s) => write!(f, "{s}"),
+            XmlDeserializationError::InvalidFloat(s) => write!(f, "{s}"),
+            XmlDeserializationError::InvalidBoolean(s) => write!(f, "{s}"),
+            XmlDeserializationError::KeyNotRead(s) => write!(f, "{s}"),
+            XmlDeserializationError::UnexpectedStart(s) => write!(f, "{s}"),
+            XmlDeserializationError::UnexpectedEnd(s) => write!(f, "{s}"),
+            XmlDeserializationError::UnexpectedEof(s) => write!(f, "{s}"),
+            XmlDeserializationError::ExpectedStart(s) => write!(f, "{s}"),
+            XmlDeserializationError::Unsupported(s) => write!(f, "{s}"),
         }
     }
 }
@@ -46,7 +46,7 @@ impl ::std::error::Error for XmlDeserializationError {}
 
 impl From<quick_xml::DeError> for XmlDeserializationError {
     fn from(value: quick_xml::DeError) -> Self {
-        let error_description = format!("{:?}", value).to_string();
+        let error_description = format!("{value:?}").to_string();
 
         match value {
             quick_xml::DeError::Custom(_) => XmlDeserializationError::Custom(error_description),

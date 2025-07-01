@@ -312,7 +312,7 @@ fn get_prefix_and_postfix_keyword(attrs: &[syn::Attribute]) -> Option<(String, S
     keyword.map(|keyword| {
         let keyword = keyword.value().to_uppercase();
 
-        (format!("{}_START", keyword), format!("{}_STOP", keyword))
+        (format!("{keyword}_START"), format!("{keyword}_STOP"))
     })
 }
 
@@ -360,7 +360,7 @@ fn handle_version_field(
     let field_name = field.ident.as_ref().unwrap();
 
     // 7.4.4 Keywords must be uppercase and must not contain blanks
-    let expected_kvn_name = format!("CCSDS_{}_VERS", message_type_name);
+    let expected_kvn_name = format!("CCSDS_{message_type_name}_VERS");
 
     // Unwrap is okay because we expect this to be a well defined type path,
     // because this is not a general-purpose proc macro, but one that we

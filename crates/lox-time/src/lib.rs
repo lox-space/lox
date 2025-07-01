@@ -884,7 +884,7 @@ mod tests {
         let actual = time.to_string();
         assert_eq!(expected, actual);
         let expected = "2000-01-01T12:00:00.000000000000000 TAI".to_string();
-        let actual = format!("{:.15}", time);
+        let actual = format!("{time:.15}");
         assert_eq!(expected, actual);
     }
 
@@ -916,8 +916,7 @@ mod tests {
         let actual = time.seconds();
         assert_eq!(
             expected, actual,
-            "expected Time to have {} seconds, but got {}",
-            expected, actual
+            "expected Time to have {expected} seconds, but got {actual}"
         );
     }
 

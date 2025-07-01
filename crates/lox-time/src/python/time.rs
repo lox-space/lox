@@ -51,7 +51,7 @@ impl FromStr for Epoch {
             "mjd" | "MJD" => Ok(Epoch::ModifiedJulianDate),
             "j1950" | "J1950" => Ok(Epoch::J1950),
             "j2000" | "J2000" => Ok(Epoch::J2000),
-            _ => Err(PyValueError::new_err(format!("unknown epoch: {}", s))),
+            _ => Err(PyValueError::new_err(format!("unknown epoch: {s}"))),
         }
     }
 }
@@ -64,7 +64,7 @@ impl FromStr for Unit {
             "seconds" => Ok(Unit::Seconds),
             "days" => Ok(Unit::Days),
             "centuries" => Ok(Unit::Centuries),
-            _ => Err(PyValueError::new_err(format!("unknown unit: {}", s))),
+            _ => Err(PyValueError::new_err(format!("unknown unit: {s}"))),
         }
     }
 }

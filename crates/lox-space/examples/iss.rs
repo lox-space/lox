@@ -26,7 +26,7 @@ fn main() {
         iss.time().days_since_j2000(),
         time
     );
-    println!("{}", title);
+    println!("{title}");
     println!("{}", "=".repeat(title.len()));
     println!("Semi-major axis: {:.3} km", iss.semi_major_axis());
     println!("Eccentricity: {:.6}", iss.eccentricity());

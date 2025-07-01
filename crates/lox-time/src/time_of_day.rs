@@ -317,8 +317,8 @@ mod tests {
     fn test_time_of_day_display() {
         let subsecond = Subsecond::new(0.123456789123456).unwrap();
         let time = TimeOfDay::new(12, 0, 0).unwrap().with_subsecond(subsecond);
-        assert_eq!(format!("{}", time), "12:00:00.123");
-        assert_eq!(format!("{:.15}", time), "12:00:00.123456789123456");
+        assert_eq!(format!("{time}"), "12:00:00.123");
+        assert_eq!(format!("{time:.15}"), "12:00:00.123456789123456");
     }
 
     #[rstest]
