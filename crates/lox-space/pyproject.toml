@@ -11,11 +11,11 @@ dependencies = [
 ]
 dynamic = ["version"]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "black",
     "ipython",
-    "numpy",
+    "maturin",
     "pytest",
     "pytest-codspeed",
 ]
