@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024. Helge Eichhorn and the LOX contributors
+ * Copyright (c) 2025. Helge Eichhorn and the LOX contributors
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -7,7 +7,11 @@
  */
 
 use pyo3::{PyErr, PyResult, exceptions::PyValueError, pyclass, pymethods};
-use crate::{UnknownFrameError, iau::IauFrameTransformationError, DynFrame, ReferenceFrame};
+use crate::{
+    dynamic::{DynFrame, UnknownFrameError},
+    transformations::iau::IauFrameTransformationError,
+    traits::ReferenceFrame
+};
 
 impl From<UnknownFrameError> for PyErr {
     fn from(err: UnknownFrameError) -> Self {
