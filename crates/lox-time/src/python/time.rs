@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024. Helge Eichhorn and the LOX contributors
+ * Copyright (c) 2025. Helge Eichhorn and the LOX contributors
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -22,10 +22,10 @@ use crate::julian_dates::{Epoch, JulianDate, Unit};
 use crate::python::deltas::PyTimeDelta;
 use crate::python::ut1::PyUt1Provider;
 use crate::subsecond::{InvalidSubsecond, Subsecond};
+use crate::time::{DynTime, Time, TimeError};
 use crate::time_of_day::{CivilTime, TimeOfDay};
 use crate::time_scales::{DynTimeScale, Tai};
 use crate::utc::transformations::ToUtc;
-use crate::{DynTime, Time, TimeError};
 
 use super::time_scales::PyTimeScale;
 use super::utc::PyUtc;

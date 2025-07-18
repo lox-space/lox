@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023. Helge Eichhorn and the LOX contributors
+ * Copyright (c) 2025. Helge Eichhorn and the LOX contributors
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -20,10 +20,10 @@ use itertools::Itertools;
 use num::ToPrimitive;
 use thiserror::Error;
 
-use crate::Time;
 use crate::calendar_dates::{CalendarDate, Date, DateError};
 use crate::deltas::{TimeDelta, ToDelta};
 use crate::julian_dates::JulianDate;
+use crate::time::Time;
 use crate::time_of_day::{CivilTime, TimeOfDay, TimeOfDayError};
 use crate::time_scales::Tai;
 

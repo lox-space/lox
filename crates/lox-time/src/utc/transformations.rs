@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023. Helge Eichhorn and the LOX contributors
+ * Copyright (c) 2025. Helge Eichhorn and the LOX contributors
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -8,14 +8,14 @@
 
 use std::sync::OnceLock;
 
-use crate::DynTime;
 use crate::deltas::TimeDelta;
 use crate::deltas::ToDelta;
+use crate::time::DynTime;
 use crate::time_of_day::CivilTime;
 use crate::time_of_day::TimeOfDay;
 use crate::time_scales::{DynTimeScale, Tai};
 use crate::time_scales::{FromScale, TimeScale, ToScale, TryFromScale};
-use crate::{Time, utc};
+use crate::{time::Time, utc};
 
 use super::LeapSecondsProvider;
 use super::leap_seconds::BuiltinLeapSeconds;
