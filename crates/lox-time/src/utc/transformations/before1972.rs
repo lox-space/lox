@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024. Helge Eichhorn and the LOX contributors
+ * Copyright (c) 2025. Helge Eichhorn and the LOX contributors
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -15,11 +15,11 @@
 use lox_math::constants::f64::time::SECONDS_PER_DAY;
 use lox_math::slices::is_sorted_asc;
 
-use crate::Time;
 use crate::deltas::{TimeDelta, ToDelta};
 use crate::julian_dates::Epoch::ModifiedJulianDate;
 use crate::julian_dates::JulianDate;
 use crate::julian_dates::Unit::Days;
+use crate::time::Time;
 use crate::time_scales::Tai;
 use crate::utc::Utc;
 
