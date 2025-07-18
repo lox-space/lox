@@ -6,7 +6,6 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-// Module declarations
 pub mod dynamic;
 pub mod frames;
 pub mod traits;
@@ -15,11 +14,9 @@ pub mod transformations;
 #[cfg(feature = "python")]
 pub mod python;
 
-// Re-export commonly used types
 pub use dynamic::{DynFrame, UnknownFrameError};
-pub use frames::{Icrf, Cirf, Tirf, Itrf, Iau};
+pub use frames::{Cirf, Iau, Icrf, Itrf, Tirf};
 pub use traits::{
-    ReferenceFrame, QuasiInertial, BodyFixed, 
-    TryQuasiInertial, TryBodyFixed, TryRotateTo,
-    NonQuasiInertialFrameError, NonBodyFixedFrameError
+    BodyFixed, NonBodyFixedFrameError, NonQuasiInertialFrameError, QuasiInertial, ReferenceFrame,
+    TryBodyFixed, TryQuasiInertial, TryRotateTo,
 };

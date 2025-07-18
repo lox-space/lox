@@ -37,7 +37,6 @@ use lox_time::time_scales::{DynTimeScale, Tai};
 use crate::analysis::{DynPass, ElevationMask, ElevationMaskError, Pass, visibility_combined};
 use crate::elements::{DynKeplerian, Keplerian};
 use crate::events::{Event, FindEventError, Window};
-use lox_frames::{DynFrame, TryRotateTo, python::PyFrame};
 use crate::ground::{DynGroundLocation, DynGroundPropagator, GroundPropagatorError, Observables};
 use crate::propagators::Propagator;
 use crate::propagators::semi_analytical::{DynVallado, Vallado, ValladoError};
@@ -48,6 +47,7 @@ use crate::{
     states::State,
     trajectories::{Trajectory, TrajectoryError},
 };
+use lox_frames::{DynFrame, TryRotateTo, python::PyFrame};
 
 impl From<TrajectoryTransformationError> for PyErr {
     fn from(err: TrajectoryTransformationError) -> Self {
@@ -62,8 +62,6 @@ impl From<FindEventError> for PyErr {
         PyValueError::new_err(err.to_string())
     }
 }
-
-
 
 #[pyfunction]
 pub fn find_events(

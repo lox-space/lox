@@ -9,17 +9,23 @@
 use std::str::FromStr;
 
 use lox_bodies::{DynOrigin, Origin, TryRotationalElements};
-use lox_time::{Time, julian_dates::JulianDate, time_scales::{Tdb, TimeScale, TryToScale}};
+use lox_time::{
+    Time,
+    julian_dates::JulianDate,
+    time_scales::{Tdb, TimeScale, TryToScale},
+};
 use thiserror::Error;
 
 use crate::{
     frames::{Cirf, Icrf, Itrf, Tirf},
-    traits::{ReferenceFrame, TryQuasiInertial, TryBodyFixed,
-             NonQuasiInertialFrameError, NonBodyFixedFrameError, TryRotateTo},
+    traits::{
+        NonBodyFixedFrameError, NonQuasiInertialFrameError, ReferenceFrame, TryBodyFixed,
+        TryQuasiInertial, TryRotateTo,
+    },
     transformations::{
+        Rotation,
         iau::{IauFrameTransformationError, icrf_to_iau},
         iers::{cirf_to_tirf, icrf_to_cirf, tirf_to_itrf},
-        Rotation,
     },
 };
 
