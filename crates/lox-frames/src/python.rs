@@ -6,12 +6,12 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use pyo3::{PyErr, PyResult, exceptions::PyValueError, pyclass, pymethods};
 use crate::{
     dynamic::{DynFrame, UnknownFrameError},
+    traits::ReferenceFrame,
     transformations::iau::IauFrameTransformationError,
-    traits::ReferenceFrame
 };
+use pyo3::{PyErr, PyResult, exceptions::PyValueError, pyclass, pymethods};
 
 impl From<UnknownFrameError> for PyErr {
     fn from(err: UnknownFrameError) -> Self {

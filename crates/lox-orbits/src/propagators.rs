@@ -3,8 +3,8 @@ use lox_time::Time;
 use lox_time::time_scales::TimeScale;
 
 use crate::trajectories::TrajectoryError;
-use lox_frames::ReferenceFrame;
 use crate::{states::State, trajectories::Trajectory};
+use lox_frames::ReferenceFrame;
 
 pub mod semi_analytical;
 pub mod sgp4;

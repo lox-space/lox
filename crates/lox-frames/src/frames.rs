@@ -8,7 +8,7 @@
 
 use lox_bodies::RotationalElements;
 
-use crate::traits::{ReferenceFrame, QuasiInertial, BodyFixed};
+use crate::traits::{BodyFixed, QuasiInertial, ReferenceFrame};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Ord, PartialOrd)]
 pub struct Icrf;
