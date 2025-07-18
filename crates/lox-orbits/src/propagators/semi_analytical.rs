@@ -12,10 +12,10 @@ use thiserror::Error;
 
 use lox_bodies::{DynOrigin, Origin, PointMass, TryPointMass};
 
-use lox_frames::{DynFrame, Icrf, ReferenceFrame};
 use crate::propagators::{Propagator, stumpff};
 use crate::states::{DynState, State};
 use crate::trajectories::TrajectoryError;
+use lox_frames::{DynFrame, Icrf, ReferenceFrame};
 
 #[derive(Debug, Error, Eq, PartialEq)]
 pub enum ValladoError {

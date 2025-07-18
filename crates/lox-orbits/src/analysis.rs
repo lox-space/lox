@@ -27,10 +27,10 @@ use std::f64::consts::PI;
 use thiserror::Error;
 
 use crate::events::{Window, find_windows, intersect_windows};
-use lox_frames::{DynFrame, Iau, Icrf, TryRotateTo};
 use crate::ground::{DynGroundLocation, DynGroundPropagator, GroundLocation, Observables};
 use crate::states::{DynState, State};
 use crate::trajectories::{DynTrajectory, Trajectory};
+use lox_frames::{DynFrame, Iau, Icrf, TryRotateTo};
 
 // Salvatore Alfano, David Negron, Jr., and Jennifer L. Moore
 // Rapid Determination of Satellite Visibility Periods

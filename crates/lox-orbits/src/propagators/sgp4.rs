@@ -18,10 +18,10 @@ use lox_time::deltas::TimeDelta;
 use lox_time::time_scales::Tai;
 use lox_time::utc::Utc;
 
-use lox_frames::Icrf;
 use crate::propagators::Propagator;
 use crate::states::State;
 use crate::trajectories::TrajectoryError;
+use lox_frames::Icrf;
 
 #[derive(Debug, Clone, Error)]
 pub enum Sgp4Error {
