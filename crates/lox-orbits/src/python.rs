@@ -37,8 +37,7 @@ use lox_time::time_scales::{DynTimeScale, Tai};
 use crate::analysis::{DynPass, ElevationMask, ElevationMaskError, Pass, visibility_combined};
 use crate::elements::{DynKeplerian, Keplerian};
 use crate::events::{Event, FindEventError, Window};
-use crate::frames::iau::IauFrameTransformationError;
-use crate::frames::{DynFrame, ReferenceFrame, TryRotateTo, UnknownFrameError};
+use lox_frames::{DynFrame, TryRotateTo, python::PyFrame};
 use crate::ground::{DynGroundLocation, DynGroundPropagator, GroundPropagatorError, Observables};
 use crate::propagators::Propagator;
 use crate::propagators::semi_analytical::{DynVallado, Vallado, ValladoError};
@@ -64,12 +63,7 @@ impl From<FindEventError> for PyErr {
     }
 }
 
-impl From<IauFrameTransformationError> for PyErr {
-    fn from(err: IauFrameTransformationError) -> Self {
-        // FIXME: wrong error type
-        PyValueError::new_err(err.to_string())
-    }
-}
+
 
 #[pyfunction]
 pub fn find_events(
@@ -119,37 +113,6 @@ pub fn find_windows(
     .into_iter()
     .map(PyWindow)
     .collect())
-}
-
-impl From<UnknownFrameError> for PyErr {
-    fn from(err: UnknownFrameError) -> Self {
-        PyValueError::new_err(err.to_string())
-    }
-}
-
-#[pyclass(name = "Frame", module = "lox_space", frozen)]
-#[pyo3(eq)]
-#[derive(Debug, Clone, Default, Eq, PartialEq, Ord, PartialOrd)]
-pub struct PyFrame(DynFrame);
-
-#[pymethods]
-impl PyFrame {
-    #[new]
-    fn new(abbreviation: &str) -> PyResult<Self> {
-        Ok(Self(abbreviation.parse()?))
-    }
-
-    fn __getnewargs__(&self) -> (String,) {
-        (self.abbreviation(),)
-    }
-
-    fn name(&self) -> String {
-        self.0.name()
-    }
-
-    fn abbreviation(&self) -> String {
-        self.0.abbreviation()
-    }
 }
 
 #[pyclass(name = "State", module = "lox_space", frozen)]

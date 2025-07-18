@@ -15,8 +15,8 @@ use lox_time::utc::Utc;
 use lox_time::{Time, deltas::TimeDelta};
 
 use crate::events::{Event, Window, find_events, find_windows};
-use crate::frames::ReferenceFrame;
-use crate::frames::{DynFrame, Icrf};
+use lox_frames::ReferenceFrame;
+use lox_frames::{DynFrame, Icrf};
 use crate::states::State;
 
 impl From<csv::Error> for TrajectoryError {
