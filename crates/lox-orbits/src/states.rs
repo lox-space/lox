@@ -26,7 +26,7 @@ use thiserror::Error;
 
 use crate::anomalies::{eccentric_to_true, hyperbolic_to_true};
 use crate::elements::{DynKeplerian, Keplerian, KeplerianElements, is_circular, is_equatorial};
-use crate::frames::{DynFrame, Iau, Icrf, ReferenceFrame, TryRotateTo};
+use lox_frames::{DynFrame, Iau, Icrf, ReferenceFrame, TryRotateTo};
 use crate::ground::{DynGroundLocation, GroundLocation};
 
 #[derive(Debug, Clone, Copy, PartialEq)]

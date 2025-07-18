@@ -15,6 +15,7 @@ crate-type = ["lib", "cdylib"]
 [dependencies]
 lox-bodies.workspace = true
 lox-ephem.workspace = true
+lox-frames.workspace = true
 lox-math.workspace = true
 lox-orbits.workspace = true
 lox-time.workspace = true
@@ -27,6 +28,7 @@ python = [
     "dep:pyo3",
     "lox-bodies/python",
     "lox-ephem/python",
+    "lox-frames/python",
     "lox-math/python",
     "lox-orbits/python",
     "lox-time/python",

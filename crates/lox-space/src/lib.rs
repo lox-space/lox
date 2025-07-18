@@ -8,8 +8,9 @@
 
 use lox_bodies::python::PyOrigin;
 use lox_ephem::python::PySpk;
+use lox_frames::python::PyFrame;
 use lox_orbits::python::{
-    PyElevationMask, PyEnsemble, PyEvent, PyFrame, PyGroundLocation, PyGroundPropagator,
+    PyElevationMask, PyEnsemble, PyEvent, PyGroundLocation, PyGroundPropagator,
     PyKeplerian, PyObservables, PyPass, PySgp4, PyState, PyTrajectory, PyVallado, PyWindow,
     find_events, find_windows, visibility, visibility_all,
 };

@@ -437,6 +437,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "lox-frames"
+version = "0.1.0-alpha.1"
+dependencies = [
+ "glam",
+ "hashbrown",
+ "lox-bodies",
+ "lox-earth",
+ "lox-math",
+ "lox-time",
+ "numpy",
+ "pyo3",
+ "rstest",
+ "thiserror",
+]
+
+[[package]]
 name = "lox-io"
 version = "0.1.0-alpha.7"
 dependencies = [
@@ -478,6 +494,7 @@ dependencies = [
  "lox-bodies",
  "lox-earth",
  "lox-ephem",
+ "lox-frames",
  "lox-math",
  "lox-time",
  "numpy",
@@ -494,6 +511,7 @@ version = "0.1.0-alpha.23"
 dependencies = [
  "lox-bodies",
  "lox-ephem",
+ "lox-frames",
  "lox-math",
  "lox-orbits",
  "lox-time",

@@ -8,7 +8,7 @@
 
 use std::f64::consts::FRAC_PI_2;
 
-use crate::frames::{DynFrame, Iau, Icrf, TryRotateTo};
+use lox_frames::{DynFrame, Iau, Icrf, TryRotateTo};
 use crate::propagators::Propagator;
 use crate::states::{DynState, State};
 use crate::trajectories::{DynTrajectory, Trajectory, TrajectoryError};

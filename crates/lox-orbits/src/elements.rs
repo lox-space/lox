@@ -16,7 +16,7 @@ use lox_time::deltas::TimeDelta;
 use lox_time::time_scales::{DynTimeScale, TimeScale};
 use lox_time::{DynTime, Time};
 
-use crate::frames::{DynFrame, Icrf, ReferenceFrame};
+use lox_frames::{DynFrame, Icrf, ReferenceFrame};
 use crate::states::State;
 
 #[derive(Debug, Clone, PartialEq)]
