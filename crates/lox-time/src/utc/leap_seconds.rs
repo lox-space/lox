@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024. Helge Eichhorn and the LOX contributors
+ * Copyright (c) 2025. Helge Eichhorn and the LOX contributors
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -17,10 +17,10 @@
     [LSK]: https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/req/time.html#The%20Leapseconds%20Kernel%20LSK
 */
 
-use crate::Time;
 use crate::calendar_dates::{Date, DateError};
 use crate::constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 use crate::deltas::{TimeDelta, ToDelta};
+use crate::time::Time;
 use crate::time_of_day::CivilTime;
 use crate::time_scales::Tai;
 use lox_io::spice::{Kernel, KernelError};
@@ -221,7 +221,7 @@ fn is_leap_second_date(epochs: &[i64], date: Date) -> bool {
 }
 
 fn is_leap_second(epochs: &[i64], tai: Time<Tai>) -> bool {
-    epochs.binary_search(&tai.seconds).is_ok()
+    epochs.binary_search(&tai.seconds()).is_ok()
 }
 
 #[cfg(test)]
@@ -230,9 +230,9 @@ mod tests {
     use rstest::rstest;
     use std::sync::OnceLock;
 
-    use crate::Time;
     use crate::deltas::TimeDelta;
     use crate::time;
+    use crate::time::Time;
     use crate::time_scales::Tai;
     use crate::utc;
     use crate::utc::LeapSecondsProvider;
