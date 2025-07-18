@@ -12,11 +12,9 @@ pub mod analysis;
 pub mod anomalies;
 pub mod elements;
 pub mod events;
-pub mod frames;
 pub mod ground;
 pub mod propagators;
 #[cfg(feature = "python")]
 pub mod python;
-pub mod rotations;
 pub mod states;
 pub mod trajectories;

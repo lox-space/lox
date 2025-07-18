@@ -18,13 +18,16 @@ use lox_time::{
 use thiserror::Error;
 
 use crate::{
-    frames::iau::{IauFrameTransformationError, icrf_to_iau},
-    frames::iers::{cirf_to_tirf, icrf_to_cirf, tirf_to_itrf},
+    iau::{IauFrameTransformationError, icrf_to_iau},
+    iers::{cirf_to_tirf, icrf_to_cirf, tirf_to_itrf},
     rotations::Rotation,
 };
 
 pub mod iau;
 pub mod iers;
+pub mod rotations;
+#[cfg(feature = "python")]
+pub mod python;
 
 pub trait ReferenceFrame {
     fn name(&self) -> String;
