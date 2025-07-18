@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2024. Helge Eichhorn and the LOX contributors
+ * Copyright (c) 2025. Helge Eichhorn and the LOX contributors
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::rotations::Rotation;
+use crate::transformations::rotations::Rotation;
 use glam::{DMat3, DVec3};
 use lox_bodies::RotationalElements;
 use lox_bodies::{TryRotationalElements, UndefinedOriginPropertyError};
@@ -17,9 +17,8 @@ use lox_time::{julian_dates::JulianDate, time_scales::TimeScale};
 use std::f64::consts::{FRAC_PI_2, TAU};
 use thiserror::Error;
 
-use super::Iau;
-use super::Icrf;
-use super::TryRotateTo;
+use crate::frames::{Iau, Icrf};
+use crate::traits::TryRotateTo;
 
 #[derive(Debug, Error)]
 pub enum IauFrameTransformationError {
@@ -29,7 +28,7 @@ pub enum IauFrameTransformationError {
     Tdb(String),
 }
 
-pub(crate) fn icrf_to_iau<T, O, P>(
+pub fn icrf_to_iau<T, O, P>(
     time: Time<T>,
     body: O,
     provider: Option<&P>,
