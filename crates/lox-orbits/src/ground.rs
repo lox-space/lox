@@ -15,9 +15,8 @@ use glam::{DMat3, DVec3};
 use lox_bodies::{DynOrigin, RotationalElements, Spheroid, TrySpheroid};
 use lox_frames::{DynFrame, Iau, Icrf, TryRotateTo};
 use lox_math::types::units::Radians;
-use lox_time::time_scales::TryToScale;
+use lox_time::time_scales::offsets::{DefaultOffsetProvider, TryOffset};
 use lox_time::time_scales::{Tdb, TimeScale};
-use lox_time::ut1::DeltaUt1TaiProvider;
 use lox_time::{DynTime, Time};
 use thiserror::Error;
 
@@ -191,26 +190,24 @@ pub enum GroundPropagatorError {
     Trajectory(#[from] TrajectoryError),
 }
 
-pub struct GroundPropagator<B: TrySpheroid, P> {
+pub struct GroundPropagator<B: TrySpheroid> {
     location: GroundLocation<B>,
-    // FIXME: We should not take ownership of the provider here
-    provider: Option<P>,
 }
 
-pub type DynGroundPropagator<P> = GroundPropagator<DynOrigin, P>;
+pub type DynGroundPropagator = GroundPropagator<DynOrigin>;
 
-impl<B, P> GroundPropagator<B, P>
+impl<B> GroundPropagator<B>
 where
     B: Spheroid,
 {
-    pub fn new(location: GroundLocation<B>, provider: Option<P>) -> Self {
-        GroundPropagator { location, provider }
+    pub fn new(location: GroundLocation<B>) -> Self {
+        GroundPropagator { location }
     }
 }
 
-impl<P: DeltaUt1TaiProvider> DynGroundPropagator<P> {
-    pub fn with_dynamic(location: DynGroundLocation, provider: Option<P>) -> Self {
-        GroundPropagator { location, provider }
+impl DynGroundPropagator {
+    pub fn with_dynamic(location: DynGroundLocation) -> Self {
+        GroundPropagator { location }
     }
 
     pub fn propagate_dyn(&self, time: DynTime) -> Result<DynState, GroundPropagatorError> {
@@ -223,7 +220,7 @@ impl<P: DeltaUt1TaiProvider> DynGroundPropagator<P> {
         );
         let rot = s
             .reference_frame()
-            .try_rotation(DynFrame::Icrf, time, self.provider.as_ref())
+            .try_rotation(DynFrame::Icrf, time, &DefaultOffsetProvider)
             .map_err(|err| GroundPropagatorError::FrameTransformation(err.to_string()))?;
         let (r1, v1) = rot.rotate_state(s.position(), s.velocity());
         Ok(State::new(time, r1, v1, self.location.body, DynFrame::Icrf))
@@ -242,16 +239,17 @@ impl<P: DeltaUt1TaiProvider> DynGroundPropagator<P> {
     }
 }
 
-impl<T, O, P> Propagator<T, O, Icrf> for GroundPropagator<O, P>
+impl<T, O> Propagator<T, O, Icrf> for GroundPropagator<O>
 where
-    T: TimeScale + TryToScale<Tdb, P> + Clone,
+    T: TimeScale + Copy,
     O: Spheroid + RotationalElements + Clone,
+    DefaultOffsetProvider: TryOffset<T, Tdb>,
 {
     type Error = GroundPropagatorError;
 
     fn propagate(&self, time: Time<T>) -> Result<State<T, O, Icrf>, Self::Error> {
         let s = State::new(
-            time.clone(),
+            time,
             self.location.body_fixed_position(),
             DVec3::ZERO,
             self.location.body.clone(),
@@ -259,7 +257,7 @@ where
         );
         let rot = s
             .reference_frame()
-            .try_rotation(Icrf, time.clone(), self.provider.as_ref())
+            .try_rotation(Icrf, time, &DefaultOffsetProvider)
             .map_err(|err| GroundPropagatorError::FrameTransformation(err.to_string()))?;
         let (r1, v1) = rot.rotate_state(s.position(), s.velocity());
         Ok(State::new(time, r1, v1, self.location.body.clone(), Icrf))
@@ -332,7 +330,7 @@ mod tests {
         let longitude = -4.3676f64.to_radians();
         let latitude = 40.4527f64.to_radians();
         let location = GroundLocation::new(longitude, latitude, 0.0, Earth);
-        let propagator = GroundPropagator::new(location, None::<()>);
+        let propagator = GroundPropagator::new(location);
         let time = utc!(2022, 1, 31, 23).unwrap().to_time();
         let expected = DVec3::new(-1765.9535510583582, 4524.585984442561, 4120.189198495323);
         let state = propagator.propagate(time).unwrap();

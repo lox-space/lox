@@ -85,11 +85,7 @@ where
         self.velocity
     }
 
-    pub fn try_to_frame<R1, P>(
-        &self,
-        frame: R1,
-        provider: Option<&P>,
-    ) -> Result<State<T, O, R1>, R::Error>
+    pub fn try_to_frame<R1, P>(&self, frame: R1, provider: &P) -> Result<State<T, O, R1>, R::Error>
     where
         R: TryRotateTo<T, R1, P>,
         R1: ReferenceFrame + Clone,
@@ -415,7 +411,11 @@ mod tests {
     use lox_ephem::spk::parser::{Spk, parse_daf_spk};
     use lox_math::assert_close;
     use lox_math::is_close::IsClose;
-    use lox_time::{Time, time, time_scales::Tdb, utc::Utc};
+    use lox_time::{
+        Time, time,
+        time_scales::{Tdb, offsets::DefaultOffsetProvider},
+        utc::Utc,
+    };
 
     use super::*;
 
@@ -430,8 +430,8 @@ mod tests {
 
         let tdb = time!(Tdb, 2000, 1, 1, 12).unwrap();
         let s = State::new(tdb, r0, v0, Jupiter, Icrf);
-        let s1 = s.try_to_frame(iau_jupiter, None::<&()>).unwrap();
-        let s0 = s1.try_to_frame(Icrf, None::<&()>).unwrap();
+        let s1 = s.try_to_frame(iau_jupiter, &DefaultOffsetProvider).unwrap();
+        let s0 = s1.try_to_frame(Icrf, &DefaultOffsetProvider).unwrap();
 
         assert_float_eq!(s0.position().x, r0.x, rel <= 1e-8);
         assert_float_eq!(s0.position().y, r0.y, rel <= 1e-8);

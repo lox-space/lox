@@ -11,6 +11,7 @@ use crate::python::time::PyTime;
 use crate::python::ut1::PyUt1Provider;
 use crate::time_of_day::CivilTime;
 use crate::time_scales::DynTimeScale;
+use crate::time_scales::offsets::DefaultOffsetProvider;
 use crate::utc::{Utc, UtcError};
 use pyo3::exceptions::PyValueError;
 use pyo3::types::PyType;
@@ -122,12 +123,14 @@ impl PyUtc {
     ) -> PyResult<PyTime> {
         let scale: DynTimeScale = scale.try_into()?;
         let provider = provider.map(|p| &p.get().0);
-        Ok(PyTime(
-            self.0
+        let time = match provider {
+            Some(provider) => self.0.to_dyn_time().try_to_scale(scale, provider)?,
+            None => self
+                .0
                 .to_dyn_time()
-                .try_to_scale(scale, provider)
-                .map_err(|err| PyValueError::new_err(err.to_string()))?,
-        ))
+                .try_to_scale(scale, &DefaultOffsetProvider)?,
+        };
+        Ok(PyTime(time))
     }
 }
 
