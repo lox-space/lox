@@ -52,10 +52,5 @@ impl<T: BodyFixed> TryBodyFixed for T {
 pub trait TryRotateTo<T: TimeScale, R: ReferenceFrame, P> {
     type Error;
 
-    fn try_rotation(
-        &self,
-        frame: R,
-        time: Time<T>,
-        provider: Option<&P>,
-    ) -> Result<Rotation, Self::Error>;
+    fn try_rotation(&self, frame: R, time: Time<T>, provider: &P) -> Result<Rotation, Self::Error>;
 }

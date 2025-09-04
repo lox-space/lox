@@ -37,17 +37,16 @@ use crate::time_of_day::CivilTime;
 use crate::time_of_day::TimeOfDay;
 use crate::time_of_day::TimeOfDayError;
 use crate::time_scales::DynTimeScale;
-use crate::time_scales::FromScale;
 use crate::time_scales::Tai;
 use crate::time_scales::Tcb;
 use crate::time_scales::Tcg;
 use crate::time_scales::Tdb;
 use crate::time_scales::TimeScale;
-use crate::time_scales::ToScale;
-use crate::time_scales::TryFromScale;
-use crate::time_scales::TryToScale;
 use crate::time_scales::Tt;
 use crate::time_scales::Ut1;
+use crate::time_scales::offsets::DefaultOffsetProvider;
+use crate::time_scales::offsets::Offset;
+use crate::time_scales::offsets::TryOffset;
 
 #[derive(Clone, Debug, Error)]
 #[error(
@@ -283,50 +282,23 @@ impl<T: TimeScale> Time<T> {
         Time::new(scale, self.seconds, self.subsecond)
     }
 
-    pub fn try_from_scale<S, P>(
-        scale: T,
-        time: Time<S>,
-        provider: Option<&P>,
-    ) -> Result<Time<T>, T::Error>
+    pub fn try_to_scale<S, P>(&self, scale: S, provider: &P) -> Result<Time<S>, P::Error>
     where
-        S: TimeScale,
-        T: TimeScale + TryFromScale<S, P> + Copy,
-    {
-        let dt = time.to_delta();
-        Ok(Time::from_delta(
-            scale,
-            dt + scale.try_offset_from(time.scale, dt, provider)?,
-        ))
-    }
-
-    pub fn from_scale<S>(scale: T, time: Time<S>) -> Time<T>
-    where
-        S: TimeScale,
-        T: TimeScale + FromScale<S> + Copy,
-    {
-        let dt = time.to_delta();
-        Time::from_delta(scale, dt + scale.offset_from(time.scale, dt))
-    }
-
-    pub fn try_to_scale<S, P>(
-        &self,
-        scale: S,
-        provider: Option<&P>,
-    ) -> Result<Time<S>, <T as TryToScale<S, P>>::Error>
-    where
+        T: Copy,
         S: TimeScale + Copy,
-        T: TryToScale<S, P>,
+        P: TryOffset<T, S>,
     {
-        let offset = self.scale.try_offset(scale, self.to_delta(), provider)?;
+        let offset = provider.try_offset(self.scale, scale, self.to_delta())?;
         Ok(self.with_scale_and_delta(scale, offset))
     }
 
     pub fn to_scale<S>(&self, scale: S) -> Time<S>
     where
+        T: Copy,
         S: TimeScale + Copy,
-        T: ToScale<S>,
+        DefaultOffsetProvider: Offset<T, S>,
     {
-        let offset = self.scale.offset(scale, self.to_delta());
+        let offset = DefaultOffsetProvider.offset(self.scale, scale, self.to_delta());
         self.with_scale_and_delta(scale, offset)
     }
 
