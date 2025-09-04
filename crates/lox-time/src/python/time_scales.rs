@@ -11,7 +11,9 @@ use pyo3::{
     types::PyAnyMethods,
 };
 
-use crate::time_scales::{DynTimeScale, TimeScale, UnknownTimeScaleError, offsets::Ut1Error};
+use crate::time_scales::{
+    DynTimeScale, TimeScale, UnknownTimeScaleError, offsets::MissingEopProviderError,
+};
 
 impl From<UnknownTimeScaleError> for PyErr {
     fn from(err: UnknownTimeScaleError) -> Self {
@@ -19,9 +21,8 @@ impl From<UnknownTimeScaleError> for PyErr {
     }
 }
 
-impl From<Ut1Error> for PyErr {
-    fn from(err: Ut1Error) -> Self {
-        // FIXME: wrong error type
+impl From<MissingEopProviderError> for PyErr {
+    fn from(err: MissingEopProviderError) -> Self {
         PyValueError::new_err(err.to_string())
     }
 }

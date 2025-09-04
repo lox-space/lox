@@ -13,8 +13,10 @@ use crate::deltas::ToDelta;
 use crate::time::DynTime;
 use crate::time_of_day::CivilTime;
 use crate::time_of_day::TimeOfDay;
+use crate::time_scales::TimeScale;
+use crate::time_scales::offsets::DefaultOffsetProvider;
+use crate::time_scales::offsets::Offset;
 use crate::time_scales::{DynTimeScale, Tai};
-use crate::time_scales::{FromScale, TimeScale, ToScale, TryFromScale};
 use crate::{time::Time, utc};
 
 use super::LeapSecondsProvider;
@@ -50,20 +52,6 @@ impl Utc {
     pub fn to_dyn_time(&self) -> DynTime {
         self.to_dyn_time_with_provider(&BuiltinLeapSeconds)
     }
-
-    pub fn try_to_scale<T, P>(&self, scale: T, provider: Option<&P>) -> Result<Time<T>, T::Error>
-    where
-        T: TimeScale + TryFromScale<Tai, P> + Copy,
-    {
-        Time::try_from_scale(scale, self.to_time(), provider)
-    }
-
-    pub fn to_scale<T>(&self, scale: T) -> Time<T>
-    where
-        T: TimeScale + FromScale<Tai> + Copy,
-    {
-        Time::from_scale(scale, self.to_time())
-    }
 }
 
 pub trait ToUtc {
@@ -80,7 +68,11 @@ impl ToUtc for Utc {
     }
 }
 
-impl<T: TimeScale + ToScale<Tai>> ToUtc for Time<T> {
+impl<T> ToUtc for Time<T>
+where
+    T: TimeScale + Copy,
+    DefaultOffsetProvider: Offset<T, Tai>,
+{
     fn to_utc_with_provider(&self, provider: &impl LeapSecondsProvider) -> Result<Utc, UtcError> {
         let tai = self.to_scale(Tai);
         let delta = if &tai < tai_at_utc_1972_01_01() {
@@ -173,9 +165,9 @@ mod test {
         let tdb = tai.to_scale(Tdb);
         let act = tdb.to_utc().unwrap();
         assert_eq!(act, exp);
-        let ut1 = tai.try_to_scale(Ut1, Some(delta_ut1_tai())).unwrap();
+        let ut1 = tai.try_to_scale(Ut1, delta_ut1_tai()).unwrap();
         let act = ut1
-            .try_to_scale(Tai, Some(delta_ut1_tai()))
+            .try_to_scale(Tai, delta_ut1_tai())
             .unwrap()
             .to_utc()
             .unwrap();

@@ -12,7 +12,7 @@ use lox_bodies::RotationalElements;
 use lox_bodies::{TryRotationalElements, UndefinedOriginPropertyError};
 use lox_time::Time;
 use lox_time::time_scales::Tdb;
-use lox_time::time_scales::TryToScale;
+use lox_time::time_scales::offsets::TryOffset;
 use lox_time::{julian_dates::JulianDate, time_scales::TimeScale};
 use std::f64::consts::{FRAC_PI_2, TAU};
 use thiserror::Error;
@@ -31,10 +31,11 @@ pub enum IauFrameTransformationError {
 pub fn icrf_to_iau<T, O, P>(
     time: Time<T>,
     body: O,
-    provider: Option<&P>,
+    provider: &P,
 ) -> Result<Rotation, IauFrameTransformationError>
 where
-    T: TimeScale + TryToScale<Tdb, P>,
+    T: TimeScale + Copy,
+    P: TryOffset<T, Tdb>,
     O: TryRotationalElements,
 {
     let seconds = time
@@ -55,7 +56,8 @@ where
 
 impl<T, O, P> TryRotateTo<T, Iau<O>, P> for Icrf
 where
-    T: TimeScale + TryToScale<Tdb, P>,
+    T: TimeScale + Copy,
+    P: TryOffset<T, Tdb>,
     O: RotationalElements,
 {
     type Error = IauFrameTransformationError;
@@ -64,7 +66,7 @@ where
         &self,
         frame: Iau<O>,
         time: Time<T>,
-        provider: Option<&P>,
+        provider: &P,
     ) -> Result<Rotation, Self::Error> {
         icrf_to_iau(time, frame.0, provider)
     }
@@ -72,7 +74,8 @@ where
 
 impl<T, O, P> TryRotateTo<T, Icrf, P> for Iau<O>
 where
-    T: TimeScale + TryToScale<Tdb, P>,
+    T: TimeScale + Copy,
+    P: TryOffset<T, Tdb>,
     O: RotationalElements + Clone,
 {
     type Error = IauFrameTransformationError;
@@ -81,7 +84,7 @@ where
         &self,
         _frame: Icrf,
         time: Time<T>,
-        provider: Option<&P>,
+        provider: &P,
     ) -> Result<Rotation, Self::Error> {
         Ok(icrf_to_iau(time, self.0.clone(), provider)?.transpose())
     }

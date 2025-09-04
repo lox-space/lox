@@ -24,6 +24,7 @@ use crate::python::ut1::PyUt1Provider;
 use crate::subsecond::{InvalidSubsecond, Subsecond};
 use crate::time::{DynTime, Time, TimeError};
 use crate::time_of_day::{CivilTime, TimeOfDay};
+use crate::time_scales::offsets::DefaultOffsetProvider;
 use crate::time_scales::{DynTimeScale, Tai};
 use crate::utc::transformations::ToUtc;
 
@@ -320,24 +321,22 @@ impl PyTime {
     ) -> PyResult<PyTime> {
         let scale: DynTimeScale = scale.try_into()?;
         let provider = provider.map(|p| &p.get().0);
-        Ok(PyTime(
-            self.0
-                .try_to_scale(scale, provider)
-                // FIXME: Better error type
-                .map_err(|err| PyValueError::new_err(err.to_string()))?,
-        ))
+        let time = match provider {
+            Some(provider) => self.0.try_to_scale(scale, provider)?,
+            None => self.0.try_to_scale(scale, &DefaultOffsetProvider)?,
+        };
+        Ok(PyTime(time))
     }
 
     #[pyo3(signature = (provider=None))]
     pub fn to_utc(&self, provider: Option<&Bound<'_, PyUt1Provider>>) -> PyResult<PyUtc> {
         let provider = provider.map(|p| &p.get().0);
-        Ok(PyUtc(
-            self.0
-                .try_to_scale(Tai, provider)
-                // FIXME: Better error type
-                .map_err(|err| PyValueError::new_err(err.to_string()))?
-                .to_utc()?,
-        ))
+        let utc = match provider {
+            Some(provider) => self.0.try_to_scale(Tai, provider)?,
+            None => self.0.try_to_scale(Tai, &DefaultOffsetProvider)?,
+        }
+        .to_utc()?;
+        Ok(PyUtc(utc))
     }
 }
 
@@ -723,7 +722,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "a UT1-TAI provider is required")]
+    #[should_panic(expected = "EOP provider")]
     fn test_pytime_ut1_tai_no_provider() {
         Python::attach(|py| {
             let time = PyTime::new(&scale_to_any(py, "UT1"), 2000, 1, 1, 0, 0, 0.0).unwrap();
