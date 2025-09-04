@@ -8,7 +8,7 @@ use crate::{
 use std::convert::Infallible;
 use thiserror::Error;
 
-pub trait OffsetProvider<Origin, Target, Error>
+pub trait TryOffset<Origin, Target, Error>
 where
     Origin: TimeScale,
     Target: TimeScale,
@@ -22,19 +22,27 @@ where
     ) -> Result<TimeDelta, Error>;
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct DefaultOffsetProvider;
+pub trait Offset<Origin, Target>
+where
+    Origin: TimeScale,
+    Target: TimeScale,
+{
+    fn offset(&self, origin: Origin, target: Target, delta: TimeDelta) -> TimeDelta;
+}
 
-impl<T: TimeScale> OffsetProvider<T, T, Infallible> for DefaultOffsetProvider {
-    fn try_offset(
-        &self,
-        _origin: T,
-        _target: T,
-        _delta: TimeDelta,
-    ) -> Result<TimeDelta, Infallible> {
-        Ok(TimeDelta::default())
+impl<Origin, Target, T> Offset<Origin, Target> for T
+where
+    Origin: TimeScale,
+    Target: TimeScale,
+    T: TryOffset<Origin, Target, Infallible>,
+{
+    fn offset(&self, origin: Origin, target: Target, delta: TimeDelta) -> TimeDelta {
+        self.try_offset(origin, target, delta).unwrap()
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct DefaultOffsetProvider;
 
 macro_rules! impl_fallible {
     ($in:ident, $out:ident) => {
@@ -91,7 +99,7 @@ pub const D_TAI_TT: TimeDelta = TimeDelta {
     subsecond: Subsecond(0.184),
 };
 
-impl OffsetProvider<Tai, Tt, Infallible> for DefaultOffsetProvider {
+impl TryOffset<Tai, Tt, Infallible> for DefaultOffsetProvider {
     fn try_offset(
         &self,
         _origin: Tai,
@@ -102,7 +110,7 @@ impl OffsetProvider<Tai, Tt, Infallible> for DefaultOffsetProvider {
     }
 }
 
-impl OffsetProvider<Tt, Tai, Infallible> for DefaultOffsetProvider {
+impl TryOffset<Tt, Tai, Infallible> for DefaultOffsetProvider {
     fn try_offset(
         &self,
         _origin: Tt,
@@ -140,7 +148,7 @@ const LG: f64 = 6.969290134e-10;
 /// The rate of change of TT with respect to TCG.
 const INV_LG: f64 = LG / (1.0 - LG);
 
-impl OffsetProvider<Tt, Tcg, Infallible> for DefaultOffsetProvider {
+impl TryOffset<Tt, Tcg, Infallible> for DefaultOffsetProvider {
     fn try_offset(
         &self,
         _origin: Tt,
@@ -152,7 +160,7 @@ impl OffsetProvider<Tt, Tcg, Infallible> for DefaultOffsetProvider {
     }
 }
 
-impl OffsetProvider<Tcg, Tt, Infallible> for DefaultOffsetProvider {
+impl TryOffset<Tcg, Tt, Infallible> for DefaultOffsetProvider {
     fn try_offset(
         &self,
         _origin: Tcg,
@@ -198,7 +206,7 @@ const TDB_0: f64 = -6.55e-5;
 
 const TCB_77: f64 = TDB_0 + LB * TT_0;
 
-impl OffsetProvider<Tdb, Tcb, Infallible> for DefaultOffsetProvider {
+impl TryOffset<Tdb, Tcb, Infallible> for DefaultOffsetProvider {
     fn try_offset(
         &self,
         _origin: Tdb,
@@ -212,7 +220,7 @@ impl OffsetProvider<Tdb, Tcb, Infallible> for DefaultOffsetProvider {
     }
 }
 
-impl OffsetProvider<Tcb, Tdb, Infallible> for DefaultOffsetProvider {
+impl TryOffset<Tcb, Tdb, Infallible> for DefaultOffsetProvider {
     fn try_offset(
         &self,
         _origin: Tcb,
@@ -249,7 +257,7 @@ const EB: f64 = 1.671e-2;
 const M_0: f64 = 6.239996;
 const M_1: f64 = 1.99096871e-7;
 
-impl OffsetProvider<Tt, Tdb, Infallible> for DefaultOffsetProvider {
+impl TryOffset<Tt, Tdb, Infallible> for DefaultOffsetProvider {
     fn try_offset(
         &self,
         _origin: Tt,
@@ -264,7 +272,7 @@ impl OffsetProvider<Tt, Tdb, Infallible> for DefaultOffsetProvider {
     }
 }
 
-impl OffsetProvider<Tdb, Tt, Infallible> for DefaultOffsetProvider {
+impl TryOffset<Tdb, Tt, Infallible> for DefaultOffsetProvider {
     fn try_offset(
         &self,
         _origin: Tdb,
@@ -307,9 +315,9 @@ impl_fallible!(Tdb, Tt);
 
 // TAI <-> UT1
 
-impl<T: TimeScale> OffsetProvider<T, Ut1, ExtrapolatedDeltaUt1Tai> for DeltaUt1Tai
+impl<T: TimeScale> TryOffset<T, Ut1, ExtrapolatedDeltaUt1Tai> for DeltaUt1Tai
 where
-    DefaultOffsetProvider: OffsetProvider<T, Tai, Infallible>,
+    DefaultOffsetProvider: TryOffset<T, Tai, Infallible>,
 {
     fn try_offset(
         &self,
@@ -325,9 +333,9 @@ where
     }
 }
 
-impl<T: TimeScale> OffsetProvider<Ut1, T, ExtrapolatedDeltaUt1Tai> for DeltaUt1Tai
+impl<T: TimeScale> TryOffset<Ut1, T, ExtrapolatedDeltaUt1Tai> for DeltaUt1Tai
 where
-    DefaultOffsetProvider: OffsetProvider<Tai, T, Infallible>,
+    DefaultOffsetProvider: TryOffset<Tai, T, Infallible>,
 {
     fn try_offset(
         &self,
@@ -340,9 +348,9 @@ where
     }
 }
 
-impl<T: TimeScale> OffsetProvider<T, T, Infallible> for DeltaUt1Tai
+impl<T: TimeScale> TryOffset<T, T, Infallible> for DeltaUt1Tai
 where
-    DefaultOffsetProvider: OffsetProvider<Tai, T, Infallible>,
+    DefaultOffsetProvider: TryOffset<Tai, T, Infallible>,
 {
     fn try_offset(
         &self,
@@ -407,8 +415,8 @@ where
     T1: TimeScale,
     T2: TimeScale + Copy,
     T3: TimeScale,
-    DefaultOffsetProvider: OffsetProvider<T1, T2, Infallible>,
-    DefaultOffsetProvider: OffsetProvider<T2, T3, Infallible>,
+    DefaultOffsetProvider: TryOffset<T1, T2, Infallible>,
+    DefaultOffsetProvider: TryOffset<T2, T3, Infallible>,
 {
     let mut offset = DefaultOffsetProvider
         .try_offset(origin, via, delta)
@@ -421,7 +429,7 @@ where
 
 macro_rules! two_step_impl {
     ($origin:ident, $via:ident, $target:ident) => {
-        impl OffsetProvider<$origin, $target, Infallible> for DefaultOffsetProvider {
+        impl TryOffset<$origin, $target, Infallible> for DefaultOffsetProvider {
             fn try_offset(
                 &self,
                 origin: $origin,
@@ -618,45 +626,119 @@ impl_ut1!(Tt);
 
 // DynTimeScale
 
-impl OffsetProvider<DynTimeScale, DynTimeScale, ExtrapolatedDeltaUt1Tai> for DefaultOffsetProvider {
+#[derive(Debug, Error, Clone, Copy, Eq, PartialEq)]
+#[error("an EOP provider is required for transformations from/to UT1")]
+pub struct MissingEopProviderError;
+
+impl<T: TimeScale> TryOffset<DynTimeScale, T, MissingEopProviderError> for DefaultOffsetProvider
+where
+    DefaultOffsetProvider: Offset<Tai, T>,
+    DefaultOffsetProvider: Offset<Tcb, T>,
+    DefaultOffsetProvider: Offset<Tcg, T>,
+    DefaultOffsetProvider: Offset<Tdb, T>,
+    DefaultOffsetProvider: Offset<Tt, T>,
+{
     fn try_offset(
         &self,
         origin: DynTimeScale,
-        target: DynTimeScale,
+        target: T,
         delta: TimeDelta,
-    ) -> Result<TimeDelta, ExtrapolatedDeltaUt1Tai> {
-        todo!()
+    ) -> Result<TimeDelta, MissingEopProviderError> {
+        match origin {
+            DynTimeScale::Tai => Ok(DefaultOffsetProvider.offset(Tai, target, delta)),
+            DynTimeScale::Tcb => Ok(DefaultOffsetProvider.offset(Tcb, target, delta)),
+            DynTimeScale::Tcg => Ok(DefaultOffsetProvider.offset(Tcg, target, delta)),
+            DynTimeScale::Tdb => Ok(DefaultOffsetProvider.offset(Tdb, target, delta)),
+            DynTimeScale::Tt => Ok(DefaultOffsetProvider.offset(Tt, target, delta)),
+            DynTimeScale::Ut1 => Err(MissingEopProviderError),
+        }
     }
 }
 
-impl OffsetProvider<DynTimeScale, DynTimeScale, ExtrapolatedDeltaUt1Tai> for DeltaUt1Tai {
+impl<T: TimeScale> TryOffset<T, DynTimeScale, MissingEopProviderError> for DefaultOffsetProvider
+where
+    DefaultOffsetProvider: Offset<T, Tai>,
+    DefaultOffsetProvider: Offset<T, Tcb>,
+    DefaultOffsetProvider: Offset<T, Tcg>,
+    DefaultOffsetProvider: Offset<T, Tdb>,
+    DefaultOffsetProvider: Offset<T, Tt>,
+{
+    fn try_offset(
+        &self,
+        origin: T,
+        target: DynTimeScale,
+        delta: TimeDelta,
+    ) -> Result<TimeDelta, MissingEopProviderError> {
+        match target {
+            DynTimeScale::Tai => Ok(DefaultOffsetProvider.offset(origin, Tai, delta)),
+            DynTimeScale::Tcb => Ok(DefaultOffsetProvider.offset(origin, Tcb, delta)),
+            DynTimeScale::Tcg => Ok(DefaultOffsetProvider.offset(origin, Tcg, delta)),
+            DynTimeScale::Tdb => Ok(DefaultOffsetProvider.offset(origin, Tdb, delta)),
+            DynTimeScale::Tt => Ok(DefaultOffsetProvider.offset(origin, Tt, delta)),
+            DynTimeScale::Ut1 => Err(MissingEopProviderError),
+        }
+    }
+}
+
+impl TryOffset<DynTimeScale, DynTimeScale, MissingEopProviderError> for DefaultOffsetProvider {
     fn try_offset(
         &self,
         origin: DynTimeScale,
         target: DynTimeScale,
         delta: TimeDelta,
-    ) -> Result<TimeDelta, ExtrapolatedDeltaUt1Tai> {
-        if origin == target {
-            return Ok(TimeDelta::default());
+    ) -> Result<TimeDelta, MissingEopProviderError> {
+        match (origin, target) {
+            (DynTimeScale::Tai, DynTimeScale::Tai) => Ok(TimeDelta::default()),
+            (DynTimeScale::Tai, DynTimeScale::Tcb) => Ok(self.offset(Tai, Tcb, delta)),
+            (DynTimeScale::Tai, DynTimeScale::Tcg) => Ok(self.offset(Tai, Tcg, delta)),
+            (DynTimeScale::Tai, DynTimeScale::Tdb) => todo!(),
+            (DynTimeScale::Tai, DynTimeScale::Tt) => todo!(),
+            (DynTimeScale::Tai, DynTimeScale::Ut1) => todo!(),
+            (DynTimeScale::Tcb, DynTimeScale::Tai) => todo!(),
+            (DynTimeScale::Tcb, DynTimeScale::Tcb) => Ok(TimeDelta::default()),
+            (DynTimeScale::Tcb, DynTimeScale::Tcg) => todo!(),
+            (DynTimeScale::Tcb, DynTimeScale::Tdb) => todo!(),
+            (DynTimeScale::Tcb, DynTimeScale::Tt) => todo!(),
+            (DynTimeScale::Tcb, DynTimeScale::Ut1) => todo!(),
+            (DynTimeScale::Tcg, DynTimeScale::Tai) => todo!(),
+            (DynTimeScale::Tcg, DynTimeScale::Tcb) => todo!(),
+            (DynTimeScale::Tcg, DynTimeScale::Tcg) => Ok(TimeDelta::default()),
+            (DynTimeScale::Tcg, DynTimeScale::Tdb) => todo!(),
+            (DynTimeScale::Tcg, DynTimeScale::Tt) => todo!(),
+            (DynTimeScale::Tcg, DynTimeScale::Ut1) => todo!(),
+            (DynTimeScale::Tdb, DynTimeScale::Tai) => todo!(),
+            (DynTimeScale::Tdb, DynTimeScale::Tcb) => todo!(),
+            (DynTimeScale::Tdb, DynTimeScale::Tcg) => todo!(),
+            (DynTimeScale::Tdb, DynTimeScale::Tdb) => Ok(TimeDelta::default()),
+            (DynTimeScale::Tdb, DynTimeScale::Tt) => todo!(),
+            (DynTimeScale::Tdb, DynTimeScale::Ut1) => todo!(),
+            (DynTimeScale::Tt, DynTimeScale::Tai) => todo!(),
+            (DynTimeScale::Tt, DynTimeScale::Tcb) => todo!(),
+            (DynTimeScale::Tt, DynTimeScale::Tcg) => todo!(),
+            (DynTimeScale::Tt, DynTimeScale::Tdb) => todo!(),
+            (DynTimeScale::Tt, DynTimeScale::Tt) => Ok(TimeDelta::default()),
+            (DynTimeScale::Tt, DynTimeScale::Ut1) => todo!(),
+            (DynTimeScale::Ut1, DynTimeScale::Tai) => todo!(),
+            (DynTimeScale::Ut1, DynTimeScale::Tcb) => todo!(),
+            (DynTimeScale::Ut1, DynTimeScale::Tcg) => todo!(),
+            (DynTimeScale::Ut1, DynTimeScale::Tdb) => todo!(),
+            (DynTimeScale::Ut1, DynTimeScale::Tt) => todo!(),
+            (DynTimeScale::Ut1, DynTimeScale::Ut1) => Ok(TimeDelta::default()),
         }
-        if origin != DynTimeScale::Ut1 && target != DynTimeScale::Ut1 {
-            return DefaultOffsetProvider.try_offset(origin, target, delta);
-        }
-        match origin {
-            DynTimeScale::Ut1 => match target {
-                DynTimeScale::Tai => todo!(),
-                DynTimeScale::Tcb => todo!(),
-                DynTimeScale::Tcg => todo!(),
-                DynTimeScale::Tdb => todo!(),
-                DynTimeScale::Tt => todo!(),
-                DynTimeScale::Ut1 => todo!(),
-            },
-            DynTimeScale::Tai => todo!(),
-            DynTimeScale::Tcb => todo!(),
-            DynTimeScale::Tcg => todo!(),
-            DynTimeScale::Tdb => todo!(),
-            DynTimeScale::Tt => todo!(),
-        }
+    }
+}
+
+impl TryOffset<DynTimeScale, DynTimeScale, ExtrapolatedDeltaUt1Tai> for DeltaUt1Tai {
+    fn try_offset(
+        &self,
+        origin: DynTimeScale,
+        target: DynTimeScale,
+        delta: TimeDelta,
+    ) -> Result<TimeDelta, ExtrapolatedDeltaUt1Tai>
+    where
+        DefaultOffsetProvider: TryOffset<DynTimeScale, DynTimeScale, MissingEopProviderError>,
+    {
+        todo!()
     }
 }
 
@@ -1000,6 +1082,66 @@ mod tests {
             .to_delta();
         let act = scale1
             .try_offset(scale2, dt, provider)
+            .unwrap()
+            .to_decimal_seconds();
+        assert_close!(act, exp, 1e-7, tol.unwrap_or(DEFAULT_TOL));
+    }
+
+    #[rstest]
+    #[case::tai_tai("TAI", "TAI", 0.0, None)]
+    #[case::tai_tcb("TAI", "TCB", 55.66851419888016, Some(TCB_TOL))]
+    #[case::tai_tcg("TAI", "TCG", 33.239589335894145, None)]
+    #[case::tai_tdb("TAI", "TDB", 32.183882324981056, None)]
+    #[case::tai_tt("TAI", "TT", 32.184, None)]
+    #[case::tai_ut1("TAI", "UT1", -36.949521832072996, Some(UT1_TOL))]
+    #[case::tcb_tai("TCB", "TAI", -55.668513317090046, Some(TCB_TOL))]
+    #[case::tcb_tcb("TCB", "TCB", 0.0, Some(TCB_TOL))]
+    #[case::tcb_tcg("TCB", "TCG", -22.4289240199929, Some(TCB_TOL))]
+    #[case::tcb_tdb("TCB", "TDB", -23.484631010747805, Some(TCB_TOL))]
+    #[case::tcb_tt("TCB", "TT", -23.484513317090048, Some(TCB_TOL))]
+    #[case::tcb_ut1("TCB", "UT1", -92.61803559995818, Some(UT1_TOL))]
+    #[case::tcg_tai("TCG", "TAI", -33.23958931272851, None)]
+    #[case::tcg_tcb("TCG", "TCB", 22.428924359636042, Some(TCB_TOL))]
+    #[case::tcg_tcg("TCG", "TCG", 0.0, None)]
+    #[case::tcg_tdb("TCG", "TDB", -1.0557069988766656, None)]
+    #[case::tcg_tt("TCG", "TT", -1.0555893127285145, None)]
+    #[case::tcg_ut1("TCG", "UT1", -70.1891114139689, Some(UT1_TOL))]
+    #[case::tdb_tai("TDB", "TAI", -32.18388231420531, None)]
+    #[case::tdb_tcb("TDB", "TCB", 23.48463137488165, Some(TCB_TOL))]
+    #[case::tdb_tcg("TDB", "TCG", 1.0557069992589518, None)]
+    #[case::tdb_tdb("TDB", "TDB", 0.0, None)]
+    #[case::tdb_tt("TDB", "TT", 1.176857946845189E-4, None)]
+    #[case::tdb_ut1("TDB", "UT1", -69.13340440689674, Some(UT1_TOL))]
+    #[case::tt_tai("TT", "TAI", -32.184, None)]
+    #[case::tt_tcb("TT", "TCB", 23.484513689085105, Some(TCB_TOL))]
+    #[case::tt_tcg("TT", "TCG", 1.055589313464182, None)]
+    #[case::tt_tdb("TT", "TDB", -1.1768579472004603E-4, None)]
+    #[case::tt_tt("TT", "TT", 0.0, None)]
+    #[case::tt_ut1("TT", "UT1", -69.13352209269237, Some(UT1_TOL))]
+    #[case::ut1_tai("UT1", "TAI", 36.949521532869305, Some(UT1_TOL))]
+    #[case::ut1_tcb("UT1", "TCB", 92.61803631703046, Some(UT1_TOL))]
+    #[case::ut1_tcg("UT1", "TCG", 70.18911089451464, Some(UT1_TOL))]
+    #[case::ut1_tdb("UT1", "TDB", 69.13340387022173, Some(UT1_TOL))]
+    #[case::ut1_tt("UT1", "TT", 69.13352153286931, Some(UT1_TOL))]
+    #[case::ut1_ut1("UT1", "UT1", 0.0, Some(UT1_TOL))]
+    fn test_dyn_time_scale_offsets_new(
+        #[case] scale1: &str,
+        #[case] scale2: &str,
+        #[case] exp: f64,
+        #[case] tol: Option<f64>,
+    ) {
+        use lox_math::assert_close;
+
+        let provider = delta_ut1_tai();
+        let scale1: DynTimeScale = scale1.parse().unwrap();
+        let scale2: DynTimeScale = scale2.parse().unwrap();
+        let date = Date::new(2024, 12, 30).unwrap();
+        let time = TimeOfDay::from_hms(10, 27, 13.145).unwrap();
+        let dt = DynTime::from_date_and_time(scale1, date, time)
+            .unwrap()
+            .to_delta();
+        let act = provider
+            .try_offset(scale1, scale2, dt)
             .unwrap()
             .to_decimal_seconds();
         assert_close!(act, exp, 1e-7, tol.unwrap_or(DEFAULT_TOL));
