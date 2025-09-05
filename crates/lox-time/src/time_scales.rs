@@ -21,71 +21,12 @@ use std::str::FromStr;
 
 use thiserror::Error;
 
-use crate::deltas::TimeDelta;
-
 pub mod offsets;
 
 /// Marker trait denoting a continuous astronomical time scale.
 pub trait TimeScale {
     fn abbreviation(&self) -> &'static str;
     fn name(&self) -> &'static str;
-}
-
-pub trait TryToScale<T: TimeScale, P> {
-    type Error: std::error::Error;
-
-    fn try_offset(
-        &self,
-        scale: T,
-        dt: TimeDelta,
-        provider: Option<&P>,
-    ) -> Result<TimeDelta, Self::Error>;
-}
-
-pub trait TryFromScale<T: TimeScale, P> {
-    type Error: std::error::Error;
-
-    fn try_offset_from(
-        &self,
-        scale: T,
-        dt: TimeDelta,
-        provider: Option<&P>,
-    ) -> Result<TimeDelta, Self::Error>;
-}
-
-impl<T, P, U> TryFromScale<U, P> for T
-where
-    T: TimeScale + Copy,
-    U: TimeScale + TryToScale<T, P>,
-{
-    type Error = <U as TryToScale<T, P>>::Error;
-
-    fn try_offset_from(
-        &self,
-        scale: U,
-        dt: TimeDelta,
-        provider: Option<&P>,
-    ) -> Result<TimeDelta, Self::Error> {
-        scale.try_offset(*self, dt, provider)
-    }
-}
-
-pub trait ToScale<T: TimeScale> {
-    fn offset(&self, scale: T, dt: TimeDelta) -> TimeDelta;
-}
-
-pub trait FromScale<T: TimeScale> {
-    fn offset_from(&self, scale: T, dt: TimeDelta) -> TimeDelta;
-}
-
-impl<T, U> FromScale<U> for T
-where
-    T: TimeScale + Copy,
-    U: TimeScale + ToScale<T>,
-{
-    fn offset_from(&self, scale: U, dt: TimeDelta) -> TimeDelta {
-        scale.offset(*self, dt)
-    }
 }
 
 /// International Atomic Time.
