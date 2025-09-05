@@ -249,7 +249,7 @@ where
 
     fn propagate(&self, time: Time<T>) -> Result<State<T, O, Icrf>, Self::Error> {
         let s = State::new(
-            time.clone(),
+            time,
             self.location.body_fixed_position(),
             DVec3::ZERO,
             self.location.body.clone(),
@@ -257,7 +257,7 @@ where
         );
         let rot = s
             .reference_frame()
-            .try_rotation(Icrf, time.clone(), &DefaultOffsetProvider)
+            .try_rotation(Icrf, time, &DefaultOffsetProvider)
             .map_err(|err| GroundPropagatorError::FrameTransformation(err.to_string()))?;
         let (r1, v1) = rot.rotate_state(s.position(), s.velocity());
         Ok(State::new(time, r1, v1, self.location.body.clone(), Icrf))

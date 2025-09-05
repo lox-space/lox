@@ -431,7 +431,7 @@ where
     P: TryOffset<T, Tdb>,
 {
     let body_fixed = Iau(gs.origin());
-    let sc = sc.interpolate_at(time.clone());
+    let sc = sc.interpolate_at(time);
     let sc = sc.try_to_frame(body_fixed, provider).unwrap();
     let obs = gs.observables(sc);
     obs.elevation() - mask.min_elevation(obs.azimuth())
@@ -452,25 +452,25 @@ where
     if times.len() < 2 {
         return vec![];
     }
-    let start = times.first().unwrap().clone();
-    let end = times.last().unwrap().clone();
+    let start = *times.first().unwrap();
+    let end = *times.last().unwrap();
     let times: Vec<f64> = times
         .iter()
-        .map(|t| (t.clone() - start.clone()).to_decimal_seconds())
+        .map(|t| (*t - start).to_decimal_seconds())
         .collect();
     let root_finder = Brent::default();
     find_windows(
         |t| {
             elevation(
-                start.clone() + TimeDelta::try_from_decimal_seconds(t).unwrap(),
+                start + TimeDelta::try_from_decimal_seconds(t).unwrap(),
                 gs,
                 mask,
                 sc,
                 provider,
             )
         },
-        start.clone(),
-        end.clone(),
+        start,
+        end,
         &times,
         root_finder,
     )
