@@ -6,6 +6,7 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use lox_time::time_scales::offsets::DefaultOffsetProvider;
 use rayon::prelude::*;
 
 use glam::DVec3;
@@ -13,7 +14,6 @@ use hashbrown::HashMap;
 use lox_ephem::Ephemeris;
 use lox_ephem::python::PySpk;
 use lox_time::DynTime;
-use lox_time::ut1::DeltaUt1TaiProvider;
 use numpy::{PyArray1, PyArray2, PyArrayMethods};
 use pyo3::types::PyType;
 use pyo3::{
@@ -169,10 +169,18 @@ impl PyState {
         provider: Option<&Bound<'_, PyUt1Provider>>,
     ) -> PyResult<Self> {
         let provider = provider.map(|p| &p.get().0);
-        let rot = self
-            .0
-            .reference_frame()
-            .try_rotation(frame.0, self.0.time(), provider)?;
+        let rot = match provider {
+            Some(provider) => {
+                self.0
+                    .reference_frame()
+                    .try_rotation(frame.0, self.0.time(), provider)
+            }
+            None => self.0.reference_frame().try_rotation(
+                frame.0,
+                self.0.time(),
+                &DefaultOffsetProvider,
+            ),
+        }?;
         let (r1, v1) = rot.rotate_state(self.0.position(), self.0.velocity());
         Ok(PyState(State::new(
             self.0.time(),
@@ -583,7 +591,7 @@ impl PyGroundLocation {
 }
 
 #[pyclass(name = "GroundPropagator", module = "lox_space", frozen)]
-pub struct PyGroundPropagator(DynGroundPropagator<PyUt1Provider>);
+pub struct PyGroundPropagator(DynGroundPropagator);
 
 impl From<GroundPropagatorError> for PyErr {
     fn from(err: GroundPropagatorError) -> Self {
@@ -594,9 +602,8 @@ impl From<GroundPropagatorError> for PyErr {
 #[pymethods]
 impl PyGroundPropagator {
     #[new]
-    #[pyo3(signature = (location, provider=None))]
-    fn new(location: PyGroundLocation, provider: Option<PyUt1Provider>) -> Self {
-        PyGroundPropagator(DynGroundPropagator::with_dynamic(location.0, provider))
+    fn new(location: PyGroundLocation) -> Self {
+        PyGroundPropagator(DynGroundPropagator::with_dynamic(location.0))
     }
 
     fn propagate<'py>(
@@ -651,7 +658,7 @@ impl PySgp4 {
         PyTime(
             self.0
                 .time()
-                .try_to_scale(DynTimeScale::Tai, None::<&PyUt1Provider>)
+                .try_to_scale(DynTimeScale::Tai, &DefaultOffsetProvider)
                 .unwrap(),
         )
     }
@@ -665,13 +672,23 @@ impl PySgp4 {
     ) -> PyResult<Bound<'py, PyAny>> {
         let provider = provider.map(|p| &p.get().0);
         if let Ok(pytime) = steps.extract::<PyTime>() {
-            let time = pytime.0.try_to_scale(Tai, provider)?;
+            let (time, dyntime) = match provider {
+                Some(provider) => (
+                    pytime.0.try_to_scale(Tai, provider)?,
+                    pytime.0.try_to_scale(DynTimeScale::Tai, provider)?,
+                ),
+                None => (
+                    pytime.0.try_to_scale(Tai, &DefaultOffsetProvider)?,
+                    pytime
+                        .0
+                        .try_to_scale(DynTimeScale::Tai, &DefaultOffsetProvider)?,
+                ),
+            };
             let s1 = self.0.propagate(time)?;
-            let time = time.try_to_scale(DynTimeScale::Tai, provider)?;
             return Ok(Bound::new(
                 py,
                 PyState(State::new(
-                    time,
+                    dyntime,
                     s1.position(),
                     s1.velocity(),
                     DynOrigin::default(),
@@ -683,11 +700,20 @@ impl PySgp4 {
         if let Ok(pysteps) = steps.extract::<Vec<PyTime>>() {
             let mut states: Vec<DynState> = Vec::with_capacity(pysteps.len());
             for step in pysteps {
-                let time = step.0.try_to_scale(Tai, provider)?;
+                let (time, dyntime) = match provider {
+                    Some(provider) => (
+                        step.0.try_to_scale(Tai, provider)?,
+                        step.0.try_to_scale(DynTimeScale::Tai, provider)?,
+                    ),
+                    None => (
+                        step.0.try_to_scale(Tai, &DefaultOffsetProvider)?,
+                        step.0
+                            .try_to_scale(DynTimeScale::Tai, &DefaultOffsetProvider)?,
+                    ),
+                };
                 let s = self.0.propagate(time)?;
-                let time = time.try_to_scale(DynTimeScale::Tai, provider)?;
                 let s = State::new(
-                    time,
+                    dyntime,
                     s.position(),
                     s.velocity(),
                     DynOrigin::default(),
@@ -702,7 +728,7 @@ impl PySgp4 {
 }
 
 #[pyfunction]
-#[pyo3(signature = (times, gs, mask, sc, ephemeris, bodies=None, provider=None))]
+#[pyo3(signature = (times, gs, mask, sc, ephemeris, bodies=None))]
 pub fn visibility(
     times: &Bound<'_, PyList>,
     gs: PyGroundLocation,
@@ -710,7 +736,6 @@ pub fn visibility(
     sc: &Bound<'_, PyTrajectory>,
     ephemeris: &Bound<'_, PySpk>,
     bodies: Option<Vec<PyOrigin>>,
-    provider: Option<&Bound<'_, PyUt1Provider>>,
 ) -> PyResult<Vec<PyPass>> {
     let sc = sc.get();
     if gs.0.origin().name() != sc.0.origin().name() {
@@ -723,7 +748,6 @@ pub fn visibility(
         .into_iter()
         .map(|s| s.0)
         .collect();
-    let provider = provider.map(|p| &p.get().0);
     let mask = &mask.borrow().0;
     let ephemeris = &ephemeris.get().0;
     let bodies: Vec<DynOrigin> = bodies
@@ -731,12 +755,12 @@ pub fn visibility(
         .into_iter()
         .map(|b| b.0)
         .collect();
-    Ok(crate::analysis::visibility_combined(
-        &times, &gs.0, mask, &bodies, &sc.0, ephemeris, provider,
-    )?
-    .into_iter()
-    .map(PyPass)
-    .collect())
+    Ok(
+        crate::analysis::visibility_combined(&times, &gs.0, mask, &bodies, &sc.0, ephemeris)?
+            .into_iter()
+            .map(PyPass)
+            .collect(),
+    )
 }
 
 #[pyclass(name = "Ensemble", module = "lox_space", frozen)]
@@ -762,7 +786,6 @@ impl PyEnsemble {
     spacecraft,
     ephemeris,
     bodies=None,
-    provider=None,
 ))]
 pub fn visibility_all(
     _py: Python<'_>,
@@ -771,7 +794,6 @@ pub fn visibility_all(
     spacecraft: &Bound<'_, PyEnsemble>,
     ephemeris: &Bound<'_, PySpk>,
     bodies: Option<Vec<PyOrigin>>,
-    provider: Option<&Bound<'_, PyUt1Provider>>,
 ) -> PyResult<HashMap<String, HashMap<String, Vec<PyPass>>>> {
     let times: Vec<DynTime> = times
         .extract::<Vec<PyTime>>()?
@@ -783,7 +805,6 @@ pub fn visibility_all(
         .into_iter()
         .map(|b| b.0)
         .collect();
-    let provider = provider.map(|p| &p.get().0);
     let spacecraft = &spacecraft.get().0;
     let ephemeris = &ephemeris.get().0;
 
@@ -798,7 +819,6 @@ pub fn visibility_all(
             spacecraft,
             ephemeris,
             &bodies,
-            provider,
         )
     } else {
         visibility_all_sequential_optimized(
@@ -808,7 +828,6 @@ pub fn visibility_all(
             spacecraft,
             ephemeris,
             &bodies,
-            provider,
         )
     }
 }
@@ -824,17 +843,15 @@ fn should_use_parallel(spacecraft_count: usize, ground_station_count: usize) -> 
 }
 
 /// Sequential implementation optimized for small workloads
-fn visibility_all_sequential_optimized<P, E>(
+fn visibility_all_sequential_optimized<E>(
     _py: Python<'_>,
     times: &[DynTime],
     ground_stations: &HashMap<String, (PyGroundLocation, PyElevationMask)>,
     spacecraft: &HashMap<String, DynTrajectory>,
     ephemeris: &E,
     bodies: &[DynOrigin],
-    provider: Option<&P>,
 ) -> PyResult<HashMap<String, HashMap<String, Vec<PyPass>>>>
 where
-    P: DeltaUt1TaiProvider + Clone + Send + Sync,
     E: Ephemeris + Send + Sync,
 {
     // Pre-allocate result with known capacity
@@ -851,7 +868,6 @@ where
                 bodies,
                 sc_trajectory,
                 ephemeris,
-                provider,
             )?;
 
             gs_results.insert(gs_name.clone(), passes.into_iter().map(PyPass).collect());
@@ -864,17 +880,15 @@ where
 }
 
 /// Parallel implementation optimized for large workloads
-fn visibility_all_parallel_optimized<P, E>(
+fn visibility_all_parallel_optimized<E>(
     py: Python<'_>,
     times: &[DynTime],
     ground_stations: &HashMap<String, (PyGroundLocation, PyElevationMask)>,
     spacecraft: &HashMap<String, DynTrajectory>,
     ephemeris: &E,
     bodies: &[DynOrigin],
-    provider: Option<&P>,
 ) -> PyResult<HashMap<String, HashMap<String, Vec<PyPass>>>>
 where
-    P: DeltaUt1TaiProvider + Clone + Send + Sync,
     E: Ephemeris + Send + Sync,
 {
     // Create all combinations upfront for better work distribution
@@ -908,7 +922,6 @@ where
                             bodies,
                             sc_trajectory,
                             ephemeris,
-                            provider,
                         )?;
 
                         let py_passes = passes.into_iter().map(PyPass).collect();
