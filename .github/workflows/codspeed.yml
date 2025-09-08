@@ -31,7 +31,7 @@ jobs:
           working-directory: ${{ env.UV_PROJECT }}
           command: develop
           args: --release --uv
-      - uses: CodSpeedHQ/action@v3
+      - uses: CodSpeedHQ/action@v4
         with:
           run: uv run --directory "$UV_PROJECT" pytest --codspeed
           token: ${{ secrets.CODSPEED_TOKEN }} # Optional for public repositories
