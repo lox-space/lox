@@ -64,7 +64,7 @@ macro_rules! impl_noop {
     };
 }
 
-impl_noop!(Tai, Tcb, Tcg, Tdb, Tt);
+impl_noop!(Tai, Tcb, Tcg, Tdb, Tt, Ut1);
 
 // TAI <-> TT
 
