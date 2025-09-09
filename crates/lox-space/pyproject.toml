@@ -33,3 +33,7 @@ cache-keys = [
   { file = "**/*.rs" },
   { file = "../**/*.rs" },
 ]
+
+[tool.uv]
+# Rebuild package when any rust files change
+cache-keys = [{file = "pyproject.toml"}, {file = "rust/Cargo.toml"}, {file = "**/*.rs"}]
