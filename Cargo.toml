@@ -29,6 +29,7 @@ float_eq = "1.0.1"
 glam = "0.30.6"
 hashbrown = {version = "0.16.0", features = ["rayon"]}
 itertools = "0.14.0"
+j4rs = "0.22.0"
 libm = "0.2.15"
 nom = "8.0.0"
 num = "0.4.3"

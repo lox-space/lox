@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools", "versioneer[toml]"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "orekitdata"
+dynamic = ["version"]
+authors = [
+    {name = "Clément Jonglez", email = "clement.jonglez@tu-berlin.de"},
+]
+description = "Orekit data repository, updated every few months"
+readme = "README.md"
+dependencies = [
+]
+
+[tool.setuptools]
+package-dir = {"orekitdata" = "."}
+
+[tool.setuptools.package-data]
+"*" = ["**"]
+
+[tool.setuptools.dynamic]
+version = {attr = "versioneer.get_version"}
+
+[tool.versioneer]
+VCS = "git"
+style = "pep440-branch"
+versionfile_source = "._version.py"
+versionfile_build = "._version.py"
+tag_prefix = ""
+parentdir_prefix = ""
+
+[project.entry-points.pyinstaller40]
+"hook-dirs" = "orekitdata._pyinstaller.entry_points:get_hook_dirs"
+"tests" = "orekitdata._pyinstaller.entry_points:get_PyInstaller_tests"

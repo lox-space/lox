@@ -1,0 +1,20 @@
+[package]
+name = "lox-orekit"
+description = "Orekit-based features for the Lox ecosystem"
+version = "0.1.0-alpha.0"
+rust-version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+lox-time.workspace = true
+
+j4rs.workspace = true
+
+[dev-dependencies]
+rstest.workspace = true
+
+[build-dependencies]
+j4rs.workspace = true
