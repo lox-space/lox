@@ -3,7 +3,7 @@ use crate::{
     constants::julian_dates::J77,
     deltas::TimeDelta,
     subsecond::Subsecond,
-    ut1::{DeltaUt1Tai, DeltaUt1TaiProvider, ExtrapolatedDeltaUt1Tai},
+    ut1::{DeltaUt1Tai, ExtrapolatedDeltaUt1Tai},
 };
 use std::convert::Infallible;
 use thiserror::Error;
