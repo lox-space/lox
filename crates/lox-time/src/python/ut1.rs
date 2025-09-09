@@ -6,8 +6,7 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::deltas::TimeDelta;
-use crate::ut1::{DeltaUt1Tai, DeltaUt1TaiError, DeltaUt1TaiProvider, ExtrapolatedDeltaUt1Tai};
+use crate::ut1::{DeltaUt1Tai, DeltaUt1TaiError, ExtrapolatedDeltaUt1Tai};
 use crate::utc::leap_seconds::BuiltinLeapSeconds;
 use pyo3::exceptions::PyValueError;
 use pyo3::{PyErr, PyResult, pyclass, pymethods};
@@ -34,18 +33,6 @@ impl PyUt1Provider {
     pub fn new(path: &str) -> PyResult<PyUt1Provider> {
         let provider = DeltaUt1Tai::new(path, &BuiltinLeapSeconds)?;
         Ok(PyUt1Provider(provider))
-    }
-}
-
-impl DeltaUt1TaiProvider for PyUt1Provider {
-    type Error = PyErr;
-
-    fn delta_ut1_tai(&self, tai: TimeDelta) -> Result<TimeDelta, Self::Error> {
-        self.0.delta_ut1_tai(tai).map_err(|err| err.into())
-    }
-
-    fn delta_tai_ut1(&self, ut1: TimeDelta) -> Result<TimeDelta, Self::Error> {
-        self.0.delta_tai_ut1(ut1).map_err(|err| err.into())
     }
 }
 

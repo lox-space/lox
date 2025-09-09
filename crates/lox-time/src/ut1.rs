@@ -127,12 +127,8 @@ impl DeltaUt1Tai {
         let series = Series::with_cubic_spline(seconds, delta_ut1_tai)?;
         Ok(Self(series))
     }
-}
 
-impl DeltaUt1TaiProvider for DeltaUt1Tai {
-    type Error = ExtrapolatedDeltaUt1Tai;
-
-    fn delta_ut1_tai(&self, tai: TimeDelta) -> Result<TimeDelta, Self::Error> {
+    pub fn delta_ut1_tai(&self, tai: TimeDelta) -> Result<TimeDelta, ExtrapolatedDeltaUt1Tai> {
         let seconds = tai.seconds_since_j2000();
         let (t0, _) = self.0.first();
         let (tn, _) = self.0.last();
@@ -143,7 +139,7 @@ impl DeltaUt1TaiProvider for DeltaUt1Tai {
         Ok(TimeDelta::try_from_decimal_seconds(val).unwrap())
     }
 
-    fn delta_tai_ut1(&self, ut1: TimeDelta) -> Result<TimeDelta, Self::Error> {
+    pub fn delta_tai_ut1(&self, ut1: TimeDelta) -> Result<TimeDelta, ExtrapolatedDeltaUt1Tai> {
         let seconds = ut1.seconds_since_j2000();
         let (t0, _) = self.0.first();
         let (tn, _) = self.0.last();
