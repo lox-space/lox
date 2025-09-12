@@ -18,9 +18,9 @@ use lox_math::series::{Series, SeriesError};
 use lox_math::types::units::Radians;
 use lox_time::deltas::TimeDelta;
 use lox_time::julian_dates::JulianDate;
-use lox_time::time_scales::{DynTimeScale, TryToScale};
+use lox_time::time_scales::DynTimeScale;
+use lox_time::time_scales::offsets::{DefaultOffsetProvider, TryOffset};
 use lox_time::time_scales::{Tdb, TimeScale};
-use lox_time::ut1::DeltaUt1TaiProvider;
 use lox_time::{DynTime, Time};
 use rayon::prelude::*;
 use std::f64::consts::PI;
@@ -124,13 +124,12 @@ pub type DynPass = Pass<DynTimeScale>;
 
 impl DynPass {
     /// Create a Pass from a window, calculating observables for times when the satellite is above the elevation mask
-    pub fn from_window<P: DeltaUt1TaiProvider>(
+    pub fn from_window(
         window: Window<DynTimeScale>,
         time_resolution: TimeDelta,
         gs: &DynGroundLocation,
         mask: &ElevationMask,
         sc: &DynTrajectory,
-        provider: Option<&P>,
     ) -> Result<DynPass, SeriesError> {
         let mut pass_times = Vec::new();
         let mut pass_observables = Vec::new();
@@ -143,7 +142,7 @@ impl DynPass {
 
             // Transform to body-fixed frame like elevation_dyn does
             let body_fixed = DynFrame::Iau(gs.origin());
-            let rot = DynFrame::Icrf.try_rotation(body_fixed, current_time, provider);
+            let rot = DynFrame::Icrf.try_rotation(body_fixed, current_time, &DefaultOffsetProvider);
             let (r1, v1) = rot
                 .unwrap()
                 .rotate_state(state.position(), state.velocity());
@@ -281,28 +280,26 @@ impl<T: TimeScale> Pass<T> {
     }
 }
 
-pub fn elevation_dyn<P: DeltaUt1TaiProvider>(
+pub fn elevation_dyn(
     time: DynTime,
     gs: &DynGroundLocation,
     mask: &ElevationMask,
     sc: &DynTrajectory,
-    provider: Option<&P>,
 ) -> Radians {
     let body_fixed = DynFrame::Iau(gs.origin());
     let sc = sc.interpolate_at(time);
-    let rot = DynFrame::Icrf.try_rotation(body_fixed, time, provider);
+    let rot = DynFrame::Icrf.try_rotation(body_fixed, time, &DefaultOffsetProvider);
     let (r1, v1) = rot.unwrap().rotate_state(sc.position(), sc.velocity());
     let sc = State::new(sc.time(), r1, v1, sc.origin(), body_fixed);
     let obs = gs.observables_dyn(sc);
     obs.elevation() - mask.min_elevation(obs.azimuth())
 }
 
-pub fn visibility_dyn<P: DeltaUt1TaiProvider>(
+pub fn visibility_dyn(
     times: &[DynTime],
     gs: &DynGroundLocation,
     mask: &ElevationMask,
     sc: &DynTrajectory,
-    provider: Option<&P>,
 ) -> Vec<Window<DynTimeScale>> {
     if times.len() < 2 {
         return vec![];
@@ -321,7 +318,6 @@ pub fn visibility_dyn<P: DeltaUt1TaiProvider>(
                 gs,
                 mask,
                 sc,
-                provider,
             )
         },
         start,
@@ -331,13 +327,12 @@ pub fn visibility_dyn<P: DeltaUt1TaiProvider>(
     )
 }
 
-pub fn visibility_los<P: DeltaUt1TaiProvider + Clone>(
+pub fn visibility_los(
     times: &[DynTime],
     gs: &DynGroundLocation,
     body: DynOrigin,
     sc: &DynTrajectory,
     ephem: &impl Ephemeris,
-    provider: Option<&P>,
 ) -> Vec<Window<DynTimeScale>> {
     if times.len() < 2 {
         return vec![];
@@ -353,7 +348,7 @@ pub fn visibility_los<P: DeltaUt1TaiProvider + Clone>(
         |t| {
             let time = start + TimeDelta::from_decimal_seconds(t);
             let epoch = time
-                .try_to_scale(Tdb, provider)
+                .try_to_scale(Tdb, &DefaultOffsetProvider)
                 .unwrap()
                 .seconds_since_j2000();
             let origin_id = sc.origin().id();
@@ -365,7 +360,7 @@ pub fn visibility_los<P: DeltaUt1TaiProvider + Clone>(
                 r_body += p;
             }
             let r_sc = sc.interpolate_at(time).position() - r_body;
-            let r_gs = DynGroundPropagator::with_dynamic(gs.clone(), provider.cloned())
+            let r_gs = DynGroundPropagator::with_dynamic(gs.clone())
                 .propagate_dyn(time)
                 .unwrap()
                 .position()
@@ -379,22 +374,18 @@ pub fn visibility_los<P: DeltaUt1TaiProvider + Clone>(
     )
 }
 
-pub fn visibility_combined<
-    P: DeltaUt1TaiProvider + Clone + Send + Sync,
-    E: Ephemeris + Send + Sync,
->(
+pub fn visibility_combined<E: Ephemeris + Send + Sync>(
     times: &[DynTime],
     gs: &DynGroundLocation,
     mask: &ElevationMask,
     bodies: &[DynOrigin],
     sc: &DynTrajectory,
     ephem: &E,
-    provider: Option<&P>,
 ) -> Result<Vec<DynPass>, SeriesError> {
-    let w1 = visibility_dyn(times, gs, mask, sc, provider);
+    let w1 = visibility_dyn(times, gs, mask, sc);
     let wb: Vec<Vec<Window<DynTimeScale>>> = bodies
         .par_iter()
-        .map(|&body| visibility_los(times, gs, body, sc, ephem, provider))
+        .map(|&body| visibility_los(times, gs, body, sc, ephem))
         .collect();
     let mut windows = w1;
     for w2 in wb {
@@ -414,7 +405,7 @@ pub fn visibility_combined<
 
     for window in windows {
         // Use the new from_window constructor to properly calculate observables
-        match DynPass::from_window(window, time_resolution, gs, mask, sc, provider) {
+        match DynPass::from_window(window, time_resolution, gs, mask, sc) {
             Ok(pass) => passes.push(pass),
             Err(SeriesError::InsufficientPoints(_, _)) => {
                 // Skip windows where the satellite never rises above the elevation mask
@@ -427,57 +418,59 @@ pub fn visibility_combined<
     Ok(passes)
 }
 
-pub fn elevation<
-    T: TimeScale + TryToScale<Tdb, P> + Clone,
-    O: Origin + TrySpheroid + RotationalElements + Clone,
-    P,
->(
+pub fn elevation<T, O, P>(
     time: Time<T>,
     gs: &GroundLocation<O>,
     mask: &ElevationMask,
     sc: &Trajectory<T, O, Icrf>,
-    provider: Option<&P>,
-) -> Radians {
+    provider: &P,
+) -> Radians
+where
+    T: TimeScale + Copy,
+    O: Origin + TrySpheroid + RotationalElements + Clone,
+    P: TryOffset<T, Tdb>,
+{
     let body_fixed = Iau(gs.origin());
-    let sc = sc.interpolate_at(time.clone());
+    let sc = sc.interpolate_at(time);
     let sc = sc.try_to_frame(body_fixed, provider).unwrap();
     let obs = gs.observables(sc);
     obs.elevation() - mask.min_elevation(obs.azimuth())
 }
 
-pub fn visibility<
-    T: TimeScale + TryToScale<Tdb, P> + Clone,
-    O: Origin + Spheroid + RotationalElements + Clone,
-    P,
->(
+pub fn visibility<T, O, P>(
     times: &[Time<T>],
     gs: &GroundLocation<O>,
     mask: &ElevationMask,
     sc: &Trajectory<T, O, Icrf>,
-    provider: Option<&P>,
-) -> Vec<Window<T>> {
+    provider: &P,
+) -> Vec<Window<T>>
+where
+    T: TimeScale + Copy,
+    O: Origin + Spheroid + RotationalElements + Clone,
+    P: TryOffset<T, Tdb>,
+{
     if times.len() < 2 {
         return vec![];
     }
-    let start = times.first().unwrap().clone();
-    let end = times.last().unwrap().clone();
+    let start = *times.first().unwrap();
+    let end = *times.last().unwrap();
     let times: Vec<f64> = times
         .iter()
-        .map(|t| (t.clone() - start.clone()).to_decimal_seconds())
+        .map(|t| (*t - start).to_decimal_seconds())
         .collect();
     let root_finder = Brent::default();
     find_windows(
         |t| {
             elevation(
-                start.clone() + TimeDelta::try_from_decimal_seconds(t).unwrap(),
+                start + TimeDelta::try_from_decimal_seconds(t).unwrap(),
                 gs,
                 mask,
                 sc,
                 provider,
             )
         },
-        start.clone(),
-        end.clone(),
+        start,
+        end,
         &times,
         root_finder,
     )
@@ -491,7 +484,6 @@ mod tests {
     use lox_math::is_close::IsClose;
     use lox_time::Time;
     use lox_time::time_scales::Tai;
-    use lox_time::ut1::DeltaUt1Tai;
     use lox_time::utc::Utc;
     use std::iter::zip;
     use std::path::PathBuf;
@@ -538,7 +530,7 @@ mod tests {
         let actual: Vec<Radians> = gs
             .times()
             .iter()
-            .map(|t| elevation(*t, &location(), &mask, &sc, None::<&()>))
+            .map(|t| elevation(*t, &location(), &mask, &sc, &DefaultOffsetProvider))
             .collect();
         for (actual, expected) in actual.iter().zip(expected.iter()) {
             assert_close!(actual, expected, 1e-1);
@@ -571,7 +563,7 @@ mod tests {
         let sc = spacecraft_trajectory();
         let times: Vec<Time<Tai>> = sc.states().iter().map(|s| s.time()).collect();
         let expected = contacts();
-        let actual = visibility(&times, &gs, &mask, &sc, None::<&()>);
+        let actual = visibility(&times, &gs, &mask, &sc, &DefaultOffsetProvider);
         assert_eq!(actual.len(), expected.len());
         for (actual, expected) in zip(actual, expected) {
             assert_close!(actual.start(), expected.start(), 0.0, 1e-4);
@@ -586,16 +578,8 @@ mod tests {
         let sc = spacecraft_trajectory_dyn();
         let times: Vec<DynTime> = sc.states().iter().map(|s| s.time()).collect();
         let expected = contacts_combined();
-        let actual = visibility_combined(
-            &times,
-            &gs,
-            &mask,
-            &[DynOrigin::Moon],
-            &sc,
-            ephemeris(),
-            None::<&DeltaUt1Tai>,
-        )
-        .unwrap();
+        let actual =
+            visibility_combined(&times, &gs, &mask, &[DynOrigin::Moon], &sc, ephemeris()).unwrap();
         assert_eq!(actual.len(), expected.len());
         for (actual, expected) in zip(actual, expected) {
             assert_close!(actual.window().start(), expected.start(), 0.0, 1e-4);
@@ -618,7 +602,6 @@ mod tests {
             &[], // No occluding bodies for this test
             &sc,
             ephemeris(),
-            None::<&DeltaUt1Tai>,
         )
         .unwrap();
 
