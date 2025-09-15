@@ -19,7 +19,7 @@ lox-frames = { path = "crates/lox-frames", version = "0.1.0-alpha.2" }
 lox-io = { path = "crates/lox-io", version = "0.1.0-alpha.7" }
 lox-math = { path = "crates/lox-math", version = "0.1.0-alpha.7" }
 lox-orbits = { path = "crates/lox-orbits", version = "0.1.0-alpha.19" }
-lox-space = { path = "crates/lox-space", version = "0.1.0-alpha.25" }
+lox-space = { path = "crates/lox-space", version = "0.1.0-alpha.26" }
 lox-time = { path = "crates/lox-time", version = "0.1.0-alpha.9" }
 
 csv = "1.3.0"
