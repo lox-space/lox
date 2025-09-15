@@ -33,5 +33,6 @@ jobs:
           args: --release --uv
       - uses: CodSpeedHQ/action@v4
         with:
+          mode: instrumentation
           run: uv run --directory "$UV_PROJECT" pytest --codspeed
           token: ${{ secrets.CODSPEED_TOKEN }} # Optional for public repositories
