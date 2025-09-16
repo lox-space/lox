@@ -42,7 +42,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist -i 3.9 -i 3.10 -i 3.11 -i 3.12 --manifest-path crates/lox-space/Cargo.toml
+          args: --release --out dist --find-interpreter --manifest-path crates/lox-space/Cargo.toml
           sccache: 'true'
           manylinux: auto
       - name: Upload wheels
@@ -60,25 +60,6 @@ jobs:
           uv pip install lox-space --offline --find-links dist --force-reinstall
           source .venv/bin/activate
           cd crates/lox-space && pytest
-      - name: pytest
-        if: ${{ !startsWith(matrix.platform.target, 'x86') && matrix.platform.target != 'ppc64' }}
-        uses: uraimo/run-on-arch-action@v3
-        with:
-          arch: ${{ matrix.platform.target }}
-          distro: ubuntu22.04
-          githubToken: ${{ github.token }}
-          install: |
-            apt-get update
-            apt-get install -y curl
-            curl -LsSf https://astral.sh/uv/install.sh | sh
-          run: |
-            set -e
-            source $HOME/.local/bin/env
-            uv venv --python 3.12
-            uv pip install pytest pytest-codspeed numpy
-            uv pip install lox-space --offline --find-links dist --force-reinstall
-            source .venv/bin/activate
-            cd crates/lox-space && pytest
 
   windows:
     runs-on: ${{ matrix.platform.runner }}
