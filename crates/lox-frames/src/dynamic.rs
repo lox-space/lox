@@ -12,7 +12,7 @@ use lox_bodies::{DynOrigin, Origin, TryRotationalElements};
 use lox_time::{
     Time,
     julian_dates::JulianDate,
-    time_scales::{Tdb, TimeScale, TryToScale},
+    time_scales::{Tdb, TimeScale, offsets::TryOffset},
 };
 use thiserror::Error;
 
@@ -131,7 +131,8 @@ impl FromStr for DynFrame {
 
 impl<T, P> TryRotateTo<T, DynFrame, P> for DynFrame
 where
-    T: TimeScale + TryToScale<Tdb, P> + Copy,
+    T: TimeScale + Copy,
+    P: TryOffset<T, Tdb>,
 {
     // FIXME
     type Error = IauFrameTransformationError;
@@ -140,7 +141,7 @@ where
         &self,
         frame: DynFrame,
         time: Time<T>,
-        provider: Option<&P>,
+        provider: &P,
     ) -> Result<Rotation, Self::Error> {
         // FIXME
         let seconds_j2000 = time.seconds_since_j2000();
@@ -226,6 +227,7 @@ mod tests {
     use lox_bodies::DynOrigin;
     use lox_math::assert_close;
     use lox_math::is_close::IsClose;
+    use lox_time::time_scales::offsets::DefaultOffsetProvider;
     use lox_time::utc::Utc;
     use rstest::rstest;
 
@@ -270,7 +272,7 @@ mod tests {
         let time = Utc::from_iso("2024-07-05T09:09:18.173").unwrap().to_time();
         let r = DVec3::new(-5530.01774359, -3487.0895338, -1850.03476185);
         let v = DVec3::new(1.29534407, -5.02456882, 5.6391936);
-        let rot = DynFrame::Icrf.try_rotation(frame, time, None::<&()>);
+        let rot = DynFrame::Icrf.try_rotation(frame, time, &DefaultOffsetProvider);
         let (r_act, v_act) = rot.unwrap().rotate_state(r, v);
         assert_close!(r_act, r_exp, 1e-8);
         assert_close!(v_act, v_exp, 1e-5);
