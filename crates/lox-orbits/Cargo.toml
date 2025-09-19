@@ -15,6 +15,7 @@ lox-ephem.workspace = true
 lox-frames.workspace = true
 lox-time.workspace = true
 lox-math.workspace = true
+lox-units.workspace = true
 
 csv.workspace = true
 float_eq.workspace = true

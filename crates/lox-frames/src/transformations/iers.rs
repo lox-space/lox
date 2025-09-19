@@ -15,7 +15,7 @@ use lox_earth::coordinate_transformations::{
 };
 use lox_earth::rotation_angle::RotationAngle;
 use lox_earth::tio::sp_00;
-use lox_math::constants::f64::time::SECONDS_PER_DAY;
+use lox_units::constants::f64::time::SECONDS_PER_DAY;
 
 pub fn icrf_to_cirf(centuries: f64) -> Rotation {
     // TODO: Add IERS corrections

@@ -18,7 +18,7 @@ use std::{
     sync::OnceLock,
 };
 
-use lox_math::constants::f64::time::{self, SECONDS_PER_JULIAN_CENTURY};
+use lox_units::constants::f64::time::{self, SECONDS_PER_JULIAN_CENTURY};
 use num::ToPrimitive;
 use thiserror::Error;
 
@@ -386,7 +386,7 @@ pub trait CalendarDate {
 
 #[cfg(test)]
 mod tests {
-    use lox_math::constants::f64::time::DAYS_PER_JULIAN_CENTURY;
+    use lox_units::constants::f64::time::DAYS_PER_JULIAN_CENTURY;
     use rstest::rstest;
 
     use crate::calendar_dates::{Calendar, Date};

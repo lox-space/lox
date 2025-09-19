@@ -6,7 +6,6 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-pub mod constants;
 pub mod glam;
 pub mod is_close;
 pub mod linear_algebra;

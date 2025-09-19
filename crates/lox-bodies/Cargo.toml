@@ -10,6 +10,7 @@ repository.workspace = true
 
 [dependencies]
 lox-math.workspace = true
+lox-units.workspace = true
 
 fast_polynomial.workspace = true
 num-derive.workspace = true
