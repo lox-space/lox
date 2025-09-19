@@ -12,7 +12,7 @@ use std::str::FromStr;
 use pyo3::basic::CompareOp;
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::types::{PyAnyMethods, PyType};
-use pyo3::{Bound, IntoPyObjectExt, PyAny, PyErr, PyObject, PyResult, Python, pyclass, pymethods};
+use pyo3::{Bound, IntoPyObjectExt, Py, PyAny, PyErr, PyResult, Python, pyclass, pymethods};
 
 use lox_math::is_close::IsClose;
 
@@ -187,7 +187,7 @@ impl PyTime {
     }
 
     #[classattr]
-    const __hash__: Option<PyObject> = None;
+    const __hash__: Option<Py<PyAny>> = None;
 
     pub fn __str__(&self) -> String {
         self.0.to_string()
@@ -413,7 +413,7 @@ mod tests {
 
     #[test]
     fn test_pytimfe() {
-        let time = Python::with_gil(|py| {
+        let time = Python::attach(|py| {
             PyTime::new(&scale_to_any(py, "TAI"), 2000, 1, 1, 0, 0, 12.123456789123).unwrap()
         });
         assert_eq!(
@@ -439,7 +439,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "invalid date")]
     fn test_pytime_invalid_date() {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             PyTime::new(&scale_to_any(py, "TAI"), 2000, 13, 1, 0, 0, 0.0).unwrap()
         });
     }
@@ -447,14 +447,14 @@ mod tests {
     #[test]
     #[should_panic(expected = "hour must be in the range")]
     fn test_pytime_invalid_time() {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             PyTime::new(&scale_to_any(py, "TAI"), 2000, 12, 1, 24, 0, 0.0).unwrap()
         });
     }
 
     #[test]
     fn test_pytime_ops() {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let t0 = PyTime::new(&scale_to_any(py, "TAI"), 2000, 1, 1, 0, 0, 0.0).unwrap();
             let dt = PyTimeDelta::new(1.0).unwrap();
             let t1 = PyTime::new(&scale_to_any(py, "TAI"), 2000, 1, 1, 0, 0, 1.0).unwrap();
@@ -482,7 +482,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "cannot subtract `Time` objects with different time scales")]
     fn test_pytime_ops_different_scales() {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let t1 = PyTime::new(&scale_to_any(py, "TAI"), 2000, 1, 1, 0, 0, 1.0).unwrap();
             let t0 = Bound::new(
                 py,
@@ -496,7 +496,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "`rhs` must be either a `Time` or a `TimeDelta` object")]
     fn test_pytime_ops_invalid_rhs() {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let t1 = PyTime::new(&scale_to_any(py, "TAI"), 2000, 1, 1, 0, 0, 1.0).unwrap();
             let invalid = PyDict::new(py);
             t1.__sub__(py, &invalid).unwrap();
@@ -505,7 +505,7 @@ mod tests {
 
     #[test]
     fn test_pytime_richcmp() {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let t0 = PyTime::new(&scale_to_any(py, "TAI"), 2000, 1, 1, 0, 0, 0.0).unwrap();
             let t1 = PyTime::new(&scale_to_any(py, "TAI"), 2000, 1, 1, 0, 0, 1.0).unwrap();
             assert!(t0.__richcmp__(t1.clone(), CompareOp::Lt));
@@ -518,7 +518,7 @@ mod tests {
 
     #[test]
     fn test_pytime_is_close() {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let t0 = PyTime::new(
                 &scale_to_any(py, "TAI"),
                 1999,
@@ -538,7 +538,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "cannot compare `Time` objects with different time scales")]
     fn test_pytime_is_close_different_scales() {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let t0 = PyTime::new(&scale_to_any(py, "TAI"), 2000, 1, 1, 0, 0, 0.0).unwrap();
             let t1 = PyTime::new(&scale_to_any(py, "TT"), 2000, 1, 1, 0, 0, 0.0).unwrap();
             t0.isclose(t1, 1e-8, 1e-13).unwrap();
@@ -547,7 +547,7 @@ mod tests {
 
     #[test]
     fn test_pytime_to_delta() {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let t = PyTime::new(&scale_to_any(py, "TAI"), 2000, 1, 1, 12, 0, 0.3).unwrap();
             assert_eq!(t.to_delta(), t.0.to_delta())
         })
@@ -555,7 +555,7 @@ mod tests {
 
     #[test]
     fn test_pytime_from_iso() {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let cls = PyType::new::<PyTime>(py);
             let expected = PyTime::new(&scale_to_any(py, "TAI"), 2000, 1, 1, 0, 0, 0.0).unwrap();
             let actual = PyTime::from_iso(&cls, "2000-01-01T00:00:00 TAI", None).unwrap();
@@ -572,7 +572,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "invalid ISO")]
     fn test_pytime_from_iso_invalid() {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let cls = PyType::new::<PyTime>(py);
             let _ = PyTime::from_iso(&cls, "2000-01-01X00:00:00 TAI", None).unwrap();
         })
@@ -581,7 +581,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "invalid ISO")]
     fn test_pytime_from_iso_invalid_scale() {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let cls = PyType::new::<PyTime>(py);
             let _ = PyTime::from_iso(&cls, "2000-01-01T00:00:00 UTC", None).unwrap();
         })
@@ -590,7 +590,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "unknown time scale: UTC")]
     fn test_pytime_from_iso_invalid_scale_arg() {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let cls = PyType::new::<PyTime>(py);
             let _ = PyTime::from_iso(
                 &cls,
@@ -603,7 +603,7 @@ mod tests {
 
     #[test]
     fn test_pytime_julian_date() {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let cls = PyType::new::<PyTime>(py);
             let time =
                 PyTime::from_julian_date(&cls, &scale_to_any(py, "TAI"), 0.0, "j2000").unwrap();
@@ -627,7 +627,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "unknown epoch: unknown")]
     fn test_pytime_invalid_epoch() {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let time = PyTime::new(&scale_to_any(py, "TAI"), 2000, 1, 1, 0, 0, 0.0).unwrap();
             time.julian_date("unknown", "days").unwrap();
         })
@@ -636,7 +636,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "unknown unit: unknown")]
     fn test_pytime_invalid_unit() {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let time = PyTime::new(&scale_to_any(py, "TAI"), 2000, 1, 1, 0, 0, 0.0).unwrap();
             time.julian_date("jd", "unknown").unwrap();
         })
@@ -644,7 +644,7 @@ mod tests {
 
     #[test]
     fn test_pytime_from_two_part_julian_date() {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let cls = PyType::new::<PyTime>(py);
             let expected = PyTime::new(&scale_to_any(py, "TAI"), 2024, 7, 11, 8, 2, 14.0).unwrap();
             let (jd1, jd2) = expected.two_part_julian_date();
@@ -657,7 +657,7 @@ mod tests {
 
     #[test]
     fn test_pytime_from_day_of_year() {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let cls = PyType::new::<PyTime>(py);
             let expected = PyTime::new(&scale_to_any(py, "TAI"), 2024, 12, 31, 0, 0, 0.0).unwrap();
             let actual =
@@ -705,7 +705,7 @@ mod tests {
     #[case("UT1", "TT")]
     #[case("UT1", "UT1")]
     fn test_pytime_to_scale(#[case] scale1: &str, #[case] scale2: &str) {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let provider = Bound::new(
                 py,
                 PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
@@ -727,7 +727,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "a UT1-TAI provider is required")]
     fn test_pytime_ut1_tai_no_provider() {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let time = PyTime::new(&scale_to_any(py, "UT1"), 2000, 1, 1, 0, 0, 0.0).unwrap();
             time.to_scale(&scale_to_any(py, "TAI"), None).unwrap();
         })
