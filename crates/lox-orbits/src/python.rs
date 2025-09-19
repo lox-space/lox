@@ -6,10 +6,11 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use std::collections::HashMap;
+
 use rayon::prelude::*;
 
 use glam::DVec3;
-use hashbrown::HashMap;
 use lox_ephem::Ephemeris;
 use lox_ephem::python::PySpk;
 use lox_time::DynTime;
@@ -894,7 +895,7 @@ where
     let chunk_size = (combinations.len() / (num_threads * 2)).clamp(1, 50);
 
     // Process combinations in chunks with periodic GIL release
-    let results: Result<Vec<_>, _> = py.allow_threads(|| {
+    let results: Result<Vec<_>, _> = py.detach(|| {
         combinations
             .par_chunks(chunk_size)
             .map(|chunk| {
@@ -926,7 +927,7 @@ where
     for (sc_name, gs_name, passes) in flat_results {
         final_result
             .entry(sc_name)
-            .or_insert_with(HashMap::new)
+            .or_default()
             .insert(gs_name, passes);
     }
 

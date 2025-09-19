@@ -66,7 +66,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "extrapolated")]
     fn test_ut1_provider_extrapolated() {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let provider = Bound::new(
                 py,
                 PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())

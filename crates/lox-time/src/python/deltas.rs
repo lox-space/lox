@@ -146,7 +146,7 @@ mod tests {
 
     #[test]
     fn test_pytimedelta_constructors() {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let cls = PyType::new::<PyTimeDelta>(py);
             let td = PyTimeDelta::from_seconds(&cls, 123);
             assert_eq!(td.to_decimal_seconds(), 123.0);
