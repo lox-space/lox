@@ -167,7 +167,7 @@ mod tests {
 
     #[test]
     fn test_pytime_from_iso() {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let cls = PyType::new::<PyUtc>(py);
             let expected = PyUtc::new(2000, 1, 1, 0, 0, 0.0).unwrap();
             let actual = PyUtc::from_iso(&cls, "2000-01-01T00:00:00 UTC").unwrap();
@@ -182,7 +182,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "invalid ISO")]
     fn test_pytime_from_iso_invalid() {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let cls = PyType::new::<PyUtc>(py);
             let _ = PyUtc::from_iso(&cls, "2000-01-01X00:00:00 UTC").unwrap();
         })
@@ -196,7 +196,7 @@ mod tests {
     #[case("TT")]
     #[case("UT1")]
     fn test_pyutc_transformations(#[case] scale: &str) {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let provider = Bound::new(
                 py,
                 PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
