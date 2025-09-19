@@ -439,9 +439,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "invalid date")]
     fn test_pytime_invalid_date() {
-        Python::attach(|py| {
-            PyTime::new(&scale_to_any(py, "TAI"), 2000, 13, 1, 0, 0, 0.0).unwrap()
-        });
+        Python::attach(|py| PyTime::new(&scale_to_any(py, "TAI"), 2000, 13, 1, 0, 0, 0.0).unwrap());
     }
 
     #[test]
