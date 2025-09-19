@@ -53,32 +53,14 @@ impl From<quick_xml::DeError> for XmlDeserializationError {
             quick_xml::DeError::InvalidXml(_) => {
                 XmlDeserializationError::InvalidXml(error_description)
             }
-            quick_xml::DeError::InvalidInt(_) => {
-                XmlDeserializationError::InvalidInt(error_description)
-            }
-            quick_xml::DeError::InvalidFloat(_) => {
-                XmlDeserializationError::InvalidFloat(error_description)
-            }
-            quick_xml::DeError::InvalidBoolean(_) => {
-                XmlDeserializationError::InvalidBoolean(error_description)
-            }
             quick_xml::DeError::KeyNotRead => {
                 XmlDeserializationError::KeyNotRead(error_description)
             }
             quick_xml::DeError::UnexpectedStart(_) => {
                 XmlDeserializationError::UnexpectedStart(error_description)
             }
-            quick_xml::DeError::UnexpectedEnd(_) => {
-                XmlDeserializationError::UnexpectedEnd(error_description)
-            }
             quick_xml::DeError::UnexpectedEof => {
                 XmlDeserializationError::UnexpectedEof(error_description)
-            }
-            quick_xml::DeError::ExpectedStart => {
-                XmlDeserializationError::ExpectedStart(error_description)
-            }
-            quick_xml::DeError::Unsupported(_) => {
-                XmlDeserializationError::Unsupported(error_description)
             }
         }
     }

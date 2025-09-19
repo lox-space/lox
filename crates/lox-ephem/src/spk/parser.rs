@@ -9,6 +9,7 @@
 use std::collections::HashMap;
 use std::iter::zip;
 
+use nom::Parser;
 use nom::bytes::complete as nb;
 use nom::error::ErrorKind;
 use nom::number::complete as nn;
@@ -130,7 +131,8 @@ pub fn parse_daf_file_record_endianness(
     // 8. LOCFMT ( 8 charactersu8, 8 bytes): The character string that indicates the
     // numeric binary format of the DAF. The string has value either "LTL-IEEE"
     // or "BIG-IEEE." [Address 88]
-    let (_, locfmt) = nom::branch::alt((nb::tag("LTL-IEEE"), nb::tag("BIG-IEEE")))(&input[88..])?;
+    let (_, locfmt) =
+        nom::branch::alt((nb::tag("LTL-IEEE"), nb::tag("BIG-IEEE"))).parse(&input[88..])?;
 
     // We know the loc strings are ASCII in the spec, so parsing them as utf-8
     // should be safe.
@@ -295,9 +297,8 @@ pub fn parse_daf_summary_and_name_record_pair(
     for _ in 0..nsum {
         let double_precision_components;
         (summary_record_input, double_precision_components) =
-            nom::multi::many_m_n(nd as usize, nd as usize, nn::f64(endianness))(
-                summary_record_input,
-            )?;
+            nom::multi::many_m_n(nd as usize, nd as usize, nn::f64(endianness))
+                .parse(summary_record_input)?;
 
         // The initial and final addresses of an array are always the values of the
         // final two integer components of the summary for the array.
@@ -309,7 +310,8 @@ pub fn parse_daf_summary_and_name_record_pair(
             component_count_without_addresses as usize,
             component_count_without_addresses as usize,
             nn::i32(endianness),
-        )(summary_record_input)?;
+        )
+        .parse(summary_record_input)?;
 
         let initial_address;
         (summary_record_input, initial_address) = nn::u32(endianness)(summary_record_input)?;
@@ -505,21 +507,24 @@ pub fn parse_spk_segment(
                     degree_of_polynomial as usize,
                     degree_of_polynomial as usize,
                     f64_parser,
-                )(segment_data)?;
+                )
+                .parse(segment_data)?;
 
                 let y_coeff;
                 (segment_data, y_coeff) = nom::multi::many_m_n(
                     degree_of_polynomial as usize,
                     degree_of_polynomial as usize,
                     f64_parser,
-                )(segment_data)?;
+                )
+                .parse(segment_data)?;
 
                 let z_coeff;
                 (segment_data, z_coeff) = nom::multi::many_m_n(
                     degree_of_polynomial as usize,
                     degree_of_polynomial as usize,
                     f64_parser,
-                )(segment_data)?;
+                )
+                .parse(segment_data)?;
 
                 let zipped_coefficients: Vec<_> = zip(x_coeff, y_coeff)
                     .zip(z_coeff)
