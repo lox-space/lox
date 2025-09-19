@@ -15,8 +15,8 @@ use nom::combinator::{map, map_res, recognize, rest};
 use nom::error::Error;
 use nom::multi::{fold_many1, many0, many1};
 use nom::number::complete::{double, float};
-use nom::sequence::{delimited, preceded, separated_pair, terminated, tuple};
-use nom::{Finish, IResult};
+use nom::sequence::{delimited, preceded, separated_pair, terminated};
+use nom::{Finish, IResult, Parser};
 use thiserror::Error;
 
 #[derive(Debug, Error, PartialEq)]
@@ -91,7 +91,7 @@ impl Kernel {
 
 fn kernel(s: &str) -> IResult<&str, (&str, Entries, &str)> {
     let header = preceded(tag("KPL/"), alpha1);
-    let mut parser = tuple((
+    let mut parser = (
         header,
         fold_many1(
             preceded(
@@ -105,21 +105,20 @@ fn kernel(s: &str) -> IResult<&str, (&str, Entries, &str)> {
             },
         ),
         rest,
-    ));
-    parser(s)
+    );
+    parser.parse(s)
 }
 
 fn fortran_double(s: &str) -> IResult<&str, f64> {
-    let mut parser = map_res(
-        recognize(tuple((double, one_of("dD"), float))),
-        |s: &str| str::replace(s, ['d', 'D'], "e").parse(),
-    );
-    parser(s)
+    let mut parser = map_res(recognize((double, one_of("dD"), float)), |s: &str| {
+        str::replace(s, ['d', 'D'], "e").parse()
+    });
+    parser.parse(s)
 }
 
 fn spice_double(s: &str) -> IResult<&str, f64> {
     let mut parser = alt((fortran_double, double));
-    parser(s)
+    parser.parse(s)
 }
 
 fn spice_string(s: &str) -> IResult<&str, String> {
@@ -134,7 +133,7 @@ fn spice_string(s: &str) -> IResult<&str, String> {
             out
         },
     );
-    parser(s)
+    parser.parse(s)
 }
 
 fn timestamp(s: &str) -> IResult<&str, String> {
@@ -148,7 +147,7 @@ fn timestamp(s: &str) -> IResult<&str, String> {
         )),
         String::from,
     );
-    parser(s)
+    parser.parse(s)
 }
 
 fn is_separator(c: char) -> bool {
@@ -168,7 +167,7 @@ fn double_array(s: &str) -> IResult<&str, Value> {
         ),
         Value::DoubleArray,
     );
-    parser(s)
+    parser.parse(s)
 }
 
 fn string_array(s: &str) -> IResult<&str, Value> {
@@ -180,7 +179,7 @@ fn string_array(s: &str) -> IResult<&str, Value> {
         ),
         Value::StringArray,
     );
-    parser(s)
+    parser.parse(s)
 }
 
 fn timestamp_array(s: &str) -> IResult<&str, Value> {
@@ -192,27 +191,27 @@ fn timestamp_array(s: &str) -> IResult<&str, Value> {
         ),
         Value::TimestampArray,
     );
-    parser(s)
+    parser.parse(s)
 }
 
 fn double_value(s: &str) -> IResult<&str, Value> {
     let mut parser = map(spice_double, Value::Double);
-    parser(s)
+    parser.parse(s)
 }
 
 fn string_value(s: &str) -> IResult<&str, Value> {
     let mut parser = map(spice_string, Value::String);
-    parser(s)
+    parser.parse(s)
 }
 
 fn timestamp_value(s: &str) -> IResult<&str, Value> {
     let mut parser = map(timestamp, Value::Timestamp);
-    parser(s)
+    parser.parse(s)
 }
 
 fn array_value(s: &str) -> IResult<&str, Value> {
     let mut parser = alt((double_array, string_array, timestamp_array));
-    parser(s)
+    parser.parse(s)
 }
 
 fn key_value(s: &str) -> IResult<&str, (String, Value)> {
@@ -227,17 +226,17 @@ fn key_value(s: &str) -> IResult<&str, (String, Value)> {
         ),
         |kv: (&str, Value)| (kv.0.to_string(), kv.1),
     );
-    parser(s)
+    parser.parse(s)
 }
 
 fn start_tag(s: &str) -> IResult<&str, &str> {
     let mut parser = terminated(tag("\\begindata"), line_ending);
-    parser(s)
+    parser.parse(s)
 }
 
 fn end_tag(s: &str) -> IResult<&str, &str> {
-    let parser = tag("\\begintext");
-    parser(s)
+    let mut parser = tag("\\begintext");
+    parser.parse(s)
 }
 
 fn data_block(s: &str) -> IResult<&str, Entries> {
@@ -246,7 +245,7 @@ fn data_block(s: &str) -> IResult<&str, Entries> {
         many0(preceded(multispace0, key_value)),
         preceded(multispace0, end_tag),
     );
-    parser(s)
+    parser.parse(s)
 }
 
 #[cfg(test)]

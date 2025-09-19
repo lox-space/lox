@@ -947,7 +947,7 @@ mod test {
             message,
             OmmType {
                 header: common::OdmHeader {
-                    comment_list: vec!["THIS IS AN XML VERSION OF THE OMM".to_string()],
+                    comment_list: vec![" THIS IS AN XML VERSION OF THE OMM ".to_string()],
                     classification_list: vec![],
                     creation_date: common::EpochType("2007-065T16:00:00".to_string()),
                     originator: "NOAA".to_string(),
@@ -1199,11 +1199,11 @@ mod test {
             message,
             OmmType {
                 header: common::OdmHeader {
-                    comment_list: vec!["THIS IS AN XML VERSION OF THE OMM".to_string()],
+                    comment_list: vec![" THIS IS AN XML VERSION OF THE OMM ".to_string()],
                     classification_list: vec![],
                     creation_date: common::EpochType("2007-065T16:00:00".to_string()),
                     originator: "NOAA".to_string(),
-                    message_id: Some("OMM 201113719185".to_string()),
+                    message_id: Some(" OMM 201113719185".to_string()),
                 },
                 body: OmmBody {
                     segment: OmmSegment {
