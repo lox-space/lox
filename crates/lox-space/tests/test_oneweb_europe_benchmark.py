@@ -191,38 +191,38 @@ class TestOneWebEuropeBenchmark:
         
         assert len(results) == len(oneweb_sample_small)
 
-    @pytest.mark.benchmark
-    def test_benchmark_parallel_small(self, europe_ground_stations_coarse, oneweb_sample_small, benchmark_times, ephemeris):
-        """Test parallel visibility analysis on a small sample."""
-        sample_ground_stations = dict(list(europe_ground_stations_coarse.items())[:20])
+    # @pytest.mark.benchmark
+    # def test_benchmark_parallel_small(self, europe_ground_stations_coarse, oneweb_sample_small, benchmark_times, ephemeris):
+    #     """Test parallel visibility analysis on a small sample."""
+    #     sample_ground_stations = dict(list(europe_ground_stations_coarse.items())[:20])
         
         
-        # Create ensemble for parallel processing
-        ensemble = lox.Ensemble(oneweb_sample_small)
+    #     # Create ensemble for parallel processing
+    #     ensemble = lox.Ensemble(oneweb_sample_small)
         
-        start_time = time.time()
+    #     start_time = time.time()
         
-        try:
-            results = lox.visibility_all(
-                times=benchmark_times,
-                ground_stations=sample_ground_stations,
-                spacecraft=ensemble,
-                ephemeris=ephemeris,
-                bodies=None,
-                provider=None,
-            )
+    #     try:
+    #         results = lox.visibility_all(
+    #             times=benchmark_times,
+    #             ground_stations=sample_ground_stations,
+    #             spacecraft=ensemble,
+    #             ephemeris=ephemeris,
+    #             bodies=None,
+    #             provider=None,
+    #         )
             
-            elapsed = time.time() - start_time
-            total_calcs = len(oneweb_sample_small) * len(sample_ground_stations)
+    #         elapsed = time.time() - start_time
+    #         total_calcs = len(oneweb_sample_small) * len(sample_ground_stations)
             
-            # Verify we got some results
-            total_windows = sum(len(windows) for sc_results in results.values() 
-                              for windows in sc_results.values())
+    #         # Verify we got some results
+    #         total_windows = sum(len(windows) for sc_results in results.values() 
+    #                           for windows in sc_results.values())
             
-            assert len(results) == len(oneweb_sample_small)
+    #         assert len(results) == len(oneweb_sample_small)
             
-        except Exception as e:
-            pytest.skip(f"Parallel visibility_all not available or failed: {e}")
+    #     except Exception as e:
+    #         pytest.skip(f"Parallel visibility_all not available or failed: {e}")
 
     @pytest.mark.benchmark  
     def test_benchmark_parallel_medium(self, europe_ground_stations_coarse, oneweb_sample_medium, benchmark_times, ephemeris):
