@@ -12,7 +12,7 @@ env:
 jobs:
   codspeed:
     name: Run benchmarks
-    runs-on: codspeed-macro
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
       - name: Setup Python
@@ -33,6 +33,6 @@ jobs:
           args: --release --uv
       - uses: CodSpeedHQ/action@v4
         with:
-          mode: walltime
+          mode: instrumentation
           run: uv run --directory "$UV_PROJECT" pytest --codspeed
           token: ${{ secrets.CODSPEED_TOKEN }} # Optional for public repositories
