@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.8](https://github.com/lox-space/lox/compare/lox-io-v0.1.0-alpha.7...lox-io-v0.1.0-alpha.8) - 2025-09-19
+
+### Other
+
+- update nom and quick-xml
+
 ## [0.1.0-alpha.7](https://github.com/lox-space/lox/compare/lox-io-v0.1.0-alpha.6...lox-io-v0.1.0-alpha.7) - 2025-07-01
 
 ### Other
