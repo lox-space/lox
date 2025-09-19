@@ -13,6 +13,7 @@ lox-bodies.workspace = true
 lox-io.workspace = true
 lox-time.workspace = true
 lox-math.workspace = true
+lox-units.workspace = true
 
 fast_polynomial.workspace = true
 glam.workspace = true

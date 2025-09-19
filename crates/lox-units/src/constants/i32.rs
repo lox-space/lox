@@ -6,4 +6,6 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+//! Module `i32` exposes i32 constants shared between Lox crates.
+
 pub mod time;

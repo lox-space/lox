@@ -15,9 +15,9 @@ use std::ops::Sub;
 use std::str::FromStr;
 
 use itertools::Itertools;
-use lox_math::constants::f64::time;
 use lox_math::is_close::IsClose;
 use lox_math::types::units::Days;
+use lox_units::constants::f64::time;
 use num::ToPrimitive;
 use thiserror::Error;
 
@@ -638,7 +638,7 @@ macro_rules! time {
 mod tests {
     use float_eq::assert_float_eq;
     use lox_math::assert_close;
-    use lox_math::constants::f64::time::DAYS_PER_JULIAN_CENTURY;
+    use lox_units::constants::f64::time::DAYS_PER_JULIAN_CENTURY;
     use rstest::rstest;
 
     use crate::Time;

@@ -8,7 +8,7 @@
 
 pub use crate::dynamic::DynOrigin;
 pub use generated::*;
-use lox_math::constants::f64::time::{SECONDS_PER_DAY, SECONDS_PER_JULIAN_CENTURY};
+use lox_units::constants::f64::time::{SECONDS_PER_DAY, SECONDS_PER_JULIAN_CENTURY};
 use std::fmt::{Display, Formatter};
 use thiserror::Error;
 
