@@ -541,6 +541,9 @@ dependencies = [
 [[package]]
 name = "lox-units"
 version = "0.1.0-alpha.0"
+dependencies = [
+ "rstest",
+]
 
 [[package]]
 name = "matrixmultiply"
