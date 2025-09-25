@@ -11,7 +11,7 @@ pub struct Angle(pub f64);
 impl Display for Angle {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         self.0.to_degrees().fmt(f)?;
-        write!(f, "º")
+        write!(f, " deg")
     }
 }
 
@@ -182,7 +182,7 @@ mod tests {
     #[test]
     fn test_angle_display() {
         let angle = 90.123456.deg();
-        assert_eq!(format!("{:.2}", angle), "90.12º")
+        assert_eq!(format!("{:.2}", angle), "90.12 deg")
     }
 
     #[test]
