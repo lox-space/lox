@@ -6,6 +6,8 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use std::f64::consts::PI;
+
 use lox_bodies::python::PyOrigin;
 use lox_ephem::python::PySpk;
 use lox_frames::python::PyFrame;
@@ -14,6 +16,8 @@ use lox_orbits::python::{
     PyObservables, PyPass, PySgp4, PyState, PyTrajectory, PyVallado, PyWindow, find_events,
     find_windows, visibility, visibility_all,
 };
+use lox_units::Angle;
+use lox_units::python::PyAngle;
 use pyo3::prelude::*;
 
 use lox_math::python::PySeries;
@@ -25,6 +29,9 @@ use lox_time::python::utc::PyUtc;
 
 #[pymodule]
 fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_class::<PyAngle>()?;
+    m.add("rad", PyAngle(Angle(1.0)))?;
+    m.add("deg", PyAngle(Angle(PI / 180.0)))?;
     m.add_function(wrap_pyfunction!(find_events, m)?)?;
     m.add_function(wrap_pyfunction!(find_windows, m)?)?;
     m.add_function(wrap_pyfunction!(visibility, m)?)?;

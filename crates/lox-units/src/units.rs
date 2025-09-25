@@ -1,5 +1,8 @@
 use std::fmt::{Display, Formatter, Result};
 
+#[cfg(feature = "python")]
+pub mod python;
+
 /// An angle in radians
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd)]
 #[repr(transparent)]
