@@ -1,5 +1,8 @@
 use std::fmt::{Display, Formatter, Result};
 
+#[cfg(feature = "python")]
+pub mod python;
+
 /// An angle in radians
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd)]
 #[repr(transparent)]
@@ -8,7 +11,7 @@ pub struct Angle(pub f64);
 impl Display for Angle {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         self.0.to_degrees().fmt(f)?;
-        write!(f, "º")
+        write!(f, " deg")
     }
 }
 
@@ -27,7 +30,7 @@ impl AngleUnits for f64 {
     }
 }
 
-const ASTRONOMICAL_UNIT: f64 = 1.495978707e11;
+pub const ASTRONOMICAL_UNIT: f64 = 1.495978707e11;
 
 /// A distance in meters
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd)]
@@ -138,6 +141,13 @@ impl Frequency {
     }
 }
 
+impl Display for Frequency {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        (1e-9 * self.0).fmt(f)?;
+        write!(f, " GHz")
+    }
+}
+
 pub trait FrequencyUnits {
     fn hz(&self) -> Frequency;
     fn khz(&self) -> Frequency;
@@ -170,16 +180,62 @@ impl FrequencyUnits for f64 {
 
 #[cfg(test)]
 mod tests {
+    use float_eq::assert_float_eq;
     use rstest::rstest;
 
     use crate::{
-        AngleUnits, DistanceUnits, Frequency, FrequencyBand, FrequencyUnits, VelocityUnits,
+        ASTRONOMICAL_UNIT, AngleUnits, DistanceUnits, Frequency, FrequencyBand, FrequencyUnits,
+        VelocityUnits,
     };
+
+    #[test]
+    fn test_angle_deg() {
+        let angle = 90.0.deg();
+        assert_float_eq!(angle.0, std::f64::consts::FRAC_PI_2, rel <= 1e-10);
+    }
+
+    #[test]
+    fn test_angle_rad() {
+        let angle = std::f64::consts::PI.rad();
+        assert_float_eq!(angle.0, std::f64::consts::PI, rel <= 1e-10);
+    }
+
+    #[test]
+    fn test_angle_conversions() {
+        let angle_deg = 180.0.deg();
+        let angle_rad = std::f64::consts::PI.rad();
+        assert_float_eq!(angle_deg.0, angle_rad.0, rel <= 1e-10);
+    }
 
     #[test]
     fn test_angle_display() {
         let angle = 90.123456.deg();
-        assert_eq!(format!("{:.2}", angle), "90.12º")
+        assert_eq!(format!("{:.2}", angle), "90.12 deg")
+    }
+
+    #[test]
+    fn test_distance_m() {
+        let distance = 1000.0.m();
+        assert_eq!(distance.0, 1000.0);
+    }
+
+    #[test]
+    fn test_distance_km() {
+        let distance = 1.0.km();
+        assert_eq!(distance.0, 1000.0);
+    }
+
+    #[test]
+    fn test_distance_au() {
+        let distance = 1.0.au();
+        assert_eq!(distance.0, ASTRONOMICAL_UNIT);
+    }
+
+    #[test]
+    fn test_distance_conversions() {
+        let d1 = 1.5e11.m();
+        let d2 = (1.5e11 / ASTRONOMICAL_UNIT).au();
+        assert_float_eq!(d1.0, d2.0, rel <= 1e-9);
     }
 
     #[test]
@@ -189,9 +245,85 @@ mod tests {
     }
 
     #[test]
+    fn test_velocity_mps() {
+        let velocity = 1000.0.mps();
+        assert_eq!(velocity.0, 1000.0);
+    }
+
+    #[test]
+    fn test_velocity_kps() {
+        let velocity = 1.0.kps();
+        assert_eq!(velocity.0, 1000.0);
+    }
+
+    #[test]
+    fn test_velocity_conversions() {
+        let v1 = 7500.0.mps();
+        let v2 = 7.5.kps();
+        assert_eq!(v1.0, v2.0);
+    }
+
+    #[test]
     fn test_velocity_display() {
         let velocity = 9.123456.kps();
         assert_eq!(format!("{:.2}", velocity), "9.12 km/s")
+    }
+
+    #[test]
+    fn test_frequency_hz() {
+        let frequency = 1000.0.hz();
+        assert_eq!(frequency.0, 1000.0);
+    }
+
+    #[test]
+    fn test_frequency_khz() {
+        let frequency = 1.0.khz();
+        assert_eq!(frequency.0, 1000.0);
+    }
+
+    #[test]
+    fn test_frequency_mhz() {
+        let frequency = 1.0.mhz();
+        assert_eq!(frequency.0, 1_000_000.0);
+    }
+
+    #[test]
+    fn test_frequency_ghz() {
+        let frequency = 1.0.ghz();
+        assert_eq!(frequency.0, 1_000_000_000.0);
+    }
+
+    #[test]
+    fn test_frequency_thz() {
+        let frequency = 1.0.thz();
+        assert_eq!(frequency.0, 1_000_000_000_000.0);
+    }
+
+    #[test]
+    fn test_frequency_conversions() {
+        let f1 = 2.4.ghz();
+        let f2 = 2400.0.mhz();
+        assert_eq!(f1.0, f2.0);
+    }
+
+    #[test]
+    fn test_frequency_wavelength() {
+        let f = 1.0.ghz();
+        let wavelength = f.wavelength();
+        assert_float_eq!(wavelength.0, 0.299792458, rel <= 1e-9);
+    }
+
+    #[test]
+    fn test_frequency_wavelength_speed_of_light() {
+        let f = 299792458.0.hz(); // 1 Hz at speed of light
+        let wavelength = f.wavelength();
+        assert_float_eq!(wavelength.0, 1.0, rel <= 1e-10);
+    }
+
+    #[test]
+    fn test_frequency_display() {
+        let frequency = 2.4123456.ghz();
+        assert_eq!(format!("{:.2}", frequency), "2.41 GHz");
     }
 
     #[rstest]

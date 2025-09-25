@@ -8,6 +8,13 @@ authors.workspace = true
 repository.workspace = true
 
 [dependencies]
+pyo3 = {workspace = true, optional = true}
 
 [dev-dependencies]
+float_eq.workspace = true
 rstest.workspace = true
+
+[features]
+python = [
+    "dep:pyo3",
+]
