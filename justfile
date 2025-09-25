@@ -6,7 +6,7 @@ _default:
 build-pyo3 *FLAGS:
     uv run maturin develop --uv -m $UV_PROJECT/Cargo.toml {{FLAGS}}
 
-pytest *FLAGS: build-pyo3
+pytest *FLAGS:
     uv run --directory $UV_PROJECT pytest {{FLAGS}}
 
 rstest *FLAGS:
