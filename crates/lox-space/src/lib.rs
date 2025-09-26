@@ -16,8 +16,8 @@ use lox_orbits::python::{
     PyObservables, PyPass, PySgp4, PyState, PyTrajectory, PyVallado, PyWindow, find_events,
     find_windows, visibility, visibility_all,
 };
+use lox_units::ASTRONOMICAL_UNIT;
 use lox_units::python::{PyAngle, PyDistance, PyFrequency, PyVelocity};
-use lox_units::{ASTRONOMICAL_UNIT, Angle};
 use pyo3::prelude::*;
 
 use lox_math::python::PySeries;
