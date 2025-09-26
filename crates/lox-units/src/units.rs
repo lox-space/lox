@@ -143,8 +143,8 @@ impl Frequency {
 
 impl Display for Frequency {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        (1e-3 * self.0).fmt(f)?;
-        write!(f, " Hz")
+        (1e-9 * self.0).fmt(f)?;
+        write!(f, " GHz")
     }
 }
 
