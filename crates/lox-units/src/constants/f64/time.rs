@@ -9,13 +9,13 @@
 //! Module `time` exposes constants time-related constants shared between Lox crates.
 
 /*
-   Days
+  Days
 */
 
 pub const DAYS_PER_JULIAN_CENTURY: f64 = 36525.0;
 
 /*
-   Seconds
+  Seconds
 */
 pub const SECONDS_PER_MINUTE: f64 = 60.0;
 
@@ -28,7 +28,7 @@ pub const SECONDS_PER_JULIAN_YEAR: f64 = SECONDS_PER_DAY * 365.25;
 pub const SECONDS_PER_JULIAN_CENTURY: f64 = SECONDS_PER_JULIAN_YEAR * 100.0;
 
 /*
-   Julian dates
+  Julian dates
 */
 
 pub const MJD_J2000: f64 = 51544.5;

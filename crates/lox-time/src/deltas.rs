@@ -22,7 +22,7 @@ use std::ops::{Add, AddAssign, Neg, RangeInclusive, Sub, SubAssign};
 use num::ToPrimitive;
 use thiserror::Error;
 
-use lox_math::constants::f64::time::{
+use lox_units::constants::f64::time::{
     SECONDS_PER_DAY, SECONDS_PER_HOUR, SECONDS_PER_JULIAN_CENTURY, SECONDS_PER_JULIAN_YEAR,
     SECONDS_PER_MINUTE,
 };
@@ -388,7 +388,7 @@ impl From<i32> for TimeDelta {
 #[cfg(test)]
 mod tests {
     use float_eq::assert_float_eq;
-    use lox_math::constants::f64::time::DAYS_PER_JULIAN_CENTURY;
+    use lox_units::constants::f64::time::DAYS_PER_JULIAN_CENTURY;
     use proptest::prelude::*;
     use rstest::rstest;
 
