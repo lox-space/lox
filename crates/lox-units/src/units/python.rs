@@ -1,38 +1,51 @@
 use pyo3::{Bound, Python, pyclass, pymethods, types::PyComplex};
 
-use crate::Angle;
+use crate::{Angle, Distance, Frequency, Velocity};
 
-#[pyclass(name = "Angle", module = "lox_space", frozen)]
-pub struct PyAngle(pub Angle);
+macro_rules! py_unit {
+    ($(($unit:ident, $name:literal, $pyunit:ident)),*) => {
+        $(
+            #[pyclass(name = $name, module = "lox_space", frozen)]
+            pub struct $pyunit(pub $unit);
 
-#[pymethods]
-impl PyAngle {
-    #[new]
-    fn new(value: f64) -> Self {
-        Self(Angle(value))
-    }
+            #[pymethods]
+            impl $pyunit {
+                #[new]
+                pub fn new(value: f64) -> Self {
+                    Self($unit(value))
+                }
 
-    fn __rmul__(&self, other: f64) -> Self {
-        Self(Angle(other * self.0.0))
-    }
+                pub fn __rmul__(&self, other: f64) -> Self {
+                    Self($unit(other * self.0.0))
+                }
 
-    fn __repr__(&self) -> String {
-        format!("Angle({})", self.0.0)
-    }
+                pub fn __repr__(&self) -> String {
+                    format!("{}({})", stringify!($unit), self.0.0)
+                }
 
-    fn __str__(&self) -> String {
-        self.0.to_string()
-    }
+                pub fn __str__(&self) -> String {
+                    self.0.to_string()
+                }
 
-    fn __complex__<'py>(&self, py: Python<'py>) -> Bound<'py, PyComplex> {
-        PyComplex::from_doubles(py, self.0.0, 0.0)
-    }
+                pub fn __complex__<'py>(&self, py: Python<'py>) -> Bound<'py, PyComplex> {
+                    PyComplex::from_doubles(py, self.0.0, 0.0)
+                }
 
-    fn __float__(&self) -> f64 {
-        self.0.0
-    }
+                pub fn __float__(&self) -> f64 {
+                    self.0.0
+                }
 
-    fn __int__(&self) -> i64 {
-        self.0.0.round_ties_even() as i64
-    }
+                pub fn __int__(&self) -> i64 {
+                    self.0.0.round_ties_even() as i64
+                }
+            }
+        )*
+    };
 }
+
+py_unit!(
+    (Angle, "Angle", PyAngle),
+    (Distance, "Distance", PyDistance),
+    (Frequency, "Frequency", PyFrequency),
+    (Velocity, "Velocity", PyVelocity)
+);

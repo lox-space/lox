@@ -30,7 +30,7 @@ impl AngleUnits for f64 {
     }
 }
 
-const ASTRONOMICAL_UNIT: f64 = 1.495978707e11;
+pub const ASTRONOMICAL_UNIT: f64 = 1.495978707e11;
 
 /// A distance in meters
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd)]
@@ -138,6 +138,13 @@ impl Frequency {
             f if f < 300e9 => Some(FrequencyBand::G),
             _ => None,
         }
+    }
+}
+
+impl Display for Frequency {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        (1e-3 * self.0).fmt(f)?;
+        write!(f, " Hz")
     }
 }
 
