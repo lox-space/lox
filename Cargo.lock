@@ -546,6 +546,7 @@ dependencies = [
  "float_eq",
  "pyo3",
  "rstest",
+ "thiserror",
 ]
 
 [[package]]

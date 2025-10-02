@@ -9,6 +9,7 @@ repository.workspace = true
 
 [dependencies]
 pyo3 = {workspace = true, optional = true}
+thiserror.workspace = true
 
 [dev-dependencies]
 float_eq.workspace = true
