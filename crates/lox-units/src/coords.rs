@@ -4,7 +4,7 @@ use thiserror::Error;
 
 use crate::{Angle, Distance};
 
-#[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd)]
+#[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct AzEl(Angle, Angle);
 
 impl AzEl {
@@ -25,7 +25,7 @@ impl AzEl {
 pub enum AzElError {
     #[error("azimuth must be between 0 deg and 360 deg but was {0}")]
     InvalidAzimuth(Angle),
-    #[error("elevation must between 0 deg and 360 deg but was {0}")]
+    #[error("elevation must be between 0 deg and 360 deg but was {0}")]
     InvalidElevation(Angle),
 }
 
