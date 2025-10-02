@@ -1,4 +1,7 @@
-use std::fmt::{Display, Formatter, Result};
+use std::{
+    fmt::{Display, Formatter, Result},
+    ops::Neg,
+};
 
 #[cfg(feature = "python")]
 pub mod python;
@@ -12,6 +15,14 @@ impl Display for Angle {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         self.0.to_degrees().fmt(f)?;
         write!(f, " deg")
+    }
+}
+
+impl Neg for Angle {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        Self(-self.0)
     }
 }
 
@@ -44,6 +55,14 @@ impl Display for Distance {
     }
 }
 
+impl Neg for Distance {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        Self(-self.0)
+    }
+}
+
 pub trait DistanceUnits {
     fn m(&self) -> Distance;
     fn km(&self) -> Distance;
@@ -69,6 +88,21 @@ impl DistanceUnits for f64 {
 #[repr(transparent)]
 pub struct Velocity(pub f64);
 
+impl Display for Velocity {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        (1e-3 * self.0).fmt(f)?;
+        write!(f, " km/s")
+    }
+}
+
+impl Neg for Velocity {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        Self(-self.0)
+    }
+}
+
 pub trait VelocityUnits {
     fn mps(&self) -> Velocity;
     fn kps(&self) -> Velocity;
@@ -81,13 +115,6 @@ impl VelocityUnits for f64 {
 
     fn kps(&self) -> Velocity {
         Velocity(1e3 * self)
-    }
-}
-
-impl Display for Velocity {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        (1e-3 * self.0).fmt(f)?;
-        write!(f, " km/s")
     }
 }
 
@@ -183,10 +210,7 @@ mod tests {
     use float_eq::assert_float_eq;
     use rstest::rstest;
 
-    use crate::{
-        ASTRONOMICAL_UNIT, AngleUnits, DistanceUnits, Frequency, FrequencyBand, FrequencyUnits,
-        VelocityUnits,
-    };
+    use super::*;
 
     #[test]
     fn test_angle_deg() {
@@ -211,6 +235,11 @@ mod tests {
     fn test_angle_display() {
         let angle = 90.123456.deg();
         assert_eq!(format!("{:.2}", angle), "90.12 deg")
+    }
+
+    #[test]
+    fn test_angle_neg() {
+        assert_eq!(Angle(-1.0), -1.0.rad())
     }
 
     #[test]
@@ -245,6 +274,11 @@ mod tests {
     }
 
     #[test]
+    fn test_distance_neg() {
+        assert_eq!(Distance(-1.0), -1.0.m())
+    }
+
+    #[test]
     fn test_velocity_mps() {
         let velocity = 1000.0.mps();
         assert_eq!(velocity.0, 1000.0);
@@ -267,6 +301,11 @@ mod tests {
     fn test_velocity_display() {
         let velocity = 9.123456.kps();
         assert_eq!(format!("{:.2}", velocity), "9.12 km/s")
+    }
+
+    #[test]
+    fn test_velocity_neg() {
+        assert_eq!(Velocity(-1.0), -1.0.mps())
     }
 
     #[test]
