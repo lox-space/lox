@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.11](https://github.com/lox-space/lox/compare/lox-time-v0.1.0-alpha.10...lox-time-v0.1.0-alpha.11) - 2025-10-03
+
+### Other
+
+- *(lox-time)* fix Python tests
+- *(lox-time)* remove obsolete trait
+- *(lox-time)* use provider pattern
+- *(lox-units/lox-math)* move constants to lox-units
+
 ## [0.1.0-alpha.10](https://github.com/lox-space/lox/compare/lox-time-v0.1.0-alpha.9...lox-time-v0.1.0-alpha.10) - 2025-09-19
 
 ### Other
