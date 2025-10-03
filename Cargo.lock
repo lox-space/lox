@@ -402,6 +402,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "lox-comms"
+version = "0.1.0-alpha.0"
+dependencies = [
+ "lox-units",
+]
+
+[[package]]
 name = "lox-derive"
 version = "0.1.0-alpha.4"
 dependencies = [

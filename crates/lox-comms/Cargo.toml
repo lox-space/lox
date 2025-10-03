@@ -1,0 +1,12 @@
+[package]
+name = "lox-comms"
+version = "0.1.0-alpha.0"
+description = "RF modelling and link budget analysis tools for the Lox ecosystem."
+rust-version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+lox-units.workspace = true
