@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.9](https://github.com/lox-space/lox/compare/lox-math-v0.1.0-alpha.8...lox-math-v0.1.0-alpha.9) - 2025-10-03
+
+### Other
+
+- *(lox-units/lox-math)* move constants to lox-units
+
 ## [0.1.0-alpha.8](https://github.com/lox-space/lox/compare/lox-math-v0.1.0-alpha.7...lox-math-v0.1.0-alpha.8) - 2025-09-19
 
 ### Other

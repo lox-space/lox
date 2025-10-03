@@ -6,6 +6,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.28](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.27...lox-space-v0.1.0-alpha.28) - 2025-10-03
+
+### Added
+
+- *(lox-units)* add Python wrapper
+
+### Fixed
+
+- *(lox-space)* fix uv cache again
+- *(lox-space)* fix Python module rebuild
+
+### Other
+
+- *(lox-time)* fix Python tests
+
 ## [0.1.0-alpha.27](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.26...lox-space-v0.1.0-alpha.27) - 2025-09-19
 
 ### Other
