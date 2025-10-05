@@ -15,8 +15,11 @@ lox-time.workspace = true
 lox-math.workspace = true
 lox-units.workspace = true
 
+csv.workspace = true
 fast_polynomial.workspace = true
 glam.workspace = true
+num.workspace = true
+serde.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]

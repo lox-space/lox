@@ -1,6 +1,7 @@
 use std::f64::consts::PI;
 
 use crate::bodies::python::PyOrigin;
+use crate::earth::python::ut1::PyEopProvider;
 use crate::ephem::python::PySpk;
 use crate::frames::python::PyFrame;
 use crate::math::python::PySeries;
@@ -10,7 +11,7 @@ use crate::orbits::python::{
     find_windows, visibility, visibility_all,
 };
 use crate::time::python::{
-    deltas::PyTimeDelta, time::PyTime, time_scales::PyTimeScale, ut1::PyUt1Provider, utc::PyUtc,
+    deltas::PyTimeDelta, time::PyTime, time_scales::PyTimeScale, utc::PyUtc,
 };
 use crate::units::{
     ASTRONOMICAL_UNIT,
@@ -23,6 +24,9 @@ use pyo3::prelude::*;
 fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // bodies
     m.add_class::<PyOrigin>()?;
+
+    // earth
+    m.add_class::<PyEopProvider>()?;
 
     // ephem
     m.add_class::<PySpk>()?;
@@ -56,7 +60,6 @@ fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyTime>()?;
     m.add_class::<PyTimeDelta>()?;
     m.add_class::<PyTimeScale>()?;
-    m.add_class::<PyUt1Provider>()?;
     m.add_class::<PyUtc>()?;
 
     // units

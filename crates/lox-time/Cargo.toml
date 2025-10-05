@@ -9,7 +9,6 @@ authors.workspace = true
 repository.workspace = true
 
 [dependencies]
-lox-io.workspace = true
 lox-math.workspace = true
 lox-units.workspace = true
 

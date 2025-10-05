@@ -21,8 +21,6 @@ use std::str::FromStr;
 
 use thiserror::Error;
 
-pub mod offsets;
-
 /// Marker trait denoting a continuous astronomical time scale.
 pub trait TimeScale {
     fn abbreviation(&self) -> &'static str;

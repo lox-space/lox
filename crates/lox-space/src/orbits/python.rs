@@ -10,6 +10,7 @@ use std::collections::HashMap;
 
 use crate::bodies::python::{PyOrigin, PyUndefinedOriginPropertyError};
 use crate::bodies::{DynOrigin, Origin};
+use crate::earth::python::ut1::{PyEopProvider, PyEopProviderError};
 use crate::ephem::Ephemeris;
 use crate::ephem::python::{PyDafSpkError, PySpk};
 use crate::frames::python::{PyFrame, PyIauFrameTransformationError};
@@ -36,11 +37,10 @@ use crate::orbits::{
 };
 use crate::time::DynTime;
 use crate::time::deltas::TimeDelta;
+use crate::time::offsets::DefaultOffsetProvider;
 use crate::time::python::deltas::{PyTimeDelta, PyTimeDeltaError};
 use crate::time::python::time::PyTime;
 use crate::time::python::time_scales::PyMissingEopProviderError;
-use crate::time::python::ut1::{PyExtrapolatedDeltaUt1Tai, PyUt1Provider};
-use crate::time::time_scales::offsets::DefaultOffsetProvider;
 use crate::time::time_scales::{DynTimeScale, Tai};
 
 use glam::DVec3;
@@ -173,7 +173,7 @@ impl PyState {
     fn to_frame(
         &self,
         frame: PyFrame,
-        provider: Option<&Bound<'_, PyUt1Provider>>,
+        provider: Option<&Bound<'_, PyEopProvider>>,
     ) -> PyResult<Self> {
         let provider = provider.map(|p| &p.get().0);
         let rot = match provider {
@@ -445,7 +445,7 @@ impl PyTrajectory {
     fn to_frame(
         &self,
         frame: PyFrame,
-        provider: Option<&Bound<'_, PyUt1Provider>>,
+        provider: Option<&Bound<'_, PyEopProvider>>,
     ) -> PyResult<Self> {
         let mut states: Vec<DynState> = Vec::with_capacity(self.0.states().len());
         for s in self.0.states() {
@@ -588,7 +588,7 @@ impl PyGroundLocation {
     fn observables(
         &self,
         state: PyState,
-        provider: Option<&Bound<'_, PyUt1Provider>>,
+        provider: Option<&Bound<'_, PyEopProvider>>,
         frame: Option<PyFrame>,
     ) -> PyResult<PyObservables> {
         let frame = frame.unwrap_or(PyFrame(DynFrame::Iau(state.0.origin())));
@@ -722,7 +722,7 @@ impl PySgp4 {
         &self,
         py: Python<'py>,
         steps: &Bound<'py, PyAny>,
-        provider: Option<&Bound<'_, PyUt1Provider>>,
+        provider: Option<&Bound<'_, PyEopProvider>>,
     ) -> PyResult<Bound<'py, PyAny>> {
         let provider = provider.map(|p| &p.get().0);
         if let Ok(pytime) = steps.extract::<PyTime>() {
@@ -731,11 +731,11 @@ impl PySgp4 {
                     pytime
                         .0
                         .try_to_scale(Tai, provider)
-                        .map_err(PyExtrapolatedDeltaUt1Tai)?,
+                        .map_err(PyEopProviderError)?,
                     pytime
                         .0
                         .try_to_scale(DynTimeScale::Tai, provider)
-                        .map_err(PyExtrapolatedDeltaUt1Tai)?,
+                        .map_err(PyEopProviderError)?,
                 ),
                 None => (
                     pytime
@@ -768,10 +768,10 @@ impl PySgp4 {
                     Some(provider) => (
                         step.0
                             .try_to_scale(Tai, provider)
-                            .map_err(PyExtrapolatedDeltaUt1Tai)?,
+                            .map_err(PyEopProviderError)?,
                         step.0
                             .try_to_scale(DynTimeScale::Tai, provider)
-                            .map_err(PyExtrapolatedDeltaUt1Tai)?,
+                            .map_err(PyEopProviderError)?,
                     ),
                     None => (
                         step.0

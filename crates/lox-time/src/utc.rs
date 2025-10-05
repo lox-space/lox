@@ -17,36 +17,21 @@ use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
 use itertools::Itertools;
+use lox_units::constants::f64::time::{SECONDS_PER_DAY, SECONDS_PER_JULIAN_CENTURY};
 use num::ToPrimitive;
 use thiserror::Error;
 
 use crate::calendar_dates::{CalendarDate, Date, DateError};
 use crate::deltas::{TimeDelta, ToDelta};
-use crate::julian_dates::JulianDate;
-use crate::time::Time;
+use crate::julian_dates::{
+    self, Epoch, JulianDate, SECONDS_BETWEEN_J1950_AND_J2000, SECONDS_BETWEEN_JD_AND_J2000,
+    SECONDS_BETWEEN_MJD_AND_J2000,
+};
 use crate::time_of_day::{CivilTime, TimeOfDay, TimeOfDayError};
-use crate::time_scales::Tai;
-
-use self::leap_seconds::BuiltinLeapSeconds;
+use crate::utc::leap_seconds::{BuiltinLeapSeconds, LeapSecondsProvider};
 
 pub mod leap_seconds;
 pub mod transformations;
-
-/// Implementers of `LeapSecondsProvider` provide the offset between TAI and UTC in leap seconds at
-/// an instant in either time scale.
-pub trait LeapSecondsProvider {
-    /// The difference in leap seconds between TAI and UTC at the given TAI instant.
-    fn delta_tai_utc(&self, tai: Time<Tai>) -> Option<TimeDelta>;
-
-    /// The difference in leap seconds between UTC and TAI at the given UTC instant.
-    fn delta_utc_tai(&self, utc: Utc) -> Option<TimeDelta>;
-
-    /// Returns `true` if a leap second occurs on `date`.
-    fn is_leap_second_date(&self, date: Date) -> bool;
-
-    /// Returns `true` if a leap second occurs at `tai`.
-    fn is_leap_second(&self, tai: Time<Tai>) -> bool;
-}
 
 /// Error type returned when attempting to construct a [Utc] instance from invalid inputs.
 #[derive(Debug, Clone, Error, PartialEq, Eq, PartialOrd, Ord)]
@@ -191,6 +176,25 @@ impl CalendarDate for Utc {
 impl CivilTime for Utc {
     fn time(&self) -> TimeOfDay {
         self.time
+    }
+}
+
+impl JulianDate for Utc {
+    fn julian_date(&self, epoch: Epoch, unit: julian_dates::Unit) -> f64 {
+        let j2000 = self.time.subsecond().0
+            + self.time.second_of_day() as f64
+            + self.date.seconds_since_j2000();
+        let jd = match epoch {
+            Epoch::JulianDate => j2000 + SECONDS_BETWEEN_JD_AND_J2000 as f64,
+            Epoch::ModifiedJulianDate => j2000 + SECONDS_BETWEEN_MJD_AND_J2000 as f64,
+            Epoch::J1950 => j2000 + SECONDS_BETWEEN_J1950_AND_J2000 as f64,
+            Epoch::J2000 => j2000,
+        };
+        match unit {
+            julian_dates::Unit::Seconds => jd,
+            julian_dates::Unit::Days => jd / SECONDS_PER_DAY,
+            julian_dates::Unit::Centuries => jd / SECONDS_PER_JULIAN_CENTURY,
+        }
     }
 }
 

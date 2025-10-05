@@ -38,6 +38,8 @@ pub struct Series<T: AsRef<[f64]>, U: AsRef<[f64]>> {
     interpolation: Interpolation,
 }
 
+pub type DSeries = Series<Vec<f64>, Vec<f64>>;
+
 impl<T: AsRef<[f64]>, U: AsRef<[f64]>> Series<T, U> {
     pub fn new(x: T, y: U) -> Result<Self, SeriesError> {
         let x_ref = x.as_ref();

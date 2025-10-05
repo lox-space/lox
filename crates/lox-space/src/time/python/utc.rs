@@ -6,12 +6,12 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use crate::earth::python::ut1::{PyEopProvider, PyEopProviderError};
 use crate::time::calendar_dates::CalendarDate;
+use crate::time::offsets::DefaultOffsetProvider;
 use crate::time::python::time::PyTime;
 use crate::time::python::time_scales::{PyMissingEopProviderError, PyTimeScale};
-use crate::time::python::ut1::{PyExtrapolatedDeltaUt1Tai, PyUt1Provider};
 use crate::time::time_of_day::CivilTime;
-use crate::time::time_scales::offsets::DefaultOffsetProvider;
 use crate::time::utc::{Utc, UtcError};
 use pyo3::exceptions::PyValueError;
 use pyo3::types::PyType;
@@ -122,7 +122,7 @@ impl PyUtc {
     pub fn to_scale(
         &self,
         scale: &Bound<'_, PyAny>,
-        provider: Option<&Bound<'_, PyUt1Provider>>,
+        provider: Option<&Bound<'_, PyEopProvider>>,
     ) -> PyResult<PyTime> {
         let scale: PyTimeScale = scale.try_into()?;
         let provider = provider.map(|p| &p.get().0);
@@ -131,7 +131,7 @@ impl PyUtc {
                 .0
                 .to_dyn_time()
                 .try_to_scale(scale.0, provider)
-                .map_err(PyExtrapolatedDeltaUt1Tai)?,
+                .map_err(PyEopProviderError)?,
             None => self
                 .0
                 .to_dyn_time()
@@ -146,7 +146,7 @@ impl PyUtc {
 mod tests {
     use super::*;
 
-    use crate::time::test_helpers::data_dir;
+    use crate::test_helpers::data_dir;
 
     use pyo3::{Bound, IntoPyObjectExt, Python};
     use rstest::rstest;
@@ -210,8 +210,7 @@ mod tests {
         Python::attach(|py| {
             let provider = Bound::new(
                 py,
-                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
-                    .unwrap(),
+                PyEopProvider::new(None, Some(data_dir().join("finals2000A.all.csv"))).unwrap(),
             )
             .unwrap();
             let scale = scale.into_bound_py_any(py).unwrap();

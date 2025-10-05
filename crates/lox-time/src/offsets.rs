@@ -1,10 +1,5 @@
-use super::{DynTimeScale, Tai, Tcb, Tcg, Tdb, TimeScale, Tt, Ut1};
-use crate::{
-    deltas::TimeDelta,
-    julian_dates::J77,
-    subsecond::Subsecond,
-    ut1::{DeltaUt1Tai, ExtrapolatedDeltaUt1Tai},
-};
+use crate::time_scales::{DynTimeScale, Tai, Tcb, Tcg, Tdb, TimeScale, Tt, Ut1};
+use crate::{deltas::TimeDelta, julian_dates::J77, subsecond::Subsecond};
 use std::convert::Infallible;
 use thiserror::Error;
 
@@ -168,52 +163,6 @@ impl Offset<Tdb, Tt> for DefaultOffsetProvider {
     }
 }
 
-// TAI <-> UT1
-
-impl<T: TimeScale> TryOffset<T, Ut1> for DeltaUt1Tai
-where
-    DefaultOffsetProvider: Offset<T, Tai>,
-{
-    type Error = ExtrapolatedDeltaUt1Tai;
-
-    fn try_offset(
-        &self,
-        origin: T,
-        _target: Ut1,
-        delta: TimeDelta,
-    ) -> Result<TimeDelta, ExtrapolatedDeltaUt1Tai> {
-        let tai = delta + DefaultOffsetProvider.offset(origin, Tai, delta);
-        self.delta_ut1_tai(tai)
-    }
-}
-
-impl<T: TimeScale> TryOffset<Ut1, T> for DeltaUt1Tai
-where
-    DefaultOffsetProvider: Offset<Tai, T>,
-{
-    type Error = ExtrapolatedDeltaUt1Tai;
-
-    fn try_offset(
-        &self,
-        _origin: Ut1,
-        target: T,
-        delta: TimeDelta,
-    ) -> Result<TimeDelta, ExtrapolatedDeltaUt1Tai> {
-        let offset_to_tai = self.delta_tai_ut1(delta)?;
-        let tai = delta + offset_to_tai;
-        Ok(offset_to_tai + DefaultOffsetProvider.offset(Tai, target, tai))
-    }
-}
-
-impl<T: TimeScale, S: TimeScale> Offset<T, S> for DeltaUt1Tai
-where
-    DefaultOffsetProvider: Offset<T, S>,
-{
-    fn offset(&self, origin: T, target: S, delta: TimeDelta) -> TimeDelta {
-        DefaultOffsetProvider.offset(origin, target, delta)
-    }
-}
-
 // Two-step transformations
 
 fn two_step_offset<T1, T2, T3>(origin: T1, via: T2, target: T3, delta: TimeDelta) -> TimeDelta
@@ -350,122 +299,15 @@ impl TryOffset<DynTimeScale, DynTimeScale> for DefaultOffsetProvider {
     }
 }
 
-// Macro to generate TryOffset implementations for DeltaUt1Tai with static scales
-macro_rules! impl_dyn_ut1 {
-    ($($scale:ident),*) => {
-        $(
-            impl TryOffset<DynTimeScale, $scale> for DeltaUt1Tai {
-                type Error = ExtrapolatedDeltaUt1Tai;
-
-                fn try_offset(
-                    &self,
-                    origin: DynTimeScale,
-                    target: $scale,
-                    delta: TimeDelta,
-                ) -> Result<TimeDelta, Self::Error> {
-                    match origin {
-                        DynTimeScale::Ut1 => self.try_offset(Ut1, target, delta),
-                        DynTimeScale::Tai => Ok(DefaultOffsetProvider.offset(Tai, target, delta)),
-                        DynTimeScale::Tcb => Ok(DefaultOffsetProvider.offset(Tcb, target, delta)),
-                        DynTimeScale::Tcg => Ok(DefaultOffsetProvider.offset(Tcg, target, delta)),
-                        DynTimeScale::Tdb => Ok(DefaultOffsetProvider.offset(Tdb, target, delta)),
-                        DynTimeScale::Tt => Ok(DefaultOffsetProvider.offset(Tt, target, delta)),
-                    }
-                }
-            }
-
-            impl TryOffset<$scale, DynTimeScale> for DeltaUt1Tai {
-                type Error = ExtrapolatedDeltaUt1Tai;
-
-                fn try_offset(
-                    &self,
-                    origin: $scale,
-                    target: DynTimeScale,
-                    delta: TimeDelta,
-                ) -> Result<TimeDelta, Self::Error> {
-                    match target {
-                        DynTimeScale::Ut1 => self.try_offset(origin, Ut1, delta),
-                        DynTimeScale::Tai => Ok(DefaultOffsetProvider.offset(origin, Tai, delta)),
-                        DynTimeScale::Tcb => Ok(DefaultOffsetProvider.offset(origin, Tcb, delta)),
-                        DynTimeScale::Tcg => Ok(DefaultOffsetProvider.offset(origin, Tcg, delta)),
-                        DynTimeScale::Tdb => Ok(DefaultOffsetProvider.offset(origin, Tdb, delta)),
-                        DynTimeScale::Tt => Ok(DefaultOffsetProvider.offset(origin, Tt, delta)),
-                    }
-                }
-            }
-        )*
-    }
-}
-
-// Apply the macro for all static scales
-impl_dyn_ut1!(Tai, Tcb, Tcg, Tdb, Tt);
-
-impl TryOffset<DynTimeScale, DynTimeScale> for DeltaUt1Tai {
-    type Error = ExtrapolatedDeltaUt1Tai;
-
-    fn try_offset(
-        &self,
-        origin: DynTimeScale,
-        target: DynTimeScale,
-        delta: TimeDelta,
-    ) -> Result<TimeDelta, ExtrapolatedDeltaUt1Tai> {
-        match (origin, target) {
-            // UT1 to UT1 is a no-op
-            (DynTimeScale::Ut1, DynTimeScale::Ut1) => Ok(TimeDelta::default()),
-            // UT1 to other scales
-            (DynTimeScale::Ut1, target) => {
-                let offset_to_tai = self.try_offset(Ut1, Tai, delta)?;
-                let tai = delta + offset_to_tai;
-                // We know target is not UT1 here, so this is safe
-                Ok(match target {
-                    DynTimeScale::Tai => offset_to_tai,
-                    DynTimeScale::Tcb => {
-                        offset_to_tai + DefaultOffsetProvider.offset(Tai, Tcb, tai)
-                    }
-                    DynTimeScale::Tcg => {
-                        offset_to_tai + DefaultOffsetProvider.offset(Tai, Tcg, tai)
-                    }
-                    DynTimeScale::Tdb => {
-                        offset_to_tai + DefaultOffsetProvider.offset(Tai, Tdb, tai)
-                    }
-                    DynTimeScale::Tt => offset_to_tai + DefaultOffsetProvider.offset(Tai, Tt, tai),
-                    DynTimeScale::Ut1 => unreachable!(), // Already handled above
-                })
-            }
-            // Other scales to UT1
-            (origin, DynTimeScale::Ut1) => {
-                let offset_to_tai = match origin {
-                    DynTimeScale::Tai => TimeDelta::default(),
-                    DynTimeScale::Tcb => DefaultOffsetProvider.offset(Tcb, Tai, delta),
-                    DynTimeScale::Tcg => DefaultOffsetProvider.offset(Tcg, Tai, delta),
-                    DynTimeScale::Tdb => DefaultOffsetProvider.offset(Tdb, Tai, delta),
-                    DynTimeScale::Tt => DefaultOffsetProvider.offset(Tt, Tai, delta),
-                    DynTimeScale::Ut1 => unreachable!(), // Already handled above
-                };
-                let tai = delta + offset_to_tai;
-                Ok(offset_to_tai + self.try_offset(Tai, Ut1, tai)?)
-            }
-            // Neither origin nor target is UT1
-            (origin, target) => Ok(DefaultOffsetProvider
-                .try_offset(origin, target, delta)
-                .unwrap()),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use rstest::rstest;
 
     use super::*;
-    use crate::{
-        DynTime, calendar_dates::Date, deltas::ToDelta, test_helpers::delta_ut1_tai,
-        time_of_day::TimeOfDay,
-    };
+    use crate::{DynTime, calendar_dates::Date, deltas::ToDelta, time_of_day::TimeOfDay};
     use lox_math::is_close::IsClose;
 
     const DEFAULT_TOL: f64 = 1e-7;
-    const UT1_TOL: f64 = 1e-2;
     const TCB_TOL: f64 = 1e-5;
 
     // Reference values from Orekit
@@ -479,37 +321,26 @@ mod tests {
     #[case::tai_tcg("TAI", "TCG", 33.239589335894145, None)]
     #[case::tai_tdb("TAI", "TDB", 32.183882324981056, None)]
     #[case::tai_tt("TAI", "TT", 32.184, None)]
-    #[case::tai_ut1("TAI", "UT1", -36.949521832072996, Some(UT1_TOL))]
     #[case::tcb_tai("TCB", "TAI", -55.668513317090046, Some(TCB_TOL))]
     #[case::tcb_tcb("TCB", "TCB", 0.0, Some(TCB_TOL))]
     #[case::tcb_tcg("TCB", "TCG", -22.4289240199929, Some(TCB_TOL))]
     #[case::tcb_tdb("TCB", "TDB", -23.484631010747805, Some(TCB_TOL))]
     #[case::tcb_tt("TCB", "TT", -23.484513317090048, Some(TCB_TOL))]
-    #[case::tcb_ut1("TCB", "UT1", -92.61803559995818, Some(UT1_TOL))]
     #[case::tcg_tai("TCG", "TAI", -33.23958931272851, None)]
     #[case::tcg_tcb("TCG", "TCB", 22.428924359636042, Some(TCB_TOL))]
     #[case::tcg_tcg("TCG", "TCG", 0.0, None)]
     #[case::tcg_tdb("TCG", "TDB", -1.0557069988766656, None)]
     #[case::tcg_tt("TCG", "TT", -1.0555893127285145, None)]
-    #[case::tcg_ut1("TCG", "UT1", -70.1891114139689, Some(UT1_TOL))]
     #[case::tdb_tai("TDB", "TAI", -32.18388231420531, None)]
     #[case::tdb_tcb("TDB", "TCB", 23.48463137488165, Some(TCB_TOL))]
     #[case::tdb_tcg("TDB", "TCG", 1.0557069992589518, None)]
     #[case::tdb_tdb("TDB", "TDB", 0.0, None)]
     #[case::tdb_tt("TDB", "TT", 1.176857946845189E-4, None)]
-    #[case::tdb_ut1("TDB", "UT1", -69.13340440689674, Some(UT1_TOL))]
     #[case::tt_tai("TT", "TAI", -32.184, None)]
     #[case::tt_tcb("TT", "TCB", 23.484513689085105, Some(TCB_TOL))]
     #[case::tt_tcg("TT", "TCG", 1.055589313464182, None)]
     #[case::tt_tdb("TT", "TDB", -1.1768579472004603E-4, None)]
     #[case::tt_tt("TT", "TT", 0.0, None)]
-    #[case::tt_ut1("TT", "UT1", -69.13352209269237, Some(UT1_TOL))]
-    #[case::ut1_tai("UT1", "TAI", 36.949521532869305, Some(UT1_TOL))]
-    #[case::ut1_tcb("UT1", "TCB", 92.61803631703046, Some(UT1_TOL))]
-    #[case::ut1_tcg("UT1", "TCG", 70.18911089451464, Some(UT1_TOL))]
-    #[case::ut1_tdb("UT1", "TDB", 69.13340387022173, Some(UT1_TOL))]
-    #[case::ut1_tt("UT1", "TT", 69.13352153286931, Some(UT1_TOL))]
-    #[case::ut1_ut1("UT1", "UT1", 0.0, Some(UT1_TOL))]
     fn test_dyn_time_scale_offsets_new(
         #[case] scale1: &str,
         #[case] scale2: &str,
@@ -518,7 +349,7 @@ mod tests {
     ) {
         use lox_math::assert_close;
 
-        let provider = delta_ut1_tai();
+        let provider = &DefaultOffsetProvider;
         let scale1: DynTimeScale = scale1.parse().unwrap();
         let scale2: DynTimeScale = scale2.parse().unwrap();
         let date = Date::new(2024, 12, 30).unwrap();

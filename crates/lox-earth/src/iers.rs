@@ -1,0 +1,317 @@
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
+
+use csv::{ByteRecord, ReaderBuilder};
+use lox_math::series::{Series, SeriesError};
+use lox_time::{
+    deltas::TimeDelta,
+    julian_dates::{JulianDate, SECONDS_BETWEEN_MJD_AND_J2000},
+    utc::{
+        Utc, UtcError,
+        leap_seconds::{BuiltinLeapSeconds, LeapSecondsProvider},
+        transformations::ToUtc,
+    },
+};
+use lox_units::constants::f64::time::SECONDS_PER_DAY;
+use serde::Deserialize;
+use thiserror::Error;
+
+#[derive(Debug, Deserialize)]
+struct EopRecord {
+    #[serde(rename = "MJD")]
+    modified_julian_date: f64,
+    #[serde(rename = "Year")]
+    year: i64,
+    #[serde(rename = "Month")]
+    month: u8,
+    #[serde(rename = "Day")]
+    day: u8,
+    x_pole: Option<f64>,
+    y_pole: Option<f64>,
+    #[serde(rename = "UT1-UTC")]
+    delta_ut1_utc: Option<f64>,
+    #[serde(rename = "dPsi")]
+    dpsi: Option<f64>,
+    #[serde(rename = "dEpsilon")]
+    deps: Option<f64>,
+    #[serde(rename = "dX")]
+    dx: Option<f64>,
+    #[serde(rename = "dY")]
+    dy: Option<f64>,
+}
+
+impl EopRecord {
+    fn merge(mut self, other: &Self) -> Self {
+        self.dpsi = self.dpsi.or(other.dpsi);
+        self.deps = self.deps.or(other.deps);
+        self.dx = self.dx.or(other.dx);
+        self.dy = self.dy.or(other.dy);
+        self
+    }
+}
+
+#[derive(Debug, Error)]
+pub enum EopParserError {
+    #[error("{0}")]
+    Csv(String),
+    #[error("either a 'finals.all.csv' or a 'finals2000A.all.csv' file needs to be provided")]
+    NoFiles,
+    #[error("could not find corresponding leap second for {0}")]
+    LeapSecond(Utc),
+    #[error("mismatched dimensions for columns '{0} (n={1})' and '{2} (n={3})'")]
+    DimensionMismatch(String, usize, String, usize),
+    #[error(transparent)]
+    Utc(#[from] UtcError),
+    #[error(transparent)]
+    Series(#[from] SeriesError),
+}
+
+impl From<csv::Error> for EopParserError {
+    fn from(err: csv::Error) -> Self {
+        EopParserError::Csv(err.to_string())
+    }
+}
+
+#[derive(Default)]
+pub struct EopParser {
+    iau1980: Option<PathBuf>,
+    iau2000: Option<PathBuf>,
+    lsp: Option<Box<dyn LeapSecondsProvider>>,
+}
+
+impl EopParser {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn with_iau1980(&mut self, path: impl AsRef<Path>) -> &mut Self {
+        self.iau1980 = Some(path.as_ref().to_owned());
+        self
+    }
+
+    pub fn with_iau2000(&mut self, path: impl AsRef<Path>) -> &mut Self {
+        self.iau2000 = Some(path.as_ref().to_owned());
+        self
+    }
+
+    pub fn with_leap_seconds_provider(&mut self, lsp: Box<dyn LeapSecondsProvider>) -> &mut Self {
+        self.lsp = Some(lsp);
+        self
+    }
+
+    pub fn parse(&self) -> Result<EopProvider, EopParserError> {
+        let n = if let Some(iau1980) = self.iau1980.as_ref() {
+            let mut reader = ReaderBuilder::new().delimiter(b';').from_path(iau1980)?;
+            reader.records().count()
+        } else if let Some(iau2000) = self.iau2000.as_ref() {
+            let mut reader = ReaderBuilder::new().delimiter(b';').from_path(iau2000)?;
+            reader.records().count()
+        } else {
+            return Err(EopParserError::NoFiles);
+        };
+
+        let mut j2000: Vec<f64> = Vec::with_capacity(n);
+        let mut delta_ut1_tai: Vec<f64> = Vec::with_capacity(n);
+        let mut x_pole: Vec<f64> = Vec::with_capacity(n);
+        let mut y_pole: Vec<f64> = Vec::with_capacity(n);
+        let mut dpsi: Vec<f64> = Vec::with_capacity(n);
+        let mut deps: Vec<f64> = Vec::with_capacity(n);
+        let mut dx: Vec<f64> = Vec::with_capacity(n);
+        let mut dy: Vec<f64> = Vec::with_capacity(n);
+
+        let mut rdr1 = ReaderBuilder::new()
+            .delimiter(b';')
+            .from_path(self.iau1980.as_ref().or(self.iau2000.as_ref()).unwrap())?;
+        let mut rdr2 = ReaderBuilder::new()
+            .delimiter(b';')
+            .from_path(self.iau2000.as_ref().or(self.iau1980.as_ref()).unwrap())?;
+        let mut raw1 = ByteRecord::new();
+        let mut raw2 = ByteRecord::new();
+        let headers = rdr1.byte_headers()?.clone();
+
+        while rdr1.read_byte_record(&mut raw1)? && rdr2.read_byte_record(&mut raw2)? {
+            let r1: EopRecord = raw1.deserialize(Some(&headers))?;
+            let r2: EopRecord = raw2.deserialize(Some(&headers))?;
+            let r = r1.merge(&r2);
+
+            j2000.push(
+                r.modified_julian_date * SECONDS_PER_DAY - SECONDS_BETWEEN_MJD_AND_J2000 as f64,
+            );
+
+            if let Some(delta_ut1_utc) = r.delta_ut1_utc {
+                let utc = Utc::builder().with_ymd(r.year, r.month, r.day).build()?;
+                let delta_tai_utc = self
+                    .lsp
+                    .as_ref()
+                    .map(|lsp| lsp.delta_utc_tai(utc))
+                    .or_else(|| Some(BuiltinLeapSeconds.delta_utc_tai(utc)))
+                    .flatten()
+                    .ok_or(EopParserError::LeapSecond(utc))?;
+                delta_ut1_tai.push(delta_ut1_utc + delta_tai_utc.to_decimal_seconds())
+            }
+
+            if let (Some(xp), Some(yp)) = (r.x_pole, r.y_pole) {
+                x_pole.push(xp);
+                y_pole.push(yp);
+            }
+
+            if let (Some(d_psi), Some(d_eps)) = (r.dpsi, r.deps) {
+                dpsi.push(d_psi);
+                deps.push(d_eps);
+            }
+
+            if let (Some(d_x), Some(d_y)) = (r.dx, r.dy) {
+                dx.push(d_x);
+                dy.push(d_y);
+            }
+        }
+
+        let n = x_pole.len();
+        let npn = dpsi.len().max(dx.len());
+
+        let index = Index(Arc::new(j2000[0..n].to_vec()));
+        let np_index = Index(Arc::new(j2000[0..npn].to_vec()));
+
+        Ok(EopProvider {
+            polar_motion: (
+                Series::with_cubic_spline(index.clone(), x_pole)?,
+                Series::with_cubic_spline(index.clone(), y_pole)?,
+            ),
+            delta_ut1_tai: Series::with_cubic_spline(index.clone(), delta_ut1_tai)?,
+            nut_prec: NutPrecCorrections {
+                iau1980: if !dpsi.is_empty() {
+                    Some((
+                        Series::with_cubic_spline(np_index.clone(), dpsi)?,
+                        Series::with_cubic_spline(np_index.clone(), deps)?,
+                    ))
+                } else {
+                    None
+                },
+                iau2000: if !dx.is_empty() {
+                    Some((
+                        Series::with_cubic_spline(np_index.clone(), dx)?,
+                        Series::with_cubic_spline(np_index.clone(), dy)?,
+                    ))
+                } else {
+                    None
+                },
+            },
+        })
+    }
+}
+
+#[derive(Clone, Debug)]
+struct Index(Arc<Vec<f64>>);
+
+impl AsRef<[f64]> for Index {
+    fn as_ref(&self) -> &[f64] {
+        self.0.as_ref()
+    }
+}
+type TSeries = Series<Index, Vec<f64>>;
+
+#[derive(Debug)]
+struct NutPrecCorrections {
+    iau1980: Option<(TSeries, TSeries)>,
+    iau2000: Option<(TSeries, TSeries)>,
+}
+
+#[derive(Debug)]
+pub struct EopProvider {
+    polar_motion: (TSeries, TSeries),
+    delta_ut1_tai: TSeries,
+    nut_prec: NutPrecCorrections,
+}
+
+#[derive(Debug, Error)]
+pub enum EopProviderError {
+    #[error(transparent)]
+    Utc(#[from] UtcError),
+    #[error("value was extrapolated")]
+    ExtrapolatedValue(f64),
+    #[error("values were extrapolated")]
+    ExtrapolatedValues(f64, f64),
+    #[error("no 'finals.all.csv' file was loaded")]
+    MissingIau1980,
+    #[error("no 'finals2000A.all.csv' file was loaded")]
+    MissingIau2000,
+}
+
+impl EopProvider {
+    pub fn polar_motion<T: ToUtc>(&self, t: T) -> Result<(f64, f64), EopProviderError> {
+        let t = t.to_utc()?.seconds_since_j2000();
+        let px = self.polar_motion.0.interpolate(t);
+        let py = self.polar_motion.1.interpolate(t);
+        let (min, _) = self.polar_motion.0.first();
+        let (max, _) = self.polar_motion.0.last();
+        if t < min || t > max {
+            return Err(EopProviderError::ExtrapolatedValues(px, py));
+        }
+        Ok((px, py))
+    }
+
+    pub fn nutation_precession_iau1980<T: ToUtc>(
+        &self,
+        t: T,
+    ) -> Result<(f64, f64), EopProviderError> {
+        let Some(nut_prec) = &self.nut_prec.iau1980 else {
+            return Err(EopProviderError::MissingIau1980);
+        };
+        let t = t.to_utc()?.seconds_since_j2000();
+        let dpsi = nut_prec.0.interpolate(t);
+        let deps = nut_prec.1.interpolate(t);
+        let (min, _) = nut_prec.0.first();
+        let (max, _) = nut_prec.0.last();
+        if t < min || t > max {
+            return Err(EopProviderError::ExtrapolatedValues(dpsi, deps));
+        }
+        Ok((dpsi, deps))
+    }
+
+    pub fn nutation_precession_iau2000<T: ToUtc>(
+        &self,
+        t: T,
+    ) -> Result<(f64, f64), EopProviderError> {
+        let Some(nut_prec) = &self.nut_prec.iau2000 else {
+            return Err(EopProviderError::MissingIau2000);
+        };
+        let t = t.to_utc()?.seconds_since_j2000();
+        let dx = nut_prec.0.interpolate(t);
+        let dy = nut_prec.1.interpolate(t);
+        let (min, _) = nut_prec.0.first();
+        let (max, _) = nut_prec.0.last();
+        if t < min || t > max {
+            return Err(EopProviderError::ExtrapolatedValues(dx, dy));
+        }
+        Ok((dx, dy))
+    }
+
+    pub fn delta_ut1_tai(&self, tai: TimeDelta) -> Result<TimeDelta, EopProviderError> {
+        let seconds = tai.seconds_since_j2000();
+        let (t0, _) = self.delta_ut1_tai.first();
+        let (tn, _) = self.delta_ut1_tai.last();
+        let val = self.delta_ut1_tai.interpolate(seconds);
+        if seconds < t0 || seconds > tn {
+            return Err(EopProviderError::ExtrapolatedValue(val));
+        }
+        Ok(TimeDelta::try_from_decimal_seconds(val).unwrap())
+    }
+
+    pub fn delta_tai_ut1(&self, ut1: TimeDelta) -> Result<TimeDelta, EopProviderError> {
+        let seconds = ut1.seconds_since_j2000();
+        let (t0, _) = self.delta_ut1_tai.first();
+        let (tn, _) = self.delta_ut1_tai.last();
+        // Use the UT1 offset as an initial guess even though the table is based on TAI
+        let mut val = self.delta_ut1_tai.interpolate(seconds);
+        // Interpolate again with the adjusted offsets
+        for _ in 0..2 {
+            val = self.delta_ut1_tai.interpolate(seconds - val);
+        }
+        if seconds < t0 || seconds > tn {
+            return Err(EopProviderError::ExtrapolatedValue(val));
+        }
+        Ok(-TimeDelta::try_from_decimal_seconds(val).unwrap())
+    }
+}

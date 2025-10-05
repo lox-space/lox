@@ -12,7 +12,8 @@ use lox_bodies::{DynOrigin, Origin, TryRotationalElements};
 use lox_time::{
     Time,
     julian_dates::JulianDate,
-    time_scales::{Tdb, TimeScale, offsets::TryOffset},
+    offsets::TryOffset,
+    time_scales::{Tdb, TimeScale},
 };
 use thiserror::Error;
 
@@ -227,7 +228,7 @@ mod tests {
     use lox_bodies::DynOrigin;
     use lox_math::assert_close;
     use lox_math::is_close::IsClose;
-    use lox_time::time_scales::offsets::DefaultOffsetProvider;
+    use lox_time::offsets::DefaultOffsetProvider;
     use lox_time::utc::Utc;
     use rstest::rstest;
 

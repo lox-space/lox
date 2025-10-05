@@ -6,6 +6,5 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-pub mod iers;
 pub mod ndm;
 pub mod spice;
