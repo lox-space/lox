@@ -10,9 +10,48 @@
 
 use std::path::{Path, PathBuf};
 
-use lox_math::types::julian_dates::ModifiedJulianDayNumber;
+use csv::ReaderBuilder;
+use lox_math::{series::DSeries, types::julian_dates::ModifiedJulianDayNumber};
 use serde::Deserialize;
 use thiserror::Error;
+
+#[derive(Debug, Deserialize)]
+struct EopRecord {
+    #[serde(rename = "MJD")]
+    modified_julian_date: i32,
+    x_pole: Option<f64>,
+    y_pole: Option<f64>,
+    #[serde(rename = "UT1-UTC")]
+    delta_ut1_utc: Option<f64>,
+    #[serde(rename = "dPsi")]
+    dpsi: Option<f64>,
+    #[serde(rename = "dEpsilon")]
+    deps: Option<f64>,
+    #[serde(rename = "dX")]
+    dx: Option<f64>,
+    #[serde(rename = "dY")]
+    dy: Option<f64>,
+}
+
+fn parse_csv<P: AsRef<Path>>(path: P) -> Result<Vec<EopRecord>, Box<dyn std::error::Error>> {
+    let mut records = vec![];
+    let mut reader = ReaderBuilder::new().delimiter(b';').from_path(path)?;
+    for result in reader.deserialize() {
+        records.push(result?);
+    }
+    Ok(records)
+}
+
+struct NutPrecCorrections {
+    iau1980: Option<(DSeries, DSeries)>,
+    iau2000: Option<(DSeries, DSeries)>,
+}
+
+struct EarthOrientationParams2 {
+    polar_motion: (DSeries, DSeries),
+    delta_ut1_utc: DSeries,
+    nut_prec: NutPrecCorrections,
+}
 
 #[derive(Copy, Clone, Debug, Error, PartialEq, Eq)]
 pub enum EopError {

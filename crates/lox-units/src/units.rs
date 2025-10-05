@@ -1,6 +1,6 @@
 use std::{
     fmt::{Display, Formatter, Result},
-    ops::Neg,
+    ops::{Add, Neg, Sub},
 };
 
 #[cfg(feature = "python")]
@@ -202,6 +202,48 @@ impl FrequencyUnits for f64 {
 
     fn thz(&self) -> Frequency {
         Frequency(1e12 * self)
+    }
+}
+
+pub struct Decibel(pub f64);
+
+impl Decibel {
+    pub fn from_db(&self) -> f64 {
+        10.0_f64.powf(self.0 / 10.0)
+    }
+}
+
+impl Add for Decibel {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self(self.0 + rhs.0)
+    }
+}
+
+impl Neg for Decibel {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        Self(-self.0)
+    }
+}
+
+impl Sub for Decibel {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self(self.0 - rhs.0)
+    }
+}
+
+pub trait DecibelUnits {
+    fn db(&self) -> Decibel;
+}
+
+impl DecibelUnits for f64 {
+    fn db(&self) -> Decibel {
+        Decibel(10.0 * self.log10())
     }
 }
 
