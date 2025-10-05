@@ -413,6 +413,7 @@ dependencies = [
 name = "lox-earth"
 version = "0.1.0-alpha.12"
 dependencies = [
+ "csv",
  "fast_polynomial",
  "float_eq",
  "glam",
@@ -421,7 +422,9 @@ dependencies = [
  "lox-math",
  "lox-time",
  "lox-units",
+ "num",
  "rstest",
+ "serde",
  "thiserror",
 ]
 
@@ -455,6 +458,8 @@ version = "0.1.0-alpha.8"
 dependencies = [
  "csv",
  "lox-derive",
+ "lox-math",
+ "lox-time",
  "lox-units",
  "nom",
  "quick-xml",
@@ -529,7 +534,6 @@ version = "0.1.0-alpha.10"
 dependencies = [
  "float_eq",
  "itertools",
- "lox-io",
  "lox-math",
  "lox-units",
  "num",

@@ -204,13 +204,8 @@ fn chi(julian_centuries_since_j2000: f64) -> Radians {
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
-
-    use rstest::{fixture, rstest};
-
-    use lox_io::iers::EarthOrientationParams;
-
     use super::*;
+    use rstest::rstest;
 
     #[rstest]
     #[case::vec_sizes_match(vec![], vec![], vec![], vec![], 0.0, Ok(Arguments::default()))]
@@ -228,19 +223,5 @@ mod tests {
     ) {
         let actual = Arguments::new(x, y, t, epochs, target_epoch);
         assert_eq!(expected, actual);
-    }
-
-    const FINALS2000A_PATH: &str = "../../data/finals2000A.all.csv";
-
-    #[fixture]
-    fn eop_data() -> EarthOrientationParams {
-        let fixture_path = Path::new(FINALS2000A_PATH);
-        EarthOrientationParams::parse_finals_csv(fixture_path).unwrap_or_else(|err| {
-            panic!(
-                "failed to parse test fixture at {}: {}",
-                fixture_path.to_str().unwrap(),
-                err,
-            )
-        })
     }
 }
