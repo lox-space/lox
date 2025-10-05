@@ -6,13 +6,11 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use crate::time::offsets::MissingEopProviderError;
+use crate::time::time_scales::{DynTimeScale, TimeScale, UnknownTimeScaleError};
 use pyo3::{
     Bound, PyAny, PyErr, PyResult, exceptions::PyValueError, pyclass, pymethods,
     types::PyAnyMethods,
-};
-
-use crate::time::time_scales::{
-    DynTimeScale, TimeScale, UnknownTimeScaleError, offsets::MissingEopProviderError,
 };
 
 pub struct PyUnknownTimeScaleError(pub UnknownTimeScaleError);

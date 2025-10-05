@@ -16,18 +16,18 @@ use pyo3::{Bound, IntoPyObjectExt, Py, PyAny, PyErr, PyResult, Python, pyclass, 
 
 use lox_math::is_close::IsClose;
 
+use crate::earth::python::ut1::{PyEopProvider, PyEopProviderError};
 use crate::time::calendar_dates::{CalendarDate, Date};
 use crate::time::deltas::{TimeDelta, ToDelta};
 use crate::time::julian_dates::{Epoch, JulianDate, Unit};
+use crate::time::offsets::DefaultOffsetProvider;
 use crate::time::python::deltas::PyTimeDelta;
 use crate::time::python::time_scales::PyMissingEopProviderError;
-use crate::time::python::ut1::{PyExtrapolatedDeltaUt1Tai, PyUt1Provider};
 use crate::time::python::utc::PyUtcError;
 use crate::time::subsecond::{InvalidSubsecond, Subsecond};
 use crate::time::time::{DynTime, Time, TimeError};
 use crate::time::time_of_day::{CivilTime, TimeOfDay};
 use crate::time::time_scales::Tai;
-use crate::time::time_scales::offsets::DefaultOffsetProvider;
 use crate::time::utc::transformations::ToUtc;
 
 use super::time_scales::PyTimeScale;
@@ -335,7 +335,7 @@ impl PyTime {
     pub fn to_scale(
         &self,
         scale: &Bound<'_, PyAny>,
-        provider: Option<&Bound<'_, PyUt1Provider>>,
+        provider: Option<&Bound<'_, PyEopProvider>>,
     ) -> PyResult<PyTime> {
         let scale: PyTimeScale = scale.try_into()?;
         let provider = provider.map(|p| &p.get().0);
@@ -343,7 +343,7 @@ impl PyTime {
             Some(provider) => self
                 .0
                 .try_to_scale(scale.0, provider)
-                .map_err(PyExtrapolatedDeltaUt1Tai)?,
+                .map_err(PyEopProviderError)?,
             None => self
                 .0
                 .try_to_scale(scale.0, &DefaultOffsetProvider)
@@ -353,13 +353,13 @@ impl PyTime {
     }
 
     #[pyo3(signature = (provider=None))]
-    pub fn to_utc(&self, provider: Option<&Bound<'_, PyUt1Provider>>) -> PyResult<PyUtc> {
+    pub fn to_utc(&self, provider: Option<&Bound<'_, PyEopProvider>>) -> PyResult<PyUtc> {
         let provider = provider.map(|p| &p.get().0);
         let utc = match provider {
             Some(provider) => self
                 .0
                 .try_to_scale(Tai, provider)
-                .map_err(PyExtrapolatedDeltaUt1Tai)?,
+                .map_err(PyEopProviderError)?,
             None => self
                 .0
                 .try_to_scale(Tai, &DefaultOffsetProvider)
@@ -434,7 +434,7 @@ mod tests {
     use super::*;
 
     use crate::math::assert_close;
-    use crate::time::test_helpers::data_dir;
+    use crate::test_helpers::data_dir;
 
     use float_eq::assert_float_eq;
     use pyo3::{IntoPyObjectExt, Python, types::PyDict};
@@ -735,8 +735,7 @@ mod tests {
         Python::attach(|py| {
             let provider = Bound::new(
                 py,
-                PyUt1Provider::new(data_dir().join("finals2000A.all.csv").to_str().unwrap())
-                    .unwrap(),
+                PyEopProvider::new(None, Some(data_dir().join("finals2000A.all.csv"))).unwrap(),
             )
             .unwrap();
             let scale1 = scale_to_any(py, scale1);
