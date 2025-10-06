@@ -1,10 +1,7 @@
-use std::{
+use core::{
     fmt::{Display, Formatter, Result},
     ops::Neg,
 };
-
-#[cfg(feature = "python")]
-pub mod python;
 
 /// An angle in radians
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd)]
@@ -210,6 +207,8 @@ mod tests {
     use float_eq::assert_float_eq;
     use rstest::rstest;
 
+    extern crate alloc;
+
     use super::*;
 
     #[test]
@@ -234,7 +233,7 @@ mod tests {
     #[test]
     fn test_angle_display() {
         let angle = 90.123456.deg();
-        assert_eq!(format!("{:.2}", angle), "90.12 deg")
+        assert_eq!(alloc::format!("{:.2}", angle), "90.12 deg")
     }
 
     #[test]
@@ -270,7 +269,7 @@ mod tests {
     #[test]
     fn test_distance_display() {
         let distance = 9.123456.km();
-        assert_eq!(format!("{:.2}", distance), "9.12 km")
+        assert_eq!(alloc::format!("{:.2}", distance), "9.12 km")
     }
 
     #[test]
@@ -300,7 +299,7 @@ mod tests {
     #[test]
     fn test_velocity_display() {
         let velocity = 9.123456.kps();
-        assert_eq!(format!("{:.2}", velocity), "9.12 km/s")
+        assert_eq!(alloc::format!("{:.2}", velocity), "9.12 km/s")
     }
 
     #[test]
@@ -362,7 +361,7 @@ mod tests {
     #[test]
     fn test_frequency_display() {
         let frequency = 2.4123456.ghz();
-        assert_eq!(format!("{:.2}", frequency), "2.41 GHz");
+        assert_eq!(alloc::format!("{:.2}", frequency), "2.41 GHz");
     }
 
     #[rstest]
@@ -382,7 +381,6 @@ mod tests {
     #[case(110.0.ghz(), Some(FrequencyBand::G))]
     #[case(1.0.thz(), None)]
     fn test_frequency_band(#[case] f: Frequency, #[case] exp: Option<FrequencyBand>) {
-        dbg!(f);
         assert_eq!(f.band(), exp)
     }
 }

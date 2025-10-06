@@ -17,6 +17,9 @@ float_eq.workspace = true
 rstest.workspace = true
 
 [features]
+default = ["std"]
+std = []
 python = [
+    "std",
     "dep:pyo3",
 ]

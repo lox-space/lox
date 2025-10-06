@@ -1,4 +1,4 @@
-use std::f64::consts::{FRAC_PI_2, PI, TAU};
+use core::f64::consts::{FRAC_PI_2, PI, TAU};
 
 use thiserror::Error;
 

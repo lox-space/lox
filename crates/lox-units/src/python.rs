@@ -1,4 +1,6 @@
 use pyo3::{Bound, Python, pyclass, pymethods, types::PyComplex};
+use std::format;
+use std::string::{String, ToString};
 
 use crate::{Angle, Distance, Frequency, Velocity};
 
@@ -19,7 +21,7 @@ macro_rules! py_unit {
                     Self($unit(other * self.0.0))
                 }
 
-                pub fn __repr__(&self) -> String {
+                pub fn __repr__(&self) ->  String {
                     format!("{}({})", stringify!($unit), self.0.0)
                 }
 
