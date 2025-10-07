@@ -204,6 +204,9 @@ impl FrequencyUnits for f64 {
 
 #[cfg(test)]
 mod tests {
+    use alloc::format;
+    use core::f64::consts::{FRAC_PI_2, PI};
+
     use float_eq::assert_float_eq;
     use rstest::rstest;
 
@@ -214,26 +217,26 @@ mod tests {
     #[test]
     fn test_angle_deg() {
         let angle = 90.0.deg();
-        assert_float_eq!(angle.0, std::f64::consts::FRAC_PI_2, rel <= 1e-10);
+        assert_float_eq!(angle.0, FRAC_PI_2, rel <= 1e-10);
     }
 
     #[test]
     fn test_angle_rad() {
-        let angle = std::f64::consts::PI.rad();
-        assert_float_eq!(angle.0, std::f64::consts::PI, rel <= 1e-10);
+        let angle = PI.rad();
+        assert_float_eq!(angle.0, PI, rel <= 1e-10);
     }
 
     #[test]
     fn test_angle_conversions() {
         let angle_deg = 180.0.deg();
-        let angle_rad = std::f64::consts::PI.rad();
+        let angle_rad = PI.rad();
         assert_float_eq!(angle_deg.0, angle_rad.0, rel <= 1e-10);
     }
 
     #[test]
     fn test_angle_display() {
         let angle = 90.123456.deg();
-        assert_eq!(alloc::format!("{:.2}", angle), "90.12 deg")
+        assert_eq!(format!("{:.2}", angle), "90.12 deg")
     }
 
     #[test]
@@ -269,7 +272,7 @@ mod tests {
     #[test]
     fn test_distance_display() {
         let distance = 9.123456.km();
-        assert_eq!(alloc::format!("{:.2}", distance), "9.12 km")
+        assert_eq!(format!("{:.2}", distance), "9.12 km")
     }
 
     #[test]
@@ -299,7 +302,7 @@ mod tests {
     #[test]
     fn test_velocity_display() {
         let velocity = 9.123456.kps();
-        assert_eq!(alloc::format!("{:.2}", velocity), "9.12 km/s")
+        assert_eq!(format!("{:.2}", velocity), "9.12 km/s")
     }
 
     #[test]
@@ -361,7 +364,7 @@ mod tests {
     #[test]
     fn test_frequency_display() {
         let frequency = 2.4123456.ghz();
-        assert_eq!(alloc::format!("{:.2}", frequency), "2.41 GHz");
+        assert_eq!(format!("{:.2}", frequency), "2.41 GHz");
     }
 
     #[rstest]
