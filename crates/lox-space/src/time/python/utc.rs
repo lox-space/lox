@@ -6,20 +6,22 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::calendar_dates::CalendarDate;
-use crate::python::time::PyTime;
-use crate::python::ut1::PyUt1Provider;
-use crate::time_of_day::CivilTime;
-use crate::time_scales::DynTimeScale;
-use crate::time_scales::offsets::DefaultOffsetProvider;
-use crate::utc::{Utc, UtcError};
+use crate::time::calendar_dates::CalendarDate;
+use crate::time::python::time::PyTime;
+use crate::time::python::time_scales::{PyMissingEopProviderError, PyTimeScale};
+use crate::time::python::ut1::{PyExtrapolatedDeltaUt1Tai, PyUt1Provider};
+use crate::time::time_of_day::CivilTime;
+use crate::time::time_scales::offsets::DefaultOffsetProvider;
+use crate::time::utc::{Utc, UtcError};
 use pyo3::exceptions::PyValueError;
 use pyo3::types::PyType;
 use pyo3::{Bound, PyAny, PyErr, PyResult, pyclass, pymethods};
 
-impl From<UtcError> for PyErr {
-    fn from(value: UtcError) -> Self {
-        PyValueError::new_err(value.to_string())
+pub struct PyUtcError(pub UtcError);
+
+impl From<PyUtcError> for PyErr {
+    fn from(value: PyUtcError) -> Self {
+        PyValueError::new_err(value.0.to_string())
     }
 }
 
@@ -42,13 +44,14 @@ impl PyUtc {
         let utc = Utc::builder()
             .with_ymd(year, month, day)
             .with_hms(hour, minute, seconds)
-            .build()?;
+            .build()
+            .map_err(PyUtcError)?;
         Ok(PyUtc(utc))
     }
 
     #[classmethod]
     pub fn from_iso(_cls: &Bound<'_, PyType>, iso: &str) -> PyResult<PyUtc> {
-        Ok(PyUtc(iso.parse()?))
+        Ok(PyUtc(iso.parse().map_err(PyUtcError)?))
     }
 
     pub fn __str__(&self) -> String {
@@ -121,14 +124,19 @@ impl PyUtc {
         scale: &Bound<'_, PyAny>,
         provider: Option<&Bound<'_, PyUt1Provider>>,
     ) -> PyResult<PyTime> {
-        let scale: DynTimeScale = scale.try_into()?;
+        let scale: PyTimeScale = scale.try_into()?;
         let provider = provider.map(|p| &p.get().0);
         let time = match provider {
-            Some(provider) => self.0.to_dyn_time().try_to_scale(scale, provider)?,
+            Some(provider) => self
+                .0
+                .to_dyn_time()
+                .try_to_scale(scale.0, provider)
+                .map_err(PyExtrapolatedDeltaUt1Tai)?,
             None => self
                 .0
                 .to_dyn_time()
-                .try_to_scale(scale, &DefaultOffsetProvider)?,
+                .try_to_scale(scale.0, &DefaultOffsetProvider)
+                .map_err(PyMissingEopProviderError)?,
         };
         Ok(PyTime(time))
     }
@@ -136,12 +144,12 @@ impl PyUtc {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
+    use crate::time::test_helpers::data_dir;
+
     use pyo3::{Bound, IntoPyObjectExt, Python};
     use rstest::rstest;
-
-    use crate::test_helpers::data_dir;
-
-    use super::*;
 
     #[test]
     fn test_pyutc() {

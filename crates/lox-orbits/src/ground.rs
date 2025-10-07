@@ -226,7 +226,7 @@ impl DynGroundPropagator {
         Ok(State::new(time, r1, v1, self.location.body, DynFrame::Icrf))
     }
 
-    pub(crate) fn propagate_all_dyn(
+    pub fn propagate_all_dyn(
         &self,
         times: impl IntoIterator<Item = DynTime>,
     ) -> Result<DynTrajectory, GroundPropagatorError> {

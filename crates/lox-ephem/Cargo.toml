@@ -12,9 +12,4 @@ repository.workspace = true
 lox-math.workspace = true
 
 nom.workspace = true
-pyo3 = { workspace = true, optional = true }
-numpy = { workspace = true, optional = true }
 thiserror.workspace = true
-
-[features]
-python = ["dep:pyo3", "dep:numpy"]
