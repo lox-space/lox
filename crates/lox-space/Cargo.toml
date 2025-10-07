@@ -19,13 +19,13 @@ lox-frames.workspace = true
 lox-math.workspace = true
 lox-orbits.workspace = true
 lox-time.workspace = true
-lox-units.workspace = true
+lox-units = { workspace = true, optional = true }
 
 pyo3 = { workspace = true, optional = true }
 
 [features]
-default = ["python"]
 python = [
+    "dep:lox-units",
     "dep:pyo3",
     "lox-bodies/python",
     "lox-ephem/python",
@@ -33,5 +33,7 @@ python = [
     "lox-math/python",
     "lox-orbits/python",
     "lox-time/python",
-    "lox-units/python",
+]
+units = [
+    "dep:lox-units",
 ]

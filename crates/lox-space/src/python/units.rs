@@ -2,7 +2,7 @@ use pyo3::{Bound, Python, pyclass, pymethods, types::PyComplex};
 use std::format;
 use std::string::{String, ToString};
 
-use crate::{Angle, Distance, Frequency, Velocity};
+use lox_units::{Angle, Distance, Frequency, Velocity};
 
 macro_rules! py_unit {
     ($(($unit:ident, $name:literal, $pyunit:ident)),*) => {
