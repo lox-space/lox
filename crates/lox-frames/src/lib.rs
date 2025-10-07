@@ -11,9 +11,6 @@ pub mod frames;
 pub mod traits;
 pub mod transformations;
 
-#[cfg(feature = "python")]
-pub mod python;
-
 pub use dynamic::{DynFrame, UnknownFrameError};
 pub use frames::{Cirf, Iau, Icrf, Itrf, Tirf};
 pub use traits::{

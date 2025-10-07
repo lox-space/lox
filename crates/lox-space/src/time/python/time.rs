@@ -16,34 +16,42 @@ use pyo3::{Bound, IntoPyObjectExt, Py, PyAny, PyErr, PyResult, Python, pyclass, 
 
 use lox_math::is_close::IsClose;
 
-use crate::calendar_dates::{CalendarDate, Date};
-use crate::deltas::{TimeDelta, ToDelta};
-use crate::julian_dates::{Epoch, JulianDate, Unit};
-use crate::python::deltas::PyTimeDelta;
-use crate::python::ut1::PyUt1Provider;
-use crate::subsecond::{InvalidSubsecond, Subsecond};
-use crate::time::{DynTime, Time, TimeError};
-use crate::time_of_day::{CivilTime, TimeOfDay};
-use crate::time_scales::offsets::DefaultOffsetProvider;
-use crate::time_scales::{DynTimeScale, Tai};
-use crate::utc::transformations::ToUtc;
+use crate::time::calendar_dates::{CalendarDate, Date};
+use crate::time::deltas::{TimeDelta, ToDelta};
+use crate::time::julian_dates::{Epoch, JulianDate, Unit};
+use crate::time::python::deltas::PyTimeDelta;
+use crate::time::python::time_scales::PyMissingEopProviderError;
+use crate::time::python::ut1::{PyExtrapolatedDeltaUt1Tai, PyUt1Provider};
+use crate::time::python::utc::PyUtcError;
+use crate::time::subsecond::{InvalidSubsecond, Subsecond};
+use crate::time::time::{DynTime, Time, TimeError};
+use crate::time::time_of_day::{CivilTime, TimeOfDay};
+use crate::time::time_scales::Tai;
+use crate::time::time_scales::offsets::DefaultOffsetProvider;
+use crate::time::utc::transformations::ToUtc;
 
 use super::time_scales::PyTimeScale;
 use super::utc::PyUtc;
 
-impl From<InvalidSubsecond> for PyErr {
-    fn from(value: InvalidSubsecond) -> Self {
-        PyValueError::new_err(value.to_string())
+pub struct PyInvalidSubsecond(pub InvalidSubsecond);
+
+impl From<PyInvalidSubsecond> for PyErr {
+    fn from(err: PyInvalidSubsecond) -> Self {
+        PyValueError::new_err(err.0.to_string())
     }
 }
 
-impl From<TimeError> for PyErr {
-    fn from(value: TimeError) -> Self {
-        PyValueError::new_err(value.to_string())
+pub struct PyTimeError(pub TimeError);
+
+impl From<PyTimeError> for PyErr {
+    fn from(err: PyTimeError) -> Self {
+        PyValueError::new_err(err.0.to_string())
     }
 }
 
-impl FromStr for Epoch {
+pub struct PyEpoch(pub Epoch);
+
+impl FromStr for PyEpoch {
     type Err = PyErr;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -54,10 +62,13 @@ impl FromStr for Epoch {
             "j2000" | "J2000" => Ok(Epoch::J2000),
             _ => Err(PyValueError::new_err(format!("unknown epoch: {s}"))),
         }
+        .map(PyEpoch)
     }
 }
 
-impl FromStr for Unit {
+pub struct PyUnit(pub Unit);
+
+impl FromStr for PyUnit {
     type Err = PyErr;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -67,6 +78,7 @@ impl FromStr for Unit {
             "centuries" => Ok(Unit::Centuries),
             _ => Err(PyValueError::new_err(format!("unknown unit: {s}"))),
         }
+        .map(PyUnit)
     }
 }
 
@@ -87,11 +99,12 @@ impl PyTime {
         minute: u8,
         seconds: f64,
     ) -> PyResult<PyTime> {
-        let scale: DynTimeScale = scale.try_into()?;
-        let time = Time::builder_with_scale(scale)
+        let scale: PyTimeScale = scale.try_into()?;
+        let time = Time::builder_with_scale(scale.0)
             .with_ymd(year, month, day)
             .with_hms(hour, minute, seconds)
-            .build()?;
+            .build()
+            .map_err(PyTimeError)?;
         Ok(PyTime(time))
     }
 
@@ -118,9 +131,11 @@ impl PyTime {
         jd: f64,
         epoch: &str,
     ) -> PyResult<Self> {
-        let scale: DynTimeScale = scale.try_into()?;
-        let epoch: Epoch = epoch.parse()?;
-        Ok(Self(Time::from_julian_date(scale, jd, epoch)?))
+        let scale: PyTimeScale = scale.try_into()?;
+        let epoch: PyEpoch = epoch.parse()?;
+        Ok(Self(
+            Time::from_julian_date(scale.0, jd, epoch.0).map_err(PyTimeError)?,
+        ))
     }
 
     #[classmethod]
@@ -130,8 +145,10 @@ impl PyTime {
         jd1: f64,
         jd2: f64,
     ) -> PyResult<Self> {
-        let scale: DynTimeScale = scale.try_into()?;
-        Ok(Self(Time::from_two_part_julian_date(scale, jd1, jd2)?))
+        let scale: PyTimeScale = scale.try_into()?;
+        Ok(Self(
+            Time::from_two_part_julian_date(scale.0, jd1, jd2).map_err(PyTimeError)?,
+        ))
     }
 
     #[classmethod]
@@ -145,11 +162,12 @@ impl PyTime {
         minute: u8,
         seconds: f64,
     ) -> PyResult<PyTime> {
-        let scale: DynTimeScale = scale.try_into()?;
-        let time = Time::builder_with_scale(scale)
+        let scale: PyTimeScale = scale.try_into()?;
+        let time = Time::builder_with_scale(scale.0)
             .with_doy(year, day)
             .with_hms(hour, minute, seconds)
-            .build()?;
+            .build()
+            .map_err(PyTimeError)?;
         Ok(PyTime(time))
     }
 
@@ -160,9 +178,9 @@ impl PyTime {
         iso: &str,
         scale: Option<&Bound<'_, PyAny>>,
     ) -> PyResult<PyTime> {
-        let scale: DynTimeScale =
-            scale.map_or(Ok(DynTimeScale::default()), |scale| scale.try_into())?;
-        let time = Time::from_iso(scale, iso)?;
+        let scale: PyTimeScale =
+            scale.map_or(Ok(PyTimeScale::default()), |scale| scale.try_into())?;
+        let time = Time::from_iso(scale.0, iso).map_err(PyTimeError)?;
         Ok(PyTime(time))
     }
 
@@ -173,9 +191,9 @@ impl PyTime {
         seconds: i64,
         subsecond: f64,
     ) -> PyResult<PyTime> {
-        let scale: DynTimeScale = scale.try_into()?;
-        let subsecond = Subsecond::new(subsecond)?;
-        let time = Time::new(scale, seconds, subsecond);
+        let scale: PyTimeScale = scale.try_into()?;
+        let subsecond = Subsecond::new(subsecond).map_err(PyInvalidSubsecond)?;
+        let time = Time::new(scale.0, seconds, subsecond);
         Ok(PyTime(time))
     }
 
@@ -248,9 +266,9 @@ impl PyTime {
 
     #[pyo3(signature = (epoch = "jd", unit = "days"))]
     pub fn julian_date(&self, epoch: &str, unit: &str) -> PyResult<f64> {
-        let epoch: Epoch = epoch.parse()?;
-        let unit: Unit = unit.parse()?;
-        Ok(self.0.julian_date(epoch, unit))
+        let epoch: PyEpoch = epoch.parse()?;
+        let unit: PyUnit = unit.parse()?;
+        Ok(self.0.julian_date(epoch.0, unit.0))
     }
 
     pub fn two_part_julian_date(&self) -> (f64, f64) {
@@ -319,11 +337,17 @@ impl PyTime {
         scale: &Bound<'_, PyAny>,
         provider: Option<&Bound<'_, PyUt1Provider>>,
     ) -> PyResult<PyTime> {
-        let scale: DynTimeScale = scale.try_into()?;
+        let scale: PyTimeScale = scale.try_into()?;
         let provider = provider.map(|p| &p.get().0);
         let time = match provider {
-            Some(provider) => self.0.try_to_scale(scale, provider)?,
-            None => self.0.try_to_scale(scale, &DefaultOffsetProvider)?,
+            Some(provider) => self
+                .0
+                .try_to_scale(scale.0, provider)
+                .map_err(PyExtrapolatedDeltaUt1Tai)?,
+            None => self
+                .0
+                .try_to_scale(scale.0, &DefaultOffsetProvider)
+                .map_err(PyMissingEopProviderError)?,
         };
         Ok(PyTime(time))
     }
@@ -332,10 +356,17 @@ impl PyTime {
     pub fn to_utc(&self, provider: Option<&Bound<'_, PyUt1Provider>>) -> PyResult<PyUtc> {
         let provider = provider.map(|p| &p.get().0);
         let utc = match provider {
-            Some(provider) => self.0.try_to_scale(Tai, provider)?,
-            None => self.0.try_to_scale(Tai, &DefaultOffsetProvider)?,
+            Some(provider) => self
+                .0
+                .try_to_scale(Tai, provider)
+                .map_err(PyExtrapolatedDeltaUt1Tai)?,
+            None => self
+                .0
+                .try_to_scale(Tai, &DefaultOffsetProvider)
+                .map_err(PyMissingEopProviderError)?,
         }
-        .to_utc()?;
+        .to_utc()
+        .map_err(PyUtcError)?;
         Ok(PyUtc(utc))
     }
 }
@@ -400,15 +431,14 @@ impl IsClose for PyTime {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
+    use crate::math::assert_close;
+    use crate::time::test_helpers::data_dir;
+
     use float_eq::assert_float_eq;
     use pyo3::{IntoPyObjectExt, Python, types::PyDict};
-
-    use lox_math::assert_close;
     use rstest::rstest;
-
-    use crate::test_helpers::data_dir;
-
-    use super::*;
 
     #[test]
     fn test_pytimfe() {

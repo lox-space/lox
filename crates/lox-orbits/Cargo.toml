@@ -13,8 +13,8 @@ lox-bodies.workspace = true
 lox-earth.workspace = true
 lox-ephem.workspace = true
 lox-frames.workspace = true
-lox-time.workspace = true
 lox-math.workspace = true
+lox-time.workspace = true
 lox-units.workspace = true
 
 csv.workspace = true
@@ -23,15 +23,9 @@ glam.workspace = true
 hashbrown.workspace = true
 itertools.workspace = true
 libm.workspace = true
-numpy = { workspace = true, optional = true }
-pyo3 = { workspace = true, optional = true }
 rayon.workspace = true
 sgp4.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
-pyo3 = { workspace = true, features = ["auto-initialize"] }
 rstest.workspace = true
-
-[features]
-python = ["dep:pyo3", "dep:numpy", "lox-bodies/python", "lox-ephem/python", "lox-frames/python", "lox-math/python", "lox-time/python"]

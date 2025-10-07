@@ -396,7 +396,6 @@ dependencies = [
  "lox-units",
  "num-derive",
  "num-traits",
- "pyo3",
  "rstest",
  "thiserror",
 ]
@@ -432,8 +431,6 @@ version = "0.1.0-alpha.7"
 dependencies = [
  "lox-math",
  "nom",
- "numpy",
- "pyo3",
  "thiserror",
 ]
 
@@ -448,8 +445,6 @@ dependencies = [
  "lox-math",
  "lox-time",
  "lox-units",
- "numpy",
- "pyo3",
  "rstest",
  "thiserror",
 ]
@@ -478,7 +473,6 @@ dependencies = [
  "fast_polynomial",
  "float_eq",
  "glam",
- "pyo3",
  "rstest",
  "thiserror",
 ]
@@ -500,8 +494,6 @@ dependencies = [
  "lox-math",
  "lox-time",
  "lox-units",
- "numpy",
- "pyo3",
  "rayon",
  "rstest",
  "sgp4",
@@ -512,14 +504,22 @@ dependencies = [
 name = "lox-space"
 version = "0.1.0-alpha.27"
 dependencies = [
+ "float_eq",
+ "glam",
  "lox-bodies",
+ "lox-earth",
  "lox-ephem",
  "lox-frames",
+ "lox-io",
  "lox-math",
  "lox-orbits",
  "lox-time",
  "lox-units",
+ "numpy",
  "pyo3",
+ "rayon",
+ "rstest",
+ "sgp4",
 ]
 
 [[package]]
@@ -533,7 +533,6 @@ dependencies = [
  "lox-units",
  "num",
  "proptest",
- "pyo3",
  "regex",
  "rstest",
  "thiserror",

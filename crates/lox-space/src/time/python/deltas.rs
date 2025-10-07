@@ -10,11 +10,13 @@ use pyo3::exceptions::PyValueError;
 use pyo3::types::PyType;
 use pyo3::{Bound, PyErr, PyResult, pyclass, pymethods};
 
-use crate::deltas::{TimeDelta, TimeDeltaError};
+use crate::time::deltas::{TimeDelta, TimeDeltaError};
 
-impl From<TimeDeltaError> for PyErr {
-    fn from(value: TimeDeltaError) -> Self {
-        PyValueError::new_err(value.to_string())
+pub struct PyTimeDeltaError(pub TimeDeltaError);
+
+impl From<PyTimeDeltaError> for PyErr {
+    fn from(err: PyTimeDeltaError) -> Self {
+        PyValueError::new_err(err.0.to_string())
     }
 }
 
@@ -26,7 +28,9 @@ pub struct PyTimeDelta(pub TimeDelta);
 impl PyTimeDelta {
     #[new]
     pub fn new(seconds: f64) -> PyResult<Self> {
-        Ok(Self(TimeDelta::try_from_decimal_seconds(seconds)?))
+        Ok(Self(
+            TimeDelta::try_from_decimal_seconds(seconds).map_err(PyTimeDeltaError)?,
+        ))
     }
 
     pub fn __repr__(&self) -> String {
@@ -72,27 +76,35 @@ impl PyTimeDelta {
 
     #[classmethod]
     pub fn from_minutes(_cls: &Bound<'_, PyType>, minutes: f64) -> PyResult<Self> {
-        Ok(Self(TimeDelta::from_minutes(minutes)?))
+        Ok(Self(
+            TimeDelta::from_minutes(minutes).map_err(PyTimeDeltaError)?,
+        ))
     }
 
     #[classmethod]
     pub fn from_hours(_cls: &Bound<'_, PyType>, hours: f64) -> PyResult<Self> {
-        Ok(Self(TimeDelta::from_hours(hours)?))
+        Ok(Self(
+            TimeDelta::from_hours(hours).map_err(PyTimeDeltaError)?,
+        ))
     }
 
     #[classmethod]
     pub fn from_days(_cls: &Bound<'_, PyType>, days: f64) -> PyResult<Self> {
-        Ok(Self(TimeDelta::from_days(days)?))
+        Ok(Self(TimeDelta::from_days(days).map_err(PyTimeDeltaError)?))
     }
 
     #[classmethod]
     pub fn from_julian_years(_cls: &Bound<'_, PyType>, years: f64) -> PyResult<Self> {
-        Ok(Self(TimeDelta::from_julian_years(years)?))
+        Ok(Self(
+            TimeDelta::from_julian_years(years).map_err(PyTimeDeltaError)?,
+        ))
     }
 
     #[classmethod]
     pub fn from_julian_centuries(_cls: &Bound<'_, PyType>, centuries: f64) -> PyResult<Self> {
-        Ok(Self(TimeDelta::from_julian_centuries(centuries)?))
+        Ok(Self(
+            TimeDelta::from_julian_centuries(centuries).map_err(PyTimeDeltaError)?,
+        ))
     }
 
     #[classmethod]

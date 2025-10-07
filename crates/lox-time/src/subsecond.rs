@@ -44,7 +44,7 @@ impl Eq for InvalidSubsecond {}
 /// An `f64` value in the range `[0.0, 1.0)` representing a fraction of a second with femtosecond
 /// precision.
 #[derive(Debug, Default, Copy, Clone)]
-pub struct Subsecond(pub(crate) f64);
+pub struct Subsecond(pub f64);
 
 /// Two Subseconds are considered equal if their absolute difference is less than 1 femtosecond.
 impl PartialEq for Subsecond {

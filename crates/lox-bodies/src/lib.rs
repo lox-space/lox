@@ -16,8 +16,6 @@ pub mod dynamic;
 pub mod fundamental;
 #[allow(clippy::approx_constant)]
 mod generated;
-#[cfg(feature = "python")]
-pub mod python;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[repr(transparent)]

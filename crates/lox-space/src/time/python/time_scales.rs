@@ -11,23 +11,27 @@ use pyo3::{
     types::PyAnyMethods,
 };
 
-use crate::time_scales::{
+use crate::time::time_scales::{
     DynTimeScale, TimeScale, UnknownTimeScaleError, offsets::MissingEopProviderError,
 };
 
-impl From<UnknownTimeScaleError> for PyErr {
-    fn from(err: UnknownTimeScaleError) -> Self {
-        PyValueError::new_err(err.to_string())
+pub struct PyUnknownTimeScaleError(pub UnknownTimeScaleError);
+
+impl From<PyUnknownTimeScaleError> for PyErr {
+    fn from(err: PyUnknownTimeScaleError) -> Self {
+        PyValueError::new_err(err.0.to_string())
     }
 }
 
-impl From<MissingEopProviderError> for PyErr {
-    fn from(err: MissingEopProviderError) -> Self {
-        PyValueError::new_err(err.to_string())
+pub struct PyMissingEopProviderError(pub MissingEopProviderError);
+
+impl From<PyMissingEopProviderError> for PyErr {
+    fn from(err: PyMissingEopProviderError) -> Self {
+        PyValueError::new_err(err.0.to_string())
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
 #[pyclass(name = "TimeScale", module = "lox_space", frozen, eq)]
 pub struct PyTimeScale(pub DynTimeScale);
 
@@ -35,7 +39,9 @@ pub struct PyTimeScale(pub DynTimeScale);
 impl PyTimeScale {
     #[new]
     pub fn new(abbreviation: &str) -> PyResult<Self> {
-        Ok(PyTimeScale(abbreviation.parse()?))
+        Ok(PyTimeScale(
+            abbreviation.parse().map_err(PyUnknownTimeScaleError)?,
+        ))
     }
     fn __getnewargs__(&self) -> (String,) {
         (self.abbreviation(),)
@@ -58,14 +64,14 @@ impl PyTimeScale {
     }
 }
 
-impl TryFrom<&Bound<'_, PyAny>> for DynTimeScale {
+impl TryFrom<&Bound<'_, PyAny>> for PyTimeScale {
     type Error = PyErr;
 
     fn try_from(value: &Bound<'_, PyAny>) -> Result<Self, Self::Error> {
         if let Ok(name) = value.extract::<&str>() {
-            return Ok(name.parse()?);
+            return Ok(PyTimeScale(name.parse().map_err(PyUnknownTimeScaleError)?));
         } else if let Ok(scale) = value.extract::<PyTimeScale>() {
-            return Ok(scale.0);
+            return Ok(scale);
         }
         Err(PyValueError::new_err(
             "'scale' argument must either a string or a 'TimeScale' instance",

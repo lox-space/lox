@@ -6,5 +6,32 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+#[cfg(feature = "bodies")]
+pub mod bodies;
+
+#[cfg(feature = "earth")]
+pub mod earth;
+
+#[cfg(feature = "ephem")]
+pub mod ephem;
+
+#[cfg(feature = "frames")]
+pub mod frames;
+
+#[cfg(feature = "io")]
+pub mod io;
+
+#[cfg(feature = "math")]
+pub mod math;
+
+#[cfg(feature = "orbits")]
+pub mod orbits;
+
+#[cfg(feature = "time")]
+pub mod time;
+
+#[cfg(feature = "units")]
+pub mod units;
+
 #[cfg(feature = "python")]
-mod python;
+pub(crate) mod python;

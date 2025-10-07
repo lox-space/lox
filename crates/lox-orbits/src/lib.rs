@@ -14,7 +14,5 @@ pub mod elements;
 pub mod events;
 pub mod ground;
 pub mod propagators;
-#[cfg(feature = "python")]
-pub mod python;
 pub mod states;
 pub mod trajectories;

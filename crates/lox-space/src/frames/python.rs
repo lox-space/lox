@@ -6,23 +6,27 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::{
+use crate::frames::{
     dynamic::{DynFrame, UnknownFrameError},
     traits::ReferenceFrame,
     transformations::iau::IauFrameTransformationError,
 };
 use pyo3::{PyErr, PyResult, exceptions::PyValueError, pyclass, pymethods};
 
-impl From<UnknownFrameError> for PyErr {
-    fn from(err: UnknownFrameError) -> Self {
-        PyValueError::new_err(err.to_string())
+pub struct PyUnknownFrameError(pub UnknownFrameError);
+
+impl From<PyUnknownFrameError> for PyErr {
+    fn from(err: PyUnknownFrameError) -> Self {
+        PyValueError::new_err(err.0.to_string())
     }
 }
 
-impl From<IauFrameTransformationError> for PyErr {
-    fn from(err: IauFrameTransformationError) -> Self {
+pub struct PyIauFrameTransformationError(pub IauFrameTransformationError);
+
+impl From<PyIauFrameTransformationError> for PyErr {
+    fn from(err: PyIauFrameTransformationError) -> Self {
         // FIXME: wrong error type
-        PyValueError::new_err(err.to_string())
+        PyValueError::new_err(err.0.to_string())
     }
 }
 
@@ -35,7 +39,7 @@ pub struct PyFrame(pub DynFrame);
 impl PyFrame {
     #[new]
     fn new(abbreviation: &str) -> PyResult<Self> {
-        Ok(Self(abbreviation.parse()?))
+        Ok(Self(abbreviation.parse().map_err(PyUnknownFrameError)?))
     }
 
     fn __getnewargs__(&self) -> (String,) {

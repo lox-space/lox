@@ -12,13 +12,7 @@ repository.workspace = true
 fast_polynomial.workspace = true
 float_eq.workspace = true
 glam.workspace = true
-pyo3 = { workspace = true, optional = true }
 thiserror.workspace = true
 
 [dev-dependencies]
 rstest.workspace = true
-
-[features]
-python = [
-    "dep:pyo3",
-]
