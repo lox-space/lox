@@ -1,7 +1,5 @@
 use lox_math::types::julian_dates::Epoch;
 
-#[cfg(feature = "python")]
-pub mod python;
 pub mod spk;
 
 pub(crate) type Position = (f64, f64, f64);

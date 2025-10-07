@@ -10,8 +10,6 @@ pub mod glam;
 pub mod is_close;
 pub mod linear_algebra;
 pub mod math;
-#[cfg(feature = "python")]
-pub mod python;
 pub mod roots;
 pub mod series;
 pub mod slices;

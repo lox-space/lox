@@ -11,19 +11,13 @@ repository.workspace = true
 [dependencies]
 lox-bodies.workspace = true
 lox-earth.workspace = true
-lox-time.workspace = true
 lox-math.workspace = true
+lox-time.workspace = true
 lox-units.workspace = true
 
 glam.workspace = true
 hashbrown.workspace = true
-numpy = { workspace = true, optional = true }
-pyo3 = { workspace = true, optional = true }
 thiserror.workspace = true
 
 [dev-dependencies]
-pyo3 = { workspace = true, features = ["auto-initialize"] }
 rstest.workspace = true
-
-[features]
-python = ["dep:pyo3", "dep:numpy", "lox-bodies/python", "lox-time/python"]

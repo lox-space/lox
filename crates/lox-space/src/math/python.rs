@@ -6,13 +6,15 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::series::{Series, SeriesError};
+use crate::math::series::{Series, SeriesError};
 use pyo3::exceptions::PyValueError;
 use pyo3::{PyErr, PyResult, pyclass, pymethods};
 
-impl From<SeriesError> for PyErr {
-    fn from(err: SeriesError) -> Self {
-        PyValueError::new_err(err.to_string())
+pub struct PySeriesError(pub SeriesError);
+
+impl From<PySeriesError> for PyErr {
+    fn from(err: PySeriesError) -> Self {
+        PyValueError::new_err(err.0.to_string())
     }
 }
 
@@ -26,8 +28,8 @@ impl PySeries {
     #[pyo3(signature = (x, y, method="linear"))]
     fn new(x: Vec<f64>, y: Vec<f64>, method: &str) -> PyResult<Self> {
         let series = match method {
-            "linear" => Series::new(x, y)?,
-            "cubic_spline" => Series::with_cubic_spline(x, y)?,
+            "linear" => Series::new(x, y).map_err(PySeriesError)?,
+            "cubic_spline" => Series::with_cubic_spline(x, y).map_err(PySeriesError)?,
             _ => return Err(PyValueError::new_err("unknown method")),
         };
         Ok(PySeries(series))

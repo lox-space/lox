@@ -8,59 +8,64 @@
 
 use std::collections::HashMap;
 
-use lox_time::time_scales::offsets::DefaultOffsetProvider;
-use rayon::prelude::*;
-
-use glam::DVec3;
-use lox_ephem::Ephemeris;
-use lox_ephem::python::PySpk;
-use lox_time::DynTime;
-use numpy::{PyArray1, PyArray2, PyArrayMethods};
-use pyo3::types::PyType;
-use pyo3::{
-    Bound, IntoPyObjectExt, PyAny, PyErr, PyResult, Python,
-    exceptions::PyValueError,
-    pyclass, pyfunction, pymethods,
-    types::{PyAnyMethods, PyList},
+use crate::bodies::python::{PyOrigin, PyUndefinedOriginPropertyError};
+use crate::bodies::{DynOrigin, Origin};
+use crate::ephem::Ephemeris;
+use crate::ephem::python::{PyDafSpkError, PySpk};
+use crate::frames::python::{PyFrame, PyIauFrameTransformationError};
+use crate::frames::{DynFrame, TryRotateTo};
+use crate::math::python::PySeriesError;
+use crate::math::roots::Brent;
+use crate::math::series::SeriesError;
+use crate::orbits::analysis::{
+    DynPass, ElevationMask, ElevationMaskError, Pass, visibility_combined,
 };
-use python::PyOrigin;
-use sgp4::Elements;
-
-use lox_bodies::*;
-use lox_math::roots::Brent;
-use lox_math::series::SeriesError;
-use lox_time::deltas::TimeDelta;
-use lox_time::python::deltas::PyTimeDelta;
-use lox_time::python::time::PyTime;
-use lox_time::python::ut1::PyUt1Provider;
-use lox_time::time_scales::{DynTimeScale, Tai};
-
-use crate::analysis::{DynPass, ElevationMask, ElevationMaskError, Pass, visibility_combined};
-use crate::elements::{DynKeplerian, Keplerian};
-use crate::events::{Event, FindEventError, Window};
-use crate::ground::{DynGroundLocation, DynGroundPropagator, GroundPropagatorError, Observables};
-use crate::propagators::Propagator;
-use crate::propagators::semi_analytical::{DynVallado, Vallado, ValladoError};
-use crate::propagators::sgp4::{Sgp4, Sgp4Error};
-use crate::states::DynState;
-use crate::trajectories::{DynTrajectory, TrajectoryTransformationError};
-use crate::{
+use crate::orbits::elements::{DynKeplerian, Keplerian};
+use crate::orbits::events::{Event, FindEventError, Window};
+use crate::orbits::ground::{
+    DynGroundLocation, DynGroundPropagator, GroundPropagatorError, Observables,
+};
+use crate::orbits::propagators::Propagator;
+use crate::orbits::propagators::semi_analytical::{DynVallado, Vallado, ValladoError};
+use crate::orbits::propagators::sgp4::{Sgp4, Sgp4Error};
+use crate::orbits::states::DynState;
+use crate::orbits::trajectories::{DynTrajectory, TrajectoryTransformationError};
+use crate::orbits::{
     states::State,
     trajectories::{Trajectory, TrajectoryError},
 };
-use lox_frames::{DynFrame, TryRotateTo, python::PyFrame};
+use crate::time::DynTime;
+use crate::time::deltas::TimeDelta;
+use crate::time::python::deltas::{PyTimeDelta, PyTimeDeltaError};
+use crate::time::python::time::PyTime;
+use crate::time::python::time_scales::PyMissingEopProviderError;
+use crate::time::python::ut1::{PyExtrapolatedDeltaUt1Tai, PyUt1Provider};
+use crate::time::time_scales::offsets::DefaultOffsetProvider;
+use crate::time::time_scales::{DynTimeScale, Tai};
 
-impl From<TrajectoryTransformationError> for PyErr {
-    fn from(err: TrajectoryTransformationError) -> Self {
+use glam::DVec3;
+use numpy::{PyArray1, PyArray2, PyArrayMethods};
+use pyo3::exceptions::PyValueError;
+use pyo3::types::{PyList, PyType};
+use pyo3::{IntoPyObjectExt, prelude::*};
+use rayon::prelude::*;
+use sgp4::Elements;
+
+struct PyTrajectoryTransformationError(TrajectoryTransformationError);
+
+impl From<PyTrajectoryTransformationError> for PyErr {
+    fn from(err: PyTrajectoryTransformationError) -> Self {
         // FIXME: wrong error type
-        PyValueError::new_err(err.to_string())
+        PyValueError::new_err(err.0.to_string())
     }
 }
 
-impl From<FindEventError> for PyErr {
-    fn from(err: FindEventError) -> Self {
+struct PyFindEventError(FindEventError);
+
+impl From<PyFindEventError> for PyErr {
+    fn from(err: PyFindEventError) -> Self {
         // FIXME: wrong error type
-        PyValueError::new_err(err.to_string())
+        PyValueError::new_err(err.0.to_string())
     }
 }
 
@@ -72,7 +77,7 @@ pub fn find_events(
     times: Vec<f64>,
 ) -> PyResult<Vec<PyEvent>> {
     let root_finder = Brent::default();
-    Ok(crate::events::find_events(
+    Ok(crate::orbits::events::find_events(
         |t| {
             func.call((t,), None)
                 .unwrap_or(f64::NAN.into_bound_py_any(py).unwrap())
@@ -82,7 +87,8 @@ pub fn find_events(
         start.0,
         &times,
         root_finder,
-    )?
+    )
+    .map_err(PyFindEventError)?
     .into_iter()
     .map(PyEvent)
     .collect())
@@ -97,7 +103,7 @@ pub fn find_windows(
     times: Vec<f64>,
 ) -> PyResult<Vec<PyWindow>> {
     let root_finder = Brent::default();
-    Ok(crate::events::find_windows(
+    Ok(crate::orbits::events::find_windows(
         |t| {
             func.call((t,), None)
                 .unwrap_or(f64::NAN.into_bound_py_any(py).unwrap())
@@ -181,7 +187,8 @@ impl PyState {
                 self.0.time(),
                 &DefaultOffsetProvider,
             ),
-        }?;
+        }
+        .map_err(PyIauFrameTransformationError)?;
         let (r1, v1) = rot.rotate_state(self.0.position(), self.0.velocity());
         Ok(PyState(State::new(
             self.0.time(),
@@ -200,7 +207,10 @@ impl PyState {
             self.clone()
         };
         let spk = &ephemeris.borrow().0;
-        let mut s1 = Self(s.0.to_origin_dynamic(target.0, spk)?);
+        let mut s1 = Self(
+            s.0.to_origin_dynamic(target.0, spk)
+                .map_err(PyDafSpkError)?,
+        );
         if frame.0 != DynFrame::Icrf {
             s1 = s1.to_frame(frame, None)?
         }
@@ -213,7 +223,11 @@ impl PyState {
                 "only inertial frames are supported for conversion to Keplerian elements",
             ));
         }
-        Ok(PyKeplerian(self.0.try_to_keplerian()?))
+        Ok(PyKeplerian(
+            self.0
+                .try_to_keplerian()
+                .map_err(PyUndefinedOriginPropertyError)?,
+        ))
     }
 
     fn rotation_lvlh<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyArray2<f64>>> {
@@ -324,9 +338,11 @@ impl PyKeplerian {
 #[derive(Debug, Clone)]
 pub struct PyTrajectory(pub DynTrajectory);
 
-impl From<TrajectoryError> for PyErr {
-    fn from(err: TrajectoryError) -> Self {
-        PyValueError::new_err(err.to_string())
+pub struct PyTrajectoryError(pub TrajectoryError);
+
+impl From<PyTrajectoryError> for PyErr {
+    fn from(err: PyTrajectoryError) -> Self {
+        PyValueError::new_err(err.0.to_string())
     }
 }
 
@@ -336,7 +352,9 @@ impl PyTrajectory {
     fn new(states: &Bound<'_, PyList>) -> PyResult<Self> {
         let states: Vec<PyState> = states.extract()?;
         let states: Vec<DynState> = states.into_iter().map(|s| s.0).collect();
-        Ok(PyTrajectory(Trajectory::new(&states)?))
+        Ok(PyTrajectory(
+            Trajectory::new(&states).map_err(PyTrajectoryError)?,
+        ))
     }
 
     #[classmethod]
@@ -356,12 +374,15 @@ impl PyTrajectory {
         }
         let mut states: Vec<DynState> = Vec::with_capacity(array.nrows());
         for row in array.rows() {
-            let time = start_time.0 + TimeDelta::try_from_decimal_seconds(row[0])?;
+            let time = start_time.0
+                + TimeDelta::try_from_decimal_seconds(row[0]).map_err(PyTimeDeltaError)?;
             let position = DVec3::new(row[1], row[2], row[3]);
             let velocity = DVec3::new(row[4], row[5], row[6]);
             states.push(State::new(time, position, velocity, origin.0, frame.0));
         }
-        Ok(PyTrajectory(Trajectory::new(&states)?))
+        Ok(PyTrajectory(
+            Trajectory::new(&states).map_err(PyTrajectoryError)?,
+        ))
     }
 
     fn origin(&self) -> PyOrigin {
@@ -430,7 +451,9 @@ impl PyTrajectory {
         for s in self.0.states() {
             states.push(PyState(s).to_frame(frame.clone(), provider)?.0);
         }
-        Ok(PyTrajectory(Trajectory::new(&states)?))
+        Ok(PyTrajectory(
+            Trajectory::new(&states).map_err(PyTrajectoryError)?,
+        ))
     }
 
     fn to_origin(&self, target: PyOrigin, ephemeris: &Bound<'_, PySpk>) -> PyResult<Self> {
@@ -439,7 +462,7 @@ impl PyTrajectory {
             states.push(s.to_origin(target.clone(), ephemeris)?)
         }
         let states: Vec<DynState> = states.into_iter().map(|s| s.0).collect();
-        Ok(Self(Trajectory::new(&states)?))
+        Ok(Self(Trajectory::new(&states).map_err(PyTrajectoryError)?))
     }
 }
 
@@ -500,10 +523,12 @@ impl PyWindow {
 #[derive(Clone, Debug)]
 pub struct PyVallado(pub DynVallado);
 
-impl From<ValladoError> for PyErr {
-    fn from(err: ValladoError) -> Self {
+pub struct PyValladoError(pub ValladoError);
+
+impl From<PyValladoError> for PyErr {
+    fn from(err: PyValladoError) -> Self {
         // TODO: Use better error type
-        PyValueError::new_err(err.to_string())
+        PyValueError::new_err(err.0.to_string())
     }
 }
 
@@ -527,11 +552,19 @@ impl PyVallado {
         steps: &Bound<'py, PyAny>,
     ) -> PyResult<Bound<'py, PyAny>> {
         if let Ok(time) = steps.extract::<PyTime>() {
-            return Ok(Bound::new(py, PyState(self.0.propagate(time.0)?))?.into_any());
+            return Ok(Bound::new(
+                py,
+                PyState(self.0.propagate(time.0).map_err(PyValladoError)?),
+            )?
+            .into_any());
         }
         if let Ok(steps) = steps.extract::<Vec<PyTime>>() {
             let steps = steps.into_iter().map(|s| s.0);
-            return Ok(Bound::new(py, PyTrajectory(self.0.propagate_all(steps)?))?.into_any());
+            return Ok(Bound::new(
+                py,
+                PyTrajectory(self.0.propagate_all(steps).map_err(PyValladoError)?),
+            )?
+            .into_any());
         }
         Err(PyValueError::new_err("invalid time delta(s)"))
     }
@@ -594,9 +627,11 @@ impl PyGroundLocation {
 #[pyclass(name = "GroundPropagator", module = "lox_space", frozen)]
 pub struct PyGroundPropagator(DynGroundPropagator);
 
-impl From<GroundPropagatorError> for PyErr {
-    fn from(err: GroundPropagatorError) -> Self {
-        PyValueError::new_err(err.to_string())
+pub struct PyGroundPropagatorError(pub GroundPropagatorError);
+
+impl From<PyGroundPropagatorError> for PyErr {
+    fn from(err: PyGroundPropagatorError) -> Self {
+        PyValueError::new_err(err.0.to_string())
     }
 }
 
@@ -613,19 +648,37 @@ impl PyGroundPropagator {
         steps: &Bound<'py, PyAny>,
     ) -> PyResult<Bound<'py, PyAny>> {
         if let Ok(time) = steps.extract::<PyTime>() {
-            return Ok(Bound::new(py, PyState(self.0.propagate_dyn(time.0)?))?.into_any());
+            return Ok(Bound::new(
+                py,
+                PyState(
+                    self.0
+                        .propagate_dyn(time.0)
+                        .map_err(PyGroundPropagatorError)?,
+                ),
+            )?
+            .into_any());
         }
         if let Ok(steps) = steps.extract::<Vec<PyTime>>() {
             let steps = steps.into_iter().map(|s| s.0);
-            return Ok(Bound::new(py, PyTrajectory(self.0.propagate_all_dyn(steps)?))?.into_any());
+            return Ok(Bound::new(
+                py,
+                PyTrajectory(
+                    self.0
+                        .propagate_all_dyn(steps)
+                        .map_err(PyGroundPropagatorError)?,
+                ),
+            )?
+            .into_any());
         }
         Err(PyValueError::new_err("invalid time delta(s)"))
     }
 }
 
-impl From<Sgp4Error> for PyErr {
-    fn from(err: Sgp4Error) -> Self {
-        PyValueError::new_err(err.to_string())
+pub struct PySgp4Error(pub Sgp4Error);
+
+impl From<PySgp4Error> for PyErr {
+    fn from(err: PySgp4Error) -> Self {
+        PyValueError::new_err(err.0.to_string())
     }
 }
 
@@ -675,17 +728,27 @@ impl PySgp4 {
         if let Ok(pytime) = steps.extract::<PyTime>() {
             let (time, dyntime) = match provider {
                 Some(provider) => (
-                    pytime.0.try_to_scale(Tai, provider)?,
-                    pytime.0.try_to_scale(DynTimeScale::Tai, provider)?,
-                ),
-                None => (
-                    pytime.0.try_to_scale(Tai, &DefaultOffsetProvider)?,
                     pytime
                         .0
-                        .try_to_scale(DynTimeScale::Tai, &DefaultOffsetProvider)?,
+                        .try_to_scale(Tai, provider)
+                        .map_err(PyExtrapolatedDeltaUt1Tai)?,
+                    pytime
+                        .0
+                        .try_to_scale(DynTimeScale::Tai, provider)
+                        .map_err(PyExtrapolatedDeltaUt1Tai)?,
+                ),
+                None => (
+                    pytime
+                        .0
+                        .try_to_scale(Tai, &DefaultOffsetProvider)
+                        .map_err(PyMissingEopProviderError)?,
+                    pytime
+                        .0
+                        .try_to_scale(DynTimeScale::Tai, &DefaultOffsetProvider)
+                        .map_err(PyMissingEopProviderError)?,
                 ),
             };
-            let s1 = self.0.propagate(time)?;
+            let s1 = self.0.propagate(time).map_err(PySgp4Error)?;
             return Ok(Bound::new(
                 py,
                 PyState(State::new(
@@ -703,16 +766,23 @@ impl PySgp4 {
             for step in pysteps {
                 let (time, dyntime) = match provider {
                     Some(provider) => (
-                        step.0.try_to_scale(Tai, provider)?,
-                        step.0.try_to_scale(DynTimeScale::Tai, provider)?,
+                        step.0
+                            .try_to_scale(Tai, provider)
+                            .map_err(PyExtrapolatedDeltaUt1Tai)?,
+                        step.0
+                            .try_to_scale(DynTimeScale::Tai, provider)
+                            .map_err(PyExtrapolatedDeltaUt1Tai)?,
                     ),
                     None => (
-                        step.0.try_to_scale(Tai, &DefaultOffsetProvider)?,
                         step.0
-                            .try_to_scale(DynTimeScale::Tai, &DefaultOffsetProvider)?,
+                            .try_to_scale(Tai, &DefaultOffsetProvider)
+                            .map_err(PyMissingEopProviderError)?,
+                        step.0
+                            .try_to_scale(DynTimeScale::Tai, &DefaultOffsetProvider)
+                            .map_err(PyMissingEopProviderError)?,
                     ),
                 };
-                let s = self.0.propagate(time)?;
+                let s = self.0.propagate(time).map_err(PySgp4Error)?;
                 let s = State::new(
                     dyntime,
                     s.position(),
@@ -722,7 +792,11 @@ impl PySgp4 {
                 );
                 states.push(s);
             }
-            return Ok(Bound::new(py, PyTrajectory(Trajectory::new(&states)?))?.into_any());
+            return Ok(Bound::new(
+                py,
+                PyTrajectory(Trajectory::new(&states).map_err(PyTrajectoryError)?),
+            )?
+            .into_any());
         }
         Err(PyValueError::new_err("invalid time delta(s)"))
     }
@@ -757,10 +831,13 @@ pub fn visibility(
         .map(|b| b.0)
         .collect();
     Ok(
-        crate::analysis::visibility_combined(&times, &gs.0, mask, &bodies, &sc.0, ephemeris)?
-            .into_iter()
-            .map(PyPass)
-            .collect(),
+        crate::orbits::analysis::visibility_combined(
+            &times, &gs.0, mask, &bodies, &sc.0, ephemeris,
+        )
+        .map_err(PySeriesError)?
+        .into_iter()
+        .map(PyPass)
+        .collect(),
     )
 }
 
@@ -869,7 +946,8 @@ where
                 bodies,
                 sc_trajectory,
                 ephemeris,
-            )?;
+            )
+            .map_err(PySeriesError)?;
 
             gs_results.insert(gs_name.clone(), passes.into_iter().map(PyPass).collect());
         }
@@ -934,7 +1012,11 @@ where
     });
 
     // Convert the flat results to nested hashmap structure
-    let flat_results: Vec<_> = results?.into_iter().flatten().collect();
+    let flat_results: Vec<_> = results
+        .map_err(PySeriesError)?
+        .into_iter()
+        .flatten()
+        .collect();
     let mut final_result: HashMap<String, HashMap<String, Vec<PyPass>>> = HashMap::new();
 
     for (sc_name, gs_name, passes) in flat_results {
@@ -947,9 +1029,11 @@ where
     Ok(final_result)
 }
 
-impl From<ElevationMaskError> for PyErr {
-    fn from(err: ElevationMaskError) -> Self {
-        PyValueError::new_err(err.to_string())
+pub struct PyElevationMaskError(pub ElevationMaskError);
+
+impl From<PyElevationMaskError> for PyErr {
+    fn from(err: PyElevationMaskError) -> Self {
+        PyValueError::new_err(err.0.to_string())
     }
 }
 
@@ -974,7 +1058,9 @@ impl PyElevationMask {
         if let (Some(azimuth), Some(elevation)) = (azimuth, elevation) {
             let azimuth = azimuth.to_vec()?;
             let elevation = elevation.to_vec()?;
-            return Ok(PyElevationMask(ElevationMask::new(azimuth, elevation)?));
+            return Ok(PyElevationMask(
+                ElevationMask::new(azimuth, elevation).map_err(PyElevationMaskError)?,
+            ));
         }
         Err(PyValueError::new_err(
             "invalid argument combination, either `min_elevation` or `azimuth` and `elevation` arrays need to be present",
@@ -994,7 +1080,9 @@ impl PyElevationMask {
     ) -> PyResult<Self> {
         let azimuth = azimuth.to_vec()?;
         let elevation = elevation.to_vec()?;
-        Ok(PyElevationMask(ElevationMask::new(azimuth, elevation)?))
+        Ok(PyElevationMask(
+            ElevationMask::new(azimuth, elevation).map_err(PyElevationMaskError)?,
+        ))
     }
 
     fn __getnewargs__(&self) -> (Option<Vec<f64>>, Option<Vec<f64>>, Option<f64>) {

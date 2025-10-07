@@ -13,26 +13,94 @@ name = "lox_space"
 crate-type = ["lib", "cdylib"]
 
 [dependencies]
-lox-bodies.workspace = true
-lox-ephem.workspace = true
-lox-frames.workspace = true
-lox-math.workspace = true
-lox-orbits.workspace = true
-lox-time.workspace = true
+lox-bodies = { workspace = true, optional = true }
+lox-earth = { workspace = true, optional = true }
+lox-ephem = { workspace = true, optional = true }
+lox-frames = { workspace = true, optional = true }
+lox-io = { workspace = true, optional = true }
+lox-math = { workspace = true, optional = true }
+lox-orbits = { workspace = true, optional = true }
+lox-time = { workspace = true, optional = true }
 lox-units = { workspace = true, optional = true }
 
+glam = { workspace = true, optional = true }
+numpy = { workspace = true, optional = true }
 pyo3 = { workspace = true, optional = true }
+rayon = { workspace = true, optional = true }
+sgp4 = { workspace = true, optional = true }
+
+[dev-dependencies]
+float_eq.workspace = true
+pyo3 = { workspace = true, features = ["auto-initialize"] }
+rstest.workspace = true
 
 [features]
+default = [
+    "bodies",
+    "earth",
+    "ephem",
+    "frames",
+    "io",
+    "math",
+    "orbits",
+    "time",
+    "units",
+]
+bodies = [
+    "math",
+    "units",
+    "dep:lox-bodies"
+]
+earth = [
+    "bodies",
+    "math",
+    "io",
+    "time",
+    "units",
+    "dep:lox-earth",
+]
+ephem = [
+    "math",
+    "dep:lox-ephem"
+]
+frames = [
+    "bodies",
+    "earth",
+    "math",
+    "time",
+    "units",
+    "dep:lox-frames"
+]
+io = [
+    "dep:lox-io"
+]
+math = [
+    "dep:lox-math"
+]
+orbits = [
+    "bodies",
+    "earth",
+    "ephem",
+    "frames",
+    "math",
+    "time",
+    "units",
+    "dep:lox-orbits"
+]
 python = [
-    "dep:lox-units",
+    "time",
+    "units",
+    "dep:glam",
+    "dep:numpy",
     "dep:pyo3",
-    "lox-bodies/python",
-    "lox-ephem/python",
-    "lox-frames/python",
-    "lox-math/python",
-    "lox-orbits/python",
-    "lox-time/python",
+    "dep:rayon",
+    "dep:sgp4",
+]
+time = [
+    "io",
+    "math",
+    "units",
+    "dep:lox-time",
 ]
 units = [
     "dep:lox-units",

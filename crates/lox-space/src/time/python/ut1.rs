@@ -6,20 +6,24 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::ut1::{DeltaUt1Tai, DeltaUt1TaiError, ExtrapolatedDeltaUt1Tai};
-use crate::utc::leap_seconds::BuiltinLeapSeconds;
+use crate::time::ut1::{DeltaUt1Tai, DeltaUt1TaiError, ExtrapolatedDeltaUt1Tai};
+use crate::time::utc::leap_seconds::BuiltinLeapSeconds;
 use pyo3::exceptions::PyValueError;
 use pyo3::{PyErr, PyResult, pyclass, pymethods};
 
-impl From<ExtrapolatedDeltaUt1Tai> for PyErr {
-    fn from(value: ExtrapolatedDeltaUt1Tai) -> Self {
-        PyValueError::new_err(value.to_string())
+pub struct PyExtrapolatedDeltaUt1Tai(pub ExtrapolatedDeltaUt1Tai);
+
+impl From<PyExtrapolatedDeltaUt1Tai> for PyErr {
+    fn from(err: PyExtrapolatedDeltaUt1Tai) -> Self {
+        PyValueError::new_err(err.0.to_string())
     }
 }
 
-impl From<DeltaUt1TaiError> for PyErr {
-    fn from(value: DeltaUt1TaiError) -> Self {
-        PyValueError::new_err(value.to_string())
+pub struct PyDeltaUt1TaiError(pub DeltaUt1TaiError);
+
+impl From<PyDeltaUt1TaiError> for PyErr {
+    fn from(err: PyDeltaUt1TaiError) -> Self {
+        PyValueError::new_err(err.0.to_string())
     }
 }
 
@@ -31,18 +35,19 @@ pub struct PyUt1Provider(pub DeltaUt1Tai);
 impl PyUt1Provider {
     #[new]
     pub fn new(path: &str) -> PyResult<PyUt1Provider> {
-        let provider = DeltaUt1Tai::new(path, &BuiltinLeapSeconds)?;
+        let provider = DeltaUt1Tai::new(path, &BuiltinLeapSeconds).map_err(PyDeltaUt1TaiError)?;
         Ok(PyUt1Provider(provider))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use pyo3::{Bound, IntoPyObjectExt, Python};
-
-    use crate::{python::time::PyTime, test_helpers::data_dir};
-
     use super::*;
+
+    use crate::time::python::time::PyTime;
+    use crate::time::test_helpers::data_dir;
+
+    use pyo3::{Bound, IntoPyObjectExt, Python};
 
     #[test]
     #[should_panic(expected = "No such file")]

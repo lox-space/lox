@@ -36,12 +36,8 @@ pub mod calendar_dates;
 pub mod constants;
 pub mod deltas;
 pub mod julian_dates;
-#[cfg(feature = "python")]
-pub mod python;
 pub mod ranges;
 pub mod subsecond;
-#[cfg(test)]
-pub(crate) mod test_helpers;
 pub mod time;
 pub mod time_of_day;
 pub mod time_scales;
@@ -50,3 +46,5 @@ pub mod utc;
 
 // Re-export commonly used types
 pub use time::{DynTime, JulianDateOutOfRange, Time, TimeBuilder, TimeError};
+
+pub mod test_helpers;
