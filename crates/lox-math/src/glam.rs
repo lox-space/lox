@@ -1,6 +1,6 @@
 use glam::DVec3;
 
-use crate::types::units::Radians;
+use lox_units::types::units::Radians;
 
 pub trait Azimuth {
     fn azimuth(&self) -> Radians;

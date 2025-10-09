@@ -2,7 +2,7 @@
 
 use std::f64::consts::{PI, TAU};
 
-use crate::types::units::{Arcseconds, Radians};
+use lox_units::types::units::{Arcseconds, Radians};
 
 /// Normalizes an angle `a` to the range [center-π, center+π).
 pub fn normalize_two_pi(a: Radians, center: Radians) -> Radians {

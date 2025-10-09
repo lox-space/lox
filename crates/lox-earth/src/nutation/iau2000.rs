@@ -2,7 +2,7 @@ use std::f64::consts::TAU;
 
 pub(crate) use iau2000a::nutation_iau2000a;
 pub(crate) use iau2000b::nutation_iau2000b;
-use lox_math::types::units::JulianCenturies;
+use lox_units::types::units::JulianCenturies;
 
 use crate::nutation::{Nutation, point1_microarcsec_to_rad};
 

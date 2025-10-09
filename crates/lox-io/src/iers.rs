@@ -10,7 +10,7 @@
 
 use std::path::{Path, PathBuf};
 
-use lox_math::types::julian_dates::ModifiedJulianDayNumber;
+use lox_units::types::julian_dates::ModifiedJulianDayNumber;
 use serde::Deserialize;
 use thiserror::Error;
 
@@ -160,7 +160,7 @@ mod tests {
 
     use rstest::rstest;
 
-    use lox_math::types::julian_dates::ModifiedJulianDayNumber;
+    use lox_units::types::julian_dates::ModifiedJulianDayNumber;
 
     use super::*;
 

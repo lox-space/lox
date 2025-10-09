@@ -13,8 +13,8 @@ use thiserror::Error;
 use lox_bodies::fundamental::iers03::mean_moon_sun_elongation_iers03;
 use lox_bodies::{Moon, Sun};
 use lox_math::math::arcsec_to_rad_two_pi;
-use lox_math::types::julian_dates::ModifiedJulianDate;
-use lox_math::types::units::{Arcseconds, Microarcseconds, Radians, Seconds};
+use lox_units::types::julian_dates::ModifiedJulianDate;
+use lox_units::types::units::{Arcseconds, Microarcseconds, Radians, Seconds};
 use lox_units::constants::f64::time::{DAYS_PER_JULIAN_CENTURY, MJD_J2000};
 
 use crate::tides::constants::{LUNI_SOLAR_TIDAL_TERMS, OCEANIC_TIDAL_TERMS};
