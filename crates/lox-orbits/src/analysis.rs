@@ -27,7 +27,7 @@ use std::f64::consts::PI;
 use thiserror::Error;
 
 use crate::events::{Window, find_windows, intersect_windows};
-use crate::ground::{DynGroundLocation, DynGroundPropagator, GroundLocation, Observables};
+use crate::ground::{DynGroundLocation, DynGroundPropagator, GroundLocation, Observables, Observer, SatelliteObserver};
 use crate::states::{DynState, State};
 use crate::trajectories::{DynTrajectory, Trajectory};
 use lox_frames::{DynFrame, Iau, Icrf, TryRotateTo};
@@ -162,6 +162,36 @@ impl DynPass {
         }
 
         // Only create a pass if we have valid observations
+        if pass_times.is_empty() {
+            return Err(SeriesError::InsufficientPoints(0, 2));
+        }
+
+        Pass::new(window, pass_times, pass_observables)
+    }
+
+    pub fn from_window_with_observer(
+        window: Window<DynTimeScale>,
+        time_resolution: TimeDelta,
+        observer: &impl Observer,
+        target: &DynTrajectory,
+    ) -> Result<DynPass, SeriesError> {
+        let mut pass_times = Vec::new();
+        let mut pass_observables = Vec::new();
+
+        let mut current_time = window.start();
+
+        while current_time <= window.end() {
+            let target_state = target.interpolate_at(current_time);
+            let obs = observer.compute_observables(target_state);
+
+            // For satellite-to-satellite, we might want different criteria
+            // For now, just include all observations within the window
+            pass_times.push(current_time);
+            pass_observables.push(obs);
+
+            current_time = current_time + time_resolution;
+        }
+
         if pass_times.is_empty() {
             return Err(SeriesError::InsufficientPoints(0, 2));
         }
@@ -461,39 +491,33 @@ pub fn visibility_intersat_los(
     }
 }
 
-pub fn visibility_intersat_los_multiple_bodies(
+pub fn visibility_intersat_los_multiple_bodies<E: Ephemeris + Send + Sync>(
     times: &[DynTime],
     source: &DynTrajectory,
     target: &DynTrajectory,
     bodies: &[DynOrigin],
-    ephem: &impl Ephemeris,
+    ephem: &E,
 ) -> Result<Vec<DynPass>, SeriesError> {
     let windows_los: Vec<Vec<Window<DynTimeScale>>> = bodies
         .par_iter()
         .map(|&body| visibility_intersat_los(times, source, target, body, ephem))
         .collect();
 
-    // TODO: combine los windows with some max range windows and angular velocity windows
     let windows: Vec<Window<DynTimeScale>> = windows_los.into_iter().flatten().collect();
 
-    // Convert windows to passes
     let mut passes = Vec::new();
-    // Calculate time resolution from the provided times array
     let time_resolution = if times.len() >= 2 {
         times[1] - times[0]
     } else {
-        // Default to 60 seconds if we don't have enough times
         TimeDelta::try_from_decimal_seconds(60.0).expect("60 seconds should be valid")
     };
 
     for window in windows {
-        // Use the new from_window constructor to properly calculate observables
-        match DynIntersatPass::from_window(window, time_resolution, gs, mask, sc) {
+        let observer = SatelliteObserver::new(source.clone());
+
+        match DynPass::from_window_with_observer(window, time_resolution, &observer, target) {
             Ok(pass) => passes.push(pass),
-            Err(SeriesError::InsufficientPoints(_, _)) => {
-                // Skip windows where the satellite never rises above the elevation mask
-                continue;
-            }
+            Err(SeriesError::InsufficientPoints(_, _)) => continue,
             Err(e) => return Err(e),
         }
     }
@@ -557,176 +581,6 @@ where
         &times,
         root_finder,
     )
-}
-
-// XXX: the 'intersat' stuff here is just hacked together quickly
-#[derive(Debug, Clone)]
-pub struct IntersatPass<T: TimeScale> {
-    window: Window<T>,
-    times: Vec<Time<T>>,
-    observables: Vec<Observables>,
-    // more stuff here
-}
-
-pub type DynIntersatPass = IntersatPass<DynTimeScale>;
-
-impl DynIntersatPass {
-    /// Create a IntersatPass from a window, calculating observables for times when the satellite is above the elevation mask
-    pub fn from_window(
-        window: Window<DynTimeScale>,
-        time_resolution: TimeDelta,
-        source: &DynTrajectory,
-        target: &DynTrajectory,
-        mask: &ElevationMask,
-    ) -> Result<DynIntersatPass, SeriesError> {
-        let mut pass_times = Vec::new();
-        let mut pass_observables = Vec::new();
-
-        // Generate times at the specified resolution within the window
-        let mut current_time = window.start();
-
-        while current_time <= window.end() {
-            let state = source.interpolate_at(current_time);
-
-            // Transform to body-fixed frame like elevation_dyn does
-            let body_fixed = DynFrame::Iau(target.origin());
-            let rot = DynFrame::Icrf.try_rotation(body_fixed, current_time, &DefaultOffsetProvider);
-            let (r1, v1) = rot
-                .unwrap()
-                .rotate_state(state.position(), state.velocity());
-            let state_bf = DynState::new(state.time(), r1, v1, state.origin(), body_fixed);
-
-            let obs = target.observables_dyn(state_bf);
-
-            // Check if satellite is above the elevation mask
-            // hack: always is
-            let min_elev = mask.min_elevation(obs.azimuth());
-            if obs.elevation() >= min_elev {
-                pass_times.push(current_time);
-                pass_observables.push(obs);
-            }
-
-            current_time = current_time + time_resolution;
-        }
-
-        // Only create a pass if we have valid observations
-        if pass_times.is_empty() {
-            return Err(SeriesError::InsufficientPoints(0, 2));
-        }
-
-        IntersatPass::new(window, pass_times, pass_observables)
-    }
-}
-
-impl<T: TimeScale> IntersatPass<T> {
-    pub fn new(
-        window: Window<T>,
-        times: Vec<Time<T>>,
-        observables: Vec<Observables>,
-    ) -> Result<Self, SeriesError>
-    where
-        T: Clone,
-    {
-        // If we have less than 2 points, we can't create a proper Series
-        // We'll create dummy series with duplicate points for Series compatibility
-        let (time_seconds, azimuths, elevations, ranges, range_rates) = if times.len() < 2 {
-            if times.is_empty() {
-                // Create default points at window start and end
-                let start_seconds = 0.0;
-                let end_seconds = window.duration().to_decimal_seconds();
-                let default_obs = observables
-                    .first()
-                    .cloned()
-                    .unwrap_or_else(|| Observables::new(0.0, 0.0, 0.0, 0.0));
-                (
-                    vec![start_seconds, end_seconds],
-                    vec![default_obs.azimuth(), default_obs.azimuth()],
-                    vec![default_obs.elevation(), default_obs.elevation()],
-                    vec![default_obs.range(), default_obs.range()],
-                    vec![default_obs.range_rate(), default_obs.range_rate()],
-                )
-            } else {
-                // Duplicate the single point
-                let time_sec = (times[0].clone() - window.start()).to_decimal_seconds();
-                let obs = &observables[0];
-                (
-                    vec![time_sec, time_sec + 1.0], // Add 1 second offset for second point
-                    vec![obs.azimuth(), obs.azimuth()],
-                    vec![obs.elevation(), obs.elevation()],
-                    vec![obs.range(), obs.range()],
-                    vec![obs.range_rate(), obs.range_rate()],
-                )
-            }
-        } else {
-            // Normal case with multiple points
-            let time_seconds: Vec<f64> = times
-                .iter()
-                .map(|t| (t.clone() - window.start()).to_decimal_seconds())
-                .collect();
-
-            // Extract observable arrays
-            let azimuths: Vec<f64> = observables.iter().map(|o| o.azimuth()).collect();
-            let elevations: Vec<f64> = observables.iter().map(|o| o.elevation()).collect();
-            let ranges: Vec<f64> = observables.iter().map(|o| o.range()).collect();
-            let range_rates: Vec<f64> = observables.iter().map(|o| o.range_rate()).collect();
-
-            (time_seconds, azimuths, elevations, ranges, range_rates)
-        };
-
-        // Create series for each observable
-        let azimuth_series = Series::new(time_seconds.clone(), azimuths)?;
-        let elevation_series = Series::new(time_seconds.clone(), elevations)?;
-        let range_series = Series::new(time_seconds.clone(), ranges)?;
-        let range_rate_series = Series::new(time_seconds, range_rates)?;
-
-        Ok(IntersatPass {
-            window,
-            times,
-            observables,
-            // azimuth_series,
-            // elevation_series,
-            // range_series,
-            // range_rate_series,
-        })
-    }
-
-    pub fn window(&self) -> &Window<T> {
-        &self.window
-    }
-
-    pub fn times(&self) -> &[Time<T>] {
-        &self.times
-    }
-
-    pub fn observables(&self) -> &[Observables] {
-        &self.observables
-    }
-
-    pub fn interpolate(&self, time: Time<T>) -> Option<Observables>
-    where
-        T: Clone + PartialOrd,
-    {
-        // Check if the time is within the window
-        if time < self.window.start() || time > self.window.end() {
-            return None;
-        }
-
-        // If we have no data points, return None
-        if self.times.is_empty() {
-            return None;
-        }
-
-        // Convert time to seconds since window start for interpolation
-        let target_seconds = (time - self.window.start()).to_decimal_seconds();
-
-        // Use Series interpolation for each observable
-        let azimuth = self.azimuth_series.interpolate(target_seconds);
-        let elevation = self.elevation_series.interpolate(target_seconds);
-        let range = self.range_series.interpolate(target_seconds);
-        let range_rate = self.range_rate_series.interpolate(target_seconds);
-
-        Some(Observables::new(azimuth, elevation, range, range_rate))
-    }
 }
 
 #[cfg(test)]

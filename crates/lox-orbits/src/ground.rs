@@ -20,6 +20,13 @@ use lox_time::{DynTime, Time};
 use lox_units::types::units::Radians;
 use thiserror::Error;
 
+
+pub trait Observer {
+    fn compute_observables(&self, target_state: DynState) -> Observables;
+    fn reference_position(&self) -> DVec3;
+    fn reference_velocity(&self) -> DVec3;
+}
+
 #[derive(Clone, Debug)]
 pub struct Observables {
     azimuth: Radians,
@@ -182,6 +189,20 @@ impl<B: TrySpheroid> GroundLocation<B> {
     }
 }
 
+impl<B: TrySpheroid> Observer for GroundLocation<B> {
+    fn compute_observables(&self, target_state: DynState) -> Observables {
+        self.observables_dyn(target_state)
+    }
+
+    fn reference_position(&self) -> DVec3 {
+        self.body_fixed_position()
+    }
+
+    fn reference_velocity(&self) -> DVec3 {
+        DVec3::ZERO
+    }
+}
+
 #[derive(Debug, Error)]
 pub enum GroundPropagatorError {
     #[error("frame transformation error: {0}")]
@@ -261,6 +282,73 @@ where
             .map_err(|err| GroundPropagatorError::FrameTransformation(err.to_string()))?;
         let (r1, v1) = rot.rotate_state(s.position(), s.velocity());
         Ok(State::new(time, r1, v1, self.location.body.clone(), Icrf))
+    }
+}
+
+// this SatelliteObserver code does not belong in this ground.rs file, at all.
+#[derive(Clone, Debug)]
+pub struct SatelliteObserver {
+    pub trajectory: DynTrajectory,
+}
+
+impl SatelliteObserver {
+    pub fn new(trajectory: DynTrajectory) -> Self {
+        Self { trajectory }
+    }
+
+    /// Compute observables from this satellite to a target satellite
+    pub fn observables_to_satellite(&self, time: DynTime, target_state: DynState) -> Observables {
+        let observer_state = self.trajectory.interpolate_at(time);
+
+        // Relative position and velocity vectors
+        let relative_position = target_state.position() - observer_state.position();
+        let relative_velocity = target_state.velocity() - observer_state.velocity();
+
+        // Range and range rate
+        let range = relative_position.length();
+        let range_rate = relative_position.dot(relative_velocity) / range;
+
+        // For satellite-to-satellite, we can use the observer's velocity vector
+        // to define a local reference frame
+        let observer_velocity_unit = observer_state.velocity().normalize();
+        let observer_position_unit = observer_state.position().normalize();
+
+        // Create a local coordinate system
+        // Z-axis: radial direction (towards Earth center)
+        let z_axis = -observer_position_unit;
+        // Y-axis: cross-track (perpendicular to orbital plane)
+        let y_axis = observer_position_unit.cross(observer_velocity_unit).normalize();
+        // X-axis: along-track direction
+        let x_axis = y_axis.cross(z_axis);
+
+        // Transform relative position to local frame
+        let local_position = DVec3::new(
+            relative_position.dot(x_axis),
+            relative_position.dot(y_axis),
+            relative_position.dot(z_axis),
+        );
+
+        // Calculate elevation and azimuth in this local frame
+        let elevation = (local_position.z / range).asin();
+        let azimuth = local_position.y.atan2(local_position.x);
+
+        Observables::new(azimuth, elevation, range, range_rate)
+    }
+}
+
+impl Observer for SatelliteObserver {
+    fn compute_observables(&self, target_state: DynState) -> Observables {
+        self.observables_to_satellite(target_state.time(), target_state)
+    }
+
+    fn reference_position(&self) -> DVec3 {
+        // This would need the time context, so this trait might need adjustment
+        // For now, return zero - this method might need rethinking
+        DVec3::ZERO
+    }
+
+    fn reference_velocity(&self) -> DVec3 {
+        DVec3::ZERO
     }
 }
 
