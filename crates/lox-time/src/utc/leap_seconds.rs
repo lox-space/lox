@@ -18,12 +18,12 @@
 */
 
 use crate::calendar_dates::{Date, DateError};
-use lox_units::constants::i64::time::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 use crate::deltas::{TimeDelta, ToDelta};
 use crate::time::Time;
 use crate::time_of_day::CivilTime;
 use crate::time_scales::Tai;
 use lox_io::spice::{Kernel, KernelError};
+use lox_units::constants::i64::time::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 use std::fs::read_to_string;
 use std::num::ParseIntError;
 use std::path::Path;
