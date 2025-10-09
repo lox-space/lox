@@ -16,7 +16,7 @@ use std::str::FromStr;
 
 use itertools::Itertools;
 use lox_math::is_close::IsClose;
-use lox_math::types::units::Days;
+use lox_units::types::units::Days;
 use lox_units::constants::f64::time;
 use num::ToPrimitive;
 use thiserror::Error;

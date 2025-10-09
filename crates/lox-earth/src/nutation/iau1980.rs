@@ -1,7 +1,7 @@
 use std::f64::consts::TAU;
 
 use lox_math::math::{arcsec_to_rad, normalize_two_pi};
-use lox_math::types::units::{Arcseconds, JulianCenturies, Radians};
+use lox_units::types::units::{Arcseconds, JulianCenturies, Radians};
 
 use crate::nutation::{Nutation, point1_milliarcsec_to_rad};
 
@@ -230,7 +230,7 @@ const COEFFICIENTS: [Coefficients; 106] = [
 mod tests {
     use float_eq::assert_float_eq;
 
-    use lox_math::types::units::JulianCenturies;
+    use lox_units::types::units::JulianCenturies;
 
     use super::nutation_iau1980;
 

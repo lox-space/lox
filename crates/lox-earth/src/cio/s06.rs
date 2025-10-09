@@ -16,7 +16,7 @@ use lox_bodies::fundamental::iers03::{
 };
 use lox_bodies::{Earth, Moon, Sun, Venus};
 use lox_math::math::arcsec_to_rad;
-use lox_math::types::units::{JulianCenturies, Radians};
+use lox_units::types::units::{JulianCenturies, Radians};
 
 mod terms;
 

@@ -10,7 +10,7 @@ repository.workspace = true
 
 [dependencies]
 lox-derive.workspace = true
-lox-math.workspace = true
+lox-units.workspace = true
 
 csv.workspace = true
 nom.workspace = true

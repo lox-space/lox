@@ -429,7 +429,7 @@ dependencies = [
 name = "lox-ephem"
 version = "0.1.0-alpha.7"
 dependencies = [
- "lox-math",
+ "lox-units",
  "nom",
  "thiserror",
 ]
@@ -455,7 +455,7 @@ version = "0.1.0-alpha.8"
 dependencies = [
  "csv",
  "lox-derive",
- "lox-math",
+ "lox-units",
  "nom",
  "quick-xml",
  "regex",
@@ -473,6 +473,7 @@ dependencies = [
  "fast_polynomial",
  "float_eq",
  "glam",
+ "lox-units",
  "rstest",
  "thiserror",
 ]
