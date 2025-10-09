@@ -22,9 +22,9 @@ use num::ToPrimitive;
 use regex::Regex;
 use thiserror::Error;
 
-use crate::{
-    constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY, SECONDS_PER_HOUR, SECONDS_PER_MINUTE},
-    subsecond::{InvalidSubsecond, Subsecond},
+use crate::subsecond::{InvalidSubsecond, Subsecond};
+use lox_units::constants::i64::time::{
+    SECONDS_PER_DAY, SECONDS_PER_HALF_DAY, SECONDS_PER_HOUR, SECONDS_PER_MINUTE,
 };
 
 fn iso_regex() -> &'static Regex {

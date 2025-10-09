@@ -18,7 +18,7 @@
 */
 
 use crate::calendar_dates::{Date, DateError};
-use crate::constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
+use lox_units::constants::i64::time::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 use crate::deltas::{TimeDelta, ToDelta};
 use crate::time::Time;
 use crate::time_of_day::CivilTime;
