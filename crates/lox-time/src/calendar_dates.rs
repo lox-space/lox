@@ -24,11 +24,11 @@ use thiserror::Error;
 
 use regex::Regex;
 
-use lox_units::constants::i64::time::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
+use crate::julian_dates::{Epoch, JulianDate, Unit};
 use crate::julian_dates::{
     SECONDS_BETWEEN_J1950_AND_J2000, SECONDS_BETWEEN_JD_AND_J2000, SECONDS_BETWEEN_MJD_AND_J2000,
 };
-use crate::julian_dates::{Epoch, JulianDate, Unit};
+use lox_units::constants::i64::time::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 
 fn iso_regex() -> &'static Regex {
     static ISO: OnceLock<Regex> = OnceLock::new();
