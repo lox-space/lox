@@ -16,21 +16,21 @@ use std::str::FromStr;
 
 use itertools::Itertools;
 use lox_math::is_close::IsClose;
-use lox_units::types::units::Days;
 use lox_units::constants::f64::time;
+use lox_units::types::units::Days;
 use num::ToPrimitive;
 use thiserror::Error;
 
 use crate::calendar_dates::CalendarDate;
 use crate::calendar_dates::Date;
 use crate::calendar_dates::DateError;
-use crate::julian_dates::SECONDS_BETWEEN_J1950_AND_J2000;
-use crate::julian_dates::SECONDS_BETWEEN_JD_AND_J2000;
-use crate::julian_dates::SECONDS_BETWEEN_MJD_AND_J2000;
 use crate::deltas::TimeDelta;
 use crate::deltas::ToDelta;
 use crate::julian_dates::Epoch;
 use crate::julian_dates::JulianDate;
+use crate::julian_dates::SECONDS_BETWEEN_J1950_AND_J2000;
+use crate::julian_dates::SECONDS_BETWEEN_JD_AND_J2000;
+use crate::julian_dates::SECONDS_BETWEEN_MJD_AND_J2000;
 use crate::julian_dates::Unit;
 use crate::subsecond::Subsecond;
 use crate::time_of_day::CivilTime;
@@ -614,12 +614,14 @@ mod tests {
     use rstest::rstest;
 
     use crate::Time;
-    use lox_units::constants::i64::time::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
     use crate::time_scales::{Tai, Tdb, Tt};
+    use lox_units::constants::i64::time::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 
     use super::*;
 
-    use lox_units::constants::i64::time::{SECONDS_PER_HOUR, SECONDS_PER_JULIAN_CENTURY, SECONDS_PER_MINUTE};
+    use lox_units::constants::i64::time::{
+        SECONDS_PER_HOUR, SECONDS_PER_JULIAN_CENTURY, SECONDS_PER_MINUTE,
+    };
 
     #[test]
     fn test_time_builder() {
