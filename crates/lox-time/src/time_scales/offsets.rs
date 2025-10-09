@@ -1,7 +1,7 @@
 use super::{DynTimeScale, Tai, Tcb, Tcg, Tdb, TimeScale, Tt, Ut1};
 use crate::{
-    constants::julian_dates::J77,
     deltas::TimeDelta,
+    julian_dates::J77,
     subsecond::Subsecond,
     ut1::{DeltaUt1Tai, ExtrapolatedDeltaUt1Tai},
 };
