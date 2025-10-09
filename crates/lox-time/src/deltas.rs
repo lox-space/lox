@@ -29,11 +29,11 @@ use lox_units::constants::f64::time::{
 
 use crate::ranges::TimeDeltaRange;
 use crate::{
-    constants::julian_dates::{
+    julian_dates::{Epoch, JulianDate, Unit},
+    julian_dates::{
         SECONDS_BETWEEN_J1950_AND_J2000, SECONDS_BETWEEN_JD_AND_J2000,
         SECONDS_BETWEEN_MJD_AND_J2000,
     },
-    julian_dates::{Epoch, JulianDate, Unit},
     subsecond::Subsecond,
 };
 
