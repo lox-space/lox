@@ -11,7 +11,7 @@ use crate::bodies::{
     Elements, Origin, TryMeanRadius, TryPointMass, TryRotationalElements, TrySpheroid,
     TryTriaxialEllipsoid,
 };
-use crate::math::types::units::Seconds;
+use crate::units::types::units::Seconds;
 use pyo3::create_exception;
 use pyo3::exceptions::{PyException, PyTypeError, PyValueError};
 use pyo3::prelude::*;

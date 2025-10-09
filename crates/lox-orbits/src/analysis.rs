@@ -15,7 +15,7 @@ use lox_bodies::{
 use lox_ephem::{Ephemeris, path_from_ids};
 use lox_math::roots::Brent;
 use lox_math::series::{Series, SeriesError};
-use lox_math::types::units::Radians;
+use lox_units::types::units::Radians;
 use lox_time::deltas::TimeDelta;
 use lox_time::julian_dates::JulianDate;
 use lox_time::time_scales::DynTimeScale;

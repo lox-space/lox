@@ -15,7 +15,7 @@ use lox_math::math::arcsec_to_rad_two_pi;
 
 use crate::{Earth, Jupiter, Mars, Mercury, Moon, Neptune, Saturn, Sun, Uranus, Venus};
 
-use lox_math::types::units::{JulianCenturies, Radians};
+use lox_units::types::units::{JulianCenturies, Radians};
 
 /// General accumulated precession in longitude.
 pub fn general_accum_precession_in_longitude_iers03(

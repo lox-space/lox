@@ -8,7 +8,7 @@
 
 use lox_bodies::fundamental::simon1994::mean_moon_sun_elongation_simon1994;
 use lox_bodies::*;
-use lox_math::types::units::JulianCenturies;
+use lox_units::types::units::JulianCenturies;
 
 use crate::nutation::Nutation;
 use crate::nutation::iau2000::{DelaunayArguments, luni_solar_nutation};
@@ -38,7 +38,7 @@ pub(crate) fn nutation_iau2000b(centuries_since_j2000_tdb: JulianCenturies) -> N
 mod tests {
     use float_eq::assert_float_eq;
 
-    use lox_math::types::units::JulianCenturies;
+    use lox_units::types::units::JulianCenturies;
 
     use super::nutation_iau2000b;
 

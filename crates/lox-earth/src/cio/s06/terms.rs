@@ -6,7 +6,7 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use lox_math::types::units::Radians;
+use lox_units::types::units::Radians;
 
 pub(crate) const COEFFICIENTS: [f64; 6] = [
     94.00e-6,

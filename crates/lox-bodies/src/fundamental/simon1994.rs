@@ -2,7 +2,7 @@
 //! (1994).
 
 use lox_math::math::arcsec_to_rad_two_pi;
-use lox_math::types::units::{Arcseconds, JulianCenturies, Radians};
+use lox_units::types::units::{Arcseconds, JulianCenturies, Radians};
 
 use crate::{Moon, Sun};
 

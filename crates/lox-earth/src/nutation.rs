@@ -12,7 +12,7 @@
 use std::ops::Add;
 
 use lox_math::math::RADIANS_IN_ARCSECOND;
-use lox_math::types::units::Radians;
+use lox_units::types::units::Radians;
 use lox_time::Time;
 use lox_time::julian_dates::JulianDate;
 use lox_time::time_scales::Tdb;

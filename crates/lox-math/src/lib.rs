@@ -13,5 +13,4 @@ pub mod math;
 pub mod roots;
 pub mod series;
 pub mod slices;
-pub mod types;
 pub mod vector_traits;
