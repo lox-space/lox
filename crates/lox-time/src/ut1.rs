@@ -18,7 +18,7 @@ use std::iter::zip;
 use thiserror::Error;
 
 use crate::calendar_dates::{CalendarDate, Date};
-use crate::constants::i64::SECONDS_PER_DAY;
+use lox_units::constants::i64::time::SECONDS_PER_DAY;
 use crate::julian_dates::SECONDS_BETWEEN_MJD_AND_J2000;
 use crate::deltas::TimeDelta;
 use crate::julian_dates::JulianDate;

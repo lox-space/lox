@@ -24,7 +24,7 @@ use thiserror::Error;
 
 use regex::Regex;
 
-use crate::constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
+use lox_units::constants::i64::time::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 use crate::julian_dates::{
     SECONDS_BETWEEN_J1950_AND_J2000, SECONDS_BETWEEN_JD_AND_J2000, SECONDS_BETWEEN_MJD_AND_J2000,
 };

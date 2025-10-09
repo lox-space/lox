@@ -614,12 +614,12 @@ mod tests {
     use rstest::rstest;
 
     use crate::Time;
-    use crate::constants::i64::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
+    use lox_units::constants::i64::time::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
     use crate::time_scales::{Tai, Tdb, Tt};
 
     use super::*;
 
-    use crate::constants::i64::{SECONDS_PER_HOUR, SECONDS_PER_JULIAN_CENTURY, SECONDS_PER_MINUTE};
+    use lox_units::constants::i64::time::{SECONDS_PER_HOUR, SECONDS_PER_JULIAN_CENTURY, SECONDS_PER_MINUTE};
 
     #[test]
     fn test_time_builder() {
