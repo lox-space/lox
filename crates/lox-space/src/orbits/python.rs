@@ -248,6 +248,10 @@ impl PyState {
                 .map_err(|err| PyValueError::new_err(err.to_string()))?,
         ))
     }
+
+    pub fn __str__(&self) -> String {
+        format!("{:?}", self.0)
+    }
 }
 
 #[pyclass(name = "Keplerian", module = "lox_space", frozen)]
@@ -331,6 +335,10 @@ impl PyKeplerian {
 
     fn orbital_period(&self) -> PyTimeDelta {
         PyTimeDelta(self.0.orbital_period())
+    }
+
+    pub fn __str__(&self) -> String {
+        format!("{:?}", self.0)
     }
 }
 
@@ -621,6 +629,10 @@ impl PyGroundLocation {
 
     fn altitude(&self) -> f64 {
         self.0.altitude()
+    }
+
+    pub fn __str__(&self) -> String {
+        format!("{:?}", self.0)
     }
 }
 
@@ -1112,6 +1124,10 @@ impl PyElevationMask {
 
     fn min_elevation(&self, azimuth: f64) -> f64 {
         self.0.min_elevation(azimuth)
+    }
+
+    pub fn __str__(&self) -> String {
+        format!("{:?}", self.0)
     }
 }
 
