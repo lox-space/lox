@@ -7,7 +7,7 @@ use crate::math::python::PySeries;
 use crate::orbits::python::{
     PyElevationMask, PyEnsemble, PyEvent, PyGroundLocation, PyGroundPropagator, PyKeplerian,
     PyObservables, PyPass, PySgp4, PyState, PyTrajectory, PyVallado, PyWindow, find_events,
-    find_windows, visibility, visibility_all,
+    find_windows, visibility, visibility_all, visibility_intersat_all,
 };
 use crate::time::python::{
     deltas::PyTimeDelta, time::PyTime, time_scales::PyTimeScale, ut1::PyUt1Provider, utc::PyUtc,
@@ -38,6 +38,7 @@ fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(find_windows, m)?)?;
     m.add_function(wrap_pyfunction!(visibility, m)?)?;
     m.add_function(wrap_pyfunction!(visibility_all, m)?)?;
+    m.add_function(wrap_pyfunction!(visibility_intersat_all, m)?)?;
     m.add_class::<PyElevationMask>()?;
     m.add_class::<PyEnsemble>()?;
     m.add_class::<PyEvent>()?;

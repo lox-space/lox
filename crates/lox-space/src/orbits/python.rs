@@ -18,7 +18,7 @@ use crate::math::python::PySeriesError;
 use crate::math::roots::Brent;
 use crate::math::series::SeriesError;
 use crate::orbits::analysis::{
-    DynPass, ElevationMask, ElevationMaskError, Pass, visibility_combined,
+    DynPass, ElevationMask, ElevationMaskError, Pass, visibility_combined, visibility_intersat_los_multiple_bodies,
 };
 use crate::orbits::elements::{DynKeplerian, Keplerian};
 use crate::orbits::events::{Event, FindEventError, Window};
@@ -1036,6 +1036,166 @@ where
             .entry(sc_name)
             .or_default()
             .insert(gs_name, passes);
+    }
+
+    Ok(final_result)
+}
+
+#[pyfunction]
+#[pyo3(signature = (
+    times,
+    source_spacecraft,
+    target_spacecraft,
+    ephemeris,
+    bodies=None,
+))]
+pub fn visibility_intersat_all(
+    _py: Python<'_>,
+    times: &Bound<'_, PyList>,
+    source_spacecraft: &Bound<'_, PyEnsemble>,
+    target_spacecraft: &Bound<'_, PyEnsemble>,
+    ephemeris: &Bound<'_, PySpk>,
+    bodies: Option<Vec<PyOrigin>>,
+) -> PyResult<HashMap<String, HashMap<String, Vec<PyPass>>>> {
+    let times: Vec<DynTime> = times
+        .extract::<Vec<PyTime>>()?
+        .into_iter()
+        .map(|s| s.0)
+        .collect();
+    let bodies: Vec<DynOrigin> = bodies
+        .unwrap_or_default()
+        .into_iter()
+        .map(|b| b.0)
+        .collect();
+    let source_spacecraft = &source_spacecraft.get().0;
+    let target_spacecraft = &target_spacecraft.get().0;
+    let ephemeris = &ephemeris.get().0;
+
+    let _total_combinations = source_spacecraft.len() * target_spacecraft.len();
+
+    // Adaptive strategy based on workload size (should also work ish for space2space)
+    if _total_combinations > 100 && (source_spacecraft.len() > 10 || target_spacecraft.len() > 8) {
+        visibility_intersat_all_parallel_optimized(
+            _py,
+            &times,
+            source_spacecraft,
+            target_spacecraft,
+            ephemeris,
+            &bodies,
+        )
+    } else {
+        visibility_intersat_all_sequential_optimized(
+            _py,
+            &times,
+            source_spacecraft,
+            target_spacecraft,
+            ephemeris,
+            &bodies,
+        )
+    }
+}
+
+fn visibility_intersat_all_sequential_optimized<E>(
+    _py: Python<'_>,
+    times: &[DynTime],
+    source_spacecraft: &HashMap<String, DynTrajectory>,
+    target_spacecraft: &HashMap<String, DynTrajectory>,
+    ephemeris: &E,
+    bodies: &[DynOrigin],
+) -> PyResult<HashMap<String, HashMap<String, Vec<PyPass>>>>
+where
+    E: Ephemeris + Send + Sync,
+{
+    // Pre-allocate result with known capacity
+    let mut source_result = HashMap::with_capacity(source_spacecraft.len());
+
+    for (sc_name, sc_trajectory) in source_spacecraft {
+        let mut target_results = HashMap::with_capacity(target_spacecraft.len());
+
+        for (tc_name, tc_trajectory) in target_spacecraft {
+            let passes = visibility_intersat_los_multiple_bodies(
+                times,
+                sc_trajectory,
+                tc_trajectory,
+                bodies,
+                ephemeris,
+            )
+            .map_err(PySeriesError)?;
+
+            target_results.insert(tc_name.clone(), passes.into_iter().map(PyPass).collect());
+        }
+
+        source_result.insert(sc_name.clone(), target_results);
+    }
+
+    Ok(source_result)
+}
+
+/// Parallel implementation optimized for large workloads
+fn visibility_intersat_all_parallel_optimized<E>(
+    py: Python<'_>,
+    times: &[DynTime],
+    source_spacecraft: &HashMap<String, DynTrajectory>,
+    target_spacecraft: &HashMap<String, DynTrajectory>,
+    ephemeris: &E,
+    bodies: &[DynOrigin],
+) -> PyResult<HashMap<String, HashMap<String, Vec<PyPass>>>>
+where
+    E: Ephemeris + Send + Sync,
+{
+    // Create all combinations upfront for better work distribution
+    let combinations: Vec<_> = source_spacecraft
+        .iter()
+        .flat_map(|(sc_name, sc_trajectory)| {
+            target_spacecraft
+                .iter()
+                .map(move |(tc_name, tc_trajectory)| {
+                    (sc_name, sc_trajectory, tc_name, tc_trajectory)
+                })
+        })
+        .collect();
+
+    // Determine optimal chunk size based on number of combinations and available cores
+    let num_threads = rayon::current_num_threads();
+    let chunk_size = (combinations.len() / (num_threads * 2)).clamp(1, 50);
+
+    // Process combinations in chunks with periodic GIL release
+    let results: Result<Vec<_>, _> = py.detach(|| {
+        combinations
+            .par_chunks(chunk_size)
+            .map(|chunk| {
+                chunk
+                    .iter()
+                    .map(|(sc_name, sc_trajectory, tc_name, tc_trajectory)| {
+                        let passes = visibility_intersat_los_multiple_bodies(
+                            times,
+                            sc_trajectory,
+                            tc_trajectory,
+                            bodies,
+                            ephemeris,
+                        )?;
+
+                        let py_passes = passes.into_iter().map(PyPass).collect();
+                        Ok(((*sc_name).clone(), (*tc_name).clone(), py_passes))
+                    })
+                    .collect::<Result<Vec<_>, SeriesError>>()
+            })
+            .collect()
+    });
+
+    // Convert the flat results to nested hashmap structure
+    let flat_results: Vec<_> = results
+        .map_err(PySeriesError)?
+        .into_iter()
+        .flatten()
+        .collect();
+    let mut final_result: HashMap<String, HashMap<String, Vec<PyPass>>> = HashMap::new();
+
+    for (sc_name, tc_name, passes) in flat_results {
+        final_result
+            .entry(sc_name)
+            .or_default()
+            .insert(tc_name, passes);
     }
 
     Ok(final_result)
