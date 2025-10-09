@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.11](https://github.com/lox-space/lox/compare/lox-bodies-v0.1.0-alpha.10...lox-bodies-v0.1.0-alpha.11) - 2025-10-09
+
+### Other
+
+- move type aliases to lox-units
+- refactor all the things
+- *(lox-units/lox-math)* move constants to lox-units
+
 ## [0.1.0-alpha.10](https://github.com/lox-space/lox/compare/lox-bodies-v0.1.0-alpha.9...lox-bodies-v0.1.0-alpha.10) - 2025-09-19
 
 ### Other
