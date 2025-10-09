@@ -392,7 +392,7 @@ mod tests {
     use proptest::prelude::*;
     use rstest::rstest;
 
-    use crate::constants::f64::SECONDS_PER_FEMTOSECOND;
+    use lox_units::constants::f64::time::SECONDS_PER_FEMTOSECOND;
 
     use super::*;
 
@@ -600,7 +600,7 @@ mod tests {
     #[test]
     fn test_delta_julian_date() {
         let delta = TimeDelta::new(
-            crate::constants::i64::SECONDS_PER_JULIAN_CENTURY,
+            lox_units::constants::i64::time::SECONDS_PER_JULIAN_CENTURY,
             Subsecond::default(),
         );
         assert_eq!(delta.seconds_since_j2000(), SECONDS_PER_JULIAN_CENTURY);

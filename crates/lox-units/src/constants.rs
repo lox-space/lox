@@ -10,3 +10,4 @@
 
 pub mod f64;
 pub mod i32;
+pub mod i64;
