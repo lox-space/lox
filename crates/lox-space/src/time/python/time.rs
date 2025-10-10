@@ -19,6 +19,7 @@ use lox_math::is_close::IsClose;
 use crate::time::calendar_dates::{CalendarDate, Date};
 use crate::time::deltas::{TimeDelta, ToDelta};
 use crate::time::julian_dates::{Epoch, JulianDate, Unit};
+use crate::time::offsets::DefaultOffsetProvider;
 use crate::time::python::deltas::PyTimeDelta;
 use crate::time::python::time_scales::PyMissingEopProviderError;
 use crate::time::python::ut1::{PyExtrapolatedDeltaUt1Tai, PyUt1Provider};
@@ -27,7 +28,6 @@ use crate::time::subsecond::{InvalidSubsecond, Subsecond};
 use crate::time::time::{DynTime, Time, TimeError};
 use crate::time::time_of_day::{CivilTime, TimeOfDay};
 use crate::time::time_scales::Tai;
-use crate::time::time_scales::offsets::DefaultOffsetProvider;
 use crate::time::utc::transformations::ToUtc;
 
 use super::time_scales::PyTimeScale;
@@ -434,7 +434,7 @@ mod tests {
     use super::*;
 
     use crate::math::assert_close;
-    use crate::time::test_helpers::data_dir;
+    use crate::test_helpers::data_dir;
 
     use float_eq::assert_float_eq;
     use pyo3::{IntoPyObjectExt, Python, types::PyDict};

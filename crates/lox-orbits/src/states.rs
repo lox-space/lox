@@ -411,11 +411,7 @@ mod tests {
     use lox_ephem::spk::parser::{Spk, parse_daf_spk};
     use lox_math::assert_close;
     use lox_math::is_close::IsClose;
-    use lox_time::{
-        Time, time,
-        time_scales::{Tdb, offsets::DefaultOffsetProvider},
-        utc::Utc,
-    };
+    use lox_time::{Time, offsets::DefaultOffsetProvider, time, time_scales::Tdb, utc::Utc};
 
     use super::*;
 

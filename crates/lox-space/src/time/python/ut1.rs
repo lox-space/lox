@@ -6,7 +6,7 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use crate::time::ut1::{DeltaUt1Tai, DeltaUt1TaiError, ExtrapolatedDeltaUt1Tai};
+use crate::earth::ut1::{DeltaUt1Tai, DeltaUt1TaiError, ExtrapolatedDeltaUt1Tai};
 use crate::time::utc::leap_seconds::BuiltinLeapSeconds;
 use pyo3::exceptions::PyValueError;
 use pyo3::{PyErr, PyResult, pyclass, pymethods};
@@ -44,8 +44,8 @@ impl PyUt1Provider {
 mod tests {
     use super::*;
 
+    use crate::test_helpers::data_dir;
     use crate::time::python::time::PyTime;
-    use crate::time::test_helpers::data_dir;
 
     use pyo3::{Bound, IntoPyObjectExt, Python};
 

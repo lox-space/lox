@@ -7,11 +7,11 @@
  */
 
 use crate::time::calendar_dates::CalendarDate;
+use crate::time::offsets::DefaultOffsetProvider;
 use crate::time::python::time::PyTime;
 use crate::time::python::time_scales::{PyMissingEopProviderError, PyTimeScale};
 use crate::time::python::ut1::{PyExtrapolatedDeltaUt1Tai, PyUt1Provider};
 use crate::time::time_of_day::CivilTime;
-use crate::time::time_scales::offsets::DefaultOffsetProvider;
 use crate::time::utc::{Utc, UtcError};
 use pyo3::exceptions::PyValueError;
 use pyo3::types::PyType;
@@ -146,7 +146,7 @@ impl PyUtc {
 mod tests {
     use super::*;
 
-    use crate::time::test_helpers::data_dir;
+    use crate::test_helpers::data_dir;
 
     use pyo3::{Bound, IntoPyObjectExt, Python};
     use rstest::rstest;

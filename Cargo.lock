@@ -421,6 +421,7 @@ dependencies = [
  "lox-math",
  "lox-time",
  "lox-units",
+ "num",
  "rstest",
  "thiserror",
 ]
@@ -455,6 +456,8 @@ version = "0.1.0-alpha.8"
 dependencies = [
  "csv",
  "lox-derive",
+ "lox-math",
+ "lox-time",
  "lox-units",
  "nom",
  "quick-xml",
@@ -529,7 +532,6 @@ version = "0.1.0-alpha.10"
 dependencies = [
  "float_eq",
  "itertools",
- "lox-io",
  "lox-math",
  "lox-units",
  "num",

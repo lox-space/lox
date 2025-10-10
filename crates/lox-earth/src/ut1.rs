@@ -14,19 +14,21 @@
     Earth Orientation Parameters from an IERS CSV file.
 */
 
+use lox_time::offsets::{DefaultOffsetProvider, Offset, TryOffset};
 use std::iter::zip;
 use thiserror::Error;
 
-use crate::calendar_dates::{CalendarDate, Date};
-use crate::deltas::TimeDelta;
-use crate::julian_dates::JulianDate;
-use crate::julian_dates::SECONDS_BETWEEN_MJD_AND_J2000;
-use crate::subsecond::Subsecond;
-use crate::time::Time;
-use crate::time_scales::Tai;
-use crate::utc::{LeapSecondsProvider, Utc};
 use lox_io::iers::{EarthOrientationParams, ParseFinalsCsvError};
 use lox_math::series::{Series, SeriesError};
+use lox_time::calendar_dates::{CalendarDate, Date};
+use lox_time::deltas::TimeDelta;
+use lox_time::julian_dates::JulianDate;
+use lox_time::julian_dates::SECONDS_BETWEEN_MJD_AND_J2000;
+use lox_time::subsecond::Subsecond;
+use lox_time::time::Time;
+use lox_time::time_scales::{DynTimeScale, Tai, Tcb, Tcg, Tdb, TimeScale, Tt, Ut1};
+use lox_time::utc::Utc;
+use lox_time::utc::leap_seconds::LeapSecondsProvider;
 use lox_units::constants::i64::time::SECONDS_PER_DAY;
 use num::ToPrimitive;
 use std::path::Path;
@@ -156,17 +158,172 @@ impl DeltaUt1Tai {
     }
 }
 
+// TAI <-> UT1
+
+macro_rules! impl_ut1_via_tai {
+    ($($scale:ident),*) => {
+        $(
+            impl TryOffset<$scale, Ut1> for DeltaUt1Tai
+            {
+                type Error = ExtrapolatedDeltaUt1Tai;
+
+                fn try_offset(
+                    &self,
+                    origin: $scale,
+                    _target: Ut1,
+                    delta: TimeDelta,
+                ) -> Result<TimeDelta, ExtrapolatedDeltaUt1Tai> {
+                    let tai = delta + DefaultOffsetProvider.offset(origin, Tai, delta);
+                    self.delta_ut1_tai(tai)
+                }
+            }
+
+            impl TryOffset<Ut1, $scale> for DeltaUt1Tai
+            {
+                type Error = ExtrapolatedDeltaUt1Tai;
+
+                fn try_offset(
+                    &self,
+                    _origin: Ut1,
+                    target: $scale,
+                    delta: TimeDelta,
+                ) -> Result<TimeDelta, ExtrapolatedDeltaUt1Tai> {
+                    let offset_to_tai = self.delta_tai_ut1(delta)?;
+                    let tai = delta + offset_to_tai;
+                    Ok(offset_to_tai + DefaultOffsetProvider.offset(Tai, target, tai))
+                }
+            }
+        )*
+    }
+}
+
+impl_ut1_via_tai!(Tai, Tcb, Tcg, Tt, Tdb);
+
+impl<T: TimeScale, S: TimeScale> Offset<T, S> for DeltaUt1Tai
+where
+    DefaultOffsetProvider: Offset<T, S>,
+{
+    fn offset(&self, origin: T, target: S, delta: TimeDelta) -> TimeDelta {
+        DefaultOffsetProvider.offset(origin, target, delta)
+    }
+}
+
+// Macro to generate TryOffset implementations for DeltaUt1Tai with static scales
+macro_rules! impl_dyn_ut1 {
+    ($($scale:ident),*) => {
+        $(
+            impl TryOffset<DynTimeScale, $scale> for DeltaUt1Tai {
+                type Error = ExtrapolatedDeltaUt1Tai;
+
+                fn try_offset(
+                    &self,
+                    origin: DynTimeScale,
+                    target: $scale,
+                    delta: TimeDelta,
+                ) -> Result<TimeDelta, Self::Error> {
+                    match origin {
+                        DynTimeScale::Ut1 => self.try_offset(Ut1, target, delta),
+                        DynTimeScale::Tai => Ok(DefaultOffsetProvider.offset(Tai, target, delta)),
+                        DynTimeScale::Tcb => Ok(DefaultOffsetProvider.offset(Tcb, target, delta)),
+                        DynTimeScale::Tcg => Ok(DefaultOffsetProvider.offset(Tcg, target, delta)),
+                        DynTimeScale::Tdb => Ok(DefaultOffsetProvider.offset(Tdb, target, delta)),
+                        DynTimeScale::Tt => Ok(DefaultOffsetProvider.offset(Tt, target, delta)),
+                    }
+                }
+            }
+
+            impl TryOffset<$scale, DynTimeScale> for DeltaUt1Tai {
+                type Error = ExtrapolatedDeltaUt1Tai;
+
+                fn try_offset(
+                    &self,
+                    origin: $scale,
+                    target: DynTimeScale,
+                    delta: TimeDelta,
+                ) -> Result<TimeDelta, Self::Error> {
+                    match target {
+                        DynTimeScale::Ut1 => self.try_offset(origin, Ut1, delta),
+                        DynTimeScale::Tai => Ok(DefaultOffsetProvider.offset(origin, Tai, delta)),
+                        DynTimeScale::Tcb => Ok(DefaultOffsetProvider.offset(origin, Tcb, delta)),
+                        DynTimeScale::Tcg => Ok(DefaultOffsetProvider.offset(origin, Tcg, delta)),
+                        DynTimeScale::Tdb => Ok(DefaultOffsetProvider.offset(origin, Tdb, delta)),
+                        DynTimeScale::Tt => Ok(DefaultOffsetProvider.offset(origin, Tt, delta)),
+                    }
+                }
+            }
+        )*
+    }
+}
+
+// Apply the macro for all static scales
+impl_dyn_ut1!(Tai, Tcb, Tcg, Tdb, Tt);
+
+impl TryOffset<DynTimeScale, DynTimeScale> for DeltaUt1Tai {
+    type Error = ExtrapolatedDeltaUt1Tai;
+
+    fn try_offset(
+        &self,
+        origin: DynTimeScale,
+        target: DynTimeScale,
+        delta: TimeDelta,
+    ) -> Result<TimeDelta, ExtrapolatedDeltaUt1Tai> {
+        match (origin, target) {
+            // UT1 to UT1 is a no-op
+            (DynTimeScale::Ut1, DynTimeScale::Ut1) => Ok(TimeDelta::default()),
+            // UT1 to other scales
+            (DynTimeScale::Ut1, target) => {
+                let offset_to_tai = self.try_offset(Ut1, Tai, delta)?;
+                let tai = delta + offset_to_tai;
+                // We know target is not UT1 here, so this is safe
+                Ok(match target {
+                    DynTimeScale::Tai => offset_to_tai,
+                    DynTimeScale::Tcb => {
+                        offset_to_tai + DefaultOffsetProvider.offset(Tai, Tcb, tai)
+                    }
+                    DynTimeScale::Tcg => {
+                        offset_to_tai + DefaultOffsetProvider.offset(Tai, Tcg, tai)
+                    }
+                    DynTimeScale::Tdb => {
+                        offset_to_tai + DefaultOffsetProvider.offset(Tai, Tdb, tai)
+                    }
+                    DynTimeScale::Tt => offset_to_tai + DefaultOffsetProvider.offset(Tai, Tt, tai),
+                    DynTimeScale::Ut1 => unreachable!(), // Already handled above
+                })
+            }
+            // Other scales to UT1
+            (origin, DynTimeScale::Ut1) => {
+                let offset_to_tai = match origin {
+                    DynTimeScale::Tai => TimeDelta::default(),
+                    DynTimeScale::Tcb => DefaultOffsetProvider.offset(Tcb, Tai, delta),
+                    DynTimeScale::Tcg => DefaultOffsetProvider.offset(Tcg, Tai, delta),
+                    DynTimeScale::Tdb => DefaultOffsetProvider.offset(Tdb, Tai, delta),
+                    DynTimeScale::Tt => DefaultOffsetProvider.offset(Tt, Tai, delta),
+                    DynTimeScale::Ut1 => unreachable!(), // Already handled above
+                };
+                let tai = delta + offset_to_tai;
+                Ok(offset_to_tai + self.try_offset(Tai, Ut1, tai)?)
+            }
+            // Neither origin nor target is UT1
+            (origin, target) => Ok(DefaultOffsetProvider
+                .try_offset(origin, target, delta)
+                .unwrap()),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::sync::OnceLock;
 
     use super::*;
-    use crate::deltas::ToDelta;
-    use crate::subsecond::Subsecond;
-    use crate::time;
-    use crate::time_scales::Ut1;
-    use crate::utc::leap_seconds::BuiltinLeapSeconds;
     use float_eq::assert_float_eq;
+    use lox_math::is_close::IsClose;
+    use lox_time::deltas::ToDelta;
+    use lox_time::subsecond::Subsecond;
+    use lox_time::time;
+    use lox_time::time_scales::Ut1;
+    use lox_time::utc::leap_seconds::BuiltinLeapSeconds;
+    use lox_time::utc::transformations::ToUtc;
     use rstest::rstest;
 
     #[rstest]
@@ -309,6 +466,57 @@ mod tests {
             .extrapolated_value
             .to_decimal_seconds();
         assert_float_eq!(actual, -expected, rel <= 1e-8);
+    }
+
+    const UT1_TOL: f64 = 1e-2;
+
+    // Reference values from Orekit
+    //
+    // Since we use a different algorithm for TCB UT1 we need to
+    // adjust the tolerance.
+    //
+    #[rstest]
+    #[case::tai_ut1("TAI", "UT1", -36.949521832072996)]
+    #[case::tcb_ut1("TCB", "UT1", -92.61803559995818)]
+    #[case::tcg_ut1("TCG", "UT1", -70.1891114139689)]
+    #[case::tdb_ut1("TDB", "UT1", -69.13340440689674)]
+    #[case::tt_ut1("TT", "UT1", -69.13352209269237)]
+    #[case::ut1_tai("UT1", "TAI", 36.949521532869305)]
+    #[case::ut1_tcb("UT1", "TCB", 92.61803631703046)]
+    #[case::ut1_tcg("UT1", "TCG", 70.18911089451464)]
+    #[case::ut1_tdb("UT1", "TDB", 69.13340387022173)]
+    #[case::ut1_tt("UT1", "TT", 69.13352153286931)]
+    #[case::ut1_ut1("UT1", "UT1", 0.0)]
+    fn test_dyn_time_scale_ut1(#[case] scale1: &str, #[case] scale2: &str, #[case] exp: f64) {
+        use lox_math::assert_close;
+        use lox_time::{DynTime, time_of_day::TimeOfDay};
+
+        let provider = delta_ut1_tai();
+        let scale1: DynTimeScale = scale1.parse().unwrap();
+        let scale2: DynTimeScale = scale2.parse().unwrap();
+        let date = Date::new(2024, 12, 30).unwrap();
+        let time = TimeOfDay::from_hms(10, 27, 13.145).unwrap();
+        let dt = DynTime::from_date_and_time(scale1, date, time)
+            .unwrap()
+            .to_delta();
+        let act = provider
+            .try_offset(scale1, scale2, dt)
+            .unwrap()
+            .to_decimal_seconds();
+        assert_close!(act, exp, 1e-7, UT1_TOL);
+    }
+
+    #[test]
+    fn test_ut1_to_utc() {
+        let tai = time!(Tai, 2024, 5, 17, 12, 13, 14.0).unwrap();
+        let exp = tai.to_utc().unwrap();
+        let ut1 = tai.try_to_scale(Ut1, delta_ut1_tai()).unwrap();
+        let act = ut1
+            .try_to_scale(Tai, delta_ut1_tai())
+            .unwrap()
+            .to_utc()
+            .unwrap();
+        assert_eq!(act, exp);
     }
 
     fn delta_ut1_tai() -> &'static DeltaUt1Tai {

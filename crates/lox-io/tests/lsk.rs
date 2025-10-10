@@ -6,7 +6,7 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use lox_io::spice::Kernel;
+use lox_io::spice::{Kernel, lsk::LeapSecondsKernel};
 
 #[test]
 fn test_lsk() {
@@ -82,4 +82,5 @@ fn test_lsk() {
     assert!(kernel.get_timestamp_array("DELTET/DELTA_T_A").is_none());
     assert!(kernel.get_double("DELTET/DELTA_AT").is_none());
     assert!(kernel.get_double_array("DELTET/DELTA_AT").is_none());
+    assert!(LeapSecondsKernel::from_file("../../data/naif0012.tls").is_ok());
 }

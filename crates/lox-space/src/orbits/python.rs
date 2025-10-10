@@ -36,11 +36,11 @@ use crate::orbits::{
 };
 use crate::time::DynTime;
 use crate::time::deltas::TimeDelta;
+use crate::time::offsets::DefaultOffsetProvider;
 use crate::time::python::deltas::{PyTimeDelta, PyTimeDeltaError};
 use crate::time::python::time::PyTime;
 use crate::time::python::time_scales::PyMissingEopProviderError;
 use crate::time::python::ut1::{PyExtrapolatedDeltaUt1Tai, PyUt1Provider};
-use crate::time::time_scales::offsets::DefaultOffsetProvider;
 use crate::time::time_scales::{DynTimeScale, Tai};
 
 use glam::DVec3;

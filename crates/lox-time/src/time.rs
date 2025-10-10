@@ -32,6 +32,9 @@ use crate::julian_dates::SECONDS_BETWEEN_J1950_AND_J2000;
 use crate::julian_dates::SECONDS_BETWEEN_JD_AND_J2000;
 use crate::julian_dates::SECONDS_BETWEEN_MJD_AND_J2000;
 use crate::julian_dates::Unit;
+use crate::offsets::DefaultOffsetProvider;
+use crate::offsets::Offset;
+use crate::offsets::TryOffset;
 use crate::subsecond::Subsecond;
 use crate::time_of_day::CivilTime;
 use crate::time_of_day::TimeOfDay;
@@ -44,9 +47,6 @@ use crate::time_scales::Tdb;
 use crate::time_scales::TimeScale;
 use crate::time_scales::Tt;
 use crate::time_scales::Ut1;
-use crate::time_scales::offsets::DefaultOffsetProvider;
-use crate::time_scales::offsets::Offset;
-use crate::time_scales::offsets::TryOffset;
 
 #[derive(Clone, Debug, Error)]
 #[error(
