@@ -741,6 +741,31 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_intersat_line_of_sight_multiple_bodies() {
+        // make two identical spacecraft trajectories, should have full visibility
+        let sc1 = spacecraft_trajectory_dyn();
+        let sc2 = spacecraft_trajectory_dyn();
+        let times: Vec<DynTime> = sc1.states().iter().map(|s| s.time()).collect();
+        let expected = vec![Window::new(*times.first().unwrap(), *times.last().unwrap())];
+        let actual = visibility_intersat_los_multiple_bodies(
+            &times,
+            &sc1,
+            &sc2,
+            &[DynOrigin::Moon],
+            ephemeris(),
+        )
+        .unwrap();
+
+        assert_eq!(actual.len(), expected.len());
+
+        for (actual, expected) in zip(actual, expected) {
+            assert_close!(actual.window().start(), expected.start(), 0.0, 1e-4);
+            assert_close!(actual.window().end(), expected.end(), 0.0, 1e-4);
+        }
+
+    }
+
     fn ground_station_trajectory() -> Trajectory<Tai, Earth, Icrf> {
         Trajectory::from_csv(
             include_str!("../../../data/trajectory_cebr.csv"),
