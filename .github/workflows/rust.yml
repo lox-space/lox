@@ -13,8 +13,17 @@ jobs:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+      - name: "Install cargo nextest"
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
       - name: Run tests
-        run: cargo test --all-features
+        run: |
+          # Workaround due to required files for j4rs that are removed from the cache
+          cargo clean -p j4rs
+          cargo build -p j4rs
+
+          cargo nextest run --all-features
 
   fmt:
     name: Rustfmt
@@ -37,7 +46,12 @@ jobs:
           components: clippy
       - uses: Swatinem/rust-cache@v2
       - name: Linting
-        run: cargo clippy -- -D warnings
+        run: |
+          # Workaround due to required files for j4rs that are removed from the cache
+          cargo clean -p j4rs
+          cargo build -p j4rs
+
+          cargo clippy -- -D warnings
 
   coverage:
     name: Code coverage
@@ -46,6 +60,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+      - uses: Swatinem/rust-cache@v2
       - name: Install Python
         uses: actions/setup-python@v6
         with:
@@ -53,7 +68,12 @@ jobs:
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
       - name: Generate code coverage
-        run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
+        run: |
+          # Workaround due to required files for j4rs that are removed from the cache
+          cargo clean -p j4rs
+          cargo build -p j4rs --target-dir /home/runner/work/lox/lox/target/llvm-cov-target
+
+          cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
