@@ -459,39 +459,43 @@ pub fn visibility_intersat_los(
     body: DynOrigin,
     ephem: &impl Ephemeris,
 ) -> Vec<Window<DynTimeScale>> {
-    if let [start, end, ..] = times {
-        let times: Vec<f64> = times
-            .iter()
-            .map(|t| (*t - *start).to_decimal_seconds())
-            .collect();
-        let root_finder = Brent::default();
-        find_windows(
-            |t| {
-                let time = *start + TimeDelta::from_decimal_seconds(t);
-                let epoch = time
-                    .try_to_scale(Tdb, &DefaultOffsetProvider)
-                    .unwrap()
-                    .seconds_since_j2000();
-                let origin_id = source.origin().id();
-                let body_id = body.id();
-                let path = path_from_ids(origin_id.0, body_id.0);
-                let mut r_body = DVec3::ZERO;
-                for (origin, target) in path.into_iter().tuple_windows() {
-                    let p: DVec3 = ephem.position(epoch, origin, target).unwrap().into();
-                    r_body += p;
-                }
-                let r_source = source.interpolate_at(time).position() - r_body;
-                let r_target = target.interpolate_at(time).position() - r_body;
-                body.line_of_sight(r_source, r_target).unwrap()
-            },
-            *start,
-            *end,
-            &times,
-            root_finder,
-        )
-    } else {
-        vec![]
+    if times.len() < 2 {
+        return vec![];
     }
+    let start = *times.first().unwrap();
+    let end = *times.last().unwrap();
+    let times: Vec<f64> = times
+        .iter()
+        .map(|t| (*t - start).to_decimal_seconds())
+        .collect();
+    let root_finder = Brent::default();
+
+    find_windows(
+        |t| {
+            let time = start + TimeDelta::from_decimal_seconds(t);
+            let epoch = time
+                .try_to_scale(Tdb, &DefaultOffsetProvider)
+                .unwrap()
+                .seconds_since_j2000();
+            let origin_id = source.origin().id();
+            let body_id = body.id();
+            let path = path_from_ids(origin_id.0, body_id.0);
+            let mut r_body = DVec3::ZERO;
+            for (origin, target) in path.into_iter().tuple_windows() {
+                let p: DVec3 = ephem.position(epoch, origin, target).unwrap().into();
+                r_body += p;
+            }
+            let r_source = source.interpolate_at(time).position() - r_body;
+            let r_target = target.interpolate_at(time).position() - r_body;
+            let los = body.line_of_sight(r_source, r_target).unwrap();
+            dbg!(los);
+            los
+        },
+        start,
+        end,
+        &times,
+        root_finder,
+    )
 }
 
 pub fn visibility_intersat_los_multiple_bodies<E: Ephemeris + Send + Sync>(
@@ -506,7 +510,10 @@ pub fn visibility_intersat_los_multiple_bodies<E: Ephemeris + Send + Sync>(
         .map(|&body| visibility_intersat_los(times, source, target, body, ephem))
         .collect();
 
+    dbg!(&windows_los);
+
     let windows: Vec<Window<DynTimeScale>> = windows_los.into_iter().flatten().collect();
+    dbg!(&windows);
 
     let mut passes = Vec::new();
     let time_resolution = if times.len() >= 2 {
@@ -524,6 +531,7 @@ pub fn visibility_intersat_los_multiple_bodies<E: Ephemeris + Send + Sync>(
             Err(e) => return Err(e),
         }
     }
+    dbg!(&passes);
 
     Ok(passes)
 }
@@ -752,7 +760,7 @@ mod tests {
             &times,
             &sc1,
             &sc2,
-            &[DynOrigin::Moon],
+            &[DynOrigin::Earth],
             ephemeris(),
         )
         .unwrap();
@@ -763,7 +771,6 @@ mod tests {
             assert_close!(actual.window().start(), expected.start(), 0.0, 1e-4);
             assert_close!(actual.window().end(), expected.end(), 0.0, 1e-4);
         }
-
     }
 
     fn ground_station_trajectory() -> Trajectory<Tai, Earth, Icrf> {

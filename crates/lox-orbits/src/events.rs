@@ -175,7 +175,6 @@ pub fn find_windows<F: Fn(f64) -> f64 + Copy, T: TimeScale + Clone, R: FindBrack
     root_finder: R,
 ) -> Vec<Window<T>> {
     let events = find_events(func, start.clone(), steps, root_finder);
-
     match events {
         Err(error) => match error {
             FindEventError::AlwaysNegative => vec![],
@@ -183,7 +182,6 @@ pub fn find_windows<F: Fn(f64) -> f64 + Copy, T: TimeScale + Clone, R: FindBrack
         },
         Ok(events) => {
             let mut events: VecDeque<Event<T>> = events.into();
-
             if events.is_empty() {
                 return vec![];
             }
