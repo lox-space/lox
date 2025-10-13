@@ -774,47 +774,13 @@ mod tests {
         // make two identical spacecraft trajectories, but one with pi offset in RAAN, should have no visibility
 
         let time = lox_time::time!(DynTimeScale::Tai, 2023, 3, 25, 21, 8, 0.0).expect("time should be valid");
-        let semi_major = 24464.560;
-        let eccentricity = 0.7311;
-        let inclination = 0.122138;
-        let ascending_node = 1.00681;
-        let periapsis_arg = 3.10686;
-        let true_anomaly_a = 0.44369564302687126;
-        let true_anomaly_b = 0.44369564302687126 +PI; // opposite side of orbit
 
         let times: Vec<DynTime> = (0..3600)
             .map(|s| time + TimeDelta::try_from_decimal_seconds(s as f64).unwrap())
             .collect();
 
-        let keplerian_a = DynKeplerian::with_dynamic(
-            time,
-            DynOrigin::Earth,
-            semi_major,
-            eccentricity,
-            inclination,
-            ascending_node,
-            periapsis_arg,
-            true_anomaly_a,
-        ).unwrap();
-
-        let state_a_0: DynState = keplerian_a.to_cartesian();
-        let vallado_a = DynVallado::with_dynamic(state_a_0).unwrap();
-        let trajectory_a: DynTrajectory = vallado_a.propagate_all(times.clone()).unwrap();
-
-        let keplerian_b = DynKeplerian::with_dynamic(
-            time,
-            DynOrigin::Earth,
-            semi_major,
-            eccentricity,
-            inclination,
-            ascending_node,
-            periapsis_arg,
-            true_anomaly_b,
-        ).unwrap();
-
-        let state_b_0: DynState = keplerian_b.to_cartesian();
-        let vallado_b = DynVallado::with_dynamic(state_b_0).unwrap();
-        let trajectory_b: DynTrajectory = vallado_b.propagate_all(times.clone()).unwrap();
+        let trajectory_a = dyn_trajectory(times.clone(), 0.0);
+        let trajectory_b = dyn_trajectory(times.clone(), PI);
 
         let expected: Vec<Pass<DynTimeScale>> = vec![];
         let actual = visibility_intersat_los_multiple_bodies(
@@ -854,6 +820,32 @@ mod tests {
             DynFrame::Icrf,
         )
         .unwrap()
+    }
+
+    fn dyn_trajectory(times: Vec<DynTime>, true_anomaly: f64) -> DynTrajectory {
+        /* ISS Orbit for Julian Day Number 5994 (2016-05-30T12:00:00.000 TDB)
+            ==================================================================
+            Semi-major axis: 6785.028 km
+            Eccentricity: 0.000680
+            Inclination: 51.698°
+            Longitude of ascending node: 146.022°
+            Argument of perigee: 130.632025321773°
+            True anomaly: 77.578°
+        */
+        let k = DynKeplerian::with_dynamic(
+            times[0],
+            DynOrigin::Earth,
+            6785000.028,
+            0.000680,
+            51.698_f64.to_radians(),
+            146.022_f64.to_radians(),
+            130.632025321773_f64.to_radians(),
+            true_anomaly,
+        ).unwrap();
+
+        let s: DynState = k.to_cartesian();
+        let v = DynVallado::with_dynamic(s).unwrap();
+        return v.propagate_all(times.clone()).unwrap();
     }
 
     fn location() -> GroundLocation<Earth> {
