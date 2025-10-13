@@ -600,6 +600,9 @@ mod tests {
     use std::path::PathBuf;
     use std::sync::OnceLock;
 
+    use crate::{elements::DynKeplerian, propagators::{semi_analytical::DynVallado}};
+    use crate::propagators::Propagator;
+
     use super::*;
 
     #[test]
@@ -743,7 +746,7 @@ mod tests {
     }
 
     #[test]
-    fn test_intersat_line_of_sight_multiple_bodies() {
+    fn test_intersat_line_of_sight_multiple_bodies_same_trajectory() {
         // make two identical spacecraft trajectories, should have full visibility
         let sc1 = spacecraft_trajectory_dyn();
         let sc2 = spacecraft_trajectory_dyn();
@@ -764,6 +767,66 @@ mod tests {
             assert_close!(actual.window().start(), expected.start(), 0.0, 1e-4);
             assert_close!(actual.window().end(), expected.end(), 0.0, 1e-4);
         }
+    }
+
+    #[test]
+    fn test_intersat_line_of_sight_multiple_bodies_opposite_trajectory() {
+        // make two identical spacecraft trajectories, but one with pi offset in RAAN, should have no visibility
+
+        let time = lox_time::time!(DynTimeScale::Tai, 2023, 3, 25, 21, 8, 0.0).expect("time should be valid");
+        let semi_major = 24464.560;
+        let eccentricity = 0.7311;
+        let inclination = 0.122138;
+        let ascending_node = 1.00681;
+        let periapsis_arg = 3.10686;
+        let true_anomaly_a = 0.44369564302687126;
+        let true_anomaly_b = 0.44369564302687126 +PI; // opposite side of orbit
+
+        let times: Vec<DynTime> = (0..3600)
+            .map(|s| time + TimeDelta::try_from_decimal_seconds(s as f64).unwrap())
+            .collect();
+
+        let keplerian_a = DynKeplerian::with_dynamic(
+            time,
+            DynOrigin::Earth,
+            semi_major,
+            eccentricity,
+            inclination,
+            ascending_node,
+            periapsis_arg,
+            true_anomaly_a,
+        ).unwrap();
+
+        let state_a_0: DynState = keplerian_a.to_cartesian();
+        let vallado_a = DynVallado::with_dynamic(state_a_0).unwrap();
+        let trajectory_a: DynTrajectory = vallado_a.propagate_all(times.clone()).unwrap();
+
+        let keplerian_b = DynKeplerian::with_dynamic(
+            time,
+            DynOrigin::Earth,
+            semi_major,
+            eccentricity,
+            inclination,
+            ascending_node,
+            periapsis_arg,
+            true_anomaly_b,
+        ).unwrap();
+
+        let state_b_0: DynState = keplerian_b.to_cartesian();
+        let vallado_b = DynVallado::with_dynamic(state_b_0).unwrap();
+        let trajectory_b: DynTrajectory = vallado_b.propagate_all(times.clone()).unwrap();
+
+        let expected: Vec<Pass<DynTimeScale>> = vec![];
+        let actual = visibility_intersat_los_multiple_bodies(
+            &times,
+            &trajectory_a,
+            &trajectory_b,
+            &[DynOrigin::Earth],
+            ephemeris(),
+        )
+        .unwrap();
+
+        assert_eq!(actual.len(), expected.len());
     }
 
     fn ground_station_trajectory() -> Trajectory<Tai, Earth, Icrf> {
