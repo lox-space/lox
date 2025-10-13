@@ -40,7 +40,8 @@ pub fn line_of_sight(radius: f64, r1: DVec3, r2: DVec3) -> f64 {
     let r2n = r2.length();
     let theta1 = radius / r1n;
     let theta2 = radius / r2n;
-    let theta = r1.dot(r2) / r1n / r2n;
+    // Clamp to the domain of `acos` to avoid floating point errors when `r1 == r2`.
+    let theta = (r1.dot(r2) / r1n / r2n).clamp(-1.0, 1.0);
     theta1.acos() + theta2.acos() - theta.acos()
 }
 
@@ -503,6 +504,17 @@ mod tests {
 
         assert!(los < 0.0);
         assert!(los_sun >= 0.0);
+    }
+
+    #[test]
+    fn test_line_of_sight_identical() {
+        let r1 = DVec3::new(0.0, -4464.696, -5102.509);
+        let r2 = DVec3::new(0.0, -4464.696, -5102.509);
+        let r = Earth.equatorial_radius();
+
+        let los = line_of_sight(r, r1, r2);
+
+        assert!(los >= 0.0);
     }
 
     #[test]
