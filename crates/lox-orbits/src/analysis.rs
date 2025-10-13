@@ -27,7 +27,10 @@ use std::f64::consts::PI;
 use thiserror::Error;
 
 use crate::events::{Window, find_windows, intersect_windows};
-use crate::ground::{DynGroundLocation, DynGroundPropagator, GroundLocation, Observables, Observer, SatelliteObserver};
+use crate::ground::{
+    DynGroundLocation, DynGroundPropagator, GroundLocation, Observables, Observer,
+    SatelliteObserver,
+};
 use crate::states::{DynState, State};
 use crate::trajectories::{DynTrajectory, Trajectory};
 use lox_frames::{DynFrame, Iau, Icrf, TryRotateTo};
