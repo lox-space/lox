@@ -487,9 +487,7 @@ pub fn visibility_intersat_los(
             }
             let r_source = source.interpolate_at(time).position() - r_body;
             let r_target = target.interpolate_at(time).position() - r_body;
-            let los = body.line_of_sight(r_source, r_target).unwrap();
-            dbg!(los);
-            los
+            body.line_of_sight(r_source, r_target).unwrap()
         },
         start,
         end,
@@ -510,10 +508,7 @@ pub fn visibility_intersat_los_multiple_bodies<E: Ephemeris + Send + Sync>(
         .map(|&body| visibility_intersat_los(times, source, target, body, ephem))
         .collect();
 
-    dbg!(&windows_los);
-
     let windows: Vec<Window<DynTimeScale>> = windows_los.into_iter().flatten().collect();
-    dbg!(&windows);
 
     let mut passes = Vec::new();
     let time_resolution = if times.len() >= 2 {
@@ -531,8 +526,6 @@ pub fn visibility_intersat_los_multiple_bodies<E: Ephemeris + Send + Sync>(
             Err(e) => return Err(e),
         }
     }
-    dbg!(&passes);
-
     Ok(passes)
 }
 

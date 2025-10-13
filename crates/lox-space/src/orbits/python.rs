@@ -1108,7 +1108,6 @@ where
 {
     // Pre-allocate result with known capacity
     let mut source_result = HashMap::with_capacity(source_spacecraft.len());
-
     for (sc_name, sc_trajectory) in source_spacecraft {
         let mut target_results = HashMap::with_capacity(target_spacecraft.len());
 
