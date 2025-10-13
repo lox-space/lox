@@ -600,8 +600,8 @@ mod tests {
     use std::path::PathBuf;
     use std::sync::OnceLock;
 
-    use crate::{elements::DynKeplerian, propagators::{semi_analytical::DynVallado}};
     use crate::propagators::Propagator;
+    use crate::{elements::DynKeplerian, propagators::semi_analytical::DynVallado};
 
     use super::*;
 
@@ -773,7 +773,8 @@ mod tests {
     fn test_intersat_line_of_sight_multiple_bodies_opposite_trajectory() {
         // make two identical spacecraft trajectories, but one with pi offset in RAAN, should have no visibility
 
-        let time = lox_time::time!(DynTimeScale::Tai, 2023, 3, 25, 21, 8, 0.0).expect("time should be valid");
+        let time = lox_time::time!(DynTimeScale::Tai, 2023, 3, 25, 21, 8, 0.0)
+            .expect("time should be valid");
 
         let times: Vec<DynTime> = (0..3600)
             .map(|s| time + TimeDelta::try_from_decimal_seconds(s as f64).unwrap())
@@ -841,7 +842,8 @@ mod tests {
             146.022_f64.to_radians(),
             130.632025321773_f64.to_radians(),
             true_anomaly,
-        ).unwrap();
+        )
+        .unwrap();
 
         let s: DynState = k.to_cartesian();
         let v = DynVallado::with_dynamic(s).unwrap();
