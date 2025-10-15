@@ -120,12 +120,23 @@ impl EopParser {
         let mut dx: Vec<f64> = Vec::with_capacity(n);
         let mut dy: Vec<f64> = Vec::with_capacity(n);
 
+        // The EOP from the IERS are split into two different files based on the two IAU conventions for some reason.
+        // Both files have the same header and identical data except that the columns for the IAU1980 parameters are
+        // only populated in `finals.all.csv` and the columns for the IAU2000 parameters are only populated in
+        // `finals2000A.all.csv`.
+        // We do not want to force the user to provide both files if they do not need them. At the same time, we want
+        // to parse both files in one pass if they are present to avoid looping over tens of thousands of lines
+        // multiple time.
+        // I have not been able to fulfil both requirements and make the compiler happy without pretending that there
+        // are always two files. In case the user provided two files, we parse both files and merge the records.
+        // If we have only one file, we still parse it twice and record merging is a no-op.
         let mut rdr1 = ReaderBuilder::new()
             .delimiter(b';')
             .from_path(self.paths.0.as_ref().unwrap())?;
         let mut rdr2 = ReaderBuilder::new()
             .delimiter(b';')
             .from_path(self.paths.1.as_ref().or(self.paths.0.as_ref()).unwrap())?;
+
         let mut raw1 = ByteRecord::new();
         let mut raw2 = ByteRecord::new();
         let headers = rdr1.byte_headers()?.clone();
