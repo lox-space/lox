@@ -452,6 +452,24 @@ pub fn visibility_combined<E: Ephemeris + Send + Sync>(
     Ok(passes)
 }
 
+fn interpolate_at_t(
+    epoch: f64,
+    trajectory: &DynTrajectory,
+    body: DynOrigin,
+    ephem: &impl Ephemeris,
+    time: DynTime
+) -> DVec3 {
+    let origin_id = trajectory.origin().id();
+    let body_id = body.id();
+    let path = path_from_ids(origin_id.0, body_id.0);
+    let mut r_body = DVec3::ZERO;
+    for (origin, target) in path.into_iter().tuple_windows() {
+        let p: DVec3 = ephem.position(epoch, origin, target).unwrap().into();
+        r_body += p;
+    }
+    trajectory.interpolate_at(time).position() - r_body
+}
+
 pub fn visibility_intersat_los(
     times: &[DynTime],
     source: &DynTrajectory,
@@ -477,16 +495,9 @@ pub fn visibility_intersat_los(
                 .try_to_scale(Tdb, &DefaultOffsetProvider)
                 .unwrap()
                 .seconds_since_j2000();
-            let origin_id = source.origin().id();
-            let body_id = body.id();
-            let path = path_from_ids(origin_id.0, body_id.0);
-            let mut r_body = DVec3::ZERO;
-            for (origin, target) in path.into_iter().tuple_windows() {
-                let p: DVec3 = ephem.position(epoch, origin, target).unwrap().into();
-                r_body += p;
-            }
-            let r_source = source.interpolate_at(time).position() - r_body;
-            let r_target = target.interpolate_at(time).position() - r_body;
+            let r_source = interpolate_at_t(epoch, source, body, ephem, time);
+            let r_target = interpolate_at_t(epoch, target, body, ephem, time);
+
             body.line_of_sight(r_source, r_target).unwrap()
         },
         start,
