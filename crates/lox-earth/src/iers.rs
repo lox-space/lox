@@ -76,8 +76,7 @@ impl From<csv::Error> for EopParserError {
 
 #[derive(Default)]
 pub struct EopParser {
-    iau1980: Option<PathBuf>,
-    iau2000: Option<PathBuf>,
+    paths: (Option<PathBuf>, Option<PathBuf>),
     lsp: Option<Box<dyn LeapSecondsProvider>>,
 }
 
@@ -86,27 +85,27 @@ impl EopParser {
         Self::default()
     }
 
-    pub fn with_iau1980(&mut self, path: impl AsRef<Path>) -> &mut Self {
-        self.iau1980 = Some(path.as_ref().to_owned());
+    pub fn from_path(&mut self, path: impl AsRef<Path>) -> &mut Self {
+        self.paths = (Some(path.as_ref().to_owned()), None);
         self
     }
 
-    pub fn with_iau2000(&mut self, path: impl AsRef<Path>) -> &mut Self {
-        self.iau2000 = Some(path.as_ref().to_owned());
+    pub fn from_paths(&mut self, path1: impl AsRef<Path>, path2: impl AsRef<Path>) -> &mut Self {
+        self.paths = (
+            Some(path1.as_ref().to_owned()),
+            Some(path2.as_ref().to_owned()),
+        );
         self
     }
 
-    pub fn with_leap_seconds_provider(&mut self, lsp: Box<dyn LeapSecondsProvider>) -> &mut Self {
+    pub fn leap_seconds_provider(&mut self, lsp: Box<dyn LeapSecondsProvider>) -> &mut Self {
         self.lsp = Some(lsp);
         self
     }
 
     pub fn parse(&self) -> Result<EopProvider, EopParserError> {
-        let n = if let Some(iau1980) = self.iau1980.as_ref() {
+        let n = if let Some(iau1980) = self.paths.0.as_ref() {
             let mut reader = ReaderBuilder::new().delimiter(b';').from_path(iau1980)?;
-            reader.records().count()
-        } else if let Some(iau2000) = self.iau2000.as_ref() {
-            let mut reader = ReaderBuilder::new().delimiter(b';').from_path(iau2000)?;
             reader.records().count()
         } else {
             return Err(EopParserError::NoFiles);
@@ -123,10 +122,10 @@ impl EopParser {
 
         let mut rdr1 = ReaderBuilder::new()
             .delimiter(b';')
-            .from_path(self.iau1980.as_ref().or(self.iau2000.as_ref()).unwrap())?;
+            .from_path(self.paths.0.as_ref().unwrap())?;
         let mut rdr2 = ReaderBuilder::new()
             .delimiter(b';')
-            .from_path(self.iau2000.as_ref().or(self.iau1980.as_ref()).unwrap())?;
+            .from_path(self.paths.1.as_ref().or(self.paths.0.as_ref()).unwrap())?;
         let mut raw1 = ByteRecord::new();
         let mut raw2 = ByteRecord::new();
         let headers = rdr1.byte_headers()?.clone();
@@ -313,5 +312,41 @@ impl EopProvider {
             return Err(EopProviderError::ExtrapolatedValue(val));
         }
         Ok(-TimeDelta::try_from_decimal_seconds(val).unwrap())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use lox_test_utils::data_dir;
+    use lox_time::{Time, time_scales::Tai};
+
+    use super::*;
+
+    #[test]
+    #[should_panic(expected = "NoFiles")]
+    fn test_eop_parser_no_files() {
+        EopParser::new().parse().unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "MissingIau2000")]
+    fn test_eop_provider_missing_iau2000() {
+        let t: Time<Tai> = Time::default();
+        let eop = EopParser::new()
+            .from_path(data_dir().join("finals.all.csv"))
+            .parse()
+            .unwrap();
+        eop.nutation_precession_iau2000(t).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "MissingIau1980")]
+    fn test_eop_provider_missing_iau1980() {
+        let t: Time<Tai> = Time::default();
+        let eop = EopParser::new()
+            .from_path(data_dir().join("finals2000A.all.csv"))
+            .parse()
+            .unwrap();
+        eop.nutation_precession_iau1980(t).unwrap();
     }
 }

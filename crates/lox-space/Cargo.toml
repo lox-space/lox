@@ -30,6 +30,7 @@ rayon = { workspace = true, optional = true }
 sgp4 = { workspace = true, optional = true }
 
 [dev-dependencies]
+lox-test-utils.workspace = true
 float_eq.workspace = true
 pyo3 = { workspace = true, features = ["auto-initialize"] }
 rstest.workspace = true

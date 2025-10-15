@@ -23,5 +23,6 @@ serde.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
+lox-test-utils.workspace = true
 float_eq.workspace = true
 rstest.workspace = true

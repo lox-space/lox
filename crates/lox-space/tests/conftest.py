@@ -17,7 +17,7 @@ DATA_DIR = pathlib.Path(__file__).parents[3].joinpath("data")
 
 @pytest.fixture(scope="session")
 def provider():
-    return lox.EOPProvider(iau2000=DATA_DIR.joinpath("finals2000A.all.csv"))
+    return lox.EOPProvider(DATA_DIR.joinpath("finals2000A.all.csv"))
 
 
 @pytest.fixture(scope="session")

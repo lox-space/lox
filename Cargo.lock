@@ -420,6 +420,7 @@ dependencies = [
  "lox-bodies",
  "lox-io",
  "lox-math",
+ "lox-test-utils",
  "lox-time",
  "lox-units",
  "num",
@@ -498,6 +499,7 @@ dependencies = [
  "lox-ephem",
  "lox-frames",
  "lox-math",
+ "lox-test-utils",
  "lox-time",
  "lox-units",
  "rayon",
@@ -519,6 +521,7 @@ dependencies = [
  "lox-io",
  "lox-math",
  "lox-orbits",
+ "lox-test-utils",
  "lox-time",
  "lox-units",
  "numpy",
@@ -527,6 +530,10 @@ dependencies = [
  "rstest",
  "sgp4",
 ]
+
+[[package]]
+name = "lox-test-utils"
+version = "0.1.0-alpha.0"
 
 [[package]]
 name = "lox-time"

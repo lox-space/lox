@@ -434,10 +434,9 @@ mod tests {
     use super::*;
 
     use crate::math::assert_close;
-    use crate::test_helpers::data_dir;
-
     use float_eq::assert_float_eq;
-    use pyo3::{IntoPyObjectExt, Python, types::PyDict};
+    use lox_test_utils::data_dir;
+    use pyo3::{IntoPyObject, IntoPyObjectExt, Python, types::PyDict};
     use rstest::rstest;
 
     #[test]
@@ -733,11 +732,10 @@ mod tests {
     #[case("UT1", "UT1")]
     fn test_pytime_to_scale(#[case] scale1: &str, #[case] scale2: &str) {
         Python::attach(|py| {
-            let provider = Bound::new(
-                py,
-                PyEopProvider::new(None, Some(data_dir().join("finals2000A.all.csv"))).unwrap(),
-            )
-            .unwrap();
+            let path = (data_dir().join("finals2000A.all.csv"),)
+                .into_pyobject(py)
+                .unwrap();
+            let provider = Bound::new(py, PyEopProvider::new(&path).unwrap()).unwrap();
             let scale1 = scale_to_any(py, scale1);
             let scale2 = scale_to_any(py, scale2);
             let exp = PyTime::new(&scale1, 2000, 1, 1, 0, 0, 0.0).unwrap();

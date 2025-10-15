@@ -182,11 +182,13 @@ mod tests {
     use float_eq::assert_float_eq;
     use lox_math::assert_close;
     use lox_math::is_close::IsClose;
+    use lox_test_utils::data_dir;
     use lox_time::Time;
     use lox_time::deltas::ToDelta;
     use lox_time::subsecond::Subsecond;
     use lox_time::time;
     use lox_time::time_scales::Ut1;
+    use lox_time::utc::leap_seconds::BuiltinLeapSeconds;
     use lox_time::utc::transformations::ToUtc;
     use lox_time::{DynTime, calendar_dates::Date, time_of_day::TimeOfDay};
     use rstest::{fixture, rstest};
@@ -389,14 +391,11 @@ mod tests {
         static PROVIDER: OnceLock<EopProvider> = OnceLock::new();
         PROVIDER.get_or_init(|| {
             EopParser::new()
-                .with_iau1980(format!(
-                    "{}/../../data/finals.all.csv",
-                    env!("CARGO_MANIFEST_DIR")
-                ))
-                .with_iau2000(format!(
-                    "{}/../../data/finals2000A.all.csv",
-                    env!("CARGO_MANIFEST_DIR")
-                ))
+                .from_paths(
+                    data_dir().join("finals.all.csv"),
+                    data_dir().join("finals2000A.all.csv"),
+                )
+                .leap_seconds_provider(Box::new(BuiltinLeapSeconds))
                 .parse()
                 .unwrap()
         })
