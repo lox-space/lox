@@ -483,11 +483,11 @@ mod tests {
     use lox_ephem::spk::parser::{Spk, parse_daf_spk};
     use lox_math::assert_close;
     use lox_math::is_close::IsClose;
+    use lox_test_utils::data_dir;
     use lox_time::Time;
     use lox_time::time_scales::Tai;
     use lox_time::utc::Utc;
     use std::iter::zip;
-    use std::path::PathBuf;
     use std::sync::OnceLock;
 
     use super::*;
@@ -702,9 +702,5 @@ mod tests {
         let contents = std::fs::read(data_dir().join("de440s.bsp")).unwrap();
         static EPHEMERIS: OnceLock<Spk> = OnceLock::new();
         EPHEMERIS.get_or_init(|| parse_daf_spk(&contents).unwrap())
-    }
-
-    pub fn data_dir() -> PathBuf {
-        PathBuf::from(format!("{}/../../data", env!("CARGO_MANIFEST_DIR")))
     }
 }

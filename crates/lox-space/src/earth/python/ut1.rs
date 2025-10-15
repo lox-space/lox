@@ -10,7 +10,8 @@ use std::path::PathBuf;
 
 use lox_earth::iers::{EopParser, EopProvider};
 use pyo3::exceptions::PyException;
-use pyo3::{PyErr, PyResult, create_exception, pyclass, pymethods};
+use pyo3::types::{PyAnyMethods, PyTuple};
+use pyo3::{Bound, PyErr, PyResult, create_exception, pyclass, pymethods};
 
 create_exception!(lox_space, EopParserError, PyException);
 
@@ -38,15 +39,14 @@ pub struct PyEopProvider(pub EopProvider);
 
 #[pymethods]
 impl PyEopProvider {
-    #[pyo3(signature = (iau1980=None, iau2000=None))]
+    #[pyo3(signature = (*args))]
     #[new]
-    pub fn new(iau1980: Option<PathBuf>, iau2000: Option<PathBuf>) -> PyResult<PyEopProvider> {
+    pub fn new(args: &Bound<'_, PyTuple>) -> PyResult<PyEopProvider> {
         let mut parser = EopParser::new();
-        if let Some(iau1980) = iau1980 {
-            parser.with_iau1980(iau1980);
-        }
-        if let Some(iau2000) = iau2000 {
-            parser.with_iau2000(iau2000);
+        if let Ok((path1, path2)) = args.extract::<(PathBuf, PathBuf)>() {
+            parser.from_paths(path1, path2);
+        } else if let Ok((path,)) = args.extract::<(PathBuf,)>() {
+            parser.from_path(path);
         }
         Ok(PyEopProvider(parser.parse().map_err(PyEopParserError)?))
     }
@@ -56,26 +56,27 @@ impl PyEopProvider {
 mod tests {
     use super::*;
 
-    use crate::test_helpers::data_dir;
     use crate::time::python::time::PyTime;
-
-    use pyo3::{Bound, IntoPyObjectExt, Python};
+    use lox_test_utils::data_dir;
+    use pyo3::{Bound, IntoPyObject, IntoPyObjectExt, Python};
 
     #[test]
     #[should_panic(expected = "No such file")]
     fn test_ut1_provider_invalid_path() {
-        let _provider = PyEopProvider::new(Some("invalid_path".into()), None).unwrap();
+        Python::attach(|py| {
+            let path = (data_dir().join("invalid"),).into_pyobject(py).unwrap();
+            let _provider = PyEopProvider::new(&path).unwrap();
+        })
     }
 
     #[test]
     #[should_panic(expected = "extrapolated")]
     fn test_ut1_provider_extrapolated() {
         Python::attach(|py| {
-            let provider = Bound::new(
-                py,
-                PyEopProvider::new(None, Some(data_dir().join("finals2000A.all.csv"))).unwrap(),
-            )
-            .unwrap();
+            let path = (data_dir().join("finals2000A.all.csv"),)
+                .into_pyobject(py)
+                .unwrap();
+            let provider = Bound::new(py, PyEopProvider::new(&path).unwrap()).unwrap();
             let tai =
                 PyTime::new(&"TAI".into_bound_py_any(py).unwrap(), 2100, 1, 1, 0, 0, 0.0).unwrap();
             let _ut1 = tai

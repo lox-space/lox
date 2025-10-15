@@ -403,7 +403,7 @@ impl DynState {
 
 #[cfg(test)]
 mod tests {
-    use std::{path::PathBuf, sync::OnceLock};
+    use std::sync::OnceLock;
 
     use float_eq::assert_float_eq;
 
@@ -411,6 +411,7 @@ mod tests {
     use lox_ephem::spk::parser::{Spk, parse_daf_spk};
     use lox_math::assert_close;
     use lox_math::is_close::IsClose;
+    use lox_test_utils::data_dir;
     use lox_time::{Time, offsets::DefaultOffsetProvider, time, time_scales::Tdb, utc::Utc};
 
     use super::*;
@@ -487,10 +488,6 @@ mod tests {
         assert_float_eq!(ground.latitude(), lat_exp, rel <= 1e-4);
         assert_float_eq!(ground.longitude(), lon_exp, rel <= 1e-4);
         assert_float_eq!(ground.altitude(), alt_exp, rel <= 1e-4);
-    }
-
-    pub fn data_dir() -> PathBuf {
-        PathBuf::from(format!("{}/../../data", env!("CARGO_MANIFEST_DIR")))
     }
 
     #[test]

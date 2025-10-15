@@ -20,6 +20,7 @@ lox-io = { path = "crates/lox-io", version = "0.1.0-alpha.8" }
 lox-math = { path = "crates/lox-math", version = "0.1.0-alpha.8" }
 lox-orbits = { path = "crates/lox-orbits", version = "0.1.0-alpha.20" }
 lox-space = { path = "crates/lox-space", version = "0.1.0-alpha.27" }
+lox-test-utils = { path = "crates/lox-test-utils", version = "0.1.0-alpha.0"}
 lox-time = { path = "crates/lox-time", version = "0.1.0-alpha.10" }
 lox-units = { path = "crates/lox-units", version = "0.1.0-alpha.0" }
 

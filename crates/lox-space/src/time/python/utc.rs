@@ -146,9 +146,9 @@ impl PyUtc {
 mod tests {
     use super::*;
 
-    use crate::test_helpers::data_dir;
+    use lox_test_utils::data_dir;
 
-    use pyo3::{Bound, IntoPyObjectExt, Python};
+    use pyo3::{Bound, IntoPyObject, IntoPyObjectExt, Python};
     use rstest::rstest;
 
     #[test]
@@ -208,11 +208,10 @@ mod tests {
     #[case("UT1")]
     fn test_pyutc_transformations(#[case] scale: &str) {
         Python::attach(|py| {
-            let provider = Bound::new(
-                py,
-                PyEopProvider::new(None, Some(data_dir().join("finals2000A.all.csv"))).unwrap(),
-            )
-            .unwrap();
+            let path = (data_dir().join("finals2000A.all.csv"),)
+                .into_pyobject(py)
+                .unwrap();
+            let provider = Bound::new(py, PyEopProvider::new(&path).unwrap()).unwrap();
             let scale = scale.into_bound_py_any(py).unwrap();
             let exp = PyUtc::new(2000, 1, 1, 0, 0, 0.0).unwrap();
             let act = exp
