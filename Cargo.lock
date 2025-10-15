@@ -388,7 +388,7 @@ checksum = "34080505efa8e45a4b816c349525ebe327ceaa8559756f0356cba97ef3bf7432"
 
 [[package]]
 name = "lox-bodies"
-version = "0.1.0-alpha.10"
+version = "0.1.0-alpha.11"
 dependencies = [
  "fast_polynomial",
  "float_eq",
@@ -411,7 +411,7 @@ dependencies = [
 
 [[package]]
 name = "lox-earth"
-version = "0.1.0-alpha.12"
+version = "0.1.0-alpha.13"
 dependencies = [
  "csv",
  "fast_polynomial",
@@ -431,7 +431,7 @@ dependencies = [
 
 [[package]]
 name = "lox-ephem"
-version = "0.1.0-alpha.7"
+version = "0.1.0-alpha.8"
 dependencies = [
  "lox-units",
  "nom",
@@ -440,7 +440,7 @@ dependencies = [
 
 [[package]]
 name = "lox-frames"
-version = "0.1.0-alpha.3"
+version = "0.1.0-alpha.4"
 dependencies = [
  "glam",
  "hashbrown 0.16.0",
@@ -455,7 +455,7 @@ dependencies = [
 
 [[package]]
 name = "lox-io"
-version = "0.1.0-alpha.8"
+version = "0.1.0-alpha.9"
 dependencies = [
  "csv",
  "lox-derive",
@@ -474,7 +474,7 @@ dependencies = [
 
 [[package]]
 name = "lox-math"
-version = "0.1.0-alpha.8"
+version = "0.1.0-alpha.9"
 dependencies = [
  "fast_polynomial",
  "float_eq",
@@ -486,7 +486,7 @@ dependencies = [
 
 [[package]]
 name = "lox-orbits"
-version = "0.1.0-alpha.20"
+version = "0.1.0-alpha.21"
 dependencies = [
  "csv",
  "float_eq",
@@ -510,7 +510,7 @@ dependencies = [
 
 [[package]]
 name = "lox-space"
-version = "0.1.0-alpha.27"
+version = "0.1.0-alpha.28"
 dependencies = [
  "float_eq",
  "glam",
@@ -537,7 +537,7 @@ version = "0.1.0-alpha.0"
 
 [[package]]
 name = "lox-time"
-version = "0.1.0-alpha.10"
+version = "0.1.0-alpha.11"
 dependencies = [
  "float_eq",
  "itertools",
@@ -552,7 +552,7 @@ dependencies = [
 
 [[package]]
 name = "lox-units"
-version = "0.1.0-alpha.0"
+version = "0.1.0-alpha.1"
 dependencies = [
  "float_eq",
  "pyo3",

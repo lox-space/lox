@@ -6,6 +6,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.28](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.27...lox-space-v0.1.0-alpha.28) - 2025-10-15
+
+### Added
+
+- add lox-test-utils crate and refine EOP parser interface
+- *(lox-earth)* implement new EOP parser and data provider
+- *(lox-units)* add Python wrapper
+
+### Fixed
+
+- *(lox-space)* fix uv cache again
+- *(lox-space)* fix Python module rebuild
+
+### Other
+
+- move type aliases to lox-units
+- refactor all the things
+- *(lox-space/lox-units)* move unit wrappers to lox-space and add feature
+- *(lox-time)* fix Python tests
+
 ## [0.1.0-alpha.27](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.26...lox-space-v0.1.0-alpha.27) - 2025-09-19
 
 ### Other
