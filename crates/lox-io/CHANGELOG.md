@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.9](https://github.com/lox-space/lox/compare/lox-io-v0.1.0-alpha.8...lox-io-v0.1.0-alpha.9) - 2025-10-15
+
+### Added
+
+- *(lox-earth)* implement new EOP parser and data provider
+
+### Other
+
+- move type aliases to lox-units
+- *(lox-space/lox-units)* move unit wrappers to lox-space and add feature
+
 ## [0.1.0-alpha.8](https://github.com/lox-space/lox/compare/lox-io-v0.1.0-alpha.7...lox-io-v0.1.0-alpha.8) - 2025-09-19
 
 ### Other

@@ -6,6 +6,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.13](https://github.com/lox-space/lox/compare/lox-earth-v0.1.0-alpha.12...lox-earth-v0.1.0-alpha.13) - 2025-10-15
+
+### Added
+
+- add lox-test-utils crate and refine EOP parser interface
+- *(lox-earth)* implement new EOP parser and data provider
+
+### Fixed
+
+- fix formatting and use stable rustfmt
+
+### Other
+
+- *(lox-earth)* add comment
+- move type aliases to lox-units
+- *(lox-units/lox-math)* move constants to lox-units
+
 ## [0.1.0-alpha.12](https://github.com/lox-space/lox/compare/lox-earth-v0.1.0-alpha.11...lox-earth-v0.1.0-alpha.12) - 2025-09-19
 
 ### Other
