@@ -260,6 +260,9 @@ name = "glam"
 version = "0.30.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9d8e8d9db3feacb0bb4801b77e00c4d550f3e8d3e5303388fdfec3ff8a91f04d"
+dependencies = [
+ "libm",
+]
 
 [[package]]
 name = "glob"
@@ -555,7 +558,7 @@ name = "lox-units"
 version = "0.1.0-alpha.0"
 dependencies = [
  "float_eq",
- "pyo3",
+ "glam",
  "rstest",
  "thiserror",
 ]

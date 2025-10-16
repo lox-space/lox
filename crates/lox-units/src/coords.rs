@@ -1,8 +1,9 @@
 use core::f64::consts::{FRAC_PI_2, PI, TAU};
 
+use glam::DVec3;
 use thiserror::Error;
 
-use crate::{Angle, Distance};
+use crate::{Angle, Distance, Velocity};
 
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct AzEl(Angle, Angle);
@@ -49,7 +50,7 @@ impl AzElBuilder {
         }
     }
 
-    pub fn with_azimuth(&mut self, azimuth: Angle) -> &mut Self {
+    pub fn az(&mut self, azimuth: Angle) -> &mut Self {
         self.azimuth = match azimuth.0 {
             lon if lon < 0.0 => Err(AzElError::InvalidAzimuth(azimuth)),
             lon if lon > TAU => Err(AzElError::InvalidAzimuth(azimuth)),
@@ -58,7 +59,7 @@ impl AzElBuilder {
         self
     }
 
-    pub fn with_elevation(&mut self, elevation: Angle) -> &mut Self {
+    pub fn el(&mut self, elevation: Angle) -> &mut Self {
         self.elevation = match elevation.0 {
             lat if lat < 0.0 => Err(AzElError::InvalidElevation(elevation)),
             lat if lat > TAU => Err(AzElError::InvalidElevation(elevation)),
@@ -125,7 +126,7 @@ impl LonLatAltBuilder {
         }
     }
 
-    pub fn with_longitude(&mut self, longitude: Angle) -> &mut Self {
+    pub fn lon(&mut self, longitude: Angle) -> &mut Self {
         self.longitude = match longitude.0 {
             lon if lon < -PI => Err(LonLatAltError::InvalidLongitude(longitude)),
             lon if lon > PI => Err(LonLatAltError::InvalidLongitude(longitude)),
@@ -134,7 +135,7 @@ impl LonLatAltBuilder {
         self
     }
 
-    pub fn with_latitude(&mut self, latitude: Angle) -> &mut Self {
+    pub fn lat(&mut self, latitude: Angle) -> &mut Self {
         self.latitude = match latitude.0 {
             lat if lat < -FRAC_PI_2 => Err(LonLatAltError::InvalidLatitude(latitude)),
             lat if lat > FRAC_PI_2 => Err(LonLatAltError::InvalidLatitude(latitude)),
@@ -143,7 +144,7 @@ impl LonLatAltBuilder {
         self
     }
 
-    pub fn with_altitude(&mut self, altitude: Distance) -> &mut Self {
+    pub fn alt(&mut self, altitude: Distance) -> &mut Self {
         self.altitude = if !altitude.0.is_finite() {
             Err(LonLatAltError::InvalidAltitude(altitude))
         } else {
@@ -157,21 +158,100 @@ impl LonLatAltBuilder {
     }
 }
 
+#[derive(Copy, Clone, Debug, Default, PartialEq)]
+pub struct Cartesian {
+    pos: DVec3,
+    vel: DVec3,
+}
+
+impl Cartesian {
+    pub fn new(
+        x: Distance,
+        y: Distance,
+        z: Distance,
+        vx: Velocity,
+        vy: Velocity,
+        vz: Velocity,
+    ) -> Self {
+        Self {
+            pos: DVec3::new(x.0, y.0, z.0),
+            vel: DVec3::new(vx.0, vy.0, vz.0),
+        }
+    }
+
+    pub fn build() -> CartesianBuilder {
+        CartesianBuilder::default()
+    }
+
+    pub fn pos(&self) -> DVec3 {
+        self.pos
+    }
+
+    pub fn vel(&self) -> DVec3 {
+        self.vel
+    }
+
+    pub fn x(&self) -> Distance {
+        Distance(self.pos.x)
+    }
+
+    pub fn y(&self) -> Distance {
+        Distance(self.pos.y)
+    }
+
+    pub fn z(&self) -> Distance {
+        Distance(self.pos.z)
+    }
+
+    pub fn vx(&self) -> Velocity {
+        Velocity(self.vel.x)
+    }
+
+    pub fn vy(&self) -> Velocity {
+        Velocity(self.vel.y)
+    }
+
+    pub fn vz(&self) -> Velocity {
+        Velocity(self.vel.z)
+    }
+}
+
+#[derive(Default)]
+pub struct CartesianBuilder {
+    pos: Option<DVec3>,
+    vel: Option<DVec3>,
+}
+
+impl CartesianBuilder {
+    pub fn pos(&mut self, x: Distance, y: Distance, z: Distance) -> &mut Self {
+        self.pos = Some(DVec3::new(x.0, y.0, z.0));
+        self
+    }
+
+    pub fn vel(&mut self, vx: Velocity, vy: Velocity, vz: Velocity) -> &mut Self {
+        self.vel = Some(DVec3::new(vx.0, vy.0, vz.0));
+        self
+    }
+
+    pub fn build(&self) -> Cartesian {
+        Cartesian {
+            pos: self.pos.unwrap_or(DVec3::ZERO),
+            vel: self.vel.unwrap_or(DVec3::ZERO),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use rstest::rstest;
 
-    use crate::{AngleUnits, DistanceUnits};
+    use crate::{AngleUnits, DistanceUnits, VelocityUnits};
 
     use super::*;
 
     #[test]
     fn test_azel_api() {
-        let azel = AzEl::build()
-            .with_azimuth(45.0.deg())
-            .with_elevation(45.0.deg())
-            .build()
-            .unwrap();
+        let azel = AzEl::build().az(45.0.deg()).el(45.0.deg()).build().unwrap();
         assert_eq!(azel.az(), 45.0.deg());
         assert_eq!(azel.el(), 45.0.deg());
     }
@@ -183,16 +263,16 @@ mod tests {
     #[case(0.0.deg(), -1.0.deg(), Err(AzElError::InvalidElevation(-1.0.deg())))]
     #[case(0.0.deg(), 361.0.deg(), Err(AzElError::InvalidElevation(361.0.deg())))]
     fn test_azel(#[case] az: Angle, #[case] el: Angle, #[case] exp: Result<AzEl, AzElError>) {
-        let act = AzEl::build().with_azimuth(az).with_elevation(el).build();
+        let act = AzEl::build().az(az).el(el).build();
         assert_eq!(act, exp)
     }
 
     #[test]
     fn test_lla_api() {
         let lla = LonLatAlt::build()
-            .with_longitude(45.0.deg())
-            .with_latitude(45.0.deg())
-            .with_altitude(100.0.m())
+            .lon(45.0.deg())
+            .lat(45.0.deg())
+            .alt(100.0.m())
             .build()
             .unwrap();
         assert_eq!(lla.lon(), 45.0.deg());
@@ -213,11 +293,23 @@ mod tests {
         #[case] alt: Distance,
         #[case] exp: Result<LonLatAlt, LonLatAltError>,
     ) {
-        let act = LonLatAlt::build()
-            .with_longitude(lon)
-            .with_latitude(lat)
-            .with_altitude(alt)
-            .build();
+        let act = LonLatAlt::build().lon(lon).lat(lat).alt(alt).build();
         assert_eq!(act, exp)
+    }
+
+    #[test]
+    fn test_cartesian() {
+        let c = Cartesian::build()
+            .pos(1000.0.km(), 1000.0.km(), 1000.0.km())
+            .vel(1.0.kps(), 1.0.kps(), 1.0.kps())
+            .build();
+        assert_eq!(c.pos(), DVec3::new(1e6, 1e6, 1e6));
+        assert_eq!(c.vel(), DVec3::new(1e3, 1e3, 1e3));
+        assert_eq!(c.x().0, 1e6);
+        assert_eq!(c.y().0, 1e6);
+        assert_eq!(c.z().0, 1e6);
+        assert_eq!(c.vx().0, 1e3);
+        assert_eq!(c.vy().0, 1e3);
+        assert_eq!(c.vz().0, 1e3);
     }
 }
