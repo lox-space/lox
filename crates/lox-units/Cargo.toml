@@ -9,7 +9,7 @@ authors.workspace = true
 repository.workspace = true
 
 [dependencies]
-pyo3 = {workspace = true, optional = true}
+glam.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
@@ -19,7 +19,3 @@ rstest.workspace = true
 [features]
 default = ["std"]
 std = []
-python = [
-    "std",
-    "dep:pyo3",
-]
