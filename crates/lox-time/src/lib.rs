@@ -36,7 +36,6 @@ pub mod calendar_dates;
 pub mod deltas;
 pub mod julian_dates;
 pub mod offsets;
-pub mod providers;
 pub mod ranges;
 pub mod subsecond;
 pub mod time;
@@ -44,4 +43,5 @@ pub mod time_of_day;
 pub mod time_scales;
 pub mod utc;
 
+pub use lox_derive::OffsetProvider;
 pub use time::{DynTime, JulianDateOutOfRange, Time, TimeBuilder, TimeError};

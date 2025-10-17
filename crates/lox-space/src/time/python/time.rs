@@ -20,7 +20,7 @@ use crate::earth::python::ut1::{PyEopProvider, PyEopProviderError};
 use crate::time::calendar_dates::{CalendarDate, Date};
 use crate::time::deltas::{TimeDelta, ToDelta};
 use crate::time::julian_dates::{Epoch, JulianDate, Unit};
-use crate::time::providers::DefaultOffsetProvider;
+use crate::time::offsets::DefaultOffsetProvider;
 use crate::time::python::deltas::PyTimeDelta;
 use crate::time::python::time_scales::PyMissingEopProviderError;
 use crate::time::python::utc::PyUtcError;
