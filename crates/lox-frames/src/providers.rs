@@ -1,4 +1,4 @@
-use lox_time::offset_provider;
+use lox_time::OffsetProvider;
 
 #[macro_export]
 macro_rules! transform_provider {
@@ -7,8 +7,7 @@ macro_rules! transform_provider {
     };
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, OffsetProvider)]
 pub struct DefaultTransformProvider;
 
-offset_provider!(DefaultTransformProvider);
 transform_provider!(DefaultTransformProvider);
