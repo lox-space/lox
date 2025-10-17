@@ -13,8 +13,8 @@ use crate::bodies::{DynOrigin, Origin};
 use crate::earth::python::ut1::{PyEopProvider, PyEopProviderError};
 use crate::ephem::Ephemeris;
 use crate::ephem::python::{PyDafSpkError, PySpk};
-use crate::frames::python::{PyFrame, PyIauFrameTransformationError};
-use crate::frames::{DynFrame, TryRotateTo};
+use crate::frames::DynFrame;
+use crate::frames::python::{PyDynTransformEopError, PyDynTransformError, PyFrame};
 use crate::math::python::PySeriesError;
 use crate::math::roots::Brent;
 use crate::math::series::SeriesError;
@@ -37,13 +37,15 @@ use crate::orbits::{
 };
 use crate::time::DynTime;
 use crate::time::deltas::TimeDelta;
-use crate::time::offsets::DefaultOffsetProvider;
+use crate::time::providers::DefaultOffsetProvider;
 use crate::time::python::deltas::{PyTimeDelta, PyTimeDeltaError};
 use crate::time::python::time::PyTime;
 use crate::time::python::time_scales::PyMissingEopProviderError;
 use crate::time::time_scales::{DynTimeScale, Tai};
 
 use glam::DVec3;
+use lox_frames::providers::DefaultTransformProvider;
+use lox_frames::transformations::{Rotation, TryTransform};
 use numpy::{PyArray1, PyArray2, PyArrayMethods};
 use pyo3::exceptions::PyValueError;
 use pyo3::types::{PyList, PyType};
@@ -176,20 +178,18 @@ impl PyState {
         provider: Option<&Bound<'_, PyEopProvider>>,
     ) -> PyResult<Self> {
         let provider = provider.map(|p| &p.get().0);
-        let rot = match provider {
-            Some(provider) => {
-                self.0
-                    .reference_frame()
-                    .try_rotation(frame.0, self.0.time(), provider)
-            }
-            None => self.0.reference_frame().try_rotation(
-                frame.0,
-                self.0.time(),
-                &DefaultOffsetProvider,
-            ),
-        }
-        .map_err(PyIauFrameTransformationError)?;
-        let (r1, v1) = rot.rotate_state(self.0.position(), self.0.velocity());
+        let origin = self.0.reference_frame();
+        let target = frame.0;
+        let time = self.0.time();
+        let rot: Result<Rotation, PyErr> = match provider {
+            Some(provider) => provider
+                .try_transform(origin, target, time)
+                .map_err(|err| PyDynTransformEopError(err).into()),
+            None => DefaultTransformProvider
+                .try_transform(origin, target, time)
+                .map_err(|err| PyDynTransformError(err).into()),
+        };
+        let (r1, v1) = rot?.rotate_state(self.0.position(), self.0.velocity());
         Ok(PyState(State::new(
             self.0.time(),
             r1,
