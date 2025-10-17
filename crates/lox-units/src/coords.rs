@@ -179,6 +179,10 @@ impl Cartesian {
         }
     }
 
+    pub fn from_vecs(pos: DVec3, vel: DVec3) -> Self {
+        Self { pos, vel }
+    }
+
     pub fn build() -> CartesianBuilder {
         CartesianBuilder::default()
     }

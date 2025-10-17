@@ -7,85 +7,77 @@
  */
 
 use crate::transformations::rotations::Rotation;
+use crate::transformations::{TransformProvider, TryTransform};
 use glam::{DMat3, DVec3};
-use lox_bodies::RotationalElements;
-use lox_bodies::{TryRotationalElements, UndefinedOriginPropertyError};
+use lox_bodies::TryRotationalElements;
 use lox_time::Time;
 use lox_time::offsets::TryOffset;
 use lox_time::time_scales::Tdb;
 use lox_time::{julian_dates::JulianDate, time_scales::TimeScale};
 use std::f64::consts::{FRAC_PI_2, TAU};
-use thiserror::Error;
 
 use crate::frames::{Iau, Icrf};
-use crate::traits::TryRotateTo;
 
-#[derive(Debug, Error)]
-pub enum IauFrameTransformationError {
-    #[error(transparent)]
-    UndefinedRotationalElements(#[from] UndefinedOriginPropertyError),
-    #[error("TDB transformation error: {0}")]
-    Tdb(String),
-}
-
-pub fn icrf_to_iau<T, O, P>(
-    time: Time<T>,
-    body: O,
-    provider: &P,
-) -> Result<Rotation, IauFrameTransformationError>
-where
-    T: TimeScale + Copy,
-    P: TryOffset<T, Tdb>,
-    O: TryRotationalElements,
-{
-    let seconds = time
-        .try_to_scale(Tdb, provider)
-        .map_err(|err| IauFrameTransformationError::Tdb(err.to_string()))?
-        .seconds_since_j2000();
-    let (right_ascension, declination, rotation_angle) = body.try_rotational_elements(seconds)?;
-    let (right_ascension_rate, declination_rate, rotation_rate) =
-        body.try_rotational_element_rates(seconds)?;
-
+pub fn icrf_to_iau(
+    right_ascension: f64,
+    declination: f64,
+    rotation_angle: f64,
+    right_ascension_rate: f64,
+    declination_rate: f64,
+    rotation_rate: f64,
+) -> Rotation {
     let m1 = DMat3::from_rotation_z(-(right_ascension + FRAC_PI_2));
     let m2 = DMat3::from_rotation_x(-(FRAC_PI_2 - declination));
     let m3 = DMat3::from_rotation_z(-(rotation_angle % TAU));
     let m = m3 * m2 * m1;
     let v = DVec3::new(right_ascension_rate, -declination_rate, rotation_rate);
-    Ok(Rotation::new(m).with_angular_velocity(v))
+    Rotation::new(m).with_angular_velocity(v)
 }
 
-impl<T, O, P> TryRotateTo<T, Iau<O>, P> for Icrf
+impl<T, Scale, Origin> TryTransform<Icrf, Iau<Origin>, Scale> for T
 where
-    T: TimeScale + Copy,
-    P: TryOffset<T, Tdb>,
-    O: RotationalElements,
+    Scale: TimeScale + Copy,
+    Origin: TryRotationalElements + Copy,
+    T: TransformProvider + TryOffset<Scale, Tdb>,
 {
-    type Error = IauFrameTransformationError;
+    type Error = <Self as TryOffset<Scale, Tdb>>::Error;
 
-    fn try_rotation(
+    fn try_transform(
         &self,
-        frame: Iau<O>,
-        time: Time<T>,
-        provider: &P,
+        _origin: Icrf,
+        target: Iau<Origin>,
+        time: Time<Scale>,
     ) -> Result<Rotation, Self::Error> {
-        icrf_to_iau(time, frame.0, provider)
+        let seconds = time.try_to_scale(Tdb, self)?.seconds_since_j2000();
+
+        let (right_ascension, declination, rotation_angle) = target.rotational_elements(seconds);
+        let (right_ascension_rate, declination_rate, rotation_rate) =
+            target.rotational_element_rates(seconds);
+        Ok(icrf_to_iau(
+            right_ascension,
+            declination,
+            rotation_angle,
+            right_ascension_rate,
+            declination_rate,
+            rotation_rate,
+        ))
     }
 }
 
-impl<T, O, P> TryRotateTo<T, Icrf, P> for Iau<O>
+impl<T, Scale, Origin> TryTransform<Iau<Origin>, Icrf, Scale> for T
 where
-    T: TimeScale + Copy,
-    P: TryOffset<T, Tdb>,
-    O: RotationalElements + Clone,
+    Scale: TimeScale,
+    Origin: TryRotationalElements,
+    T: TryTransform<Icrf, Iau<Origin>, Scale> + TryOffset<Scale, Tdb>,
 {
-    type Error = IauFrameTransformationError;
+    type Error = <Self as TryTransform<Icrf, Iau<Origin>, Scale>>::Error;
 
-    fn try_rotation(
+    fn try_transform(
         &self,
-        _frame: Icrf,
-        time: Time<T>,
-        provider: &P,
+        origin: Iau<Origin>,
+        target: Icrf,
+        time: Time<Scale>,
     ) -> Result<Rotation, Self::Error> {
-        Ok(icrf_to_iau(time, self.0.clone(), provider)?.transpose())
+        Ok(self.try_transform(target, origin, time)?.transpose())
     }
 }

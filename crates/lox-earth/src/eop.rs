@@ -11,7 +11,7 @@ use lox_time::{
     utc::{
         Utc, UtcError,
         leap_seconds::{BuiltinLeapSeconds, LeapSecondsProvider},
-        transformations::ToUtc,
+        transformations::TryToUtc,
     },
 };
 use lox_units::constants::f64::time::SECONDS_PER_DAY;
@@ -250,8 +250,8 @@ pub enum EopProviderError {
 }
 
 impl EopProvider {
-    pub fn polar_motion<T: ToUtc>(&self, t: T) -> Result<(f64, f64), EopProviderError> {
-        let t = t.to_utc()?.seconds_since_j2000();
+    pub fn polar_motion<T: TryToUtc>(&self, t: T) -> Result<(f64, f64), EopProviderError> {
+        let t = t.try_to_utc()?.seconds_since_j2000();
         let px = self.polar_motion.0.interpolate(t);
         let py = self.polar_motion.1.interpolate(t);
         let (min, _) = self.polar_motion.0.first();
@@ -262,14 +262,14 @@ impl EopProvider {
         Ok((px, py))
     }
 
-    pub fn nutation_precession_iau1980<T: ToUtc>(
+    pub fn nutation_precession_iau1980<T: TryToUtc>(
         &self,
         t: T,
     ) -> Result<(f64, f64), EopProviderError> {
         let Some(nut_prec) = &self.nut_prec.iau1980 else {
             return Err(EopProviderError::MissingIau1980);
         };
-        let t = t.to_utc()?.seconds_since_j2000();
+        let t = t.try_to_utc()?.seconds_since_j2000();
         let dpsi = nut_prec.0.interpolate(t);
         let deps = nut_prec.1.interpolate(t);
         let (min, _) = nut_prec.0.first();
@@ -280,14 +280,14 @@ impl EopProvider {
         Ok((dpsi, deps))
     }
 
-    pub fn nutation_precession_iau2000<T: ToUtc>(
+    pub fn nutation_precession_iau2000<T: TryToUtc>(
         &self,
         t: T,
     ) -> Result<(f64, f64), EopProviderError> {
         let Some(nut_prec) = &self.nut_prec.iau2000 else {
             return Err(EopProviderError::MissingIau2000);
         };
-        let t = t.to_utc()?.seconds_since_j2000();
+        let t = t.try_to_utc()?.seconds_since_j2000();
         let dx = nut_prec.0.interpolate(t);
         let dy = nut_prec.1.interpolate(t);
         let (min, _) = nut_prec.0.first();

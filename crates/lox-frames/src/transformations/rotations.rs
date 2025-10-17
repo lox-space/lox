@@ -1,4 +1,7 @@
+use std::ops::Mul;
+
 use glam::{DMat3, DVec3};
+use lox_units::coords::Cartesian;
 
 pub fn rotation_matrix_derivative(m: DMat3, v: DVec3) -> DMat3 {
     let sx = DVec3::new(0.0, v.z, v.y);
@@ -9,12 +12,14 @@ pub fn rotation_matrix_derivative(m: DMat3, v: DVec3) -> DMat3 {
 }
 
 pub struct Rotation {
+    /// Rotation matrix
     m: DMat3,
+    /// Time derivative of the rotation matrix
     dm: DMat3,
 }
 
 impl Rotation {
-    pub(crate) const IDENTITY: Self = Self {
+    pub const IDENTITY: Self = Self {
         m: DMat3::IDENTITY,
         dm: DMat3::ZERO,
     };
@@ -41,7 +46,7 @@ impl Rotation {
         self.dm
     }
 
-    pub fn compose(&self, other: &Self) -> Self {
+    pub fn compose(self, other: Self) -> Self {
         Self {
             m: other.m * self.m,
             dm: other.dm * self.m + other.m * self.dm,
@@ -64,5 +69,23 @@ impl Rotation {
 
     pub fn rotate_state(&self, pos: DVec3, vel: DVec3) -> (DVec3, DVec3) {
         (self.rotate_position(pos), self.rotate_velocity(pos, vel))
+    }
+}
+
+impl Mul<DVec3> for Rotation {
+    type Output = DVec3;
+
+    fn mul(self, rhs: DVec3) -> Self::Output {
+        self.m * rhs
+    }
+}
+
+impl Mul<Cartesian> for Rotation {
+    type Output = Cartesian;
+
+    fn mul(self, rhs: Cartesian) -> Self::Output {
+        let pos = self.m * rhs.pos();
+        let vel = self.dm * rhs.pos() + self.m * rhs.vel();
+        Cartesian::from_vecs(pos, vel)
     }
 }

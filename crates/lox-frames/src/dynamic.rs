@@ -8,26 +8,19 @@
 
 use std::str::FromStr;
 
-use lox_bodies::{DynOrigin, Origin, TryRotationalElements};
-use lox_time::{
-    Time,
-    julian_dates::JulianDate,
-    offsets::TryOffset,
-    time_scales::{Tdb, TimeScale},
-};
+use lox_bodies::{DynOrigin, Origin, TryRotationalElements, UndefinedOriginPropertyError};
+use lox_time::{Time, time_scales::DynTimeScale};
 use thiserror::Error;
 
 use crate::{
+    Iau,
     frames::{Cirf, Icrf, Itrf, Tirf},
+    providers::DefaultTransformProvider,
     traits::{
         NonBodyFixedFrameError, NonQuasiInertialFrameError, ReferenceFrame, TryBodyFixed,
-        TryQuasiInertial, TryRotateTo,
+        TryQuasiInertial,
     },
-    transformations::{
-        Rotation,
-        iau::{IauFrameTransformationError, icrf_to_iau},
-        iers::{cirf_to_tirf, icrf_to_cirf, tirf_to_itrf},
-    },
+    transformations::{Rotation, TryTransform},
 };
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
@@ -130,92 +123,46 @@ impl FromStr for DynFrame {
     }
 }
 
-impl<T, P> TryRotateTo<T, DynFrame, P> for DynFrame
-where
-    T: TimeScale + Copy,
-    P: TryOffset<T, Tdb>,
-{
-    // FIXME
-    type Error = IauFrameTransformationError;
+#[derive(Debug, Error)]
+pub enum DynTransformError {
+    #[error("transformations between {0} and {1} require an EOP provider")]
+    MissingEopProvider(String, String),
+    #[error(transparent)]
+    MissingUt1Provider(#[from] lox_time::offsets::MissingEopProviderError),
+    #[error(transparent)]
+    UndefinedRotationalElements(#[from] UndefinedOriginPropertyError),
+}
 
-    fn try_rotation(
+impl TryTransform<DynFrame, DynFrame, DynTimeScale> for DefaultTransformProvider {
+    type Error = DynTransformError;
+
+    fn try_transform(
         &self,
-        frame: DynFrame,
-        time: Time<T>,
-        provider: &P,
+        origin: DynFrame,
+        target: DynFrame,
+        time: Time<DynTimeScale>,
     ) -> Result<Rotation, Self::Error> {
-        // FIXME
-        let seconds_j2000 = time.seconds_since_j2000();
-        let centuries_j2000 = time.centuries_since_j2000();
-        match self {
-            DynFrame::Icrf => match frame {
-                DynFrame::Icrf => Ok(Rotation::IDENTITY),
-                DynFrame::Cirf => Ok(icrf_to_cirf(centuries_j2000)),
-                DynFrame::Tirf => {
-                    Ok(icrf_to_cirf(centuries_j2000).compose(&cirf_to_tirf(seconds_j2000)))
-                }
-                DynFrame::Itrf => Ok(icrf_to_cirf(centuries_j2000)
-                    .compose(&cirf_to_tirf(seconds_j2000))
-                    .compose(&tirf_to_itrf(centuries_j2000))),
-                DynFrame::Iau(target) => icrf_to_iau(time, target, provider),
-            },
-            DynFrame::Cirf => match frame {
-                DynFrame::Icrf => Ok(icrf_to_cirf(centuries_j2000).transpose()),
-                DynFrame::Cirf => Ok(Rotation::IDENTITY),
-                DynFrame::Tirf => Ok(cirf_to_tirf(seconds_j2000)),
-                DynFrame::Itrf => {
-                    Ok(cirf_to_tirf(seconds_j2000).compose(&tirf_to_itrf(centuries_j2000)))
-                }
-                DynFrame::Iau(_) => Ok(self
-                    .try_rotation(DynFrame::Icrf, time, provider)?
-                    .compose(&DynFrame::Icrf.try_rotation(frame, time, provider)?)),
-            },
-            DynFrame::Tirf => match frame {
-                DynFrame::Icrf => Ok(cirf_to_tirf(seconds_j2000)
-                    .transpose()
-                    .compose(&icrf_to_cirf(centuries_j2000).transpose())),
-                DynFrame::Cirf => Ok(cirf_to_tirf(seconds_j2000).transpose()),
-                DynFrame::Tirf => Ok(Rotation::IDENTITY),
-                DynFrame::Itrf => Ok(tirf_to_itrf(centuries_j2000)),
-                DynFrame::Iau(_) => Ok(self
-                    .try_rotation(DynFrame::Icrf, time, provider)?
-                    .compose(&DynFrame::Icrf.try_rotation(frame, time, provider)?)),
-            },
-            DynFrame::Itrf => match frame {
-                DynFrame::Icrf => Ok(tirf_to_itrf(centuries_j2000)
-                    .transpose()
-                    .compose(&cirf_to_tirf(seconds_j2000).transpose())
-                    .compose(&icrf_to_cirf(centuries_j2000).transpose())),
-                DynFrame::Cirf => Ok(tirf_to_itrf(centuries_j2000)
-                    .transpose()
-                    .compose(&cirf_to_tirf(seconds_j2000).transpose())),
-                DynFrame::Tirf => Ok(tirf_to_itrf(centuries_j2000).transpose()),
-                DynFrame::Itrf => Ok(Rotation::IDENTITY),
-                DynFrame::Iau(_) => Ok(self
-                    .try_rotation(DynFrame::Icrf, time, provider)?
-                    .compose(&DynFrame::Icrf.try_rotation(frame, time, provider)?)),
-            },
-            DynFrame::Iau(origin) => match frame {
-                DynFrame::Icrf => Ok(icrf_to_iau(time, *origin, provider)?.transpose()),
-                DynFrame::Cirf => Ok(self
-                    .try_rotation(DynFrame::Icrf, time, provider)?
-                    .compose(&DynFrame::Icrf.try_rotation(frame, time, provider)?)),
-                DynFrame::Tirf => Ok(self
-                    .try_rotation(DynFrame::Icrf, time, provider)?
-                    .compose(&DynFrame::Icrf.try_rotation(frame, time, provider)?)),
-                DynFrame::Itrf => Ok(self
-                    .try_rotation(DynFrame::Icrf, time, provider)?
-                    .compose(&DynFrame::Icrf.try_rotation(frame, time, provider)?)),
-                DynFrame::Iau(target) => {
-                    if *origin == target {
-                        Ok(Rotation::IDENTITY)
-                    } else {
-                        Ok(self
-                            .try_rotation(DynFrame::Icrf, time, provider)?
-                            .compose(&DynFrame::Icrf.try_rotation(frame, time, provider)?))
-                    }
-                }
-            },
+        match (origin, target) {
+            (DynFrame::Icrf, DynFrame::Icrf) => Ok(Rotation::IDENTITY),
+            (DynFrame::Icrf, DynFrame::Iau(target)) => {
+                Ok(self.try_transform(Icrf, Iau::try_new(target)?, time)?)
+            }
+            (DynFrame::Cirf, DynFrame::Cirf) => Ok(Rotation::IDENTITY),
+            (DynFrame::Tirf, DynFrame::Tirf) => Ok(Rotation::IDENTITY),
+            (DynFrame::Iau(origin), DynFrame::Icrf) => {
+                Ok(self.try_transform(Iau::try_new(origin)?, Icrf, time)?)
+            }
+            (DynFrame::Iau(origin), DynFrame::Iau(target)) => {
+                let origin = Iau::try_new(origin)?;
+                let target = Iau::try_new(target)?;
+                Ok(self
+                    .try_transform(origin, Icrf, time)?
+                    .compose(self.try_transform(Icrf, target, time)?))
+            }
+            (origin, target) => Err(DynTransformError::MissingEopProvider(
+                origin.abbreviation(),
+                target.abbreviation(),
+            )),
         }
     }
 }
@@ -228,15 +175,14 @@ mod tests {
     use lox_bodies::DynOrigin;
     use lox_math::assert_close;
     use lox_math::is_close::IsClose;
-    use lox_time::offsets::DefaultOffsetProvider;
     use lox_time::utc::Utc;
     use rstest::rstest;
 
     #[rstest]
-    #[case("IAU_EARTH", Some(DynFrame::Iau(DynOrigin::Earth)))]
-    #[case("FOO_EARTH", None)]
-    #[case("IAU_RUPERT", None)]
-    #[case("IAU_SYCORAX", None)]
+    #[case::valid("IAU_EARTH", Some(DynFrame::Iau(DynOrigin::Earth)))]
+    #[case::invalid_prefix("FOO_EARTH", None)]
+    #[case::unkown_body("IAU_RUPERT", None)]
+    #[case::undefined_rotation("IAU_SYCORAX", None)]
     fn test_parse_iau_frame(#[case] name: &str, #[case] exp: Option<DynFrame>) {
         let act = parse_iau_frame(name);
         assert_eq!(act, exp)
@@ -270,11 +216,15 @@ mod tests {
         ),
     )]
     fn test_icrf_to_bodyfixed(#[case] frame: DynFrame, #[case] r_exp: DVec3, #[case] v_exp: DVec3) {
-        let time = Utc::from_iso("2024-07-05T09:09:18.173").unwrap().to_time();
+        let time = Utc::from_iso("2024-07-05T09:09:18.173")
+            .unwrap()
+            .to_dyn_time();
         let r = DVec3::new(-5530.01774359, -3487.0895338, -1850.03476185);
         let v = DVec3::new(1.29534407, -5.02456882, 5.6391936);
-        let rot = DynFrame::Icrf.try_rotation(frame, time, &DefaultOffsetProvider);
-        let (r_act, v_act) = rot.unwrap().rotate_state(r, v);
+        let rot = DefaultTransformProvider
+            .try_transform(DynFrame::Icrf, frame, time)
+            .unwrap();
+        let (r_act, v_act) = rot.rotate_state(r, v);
         assert_close!(r_act, r_exp, 1e-8);
         assert_close!(v_act, v_exp, 1e-5);
     }

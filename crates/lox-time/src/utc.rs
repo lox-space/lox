@@ -46,6 +46,8 @@ pub enum UtcError {
     UtcUndefined,
     #[error("invalid ISO string `{0}`")]
     InvalidIsoString(String),
+    #[error("UT1 transformation error: {0}")]
+    Ut1(String),
 }
 
 /// Coordinated Universal Time.

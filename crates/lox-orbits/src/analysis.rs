@@ -13,11 +13,13 @@ use lox_bodies::{
     UndefinedOriginPropertyError,
 };
 use lox_ephem::{Ephemeris, path_from_ids};
+use lox_frames::providers::DefaultTransformProvider;
+use lox_frames::transformations::TryTransform;
 use lox_math::roots::Brent;
 use lox_math::series::{Series, SeriesError};
 use lox_time::deltas::TimeDelta;
 use lox_time::julian_dates::JulianDate;
-use lox_time::offsets::{DefaultOffsetProvider, TryOffset};
+use lox_time::providers::DefaultOffsetProvider;
 use lox_time::time_scales::DynTimeScale;
 use lox_time::time_scales::{Tdb, TimeScale};
 use lox_time::{DynTime, Time};
@@ -30,7 +32,7 @@ use crate::events::{Window, find_windows, intersect_windows};
 use crate::ground::{DynGroundLocation, DynGroundPropagator, GroundLocation, Observables};
 use crate::states::{DynState, State};
 use crate::trajectories::{DynTrajectory, Trajectory};
-use lox_frames::{DynFrame, Iau, Icrf, TryRotateTo};
+use lox_frames::{DynFrame, Iau, Icrf};
 
 // Salvatore Alfano, David Negron, Jr., and Jennifer L. Moore
 // Rapid Determination of Satellite Visibility Periods
@@ -143,10 +145,10 @@ impl DynPass {
 
             // Transform to body-fixed frame like elevation_dyn does
             let body_fixed = DynFrame::Iau(gs.origin());
-            let rot = DynFrame::Icrf.try_rotation(body_fixed, current_time, &DefaultOffsetProvider);
-            let (r1, v1) = rot
-                .unwrap()
-                .rotate_state(state.position(), state.velocity());
+            let rot = DefaultTransformProvider
+                .try_transform(DynFrame::Icrf, body_fixed, current_time)
+                .unwrap();
+            let (r1, v1) = rot.rotate_state(state.position(), state.velocity());
             let state_bf = DynState::new(state.time(), r1, v1, state.origin(), body_fixed);
 
             let obs = gs.observables_dyn(state_bf);
@@ -289,8 +291,10 @@ pub fn elevation_dyn(
 ) -> Radians {
     let body_fixed = DynFrame::Iau(gs.origin());
     let sc = sc.interpolate_at(time);
-    let rot = DynFrame::Icrf.try_rotation(body_fixed, time, &DefaultOffsetProvider);
-    let (r1, v1) = rot.unwrap().rotate_state(sc.position(), sc.velocity());
+    let rot = DefaultTransformProvider
+        .try_transform(DynFrame::Icrf, body_fixed, time)
+        .unwrap();
+    let (r1, v1) = rot.rotate_state(sc.position(), sc.velocity());
     let sc = State::new(sc.time(), r1, v1, sc.origin(), body_fixed);
     let obs = gs.observables_dyn(sc);
     obs.elevation() - mask.min_elevation(obs.azimuth())
@@ -428,10 +432,10 @@ pub fn elevation<T, O, P>(
 ) -> Radians
 where
     T: TimeScale + Copy,
-    O: Origin + TrySpheroid + RotationalElements + Clone,
-    P: TryOffset<T, Tdb>,
+    O: Origin + TrySpheroid + RotationalElements + Copy,
+    P: TryTransform<Icrf, Iau<O>, T>,
 {
-    let body_fixed = Iau(gs.origin());
+    let body_fixed = Iau::new(gs.origin());
     let sc = sc.interpolate_at(time);
     let sc = sc.try_to_frame(body_fixed, provider).unwrap();
     let obs = gs.observables(sc);
@@ -447,8 +451,8 @@ pub fn visibility<T, O, P>(
 ) -> Vec<Window<T>>
 where
     T: TimeScale + Copy,
-    O: Origin + Spheroid + RotationalElements + Clone,
-    P: TryOffset<T, Tdb>,
+    O: Origin + Spheroid + RotationalElements + Copy,
+    P: TryTransform<Icrf, Iau<O>, T>,
 {
     if times.len() < 2 {
         return vec![];
@@ -542,7 +546,7 @@ mod tests {
         let actual: Vec<Radians> = gs
             .times()
             .iter()
-            .map(|t| elevation(*t, &location(), &mask, &sc, &DefaultOffsetProvider))
+            .map(|t| elevation(*t, &location(), &mask, &sc, &DefaultTransformProvider))
             .collect();
         for (actual, expected) in actual.iter().zip(expected.iter()) {
             assert_close!(actual, expected, 1e-1);
@@ -575,7 +579,7 @@ mod tests {
         let sc = spacecraft_trajectory();
         let times: Vec<Time<Tai>> = sc.states().iter().map(|s| s.time()).collect();
         let expected = contacts();
-        let actual = visibility(&times, &gs, &mask, &sc, &DefaultOffsetProvider);
+        let actual = visibility(&times, &gs, &mask, &sc, &DefaultTransformProvider);
         assert_eq!(actual.len(), expected.len());
         for (actual, expected) in zip(actual, expected) {
             assert_close!(actual.start(), expected.start(), 0.0, 1e-4);

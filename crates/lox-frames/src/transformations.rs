@@ -6,11 +6,29 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use lox_time::{Time, offsets::OffsetProvider, time_scales::TimeScale};
+
+pub use rotations::Rotation;
+
+use crate::ReferenceFrame;
+
 pub mod iau;
-pub mod iers;
 pub mod rotations;
 
-// Re-export commonly used items
-pub use iau::IauFrameTransformationError;
-pub use iers::{cirf_to_tirf, icrf_to_cirf, tirf_to_itrf};
-pub use rotations::Rotation;
+pub trait TransformProvider: OffsetProvider {}
+
+pub trait TryTransform<Origin, Target, T>: TransformProvider
+where
+    Origin: ReferenceFrame,
+    Target: ReferenceFrame,
+    T: TimeScale,
+{
+    type Error: std::error::Error + Send + Sync + 'static;
+
+    fn try_transform(
+        &self,
+        origin: Origin,
+        target: Target,
+        time: Time<T>,
+    ) -> Result<Rotation, Self::Error>;
+}
