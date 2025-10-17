@@ -14,12 +14,9 @@
     Earth Orientation Parameters from an IERS CSV file.
 */
 
-use std::convert::Infallible;
-
 use crate::eop::{EopProvider, EopProviderError};
 use lox_time::deltas::TimeDelta;
-use lox_time::offset_provider;
-use lox_time::offsets::{MissingEopProviderError, TryOffset};
+use lox_time::offsets::{Offset, TryOffset};
 use lox_time::time_scales::{Tai, Tcb, Tcg, Tdb, Tt, Ut1};
 
 // TAI <-> UT1
@@ -55,28 +52,12 @@ macro_rules! impl_ut1 {
                 ) -> Result<TimeDelta, Self::Error> {
                     let offset = self.delta_tai_ut1(delta)?;
                     let tai = delta + offset;
-                    Ok(offset + self.try_offset(Tai, target, tai)?)
+                    Ok(offset + self.offset(Tai, target, tai))
                 }
             }
         )*
     }
 }
-
-// These impls are here to make the compiler happy.
-// They are actually impossible to trigger and thus we can use a random error type.
-// FIXME: Replace with `!` once it lands in stable.
-impl From<Infallible> for EopProviderError {
-    fn from(_: Infallible) -> Self {
-        EopProviderError::MissingIau1980
-    }
-}
-impl From<MissingEopProviderError> for EopProviderError {
-    fn from(_: MissingEopProviderError) -> Self {
-        EopProviderError::MissingIau1980
-    }
-}
-
-offset_provider!(EopProvider, EopProviderError);
 
 impl_ut1!(Tai, Tcb, Tcg, Tt, Tdb);
 

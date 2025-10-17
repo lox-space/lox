@@ -19,7 +19,7 @@ use lox_math::roots::Brent;
 use lox_math::series::{Series, SeriesError};
 use lox_time::deltas::TimeDelta;
 use lox_time::julian_dates::JulianDate;
-use lox_time::providers::DefaultOffsetProvider;
+use lox_time::offsets::DefaultOffsetProvider;
 use lox_time::time_scales::DynTimeScale;
 use lox_time::time_scales::{Tdb, TimeScale};
 use lox_time::{DynTime, Time};

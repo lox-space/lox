@@ -8,7 +8,7 @@
 
 use crate::earth::python::ut1::{PyEopProvider, PyEopProviderError};
 use crate::time::calendar_dates::CalendarDate;
-use crate::time::providers::DefaultOffsetProvider;
+use crate::time::offsets::DefaultOffsetProvider;
 use crate::time::python::time::PyTime;
 use crate::time::python::time_scales::{PyMissingEopProviderError, PyTimeScale};
 use crate::time::time_of_day::CivilTime;

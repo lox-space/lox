@@ -1,7 +1,8 @@
 use std::convert::Infallible;
 
-use crate::time_scales::{Tai, Tcb, Tcg, Tdb, TimeScale, Tt, Ut1};
+use crate::time_scales::TimeScale;
 use crate::{deltas::TimeDelta, julian_dates::J77, subsecond::Subsecond};
+use lox_derive::OffsetProvider;
 use thiserror::Error;
 
 pub trait OffsetProvider {}
@@ -40,31 +41,19 @@ where
     }
 }
 
-#[derive(Debug, Error, Clone, Copy, Eq, PartialEq)]
+#[derive(Debug, Error, Default)]
 #[error("an EOP provider is required for transformations from/to UT1")]
 pub struct MissingEopProviderError;
 
+// FIXME: Remove once `!` lands on stable.
 impl From<Infallible> for MissingEopProviderError {
     fn from(_: Infallible) -> Self {
         MissingEopProviderError
     }
 }
 
-macro_rules! impl_noop {
-    ($($scale:ident),*) => {
-        $(
-            impl<T> TryOffset<$scale, $scale> for T where T: OffsetProvider {
-                type Error = MissingEopProviderError;
-
-                fn try_offset(&self, _origin: $scale, _target: $scale, _delta: TimeDelta) -> Result<TimeDelta, Self::Error> {
-                    Ok(TimeDelta::default())
-                }
-            }
-        )*
-    };
-}
-
-impl_noop!(Tai, Tcb, Tcg, Tdb, Tt, Ut1);
+#[derive(Debug, Clone, Copy, OffsetProvider)]
+pub struct DefaultOffsetProvider;
 
 // TAI <-> TT
 
@@ -73,38 +62,6 @@ pub const D_TAI_TT: TimeDelta = TimeDelta {
     seconds: 32,
     subsecond: Subsecond(0.184),
 };
-
-impl<T> TryOffset<Tai, Tt> for T
-where
-    T: OffsetProvider,
-{
-    type Error = Infallible;
-
-    fn try_offset(
-        &self,
-        _origin: Tai,
-        _target: Tt,
-        _delta: TimeDelta,
-    ) -> Result<TimeDelta, Self::Error> {
-        Ok(D_TAI_TT)
-    }
-}
-
-impl<T> TryOffset<Tt, Tai> for T
-where
-    T: OffsetProvider,
-{
-    type Error = Infallible;
-
-    fn try_offset(
-        &self,
-        _origin: Tt,
-        _target: Tai,
-        _delta: TimeDelta,
-    ) -> Result<TimeDelta, Self::Error> {
-        Ok(-D_TAI_TT)
-    }
-}
 
 // TT <-> TCG
 
@@ -117,38 +74,14 @@ const LG: f64 = 6.969290134e-10;
 /// The rate of change of TT with respect to TCG.
 const INV_LG: f64 = LG / (1.0 - LG);
 
-impl<T> TryOffset<Tt, Tcg> for T
-where
-    T: OffsetProvider,
-{
-    type Error = Infallible;
-
-    fn try_offset(
-        &self,
-        _origin: Tt,
-        _target: Tcg,
-        delta: TimeDelta,
-    ) -> Result<TimeDelta, Self::Error> {
-        let tt = delta.to_decimal_seconds();
-        Ok(TimeDelta::from_decimal_seconds(INV_LG * (tt - J77_TT)))
-    }
+pub fn tt_to_tcg(delta: TimeDelta) -> TimeDelta {
+    let tt = delta.to_decimal_seconds();
+    TimeDelta::from_decimal_seconds(INV_LG * (tt - J77_TT))
 }
 
-impl<T> TryOffset<Tcg, Tt> for T
-where
-    T: OffsetProvider,
-{
-    type Error = Infallible;
-
-    fn try_offset(
-        &self,
-        _origin: Tcg,
-        _target: Tt,
-        delta: TimeDelta,
-    ) -> Result<TimeDelta, Self::Error> {
-        let tcg = delta.to_decimal_seconds();
-        Ok(TimeDelta::from_decimal_seconds(-LG * (tcg - J77_TT)))
-    }
+pub fn tcg_to_tt(delta: TimeDelta) -> TimeDelta {
+    let tcg = delta.to_decimal_seconds();
+    TimeDelta::from_decimal_seconds(-LG * (tcg - J77_TT))
 }
 
 // TDB <-> TCB
@@ -167,40 +100,14 @@ const TDB_0: f64 = -6.55e-5;
 
 const TCB_77: f64 = TDB_0 + LB * TT_0;
 
-impl<T> TryOffset<Tdb, Tcb> for T
-where
-    T: OffsetProvider,
-{
-    type Error = Infallible;
-
-    fn try_offset(
-        &self,
-        _origin: Tdb,
-        _target: Tcb,
-        delta: TimeDelta,
-    ) -> Result<TimeDelta, Self::Error> {
-        let tdb = delta.to_decimal_seconds();
-        Ok(TimeDelta::from_decimal_seconds(
-            -TCB_77 / (1.0 - LB) + INV_LB * tdb,
-        ))
-    }
+pub fn tdb_to_tcb(delta: TimeDelta) -> TimeDelta {
+    let tdb = delta.to_decimal_seconds();
+    TimeDelta::from_decimal_seconds(-TCB_77 / (1.0 - LB) + INV_LB * tdb)
 }
 
-impl<T> TryOffset<Tcb, Tdb> for T
-where
-    T: OffsetProvider,
-{
-    type Error = Infallible;
-
-    fn try_offset(
-        &self,
-        _origin: Tcb,
-        _target: Tdb,
-        delta: TimeDelta,
-    ) -> Result<TimeDelta, Self::Error> {
-        let tcb = delta.to_decimal_seconds();
-        Ok(TimeDelta::from_decimal_seconds(TCB_77 - LB * tcb))
-    }
+pub fn tcb_to_tdb(delta: TimeDelta) -> TimeDelta {
+    let tcb = delta.to_decimal_seconds();
+    TimeDelta::from_decimal_seconds(TCB_77 - LB * tcb)
 }
 
 // TT <-> TDB
@@ -210,51 +117,25 @@ const EB: f64 = 1.671e-2;
 const M_0: f64 = 6.239996;
 const M_1: f64 = 1.99096871e-7;
 
-impl<T> TryOffset<Tt, Tdb> for T
-where
-    T: OffsetProvider,
-{
-    type Error = Infallible;
-
-    fn try_offset(
-        &self,
-        _origin: Tt,
-        _target: Tdb,
-        delta: TimeDelta,
-    ) -> Result<TimeDelta, Self::Error> {
-        let tt = delta.to_decimal_seconds();
-        let g = M_0 + M_1 * tt;
-        Ok(TimeDelta::from_decimal_seconds(
-            K * (g + EB * g.sin()).sin(),
-        ))
-    }
+pub fn tt_to_tdb(delta: TimeDelta) -> TimeDelta {
+    let tt = delta.to_decimal_seconds();
+    let g = M_0 + M_1 * tt;
+    TimeDelta::from_decimal_seconds(K * (g + EB * g.sin()).sin())
 }
 
-impl<T> TryOffset<Tdb, Tt> for T
-where
-    T: OffsetProvider,
-{
-    type Error = Infallible;
-
-    fn try_offset(
-        &self,
-        _origin: Tdb,
-        _target: Tt,
-        delta: TimeDelta,
-    ) -> Result<TimeDelta, Self::Error> {
-        let tdb = delta.to_decimal_seconds();
-        let mut offset = 0.0;
-        for _ in 1..3 {
-            let g = M_0 + M_1 * (tdb + offset);
-            offset = -K * (g + EB * g.sin()).sin();
-        }
-        Ok(TimeDelta::from_decimal_seconds(offset))
+pub fn tdb_to_tt(delta: TimeDelta) -> TimeDelta {
+    let tdb = delta.to_decimal_seconds();
+    let mut offset = 0.0;
+    for _ in 1..3 {
+        let g = M_0 + M_1 * (tdb + offset);
+        offset = -K * (g + EB * g.sin()).sin();
     }
+    TimeDelta::from_decimal_seconds(offset)
 }
 
 // Two-step transformations
 
-fn two_step_offset<P, T1, T2, T3>(
+pub fn two_step_offset<P, T1, T2, T3>(
     provider: &P,
     origin: T1,
     via: T2,
@@ -272,39 +153,69 @@ where
     offset
 }
 
-macro_rules! impl_two_step {
-    ($(($origin:ident, $via:ident, $target:ident)),*) => {
-        $(
-            impl<T> TryOffset<$origin, $target> for T
-            where
-                T: OffsetProvider,
-            {
-                type Error = Infallible;
+#[cfg(test)]
+mod tests {
+    use rstest::rstest;
 
-                fn try_offset(&self, origin: $origin, target: $target, delta: TimeDelta) -> Result<TimeDelta, Self::Error> {
-                    Ok(two_step_offset(self, origin, $via, target, delta))
-                }
-            }
+    use super::*;
+    use crate::offsets::TryOffset;
+    use crate::time_scales::DynTimeScale;
+    use crate::{DynTime, calendar_dates::Date, deltas::ToDelta, time_of_day::TimeOfDay};
+    use lox_math::assert_close;
+    use lox_math::is_close::IsClose;
 
-            impl<T> TryOffset<$target, $origin> for T
-            where
-                T: OffsetProvider,
-            {
-                type Error = Infallible;
+    const DEFAULT_TOL: f64 = 1e-7;
+    const TCB_TOL: f64 = 1e-5;
 
-                fn try_offset(&self, origin: $target, target: $origin, delta: TimeDelta) -> Result<TimeDelta, Self::Error> {
-                    Ok(two_step_offset(self, origin, $via, target, delta))
-                }
-            }
-        )*
+    // Reference values from Orekit
+    //
+    // Since we use different algorithms for TCB and UT1 we need to
+    // adjust the tolerances accordingly.
+    //
+    #[rstest]
+    #[case::tai_tai("TAI", "TAI", 0.0, None)]
+    #[case::tai_tcb("TAI", "TCB", 55.66851419888016, Some(TCB_TOL))]
+    #[case::tai_tcg("TAI", "TCG", 33.239589335894145, None)]
+    #[case::tai_tdb("TAI", "TDB", 32.183882324981056, None)]
+    #[case::tai_tt("TAI", "TT", 32.184, None)]
+    #[case::tcb_tai("TCB", "TAI", -55.668513317090046, Some(TCB_TOL))]
+    #[case::tcb_tcb("TCB", "TCB", 0.0, Some(TCB_TOL))]
+    #[case::tcb_tcg("TCB", "TCG", -22.4289240199929, Some(TCB_TOL))]
+    #[case::tcb_tdb("TCB", "TDB", -23.484631010747805, Some(TCB_TOL))]
+    #[case::tcb_tt("TCB", "TT", -23.484513317090048, Some(TCB_TOL))]
+    #[case::tcg_tai("TCG", "TAI", -33.23958931272851, None)]
+    #[case::tcg_tcb("TCG", "TCB", 22.428924359636042, Some(TCB_TOL))]
+    #[case::tcg_tcg("TCG", "TCG", 0.0, None)]
+    #[case::tcg_tdb("TCG", "TDB", -1.0557069988766656, None)]
+    #[case::tcg_tt("TCG", "TT", -1.0555893127285145, None)]
+    #[case::tdb_tai("TDB", "TAI", -32.18388231420531, None)]
+    #[case::tdb_tcb("TDB", "TCB", 23.48463137488165, Some(TCB_TOL))]
+    #[case::tdb_tcg("TDB", "TCG", 1.0557069992589518, None)]
+    #[case::tdb_tdb("TDB", "TDB", 0.0, None)]
+    #[case::tdb_tt("TDB", "TT", 1.176857946845189E-4, None)]
+    #[case::tt_tai("TT", "TAI", -32.184, None)]
+    #[case::tt_tcb("TT", "TCB", 23.484513689085105, Some(TCB_TOL))]
+    #[case::tt_tcg("TT", "TCG", 1.055589313464182, None)]
+    #[case::tt_tdb("TT", "TDB", -1.1768579472004603E-4, None)]
+    #[case::tt_tt("TT", "TT", 0.0, None)]
+    fn test_dyn_time_scale_offsets_new(
+        #[case] scale1: &str,
+        #[case] scale2: &str,
+        #[case] exp: f64,
+        #[case] tol: Option<f64>,
+    ) {
+        let provider = &DefaultOffsetProvider;
+        let scale1: DynTimeScale = scale1.parse().unwrap();
+        let scale2: DynTimeScale = scale2.parse().unwrap();
+        let date = Date::new(2024, 12, 30).unwrap();
+        let time = TimeOfDay::from_hms(10, 27, 13.145).unwrap();
+        let dt = DynTime::from_date_and_time(scale1, date, time)
+            .unwrap()
+            .to_delta();
+        let act = provider
+            .try_offset(scale1, scale2, dt)
+            .unwrap()
+            .to_decimal_seconds();
+        assert_close!(act, exp, 1e-7, tol.unwrap_or(DEFAULT_TOL));
     }
 }
-
-impl_two_step!(
-    (Tai, Tt, Tdb),
-    (Tdb, Tt, Tcg),
-    (Tai, Tt, Tcg),
-    (Tai, Tdb, Tcb),
-    (Tt, Tdb, Tcb),
-    (Tcb, Tdb, Tcg)
-);

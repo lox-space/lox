@@ -6,6 +6,7 @@ use std::{
 use csv::{ByteRecord, ReaderBuilder};
 use lox_math::series::{Series, SeriesError};
 use lox_time::{
+    OffsetProvider,
     deltas::TimeDelta,
     julian_dates::{JulianDate, SECONDS_BETWEEN_MJD_AND_J2000},
     utc::{
@@ -212,6 +213,23 @@ impl EopParser {
     }
 }
 
+#[derive(Debug, Default, Error)]
+pub enum EopProviderError {
+    #[error(transparent)]
+    Utc(#[from] UtcError),
+    #[error("value was extrapolated")]
+    ExtrapolatedValue(f64),
+    #[error("values were extrapolated")]
+    ExtrapolatedValues(f64, f64),
+    #[error("no 'finals.all.csv' file was loaded")]
+    MissingIau1980,
+    #[error("no 'finals2000A.all.csv' file was loaded")]
+    MissingIau2000,
+    #[default]
+    #[error("unreachable")]
+    Never,
+}
+
 #[derive(Clone, Debug)]
 struct Index(Arc<Vec<f64>>);
 
@@ -228,25 +246,12 @@ struct NutPrecCorrections {
     iau2000: Option<(TSeries, TSeries)>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, OffsetProvider)]
+#[lox_time(error=EopProviderError, disable(ut1))]
 pub struct EopProvider {
     polar_motion: (TSeries, TSeries),
     delta_ut1_tai: TSeries,
     nut_prec: NutPrecCorrections,
-}
-
-#[derive(Debug, Error)]
-pub enum EopProviderError {
-    #[error(transparent)]
-    Utc(#[from] UtcError),
-    #[error("value was extrapolated")]
-    ExtrapolatedValue(f64),
-    #[error("values were extrapolated")]
-    ExtrapolatedValues(f64, f64),
-    #[error("no 'finals.all.csv' file was loaded")]
-    MissingIau1980,
-    #[error("no 'finals2000A.all.csv' file was loaded")]
-    MissingIau2000,
 }
 
 impl EopProvider {

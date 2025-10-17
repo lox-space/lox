@@ -10,8 +10,8 @@ use std::sync::OnceLock;
 
 use crate::deltas::TimeDelta;
 use crate::deltas::ToDelta;
+use crate::offsets::DefaultOffsetProvider;
 use crate::offsets::TryOffset;
-use crate::providers::DefaultOffsetProvider;
 use crate::time::DynTime;
 use crate::time_of_day::CivilTime;
 use crate::time_of_day::TimeOfDay;
