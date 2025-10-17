@@ -6,11 +6,11 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use lox_bodies::RotationalElements;
+use lox_bodies::{RotationalElements, TryRotationalElements, UndefinedOriginPropertyError};
 
 use crate::traits::{BodyFixed, QuasiInertial, ReferenceFrame};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Ord, PartialOrd)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Icrf;
 
 impl ReferenceFrame for Icrf {
@@ -29,7 +29,7 @@ impl ReferenceFrame for Icrf {
 
 impl QuasiInertial for Icrf {}
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Ord, PartialOrd)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Cirf;
 
 impl ReferenceFrame for Cirf {
@@ -46,7 +46,7 @@ impl ReferenceFrame for Cirf {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Ord, PartialOrd)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Tirf;
 
 impl ReferenceFrame for Tirf {
@@ -63,7 +63,7 @@ impl ReferenceFrame for Tirf {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Ord, PartialOrd)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Itrf;
 
 impl ReferenceFrame for Itrf {
@@ -82,14 +82,48 @@ impl ReferenceFrame for Itrf {
 
 impl BodyFixed for Itrf {}
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Ord, PartialOrd)]
-pub struct Iau<T: RotationalElements>(pub T);
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Iau<T: TryRotationalElements>(T);
 
-impl<T: RotationalElements> BodyFixed for Iau<T> {}
+impl<T> Iau<T>
+where
+    T: RotationalElements,
+{
+    pub fn new(body: T) -> Self {
+        Self(body)
+    }
+}
+
+impl<T> Iau<T>
+where
+    T: TryRotationalElements,
+{
+    pub fn try_new(body: T) -> Result<Self, UndefinedOriginPropertyError> {
+        let _ = body.try_right_ascension(0.0)?;
+        Ok(Self(body))
+    }
+
+    pub fn body(&self) -> T
+    where
+        T: Copy,
+    {
+        self.0
+    }
+
+    pub fn rotational_elements(&self, j2000: f64) -> (f64, f64, f64) {
+        self.0.try_rotational_elements(j2000).unwrap()
+    }
+
+    pub fn rotational_element_rates(&self, j2000: f64) -> (f64, f64, f64) {
+        self.0.try_rotational_element_rates(j2000).unwrap()
+    }
+}
+
+impl<T: TryRotationalElements> BodyFixed for Iau<T> {}
 
 impl<T> ReferenceFrame for Iau<T>
 where
-    T: RotationalElements,
+    T: TryRotationalElements,
 {
     fn name(&self) -> String {
         let body = self.0.name();

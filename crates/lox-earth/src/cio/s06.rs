@@ -79,7 +79,7 @@ fn evaluate_single_order_terms(
 mod tests {
     use float_eq::assert_float_eq;
 
-    use crate::cip::xy06::xy;
+    use crate::cip::xy06::cip_coords;
 
     use super::*;
 
@@ -88,21 +88,21 @@ mod tests {
     #[test]
     fn test_s_jd0() {
         let jd0: JulianCenturies = -67.11964407939767;
-        let xy = xy(jd0);
+        let xy = cip_coords(jd0);
         assert_float_eq!(s(jd0, xy), -0.0723985415686306, rel <= TOLERANCE);
     }
 
     #[test]
     fn test_s_j2000() {
         let j2000: JulianCenturies = 0.0;
-        let xy = xy(j2000);
+        let xy = cip_coords(j2000);
         assert_float_eq!(s(j2000, xy), -0.00000001013396519178, rel <= TOLERANCE);
     }
 
     #[test]
     fn test_s_j2100() {
         let j2100: JulianCenturies = 1.0;
-        let xy = xy(j2100);
+        let xy = cip_coords(j2100);
         assert_float_eq!(s(j2100, xy), -0.00000000480511934533, rel <= TOLERANCE);
     }
 

@@ -37,7 +37,7 @@ struct NutationComponents {
 
 /// Calculates the (X, Y) coordinates of the Celestial Intermediate Pole (CIP) using the the IAU
 /// 2006 precession and IAU 2000A nutation models.
-pub fn xy(centuries_since_j2000_tdb: JulianCenturies) -> DVec2 {
+pub fn cip_coords(centuries_since_j2000_tdb: JulianCenturies) -> DVec2 {
     let powers_of_t = powers_of_t(centuries_since_j2000_tdb);
     let fundamental_args = fundamental_args(centuries_since_j2000_tdb);
     let polynomial_components = polynomial_components(&powers_of_t);
@@ -188,7 +188,7 @@ mod tests {
     #[test]
     fn test_cip_xy_jd0() {
         let jd0: JulianCenturies = -67.11964407939767;
-        let xy = xy(jd0);
+        let xy = cip_coords(jd0);
         assert_float_eq!(xy[0], -0.4088355637476968, rel <= TOLERANCE);
         assert_float_eq!(xy[1], -0.38359667445777073, rel <= TOLERANCE);
     }
@@ -196,7 +196,7 @@ mod tests {
     #[test]
     fn test_cip_xy_j2000() {
         let j2000: JulianCenturies = 0.0;
-        let xy = xy(j2000);
+        let xy = cip_coords(j2000);
         assert_float_eq!(xy[0], -0.0000269463795685740, rel <= TOLERANCE);
         assert_float_eq!(xy[1], -0.00002800472282281282, rel <= TOLERANCE);
     }
@@ -204,7 +204,7 @@ mod tests {
     #[test]
     fn test_cip_xy_j2100() {
         let j2100: JulianCenturies = 1.0;
-        let xy = xy(j2100);
+        let xy = cip_coords(j2100);
         assert_float_eq!(xy[0], 0.00972070446172924, rel <= TOLERANCE);
         assert_float_eq!(xy[1], -0.0000673058699616719, rel <= TOLERANCE);
     }

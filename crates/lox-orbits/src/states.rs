@@ -16,6 +16,7 @@ use lox_bodies::{
     UndefinedOriginPropertyError,
 };
 use lox_ephem::{Ephemeris, path_from_ids};
+use lox_frames::transformations::TryTransform;
 use lox_math::{
     glam::Azimuth,
     math::{mod_two_pi, normalize_two_pi},
@@ -27,7 +28,7 @@ use thiserror::Error;
 use crate::anomalies::{eccentric_to_true, hyperbolic_to_true};
 use crate::elements::{DynKeplerian, Keplerian, KeplerianElements, is_circular, is_equatorial};
 use crate::ground::{DynGroundLocation, GroundLocation};
-use lox_frames::{DynFrame, Iau, Icrf, ReferenceFrame, TryRotateTo};
+use lox_frames::{DynFrame, Iau, Icrf, ReferenceFrame};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct State<T: TimeScale, O: Origin, R: ReferenceFrame> {
@@ -85,16 +86,15 @@ where
         self.velocity
     }
 
-    pub fn try_to_frame<R1, P>(&self, frame: R1, provider: &P) -> Result<State<T, O, R1>, R::Error>
+    pub fn try_to_frame<R1, P>(&self, frame: R1, provider: &P) -> Result<State<T, O, R1>, P::Error>
     where
-        R: TryRotateTo<T, R1, P>,
-        R1: ReferenceFrame + Clone,
+        R: Copy,
+        P: TryTransform<R, R1, T>,
+        R1: ReferenceFrame + Copy,
         O: Clone,
-        T: Clone,
+        T: Copy,
     {
-        let rot = self
-            .frame
-            .try_rotation(frame.clone(), self.time(), provider)?;
+        let rot = provider.try_transform(self.frame, frame, self.time)?;
         let (r1, v1) = rot.rotate_state(self.position, self.velocity);
         Ok(State::new(self.time(), r1, v1, self.origin(), frame))
     }
@@ -409,16 +409,17 @@ mod tests {
 
     use lox_bodies::{Earth, Jupiter, Venus};
     use lox_ephem::spk::parser::{Spk, parse_daf_spk};
+    use lox_frames::providers::DefaultTransformProvider;
     use lox_math::assert_close;
     use lox_math::is_close::IsClose;
     use lox_test_utils::data_dir;
-    use lox_time::{Time, offsets::DefaultOffsetProvider, time, time_scales::Tdb, utc::Utc};
+    use lox_time::{Time, time, time_scales::Tdb, utc::Utc};
 
     use super::*;
 
     #[test]
     fn test_bodyfixed() {
-        let iau_jupiter = Iau(Jupiter);
+        let iau_jupiter = Iau::new(Jupiter);
 
         let r0 = DVec3::new(6068.27927, -1692.84394, -2516.61918);
         let v0 = DVec3::new(-0.660415582, 5.495938726, -5.303093233);
@@ -427,8 +428,10 @@ mod tests {
 
         let tdb = time!(Tdb, 2000, 1, 1, 12).unwrap();
         let s = State::new(tdb, r0, v0, Jupiter, Icrf);
-        let s1 = s.try_to_frame(iau_jupiter, &DefaultOffsetProvider).unwrap();
-        let s0 = s1.try_to_frame(Icrf, &DefaultOffsetProvider).unwrap();
+        let s1 = s
+            .try_to_frame(iau_jupiter, &DefaultTransformProvider)
+            .unwrap();
+        let s0 = s1.try_to_frame(Icrf, &DefaultTransformProvider).unwrap();
 
         assert_float_eq!(s0.position().x, r0.x, rel <= 1e-8);
         assert_float_eq!(s0.position().y, r0.y, rel <= 1e-8);
@@ -483,7 +486,7 @@ mod tests {
         let position = DVec3::new(3359.927, -2398.072, 5153.0);
         let velocity = DVec3::new(5.0657, 5.485, -0.744);
         let time = time!(Tdb, 2012, 7, 1).unwrap();
-        let state = State::new(time, position, velocity, Earth, Iau(Earth));
+        let state = State::new(time, position, velocity, Earth, Iau::new(Earth));
         let ground = state.to_ground_location().unwrap();
         assert_float_eq!(ground.latitude(), lat_exp, rel <= 1e-4);
         assert_float_eq!(ground.longitude(), lon_exp, rel <= 1e-4);
