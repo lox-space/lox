@@ -13,9 +13,10 @@ use crate::states::{DynState, State};
 use crate::trajectories::{DynTrajectory, Trajectory, TrajectoryError};
 use glam::{DMat3, DVec3};
 use lox_bodies::{DynOrigin, RotationalElements, Spheroid, TrySpheroid};
-use lox_frames::{DynFrame, Iau, Icrf, TryRotateTo};
-use lox_time::offsets::{DefaultOffsetProvider, TryOffset};
-use lox_time::time_scales::{Tdb, TimeScale};
+use lox_frames::providers::DefaultTransformProvider;
+use lox_frames::transformations::TryTransform;
+use lox_frames::{DynFrame, Iau, Icrf};
+use lox_time::time_scales::TimeScale;
 use lox_time::{DynTime, Time};
 use lox_units::types::units::Radians;
 use thiserror::Error;
@@ -218,9 +219,8 @@ impl DynGroundPropagator {
             self.location.body,
             DynFrame::Iau(self.location.body),
         );
-        let rot = s
-            .reference_frame()
-            .try_rotation(DynFrame::Icrf, time, &DefaultOffsetProvider)
+        let rot = DefaultTransformProvider
+            .try_transform(s.reference_frame(), DynFrame::Icrf, time)
             .map_err(|err| GroundPropagatorError::FrameTransformation(err.to_string()))?;
         let (r1, v1) = rot.rotate_state(s.position(), s.velocity());
         Ok(State::new(time, r1, v1, self.location.body, DynFrame::Icrf))
@@ -242,8 +242,8 @@ impl DynGroundPropagator {
 impl<T, O> Propagator<T, O, Icrf> for GroundPropagator<O>
 where
     T: TimeScale + Copy,
-    O: Spheroid + RotationalElements + Clone,
-    DefaultOffsetProvider: TryOffset<T, Tdb>,
+    O: Spheroid + RotationalElements + Copy,
+    DefaultTransformProvider: TryTransform<Iau<O>, Icrf, T>,
 {
     type Error = GroundPropagatorError;
 
@@ -252,15 +252,14 @@ where
             time,
             self.location.body_fixed_position(),
             DVec3::ZERO,
-            self.location.body.clone(),
-            Iau(self.location.body.clone()),
+            self.location.body,
+            Iau::new(self.location.body),
         );
-        let rot = s
-            .reference_frame()
-            .try_rotation(Icrf, time, &DefaultOffsetProvider)
+        let rot = DefaultTransformProvider
+            .try_transform(s.reference_frame(), Icrf, time)
             .map_err(|err| GroundPropagatorError::FrameTransformation(err.to_string()))?;
         let (r1, v1) = rot.rotate_state(s.position(), s.velocity());
-        Ok(State::new(time, r1, v1, self.location.body.clone(), Icrf))
+        Ok(State::new(time, r1, v1, self.location.body, Icrf))
     }
 }
 
@@ -271,6 +270,7 @@ mod tests {
     use lox_bodies::Earth;
     use lox_math::assert_close;
     use lox_math::is_close::IsClose;
+    use lox_time::time_scales::Tdb;
     use lox_time::utc::Utc;
     use lox_time::{Time, time, utc};
 
@@ -313,7 +313,7 @@ mod tests {
         let position = DVec3::new(3359.927, -2398.072, 5153.0);
         let velocity = DVec3::new(5.0657, 5.485, -0.744);
         let time = time!(Tdb, 2012, 7, 1).unwrap();
-        let state = State::new(time, position, velocity, Earth, Iau(Earth));
+        let state = State::new(time, position, velocity, Earth, Iau::new(Earth));
         let observables = location.observables(state);
         let expected_range = 2707.7;
         let expected_range_rate = -7.16;

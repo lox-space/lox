@@ -28,7 +28,7 @@ use crate::time::subsecond::{InvalidSubsecond, Subsecond};
 use crate::time::time::{DynTime, Time, TimeError};
 use crate::time::time_of_day::{CivilTime, TimeOfDay};
 use crate::time::time_scales::Tai;
-use crate::time::utc::transformations::ToUtc;
+use crate::time::utc::transformations::TryToUtc;
 
 use super::time_scales::PyTimeScale;
 use super::utc::PyUtc;
@@ -365,7 +365,7 @@ impl PyTime {
                 .try_to_scale(Tai, &DefaultOffsetProvider)
                 .map_err(PyMissingEopProviderError)?,
         }
-        .to_utc()
+        .try_to_utc()
         .map_err(PyUtcError)?;
         Ok(PyUtc(utc))
     }

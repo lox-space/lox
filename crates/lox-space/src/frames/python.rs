@@ -9,9 +9,14 @@
 use crate::frames::{
     dynamic::{DynFrame, UnknownFrameError},
     traits::ReferenceFrame,
-    transformations::iau::IauFrameTransformationError,
 };
-use pyo3::{PyErr, PyResult, exceptions::PyValueError, pyclass, pymethods};
+use lox_earth::itrf::DynTransformEopError;
+use lox_frames::dynamic::DynTransformError;
+use pyo3::{
+    PyErr, PyResult, create_exception,
+    exceptions::{PyException, PyValueError},
+    pyclass, pymethods,
+};
 
 pub struct PyUnknownFrameError(pub UnknownFrameError);
 
@@ -21,12 +26,21 @@ impl From<PyUnknownFrameError> for PyErr {
     }
 }
 
-pub struct PyIauFrameTransformationError(pub IauFrameTransformationError);
+create_exception!(lox_space, FrameTransformationError, PyException);
 
-impl From<PyIauFrameTransformationError> for PyErr {
-    fn from(err: PyIauFrameTransformationError) -> Self {
-        // FIXME: wrong error type
-        PyValueError::new_err(err.0.to_string())
+pub struct PyDynTransformError(pub DynTransformError);
+
+impl From<PyDynTransformError> for PyErr {
+    fn from(err: PyDynTransformError) -> Self {
+        FrameTransformationError::new_err(err.0.to_string())
+    }
+}
+
+pub struct PyDynTransformEopError(pub DynTransformEopError);
+
+impl From<PyDynTransformEopError> for PyErr {
+    fn from(err: PyDynTransformEopError) -> Self {
+        FrameTransformationError::new_err(err.0.to_string())
     }
 }
 

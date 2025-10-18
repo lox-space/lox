@@ -11,18 +11,14 @@
 //! less than 0.1 microarcseconds, but are retained as a faithful reproduction of the original
 //! model.
 
-use std::f64::consts::TAU;
-
-use lox_math::math::arcsec_to_rad_two_pi;
-
 use crate::{Moon, Neptune, Sun};
 
-use lox_units::types::units::{Arcseconds, JulianCenturies, Radians};
+use lox_units::{Angle, AngleUnits, types::units::JulianCenturies};
 
 pub fn mean_moon_sun_elongation_mhb2000_luni_solar(
     centuries_since_j2000_tdb: JulianCenturies,
-) -> Radians {
-    let arcsec: Arcseconds = fast_polynomial::poly_array(
+) -> Angle {
+    Angle::asec_normalized_signed(fast_polynomial::poly_array(
         centuries_since_j2000_tdb,
         &[
             1072260.70369,
@@ -31,19 +27,20 @@ pub fn mean_moon_sun_elongation_mhb2000_luni_solar(
             0.006593,
             -0.00003169,
         ],
-    );
-    arcsec_to_rad_two_pi(arcsec)
+    ))
 }
 
 pub fn mean_moon_sun_elongation_mhb2000_planetary(
     centuries_since_j2000_tdb: JulianCenturies,
-) -> Radians {
-    fast_polynomial::poly_array(centuries_since_j2000_tdb, &[5.198466741, 7771.3771468121]) % TAU
+) -> Angle {
+    fast_polynomial::poly_array(centuries_since_j2000_tdb, &[5.198466741, 7771.3771468121])
+        .rad()
+        .mod_two_pi_signed()
 }
 
 impl Sun {
-    pub fn mean_anomaly_mhb2000(&self, centuries_since_j2000_tdb: JulianCenturies) -> Radians {
-        let arcsec: Arcseconds = fast_polynomial::poly_array(
+    pub fn mean_anomaly_mhb2000(&self, centuries_since_j2000_tdb: JulianCenturies) -> Angle {
+        Angle::asec_normalized_signed(fast_polynomial::poly_array(
             centuries_since_j2000_tdb,
             &[
                 1287104.79305,
@@ -52,34 +49,41 @@ impl Sun {
                 0.000136,
                 -0.00001149,
             ],
-        );
-        arcsec_to_rad_two_pi(arcsec)
+        ))
     }
 }
 
 impl Moon {
-    pub fn mean_anomaly_mhb2000(&self, centuries_since_j2000_tdb: JulianCenturies) -> Radians {
-        fast_polynomial::poly_array(centuries_since_j2000_tdb, &[2.35555598, 8328.6914269554]) % TAU
+    pub fn mean_anomaly_mhb2000(&self, centuries_since_j2000_tdb: JulianCenturies) -> Angle {
+        fast_polynomial::poly_array(centuries_since_j2000_tdb, &[2.35555598, 8328.6914269554])
+            .rad()
+            .mod_two_pi_signed()
     }
 
     pub fn mean_longitude_minus_ascending_node_mean_longitude_mhb2000(
         &self,
         centuries_since_j2000_tdb: JulianCenturies,
-    ) -> Radians {
-        fast_polynomial::poly_array(centuries_since_j2000_tdb, &[1.627905234, 8433.466158131]) % TAU
+    ) -> Angle {
+        fast_polynomial::poly_array(centuries_since_j2000_tdb, &[1.627905234, 8433.466158131])
+            .rad()
+            .mod_two_pi_signed()
     }
 
     pub fn ascending_node_mean_longitude_mhb2000(
         &self,
         centuries_since_j2000_tdb: JulianCenturies,
-    ) -> Radians {
-        fast_polynomial::poly_array(centuries_since_j2000_tdb, &[2.18243920, -33.757045]) % TAU
+    ) -> Angle {
+        fast_polynomial::poly_array(centuries_since_j2000_tdb, &[2.18243920, -33.757045])
+            .rad()
+            .mod_two_pi_signed()
     }
 }
 
 impl Neptune {
-    pub fn mean_longitude_mhb2000(&self, centuries_since_j2000_tdb: JulianCenturies) -> Radians {
-        fast_polynomial::poly_array(centuries_since_j2000_tdb, &[5.3211590, 3.81277740]) % TAU
+    pub fn mean_longitude_mhb2000(&self, centuries_since_j2000_tdb: JulianCenturies) -> Angle {
+        fast_polynomial::poly_array(centuries_since_j2000_tdb, &[5.3211590, 3.81277740])
+            .rad()
+            .mod_two_pi_signed()
     }
 }
 
@@ -97,7 +101,7 @@ mod tests {
     // This is somewhat loose, being based on observations of how closely our implementations
     // match ERFA outputs rather than any target tolerance.
     // See https://github.com/lox-space/lox/pull/23#discussion_r1398485509
-    const TOLERANCE: f64 = 1e-11;
+    const TOLERANCE: Angle = Angle::rad(1e-11);
 
     // Test cases for t.
     const T_ZERO: JulianCenturies = 0.0;
@@ -108,17 +112,17 @@ mod tests {
     fn test_mean_moon_sun_elongation_mhb2000_luni_solar() {
         assert_float_eq!(
             mean_moon_sun_elongation_mhb2000_luni_solar(T_ZERO),
-            5.198466588650503,
+            5.198466588650503.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
             mean_moon_sun_elongation_mhb2000_luni_solar(T_POSITIVE),
-            5.067140540624282,
+            5.067140540624282.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
             mean_moon_sun_elongation_mhb2000_luni_solar(T_NEGATIVE),
-            -0.953486820095515,
+            -0.953486820095515.rad(),
             rel <= TOLERANCE
         );
     }
@@ -127,17 +131,17 @@ mod tests {
     fn test_mean_moon_sun_elongation_mhb2000_planetary() {
         assert_float_eq!(
             mean_moon_sun_elongation_mhb2000_planetary(T_ZERO),
-            5.1984667410,
+            5.1984667410.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
             mean_moon_sun_elongation_mhb2000_planetary(T_POSITIVE),
-            5.06718921180569,
+            5.06718921180569.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
             mean_moon_sun_elongation_mhb2000_planetary(T_NEGATIVE),
-            -0.953441036985836,
+            -0.953441036985836.rad(),
             rel <= TOLERANCE
         );
     }
@@ -146,17 +150,17 @@ mod tests {
     fn test_sun_mean_anomaly_mhb2000() {
         assert_float_eq!(
             Sun.mean_anomaly_mhb2000(T_ZERO),
-            6.24006012692298,
+            6.24006012692298.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
             Sun.mean_anomaly_mhb2000(T_POSITIVE),
-            2.806497028816457,
+            2.806497028816457.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
             Sun.mean_anomaly_mhb2000(T_NEGATIVE),
-            -2.892755565138653,
+            -2.892755565138653.rad(),
             rel <= TOLERANCE
         );
     }
@@ -165,17 +169,17 @@ mod tests {
     fn test_moon_mean_anomaly_mhb2000() {
         assert_float_eq!(
             Moon.mean_anomaly_mhb2000(T_ZERO),
-            2.35555598,
+            2.35555598.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
             Moon.mean_anomaly_mhb2000(T_POSITIVE),
-            5.399394871613055,
+            5.399394871613055.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
             Moon.mean_anomaly_mhb2000(T_NEGATIVE),
-            -0.688282911613584,
+            -0.688282911613584.rad(),
             rel <= TOLERANCE
         );
     }
@@ -184,17 +188,17 @@ mod tests {
     fn test_moon_mean_longitude_minus_ascending_node_mean_longitude_mhb2000() {
         assert_float_eq!(
             Moon.mean_longitude_minus_ascending_node_mean_longitude_mhb2000(T_ZERO),
-            1.627905234,
+            1.627905234.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
             Moon.mean_longitude_minus_ascending_node_mean_longitude_mhb2000(T_POSITIVE),
-            2.07637146761946,
+            2.07637146761946.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
             Moon.mean_longitude_minus_ascending_node_mean_longitude_mhb2000(T_NEGATIVE),
-            -5.103746306797973,
+            -5.103746306797973.rad(),
             rel <= TOLERANCE
         );
     }
@@ -203,17 +207,17 @@ mod tests {
     fn test_moon_ascending_node_mean_longitude_mhb2000() {
         assert_float_eq!(
             Moon.ascending_node_mean_longitude_mhb2000(T_ZERO),
-            2.18243920,
+            2.18243920.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
             Moon.ascending_node_mean_longitude_mhb2000(T_POSITIVE),
-            -1.793812775207527,
+            -1.793812775207527.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
             Moon.ascending_node_mean_longitude_mhb2000(T_NEGATIVE),
-            6.15869117520753,
+            6.15869117520753.rad(),
             rel <= TOLERANCE
         );
     }
@@ -222,17 +226,17 @@ mod tests {
     fn test_neptune_mean_longitude_mhb2000() {
         assert_float_eq!(
             Neptune.mean_longitude_mhb2000(T_ZERO),
-            5.3211590,
+            5.3211590.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
             Neptune.mean_longitude_mhb2000(T_POSITIVE),
-            3.7451062425781,
+            3.7451062425781.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
             Neptune.mean_longitude_mhb2000(T_NEGATIVE),
-            0.614026450242314,
+            0.614026450242314.rad(),
             rel <= TOLERANCE
         );
     }

@@ -8,14 +8,14 @@
 
 use std::path::PathBuf;
 
-use lox_earth::iers::{EopParser, EopProvider};
+use lox_earth::eop::{EopParser, EopProvider};
 use pyo3::exceptions::PyException;
 use pyo3::types::{PyAnyMethods, PyTuple};
 use pyo3::{Bound, PyErr, PyResult, create_exception, pyclass, pymethods};
 
 create_exception!(lox_space, EopParserError, PyException);
 
-pub struct PyEopParserError(pub lox_earth::iers::EopParserError);
+pub struct PyEopParserError(pub lox_earth::eop::EopParserError);
 
 impl From<PyEopParserError> for PyErr {
     fn from(err: PyEopParserError) -> Self {
@@ -25,7 +25,7 @@ impl From<PyEopParserError> for PyErr {
 
 create_exception!(lox_space, EopProviderError, PyException);
 
-pub struct PyEopProviderError(pub lox_earth::iers::EopProviderError);
+pub struct PyEopProviderError(pub lox_earth::eop::EopProviderError);
 
 impl From<PyEopProviderError> for PyErr {
     fn from(err: PyEopProviderError) -> Self {

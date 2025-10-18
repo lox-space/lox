@@ -6,10 +6,7 @@
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use lox_time::{Time, time_scales::TimeScale};
 use thiserror::Error;
-
-use crate::transformations::Rotation;
 
 pub trait ReferenceFrame {
     fn name(&self) -> String;
@@ -47,10 +44,4 @@ impl<T: BodyFixed> TryBodyFixed for T {
     fn try_body_fixed(&self) -> Result<(), NonBodyFixedFrameError> {
         Ok(())
     }
-}
-
-pub trait TryRotateTo<T: TimeScale, R: ReferenceFrame, P> {
-    type Error;
-
-    fn try_rotation(&self, frame: R, time: Time<T>, provider: &P) -> Result<Rotation, Self::Error>;
 }

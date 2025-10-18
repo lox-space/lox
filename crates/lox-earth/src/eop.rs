@@ -6,12 +6,13 @@ use std::{
 use csv::{ByteRecord, ReaderBuilder};
 use lox_math::series::{Series, SeriesError};
 use lox_time::{
+    OffsetProvider,
     deltas::TimeDelta,
     julian_dates::{JulianDate, SECONDS_BETWEEN_MJD_AND_J2000},
     utc::{
         Utc, UtcError,
         leap_seconds::{BuiltinLeapSeconds, LeapSecondsProvider},
-        transformations::ToUtc,
+        transformations::TryToUtc,
     },
 };
 use lox_units::constants::f64::time::SECONDS_PER_DAY;
@@ -212,6 +213,23 @@ impl EopParser {
     }
 }
 
+#[derive(Debug, Default, Error)]
+pub enum EopProviderError {
+    #[error(transparent)]
+    Utc(#[from] UtcError),
+    #[error("value was extrapolated")]
+    ExtrapolatedValue(f64),
+    #[error("values were extrapolated")]
+    ExtrapolatedValues(f64, f64),
+    #[error("no 'finals.all.csv' file was loaded")]
+    MissingIau1980,
+    #[error("no 'finals2000A.all.csv' file was loaded")]
+    MissingIau2000,
+    #[default]
+    #[error("unreachable")]
+    Never,
+}
+
 #[derive(Clone, Debug)]
 struct Index(Arc<Vec<f64>>);
 
@@ -228,30 +246,17 @@ struct NutPrecCorrections {
     iau2000: Option<(TSeries, TSeries)>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, OffsetProvider)]
+#[lox_time(error=EopProviderError, disable(ut1))]
 pub struct EopProvider {
     polar_motion: (TSeries, TSeries),
     delta_ut1_tai: TSeries,
     nut_prec: NutPrecCorrections,
 }
 
-#[derive(Debug, Error)]
-pub enum EopProviderError {
-    #[error(transparent)]
-    Utc(#[from] UtcError),
-    #[error("value was extrapolated")]
-    ExtrapolatedValue(f64),
-    #[error("values were extrapolated")]
-    ExtrapolatedValues(f64, f64),
-    #[error("no 'finals.all.csv' file was loaded")]
-    MissingIau1980,
-    #[error("no 'finals2000A.all.csv' file was loaded")]
-    MissingIau2000,
-}
-
 impl EopProvider {
-    pub fn polar_motion<T: ToUtc>(&self, t: T) -> Result<(f64, f64), EopProviderError> {
-        let t = t.to_utc()?.seconds_since_j2000();
+    pub fn polar_motion<T: TryToUtc>(&self, t: T) -> Result<(f64, f64), EopProviderError> {
+        let t = t.try_to_utc()?.seconds_since_j2000();
         let px = self.polar_motion.0.interpolate(t);
         let py = self.polar_motion.1.interpolate(t);
         let (min, _) = self.polar_motion.0.first();
@@ -262,14 +267,14 @@ impl EopProvider {
         Ok((px, py))
     }
 
-    pub fn nutation_precession_iau1980<T: ToUtc>(
+    pub fn nutation_precession_iau1980<T: TryToUtc>(
         &self,
         t: T,
     ) -> Result<(f64, f64), EopProviderError> {
         let Some(nut_prec) = &self.nut_prec.iau1980 else {
             return Err(EopProviderError::MissingIau1980);
         };
-        let t = t.to_utc()?.seconds_since_j2000();
+        let t = t.try_to_utc()?.seconds_since_j2000();
         let dpsi = nut_prec.0.interpolate(t);
         let deps = nut_prec.1.interpolate(t);
         let (min, _) = nut_prec.0.first();
@@ -280,14 +285,14 @@ impl EopProvider {
         Ok((dpsi, deps))
     }
 
-    pub fn nutation_precession_iau2000<T: ToUtc>(
+    pub fn nutation_precession_iau2000<T: TryToUtc>(
         &self,
         t: T,
     ) -> Result<(f64, f64), EopProviderError> {
         let Some(nut_prec) = &self.nut_prec.iau2000 else {
             return Err(EopProviderError::MissingIau2000);
         };
-        let t = t.to_utc()?.seconds_since_j2000();
+        let t = t.try_to_utc()?.seconds_since_j2000();
         let dx = nut_prec.0.interpolate(t);
         let dy = nut_prec.1.interpolate(t);
         let (min, _) = nut_prec.0.first();

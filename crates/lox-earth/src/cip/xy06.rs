@@ -15,8 +15,8 @@ use lox_bodies::fundamental::iers03::{
     general_accum_precession_in_longitude_iers03, mean_moon_sun_elongation_iers03,
 };
 use lox_bodies::{Earth, Jupiter, Mars, Mercury, Moon, Neptune, Saturn, Sun, Uranus, Venus};
-use lox_math::math::arcsec_to_rad;
-use lox_units::types::units::{JulianCenturies, Radians};
+use lox_units::types::units::JulianCenturies;
+use lox_units::{Angle, AngleUnits};
 
 mod amplitudes;
 mod luni_solar;
@@ -27,7 +27,7 @@ const MAX_POWER_OF_T: usize = 5;
 
 type PowersOfT = [f64; MAX_POWER_OF_T + 1];
 
-type FundamentalArgs = [Radians; 14];
+type FundamentalArgs = [Angle; 14];
 
 #[derive(Debug, Default)]
 struct NutationComponents {
@@ -35,9 +35,22 @@ struct NutationComponents {
     luni_solar: DVec2,
 }
 
-/// Calculates the (X, Y) coordinates of the Celestial Intermediate Pole (CIP) using the the IAU
-/// 2006 precession and IAU 2000A nutation models.
-pub fn xy(centuries_since_j2000_tdb: JulianCenturies) -> DVec2 {
+#[derive(Copy, Clone, Debug, Default, PartialEq)]
+pub struct CipCoords {
+    pub x: Angle,
+    pub y: Angle,
+}
+
+impl CipCoords {
+    /// Calculates the (X, Y) coordinates of the Celestial Intermediate Pole (CIP) using the the IAU
+    /// 2006 precession and IAU 2000A nutation models.
+    pub fn new(centuries_since_j2000_tdb: JulianCenturies) -> Self {
+        let (x, y) = cip_coords(centuries_since_j2000_tdb);
+        Self { x, y }
+    }
+}
+
+fn cip_coords(centuries_since_j2000_tdb: JulianCenturies) -> (Angle, Angle) {
     let powers_of_t = powers_of_t(centuries_since_j2000_tdb);
     let fundamental_args = fundamental_args(centuries_since_j2000_tdb);
     let polynomial_components = polynomial_components(&powers_of_t);
@@ -101,8 +114,8 @@ fn nutation_components(
     // Calculate planetary nutation components.
     for (freq_list_idx, freq_list) in planetary::FREQUENCY_LISTS.iter().enumerate().rev() {
         // Calculate argument functions.
-        let mut arg = 0.0;
-        for (i, freq) in freq_list.iter().enumerate() {
+        let mut arg = 0.0.rad();
+        for (i, &freq) in freq_list.iter().enumerate() {
             arg += freq * fundamental_args[i];
         }
         sin_cos[0] = arg.sin();
@@ -132,8 +145,8 @@ fn nutation_components(
     // Calculate luni-solar nutation components.
     for (freq_list_idx, freq_list) in luni_solar::FREQUENCY_LISTS.iter().enumerate().rev() {
         // Calculate argument functions.
-        let mut arg = 0.0;
-        for (i, freq) in freq_list.iter().enumerate() {
+        let mut arg = 0.0.rad();
+        for (i, &freq) in freq_list.iter().enumerate() {
             arg += freq * fundamental_args[i];
         }
         sin_cos[0] = arg.sin();
@@ -166,47 +179,46 @@ fn nutation_components(
 fn calculate_cip_unit_vector(
     polynomial_components: &DVec2,
     nutation_components: &NutationComponents,
-) -> DVec2 {
-    let x_arcsec = polynomial_components[0]
+) -> (Angle, Angle) {
+    let x = polynomial_components[0]
         + (nutation_components.planetary[0] + nutation_components.luni_solar[0]) / 1e6;
-    let y_arcsec = polynomial_components[1]
+    let y = polynomial_components[1]
         + (nutation_components.planetary[1] + nutation_components.luni_solar[1]) / 1e6;
-    DVec2 {
-        x: arcsec_to_rad(x_arcsec),
-        y: arcsec_to_rad(y_arcsec),
-    }
+    (x.asec(), y.asec())
 }
 
 #[cfg(test)]
 mod tests {
+    use std::iter::zip;
+
     use float_eq::assert_float_eq;
 
     use super::*;
 
-    const TOLERANCE: f64 = 1e-12;
+    const TOLERANCE: Angle = Angle::rad(1e-12);
 
     #[test]
     fn test_cip_xy_jd0() {
         let jd0: JulianCenturies = -67.11964407939767;
-        let xy = xy(jd0);
-        assert_float_eq!(xy[0], -0.4088355637476968, rel <= TOLERANCE);
-        assert_float_eq!(xy[1], -0.38359667445777073, rel <= TOLERANCE);
+        let CipCoords { x, y } = CipCoords::new(jd0);
+        assert_float_eq!(x, -0.4088355637476968.rad(), rel <= TOLERANCE);
+        assert_float_eq!(y, -0.38359667445777073.rad(), rel <= TOLERANCE);
     }
 
     #[test]
     fn test_cip_xy_j2000() {
         let j2000: JulianCenturies = 0.0;
-        let xy = xy(j2000);
-        assert_float_eq!(xy[0], -0.0000269463795685740, rel <= TOLERANCE);
-        assert_float_eq!(xy[1], -0.00002800472282281282, rel <= TOLERANCE);
+        let CipCoords { x, y } = CipCoords::new(j2000);
+        assert_float_eq!(x, -0.0000269463795685740.rad(), rel <= TOLERANCE);
+        assert_float_eq!(y, -0.00002800472282281282.rad(), rel <= TOLERANCE);
     }
 
     #[test]
     fn test_cip_xy_j2100() {
         let j2100: JulianCenturies = 1.0;
-        let xy = xy(j2100);
-        assert_float_eq!(xy[0], 0.00972070446172924, rel <= TOLERANCE);
-        assert_float_eq!(xy[1], -0.0000673058699616719, rel <= TOLERANCE);
+        let CipCoords { x, y } = CipCoords::new(j2100);
+        assert_float_eq!(x, 0.00972070446172924.rad(), rel <= TOLERANCE);
+        assert_float_eq!(y, -0.0000673058699616719.rad(), rel <= TOLERANCE);
     }
 
     #[test]
@@ -230,8 +242,8 @@ mod tests {
             general_accum_precession_in_longitude_iers03(j2000),
         ];
 
-        expected.iter().enumerate().for_each(|(i, expected)| {
-            assert_float_eq!(*expected, actual[i], rel <= TOLERANCE);
-        });
+        for (act, exp) in zip(actual, expected) {
+            assert_float_eq!(act, exp, rel <= TOLERANCE)
+        }
     }
 }

@@ -21,7 +21,7 @@ regex.workspace = true
 serde-aux.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-thiserror = { workspace = true, features = ["std"] }
+thiserror.workspace = true
 
 [dev-dependencies]
 rstest.workspace = true
