@@ -81,7 +81,7 @@ mod tests {
 
     use super::*;
 
-    const TOLERANCE: f64 = 1e-12;
+    const TOLERANCE: Angle = Angle::rad(1e-12);
 
     #[test]
     fn test_nutation_iau1980() {
@@ -91,8 +91,8 @@ mod tests {
             obliquity: -0.00002799221238377013.rad(),
         };
         let actual = nutation(Model::IAU1980, time);
-        assert_float_eq!(expected.longitude.0, actual.longitude.0, rel <= TOLERANCE);
-        assert_float_eq!(expected.obliquity.0, actual.obliquity.0, rel <= TOLERANCE);
+        assert_float_eq!(expected.longitude, actual.longitude, rel <= TOLERANCE);
+        assert_float_eq!(expected.obliquity, actual.obliquity, rel <= TOLERANCE);
     }
     #[test]
     fn test_nutation_iau2000a() {
@@ -102,8 +102,8 @@ mod tests {
             obliquity: -0.00002797083119237414.rad(),
         };
         let actual = nutation(Model::IAU2000A, time);
-        assert_float_eq!(expected.longitude.0, actual.longitude.0, rel <= TOLERANCE);
-        assert_float_eq!(expected.obliquity.0, actual.obliquity.0, rel <= TOLERANCE);
+        assert_float_eq!(expected.longitude, actual.longitude, rel <= TOLERANCE);
+        assert_float_eq!(expected.obliquity, actual.obliquity, rel <= TOLERANCE);
     }
 
     #[test]
@@ -114,8 +114,8 @@ mod tests {
             obliquity: -0.00002797092331098565.rad(),
         };
         let actual = nutation(Model::IAU2000B, time);
-        assert_float_eq!(expected.longitude.0, actual.longitude.0, rel <= TOLERANCE);
-        assert_float_eq!(expected.obliquity.0, actual.obliquity.0, rel <= TOLERANCE);
+        assert_float_eq!(expected.longitude, actual.longitude, rel <= TOLERANCE);
+        assert_float_eq!(expected.obliquity, actual.obliquity, rel <= TOLERANCE);
     }
 
     #[test]
@@ -126,7 +126,7 @@ mod tests {
             obliquity: -0.00002797083119237414.rad(),
         };
         let actual = nutation(Model::IAU2006A, time);
-        assert_float_eq!(expected.longitude.0, actual.longitude.0, rel <= TOLERANCE);
-        assert_float_eq!(expected.obliquity.0, actual.obliquity.0, rel <= TOLERANCE);
+        assert_float_eq!(expected.longitude, actual.longitude, rel <= TOLERANCE);
+        assert_float_eq!(expected.obliquity, actual.obliquity, rel <= TOLERANCE);
     }
 }

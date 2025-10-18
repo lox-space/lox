@@ -4,6 +4,8 @@ use std::{
     ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign},
 };
 
+use float_eq::derive_float_eq;
+
 pub const DEGREES_IN_CIRCLE: f64 = 360.0;
 
 pub const ARCSECONDS_IN_CIRCLE: f64 = DEGREES_IN_CIRCLE * 60.0 * 60.0;
@@ -13,9 +15,15 @@ pub const RADIANS_IN_ARCSECOND: f64 = TAU / ARCSECONDS_IN_CIRCLE;
 pub type Radians = f64;
 
 /// An angle in radians
+#[derive_float_eq(
+    ulps_tol = "AngleUlps",
+    ulps_tol_derive = "Clone, Copy, Debug, PartialEq",
+    debug_ulps_diff = "AngleDebugUlpsDiff",
+    debug_ulps_diff_derive = "Clone, Copy, Debug, PartialEq"
+)]
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd)]
 #[repr(transparent)]
-pub struct Angle(pub Radians);
+pub struct Angle(Radians);
 
 impl Angle {
     pub const ZERO: Self = Self(0.0);
@@ -24,39 +32,43 @@ impl Angle {
     pub const FRAC_PI_2: Self = Self(FRAC_PI_2);
     pub const FRAC_PI_4: Self = Self(FRAC_PI_4);
 
-    pub fn rad(rad: f64) -> Self {
+    pub const fn new(rad: f64) -> Self {
         Self(rad)
     }
 
-    pub fn rad_normalized(rad: f64) -> Self {
+    pub const fn rad(rad: f64) -> Self {
+        Self(rad)
+    }
+
+    pub const fn rad_normalized(rad: f64) -> Self {
         Self(rad).mod_two_pi()
     }
 
-    pub fn rad_normalized_signed(rad: f64) -> Self {
+    pub const fn rad_normalized_signed(rad: f64) -> Self {
         Self(rad).mod_two_pi_signed()
     }
 
-    pub fn deg(deg: f64) -> Self {
+    pub const fn deg(deg: f64) -> Self {
         Self(deg.to_radians())
     }
 
-    pub fn deg_normalized(deg: f64) -> Self {
+    pub const fn deg_normalized(deg: f64) -> Self {
         Self((deg % DEGREES_IN_CIRCLE).to_radians()).mod_two_pi()
     }
 
-    pub fn deg_normalized_signed(deg: f64) -> Self {
+    pub const fn deg_normalized_signed(deg: f64) -> Self {
         Self((deg % DEGREES_IN_CIRCLE).to_radians())
     }
 
-    pub fn asec(asec: f64) -> Self {
+    pub const fn asec(asec: f64) -> Self {
         Self(asec * RADIANS_IN_ARCSECOND)
     }
 
-    pub fn asec_normalized(asec: f64) -> Self {
+    pub const fn asec_normalized(asec: f64) -> Self {
         Self((asec % ARCSECONDS_IN_CIRCLE) * RADIANS_IN_ARCSECOND).mod_two_pi()
     }
 
-    pub fn asec_normalized_signed(asec: f64) -> Self {
+    pub const fn asec_normalized_signed(asec: f64) -> Self {
         Self((asec % ARCSECONDS_IN_CIRCLE) * RADIANS_IN_ARCSECOND)
     }
 
@@ -88,7 +100,7 @@ impl Angle {
         self.0.tanh()
     }
 
-    pub fn mod_two_pi(&self) -> Self {
+    pub const fn mod_two_pi(&self) -> Self {
         let mut a = self.0 % TAU;
         if a < 0.0 {
             a += TAU
@@ -96,12 +108,24 @@ impl Angle {
         Self(a)
     }
 
-    pub fn mod_two_pi_signed(&self) -> Self {
+    pub const fn mod_two_pi_signed(&self) -> Self {
         Self(self.0 % TAU)
     }
 
-    pub fn normalize_two_pi(&self, center: Self) -> Self {
+    pub const fn normalize_two_pi(&self, center: Self) -> Self {
         Self(self.0 - TAU * ((self.0 + PI - center.0) / TAU).floor())
+    }
+
+    pub const fn to_radians(&self) -> f64 {
+        self.0
+    }
+
+    pub const fn to_degrees(&self) -> f64 {
+        self.0.to_degrees()
+    }
+
+    pub const fn to_arcseconds(&self) -> f64 {
+        self.0 / RADIANS_IN_ARCSECOND
     }
 }
 
@@ -151,6 +175,12 @@ type Meters = f64;
 #[repr(transparent)]
 pub struct Distance(pub Meters);
 
+impl Distance {
+    pub const fn new(m: f64) -> Self {
+        Self(m)
+    }
+}
+
 impl Display for Distance {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         (1e-3 * self.0).fmt(f)?;
@@ -184,6 +214,12 @@ type MetersPerSecond = f64;
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd)]
 #[repr(transparent)]
 pub struct Velocity(pub MetersPerSecond);
+
+impl Velocity {
+    pub const fn new(mps: f64) -> Self {
+        Self(mps)
+    }
+}
 
 impl Display for Velocity {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
@@ -230,6 +266,12 @@ pub enum FrequencyBand {
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd)]
 #[repr(transparent)]
 pub struct Frequency(pub f64);
+
+impl Frequency {
+    pub const fn new(hz: f64) -> Self {
+        Self(hz)
+    }
+}
 
 impl Frequency {
     pub fn wavelength(&self) -> Distance {
@@ -340,11 +382,17 @@ macro_rules! impl_ops {
                     $unit(self * rhs.0)
                 }
             }
+
+            impl From<$unit> for f64 {
+                fn from(val: $unit) -> Self {
+                    val.0
+                }
+            }
         )*
     };
 }
 
-impl_ops!(Angle, Distance, Velocity);
+impl_ops!(Angle, Distance, Frequency, Velocity);
 
 #[cfg(test)]
 mod tests {

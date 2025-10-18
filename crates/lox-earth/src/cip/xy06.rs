@@ -114,9 +114,9 @@ fn nutation_components(
     // Calculate planetary nutation components.
     for (freq_list_idx, freq_list) in planetary::FREQUENCY_LISTS.iter().enumerate().rev() {
         // Calculate argument functions.
-        let mut arg = 0.0;
-        for (i, freq) in freq_list.iter().enumerate() {
-            arg += freq * fundamental_args[i].0;
+        let mut arg = 0.0.rad();
+        for (i, &freq) in freq_list.iter().enumerate() {
+            arg += freq * fundamental_args[i];
         }
         sin_cos[0] = arg.sin();
         sin_cos[1] = arg.cos();
@@ -145,9 +145,9 @@ fn nutation_components(
     // Calculate luni-solar nutation components.
     for (freq_list_idx, freq_list) in luni_solar::FREQUENCY_LISTS.iter().enumerate().rev() {
         // Calculate argument functions.
-        let mut arg = 0.0;
-        for (i, freq) in freq_list.iter().enumerate() {
-            arg += freq * fundamental_args[i].0;
+        let mut arg = 0.0.rad();
+        for (i, &freq) in freq_list.iter().enumerate() {
+            arg += freq * fundamental_args[i];
         }
         sin_cos[0] = arg.sin();
         sin_cos[1] = arg.cos();
@@ -195,30 +195,30 @@ mod tests {
 
     use super::*;
 
-    const TOLERANCE: f64 = 1e-12;
+    const TOLERANCE: Angle = Angle::rad(1e-12);
 
     #[test]
     fn test_cip_xy_jd0() {
         let jd0: JulianCenturies = -67.11964407939767;
         let CipCoords { x, y } = CipCoords::new(jd0);
-        assert_float_eq!(x.0, -0.4088355637476968, rel <= TOLERANCE);
-        assert_float_eq!(y.0, -0.38359667445777073, rel <= TOLERANCE);
+        assert_float_eq!(x, -0.4088355637476968.rad(), rel <= TOLERANCE);
+        assert_float_eq!(y, -0.38359667445777073.rad(), rel <= TOLERANCE);
     }
 
     #[test]
     fn test_cip_xy_j2000() {
         let j2000: JulianCenturies = 0.0;
         let CipCoords { x, y } = CipCoords::new(j2000);
-        assert_float_eq!(x.0, -0.0000269463795685740, rel <= TOLERANCE);
-        assert_float_eq!(y.0, -0.00002800472282281282, rel <= TOLERANCE);
+        assert_float_eq!(x, -0.0000269463795685740.rad(), rel <= TOLERANCE);
+        assert_float_eq!(y, -0.00002800472282281282.rad(), rel <= TOLERANCE);
     }
 
     #[test]
     fn test_cip_xy_j2100() {
         let j2100: JulianCenturies = 1.0;
         let CipCoords { x, y } = CipCoords::new(j2100);
-        assert_float_eq!(x.0, 0.00972070446172924, rel <= TOLERANCE);
-        assert_float_eq!(y.0, -0.0000673058699616719, rel <= TOLERANCE);
+        assert_float_eq!(x, 0.00972070446172924.rad(), rel <= TOLERANCE);
+        assert_float_eq!(y, -0.0000673058699616719.rad(), rel <= TOLERANCE);
     }
 
     #[test]
@@ -243,7 +243,7 @@ mod tests {
         ];
 
         for (act, exp) in zip(actual, expected) {
-            assert_float_eq!(act.0, exp.0, rel <= TOLERANCE)
+            assert_float_eq!(act, exp, rel <= TOLERANCE)
         }
     }
 }

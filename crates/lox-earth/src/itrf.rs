@@ -57,7 +57,7 @@ where
 pub fn cirf_to_tirf(seconds: f64) -> Rotation {
     let era = earth_rotation_angle_00(seconds / SECONDS_PER_DAY);
     let rate = Earth.rotation_rate(seconds);
-    let m = DMat3::from_rotation_z(-era.0);
+    let m = DMat3::from_rotation_z(-era.to_radians());
     let v = DVec3::new(0.0, 0.0, rate);
     Rotation::new(m).with_angular_velocity(v)
 }
