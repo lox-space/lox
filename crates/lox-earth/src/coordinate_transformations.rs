@@ -9,21 +9,29 @@
 //! Module coordinate_transformations provides functions for transforming coordinates between
 //! reference systems.
 
-use glam::{DMat3, DVec2};
+use glam::DMat3;
 
-use lox_units::types::units::Radians;
+use lox_units::{Angle, AngleUnits, types::units::Radians};
+
+use crate::cip::xy06::CipCoords;
+
+#[derive(Copy, Clone, Debug, Default, PartialEq)]
+pub struct PoleCoords {
+    pub x: Angle,
+    pub y: Angle,
+}
 
 /// The spherical angles E and d.
 struct SphericalAngles {
-    e: Radians,
-    d: Radians,
+    e: Angle,
+    d: Angle,
 }
 
 impl SphericalAngles {
-    fn new(cip: DVec2) -> Self {
-        let r2 = cip[0] * cip[0] + cip[1] * cip[1];
-        let e = cip[1].atan2(cip[0]);
-        let d = (r2 / (1.0 - r2)).sqrt().atan();
+    fn new(CipCoords { x, y }: CipCoords) -> Self {
+        let r2 = x.0.powi(2) + y.0.powi(2);
+        let e = y.0.atan2(x.0).rad();
+        let d = (r2 / (1.0 - r2)).sqrt().atan().rad();
         Self { e, d }
     }
 }
@@ -34,12 +42,12 @@ impl SphericalAngles {
 ///
 /// Note that the signs of all angles are reversed relative to ERFA, which uses left-handed
 /// coordinates, whereas glam is right-handed.
-pub fn celestial_to_intermediate_frame_of_date_matrix(cip: DVec2, s: Radians) -> DMat3 {
-    let spherical_angles = SphericalAngles::new(cip);
+pub fn celestial_to_intermediate_frame_of_date_matrix(xy: CipCoords, s: Angle) -> DMat3 {
+    let spherical_angles = SphericalAngles::new(xy);
     let mut result = DMat3::default();
-    result = DMat3::from_rotation_z(-spherical_angles.e) * result;
-    result = DMat3::from_rotation_y(-spherical_angles.d) * result;
-    DMat3::from_rotation_z(spherical_angles.e + s) * result
+    result = DMat3::from_rotation_z(-spherical_angles.e.0) * result;
+    result = DMat3::from_rotation_y(-spherical_angles.d.0) * result;
+    DMat3::from_rotation_z(spherical_angles.e.0 + s.0) * result
 }
 
 /// Compute the celestial-terrestrial transformation matrix (excluding polar motion) given the
@@ -58,11 +66,11 @@ pub fn celestial_terrestrial_matrix(
 ///
 /// Note that the signs of all angles are reversed relative to ERFA, which uses left-handed
 /// coordinates, whereas glam is right-handed.
-pub fn polar_motion_matrix(pole_coords: DVec2, sp: Radians) -> DMat3 {
+pub fn polar_motion_matrix(pole_coords: PoleCoords, sp: Angle) -> DMat3 {
     let mut result = DMat3::default();
-    result = DMat3::from_rotation_z(-sp) * result;
-    result = DMat3::from_rotation_y(pole_coords[0]) * result;
-    DMat3::from_rotation_x(pole_coords[1]) * result
+    result = DMat3::from_rotation_z(-sp.0) * result;
+    result = DMat3::from_rotation_y(pole_coords.x.0) * result;
+    DMat3::from_rotation_x(pole_coords.y.0) * result
 }
 
 #[cfg(test)]
@@ -75,11 +83,11 @@ mod tests {
 
     #[test]
     fn test_celestial_to_intermediate_frame_of_date_matrix_jd0() {
-        let cip = DVec2 {
-            x: -0.4088355637476968,
-            y: -0.38359667445777073,
+        let cip = CipCoords {
+            x: -0.4088355637476968.rad(),
+            y: -0.38359667445777073.rad(),
         };
-        let s = -0.0723985415686306;
+        let s = -0.0723985415686306.rad();
         let expected = [
             0.899981235912944,
             -0.151285348992267,
@@ -97,11 +105,11 @@ mod tests {
 
     #[test]
     fn test_celestial_to_intermediate_frame_of_date_matrix_j2000() {
-        let cip = DVec2 {
-            x: -0.0000269463795685740,
-            y: -0.00002800472282281282,
+        let cip = CipCoords {
+            x: -0.0000269463795685740.rad(),
+            y: -0.00002800472282281282.rad(),
         };
-        let s = -0.00000001013396519178;
+        let s = -0.00000001013396519178.rad();
         let expected = [
             0.999999999636946,
             -0.00000001051127817488,
@@ -119,11 +127,11 @@ mod tests {
 
     #[test]
     fn test_celestial_to_intermediate_frame_of_date_matrix_j2100() {
-        let cip = DVec2 {
-            x: 0.00972070446172924,
-            y: -0.0000673058699616719,
+        let cip = CipCoords {
+            x: 0.00972070446172924.rad(),
+            y: -0.0000673058699616719.rad(),
         };
-        let s = -0.00000000480511934533;
+        let s = -0.00000000480511934533.rad();
         let expected = [
             0.999952752836184,
             0.00000032233307144280,
@@ -163,11 +171,11 @@ mod tests {
 
     #[test]
     fn test_polar_motion_matrix() {
-        let pole_coords = DVec2 {
-            x: 0.123456789,
-            y: 0.987654321,
+        let pole_coords = PoleCoords {
+            x: 0.123456789.rad(),
+            y: 0.987654321.rad(),
         };
-        let sp = 1.23456789;
+        let sp = 1.23456789.rad();
         let expected = [
             0.32741794183501576,
             -0.4859020097420154,

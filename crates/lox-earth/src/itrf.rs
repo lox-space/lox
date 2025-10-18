@@ -5,15 +5,15 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, you can obtain one at https://mozilla.org/MPL/2.0/.
  */
-use crate::cio::s06::s;
-use crate::cip::xy06::cip_coords;
+use crate::cio::s06::cio_locator;
+use crate::cip::xy06::CipCoords;
 use crate::coordinate_transformations::{
-    celestial_to_intermediate_frame_of_date_matrix, polar_motion_matrix,
+    PoleCoords, celestial_to_intermediate_frame_of_date_matrix, polar_motion_matrix,
 };
 use crate::eop::{EopProvider, EopProviderError};
-use crate::rotation_angle::RotationAngle;
-use crate::tio::sp_00;
-use glam::{DMat3, DVec2, DVec3};
+use crate::rotation_angle::earth_rotation_angle_00;
+use crate::tio::tio_locator;
+use glam::{DMat3, DVec3};
 use lox_bodies::{Earth, RotationalElements};
 use lox_frames::dynamic::DynTransformError;
 use lox_frames::transformations::TryTransform;
@@ -30,9 +30,9 @@ transform_provider!(EopProvider);
 
 pub fn icrf_to_cirf(centuries: f64) -> Rotation {
     // TODO: Add IERS corrections
-    let xy = cip_coords(centuries);
-    let cio_locator = s(centuries, xy);
-    let m = celestial_to_intermediate_frame_of_date_matrix(xy, cio_locator);
+    let xy = CipCoords::new(centuries);
+    let s = cio_locator(centuries, xy);
+    let m = celestial_to_intermediate_frame_of_date_matrix(xy, s);
     Rotation::new(m)
 }
 
@@ -55,18 +55,18 @@ where
 }
 
 pub fn cirf_to_tirf(seconds: f64) -> Rotation {
-    let era = Earth::rotation_angle_00(seconds / SECONDS_PER_DAY);
+    let era = earth_rotation_angle_00(seconds / SECONDS_PER_DAY);
     let rate = Earth.rotation_rate(seconds);
-    let m = DMat3::from_rotation_z(-era);
+    let m = DMat3::from_rotation_z(-era.0);
     let v = DVec3::new(0.0, 0.0, rate);
     Rotation::new(m).with_angular_velocity(v)
 }
 
 pub fn tirf_to_itrf(centuries: f64) -> Rotation {
     // TODO: Add IERS corrections
-    let pole_coords: DVec2 = (0.0, 0.0).into();
-    let tio_locator = sp_00(centuries);
-    let m = polar_motion_matrix(pole_coords, tio_locator);
+    let pole_coords = PoleCoords::default();
+    let sp = tio_locator(centuries);
+    let m = polar_motion_matrix(pole_coords, sp);
     Rotation::new(m)
 }
 

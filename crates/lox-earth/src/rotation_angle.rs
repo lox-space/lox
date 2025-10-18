@@ -10,19 +10,12 @@
 
 use std::f64::consts::TAU;
 
-use lox_bodies::Earth;
-use lox_units::types::units::{Days, Radians};
+use lox_units::{Angle, AngleUnits, types::units::Days};
 
-pub trait RotationAngle {
-    /// Computes the Earth Rotation Angle (ERA) in radians using the IAU 2000 model.
-    fn rotation_angle_00(days_since_j2000_ut1: Days) -> Radians;
-}
-
-impl RotationAngle for Earth {
-    fn rotation_angle_00(days_since_j2000_ut1: Days) -> Radians {
-        let f = days_since_j2000_ut1.rem_euclid(1.0); // fractional part of t
-        TAU * (f + 0.7790572732640 + 0.00273781191135448 * days_since_j2000_ut1) % TAU
-    }
+pub fn earth_rotation_angle_00(days_since_j2000_ut1: Days) -> Angle {
+    let f = days_since_j2000_ut1.rem_euclid(1.0); // fractional part of t
+    let era = (TAU * (f + 0.7790572732640 + 0.00273781191135448 * days_since_j2000_ut1)).rad();
+    era.mod_two_pi()
 }
 
 #[cfg(test)]
@@ -33,11 +26,11 @@ mod tests {
     use super::*;
 
     #[rstest]
-    #[case::before_j2000(-123.45, 6.227104062035152)]
-    #[case::j2000(0.0, 4.894961212823756)]
-    #[case::after_j2000(123.45, 3.562818363612361)]
-    fn test_rotation_angle_00(#[case] days_since_j2000_ut1: Days, #[case] expected: Radians) {
-        let actual = Earth::rotation_angle_00(days_since_j2000_ut1);
-        assert_float_eq!(expected, actual, rel <= 1e-9);
+    #[case::before_j2000(-123.45, 6.227104062035152.rad())]
+    #[case::j2000(0.0, 4.894961212823756.rad())]
+    #[case::after_j2000(123.45, 3.562818363612361.rad())]
+    fn test_rotation_angle_00(#[case] days_since_j2000_ut1: Days, #[case] expected: Angle) {
+        let actual = earth_rotation_angle_00(days_since_j2000_ut1);
+        assert_float_eq!(expected.0, actual.0, rel <= 1e-9);
     }
 }
