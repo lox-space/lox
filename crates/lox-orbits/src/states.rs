@@ -19,10 +19,10 @@ use lox_ephem::{Ephemeris, path_from_ids};
 use lox_frames::transformations::TryTransform;
 use lox_math::{
     glam::Azimuth,
-    math::{mod_two_pi, normalize_two_pi},
     roots::{BracketError, FindRoot, Secant},
 };
 use lox_time::{Time, julian_dates::JulianDate, time_scales::DynTimeScale, time_scales::TimeScale};
+use lox_units::{Angle, AngleUnits};
 use thiserror::Error;
 
 use crate::anomalies::{eccentric_to_true, hyperbolic_to_true};
@@ -350,9 +350,9 @@ pub(crate) fn rv_to_keplerian(r: DVec3, v: DVec3, mu: f64) -> KeplerianElements 
         semi_major_axis,
         eccentricity,
         inclination,
-        longitude_of_ascending_node: mod_two_pi(longitude_of_ascending_node),
-        argument_of_periapsis: mod_two_pi(argument_of_periapsis),
-        true_anomaly: normalize_two_pi(true_anomaly, 0.0),
+        longitude_of_ascending_node: longitude_of_ascending_node.rad().mod_two_pi().0,
+        argument_of_periapsis: argument_of_periapsis.rad().mod_two_pi().0,
+        true_anomaly: true_anomaly.rad().normalize_two_pi(Angle::ZERO).0,
     }
 }
 

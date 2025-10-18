@@ -9,28 +9,30 @@
 //! Module s06 exposes a function for calculating the Celestial Intermediate Origin (CIO) locator,
 //! s, using IAU 2006 precession and IAU 2000A nutation.
 
-use glam::DVec2;
-
 use lox_bodies::fundamental::iers03::{
     general_accum_precession_in_longitude_iers03, mean_moon_sun_elongation_iers03,
 };
 use lox_bodies::{Earth, Moon, Sun, Venus};
-use lox_math::math::arcsec_to_rad;
-use lox_units::types::units::{JulianCenturies, Radians};
+use lox_units::types::units::JulianCenturies;
+use lox_units::{Angle, AngleUnits};
+
+use crate::cip::xy06::CipCoords;
 
 mod terms;
 
 /// l, l', F, D, Ω, LVe, LE and pA.
-type FundamentalArgs = [Radians; 8];
+type FundamentalArgs = [Angle; 8];
 
 /// Computes the Celestial Intermediate Origin (CIO) locator s, in radians, given the (X, Y)
 /// coordinates of the Celestial Intermediate Pole (CIP).
-pub fn s(centuries_since_j2000_tdb: JulianCenturies, xy: DVec2) -> Radians {
+pub fn cio_locator(
+    centuries_since_j2000_tdb: JulianCenturies,
+    CipCoords { x, y }: CipCoords,
+) -> Angle {
     let fundamental_args = fundamental_args(centuries_since_j2000_tdb);
     let evaluated_terms = evaluate_terms(&fundamental_args);
-    let arcsec = fast_polynomial::poly_array(centuries_since_j2000_tdb, &evaluated_terms);
-    let radians = arcsec_to_rad(arcsec);
-    radians - xy[0] * xy[1] / 2.0
+    let s = fast_polynomial::poly_array(centuries_since_j2000_tdb, &evaluated_terms).asec();
+    Angle(s.0 - x.0 * y.0 / 2.0)
 }
 
 fn fundamental_args(centuries_since_j2000_tdb: JulianCenturies) -> FundamentalArgs {
@@ -69,7 +71,7 @@ fn evaluate_single_order_terms(
             .fundamental_arg_coeffs
             .iter()
             .zip(args)
-            .fold(0.0, |acc, (coeff, arg)| acc + coeff * arg);
+            .fold(0.0, |acc, (coeff, arg)| acc + coeff * arg.0);
 
         acc + term.sin_coeff * a.sin() + term.cos_coeff * a.cos()
     })
@@ -77,9 +79,9 @@ fn evaluate_single_order_terms(
 
 #[cfg(test)]
 mod tests {
-    use float_eq::assert_float_eq;
+    use std::iter::zip;
 
-    use crate::cip::xy06::cip_coords;
+    use float_eq::assert_float_eq;
 
     use super::*;
 
@@ -88,22 +90,34 @@ mod tests {
     #[test]
     fn test_s_jd0() {
         let jd0: JulianCenturies = -67.11964407939767;
-        let xy = cip_coords(jd0);
-        assert_float_eq!(s(jd0, xy), -0.0723985415686306, rel <= TOLERANCE);
+        let xy = CipCoords::new(jd0);
+        assert_float_eq!(
+            cio_locator(jd0, xy).0,
+            -0.0723985415686306,
+            rel <= TOLERANCE
+        );
     }
 
     #[test]
     fn test_s_j2000() {
         let j2000: JulianCenturies = 0.0;
-        let xy = cip_coords(j2000);
-        assert_float_eq!(s(j2000, xy), -0.00000001013396519178, rel <= TOLERANCE);
+        let xy = CipCoords::new(j2000);
+        assert_float_eq!(
+            cio_locator(j2000, xy).0,
+            -0.00000001013396519178,
+            rel <= TOLERANCE
+        );
     }
 
     #[test]
     fn test_s_j2100() {
         let j2100: JulianCenturies = 1.0;
-        let xy = cip_coords(j2100);
-        assert_float_eq!(s(j2100, xy), -0.00000000480511934533, rel <= TOLERANCE);
+        let xy = CipCoords::new(j2100);
+        assert_float_eq!(
+            cio_locator(j2100, xy).0,
+            -0.00000000480511934533,
+            rel <= TOLERANCE
+        );
     }
 
     #[test]
@@ -121,8 +135,8 @@ mod tests {
             general_accum_precession_in_longitude_iers03(j2000),
         ];
 
-        expected.iter().enumerate().for_each(|(i, expected)| {
-            assert_float_eq!(*expected, actual[i], rel <= TOLERANCE);
-        });
+        for (act, exp) in zip(actual, expected) {
+            assert_float_eq!(act.0, exp.0, rel <= TOLERANCE)
+        }
     }
 }

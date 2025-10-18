@@ -1,12 +1,109 @@
-use core::{
+use std::{
+    f64::consts::{FRAC_PI_2, FRAC_PI_4, PI, TAU},
     fmt::{Display, Formatter, Result},
-    ops::Neg,
+    ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign},
 };
+
+pub const DEGREES_IN_CIRCLE: f64 = 360.0;
+
+pub const ARCSECONDS_IN_CIRCLE: f64 = DEGREES_IN_CIRCLE * 60.0 * 60.0;
+
+pub const RADIANS_IN_ARCSECOND: f64 = TAU / ARCSECONDS_IN_CIRCLE;
+
+pub type Radians = f64;
 
 /// An angle in radians
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd)]
 #[repr(transparent)]
-pub struct Angle(pub f64);
+pub struct Angle(pub Radians);
+
+impl Angle {
+    pub const ZERO: Self = Self(0.0);
+    pub const PI: Self = Self(PI);
+    pub const TAU: Self = Self(TAU);
+    pub const FRAC_PI_2: Self = Self(FRAC_PI_2);
+    pub const FRAC_PI_4: Self = Self(FRAC_PI_4);
+
+    pub fn rad(rad: f64) -> Self {
+        Self(rad)
+    }
+
+    pub fn rad_normalized(rad: f64) -> Self {
+        Self(rad).mod_two_pi()
+    }
+
+    pub fn rad_normalized_signed(rad: f64) -> Self {
+        Self(rad).mod_two_pi_signed()
+    }
+
+    pub fn deg(deg: f64) -> Self {
+        Self(deg.to_radians())
+    }
+
+    pub fn deg_normalized(deg: f64) -> Self {
+        Self((deg % DEGREES_IN_CIRCLE).to_radians()).mod_two_pi()
+    }
+
+    pub fn deg_normalized_signed(deg: f64) -> Self {
+        Self((deg % DEGREES_IN_CIRCLE).to_radians())
+    }
+
+    pub fn asec(asec: f64) -> Self {
+        Self(asec * RADIANS_IN_ARCSECOND)
+    }
+
+    pub fn asec_normalized(asec: f64) -> Self {
+        Self((asec % ARCSECONDS_IN_CIRCLE) * RADIANS_IN_ARCSECOND).mod_two_pi()
+    }
+
+    pub fn asec_normalized_signed(asec: f64) -> Self {
+        Self((asec % ARCSECONDS_IN_CIRCLE) * RADIANS_IN_ARCSECOND)
+    }
+
+    pub fn cos(&self) -> f64 {
+        self.0.cos()
+    }
+
+    pub fn cosh(&self) -> f64 {
+        self.0.cosh()
+    }
+
+    pub fn sin(&self) -> f64 {
+        self.0.sin()
+    }
+
+    pub fn sinh(&self) -> f64 {
+        self.0.sinh()
+    }
+
+    pub fn sin_cos(&self) -> (f64, f64) {
+        self.0.sin_cos()
+    }
+
+    pub fn tan(&self) -> f64 {
+        self.0.tan()
+    }
+
+    pub fn tanh(&self) -> f64 {
+        self.0.tanh()
+    }
+
+    pub fn mod_two_pi(&self) -> Self {
+        let mut a = self.0 % TAU;
+        if a < 0.0 {
+            a += TAU
+        }
+        Self(a)
+    }
+
+    pub fn mod_two_pi_signed(&self) -> Self {
+        Self(self.0 % TAU)
+    }
+
+    pub fn normalize_two_pi(&self, center: Self) -> Self {
+        Self(self.0 - TAU * ((self.0 + PI - center.0) / TAU).floor())
+    }
+}
 
 impl Display for Angle {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
@@ -15,48 +112,49 @@ impl Display for Angle {
     }
 }
 
-impl Neg for Angle {
-    type Output = Self;
-
-    fn neg(self) -> Self::Output {
-        Self(-self.0)
-    }
-}
-
 pub trait AngleUnits {
     fn deg(&self) -> Angle;
     fn rad(&self) -> Angle;
+    fn asec(&self) -> Angle;
+    fn mas(&self) -> Angle;
+    fn uas(&self) -> Angle;
 }
 
 impl AngleUnits for f64 {
     fn deg(&self) -> Angle {
-        Angle(self.to_radians())
+        Angle::deg(*self)
     }
 
     fn rad(&self) -> Angle {
-        Angle(*self)
+        Angle::rad(*self)
+    }
+
+    fn asec(&self) -> Angle {
+        Angle::asec(*self)
+    }
+
+    fn mas(&self) -> Angle {
+        Angle::asec(self * 1e-3)
+    }
+
+    fn uas(&self) -> Angle {
+        Angle::asec(self * 1e-6)
     }
 }
 
 pub const ASTRONOMICAL_UNIT: f64 = 1.495978707e11;
 
+type Meters = f64;
+
 /// A distance in meters
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd)]
 #[repr(transparent)]
-pub struct Distance(pub f64);
+pub struct Distance(pub Meters);
 
 impl Display for Distance {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         (1e-3 * self.0).fmt(f)?;
         write!(f, " km")
-    }
-}
-
-impl Neg for Distance {
-    type Output = Self;
-
-    fn neg(self) -> Self::Output {
-        Self(-self.0)
     }
 }
 
@@ -80,23 +178,17 @@ impl DistanceUnits for f64 {
     }
 }
 
+type MetersPerSecond = f64;
+
 /// A velocity in meters per second
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd)]
 #[repr(transparent)]
-pub struct Velocity(pub f64);
+pub struct Velocity(pub MetersPerSecond);
 
 impl Display for Velocity {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         (1e-3 * self.0).fmt(f)?;
         write!(f, " km/s")
-    }
-}
-
-impl Neg for Velocity {
-    type Output = Self;
-
-    fn neg(self) -> Self::Output {
-        Self(-self.0)
     }
 }
 
@@ -202,6 +294,58 @@ impl FrequencyUnits for f64 {
     }
 }
 
+macro_rules! impl_ops {
+    ($($unit:ident),*) => {
+        $(
+            impl Neg for $unit {
+                type Output = Self;
+
+                fn neg(self) -> Self::Output {
+                    Self(-self.0)
+                }
+            }
+
+            impl Add for $unit {
+                type Output = Self;
+
+                fn add(self, rhs: Self) -> Self::Output {
+                    Self(self.0 + rhs.0)
+                }
+            }
+
+            impl AddAssign for $unit {
+                fn add_assign(&mut self, rhs: Self) {
+                    self.0 = self.0 + rhs.0;
+                }
+            }
+
+            impl Sub for $unit {
+                type Output = Self;
+
+                fn sub(self, rhs: Self) -> Self::Output {
+                    Self(self.0 - rhs.0)
+                }
+            }
+
+            impl SubAssign for $unit {
+                fn sub_assign(&mut self, rhs: Self) {
+                    self.0 = self.0 - rhs.0
+                }
+            }
+
+            impl Mul<$unit> for f64 {
+                type Output = $unit;
+
+                fn mul(self, rhs: $unit) -> Self::Output {
+                    $unit(self * rhs.0)
+                }
+            }
+        )*
+    };
+}
+
+impl_ops!(Angle, Distance, Velocity);
+
 #[cfg(test)]
 mod tests {
     use alloc::format;
@@ -242,6 +386,40 @@ mod tests {
     #[test]
     fn test_angle_neg() {
         assert_eq!(Angle(-1.0), -1.0.rad())
+    }
+
+    const TOLERANCE: f64 = f64::EPSILON;
+
+    #[rstest]
+    // Center 0.0 – expected range [-π, π).
+    #[case(Angle::ZERO, Angle::ZERO, 0.0)]
+    #[case(Angle::PI, Angle::ZERO, -PI)]
+    #[case(-Angle::PI, Angle::ZERO, -PI)]
+    #[case(Angle::TAU, Angle::ZERO, 0.0)]
+    #[case(Angle::FRAC_PI_2, Angle::ZERO, FRAC_PI_2)]
+    #[case(-Angle::FRAC_PI_2, Angle::ZERO, -FRAC_PI_2)]
+    // Center π – expected range [0, 2π).
+    #[case(Angle::ZERO, Angle::PI, 0.0)]
+    #[case(Angle::PI, Angle::PI, PI)]
+    #[case(-Angle::PI, Angle::PI, PI)]
+    #[case(Angle::TAU, Angle::PI, 0.0)]
+    #[case(Angle::FRAC_PI_2, Angle::PI, FRAC_PI_2)]
+    #[case(-Angle::FRAC_PI_2, Angle::PI, 3.0 * PI / 2.0)]
+    // Center -π – expected range [-2π, 0).
+    #[case(Angle::ZERO, -Angle::PI, -TAU)]
+    #[case(Angle::PI, -Angle::PI, -PI)]
+    #[case(-Angle::PI, -Angle::PI, -PI)]
+    #[case(Angle::TAU, -Angle::PI, -TAU)]
+    #[case(Angle::FRAC_PI_2, -Angle::PI, -3.0 * PI / 2.0)]
+    #[case(-Angle::FRAC_PI_2, -Angle::PI, -FRAC_PI_2)]
+    fn test_angle_normalize_two_pi(#[case] angle: Angle, #[case] center: Angle, #[case] exp: f64) {
+        // abs is preferred to rel for floating-point comparisons with 0.0. See
+        // https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/#inferna
+        if exp == 0.0 {
+            assert_float_eq!(angle.normalize_two_pi(center).0, exp, abs <= TOLERANCE);
+        } else {
+            assert_float_eq!(angle.normalize_two_pi(center).0, exp, rel <= TOLERANCE);
+        }
     }
 
     #[test]

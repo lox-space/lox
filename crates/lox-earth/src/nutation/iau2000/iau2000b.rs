@@ -8,13 +8,13 @@
 
 use lox_bodies::fundamental::simon1994::mean_moon_sun_elongation_simon1994;
 use lox_bodies::*;
+use lox_units::AngleUnits;
 use lox_units::types::units::JulianCenturies;
 
 use crate::nutation::Nutation;
 use crate::nutation::iau2000::{DelaunayArguments, luni_solar_nutation};
 
 mod luni_solar;
-mod planetary;
 
 pub(crate) fn nutation_iau2000b(centuries_since_j2000_tdb: JulianCenturies) -> Nutation {
     let luni_solar_args = DelaunayArguments {
@@ -25,11 +25,18 @@ pub(crate) fn nutation_iau2000b(centuries_since_j2000_tdb: JulianCenturies) -> N
         om: Moon.ascending_node_mean_longitude_simon1994(centuries_since_j2000_tdb),
     };
 
+    dbg!(&luni_solar_args);
+
+    let planetary = Nutation {
+        longitude: -0.135.mas(),
+        obliquity: 0.388.mas(),
+    };
+
     luni_solar_nutation(
         centuries_since_j2000_tdb,
         &luni_solar_args,
         &luni_solar::COEFFICIENTS,
-    ) + planetary::OFFSETS
+    ) + planetary
 }
 
 #[cfg(test)]
@@ -48,23 +55,31 @@ mod tests {
     fn test_nutation_iau2000b_jd0() {
         let jd0: JulianCenturies = -67.11964407939767;
         let actual = nutation_iau2000b(jd0);
-        assert_float_eq!(0.00001795252319583832, actual.longitude, rel <= TOLERANCE);
-        assert_float_eq!(0.00004024546928325646, actual.obliquity, rel <= TOLERANCE);
+        assert_float_eq!(0.00001795252319583832, actual.longitude.0, rel <= TOLERANCE);
+        assert_float_eq!(0.00004024546928325646, actual.obliquity.0, rel <= TOLERANCE);
     }
 
     #[test]
     fn test_nutation_iau2000b_j2000() {
         let j2000: JulianCenturies = 0.0;
         let actual = nutation_iau2000b(j2000);
-        assert_float_eq!(-0.00006754261253992235, actual.longitude, rel <= TOLERANCE);
-        assert_float_eq!(-0.00002797092331098565, actual.obliquity, rel <= TOLERANCE);
+        assert_float_eq!(
+            -0.00006754261253992235,
+            actual.longitude.0,
+            rel <= TOLERANCE
+        );
+        assert_float_eq!(
+            -0.00002797092331098565,
+            actual.obliquity.0,
+            rel <= TOLERANCE
+        );
     }
 
     #[test]
     fn test_nutation_iau2000b_j2100() {
         let j2100: JulianCenturies = 1.0;
         let actual = nutation_iau2000b(j2100);
-        assert_float_eq!(0.00001586677813945249, actual.longitude, rel <= TOLERANCE);
-        assert_float_eq!(0.00004162057618703116, actual.obliquity, rel <= TOLERANCE);
+        assert_float_eq!(0.00001586677813945249, actual.longitude.0, rel <= TOLERANCE);
+        assert_float_eq!(0.00004162057618703116, actual.obliquity.0, rel <= TOLERANCE);
     }
 }

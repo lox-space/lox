@@ -8,18 +8,20 @@
 
 use std::f64::consts::TAU;
 
+use lox_units::{Angle, AngleUnits};
 use thiserror::Error;
 
 use lox_bodies::fundamental::iers03::mean_moon_sun_elongation_iers03;
 use lox_bodies::{Moon, Sun};
-use lox_math::math::arcsec_to_rad_two_pi;
 use lox_units::constants::f64::time::{DAYS_PER_JULIAN_CENTURY, MJD_J2000};
 use lox_units::types::julian_dates::ModifiedJulianDate;
-use lox_units::types::units::{Arcseconds, Microarcseconds, Radians, Seconds};
+use lox_units::types::units::{Arcseconds, Seconds};
 
 use crate::tides::constants::{LUNI_SOLAR_TIDAL_TERMS, OCEANIC_TIDAL_TERMS};
 
 mod constants;
+
+type Microarcseconds = f64;
 
 #[derive(Clone, Copy, Debug, Error, PartialEq)]
 #[error(
@@ -82,7 +84,7 @@ pub struct Interpolation {
 }
 
 /// χ (GMST + π) followed by Delaunay arguments l, l', F, D, Ω.
-type TidalArgs = [Arcseconds; 6];
+type TidalArgs = [Angle; 6];
 
 fn tidal_args(julian_centuries_since_j2000: f64) -> TidalArgs {
     [
@@ -128,7 +130,7 @@ fn oceanic_tidal_correction(tidal_args: &TidalArgs) -> OceanicTidalCorrection {
         let mut agg = 0.0;
         for (i, arg) in tidal_args.iter().enumerate() {
             let coeff = term.coefficients[i] as f64;
-            agg = arg.mul_add(coeff, agg);
+            agg = arg.0.mul_add(coeff, agg);
         }
         agg %= TAU;
 
@@ -168,7 +170,7 @@ fn luni_solar_tidal_correction(tidal_args: &TidalArgs) -> LuniSolarTidalCorrecti
     for term in LUNI_SOLAR_TIDAL_TERMS {
         let mut agg = 0.0;
         for (i, arg) in tidal_args.iter().enumerate() {
-            agg += term.coefficients[i] as f64 * arg;
+            agg += term.coefficients[i] as f64 * arg.0;
         }
         agg %= TAU;
 
@@ -188,7 +190,7 @@ fn julian_centuries_since_j2000(mjd: ModifiedJulianDate) -> f64 {
 }
 
 /// GMST + π.
-fn chi(julian_centuries_since_j2000: f64) -> Radians {
+fn chi(julian_centuries_since_j2000: f64) -> Angle {
     let mut arcsec = fast_polynomial::poly_array(
         julian_centuries_since_j2000,
         &[
@@ -199,7 +201,7 @@ fn chi(julian_centuries_since_j2000: f64) -> Radians {
         ],
     );
     arcsec = arcsec.mul_add(15.0, 648000.0);
-    arcsec_to_rad_two_pi(arcsec)
+    arcsec.asec().mod_two_pi_signed()
 }
 
 #[cfg(test)]
