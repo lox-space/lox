@@ -32,7 +32,7 @@ mod tests {
     #[test]
     fn test_sp_00() {
         let t = 123.45;
-        let expected = -2.812961699849694e-8;
-        assert_float_eq!(expected, tio_locator(t).0, rel <= 1e-12);
+        let expected = -2.812961699849694e-8.rad();
+        assert_float_eq!(expected, tio_locator(t), rel <= 1e-12.rad());
     }
 }

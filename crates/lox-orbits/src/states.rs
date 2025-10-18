@@ -350,9 +350,12 @@ pub(crate) fn rv_to_keplerian(r: DVec3, v: DVec3, mu: f64) -> KeplerianElements 
         semi_major_axis,
         eccentricity,
         inclination,
-        longitude_of_ascending_node: longitude_of_ascending_node.rad().mod_two_pi().0,
-        argument_of_periapsis: argument_of_periapsis.rad().mod_two_pi().0,
-        true_anomaly: true_anomaly.rad().normalize_two_pi(Angle::ZERO).0,
+        longitude_of_ascending_node: longitude_of_ascending_node.rad().mod_two_pi().to_radians(),
+        argument_of_periapsis: argument_of_periapsis.rad().mod_two_pi().to_radians(),
+        true_anomaly: true_anomaly
+            .rad()
+            .normalize_two_pi(Angle::ZERO)
+            .to_radians(),
     }
 }
 

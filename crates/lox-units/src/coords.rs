@@ -1,4 +1,4 @@
-use core::f64::consts::{FRAC_PI_2, PI, TAU};
+use core::f64::consts::TAU;
 
 use glam::DVec3;
 use thiserror::Error;
@@ -51,7 +51,7 @@ impl AzElBuilder {
     }
 
     pub fn az(&mut self, azimuth: Angle) -> &mut Self {
-        self.azimuth = match azimuth.0 {
+        self.azimuth = match azimuth.to_radians() {
             lon if lon < 0.0 => Err(AzElError::InvalidAzimuth(azimuth)),
             lon if lon > TAU => Err(AzElError::InvalidAzimuth(azimuth)),
             _ => Ok(azimuth),
@@ -60,7 +60,7 @@ impl AzElBuilder {
     }
 
     pub fn el(&mut self, elevation: Angle) -> &mut Self {
-        self.elevation = match elevation.0 {
+        self.elevation = match elevation.to_radians() {
             lat if lat < 0.0 => Err(AzElError::InvalidElevation(elevation)),
             lat if lat > TAU => Err(AzElError::InvalidElevation(elevation)),
             _ => Ok(elevation),
@@ -127,18 +127,18 @@ impl LonLatAltBuilder {
     }
 
     pub fn lon(&mut self, longitude: Angle) -> &mut Self {
-        self.longitude = match longitude.0 {
-            lon if lon < -PI => Err(LonLatAltError::InvalidLongitude(longitude)),
-            lon if lon > PI => Err(LonLatAltError::InvalidLongitude(longitude)),
+        self.longitude = match longitude.to_degrees() {
+            lon if lon < -180.0 => Err(LonLatAltError::InvalidLongitude(longitude)),
+            lon if lon > 180.0 => Err(LonLatAltError::InvalidLongitude(longitude)),
             _ => Ok(longitude),
         };
         self
     }
 
     pub fn lat(&mut self, latitude: Angle) -> &mut Self {
-        self.latitude = match latitude.0 {
-            lat if lat < -FRAC_PI_2 => Err(LonLatAltError::InvalidLatitude(latitude)),
-            lat if lat > FRAC_PI_2 => Err(LonLatAltError::InvalidLatitude(latitude)),
+        self.latitude = match latitude.to_degrees() {
+            lat if lat < -90.0 => Err(LonLatAltError::InvalidLatitude(latitude)),
+            lat if lat > 90.0 => Err(LonLatAltError::InvalidLatitude(latitude)),
             _ => Ok(latitude),
         };
         self

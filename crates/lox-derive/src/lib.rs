@@ -561,24 +561,22 @@ fn generate_call_to_deserializer_for_kvn_type(
 fn get_generic_type_argument(field: &Field) -> Option<(String, &syn::Path)> {
     if let syn::Type::Path(type_path) = &field.ty {
         let path_part = type_path.path.segments.first();
-        if let Some(path_part) = path_part {
-            if let syn::PathArguments::AngleBracketed(type_argument) = &path_part.arguments {
-                if let Some(syn::GenericArgument::Type(syn::Type::Path(r#type))) =
-                    &type_argument.args.first()
-                {
-                    return Some((
-                        r#type
-                            .path
-                            .segments
-                            .clone()
-                            .into_iter()
-                            .map(|ident| ident.to_token_stream().to_string())
-                            .reduce(|a, b| a + "::" + &b)
-                            .unwrap(),
-                        &r#type.path,
-                    ));
-                }
-            }
+        if let Some(path_part) = path_part
+            && let syn::PathArguments::AngleBracketed(type_argument) = &path_part.arguments
+            && let Some(syn::GenericArgument::Type(syn::Type::Path(r#type))) =
+                &type_argument.args.first()
+        {
+            return Some((
+                r#type
+                    .path
+                    .segments
+                    .clone()
+                    .into_iter()
+                    .map(|ident| ident.to_token_stream().to_string())
+                    .reduce(|a, b| a + "::" + &b)
+                    .unwrap(),
+                &r#type.path,
+            ));
         }
     }
 

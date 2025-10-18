@@ -130,7 +130,7 @@ fn oceanic_tidal_correction(tidal_args: &TidalArgs) -> OceanicTidalCorrection {
         let mut agg = 0.0;
         for (i, arg) in tidal_args.iter().enumerate() {
             let coeff = term.coefficients[i] as f64;
-            agg = arg.0.mul_add(coeff, agg);
+            agg = arg.to_radians().mul_add(coeff, agg);
         }
         agg %= TAU;
 
@@ -170,7 +170,7 @@ fn luni_solar_tidal_correction(tidal_args: &TidalArgs) -> LuniSolarTidalCorrecti
     for term in LUNI_SOLAR_TIDAL_TERMS {
         let mut agg = 0.0;
         for (i, arg) in tidal_args.iter().enumerate() {
-            agg += term.coefficients[i] as f64 * arg.0;
+            agg += term.coefficients[i] as f64 * arg.to_radians();
         }
         agg %= TAU;
 

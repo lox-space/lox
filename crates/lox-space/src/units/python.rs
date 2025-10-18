@@ -14,15 +14,15 @@ macro_rules! py_unit {
             impl $pyunit {
                 #[new]
                 pub fn new(value: f64) -> Self {
-                    Self($unit(value))
+                    Self($unit::new(value))
                 }
 
                 pub fn __rmul__(&self, other: f64) -> Self {
-                    Self($unit(other * self.0.0))
+                    Self(other * self.0)
                 }
 
                 pub fn __repr__(&self) ->  String {
-                    format!("{}({})", stringify!($unit), self.0.0)
+                    format!("{}({})", stringify!($unit), f64::from(self.0))
                 }
 
                 pub fn __str__(&self) -> String {
@@ -30,15 +30,16 @@ macro_rules! py_unit {
                 }
 
                 pub fn __complex__<'py>(&self, py: Python<'py>) -> Bound<'py, PyComplex> {
-                    PyComplex::from_doubles(py, self.0.0, 0.0)
+                    PyComplex::from_doubles(py, self.0.into(), 0.0)
                 }
 
                 pub fn __float__(&self) -> f64 {
-                    self.0.0
+                    self.0.into()
                 }
 
                 pub fn __int__(&self) -> i64 {
-                    self.0.0.round_ties_even() as i64
+                   let val: f64 =  self.0.into();
+                    val.round_ties_even() as i64
                 }
             }
         )*

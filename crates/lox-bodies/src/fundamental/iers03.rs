@@ -179,7 +179,7 @@ mod tests {
     // This is somewhat loose, being based on observations of how closely our implementations
     // match ERFA outputs rather than any target tolerance.
     // See https://github.com/lox-space/lox/pull/23#discussion_r1398485509
-    const TOLERANCE: f64 = 1e-11;
+    const TOLERANCE: Angle = Angle::rad(1e-11);
 
     // Test cases for t.
     const T_ZERO: JulianCenturies = 0.0;
@@ -189,18 +189,18 @@ mod tests {
     #[test]
     fn test_general_accum_precession_in_longitude() {
         assert_float_eq!(
-            general_accum_precession_in_longitude_iers03(T_ZERO).0,
-            0.0,
+            general_accum_precession_in_longitude_iers03(T_ZERO),
+            0.0.rad(),
             abs <= TOLERANCE
         );
         assert_float_eq!(
-            general_accum_precession_in_longitude_iers03(T_POSITIVE).0,
-            0.030109136153306,
+            general_accum_precession_in_longitude_iers03(T_POSITIVE),
+            0.030109136153306.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
-            general_accum_precession_in_longitude_iers03(T_NEGATIVE).0,
-            -0.030092715150709,
+            general_accum_precession_in_longitude_iers03(T_NEGATIVE),
+            -0.030092715150709.rad(),
             rel <= TOLERANCE
         );
     }
@@ -208,18 +208,18 @@ mod tests {
     #[test]
     fn test_mean_moon_sun_elongation() {
         assert_float_eq!(
-            mean_moon_sun_elongation_iers03(T_ZERO).0,
-            5.198466588660199,
+            mean_moon_sun_elongation_iers03(T_ZERO),
+            5.198466588660199.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
-            mean_moon_sun_elongation_iers03(T_POSITIVE).0,
-            5.067140540634685,
+            mean_moon_sun_elongation_iers03(T_POSITIVE),
+            5.067140540634685.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
-            mean_moon_sun_elongation_iers03(T_NEGATIVE).0,
-            -0.953486820085112,
+            mean_moon_sun_elongation_iers03(T_NEGATIVE),
+            -0.953486820085112.rad(),
             rel <= TOLERANCE
         );
     }
@@ -227,18 +227,18 @@ mod tests {
     #[test]
     fn test_mean_anomaly_sun() {
         assert_float_eq!(
-            Sun.mean_anomaly_iers03(T_ZERO).0,
-            6.240060126913284,
+            Sun.mean_anomaly_iers03(T_ZERO),
+            6.240060126913284.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
-            Sun.mean_anomaly_iers03(T_POSITIVE).0,
-            2.806497028806777,
+            Sun.mean_anomaly_iers03(T_POSITIVE),
+            2.806497028806777.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
-            Sun.mean_anomaly_iers03(T_NEGATIVE).0,
-            -2.892755565148333,
+            Sun.mean_anomaly_iers03(T_NEGATIVE),
+            -2.892755565148333.rad(),
             rel <= TOLERANCE
         );
     }
@@ -246,18 +246,18 @@ mod tests {
     #[test]
     fn test_mean_anomaly_moon() {
         assert_float_eq!(
-            Moon.mean_anomaly_iers03(T_ZERO).0,
-            2.355555743493879,
+            Moon.mean_anomaly_iers03(T_ZERO),
+            2.355555743493879.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
-            Moon.mean_anomaly_iers03(T_POSITIVE).0,
-            5.399629142881749,
+            Moon.mean_anomaly_iers03(T_POSITIVE),
+            5.399629142881749.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
-            Moon.mean_anomaly_iers03(T_NEGATIVE).0,
-            -0.688046529809469,
+            Moon.mean_anomaly_iers03(T_NEGATIVE),
+            -0.688046529809469.rad(),
             rel <= TOLERANCE
         );
     }
@@ -265,21 +265,18 @@ mod tests {
     #[test]
     fn test_moon_mean_long_minus_ascending_node_mean_long() {
         assert_float_eq!(
-            Moon.mean_longitude_minus_ascending_node_mean_longitude_iers03(T_ZERO)
-                .0,
-            1.627905081537519,
+            Moon.mean_longitude_minus_ascending_node_mean_longitude_iers03(T_ZERO),
+            1.627905081537519.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
-            Moon.mean_longitude_minus_ascending_node_mean_longitude_iers03(T_POSITIVE)
-                .0,
-            2.076275583431815,
+            Moon.mean_longitude_minus_ascending_node_mean_longitude_iers03(T_POSITIVE),
+            2.076275583431815.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
-            Moon.mean_longitude_minus_ascending_node_mean_longitude_iers03(T_NEGATIVE)
-                .0,
-            -5.103839172987284,
+            Moon.mean_longitude_minus_ascending_node_mean_longitude_iers03(T_NEGATIVE),
+            -5.103839172987284.rad(),
             rel <= TOLERANCE
         );
     }
@@ -287,18 +284,18 @@ mod tests {
     #[test]
     fn test_moon_ascending_node_mean_longitude() {
         assert_float_eq!(
-            Moon.ascending_node_mean_longitude_iers03(T_ZERO).0,
-            2.182439196615671,
+            Moon.ascending_node_mean_longitude_iers03(T_ZERO),
+            2.182439196615671.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
-            Moon.ascending_node_mean_longitude_iers03(T_POSITIVE).0,
-            -1.793758671799353,
+            Moon.ascending_node_mean_longitude_iers03(T_POSITIVE),
+            -1.793758671799353.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
-            Moon.ascending_node_mean_longitude_iers03(T_NEGATIVE).0,
-            6.158747492734907,
+            Moon.ascending_node_mean_longitude_iers03(T_NEGATIVE),
+            6.158747492734907.rad(),
             rel <= TOLERANCE
         );
     }
@@ -306,18 +303,18 @@ mod tests {
     #[test]
     fn test_mean_longitude_mercury() {
         assert_float_eq!(
-            Mercury.mean_longitude_iers03(T_ZERO).0,
-            4.402608842,
+            Mercury.mean_longitude_iers03(T_ZERO),
+            4.402608842.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
-            Mercury.mean_longitude_iers03(T_POSITIVE).0,
-            1.857299860610716,
+            Mercury.mean_longitude_iers03(T_POSITIVE),
+            1.857299860610716.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
-            Mercury.mean_longitude_iers03(T_NEGATIVE).0,
-            -5.618452790969762,
+            Mercury.mean_longitude_iers03(T_NEGATIVE),
+            -5.618452790969762.rad(),
             rel <= TOLERANCE
         );
     }
@@ -325,18 +322,18 @@ mod tests {
     #[test]
     fn test_mean_longitude_venus() {
         assert_float_eq!(
-            Venus.mean_longitude_iers03(T_ZERO).0,
-            3.176146697,
+            Venus.mean_longitude_iers03(T_ZERO),
+            3.176146697.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
-            Venus.mean_longitude_iers03(T_POSITIVE).0,
-            1.155338629224197,
+            Venus.mean_longitude_iers03(T_POSITIVE),
+            1.155338629224197.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
-            Venus.mean_longitude_iers03(T_NEGATIVE).0,
-            -1.086230542403939,
+            Venus.mean_longitude_iers03(T_NEGATIVE),
+            -1.086230542403939.rad(),
             rel <= TOLERANCE
         );
     }
@@ -344,18 +341,18 @@ mod tests {
     #[test]
     fn test_mean_longitude_earth() {
         assert_float_eq!(
-            Earth.mean_longitude_iers03(T_ZERO).0,
-            1.753470314,
+            Earth.mean_longitude_iers03(T_ZERO),
+            1.753470314.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
-            Earth.mean_longitude_iers03(T_POSITIVE).0,
-            4.610047014245303,
+            Earth.mean_longitude_iers03(T_POSITIVE),
+            4.610047014245303.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
-            Earth.mean_longitude_iers03(T_NEGATIVE).0,
-            -1.103106386245365,
+            Earth.mean_longitude_iers03(T_NEGATIVE),
+            -1.103106386245365.rad(),
             rel <= TOLERANCE
         );
     }
@@ -363,18 +360,18 @@ mod tests {
     #[test]
     fn test_mean_longitude_mars() {
         assert_float_eq!(
-            Mars.mean_longitude_iers03(T_ZERO).0,
-            6.203480913,
+            Mars.mean_longitude_iers03(T_ZERO),
+            6.203480913.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
-            Mars.mean_longitude_iers03(T_POSITIVE).0,
-            3.934534133027128,
+            Mars.mean_longitude_iers03(T_POSITIVE),
+            3.934534133027128.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
-            Mars.mean_longitude_iers03(T_NEGATIVE).0,
-            -4.093942921386315,
+            Mars.mean_longitude_iers03(T_NEGATIVE),
+            -4.093942921386315.rad(),
             rel <= TOLERANCE
         );
     }
@@ -382,18 +379,18 @@ mod tests {
     #[test]
     fn test_mean_longitude_jupiter() {
         assert_float_eq!(
-            Jupiter.mean_longitude_iers03(T_ZERO).0,
-            0.599546497,
+            Jupiter.mean_longitude_iers03(T_ZERO),
+            0.599546497.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
-            Jupiter.mean_longitude_iers03(T_POSITIVE).0,
-            3.161638835180952,
+            Jupiter.mean_longitude_iers03(T_POSITIVE),
+            3.161638835180952.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
-            Jupiter.mean_longitude_iers03(T_NEGATIVE).0,
-            -1.962545841180955,
+            Jupiter.mean_longitude_iers03(T_NEGATIVE),
+            -1.962545841180955.rad(),
             rel <= TOLERANCE
         );
     }
@@ -401,18 +398,18 @@ mod tests {
     #[test]
     fn test_mean_longitude_saturn() {
         assert_float_eq!(
-            Saturn.mean_longitude_iers03(T_ZERO).0,
-            0.874016757,
+            Saturn.mean_longitude_iers03(T_ZERO),
+            0.874016757.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
-            Saturn.mean_longitude_iers03(T_POSITIVE).0,
-            2.074498123217225,
+            Saturn.mean_longitude_iers03(T_POSITIVE),
+            2.074498123217225.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
-            Saturn.mean_longitude_iers03(T_NEGATIVE).0,
-            -0.326464609217226,
+            Saturn.mean_longitude_iers03(T_NEGATIVE),
+            -0.326464609217226.rad(),
             rel <= TOLERANCE
         );
     }
@@ -420,18 +417,18 @@ mod tests {
     #[test]
     fn test_mean_longitude_uranus() {
         assert_float_eq!(
-            Uranus.mean_longitude_iers03(T_ZERO).0,
-            5.481293872,
+            Uranus.mean_longitude_iers03(T_ZERO),
+            5.481293872.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
-            Uranus.mean_longitude_iers03(T_POSITIVE).0,
-            2.147219293009648,
+            Uranus.mean_longitude_iers03(T_POSITIVE),
+            2.147219293009648.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
-            Uranus.mean_longitude_iers03(T_NEGATIVE).0,
-            -3.75100216336882,
+            Uranus.mean_longitude_iers03(T_NEGATIVE),
+            -3.75100216336882.rad(),
             rel <= TOLERANCE
         );
     }
@@ -439,18 +436,18 @@ mod tests {
     #[test]
     fn test_mean_longitude_neptune() {
         assert_float_eq!(
-            Neptune.mean_longitude_iers03(T_ZERO).0,
-            5.311886287,
+            Neptune.mean_longitude_iers03(T_ZERO),
+            5.311886287.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
-            Neptune.mean_longitude_iers03(T_POSITIVE).0,
-            3.73648311451046,
+            Neptune.mean_longitude_iers03(T_POSITIVE),
+            3.73648311451046.rad(),
             rel <= TOLERANCE
         );
         assert_float_eq!(
-            Neptune.mean_longitude_iers03(T_NEGATIVE).0,
-            0.604104152309954,
+            Neptune.mean_longitude_iers03(T_NEGATIVE),
+            0.604104152309954.rad(),
             rel <= TOLERANCE
         );
     }
