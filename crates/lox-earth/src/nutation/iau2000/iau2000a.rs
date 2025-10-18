@@ -123,18 +123,26 @@ fn planetary_nutation(
 mod tests {
     use float_eq::assert_float_eq;
 
-    use lox_units::types::units::JulianCenturies;
+    use lox_units::{Angle, AngleUnits, types::units::JulianCenturies};
 
     use super::nutation_iau2000a;
 
-    const TOLERANCE: f64 = 1e-11;
+    const TOLERANCE: Angle = Angle::rad(1e-11);
 
     #[test]
     fn test_nutation_iau2000a_jd0() {
         let jd0: JulianCenturies = -67.11964407939767;
         let actual = nutation_iau2000a(jd0);
-        assert_float_eq!(0.00000737147877835653, actual.longitude.0, rel <= TOLERANCE);
-        assert_float_eq!(0.00004132135467915123, actual.obliquity.0, rel <= TOLERANCE);
+        assert_float_eq!(
+            0.00000737147877835653.rad(),
+            actual.longitude,
+            rel <= TOLERANCE
+        );
+        assert_float_eq!(
+            0.00004132135467915123.rad(),
+            actual.obliquity,
+            rel <= TOLERANCE
+        );
     }
 
     #[test]
@@ -142,13 +150,13 @@ mod tests {
         let j2000: JulianCenturies = 0.0;
         let actual = nutation_iau2000a(j2000);
         assert_float_eq!(
-            -0.00006754422426417299,
-            actual.longitude.0,
+            -0.00006754422426417299.rad(),
+            actual.longitude,
             rel <= TOLERANCE
         );
         assert_float_eq!(
-            -0.00002797083119237414,
-            actual.obliquity.0,
+            -0.00002797083119237414.rad(),
+            actual.obliquity,
             rel <= TOLERANCE
         );
     }
@@ -157,7 +165,15 @@ mod tests {
     fn test_nutation_iau2000a_j2100() {
         let j2100: JulianCenturies = 1.0;
         let actual = nutation_iau2000a(j2100);
-        assert_float_eq!(0.00001585987390484147, actual.longitude.0, rel <= TOLERANCE);
-        assert_float_eq!(0.00004162326779426948, actual.obliquity.0, rel <= TOLERANCE);
+        assert_float_eq!(
+            0.00001585987390484147.rad(),
+            actual.longitude,
+            rel <= TOLERANCE
+        );
+        assert_float_eq!(
+            0.00004162326779426948.rad(),
+            actual.obliquity,
+            rel <= TOLERANCE
+        );
     }
 }

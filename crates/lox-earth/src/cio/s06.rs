@@ -32,7 +32,7 @@ pub fn cio_locator(
     let fundamental_args = fundamental_args(centuries_since_j2000_tdb);
     let evaluated_terms = evaluate_terms(&fundamental_args);
     let s = fast_polynomial::poly_array(centuries_since_j2000_tdb, &evaluated_terms).asec();
-    Angle(s.0 - x.0 * y.0 / 2.0)
+    Angle::rad(s.to_radians() - x.to_radians() * y.to_radians() / 2.0)
 }
 
 fn fundamental_args(centuries_since_j2000_tdb: JulianCenturies) -> FundamentalArgs {
@@ -71,7 +71,7 @@ fn evaluate_single_order_terms(
             .fundamental_arg_coeffs
             .iter()
             .zip(args)
-            .fold(0.0, |acc, (coeff, arg)| acc + coeff * arg.0);
+            .fold(0.0.rad(), |acc, (&coeff, &arg)| acc + coeff * arg);
 
         acc + term.sin_coeff * a.sin() + term.cos_coeff * a.cos()
     })
@@ -85,15 +85,15 @@ mod tests {
 
     use super::*;
 
-    const TOLERANCE: f64 = 1e-11;
+    const TOLERANCE: Angle = Angle::rad(1e-11);
 
     #[test]
     fn test_s_jd0() {
         let jd0: JulianCenturies = -67.11964407939767;
         let xy = CipCoords::new(jd0);
         assert_float_eq!(
-            cio_locator(jd0, xy).0,
-            -0.0723985415686306,
+            cio_locator(jd0, xy),
+            -0.0723985415686306.rad(),
             rel <= TOLERANCE
         );
     }
@@ -103,8 +103,8 @@ mod tests {
         let j2000: JulianCenturies = 0.0;
         let xy = CipCoords::new(j2000);
         assert_float_eq!(
-            cio_locator(j2000, xy).0,
-            -0.00000001013396519178,
+            cio_locator(j2000, xy),
+            -0.00000001013396519178.rad(),
             rel <= TOLERANCE
         );
     }
@@ -114,8 +114,8 @@ mod tests {
         let j2100: JulianCenturies = 1.0;
         let xy = CipCoords::new(j2100);
         assert_float_eq!(
-            cio_locator(j2100, xy).0,
-            -0.00000000480511934533,
+            cio_locator(j2100, xy),
+            -0.00000000480511934533.rad(),
             rel <= TOLERANCE
         );
     }
@@ -136,7 +136,7 @@ mod tests {
         ];
 
         for (act, exp) in zip(actual, expected) {
-            assert_float_eq!(act.0, exp.0, rel <= TOLERANCE)
+            assert_float_eq!(act, exp, rel <= TOLERANCE)
         }
     }
 }

@@ -29,8 +29,8 @@ struct SphericalAngles {
 
 impl SphericalAngles {
     fn new(CipCoords { x, y }: CipCoords) -> Self {
-        let r2 = x.0.powi(2) + y.0.powi(2);
-        let e = y.0.atan2(x.0).rad();
+        let r2 = x.to_radians().powi(2) + y.to_radians().powi(2);
+        let e = y.to_radians().atan2(x.to_radians()).rad();
         let d = (r2 / (1.0 - r2)).sqrt().atan().rad();
         Self { e, d }
     }
@@ -45,9 +45,9 @@ impl SphericalAngles {
 pub fn celestial_to_intermediate_frame_of_date_matrix(xy: CipCoords, s: Angle) -> DMat3 {
     let spherical_angles = SphericalAngles::new(xy);
     let mut result = DMat3::default();
-    result = DMat3::from_rotation_z(-spherical_angles.e.0) * result;
-    result = DMat3::from_rotation_y(-spherical_angles.d.0) * result;
-    DMat3::from_rotation_z(spherical_angles.e.0 + s.0) * result
+    result = DMat3::from_rotation_z(-spherical_angles.e.to_radians()) * result;
+    result = DMat3::from_rotation_y(-spherical_angles.d.to_radians()) * result;
+    DMat3::from_rotation_z(spherical_angles.e.to_radians() + s.to_radians()) * result
 }
 
 /// Compute the celestial-terrestrial transformation matrix (excluding polar motion) given the
@@ -68,9 +68,9 @@ pub fn celestial_terrestrial_matrix(
 /// coordinates, whereas glam is right-handed.
 pub fn polar_motion_matrix(pole_coords: PoleCoords, sp: Angle) -> DMat3 {
     let mut result = DMat3::default();
-    result = DMat3::from_rotation_z(-sp.0) * result;
-    result = DMat3::from_rotation_y(pole_coords.x.0) * result;
-    DMat3::from_rotation_x(pole_coords.y.0) * result
+    result = DMat3::from_rotation_z(-sp.to_radians()) * result;
+    result = DMat3::from_rotation_y(pole_coords.x.to_radians()) * result;
+    DMat3::from_rotation_x(pole_coords.y.to_radians()) * result
 }
 
 #[cfg(test)]
