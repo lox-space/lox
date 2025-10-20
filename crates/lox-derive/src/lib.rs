@@ -12,7 +12,73 @@ use darling::{FromDeriveInput, FromMeta, util::Flag};
 use proc_macro_crate::{FoundCrate, crate_name};
 use proc_macro2::{Ident, Span};
 use quote::{ToTokens, format_ident, quote};
-use syn::{DeriveInput, Field, parse_macro_input};
+use syn::{Data, DeriveInput, Error, Field, Fields, Index, parse_macro_input};
+
+#[proc_macro_derive(ApproxEq)]
+pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let DeriveInput { ident, data, .. } = parse_macro_input!(input);
+
+    let lox_test_utils = match crate_name("lox-test-utils") {
+        Ok(FoundCrate::Itself) => quote!(crate),
+        Ok(FoundCrate::Name(name)) => {
+            let ident = syn::Ident::new(&name, proc_macro2::Span::call_site());
+            quote!(::#ident)
+        }
+        Err(_) => quote!(::lox_test_utils),
+    };
+
+    let fields: Vec<proc_macro2::TokenStream> = match data {
+        Data::Struct(data) => match data.fields {
+            Fields::Named(fields) => fields
+                .named
+                .into_iter()
+                .map(|f| {
+                    let f = f.ident.unwrap();
+                    quote! {#f}
+                })
+                .collect::<Vec<proc_macro2::TokenStream>>(),
+            Fields::Unnamed(fields) => fields
+                .unnamed
+                .into_iter()
+                .enumerate()
+                .map(|(idx, _)| {
+                    let idx = Index::from(idx);
+                    quote! {#idx}
+                })
+                .collect(),
+            Fields::Unit => {
+                return Error::new(ident.span(), "unit structs are not supported")
+                    .into_compile_error()
+                    .into();
+            }
+        },
+        _ => {
+            return Error::new(ident.span(), format!("{} is not a struct", ident))
+                .into_compile_error()
+                .into();
+        }
+    }
+    .iter()
+    .map(|f| {
+        quote! {
+            results.merge(stringify!(#f).to_string(), self.#f.approx_eq(&rhs.#f, atol, rtol));
+        }
+    })
+    .collect();
+
+    let results = quote! {#lox_test_utils::approx_eq::results::ApproxEqResults};
+
+    let output = quote! {
+        impl #lox_test_utils::approx_eq::ApproxEq for #ident {
+            fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> #results {
+                let mut results = #results::new();
+                #(#fields)*
+                results
+            }
+        }
+    };
+    output.into()
+}
 
 #[derive(FromMeta)]
 struct Scales {
@@ -34,7 +100,10 @@ const SCALES: [&str; 6] = ["Tai", "Tcb", "Tcg", "Tdb", "Tt", "Ut1"];
 #[proc_macro_derive(OffsetProvider, attributes(lox_time))]
 pub fn derive_offset_provider(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input);
-    let opts = Opts::from_derive_input(&input).expect("Wrong options");
+    let opts = match Opts::from_derive_input(&input) {
+        Ok(opts) => opts,
+        Err(err) => return err.write_errors().into(),
+    };
     let DeriveInput { ident, .. } = input;
 
     let lox_time = match crate_name("lox-time") {
@@ -1212,7 +1281,7 @@ pub fn derive_kvn_deserialize(item: proc_macro::TokenStream) -> proc_macro::Toke
     let is_value_unit_struct = is_value_unit_struct(&item);
     let prefix_and_postfix_keyword = get_prefix_and_postfix_keyword(&item.attrs);
 
-    let syn::Data::Struct(strukt) = item.data else {
+    let Data::Struct(strukt) = item.data else {
         return syn::Error::new_spanned(
             &item,
             "only structs are supported for `#[derive(KvnDeserialize)]`",
@@ -1222,7 +1291,7 @@ pub fn derive_kvn_deserialize(item: proc_macro::TokenStream) -> proc_macro::Toke
     };
 
     let (struct_deserializer, should_check_key_match) = match strukt.fields {
-        syn::Fields::Named(syn::FieldsNamed { named, .. }) => (
+        Fields::Named(syn::FieldsNamed { named, .. }) => (
             deserializer_for_struct_with_named_fields(
                 type_name,
                 &named,
@@ -1231,7 +1300,7 @@ pub fn derive_kvn_deserialize(item: proc_macro::TokenStream) -> proc_macro::Toke
             ),
             is_value_unit_struct,
         ),
-        syn::Fields::Unnamed(syn::FieldsUnnamed { unnamed, .. }) => (
+        Fields::Unnamed(syn::FieldsUnnamed { unnamed, .. }) => (
             deserializers_for_struct_with_unnamed_fields(type_name, &unnamed),
             true,
         ),
