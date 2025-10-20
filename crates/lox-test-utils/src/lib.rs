@@ -6,3 +6,7 @@ pub mod approx_eq;
 pub fn data_dir() -> PathBuf {
     PathBuf::from(format!("{}/../../data", env!("CARGO_MANIFEST_DIR")))
 }
+
+#[cfg(feature = "derive")]
+#[doc(inline)]
+pub use lox_derive::ApproxEq;

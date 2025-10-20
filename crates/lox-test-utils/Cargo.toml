@@ -9,4 +9,8 @@ authors.workspace = true
 repository.workspace = true
 
 [dependencies]
+lox-derive = { workspace = true, optional = true }
 glam.workspace = true
+
+[features]
+derive = ["dep:lox-derive"]
