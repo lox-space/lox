@@ -1,3 +1,5 @@
+//! Newtype wrappers for unitful [`f64`] double precision values
+
 use std::{
     f64::consts::{FRAC_PI_2, FRAC_PI_4, PI, TAU},
     fmt::{Display, Formatter, Result},
@@ -6,15 +8,18 @@ use std::{
 
 use float_eq::derive_float_eq;
 
+/// Degrees in full circle
 pub const DEGREES_IN_CIRCLE: f64 = 360.0;
 
+/// Arcseconds in full circle
 pub const ARCSECONDS_IN_CIRCLE: f64 = DEGREES_IN_CIRCLE * 60.0 * 60.0;
 
+/// Radians per arcsecond
 pub const RADIANS_IN_ARCSECOND: f64 = TAU / ARCSECONDS_IN_CIRCLE;
 
-pub type Radians = f64;
+type Radians = f64;
 
-/// An angle in radians
+/// Angle in radians.
 #[derive_float_eq(
     ulps_tol = "AngleUlps",
     ulps_tol_derive = "Clone, Copy, Debug, PartialEq",
@@ -26,80 +31,109 @@ pub type Radians = f64;
 pub struct Angle(Radians);
 
 impl Angle {
+    /// An angle equal to zero.
     pub const ZERO: Self = Self(0.0);
+    /// An angle equal to π.
     pub const PI: Self = Self(PI);
+    /// An angle equal to τ = 2π.
     pub const TAU: Self = Self(TAU);
+    /// An angle equal to π/2.
     pub const FRAC_PI_2: Self = Self(FRAC_PI_2);
+    /// An angle equal to π/4.
     pub const FRAC_PI_4: Self = Self(FRAC_PI_4);
 
+    /// Creates a new angle from an `f64` value in radians.
     pub const fn new(rad: f64) -> Self {
         Self(rad)
     }
 
-    pub const fn rad(rad: f64) -> Self {
+    /// Creates a new angle from an `f64` value in radians.
+    pub const fn radians(rad: f64) -> Self {
         Self(rad)
     }
 
-    pub const fn rad_normalized(rad: f64) -> Self {
+    /// Creates a new angle from an `f64` value in radians and normalize the angle
+    /// to the interval [0.0, 2π).
+    pub const fn radians_normalized(rad: f64) -> Self {
         Self(rad).mod_two_pi()
     }
 
-    pub const fn rad_normalized_signed(rad: f64) -> Self {
+    /// Creates a new angle from an `f64` value in radians and normalize the angle
+    /// to the interval (-2π, 2π).
+    pub const fn radians_normalized_signed(rad: f64) -> Self {
         Self(rad).mod_two_pi_signed()
     }
 
-    pub const fn deg(deg: f64) -> Self {
+    /// Creates a new angle from an `f64` value in degrees.
+    pub const fn degrees(deg: f64) -> Self {
         Self(deg.to_radians())
     }
 
-    pub const fn deg_normalized(deg: f64) -> Self {
+    /// Creates a new angle from an `f64` value in degrees and normalize the angle
+    /// to the interval [0.0, 2π).
+    pub const fn degrees_normalized(deg: f64) -> Self {
         Self((deg % DEGREES_IN_CIRCLE).to_radians()).mod_two_pi()
     }
 
-    pub const fn deg_normalized_signed(deg: f64) -> Self {
+    /// Creates a new angle from an `f64` value in degrees and normalize the angle
+    /// to the interval (-2π, 2π).
+    pub const fn degrees_normalized_signed(deg: f64) -> Self {
         Self((deg % DEGREES_IN_CIRCLE).to_radians())
     }
 
-    pub const fn asec(asec: f64) -> Self {
+    /// Creates a new angle from an `f64` value in arcseconds.
+    pub const fn arcseconds(asec: f64) -> Self {
         Self(asec * RADIANS_IN_ARCSECOND)
     }
 
-    pub const fn asec_normalized(asec: f64) -> Self {
+    /// Creates a new angle from an `f64` value in arcseconds and normalize the angle
+    /// to the interval [0.0, 2π).
+    pub const fn arcseconds_normalized(asec: f64) -> Self {
         Self((asec % ARCSECONDS_IN_CIRCLE) * RADIANS_IN_ARCSECOND).mod_two_pi()
     }
 
-    pub const fn asec_normalized_signed(asec: f64) -> Self {
+    /// Creates a new angle from an `f64` value in arcseconds and normalize the angle
+    /// to the interval (-2π, 2π).
+    pub const fn arcseconds_normalized_signed(asec: f64) -> Self {
         Self((asec % ARCSECONDS_IN_CIRCLE) * RADIANS_IN_ARCSECOND)
     }
 
+    /// Returns the cosine of the angle.
     pub fn cos(&self) -> f64 {
         self.0.cos()
     }
 
+    /// Returns the hyperbolic cosine of the angle.
     pub fn cosh(&self) -> f64 {
         self.0.cosh()
     }
 
+    /// Returns the sine of the angle.
     pub fn sin(&self) -> f64 {
         self.0.sin()
     }
 
+    /// Returns the hyperbolic sine of the angle.
     pub fn sinh(&self) -> f64 {
         self.0.sinh()
     }
 
+    /// Returns sine and cosine of the angle.
     pub fn sin_cos(&self) -> (f64, f64) {
         self.0.sin_cos()
     }
 
+    /// Returns the tangent of the angle.
     pub fn tan(&self) -> f64 {
         self.0.tan()
     }
 
+    /// Returns the hyperbolic tangent of the angle.
     pub fn tanh(&self) -> f64 {
         self.0.tanh()
     }
 
+    /// Returns a new angle that is normalized to the interval [0.0, 2π).
     pub const fn mod_two_pi(&self) -> Self {
         let mut a = self.0 % TAU;
         if a < 0.0 {
@@ -108,22 +142,28 @@ impl Angle {
         Self(a)
     }
 
+    /// Returns a new angle that is normalized to the interval (-2π, 2π).
     pub const fn mod_two_pi_signed(&self) -> Self {
         Self(self.0 % TAU)
     }
 
+    /// Returns a new angle that is normalized to a (-π, π) interval
+    /// centered around `center`.
     pub const fn normalize_two_pi(&self, center: Self) -> Self {
         Self(self.0 - TAU * ((self.0 + PI - center.0) / TAU).floor())
     }
 
+    /// Returns the value of the angle in radians.
     pub const fn to_radians(&self) -> f64 {
         self.0
     }
 
+    /// Returns the value of the angle in degrees.
     pub const fn to_degrees(&self) -> f64 {
         self.0.to_degrees()
     }
 
+    /// Returns the value of the angle in arcseconds.
     pub const fn to_arcseconds(&self) -> f64 {
         self.0 / RADIANS_IN_ARCSECOND
     }
@@ -136,48 +176,125 @@ impl Display for Angle {
     }
 }
 
+/// A trait for creating [`Angle`] instances from primitives.
+///
+/// By default it is implemented for [`f64`] and [`i64`].
+///
+/// # Examples
+///
+/// ```
+/// use lox_units::units::AngleUnits;
+///
+/// let angle = 360.deg();
+/// assert_eq!(angle.to_radians(), std::f64::consts::TAU);
+/// ```
 pub trait AngleUnits {
-    fn deg(&self) -> Angle;
+    /// Creates an angle from a value in radians.
     fn rad(&self) -> Angle;
-    fn asec(&self) -> Angle;
+    /// Creates an angle from a value in degrees.
+    fn deg(&self) -> Angle;
+    /// Creates an angle from a value in arcseconds.
+    fn arcsec(&self) -> Angle;
+    /// Creates an angle from a value in milliarcseconds.
     fn mas(&self) -> Angle;
+    /// Creates an angle from a value in microarcseconds.
     fn uas(&self) -> Angle;
 }
 
 impl AngleUnits for f64 {
-    fn deg(&self) -> Angle {
-        Angle::deg(*self)
-    }
-
     fn rad(&self) -> Angle {
-        Angle::rad(*self)
+        Angle::radians(*self)
     }
 
-    fn asec(&self) -> Angle {
-        Angle::asec(*self)
+    fn deg(&self) -> Angle {
+        Angle::degrees(*self)
+    }
+
+    fn arcsec(&self) -> Angle {
+        Angle::arcseconds(*self)
     }
 
     fn mas(&self) -> Angle {
-        Angle::asec(self * 1e-3)
+        Angle::arcseconds(self * 1e-3)
     }
 
     fn uas(&self) -> Angle {
-        Angle::asec(self * 1e-6)
+        Angle::arcseconds(self * 1e-6)
     }
 }
 
+impl AngleUnits for i64 {
+    fn rad(&self) -> Angle {
+        Angle::radians(*self as f64)
+    }
+
+    fn deg(&self) -> Angle {
+        Angle::degrees(*self as f64)
+    }
+
+    fn arcsec(&self) -> Angle {
+        Angle::arcseconds(*self as f64)
+    }
+
+    fn mas(&self) -> Angle {
+        Angle::arcseconds(*self as f64 * 1e-3)
+    }
+
+    fn uas(&self) -> Angle {
+        Angle::arcseconds(*self as f64 * 1e-6)
+    }
+}
+
+/// The astronomical unit in meters.
 pub const ASTRONOMICAL_UNIT: f64 = 1.495978707e11;
 
 type Meters = f64;
 
-/// A distance in meters
+/// Distance in meters.
+#[derive_float_eq(
+    ulps_tol = "DistanceUlps",
+    ulps_tol_derive = "Clone, Copy, Debug, PartialEq",
+    debug_ulps_diff = "DistanceDebugUlpsDiff",
+    debug_ulps_diff_derive = "Clone, Copy, Debug, PartialEq"
+)]
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd)]
 #[repr(transparent)]
-pub struct Distance(pub Meters);
+pub struct Distance(Meters);
 
 impl Distance {
+    /// Create a new distance from an `f64` value in meters.
     pub const fn new(m: f64) -> Self {
         Self(m)
+    }
+
+    /// Create a new distance from an `f64` value in meters.
+    pub const fn meters(m: f64) -> Self {
+        Self(m)
+    }
+
+    /// Create a new distance from an `f64` value in kilometers.
+    pub const fn kilometers(m: f64) -> Self {
+        Self(m * 1e3)
+    }
+
+    /// Create a new distance from an `f64` value in astronomical units.
+    pub const fn astronomical_units(m: f64) -> Self {
+        Self(m * ASTRONOMICAL_UNIT)
+    }
+
+    /// Returns the value of the distance in meters.
+    pub const fn to_meters(&self) -> f64 {
+        self.0
+    }
+
+    /// Returns the value of the distance in kilometers.
+    pub const fn to_kilometers(&self) -> f64 {
+        self.0 * 1e-3
+    }
+
+    /// Returns the value of the distance in astronomical units.
+    pub const fn to_astronomical_units(&self) -> f64 {
+        self.0 / ASTRONOMICAL_UNIT
     }
 }
 
@@ -188,36 +305,92 @@ impl Display for Distance {
     }
 }
 
+/// A trait for creating [`Distance`] instances from primitives.
+///
+/// By default it is implemented for [`f64`] and [`i64`].
+///
+/// # Examples
+///
+/// ```
+/// use lox_units::units::DistanceUnits;
+///
+/// let d = 1.km();
+/// assert_eq!(d.to_meters(), 1e3);
+/// ```
 pub trait DistanceUnits {
+    /// Creates a distance from a value in meters.
     fn m(&self) -> Distance;
+    /// Creates a distance from a value in kilometers.
     fn km(&self) -> Distance;
+    /// Creates a distance from a value in astronomical units.
     fn au(&self) -> Distance;
 }
 
 impl DistanceUnits for f64 {
     fn m(&self) -> Distance {
-        Distance(*self)
+        Distance::meters(*self)
     }
 
     fn km(&self) -> Distance {
-        Distance(1e3 * self)
+        Distance::kilometers(*self)
     }
 
     fn au(&self) -> Distance {
-        Distance(ASTRONOMICAL_UNIT * self)
+        Distance::astronomical_units(*self)
+    }
+}
+
+impl DistanceUnits for i64 {
+    fn m(&self) -> Distance {
+        Distance::meters(*self as f64)
+    }
+
+    fn km(&self) -> Distance {
+        Distance::kilometers(*self as f64)
+    }
+
+    fn au(&self) -> Distance {
+        Distance::astronomical_units(*self as f64)
     }
 }
 
 type MetersPerSecond = f64;
 
-/// A velocity in meters per second
+/// Velocity in meters per second.
+#[derive_float_eq(
+    ulps_tol = "VelocityUlps",
+    ulps_tol_derive = "Clone, Copy, Debug, PartialEq",
+    debug_ulps_diff = "VelocityDebugUlpsDiff",
+    debug_ulps_diff_derive = "Clone, Copy, Debug, PartialEq"
+)]
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd)]
 #[repr(transparent)]
-pub struct Velocity(pub MetersPerSecond);
+pub struct Velocity(MetersPerSecond);
 
 impl Velocity {
+    /// Creates a new velocity from an `f64` value in m/s.
     pub const fn new(mps: f64) -> Self {
         Self(mps)
+    }
+
+    /// Creates a new velocity from an `f64` value in m/s.
+    pub const fn meters_per_second(mps: f64) -> Self {
+        Self(mps)
+    }
+
+    /// Creates a new velocity from an `f64` value in km/s.
+    pub const fn kilometers_per_second(mps: f64) -> Self {
+        Self(mps * 1e3)
+    }
+
+    /// Returns the value of the velocity in m/s.
+    pub const fn to_meters_per_second(&self) -> f64 {
+        self.0
+    }
+
+    /// Returns the value of the velocity in km/s.
+    pub const fn to_kilometers_per_second(&self) -> f64 {
+        self.0 * 1e-3
     }
 }
 
@@ -228,56 +401,154 @@ impl Display for Velocity {
     }
 }
 
+/// A trait for creating [`Velocity`] instances from primitives.
+///
+/// By default it is implemented for [`f64`] and [`i64`].
+///
+/// # Examples
+///
+/// ```
+/// use lox_units::units::VelocityUnits;
+///
+/// let v = 1.kps();
+/// assert_eq!(v.to_meters_per_second(), 1e3);
+/// ```
 pub trait VelocityUnits {
+    /// Creates a velocity from a value in m/s.
     fn mps(&self) -> Velocity;
+    /// Creates a velocity from a value in km/s.
     fn kps(&self) -> Velocity;
 }
 
 impl VelocityUnits for f64 {
     fn mps(&self) -> Velocity {
-        Velocity(*self)
+        Velocity::meters_per_second(*self)
     }
 
     fn kps(&self) -> Velocity {
-        Velocity(1e3 * self)
+        Velocity::kilometers_per_second(*self)
     }
 }
 
-const C_0: f64 = 299792458.0;
+impl VelocityUnits for i64 {
+    fn mps(&self) -> Velocity {
+        Velocity::meters_per_second(*self as f64)
+    }
 
+    fn kps(&self) -> Velocity {
+        Velocity::kilometers_per_second(*self as f64)
+    }
+}
+
+/// The speed of light in vacuum in m/s.
+pub const SPEED_OF_LIGHT: f64 = 299792458.0;
+
+/// IEEE letter codes for frequency bands commonly used for satellite communications.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 pub enum FrequencyBand {
+    /// HF (High Frequency) – 3 to 30 MHz
     HF,
+    /// VHF (Very High Frequency) – 30 to 300 MHz
     VHF,
+    /// UHF (Ultra-High Frequency) – 0.3 to 1 GHz
     UHF,
+    /// L – 1 to 2 GHz
     L,
+    /// S – 2 to 4 GHz
     S,
+    /// C – 4 to 8 GHz
     C,
+    /// X – 8 to 12 GHz
     X,
+    /// Kᵤ – 12 to 18 GHz
     Ku,
+    /// K – 18 to 27 GHz
     K,
+    /// Kₐ – 27 to 40 GHz
     Ka,
+    /// V – 40 to 75 GHz
     V,
+    /// W – 75 to 110 GHz
     W,
+    /// G – 110 to 300 GHz
     G,
 }
 
-/// A frequency in Hertz
+type Hertz = f64;
+
+/// Frequency in Hertz
+#[derive_float_eq(
+    ulps_tol = "FrequencyUlps",
+    ulps_tol_derive = "Clone, Copy, Debug, PartialEq",
+    debug_ulps_diff = "FrequencyDebugUlpsDiff",
+    debug_ulps_diff_derive = "Clone, Copy, Debug, PartialEq"
+)]
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd)]
 #[repr(transparent)]
-pub struct Frequency(pub f64);
+pub struct Frequency(Hertz);
 
 impl Frequency {
-    pub const fn new(hz: f64) -> Self {
+    /// Creates a new frequency from an `f64` value in Hz.
+    pub const fn new(hz: Hertz) -> Self {
         Self(hz)
     }
-}
 
-impl Frequency {
-    pub fn wavelength(&self) -> Distance {
-        Distance(C_0 / self.0)
+    /// Creates a new frequency from an `f64` value in Hz.
+    pub const fn hertz(hz: Hertz) -> Self {
+        Self(hz)
     }
 
+    /// Creates a new frequency from an `f64` value in KHz.
+    pub const fn kilohertz(hz: Hertz) -> Self {
+        Self(hz * 1e3)
+    }
+
+    /// Creates a new frequency from an `f64` value in MHz.
+    pub const fn megahertz(hz: Hertz) -> Self {
+        Self(hz * 1e6)
+    }
+
+    /// Creates a new frequency from an `f64` value in GHz.
+    pub const fn gigahertz(hz: Hertz) -> Self {
+        Self(hz * 1e9)
+    }
+
+    /// Creates a new frequency from an `f64` value in THz.
+    pub const fn terahertz(hz: Hertz) -> Self {
+        Self(hz * 1e12)
+    }
+
+    /// Returns the value of the frequency in Hz.
+    pub const fn to_hertz(&self) -> f64 {
+        self.0
+    }
+
+    /// Returns the value of the frequency in KHz.
+    pub const fn to_kilohertz(&self) -> f64 {
+        self.0 * 1e-3
+    }
+
+    /// Returns the value of the frequency in MHz.
+    pub const fn to_megahertz(&self) -> f64 {
+        self.0 * 1e-6
+    }
+
+    /// Returns the value of the frequency in GHz.
+    pub const fn to_gigahertz(&self) -> f64 {
+        self.0 * 1e-9
+    }
+
+    /// Returns the value of the frequency in THz.
+    pub const fn to_terahertz(&self) -> f64 {
+        self.0 * 1e-12
+    }
+
+    /// Returns the wavelength.
+    pub fn wavelength(&self) -> Distance {
+        Distance(SPEED_OF_LIGHT / self.0)
+    }
+
+    /// Returns the IEEE letter code if the frequency matches one of the bands.
     pub fn band(&self) -> Option<FrequencyBand> {
         match self.0 {
             f if f < 3e6 => None,
@@ -306,37 +577,76 @@ impl Display for Frequency {
     }
 }
 
+/// A trait for creating [`Frequency`] instances from primitives.
+///
+/// By default it is implemented for [`f64`] and [`i64`].
+///
+/// # Examples
+///
+/// ```
+/// use lox_units::units::FrequencyUnits;
+///
+/// let f = 1.ghz();
+/// assert_eq!(f.to_hertz(), 1e9);
+/// ```
 pub trait FrequencyUnits {
+    /// Creates a frequency from a value in Hz.
     fn hz(&self) -> Frequency;
+    /// Creates a frequency from a value in KHz.
     fn khz(&self) -> Frequency;
+    /// Creates a frequency from a value in MHz.
     fn mhz(&self) -> Frequency;
+    /// Creates a frequency from a value in GHz.
     fn ghz(&self) -> Frequency;
+    /// Creates a frequency from a value in THz.
     fn thz(&self) -> Frequency;
 }
 
 impl FrequencyUnits for f64 {
     fn hz(&self) -> Frequency {
-        Frequency(*self)
+        Frequency::hertz(*self)
     }
 
     fn khz(&self) -> Frequency {
-        Frequency(1e3 * self)
+        Frequency::kilohertz(*self)
     }
 
     fn mhz(&self) -> Frequency {
-        Frequency(1e6 * self)
+        Frequency::megahertz(*self)
     }
 
     fn ghz(&self) -> Frequency {
-        Frequency(1e9 * self)
+        Frequency::gigahertz(*self)
     }
 
     fn thz(&self) -> Frequency {
-        Frequency(1e12 * self)
+        Frequency::terahertz(*self)
     }
 }
 
-macro_rules! impl_ops {
+impl FrequencyUnits for i64 {
+    fn hz(&self) -> Frequency {
+        Frequency::hertz(*self as f64)
+    }
+
+    fn khz(&self) -> Frequency {
+        Frequency::kilohertz(*self as f64)
+    }
+
+    fn mhz(&self) -> Frequency {
+        Frequency::megahertz(*self as f64)
+    }
+
+    fn ghz(&self) -> Frequency {
+        Frequency::gigahertz(*self as f64)
+    }
+
+    fn thz(&self) -> Frequency {
+        Frequency::terahertz(*self as f64)
+    }
+}
+
+macro_rules! trait_impls {
     ($($unit:ident),*) => {
         $(
             impl Neg for $unit {
@@ -392,7 +702,7 @@ macro_rules! impl_ops {
     };
 }
 
-impl_ops!(Angle, Distance, Frequency, Velocity);
+trait_impls!(Angle, Distance, Frequency, Velocity);
 
 #[cfg(test)]
 mod tests {

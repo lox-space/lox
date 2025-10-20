@@ -20,7 +20,7 @@ const SECULAR_DRIFT: ArcsecondsPerCentury = -47e-6;
 /// Approximate the TIO locator, s', in radians using the IAU 2000 model.
 #[inline]
 pub fn tio_locator(centuries_since_j2000_tt: JulianCenturies) -> Angle {
-    (SECULAR_DRIFT * centuries_since_j2000_tt).asec()
+    (SECULAR_DRIFT * centuries_since_j2000_tt).arcsec()
 }
 
 #[cfg(test)]
