@@ -201,7 +201,7 @@ fn chi(julian_centuries_since_j2000: f64) -> Angle {
         ],
     );
     arcsec = arcsec.mul_add(15.0, 648000.0);
-    arcsec.asec().mod_two_pi_signed()
+    arcsec.arcsec().mod_two_pi_signed()
 }
 
 #[cfg(test)]

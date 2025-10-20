@@ -145,7 +145,7 @@ impl LonLatAltBuilder {
     }
 
     pub fn alt(&mut self, altitude: Distance) -> &mut Self {
-        self.altitude = if !altitude.0.is_finite() {
+        self.altitude = if !altitude.to_meters().is_finite() {
             Err(LonLatAltError::InvalidAltitude(altitude))
         } else {
             Ok(altitude)
@@ -174,8 +174,12 @@ impl Cartesian {
         vz: Velocity,
     ) -> Self {
         Self {
-            pos: DVec3::new(x.0, y.0, z.0),
-            vel: DVec3::new(vx.0, vy.0, vz.0),
+            pos: DVec3::new(x.to_meters(), y.to_meters(), z.to_meters()),
+            vel: DVec3::new(
+                vx.to_meters_per_second(),
+                vy.to_meters_per_second(),
+                vz.to_meters_per_second(),
+            ),
         }
     }
 
@@ -196,27 +200,27 @@ impl Cartesian {
     }
 
     pub fn x(&self) -> Distance {
-        Distance(self.pos.x)
+        Distance::meters(self.pos.x)
     }
 
     pub fn y(&self) -> Distance {
-        Distance(self.pos.y)
+        Distance::meters(self.pos.y)
     }
 
     pub fn z(&self) -> Distance {
-        Distance(self.pos.z)
+        Distance::meters(self.pos.z)
     }
 
     pub fn vx(&self) -> Velocity {
-        Velocity(self.vel.x)
+        Velocity::meters_per_second(self.vel.x)
     }
 
     pub fn vy(&self) -> Velocity {
-        Velocity(self.vel.y)
+        Velocity::meters_per_second(self.vel.y)
     }
 
     pub fn vz(&self) -> Velocity {
-        Velocity(self.vel.z)
+        Velocity::meters_per_second(self.vel.z)
     }
 }
 
@@ -228,12 +232,16 @@ pub struct CartesianBuilder {
 
 impl CartesianBuilder {
     pub fn pos(&mut self, x: Distance, y: Distance, z: Distance) -> &mut Self {
-        self.pos = Some(DVec3::new(x.0, y.0, z.0));
+        self.pos = Some(DVec3::new(x.to_meters(), y.to_meters(), z.to_meters()));
         self
     }
 
     pub fn vel(&mut self, vx: Velocity, vy: Velocity, vz: Velocity) -> &mut Self {
-        self.vel = Some(DVec3::new(vx.0, vy.0, vz.0));
+        self.vel = Some(DVec3::new(
+            vx.to_meters_per_second(),
+            vy.to_meters_per_second(),
+            vz.to_meters_per_second(),
+        ));
         self
     }
 
@@ -309,11 +317,11 @@ mod tests {
             .build();
         assert_eq!(c.pos(), DVec3::new(1e6, 1e6, 1e6));
         assert_eq!(c.vel(), DVec3::new(1e3, 1e3, 1e3));
-        assert_eq!(c.x().0, 1e6);
-        assert_eq!(c.y().0, 1e6);
-        assert_eq!(c.z().0, 1e6);
-        assert_eq!(c.vx().0, 1e3);
-        assert_eq!(c.vy().0, 1e3);
-        assert_eq!(c.vz().0, 1e3);
+        assert_eq!(c.x(), 1e6.m());
+        assert_eq!(c.y(), 1e6.m());
+        assert_eq!(c.z(), 1e6.m());
+        assert_eq!(c.vx(), 1e3.mps());
+        assert_eq!(c.vy(), 1e3.mps());
+        assert_eq!(c.vz(), 1e3.mps());
     }
 }

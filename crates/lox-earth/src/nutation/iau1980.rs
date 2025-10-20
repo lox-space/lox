@@ -64,7 +64,7 @@ fn l(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
         centuries_since_j2000_tdb,
         &[485866.733, 715922.633, 31.31, 0.064],
     );
-    (l_poly.asec() + ((1325.0 * centuries_since_j2000_tdb % 1.0) * TAU).rad())
+    (l_poly.arcsec() + ((1325.0 * centuries_since_j2000_tdb % 1.0) * TAU).rad())
         .normalize_two_pi(Angle::ZERO)
 }
 
@@ -75,7 +75,7 @@ fn lp(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
         centuries_since_j2000_tdb,
         &[1287099.804, 1292581.224, -0.577, -0.012],
     );
-    (lp_poly.asec() + ((99.0 * centuries_since_j2000_tdb % 1.0) * TAU).rad())
+    (lp_poly.arcsec() + ((99.0 * centuries_since_j2000_tdb % 1.0) * TAU).rad())
         .normalize_two_pi(Angle::ZERO)
 }
 
@@ -86,7 +86,7 @@ fn f(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
         centuries_since_j2000_tdb,
         &[335778.877, 295263.137, -13.257, 0.011],
     );
-    (f_poly.asec() + ((1342.0 * centuries_since_j2000_tdb % 1.0) * TAU).rad())
+    (f_poly.arcsec() + ((1342.0 * centuries_since_j2000_tdb % 1.0) * TAU).rad())
         .normalize_two_pi(Angle::ZERO)
 }
 
@@ -96,7 +96,7 @@ fn d(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
         centuries_since_j2000_tdb,
         &[1072261.307, 1105601.328, -6.891, 0.019],
     );
-    (d_poly.asec() + ((1236.0 * centuries_since_j2000_tdb % 1.0) * TAU).rad())
+    (d_poly.arcsec() + ((1236.0 * centuries_since_j2000_tdb % 1.0) * TAU).rad())
         .normalize_two_pi(Angle::ZERO)
 }
 
@@ -107,7 +107,7 @@ fn omega(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
         centuries_since_j2000_tdb,
         &[450160.280, -482890.539, 7.455, 0.008],
     );
-    (om_poly.asec() + ((-5.0 * centuries_since_j2000_tdb % 1.0) * TAU).rad())
+    (om_poly.arcsec() + ((-5.0 * centuries_since_j2000_tdb % 1.0) * TAU).rad())
         .normalize_two_pi(Angle::ZERO)
 }
 
@@ -233,7 +233,7 @@ mod tests {
 
     use super::*;
 
-    const TOLERANCE: Angle = Angle::rad(1e-12);
+    const TOLERANCE: Angle = Angle::radians(1e-12);
 
     #[test]
     fn test_nutation_iau1980_jd0() {

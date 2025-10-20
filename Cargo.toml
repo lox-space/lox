@@ -9,6 +9,7 @@ edition = "2024"
 license = "MPL-2.0"
 authors = ["Helge Eichhorn and the lox-space contributors"]
 repository = "https://github.com/lox-space/lox"
+keywords = ["lox", "astrodynamics", "orbital dynamics", "mission analysis"]
 
 [workspace.dependencies]
 lox-bodies = { path = "crates/lox-bodies", version = "0.1.0-alpha.10" }

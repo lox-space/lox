@@ -31,8 +31,8 @@ pub fn cio_locator(
 ) -> Angle {
     let fundamental_args = fundamental_args(centuries_since_j2000_tdb);
     let evaluated_terms = evaluate_terms(&fundamental_args);
-    let s = fast_polynomial::poly_array(centuries_since_j2000_tdb, &evaluated_terms).asec();
-    Angle::rad(s.to_radians() - x.to_radians() * y.to_radians() / 2.0)
+    let s = fast_polynomial::poly_array(centuries_since_j2000_tdb, &evaluated_terms).arcsec();
+    Angle::radians(s.to_radians() - x.to_radians() * y.to_radians() / 2.0)
 }
 
 fn fundamental_args(centuries_since_j2000_tdb: JulianCenturies) -> FundamentalArgs {
@@ -85,7 +85,7 @@ mod tests {
 
     use super::*;
 
-    const TOLERANCE: Angle = Angle::rad(1e-11);
+    const TOLERANCE: Angle = Angle::radians(1e-11);
 
     #[test]
     fn test_s_jd0() {

@@ -42,7 +42,7 @@ mod tests {
 
     use super::nutation_iau2000b;
 
-    const TOLERANCE: Angle = Angle::rad(1e-11);
+    const TOLERANCE: Angle = Angle::radians(1e-11);
 
     #[test]
     fn test_nutation_iau2000b_jd0() {

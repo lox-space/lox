@@ -184,7 +184,7 @@ fn calculate_cip_unit_vector(
         + (nutation_components.planetary[0] + nutation_components.luni_solar[0]) / 1e6;
     let y = polynomial_components[1]
         + (nutation_components.planetary[1] + nutation_components.luni_solar[1]) / 1e6;
-    (x.asec(), y.asec())
+    (x.arcsec(), y.arcsec())
 }
 
 #[cfg(test)]
@@ -195,7 +195,7 @@ mod tests {
 
     use super::*;
 
-    const TOLERANCE: Angle = Angle::rad(1e-12);
+    const TOLERANCE: Angle = Angle::radians(1e-12);
 
     #[test]
     fn test_cip_xy_jd0() {

@@ -6,7 +6,7 @@ use lox_units::{Angle, types::units::JulianCenturies};
 use crate::{Moon, Sun};
 
 pub fn mean_moon_sun_elongation_simon1994(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
-    Angle::asec_normalized_signed(fast_polynomial::poly_array(
+    Angle::arcseconds_normalized_signed(fast_polynomial::poly_array(
         centuries_since_j2000_tdb,
         &[1072260.70369, 1602961601.2090],
     ))
@@ -14,7 +14,7 @@ pub fn mean_moon_sun_elongation_simon1994(centuries_since_j2000_tdb: JulianCentu
 
 impl Sun {
     pub fn mean_anomaly_simon1994(&self, centuries_since_j2000_tdb: JulianCenturies) -> Angle {
-        Angle::asec_normalized_signed(fast_polynomial::poly_array(
+        Angle::arcseconds_normalized_signed(fast_polynomial::poly_array(
             centuries_since_j2000_tdb,
             &[1287104.79305, 129596581.0481],
         ))
@@ -23,7 +23,7 @@ impl Sun {
 
 impl Moon {
     pub fn mean_anomaly_simon1994(&self, centuries_since_j2000_tdb: JulianCenturies) -> Angle {
-        Angle::asec_normalized_signed(fast_polynomial::poly_array(
+        Angle::arcseconds_normalized_signed(fast_polynomial::poly_array(
             centuries_since_j2000_tdb,
             &[485868.249036, 1717915923.2178],
         ))
@@ -33,7 +33,7 @@ impl Moon {
         &self,
         centuries_since_j2000_tdb: JulianCenturies,
     ) -> Angle {
-        Angle::asec_normalized_signed(fast_polynomial::poly_array(
+        Angle::arcseconds_normalized_signed(fast_polynomial::poly_array(
             centuries_since_j2000_tdb,
             &[335779.526232, 1739527262.8478],
         ))
@@ -43,7 +43,7 @@ impl Moon {
         &self,
         centuries_since_j2000_tdb: JulianCenturies,
     ) -> Angle {
-        Angle::asec_normalized_signed(fast_polynomial::poly_array(
+        Angle::arcseconds_normalized_signed(fast_polynomial::poly_array(
             centuries_since_j2000_tdb,
             &[450160.398036, -6962890.5431],
         ))
@@ -63,7 +63,7 @@ mod tests {
     // This is somewhat loose, being based on observations of how closely our implementations
     // match ERFA outputs rather than any target tolerance.
     // See https://github.com/lox-space/lox/pull/23#discussion_r1398485509
-    const TOLERANCE: Angle = Angle::rad(1e-10);
+    const TOLERANCE: Angle = Angle::radians(1e-10);
 
     // Test cases for t.
     const T_ZERO: JulianCenturies = 0.0;
