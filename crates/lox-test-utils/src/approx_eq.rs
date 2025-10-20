@@ -1,141 +1,262 @@
-use std::{collections::HashMap, fmt::Display};
+use std::iter::zip;
 
 use glam::DVec3;
 
-pub const fn default_rtol(atol: f64) -> f64 {
-    if atol > 0.0 { 0.0 } else { 1e-8 }
+use crate::approx_eq::results::{ApproxEqResult, ApproxEqResults};
+
+pub mod macros;
+pub mod results;
+
+pub fn default_rtol(atol: f64) -> f64 {
+    if atol > 0.0 { 0.0 } else { f64::EPSILON.sqrt() }
 }
 
-pub enum ApproxEqResult {
-    Pass,
-    Fail { left: f64, right: f64 },
-}
-
-impl ApproxEqResult {
-    pub fn new(left: f64, right: f64, atol: f64, rtol: f64) -> Self {
-        let approx_eq =
-            (left - right).abs() <= f64::max(rtol * f64::max(left.abs(), right.abs()), atol);
-        if !approx_eq {
-            Self::Fail { left, right }
-        } else {
-            Self::Pass
-        }
-    }
-}
-
-pub struct ApproxEqResults(HashMap<&'static str, ApproxEqResult>);
-
-impl ApproxEqResults {
-    pub fn is_approx_eq(&self) -> bool {
-        self.0.values().all(|v| matches!(v, ApproxEqResult::Pass))
-    }
-}
-
-impl Display for ApproxEqResults {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for (&field, result) in &self.0 {
-            match result {
-                ApproxEqResult::Pass => continue,
-                ApproxEqResult::Fail { left, right } => {
-                    if field != "None" {
-                        writeln!(f, "Field: {}", field)?;
-                    }
-                    writeln!(f, "Left:  {:?}", left)?;
-                    writeln!(f, "Right: {:?}", right)?;
-                    writeln!(f, "Diff:  {:?}", (left - right).abs())?;
-                }
-            }
-        }
-        write!(f, "")
-    }
-}
-
-pub trait ApproxEq {
-    fn approx_eq(self, rhs: Self, atol: f64, rtol: f64) -> ApproxEqResults;
+pub trait ApproxEq<Rhs = Self>: std::fmt::Debug {
+    fn approx_eq(&self, rhs: &Rhs, atol: f64, rtol: f64) -> ApproxEqResults;
 }
 
 #[doc(hidden)]
-pub fn approx_eq_helper<T: ApproxEq>(lhs: T, rhs: T, atol: f64, rtol: f64) -> ApproxEqResults {
+pub fn approx_eq_helper<T: ApproxEq>(lhs: &T, rhs: &T, atol: f64, rtol: f64) -> ApproxEqResults {
     lhs.approx_eq(rhs, atol, rtol)
 }
 
 impl ApproxEq for f64 {
-    fn approx_eq(self, rhs: Self, atol: f64, rtol: f64) -> ApproxEqResults {
-        ApproxEqResults(HashMap::from([(
-            "None",
-            ApproxEqResult::new(self, rhs, atol, rtol),
-        )]))
+    fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
+        let mut results = ApproxEqResults::new();
+        results.insert(
+            String::default(),
+            ApproxEqResult::new(*self, *rhs, atol, rtol),
+        );
+        results
     }
 }
 
 impl ApproxEq for DVec3 {
-    fn approx_eq(self, rhs: Self, atol: f64, rtol: f64) -> ApproxEqResults {
-        ApproxEqResults(HashMap::from([
-            ("x", ApproxEqResult::new(self.x, rhs.x, atol, rtol)),
-            ("y", ApproxEqResult::new(self.y, rhs.y, atol, rtol)),
-            ("z", ApproxEqResult::new(self.z, rhs.z, atol, rtol)),
-        ]))
+    fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
+        let mut results = ApproxEqResults::new();
+        results.merge("x".to_string(), self.x.approx_eq(&rhs.x, atol, rtol));
+        results.merge("y".to_string(), self.y.approx_eq(&rhs.y, atol, rtol));
+        results.merge("z".to_string(), self.z.approx_eq(&rhs.z, atol, rtol));
+        results
     }
 }
 
-#[macro_export]
-macro_rules! approx_eq {
-    ($lhs:expr, $rhs:expr) => {
-        approx_eq!($lhs, $rhs, 0.0, $crate::approx_eq::default_rtol(0.0))
-    };
-    ($lhs:expr, $rhs:expr, rtol <= $rtol:expr) => {
-        approx_eq!($lhs, $rhs, 0.0, $rtol)
-    };
-    ($lhs:expr, $rhs:expr, atol <= $atol:expr) => {
-        approx_eq!($lhs, $rhs, $atol, $crate::approx_eq::default_rtol($atol))
-    };
-    ($lhs:expr, $rhs:expr, atol <= $atol:expr, rtol <= $rtol:expr) => {
-        $crate::approx_eq::approx_eq_helper($lhs, $rhs, $atol, $rtol).is_approx_eq()
-    };
+impl<T> ApproxEq for Vec<T>
+where
+    T: ApproxEq,
+{
+    fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
+        let mut results = ApproxEqResults::new();
+        for (idx, (left, right)) in zip(self, rhs).enumerate() {
+            results.merge(format!("{}", idx), left.approx_eq(right, atol, rtol));
+        }
+        results
+    }
 }
 
-#[macro_export]
-macro_rules! assert_approx_eq {
-    ($lhs:expr, $rhs:expr) => {
-        assert_approx_eq!(
-            $lhs,
-            $rhs,
-            atol <= 0.0,
-            rtol <= $crate::approx_eq::default_rtol(0.0)
-        )
-    };
-    ($lhs:expr, $rhs:expr, rtol <= $rtol:expr) => {
-        assert_approx_eq!($lhs, $rhs, 0.0, $rtol)
-    };
-    ($lhs:expr, $rhs:expr, atol <= $atol:expr) => {
-        assert_approx_eq!($lhs, $rhs, $atol, $crate::approx_eq::default_rtol($atol))
-    };
-    ($lhs:expr, $rhs:expr, atol <= $rtol:expr, rtol <= $atol:expr) => {
-        assert!(
-            $crate::approx_eq!($lhs, $rhs, atol <= $atol, rtol <= $rtol),
-            "{:?} ≉ {:?}\n\nAbsolute tolerance: {:?}\nRelative tolerance: {:?}\n\n{}",
-            $lhs,
-            $rhs,
-            $atol,
-            $rtol,
-            $crate::approx_eq::approx_eq_helper($lhs, $rhs, $atol, $rtol)
-        )
-    };
+impl<T, const N: usize> ApproxEq for [T; N]
+where
+    T: ApproxEq,
+{
+    fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
+        let mut results = ApproxEqResults::new();
+        for (idx, (left, right)) in zip(self, rhs).enumerate() {
+            results.merge(format!("{}", idx), left.approx_eq(right, atol, rtol));
+        }
+        results
+    }
+}
+
+impl<T, U> ApproxEq<&U> for &T
+where
+    T: ApproxEq<U>,
+{
+    fn approx_eq(&self, rhs: &&U, atol: f64, rtol: f64) -> ApproxEqResults {
+        (*self).approx_eq(*rhs, atol, rtol)
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::{approx_eq, approx_ne, assert_approx_eq, assert_approx_ne};
+
     use super::*;
+
+    #[cfg(feature = "derive")]
+    mod derive_tests {
+        use super::*;
+
+        use crate::{ApproxEq, assert_approx_eq, assert_approx_ne};
+
+        #[derive(ApproxEq, Debug)]
+        struct Vec3 {
+            x: f64,
+            y: f64,
+            z: f64,
+        }
+
+        #[test]
+        fn test_approx_eq_derive_struct() {
+            let v1 = Vec3 {
+                x: 1.0,
+                y: 1.0,
+                z: 4.0,
+            };
+            let v2 = Vec3 {
+                x: 1.0,
+                y: 1.0,
+                z: 4.00000000000001,
+            };
+            let v3 = Vec3 {
+                x: 1.0,
+                y: 1.0,
+                z: 4.000000002,
+            };
+            let v4 = Vec3 {
+                x: 1.0,
+                y: 1.0,
+                z: 4.00300002,
+            };
+            assert_approx_eq!(v1, v2);
+            assert_approx_ne!(v3, v4);
+        }
+
+        #[derive(ApproxEq, Debug)]
+        struct Pair(f64, f64);
+
+        #[test]
+        fn test_approx_eq_derive_tuple_struct() {
+            let p1 = Pair(1.0, 4.0);
+            let p2 = Pair(1.0, 4.00000000000001);
+            let p3 = Pair(1.0, 4.000000002);
+            let p4 = Pair(1.0, 4.00300002);
+
+            assert_approx_eq!(p1, p2);
+            assert_approx_ne!(p3, p4);
+        }
+
+        #[derive(ApproxEq, Debug)]
+        struct Nested {
+            pair: Pair,
+            vec3: Vec3,
+        }
+
+        #[test]
+        fn test_approx_eq_derive_nested() {
+            let v1 = Vec3 {
+                x: 1.0,
+                y: 1.0,
+                z: 4.0,
+            };
+            let v2 = Vec3 {
+                x: 1.0,
+                y: 1.0,
+                z: 4.00000000000001,
+            };
+            let v3 = Vec3 {
+                x: 1.0,
+                y: 1.0,
+                z: 4.000000002,
+            };
+            let v4 = Vec3 {
+                x: 1.0,
+                y: 1.0,
+                z: 4.00300002,
+            };
+
+            let p1 = Pair(1.0, 4.0);
+            let p2 = Pair(1.0, 4.00000000000001);
+            let p3 = Pair(1.0, 4.000000002);
+            let p4 = Pair(1.0, 4.00300002);
+
+            let n1 = Nested { pair: p1, vec3: v1 };
+            let n2 = Nested { pair: p2, vec3: v2 };
+            let n3 = Nested { pair: p3, vec3: v3 };
+            let n4 = Nested { pair: p4, vec3: v4 };
+
+            assert_approx_eq!(n1, n2);
+            assert_approx_ne!(n3, n4);
+        }
+
+        #[derive(ApproxEq, Debug)]
+        struct Inner(f64);
+
+        #[derive(ApproxEq, Debug)]
+        struct Outer {
+            inner: Inner,
+        }
+
+        #[derive(ApproxEq, Debug)]
+        struct Hyper(Outer);
+
+        #[test]
+        fn test_approx_eq_derive_display_results() {
+            let h1 = Hyper(Outer {
+                inner: Inner(4.000000002),
+            });
+            let h2 = Hyper(Outer {
+                inner: Inner(4.00300002),
+            });
+            let result = h1.approx_eq(&h2, 0.0, 1e-8).to_string();
+            assert!(result.contains("Field: 0.inner.0"));
+        }
+    }
 
     #[test]
     fn test_approx_eq_f64() {
-        assert_approx_eq!(1.0, 1.1)
+        assert_approx_eq!(4.00000000000001, 4.0);
+        assert_approx_eq!(5.0, 4.999999999999993);
+        assert_approx_ne!(4.000000002, 4.00300002);
+        assert_approx_eq!(4.32, 4.3, rtol <= 0.1, atol <= 0.01);
+        assert_approx_eq!(1.001, 1.002, rtol <= 0.001, atol <= 0.0001);
+        assert_approx_ne!(4.5, 4.9, rtol <= 0.001, atol <= 0.001);
+    }
+
+    #[test]
+    fn test_approx_eq_macros() {
+        assert!(approx_eq!(4.00000000000001, 4.0));
+        assert!(approx_eq!(5.0, 4.999999999999993));
+        assert!(approx_ne!(4.000000002, 4.00300002));
+        assert!(approx_eq!(4.32, 4.3, rtol <= 0.1, atol <= 0.01));
+        assert!(approx_eq!(1.001, 1.002, rtol <= 0.001, atol <= 0.0001));
+        assert!(approx_ne!(4.5, 4.9, rtol <= 0.001, atol <= 0.001));
     }
 
     #[test]
     fn test_approx_eq_dvec3() {
-        let lhs = DVec3::new(1.0, 1.0, 1.1);
-        let rhs = DVec3::new(1.0, 1.0, 1.0);
-        assert_approx_eq!(lhs, rhs)
+        let v1 = DVec3::new(1.0, 1.0, 4.0);
+        let v2 = DVec3::new(1.0, 1.0, 4.00000000000001);
+        let v3 = DVec3::new(1.0, 1.0, 4.000000002);
+        let v4 = DVec3::new(1.0, 1.0, 4.00300002);
+        assert_approx_eq!(v1, v2);
+        assert_approx_ne!(v3, v4);
+    }
+
+    #[test]
+    fn test_approx_eq_vec() {
+        let v1 = vec![1.0, 1.0, 4.0];
+        let v2 = vec![1.0, 1.0, 4.00000000000001];
+        let v3 = vec![1.0, 1.0, 4.000000002];
+        let v4 = vec![1.0, 1.0, 4.00300002];
+        assert_approx_eq!(v1, v2);
+        assert_approx_ne!(v3, v4);
+    }
+
+    #[test]
+    fn test_approx_eq_array() {
+        let v1 = [1.0, 1.0, 4.0];
+        let v2 = [1.0, 1.0, 4.00000000000001];
+        let v3 = [1.0, 1.0, 4.000000002];
+        let v4 = [1.0, 1.0, 4.00300002];
+        assert_approx_eq!(v1, v2);
+        assert_approx_ne!(v3, v4);
+    }
+
+    #[test]
+    fn test_approx_eq_display_results() {
+        let v1 = DVec3::new(1.0, 1.0, 4.000000002);
+        let v2 = DVec3::new(1.0, 1.0, 4.00300002);
+        let result = v1.approx_eq(&v2, 0.0, 1e-8).to_string();
+        assert!(result.contains("Field: z"));
     }
 }
