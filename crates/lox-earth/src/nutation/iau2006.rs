@@ -45,7 +45,7 @@ mod tests {
 
     use lox_units::{Angle, AngleUnits, types::units::JulianCenturies};
 
-    const TOLERANCE: Angle = Angle::rad(1e-11);
+    const TOLERANCE: Angle = Angle::radians(1e-11);
 
     #[test]
     fn test_nutation_iau2006a_jd0() {

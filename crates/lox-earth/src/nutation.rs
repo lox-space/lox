@@ -81,7 +81,7 @@ mod tests {
 
     use super::*;
 
-    const TOLERANCE: Angle = Angle::rad(1e-12);
+    const TOLERANCE: Angle = Angle::radians(1e-12);
 
     #[test]
     fn test_nutation_iau1980() {

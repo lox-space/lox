@@ -18,7 +18,7 @@ use lox_units::{Angle, AngleUnits, types::units::JulianCenturies};
 pub fn mean_moon_sun_elongation_mhb2000_luni_solar(
     centuries_since_j2000_tdb: JulianCenturies,
 ) -> Angle {
-    Angle::asec_normalized_signed(fast_polynomial::poly_array(
+    Angle::arcseconds_normalized_signed(fast_polynomial::poly_array(
         centuries_since_j2000_tdb,
         &[
             1072260.70369,
@@ -40,7 +40,7 @@ pub fn mean_moon_sun_elongation_mhb2000_planetary(
 
 impl Sun {
     pub fn mean_anomaly_mhb2000(&self, centuries_since_j2000_tdb: JulianCenturies) -> Angle {
-        Angle::asec_normalized_signed(fast_polynomial::poly_array(
+        Angle::arcseconds_normalized_signed(fast_polynomial::poly_array(
             centuries_since_j2000_tdb,
             &[
                 1287104.79305,
@@ -101,7 +101,7 @@ mod tests {
     // This is somewhat loose, being based on observations of how closely our implementations
     // match ERFA outputs rather than any target tolerance.
     // See https://github.com/lox-space/lox/pull/23#discussion_r1398485509
-    const TOLERANCE: Angle = Angle::rad(1e-11);
+    const TOLERANCE: Angle = Angle::radians(1e-11);
 
     // Test cases for t.
     const T_ZERO: JulianCenturies = 0.0;
