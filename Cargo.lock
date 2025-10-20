@@ -591,6 +591,9 @@ dependencies = [
 [[package]]
 name = "lox-test-utils"
 version = "0.1.0-alpha.0"
+dependencies = [
+ "glam",
+]
 
 [[package]]
 name = "lox-time"
