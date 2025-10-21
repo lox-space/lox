@@ -12,5 +12,12 @@ repository.workspace = true
 lox-derive = { workspace = true, optional = true }
 glam.workspace = true
 
+[dev-dependencies]
+divan.workspace = true
+
 [features]
 derive = ["dep:lox-derive"]
+
+[[bench]]
+name = "approx_eq"
+harness = false

@@ -1,17 +1,141 @@
+//! Approximate equality testing for floating-point types.
+//!
+//! This module provides a robust framework for comparing floating-point values with configurable
+//! tolerances. It implements the NumPy-style `isclose` algorithm, which uses both absolute and
+//! relative tolerances to determine equality.
+//!
+//! # Algorithm
+//!
+//! Two values `a` and `b` are considered approximately equal if:
+//!
+//! ```text
+//! |a - b| ≤ max(atol, rtol * max(|a|, |b|))
+//! ```
+//!
+//! Where:
+//! - `atol` is the absolute tolerance (default: 0.0)
+//! - `rtol` is the relative tolerance (default: sqrt(f64::EPSILON) ≈ 1.49e-8)
+//!
+//! # Usage
+//!
+//! The primary interface is through the [`approx_eq!`](crate::approx_eq!), [`approx_ne!`](crate::approx_ne!), [`assert_approx_eq!`](crate::assert_approx_eq!),
+//! and [`assert_approx_ne!`](crate::assert_approx_ne!) macros:
+//!
+//! ```
+//! use lox_test_utils::{approx_eq, assert_approx_eq};
+//!
+//! // Default tolerances - uses rtol = sqrt(f64::EPSILON)
+//! assert!(approx_eq!(1.0, 1.0 + f64::EPSILON));
+//!
+//! // Custom tolerances
+//! assert!(approx_eq!(1.0, 1.001, atol <= 0.01));
+//! assert!(approx_eq!(100.0, 100.1, rtol <= 0.01));
+//! assert!(approx_eq!(1.0, 1.001, atol <= 0.01, rtol <= 0.01));
+//!
+//! // Assert macros with helpful error messages
+//! assert_approx_eq!(1.0, 1.0 + f64::EPSILON);
+//! ```
+//!
+//! # Supported Types
+//!
+//! The following types implement [`ApproxEq`] out of the box:
+//! - `f64` - scalar floating-point values
+//! - `glam::DVec3` - 3D vectors
+//! - `glam::DMat3` - 3×3 matrices
+//! - `Vec<T>` where `T: ApproxEq`
+//! - `[T; N]` where `T: ApproxEq`
+//!
+//! # Custom Types
+//!
+//! You can implement [`ApproxEq`] for your own types either manually or using the derive macro
+//! (requires the `derive` feature):
+//!
+//! ```ignore
+//! use lox_test_utils::ApproxEq;
+//!
+//! #[derive(ApproxEq, Debug)]
+//! struct Vec3 {
+//!     x: f64,
+//!     y: f64,
+//!     z: f64,
+//! }
+//! ```
+//!
+//! # Performance
+//!
+//! This implementation is highly optimized for performance. Single scalar comparisons
+//! (e.g., `f64`) complete in sub-nanosecond time.
+
 use std::iter::zip;
 
 use glam::{DMat3, DVec3};
 
-use crate::approx_eq::results::{ApproxEqResult, ApproxEqResults};
-
 pub mod macros;
 pub mod results;
 
+pub use results::{ApproxEqResult, ApproxEqResults};
+
+/// Returns the default relative tolerance based on the absolute tolerance.
+///
+/// If `atol > 0.0`, returns `0.0` (only absolute tolerance is used).
+/// Otherwise, returns `sqrt(f64::EPSILON)` ≈ 1.49e-8.
+///
+/// # Examples
+///
+/// ```
+/// use lox_test_utils::approx_eq::default_rtol;
+///
+/// assert_eq!(default_rtol(0.0), f64::EPSILON.sqrt());
+/// assert_eq!(default_rtol(0.01), 0.0);
+/// ```
 pub fn default_rtol(atol: f64) -> f64 {
     if atol > 0.0 { 0.0 } else { f64::EPSILON.sqrt() }
 }
 
+/// Trait for types that can be compared for approximate equality.
+///
+/// This trait is the foundation of the approximate equality system. Types implementing
+/// this trait can be used with the [`approx_eq!`](crate::approx_eq!), [`approx_ne!`](crate::approx_ne!), [`assert_approx_eq!`](crate::assert_approx_eq!),
+/// and [`assert_approx_ne!`](crate::assert_approx_ne!) macros.
+///
+/// # Type Parameters
+///
+/// - `Rhs`: The right-hand side type for comparison (defaults to `Self`)
+///
+/// # Examples
+///
+/// Implementing for a custom type:
+///
+/// ```
+/// use lox_test_utils::approx_eq::{ApproxEq, ApproxEqResults, ApproxEqResult};
+///
+/// #[derive(Debug)]
+/// struct Complex {
+///     real: f64,
+///     imag: f64,
+/// }
+///
+/// impl ApproxEq for Complex {
+///     fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
+///         let mut results = ApproxEqResults::new();
+///         results.merge("real", self.real.approx_eq(&rhs.real, atol, rtol));
+///         results.merge("imag", self.imag.approx_eq(&rhs.imag, atol, rtol));
+///         results
+///     }
+/// }
+/// ```
 pub trait ApproxEq<Rhs = Self>: std::fmt::Debug {
+    /// Compares `self` with `rhs` for approximate equality.
+    ///
+    /// # Parameters
+    ///
+    /// - `rhs`: The value to compare against
+    /// - `atol`: Absolute tolerance
+    /// - `rtol`: Relative tolerance
+    ///
+    /// # Returns
+    ///
+    /// An [`ApproxEqResults`] object containing the comparison results.
     fn approx_eq(&self, rhs: &Rhs, atol: f64, rtol: f64) -> ApproxEqResults;
 }
 
@@ -21,17 +145,14 @@ pub fn approx_eq_helper<T: ApproxEq>(lhs: &T, rhs: &T, atol: f64, rtol: f64) -> 
 }
 
 impl ApproxEq for f64 {
+    #[inline]
     fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
-        let mut results = ApproxEqResults::new();
-        results.insert(
-            String::default(),
-            ApproxEqResult::new(*self, *rhs, atol, rtol),
-        );
-        results
+        ApproxEqResults::single(ApproxEqResult::new(*self, *rhs, atol, rtol))
     }
 }
 
 impl ApproxEq for DVec3 {
+    #[inline]
     fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
         let mut results = ApproxEqResults::new();
         results.merge("x", self.x.approx_eq(&rhs.x, atol, rtol));
@@ -42,6 +163,7 @@ impl ApproxEq for DVec3 {
 }
 
 impl ApproxEq for DMat3 {
+    #[inline]
     fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
         let mut results = ApproxEqResults::new();
         results.merge("x_axis", self.x_axis.approx_eq(&rhs.x_axis, atol, rtol));
