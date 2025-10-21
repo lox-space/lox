@@ -68,9 +68,7 @@ mod tests {
     use crate::eop::EopParser;
 
     use super::*;
-    use float_eq::assert_float_eq;
-    use lox_math::assert_close;
-    use lox_math::is_close::IsClose;
+    use lox_test_utils::assert_approx_eq;
     use lox_test_utils::data_dir;
     use lox_time::Time;
     use lox_time::deltas::ToDelta;
@@ -182,12 +180,12 @@ mod tests {
             .delta_ut1_tai(tai.to_delta())
             .unwrap()
             .to_decimal_seconds();
-        assert_float_eq!(actual, expected, rel <= 1e-6);
+        assert_approx_eq!(actual, expected, rtol <= 1e-6);
         let actual = provider
             .delta_tai_ut1(ut1.to_delta())
             .unwrap()
             .to_decimal_seconds();
-        assert_float_eq!(actual, -expected, rel <= 1e-6);
+        assert_approx_eq!(actual, -expected, rtol <= 1e-6);
     }
 
     // #[rstest]
@@ -264,7 +262,7 @@ mod tests {
             .try_offset(scale1, scale2, dt)
             .unwrap()
             .to_decimal_seconds();
-        assert_close!(act, exp, 1e-7, UT1_TOL);
+        assert_approx_eq!(act, exp, rtol <= UT1_TOL);
     }
 
     #[test]

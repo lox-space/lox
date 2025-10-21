@@ -75,7 +75,7 @@ pub fn polar_motion_matrix(pole_coords: PoleCoords, sp: Angle) -> DMat3 {
 
 #[cfg(test)]
 mod tests {
-    use float_eq::assert_float_eq;
+    use lox_test_utils::assert_approx_eq;
 
     use super::*;
 
@@ -88,7 +88,7 @@ mod tests {
             y: -0.38359667445777073.rad(),
         };
         let s = -0.0723985415686306.rad();
-        let expected = [
+        let expected = DMat3::from_cols_array(&[
             0.899981235912944,
             -0.151285348992267,
             -0.408835563747697,
@@ -98,9 +98,9 @@ mod tests {
             0.435512150790498,
             0.353018545339750,
             0.8280743162060046,
-        ];
-        let actual = celestial_to_intermediate_frame_of_date_matrix(cip, s).to_cols_array();
-        assert_mat3_eq(&expected, &actual)
+        ]);
+        let actual = celestial_to_intermediate_frame_of_date_matrix(cip, s);
+        assert_approx_eq!(expected, actual, rtol <= TOLERANCE)
     }
 
     #[test]
@@ -110,7 +110,7 @@ mod tests {
             y: -0.00002800472282281282.rad(),
         };
         let s = -0.00000001013396519178.rad();
-        let expected = [
+        let expected = DMat3::from_cols_array(&[
             0.999999999636946,
             -0.00000001051127817488,
             -0.000026946379569,
@@ -120,9 +120,9 @@ mod tests {
             0.000026946379852,
             0.000028004722550,
             0.999999999244814,
-        ];
-        let actual = celestial_to_intermediate_frame_of_date_matrix(cip, s).to_cols_array();
-        assert_mat3_eq(&expected, &actual)
+        ]);
+        let actual = celestial_to_intermediate_frame_of_date_matrix(cip, s);
+        assert_approx_eq!(expected, actual, rtol <= TOLERANCE)
     }
 
     #[test]
@@ -132,7 +132,7 @@ mod tests {
             y: -0.0000673058699616719.rad(),
         };
         let s = -0.00000000480511934533.rad();
-        let expected = [
+        let expected = DMat3::from_cols_array(&[
             0.999952752836184,
             0.00000032233307144280,
             0.009720704461729,
@@ -142,18 +142,17 @@ mod tests {
             -0.009720704461405,
             0.00006730591667081695,
             0.999952750571089,
-        ];
-        let actual = celestial_to_intermediate_frame_of_date_matrix(cip, s).to_cols_array();
-        assert_mat3_eq(&expected, &actual)
+        ]);
+        let actual = celestial_to_intermediate_frame_of_date_matrix(cip, s);
+        assert_approx_eq!(expected, actual, rtol <= TOLERANCE)
     }
 
     #[test]
     fn test_celestial_terrestrial_matrix() {
-        //
         let intermediate_frame_of_date_matrix =
             DMat3::from_cols_array(&[0.0, 3.0, 6.0, 1.0, 4.0, 7.0, 2.0, 5.0, 8.0]);
         let era = -0.123456789;
-        let expected = [
+        let expected = DMat3::from_cols_array(&[
             -0.3694302455469326,
             2.9771666553411373,
             6.0,
@@ -163,10 +162,9 @@ mod tests {
             1.3690606943158702,
             5.208231255933183,
             8.0,
-        ];
-        let actual =
-            celestial_terrestrial_matrix(intermediate_frame_of_date_matrix, era).to_cols_array();
-        assert_mat3_eq(&expected, &actual)
+        ]);
+        let actual = celestial_terrestrial_matrix(intermediate_frame_of_date_matrix, era);
+        assert_approx_eq!(expected, actual, rtol <= TOLERANCE)
     }
 
     #[test]
@@ -176,7 +174,7 @@ mod tests {
             y: 0.987654321.rad(),
         };
         let sp = 1.23456789.rad();
-        let expected = [
+        let expected = DMat3::from_cols_array(&[
             0.32741794183501576,
             -0.4859020097420154,
             -0.8103682670818204,
@@ -186,24 +184,8 @@ mod tests {
             0.12314341518231086,
             -0.828383353116187,
             0.5464583420327842,
-        ];
-        let actual = polar_motion_matrix(pole_coords, sp).to_cols_array();
-        assert_mat3_eq(&expected, &actual)
-    }
-
-    fn assert_mat3_eq(expected: &[f64; 9], actual: &[f64; 9]) {
-        for i in 0..9 {
-            assert_float_eq!(
-                expected[i],
-                actual[i],
-                abs <= TOLERANCE,
-                "actual matrix differed from expected matrix at col {}, row {}:\n\t\
-                    expected: {},\n\tactual: {}",
-                i / 3,
-                i % 3,
-                DMat3::from_cols_array(expected),
-                DMat3::from_cols_array(actual),
-            );
-        }
+        ]);
+        let actual = polar_motion_matrix(pole_coords, sp);
+        assert_approx_eq!(expected, actual, rtol <= TOLERANCE)
     }
 }

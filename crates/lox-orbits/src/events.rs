@@ -1,4 +1,5 @@
 use itertools::Itertools;
+use lox_test_utils::ApproxEq;
 use lox_time::Time;
 use lox_time::time_scales::TimeScale;
 use std::collections::VecDeque;
@@ -101,7 +102,7 @@ pub fn find_events<F: Fn(f64) -> f64 + Copy, T: TimeScale + Clone, R: FindBracke
     Ok(events)
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ApproxEq)]
 pub struct Window<T: TimeScale> {
     start: Time<T>,
     end: Time<T>,
@@ -239,9 +240,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lox_math::assert_close;
-    use lox_math::is_close::IsClose;
     use lox_math::roots::Brent;
+    use lox_test_utils::assert_approx_eq;
     use lox_time::time_scales::Tai;
     use lox_time::{Time, time};
     use std::f64::consts::{PI, TAU};
@@ -258,16 +258,16 @@ mod tests {
 
         assert_eq!(events.len(), 2);
         assert_eq!(events[0].crossing, ZeroCrossing::Down);
-        assert_close!(
+        assert_approx_eq!(
             events[0].time,
             start + TimeDelta::try_from_decimal_seconds(PI).unwrap(),
-            1e-6
+            rtol <= 1e-6
         );
         assert_eq!(events[1].crossing, ZeroCrossing::Up);
-        assert_close!(
+        assert_approx_eq!(
             events[1].time,
             start + TimeDelta::try_from_decimal_seconds(TAU).unwrap(),
-            1e-6
+            rtol <= 1e-6
         );
     }
 
@@ -284,10 +284,10 @@ mod tests {
 
         assert_eq!(windows.len(), 2);
         assert_eq!(windows[0].start, start);
-        assert_close!(
+        assert_approx_eq!(
             windows[0].end,
             start + TimeDelta::try_from_decimal_seconds(PI).unwrap(),
-            1e-6
+            rtol <= 1e-6
         );
     }
 

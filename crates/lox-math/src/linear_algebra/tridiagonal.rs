@@ -92,7 +92,7 @@ impl Index<Idx> for Tridiagonal<'_> {
 
 #[cfg(test)]
 mod tests {
-    use float_eq::assert_float_eq;
+    use lox_test_utils::assert_approx_eq;
 
     use super::*;
 
@@ -137,9 +137,9 @@ mod tests {
         let x = tri.solve(&b);
         let exp = [-0.1666666666666666, 1.5, -1.5];
 
-        assert_float_eq!(x[0], exp[0], rel <= 1e-14);
-        assert_float_eq!(x[1], exp[1], rel <= 1e-14);
-        assert_float_eq!(x[2], exp[2], rel <= 1e-14);
+        assert_approx_eq!(x[0], exp[0], rtol <= 1e-14);
+        assert_approx_eq!(x[1], exp[1], rtol <= 1e-14);
+        assert_approx_eq!(x[2], exp[2], rtol <= 1e-14);
     }
 
     #[test]

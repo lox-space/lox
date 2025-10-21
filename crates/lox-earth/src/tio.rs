@@ -25,7 +25,7 @@ pub fn tio_locator(centuries_since_j2000_tt: JulianCenturies) -> Angle {
 
 #[cfg(test)]
 mod tests {
-    use float_eq::assert_float_eq;
+    use lox_test_utils::assert_approx_eq;
 
     use super::*;
 
@@ -33,6 +33,6 @@ mod tests {
     fn test_sp_00() {
         let t = 123.45;
         let expected = -2.812961699849694e-8.rad();
-        assert_float_eq!(expected, tio_locator(t), rel <= 1e-12.rad());
+        assert_approx_eq!(expected, tio_locator(t), rtol <= 1e-12);
     }
 }

@@ -168,11 +168,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use float_eq::assert_float_eq;
-
     use lox_bodies::Earth;
-    use lox_math::assert_close;
-    use lox_math::is_close::IsClose;
+    use lox_test_utils::assert_approx_eq;
     use lox_time::deltas::TimeDelta;
     use lox_time::time_scales::Tdb;
     use lox_time::utc;
@@ -212,17 +209,17 @@ mod tests {
             .expect("propagator should converge");
 
         let k1 = s1.to_keplerian();
-        assert_float_eq!(k1.semi_major_axis(), semi_major, rel <= 1e-8);
-        assert_float_eq!(k1.eccentricity(), eccentricity, rel <= 1e-8);
-        assert_float_eq!(k1.inclination(), inclination, rel <= 1e-8);
-        assert_float_eq!(
+        assert_approx_eq!(k1.semi_major_axis(), semi_major, rtol <= 1e-8);
+        assert_approx_eq!(k1.eccentricity(), eccentricity, rtol <= 1e-8);
+        assert_approx_eq!(k1.inclination(), inclination, rtol <= 1e-8);
+        assert_approx_eq!(
             k1.longitude_of_ascending_node(),
             ascending_node,
-            rel <= 1e-8
+            rtol <= 1e-8
         );
-        assert_float_eq!(k1.argument_of_periapsis(), periapsis_arg, rel <= 1e-8);
-        assert_float_eq!(k1.true_anomaly(), true_anomaly, rel <= 1e-8);
-        assert_close!(k1.time(), t1);
+        assert_approx_eq!(k1.argument_of_periapsis(), periapsis_arg, rtol <= 1e-8);
+        assert_approx_eq!(k1.true_anomaly(), true_anomaly, rtol <= 1e-8);
+        assert_approx_eq!(k1.time(), t1);
     }
 
     #[test]
@@ -254,15 +251,15 @@ mod tests {
         let s1 = trajectory.interpolate(period);
         let k1 = s1.to_keplerian();
 
-        assert_float_eq!(k1.semi_major_axis(), semi_major, rel <= 1e-8);
-        assert_float_eq!(k1.eccentricity(), eccentricity, rel <= 1e-8);
-        assert_float_eq!(k1.inclination(), inclination, rel <= 1e-8);
-        assert_float_eq!(
+        assert_approx_eq!(k1.semi_major_axis(), semi_major, rtol <= 1e-8);
+        assert_approx_eq!(k1.eccentricity(), eccentricity, rtol <= 1e-8);
+        assert_approx_eq!(k1.inclination(), inclination, rtol <= 1e-8);
+        assert_approx_eq!(
             k1.longitude_of_ascending_node(),
             ascending_node,
-            rel <= 1e-8
+            rtol <= 1e-8
         );
-        assert_float_eq!(k1.argument_of_periapsis(), periapsis_arg, rel <= 1e-8);
-        assert_float_eq!(k1.true_anomaly(), true_anomaly, rel <= 1e-8);
+        assert_approx_eq!(k1.argument_of_periapsis(), periapsis_arg, rtol <= 1e-8);
+        assert_approx_eq!(k1.true_anomaly(), true_anomaly, rtol <= 1e-8);
     }
 }

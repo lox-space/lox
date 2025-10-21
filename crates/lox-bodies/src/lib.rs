@@ -299,7 +299,7 @@ impl<T: RotationalElements> TryRotationalElements for T {
 
 #[cfg(test)]
 mod tests {
-    use float_eq::assert_float_eq;
+    use lox_test_utils::assert_approx_eq;
 
     use super::*;
 
@@ -492,43 +492,47 @@ mod tests {
 
     #[test]
     fn test_rotational_elements_right_ascension() {
-        assert_float_eq!(Jupiter.right_ascension(0.0), 4.678480799964803, rel <= 1e-8);
+        assert_approx_eq!(
+            Jupiter.right_ascension(0.0),
+            4.678480799964803,
+            rtol <= 1e-8
+        );
     }
 
     #[test]
     fn test_rotational_elements_right_ascension_dot() {
-        assert_float_eq!(
+        assert_approx_eq!(
             Jupiter.right_ascension_rate(0.0),
             -1.3266588500099516e-13,
-            rel <= 1e-8
+            rtol <= 1e-8
         );
     }
 
     #[test]
     fn test_rotational_elements_declination() {
-        assert_float_eq!(Jupiter.declination(0.0), 1.1256642372977634, rel <= 1e-8);
+        assert_approx_eq!(Jupiter.declination(0.0), 1.1256642372977634, rtol <= 1e-8);
     }
 
     #[test]
     fn test_rotational_elements_declination_dot() {
-        assert_float_eq!(
+        assert_approx_eq!(
             Jupiter.declination_rate(0.0),
             3.004482367136341e-15,
-            rel <= 1e-8
+            rtol <= 1e-8
         );
     }
 
     #[test]
     fn test_rotational_elements_prime_meridian() {
-        assert_float_eq!(Jupiter.rotation_angle(0.0), 4.973315703557842, rel <= 1e-8);
+        assert_approx_eq!(Jupiter.rotation_angle(0.0), 4.973315703557842, rtol <= 1e-8);
     }
 
     #[test]
     fn test_rotational_elements_prime_meridian_dot() {
-        assert_float_eq!(
+        assert_approx_eq!(
             Jupiter.rotation_rate(0.0),
             0.00017585323445765458,
-            rel <= 1e-8
+            rtol <= 1e-8
         );
     }
 }

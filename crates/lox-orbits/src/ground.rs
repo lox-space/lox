@@ -265,11 +265,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use float_eq::assert_float_eq;
-
     use lox_bodies::Earth;
-    use lox_math::assert_close;
-    use lox_math::is_close::IsClose;
+    use lox_test_utils::assert_approx_eq;
     use lox_time::time_scales::Tdb;
     use lox_time::utc::Utc;
     use lox_time::{Time, time, utc};
@@ -282,7 +279,7 @@ mod tests {
         let latitude = 40.4527f64.to_radians();
         let location = GroundLocation::new(longitude, latitude, 0.0, Earth);
         let expected = DVec3::new(4846.130017870638, -370.1328551351891, 4116.364272747229);
-        assert_close!(location.body_fixed_position(), expected);
+        assert_approx_eq!(location.body_fixed_position(), expected);
     }
 
     #[test]
@@ -290,8 +287,8 @@ mod tests {
         let longitude = -4.3676f64.to_radians();
         let latitude = 40.4527f64.to_radians();
         let location = GroundLocation::new(longitude, latitude, 0.0, Earth);
-        let rot = location.rotation_to_topocentric();
-        let expected = DMat3::from_cols(
+        let act = location.rotation_to_topocentric();
+        let exp = DMat3::from_cols(
             DVec3::new(0.6469358921661584, 0.07615519584215287, 0.7587320591443464),
             DVec3::new(
                 -0.049411020334552434,
@@ -300,9 +297,7 @@ mod tests {
             ),
             DVec3::new(-0.7609418522440956, 0.0, 0.6488200809957448),
         );
-        assert_close!(rot.x_axis, expected.x_axis);
-        assert_close!(rot.y_axis, expected.y_axis);
-        assert_close!(rot.z_axis, expected.z_axis);
+        assert_approx_eq!(exp, act);
     }
 
     #[test]
@@ -319,10 +314,10 @@ mod tests {
         let expected_range_rate = -7.16;
         let expected_azimuth = -53.418f64.to_radians();
         let expected_elevation = -7.077f64.to_radians();
-        assert_float_eq!(observables.range, expected_range, rel <= 1e-2);
-        assert_float_eq!(observables.range_rate, expected_range_rate, rel <= 1e-2);
-        assert_float_eq!(observables.azimuth, expected_azimuth, rel <= 1e-2);
-        assert_float_eq!(observables.elevation, expected_elevation, rel <= 1e-2);
+        assert_approx_eq!(observables.range, expected_range, rtol <= 1e-2);
+        assert_approx_eq!(observables.range_rate, expected_range_rate, rtol <= 1e-2);
+        assert_approx_eq!(observables.azimuth, expected_azimuth, rtol <= 1e-2);
+        assert_approx_eq!(observables.elevation, expected_elevation, rtol <= 1e-2);
     }
 
     #[test]
@@ -334,6 +329,6 @@ mod tests {
         let time = utc!(2022, 1, 31, 23).unwrap().to_time();
         let expected = DVec3::new(-1765.9535510583582, 4524.585984442561, 4120.189198495323);
         let state = propagator.propagate(time).unwrap();
-        assert_close!(state.position(), expected);
+        assert_approx_eq!(state.position(), expected);
     }
 }

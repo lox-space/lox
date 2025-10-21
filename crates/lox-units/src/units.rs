@@ -6,7 +6,7 @@ use std::{
     ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign},
 };
 
-use float_eq::derive_float_eq;
+use lox_test_utils::ApproxEq;
 
 /// Degrees in full circle
 pub const DEGREES_IN_CIRCLE: f64 = 360.0;
@@ -20,13 +20,7 @@ pub const RADIANS_IN_ARCSECOND: f64 = TAU / ARCSECONDS_IN_CIRCLE;
 type Radians = f64;
 
 /// Angle in radians.
-#[derive_float_eq(
-    ulps_tol = "AngleUlps",
-    ulps_tol_derive = "Clone, Copy, Debug, PartialEq",
-    debug_ulps_diff = "AngleDebugUlpsDiff",
-    debug_ulps_diff_derive = "Clone, Copy, Debug, PartialEq"
-)]
-#[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
 #[repr(transparent)]
 pub struct Angle(Radians);
 
@@ -251,13 +245,7 @@ pub const ASTRONOMICAL_UNIT: f64 = 1.495978707e11;
 type Meters = f64;
 
 /// Distance in meters.
-#[derive_float_eq(
-    ulps_tol = "DistanceUlps",
-    ulps_tol_derive = "Clone, Copy, Debug, PartialEq",
-    debug_ulps_diff = "DistanceDebugUlpsDiff",
-    debug_ulps_diff_derive = "Clone, Copy, Debug, PartialEq"
-)]
-#[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
 #[repr(transparent)]
 pub struct Distance(Meters);
 
@@ -357,13 +345,7 @@ impl DistanceUnits for i64 {
 type MetersPerSecond = f64;
 
 /// Velocity in meters per second.
-#[derive_float_eq(
-    ulps_tol = "VelocityUlps",
-    ulps_tol_derive = "Clone, Copy, Debug, PartialEq",
-    debug_ulps_diff = "VelocityDebugUlpsDiff",
-    debug_ulps_diff_derive = "Clone, Copy, Debug, PartialEq"
-)]
-#[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
 #[repr(transparent)]
 pub struct Velocity(MetersPerSecond);
 
@@ -477,13 +459,7 @@ pub enum FrequencyBand {
 type Hertz = f64;
 
 /// Frequency in Hertz
-#[derive_float_eq(
-    ulps_tol = "FrequencyUlps",
-    ulps_tol_derive = "Clone, Copy, Debug, PartialEq",
-    debug_ulps_diff = "FrequencyDebugUlpsDiff",
-    debug_ulps_diff_derive = "Clone, Copy, Debug, PartialEq"
-)]
-#[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
 #[repr(transparent)]
 pub struct Frequency(Hertz);
 
@@ -707,9 +683,9 @@ trait_impls!(Angle, Distance, Frequency, Velocity);
 #[cfg(test)]
 mod tests {
     use alloc::format;
-    use core::f64::consts::{FRAC_PI_2, PI};
+    use std::f64::consts::{FRAC_PI_2, PI};
 
-    use float_eq::assert_float_eq;
+    use lox_test_utils::assert_approx_eq;
     use rstest::rstest;
 
     extern crate alloc;
@@ -719,20 +695,20 @@ mod tests {
     #[test]
     fn test_angle_deg() {
         let angle = 90.0.deg();
-        assert_float_eq!(angle.0, FRAC_PI_2, rel <= 1e-10);
+        assert_approx_eq!(angle.0, FRAC_PI_2, rtol <= 1e-10);
     }
 
     #[test]
     fn test_angle_rad() {
         let angle = PI.rad();
-        assert_float_eq!(angle.0, PI, rel <= 1e-10);
+        assert_approx_eq!(angle.0, PI, rtol <= 1e-10);
     }
 
     #[test]
     fn test_angle_conversions() {
         let angle_deg = 180.0.deg();
         let angle_rad = PI.rad();
-        assert_float_eq!(angle_deg.0, angle_rad.0, rel <= 1e-10);
+        assert_approx_eq!(angle_deg.0, angle_rad.0, rtol <= 1e-10);
     }
 
     #[test]
@@ -771,12 +747,12 @@ mod tests {
     #[case(Angle::FRAC_PI_2, -Angle::PI, -3.0 * PI / 2.0)]
     #[case(-Angle::FRAC_PI_2, -Angle::PI, -FRAC_PI_2)]
     fn test_angle_normalize_two_pi(#[case] angle: Angle, #[case] center: Angle, #[case] exp: f64) {
-        // abs is preferred to rel for floating-point comparisons with 0.0. See
+        // atol is preferred to rtol for floating-point comparisons with 0.0. See
         // https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/#inferna
         if exp == 0.0 {
-            assert_float_eq!(angle.normalize_two_pi(center).0, exp, abs <= TOLERANCE);
+            assert_approx_eq!(angle.normalize_two_pi(center).0, exp, atol <= TOLERANCE);
         } else {
-            assert_float_eq!(angle.normalize_two_pi(center).0, exp, rel <= TOLERANCE);
+            assert_approx_eq!(angle.normalize_two_pi(center).0, exp, rtol <= TOLERANCE);
         }
     }
 
@@ -802,7 +778,7 @@ mod tests {
     fn test_distance_conversions() {
         let d1 = 1.5e11.m();
         let d2 = (1.5e11 / ASTRONOMICAL_UNIT).au();
-        assert_float_eq!(d1.0, d2.0, rel <= 1e-9);
+        assert_approx_eq!(d1.0, d2.0, rtol <= 1e-9);
     }
 
     #[test]
@@ -887,14 +863,14 @@ mod tests {
     fn test_frequency_wavelength() {
         let f = 1.0.ghz();
         let wavelength = f.wavelength();
-        assert_float_eq!(wavelength.0, 0.299792458, rel <= 1e-9);
+        assert_approx_eq!(wavelength.0, 0.299792458, rtol <= 1e-9);
     }
 
     #[test]
     fn test_frequency_wavelength_speed_of_light() {
         let f = 299792458.0.hz(); // 1 Hz at speed of light
         let wavelength = f.wavelength();
-        assert_float_eq!(wavelength.0, 1.0, rel <= 1e-10);
+        assert_approx_eq!(wavelength.0, 1.0, rtol <= 1e-10);
     }
 
     #[test]

@@ -20,7 +20,8 @@ pub fn earth_rotation_angle_00(days_since_j2000_ut1: Days) -> Angle {
 
 #[cfg(test)]
 mod tests {
-    use float_eq::assert_float_eq;
+    use lox_test_utils::assert_approx_eq;
+
     use rstest::rstest;
 
     use super::*;
@@ -31,6 +32,6 @@ mod tests {
     #[case::after_j2000(123.45, 3.562818363612361.rad())]
     fn test_rotation_angle_00(#[case] days_since_j2000_ut1: Days, #[case] expected: Angle) {
         let actual = earth_rotation_angle_00(days_since_j2000_ut1);
-        assert_float_eq!(expected, actual, rel <= 1e-9.rad());
+        assert_approx_eq!(expected, actual, rtol <= 1e-9);
     }
 }

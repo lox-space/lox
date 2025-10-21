@@ -81,20 +81,20 @@ fn evaluate_single_order_terms(
 mod tests {
     use std::iter::zip;
 
-    use float_eq::assert_float_eq;
+    use lox_test_utils::assert_approx_eq;
 
     use super::*;
 
-    const TOLERANCE: Angle = Angle::radians(1e-11);
+    const TOLERANCE: f64 = 1e-11;
 
     #[test]
     fn test_s_jd0() {
         let jd0: JulianCenturies = -67.11964407939767;
         let xy = CipCoords::new(jd0);
-        assert_float_eq!(
+        assert_approx_eq!(
             cio_locator(jd0, xy),
             -0.0723985415686306.rad(),
-            rel <= TOLERANCE
+            rtol <= TOLERANCE
         );
     }
 
@@ -102,10 +102,10 @@ mod tests {
     fn test_s_j2000() {
         let j2000: JulianCenturies = 0.0;
         let xy = CipCoords::new(j2000);
-        assert_float_eq!(
+        assert_approx_eq!(
             cio_locator(j2000, xy),
             -0.00000001013396519178.rad(),
-            rel <= TOLERANCE
+            rtol <= TOLERANCE
         );
     }
 
@@ -113,10 +113,10 @@ mod tests {
     fn test_s_j2100() {
         let j2100: JulianCenturies = 1.0;
         let xy = CipCoords::new(j2100);
-        assert_float_eq!(
+        assert_approx_eq!(
             cio_locator(j2100, xy),
             -0.00000000480511934533.rad(),
-            rel <= TOLERANCE
+            rtol <= TOLERANCE
         );
     }
 
@@ -136,7 +136,7 @@ mod tests {
         ];
 
         for (act, exp) in zip(actual, expected) {
-            assert_float_eq!(act, exp, rel <= TOLERANCE)
+            assert_approx_eq!(act, exp, rtol <= TOLERANCE)
         }
     }
 }
