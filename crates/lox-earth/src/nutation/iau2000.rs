@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2023 Angus Morrison <github@angus-morrison.com>
+// SPDX-FileCopyrightText: 2024 Helge Eichhorn <git@helgeeichhorn.de>
+// SPDX-License-Identifier: MPL-2.0
+
 pub(crate) use iau2000a::nutation_iau2000a;
 pub(crate) use iau2000b::nutation_iau2000b;
 use lox_units::{Angle, AngleUnits, types::units::JulianCenturies};

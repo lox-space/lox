@@ -1,10 +1,6 @@
-/*
- * Copyright (c) 2023. Helge Eichhorn and the LOX contributors
- *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, you can obtain one at https://mozilla.org/MPL/2.0/.
- */
+// SPDX-FileCopyrightText: 2023 Angus Morrison <github@angus-morrison.com>
+// SPDX-FileCopyrightText: 2024 Helge Eichhorn <git@helgeeichhorn.de>
+// SPDX-License-Identifier: MPL-2.0
 
 //! Module xy06 provides a function to calculate the (X, Y) position of the Celestial Intermediate
 //! Pole (CIP) using the IAU 2006 precession and IAU 2000A nutation models.

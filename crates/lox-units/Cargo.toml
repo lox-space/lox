@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2025 Helge Eichhorn <git@helgeeichhorn.de>
+# SPDX-License-Identifier: MPL-2.0
+
 [package]
 name = "lox-units"
 description = "Physical units, constants, and common data types for the Lox Astrodynamics Toolkit"
