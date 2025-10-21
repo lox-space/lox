@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2024 Helge Eichhorn <git@helgeeichhorn.de>
+// SPDX-License-Identifier: MPL-2.0
+
 use lox_bodies::Origin;
 use lox_time::Time;
 use lox_time::time_scales::TimeScale;

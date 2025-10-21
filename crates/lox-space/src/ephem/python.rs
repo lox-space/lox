@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2024 Helge Eichhorn <git@helgeeichhorn.de>
+// SPDX-License-Identifier: MPL-2.0
+
 use pyo3::{PyErr, PyResult, exceptions::PyValueError, pyclass, pymethods};
 
 use crate::ephem::spk::parser::{DafSpkError, Spk, parse_daf_spk};

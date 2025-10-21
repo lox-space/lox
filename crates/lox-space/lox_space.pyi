@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2024 Helge Eichhorn <git@helgeeichhorn.de>
+# SPDX-License-Identifier: MPL-2.0
+
 from collections.abc import Callable
 from typing import Literal, Self, overload
 import numpy as np

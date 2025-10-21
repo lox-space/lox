@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2024 Helge Eichhorn <git@helgeeichhorn.de>
+// SPDX-License-Identifier: MPL-2.0
+
 use itertools::Itertools;
 use lox_test_utils::ApproxEq;
 use lox_time::Time;

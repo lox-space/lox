@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2024 Andrei Zisu <matzipan@gmail.com>
+// SPDX-FileCopyrightText: 2024 Helge Eichhorn <git@helgeeichhorn.de>
+// SPDX-License-Identifier: MPL-2.0
+
 //! Parsers for CCSDS
 //! [Navigation Data Messages version 3](https://public.ccsds.org/Pubs/502x0b3e1.pdf).
 //!

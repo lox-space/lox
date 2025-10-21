@@ -1,14 +1,7 @@
-/*
- * Copyright (c) 2023. Helge Eichhorn and the LOX contributors
- *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, you can obtain one at https://mozilla.org/MPL/2.0/.
- */
+// SPDX-FileCopyrightText: 2024 Andrei Zisu <matzipan@gmail.com>
+// SPDX-FileCopyrightText: 2025 Helge Eichhorn <git@helgeeichhorn.de>
+// SPDX-License-Identifier: MPL-2.0
 
-/// Deserialization error. Simple wrapper for
-/// quick_xml::errors::serialize::DeError. Check the source class for further
-/// documentation.
 #[derive(Clone, Debug)]
 pub enum XmlDeserializationError {
     Custom(String),

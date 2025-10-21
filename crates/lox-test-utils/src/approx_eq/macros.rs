@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025 Helge Eichhorn <git@helgeeichhorn.de>
+// SPDX-License-Identifier: MPL-2.0
+
 //! Macros for approximate equality testing.
 //!
 //! This module defines the core macros for testing floating-point equality:

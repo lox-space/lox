@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025 Helge Eichhorn <git@helgeeichhorn.de>
+// SPDX-License-Identifier: MPL-2.0
+
 use pyo3::{Bound, Python, pyclass, pymethods, types::PyComplex};
 use std::format;
 use std::string::{String, ToString};

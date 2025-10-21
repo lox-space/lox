@@ -1,0 +1,32 @@
+version = 1
+
+[[annotations]]
+path = "data/*"
+SPDX-FileCopyrightText = "2023 Helge Eichhorn <git@helgeeichhorn.de>"
+SPDX-License-Identifier = "CC0-1.0"
+
+[[annotations]]
+path = "pyrightconfig.json"
+SPDX-FileCopyrightText = "2023 Helge Eichhorn <git@helgeeichhorn.de>"
+SPDX-License-Identifier = "MPL-2.0"
+
+[[annotations]]
+path = "public/crabstellation.webp"
+SPDX-FileCopyrightText = "2024 Angus Morrison <github@angus-morrison.com>"
+SPDX-License-Identifier = "CC-BY-4.0"
+
+[[annotations]]
+path = "public/ephemerista-logo.webp"
+SPDX-FileCopyrightText = "2024 Libre Space Foundation"
+SPDX-License-Identifier = "CC-BY-4.0"
+
+# Machine generated files
+[[annotations]]
+path = [
+  "**/CHANGELOG.md",
+  "**/Cargo.lock",
+  "**/uv.lock",
+  "**/proptest-regressions/**",
+]
+SPDX-FileCopyrightText = "NONE"
+SPDX-License-Identifier = "CC0-1.0"

@@ -1,10 +1,6 @@
-/*
- * Copyright (c) 2025. Helge Eichhorn and the LOX contributors
- *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, you can obtain one at https://mozilla.org/MPL/2.0/.
- */
+// SPDX-FileCopyrightText: 2024 Angus Morrison <github@angus-morrison.com>
+// SPDX-FileCopyrightText: 2024 Helge Eichhorn <git@helgeeichhorn.de>
+// SPDX-License-Identifier: MPL-2.0
 
 /*!
     Module `leap_seconds` exposes the [LeapSecondsProvider] trait for defining sources of leap
