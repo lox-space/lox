@@ -121,59 +121,45 @@ fn planetary_nutation(
 /// All fixtures and assertion values were generated using the ERFA C library unless otherwise
 /// stated.
 mod tests {
-    use float_eq::assert_float_eq;
+    use lox_test_utils::assert_approx_eq;
+    use lox_units::{AngleUnits, types::units::JulianCenturies};
 
-    use lox_units::{Angle, AngleUnits, types::units::JulianCenturies};
+    use crate::nutation::Nutation;
 
     use super::nutation_iau2000a;
 
-    const TOLERANCE: Angle = Angle::radians(1e-11);
+    const TOLERANCE: f64 = 1e-11;
 
     #[test]
     fn test_nutation_iau2000a_jd0() {
         let jd0: JulianCenturies = -67.11964407939767;
+        let expected = Nutation {
+            longitude: 0.00000737147877835653.rad(),
+            obliquity: 0.00004132135467915123.rad(),
+        };
         let actual = nutation_iau2000a(jd0);
-        assert_float_eq!(
-            0.00000737147877835653.rad(),
-            actual.longitude,
-            rel <= TOLERANCE
-        );
-        assert_float_eq!(
-            0.00004132135467915123.rad(),
-            actual.obliquity,
-            rel <= TOLERANCE
-        );
+        assert_approx_eq!(expected, actual, rtol <= TOLERANCE);
     }
 
     #[test]
     fn test_nutation_iau2000a_j2000() {
         let j2000: JulianCenturies = 0.0;
+        let expected = Nutation {
+            longitude: -0.00006754422426417299.rad(),
+            obliquity: -0.00002797083119237414.rad(),
+        };
         let actual = nutation_iau2000a(j2000);
-        assert_float_eq!(
-            -0.00006754422426417299.rad(),
-            actual.longitude,
-            rel <= TOLERANCE
-        );
-        assert_float_eq!(
-            -0.00002797083119237414.rad(),
-            actual.obliquity,
-            rel <= TOLERANCE
-        );
+        assert_approx_eq!(expected, actual, rtol <= TOLERANCE);
     }
 
     #[test]
     fn test_nutation_iau2000a_j2100() {
         let j2100: JulianCenturies = 1.0;
+        let expected = Nutation {
+            longitude: 0.00001585987390484147.rad(),
+            obliquity: 0.00004162326779426948.rad(),
+        };
         let actual = nutation_iau2000a(j2100);
-        assert_float_eq!(
-            0.00001585987390484147.rad(),
-            actual.longitude,
-            rel <= TOLERANCE
-        );
-        assert_float_eq!(
-            0.00004162326779426948.rad(),
-            actual.obliquity,
-            rel <= TOLERANCE
-        );
+        assert_approx_eq!(expected, actual, rtol <= TOLERANCE);
     }
 }

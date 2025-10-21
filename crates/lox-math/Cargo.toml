@@ -10,9 +10,9 @@ repository.workspace = true
 
 [dependencies]
 lox-units.workspace = true
+lox-test-utils.workspace = true
 
 fast_polynomial.workspace = true
-float_eq.workspace = true
 glam.workspace = true
 thiserror.workspace = true
 

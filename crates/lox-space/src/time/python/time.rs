@@ -9,12 +9,11 @@
 use std::ops::{Add, Sub};
 use std::str::FromStr;
 
+use lox_test_utils::{ApproxEq, approx_eq};
 use pyo3::basic::CompareOp;
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::types::{PyAnyMethods, PyType};
 use pyo3::{Bound, IntoPyObjectExt, Py, PyAny, PyErr, PyResult, Python, pyclass, pymethods};
-
-use lox_math::is_close::IsClose;
 
 use crate::earth::python::ut1::{PyEopProvider, PyEopProviderError};
 use crate::time::calendar_dates::{CalendarDate, Date};
@@ -83,7 +82,7 @@ impl FromStr for PyUnit {
 }
 
 #[pyclass(name = "Time", module = "lox_space", frozen)]
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, ApproxEq)]
 pub struct PyTime(pub DynTime);
 
 #[pymethods]
@@ -261,7 +260,7 @@ impl PyTime {
                 "cannot compare `Time` objects with different time scales",
             ));
         }
-        Ok(self.0.is_close_with_tolerances(&rhs.0, rel_tol, abs_tol))
+        Ok(approx_eq!(self, &rhs, rtol <= rel_tol, atol <= abs_tol))
     }
 
     #[pyo3(signature = (epoch = "jd", unit = "days"))]
@@ -419,23 +418,11 @@ impl CivilTime for PyTime {
     }
 }
 
-impl IsClose for PyTime {
-    const DEFAULT_RELATIVE: f64 = 1e-10;
-
-    const DEFAULT_ABSOLUTE: f64 = 1e-14;
-
-    fn is_close_with_tolerances(&self, rhs: &Self, rel_tol: f64, abs_tol: f64) -> bool {
-        self.0.is_close_with_tolerances(&rhs.0, rel_tol, abs_tol)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    use crate::math::assert_close;
-    use float_eq::assert_float_eq;
-    use lox_test_utils::data_dir;
+    use lox_test_utils::{assert_approx_eq, data_dir};
     use pyo3::{IntoPyObject, IntoPyObjectExt, Python, types::PyDict};
     use rstest::rstest;
 
@@ -461,7 +448,7 @@ mod tests {
         assert_eq!(time.nanosecond(), 789);
         assert_eq!(time.picosecond(), 123);
         assert_eq!(time.femtosecond(), 0);
-        assert_float_eq!(time.decimal_seconds(), 12.123456789123, rel <= 1e-15);
+        assert_approx_eq!(time.decimal_seconds(), 12.123456789123, rtol <= 1e-15);
     }
 
     #[test]
@@ -677,7 +664,7 @@ mod tests {
             let actual =
                 PyTime::from_two_part_julian_date(&cls, &scale_to_any(py, "TAI"), jd1, jd2)
                     .unwrap();
-            assert_close!(actual.0, expected.0);
+            assert_approx_eq!(actual, expected);
         })
     }
 
@@ -744,7 +731,7 @@ mod tests {
                 .unwrap()
                 .to_scale(&scale1, Some(&provider))
                 .unwrap();
-            assert_close!(act, exp)
+            assert_approx_eq!(act, exp)
         })
     }
 

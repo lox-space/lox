@@ -18,5 +18,5 @@ num-traits.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
-float_eq.workspace = true
+lox-test-utils.workspace = true
 rstest.workspace = true

@@ -173,8 +173,7 @@ mod tests {
 
     use glam::DVec3;
     use lox_bodies::DynOrigin;
-    use lox_math::assert_close;
-    use lox_math::is_close::IsClose;
+    use lox_test_utils::assert_approx_eq;
     use lox_time::utc::Utc;
     use rstest::rstest;
 
@@ -225,7 +224,7 @@ mod tests {
             .try_transform(DynFrame::Icrf, frame, time)
             .unwrap();
         let (r_act, v_act) = rot.rotate_state(r, v);
-        assert_close!(r_act, r_exp, 1e-8);
-        assert_close!(v_act, v_exp, 1e-5);
+        assert_approx_eq!(r_act, r_exp, rtol <= 1e-8);
+        assert_approx_eq!(v_act, v_exp, rtol <= 1e-5);
     }
 }

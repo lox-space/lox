@@ -485,9 +485,7 @@ where
 mod tests {
     use lox_bodies::Earth;
     use lox_ephem::spk::parser::{Spk, parse_daf_spk};
-    use lox_math::assert_close;
-    use lox_math::is_close::IsClose;
-    use lox_test_utils::data_dir;
+    use lox_test_utils::{assert_approx_eq, data_dir};
     use lox_time::Time;
     use lox_time::time_scales::Tai;
     use lox_time::utc::Utc;
@@ -548,9 +546,7 @@ mod tests {
             .iter()
             .map(|t| elevation(*t, &location(), &mask, &sc, &DefaultTransformProvider))
             .collect();
-        for (actual, expected) in actual.iter().zip(expected.iter()) {
-            assert_close!(actual, expected, 1e-1);
-        }
+        assert_approx_eq!(actual, expected, atol <= 1e-1);
     }
 
     #[test]
@@ -581,10 +577,7 @@ mod tests {
         let expected = contacts();
         let actual = visibility(&times, &gs, &mask, &sc, &DefaultTransformProvider);
         assert_eq!(actual.len(), expected.len());
-        for (actual, expected) in zip(actual, expected) {
-            assert_close!(actual.start(), expected.start(), 0.0, 1e-4);
-            assert_close!(actual.end(), expected.end(), 0.0, 1e-4);
-        }
+        assert_approx_eq!(expected, actual, rtol <= 1e-4);
     }
 
     #[test]
@@ -598,8 +591,8 @@ mod tests {
             visibility_combined(&times, &gs, &mask, &[DynOrigin::Moon], &sc, ephemeris()).unwrap();
         assert_eq!(actual.len(), expected.len());
         for (actual, expected) in zip(actual, expected) {
-            assert_close!(actual.window().start(), expected.start(), 0.0, 1e-4);
-            assert_close!(actual.window().end(), expected.end(), 0.0, 1e-4);
+            assert_approx_eq!(actual.window().start(), expected.start(), rtol <= 1e-4);
+            assert_approx_eq!(actual.window().end(), expected.end(), rtol <= 1e-4);
         }
     }
 

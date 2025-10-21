@@ -63,7 +63,7 @@ impl Propagator<Tai, Earth, Icrf> for Sgp4 {
 
 #[cfg(test)]
 mod tests {
-    use float_eq::assert_float_eq;
+    use lox_test_utils::assert_approx_eq;
 
     use super::*;
 
@@ -80,10 +80,10 @@ mod tests {
         let t1 = sgp4.time() + TimeDelta::from_minutes(orbital_period).unwrap();
         let s1 = sgp4.propagate(t1).unwrap();
         let k1 = s1.to_keplerian();
-        assert_float_eq!(
+        assert_approx_eq!(
             k1.orbital_period().to_decimal_seconds() / SECONDS_PER_MINUTE,
             orbital_period,
-            rel <= 1e-4
+            rtol <= 1e-4
         );
     }
 }

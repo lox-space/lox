@@ -189,43 +189,41 @@ fn calculate_cip_unit_vector(
 
 #[cfg(test)]
 mod tests {
-    use std::iter::zip;
-
-    use float_eq::assert_float_eq;
+    use lox_test_utils::assert_approx_eq;
 
     use super::*;
 
-    const TOLERANCE: Angle = Angle::radians(1e-12);
+    const TOLERANCE: f64 = 1e-12;
 
     #[test]
     fn test_cip_xy_jd0() {
         let jd0: JulianCenturies = -67.11964407939767;
         let CipCoords { x, y } = CipCoords::new(jd0);
-        assert_float_eq!(x, -0.4088355637476968.rad(), rel <= TOLERANCE);
-        assert_float_eq!(y, -0.38359667445777073.rad(), rel <= TOLERANCE);
+        assert_approx_eq!(x, -0.4088355637476968.rad(), rtol <= TOLERANCE);
+        assert_approx_eq!(y, -0.38359667445777073.rad(), rtol <= TOLERANCE);
     }
 
     #[test]
     fn test_cip_xy_j2000() {
         let j2000: JulianCenturies = 0.0;
         let CipCoords { x, y } = CipCoords::new(j2000);
-        assert_float_eq!(x, -0.0000269463795685740.rad(), rel <= TOLERANCE);
-        assert_float_eq!(y, -0.00002800472282281282.rad(), rel <= TOLERANCE);
+        assert_approx_eq!(x, -0.0000269463795685740.rad(), rtol <= TOLERANCE);
+        assert_approx_eq!(y, -0.00002800472282281282.rad(), rtol <= TOLERANCE);
     }
 
     #[test]
     fn test_cip_xy_j2100() {
         let j2100: JulianCenturies = 1.0;
         let CipCoords { x, y } = CipCoords::new(j2100);
-        assert_float_eq!(x, 0.00972070446172924.rad(), rel <= TOLERANCE);
-        assert_float_eq!(y, -0.0000673058699616719.rad(), rel <= TOLERANCE);
+        assert_approx_eq!(x, 0.00972070446172924.rad(), rtol <= TOLERANCE);
+        assert_approx_eq!(y, -0.0000673058699616719.rad(), rtol <= TOLERANCE);
     }
 
     #[test]
     fn test_fundamental_args_ordering() {
         let j2000: JulianCenturies = 0.0;
-        let actual = fundamental_args(j2000);
-        let expected = [
+        let act = fundamental_args(j2000);
+        let exp = [
             Moon.mean_anomaly_iers03(j2000),
             Sun.mean_anomaly_iers03(j2000),
             Moon.mean_longitude_minus_ascending_node_mean_longitude_iers03(j2000),
@@ -242,8 +240,6 @@ mod tests {
             general_accum_precession_in_longitude_iers03(j2000),
         ];
 
-        for (act, exp) in zip(actual, expected) {
-            assert_float_eq!(act, exp, rel <= TOLERANCE)
-        }
+        assert_approx_eq!(act, exp, rtol <= TOLERANCE)
     }
 }

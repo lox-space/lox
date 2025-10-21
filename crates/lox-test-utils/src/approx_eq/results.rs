@@ -3,16 +3,34 @@ use std::{collections::HashMap, fmt::Display};
 #[derive(Debug)]
 pub enum ApproxEqResult {
     Pass,
-    Fail { left: f64, right: f64 },
+    Fail {
+        left: f64,
+        right: f64,
+        diff: Option<f64>,
+        tol: Option<f64>,
+    },
 }
 
 impl ApproxEqResult {
     pub fn new(left: f64, right: f64, atol: f64, rtol: f64) -> Self {
-        let approx_eq = left.is_finite()
-            && right.is_finite()
-            && (left - right).abs() <= f64::max(atol, rtol * f64::max(left.abs(), right.abs()));
-        if !approx_eq {
-            Self::Fail { left, right }
+        if !left.is_finite() || !right.is_finite() {
+            return Self::Fail {
+                left,
+                right,
+                diff: None,
+                tol: None,
+            };
+        }
+        // Effective tolerance
+        let tol = f64::max(atol, rtol * f64::max(left.abs(), right.abs()));
+        let diff = (left - right).abs();
+        if diff > tol {
+            Self::Fail {
+                left,
+                right,
+                diff: Some(diff),
+                tol: Some(tol),
+            }
         } else {
             Self::Pass
         }
@@ -40,7 +58,8 @@ impl ApproxEqResults {
         self
     }
 
-    pub fn merge(&mut self, field: String, other: Self) -> &mut Self {
+    pub fn merge(&mut self, field: impl AsRef<str>, other: Self) -> &mut Self {
+        let field = field.as_ref().to_owned();
         for (other_field, result) in other.0 {
             let field = if !other_field.is_empty() {
                 format!("{}.{}", field.clone(), other_field)
@@ -58,13 +77,23 @@ impl Display for ApproxEqResults {
         for (field, result) in &self.0 {
             match result {
                 ApproxEqResult::Pass => continue,
-                ApproxEqResult::Fail { left, right } => {
+                ApproxEqResult::Fail {
+                    left,
+                    right,
+                    diff,
+                    tol,
+                } => {
                     if !field.is_empty() {
                         writeln!(f, "Field: {}", field)?;
                     }
                     writeln!(f, "Left:  {:?}", left)?;
                     writeln!(f, "Right: {:?}", right)?;
-                    writeln!(f, "Diff:  {:?}\n", (left - right).abs())?;
+                    if let Some(diff) = diff {
+                        writeln!(f, "Diff:  {:?}", diff)?;
+                    }
+                    if let Some(tol) = tol {
+                        writeln!(f, "Tol:   {:?}\n", tol)?;
+                    }
                 }
             }
         }

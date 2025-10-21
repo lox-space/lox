@@ -8,10 +8,10 @@
 
 use std::f64::consts::TAU;
 
-use float_eq::float_eq;
 use glam::{DMat3, DVec3};
 
 use lox_bodies::{DynOrigin, PointMass, TryPointMass, UndefinedOriginPropertyError};
+use lox_test_utils::approx_eq;
 use lox_time::deltas::TimeDelta;
 use lox_time::time_scales::{DynTimeScale, TimeScale};
 use lox_time::{DynTime, Time};
@@ -238,19 +238,19 @@ where
 }
 
 pub fn is_equatorial(inclination: f64) -> bool {
-    float_eq!(inclination.abs(), 0.0, abs <= 1e-8)
+    approx_eq!(inclination.abs(), 0.0, atol <= 1e-8)
 }
 
 pub fn is_circular(eccentricity: f64) -> bool {
-    float_eq!(eccentricity, 0.0, abs <= 1e-8)
+    approx_eq!(eccentricity, 0.0, atol <= 1e-8)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    use float_eq::assert_float_eq;
     use lox_bodies::Earth;
+    use lox_test_utils::assert_approx_eq;
     use lox_time::time_scales::Tdb;
     use lox_time::{Time, time};
 
@@ -280,35 +280,35 @@ mod tests {
         assert_eq!(keplerian1.origin(), Earth);
         assert_eq!(keplerian1.reference_frame(), Icrf);
 
-        assert_float_eq!(
+        assert_approx_eq!(
             keplerian.semi_major_axis(),
             keplerian1.semi_major_axis(),
-            rel <= 1e-6
+            rtol <= 1e-6
         );
-        assert_float_eq!(
+        assert_approx_eq!(
             keplerian.eccentricity(),
             keplerian1.eccentricity(),
-            abs <= 1e-6
+            atol <= 1e-6
         );
-        assert_float_eq!(
+        assert_approx_eq!(
             keplerian.inclination(),
             keplerian1.inclination(),
-            rel <= 1e-6
+            rtol <= 1e-6
         );
-        assert_float_eq!(
+        assert_approx_eq!(
             keplerian.longitude_of_ascending_node(),
             keplerian1.longitude_of_ascending_node(),
-            rel <= 1e-6
+            rtol <= 1e-6
         );
-        assert_float_eq!(
+        assert_approx_eq!(
             keplerian.argument_of_periapsis(),
             keplerian1.argument_of_periapsis(),
-            rel <= 1e-6
+            rtol <= 1e-6
         );
-        assert_float_eq!(
+        assert_approx_eq!(
             keplerian.true_anomaly(),
             keplerian1.true_anomaly(),
-            rel <= 1e-6
+            rtol <= 1e-6
         );
     }
 }

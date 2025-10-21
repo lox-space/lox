@@ -11,6 +11,7 @@
 
 use std::ops::Add;
 
+use lox_test_utils::ApproxEq;
 use lox_time::Time;
 use lox_time::julian_dates::JulianDate;
 use lox_time::time_scales::Tdb;
@@ -33,7 +34,7 @@ pub enum Model {
 }
 
 /// Nutation components with respect to some ecliptic of date.
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Debug, Default, Clone, PartialEq, ApproxEq)]
 pub struct Nutation {
     /// δψ
     pub longitude: Angle,
@@ -76,12 +77,12 @@ pub fn nutation(model: Model, time: Time<Tdb>) -> Nutation {
 
 #[cfg(test)]
 mod tests {
-    use float_eq::assert_float_eq;
+    use lox_test_utils::assert_approx_eq;
     use lox_units::AngleUnits;
 
     use super::*;
 
-    const TOLERANCE: Angle = Angle::radians(1e-12);
+    const TOLERANCE: f64 = 1e-12;
 
     #[test]
     fn test_nutation_iau1980() {
@@ -91,9 +92,9 @@ mod tests {
             obliquity: -0.00002799221238377013.rad(),
         };
         let actual = nutation(Model::IAU1980, time);
-        assert_float_eq!(expected.longitude, actual.longitude, rel <= TOLERANCE);
-        assert_float_eq!(expected.obliquity, actual.obliquity, rel <= TOLERANCE);
+        assert_approx_eq!(expected, actual, rtol <= TOLERANCE);
     }
+
     #[test]
     fn test_nutation_iau2000a() {
         let time = Time::j2000(Tdb);
@@ -102,8 +103,7 @@ mod tests {
             obliquity: -0.00002797083119237414.rad(),
         };
         let actual = nutation(Model::IAU2000A, time);
-        assert_float_eq!(expected.longitude, actual.longitude, rel <= TOLERANCE);
-        assert_float_eq!(expected.obliquity, actual.obliquity, rel <= TOLERANCE);
+        assert_approx_eq!(expected, actual, rtol <= TOLERANCE);
     }
 
     #[test]
@@ -114,8 +114,7 @@ mod tests {
             obliquity: -0.00002797092331098565.rad(),
         };
         let actual = nutation(Model::IAU2000B, time);
-        assert_float_eq!(expected.longitude, actual.longitude, rel <= TOLERANCE);
-        assert_float_eq!(expected.obliquity, actual.obliquity, rel <= TOLERANCE);
+        assert_approx_eq!(expected, actual, rtol <= TOLERANCE);
     }
 
     #[test]
@@ -126,7 +125,6 @@ mod tests {
             obliquity: -0.00002797083119237414.rad(),
         };
         let actual = nutation(Model::IAU2006A, time);
-        assert_float_eq!(expected.longitude, actual.longitude, rel <= TOLERANCE);
-        assert_float_eq!(expected.obliquity, actual.obliquity, rel <= TOLERANCE);
+        assert_approx_eq!(expected, actual, rtol <= TOLERANCE);
     }
 }

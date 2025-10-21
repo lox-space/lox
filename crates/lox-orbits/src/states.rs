@@ -408,14 +408,10 @@ impl DynState {
 mod tests {
     use std::sync::OnceLock;
 
-    use float_eq::assert_float_eq;
-
     use lox_bodies::{Earth, Jupiter, Venus};
     use lox_ephem::spk::parser::{Spk, parse_daf_spk};
     use lox_frames::providers::DefaultTransformProvider;
-    use lox_math::assert_close;
-    use lox_math::is_close::IsClose;
-    use lox_test_utils::data_dir;
+    use lox_test_utils::{assert_approx_eq, data_dir};
     use lox_time::{Time, time, time_scales::Tdb, utc::Utc};
 
     use super::*;
@@ -436,19 +432,11 @@ mod tests {
             .unwrap();
         let s0 = s1.try_to_frame(Icrf, &DefaultTransformProvider).unwrap();
 
-        assert_float_eq!(s0.position().x, r0.x, rel <= 1e-8);
-        assert_float_eq!(s0.position().y, r0.y, rel <= 1e-8);
-        assert_float_eq!(s0.position().z, r0.z, rel <= 1e-8);
-        assert_float_eq!(s0.velocity().x, v0.x, rel <= 1e-8);
-        assert_float_eq!(s0.velocity().y, v0.y, rel <= 1e-8);
-        assert_float_eq!(s0.velocity().z, v0.z, rel <= 1e-8);
+        assert_approx_eq!(s0.position(), r0, rtol <= 1e-8);
+        assert_approx_eq!(s0.velocity(), v0, rtol <= 1e-8);
 
-        assert_float_eq!(s1.position().x, r1.x, rel <= 1e-8);
-        assert_float_eq!(s1.position().y, r1.y, rel <= 1e-8);
-        assert_float_eq!(s1.position().z, r1.z, rel <= 1e-8);
-        assert_float_eq!(s1.velocity().x, v1.x, rel <= 1e-8);
-        assert_float_eq!(s1.velocity().y, v1.y, rel <= 1e-8);
-        assert_float_eq!(s1.velocity().z, v1.z, rel <= 1e-8);
+        assert_approx_eq!(s1.position(), r1, rtol <= 1e-8);
+        assert_approx_eq!(s1.velocity(), v1, rtol <= 1e-8);
     }
 
     #[test]
@@ -472,12 +460,8 @@ mod tests {
         assert_eq!(cartesian1.origin(), Earth);
         assert_eq!(cartesian1.reference_frame(), Icrf);
 
-        assert_float_eq!(cartesian.position().x, cartesian1.position().x, rel <= 1e-8);
-        assert_float_eq!(cartesian.position().y, cartesian1.position().y, rel <= 1e-8);
-        assert_float_eq!(cartesian.position().z, cartesian1.position().z, rel <= 1e-8);
-        assert_float_eq!(cartesian.velocity().x, cartesian1.velocity().x, rel <= 1e-6);
-        assert_float_eq!(cartesian.velocity().y, cartesian1.velocity().y, rel <= 1e-6);
-        assert_float_eq!(cartesian.velocity().z, cartesian1.velocity().z, rel <= 1e-6);
+        assert_approx_eq!(cartesian.position(), cartesian1.position(), rtol <= 1e-8);
+        assert_approx_eq!(cartesian.velocity(), cartesian1.velocity(), rtol <= 1e-6);
     }
 
     #[test]
@@ -491,9 +475,9 @@ mod tests {
         let time = time!(Tdb, 2012, 7, 1).unwrap();
         let state = State::new(time, position, velocity, Earth, Iau::new(Earth));
         let ground = state.to_ground_location().unwrap();
-        assert_float_eq!(ground.latitude(), lat_exp, rel <= 1e-4);
-        assert_float_eq!(ground.longitude(), lon_exp, rel <= 1e-4);
-        assert_float_eq!(ground.altitude(), alt_exp, rel <= 1e-4);
+        assert_approx_eq!(ground.latitude(), lat_exp, rtol <= 1e-4);
+        assert_approx_eq!(ground.longitude(), lon_exp, rtol <= 1e-4);
+        assert_approx_eq!(ground.altitude(), alt_exp, rtol <= 1e-4);
     }
 
     #[test]
@@ -520,8 +504,8 @@ mod tests {
         let r_act = s_venus.position();
         let v_act = s_venus.velocity();
 
-        assert_close!(r_act, r_exp);
-        assert_close!(v_act, v_exp);
+        assert_approx_eq!(r_act, r_exp);
+        assert_approx_eq!(v_act, v_exp);
     }
 
     fn ephemeris() -> &'static Spk {

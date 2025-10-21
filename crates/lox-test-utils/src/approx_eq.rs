@@ -1,6 +1,6 @@
 use std::iter::zip;
 
-use glam::DVec3;
+use glam::{DMat3, DVec3};
 
 use crate::approx_eq::results::{ApproxEqResult, ApproxEqResults};
 
@@ -34,9 +34,19 @@ impl ApproxEq for f64 {
 impl ApproxEq for DVec3 {
     fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
         let mut results = ApproxEqResults::new();
-        results.merge("x".to_string(), self.x.approx_eq(&rhs.x, atol, rtol));
-        results.merge("y".to_string(), self.y.approx_eq(&rhs.y, atol, rtol));
-        results.merge("z".to_string(), self.z.approx_eq(&rhs.z, atol, rtol));
+        results.merge("x", self.x.approx_eq(&rhs.x, atol, rtol));
+        results.merge("y", self.y.approx_eq(&rhs.y, atol, rtol));
+        results.merge("z", self.z.approx_eq(&rhs.z, atol, rtol));
+        results
+    }
+}
+
+impl ApproxEq for DMat3 {
+    fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
+        let mut results = ApproxEqResults::new();
+        results.merge("x_axis", self.x_axis.approx_eq(&rhs.x_axis, atol, rtol));
+        results.merge("y_axis", self.y_axis.approx_eq(&rhs.y_axis, atol, rtol));
+        results.merge("z_axis", self.z_axis.approx_eq(&rhs.z_axis, atol, rtol));
         results
     }
 }

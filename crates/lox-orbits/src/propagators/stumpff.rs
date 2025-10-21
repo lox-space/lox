@@ -48,7 +48,7 @@ pub fn c3(psi: f64) -> f64 {
 
 #[cfg(test)]
 mod tests {
-    use float_eq::assert_float_eq;
+    use lox_test_utils::assert_approx_eq;
 
     use super::*;
 
@@ -58,8 +58,8 @@ mod tests {
         let expected_c2 = (1.0 - psi.powf(0.5).cos()) / psi;
         let expected_c3 = (psi.powf(0.5) - psi.powf(0.5).sin()) / psi.powf(1.5);
 
-        assert_float_eq!(c2(psi), expected_c2, rel <= 1e-8);
-        assert_float_eq!(c3(psi), expected_c3, rel <= 1e-8);
+        assert_approx_eq!(c2(psi), expected_c2, rtol <= 1e-8);
+        assert_approx_eq!(c3(psi), expected_c3, rtol <= 1e-8);
     }
 
     #[test]
@@ -68,8 +68,8 @@ mod tests {
         let expected_c2 = (1.0 - psi.powf(0.5).cos()) / psi;
         let expected_c3 = (psi.powf(0.5) - psi.powf(0.5).sin()) / psi.powf(1.5);
 
-        assert_float_eq!(c2(psi), expected_c2, rel <= 1e-10);
-        assert_float_eq!(c3(psi), expected_c3, rel <= 1e-10);
+        assert_approx_eq!(c2(psi), expected_c2, rtol <= 1e-10);
+        assert_approx_eq!(c3(psi), expected_c3, rtol <= 1e-10);
     }
 
     #[test]
@@ -78,7 +78,7 @@ mod tests {
         let expected_c2 = ((-psi).powf(0.5).cosh() - 1.0) / (-psi);
         let expected_c3 = ((-psi).powf(0.5).sinh() - (-psi).powf(0.5)) / (-psi).powf(1.5);
 
-        assert_float_eq!(c2(psi), expected_c2, rel <= 1e-10);
-        assert_float_eq!(c3(psi), expected_c3, rel <= 1e-10);
+        assert_approx_eq!(c2(psi), expected_c2, rtol <= 1e-10);
+        assert_approx_eq!(c3(psi), expected_c3, rtol <= 1e-10);
     }
 }

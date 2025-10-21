@@ -197,8 +197,9 @@ impl<T: AsRef<[f64]>, U: AsRef<[f64]>> Series<T, U> {
 
 #[cfg(test)]
 mod tests {
-    use float_eq::assert_float_eq;
     use rstest::rstest;
+
+    use lox_test_utils::assert_approx_eq;
 
     use super::*;
 
@@ -292,7 +293,7 @@ mod tests {
 
         let s = Series::with_cubic_spline(x, y).unwrap();
         let actual = s.interpolate(xp);
-        assert_float_eq!(actual, expected, rel <= 1e-12);
+        assert_approx_eq!(actual, expected, rtol <= 1e-12);
     }
 
     #[rstest]

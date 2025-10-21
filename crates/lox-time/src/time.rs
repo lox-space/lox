@@ -15,7 +15,8 @@ use std::ops::Sub;
 use std::str::FromStr;
 
 use itertools::Itertools;
-use lox_math::is_close::IsClose;
+use lox_test_utils::approx_eq::ApproxEq;
+use lox_test_utils::approx_eq::results::ApproxEqResults;
 use lox_units::constants::f64::time;
 use lox_units::types::units::Days;
 use num::ToPrimitive;
@@ -341,15 +342,13 @@ impl<T: TimeScale> Time<T> {
     }
 }
 
-impl<T: TimeScale> IsClose for Time<T> {
-    const DEFAULT_RELATIVE: f64 = 1e-9;
-
-    const DEFAULT_ABSOLUTE: f64 = 1e-14;
-
-    fn is_close_with_tolerances(&self, rhs: &Self, rel_tol: f64, abs_tol: f64) -> bool {
+impl<T: TimeScale + std::fmt::Debug> ApproxEq for Time<T> {
+    fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
+        let mut results = ApproxEqResults::new();
         let a = self.to_delta().to_decimal_seconds();
         let b = rhs.to_delta().to_decimal_seconds();
-        a.is_close_with_tolerances(&b, rel_tol, abs_tol)
+        results.merge(String::default(), a.approx_eq(&b, atol, rtol));
+        results
     }
 }
 
@@ -608,8 +607,7 @@ macro_rules! time {
 
 #[cfg(test)]
 mod tests {
-    use float_eq::assert_float_eq;
-    use lox_math::assert_close;
+    use lox_test_utils::assert_approx_eq;
     use lox_units::constants::f64::time::DAYS_PER_JULIAN_CENTURY;
     use rstest::rstest;
 
@@ -665,7 +663,7 @@ mod tests {
     #[test]
     fn test_time_from_julian_date_subsecond() {
         let time = Time::from_julian_date(Tai, 0.3 / time::SECONDS_PER_DAY, Epoch::J2000).unwrap();
-        assert_float_eq!(time.subsecond(), 0.3, abs <= 1e-15);
+        assert_approx_eq!(time.subsecond(), 0.3, atol <= 1e-15);
     }
 
     #[test]
@@ -673,7 +671,7 @@ mod tests {
         let t0 = time!(Tai, 2024, 7, 11, 8, 2, 14.0).unwrap();
         let (jd1, jd2) = t0.two_part_julian_date();
         let t1 = Time::from_two_part_julian_date(Tai, jd1, jd2).unwrap();
-        assert_close!(t0, t1);
+        assert_approx_eq!(t0, t1);
     }
 
     #[rstest]
@@ -1119,32 +1117,32 @@ mod tests {
     #[rstest]
     #[case::at_the_epoch(Time::default(), 0.0)]
     #[case::exactly_one_day_after_the_epoch(
-    Time {
-        scale: Tai,
-    seconds: SECONDS_PER_DAY,
-    subsecond: Subsecond::default(),
-    },
-    1.0
+        Time {
+            scale: Tai,
+            seconds: SECONDS_PER_DAY,
+            subsecond: Subsecond::default(),
+        },
+        1.0
     )]
     #[case::exactly_one_day_before_the_epoch(
-    Time {
-        scale   : Tai,
-    seconds: - SECONDS_PER_DAY,
-    subsecond: Subsecond::default(),
-    },
-    - 1.0
+        Time {
+            scale   : Tai,
+            seconds: - SECONDS_PER_DAY,
+            subsecond: Subsecond::default(),
+        },
+        - 1.0
     )]
     #[case::a_partial_number_of_days_after_the_epoch(
-    Time {
-        scale   : Tai,
-    seconds: (SECONDS_PER_DAY / 2) * 3,
-    subsecond: Subsecond(0.5),
-    },
-    1.5000057870370371
+        Time {
+            scale   : Tai,
+            seconds: (SECONDS_PER_DAY / 2) * 3,
+            subsecond: Subsecond(0.5),
+        },
+        1.5000057870370371
     )]
     fn test_time_days_since_j2000(#[case] time: Time<Tai>, #[case] expected: f64) {
         let actual = time.days_since_j2000();
-        assert_float_eq!(expected, actual, abs <= 1e-12);
+        assert_approx_eq!(expected, actual, atol <= 1e-12);
     }
 
     #[rstest]
@@ -1175,7 +1173,7 @@ mod tests {
     )]
     fn test_time_centuries_since_j2000(#[case] time: Time<Tai>, #[case] expected: f64) {
         let actual = time.centuries_since_j2000();
-        assert_float_eq!(expected, actual, abs <= 1e-12,);
+        assert_approx_eq!(expected, actual, atol <= 1e-12);
     }
 
     #[rstest]

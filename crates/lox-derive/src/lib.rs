@@ -12,11 +12,29 @@ use darling::{FromDeriveInput, FromMeta, util::Flag};
 use proc_macro_crate::{FoundCrate, crate_name};
 use proc_macro2::{Ident, Span};
 use quote::{ToTokens, format_ident, quote};
-use syn::{Data, DeriveInput, Error, Field, Fields, Index, parse_macro_input};
+use syn::{
+    Data, DeriveInput, Error, Field, Fields, GenericParam, Generics, Index, parse_macro_input,
+    parse_quote,
+};
+
+fn add_trait_bounds(mut generics: Generics) -> Generics {
+    for param in &mut generics.params {
+        if let GenericParam::Type(ref mut type_param) = *param {
+            // Add a trait bound to each type parameter
+            type_param.bounds.push(parse_quote!(::std::fmt::Debug));
+        }
+    }
+    generics
+}
 
 #[proc_macro_derive(ApproxEq)]
 pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let DeriveInput { ident, data, .. } = parse_macro_input!(input);
+    let DeriveInput {
+        ident,
+        data,
+        generics,
+        ..
+    } = parse_macro_input!(input);
 
     let lox_test_utils = match crate_name("lox-test-utils") {
         Ok(FoundCrate::Itself) => quote!(crate),
@@ -66,10 +84,13 @@ pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     })
     .collect();
 
+    let generics = add_trait_bounds(generics);
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
     let results = quote! {#lox_test_utils::approx_eq::results::ApproxEqResults};
 
     let output = quote! {
-        impl #lox_test_utils::approx_eq::ApproxEq for #ident {
+        impl #impl_generics #lox_test_utils::approx_eq::ApproxEq for #ident #ty_generics #where_clause {
             fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> #results {
                 let mut results = #results::new();
                 #(#fields)*

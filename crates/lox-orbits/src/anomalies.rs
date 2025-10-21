@@ -20,25 +20,25 @@ pub fn eccentric_to_true(eccentric_anomaly: f64, eccentricity: f64) -> f64 {
 mod tests {
     use std::f64::consts::PI;
 
-    use float_eq::assert_float_eq;
+    use lox_test_utils::assert_approx_eq;
 
     use super::*;
 
     #[test]
     fn test_hyperbolic() {
-        assert_float_eq!(
+        assert_approx_eq!(
             hyperbolic_to_true(PI / 2.0, 1.2),
             2.2797028138935547,
-            rel <= 1e-8
+            rtol <= 1e-8
         );
     }
 
     #[test]
     fn test_eccentric() {
-        assert_float_eq!(
+        assert_approx_eq!(
             eccentric_to_true(PI / 2.0, 0.2),
             1.7721542475852272,
-            rel <= 1e-8
+            rtol <= 1e-8
         );
     }
 }

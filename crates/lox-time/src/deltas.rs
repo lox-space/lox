@@ -387,7 +387,7 @@ impl From<i32> for TimeDelta {
 
 #[cfg(test)]
 mod tests {
-    use float_eq::assert_float_eq;
+    use lox_test_utils::assert_approx_eq;
     use lox_units::constants::f64::time::DAYS_PER_JULIAN_CENTURY;
     use proptest::prelude::*;
     use rstest::rstest;
@@ -511,9 +511,9 @@ mod tests {
             };
             let delta = TimeDelta::try_from_decimal_seconds(s).unwrap();
             if s > 1.0 {
-                assert_float_eq!(delta.to_decimal_seconds(), exp, rel <= 1e-15, "input {} was not roundtrippable", s);
+                assert_approx_eq!(delta.to_decimal_seconds(), exp, rtol <= 1e-15);
             } else {
-                assert_float_eq!(delta.to_decimal_seconds(), exp, abs <= 1e-15, "input {} was not roundtrippable", s);
+                assert_approx_eq!(delta.to_decimal_seconds(), exp, atol <= 1e-15);
             }
         }
     }

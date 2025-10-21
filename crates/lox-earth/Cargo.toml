@@ -14,6 +14,7 @@ lox-frames.workspace = true
 lox-io.workspace = true
 lox-time.workspace = true
 lox-math.workspace = true
+lox-test-utils.workspace = true
 lox-units.workspace = true
 
 csv.workspace = true
@@ -24,6 +25,4 @@ serde.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
-lox-test-utils.workspace = true
-float_eq.workspace = true
 rstest.workspace = true

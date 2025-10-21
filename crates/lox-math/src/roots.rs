@@ -1,5 +1,4 @@
-use crate::is_close::IsClose;
-use float_eq::float_eq;
+use lox_test_utils::approx_eq;
 use thiserror::Error;
 
 #[derive(Clone, Debug, Error, Eq, PartialEq)]
@@ -56,7 +55,7 @@ where
             let f1 = p0 + f(p0);
             let f2 = f1 + f(f1);
             let p = p0 - (f1 - p0).powi(2) / (f2 - 2.0 * f1 + p0);
-            if float_eq!(p, p0, abs <= self.tolerance) {
+            if approx_eq!(p, p0, atol <= self.tolerance) {
                 return Ok(p);
             }
             p0 = p;
@@ -96,7 +95,7 @@ where
         let mut p0 = initial_guess;
         for _ in 0..self.max_iter {
             let p = p0 - f(p0) / derivative(p0);
-            if float_eq!(p, p0, abs <= self.tolerance) {
+            if approx_eq!(p, p0, atol <= self.tolerance) {
                 return Ok(p);
             }
             p0 = p;
@@ -150,11 +149,11 @@ where
             return Err(BracketError::NotInBracket);
         }
 
-        if float_eq!(fpre, 0.0, abs <= self.abs_tol) {
+        if approx_eq!(fpre, 0.0, atol <= self.abs_tol) {
             return Ok(xpre);
         }
 
-        if float_eq!(fcur, 0.0, abs <= self.abs_tol) {
+        if approx_eq!(fcur, 0.0, atol <= self.abs_tol) {
             return Ok(xcur);
         }
 
@@ -178,12 +177,12 @@ where
             let delta = (self.abs_tol + self.rel_tol * xcur.abs()) / 2.0;
             let sbis = (xblk - xcur) / 2.0;
 
-            if float_eq!(fcur, 0.0, abs <= self.abs_tol) || sbis.abs() < delta {
+            if approx_eq!(fcur, 0.0, atol <= self.abs_tol) || sbis.abs() < delta {
                 return Ok(xcur);
             }
 
             if spre.abs() > delta && fcur.abs() < fpre.abs() {
-                let stry = if float_eq!(xpre, xblk, rmax <= self.rel_tol) {
+                let stry = if approx_eq!(xpre, xblk, rtol <= self.rel_tol) {
                     // interpolate
                     -fcur * (xcur - xpre) / (fcur - fpre)
                 } else {
@@ -268,7 +267,7 @@ where
             } else {
                 (-q1 / q0 * p0 + p1) / (1.0 - q1 / q0)
             };
-            if p.is_close_with_tolerances(&p1, self.rel_tol, self.abs_tol) {
+            if approx_eq!(p, p1, rtol <= self.rel_tol, atol <= self.abs_tol) {
                 return Ok(p);
             }
             p0 = p1;
@@ -299,7 +298,7 @@ where
 mod tests {
     use std::f64::consts::PI;
 
-    use float_eq::assert_float_eq;
+    use lox_test_utils::assert_approx_eq;
 
     use super::*;
 
@@ -314,7 +313,7 @@ mod tests {
             )
         }
         let act = mean_to_ecc(PI / 2.0, 0.3).expect("should converge");
-        assert_float_eq!(act, 1.85846841205333, rel <= 1e-8);
+        assert_approx_eq!(act, 1.85846841205333, rtol <= 1e-8);
     }
 
     #[test]
@@ -327,7 +326,7 @@ mod tests {
                 1.5,
             )
             .expect("should converge");
-        assert_float_eq!(act, 1.3652300134140969, rel <= 1e-8);
+        assert_approx_eq!(act, 1.3652300134140969, rtol <= 1e-8);
     }
 
     #[test]
@@ -336,7 +335,7 @@ mod tests {
         let act = steffensen
             .find(|x| x.powi(3) + 4.0 * x.powi(2) - 10.0, 1.5)
             .expect("should converge");
-        assert_float_eq!(act, 1.3652300134140969, rel <= 1e-8);
+        assert_approx_eq!(act, 1.3652300134140969, rtol <= 1e-8);
     }
 
     #[test]
@@ -345,7 +344,7 @@ mod tests {
         let act = brent
             .find_in_bracket(|x| x.powi(3) + 4.0 * x.powi(2) - 10.0, (1.0, 1.5))
             .expect("should converge");
-        assert_float_eq!(act, 1.3652300134140969, rel <= 1e-8);
+        assert_approx_eq!(act, 1.3652300134140969, rtol <= 1e-8);
     }
 
     #[test]
@@ -354,10 +353,10 @@ mod tests {
         let act = secant
             .find_in_bracket(|x| x.powi(3) + 4.0 * x.powi(2) - 10.0, (1.0, 1.5))
             .expect("should converge");
-        assert_float_eq!(act, 1.3652300134140969, rel <= 1e-8);
+        assert_approx_eq!(act, 1.3652300134140969, rtol <= 1e-8);
         let act = secant
             .find(|x| x.powi(3) + 4.0 * x.powi(2) - 10.0, 1.0)
             .expect("should converge");
-        assert_float_eq!(act, 1.3652300134140969, rel <= 1e-8);
+        assert_approx_eq!(act, 1.3652300134140969, rtol <= 1e-8);
     }
 }
