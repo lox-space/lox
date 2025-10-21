@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2024 Helge Eichhorn <git@helgeeichhorn.de>
+// SPDX-License-Identifier: MPL-2.0
+
 use glam::DVec3;
 
 use lox_units::types::units::Radians;

@@ -1,13 +1,6 @@
-/*
- * Copyright (c) 2023. Helge Eichhorn and the LOX contributors
- *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, you can obtain one at https://mozilla.org/MPL/2.0/.
- */
-
-// This parser handles the Keyword Value Notation (KVN) defined in section
-// 7.4 of CCSDS 502.0-B-3 (https://public.ccsds.org/Pubs/502x0b3e1.pdf).
+// SPDX-FileCopyrightText: 2024 Andrei Zisu <matzipan@gmail.com>
+// SPDX-FileCopyrightText: 2024 Helge Eichhorn <git@helgeeichhorn.de>
+// SPDX-License-Identifier: MPL-2.0
 
 use regex::Regex;
 

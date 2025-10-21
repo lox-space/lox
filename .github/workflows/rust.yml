@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2023 Helge Eichhorn <git@helgeeichhorn.de>
+# SPDX-License-Identifier: MPL-2.0
+
 name: Rust
 
 on: [push, pull_request]
@@ -38,6 +41,16 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Linting
         run: cargo clippy -- -D warnings
+
+  reuse:
+    name: REUSE Compliance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: Check REUSE compliance
+        run: uvx reuse lint
 
   coverage:
     name: Code coverage

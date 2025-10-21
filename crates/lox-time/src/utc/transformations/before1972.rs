@@ -1,10 +1,6 @@
-/*
- * Copyright (c) 2025. Helge Eichhorn and the LOX contributors
- *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, you can obtain one at https://mozilla.org/MPL/2.0/.
- */
+// SPDX-FileCopyrightText: 2024 Angus Morrison <github@angus-morrison.com>
+// SPDX-FileCopyrightText: 2024 Helge Eichhorn <git@helgeeichhorn.de>
+// SPDX-License-Identifier: MPL-2.0
 
 //! Mod `pre1972` exposes functions for interpolating the UTC-TAI delta for dates between
 //! 1960-01-01 and 1972-01-01, during which there are 10 leap seconds distributed by a linear

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025 Helge Eichhorn <git@helgeeichhorn.de>
+// SPDX-License-Identifier: MPL-2.0
+
 //! Approximate equality testing for floating-point types.
 //!
 //! This module provides a robust framework for comparing floating-point values with configurable
