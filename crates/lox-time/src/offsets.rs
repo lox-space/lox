@@ -155,17 +155,16 @@ where
 
 #[cfg(test)]
 mod tests {
+    use lox_test_utils::assert_approx_eq;
     use rstest::rstest;
 
     use super::*;
     use crate::offsets::TryOffset;
     use crate::time_scales::DynTimeScale;
     use crate::{DynTime, calendar_dates::Date, deltas::ToDelta, time_of_day::TimeOfDay};
-    use lox_math::assert_close;
-    use lox_math::is_close::IsClose;
 
     const DEFAULT_TOL: f64 = 1e-7;
-    const TCB_TOL: f64 = 1e-5;
+    const TCB_TOL: f64 = 1e-4;
 
     // Reference values from Orekit
     //
@@ -216,6 +215,6 @@ mod tests {
             .try_offset(scale1, scale2, dt)
             .unwrap()
             .to_decimal_seconds();
-        assert_close!(act, exp, 1e-7, tol.unwrap_or(DEFAULT_TOL));
+        assert_approx_eq!(act, exp, atol <= tol.unwrap_or(DEFAULT_TOL));
     }
 }

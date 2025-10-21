@@ -19,4 +19,5 @@ hashbrown.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
+lox-test-utils.workspace = true
 rstest.workspace = true

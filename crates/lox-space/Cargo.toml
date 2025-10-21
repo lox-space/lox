@@ -13,6 +13,7 @@ name = "lox_space"
 crate-type = ["lib", "cdylib"]
 
 [dependencies]
+lox-test-utils.workspace = true
 lox-bodies = { workspace = true, optional = true }
 lox-earth = { workspace = true, optional = true }
 lox-ephem = { workspace = true, optional = true }
@@ -30,8 +31,6 @@ rayon = { workspace = true, optional = true }
 sgp4 = { workspace = true, optional = true }
 
 [dev-dependencies]
-lox-test-utils.workspace = true
-float_eq.workspace = true
 pyo3 = { workspace = true, features = ["auto-initialize"] }
 rstest.workspace = true
 

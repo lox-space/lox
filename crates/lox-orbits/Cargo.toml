@@ -14,11 +14,11 @@ lox-earth.workspace = true
 lox-ephem.workspace = true
 lox-frames.workspace = true
 lox-math.workspace = true
+lox-test-utils.workspace = true
 lox-time.workspace = true
 lox-units.workspace = true
 
 csv.workspace = true
-float_eq.workspace = true
 glam.workspace = true
 hashbrown.workspace = true
 itertools.workspace = true
@@ -28,5 +28,4 @@ sgp4.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
-lox-test-utils.workspace = true
 rstest.workspace = true

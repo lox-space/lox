@@ -127,7 +127,7 @@ impl PyTimeDelta {
 
 #[cfg(test)]
 mod tests {
-    use float_eq::assert_float_eq;
+    use lox_test_utils::assert_approx_eq;
     use pyo3::Python;
 
     use super::*;
@@ -153,7 +153,7 @@ mod tests {
     fn test_pytimedelta_seconds() {
         let td = PyTimeDelta::new(123.456).unwrap();
         assert_eq!(td.seconds(), 123);
-        assert_float_eq!(td.subsecond(), 0.456, abs <= 1e-14);
+        assert_approx_eq!(td.subsecond(), 0.456, atol <= 1e-14);
     }
 
     #[test]

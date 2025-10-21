@@ -9,7 +9,8 @@ authors.workspace = true
 repository.workspace = true
 
 [dependencies]
-float_eq = { workspace = true, features = ["derive"] }
+lox-test-utils = { workspace = true, features = ["derive"] }
+
 glam.workspace = true
 thiserror.workspace = true
 

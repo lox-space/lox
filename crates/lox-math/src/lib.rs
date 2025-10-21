@@ -7,7 +7,6 @@
  */
 
 pub mod glam;
-pub mod is_close;
 pub mod linear_algebra;
 pub mod roots;
 pub mod series;
