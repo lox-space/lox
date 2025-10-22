@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2024 Andrei Zisu <matzipan@gmail.com>
 // SPDX-FileCopyrightText: 2024 Helge Eichhorn <git@helgeeichhorn.de>
+//
 // SPDX-License-Identifier: MPL-2.0
 
 use regex::Regex;

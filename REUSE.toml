@@ -1,7 +1,7 @@
 version = 1
 
 [[annotations]]
-path = "data/*"
+path = "crates/lox-test-data/test-data/*"
 SPDX-FileCopyrightText = "2023 Helge Eichhorn <git@helgeeichhorn.de>"
 SPDX-License-Identifier = "CC0-1.0"
 

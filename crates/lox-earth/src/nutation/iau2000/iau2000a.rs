@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2023 Angus Morrison <github@angus-morrison.com>
 // SPDX-FileCopyrightText: 2024 Helge Eichhorn <git@helgeeichhorn.de>
+//
 // SPDX-License-Identifier: MPL-2.0
 
 use lox_bodies::fundamental::iers03::general_accum_precession_in_longitude_iers03;

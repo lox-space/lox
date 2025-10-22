@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: 2024 Andrei Zisu <matzipan@gmail.com>
+//
 // SPDX-License-Identifier: MPL-2.0
 
 //! Data types shared between different NDM message types

@@ -1,0 +1,20 @@
+# SPDX-FileCopyrightText: 2025 Helge Eichhorn <git@helgeeichhorn.de>
+#
+# SPDX-License-Identifier: MPL-2.0
+
+pre-commit:
+  parallel: true
+  commands:
+    spdx-headers:
+      glob: "*.{rs,py,toml,md,yml,yaml,sh}"
+      run: python3 tools/add_spdx_headers.py {staged_files}
+
+pre-push:
+  parallel: true
+  commands:
+    reuse:
+      run: uvx reuse lint
+    clippy:
+      run: cargo clippy --all-features
+    rustfmt:
+      run: cargo fmt --check

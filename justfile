@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2024 Helge Eichhorn <git@helgeeichhorn.de>
+#
 # SPDX-License-Identifier: MPL-2.0
 
 export UV_PROJECT := "crates/lox-space"
@@ -16,3 +17,21 @@ rstest *FLAGS:
     cargo nextest run --all-features {{FLAGS}}
 
 test: rstest pytest
+
+lint-reuse *ARGS:
+    uvx reuse lint {{ARGS}}
+
+lint-clippy *ARGS:
+    cargo clippy --all-features {{ARGS}}
+
+lint-rustfmt *ARGS:
+    cargo fmt --check {{ARGS}}
+
+lint: lint-reuse lint-clippy lint-rustfmt
+
+# Add SPDX headers to new files
+headers:
+    uv run --no-project tools/add_spdx_headers.py
+
+install-hooks:
+    lefthook install

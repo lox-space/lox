@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: 2024 Helge Eichhorn <git@helgeeichhorn.de>
+//
 // SPDX-License-Identifier: MPL-2.0
 
 pub fn hyperbolic_to_true(hyperbolic_anomaly: f64, eccentricity: f64) -> f64 {
