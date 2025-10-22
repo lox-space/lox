@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2024 Angus Morrison <github@angus-morrison.com>
 // SPDX-FileCopyrightText: 2024 Helge Eichhorn <git@helgeeichhorn.de>
+//
 // SPDX-License-Identifier: MPL-2.0
 
 //! Mod `pre1972` exposes functions for interpolating the UTC-TAI delta for dates between

@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: 2025 Helge Eichhorn <git@helgeeichhorn.de>
+//
 // SPDX-License-Identifier: MPL-2.0
 
 //! Newtype wrappers for unitful [`f64`] double precision values

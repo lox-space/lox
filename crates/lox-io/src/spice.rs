@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: 2023 Helge Eichhorn <git@helgeeichhorn.de>
+//
 // SPDX-License-Identifier: MPL-2.0
 
 use std::collections::HashMap;
