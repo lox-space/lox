@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2024 Angus Morrison <github@angus-morrison.com>
 // SPDX-FileCopyrightText: 2024 Helge Eichhorn <git@helgeeichhorn.de>
+//
 // SPDX-License-Identifier: MPL-2.0
 
 //! Module rotation_angle exposes functions for calculating the Earth Rotation Angle (ERA).
