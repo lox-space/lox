@@ -98,13 +98,13 @@ pub fn find_leap_seconds_tai(
     leap_seconds: &[i64],
     tai: Time<Tai>,
 ) -> Option<TimeDelta> {
-    find_leap_seconds(epochs, leap_seconds, tai.seconds())
+    find_leap_seconds(epochs, leap_seconds, tai.seconds()?)
 }
 
 pub fn find_leap_seconds_utc(epochs: &[i64], leap_seconds: &[i64], utc: Utc) -> Option<TimeDelta> {
-    find_leap_seconds(epochs, leap_seconds, utc.to_delta().seconds).map(|mut ls| {
+    find_leap_seconds(epochs, leap_seconds, utc.to_delta().seconds()?).map(|mut ls| {
         if utc.second() == 60 {
-            ls.seconds -= 1;
+            ls -= TimeDelta::from_seconds(1);
         }
         -ls
     })
@@ -120,7 +120,10 @@ pub fn is_leap_second_date(epochs: &[i64], date: Date) -> bool {
 }
 
 pub fn is_leap_second(epochs: &[i64], tai: Time<Tai>) -> bool {
-    epochs.binary_search(&tai.seconds()).is_ok()
+    match tai.seconds() {
+        Some(seconds) => epochs.binary_search(&seconds).is_ok(),
+        None => false,
+    }
 }
 
 #[cfg(test)]

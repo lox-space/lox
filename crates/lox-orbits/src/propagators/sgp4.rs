@@ -11,7 +11,7 @@ use lox_bodies::Earth;
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::time_scales::Tai;
-use lox_time::utc::Utc;
+use lox_time::utc::{Utc, UtcError};
 use lox_units::f64::consts::SECONDS_PER_MINUTE;
 
 use crate::propagators::Propagator;
@@ -22,9 +22,13 @@ use lox_frames::Icrf;
 #[derive(Debug, Clone, Error)]
 pub enum Sgp4Error {
     #[error(transparent)]
+    ElementsError(#[from] ElementsError),
+    #[error(transparent)]
     TrajectoryError(#[from] TrajectoryError),
     #[error(transparent)]
     Sgp4(#[from] sgp4::Error),
+    #[error(transparent)]
+    Utc(#[from] UtcError),
 }
 
 pub struct Sgp4 {
@@ -33,9 +37,9 @@ pub struct Sgp4 {
 }
 
 impl Sgp4 {
-    pub fn new(initial_state: Elements) -> Result<Self, ElementsError> {
+    pub fn new(initial_state: Elements) -> Result<Self, Sgp4Error> {
         let epoch = initial_state.epoch();
-        let time = Utc::from_delta(TimeDelta::from_julian_years(epoch).unwrap()).to_time();
+        let time = Utc::from_delta(TimeDelta::from_julian_years(epoch))?.to_time();
         let constants = Constants::from_elements(&initial_state)?;
         Ok(Self { constants, time })
     }
@@ -49,7 +53,7 @@ impl Propagator<Tai, Earth, Icrf> for Sgp4 {
     type Error = Sgp4Error;
 
     fn propagate(&self, time: Time<Tai>) -> Result<State<Tai, Earth, Icrf>, Self::Error> {
-        let dt = (time - self.time).to_decimal_seconds() / SECONDS_PER_MINUTE;
+        let dt = (time - self.time).as_seconds_f64() / SECONDS_PER_MINUTE;
         let prediction = self.constants.propagate(MinutesSinceEpoch(dt))?;
         let position = DVec3::from_array(prediction.position);
         let velocity = DVec3::from_array(prediction.velocity);
@@ -73,11 +77,11 @@ mod tests {
         .unwrap();
         let sgp4 = Sgp4::new(tle).unwrap();
         let orbital_period = 92.821;
-        let t1 = sgp4.time() + TimeDelta::from_minutes(orbital_period).unwrap();
+        let t1 = sgp4.time() + TimeDelta::from_minutes(orbital_period);
         let s1 = sgp4.propagate(t1).unwrap();
         let k1 = s1.to_keplerian();
         assert_approx_eq!(
-            k1.orbital_period().to_decimal_seconds() / SECONDS_PER_MINUTE,
+            k1.orbital_period().as_seconds_f64() / SECONDS_PER_MINUTE,
             orbital_period,
             rtol <= 1e-4
         );

@@ -6,10 +6,14 @@ use std::ops::{Add, Sub};
 use std::str::FromStr;
 
 use lox_test_utils::{ApproxEq, approx_eq};
+use lox_time::subsecond::Subsecond;
 use pyo3::basic::CompareOp;
-use pyo3::exceptions::{PyTypeError, PyValueError};
+use pyo3::exceptions::{PyException, PyTypeError, PyValueError};
 use pyo3::types::{PyAnyMethods, PyType};
-use pyo3::{Bound, IntoPyObjectExt, Py, PyAny, PyErr, PyResult, Python, pyclass, pymethods};
+use pyo3::{
+    Bound, IntoPyObjectExt, Py, PyAny, PyErr, PyResult, Python, create_exception, pyclass,
+    pymethods,
+};
 
 use crate::earth::python::ut1::{PyEopProvider, PyEopProviderError};
 use crate::time::calendar_dates::{CalendarDate, Date};
@@ -19,7 +23,6 @@ use crate::time::offsets::DefaultOffsetProvider;
 use crate::time::python::deltas::PyTimeDelta;
 use crate::time::python::time_scales::PyMissingEopProviderError;
 use crate::time::python::utc::PyUtcError;
-use crate::time::subsecond::{InvalidSubsecond, Subsecond};
 use crate::time::time::{DynTime, Time, TimeError};
 use crate::time::time_of_day::{CivilTime, TimeOfDay};
 use crate::time::time_scales::Tai;
@@ -28,13 +31,7 @@ use crate::time::utc::transformations::TryToUtc;
 use super::time_scales::PyTimeScale;
 use super::utc::PyUtc;
 
-pub struct PyInvalidSubsecond(pub InvalidSubsecond);
-
-impl From<PyInvalidSubsecond> for PyErr {
-    fn from(err: PyInvalidSubsecond) -> Self {
-        PyValueError::new_err(err.0.to_string())
-    }
-}
+create_exception!(lox_space, NonFiniteTimeError, PyException);
 
 pub struct PyTimeError(pub TimeError);
 
@@ -114,7 +111,7 @@ impl PyTime {
             self.0.day(),
             self.0.hour(),
             self.0.minute(),
-            self.0.decimal_seconds(),
+            self.0.as_seconds_f64(),
         )
     }
 
@@ -128,9 +125,7 @@ impl PyTime {
     ) -> PyResult<Self> {
         let scale: PyTimeScale = scale.try_into()?;
         let epoch: PyEpoch = epoch.parse()?;
-        Ok(Self(
-            Time::from_julian_date(scale.0, jd, epoch.0).map_err(PyTimeError)?,
-        ))
+        Ok(Self(Time::from_julian_date(scale.0, jd, epoch.0)))
     }
 
     #[classmethod]
@@ -141,9 +136,7 @@ impl PyTime {
         jd2: f64,
     ) -> PyResult<Self> {
         let scale: PyTimeScale = scale.try_into()?;
-        Ok(Self(
-            Time::from_two_part_julian_date(scale.0, jd1, jd2).map_err(PyTimeError)?,
-        ))
+        Ok(Self(Time::from_two_part_julian_date(scale.0, jd1, jd2)))
     }
 
     #[classmethod]
@@ -187,17 +180,22 @@ impl PyTime {
         subsecond: f64,
     ) -> PyResult<PyTime> {
         let scale: PyTimeScale = scale.try_into()?;
-        let subsecond = Subsecond::new(subsecond).map_err(PyInvalidSubsecond)?;
+        let subsecond =
+            Subsecond::from_f64(subsecond).ok_or(PyValueError::new_err("invalid subsecond"))?;
         let time = Time::new(scale.0, seconds, subsecond);
         Ok(PyTime(time))
     }
 
-    pub fn seconds(&self) -> i64 {
-        self.0.seconds()
+    pub fn seconds(&self) -> PyResult<i64> {
+        self.0.seconds().ok_or(NonFiniteTimeError::new_err(
+            "cannot access seconds for non-finite time",
+        ))
     }
 
-    pub fn subsecond(&self) -> f64 {
-        self.0.subsecond()
+    pub fn subsecond(&self) -> PyResult<f64> {
+        self.0.subsecond().ok_or(NonFiniteTimeError::new_err(
+            "cannot access subsecond for non-finite time",
+        ))
     }
 
     #[classattr]
@@ -216,7 +214,7 @@ impl PyTime {
             self.0.day(),
             self.0.hour(),
             self.0.minute(),
-            self.0.decimal_seconds(),
+            self.0.as_seconds_f64(),
         )
     }
 
@@ -302,28 +300,28 @@ impl PyTime {
         self.0.second()
     }
 
-    pub fn millisecond(&self) -> i64 {
+    pub fn millisecond(&self) -> u32 {
         self.0.millisecond()
     }
 
-    pub fn microsecond(&self) -> i64 {
+    pub fn microsecond(&self) -> u32 {
         self.0.microsecond()
     }
 
-    pub fn nanosecond(&self) -> i64 {
+    pub fn nanosecond(&self) -> u32 {
         self.0.nanosecond()
     }
 
-    pub fn picosecond(&self) -> i64 {
+    pub fn picosecond(&self) -> u32 {
         self.0.picosecond()
     }
 
-    pub fn femtosecond(&self) -> i64 {
+    pub fn femtosecond(&self) -> u32 {
         self.0.femtosecond()
     }
 
     pub fn decimal_seconds(&self) -> f64 {
-        self.0.decimal_seconds()
+        self.0.as_seconds_f64()
     }
 
     #[pyo3(signature = (scale, provider=None))]
@@ -465,10 +463,10 @@ mod tests {
     fn test_pytime_ops() {
         Python::attach(|py| {
             let t0 = PyTime::new(&scale_to_any(py, "TAI"), 2000, 1, 1, 0, 0, 0.0).unwrap();
-            let dt = PyTimeDelta::new(1.0).unwrap();
+            let dt = PyTimeDelta::new(1.0);
             let t1 = PyTime::new(&scale_to_any(py, "TAI"), 2000, 1, 1, 0, 0, 1.0).unwrap();
             assert_eq!(t0.__add__(dt.clone()), t1.clone());
-            let dtb = Bound::new(py, PyTimeDelta::new(1.0).unwrap()).unwrap();
+            let dtb = Bound::new(py, PyTimeDelta::new(1.0)).unwrap();
             assert_eq!(
                 t1.__sub__(py, &dtb).unwrap().extract::<PyTime>().unwrap(),
                 t0

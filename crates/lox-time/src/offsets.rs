@@ -4,8 +4,8 @@
 
 use std::convert::Infallible;
 
+use crate::deltas::TimeDelta;
 use crate::time_scales::TimeScale;
-use crate::{deltas::TimeDelta, julian_dates::J77, subsecond::Subsecond};
 use lox_derive::OffsetProvider;
 use thiserror::Error;
 
@@ -62,10 +62,7 @@ pub struct DefaultOffsetProvider;
 // TAI <-> TT
 
 /// The constant offset between TAI and TT.
-pub const D_TAI_TT: TimeDelta = TimeDelta {
-    seconds: 32,
-    subsecond: Subsecond(0.184),
-};
+pub const D_TAI_TT: TimeDelta = TimeDelta::builder().seconds(32).milliseconds(184).build();
 
 // TT <-> TCG
 
@@ -79,19 +76,26 @@ const LG: f64 = 6.969290134e-10;
 const INV_LG: f64 = LG / (1.0 - LG);
 
 pub fn tt_to_tcg(delta: TimeDelta) -> TimeDelta {
-    let tt = delta.to_decimal_seconds();
-    TimeDelta::from_decimal_seconds(INV_LG * (tt - J77_TT))
+    let tt = delta.as_seconds_f64();
+    TimeDelta::from_seconds_f64(INV_LG * (tt - J77_TT))
 }
 
 pub fn tcg_to_tt(delta: TimeDelta) -> TimeDelta {
-    let tcg = delta.to_decimal_seconds();
-    TimeDelta::from_decimal_seconds(-LG * (tcg - J77_TT))
+    let tcg = delta.as_seconds_f64();
+    TimeDelta::from_seconds_f64(-LG * (tcg - J77_TT))
 }
 
 // TDB <-> TCB
 
+/// 1977 January 1 00:00, at which the following are equal:
+/// * 1977-01-01T00:00:00.000 TAI
+/// * 1977-01-01T00:00:32.184 TT
+/// * 1977-01-01T00:00:32.184 TCG
+/// * 1977-01-01T00:00:32.184 TCB
+pub const J77: f64 = -725803200.0;
+
 /// 1977 January 1.0 TAI
-const TT_0: f64 = J77.seconds as f64 + D_TAI_TT.seconds as f64 + D_TAI_TT.subsecond.0;
+const TT_0: f64 = D_TAI_TT.as_seconds_f64() + J77;
 
 /// The rate of change of TDB with respect to TCB.
 const LB: f64 = 1.550519768e-8;
@@ -105,13 +109,13 @@ const TDB_0: f64 = -6.55e-5;
 const TCB_77: f64 = TDB_0 + LB * TT_0;
 
 pub fn tdb_to_tcb(delta: TimeDelta) -> TimeDelta {
-    let tdb = delta.to_decimal_seconds();
-    TimeDelta::from_decimal_seconds(-TCB_77 / (1.0 - LB) + INV_LB * tdb)
+    let tdb = delta.as_seconds_f64();
+    TimeDelta::from_seconds_f64(-TCB_77 / (1.0 - LB) + INV_LB * tdb)
 }
 
 pub fn tcb_to_tdb(delta: TimeDelta) -> TimeDelta {
-    let tcb = delta.to_decimal_seconds();
-    TimeDelta::from_decimal_seconds(TCB_77 - LB * tcb)
+    let tcb = delta.as_seconds_f64();
+    TimeDelta::from_seconds_f64(TCB_77 - LB * tcb)
 }
 
 // TT <-> TDB
@@ -122,19 +126,19 @@ const M_0: f64 = 6.239996;
 const M_1: f64 = 1.99096871e-7;
 
 pub fn tt_to_tdb(delta: TimeDelta) -> TimeDelta {
-    let tt = delta.to_decimal_seconds();
+    let tt = delta.as_seconds_f64();
     let g = M_0 + M_1 * tt;
-    TimeDelta::from_decimal_seconds(K * (g + EB * g.sin()).sin())
+    TimeDelta::from_seconds_f64(K * (g + EB * g.sin()).sin())
 }
 
 pub fn tdb_to_tt(delta: TimeDelta) -> TimeDelta {
-    let tdb = delta.to_decimal_seconds();
+    let tdb = delta.as_seconds_f64();
     let mut offset = 0.0;
     for _ in 1..3 {
         let g = M_0 + M_1 * (tdb + offset);
         offset = -K * (g + EB * g.sin()).sin();
     }
-    TimeDelta::from_decimal_seconds(offset)
+    TimeDelta::from_seconds_f64(offset)
 }
 
 // Two-step transformations
@@ -218,7 +222,7 @@ mod tests {
         let act = provider
             .try_offset(scale1, scale2, dt)
             .unwrap()
-            .to_decimal_seconds();
+            .as_seconds_f64();
         assert_approx_eq!(act, exp, atol <= tol.unwrap_or(DEFAULT_TOL));
     }
 }

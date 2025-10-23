@@ -208,7 +208,7 @@ where
     pub fn orbital_period(&self) -> TimeDelta {
         let mu = self.gravitational_parameter();
         let a = self.semi_major_axis();
-        TimeDelta::try_from_decimal_seconds(TAU * (a.powi(3) / mu).sqrt()).unwrap()
+        TimeDelta::from_seconds_f64(TAU * (a.powi(3) / mu).sqrt())
     }
 }
 
