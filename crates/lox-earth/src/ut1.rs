@@ -65,7 +65,7 @@ mod tests {
 
     use super::*;
     use lox_test_utils::assert_approx_eq;
-    use lox_test_utils::data_dir;
+    use lox_test_utils::data_file;
     use lox_time::Time;
     use lox_time::deltas::ToDelta;
     use lox_time::subsecond::Subsecond;
@@ -280,8 +280,8 @@ mod tests {
         PROVIDER.get_or_init(|| {
             EopParser::new()
                 .from_paths(
-                    data_dir().join("finals.all.csv"),
-                    data_dir().join("finals2000A.all.csv"),
+                    data_file("iers/finals.all.csv"),
+                    data_file("iers/finals2000A.all.csv"),
                 )
                 .leap_seconds_provider(Box::new(BuiltinLeapSeconds))
                 .parse()

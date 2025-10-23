@@ -418,7 +418,7 @@ impl CivilTime for PyTime {
 mod tests {
     use super::*;
 
-    use lox_test_utils::{assert_approx_eq, data_dir};
+    use lox_test_utils::{assert_approx_eq, data_file};
     use pyo3::{IntoPyObject, IntoPyObjectExt, Python, types::PyDict};
     use rstest::rstest;
 
@@ -715,7 +715,7 @@ mod tests {
     #[case("UT1", "UT1")]
     fn test_pytime_to_scale(#[case] scale1: &str, #[case] scale2: &str) {
         Python::attach(|py| {
-            let path = (data_dir().join("finals2000A.all.csv"),)
+            let path = (data_file("iers/finals2000A.all.csv"),)
                 .into_pyobject(py)
                 .unwrap();
             let provider = Bound::new(py, PyEopProvider::new(&path).unwrap()).unwrap();

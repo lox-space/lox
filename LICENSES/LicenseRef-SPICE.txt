@@ -1,0 +1,8 @@
+Kernels Redistribution
+----------------------
+Redistribution of SPICE kernels distributed by NAIF is permitted as long as they have not been modified.
+If a kernel distributed by NAIF has been modified in any way, any embedded or otherwise allied attribution of the
+original kernel producer must be replaced with the name and institution of whomever has made the last modification.
+Redistribution of kernels distributed by any other entity is subject to the rules on and of that entity.
+
+Excerpted from https://naif.jpl.nasa.gov/naif/rules.html

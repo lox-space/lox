@@ -1,2 +1,0 @@
-MJD;Year;Month;Day;Type;x_pole;sigma_x_pole;y_pole;sigma_y_pole;Type;UT1-UTC;sigma_UT1-UTC;LOD;sigma_LOD;Type;dPsi;sigma_dPsi;dEpsilon;sigma_dEpsilon;dX;sigma_dX;dY;sigma_dY;Type;bulB/x_pole;bulB/y_pole;Type;bulB/UT-UTC;Type;bulB/dPsi;bulB/dEpsilon;bulB/dX;bulB/dY
-41684;1973;01;02;final;0.120733;0.009786;;0.015902;final;0.8084178;0.0002710;0.0000;0.1916;prediction;44.969;.500;2.839;.300;;;;;final;.143000;.137000;final;.8075000;final;.000;.000;;

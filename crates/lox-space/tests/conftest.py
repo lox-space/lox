@@ -15,7 +15,7 @@ DATA_DIR = pathlib.Path(__file__).parents[3].joinpath("data")
 
 @pytest.fixture(scope="session")
 def provider():
-    return lox.EOPProvider(DATA_DIR.joinpath("finals2000A.all.csv"))
+    return lox.EOPProvider(DATA_DIR.joinpath("iers/finals2000A.all.csv"))
 
 
 @pytest.fixture(scope="session")
@@ -59,7 +59,4 @@ def estrack():
 
 @pytest.fixture(scope="session")
 def ephemeris():
-    spk = (
-        Path(__file__).parent.joinpath("..", "..", "..", "data", "de440s.bsp").resolve()
-    )
-    return lox.SPK(str(spk))
+    return lox.SPK(DATA_DIR.joinpath("spice/de440s.bsp"))

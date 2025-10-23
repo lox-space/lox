@@ -15,9 +15,9 @@ fn crates_dir() -> PathBuf {
 }
 
 pub fn main() {
-    let pck = Kernel::from_string(include_str!("../../../data/pck00011_n0066.tpc"))
+    let pck = Kernel::from_string(include_str!("../../../data/spice/pck00011_n0066.tpc"))
         .expect("parsing should succeed");
-    let gm = Kernel::from_string(include_str!("../../../data/gm_de440.tpc"))
+    let gm = Kernel::from_string(include_str!("../../../data/spice/gm_de440.tpc"))
         .expect("parsing should succeed");
     let bodies_target_dir = crates_dir().join("lox-bodies/src/");
     generate_bodies(&bodies_target_dir, &pck, &gm);

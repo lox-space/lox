@@ -337,7 +337,7 @@ impl EopProvider {
 
 #[cfg(test)]
 mod tests {
-    use lox_test_utils::data_dir;
+    use lox_test_utils::data_file;
     use lox_time::{Time, time_scales::Tai};
 
     use super::*;
@@ -353,7 +353,7 @@ mod tests {
     fn test_eop_provider_missing_iau2000() {
         let t: Time<Tai> = Time::default();
         let eop = EopParser::new()
-            .from_path(data_dir().join("finals.all.csv"))
+            .from_path(data_file("iers/finals.all.csv"))
             .parse()
             .unwrap();
         eop.nutation_precession_iau2000(t).unwrap();
@@ -364,7 +364,7 @@ mod tests {
     fn test_eop_provider_missing_iau1980() {
         let t: Time<Tai> = Time::default();
         let eop = EopParser::new()
-            .from_path(data_dir().join("finals2000A.all.csv"))
+            .from_path(data_file("iers/finals2000A.all.csv"))
             .parse()
             .unwrap();
         eop.nutation_precession_iau1980(t).unwrap();
