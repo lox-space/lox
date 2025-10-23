@@ -175,12 +175,12 @@ mod tests {
         let actual = provider
             .delta_ut1_tai(tai.to_delta())
             .unwrap()
-            .to_decimal_seconds();
+            .as_seconds_f64();
         assert_approx_eq!(actual, expected, rtol <= 1e-6);
         let actual = provider
             .delta_tai_ut1(ut1.to_delta())
             .unwrap()
-            .to_decimal_seconds();
+            .as_seconds_f64();
         assert_approx_eq!(actual, -expected, rtol <= 1e-6);
     }
 
@@ -257,7 +257,7 @@ mod tests {
         let act = provider
             .try_offset(scale1, scale2, dt)
             .unwrap()
-            .to_decimal_seconds();
+            .as_seconds_f64();
         assert_approx_eq!(act, exp, rtol <= UT1_TOL);
     }
 

@@ -6,7 +6,7 @@ use std::ops::RangeInclusive;
 
 use crate::deltas::TimeDelta;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd)]
 pub struct TimeDeltaRange {
     start: TimeDelta,
     end: TimeDelta,
