@@ -34,7 +34,7 @@ use crate::orbits::{
 use crate::time::DynTime;
 use crate::time::deltas::TimeDelta;
 use crate::time::offsets::DefaultOffsetProvider;
-use crate::time::python::deltas::{PyTimeDelta, PyTimeDeltaError};
+use crate::time::python::deltas::PyTimeDelta;
 use crate::time::python::time::PyTime;
 use crate::time::python::time_scales::PyMissingEopProviderError;
 use crate::time::time_scales::{DynTimeScale, Tai};
@@ -370,8 +370,7 @@ impl PyTrajectory {
         }
         let mut states: Vec<DynState> = Vec::with_capacity(array.nrows());
         for row in array.rows() {
-            let time = start_time.0
-                + TimeDelta::try_from_decimal_seconds(row[0]).map_err(PyTimeDeltaError)?;
+            let time = start_time.0 + TimeDelta::from_seconds_f64(row[0]);
             let position = DVec3::new(row[1], row[2], row[3]);
             let velocity = DVec3::new(row[4], row[5], row[6]);
             states.push(State::new(time, position, velocity, origin.0, frame.0));

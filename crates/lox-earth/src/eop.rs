@@ -12,14 +12,14 @@ use lox_math::series::{Series, SeriesError};
 use lox_time::{
     OffsetProvider,
     deltas::TimeDelta,
-    julian_dates::{JulianDate, SECONDS_BETWEEN_MJD_AND_J2000},
+    julian_dates::JulianDate,
     utc::{
         Utc, UtcError,
         leap_seconds::{BuiltinLeapSeconds, LeapSecondsProvider},
         transformations::TryToUtc,
     },
 };
-use lox_units::f64::consts::SECONDS_PER_DAY;
+use lox_units::f64::consts::{SECONDS_BETWEEN_MJD_AND_J2000, SECONDS_PER_DAY};
 use serde::Deserialize;
 use thiserror::Error;
 
@@ -151,9 +151,7 @@ impl EopParser {
             let r2: EopRecord = raw2.deserialize(Some(&headers))?;
             let r = r1.merge(&r2);
 
-            j2000.push(
-                r.modified_julian_date * SECONDS_PER_DAY - SECONDS_BETWEEN_MJD_AND_J2000 as f64,
-            );
+            j2000.push(r.modified_julian_date * SECONDS_PER_DAY - SECONDS_BETWEEN_MJD_AND_J2000);
 
             if let Some(delta_ut1_utc) = r.delta_ut1_utc {
                 let utc = Utc::builder().with_ymd(r.year, r.month, r.day).build()?;
@@ -164,7 +162,7 @@ impl EopParser {
                     .or_else(|| Some(BuiltinLeapSeconds.delta_utc_tai(utc)))
                     .flatten()
                     .ok_or(EopParserError::LeapSecond(utc))?;
-                delta_ut1_tai.push(delta_ut1_utc + delta_tai_utc.to_decimal_seconds())
+                delta_ut1_tai.push(delta_ut1_utc + delta_tai_utc.as_seconds_f64())
             }
 
             if let (Some(xp), Some(yp)) = (r.x_pole, r.y_pole) {
@@ -315,7 +313,7 @@ impl EopProvider {
         if seconds < t0 || seconds > tn {
             return Err(EopProviderError::ExtrapolatedValue(val));
         }
-        Ok(TimeDelta::try_from_decimal_seconds(val).unwrap())
+        Ok(TimeDelta::from_seconds_f64(val))
     }
 
     pub fn delta_tai_ut1(&self, ut1: TimeDelta) -> Result<TimeDelta, EopProviderError> {
@@ -331,7 +329,7 @@ impl EopProvider {
         if seconds < t0 || seconds > tn {
             return Err(EopProviderError::ExtrapolatedValue(val));
         }
-        Ok(-TimeDelta::try_from_decimal_seconds(val).unwrap())
+        Ok(-TimeDelta::from_seconds_f64(val))
     }
 }
 

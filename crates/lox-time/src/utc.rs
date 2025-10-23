@@ -14,16 +14,12 @@ use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
 use itertools::Itertools;
-use lox_units::f64::consts::{SECONDS_PER_DAY, SECONDS_PER_JULIAN_CENTURY};
-use num::ToPrimitive;
+use lox_units::i64::consts::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 use thiserror::Error;
 
 use crate::calendar_dates::{CalendarDate, Date, DateError};
 use crate::deltas::{TimeDelta, ToDelta};
-use crate::julian_dates::{
-    self, Epoch, JulianDate, SECONDS_BETWEEN_J1950_AND_J2000, SECONDS_BETWEEN_JD_AND_J2000,
-    SECONDS_BETWEEN_MJD_AND_J2000,
-};
+use crate::julian_dates::{self, Epoch, JulianDate};
 use crate::time_of_day::{CivilTime, TimeOfDay, TimeOfDayError};
 use crate::utc::leap_seconds::{BuiltinLeapSeconds, LeapSecondsProvider};
 
@@ -31,7 +27,7 @@ pub mod leap_seconds;
 pub mod transformations;
 
 /// Error type returned when attempting to construct a [Utc] instance from invalid inputs.
-#[derive(Debug, Clone, Error, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Error, PartialEq, Eq)]
 pub enum UtcError {
     #[error(transparent)]
     DateError(#[from] DateError),
@@ -127,27 +123,31 @@ impl Utc {
     /// Constructs a new [Utc] instance from a [TimeDelta] relative to J2000.
     ///
     /// Note that this constructor is not leap-second aware.
-    pub fn from_delta(delta: TimeDelta) -> Self {
-        let date = Date::from_seconds_since_j2000(delta.seconds);
-        let time =
-            TimeOfDay::from_seconds_since_j2000(delta.seconds).with_subsecond(delta.subsecond);
-        Self { date, time }
+    pub fn from_delta(delta: TimeDelta) -> Result<Self, UtcError> {
+        let (mut seconds, subsecond) = delta
+            .as_seconds_and_subsecond()
+            .ok_or(UtcError::UtcUndefined)?;
+
+        // Handle cases where subsecond is very close to 1 second due to floating-point precision
+        // If subsecond >= 0.999999999999999 (999999999999999000 attoseconds), round up to next second
+        if subsecond.as_attoseconds() >= 999_999_999_999_999_000 {
+            seconds += 1;
+            let date = Date::from_seconds_since_j2000(seconds);
+            let time = TimeOfDay::from_seconds_since_j2000(seconds);
+            Ok(Self { date, time })
+        } else {
+            let date = Date::from_seconds_since_j2000(seconds);
+            let time = TimeOfDay::from_seconds_since_j2000(seconds).with_subsecond(subsecond);
+            Ok(Self { date, time })
+        }
     }
 }
 
 impl ToDelta for Utc {
     fn to_delta(&self) -> TimeDelta {
-        let seconds = self.date.seconds_since_j2000().to_i64().unwrap_or_else(|| {
-            unreachable!(
-                "seconds since J2000 for date {} are not representable as i64: {}",
-                self,
-                self.date.seconds_since_j2000()
-            )
-        }) + self.time.second_of_day();
-        TimeDelta {
-            seconds,
-            subsecond: self.time.subsecond(),
-        }
+        let seconds = self.date.j2000_day_number() * SECONDS_PER_DAY + self.time.second_of_day()
+            - SECONDS_PER_HALF_DAY;
+        TimeDelta::from_seconds_and_subsecond(seconds, self.time.subsecond())
     }
 }
 
@@ -180,25 +180,12 @@ impl CivilTime for Utc {
 
 impl JulianDate for Utc {
     fn julian_date(&self, epoch: Epoch, unit: julian_dates::Unit) -> f64 {
-        let j2000 = self.time.subsecond().0
-            + self.time.second_of_day() as f64
-            + self.date.seconds_since_j2000();
-        let jd = match epoch {
-            Epoch::JulianDate => j2000 + SECONDS_BETWEEN_JD_AND_J2000 as f64,
-            Epoch::ModifiedJulianDate => j2000 + SECONDS_BETWEEN_MJD_AND_J2000 as f64,
-            Epoch::J1950 => j2000 + SECONDS_BETWEEN_J1950_AND_J2000 as f64,
-            Epoch::J2000 => j2000,
-        };
-        match unit {
-            julian_dates::Unit::Seconds => jd,
-            julian_dates::Unit::Days => jd / SECONDS_PER_DAY,
-            julian_dates::Unit::Centuries => jd / SECONDS_PER_JULIAN_CENTURY,
-        }
+        self.to_delta().julian_date(epoch, unit)
     }
 }
 
 /// A builder for constructing [Utc] instances piecewise.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UtcBuilder {
     date: Result<Date, DateError>,
     time: Result<TimeOfDay, TimeOfDayError>,

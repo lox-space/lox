@@ -19,7 +19,7 @@ use num::ToPrimitive;
 use regex::Regex;
 use thiserror::Error;
 
-use crate::subsecond::{InvalidSubsecond, Subsecond};
+use crate::subsecond::Subsecond;
 use lox_units::i64::consts::{
     SECONDS_PER_DAY, SECONDS_PER_HALF_DAY, SECONDS_PER_HOUR, SECONDS_PER_MINUTE,
 };
@@ -37,18 +37,6 @@ fn iso_regex() -> &'static Regex {
 #[error("seconds must be in the range [0.0..86401.0) but was {0}")]
 pub struct InvalidSeconds(f64);
 
-impl PartialOrd for InvalidSeconds {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for InvalidSeconds {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.0.total_cmp(&other.0)
-    }
-}
-
 impl PartialEq for InvalidSeconds {
     fn eq(&self, other: &Self) -> bool {
         self.0.total_cmp(&other.0) == Ordering::Equal
@@ -58,7 +46,7 @@ impl PartialEq for InvalidSeconds {
 impl Eq for InvalidSeconds {}
 
 /// Error type returned when attempting to construct a [TimeOfDay] from invalid components.
-#[derive(Debug, Clone, Error, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Error, PartialEq, Eq)]
 pub enum TimeOfDayError {
     #[error("hour must be in the range [0..24) but was {0}")]
     InvalidHour(u8),
@@ -72,8 +60,6 @@ pub enum TimeOfDayError {
     InvalidSeconds(#[from] InvalidSeconds),
     #[error("leap seconds are only valid at the end of the day")]
     InvalidLeapSecond,
-    #[error(transparent)]
-    InvalidSubsecond(#[from] InvalidSubsecond),
     #[error("invalid ISO string `{0}`")]
     InvalidIsoString(String),
 }
@@ -95,28 +81,28 @@ pub trait CivilTime {
         self.time().second()
     }
 
-    fn decimal_seconds(&self) -> f64 {
-        self.time().subsecond().0 + self.time().second() as f64
+    fn as_seconds_f64(&self) -> f64 {
+        self.time().subsecond().as_seconds_f64() + self.time().second() as f64
     }
 
-    fn millisecond(&self) -> i64 {
-        self.time().subsecond().millisecond()
+    fn millisecond(&self) -> u32 {
+        self.time().subsecond().milliseconds()
     }
 
-    fn microsecond(&self) -> i64 {
-        self.time().subsecond().microsecond()
+    fn microsecond(&self) -> u32 {
+        self.time().subsecond().microseconds()
     }
 
-    fn nanosecond(&self) -> i64 {
-        self.time().subsecond().nanosecond()
+    fn nanosecond(&self) -> u32 {
+        self.time().subsecond().nanoseconds()
     }
 
-    fn picosecond(&self) -> i64 {
-        self.time().subsecond().picosecond()
+    fn picosecond(&self) -> u32 {
+        self.time().subsecond().picoseconds()
     }
 
-    fn femtosecond(&self) -> i64 {
-        self.time().subsecond().femtosecond()
+    fn femtosecond(&self) -> u32 {
+        self.time().subsecond().femtoseconds()
     }
 }
 
@@ -179,11 +165,11 @@ impl TimeOfDay {
             .map_err(|_| TimeOfDayError::InvalidIsoString(iso.to_owned()))?;
         let mut time = TimeOfDay::new(hour, minute, second)?;
         if let Some(subsecond) = caps.name("subsecond") {
-            let subsecond: f64 = subsecond
-                .as_str()
+            let subsecond_str = subsecond.as_str().trim_start_matches('.');
+            let subsecond: Subsecond = subsecond_str
                 .parse()
                 .map_err(|_| TimeOfDayError::InvalidIsoString(iso.to_owned()))?;
-            time.with_subsecond(Subsecond(subsecond));
+            time.with_subsecond(subsecond);
         }
         Ok(time)
     }
@@ -202,7 +188,8 @@ impl TimeOfDay {
         }
         let second = seconds.trunc() as u8;
         let fraction = seconds.fract();
-        let subsecond = Subsecond::new(fraction).unwrap();
+        let subsecond = Subsecond::from_f64(fraction)
+            .ok_or(TimeOfDayError::InvalidSeconds(InvalidSeconds(seconds)))?;
         Ok(Self::new(hour, minute, second)?.with_subsecond(subsecond))
     }
 
@@ -312,7 +299,7 @@ mod tests {
 
     #[test]
     fn test_time_of_day_display() {
-        let subsecond = Subsecond::new(0.123456789123456).unwrap();
+        let subsecond: Subsecond = "123456789123456".parse().unwrap();
         let time = TimeOfDay::new(12, 0, 0).unwrap().with_subsecond(subsecond);
         assert_eq!(format!("{time}"), "12:00:00.123");
         assert_eq!(format!("{time:.15}"), "12:00:00.123456789123456");
@@ -336,7 +323,7 @@ mod tests {
 
     #[rstest]
     #[case("12:13:14", Ok(TimeOfDay::new(12, 13, 14).unwrap()))]
-    #[case("12:13:14.123", Ok(TimeOfDay::new(12, 13, 14).unwrap().with_subsecond(Subsecond(0.123))))]
+    #[case("12:13:14.123", Ok(TimeOfDay::new(12, 13, 14).unwrap().with_subsecond("123".parse().unwrap())))]
     #[case("2:13:14.123", Err(TimeOfDayError::InvalidIsoString("2:13:14.123".to_string())))]
     #[case("12:3:14.123", Err(TimeOfDayError::InvalidIsoString("12:3:14.123".to_string())))]
     #[case("12:13:4.123", Err(TimeOfDayError::InvalidIsoString("12:13:4.123".to_string())))]
@@ -349,12 +336,14 @@ mod tests {
     }
 
     #[test]
-    fn test_invalid_seconds_ord() {
-        let actual = InvalidSeconds(-f64::NAN).partial_cmp(&InvalidSeconds(f64::NAN));
-        let expected = Some(Ordering::Less);
-        assert_eq!(actual, expected);
-        let actual = InvalidSeconds(-f64::NAN).cmp(&InvalidSeconds(f64::NAN));
-        let expected = Ordering::Less;
-        assert_eq!(actual, expected);
+    fn test_invalid_seconds_eq() {
+        let a = InvalidSeconds(-f64::NAN);
+        let b = InvalidSeconds(f64::NAN);
+        // NaN values with different signs should not be equal
+        assert_ne!(a, b);
+        // Same NaN values should be equal
+        let c = InvalidSeconds(f64::NAN);
+        let d = InvalidSeconds(f64::NAN);
+        assert_eq!(c, d);
     }
 }

@@ -62,7 +62,7 @@ impl PyUtc {
             self.0.day(),
             self.0.hour(),
             self.0.minute(),
-            self.0.decimal_seconds()
+            self.0.as_seconds_f64()
         )
     }
 
@@ -94,24 +94,24 @@ impl PyUtc {
         self.0.second()
     }
 
-    pub fn millisecond(&self) -> i64 {
+    pub fn millisecond(&self) -> u32 {
         self.0.millisecond()
     }
 
-    pub fn microsecond(&self) -> i64 {
+    pub fn microsecond(&self) -> u32 {
         self.0.microsecond()
     }
 
-    pub fn nanosecond(&self) -> i64 {
+    pub fn nanosecond(&self) -> u32 {
         self.0.nanosecond()
     }
 
-    pub fn picosecond(&self) -> i64 {
+    pub fn picosecond(&self) -> u32 {
         self.0.picosecond()
     }
 
     pub fn decimal_seconds(&self) -> f64 {
-        self.0.decimal_seconds()
+        self.0.as_seconds_f64()
     }
 
     #[pyo3(signature = (scale, provider=None))]

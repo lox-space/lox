@@ -89,7 +89,7 @@ where
             provider.delta_tai_utc(tai)
         }
         .ok_or(UtcError::UtcUndefined)?;
-        let mut utc = Utc::from_delta(tai.to_delta() - delta);
+        let mut utc = Utc::from_delta(tai.to_delta() - delta)?;
         if provider.is_leap_second(tai) {
             utc.time = TimeOfDay::new(utc.hour(), utc.minute(), 60)
                 .unwrap()
@@ -117,11 +117,10 @@ fn tai_at_utc_1972_01_01() -> &'static Time<Tai> {
 
 #[cfg(test)]
 mod test {
+    use crate::subsecond::Subsecond;
     use crate::time;
     use crate::time_scales::{Tcb, Tcg, Tdb, Tt};
     use rstest::rstest;
-
-    use crate::subsecond::Subsecond;
 
     use super::*;
 
@@ -186,12 +185,12 @@ mod test {
     }
 
     fn tai_at_utc_1971_01_01() -> &'static Time<Tai> {
-        const DELTA: TimeDelta = TimeDelta {
-            seconds: 8,
-            // Note the substantial rounding error inherent in converting between single-f64 MJDs.
-            // For dates prior to 1972, this algorithm achieves microsecond precision at best.
-            subsecond: Subsecond(0.9461620000000011),
-        };
+        // const DELTA: TimeDelta = TimeDelta::builder()
+        //     .seconds(8)
+        //     .milliseconds(946)
+        //     .microseconds(162)
+        //     .build();
+        const DELTA: TimeDelta = TimeDelta::from_seconds_and_subsecond_f64(8.0, 0.9461620000000011);
 
         static TAI_AT_UTC_1971_01_01: OnceLock<Time<Tai>> = OnceLock::new();
         TAI_AT_UTC_1971_01_01.get_or_init(|| {

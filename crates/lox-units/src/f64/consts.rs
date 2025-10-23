@@ -30,9 +30,21 @@ pub const SECONDS_PER_JULIAN_CENTURY: f64 = SECONDS_PER_JULIAN_YEAR * 100.0;
 /// Number of seconds in a femtosecond.
 pub const SECONDS_PER_FEMTOSECOND: f64 = 1e-15;
 
+/// Number of seconds in an attosecond.
+pub const SECONDS_PER_ATTOSECOND: f64 = 1e-18;
+
 /*
  * Julian date constants
  */
 
 /// Modified Julian Date at J2000 epoch.
 pub const MJD_J2000: f64 = 51544.5;
+
+/// The number of seconds between the Julian Epoch and the J2000 Epoch.
+pub const SECONDS_BETWEEN_JD_AND_J2000: f64 = 211813488000.0;
+
+/// The number of seconds between the Modified Julian Epoch and the J2000 Epoch.
+pub const SECONDS_BETWEEN_MJD_AND_J2000: f64 = 4453444800.0;
+
+/// The number of seconds between the J1950 Epoch and the J2000 Epoch.
+pub const SECONDS_BETWEEN_J1950_AND_J2000: f64 = 1577880000.0;

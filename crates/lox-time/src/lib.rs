@@ -42,4 +42,4 @@ pub mod time_scales;
 pub mod utc;
 
 pub use lox_derive::OffsetProvider;
-pub use time::{DynTime, JulianDateOutOfRange, Time, TimeBuilder, TimeError};
+pub use time::{DynTime, Time, TimeBuilder, TimeError};

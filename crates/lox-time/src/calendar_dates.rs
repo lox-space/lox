@@ -15,16 +15,19 @@ use std::{
     sync::OnceLock,
 };
 
-use lox_units::f64::consts::{self, SECONDS_PER_JULIAN_CENTURY};
+use lox_units::{
+    f64::consts::{self, SECONDS_PER_JULIAN_CENTURY},
+    i64::consts::{
+        SECONDS_BETWEEN_J1950_AND_J2000, SECONDS_BETWEEN_JD_AND_J2000,
+        SECONDS_BETWEEN_MJD_AND_J2000,
+    },
+};
 use num::ToPrimitive;
 use thiserror::Error;
 
 use regex::Regex;
 
 use crate::julian_dates::{Epoch, JulianDate, Unit};
-use crate::julian_dates::{
-    SECONDS_BETWEEN_J1950_AND_J2000, SECONDS_BETWEEN_JD_AND_J2000, SECONDS_BETWEEN_MJD_AND_J2000,
-};
 use lox_units::i64::consts::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 
 fn iso_regex() -> &'static Regex {

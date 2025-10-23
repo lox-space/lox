@@ -2,19 +2,13 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use pyo3::exceptions::PyValueError;
+use pyo3::exceptions::PyException;
 use pyo3::types::PyType;
-use pyo3::{Bound, PyErr, PyResult, pyclass, pymethods};
+use pyo3::{Bound, PyResult, create_exception, pyclass, pymethods};
 
-use crate::time::deltas::{TimeDelta, TimeDeltaError};
+use crate::time::deltas::TimeDelta;
 
-pub struct PyTimeDeltaError(pub TimeDeltaError);
-
-impl From<PyTimeDeltaError> for PyErr {
-    fn from(err: PyTimeDeltaError) -> Self {
-        PyValueError::new_err(err.0.to_string())
-    }
-}
+create_exception!(lox_space, NonFiniteTimeDeltaError, PyException);
 
 #[pyclass(name = "TimeDelta", module = "lox_space", frozen)]
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -23,10 +17,8 @@ pub struct PyTimeDelta(pub TimeDelta);
 #[pymethods]
 impl PyTimeDelta {
     #[new]
-    pub fn new(seconds: f64) -> PyResult<Self> {
-        Ok(Self(
-            TimeDelta::try_from_decimal_seconds(seconds).map_err(PyTimeDeltaError)?,
-        ))
+    pub fn new(seconds: f64) -> Self {
+        Self(TimeDelta::from_seconds_f64(seconds))
     }
 
     pub fn __repr__(&self) -> String {
@@ -57,12 +49,16 @@ impl PyTimeDelta {
         self.0 == other.0
     }
 
-    pub fn seconds(&self) -> i64 {
-        self.0.seconds
+    pub fn seconds(&self) -> PyResult<i64> {
+        self.0.seconds().ok_or(NonFiniteTimeDeltaError::new_err(
+            "cannot access seconds for non-finite time delta",
+        ))
     }
 
-    pub fn subsecond(&self) -> f64 {
-        self.0.subsecond.0
+    pub fn subsecond(&self) -> PyResult<f64> {
+        self.0.subsecond().ok_or(NonFiniteTimeDeltaError::new_err(
+            "cannot access subsecond for non-finite time delta",
+        ))
     }
 
     #[classmethod]
@@ -72,35 +68,27 @@ impl PyTimeDelta {
 
     #[classmethod]
     pub fn from_minutes(_cls: &Bound<'_, PyType>, minutes: f64) -> PyResult<Self> {
-        Ok(Self(
-            TimeDelta::from_minutes(minutes).map_err(PyTimeDeltaError)?,
-        ))
+        Ok(Self(TimeDelta::from_minutes(minutes)))
     }
 
     #[classmethod]
     pub fn from_hours(_cls: &Bound<'_, PyType>, hours: f64) -> PyResult<Self> {
-        Ok(Self(
-            TimeDelta::from_hours(hours).map_err(PyTimeDeltaError)?,
-        ))
+        Ok(Self(TimeDelta::from_hours(hours)))
     }
 
     #[classmethod]
     pub fn from_days(_cls: &Bound<'_, PyType>, days: f64) -> PyResult<Self> {
-        Ok(Self(TimeDelta::from_days(days).map_err(PyTimeDeltaError)?))
+        Ok(Self(TimeDelta::from_days(days)))
     }
 
     #[classmethod]
     pub fn from_julian_years(_cls: &Bound<'_, PyType>, years: f64) -> PyResult<Self> {
-        Ok(Self(
-            TimeDelta::from_julian_years(years).map_err(PyTimeDeltaError)?,
-        ))
+        Ok(Self(TimeDelta::from_julian_years(years)))
     }
 
     #[classmethod]
     pub fn from_julian_centuries(_cls: &Bound<'_, PyType>, centuries: f64) -> PyResult<Self> {
-        Ok(Self(
-            TimeDelta::from_julian_centuries(centuries).map_err(PyTimeDeltaError)?,
-        ))
+        Ok(Self(TimeDelta::from_julian_centuries(centuries)))
     }
 
     #[classmethod]
@@ -117,7 +105,7 @@ impl PyTimeDelta {
     }
 
     pub fn to_decimal_seconds(&self) -> f64 {
-        self.0.to_decimal_seconds()
+        self.0.as_seconds_f64()
     }
 }
 
@@ -130,15 +118,15 @@ mod tests {
 
     #[test]
     fn test_pytimedelta_repr() {
-        let td = PyTimeDelta::new(123.456).unwrap();
+        let td = PyTimeDelta::new(123.456);
         assert_eq!(td.__repr__(), "TimeDelta(123.456)");
         assert_eq!(td.__str__(), "123.456 seconds");
     }
 
     #[test]
     fn test_pytimedelta_ops() {
-        let td1 = PyTimeDelta::new(123.456).unwrap();
-        let td2 = PyTimeDelta::new(654.321).unwrap();
+        let td1 = PyTimeDelta::new(123.456);
+        let td2 = PyTimeDelta::new(654.321);
         assert_eq!(td1.__add__(td2.clone()).to_decimal_seconds(), 777.777);
         assert_eq!(td1.__sub__(td2.clone()).to_decimal_seconds(), -530.865);
         assert_eq!(td1.__neg__().to_decimal_seconds(), -123.456);
@@ -147,9 +135,9 @@ mod tests {
 
     #[test]
     fn test_pytimedelta_seconds() {
-        let td = PyTimeDelta::new(123.456).unwrap();
-        assert_eq!(td.seconds(), 123);
-        assert_approx_eq!(td.subsecond(), 0.456, atol <= 1e-14);
+        let td = PyTimeDelta::new(123.456);
+        assert_eq!(td.seconds().unwrap(), 123);
+        assert_approx_eq!(td.subsecond().unwrap(), 0.456, atol <= 1e-14);
     }
 
     #[test]
@@ -172,8 +160,8 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "NaN is unrepresentable")]
+    #[should_panic]
     fn test_pytimedelta_error() {
-        PyTimeDelta::new(f64::NAN).unwrap();
+        PyTimeDelta::new(f64::NAN).0.seconds().unwrap();
     }
 }
