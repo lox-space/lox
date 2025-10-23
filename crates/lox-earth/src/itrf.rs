@@ -20,7 +20,7 @@ use lox_time::Time;
 use lox_time::julian_dates::JulianDate;
 use lox_time::offsets::TryOffset;
 use lox_time::time_scales::{DynTimeScale, Tdb, TimeScale};
-use lox_units::constants::f64::time::SECONDS_PER_DAY;
+use lox_units::f64::consts::SECONDS_PER_DAY;
 use thiserror::Error;
 
 transform_provider!(EopProvider);

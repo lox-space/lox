@@ -20,7 +20,7 @@ use crate::time::Time;
 use crate::time_of_day::CivilTime;
 use crate::time_scales::Tai;
 use crate::utc::Utc;
-use lox_units::constants::i64::time::SECONDS_PER_DAY;
+use lox_units::i64::consts::SECONDS_PER_DAY;
 
 pub const LEAP_SECOND_EPOCHS_UTC: [i64; 28] = [
     -883656000, -867931200, -852033600, -820497600, -788961600, -757425600, -725803200, -694267200,

@@ -4,6 +4,6 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-//! Module `f64` exposes f64 constants shared between Lox crates.
+//! Constants for the `i32` type.
 
-pub mod time;
+pub mod consts;

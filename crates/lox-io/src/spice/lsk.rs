@@ -18,7 +18,7 @@ use lox_time::{
         },
     },
 };
-use lox_units::constants::{i64::time::SECONDS_PER_DAY, i64::time::SECONDS_PER_HALF_DAY};
+use lox_units::i64::consts::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 use thiserror::Error;
 
 use crate::spice::{Kernel, KernelError};

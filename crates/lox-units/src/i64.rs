@@ -2,4 +2,6 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-pub mod time;
+//! Constants for the `i64` type.
+
+pub mod consts;
