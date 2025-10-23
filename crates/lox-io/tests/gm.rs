@@ -3,11 +3,12 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use lox_io::spice::Kernel;
+use lox_test_utils::read_data_file;
 
 #[test]
 fn test_gm() {
-    let gm = include_str!("../../../data/gm_de440.tpc");
-    let kernel = Kernel::from_string(gm).expect("file should be parsable");
+    let gm = read_data_file("spice/gm_de440.tpc");
+    let kernel = Kernel::from_string(&gm).expect("file should be parsable");
     assert_eq!(kernel.type_id(), "PCK");
 
     assert!(!kernel.keys().is_empty());

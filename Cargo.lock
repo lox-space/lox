@@ -560,6 +560,7 @@ dependencies = [
  "csv",
  "lox-derive",
  "lox-math",
+ "lox-test-utils",
  "lox-time",
  "lox-units",
  "nom",
