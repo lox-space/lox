@@ -10,7 +10,7 @@ use thiserror::Error;
 
 use lox_bodies::fundamental::iers03::mean_moon_sun_elongation_iers03;
 use lox_bodies::{Moon, Sun};
-use lox_units::constants::f64::time::{DAYS_PER_JULIAN_CENTURY, MJD_J2000};
+use lox_units::f64::consts::{DAYS_PER_JULIAN_CENTURY, MJD_J2000};
 use lox_units::types::julian_dates::ModifiedJulianDate;
 use lox_units::types::units::{Arcseconds, Seconds};
 

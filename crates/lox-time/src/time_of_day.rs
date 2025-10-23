@@ -20,7 +20,7 @@ use regex::Regex;
 use thiserror::Error;
 
 use crate::subsecond::{InvalidSubsecond, Subsecond};
-use lox_units::constants::i64::time::{
+use lox_units::i64::consts::{
     SECONDS_PER_DAY, SECONDS_PER_HALF_DAY, SECONDS_PER_HOUR, SECONDS_PER_MINUTE,
 };
 

@@ -15,7 +15,7 @@ use std::str::FromStr;
 use itertools::Itertools;
 use lox_test_utils::approx_eq::ApproxEq;
 use lox_test_utils::approx_eq::results::ApproxEqResults;
-use lox_units::constants::f64::time;
+use lox_units::f64::consts;
 use lox_units::types::units::Days;
 use num::ToPrimitive;
 use thiserror::Error;
@@ -120,7 +120,7 @@ impl<T: TimeScale> Time<T> {
     /// * Returns `TimeError::LeapSecondsOutsideUtc` if `time` is a leap second, since leap seconds
     ///   cannot be unambiguously represented by a continuous time format.
     pub fn from_date_and_time(scale: T, date: Date, time: TimeOfDay) -> Result<Self, TimeError> {
-        let mut seconds = (date.days_since_j2000() * time::SECONDS_PER_DAY)
+        let mut seconds = (date.days_since_j2000() * consts::SECONDS_PER_DAY)
             .to_i64()
             .unwrap_or_else(|| {
                 unreachable!(
@@ -206,7 +206,7 @@ impl<T: TimeScale> Time<T> {
     ///
     /// * Returns `TimeError::JulianDateOutOfRange` if `julian_date` is NaN or ±infinity.
     pub fn from_julian_date(scale: T, julian_date: Days, epoch: Epoch) -> Result<Self, TimeError> {
-        let seconds = julian_date * time::SECONDS_PER_DAY;
+        let seconds = julian_date * consts::SECONDS_PER_DAY;
         if !(i64::MIN as f64..=i64::MAX as f64).contains(&seconds) {
             return Err(TimeError::JulianDateOutOfRange(JulianDateOutOfRange(
                 seconds,
@@ -229,8 +229,8 @@ impl<T: TimeScale> Time<T> {
     }
 
     pub fn from_two_part_julian_date(scale: T, jd1: Days, jd2: Days) -> Result<Self, TimeError> {
-        let seconds1 = jd1 * time::SECONDS_PER_DAY;
-        let seconds2 = jd2 * time::SECONDS_PER_DAY;
+        let seconds1 = jd1 * consts::SECONDS_PER_DAY;
+        let seconds2 = jd2 * consts::SECONDS_PER_DAY;
         let seconds = seconds1.trunc() + seconds2.trunc() - SECONDS_BETWEEN_JD_AND_J2000 as f64;
         if !(i64::MIN as f64..=i64::MAX as f64).contains(&seconds) {
             return Err(TimeError::JulianDateOutOfRange(JulianDateOutOfRange(
@@ -372,8 +372,8 @@ impl<T: TimeScale> JulianDate for Time<T> {
         decimal_seconds += self.subsecond.0;
         match unit {
             Unit::Seconds => decimal_seconds,
-            Unit::Days => decimal_seconds / time::SECONDS_PER_DAY,
-            Unit::Centuries => decimal_seconds / time::SECONDS_PER_JULIAN_CENTURY,
+            Unit::Days => decimal_seconds / consts::SECONDS_PER_DAY,
+            Unit::Centuries => decimal_seconds / consts::SECONDS_PER_JULIAN_CENTURY,
         }
     }
 }
@@ -606,16 +606,16 @@ macro_rules! time {
 #[cfg(test)]
 mod tests {
     use lox_test_utils::assert_approx_eq;
-    use lox_units::constants::f64::time::DAYS_PER_JULIAN_CENTURY;
+    use lox_units::f64::consts::DAYS_PER_JULIAN_CENTURY;
     use rstest::rstest;
 
     use crate::Time;
     use crate::time_scales::{Tai, Tdb, Tt};
-    use lox_units::constants::i64::time::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
+    use lox_units::i64::consts::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 
     use super::*;
 
-    use lox_units::constants::i64::time::{
+    use lox_units::i64::consts::{
         SECONDS_PER_HOUR, SECONDS_PER_JULIAN_CENTURY, SECONDS_PER_MINUTE,
     };
 
@@ -660,7 +660,7 @@ mod tests {
 
     #[test]
     fn test_time_from_julian_date_subsecond() {
-        let time = Time::from_julian_date(Tai, 0.3 / time::SECONDS_PER_DAY, Epoch::J2000).unwrap();
+        let time = Time::from_julian_date(Tai, 0.3 / consts::SECONDS_PER_DAY, Epoch::J2000).unwrap();
         assert_approx_eq!(time.subsecond(), 0.3, atol <= 1e-15);
     }
 
@@ -680,25 +680,25 @@ mod tests {
         assert_eq!(
             time,
             Err(TimeError::JulianDateOutOfRange(JulianDateOutOfRange(
-                (jd1 + jd2) * time::SECONDS_PER_DAY - SECONDS_BETWEEN_JD_AND_J2000 as f64
+                (jd1 + jd2) * consts::SECONDS_PER_DAY - SECONDS_BETWEEN_JD_AND_J2000 as f64
             )))
         );
     }
 
     #[rstest]
     #[case(
-        (SECONDS_BETWEEN_JD_AND_J2000 as f64) / time::SECONDS_PER_DAY,
+        (SECONDS_BETWEEN_JD_AND_J2000 as f64) / consts::SECONDS_PER_DAY,
         0.0,
         0,
     )]
     #[case(
-        (SECONDS_BETWEEN_JD_AND_J2000 as f64 + 0.5) / time::SECONDS_PER_DAY,
-        0.6 / time::SECONDS_PER_DAY,
+        (SECONDS_BETWEEN_JD_AND_J2000 as f64 + 0.5) / consts::SECONDS_PER_DAY,
+        0.6 / consts::SECONDS_PER_DAY,
         1,
     )]
     #[case(
-        (SECONDS_BETWEEN_JD_AND_J2000 as f64 + 0.5) / time::SECONDS_PER_DAY,
-        -0.6 / time::SECONDS_PER_DAY,
+        (SECONDS_BETWEEN_JD_AND_J2000 as f64 + 0.5) / consts::SECONDS_PER_DAY,
+        -0.6 / consts::SECONDS_PER_DAY,
         -1,
     )]
     fn test_time_from_two_part_julian_date_adjustments(
@@ -724,11 +724,11 @@ mod tests {
     #[case(-f64::INFINITY)]
     #[case(f64::NAN)]
     #[case(-f64::NAN)]
-    #[case(i64::MAX as f64 / time::SECONDS_PER_DAY + 1.0)]
-    #[case(i64::MIN as f64 / time::SECONDS_PER_DAY - 1.0)]
+    #[case(i64::MAX as f64 / consts::SECONDS_PER_DAY + 1.0)]
+    #[case(i64::MIN as f64 / consts::SECONDS_PER_DAY - 1.0)]
     fn test_time_from_julian_date_invalid(#[case] julian_date: f64) {
         let expected = Err(TimeError::JulianDateOutOfRange(JulianDateOutOfRange(
-            julian_date * time::SECONDS_PER_DAY,
+            julian_date * consts::SECONDS_PER_DAY,
         )));
         let actual = Time::from_julian_date(Tai, julian_date, Epoch::J2000);
         assert_eq!(actual, expected);

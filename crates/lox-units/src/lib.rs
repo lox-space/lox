@@ -12,8 +12,10 @@
 //!
 //! ## Types
 
-pub mod constants;
 pub mod coords;
+pub mod f64;
+pub mod i32;
+pub mod i64;
 pub mod types;
 pub mod units;
 

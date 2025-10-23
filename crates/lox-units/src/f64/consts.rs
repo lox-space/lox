@@ -3,31 +3,36 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-//! Module `time` exposes constants time-related constants shared between Lox crates.
+//! Useful constants for the `f64` type.
 
 /*
-  Days
-*/
+ * Time conversion constants
+ */
 
+/// Number of days in a Julian century.
 pub const DAYS_PER_JULIAN_CENTURY: f64 = 36525.0;
 
-/*
-  Seconds
-*/
+/// Number of seconds in a minute.
 pub const SECONDS_PER_MINUTE: f64 = 60.0;
 
+/// Number of seconds in an hour.
 pub const SECONDS_PER_HOUR: f64 = SECONDS_PER_MINUTE * 60.0;
 
+/// Number of seconds in a day.
 pub const SECONDS_PER_DAY: f64 = SECONDS_PER_HOUR * 24.0;
 
+/// Number of seconds in a Julian year (365.25 days).
 pub const SECONDS_PER_JULIAN_YEAR: f64 = SECONDS_PER_DAY * 365.25;
 
+/// Number of seconds in a Julian century.
 pub const SECONDS_PER_JULIAN_CENTURY: f64 = SECONDS_PER_JULIAN_YEAR * 100.0;
 
+/// Number of seconds in a femtosecond.
 pub const SECONDS_PER_FEMTOSECOND: f64 = 1e-15;
 
 /*
-  Julian dates
-*/
+ * Julian date constants
+ */
 
+/// Modified Julian Date at J2000 epoch.
 pub const MJD_J2000: f64 = 51544.5;

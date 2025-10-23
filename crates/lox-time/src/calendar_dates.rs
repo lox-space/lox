@@ -15,7 +15,7 @@ use std::{
     sync::OnceLock,
 };
 
-use lox_units::constants::f64::time::{self, SECONDS_PER_JULIAN_CENTURY};
+use lox_units::f64::consts::{self, SECONDS_PER_JULIAN_CENTURY};
 use num::ToPrimitive;
 use thiserror::Error;
 
@@ -25,7 +25,7 @@ use crate::julian_dates::{Epoch, JulianDate, Unit};
 use crate::julian_dates::{
     SECONDS_BETWEEN_J1950_AND_J2000, SECONDS_BETWEEN_JD_AND_J2000, SECONDS_BETWEEN_MJD_AND_J2000,
 };
-use lox_units::constants::i64::time::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
+use lox_units::i64::consts::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 
 fn iso_regex() -> &'static Regex {
     static ISO: OnceLock<Regex> = OnceLock::new();
@@ -260,7 +260,7 @@ impl JulianDate for Date {
 
         match unit {
             Unit::Seconds => seconds,
-            Unit::Days => seconds / time::SECONDS_PER_DAY,
+            Unit::Days => seconds / consts::SECONDS_PER_DAY,
             Unit::Centuries => seconds / SECONDS_PER_JULIAN_CENTURY,
         }
     }
@@ -383,7 +383,7 @@ pub trait CalendarDate {
 
 #[cfg(test)]
 mod tests {
-    use lox_units::constants::f64::time::DAYS_PER_JULIAN_CENTURY;
+    use lox_units::f64::consts::DAYS_PER_JULIAN_CENTURY;
     use rstest::rstest;
 
     use crate::calendar_dates::{Calendar, Date};
