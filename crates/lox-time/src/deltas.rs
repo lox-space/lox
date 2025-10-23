@@ -19,7 +19,7 @@ use std::ops::{Add, AddAssign, Neg, RangeInclusive, Sub, SubAssign};
 use num::ToPrimitive;
 use thiserror::Error;
 
-use lox_units::constants::f64::time::{
+use lox_units::f64::consts::{
     SECONDS_PER_DAY, SECONDS_PER_HOUR, SECONDS_PER_JULIAN_CENTURY, SECONDS_PER_JULIAN_YEAR,
     SECONDS_PER_MINUTE,
 };
@@ -385,11 +385,11 @@ impl From<i32> for TimeDelta {
 #[cfg(test)]
 mod tests {
     use lox_test_utils::assert_approx_eq;
-    use lox_units::constants::f64::time::DAYS_PER_JULIAN_CENTURY;
+    use lox_units::f64::consts::DAYS_PER_JULIAN_CENTURY;
     use proptest::prelude::*;
     use rstest::rstest;
 
-    use lox_units::constants::f64::time::SECONDS_PER_FEMTOSECOND;
+    use lox_units::f64::consts::SECONDS_PER_FEMTOSECOND;
 
     use super::*;
 
@@ -597,7 +597,7 @@ mod tests {
     #[test]
     fn test_delta_julian_date() {
         let delta = TimeDelta::new(
-            lox_units::constants::i64::time::SECONDS_PER_JULIAN_CENTURY,
+            lox_units::i64::consts::SECONDS_PER_JULIAN_CENTURY,
             Subsecond::default(),
         );
         assert_eq!(delta.seconds_since_j2000(), SECONDS_PER_JULIAN_CENTURY);

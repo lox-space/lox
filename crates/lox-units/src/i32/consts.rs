@@ -3,4 +3,11 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+//! Useful constants for the `i32` type.
+
+/*
+ * Julian date constants
+ */
+
+/// Julian Date at J2000 epoch.
 pub const JD_J2000: i32 = 2451545;

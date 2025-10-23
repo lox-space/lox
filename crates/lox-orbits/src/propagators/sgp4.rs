@@ -12,7 +12,7 @@ use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::time_scales::Tai;
 use lox_time::utc::Utc;
-use lox_units::constants::f64::time::SECONDS_PER_MINUTE;
+use lox_units::f64::consts::SECONDS_PER_MINUTE;
 
 use crate::propagators::Propagator;
 use crate::states::State;

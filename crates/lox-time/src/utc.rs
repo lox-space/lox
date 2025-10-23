@@ -14,7 +14,7 @@ use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
 use itertools::Itertools;
-use lox_units::constants::f64::time::{SECONDS_PER_DAY, SECONDS_PER_JULIAN_CENTURY};
+use lox_units::f64::consts::{SECONDS_PER_DAY, SECONDS_PER_JULIAN_CENTURY};
 use num::ToPrimitive;
 use thiserror::Error;
 

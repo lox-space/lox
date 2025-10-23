@@ -19,7 +19,7 @@ use lox_time::{
         transformations::TryToUtc,
     },
 };
-use lox_units::constants::f64::time::SECONDS_PER_DAY;
+use lox_units::f64::consts::SECONDS_PER_DAY;
 use serde::Deserialize;
 use thiserror::Error;
 
