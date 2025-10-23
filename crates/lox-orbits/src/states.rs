@@ -407,7 +407,7 @@ mod tests {
     use lox_bodies::{Earth, Jupiter, Venus};
     use lox_ephem::spk::parser::{Spk, parse_daf_spk};
     use lox_frames::providers::DefaultTransformProvider;
-    use lox_test_utils::{assert_approx_eq, data_dir};
+    use lox_test_utils::{assert_approx_eq, data_file};
     use lox_time::{Time, time, time_scales::Tdb, utc::Utc};
 
     use super::*;
@@ -505,7 +505,7 @@ mod tests {
     }
 
     fn ephemeris() -> &'static Spk {
-        let contents = std::fs::read(data_dir().join("de440s.bsp")).unwrap();
+        let contents = std::fs::read(data_file("spice/de440s.bsp")).unwrap();
         static EPHEMERIS: OnceLock<Spk> = OnceLock::new();
         EPHEMERIS.get_or_init(|| parse_daf_spk(&contents).unwrap())
     }

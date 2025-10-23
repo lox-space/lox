@@ -53,14 +53,14 @@ mod tests {
     use super::*;
 
     use crate::time::python::time::PyTime;
-    use lox_test_utils::data_dir;
+    use lox_test_utils::data_file;
     use pyo3::{Bound, IntoPyObject, IntoPyObjectExt, Python};
 
     #[test]
     #[should_panic(expected = "No such file")]
     fn test_ut1_provider_invalid_path() {
         Python::attach(|py| {
-            let path = (data_dir().join("invalid"),).into_pyobject(py).unwrap();
+            let path = (data_file("invalid"),).into_pyobject(py).unwrap();
             let _provider = PyEopProvider::new(&path).unwrap();
         })
     }
@@ -69,7 +69,7 @@ mod tests {
     #[should_panic(expected = "extrapolated")]
     fn test_ut1_provider_extrapolated() {
         Python::attach(|py| {
-            let path = (data_dir().join("finals2000A.all.csv"),)
+            let path = (data_file("iers/finals2000A.all.csv"),)
                 .into_pyobject(py)
                 .unwrap();
             let provider = Bound::new(py, PyEopProvider::new(&path).unwrap()).unwrap();

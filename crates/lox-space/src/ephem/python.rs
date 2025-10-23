@@ -2,7 +2,12 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use pyo3::{PyErr, PyResult, exceptions::PyValueError, pyclass, pymethods};
+use std::path::PathBuf;
+
+use pyo3::{
+    Bound, PyAny, PyErr, PyResult, exceptions::PyValueError, pyclass, pymethods,
+    types::PyAnyMethods,
+};
 
 use crate::ephem::spk::parser::{DafSpkError, Spk, parse_daf_spk};
 
@@ -20,7 +25,8 @@ pub struct PySpk(pub Spk);
 #[pymethods]
 impl PySpk {
     #[new]
-    fn new(path: &str) -> PyResult<Self> {
+    fn new(path: &Bound<'_, PyAny>) -> PyResult<Self> {
+        let path = path.extract::<PathBuf>()?;
         let data = std::fs::read(path)?;
         let spk = parse_daf_spk(&data).map_err(PyDafSpkError)?;
         Ok(PySpk(spk))

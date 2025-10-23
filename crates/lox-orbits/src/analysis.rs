@@ -481,7 +481,7 @@ where
 mod tests {
     use lox_bodies::Earth;
     use lox_ephem::spk::parser::{Spk, parse_daf_spk};
-    use lox_test_utils::{assert_approx_eq, data_dir};
+    use lox_test_utils::{assert_approx_eq, data_dir, data_file, read_data_file};
     use lox_time::Time;
     use lox_time::time_scales::Tai;
     use lox_time::utc::Utc;
@@ -533,7 +533,7 @@ mod tests {
         let gs = ground_station_trajectory();
         let sc = spacecraft_trajectory();
         let mask = ElevationMask::with_fixed_elevation(0.0);
-        let expected: Vec<Radians> = include_str!("../../../data/elevation.csv")
+        let expected: Vec<Radians> = read_data_file("elevation.csv")
             .lines()
             .map(|line| line.parse::<f64>().unwrap().to_radians())
             .collect();
@@ -626,26 +626,16 @@ mod tests {
     }
 
     fn ground_station_trajectory() -> Trajectory<Tai, Earth, Icrf> {
-        Trajectory::from_csv(
-            include_str!("../../../data/trajectory_cebr.csv"),
-            Earth,
-            Icrf,
-        )
-        .unwrap()
+        Trajectory::from_csv(&read_data_file("trajectory_cebr.csv"), Earth, Icrf).unwrap()
     }
 
     fn spacecraft_trajectory() -> Trajectory<Tai, Earth, Icrf> {
-        Trajectory::from_csv(
-            include_str!("../../../data/trajectory_lunar.csv"),
-            Earth,
-            Icrf,
-        )
-        .unwrap()
+        Trajectory::from_csv(&read_data_file("trajectory_lunar.csv"), Earth, Icrf).unwrap()
     }
 
     fn spacecraft_trajectory_dyn() -> DynTrajectory {
         Trajectory::from_csv_dyn(
-            include_str!("../../../data/trajectory_lunar.csv"),
+            &read_data_file("trajectory_lunar.csv"),
             DynOrigin::Earth,
             DynFrame::Icrf,
         )
@@ -666,8 +656,7 @@ mod tests {
 
     fn contacts() -> Vec<Window<Tai>> {
         let mut windows = vec![];
-        let mut reader =
-            csv::Reader::from_reader(include_str!("../../../data/contacts.csv").as_bytes());
+        let mut reader = csv::Reader::from_path(data_file("contacts.csv")).unwrap();
         for result in reader.records() {
             let record = result.unwrap();
             let start = record[0].parse::<Utc>().unwrap().to_time();
@@ -679,9 +668,7 @@ mod tests {
 
     fn contacts_combined() -> Vec<Window<DynTimeScale>> {
         let mut windows = vec![];
-        let mut reader = csv::Reader::from_reader(
-            include_str!("../../../data/contacts_combined.csv").as_bytes(),
-        );
+        let mut reader = csv::Reader::from_path(data_file("contacts_combined.csv")).unwrap();
         for result in reader.records() {
             let record = result.unwrap();
             let start = record[0].parse::<Utc>().unwrap().to_dyn_time();
@@ -692,7 +679,7 @@ mod tests {
     }
 
     fn ephemeris() -> &'static Spk {
-        let contents = std::fs::read(data_dir().join("de440s.bsp")).unwrap();
+        let contents = std::fs::read(data_dir().join("spice/de440s.bsp")).unwrap();
         static EPHEMERIS: OnceLock<Spk> = OnceLock::new();
         EPHEMERIS.get_or_init(|| parse_daf_spk(&contents).unwrap())
     }

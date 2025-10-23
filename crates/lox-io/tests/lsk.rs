@@ -3,11 +3,12 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use lox_io::spice::{Kernel, lsk::LeapSecondsKernel};
+use lox_test_utils::{data_file, read_data_file};
 
 #[test]
 fn test_lsk() {
-    let lsk = include_str!("../../../data/naif0012.tls");
-    let kernel = Kernel::from_string(lsk).expect("file should be parsable");
+    let lsk = read_data_file("spice/naif0012.tls");
+    let kernel = Kernel::from_string(&lsk).expect("file should be parsable");
     assert_eq!(kernel.type_id(), "LSK");
 
     assert!(!kernel.keys().is_empty());
@@ -78,5 +79,5 @@ fn test_lsk() {
     assert!(kernel.get_timestamp_array("DELTET/DELTA_T_A").is_none());
     assert!(kernel.get_double("DELTET/DELTA_AT").is_none());
     assert!(kernel.get_double_array("DELTET/DELTA_AT").is_none());
-    assert!(LeapSecondsKernel::from_file("../../data/naif0012.tls").is_ok());
+    assert!(LeapSecondsKernel::from_file(data_file("spice/naif0012.tls")).is_ok());
 }
