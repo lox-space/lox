@@ -604,12 +604,15 @@ impl PyGroundLocation {
         let rot = self.0.rotation_to_topocentric();
         let position = rot * (state.0.position() - self.0.body_fixed_position());
         let velocity = rot * state.0.velocity();
+        let omega = position.cross(velocity) / position.length_squared();
+        // Angular velocity magnitude, radians/second
+        let angular_velocity = omega.length();
         let range = position.length();
         let range_rate = position.dot(velocity) / range;
         let elevation = (position.z / range).asin();
         let azimuth = position.y.atan2(-position.x);
         Ok(PyObservables(Observables::new(
-            azimuth, elevation, range, range_rate,
+            azimuth, elevation, range, range_rate, angular_velocity
         )))
     }
 
@@ -1297,8 +1300,8 @@ pub struct PyObservables(pub Observables);
 #[pymethods]
 impl PyObservables {
     #[new]
-    fn new(azimuth: f64, elevation: f64, range: f64, range_rate: f64) -> Self {
-        PyObservables(Observables::new(azimuth, elevation, range, range_rate))
+    fn new(azimuth: f64, elevation: f64, range: f64, range_rate: f64, angular_velocity: f64) -> Self {
+        PyObservables(Observables::new(azimuth, elevation, range, range_rate, angular_velocity))
     }
 
     fn azimuth(&self) -> f64 {

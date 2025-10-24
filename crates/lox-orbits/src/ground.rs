@@ -33,15 +33,17 @@ pub struct Observables {
     elevation: Radians,
     range: f64,
     range_rate: f64,
+    angular_velocity: f64,
 }
 
 impl Observables {
-    pub fn new(azimuth: Radians, elevation: Radians, range: f64, range_rate: f64) -> Self {
+    pub fn new(azimuth: Radians, elevation: Radians, range: f64, range_rate: f64, angular_velocity: f64) -> Self {
         Observables {
             azimuth,
             elevation,
             range,
             range_rate,
+            angular_velocity
         }
     }
     pub fn azimuth(&self) -> Radians {
@@ -58,6 +60,10 @@ impl Observables {
 
     pub fn range_rate(&self) -> f64 {
         self.range_rate
+    }
+
+    pub fn angular_velocity(&self) -> f64 {
+        self.angular_velocity
     }
 }
 
@@ -160,6 +166,10 @@ impl<B: TrySpheroid> GroundLocation<B> {
         let rot = self.rotation_to_topocentric();
         let position = rot * (state.position() - self.body_fixed_position());
         let velocity = rot * state.velocity();
+        let omega = position.cross(velocity) / position.length_squared();
+        // Angular velocity magnitude, radians/second
+        let angular_velocity = omega.length();
+
         let range = position.length();
         let range_rate = position.dot(velocity) / range;
         let elevation = (position.z / range).asin();
@@ -169,6 +179,7 @@ impl<B: TrySpheroid> GroundLocation<B> {
             elevation,
             range,
             range_rate,
+            angular_velocity
         }
     }
 
@@ -176,6 +187,9 @@ impl<B: TrySpheroid> GroundLocation<B> {
         let rot = self.rotation_to_topocentric();
         let position = rot * (state.position() - self.body_fixed_position());
         let velocity = rot * state.velocity();
+        let omega = position.cross(velocity) / position.length_squared();
+        // Angular velocity magnitude, radians/second
+        let angular_velocity = omega.length();
         let range = position.length();
         let range_rate = position.dot(velocity) / range;
         let elevation = (position.z / range).asin();
@@ -185,6 +199,7 @@ impl<B: TrySpheroid> GroundLocation<B> {
             elevation,
             range,
             range_rate,
+            angular_velocity,
         }
     }
 }
@@ -304,6 +319,11 @@ impl SatelliteObserver {
         let relative_position = target_state.position() - observer_state.position();
         let relative_velocity = target_state.velocity() - observer_state.velocity();
 
+        // Angular velocity vector (orbital rate)
+        let omega = relative_position.cross(relative_velocity) / relative_position.length_squared();
+        // Angular velocity magnitude, radians/second
+        let angular_velocity = omega.length();
+
         // Range and range rate
         let range = relative_position.length();
         let range_rate = relative_position.dot(relative_velocity) / range;
@@ -332,7 +352,7 @@ impl SatelliteObserver {
         let elevation = (local_position.z / range).asin();
         let azimuth = local_position.y.atan2(local_position.x);
 
-        Observables::new(azimuth, elevation, range, range_rate)
+        Observables::new(azimuth, elevation, range, range_rate, angular_velocity)
     }
 }
 

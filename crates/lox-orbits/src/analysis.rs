@@ -122,6 +122,7 @@ pub struct Pass<T: TimeScale> {
     elevation_series: Series<Vec<f64>, Vec<f64>>,
     range_series: Series<Vec<f64>, Vec<f64>>,
     range_rate_series: Series<Vec<f64>, Vec<f64>>,
+    angular_velocity_series: Series<Vec<f64>, Vec<f64>>,
 }
 
 pub type DynPass = Pass<DynTimeScale>;
@@ -214,7 +215,7 @@ impl<T: TimeScale> Pass<T> {
     {
         // If we have less than 2 points, we can't create a proper Series
         // We'll create dummy series with duplicate points for Series compatibility
-        let (time_seconds, azimuths, elevations, ranges, range_rates) = if times.len() < 2 {
+        let (time_seconds, azimuths, elevations, ranges, range_rates, angular_velocities) = if times.len() < 2 {
             if times.is_empty() {
                 // Create default points at window start and end
                 let start_seconds = 0.0;
@@ -222,13 +223,14 @@ impl<T: TimeScale> Pass<T> {
                 let default_obs = observables
                     .first()
                     .cloned()
-                    .unwrap_or_else(|| Observables::new(0.0, 0.0, 0.0, 0.0));
+                    .unwrap_or_else(|| Observables::new(0.0, 0.0, 0.0, 0.0, 0.0));
                 (
                     vec![start_seconds, end_seconds],
                     vec![default_obs.azimuth(), default_obs.azimuth()],
                     vec![default_obs.elevation(), default_obs.elevation()],
                     vec![default_obs.range(), default_obs.range()],
                     vec![default_obs.range_rate(), default_obs.range_rate()],
+                    vec![default_obs.angular_velocity(), default_obs.angular_velocity()]
                 )
             } else {
                 // Duplicate the single point
@@ -240,6 +242,7 @@ impl<T: TimeScale> Pass<T> {
                     vec![obs.elevation(), obs.elevation()],
                     vec![obs.range(), obs.range()],
                     vec![obs.range_rate(), obs.range_rate()],
+                    vec![obs.angular_velocity(), obs.angular_velocity()]
                 )
             }
         } else {
@@ -254,15 +257,17 @@ impl<T: TimeScale> Pass<T> {
             let elevations: Vec<f64> = observables.iter().map(|o| o.elevation()).collect();
             let ranges: Vec<f64> = observables.iter().map(|o| o.range()).collect();
             let range_rates: Vec<f64> = observables.iter().map(|o| o.range_rate()).collect();
+            let angular_velocities: Vec<f64> = observables.iter().map(|o| o.angular_velocity()).collect();
 
-            (time_seconds, azimuths, elevations, ranges, range_rates)
+            (time_seconds, azimuths, elevations, ranges, range_rates, angular_velocities)
         };
 
         // Create series for each observable
         let azimuth_series = Series::new(time_seconds.clone(), azimuths)?;
         let elevation_series = Series::new(time_seconds.clone(), elevations)?;
         let range_series = Series::new(time_seconds.clone(), ranges)?;
-        let range_rate_series = Series::new(time_seconds, range_rates)?;
+        let range_rate_series = Series::new(time_seconds.clone(), range_rates)?;
+        let angular_velocity_series = Series::new(time_seconds, angular_velocities)?;
 
         Ok(Pass {
             window,
@@ -272,6 +277,7 @@ impl<T: TimeScale> Pass<T> {
             elevation_series,
             range_series,
             range_rate_series,
+            angular_velocity_series,
         })
     }
 
@@ -309,8 +315,9 @@ impl<T: TimeScale> Pass<T> {
         let elevation = self.elevation_series.interpolate(target_seconds);
         let range = self.range_series.interpolate(target_seconds);
         let range_rate = self.range_rate_series.interpolate(target_seconds);
+        let angular_velocity = self.angular_velocity_series.interpolate(target_seconds);
 
-        Some(Observables::new(azimuth, elevation, range, range_rate))
+        Some(Observables::new(azimuth, elevation, range, range_rate, angular_velocity))
     }
 }
 
@@ -507,6 +514,57 @@ pub fn visibility_intersat_los(
     )
 }
 
+
+// iterate through passes, shorten them based on filter function, each timestep, possiblty removing entire passes or splitting it.
+fn filter_passes_by_fn(
+    passes: Vec<DynPass>,
+    filter_fn: impl Fn(&Observables) -> bool,
+    minimum_window_duration: TimeDelta,
+) -> Vec<DynPass> {
+    let mut reconstructed_passes: Vec<DynPass> = Vec::new();
+    passes.into_iter().for_each(|pass| {
+        let mut current_window_start: Option<DynTime> = None;
+        let mut current_times: Vec<DynTime> = Vec::new();
+        let mut current_observables: Vec<Observables> = Vec::new();
+
+        for (time, obs) in pass.times().iter().zip(pass.observables().iter()) {
+            if filter_fn(obs) {
+                // If we are not currently in a valid window, start one
+                if current_window_start.is_none() {
+                    current_window_start = Some(*time);
+                }
+                current_times.push(*time);
+                current_observables.push(obs.clone());
+            } else {
+                // If we were in a valid window, close it and create a new pass
+                if let Some(window_start) = current_window_start {
+                    let window_end = *current_times.last().unwrap();
+                    let window = Window::new(window_start.clone(), window_end.clone());
+                    let new_pass = DynPass::new(window, current_times.clone(), current_observables.clone()).unwrap();
+                    if new_pass.window().duration() >= minimum_window_duration {
+                        reconstructed_passes.push(new_pass);
+                    }
+
+                    current_window_start = None;
+                    current_times.clear();
+                    current_observables.clear();
+                }
+            }
+        }
+
+        // Handle case where pass ends while still in a valid window
+        if let Some(window_start) = current_window_start {
+            let window_end = *current_times.last().unwrap();
+            let window = Window::new(window_start.clone(), window_end.clone());
+            let new_pass = DynPass::new(window, current_times.clone(), current_observables.clone()).unwrap();
+            if new_pass.window().duration() >= minimum_window_duration {
+                reconstructed_passes.push(new_pass);
+            }
+        }
+    });
+    reconstructed_passes
+}
+
 pub fn visibility_intersat_los_multiple_bodies<E: Ephemeris + Send + Sync>(
     times: &[DynTime],
     source: &DynTrajectory,
@@ -537,6 +595,14 @@ pub fn visibility_intersat_los_multiple_bodies<E: Ephemeris + Send + Sync>(
             Err(e) => return Err(e),
         }
     }
+    let minimum_window_duration = TimeDelta::from_seconds(60);
+    let minimum_range = 500.0; // 500 km
+    let maximum_range = 3500.0; // 3500 km
+    let maximum_angular_velocity = 0.14; // ~8 degrees per second in radians
+
+    // filter passes by range and then angular velocity
+    let passes = filter_passes_by_fn(passes, |obs| obs.range() >= minimum_range && obs.range() < maximum_range, minimum_window_duration);
+    let passes = filter_passes_by_fn(passes, |obs| obs.angular_velocity() < maximum_angular_velocity, minimum_window_duration);
     Ok(passes)
 }
 
