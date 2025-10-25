@@ -10,6 +10,11 @@ pre-commit:
       run: |
         python3 tools/add_spdx_headers.py {staged_files}
         git add {staged_files}
+    rustfmt:
+      glob: "*.rs"
+      run: |
+        cargo fmt -- {staged_files}
+        git add {staged_files}
 
 pre-push:
   parallel: true

@@ -4,15 +4,51 @@
 
 //! Data types for representing orbital elements.
 
+use std::f64::consts::PI;
+use std::f64::consts::TAU;
+use std::fmt::Display;
+
 use glam::DVec3;
+use lox_test_utils::ApproxEq;
 use lox_test_utils::approx_eq;
-use lox_test_utils::{
-    ApproxEq,
-    approx_eq::{ApproxEq, ApproxEqResult, ApproxEqResults},
-};
 use thiserror::Error;
 
+use crate::anomalies::AnomalyError;
+use crate::anomalies::MeanAnomaly;
+use crate::anomalies::{EccentricAnomaly, TrueAnomaly};
+use crate::utils::Linspace;
 use crate::{Angle, AngleUnits, Distance, DistanceUnits, coords::Cartesian, glam::Azimuth};
+
+/// The standard gravitational parameter of a celestial body µ = GM.
+#[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd, ApproxEq)]
+#[repr(transparent)]
+pub struct GravitationalParameter(f64);
+
+impl GravitationalParameter {
+    /// Creates a new gravitational parameter from an `f64` value in m³/s².
+    pub fn m3_per_s2(mu: f64) -> Self {
+        Self(mu)
+    }
+
+    /// Creates a new gravitational parameter from an `f64` value in km³/s².
+    pub fn km3_per_s2(mu: f64) -> Self {
+        Self(1e9 * mu)
+    }
+
+    /// Returns the value of the gravitational parameters as an `f64`.
+    pub fn as_f64(&self) -> f64 {
+        self.0
+    }
+}
+
+impl Display for GravitationalParameter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        (self.0 * 1e-9).fmt(f)?;
+        write!(f, " km³/s²")
+    }
+}
+
+pub type SemiMajorAxis = Distance;
 
 /// The Keplerian orbit types or conic sections.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -27,7 +63,18 @@ pub enum OrbitType {
     Hyperbolic,
 }
 
-#[derive(Debug, Error)]
+impl Display for OrbitType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OrbitType::Circular => "circular".fmt(f),
+            OrbitType::Elliptic => "elliptic".fmt(f),
+            OrbitType::Parabolic => "parabolic".fmt(f),
+            OrbitType::Hyperbolic => "hyperbolic".fmt(f),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Error)]
 #[error("eccentricity cannot be negative but was {0}")]
 pub struct NegativeEccentricityError(f64);
 
@@ -42,7 +89,7 @@ impl Eccentricity {
     /// # Errors
     ///
     /// Returns a [`NegativeEccentricityError`] if the value is smaller than zero.
-    pub fn try_new(ecc: f64) -> Result<Eccentricity, NegativeEccentricityError> {
+    pub const fn try_new(ecc: f64) -> Result<Eccentricity, NegativeEccentricityError> {
         if ecc < 0.0 {
             return Err(NegativeEccentricityError(ecc));
         }
@@ -50,7 +97,7 @@ impl Eccentricity {
     }
 
     /// Returns the value of the eccentricity as an `f64`.
-    pub fn as_f64(&self) -> f64 {
+    pub const fn as_f64(&self) -> f64 {
         self.0
     }
 
@@ -85,118 +132,166 @@ impl Eccentricity {
     }
 }
 
-fn hyperbolic_to_true(hyperbolic_anomaly: f64, eccentricity: f64) -> f64 {
-    2.0 * (((1.0 + eccentricity) / (eccentricity - 1.0)).sqrt() * (hyperbolic_anomaly / 2.0).tanh())
-        .atan()
-}
-
-fn eccentric_to_true(eccentric_anomaly: f64, eccentricity: f64) -> f64 {
-    2.0 * (((1.0 + eccentricity) / (1.0 - eccentricity)).sqrt() * (eccentric_anomaly / 2.0).tan())
-        .atan()
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
-pub enum Anomaly {
-    True(Angle),
-    Eccentric(Angle),
-    Mean(Angle),
-}
-
-impl Anomaly {
-    pub fn new(anomaly: Angle) -> Self {
-        Self::True(anomaly.normalize_two_pi(Angle::ZERO))
-    }
-
-    pub fn eccentric(anomaly: Angle) -> Self {
-        Self::Eccentric(anomaly.normalize_two_pi(Angle::ZERO))
-    }
-
-    pub fn mean(anomaly: Angle) -> Self {
-        Self::Mean(anomaly.normalize_two_pi(Angle::ZERO))
-    }
-
-    pub fn to_true(&self, ecc: Eccentricity) -> Self {
-        let orbit = ecc.orbit_type();
-        let ecc = ecc.as_f64();
-        match (self, orbit) {
-            (Anomaly::Eccentric(anomaly), OrbitType::Circular | OrbitType::Elliptic) => {
-                Self::new(eccentric_to_true(anomaly.as_f64(), ecc).rad())
-            }
-            (Anomaly::Eccentric(anomaly), OrbitType::Hyperbolic) => {
-                Self::new(hyperbolic_to_true(anomaly.as_f64(), ecc).rad())
-            }
-            (Anomaly::Eccentric(_), OrbitType::Parabolic) => todo!(),
-            (Anomaly::Mean(_), OrbitType::Circular) => todo!(),
-            (Anomaly::Mean(_), OrbitType::Elliptic) => todo!(),
-            (Anomaly::Mean(_), OrbitType::Parabolic) => todo!(),
-            (Anomaly::Mean(_), OrbitType::Hyperbolic) => todo!(),
-            (Anomaly::True(_), _) => *self,
-        }
-    }
-
-    pub fn normalize(&self) -> Self {
-        match self {
-            Anomaly::True(angle) => Anomaly::True(angle.normalize_two_pi(Angle::ZERO)),
-            Anomaly::Eccentric(angle) => Anomaly::Eccentric(angle.normalize_two_pi(Angle::ZERO)),
-            Anomaly::Mean(angle) => Anomaly::Mean(angle.normalize_two_pi(Angle::ZERO)),
-        }
-    }
-
-    pub fn as_angle(&self) -> Angle {
-        match self {
-            Anomaly::True(angle) | Anomaly::Eccentric(angle) | Anomaly::Mean(angle) => *angle,
-        }
-    }
-
-    pub fn as_f64(&self) -> f64 {
-        self.as_angle().as_f64()
+impl Display for Eccentricity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
     }
 }
 
-impl ApproxEq for Anomaly {
-    fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
-        match (self, rhs) {
-            (Anomaly::True(lhs), Anomaly::True(rhs))
-            | (Anomaly::Eccentric(lhs), Anomaly::Eccentric(rhs))
-            | (Anomaly::Mean(lhs), Anomaly::Mean(rhs)) => lhs.approx_eq(rhs, atol, rtol),
-            (_, _) => ApproxEqResults::single(ApproxEqResult::fail(self.as_f64(), rhs.as_f64())),
-        }
-    }
-}
+#[derive(Debug, Clone, Error)]
+#[error("inclination must be between 0 and 180 deg but was {0}")]
+pub struct InclinationError(Angle);
 
-/// The standard gravitational parameter of a celestial body µ = GM.
+/// Orbital inclination.
 #[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd, ApproxEq)]
 #[repr(transparent)]
-pub struct GravitationalParameter(f64);
+pub struct Inclination(Angle);
 
-impl GravitationalParameter {
-    /// Creates a new gravitational parameter from an `f64` value in m³/s².
-    pub fn m3_per_s2(mu: f64) -> Self {
-        Self(mu)
+impl Inclination {
+    pub const fn try_new(inclination: Angle) -> Result<Inclination, InclinationError> {
+        let inc = inclination.as_f64();
+        if inc < 0.0 || inc > PI {
+            return Err(InclinationError(inclination));
+        }
+        Ok(Inclination(inclination))
     }
 
-    /// Creates a new gravitational parameter from an `f64` value in km³/s².
-    pub fn km3_per_s2(mu: f64) -> Self {
-        Self(1e9 * mu)
-    }
-
-    /// Returns the value of the gravitational parameters as an `f64`.
-    pub fn as_f64(&self) -> f64 {
-        self.0
+    pub const fn as_f64(&self) -> f64 {
+        self.0.as_f64()
     }
 }
+
+impl Display for Inclination {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+#[derive(Debug, Clone, Error)]
+#[error("longitude of ascending node must be between 0 and 360 deg but was {0}")]
+pub struct LongitudeOfAscendingNodeError(Angle);
+
+/// Longitude of ascending node.
+#[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd, ApproxEq)]
+#[repr(transparent)]
+pub struct LongitudeOfAscendingNode(Angle);
+
+impl LongitudeOfAscendingNode {
+    pub const fn try_new(
+        longitude_of_ascending_node: Angle,
+    ) -> Result<LongitudeOfAscendingNode, LongitudeOfAscendingNodeError> {
+        let node = longitude_of_ascending_node.as_f64();
+        if node < 0.0 || node > TAU {
+            return Err(LongitudeOfAscendingNodeError(longitude_of_ascending_node));
+        }
+        Ok(LongitudeOfAscendingNode(longitude_of_ascending_node))
+    }
+
+    pub const fn as_f64(&self) -> f64 {
+        self.0.as_f64()
+    }
+}
+
+impl Display for LongitudeOfAscendingNode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+#[derive(Debug, Clone, Error)]
+#[error("argument of periapsis must be between 0 and 360 deg but was {0}")]
+pub struct ArgumentOfPeriapsisError(Angle);
+
+/// Argument of periapsis.
+#[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd, ApproxEq)]
+#[repr(transparent)]
+pub struct ArgumentOfPeriapsis(Angle);
+
+impl ArgumentOfPeriapsis {
+    pub const fn try_new(
+        argument_of_periapsis: Angle,
+    ) -> Result<ArgumentOfPeriapsis, ArgumentOfPeriapsisError> {
+        let arg = argument_of_periapsis.as_f64();
+        if arg < 0.0 || arg > TAU {
+            return Err(ArgumentOfPeriapsisError(argument_of_periapsis));
+        }
+        Ok(ArgumentOfPeriapsis(argument_of_periapsis))
+    }
+
+    pub const fn as_f64(&self) -> f64 {
+        self.0.as_f64()
+    }
+}
+
+impl Display for ArgumentOfPeriapsis {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+// enum LocalTime {
+//     LTAN(TimeOfDay)
+// }
 
 #[derive(Debug, Clone, Copy, PartialEq, ApproxEq)]
 pub struct Keplerian {
-    pub semi_major_axis: Distance,
-    pub eccentricity: Eccentricity,
-    pub inclination: Angle,
-    pub longitude_of_ascending_node: Angle,
-    pub argument_of_periapsis: Angle,
-    pub anomaly: Anomaly,
+    semi_major_axis: SemiMajorAxis,
+    eccentricity: Eccentricity,
+    inclination: Inclination,
+    longitude_of_ascending_node: LongitudeOfAscendingNode,
+    argument_of_periapsis: ArgumentOfPeriapsis,
+    true_anomaly: TrueAnomaly,
 }
 
 impl Keplerian {
+    pub fn new(
+        semi_major_axis: SemiMajorAxis,
+        eccentricity: Eccentricity,
+        inclination: Inclination,
+        longitude_of_ascending_node: LongitudeOfAscendingNode,
+        argument_of_periapsis: ArgumentOfPeriapsis,
+        true_anomaly: TrueAnomaly,
+    ) -> Self {
+        Self {
+            semi_major_axis,
+            eccentricity,
+            inclination,
+            longitude_of_ascending_node,
+            argument_of_periapsis,
+            true_anomaly,
+        }
+    }
+
+    pub fn builder() -> KeplerianBuilder {
+        KeplerianBuilder::default()
+    }
+
+    // pub fn from_sso(altitude: Distance, eccentricity: Eccentricity, ) -> Result<Self, ()> {}
+
+    pub fn semi_major_axis(&self) -> SemiMajorAxis {
+        self.semi_major_axis
+    }
+
+    pub fn eccentricity(&self) -> Eccentricity {
+        self.eccentricity
+    }
+
+    pub fn inclination(&self) -> Inclination {
+        self.inclination
+    }
+
+    pub fn longitude_of_ascending_node(&self) -> LongitudeOfAscendingNode {
+        self.longitude_of_ascending_node
+    }
+
+    pub fn argument_of_periapsis(&self) -> ArgumentOfPeriapsis {
+        self.argument_of_periapsis
+    }
+
+    pub fn true_anomaly(&self) -> TrueAnomaly {
+        self.true_anomaly
+    }
+
     pub fn semi_parameter(&self) -> Distance {
         if self.eccentricity.is_circular() {
             self.semi_major_axis
@@ -209,7 +304,7 @@ impl Keplerian {
         let ecc = self.eccentricity.as_f64();
         let mu = grav_param.as_f64();
         let semiparameter = self.semi_parameter().as_f64();
-        let (sin_nu, cos_nu) = self.anomaly.to_true(self.eccentricity).as_angle().sin_cos();
+        let (sin_nu, cos_nu) = self.true_anomaly.as_angle().sin_cos();
         let sqrt_mu_p = (mu / semiparameter).sqrt();
 
         let pos = DVec3::new(cos_nu, sin_nu, 0.0) * (semiparameter / (1.0 + ecc * cos_nu));
@@ -220,10 +315,23 @@ impl Keplerian {
 
     pub fn to_cartesian(&self, grav_param: GravitationalParameter) -> Cartesian {
         let (pos, vel) = self.to_perifocal(grav_param);
-        let rot = self.longitude_of_ascending_node.rotation_z().transpose()
-            * self.inclination.rotation_x().transpose()
-            * self.argument_of_periapsis.rotation_z().transpose();
+        let rot = self.longitude_of_ascending_node.0.rotation_z().transpose()
+            * self.inclination.0.rotation_x().transpose()
+            * self.argument_of_periapsis.0.rotation_z().transpose();
         Cartesian::from_vecs(rot * pos, rot * vel)
+    }
+
+    pub fn trace_orbit(&self, grav_param: GravitationalParameter, n: usize) -> Vec<Cartesian> {
+        Linspace::new(-PI, PI, n)
+            .map(|ecc| {
+                let true_anomaly = EccentricAnomaly::new(ecc.rad()).to_true(self.eccentricity);
+                Keplerian {
+                    true_anomaly,
+                    ..*self
+                }
+                .to_cartesian(grav_param)
+            })
+            .collect()
     }
 }
 
@@ -268,25 +376,25 @@ impl Cartesian {
                 (
                     Angle::ZERO,
                     e.azimuth(),
-                    Anomaly::True(Angle::from_atan2(h.dot(e.cross(r)) / hm, r.dot(e))),
+                    TrueAnomaly::new(Angle::from_atan2(h.dot(e.cross(r)) / hm, r.dot(e))),
                 )
             } else if !equatorial && circular {
                 (
                     node.azimuth(),
                     Angle::ZERO,
-                    Anomaly::True(Angle::from_atan2(r.dot(h.cross(node)) / hm, r.dot(node))),
+                    TrueAnomaly::new(Angle::from_atan2(r.dot(h.cross(node)) / hm, r.dot(node))),
                 )
             } else if equatorial && circular {
-                (Angle::ZERO, Angle::ZERO, Anomaly::new(r.azimuth()))
+                (Angle::ZERO, Angle::ZERO, TrueAnomaly::new(r.azimuth()))
             } else {
                 let true_anomaly = if semi_major_axis > 0.0 {
                     let e_se = r.dot(v) / (mu * semi_major_axis).sqrt();
                     let e_ce = (rm * vm.powi(2)) / mu - 1.0;
-                    Anomaly::Eccentric(Angle::from_atan2(e_se, e_ce)).to_true(eccentricity)
+                    EccentricAnomaly::new(Angle::from_atan2(e_se, e_ce)).to_true(eccentricity)
                 } else {
                     let e_sh = r.dot(v) / (-mu * semi_major_axis).sqrt();
                     let e_ch = (rm * vm.powi(2)) / mu - 1.0;
-                    Anomaly::eccentric((((e_ch + e_sh) / (e_ch - e_sh)).ln() / 2.0).rad())
+                    EccentricAnomaly::new((((e_ch + e_sh) / (e_ch - e_sh)).ln() / 2.0).rad())
                         .to_true(eccentricity)
                 };
                 let px = r.dot(node);
@@ -301,11 +409,161 @@ impl Cartesian {
         Keplerian {
             semi_major_axis: semi_major_axis.m(),
             eccentricity,
-            inclination,
-            longitude_of_ascending_node: longitude_of_ascending_node.mod_two_pi(),
-            argument_of_periapsis: argument_of_periapsis.mod_two_pi(),
-            anomaly: true_anomaly.normalize(),
+            inclination: Inclination(inclination),
+            longitude_of_ascending_node: LongitudeOfAscendingNode(
+                longitude_of_ascending_node.mod_two_pi(),
+            ),
+            argument_of_periapsis: ArgumentOfPeriapsis(argument_of_periapsis.mod_two_pi()),
+            true_anomaly,
         }
+    }
+}
+
+#[derive(Debug, Clone, Error)]
+pub enum KeplerianError {
+    #[error(transparent)]
+    NegativeEccentricity(#[from] NegativeEccentricityError),
+    #[error(
+        "{} semi-major axis ({semi_major_axis}) for {} eccentricity ({eccentricity})",
+        if .semi_major_axis.as_f64().signum() == -1.0 {"negative"} else {"positive"},
+        .eccentricity.orbit_type()
+    )]
+    InvalidShape {
+        semi_major_axis: SemiMajorAxis,
+        eccentricity: Eccentricity,
+    },
+    #[error(
+        "no orbital shape parameters (semi-major axis and eccentricity, radii, or altitudes) were provided"
+    )]
+    MissingShape,
+    #[error(transparent)]
+    InvalidInclination(#[from] InclinationError),
+    #[error(transparent)]
+    InvalidLongitudeOfAscendingNode(#[from] LongitudeOfAscendingNodeError),
+    #[error(transparent)]
+    InvalidArgumentOfPeriapsis(#[from] ArgumentOfPeriapsisError),
+    #[error(transparent)]
+    Anomaly(#[from] AnomalyError),
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct KeplerianBuilder {
+    shape: Option<(
+        SemiMajorAxis,
+        Result<Eccentricity, NegativeEccentricityError>,
+    )>,
+    inclination: Angle,
+    longitude_of_ascending_node: Angle,
+    argument_of_periapsis: Angle,
+    true_anomaly: Option<Angle>,
+    mean_anomaly: Option<Angle>,
+}
+
+impl KeplerianBuilder {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn with_semi_major_axis(
+        mut self,
+        semi_major_axis: SemiMajorAxis,
+        eccentricity: f64,
+    ) -> Self {
+        self.shape = Some((semi_major_axis, Eccentricity::try_new(eccentricity)));
+        self
+    }
+
+    pub fn with_radii(mut self, periapsis_radius: Distance, apoapsis_radius: Distance) -> Self {
+        let rp = periapsis_radius.as_f64();
+        let ra = apoapsis_radius.as_f64();
+        let semi_major_axis = SemiMajorAxis::new((rp + ra) / 2.0);
+
+        let eccentricity = Eccentricity::try_new((ra - rp) / (ra + rp));
+
+        self.shape = Some((semi_major_axis, eccentricity));
+
+        self
+    }
+
+    pub fn with_altitudes(
+        self,
+        periapsis_altitude: Distance,
+        apoapsis_altitude: Distance,
+        mean_radius: Distance,
+    ) -> Self {
+        let rp = periapsis_altitude + mean_radius;
+        let ra = apoapsis_altitude + mean_radius;
+        self.with_radii(rp, ra)
+    }
+
+    pub fn with_inclination(mut self, inclination: Angle) -> Self {
+        self.inclination = inclination;
+        self
+    }
+
+    pub fn with_longitude_of_ascending_node(mut self, longitude_of_ascending_node: Angle) -> Self {
+        self.longitude_of_ascending_node = longitude_of_ascending_node;
+        self
+    }
+
+    pub fn with_argument_of_periapsis(mut self, argument_of_periapsis: Angle) -> Self {
+        self.argument_of_periapsis = argument_of_periapsis;
+        self
+    }
+
+    pub fn with_true_anomaly(mut self, true_anomaly: Angle) -> Self {
+        self.true_anomaly = Some(true_anomaly);
+        self
+    }
+
+    pub fn with_mean_anomaly(mut self, mean_anomaly: Angle) -> Self {
+        self.mean_anomaly = Some(mean_anomaly);
+        self
+    }
+
+    pub fn build(self) -> Result<Keplerian, KeplerianError> {
+        let (semi_major_axis, eccentricity) = self.shape.ok_or(KeplerianError::MissingShape)?;
+
+        let eccentricity = eccentricity?;
+
+        Self::check_shape(semi_major_axis, eccentricity)?;
+
+        let inclination = Inclination::try_new(self.inclination)?;
+        let longitude_of_ascending_node =
+            LongitudeOfAscendingNode::try_new(self.longitude_of_ascending_node)?;
+        let argument_of_periapsis = ArgumentOfPeriapsis::try_new(self.argument_of_periapsis)?;
+
+        let true_anomaly = match self.true_anomaly {
+            Some(true_anomaly) => TrueAnomaly::new(true_anomaly),
+            None => match self.mean_anomaly {
+                Some(mean_anomaly) => MeanAnomaly::new(mean_anomaly).to_true(eccentricity)?,
+                None => TrueAnomaly::new(Angle::ZERO),
+            },
+        };
+
+        Ok(Keplerian {
+            semi_major_axis,
+            eccentricity,
+            inclination,
+            longitude_of_ascending_node,
+            argument_of_periapsis,
+            true_anomaly,
+        })
+    }
+
+    fn check_shape(
+        semi_major_axis: SemiMajorAxis,
+        eccentricity: Eccentricity,
+    ) -> Result<(), KeplerianError> {
+        let ecc = eccentricity.as_f64();
+        let sma = semi_major_axis.as_f64();
+        if (ecc > 1.0 && sma > 0.0) || (ecc < 1.0 && sma < 0.0) {
+            return Err(KeplerianError::InvalidShape {
+                semi_major_axis,
+                eccentricity,
+            });
+        }
+        Ok(())
     }
 }
 
@@ -338,5 +596,28 @@ mod tests {
 
         assert_approx_eq!(cartesian.position(), cartesian1.position(), rtol <= 1e-8);
         assert_approx_eq!(cartesian.velocity(), cartesian1.velocity(), rtol <= 1e-6);
+    }
+
+    #[test]
+    fn test_keplerian_builder() {
+        let mu = GravitationalParameter::km3_per_s2(398600.43550702266f64);
+
+        let semi_major_axis = 24464.560.km();
+        let eccentricity = 0.7311;
+        let inclination = 0.122138.rad();
+        let ascending_node = 1.00681.rad();
+        let argument_of_periapsis = 3.10686.rad();
+        let true_anomaly = 0.44369564302687126.rad();
+
+        let k = Keplerian::builder()
+            .with_semi_major_axis(semi_major_axis, eccentricity)
+            .with_inclination(inclination)
+            .with_longitude_of_ascending_node(ascending_node)
+            .with_argument_of_periapsis(argument_of_periapsis)
+            .with_true_anomaly(true_anomaly)
+            .build()
+            .unwrap();
+        let k1 = k.to_cartesian(mu).to_keplerian(mu);
+        assert_approx_eq!(k, k1);
     }
 }

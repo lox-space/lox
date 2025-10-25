@@ -661,6 +661,7 @@ version = "0.1.0-alpha.0"
 dependencies = [
  "glam",
  "lox-test-utils",
+ "proptest",
  "rstest",
  "thiserror",
 ]
