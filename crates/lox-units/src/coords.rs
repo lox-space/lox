@@ -191,15 +191,15 @@ impl Cartesian {
         Self { pos, vel }
     }
 
-    pub fn build() -> CartesianBuilder {
+    pub fn builder() -> CartesianBuilder {
         CartesianBuilder::default()
     }
 
-    pub fn pos(&self) -> DVec3 {
+    pub fn position(&self) -> DVec3 {
         self.pos
     }
 
-    pub fn vel(&self) -> DVec3 {
+    pub fn velocity(&self) -> DVec3 {
         self.vel
     }
 
@@ -235,12 +235,12 @@ pub struct CartesianBuilder {
 }
 
 impl CartesianBuilder {
-    pub fn pos(&mut self, x: Distance, y: Distance, z: Distance) -> &mut Self {
+    pub fn position(&mut self, x: Distance, y: Distance, z: Distance) -> &mut Self {
         self.pos = Some(DVec3::new(x.to_meters(), y.to_meters(), z.to_meters()));
         self
     }
 
-    pub fn vel(&mut self, vx: Velocity, vy: Velocity, vz: Velocity) -> &mut Self {
+    pub fn velocity(&mut self, vx: Velocity, vy: Velocity, vz: Velocity) -> &mut Self {
         self.vel = Some(DVec3::new(
             vx.to_meters_per_second(),
             vy.to_meters_per_second(),
@@ -315,12 +315,12 @@ mod tests {
 
     #[test]
     fn test_cartesian() {
-        let c = Cartesian::build()
-            .pos(1000.0.km(), 1000.0.km(), 1000.0.km())
-            .vel(1.0.kps(), 1.0.kps(), 1.0.kps())
+        let c = Cartesian::builder()
+            .position(1000.0.km(), 1000.0.km(), 1000.0.km())
+            .velocity(1.0.kps(), 1.0.kps(), 1.0.kps())
             .build();
-        assert_eq!(c.pos(), DVec3::new(1e6, 1e6, 1e6));
-        assert_eq!(c.vel(), DVec3::new(1e3, 1e3, 1e3));
+        assert_eq!(c.position(), DVec3::new(1e6, 1e6, 1e6));
+        assert_eq!(c.velocity(), DVec3::new(1e3, 1e3, 1e3));
         assert_eq!(c.x(), 1e6.m());
         assert_eq!(c.y(), 1e6.m());
         assert_eq!(c.z(), 1e6.m());

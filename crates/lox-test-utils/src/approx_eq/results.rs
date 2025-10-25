@@ -96,6 +96,16 @@ impl ApproxEqResult {
         }
     }
 
+    #[inline]
+    pub fn fail(left: f64, right: f64) -> Self {
+        Self::Fail {
+            left,
+            right,
+            diff: None,
+            tol: None,
+        }
+    }
+
     /// Returns `true` if the comparison passed.
     ///
     /// # Examples
