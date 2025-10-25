@@ -169,7 +169,7 @@ pub struct Cartesian {
 }
 
 impl Cartesian {
-    pub fn new(
+    pub const fn new(
         x: Distance,
         y: Distance,
         z: Distance,
@@ -187,12 +187,12 @@ impl Cartesian {
         }
     }
 
-    pub fn from_vecs(pos: DVec3, vel: DVec3) -> Self {
+    pub const fn from_vecs(pos: DVec3, vel: DVec3) -> Self {
         Self { pos, vel }
     }
 
-    pub fn builder() -> CartesianBuilder {
-        CartesianBuilder::default()
+    pub const fn builder() -> CartesianBuilder {
+        CartesianBuilder::new()
     }
 
     pub fn position(&self) -> DVec3 {
@@ -228,19 +228,26 @@ impl Cartesian {
     }
 }
 
-#[derive(Default)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct CartesianBuilder {
     pos: Option<DVec3>,
     vel: Option<DVec3>,
 }
 
 impl CartesianBuilder {
-    pub fn position(&mut self, x: Distance, y: Distance, z: Distance) -> &mut Self {
+    pub const fn new() -> Self {
+        Self {
+            pos: None,
+            vel: None,
+        }
+    }
+
+    pub const fn position(&mut self, x: Distance, y: Distance, z: Distance) -> &mut Self {
         self.pos = Some(DVec3::new(x.to_meters(), y.to_meters(), z.to_meters()));
         self
     }
 
-    pub fn velocity(&mut self, vx: Velocity, vy: Velocity, vz: Velocity) -> &mut Self {
+    pub const fn velocity(&mut self, vx: Velocity, vy: Velocity, vz: Velocity) -> &mut Self {
         self.vel = Some(DVec3::new(
             vx.to_meters_per_second(),
             vy.to_meters_per_second(),
@@ -249,10 +256,16 @@ impl CartesianBuilder {
         self
     }
 
-    pub fn build(&self) -> Cartesian {
+    pub const fn build(&self) -> Cartesian {
         Cartesian {
-            pos: self.pos.unwrap_or(DVec3::ZERO),
-            vel: self.vel.unwrap_or(DVec3::ZERO),
+            pos: match self.pos {
+                Some(pos) => pos,
+                None => DVec3::ZERO,
+            },
+            vel: match self.vel {
+                Some(vel) => vel,
+                None => DVec3::ZERO,
+            },
         }
     }
 }
