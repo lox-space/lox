@@ -15,6 +15,7 @@ use std::fmt::Display;
 use std::str::FromStr;
 use std::{cmp::Ordering, sync::OnceLock};
 
+use lox_units::Angle;
 use num::ToPrimitive;
 use regex::Regex;
 use thiserror::Error;
@@ -174,6 +175,14 @@ impl TimeOfDay {
         Ok(time)
     }
 
+    pub fn from_hour(hour: u8) -> Result<Self, TimeOfDayError> {
+        Self::new(hour, 0, 0)
+    }
+
+    pub fn from_hour_and_minute(hour: u8, minute: u8) -> Result<Self, TimeOfDayError> {
+        Self::new(hour, minute, 0)
+    }
+
     /// Constructs a new `TimeOfDay` instance from the given hour, minute, and floating-point second
     /// components.
     ///
@@ -249,11 +258,19 @@ impl TimeOfDay {
         self.subsecond
     }
 
+    pub fn seconds_f64(&self) -> f64 {
+        self.subsecond.as_seconds_f64() + self.second as f64
+    }
+
     /// Returns the number of integral seconds since the start of the day.
     pub fn second_of_day(&self) -> i64 {
         self.hour as i64 * SECONDS_PER_HOUR
             + self.minute as i64 * SECONDS_PER_MINUTE
             + self.second as i64
+    }
+
+    pub fn to_angle(&self) -> Angle {
+        Angle::from_hms(self.hour as i64, self.minute, self.seconds_f64())
     }
 }
 

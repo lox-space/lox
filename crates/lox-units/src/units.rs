@@ -68,6 +68,10 @@ impl Angle {
         Self(deg.to_radians())
     }
 
+    pub const fn from_hms(hours: i64, minutes: u8, seconds: f64) -> Self {
+        Self::degrees(15.0 * (hours as f64 + minutes as f64 / 60.0 + seconds / 3600.0))
+    }
+
     /// Creates a new angle from an `f64` value in degrees and normalize the angle
     /// to the interval [0.0, 2π).
     pub const fn degrees_normalized(deg: f64) -> Self {
@@ -95,6 +99,10 @@ impl Angle {
     /// to the interval (-2π, 2π).
     pub const fn arcseconds_normalized_signed(asec: f64) -> Self {
         Self((asec % ARCSECONDS_IN_CIRCLE) * RADIANS_IN_ARCSECOND)
+    }
+
+    pub const fn abs(&self) -> Self {
+        Self(self.0.abs())
     }
 
     pub fn from_asin(value: f64) -> Self {
