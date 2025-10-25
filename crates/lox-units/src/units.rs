@@ -10,6 +10,7 @@ use std::{
     ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign},
 };
 
+use glam::DMat3;
 use lox_test_utils::ApproxEq;
 
 /// Degrees in full circle
@@ -96,6 +97,34 @@ impl Angle {
         Self((asec % ARCSECONDS_IN_CIRCLE) * RADIANS_IN_ARCSECOND)
     }
 
+    pub fn from_asin(value: f64) -> Self {
+        Self(value.asin())
+    }
+
+    pub fn from_asinh(value: f64) -> Self {
+        Self(value.asinh())
+    }
+
+    pub fn from_acos(value: f64) -> Self {
+        Self(value.acos())
+    }
+
+    pub fn from_acosh(value: f64) -> Self {
+        Self(value.acosh())
+    }
+
+    pub fn from_atan(value: f64) -> Self {
+        Self(value.atan())
+    }
+
+    pub fn from_atanh(value: f64) -> Self {
+        Self(value.atanh())
+    }
+
+    pub fn from_atan2(y: f64, x: f64) -> Self {
+        Self(y.atan2(x))
+    }
+
     /// Returns the cosine of the angle.
     pub fn cos(&self) -> f64 {
         self.0.cos()
@@ -152,6 +181,11 @@ impl Angle {
     }
 
     /// Returns the value of the angle in radians.
+    pub const fn as_f64(&self) -> f64 {
+        self.0
+    }
+
+    /// Returns the value of the angle in radians.
     pub const fn to_radians(&self) -> f64 {
         self.0
     }
@@ -164,6 +198,18 @@ impl Angle {
     /// Returns the value of the angle in arcseconds.
     pub const fn to_arcseconds(&self) -> f64 {
         self.0 / RADIANS_IN_ARCSECOND
+    }
+
+    pub fn rotation_x(&self) -> DMat3 {
+        DMat3::from_rotation_x(-self.to_radians())
+    }
+
+    pub fn rotation_y(&self) -> DMat3 {
+        DMat3::from_rotation_y(-self.to_radians())
+    }
+
+    pub fn rotation_z(&self) -> DMat3 {
+        DMat3::from_rotation_z(-self.to_radians())
     }
 }
 
@@ -272,6 +318,10 @@ impl Distance {
     /// Create a new distance from an `f64` value in astronomical units.
     pub const fn astronomical_units(m: f64) -> Self {
         Self(m * ASTRONOMICAL_UNIT)
+    }
+
+    pub const fn as_f64(&self) -> f64 {
+        self.0
     }
 
     /// Returns the value of the distance in meters.

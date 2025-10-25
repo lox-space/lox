@@ -88,8 +88,8 @@ impl Mul<Cartesian> for Rotation {
     type Output = Cartesian;
 
     fn mul(self, rhs: Cartesian) -> Self::Output {
-        let pos = self.m * rhs.pos();
-        let vel = self.dm * rhs.pos() + self.m * rhs.vel();
+        let pos = self.m * rhs.position();
+        let vel = self.dm * rhs.position() + self.m * rhs.velocity();
         Cartesian::from_vecs(pos, vel)
     }
 }
