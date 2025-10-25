@@ -13,15 +13,15 @@ use crate::{Angle, Distance, Velocity};
 pub struct AzEl(Angle, Angle);
 
 impl AzEl {
-    pub fn build() -> AzElBuilder {
+    pub fn builder() -> AzElBuilder {
         AzElBuilder::default()
     }
 
-    pub fn az(&self) -> Angle {
+    pub fn azimuth(&self) -> Angle {
         self.0
     }
 
-    pub fn el(&self) -> Angle {
+    pub fn elevation(&self) -> Angle {
         self.1
     }
 }
@@ -54,7 +54,7 @@ impl AzElBuilder {
         }
     }
 
-    pub fn az(&mut self, azimuth: Angle) -> &mut Self {
+    pub fn azimuth(&mut self, azimuth: Angle) -> &mut Self {
         self.azimuth = match azimuth.to_radians() {
             lon if lon < 0.0 => Err(AzElError::InvalidAzimuth(azimuth)),
             lon if lon > TAU => Err(AzElError::InvalidAzimuth(azimuth)),
@@ -63,7 +63,7 @@ impl AzElBuilder {
         self
     }
 
-    pub fn el(&mut self, elevation: Angle) -> &mut Self {
+    pub fn elevation(&mut self, elevation: Angle) -> &mut Self {
         self.elevation = match elevation.to_radians() {
             lat if lat < 0.0 => Err(AzElError::InvalidElevation(elevation)),
             lat if lat > TAU => Err(AzElError::InvalidElevation(elevation)),
@@ -81,7 +81,7 @@ impl AzElBuilder {
 pub struct LonLatAlt(Angle, Angle, Distance);
 
 impl LonLatAlt {
-    pub fn build() -> LonLatAltBuilder {
+    pub fn builder() -> LonLatAltBuilder {
         LonLatAltBuilder::default()
     }
 
@@ -130,7 +130,7 @@ impl LonLatAltBuilder {
         }
     }
 
-    pub fn lon(&mut self, longitude: Angle) -> &mut Self {
+    pub fn longitude(&mut self, longitude: Angle) -> &mut Self {
         self.longitude = match longitude.to_degrees() {
             lon if lon < -180.0 => Err(LonLatAltError::InvalidLongitude(longitude)),
             lon if lon > 180.0 => Err(LonLatAltError::InvalidLongitude(longitude)),
@@ -139,7 +139,7 @@ impl LonLatAltBuilder {
         self
     }
 
-    pub fn lat(&mut self, latitude: Angle) -> &mut Self {
+    pub fn latitude(&mut self, latitude: Angle) -> &mut Self {
         self.latitude = match latitude.to_degrees() {
             lat if lat < -90.0 => Err(LonLatAltError::InvalidLatitude(latitude)),
             lat if lat > 90.0 => Err(LonLatAltError::InvalidLatitude(latitude)),
@@ -148,7 +148,7 @@ impl LonLatAltBuilder {
         self
     }
 
-    pub fn alt(&mut self, altitude: Distance) -> &mut Self {
+    pub fn altitude(&mut self, altitude: Distance) -> &mut Self {
         self.altitude = if !altitude.to_meters().is_finite() {
             Err(LonLatAltError::InvalidAltitude(altitude))
         } else {
@@ -267,9 +267,13 @@ mod tests {
 
     #[test]
     fn test_azel_api() {
-        let azel = AzEl::build().az(45.0.deg()).el(45.0.deg()).build().unwrap();
-        assert_eq!(azel.az(), 45.0.deg());
-        assert_eq!(azel.el(), 45.0.deg());
+        let azel = AzEl::builder()
+            .azimuth(45.0.deg())
+            .elevation(45.0.deg())
+            .build()
+            .unwrap();
+        assert_eq!(azel.azimuth(), 45.0.deg());
+        assert_eq!(azel.elevation(), 45.0.deg());
     }
 
     #[rstest]
@@ -279,16 +283,16 @@ mod tests {
     #[case(0.0.deg(), -1.0.deg(), Err(AzElError::InvalidElevation(-1.0.deg())))]
     #[case(0.0.deg(), 361.0.deg(), Err(AzElError::InvalidElevation(361.0.deg())))]
     fn test_azel(#[case] az: Angle, #[case] el: Angle, #[case] exp: Result<AzEl, AzElError>) {
-        let act = AzEl::build().az(az).el(el).build();
+        let act = AzEl::builder().azimuth(az).elevation(el).build();
         assert_eq!(act, exp)
     }
 
     #[test]
     fn test_lla_api() {
-        let lla = LonLatAlt::build()
-            .lon(45.0.deg())
-            .lat(45.0.deg())
-            .alt(100.0.m())
+        let lla = LonLatAlt::builder()
+            .longitude(45.0.deg())
+            .latitude(45.0.deg())
+            .altitude(100.0.m())
             .build()
             .unwrap();
         assert_eq!(lla.lon(), 45.0.deg());
@@ -309,7 +313,11 @@ mod tests {
         #[case] alt: Distance,
         #[case] exp: Result<LonLatAlt, LonLatAltError>,
     ) {
-        let act = LonLatAlt::build().lon(lon).lat(lat).alt(alt).build();
+        let act = LonLatAlt::builder()
+            .longitude(lon)
+            .latitude(lat)
+            .altitude(alt)
+            .build();
         assert_eq!(act, exp)
     }
 
