@@ -13,7 +13,9 @@
 //! ## Types
 
 pub mod coords;
+pub mod elements;
 pub mod f64;
+pub mod glam;
 pub mod i32;
 pub mod i64;
 pub mod types;
