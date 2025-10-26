@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use lox_bodies::{RotationalElements, TryRotationalElements, UndefinedOriginPropertyError};
+use lox_bodies::{Origin, RotationalElements, TryRotationalElements, UndefinedOriginPropertyError};
 
 use crate::traits::{BodyFixed, QuasiInertial, ReferenceFrame};
 
@@ -20,6 +20,10 @@ impl ReferenceFrame for Icrf {
 
     fn is_rotating(&self) -> bool {
         false
+    }
+
+    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<i32> {
+        Some(0)
     }
 }
 
@@ -40,6 +44,10 @@ impl ReferenceFrame for Cirf {
     fn is_rotating(&self) -> bool {
         false
     }
+
+    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<i32> {
+        Some(1)
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -57,6 +65,10 @@ impl ReferenceFrame for Tirf {
     fn is_rotating(&self) -> bool {
         true
     }
+
+    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<i32> {
+        Some(2)
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -73,6 +85,10 @@ impl ReferenceFrame for Itrf {
 
     fn is_rotating(&self) -> bool {
         true
+    }
+
+    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<i32> {
+        Some(3)
     }
 }
 
@@ -119,7 +135,7 @@ impl<T: TryRotationalElements> BodyFixed for Iau<T> {}
 
 impl<T> ReferenceFrame for Iau<T>
 where
-    T: TryRotationalElements,
+    T: TryRotationalElements + Origin,
 {
     fn name(&self) -> String {
         let body = self.0.name();
@@ -136,5 +152,9 @@ where
 
     fn is_rotating(&self) -> bool {
         true
+    }
+
+    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<i32> {
+        Some(1000 + self.0.id().0)
     }
 }

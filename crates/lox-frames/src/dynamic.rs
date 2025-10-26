@@ -14,7 +14,7 @@ use crate::{
     providers::DefaultTransformProvider,
     traits::{
         NonBodyFixedFrameError, NonQuasiInertialFrameError, ReferenceFrame, TryBodyFixed,
-        TryQuasiInertial,
+        TryQuasiInertial, frame_id,
     },
     transformations::{Rotation, TryTransform},
 };
@@ -63,6 +63,16 @@ impl ReferenceFrame for DynFrame {
         match self {
             DynFrame::Icrf | DynFrame::Cirf => false,
             DynFrame::Tirf | DynFrame::Itrf | DynFrame::Iau(_) => true,
+        }
+    }
+
+    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<i32> {
+        match self {
+            DynFrame::Icrf => frame_id(Icrf),
+            DynFrame::Cirf => frame_id(Cirf),
+            DynFrame::Tirf => frame_id(Tirf),
+            DynFrame::Itrf => frame_id(Itrf),
+            DynFrame::Iau(dyn_origin) => Some(1000 + dyn_origin.id().0),
         }
     }
 }
@@ -168,7 +178,7 @@ mod tests {
     use super::*;
 
     use glam::DVec3;
-    use lox_bodies::DynOrigin;
+    use lox_bodies::{DynOrigin, Earth};
     use lox_test_utils::assert_approx_eq;
     use lox_time::utc::Utc;
     use rstest::rstest;
@@ -222,5 +232,17 @@ mod tests {
         let (r_act, v_act) = rot.rotate_state(r, v);
         assert_approx_eq!(r_act, r_exp, rtol <= 1e-8);
         assert_approx_eq!(v_act, v_exp, rtol <= 1e-5);
+    }
+
+    #[test]
+    fn test_frame_id() {
+        assert_eq!(frame_id(Icrf), frame_id(DynFrame::Icrf));
+        assert_eq!(frame_id(Cirf), frame_id(DynFrame::Cirf));
+        assert_eq!(frame_id(Tirf), frame_id(DynFrame::Tirf));
+        assert_eq!(frame_id(Itrf), frame_id(DynFrame::Itrf));
+        assert_eq!(
+            frame_id(Iau::new(Earth)),
+            frame_id(DynFrame::Iau(DynOrigin::Earth))
+        );
     }
 }
