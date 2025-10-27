@@ -17,6 +17,7 @@ jobs:
   codspeed:
     name: Run benchmarks
     runs-on: ubuntu-latest
+    if: github.actor != 'dependabot[bot]'
     steps:
       - uses: actions/checkout@v5
       - name: Setup Python
