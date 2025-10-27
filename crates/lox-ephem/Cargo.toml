@@ -6,7 +6,7 @@
 [package]
 name = "lox-ephem"
 description = "Ephemerides for the Lox ecosystem"
-version = "0.1.0-alpha.7"
+version = "0.1.0-alpha.8"
 rust-version.workspace = true
 edition.workspace = true
 license.workspace = true

@@ -6,6 +6,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.21](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.20...lox-orbits-v0.1.0-alpha.21) - 2025-10-27
+
+### Added
+
+- *(lox-time)* add attosecond-resolution deltas
+- *(lox-derive)* implement OffsetProvider derive macro
+- add lox-test-utils crate and refine EOP parser interface
+- *(lox-earth)* implement new EOP parser and data provider
+
+### Fixed
+
+- *(lox-orbits)* fix floating point issue in LOS calculation
+- fix formatting and use stable rustfmt
+
+### Other
+
+- *(lox-units)* restructure constants to match std
+- add 3rd-party data licenses
+- update SPDX headers and add helper script
+- make Lox REUSE-compliant
+- get rid of float_eq and lox_math::is_close
+- *(lox-units)* make Angle value private
+- *(lox-bodies/lox-earth)* anglify lox-bodies and lox-earth
+- start reimplementation of frame transformations
+- move type aliases to lox-units
+- refactor all the things
+- *(lox-time)* use provider pattern
+- *(lox-units/lox-math)* move constants to lox-units
+
 ## [0.1.0-alpha.20](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.19...lox-orbits-v0.1.0-alpha.20) - 2025-09-19
 
 ### Other

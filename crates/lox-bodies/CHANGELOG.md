@@ -6,6 +6,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.11](https://github.com/lox-space/lox/compare/lox-bodies-v0.1.0-alpha.10...lox-bodies-v0.1.0-alpha.11) - 2025-10-27
+
+### Added
+
+- *(lox-units)* extend and document `lox_units::units` module
+
+### Other
+
+- *(lox-units)* restructure constants to match std
+- update SPDX headers and add helper script
+- make Lox REUSE-compliant
+- get rid of float_eq and lox_math::is_close
+- *(lox-units)* make Angle value private
+- *(lox-bodies/lox-earth)* anglify lox-bodies and lox-earth
+- move type aliases to lox-units
+- refactor all the things
+- *(lox-units/lox-math)* move constants to lox-units
+
 ## [0.1.0-alpha.10](https://github.com/lox-space/lox/compare/lox-bodies-v0.1.0-alpha.9...lox-bodies-v0.1.0-alpha.10) - 2025-09-19
 
 ### Other

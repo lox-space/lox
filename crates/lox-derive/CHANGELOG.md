@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.5](https://github.com/lox-space/lox/compare/lox-derive-v0.1.0-alpha.4...lox-derive-v0.1.0-alpha.5) - 2025-10-27
+
+### Added
+
+- *(lox-test-utils)* add ApproxEq derive macro
+- *(lox-derive)* implement OffsetProvider derive macro
+
+### Other
+
+- update SPDX headers and add helper script
+- make Lox REUSE-compliant
+- get rid of float_eq and lox_math::is_close
+- *(lox-units)* make Angle value private
+
 ## [0.1.0-alpha.4](https://github.com/lox-space/lox/compare/lox-derive-v0.1.0-alpha.3...lox-derive-v0.1.0-alpha.4) - 2025-07-01
 
 ### Other

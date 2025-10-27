@@ -6,6 +6,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.9](https://github.com/lox-space/lox/compare/lox-math-v0.1.0-alpha.8...lox-math-v0.1.0-alpha.9) - 2025-10-27
+
+### Added
+
+- *(lox-earth)* implement new EOP parser and data provider
+
+### Other
+
+- update SPDX headers and add helper script
+- make Lox REUSE-compliant
+- get rid of float_eq and lox_math::is_close
+- *(lox-bodies/lox-earth)* anglify lox-bodies and lox-earth
+- move type aliases to lox-units
+- refactor all the things
+- *(lox-units/lox-math)* move constants to lox-units
+
 ## [0.1.0-alpha.8](https://github.com/lox-space/lox/compare/lox-math-v0.1.0-alpha.7...lox-math-v0.1.0-alpha.8) - 2025-09-19
 
 ### Other
