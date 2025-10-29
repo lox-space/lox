@@ -503,6 +503,7 @@ dependencies = [
 name = "lox-core"
 version = "0.1.0-alpha.0"
 dependencies = [
+ "fast_polynomial",
  "glam",
  "lox-test-utils",
  "proptest",

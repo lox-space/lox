@@ -5,8 +5,8 @@
 use fast_polynomial::poly_array;
 use thiserror::Error;
 
-use crate::linear_algebra::tridiagonal::Tridiagonal;
-use crate::vector_traits::Diff;
+use super::linear_algebra::tridiagonal::Tridiagonal;
+use super::vector_traits::Diff;
 
 const MIN_POINTS_LINEAR: usize = 2;
 const MIN_POINTS_SPLINE: usize = 4;
