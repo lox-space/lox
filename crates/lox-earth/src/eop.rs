@@ -8,6 +8,7 @@ use std::{
 };
 
 use csv::{ByteRecord, ReaderBuilder};
+use lox_core::f64::consts::{SECONDS_BETWEEN_MJD_AND_J2000, SECONDS_PER_DAY};
 use lox_math::series::{Series, SeriesError};
 use lox_time::{
     OffsetProvider,
@@ -19,7 +20,6 @@ use lox_time::{
         transformations::TryToUtc,
     },
 };
-use lox_units::f64::consts::{SECONDS_BETWEEN_MJD_AND_J2000, SECONDS_PER_DAY};
 use serde::Deserialize;
 use thiserror::Error;
 

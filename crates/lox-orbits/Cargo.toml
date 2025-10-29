@@ -15,6 +15,7 @@ repository.workspace = true
 
 [dependencies]
 lox-bodies.workspace = true
+lox-core.workspace = true
 lox-earth.workspace = true
 lox-ephem.workspace = true
 lox-frames.workspace = true

@@ -6,7 +6,7 @@
 
 use std::collections::HashMap;
 
-use lox_units::types::julian_dates::Epoch;
+use lox_core::types::julian_dates::Epoch;
 
 use crate::{Body, Ephemeris, Position, Velocity};
 

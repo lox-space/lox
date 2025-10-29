@@ -16,9 +16,9 @@
 use std::fmt::Display;
 use std::ops::{Add, AddAssign, Neg, RangeInclusive, Sub, SubAssign};
 
-use lox_units::f64;
-use lox_units::i64::consts::{ATTOSECONDS_IN_SECOND, SECONDS_BETWEEN_JD_AND_J2000};
-use lox_units::types::units::Days;
+use lox_core::f64;
+use lox_core::i64::consts::{ATTOSECONDS_IN_SECOND, SECONDS_BETWEEN_JD_AND_J2000};
+use lox_core::types::units::Days;
 
 use crate::julian_dates::{Epoch, JulianDate, Unit};
 use crate::ranges::TimeDeltaRange;
@@ -593,7 +593,7 @@ impl TimeDeltaBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lox_units::i64::consts::ATTOSECONDS_IN_SECOND;
+    use lox_core::i64::consts::ATTOSECONDS_IN_SECOND;
 
     #[test]
     fn test_new_normalizes_attoseconds() {

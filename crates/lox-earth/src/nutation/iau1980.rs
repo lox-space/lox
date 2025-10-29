@@ -5,10 +5,8 @@
 
 use std::f64::consts::TAU;
 
-use lox_units::{
-    Angle, AngleUnits,
-    types::units::{Arcseconds, JulianCenturies},
-};
+use lox_core::types::units::{Arcseconds, JulianCenturies};
+use lox_units::{Angle, AngleUnits};
 
 use crate::nutation::Nutation;
 
@@ -232,8 +230,8 @@ const COEFFICIENTS: [Coefficients; 106] = [
 /// All fixtures and assertion values were generated using the ERFA C library unless otherwise
 /// stated.
 mod tests {
+    use lox_core::types::units::JulianCenturies;
     use lox_test_utils::assert_approx_eq;
-    use lox_units::types::units::JulianCenturies;
 
     use super::*;
 

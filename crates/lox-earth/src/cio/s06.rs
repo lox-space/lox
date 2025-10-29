@@ -10,7 +10,7 @@ use lox_bodies::fundamental::iers03::{
     general_accum_precession_in_longitude_iers03, mean_moon_sun_elongation_iers03,
 };
 use lox_bodies::{Earth, Moon, Sun, Venus};
-use lox_units::types::units::JulianCenturies;
+use lox_core::types::units::JulianCenturies;
 use lox_units::{Angle, AngleUnits};
 
 use crate::cip::xy06::CipCoords;
