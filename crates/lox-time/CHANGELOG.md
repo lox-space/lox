@@ -6,6 +6,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.11](https://github.com/lox-space/lox/compare/lox-time-v0.1.0-alpha.10...lox-time-v0.1.0-alpha.11) - 2025-10-29
+
+### Added
+
+- *(lox-orbits)* add new Orbit types
+- *(lox-time)* add attosecond-resolution deltas
+- *(lox-derive)* implement OffsetProvider derive macro
+- add lox-test-utils crate and refine EOP parser interface
+- *(lox-earth)* implement new EOP parser and data provider
+
+### Fixed
+
+- fix formatting and use stable rustfmt
+
+### Other
+
+- move time primitives to lox-core
+- move lox-units code to lox-core
+- *(lox-units)* restructure constants to match std
+- update SPDX headers and add helper script
+- make Lox REUSE-compliant
+- get rid of float_eq and lox_math::is_close
+- start reimplementation of frame transformations
+- consolidate constants in lox-units
+- *(lox-time)* consolidate julian_dates modules
+- move type aliases to lox-units
+- refactor all the things
+- *(lox-time)* fix Python tests
+- *(lox-time)* remove obsolete trait
+- *(lox-time)* use provider pattern
+- *(lox-units/lox-math)* move constants to lox-units
+
 ## [0.1.0-alpha.10](https://github.com/lox-space/lox/compare/lox-time-v0.1.0-alpha.9...lox-time-v0.1.0-alpha.10) - 2025-09-19
 
 ### Other
