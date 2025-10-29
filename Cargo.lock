@@ -506,7 +506,9 @@ dependencies = [
  "fast_polynomial",
  "glam",
  "lox-test-utils",
+ "num",
  "proptest",
+ "regex",
  "rstest",
  "thiserror",
 ]
