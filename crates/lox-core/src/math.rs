@@ -4,5 +4,9 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-#[doc(inline)]
-pub use lox_core::math::*;
+pub mod glam;
+pub mod linear_algebra;
+pub mod roots;
+pub mod series;
+pub mod slices;
+pub mod vector_traits;
