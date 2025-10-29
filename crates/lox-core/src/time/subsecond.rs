@@ -14,7 +14,7 @@
 //! # Examples
 //!
 //! ```
-//! use lox_time::subsecond::Subsecond;
+//! use lox_core::time::subsecond::Subsecond;
 //!
 //! // Create from individual components
 //! let s = Subsecond::new()
@@ -74,7 +74,7 @@ impl Subsecond {
     /// # Examples
     ///
     /// ```
-    /// use lox_time::subsecond::Subsecond;
+    /// use lox_core::time::subsecond::Subsecond;
     ///
     /// let s = Subsecond::new();
     /// assert_eq!(s.as_attoseconds(), 0);
@@ -92,7 +92,7 @@ impl Subsecond {
     /// # Examples
     ///
     /// ```
-    /// use lox_time::subsecond::Subsecond;
+    /// use lox_core::time::subsecond::Subsecond;
     ///
     /// let s = Subsecond::from_attoseconds(123456789123456789);
     /// assert_eq!(s.milliseconds(), 123);
@@ -139,7 +139,7 @@ impl Subsecond {
     /// # Examples
     ///
     /// ```
-    /// use lox_time::subsecond::Subsecond;
+    /// use lox_core::time::subsecond::Subsecond;
     ///
     /// let s = Subsecond::new().set_milliseconds(123);
     /// assert_eq!(s.milliseconds(), 123);
@@ -205,7 +205,7 @@ impl Subsecond {
     /// # Examples
     ///
     /// ```
-    /// use lox_time::subsecond::Subsecond;
+    /// use lox_core::time::subsecond::Subsecond;
     ///
     /// let s = Subsecond::new().set_milliseconds(123).set_microseconds(456);
     /// assert_eq!(s.as_attoseconds(), 123456000000000000);
@@ -224,7 +224,7 @@ impl Subsecond {
     /// # Examples
     ///
     /// ```
-    /// use lox_time::subsecond::Subsecond;
+    /// use lox_core::time::subsecond::Subsecond;
     ///
     /// let s = Subsecond::new().set_milliseconds(500);
     /// assert_eq!(s.as_seconds_f64(), 0.5);
