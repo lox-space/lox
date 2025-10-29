@@ -15,7 +15,7 @@ authors.workspace = true
 repository.workspace = true
 
 [dependencies]
-lox-units.workspace = true
+lox-core.workspace = true
 lox-test-utils.workspace = true
 
 fast_polynomial.workspace = true

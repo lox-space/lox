@@ -8,7 +8,7 @@ use crate::bodies::{
     Elements, Origin, TryMeanRadius, TryPointMass, TryRotationalElements, TrySpheroid,
     TryTriaxialEllipsoid,
 };
-use crate::units::types::units::Seconds;
+use lox_core::types::units::Seconds;
 use pyo3::create_exception;
 use pyo3::exceptions::{PyException, PyTypeError, PyValueError};
 use pyo3::prelude::*;

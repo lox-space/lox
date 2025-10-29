@@ -21,7 +21,7 @@ use regex::Regex;
 use thiserror::Error;
 
 use crate::subsecond::Subsecond;
-use lox_units::i64::consts::{
+use lox_core::i64::consts::{
     SECONDS_PER_DAY, SECONDS_PER_HALF_DAY, SECONDS_PER_HOUR, SECONDS_PER_MINUTE,
 };
 

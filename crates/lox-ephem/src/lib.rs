@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use lox_units::types::julian_dates::Epoch;
+use lox_core::types::julian_dates::Epoch;
 
 pub mod spk;
 

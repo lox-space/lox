@@ -8,7 +8,8 @@
 
 use crate::{Earth, Jupiter, Mars, Mercury, Moon, Neptune, Saturn, Sun, Uranus, Venus};
 
-use lox_units::{Angle, AngleUnits, types::units::JulianCenturies};
+use lox_core::types::units::JulianCenturies;
+use lox_units::{Angle, AngleUnits};
 
 /// General accumulated precession in longitude.
 pub fn general_accum_precession_in_longitude_iers03(

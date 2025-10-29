@@ -8,8 +8,8 @@ use lox_bodies::fundamental::mhb2000::{
     mean_moon_sun_elongation_mhb2000_luni_solar, mean_moon_sun_elongation_mhb2000_planetary,
 };
 use lox_bodies::*;
+use lox_core::types::units::JulianCenturies;
 use lox_units::AngleUnits;
-use lox_units::types::units::JulianCenturies;
 
 use crate::nutation::Nutation;
 use crate::nutation::iau2000::{DelaunayArguments, luni_solar_nutation};
@@ -118,8 +118,9 @@ fn planetary_nutation(
 /// All fixtures and assertion values were generated using the ERFA C library unless otherwise
 /// stated.
 mod tests {
+    use lox_core::types::units::JulianCenturies;
     use lox_test_utils::assert_approx_eq;
-    use lox_units::{AngleUnits, types::units::JulianCenturies};
+    use lox_units::AngleUnits;
 
     use crate::nutation::Nutation;
 

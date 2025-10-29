@@ -5,7 +5,7 @@
 use std::ops::Mul;
 
 use glam::{DMat3, DVec3};
-use lox_units::coords::Cartesian;
+use lox_core::coords::Cartesian;
 
 pub fn rotation_matrix_derivative(m: DMat3, v: DVec3) -> DMat3 {
     let sx = DVec3::new(0.0, v.z, v.y);

@@ -20,6 +20,7 @@ crate-type = ["lib", "cdylib"]
 [dependencies]
 lox-test-utils.workspace = true
 lox-bodies = { workspace = true, optional = true }
+lox-core = { workspace = true, optional = true }
 lox-earth = { workspace = true, optional = true }
 lox-ephem = { workspace = true, optional = true }
 lox-frames = { workspace = true, optional = true }
@@ -95,6 +96,7 @@ orbits = [
 python = [
     "time",
     "units",
+    "dep:lox-core",
     "dep:glam",
     "dep:numpy",
     "dep:pyo3",

@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use lox_units::types::units::Microarcseconds;
+use lox_core::types::units::Microarcseconds;
 
 /// Indices into amplitude [COEFFICIENTS].
 #[rustfmt::skip]

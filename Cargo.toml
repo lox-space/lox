@@ -19,6 +19,7 @@ keywords = ["lox", "astrodynamics", "orbital dynamics", "mission analysis"]
 
 [workspace.dependencies]
 lox-bodies = { path = "crates/lox-bodies", version = "0.1.0-alpha.10" }
+lox-core = { path = "crates/lox-core", version = "0.1.0-alpha.0" }
 lox-derive = { path = "crates/lox-derive", version = "0.1.0-alpha.4" }
 lox-earth = { path = "crates/lox-earth", version = "0.1.0-alpha.12" }
 lox-ephem = { path = "crates/lox-ephem", version = "0.1.0-alpha.7" }

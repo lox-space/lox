@@ -12,6 +12,7 @@ use crate::rotation_angle::earth_rotation_angle_00;
 use crate::tio::tio_locator;
 use glam::{DMat3, DVec3};
 use lox_bodies::{Earth, RotationalElements};
+use lox_core::f64::consts::SECONDS_PER_DAY;
 use lox_frames::dynamic::DynTransformError;
 use lox_frames::transformations::TryTransform;
 use lox_frames::transformations::rotations::Rotation;
@@ -20,7 +21,6 @@ use lox_time::Time;
 use lox_time::julian_dates::JulianDate;
 use lox_time::offsets::TryOffset;
 use lox_time::time_scales::{DynTimeScale, Tdb, TimeScale};
-use lox_units::f64::consts::SECONDS_PER_DAY;
 use thiserror::Error;
 
 transform_provider!(EopProvider);

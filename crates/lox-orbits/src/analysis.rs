@@ -8,6 +8,7 @@ use lox_bodies::{
     DynOrigin, Origin, RotationalElements, Spheroid, TryMeanRadius, TrySpheroid,
     UndefinedOriginPropertyError,
 };
+use lox_core::types::units::Radians;
 use lox_ephem::{Ephemeris, path_from_ids};
 use lox_frames::providers::DefaultTransformProvider;
 use lox_frames::transformations::TryTransform;
@@ -19,7 +20,6 @@ use lox_time::offsets::DefaultOffsetProvider;
 use lox_time::time_scales::DynTimeScale;
 use lox_time::time_scales::{Tdb, TimeScale};
 use lox_time::{DynTime, Time};
-use lox_units::types::units::Radians;
 use rayon::prelude::*;
 use std::f64::consts::PI;
 use thiserror::Error;

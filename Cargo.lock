@@ -489,11 +489,23 @@ name = "lox-bodies"
 version = "0.1.0-alpha.10"
 dependencies = [
  "fast_polynomial",
+ "lox-core",
  "lox-math",
  "lox-test-utils",
  "lox-units",
  "num-derive",
  "num-traits",
+ "rstest",
+ "thiserror",
+]
+
+[[package]]
+name = "lox-core"
+version = "0.1.0-alpha.0"
+dependencies = [
+ "glam",
+ "lox-test-utils",
+ "proptest",
  "rstest",
  "thiserror",
 ]
@@ -517,6 +529,7 @@ dependencies = [
  "fast_polynomial",
  "glam",
  "lox-bodies",
+ "lox-core",
  "lox-frames",
  "lox-io",
  "lox-math",
@@ -533,6 +546,7 @@ dependencies = [
 name = "lox-ephem"
 version = "0.1.0-alpha.7"
 dependencies = [
+ "lox-core",
  "lox-units",
  "nom",
  "thiserror",
@@ -545,6 +559,7 @@ dependencies = [
  "glam",
  "hashbrown 0.16.0",
  "lox-bodies",
+ "lox-core",
  "lox-math",
  "lox-test-utils",
  "lox-time",
@@ -558,6 +573,7 @@ name = "lox-io"
 version = "0.1.0-alpha.8"
 dependencies = [
  "csv",
+ "lox-core",
  "lox-derive",
  "lox-math",
  "lox-test-utils",
@@ -579,8 +595,8 @@ version = "0.1.0-alpha.8"
 dependencies = [
  "fast_polynomial",
  "glam",
+ "lox-core",
  "lox-test-utils",
- "lox-units",
  "rstest",
  "thiserror",
 ]
@@ -595,6 +611,7 @@ dependencies = [
  "itertools",
  "libm",
  "lox-bodies",
+ "lox-core",
  "lox-earth",
  "lox-ephem",
  "lox-frames",
@@ -614,6 +631,7 @@ version = "0.1.0-alpha.27"
 dependencies = [
  "glam",
  "lox-bodies",
+ "lox-core",
  "lox-earth",
  "lox-ephem",
  "lox-frames",
@@ -644,6 +662,7 @@ name = "lox-time"
 version = "0.1.0-alpha.10"
 dependencies = [
  "itertools",
+ "lox-core",
  "lox-derive",
  "lox-math",
  "lox-test-utils",
@@ -659,11 +678,7 @@ dependencies = [
 name = "lox-units"
 version = "0.1.0-alpha.0"
 dependencies = [
- "glam",
- "lox-test-utils",
- "proptest",
- "rstest",
- "thiserror",
+ "lox-core",
 ]
 
 [[package]]

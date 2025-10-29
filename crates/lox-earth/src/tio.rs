@@ -6,7 +6,8 @@
 //! Module tio exposes functions for calculating the Terrestrial Intermediate Origin (TIO) locator,
 //! s', which places the TIO on the equator of the Celestial Intermediate Pole (CIP).
 
-use lox_units::{Angle, AngleUnits, types::units::JulianCenturies};
+use lox_core::types::units::JulianCenturies;
+use lox_units::{Angle, AngleUnits};
 
 type ArcsecondsPerCentury = f64;
 

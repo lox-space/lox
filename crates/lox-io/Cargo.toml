@@ -14,6 +14,7 @@ authors.workspace = true
 repository.workspace = true
 
 [dependencies]
+lox-core.workspace = true
 lox-derive.workspace = true
 lox-math.workspace = true
 lox-time.workspace = true

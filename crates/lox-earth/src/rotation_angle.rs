@@ -7,7 +7,8 @@
 
 use std::f64::consts::TAU;
 
-use lox_units::{Angle, AngleUnits, types::units::Days};
+use lox_core::types::units::Days;
+use lox_units::{Angle, AngleUnits};
 
 pub fn earth_rotation_angle_00(days_since_j2000_ut1: Days) -> Angle {
     let f = days_since_j2000_ut1.rem_euclid(1.0); // fractional part of t

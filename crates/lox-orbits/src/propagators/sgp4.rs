@@ -8,11 +8,11 @@ use sgp4::{Constants, ElementsError, MinutesSinceEpoch};
 use thiserror::Error;
 
 use lox_bodies::Earth;
+use lox_core::f64::consts::SECONDS_PER_MINUTE;
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::time_scales::Tai;
 use lox_time::utc::{Utc, UtcError};
-use lox_units::f64::consts::SECONDS_PER_MINUTE;
 
 use crate::propagators::Propagator;
 use crate::states::State;

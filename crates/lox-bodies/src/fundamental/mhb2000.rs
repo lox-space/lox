@@ -10,7 +10,8 @@
 
 use crate::{Moon, Neptune, Sun};
 
-use lox_units::{Angle, AngleUnits, types::units::JulianCenturies};
+use lox_core::types::units::JulianCenturies;
+use lox_units::{Angle, AngleUnits};
 
 pub fn mean_moon_sun_elongation_mhb2000_luni_solar(
     centuries_since_j2000_tdb: JulianCenturies,
@@ -87,8 +88,8 @@ impl Neptune {
 #[cfg(test)]
 mod tests {
 
+    use lox_core::types::units::JulianCenturies;
     use lox_test_utils::assert_approx_eq;
-    use lox_units::types::units::JulianCenturies;
 
     use super::*;
 
