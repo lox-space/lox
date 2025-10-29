@@ -38,8 +38,8 @@
 use std::fmt::Display;
 use std::str::FromStr;
 
-use lox_units::f64::consts::SECONDS_PER_ATTOSECOND;
-use lox_units::i64::consts::{
+use lox_core::f64::consts::SECONDS_PER_ATTOSECOND;
+use lox_core::i64::consts::{
     ATTOSECONDS_IN_FEMTOSECOND, ATTOSECONDS_IN_MICROSECOND, ATTOSECONDS_IN_MILLISECOND,
     ATTOSECONDS_IN_NANOSECOND, ATTOSECONDS_IN_PICOSECOND, ATTOSECONDS_IN_SECOND,
 };
@@ -127,7 +127,7 @@ impl Subsecond {
         // Ensure remainder is in [0, 1) range (Rust's % can return negative values)
         let rem = if rem < 0.0 { rem + 1.0 } else { rem };
         // Convert to attoseconds with rounding to handle floating-point precision issues
-        let attoseconds = (rem / lox_units::f64::consts::SECONDS_PER_ATTOSECOND).round() as i64;
+        let attoseconds = (rem / lox_core::f64::consts::SECONDS_PER_ATTOSECOND).round() as i64;
         Some(Self::from_attoseconds(attoseconds))
     }
 

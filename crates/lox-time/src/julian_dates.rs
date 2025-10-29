@@ -8,7 +8,7 @@
     representations as Julian dates relative to standard [Epoch]s and in a variety of [Unit]s.
 */
 
-use lox_units::i64::consts::SECONDS_BETWEEN_JD_AND_J2000;
+use lox_core::i64::consts::SECONDS_BETWEEN_JD_AND_J2000;
 
 use crate::deltas::TimeDelta;
 

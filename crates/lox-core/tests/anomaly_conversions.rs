@@ -4,10 +4,10 @@
 
 //! Property tests for anomaly conversions
 
+use lox_core::anomalies::{EccentricAnomaly, MeanAnomaly, TrueAnomaly};
+use lox_core::elements::Eccentricity;
+use lox_core::{Angle, AngleUnits};
 use lox_test_utils::approx_eq;
-use lox_units::anomalies::{EccentricAnomaly, MeanAnomaly, TrueAnomaly};
-use lox_units::elements::Eccentricity;
-use lox_units::{Angle, AngleUnits};
 use proptest::prelude::*;
 
 // Strategy for generating eccentricities for different orbit types

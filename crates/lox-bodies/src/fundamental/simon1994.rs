@@ -6,7 +6,8 @@
 //! Functions for calculating fundamental astronomical parameters as proposed by Simon et al.
 //! (1994).
 
-use lox_units::{Angle, types::units::JulianCenturies};
+use lox_core::types::units::JulianCenturies;
+use lox_units::Angle;
 
 use crate::{Moon, Sun};
 

@@ -12,11 +12,11 @@ use std::ops::Sub;
 use std::str::FromStr;
 
 use itertools::Itertools;
+use lox_core::f64;
+use lox_core::i64;
+use lox_core::types::units::Days;
 use lox_test_utils::approx_eq::ApproxEq;
 use lox_test_utils::approx_eq::results::ApproxEqResults;
-use lox_units::f64;
-use lox_units::i64;
-use lox_units::types::units::Days;
 use num::ToPrimitive;
 use thiserror::Error;
 
@@ -480,17 +480,17 @@ macro_rules! time {
 
 #[cfg(test)]
 mod tests {
+    use lox_core::f64::consts::DAYS_PER_JULIAN_CENTURY;
     use lox_test_utils::assert_approx_eq;
-    use lox_units::f64::consts::DAYS_PER_JULIAN_CENTURY;
     use rstest::rstest;
 
     use crate::Time;
     use crate::time_scales::{Tai, Tdb, Tt};
-    use lox_units::i64::consts::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
+    use lox_core::i64::consts::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 
     use super::*;
 
-    use lox_units::i64::consts::{
+    use lox_core::i64::consts::{
         SECONDS_BETWEEN_J1950_AND_J2000, SECONDS_BETWEEN_JD_AND_J2000,
         SECONDS_BETWEEN_MJD_AND_J2000, SECONDS_PER_HOUR, SECONDS_PER_JULIAN_CENTURY,
         SECONDS_PER_MINUTE,

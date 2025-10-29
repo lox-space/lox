@@ -14,7 +14,7 @@ use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
 use itertools::Itertools;
-use lox_units::i64::consts::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
+use lox_core::i64::consts::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 use thiserror::Error;
 
 use crate::calendar_dates::{CalendarDate, Date, DateError};

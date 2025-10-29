@@ -9,12 +9,12 @@ use crate::states::{DynState, State};
 use crate::trajectories::{DynTrajectory, Trajectory, TrajectoryError};
 use glam::{DMat3, DVec3};
 use lox_bodies::{DynOrigin, RotationalElements, Spheroid, TrySpheroid};
+use lox_core::types::units::Radians;
 use lox_frames::providers::DefaultTransformProvider;
 use lox_frames::transformations::TryTransform;
 use lox_frames::{DynFrame, Iau, Icrf};
 use lox_time::time_scales::TimeScale;
 use lox_time::{DynTime, Time};
-use lox_units::types::units::Radians;
 use thiserror::Error;
 
 #[derive(Clone, Debug)]

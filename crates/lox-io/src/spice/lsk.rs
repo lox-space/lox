@@ -5,6 +5,7 @@
 
 use std::{fs::read_to_string, num::ParseIntError, path::Path};
 
+use lox_core::i64::consts::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 use lox_time::{
     Time,
     calendar_dates::{Date, DateError},
@@ -18,7 +19,6 @@ use lox_time::{
         },
     },
 };
-use lox_units::i64::consts::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 use thiserror::Error;
 
 use crate::spice::{Kernel, KernelError};

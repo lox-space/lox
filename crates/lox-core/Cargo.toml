@@ -3,14 +3,21 @@
 # SPDX-License-Identifier: MPL-2.0
 
 [package]
-name = "lox-units"
+name = "lox-core"
+description = "Common data types and utilities for the Lox Astrodynamics Toolkit"
 version = "0.1.0-alpha.0"
 rust-version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
-keywords.workspace = true
 
 [dependencies]
-lox-core.workspace = true
+lox-test-utils = { workspace = true, features = ["derive"] }
+
+glam.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+rstest.workspace = true
+proptest.workspace = true

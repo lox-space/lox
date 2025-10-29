@@ -3,7 +3,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use lox_units::types::units::Radians;
+use lox_core::types::units::Radians;
 
 pub(crate) const COEFFICIENTS: [f64; 6] = [
     94.00e-6,

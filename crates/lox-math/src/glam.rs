@@ -4,7 +4,7 @@
 
 use glam::DVec3;
 
-use lox_units::types::units::Radians;
+use lox_core::types::units::Radians;
 
 pub trait Azimuth {
     fn azimuth(&self) -> Radians;
