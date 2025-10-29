@@ -4,7 +4,7 @@
 
 [package]
 name = "lox-test-utils"
-version = "0.1.0-alpha.0"
+version = "0.1.0-alpha.1"
 description = "Testing utilities for the Lox ecosystem"
 rust-version.workspace = true
 edition.workspace = true

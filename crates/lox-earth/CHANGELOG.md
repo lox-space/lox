@@ -6,6 +6,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.13](https://github.com/lox-space/lox/compare/lox-earth-v0.1.0-alpha.12...lox-earth-v0.1.0-alpha.13) - 2025-10-29
+
+### Added
+
+- *(lox-time)* add attosecond-resolution deltas
+- *(lox-units)* extend and document `lox_units::units` module
+- *(lox-derive)* implement OffsetProvider derive macro
+- add lox-test-utils crate and refine EOP parser interface
+- *(lox-earth)* implement new EOP parser and data provider
+
+### Fixed
+
+- fix formatting and use stable rustfmt
+
+### Other
+
+- move lox-units code to lox-core
+- *(lox-units)* restructure constants to match std
+- add 3rd-party data licenses
+- update SPDX headers and add helper script
+- make Lox REUSE-compliant
+- get rid of float_eq and lox_math::is_close
+- *(lox-units)* make Angle value private
+- *(lox-bodies/lox-earth)* anglify lox-bodies and lox-earth
+- start reimplementation of frame transformations
+- *(lox-earth)* add comment
+- move type aliases to lox-units
+- *(lox-units/lox-math)* move constants to lox-units
+
 ## [0.1.0-alpha.12](https://github.com/lox-space/lox/compare/lox-earth-v0.1.0-alpha.11...lox-earth-v0.1.0-alpha.12) - 2025-09-19
 
 ### Other
