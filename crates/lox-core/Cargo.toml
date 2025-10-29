@@ -17,6 +17,8 @@ lox-test-utils = { workspace = true, features = ["derive"] }
 
 fast_polynomial.workspace = true
 glam.workspace = true
+num.workspace = true
+regex.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
