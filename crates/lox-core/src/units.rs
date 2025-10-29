@@ -235,7 +235,7 @@ impl Display for Angle {
 /// # Examples
 ///
 /// ```
-/// use lox_units::units::AngleUnits;
+/// use lox_core::units::AngleUnits;
 ///
 /// let angle = 360.deg();
 /// assert_eq!(angle.to_radians(), std::f64::consts::TAU);
@@ -362,7 +362,7 @@ impl Display for Distance {
 /// # Examples
 ///
 /// ```
-/// use lox_units::units::DistanceUnits;
+/// use lox_core::units::DistanceUnits;
 ///
 /// let d = 1.km();
 /// assert_eq!(d.to_meters(), 1e3);
@@ -452,7 +452,7 @@ impl Display for Velocity {
 /// # Examples
 ///
 /// ```
-/// use lox_units::units::VelocityUnits;
+/// use lox_core::units::VelocityUnits;
 ///
 /// let v = 1.kps();
 /// assert_eq!(v.to_meters_per_second(), 1e3);
@@ -622,7 +622,7 @@ impl Display for Frequency {
 /// # Examples
 ///
 /// ```
-/// use lox_units::units::FrequencyUnits;
+/// use lox_core::units::FrequencyUnits;
 ///
 /// let f = 1.ghz();
 /// assert_eq!(f.to_hertz(), 1e9);

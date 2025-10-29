@@ -62,7 +62,7 @@ impl TimeDelta {
     /// # Examples
     ///
     /// ```
-    /// use lox_time::deltas::TimeDelta;
+    /// use lox_core::time::deltas::TimeDelta;
     ///
     /// let dt = TimeDelta::new(1, 500_000_000_000_000_000);
     /// assert_eq!(dt.seconds(), Some(1));
@@ -575,7 +575,7 @@ impl TimeDeltaBuilder {
     /// # Examples
     ///
     /// ```
-    /// use lox_time::deltas::TimeDelta;
+    /// use lox_core::time::deltas::TimeDelta;
     ///
     /// let dt = TimeDelta::builder()
     ///     .seconds(1)
