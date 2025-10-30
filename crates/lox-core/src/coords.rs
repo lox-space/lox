@@ -3,11 +3,13 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use core::f64::consts::TAU;
+use std::ops::{Add, Neg, Sub};
 
 use glam::DVec3;
+use lox_test_utils::ApproxEq;
 use thiserror::Error;
 
-use crate::{Angle, Distance, Velocity};
+use crate::units::{Angle, Distance, Velocity};
 
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct AzEl(Angle, Angle);
@@ -162,7 +164,7 @@ impl LonLatAltBuilder {
     }
 }
 
-#[derive(Copy, Clone, Debug, Default, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, ApproxEq)]
 pub struct Cartesian {
     pos: DVec3,
     vel: DVec3,
@@ -270,11 +272,35 @@ impl CartesianBuilder {
     }
 }
 
+impl Add for Cartesian {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self::from_vecs(self.pos + rhs.pos, self.vel + rhs.vel)
+    }
+}
+
+impl Sub for Cartesian {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self::from_vecs(self.pos - rhs.pos, self.vel - rhs.vel)
+    }
+}
+
+impl Neg for Cartesian {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        Self::from_vecs(-self.pos, -self.vel)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use rstest::rstest;
 
-    use crate::{AngleUnits, DistanceUnits, VelocityUnits};
+    use crate::units::{AngleUnits, DistanceUnits, VelocityUnits};
 
     use super::*;
 

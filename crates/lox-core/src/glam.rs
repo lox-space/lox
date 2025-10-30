@@ -4,7 +4,7 @@
 
 use glam::DVec3;
 
-use crate::Angle;
+use crate::units::Angle;
 
 pub trait Azimuth {
     fn azimuth(&self) -> Angle;
