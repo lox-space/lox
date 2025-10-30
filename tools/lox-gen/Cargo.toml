@@ -11,7 +11,7 @@ publish = false
 [dependencies]
 lox-io = { path = "../../crates/lox-io" }
 
-proc-macro2 = "1.0.92"
-quote = "1.0.37"
-syn = "2.0.90"
-prettyplease = "0.2.25"
+prettyplease = "0.2.37"
+proc-macro2 = "1.0.103"
+quote = "1.0.41"
+syn = "2.0.108"
