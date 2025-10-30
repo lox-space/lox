@@ -117,6 +117,19 @@ pub struct TimeOfDay {
 }
 
 impl TimeOfDay {
+    pub const MIDNIGHT: Self = TimeOfDay {
+        hour: 0,
+        minute: 0,
+        second: 0,
+        subsecond: Subsecond::ZERO,
+    };
+
+    pub const NOON: Self = TimeOfDay {
+        hour: 12,
+        minute: 0,
+        second: 0,
+        subsecond: Subsecond::ZERO,
+    };
     /// Constructs a new `TimeOfDay` instance from the given hour, minute, and second components.
     ///
     /// # Errors

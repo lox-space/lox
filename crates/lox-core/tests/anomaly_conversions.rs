@@ -6,7 +6,7 @@
 
 use lox_core::anomalies::{EccentricAnomaly, MeanAnomaly, TrueAnomaly};
 use lox_core::elements::Eccentricity;
-use lox_core::{Angle, AngleUnits};
+use lox_core::units::{Angle, AngleUnits};
 use lox_test_utils::approx_eq;
 use proptest::prelude::*;
 

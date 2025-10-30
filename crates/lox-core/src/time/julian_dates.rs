@@ -27,6 +27,7 @@ pub enum Epoch {
 pub enum Unit {
     Seconds,
     Days,
+    Years,
     Centuries,
 }
 
@@ -86,6 +87,26 @@ pub trait JulianDate {
     /// Returns the number of days since J2000 as an `f64`.
     fn days_since_j2000(&self) -> f64 {
         self.julian_date(Epoch::J2000, Unit::Days)
+    }
+
+    /// Returns the number of years since the Julian epoch as an `f64`.
+    fn years_since_julian_epoch(&self) -> f64 {
+        self.julian_date(Epoch::JulianDate, Unit::Years)
+    }
+
+    /// Returns the number of years since the Modified Julian epoch as an `f64`.
+    fn years_since_modified_julian_epoch(&self) -> f64 {
+        self.julian_date(Epoch::ModifiedJulianDate, Unit::Years)
+    }
+
+    /// Returns the number of years since J1950 as an `f64`.
+    fn years_since_j1950(&self) -> f64 {
+        self.julian_date(Epoch::J1950, Unit::Years)
+    }
+
+    /// Returns the number of years since J2000 as an `f64`.
+    fn years_since_j2000(&self) -> f64 {
+        self.julian_date(Epoch::J2000, Unit::Years)
     }
 
     /// Returns the number of centuries since the Julian epoch as an `f64`.

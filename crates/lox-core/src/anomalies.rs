@@ -27,8 +27,8 @@ use lox_test_utils::approx_eq::{ApproxEq, ApproxEqResults};
 use thiserror::Error;
 
 use crate::{
-    Angle, AngleUnits,
     elements::{Eccentricity, OrbitType},
+    units::{Angle, AngleUnits},
 };
 
 use core::marker::PhantomData;
@@ -46,15 +46,15 @@ mod sealed {
 }
 
 /// Marker type for true anomaly
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct TrueKind;
 
 /// Marker type for eccentric anomaly (E for elliptic, F for hyperbolic, D for parabolic)
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct EccentricKind;
 
 /// Marker type for mean anomaly
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct MeanKind;
 
 impl AnomalyKind for TrueKind {}
@@ -62,7 +62,7 @@ impl AnomalyKind for EccentricKind {}
 impl AnomalyKind for MeanKind {}
 
 /// Generic anomaly type parameterized by kind marker
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, PartialOrd)]
 pub struct Anomaly<K: AnomalyKind> {
     anomaly: Angle,
     _kind: PhantomData<K>,
