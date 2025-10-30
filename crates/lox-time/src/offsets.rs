@@ -52,11 +52,11 @@ pub struct MissingEopProviderError;
 // FIXME: Remove once `!` lands on stable.
 impl From<Infallible> for MissingEopProviderError {
     fn from(_: Infallible) -> Self {
-        MissingEopProviderError
+        unreachable!()
     }
 }
 
-#[derive(Debug, Clone, Copy, OffsetProvider)]
+#[derive(Debug, Clone, Copy, Default, OffsetProvider)]
 pub struct DefaultOffsetProvider;
 
 // TAI <-> TT

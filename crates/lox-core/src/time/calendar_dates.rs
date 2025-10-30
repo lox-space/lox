@@ -16,7 +16,7 @@ use std::{
 };
 
 use crate::{
-    f64::consts::{self, SECONDS_PER_JULIAN_CENTURY},
+    f64::consts::{self, SECONDS_PER_JULIAN_CENTURY, SECONDS_PER_JULIAN_YEAR},
     i64::consts::{
         SECONDS_BETWEEN_J1950_AND_J2000, SECONDS_BETWEEN_JD_AND_J2000,
         SECONDS_BETWEEN_MJD_AND_J2000,
@@ -264,6 +264,7 @@ impl JulianDate for Date {
         match unit {
             Unit::Seconds => seconds,
             Unit::Days => seconds / consts::SECONDS_PER_DAY,
+            Unit::Years => seconds / SECONDS_PER_JULIAN_YEAR,
             Unit::Centuries => seconds / SECONDS_PER_JULIAN_CENTURY,
         }
     }

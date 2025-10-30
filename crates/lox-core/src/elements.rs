@@ -17,7 +17,11 @@ use crate::anomalies::AnomalyError;
 use crate::anomalies::MeanAnomaly;
 use crate::anomalies::{EccentricAnomaly, TrueAnomaly};
 use crate::utils::Linspace;
-use crate::{Angle, AngleUnits, Distance, DistanceUnits, coords::Cartesian, glam::Azimuth};
+use crate::{
+    coords::Cartesian,
+    glam::Azimuth,
+    units::{Angle, AngleUnits, Distance, DistanceUnits},
+};
 
 /// The standard gravitational parameter of a celestial body µ = GM.
 #[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd, ApproxEq)]
@@ -26,17 +30,17 @@ pub struct GravitationalParameter(f64);
 
 impl GravitationalParameter {
     /// Creates a new gravitational parameter from an `f64` value in m³/s².
-    pub fn m3_per_s2(mu: f64) -> Self {
+    pub const fn m3_per_s2(mu: f64) -> Self {
         Self(mu)
     }
 
     /// Creates a new gravitational parameter from an `f64` value in km³/s².
-    pub fn km3_per_s2(mu: f64) -> Self {
+    pub const fn km3_per_s2(mu: f64) -> Self {
         Self(1e9 * mu)
     }
 
     /// Returns the value of the gravitational parameters as an `f64`.
-    pub fn as_f64(&self) -> f64 {
+    pub const fn as_f64(&self) -> f64 {
         self.0
     }
 }
@@ -229,10 +233,6 @@ impl Display for ArgumentOfPeriapsis {
     }
 }
 
-// enum LocalTime {
-//     LTAN(TimeOfDay)
-// }
-
 #[derive(Debug, Clone, Copy, PartialEq, ApproxEq)]
 pub struct Keplerian {
     semi_major_axis: SemiMajorAxis,
@@ -265,8 +265,6 @@ impl Keplerian {
     pub fn builder() -> KeplerianBuilder {
         KeplerianBuilder::default()
     }
-
-    // pub fn from_sso(altitude: Distance, eccentricity: Eccentricity, ) -> Result<Self, ()> {}
 
     pub fn semi_major_axis(&self) -> SemiMajorAxis {
         self.semi_major_axis
@@ -571,7 +569,7 @@ impl KeplerianBuilder {
 mod tests {
     use lox_test_utils::assert_approx_eq;
 
-    use crate::VelocityUnits;
+    use crate::units::VelocityUnits;
 
     use super::*;
 

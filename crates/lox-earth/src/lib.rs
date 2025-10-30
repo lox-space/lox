@@ -8,6 +8,7 @@ pub mod cio;
 pub mod cip;
 pub mod coordinate_transformations;
 pub mod eop;
+pub mod ephemeris;
 pub mod itrf;
 pub mod nutation;
 pub mod rotation_angle;

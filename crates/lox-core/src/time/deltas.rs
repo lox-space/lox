@@ -432,6 +432,7 @@ impl JulianDate for TimeDelta {
         match unit {
             Unit::Seconds => seconds,
             Unit::Days => seconds / f64::consts::SECONDS_PER_DAY,
+            Unit::Years => seconds / f64::consts::SECONDS_PER_JULIAN_YEAR,
             Unit::Centuries => seconds / f64::consts::SECONDS_PER_JULIAN_CENTURY,
         }
     }

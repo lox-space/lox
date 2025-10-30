@@ -13,6 +13,8 @@ use std::{
 use glam::DMat3;
 use lox_test_utils::ApproxEq;
 
+use crate::f64::consts::SECONDS_PER_DAY;
+
 /// Degrees in full circle
 pub const DEGREES_IN_CIRCLE: f64 = 360.0;
 
@@ -324,8 +326,8 @@ impl Distance {
     }
 
     /// Create a new distance from an `f64` value in astronomical units.
-    pub const fn astronomical_units(m: f64) -> Self {
-        Self(m * ASTRONOMICAL_UNIT)
+    pub const fn astronomical_units(au: f64) -> Self {
+        Self(au * ASTRONOMICAL_UNIT)
     }
 
     pub const fn as_f64(&self) -> f64 {
@@ -427,6 +429,16 @@ impl Velocity {
         Self(mps * 1e3)
     }
 
+    /// Creates a new velocity from an `f64` value in au/d.
+    pub const fn astronomical_units_per_day(aud: f64) -> Self {
+        Self(aud * ASTRONOMICAL_UNIT / SECONDS_PER_DAY)
+    }
+
+    /// Creates a new velocity from an `f64` value in 1/c.
+    pub const fn fraction_of_speed_of_light(c: f64) -> Self {
+        Self(c * SPEED_OF_LIGHT)
+    }
+
     /// Returns the value of the velocity in m/s.
     pub const fn to_meters_per_second(&self) -> f64 {
         self.0
@@ -435,6 +447,16 @@ impl Velocity {
     /// Returns the value of the velocity in km/s.
     pub const fn to_kilometers_per_second(&self) -> f64 {
         self.0 * 1e-3
+    }
+
+    /// Returns the value of the velocity in au/d.
+    pub const fn to_astronomical_units_per_day(&self) -> f64 {
+        self.0 * SECONDS_PER_DAY / ASTRONOMICAL_UNIT
+    }
+
+    /// Returns the value of the velocity in 1/c.
+    pub const fn to_fraction_of_speed_of_light(&self) -> f64 {
+        self.0 / SPEED_OF_LIGHT
     }
 }
 
@@ -462,6 +484,10 @@ pub trait VelocityUnits {
     fn mps(&self) -> Velocity;
     /// Creates a velocity from a value in km/s.
     fn kps(&self) -> Velocity;
+    /// Creates a velocity from a value in au/d.
+    fn aud(&self) -> Velocity;
+    /// Crates a velocity from a value in 1/c (fraction of the speed of light).
+    fn c(&self) -> Velocity;
 }
 
 impl VelocityUnits for f64 {
@@ -472,6 +498,14 @@ impl VelocityUnits for f64 {
     fn kps(&self) -> Velocity {
         Velocity::kilometers_per_second(*self)
     }
+
+    fn aud(&self) -> Velocity {
+        Velocity::astronomical_units_per_day(*self)
+    }
+
+    fn c(&self) -> Velocity {
+        Velocity::fraction_of_speed_of_light(*self)
+    }
 }
 
 impl VelocityUnits for i64 {
@@ -481,6 +515,14 @@ impl VelocityUnits for i64 {
 
     fn kps(&self) -> Velocity {
         Velocity::kilometers_per_second(*self as f64)
+    }
+
+    fn aud(&self) -> Velocity {
+        Velocity::astronomical_units_per_day(*self as f64)
+    }
+
+    fn c(&self) -> Velocity {
+        Velocity::fraction_of_speed_of_light(*self as f64)
     }
 }
 
