@@ -6,7 +6,7 @@
 [package]
 name = "lox-space"
 description = "The Lox toolbox for space mission analysis and design"
-version = "0.1.0-alpha.28"
+version = "0.1.0-alpha.29"
 rust-version.workspace = true
 edition.workspace = true
 license.workspace = true
