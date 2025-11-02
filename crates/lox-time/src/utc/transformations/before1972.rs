@@ -10,7 +10,7 @@
 //! Data sourced from ftp://maia.usno.navy.mil/ser7/tai-utc.dat.
 
 use lox_core::f64::consts::SECONDS_PER_DAY;
-use lox_math::slices::is_sorted_asc;
+use lox_core::math::slices::Monotonic;
 
 use crate::deltas::{TimeDelta, ToDelta};
 use crate::julian_dates::Epoch::ModifiedJulianDate;
@@ -44,7 +44,7 @@ const DRIFT_RATES: [f64; 14] = [
 /// although this is impossible for all properly constructed [UtcDateTime] instances.
 pub fn delta_utc_tai(utc: &Utc) -> Option<TimeDelta> {
     // Invariant: EPOCHS must be sorted for the search below to work
-    debug_assert!(is_sorted_asc(&EPOCHS));
+    debug_assert!(&EPOCHS.is_strictly_increasing());
 
     let mjd = utc.to_delta().days_since_modified_julian_epoch();
     let threshold = mjd.floor() as u64;
@@ -59,7 +59,7 @@ pub fn delta_utc_tai(utc: &Utc) -> Option<TimeDelta> {
 /// TAI minus UTC.
 pub fn delta_tai_utc(tai: &Time<Tai>) -> Option<TimeDelta> {
     // Invariant: EPOCHS must be sorted for the search below to work
-    debug_assert!(is_sorted_asc(&EPOCHS));
+    debug_assert!(&EPOCHS.is_strictly_increasing());
 
     let mjd = tai.julian_date(ModifiedJulianDate, Days);
     let threshold = mjd.floor() as u64;

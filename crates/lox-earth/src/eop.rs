@@ -189,23 +189,23 @@ impl EopParser {
 
         Ok(EopProvider {
             polar_motion: (
-                Series::with_cubic_spline(index.clone(), x_pole)?,
-                Series::with_cubic_spline(index.clone(), y_pole)?,
+                Series::try_cubic_spline(index.clone(), x_pole)?,
+                Series::try_cubic_spline(index.clone(), y_pole)?,
             ),
-            delta_ut1_tai: Series::with_cubic_spline(index.clone(), delta_ut1_tai)?,
+            delta_ut1_tai: Series::try_cubic_spline(index.clone(), delta_ut1_tai)?,
             nut_prec: NutPrecCorrections {
                 iau1980: if !dpsi.is_empty() {
                     Some((
-                        Series::with_cubic_spline(np_index.clone(), dpsi)?,
-                        Series::with_cubic_spline(np_index.clone(), deps)?,
+                        Series::try_cubic_spline(np_index.clone(), dpsi)?,
+                        Series::try_cubic_spline(np_index.clone(), deps)?,
                     ))
                 } else {
                     None
                 },
                 iau2000: if !dx.is_empty() {
                     Some((
-                        Series::with_cubic_spline(np_index.clone(), dx)?,
-                        Series::with_cubic_spline(np_index.clone(), dy)?,
+                        Series::try_cubic_spline(np_index.clone(), dx)?,
+                        Series::try_cubic_spline(np_index.clone(), dy)?,
                     ))
                 } else {
                     None

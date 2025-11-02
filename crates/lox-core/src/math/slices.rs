@@ -3,25 +3,80 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-//! Mod `slices` provides utility functions for working with slices.
+//! Utility traits for working with slices of numbers.
 
-/// Returns true if the slice contents are sorted in ascending order, and false otherwise.
-pub fn is_sorted_asc<T: Ord>(slice: &[T]) -> bool {
-    slice.windows(2).all(|x| x[0] <= x[1])
+use std::ops::Sub;
+
+pub trait Diff<T> {
+    fn diff(&self) -> Vec<T>;
+}
+
+impl<T> Diff<T> for [T]
+where
+    T: Copy + Sub<Output = T>,
+{
+    fn diff(&self) -> Vec<T> {
+        let n = self.len();
+        self.iter()
+            .take(n - 1)
+            .enumerate()
+            .map(|(idx, x)| self[idx + 1] - *x)
+            .collect()
+    }
+}
+
+pub trait Monotonic {
+    fn is_increasing(&self) -> bool;
+    fn is_decreasing(&self) -> bool;
+    fn is_strictly_increasing(&self) -> bool;
+    fn is_strictly_decreasing(&self) -> bool;
+}
+
+impl<T> Monotonic for [T]
+where
+    T: PartialOrd,
+{
+    fn is_increasing(&self) -> bool {
+        self.as_ref().iter().is_sorted()
+    }
+
+    fn is_decreasing(&self) -> bool {
+        self.as_ref().iter().is_sorted_by(|a, b| a >= b)
+    }
+
+    fn is_strictly_increasing(&self) -> bool {
+        self.as_ref().iter().is_sorted_by(|a, b| a < b)
+    }
+
+    fn is_strictly_decreasing(&self) -> bool {
+        self.as_ref().iter().is_sorted_by(|a, b| a > b)
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use rstest::rstest;
-
     use super::*;
 
-    #[rstest]
-    #[case(&[1, 2, 3, 4, 5], true)]
-    #[case(&[1, 2, 3, 5, 4], false)]
-    #[case(&[1, 1, 1, 1, 1], true)]
-    #[case(&[5, 4, 3, 2, 1], false)]
-    fn test_is_sorted(#[case] slice: &[i32], #[case] expected: bool) {
-        assert_eq!(is_sorted_asc(slice), expected);
+    #[test]
+    fn test_diff() {
+        let x: Vec<f64> = vec![1.0, 2.0, 3.0];
+        let exp: Vec<f64> = vec![1.0, 1.0];
+        assert_eq!(x.diff(), exp);
+    }
+
+    #[test]
+    fn test_monotonic() {
+        let x1: Vec<f64> = vec![1.0, 1.0, 3.0];
+        let x2: Vec<f64> = vec![1.0, 2.0, 3.0];
+        let x3: Vec<f64> = vec![3.0, 2.0, 2.0];
+        let x4: Vec<f64> = vec![3.0, 2.0, 1.0];
+        assert!(x1.is_increasing());
+        assert!(!x1.is_strictly_increasing());
+        assert!(x2.is_increasing());
+        assert!(x2.is_strictly_increasing());
+        assert!(x3.is_decreasing());
+        assert!(!x3.is_strictly_decreasing());
+        assert!(x4.is_decreasing());
+        assert!(x4.is_strictly_decreasing());
     }
 }

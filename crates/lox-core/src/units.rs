@@ -439,6 +439,10 @@ impl Velocity {
         Self(c * SPEED_OF_LIGHT)
     }
 
+    pub const fn as_f64(&self) -> f64 {
+        self.0
+    }
+
     /// Returns the value of the velocity in m/s.
     pub const fn to_meters_per_second(&self) -> f64 {
         self.0

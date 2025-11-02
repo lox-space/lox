@@ -18,7 +18,7 @@ pub trait ReferenceFrame {
     }
 }
 
-pub fn frame_id(frame: impl ReferenceFrame) -> Option<i32> {
+pub fn frame_id(frame: &impl ReferenceFrame) -> Option<i32> {
     frame.frame_id(private::Internal)
 }
 
