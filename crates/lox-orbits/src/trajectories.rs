@@ -75,12 +75,12 @@ where
         let vx: Vec<f64> = states.iter().map(|s| s.velocity().x).collect();
         let vy: Vec<f64> = states.iter().map(|s| s.velocity().y).collect();
         let vz: Vec<f64> = states.iter().map(|s| s.velocity().z).collect();
-        let x = Series::with_cubic_spline(t.clone(), x)?;
-        let y = Series::with_cubic_spline(t.clone(), y)?;
-        let z = Series::with_cubic_spline(t.clone(), z)?;
-        let vx = Series::with_cubic_spline(t.clone(), vx)?;
-        let vy = Series::with_cubic_spline(t.clone(), vy)?;
-        let vz = Series::with_cubic_spline(t.clone(), vz)?;
+        let x = Series::try_cubic_spline(t.clone(), x)?;
+        let y = Series::try_cubic_spline(t.clone(), y)?;
+        let z = Series::try_cubic_spline(t.clone(), z)?;
+        let vx = Series::try_cubic_spline(t.clone(), vx)?;
+        let vy = Series::try_cubic_spline(t.clone(), vy)?;
+        let vz = Series::try_cubic_spline(t.clone(), vz)?;
         Ok(Self {
             states: states.to_vec(),
             t,

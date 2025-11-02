@@ -3,13 +3,20 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use core::f64::consts::TAU;
-use std::ops::{Add, Neg, Sub};
+use std::{
+    ops::{Add, Neg, Sub},
+    sync::Arc,
+};
 
 use glam::DVec3;
 use lox_test_utils::ApproxEq;
 use thiserror::Error;
 
-use crate::units::{Angle, Distance, Velocity};
+use crate::{
+    math::series::Series,
+    types::units::Seconds,
+    units::{Angle, Distance, Velocity},
+};
 
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct AzEl(Angle, Angle);
@@ -193,6 +200,13 @@ impl Cartesian {
         Self { pos, vel }
     }
 
+    pub const fn from_array([x, y, z, vx, vy, vz]: [f64; 6]) -> Self {
+        Self {
+            pos: DVec3::new(x, y, z),
+            vel: DVec3::new(vx, vy, vz),
+        }
+    }
+
     pub const fn builder() -> CartesianBuilder {
         CartesianBuilder::new()
     }
@@ -293,6 +307,235 @@ impl Neg for Cartesian {
 
     fn neg(self) -> Self::Output {
         Self::from_vecs(-self.pos, -self.vel)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ArcVecF64(Arc<Vec<f64>>);
+
+impl ArcVecF64 {
+    pub fn new(times: impl IntoIterator<Item = f64>) -> Self {
+        Self(Arc::new(times.into_iter().collect()))
+    }
+}
+
+impl AsRef<[f64]> for ArcVecF64 {
+    fn as_ref(&self) -> &[f64] {
+        self.0.as_ref()
+    }
+}
+
+pub type TimeSeries = Series<ArcVecF64, Vec<f64>>;
+
+#[derive(Debug, Clone)]
+pub struct TrajectoryData<const N: usize> {
+    time_steps: ArcVecF64,
+    data: [ArcVecF64; N],
+    series: [Series<ArcVecF64, ArcVecF64>; N],
+}
+
+impl<const N: usize> TrajectoryData<N> {
+    pub fn from_arrays<const M: usize>(time_steps: [f64; M], data: &[[f64; M]; N]) -> Self {
+        let index = ArcVecF64::new(time_steps);
+        let data = data.map(ArcVecF64::new);
+        let series = data
+            .clone()
+            .map(|d| Series::cubic_spline(index.clone(), d.clone()));
+        Self {
+            time_steps: index,
+            data,
+            series,
+        }
+    }
+
+    pub fn time_steps(&self) -> Arc<Vec<f64>> {
+        self.time_steps.0.clone()
+    }
+
+    pub fn interpolate<const M: usize>(&self, t: f64) -> f64 {
+        const { assert!(M < N, "index is out-of-bounds") }
+
+        self.series[M].interpolate(t)
+    }
+}
+
+pub struct TimeStampedCartesian {
+    pub time: Seconds,
+    pub state: Cartesian,
+}
+
+pub type CartesianTrajectory = TrajectoryData<6>;
+
+impl CartesianTrajectory {
+    pub fn from_states(states: impl IntoIterator<Item = TimeStampedCartesian>) -> Self {
+        let iter = states.into_iter();
+        let (n, _) = iter.size_hint();
+
+        let mut time_steps: Vec<f64> = Vec::with_capacity(n);
+        let mut x: Vec<f64> = Vec::with_capacity(n);
+        let mut y: Vec<f64> = Vec::with_capacity(n);
+        let mut z: Vec<f64> = Vec::with_capacity(n);
+        let mut vx: Vec<f64> = Vec::with_capacity(n);
+        let mut vy: Vec<f64> = Vec::with_capacity(n);
+        let mut vz: Vec<f64> = Vec::with_capacity(n);
+
+        iter.for_each(|TimeStampedCartesian { time, state }| {
+            time_steps.push(time);
+            x.push(state.x().as_f64());
+            y.push(state.y().as_f64());
+            z.push(state.z().as_f64());
+            vx.push(state.vx().as_f64());
+            vy.push(state.vy().as_f64());
+            vz.push(state.vz().as_f64());
+        });
+
+        let time_steps = ArcVecF64::new(time_steps);
+
+        let x = ArcVecF64::new(x);
+        let y = ArcVecF64::new(y);
+        let z = ArcVecF64::new(z);
+        let vx = ArcVecF64::new(vx);
+        let vy = ArcVecF64::new(vy);
+        let vz = ArcVecF64::new(vz);
+
+        let data = [
+            x.clone(),
+            y.clone(),
+            z.clone(),
+            vx.clone(),
+            vy.clone(),
+            vz.clone(),
+        ];
+
+        let series = data
+            .clone()
+            .map(|d| Series::cubic_spline(time_steps.clone(), d.clone()));
+
+        Self {
+            time_steps,
+            data,
+            series,
+        }
+    }
+
+    pub fn x(&self) -> Arc<Vec<f64>> {
+        self.data[0].0.clone()
+    }
+
+    pub fn y(&self) -> Arc<Vec<f64>> {
+        self.data[1].0.clone()
+    }
+
+    pub fn z(&self) -> Arc<Vec<f64>> {
+        self.data[2].0.clone()
+    }
+
+    pub fn vx(&self) -> Arc<Vec<f64>> {
+        self.data[3].0.clone()
+    }
+
+    pub fn vy(&self) -> Arc<Vec<f64>> {
+        self.data[4].0.clone()
+    }
+
+    pub fn vz(&self) -> Arc<Vec<f64>> {
+        self.data[5].0.clone()
+    }
+
+    pub fn interpolate_x(&self, t: f64) -> f64 {
+        self.interpolate::<0>(t)
+    }
+
+    pub fn interpolate_y(&self, t: f64) -> f64 {
+        self.interpolate::<1>(t)
+    }
+
+    pub fn interpolate_z(&self, t: f64) -> f64 {
+        self.interpolate::<2>(t)
+    }
+
+    pub fn interpolate_vx(&self, t: f64) -> f64 {
+        self.interpolate::<3>(t)
+    }
+
+    pub fn interpolate_vy(&self, t: f64) -> f64 {
+        self.interpolate::<4>(t)
+    }
+
+    pub fn interpolate_vz(&self, t: f64) -> f64 {
+        self.interpolate::<5>(t)
+    }
+
+    pub fn position(&self, t: f64) -> DVec3 {
+        DVec3::new(
+            self.interpolate_x(t),
+            self.interpolate_y(t),
+            self.interpolate_z(t),
+        )
+    }
+
+    pub fn velocity(&self, t: f64) -> DVec3 {
+        DVec3::new(
+            self.interpolate_vx(t),
+            self.interpolate_vy(t),
+            self.interpolate_vz(t),
+        )
+    }
+
+    pub fn at(&self, t: f64) -> Cartesian {
+        Cartesian::from_vecs(self.position(t), self.velocity(t))
+    }
+}
+
+pub struct CartesianTrajectoryIterator {
+    data: CartesianTrajectory,
+    curr: usize,
+}
+
+impl CartesianTrajectoryIterator {
+    fn new(data: CartesianTrajectory) -> Self {
+        Self { data, curr: 0 }
+    }
+
+    fn len(&self) -> usize {
+        self.data.time_steps.0.len()
+    }
+
+    fn get_item(&self, idx: usize) -> Option<TimeStampedCartesian> {
+        let n = self.len();
+        if idx >= n {
+            return None;
+        }
+
+        let time = self.data.time_steps.0[idx];
+        let state = Cartesian::from_array(self.data.data.clone().map(|d| d.0[idx]));
+        Some(TimeStampedCartesian { time, state })
+    }
+}
+
+impl Iterator for CartesianTrajectoryIterator {
+    type Item = TimeStampedCartesian;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let item = self.get_item(self.curr);
+        self.curr += 1;
+        item
+    }
+}
+
+impl IntoIterator for CartesianTrajectory {
+    type Item = TimeStampedCartesian;
+
+    type IntoIter = CartesianTrajectoryIterator;
+
+    fn into_iter(self) -> Self::IntoIter {
+        Self::IntoIter::new(self)
+    }
+}
+
+impl FromIterator<TimeStampedCartesian> for CartesianTrajectory {
+    fn from_iter<T: IntoIterator<Item = TimeStampedCartesian>>(iter: T) -> Self {
+        TrajectoryData::from_states(iter)
     }
 }
 

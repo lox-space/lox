@@ -24,8 +24,8 @@ impl PySeries {
     #[pyo3(signature = (x, y, method="linear"))]
     fn new(x: Vec<f64>, y: Vec<f64>, method: &str) -> PyResult<Self> {
         let series = match method {
-            "linear" => Series::new(x, y).map_err(PySeriesError)?,
-            "cubic_spline" => Series::with_cubic_spline(x, y).map_err(PySeriesError)?,
+            "linear" => Series::try_linear(x, y).map_err(PySeriesError)?,
+            "cubic_spline" => Series::try_cubic_spline(x, y).map_err(PySeriesError)?,
             _ => return Err(PyValueError::new_err("unknown method")),
         };
         Ok(PySeries(series))

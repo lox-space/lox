@@ -8,7 +8,7 @@ use glam::DVec3;
 use lox_bodies::{DynOrigin, Origin, PointMass, TryPointMass, UndefinedOriginPropertyError};
 use lox_core::{
     anomalies::TrueAnomaly,
-    coords::Cartesian,
+    coords::{Cartesian, CartesianTrajectory, TimeStampedCartesian},
     elements::{
         ArgumentOfPeriapsis, Eccentricity, GravitationalParameter, Inclination, Keplerian,
         LongitudeOfAscendingNode,
@@ -16,9 +16,11 @@ use lox_core::{
 };
 use lox_frames::{
     DynFrame, NonQuasiInertialFrameError, QuasiInertial, ReferenceFrame, TryQuasiInertial,
+    traits::frame_id, transformations::TryTransform,
 };
 use lox_time::{
     Time,
+    deltas::TimeDelta,
     time_scales::{DynTimeScale, TimeScale},
 };
 use lox_units::Distance;
@@ -226,3 +228,79 @@ where
 }
 
 pub type DynKeplerianOrbit = Orbit<Keplerian, DynTimeScale, DynOrigin, DynFrame>;
+
+#[derive(Debug, Clone)]
+pub struct Trajectory<T: TimeScale, O: Origin, R: ReferenceFrame> {
+    epoch: Time<T>,
+    origin: O,
+    frame: R,
+    data: CartesianTrajectory,
+}
+
+impl<T, O, R> Trajectory<T, O, R>
+where
+    T: TimeScale,
+    O: Origin,
+    R: ReferenceFrame,
+{
+    pub fn at(&self, time: Time<T>) -> CartesianOrbit<T, O, R>
+    where
+        T: Copy,
+        O: Copy,
+        R: Copy,
+    {
+        let t = (time - self.epoch).as_seconds_f64();
+        let state = self.data.at(t);
+        Orbit {
+            state,
+            time,
+            origin: self.origin,
+            frame: self.frame,
+        }
+    }
+
+    pub fn into_frame<R1, P>(
+        self,
+        frame: R1,
+        provider: P,
+    ) -> Result<Trajectory<T, O, R1>, Box<dyn std::error::Error>>
+    where
+        T: Copy,
+        R: Copy,
+        R1: ReferenceFrame + Copy,
+        P: TryTransform<R, R1, T>,
+    {
+        if frame_id(&self.frame) == frame_id(&frame) {
+            return Ok(Trajectory {
+                epoch: self.epoch,
+                origin: self.origin,
+                frame,
+                data: self.data,
+            });
+        }
+
+        let data: Result<CartesianTrajectory, P::Error> = self
+            .data
+            .into_iter()
+            .map(|TimeStampedCartesian { time, state }| {
+                let dt: TimeDelta = time.into();
+                let t = self.epoch + dt;
+                provider
+                    .try_transform(self.frame, frame, t)
+                    .map(|rot| TimeStampedCartesian {
+                        time,
+                        state: rot * state,
+                    })
+            })
+            .collect();
+
+        Ok(Trajectory {
+            epoch: self.epoch,
+            origin: self.origin,
+            frame,
+            data: data?,
+        })
+    }
+}
+
+pub type DynTrajectory = Trajectory<DynTimeScale, DynOrigin, DynFrame>;
