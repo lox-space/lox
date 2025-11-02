@@ -92,7 +92,7 @@ impl ElevationMask {
                 return Err(ElevationMaskError::InvalidAzimuthRange(az_min, az_max));
             }
         }
-        Ok(Self::Variable(Series::new(azimuth, elevation)?))
+        Ok(Self::Variable(Series::try_linear(azimuth, elevation)?))
     }
 
     pub fn with_fixed_elevation(elevation: f64) -> Self {
@@ -224,10 +224,10 @@ impl<T: TimeScale> Pass<T> {
         };
 
         // Create series for each observable
-        let azimuth_series = Series::new(time_seconds.clone(), azimuths)?;
-        let elevation_series = Series::new(time_seconds.clone(), elevations)?;
-        let range_series = Series::new(time_seconds.clone(), ranges)?;
-        let range_rate_series = Series::new(time_seconds, range_rates)?;
+        let azimuth_series = Series::try_linear(time_seconds.clone(), azimuths)?;
+        let elevation_series = Series::try_linear(time_seconds.clone(), elevations)?;
+        let range_series = Series::try_linear(time_seconds.clone(), ranges)?;
+        let range_rate_series = Series::try_linear(time_seconds, range_rates)?;
 
         Ok(Pass {
             window,
