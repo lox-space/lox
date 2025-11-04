@@ -16,6 +16,7 @@ use thiserror::Error;
 use crate::anomalies::AnomalyError;
 use crate::anomalies::MeanAnomaly;
 use crate::anomalies::{EccentricAnomaly, TrueAnomaly};
+use crate::time::deltas::TimeDelta;
 use crate::utils::Linspace;
 use crate::{
     coords::Cartesian,
@@ -133,6 +134,11 @@ impl Eccentricity {
     /// Checks if the orbit is hyperbolic.
     pub fn is_hyperbolic(&self) -> bool {
         matches!(self.orbit_type(), OrbitType::Hyperbolic)
+    }
+
+    /// Checks if the orbit is circular or elliptic.
+    pub fn is_circular_or_elliptic(&self) -> bool {
+        matches!(self.orbit_type(), OrbitType::Circular | OrbitType::Elliptic)
     }
 }
 
@@ -319,17 +325,36 @@ impl Keplerian {
         Cartesian::from_vecs(rot * pos, rot * vel)
     }
 
-    pub fn trace_orbit(&self, grav_param: GravitationalParameter, n: usize) -> Vec<Cartesian> {
-        Linspace::new(-PI, PI, n)
-            .map(|ecc| {
-                let true_anomaly = EccentricAnomaly::new(ecc.rad()).to_true(self.eccentricity);
-                Keplerian {
-                    true_anomaly,
-                    ..*self
-                }
-                .to_cartesian(grav_param)
-            })
-            .collect()
+    pub fn orbital_period(&self, grav_param: GravitationalParameter) -> Option<TimeDelta> {
+        if !self.eccentricity().is_circular_or_elliptic() {
+            return None;
+        }
+        let mu = grav_param.as_f64();
+        let a = self.semi_major_axis.as_f64();
+        Some(TimeDelta::from_seconds_f64(TAU * (a.powf(3.0) / mu).sqrt()))
+    }
+
+    pub fn iter_trace(
+        &self,
+        grav_param: GravitationalParameter,
+        n: usize,
+    ) -> impl Iterator<Item = Cartesian> {
+        assert!(self.eccentricity().is_circular_or_elliptic());
+        Linspace::new(-PI, PI, n).map(move |ecc| {
+            let true_anomaly = EccentricAnomaly::new(ecc.rad()).to_true(self.eccentricity);
+            Keplerian {
+                true_anomaly,
+                ..*self
+            }
+            .to_cartesian(grav_param)
+        })
+    }
+
+    pub fn trace(&self, grav_param: GravitationalParameter, n: usize) -> Option<Vec<Cartesian>> {
+        if !self.eccentricity().is_circular_or_elliptic() {
+            return None;
+        }
+        Some(self.iter_trace(grav_param, n).collect())
     }
 }
 

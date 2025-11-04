@@ -12,7 +12,7 @@ use lox_core::glam::Azimuth;
 use lox_core::time::julian_dates::JulianDate;
 use lox_core::time::time_of_day::TimeOfDay;
 use lox_core::units::{Angle, AngleUnits, Distance};
-use lox_earth::ephemeris::sun_position;
+use lox_earth::ephemeris::apparent_sun_position;
 use lox_frames::Icrf;
 use lox_time::Time;
 use lox_time::offsets::{DefaultOffsetProvider, TryOffset};
@@ -73,7 +73,7 @@ fn inclination_sso(semi_major_axis: Distance, eccentricity: Eccentricity) -> Ang
 }
 
 fn right_ascension_sun(time: Time<Tdb>) -> Angle {
-    let sun = sun_position(time);
+    let sun = apparent_sun_position(time);
     sun.azimuth().mod_two_pi()
 }
 
