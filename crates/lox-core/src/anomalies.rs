@@ -32,7 +32,10 @@ use crate::{
 };
 
 use core::marker::PhantomData;
-use std::fmt::Display;
+use std::{
+    fmt::Display,
+    ops::{Add, Neg, Sub},
+};
 
 /// Sealed marker trait for anomaly kinds
 pub trait AnomalyKind: sealed::Sealed + std::fmt::Debug {}
@@ -89,6 +92,48 @@ where
     /// Returns the raw f64 value
     pub fn as_f64(self) -> f64 {
         self.anomaly.as_f64()
+    }
+}
+
+impl<K> Add for Anomaly<K>
+where
+    K: AnomalyKind,
+{
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Anomaly {
+            anomaly: self.anomaly + rhs.anomaly,
+            _kind: PhantomData,
+        }
+    }
+}
+
+impl<K> Sub for Anomaly<K>
+where
+    K: AnomalyKind,
+{
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Anomaly {
+            anomaly: self.anomaly - rhs.anomaly,
+            _kind: PhantomData,
+        }
+    }
+}
+
+impl<K> Neg for Anomaly<K>
+where
+    K: AnomalyKind,
+{
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        Anomaly {
+            anomaly: -self.anomaly,
+            _kind: PhantomData,
+        }
     }
 }
 

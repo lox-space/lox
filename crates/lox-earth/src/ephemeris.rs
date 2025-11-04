@@ -48,6 +48,7 @@ pub fn earth_state(time: Time<Tdb>) -> EarthState {
     }
 }
 
+// TODO: Move to constants module
 // Schwarzschild radius of the Sun (au)
 // 2 * 1.32712440041e20 / (2.99792458e8)^2 / 1.49597870700e11
 const SRS: Distance = Distance::astronomical_units(1.97412574336e-8);
@@ -68,7 +69,7 @@ fn aberration(pnat: DVec3, v: DVec3, s: Distance, bm1: f64) -> DVec3 {
     DVec3::from(p) / r
 }
 
-pub fn sun_position(time: Time<Tdb>) -> DVec3 {
+pub fn apparent_sun_position(time: Time<Tdb>) -> DVec3 {
     let s = earth_state(time);
     let pe = s.heliocentric.position();
     let vb = s.barycentric.velocity() / SPEED_OF_LIGHT;
