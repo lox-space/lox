@@ -216,7 +216,7 @@ where
 }
 
 #[derive(Debug, Clone)]
-pub struct SSOBuilder<'a, T: TimeScale + Copy, P: TryOffset<T, Ut1> + TryOffset<T, Tdb>> {
+pub struct SsoBuilder<'a, T: TimeScale + Copy, P: TryOffset<T, Ut1> + TryOffset<T, Tdb>> {
     time: Time<T>,
     semi_major_axis: Option<SemiMajorAxis>,
     eccentricity: Result<Eccentricity, NegativeEccentricityError>,
@@ -226,7 +226,7 @@ pub struct SSOBuilder<'a, T: TimeScale + Copy, P: TryOffset<T, Ut1> + TryOffset<
     provider: Option<&'a P>,
 }
 
-impl<'a> SSOBuilder<'a, Tai, DefaultOffsetProvider> {
+impl<'a> SsoBuilder<'a, Tai, DefaultOffsetProvider> {
     pub fn new() -> Self {
         Self {
             time: Time::default(),
@@ -240,22 +240,22 @@ impl<'a> SSOBuilder<'a, Tai, DefaultOffsetProvider> {
     }
 }
 
-impl<'a> Default for SSOBuilder<'a, Tai, DefaultOffsetProvider> {
+impl<'a> Default for SsoBuilder<'a, Tai, DefaultOffsetProvider> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<'a, T, U> SSOBuilder<'a, T, U>
+impl<'a, T, U> SsoBuilder<'a, T, U>
 where
     T: TimeScale + Copy,
     U: TryOffset<T, Ut1> + TryOffset<T, Tdb>,
 {
-    pub fn with_provider<P>(self, provider: &'a P) -> SSOBuilder<'a, T, P>
+    pub fn with_provider<P>(self, provider: &'a P) -> SsoBuilder<'a, T, P>
     where
         P: TryOffset<T, Ut1> + TryOffset<T, Tdb>,
     {
-        SSOBuilder {
+        SsoBuilder {
             time: self.time,
             semi_major_axis: self.semi_major_axis,
             eccentricity: self.eccentricity,
@@ -267,16 +267,16 @@ where
     }
 }
 
-impl<'a, S, P> SSOBuilder<'a, S, P>
+impl<'a, S, P> SsoBuilder<'a, S, P>
 where
     S: TimeScale + Copy,
     P: TryOffset<S, Ut1> + TryOffset<S, Tdb>,
 {
-    pub fn with_time<T: TimeScale + Copy>(self, time: Time<T>) -> SSOBuilder<'a, T, P>
+    pub fn with_time<T: TimeScale + Copy>(self, time: Time<T>) -> SsoBuilder<'a, T, P>
     where
         P: TryOffset<T, Ut1> + TryOffset<T, Tdb>,
     {
-        SSOBuilder {
+        SsoBuilder {
             time,
             semi_major_axis: self.semi_major_axis,
             eccentricity: self.eccentricity,
@@ -288,7 +288,7 @@ where
     }
 }
 
-impl<'a, T, P> SSOBuilder<'a, T, P>
+impl<'a, T, P> SsoBuilder<'a, T, P>
 where
     T: TimeScale + Copy,
     P: TryOffset<T, Ut1> + TryOffset<T, Tdb>,
@@ -426,7 +426,7 @@ mod tests {
         let exp_node = LongitudeOfAscendingNode::try_new(350.5997.deg()).unwrap();
         let exp_inc = Inclination::try_new(98.627.deg()).unwrap();
 
-        let sso = SSOBuilder::default()
+        let sso = SsoBuilder::default()
             .with_provider(eop_provider())
             .with_semi_major_axis(semi_major_axis)
             .with_eccentricity(Eccentricity::default().as_f64())
@@ -441,7 +441,7 @@ mod tests {
         assert_approx_eq!(act_node, exp_node, rtol <= 4e-3);
 
         let altitude = semi_major_axis - Earth.equatorial_radius().km();
-        let sso = SSOBuilder::default()
+        let sso = SsoBuilder::default()
             .with_provider(eop_provider())
             .with_altitude(altitude)
             .with_time(epoch)
