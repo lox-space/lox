@@ -4,15 +4,21 @@
 
 pub mod sso;
 
+use std::{
+    f64::consts::{PI, TAU},
+    iter::zip,
+};
+
 use glam::DVec3;
 use lox_bodies::{DynOrigin, Origin, PointMass, TryPointMass, UndefinedOriginPropertyError};
 use lox_core::{
-    anomalies::TrueAnomaly,
+    anomalies::{EccentricAnomaly, TrueAnomaly},
     coords::{Cartesian, CartesianTrajectory, TimeStampedCartesian},
     elements::{
         ArgumentOfPeriapsis, Eccentricity, GravitationalParameter, Inclination, Keplerian,
         LongitudeOfAscendingNode,
     },
+    utils::Linspace,
 };
 use lox_frames::{
     DynFrame, NonQuasiInertialFrameError, QuasiInertial, ReferenceFrame, TryQuasiInertial,
@@ -23,7 +29,7 @@ use lox_time::{
     deltas::TimeDelta,
     time_scales::{DynTimeScale, TimeScale},
 };
-use lox_units::Distance;
+use lox_units::{AngleUnits, Distance};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Orbit<S, T: TimeScale, O: Origin, R: ReferenceFrame> {
@@ -68,6 +74,24 @@ where
     {
         self.frame
     }
+
+    pub fn try_gravitational_parameter(
+        &self,
+    ) -> Result<GravitationalParameter, UndefinedOriginPropertyError>
+    where
+        O: TryPointMass,
+    {
+        self.origin
+            .try_gravitational_parameter()
+            .map(GravitationalParameter::km3_per_s2)
+    }
+
+    pub fn gravitational_parameter(&self) -> GravitationalParameter
+    where
+        O: PointMass,
+    {
+        GravitationalParameter::km3_per_s2(self.origin.gravitational_parameter())
+    }
 }
 
 pub type CartesianOrbit<T, O, R> = Orbit<Cartesian, T, O, R>;
@@ -101,10 +125,8 @@ where
         O: Copy + PointMass,
         R: Copy,
     {
-        let grav_param = GravitationalParameter::km3_per_s2(self.origin.gravitational_parameter());
-        let keplerian = self.state.to_keplerian(grav_param);
         Orbit {
-            state: keplerian,
+            state: self.state.to_keplerian(self.gravitational_parameter()),
             time: self.time,
             origin: self.origin,
             frame: self.frame,
@@ -117,11 +139,8 @@ where
         O: Copy + TryPointMass,
         R: Copy,
     {
-        let grav_param =
-            GravitationalParameter::km3_per_s2(self.origin.try_gravitational_parameter()?);
-        let keplerian = self.state.to_keplerian(grav_param);
         Ok(Orbit {
-            state: keplerian,
+            state: self.state.to_keplerian(self.try_gravitational_parameter()?),
             time: self.time,
             origin: self.origin,
             frame: self.frame,
@@ -199,10 +218,8 @@ where
         O: Copy + PointMass,
         R: Copy,
     {
-        let grav_param = GravitationalParameter::km3_per_s2(self.origin.gravitational_parameter());
-        let cartesian = self.state.to_cartesian(grav_param);
         Orbit {
-            state: cartesian,
+            state: self.state.to_cartesian(self.gravitational_parameter()),
             time: self.time,
             origin: self.origin,
             frame: self.frame,
@@ -215,14 +232,52 @@ where
         O: Copy + TryPointMass,
         R: Copy,
     {
-        let grav_param =
-            GravitationalParameter::km3_per_s2(self.origin.try_gravitational_parameter()?);
-        let cartesian = self.state.to_cartesian(grav_param);
         Ok(Orbit {
-            state: cartesian,
+            state: self.state.to_cartesian(self.try_gravitational_parameter()?),
             time: self.time,
             origin: self.origin,
             frame: self.frame,
+        })
+    }
+
+    pub fn orbital_period(&self) -> Option<TimeDelta>
+    where
+        O: TryPointMass,
+    {
+        self.state
+            .orbital_period(self.try_gravitational_parameter().ok()?)
+    }
+
+    pub fn trace(&self, n: usize) -> Option<Trajectory<T, O, R>>
+    where
+        T: Copy,
+        O: TryPointMass + Copy,
+        R: Copy,
+    {
+        let period = self.orbital_period()?;
+        let mean_motion = TAU / period.as_seconds_f64();
+        let mean_anomaly_at_epoch = self.true_anomaly().to_mean(self.eccentricity()).ok()?;
+
+        let state_iter = self
+            .state
+            .iter_trace(self.try_gravitational_parameter().ok()?, n);
+
+        let data: CartesianTrajectory = zip(Linspace::new(-PI, PI, n), state_iter)
+            .map(|(ecc, state)| {
+                let mean_anomaly = EccentricAnomaly::new(ecc.rad()).to_mean(self.eccentricity());
+                let time_of_flight = (mean_anomaly - mean_anomaly_at_epoch).as_f64() / mean_motion;
+                TimeStampedCartesian {
+                    time: time_of_flight,
+                    state,
+                }
+            })
+            .collect();
+
+        Some(Trajectory {
+            epoch: self.time,
+            origin: self.origin,
+            frame: self.frame,
+            data,
         })
     }
 }
