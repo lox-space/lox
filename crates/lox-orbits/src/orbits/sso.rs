@@ -5,8 +5,8 @@
 use lox_bodies::{Earth, PointMass, Spheroid, Sun};
 use lox_core::anomalies::TrueAnomaly;
 use lox_core::elements::{
-    ArgumentOfPeriapsis, Eccentricity, GravitationalParameter, Inclination, Keplerian,
-    LongitudeOfAscendingNode, SemiMajorAxis,
+    ArgumentOfPeriapsis, Eccentricity, GravitationalParameter, Inclination, InclinationError,
+    Keplerian, LongitudeOfAscendingNode, NegativeEccentricityError, SemiMajorAxis,
 };
 use lox_core::glam::Azimuth;
 use lox_core::time::julian_dates::JulianDate;
@@ -29,12 +29,16 @@ const J2_EARTH: f64 = 0.001_082_626_174;
 
 #[derive(Debug, Error)]
 pub enum SsoError {
-    #[error("either altitude or semi-major axis and eccentricity need to be provided")]
-    InvalidShape,
+    #[error("either altitude, semi-major axis, or inclination need to be provided")]
+    InvalidParameters,
     #[error("invalid local time of ascending/descending node: {0}")]
     InvalidLtan(String),
     #[error("offset provider error: {0}")]
     OffsetProvider(String),
+    #[error(transparent)]
+    Inclination(#[from] InclinationError),
+    #[error(transparent)]
+    Eccentricity(#[from] NegativeEccentricityError),
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -61,15 +65,23 @@ impl Default for LocalTimeOfNode {
     }
 }
 
-fn inclination_sso(semi_major_axis: Distance, eccentricity: Eccentricity) -> Angle {
+fn inclination_sso(semi_major_axis: Distance, eccentricity: Eccentricity) -> Inclination {
     let r_eq = Earth.equatorial_radius().km().as_f64();
     let mu = GravitationalParameter::km3_per_s2(Earth.gravitational_parameter()).as_f64();
-    let cos_num = -semi_major_axis.as_f64().powf(7.0 / 2.0)
+    let num = -semi_major_axis.as_f64().powf(7.0 / 2.0)
         * 2.0
         * OMEGA_SUN_SYNC
         * (1.0 - eccentricity.as_f64().powi(2)).powi(2);
-    let cos_den = 3.0 * r_eq.powi(2) * J2_EARTH * mu.sqrt();
-    Angle::from_acos(cos_num / cos_den)
+    let den = 3.0 * r_eq.powi(2) * J2_EARTH * mu.sqrt();
+    Inclination::try_new(Angle::from_acos(num / den)).expect("SSO inclination shoud be valid")
+}
+
+fn semi_major_axis_sso(inclination: Inclination, eccentricity: Eccentricity) -> Distance {
+    let r_eq = Earth.equatorial_radius().km().as_f64();
+    let mu = GravitationalParameter::km3_per_s2(Earth.gravitational_parameter()).as_f64();
+    let num = -3.0 * r_eq.powi(2) * J2_EARTH * mu.sqrt();
+    let den = 2.0 * OMEGA_SUN_SYNC * (1.0 - eccentricity.as_f64().powi(2)).powi(2);
+    (num * inclination.as_f64().cos() / den).powf(2.0 / 7.0).m()
 }
 
 fn right_ascension_sun(time: Time<Tdb>) -> Angle {
@@ -121,9 +133,35 @@ where
     Ok((smlt + ltan.local_time_of_ascending_node()).mod_two_pi())
 }
 
-pub fn keplerian_from_sso<T, P>(
+#[derive(Debug)]
+enum SemiMajorAxisOrInclination {
+    SemiMajorAxis(SemiMajorAxis),
+    Inclination(Inclination),
+}
+
+impl SemiMajorAxisOrInclination {
+    fn semi_major_axis(&self, eccentricity: Eccentricity) -> SemiMajorAxis {
+        match self {
+            SemiMajorAxisOrInclination::SemiMajorAxis(semi_major_axis) => *semi_major_axis,
+            SemiMajorAxisOrInclination::Inclination(inclination) => {
+                semi_major_axis_sso(*inclination, eccentricity)
+            }
+        }
+    }
+
+    fn inclination(&self, eccentricity: Eccentricity) -> Inclination {
+        match self {
+            SemiMajorAxisOrInclination::SemiMajorAxis(semi_major_axis) => {
+                inclination_sso(*semi_major_axis, eccentricity)
+            }
+            SemiMajorAxisOrInclination::Inclination(inclination) => *inclination,
+        }
+    }
+}
+
+fn keplerian_from_sso<T, P>(
     time: Time<T>,
-    semi_major_axis: SemiMajorAxis,
+    semi_major_axis_or_inclination: SemiMajorAxisOrInclination,
     eccentricity: Eccentricity,
     ltan: LocalTimeOfNode,
     true_anomaly: TrueAnomaly,
@@ -133,12 +171,13 @@ where
     T: TimeScale + Copy,
     P: TryOffset<T, Ut1> + TryOffset<T, Tdb>,
 {
-    let inclination = Inclination::try_new(inclination_sso(semi_major_axis, eccentricity))
-        .expect("SSO inclination should be valid");
+    let semi_major_axis = semi_major_axis_or_inclination.semi_major_axis(eccentricity);
+    let inclination = semi_major_axis_or_inclination.inclination(eccentricity);
     let longitude_of_ascending_node =
         LongitudeOfAscendingNode::try_new(longitude_of_ascending_node_sso(time, ltan, provider)?)
             .expect("SSO RAAN should be valid");
     let argument_of_periapsis = ArgumentOfPeriapsis::default();
+
     Ok(Keplerian::new(
         semi_major_axis,
         eccentricity,
@@ -153,9 +192,9 @@ impl<T> KeplerianOrbit<T, Earth, Icrf>
 where
     T: TimeScale + Copy,
 {
-    pub fn from_sso<P>(
+    fn from_sso<P>(
         time: Time<T>,
-        semi_major_axis: SemiMajorAxis,
+        semi_major_axis_or_inclination: SemiMajorAxisOrInclination,
         eccentricity: Eccentricity,
         ltan: LocalTimeOfNode,
         true_anomaly: TrueAnomaly,
@@ -166,7 +205,7 @@ where
     {
         let state = keplerian_from_sso(
             time,
-            semi_major_axis,
+            semi_major_axis_or_inclination,
             eccentricity,
             ltan,
             true_anomaly,
@@ -180,7 +219,8 @@ where
 pub struct SSOBuilder<'a, T: TimeScale + Copy, P: TryOffset<T, Ut1> + TryOffset<T, Tdb>> {
     time: Time<T>,
     semi_major_axis: Option<SemiMajorAxis>,
-    eccentricity: Eccentricity,
+    eccentricity: Result<Eccentricity, NegativeEccentricityError>,
+    inclination: Option<Result<Inclination, InclinationError>>,
     ltan: Result<LocalTimeOfNode, TimeOfDayError>,
     true_anomaly: TrueAnomaly,
     provider: Option<&'a P>,
@@ -191,7 +231,8 @@ impl<'a> SSOBuilder<'a, Tai, DefaultOffsetProvider> {
         Self {
             time: Time::default(),
             semi_major_axis: None,
-            eccentricity: Eccentricity::default(),
+            eccentricity: Ok(Eccentricity::default()),
+            inclination: None,
             ltan: Ok(LocalTimeOfNode::default()),
             true_anomaly: TrueAnomaly::default(),
             provider: None,
@@ -218,6 +259,7 @@ where
             time: self.time,
             semi_major_axis: self.semi_major_axis,
             eccentricity: self.eccentricity,
+            inclination: self.inclination,
             ltan: self.ltan,
             true_anomaly: self.true_anomaly,
             provider: Some(provider),
@@ -238,6 +280,7 @@ where
             time,
             semi_major_axis: self.semi_major_axis,
             eccentricity: self.eccentricity,
+            inclination: self.inclination,
             ltan: self.ltan,
             true_anomaly: self.true_anomaly,
             provider: self.provider,
@@ -255,14 +298,19 @@ where
         self
     }
 
-    pub fn with_eccentricity(mut self, eccentricity: Eccentricity) -> Self {
-        self.eccentricity = eccentricity;
+    pub fn with_eccentricity(mut self, eccentricity: f64) -> Self {
+        self.eccentricity = Eccentricity::try_new(eccentricity);
         self
     }
 
     pub fn with_altitude(mut self, altitude: Distance) -> Self {
         self.semi_major_axis = Some(altitude + Earth.equatorial_radius().km());
-        self.eccentricity = Eccentricity::default();
+        self.eccentricity = Ok(Eccentricity::default());
+        self
+    }
+
+    pub fn with_inclination(mut self, inclination: Angle) -> Self {
+        self.inclination = Some(Inclination::try_new(inclination));
         self
     }
 
@@ -287,23 +335,30 @@ where
     where
         DefaultOffsetProvider: TryOffset<T, Ut1> + TryOffset<T, Tdb>,
     {
-        let semi_major_axis = self.semi_major_axis.ok_or(SsoError::InvalidShape)?;
+        let semi_major_axis_or_inclination = match (self.semi_major_axis, self.inclination) {
+            (None, Some(inclination)) => SemiMajorAxisOrInclination::Inclination(inclination?),
+            (Some(semi_major_axis), None) => {
+                SemiMajorAxisOrInclination::SemiMajorAxis(semi_major_axis)
+            }
+            (_, _) => return Err(SsoError::InvalidParameters),
+        };
+        let eccentricity = self.eccentricity?;
         let ltan = self
             .ltan
             .map_err(|err| SsoError::InvalidLtan(err.to_string()))?;
         match self.provider {
             Some(provider) => KeplerianOrbit::from_sso(
                 self.time,
-                semi_major_axis,
-                self.eccentricity,
+                semi_major_axis_or_inclination,
+                eccentricity,
                 ltan,
                 self.true_anomaly,
                 provider,
             ),
             None => KeplerianOrbit::from_sso(
                 self.time,
-                semi_major_axis,
-                self.eccentricity,
+                semi_major_axis_or_inclination,
+                eccentricity,
                 ltan,
                 self.true_anomaly,
                 &DefaultOffsetProvider,
@@ -325,12 +380,22 @@ mod tests {
 
     #[test]
     fn test_sso_inclination() {
-        let exp = 98.627.deg();
+        let exp = Inclination::try_new(98.627.deg()).unwrap();
 
         let act = inclination_sso(7178.1363.km(), Eccentricity::default());
         assert_approx_eq!(exp, act, rtol <= 1e-5);
 
         let act = inclination_sso(7179.821.km(), Eccentricity::try_new(0.02).unwrap());
+        assert_approx_eq!(exp, act, rtol <= 1e-5);
+    }
+
+    #[test]
+    fn test_sso_semi_major_axis() {
+        let exp = 7179.821.km();
+        let act = semi_major_axis_sso(
+            Inclination::try_new(98.627.deg()).unwrap(),
+            Eccentricity::try_new(0.02).unwrap(),
+        );
         assert_approx_eq!(exp, act, rtol <= 1e-5);
     }
 
@@ -364,7 +429,7 @@ mod tests {
         let sso = SSOBuilder::default()
             .with_provider(eop_provider())
             .with_semi_major_axis(semi_major_axis)
-            .with_eccentricity(Eccentricity::default())
+            .with_eccentricity(Eccentricity::default().as_f64())
             .with_true_anomaly(Angle::ZERO)
             .with_time(epoch)
             .with_ltan(13, 30)
