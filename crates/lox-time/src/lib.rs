@@ -32,6 +32,7 @@
 
 pub mod calendar_dates;
 pub mod deltas;
+pub mod intervals;
 pub mod julian_dates;
 pub mod offsets;
 pub mod ranges;
