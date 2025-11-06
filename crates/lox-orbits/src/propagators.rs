@@ -4,12 +4,15 @@
 
 use lox_bodies::Origin;
 use lox_time::Time;
+use lox_time::deltas::TimeDelta;
 use lox_time::time_scales::TimeScale;
 
+use crate::orbits::Orbit;
 use crate::trajectories::TrajectoryError;
 use crate::{states::State, trajectories::Trajectory};
 use lox_frames::ReferenceFrame;
 
+pub mod numerical;
 pub mod semi_analytical;
 pub mod sgp4;
 mod stumpff;
@@ -35,4 +38,10 @@ where
         }
         Ok(Trajectory::new(&states)?)
     }
+}
+
+pub struct PropagatorError;
+
+pub trait OrbitPropagator<Input, Output> {
+    fn propagate(&self, initial_state: Input, step: TimeDelta) -> Result<Output, PropagatorError>;
 }
