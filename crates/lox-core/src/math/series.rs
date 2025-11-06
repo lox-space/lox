@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+use std::sync::Arc;
+
 use fast_polynomial::poly_array;
 use thiserror::Error;
 
@@ -17,8 +19,8 @@ const MIN_POINTS_SPLINE: usize = 4;
 pub enum SeriesError {
     #[error("`x` and `y` must have the same length but were {0} and {1}")]
     DimensionMismatch(usize, usize),
-    #[error("length of `x` and `y` must at least {1} but was {0}")]
-    InsufficientPoints(usize, usize),
+    #[error("length of `x` and `y` must at least 2 but was {0}")]
+    InsufficientPoints(usize),
     #[error("x-axis must be strictly monotonic")]
     NonMonotonic,
 }
@@ -26,26 +28,59 @@ pub enum SeriesError {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Interpolation {
     Linear,
-    CubicSpline(Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>),
+    CubicSpline(Arc<[f64]>, Arc<[f64]>, Arc<[f64]>, Arc<[f64]>),
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Series<T: AsRef<[f64]>, U: AsRef<[f64]>> {
-    x: T,
-    y: U,
+pub struct Series {
+    x: Arc<[f64]>,
+    y: Arc<[f64]>,
     interpolation: Interpolation,
 }
 
-impl<T: AsRef<[f64]>, U: AsRef<[f64]>> Series<T, U> {
-    pub fn try_linear(x: T, y: U) -> Result<Self, SeriesError> {
-        Self::check(&x, &y, MIN_POINTS_LINEAR)?;
+pub enum InterpolationType {
+    Linear,
+    CubicSpline,
+}
 
-        Ok(Self::linear(x, y))
+impl Series {
+    pub fn try_new(
+        x: impl Into<Arc<[f64]>>,
+        y: impl Into<Arc<[f64]>>,
+        interpolation: InterpolationType,
+    ) -> Result<Self, SeriesError> {
+        let x: Arc<[f64]> = x.into();
+        let y: Arc<[f64]> = y.into();
+
+        Self::check(&x, &y)?;
+
+        Ok(Self::new(x, y, interpolation))
     }
 
-    pub fn linear(x: T, y: U) -> Self {
-        Self::assert(&x, &y, MIN_POINTS_LINEAR);
+    pub fn new(
+        x: impl Into<Arc<[f64]>>,
+        y: impl Into<Arc<[f64]>>,
+        interpolation: InterpolationType,
+    ) -> Self {
+        let x: Arc<[f64]> = x.into();
+        let y: Arc<[f64]> = y.into();
 
+        Self::assert(&x, &y);
+
+        match interpolation {
+            InterpolationType::Linear => Self::linear(x, y),
+            InterpolationType::CubicSpline => {
+                let n = x.len();
+                if n < MIN_POINTS_SPLINE {
+                    Self::linear(x, y)
+                } else {
+                    Self::cubic_spline(x, y)
+                }
+            }
+        }
+    }
+
+    fn linear(x: Arc<[f64]>, y: Arc<[f64]>) -> Self {
         Self {
             x,
             y,
@@ -53,23 +88,12 @@ impl<T: AsRef<[f64]>, U: AsRef<[f64]>> Series<T, U> {
         }
     }
 
-    pub fn try_cubic_spline(x: T, y: U) -> Result<Self, SeriesError> {
-        Self::check(&x, &y, MIN_POINTS_SPLINE)?;
+    fn cubic_spline(x: Arc<[f64]>, y: Arc<[f64]>) -> Self {
+        let n = x.len();
 
-        Ok(Self::cubic_spline(x, y))
-    }
-
-    pub fn cubic_spline(x: T, y: U) -> Self {
-        Self::assert(&x, &y, MIN_POINTS_SPLINE);
-
-        let x_ref = x.as_ref();
-        let y_ref = y.as_ref();
-
-        let n = x_ref.len();
-
-        let dx = x_ref.diff();
+        let dx = x.diff();
         let nd = dx.len();
-        let slope: Vec<f64> = y_ref
+        let slope: Vec<f64> = y
             .diff()
             .iter()
             .enumerate()
@@ -91,14 +115,14 @@ impl<T: AsRef<[f64]>, U: AsRef<[f64]>> Series<T, U> {
 
         // Not-a-knot boundary condition
         d.insert(0, dx[1]);
-        du.insert(0, x_ref[2] - x_ref[0]);
-        let delta = x_ref[2] - x_ref[0];
+        du.insert(0, x[2] - x[0]);
+        let delta = x[2] - x[0];
         b.insert(
             0,
             ((dx[0] + 2.0 * delta) * dx[1] * slope[0] + dx[0].powi(2) * slope[1]) / delta,
         );
         d.push(dx[nd - 2]);
-        let delta = x_ref[n - 1] - x_ref[n - 3];
+        let delta = x[n - 1] - x[n - 3];
         dl.push(delta);
         b.push(
             (dx[nd - 1].powi(2) * slope[nd - 2]
@@ -119,7 +143,7 @@ impl<T: AsRef<[f64]>, U: AsRef<[f64]>> Series<T, U> {
             .map(|(idx, si)| (si + s[idx + 1] - 2.0 * slope[idx]) / dx[idx])
             .collect();
 
-        let c1 = y_ref[0..n - 1].to_vec();
+        let c1 = y[0..n - 1].to_vec();
         let c2 = s[0..n - 1].to_vec();
         let c3: Vec<f64> = slope
             .iter()
@@ -131,7 +155,7 @@ impl<T: AsRef<[f64]>, U: AsRef<[f64]>> Series<T, U> {
         Self {
             x,
             y,
-            interpolation: Interpolation::CubicSpline(c1, c2, c3, c4),
+            interpolation: Interpolation::CubicSpline(c1.into(), c2.into(), c3.into(), c4.into()),
         }
     }
 
@@ -177,10 +201,7 @@ impl<T: AsRef<[f64]>, U: AsRef<[f64]>> Series<T, U> {
         (*self.x().last().unwrap(), *self.y().last().unwrap())
     }
 
-    fn check(x: &T, y: &U, min_points: usize) -> Result<(), SeriesError> {
-        let x = x.as_ref();
-        let y = y.as_ref();
-
+    fn check(x: &[f64], y: &[f64]) -> Result<(), SeriesError> {
         if !x.is_strictly_increasing() {
             return Err(SeriesError::NonMonotonic);
         }
@@ -191,21 +212,18 @@ impl<T: AsRef<[f64]>, U: AsRef<[f64]>> Series<T, U> {
             return Err(SeriesError::DimensionMismatch(n, y.len()));
         }
 
-        if n < min_points {
-            return Err(SeriesError::InsufficientPoints(n, min_points));
+        if n < MIN_POINTS_LINEAR {
+            return Err(SeriesError::InsufficientPoints(n));
         }
         Ok(())
     }
 
-    fn assert(x: &T, y: &U, min_points: usize) {
-        let x = x.as_ref();
-        let y = y.as_ref();
-
+    fn assert(x: &[f64], y: &[f64]) {
         assert!(x.is_strictly_increasing());
 
         let n = x.len();
         assert!(y.len() == n);
-        assert!(n >= min_points);
+        assert!(n >= MIN_POINTS_LINEAR);
     }
 }
 
@@ -227,7 +245,7 @@ mod tests {
         let x = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let y = vec![1.0, 2.0, 3.0, 4.0, 5.0];
 
-        let s = Series::try_linear(x, y).unwrap();
+        let s = Series::try_new(x, y, InterpolationType::Linear).unwrap();
         let actual = s.interpolate(xp);
         assert_eq!(actual, expected);
     }
@@ -305,19 +323,19 @@ mod tests {
             -0.7254418066056914,
         ];
 
-        let s = Series::try_cubic_spline(x, y).unwrap();
+        let s = Series::try_new(x, y, InterpolationType::CubicSpline).unwrap();
         let actual = s.interpolate(xp);
         assert_approx_eq!(actual, expected, rtol <= 1e-12);
     }
 
     #[rstest]
-    #[case(Series::try_linear(vec![1.0], vec![1.0]), Err(SeriesError::InsufficientPoints(1, 2)))]
-    #[case(Series::try_cubic_spline(vec![1.0], vec![1.0]), Err(SeriesError::InsufficientPoints(1, 4)))]
-    #[case(Series::try_linear(vec![1.0, 2.0], vec![1.0]), Err(SeriesError::DimensionMismatch(2, 1)))]
-    #[case(Series::try_cubic_spline(vec![1.0, 2.0], vec![1.0]), Err(SeriesError::DimensionMismatch(2, 1)))]
+    #[case(Series::try_new(vec![1.0], vec![1.0], InterpolationType::Linear), Err(SeriesError::InsufficientPoints(1)))]
+    #[case(Series::try_new(vec![1.0], vec![1.0], InterpolationType::CubicSpline), Err(SeriesError::InsufficientPoints(1)))]
+    #[case(Series::try_new(vec![1.0, 2.0], vec![1.0], InterpolationType::Linear), Err(SeriesError::DimensionMismatch(2, 1)))]
+    #[case(Series::try_new(vec![1.0, 2.0], vec![1.0], InterpolationType::CubicSpline), Err(SeriesError::DimensionMismatch(2, 1)))]
     fn test_series_errors(
-        #[case] actual: Result<Series<Vec<f64>, Vec<f64>>, SeriesError>,
-        #[case] expected: Result<Series<Vec<f64>, Vec<f64>>, SeriesError>,
+        #[case] actual: Result<Series, SeriesError>,
+        #[case] expected: Result<Series, SeriesError>,
     ) {
         assert_eq!(actual, expected);
     }
