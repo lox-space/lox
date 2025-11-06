@@ -13,7 +13,7 @@ use thiserror::Error;
 
 use lox_bodies::{DynOrigin, Origin};
 use lox_math::roots::Brent;
-use lox_math::series::{Series, SeriesError};
+use lox_math::series::{InterpolationType, Series, SeriesError};
 use lox_time::time_scales::Tai;
 use lox_time::utc::Utc;
 use lox_time::{Time, deltas::TimeDelta};
@@ -43,12 +43,12 @@ pub enum TrajectoryError {
 pub struct Trajectory<T: TimeScale, O: Origin, R: ReferenceFrame> {
     states: Vec<State<T, O, R>>,
     t: Vec<f64>,
-    x: Series<Vec<f64>, Vec<f64>>,
-    y: Series<Vec<f64>, Vec<f64>>,
-    z: Series<Vec<f64>, Vec<f64>>,
-    vy: Series<Vec<f64>, Vec<f64>>,
-    vx: Series<Vec<f64>, Vec<f64>>,
-    vz: Series<Vec<f64>, Vec<f64>>,
+    x: Series,
+    y: Series,
+    z: Series,
+    vy: Series,
+    vx: Series,
+    vz: Series,
 }
 
 pub type DynTrajectory = Trajectory<DynTimeScale, DynOrigin, DynFrame>;
@@ -75,12 +75,12 @@ where
         let vx: Vec<f64> = states.iter().map(|s| s.velocity().x).collect();
         let vy: Vec<f64> = states.iter().map(|s| s.velocity().y).collect();
         let vz: Vec<f64> = states.iter().map(|s| s.velocity().z).collect();
-        let x = Series::try_cubic_spline(t.clone(), x)?;
-        let y = Series::try_cubic_spline(t.clone(), y)?;
-        let z = Series::try_cubic_spline(t.clone(), z)?;
-        let vx = Series::try_cubic_spline(t.clone(), vx)?;
-        let vy = Series::try_cubic_spline(t.clone(), vy)?;
-        let vz = Series::try_cubic_spline(t.clone(), vz)?;
+        let x = Series::try_new(t.clone(), x, InterpolationType::CubicSpline)?;
+        let y = Series::try_new(t.clone(), y, InterpolationType::CubicSpline)?;
+        let z = Series::try_new(t.clone(), z, InterpolationType::CubicSpline)?;
+        let vx = Series::try_new(t.clone(), vx, InterpolationType::CubicSpline)?;
+        let vy = Series::try_new(t.clone(), vy, InterpolationType::CubicSpline)?;
+        let vz = Series::try_new(t.clone(), vz, InterpolationType::CubicSpline)?;
         Ok(Self {
             states: states.to_vec(),
             t,

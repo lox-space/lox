@@ -355,6 +355,6 @@ class Series:
         cls,
         x: list[float],
         y: list[float],
-        method: Literal["linear", "cubic_spline"] = "linear",
+        interpolation: Literal["linear", "cubic_spline"] = "linear",
     ): ...
     def interpolate(self, xp: float) -> float: ...
