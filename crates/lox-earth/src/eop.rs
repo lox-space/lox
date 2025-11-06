@@ -8,13 +8,11 @@ use std::{
 };
 
 use csv::{ByteRecord, ReaderBuilder};
-use lox_core::{
-    f64::consts::{SECONDS_BETWEEN_MJD_AND_J2000, SECONDS_PER_DAY},
-    units::Angle,
-};
+use lox_core::f64::consts::{SECONDS_BETWEEN_MJD_AND_J2000, SECONDS_PER_DAY};
+use lox_core::units::Angle;
 use lox_frames::iers::{Corrections, polar_motion::PoleCoords};
 use lox_io::spice::lsk::LeapSecondsKernel;
-use lox_math::series::{Series, SeriesError};
+use lox_math::series::{InterpolationType, Series, SeriesError};
 use lox_time::{
     deltas::TimeDelta,
     julian_dates::JulianDate,
@@ -188,28 +186,32 @@ impl EopParser {
         let n = x_pole.len();
         let npn = dpsi.len().max(dx.len());
 
-        let index = Index(Arc::new(j2000[0..n].to_vec()));
-        let np_index = Index(Arc::new(j2000[0..npn].to_vec()));
+        let index: Arc<[f64]> = Arc::from(&j2000[0..n]);
+        let np_index: Arc<[f64]> = Arc::from(&j2000[0..npn]);
 
         Ok(EopProvider {
             polar_motion: (
-                Series::try_cubic_spline(index.clone(), x_pole)?,
-                Series::try_cubic_spline(index.clone(), y_pole)?,
+                Series::try_new(index.clone(), x_pole, InterpolationType::CubicSpline)?,
+                Series::try_new(index.clone(), y_pole, InterpolationType::CubicSpline)?,
             ),
-            delta_ut1_tai: Series::try_cubic_spline(index.clone(), delta_ut1_tai)?,
+            delta_ut1_tai: Series::try_new(
+                index.clone(),
+                delta_ut1_tai,
+                InterpolationType::CubicSpline,
+            )?,
             nut_prec: NutPrecCorrections {
                 iau1980: if !dpsi.is_empty() {
                     Some((
-                        Series::try_cubic_spline(np_index.clone(), dpsi)?,
-                        Series::try_cubic_spline(np_index.clone(), deps)?,
+                        Series::try_new(np_index.clone(), dpsi, InterpolationType::CubicSpline)?,
+                        Series::try_new(np_index.clone(), deps, InterpolationType::CubicSpline)?,
                     ))
                 } else {
                     None
                 },
                 iau2000: if !dx.is_empty() {
                     Some((
-                        Series::try_cubic_spline(np_index.clone(), dx)?,
-                        Series::try_cubic_spline(np_index.clone(), dy)?,
+                        Series::try_new(np_index.clone(), dx, InterpolationType::CubicSpline)?,
+                        Series::try_new(np_index.clone(), dy, InterpolationType::CubicSpline)?,
                     ))
                 } else {
                     None
@@ -236,26 +238,16 @@ pub enum EopProviderError {
     MissingIau2000,
 }
 
-#[derive(Clone, Debug)]
-struct Index(Arc<Vec<f64>>);
-
-impl AsRef<[f64]> for Index {
-    fn as_ref(&self) -> &[f64] {
-        self.0.as_ref()
-    }
-}
-type TSeries = Series<Index, Vec<f64>>;
-
 #[derive(Debug, Clone)]
 struct NutPrecCorrections {
-    iau1980: Option<(TSeries, TSeries)>,
-    iau2000: Option<(TSeries, TSeries)>,
+    iau1980: Option<(Series, Series)>,
+    iau2000: Option<(Series, Series)>,
 }
 
 #[derive(Debug)]
 pub struct EopProvider {
-    polar_motion: (TSeries, TSeries),
-    delta_ut1_tai: TSeries,
+    polar_motion: (Series, Series),
+    delta_ut1_tai: Series,
     nut_prec: NutPrecCorrections,
     lsk: Option<LeapSecondsKernel>,
 }

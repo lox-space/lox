@@ -1080,7 +1080,7 @@ class Series:
         cls,
         x: list[float],
         y: list[float],
-        method: Literal["linear", "cubic_spline"] = "linear",
+        interpolation: Literal["linear", "cubic_spline"] = "linear",
     ) -> Self: ...
     def interpolate(self, xp: float) -> float:
         """Interpolate a y value at the given x coordinate."""

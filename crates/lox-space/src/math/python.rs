@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use crate::math::series::{Series, SeriesError};
+use lox_math::series::InterpolationType;
 use pyo3::exceptions::PyValueError;
 use pyo3::{PyErr, PyResult, pyclass, pymethods};
 
@@ -28,18 +29,19 @@ impl From<PySeriesError> for PyErr {
 ///     ValueError: If x and y have different lengths or x is not monotonic.
 #[pyclass(name = "Series", module = "lox_space", frozen)]
 #[derive(Clone, Debug)]
-pub struct PySeries(pub Series<Vec<f64>, Vec<f64>>);
+pub struct PySeries(pub Series);
 
 #[pymethods]
 impl PySeries {
     #[new]
-    #[pyo3(signature = (x, y, method="linear"))]
-    fn new(x: Vec<f64>, y: Vec<f64>, method: &str) -> PyResult<Self> {
-        let series = match method {
-            "linear" => Series::try_linear(x, y).map_err(PySeriesError)?,
-            "cubic_spline" => Series::try_cubic_spline(x, y).map_err(PySeriesError)?,
-            _ => return Err(PyValueError::new_err("unknown method")),
+    #[pyo3(signature = (x, y, interpolation="linear"))]
+    fn new(x: Vec<f64>, y: Vec<f64>, interpolation: &str) -> PyResult<Self> {
+        let interpolation = match interpolation {
+            "linear" => InterpolationType::Linear,
+            "cubic_spline" => InterpolationType::CubicSpline,
+            _ => return Err(PyValueError::new_err("unknown interpolation type")),
         };
+        let series = Series::try_new(x, y, interpolation).map_err(PySeriesError)?;
         Ok(PySeries(series))
     }
 

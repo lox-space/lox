@@ -13,7 +13,7 @@ use lox_ephem::{Ephemeris, path_from_ids};
 use lox_frames::providers::DefaultRotationProvider;
 use lox_frames::rotations::TryRotation;
 use lox_math::roots::Brent;
-use lox_math::series::{Series, SeriesError};
+use lox_math::series::{InterpolationType, Series, SeriesError};
 use lox_time::deltas::TimeDelta;
 use lox_time::julian_dates::JulianDate;
 use lox_time::offsets::DefaultOffsetProvider;
@@ -80,7 +80,7 @@ pub enum ElevationMaskError {
 #[derive(Debug, Clone, PartialEq)]
 pub enum ElevationMask {
     Fixed(f64),
-    Variable(Series<Vec<f64>, Vec<f64>>),
+    Variable(Series),
 }
 
 impl ElevationMask {
@@ -92,7 +92,11 @@ impl ElevationMask {
                 return Err(ElevationMaskError::InvalidAzimuthRange(az_min, az_max));
             }
         }
-        Ok(Self::Variable(Series::try_linear(azimuth, elevation)?))
+        Ok(Self::Variable(Series::try_new(
+            azimuth,
+            elevation,
+            InterpolationType::Linear,
+        )?))
     }
 
     pub fn with_fixed_elevation(elevation: f64) -> Self {
@@ -113,10 +117,10 @@ pub struct Pass<T: TimeScale> {
     times: Vec<Time<T>>,
     observables: Vec<Observables>,
     // Series for interpolation
-    azimuth_series: Series<Vec<f64>, Vec<f64>>,
-    elevation_series: Series<Vec<f64>, Vec<f64>>,
-    range_series: Series<Vec<f64>, Vec<f64>>,
-    range_rate_series: Series<Vec<f64>, Vec<f64>>,
+    azimuth_series: Series,
+    elevation_series: Series,
+    range_series: Series,
+    range_rate_series: Series,
 }
 
 pub type DynPass = Pass<DynTimeScale>;
@@ -161,7 +165,7 @@ impl DynPass {
 
         // Only create a pass if we have valid observations
         if pass_times.is_empty() {
-            return Err(SeriesError::InsufficientPoints(0, 2));
+            return Err(SeriesError::InsufficientPoints(0));
         }
 
         Pass::new(window, pass_times, pass_observables)
@@ -224,10 +228,14 @@ impl<T: TimeScale> Pass<T> {
         };
 
         // Create series for each observable
-        let azimuth_series = Series::try_linear(time_seconds.clone(), azimuths)?;
-        let elevation_series = Series::try_linear(time_seconds.clone(), elevations)?;
-        let range_series = Series::try_linear(time_seconds.clone(), ranges)?;
-        let range_rate_series = Series::try_linear(time_seconds, range_rates)?;
+        let azimuth_series =
+            Series::try_new(time_seconds.clone(), azimuths, InterpolationType::Linear)?;
+        let elevation_series =
+            Series::try_new(time_seconds.clone(), elevations, InterpolationType::Linear)?;
+        let range_series =
+            Series::try_new(time_seconds.clone(), ranges, InterpolationType::Linear)?;
+        let range_rate_series =
+            Series::try_new(time_seconds, range_rates, InterpolationType::Linear)?;
 
         Ok(Pass {
             window,
@@ -400,7 +408,7 @@ pub fn visibility_combined<E: Ephemeris + Send + Sync>(
         // Use the new from_window constructor to properly calculate observables
         match DynPass::from_window(window, time_resolution, gs, mask, sc) {
             Ok(pass) => passes.push(pass),
-            Err(SeriesError::InsufficientPoints(_, _)) => {
+            Err(SeriesError::InsufficientPoints(_)) => {
                 // Skip windows where the satellite never rises above the elevation mask
                 continue;
             }
