@@ -140,7 +140,6 @@ impl<T: TimeScale> Window<T> {
 
     fn contains(&self, other: &Self) -> bool
     where
-        // FIXME: Manually implement `Ord` on `Time`
         T: Ord,
     {
         self.start <= other.start && self.end >= other.end
