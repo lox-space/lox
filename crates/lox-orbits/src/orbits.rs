@@ -32,6 +32,11 @@ use lox_time::{
 use lox_units::{AngleUnits, Distance};
 use thiserror::Error;
 
+pub enum OrbitType {
+    Cartesian(Cartesian),
+    Keplerian(Keplerian),
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Orbit<S, T: TimeScale, O: Origin, R: ReferenceFrame> {
     state: S,
@@ -39,6 +44,8 @@ pub struct Orbit<S, T: TimeScale, O: Origin, R: ReferenceFrame> {
     origin: O,
     frame: R,
 }
+
+pub type DynOrbit = Orbit<OrbitType, DynTimeScale, DynOrigin, DynFrame>;
 
 impl<S, T, O, R> Orbit<S, T, O, R>
 where
@@ -99,6 +106,10 @@ where
         O: PointMass,
     {
         GravitationalParameter::km3_per_s2(self.origin.gravitational_parameter())
+    }
+
+    pub fn propagate(&self) -> Trajectory<T, O, R> {
+        todo!()
     }
 }
 
