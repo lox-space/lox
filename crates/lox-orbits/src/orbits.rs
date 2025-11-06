@@ -30,6 +30,7 @@ use lox_time::{
     time_scales::{DynTimeScale, TimeScale},
 };
 use lox_units::{AngleUnits, Distance};
+use thiserror::Error;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Orbit<S, T: TimeScale, O: Origin, R: ReferenceFrame> {
@@ -52,6 +53,13 @@ where
             origin,
             frame,
         }
+    }
+
+    pub fn state(&self) -> S
+    where
+        S: Copy,
+    {
+        self.state
     }
 
     pub fn time(&self) -> Time<T>
@@ -284,6 +292,12 @@ where
 
 pub type DynKeplerianOrbit = Orbit<Keplerian, DynTimeScale, DynOrigin, DynFrame>;
 
+#[derive(Debug, Error)]
+pub enum TrajectorError {
+    #[error("at least 2 states are required but only {0} were provided")]
+    InsufficientStates(usize),
+}
+
 #[derive(Debug, Clone)]
 pub struct Trajectory<T: TimeScale, O: Origin, R: ReferenceFrame> {
     epoch: Time<T>,
@@ -294,16 +308,44 @@ pub struct Trajectory<T: TimeScale, O: Origin, R: ReferenceFrame> {
 
 impl<T, O, R> Trajectory<T, O, R>
 where
-    T: TimeScale,
-    O: Origin,
-    R: ReferenceFrame,
+    T: TimeScale + Copy,
+    O: Origin + Copy,
+    R: ReferenceFrame + Copy,
 {
-    pub fn at(&self, time: Time<T>) -> CartesianOrbit<T, O, R>
-    where
-        T: Copy,
-        O: Copy,
-        R: Copy,
-    {
+    pub fn new(states: impl IntoIterator<Item = CartesianOrbit<T, O, R>>) -> Self {
+        let mut states = states.into_iter().peekable();
+        let first = states.peek().unwrap();
+        let epoch = first.time();
+        let origin = first.origin();
+        let frame = first.reference_frame();
+        let data = states
+            .map(|orb| {
+                let time = (orb.time() - epoch).as_seconds_f64();
+                TimeStampedCartesian {
+                    time,
+                    state: orb.state(),
+                }
+            })
+            .collect();
+        Self {
+            epoch,
+            origin,
+            frame,
+            data,
+        }
+    }
+
+    pub fn try_new(
+        states: impl IntoIterator<Item = CartesianOrbit<T, O, R>>,
+    ) -> Result<Self, TrajectorError> {
+        let mut states = states.into_iter().peekable();
+        for i in 0..2 {
+            states.peek().ok_or(TrajectorError::InsufficientStates(i))?;
+        }
+        Ok(Self::new(states))
+    }
+
+    pub fn at(&self, time: Time<T>) -> CartesianOrbit<T, O, R> {
         let t = (time - self.epoch).as_seconds_f64();
         let state = self.data.at(t);
         Orbit {
@@ -320,8 +362,6 @@ where
         provider: P,
     ) -> Result<Trajectory<T, O, R1>, Box<dyn std::error::Error>>
     where
-        T: Copy,
-        R: Copy,
         R1: ReferenceFrame + Copy,
         P: TryTransform<R, R1, T>,
     {
@@ -359,3 +399,14 @@ where
 }
 
 pub type DynTrajectory = Trajectory<DynTimeScale, DynOrigin, DynFrame>;
+
+impl<T, O, R> FromIterator<CartesianOrbit<T, O, R>> for Trajectory<T, O, R>
+where
+    T: TimeScale + Copy,
+    O: Origin + Copy,
+    R: ReferenceFrame + Copy,
+{
+    fn from_iter<U: IntoIterator<Item = CartesianOrbit<T, O, R>>>(iter: U) -> Self {
+        Self::new(iter)
+    }
+}
