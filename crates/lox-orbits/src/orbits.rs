@@ -30,8 +30,12 @@ use lox_time::{
     deltas::TimeDelta,
     time_scales::{DynTimeScale, TimeScale},
 };
-use lox_units::{AngleUnits, Distance};
 use thiserror::Error;
+
+pub enum OrbitType {
+    Cartesian(Cartesian),
+    Keplerian(Keplerian),
+}
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Orbit<S, T: TimeScale, O: Origin, R: ReferenceFrame> {
@@ -40,6 +44,8 @@ pub struct Orbit<S, T: TimeScale, O: Origin, R: ReferenceFrame> {
     origin: O,
     frame: R,
 }
+
+pub type DynOrbit = Orbit<OrbitType, DynTimeScale, DynOrigin, DynFrame>;
 
 impl<S, T, O, R> Orbit<S, T, O, R>
 where
@@ -100,6 +106,10 @@ where
         O: PointMass,
     {
         GravitationalParameter::km3_per_s2(self.origin.gravitational_parameter())
+    }
+
+    pub fn propagate(&self) -> Trajectory<T, O, R> {
+        todo!()
     }
 }
 
@@ -313,23 +323,6 @@ where
     O: Origin + Copy,
     R: ReferenceFrame + Copy,
 {
-<<<<<<< HEAD
-    pub fn at(&self, time: Time<T>) -> CartesianOrbit<T, O, R>
-    where
-        T: Copy,
-        O: Copy,
-        R: Copy,
-    {
-        let t = (time - self.epoch).to_seconds().to_f64();
-||||||| parent of 44064ca (feat(lox-orbits): add constructors for new trajectories)
-    pub fn at(&self, time: Time<T>) -> CartesianOrbit<T, O, R>
-    where
-        T: Copy,
-        O: Copy,
-        R: Copy,
-    {
-        let t = (time - self.epoch).as_seconds_f64();
-=======
     pub fn new(states: impl IntoIterator<Item = CartesianOrbit<T, O, R>>) -> Self {
         let mut states = states.into_iter().peekable();
         let first = states.peek().unwrap();
@@ -364,8 +357,7 @@ where
     }
 
     pub fn at(&self, time: Time<T>) -> CartesianOrbit<T, O, R> {
-        let t = (time - self.epoch).as_seconds_f64();
->>>>>>> 44064ca (feat(lox-orbits): add constructors for new trajectories)
+        let t = (time - self.epoch).to_seconds().to_f64();
         let state = self.data.at(t);
         Orbit {
             state,

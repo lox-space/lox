@@ -13,5 +13,6 @@ pub mod events;
 pub mod ground;
 pub mod orbits;
 pub mod propagators;
+pub mod scenarios;
 pub mod states;
 pub mod trajectories;
