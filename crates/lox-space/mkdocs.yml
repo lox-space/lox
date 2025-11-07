@@ -2,12 +2,16 @@
 #
 # SPDX-License-Identifier: MPL-2.0
 
-site_name: My Docs
+site_name: Lox Python
+site_url: https://python.lox-space.org
+repo_url: https://github.com/lox-space/lox
+
 theme:
   name: material
   palette:
     scheme: slate
     primary: indigo
+
 plugins:
 - mkdocstrings:
     handlers:
