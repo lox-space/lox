@@ -216,6 +216,7 @@ class TimeScale:
     def name(self) -> str: ...
 
 class Time:
+    """The Time class."""
     def __new__(
         cls,
         scale: Scale | TimeScale,
