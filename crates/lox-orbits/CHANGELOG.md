@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.22](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.21...lox-orbits-v0.1.0-alpha.22) - 2025-11-07
+
+### Added
+
+- *(lox-orbits)* add inclination to SSOBuilder
+- *(lox-orbits)* re-design trajectories
+- add SSO builder and Earth ephemeris
+
+### Other
+
+- *(lox-orbits)* rename to SsoBuilder
+- refactor orbit tracing
+
 ## [0.1.0-alpha.21](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.20...lox-orbits-v0.1.0-alpha.21) - 2025-10-29
 
 ### Added

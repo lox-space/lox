@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.0-alpha.5](https://github.com/lox-space/lox/compare/lox-frames-v0.1.0-alpha.4...lox-frames-v0.1.0-alpha.5) - 2025-11-07
+
+### Added
+
+- *(lox-orbits)* re-design trajectories
+- *(lox-frames)* add frame ID to builtin frames
+
 ## [0.1.0-alpha.4](https://github.com/lox-space/lox/compare/lox-frames-v0.1.0-alpha.3...lox-frames-v0.1.0-alpha.4) - 2025-10-29
 
 ### Added
