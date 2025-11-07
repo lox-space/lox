@@ -73,3 +73,6 @@ docs/_build/
 
 # Pyenv
 .python-version
+
+# MkDocs documentation
+site/
