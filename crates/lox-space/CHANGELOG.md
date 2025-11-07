@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.29](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.28...lox-space-v0.1.0-alpha.29) - 2025-11-07
+
+### Added
+
+- *(lox-orbits)* re-design trajectories
+
+### Other
+
+- *(lox-space)* update MkDocs config
+- *(lox-space)* test Python reference docs
+
 ## [0.1.0-alpha.28](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.27...lox-space-v0.1.0-alpha.28) - 2025-10-29
 
 ### Added

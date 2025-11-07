@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.14](https://github.com/lox-space/lox/compare/lox-earth-v0.1.0-alpha.13...lox-earth-v0.1.0-alpha.14) - 2025-11-07
+
+### Added
+
+- *(lox-orbits)* re-design trajectories
+- add SSO builder and Earth ephemeris
+
+### Other
+
+- refactor orbit tracing
+
 ## [0.1.0-alpha.13](https://github.com/lox-space/lox/compare/lox-earth-v0.1.0-alpha.12...lox-earth-v0.1.0-alpha.13) - 2025-10-29
 
 ### Added
