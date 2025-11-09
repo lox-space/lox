@@ -10,8 +10,8 @@ use lox_bodies::{
 };
 use lox_core::types::units::Radians;
 use lox_ephem::{Ephemeris, path_from_ids};
-use lox_frames::providers::DefaultTransformProvider;
-use lox_frames::transformations::TryTransform;
+use lox_frames::providers::DefaultRotationProvider;
+use lox_frames::rotations::TryRotation;
 use lox_math::roots::Brent;
 use lox_math::series::{Series, SeriesError};
 use lox_time::deltas::TimeDelta;
@@ -141,8 +141,8 @@ impl DynPass {
 
             // Transform to body-fixed frame like elevation_dyn does
             let body_fixed = DynFrame::Iau(gs.origin());
-            let rot = DefaultTransformProvider
-                .try_transform(DynFrame::Icrf, body_fixed, current_time)
+            let rot = DefaultRotationProvider
+                .try_rotation(DynFrame::Icrf, body_fixed, current_time)
                 .unwrap();
             let (r1, v1) = rot.rotate_state(state.position(), state.velocity());
             let state_bf = DynState::new(state.time(), r1, v1, state.origin(), body_fixed);
@@ -287,8 +287,8 @@ pub fn elevation_dyn(
 ) -> Radians {
     let body_fixed = DynFrame::Iau(gs.origin());
     let sc = sc.interpolate_at(time);
-    let rot = DefaultTransformProvider
-        .try_transform(DynFrame::Icrf, body_fixed, time)
+    let rot = DefaultRotationProvider
+        .try_rotation(DynFrame::Icrf, body_fixed, time)
         .unwrap();
     let (r1, v1) = rot.rotate_state(sc.position(), sc.velocity());
     let sc = State::new(sc.time(), r1, v1, sc.origin(), body_fixed);
@@ -421,7 +421,7 @@ pub fn elevation<T, O, P>(
 where
     T: TimeScale + Copy,
     O: Origin + TrySpheroid + RotationalElements + Copy,
-    P: TryTransform<Icrf, Iau<O>, T>,
+    P: TryRotation<Icrf, Iau<O>, T>,
 {
     let body_fixed = Iau::new(gs.origin());
     let sc = sc.interpolate_at(time);
@@ -440,7 +440,7 @@ pub fn visibility<T, O, P>(
 where
     T: TimeScale + Copy,
     O: Origin + Spheroid + RotationalElements + Copy,
-    P: TryTransform<Icrf, Iau<O>, T>,
+    P: TryRotation<Icrf, Iau<O>, T>,
 {
     if times.len() < 2 {
         return vec![];
@@ -532,7 +532,7 @@ mod tests {
         let actual: Vec<Radians> = gs
             .times()
             .iter()
-            .map(|t| elevation(*t, &location(), &mask, &sc, &DefaultTransformProvider))
+            .map(|t| elevation(*t, &location(), &mask, &sc, &DefaultRotationProvider))
             .collect();
         assert_approx_eq!(actual, expected, atol <= 1e-1);
     }
@@ -563,7 +563,7 @@ mod tests {
         let sc = spacecraft_trajectory();
         let times: Vec<Time<Tai>> = sc.states().iter().map(|s| s.time()).collect();
         let expected = contacts();
-        let actual = visibility(&times, &gs, &mask, &sc, &DefaultTransformProvider);
+        let actual = visibility(&times, &gs, &mask, &sc, &DefaultRotationProvider);
         assert_eq!(actual.len(), expected.len());
         assert_approx_eq!(expected, actual, rtol <= 1e-4);
     }

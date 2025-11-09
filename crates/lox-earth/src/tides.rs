@@ -5,14 +5,15 @@
 
 use std::f64::consts::TAU;
 
-use lox_units::{Angle, AngleUnits};
+use lox_core::units::{Angle, AngleUnits};
 use thiserror::Error;
 
-use lox_bodies::fundamental::iers03::mean_moon_sun_elongation_iers03;
-use lox_bodies::{Moon, Sun};
 use lox_core::f64::consts::{DAYS_PER_JULIAN_CENTURY, MJD_J2000};
 use lox_core::types::julian_dates::ModifiedJulianDate;
 use lox_core::types::units::{Arcseconds, Seconds};
+use lox_frames::iers::fundamental::iers03::{
+    d_iers03, f_iers03, l_iers03, lp_iers03, omega_iers03,
+};
 
 use crate::tides::constants::{LUNI_SOLAR_TIDAL_TERMS, OCEANIC_TIDAL_TERMS};
 
@@ -86,13 +87,11 @@ type TidalArgs = [Angle; 6];
 fn tidal_args(julian_centuries_since_j2000: f64) -> TidalArgs {
     [
         chi(julian_centuries_since_j2000),
-        Moon.mean_anomaly_iers03(julian_centuries_since_j2000),
-        Sun.mean_anomaly_iers03(julian_centuries_since_j2000),
-        Moon.mean_longitude_minus_ascending_node_mean_longitude_iers03(
-            julian_centuries_since_j2000,
-        ),
-        mean_moon_sun_elongation_iers03(julian_centuries_since_j2000),
-        Moon.ascending_node_mean_longitude_iers03(julian_centuries_since_j2000),
+        l_iers03(julian_centuries_since_j2000),
+        lp_iers03(julian_centuries_since_j2000),
+        f_iers03(julian_centuries_since_j2000),
+        d_iers03(julian_centuries_since_j2000),
+        omega_iers03(julian_centuries_since_j2000),
     ]
 }
 

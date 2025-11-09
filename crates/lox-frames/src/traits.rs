@@ -11,14 +11,13 @@ pub(crate) mod private {
 pub trait ReferenceFrame {
     fn name(&self) -> String;
     fn abbreviation(&self) -> String;
-    fn is_rotating(&self) -> bool;
     #[doc(hidden)]
-    fn frame_id(&self, _: private::Internal) -> Option<i32> {
+    fn frame_id(&self, _: private::Internal) -> Option<usize> {
         None
     }
 }
 
-pub fn frame_id(frame: &impl ReferenceFrame) -> Option<i32> {
+pub fn frame_id(frame: &impl ReferenceFrame) -> Option<usize> {
     frame.frame_id(private::Internal)
 }
 

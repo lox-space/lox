@@ -174,9 +174,9 @@ impl<T: TimeScale> Time<T> {
     /// Returns the timescale
     pub fn scale(&self) -> T
     where
-        T: Clone,
+        T: Copy,
     {
-        self.scale.clone()
+        self.scale
     }
 
     /// Returns a new [Time] with the delta of `self` but time scale `scale`.
@@ -190,7 +190,7 @@ impl<T: TimeScale> Time<T> {
     where
         T: Copy,
         S: TimeScale + Copy,
-        P: TryOffset<T, S>,
+        P: TryOffset<T, S> + ?Sized,
     {
         let offset = provider.try_offset(self.scale, scale, self.to_delta())?;
         Ok(self.with_scale_and_delta(scale, offset))
