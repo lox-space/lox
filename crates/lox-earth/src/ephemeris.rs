@@ -5,9 +5,9 @@
 use std::iter::zip;
 
 use glam::{DMat3, DVec3};
+use lox_core::units::{ASTRONOMICAL_UNIT, Distance, DistanceUnits, SPEED_OF_LIGHT};
 use lox_core::{coords::Cartesian, f64::consts::SECONDS_PER_JULIAN_YEAR};
 use lox_time::{Time, julian_dates::JulianDate, time_scales::Tdb};
-use lox_units::{ASTRONOMICAL_UNIT, Distance, DistanceUnits, SPEED_OF_LIGHT};
 
 mod coefficients;
 
@@ -149,8 +149,8 @@ const BARICENTRIC_COEFFS: Coeffs = Coeffs {
 
 #[cfg(test)]
 mod tests {
+    use lox_core::units::{DistanceUnits, VelocityUnits};
     use lox_test_utils::assert_approx_eq;
-    use lox_units::{DistanceUnits, VelocityUnits};
 
     use super::*;
 

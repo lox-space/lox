@@ -103,6 +103,10 @@ impl Angle {
         Self((asec % ARCSECONDS_IN_CIRCLE) * RADIANS_IN_ARCSECOND)
     }
 
+    pub fn is_zero(&self) -> bool {
+        self.0 == 0.0
+    }
+
     pub const fn abs(&self) -> Self {
         Self(self.0.abs())
     }

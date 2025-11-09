@@ -487,7 +487,6 @@ dependencies = [
  "lox-math",
  "lox-test-utils",
  "lox-time",
- "lox-units",
  "num",
  "rstest",
  "serde",
@@ -508,6 +507,7 @@ dependencies = [
 name = "lox-frames"
 version = "0.1.0-alpha.4"
 dependencies = [
+ "fast_polynomial",
  "glam",
  "hashbrown",
  "lox-bodies",

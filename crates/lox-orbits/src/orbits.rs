@@ -11,6 +11,7 @@ use std::{
 
 use glam::DVec3;
 use lox_bodies::{DynOrigin, Origin, PointMass, TryPointMass, UndefinedOriginPropertyError};
+use lox_core::units::{AngleUnits, Distance};
 use lox_core::{
     anomalies::{EccentricAnomaly, TrueAnomaly},
     coords::{Cartesian, CartesianTrajectory, TimeStampedCartesian},
@@ -22,14 +23,13 @@ use lox_core::{
 };
 use lox_frames::{
     DynFrame, NonQuasiInertialFrameError, QuasiInertial, ReferenceFrame, TryQuasiInertial,
-    traits::frame_id, transformations::TryTransform,
+    rotations::TryRotation, traits::frame_id,
 };
 use lox_time::{
     Time,
     deltas::TimeDelta,
     time_scales::{DynTimeScale, TimeScale},
 };
-use lox_units::{AngleUnits, Distance};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Orbit<S, T: TimeScale, O: Origin, R: ReferenceFrame> {
@@ -323,7 +323,7 @@ where
         T: Copy,
         R: Copy,
         R1: ReferenceFrame + Copy,
-        P: TryTransform<R, R1, T>,
+        P: TryRotation<R, R1, T>,
     {
         if frame_id(&self.frame) == frame_id(&frame) {
             return Ok(Trajectory {
@@ -341,7 +341,7 @@ where
                 let dt: TimeDelta = time.into();
                 let t = self.epoch + dt;
                 provider
-                    .try_transform(self.frame, frame, t)
+                    .try_rotation(self.frame, frame, t)
                     .map(|rot| TimeStampedCartesian {
                         time,
                         state: rot * state,

@@ -4,15 +4,8 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-pub mod cio;
-pub mod cip;
-pub mod coordinate_transformations;
 pub mod eop;
 pub mod ephemeris;
-pub mod itrf;
-pub mod nutation;
-pub mod rotation_angle;
+pub mod providers;
 #[allow(dead_code)]
 pub mod tides;
-pub mod tio;
-pub mod ut1;
