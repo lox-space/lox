@@ -28,6 +28,7 @@ use lox_frames::{
 use lox_time::{
     Time,
     deltas::TimeDelta,
+    intervals::TimeInterval,
     time_scales::{DynTimeScale, TimeScale},
 };
 use thiserror::Error;
@@ -108,7 +109,10 @@ where
         GravitationalParameter::km3_per_s2(self.origin.gravitational_parameter())
     }
 
-    pub fn propagate(&self) -> Trajectory<T, O, R> {
+    pub fn propagate<T1>(&self, interval: TimeInterval<T1>) -> Trajectory<T, O, R>
+    where
+        T1: TimeScale,
+    {
         todo!()
     }
 }
@@ -286,7 +290,7 @@ where
                 let mean_anomaly = EccentricAnomaly::new(ecc.rad()).to_mean(self.eccentricity());
                 let time_of_flight = (mean_anomaly - mean_anomaly_at_epoch).as_f64() / mean_motion;
                 TimeStampedCartesian {
-                    time: time_of_flight,
+                    time: TimeDelta::from_seconds_f64(time_of_flight),
                     state,
                 }
             })
@@ -331,7 +335,7 @@ where
         let frame = first.reference_frame();
         let data = states
             .map(|orb| {
-                let time = (orb.time() - epoch).as_seconds_f64();
+                let time = orb.time() - epoch;
                 TimeStampedCartesian {
                     time,
                     state: orb.state(),

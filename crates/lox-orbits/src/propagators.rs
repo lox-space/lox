@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use lox_bodies::Origin;
+use lox_core::coords::TimeStampedCartesian;
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::time_scales::TimeScale;
@@ -40,8 +41,35 @@ where
     }
 }
 
-pub struct PropagatorError;
+pub trait StatePropagator: Send + Sync + 'static {
+    type State;
+    type Error: std::error::Error + Send + Sync + 'static;
 
-pub trait OrbitPropagator<Input, Output> {
-    fn propagate(&self, initial_state: Input, step: TimeDelta) -> Result<Output, PropagatorError>;
+    fn propagate(
+        &self,
+        initial_state: Self::State,
+        step: TimeDelta,
+    ) -> Result<Self::State, Self::Error>;
+}
+
+pub trait DynPropagator: Send + Sync + 'static {
+    fn propagate(
+        &self,
+        initial_state: TimeStampedCartesian,
+        step: TimeDelta,
+    ) -> Result<TimeStampedCartesian, Box<dyn std::error::Error>>;
+}
+
+impl<T: StatePropagator<State = TimeStampedCartesian>> DynPropagator for T {
+    fn propagate(
+        &self,
+        initial_state: TimeStampedCartesian,
+        step: TimeDelta,
+    ) -> Result<TimeStampedCartesian, Box<dyn std::error::Error>> {
+        Ok(<Self as StatePropagator>::propagate(
+            self,
+            initial_state,
+            step,
+        )?)
+    }
 }

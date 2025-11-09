@@ -33,6 +33,7 @@ rayon.workspace = true
 sgp4.workspace = true
 thiserror.workspace = true
 bevy_ecs = "0.17.2"
+differential-equations = "0.5.0"
 
 [dev-dependencies]
 rstest.workspace = true
