@@ -4,7 +4,19 @@
 
 use lox_bodies::{Origin, RotationalElements, TryRotationalElements, UndefinedOriginPropertyError};
 
-use crate::traits::{BodyFixed, QuasiInertial, ReferenceFrame};
+use crate::{
+    iers::IersSystem,
+    traits::{BodyFixed, QuasiInertial, ReferenceFrame},
+};
+
+const ICRF_ID: usize = 0;
+const CIRF_ID: usize = 1;
+const TIRF_ID: usize = 2;
+const ITRF_ID: usize = 3;
+
+const MOD_ID: usize = 11;
+const TOD_ID: usize = 12;
+const PEF_ID: usize = 13;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Icrf;
@@ -18,12 +30,8 @@ impl ReferenceFrame for Icrf {
         "ICRF".to_string()
     }
 
-    fn is_rotating(&self) -> bool {
-        false
-    }
-
-    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<i32> {
-        Some(0)
+    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<usize> {
+        Some(ICRF_ID)
     }
 }
 
@@ -41,12 +49,8 @@ impl ReferenceFrame for Cirf {
         "CIRF".to_string()
     }
 
-    fn is_rotating(&self) -> bool {
-        false
-    }
-
-    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<i32> {
-        Some(1)
+    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<usize> {
+        Some(CIRF_ID)
     }
 }
 
@@ -62,12 +66,8 @@ impl ReferenceFrame for Tirf {
         "TIRF".to_string()
     }
 
-    fn is_rotating(&self) -> bool {
-        true
-    }
-
-    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<i32> {
-        Some(2)
+    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<usize> {
+        Some(TIRF_ID)
     }
 }
 
@@ -83,12 +83,85 @@ impl ReferenceFrame for Itrf {
         "ITRF".to_string()
     }
 
-    fn is_rotating(&self) -> bool {
-        true
+    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<usize> {
+        Some(ITRF_ID)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Mod<T: IersSystem>(pub T);
+
+impl<T> ReferenceFrame for Mod<T>
+where
+    T: IersSystem,
+{
+    fn name(&self) -> String {
+        format!("{} Mean of Date Frame", self.0.name())
     }
 
-    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<i32> {
-        Some(3)
+    fn abbreviation(&self) -> String {
+        format!("MOD({})", self.0.name())
+    }
+
+    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<usize> {
+        Some(MOD_ID * 10 + self.0.id())
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Tod<T: IersSystem>(pub T);
+
+impl<T> ReferenceFrame for Tod<T>
+where
+    T: IersSystem,
+{
+    fn name(&self) -> String {
+        format!("{} True of Date Frame", self.0.name())
+    }
+
+    fn abbreviation(&self) -> String {
+        format!("TOD({})", self.0.name())
+    }
+
+    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<usize> {
+        Some(TOD_ID * 10 + self.0.id())
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Pef<T: IersSystem>(pub T);
+
+impl<T> ReferenceFrame for Pef<T>
+where
+    T: IersSystem,
+{
+    fn name(&self) -> String {
+        format!("{} Pseudo-Earth Fixed Frame", self.0.name())
+    }
+
+    fn abbreviation(&self) -> String {
+        format!("PEF({})", self.0.name())
+    }
+
+    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<usize> {
+        Some(PEF_ID * 10 + self.0.id())
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Teme;
+
+impl ReferenceFrame for Teme {
+    fn name(&self) -> String {
+        "True Equator Mean Equinox".to_owned()
+    }
+
+    fn abbreviation(&self) -> String {
+        "TEME".to_owned()
+    }
+
+    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<usize> {
+        Some(7)
     }
 }
 
@@ -150,11 +223,7 @@ where
         format!("IAU_{body}")
     }
 
-    fn is_rotating(&self) -> bool {
-        true
-    }
-
-    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<i32> {
-        Some(1000 + self.0.id().0)
+    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<usize> {
+        Some(1000 + self.0.id().0 as usize)
     }
 }

@@ -11,20 +11,20 @@ use lox_bodies::{
     DynOrigin, Origin, PointMass, RotationalElements, Spheroid, TryPointMass, TrySpheroid,
     UndefinedOriginPropertyError,
 };
+use lox_core::units::{Angle, AngleUnits};
 use lox_ephem::{Ephemeris, path_from_ids};
-use lox_frames::transformations::TryTransform;
+use lox_frames::rotations::TryRotation;
 use lox_math::{
     glam::Azimuth,
     roots::{BracketError, FindRoot, Secant},
 };
 use lox_time::{Time, julian_dates::JulianDate, time_scales::DynTimeScale, time_scales::TimeScale};
-use lox_units::{Angle, AngleUnits};
 use thiserror::Error;
 
 use crate::anomalies::{eccentric_to_true, hyperbolic_to_true};
 use crate::elements::{DynKeplerian, Keplerian, KeplerianElements, is_circular, is_equatorial};
 use crate::ground::{DynGroundLocation, GroundLocation};
-use lox_frames::{DynFrame, Iau, Icrf, ReferenceFrame};
+use lox_frames::{DynFrame, Iau, Icrf, ReferenceFrame, TryBodyFixed};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct State<T: TimeScale, O: Origin, R: ReferenceFrame> {
@@ -85,12 +85,12 @@ where
     pub fn try_to_frame<R1, P>(&self, frame: R1, provider: &P) -> Result<State<T, O, R1>, P::Error>
     where
         R: Copy,
-        P: TryTransform<R, R1, T>,
+        P: TryRotation<R, R1, T>,
         R1: ReferenceFrame + Copy,
         O: Clone,
         T: Copy,
     {
-        let rot = provider.try_transform(self.frame, frame, self.time)?;
+        let rot = provider.try_rotation(self.frame, frame, self.time)?;
         let (r1, v1) = rot.rotate_state(self.position, self.velocity);
         Ok(State::new(self.time(), r1, v1, self.origin(), frame))
     }
@@ -188,7 +188,7 @@ pub enum StateToDynGroundError {
 
 impl DynState {
     pub fn to_dyn_ground_location(&self) -> Result<DynGroundLocation, StateToDynGroundError> {
-        if !self.frame.is_rotating() {
+        if self.frame.try_body_fixed().is_err() {
             return Err(StateToDynGroundError::NonBodyFixedFrame(
                 self.frame.name().to_string(),
             ));
@@ -406,7 +406,7 @@ mod tests {
 
     use lox_bodies::{Earth, Jupiter, Venus};
     use lox_ephem::spk::parser::{Spk, parse_daf_spk};
-    use lox_frames::providers::DefaultTransformProvider;
+    use lox_frames::providers::DefaultRotationProvider;
     use lox_test_utils::{assert_approx_eq, data_file};
     use lox_time::{Time, time, time_scales::Tdb, utc::Utc};
 
@@ -424,9 +424,9 @@ mod tests {
         let tdb = time!(Tdb, 2000, 1, 1, 12).unwrap();
         let s = State::new(tdb, r0, v0, Jupiter, Icrf);
         let s1 = s
-            .try_to_frame(iau_jupiter, &DefaultTransformProvider)
+            .try_to_frame(iau_jupiter, &DefaultRotationProvider)
             .unwrap();
-        let s0 = s1.try_to_frame(Icrf, &DefaultTransformProvider).unwrap();
+        let s0 = s1.try_to_frame(Icrf, &DefaultRotationProvider).unwrap();
 
         assert_approx_eq!(s0.position(), r0, rtol <= 1e-8);
         assert_approx_eq!(s0.velocity(), v0, rtol <= 1e-8);

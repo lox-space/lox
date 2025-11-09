@@ -8,7 +8,11 @@ use std::{
 };
 
 use csv::{ByteRecord, ReaderBuilder};
-use lox_core::f64::consts::{SECONDS_BETWEEN_MJD_AND_J2000, SECONDS_PER_DAY};
+use lox_core::{
+    f64::consts::{SECONDS_BETWEEN_MJD_AND_J2000, SECONDS_PER_DAY},
+    units::Angle,
+};
+use lox_frames::iers::{Corrections, polar_motion::PoleCoords};
 use lox_io::spice::lsk::LeapSecondsKernel;
 use lox_math::series::{Series, SeriesError};
 use lox_time::{
@@ -216,10 +220,12 @@ impl EopParser {
     }
 }
 
-#[derive(Debug, Default, Error)]
+#[derive(Debug, Error)]
 pub enum EopProviderError {
     #[error(transparent)]
     Utc(#[from] UtcError),
+    #[error("offset error: {0}")]
+    Offset(String),
     #[error("value was extrapolated")]
     ExtrapolatedValue(f64),
     #[error("values were extrapolated")]
@@ -228,9 +234,6 @@ pub enum EopProviderError {
     MissingIau1980,
     #[error("no 'finals2000A.all.csv' file was loaded")]
     MissingIau2000,
-    #[default]
-    #[error("unreachable")]
-    Never,
 }
 
 #[derive(Clone, Debug)]
@@ -258,22 +261,25 @@ pub struct EopProvider {
 }
 
 impl EopProvider {
-    pub fn polar_motion<T: TryToUtc>(&self, t: T) -> Result<(f64, f64), EopProviderError> {
+    pub fn polar_motion<T: TryToUtc>(&self, t: T) -> Result<PoleCoords, EopProviderError> {
         let t = t.try_to_utc()?.seconds_since_j2000();
-        let px = self.polar_motion.0.interpolate(t);
-        let py = self.polar_motion.1.interpolate(t);
+        let xp = self.polar_motion.0.interpolate(t);
+        let yp = self.polar_motion.1.interpolate(t);
         let (min, _) = self.polar_motion.0.first();
         let (max, _) = self.polar_motion.0.last();
         if t < min || t > max {
-            return Err(EopProviderError::ExtrapolatedValues(px, py));
+            return Err(EopProviderError::ExtrapolatedValues(xp, yp));
         }
-        Ok((px, py))
+        Ok(PoleCoords {
+            xp: Angle::arcseconds(xp),
+            yp: Angle::arcseconds(yp),
+        })
     }
 
     pub fn nutation_precession_iau1980<T: TryToUtc>(
         &self,
         t: T,
-    ) -> Result<(f64, f64), EopProviderError> {
+    ) -> Result<Corrections, EopProviderError> {
         let Some(nut_prec) = &self.nut_prec.iau1980 else {
             return Err(EopProviderError::MissingIau1980);
         };
@@ -285,13 +291,16 @@ impl EopProvider {
         if t < min || t > max {
             return Err(EopProviderError::ExtrapolatedValues(dpsi, deps));
         }
-        Ok((dpsi, deps))
+        Ok(Corrections(
+            Angle::arcseconds(dpsi * 1e-3),
+            Angle::arcseconds(deps * 1e-3),
+        ))
     }
 
     pub fn nutation_precession_iau2000<T: TryToUtc>(
         &self,
         t: T,
-    ) -> Result<(f64, f64), EopProviderError> {
+    ) -> Result<Corrections, EopProviderError> {
         let Some(nut_prec) = &self.nut_prec.iau2000 else {
             return Err(EopProviderError::MissingIau2000);
         };
@@ -303,7 +312,10 @@ impl EopProvider {
         if t < min || t > max {
             return Err(EopProviderError::ExtrapolatedValues(dx, dy));
         }
-        Ok((dx, dy))
+        Ok(Corrections(
+            Angle::arcseconds(dx * 1e-3),
+            Angle::arcseconds(dy * 1e-3),
+        ))
     }
 
     pub fn delta_ut1_tai(&self, tai: TimeDelta) -> Result<TimeDelta, EopProviderError> {

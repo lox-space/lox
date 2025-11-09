@@ -10,7 +10,7 @@ use crate::earth::python::ut1::{PyEopProvider, PyEopProviderError};
 use crate::ephem::Ephemeris;
 use crate::ephem::python::{PyDafSpkError, PySpk};
 use crate::frames::DynFrame;
-use crate::frames::python::{PyDynTransformEopError, PyDynTransformError, PyFrame};
+use crate::frames::python::{PyDynRotationError, PyFrame};
 use crate::math::python::PySeriesError;
 use crate::math::roots::Brent;
 use crate::math::series::SeriesError;
@@ -39,8 +39,8 @@ use crate::time::python::time::PyTime;
 use crate::time::time_scales::{DynTimeScale, Tai};
 
 use glam::DVec3;
-use lox_frames::providers::DefaultTransformProvider;
-use lox_frames::transformations::{Rotation, TryTransform};
+use lox_frames::providers::DefaultRotationProvider;
+use lox_frames::rotations::TryRotation;
 use numpy::{PyArray1, PyArray2, PyArrayMethods};
 use pyo3::exceptions::PyValueError;
 use pyo3::types::{PyList, PyType};
@@ -266,15 +266,15 @@ impl PyState {
         let origin = self.0.reference_frame();
         let target = frame.0;
         let time = self.0.time();
-        let rot: Result<Rotation, PyErr> = match provider {
+        let rot = match provider {
             Some(provider) => provider
-                .try_transform(origin, target, time)
-                .map_err(|err| PyDynTransformEopError(err).into()),
-            None => DefaultTransformProvider
-                .try_transform(origin, target, time)
-                .map_err(|err| PyDynTransformError(err).into()),
-        };
-        let (r1, v1) = rot?.rotate_state(self.0.position(), self.0.velocity());
+                .try_rotation(origin, target, time)
+                .map_err(PyDynRotationError),
+            None => DefaultRotationProvider
+                .try_rotation(origin, target, time)
+                .map_err(PyDynRotationError),
+        }?;
+        let (r1, v1) = rot.rotate_state(self.0.position(), self.0.velocity());
         Ok(PyState(State::new(
             self.0.time(),
             r1,

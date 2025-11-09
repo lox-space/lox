@@ -22,6 +22,9 @@ pub const SECONDS_PER_MINUTE: f64 = 60.0;
 pub const SECONDS_PER_HOUR: f64 = SECONDS_PER_MINUTE * 60.0;
 
 /// Number of seconds in a day.
+pub const SECONDS_PER_HALF_DAY: f64 = SECONDS_PER_HOUR * 12.0;
+
+/// Number of seconds in a day.
 pub const SECONDS_PER_DAY: f64 = SECONDS_PER_HOUR * 24.0;
 
 /// Number of seconds in a Julian year (365.25 days).
@@ -51,3 +54,9 @@ pub const SECONDS_BETWEEN_MJD_AND_J2000: f64 = 4453444800.0;
 
 /// The number of seconds between the J1950 Epoch and the J2000 Epoch.
 pub const SECONDS_BETWEEN_J1950_AND_J2000: f64 = 1577880000.0;
+
+/*
+ * Physical constants
+ */
+
+pub const ROTATION_RATE_EARTH: f64 = 7.2921150e-5;

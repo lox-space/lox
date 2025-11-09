@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use lox_bodies::{Earth, PointMass, Spheroid, Sun};
+use lox_bodies::{Earth, PointMass, Spheroid};
 use lox_core::anomalies::TrueAnomaly;
 use lox_core::elements::{
     ArgumentOfPeriapsis, Eccentricity, GravitationalParameter, Inclination, InclinationError,
@@ -11,14 +11,15 @@ use lox_core::elements::{
 use lox_core::glam::Azimuth;
 use lox_core::time::julian_dates::JulianDate;
 use lox_core::time::time_of_day::TimeOfDay;
+use lox_core::units::DistanceUnits;
 use lox_core::units::{Angle, AngleUnits, Distance};
 use lox_earth::ephemeris::apparent_sun_position;
 use lox_frames::Icrf;
+use lox_frames::iers::fundamental::iers03::lp_iers03;
 use lox_time::Time;
 use lox_time::offsets::{DefaultOffsetProvider, TryOffset};
 use lox_time::time_of_day::TimeOfDayError;
 use lox_time::time_scales::{Tai, Tdb, TimeScale, Ut1};
-use lox_units::DistanceUnits;
 use thiserror::Error;
 
 use crate::orbits::{KeplerianOrbit, Orbit};
@@ -113,7 +114,7 @@ where
     let salt = ra_sun + TimeOfDay::NOON.to_angle();
 
     // G: Mean anomaly of the Sun
-    let m_sun = Sun.mean_anomaly_iers03(tdb.centuries_since_j2000());
+    let m_sun = lp_iers03(tdb.centuries_since_j2000());
     // L: Mean longitude of the Sun
     let l_sun = t_ut1.mul_add(36000.77, 280.460).deg();
     // λ: Longitude of the ecliptic

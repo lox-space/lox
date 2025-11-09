@@ -10,7 +10,6 @@ use std::fmt::{Display, Formatter};
 use thiserror::Error;
 
 pub mod dynamic;
-pub mod fundamental;
 #[allow(clippy::approx_constant)]
 mod generated;
 

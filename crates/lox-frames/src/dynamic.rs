@@ -2,24 +2,21 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use std::{convert::Infallible, str::FromStr};
+use std::str::FromStr;
 
-use lox_bodies::{DynOrigin, Origin, TryRotationalElements, UndefinedOriginPropertyError};
-use lox_time::{Time, time_scales::DynTimeScale};
+use lox_bodies::{DynOrigin, Origin, TryRotationalElements};
 use thiserror::Error;
 
 use crate::{
-    Iau,
-    frames::{Cirf, Icrf, Itrf, Tirf},
-    providers::DefaultTransformProvider,
+    frames::{Cirf, Icrf, Itrf, Mod, Pef, Teme, Tirf, Tod},
+    iers::ReferenceSystem,
     traits::{
         NonBodyFixedFrameError, NonQuasiInertialFrameError, ReferenceFrame, TryBodyFixed,
         TryQuasiInertial, frame_id,
     },
-    transformations::{Rotation, TryTransform},
 };
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum DynFrame {
     #[default]
     Icrf,
@@ -27,6 +24,10 @@ pub enum DynFrame {
     Tirf,
     Itrf,
     Iau(DynOrigin),
+    Mod(ReferenceSystem),
+    Tod(ReferenceSystem),
+    Pef(ReferenceSystem),
+    Teme,
 }
 
 impl ReferenceFrame for DynFrame {
@@ -43,6 +44,10 @@ impl ReferenceFrame for DynFrame {
                     _ => format!("IAU Body-Fixed Reference Frame for {body}"),
                 }
             }
+            DynFrame::Mod(sys) => Mod(*sys).name(),
+            DynFrame::Tod(sys) => Tod(*sys).name(),
+            DynFrame::Pef(sys) => Pef(*sys).name(),
+            DynFrame::Teme => Teme.name(),
         }
     }
 
@@ -56,23 +61,25 @@ impl ReferenceFrame for DynFrame {
                 let body = dyn_origin.name().replace([' ', '-'], "_").to_uppercase();
                 format!("IAU_{body}")
             }
+            DynFrame::Mod(sys) => Mod(*sys).abbreviation(),
+            DynFrame::Tod(sys) => Tod(*sys).abbreviation(),
+            DynFrame::Pef(sys) => Pef(*sys).abbreviation(),
+            DynFrame::Teme => Teme.abbreviation(),
         }
     }
 
-    fn is_rotating(&self) -> bool {
-        match self {
-            DynFrame::Icrf | DynFrame::Cirf => false,
-            DynFrame::Tirf | DynFrame::Itrf | DynFrame::Iau(_) => true,
-        }
-    }
-
-    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<i32> {
+    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<usize> {
         match self {
             DynFrame::Icrf => frame_id(&Icrf),
             DynFrame::Cirf => frame_id(&Cirf),
             DynFrame::Tirf => frame_id(&Tirf),
             DynFrame::Itrf => frame_id(&Itrf),
-            DynFrame::Iau(dyn_origin) => Some(1000 + dyn_origin.id().0),
+            DynFrame::Iau(dyn_origin) => Some(1000 + dyn_origin.id().0 as usize),
+            DynFrame::Mod(sys) => frame_id(&Mod(*sys)),
+            DynFrame::Tod(sys) => frame_id(&Tod(*sys)),
+
+            DynFrame::Pef(sys) => frame_id(&Pef(*sys)),
+            DynFrame::Teme => frame_id(&Teme),
         }
     }
 }
@@ -80,7 +87,7 @@ impl ReferenceFrame for DynFrame {
 impl TryQuasiInertial for DynFrame {
     fn try_quasi_inertial(&self) -> Result<(), NonQuasiInertialFrameError> {
         match self {
-            DynFrame::Icrf => Ok(()),
+            DynFrame::Icrf | DynFrame::Cirf | DynFrame::Mod(_) | DynFrame::Tod(_) => Ok(()),
             _ => Err(NonQuasiInertialFrameError(self.abbreviation())),
         }
     }
@@ -89,7 +96,7 @@ impl TryQuasiInertial for DynFrame {
 impl TryBodyFixed for DynFrame {
     fn try_body_fixed(&self) -> Result<(), NonBodyFixedFrameError> {
         match self {
-            DynFrame::Iau(_) | DynFrame::Itrf => Ok(()),
+            DynFrame::Iau(_) | DynFrame::Itrf | DynFrame::Tirf | DynFrame::Pef(_) => Ok(()),
             _ => Err(NonBodyFixedFrameError(self.abbreviation())),
         }
     }
@@ -118,6 +125,7 @@ impl FromStr for DynFrame {
             "cirf" | "CIRF" => Ok(DynFrame::Cirf),
             "tirf" | "TIRF" => Ok(DynFrame::Tirf),
             "itrf" | "ITRF" => Ok(DynFrame::Itrf),
+            "teme" | "TEME" => Ok(DynFrame::Teme),
             _ => {
                 if let Some(frame) = parse_iau_frame(s) {
                     Ok(frame)
@@ -129,57 +137,12 @@ impl FromStr for DynFrame {
     }
 }
 
-#[derive(Debug, Error)]
-pub enum DynTransformError {
-    #[error("transformations between {0} and {1} require an EOP provider")]
-    MissingEopProvider(String, String),
-    #[error(transparent)]
-    UndefinedRotationalElements(#[from] UndefinedOriginPropertyError),
-}
-
-impl From<Infallible> for DynTransformError {
-    fn from(_: Infallible) -> Self {
-        unreachable!()
-    }
-}
-
-impl TryTransform<DynFrame, DynFrame, DynTimeScale> for DefaultTransformProvider {
-    type Error = DynTransformError;
-
-    fn try_transform(
-        &self,
-        origin: DynFrame,
-        target: DynFrame,
-        time: Time<DynTimeScale>,
-    ) -> Result<Rotation, Self::Error> {
-        match (origin, target) {
-            (DynFrame::Icrf, DynFrame::Icrf) => Ok(Rotation::IDENTITY),
-            (DynFrame::Icrf, DynFrame::Iau(target)) => {
-                Ok(self.try_transform(Icrf, Iau::try_new(target)?, time)?)
-            }
-            (DynFrame::Cirf, DynFrame::Cirf) => Ok(Rotation::IDENTITY),
-            (DynFrame::Tirf, DynFrame::Tirf) => Ok(Rotation::IDENTITY),
-            (DynFrame::Iau(origin), DynFrame::Icrf) => {
-                Ok(self.try_transform(Iau::try_new(origin)?, Icrf, time)?)
-            }
-            (DynFrame::Iau(origin), DynFrame::Iau(target)) => {
-                let origin = Iau::try_new(origin)?;
-                let target = Iau::try_new(target)?;
-                Ok(self
-                    .try_transform(origin, Icrf, time)?
-                    .compose(self.try_transform(Icrf, target, time)?))
-            }
-            (origin, target) => Err(DynTransformError::MissingEopProvider(
-                origin.abbreviation(),
-                target.abbreviation(),
-            )),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use crate::rotations::TryRotation;
+    use crate::{Iau, providers::DefaultRotationProvider};
 
     use glam::DVec3;
     use lox_bodies::{DynOrigin, Earth};
@@ -230,8 +193,8 @@ mod tests {
             .to_dyn_time();
         let r = DVec3::new(-5530.01774359, -3487.0895338, -1850.03476185);
         let v = DVec3::new(1.29534407, -5.02456882, 5.6391936);
-        let rot = DefaultTransformProvider
-            .try_transform(DynFrame::Icrf, frame, time)
+        let rot = DefaultRotationProvider
+            .try_rotation(DynFrame::Icrf, frame, time)
             .unwrap();
         let (r_act, v_act) = rot.rotate_state(r, v);
         assert_approx_eq!(r_act, r_exp, rtol <= 1e-8);

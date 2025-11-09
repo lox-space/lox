@@ -4,9 +4,11 @@
 
 pub mod dynamic;
 pub mod frames;
+pub mod iau;
+pub mod iers;
 pub mod providers;
+pub mod rotations;
 pub mod traits;
-pub mod transformations;
 
 pub use dynamic::{DynFrame, UnknownFrameError};
 pub use frames::{Cirf, Iau, Icrf, Itrf, Tirf};

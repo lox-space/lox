@@ -235,9 +235,9 @@ macro_rules! assert_approx_eq {
         let result = $crate::approx_eq::approx_eq_helper(&$lhs, &$rhs, $atol, $rtol);
         assert!(
             result.is_approx_eq(),
-            "{:?} ≉ {:?}\n\nAbsolute tolerance: {:?}\nRelative tolerance: {:?}\n\n{}",
-            $lhs,
-            $rhs,
+            "{} ≉ {}\n\nAbsolute tolerance: {:?}\nRelative tolerance: {:?}\n\n{}",
+            stringify!($lhs),
+            stringify!($rhs),
             $atol,
             $rtol,
             result

@@ -6,8 +6,7 @@ use crate::frames::{
     dynamic::{DynFrame, UnknownFrameError},
     traits::ReferenceFrame,
 };
-use lox_earth::itrf::DynTransformEopError;
-use lox_frames::dynamic::DynTransformError;
+use lox_frames::rotations::DynRotationError;
 use pyo3::{
     PyErr, PyResult, create_exception,
     exceptions::{PyException, PyValueError},
@@ -24,18 +23,10 @@ impl From<PyUnknownFrameError> for PyErr {
 
 create_exception!(lox_space, FrameTransformationError, PyException);
 
-pub struct PyDynTransformError(pub DynTransformError);
+pub struct PyDynRotationError(pub DynRotationError);
 
-impl From<PyDynTransformError> for PyErr {
-    fn from(err: PyDynTransformError) -> Self {
-        FrameTransformationError::new_err(err.0.to_string())
-    }
-}
-
-pub struct PyDynTransformEopError(pub DynTransformEopError);
-
-impl From<PyDynTransformEopError> for PyErr {
-    fn from(err: PyDynTransformEopError) -> Self {
+impl From<PyDynRotationError> for PyErr {
+    fn from(err: PyDynRotationError) -> Self {
         FrameTransformationError::new_err(err.0.to_string())
     }
 }
@@ -72,7 +63,7 @@ impl From<PyDynTransformEopError> for PyErr {
 ///     'ICRF'
 #[pyclass(name = "Frame", module = "lox_space", frozen)]
 #[pyo3(eq)]
-#[derive(Debug, Clone, Default, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Debug, Clone, Default, Eq, PartialEq)]
 pub struct PyFrame(pub DynFrame);
 
 #[pymethods]

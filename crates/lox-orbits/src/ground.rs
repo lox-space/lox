@@ -10,8 +10,8 @@ use crate::trajectories::{DynTrajectory, Trajectory, TrajectoryError};
 use glam::{DMat3, DVec3};
 use lox_bodies::{DynOrigin, RotationalElements, Spheroid, TrySpheroid};
 use lox_core::types::units::Radians;
-use lox_frames::providers::DefaultTransformProvider;
-use lox_frames::transformations::TryTransform;
+use lox_frames::providers::DefaultRotationProvider;
+use lox_frames::rotations::TryRotation;
 use lox_frames::{DynFrame, Iau, Icrf};
 use lox_time::time_scales::TimeScale;
 use lox_time::{DynTime, Time};
@@ -215,8 +215,8 @@ impl DynGroundPropagator {
             self.location.body,
             DynFrame::Iau(self.location.body),
         );
-        let rot = DefaultTransformProvider
-            .try_transform(s.reference_frame(), DynFrame::Icrf, time)
+        let rot = DefaultRotationProvider
+            .try_rotation(s.reference_frame(), DynFrame::Icrf, time)
             .map_err(|err| GroundPropagatorError::FrameTransformation(err.to_string()))?;
         let (r1, v1) = rot.rotate_state(s.position(), s.velocity());
         Ok(State::new(time, r1, v1, self.location.body, DynFrame::Icrf))
@@ -239,7 +239,7 @@ impl<T, O> Propagator<T, O, Icrf> for GroundPropagator<O>
 where
     T: TimeScale + Copy,
     O: Spheroid + RotationalElements + Copy,
-    DefaultTransformProvider: TryTransform<Iau<O>, Icrf, T>,
+    DefaultRotationProvider: TryRotation<Iau<O>, Icrf, T>,
 {
     type Error = GroundPropagatorError;
 
@@ -251,8 +251,8 @@ where
             self.location.body,
             Iau::new(self.location.body),
         );
-        let rot = DefaultTransformProvider
-            .try_transform(s.reference_frame(), Icrf, time)
+        let rot = DefaultRotationProvider
+            .try_rotation(s.reference_frame(), Icrf, time)
             .map_err(|err| GroundPropagatorError::FrameTransformation(err.to_string()))?;
         let (r1, v1) = rot.rotate_state(s.position(), s.velocity());
         Ok(State::new(time, r1, v1, self.location.body, Icrf))
