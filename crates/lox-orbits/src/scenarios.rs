@@ -7,18 +7,19 @@
 use bevy_ecs::{prelude::*, system::RegisteredSystemError};
 
 use lox_bodies::DynOrigin;
-use lox_core::coords::LonLatAlt;
+use lox_core::coords::{LonLatAlt, TimeStampedCartesian};
 use lox_frames::DynFrame;
 use lox_time::{
     Time,
     deltas::TimeDelta,
+    intervals::UtcInterval,
     time_scales::{self, Tai},
     utc::Utc,
 };
 
 use crate::{
     orbits::{DynOrbit, DynTrajectory},
-    propagators::OrbitPropagator,
+    propagators::DynPropagator,
 };
 
 #[derive(Component)]
@@ -30,6 +31,12 @@ struct Asset {
 struct Orbit(DynOrbit);
 
 #[derive(Component)]
+struct InitialState(TimeStampedCartesian);
+
+#[derive(Component)]
+struct Propagator(Box<dyn DynPropagator + Send + Sync>);
+
+#[derive(Component, Default)]
 struct Trajectory(Option<DynTrajectory>);
 
 #[derive(Bundle)]
@@ -40,40 +47,31 @@ struct Spacecraft {
 }
 
 #[derive(Resource)]
-struct ScenarioInterval {
-    start_time: Utc,
-    end_time: Utc,
-}
-
-#[derive(Resource)]
-struct TimeStep(TimeDelta);
-
-impl ScenarioInterval {
-    fn start_time(&self) -> Time<Tai> {
-        self.start_time.to_time()
-    }
-
-    fn end_time(&self) -> Time<Tai> {
-        self.end_time.to_time()
-    }
+struct ScenarioData {
+    interval: UtcInterval,
+    origin: DynOrigin,
+    frame: DynFrame,
 }
 
 pub struct Scenario(World);
 
-fn propagate(mut query: Query<(&Orbit, &mut Trajectory), Or<(Changed<Orbit>, Added<Orbit>)>>) {
-    query
-        .par_iter_mut()
-        .for_each(|(orbit, mut trajectory)| trajectory.0 = Some(orbit.0.propagate()));
+fn propagate(
+    scenario: Res<ScenarioData>,
+    mut query: Query<(&Orbit, &mut Trajectory), Or<(Changed<Orbit>, Added<Orbit>)>>,
+) {
+    query.par_iter_mut().for_each(|(orbit, mut trajectory)| {
+        trajectory.0 = Some(orbit.0.propagate(scenario.interval.to_time()))
+    });
 }
 
 impl Scenario {
     pub fn new(start_time: Utc, end_time: Utc) -> Self {
         let mut world = World::new();
-        world.insert_resource(ScenarioInterval {
-            start_time,
-            end_time,
+        world.insert_resource(ScenarioData {
+            interval: UtcInterval::new(start_time, end_time),
+            origin: DynOrigin::default(),
+            frame: DynFrame::default(),
         });
-        world.insert_resource(TimeStep(TimeDelta::from_seconds(60)));
         Self(world)
     }
 
@@ -107,6 +105,7 @@ mod tests {
     fn test_scenario() {
         let start_time = utc!(2025, 11, 6).unwrap();
         let end_time = utc!(2025, 11, 6, 1).unwrap();
-        let scn = Scenario::new(start_time, end_time);
+        let mut scn = Scenario::new(start_time, end_time);
+        scn.propagate().unwrap();
     }
 }
