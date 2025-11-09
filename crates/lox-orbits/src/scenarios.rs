@@ -34,7 +34,7 @@ struct Orbit(DynOrbit);
 struct InitialState(TimeStampedCartesian);
 
 #[derive(Component)]
-struct Propagator(Box<dyn DynPropagator + Send + Sync>);
+struct Propagator(Box<dyn DynPropagator>);
 
 #[derive(Component, Default)]
 struct Trajectory(Option<DynTrajectory>);
