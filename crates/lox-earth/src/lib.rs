@@ -7,6 +7,7 @@
 pub mod cio;
 pub mod cip;
 pub mod coordinate_transformations;
+pub mod ecliptic;
 pub mod eop;
 pub mod ephemeris;
 pub mod itrf;
