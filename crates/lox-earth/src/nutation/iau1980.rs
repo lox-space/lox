@@ -6,6 +6,7 @@
 use std::f64::consts::TAU;
 
 use lox_core::types::units::{Arcseconds, JulianCenturies};
+use lox_time::{Time, julian_dates::JulianDate, time_scales::Tdb};
 use lox_units::{Angle, AngleUnits};
 
 use crate::nutation::Nutation;
@@ -28,12 +29,13 @@ struct Coefficients {
 }
 
 impl Nutation {
-    pub fn iau1980(centuries_since_j2000_tdb: JulianCenturies) -> Self {
-        let l = l(centuries_since_j2000_tdb);
-        let lp = lp(centuries_since_j2000_tdb);
-        let f = f(centuries_since_j2000_tdb);
-        let d = d(centuries_since_j2000_tdb);
-        let om = omega(centuries_since_j2000_tdb);
+    pub fn iau1980(time: Time<Tdb>) -> Self {
+        let t = time.centuries_since_j2000();
+        let l = l(t);
+        let lp = lp(t);
+        let f = f(t);
+        let d = d(t);
+        let om = omega(t);
 
         let (dpsi, deps) = COEFFICIENTS
             .iter()
@@ -45,8 +47,8 @@ impl Nutation {
                 let arg = coeff.l * l + coeff.lp * lp + coeff.f * f + coeff.d * d + coeff.om * om;
 
                 // Accumulate current term.
-                let sin = coeff.sin_psi + coeff.sin_psi_t * centuries_since_j2000_tdb;
-                let cos = coeff.cos_eps + coeff.cos_eps_t * centuries_since_j2000_tdb;
+                let sin = coeff.sin_psi + coeff.sin_psi_t * t;
+                let cos = coeff.cos_eps + coeff.cos_eps_t * t;
                 dpsi += sin * arg.sin();
                 deps += cos * arg.cos();
 
@@ -227,46 +229,19 @@ const COEFFICIENTS: [Coefficients; 106] = [
 // @formatter:on
 
 #[cfg(test)]
-/// All fixtures and assertion values were generated using the ERFA C library unless otherwise
-/// stated.
 mod tests {
-    use lox_core::types::units::JulianCenturies;
     use lox_test_utils::assert_approx_eq;
 
     use super::*;
 
-    const TOLERANCE: f64 = 1e-12;
-
     #[test]
-    fn test_nutation_iau1980_jd0() {
-        let jd0: JulianCenturies = -67.11964407939767;
-        let actual = Nutation::iau1980(jd0);
+    fn test_nutation_iau1980() {
+        let time = Time::from_two_part_julian_date(Tdb, 2400000.5, 53736.0);
+        let actual = Nutation::iau1980(time);
         let expected = Nutation {
-            longitude: 0.00000693404778664026.rad(),
-            obliquity: 0.00004131255061383108.rad(),
+            longitude: -9.643_658_353_226_563e-6.rad(),
+            obliquity: 4.060_051_006_879_713e-5.rad(),
         };
-        assert_approx_eq!(expected, actual, rtol <= TOLERANCE);
-    }
-
-    #[test]
-    fn test_nutation_iau1980_j2000() {
-        let j2000: JulianCenturies = 0.0;
-        let actual = Nutation::iau1980(j2000);
-        let expected = Nutation {
-            longitude: -0.00006750247617532478.rad(),
-            obliquity: -0.00002799221238377013.rad(),
-        };
-        assert_approx_eq!(expected, actual, rtol <= TOLERANCE);
-    }
-
-    #[test]
-    fn test_nutation_iau1980_j2100() {
-        let j2100: JulianCenturies = 1.0;
-        let actual = Nutation::iau1980(j2100);
-        let expected = Nutation {
-            longitude: 0.00001584138015187132.rad(),
-            obliquity: 0.00004158958379918889.rad(),
-        };
-        assert_approx_eq!(expected, actual, rtol <= TOLERANCE);
+        assert_approx_eq!(expected, actual, rtol <= 1e-13);
     }
 }

@@ -9,6 +9,9 @@ use lox_bodies::fundamental::mhb2000::{
 };
 use lox_bodies::*;
 use lox_core::types::units::JulianCenturies;
+use lox_time::Time;
+use lox_time::julian_dates::JulianDate;
+use lox_time::time_scales::Tdb;
 use lox_units::AngleUnits;
 
 use crate::nutation::Nutation;
@@ -46,30 +49,28 @@ struct PlanetaryCoefficients {
     cos_eps: f64,
 }
 
-pub(crate) fn nutation_iau2000a(centuries_since_j2000_tdb: JulianCenturies) -> Nutation {
-    let luni_solar_args = DelaunayArguments {
-        l: Moon.mean_anomaly_iers03(centuries_since_j2000_tdb),
-        lp: Sun.mean_anomaly_mhb2000(centuries_since_j2000_tdb),
-        f: Moon
-            .mean_longitude_minus_ascending_node_mean_longitude_iers03(centuries_since_j2000_tdb),
-        d: mean_moon_sun_elongation_mhb2000_luni_solar(centuries_since_j2000_tdb),
-        om: Moon.ascending_node_mean_longitude_iers03(centuries_since_j2000_tdb),
-    };
+impl Nutation {
+    pub fn iau2000a(time: Time<Tdb>) -> Nutation {
+        let t = time.centuries_since_j2000();
+        let luni_solar_args = DelaunayArguments {
+            l: Moon.mean_anomaly_iers03(t),
+            lp: Sun.mean_anomaly_mhb2000(t),
+            f: Moon.mean_longitude_minus_ascending_node_mean_longitude_iers03(t),
+            d: mean_moon_sun_elongation_mhb2000_luni_solar(t),
+            om: Moon.ascending_node_mean_longitude_iers03(t),
+        };
 
-    let planetary_args = DelaunayArguments {
-        l: Moon.mean_anomaly_mhb2000(centuries_since_j2000_tdb),
-        lp: 0.0.rad(), // unused
-        f: Moon
-            .mean_longitude_minus_ascending_node_mean_longitude_mhb2000(centuries_since_j2000_tdb),
-        d: mean_moon_sun_elongation_mhb2000_planetary(centuries_since_j2000_tdb),
-        om: Moon.ascending_node_mean_longitude_mhb2000(centuries_since_j2000_tdb),
-    };
+        let planetary_args = DelaunayArguments {
+            l: Moon.mean_anomaly_mhb2000(t),
+            lp: 0.0.rad(), // unused
+            f: Moon.mean_longitude_minus_ascending_node_mean_longitude_mhb2000(t),
+            d: mean_moon_sun_elongation_mhb2000_planetary(t),
+            om: Moon.ascending_node_mean_longitude_mhb2000(t),
+        };
 
-    luni_solar_nutation(
-        centuries_since_j2000_tdb,
-        &luni_solar_args,
-        &luni_solar::COEFFICIENTS,
-    ) + planetary_nutation(centuries_since_j2000_tdb, planetary_args)
+        luni_solar_nutation(t, &luni_solar_args, &luni_solar::COEFFICIENTS)
+            + planetary_nutation(t, planetary_args)
+    }
 }
 
 fn planetary_nutation(
@@ -118,46 +119,20 @@ fn planetary_nutation(
 /// All fixtures and assertion values were generated using the ERFA C library unless otherwise
 /// stated.
 mod tests {
-    use lox_core::types::units::JulianCenturies;
     use lox_test_utils::assert_approx_eq;
+    use lox_time::{Time, time_scales::Tdb};
     use lox_units::AngleUnits;
 
     use crate::nutation::Nutation;
 
-    use super::nutation_iau2000a;
-
-    const TOLERANCE: f64 = 1e-11;
-
     #[test]
-    fn test_nutation_iau2000a_jd0() {
-        let jd0: JulianCenturies = -67.11964407939767;
+    fn test_nutation_iau2000a() {
+        let time = Time::from_two_part_julian_date(Tdb, 2400000.5, 53736.0);
         let expected = Nutation {
-            longitude: 0.00000737147877835653.rad(),
-            obliquity: 0.00004132135467915123.rad(),
+            longitude: -9.630_909_107_115_518e-6.rad(),
+            obliquity: 4.063_239_174_001_679e-5.rad(),
         };
-        let actual = nutation_iau2000a(jd0);
-        assert_approx_eq!(expected, actual, rtol <= TOLERANCE);
-    }
-
-    #[test]
-    fn test_nutation_iau2000a_j2000() {
-        let j2000: JulianCenturies = 0.0;
-        let expected = Nutation {
-            longitude: -0.00006754422426417299.rad(),
-            obliquity: -0.00002797083119237414.rad(),
-        };
-        let actual = nutation_iau2000a(j2000);
-        assert_approx_eq!(expected, actual, rtol <= TOLERANCE);
-    }
-
-    #[test]
-    fn test_nutation_iau2000a_j2100() {
-        let j2100: JulianCenturies = 1.0;
-        let expected = Nutation {
-            longitude: 0.00001585987390484147.rad(),
-            obliquity: 0.00004162326779426948.rad(),
-        };
-        let actual = nutation_iau2000a(j2100);
-        assert_approx_eq!(expected, actual, rtol <= TOLERANCE);
+        let actual = Nutation::iau2000a(time);
+        assert_approx_eq!(expected, actual, rtol <= 1e-13);
     }
 }

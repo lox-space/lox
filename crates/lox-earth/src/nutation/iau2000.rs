@@ -3,8 +3,6 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-pub(crate) use iau2000a::nutation_iau2000a;
-pub(crate) use iau2000b::nutation_iau2000b;
 use lox_core::types::units::JulianCenturies;
 use lox_units::{Angle, AngleUnits};
 
