@@ -13,6 +13,7 @@ pub mod ephemeris;
 pub mod fundamental;
 pub mod itrf;
 pub mod nutation;
+pub mod precession;
 pub mod rotation;
 #[allow(dead_code)]
 pub mod tides;

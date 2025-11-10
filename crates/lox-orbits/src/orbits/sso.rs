@@ -11,6 +11,7 @@ use lox_core::elements::{
 use lox_core::glam::Azimuth;
 use lox_core::time::julian_dates::JulianDate;
 use lox_core::time::time_of_day::TimeOfDay;
+use lox_core::units::DistanceUnits;
 use lox_core::units::{Angle, AngleUnits, Distance};
 use lox_earth::ephemeris::apparent_sun_position;
 use lox_earth::fundamental::iers03::lp_iers03;
@@ -19,7 +20,6 @@ use lox_time::Time;
 use lox_time::offsets::{DefaultOffsetProvider, TryOffset};
 use lox_time::time_of_day::TimeOfDayError;
 use lox_time::time_scales::{Tai, Tdb, TimeScale, Ut1};
-use lox_units::DistanceUnits;
 use thiserror::Error;
 
 use crate::orbits::{KeplerianOrbit, Orbit};

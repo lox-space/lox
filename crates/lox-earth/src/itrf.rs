@@ -3,12 +3,11 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use crate::cio::s06::cio_locator;
-use crate::cip::xy06::CipCoords;
+use crate::cip::CipCoords;
 use crate::coordinate_transformations::{
     PoleCoords, celestial_to_intermediate_frame_of_date_matrix, polar_motion_matrix,
 };
 use crate::eop::{EopProvider, EopProviderError};
-use crate::rotation::earth_rotation_angle_00;
 use crate::tio::tio_locator;
 use glam::{DMat3, DVec3};
 use lox_bodies::{Earth, RotationalElements};
@@ -52,11 +51,12 @@ where
 }
 
 pub fn cirf_to_tirf(seconds: f64) -> Rotation {
-    let era = earth_rotation_angle_00(seconds / SECONDS_PER_DAY);
-    let rate = Earth.rotation_rate(seconds);
-    let m = DMat3::from_rotation_z(-era.to_radians());
-    let v = DVec3::new(0.0, 0.0, rate);
-    Rotation::new(m).with_angular_velocity(v)
+    // let era = earth_rotation_angle_00(seconds / SECONDS_PER_DAY);
+    // let rate = Earth.rotation_rate(seconds);
+    // let m = DMat3::from_rotation_z(-era.to_radians());
+    // let v = DVec3::new(0.0, 0.0, rate);
+    // Rotation::new(m).with_angular_velocity(v)
+    todo!()
 }
 
 pub fn tirf_to_itrf(centuries: f64) -> Rotation {

@@ -22,6 +22,9 @@ pub const SECONDS_PER_MINUTE: f64 = 60.0;
 pub const SECONDS_PER_HOUR: f64 = SECONDS_PER_MINUTE * 60.0;
 
 /// Number of seconds in a day.
+pub const SECONDS_PER_HALF_DAY: f64 = SECONDS_PER_HOUR * 12.0;
+
+/// Number of seconds in a day.
 pub const SECONDS_PER_DAY: f64 = SECONDS_PER_HOUR * 24.0;
 
 /// Number of seconds in a Julian year (365.25 days).

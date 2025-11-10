@@ -11,6 +11,7 @@ use std::{
 
 use glam::DVec3;
 use lox_bodies::{DynOrigin, Origin, PointMass, TryPointMass, UndefinedOriginPropertyError};
+use lox_core::units::{AngleUnits, Distance};
 use lox_core::{
     anomalies::{EccentricAnomaly, TrueAnomaly},
     coords::{Cartesian, CartesianTrajectory, TimeStampedCartesian},
@@ -29,7 +30,6 @@ use lox_time::{
     deltas::TimeDelta,
     time_scales::{DynTimeScale, TimeScale},
 };
-use lox_units::{AngleUnits, Distance};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Orbit<S, T: TimeScale, O: Origin, R: ReferenceFrame> {

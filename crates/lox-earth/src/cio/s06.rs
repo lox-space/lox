@@ -9,7 +9,7 @@
 use lox_core::types::units::JulianCenturies;
 use lox_core::units::{Angle, AngleUnits};
 
-use crate::cip::xy06::CipCoords;
+use crate::cip::CipCoords;
 use crate::fundamental::iers03::{
     d_iers03, earth_l_iers03, f_iers03, l_iers03, lp_iers03, omega_iers03, pa_iers03,
     venus_l_iers03,

@@ -34,22 +34,7 @@ struct NutationComponents {
     luni_solar: DVec2,
 }
 
-#[derive(Copy, Clone, Debug, Default, PartialEq)]
-pub struct CipCoords {
-    pub x: Angle,
-    pub y: Angle,
-}
-
-impl CipCoords {
-    /// Calculates the (X, Y) coordinates of the Celestial Intermediate Pole (CIP) using the the IAU
-    /// 2006 precession and IAU 2000A nutation models.
-    pub fn new(centuries_since_j2000_tdb: JulianCenturies) -> Self {
-        let (x, y) = cip_coords(centuries_since_j2000_tdb);
-        Self { x, y }
-    }
-}
-
-fn cip_coords(centuries_since_j2000_tdb: JulianCenturies) -> (Angle, Angle) {
+pub fn cip_coords(centuries_since_j2000_tdb: JulianCenturies) -> (Angle, Angle) {
     let powers_of_t = powers_of_t(centuries_since_j2000_tdb);
     let fundamental_args = fundamental_args(centuries_since_j2000_tdb);
     let polynomial_components = polynomial_components(&powers_of_t);
@@ -189,6 +174,8 @@ fn calculate_cip_unit_vector(
 #[cfg(test)]
 mod tests {
     use lox_test_utils::assert_approx_eq;
+
+    use crate::cip::CipCoords;
 
     use super::*;
 

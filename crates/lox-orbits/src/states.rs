@@ -11,6 +11,7 @@ use lox_bodies::{
     DynOrigin, Origin, PointMass, RotationalElements, Spheroid, TryPointMass, TrySpheroid,
     UndefinedOriginPropertyError,
 };
+use lox_core::units::{Angle, AngleUnits};
 use lox_ephem::{Ephemeris, path_from_ids};
 use lox_frames::transformations::TryTransform;
 use lox_math::{
@@ -18,7 +19,6 @@ use lox_math::{
     roots::{BracketError, FindRoot, Secant},
 };
 use lox_time::{Time, julian_dates::JulianDate, time_scales::DynTimeScale, time_scales::TimeScale};
-use lox_units::{Angle, AngleUnits};
 use thiserror::Error;
 
 use crate::anomalies::{eccentric_to_true, hyperbolic_to_true};

@@ -11,7 +11,7 @@ use glam::DMat3;
 use lox_core::types::units::Radians;
 use lox_core::units::{Angle, AngleUnits};
 
-use crate::cip::xy06::CipCoords;
+use crate::cip::CipCoords;
 
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct PoleCoords {
