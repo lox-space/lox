@@ -32,9 +32,9 @@ impl Nutation {
 
 #[cfg(test)]
 mod tests {
+    use lox_core::units::AngleUnits;
     use lox_test_utils::assert_approx_eq;
     use lox_time::{Time, time_scales::Tdb};
-    use lox_units::AngleUnits;
 
     use crate::nutation::Nutation;
 

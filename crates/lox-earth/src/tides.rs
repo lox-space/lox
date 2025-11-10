@@ -5,7 +5,7 @@
 
 use std::f64::consts::TAU;
 
-use lox_units::{Angle, AngleUnits};
+use lox_core::units::{Angle, AngleUnits};
 use thiserror::Error;
 
 use lox_bodies::fundamental::iers03::mean_moon_sun_elongation_iers03;

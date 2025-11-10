@@ -3,7 +3,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use lox_units::Angle;
+use lox_core::units::Angle;
 
 use crate::nutation::Nutation;
 

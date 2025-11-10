@@ -7,7 +7,7 @@
 //! s', which places the TIO on the equator of the Celestial Intermediate Pole (CIP).
 
 use lox_core::types::units::JulianCenturies;
-use lox_units::{Angle, AngleUnits};
+use lox_core::units::{Angle, AngleUnits};
 
 type ArcsecondsPerCentury = f64;
 

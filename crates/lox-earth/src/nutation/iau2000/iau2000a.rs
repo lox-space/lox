@@ -9,10 +9,10 @@ use lox_bodies::fundamental::mhb2000::{
 };
 use lox_bodies::*;
 use lox_core::types::units::JulianCenturies;
+use lox_core::units::AngleUnits;
 use lox_time::Time;
 use lox_time::julian_dates::JulianDate;
 use lox_time::time_scales::Tdb;
-use lox_units::AngleUnits;
 
 use crate::nutation::Nutation;
 use crate::nutation::iau2000::{DelaunayArguments, luni_solar_nutation};
@@ -119,9 +119,9 @@ fn planetary_nutation(
 /// All fixtures and assertion values were generated using the ERFA C library unless otherwise
 /// stated.
 mod tests {
+    use lox_core::units::AngleUnits;
     use lox_test_utils::assert_approx_eq;
     use lox_time::{Time, time_scales::Tdb};
-    use lox_units::AngleUnits;
 
     use crate::nutation::Nutation;
 

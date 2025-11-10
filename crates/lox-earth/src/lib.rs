@@ -12,7 +12,7 @@ pub mod eop;
 pub mod ephemeris;
 pub mod itrf;
 pub mod nutation;
-pub mod rotation_angle;
+pub mod rotation;
 #[allow(dead_code)]
 pub mod tides;
 pub mod tio;

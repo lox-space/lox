@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use lox_core::types::units::JulianCenturies;
-use lox_units::{Angle, AngleUnits};
+use lox_core::units::{Angle, AngleUnits};
 
 use crate::nutation::Nutation;
 

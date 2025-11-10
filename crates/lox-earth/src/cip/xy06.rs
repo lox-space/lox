@@ -13,7 +13,7 @@ use lox_bodies::fundamental::iers03::{
 };
 use lox_bodies::{Earth, Jupiter, Mars, Mercury, Moon, Neptune, Saturn, Sun, Uranus, Venus};
 use lox_core::types::units::JulianCenturies;
-use lox_units::{Angle, AngleUnits};
+use lox_core::units::{Angle, AngleUnits};
 
 mod amplitudes;
 mod luni_solar;

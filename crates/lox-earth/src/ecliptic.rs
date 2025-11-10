@@ -3,9 +3,9 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use fast_polynomial::poly_array;
+use lox_core::units::Angle;
 use lox_test_utils::ApproxEq;
 use lox_time::{Time, julian_dates::JulianDate, time_scales::Tt};
-use lox_units::Angle;
 
 /// Mean obliquity of the ecliptic.
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, ApproxEq)]

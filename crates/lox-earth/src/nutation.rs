@@ -9,12 +9,12 @@
 use std::ops::Add;
 
 use glam::DMat3;
+use lox_core::units::Angle;
 use lox_test_utils::ApproxEq;
 use lox_time::{
     Time,
     time_scales::{Tdb, Tt},
 };
-use lox_units::Angle;
 
 use crate::ecliptic::MeanObliquity;
 
@@ -71,8 +71,8 @@ impl Add<&Self> for Nutation {
 
 #[cfg(test)]
 mod tests {
+    use lox_core::units::AngleUnits;
     use lox_test_utils::assert_approx_eq;
-    use lox_units::AngleUnits;
 
     use super::*;
 
@@ -103,15 +103,15 @@ mod tests {
     fn test_nutation_matrix_iau1980() {
         let time = Time::from_two_part_julian_date(Tdb, 2400000.5, 53736.0);
         let exp = DMat3::from_cols_array(&[
-            0.9999999999534999268,
-            0.8847935789636432161e-5,
-            0.3835906502164019142e-5,
-            -0.8847780042583435924e-5,
-            0.9999999991366569963,
-            -0.4060052702727130809e-4,
-            -0.3836265729708478796e-5,
-            0.4060049308612638555e-4,
-            0.9999999991684415129,
+            0.999_999_999_953_5,
+            8.847_935_789_636_432e-6,
+            3.835_906_502_164_019_5e-6,
+            -8.847_780_042_583_437e-6,
+            0.999_999_999_136_657,
+            -4.060_052_702_727_131e-5,
+            -3.836_265_729_708_479e-6,
+            4.060_049_308_612_638_4e-5,
+            0.999_999_999_168_441_5,
         ])
         .transpose();
         let act = Nutation::nutation_matrix_iau1980(time);

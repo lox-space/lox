@@ -9,7 +9,7 @@
 use glam::DMat3;
 
 use lox_core::types::units::Radians;
-use lox_units::{Angle, AngleUnits};
+use lox_core::units::{Angle, AngleUnits};
 
 use crate::cip::xy06::CipCoords;
 

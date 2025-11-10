@@ -8,7 +8,7 @@ use crate::coordinate_transformations::{
     PoleCoords, celestial_to_intermediate_frame_of_date_matrix, polar_motion_matrix,
 };
 use crate::eop::{EopProvider, EopProviderError};
-use crate::rotation_angle::earth_rotation_angle_00;
+use crate::rotation::earth_rotation_angle_00;
 use crate::tio::tio_locator;
 use glam::{DMat3, DVec3};
 use lox_bodies::{Earth, RotationalElements};

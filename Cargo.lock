@@ -529,7 +529,6 @@ dependencies = [
  "lox-math",
  "lox-test-utils",
  "lox-time",
- "lox-units",
  "num",
  "rstest",
  "serde",

@@ -6,8 +6,8 @@
 use std::f64::consts::TAU;
 
 use lox_core::types::units::{Arcseconds, JulianCenturies};
+use lox_core::units::{Angle, AngleUnits};
 use lox_time::{Time, julian_dates::JulianDate, time_scales::Tdb};
-use lox_units::{Angle, AngleUnits};
 
 use crate::nutation::Nutation;
 

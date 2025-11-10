@@ -11,7 +11,7 @@ use lox_bodies::fundamental::iers03::{
 };
 use lox_bodies::{Earth, Moon, Sun, Venus};
 use lox_core::types::units::JulianCenturies;
-use lox_units::{Angle, AngleUnits};
+use lox_core::units::{Angle, AngleUnits};
 
 use crate::cip::xy06::CipCoords;
 
