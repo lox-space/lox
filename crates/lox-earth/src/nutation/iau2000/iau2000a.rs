@@ -3,17 +3,20 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use lox_bodies::fundamental::iers03::general_accum_precession_in_longitude_iers03;
-use lox_bodies::fundamental::mhb2000::{
-    mean_moon_sun_elongation_mhb2000_luni_solar, mean_moon_sun_elongation_mhb2000_planetary,
-};
-use lox_bodies::*;
 use lox_core::types::units::JulianCenturies;
 use lox_core::units::AngleUnits;
 use lox_time::Time;
 use lox_time::julian_dates::JulianDate;
 use lox_time::time_scales::Tdb;
 
+use crate::fundamental::iers03::{
+    earth_l_iers03, f_iers03, jupiter_l_iers03, l_iers03, mars_l_iers03, mercury_l_iers03,
+    omega_iers03, pa_iers03, saturn_l_iers03, uranus_l_iers03, venus_l_iers03,
+};
+use crate::fundamental::mhb2000::{
+    d_mhb2000_luni_solar, d_mhb2000_planetary, f_mhb2000, l_mhb2000, lp_mhb2000, neptune_l_mhb2000,
+    omega_mhb2000,
+};
 use crate::nutation::Nutation;
 use crate::nutation::iau2000::{DelaunayArguments, luni_solar_nutation};
 
@@ -53,19 +56,19 @@ impl Nutation {
     pub fn iau2000a(time: Time<Tdb>) -> Nutation {
         let t = time.centuries_since_j2000();
         let luni_solar_args = DelaunayArguments {
-            l: Moon.mean_anomaly_iers03(t),
-            lp: Sun.mean_anomaly_mhb2000(t),
-            f: Moon.mean_longitude_minus_ascending_node_mean_longitude_iers03(t),
-            d: mean_moon_sun_elongation_mhb2000_luni_solar(t),
-            om: Moon.ascending_node_mean_longitude_iers03(t),
+            l: l_iers03(t),
+            lp: lp_mhb2000(t),
+            f: f_iers03(t),
+            d: d_mhb2000_luni_solar(t),
+            om: omega_iers03(t),
         };
 
         let planetary_args = DelaunayArguments {
-            l: Moon.mean_anomaly_mhb2000(t),
+            l: l_mhb2000(t),
             lp: 0.0.rad(), // unused
-            f: Moon.mean_longitude_minus_ascending_node_mean_longitude_mhb2000(t),
-            d: mean_moon_sun_elongation_mhb2000_planetary(t),
-            om: Moon.ascending_node_mean_longitude_mhb2000(t),
+            f: f_mhb2000(t),
+            d: d_mhb2000_planetary(t),
+            om: omega_mhb2000(t),
         };
 
         luni_solar_nutation(t, &luni_solar_args, &luni_solar::COEFFICIENTS)
@@ -88,16 +91,15 @@ fn planetary_nutation(
                 + coeff.f * args.f
                 + coeff.d * args.d
                 + coeff.om * args.om
-                + coeff.mercury * Mercury.mean_longitude_iers03(centuries_since_j2000_tdb)
-                + coeff.venus * Venus.mean_longitude_iers03(centuries_since_j2000_tdb)
-                + coeff.earth * Earth.mean_longitude_iers03(centuries_since_j2000_tdb)
-                + coeff.mars * Mars.mean_longitude_iers03(centuries_since_j2000_tdb)
-                + coeff.jupiter * Jupiter.mean_longitude_iers03(centuries_since_j2000_tdb)
-                + coeff.saturn * Saturn.mean_longitude_iers03(centuries_since_j2000_tdb)
-                + coeff.uranus * Uranus.mean_longitude_iers03(centuries_since_j2000_tdb)
-                + coeff.neptune * Neptune.mean_longitude_mhb2000(centuries_since_j2000_tdb)
-                + coeff.pa
-                    * general_accum_precession_in_longitude_iers03(centuries_since_j2000_tdb))
+                + coeff.mercury * mercury_l_iers03(centuries_since_j2000_tdb)
+                + coeff.venus * venus_l_iers03(centuries_since_j2000_tdb)
+                + coeff.earth * earth_l_iers03(centuries_since_j2000_tdb)
+                + coeff.mars * mars_l_iers03(centuries_since_j2000_tdb)
+                + coeff.jupiter * jupiter_l_iers03(centuries_since_j2000_tdb)
+                + coeff.saturn * saturn_l_iers03(centuries_since_j2000_tdb)
+                + coeff.uranus * uranus_l_iers03(centuries_since_j2000_tdb)
+                + coeff.neptune * neptune_l_mhb2000(centuries_since_j2000_tdb)
+                + coeff.pa * pa_iers03(centuries_since_j2000_tdb))
             .mod_two_pi_signed();
 
             // Accumulate current term.

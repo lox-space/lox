@@ -3,12 +3,13 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use lox_bodies::fundamental::simon1994::mean_moon_sun_elongation_simon1994;
-use lox_bodies::*;
 use lox_time::Time;
 use lox_time::julian_dates::JulianDate;
 use lox_time::time_scales::Tdb;
 
+use crate::fundamental::simon1994::{
+    d_simon1994, f_simon1994, l_simon1994, lp_simon1994, omega_simon1994,
+};
 use crate::nutation::Nutation;
 use crate::nutation::iau2000::{DelaunayArguments, luni_solar_nutation};
 
@@ -19,11 +20,11 @@ impl Nutation {
     pub fn iau2000b(time: Time<Tdb>) -> Nutation {
         let t = time.centuries_since_j2000();
         let luni_solar_args = DelaunayArguments {
-            l: Moon.mean_anomaly_simon1994(t),
-            lp: Sun.mean_anomaly_simon1994(t),
-            f: Moon.mean_argument_of_latitude_simon1994(t),
-            d: mean_moon_sun_elongation_simon1994(t),
-            om: Moon.ascending_node_mean_longitude_simon1994(t),
+            l: l_simon1994(t),
+            lp: lp_simon1994(t),
+            f: f_simon1994(t),
+            d: d_simon1994(t),
+            om: omega_simon1994(t),
         };
 
         luni_solar_nutation(t, &luni_solar_args, &luni_solar::COEFFICIENTS) + planetary::OFFSETS

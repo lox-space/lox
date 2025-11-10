@@ -6,14 +6,14 @@
 //! Module s06 exposes a function for calculating the Celestial Intermediate Origin (CIO) locator,
 //! s, using IAU 2006 precession and IAU 2000A nutation.
 
-use lox_bodies::fundamental::iers03::{
-    general_accum_precession_in_longitude_iers03, mean_moon_sun_elongation_iers03,
-};
-use lox_bodies::{Earth, Moon, Sun, Venus};
 use lox_core::types::units::JulianCenturies;
 use lox_core::units::{Angle, AngleUnits};
 
 use crate::cip::xy06::CipCoords;
+use crate::fundamental::iers03::{
+    d_iers03, earth_l_iers03, f_iers03, l_iers03, lp_iers03, omega_iers03, pa_iers03,
+    venus_l_iers03,
+};
 
 mod terms;
 
@@ -36,14 +36,14 @@ fn fundamental_args(centuries_since_j2000_tdb: JulianCenturies) -> FundamentalAr
     // The output of the CIO calculation is dependent on the ordering of these arguments. DO NOT
     // EDIT.
     [
-        Moon.mean_anomaly_iers03(centuries_since_j2000_tdb),
-        Sun.mean_anomaly_iers03(centuries_since_j2000_tdb),
-        Moon.mean_longitude_minus_ascending_node_mean_longitude_iers03(centuries_since_j2000_tdb),
-        mean_moon_sun_elongation_iers03(centuries_since_j2000_tdb),
-        Moon.ascending_node_mean_longitude_iers03(centuries_since_j2000_tdb),
-        Venus.mean_longitude_iers03(centuries_since_j2000_tdb),
-        Earth.mean_longitude_iers03(centuries_since_j2000_tdb),
-        general_accum_precession_in_longitude_iers03(centuries_since_j2000_tdb),
+        l_iers03(centuries_since_j2000_tdb),
+        lp_iers03(centuries_since_j2000_tdb),
+        f_iers03(centuries_since_j2000_tdb),
+        d_iers03(centuries_since_j2000_tdb),
+        omega_iers03(centuries_since_j2000_tdb),
+        venus_l_iers03(centuries_since_j2000_tdb),
+        earth_l_iers03(centuries_since_j2000_tdb),
+        pa_iers03(centuries_since_j2000_tdb),
     ]
 }
 
@@ -122,14 +122,14 @@ mod tests {
         let j2000: JulianCenturies = 0.0;
         let actual = fundamental_args(j2000);
         let expected = [
-            Moon.mean_anomaly_iers03(j2000),
-            Sun.mean_anomaly_iers03(j2000),
-            Moon.mean_longitude_minus_ascending_node_mean_longitude_iers03(j2000),
-            mean_moon_sun_elongation_iers03(j2000),
-            Moon.ascending_node_mean_longitude_iers03(j2000),
-            Venus.mean_longitude_iers03(j2000),
-            Earth.mean_longitude_iers03(j2000),
-            general_accum_precession_in_longitude_iers03(j2000),
+            l_iers03(j2000),
+            lp_iers03(j2000),
+            f_iers03(j2000),
+            d_iers03(j2000),
+            omega_iers03(j2000),
+            venus_l_iers03(j2000),
+            earth_l_iers03(j2000),
+            pa_iers03(j2000),
         ];
 
         for (act, exp) in zip(actual, expected) {

@@ -8,12 +8,14 @@
 
 use glam::DVec2;
 
-use lox_bodies::fundamental::iers03::{
-    general_accum_precession_in_longitude_iers03, mean_moon_sun_elongation_iers03,
-};
-use lox_bodies::{Earth, Jupiter, Mars, Mercury, Moon, Neptune, Saturn, Sun, Uranus, Venus};
 use lox_core::types::units::JulianCenturies;
 use lox_core::units::{Angle, AngleUnits};
+
+use crate::fundamental::iers03::{
+    d_iers03, earth_l_iers03, f_iers03, jupiter_l_iers03, l_iers03, lp_iers03, mars_l_iers03,
+    mercury_l_iers03, neptune_l_iers03, omega_iers03, pa_iers03, saturn_l_iers03, uranus_l_iers03,
+    venus_l_iers03,
+};
 
 mod amplitudes;
 mod luni_solar;
@@ -69,20 +71,20 @@ fn fundamental_args(centuries_since_j2000_tdb: JulianCenturies) -> FundamentalAr
     // The output of the CIP calculation is dependent on the ordering of these arguments. DO NOT
     // EDIT.
     [
-        Moon.mean_anomaly_iers03(centuries_since_j2000_tdb),
-        Sun.mean_anomaly_iers03(centuries_since_j2000_tdb),
-        Moon.mean_longitude_minus_ascending_node_mean_longitude_iers03(centuries_since_j2000_tdb),
-        mean_moon_sun_elongation_iers03(centuries_since_j2000_tdb),
-        Moon.ascending_node_mean_longitude_iers03(centuries_since_j2000_tdb),
-        Mercury.mean_longitude_iers03(centuries_since_j2000_tdb),
-        Venus.mean_longitude_iers03(centuries_since_j2000_tdb),
-        Earth.mean_longitude_iers03(centuries_since_j2000_tdb),
-        Mars.mean_longitude_iers03(centuries_since_j2000_tdb),
-        Jupiter.mean_longitude_iers03(centuries_since_j2000_tdb),
-        Saturn.mean_longitude_iers03(centuries_since_j2000_tdb),
-        Uranus.mean_longitude_iers03(centuries_since_j2000_tdb),
-        Neptune.mean_longitude_iers03(centuries_since_j2000_tdb),
-        general_accum_precession_in_longitude_iers03(centuries_since_j2000_tdb),
+        l_iers03(centuries_since_j2000_tdb),
+        lp_iers03(centuries_since_j2000_tdb),
+        f_iers03(centuries_since_j2000_tdb),
+        d_iers03(centuries_since_j2000_tdb),
+        omega_iers03(centuries_since_j2000_tdb),
+        mercury_l_iers03(centuries_since_j2000_tdb),
+        venus_l_iers03(centuries_since_j2000_tdb),
+        earth_l_iers03(centuries_since_j2000_tdb),
+        mars_l_iers03(centuries_since_j2000_tdb),
+        jupiter_l_iers03(centuries_since_j2000_tdb),
+        saturn_l_iers03(centuries_since_j2000_tdb),
+        uranus_l_iers03(centuries_since_j2000_tdb),
+        neptune_l_iers03(centuries_since_j2000_tdb),
+        pa_iers03(centuries_since_j2000_tdb),
     ]
 }
 
@@ -221,20 +223,20 @@ mod tests {
         let j2000: JulianCenturies = 0.0;
         let act = fundamental_args(j2000);
         let exp = [
-            Moon.mean_anomaly_iers03(j2000),
-            Sun.mean_anomaly_iers03(j2000),
-            Moon.mean_longitude_minus_ascending_node_mean_longitude_iers03(j2000),
-            mean_moon_sun_elongation_iers03(j2000),
-            Moon.ascending_node_mean_longitude_iers03(j2000),
-            Mercury.mean_longitude_iers03(j2000),
-            Venus.mean_longitude_iers03(j2000),
-            Earth.mean_longitude_iers03(j2000),
-            Mars.mean_longitude_iers03(j2000),
-            Jupiter.mean_longitude_iers03(j2000),
-            Saturn.mean_longitude_iers03(j2000),
-            Uranus.mean_longitude_iers03(j2000),
-            Neptune.mean_longitude_iers03(j2000),
-            general_accum_precession_in_longitude_iers03(j2000),
+            l_iers03(j2000),
+            lp_iers03(j2000),
+            f_iers03(j2000),
+            d_iers03(j2000),
+            omega_iers03(j2000),
+            mercury_l_iers03(j2000),
+            venus_l_iers03(j2000),
+            earth_l_iers03(j2000),
+            mars_l_iers03(j2000),
+            jupiter_l_iers03(j2000),
+            saturn_l_iers03(j2000),
+            uranus_l_iers03(j2000),
+            neptune_l_iers03(j2000),
+            pa_iers03(j2000),
         ];
 
         assert_approx_eq!(act, exp, rtol <= TOLERANCE)

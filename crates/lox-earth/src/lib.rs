@@ -10,6 +10,7 @@ pub mod coordinate_transformations;
 pub mod ecliptic;
 pub mod eop;
 pub mod ephemeris;
+pub mod fundamental;
 pub mod itrf;
 pub mod nutation;
 pub mod rotation;
