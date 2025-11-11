@@ -408,8 +408,11 @@ impl<const N: usize> TrajectoryData<N> {
         time_steps: [TimeDelta; M],
         data: &[[f64; M]; N],
     ) -> Self {
-        let time_steps: Arc<[f64]> =
-            Arc::from_iter(time_steps.into_iter().map(|t| (t - epoch).as_seconds_f64()));
+        let time_steps: Arc<[f64]> = Arc::from_iter(
+            time_steps
+                .into_iter()
+                .map(|t| (t - epoch).to_seconds().to_f64()),
+        );
         let data: [Arc<[f64]>; N] = data.map(Arc::from);
         let series = data.clone().map(|d| {
             Series::new(
@@ -460,7 +463,7 @@ impl CartesianTrajectory {
         let mut vz: Vec<f64> = Vec::with_capacity(n);
 
         iter.for_each(|TimeStampedCartesian { time, state }| {
-            time_steps.push((time - epoch).as_seconds_f64());
+            time_steps.push((time - epoch).to_seconds().to_f64());
             x.push(state.x().as_f64());
             y.push(state.y().as_f64());
             z.push(state.z().as_f64());

@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use bevy_ecs::{prelude::*, system::RegisteredSystemError};
+use bevy_ecs::{prelude::*, system::RegisteredSystemError, world::error::EntityMutableFetchError};
 
 use lox_bodies::DynOrigin;
 use lox_core::coords::{LonLatAlt, TimeStampedCartesian};
@@ -83,6 +83,15 @@ impl Scenario {
                 trajectory: Trajectory(None),
             })
             .id()
+    }
+
+    pub fn insert_bundle<B: Bundle>(
+        &mut self,
+        id: Entity,
+        bundle: B,
+    ) -> Result<(), EntityMutableFetchError> {
+        self.0.get_entity_mut(id)?.insert(bundle);
+        Ok(())
     }
 
     pub fn all_spacecraft(&mut self) {
