@@ -9,7 +9,7 @@ use std::f64::consts::TAU;
 use std::iter::zip;
 
 use fast_polynomial::poly_array;
-use lox_core::f64::consts::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
+use lox_core::f64::consts::SECONDS_PER_DAY;
 use lox_core::units::{Angle, AngleUnits};
 use lox_test_utils::ApproxEq;
 use lox_time::time_scales::{Tdb, Tt, Ut1};
@@ -21,7 +21,7 @@ use crate::fundamental::iers03::{
     venus_l_iers03,
 };
 use crate::nutation::Nutation;
-use crate::precession::precession_rate_iau2000;
+use crate::precession::PrecessionCorrectionsIau2000;
 
 mod complementary_terms;
 
@@ -143,9 +143,7 @@ impl EquationOfTheEquinoxes {
     }
 
     pub fn iau2000a(time: Time<Tt>) -> Self {
-        let Nutation {
-            obliquity: depspr, ..
-        } = precession_rate_iau2000(time);
+        let PrecessionCorrectionsIau2000 { depspr, .. } = PrecessionCorrectionsIau2000::new(time);
         let epsa = MeanObliquity::iau1980(time).0 + depspr;
         let Nutation {
             longitude: dpsi, ..
@@ -154,9 +152,7 @@ impl EquationOfTheEquinoxes {
     }
 
     pub fn iau2000b(time: Time<Tt>) -> Self {
-        let Nutation {
-            obliquity: depspr, ..
-        } = precession_rate_iau2000(time);
+        let PrecessionCorrectionsIau2000 { depspr, .. } = PrecessionCorrectionsIau2000::new(time);
         let epsa = MeanObliquity::iau1980(time).0 + depspr;
         let Nutation {
             longitude: dpsi, ..
