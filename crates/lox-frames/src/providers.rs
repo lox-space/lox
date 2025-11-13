@@ -7,11 +7,11 @@ use lox_time::OffsetProvider;
 #[macro_export]
 macro_rules! transform_provider {
     ($provider:ident) => {
-        impl $crate::transformations::TransformProvider for $provider {}
+        impl $crate::transformations::RotationProvider for $provider {}
     };
 }
 
 #[derive(Copy, Clone, Debug, OffsetProvider)]
-pub struct DefaultTransformProvider;
+pub struct DefaultRotationProvider;
 
-transform_provider!(DefaultTransformProvider);
+transform_provider!(DefaultRotationProvider);

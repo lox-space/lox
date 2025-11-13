@@ -6,9 +6,14 @@
 //! Module s06 exposes a function for calculating the Celestial Intermediate Origin (CIO) locator,
 //! s, using IAU 2006 precession and IAU 2000A nutation.
 
+use fast_polynomial::poly_array;
 use lox_core::types::units::JulianCenturies;
 use lox_core::units::{Angle, AngleUnits};
+use lox_time::Time;
+use lox_time::julian_dates::JulianDate;
+use lox_time::time_scales::Tdb;
 
+use crate::cio::CioLocator;
 use crate::cip::CipCoords;
 use crate::fundamental::iers03::{
     d_iers03, earth_l_iers03, f_iers03, l_iers03, lp_iers03, omega_iers03, pa_iers03,
@@ -16,6 +21,16 @@ use crate::fundamental::iers03::{
 };
 
 mod terms;
+
+impl CioLocator {
+    pub fn iau2006(time: Time<Tdb>, CipCoords { x, y }: CipCoords) -> Self {
+        let t = time.centuries_since_j2000();
+        let fundamental_args = fundamental_args(t);
+        let evaluated_terms = evaluate_terms(&fundamental_args);
+        let s = poly_array(t, &evaluated_terms).arcsec();
+        CioLocator(s - y.to_radians() / 2.0 * x)
+    }
+}
 
 /// l, l', F, D, Ω, LVe, LE and pA.
 type FundamentalArgs = [Angle; 8];
@@ -28,7 +43,7 @@ pub fn cio_locator(
 ) -> Angle {
     let fundamental_args = fundamental_args(centuries_since_j2000_tdb);
     let evaluated_terms = evaluate_terms(&fundamental_args);
-    let s = fast_polynomial::poly_array(centuries_since_j2000_tdb, &evaluated_terms).arcsec();
+    let s = poly_array(centuries_since_j2000_tdb, &evaluated_terms).arcsec();
     Angle::radians(s.to_radians() - x.to_radians() * y.to_radians() / 2.0)
 }
 
@@ -76,52 +91,27 @@ fn evaluate_single_order_terms(
 
 #[cfg(test)]
 mod tests {
-    use std::iter::zip;
-
     use lox_test_utils::assert_approx_eq;
 
     use super::*;
 
-    const TOLERANCE: f64 = 1e-11;
-
     #[test]
-    fn test_s_jd0() {
-        let jd0: JulianCenturies = -67.11964407939767;
-        let xy = CipCoords::new(jd0);
-        assert_approx_eq!(
-            cio_locator(jd0, xy),
-            -0.0723985415686306.rad(),
-            rtol <= TOLERANCE
-        );
-    }
-
-    #[test]
-    fn test_s_j2000() {
-        let j2000: JulianCenturies = 0.0;
-        let xy = CipCoords::new(j2000);
-        assert_approx_eq!(
-            cio_locator(j2000, xy),
-            -0.00000001013396519178.rad(),
-            rtol <= TOLERANCE
-        );
-    }
-
-    #[test]
-    fn test_s_j2100() {
-        let j2100: JulianCenturies = 1.0;
-        let xy = CipCoords::new(j2100);
-        assert_approx_eq!(
-            cio_locator(j2100, xy),
-            -0.00000000480511934533.rad(),
-            rtol <= TOLERANCE
-        );
+    fn test_cio_locator_iau2006() {
+        let cip_coords = CipCoords {
+            x: 5.791_308_486_706_011e-4.rad(),
+            y: 4.020_579_816_732_961e-5.rad(),
+        };
+        let time = Time::from_two_part_julian_date(Tdb, 2400000.5, 53736.0);
+        let exp = CioLocator(-1.220_032_213_076_463e-8.rad());
+        let act = CioLocator::iau2006(time, cip_coords);
+        assert_approx_eq!(act, exp, atol <= 1e-18);
     }
 
     #[test]
     fn test_fundamental_args_ordering() {
         let j2000: JulianCenturies = 0.0;
-        let actual = fundamental_args(j2000);
-        let expected = [
+        let act = fundamental_args(j2000);
+        let exp = [
             l_iers03(j2000),
             lp_iers03(j2000),
             f_iers03(j2000),
@@ -132,8 +122,6 @@ mod tests {
             pa_iers03(j2000),
         ];
 
-        for (act, exp) in zip(actual, expected) {
-            assert_approx_eq!(act, exp, rtol <= TOLERANCE)
-        }
+        assert_approx_eq!(act, exp, rtol <= 1e-12)
     }
 }

@@ -6,13 +6,14 @@
 
 pub mod cio;
 pub mod cip;
-pub mod coordinate_transformations;
 pub mod ecliptic;
 pub mod eop;
 pub mod ephemeris;
+pub mod frames;
 pub mod fundamental;
-pub mod itrf;
+pub mod iers;
 pub mod nutation;
+pub mod polar_motion;
 pub mod precession;
 pub mod rotation;
 #[allow(dead_code)]

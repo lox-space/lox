@@ -174,6 +174,7 @@ fn calculate_cip_unit_vector(
 #[cfg(test)]
 mod tests {
     use lox_test_utils::assert_approx_eq;
+    use lox_time::{Time, time_scales::Tdb};
 
     use crate::cip::CipCoords;
 
@@ -182,27 +183,11 @@ mod tests {
     const TOLERANCE: f64 = 1e-12;
 
     #[test]
-    fn test_cip_xy_jd0() {
-        let jd0: JulianCenturies = -67.11964407939767;
-        let CipCoords { x, y } = CipCoords::new(jd0);
-        assert_approx_eq!(x, -0.4088355637476968.rad(), rtol <= TOLERANCE);
-        assert_approx_eq!(y, -0.38359667445777073.rad(), rtol <= TOLERANCE);
-    }
-
-    #[test]
-    fn test_cip_xy_j2000() {
-        let j2000: JulianCenturies = 0.0;
-        let CipCoords { x, y } = CipCoords::new(j2000);
-        assert_approx_eq!(x, -0.0000269463795685740.rad(), rtol <= TOLERANCE);
-        assert_approx_eq!(y, -0.00002800472282281282.rad(), rtol <= TOLERANCE);
-    }
-
-    #[test]
-    fn test_cip_xy_j2100() {
-        let j2100: JulianCenturies = 1.0;
-        let CipCoords { x, y } = CipCoords::new(j2100);
-        assert_approx_eq!(x, 0.00972070446172924.rad(), rtol <= TOLERANCE);
-        assert_approx_eq!(y, -0.0000673058699616719.rad(), rtol <= TOLERANCE);
+    fn test_cip_coordinates_iau2006() {
+        let time = Time::from_two_part_julian_date(Tdb, 2400000.5, 53736.0);
+        let CipCoords { x, y } = CipCoords::iau2006(time);
+        assert_approx_eq!(x, 5.791_308_486_706_011e-4.rad(), rtol <= TOLERANCE);
+        assert_approx_eq!(y, 4.020_579_816_732_958e-5.rad(), rtol <= TOLERANCE);
     }
 
     #[test]

@@ -11,12 +11,12 @@ use thiserror::Error;
 use crate::{
     Iau,
     frames::{Cirf, Icrf, Itrf, Tirf},
-    providers::DefaultTransformProvider,
+    providers::DefaultRotationProvider,
     traits::{
         NonBodyFixedFrameError, NonQuasiInertialFrameError, ReferenceFrame, TryBodyFixed,
         TryQuasiInertial, frame_id,
     },
-    transformations::{Rotation, TryTransform},
+    transformations::{Rotation, TryRotation},
 };
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
@@ -139,10 +139,10 @@ pub enum DynTransformError {
     UndefinedRotationalElements(#[from] UndefinedOriginPropertyError),
 }
 
-impl TryTransform<DynFrame, DynFrame, DynTimeScale> for DefaultTransformProvider {
+impl TryRotation<DynFrame, DynFrame, DynTimeScale> for DefaultRotationProvider {
     type Error = DynTransformError;
 
-    fn try_transform(
+    fn try_rotation(
         &self,
         origin: DynFrame,
         target: DynFrame,
@@ -151,19 +151,19 @@ impl TryTransform<DynFrame, DynFrame, DynTimeScale> for DefaultTransformProvider
         match (origin, target) {
             (DynFrame::Icrf, DynFrame::Icrf) => Ok(Rotation::IDENTITY),
             (DynFrame::Icrf, DynFrame::Iau(target)) => {
-                Ok(self.try_transform(Icrf, Iau::try_new(target)?, time)?)
+                Ok(self.try_rotation(Icrf, Iau::try_new(target)?, time)?)
             }
             (DynFrame::Cirf, DynFrame::Cirf) => Ok(Rotation::IDENTITY),
             (DynFrame::Tirf, DynFrame::Tirf) => Ok(Rotation::IDENTITY),
             (DynFrame::Iau(origin), DynFrame::Icrf) => {
-                Ok(self.try_transform(Iau::try_new(origin)?, Icrf, time)?)
+                Ok(self.try_rotation(Iau::try_new(origin)?, Icrf, time)?)
             }
             (DynFrame::Iau(origin), DynFrame::Iau(target)) => {
                 let origin = Iau::try_new(origin)?;
                 let target = Iau::try_new(target)?;
                 Ok(self
-                    .try_transform(origin, Icrf, time)?
-                    .compose(self.try_transform(Icrf, target, time)?))
+                    .try_rotation(origin, Icrf, time)?
+                    .compose(self.try_rotation(Icrf, target, time)?))
             }
             (origin, target) => Err(DynTransformError::MissingEopProvider(
                 origin.abbreviation(),
@@ -226,8 +226,8 @@ mod tests {
             .to_dyn_time();
         let r = DVec3::new(-5530.01774359, -3487.0895338, -1850.03476185);
         let v = DVec3::new(1.29534407, -5.02456882, 5.6391936);
-        let rot = DefaultTransformProvider
-            .try_transform(DynFrame::Icrf, frame, time)
+        let rot = DefaultRotationProvider
+            .try_rotation(DynFrame::Icrf, frame, time)
             .unwrap();
         let (r_act, v_act) = rot.rotate_state(r, v);
         assert_approx_eq!(r_act, r_exp, rtol <= 1e-8);

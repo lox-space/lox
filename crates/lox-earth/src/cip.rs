@@ -6,13 +6,15 @@
 //! Module cip exposes functions for calculating the position of the
 //! Celestial Intermediate Pole (CIP).
 
-use glam::DMat3;
-use lox_core::{
-    types::units::JulianCenturies,
-    units::{Angle, AngleUnits},
-};
+use std::ops::{Add, AddAssign};
 
-mod xy06;
+use glam::DMat3;
+use lox_core::units::{Angle, AngleUnits};
+use lox_time::{Time, julian_dates::JulianDate, time_scales::Tdb};
+
+use crate::cio::CioLocator;
+
+mod iau2006;
 
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct CipCoords {
@@ -23,8 +25,9 @@ pub struct CipCoords {
 impl CipCoords {
     /// Calculates the (X, Y) coordinates of the Celestial Intermediate Pole (CIP) using the the IAU
     /// 2006 precession and IAU 2000A nutation models.
-    pub fn new(centuries_since_j2000_tdb: JulianCenturies) -> Self {
-        let (x, y) = xy06::cip_coords(centuries_since_j2000_tdb);
+    pub fn iau2006(time: Time<Tdb>) -> Self {
+        let t = time.centuries_since_j2000();
+        let (x, y) = iau2006::cip_coords(t);
         Self { x, y }
     }
 
@@ -34,10 +37,45 @@ impl CipCoords {
         let y = bpn.y_axis.z.rad();
         Self { x, y }
     }
+
+    pub fn celestial_to_intermediate_matrix(&self, s: CioLocator) -> DMat3 {
+        let x = self.x.to_radians();
+        let y = self.y.to_radians();
+        let r2 = x.powi(2) + y.powi(2);
+
+        let e = if r2 > 0.0 {
+            Angle::from_atan2(y, x)
+        } else {
+            Angle::default()
+        };
+        let d = Angle::from_atan((r2 / (1.0 - r2)).sqrt());
+
+        (-(e + s.0)).rotation_z() * d.rotation_y() * e.rotation_z()
+    }
+}
+
+impl Add for CipCoords {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        CipCoords {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+        }
+    }
+}
+
+impl AddAssign for CipCoords {
+    fn add_assign(&mut self, rhs: Self) {
+        self.x += rhs.x;
+        self.y += rhs.y;
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use lox_test_utils::assert_approx_eq;
+
     use super::*;
 
     #[test]
@@ -57,5 +95,28 @@ mod tests {
         let cip = CipCoords::from_matrix(bpn);
         assert_eq!(cip.x, 1.093465510215479e-3.rad());
         assert_eq!(cip.y, -4.281337229063151e-5.rad());
+    }
+
+    #[test]
+    fn test_cip_celestial_to_intermediate_matrix() {
+        let xy = CipCoords {
+            x: 5.791_308_486_706_011e-4.rad(),
+            y: 4.020_579_816_732_961e-5.rad(),
+        };
+        let s = CioLocator(-1.220_040_848_472_272e-8.rad());
+        let exp = DMat3::from_cols_array(&[
+            0.999_999_832_303_715_7,
+            5.581_984_869_168_499e-10,
+            -5.791_308_491_611_282e-4,
+            -2.384_261_642_670_440_2e-8,
+            0.999_999_999_191_746_9,
+            -4.020_579_110_169_669e-5,
+            5.791_308_486_706_011e-4,
+            4.020_579_816_732_961e-5,
+            0.999_999_831_495_462_8,
+        ])
+        .transpose();
+        let act = xy.celestial_to_intermediate_matrix(s);
+        assert_approx_eq!(act, exp, atol <= 1e-12);
     }
 }

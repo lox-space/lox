@@ -11,9 +11,9 @@ use crate::ReferenceFrame;
 pub mod iau;
 pub mod rotations;
 
-pub trait TransformProvider: OffsetProvider {}
+pub trait RotationProvider: OffsetProvider {}
 
-pub trait TryTransform<Origin, Target, T>: TransformProvider
+pub trait TryRotation<Origin, Target, T>: RotationProvider
 where
     Origin: ReferenceFrame,
     Target: ReferenceFrame,
@@ -21,7 +21,7 @@ where
 {
     type Error: std::error::Error + Send + Sync + 'static;
 
-    fn try_transform(
+    fn try_rotation(
         &self,
         origin: Origin,
         target: Target,

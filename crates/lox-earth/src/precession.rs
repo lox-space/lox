@@ -45,6 +45,11 @@ impl PrecessionIau1976 {
             * tas2r;
         Self { zeta, z, theta }
     }
+
+    pub fn matrix(time: Time<Tdb>) -> DMat3 {
+        let prec = Self::new(Time::default(), time);
+        (-prec.z).rotation_z() * prec.theta.rotation_y() * (-prec.zeta).rotation_z()
+    }
 }
 
 pub struct BiasPrecessionIau2000 {
@@ -53,7 +58,7 @@ pub struct BiasPrecessionIau2000 {
     /// Precession matrix.
     pub rp: DMat3,
     /// Bias-precession matrix.
-    pub rbp: DMat3,
+    pub rpb: DMat3,
 }
 
 impl BiasPrecessionIau2000 {
@@ -81,7 +86,7 @@ impl BiasPrecessionIau2000 {
 
         // Bias-precession matrix: GCRS to mean of date
         let rbp = rp * rb;
-        Self { rb, rp, rbp }
+        Self { rb, rp, rpb: rbp }
     }
 }
 
@@ -225,7 +230,7 @@ mod tests {
             0.999_999_928_598_468_3,
         ])
         .transpose();
-        let rbp_exp = DMat3::from_cols_array(&[
+        let rpb_exp = DMat3::from_cols_array(&[
             0.999_999_550_517_508_8,
             8.695_405_883_617_885e-4,
             3.779_734_722_239_007e-4,
@@ -239,7 +244,7 @@ mod tests {
         .transpose();
         assert_approx_eq!(bp.rb, rb_exp, atol <= 1e-12);
         assert_approx_eq!(bp.rp, rp_exp, atol <= 1e-12);
-        assert_approx_eq!(bp.rbp, rbp_exp, atol <= 1e-12);
+        assert_approx_eq!(bp.rpb, rpb_exp, atol <= 1e-12);
     }
 
     #[test]

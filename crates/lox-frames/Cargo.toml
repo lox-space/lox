@@ -17,6 +17,7 @@ repository.workspace = true
 lox-bodies.workspace = true
 lox-core.workspace = true
 lox-math.workspace = true
+lox-test-utils.workspace = true
 lox-time.workspace = true
 lox-units.workspace = true
 
@@ -25,5 +26,4 @@ hashbrown.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
-lox-test-utils.workspace = true
 rstest.workspace = true

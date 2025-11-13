@@ -23,7 +23,7 @@ use lox_core::{
 };
 use lox_frames::{
     DynFrame, NonQuasiInertialFrameError, QuasiInertial, ReferenceFrame, TryQuasiInertial,
-    traits::frame_id, transformations::TryTransform,
+    traits::frame_id, transformations::TryRotation,
 };
 use lox_time::{
     Time,
@@ -323,7 +323,7 @@ where
         T: Copy,
         R: Copy,
         R1: ReferenceFrame + Copy,
-        P: TryTransform<R, R1, T>,
+        P: TryRotation<R, R1, T>,
     {
         if frame_id(&self.frame) == frame_id(&frame) {
             return Ok(Trajectory {
@@ -341,7 +341,7 @@ where
                 let dt: TimeDelta = time.into();
                 let t = self.epoch + dt;
                 provider
-                    .try_transform(self.frame, frame, t)
+                    .try_rotation(self.frame, frame, t)
                     .map(|rot| TimeStampedCartesian {
                         time,
                         state: rot * state,

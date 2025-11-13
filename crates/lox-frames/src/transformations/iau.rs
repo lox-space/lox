@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use crate::transformations::rotations::Rotation;
-use crate::transformations::{TransformProvider, TryTransform};
+use crate::transformations::{RotationProvider, TryRotation};
 use glam::{DMat3, DVec3};
 use lox_bodies::TryRotationalElements;
 use lox_time::Time;
@@ -30,15 +30,15 @@ pub fn icrf_to_iau(
     Rotation::new(m).with_angular_velocity(v)
 }
 
-impl<T, Scale, Origin> TryTransform<Icrf, Iau<Origin>, Scale> for T
+impl<T, Scale, Origin> TryRotation<Icrf, Iau<Origin>, Scale> for T
 where
     Scale: TimeScale + Copy,
     Origin: TryRotationalElements + Copy,
-    T: TransformProvider + TryOffset<Scale, Tdb>,
+    T: RotationProvider + TryOffset<Scale, Tdb>,
 {
     type Error = <Self as TryOffset<Scale, Tdb>>::Error;
 
-    fn try_transform(
+    fn try_rotation(
         &self,
         _origin: Icrf,
         target: Iau<Origin>,
@@ -60,20 +60,20 @@ where
     }
 }
 
-impl<T, Scale, Origin> TryTransform<Iau<Origin>, Icrf, Scale> for T
+impl<T, Scale, Origin> TryRotation<Iau<Origin>, Icrf, Scale> for T
 where
     Scale: TimeScale,
     Origin: TryRotationalElements,
-    T: TryTransform<Icrf, Iau<Origin>, Scale> + TryOffset<Scale, Tdb>,
+    T: TryRotation<Icrf, Iau<Origin>, Scale> + TryOffset<Scale, Tdb>,
 {
-    type Error = <Self as TryTransform<Icrf, Iau<Origin>, Scale>>::Error;
+    type Error = <Self as TryRotation<Icrf, Iau<Origin>, Scale>>::Error;
 
-    fn try_transform(
+    fn try_rotation(
         &self,
         origin: Iau<Origin>,
         target: Icrf,
         time: Time<Scale>,
     ) -> Result<Rotation, Self::Error> {
-        Ok(self.try_transform(target, origin, time)?.transpose())
+        Ok(self.try_rotation(target, origin, time)?.transpose())
     }
 }

@@ -6,6 +6,16 @@ use lox_bodies::{Origin, RotationalElements, TryRotationalElements, UndefinedOri
 
 use crate::traits::{BodyFixed, QuasiInertial, ReferenceFrame};
 
+const ICRF_ID: i32 = 0;
+const CIRF_ID: i32 = 1;
+const TIRF_ID: i32 = 2;
+const ITRF_ID: i32 = 3;
+
+const J2000_ID: i32 = 10;
+const MOD_ID: i32 = 11;
+const TOD_ID: i32 = 12;
+const PEF_ID: i32 = 13;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Icrf;
 
@@ -23,7 +33,7 @@ impl ReferenceFrame for Icrf {
     }
 
     fn frame_id(&self, _: crate::traits::private::Internal) -> Option<i32> {
-        Some(0)
+        Some(ICRF_ID)
     }
 }
 
@@ -46,7 +56,7 @@ impl ReferenceFrame for Cirf {
     }
 
     fn frame_id(&self, _: crate::traits::private::Internal) -> Option<i32> {
-        Some(1)
+        Some(CIRF_ID)
     }
 }
 
@@ -67,7 +77,7 @@ impl ReferenceFrame for Tirf {
     }
 
     fn frame_id(&self, _: crate::traits::private::Internal) -> Option<i32> {
-        Some(2)
+        Some(TIRF_ID)
     }
 }
 
@@ -88,7 +98,112 @@ impl ReferenceFrame for Itrf {
     }
 
     fn frame_id(&self, _: crate::traits::private::Internal) -> Option<i32> {
-        Some(3)
+        Some(ITRF_ID)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct J2000;
+
+impl ReferenceFrame for J2000 {
+    fn name(&self) -> String {
+        "J2000".to_owned()
+    }
+
+    fn abbreviation(&self) -> String {
+        "J2000".to_owned()
+    }
+
+    fn is_rotating(&self) -> bool {
+        false
+    }
+
+    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<i32> {
+        Some(J2000_ID)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Mod;
+
+impl ReferenceFrame for Mod {
+    fn name(&self) -> String {
+        "Mean of Date".to_owned()
+    }
+
+    fn abbreviation(&self) -> String {
+        "MOD".to_owned()
+    }
+
+    fn is_rotating(&self) -> bool {
+        false
+    }
+
+    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<i32> {
+        Some(MOD_ID)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Tod;
+
+impl ReferenceFrame for Tod {
+    fn name(&self) -> String {
+        "True of Date".to_owned()
+    }
+
+    fn abbreviation(&self) -> String {
+        "TOD".to_owned()
+    }
+
+    fn is_rotating(&self) -> bool {
+        false
+    }
+
+    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<i32> {
+        Some(TOD_ID)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Pef;
+
+impl ReferenceFrame for Pef {
+    fn name(&self) -> String {
+        "Pseudo Earth Fixed".to_owned()
+    }
+
+    fn abbreviation(&self) -> String {
+        "PEF".to_owned()
+    }
+
+    fn is_rotating(&self) -> bool {
+        true
+    }
+
+    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<i32> {
+        Some(PEF_ID)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Teme;
+
+impl ReferenceFrame for Teme {
+    fn name(&self) -> String {
+        "True Equator Mean Equinox".to_owned()
+    }
+
+    fn abbreviation(&self) -> String {
+        "TEME".to_owned()
+    }
+
+    fn is_rotating(&self) -> bool {
+        false
+    }
+
+    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<i32> {
+        Some(7)
     }
 }
 

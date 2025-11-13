@@ -32,7 +32,7 @@ pub struct Nutation {
 }
 
 impl Nutation {
-    fn nutation_matrix(&self, mean_obliquity: MeanObliquity) -> DMat3 {
+    pub fn nutation_matrix(&self, mean_obliquity: MeanObliquity) -> DMat3 {
         let rot1 = mean_obliquity.0.rotation_x();
         let rot2 = (-self.longitude).rotation_z();
         let rot3 = (-(self.obliquity + mean_obliquity.0)).rotation_x();

@@ -9,11 +9,11 @@ use std::f64::consts::TAU;
 use std::iter::zip;
 
 use fast_polynomial::poly_array;
-use lox_core::f64::consts::SECONDS_PER_DAY;
+use lox_core::f64::consts::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 use lox_core::units::{Angle, AngleUnits};
 use lox_test_utils::ApproxEq;
 use lox_time::time_scales::{Tdb, Tt, Ut1};
-use lox_time::{Time, julian_dates::JulianDate, time_of_day::CivilTime};
+use lox_time::{Time, julian_dates::JulianDate};
 
 use crate::ecliptic::MeanObliquity;
 use crate::fundamental::iers03::{
@@ -48,15 +48,15 @@ pub struct GreenwichMeanSiderealTime(pub Angle);
 pub type Gmst = GreenwichMeanSiderealTime;
 
 // Coefficients of IAU 1982 GMST-UT1 model
-const A: f64 = 24110.54841;
+const A: f64 = 24110.54841 - SECONDS_PER_HALF_DAY;
 const B: f64 = 8640184.812866;
 const C: f64 = 0.093104;
 const D: f64 = -6.2e-6;
 
 impl GreenwichMeanSiderealTime {
-    pub fn iau1980(time: Time<Ut1>) -> Self {
+    pub fn iau1982(time: Time<Ut1>) -> Self {
         let t = time.centuries_since_j2000();
-        let f = time.time().seconds_f64() / SECONDS_PER_DAY;
+        let f = time.days_since_j2000().rem_euclid(1.0) * SECONDS_PER_DAY;
         Self(Angle::from_hms(0, 0, poly_array(t, &[A, B, C, D]) + f).mod_two_pi())
     }
 
@@ -100,7 +100,7 @@ pub type Gast = GreenwichApparentSiderealTime;
 impl GreenwichApparentSiderealTime {
     pub fn iau1994(time: Time<Ut1>) -> Self {
         Self(
-            (GreenwichMeanSiderealTime::iau1980(time).0
+            (GreenwichMeanSiderealTime::iau1982(time).0
                 + EquationOfTheEquinoxes::iau1994(time.with_scale(Tdb)).0)
                 .mod_two_pi(),
         )
@@ -235,10 +235,10 @@ mod tests {
     }
 
     #[test]
-    fn test_greenwich_mean_sidereal_time_iau1980() {
+    fn test_greenwich_mean_sidereal_time_iau1982() {
         let ut1 = Time::from_two_part_julian_date(Ut1, 2400000.5, 53736.0);
         let exp = GreenwichMeanSiderealTime(Angle::new(1.754_174_981_860_675));
-        let act = Gmst::iau1980(ut1);
+        let act = Gmst::iau1982(ut1);
         assert_approx_eq!(act, exp, rtol <= 1e-12);
     }
 

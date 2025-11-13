@@ -40,8 +40,8 @@ use crate::time::python::time_scales::PyMissingEopProviderError;
 use crate::time::time_scales::{DynTimeScale, Tai};
 
 use glam::DVec3;
-use lox_frames::providers::DefaultTransformProvider;
-use lox_frames::transformations::{Rotation, TryTransform};
+use lox_frames::providers::DefaultRotationProvider;
+use lox_frames::transformations::{Rotation, TryRotation};
 use numpy::{PyArray1, PyArray2, PyArrayMethods};
 use pyo3::exceptions::PyValueError;
 use pyo3::types::{PyList, PyType};
@@ -179,10 +179,10 @@ impl PyState {
         let time = self.0.time();
         let rot: Result<Rotation, PyErr> = match provider {
             Some(provider) => provider
-                .try_transform(origin, target, time)
+                .try_rotation(origin, target, time)
                 .map_err(|err| PyDynTransformEopError(err).into()),
-            None => DefaultTransformProvider
-                .try_transform(origin, target, time)
+            None => DefaultRotationProvider
+                .try_rotation(origin, target, time)
                 .map_err(|err| PyDynTransformError(err).into()),
         };
         let (r1, v1) = rot?.rotate_state(self.0.position(), self.0.velocity());

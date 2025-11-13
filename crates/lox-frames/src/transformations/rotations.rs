@@ -6,6 +6,7 @@ use std::ops::Mul;
 
 use glam::{DMat3, DVec3};
 use lox_core::coords::Cartesian;
+use lox_test_utils::ApproxEq;
 
 pub fn rotation_matrix_derivative(m: DMat3, v: DVec3) -> DMat3 {
     let sx = DVec3::new(0.0, v.z, v.y);
@@ -15,11 +16,12 @@ pub fn rotation_matrix_derivative(m: DMat3, v: DVec3) -> DMat3 {
     -s * m
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, ApproxEq)]
 pub struct Rotation {
     /// Rotation matrix
-    m: DMat3,
+    pub m: DMat3,
     /// Time derivative of the rotation matrix
-    dm: DMat3,
+    pub dm: DMat3,
 }
 
 impl Rotation {
@@ -73,6 +75,15 @@ impl Rotation {
 
     pub fn rotate_state(&self, pos: DVec3, vel: DVec3) -> (DVec3, DVec3) {
         (self.rotate_position(pos), self.rotate_velocity(pos, vel))
+    }
+}
+
+impl Default for Rotation {
+    fn default() -> Self {
+        Self {
+            m: DMat3::IDENTITY,
+            dm: DMat3::ZERO,
+        }
     }
 }
 
