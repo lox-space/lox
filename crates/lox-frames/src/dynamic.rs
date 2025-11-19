@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use std::str::FromStr;
+use std::{convert::Infallible, str::FromStr};
 
 use lox_bodies::{DynOrigin, Origin, TryRotationalElements, UndefinedOriginPropertyError};
 use lox_time::{Time, time_scales::DynTimeScale};
@@ -134,9 +134,13 @@ pub enum DynTransformError {
     #[error("transformations between {0} and {1} require an EOP provider")]
     MissingEopProvider(String, String),
     #[error(transparent)]
-    MissingUt1Provider(#[from] lox_time::offsets::MissingEopProviderError),
-    #[error(transparent)]
     UndefinedRotationalElements(#[from] UndefinedOriginPropertyError),
+}
+
+impl From<Infallible> for DynTransformError {
+    fn from(_: Infallible) -> Self {
+        unreachable!()
+    }
 }
 
 impl TryTransform<DynFrame, DynFrame, DynTimeScale> for DefaultTransformProvider {

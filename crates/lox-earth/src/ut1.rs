@@ -12,50 +12,19 @@
 
 use crate::eop::{EopProvider, EopProviderError};
 use lox_time::deltas::TimeDelta;
-use lox_time::offsets::{Offset, TryOffset};
-use lox_time::time_scales::{Tai, Tcb, Tcg, Tdb, Tt, Ut1};
+use lox_time::offsets::OffsetProvider;
 
-// TAI <-> UT1
+impl OffsetProvider for EopProvider {
+    type Error = EopProviderError;
 
-macro_rules! impl_ut1 {
-    ($($scale:ident),*) => {
-        $(
-            impl TryOffset<$scale, Ut1> for EopProvider
-            {
-                type Error = EopProviderError;
+    fn tai_to_ut1(&self, delta: TimeDelta) -> Result<TimeDelta, Self::Error> {
+        self.delta_ut1_tai(delta)
+    }
 
-                fn try_offset(
-                    &self,
-                    origin: $scale,
-                    _target: Ut1,
-                    delta: TimeDelta,
-                ) -> Result<TimeDelta, Self::Error> {
-                    let offset = self.try_offset(origin, Tai, delta)?;
-                    let tai = delta + offset;
-                    Ok(offset + self.delta_ut1_tai(tai)?)
-                }
-            }
-
-            impl TryOffset<Ut1, $scale> for EopProvider
-            {
-                type Error = EopProviderError;
-
-                fn try_offset(
-                    &self,
-                    _origin: Ut1,
-                    target: $scale,
-                    delta: TimeDelta,
-                ) -> Result<TimeDelta, Self::Error> {
-                    let offset = self.delta_tai_ut1(delta)?;
-                    let tai = delta + offset;
-                    Ok(offset + self.offset(Tai, target, tai))
-                }
-            }
-        )*
+    fn ut1_to_tai(&self, delta: TimeDelta) -> Result<TimeDelta, Self::Error> {
+        self.delta_tai_ut1(delta)
     }
 }
-
-impl_ut1!(Tai, Tcb, Tcg, Tt, Tdb);
 
 #[cfg(test)]
 mod tests {
@@ -68,10 +37,11 @@ mod tests {
     use lox_test_utils::data_file;
     use lox_time::Time;
     use lox_time::deltas::ToDelta;
+    use lox_time::offsets::TryOffset;
     use lox_time::subsecond::Subsecond;
     use lox_time::time;
     use lox_time::time_scales::DynTimeScale;
-    use lox_time::time_scales::Ut1;
+    use lox_time::time_scales::{Tai, Ut1};
     use lox_time::utc::leap_seconds::BuiltinLeapSeconds;
     use lox_time::utc::transformations::TryToUtc;
     use lox_time::{DynTime, calendar_dates::Date, time_of_day::TimeOfDay};

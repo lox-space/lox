@@ -36,7 +36,6 @@ use crate::time::deltas::TimeDelta;
 use crate::time::offsets::DefaultOffsetProvider;
 use crate::time::python::deltas::PyTimeDelta;
 use crate::time::python::time::PyTime;
-use crate::time::python::time_scales::PyMissingEopProviderError;
 use crate::time::time_scales::{DynTimeScale, Tai};
 
 use glam::DVec3;
@@ -732,16 +731,7 @@ impl PySgp4 {
                         .try_to_scale(DynTimeScale::Tai, provider)
                         .map_err(PyEopProviderError)?,
                 ),
-                None => (
-                    pytime
-                        .0
-                        .try_to_scale(Tai, &DefaultOffsetProvider)
-                        .map_err(PyMissingEopProviderError)?,
-                    pytime
-                        .0
-                        .try_to_scale(DynTimeScale::Tai, &DefaultOffsetProvider)
-                        .map_err(PyMissingEopProviderError)?,
-                ),
+                None => (pytime.0.to_scale(Tai), pytime.0.to_scale(DynTimeScale::Tai)),
             };
             let s1 = self.0.propagate(time).map_err(PySgp4Error)?;
             return Ok(Bound::new(
@@ -768,14 +758,7 @@ impl PySgp4 {
                             .try_to_scale(DynTimeScale::Tai, provider)
                             .map_err(PyEopProviderError)?,
                     ),
-                    None => (
-                        step.0
-                            .try_to_scale(Tai, &DefaultOffsetProvider)
-                            .map_err(PyMissingEopProviderError)?,
-                        step.0
-                            .try_to_scale(DynTimeScale::Tai, &DefaultOffsetProvider)
-                            .map_err(PyMissingEopProviderError)?,
-                    ),
+                    None => (step.0.to_scale(Tai), step.0.to_scale(DynTimeScale::Tai)),
                 };
                 let s = self.0.propagate(time).map_err(PySgp4Error)?;
                 let s = State::new(
