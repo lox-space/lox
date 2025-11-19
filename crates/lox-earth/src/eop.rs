@@ -249,7 +249,7 @@ struct NutPrecCorrections {
     iau2000: Option<(TSeries, TSeries)>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct EopProvider {
     polar_motion: (TSeries, TSeries),
     delta_ut1_tai: TSeries,

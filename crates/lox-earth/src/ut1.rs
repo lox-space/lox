@@ -14,10 +14,10 @@ use crate::eop::{EopProvider, EopProviderError};
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::offsets::OffsetProvider;
-use lox_time::time_scales::Tai;
+use lox_time::offsets::{Offset, TryOffset};
+use lox_time::time_scales::{Tai, Tcb, Tcg, Tdb, Tt, Ut1};
 use lox_time::utc::Utc;
 use lox_time::utc::leap_seconds::{DefaultLeapSecondsProvider, LeapSecondsProvider};
-
 impl LeapSecondsProvider for EopProvider {
     fn delta_tai_utc(&self, tai: Time<Tai>) -> Option<TimeDelta> {
         self.get_lsk().map_or_else(
@@ -77,7 +77,9 @@ mod tests {
     use lox_time::subsecond::Subsecond;
     use lox_time::time;
     use lox_time::time_scales::DynTimeScale;
+    use lox_time::time_scales::Ut1;
     use lox_time::time_scales::{Tai, Ut1};
+    use lox_time::utc::leap_seconds::BuiltinLeapSeconds;
     use lox_time::utc::transformations::TryToUtc;
     use lox_time::{DynTime, calendar_dates::Date, time_of_day::TimeOfDay};
     use rstest::{fixture, rstest};

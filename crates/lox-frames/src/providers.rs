@@ -8,24 +8,22 @@ use lox_time::{
     Time,
     deltas::TimeDelta,
     offsets::OffsetProvider,
-    time_scales::Tai,
+    time_scales::{Tai, TimeScale},
     utc::{
         Utc,
         leap_seconds::{DefaultLeapSecondsProvider, LeapSecondsProvider},
     },
 };
 
-#[macro_export]
-macro_rules! transform_provider {
-    ($provider:ident) => {
-        impl $crate::transformations::TransformProvider for $provider {}
-    };
-}
+use crate::{
+    iers::{Corrections, ReferenceSystem, polar_motion::PoleCoords},
+    rotations::RotationProvider,
+};
 
 #[derive(Copy, Clone, Debug)]
-pub struct DefaultTransformProvider;
+pub struct DefaultRotationProvider;
 
-impl OffsetProvider for DefaultTransformProvider {
+impl OffsetProvider for DefaultRotationProvider {
     type Error = Infallible;
 
     fn tai_to_ut1(&self, delta: TimeDelta) -> Result<TimeDelta, Self::Error> {
@@ -47,4 +45,21 @@ impl OffsetProvider for DefaultTransformProvider {
     }
 }
 
-transform_provider!(DefaultTransformProvider);
+impl<T> RotationProvider<T> for DefaultRotationProvider
+where
+    T: TimeScale,
+{
+    type EopError = Infallible;
+
+    fn corrections(
+        &self,
+        _time: Time<T>,
+        _sys: ReferenceSystem,
+    ) -> Result<Corrections, Self::EopError> {
+        Ok(Corrections::default())
+    }
+
+    fn pole_coords(&self, _time: Time<T>) -> Result<PoleCoords, Self::EopError> {
+        Ok(PoleCoords::default())
+    }
+}
