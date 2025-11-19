@@ -42,5 +42,4 @@ pub mod time_of_day;
 pub mod time_scales;
 pub mod utc;
 
-pub use lox_derive::OffsetProvider;
 pub use time::{DynTime, Time, TimeBuilder, TimeError};

@@ -173,6 +173,42 @@ impl TimeScale for DynTimeScale {
     }
 }
 
+impl From<Tai> for DynTimeScale {
+    fn from(_: Tai) -> Self {
+        Self::Tai
+    }
+}
+
+impl From<Tcb> for DynTimeScale {
+    fn from(_: Tcb) -> Self {
+        Self::Tcb
+    }
+}
+
+impl From<Tcg> for DynTimeScale {
+    fn from(_: Tcg) -> Self {
+        Self::Tcg
+    }
+}
+
+impl From<Tdb> for DynTimeScale {
+    fn from(_: Tdb) -> Self {
+        Self::Tdb
+    }
+}
+
+impl From<Tt> for DynTimeScale {
+    fn from(_: Tt) -> Self {
+        Self::Tt
+    }
+}
+
+impl From<Ut1> for DynTimeScale {
+    fn from(_: Ut1) -> Self {
+        Self::Ut1
+    }
+}
+
 #[derive(Clone, Debug, Error, Eq, PartialEq)]
 #[error("unknown time scale: {0}")]
 pub struct UnknownTimeScaleError(String);

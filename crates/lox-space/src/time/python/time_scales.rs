@@ -2,7 +2,6 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use crate::time::offsets::MissingEopProviderError;
 use crate::time::time_scales::{DynTimeScale, TimeScale, UnknownTimeScaleError};
 use pyo3::{
     Bound, PyAny, PyErr, PyResult, exceptions::PyValueError, pyclass, pymethods,
@@ -13,14 +12,6 @@ pub struct PyUnknownTimeScaleError(pub UnknownTimeScaleError);
 
 impl From<PyUnknownTimeScaleError> for PyErr {
     fn from(err: PyUnknownTimeScaleError) -> Self {
-        PyValueError::new_err(err.0.to_string())
-    }
-}
-
-pub struct PyMissingEopProviderError(pub MissingEopProviderError);
-
-impl From<PyMissingEopProviderError> for PyErr {
-    fn from(err: PyMissingEopProviderError) -> Self {
         PyValueError::new_err(err.0.to_string())
     }
 }

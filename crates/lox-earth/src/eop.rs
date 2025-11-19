@@ -11,7 +11,6 @@ use csv::{ByteRecord, ReaderBuilder};
 use lox_core::f64::consts::{SECONDS_BETWEEN_MJD_AND_J2000, SECONDS_PER_DAY};
 use lox_math::series::{Series, SeriesError};
 use lox_time::{
-    OffsetProvider,
     deltas::TimeDelta,
     julian_dates::JulianDate,
     utc::{
@@ -79,7 +78,7 @@ impl From<csv::Error> for EopParserError {
     }
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct EopParser {
     paths: (Option<PathBuf>, Option<PathBuf>),
     lsp: Option<Box<dyn LeapSecondsProvider>>,
@@ -248,8 +247,7 @@ struct NutPrecCorrections {
     iau2000: Option<(TSeries, TSeries)>,
 }
 
-#[derive(Debug, OffsetProvider)]
-#[lox_time(error=EopProviderError, disable(ut1))]
+#[derive(Debug, Clone)]
 pub struct EopProvider {
     polar_motion: (TSeries, TSeries),
     delta_ut1_tai: TSeries,

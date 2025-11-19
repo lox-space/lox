@@ -22,8 +22,6 @@ def test_time(provider):
     assert tai_exp.isclose(tai_act)
     tai_act = tai_exp.to_scale("UT1", provider).to_scale("TAI", provider)
     assert tai_exp.isclose(tai_act)
-    with pytest.raises(ValueError):
-        tai_exp.to_scale("UT1")
     tai1 = lox.Time("TAI", 2000, 1, 1, 0, 0, 0.5)
     assert tai1 > tai_exp
     assert tai1 >= tai_exp

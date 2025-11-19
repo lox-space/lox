@@ -4,9 +4,8 @@
 
 use crate::earth::python::ut1::{PyEopProvider, PyEopProviderError};
 use crate::time::calendar_dates::CalendarDate;
-use crate::time::offsets::DefaultOffsetProvider;
 use crate::time::python::time::PyTime;
-use crate::time::python::time_scales::{PyMissingEopProviderError, PyTimeScale};
+use crate::time::python::time_scales::PyTimeScale;
 use crate::time::time_of_day::CivilTime;
 use crate::time::utc::{Utc, UtcError};
 use pyo3::exceptions::PyValueError;
@@ -128,11 +127,7 @@ impl PyUtc {
                 .to_dyn_time()
                 .try_to_scale(scale.0, provider)
                 .map_err(PyEopProviderError)?,
-            None => self
-                .0
-                .to_dyn_time()
-                .try_to_scale(scale.0, &DefaultOffsetProvider)
-                .map_err(PyMissingEopProviderError)?,
+            None => self.0.to_dyn_time().to_scale(scale.0),
         };
         Ok(PyTime(time))
     }

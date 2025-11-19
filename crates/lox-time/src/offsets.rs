@@ -4,14 +4,15 @@
 
 use std::convert::Infallible;
 
+use crate::Time;
 use crate::deltas::TimeDelta;
-use crate::time_scales::TimeScale;
-use lox_derive::OffsetProvider;
-use thiserror::Error;
+use crate::time_scales::{Tai, TimeScale};
+use crate::utc::Utc;
+use crate::utc::leap_seconds::{BuiltinLeapSeconds, LeapSecondsProvider};
 
-pub trait OffsetProvider {}
+mod impls;
 
-pub trait TryOffset<Origin, Target>: OffsetProvider
+pub trait TryOffset<Origin, Target>
 where
     Origin: TimeScale,
     Target: TimeScale,
@@ -26,7 +27,7 @@ where
     ) -> Result<TimeDelta, Self::Error>;
 }
 
-pub trait Offset<Origin, Target>: OffsetProvider
+pub trait Offset<Origin, Target>
 where
     Origin: TimeScale,
     Target: TimeScale,
@@ -45,19 +46,63 @@ where
     }
 }
 
-#[derive(Debug, Error, Default)]
-#[error("an EOP provider is required for transformations from/to UT1")]
-pub struct MissingEopProviderError;
+pub trait OffsetProvider {
+    type Error: std::error::Error + Send + Sync + 'static;
 
-// FIXME: Remove once `!` lands on stable.
-impl From<Infallible> for MissingEopProviderError {
-    fn from(_: Infallible) -> Self {
-        unreachable!()
+    fn tai_to_ut1(&self, delta: TimeDelta) -> Result<TimeDelta, Self::Error>;
+    fn ut1_to_tai(&self, delta: TimeDelta) -> Result<TimeDelta, Self::Error>;
+
+    fn tai_to_tt(&self) -> TimeDelta {
+        D_TAI_TT
+    }
+
+    fn tt_to_tai(&self) -> TimeDelta {
+        -D_TAI_TT
+    }
+
+    fn tt_to_tcg(&self, delta: TimeDelta) -> TimeDelta {
+        tt_to_tcg(delta)
+    }
+
+    fn tcg_to_tt(&self, delta: TimeDelta) -> TimeDelta {
+        tcg_to_tt(delta)
+    }
+
+    fn tdb_to_tcb(&self, delta: TimeDelta) -> TimeDelta {
+        tdb_to_tcb(delta)
+    }
+
+    fn tcb_to_tdb(&self, delta: TimeDelta) -> TimeDelta {
+        tcb_to_tdb(delta)
+    }
+
+    fn tt_to_tdb(&self, delta: TimeDelta) -> TimeDelta {
+        tt_to_tdb(delta)
+    }
+
+    fn tdb_to_tt(&self, delta: TimeDelta) -> TimeDelta {
+        tdb_to_tt(delta)
     }
 }
 
-#[derive(Debug, Clone, Copy, Default, OffsetProvider)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct DefaultOffsetProvider;
+
+impl OffsetProvider for DefaultOffsetProvider {
+    type Error = Infallible;
+
+    fn tai_to_ut1(&self, delta: TimeDelta) -> Result<TimeDelta, Self::Error> {
+        let tai = Time::from_delta(Tai, delta);
+        Ok(BuiltinLeapSeconds.delta_tai_utc(tai).unwrap_or_default())
+    }
+
+    fn ut1_to_tai(&self, delta: TimeDelta) -> Result<TimeDelta, Self::Error> {
+        Ok(Utc::from_delta(delta)
+            .ok()
+            .map(|utc| BuiltinLeapSeconds.delta_utc_tai(utc).unwrap_or_default())
+            .unwrap_or_default())
+    }
+}
 
 // TAI <-> TT
 
@@ -75,12 +120,12 @@ const LG: f64 = 6.969290134e-10;
 /// The rate of change of TT with respect to TCG.
 const INV_LG: f64 = LG / (1.0 - LG);
 
-pub fn tt_to_tcg(delta: TimeDelta) -> TimeDelta {
+fn tt_to_tcg(delta: TimeDelta) -> TimeDelta {
     let tt = delta.as_seconds_f64();
     TimeDelta::from_seconds_f64(INV_LG * (tt - J77_TT))
 }
 
-pub fn tcg_to_tt(delta: TimeDelta) -> TimeDelta {
+fn tcg_to_tt(delta: TimeDelta) -> TimeDelta {
     let tcg = delta.as_seconds_f64();
     TimeDelta::from_seconds_f64(-LG * (tcg - J77_TT))
 }
@@ -108,12 +153,12 @@ const TDB_0: f64 = -6.55e-5;
 
 const TCB_77: f64 = TDB_0 + LB * TT_0;
 
-pub fn tdb_to_tcb(delta: TimeDelta) -> TimeDelta {
+fn tdb_to_tcb(delta: TimeDelta) -> TimeDelta {
     let tdb = delta.as_seconds_f64();
     TimeDelta::from_seconds_f64(-TCB_77 / (1.0 - LB) + INV_LB * tdb)
 }
 
-pub fn tcb_to_tdb(delta: TimeDelta) -> TimeDelta {
+fn tcb_to_tdb(delta: TimeDelta) -> TimeDelta {
     let tcb = delta.as_seconds_f64();
     TimeDelta::from_seconds_f64(TCB_77 - LB * tcb)
 }
@@ -125,13 +170,13 @@ const EB: f64 = 1.671e-2;
 const M_0: f64 = 6.239996;
 const M_1: f64 = 1.99096871e-7;
 
-pub fn tt_to_tdb(delta: TimeDelta) -> TimeDelta {
+fn tt_to_tdb(delta: TimeDelta) -> TimeDelta {
     let tt = delta.as_seconds_f64();
     let g = M_0 + M_1 * tt;
     TimeDelta::from_seconds_f64(K * (g + EB * g.sin()).sin())
 }
 
-pub fn tdb_to_tt(delta: TimeDelta) -> TimeDelta {
+fn tdb_to_tt(delta: TimeDelta) -> TimeDelta {
     let tdb = delta.as_seconds_f64();
     let mut offset = 0.0;
     for _ in 1..3 {
@@ -143,7 +188,7 @@ pub fn tdb_to_tt(delta: TimeDelta) -> TimeDelta {
 
 // Two-step transformations
 
-pub fn two_step_offset<P, T1, T2, T3>(
+fn two_step_offset<P, T1, T2, T3>(
     provider: &P,
     origin: T1,
     via: T2,
