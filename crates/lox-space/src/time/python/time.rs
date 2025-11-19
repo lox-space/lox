@@ -19,9 +19,7 @@ use crate::earth::python::ut1::{PyEopProvider, PyEopProviderError};
 use crate::time::calendar_dates::{CalendarDate, Date};
 use crate::time::deltas::{TimeDelta, ToDelta};
 use crate::time::julian_dates::{Epoch, JulianDate, Unit};
-use crate::time::offsets::DefaultOffsetProvider;
 use crate::time::python::deltas::PyTimeDelta;
-use crate::time::python::time_scales::PyMissingEopProviderError;
 use crate::time::python::utc::PyUtcError;
 use crate::time::time::{DynTime, Time, TimeError};
 use crate::time::time_of_day::{CivilTime, TimeOfDay};
@@ -337,10 +335,7 @@ impl PyTime {
                 .0
                 .try_to_scale(scale.0, provider)
                 .map_err(PyEopProviderError)?,
-            None => self
-                .0
-                .try_to_scale(scale.0, &DefaultOffsetProvider)
-                .map_err(PyMissingEopProviderError)?,
+            None => self.0.to_scale(scale.0),
         };
         Ok(PyTime(time))
     }
@@ -353,10 +348,7 @@ impl PyTime {
                 .0
                 .try_to_scale(Tai, provider)
                 .map_err(PyEopProviderError)?,
-            None => self
-                .0
-                .try_to_scale(Tai, &DefaultOffsetProvider)
-                .map_err(PyMissingEopProviderError)?,
+            None => self.0.to_scale(Tai),
         }
         .try_to_utc()
         .map_err(PyUtcError)?;
@@ -726,15 +718,6 @@ mod tests {
                 .to_scale(&scale1, Some(&provider))
                 .unwrap();
             assert_approx_eq!(act, exp)
-        })
-    }
-
-    #[test]
-    #[should_panic(expected = "EOP provider")]
-    fn test_pytime_ut1_tai_no_provider() {
-        Python::attach(|py| {
-            let time = PyTime::new(&scale_to_any(py, "UT1"), 2000, 1, 1, 0, 0, 0.0).unwrap();
-            time.to_scale(&scale_to_any(py, "TAI"), None).unwrap();
         })
     }
 
