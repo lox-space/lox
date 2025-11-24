@@ -16,6 +16,8 @@
 use std::fmt::Display;
 use std::ops::{Add, AddAssign, Neg, RangeInclusive, Sub, SubAssign};
 
+use lox_test_utils::approx_eq::ApproxEq;
+
 use crate::f64;
 use crate::i64::consts::{ATTOSECONDS_IN_SECOND, SECONDS_BETWEEN_JD_AND_J2000};
 use crate::types::units::Days;
@@ -483,6 +485,18 @@ impl From<i64> for TimeDelta {
 impl From<i32> for TimeDelta {
     fn from(value: i32) -> Self {
         TimeDelta::from_seconds(value as i64)
+    }
+}
+
+impl ApproxEq for TimeDelta {
+    fn approx_eq(
+        &self,
+        rhs: &Self,
+        atol: f64,
+        rtol: f64,
+    ) -> lox_test_utils::approx_eq::ApproxEqResults {
+        self.as_seconds_f64()
+            .approx_eq(&rhs.as_seconds_f64(), atol, rtol)
     }
 }
 

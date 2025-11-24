@@ -15,13 +15,14 @@ use std::str::FromStr;
 
 use itertools::Itertools;
 use lox_core::i64::consts::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
+use lox_test_utils::approx_eq::{ApproxEq, ApproxEqResults};
 use thiserror::Error;
 
 use crate::calendar_dates::{CalendarDate, Date, DateError};
 use crate::deltas::{TimeDelta, ToDelta};
 use crate::julian_dates::{self, Epoch, JulianDate};
 use crate::time_of_day::{CivilTime, TimeOfDay, TimeOfDayError};
-use crate::utc::leap_seconds::{BuiltinLeapSeconds, LeapSecondsProvider};
+use crate::utc::leap_seconds::{DefaultLeapSecondsProvider, LeapSecondsProvider};
 
 pub mod leap_seconds;
 pub mod transformations;
@@ -117,29 +118,19 @@ impl Utc {
     /// Constructs a new [Utc] instance from the given ISO 8601 string, with leap second validation
     /// provided by [BuiltinLeapSeconds].
     pub fn from_iso(iso: &str) -> Result<Self, UtcError> {
-        Self::from_iso_with_provider(iso, &BuiltinLeapSeconds)
+        Self::from_iso_with_provider(iso, &DefaultLeapSecondsProvider)
     }
 
     /// Constructs a new [Utc] instance from a [TimeDelta] relative to J2000.
     ///
     /// Note that this constructor is not leap-second aware.
     pub fn from_delta(delta: TimeDelta) -> Result<Self, UtcError> {
-        let (mut seconds, subsecond) = delta
+        let (seconds, subsecond) = delta
             .as_seconds_and_subsecond()
             .ok_or(UtcError::UtcUndefined)?;
-
-        // Handle cases where subsecond is very close to 1 second due to floating-point precision
-        // If subsecond >= 0.999999999999999 (999999999999999000 attoseconds), round up to next second
-        if subsecond.as_attoseconds() >= 999_999_999_999_999_000 {
-            seconds += 1;
-            let date = Date::from_seconds_since_j2000(seconds);
-            let time = TimeOfDay::from_seconds_since_j2000(seconds);
-            Ok(Self { date, time })
-        } else {
-            let date = Date::from_seconds_since_j2000(seconds);
-            let time = TimeOfDay::from_seconds_since_j2000(seconds).with_subsecond(subsecond);
-            Ok(Self { date, time })
-        }
+        let date = Date::from_seconds_since_j2000(seconds);
+        let time = TimeOfDay::from_seconds_since_j2000(seconds).with_subsecond(subsecond);
+        Ok(Self { date, time })
     }
 }
 
@@ -181,6 +172,12 @@ impl CivilTime for Utc {
 impl JulianDate for Utc {
     fn julian_date(&self, epoch: Epoch, unit: julian_dates::Unit) -> f64 {
         self.to_delta().julian_date(epoch, unit)
+    }
+}
+
+impl ApproxEq for Utc {
+    fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
+        self.to_delta().approx_eq(&rhs.to_delta(), atol, rtol)
     }
 }
 
@@ -228,7 +225,7 @@ impl UtcBuilder {
 
     /// Constructs the [Utc] instance with leap second validation provided by [BuiltinLeapSeconds].
     pub fn build(self) -> Result<Utc, UtcError> {
-        self.build_with_provider(&BuiltinLeapSeconds)
+        self.build_with_provider(&DefaultLeapSecondsProvider)
     }
 }
 
@@ -320,7 +317,7 @@ mod tests {
         let exp = utc!(2000, 1, 1).unwrap();
         let act = Utc::builder()
             .with_ymd(2000, 1, 1)
-            .build_with_provider(&BuiltinLeapSeconds)
+            .build_with_provider(&DefaultLeapSecondsProvider)
             .unwrap();
         assert_eq!(exp, act)
     }

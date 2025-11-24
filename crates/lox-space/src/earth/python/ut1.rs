@@ -4,14 +4,14 @@
 
 use std::path::PathBuf;
 
-use lox_earth::eop::{EopParser, EopProvider};
+use lox_earth::eop::{self, EopParser, EopProvider};
 use pyo3::exceptions::PyException;
 use pyo3::types::{PyAnyMethods, PyTuple};
 use pyo3::{Bound, PyErr, PyResult, create_exception, pyclass, pymethods};
 
 create_exception!(lox_space, EopParserError, PyException);
 
-pub struct PyEopParserError(pub lox_earth::eop::EopParserError);
+pub struct PyEopParserError(pub eop::EopParserError);
 
 impl From<PyEopParserError> for PyErr {
     fn from(err: PyEopParserError) -> Self {
@@ -38,13 +38,19 @@ impl PyEopProvider {
     #[pyo3(signature = (*args))]
     #[new]
     pub fn new(args: &Bound<'_, PyTuple>) -> PyResult<PyEopProvider> {
-        let mut parser = EopParser::new();
-        if let Ok((path1, path2)) = args.extract::<(PathBuf, PathBuf)>() {
-            parser.from_paths(path1, path2);
+        let (path1, path2) = if let Ok((path1, path2)) = args.extract::<(PathBuf, PathBuf)>() {
+            (path1, path2)
         } else if let Ok((path,)) = args.extract::<(PathBuf,)>() {
-            parser.from_path(path);
-        }
-        Ok(PyEopProvider(parser.parse().map_err(PyEopParserError)?))
+            (path.clone(), path)
+        } else {
+            return Err(PyEopParserError(eop::EopParserError::NoFiles).into());
+        };
+        Ok(PyEopProvider(
+            EopParser::new()
+                .from_paths(path1, path2)
+                .parse()
+                .map_err(PyEopParserError)?,
+        ))
     }
 }
 

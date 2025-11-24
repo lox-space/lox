@@ -252,11 +252,7 @@ impl<T: TimeScale> Time<T> {
 
 impl<T: TimeScale + std::fmt::Debug> ApproxEq for Time<T> {
     fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
-        let mut results = ApproxEqResults::new();
-        let a = self.to_delta().as_seconds_f64();
-        let b = rhs.to_delta().as_seconds_f64();
-        results.merge(String::default(), a.approx_eq(&b, atol, rtol));
-        results
+        self.to_delta().approx_eq(&rhs.to_delta(), atol, rtol)
     }
 }
 

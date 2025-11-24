@@ -11,7 +11,7 @@ use lox_time::{
     time_scales::Tai,
     utc::{
         Utc,
-        leap_seconds::{BuiltinLeapSeconds, LeapSecondsProvider},
+        leap_seconds::{DefaultLeapSecondsProvider, LeapSecondsProvider},
     },
 };
 
@@ -30,13 +30,19 @@ impl OffsetProvider for DefaultTransformProvider {
 
     fn tai_to_ut1(&self, delta: TimeDelta) -> Result<TimeDelta, Self::Error> {
         let tai = Time::from_delta(Tai, delta);
-        Ok(BuiltinLeapSeconds.delta_tai_utc(tai).unwrap_or_default())
+        Ok(DefaultLeapSecondsProvider
+            .delta_tai_utc(tai)
+            .unwrap_or_default())
     }
 
     fn ut1_to_tai(&self, delta: TimeDelta) -> Result<TimeDelta, Self::Error> {
         Ok(Utc::from_delta(delta)
             .ok()
-            .map(|utc| BuiltinLeapSeconds.delta_utc_tai(utc).unwrap_or_default())
+            .map(|utc| {
+                DefaultLeapSecondsProvider
+                    .delta_utc_tai(utc)
+                    .unwrap_or_default()
+            })
             .unwrap_or_default())
     }
 }

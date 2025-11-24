@@ -17,7 +17,7 @@ use crate::time_scales::{DynTimeScale, Tai};
 use crate::{time::Time, utc};
 
 use super::LeapSecondsProvider;
-use super::leap_seconds::BuiltinLeapSeconds;
+use super::leap_seconds::DefaultLeapSecondsProvider;
 use super::{Utc, UtcError};
 
 mod before1972;
@@ -38,7 +38,7 @@ impl Utc {
     }
 
     pub fn to_time(&self) -> Time<Tai> {
-        self.to_time_with_provider(&BuiltinLeapSeconds)
+        self.to_time_with_provider(&DefaultLeapSecondsProvider)
     }
 
     pub fn to_dyn_time_with_provider(&self, provider: &impl LeapSecondsProvider) -> DynTime {
@@ -47,7 +47,7 @@ impl Utc {
     }
 
     pub fn to_dyn_time(&self) -> DynTime {
-        self.to_dyn_time_with_provider(&BuiltinLeapSeconds)
+        self.to_dyn_time_with_provider(&DefaultLeapSecondsProvider)
     }
 }
 
@@ -58,7 +58,7 @@ pub trait TryToUtc {
     ) -> Result<Utc, UtcError>;
 
     fn try_to_utc(&self) -> Result<Utc, UtcError> {
-        self.try_to_utc_with_provider(&BuiltinLeapSeconds)
+        self.try_to_utc_with_provider(&DefaultLeapSecondsProvider)
     }
 }
 
