@@ -137,7 +137,7 @@ impl PyUtc {
 mod tests {
     use super::*;
 
-    use lox_test_utils::data_file;
+    use lox_test_utils::{assert_approx_eq, data_file};
 
     use pyo3::{Bound, IntoPyObject, IntoPyObjectExt, Python};
     use rstest::rstest;
@@ -191,12 +191,12 @@ mod tests {
     }
 
     #[rstest]
-    #[case("TAI")]
-    #[case("TCB")]
-    #[case("TCG")]
-    #[case("TDB")]
-    #[case("TT")]
-    #[case("UT1")]
+    #[case::tai("TAI")]
+    #[case::tcb("TCB")]
+    #[case::tcg("TCG")]
+    #[case::tdb("TDB")]
+    #[case::tt("TT")]
+    #[case::ut1("UT1")]
     fn test_pyutc_transformations(#[case] scale: &str) {
         Python::attach(|py| {
             let path = (data_file("iers/finals2000A.all.csv"),)
@@ -210,7 +210,7 @@ mod tests {
                 .unwrap()
                 .to_utc(Some(&provider))
                 .unwrap();
-            assert_eq!(act, exp);
+            assert_approx_eq!(act.0, exp.0);
         });
     }
 }

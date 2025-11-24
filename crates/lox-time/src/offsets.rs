@@ -8,7 +8,7 @@ use crate::Time;
 use crate::deltas::TimeDelta;
 use crate::time_scales::{Tai, TimeScale};
 use crate::utc::Utc;
-use crate::utc::leap_seconds::{BuiltinLeapSeconds, LeapSecondsProvider};
+use crate::utc::leap_seconds::{DefaultLeapSecondsProvider, LeapSecondsProvider};
 
 mod impls;
 
@@ -88,18 +88,26 @@ pub trait OffsetProvider {
 #[derive(Debug, Clone, Copy, Default)]
 pub struct DefaultOffsetProvider;
 
+impl LeapSecondsProvider for DefaultOffsetProvider {}
+
 impl OffsetProvider for DefaultOffsetProvider {
     type Error = Infallible;
 
     fn tai_to_ut1(&self, delta: TimeDelta) -> Result<TimeDelta, Self::Error> {
         let tai = Time::from_delta(Tai, delta);
-        Ok(BuiltinLeapSeconds.delta_tai_utc(tai).unwrap_or_default())
+        Ok(DefaultLeapSecondsProvider
+            .delta_tai_utc(tai)
+            .unwrap_or_default())
     }
 
     fn ut1_to_tai(&self, delta: TimeDelta) -> Result<TimeDelta, Self::Error> {
         Ok(Utc::from_delta(delta)
             .ok()
-            .map(|utc| BuiltinLeapSeconds.delta_utc_tai(utc).unwrap_or_default())
+            .map(|utc| {
+                DefaultLeapSecondsProvider
+                    .delta_utc_tai(utc)
+                    .unwrap_or_default()
+            })
             .unwrap_or_default())
     }
 }
