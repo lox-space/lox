@@ -45,16 +45,24 @@ pub const LEAP_SECONDS: [i64; 28] = [
 /// an instant in either time scale.
 pub trait LeapSecondsProvider {
     /// The difference in leap seconds between TAI and UTC at the given TAI instant.
-    fn delta_tai_utc(&self, tai: Time<Tai>) -> Option<TimeDelta>;
+    fn delta_tai_utc(&self, tai: Time<Tai>) -> Option<TimeDelta> {
+        find_leap_seconds_tai(&LEAP_SECOND_EPOCHS_TAI, &LEAP_SECONDS, tai)
+    }
 
     /// The difference in leap seconds between UTC and TAI at the given UTC instant.
-    fn delta_utc_tai(&self, utc: Utc) -> Option<TimeDelta>;
+    fn delta_utc_tai(&self, utc: Utc) -> Option<TimeDelta> {
+        find_leap_seconds_utc(&LEAP_SECOND_EPOCHS_UTC, &LEAP_SECONDS, utc)
+    }
 
     /// Returns `true` if a leap second occurs on `date`.
-    fn is_leap_second_date(&self, date: Date) -> bool;
+    fn is_leap_second_date(&self, date: Date) -> bool {
+        is_leap_second_date(&LEAP_SECOND_EPOCHS_UTC, date)
+    }
 
     /// Returns `true` if a leap second occurs at `tai`.
-    fn is_leap_second(&self, tai: Time<Tai>) -> bool;
+    fn is_leap_second(&self, tai: Time<Tai>) -> bool {
+        is_leap_second(&LEAP_SECOND_EPOCHS_TAI, tai)
+    }
 }
 
 /// `lox-time`'s default [LeapSecondsProvider], suitable for most applications.
@@ -64,25 +72,9 @@ pub trait LeapSecondsProvider {
 /// change. If this is unsuitable for your use case, we recommend implementing [LeapSecondsProvider]
 /// manually.
 #[derive(Debug)]
-pub struct BuiltinLeapSeconds;
+pub struct DefaultLeapSecondsProvider;
 
-impl LeapSecondsProvider for BuiltinLeapSeconds {
-    fn delta_tai_utc(&self, tai: Time<Tai>) -> Option<TimeDelta> {
-        find_leap_seconds_tai(&LEAP_SECOND_EPOCHS_TAI, &LEAP_SECONDS, tai)
-    }
-
-    fn delta_utc_tai(&self, utc: Utc) -> Option<TimeDelta> {
-        find_leap_seconds_utc(&LEAP_SECOND_EPOCHS_UTC, &LEAP_SECONDS, utc)
-    }
-
-    fn is_leap_second_date(&self, date: Date) -> bool {
-        is_leap_second_date(&LEAP_SECOND_EPOCHS_UTC, date)
-    }
-
-    fn is_leap_second(&self, tai: Time<Tai>) -> bool {
-        is_leap_second(&LEAP_SECOND_EPOCHS_TAI, tai)
-    }
-}
+impl LeapSecondsProvider for DefaultLeapSecondsProvider {}
 
 fn find_leap_seconds(epochs: &[i64], leap_seconds: &[i64], seconds: i64) -> Option<TimeDelta> {
     if seconds < epochs[0] {
@@ -145,8 +137,8 @@ mod tests {
     #[case::new_year_2017(time!(Tai, 2017, 1, 1, 0, 0, 37.0).unwrap(), utc!(2017, 1, 1, 0, 0, 0.0).unwrap(), 37)]
     #[case::new_year_2024(time!(Tai, 2024, 1, 1).unwrap(), utc!(2024, 1, 1).unwrap(), 37)]
     fn test_builtin_leap_seconds(#[case] tai: Time<Tai>, #[case] utc: Utc, #[case] expected: i64) {
-        let ls_tai = BuiltinLeapSeconds.delta_tai_utc(tai).unwrap();
-        let ls_utc = BuiltinLeapSeconds.delta_utc_tai(utc).unwrap();
+        let ls_tai = DefaultLeapSecondsProvider.delta_tai_utc(tai).unwrap();
+        let ls_utc = DefaultLeapSecondsProvider.delta_utc_tai(utc).unwrap();
         assert_eq!(ls_tai, TimeDelta::from_seconds(expected));
         assert_eq!(ls_utc, TimeDelta::from_seconds(-expected));
     }
@@ -155,7 +147,7 @@ mod tests {
     #[case(Date::new(2000, 12, 31).unwrap(), false)]
     #[case(Date::new(2016, 12, 31).unwrap(), true)]
     fn test_is_leap_second_date(#[case] date: Date, #[case] expected: bool) {
-        let actual = BuiltinLeapSeconds.is_leap_second_date(date);
+        let actual = DefaultLeapSecondsProvider.is_leap_second_date(date);
         assert_eq!(actual, expected);
     }
 
@@ -163,7 +155,7 @@ mod tests {
     #[case(time!(Tai, 2017, 1, 1, 0, 0, 35.0).unwrap(), false)]
     #[case(time!(Tai, 2017, 1, 1, 0, 0, 36.0).unwrap(), true)]
     fn test_is_leap_second(#[case] tai: Time<Tai>, #[case] expected: bool) {
-        let actual = BuiltinLeapSeconds.is_leap_second(tai);
+        let actual = DefaultLeapSecondsProvider.is_leap_second(tai);
         assert_eq!(actual, expected);
     }
 }
