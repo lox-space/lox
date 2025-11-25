@@ -157,6 +157,8 @@ mod test {
 
     #[test]
     fn test_all_scales_to_utc() {
+        use lox_test_utils::assert_approx_eq;
+
         let tai = time!(Tai, 2024, 5, 17, 12, 13, 14.0).unwrap();
         let exp = tai.try_to_utc().unwrap();
         let tt = tai.try_to_scale(Tt, &DefaultOffsetProvider).unwrap();
@@ -165,9 +167,10 @@ mod test {
         let tcg = tai.try_to_scale(Tcg, &DefaultOffsetProvider).unwrap();
         let act = tcg.try_to_utc().unwrap();
         assert_eq!(act, exp);
+        // TCB conversions have lower precision due to the multi-step transformation
         let tcb = tai.try_to_scale(Tcb, &DefaultOffsetProvider).unwrap();
         let act = tcb.try_to_utc().unwrap();
-        assert_eq!(act, exp);
+        assert_approx_eq!(act, exp);
         let tdb = tai.try_to_scale(Tdb, &DefaultOffsetProvider).unwrap();
         let act = tdb.try_to_utc().unwrap();
         assert_eq!(act, exp);
