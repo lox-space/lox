@@ -255,7 +255,7 @@ where
         R: Copy,
     {
         let period = self.orbital_period()?;
-        let mean_motion = TAU / period.as_seconds_f64();
+        let mean_motion = TAU / period.to_seconds().to_f64();
         let mean_anomaly_at_epoch = self.true_anomaly().to_mean(self.eccentricity()).ok()?;
 
         let state_iter = self
@@ -304,7 +304,7 @@ where
         O: Copy,
         R: Copy,
     {
-        let t = (time - self.epoch).as_seconds_f64();
+        let t = (time - self.epoch).to_seconds().to_f64();
         let state = self.data.at(t);
         Orbit {
             state,

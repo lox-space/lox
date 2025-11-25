@@ -162,7 +162,7 @@ impl EopParser {
                     .or_else(|| Some(DefaultLeapSecondsProvider.delta_utc_tai(utc)))
                     .flatten()
                     .ok_or(EopParserError::LeapSecond(utc))?;
-                delta_ut1_tai.push(delta_ut1_utc + delta_tai_utc.as_seconds_f64())
+                delta_ut1_tai.push(delta_ut1_utc + delta_tai_utc.to_seconds().to_f64())
             }
 
             if let (Some(xp), Some(yp)) = (r.x_pole, r.y_pole) {

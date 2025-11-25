@@ -153,9 +153,10 @@ const ONE_MINUS_LB_INV: f64 = 1.0 / (1.0 - LB);
 /// Constant term of TDB − TT formula of Fairhead & Bretagnon (1990).
 // const TDB_0: f64 = -6.55e-5;
 const TDB_0: TimeDelta = TimeDelta::builder()
-    .seconds(-0)
+    .seconds(0)
     .microseconds(65)
     .nanoseconds(500)
+    .negative()
     .build();
 
 const TCB_77: TimeDelta = TDB_0.add_const(J77_TT.mul_const(LB));
@@ -176,13 +177,13 @@ const M_0: f64 = 6.239996;
 const M_1: f64 = 1.99096871e-7;
 
 fn tt_to_tdb(delta: TimeDelta) -> TimeDelta {
-    let tt = delta.as_seconds_f64();
+    let tt = delta.to_seconds().to_f64();
     let g = M_0 + M_1 * tt;
     TimeDelta::from_seconds_f64(K * (g + EB * g.sin()).sin())
 }
 
 fn tdb_to_tt(delta: TimeDelta) -> TimeDelta {
-    let tdb = delta.as_seconds_f64();
+    let tdb = delta.to_seconds().to_f64();
     let mut offset = 0.0;
     for _ in 1..3 {
         let g = M_0 + M_1 * (tdb + offset);
@@ -272,15 +273,18 @@ mod tests {
         let act = provider
             .try_offset(scale1, scale2, dt)
             .unwrap()
-            .as_seconds_f64();
+            .to_seconds()
+            .to_f64();
         assert_approx_eq!(act, exp, atol <= tol.unwrap_or(DEFAULT_TOL));
     }
 
     // Test round-trip conversions for reversibility
     #[rstest]
-    #[case::tt_tcg_tt("TT", "TCG")]
-    #[case::tcg_tt_tcg("TCG", "TT")]
-    fn test_tcg_tt_roundtrip(#[case] scale1: &str, #[case] scale2: &str) {
+    #[case::tt_tcg_tt("TT", "TCG", 1e-15)]
+    #[case::tcg_tt_tcg("TCG", "TT", 1e-15)]
+    #[case::tdb_tcb_tdb("TDB", "TCB", 1e-14)]
+    #[case::tcb_tdb_tcb("TCB", "TDB", 1e-14)]
+    fn test_time_scale_roundtrip(#[case] scale1: &str, #[case] scale2: &str, #[case] tol: f64) {
         let provider = &DefaultOffsetProvider;
         let scale1: DynTimeScale = scale1.parse().unwrap();
         let scale2: DynTimeScale = scale2.parse().unwrap();
@@ -300,15 +304,29 @@ mod tests {
             .unwrap();
         let final_delta = intermediate_delta + offset2;
 
-        // Should be equal to original within 1 nanosecond
-        let diff = (final_delta - original_delta).as_seconds_f64().abs();
+        let diff = (final_delta - original_delta).to_seconds().to_f64().abs();
         assert!(
-            diff < 1e-9,
-            "Round-trip conversion {} -> {} -> {} failed: difference = {} seconds",
+            diff < tol,
+            "Round-trip conversion {} -> {} -> {} failed: difference = {:.2e} seconds, tolerance = {:.2e} seconds",
             scale1,
             scale2,
             scale1,
-            diff
+            diff,
+            tol
         );
+    }
+
+    #[test]
+    fn test_offset_constants() {
+        let tdb_0 = TDB_0.to_seconds();
+        assert!((tdb_0.to_f64() - (-6.55e-5)).abs() < 1e-15);
+
+        let j77 = J77_TT.to_seconds();
+        // For negative times, internal representation stores one less second
+        // and a positive subsecond fraction: -725803167.816 = -725803168 + 0.184
+        assert_eq!(j77.hi, -725803168.0);
+        assert!((j77.lo - 0.184).abs() < 1e-15);
+        // But the total should be correct
+        assert!((j77.to_f64() - (-725803167.816)).abs() < 1e-9);
     }
 }

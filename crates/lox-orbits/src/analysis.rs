@@ -183,7 +183,7 @@ impl<T: TimeScale> Pass<T> {
             if times.is_empty() {
                 // Create default points at window start and end
                 let start_seconds = 0.0;
-                let end_seconds = window.duration().as_seconds_f64();
+                let end_seconds = window.duration().to_seconds().to_f64();
                 let default_obs = observables
                     .first()
                     .cloned()
@@ -197,7 +197,7 @@ impl<T: TimeScale> Pass<T> {
                 )
             } else {
                 // Duplicate the single point
-                let time_sec = (times[0].clone() - window.start()).as_seconds_f64();
+                let time_sec = (times[0].clone() - window.start()).to_seconds().to_f64();
                 let obs = &observables[0];
                 (
                     vec![time_sec, time_sec + 1.0], // Add 1 second offset for second point
@@ -211,7 +211,7 @@ impl<T: TimeScale> Pass<T> {
             // Normal case with multiple points
             let time_seconds: Vec<f64> = times
                 .iter()
-                .map(|t| (t.clone() - window.start()).as_seconds_f64())
+                .map(|t| (t.clone() - window.start()).to_seconds().to_f64())
                 .collect();
 
             // Extract observable arrays
@@ -267,7 +267,7 @@ impl<T: TimeScale> Pass<T> {
         }
 
         // Convert time to seconds since window start for interpolation
-        let target_seconds = (time - self.window.start()).as_seconds_f64();
+        let target_seconds = (time - self.window.start()).to_seconds().to_f64();
 
         // Use Series interpolation for each observable
         let azimuth = self.azimuth_series.interpolate(target_seconds);
@@ -309,7 +309,7 @@ pub fn visibility_dyn(
     let end = *times.last().unwrap();
     let times: Vec<f64> = times
         .iter()
-        .map(|t| (*t - start).as_seconds_f64())
+        .map(|t| (*t - start).to_seconds().to_f64())
         .collect();
     let root_finder = Brent::default();
     find_windows(
@@ -335,7 +335,7 @@ pub fn visibility_los(
     let end = *times.last().unwrap();
     let times: Vec<f64> = times
         .iter()
-        .map(|t| (*t - start).as_seconds_f64())
+        .map(|t| (*t - start).to_seconds().to_f64())
         .collect();
     let root_finder = Brent::default();
     find_windows(
@@ -449,7 +449,7 @@ where
     let end = *times.last().unwrap();
     let times: Vec<f64> = times
         .iter()
-        .map(|t| (*t - start).as_seconds_f64())
+        .map(|t| (*t - start).to_seconds().to_f64())
         .collect();
     let root_finder = Brent::default();
     find_windows(
