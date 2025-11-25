@@ -38,16 +38,6 @@ impl From<PyUtcError> for PyErr {
 /// Raises:
 ///     ValueError: If date or time components are out of valid range.
 ///
-/// Examples:
-///     >>> import lox_space as lox
-///     >>> utc = lox.UTC(2024, 6, 15, 12, 30, 45.5)
-///     >>> str(utc)
-///     '2024-06-15T12:30:45.500 UTC'
-///
-///     Convert to TAI:
-///
-///     >>> t_tai = utc.to_scale("TAI")
-///
 /// See Also:
 ///     Time: For continuous astronomical time scales.
 #[pyclass(name = "UTC", module = "lox_space", frozen)]

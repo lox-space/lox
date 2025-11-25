@@ -16,7 +16,10 @@ pytest *FLAGS:
 rstest *FLAGS:
     cargo nextest run --all-features {{FLAGS}}
 
-test: rstest pytest
+doctest *FLAGS:
+    cargo test --doc --all-features {{FLAGS}}
+
+test: rstest doctest pytest
 
 lint-reuse *ARGS:
     uvx reuse lint {{ARGS}}

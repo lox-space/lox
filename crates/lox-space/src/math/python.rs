@@ -26,21 +26,6 @@ impl From<PySeriesError> for PyErr {
 ///
 /// Raises:
 ///     ValueError: If x and y have different lengths or x is not monotonic.
-///
-/// Examples:
-///     >>> import lox_space as lox
-///     >>> x = [0.0, 1.0, 2.0, 3.0]
-///     >>> y = [0.0, 1.0, 4.0, 9.0]
-///
-///     >>> # Linear interpolation
-///     >>> series = lox.Series(x, y)
-///     >>> series.interpolate(1.5)
-///     2.5
-///
-///     >>> # Cubic spline interpolation
-///     >>> series = lox.Series(x, y, method="cubic_spline")
-///     >>> series.interpolate(1.5)
-///     2.25
 #[pyclass(name = "Series", module = "lox_space", frozen)]
 #[derive(Clone, Debug)]
 pub struct PySeries(pub Series<Vec<f64>, Vec<f64>>);

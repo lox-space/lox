@@ -32,12 +32,6 @@ impl From<PyUnknownTimeScaleError> for PyErr {
 ///
 /// Raises:
 ///     ValueError: If the abbreviation is not recognized.
-///
-/// Examples:
-///     >>> import lox_space as lox
-///     >>> scale = lox.TimeScale("TAI")
-///     >>> scale.name()
-///     'International Atomic Time'
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
 #[pyclass(name = "TimeScale", module = "lox_space", frozen, eq)]
 pub struct PyTimeScale(pub DynTimeScale);

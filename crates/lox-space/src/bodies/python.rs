@@ -52,17 +52,6 @@ impl From<PyUnknownOriginName> for PyErr {
 /// Raises:
 ///     ValueError: If the origin name or ID is not recognized.
 ///     TypeError: If the argument is neither a string nor an integer.
-///
-/// Examples:
-///     >>> import lox_space as lox
-///     >>> earth = lox.Origin("Earth")
-///     >>> moon = lox.Origin("Moon")
-///     >>> mars = lox.Origin(499)  # NAIF ID
-///
-///     >>> earth.gravitational_parameter()
-///     398600.435...
-///     >>> earth.mean_radius()
-///     6371.0084...
 #[pyclass(name = "Origin", module = "lox_space", frozen, eq)]
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct PyOrigin(pub DynOrigin);
