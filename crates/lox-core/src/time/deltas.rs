@@ -14,7 +14,7 @@
 */
 
 use std::fmt::Display;
-use std::ops::{Add, AddAssign, Neg, RangeInclusive, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Mul, Neg, RangeInclusive, Sub, SubAssign};
 
 use lox_test_utils::approx_eq::ApproxEq;
 
@@ -303,7 +303,7 @@ impl TimeDelta {
         }
     }
 
-    const fn add_const(self, rhs: Self) -> Self {
+    pub const fn add_const(self, rhs: Self) -> Self {
         let (secs_lhs, attos_lhs, secs_rhs, attos_rhs) = match (self, rhs) {
             (
                 TimeDelta::Valid {
@@ -332,7 +332,7 @@ impl TimeDelta {
         Self::new(seconds, attoseconds)
     }
 
-    const fn sub_const(self, rhs: Self) -> Self {
+    pub const fn sub_const(self, rhs: Self) -> Self {
         let (secs_lhs, attos_lhs, secs_rhs, attos_rhs) = match (self, rhs) {
             (
                 TimeDelta::Valid {
@@ -359,6 +359,59 @@ impl TimeDelta {
         let seconds = secs_lhs - secs_rhs;
         let attoseconds = attos_lhs - attos_rhs;
         Self::new(seconds, attoseconds)
+    }
+
+    pub const fn mul_const(self, rhs: f64) -> Self {
+        let (seconds, attoseconds) = match self {
+            TimeDelta::Valid {
+                seconds,
+                attoseconds,
+            } => (seconds, attoseconds),
+            TimeDelta::NaN => return TimeDelta::NaN,
+            TimeDelta::PosInf => {
+                return if rhs.is_nan() {
+                    TimeDelta::NaN
+                } else if rhs > 0.0 {
+                    TimeDelta::PosInf
+                } else if rhs < 0.0 {
+                    TimeDelta::NegInf
+                } else {
+                    TimeDelta::NaN
+                };
+            }
+            TimeDelta::NegInf => {
+                return if rhs.is_nan() {
+                    TimeDelta::NaN
+                } else if rhs > 0.0 {
+                    TimeDelta::NegInf
+                } else if rhs < 0.0 {
+                    TimeDelta::PosInf
+                } else {
+                    TimeDelta::NaN
+                };
+            }
+        };
+
+        if rhs.is_nan() {
+            return TimeDelta::NaN;
+        }
+        if !rhs.is_finite() {
+            return if rhs.is_sign_positive() {
+                TimeDelta::PosInf
+            } else {
+                TimeDelta::NegInf
+            };
+        }
+
+        // Multiply seconds component
+        let seconds_product = rhs * seconds as f64;
+
+        // Multiply attoseconds component (keeping high precision)
+        // attoseconds * factor / ATTOSECONDS_IN_SECOND
+        let attoseconds_product = rhs * attoseconds as f64 / ATTOSECONDS_IN_SECOND as f64;
+
+        // Combine results
+        TimeDelta::from_seconds_f64(seconds_product + attoseconds_product)
     }
 }
 
@@ -473,6 +526,14 @@ impl Sub for TimeDelta {
 impl SubAssign for TimeDelta {
     fn sub_assign(&mut self, rhs: Self) {
         *self = *self - rhs
+    }
+}
+
+impl Mul<TimeDelta> for f64 {
+    type Output = TimeDelta;
+
+    fn mul(self, rhs: TimeDelta) -> Self::Output {
+        rhs.mul_const(self)
     }
 }
 
@@ -599,8 +660,12 @@ impl TimeDeltaBuilder {
     /// assert_eq!(dt.seconds(), Some(1));
     /// ```
     pub const fn build(self) -> TimeDelta {
-        let seconds = self.seconds;
-        let attoseconds = self.subsecond.as_attoseconds();
+        let mut seconds = self.seconds;
+        let mut attoseconds = self.subsecond.as_attoseconds();
+        if seconds.is_negative() {
+            seconds -= 1;
+            attoseconds = ATTOSECONDS_IN_SECOND - attoseconds;
+        }
         TimeDelta::new(seconds, attoseconds)
     }
 }
@@ -874,5 +939,80 @@ mod tests {
         let mut dt = TimeDelta::from_seconds(5);
         dt -= TimeDelta::from_seconds(2);
         assert_eq!(dt.seconds(), Some(3));
+    }
+
+    #[test]
+    fn test_time_delta_julian_date() {
+        let dt = TimeDelta::builder()
+            .seconds(-725803232)
+            .milliseconds(184)
+            .build();
+        let exp = -725803232.184;
+        let act = dt.julian_date(Epoch::J2000, Unit::Seconds);
+        assert_eq!(act, exp);
+    }
+
+    #[test]
+    fn test_mul_precision() {
+        // Test that multiplication preserves precision better than naive conversion
+        let dt = TimeDelta::new(1000000, 123_456_789_012_345_678);
+        let factor = 1e-10;
+
+        let result = factor * dt;
+
+        // Expected: 1000000.123456789012345678 * 1e-10 = 0.0001000000123456789...
+        // With improved precision, we should preserve more digits
+        let result_f64 = result.as_seconds_f64();
+        let expected = 0.0001000000123456789;
+
+        // Check within attosecond precision
+        assert!((result_f64 - expected).abs() < 1e-17);
+    }
+
+    #[test]
+    fn test_mul_small_factors() {
+        // Test with very small factors like those used in time scale conversions
+        let dt = TimeDelta::new(788000833, 145_000_000_000_000_000);
+        let lg = 6.969290134e-10; // From TCG/TT conversions
+
+        let result = lg * dt;
+
+        // The result should be computed with higher precision than naive approach
+        let result_seconds = result.as_seconds_f64();
+
+        // Verify it's in the expected range (around 0.55 seconds for these values)
+        assert!(result_seconds > 0.5 && result_seconds < 0.6);
+        assert!(result.is_finite());
+    }
+
+    #[test]
+    fn test_mul_special_values() {
+        let dt = TimeDelta::from_seconds(100);
+
+        // Multiply by zero
+        let result = 0.0 * dt;
+        assert!(result.is_zero());
+
+        // Multiply by NaN
+        let result = f64::NAN * dt;
+        assert!(result.is_nan());
+
+        // Multiply by infinity
+        let result = f64::INFINITY * dt;
+        assert_eq!(result, TimeDelta::PosInf);
+
+        let result = f64::NEG_INFINITY * dt;
+        assert_eq!(result, TimeDelta::NegInf);
+
+        // Multiply infinity by negative factor
+        let result = -2.0 * TimeDelta::PosInf;
+        assert_eq!(result, TimeDelta::NegInf);
+
+        let result = -2.0 * TimeDelta::NegInf;
+        assert_eq!(result, TimeDelta::PosInf);
+
+        // Multiply infinity by zero
+        let result = 0.0 * TimeDelta::PosInf;
+        assert!(result.is_nan());
     }
 }
