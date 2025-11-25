@@ -72,6 +72,43 @@ impl FromStr for PyUnit {
     }
 }
 
+/// Represents an instant in time on a specific astronomical time scale.
+///
+/// `Time` is the fundamental time representation in lox, providing
+/// femtosecond precision and support for multiple astronomical time scales
+/// (TAI, TT, TDB, TCB, TCG, UT1).
+///
+/// Args:
+///     scale: Time scale ("TAI", "TT", "TDB", "TCB", "TCG", "UT1") or TimeScale object.
+///     year: Calendar year.
+///     month: Calendar month (1-12).
+///     day: Day of month (1-31).
+///     hour: Hour of day (0-23). Defaults to 0.
+///     minute: Minute of hour (0-59). Defaults to 0.
+///     seconds: Seconds with fractional part (0.0-60.0). Defaults to 0.0.
+///
+/// Raises:
+///     ValueError: If date or time components are out of valid range.
+///
+/// Examples:
+///     Create a time instant in TAI scale:
+///
+///     >>> import lox_space as lox
+///     >>> t = lox.Time("TAI", 2024, 6, 15, 12, 30, 45.5)
+///     >>> str(t)
+///     '2024-06-15T12:30:45.500 TAI'
+///
+///     Create from ISO string:
+///
+///     >>> t = lox.Time.from_iso("2024-06-15T12:30:45.5 TAI")
+///
+///     Convert between time scales:
+///
+///     >>> t_tt = t.to_scale("TT")
+///
+/// See Also:
+///     TimeDelta: For representing time differences.
+///     UTC: For UTC time with leap second handling.
 #[pyclass(name = "Time", module = "lox_space", frozen)]
 #[derive(Clone, Debug, Eq, PartialEq, ApproxEq)]
 pub struct PyTime(pub DynTime);
@@ -113,6 +150,18 @@ impl PyTime {
         )
     }
 
+    /// Create a Time from a Julian date.
+    ///
+    /// Args:
+    ///     scale: Time scale for the resulting Time object.
+    ///     jd: Julian date value.
+    ///     epoch: Reference epoch ("jd", "mjd", "j1950", "j2000"). Defaults to "jd".
+    ///
+    /// Returns:
+    ///     A new Time object.
+    ///
+    /// Examples:
+    ///     >>> t = Time.from_julian_date("TAI", 2451545.0, "jd")  # J2000.0
     #[classmethod]
     #[pyo3(signature = (scale, jd, epoch = "jd"))]
     pub fn from_julian_date(
@@ -126,6 +175,18 @@ impl PyTime {
         Ok(Self(Time::from_julian_date(scale.0, jd, epoch.0)))
     }
 
+    /// Create a Time from a two-part Julian date for maximum precision.
+    ///
+    /// This method preserves full precision by accepting the Julian date
+    /// as two separate float components that are added together.
+    ///
+    /// Args:
+    ///     scale: Time scale for the resulting Time object.
+    ///     jd1: First part of the Julian date (typically the integer part).
+    ///     jd2: Second part of the Julian date (typically the fractional part).
+    ///
+    /// Returns:
+    ///     A new Time object.
     #[classmethod]
     pub fn from_two_part_julian_date(
         _cls: &Bound<'_, PyType>,
@@ -137,6 +198,25 @@ impl PyTime {
         Ok(Self(Time::from_two_part_julian_date(scale.0, jd1, jd2)))
     }
 
+    /// Create a Time from year and day of year.
+    ///
+    /// Args:
+    ///     scale: Time scale for the resulting Time object.
+    ///     year: Calendar year.
+    ///     day: Day of year (1-366).
+    ///     hour: Hour of day (0-23). Defaults to 0.
+    ///     minute: Minute of hour (0-59). Defaults to 0.
+    ///     seconds: Seconds with fractional part. Defaults to 0.0.
+    ///
+    /// Returns:
+    ///     A new Time object.
+    ///
+    /// Raises:
+    ///     ValueError: If day of year is out of range for the given year.
+    ///
+    /// Examples:
+    ///     >>> t = Time.from_day_of_year("TAI", 2024, 1)  # Jan 1, 2024
+    ///     >>> t = Time.from_day_of_year("TAI", 2024, 366)  # Dec 31, 2024 (leap year)
     #[classmethod]
     #[pyo3(signature=(scale, year, day, hour=0, minute=0, seconds=0.0))]
     pub fn from_day_of_year(
@@ -157,6 +237,21 @@ impl PyTime {
         Ok(PyTime(time))
     }
 
+    /// Create a Time from an ISO 8601 formatted string.
+    ///
+    /// Args:
+    ///     iso: ISO 8601 formatted datetime string (e.g., "2024-06-15T12:30:45.5 TAI").
+    ///     scale: Time scale. If not provided, the scale must be in the ISO string.
+    ///
+    /// Returns:
+    ///     A new Time object.
+    ///
+    /// Raises:
+    ///     ValueError: If the ISO string is invalid or the scale cannot be determined.
+    ///
+    /// Examples:
+    ///     >>> t = Time.from_iso("2024-06-15T12:30:45.5 TAI")
+    ///     >>> t = Time.from_iso("2024-06-15T12:30:45.5", "TAI")
     #[classmethod]
     #[pyo3(signature = (iso, scale=None))]
     pub fn from_iso(
@@ -170,6 +265,20 @@ impl PyTime {
         Ok(PyTime(time))
     }
 
+    /// Create a Time from raw seconds and subsecond components.
+    ///
+    /// This is a low-level constructor for maximum precision.
+    ///
+    /// Args:
+    ///     scale: Time scale for the resulting Time object.
+    ///     seconds: Integer seconds since the internal epoch.
+    ///     subsecond: Fractional second component (0.0 to 1.0).
+    ///
+    /// Returns:
+    ///     A new Time object.
+    ///
+    /// Raises:
+    ///     ValueError: If subsecond is not in the valid range.
     #[classmethod]
     pub fn from_seconds(
         _cls: &Bound<'_, PyType>,
@@ -184,12 +293,26 @@ impl PyTime {
         Ok(PyTime(time))
     }
 
+    /// Return the integer seconds component of the internal representation.
+    ///
+    /// Returns:
+    ///     Integer seconds since the internal epoch.
+    ///
+    /// Raises:
+    ///     NonFiniteTimeError: If the time is non-finite.
     pub fn seconds(&self) -> PyResult<i64> {
         self.0.seconds().ok_or(NonFiniteTimeError::new_err(
             "cannot access seconds for non-finite time",
         ))
     }
 
+    /// Return the subsecond (fractional second) component.
+    ///
+    /// Returns:
+    ///     Fractional seconds (0.0 to 1.0).
+    ///
+    /// Raises:
+    ///     NonFiniteTimeError: If the time is non-finite.
     pub fn subsecond(&self) -> PyResult<f64> {
         self.0.subsecond().ok_or(NonFiniteTimeError::new_err(
             "cannot access subsecond for non-finite time",
@@ -245,6 +368,18 @@ impl PyTime {
         op.matches(self.0.cmp(&other.0))
     }
 
+    /// Check if two Time objects are approximately equal.
+    ///
+    /// Args:
+    ///     rhs: The other Time object to compare.
+    ///     rel_tol: Relative tolerance. Defaults to 1e-8.
+    ///     abs_tol: Absolute tolerance. Defaults to 1e-14.
+    ///
+    /// Returns:
+    ///     True if the times are approximately equal within the tolerances.
+    ///
+    /// Raises:
+    ///     ValueError: If the Time objects have different time scales.
     #[pyo3(signature = (rhs, rel_tol = 1e-8, abs_tol = 1e-14))]
     pub fn isclose(&self, rhs: PyTime, rel_tol: f64, abs_tol: f64) -> PyResult<bool> {
         if self.scale() != rhs.scale() {
@@ -255,6 +390,17 @@ impl PyTime {
         Ok(approx_eq!(self, &rhs, rtol <= rel_tol, atol <= abs_tol))
     }
 
+    /// Return the Julian date relative to the specified epoch.
+    ///
+    /// Args:
+    ///     epoch: Reference epoch ("jd", "mjd", "j1950", "j2000"). Defaults to "jd".
+    ///     unit: Output unit ("seconds", "days", "centuries"). Defaults to "days".
+    ///
+    /// Returns:
+    ///     The Julian date in the specified units relative to the epoch.
+    ///
+    /// Raises:
+    ///     ValueError: If epoch or unit is invalid.
     #[pyo3(signature = (epoch = "jd", unit = "days"))]
     pub fn julian_date(&self, epoch: &str, unit: &str) -> PyResult<f64> {
         let epoch: PyEpoch = epoch.parse()?;
@@ -262,66 +408,103 @@ impl PyTime {
         Ok(self.0.julian_date(epoch.0, unit.0))
     }
 
+    /// Return the two-part Julian date for maximum precision.
+    ///
+    /// Returns:
+    ///     A tuple of (jd1, jd2) where the Julian date is jd1 + jd2.
     pub fn two_part_julian_date(&self) -> (f64, f64) {
         self.0.two_part_julian_date()
     }
 
+    /// Return the time scale of this Time object.
+    ///
+    /// Returns:
+    ///     The TimeScale of this Time.
     pub fn scale(&self) -> PyTimeScale {
         PyTimeScale(self.0.scale())
     }
 
+    /// Return the year component.
     pub fn year(&self) -> i64 {
         self.0.year()
     }
 
+    /// Return the month component (1-12).
     pub fn month(&self) -> u8 {
         self.0.month()
     }
 
+    /// Return the day of month component (1-31).
     pub fn day(&self) -> u8 {
         self.0.day()
     }
 
+    /// Return the day of year (1-366).
     pub fn day_of_year(&self) -> u16 {
         self.0.day_of_year()
     }
 
+    /// Return the hour component (0-23).
     pub fn hour(&self) -> u8 {
         self.0.hour()
     }
 
+    /// Return the minute component (0-59).
     pub fn minute(&self) -> u8 {
         self.0.minute()
     }
 
+    /// Return the integer second component (0-59, or 60 for leap second).
     pub fn second(&self) -> u8 {
         self.0.second()
     }
 
+    /// Return the millisecond component (0-999).
     pub fn millisecond(&self) -> u32 {
         self.0.millisecond()
     }
 
+    /// Return the microsecond component (0-999).
     pub fn microsecond(&self) -> u32 {
         self.0.microsecond()
     }
 
+    /// Return the nanosecond component (0-999).
     pub fn nanosecond(&self) -> u32 {
         self.0.nanosecond()
     }
 
+    /// Return the picosecond component (0-999).
     pub fn picosecond(&self) -> u32 {
         self.0.picosecond()
     }
 
+    /// Return the femtosecond component (0-999).
     pub fn femtosecond(&self) -> u32 {
         self.0.femtosecond()
     }
 
+    /// Return the decimal seconds (seconds + fractional part).
     pub fn decimal_seconds(&self) -> f64 {
         self.0.as_seconds_f64()
     }
 
+    /// Convert this Time to another time scale.
+    ///
+    /// Args:
+    ///     scale: Target time scale.
+    ///     provider: EOP provider for UT1 conversions. Required when converting
+    ///         to/from UT1.
+    ///
+    /// Returns:
+    ///     A new Time object in the target scale.
+    ///
+    /// Raises:
+    ///     ValueError: If conversion requires EOP data but no provider is given.
+    ///
+    /// Examples:
+    ///     >>> t_tai = Time("TAI", 2024, 1, 1)
+    ///     >>> t_tt = t_tai.to_scale("TT")
     #[pyo3(signature = (scale, provider=None))]
     pub fn to_scale(
         &self,
@@ -340,6 +523,16 @@ impl PyTime {
         Ok(PyTime(time))
     }
 
+    /// Convert this Time to UTC.
+    ///
+    /// Args:
+    ///     provider: EOP provider for UT1 conversions.
+    ///
+    /// Returns:
+    ///     A UTC object representing this instant in UTC.
+    ///
+    /// Raises:
+    ///     ValueError: If the time is outside the valid UTC range.
     #[pyo3(signature = (provider=None))]
     pub fn to_utc(&self, provider: Option<&Bound<'_, PyEopProvider>>) -> PyResult<PyUtc> {
         let provider = provider.map(|p| &p.get().0);

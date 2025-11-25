@@ -40,6 +40,29 @@ impl From<PyUnknownOriginName> for PyErr {
     }
 }
 
+/// Represents a celestial body (planet, moon, barycenter, etc.).
+///
+/// Origin objects represent celestial bodies using NAIF/SPICE identifiers.
+/// They provide access to physical properties such as gravitational parameters,
+/// radii, and rotational elements.
+///
+/// Args:
+///     origin: Body name (e.g., "Earth", "Moon") or NAIF ID (e.g., 399 for Earth).
+///
+/// Raises:
+///     ValueError: If the origin name or ID is not recognized.
+///     TypeError: If the argument is neither a string nor an integer.
+///
+/// Examples:
+///     >>> import lox_space as lox
+///     >>> earth = lox.Origin("Earth")
+///     >>> moon = lox.Origin("Moon")
+///     >>> mars = lox.Origin(499)  # NAIF ID
+///
+///     >>> earth.gravitational_parameter()
+///     398600.435...
+///     >>> earth.mean_radius()
+///     6371.0084...
 #[pyclass(name = "Origin", module = "lox_space", frozen, eq)]
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct PyOrigin(pub DynOrigin);
@@ -73,14 +96,20 @@ impl PyOrigin {
         (self.name(),)
     }
 
+    /// Return the NAIF ID of this body.
     pub fn id(&self) -> i32 {
         self.0.id().0
     }
 
+    /// Return the name of this body.
     pub fn name(&self) -> &'static str {
         self.0.name()
     }
 
+    /// Return the gravitational parameter (GM) in km³/s².
+    ///
+    /// Raises:
+    ///     UndefinedOriginPropertyError: If not defined for this body.
     pub fn gravitational_parameter(&self) -> PyResult<f64> {
         Ok(self
             .0
@@ -88,6 +117,10 @@ impl PyOrigin {
             .map_err(PyUndefinedOriginPropertyError)?)
     }
 
+    /// Return the mean radius in km.
+    ///
+    /// Raises:
+    ///     UndefinedOriginPropertyError: If not defined for this body.
     pub fn mean_radius(&self) -> PyResult<f64> {
         Ok(self
             .0
@@ -95,10 +128,18 @@ impl PyOrigin {
             .map_err(PyUndefinedOriginPropertyError)?)
     }
 
+    /// Return the triaxial radii (x, y, z) in km.
+    ///
+    /// Raises:
+    ///     UndefinedOriginPropertyError: If not defined for this body.
     pub fn radii(&self) -> PyResult<Radii> {
         Ok(self.0.try_radii().map_err(PyUndefinedOriginPropertyError)?)
     }
 
+    /// Return the equatorial radius in km.
+    ///
+    /// Raises:
+    ///     UndefinedOriginPropertyError: If not defined for this body.
     pub fn equatorial_radius(&self) -> PyResult<f64> {
         Ok(self
             .0
@@ -106,6 +147,10 @@ impl PyOrigin {
             .map_err(PyUndefinedOriginPropertyError)?)
     }
 
+    /// Return the polar radius in km.
+    ///
+    /// Raises:
+    ///     UndefinedOriginPropertyError: If not defined for this body.
     pub fn polar_radius(&self) -> PyResult<f64> {
         Ok(self
             .0
@@ -113,6 +158,16 @@ impl PyOrigin {
             .map_err(PyUndefinedOriginPropertyError)?)
     }
 
+    /// Return rotational elements (right ascension, declination, rotation angle) in radians.
+    ///
+    /// Args:
+    ///     et: Ephemeris time in seconds from J2000.
+    ///
+    /// Returns:
+    ///     Tuple of (right_ascension, declination, rotation_angle) in radians.
+    ///
+    /// Raises:
+    ///     UndefinedOriginPropertyError: If not defined for this body.
     pub fn rotational_elements(&self, et: Seconds) -> PyResult<Elements> {
         Ok(self
             .0
@@ -120,6 +175,16 @@ impl PyOrigin {
             .map_err(PyUndefinedOriginPropertyError)?)
     }
 
+    /// Return rotational element rates in radians/second.
+    ///
+    /// Args:
+    ///     et: Ephemeris time in seconds from J2000.
+    ///
+    /// Returns:
+    ///     Tuple of (ra_rate, dec_rate, rotation_rate) in radians/second.
+    ///
+    /// Raises:
+    ///     UndefinedOriginPropertyError: If not defined for this body.
     pub fn rotational_element_rates(&self, et: Seconds) -> PyResult<Elements> {
         Ok(self
             .0
@@ -127,6 +192,10 @@ impl PyOrigin {
             .map_err(PyUndefinedOriginPropertyError)?)
     }
 
+    /// Return the right ascension of the pole in radians.
+    ///
+    /// Args:
+    ///     et: Ephemeris time in seconds from J2000.
     pub fn right_ascension(&self, et: Seconds) -> PyResult<f64> {
         Ok(self
             .0
@@ -134,6 +203,10 @@ impl PyOrigin {
             .map_err(PyUndefinedOriginPropertyError)?)
     }
 
+    /// Return the rate of change of right ascension in radians/second.
+    ///
+    /// Args:
+    ///     et: Ephemeris time in seconds from J2000.
     pub fn right_ascension_rate(&self, et: Seconds) -> PyResult<f64> {
         Ok(self
             .0
@@ -141,6 +214,10 @@ impl PyOrigin {
             .map_err(PyUndefinedOriginPropertyError)?)
     }
 
+    /// Return the declination of the pole in radians.
+    ///
+    /// Args:
+    ///     et: Ephemeris time in seconds from J2000.
     pub fn declination(&self, et: Seconds) -> PyResult<f64> {
         Ok(self
             .0
@@ -148,6 +225,10 @@ impl PyOrigin {
             .map_err(PyUndefinedOriginPropertyError)?)
     }
 
+    /// Return the rate of change of declination in radians/second.
+    ///
+    /// Args:
+    ///     et: Ephemeris time in seconds from J2000.
     pub fn declination_rate(&self, et: Seconds) -> PyResult<f64> {
         Ok(self
             .0
@@ -155,6 +236,10 @@ impl PyOrigin {
             .map_err(PyUndefinedOriginPropertyError)?)
     }
 
+    /// Return the rotation angle (prime meridian) in radians.
+    ///
+    /// Args:
+    ///     et: Ephemeris time in seconds from J2000.
     pub fn rotation_angle(&self, et: Seconds) -> PyResult<f64> {
         Ok(self
             .0
@@ -162,6 +247,10 @@ impl PyOrigin {
             .map_err(PyUndefinedOriginPropertyError)?)
     }
 
+    /// Return the rotation rate in radians/second.
+    ///
+    /// Args:
+    ///     et: Ephemeris time in seconds from J2000.
     pub fn rotation_rate(&self, et: Seconds) -> PyResult<f64> {
         Ok(self
             .0

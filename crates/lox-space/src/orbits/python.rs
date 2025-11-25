@@ -66,6 +66,28 @@ impl From<PyFindEventError> for PyErr {
     }
 }
 
+/// Find events where a function crosses zero.
+///
+/// This function detects zero-crossings of a user-defined function over a
+/// time span. Events can be found for any scalar function of time.
+///
+/// Args:
+///     func: Function that takes a float (seconds from start) and returns a float.
+///     start: Reference time (epoch).
+///     times: Array of time offsets in seconds from start.
+///
+/// Returns:
+///     List of Event objects at the detected zero-crossings.
+///
+/// Examples:
+///     >>> import lox_space as lox
+///     >>> import math
+///     >>> # Find times when a sine function crosses zero
+///     >>> events = lox.find_events(
+///     ...     lambda t: math.sin(t),
+///     ...     start=lox.Time("TAI", 2024, 1, 1),
+///     ...     times=[float(i) for i in range(100)]
+///     ... )
 #[pyfunction]
 pub fn find_events(
     py: Python<'_>,
@@ -91,6 +113,30 @@ pub fn find_events(
     .collect())
 }
 
+/// Find time windows where a function is positive.
+///
+/// This function finds all intervals where a user-defined function is
+/// positive. Windows are bounded by zero-crossings of the function.
+///
+/// Args:
+///     func: Function that takes a float (seconds from start) and returns a float.
+///     start: Start time of the analysis period.
+///     end: End time of the analysis period.
+///     times: Array of time offsets in seconds from start.
+///
+/// Returns:
+///     List of Window objects for intervals where the function is positive.
+///
+/// Examples:
+///     >>> import lox_space as lox
+///     >>> import math
+///     >>> # Find windows when sine is positive
+///     >>> windows = lox.find_windows(
+///     ...     lambda t: math.sin(t),
+///     ...     start=lox.Time("TAI", 2024, 1, 1),
+///     ...     end=lox.Time("TAI", 2024, 1, 1, 0, 0, 10.0),
+///     ...     times=[float(i) * 0.1 for i in range(100)]
+///     ... )
 #[pyfunction]
 pub fn find_windows(
     py: Python<'_>,
@@ -117,6 +163,34 @@ pub fn find_windows(
     .collect())
 }
 
+/// Represents an orbital state (position and velocity) at a specific time.
+///
+/// A `State` captures the complete kinematic state of an object in space,
+/// including its position, velocity, time, central body (origin), and
+/// reference frame.
+///
+/// Args:
+///     time: The epoch of this state.
+///     position: Position vector (x, y, z) in km.
+///     velocity: Velocity vector (vx, vy, vz) in km/s.
+///     origin: Central body (default: Earth).
+///     frame: Reference frame (default: ICRF).
+///
+/// Examples:
+///     >>> import lox_space as lox
+///     >>> t = lox.Time("TAI", 2024, 1, 1)
+///     >>> state = lox.State(
+///     ...     t,
+///     ...     position=(6678.0, 0.0, 0.0),
+///     ...     velocity=(0.0, 7.73, 0.0),
+///     ... )
+///
+///     >>> state.time()
+///     Time(TAI, 2024, 1, 1, 0, 0, 0.0)
+///     >>> state.position()  # numpy array
+///     array([6678., 0., 0.])
+///     >>> state.velocity()  # numpy array
+///     array([0., 7.73, 0.])
 #[pyclass(name = "State", module = "lox_space", frozen)]
 #[derive(Debug, Clone)]
 pub struct PyState(pub DynState);
@@ -144,28 +218,44 @@ impl PyState {
         )))
     }
 
+    /// Return the epoch of this state.
     fn time(&self) -> PyTime {
         PyTime(self.0.time())
     }
 
+    /// Return the central body (origin) of this state.
     fn origin(&self) -> PyOrigin {
         PyOrigin(self.0.origin())
     }
 
+    /// Return the reference frame of this state.
     fn reference_frame(&self) -> PyFrame {
         PyFrame(self.0.reference_frame())
     }
 
+    /// Return the position vector as a numpy array [x, y, z] in km.
     fn position<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<f64>> {
         let pos = self.0.position().to_array();
         PyArray1::from_slice(py, &pos)
     }
 
+    /// Return the velocity vector as a numpy array [vx, vy, vz] in km/s.
     fn velocity<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<f64>> {
         let vel = self.0.velocity().to_array();
         PyArray1::from_slice(py, &vel)
     }
 
+    /// Transform this state to a different reference frame.
+    ///
+    /// Args:
+    ///     frame: Target reference frame.
+    ///     provider: EOP provider (required for ITRF transformations).
+    ///
+    /// Returns:
+    ///     A new State in the target frame.
+    ///
+    /// Raises:
+    ///     FrameTransformationError: If the transformation fails.
     #[pyo3(signature = (frame, provider=None))]
     fn to_frame(
         &self,
@@ -194,6 +284,17 @@ impl PyState {
         )))
     }
 
+    /// Transform this state to a different central body.
+    ///
+    /// Args:
+    ///     target: Target central body (origin).
+    ///     ephemeris: SPK ephemeris data for computing body positions.
+    ///
+    /// Returns:
+    ///     A new State relative to the target origin.
+    ///
+    /// Raises:
+    ///     ValueError: If the transformation fails.
     fn to_origin(&self, target: PyOrigin, ephemeris: &Bound<'_, PySpk>) -> PyResult<Self> {
         let frame = self.reference_frame();
         let s = if frame.0 != DynFrame::Icrf {
@@ -212,6 +313,14 @@ impl PyState {
         Ok(s1)
     }
 
+    /// Convert this Cartesian state to Keplerian orbital elements.
+    ///
+    /// Returns:
+    ///     Keplerian elements representing this orbit.
+    ///
+    /// Raises:
+    ///     ValueError: If the state is not in an inertial frame.
+    ///     UndefinedOriginPropertyError: If the origin has no gravitational parameter.
     fn to_keplerian(&self) -> PyResult<PyKeplerian> {
         if self.0.reference_frame() != DynFrame::Icrf {
             return Err(PyValueError::new_err(
@@ -225,6 +334,13 @@ impl PyState {
         ))
     }
 
+    /// Compute the rotation matrix from inertial to LVLH (Local Vertical Local Horizontal) frame.
+    ///
+    /// Returns:
+    ///     3x3 rotation matrix as a numpy array.
+    ///
+    /// Raises:
+    ///     ValueError: If the state is not in an inertial frame.
     fn rotation_lvlh<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyArray2<f64>>> {
         if self.0.reference_frame() != DynFrame::Icrf {
             return Err(PyValueError::new_err(
@@ -236,6 +352,15 @@ impl PyState {
         Ok(PyArray2::from_vec2(py, &rot)?)
     }
 
+    /// Convert this state to a ground location.
+    ///
+    /// This is useful for converting a state in a body-fixed frame to geodetic coordinates.
+    ///
+    /// Returns:
+    ///     GroundLocation with longitude, latitude, and altitude.
+    ///
+    /// Raises:
+    ///     ValueError: If conversion fails.
     fn to_ground_location(&self) -> PyResult<PyGroundLocation> {
         Ok(PyGroundLocation(
             self.0
@@ -245,6 +370,38 @@ impl PyState {
     }
 }
 
+/// Represents an orbit using Keplerian (classical) orbital elements.
+///
+/// Keplerian elements describe an orbit using six parameters that define
+/// its shape, orientation, and position along the orbit.
+///
+/// Args:
+///     time: Epoch of the elements.
+///     semi_major_axis: Semi-major axis in km.
+///     eccentricity: Orbital eccentricity (0 = circular, <1 = elliptical).
+///     inclination: Inclination in radians.
+///     longitude_of_ascending_node: RAAN in radians.
+///     argument_of_periapsis: Argument of periapsis in radians.
+///     true_anomaly: True anomaly in radians.
+///     origin: Central body (default: Earth).
+///
+/// Examples:
+///     >>> import lox_space as lox
+///     >>> import math
+///     >>> t = lox.Time("TAI", 2024, 1, 1)
+///     >>> orbit = lox.Keplerian(
+///     ...     t,
+///     ...     semi_major_axis=6678.0,
+///     ...     eccentricity=0.001,
+///     ...     inclination=math.radians(51.6),
+///     ...     longitude_of_ascending_node=0.0,
+///     ...     argument_of_periapsis=0.0,
+///     ...     true_anomaly=0.0,
+///     ... )
+///
+///     >>> orbit.orbital_period()
+///     TimeDelta(seconds=5431.0...)
+///     >>> state = orbit.to_cartesian()  # Convert to State
 #[pyclass(name = "Keplerian", module = "lox_space", frozen)]
 pub struct PyKeplerian(pub DynKeplerian);
 
@@ -288,47 +445,84 @@ impl PyKeplerian {
         ))
     }
 
+    /// Return the epoch of these elements.
     fn time(&self) -> PyTime {
         PyTime(self.0.time())
     }
 
+    /// Return the central body (origin) of this orbit.
     fn origin(&self) -> PyOrigin {
         PyOrigin(self.0.origin())
     }
 
+    /// Return the semi-major axis in km.
     fn semi_major_axis(&self) -> f64 {
         self.0.semi_major_axis()
     }
 
+    /// Return the orbital eccentricity.
     fn eccentricity(&self) -> f64 {
         self.0.eccentricity()
     }
 
+    /// Return the inclination in radians.
     fn inclination(&self) -> f64 {
         self.0.inclination()
     }
 
+    /// Return the longitude of the ascending node (RAAN) in radians.
     fn longitude_of_ascending_node(&self) -> f64 {
         self.0.longitude_of_ascending_node()
     }
 
+    /// Return the argument of periapsis in radians.
     fn argument_of_periapsis(&self) -> f64 {
         self.0.argument_of_periapsis()
     }
 
+    /// Return the true anomaly in radians.
     fn true_anomaly(&self) -> f64 {
         self.0.true_anomaly()
     }
 
+    /// Convert these Keplerian elements to a Cartesian state.
+    ///
+    /// Returns:
+    ///     State with position and velocity vectors.
     fn to_cartesian(&self) -> PyResult<PyState> {
         Ok(PyState(self.0.to_cartesian()))
     }
 
+    /// Return the orbital period.
+    ///
+    /// Returns:
+    ///     TimeDelta representing one complete orbit.
     fn orbital_period(&self) -> PyTimeDelta {
         PyTimeDelta(self.0.orbital_period())
     }
 }
 
+/// A time-series of orbital states with interpolation support.
+///
+/// Trajectories store a sequence of States and provide interpolation to
+/// compute states at arbitrary times between the stored samples.
+///
+/// Args:
+///     states: List of State objects in chronological order.
+///
+/// Examples:
+///     >>> import lox_space as lox
+///     >>> # Create from propagation
+///     >>> trajectory = propagator.propagate(times)
+///
+///     >>> # Interpolate at a specific time
+///     >>> state = trajectory.interpolate(t)
+///
+///     >>> # Convert to numpy array (columns: t, x, y, z, vx, vy, vz)
+///     >>> arr = trajectory.to_numpy()
+///
+///     >>> # Find events (e.g., altitude crossings)
+///     >>> events = trajectory.find_events(lambda s: altitude(s) - target)
 #[pyclass(name = "Trajectory", module = "lox_space", frozen)]
 #[derive(Debug, Clone)]
 pub struct PyTrajectory(pub DynTrajectory);
@@ -352,6 +546,19 @@ impl PyTrajectory {
         ))
     }
 
+    /// Create a Trajectory from a numpy array.
+    ///
+    /// Args:
+    ///     start_time: Reference epoch for the trajectory.
+    ///     array: 2D numpy array with columns [t, x, y, z, vx, vy, vz] where t is seconds from start_time.
+    ///     origin: Central body (default: Earth).
+    ///     frame: Reference frame (default: ICRF).
+    ///
+    /// Returns:
+    ///     A new Trajectory.
+    ///
+    /// Raises:
+    ///     ValueError: If the array has invalid shape.
     #[classmethod]
     #[pyo3(signature = (start_time, array, origin=None, frame=None))]
     fn from_numpy(
@@ -379,22 +586,37 @@ impl PyTrajectory {
         ))
     }
 
+    /// Return the central body (origin) of this trajectory.
     fn origin(&self) -> PyOrigin {
         PyOrigin(self.0.origin())
     }
 
+    /// Return the reference frame of this trajectory.
     fn reference_frame(&self) -> PyFrame {
         PyFrame(self.0.reference_frame())
     }
 
+    /// Export trajectory to a numpy array.
+    ///
+    /// Returns:
+    ///     2D numpy array with columns [t, x, y, z, vx, vy, vz].
     fn to_numpy<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyArray2<f64>>> {
         Ok(PyArray2::from_vec2(py, &self.0.to_vec())?)
     }
 
+    /// Return the list of states in this trajectory.
     fn states(&self) -> Vec<PyState> {
         self.0.states().into_iter().map(PyState).collect()
     }
 
+    /// Find events where a function crosses zero.
+    ///
+    /// Args:
+    ///     func: Function that takes a State and returns a float.
+    ///           Events are detected where the function crosses zero.
+    ///
+    /// Returns:
+    ///     List of Event objects.
     fn find_events(&self, py: Python<'_>, func: &Bound<'_, PyAny>) -> PyResult<Vec<PyEvent>> {
         Ok(self
             .0
@@ -410,6 +632,14 @@ impl PyTrajectory {
             .collect())
     }
 
+    /// Find time windows where a function is positive.
+    ///
+    /// Args:
+    ///     func: Function that takes a State and returns a float.
+    ///           Windows are periods where the function is positive.
+    ///
+    /// Returns:
+    ///     List of Window objects.
     fn find_windows(&self, py: Python<'_>, func: &Bound<'_, PyAny>) -> PyResult<Vec<PyWindow>> {
         Ok(self
             .0
@@ -425,6 +655,16 @@ impl PyTrajectory {
             .collect())
     }
 
+    /// Interpolate the trajectory at a specific time.
+    ///
+    /// Args:
+    ///     time: Either a Time (absolute) or TimeDelta (relative to trajectory start).
+    ///
+    /// Returns:
+    ///     Interpolated State at the requested time.
+    ///
+    /// Raises:
+    ///     ValueError: If the time argument is invalid.
     fn interpolate(&self, time: &Bound<'_, PyAny>) -> PyResult<PyState> {
         if let Ok(delta) = time.extract::<PyTimeDelta>() {
             return Ok(PyState(self.0.interpolate(delta.0)));
@@ -435,6 +675,14 @@ impl PyTrajectory {
         Err(PyValueError::new_err("invalid time argument"))
     }
 
+    /// Transform all states in the trajectory to a different reference frame.
+    ///
+    /// Args:
+    ///     frame: Target reference frame.
+    ///     provider: EOP provider (required for ITRF transformations).
+    ///
+    /// Returns:
+    ///     A new Trajectory in the target frame.
     #[pyo3(signature = (frame, provider=None))]
     fn to_frame(
         &self,
@@ -450,6 +698,14 @@ impl PyTrajectory {
         ))
     }
 
+    /// Transform all states in the trajectory to a different central body.
+    ///
+    /// Args:
+    ///     target: Target central body (origin).
+    ///     ephemeris: SPK ephemeris data.
+    ///
+    /// Returns:
+    ///     A new Trajectory relative to the target origin.
     fn to_origin(&self, target: PyOrigin, ephemeris: &Bound<'_, PySpk>) -> PyResult<Self> {
         let mut states: Vec<PyState> = Vec::with_capacity(self.states().len());
         for s in self.states() {
@@ -460,6 +716,16 @@ impl PyTrajectory {
     }
 }
 
+/// Represents a detected event (zero-crossing of a function).
+///
+/// Events are detected when a monitored function crosses zero during
+/// trajectory analysis. The crossing direction indicates whether the
+/// function went from negative to positive ("up") or positive to negative ("down").
+///
+/// Examples:
+///     >>> events = trajectory.find_events(lambda s: altitude(s) - 400.0)
+///     >>> for event in events:
+///     ...     print(f"{event.crossing()} crossing at {event.time()}")
 #[pyclass(name = "Event", module = "lox_space", frozen)]
 #[derive(Clone, Debug)]
 pub struct PyEvent(pub Event<DynTimeScale>);
@@ -477,15 +743,27 @@ impl PyEvent {
             self.time().__str__()
         )
     }
+
+    /// Return the time of this event.
     fn time(&self) -> PyTime {
         PyTime(self.0.time())
     }
 
+    /// Return the crossing direction ("up" or "down").
     fn crossing(&self) -> String {
         self.0.crossing().to_string()
     }
 }
 
+/// Represents a time window (interval between two times).
+///
+/// Windows are used to represent periods when certain conditions are met,
+/// such as visibility windows between a ground station and spacecraft.
+///
+/// Examples:
+///     >>> windows = trajectory.find_windows(lambda s: elevation(s) - min_elevation)
+///     >>> for w in windows:
+///     ...     print(f"Window: {w.start()} to {w.end()}, duration: {w.duration()}")
 #[pyclass(name = "Window", module = "lox_space", frozen)]
 #[derive(Clone, Debug)]
 pub struct PyWindow(pub Window<DynTimeScale>);
@@ -500,19 +778,42 @@ impl PyWindow {
         )
     }
 
+    /// Return the start time of this window.
     fn start(&self) -> PyTime {
         PyTime(self.0.start())
     }
 
+    /// Return the end time of this window.
     fn end(&self) -> PyTime {
         PyTime(self.0.end())
     }
 
+    /// Return the duration of this window.
     fn duration(&self) -> PyTimeDelta {
         PyTimeDelta(self.0.duration())
     }
 }
 
+/// Semi-analytical Keplerian orbit propagator using Vallado's method.
+///
+/// This propagator uses Kepler's equation and handles elliptical, parabolic,
+/// and hyperbolic orbits. It's suitable for two-body propagation without
+/// perturbations.
+///
+/// Args:
+///     initial_state: Initial orbital state (must be in an inertial frame).
+///     max_iter: Maximum iterations for Kepler's equation solver (default: 50).
+///
+/// Examples:
+///     >>> import lox_space as lox
+///     >>> state = lox.State(t, position=(6678.0, 0.0, 0.0), velocity=(0.0, 7.73, 0.0))
+///     >>> prop = lox.Vallado(state)
+///
+///     >>> # Propagate to a single time
+///     >>> state2 = prop.propagate(t2)
+///
+///     >>> # Propagate to multiple times
+///     >>> trajectory = prop.propagate([t1, t2, t3])
 #[pyclass(name = "Vallado", module = "lox_space", frozen)]
 #[derive(Clone, Debug)]
 pub struct PyVallado(pub DynVallado);
@@ -540,6 +841,16 @@ impl PyVallado {
         Ok(PyVallado(vallado))
     }
 
+    /// Propagate the orbit to one or more times.
+    ///
+    /// Args:
+    ///     steps: Single Time or list of Times.
+    ///
+    /// Returns:
+    ///     State (if single time) or Trajectory (if list of times).
+    ///
+    /// Raises:
+    ///     ValueError: If propagation fails.
     fn propagate<'py>(
         &self,
         py: Python<'py>,
@@ -564,6 +875,31 @@ impl PyVallado {
     }
 }
 
+/// Represents a location on the surface of a celestial body.
+///
+/// Ground locations are specified using geodetic coordinates (longitude, latitude,
+/// altitude) relative to a central body's reference ellipsoid.
+///
+/// Args:
+///     origin: The central body (e.g., Earth, Moon).
+///     longitude: Geodetic longitude in radians.
+///     latitude: Geodetic latitude in radians.
+///     altitude: Altitude above the reference ellipsoid in km.
+///
+/// Examples:
+///     >>> import lox_space as lox
+///     >>> import math
+///     >>> # Darmstadt, Germany
+///     >>> darmstadt = lox.GroundLocation(
+///     ...     lox.Origin("Earth"),
+///     ...     longitude=math.radians(8.6512),
+///     ...     latitude=math.radians(49.8728),
+///     ...     altitude=0.108,
+///     ... )
+///
+///     >>> # Get observables to a spacecraft
+///     >>> obs = darmstadt.observables(state)
+///     >>> print(f"Elevation: {math.degrees(obs.elevation())}°")
 #[pyclass(name = "GroundLocation", module = "lox_space", frozen)]
 #[derive(Clone, Debug)]
 pub struct PyGroundLocation(pub DynGroundLocation);
@@ -578,6 +914,15 @@ impl PyGroundLocation {
         ))
     }
 
+    /// Compute observables (azimuth, elevation, range, range rate) to a target.
+    ///
+    /// Args:
+    ///     state: Target state (e.g., spacecraft position).
+    ///     provider: EOP provider (for accurate Earth rotation).
+    ///     frame: Body-fixed frame (default: IAU frame of origin).
+    ///
+    /// Returns:
+    ///     Observables with azimuth, elevation, range, and range rate.
     #[pyo3(signature = (state, provider=None, frame=None))]
     fn observables(
         &self,
@@ -599,25 +944,50 @@ impl PyGroundLocation {
         )))
     }
 
+    /// Return the rotation matrix from body-fixed to topocentric frame.
+    ///
+    /// Returns:
+    ///     3x3 rotation matrix as a numpy array.
     fn rotation_to_topocentric<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyArray2<f64>>> {
         let rot = self.0.rotation_to_topocentric();
         let rot: Vec<Vec<f64>> = rot.to_cols_array_2d().iter().map(|v| v.to_vec()).collect();
         Ok(PyArray2::from_vec2(py, &rot)?)
     }
 
+    /// Return the geodetic longitude in radians.
     fn longitude(&self) -> f64 {
         self.0.longitude()
     }
 
+    /// Return the geodetic latitude in radians.
     fn latitude(&self) -> f64 {
         self.0.latitude()
     }
 
+    /// Return the altitude above the reference ellipsoid in km.
     fn altitude(&self) -> f64 {
         self.0.altitude()
     }
 }
 
+/// Propagator for ground station positions.
+///
+/// Computes the position of a ground station at arbitrary times by
+/// rotating the body-fixed position according to the body's rotation.
+///
+/// Args:
+///     location: The ground location to propagate.
+///
+/// Examples:
+///     >>> import lox_space as lox
+///     >>> gs = lox.GroundLocation(lox.Origin("Earth"), lon, lat, alt)
+///     >>> prop = lox.GroundPropagator(gs)
+///
+///     >>> # Get position at a single time
+///     >>> state = prop.propagate(t)
+///
+///     >>> # Get trajectory over multiple times
+///     >>> trajectory = prop.propagate([t1, t2, t3])
 #[pyclass(name = "GroundPropagator", module = "lox_space", frozen)]
 pub struct PyGroundPropagator(DynGroundPropagator);
 
@@ -636,6 +1006,16 @@ impl PyGroundPropagator {
         PyGroundPropagator(DynGroundPropagator::with_dynamic(location.0))
     }
 
+    /// Propagate the ground station to one or more times.
+    ///
+    /// Args:
+    ///     steps: Single Time or list of Times.
+    ///
+    /// Returns:
+    ///     State (if single time) or Trajectory (if list of times).
+    ///
+    /// Raises:
+    ///     ValueError: If propagation fails.
     fn propagate<'py>(
         &self,
         py: Python<'py>,
@@ -676,6 +1056,31 @@ impl From<PySgp4Error> for PyErr {
     }
 }
 
+/// SGP4 (Simplified General Perturbations 4) orbit propagator.
+///
+/// SGP4 is the standard propagator for objects tracked by NORAD/Space-Track.
+/// It uses Two-Line Element (TLE) data and models atmospheric drag, solar
+/// radiation pressure, and gravitational perturbations.
+///
+/// Args:
+///     tle: Two-Line Element set (2 or 3 lines).
+///
+/// Examples:
+///     >>> import lox_space as lox
+///     >>> tle = \"\"\"ISS (ZARYA)
+///     ... 1 25544U 98067A   24001.50000000  .00016717  00000-0  10270-3 0  9002
+///     ... 2 25544  51.6400 208.9163 0006703  40.7490  46.4328 15.49952307    11\"\"\"
+///     >>> sgp4 = lox.SGP4(tle)
+///
+///     >>> # Get TLE epoch
+///     >>> sgp4.time()
+///     Time(TAI, 2024, 1, 1, 12, 0, 0.0)
+///
+///     >>> # Propagate to a specific time
+///     >>> state = sgp4.propagate(t)
+///
+///     >>> # Propagate to multiple times
+///     >>> trajectory = sgp4.propagate([t1, t2, t3])
 #[pyclass(name = "SGP4", module = "lox_space", frozen)]
 pub struct PySgp4(pub Sgp4);
 
@@ -702,6 +1107,7 @@ impl PySgp4 {
         ))
     }
 
+    /// Return the TLE epoch time.
     fn time(&self) -> PyTime {
         PyTime(
             self.0
@@ -711,6 +1117,17 @@ impl PySgp4 {
         )
     }
 
+    /// Propagate the orbit to one or more times.
+    ///
+    /// Args:
+    ///     steps: Single Time or list of Times.
+    ///     provider: EOP provider (optional, for UT1 time conversions).
+    ///
+    /// Returns:
+    ///     State (if single time) or Trajectory (if list of times).
+    ///
+    /// Raises:
+    ///     ValueError: If propagation fails.
     #[pyo3(signature = (steps, provider=None))]
     fn propagate<'py>(
         &self,
@@ -780,6 +1197,36 @@ impl PySgp4 {
     }
 }
 
+/// Compute visibility passes between a ground station and spacecraft.
+///
+/// This function finds all visibility windows where the spacecraft is above
+/// the elevation mask as seen from the ground station.
+///
+/// Args:
+///     times: List of Time objects defining the analysis period.
+///     gs: Ground station location.
+///     mask: Elevation mask defining minimum elevation constraints.
+///     sc: Spacecraft trajectory.
+///     ephemeris: SPK ephemeris data.
+///     bodies: Optional list of bodies for occultation checking.
+///
+/// Returns:
+///     List of Pass objects containing visibility windows and observables.
+///
+/// Raises:
+///     ValueError: If ground station and spacecraft have different origins.
+///
+/// Examples:
+///     >>> import lox_space as lox
+///     >>> passes = lox.visibility(
+///     ...     times=times,
+///     ...     gs=ground_station,
+///     ...     mask=lox.ElevationMask.fixed(5.0 * lox.deg),
+///     ...     sc=trajectory,
+///     ...     ephemeris=spk,
+///     ... )
+///     >>> for p in passes:
+///     ...     print(f"Pass: {p.window().start()} to {p.window().end()}")
 #[pyfunction]
 #[pyo3(signature = (times, gs, mask, sc, ephemeris, bodies=None))]
 pub fn visibility(
@@ -819,6 +1266,22 @@ pub fn visibility(
     )
 }
 
+/// Collection of named trajectories for batch visibility analysis.
+///
+/// Ensembles allow computing visibility for multiple spacecraft against
+/// multiple ground stations efficiently using `visibility_all`.
+///
+/// Args:
+///     ensemble: Dictionary mapping spacecraft names to their trajectories.
+///
+/// Examples:
+///     >>> import lox_space as lox
+///     >>> ensemble = lox.Ensemble({
+///     ...     "SC1": trajectory1,
+///     ...     "SC2": trajectory2,
+///     ...     "SC3": trajectory3,
+///     ... })
+///     >>> results = lox.visibility_all(times, ground_stations, ensemble, spk)
 #[pyclass(name = "Ensemble", module = "lox_space", frozen)]
 pub struct PyEnsemble(pub HashMap<String, DynTrajectory>);
 
@@ -835,6 +1298,34 @@ impl PyEnsemble {
     }
 }
 
+/// Compute visibility for multiple spacecraft and ground stations.
+///
+/// This function efficiently computes visibility passes for all combinations
+/// of spacecraft and ground stations, using parallel processing for large
+/// workloads.
+///
+/// Args:
+///     times: List of Time objects defining the analysis period.
+///     ground_stations: Dictionary mapping station names to (location, mask) tuples.
+///     spacecraft: Ensemble of spacecraft trajectories.
+///     ephemeris: SPK ephemeris data.
+///     bodies: Optional list of bodies for occultation checking.
+///
+/// Returns:
+///     Nested dictionary: {spacecraft_name: {station_name: [passes]}}.
+///
+/// Examples:
+///     >>> import lox_space as lox
+///     >>> ground_stations = {
+///     ...     "ESOC": (darmstadt, mask),
+///     ...     "DSN": (goldstone, mask),
+///     ... }
+///     >>> results = lox.visibility_all(
+///     ...     times, ground_stations, ensemble, spk
+///     ... )
+///     >>> for sc_name, gs_passes in results.items():
+///     ...     for gs_name, passes in gs_passes.items():
+///     ...         print(f"{sc_name} -> {gs_name}: {len(passes)} passes")
 #[pyfunction]
 #[pyo3(signature = (
     times,
@@ -1015,6 +1506,30 @@ impl From<PyElevationMaskError> for PyErr {
     }
 }
 
+/// Defines elevation constraints for visibility analysis.
+///
+/// An elevation mask specifies the minimum elevation angle required for
+/// visibility at different azimuth angles. Can be either fixed (constant
+/// minimum elevation) or variable (azimuth-dependent).
+///
+/// Args:
+///     azimuth: Array of azimuth angles in radians (for variable mask).
+///     elevation: Array of minimum elevations in radians (for variable mask).
+///     min_elevation: Fixed minimum elevation in radians.
+///
+/// Examples:
+///     >>> import lox_space as lox
+///     >>> # Fixed elevation mask (5 degrees)
+///     >>> mask = lox.ElevationMask.fixed(5.0 * lox.deg)
+///
+///     >>> # Variable mask based on terrain
+///     >>> import numpy as np
+///     >>> azimuth = np.linspace(0, 2*np.pi, 36)
+///     >>> elevation = np.array([...])  # terrain profile
+///     >>> mask = lox.ElevationMask.variable(azimuth, elevation)
+///
+///     >>> # Query minimum elevation at an azimuth
+///     >>> min_el = mask.min_elevation(1.5)  # radians
 #[pyclass(name = "ElevationMask", module = "lox_space", frozen, eq)]
 #[derive(Debug, Clone, PartialEq)]
 pub struct PyElevationMask(pub ElevationMask);
@@ -1045,11 +1560,26 @@ impl PyElevationMask {
         ))
     }
 
+    /// Create a fixed elevation mask with constant minimum elevation.
+    ///
+    /// Args:
+    ///     min_elevation: Minimum elevation angle in radians.
+    ///
+    /// Returns:
+    ///     ElevationMask with fixed minimum elevation.
     #[classmethod]
     fn fixed(_cls: &Bound<'_, PyType>, min_elevation: f64) -> Self {
         PyElevationMask(ElevationMask::with_fixed_elevation(min_elevation))
     }
 
+    /// Create a variable elevation mask from azimuth-dependent data.
+    ///
+    /// Args:
+    ///     azimuth: Array of azimuth angles in radians.
+    ///     elevation: Array of minimum elevations in radians.
+    ///
+    /// Returns:
+    ///     ElevationMask with variable minimum elevation.
     #[classmethod]
     fn variable(
         _cls: &Bound<'_, PyType>,
@@ -1067,6 +1597,7 @@ impl PyElevationMask {
         (self.azimuth(), self.elevation(), self.fixed_elevation())
     }
 
+    /// Return the azimuth array (for variable masks only).
     fn azimuth(&self) -> Option<Vec<f64>> {
         match &self.0 {
             ElevationMask::Fixed(_) => None,
@@ -1074,6 +1605,7 @@ impl PyElevationMask {
         }
     }
 
+    /// Return the elevation array (for variable masks only).
     fn elevation(&self) -> Option<Vec<f64>> {
         match &self.0 {
             ElevationMask::Fixed(_) => None,
@@ -1081,6 +1613,7 @@ impl PyElevationMask {
         }
     }
 
+    /// Return the fixed elevation value (for fixed masks only).
     fn fixed_elevation(&self) -> Option<f64> {
         match &self.0 {
             ElevationMask::Fixed(min_elevation) => Some(*min_elevation),
@@ -1088,11 +1621,35 @@ impl PyElevationMask {
         }
     }
 
+    /// Return the minimum elevation at the given azimuth.
+    ///
+    /// Args:
+    ///     azimuth: Azimuth angle in radians.
+    ///
+    /// Returns:
+    ///     Minimum elevation in radians.
     fn min_elevation(&self, azimuth: f64) -> f64 {
         self.0.min_elevation(azimuth)
     }
 }
 
+/// Observation data from a ground station to a target.
+///
+/// Observables contain the geometric relationship between a ground station
+/// and a spacecraft, including angles and range information.
+///
+/// Args:
+///     azimuth: Azimuth angle in radians (measured from north, clockwise).
+///     elevation: Elevation angle in radians (above local horizon).
+///     range: Distance to target in km.
+///     range_rate: Rate of change of range in km/s.
+///
+/// Examples:
+///     >>> obs = ground_station.observables(state)
+///     >>> import math
+///     >>> print(f"Az: {math.degrees(obs.azimuth()):.1f}°")
+///     >>> print(f"El: {math.degrees(obs.elevation()):.1f}°")
+///     >>> print(f"Range: {obs.range():.1f} km")
 #[pyclass(name = "Observables", module = "lox_space", frozen)]
 #[derive(Clone, Debug)]
 pub struct PyObservables(pub Observables);
@@ -1104,23 +1661,41 @@ impl PyObservables {
         PyObservables(Observables::new(azimuth, elevation, range, range_rate))
     }
 
+    /// Return the azimuth angle in radians.
     fn azimuth(&self) -> f64 {
         self.0.azimuth()
     }
 
+    /// Return the elevation angle in radians.
     fn elevation(&self) -> f64 {
         self.0.elevation()
     }
 
+    /// Return the range (distance) in km.
     fn range(&self) -> f64 {
         self.0.range()
     }
 
+    /// Return the range rate in km/s.
     fn range_rate(&self) -> f64 {
         self.0.range_rate()
     }
 }
 
+/// Represents a visibility pass between a ground station and spacecraft.
+///
+/// A Pass contains the visibility window (start and end times) along with
+/// observables computed at regular intervals throughout the pass.
+///
+/// Examples:
+///     >>> passes = lox.visibility(times, gs, mask, trajectory, spk)
+///     >>> for p in passes:
+///     ...     w = p.window()
+///     ...     print(f"Pass: {w.start()} to {w.end()}")
+///     ...     print(f"Duration: {w.duration()}")
+///     ...     # Get max elevation
+///     ...     max_el = max(o.elevation() for o in p.observables())
+///     ...     print(f"Max elevation: {math.degrees(max_el):.1f}°")
 #[pyclass(name = "Pass", module = "lox_space", frozen)]
 #[derive(Debug, Clone)]
 pub struct PyPass(pub DynPass);
@@ -1142,14 +1717,17 @@ impl PyPass {
         Ok(PyPass(pass))
     }
 
+    /// Return the visibility window for this pass.
     fn window(&self) -> PyWindow {
         PyWindow(*self.0.window())
     }
 
+    /// Return the time samples during this pass.
     fn times(&self) -> Vec<PyTime> {
         self.0.times().iter().map(|&t| PyTime(t)).collect()
     }
 
+    /// Return the observables at each time sample.
     fn observables(&self) -> Vec<PyObservables> {
         self.0
             .observables()
@@ -1158,6 +1736,13 @@ impl PyPass {
             .collect()
     }
 
+    /// Interpolate observables at a specific time within the pass.
+    ///
+    /// Args:
+    ///     time: Time to interpolate at.
+    ///
+    /// Returns:
+    ///     Interpolated Observables, or None if time is outside the pass.
     fn interpolate(&self, time: PyTime) -> Option<PyObservables> {
         self.0.interpolate(time.0).map(PyObservables)
     }
