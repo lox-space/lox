@@ -106,7 +106,7 @@ where
         let origin = self.origin();
         let mu = self.gravitational_parameter();
         let t0 = self.initial_state.time();
-        let dt = (time.clone() - t0).as_seconds_f64();
+        let dt = (time.clone() - t0).to_seconds().to_f64();
         let sqrt_mu = mu.sqrt();
         let p0 = self.initial_state.position();
         let v0 = self.initial_state.velocity();
@@ -241,7 +241,7 @@ mod tests {
         );
         let s0 = k0.to_cartesian();
         let period = k0.orbital_period();
-        let t_end = period.as_seconds_f64().ceil() as i64;
+        let t_end = period.to_seconds().to_f64().ceil() as i64;
         let steps = TimeDelta::range(0..=t_end).map(|dt| time + dt);
         let trajectory = Vallado::new(s0).propagate_all(steps).unwrap();
         let s1 = trajectory.interpolate(period);

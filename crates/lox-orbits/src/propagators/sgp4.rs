@@ -53,7 +53,7 @@ impl Propagator<Tai, Earth, Icrf> for Sgp4 {
     type Error = Sgp4Error;
 
     fn propagate(&self, time: Time<Tai>) -> Result<State<Tai, Earth, Icrf>, Self::Error> {
-        let dt = (time - self.time).as_seconds_f64() / SECONDS_PER_MINUTE;
+        let dt = (time - self.time).to_seconds().to_f64() / SECONDS_PER_MINUTE;
         let prediction = self.constants.propagate(MinutesSinceEpoch(dt))?;
         let position = DVec3::from_array(prediction.position);
         let velocity = DVec3::from_array(prediction.velocity);
@@ -81,7 +81,7 @@ mod tests {
         let s1 = sgp4.propagate(t1).unwrap();
         let k1 = s1.to_keplerian();
         assert_approx_eq!(
-            k1.orbital_period().as_seconds_f64() / SECONDS_PER_MINUTE,
+            k1.orbital_period().to_seconds().to_f64() / SECONDS_PER_MINUTE,
             orbital_period,
             rtol <= 1e-4
         );

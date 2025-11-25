@@ -8,6 +8,7 @@ use crate::time::python::time::PyTime;
 use crate::time::python::time_scales::PyTimeScale;
 use crate::time::time_of_day::CivilTime;
 use crate::time::utc::{Utc, UtcError};
+use lox_test_utils::{ApproxEq, approx_eq};
 use pyo3::exceptions::PyValueError;
 use pyo3::types::PyType;
 use pyo3::{Bound, PyAny, PyErr, PyResult, pyclass, pymethods};
@@ -21,7 +22,7 @@ impl From<PyUtcError> for PyErr {
 }
 
 #[pyclass(name = "UTC", module = "lox_space", frozen)]
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, ApproxEq)]
 pub struct PyUtc(pub Utc);
 
 #[pymethods]
@@ -67,6 +68,11 @@ impl PyUtc {
 
     pub fn __eq__(&self, other: PyUtc) -> bool {
         self.0 == other.0
+    }
+
+    #[pyo3(signature = (other, rel_tol = 1e-8, abs_tol = 1e-14))]
+    pub fn isclose(&self, other: PyUtc, rel_tol: f64, abs_tol: f64) -> bool {
+        approx_eq!(self, &other, rtol <= rel_tol, atol <= abs_tol)
     }
 
     pub fn year(&self) -> i64 {

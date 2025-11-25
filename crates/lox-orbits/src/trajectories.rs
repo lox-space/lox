@@ -66,7 +66,7 @@ where
         let start_time = states[0].time();
         let t: Vec<f64> = states
             .iter()
-            .map(|s| (s.time() - start_time.clone()).as_seconds_f64())
+            .map(|s| (s.time() - start_time.clone()).to_seconds().to_f64())
             .collect();
         // let t = ArcVecF64(Arc::new(t));
         let x: Vec<f64> = states.iter().map(|s| s.position().x).collect();
@@ -149,7 +149,7 @@ where
     }
 
     pub fn interpolate(&self, dt: TimeDelta) -> State<T, O, R> {
-        let t = dt.as_seconds_f64();
+        let t = dt.to_seconds().to_f64();
         State::new(
             self.start_time() + dt,
             self.position(t),
