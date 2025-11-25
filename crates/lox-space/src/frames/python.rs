@@ -40,6 +40,36 @@ impl From<PyDynTransformEopError> for PyErr {
     }
 }
 
+/// Represents a reference frame for positioning and transformations.
+///
+/// Reference frames define coordinate systems for expressing positions and
+/// velocities. Lox supports both inertial (non-rotating) and rotating frames.
+///
+/// Supported frames:
+///
+/// - **ICRF**: International Celestial Reference Frame (inertial)
+/// - **GCRF**: Geocentric Celestial Reference Frame (inertial, Earth-centered)
+/// - **CIRF**: Celestial Intermediate Reference Frame
+/// - **TIRF**: Terrestrial Intermediate Reference Frame
+/// - **ITRF**: International Terrestrial Reference Frame (Earth-fixed)
+/// - **Body-fixed frames**: IAU_EARTH, IAU_MOON, IAU_MARS, etc.
+///
+/// Args:
+///     abbreviation: Frame abbreviation (e.g., "ICRF", "ITRF", "IAU_MOON").
+///
+/// Raises:
+///     ValueError: If the frame abbreviation is not recognized.
+///
+/// Examples:
+///     >>> import lox_space as lox
+///     >>> icrf = lox.Frame("ICRF")
+///     >>> itrf = lox.Frame("ITRF")
+///     >>> moon_fixed = lox.Frame("IAU_MOON")
+///
+///     >>> icrf.name()
+///     'International Celestial Reference Frame'
+///     >>> icrf.abbreviation()
+///     'ICRF'
 #[pyclass(name = "Frame", module = "lox_space", frozen)]
 #[pyo3(eq)]
 #[derive(Debug, Clone, Default, Eq, PartialEq, Ord, PartialOrd)]
@@ -56,10 +86,18 @@ impl PyFrame {
         (self.abbreviation(),)
     }
 
+    /// Return the full name of this reference frame.
+    ///
+    /// Returns:
+    ///     The descriptive name (e.g., "International Celestial Reference Frame").
     fn name(&self) -> String {
         self.0.name()
     }
 
+    /// Return the abbreviation of this reference frame.
+    ///
+    /// Returns:
+    ///     The short abbreviation (e.g., "ICRF", "ITRF").
     fn abbreviation(&self) -> String {
         self.0.abbreviation()
     }

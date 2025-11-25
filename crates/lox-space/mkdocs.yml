@@ -3,8 +3,21 @@
 # SPDX-License-Identifier: MPL-2.0
 
 site_name: Lox Python
-site_url: https://python.lox-space.org
+site_url: https://python.lox.rs
 repo_url: https://github.com/lox-space/lox
+
+nav:
+  - Home: index.md
+  - API Reference:
+    - Time & Dates: time.md
+    - Celestial Bodies: bodies.md
+    - Reference Frames: frames.md
+    - Orbital States: states.md
+    - Propagators: propagators.md
+    - Ground Stations: ground.md
+    - Events & Visibility: events.md
+    - Data Providers: data.md
+    - Units: units.md
 
 theme:
   name: material

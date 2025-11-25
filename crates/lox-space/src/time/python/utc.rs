@@ -21,6 +21,35 @@ impl From<PyUtcError> for PyErr {
     }
 }
 
+/// Represents a UTC (Coordinated Universal Time) timestamp.
+///
+/// UTC is the basis for civil time worldwide. Unlike `Time`, UTC handles
+/// leap seconds and is discontinuous. Use `Time` for astronomical calculations
+/// that require continuous time.
+///
+/// Args:
+///     year: Calendar year.
+///     month: Calendar month (1-12).
+///     day: Day of month (1-31).
+///     hour: Hour of day (0-23). Defaults to 0.
+///     minute: Minute of hour (0-59). Defaults to 0.
+///     seconds: Seconds (0.0-60.0, allows 60 for leap seconds). Defaults to 0.0.
+///
+/// Raises:
+///     ValueError: If date or time components are out of valid range.
+///
+/// Examples:
+///     >>> import lox_space as lox
+///     >>> utc = lox.UTC(2024, 6, 15, 12, 30, 45.5)
+///     >>> str(utc)
+///     '2024-06-15T12:30:45.500 UTC'
+///
+///     Convert to TAI:
+///
+///     >>> t_tai = utc.to_scale("TAI")
+///
+/// See Also:
+///     Time: For continuous astronomical time scales.
 #[pyclass(name = "UTC", module = "lox_space", frozen)]
 #[derive(Clone, Debug, Eq, PartialEq, ApproxEq)]
 pub struct PyUtc(pub Utc);
@@ -45,6 +74,16 @@ impl PyUtc {
         Ok(PyUtc(utc))
     }
 
+    /// Create a UTC timestamp from an ISO 8601 formatted string.
+    ///
+    /// Args:
+    ///     iso: ISO 8601 formatted datetime string (e.g., "2024-06-15T12:30:45Z").
+    ///
+    /// Returns:
+    ///     A new UTC object.
+    ///
+    /// Raises:
+    ///     ValueError: If the ISO string is invalid.
     #[classmethod]
     pub fn from_iso(_cls: &Bound<'_, PyType>, iso: &str) -> PyResult<PyUtc> {
         Ok(PyUtc(iso.parse().map_err(PyUtcError)?))
@@ -70,55 +109,87 @@ impl PyUtc {
         self.0 == other.0
     }
 
+    /// Check if two UTC timestamps are approximately equal.
+    ///
+    /// Args:
+    ///     other: The other UTC object to compare.
+    ///     rel_tol: Relative tolerance. Defaults to 1e-8.
+    ///     abs_tol: Absolute tolerance. Defaults to 1e-14.
+    ///
+    /// Returns:
+    ///     True if the timestamps are approximately equal.
     #[pyo3(signature = (other, rel_tol = 1e-8, abs_tol = 1e-14))]
     pub fn isclose(&self, other: PyUtc, rel_tol: f64, abs_tol: f64) -> bool {
         approx_eq!(self, &other, rtol <= rel_tol, atol <= abs_tol)
     }
 
+    /// Return the year component.
     pub fn year(&self) -> i64 {
         self.0.year()
     }
 
+    /// Return the month component (1-12).
     pub fn month(&self) -> u8 {
         self.0.month()
     }
 
+    /// Return the day of month component (1-31).
     pub fn day(&self) -> u8 {
         self.0.day()
     }
 
+    /// Return the hour component (0-23).
     pub fn hour(&self) -> u8 {
         self.0.hour()
     }
 
+    /// Return the minute component (0-59).
     pub fn minute(&self) -> u8 {
         self.0.minute()
     }
 
+    /// Return the integer second component (0-60, 60 for leap second).
     pub fn second(&self) -> u8 {
         self.0.second()
     }
 
+    /// Return the millisecond component (0-999).
     pub fn millisecond(&self) -> u32 {
         self.0.millisecond()
     }
 
+    /// Return the microsecond component (0-999).
     pub fn microsecond(&self) -> u32 {
         self.0.microsecond()
     }
 
+    /// Return the nanosecond component (0-999).
     pub fn nanosecond(&self) -> u32 {
         self.0.nanosecond()
     }
 
+    /// Return the picosecond component (0-999).
     pub fn picosecond(&self) -> u32 {
         self.0.picosecond()
     }
 
+    /// Return the decimal seconds (seconds + fractional part).
     pub fn decimal_seconds(&self) -> f64 {
         self.0.as_seconds_f64()
     }
 
+    /// Convert this UTC timestamp to a Time object in the specified scale.
+    ///
+    /// Args:
+    ///     scale: Target time scale.
+    ///     provider: EOP provider for UT1 conversions.
+    ///
+    /// Returns:
+    ///     A Time object in the target scale.
+    ///
+    /// Examples:
+    ///     >>> utc = lox.UTC(2024, 1, 1)
+    ///     >>> t_tai = utc.to_scale("TAI")
     #[pyo3(signature = (scale, provider=None))]
     pub fn to_scale(
         &self,

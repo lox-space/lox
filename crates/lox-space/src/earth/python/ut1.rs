@@ -29,6 +29,36 @@ impl From<PyEopProviderError> for PyErr {
     }
 }
 
+/// Earth Orientation Parameters (EOP) data provider.
+///
+/// EOP data is required for accurate transformations involving UT1 and
+/// polar motion corrections. The data can be loaded from IERS finals2000A
+/// files (CSV format).
+///
+/// EOP data files can be obtained from:
+///
+/// - IERS: https://www.iers.org/IERS/EN/DataProducts/EarthOrientationData/eop.html
+/// - Celestrak: https://celestrak.org/SpaceData/
+///
+/// Args:
+///     path: Path to the EOP data file (CSV format).
+///     path2: Optional second path for separate polar motion and UT1 files.
+///
+/// Raises:
+///     EopParserError: If the file cannot be parsed.
+///     OSError: If the file cannot be read.
+///
+/// Examples:
+///     >>> import lox_space as lox
+///     >>> # Load EOP data from a single file
+///     >>> eop = lox.EOPProvider("/path/to/finals2000A.all.csv")
+///
+///     >>> # Use with time scale conversions
+///     >>> t_tai = lox.Time("TAI", 2024, 1, 1)
+///     >>> t_ut1 = t_tai.to_scale("UT1", provider=eop)
+///
+///     >>> # Use with frame transformations
+///     >>> state_itrf = state.to_frame(lox.Frame("ITRF"), provider=eop)
 #[pyclass(name = "EOPProvider", module = "lox_space", frozen)]
 #[derive(Debug)]
 pub struct PyEopProvider(pub EopProvider);

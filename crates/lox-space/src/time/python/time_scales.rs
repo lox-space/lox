@@ -16,6 +16,28 @@ impl From<PyUnknownTimeScaleError> for PyErr {
     }
 }
 
+/// Represents an astronomical time scale.
+///
+/// Supported time scales:
+///
+/// - **TAI**: International Atomic Time - the basis for civil time
+/// - **TT**: Terrestrial Time - used for geocentric ephemerides
+/// - **TDB**: Barycentric Dynamical Time - used for solar system ephemerides
+/// - **TCB**: Barycentric Coordinate Time - relativistic coordinate time
+/// - **TCG**: Geocentric Coordinate Time - relativistic coordinate time
+/// - **UT1**: Universal Time - tied to Earth's rotation
+///
+/// Args:
+///     abbreviation: Time scale abbreviation ("TAI", "TT", "TDB", "TCB", "TCG", "UT1").
+///
+/// Raises:
+///     ValueError: If the abbreviation is not recognized.
+///
+/// Examples:
+///     >>> import lox_space as lox
+///     >>> scale = lox.TimeScale("TAI")
+///     >>> scale.name()
+///     'International Atomic Time'
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
 #[pyclass(name = "TimeScale", module = "lox_space", frozen, eq)]
 pub struct PyTimeScale(pub DynTimeScale);
@@ -40,10 +62,12 @@ impl PyTimeScale {
         format!("{}", self.0)
     }
 
+    /// Return the time scale abbreviation (e.g., "TAI").
     pub fn abbreviation(&self) -> String {
         self.0.abbreviation().to_owned()
     }
 
+    /// Return the full name of the time scale (e.g., "International Atomic Time").
     pub fn name(&self) -> String {
         self.0.name().to_owned()
     }
