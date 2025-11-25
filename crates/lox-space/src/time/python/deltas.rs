@@ -19,18 +19,6 @@ create_exception!(lox_space, NonFiniteTimeDeltaError, PyException);
 /// Args:
 ///     seconds: Duration in seconds (can be negative).
 ///
-/// Examples:
-///     Create a time delta:
-///
-///     >>> import lox_space as lox
-///     >>> dt = lox.TimeDelta(3600.0)  # 1 hour
-///     >>> dt = lox.TimeDelta.from_hours(1.0)  # also 1 hour
-///
-///     Use with Time objects:
-///
-///     >>> t = lox.Time("TAI", 2024, 1, 1)
-///     >>> t2 = t + dt
-///
 /// See Also:
 ///     Time: For representing instants in time.
 #[pyclass(name = "TimeDelta", module = "lox_space", frozen)]

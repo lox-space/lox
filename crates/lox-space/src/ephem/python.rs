@@ -36,17 +36,6 @@ impl From<PyDafSpkError> for PyErr {
 /// Raises:
 ///     ValueError: If the file cannot be parsed or is invalid.
 ///     OSError: If the file cannot be read.
-///
-/// Examples:
-///     >>> import lox_space as lox
-///     >>> # Load planetary ephemeris
-///     >>> spk = lox.SPK("/path/to/de440.bsp")
-///
-///     >>> # Use with propagation
-///     >>> trajectory = propagator.propagate(times, ephemeris=spk)
-///
-///     >>> # Use with visibility analysis
-///     >>> passes = lox.visibility(times, gs, mask, trajectory, ephemeris=spk)
 #[pyclass(name = "SPK", module = "lox_space", frozen)]
 pub struct PySpk(pub Spk);
 
