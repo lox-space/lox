@@ -47,18 +47,6 @@ impl From<PyEopProviderError> for PyErr {
 /// Raises:
 ///     EopParserError: If the file cannot be parsed.
 ///     OSError: If the file cannot be read.
-///
-/// Examples:
-///     >>> import lox_space as lox
-///     >>> # Load EOP data from a single file
-///     >>> eop = lox.EOPProvider("/path/to/finals2000A.all.csv")
-///
-///     >>> # Use with time scale conversions
-///     >>> t_tai = lox.Time("TAI", 2024, 1, 1)
-///     >>> t_ut1 = t_tai.to_scale("UT1", provider=eop)
-///
-///     >>> # Use with frame transformations
-///     >>> state_itrf = state.to_frame(lox.Frame("ITRF"), provider=eop)
 #[pyclass(name = "EOPProvider", module = "lox_space", frozen)]
 #[derive(Debug)]
 pub struct PyEopProvider(pub EopProvider);

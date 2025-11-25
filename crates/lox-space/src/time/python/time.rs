@@ -90,22 +90,6 @@ impl FromStr for PyUnit {
 /// Raises:
 ///     ValueError: If date or time components are out of valid range.
 ///
-/// Examples:
-///     Create a time instant in TAI scale:
-///
-///     >>> import lox_space as lox
-///     >>> t = lox.Time("TAI", 2024, 6, 15, 12, 30, 45.5)
-///     >>> str(t)
-///     '2024-06-15T12:30:45.500 TAI'
-///
-///     Create from ISO string:
-///
-///     >>> t = lox.Time.from_iso("2024-06-15T12:30:45.5 TAI")
-///
-///     Convert between time scales:
-///
-///     >>> t_tt = t.to_scale("TT")
-///
 /// See Also:
 ///     TimeDelta: For representing time differences.
 ///     UTC: For UTC time with leap second handling.

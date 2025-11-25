@@ -50,17 +50,6 @@ impl From<PyDynRotationError> for PyErr {
 ///
 /// Raises:
 ///     ValueError: If the frame abbreviation is not recognized.
-///
-/// Examples:
-///     >>> import lox_space as lox
-///     >>> icrf = lox.Frame("ICRF")
-///     >>> itrf = lox.Frame("ITRF")
-///     >>> moon_fixed = lox.Frame("IAU_MOON")
-///
-///     >>> icrf.name()
-///     'International Celestial Reference Frame'
-///     >>> icrf.abbreviation()
-///     'ICRF'
 #[pyclass(name = "Frame", module = "lox_space", frozen)]
 #[pyo3(eq)]
 #[derive(Debug, Clone, Default, Eq, PartialEq)]
