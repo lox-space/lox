@@ -120,7 +120,10 @@ pub const D_TAI_TT: TimeDelta = TimeDelta::builder().seconds(32).milliseconds(18
 // TT <-> TCG
 
 /// The difference between J2000 TT and 1977 January 1.0 TAI as TT.
-const J77_TT: f64 = -7.25803167816e8;
+const J77_TT: TimeDelta = TimeDelta::builder()
+    .seconds(-725803167)
+    .milliseconds(816)
+    .build();
 
 /// The rate of change of TCG with respect to TT.
 const LG: f64 = 6.969290134e-10;
@@ -129,26 +132,14 @@ const LG: f64 = 6.969290134e-10;
 const INV_LG: f64 = LG / (1.0 - LG);
 
 fn tt_to_tcg(delta: TimeDelta) -> TimeDelta {
-    let tt = delta.as_seconds_f64();
-    TimeDelta::from_seconds_f64(INV_LG * (tt - J77_TT))
+    INV_LG * (delta - J77_TT)
 }
 
 fn tcg_to_tt(delta: TimeDelta) -> TimeDelta {
-    let tcg = delta.as_seconds_f64();
-    TimeDelta::from_seconds_f64(-LG * (tcg - J77_TT))
+    -LG * (delta - J77_TT)
 }
 
 // TDB <-> TCB
-
-/// 1977 January 1 00:00, at which the following are equal:
-/// * 1977-01-01T00:00:00.000 TAI
-/// * 1977-01-01T00:00:32.184 TT
-/// * 1977-01-01T00:00:32.184 TCG
-/// * 1977-01-01T00:00:32.184 TCB
-pub const J77: f64 = -725803200.0;
-
-/// 1977 January 1.0 TAI
-const TT_0: f64 = D_TAI_TT.as_seconds_f64() + J77;
 
 /// The rate of change of TDB with respect to TCB.
 const LB: f64 = 1.550519768e-8;
@@ -156,19 +147,25 @@ const LB: f64 = 1.550519768e-8;
 /// The rate of change of TCB with respect to TDB.
 const INV_LB: f64 = LB / (1.0 - LB);
 
-/// Constant term of TDB − TT formula of Fairhead & Bretagnon (1990).
-const TDB_0: f64 = -6.55e-5;
+/// Scale factor for TDB to TCB constant term: 1 / (1 - LB).
+const ONE_MINUS_LB_INV: f64 = 1.0 / (1.0 - LB);
 
-const TCB_77: f64 = TDB_0 + LB * TT_0;
+/// Constant term of TDB − TT formula of Fairhead & Bretagnon (1990).
+// const TDB_0: f64 = -6.55e-5;
+const TDB_0: TimeDelta = TimeDelta::builder()
+    .seconds(-0)
+    .microseconds(65)
+    .nanoseconds(500)
+    .build();
+
+const TCB_77: TimeDelta = TDB_0.add_const(J77_TT.mul_const(LB));
 
 fn tdb_to_tcb(delta: TimeDelta) -> TimeDelta {
-    let tdb = delta.as_seconds_f64();
-    TimeDelta::from_seconds_f64(-TCB_77 / (1.0 - LB) + INV_LB * tdb)
+    INV_LB * delta - ONE_MINUS_LB_INV * TCB_77
 }
 
 fn tcb_to_tdb(delta: TimeDelta) -> TimeDelta {
-    let tcb = delta.as_seconds_f64();
-    TimeDelta::from_seconds_f64(TCB_77 - LB * tcb)
+    TCB_77 - LB * delta
 }
 
 // TT <-> TDB
@@ -277,5 +274,41 @@ mod tests {
             .unwrap()
             .as_seconds_f64();
         assert_approx_eq!(act, exp, atol <= tol.unwrap_or(DEFAULT_TOL));
+    }
+
+    // Test round-trip conversions for reversibility
+    #[rstest]
+    #[case::tt_tcg_tt("TT", "TCG")]
+    #[case::tcg_tt_tcg("TCG", "TT")]
+    fn test_tcg_tt_roundtrip(#[case] scale1: &str, #[case] scale2: &str) {
+        let provider = &DefaultOffsetProvider;
+        let scale1: DynTimeScale = scale1.parse().unwrap();
+        let scale2: DynTimeScale = scale2.parse().unwrap();
+        let date = Date::new(2024, 12, 30).unwrap();
+        let time = TimeOfDay::from_hms(10, 27, 13.145).unwrap();
+        let original_delta = DynTime::from_date_and_time(scale1, date, time)
+            .unwrap()
+            .to_delta();
+
+        // Forward conversion
+        let offset1 = provider.try_offset(scale1, scale2, original_delta).unwrap();
+        let intermediate_delta = original_delta + offset1;
+
+        // Reverse conversion
+        let offset2 = provider
+            .try_offset(scale2, scale1, intermediate_delta)
+            .unwrap();
+        let final_delta = intermediate_delta + offset2;
+
+        // Should be equal to original within 1 nanosecond
+        let diff = (final_delta - original_delta).as_seconds_f64().abs();
+        assert!(
+            diff < 1e-9,
+            "Round-trip conversion {} -> {} -> {} failed: difference = {} seconds",
+            scale1,
+            scale2,
+            scale1,
+            diff
+        );
     }
 }
