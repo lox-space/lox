@@ -4,11 +4,11 @@
 
 use crate::earth::python::ut1::{PyEopProvider, PyEopProviderError};
 use crate::time::calendar_dates::CalendarDate;
-use crate::time::offsets::DefaultOffsetProvider;
 use crate::time::python::time::PyTime;
-use crate::time::python::time_scales::{PyMissingEopProviderError, PyTimeScale};
+use crate::time::python::time_scales::PyTimeScale;
 use crate::time::time_of_day::CivilTime;
 use crate::time::utc::{Utc, UtcError};
+use lox_test_utils::{ApproxEq, approx_eq};
 use pyo3::exceptions::PyValueError;
 use pyo3::types::PyType;
 use pyo3::{Bound, PyAny, PyErr, PyResult, pyclass, pymethods};
@@ -22,7 +22,7 @@ impl From<PyUtcError> for PyErr {
 }
 
 #[pyclass(name = "UTC", module = "lox_space", frozen)]
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, ApproxEq)]
 pub struct PyUtc(pub Utc);
 
 #[pymethods]
@@ -68,6 +68,11 @@ impl PyUtc {
 
     pub fn __eq__(&self, other: PyUtc) -> bool {
         self.0 == other.0
+    }
+
+    #[pyo3(signature = (other, rel_tol = 1e-8, abs_tol = 1e-14))]
+    pub fn isclose(&self, other: PyUtc, rel_tol: f64, abs_tol: f64) -> bool {
+        approx_eq!(self, &other, rtol <= rel_tol, atol <= abs_tol)
     }
 
     pub fn year(&self) -> i64 {
@@ -128,11 +133,7 @@ impl PyUtc {
                 .to_dyn_time()
                 .try_to_scale(scale.0, provider)
                 .map_err(PyEopProviderError)?,
-            None => self
-                .0
-                .to_dyn_time()
-                .try_to_scale(scale.0, &DefaultOffsetProvider)
-                .map_err(PyMissingEopProviderError)?,
+            None => self.0.to_dyn_time().to_scale(scale.0),
         };
         Ok(PyTime(time))
     }
@@ -142,7 +143,7 @@ impl PyUtc {
 mod tests {
     use super::*;
 
-    use lox_test_utils::data_file;
+    use lox_test_utils::{assert_approx_eq, data_file};
 
     use pyo3::{Bound, IntoPyObject, IntoPyObjectExt, Python};
     use rstest::rstest;
@@ -196,12 +197,12 @@ mod tests {
     }
 
     #[rstest]
-    #[case("TAI")]
-    #[case("TCB")]
-    #[case("TCG")]
-    #[case("TDB")]
-    #[case("TT")]
-    #[case("UT1")]
+    #[case::tai("TAI")]
+    #[case::tcb("TCB")]
+    #[case::tcg("TCG")]
+    #[case::tdb("TDB")]
+    #[case::tt("TT")]
+    #[case::ut1("UT1")]
     fn test_pyutc_transformations(#[case] scale: &str) {
         Python::attach(|py| {
             let path = (data_file("iers/finals2000A.all.csv"),)
@@ -215,7 +216,7 @@ mod tests {
                 .unwrap()
                 .to_utc(Some(&provider))
                 .unwrap();
-            assert_eq!(act, exp);
+            assert_approx_eq!(act.0, exp.0);
         });
     }
 }

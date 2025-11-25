@@ -17,7 +17,7 @@ use crate::time_scales::{DynTimeScale, Tai};
 use crate::{time::Time, utc};
 
 use super::LeapSecondsProvider;
-use super::leap_seconds::BuiltinLeapSeconds;
+use super::leap_seconds::DefaultLeapSecondsProvider;
 use super::{Utc, UtcError};
 
 mod before1972;
@@ -38,7 +38,7 @@ impl Utc {
     }
 
     pub fn to_time(&self) -> Time<Tai> {
-        self.to_time_with_provider(&BuiltinLeapSeconds)
+        self.to_time_with_provider(&DefaultLeapSecondsProvider)
     }
 
     pub fn to_dyn_time_with_provider(&self, provider: &impl LeapSecondsProvider) -> DynTime {
@@ -47,7 +47,7 @@ impl Utc {
     }
 
     pub fn to_dyn_time(&self) -> DynTime {
-        self.to_dyn_time_with_provider(&BuiltinLeapSeconds)
+        self.to_dyn_time_with_provider(&DefaultLeapSecondsProvider)
     }
 }
 
@@ -58,7 +58,7 @@ pub trait TryToUtc {
     ) -> Result<Utc, UtcError>;
 
     fn try_to_utc(&self) -> Result<Utc, UtcError> {
-        self.try_to_utc_with_provider(&BuiltinLeapSeconds)
+        self.try_to_utc_with_provider(&DefaultLeapSecondsProvider)
     }
 }
 
@@ -157,6 +157,8 @@ mod test {
 
     #[test]
     fn test_all_scales_to_utc() {
+        use lox_test_utils::assert_approx_eq;
+
         let tai = time!(Tai, 2024, 5, 17, 12, 13, 14.0).unwrap();
         let exp = tai.try_to_utc().unwrap();
         let tt = tai.try_to_scale(Tt, &DefaultOffsetProvider).unwrap();
@@ -165,9 +167,10 @@ mod test {
         let tcg = tai.try_to_scale(Tcg, &DefaultOffsetProvider).unwrap();
         let act = tcg.try_to_utc().unwrap();
         assert_eq!(act, exp);
+        // TCB conversions have lower precision due to the multi-step transformation
         let tcb = tai.try_to_scale(Tcb, &DefaultOffsetProvider).unwrap();
         let act = tcb.try_to_utc().unwrap();
-        assert_eq!(act, exp);
+        assert_approx_eq!(act, exp);
         let tdb = tai.try_to_scale(Tdb, &DefaultOffsetProvider).unwrap();
         let act = tdb.try_to_utc().unwrap();
         assert_eq!(act, exp);

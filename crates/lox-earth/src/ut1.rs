@@ -11,68 +11,73 @@
 */
 
 use crate::eop::{EopProvider, EopProviderError};
+use lox_time::Time;
 use lox_time::deltas::TimeDelta;
-use lox_time::offsets::{Offset, TryOffset};
-use lox_time::time_scales::{Tai, Tcb, Tcg, Tdb, Tt, Ut1};
+use lox_time::offsets::OffsetProvider;
+use lox_time::time_scales::Tai;
+use lox_time::utc::Utc;
+use lox_time::utc::leap_seconds::{DefaultLeapSecondsProvider, LeapSecondsProvider};
 
-// TAI <-> UT1
+impl LeapSecondsProvider for EopProvider {
+    fn delta_tai_utc(&self, tai: Time<Tai>) -> Option<TimeDelta> {
+        self.get_lsk().map_or_else(
+            || DefaultLeapSecondsProvider.delta_tai_utc(tai),
+            |lsk| lsk.delta_tai_utc(tai),
+        )
+    }
 
-macro_rules! impl_ut1 {
-    ($($scale:ident),*) => {
-        $(
-            impl TryOffset<$scale, Ut1> for EopProvider
-            {
-                type Error = EopProviderError;
+    fn delta_utc_tai(&self, utc: Utc) -> Option<TimeDelta> {
+        self.get_lsk().map_or_else(
+            || DefaultLeapSecondsProvider.delta_utc_tai(utc),
+            |lsk| lsk.delta_utc_tai(utc),
+        )
+    }
 
-                fn try_offset(
-                    &self,
-                    origin: $scale,
-                    _target: Ut1,
-                    delta: TimeDelta,
-                ) -> Result<TimeDelta, Self::Error> {
-                    let offset = self.try_offset(origin, Tai, delta)?;
-                    let tai = delta + offset;
-                    Ok(offset + self.delta_ut1_tai(tai)?)
-                }
-            }
+    fn is_leap_second_date(&self, date: lox_time::calendar_dates::Date) -> bool {
+        self.get_lsk().map_or_else(
+            || DefaultLeapSecondsProvider.is_leap_second_date(date),
+            |lsk| lsk.is_leap_second_date(date),
+        )
+    }
 
-            impl TryOffset<Ut1, $scale> for EopProvider
-            {
-                type Error = EopProviderError;
-
-                fn try_offset(
-                    &self,
-                    _origin: Ut1,
-                    target: $scale,
-                    delta: TimeDelta,
-                ) -> Result<TimeDelta, Self::Error> {
-                    let offset = self.delta_tai_ut1(delta)?;
-                    let tai = delta + offset;
-                    Ok(offset + self.offset(Tai, target, tai))
-                }
-            }
-        )*
+    fn is_leap_second(&self, tai: Time<Tai>) -> bool {
+        self.get_lsk().map_or_else(
+            || DefaultLeapSecondsProvider.is_leap_second(tai),
+            |lsk| lsk.is_leap_second(tai),
+        )
     }
 }
 
-impl_ut1!(Tai, Tcb, Tcg, Tt, Tdb);
+impl OffsetProvider for EopProvider {
+    type Error = EopProviderError;
+
+    fn tai_to_ut1(&self, delta: TimeDelta) -> Result<TimeDelta, Self::Error> {
+        self.delta_ut1_tai(delta)
+    }
+
+    fn ut1_to_tai(&self, delta: TimeDelta) -> Result<TimeDelta, Self::Error> {
+        self.delta_tai_ut1(delta)
+    }
+}
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     use std::sync::OnceLock;
 
     use crate::eop::EopParser;
 
-    use super::*;
+    use lox_io::spice::lsk::LeapSecondsKernel;
     use lox_test_utils::assert_approx_eq;
     use lox_test_utils::data_file;
     use lox_time::Time;
     use lox_time::deltas::ToDelta;
+    use lox_time::offsets::TryOffset;
     use lox_time::subsecond::Subsecond;
     use lox_time::time;
     use lox_time::time_scales::DynTimeScale;
-    use lox_time::time_scales::Ut1;
-    use lox_time::utc::leap_seconds::BuiltinLeapSeconds;
+    use lox_time::time_scales::{Tai, Ut1};
     use lox_time::utc::transformations::TryToUtc;
     use lox_time::{DynTime, calendar_dates::Date, time_of_day::TimeOfDay};
     use rstest::{fixture, rstest};
@@ -175,52 +180,27 @@ mod tests {
         let actual = provider
             .delta_ut1_tai(tai.to_delta())
             .unwrap()
-            .as_seconds_f64();
+            .to_seconds()
+            .to_f64();
         assert_approx_eq!(actual, expected, rtol <= 1e-6);
         let actual = provider
             .delta_tai_ut1(ut1.to_delta())
             .unwrap()
-            .as_seconds_f64();
+            .to_seconds()
+            .to_f64();
         assert_approx_eq!(actual, -expected, rtol <= 1e-6);
     }
 
-    // #[rstest]
-    // #[case(time!(Tai, 1973, 1, 1).unwrap(), Err(ExtrapolatedDeltaUt1Tai {
-    //     req_date: Date::new(1973, 1, 1).unwrap(),
-    //     min_date: Date::new(1973, 1, 2).unwrap(),
-    //     max_date: Date::new(2025, 3, 15).unwrap(),
-    //     extrapolated_value: TimeDelta::try_from_decimal_seconds(-11.188739245677642).unwrap(),
-    // }))]
-    // #[case(time!(Tai, 2025, 3, 16).unwrap(), Err(ExtrapolatedDeltaUt1Tai {
-    //     req_date: Date::new(2025, 3, 16).unwrap(),
-    //     min_date: Date::new(1973, 1, 2).unwrap(),
-    //     max_date: Date::new(2025, 3, 15).unwrap(),
-    //     extrapolated_value: TimeDelta::try_from_decimal_seconds(-36.98893121380733).unwrap(),
-    // }))]
-    // fn test_delta_ut1_tai_extrapolation(
-    //     #[case] time: Time<Tai>,
-    //     #[case] expected: Result<TimeDelta, ExtrapolatedDeltaUt1Tai>,
-    // ) {
-    //     let provider = eop_provider();
-    //     let expected = expected
-    //         .unwrap_err()
-    //         .extrapolated_value
-    //         .to_decimal_seconds();
-    //     let actual = provider
-    //         .delta_ut1_tai(time.to_delta())
-    //         .unwrap_err()
-    //         .extrapolated_value
-    //         .to_decimal_seconds();
-    //     assert_float_eq!(actual, expected, rel <= 1e-8);
-    //     let ut1 =
-    //         time.with_scale_and_delta(Ut1, TimeDelta::try_from_decimal_seconds(actual).unwrap());
-    //     let actual = provider
-    //         .delta_tai_ut1(ut1.to_delta())
-    //         .unwrap_err()
-    //         .extrapolated_value
-    //         .to_decimal_seconds();
-    //     assert_float_eq!(actual, -expected, rel <= 1e-8);
-    // }
+    #[rstest]
+    #[case(time!(Tai, 1973, 1, 1).unwrap())]
+    #[case(time!(Tai, 2100, 1, 1).unwrap())]
+    fn test_delta_ut1_tai_extrapolation(#[case] time: Time<Tai>, provider: &EopProvider) {
+        let act = provider.delta_ut1_tai(time.to_delta()).unwrap_err();
+        assert!(matches!(act, EopProviderError::ExtrapolatedValue(_)));
+        let ut1 = time.with_scale(Ut1);
+        let act = provider.delta_tai_ut1(ut1.to_delta()).unwrap_err();
+        assert!(matches!(act, EopProviderError::ExtrapolatedValue(_)));
+    }
 
     const UT1_TOL: f64 = 1e-2;
 
@@ -257,7 +237,8 @@ mod tests {
         let act = provider
             .try_offset(scale1, scale2, dt)
             .unwrap()
-            .as_seconds_f64();
+            .to_seconds()
+            .to_f64();
         assert_approx_eq!(act, exp, rtol <= UT1_TOL);
     }
 
@@ -283,7 +264,9 @@ mod tests {
                     data_file("iers/finals.all.csv"),
                     data_file("iers/finals2000A.all.csv"),
                 )
-                .leap_seconds_provider(Box::new(BuiltinLeapSeconds))
+                .with_leap_seconds_kernel(
+                    LeapSecondsKernel::from_file(data_file("spice/naif0012.tls")).unwrap(),
+                )
                 .parse()
                 .unwrap()
         })

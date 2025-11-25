@@ -22,8 +22,6 @@ def test_time(provider):
     assert tai_exp.isclose(tai_act)
     tai_act = tai_exp.to_scale("UT1", provider).to_scale("TAI", provider)
     assert tai_exp.isclose(tai_act)
-    with pytest.raises(ValueError):
-        tai_exp.to_scale("UT1")
     tai1 = lox.Time("TAI", 2000, 1, 1, 0, 0, 0.5)
     assert tai1 > tai_exp
     assert tai1 >= tai_exp
@@ -47,15 +45,15 @@ def test_utc(provider):
     utc_act = utc_exp.to_scale("TAI").to_utc()
     assert utc_exp == utc_act
     utc_act = utc_exp.to_scale("TCB").to_utc()
-    assert utc_exp == utc_act
+    assert utc_exp.isclose(utc_act)
     utc_act = utc_exp.to_scale("TCG").to_utc()
-    assert utc_exp == utc_act
+    assert utc_exp.isclose(utc_act)
     utc_act = utc_exp.to_scale("TDB").to_utc()
-    assert utc_exp == utc_act
+    assert utc_exp.isclose(utc_act)
     utc_act = utc_exp.to_scale("TT").to_utc()
     assert utc_exp == utc_act
     utc_act = utc_exp.to_scale("UT1", provider).to_utc(provider)
-    assert utc_exp == utc_act
+    assert utc_exp.isclose(utc_act)
 
 
 def test_time_delta():

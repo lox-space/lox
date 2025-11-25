@@ -9,14 +9,14 @@ use std::{
 
 use csv::{ByteRecord, ReaderBuilder};
 use lox_core::f64::consts::{SECONDS_BETWEEN_MJD_AND_J2000, SECONDS_PER_DAY};
+use lox_io::spice::lsk::LeapSecondsKernel;
 use lox_math::series::{Series, SeriesError};
 use lox_time::{
-    OffsetProvider,
     deltas::TimeDelta,
     julian_dates::JulianDate,
     utc::{
         Utc, UtcError,
-        leap_seconds::{BuiltinLeapSeconds, LeapSecondsProvider},
+        leap_seconds::{DefaultLeapSecondsProvider, LeapSecondsProvider},
         transformations::TryToUtc,
     },
 };
@@ -82,7 +82,7 @@ impl From<csv::Error> for EopParserError {
 #[derive(Default)]
 pub struct EopParser {
     paths: (Option<PathBuf>, Option<PathBuf>),
-    lsp: Option<Box<dyn LeapSecondsProvider>>,
+    lsk: Option<LeapSecondsKernel>,
 }
 
 impl EopParser {
@@ -90,12 +90,12 @@ impl EopParser {
         Self::default()
     }
 
-    pub fn from_path(&mut self, path: impl AsRef<Path>) -> &mut Self {
+    pub fn from_path(mut self, path: impl AsRef<Path>) -> Self {
         self.paths = (Some(path.as_ref().to_owned()), None);
         self
     }
 
-    pub fn from_paths(&mut self, path1: impl AsRef<Path>, path2: impl AsRef<Path>) -> &mut Self {
+    pub fn from_paths(mut self, path1: impl AsRef<Path>, path2: impl AsRef<Path>) -> Self {
         self.paths = (
             Some(path1.as_ref().to_owned()),
             Some(path2.as_ref().to_owned()),
@@ -103,12 +103,12 @@ impl EopParser {
         self
     }
 
-    pub fn leap_seconds_provider(&mut self, lsp: Box<dyn LeapSecondsProvider>) -> &mut Self {
-        self.lsp = Some(lsp);
+    pub fn with_leap_seconds_kernel(mut self, lsp: LeapSecondsKernel) -> Self {
+        self.lsk = Some(lsp);
         self
     }
 
-    pub fn parse(&self) -> Result<EopProvider, EopParserError> {
+    pub fn parse(self) -> Result<EopProvider, EopParserError> {
         let n = if let Some(iau1980) = self.paths.0.as_ref() {
             let mut reader = ReaderBuilder::new().delimiter(b';').from_path(iau1980)?;
             reader.records().count()
@@ -156,13 +156,13 @@ impl EopParser {
             if let Some(delta_ut1_utc) = r.delta_ut1_utc {
                 let utc = Utc::builder().with_ymd(r.year, r.month, r.day).build()?;
                 let delta_tai_utc = self
-                    .lsp
+                    .lsk
                     .as_ref()
                     .map(|lsp| lsp.delta_utc_tai(utc))
-                    .or_else(|| Some(BuiltinLeapSeconds.delta_utc_tai(utc)))
+                    .or_else(|| Some(DefaultLeapSecondsProvider.delta_utc_tai(utc)))
                     .flatten()
                     .ok_or(EopParserError::LeapSecond(utc))?;
-                delta_ut1_tai.push(delta_ut1_utc + delta_tai_utc.as_seconds_f64())
+                delta_ut1_tai.push(delta_ut1_utc + delta_tai_utc.to_seconds().to_f64())
             }
 
             if let (Some(xp), Some(yp)) = (r.x_pole, r.y_pole) {
@@ -211,6 +211,7 @@ impl EopParser {
                     None
                 },
             },
+            lsk: self.lsk.clone(),
         })
     }
 }
@@ -242,18 +243,18 @@ impl AsRef<[f64]> for Index {
 }
 type TSeries = Series<Index, Vec<f64>>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct NutPrecCorrections {
     iau1980: Option<(TSeries, TSeries)>,
     iau2000: Option<(TSeries, TSeries)>,
 }
 
-#[derive(Debug, OffsetProvider)]
-#[lox_time(error=EopProviderError, disable(ut1))]
+#[derive(Debug, Clone)]
 pub struct EopProvider {
     polar_motion: (TSeries, TSeries),
     delta_ut1_tai: TSeries,
     nut_prec: NutPrecCorrections,
+    lsk: Option<LeapSecondsKernel>,
 }
 
 impl EopProvider {
@@ -330,6 +331,10 @@ impl EopProvider {
             return Err(EopProviderError::ExtrapolatedValue(val));
         }
         Ok(-TimeDelta::from_seconds_f64(val))
+    }
+
+    pub fn get_lsk(&self) -> Option<&LeapSecondsKernel> {
+        self.lsk.as_ref()
     }
 }
 

@@ -47,7 +47,7 @@ pub enum LeapSecondsKernelError {
 ///
 /// Most users should prefer [BuiltinLeapSeconds] to implementing their own [LeapSecondsProvider]
 /// using the kernel.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LeapSecondsKernel {
     epochs_utc: Vec<i64>,
     epochs_tai: Vec<i64>,
