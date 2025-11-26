@@ -13,7 +13,7 @@ use crate::states::{DynState, State};
 use crate::trajectories::TrajectoryError;
 use lox_frames::{DynFrame, Icrf, ReferenceFrame};
 
-#[derive(Debug, Error, Eq, PartialEq)]
+#[derive(Debug, Error, PartialEq)]
 pub enum ValladoError {
     #[error("did not converge")]
     NotConverged,
