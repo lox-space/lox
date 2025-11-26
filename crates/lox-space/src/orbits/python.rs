@@ -12,7 +12,7 @@ use crate::ephem::python::{PyDafSpkError, PySpk};
 use crate::frames::DynFrame;
 use crate::frames::python::{PyDynRotationError, PyFrame};
 use crate::math::python::PySeriesError;
-use crate::math::roots::Brent;
+use crate::math::roots::{Brent, RootFinderError};
 use crate::math::series::SeriesError;
 use crate::orbits::analysis::{
     DynPass, ElevationMask, ElevationMaskError, Pass, visibility_combined,
@@ -61,7 +61,14 @@ struct PyFindEventError(FindEventError);
 
 impl From<PyFindEventError> for PyErr {
     fn from(err: PyFindEventError) -> Self {
-        // FIXME: wrong error type
+        PyValueError::new_err(err.0.to_string())
+    }
+}
+
+struct PyRootFinderError(RootFinderError);
+
+impl From<PyRootFinderError> for PyErr {
+    fn from(err: PyRootFinderError) -> Self {
         PyValueError::new_err(err.0.to_string())
     }
 }
@@ -87,12 +94,7 @@ pub fn find_events(
 ) -> PyResult<Vec<PyEvent>> {
     let root_finder = Brent::default();
     Ok(crate::orbits::events::find_events(
-        |t| {
-            func.call((t,), None)
-                .unwrap_or(f64::NAN.into_bound_py_any(py).unwrap())
-                .extract()
-                .unwrap_or(f64::NAN)
-        },
+        |t| func.call((t,), None).and_then(|obj| obj.extract::<f64>()),
         start.0,
         &times,
         root_finder,
@@ -118,28 +120,22 @@ pub fn find_events(
 ///     List of Window objects for intervals where the function is positive.
 #[pyfunction]
 pub fn find_windows(
-    py: Python<'_>,
+    _py: Python<'_>,
     func: &Bound<'_, PyAny>,
     start: PyTime,
     end: PyTime,
     times: Vec<f64>,
 ) -> PyResult<Vec<PyWindow>> {
     let root_finder = Brent::default();
-    Ok(crate::orbits::events::find_windows(
-        |t| {
-            func.call((t,), None)
-                .unwrap_or(f64::NAN.into_bound_py_any(py).unwrap())
-                .extract()
-                .unwrap_or(f64::NAN)
-        },
+    let res = crate::orbits::events::find_windows(
+        |t| func.call((t,), None).and_then(|obj| obj.extract::<f64>()),
         start.0,
         end.0,
         &times,
         root_finder,
-    )
-    .into_iter()
-    .map(PyWindow)
-    .collect())
+    );
+    let windows = res.map_err(PyRootFinderError)?;
+    Ok(windows.into_iter().map(PyWindow).collect())
 }
 
 /// Represents an orbital state (position and velocity) at a specific time.
@@ -549,18 +545,13 @@ impl PyTrajectory {
     /// Returns:
     ///     List of Event objects.
     fn find_events(&self, py: Python<'_>, func: &Bound<'_, PyAny>) -> PyResult<Vec<PyEvent>> {
-        Ok(self
-            .0
-            .find_events(|s| {
-                func.call((PyState(s),), None)
-                    // FIXME: Bad idea
-                    .unwrap_or(f64::NAN.into_bound_py_any(py).unwrap())
-                    .extract()
-                    .unwrap_or(f64::NAN)
-            })
-            .into_iter()
-            .map(PyEvent)
-            .collect())
+        let res = self.0.find_events(|s| {
+            // Python callable gets PyState and must return float; propagate exceptions
+            func.call((PyState(s),), None)
+                .and_then(|obj| obj.extract::<f64>())
+        });
+        let events = res.map_err(PyFindEventError)?;
+        Ok(events.into_iter().map(PyEvent).collect())
     }
 
     /// Find time windows where a function is positive.
@@ -571,19 +562,13 @@ impl PyTrajectory {
     ///
     /// Returns:
     ///     List of Window objects.
-    fn find_windows(&self, py: Python<'_>, func: &Bound<'_, PyAny>) -> PyResult<Vec<PyWindow>> {
-        Ok(self
-            .0
-            .find_windows(|s| {
-                func.call((PyState(s),), None)
-                    // FIXME: Bad idea
-                    .unwrap_or(f64::NAN.into_bound_py_any(py).unwrap())
-                    .extract()
-                    .unwrap_or(f64::NAN)
-            })
-            .into_iter()
-            .map(PyWindow)
-            .collect())
+    fn find_windows(&self, _py: Python<'_>, func: &Bound<'_, PyAny>) -> PyResult<Vec<PyWindow>> {
+        let res = self.0.find_windows(|s| {
+            func.call((PyState(s),), None)
+                .and_then(|obj| obj.extract::<f64>())
+        });
+        let windows = res.map_err(PyRootFinderError)?;
+        Ok(windows.into_iter().map(PyWindow).collect())
     }
 
     /// Interpolate the trajectory at a specific time.

@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+use std::convert::Infallible;
 use std::f64::consts::{PI, TAU};
 use std::ops::Sub;
 
@@ -16,7 +17,7 @@ use lox_ephem::{Ephemeris, path_from_ids};
 use lox_frames::rotations::TryRotation;
 use lox_math::{
     glam::Azimuth,
-    roots::{BracketError, FindRoot, Secant},
+    roots::{FindRoot, RootFinderError, Secant},
 };
 use lox_time::{Time, julian_dates::JulianDate, time_scales::DynTimeScale, time_scales::TimeScale};
 use thiserror::Error;
@@ -127,7 +128,7 @@ impl DynState {
 
 type LonLatAlt = (f64, f64, f64);
 
-fn rv_to_lla(r: DVec3, r_eq: f64, f: f64) -> Result<LonLatAlt, BracketError> {
+fn rv_to_lla(r: DVec3, r_eq: f64, f: f64) -> Result<LonLatAlt, RootFinderError> {
     let rm = r.length();
     let r_delta = (r.x.powi(2) + r.y.powi(2)).sqrt();
     let mut lon = r.y.atan2(r.x);
@@ -148,7 +149,7 @@ fn rv_to_lla(r: DVec3, r_eq: f64, f: f64) -> Result<LonLatAlt, BracketError> {
         |lat| {
             let e = (2.0 * f - f.powi(2)).sqrt();
             let c = r_eq / (1.0 - e.powi(2) * lat.sin().powi(2)).sqrt();
-            (r.z + c * e.powi(2) * lat.sin()) / r_delta - lat.tan()
+            Ok::<f64, Infallible>((r.z + c * e.powi(2) * lat.sin()) / r_delta - lat.tan())
         },
         delta,
     )?;
@@ -166,7 +167,7 @@ where
     T: TimeScale,
     O: Origin + RotationalElements + Spheroid + Clone,
 {
-    pub fn to_ground_location(&self) -> Result<GroundLocation<O>, BracketError> {
+    pub fn to_ground_location(&self) -> Result<GroundLocation<O>, RootFinderError> {
         let r = self.position();
         let r_eq = self.origin.equatorial_radius();
         let f = self.origin.flattening();
@@ -176,12 +177,12 @@ where
     }
 }
 
-#[derive(Debug, Clone, Error, Eq, PartialEq)]
+#[derive(Debug, Clone, Error, PartialEq)]
 pub enum StateToDynGroundError {
     #[error("equatorial radius and flattening factor are not available for origin `{}`", .0.name())]
     UndefinedSpheroid(DynOrigin),
     #[error(transparent)]
-    BracketError(#[from] BracketError),
+    RootFinderError(#[from] RootFinderError),
     #[error("not a body-fixed frame {0}")]
     NonBodyFixedFrame(String),
 }
