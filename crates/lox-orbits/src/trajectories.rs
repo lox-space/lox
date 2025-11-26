@@ -12,7 +12,7 @@ use lox_time::time_scales::{DynTimeScale, TimeScale};
 use thiserror::Error;
 
 use lox_bodies::{DynOrigin, Origin};
-use lox_math::roots::Brent;
+use lox_math::roots::{Brent, RootFinderError};
 use lox_math::series::{InterpolationType, Series, SeriesError};
 use lox_time::time_scales::Tai;
 use lox_time::utc::Utc;
@@ -29,7 +29,7 @@ impl From<csv::Error> for TrajectoryError {
     }
 }
 
-#[derive(Clone, Debug, Error, Eq, PartialEq)]
+#[derive(Clone, Debug, Error, PartialEq)]
 pub enum TrajectoryError {
     #[error("`states` must have at least 2 elements but had {0}")]
     InsufficientStates(usize),
@@ -163,7 +163,11 @@ where
         self.interpolate(time - self.start_time())
     }
 
-    pub fn find_events<F: Fn(State<T, O, R>) -> f64>(&self, func: F) -> Vec<Event<T>> {
+    pub fn find_events<F, E>(&self, func: F) -> Result<Vec<Event<T>>, crate::events::FindEventError>
+    where
+        F: Fn(State<T, O, R>) -> Result<f64, E> + Copy,
+        E: std::fmt::Display,
+    {
         let root_finder = Brent::default();
         find_events(
             |t| {
@@ -179,10 +183,13 @@ where
             self.t.as_ref(),
             root_finder,
         )
-        .unwrap_or_default()
     }
 
-    pub fn find_windows<F: Fn(State<T, O, R>) -> f64>(&self, func: F) -> Vec<Window<T>> {
+    pub fn find_windows<F, E>(&self, func: F) -> Result<Vec<Window<T>>, RootFinderError>
+    where
+        F: Fn(State<T, O, R>) -> Result<f64, E> + Copy,
+        E: std::fmt::Display,
+    {
         let root_finder = Brent::default();
         find_windows(
             |t| {
