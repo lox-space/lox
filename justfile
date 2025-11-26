@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: MPL-2.0
 
+export PYO3_PYTHON := `uv python find`
 export UV_PROJECT := "crates/lox-space"
 
 _default:
