@@ -110,7 +110,7 @@ where
             // the event occurred
             let t = root_finder
                 .find_in_bracket(func, (t0, t1))
-                .map_err(|e| FindEventError::RootFinder(e))?;
+                .map_err(FindEventError::RootFinder)?;
             let time = start.clone() + TimeDelta::from_seconds_f64(t);
 
             events.push(Event { crossing, time });
