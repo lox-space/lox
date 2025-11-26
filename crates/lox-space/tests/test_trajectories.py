@@ -127,5 +127,9 @@ def test_events_callback_error(trajectory):
 
 def test_windows_callback_error(trajectory):
     def bad_func(_s):
-        raise RuntimeError("boom in windows")
-    expect_callback_error(lambda: trajectory.find_windows(bad_func), RuntimeError, r"boom in windows")
+        raise ValueError("boom in windows")
+    expect_callback_error(
+        lambda: trajectory.find_windows(bad_func),
+        ValueError,
+        r"boom in windows"
+    )

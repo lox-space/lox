@@ -7,6 +7,7 @@ use std::sync::Arc;
 use fast_polynomial::poly_array;
 use thiserror::Error;
 
+use crate::math::roots::RootFinderError;
 use crate::math::slices::Monotonic;
 
 use super::linear_algebra::tridiagonal::Tridiagonal;
@@ -15,7 +16,7 @@ use super::slices::Diff;
 const MIN_POINTS_LINEAR: usize = 2;
 const MIN_POINTS_SPLINE: usize = 4;
 
-#[derive(Clone, Debug, Error, Eq, PartialEq)]
+#[derive(Clone, Debug, Error, PartialEq)]
 pub enum SeriesError {
     #[error("`x` and `y` must have the same length but were {0} and {1}")]
     DimensionMismatch(usize, usize),
@@ -23,6 +24,8 @@ pub enum SeriesError {
     InsufficientPoints(usize),
     #[error("x-axis must be strictly monotonic")]
     NonMonotonic,
+    #[error(transparent)]
+    RootFinder(#[from] RootFinderError),
 }
 
 #[derive(Clone, Debug, PartialEq)]

@@ -12,7 +12,7 @@ use lox_core::types::units::Radians;
 use lox_ephem::{Ephemeris, path_from_ids};
 use lox_frames::providers::DefaultRotationProvider;
 use lox_frames::rotations::TryRotation;
-use lox_math::roots::Brent;
+use lox_math::roots::{Brent, RootFinderError};
 use lox_math::series::{InterpolationType, Series, SeriesError};
 use lox_time::deltas::TimeDelta;
 use lox_time::julian_dates::JulianDate;
@@ -21,6 +21,7 @@ use lox_time::time_scales::DynTimeScale;
 use lox_time::time_scales::{Tdb, TimeScale};
 use lox_time::{DynTime, Time};
 use rayon::prelude::*;
+use std::convert::Infallible;
 use std::f64::consts::PI;
 use thiserror::Error;
 
@@ -309,9 +310,9 @@ pub fn visibility_dyn(
     gs: &DynGroundLocation,
     mask: &ElevationMask,
     sc: &DynTrajectory,
-) -> Vec<Window<DynTimeScale>> {
+) -> Result<Vec<Window<DynTimeScale>>, RootFinderError> {
     if times.len() < 2 {
-        return vec![];
+        return Ok(vec![]);
     }
     let start = *times.first().unwrap();
     let end = *times.last().unwrap();
@@ -321,7 +322,14 @@ pub fn visibility_dyn(
         .collect();
     let root_finder = Brent::default();
     find_windows(
-        |t| elevation_dyn(start + TimeDelta::from_seconds_f64(t), gs, mask, sc),
+        |t| {
+            Ok::<f64, Infallible>(elevation_dyn(
+                start + TimeDelta::from_seconds_f64(t),
+                gs,
+                mask,
+                sc,
+            ))
+        },
         start,
         end,
         &times,
@@ -335,9 +343,9 @@ pub fn visibility_los(
     body: DynOrigin,
     sc: &DynTrajectory,
     ephem: &impl Ephemeris,
-) -> Vec<Window<DynTimeScale>> {
+) -> Result<Vec<Window<DynTimeScale>>, RootFinderError> {
     if times.len() < 2 {
-        return vec![];
+        return Ok(vec![]);
     }
     let start = *times.first().unwrap();
     let end = *times.last().unwrap();
@@ -367,7 +375,7 @@ pub fn visibility_los(
                 .unwrap()
                 .position()
                 - r_body;
-            body.line_of_sight(r_gs, r_sc).unwrap()
+            Ok::<f64, Infallible>(body.line_of_sight(r_gs, r_sc).unwrap())
         },
         start,
         end,
@@ -384,12 +392,13 @@ pub fn visibility_combined<E: Ephemeris + Send + Sync>(
     sc: &DynTrajectory,
     ephem: &E,
 ) -> Result<Vec<DynPass>, SeriesError> {
-    let w1 = visibility_dyn(times, gs, mask, sc);
-    let wb: Vec<Vec<Window<DynTimeScale>>> = bodies
+    let w1 = visibility_dyn(times, gs, mask, sc)?;
+    let wb = bodies
         .par_iter()
-        .map(|&body| visibility_los(times, gs, body, sc, ephem))
-        .collect();
+        .map(|&body| visibility_los(times, gs, body, sc, ephem)) // -> Result<Vec<Window<DynTimeScale>>, RootFinderError>
+        .collect::<Result<Vec<Vec<Window<DynTimeScale>>>, RootFinderError>>()?;
     let mut windows = w1;
+
     for w2 in wb {
         windows = intersect_windows(&windows, &w2);
     }
@@ -444,14 +453,14 @@ pub fn visibility<T, O, P>(
     mask: &ElevationMask,
     sc: &Trajectory<T, O, Icrf>,
     provider: &P,
-) -> Vec<Window<T>>
+) -> Result<Vec<Window<T>>, RootFinderError>
 where
     T: TimeScale + Copy,
     O: Origin + Spheroid + RotationalElements + Copy,
     P: TryRotation<Icrf, Iau<O>, T>,
 {
     if times.len() < 2 {
-        return vec![];
+        return Ok(vec![]);
     }
     let start = *times.first().unwrap();
     let end = *times.last().unwrap();
@@ -462,13 +471,13 @@ where
     let root_finder = Brent::default();
     find_windows(
         |t| {
-            elevation(
+            Ok::<f64, Infallible>(elevation(
                 start + TimeDelta::from_seconds_f64(t),
                 gs,
                 mask,
                 sc,
                 provider,
-            )
+            ))
         },
         start,
         end,
@@ -571,7 +580,7 @@ mod tests {
         let sc = spacecraft_trajectory();
         let times: Vec<Time<Tai>> = sc.states().iter().map(|s| s.time()).collect();
         let expected = contacts();
-        let actual = visibility(&times, &gs, &mask, &sc, &DefaultRotationProvider);
+        let actual = visibility(&times, &gs, &mask, &sc, &DefaultRotationProvider).unwrap();
         assert_eq!(actual.len(), expected.len());
         assert_approx_eq!(expected, actual, rtol <= 1e-4);
     }

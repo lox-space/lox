@@ -11,7 +11,7 @@ use std::fmt::Display;
 use std::iter::zip;
 use thiserror::Error;
 
-use lox_math::roots::FindBracketedRoot;
+use lox_math::roots::{FindBracketedRoot, RootFinderError};
 use lox_time::deltas::TimeDelta;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -41,12 +41,14 @@ impl Display for ZeroCrossing {
     }
 }
 
-#[derive(Debug, Error, Clone, Eq, PartialEq)]
+#[derive(Debug, Error, Clone, PartialEq)]
 pub enum FindEventError {
     #[error("function is always negative")]
     AlwaysNegative,
     #[error("function is always positive")]
     AlwaysPositive,
+    #[error(transparent)]
+    RootFinder(#[from] RootFinderError),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -68,14 +70,26 @@ impl<T: TimeScale> Event<T> {
     }
 }
 
-pub fn find_events<F: Fn(f64) -> f64 + Copy, T: TimeScale + Clone, R: FindBracketedRoot<F>>(
+pub fn find_events<F, R, T, E>(
     func: F,
     start: Time<T>,
     steps: &[f64],
     root_finder: R,
-) -> Result<Vec<Event<T>>, FindEventError> {
-    // Determine the sign of `func` at each time step
-    let signs: Vec<f64> = steps.iter().map(|&t| func(t).signum()).collect();
+) -> Result<Vec<Event<T>>, FindEventError>
+where
+    F: Fn(f64) -> Result<f64, E> + Copy,
+    T: TimeScale + Clone,
+    E: Display,
+    R: FindBracketedRoot<F, E>,
+{
+    // Determine the sign of `func` at each time step (propagate callback errors)
+    let mut signs = Vec::with_capacity(steps.len());
+    for &t in steps {
+        let v = func(t).map_err(|e| {
+            FindEventError::RootFinder(RootFinderError::CallbackError(e.to_string()))
+        })?;
+        signs.push(v.signum());
+    }
 
     // No events could be detected because the function is always negative
     if signs.iter().all(|&s| s < 0.0) {
@@ -96,7 +110,7 @@ pub fn find_events<F: Fn(f64) -> f64 + Copy, T: TimeScale + Clone, R: FindBracke
             // the event occurred
             let t = root_finder
                 .find_in_bracket(func, (t0, t1))
-                .expect("sign changed but root finder failed");
+                .map_err(|e| FindEventError::RootFinder(e))?;
             let time = start.clone() + TimeDelta::from_seconds_f64(t);
 
             events.push(Event { crossing, time });
@@ -171,25 +185,28 @@ impl<T: TimeScale> Window<T> {
     }
 }
 
-pub fn find_windows<F: Fn(f64) -> f64 + Copy, T: TimeScale + Clone, R: FindBracketedRoot<F>>(
+pub fn find_windows<F, T, R, E>(
     func: F,
     start: Time<T>,
     end: Time<T>,
     steps: &[f64],
     root_finder: R,
-) -> Vec<Window<T>> {
-    let events = find_events(func, start.clone(), steps, root_finder);
-
-    match events {
-        Err(error) => match error {
-            FindEventError::AlwaysNegative => vec![],
-            FindEventError::AlwaysPositive => vec![Window { start, end }],
-        },
+) -> Result<Vec<Window<T>>, RootFinderError>
+where
+    F: Fn(f64) -> Result<f64, E> + Copy,
+    T: TimeScale + Clone,
+    E: Display,
+    R: FindBracketedRoot<F, E>,
+{
+    match find_events(func, start.clone(), steps, root_finder) {
+        Err(FindEventError::AlwaysNegative) => Ok(vec![]),
+        Err(FindEventError::AlwaysPositive) => Ok(vec![Window { start, end }]),
+        Err(FindEventError::RootFinder(err)) => Err(err),
         Ok(events) => {
             let mut events: VecDeque<Event<T>> = events.into();
 
             if events.is_empty() {
-                return vec![];
+                return Ok(vec![]);
             }
 
             // If the first event is a downcrossing, insert an upcrossing at the start
@@ -220,7 +237,7 @@ pub fn find_windows<F: Fn(f64) -> f64 + Copy, T: TimeScale + Clone, R: FindBrack
                 });
             }
 
-            windows
+            Ok(windows)
         }
     }
 }
@@ -247,11 +264,12 @@ mod tests {
     use lox_test_utils::assert_approx_eq;
     use lox_time::time_scales::Tai;
     use lox_time::{Time, time};
+    use std::convert::Infallible;
     use std::f64::consts::{PI, TAU};
 
     #[test]
     fn test_events() {
-        let func = |t: f64| t.sin();
+        let func = |t: f64| Ok::<f64, Infallible>(t.sin());
         let start = time!(Tai, 2000, 1, 1, 12).unwrap();
         let steps = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
 
@@ -276,14 +294,14 @@ mod tests {
 
     #[test]
     fn test_windows() {
-        let func = |t: f64| t.sin();
+        let func = |t: f64| Ok::<f64, Infallible>(t.sin());
         let start = time!(Tai, 2000, 1, 1, 12).unwrap();
         let steps = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
         let end = start + TimeDelta::from_seconds(7);
 
         let root_finder = Brent::default();
 
-        let windows = find_windows(func, start, end, &steps, root_finder);
+        let windows = find_windows(func, start, end, &steps, root_finder).unwrap();
 
         assert_eq!(windows.len(), 2);
         assert_eq!(windows[0].start, start);
@@ -296,28 +314,28 @@ mod tests {
 
     #[test]
     fn test_windows_no_windows() {
-        let func = |_: f64| -1.0;
+        let func = |_: f64| Ok::<f64, Infallible>(-1.0);
         let start = time!(Tai, 2000, 1, 1, 12).unwrap();
         let steps = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
         let end = start + TimeDelta::from_seconds(7);
 
         let root_finder = Brent::default();
 
-        let windows = find_windows(func, start, end, &steps, root_finder);
+        let windows = find_windows(func, start, end, &steps, root_finder).unwrap();
 
         assert!(windows.is_empty());
     }
 
     #[test]
     fn test_windows_full_coverage() {
-        let func = |_: f64| 1.0;
+        let func = |_: f64| Ok::<f64, Infallible>(1.0);
         let start = time!(Tai, 2000, 1, 1, 12).unwrap();
         let steps = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
         let end = start + TimeDelta::from_seconds(7);
 
         let root_finder = Brent::default();
 
-        let windows = find_windows(func, start, end, &steps, root_finder);
+        let windows = find_windows(func, start, end, &steps, root_finder).unwrap();
 
         assert_eq!(windows.len(), 1);
         assert_eq!(windows[0].start, start);
