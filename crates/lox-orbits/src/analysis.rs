@@ -580,7 +580,8 @@ mod tests {
         let sc = spacecraft_trajectory();
         let times: Vec<Time<Tai>> = sc.states().iter().map(|s| s.time()).collect();
         let expected = contacts();
-        let actual = visibility(&times, &gs, &mask, &sc, &DefaultRotationProvider).unwrap();
+        let actual =
+            visibility(&times, &gs, &mask, &sc, &DefaultRotationProvider).expect("visibility");
         assert_eq!(actual.len(), expected.len());
         assert_approx_eq!(expected, actual, rtol <= 1e-4);
     }
