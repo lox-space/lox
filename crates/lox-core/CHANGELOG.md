@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.1](https://github.com/lox-space/lox/compare/lox-core-v0.1.0-alpha.0...lox-core-v0.1.0-alpha.1) - 2025-12-04
+
+### Added
+
+- *(lox-time)* use compensated sum for two-float deltas
+- *(lox-orbits)* re-design trajectories
+- add SSO builder and Earth ephemeris
+
+### Fixed
+
+- *(lox-time)* improve precision of TCB and TCG conversions
+
+### Other
+
+- *(lox-core)* simplify Series type
+- *(lox-frames)* rewrite frame transforms
+- *(lox-time)* make LSP trait easier to implement
+- refactor orbit tracing
+
 ## [0.1.0-alpha.0](https://github.com/lox-space/lox/releases/tag/lox-core-v0.1.0-alpha.0) - 2025-10-29
 
 ### Fixed
