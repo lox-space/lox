@@ -401,10 +401,13 @@ mod tests {
             |_e| -> Result<f64, TestError> { Err(TestError("derivative failed")) },
             1.0,
         );
-        match res {
-            Err(RootFinderError::CallbackError(msg)) => assert!(msg.contains("derivative failed")),
-            _ => panic!("expected CallbackError"),
-        }
+
+        assert_eq!(
+            res,
+            Err(RootFinderError::CallbackError(
+                "derivative failed".to_string()
+            ))
+        );
     }
 
     #[test]
@@ -415,10 +418,11 @@ mod tests {
             |_x| -> Result<f64, TestError> { Err(TestError("f failed")) },
             1.0,
         );
-        match res {
-            Err(RootFinderError::CallbackError(msg)) => assert!(msg.contains("f failed")),
-            _ => panic!("expected CallbackError"),
-        }
+
+        assert_eq!(
+            res,
+            Err(RootFinderError::CallbackError("f failed".to_string()))
+        );
     }
 
     #[test]
@@ -435,9 +439,10 @@ mod tests {
             },
             (-1.0, 2.0),
         );
-        match res {
-            Err(RootFinderError::CallbackError(msg)) => assert!(msg.contains("negative x")),
-            _ => panic!("expected CallbackError"),
-        }
+
+        assert_eq!(
+            res,
+            Err(RootFinderError::CallbackError("negative x".to_string()))
+        );
     }
 }
