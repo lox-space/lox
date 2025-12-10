@@ -41,8 +41,8 @@ use lox_frames::providers::DefaultRotationProvider;
 use lox_frames::rotations::TryRotation;
 use numpy::{PyArray1, PyArray2, PyArrayMethods};
 use pyo3::exceptions::PyValueError;
+use pyo3::prelude::*;
 use pyo3::types::{PyList, PyType};
-use pyo3::{IntoPyObjectExt, prelude::*};
 use rayon::prelude::*;
 use sgp4::Elements;
 
@@ -79,17 +79,6 @@ impl From<PyVisibilityError> for PyErr {
     }
 }
 
-#[derive(Debug)]
-struct PyCallbackError(String);
-
-impl std::fmt::Display for PyCallbackError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.0)
-    }
-}
-
-impl std::error::Error for PyCallbackError {}
-
 /// Find events where a function crosses zero.
 ///
 /// This function detects zero-crossings of a user-defined function over a
@@ -104,7 +93,6 @@ impl std::error::Error for PyCallbackError {}
 ///     List of Event objects at the detected zero-crossings.
 #[pyfunction]
 pub fn find_events(
-    py: Python<'_>,
     func: &Bound<'_, PyAny>,
     start: PyTime,
     times: Vec<f64>,
@@ -114,7 +102,7 @@ pub fn find_events(
         |t| {
             func.call((t,), None)
                 .and_then(|obj| obj.extract::<f64>())
-                .map_err(|err| Box::new(PyCallbackError(err.to_string())) as _)
+                .map_err(Into::into)
         },
         start.0,
         &times,
@@ -152,7 +140,7 @@ pub fn find_windows(
         |t| {
             func.call((t,), None)
                 .and_then(|obj| obj.extract::<f64>())
-                .map_err(|err| Box::new(PyCallbackError(err.to_string())) as _)
+                .map_err(Into::into)
         },
         start.0,
         end.0,
@@ -569,7 +557,7 @@ impl PyTrajectory {
     ///
     /// Returns:
     ///     List of Event objects.
-    fn find_events(&self, py: Python<'_>, func: &Bound<'_, PyAny>) -> PyResult<Vec<PyEvent>> {
+    fn find_events(&self, func: &Bound<'_, PyAny>) -> PyResult<Vec<PyEvent>> {
         let res = self.0.find_events(|s| {
             // Python callable gets PyState and must return float; propagate exceptions
             func.call((PyState(s),), None)

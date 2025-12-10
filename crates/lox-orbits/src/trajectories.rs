@@ -18,7 +18,7 @@ use lox_time::time_scales::Tai;
 use lox_time::utc::Utc;
 use lox_time::{Time, deltas::TimeDelta};
 
-use crate::events::{Event, Window, find_events, find_windows};
+use crate::events::{Event, FindEventError, Window, find_events, find_windows};
 use crate::states::State;
 use lox_frames::ReferenceFrame;
 use lox_frames::{DynFrame, Icrf};
@@ -163,7 +163,7 @@ where
         self.interpolate(time - self.start_time())
     }
 
-    pub fn find_events<F, E>(&self, func: F) -> Result<Vec<Event<T>>, crate::events::FindEventError>
+    pub fn find_events<F, E>(&self, func: F) -> Result<Vec<Event<T>>, FindEventError>
     where
         F: Fn(State<T, O, R>) -> Result<f64, E> + Copy,
         E: Into<BoxedError>,
