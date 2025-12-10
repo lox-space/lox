@@ -12,7 +12,7 @@ use lox_time::time_scales::{DynTimeScale, TimeScale};
 use thiserror::Error;
 
 use lox_bodies::{DynOrigin, Origin};
-use lox_math::roots::{Brent, RootFinderError};
+use lox_math::roots::{BoxedError, Brent, RootFinderError};
 use lox_math::series::{InterpolationType, Series, SeriesError};
 use lox_time::time_scales::Tai;
 use lox_time::utc::Utc;
@@ -166,7 +166,7 @@ where
     pub fn find_events<F, E>(&self, func: F) -> Result<Vec<Event<T>>, crate::events::FindEventError>
     where
         F: Fn(State<T, O, R>) -> Result<f64, E> + Copy,
-        E: std::fmt::Display,
+        E: Into<BoxedError>,
     {
         let root_finder = Brent::default();
         find_events(
@@ -178,6 +178,7 @@ where
                     self.origin(),
                     self.reference_frame(),
                 ))
+                .map_err(Into::into)
             },
             self.start_time(),
             self.t.as_ref(),
@@ -188,7 +189,7 @@ where
     pub fn find_windows<F, E>(&self, func: F) -> Result<Vec<Window<T>>, RootFinderError>
     where
         F: Fn(State<T, O, R>) -> Result<f64, E> + Copy,
-        E: std::fmt::Display,
+        E: Into<BoxedError>,
     {
         let root_finder = Brent::default();
         find_windows(
@@ -200,6 +201,7 @@ where
                     self.origin(),
                     self.reference_frame(),
                 ))
+                .map_err(Into::into)
             },
             self.start_time(),
             self.end_time(),

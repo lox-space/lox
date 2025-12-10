@@ -11,11 +11,9 @@ use crate::ephem::Ephemeris;
 use crate::ephem::python::{PyDafSpkError, PySpk};
 use crate::frames::DynFrame;
 use crate::frames::python::{PyDynRotationError, PyFrame};
-use crate::math::python::PySeriesError;
 use crate::math::roots::{Brent, RootFinderError};
-use crate::math::series::SeriesError;
 use crate::orbits::analysis::{
-    DynPass, ElevationMask, ElevationMaskError, Pass, visibility_combined,
+    DynPass, ElevationMask, ElevationMaskError, Pass, VisibilityError, visibility_combined,
 };
 use crate::orbits::elements::{DynKeplerian, Keplerian};
 use crate::orbits::events::{Event, FindEventError, Window};
@@ -73,6 +71,25 @@ impl From<PyRootFinderError> for PyErr {
     }
 }
 
+struct PyVisibilityError(VisibilityError);
+
+impl From<PyVisibilityError> for PyErr {
+    fn from(err: PyVisibilityError) -> Self {
+        PyValueError::new_err(err.0.to_string())
+    }
+}
+
+#[derive(Debug)]
+struct PyCallbackError(String);
+
+impl std::fmt::Display for PyCallbackError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl std::error::Error for PyCallbackError {}
+
 /// Find events where a function crosses zero.
 ///
 /// This function detects zero-crossings of a user-defined function over a
@@ -94,7 +111,11 @@ pub fn find_events(
 ) -> PyResult<Vec<PyEvent>> {
     let root_finder = Brent::default();
     Ok(crate::orbits::events::find_events(
-        |t| func.call((t,), None).and_then(|obj| obj.extract::<f64>()),
+        |t| {
+            func.call((t,), None)
+                .and_then(|obj| obj.extract::<f64>())
+                .map_err(|err| Box::new(PyCallbackError(err.to_string())) as _)
+        },
         start.0,
         &times,
         root_finder,
@@ -128,7 +149,11 @@ pub fn find_windows(
 ) -> PyResult<Vec<PyWindow>> {
     let root_finder = Brent::default();
     let res = crate::orbits::events::find_windows(
-        |t| func.call((t,), None).and_then(|obj| obj.extract::<f64>()),
+        |t| {
+            func.call((t,), None)
+                .and_then(|obj| obj.extract::<f64>())
+                .map_err(|err| Box::new(PyCallbackError(err.to_string())) as _)
+        },
         start.0,
         end.0,
         &times,
@@ -1099,7 +1124,7 @@ pub fn visibility(
         crate::orbits::analysis::visibility_combined(
             &times, &gs.0, mask, &bodies, &sc.0, ephemeris,
         )
-        .map_err(PySeriesError)?
+        .map_err(PyVisibilityError)?
         .into_iter()
         .map(PyPass)
         .collect(),
@@ -1234,7 +1259,7 @@ where
                 sc_trajectory,
                 ephemeris,
             )
-            .map_err(PySeriesError)?;
+            .map_err(PyVisibilityError)?;
 
             gs_results.insert(gs_name.clone(), passes.into_iter().map(PyPass).collect());
         }
@@ -1293,14 +1318,14 @@ where
                         let py_passes = passes.into_iter().map(PyPass).collect();
                         Ok(((*sc_name).clone(), (*gs_name).clone(), py_passes))
                     })
-                    .collect::<Result<Vec<_>, SeriesError>>()
+                    .collect::<Result<Vec<_>, VisibilityError>>()
             })
             .collect()
     });
 
     // Convert the flat results to nested hashmap structure
     let flat_results: Vec<_> = results
-        .map_err(PySeriesError)?
+        .map_err(PyVisibilityError)?
         .into_iter()
         .flatten()
         .collect();

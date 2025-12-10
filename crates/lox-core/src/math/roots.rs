@@ -5,29 +5,52 @@
 use lox_test_utils::approx_eq;
 use thiserror::Error;
 
-#[derive(Debug, Clone, Error, PartialEq)]
+#[derive(Debug, Error)]
 pub enum RootFinderError {
     #[error("not converged after {0} iterations, residual {1}")]
     NotConverged(u32, f64),
     #[error("root not in bracket")]
     NotInBracket,
-    #[error("callback error: {0}")]
-    CallbackError(String),
+    #[error(transparent)]
+    Callback(#[from] CallbackError),
 }
 
-pub trait FindRoot<F, E>
+pub type BoxedError = Box<dyn std::error::Error + Send + Sync + 'static>;
+
+#[derive(Debug, Error)]
+#[error(transparent)]
+pub struct CallbackError(BoxedError);
+
+impl From<&str> for CallbackError {
+    fn from(s: &str) -> Self {
+        CallbackError(s.into())
+    }
+}
+
+pub trait Callback {
+    fn call(&self, v: f64) -> Result<f64, CallbackError>;
+}
+
+impl<F> Callback for F
 where
-    F: Fn(f64) -> Result<f64, E>,
-    E: std::fmt::Display,
+    F: Fn(f64) -> Result<f64, BoxedError>,
+{
+    fn call(&self, v: f64) -> Result<f64, CallbackError> {
+        self(v).map_err(CallbackError)
+    }
+}
+
+pub trait FindRoot<F>
+where
+    F: Callback,
 {
     fn find(&self, f: F, initial_guess: f64) -> Result<f64, RootFinderError>;
 }
 
-pub trait FindRootWithDerivative<F, D, E>
+pub trait FindRootWithDerivative<F, D>
 where
-    F: Fn(f64) -> Result<f64, E>,
-    D: Fn(f64) -> Result<f64, E>,
-    E: std::fmt::Display,
+    F: Callback,
+    D: Callback,
 {
     fn find_with_derivative(
         &self,
@@ -37,10 +60,9 @@ where
     ) -> Result<f64, RootFinderError>;
 }
 
-pub trait FindBracketedRoot<F, E>
+pub trait FindBracketedRoot<F>
 where
-    F: Fn(f64) -> Result<f64, E>,
-    E: std::fmt::Display,
+    F: Callback,
 {
     fn find_in_bracket(&self, f: F, bracket: (f64, f64)) -> Result<f64, RootFinderError>;
 }
@@ -60,16 +82,15 @@ impl Default for Steffensen {
     }
 }
 
-impl<F, E> FindRoot<F, E> for Steffensen
+impl<F> FindRoot<F> for Steffensen
 where
-    F: Fn(f64) -> Result<f64, E>,
-    E: std::fmt::Display,
+    F: Callback,
 {
     fn find(&self, f: F, initial_guess: f64) -> Result<f64, RootFinderError> {
         let mut p0 = initial_guess;
         for _ in 0..self.max_iter {
-            let f1 = p0 + f(p0).map_err(|e| RootFinderError::CallbackError(e.to_string()))?;
-            let f2 = f1 + f(f1).map_err(|e| RootFinderError::CallbackError(e.to_string()))?;
+            let f1 = p0 + f.call(p0).map_err(RootFinderError::Callback)?;
+            let f2 = f1 + f.call(f1).map_err(RootFinderError::Callback)?;
             let p = p0 - (f1 - p0).powi(2) / (f2 - 2.0 * f1 + p0);
             if approx_eq!(p, p0, atol <= self.tolerance) {
                 return Ok(p);
@@ -95,11 +116,10 @@ impl Default for Newton {
     }
 }
 
-impl<F, D, E> FindRootWithDerivative<F, D, E> for Newton
+impl<F, D> FindRootWithDerivative<F, D> for Newton
 where
-    F: Fn(f64) -> Result<f64, E>,
-    D: Fn(f64) -> Result<f64, E>,
-    E: std::fmt::Display,
+    F: Callback,
+    D: Callback,
 {
     fn find_with_derivative(
         &self,
@@ -110,8 +130,8 @@ where
         let mut p0 = initial_guess;
         for _ in 0..self.max_iter {
             let p = p0
-                - f(p0).map_err(|e| RootFinderError::CallbackError(e.to_string()))?
-                    / derivative(p0).map_err(|e| RootFinderError::CallbackError(e.to_string()))?;
+                - f.call(p0).map_err(RootFinderError::Callback)?
+                    / derivative.call(p0).map_err(RootFinderError::Callback)?;
             if approx_eq!(p, p0, atol <= self.tolerance) {
                 return Ok(p);
             }
@@ -138,10 +158,9 @@ impl Default for Brent {
     }
 }
 
-impl<F, E> FindBracketedRoot<F, E> for Brent
+impl<F> FindBracketedRoot<F> for Brent
 where
-    F: Fn(f64) -> Result<f64, E>,
-    E: std::fmt::Display,
+    F: Callback,
 {
     fn find_in_bracket(&self, f: F, bracket: (f64, f64)) -> Result<f64, RootFinderError> {
         let mut fblk = 0.0;
@@ -150,8 +169,8 @@ where
         let mut spre = 0.0;
         let mut scur = 0.0;
 
-        let mut fpre = f(xpre).map_err(|e| RootFinderError::CallbackError(e.to_string()))?;
-        let mut fcur = f(xcur).map_err(|e| RootFinderError::CallbackError(e.to_string()))?;
+        let mut fpre = f.call(xpre).map_err(RootFinderError::Callback)?;
+        let mut fcur = f.call(xcur).map_err(RootFinderError::Callback)?;
 
         if fpre * fcur > 0.0 {
             return Err(RootFinderError::NotInBracket);
@@ -223,7 +242,7 @@ where
                 xcur += if sbis > 0.0 { delta } else { -delta };
             }
 
-            fcur = f(xcur).map_err(|e| RootFinderError::CallbackError(e.to_string()))?;
+            fcur = f.call(xcur).map_err(RootFinderError::Callback)?;
         }
 
         Err(RootFinderError::NotConverged(self.max_iter, fcur))
@@ -247,17 +266,16 @@ impl Default for Secant {
     }
 }
 
-impl<F, E> FindBracketedRoot<F, E> for Secant
+impl<F> FindBracketedRoot<F> for Secant
 where
-    F: Fn(f64) -> Result<f64, E>,
-    E: std::fmt::Display,
+    F: Callback,
 {
     fn find_in_bracket(&self, f: F, bracket: (f64, f64)) -> Result<f64, RootFinderError> {
         let (x0, x1) = bracket;
         let mut p0 = x0;
         let mut p1 = x1;
-        let mut q0 = f(p0).map_err(|e| RootFinderError::CallbackError(e.to_string()))?;
-        let mut q1 = f(p1).map_err(|e| RootFinderError::CallbackError(e.to_string()))?;
+        let mut q0 = f.call(p0).map_err(RootFinderError::Callback)?;
+        let mut q1 = f.call(p1).map_err(RootFinderError::Callback)?;
         if q1.abs() < q0.abs() {
             std::mem::swap(&mut p0, &mut p1);
             std::mem::swap(&mut q0, &mut q1);
@@ -281,16 +299,15 @@ where
             p0 = p1;
             q0 = q1;
             p1 = p;
-            q1 = f(p).map_err(|e| RootFinderError::CallbackError(e.to_string()))?;
+            q1 = f.call(p).map_err(RootFinderError::Callback)?;
         }
         Err(RootFinderError::NotConverged(self.max_iter, p0))
     }
 }
 
-impl<F, E> FindRoot<F, E> for Secant
+impl<F> FindRoot<F> for Secant
 where
-    F: Fn(f64) -> Result<f64, E>,
-    E: std::fmt::Display,
+    F: Callback,
 {
     fn find(&self, f: F, initial_guess: f64) -> Result<f64, RootFinderError> {
         let x0 = initial_guess;
@@ -304,20 +321,19 @@ where
 #[cfg(test)]
 mod tests {
     use lox_test_utils::assert_approx_eq;
-    use std::convert::Infallible;
     use std::f64::consts::PI;
 
     use super::*;
 
-    pub type Fallible = Result<f64, Infallible>;
+    type Result = std::result::Result<f64, BoxedError>;
 
     #[test]
     fn test_newton_kepler() {
-        fn mean_to_ecc(mean: f64, eccentricity: f64) -> Result<f64, RootFinderError> {
+        fn mean_to_ecc(mean: f64, eccentricity: f64) -> std::result::Result<f64, RootFinderError> {
             let newton = Newton::default();
             newton.find_with_derivative(
-                |e| -> Fallible { Ok(e - eccentricity * e.sin() - mean) },
-                |e| -> Fallible { Ok(1.0 - eccentricity * e.cos()) },
+                |e: f64| -> Result { Ok(e - eccentricity * e.sin() - mean) },
+                |e: f64| -> Result { Ok(1.0 - eccentricity * e.cos()) },
                 mean,
             )
         }
@@ -330,8 +346,8 @@ mod tests {
         let newton = Newton::default();
         let act = newton
             .find_with_derivative(
-                |x| -> Fallible { Ok(x.powi(3) + 4.0 * x.powi(2) - 10.0) },
-                |x| -> Fallible { Ok(2.0 * x.powi(2) + 8.0 * x) },
+                |x: f64| -> Result { Ok(x.powi(3) + 4.0 * x.powi(2) - 10.0) },
+                |x: f64| -> Result { Ok(2.0 * x.powi(2) + 8.0 * x) },
                 1.5,
             )
             .expect("should converge");
@@ -343,7 +359,7 @@ mod tests {
         let steffensen = Steffensen::default();
         let act = steffensen
             .find(
-                |x| -> Fallible { Ok(x.powi(3) + 4.0 * x.powi(2) - 10.0) },
+                |x: f64| -> Result { Ok(x.powi(3) + 4.0 * x.powi(2) - 10.0) },
                 1.5,
             )
             .expect("should converge");
@@ -355,7 +371,7 @@ mod tests {
         let brent = Brent::default();
         let act = brent
             .find_in_bracket(
-                |x| -> Fallible { Ok(x.powi(3) + 4.0 * x.powi(2) - 10.0) },
+                |x: f64| -> Result { Ok(x.powi(3) + 4.0 * x.powi(2) - 10.0) },
                 (1.0, 1.5),
             )
             .expect("should converge");
@@ -367,7 +383,7 @@ mod tests {
         let secant = Secant::default();
         let act = secant
             .find_in_bracket(
-                |x| -> Fallible { Ok(x.powi(3) + 4.0 * x.powi(2) - 10.0) },
+                |x: f64| -> Result { Ok(x.powi(3) + 4.0 * x.powi(2) - 10.0) },
                 (1.0, 1.5),
             )
             .expect("should converge");
@@ -375,74 +391,52 @@ mod tests {
 
         let act = secant
             .find(
-                |x| -> Fallible { Ok(x.powi(3) + 4.0 * x.powi(2) - 10.0) },
+                |x: f64| -> Result { Ok(x.powi(3) + 4.0 * x.powi(2) - 10.0) },
                 1.0,
             )
             .expect("should converge");
         assert_approx_eq!(act, 1.3652300134140969, rtol <= 1e-8);
     }
 
-    use std::fmt;
-    // Simple error type to simulate unexpected callback failures
-    #[derive(Debug, Clone)]
-    struct TestError(&'static str);
-    impl fmt::Display for TestError {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(f, "{}", self.0)
-        }
-    }
-
     #[test]
+    #[should_panic(expected = "derivative failed")]
     fn test_newton_kepler_callback_error() {
         let newton = Newton::default();
-        // derivative intentionally errors to test propagation
-        let res = newton.find_with_derivative(
-            |e| -> Result<f64, TestError> { Ok(e) },
-            |_e| -> Result<f64, TestError> { Err(TestError("derivative failed")) },
-            1.0,
-        );
-
-        assert_eq!(
-            res,
-            Err(RootFinderError::CallbackError(
-                "derivative failed".to_string()
-            ))
-        );
+        newton
+            .find_with_derivative(
+                |e: f64| -> Result { Ok(e) },
+                |_e: f64| -> Result { Err("derivative failed".into()) },
+                1.0,
+            )
+            .unwrap();
     }
 
     #[test]
+    #[should_panic(expected = "f failed")]
     fn test_steffensen_cubic_error() {
         let steffensen = Steffensen::default();
         // function errors immediately
-        let res = steffensen.find(
-            |_x| -> Result<f64, TestError> { Err(TestError("f failed")) },
-            1.0,
-        );
-
-        assert_eq!(
-            res,
-            Err(RootFinderError::CallbackError("f failed".to_string()))
-        );
+        steffensen
+            .find(|_x| -> Result { Err("f failed".into()) }, 1.0)
+            .unwrap();
     }
 
     #[test]
+    #[should_panic(expected = "negative x")]
     fn test_brent_cubic_error() {
         let brent = Brent::default();
         // error at bracket endpoint, then during iteration
-        let res = brent.find_in_bracket(
-            |x| -> Result<f64, TestError> {
-                if x.is_sign_negative() {
-                    Err(TestError("negative x"))
-                } else {
-                    Ok(x * x - 2.0)
-                }
-            },
-            (-1.0, 2.0),
-        );
-
-        assert_eq!(
-            res,
-            Err(RootFinderError::CallbackError("negative x".to_string()))
-        );
+        brent
+            .find_in_bracket(
+                |x: f64| -> Result {
+                    if x.is_sign_negative() {
+                        Err("negative x".into())
+                    } else {
+                        Ok(x * x - 2.0)
+                    }
+                },
+                (-1.0, 2.0),
+            )
+            .unwrap();
     }
 }
