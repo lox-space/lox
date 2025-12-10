@@ -11,7 +11,7 @@ use std::fmt::Display;
 use std::iter::zip;
 use thiserror::Error;
 
-use lox_math::roots::{FindBracketedRoot, RootFinderError};
+use lox_math::roots::{Callback, FindBracketedRoot, RootFinderError};
 use lox_time::deltas::TimeDelta;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -41,7 +41,7 @@ impl Display for ZeroCrossing {
     }
 }
 
-#[derive(Debug, Error, Clone, PartialEq)]
+#[derive(Debug, Error)]
 pub enum FindEventError {
     #[error("function is always negative")]
     AlwaysNegative,
@@ -70,24 +70,23 @@ impl<T: TimeScale> Event<T> {
     }
 }
 
-pub fn find_events<F, R, T, E>(
+pub fn find_events<F, R, T>(
     func: F,
     start: Time<T>,
     steps: &[f64],
     root_finder: R,
 ) -> Result<Vec<Event<T>>, FindEventError>
 where
-    F: Fn(f64) -> Result<f64, E> + Copy,
+    F: Callback + Clone,
     T: TimeScale + Clone,
-    E: Display,
-    R: FindBracketedRoot<F, E>,
+    R: FindBracketedRoot<F>,
 {
     // Determine the sign of `func` at each time step (propagate callback errors)
     let mut signs = Vec::with_capacity(steps.len());
     for &t in steps {
-        let v = func(t).map_err(|e| {
-            FindEventError::RootFinder(RootFinderError::CallbackError(e.to_string()))
-        })?;
+        let v = func
+            .call(t)
+            .map_err(|e| FindEventError::RootFinder(RootFinderError::Callback(e.into())))?;
         signs.push(v.signum());
     }
 
@@ -109,7 +108,7 @@ where
             // If the sign changes, run the root finder to determine the exact point in time when
             // the event occurred
             let t = root_finder
-                .find_in_bracket(func, (t0, t1))
+                .find_in_bracket(func.clone(), (t0, t1))
                 .map_err(FindEventError::RootFinder)?;
             let time = start.clone() + TimeDelta::from_seconds_f64(t);
 
@@ -185,7 +184,7 @@ impl<T: TimeScale> Window<T> {
     }
 }
 
-pub fn find_windows<F, T, R, E>(
+pub fn find_windows<F, T, R>(
     func: F,
     start: Time<T>,
     end: Time<T>,
@@ -193,10 +192,9 @@ pub fn find_windows<F, T, R, E>(
     root_finder: R,
 ) -> Result<Vec<Window<T>>, RootFinderError>
 where
-    F: Fn(f64) -> Result<f64, E> + Copy,
+    F: Callback + Clone,
     T: TimeScale + Clone,
-    E: Display,
-    R: FindBracketedRoot<F, E>,
+    R: FindBracketedRoot<F>,
 {
     match find_events(func, start.clone(), steps, root_finder) {
         Err(FindEventError::AlwaysNegative) => Ok(vec![]),
@@ -264,12 +262,11 @@ mod tests {
     use lox_test_utils::assert_approx_eq;
     use lox_time::time_scales::Tai;
     use lox_time::{Time, time};
-    use std::convert::Infallible;
     use std::f64::consts::{PI, TAU};
 
     #[test]
     fn test_events() {
-        let func = |t: f64| Ok::<f64, Infallible>(t.sin());
+        let func = |t: f64| Ok(t.sin());
         let start = time!(Tai, 2000, 1, 1, 12).unwrap();
         let steps = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
 
@@ -294,7 +291,7 @@ mod tests {
 
     #[test]
     fn test_windows() {
-        let func = |t: f64| Ok::<f64, Infallible>(t.sin());
+        let func = |t: f64| Ok(t.sin());
         let start = time!(Tai, 2000, 1, 1, 12).unwrap();
         let steps = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
         let end = start + TimeDelta::from_seconds(7);
@@ -314,7 +311,7 @@ mod tests {
 
     #[test]
     fn test_windows_no_windows() {
-        let func = |_: f64| Ok::<f64, Infallible>(-1.0);
+        let func = |_: f64| Ok(-1.0);
         let start = time!(Tai, 2000, 1, 1, 12).unwrap();
         let steps = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
         let end = start + TimeDelta::from_seconds(7);
@@ -328,7 +325,7 @@ mod tests {
 
     #[test]
     fn test_windows_full_coverage() {
-        let func = |_: f64| Ok::<f64, Infallible>(1.0);
+        let func = |_: f64| Ok(1.0);
         let start = time!(Tai, 2000, 1, 1, 12).unwrap();
         let steps = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
         let end = start + TimeDelta::from_seconds(7);

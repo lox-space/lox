@@ -21,7 +21,6 @@ use lox_time::time_scales::DynTimeScale;
 use lox_time::time_scales::{Tdb, TimeScale};
 use lox_time::{DynTime, Time};
 use rayon::prelude::*;
-use std::convert::Infallible;
 use std::f64::consts::PI;
 use thiserror::Error;
 
@@ -82,6 +81,14 @@ pub enum ElevationMaskError {
 pub enum ElevationMask {
     Fixed(f64),
     Variable(Series),
+}
+
+#[derive(Debug, Error)]
+pub enum VisibilityError {
+    #[error(transparent)]
+    RootFinder(#[from] RootFinderError),
+    #[error(transparent)]
+    Series(#[from] SeriesError),
 }
 
 impl ElevationMask {
@@ -310,7 +317,7 @@ pub fn visibility_dyn(
     gs: &DynGroundLocation,
     mask: &ElevationMask,
     sc: &DynTrajectory,
-) -> Result<Vec<Window<DynTimeScale>>, RootFinderError> {
+) -> Result<Vec<Window<DynTimeScale>>, VisibilityError> {
     if times.len() < 2 {
         return Ok(vec![]);
     }
@@ -322,8 +329,8 @@ pub fn visibility_dyn(
         .collect();
     let root_finder = Brent::default();
     find_windows(
-        |t| {
-            Ok::<f64, Infallible>(elevation_dyn(
+        |t: f64| {
+            Ok(elevation_dyn(
                 start + TimeDelta::from_seconds_f64(t),
                 gs,
                 mask,
@@ -335,6 +342,7 @@ pub fn visibility_dyn(
         &times,
         root_finder,
     )
+    .map_err(VisibilityError::RootFinder)
 }
 
 pub fn visibility_los(
@@ -375,7 +383,7 @@ pub fn visibility_los(
                 .unwrap()
                 .position()
                 - r_body;
-            Ok::<f64, Infallible>(body.line_of_sight(r_gs, r_sc).unwrap())
+            Ok(body.line_of_sight(r_gs, r_sc).unwrap())
         },
         start,
         end,
@@ -391,7 +399,7 @@ pub fn visibility_combined<E: Ephemeris + Send + Sync>(
     bodies: &[DynOrigin],
     sc: &DynTrajectory,
     ephem: &E,
-) -> Result<Vec<DynPass>, SeriesError> {
+) -> Result<Vec<DynPass>, VisibilityError> {
     let w1 = visibility_dyn(times, gs, mask, sc)?;
     let wb = bodies
         .par_iter()
@@ -421,7 +429,7 @@ pub fn visibility_combined<E: Ephemeris + Send + Sync>(
                 // Skip windows where the satellite never rises above the elevation mask
                 continue;
             }
-            Err(e) => return Err(e),
+            Err(e) => return Err(VisibilityError::Series(e)),
         }
     }
 
@@ -470,8 +478,8 @@ where
         .collect();
     let root_finder = Brent::default();
     find_windows(
-        |t| {
-            Ok::<f64, Infallible>(elevation(
+        |t: f64| {
+            Ok(elevation(
                 start + TimeDelta::from_seconds_f64(t),
                 gs,
                 mask,

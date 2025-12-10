@@ -7,7 +7,6 @@ use std::sync::Arc;
 use fast_polynomial::poly_array;
 use thiserror::Error;
 
-use crate::math::roots::RootFinderError;
 use crate::math::slices::Monotonic;
 
 use super::linear_algebra::tridiagonal::Tridiagonal;
@@ -24,8 +23,6 @@ pub enum SeriesError {
     InsufficientPoints(usize),
     #[error("x-axis must be strictly monotonic")]
     NonMonotonic,
-    #[error(transparent)]
-    RootFinder(#[from] RootFinderError),
 }
 
 #[derive(Clone, Debug, PartialEq)]
