@@ -283,8 +283,7 @@ where
         for i in 0..self.max_iter {
             if q1 == q0 {
                 if p1 != p0 {
-                    // XXX: unsure about p0 parameter
-                    return Err(RootFinderError::NotConverged(i, p0));
+                    return Err(RootFinderError::NotConverged(i, q0));
                 }
                 return Ok((p1 + p0) / 2.0);
             }
