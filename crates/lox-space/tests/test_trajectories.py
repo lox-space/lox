@@ -95,41 +95,15 @@ def test_windows(trajectory):
     assert len(windows) == 1
 
 
-import re
-
-def expect_callback_error(call, expected_exc, match=None):
-    try:
-        result = call()
-    except Exception as e:
-        if not isinstance(e, expected_exc):
-            pytest.fail(
-                f"Expected {expected_exc.__name__} from callback, "
-                f"but got {type(e).__name__}: {e!r}"
-            )
-        if match is not None and re.search(match, str(e)) is None:
-            pytest.fail(
-                f"Exception message mismatch.\n"
-                f"  expected pattern: {match}\n"
-                f"  actual message:   {e}"
-            )
-        return
-    pytest.fail(
-        f"Expected {expected_exc.__name__} from callback, "
-        f"but no exception was raised. Function returned: {result!r}"
-    )
-
-# these can be rewritten as
-# with pytest.raises(...) but this way we can also check the exception message
 def test_events_callback_error(trajectory):
     def bad_func(_s):
         raise ValueError("boom in events")
-    expect_callback_error(lambda: trajectory.find_events(bad_func), ValueError, r"boom in events")
+    with pytest.raises(ValueError, match=r"boom in events"):
+        trajectory.find_events(bad_func)
 
 def test_windows_callback_error(trajectory):
     def bad_func(_s):
         raise ValueError("boom in windows")
-    expect_callback_error(
-        lambda: trajectory.find_windows(bad_func),
-        ValueError,
-        r"boom in windows"
-    )
+
+    with pytest.raises(ValueError, match=r"boom in windows"):
+        trajectory.find_windows(bad_func)
