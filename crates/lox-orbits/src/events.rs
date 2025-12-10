@@ -86,7 +86,7 @@ where
     for &t in steps {
         let v = func
             .call(t)
-            .map_err(|e| FindEventError::RootFinder(RootFinderError::Callback(e.into())))?;
+            .map_err(|e| FindEventError::RootFinder(RootFinderError::Callback(e)))?;
         signs.push(v.signum());
     }
 
