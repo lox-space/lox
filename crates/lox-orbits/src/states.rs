@@ -2,7 +2,6 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use std::convert::Infallible;
 use std::f64::consts::{PI, TAU};
 use std::ops::Sub;
 
@@ -146,10 +145,10 @@ fn rv_to_lla(r: DVec3, r_eq: f64, f: f64) -> Result<LonLatAlt, RootFinderError> 
     let root_finder = Secant::default();
 
     let lat = root_finder.find(
-        |lat| {
+        |lat: f64| {
             let e = (2.0 * f - f.powi(2)).sqrt();
             let c = r_eq / (1.0 - e.powi(2) * lat.sin().powi(2)).sqrt();
-            Ok::<f64, Infallible>((r.z + c * e.powi(2) * lat.sin()) / r_delta - lat.tan())
+            Ok((r.z + c * e.powi(2) * lat.sin()) / r_delta - lat.tan())
         },
         delta,
     )?;
@@ -177,7 +176,7 @@ where
     }
 }
 
-#[derive(Debug, Clone, Error, PartialEq)]
+#[derive(Debug, Error)]
 pub enum StateToDynGroundError {
     #[error("equatorial radius and flattening factor are not available for origin `{}`", .0.name())]
     UndefinedSpheroid(DynOrigin),
