@@ -13411,6 +13411,11 @@ impl TryRotationalElements for DynOrigin {
 mod tests {
     use crate::*;
     #[test]
+    fn test_origin_10() {
+        assert_eq!(Sun.id().0, 10i32);
+        assert_eq!(Sun.to_string(), "Sun");
+    }
+    #[test]
     fn test_point_mass_10() {
         assert_eq!(Sun.gravitational_parameter(), 132712440041.27942f64);
     }
@@ -13424,6 +13429,11 @@ mod tests {
         assert_eq!(Sun.radii().0, 695700f64);
         assert_eq!(Sun.radii().1, 695700f64);
         assert_eq!(Sun.radii().2, 695700f64);
+    }
+    #[test]
+    fn test_origin_199() {
+        assert_eq!(Mercury.id().0, 199i32);
+        assert_eq!(Mercury.to_string(), "Mercury");
     }
     #[test]
     fn test_point_mass_199() {
@@ -13445,6 +13455,11 @@ mod tests {
         assert_eq!(Mercury.mean_radius(), 2439.4f64);
     }
     #[test]
+    fn test_origin_299() {
+        assert_eq!(Venus.id().0, 299i32);
+        assert_eq!(Venus.to_string(), "Venus");
+    }
+    #[test]
     fn test_point_mass_299() {
         assert_eq!(Venus.gravitational_parameter(), 324858.592f64);
     }
@@ -13462,6 +13477,11 @@ mod tests {
     #[test]
     fn test_mean_radius_299() {
         assert_eq!(Venus.mean_radius(), 6051.8f64);
+    }
+    #[test]
+    fn test_origin_399() {
+        assert_eq!(Earth.id().0, 399i32);
+        assert_eq!(Earth.to_string(), "Earth");
     }
     #[test]
     fn test_point_mass_399() {
@@ -13483,6 +13503,11 @@ mod tests {
         assert_eq!(Earth.mean_radius(), 6371.0084f64);
     }
     #[test]
+    fn test_origin_499() {
+        assert_eq!(Mars.id().0, 499i32);
+        assert_eq!(Mars.to_string(), "Mars");
+    }
+    #[test]
     fn test_point_mass_499() {
         assert_eq!(Mars.gravitational_parameter(), 42828.37362069909f64);
     }
@@ -13500,6 +13525,11 @@ mod tests {
     #[test]
     fn test_mean_radius_499() {
         assert_eq!(Mars.mean_radius(), 3389.5f64);
+    }
+    #[test]
+    fn test_origin_599() {
+        assert_eq!(Jupiter.id().0, 599i32);
+        assert_eq!(Jupiter.to_string(), "Jupiter");
     }
     #[test]
     fn test_point_mass_599() {
@@ -13521,6 +13551,11 @@ mod tests {
         assert_eq!(Jupiter.mean_radius(), 69911f64);
     }
     #[test]
+    fn test_origin_699() {
+        assert_eq!(Saturn.id().0, 699i32);
+        assert_eq!(Saturn.to_string(), "Saturn");
+    }
+    #[test]
     fn test_point_mass_699() {
         assert_eq!(Saturn.gravitational_parameter(), 37931206.23436167f64);
     }
@@ -13538,6 +13573,11 @@ mod tests {
     #[test]
     fn test_mean_radius_699() {
         assert_eq!(Saturn.mean_radius(), 58232f64);
+    }
+    #[test]
+    fn test_origin_799() {
+        assert_eq!(Uranus.id().0, 799i32);
+        assert_eq!(Uranus.to_string(), "Uranus");
     }
     #[test]
     fn test_point_mass_799() {
@@ -13559,6 +13599,11 @@ mod tests {
         assert_eq!(Uranus.mean_radius(), 25362f64);
     }
     #[test]
+    fn test_origin_899() {
+        assert_eq!(Neptune.id().0, 899i32);
+        assert_eq!(Neptune.to_string(), "Neptune");
+    }
+    #[test]
     fn test_point_mass_899() {
         assert_eq!(Neptune.gravitational_parameter(), 6835103.145462294f64);
     }
@@ -13576,6 +13621,11 @@ mod tests {
     #[test]
     fn test_mean_radius_899() {
         assert_eq!(Neptune.mean_radius(), 24622f64);
+    }
+    #[test]
+    fn test_origin_999() {
+        assert_eq!(Pluto.id().0, 999i32);
+        assert_eq!(Pluto.to_string(), "Pluto");
     }
     #[test]
     fn test_point_mass_999() {
@@ -13597,11 +13647,21 @@ mod tests {
         assert_eq!(Pluto.mean_radius(), 1188.3f64);
     }
     #[test]
+    fn test_origin_0() {
+        assert_eq!(SolarSystemBarycenter.id().0, 0i32);
+        assert_eq!(SolarSystemBarycenter.to_string(), "Solar System Barycenter");
+    }
+    #[test]
     fn test_point_mass_0() {
         assert_eq!(
             SolarSystemBarycenter.gravitational_parameter(),
             132712440041.27942f64
         );
+    }
+    #[test]
+    fn test_origin_1() {
+        assert_eq!(MercuryBarycenter.id().0, 1i32);
+        assert_eq!(MercuryBarycenter.to_string(), "Mercury Barycenter");
     }
     #[test]
     fn test_point_mass_1() {
@@ -13611,8 +13671,18 @@ mod tests {
         );
     }
     #[test]
+    fn test_origin_2() {
+        assert_eq!(VenusBarycenter.id().0, 2i32);
+        assert_eq!(VenusBarycenter.to_string(), "Venus Barycenter");
+    }
+    #[test]
     fn test_point_mass_2() {
         assert_eq!(VenusBarycenter.gravitational_parameter(), 324858.592f64);
+    }
+    #[test]
+    fn test_origin_3() {
+        assert_eq!(EarthBarycenter.id().0, 3i32);
+        assert_eq!(EarthBarycenter.to_string(), "Earth Barycenter");
     }
     #[test]
     fn test_point_mass_3() {
@@ -13622,11 +13692,21 @@ mod tests {
         );
     }
     #[test]
+    fn test_origin_4() {
+        assert_eq!(MarsBarycenter.id().0, 4i32);
+        assert_eq!(MarsBarycenter.to_string(), "Mars Barycenter");
+    }
+    #[test]
     fn test_point_mass_4() {
         assert_eq!(
             MarsBarycenter.gravitational_parameter(),
             42828.3758157561f64
         );
+    }
+    #[test]
+    fn test_origin_5() {
+        assert_eq!(JupiterBarycenter.id().0, 5i32);
+        assert_eq!(JupiterBarycenter.to_string(), "Jupiter Barycenter");
     }
     #[test]
     fn test_point_mass_5() {
@@ -13636,8 +13716,18 @@ mod tests {
         );
     }
     #[test]
+    fn test_origin_6() {
+        assert_eq!(SaturnBarycenter.id().0, 6i32);
+        assert_eq!(SaturnBarycenter.to_string(), "Saturn Barycenter");
+    }
+    #[test]
     fn test_point_mass_6() {
         assert_eq!(SaturnBarycenter.gravitational_parameter(), 37940584.8418f64);
+    }
+    #[test]
+    fn test_origin_7() {
+        assert_eq!(UranusBarycenter.id().0, 7i32);
+        assert_eq!(UranusBarycenter.to_string(), "Uranus Barycenter");
     }
     #[test]
     fn test_point_mass_7() {
@@ -13647,6 +13737,11 @@ mod tests {
         );
     }
     #[test]
+    fn test_origin_8() {
+        assert_eq!(NeptuneBarycenter.id().0, 8i32);
+        assert_eq!(NeptuneBarycenter.to_string(), "Neptune Barycenter");
+    }
+    #[test]
     fn test_point_mass_8() {
         assert_eq!(
             NeptuneBarycenter.gravitational_parameter(),
@@ -13654,8 +13749,18 @@ mod tests {
         );
     }
     #[test]
+    fn test_origin_9() {
+        assert_eq!(PlutoBarycenter.id().0, 9i32);
+        assert_eq!(PlutoBarycenter.to_string(), "Pluto Barycenter");
+    }
+    #[test]
     fn test_point_mass_9() {
         assert_eq!(PlutoBarycenter.gravitational_parameter(), 975.5f64);
+    }
+    #[test]
+    fn test_origin_301() {
+        assert_eq!(Moon.id().0, 301i32);
+        assert_eq!(Moon.to_string(), "Moon");
     }
     #[test]
     fn test_point_mass_301() {
@@ -13677,6 +13782,11 @@ mod tests {
         assert_eq!(Moon.mean_radius(), 1737.4f64);
     }
     #[test]
+    fn test_origin_401() {
+        assert_eq!(Phobos.id().0, 401i32);
+        assert_eq!(Phobos.to_string(), "Phobos");
+    }
+    #[test]
     fn test_point_mass_401() {
         assert_eq!(Phobos.gravitational_parameter(), 0.0007087546066894452f64);
     }
@@ -13689,6 +13799,11 @@ mod tests {
     #[test]
     fn test_mean_radius_401() {
         assert_eq!(Phobos.mean_radius(), 11.08f64);
+    }
+    #[test]
+    fn test_origin_402() {
+        assert_eq!(Deimos.id().0, 402i32);
+        assert_eq!(Deimos.to_string(), "Deimos");
     }
     #[test]
     fn test_point_mass_402() {
@@ -13705,6 +13820,11 @@ mod tests {
         assert_eq!(Deimos.mean_radius(), 6.2f64);
     }
     #[test]
+    fn test_origin_501() {
+        assert_eq!(Io.id().0, 501i32);
+        assert_eq!(Io.to_string(), "Io");
+    }
+    #[test]
     fn test_point_mass_501() {
         assert_eq!(Io.gravitational_parameter(), 5959.915466180539f64);
     }
@@ -13719,6 +13839,11 @@ mod tests {
         assert_eq!(Io.mean_radius(), 1821.49f64);
     }
     #[test]
+    fn test_origin_502() {
+        assert_eq!(Europa.id().0, 502i32);
+        assert_eq!(Europa.to_string(), "Europa");
+    }
+    #[test]
     fn test_point_mass_502() {
         assert_eq!(Europa.gravitational_parameter(), 3202.712099607295f64);
     }
@@ -13731,6 +13856,11 @@ mod tests {
     #[test]
     fn test_mean_radius_502() {
         assert_eq!(Europa.mean_radius(), 1560.8f64);
+    }
+    #[test]
+    fn test_origin_503() {
+        assert_eq!(Ganymede.id().0, 503i32);
+        assert_eq!(Ganymede.to_string(), "Ganymede");
     }
     #[test]
     fn test_point_mass_503() {
@@ -13752,6 +13882,11 @@ mod tests {
         assert_eq!(Ganymede.mean_radius(), 2631.2f64);
     }
     #[test]
+    fn test_origin_504() {
+        assert_eq!(Callisto.id().0, 504i32);
+        assert_eq!(Callisto.to_string(), "Callisto");
+    }
+    #[test]
     fn test_point_mass_504() {
         assert_eq!(Callisto.gravitational_parameter(), 7179.283402579837f64);
     }
@@ -13771,6 +13906,11 @@ mod tests {
         assert_eq!(Callisto.mean_radius(), 2410.3f64);
     }
     #[test]
+    fn test_origin_505() {
+        assert_eq!(Amalthea.id().0, 505i32);
+        assert_eq!(Amalthea.to_string(), "Amalthea");
+    }
+    #[test]
     fn test_point_mass_505() {
         assert_eq!(Amalthea.gravitational_parameter(), 0.1645634534798259f64);
     }
@@ -13783,6 +13923,11 @@ mod tests {
     #[test]
     fn test_mean_radius_505() {
         assert_eq!(Amalthea.mean_radius(), 83.5f64);
+    }
+    #[test]
+    fn test_origin_506() {
+        assert_eq!(Himalia.id().0, 506i32);
+        assert_eq!(Himalia.to_string(), "Himalia");
     }
     #[test]
     fn test_point_mass_506() {
@@ -13804,6 +13949,11 @@ mod tests {
         assert_eq!(Himalia.mean_radius(), 85f64);
     }
     #[test]
+    fn test_origin_507() {
+        assert_eq!(Elara.id().0, 507i32);
+        assert_eq!(Elara.to_string(), "Elara");
+    }
+    #[test]
     fn test_spheroid_507() {
         assert_eq!(Elara.polar_radius(), 40f64);
         assert_eq!(Elara.equatorial_radius(), 40f64);
@@ -13817,6 +13967,11 @@ mod tests {
     #[test]
     fn test_mean_radius_507() {
         assert_eq!(Elara.mean_radius(), 40f64);
+    }
+    #[test]
+    fn test_origin_508() {
+        assert_eq!(Pasiphae.id().0, 508i32);
+        assert_eq!(Pasiphae.to_string(), "Pasiphae");
     }
     #[test]
     fn test_spheroid_508() {
@@ -13834,6 +13989,11 @@ mod tests {
         assert_eq!(Pasiphae.mean_radius(), 18f64);
     }
     #[test]
+    fn test_origin_509() {
+        assert_eq!(Sinope.id().0, 509i32);
+        assert_eq!(Sinope.to_string(), "Sinope");
+    }
+    #[test]
     fn test_spheroid_509() {
         assert_eq!(Sinope.polar_radius(), 14f64);
         assert_eq!(Sinope.equatorial_radius(), 14f64);
@@ -13847,6 +14007,11 @@ mod tests {
     #[test]
     fn test_mean_radius_509() {
         assert_eq!(Sinope.mean_radius(), 14f64);
+    }
+    #[test]
+    fn test_origin_510() {
+        assert_eq!(Lysithea.id().0, 510i32);
+        assert_eq!(Lysithea.to_string(), "Lysithea");
     }
     #[test]
     fn test_spheroid_510() {
@@ -13864,6 +14029,11 @@ mod tests {
         assert_eq!(Lysithea.mean_radius(), 12f64);
     }
     #[test]
+    fn test_origin_511() {
+        assert_eq!(Carme.id().0, 511i32);
+        assert_eq!(Carme.to_string(), "Carme");
+    }
+    #[test]
     fn test_spheroid_511() {
         assert_eq!(Carme.polar_radius(), 15f64);
         assert_eq!(Carme.equatorial_radius(), 15f64);
@@ -13877,6 +14047,11 @@ mod tests {
     #[test]
     fn test_mean_radius_511() {
         assert_eq!(Carme.mean_radius(), 15f64);
+    }
+    #[test]
+    fn test_origin_512() {
+        assert_eq!(Ananke.id().0, 512i32);
+        assert_eq!(Ananke.to_string(), "Ananke");
     }
     #[test]
     fn test_spheroid_512() {
@@ -13894,6 +14069,11 @@ mod tests {
         assert_eq!(Ananke.mean_radius(), 10f64);
     }
     #[test]
+    fn test_origin_513() {
+        assert_eq!(Leda.id().0, 513i32);
+        assert_eq!(Leda.to_string(), "Leda");
+    }
+    #[test]
     fn test_spheroid_513() {
         assert_eq!(Leda.polar_radius(), 5f64);
         assert_eq!(Leda.equatorial_radius(), 5f64);
@@ -13907,6 +14087,11 @@ mod tests {
     #[test]
     fn test_mean_radius_513() {
         assert_eq!(Leda.mean_radius(), 5f64);
+    }
+    #[test]
+    fn test_origin_514() {
+        assert_eq!(Thebe.id().0, 514i32);
+        assert_eq!(Thebe.to_string(), "Thebe");
     }
     #[test]
     fn test_point_mass_514() {
@@ -13923,6 +14108,11 @@ mod tests {
         assert_eq!(Thebe.mean_radius(), 49.3f64);
     }
     #[test]
+    fn test_origin_515() {
+        assert_eq!(Adrastea.id().0, 515i32);
+        assert_eq!(Adrastea.to_string(), "Adrastea");
+    }
+    #[test]
     fn test_point_mass_515() {
         assert_eq!(Adrastea.gravitational_parameter(), 0.000139f64);
     }
@@ -13935,6 +14125,11 @@ mod tests {
     #[test]
     fn test_mean_radius_515() {
         assert_eq!(Adrastea.mean_radius(), 8.2f64);
+    }
+    #[test]
+    fn test_origin_516() {
+        assert_eq!(Metis.id().0, 516i32);
+        assert_eq!(Metis.to_string(), "Metis");
     }
     #[test]
     fn test_point_mass_516() {
@@ -13951,6 +14146,186 @@ mod tests {
         assert_eq!(Metis.mean_radius(), 21.5f64);
     }
     #[test]
+    fn test_origin_517() {
+        assert_eq!(Callirrhoe.id().0, 517i32);
+        assert_eq!(Callirrhoe.to_string(), "Callirrhoe");
+    }
+    #[test]
+    fn test_origin_518() {
+        assert_eq!(Themisto.id().0, 518i32);
+        assert_eq!(Themisto.to_string(), "Themisto");
+    }
+    #[test]
+    fn test_origin_519() {
+        assert_eq!(Magaclite.id().0, 519i32);
+        assert_eq!(Magaclite.to_string(), "Magaclite");
+    }
+    #[test]
+    fn test_origin_520() {
+        assert_eq!(Taygete.id().0, 520i32);
+        assert_eq!(Taygete.to_string(), "Taygete");
+    }
+    #[test]
+    fn test_origin_521() {
+        assert_eq!(Chaldene.id().0, 521i32);
+        assert_eq!(Chaldene.to_string(), "Chaldene");
+    }
+    #[test]
+    fn test_origin_522() {
+        assert_eq!(Harpalyke.id().0, 522i32);
+        assert_eq!(Harpalyke.to_string(), "Harpalyke");
+    }
+    #[test]
+    fn test_origin_523() {
+        assert_eq!(Kalyke.id().0, 523i32);
+        assert_eq!(Kalyke.to_string(), "Kalyke");
+    }
+    #[test]
+    fn test_origin_524() {
+        assert_eq!(Iocaste.id().0, 524i32);
+        assert_eq!(Iocaste.to_string(), "Iocaste");
+    }
+    #[test]
+    fn test_origin_525() {
+        assert_eq!(Erinome.id().0, 525i32);
+        assert_eq!(Erinome.to_string(), "Erinome");
+    }
+    #[test]
+    fn test_origin_526() {
+        assert_eq!(Isonoe.id().0, 526i32);
+        assert_eq!(Isonoe.to_string(), "Isonoe");
+    }
+    #[test]
+    fn test_origin_527() {
+        assert_eq!(Praxidike.id().0, 527i32);
+        assert_eq!(Praxidike.to_string(), "Praxidike");
+    }
+    #[test]
+    fn test_origin_528() {
+        assert_eq!(Autonoe.id().0, 528i32);
+        assert_eq!(Autonoe.to_string(), "Autonoe");
+    }
+    #[test]
+    fn test_origin_529() {
+        assert_eq!(Thyone.id().0, 529i32);
+        assert_eq!(Thyone.to_string(), "Thyone");
+    }
+    #[test]
+    fn test_origin_530() {
+        assert_eq!(Hermippe.id().0, 530i32);
+        assert_eq!(Hermippe.to_string(), "Hermippe");
+    }
+    #[test]
+    fn test_origin_531() {
+        assert_eq!(Aitne.id().0, 531i32);
+        assert_eq!(Aitne.to_string(), "Aitne");
+    }
+    #[test]
+    fn test_origin_532() {
+        assert_eq!(Eurydome.id().0, 532i32);
+        assert_eq!(Eurydome.to_string(), "Eurydome");
+    }
+    #[test]
+    fn test_origin_533() {
+        assert_eq!(Euanthe.id().0, 533i32);
+        assert_eq!(Euanthe.to_string(), "Euanthe");
+    }
+    #[test]
+    fn test_origin_534() {
+        assert_eq!(Euporie.id().0, 534i32);
+        assert_eq!(Euporie.to_string(), "Euporie");
+    }
+    #[test]
+    fn test_origin_535() {
+        assert_eq!(Orthosie.id().0, 535i32);
+        assert_eq!(Orthosie.to_string(), "Orthosie");
+    }
+    #[test]
+    fn test_origin_536() {
+        assert_eq!(Sponde.id().0, 536i32);
+        assert_eq!(Sponde.to_string(), "Sponde");
+    }
+    #[test]
+    fn test_origin_537() {
+        assert_eq!(Kale.id().0, 537i32);
+        assert_eq!(Kale.to_string(), "Kale");
+    }
+    #[test]
+    fn test_origin_538() {
+        assert_eq!(Pasithee.id().0, 538i32);
+        assert_eq!(Pasithee.to_string(), "Pasithee");
+    }
+    #[test]
+    fn test_origin_539() {
+        assert_eq!(Hegemone.id().0, 539i32);
+        assert_eq!(Hegemone.to_string(), "Hegemone");
+    }
+    #[test]
+    fn test_origin_540() {
+        assert_eq!(Mneme.id().0, 540i32);
+        assert_eq!(Mneme.to_string(), "Mneme");
+    }
+    #[test]
+    fn test_origin_541() {
+        assert_eq!(Aoede.id().0, 541i32);
+        assert_eq!(Aoede.to_string(), "Aoede");
+    }
+    #[test]
+    fn test_origin_542() {
+        assert_eq!(Thelxinoe.id().0, 542i32);
+        assert_eq!(Thelxinoe.to_string(), "Thelxinoe");
+    }
+    #[test]
+    fn test_origin_543() {
+        assert_eq!(Arche.id().0, 543i32);
+        assert_eq!(Arche.to_string(), "Arche");
+    }
+    #[test]
+    fn test_origin_544() {
+        assert_eq!(Kallichore.id().0, 544i32);
+        assert_eq!(Kallichore.to_string(), "Kallichore");
+    }
+    #[test]
+    fn test_origin_545() {
+        assert_eq!(Helike.id().0, 545i32);
+        assert_eq!(Helike.to_string(), "Helike");
+    }
+    #[test]
+    fn test_origin_546() {
+        assert_eq!(Carpo.id().0, 546i32);
+        assert_eq!(Carpo.to_string(), "Carpo");
+    }
+    #[test]
+    fn test_origin_547() {
+        assert_eq!(Eukelade.id().0, 547i32);
+        assert_eq!(Eukelade.to_string(), "Eukelade");
+    }
+    #[test]
+    fn test_origin_548() {
+        assert_eq!(Cyllene.id().0, 548i32);
+        assert_eq!(Cyllene.to_string(), "Cyllene");
+    }
+    #[test]
+    fn test_origin_549() {
+        assert_eq!(Kore.id().0, 549i32);
+        assert_eq!(Kore.to_string(), "Kore");
+    }
+    #[test]
+    fn test_origin_550() {
+        assert_eq!(Herse.id().0, 550i32);
+        assert_eq!(Herse.to_string(), "Herse");
+    }
+    #[test]
+    fn test_origin_553() {
+        assert_eq!(Dia.id().0, 553i32);
+        assert_eq!(Dia.to_string(), "Dia");
+    }
+    #[test]
+    fn test_origin_601() {
+        assert_eq!(Mimas.id().0, 601i32);
+        assert_eq!(Mimas.to_string(), "Mimas");
+    }
+    #[test]
     fn test_point_mass_601() {
         assert_eq!(Mimas.gravitational_parameter(), 2.503488768152587f64);
     }
@@ -13963,6 +14338,11 @@ mod tests {
     #[test]
     fn test_mean_radius_601() {
         assert_eq!(Mimas.mean_radius(), 198.2f64);
+    }
+    #[test]
+    fn test_origin_602() {
+        assert_eq!(Enceladus.id().0, 602i32);
+        assert_eq!(Enceladus.to_string(), "Enceladus");
     }
     #[test]
     fn test_point_mass_602() {
@@ -13979,6 +14359,11 @@ mod tests {
         assert_eq!(Enceladus.mean_radius(), 252.1f64);
     }
     #[test]
+    fn test_origin_603() {
+        assert_eq!(Tethys.id().0, 603i32);
+        assert_eq!(Tethys.to_string(), "Tethys");
+    }
+    #[test]
     fn test_point_mass_603() {
         assert_eq!(Tethys.gravitational_parameter(), 41.21352885489587f64);
     }
@@ -13991,6 +14376,11 @@ mod tests {
     #[test]
     fn test_mean_radius_603() {
         assert_eq!(Tethys.mean_radius(), 531f64);
+    }
+    #[test]
+    fn test_origin_604() {
+        assert_eq!(Dione.id().0, 604i32);
+        assert_eq!(Dione.to_string(), "Dione");
     }
     #[test]
     fn test_point_mass_604() {
@@ -14007,6 +14397,11 @@ mod tests {
         assert_eq!(Dione.mean_radius(), 561.4f64);
     }
     #[test]
+    fn test_origin_605() {
+        assert_eq!(Rhea.id().0, 605i32);
+        assert_eq!(Rhea.to_string(), "Rhea");
+    }
+    #[test]
     fn test_point_mass_605() {
         assert_eq!(Rhea.gravitational_parameter(), 153.9417519146563f64);
     }
@@ -14019,6 +14414,11 @@ mod tests {
     #[test]
     fn test_mean_radius_605() {
         assert_eq!(Rhea.mean_radius(), 763.5f64);
+    }
+    #[test]
+    fn test_origin_606() {
+        assert_eq!(Titan.id().0, 606i32);
+        assert_eq!(Titan.to_string(), "Titan");
     }
     #[test]
     fn test_point_mass_606() {
@@ -14035,6 +14435,11 @@ mod tests {
         assert_eq!(Titan.mean_radius(), 2575f64);
     }
     #[test]
+    fn test_origin_607() {
+        assert_eq!(Hyperion.id().0, 607i32);
+        assert_eq!(Hyperion.to_string(), "Hyperion");
+    }
+    #[test]
     fn test_point_mass_607() {
         assert_eq!(Hyperion.gravitational_parameter(), 0.3704913747932265f64);
     }
@@ -14047,6 +14452,11 @@ mod tests {
     #[test]
     fn test_mean_radius_607() {
         assert_eq!(Hyperion.mean_radius(), 135f64);
+    }
+    #[test]
+    fn test_origin_608() {
+        assert_eq!(Iapetus.id().0, 608i32);
+        assert_eq!(Iapetus.to_string(), "Iapetus");
     }
     #[test]
     fn test_point_mass_608() {
@@ -14068,6 +14478,11 @@ mod tests {
         assert_eq!(Iapetus.mean_radius(), 734.3f64);
     }
     #[test]
+    fn test_origin_609() {
+        assert_eq!(Phoebe.id().0, 609i32);
+        assert_eq!(Phoebe.to_string(), "Phoebe");
+    }
+    #[test]
     fn test_point_mass_609() {
         assert_eq!(Phoebe.gravitational_parameter(), 0.5547860052791678f64);
     }
@@ -14080,6 +14495,11 @@ mod tests {
     #[test]
     fn test_mean_radius_609() {
         assert_eq!(Phoebe.mean_radius(), 106.5f64);
+    }
+    #[test]
+    fn test_origin_610() {
+        assert_eq!(Janus.id().0, 610i32);
+        assert_eq!(Janus.to_string(), "Janus");
     }
     #[test]
     fn test_point_mass_610() {
@@ -14096,6 +14516,11 @@ mod tests {
         assert_eq!(Janus.mean_radius(), 89.2f64);
     }
     #[test]
+    fn test_origin_611() {
+        assert_eq!(Epimetheus.id().0, 611i32);
+        assert_eq!(Epimetheus.to_string(), "Epimetheus");
+    }
+    #[test]
     fn test_point_mass_611() {
         assert_eq!(Epimetheus.gravitational_parameter(), 0.03512333288208074f64);
     }
@@ -14108,6 +14533,11 @@ mod tests {
     #[test]
     fn test_mean_radius_611() {
         assert_eq!(Epimetheus.mean_radius(), 58.2f64);
+    }
+    #[test]
+    fn test_origin_612() {
+        assert_eq!(Helene.id().0, 612i32);
+        assert_eq!(Helene.to_string(), "Helene");
     }
     #[test]
     fn test_point_mass_612() {
@@ -14124,6 +14554,11 @@ mod tests {
         assert_eq!(Helene.mean_radius(), 18f64);
     }
     #[test]
+    fn test_origin_613() {
+        assert_eq!(Telesto.id().0, 613i32);
+        assert_eq!(Telesto.to_string(), "Telesto");
+    }
+    #[test]
     fn test_tri_axial_613() {
         assert_eq!(Telesto.radii().0, 16.3f64);
         assert_eq!(Telesto.radii().1, 11.8f64);
@@ -14134,6 +14569,11 @@ mod tests {
         assert_eq!(Telesto.mean_radius(), 12.4f64);
     }
     #[test]
+    fn test_origin_614() {
+        assert_eq!(Calypso.id().0, 614i32);
+        assert_eq!(Calypso.to_string(), "Calypso");
+    }
+    #[test]
     fn test_tri_axial_614() {
         assert_eq!(Calypso.radii().0, 15.3f64);
         assert_eq!(Calypso.radii().1, 9.3f64);
@@ -14142,6 +14582,11 @@ mod tests {
     #[test]
     fn test_mean_radius_614() {
         assert_eq!(Calypso.mean_radius(), 9.6f64);
+    }
+    #[test]
+    fn test_origin_615() {
+        assert_eq!(Atlas.id().0, 615i32);
+        assert_eq!(Atlas.to_string(), "Atlas");
     }
     #[test]
     fn test_point_mass_615() {
@@ -14158,6 +14603,11 @@ mod tests {
         assert_eq!(Atlas.mean_radius(), 15.1f64);
     }
     #[test]
+    fn test_origin_616() {
+        assert_eq!(Prometheus.id().0, 616i32);
+        assert_eq!(Prometheus.to_string(), "Prometheus");
+    }
+    #[test]
     fn test_point_mass_616() {
         assert_eq!(Prometheus.gravitational_parameter(), 0.0107520800100761f64);
     }
@@ -14170,6 +14620,11 @@ mod tests {
     #[test]
     fn test_mean_radius_616() {
         assert_eq!(Prometheus.mean_radius(), 43.1f64);
+    }
+    #[test]
+    fn test_origin_617() {
+        assert_eq!(Pandora.id().0, 617i32);
+        assert_eq!(Pandora.to_string(), "Pandora");
     }
     #[test]
     fn test_point_mass_617() {
@@ -14186,6 +14641,11 @@ mod tests {
         assert_eq!(Pandora.mean_radius(), 40.6f64);
     }
     #[test]
+    fn test_origin_618() {
+        assert_eq!(Pan.id().0, 618i32);
+        assert_eq!(Pan.to_string(), "Pan");
+    }
+    #[test]
     fn test_tri_axial_618() {
         assert_eq!(Pan.radii().0, 17.2f64);
         assert_eq!(Pan.radii().1, 15.4f64);
@@ -14194,6 +14654,76 @@ mod tests {
     #[test]
     fn test_mean_radius_618() {
         assert_eq!(Pan.mean_radius(), 14f64);
+    }
+    #[test]
+    fn test_origin_619() {
+        assert_eq!(Ymir.id().0, 619i32);
+        assert_eq!(Ymir.to_string(), "Ymir");
+    }
+    #[test]
+    fn test_origin_620() {
+        assert_eq!(Paaliaq.id().0, 620i32);
+        assert_eq!(Paaliaq.to_string(), "Paaliaq");
+    }
+    #[test]
+    fn test_origin_621() {
+        assert_eq!(Tarvos.id().0, 621i32);
+        assert_eq!(Tarvos.to_string(), "Tarvos");
+    }
+    #[test]
+    fn test_origin_622() {
+        assert_eq!(Ijiraq.id().0, 622i32);
+        assert_eq!(Ijiraq.to_string(), "Ijiraq");
+    }
+    #[test]
+    fn test_origin_623() {
+        assert_eq!(Suttungr.id().0, 623i32);
+        assert_eq!(Suttungr.to_string(), "Suttungr");
+    }
+    #[test]
+    fn test_origin_624() {
+        assert_eq!(Kiviuq.id().0, 624i32);
+        assert_eq!(Kiviuq.to_string(), "Kiviuq");
+    }
+    #[test]
+    fn test_origin_625() {
+        assert_eq!(Mundilfari.id().0, 625i32);
+        assert_eq!(Mundilfari.to_string(), "Mundilfari");
+    }
+    #[test]
+    fn test_origin_626() {
+        assert_eq!(Albiorix.id().0, 626i32);
+        assert_eq!(Albiorix.to_string(), "Albiorix");
+    }
+    #[test]
+    fn test_origin_627() {
+        assert_eq!(Skathi.id().0, 627i32);
+        assert_eq!(Skathi.to_string(), "Skathi");
+    }
+    #[test]
+    fn test_origin_628() {
+        assert_eq!(Erriapus.id().0, 628i32);
+        assert_eq!(Erriapus.to_string(), "Erriapus");
+    }
+    #[test]
+    fn test_origin_629() {
+        assert_eq!(Siarnaq.id().0, 629i32);
+        assert_eq!(Siarnaq.to_string(), "Siarnaq");
+    }
+    #[test]
+    fn test_origin_630() {
+        assert_eq!(Thrymr.id().0, 630i32);
+        assert_eq!(Thrymr.to_string(), "Thrymr");
+    }
+    #[test]
+    fn test_origin_631() {
+        assert_eq!(Narvi.id().0, 631i32);
+        assert_eq!(Narvi.to_string(), "Narvi");
+    }
+    #[test]
+    fn test_origin_632() {
+        assert_eq!(Methone.id().0, 632i32);
+        assert_eq!(Methone.to_string(), "Methone");
     }
     #[test]
     fn test_tri_axial_632() {
@@ -14206,6 +14736,11 @@ mod tests {
         assert_eq!(Methone.mean_radius(), 1.45f64);
     }
     #[test]
+    fn test_origin_633() {
+        assert_eq!(Pallene.id().0, 633i32);
+        assert_eq!(Pallene.to_string(), "Pallene");
+    }
+    #[test]
     fn test_tri_axial_633() {
         assert_eq!(Pallene.radii().0, 2.88f64);
         assert_eq!(Pallene.radii().1, 2.08f64);
@@ -14214,6 +14749,11 @@ mod tests {
     #[test]
     fn test_mean_radius_633() {
         assert_eq!(Pallene.mean_radius(), 2.23f64);
+    }
+    #[test]
+    fn test_origin_634() {
+        assert_eq!(Polydeuces.id().0, 634i32);
+        assert_eq!(Polydeuces.to_string(), "Polydeuces");
     }
     #[test]
     fn test_tri_axial_634() {
@@ -14226,6 +14766,11 @@ mod tests {
         assert_eq!(Polydeuces.mean_radius(), 1.3f64);
     }
     #[test]
+    fn test_origin_635() {
+        assert_eq!(Daphnis.id().0, 635i32);
+        assert_eq!(Daphnis.to_string(), "Daphnis");
+    }
+    #[test]
     fn test_tri_axial_635() {
         assert_eq!(Daphnis.radii().0, 4.6f64);
         assert_eq!(Daphnis.radii().1, 4.5f64);
@@ -14234,6 +14779,76 @@ mod tests {
     #[test]
     fn test_mean_radius_635() {
         assert_eq!(Daphnis.mean_radius(), 3.8f64);
+    }
+    #[test]
+    fn test_origin_636() {
+        assert_eq!(Aegir.id().0, 636i32);
+        assert_eq!(Aegir.to_string(), "Aegir");
+    }
+    #[test]
+    fn test_origin_637() {
+        assert_eq!(Bebhionn.id().0, 637i32);
+        assert_eq!(Bebhionn.to_string(), "Bebhionn");
+    }
+    #[test]
+    fn test_origin_638() {
+        assert_eq!(Bergelmir.id().0, 638i32);
+        assert_eq!(Bergelmir.to_string(), "Bergelmir");
+    }
+    #[test]
+    fn test_origin_639() {
+        assert_eq!(Bestla.id().0, 639i32);
+        assert_eq!(Bestla.to_string(), "Bestla");
+    }
+    #[test]
+    fn test_origin_640() {
+        assert_eq!(Farbauti.id().0, 640i32);
+        assert_eq!(Farbauti.to_string(), "Farbauti");
+    }
+    #[test]
+    fn test_origin_641() {
+        assert_eq!(Fenrir.id().0, 641i32);
+        assert_eq!(Fenrir.to_string(), "Fenrir");
+    }
+    #[test]
+    fn test_origin_642() {
+        assert_eq!(Fornjot.id().0, 642i32);
+        assert_eq!(Fornjot.to_string(), "Fornjot");
+    }
+    #[test]
+    fn test_origin_643() {
+        assert_eq!(Hati.id().0, 643i32);
+        assert_eq!(Hati.to_string(), "Hati");
+    }
+    #[test]
+    fn test_origin_644() {
+        assert_eq!(Hyrrokkin.id().0, 644i32);
+        assert_eq!(Hyrrokkin.to_string(), "Hyrrokkin");
+    }
+    #[test]
+    fn test_origin_645() {
+        assert_eq!(Kari.id().0, 645i32);
+        assert_eq!(Kari.to_string(), "Kari");
+    }
+    #[test]
+    fn test_origin_646() {
+        assert_eq!(Loge.id().0, 646i32);
+        assert_eq!(Loge.to_string(), "Loge");
+    }
+    #[test]
+    fn test_origin_647() {
+        assert_eq!(Skoll.id().0, 647i32);
+        assert_eq!(Skoll.to_string(), "Skoll");
+    }
+    #[test]
+    fn test_origin_648() {
+        assert_eq!(Surtur.id().0, 648i32);
+        assert_eq!(Surtur.to_string(), "Surtur");
+    }
+    #[test]
+    fn test_origin_649() {
+        assert_eq!(Anthe.id().0, 649i32);
+        assert_eq!(Anthe.to_string(), "Anthe");
     }
     #[test]
     fn test_spheroid_649() {
@@ -14251,6 +14866,26 @@ mod tests {
         assert_eq!(Anthe.mean_radius(), 0.5f64);
     }
     #[test]
+    fn test_origin_650() {
+        assert_eq!(Jarnsaxa.id().0, 650i32);
+        assert_eq!(Jarnsaxa.to_string(), "Jarnsaxa");
+    }
+    #[test]
+    fn test_origin_651() {
+        assert_eq!(Greip.id().0, 651i32);
+        assert_eq!(Greip.to_string(), "Greip");
+    }
+    #[test]
+    fn test_origin_652() {
+        assert_eq!(Tarqeq.id().0, 652i32);
+        assert_eq!(Tarqeq.to_string(), "Tarqeq");
+    }
+    #[test]
+    fn test_origin_653() {
+        assert_eq!(Aegaeon.id().0, 653i32);
+        assert_eq!(Aegaeon.to_string(), "Aegaeon");
+    }
+    #[test]
     fn test_tri_axial_653() {
         assert_eq!(Aegaeon.radii().0, 0.7f64);
         assert_eq!(Aegaeon.radii().1, 0.25f64);
@@ -14259,6 +14894,11 @@ mod tests {
     #[test]
     fn test_mean_radius_653() {
         assert_eq!(Aegaeon.mean_radius(), 0.33f64);
+    }
+    #[test]
+    fn test_origin_701() {
+        assert_eq!(Ariel.id().0, 701i32);
+        assert_eq!(Ariel.to_string(), "Ariel");
     }
     #[test]
     fn test_point_mass_701() {
@@ -14273,6 +14913,11 @@ mod tests {
     #[test]
     fn test_mean_radius_701() {
         assert_eq!(Ariel.mean_radius(), 578.9f64);
+    }
+    #[test]
+    fn test_origin_702() {
+        assert_eq!(Umbriel.id().0, 702i32);
+        assert_eq!(Umbriel.to_string(), "Umbriel");
     }
     #[test]
     fn test_point_mass_702() {
@@ -14294,6 +14939,11 @@ mod tests {
         assert_eq!(Umbriel.mean_radius(), 584.7f64);
     }
     #[test]
+    fn test_origin_703() {
+        assert_eq!(Titania.id().0, 703i32);
+        assert_eq!(Titania.to_string(), "Titania");
+    }
+    #[test]
     fn test_point_mass_703() {
         assert_eq!(Titania.gravitational_parameter(), 226.9437003741248f64);
     }
@@ -14311,6 +14961,11 @@ mod tests {
     #[test]
     fn test_mean_radius_703() {
         assert_eq!(Titania.mean_radius(), 788.9f64);
+    }
+    #[test]
+    fn test_origin_704() {
+        assert_eq!(Oberon.id().0, 704i32);
+        assert_eq!(Oberon.to_string(), "Oberon");
     }
     #[test]
     fn test_point_mass_704() {
@@ -14332,6 +14987,11 @@ mod tests {
         assert_eq!(Oberon.mean_radius(), 761.4f64);
     }
     #[test]
+    fn test_origin_705() {
+        assert_eq!(Miranda.id().0, 705i32);
+        assert_eq!(Miranda.to_string(), "Miranda");
+    }
+    #[test]
     fn test_point_mass_705() {
         assert_eq!(Miranda.gravitational_parameter(), 4.3195168992321f64);
     }
@@ -14344,6 +15004,11 @@ mod tests {
     #[test]
     fn test_mean_radius_705() {
         assert_eq!(Miranda.mean_radius(), 235.8f64);
+    }
+    #[test]
+    fn test_origin_706() {
+        assert_eq!(Cordelia.id().0, 706i32);
+        assert_eq!(Cordelia.to_string(), "Cordelia");
     }
     #[test]
     fn test_spheroid_706() {
@@ -14361,6 +15026,11 @@ mod tests {
         assert_eq!(Cordelia.mean_radius(), 13f64);
     }
     #[test]
+    fn test_origin_707() {
+        assert_eq!(Ophelia.id().0, 707i32);
+        assert_eq!(Ophelia.to_string(), "Ophelia");
+    }
+    #[test]
     fn test_spheroid_707() {
         assert_eq!(Ophelia.polar_radius(), 15f64);
         assert_eq!(Ophelia.equatorial_radius(), 15f64);
@@ -14374,6 +15044,11 @@ mod tests {
     #[test]
     fn test_mean_radius_707() {
         assert_eq!(Ophelia.mean_radius(), 15f64);
+    }
+    #[test]
+    fn test_origin_708() {
+        assert_eq!(Bianca.id().0, 708i32);
+        assert_eq!(Bianca.to_string(), "Bianca");
     }
     #[test]
     fn test_spheroid_708() {
@@ -14391,6 +15066,11 @@ mod tests {
         assert_eq!(Bianca.mean_radius(), 21f64);
     }
     #[test]
+    fn test_origin_709() {
+        assert_eq!(Cressida.id().0, 709i32);
+        assert_eq!(Cressida.to_string(), "Cressida");
+    }
+    #[test]
     fn test_spheroid_709() {
         assert_eq!(Cressida.polar_radius(), 31f64);
         assert_eq!(Cressida.equatorial_radius(), 31f64);
@@ -14404,6 +15084,11 @@ mod tests {
     #[test]
     fn test_mean_radius_709() {
         assert_eq!(Cressida.mean_radius(), 31f64);
+    }
+    #[test]
+    fn test_origin_710() {
+        assert_eq!(Desdemona.id().0, 710i32);
+        assert_eq!(Desdemona.to_string(), "Desdemona");
     }
     #[test]
     fn test_spheroid_710() {
@@ -14421,6 +15106,11 @@ mod tests {
         assert_eq!(Desdemona.mean_radius(), 27f64);
     }
     #[test]
+    fn test_origin_711() {
+        assert_eq!(Juliet.id().0, 711i32);
+        assert_eq!(Juliet.to_string(), "Juliet");
+    }
+    #[test]
     fn test_spheroid_711() {
         assert_eq!(Juliet.polar_radius(), 42f64);
         assert_eq!(Juliet.equatorial_radius(), 42f64);
@@ -14434,6 +15124,11 @@ mod tests {
     #[test]
     fn test_mean_radius_711() {
         assert_eq!(Juliet.mean_radius(), 42f64);
+    }
+    #[test]
+    fn test_origin_712() {
+        assert_eq!(Portia.id().0, 712i32);
+        assert_eq!(Portia.to_string(), "Portia");
     }
     #[test]
     fn test_spheroid_712() {
@@ -14451,6 +15146,11 @@ mod tests {
         assert_eq!(Portia.mean_radius(), 54f64);
     }
     #[test]
+    fn test_origin_713() {
+        assert_eq!(Rosalind.id().0, 713i32);
+        assert_eq!(Rosalind.to_string(), "Rosalind");
+    }
+    #[test]
     fn test_spheroid_713() {
         assert_eq!(Rosalind.polar_radius(), 27f64);
         assert_eq!(Rosalind.equatorial_radius(), 27f64);
@@ -14464,6 +15164,11 @@ mod tests {
     #[test]
     fn test_mean_radius_713() {
         assert_eq!(Rosalind.mean_radius(), 27f64);
+    }
+    #[test]
+    fn test_origin_714() {
+        assert_eq!(Belinda.id().0, 714i32);
+        assert_eq!(Belinda.to_string(), "Belinda");
     }
     #[test]
     fn test_spheroid_714() {
@@ -14481,6 +15186,11 @@ mod tests {
         assert_eq!(Belinda.mean_radius(), 33f64);
     }
     #[test]
+    fn test_origin_715() {
+        assert_eq!(Puck.id().0, 715i32);
+        assert_eq!(Puck.to_string(), "Puck");
+    }
+    #[test]
     fn test_spheroid_715() {
         assert_eq!(Puck.polar_radius(), 77f64);
         assert_eq!(Puck.equatorial_radius(), 77f64);
@@ -14494,6 +15204,71 @@ mod tests {
     #[test]
     fn test_mean_radius_715() {
         assert_eq!(Puck.mean_radius(), 77f64);
+    }
+    #[test]
+    fn test_origin_716() {
+        assert_eq!(Caliban.id().0, 716i32);
+        assert_eq!(Caliban.to_string(), "Caliban");
+    }
+    #[test]
+    fn test_origin_717() {
+        assert_eq!(Sycorax.id().0, 717i32);
+        assert_eq!(Sycorax.to_string(), "Sycorax");
+    }
+    #[test]
+    fn test_origin_718() {
+        assert_eq!(Prospero.id().0, 718i32);
+        assert_eq!(Prospero.to_string(), "Prospero");
+    }
+    #[test]
+    fn test_origin_719() {
+        assert_eq!(Setebos.id().0, 719i32);
+        assert_eq!(Setebos.to_string(), "Setebos");
+    }
+    #[test]
+    fn test_origin_720() {
+        assert_eq!(Stephano.id().0, 720i32);
+        assert_eq!(Stephano.to_string(), "Stephano");
+    }
+    #[test]
+    fn test_origin_721() {
+        assert_eq!(Trinculo.id().0, 721i32);
+        assert_eq!(Trinculo.to_string(), "Trinculo");
+    }
+    #[test]
+    fn test_origin_722() {
+        assert_eq!(Francisco.id().0, 722i32);
+        assert_eq!(Francisco.to_string(), "Francisco");
+    }
+    #[test]
+    fn test_origin_723() {
+        assert_eq!(Margaret.id().0, 723i32);
+        assert_eq!(Margaret.to_string(), "Margaret");
+    }
+    #[test]
+    fn test_origin_724() {
+        assert_eq!(Ferdinand.id().0, 724i32);
+        assert_eq!(Ferdinand.to_string(), "Ferdinand");
+    }
+    #[test]
+    fn test_origin_725() {
+        assert_eq!(Perdita.id().0, 725i32);
+        assert_eq!(Perdita.to_string(), "Perdita");
+    }
+    #[test]
+    fn test_origin_726() {
+        assert_eq!(Mab.id().0, 726i32);
+        assert_eq!(Mab.to_string(), "Mab");
+    }
+    #[test]
+    fn test_origin_727() {
+        assert_eq!(Cupid.id().0, 727i32);
+        assert_eq!(Cupid.to_string(), "Cupid");
+    }
+    #[test]
+    fn test_origin_801() {
+        assert_eq!(Triton.id().0, 801i32);
+        assert_eq!(Triton.to_string(), "Triton");
     }
     #[test]
     fn test_point_mass_801() {
@@ -14515,6 +15290,11 @@ mod tests {
         assert_eq!(Triton.mean_radius(), 1352.6f64);
     }
     #[test]
+    fn test_origin_802() {
+        assert_eq!(Nereid.id().0, 802i32);
+        assert_eq!(Nereid.to_string(), "Nereid");
+    }
+    #[test]
     fn test_spheroid_802() {
         assert_eq!(Nereid.polar_radius(), 170f64);
         assert_eq!(Nereid.equatorial_radius(), 170f64);
@@ -14528,6 +15308,11 @@ mod tests {
     #[test]
     fn test_mean_radius_802() {
         assert_eq!(Nereid.mean_radius(), 170f64);
+    }
+    #[test]
+    fn test_origin_803() {
+        assert_eq!(Naiad.id().0, 803i32);
+        assert_eq!(Naiad.to_string(), "Naiad");
     }
     #[test]
     fn test_point_mass_803() {
@@ -14549,6 +15334,11 @@ mod tests {
         assert_eq!(Naiad.mean_radius(), 29f64);
     }
     #[test]
+    fn test_origin_804() {
+        assert_eq!(Thalassa.id().0, 804i32);
+        assert_eq!(Thalassa.to_string(), "Thalassa");
+    }
+    #[test]
     fn test_point_mass_804() {
         assert_eq!(Thalassa.gravitational_parameter(), 0.0235887319799217f64);
     }
@@ -14566,6 +15356,11 @@ mod tests {
     #[test]
     fn test_mean_radius_804() {
         assert_eq!(Thalassa.mean_radius(), 40f64);
+    }
+    #[test]
+    fn test_origin_805() {
+        assert_eq!(Despina.id().0, 805i32);
+        assert_eq!(Despina.to_string(), "Despina");
     }
     #[test]
     fn test_point_mass_805() {
@@ -14587,6 +15382,11 @@ mod tests {
         assert_eq!(Despina.mean_radius(), 74f64);
     }
     #[test]
+    fn test_origin_806() {
+        assert_eq!(Galatea.id().0, 806i32);
+        assert_eq!(Galatea.to_string(), "Galatea");
+    }
+    #[test]
     fn test_point_mass_806() {
         assert_eq!(Galatea.gravitational_parameter(), 0.189898503906069f64);
     }
@@ -14604,6 +15404,11 @@ mod tests {
     #[test]
     fn test_mean_radius_806() {
         assert_eq!(Galatea.mean_radius(), 79f64);
+    }
+    #[test]
+    fn test_origin_807() {
+        assert_eq!(Larissa.id().0, 807i32);
+        assert_eq!(Larissa.to_string(), "Larissa");
     }
     #[test]
     fn test_point_mass_807() {
@@ -14625,6 +15430,11 @@ mod tests {
         assert_eq!(Larissa.mean_radius(), 96f64);
     }
     #[test]
+    fn test_origin_808() {
+        assert_eq!(Proteus.id().0, 808i32);
+        assert_eq!(Proteus.to_string(), "Proteus");
+    }
+    #[test]
     fn test_point_mass_808() {
         assert_eq!(Proteus.gravitational_parameter(), 2.583422379120727f64);
     }
@@ -14637,6 +15447,36 @@ mod tests {
     #[test]
     fn test_mean_radius_808() {
         assert_eq!(Proteus.mean_radius(), 208f64);
+    }
+    #[test]
+    fn test_origin_809() {
+        assert_eq!(Halimede.id().0, 809i32);
+        assert_eq!(Halimede.to_string(), "Halimede");
+    }
+    #[test]
+    fn test_origin_810() {
+        assert_eq!(Psamathe.id().0, 810i32);
+        assert_eq!(Psamathe.to_string(), "Psamathe");
+    }
+    #[test]
+    fn test_origin_811() {
+        assert_eq!(Sao.id().0, 811i32);
+        assert_eq!(Sao.to_string(), "Sao");
+    }
+    #[test]
+    fn test_origin_812() {
+        assert_eq!(Laomedeia.id().0, 812i32);
+        assert_eq!(Laomedeia.to_string(), "Laomedeia");
+    }
+    #[test]
+    fn test_origin_813() {
+        assert_eq!(Neso.id().0, 813i32);
+        assert_eq!(Neso.to_string(), "Neso");
+    }
+    #[test]
+    fn test_origin_901() {
+        assert_eq!(Charon.id().0, 901i32);
+        assert_eq!(Charon.to_string(), "Charon");
     }
     #[test]
     fn test_point_mass_901() {
@@ -14658,20 +15498,45 @@ mod tests {
         assert_eq!(Charon.mean_radius(), 606f64);
     }
     #[test]
+    fn test_origin_902() {
+        assert_eq!(Nix.id().0, 902i32);
+        assert_eq!(Nix.to_string(), "Nix");
+    }
+    #[test]
     fn test_point_mass_902() {
         assert_eq!(Nix.gravitational_parameter(), 0.00304817564816976f64);
+    }
+    #[test]
+    fn test_origin_903() {
+        assert_eq!(Hydra.id().0, 903i32);
+        assert_eq!(Hydra.to_string(), "Hydra");
     }
     #[test]
     fn test_point_mass_903() {
         assert_eq!(Hydra.gravitational_parameter(), 0.003211039206155255f64);
     }
     #[test]
+    fn test_origin_904() {
+        assert_eq!(Kerberos.id().0, 904i32);
+        assert_eq!(Kerberos.to_string(), "Kerberos");
+    }
+    #[test]
     fn test_point_mass_904() {
         assert_eq!(Kerberos.gravitational_parameter(), 0.001110040850536676f64);
     }
     #[test]
+    fn test_origin_905() {
+        assert_eq!(Styx.id().0, 905i32);
+        assert_eq!(Styx.to_string(), "Styx");
+    }
+    #[test]
     fn test_point_mass_905() {
         assert_eq!(Styx.gravitational_parameter(), 0f64);
+    }
+    #[test]
+    fn test_origin_9511010() {
+        assert_eq!(Gaspra.id().0, 9511010i32);
+        assert_eq!(Gaspra.to_string(), "Gaspra");
     }
     #[test]
     fn test_tri_axial_9511010() {
@@ -14684,6 +15549,11 @@ mod tests {
         assert_eq!(Gaspra.mean_radius(), 6.1f64);
     }
     #[test]
+    fn test_origin_2431010() {
+        assert_eq!(Ida.id().0, 2431010i32);
+        assert_eq!(Ida.to_string(), "Ida");
+    }
+    #[test]
     fn test_tri_axial_2431010() {
         assert_eq!(Ida.radii().0, 26.8f64);
         assert_eq!(Ida.radii().1, 12f64);
@@ -14692,6 +15562,16 @@ mod tests {
     #[test]
     fn test_mean_radius_2431010() {
         assert_eq!(Ida.mean_radius(), 15.65f64);
+    }
+    #[test]
+    fn test_origin_2431011() {
+        assert_eq!(Dactyl.id().0, 2431011i32);
+        assert_eq!(Dactyl.to_string(), "Dactyl");
+    }
+    #[test]
+    fn test_origin_2000001() {
+        assert_eq!(Ceres.id().0, 2000001i32);
+        assert_eq!(Ceres.to_string(), "Ceres");
     }
     #[test]
     fn test_point_mass_2000001() {
@@ -14713,8 +15593,18 @@ mod tests {
         assert_eq!(Ceres.mean_radius(), 470f64);
     }
     #[test]
+    fn test_origin_2000002() {
+        assert_eq!(Pallas.id().0, 2000002i32);
+        assert_eq!(Pallas.to_string(), "Pallas");
+    }
+    #[test]
     fn test_point_mass_2000002() {
         assert_eq!(Pallas.gravitational_parameter(), 13.665878145967422f64);
+    }
+    #[test]
+    fn test_origin_2000004() {
+        assert_eq!(Vesta.id().0, 2000004i32);
+        assert_eq!(Vesta.to_string(), "Vesta");
     }
     #[test]
     fn test_point_mass_2000004() {
@@ -14725,6 +15615,11 @@ mod tests {
         assert_eq!(Vesta.radii().0, 289f64);
         assert_eq!(Vesta.radii().1, 280f64);
         assert_eq!(Vesta.radii().2, 229f64);
+    }
+    #[test]
+    fn test_origin_2000016() {
+        assert_eq!(Psyche.id().0, 2000016i32);
+        assert_eq!(Psyche.to_string(), "Psyche");
     }
     #[test]
     fn test_point_mass_2000016() {
@@ -14741,6 +15636,11 @@ mod tests {
         assert_eq!(Psyche.mean_radius(), 113f64);
     }
     #[test]
+    fn test_origin_2000021() {
+        assert_eq!(Lutetia.id().0, 2000021i32);
+        assert_eq!(Lutetia.to_string(), "Lutetia");
+    }
+    #[test]
     fn test_tri_axial_2000021() {
         assert_eq!(Lutetia.radii().0, 62f64);
         assert_eq!(Lutetia.radii().1, 50.5f64);
@@ -14749,6 +15649,16 @@ mod tests {
     #[test]
     fn test_mean_radius_2000021() {
         assert_eq!(Lutetia.mean_radius(), 52.5f64);
+    }
+    #[test]
+    fn test_origin_2000216() {
+        assert_eq!(Kleopatra.id().0, 2000216i32);
+        assert_eq!(Kleopatra.to_string(), "Kleopatra");
+    }
+    #[test]
+    fn test_origin_2000433() {
+        assert_eq!(Eros.id().0, 2000433i32);
+        assert_eq!(Eros.to_string(), "Eros");
     }
     #[test]
     fn test_point_mass_2000433() {
@@ -14765,6 +15675,11 @@ mod tests {
         assert_eq!(Eros.mean_radius(), 8.45f64);
     }
     #[test]
+    fn test_origin_2000511() {
+        assert_eq!(Davida.id().0, 2000511i32);
+        assert_eq!(Davida.to_string(), "Davida");
+    }
+    #[test]
     fn test_point_mass_2000511() {
         assert_eq!(Davida.gravitational_parameter(), 3.8944831481705644f64);
     }
@@ -14779,6 +15694,11 @@ mod tests {
         assert_eq!(Davida.mean_radius(), 150f64);
     }
     #[test]
+    fn test_origin_2000253() {
+        assert_eq!(Mathilde.id().0, 2000253i32);
+        assert_eq!(Mathilde.to_string(), "Mathilde");
+    }
+    #[test]
     fn test_tri_axial_2000253() {
         assert_eq!(Mathilde.radii().0, 33f64);
         assert_eq!(Mathilde.radii().1, 24f64);
@@ -14787,6 +15707,11 @@ mod tests {
     #[test]
     fn test_mean_radius_2000253() {
         assert_eq!(Mathilde.mean_radius(), 26.5f64);
+    }
+    #[test]
+    fn test_origin_2002867() {
+        assert_eq!(Steins.id().0, 2002867i32);
+        assert_eq!(Steins.to_string(), "Steins");
     }
     #[test]
     fn test_tri_axial_2002867() {
@@ -14799,15 +15724,40 @@ mod tests {
         assert_eq!(Steins.mean_radius(), 2.7f64);
     }
     #[test]
+    fn test_origin_2009969() {
+        assert_eq!(Braille.id().0, 2009969i32);
+        assert_eq!(Braille.to_string(), "Braille");
+    }
+    #[test]
+    fn test_origin_2004015() {
+        assert_eq!(WilsonHarrington.id().0, 2004015i32);
+        assert_eq!(WilsonHarrington.to_string(), "Wilson-Harrington");
+    }
+    #[test]
+    fn test_origin_2004179() {
+        assert_eq!(Toutatis.id().0, 2004179i32);
+        assert_eq!(Toutatis.to_string(), "Toutatis");
+    }
+    #[test]
     fn test_tri_axial_2004179() {
         assert_eq!(Toutatis.radii().0, 2.13f64);
         assert_eq!(Toutatis.radii().1, 1.015f64);
         assert_eq!(Toutatis.radii().2, 0.85f64);
     }
     #[test]
+    fn test_origin_2025143() {
+        assert_eq!(Itokawa.id().0, 2025143i32);
+        assert_eq!(Itokawa.to_string(), "Itokawa");
+    }
+    #[test]
     fn test_tri_axial_2025143() {
         assert_eq!(Itokawa.radii().0, 0.268f64);
         assert_eq!(Itokawa.radii().1, 0.147f64);
         assert_eq!(Itokawa.radii().2, 0.104f64);
+    }
+    #[test]
+    fn test_origin_2101955() {
+        assert_eq!(Bennu.id().0, 2101955i32);
+        assert_eq!(Bennu.to_string(), "Bennu");
     }
 }

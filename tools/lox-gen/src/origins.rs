@@ -1062,6 +1062,16 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
             }
         });
 
+        let origin_test_name = format_ident!("test_origin_{}", id as u32);
+
+        tests.extend(quote! {
+            #[test]
+            fn #origin_test_name() {
+                assert_eq!(#ident.id().0, #id);
+                assert_eq!(#ident.to_string(), #name);
+            }
+        });
+
         // PointMass
         let key = if id == 0 {
             "BODY10_GM".to_string()
@@ -1086,7 +1096,6 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
             let point_mass_test_name = format_ident!("test_point_mass_{}", id as u32);
 
             tests.extend(quote! {
-
                 #[test]
                 fn #point_mass_test_name() {
                     assert_eq!(#ident.gravitational_parameter(), #gm);
