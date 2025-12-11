@@ -1029,6 +1029,8 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
     let mut rotational_elements_match_arms = quote! {};
     let mut rotational_element_rates_match_arms = quote! {};
 
+    let mut tests = quote! {};
+
     for Origin {
         name,
         id,
@@ -1079,6 +1081,16 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
 
             point_mass_match_arms.extend(quote! {
                 DynOrigin::#ident => Ok(#gm),
+            });
+
+            let point_mass_test_name = format_ident!("test_point_mass_{}", id as u32);
+
+            tests.extend(quote! {
+
+                #[test]
+                fn #point_mass_test_name() {
+                    assert_eq!(#ident.gravitational_parameter(), #gm);
+                }
             });
         };
 
@@ -1248,6 +1260,49 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
                 DynOrigin::#ident => Ok((#ra_dot, #dec_dot, #pm_dot)),
             });
         }
+
+        // triaxial/spheroid tests
+        if let Some(radii) = pck.get_double_array(&key) {
+            let equatorial = radii[0];
+            let along_orbit = radii[1];
+            let polar = radii[2];
+
+            if radii[0] == radii[1] {
+                let spheroid_test_name = format_ident!("test_spheroid_{}", id as u32);
+                tests.extend(quote! {
+
+                    #[test]
+                    fn #spheroid_test_name() {
+                        assert_eq!(#ident.polar_radius(), #polar);
+                        assert_eq!(#ident.equatorial_radius(), #equatorial);
+                    }
+
+                });
+            }
+
+            let triaxial_test_name = format_ident!("test_tri_axial_{}", id as u32);
+            tests.extend(quote! {
+                #[test]
+                fn #triaxial_test_name() {
+                    assert_eq!(#ident.radii().0, #equatorial);
+                    assert_eq!(#ident.radii().1, #along_orbit);
+                    assert_eq!(#ident.radii().2, #polar);
+                }
+
+            });
+        }
+
+        if let Some(mean_radius) = mean_radius {
+            let mean_radius_test_name = format_ident!("test_mean_radius_{}", id as u32);
+            tests.extend(quote! {
+
+                #[test]
+                fn #mean_radius_test_name() {
+                    assert_eq!(#ident.mean_radius(), #mean_radius);
+                }
+
+            });
+        }
     }
 
     code.extend(quote! {
@@ -1319,6 +1374,16 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
                     ),
                 }
             }
+        }
+    });
+
+    code.extend(quote! {
+        #[cfg(test)]
+        #[allow(clippy::approx_constant)] // at least one parsed constant is close to TAU
+        mod tests {
+            use crate::*;
+
+            #tests
         }
     });
 
