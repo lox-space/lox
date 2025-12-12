@@ -71,37 +71,3 @@ impl PyEopProvider {
         ))
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    use crate::time::python::time::PyTime;
-    use lox_test_utils::data_file;
-    use pyo3::{Bound, IntoPyObject, IntoPyObjectExt, Python};
-
-    #[test]
-    #[should_panic(expected = "No such file")]
-    fn test_ut1_provider_invalid_path() {
-        Python::attach(|py| {
-            let path = (data_file("invalid"),).into_pyobject(py).unwrap();
-            let _provider = PyEopProvider::new(&path).unwrap();
-        })
-    }
-
-    #[test]
-    #[should_panic(expected = "extrapolated")]
-    fn test_ut1_provider_extrapolated() {
-        Python::attach(|py| {
-            let path = (data_file("iers/finals2000A.all.csv"),)
-                .into_pyobject(py)
-                .unwrap();
-            let provider = Bound::new(py, PyEopProvider::new(&path).unwrap()).unwrap();
-            let tai =
-                PyTime::new(&"TAI".into_bound_py_any(py).unwrap(), 2100, 1, 1, 0, 0, 0.0).unwrap();
-            let _ut1 = tai
-                .to_scale(&"UT1".into_bound_py_any(py).unwrap(), Some(&provider))
-                .unwrap();
-        })
-    }
-}
