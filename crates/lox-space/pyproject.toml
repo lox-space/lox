@@ -14,7 +14,7 @@ dependencies = ["numpy >= 1.16.0"]
 dynamic = ["version"]
 
 [dependency-groups]
-dev = ["black", "ipython", "maturin", "pytest", "pytest-codspeed"]
+dev = ["black", "ipython", "maturin", "pytest", "pytest-codspeed", "pytest-cov>=6.0.0"]
 docs = ["mkdocs", "mkdocstrings[python]>=0.18", "mkdocs-material"]
 
 [build-system]

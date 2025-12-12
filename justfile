@@ -22,6 +22,10 @@ doctest *FLAGS:
 
 test: rstest doctest pytest
 
+# Run tests with coverage (includes Python integration tests)
+coverage *FLAGS:
+    uv run --no-project tools/coverage.py {{FLAGS}}
+
 lint-reuse *ARGS:
     uvx reuse lint {{ARGS}}
 
