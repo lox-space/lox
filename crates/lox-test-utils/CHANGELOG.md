@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.2](https://github.com/lox-space/lox/compare/lox-test-utils-v0.1.0-alpha.1...lox-test-utils-v0.1.0-alpha.2) - 2025-12-12
+
+### Other
+
+- *(lox-frames)* rewrite frame transforms
+
 ## [0.1.0-alpha.1](https://github.com/lox-space/lox/compare/lox-test-utils-v0.1.0-alpha.0...lox-test-utils-v0.1.0-alpha.1) - 2025-10-29
 
 ### Added

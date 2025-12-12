@@ -18,18 +18,18 @@ repository = "https://github.com/lox-space/lox"
 keywords = ["lox", "astrodynamics", "orbital-dynamics", "mission-analysis"]
 
 [workspace.dependencies]
-lox-bodies = { path = "crates/lox-bodies", version = "0.1.0-alpha.11" }
-lox-core = { path = "crates/lox-core", version = "0.1.0-alpha.0" }
-lox-derive = { path = "crates/lox-derive", version = "0.1.0-alpha.5" }
-lox-earth = { path = "crates/lox-earth", version = "0.1.0-alpha.13" }
-lox-ephem = { path = "crates/lox-ephem", version = "0.1.0-alpha.8" }
-lox-frames = { path = "crates/lox-frames", version = "0.1.0-alpha.4" }
-lox-io = { path = "crates/lox-io", version = "0.1.0-alpha.9" }
-lox-math = { path = "crates/lox-math", version = "0.1.0-alpha.9" }
-lox-orbits = { path = "crates/lox-orbits", version = "0.1.0-alpha.21" }
-lox-test-utils = { path = "crates/lox-test-utils", version = "0.1.0-alpha.1" }
-lox-time = { path = "crates/lox-time", version = "0.1.0-alpha.11" }
-lox-units = { path = "crates/lox-units", version = "0.1.0-alpha.1" }
+lox-bodies = { path = "crates/lox-bodies", version = "0.1.0-alpha.12" }
+lox-core = { path = "crates/lox-core", version = "0.1.0-alpha.1" }
+lox-derive = { path = "crates/lox-derive", version = "0.1.0-alpha.6" }
+lox-earth = { path = "crates/lox-earth", version = "0.1.0-alpha.14" }
+lox-ephem = { path = "crates/lox-ephem", version = "0.1.0-alpha.9" }
+lox-frames = { path = "crates/lox-frames", version = "0.1.0-alpha.5" }
+lox-io = { path = "crates/lox-io", version = "0.1.0-alpha.10" }
+lox-math = { path = "crates/lox-math", version = "0.1.0-alpha.10" }
+lox-orbits = { path = "crates/lox-orbits", version = "0.1.0-alpha.22" }
+lox-test-utils = { path = "crates/lox-test-utils", version = "0.1.0-alpha.2" }
+lox-time = { path = "crates/lox-time", version = "0.1.0-alpha.12" }
+lox-units = { path = "crates/lox-units", version = "0.1.0-alpha.2" }
 
 csv = "1.4.0"
 divan = "0.1.21"

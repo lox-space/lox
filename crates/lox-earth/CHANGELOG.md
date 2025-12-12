@@ -6,6 +6,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.14](https://github.com/lox-space/lox/compare/lox-earth-v0.1.0-alpha.13...lox-earth-v0.1.0-alpha.14) - 2025-12-12
+
+### Added
+
+- *(lox-time)* use compensated sum for two-float deltas
+- *(lox-orbits)* re-design trajectories
+- add SSO builder and Earth ephemeris
+
+### Other
+
+- *(lox-core)* simplify Series type
+- *(lox-frames)* rewrite frame transforms
+- *(lox-time)* implement offsets via `OffsetProvider` trait
+- *(lox-time)* make LSP trait easier to implement
+- *(lox-time)* implement offsets via `OffsetProvider` trait
+- refactor orbit tracing
+
 ## [0.1.0-alpha.13](https://github.com/lox-space/lox/compare/lox-earth-v0.1.0-alpha.12...lox-earth-v0.1.0-alpha.13) - 2025-10-29
 
 ### Added
