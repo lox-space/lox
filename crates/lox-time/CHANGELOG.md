@@ -6,6 +6,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.12](https://github.com/lox-space/lox/compare/lox-time-v0.1.0-alpha.11...lox-time-v0.1.0-alpha.12) - 2025-12-12
+
+### Added
+
+- *(lox-time)* use compensated sum for two-float deltas
+- *(lox-time)* add intervals
+- *(lox-orbits)* re-design trajectories
+- add SSO builder and Earth ephemeris
+
+### Fixed
+
+- *(lox-time)* improve precision of TCB and TCG conversions
+
+### Other
+
+- *(lox-frames)* rewrite frame transforms
+- *(lox-time)* make LSP trait easier to implement
+- *(lox-time)* implement offsets via `OffsetProvider` trait
+
 ## [0.1.0-alpha.11](https://github.com/lox-space/lox/compare/lox-time-v0.1.0-alpha.10...lox-time-v0.1.0-alpha.11) - 2025-10-29
 
 ### Added

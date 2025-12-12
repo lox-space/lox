@@ -6,6 +6,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.29](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.28...lox-space-v0.1.0-alpha.29) - 2025-12-12
+
+### Added
+
+- *(lox-time)* use compensated sum for two-float deltas
+- *(lox-orbits)* re-design trajectories
+
+### Other
+
+- *(lox-space)* add tests for IAU frames
+- get coverage from pytest
+- clean up lints and simplify errors
+- simplify pytest failure checking
+- rewrite from closures to a Callback trait, should_panic for roots tests
+- Combine all root errors to common error domain, bubble up errors everywhere.
+- failing test cases: expect errors
+- *(lox-core)* simplify Series type
+- *(lox-space)* fix doctests
+- *(lox-frames)* rewrite frame transforms
+- *(lox-space)* add Python docs
+- *(lox-time)* make LSP trait easier to implement
+- *(lox-time)* implement offsets via `OffsetProvider` trait
+- *(lox-space)* update MkDocs config
+- *(lox-space)* test Python reference docs
+
 ## [0.1.0-alpha.28](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.27...lox-space-v0.1.0-alpha.28) - 2025-10-29
 
 ### Added
