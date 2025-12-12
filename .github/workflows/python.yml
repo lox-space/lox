@@ -59,8 +59,8 @@ jobs:
         shell: bash
         run: |
           set -e
-          uv venv --python 3.12
-          uv pip install pytest pytest-codspeed numpy
+          uv venv
+          uv pip install --project crates/lox-space --group dev
           uv pip install lox-space --offline --find-links dist --force-reinstall
           source .venv/bin/activate
           cd crates/lox-space && pytest
@@ -95,13 +95,12 @@ jobs:
           name: wheels-windows-${{ matrix.platform.target }}
           path: dist
       - name: pytest
-        if: ${{ !startsWith(matrix.platform.target, 'aarch64') }}
+        if: ${{ startsWith(matrix.platform.target, 'x64') }}
         shell: bash
         run: |
           set -e
-          # We cannot use `uv` here because it will always install a 64-bit interpreter
-          python3 -m venv .venv
-          uv pip install pytest pytest-codspeed numpy
+          uv venv
+          uv pip install --project crates/lox-space --group dev
           uv pip install lox-space --offline --find-links dist --force-reinstall
           source .venv/Scripts/activate
           cd crates/lox-space && pytest
@@ -137,8 +136,8 @@ jobs:
       - name: pytest
         run: |
           set -e
-          uv venv --python 3.12
-          uv pip install pytest pytest-codspeed numpy
+          uv venv
+          uv pip install --project crates/lox-space --group dev
           uv pip install lox-space --offline --find-links dist --force-reinstall
           source .venv/bin/activate
           cd crates/lox-space && pytest
