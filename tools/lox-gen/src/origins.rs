@@ -1262,11 +1262,11 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
             });
 
             rotational_elements_match_arms.extend(quote! {
-                DynOrigin::#ident => Ok((#ra, #dec, #pm)),
+                DynOrigin::#ident => Ok(#ident.rotational_elements(t)),
             });
 
             rotational_element_rates_match_arms.extend(quote! {
-                DynOrigin::#ident => Ok((#ra_dot, #dec_dot, #pm_dot)),
+                DynOrigin::#ident => Ok(#ident.rotational_element_rates(t)),
             });
         }
 
