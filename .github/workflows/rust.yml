@@ -57,20 +57,22 @@ jobs:
     name: Code coverage
     runs-on: ubuntu-latest
     if: github.actor != 'dependabot[bot]'
+    env:
+      UV_PROJECT: crates/lox-space
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-      - name: Install Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: 3.x
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@nextest
       - name: Generate code coverage
-        run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
+        run: uv run --no-project tools/coverage.py --codecov --output-path codecov.json
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
-          files: lcov.info
+          files: codecov.json,crates/lox-space/coverage.xml
           fail_ci_if_error: true

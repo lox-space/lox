@@ -5,7 +5,7 @@
 use std::f64::consts::PI;
 
 use crate::bodies::python::PyOrigin;
-use crate::earth::python::ut1::PyEopProvider;
+use crate::earth::python::ut1::{EopParserError, EopProviderError, PyEopProvider};
 use crate::ephem::python::PySpk;
 use crate::frames::python::PyFrame;
 use crate::math::python::PySeries;
@@ -27,6 +27,8 @@ use crate::units::{
 
 use pyo3::prelude::*;
 
+// LCOV_EXCL_START - PyO3 module initialization cannot be directly tested.
+// See: https://github.com/rust-lang/rust/issues/84605
 #[pymodule]
 fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // bodies
@@ -34,6 +36,8 @@ fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     // earth
     m.add_class::<PyEopProvider>()?;
+    m.add("EopParserError", m.py().get_type::<EopParserError>())?;
+    m.add("EopProviderError", m.py().get_type::<EopProviderError>())?;
 
     // ephem
     m.add_class::<PySpk>()?;
@@ -93,3 +97,4 @@ fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     Ok(())
 }
+// LCOV_EXCL_STOP
