@@ -71,13 +71,9 @@ pub trait Spheroid: TriaxialEllipsoid {
 }
 
 pub trait TrySpheroid: TryTriaxialEllipsoid {
-    fn try_equatorial_radius(&self) -> Result<f64, UndefinedOriginPropertyError> {
-        self.try_radii().map(|radii| radii.0)
-    }
+    fn try_equatorial_radius(&self) -> Result<f64, UndefinedOriginPropertyError>;
 
-    fn try_polar_radius(&self) -> Result<f64, UndefinedOriginPropertyError> {
-        self.try_radii().map(|radii| radii.2)
-    }
+    fn try_polar_radius(&self) -> Result<f64, UndefinedOriginPropertyError>;
 
     fn try_flattening(&self) -> Result<f64, UndefinedOriginPropertyError> {
         self.try_radii().map(|radii| flattening(radii.0, radii.2))
@@ -529,6 +525,16 @@ mod tests {
             Jupiter.rotation_rate(0.0),
             0.00017585323445765458,
             rtol <= 1e-8
+        );
+    }
+
+    #[test]
+    fn test_rotational_elements_error() {
+        assert!(DynOrigin::Mundilfari.try_rotational_elements(0.0).is_err());
+        assert!(
+            DynOrigin::Mundilfari
+                .try_rotational_element_rates(0.0)
+                .is_err()
         );
     }
 }
