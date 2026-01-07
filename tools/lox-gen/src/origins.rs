@@ -1024,6 +1024,8 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
 
     let mut point_mass_match_arms = quote! {};
     let mut mean_radius_match_arms = quote! {};
+    let mut polar_radius_match_arms = quote! {};
+    let mut equatorial_radius_match_arms = quote! {};
     let mut ellipsoid_match_arms = quote! {};
 
     let mut rotational_elements_match_arms = quote! {};
@@ -1079,6 +1081,8 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
             format!("BODY{id}_GM")
         };
 
+        let point_mass_test_name = format_ident!("test_point_mass_{}", id as u32);
+
         if let Some(gm) = gm.get_double_array(&key) {
             let gm = gm.first().unwrap();
             code.extend(quote! {
@@ -1093,12 +1097,18 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
                 DynOrigin::#ident => Ok(#gm),
             });
 
-            let point_mass_test_name = format_ident!("test_point_mass_{}", id as u32);
-
             tests.extend(quote! {
                 #[test]
                 fn #point_mass_test_name() {
                     assert_eq!(#ident.gravitational_parameter(), #gm);
+                    assert_eq!(DynOrigin::#ident.try_gravitational_parameter(), Ok(#gm));
+                }
+            });
+        } else {
+            tests.extend(quote! {
+                #[test]
+                fn #point_mass_test_name() {
+                    assert!(DynOrigin::#ident.try_gravitational_parameter().is_err());
                 }
             });
         };
@@ -1107,6 +1117,8 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
         if id < 10 {
             continue;
         }
+
+        let mean_radius_test_name = format_ident!("test_mean_radius_{}", id as u32);
 
         if let Some(mean_radius) = mean_radius {
             code.extend(quote! {
@@ -1119,13 +1131,35 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
 
             mean_radius_match_arms.extend(quote! {
                 DynOrigin::#ident => Ok(#mean_radius),
-            })
+            });
+
+            tests.extend(quote! {
+                #[test]
+                fn #mean_radius_test_name() {
+                    assert_eq!(#ident.mean_radius(), #mean_radius);
+                    assert_eq!(DynOrigin::#ident.try_mean_radius(), Ok(#mean_radius));
+                }
+            });
+        } else {
+            tests.extend(quote! {
+                #[test]
+                fn #mean_radius_test_name() {
+                    assert!(DynOrigin::#ident.try_mean_radius().is_err());
+                }
+            });
         }
 
         // TriaxialEllipsoid / Spheroid
         let key = format!("BODY{id}_RADII");
 
+        let triaxial_test_name = format_ident!("test_tri_axial_{}", id as u32);
+        let spheroid_test_name = format_ident!("test_spheroid_{}", id as u32);
+
         if let Some(radii) = pck.get_double_array(&key) {
+            let equatorial = radii[0];
+            let along_orbit = radii[1];
+            let polar = radii[2];
+
             code.extend(quote! {
                 impl TriaxialEllipsoid for #ident {
                     fn radii(&self) -> Radii {
@@ -1137,12 +1171,58 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
             if radii[0] == radii[1] {
                 code.extend(quote! {
                     impl Spheroid for #ident {}
-                })
+                });
+
+                polar_radius_match_arms.extend(quote! {
+                    DynOrigin::#ident => Ok(#polar),
+                });
+                equatorial_radius_match_arms.extend(quote! {
+                    DynOrigin::#ident => Ok(#equatorial),
+                });
+
+                tests.extend(quote! {
+                    #[test]
+                    fn #spheroid_test_name() {
+                        assert_eq!(#ident.polar_radius(), #polar);
+                        assert_eq!(DynOrigin::#ident.try_polar_radius(), Ok(#polar));
+                        assert_eq!(#ident.equatorial_radius(), #equatorial);
+                        assert_eq!(DynOrigin::#ident.try_equatorial_radius(), Ok(#equatorial));
+                    }
+
+                });
+            } else {
+                tests.extend(quote! {
+                    #[test]
+                    fn #spheroid_test_name() {
+                        assert!(DynOrigin::#ident.try_polar_radius().is_err());
+                        assert!(DynOrigin::#ident.try_equatorial_radius().is_err());
+                    }
+                });
             }
 
             ellipsoid_match_arms.extend(quote! {
                 DynOrigin::#ident => Ok((#(#radii),*)),
-            })
+            });
+
+            tests.extend(quote! {
+                #[test]
+                fn #triaxial_test_name() {
+                    assert_eq!(#ident.radii(), (#equatorial, #along_orbit, #polar));
+                    assert_eq!(DynOrigin::#ident.try_radii(), Ok((#equatorial, #along_orbit, #polar)));
+                }
+            });
+        } else {
+            tests.extend(quote! {
+                #[test]
+                fn #triaxial_test_name() {
+                    assert!(DynOrigin::#ident.try_radii().is_err());
+                }
+                #[test]
+                fn #spheroid_test_name() {
+                    assert!(DynOrigin::#ident.try_polar_radius().is_err());
+                    assert!(DynOrigin::#ident.try_equatorial_radius().is_err());
+                }
+            });
         }
 
         let ra_key = format!("BODY{id}_POLE_RA");
@@ -1269,49 +1349,6 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
                 DynOrigin::#ident => Ok(#ident.rotational_element_rates(t)),
             });
         }
-
-        // triaxial/spheroid tests
-        if let Some(radii) = pck.get_double_array(&key) {
-            let equatorial = radii[0];
-            let along_orbit = radii[1];
-            let polar = radii[2];
-
-            if radii[0] == radii[1] {
-                let spheroid_test_name = format_ident!("test_spheroid_{}", id as u32);
-                tests.extend(quote! {
-
-                    #[test]
-                    fn #spheroid_test_name() {
-                        assert_eq!(#ident.polar_radius(), #polar);
-                        assert_eq!(#ident.equatorial_radius(), #equatorial);
-                    }
-
-                });
-            }
-
-            let triaxial_test_name = format_ident!("test_tri_axial_{}", id as u32);
-            tests.extend(quote! {
-                #[test]
-                fn #triaxial_test_name() {
-                    assert_eq!(#ident.radii().0, #equatorial);
-                    assert_eq!(#ident.radii().1, #along_orbit);
-                    assert_eq!(#ident.radii().2, #polar);
-                }
-
-            });
-        }
-
-        if let Some(mean_radius) = mean_radius {
-            let mean_radius_test_name = format_ident!("test_mean_radius_{}", id as u32);
-            tests.extend(quote! {
-
-                #[test]
-                fn #mean_radius_test_name() {
-                    assert_eq!(#ident.mean_radius(), #mean_radius);
-                }
-
-            });
-        }
     }
 
     code.extend(quote! {
@@ -1354,7 +1391,30 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
                 }
             }
         }
-        impl TrySpheroid for DynOrigin {}
+        impl TrySpheroid for DynOrigin {
+            fn try_polar_radius(&self) -> Result<f64, UndefinedOriginPropertyError> {
+                match self {
+                    #polar_radius_match_arms
+                    _ => Err(
+                        UndefinedOriginPropertyError {
+                            origin: self.to_string(),
+                            prop: "polar radius".to_string(),
+                        }
+                    ),
+                }
+            }
+            fn try_equatorial_radius(&self) -> Result<f64, UndefinedOriginPropertyError> {
+                match self {
+                    #equatorial_radius_match_arms
+                    _ => Err(
+                        UndefinedOriginPropertyError {
+                            origin: self.to_string(),
+                            prop: "equatorial radius".to_string(),
+                        }
+                    ),
+                }
+            }
+        }
         impl TryRotationalElements for DynOrigin {
             fn try_rotational_elements(&self, t: f64)
                 -> Result<Elements, UndefinedOriginPropertyError> {

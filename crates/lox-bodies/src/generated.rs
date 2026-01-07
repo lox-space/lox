@@ -12674,7 +12674,114 @@ impl TryTriaxialEllipsoid for DynOrigin {
         }
     }
 }
-impl TrySpheroid for DynOrigin {}
+impl TrySpheroid for DynOrigin {
+    fn try_polar_radius(&self) -> Result<f64, UndefinedOriginPropertyError> {
+        match self {
+            DynOrigin::Sun => Ok(695700f64),
+            DynOrigin::Mercury => Ok(2438.26f64),
+            DynOrigin::Venus => Ok(6051.8f64),
+            DynOrigin::Earth => Ok(6356.7519f64),
+            DynOrigin::Mars => Ok(3376.2f64),
+            DynOrigin::Jupiter => Ok(66854f64),
+            DynOrigin::Saturn => Ok(54364f64),
+            DynOrigin::Uranus => Ok(24973f64),
+            DynOrigin::Neptune => Ok(24341f64),
+            DynOrigin::Pluto => Ok(1188.3f64),
+            DynOrigin::Moon => Ok(1737.4f64),
+            DynOrigin::Ganymede => Ok(2631.2f64),
+            DynOrigin::Callisto => Ok(2410.3f64),
+            DynOrigin::Himalia => Ok(85f64),
+            DynOrigin::Elara => Ok(40f64),
+            DynOrigin::Pasiphae => Ok(18f64),
+            DynOrigin::Sinope => Ok(14f64),
+            DynOrigin::Lysithea => Ok(12f64),
+            DynOrigin::Carme => Ok(15f64),
+            DynOrigin::Ananke => Ok(10f64),
+            DynOrigin::Leda => Ok(5f64),
+            DynOrigin::Iapetus => Ok(712.1f64),
+            DynOrigin::Anthe => Ok(0.5f64),
+            DynOrigin::Umbriel => Ok(584.7f64),
+            DynOrigin::Titania => Ok(788.9f64),
+            DynOrigin::Oberon => Ok(761.4f64),
+            DynOrigin::Cordelia => Ok(13f64),
+            DynOrigin::Ophelia => Ok(15f64),
+            DynOrigin::Bianca => Ok(21f64),
+            DynOrigin::Cressida => Ok(31f64),
+            DynOrigin::Desdemona => Ok(27f64),
+            DynOrigin::Juliet => Ok(42f64),
+            DynOrigin::Portia => Ok(54f64),
+            DynOrigin::Rosalind => Ok(27f64),
+            DynOrigin::Belinda => Ok(33f64),
+            DynOrigin::Puck => Ok(77f64),
+            DynOrigin::Triton => Ok(1352.6f64),
+            DynOrigin::Nereid => Ok(170f64),
+            DynOrigin::Naiad => Ok(29f64),
+            DynOrigin::Thalassa => Ok(40f64),
+            DynOrigin::Despina => Ok(74f64),
+            DynOrigin::Galatea => Ok(79f64),
+            DynOrigin::Larissa => Ok(96f64),
+            DynOrigin::Charon => Ok(606f64),
+            DynOrigin::Ceres => Ok(446f64),
+            _ => Err(UndefinedOriginPropertyError {
+                origin: self.to_string(),
+                prop: "polar radius".to_string(),
+            }),
+        }
+    }
+    fn try_equatorial_radius(&self) -> Result<f64, UndefinedOriginPropertyError> {
+        match self {
+            DynOrigin::Sun => Ok(695700f64),
+            DynOrigin::Mercury => Ok(2440.53f64),
+            DynOrigin::Venus => Ok(6051.8f64),
+            DynOrigin::Earth => Ok(6378.1366f64),
+            DynOrigin::Mars => Ok(3396.19f64),
+            DynOrigin::Jupiter => Ok(71492f64),
+            DynOrigin::Saturn => Ok(60268f64),
+            DynOrigin::Uranus => Ok(25559f64),
+            DynOrigin::Neptune => Ok(24764f64),
+            DynOrigin::Pluto => Ok(1188.3f64),
+            DynOrigin::Moon => Ok(1737.4f64),
+            DynOrigin::Ganymede => Ok(2631.2f64),
+            DynOrigin::Callisto => Ok(2410.3f64),
+            DynOrigin::Himalia => Ok(85f64),
+            DynOrigin::Elara => Ok(40f64),
+            DynOrigin::Pasiphae => Ok(18f64),
+            DynOrigin::Sinope => Ok(14f64),
+            DynOrigin::Lysithea => Ok(12f64),
+            DynOrigin::Carme => Ok(15f64),
+            DynOrigin::Ananke => Ok(10f64),
+            DynOrigin::Leda => Ok(5f64),
+            DynOrigin::Iapetus => Ok(745.7f64),
+            DynOrigin::Anthe => Ok(0.5f64),
+            DynOrigin::Umbriel => Ok(584.7f64),
+            DynOrigin::Titania => Ok(788.9f64),
+            DynOrigin::Oberon => Ok(761.4f64),
+            DynOrigin::Cordelia => Ok(13f64),
+            DynOrigin::Ophelia => Ok(15f64),
+            DynOrigin::Bianca => Ok(21f64),
+            DynOrigin::Cressida => Ok(31f64),
+            DynOrigin::Desdemona => Ok(27f64),
+            DynOrigin::Juliet => Ok(42f64),
+            DynOrigin::Portia => Ok(54f64),
+            DynOrigin::Rosalind => Ok(27f64),
+            DynOrigin::Belinda => Ok(33f64),
+            DynOrigin::Puck => Ok(77f64),
+            DynOrigin::Triton => Ok(1352.6f64),
+            DynOrigin::Nereid => Ok(170f64),
+            DynOrigin::Naiad => Ok(29f64),
+            DynOrigin::Thalassa => Ok(40f64),
+            DynOrigin::Despina => Ok(74f64),
+            DynOrigin::Galatea => Ok(79f64),
+            DynOrigin::Larissa => Ok(96f64),
+            DynOrigin::Charon => Ok(606f64),
+            DynOrigin::Ceres => Ok(487.3f64),
+            _ => Err(UndefinedOriginPropertyError {
+                origin: self.to_string(),
+                prop: "equatorial radius".to_string(),
+            }),
+        }
+    }
+}
 impl TryRotationalElements for DynOrigin {
     fn try_rotational_elements(&self, t: f64) -> Result<Elements, UndefinedOriginPropertyError> {
         match self {
@@ -12850,17 +12957,29 @@ mod tests {
     #[test]
     fn test_point_mass_10() {
         assert_eq!(Sun.gravitational_parameter(), 132712440041.27942f64);
+        assert_eq!(
+            DynOrigin::Sun.try_gravitational_parameter(),
+            Ok(132712440041.27942f64)
+        );
+    }
+    #[test]
+    fn test_mean_radius_10() {
+        assert!(DynOrigin::Sun.try_mean_radius().is_err());
     }
     #[test]
     fn test_spheroid_10() {
         assert_eq!(Sun.polar_radius(), 695700f64);
+        assert_eq!(DynOrigin::Sun.try_polar_radius(), Ok(695700f64));
         assert_eq!(Sun.equatorial_radius(), 695700f64);
+        assert_eq!(DynOrigin::Sun.try_equatorial_radius(), Ok(695700f64));
     }
     #[test]
     fn test_tri_axial_10() {
-        assert_eq!(Sun.radii().0, 695700f64);
-        assert_eq!(Sun.radii().1, 695700f64);
-        assert_eq!(Sun.radii().2, 695700f64);
+        assert_eq!(Sun.radii(), (695700f64, 695700f64, 695700f64));
+        assert_eq!(
+            DynOrigin::Sun.try_radii(),
+            Ok((695700f64, 695700f64, 695700f64))
+        );
     }
     #[test]
     fn test_origin_199() {
@@ -12870,21 +12989,30 @@ mod tests {
     #[test]
     fn test_point_mass_199() {
         assert_eq!(Mercury.gravitational_parameter(), 22031.868551400003f64);
-    }
-    #[test]
-    fn test_spheroid_199() {
-        assert_eq!(Mercury.polar_radius(), 2438.26f64);
-        assert_eq!(Mercury.equatorial_radius(), 2440.53f64);
-    }
-    #[test]
-    fn test_tri_axial_199() {
-        assert_eq!(Mercury.radii().0, 2440.53f64);
-        assert_eq!(Mercury.radii().1, 2440.53f64);
-        assert_eq!(Mercury.radii().2, 2438.26f64);
+        assert_eq!(
+            DynOrigin::Mercury.try_gravitational_parameter(),
+            Ok(22031.868551400003f64)
+        );
     }
     #[test]
     fn test_mean_radius_199() {
         assert_eq!(Mercury.mean_radius(), 2439.4f64);
+        assert_eq!(DynOrigin::Mercury.try_mean_radius(), Ok(2439.4f64));
+    }
+    #[test]
+    fn test_spheroid_199() {
+        assert_eq!(Mercury.polar_radius(), 2438.26f64);
+        assert_eq!(DynOrigin::Mercury.try_polar_radius(), Ok(2438.26f64));
+        assert_eq!(Mercury.equatorial_radius(), 2440.53f64);
+        assert_eq!(DynOrigin::Mercury.try_equatorial_radius(), Ok(2440.53f64));
+    }
+    #[test]
+    fn test_tri_axial_199() {
+        assert_eq!(Mercury.radii(), (2440.53f64, 2440.53f64, 2438.26f64));
+        assert_eq!(
+            DynOrigin::Mercury.try_radii(),
+            Ok((2440.53f64, 2440.53f64, 2438.26f64))
+        );
     }
     #[test]
     fn test_origin_299() {
@@ -12894,21 +13022,30 @@ mod tests {
     #[test]
     fn test_point_mass_299() {
         assert_eq!(Venus.gravitational_parameter(), 324858.592f64);
-    }
-    #[test]
-    fn test_spheroid_299() {
-        assert_eq!(Venus.polar_radius(), 6051.8f64);
-        assert_eq!(Venus.equatorial_radius(), 6051.8f64);
-    }
-    #[test]
-    fn test_tri_axial_299() {
-        assert_eq!(Venus.radii().0, 6051.8f64);
-        assert_eq!(Venus.radii().1, 6051.8f64);
-        assert_eq!(Venus.radii().2, 6051.8f64);
+        assert_eq!(
+            DynOrigin::Venus.try_gravitational_parameter(),
+            Ok(324858.592f64)
+        );
     }
     #[test]
     fn test_mean_radius_299() {
         assert_eq!(Venus.mean_radius(), 6051.8f64);
+        assert_eq!(DynOrigin::Venus.try_mean_radius(), Ok(6051.8f64));
+    }
+    #[test]
+    fn test_spheroid_299() {
+        assert_eq!(Venus.polar_radius(), 6051.8f64);
+        assert_eq!(DynOrigin::Venus.try_polar_radius(), Ok(6051.8f64));
+        assert_eq!(Venus.equatorial_radius(), 6051.8f64);
+        assert_eq!(DynOrigin::Venus.try_equatorial_radius(), Ok(6051.8f64));
+    }
+    #[test]
+    fn test_tri_axial_299() {
+        assert_eq!(Venus.radii(), (6051.8f64, 6051.8f64, 6051.8f64));
+        assert_eq!(
+            DynOrigin::Venus.try_radii(),
+            Ok((6051.8f64, 6051.8f64, 6051.8f64))
+        );
     }
     #[test]
     fn test_origin_399() {
@@ -12918,21 +13055,30 @@ mod tests {
     #[test]
     fn test_point_mass_399() {
         assert_eq!(Earth.gravitational_parameter(), 398600.43550702266f64);
-    }
-    #[test]
-    fn test_spheroid_399() {
-        assert_eq!(Earth.polar_radius(), 6356.7519f64);
-        assert_eq!(Earth.equatorial_radius(), 6378.1366f64);
-    }
-    #[test]
-    fn test_tri_axial_399() {
-        assert_eq!(Earth.radii().0, 6378.1366f64);
-        assert_eq!(Earth.radii().1, 6378.1366f64);
-        assert_eq!(Earth.radii().2, 6356.7519f64);
+        assert_eq!(
+            DynOrigin::Earth.try_gravitational_parameter(),
+            Ok(398600.43550702266f64)
+        );
     }
     #[test]
     fn test_mean_radius_399() {
         assert_eq!(Earth.mean_radius(), 6371.0084f64);
+        assert_eq!(DynOrigin::Earth.try_mean_radius(), Ok(6371.0084f64));
+    }
+    #[test]
+    fn test_spheroid_399() {
+        assert_eq!(Earth.polar_radius(), 6356.7519f64);
+        assert_eq!(DynOrigin::Earth.try_polar_radius(), Ok(6356.7519f64));
+        assert_eq!(Earth.equatorial_radius(), 6378.1366f64);
+        assert_eq!(DynOrigin::Earth.try_equatorial_radius(), Ok(6378.1366f64));
+    }
+    #[test]
+    fn test_tri_axial_399() {
+        assert_eq!(Earth.radii(), (6378.1366f64, 6378.1366f64, 6356.7519f64));
+        assert_eq!(
+            DynOrigin::Earth.try_radii(),
+            Ok((6378.1366f64, 6378.1366f64, 6356.7519f64))
+        );
     }
     #[test]
     fn test_origin_499() {
@@ -12942,21 +13088,30 @@ mod tests {
     #[test]
     fn test_point_mass_499() {
         assert_eq!(Mars.gravitational_parameter(), 42828.37362069909f64);
-    }
-    #[test]
-    fn test_spheroid_499() {
-        assert_eq!(Mars.polar_radius(), 3376.2f64);
-        assert_eq!(Mars.equatorial_radius(), 3396.19f64);
-    }
-    #[test]
-    fn test_tri_axial_499() {
-        assert_eq!(Mars.radii().0, 3396.19f64);
-        assert_eq!(Mars.radii().1, 3396.19f64);
-        assert_eq!(Mars.radii().2, 3376.2f64);
+        assert_eq!(
+            DynOrigin::Mars.try_gravitational_parameter(),
+            Ok(42828.37362069909f64)
+        );
     }
     #[test]
     fn test_mean_radius_499() {
         assert_eq!(Mars.mean_radius(), 3389.5f64);
+        assert_eq!(DynOrigin::Mars.try_mean_radius(), Ok(3389.5f64));
+    }
+    #[test]
+    fn test_spheroid_499() {
+        assert_eq!(Mars.polar_radius(), 3376.2f64);
+        assert_eq!(DynOrigin::Mars.try_polar_radius(), Ok(3376.2f64));
+        assert_eq!(Mars.equatorial_radius(), 3396.19f64);
+        assert_eq!(DynOrigin::Mars.try_equatorial_radius(), Ok(3396.19f64));
+    }
+    #[test]
+    fn test_tri_axial_499() {
+        assert_eq!(Mars.radii(), (3396.19f64, 3396.19f64, 3376.2f64));
+        assert_eq!(
+            DynOrigin::Mars.try_radii(),
+            Ok((3396.19f64, 3396.19f64, 3376.2f64))
+        );
     }
     #[test]
     fn test_origin_599() {
@@ -12966,21 +13121,30 @@ mod tests {
     #[test]
     fn test_point_mass_599() {
         assert_eq!(Jupiter.gravitational_parameter(), 126686531.9003704f64);
-    }
-    #[test]
-    fn test_spheroid_599() {
-        assert_eq!(Jupiter.polar_radius(), 66854f64);
-        assert_eq!(Jupiter.equatorial_radius(), 71492f64);
-    }
-    #[test]
-    fn test_tri_axial_599() {
-        assert_eq!(Jupiter.radii().0, 71492f64);
-        assert_eq!(Jupiter.radii().1, 71492f64);
-        assert_eq!(Jupiter.radii().2, 66854f64);
+        assert_eq!(
+            DynOrigin::Jupiter.try_gravitational_parameter(),
+            Ok(126686531.9003704f64)
+        );
     }
     #[test]
     fn test_mean_radius_599() {
         assert_eq!(Jupiter.mean_radius(), 69911f64);
+        assert_eq!(DynOrigin::Jupiter.try_mean_radius(), Ok(69911f64));
+    }
+    #[test]
+    fn test_spheroid_599() {
+        assert_eq!(Jupiter.polar_radius(), 66854f64);
+        assert_eq!(DynOrigin::Jupiter.try_polar_radius(), Ok(66854f64));
+        assert_eq!(Jupiter.equatorial_radius(), 71492f64);
+        assert_eq!(DynOrigin::Jupiter.try_equatorial_radius(), Ok(71492f64));
+    }
+    #[test]
+    fn test_tri_axial_599() {
+        assert_eq!(Jupiter.radii(), (71492f64, 71492f64, 66854f64));
+        assert_eq!(
+            DynOrigin::Jupiter.try_radii(),
+            Ok((71492f64, 71492f64, 66854f64))
+        );
     }
     #[test]
     fn test_origin_699() {
@@ -12990,21 +13154,30 @@ mod tests {
     #[test]
     fn test_point_mass_699() {
         assert_eq!(Saturn.gravitational_parameter(), 37931206.23436167f64);
-    }
-    #[test]
-    fn test_spheroid_699() {
-        assert_eq!(Saturn.polar_radius(), 54364f64);
-        assert_eq!(Saturn.equatorial_radius(), 60268f64);
-    }
-    #[test]
-    fn test_tri_axial_699() {
-        assert_eq!(Saturn.radii().0, 60268f64);
-        assert_eq!(Saturn.radii().1, 60268f64);
-        assert_eq!(Saturn.radii().2, 54364f64);
+        assert_eq!(
+            DynOrigin::Saturn.try_gravitational_parameter(),
+            Ok(37931206.23436167f64)
+        );
     }
     #[test]
     fn test_mean_radius_699() {
         assert_eq!(Saturn.mean_radius(), 58232f64);
+        assert_eq!(DynOrigin::Saturn.try_mean_radius(), Ok(58232f64));
+    }
+    #[test]
+    fn test_spheroid_699() {
+        assert_eq!(Saturn.polar_radius(), 54364f64);
+        assert_eq!(DynOrigin::Saturn.try_polar_radius(), Ok(54364f64));
+        assert_eq!(Saturn.equatorial_radius(), 60268f64);
+        assert_eq!(DynOrigin::Saturn.try_equatorial_radius(), Ok(60268f64));
+    }
+    #[test]
+    fn test_tri_axial_699() {
+        assert_eq!(Saturn.radii(), (60268f64, 60268f64, 54364f64));
+        assert_eq!(
+            DynOrigin::Saturn.try_radii(),
+            Ok((60268f64, 60268f64, 54364f64))
+        );
     }
     #[test]
     fn test_origin_799() {
@@ -13014,21 +13187,30 @@ mod tests {
     #[test]
     fn test_point_mass_799() {
         assert_eq!(Uranus.gravitational_parameter(), 5793951.256527211f64);
-    }
-    #[test]
-    fn test_spheroid_799() {
-        assert_eq!(Uranus.polar_radius(), 24973f64);
-        assert_eq!(Uranus.equatorial_radius(), 25559f64);
-    }
-    #[test]
-    fn test_tri_axial_799() {
-        assert_eq!(Uranus.radii().0, 25559f64);
-        assert_eq!(Uranus.radii().1, 25559f64);
-        assert_eq!(Uranus.radii().2, 24973f64);
+        assert_eq!(
+            DynOrigin::Uranus.try_gravitational_parameter(),
+            Ok(5793951.256527211f64)
+        );
     }
     #[test]
     fn test_mean_radius_799() {
         assert_eq!(Uranus.mean_radius(), 25362f64);
+        assert_eq!(DynOrigin::Uranus.try_mean_radius(), Ok(25362f64));
+    }
+    #[test]
+    fn test_spheroid_799() {
+        assert_eq!(Uranus.polar_radius(), 24973f64);
+        assert_eq!(DynOrigin::Uranus.try_polar_radius(), Ok(24973f64));
+        assert_eq!(Uranus.equatorial_radius(), 25559f64);
+        assert_eq!(DynOrigin::Uranus.try_equatorial_radius(), Ok(25559f64));
+    }
+    #[test]
+    fn test_tri_axial_799() {
+        assert_eq!(Uranus.radii(), (25559f64, 25559f64, 24973f64));
+        assert_eq!(
+            DynOrigin::Uranus.try_radii(),
+            Ok((25559f64, 25559f64, 24973f64))
+        );
     }
     #[test]
     fn test_origin_899() {
@@ -13038,21 +13220,30 @@ mod tests {
     #[test]
     fn test_point_mass_899() {
         assert_eq!(Neptune.gravitational_parameter(), 6835103.145462294f64);
-    }
-    #[test]
-    fn test_spheroid_899() {
-        assert_eq!(Neptune.polar_radius(), 24341f64);
-        assert_eq!(Neptune.equatorial_radius(), 24764f64);
-    }
-    #[test]
-    fn test_tri_axial_899() {
-        assert_eq!(Neptune.radii().0, 24764f64);
-        assert_eq!(Neptune.radii().1, 24764f64);
-        assert_eq!(Neptune.radii().2, 24341f64);
+        assert_eq!(
+            DynOrigin::Neptune.try_gravitational_parameter(),
+            Ok(6835103.145462294f64)
+        );
     }
     #[test]
     fn test_mean_radius_899() {
         assert_eq!(Neptune.mean_radius(), 24622f64);
+        assert_eq!(DynOrigin::Neptune.try_mean_radius(), Ok(24622f64));
+    }
+    #[test]
+    fn test_spheroid_899() {
+        assert_eq!(Neptune.polar_radius(), 24341f64);
+        assert_eq!(DynOrigin::Neptune.try_polar_radius(), Ok(24341f64));
+        assert_eq!(Neptune.equatorial_radius(), 24764f64);
+        assert_eq!(DynOrigin::Neptune.try_equatorial_radius(), Ok(24764f64));
+    }
+    #[test]
+    fn test_tri_axial_899() {
+        assert_eq!(Neptune.radii(), (24764f64, 24764f64, 24341f64));
+        assert_eq!(
+            DynOrigin::Neptune.try_radii(),
+            Ok((24764f64, 24764f64, 24341f64))
+        );
     }
     #[test]
     fn test_origin_999() {
@@ -13062,21 +13253,30 @@ mod tests {
     #[test]
     fn test_point_mass_999() {
         assert_eq!(Pluto.gravitational_parameter(), 869.6138177608748f64);
-    }
-    #[test]
-    fn test_spheroid_999() {
-        assert_eq!(Pluto.polar_radius(), 1188.3f64);
-        assert_eq!(Pluto.equatorial_radius(), 1188.3f64);
-    }
-    #[test]
-    fn test_tri_axial_999() {
-        assert_eq!(Pluto.radii().0, 1188.3f64);
-        assert_eq!(Pluto.radii().1, 1188.3f64);
-        assert_eq!(Pluto.radii().2, 1188.3f64);
+        assert_eq!(
+            DynOrigin::Pluto.try_gravitational_parameter(),
+            Ok(869.6138177608748f64)
+        );
     }
     #[test]
     fn test_mean_radius_999() {
         assert_eq!(Pluto.mean_radius(), 1188.3f64);
+        assert_eq!(DynOrigin::Pluto.try_mean_radius(), Ok(1188.3f64));
+    }
+    #[test]
+    fn test_spheroid_999() {
+        assert_eq!(Pluto.polar_radius(), 1188.3f64);
+        assert_eq!(DynOrigin::Pluto.try_polar_radius(), Ok(1188.3f64));
+        assert_eq!(Pluto.equatorial_radius(), 1188.3f64);
+        assert_eq!(DynOrigin::Pluto.try_equatorial_radius(), Ok(1188.3f64));
+    }
+    #[test]
+    fn test_tri_axial_999() {
+        assert_eq!(Pluto.radii(), (1188.3f64, 1188.3f64, 1188.3f64));
+        assert_eq!(
+            DynOrigin::Pluto.try_radii(),
+            Ok((1188.3f64, 1188.3f64, 1188.3f64))
+        );
     }
     #[test]
     fn test_origin_0() {
@@ -13088,6 +13288,10 @@ mod tests {
         assert_eq!(
             SolarSystemBarycenter.gravitational_parameter(),
             132712440041.27942f64
+        );
+        assert_eq!(
+            DynOrigin::SolarSystemBarycenter.try_gravitational_parameter(),
+            Ok(132712440041.27942f64)
         );
     }
     #[test]
@@ -13101,6 +13305,10 @@ mod tests {
             MercuryBarycenter.gravitational_parameter(),
             22031.868551400003f64
         );
+        assert_eq!(
+            DynOrigin::MercuryBarycenter.try_gravitational_parameter(),
+            Ok(22031.868551400003f64)
+        );
     }
     #[test]
     fn test_origin_2() {
@@ -13110,6 +13318,10 @@ mod tests {
     #[test]
     fn test_point_mass_2() {
         assert_eq!(VenusBarycenter.gravitational_parameter(), 324858.592f64);
+        assert_eq!(
+            DynOrigin::VenusBarycenter.try_gravitational_parameter(),
+            Ok(324858.592f64)
+        );
     }
     #[test]
     fn test_origin_3() {
@@ -13121,6 +13333,10 @@ mod tests {
         assert_eq!(
             EarthBarycenter.gravitational_parameter(),
             403503.2356254802f64
+        );
+        assert_eq!(
+            DynOrigin::EarthBarycenter.try_gravitational_parameter(),
+            Ok(403503.2356254802f64)
         );
     }
     #[test]
@@ -13134,6 +13350,10 @@ mod tests {
             MarsBarycenter.gravitational_parameter(),
             42828.3758157561f64
         );
+        assert_eq!(
+            DynOrigin::MarsBarycenter.try_gravitational_parameter(),
+            Ok(42828.3758157561f64)
+        );
     }
     #[test]
     fn test_origin_5() {
@@ -13146,6 +13366,10 @@ mod tests {
             JupiterBarycenter.gravitational_parameter(),
             126712764.09999998f64
         );
+        assert_eq!(
+            DynOrigin::JupiterBarycenter.try_gravitational_parameter(),
+            Ok(126712764.09999998f64)
+        );
     }
     #[test]
     fn test_origin_6() {
@@ -13155,6 +13379,10 @@ mod tests {
     #[test]
     fn test_point_mass_6() {
         assert_eq!(SaturnBarycenter.gravitational_parameter(), 37940584.8418f64);
+        assert_eq!(
+            DynOrigin::SaturnBarycenter.try_gravitational_parameter(),
+            Ok(37940584.8418f64)
+        );
     }
     #[test]
     fn test_origin_7() {
@@ -13166,6 +13394,10 @@ mod tests {
         assert_eq!(
             UranusBarycenter.gravitational_parameter(),
             5794556.3999999985f64
+        );
+        assert_eq!(
+            DynOrigin::UranusBarycenter.try_gravitational_parameter(),
+            Ok(5794556.3999999985f64)
         );
     }
     #[test]
@@ -13179,6 +13411,10 @@ mod tests {
             NeptuneBarycenter.gravitational_parameter(),
             6836527.100580399f64
         );
+        assert_eq!(
+            DynOrigin::NeptuneBarycenter.try_gravitational_parameter(),
+            Ok(6836527.100580399f64)
+        );
     }
     #[test]
     fn test_origin_9() {
@@ -13188,6 +13424,10 @@ mod tests {
     #[test]
     fn test_point_mass_9() {
         assert_eq!(PlutoBarycenter.gravitational_parameter(), 975.5f64);
+        assert_eq!(
+            DynOrigin::PlutoBarycenter.try_gravitational_parameter(),
+            Ok(975.5f64)
+        );
     }
     #[test]
     fn test_origin_301() {
@@ -13197,21 +13437,30 @@ mod tests {
     #[test]
     fn test_point_mass_301() {
         assert_eq!(Moon.gravitational_parameter(), 4902.80011845755f64);
-    }
-    #[test]
-    fn test_spheroid_301() {
-        assert_eq!(Moon.polar_radius(), 1737.4f64);
-        assert_eq!(Moon.equatorial_radius(), 1737.4f64);
-    }
-    #[test]
-    fn test_tri_axial_301() {
-        assert_eq!(Moon.radii().0, 1737.4f64);
-        assert_eq!(Moon.radii().1, 1737.4f64);
-        assert_eq!(Moon.radii().2, 1737.4f64);
+        assert_eq!(
+            DynOrigin::Moon.try_gravitational_parameter(),
+            Ok(4902.80011845755f64)
+        );
     }
     #[test]
     fn test_mean_radius_301() {
         assert_eq!(Moon.mean_radius(), 1737.4f64);
+        assert_eq!(DynOrigin::Moon.try_mean_radius(), Ok(1737.4f64));
+    }
+    #[test]
+    fn test_spheroid_301() {
+        assert_eq!(Moon.polar_radius(), 1737.4f64);
+        assert_eq!(DynOrigin::Moon.try_polar_radius(), Ok(1737.4f64));
+        assert_eq!(Moon.equatorial_radius(), 1737.4f64);
+        assert_eq!(DynOrigin::Moon.try_equatorial_radius(), Ok(1737.4f64));
+    }
+    #[test]
+    fn test_tri_axial_301() {
+        assert_eq!(Moon.radii(), (1737.4f64, 1737.4f64, 1737.4f64));
+        assert_eq!(
+            DynOrigin::Moon.try_radii(),
+            Ok((1737.4f64, 1737.4f64, 1737.4f64))
+        );
     }
     #[test]
     fn test_origin_401() {
@@ -13221,16 +13470,25 @@ mod tests {
     #[test]
     fn test_point_mass_401() {
         assert_eq!(Phobos.gravitational_parameter(), 0.0007087546066894452f64);
-    }
-    #[test]
-    fn test_tri_axial_401() {
-        assert_eq!(Phobos.radii().0, 13f64);
-        assert_eq!(Phobos.radii().1, 11.4f64);
-        assert_eq!(Phobos.radii().2, 9.1f64);
+        assert_eq!(
+            DynOrigin::Phobos.try_gravitational_parameter(),
+            Ok(0.0007087546066894452f64)
+        );
     }
     #[test]
     fn test_mean_radius_401() {
         assert_eq!(Phobos.mean_radius(), 11.08f64);
+        assert_eq!(DynOrigin::Phobos.try_mean_radius(), Ok(11.08f64));
+    }
+    #[test]
+    fn test_spheroid_401() {
+        assert!(DynOrigin::Phobos.try_polar_radius().is_err());
+        assert!(DynOrigin::Phobos.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_401() {
+        assert_eq!(Phobos.radii(), (13f64, 11.4f64, 9.1f64));
+        assert_eq!(DynOrigin::Phobos.try_radii(), Ok((13f64, 11.4f64, 9.1f64)));
     }
     #[test]
     fn test_origin_402() {
@@ -13240,16 +13498,25 @@ mod tests {
     #[test]
     fn test_point_mass_402() {
         assert_eq!(Deimos.gravitational_parameter(), 0.00009615569648120313f64);
-    }
-    #[test]
-    fn test_tri_axial_402() {
-        assert_eq!(Deimos.radii().0, 7.8f64);
-        assert_eq!(Deimos.radii().1, 6f64);
-        assert_eq!(Deimos.radii().2, 5.1f64);
+        assert_eq!(
+            DynOrigin::Deimos.try_gravitational_parameter(),
+            Ok(0.00009615569648120313f64)
+        );
     }
     #[test]
     fn test_mean_radius_402() {
         assert_eq!(Deimos.mean_radius(), 6.2f64);
+        assert_eq!(DynOrigin::Deimos.try_mean_radius(), Ok(6.2f64));
+    }
+    #[test]
+    fn test_spheroid_402() {
+        assert!(DynOrigin::Deimos.try_polar_radius().is_err());
+        assert!(DynOrigin::Deimos.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_402() {
+        assert_eq!(Deimos.radii(), (7.8f64, 6f64, 5.1f64));
+        assert_eq!(DynOrigin::Deimos.try_radii(), Ok((7.8f64, 6f64, 5.1f64)));
     }
     #[test]
     fn test_origin_501() {
@@ -13259,16 +13526,28 @@ mod tests {
     #[test]
     fn test_point_mass_501() {
         assert_eq!(Io.gravitational_parameter(), 5959.915466180539f64);
-    }
-    #[test]
-    fn test_tri_axial_501() {
-        assert_eq!(Io.radii().0, 1829.4f64);
-        assert_eq!(Io.radii().1, 1819.4f64);
-        assert_eq!(Io.radii().2, 1815.7f64);
+        assert_eq!(
+            DynOrigin::Io.try_gravitational_parameter(),
+            Ok(5959.915466180539f64)
+        );
     }
     #[test]
     fn test_mean_radius_501() {
         assert_eq!(Io.mean_radius(), 1821.49f64);
+        assert_eq!(DynOrigin::Io.try_mean_radius(), Ok(1821.49f64));
+    }
+    #[test]
+    fn test_spheroid_501() {
+        assert!(DynOrigin::Io.try_polar_radius().is_err());
+        assert!(DynOrigin::Io.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_501() {
+        assert_eq!(Io.radii(), (1829.4f64, 1819.4f64, 1815.7f64));
+        assert_eq!(
+            DynOrigin::Io.try_radii(),
+            Ok((1829.4f64, 1819.4f64, 1815.7f64))
+        );
     }
     #[test]
     fn test_origin_502() {
@@ -13278,16 +13557,28 @@ mod tests {
     #[test]
     fn test_point_mass_502() {
         assert_eq!(Europa.gravitational_parameter(), 3202.712099607295f64);
-    }
-    #[test]
-    fn test_tri_axial_502() {
-        assert_eq!(Europa.radii().0, 1562.6f64);
-        assert_eq!(Europa.radii().1, 1560.3f64);
-        assert_eq!(Europa.radii().2, 1559.5f64);
+        assert_eq!(
+            DynOrigin::Europa.try_gravitational_parameter(),
+            Ok(3202.712099607295f64)
+        );
     }
     #[test]
     fn test_mean_radius_502() {
         assert_eq!(Europa.mean_radius(), 1560.8f64);
+        assert_eq!(DynOrigin::Europa.try_mean_radius(), Ok(1560.8f64));
+    }
+    #[test]
+    fn test_spheroid_502() {
+        assert!(DynOrigin::Europa.try_polar_radius().is_err());
+        assert!(DynOrigin::Europa.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_502() {
+        assert_eq!(Europa.radii(), (1562.6f64, 1560.3f64, 1559.5f64));
+        assert_eq!(
+            DynOrigin::Europa.try_radii(),
+            Ok((1562.6f64, 1560.3f64, 1559.5f64))
+        );
     }
     #[test]
     fn test_origin_503() {
@@ -13297,21 +13588,30 @@ mod tests {
     #[test]
     fn test_point_mass_503() {
         assert_eq!(Ganymede.gravitational_parameter(), 9887.832752719638f64);
-    }
-    #[test]
-    fn test_spheroid_503() {
-        assert_eq!(Ganymede.polar_radius(), 2631.2f64);
-        assert_eq!(Ganymede.equatorial_radius(), 2631.2f64);
-    }
-    #[test]
-    fn test_tri_axial_503() {
-        assert_eq!(Ganymede.radii().0, 2631.2f64);
-        assert_eq!(Ganymede.radii().1, 2631.2f64);
-        assert_eq!(Ganymede.radii().2, 2631.2f64);
+        assert_eq!(
+            DynOrigin::Ganymede.try_gravitational_parameter(),
+            Ok(9887.832752719638f64)
+        );
     }
     #[test]
     fn test_mean_radius_503() {
         assert_eq!(Ganymede.mean_radius(), 2631.2f64);
+        assert_eq!(DynOrigin::Ganymede.try_mean_radius(), Ok(2631.2f64));
+    }
+    #[test]
+    fn test_spheroid_503() {
+        assert_eq!(Ganymede.polar_radius(), 2631.2f64);
+        assert_eq!(DynOrigin::Ganymede.try_polar_radius(), Ok(2631.2f64));
+        assert_eq!(Ganymede.equatorial_radius(), 2631.2f64);
+        assert_eq!(DynOrigin::Ganymede.try_equatorial_radius(), Ok(2631.2f64));
+    }
+    #[test]
+    fn test_tri_axial_503() {
+        assert_eq!(Ganymede.radii(), (2631.2f64, 2631.2f64, 2631.2f64));
+        assert_eq!(
+            DynOrigin::Ganymede.try_radii(),
+            Ok((2631.2f64, 2631.2f64, 2631.2f64))
+        );
     }
     #[test]
     fn test_origin_504() {
@@ -13321,21 +13621,30 @@ mod tests {
     #[test]
     fn test_point_mass_504() {
         assert_eq!(Callisto.gravitational_parameter(), 7179.283402579837f64);
-    }
-    #[test]
-    fn test_spheroid_504() {
-        assert_eq!(Callisto.polar_radius(), 2410.3f64);
-        assert_eq!(Callisto.equatorial_radius(), 2410.3f64);
-    }
-    #[test]
-    fn test_tri_axial_504() {
-        assert_eq!(Callisto.radii().0, 2410.3f64);
-        assert_eq!(Callisto.radii().1, 2410.3f64);
-        assert_eq!(Callisto.radii().2, 2410.3f64);
+        assert_eq!(
+            DynOrigin::Callisto.try_gravitational_parameter(),
+            Ok(7179.283402579837f64)
+        );
     }
     #[test]
     fn test_mean_radius_504() {
         assert_eq!(Callisto.mean_radius(), 2410.3f64);
+        assert_eq!(DynOrigin::Callisto.try_mean_radius(), Ok(2410.3f64));
+    }
+    #[test]
+    fn test_spheroid_504() {
+        assert_eq!(Callisto.polar_radius(), 2410.3f64);
+        assert_eq!(DynOrigin::Callisto.try_polar_radius(), Ok(2410.3f64));
+        assert_eq!(Callisto.equatorial_radius(), 2410.3f64);
+        assert_eq!(DynOrigin::Callisto.try_equatorial_radius(), Ok(2410.3f64));
+    }
+    #[test]
+    fn test_tri_axial_504() {
+        assert_eq!(Callisto.radii(), (2410.3f64, 2410.3f64, 2410.3f64));
+        assert_eq!(
+            DynOrigin::Callisto.try_radii(),
+            Ok((2410.3f64, 2410.3f64, 2410.3f64))
+        );
     }
     #[test]
     fn test_origin_505() {
@@ -13345,16 +13654,25 @@ mod tests {
     #[test]
     fn test_point_mass_505() {
         assert_eq!(Amalthea.gravitational_parameter(), 0.1645634534798259f64);
-    }
-    #[test]
-    fn test_tri_axial_505() {
-        assert_eq!(Amalthea.radii().0, 125f64);
-        assert_eq!(Amalthea.radii().1, 73f64);
-        assert_eq!(Amalthea.radii().2, 64f64);
+        assert_eq!(
+            DynOrigin::Amalthea.try_gravitational_parameter(),
+            Ok(0.1645634534798259f64)
+        );
     }
     #[test]
     fn test_mean_radius_505() {
         assert_eq!(Amalthea.mean_radius(), 83.5f64);
+        assert_eq!(DynOrigin::Amalthea.try_mean_radius(), Ok(83.5f64));
+    }
+    #[test]
+    fn test_spheroid_505() {
+        assert!(DynOrigin::Amalthea.try_polar_radius().is_err());
+        assert!(DynOrigin::Amalthea.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_505() {
+        assert_eq!(Amalthea.radii(), (125f64, 73f64, 64f64));
+        assert_eq!(DynOrigin::Amalthea.try_radii(), Ok((125f64, 73f64, 64f64)));
     }
     #[test]
     fn test_origin_506() {
@@ -13364,21 +13682,27 @@ mod tests {
     #[test]
     fn test_point_mass_506() {
         assert_eq!(Himalia.gravitational_parameter(), 0.1515524299611265f64);
-    }
-    #[test]
-    fn test_spheroid_506() {
-        assert_eq!(Himalia.polar_radius(), 85f64);
-        assert_eq!(Himalia.equatorial_radius(), 85f64);
-    }
-    #[test]
-    fn test_tri_axial_506() {
-        assert_eq!(Himalia.radii().0, 85f64);
-        assert_eq!(Himalia.radii().1, 85f64);
-        assert_eq!(Himalia.radii().2, 85f64);
+        assert_eq!(
+            DynOrigin::Himalia.try_gravitational_parameter(),
+            Ok(0.1515524299611265f64)
+        );
     }
     #[test]
     fn test_mean_radius_506() {
         assert_eq!(Himalia.mean_radius(), 85f64);
+        assert_eq!(DynOrigin::Himalia.try_mean_radius(), Ok(85f64));
+    }
+    #[test]
+    fn test_spheroid_506() {
+        assert_eq!(Himalia.polar_radius(), 85f64);
+        assert_eq!(DynOrigin::Himalia.try_polar_radius(), Ok(85f64));
+        assert_eq!(Himalia.equatorial_radius(), 85f64);
+        assert_eq!(DynOrigin::Himalia.try_equatorial_radius(), Ok(85f64));
+    }
+    #[test]
+    fn test_tri_axial_506() {
+        assert_eq!(Himalia.radii(), (85f64, 85f64, 85f64));
+        assert_eq!(DynOrigin::Himalia.try_radii(), Ok((85f64, 85f64, 85f64)));
     }
     #[test]
     fn test_origin_507() {
@@ -13386,19 +13710,25 @@ mod tests {
         assert_eq!(Elara.to_string(), "Elara");
     }
     #[test]
-    fn test_spheroid_507() {
-        assert_eq!(Elara.polar_radius(), 40f64);
-        assert_eq!(Elara.equatorial_radius(), 40f64);
-    }
-    #[test]
-    fn test_tri_axial_507() {
-        assert_eq!(Elara.radii().0, 40f64);
-        assert_eq!(Elara.radii().1, 40f64);
-        assert_eq!(Elara.radii().2, 40f64);
+    fn test_point_mass_507() {
+        assert!(DynOrigin::Elara.try_gravitational_parameter().is_err());
     }
     #[test]
     fn test_mean_radius_507() {
         assert_eq!(Elara.mean_radius(), 40f64);
+        assert_eq!(DynOrigin::Elara.try_mean_radius(), Ok(40f64));
+    }
+    #[test]
+    fn test_spheroid_507() {
+        assert_eq!(Elara.polar_radius(), 40f64);
+        assert_eq!(DynOrigin::Elara.try_polar_radius(), Ok(40f64));
+        assert_eq!(Elara.equatorial_radius(), 40f64);
+        assert_eq!(DynOrigin::Elara.try_equatorial_radius(), Ok(40f64));
+    }
+    #[test]
+    fn test_tri_axial_507() {
+        assert_eq!(Elara.radii(), (40f64, 40f64, 40f64));
+        assert_eq!(DynOrigin::Elara.try_radii(), Ok((40f64, 40f64, 40f64)));
     }
     #[test]
     fn test_origin_508() {
@@ -13406,19 +13736,25 @@ mod tests {
         assert_eq!(Pasiphae.to_string(), "Pasiphae");
     }
     #[test]
-    fn test_spheroid_508() {
-        assert_eq!(Pasiphae.polar_radius(), 18f64);
-        assert_eq!(Pasiphae.equatorial_radius(), 18f64);
-    }
-    #[test]
-    fn test_tri_axial_508() {
-        assert_eq!(Pasiphae.radii().0, 18f64);
-        assert_eq!(Pasiphae.radii().1, 18f64);
-        assert_eq!(Pasiphae.radii().2, 18f64);
+    fn test_point_mass_508() {
+        assert!(DynOrigin::Pasiphae.try_gravitational_parameter().is_err());
     }
     #[test]
     fn test_mean_radius_508() {
         assert_eq!(Pasiphae.mean_radius(), 18f64);
+        assert_eq!(DynOrigin::Pasiphae.try_mean_radius(), Ok(18f64));
+    }
+    #[test]
+    fn test_spheroid_508() {
+        assert_eq!(Pasiphae.polar_radius(), 18f64);
+        assert_eq!(DynOrigin::Pasiphae.try_polar_radius(), Ok(18f64));
+        assert_eq!(Pasiphae.equatorial_radius(), 18f64);
+        assert_eq!(DynOrigin::Pasiphae.try_equatorial_radius(), Ok(18f64));
+    }
+    #[test]
+    fn test_tri_axial_508() {
+        assert_eq!(Pasiphae.radii(), (18f64, 18f64, 18f64));
+        assert_eq!(DynOrigin::Pasiphae.try_radii(), Ok((18f64, 18f64, 18f64)));
     }
     #[test]
     fn test_origin_509() {
@@ -13426,19 +13762,25 @@ mod tests {
         assert_eq!(Sinope.to_string(), "Sinope");
     }
     #[test]
-    fn test_spheroid_509() {
-        assert_eq!(Sinope.polar_radius(), 14f64);
-        assert_eq!(Sinope.equatorial_radius(), 14f64);
-    }
-    #[test]
-    fn test_tri_axial_509() {
-        assert_eq!(Sinope.radii().0, 14f64);
-        assert_eq!(Sinope.radii().1, 14f64);
-        assert_eq!(Sinope.radii().2, 14f64);
+    fn test_point_mass_509() {
+        assert!(DynOrigin::Sinope.try_gravitational_parameter().is_err());
     }
     #[test]
     fn test_mean_radius_509() {
         assert_eq!(Sinope.mean_radius(), 14f64);
+        assert_eq!(DynOrigin::Sinope.try_mean_radius(), Ok(14f64));
+    }
+    #[test]
+    fn test_spheroid_509() {
+        assert_eq!(Sinope.polar_radius(), 14f64);
+        assert_eq!(DynOrigin::Sinope.try_polar_radius(), Ok(14f64));
+        assert_eq!(Sinope.equatorial_radius(), 14f64);
+        assert_eq!(DynOrigin::Sinope.try_equatorial_radius(), Ok(14f64));
+    }
+    #[test]
+    fn test_tri_axial_509() {
+        assert_eq!(Sinope.radii(), (14f64, 14f64, 14f64));
+        assert_eq!(DynOrigin::Sinope.try_radii(), Ok((14f64, 14f64, 14f64)));
     }
     #[test]
     fn test_origin_510() {
@@ -13446,19 +13788,25 @@ mod tests {
         assert_eq!(Lysithea.to_string(), "Lysithea");
     }
     #[test]
-    fn test_spheroid_510() {
-        assert_eq!(Lysithea.polar_radius(), 12f64);
-        assert_eq!(Lysithea.equatorial_radius(), 12f64);
-    }
-    #[test]
-    fn test_tri_axial_510() {
-        assert_eq!(Lysithea.radii().0, 12f64);
-        assert_eq!(Lysithea.radii().1, 12f64);
-        assert_eq!(Lysithea.radii().2, 12f64);
+    fn test_point_mass_510() {
+        assert!(DynOrigin::Lysithea.try_gravitational_parameter().is_err());
     }
     #[test]
     fn test_mean_radius_510() {
         assert_eq!(Lysithea.mean_radius(), 12f64);
+        assert_eq!(DynOrigin::Lysithea.try_mean_radius(), Ok(12f64));
+    }
+    #[test]
+    fn test_spheroid_510() {
+        assert_eq!(Lysithea.polar_radius(), 12f64);
+        assert_eq!(DynOrigin::Lysithea.try_polar_radius(), Ok(12f64));
+        assert_eq!(Lysithea.equatorial_radius(), 12f64);
+        assert_eq!(DynOrigin::Lysithea.try_equatorial_radius(), Ok(12f64));
+    }
+    #[test]
+    fn test_tri_axial_510() {
+        assert_eq!(Lysithea.radii(), (12f64, 12f64, 12f64));
+        assert_eq!(DynOrigin::Lysithea.try_radii(), Ok((12f64, 12f64, 12f64)));
     }
     #[test]
     fn test_origin_511() {
@@ -13466,19 +13814,25 @@ mod tests {
         assert_eq!(Carme.to_string(), "Carme");
     }
     #[test]
-    fn test_spheroid_511() {
-        assert_eq!(Carme.polar_radius(), 15f64);
-        assert_eq!(Carme.equatorial_radius(), 15f64);
-    }
-    #[test]
-    fn test_tri_axial_511() {
-        assert_eq!(Carme.radii().0, 15f64);
-        assert_eq!(Carme.radii().1, 15f64);
-        assert_eq!(Carme.radii().2, 15f64);
+    fn test_point_mass_511() {
+        assert!(DynOrigin::Carme.try_gravitational_parameter().is_err());
     }
     #[test]
     fn test_mean_radius_511() {
         assert_eq!(Carme.mean_radius(), 15f64);
+        assert_eq!(DynOrigin::Carme.try_mean_radius(), Ok(15f64));
+    }
+    #[test]
+    fn test_spheroid_511() {
+        assert_eq!(Carme.polar_radius(), 15f64);
+        assert_eq!(DynOrigin::Carme.try_polar_radius(), Ok(15f64));
+        assert_eq!(Carme.equatorial_radius(), 15f64);
+        assert_eq!(DynOrigin::Carme.try_equatorial_radius(), Ok(15f64));
+    }
+    #[test]
+    fn test_tri_axial_511() {
+        assert_eq!(Carme.radii(), (15f64, 15f64, 15f64));
+        assert_eq!(DynOrigin::Carme.try_radii(), Ok((15f64, 15f64, 15f64)));
     }
     #[test]
     fn test_origin_512() {
@@ -13486,19 +13840,25 @@ mod tests {
         assert_eq!(Ananke.to_string(), "Ananke");
     }
     #[test]
-    fn test_spheroid_512() {
-        assert_eq!(Ananke.polar_radius(), 10f64);
-        assert_eq!(Ananke.equatorial_radius(), 10f64);
-    }
-    #[test]
-    fn test_tri_axial_512() {
-        assert_eq!(Ananke.radii().0, 10f64);
-        assert_eq!(Ananke.radii().1, 10f64);
-        assert_eq!(Ananke.radii().2, 10f64);
+    fn test_point_mass_512() {
+        assert!(DynOrigin::Ananke.try_gravitational_parameter().is_err());
     }
     #[test]
     fn test_mean_radius_512() {
         assert_eq!(Ananke.mean_radius(), 10f64);
+        assert_eq!(DynOrigin::Ananke.try_mean_radius(), Ok(10f64));
+    }
+    #[test]
+    fn test_spheroid_512() {
+        assert_eq!(Ananke.polar_radius(), 10f64);
+        assert_eq!(DynOrigin::Ananke.try_polar_radius(), Ok(10f64));
+        assert_eq!(Ananke.equatorial_radius(), 10f64);
+        assert_eq!(DynOrigin::Ananke.try_equatorial_radius(), Ok(10f64));
+    }
+    #[test]
+    fn test_tri_axial_512() {
+        assert_eq!(Ananke.radii(), (10f64, 10f64, 10f64));
+        assert_eq!(DynOrigin::Ananke.try_radii(), Ok((10f64, 10f64, 10f64)));
     }
     #[test]
     fn test_origin_513() {
@@ -13506,19 +13866,25 @@ mod tests {
         assert_eq!(Leda.to_string(), "Leda");
     }
     #[test]
-    fn test_spheroid_513() {
-        assert_eq!(Leda.polar_radius(), 5f64);
-        assert_eq!(Leda.equatorial_radius(), 5f64);
-    }
-    #[test]
-    fn test_tri_axial_513() {
-        assert_eq!(Leda.radii().0, 5f64);
-        assert_eq!(Leda.radii().1, 5f64);
-        assert_eq!(Leda.radii().2, 5f64);
+    fn test_point_mass_513() {
+        assert!(DynOrigin::Leda.try_gravitational_parameter().is_err());
     }
     #[test]
     fn test_mean_radius_513() {
         assert_eq!(Leda.mean_radius(), 5f64);
+        assert_eq!(DynOrigin::Leda.try_mean_radius(), Ok(5f64));
+    }
+    #[test]
+    fn test_spheroid_513() {
+        assert_eq!(Leda.polar_radius(), 5f64);
+        assert_eq!(DynOrigin::Leda.try_polar_radius(), Ok(5f64));
+        assert_eq!(Leda.equatorial_radius(), 5f64);
+        assert_eq!(DynOrigin::Leda.try_equatorial_radius(), Ok(5f64));
+    }
+    #[test]
+    fn test_tri_axial_513() {
+        assert_eq!(Leda.radii(), (5f64, 5f64, 5f64));
+        assert_eq!(DynOrigin::Leda.try_radii(), Ok((5f64, 5f64, 5f64)));
     }
     #[test]
     fn test_origin_514() {
@@ -13528,16 +13894,25 @@ mod tests {
     #[test]
     fn test_point_mass_514() {
         assert_eq!(Thebe.gravitational_parameter(), 0.030148f64);
-    }
-    #[test]
-    fn test_tri_axial_514() {
-        assert_eq!(Thebe.radii().0, 58f64);
-        assert_eq!(Thebe.radii().1, 49f64);
-        assert_eq!(Thebe.radii().2, 42f64);
+        assert_eq!(
+            DynOrigin::Thebe.try_gravitational_parameter(),
+            Ok(0.030148f64)
+        );
     }
     #[test]
     fn test_mean_radius_514() {
         assert_eq!(Thebe.mean_radius(), 49.3f64);
+        assert_eq!(DynOrigin::Thebe.try_mean_radius(), Ok(49.3f64));
+    }
+    #[test]
+    fn test_spheroid_514() {
+        assert!(DynOrigin::Thebe.try_polar_radius().is_err());
+        assert!(DynOrigin::Thebe.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_514() {
+        assert_eq!(Thebe.radii(), (58f64, 49f64, 42f64));
+        assert_eq!(DynOrigin::Thebe.try_radii(), Ok((58f64, 49f64, 42f64)));
     }
     #[test]
     fn test_origin_515() {
@@ -13547,16 +13922,25 @@ mod tests {
     #[test]
     fn test_point_mass_515() {
         assert_eq!(Adrastea.gravitational_parameter(), 0.000139f64);
-    }
-    #[test]
-    fn test_tri_axial_515() {
-        assert_eq!(Adrastea.radii().0, 10f64);
-        assert_eq!(Adrastea.radii().1, 8f64);
-        assert_eq!(Adrastea.radii().2, 7f64);
+        assert_eq!(
+            DynOrigin::Adrastea.try_gravitational_parameter(),
+            Ok(0.000139f64)
+        );
     }
     #[test]
     fn test_mean_radius_515() {
         assert_eq!(Adrastea.mean_radius(), 8.2f64);
+        assert_eq!(DynOrigin::Adrastea.try_mean_radius(), Ok(8.2f64));
+    }
+    #[test]
+    fn test_spheroid_515() {
+        assert!(DynOrigin::Adrastea.try_polar_radius().is_err());
+        assert!(DynOrigin::Adrastea.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_515() {
+        assert_eq!(Adrastea.radii(), (10f64, 8f64, 7f64));
+        assert_eq!(DynOrigin::Adrastea.try_radii(), Ok((10f64, 8f64, 7f64)));
     }
     #[test]
     fn test_origin_516() {
@@ -13566,16 +13950,25 @@ mod tests {
     #[test]
     fn test_point_mass_516() {
         assert_eq!(Metis.gravitational_parameter(), 0.002501f64);
-    }
-    #[test]
-    fn test_tri_axial_516() {
-        assert_eq!(Metis.radii().0, 30f64);
-        assert_eq!(Metis.radii().1, 20f64);
-        assert_eq!(Metis.radii().2, 17f64);
+        assert_eq!(
+            DynOrigin::Metis.try_gravitational_parameter(),
+            Ok(0.002501f64)
+        );
     }
     #[test]
     fn test_mean_radius_516() {
         assert_eq!(Metis.mean_radius(), 21.5f64);
+        assert_eq!(DynOrigin::Metis.try_mean_radius(), Ok(21.5f64));
+    }
+    #[test]
+    fn test_spheroid_516() {
+        assert!(DynOrigin::Metis.try_polar_radius().is_err());
+        assert!(DynOrigin::Metis.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_516() {
+        assert_eq!(Metis.radii(), (30f64, 20f64, 17f64));
+        assert_eq!(DynOrigin::Metis.try_radii(), Ok((30f64, 20f64, 17f64)));
     }
     #[test]
     fn test_origin_517() {
@@ -13583,9 +13976,43 @@ mod tests {
         assert_eq!(Callirrhoe.to_string(), "Callirrhoe");
     }
     #[test]
+    fn test_point_mass_517() {
+        assert!(DynOrigin::Callirrhoe.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_517() {
+        assert!(DynOrigin::Callirrhoe.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_517() {
+        assert!(DynOrigin::Callirrhoe.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_517() {
+        assert!(DynOrigin::Callirrhoe.try_polar_radius().is_err());
+        assert!(DynOrigin::Callirrhoe.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_518() {
         assert_eq!(Themisto.id().0, 518i32);
         assert_eq!(Themisto.to_string(), "Themisto");
+    }
+    #[test]
+    fn test_point_mass_518() {
+        assert!(DynOrigin::Themisto.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_518() {
+        assert!(DynOrigin::Themisto.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_518() {
+        assert!(DynOrigin::Themisto.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_518() {
+        assert!(DynOrigin::Themisto.try_polar_radius().is_err());
+        assert!(DynOrigin::Themisto.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_519() {
@@ -13593,9 +14020,43 @@ mod tests {
         assert_eq!(Magaclite.to_string(), "Magaclite");
     }
     #[test]
+    fn test_point_mass_519() {
+        assert!(DynOrigin::Magaclite.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_519() {
+        assert!(DynOrigin::Magaclite.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_519() {
+        assert!(DynOrigin::Magaclite.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_519() {
+        assert!(DynOrigin::Magaclite.try_polar_radius().is_err());
+        assert!(DynOrigin::Magaclite.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_520() {
         assert_eq!(Taygete.id().0, 520i32);
         assert_eq!(Taygete.to_string(), "Taygete");
+    }
+    #[test]
+    fn test_point_mass_520() {
+        assert!(DynOrigin::Taygete.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_520() {
+        assert!(DynOrigin::Taygete.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_520() {
+        assert!(DynOrigin::Taygete.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_520() {
+        assert!(DynOrigin::Taygete.try_polar_radius().is_err());
+        assert!(DynOrigin::Taygete.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_521() {
@@ -13603,9 +14064,43 @@ mod tests {
         assert_eq!(Chaldene.to_string(), "Chaldene");
     }
     #[test]
+    fn test_point_mass_521() {
+        assert!(DynOrigin::Chaldene.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_521() {
+        assert!(DynOrigin::Chaldene.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_521() {
+        assert!(DynOrigin::Chaldene.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_521() {
+        assert!(DynOrigin::Chaldene.try_polar_radius().is_err());
+        assert!(DynOrigin::Chaldene.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_522() {
         assert_eq!(Harpalyke.id().0, 522i32);
         assert_eq!(Harpalyke.to_string(), "Harpalyke");
+    }
+    #[test]
+    fn test_point_mass_522() {
+        assert!(DynOrigin::Harpalyke.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_522() {
+        assert!(DynOrigin::Harpalyke.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_522() {
+        assert!(DynOrigin::Harpalyke.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_522() {
+        assert!(DynOrigin::Harpalyke.try_polar_radius().is_err());
+        assert!(DynOrigin::Harpalyke.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_523() {
@@ -13613,9 +14108,43 @@ mod tests {
         assert_eq!(Kalyke.to_string(), "Kalyke");
     }
     #[test]
+    fn test_point_mass_523() {
+        assert!(DynOrigin::Kalyke.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_523() {
+        assert!(DynOrigin::Kalyke.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_523() {
+        assert!(DynOrigin::Kalyke.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_523() {
+        assert!(DynOrigin::Kalyke.try_polar_radius().is_err());
+        assert!(DynOrigin::Kalyke.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_524() {
         assert_eq!(Iocaste.id().0, 524i32);
         assert_eq!(Iocaste.to_string(), "Iocaste");
+    }
+    #[test]
+    fn test_point_mass_524() {
+        assert!(DynOrigin::Iocaste.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_524() {
+        assert!(DynOrigin::Iocaste.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_524() {
+        assert!(DynOrigin::Iocaste.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_524() {
+        assert!(DynOrigin::Iocaste.try_polar_radius().is_err());
+        assert!(DynOrigin::Iocaste.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_525() {
@@ -13623,9 +14152,43 @@ mod tests {
         assert_eq!(Erinome.to_string(), "Erinome");
     }
     #[test]
+    fn test_point_mass_525() {
+        assert!(DynOrigin::Erinome.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_525() {
+        assert!(DynOrigin::Erinome.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_525() {
+        assert!(DynOrigin::Erinome.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_525() {
+        assert!(DynOrigin::Erinome.try_polar_radius().is_err());
+        assert!(DynOrigin::Erinome.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_526() {
         assert_eq!(Isonoe.id().0, 526i32);
         assert_eq!(Isonoe.to_string(), "Isonoe");
+    }
+    #[test]
+    fn test_point_mass_526() {
+        assert!(DynOrigin::Isonoe.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_526() {
+        assert!(DynOrigin::Isonoe.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_526() {
+        assert!(DynOrigin::Isonoe.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_526() {
+        assert!(DynOrigin::Isonoe.try_polar_radius().is_err());
+        assert!(DynOrigin::Isonoe.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_527() {
@@ -13633,9 +14196,43 @@ mod tests {
         assert_eq!(Praxidike.to_string(), "Praxidike");
     }
     #[test]
+    fn test_point_mass_527() {
+        assert!(DynOrigin::Praxidike.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_527() {
+        assert!(DynOrigin::Praxidike.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_527() {
+        assert!(DynOrigin::Praxidike.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_527() {
+        assert!(DynOrigin::Praxidike.try_polar_radius().is_err());
+        assert!(DynOrigin::Praxidike.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_528() {
         assert_eq!(Autonoe.id().0, 528i32);
         assert_eq!(Autonoe.to_string(), "Autonoe");
+    }
+    #[test]
+    fn test_point_mass_528() {
+        assert!(DynOrigin::Autonoe.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_528() {
+        assert!(DynOrigin::Autonoe.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_528() {
+        assert!(DynOrigin::Autonoe.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_528() {
+        assert!(DynOrigin::Autonoe.try_polar_radius().is_err());
+        assert!(DynOrigin::Autonoe.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_529() {
@@ -13643,9 +14240,43 @@ mod tests {
         assert_eq!(Thyone.to_string(), "Thyone");
     }
     #[test]
+    fn test_point_mass_529() {
+        assert!(DynOrigin::Thyone.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_529() {
+        assert!(DynOrigin::Thyone.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_529() {
+        assert!(DynOrigin::Thyone.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_529() {
+        assert!(DynOrigin::Thyone.try_polar_radius().is_err());
+        assert!(DynOrigin::Thyone.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_530() {
         assert_eq!(Hermippe.id().0, 530i32);
         assert_eq!(Hermippe.to_string(), "Hermippe");
+    }
+    #[test]
+    fn test_point_mass_530() {
+        assert!(DynOrigin::Hermippe.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_530() {
+        assert!(DynOrigin::Hermippe.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_530() {
+        assert!(DynOrigin::Hermippe.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_530() {
+        assert!(DynOrigin::Hermippe.try_polar_radius().is_err());
+        assert!(DynOrigin::Hermippe.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_531() {
@@ -13653,9 +14284,43 @@ mod tests {
         assert_eq!(Aitne.to_string(), "Aitne");
     }
     #[test]
+    fn test_point_mass_531() {
+        assert!(DynOrigin::Aitne.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_531() {
+        assert!(DynOrigin::Aitne.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_531() {
+        assert!(DynOrigin::Aitne.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_531() {
+        assert!(DynOrigin::Aitne.try_polar_radius().is_err());
+        assert!(DynOrigin::Aitne.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_532() {
         assert_eq!(Eurydome.id().0, 532i32);
         assert_eq!(Eurydome.to_string(), "Eurydome");
+    }
+    #[test]
+    fn test_point_mass_532() {
+        assert!(DynOrigin::Eurydome.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_532() {
+        assert!(DynOrigin::Eurydome.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_532() {
+        assert!(DynOrigin::Eurydome.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_532() {
+        assert!(DynOrigin::Eurydome.try_polar_radius().is_err());
+        assert!(DynOrigin::Eurydome.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_533() {
@@ -13663,9 +14328,43 @@ mod tests {
         assert_eq!(Euanthe.to_string(), "Euanthe");
     }
     #[test]
+    fn test_point_mass_533() {
+        assert!(DynOrigin::Euanthe.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_533() {
+        assert!(DynOrigin::Euanthe.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_533() {
+        assert!(DynOrigin::Euanthe.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_533() {
+        assert!(DynOrigin::Euanthe.try_polar_radius().is_err());
+        assert!(DynOrigin::Euanthe.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_534() {
         assert_eq!(Euporie.id().0, 534i32);
         assert_eq!(Euporie.to_string(), "Euporie");
+    }
+    #[test]
+    fn test_point_mass_534() {
+        assert!(DynOrigin::Euporie.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_534() {
+        assert!(DynOrigin::Euporie.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_534() {
+        assert!(DynOrigin::Euporie.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_534() {
+        assert!(DynOrigin::Euporie.try_polar_radius().is_err());
+        assert!(DynOrigin::Euporie.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_535() {
@@ -13673,9 +14372,43 @@ mod tests {
         assert_eq!(Orthosie.to_string(), "Orthosie");
     }
     #[test]
+    fn test_point_mass_535() {
+        assert!(DynOrigin::Orthosie.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_535() {
+        assert!(DynOrigin::Orthosie.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_535() {
+        assert!(DynOrigin::Orthosie.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_535() {
+        assert!(DynOrigin::Orthosie.try_polar_radius().is_err());
+        assert!(DynOrigin::Orthosie.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_536() {
         assert_eq!(Sponde.id().0, 536i32);
         assert_eq!(Sponde.to_string(), "Sponde");
+    }
+    #[test]
+    fn test_point_mass_536() {
+        assert!(DynOrigin::Sponde.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_536() {
+        assert!(DynOrigin::Sponde.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_536() {
+        assert!(DynOrigin::Sponde.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_536() {
+        assert!(DynOrigin::Sponde.try_polar_radius().is_err());
+        assert!(DynOrigin::Sponde.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_537() {
@@ -13683,9 +14416,43 @@ mod tests {
         assert_eq!(Kale.to_string(), "Kale");
     }
     #[test]
+    fn test_point_mass_537() {
+        assert!(DynOrigin::Kale.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_537() {
+        assert!(DynOrigin::Kale.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_537() {
+        assert!(DynOrigin::Kale.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_537() {
+        assert!(DynOrigin::Kale.try_polar_radius().is_err());
+        assert!(DynOrigin::Kale.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_538() {
         assert_eq!(Pasithee.id().0, 538i32);
         assert_eq!(Pasithee.to_string(), "Pasithee");
+    }
+    #[test]
+    fn test_point_mass_538() {
+        assert!(DynOrigin::Pasithee.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_538() {
+        assert!(DynOrigin::Pasithee.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_538() {
+        assert!(DynOrigin::Pasithee.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_538() {
+        assert!(DynOrigin::Pasithee.try_polar_radius().is_err());
+        assert!(DynOrigin::Pasithee.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_539() {
@@ -13693,9 +14460,43 @@ mod tests {
         assert_eq!(Hegemone.to_string(), "Hegemone");
     }
     #[test]
+    fn test_point_mass_539() {
+        assert!(DynOrigin::Hegemone.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_539() {
+        assert!(DynOrigin::Hegemone.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_539() {
+        assert!(DynOrigin::Hegemone.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_539() {
+        assert!(DynOrigin::Hegemone.try_polar_radius().is_err());
+        assert!(DynOrigin::Hegemone.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_540() {
         assert_eq!(Mneme.id().0, 540i32);
         assert_eq!(Mneme.to_string(), "Mneme");
+    }
+    #[test]
+    fn test_point_mass_540() {
+        assert!(DynOrigin::Mneme.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_540() {
+        assert!(DynOrigin::Mneme.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_540() {
+        assert!(DynOrigin::Mneme.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_540() {
+        assert!(DynOrigin::Mneme.try_polar_radius().is_err());
+        assert!(DynOrigin::Mneme.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_541() {
@@ -13703,9 +14504,43 @@ mod tests {
         assert_eq!(Aoede.to_string(), "Aoede");
     }
     #[test]
+    fn test_point_mass_541() {
+        assert!(DynOrigin::Aoede.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_541() {
+        assert!(DynOrigin::Aoede.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_541() {
+        assert!(DynOrigin::Aoede.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_541() {
+        assert!(DynOrigin::Aoede.try_polar_radius().is_err());
+        assert!(DynOrigin::Aoede.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_542() {
         assert_eq!(Thelxinoe.id().0, 542i32);
         assert_eq!(Thelxinoe.to_string(), "Thelxinoe");
+    }
+    #[test]
+    fn test_point_mass_542() {
+        assert!(DynOrigin::Thelxinoe.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_542() {
+        assert!(DynOrigin::Thelxinoe.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_542() {
+        assert!(DynOrigin::Thelxinoe.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_542() {
+        assert!(DynOrigin::Thelxinoe.try_polar_radius().is_err());
+        assert!(DynOrigin::Thelxinoe.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_543() {
@@ -13713,9 +14548,43 @@ mod tests {
         assert_eq!(Arche.to_string(), "Arche");
     }
     #[test]
+    fn test_point_mass_543() {
+        assert!(DynOrigin::Arche.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_543() {
+        assert!(DynOrigin::Arche.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_543() {
+        assert!(DynOrigin::Arche.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_543() {
+        assert!(DynOrigin::Arche.try_polar_radius().is_err());
+        assert!(DynOrigin::Arche.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_544() {
         assert_eq!(Kallichore.id().0, 544i32);
         assert_eq!(Kallichore.to_string(), "Kallichore");
+    }
+    #[test]
+    fn test_point_mass_544() {
+        assert!(DynOrigin::Kallichore.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_544() {
+        assert!(DynOrigin::Kallichore.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_544() {
+        assert!(DynOrigin::Kallichore.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_544() {
+        assert!(DynOrigin::Kallichore.try_polar_radius().is_err());
+        assert!(DynOrigin::Kallichore.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_545() {
@@ -13723,9 +14592,43 @@ mod tests {
         assert_eq!(Helike.to_string(), "Helike");
     }
     #[test]
+    fn test_point_mass_545() {
+        assert!(DynOrigin::Helike.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_545() {
+        assert!(DynOrigin::Helike.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_545() {
+        assert!(DynOrigin::Helike.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_545() {
+        assert!(DynOrigin::Helike.try_polar_radius().is_err());
+        assert!(DynOrigin::Helike.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_546() {
         assert_eq!(Carpo.id().0, 546i32);
         assert_eq!(Carpo.to_string(), "Carpo");
+    }
+    #[test]
+    fn test_point_mass_546() {
+        assert!(DynOrigin::Carpo.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_546() {
+        assert!(DynOrigin::Carpo.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_546() {
+        assert!(DynOrigin::Carpo.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_546() {
+        assert!(DynOrigin::Carpo.try_polar_radius().is_err());
+        assert!(DynOrigin::Carpo.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_547() {
@@ -13733,9 +14636,43 @@ mod tests {
         assert_eq!(Eukelade.to_string(), "Eukelade");
     }
     #[test]
+    fn test_point_mass_547() {
+        assert!(DynOrigin::Eukelade.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_547() {
+        assert!(DynOrigin::Eukelade.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_547() {
+        assert!(DynOrigin::Eukelade.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_547() {
+        assert!(DynOrigin::Eukelade.try_polar_radius().is_err());
+        assert!(DynOrigin::Eukelade.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_548() {
         assert_eq!(Cyllene.id().0, 548i32);
         assert_eq!(Cyllene.to_string(), "Cyllene");
+    }
+    #[test]
+    fn test_point_mass_548() {
+        assert!(DynOrigin::Cyllene.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_548() {
+        assert!(DynOrigin::Cyllene.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_548() {
+        assert!(DynOrigin::Cyllene.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_548() {
+        assert!(DynOrigin::Cyllene.try_polar_radius().is_err());
+        assert!(DynOrigin::Cyllene.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_549() {
@@ -13743,14 +14680,65 @@ mod tests {
         assert_eq!(Kore.to_string(), "Kore");
     }
     #[test]
+    fn test_point_mass_549() {
+        assert!(DynOrigin::Kore.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_549() {
+        assert!(DynOrigin::Kore.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_549() {
+        assert!(DynOrigin::Kore.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_549() {
+        assert!(DynOrigin::Kore.try_polar_radius().is_err());
+        assert!(DynOrigin::Kore.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_550() {
         assert_eq!(Herse.id().0, 550i32);
         assert_eq!(Herse.to_string(), "Herse");
     }
     #[test]
+    fn test_point_mass_550() {
+        assert!(DynOrigin::Herse.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_550() {
+        assert!(DynOrigin::Herse.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_550() {
+        assert!(DynOrigin::Herse.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_550() {
+        assert!(DynOrigin::Herse.try_polar_radius().is_err());
+        assert!(DynOrigin::Herse.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_553() {
         assert_eq!(Dia.id().0, 553i32);
         assert_eq!(Dia.to_string(), "Dia");
+    }
+    #[test]
+    fn test_point_mass_553() {
+        assert!(DynOrigin::Dia.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_553() {
+        assert!(DynOrigin::Dia.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_553() {
+        assert!(DynOrigin::Dia.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_553() {
+        assert!(DynOrigin::Dia.try_polar_radius().is_err());
+        assert!(DynOrigin::Dia.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_601() {
@@ -13760,16 +14748,28 @@ mod tests {
     #[test]
     fn test_point_mass_601() {
         assert_eq!(Mimas.gravitational_parameter(), 2.503488768152587f64);
-    }
-    #[test]
-    fn test_tri_axial_601() {
-        assert_eq!(Mimas.radii().0, 207.8f64);
-        assert_eq!(Mimas.radii().1, 196.7f64);
-        assert_eq!(Mimas.radii().2, 190.6f64);
+        assert_eq!(
+            DynOrigin::Mimas.try_gravitational_parameter(),
+            Ok(2.503488768152587f64)
+        );
     }
     #[test]
     fn test_mean_radius_601() {
         assert_eq!(Mimas.mean_radius(), 198.2f64);
+        assert_eq!(DynOrigin::Mimas.try_mean_radius(), Ok(198.2f64));
+    }
+    #[test]
+    fn test_spheroid_601() {
+        assert!(DynOrigin::Mimas.try_polar_radius().is_err());
+        assert!(DynOrigin::Mimas.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_601() {
+        assert_eq!(Mimas.radii(), (207.8f64, 196.7f64, 190.6f64));
+        assert_eq!(
+            DynOrigin::Mimas.try_radii(),
+            Ok((207.8f64, 196.7f64, 190.6f64))
+        );
     }
     #[test]
     fn test_origin_602() {
@@ -13779,16 +14779,28 @@ mod tests {
     #[test]
     fn test_point_mass_602() {
         assert_eq!(Enceladus.gravitational_parameter(), 7.210366688598896f64);
-    }
-    #[test]
-    fn test_tri_axial_602() {
-        assert_eq!(Enceladus.radii().0, 256.6f64);
-        assert_eq!(Enceladus.radii().1, 251.4f64);
-        assert_eq!(Enceladus.radii().2, 248.3f64);
+        assert_eq!(
+            DynOrigin::Enceladus.try_gravitational_parameter(),
+            Ok(7.210366688598896f64)
+        );
     }
     #[test]
     fn test_mean_radius_602() {
         assert_eq!(Enceladus.mean_radius(), 252.1f64);
+        assert_eq!(DynOrigin::Enceladus.try_mean_radius(), Ok(252.1f64));
+    }
+    #[test]
+    fn test_spheroid_602() {
+        assert!(DynOrigin::Enceladus.try_polar_radius().is_err());
+        assert!(DynOrigin::Enceladus.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_602() {
+        assert_eq!(Enceladus.radii(), (256.6f64, 251.4f64, 248.3f64));
+        assert_eq!(
+            DynOrigin::Enceladus.try_radii(),
+            Ok((256.6f64, 251.4f64, 248.3f64))
+        );
     }
     #[test]
     fn test_origin_603() {
@@ -13798,16 +14810,28 @@ mod tests {
     #[test]
     fn test_point_mass_603() {
         assert_eq!(Tethys.gravitational_parameter(), 41.21352885489587f64);
-    }
-    #[test]
-    fn test_tri_axial_603() {
-        assert_eq!(Tethys.radii().0, 538.4f64);
-        assert_eq!(Tethys.radii().1, 528.3f64);
-        assert_eq!(Tethys.radii().2, 526.3f64);
+        assert_eq!(
+            DynOrigin::Tethys.try_gravitational_parameter(),
+            Ok(41.21352885489587f64)
+        );
     }
     #[test]
     fn test_mean_radius_603() {
         assert_eq!(Tethys.mean_radius(), 531f64);
+        assert_eq!(DynOrigin::Tethys.try_mean_radius(), Ok(531f64));
+    }
+    #[test]
+    fn test_spheroid_603() {
+        assert!(DynOrigin::Tethys.try_polar_radius().is_err());
+        assert!(DynOrigin::Tethys.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_603() {
+        assert_eq!(Tethys.radii(), (538.4f64, 528.3f64, 526.3f64));
+        assert_eq!(
+            DynOrigin::Tethys.try_radii(),
+            Ok((538.4f64, 528.3f64, 526.3f64))
+        );
     }
     #[test]
     fn test_origin_604() {
@@ -13817,16 +14841,28 @@ mod tests {
     #[test]
     fn test_point_mass_604() {
         assert_eq!(Dione.gravitational_parameter(), 73.11607172482067f64);
-    }
-    #[test]
-    fn test_tri_axial_604() {
-        assert_eq!(Dione.radii().0, 563.4f64);
-        assert_eq!(Dione.radii().1, 561.3f64);
-        assert_eq!(Dione.radii().2, 559.6f64);
+        assert_eq!(
+            DynOrigin::Dione.try_gravitational_parameter(),
+            Ok(73.11607172482067f64)
+        );
     }
     #[test]
     fn test_mean_radius_604() {
         assert_eq!(Dione.mean_radius(), 561.4f64);
+        assert_eq!(DynOrigin::Dione.try_mean_radius(), Ok(561.4f64));
+    }
+    #[test]
+    fn test_spheroid_604() {
+        assert!(DynOrigin::Dione.try_polar_radius().is_err());
+        assert!(DynOrigin::Dione.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_604() {
+        assert_eq!(Dione.radii(), (563.4f64, 561.3f64, 559.6f64));
+        assert_eq!(
+            DynOrigin::Dione.try_radii(),
+            Ok((563.4f64, 561.3f64, 559.6f64))
+        );
     }
     #[test]
     fn test_origin_605() {
@@ -13836,16 +14872,28 @@ mod tests {
     #[test]
     fn test_point_mass_605() {
         assert_eq!(Rhea.gravitational_parameter(), 153.9417519146563f64);
-    }
-    #[test]
-    fn test_tri_axial_605() {
-        assert_eq!(Rhea.radii().0, 765f64);
-        assert_eq!(Rhea.radii().1, 763.1f64);
-        assert_eq!(Rhea.radii().2, 762.4f64);
+        assert_eq!(
+            DynOrigin::Rhea.try_gravitational_parameter(),
+            Ok(153.9417519146563f64)
+        );
     }
     #[test]
     fn test_mean_radius_605() {
         assert_eq!(Rhea.mean_radius(), 763.5f64);
+        assert_eq!(DynOrigin::Rhea.try_mean_radius(), Ok(763.5f64));
+    }
+    #[test]
+    fn test_spheroid_605() {
+        assert!(DynOrigin::Rhea.try_polar_radius().is_err());
+        assert!(DynOrigin::Rhea.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_605() {
+        assert_eq!(Rhea.radii(), (765f64, 763.1f64, 762.4f64));
+        assert_eq!(
+            DynOrigin::Rhea.try_radii(),
+            Ok((765f64, 763.1f64, 762.4f64))
+        );
     }
     #[test]
     fn test_origin_606() {
@@ -13855,16 +14903,28 @@ mod tests {
     #[test]
     fn test_point_mass_606() {
         assert_eq!(Titan.gravitational_parameter(), 8978.137095521046f64);
-    }
-    #[test]
-    fn test_tri_axial_606() {
-        assert_eq!(Titan.radii().0, 2575.15f64);
-        assert_eq!(Titan.radii().1, 2574.78f64);
-        assert_eq!(Titan.radii().2, 2574.47f64);
+        assert_eq!(
+            DynOrigin::Titan.try_gravitational_parameter(),
+            Ok(8978.137095521046f64)
+        );
     }
     #[test]
     fn test_mean_radius_606() {
         assert_eq!(Titan.mean_radius(), 2575f64);
+        assert_eq!(DynOrigin::Titan.try_mean_radius(), Ok(2575f64));
+    }
+    #[test]
+    fn test_spheroid_606() {
+        assert!(DynOrigin::Titan.try_polar_radius().is_err());
+        assert!(DynOrigin::Titan.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_606() {
+        assert_eq!(Titan.radii(), (2575.15f64, 2574.78f64, 2574.47f64));
+        assert_eq!(
+            DynOrigin::Titan.try_radii(),
+            Ok((2575.15f64, 2574.78f64, 2574.47f64))
+        );
     }
     #[test]
     fn test_origin_607() {
@@ -13874,16 +14934,28 @@ mod tests {
     #[test]
     fn test_point_mass_607() {
         assert_eq!(Hyperion.gravitational_parameter(), 0.3704913747932265f64);
-    }
-    #[test]
-    fn test_tri_axial_607() {
-        assert_eq!(Hyperion.radii().0, 180.1f64);
-        assert_eq!(Hyperion.radii().1, 133f64);
-        assert_eq!(Hyperion.radii().2, 102.7f64);
+        assert_eq!(
+            DynOrigin::Hyperion.try_gravitational_parameter(),
+            Ok(0.3704913747932265f64)
+        );
     }
     #[test]
     fn test_mean_radius_607() {
         assert_eq!(Hyperion.mean_radius(), 135f64);
+        assert_eq!(DynOrigin::Hyperion.try_mean_radius(), Ok(135f64));
+    }
+    #[test]
+    fn test_spheroid_607() {
+        assert!(DynOrigin::Hyperion.try_polar_radius().is_err());
+        assert!(DynOrigin::Hyperion.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_607() {
+        assert_eq!(Hyperion.radii(), (180.1f64, 133f64, 102.7f64));
+        assert_eq!(
+            DynOrigin::Hyperion.try_radii(),
+            Ok((180.1f64, 133f64, 102.7f64))
+        );
     }
     #[test]
     fn test_origin_608() {
@@ -13893,21 +14965,30 @@ mod tests {
     #[test]
     fn test_point_mass_608() {
         assert_eq!(Iapetus.gravitational_parameter(), 120.5151060137642f64);
-    }
-    #[test]
-    fn test_spheroid_608() {
-        assert_eq!(Iapetus.polar_radius(), 712.1f64);
-        assert_eq!(Iapetus.equatorial_radius(), 745.7f64);
-    }
-    #[test]
-    fn test_tri_axial_608() {
-        assert_eq!(Iapetus.radii().0, 745.7f64);
-        assert_eq!(Iapetus.radii().1, 745.7f64);
-        assert_eq!(Iapetus.radii().2, 712.1f64);
+        assert_eq!(
+            DynOrigin::Iapetus.try_gravitational_parameter(),
+            Ok(120.5151060137642f64)
+        );
     }
     #[test]
     fn test_mean_radius_608() {
         assert_eq!(Iapetus.mean_radius(), 734.3f64);
+        assert_eq!(DynOrigin::Iapetus.try_mean_radius(), Ok(734.3f64));
+    }
+    #[test]
+    fn test_spheroid_608() {
+        assert_eq!(Iapetus.polar_radius(), 712.1f64);
+        assert_eq!(DynOrigin::Iapetus.try_polar_radius(), Ok(712.1f64));
+        assert_eq!(Iapetus.equatorial_radius(), 745.7f64);
+        assert_eq!(DynOrigin::Iapetus.try_equatorial_radius(), Ok(745.7f64));
+    }
+    #[test]
+    fn test_tri_axial_608() {
+        assert_eq!(Iapetus.radii(), (745.7f64, 745.7f64, 712.1f64));
+        assert_eq!(
+            DynOrigin::Iapetus.try_radii(),
+            Ok((745.7f64, 745.7f64, 712.1f64))
+        );
     }
     #[test]
     fn test_origin_609() {
@@ -13917,16 +14998,28 @@ mod tests {
     #[test]
     fn test_point_mass_609() {
         assert_eq!(Phoebe.gravitational_parameter(), 0.5547860052791678f64);
-    }
-    #[test]
-    fn test_tri_axial_609() {
-        assert_eq!(Phoebe.radii().0, 109.4f64);
-        assert_eq!(Phoebe.radii().1, 108.5f64);
-        assert_eq!(Phoebe.radii().2, 101.8f64);
+        assert_eq!(
+            DynOrigin::Phoebe.try_gravitational_parameter(),
+            Ok(0.5547860052791678f64)
+        );
     }
     #[test]
     fn test_mean_radius_609() {
         assert_eq!(Phoebe.mean_radius(), 106.5f64);
+        assert_eq!(DynOrigin::Phoebe.try_mean_radius(), Ok(106.5f64));
+    }
+    #[test]
+    fn test_spheroid_609() {
+        assert!(DynOrigin::Phoebe.try_polar_radius().is_err());
+        assert!(DynOrigin::Phoebe.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_609() {
+        assert_eq!(Phoebe.radii(), (109.4f64, 108.5f64, 101.8f64));
+        assert_eq!(
+            DynOrigin::Phoebe.try_radii(),
+            Ok((109.4f64, 108.5f64, 101.8f64))
+        );
     }
     #[test]
     fn test_origin_610() {
@@ -13936,16 +15029,25 @@ mod tests {
     #[test]
     fn test_point_mass_610() {
         assert_eq!(Janus.gravitational_parameter(), 0.1265765099012197f64);
-    }
-    #[test]
-    fn test_tri_axial_610() {
-        assert_eq!(Janus.radii().0, 101.7f64);
-        assert_eq!(Janus.radii().1, 93f64);
-        assert_eq!(Janus.radii().2, 76.3f64);
+        assert_eq!(
+            DynOrigin::Janus.try_gravitational_parameter(),
+            Ok(0.1265765099012197f64)
+        );
     }
     #[test]
     fn test_mean_radius_610() {
         assert_eq!(Janus.mean_radius(), 89.2f64);
+        assert_eq!(DynOrigin::Janus.try_mean_radius(), Ok(89.2f64));
+    }
+    #[test]
+    fn test_spheroid_610() {
+        assert!(DynOrigin::Janus.try_polar_radius().is_err());
+        assert!(DynOrigin::Janus.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_610() {
+        assert_eq!(Janus.radii(), (101.7f64, 93f64, 76.3f64));
+        assert_eq!(DynOrigin::Janus.try_radii(), Ok((101.7f64, 93f64, 76.3f64)));
     }
     #[test]
     fn test_origin_611() {
@@ -13955,16 +15057,28 @@ mod tests {
     #[test]
     fn test_point_mass_611() {
         assert_eq!(Epimetheus.gravitational_parameter(), 0.03512333288208074f64);
-    }
-    #[test]
-    fn test_tri_axial_611() {
-        assert_eq!(Epimetheus.radii().0, 64.9f64);
-        assert_eq!(Epimetheus.radii().1, 57.3f64);
-        assert_eq!(Epimetheus.radii().2, 53f64);
+        assert_eq!(
+            DynOrigin::Epimetheus.try_gravitational_parameter(),
+            Ok(0.03512333288208074f64)
+        );
     }
     #[test]
     fn test_mean_radius_611() {
         assert_eq!(Epimetheus.mean_radius(), 58.2f64);
+        assert_eq!(DynOrigin::Epimetheus.try_mean_radius(), Ok(58.2f64));
+    }
+    #[test]
+    fn test_spheroid_611() {
+        assert!(DynOrigin::Epimetheus.try_polar_radius().is_err());
+        assert!(DynOrigin::Epimetheus.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_611() {
+        assert_eq!(Epimetheus.radii(), (64.9f64, 57.3f64, 53f64));
+        assert_eq!(
+            DynOrigin::Epimetheus.try_radii(),
+            Ok((64.9f64, 57.3f64, 53f64))
+        );
     }
     #[test]
     fn test_origin_612() {
@@ -13974,16 +15088,28 @@ mod tests {
     #[test]
     fn test_point_mass_612() {
         assert_eq!(Helene.gravitational_parameter(), 0.0004757419551776972f64);
-    }
-    #[test]
-    fn test_tri_axial_612() {
-        assert_eq!(Helene.radii().0, 22.5f64);
-        assert_eq!(Helene.radii().1, 19.6f64);
-        assert_eq!(Helene.radii().2, 13.3f64);
+        assert_eq!(
+            DynOrigin::Helene.try_gravitational_parameter(),
+            Ok(0.0004757419551776972f64)
+        );
     }
     #[test]
     fn test_mean_radius_612() {
         assert_eq!(Helene.mean_radius(), 18f64);
+        assert_eq!(DynOrigin::Helene.try_mean_radius(), Ok(18f64));
+    }
+    #[test]
+    fn test_spheroid_612() {
+        assert!(DynOrigin::Helene.try_polar_radius().is_err());
+        assert!(DynOrigin::Helene.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_612() {
+        assert_eq!(Helene.radii(), (22.5f64, 19.6f64, 13.3f64));
+        assert_eq!(
+            DynOrigin::Helene.try_radii(),
+            Ok((22.5f64, 19.6f64, 13.3f64))
+        );
     }
     #[test]
     fn test_origin_613() {
@@ -13991,14 +15117,26 @@ mod tests {
         assert_eq!(Telesto.to_string(), "Telesto");
     }
     #[test]
-    fn test_tri_axial_613() {
-        assert_eq!(Telesto.radii().0, 16.3f64);
-        assert_eq!(Telesto.radii().1, 11.8f64);
-        assert_eq!(Telesto.radii().2, 9.8f64);
+    fn test_point_mass_613() {
+        assert!(DynOrigin::Telesto.try_gravitational_parameter().is_err());
     }
     #[test]
     fn test_mean_radius_613() {
         assert_eq!(Telesto.mean_radius(), 12.4f64);
+        assert_eq!(DynOrigin::Telesto.try_mean_radius(), Ok(12.4f64));
+    }
+    #[test]
+    fn test_spheroid_613() {
+        assert!(DynOrigin::Telesto.try_polar_radius().is_err());
+        assert!(DynOrigin::Telesto.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_613() {
+        assert_eq!(Telesto.radii(), (16.3f64, 11.8f64, 9.8f64));
+        assert_eq!(
+            DynOrigin::Telesto.try_radii(),
+            Ok((16.3f64, 11.8f64, 9.8f64))
+        );
     }
     #[test]
     fn test_origin_614() {
@@ -14006,14 +15144,26 @@ mod tests {
         assert_eq!(Calypso.to_string(), "Calypso");
     }
     #[test]
-    fn test_tri_axial_614() {
-        assert_eq!(Calypso.radii().0, 15.3f64);
-        assert_eq!(Calypso.radii().1, 9.3f64);
-        assert_eq!(Calypso.radii().2, 6.3f64);
+    fn test_point_mass_614() {
+        assert!(DynOrigin::Calypso.try_gravitational_parameter().is_err());
     }
     #[test]
     fn test_mean_radius_614() {
         assert_eq!(Calypso.mean_radius(), 9.6f64);
+        assert_eq!(DynOrigin::Calypso.try_mean_radius(), Ok(9.6f64));
+    }
+    #[test]
+    fn test_spheroid_614() {
+        assert!(DynOrigin::Calypso.try_polar_radius().is_err());
+        assert!(DynOrigin::Calypso.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_614() {
+        assert_eq!(Calypso.radii(), (15.3f64, 9.3f64, 6.3f64));
+        assert_eq!(
+            DynOrigin::Calypso.try_radii(),
+            Ok((15.3f64, 9.3f64, 6.3f64))
+        );
     }
     #[test]
     fn test_origin_615() {
@@ -14023,16 +15173,25 @@ mod tests {
     #[test]
     fn test_point_mass_615() {
         assert_eq!(Atlas.gravitational_parameter(), 0.0003718871247516475f64);
-    }
-    #[test]
-    fn test_tri_axial_615() {
-        assert_eq!(Atlas.radii().0, 20.5f64);
-        assert_eq!(Atlas.radii().1, 17.8f64);
-        assert_eq!(Atlas.radii().2, 9.4f64);
+        assert_eq!(
+            DynOrigin::Atlas.try_gravitational_parameter(),
+            Ok(0.0003718871247516475f64)
+        );
     }
     #[test]
     fn test_mean_radius_615() {
         assert_eq!(Atlas.mean_radius(), 15.1f64);
+        assert_eq!(DynOrigin::Atlas.try_mean_radius(), Ok(15.1f64));
+    }
+    #[test]
+    fn test_spheroid_615() {
+        assert!(DynOrigin::Atlas.try_polar_radius().is_err());
+        assert!(DynOrigin::Atlas.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_615() {
+        assert_eq!(Atlas.radii(), (20.5f64, 17.8f64, 9.4f64));
+        assert_eq!(DynOrigin::Atlas.try_radii(), Ok((20.5f64, 17.8f64, 9.4f64)));
     }
     #[test]
     fn test_origin_616() {
@@ -14042,16 +15201,28 @@ mod tests {
     #[test]
     fn test_point_mass_616() {
         assert_eq!(Prometheus.gravitational_parameter(), 0.0107520800100761f64);
-    }
-    #[test]
-    fn test_tri_axial_616() {
-        assert_eq!(Prometheus.radii().0, 68.2f64);
-        assert_eq!(Prometheus.radii().1, 41.6f64);
-        assert_eq!(Prometheus.radii().2, 28.2f64);
+        assert_eq!(
+            DynOrigin::Prometheus.try_gravitational_parameter(),
+            Ok(0.0107520800100761f64)
+        );
     }
     #[test]
     fn test_mean_radius_616() {
         assert_eq!(Prometheus.mean_radius(), 43.1f64);
+        assert_eq!(DynOrigin::Prometheus.try_mean_radius(), Ok(43.1f64));
+    }
+    #[test]
+    fn test_spheroid_616() {
+        assert!(DynOrigin::Prometheus.try_polar_radius().is_err());
+        assert!(DynOrigin::Prometheus.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_616() {
+        assert_eq!(Prometheus.radii(), (68.2f64, 41.6f64, 28.2f64));
+        assert_eq!(
+            DynOrigin::Prometheus.try_radii(),
+            Ok((68.2f64, 41.6f64, 28.2f64))
+        );
     }
     #[test]
     fn test_origin_617() {
@@ -14061,16 +15232,28 @@ mod tests {
     #[test]
     fn test_point_mass_617() {
         assert_eq!(Pandora.gravitational_parameter(), 0.009290325122028795f64);
-    }
-    #[test]
-    fn test_tri_axial_617() {
-        assert_eq!(Pandora.radii().0, 52.2f64);
-        assert_eq!(Pandora.radii().1, 40.8f64);
-        assert_eq!(Pandora.radii().2, 31.5f64);
+        assert_eq!(
+            DynOrigin::Pandora.try_gravitational_parameter(),
+            Ok(0.009290325122028795f64)
+        );
     }
     #[test]
     fn test_mean_radius_617() {
         assert_eq!(Pandora.mean_radius(), 40.6f64);
+        assert_eq!(DynOrigin::Pandora.try_mean_radius(), Ok(40.6f64));
+    }
+    #[test]
+    fn test_spheroid_617() {
+        assert!(DynOrigin::Pandora.try_polar_radius().is_err());
+        assert!(DynOrigin::Pandora.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_617() {
+        assert_eq!(Pandora.radii(), (52.2f64, 40.8f64, 31.5f64));
+        assert_eq!(
+            DynOrigin::Pandora.try_radii(),
+            Ok((52.2f64, 40.8f64, 31.5f64))
+        );
     }
     #[test]
     fn test_origin_618() {
@@ -14078,14 +15261,23 @@ mod tests {
         assert_eq!(Pan.to_string(), "Pan");
     }
     #[test]
-    fn test_tri_axial_618() {
-        assert_eq!(Pan.radii().0, 17.2f64);
-        assert_eq!(Pan.radii().1, 15.4f64);
-        assert_eq!(Pan.radii().2, 10.4f64);
+    fn test_point_mass_618() {
+        assert!(DynOrigin::Pan.try_gravitational_parameter().is_err());
     }
     #[test]
     fn test_mean_radius_618() {
         assert_eq!(Pan.mean_radius(), 14f64);
+        assert_eq!(DynOrigin::Pan.try_mean_radius(), Ok(14f64));
+    }
+    #[test]
+    fn test_spheroid_618() {
+        assert!(DynOrigin::Pan.try_polar_radius().is_err());
+        assert!(DynOrigin::Pan.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_618() {
+        assert_eq!(Pan.radii(), (17.2f64, 15.4f64, 10.4f64));
+        assert_eq!(DynOrigin::Pan.try_radii(), Ok((17.2f64, 15.4f64, 10.4f64)));
     }
     #[test]
     fn test_origin_619() {
@@ -14093,9 +15285,43 @@ mod tests {
         assert_eq!(Ymir.to_string(), "Ymir");
     }
     #[test]
+    fn test_point_mass_619() {
+        assert!(DynOrigin::Ymir.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_619() {
+        assert!(DynOrigin::Ymir.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_619() {
+        assert!(DynOrigin::Ymir.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_619() {
+        assert!(DynOrigin::Ymir.try_polar_radius().is_err());
+        assert!(DynOrigin::Ymir.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_620() {
         assert_eq!(Paaliaq.id().0, 620i32);
         assert_eq!(Paaliaq.to_string(), "Paaliaq");
+    }
+    #[test]
+    fn test_point_mass_620() {
+        assert!(DynOrigin::Paaliaq.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_620() {
+        assert!(DynOrigin::Paaliaq.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_620() {
+        assert!(DynOrigin::Paaliaq.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_620() {
+        assert!(DynOrigin::Paaliaq.try_polar_radius().is_err());
+        assert!(DynOrigin::Paaliaq.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_621() {
@@ -14103,9 +15329,43 @@ mod tests {
         assert_eq!(Tarvos.to_string(), "Tarvos");
     }
     #[test]
+    fn test_point_mass_621() {
+        assert!(DynOrigin::Tarvos.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_621() {
+        assert!(DynOrigin::Tarvos.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_621() {
+        assert!(DynOrigin::Tarvos.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_621() {
+        assert!(DynOrigin::Tarvos.try_polar_radius().is_err());
+        assert!(DynOrigin::Tarvos.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_622() {
         assert_eq!(Ijiraq.id().0, 622i32);
         assert_eq!(Ijiraq.to_string(), "Ijiraq");
+    }
+    #[test]
+    fn test_point_mass_622() {
+        assert!(DynOrigin::Ijiraq.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_622() {
+        assert!(DynOrigin::Ijiraq.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_622() {
+        assert!(DynOrigin::Ijiraq.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_622() {
+        assert!(DynOrigin::Ijiraq.try_polar_radius().is_err());
+        assert!(DynOrigin::Ijiraq.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_623() {
@@ -14113,9 +15373,43 @@ mod tests {
         assert_eq!(Suttungr.to_string(), "Suttungr");
     }
     #[test]
+    fn test_point_mass_623() {
+        assert!(DynOrigin::Suttungr.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_623() {
+        assert!(DynOrigin::Suttungr.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_623() {
+        assert!(DynOrigin::Suttungr.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_623() {
+        assert!(DynOrigin::Suttungr.try_polar_radius().is_err());
+        assert!(DynOrigin::Suttungr.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_624() {
         assert_eq!(Kiviuq.id().0, 624i32);
         assert_eq!(Kiviuq.to_string(), "Kiviuq");
+    }
+    #[test]
+    fn test_point_mass_624() {
+        assert!(DynOrigin::Kiviuq.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_624() {
+        assert!(DynOrigin::Kiviuq.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_624() {
+        assert!(DynOrigin::Kiviuq.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_624() {
+        assert!(DynOrigin::Kiviuq.try_polar_radius().is_err());
+        assert!(DynOrigin::Kiviuq.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_625() {
@@ -14123,9 +15417,43 @@ mod tests {
         assert_eq!(Mundilfari.to_string(), "Mundilfari");
     }
     #[test]
+    fn test_point_mass_625() {
+        assert!(DynOrigin::Mundilfari.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_625() {
+        assert!(DynOrigin::Mundilfari.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_625() {
+        assert!(DynOrigin::Mundilfari.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_625() {
+        assert!(DynOrigin::Mundilfari.try_polar_radius().is_err());
+        assert!(DynOrigin::Mundilfari.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_626() {
         assert_eq!(Albiorix.id().0, 626i32);
         assert_eq!(Albiorix.to_string(), "Albiorix");
+    }
+    #[test]
+    fn test_point_mass_626() {
+        assert!(DynOrigin::Albiorix.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_626() {
+        assert!(DynOrigin::Albiorix.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_626() {
+        assert!(DynOrigin::Albiorix.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_626() {
+        assert!(DynOrigin::Albiorix.try_polar_radius().is_err());
+        assert!(DynOrigin::Albiorix.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_627() {
@@ -14133,9 +15461,43 @@ mod tests {
         assert_eq!(Skathi.to_string(), "Skathi");
     }
     #[test]
+    fn test_point_mass_627() {
+        assert!(DynOrigin::Skathi.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_627() {
+        assert!(DynOrigin::Skathi.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_627() {
+        assert!(DynOrigin::Skathi.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_627() {
+        assert!(DynOrigin::Skathi.try_polar_radius().is_err());
+        assert!(DynOrigin::Skathi.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_628() {
         assert_eq!(Erriapus.id().0, 628i32);
         assert_eq!(Erriapus.to_string(), "Erriapus");
+    }
+    #[test]
+    fn test_point_mass_628() {
+        assert!(DynOrigin::Erriapus.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_628() {
+        assert!(DynOrigin::Erriapus.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_628() {
+        assert!(DynOrigin::Erriapus.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_628() {
+        assert!(DynOrigin::Erriapus.try_polar_radius().is_err());
+        assert!(DynOrigin::Erriapus.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_629() {
@@ -14143,9 +15505,43 @@ mod tests {
         assert_eq!(Siarnaq.to_string(), "Siarnaq");
     }
     #[test]
+    fn test_point_mass_629() {
+        assert!(DynOrigin::Siarnaq.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_629() {
+        assert!(DynOrigin::Siarnaq.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_629() {
+        assert!(DynOrigin::Siarnaq.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_629() {
+        assert!(DynOrigin::Siarnaq.try_polar_radius().is_err());
+        assert!(DynOrigin::Siarnaq.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_630() {
         assert_eq!(Thrymr.id().0, 630i32);
         assert_eq!(Thrymr.to_string(), "Thrymr");
+    }
+    #[test]
+    fn test_point_mass_630() {
+        assert!(DynOrigin::Thrymr.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_630() {
+        assert!(DynOrigin::Thrymr.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_630() {
+        assert!(DynOrigin::Thrymr.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_630() {
+        assert!(DynOrigin::Thrymr.try_polar_radius().is_err());
+        assert!(DynOrigin::Thrymr.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_631() {
@@ -14153,19 +15549,48 @@ mod tests {
         assert_eq!(Narvi.to_string(), "Narvi");
     }
     #[test]
+    fn test_point_mass_631() {
+        assert!(DynOrigin::Narvi.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_631() {
+        assert!(DynOrigin::Narvi.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_631() {
+        assert!(DynOrigin::Narvi.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_631() {
+        assert!(DynOrigin::Narvi.try_polar_radius().is_err());
+        assert!(DynOrigin::Narvi.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_632() {
         assert_eq!(Methone.id().0, 632i32);
         assert_eq!(Methone.to_string(), "Methone");
     }
     #[test]
-    fn test_tri_axial_632() {
-        assert_eq!(Methone.radii().0, 1.94f64);
-        assert_eq!(Methone.radii().1, 1.29f64);
-        assert_eq!(Methone.radii().2, 1.21f64);
+    fn test_point_mass_632() {
+        assert!(DynOrigin::Methone.try_gravitational_parameter().is_err());
     }
     #[test]
     fn test_mean_radius_632() {
         assert_eq!(Methone.mean_radius(), 1.45f64);
+        assert_eq!(DynOrigin::Methone.try_mean_radius(), Ok(1.45f64));
+    }
+    #[test]
+    fn test_spheroid_632() {
+        assert!(DynOrigin::Methone.try_polar_radius().is_err());
+        assert!(DynOrigin::Methone.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_632() {
+        assert_eq!(Methone.radii(), (1.94f64, 1.29f64, 1.21f64));
+        assert_eq!(
+            DynOrigin::Methone.try_radii(),
+            Ok((1.94f64, 1.29f64, 1.21f64))
+        );
     }
     #[test]
     fn test_origin_633() {
@@ -14173,14 +15598,26 @@ mod tests {
         assert_eq!(Pallene.to_string(), "Pallene");
     }
     #[test]
-    fn test_tri_axial_633() {
-        assert_eq!(Pallene.radii().0, 2.88f64);
-        assert_eq!(Pallene.radii().1, 2.08f64);
-        assert_eq!(Pallene.radii().2, 1.8f64);
+    fn test_point_mass_633() {
+        assert!(DynOrigin::Pallene.try_gravitational_parameter().is_err());
     }
     #[test]
     fn test_mean_radius_633() {
         assert_eq!(Pallene.mean_radius(), 2.23f64);
+        assert_eq!(DynOrigin::Pallene.try_mean_radius(), Ok(2.23f64));
+    }
+    #[test]
+    fn test_spheroid_633() {
+        assert!(DynOrigin::Pallene.try_polar_radius().is_err());
+        assert!(DynOrigin::Pallene.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_633() {
+        assert_eq!(Pallene.radii(), (2.88f64, 2.08f64, 1.8f64));
+        assert_eq!(
+            DynOrigin::Pallene.try_radii(),
+            Ok((2.88f64, 2.08f64, 1.8f64))
+        );
     }
     #[test]
     fn test_origin_634() {
@@ -14188,14 +15625,26 @@ mod tests {
         assert_eq!(Polydeuces.to_string(), "Polydeuces");
     }
     #[test]
-    fn test_tri_axial_634() {
-        assert_eq!(Polydeuces.radii().0, 1.5f64);
-        assert_eq!(Polydeuces.radii().1, 1.2f64);
-        assert_eq!(Polydeuces.radii().2, 1f64);
+    fn test_point_mass_634() {
+        assert!(DynOrigin::Polydeuces.try_gravitational_parameter().is_err());
     }
     #[test]
     fn test_mean_radius_634() {
         assert_eq!(Polydeuces.mean_radius(), 1.3f64);
+        assert_eq!(DynOrigin::Polydeuces.try_mean_radius(), Ok(1.3f64));
+    }
+    #[test]
+    fn test_spheroid_634() {
+        assert!(DynOrigin::Polydeuces.try_polar_radius().is_err());
+        assert!(DynOrigin::Polydeuces.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_634() {
+        assert_eq!(Polydeuces.radii(), (1.5f64, 1.2f64, 1f64));
+        assert_eq!(
+            DynOrigin::Polydeuces.try_radii(),
+            Ok((1.5f64, 1.2f64, 1f64))
+        );
     }
     #[test]
     fn test_origin_635() {
@@ -14203,14 +15652,23 @@ mod tests {
         assert_eq!(Daphnis.to_string(), "Daphnis");
     }
     #[test]
-    fn test_tri_axial_635() {
-        assert_eq!(Daphnis.radii().0, 4.6f64);
-        assert_eq!(Daphnis.radii().1, 4.5f64);
-        assert_eq!(Daphnis.radii().2, 2.8f64);
+    fn test_point_mass_635() {
+        assert!(DynOrigin::Daphnis.try_gravitational_parameter().is_err());
     }
     #[test]
     fn test_mean_radius_635() {
         assert_eq!(Daphnis.mean_radius(), 3.8f64);
+        assert_eq!(DynOrigin::Daphnis.try_mean_radius(), Ok(3.8f64));
+    }
+    #[test]
+    fn test_spheroid_635() {
+        assert!(DynOrigin::Daphnis.try_polar_radius().is_err());
+        assert!(DynOrigin::Daphnis.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_635() {
+        assert_eq!(Daphnis.radii(), (4.6f64, 4.5f64, 2.8f64));
+        assert_eq!(DynOrigin::Daphnis.try_radii(), Ok((4.6f64, 4.5f64, 2.8f64)));
     }
     #[test]
     fn test_origin_636() {
@@ -14218,9 +15676,43 @@ mod tests {
         assert_eq!(Aegir.to_string(), "Aegir");
     }
     #[test]
+    fn test_point_mass_636() {
+        assert!(DynOrigin::Aegir.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_636() {
+        assert!(DynOrigin::Aegir.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_636() {
+        assert!(DynOrigin::Aegir.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_636() {
+        assert!(DynOrigin::Aegir.try_polar_radius().is_err());
+        assert!(DynOrigin::Aegir.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_637() {
         assert_eq!(Bebhionn.id().0, 637i32);
         assert_eq!(Bebhionn.to_string(), "Bebhionn");
+    }
+    #[test]
+    fn test_point_mass_637() {
+        assert!(DynOrigin::Bebhionn.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_637() {
+        assert!(DynOrigin::Bebhionn.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_637() {
+        assert!(DynOrigin::Bebhionn.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_637() {
+        assert!(DynOrigin::Bebhionn.try_polar_radius().is_err());
+        assert!(DynOrigin::Bebhionn.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_638() {
@@ -14228,9 +15720,43 @@ mod tests {
         assert_eq!(Bergelmir.to_string(), "Bergelmir");
     }
     #[test]
+    fn test_point_mass_638() {
+        assert!(DynOrigin::Bergelmir.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_638() {
+        assert!(DynOrigin::Bergelmir.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_638() {
+        assert!(DynOrigin::Bergelmir.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_638() {
+        assert!(DynOrigin::Bergelmir.try_polar_radius().is_err());
+        assert!(DynOrigin::Bergelmir.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_639() {
         assert_eq!(Bestla.id().0, 639i32);
         assert_eq!(Bestla.to_string(), "Bestla");
+    }
+    #[test]
+    fn test_point_mass_639() {
+        assert!(DynOrigin::Bestla.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_639() {
+        assert!(DynOrigin::Bestla.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_639() {
+        assert!(DynOrigin::Bestla.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_639() {
+        assert!(DynOrigin::Bestla.try_polar_radius().is_err());
+        assert!(DynOrigin::Bestla.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_640() {
@@ -14238,9 +15764,43 @@ mod tests {
         assert_eq!(Farbauti.to_string(), "Farbauti");
     }
     #[test]
+    fn test_point_mass_640() {
+        assert!(DynOrigin::Farbauti.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_640() {
+        assert!(DynOrigin::Farbauti.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_640() {
+        assert!(DynOrigin::Farbauti.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_640() {
+        assert!(DynOrigin::Farbauti.try_polar_radius().is_err());
+        assert!(DynOrigin::Farbauti.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_641() {
         assert_eq!(Fenrir.id().0, 641i32);
         assert_eq!(Fenrir.to_string(), "Fenrir");
+    }
+    #[test]
+    fn test_point_mass_641() {
+        assert!(DynOrigin::Fenrir.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_641() {
+        assert!(DynOrigin::Fenrir.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_641() {
+        assert!(DynOrigin::Fenrir.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_641() {
+        assert!(DynOrigin::Fenrir.try_polar_radius().is_err());
+        assert!(DynOrigin::Fenrir.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_642() {
@@ -14248,9 +15808,43 @@ mod tests {
         assert_eq!(Fornjot.to_string(), "Fornjot");
     }
     #[test]
+    fn test_point_mass_642() {
+        assert!(DynOrigin::Fornjot.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_642() {
+        assert!(DynOrigin::Fornjot.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_642() {
+        assert!(DynOrigin::Fornjot.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_642() {
+        assert!(DynOrigin::Fornjot.try_polar_radius().is_err());
+        assert!(DynOrigin::Fornjot.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_643() {
         assert_eq!(Hati.id().0, 643i32);
         assert_eq!(Hati.to_string(), "Hati");
+    }
+    #[test]
+    fn test_point_mass_643() {
+        assert!(DynOrigin::Hati.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_643() {
+        assert!(DynOrigin::Hati.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_643() {
+        assert!(DynOrigin::Hati.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_643() {
+        assert!(DynOrigin::Hati.try_polar_radius().is_err());
+        assert!(DynOrigin::Hati.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_644() {
@@ -14258,9 +15852,43 @@ mod tests {
         assert_eq!(Hyrrokkin.to_string(), "Hyrrokkin");
     }
     #[test]
+    fn test_point_mass_644() {
+        assert!(DynOrigin::Hyrrokkin.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_644() {
+        assert!(DynOrigin::Hyrrokkin.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_644() {
+        assert!(DynOrigin::Hyrrokkin.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_644() {
+        assert!(DynOrigin::Hyrrokkin.try_polar_radius().is_err());
+        assert!(DynOrigin::Hyrrokkin.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_645() {
         assert_eq!(Kari.id().0, 645i32);
         assert_eq!(Kari.to_string(), "Kari");
+    }
+    #[test]
+    fn test_point_mass_645() {
+        assert!(DynOrigin::Kari.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_645() {
+        assert!(DynOrigin::Kari.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_645() {
+        assert!(DynOrigin::Kari.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_645() {
+        assert!(DynOrigin::Kari.try_polar_radius().is_err());
+        assert!(DynOrigin::Kari.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_646() {
@@ -14268,9 +15896,43 @@ mod tests {
         assert_eq!(Loge.to_string(), "Loge");
     }
     #[test]
+    fn test_point_mass_646() {
+        assert!(DynOrigin::Loge.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_646() {
+        assert!(DynOrigin::Loge.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_646() {
+        assert!(DynOrigin::Loge.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_646() {
+        assert!(DynOrigin::Loge.try_polar_radius().is_err());
+        assert!(DynOrigin::Loge.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_647() {
         assert_eq!(Skoll.id().0, 647i32);
         assert_eq!(Skoll.to_string(), "Skoll");
+    }
+    #[test]
+    fn test_point_mass_647() {
+        assert!(DynOrigin::Skoll.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_647() {
+        assert!(DynOrigin::Skoll.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_647() {
+        assert!(DynOrigin::Skoll.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_647() {
+        assert!(DynOrigin::Skoll.try_polar_radius().is_err());
+        assert!(DynOrigin::Skoll.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_648() {
@@ -14278,24 +15940,47 @@ mod tests {
         assert_eq!(Surtur.to_string(), "Surtur");
     }
     #[test]
+    fn test_point_mass_648() {
+        assert!(DynOrigin::Surtur.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_648() {
+        assert!(DynOrigin::Surtur.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_648() {
+        assert!(DynOrigin::Surtur.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_648() {
+        assert!(DynOrigin::Surtur.try_polar_radius().is_err());
+        assert!(DynOrigin::Surtur.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_649() {
         assert_eq!(Anthe.id().0, 649i32);
         assert_eq!(Anthe.to_string(), "Anthe");
     }
     #[test]
-    fn test_spheroid_649() {
-        assert_eq!(Anthe.polar_radius(), 0.5f64);
-        assert_eq!(Anthe.equatorial_radius(), 0.5f64);
-    }
-    #[test]
-    fn test_tri_axial_649() {
-        assert_eq!(Anthe.radii().0, 0.5f64);
-        assert_eq!(Anthe.radii().1, 0.5f64);
-        assert_eq!(Anthe.radii().2, 0.5f64);
+    fn test_point_mass_649() {
+        assert!(DynOrigin::Anthe.try_gravitational_parameter().is_err());
     }
     #[test]
     fn test_mean_radius_649() {
         assert_eq!(Anthe.mean_radius(), 0.5f64);
+        assert_eq!(DynOrigin::Anthe.try_mean_radius(), Ok(0.5f64));
+    }
+    #[test]
+    fn test_spheroid_649() {
+        assert_eq!(Anthe.polar_radius(), 0.5f64);
+        assert_eq!(DynOrigin::Anthe.try_polar_radius(), Ok(0.5f64));
+        assert_eq!(Anthe.equatorial_radius(), 0.5f64);
+        assert_eq!(DynOrigin::Anthe.try_equatorial_radius(), Ok(0.5f64));
+    }
+    #[test]
+    fn test_tri_axial_649() {
+        assert_eq!(Anthe.radii(), (0.5f64, 0.5f64, 0.5f64));
+        assert_eq!(DynOrigin::Anthe.try_radii(), Ok((0.5f64, 0.5f64, 0.5f64)));
     }
     #[test]
     fn test_origin_650() {
@@ -14303,9 +15988,43 @@ mod tests {
         assert_eq!(Jarnsaxa.to_string(), "Jarnsaxa");
     }
     #[test]
+    fn test_point_mass_650() {
+        assert!(DynOrigin::Jarnsaxa.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_650() {
+        assert!(DynOrigin::Jarnsaxa.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_650() {
+        assert!(DynOrigin::Jarnsaxa.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_650() {
+        assert!(DynOrigin::Jarnsaxa.try_polar_radius().is_err());
+        assert!(DynOrigin::Jarnsaxa.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_651() {
         assert_eq!(Greip.id().0, 651i32);
         assert_eq!(Greip.to_string(), "Greip");
+    }
+    #[test]
+    fn test_point_mass_651() {
+        assert!(DynOrigin::Greip.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_651() {
+        assert!(DynOrigin::Greip.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_651() {
+        assert!(DynOrigin::Greip.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_651() {
+        assert!(DynOrigin::Greip.try_polar_radius().is_err());
+        assert!(DynOrigin::Greip.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_652() {
@@ -14313,19 +16032,48 @@ mod tests {
         assert_eq!(Tarqeq.to_string(), "Tarqeq");
     }
     #[test]
+    fn test_point_mass_652() {
+        assert!(DynOrigin::Tarqeq.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_652() {
+        assert!(DynOrigin::Tarqeq.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_652() {
+        assert!(DynOrigin::Tarqeq.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_652() {
+        assert!(DynOrigin::Tarqeq.try_polar_radius().is_err());
+        assert!(DynOrigin::Tarqeq.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_653() {
         assert_eq!(Aegaeon.id().0, 653i32);
         assert_eq!(Aegaeon.to_string(), "Aegaeon");
     }
     #[test]
-    fn test_tri_axial_653() {
-        assert_eq!(Aegaeon.radii().0, 0.7f64);
-        assert_eq!(Aegaeon.radii().1, 0.25f64);
-        assert_eq!(Aegaeon.radii().2, 0.2f64);
+    fn test_point_mass_653() {
+        assert!(DynOrigin::Aegaeon.try_gravitational_parameter().is_err());
     }
     #[test]
     fn test_mean_radius_653() {
         assert_eq!(Aegaeon.mean_radius(), 0.33f64);
+        assert_eq!(DynOrigin::Aegaeon.try_mean_radius(), Ok(0.33f64));
+    }
+    #[test]
+    fn test_spheroid_653() {
+        assert!(DynOrigin::Aegaeon.try_polar_radius().is_err());
+        assert!(DynOrigin::Aegaeon.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_653() {
+        assert_eq!(Aegaeon.radii(), (0.7f64, 0.25f64, 0.2f64));
+        assert_eq!(
+            DynOrigin::Aegaeon.try_radii(),
+            Ok((0.7f64, 0.25f64, 0.2f64))
+        );
     }
     #[test]
     fn test_origin_701() {
@@ -14335,16 +16083,28 @@ mod tests {
     #[test]
     fn test_point_mass_701() {
         assert_eq!(Ariel.gravitational_parameter(), 83.46344431770477f64);
-    }
-    #[test]
-    fn test_tri_axial_701() {
-        assert_eq!(Ariel.radii().0, 581.1f64);
-        assert_eq!(Ariel.radii().1, 577.9f64);
-        assert_eq!(Ariel.radii().2, 577.7f64);
+        assert_eq!(
+            DynOrigin::Ariel.try_gravitational_parameter(),
+            Ok(83.46344431770477f64)
+        );
     }
     #[test]
     fn test_mean_radius_701() {
         assert_eq!(Ariel.mean_radius(), 578.9f64);
+        assert_eq!(DynOrigin::Ariel.try_mean_radius(), Ok(578.9f64));
+    }
+    #[test]
+    fn test_spheroid_701() {
+        assert!(DynOrigin::Ariel.try_polar_radius().is_err());
+        assert!(DynOrigin::Ariel.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_701() {
+        assert_eq!(Ariel.radii(), (581.1f64, 577.9f64, 577.7f64));
+        assert_eq!(
+            DynOrigin::Ariel.try_radii(),
+            Ok((581.1f64, 577.9f64, 577.7f64))
+        );
     }
     #[test]
     fn test_origin_702() {
@@ -14354,21 +16114,30 @@ mod tests {
     #[test]
     fn test_point_mass_702() {
         assert_eq!(Umbriel.gravitational_parameter(), 85.09338094489388f64);
-    }
-    #[test]
-    fn test_spheroid_702() {
-        assert_eq!(Umbriel.polar_radius(), 584.7f64);
-        assert_eq!(Umbriel.equatorial_radius(), 584.7f64);
-    }
-    #[test]
-    fn test_tri_axial_702() {
-        assert_eq!(Umbriel.radii().0, 584.7f64);
-        assert_eq!(Umbriel.radii().1, 584.7f64);
-        assert_eq!(Umbriel.radii().2, 584.7f64);
+        assert_eq!(
+            DynOrigin::Umbriel.try_gravitational_parameter(),
+            Ok(85.09338094489388f64)
+        );
     }
     #[test]
     fn test_mean_radius_702() {
         assert_eq!(Umbriel.mean_radius(), 584.7f64);
+        assert_eq!(DynOrigin::Umbriel.try_mean_radius(), Ok(584.7f64));
+    }
+    #[test]
+    fn test_spheroid_702() {
+        assert_eq!(Umbriel.polar_radius(), 584.7f64);
+        assert_eq!(DynOrigin::Umbriel.try_polar_radius(), Ok(584.7f64));
+        assert_eq!(Umbriel.equatorial_radius(), 584.7f64);
+        assert_eq!(DynOrigin::Umbriel.try_equatorial_radius(), Ok(584.7f64));
+    }
+    #[test]
+    fn test_tri_axial_702() {
+        assert_eq!(Umbriel.radii(), (584.7f64, 584.7f64, 584.7f64));
+        assert_eq!(
+            DynOrigin::Umbriel.try_radii(),
+            Ok((584.7f64, 584.7f64, 584.7f64))
+        );
     }
     #[test]
     fn test_origin_703() {
@@ -14378,21 +16147,30 @@ mod tests {
     #[test]
     fn test_point_mass_703() {
         assert_eq!(Titania.gravitational_parameter(), 226.9437003741248f64);
-    }
-    #[test]
-    fn test_spheroid_703() {
-        assert_eq!(Titania.polar_radius(), 788.9f64);
-        assert_eq!(Titania.equatorial_radius(), 788.9f64);
-    }
-    #[test]
-    fn test_tri_axial_703() {
-        assert_eq!(Titania.radii().0, 788.9f64);
-        assert_eq!(Titania.radii().1, 788.9f64);
-        assert_eq!(Titania.radii().2, 788.9f64);
+        assert_eq!(
+            DynOrigin::Titania.try_gravitational_parameter(),
+            Ok(226.9437003741248f64)
+        );
     }
     #[test]
     fn test_mean_radius_703() {
         assert_eq!(Titania.mean_radius(), 788.9f64);
+        assert_eq!(DynOrigin::Titania.try_mean_radius(), Ok(788.9f64));
+    }
+    #[test]
+    fn test_spheroid_703() {
+        assert_eq!(Titania.polar_radius(), 788.9f64);
+        assert_eq!(DynOrigin::Titania.try_polar_radius(), Ok(788.9f64));
+        assert_eq!(Titania.equatorial_radius(), 788.9f64);
+        assert_eq!(DynOrigin::Titania.try_equatorial_radius(), Ok(788.9f64));
+    }
+    #[test]
+    fn test_tri_axial_703() {
+        assert_eq!(Titania.radii(), (788.9f64, 788.9f64, 788.9f64));
+        assert_eq!(
+            DynOrigin::Titania.try_radii(),
+            Ok((788.9f64, 788.9f64, 788.9f64))
+        );
     }
     #[test]
     fn test_origin_704() {
@@ -14402,21 +16180,30 @@ mod tests {
     #[test]
     fn test_point_mass_704() {
         assert_eq!(Oberon.gravitational_parameter(), 205.3234302535623f64);
-    }
-    #[test]
-    fn test_spheroid_704() {
-        assert_eq!(Oberon.polar_radius(), 761.4f64);
-        assert_eq!(Oberon.equatorial_radius(), 761.4f64);
-    }
-    #[test]
-    fn test_tri_axial_704() {
-        assert_eq!(Oberon.radii().0, 761.4f64);
-        assert_eq!(Oberon.radii().1, 761.4f64);
-        assert_eq!(Oberon.radii().2, 761.4f64);
+        assert_eq!(
+            DynOrigin::Oberon.try_gravitational_parameter(),
+            Ok(205.3234302535623f64)
+        );
     }
     #[test]
     fn test_mean_radius_704() {
         assert_eq!(Oberon.mean_radius(), 761.4f64);
+        assert_eq!(DynOrigin::Oberon.try_mean_radius(), Ok(761.4f64));
+    }
+    #[test]
+    fn test_spheroid_704() {
+        assert_eq!(Oberon.polar_radius(), 761.4f64);
+        assert_eq!(DynOrigin::Oberon.try_polar_radius(), Ok(761.4f64));
+        assert_eq!(Oberon.equatorial_radius(), 761.4f64);
+        assert_eq!(DynOrigin::Oberon.try_equatorial_radius(), Ok(761.4f64));
+    }
+    #[test]
+    fn test_tri_axial_704() {
+        assert_eq!(Oberon.radii(), (761.4f64, 761.4f64, 761.4f64));
+        assert_eq!(
+            DynOrigin::Oberon.try_radii(),
+            Ok((761.4f64, 761.4f64, 761.4f64))
+        );
     }
     #[test]
     fn test_origin_705() {
@@ -14426,16 +16213,28 @@ mod tests {
     #[test]
     fn test_point_mass_705() {
         assert_eq!(Miranda.gravitational_parameter(), 4.3195168992321f64);
-    }
-    #[test]
-    fn test_tri_axial_705() {
-        assert_eq!(Miranda.radii().0, 240.4f64);
-        assert_eq!(Miranda.radii().1, 234.2f64);
-        assert_eq!(Miranda.radii().2, 232.9f64);
+        assert_eq!(
+            DynOrigin::Miranda.try_gravitational_parameter(),
+            Ok(4.3195168992321f64)
+        );
     }
     #[test]
     fn test_mean_radius_705() {
         assert_eq!(Miranda.mean_radius(), 235.8f64);
+        assert_eq!(DynOrigin::Miranda.try_mean_radius(), Ok(235.8f64));
+    }
+    #[test]
+    fn test_spheroid_705() {
+        assert!(DynOrigin::Miranda.try_polar_radius().is_err());
+        assert!(DynOrigin::Miranda.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_705() {
+        assert_eq!(Miranda.radii(), (240.4f64, 234.2f64, 232.9f64));
+        assert_eq!(
+            DynOrigin::Miranda.try_radii(),
+            Ok((240.4f64, 234.2f64, 232.9f64))
+        );
     }
     #[test]
     fn test_origin_706() {
@@ -14443,19 +16242,25 @@ mod tests {
         assert_eq!(Cordelia.to_string(), "Cordelia");
     }
     #[test]
-    fn test_spheroid_706() {
-        assert_eq!(Cordelia.polar_radius(), 13f64);
-        assert_eq!(Cordelia.equatorial_radius(), 13f64);
-    }
-    #[test]
-    fn test_tri_axial_706() {
-        assert_eq!(Cordelia.radii().0, 13f64);
-        assert_eq!(Cordelia.radii().1, 13f64);
-        assert_eq!(Cordelia.radii().2, 13f64);
+    fn test_point_mass_706() {
+        assert!(DynOrigin::Cordelia.try_gravitational_parameter().is_err());
     }
     #[test]
     fn test_mean_radius_706() {
         assert_eq!(Cordelia.mean_radius(), 13f64);
+        assert_eq!(DynOrigin::Cordelia.try_mean_radius(), Ok(13f64));
+    }
+    #[test]
+    fn test_spheroid_706() {
+        assert_eq!(Cordelia.polar_radius(), 13f64);
+        assert_eq!(DynOrigin::Cordelia.try_polar_radius(), Ok(13f64));
+        assert_eq!(Cordelia.equatorial_radius(), 13f64);
+        assert_eq!(DynOrigin::Cordelia.try_equatorial_radius(), Ok(13f64));
+    }
+    #[test]
+    fn test_tri_axial_706() {
+        assert_eq!(Cordelia.radii(), (13f64, 13f64, 13f64));
+        assert_eq!(DynOrigin::Cordelia.try_radii(), Ok((13f64, 13f64, 13f64)));
     }
     #[test]
     fn test_origin_707() {
@@ -14463,19 +16268,25 @@ mod tests {
         assert_eq!(Ophelia.to_string(), "Ophelia");
     }
     #[test]
-    fn test_spheroid_707() {
-        assert_eq!(Ophelia.polar_radius(), 15f64);
-        assert_eq!(Ophelia.equatorial_radius(), 15f64);
-    }
-    #[test]
-    fn test_tri_axial_707() {
-        assert_eq!(Ophelia.radii().0, 15f64);
-        assert_eq!(Ophelia.radii().1, 15f64);
-        assert_eq!(Ophelia.radii().2, 15f64);
+    fn test_point_mass_707() {
+        assert!(DynOrigin::Ophelia.try_gravitational_parameter().is_err());
     }
     #[test]
     fn test_mean_radius_707() {
         assert_eq!(Ophelia.mean_radius(), 15f64);
+        assert_eq!(DynOrigin::Ophelia.try_mean_radius(), Ok(15f64));
+    }
+    #[test]
+    fn test_spheroid_707() {
+        assert_eq!(Ophelia.polar_radius(), 15f64);
+        assert_eq!(DynOrigin::Ophelia.try_polar_radius(), Ok(15f64));
+        assert_eq!(Ophelia.equatorial_radius(), 15f64);
+        assert_eq!(DynOrigin::Ophelia.try_equatorial_radius(), Ok(15f64));
+    }
+    #[test]
+    fn test_tri_axial_707() {
+        assert_eq!(Ophelia.radii(), (15f64, 15f64, 15f64));
+        assert_eq!(DynOrigin::Ophelia.try_radii(), Ok((15f64, 15f64, 15f64)));
     }
     #[test]
     fn test_origin_708() {
@@ -14483,19 +16294,25 @@ mod tests {
         assert_eq!(Bianca.to_string(), "Bianca");
     }
     #[test]
-    fn test_spheroid_708() {
-        assert_eq!(Bianca.polar_radius(), 21f64);
-        assert_eq!(Bianca.equatorial_radius(), 21f64);
-    }
-    #[test]
-    fn test_tri_axial_708() {
-        assert_eq!(Bianca.radii().0, 21f64);
-        assert_eq!(Bianca.radii().1, 21f64);
-        assert_eq!(Bianca.radii().2, 21f64);
+    fn test_point_mass_708() {
+        assert!(DynOrigin::Bianca.try_gravitational_parameter().is_err());
     }
     #[test]
     fn test_mean_radius_708() {
         assert_eq!(Bianca.mean_radius(), 21f64);
+        assert_eq!(DynOrigin::Bianca.try_mean_radius(), Ok(21f64));
+    }
+    #[test]
+    fn test_spheroid_708() {
+        assert_eq!(Bianca.polar_radius(), 21f64);
+        assert_eq!(DynOrigin::Bianca.try_polar_radius(), Ok(21f64));
+        assert_eq!(Bianca.equatorial_radius(), 21f64);
+        assert_eq!(DynOrigin::Bianca.try_equatorial_radius(), Ok(21f64));
+    }
+    #[test]
+    fn test_tri_axial_708() {
+        assert_eq!(Bianca.radii(), (21f64, 21f64, 21f64));
+        assert_eq!(DynOrigin::Bianca.try_radii(), Ok((21f64, 21f64, 21f64)));
     }
     #[test]
     fn test_origin_709() {
@@ -14503,19 +16320,25 @@ mod tests {
         assert_eq!(Cressida.to_string(), "Cressida");
     }
     #[test]
-    fn test_spheroid_709() {
-        assert_eq!(Cressida.polar_radius(), 31f64);
-        assert_eq!(Cressida.equatorial_radius(), 31f64);
-    }
-    #[test]
-    fn test_tri_axial_709() {
-        assert_eq!(Cressida.radii().0, 31f64);
-        assert_eq!(Cressida.radii().1, 31f64);
-        assert_eq!(Cressida.radii().2, 31f64);
+    fn test_point_mass_709() {
+        assert!(DynOrigin::Cressida.try_gravitational_parameter().is_err());
     }
     #[test]
     fn test_mean_radius_709() {
         assert_eq!(Cressida.mean_radius(), 31f64);
+        assert_eq!(DynOrigin::Cressida.try_mean_radius(), Ok(31f64));
+    }
+    #[test]
+    fn test_spheroid_709() {
+        assert_eq!(Cressida.polar_radius(), 31f64);
+        assert_eq!(DynOrigin::Cressida.try_polar_radius(), Ok(31f64));
+        assert_eq!(Cressida.equatorial_radius(), 31f64);
+        assert_eq!(DynOrigin::Cressida.try_equatorial_radius(), Ok(31f64));
+    }
+    #[test]
+    fn test_tri_axial_709() {
+        assert_eq!(Cressida.radii(), (31f64, 31f64, 31f64));
+        assert_eq!(DynOrigin::Cressida.try_radii(), Ok((31f64, 31f64, 31f64)));
     }
     #[test]
     fn test_origin_710() {
@@ -14523,19 +16346,25 @@ mod tests {
         assert_eq!(Desdemona.to_string(), "Desdemona");
     }
     #[test]
-    fn test_spheroid_710() {
-        assert_eq!(Desdemona.polar_radius(), 27f64);
-        assert_eq!(Desdemona.equatorial_radius(), 27f64);
-    }
-    #[test]
-    fn test_tri_axial_710() {
-        assert_eq!(Desdemona.radii().0, 27f64);
-        assert_eq!(Desdemona.radii().1, 27f64);
-        assert_eq!(Desdemona.radii().2, 27f64);
+    fn test_point_mass_710() {
+        assert!(DynOrigin::Desdemona.try_gravitational_parameter().is_err());
     }
     #[test]
     fn test_mean_radius_710() {
         assert_eq!(Desdemona.mean_radius(), 27f64);
+        assert_eq!(DynOrigin::Desdemona.try_mean_radius(), Ok(27f64));
+    }
+    #[test]
+    fn test_spheroid_710() {
+        assert_eq!(Desdemona.polar_radius(), 27f64);
+        assert_eq!(DynOrigin::Desdemona.try_polar_radius(), Ok(27f64));
+        assert_eq!(Desdemona.equatorial_radius(), 27f64);
+        assert_eq!(DynOrigin::Desdemona.try_equatorial_radius(), Ok(27f64));
+    }
+    #[test]
+    fn test_tri_axial_710() {
+        assert_eq!(Desdemona.radii(), (27f64, 27f64, 27f64));
+        assert_eq!(DynOrigin::Desdemona.try_radii(), Ok((27f64, 27f64, 27f64)));
     }
     #[test]
     fn test_origin_711() {
@@ -14543,19 +16372,25 @@ mod tests {
         assert_eq!(Juliet.to_string(), "Juliet");
     }
     #[test]
-    fn test_spheroid_711() {
-        assert_eq!(Juliet.polar_radius(), 42f64);
-        assert_eq!(Juliet.equatorial_radius(), 42f64);
-    }
-    #[test]
-    fn test_tri_axial_711() {
-        assert_eq!(Juliet.radii().0, 42f64);
-        assert_eq!(Juliet.radii().1, 42f64);
-        assert_eq!(Juliet.radii().2, 42f64);
+    fn test_point_mass_711() {
+        assert!(DynOrigin::Juliet.try_gravitational_parameter().is_err());
     }
     #[test]
     fn test_mean_radius_711() {
         assert_eq!(Juliet.mean_radius(), 42f64);
+        assert_eq!(DynOrigin::Juliet.try_mean_radius(), Ok(42f64));
+    }
+    #[test]
+    fn test_spheroid_711() {
+        assert_eq!(Juliet.polar_radius(), 42f64);
+        assert_eq!(DynOrigin::Juliet.try_polar_radius(), Ok(42f64));
+        assert_eq!(Juliet.equatorial_radius(), 42f64);
+        assert_eq!(DynOrigin::Juliet.try_equatorial_radius(), Ok(42f64));
+    }
+    #[test]
+    fn test_tri_axial_711() {
+        assert_eq!(Juliet.radii(), (42f64, 42f64, 42f64));
+        assert_eq!(DynOrigin::Juliet.try_radii(), Ok((42f64, 42f64, 42f64)));
     }
     #[test]
     fn test_origin_712() {
@@ -14563,19 +16398,25 @@ mod tests {
         assert_eq!(Portia.to_string(), "Portia");
     }
     #[test]
-    fn test_spheroid_712() {
-        assert_eq!(Portia.polar_radius(), 54f64);
-        assert_eq!(Portia.equatorial_radius(), 54f64);
-    }
-    #[test]
-    fn test_tri_axial_712() {
-        assert_eq!(Portia.radii().0, 54f64);
-        assert_eq!(Portia.radii().1, 54f64);
-        assert_eq!(Portia.radii().2, 54f64);
+    fn test_point_mass_712() {
+        assert!(DynOrigin::Portia.try_gravitational_parameter().is_err());
     }
     #[test]
     fn test_mean_radius_712() {
         assert_eq!(Portia.mean_radius(), 54f64);
+        assert_eq!(DynOrigin::Portia.try_mean_radius(), Ok(54f64));
+    }
+    #[test]
+    fn test_spheroid_712() {
+        assert_eq!(Portia.polar_radius(), 54f64);
+        assert_eq!(DynOrigin::Portia.try_polar_radius(), Ok(54f64));
+        assert_eq!(Portia.equatorial_radius(), 54f64);
+        assert_eq!(DynOrigin::Portia.try_equatorial_radius(), Ok(54f64));
+    }
+    #[test]
+    fn test_tri_axial_712() {
+        assert_eq!(Portia.radii(), (54f64, 54f64, 54f64));
+        assert_eq!(DynOrigin::Portia.try_radii(), Ok((54f64, 54f64, 54f64)));
     }
     #[test]
     fn test_origin_713() {
@@ -14583,19 +16424,25 @@ mod tests {
         assert_eq!(Rosalind.to_string(), "Rosalind");
     }
     #[test]
-    fn test_spheroid_713() {
-        assert_eq!(Rosalind.polar_radius(), 27f64);
-        assert_eq!(Rosalind.equatorial_radius(), 27f64);
-    }
-    #[test]
-    fn test_tri_axial_713() {
-        assert_eq!(Rosalind.radii().0, 27f64);
-        assert_eq!(Rosalind.radii().1, 27f64);
-        assert_eq!(Rosalind.radii().2, 27f64);
+    fn test_point_mass_713() {
+        assert!(DynOrigin::Rosalind.try_gravitational_parameter().is_err());
     }
     #[test]
     fn test_mean_radius_713() {
         assert_eq!(Rosalind.mean_radius(), 27f64);
+        assert_eq!(DynOrigin::Rosalind.try_mean_radius(), Ok(27f64));
+    }
+    #[test]
+    fn test_spheroid_713() {
+        assert_eq!(Rosalind.polar_radius(), 27f64);
+        assert_eq!(DynOrigin::Rosalind.try_polar_radius(), Ok(27f64));
+        assert_eq!(Rosalind.equatorial_radius(), 27f64);
+        assert_eq!(DynOrigin::Rosalind.try_equatorial_radius(), Ok(27f64));
+    }
+    #[test]
+    fn test_tri_axial_713() {
+        assert_eq!(Rosalind.radii(), (27f64, 27f64, 27f64));
+        assert_eq!(DynOrigin::Rosalind.try_radii(), Ok((27f64, 27f64, 27f64)));
     }
     #[test]
     fn test_origin_714() {
@@ -14603,19 +16450,25 @@ mod tests {
         assert_eq!(Belinda.to_string(), "Belinda");
     }
     #[test]
-    fn test_spheroid_714() {
-        assert_eq!(Belinda.polar_radius(), 33f64);
-        assert_eq!(Belinda.equatorial_radius(), 33f64);
-    }
-    #[test]
-    fn test_tri_axial_714() {
-        assert_eq!(Belinda.radii().0, 33f64);
-        assert_eq!(Belinda.radii().1, 33f64);
-        assert_eq!(Belinda.radii().2, 33f64);
+    fn test_point_mass_714() {
+        assert!(DynOrigin::Belinda.try_gravitational_parameter().is_err());
     }
     #[test]
     fn test_mean_radius_714() {
         assert_eq!(Belinda.mean_radius(), 33f64);
+        assert_eq!(DynOrigin::Belinda.try_mean_radius(), Ok(33f64));
+    }
+    #[test]
+    fn test_spheroid_714() {
+        assert_eq!(Belinda.polar_radius(), 33f64);
+        assert_eq!(DynOrigin::Belinda.try_polar_radius(), Ok(33f64));
+        assert_eq!(Belinda.equatorial_radius(), 33f64);
+        assert_eq!(DynOrigin::Belinda.try_equatorial_radius(), Ok(33f64));
+    }
+    #[test]
+    fn test_tri_axial_714() {
+        assert_eq!(Belinda.radii(), (33f64, 33f64, 33f64));
+        assert_eq!(DynOrigin::Belinda.try_radii(), Ok((33f64, 33f64, 33f64)));
     }
     #[test]
     fn test_origin_715() {
@@ -14623,19 +16476,25 @@ mod tests {
         assert_eq!(Puck.to_string(), "Puck");
     }
     #[test]
-    fn test_spheroid_715() {
-        assert_eq!(Puck.polar_radius(), 77f64);
-        assert_eq!(Puck.equatorial_radius(), 77f64);
-    }
-    #[test]
-    fn test_tri_axial_715() {
-        assert_eq!(Puck.radii().0, 77f64);
-        assert_eq!(Puck.radii().1, 77f64);
-        assert_eq!(Puck.radii().2, 77f64);
+    fn test_point_mass_715() {
+        assert!(DynOrigin::Puck.try_gravitational_parameter().is_err());
     }
     #[test]
     fn test_mean_radius_715() {
         assert_eq!(Puck.mean_radius(), 77f64);
+        assert_eq!(DynOrigin::Puck.try_mean_radius(), Ok(77f64));
+    }
+    #[test]
+    fn test_spheroid_715() {
+        assert_eq!(Puck.polar_radius(), 77f64);
+        assert_eq!(DynOrigin::Puck.try_polar_radius(), Ok(77f64));
+        assert_eq!(Puck.equatorial_radius(), 77f64);
+        assert_eq!(DynOrigin::Puck.try_equatorial_radius(), Ok(77f64));
+    }
+    #[test]
+    fn test_tri_axial_715() {
+        assert_eq!(Puck.radii(), (77f64, 77f64, 77f64));
+        assert_eq!(DynOrigin::Puck.try_radii(), Ok((77f64, 77f64, 77f64)));
     }
     #[test]
     fn test_origin_716() {
@@ -14643,9 +16502,43 @@ mod tests {
         assert_eq!(Caliban.to_string(), "Caliban");
     }
     #[test]
+    fn test_point_mass_716() {
+        assert!(DynOrigin::Caliban.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_716() {
+        assert!(DynOrigin::Caliban.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_716() {
+        assert!(DynOrigin::Caliban.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_716() {
+        assert!(DynOrigin::Caliban.try_polar_radius().is_err());
+        assert!(DynOrigin::Caliban.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_717() {
         assert_eq!(Sycorax.id().0, 717i32);
         assert_eq!(Sycorax.to_string(), "Sycorax");
+    }
+    #[test]
+    fn test_point_mass_717() {
+        assert!(DynOrigin::Sycorax.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_717() {
+        assert!(DynOrigin::Sycorax.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_717() {
+        assert!(DynOrigin::Sycorax.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_717() {
+        assert!(DynOrigin::Sycorax.try_polar_radius().is_err());
+        assert!(DynOrigin::Sycorax.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_718() {
@@ -14653,9 +16546,43 @@ mod tests {
         assert_eq!(Prospero.to_string(), "Prospero");
     }
     #[test]
+    fn test_point_mass_718() {
+        assert!(DynOrigin::Prospero.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_718() {
+        assert!(DynOrigin::Prospero.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_718() {
+        assert!(DynOrigin::Prospero.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_718() {
+        assert!(DynOrigin::Prospero.try_polar_radius().is_err());
+        assert!(DynOrigin::Prospero.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_719() {
         assert_eq!(Setebos.id().0, 719i32);
         assert_eq!(Setebos.to_string(), "Setebos");
+    }
+    #[test]
+    fn test_point_mass_719() {
+        assert!(DynOrigin::Setebos.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_719() {
+        assert!(DynOrigin::Setebos.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_719() {
+        assert!(DynOrigin::Setebos.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_719() {
+        assert!(DynOrigin::Setebos.try_polar_radius().is_err());
+        assert!(DynOrigin::Setebos.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_720() {
@@ -14663,9 +16590,43 @@ mod tests {
         assert_eq!(Stephano.to_string(), "Stephano");
     }
     #[test]
+    fn test_point_mass_720() {
+        assert!(DynOrigin::Stephano.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_720() {
+        assert!(DynOrigin::Stephano.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_720() {
+        assert!(DynOrigin::Stephano.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_720() {
+        assert!(DynOrigin::Stephano.try_polar_radius().is_err());
+        assert!(DynOrigin::Stephano.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_721() {
         assert_eq!(Trinculo.id().0, 721i32);
         assert_eq!(Trinculo.to_string(), "Trinculo");
+    }
+    #[test]
+    fn test_point_mass_721() {
+        assert!(DynOrigin::Trinculo.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_721() {
+        assert!(DynOrigin::Trinculo.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_721() {
+        assert!(DynOrigin::Trinculo.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_721() {
+        assert!(DynOrigin::Trinculo.try_polar_radius().is_err());
+        assert!(DynOrigin::Trinculo.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_722() {
@@ -14673,9 +16634,43 @@ mod tests {
         assert_eq!(Francisco.to_string(), "Francisco");
     }
     #[test]
+    fn test_point_mass_722() {
+        assert!(DynOrigin::Francisco.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_722() {
+        assert!(DynOrigin::Francisco.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_722() {
+        assert!(DynOrigin::Francisco.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_722() {
+        assert!(DynOrigin::Francisco.try_polar_radius().is_err());
+        assert!(DynOrigin::Francisco.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_723() {
         assert_eq!(Margaret.id().0, 723i32);
         assert_eq!(Margaret.to_string(), "Margaret");
+    }
+    #[test]
+    fn test_point_mass_723() {
+        assert!(DynOrigin::Margaret.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_723() {
+        assert!(DynOrigin::Margaret.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_723() {
+        assert!(DynOrigin::Margaret.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_723() {
+        assert!(DynOrigin::Margaret.try_polar_radius().is_err());
+        assert!(DynOrigin::Margaret.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_724() {
@@ -14683,9 +16678,43 @@ mod tests {
         assert_eq!(Ferdinand.to_string(), "Ferdinand");
     }
     #[test]
+    fn test_point_mass_724() {
+        assert!(DynOrigin::Ferdinand.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_724() {
+        assert!(DynOrigin::Ferdinand.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_724() {
+        assert!(DynOrigin::Ferdinand.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_724() {
+        assert!(DynOrigin::Ferdinand.try_polar_radius().is_err());
+        assert!(DynOrigin::Ferdinand.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_725() {
         assert_eq!(Perdita.id().0, 725i32);
         assert_eq!(Perdita.to_string(), "Perdita");
+    }
+    #[test]
+    fn test_point_mass_725() {
+        assert!(DynOrigin::Perdita.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_725() {
+        assert!(DynOrigin::Perdita.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_725() {
+        assert!(DynOrigin::Perdita.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_725() {
+        assert!(DynOrigin::Perdita.try_polar_radius().is_err());
+        assert!(DynOrigin::Perdita.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_726() {
@@ -14693,9 +16722,43 @@ mod tests {
         assert_eq!(Mab.to_string(), "Mab");
     }
     #[test]
+    fn test_point_mass_726() {
+        assert!(DynOrigin::Mab.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_726() {
+        assert!(DynOrigin::Mab.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_726() {
+        assert!(DynOrigin::Mab.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_726() {
+        assert!(DynOrigin::Mab.try_polar_radius().is_err());
+        assert!(DynOrigin::Mab.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_727() {
         assert_eq!(Cupid.id().0, 727i32);
         assert_eq!(Cupid.to_string(), "Cupid");
+    }
+    #[test]
+    fn test_point_mass_727() {
+        assert!(DynOrigin::Cupid.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_727() {
+        assert!(DynOrigin::Cupid.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_727() {
+        assert!(DynOrigin::Cupid.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_727() {
+        assert!(DynOrigin::Cupid.try_polar_radius().is_err());
+        assert!(DynOrigin::Cupid.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_801() {
@@ -14705,21 +16768,30 @@ mod tests {
     #[test]
     fn test_point_mass_801() {
         assert_eq!(Triton.gravitational_parameter(), 1428.495462910464f64);
-    }
-    #[test]
-    fn test_spheroid_801() {
-        assert_eq!(Triton.polar_radius(), 1352.6f64);
-        assert_eq!(Triton.equatorial_radius(), 1352.6f64);
-    }
-    #[test]
-    fn test_tri_axial_801() {
-        assert_eq!(Triton.radii().0, 1352.6f64);
-        assert_eq!(Triton.radii().1, 1352.6f64);
-        assert_eq!(Triton.radii().2, 1352.6f64);
+        assert_eq!(
+            DynOrigin::Triton.try_gravitational_parameter(),
+            Ok(1428.495462910464f64)
+        );
     }
     #[test]
     fn test_mean_radius_801() {
         assert_eq!(Triton.mean_radius(), 1352.6f64);
+        assert_eq!(DynOrigin::Triton.try_mean_radius(), Ok(1352.6f64));
+    }
+    #[test]
+    fn test_spheroid_801() {
+        assert_eq!(Triton.polar_radius(), 1352.6f64);
+        assert_eq!(DynOrigin::Triton.try_polar_radius(), Ok(1352.6f64));
+        assert_eq!(Triton.equatorial_radius(), 1352.6f64);
+        assert_eq!(DynOrigin::Triton.try_equatorial_radius(), Ok(1352.6f64));
+    }
+    #[test]
+    fn test_tri_axial_801() {
+        assert_eq!(Triton.radii(), (1352.6f64, 1352.6f64, 1352.6f64));
+        assert_eq!(
+            DynOrigin::Triton.try_radii(),
+            Ok((1352.6f64, 1352.6f64, 1352.6f64))
+        );
     }
     #[test]
     fn test_origin_802() {
@@ -14727,19 +16799,25 @@ mod tests {
         assert_eq!(Nereid.to_string(), "Nereid");
     }
     #[test]
-    fn test_spheroid_802() {
-        assert_eq!(Nereid.polar_radius(), 170f64);
-        assert_eq!(Nereid.equatorial_radius(), 170f64);
-    }
-    #[test]
-    fn test_tri_axial_802() {
-        assert_eq!(Nereid.radii().0, 170f64);
-        assert_eq!(Nereid.radii().1, 170f64);
-        assert_eq!(Nereid.radii().2, 170f64);
+    fn test_point_mass_802() {
+        assert!(DynOrigin::Nereid.try_gravitational_parameter().is_err());
     }
     #[test]
     fn test_mean_radius_802() {
         assert_eq!(Nereid.mean_radius(), 170f64);
+        assert_eq!(DynOrigin::Nereid.try_mean_radius(), Ok(170f64));
+    }
+    #[test]
+    fn test_spheroid_802() {
+        assert_eq!(Nereid.polar_radius(), 170f64);
+        assert_eq!(DynOrigin::Nereid.try_polar_radius(), Ok(170f64));
+        assert_eq!(Nereid.equatorial_radius(), 170f64);
+        assert_eq!(DynOrigin::Nereid.try_equatorial_radius(), Ok(170f64));
+    }
+    #[test]
+    fn test_tri_axial_802() {
+        assert_eq!(Nereid.radii(), (170f64, 170f64, 170f64));
+        assert_eq!(DynOrigin::Nereid.try_radii(), Ok((170f64, 170f64, 170f64)));
     }
     #[test]
     fn test_origin_803() {
@@ -14749,21 +16827,27 @@ mod tests {
     #[test]
     fn test_point_mass_803() {
         assert_eq!(Naiad.gravitational_parameter(), 0.008530281246540886f64);
-    }
-    #[test]
-    fn test_spheroid_803() {
-        assert_eq!(Naiad.polar_radius(), 29f64);
-        assert_eq!(Naiad.equatorial_radius(), 29f64);
-    }
-    #[test]
-    fn test_tri_axial_803() {
-        assert_eq!(Naiad.radii().0, 29f64);
-        assert_eq!(Naiad.radii().1, 29f64);
-        assert_eq!(Naiad.radii().2, 29f64);
+        assert_eq!(
+            DynOrigin::Naiad.try_gravitational_parameter(),
+            Ok(0.008530281246540886f64)
+        );
     }
     #[test]
     fn test_mean_radius_803() {
         assert_eq!(Naiad.mean_radius(), 29f64);
+        assert_eq!(DynOrigin::Naiad.try_mean_radius(), Ok(29f64));
+    }
+    #[test]
+    fn test_spheroid_803() {
+        assert_eq!(Naiad.polar_radius(), 29f64);
+        assert_eq!(DynOrigin::Naiad.try_polar_radius(), Ok(29f64));
+        assert_eq!(Naiad.equatorial_radius(), 29f64);
+        assert_eq!(DynOrigin::Naiad.try_equatorial_radius(), Ok(29f64));
+    }
+    #[test]
+    fn test_tri_axial_803() {
+        assert_eq!(Naiad.radii(), (29f64, 29f64, 29f64));
+        assert_eq!(DynOrigin::Naiad.try_radii(), Ok((29f64, 29f64, 29f64)));
     }
     #[test]
     fn test_origin_804() {
@@ -14773,21 +16857,27 @@ mod tests {
     #[test]
     fn test_point_mass_804() {
         assert_eq!(Thalassa.gravitational_parameter(), 0.0235887319799217f64);
-    }
-    #[test]
-    fn test_spheroid_804() {
-        assert_eq!(Thalassa.polar_radius(), 40f64);
-        assert_eq!(Thalassa.equatorial_radius(), 40f64);
-    }
-    #[test]
-    fn test_tri_axial_804() {
-        assert_eq!(Thalassa.radii().0, 40f64);
-        assert_eq!(Thalassa.radii().1, 40f64);
-        assert_eq!(Thalassa.radii().2, 40f64);
+        assert_eq!(
+            DynOrigin::Thalassa.try_gravitational_parameter(),
+            Ok(0.0235887319799217f64)
+        );
     }
     #[test]
     fn test_mean_radius_804() {
         assert_eq!(Thalassa.mean_radius(), 40f64);
+        assert_eq!(DynOrigin::Thalassa.try_mean_radius(), Ok(40f64));
+    }
+    #[test]
+    fn test_spheroid_804() {
+        assert_eq!(Thalassa.polar_radius(), 40f64);
+        assert_eq!(DynOrigin::Thalassa.try_polar_radius(), Ok(40f64));
+        assert_eq!(Thalassa.equatorial_radius(), 40f64);
+        assert_eq!(DynOrigin::Thalassa.try_equatorial_radius(), Ok(40f64));
+    }
+    #[test]
+    fn test_tri_axial_804() {
+        assert_eq!(Thalassa.radii(), (40f64, 40f64, 40f64));
+        assert_eq!(DynOrigin::Thalassa.try_radii(), Ok((40f64, 40f64, 40f64)));
     }
     #[test]
     fn test_origin_805() {
@@ -14797,21 +16887,27 @@ mod tests {
     #[test]
     fn test_point_mass_805() {
         assert_eq!(Despina.gravitational_parameter(), 0.1167318403814998f64);
-    }
-    #[test]
-    fn test_spheroid_805() {
-        assert_eq!(Despina.polar_radius(), 74f64);
-        assert_eq!(Despina.equatorial_radius(), 74f64);
-    }
-    #[test]
-    fn test_tri_axial_805() {
-        assert_eq!(Despina.radii().0, 74f64);
-        assert_eq!(Despina.radii().1, 74f64);
-        assert_eq!(Despina.radii().2, 74f64);
+        assert_eq!(
+            DynOrigin::Despina.try_gravitational_parameter(),
+            Ok(0.1167318403814998f64)
+        );
     }
     #[test]
     fn test_mean_radius_805() {
         assert_eq!(Despina.mean_radius(), 74f64);
+        assert_eq!(DynOrigin::Despina.try_mean_radius(), Ok(74f64));
+    }
+    #[test]
+    fn test_spheroid_805() {
+        assert_eq!(Despina.polar_radius(), 74f64);
+        assert_eq!(DynOrigin::Despina.try_polar_radius(), Ok(74f64));
+        assert_eq!(Despina.equatorial_radius(), 74f64);
+        assert_eq!(DynOrigin::Despina.try_equatorial_radius(), Ok(74f64));
+    }
+    #[test]
+    fn test_tri_axial_805() {
+        assert_eq!(Despina.radii(), (74f64, 74f64, 74f64));
+        assert_eq!(DynOrigin::Despina.try_radii(), Ok((74f64, 74f64, 74f64)));
     }
     #[test]
     fn test_origin_806() {
@@ -14821,21 +16917,27 @@ mod tests {
     #[test]
     fn test_point_mass_806() {
         assert_eq!(Galatea.gravitational_parameter(), 0.189898503906069f64);
-    }
-    #[test]
-    fn test_spheroid_806() {
-        assert_eq!(Galatea.polar_radius(), 79f64);
-        assert_eq!(Galatea.equatorial_radius(), 79f64);
-    }
-    #[test]
-    fn test_tri_axial_806() {
-        assert_eq!(Galatea.radii().0, 79f64);
-        assert_eq!(Galatea.radii().1, 79f64);
-        assert_eq!(Galatea.radii().2, 79f64);
+        assert_eq!(
+            DynOrigin::Galatea.try_gravitational_parameter(),
+            Ok(0.189898503906069f64)
+        );
     }
     #[test]
     fn test_mean_radius_806() {
         assert_eq!(Galatea.mean_radius(), 79f64);
+        assert_eq!(DynOrigin::Galatea.try_mean_radius(), Ok(79f64));
+    }
+    #[test]
+    fn test_spheroid_806() {
+        assert_eq!(Galatea.polar_radius(), 79f64);
+        assert_eq!(DynOrigin::Galatea.try_polar_radius(), Ok(79f64));
+        assert_eq!(Galatea.equatorial_radius(), 79f64);
+        assert_eq!(DynOrigin::Galatea.try_equatorial_radius(), Ok(79f64));
+    }
+    #[test]
+    fn test_tri_axial_806() {
+        assert_eq!(Galatea.radii(), (79f64, 79f64, 79f64));
+        assert_eq!(DynOrigin::Galatea.try_radii(), Ok((79f64, 79f64, 79f64)));
     }
     #[test]
     fn test_origin_807() {
@@ -14845,21 +16947,27 @@ mod tests {
     #[test]
     fn test_point_mass_807() {
         assert_eq!(Larissa.gravitational_parameter(), 0.2548437405693583f64);
-    }
-    #[test]
-    fn test_spheroid_807() {
-        assert_eq!(Larissa.polar_radius(), 96f64);
-        assert_eq!(Larissa.equatorial_radius(), 96f64);
-    }
-    #[test]
-    fn test_tri_axial_807() {
-        assert_eq!(Larissa.radii().0, 96f64);
-        assert_eq!(Larissa.radii().1, 96f64);
-        assert_eq!(Larissa.radii().2, 96f64);
+        assert_eq!(
+            DynOrigin::Larissa.try_gravitational_parameter(),
+            Ok(0.2548437405693583f64)
+        );
     }
     #[test]
     fn test_mean_radius_807() {
         assert_eq!(Larissa.mean_radius(), 96f64);
+        assert_eq!(DynOrigin::Larissa.try_mean_radius(), Ok(96f64));
+    }
+    #[test]
+    fn test_spheroid_807() {
+        assert_eq!(Larissa.polar_radius(), 96f64);
+        assert_eq!(DynOrigin::Larissa.try_polar_radius(), Ok(96f64));
+        assert_eq!(Larissa.equatorial_radius(), 96f64);
+        assert_eq!(DynOrigin::Larissa.try_equatorial_radius(), Ok(96f64));
+    }
+    #[test]
+    fn test_tri_axial_807() {
+        assert_eq!(Larissa.radii(), (96f64, 96f64, 96f64));
+        assert_eq!(DynOrigin::Larissa.try_radii(), Ok((96f64, 96f64, 96f64)));
     }
     #[test]
     fn test_origin_808() {
@@ -14869,16 +16977,25 @@ mod tests {
     #[test]
     fn test_point_mass_808() {
         assert_eq!(Proteus.gravitational_parameter(), 2.583422379120727f64);
-    }
-    #[test]
-    fn test_tri_axial_808() {
-        assert_eq!(Proteus.radii().0, 218f64);
-        assert_eq!(Proteus.radii().1, 208f64);
-        assert_eq!(Proteus.radii().2, 201f64);
+        assert_eq!(
+            DynOrigin::Proteus.try_gravitational_parameter(),
+            Ok(2.583422379120727f64)
+        );
     }
     #[test]
     fn test_mean_radius_808() {
         assert_eq!(Proteus.mean_radius(), 208f64);
+        assert_eq!(DynOrigin::Proteus.try_mean_radius(), Ok(208f64));
+    }
+    #[test]
+    fn test_spheroid_808() {
+        assert!(DynOrigin::Proteus.try_polar_radius().is_err());
+        assert!(DynOrigin::Proteus.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_808() {
+        assert_eq!(Proteus.radii(), (218f64, 208f64, 201f64));
+        assert_eq!(DynOrigin::Proteus.try_radii(), Ok((218f64, 208f64, 201f64)));
     }
     #[test]
     fn test_origin_809() {
@@ -14886,9 +17003,43 @@ mod tests {
         assert_eq!(Halimede.to_string(), "Halimede");
     }
     #[test]
+    fn test_point_mass_809() {
+        assert!(DynOrigin::Halimede.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_809() {
+        assert!(DynOrigin::Halimede.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_809() {
+        assert!(DynOrigin::Halimede.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_809() {
+        assert!(DynOrigin::Halimede.try_polar_radius().is_err());
+        assert!(DynOrigin::Halimede.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_810() {
         assert_eq!(Psamathe.id().0, 810i32);
         assert_eq!(Psamathe.to_string(), "Psamathe");
+    }
+    #[test]
+    fn test_point_mass_810() {
+        assert!(DynOrigin::Psamathe.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_810() {
+        assert!(DynOrigin::Psamathe.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_810() {
+        assert!(DynOrigin::Psamathe.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_810() {
+        assert!(DynOrigin::Psamathe.try_polar_radius().is_err());
+        assert!(DynOrigin::Psamathe.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_811() {
@@ -14896,14 +17047,65 @@ mod tests {
         assert_eq!(Sao.to_string(), "Sao");
     }
     #[test]
+    fn test_point_mass_811() {
+        assert!(DynOrigin::Sao.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_811() {
+        assert!(DynOrigin::Sao.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_811() {
+        assert!(DynOrigin::Sao.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_811() {
+        assert!(DynOrigin::Sao.try_polar_radius().is_err());
+        assert!(DynOrigin::Sao.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_812() {
         assert_eq!(Laomedeia.id().0, 812i32);
         assert_eq!(Laomedeia.to_string(), "Laomedeia");
     }
     #[test]
+    fn test_point_mass_812() {
+        assert!(DynOrigin::Laomedeia.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_812() {
+        assert!(DynOrigin::Laomedeia.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_812() {
+        assert!(DynOrigin::Laomedeia.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_812() {
+        assert!(DynOrigin::Laomedeia.try_polar_radius().is_err());
+        assert!(DynOrigin::Laomedeia.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_813() {
         assert_eq!(Neso.id().0, 813i32);
         assert_eq!(Neso.to_string(), "Neso");
+    }
+    #[test]
+    fn test_point_mass_813() {
+        assert!(DynOrigin::Neso.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_813() {
+        assert!(DynOrigin::Neso.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_813() {
+        assert!(DynOrigin::Neso.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_813() {
+        assert!(DynOrigin::Neso.try_polar_radius().is_err());
+        assert!(DynOrigin::Neso.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_901() {
@@ -14913,21 +17115,27 @@ mod tests {
     #[test]
     fn test_point_mass_901() {
         assert_eq!(Charon.gravitational_parameter(), 105.8799888601881f64);
-    }
-    #[test]
-    fn test_spheroid_901() {
-        assert_eq!(Charon.polar_radius(), 606f64);
-        assert_eq!(Charon.equatorial_radius(), 606f64);
-    }
-    #[test]
-    fn test_tri_axial_901() {
-        assert_eq!(Charon.radii().0, 606f64);
-        assert_eq!(Charon.radii().1, 606f64);
-        assert_eq!(Charon.radii().2, 606f64);
+        assert_eq!(
+            DynOrigin::Charon.try_gravitational_parameter(),
+            Ok(105.8799888601881f64)
+        );
     }
     #[test]
     fn test_mean_radius_901() {
         assert_eq!(Charon.mean_radius(), 606f64);
+        assert_eq!(DynOrigin::Charon.try_mean_radius(), Ok(606f64));
+    }
+    #[test]
+    fn test_spheroid_901() {
+        assert_eq!(Charon.polar_radius(), 606f64);
+        assert_eq!(DynOrigin::Charon.try_polar_radius(), Ok(606f64));
+        assert_eq!(Charon.equatorial_radius(), 606f64);
+        assert_eq!(DynOrigin::Charon.try_equatorial_radius(), Ok(606f64));
+    }
+    #[test]
+    fn test_tri_axial_901() {
+        assert_eq!(Charon.radii(), (606f64, 606f64, 606f64));
+        assert_eq!(DynOrigin::Charon.try_radii(), Ok((606f64, 606f64, 606f64)));
     }
     #[test]
     fn test_origin_902() {
@@ -14937,6 +17145,23 @@ mod tests {
     #[test]
     fn test_point_mass_902() {
         assert_eq!(Nix.gravitational_parameter(), 0.00304817564816976f64);
+        assert_eq!(
+            DynOrigin::Nix.try_gravitational_parameter(),
+            Ok(0.00304817564816976f64)
+        );
+    }
+    #[test]
+    fn test_mean_radius_902() {
+        assert!(DynOrigin::Nix.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_902() {
+        assert!(DynOrigin::Nix.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_902() {
+        assert!(DynOrigin::Nix.try_polar_radius().is_err());
+        assert!(DynOrigin::Nix.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_903() {
@@ -14946,6 +17171,23 @@ mod tests {
     #[test]
     fn test_point_mass_903() {
         assert_eq!(Hydra.gravitational_parameter(), 0.003211039206155255f64);
+        assert_eq!(
+            DynOrigin::Hydra.try_gravitational_parameter(),
+            Ok(0.003211039206155255f64)
+        );
+    }
+    #[test]
+    fn test_mean_radius_903() {
+        assert!(DynOrigin::Hydra.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_903() {
+        assert!(DynOrigin::Hydra.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_903() {
+        assert!(DynOrigin::Hydra.try_polar_radius().is_err());
+        assert!(DynOrigin::Hydra.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_904() {
@@ -14955,6 +17197,23 @@ mod tests {
     #[test]
     fn test_point_mass_904() {
         assert_eq!(Kerberos.gravitational_parameter(), 0.001110040850536676f64);
+        assert_eq!(
+            DynOrigin::Kerberos.try_gravitational_parameter(),
+            Ok(0.001110040850536676f64)
+        );
+    }
+    #[test]
+    fn test_mean_radius_904() {
+        assert!(DynOrigin::Kerberos.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_904() {
+        assert!(DynOrigin::Kerberos.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_904() {
+        assert!(DynOrigin::Kerberos.try_polar_radius().is_err());
+        assert!(DynOrigin::Kerberos.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_905() {
@@ -14964,6 +17223,20 @@ mod tests {
     #[test]
     fn test_point_mass_905() {
         assert_eq!(Styx.gravitational_parameter(), 0f64);
+        assert_eq!(DynOrigin::Styx.try_gravitational_parameter(), Ok(0f64));
+    }
+    #[test]
+    fn test_mean_radius_905() {
+        assert!(DynOrigin::Styx.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_905() {
+        assert!(DynOrigin::Styx.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_905() {
+        assert!(DynOrigin::Styx.try_polar_radius().is_err());
+        assert!(DynOrigin::Styx.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_9511010() {
@@ -14971,14 +17244,23 @@ mod tests {
         assert_eq!(Gaspra.to_string(), "Gaspra");
     }
     #[test]
-    fn test_tri_axial_9511010() {
-        assert_eq!(Gaspra.radii().0, 9.1f64);
-        assert_eq!(Gaspra.radii().1, 5.2f64);
-        assert_eq!(Gaspra.radii().2, 4.4f64);
+    fn test_point_mass_9511010() {
+        assert!(DynOrigin::Gaspra.try_gravitational_parameter().is_err());
     }
     #[test]
     fn test_mean_radius_9511010() {
         assert_eq!(Gaspra.mean_radius(), 6.1f64);
+        assert_eq!(DynOrigin::Gaspra.try_mean_radius(), Ok(6.1f64));
+    }
+    #[test]
+    fn test_spheroid_9511010() {
+        assert!(DynOrigin::Gaspra.try_polar_radius().is_err());
+        assert!(DynOrigin::Gaspra.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_9511010() {
+        assert_eq!(Gaspra.radii(), (9.1f64, 5.2f64, 4.4f64));
+        assert_eq!(DynOrigin::Gaspra.try_radii(), Ok((9.1f64, 5.2f64, 4.4f64)));
     }
     #[test]
     fn test_origin_2431010() {
@@ -14986,19 +17268,45 @@ mod tests {
         assert_eq!(Ida.to_string(), "Ida");
     }
     #[test]
-    fn test_tri_axial_2431010() {
-        assert_eq!(Ida.radii().0, 26.8f64);
-        assert_eq!(Ida.radii().1, 12f64);
-        assert_eq!(Ida.radii().2, 7.6f64);
+    fn test_point_mass_2431010() {
+        assert!(DynOrigin::Ida.try_gravitational_parameter().is_err());
     }
     #[test]
     fn test_mean_radius_2431010() {
         assert_eq!(Ida.mean_radius(), 15.65f64);
+        assert_eq!(DynOrigin::Ida.try_mean_radius(), Ok(15.65f64));
+    }
+    #[test]
+    fn test_spheroid_2431010() {
+        assert!(DynOrigin::Ida.try_polar_radius().is_err());
+        assert!(DynOrigin::Ida.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_2431010() {
+        assert_eq!(Ida.radii(), (26.8f64, 12f64, 7.6f64));
+        assert_eq!(DynOrigin::Ida.try_radii(), Ok((26.8f64, 12f64, 7.6f64)));
     }
     #[test]
     fn test_origin_2431011() {
         assert_eq!(Dactyl.id().0, 2431011i32);
         assert_eq!(Dactyl.to_string(), "Dactyl");
+    }
+    #[test]
+    fn test_point_mass_2431011() {
+        assert!(DynOrigin::Dactyl.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_2431011() {
+        assert!(DynOrigin::Dactyl.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_2431011() {
+        assert!(DynOrigin::Dactyl.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_2431011() {
+        assert!(DynOrigin::Dactyl.try_polar_radius().is_err());
+        assert!(DynOrigin::Dactyl.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_2000001() {
@@ -15008,21 +17316,30 @@ mod tests {
     #[test]
     fn test_point_mass_2000001() {
         assert_eq!(Ceres.gravitational_parameter(), 62.62888864440993f64);
-    }
-    #[test]
-    fn test_spheroid_2000001() {
-        assert_eq!(Ceres.polar_radius(), 446f64);
-        assert_eq!(Ceres.equatorial_radius(), 487.3f64);
-    }
-    #[test]
-    fn test_tri_axial_2000001() {
-        assert_eq!(Ceres.radii().0, 487.3f64);
-        assert_eq!(Ceres.radii().1, 487.3f64);
-        assert_eq!(Ceres.radii().2, 446f64);
+        assert_eq!(
+            DynOrigin::Ceres.try_gravitational_parameter(),
+            Ok(62.62888864440993f64)
+        );
     }
     #[test]
     fn test_mean_radius_2000001() {
         assert_eq!(Ceres.mean_radius(), 470f64);
+        assert_eq!(DynOrigin::Ceres.try_mean_radius(), Ok(470f64));
+    }
+    #[test]
+    fn test_spheroid_2000001() {
+        assert_eq!(Ceres.polar_radius(), 446f64);
+        assert_eq!(DynOrigin::Ceres.try_polar_radius(), Ok(446f64));
+        assert_eq!(Ceres.equatorial_radius(), 487.3f64);
+        assert_eq!(DynOrigin::Ceres.try_equatorial_radius(), Ok(487.3f64));
+    }
+    #[test]
+    fn test_tri_axial_2000001() {
+        assert_eq!(Ceres.radii(), (487.3f64, 487.3f64, 446f64));
+        assert_eq!(
+            DynOrigin::Ceres.try_radii(),
+            Ok((487.3f64, 487.3f64, 446f64))
+        );
     }
     #[test]
     fn test_origin_2000002() {
@@ -15032,6 +17349,23 @@ mod tests {
     #[test]
     fn test_point_mass_2000002() {
         assert_eq!(Pallas.gravitational_parameter(), 13.665878145967422f64);
+        assert_eq!(
+            DynOrigin::Pallas.try_gravitational_parameter(),
+            Ok(13.665878145967422f64)
+        );
+    }
+    #[test]
+    fn test_mean_radius_2000002() {
+        assert!(DynOrigin::Pallas.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_2000002() {
+        assert!(DynOrigin::Pallas.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_2000002() {
+        assert!(DynOrigin::Pallas.try_polar_radius().is_err());
+        assert!(DynOrigin::Pallas.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_2000004() {
@@ -15041,12 +17375,24 @@ mod tests {
     #[test]
     fn test_point_mass_2000004() {
         assert_eq!(Vesta.gravitational_parameter(), 17.288232879171513f64);
+        assert_eq!(
+            DynOrigin::Vesta.try_gravitational_parameter(),
+            Ok(17.288232879171513f64)
+        );
+    }
+    #[test]
+    fn test_mean_radius_2000004() {
+        assert!(DynOrigin::Vesta.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_spheroid_2000004() {
+        assert!(DynOrigin::Vesta.try_polar_radius().is_err());
+        assert!(DynOrigin::Vesta.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_tri_axial_2000004() {
-        assert_eq!(Vesta.radii().0, 289f64);
-        assert_eq!(Vesta.radii().1, 280f64);
-        assert_eq!(Vesta.radii().2, 229f64);
+        assert_eq!(Vesta.radii(), (289f64, 280f64, 229f64));
+        assert_eq!(DynOrigin::Vesta.try_radii(), Ok((289f64, 280f64, 229f64)));
     }
     #[test]
     fn test_origin_2000016() {
@@ -15056,16 +17402,28 @@ mod tests {
     #[test]
     fn test_point_mass_2000016() {
         assert_eq!(Psyche.gravitational_parameter(), 1.5896582441709424f64);
-    }
-    #[test]
-    fn test_tri_axial_2000016() {
-        assert_eq!(Psyche.radii().0, 139.5f64);
-        assert_eq!(Psyche.radii().1, 116f64);
-        assert_eq!(Psyche.radii().2, 94.5f64);
+        assert_eq!(
+            DynOrigin::Psyche.try_gravitational_parameter(),
+            Ok(1.5896582441709424f64)
+        );
     }
     #[test]
     fn test_mean_radius_2000016() {
         assert_eq!(Psyche.mean_radius(), 113f64);
+        assert_eq!(DynOrigin::Psyche.try_mean_radius(), Ok(113f64));
+    }
+    #[test]
+    fn test_spheroid_2000016() {
+        assert!(DynOrigin::Psyche.try_polar_radius().is_err());
+        assert!(DynOrigin::Psyche.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_2000016() {
+        assert_eq!(Psyche.radii(), (139.5f64, 116f64, 94.5f64));
+        assert_eq!(
+            DynOrigin::Psyche.try_radii(),
+            Ok((139.5f64, 116f64, 94.5f64))
+        );
     }
     #[test]
     fn test_origin_2000021() {
@@ -15073,19 +17431,48 @@ mod tests {
         assert_eq!(Lutetia.to_string(), "Lutetia");
     }
     #[test]
-    fn test_tri_axial_2000021() {
-        assert_eq!(Lutetia.radii().0, 62f64);
-        assert_eq!(Lutetia.radii().1, 50.5f64);
-        assert_eq!(Lutetia.radii().2, 46.5f64);
+    fn test_point_mass_2000021() {
+        assert!(DynOrigin::Lutetia.try_gravitational_parameter().is_err());
     }
     #[test]
     fn test_mean_radius_2000021() {
         assert_eq!(Lutetia.mean_radius(), 52.5f64);
+        assert_eq!(DynOrigin::Lutetia.try_mean_radius(), Ok(52.5f64));
+    }
+    #[test]
+    fn test_spheroid_2000021() {
+        assert!(DynOrigin::Lutetia.try_polar_radius().is_err());
+        assert!(DynOrigin::Lutetia.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_2000021() {
+        assert_eq!(Lutetia.radii(), (62f64, 50.5f64, 46.5f64));
+        assert_eq!(
+            DynOrigin::Lutetia.try_radii(),
+            Ok((62f64, 50.5f64, 46.5f64))
+        );
     }
     #[test]
     fn test_origin_2000216() {
         assert_eq!(Kleopatra.id().0, 2000216i32);
         assert_eq!(Kleopatra.to_string(), "Kleopatra");
+    }
+    #[test]
+    fn test_point_mass_2000216() {
+        assert!(DynOrigin::Kleopatra.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_2000216() {
+        assert!(DynOrigin::Kleopatra.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_2000216() {
+        assert!(DynOrigin::Kleopatra.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_2000216() {
+        assert!(DynOrigin::Kleopatra.try_polar_radius().is_err());
+        assert!(DynOrigin::Kleopatra.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_2000433() {
@@ -15095,16 +17482,25 @@ mod tests {
     #[test]
     fn test_point_mass_2000433() {
         assert_eq!(Eros.gravitational_parameter(), 0.0004463f64);
-    }
-    #[test]
-    fn test_tri_axial_2000433() {
-        assert_eq!(Eros.radii().0, 17f64);
-        assert_eq!(Eros.radii().1, 5.5f64);
-        assert_eq!(Eros.radii().2, 5.5f64);
+        assert_eq!(
+            DynOrigin::Eros.try_gravitational_parameter(),
+            Ok(0.0004463f64)
+        );
     }
     #[test]
     fn test_mean_radius_2000433() {
         assert_eq!(Eros.mean_radius(), 8.45f64);
+        assert_eq!(DynOrigin::Eros.try_mean_radius(), Ok(8.45f64));
+    }
+    #[test]
+    fn test_spheroid_2000433() {
+        assert!(DynOrigin::Eros.try_polar_radius().is_err());
+        assert!(DynOrigin::Eros.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_2000433() {
+        assert_eq!(Eros.radii(), (17f64, 5.5f64, 5.5f64));
+        assert_eq!(DynOrigin::Eros.try_radii(), Ok((17f64, 5.5f64, 5.5f64)));
     }
     #[test]
     fn test_origin_2000511() {
@@ -15114,16 +17510,25 @@ mod tests {
     #[test]
     fn test_point_mass_2000511() {
         assert_eq!(Davida.gravitational_parameter(), 3.8944831481705644f64);
-    }
-    #[test]
-    fn test_tri_axial_2000511() {
-        assert_eq!(Davida.radii().0, 180f64);
-        assert_eq!(Davida.radii().1, 147f64);
-        assert_eq!(Davida.radii().2, 127f64);
+        assert_eq!(
+            DynOrigin::Davida.try_gravitational_parameter(),
+            Ok(3.8944831481705644f64)
+        );
     }
     #[test]
     fn test_mean_radius_2000511() {
         assert_eq!(Davida.mean_radius(), 150f64);
+        assert_eq!(DynOrigin::Davida.try_mean_radius(), Ok(150f64));
+    }
+    #[test]
+    fn test_spheroid_2000511() {
+        assert!(DynOrigin::Davida.try_polar_radius().is_err());
+        assert!(DynOrigin::Davida.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_2000511() {
+        assert_eq!(Davida.radii(), (180f64, 147f64, 127f64));
+        assert_eq!(DynOrigin::Davida.try_radii(), Ok((180f64, 147f64, 127f64)));
     }
     #[test]
     fn test_origin_2000253() {
@@ -15131,14 +17536,23 @@ mod tests {
         assert_eq!(Mathilde.to_string(), "Mathilde");
     }
     #[test]
-    fn test_tri_axial_2000253() {
-        assert_eq!(Mathilde.radii().0, 33f64);
-        assert_eq!(Mathilde.radii().1, 24f64);
-        assert_eq!(Mathilde.radii().2, 23f64);
+    fn test_point_mass_2000253() {
+        assert!(DynOrigin::Mathilde.try_gravitational_parameter().is_err());
     }
     #[test]
     fn test_mean_radius_2000253() {
         assert_eq!(Mathilde.mean_radius(), 26.5f64);
+        assert_eq!(DynOrigin::Mathilde.try_mean_radius(), Ok(26.5f64));
+    }
+    #[test]
+    fn test_spheroid_2000253() {
+        assert!(DynOrigin::Mathilde.try_polar_radius().is_err());
+        assert!(DynOrigin::Mathilde.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_2000253() {
+        assert_eq!(Mathilde.radii(), (33f64, 24f64, 23f64));
+        assert_eq!(DynOrigin::Mathilde.try_radii(), Ok((33f64, 24f64, 23f64)));
     }
     #[test]
     fn test_origin_2002867() {
@@ -15146,14 +17560,26 @@ mod tests {
         assert_eq!(Steins.to_string(), "Steins");
     }
     #[test]
-    fn test_tri_axial_2002867() {
-        assert_eq!(Steins.radii().0, 3.24f64);
-        assert_eq!(Steins.radii().1, 2.73f64);
-        assert_eq!(Steins.radii().2, 2.04f64);
+    fn test_point_mass_2002867() {
+        assert!(DynOrigin::Steins.try_gravitational_parameter().is_err());
     }
     #[test]
     fn test_mean_radius_2002867() {
         assert_eq!(Steins.mean_radius(), 2.7f64);
+        assert_eq!(DynOrigin::Steins.try_mean_radius(), Ok(2.7f64));
+    }
+    #[test]
+    fn test_spheroid_2002867() {
+        assert!(DynOrigin::Steins.try_polar_radius().is_err());
+        assert!(DynOrigin::Steins.try_equatorial_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_2002867() {
+        assert_eq!(Steins.radii(), (3.24f64, 2.73f64, 2.04f64));
+        assert_eq!(
+            DynOrigin::Steins.try_radii(),
+            Ok((3.24f64, 2.73f64, 2.04f64))
+        );
     }
     #[test]
     fn test_origin_2009969() {
@@ -15161,9 +17587,47 @@ mod tests {
         assert_eq!(Braille.to_string(), "Braille");
     }
     #[test]
+    fn test_point_mass_2009969() {
+        assert!(DynOrigin::Braille.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_2009969() {
+        assert!(DynOrigin::Braille.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_2009969() {
+        assert!(DynOrigin::Braille.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_2009969() {
+        assert!(DynOrigin::Braille.try_polar_radius().is_err());
+        assert!(DynOrigin::Braille.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_origin_2004015() {
         assert_eq!(WilsonHarrington.id().0, 2004015i32);
         assert_eq!(WilsonHarrington.to_string(), "Wilson-Harrington");
+    }
+    #[test]
+    fn test_point_mass_2004015() {
+        assert!(
+            DynOrigin::WilsonHarrington
+                .try_gravitational_parameter()
+                .is_err()
+        );
+    }
+    #[test]
+    fn test_mean_radius_2004015() {
+        assert!(DynOrigin::WilsonHarrington.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_2004015() {
+        assert!(DynOrigin::WilsonHarrington.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_2004015() {
+        assert!(DynOrigin::WilsonHarrington.try_polar_radius().is_err());
+        assert!(DynOrigin::WilsonHarrington.try_equatorial_radius().is_err());
     }
     #[test]
     fn test_origin_2004179() {
@@ -15171,10 +17635,25 @@ mod tests {
         assert_eq!(Toutatis.to_string(), "Toutatis");
     }
     #[test]
+    fn test_point_mass_2004179() {
+        assert!(DynOrigin::Toutatis.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_2004179() {
+        assert!(DynOrigin::Toutatis.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_spheroid_2004179() {
+        assert!(DynOrigin::Toutatis.try_polar_radius().is_err());
+        assert!(DynOrigin::Toutatis.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_tri_axial_2004179() {
-        assert_eq!(Toutatis.radii().0, 2.13f64);
-        assert_eq!(Toutatis.radii().1, 1.015f64);
-        assert_eq!(Toutatis.radii().2, 0.85f64);
+        assert_eq!(Toutatis.radii(), (2.13f64, 1.015f64, 0.85f64));
+        assert_eq!(
+            DynOrigin::Toutatis.try_radii(),
+            Ok((2.13f64, 1.015f64, 0.85f64))
+        );
     }
     #[test]
     fn test_origin_2025143() {
@@ -15182,14 +17661,46 @@ mod tests {
         assert_eq!(Itokawa.to_string(), "Itokawa");
     }
     #[test]
+    fn test_point_mass_2025143() {
+        assert!(DynOrigin::Itokawa.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_2025143() {
+        assert!(DynOrigin::Itokawa.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_spheroid_2025143() {
+        assert!(DynOrigin::Itokawa.try_polar_radius().is_err());
+        assert!(DynOrigin::Itokawa.try_equatorial_radius().is_err());
+    }
+    #[test]
     fn test_tri_axial_2025143() {
-        assert_eq!(Itokawa.radii().0, 0.268f64);
-        assert_eq!(Itokawa.radii().1, 0.147f64);
-        assert_eq!(Itokawa.radii().2, 0.104f64);
+        assert_eq!(Itokawa.radii(), (0.268f64, 0.147f64, 0.104f64));
+        assert_eq!(
+            DynOrigin::Itokawa.try_radii(),
+            Ok((0.268f64, 0.147f64, 0.104f64))
+        );
     }
     #[test]
     fn test_origin_2101955() {
         assert_eq!(Bennu.id().0, 2101955i32);
         assert_eq!(Bennu.to_string(), "Bennu");
+    }
+    #[test]
+    fn test_point_mass_2101955() {
+        assert!(DynOrigin::Bennu.try_gravitational_parameter().is_err());
+    }
+    #[test]
+    fn test_mean_radius_2101955() {
+        assert!(DynOrigin::Bennu.try_mean_radius().is_err());
+    }
+    #[test]
+    fn test_tri_axial_2101955() {
+        assert!(DynOrigin::Bennu.try_radii().is_err());
+    }
+    #[test]
+    fn test_spheroid_2101955() {
+        assert!(DynOrigin::Bennu.try_polar_radius().is_err());
+        assert!(DynOrigin::Bennu.try_equatorial_radius().is_err());
     }
 }
