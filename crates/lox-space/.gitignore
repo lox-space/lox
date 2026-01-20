@@ -76,3 +76,6 @@ docs/_build/
 
 # MkDocs documentation
 site/
+
+node_modules/
+

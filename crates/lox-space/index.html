@@ -1,0 +1,18 @@
+<!doctype html>
+<html>
+  <body>
+    <pre id="out">Loading…</pre>
+    <script type="module">
+      import init, { Origin } from './pkg/lox_space.js';
+      const out = document.getElementById('out');
+      try {
+        await init();
+        const earth = new Origin('Earth');
+        console.log(earth);
+        out.textContent = `Earth id: ${earth.id}, name: ${earth.name}`;
+      } catch (e) {
+        out.textContent = `Error: ${e.name}: ${e.message}\n${e.stack}`;
+      }
+    </script>
+  </body>
+</html>

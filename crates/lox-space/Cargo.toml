@@ -36,6 +36,9 @@ pyo3 = { workspace = true, optional = true }
 rayon = { workspace = true, optional = true }
 sgp4 = { workspace = true, optional = true }
 
+wasm-bindgen = { workspace = true, optional = true }
+js-sys = "0.3.85"
+
 [dev-dependencies]
 pyo3 = { workspace = true, features = ["auto-initialize"] }
 rstest.workspace = true
@@ -102,6 +105,13 @@ python = [
     "dep:pyo3",
     "dep:rayon",
     "dep:sgp4",
+]
+wasm = [
+    "time",
+    "units",
+    "dep:glam",
+    "dep:lox-core",
+    "dep:wasm-bindgen",
 ]
 time = [
     "io",
