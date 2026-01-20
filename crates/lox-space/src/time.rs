@@ -7,3 +7,6 @@ pub use lox_time::*;
 
 #[cfg(feature = "python")]
 pub(crate) mod python;
+
+#[cfg(feature = "wasm")]
+pub(crate) mod wasm;

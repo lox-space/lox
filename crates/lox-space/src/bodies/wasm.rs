@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Halvor Granskogen Bjørnstad <halvor.bjornstad@ksat.no>
 //
 // SPDX-License-Identifier: MPL-2.0
-// this whole file is a port of python.rs to wasm-bindgen
 
 use crate::bodies::dynamic::{DynOrigin, UnknownOriginId, UnknownOriginName};
 use crate::bodies::{
@@ -10,14 +9,9 @@ use crate::bodies::{
 };
 use lox_core::types::units::Seconds;
 use wasm_bindgen::prelude::*;
-use js_sys::Error;
+use crate::wasm::js_error_with_name;
 use std::str::FromStr;
 
-fn js_error_with_name<E: std::fmt::Display>(e: E, name: &str) -> JsValue {
-    let err = Error::new(&e.to_string());
-    err.set_name(name);
-    err.into()
-}
 
 pub struct JsUndefinedOriginPropertyError(crate::bodies::UndefinedOriginPropertyError);
 
@@ -45,14 +39,14 @@ impl From<JsUnknownOriginName> for JsValue {
 }
 
 // not too sure about the naming of these structs, they're from type aliases
-#[wasm_bindgen]
+#[wasm_bindgen(js_name = "Radii")]
 pub struct JsRadii {
     pub x: f64,
     pub y: f64,
     pub z: f64,
 }
 
-#[wasm_bindgen]
+#[wasm_bindgen(js_name = "Elements")]
 pub struct JsElements {
     pub x: f64,
     pub y: f64,
