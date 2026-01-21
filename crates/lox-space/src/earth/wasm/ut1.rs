@@ -84,3 +84,13 @@ impl JsEopProvider {
         ))
     }
 }
+
+impl JsEopProvider {
+    pub fn inner(&self) -> EopProvider {
+        self.0.clone()
+    }
+
+    pub fn from_inner(provider: EopProvider) -> Self {
+        Self(provider)
+    }
+}

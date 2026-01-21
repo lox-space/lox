@@ -6,7 +6,7 @@ use std::ops::{Add, Sub};
 use std::str::FromStr;
 
 use js_sys::Array;
-use wasm_bindgen::{prelude::*, JsCast};
+use wasm_bindgen::prelude::*;
 
 use lox_test_utils::{approx_eq, ApproxEq};
 use lox_time::subsecond::Subsecond;
@@ -19,7 +19,7 @@ use crate::time::time::{DynTime, Time, TimeError};
 use crate::time::time_of_day::{CivilTime, TimeOfDay};
 use crate::time::time_scales::Tai;
 use crate::time::utc::transformations::TryToUtc;
-use crate::wasm::js_error_with_name;
+use crate::wasm::{js_error_with_name, js_error_with_name_from_string};
 
 use super::time_scales::JsTimeScale;
 use crate::time::wasm::deltas::JsTimeDelta;
@@ -29,7 +29,7 @@ pub struct JsTimeError(pub TimeError);
 
 impl From<JsTimeError> for JsValue {
     fn from(err: JsTimeError) -> Self {
-        js_error_with_name("TimeError", err.0.to_string())
+        js_error_with_name("TimeError", &err.0.to_string())
     }
 }
 
@@ -44,7 +44,7 @@ impl FromStr for JsEpoch {
             "mjd" | "MJD" => Ok(Epoch::ModifiedJulianDate),
             "j1950" | "J1950" => Ok(Epoch::J1950),
             "j2000" | "J2000" => Ok(Epoch::J2000),
-            _ => Err(js_error_with_name("ValueError", format!("unknown epoch: {s}"))),
+            _ => Err(js_error_with_name_from_string("ValueError", format!("unknown epoch: {s}"))),
         }
         .map(JsEpoch)
     }
@@ -60,7 +60,7 @@ impl FromStr for JsUnit {
             "seconds" => Ok(Unit::Seconds),
             "days" => Ok(Unit::Days),
             "centuries" => Ok(Unit::Centuries),
-            _ => Err(js_error_with_name("ValueError", format!("unknown unit: {s}"))),
+            _ => Err(js_error_with_name_from_string("ValueError", format!("unknown unit: {s}"))),
         }
         .map(JsUnit)
     }
@@ -103,7 +103,7 @@ impl JsTime {
         seconds: f64,
     ) -> Result<JsTime, JsValue> {
         let scale: JsTimeScale = scale.try_into()?;
-        let time = Time::builder_with_scale(scale.0)
+        let time = Time::builder_with_scale(scale.inner())
             .with_ymd(year, month, day)
             .with_hms(hour, minute, seconds)
             .build()
@@ -131,7 +131,7 @@ impl JsTime {
     ) -> Result<JsTime, JsValue> {
         let scale: JsTimeScale = scale.try_into()?;
         let epoch: JsEpoch = epoch.unwrap_or_else(|| "jd".to_string()).parse()?;
-        Ok(Self(Time::from_julian_date(scale.0, jd, epoch.0)))
+        Ok(Self(Time::from_julian_date(scale.inner(), jd, epoch.0)))
     }
 
     /// Create a Time from a two-part Julian date for maximum precision.
@@ -153,7 +153,7 @@ impl JsTime {
         jd2: f64,
     ) -> Result<JsTime, JsValue> {
         let scale: JsTimeScale = scale.try_into()?;
-        Ok(Self(Time::from_two_part_julian_date(scale.0, jd1, jd2)))
+        Ok(Self(Time::from_two_part_julian_date(scale.inner(), jd1, jd2)))
     }
 
     /// Create a Time from year and day of year.
@@ -185,7 +185,7 @@ impl JsTime {
         seconds: Option<f64>,
     ) -> Result<JsTime, JsValue> {
         let scale: JsTimeScale = scale.try_into()?;
-        let time = Time::builder_with_scale(scale.0)
+        let time = Time::builder_with_scale(scale.inner())
             .with_doy(year, day)
             .with_hms(hour.unwrap_or(0), minute.unwrap_or(0), seconds.unwrap_or(0.0))
             .build()
@@ -211,7 +211,7 @@ impl JsTime {
     pub fn from_iso(iso: &str, scale: Option<JsValue>) -> Result<JsTime, JsValue> {
         let scale: JsTimeScale =
             scale.map_or(Ok(JsTimeScale::default()), |scale| scale.try_into())?;
-        let time = Time::from_iso(scale.0, iso).map_err(JsTimeError)?;
+        let time = Time::from_iso(scale.inner(), iso).map_err(JsTimeError)?;
         Ok(JsTime(time))
     }
 
@@ -238,7 +238,7 @@ impl JsTime {
         let scale: JsTimeScale = scale.try_into()?;
         let subsecond =
             Subsecond::from_f64(subsecond).ok_or_else(|| js_error_with_name("ValueError", "invalid subsecond"))?;
-        let time = Time::new(scale.0, seconds, subsecond);
+        let time = Time::new(scale.inner(), seconds, subsecond);
         Ok(JsTime(time))
     }
 
@@ -294,27 +294,25 @@ impl JsTime {
 
     #[wasm_bindgen]
     pub fn add(&self, delta: &JsTimeDelta) -> JsTime {
-        JsTime(self.0 + delta.0)
+        JsTime(self.0 + delta.inner())
     }
 
-    #[wasm_bindgen]
-    pub fn subtract(&self, rhs: &JsValue) -> Result<JsValue, JsValue> {
-        if let Ok(delta) = rhs.clone().dyn_into::<JsTimeDelta>() {
-            Ok(JsTime(self.0 - delta.0).into())
-        } else if let Ok(rhs) = rhs.clone().dyn_into::<JsTime>() {
-            if self.scale() != rhs.scale() {
-                return Err(js_error_with_name(
-                    "ValueError",
-                    "cannot subtract `Time` objects with different time scales",
-                ));
-            }
-            Ok(JsTimeDelta(self.0 - rhs.0).into())
-        } else {
-            Err(js_error_with_name(
-                "TypeError",
-                "`rhs` must be either a `Time` or a `TimeDelta` object",
-            ))
+    /// Subtract a TimeDelta from this Time.
+    #[wasm_bindgen(js_name = "subtractDelta")]
+    pub fn subtract_delta(&self, delta: &JsTimeDelta) -> JsTime {
+        JsTime(self.0 - delta.inner())
+    }
+
+    /// Compute the TimeDelta between this Time and another Time.
+    #[wasm_bindgen(js_name = "subtract")]
+    pub fn subtract_time(&self, rhs: &JsTime) -> Result<JsTimeDelta, JsValue> {
+        if self.0.scale() != rhs.0.scale() {
+            return Err(js_error_with_name(
+                "ValueError",
+                "cannot subtract `Time` objects with different time scales",
+            ));
         }
+        Ok(JsTimeDelta::from_inner(self.0 - rhs.0))
     }
 
     /// Check if two Time objects are approximately equal.
@@ -336,7 +334,7 @@ impl JsTime {
         rel_tol: Option<f64>,
         abs_tol: Option<f64>,
     ) -> Result<bool, JsValue> {
-        if self.scale() != rhs.scale() {
+        if self.0.scale() != rhs.0.scale() {
             return Err(js_error_with_name(
                 "ValueError",
                 "cannot compare `Time` objects with different time scales",
@@ -344,7 +342,7 @@ impl JsTime {
         }
         let rel = rel_tol.unwrap_or(1e-8);
         let abs = abs_tol.unwrap_or(1e-14);
-        Ok(approx_eq!(self, rhs, rtol <= rel, atol <= abs))
+        Ok(approx_eq!(self.0, rhs.0, rtol <= rel, atol <= abs))
     }
 
     /// Return the Julian date relative to the specified epoch.
@@ -382,7 +380,7 @@ impl JsTime {
     ///     The TimeScale of this Time.
     #[wasm_bindgen]
     pub fn scale(&self) -> JsTimeScale {
-        JsTimeScale(self.0.scale())
+        JsTimeScale::from_inner(self.0.scale())
     }
 
     /// Return the year component.
@@ -486,13 +484,13 @@ impl JsTime {
         provider: Option<JsEopProvider>,
     ) -> Result<JsTime, JsValue> {
         let scale: JsTimeScale = scale.try_into()?;
-        let provider = provider.as_ref().map(|p| &p.0);
+        let provider = provider.as_ref().map(|p| p.inner());
         let time = match provider {
             Some(provider) => self
                 .0
-                .try_to_scale(scale.0, provider)
+                .try_to_scale(scale.inner(), &provider)
                 .map_err(JsEopProviderError)?,
-            None => self.0.to_scale(scale.0),
+            None => self.0.to_scale(scale.inner()),
         };
         Ok(JsTime(time))
     }
@@ -509,17 +507,27 @@ impl JsTime {
     ///     ValueError: If the time is outside the valid UTC range.
     #[wasm_bindgen]
     pub fn to_utc(&self, provider: Option<JsEopProvider>) -> Result<JsUtc, JsValue> {
-        let provider = provider.as_ref().map(|p| &p.0);
+        let provider = provider.as_ref().map(|p| p.inner());
         let utc = match provider {
             Some(provider) => self
                 .0
-                .try_to_scale(Tai, provider)
+                .try_to_scale(Tai, &provider)
                 .map_err(JsEopProviderError)?,
             None => self.0.to_scale(Tai),
         }
         .try_to_utc()
         .map_err(JsUtcError)?;
-        Ok(JsUtc(utc))
+        Ok(JsUtc::from_inner(utc))
+    }
+}
+
+impl JsTime {
+    pub fn inner(&self) -> DynTime {
+        self.0.clone()
+    }
+
+    pub fn from_inner(time: DynTime) -> Self {
+        Self(time)
     }
 }
 

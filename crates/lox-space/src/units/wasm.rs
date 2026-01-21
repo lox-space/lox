@@ -11,7 +11,7 @@ macro_rules! wasm_unit {
     ($(($unit:ident, $jsunit:ident)),*) => {
         $(
             #[wasm_bindgen]
-            pub struct $jsunit(pub $unit);
+            pub struct $jsunit($unit);
 
             #[wasm_bindgen]
             impl $jsunit {
@@ -55,9 +55,9 @@ macro_rules! wasm_unit {
     };
 }
 
-py_unit!(
-    (Angle, "Angle", PyAngle),
-    (Distance, "Distance", PyDistance),
-    (Frequency, "Frequency", PyFrequency),
-    (Velocity, "Velocity", PyVelocity)
+wasm_unit!(
+    (Angle, JsAngle),
+    (Distance, JsDistance),
+    (Frequency, JsFrequency),
+    (Velocity, JsVelocity)
 );

@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use crate::wasm::js_error_with_name;
+use js_sys::Reflect;
 use wasm_bindgen::prelude::*;
-use wasm_bindgen::JsCast;
 
 use crate::time::time_scales::{DynTimeScale, TimeScale, UnknownTimeScaleError};
 
@@ -33,7 +33,7 @@ impl From<JsUnknownTimeScaleError> for JsValue {
 /// Raises:
 ///     ValueError: If the abbreviation is not recognized.
 #[wasm_bindgen(js_name = "TimeScale")]
-pub struct JsTimeScale(pub DynTimeScale);
+pub struct JsTimeScale(DynTimeScale);
 
 #[wasm_bindgen(js_class = "TimeScale")]
 impl JsTimeScale {
@@ -55,14 +55,30 @@ impl JsTimeScale {
         format!("{}", self.0)
     }
 
+    pub fn default() -> Self {
+        Self(DynTimeScale::default())
+    }
+
     /// Return the time scale abbreviation (e.g., "TAI").
+    #[wasm_bindgen]
     pub fn abbreviation(&self) -> String {
         self.0.abbreviation().to_owned()
     }
 
     /// Return the full name of the time scale (e.g., "International Atomic Time").
+    #[wasm_bindgen]
     pub fn name(&self) -> String {
         self.0.name().to_owned()
+    }
+}
+
+impl JsTimeScale {
+    pub fn inner(&self) -> DynTimeScale {
+        self.0.clone()
+    }
+
+    pub fn from_inner(scale: DynTimeScale) -> Self {
+        Self(scale)
     }
 }
 
@@ -73,10 +89,14 @@ impl TryFrom<JsValue> for JsTimeScale {
         if let Some(name) = value.as_string() {
             return Ok(JsTimeScale(name.parse().map_err(JsUnknownTimeScaleError)?));
         }
-        if value.is_instance_of::<JsTimeScale>() {
-            // Safe because we just checked the instance type
-            let scale: JsTimeScale = value.unchecked_into();
-            return Ok(scale);
+        if value.is_object() {
+            // XXX: ugly, maybe make a serde thing instead?
+            // Checks if the object has an "abbreviation" property
+            if let Ok(prop) = Reflect::get(&value, &JsValue::from_str("abbreviation")) {
+                if let Some(name) = prop.as_string() {
+                    return Ok(JsTimeScale(name.parse().map_err(JsUnknownTimeScaleError)?));
+                }
+            }
         }
         Err(js_error_with_name(
             "'scale' argument must be a string or a TimeScale instance",

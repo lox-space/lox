@@ -12,13 +12,13 @@ use crate::time::time_of_day::CivilTime;
 use crate::time::utc::{Utc, UtcError};
 use crate::time::wasm::time::JsTime;
 use crate::time::wasm::time_scales::JsTimeScale;
-use crate::wasm::js_error_with_name;
+use crate::wasm::{js_error_with_name_from_string};
 
 pub struct JsUtcError(pub UtcError);
 
 impl From<JsUtcError> for JsValue {
     fn from(value: JsUtcError) -> Self {
-        js_error_with_name("ValueError", value.0.to_string())
+        js_error_with_name_from_string("ValueError", value.0.to_string())
     }
 }
 
@@ -202,15 +202,26 @@ impl JsUtc {
         provider: Option<JsEopProvider>,
     ) -> Result<JsTime, JsValue> {
         let scale: JsTimeScale = scale.try_into()?;
-        let provider = provider.as_ref().map(|p| &p.0);
+        let provider = provider.as_ref().map(|p| p.inner());
         let time = match provider {
             Some(provider) => self
                 .0
                 .to_dyn_time()
-                .try_to_scale(scale.0, provider)
+                .try_to_scale(scale.inner(), &provider)
                 .map_err(JsEopProviderError)?,
-            None => self.0.to_dyn_time().to_scale(scale.0),
+            None => self.0.to_dyn_time().to_scale(scale.inner()),
         };
-        Ok(JsTime(time))
+        Ok(JsTime::from_inner(time))
+    }
+}
+
+
+impl JsUtc {
+    pub fn inner(&self) -> Utc {
+        self.0.clone()
+    }
+
+    pub fn from_inner(utc: Utc) -> Self {
+        Self(utc)
     }
 }
