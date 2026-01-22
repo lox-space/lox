@@ -6,3 +6,6 @@ pub use lox_orbits::*;
 
 #[cfg(feature = "python")]
 pub(crate) mod python;
+
+#[cfg(feature = "wasm")]
+pub(crate) mod wasm;
