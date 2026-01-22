@@ -17,7 +17,9 @@
   },
   "scripts": {
     "build": "wasm-pack build --target web --dev --out-dir pkg -- --features wasm",
-    "test": "cargo test",
+    "build:bundler": "wasm-pack build --target bundler --dev --out-dir pkg -- --features wasm",
+    "test": "cargo test --features wasm",
+    "test:js": "npm run build:bundler && node --test tests/js/**/*.js",
     "clean": "cargo clean && rm -rf pkg"
   },
   "keywords": [
