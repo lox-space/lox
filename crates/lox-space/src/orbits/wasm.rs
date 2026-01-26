@@ -126,7 +126,7 @@ fn callback_error_msg(msg: &str) -> Box<dyn Error + Send + Sync> {
 }
 
 /// Find events where a function crosses zero.
-#[wasm_bindgen]
+#[wasm_bindgen(js_name="findEvents")]
 pub fn find_events(func: &Function, start: JsTime, times: Vec<f64>) -> Result<Vec<JsEvent>, JsValue> {
 	let root_finder = Brent::default();
 	let events = crate::orbits::events::find_events(
@@ -148,7 +148,7 @@ pub fn find_events(func: &Function, start: JsTime, times: Vec<f64>) -> Result<Ve
 }
 
 /// Find time windows where a function is positive.
-#[wasm_bindgen]
+#[wasm_bindgen(js_name="findWindows")]
 pub fn find_windows(func: &Function, start: JsTime, end: JsTime, times: Vec<f64>) -> Result<Vec<JsWindow>, JsValue> {
 	let root_finder = Brent::default();
 	let windows = crate::orbits::events::find_windows(
@@ -222,17 +222,15 @@ impl JsState {
 		JsFrame::from_inner(self.0.reference_frame())
 	}
 
-	#[wasm_bindgen]
 	pub fn position(&self) -> Array {
 		array_from_vec3(self.0.position())
 	}
 
-	#[wasm_bindgen]
 	pub fn velocity(&self) -> Array {
 		array_from_vec3(self.0.velocity())
 	}
 
-	#[wasm_bindgen]
+	#[wasm_bindgen(js_name="toFrame")]
 	pub fn to_frame(&self, frame: JsFrame, provider: Option<JsEopProvider>) -> Result<JsState, JsValue> {
 		let provider = provider.map(|p| p.inner());
 		let origin = self.0.reference_frame();
@@ -256,7 +254,7 @@ impl JsState {
 		)))
 	}
 
-	#[wasm_bindgen]
+	#[wasm_bindgen(js_name="toOrigin")]
 	pub fn to_origin(&self, target: JsOrigin, ephemeris: &JsSpk) -> Result<JsState, JsValue> {
 		let frame = self.reference_frame();
 		let s = if frame.inner() != DynFrame::Icrf {
@@ -276,7 +274,7 @@ impl JsState {
 		Ok(s1)
 	}
 
-	#[wasm_bindgen]
+	#[wasm_bindgen(js_name="toKeplerian")]
 	pub fn to_keplerian(&self) -> Result<JsKeplerian, JsValue> {
 		if self.0.reference_frame() != DynFrame::Icrf {
 			return Err(js_error_with_name(
@@ -291,7 +289,7 @@ impl JsState {
 		))
 	}
 
-	#[wasm_bindgen]
+	#[wasm_bindgen(js_name="rotationLvlh")]
 	pub fn rotation_lvlh(&self) -> Result<Array, JsValue> {
 		if self.0.reference_frame() != DynFrame::Icrf {
 			return Err(js_error_with_name(
@@ -304,7 +302,7 @@ impl JsState {
 		Ok(to_js_2d(&rot))
 	}
 
-	#[wasm_bindgen]
+	#[wasm_bindgen(js_name="toGroundLocation")]
 	pub fn to_ground_location(&self) -> Result<JsGroundLocation, JsValue> {
 		Ok(JsGroundLocation(
 			self.0
@@ -358,7 +356,7 @@ impl JsKeplerian {
 		JsOrigin::from_inner(self.0.origin())
 	}
 
-	#[wasm_bindgen(getter)]
+	#[wasm_bindgen(getter, js_name = "semiMajorAxis")]
 	pub fn semi_major_axis(&self) -> f64 {
 		self.0.semi_major_axis()
 	}
@@ -388,7 +386,7 @@ impl JsKeplerian {
 		self.0.true_anomaly()
 	}
 
-	#[wasm_bindgen]
+	#[wasm_bindgen(js_name = "toCartesian")]
 	pub fn to_cartesian(&self) -> Result<JsState, JsValue> {
 		Ok(JsState(self.0.to_cartesian()))
 	}
@@ -458,7 +456,6 @@ impl JsTrajectory {
 		Ok(windows.into_iter().map(JsWindow).collect())
 	}
 
-	#[wasm_bindgen]
 	pub fn interpolate(&self, time: JsValue) -> Result<JsState, JsValue> {
 		if let Ok(delta) = time.clone().dyn_into::<JsTimeDelta>() {
 			return Ok(JsState(self.0.interpolate(delta.inner())));
@@ -498,19 +495,17 @@ pub struct JsEvent(Event<DynTimeScale>);
 
 #[wasm_bindgen(js_class = "Event")]
 impl JsEvent {
-	#[wasm_bindgen(js_name = "time")]
 	pub fn time(&self) -> JsTime {
 		JsTime::from_inner(self.0.time())
 	}
 
-	#[wasm_bindgen(js_name = "crossing")]
 	pub fn crossing(&self) -> String {
 		self.0.crossing().to_string()
 	}
 
 	#[wasm_bindgen(js_name = "toString")]
-	pub fn to_string_js(&self) -> String {
-		format!("Event - {}crossing at {}", self.crossing(), self.time().to_string_js())
+	pub fn to_string(&self) -> String {
+		format!("Event - {}crossing at {}", self.crossing(), self.time().to_string())
 	}
 }
 
@@ -521,17 +516,14 @@ pub struct JsWindow(Window<DynTimeScale>);
 
 #[wasm_bindgen(js_class = "Window")]
 impl JsWindow {
-	#[wasm_bindgen(js_name = "start")]
 	pub fn start(&self) -> JsTime {
 		JsTime::from_inner(self.0.start())
 	}
 
-	#[wasm_bindgen(js_name = "end")]
 	pub fn end(&self) -> JsTime {
 		JsTime::from_inner(self.0.end())
 	}
 
-	#[wasm_bindgen(js_name = "duration")]
 	pub fn duration(&self) -> JsTimeDelta {
 		JsTimeDelta::from_inner(self.0.duration())
 	}
@@ -568,7 +560,6 @@ impl JsVallado {
 		Ok(JsVallado(vallado))
 	}
 
-	#[wasm_bindgen]
 	pub fn propagate(&self, steps: JsValue) -> Result<JsValue, JsValue> {
 		if let Ok(time) = steps.clone().dyn_into::<JsTime>() {
 			let state = self.0.propagate(time.inner()).map_err(JsValladoError)?;
@@ -601,7 +592,6 @@ impl JsGroundLocation {
 		))
 	}
 
-	#[wasm_bindgen]
 	pub fn observables(
 		&self,
 		state: JsState,
@@ -656,7 +646,6 @@ impl JsGroundPropagator {
 		JsGroundPropagator(DynGroundPropagator::with_dynamic(location.0))
 	}
 
-	#[wasm_bindgen]
 	pub fn propagate(&self, steps: JsValue) -> Result<JsValue, JsValue> {
 		if let Ok(time) = steps.clone().dyn_into::<JsTime>() {
 			let state = self
@@ -718,7 +707,6 @@ impl JsSgp4 {
 		)
 	}
 
-	#[wasm_bindgen]
 	pub fn propagate(
 		&self,
 		steps: JsValue,
@@ -802,19 +790,16 @@ impl JsElevationMask {
 		))
 	}
 
-	#[wasm_bindgen(js_name = "fixed")]
 	pub fn fixed(min_elevation: f64) -> Self {
 		JsElevationMask(ElevationMask::with_fixed_elevation(min_elevation))
 	}
 
-	#[wasm_bindgen(js_name = "variable")]
 	pub fn variable(azimuth: Vec<f64>, elevation: Vec<f64>) -> Result<Self, JsValue> {
 		Ok(JsElevationMask(
 			ElevationMask::new(azimuth, elevation).map_err(JsElevationMaskError)?,
 		))
 	}
 
-	#[wasm_bindgen(js_name = "azimuth")]
 	pub fn azimuth(&self) -> Option<Vec<f64>> {
 		match &self.0 {
 			ElevationMask::Fixed(_) => None,
@@ -822,7 +807,6 @@ impl JsElevationMask {
 		}
 	}
 
-	#[wasm_bindgen(js_name = "elevation")]
 	pub fn elevation(&self) -> Option<Vec<f64>> {
 		match &self.0 {
 			ElevationMask::Fixed(_) => None,
@@ -924,7 +908,6 @@ impl JsPass {
 			.collect()
 	}
 
-	#[wasm_bindgen]
 	pub fn interpolate(&self, time: JsTime) -> Option<JsObservables> {
 		self.0.interpolate(time.inner()).map(JsObservables)
 	}
