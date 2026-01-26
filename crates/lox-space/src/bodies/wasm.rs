@@ -93,16 +93,13 @@ impl JsOrigin {
         ))
     }
 
-    fn __repr__(&self) -> String {
-        format!("Origin(\"{}\")", self.0.name())
-    }
-
-    fn __str__(&self) -> String {
+    #[wasm_bindgen(js_name = "toString")]
+    pub fn to_string(&self) -> String {
         self.0.name().to_string()
     }
 
-    fn __getnewargs__(&self) -> (String,) {
-        (self.0.name().to_string(),)
+    pub fn repr(&self) -> String {
+        format!("Origin(\"{}\")", self.name())
     }
 
     /// Return the NAIF ID of this body.
@@ -121,6 +118,7 @@ impl JsOrigin {
     ///
     /// Raises:
     ///     UndefinedOriginPropertyError: If not defined for this body.
+    #[wasm_bindgen(js_name = "gravitationalParameter")]
     pub fn gravitational_parameter(&self) -> Result<f64, JsValue> {
         Ok(self
             .0
@@ -132,6 +130,7 @@ impl JsOrigin {
     ///
     /// Raises:
     ///     UndefinedOriginPropertyError: If not defined for this body.
+    #[wasm_bindgen(js_name = "meanRadius")]
     pub fn mean_radius(&self) -> Result<f64, JsValue> {
         Ok(self
             .0
@@ -156,6 +155,7 @@ impl JsOrigin {
     ///
     /// Raises:
     ///     UndefinedOriginPropertyError: If not defined for this body.
+    #[wasm_bindgen(js_name = "equatorialRadius")]
     pub fn equatorial_radius(&self) -> Result<f64, JsValue> {
         Ok(self
             .0
@@ -167,6 +167,7 @@ impl JsOrigin {
     ///
     /// Raises:
     ///     UndefinedOriginPropertyError: If not defined for this body.
+    #[wasm_bindgen(js_name = "polarRadius")]
     pub fn polar_radius(&self) -> Result<f64, JsValue> {
         Ok(self
             .0
@@ -184,6 +185,7 @@ impl JsOrigin {
     ///
     /// Raises:
     ///     UndefinedOriginPropertyError: If not defined for this body.
+    #[wasm_bindgen(js_name = "rotationalElements")]
     pub fn rotational_elements(&self, et: Seconds) -> Result<JsElements, JsValue> {
         Ok(self
             .0
@@ -214,6 +216,7 @@ impl JsOrigin {
     ///
     /// Args:
     ///     et: Ephemeris time in seconds from J2000.
+    #[wasm_bindgen(js_name = "rightAscension")]
     pub fn right_ascension(&self, et: Seconds) -> Result<f64, JsValue> {
         Ok(self
             .0
@@ -225,6 +228,7 @@ impl JsOrigin {
     ///
     /// Args:
     ///     et: Ephemeris time in seconds from J2000.
+    #[wasm_bindgen(js_name = "rightAscensionRate")]
     pub fn right_ascension_rate(&self, et: Seconds) -> Result<f64, JsValue> {
         Ok(self
             .0
@@ -247,6 +251,7 @@ impl JsOrigin {
     ///
     /// Args:
     ///     et: Ephemeris time in seconds from J2000.
+    #[wasm_bindgen(js_name = "declinationRate")]
     pub fn declination_rate(&self, et: Seconds) -> Result<f64, JsValue> {
         Ok(self
             .0
@@ -258,6 +263,7 @@ impl JsOrigin {
     ///
     /// Args:
     ///     et: Ephemeris time in seconds from J2000.
+    #[wasm_bindgen(js_name = "rotationAngle")]
     pub fn rotation_angle(&self, et: Seconds) -> Result<f64, JsValue> {
         Ok(self
             .0
@@ -269,6 +275,7 @@ impl JsOrigin {
     ///
     /// Args:
     ///     et: Ephemeris time in seconds from J2000.
+    #[wasm_bindgen(js_name = "rotationRate")]
     pub fn rotation_rate(&self, et: Seconds) -> Result<f64, JsValue> {
         Ok(self
             .0

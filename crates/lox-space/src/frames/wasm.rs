@@ -60,7 +60,6 @@ impl JsFrame {
     ///
     /// Returns:
     ///     The descriptive name (e.g., "International Celestial Reference Frame").
-    #[wasm_bindgen]
     pub fn name(&self) -> String {
         self.0.name()
     }
@@ -69,7 +68,6 @@ impl JsFrame {
     ///
     /// Returns:
     ///     The short abbreviation (e.g., "ICRF", "ITRF").
-    #[wasm_bindgen]
     pub fn abbreviation(&self) -> String {
         self.0.abbreviation()
     }

@@ -28,7 +28,8 @@ impl JsTimeDelta {
         Self(TimeDelta::from_seconds_f64(seconds))
     }
 
-    pub fn to_string_js(&self) -> String {
+    #[wasm_bindgen(js_name = "toString")]
+    pub fn to_string(&self) -> String {
         format!("{} seconds", self.to_decimal_seconds())
     }
 
@@ -85,31 +86,37 @@ impl JsTimeDelta {
     }
 
     /// Create a TimeDelta from integer seconds.
+    #[wasm_bindgen(js_name = "fromSeconds")]
     pub fn from_seconds(seconds: i64) -> Self {
         Self(TimeDelta::from_seconds(seconds))
     }
 
     /// Create a TimeDelta from minutes.
+    #[wasm_bindgen(js_name = "fromMinutes")]
     pub fn from_minutes(minutes: f64) -> Self {
         Self(TimeDelta::from_minutes(minutes))
     }
 
     /// Create a TimeDelta from hours.
+    #[wasm_bindgen(js_name = "fromHours")]
     pub fn from_hours(hours: f64) -> Self {
         Self(TimeDelta::from_hours(hours))
     }
 
     /// Create a TimeDelta from days (86400 seconds per day).
+    #[wasm_bindgen(js_name = "fromDays")]
     pub fn from_days(days: f64) -> Self {
         Self(TimeDelta::from_days(days))
     }
 
     /// Create a TimeDelta from Julian years (365.25 days per year).
+    #[wasm_bindgen(js_name = "fromJulianYears")]
     pub fn from_julian_years(years: f64) -> Self {
         Self(TimeDelta::from_julian_years(years))
     }
 
     /// Create a TimeDelta from Julian centuries (36525 days per century).
+    #[wasm_bindgen(js_name = "fromJulianCenturies")]
     pub fn from_julian_centuries(centuries: f64) -> Self {
         Self(TimeDelta::from_julian_centuries(centuries))
     }
@@ -140,6 +147,8 @@ impl JsTimeDelta {
     ///
     /// Returns:
     ///     The duration as a float in seconds.
+
+    #[wasm_bindgen(js_name = "toDecimalSeconds")]
     pub fn to_decimal_seconds(&self) -> f64 {
         self.0.to_seconds().to_f64()
     }

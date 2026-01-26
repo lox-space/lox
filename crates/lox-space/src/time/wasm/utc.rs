@@ -74,18 +74,17 @@ impl JsUtc {
     ///
     /// Raises:
     ///     ValueError: If the ISO string is invalid.
-    #[wasm_bindgen]
+    #[wasm_bindgen(js_name = "fromISO")]
     pub fn from_iso(iso: &str) -> Result<JsUtc, JsValue> {
         Ok(JsUtc(iso.parse().map_err(JsUtcError)?))
     }
 
-    #[wasm_bindgen]
-    pub fn to_string_js(&self) -> String {
+    #[wasm_bindgen(js_name = "toString")]
+    pub fn to_string(&self) -> String {
         self.0.to_string()
     }
 
-    #[wasm_bindgen]
-    pub fn debug(&self) -> String {
+    pub fn repr(&self) -> String {
         format!(
             "UTC({}, {}, {}, {}, {}, {})",
             self.0.year(),
@@ -97,7 +96,6 @@ impl JsUtc {
         )
     }
 
-    #[wasm_bindgen]
     pub fn equals(&self, other: &JsUtc) -> bool {
         self.0 == other.0
     }
@@ -111,57 +109,49 @@ impl JsUtc {
     ///
     /// Returns:
     ///     True if the timestamps are approximately equal.
-    #[wasm_bindgen]
-    pub fn isclose(&self, other: &JsUtc, rel_tol: Option<f64>, abs_tol: Option<f64>) -> bool {
+    #[wasm_bindgen(js_name = "isClose")]
+    pub fn is_close(&self, other: &JsUtc, rel_tol: Option<f64>, abs_tol: Option<f64>) -> bool {
         let rel = rel_tol.unwrap_or(1e-8);
         let abs = abs_tol.unwrap_or(1e-14);
         approx_eq!(self, other, rtol <= rel, atol <= abs)
     }
 
     /// Return the year component.
-    #[wasm_bindgen]
     pub fn year(&self) -> i64 {
         self.0.year()
     }
 
     /// Return the month component (1-12).
-    #[wasm_bindgen]
     pub fn month(&self) -> u8 {
         self.0.month()
     }
 
     /// Return the day of month component (1-31).
-    #[wasm_bindgen]
     pub fn day(&self) -> u8 {
         self.0.day()
     }
 
     /// Return the hour component (0-23).
-    #[wasm_bindgen]
     pub fn hour(&self) -> u8 {
         self.0.hour()
     }
 
     /// Return the minute component (0-59).
-    #[wasm_bindgen]
     pub fn minute(&self) -> u8 {
         self.0.minute()
     }
 
     /// Return the integer second component (0-60, 60 for leap second).
-    #[wasm_bindgen]
     pub fn second(&self) -> u8 {
         self.0.second()
     }
 
     /// Return the millisecond component (0-999).
-    #[wasm_bindgen]
     pub fn millisecond(&self) -> u32 {
         self.0.millisecond()
     }
 
     /// Return the microsecond component (0-999).
-    #[wasm_bindgen]
     pub fn microsecond(&self) -> u32 {
         self.0.microsecond()
     }
@@ -172,13 +162,12 @@ impl JsUtc {
     }
 
     /// Return the picosecond component (0-999).
-    #[wasm_bindgen]
     pub fn picosecond(&self) -> u32 {
         self.0.picosecond()
     }
 
     /// Return the decimal seconds (seconds + fractional part).
-    #[wasm_bindgen]
+    #[wasm_bindgen(js_name = "decimalSeconds")]
     pub fn decimal_seconds(&self) -> f64 {
         self.0.as_seconds_f64()
     }
@@ -195,7 +184,7 @@ impl JsUtc {
     /// Examples:
     ///     >>> utc = lox.UTC(2024, 1, 1)
     ///     >>> t_tai = utc.to_scale("TAI")
-    #[wasm_bindgen]
+    #[wasm_bindgen(js_name = "toScale")]
     pub fn to_scale(
         &self,
         scale: JsValue,

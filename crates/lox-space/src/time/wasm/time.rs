@@ -123,7 +123,7 @@ impl JsTime {
     ///
     /// Examples:
     ///     >>> t = Time.from_julian_date("TAI", 2451545.0, "jd")  # J2000.0
-    #[wasm_bindgen]
+    #[wasm_bindgen(js_name="fromJulianDate")]
     pub fn from_julian_date(
         scale: JsValue,
         jd: f64,
@@ -146,7 +146,7 @@ impl JsTime {
     ///
     /// Returns:
     ///     A new Time object.
-    #[wasm_bindgen]
+    #[wasm_bindgen(js_name="fromTwoPartJulianDate")]
     pub fn from_two_part_julian_date(
         scale: JsValue,
         jd1: f64,
@@ -175,7 +175,7 @@ impl JsTime {
     /// Examples:
     ///     >>> t = Time.from_day_of_year("TAI", 2024, 1)  # Jan 1, 2024
     ///     >>> t = Time.from_day_of_year("TAI", 2024, 366)  # Dec 31, 2024 (leap year)
-    #[wasm_bindgen]
+    #[wasm_bindgen(js_name="fromDayOfYear")]
     pub fn from_day_of_year(
         scale: JsValue,
         year: i64,
@@ -207,7 +207,7 @@ impl JsTime {
     /// Examples:
     ///     >>> t = Time.from_iso("2024-06-15T12:30:45.5 TAI")
     ///     >>> t = Time.from_iso("2024-06-15T12:30:45.5", "TAI")
-    #[wasm_bindgen]
+    #[wasm_bindgen(js_name="fromISO")]
     pub fn from_iso(iso: &str, scale: Option<JsValue>) -> Result<JsTime, JsValue> {
         let scale: JsTimeScale =
             scale.map_or(Ok(JsTimeScale::default()), |scale| scale.try_into())?;
@@ -229,7 +229,7 @@ impl JsTime {
     ///
     /// Raises:
     ///     ValueError: If subsecond is not in the valid range.
-    #[wasm_bindgen]
+    #[wasm_bindgen(js_name="fromSeconds")]
     pub fn from_seconds(
         scale: JsValue,
         seconds: i64,
@@ -249,7 +249,6 @@ impl JsTime {
     ///
     /// Raises:
     ///     NonFiniteTimeError: If the time is non-finite.
-    #[wasm_bindgen]
     pub fn seconds(&self) -> Result<i64, JsValue> {
         self.0.seconds().ok_or_else(|| {
             js_error_with_name("NonFiniteTimeError", "cannot access seconds for non-finite time")
@@ -263,7 +262,6 @@ impl JsTime {
     ///
     /// Raises:
     ///     NonFiniteTimeError: If the time is non-finite.
-    #[wasm_bindgen]
     pub fn subsecond(&self) -> Result<f64, JsValue> {
         self.0.subsecond().ok_or_else(|| {
             js_error_with_name(
@@ -273,13 +271,12 @@ impl JsTime {
         })
     }
 
-    #[wasm_bindgen]
-    pub fn to_string_js(&self) -> String {
+    #[wasm_bindgen(js_name = "toString")]
+    pub fn to_string(&self) -> String {
         self.0.to_string()
     }
 
-    #[wasm_bindgen]
-    pub fn debug(&self) -> String {
+    pub fn repr(&self) -> String {
         format!(
             "Time(\"{}\", {}, {}, {}, {}, {}, {})",
             self.scale().abbreviation(),
@@ -292,7 +289,6 @@ impl JsTime {
         )
     }
 
-    #[wasm_bindgen]
     pub fn add(&self, delta: &JsTimeDelta) -> JsTime {
         JsTime(self.0 + delta.inner())
     }
@@ -304,7 +300,7 @@ impl JsTime {
     }
 
     /// Compute the TimeDelta between this Time and another Time.
-    #[wasm_bindgen(js_name = "subtract")]
+    #[wasm_bindgen(js_name = "subtractTime")]
     pub fn subtract_time(&self, rhs: &JsTime) -> Result<JsTimeDelta, JsValue> {
         if self.0.scale() != rhs.0.scale() {
             return Err(js_error_with_name(
@@ -327,8 +323,8 @@ impl JsTime {
     ///
     /// Raises:
     ///     ValueError: If the Time objects have different time scales.
-    #[wasm_bindgen]
-    pub fn isclose(
+    #[wasm_bindgen(js_name = "isClose")]
+    pub fn is_close(
         &self,
         rhs: &JsTime,
         rel_tol: Option<f64>,
@@ -356,7 +352,7 @@ impl JsTime {
     ///
     /// Raises:
     ///     ValueError: If epoch or unit is invalid.
-    #[wasm_bindgen]
+    #[wasm_bindgen(js_name = "julianDate")]
     pub fn julian_date(&self, epoch: Option<String>, unit: Option<String>) -> Result<f64, JsValue> {
         let epoch: JsEpoch = epoch.unwrap_or_else(|| "jd".to_string()).parse()?;
         let unit: JsUnit = unit.unwrap_or_else(|| "days".to_string()).parse()?;
@@ -367,7 +363,7 @@ impl JsTime {
     ///
     /// Returns:
     ///     A tuple of (jd1, jd2) where the Julian date is jd1 + jd2.
-    #[wasm_bindgen]
+    #[wasm_bindgen(js_name = "twoPartJulianDate")]
     pub fn two_part_julian_date(&self) -> Array {
         let (jd1, jd2) = self.0.two_part_julian_date();
         Array::of2(&JsValue::from_f64(jd1), &JsValue::from_f64(jd2))
@@ -378,85 +374,73 @@ impl JsTime {
     ///
     /// Returns:
     ///     The TimeScale of this Time.
-    #[wasm_bindgen]
     pub fn scale(&self) -> JsTimeScale {
         JsTimeScale::from_inner(self.0.scale())
     }
 
     /// Return the year component.
-    #[wasm_bindgen]
     pub fn year(&self) -> i64 {
         self.0.year()
     }
 
     /// Return the month component (1-12).
-    #[wasm_bindgen]
     pub fn month(&self) -> u8 {
         self.0.month()
     }
 
     /// Return the day of month component (1-31).
-    #[wasm_bindgen]
     pub fn day(&self) -> u8 {
         self.0.day()
     }
 
     /// Return the day of year (1-366).
-    #[wasm_bindgen]
+    #[wasm_bindgen(js_name = "dayOfYear")]
     pub fn day_of_year(&self) -> u16 {
         self.0.day_of_year()
     }
 
     /// Return the hour component (0-23).
-    #[wasm_bindgen]
     pub fn hour(&self) -> u8 {
         self.0.hour()
     }
 
     /// Return the minute component (0-59).
-    #[wasm_bindgen]
     pub fn minute(&self) -> u8 {
         self.0.minute()
     }
 
     /// Return the integer second component (0-59, or 60 for leap second).
-    #[wasm_bindgen]
     pub fn second(&self) -> u8 {
         self.0.second()
     }
 
     /// Return the millisecond component (0-999).
-    #[wasm_bindgen]
     pub fn millisecond(&self) -> u32 {
         self.0.millisecond()
     }
 
     /// Return the microsecond component (0-999).
-    #[wasm_bindgen]
     pub fn microsecond(&self) -> u32 {
         self.0.microsecond()
     }
 
     /// Return the nanosecond component (0-999).
-    #[wasm_bindgen]
     pub fn nanosecond(&self) -> u32 {
         self.0.nanosecond()
     }
 
     /// Return the picosecond component (0-999).
-    #[wasm_bindgen]
     pub fn picosecond(&self) -> u32 {
         self.0.picosecond()
     }
 
     /// Return the femtosecond component (0-999).
-    #[wasm_bindgen]
     pub fn femtosecond(&self) -> u32 {
         self.0.femtosecond()
     }
 
     /// Return the decimal seconds (seconds + fractional part).
-    #[wasm_bindgen]
+    #[wasm_bindgen(js_name = "decimalSeconds")]
     pub fn decimal_seconds(&self) -> f64 {
         self.0.as_seconds_f64()
     }
@@ -477,7 +461,7 @@ impl JsTime {
     /// Examples:
     ///     >>> t_tai = Time("TAI", 2024, 1, 1)
     ///     >>> t_tt = t_tai.to_scale("TT")
-    #[wasm_bindgen]
+    #[wasm_bindgen(js_name = "toScale")]
     pub fn to_scale(
         &self,
         scale: JsValue,
@@ -505,7 +489,7 @@ impl JsTime {
     ///
     /// Raises:
     ///     ValueError: If the time is outside the valid UTC range.
-    #[wasm_bindgen]
+    #[wasm_bindgen(js_name = "toUtc")]
     pub fn to_utc(&self, provider: Option<JsEopProvider>) -> Result<JsUtc, JsValue> {
         let provider = provider.as_ref().map(|p| p.inner());
         let utc = match provider {

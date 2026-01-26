@@ -43,16 +43,14 @@ impl JsTimeScale {
             abbreviation.parse().map_err(JsUnknownTimeScaleError)?,
         ))
     }
-    fn __getnewargs__(&self) -> (String,) {
-        (self.abbreviation(),)
-    }
 
-    pub fn __repr__(&self) -> String {
-        format!("TimeScale(\"{}\")", self.0)
-    }
-
-    pub fn __str__(&self) -> String {
+    #[wasm_bindgen(js_name = "toString")]
+    pub fn to_string(&self) -> String {
         format!("{}", self.0)
+    }
+
+    pub fn repr(&self) -> String {
+        format!("TimeScale(\"{}\")", self.0)
     }
 
     pub fn default() -> Self {
@@ -60,13 +58,11 @@ impl JsTimeScale {
     }
 
     /// Return the time scale abbreviation (e.g., "TAI").
-    #[wasm_bindgen]
     pub fn abbreviation(&self) -> String {
         self.0.abbreviation().to_owned()
     }
 
     /// Return the full name of the time scale (e.g., "International Atomic Time").
-    #[wasm_bindgen]
     pub fn name(&self) -> String {
         self.0.name().to_owned()
     }

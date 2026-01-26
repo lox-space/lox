@@ -9,7 +9,7 @@ use lox_units::{Angle, Distance, Frequency, Velocity};
 macro_rules! wasm_unit {
     ($(
         ($unit:ident, $rust_name:ident, $js_name:literal,
-            [$(($from_fn:ident, $to_fn:ident)),* $(,)?]
+            [$(($from_fn:ident, $from_fn_camel:literal, $to_fn:ident, $to_fn_camel:literal)),* $(,)?]
         )
     ),* $(,)?) => {
         $(
@@ -27,28 +27,33 @@ macro_rules! wasm_unit {
                     Self(scalar * self.0)
                 }
 
+                #[wasm_bindgen(js_name = "rawValue")]
                 pub fn raw_value(&self) -> f64 {
                     f64::from(self.0)
                 }
 
+                #[wasm_bindgen(js_name = "asInt")]
                 pub fn as_int(&self) -> i64 {
                     let val: f64 = self.0.into();
                     val.round_ties_even() as i64
                 }
 
-                pub fn to_string_js(&self) -> String {
+                #[wasm_bindgen(js_name = "toString")]
+                pub fn to_string(&self) -> String {
                     self.0.to_string()
                 }
 
-                pub fn repr(&self) -> String {
+                pub fn repr(&self) ->  String {
                     format!("{}({})", stringify!($unit), f64::from(self.0))
                 }
 
                 $(
+                    #[wasm_bindgen(js_name = $from_fn_camel)]
                     pub fn $from_fn(value: f64) -> Self {
                         Self($unit::$from_fn(value))
                     }
 
+                    #[wasm_bindgen(js_name = $to_fn_camel)]
                     pub fn $to_fn(&self) -> f64 {
                         self.0.$to_fn()
                     }
@@ -64,8 +69,8 @@ wasm_unit!(
         JsAngle,
         "Angle",
         [
-            (degrees, to_degrees),
-            (radians, to_radians)
+            (degrees, "degrees", to_degrees, "toDegrees"),
+            (radians, "radians", to_radians, "toRadians")
         ]
     ),
     (
@@ -73,9 +78,9 @@ wasm_unit!(
         JsDistance,
         "Distance",
         [
-            (kilometers, to_kilometers),
-            (meters, to_meters),
-            (astronomical_units, to_astronomical_units)
+            (kilometers, "kilometers", to_kilometers, "toKilometers"),
+            (meters, "meters", to_meters, "toMeters"),
+            (astronomical_units, "astronomical_units", to_astronomical_units, "toAstronomicalUnits")
         ]
     ),
     (
@@ -83,11 +88,11 @@ wasm_unit!(
         JsFrequency,
         "Frequency",
         [
-            (hertz, to_hertz),
-            (kilohertz, to_kilohertz),
-            (megahertz, to_megahertz),
-            (gigahertz, to_gigahertz),
-            (terahertz, to_terahertz)
+            (hertz, "hertz", to_hertz, "toHertz"),
+            (kilohertz, "kilohertz", to_kilohertz, "toKilohertz"),
+            (megahertz, "megahertz", to_megahertz, "toMegahertz"),
+            (gigahertz, "gigahertz", to_gigahertz, "toGigahertz"),
+            (terahertz, "terahertz", to_terahertz, "toTerahertz")
         ]
     ),
     (
@@ -95,10 +100,10 @@ wasm_unit!(
         JsVelocity,
         "Velocity",
         [
-            (meters_per_second, to_meters_per_second),
-            (kilometers_per_second, to_kilometers_per_second),
-            (astronomical_units_per_day, to_astronomical_units_per_day),
-            (fraction_of_speed_of_light, to_fraction_of_speed_of_light)
+            (meters_per_second, "metersPerSecond", to_meters_per_second, "toMetersPerSecond"),
+            (kilometers_per_second, "kilometersPerSecond", to_kilometers_per_second, "toKilometersPerSecond"),
+            (astronomical_units_per_day, "astronomicalUnitsPerDay", to_astronomical_units_per_day, "toAstronomicalUnitsPerDay"),
+            (fraction_of_speed_of_light, "fractionOfSpeedOfLight", to_fraction_of_speed_of_light, "toFractionOfSpeedOfLight")
         ]
     )
 );
