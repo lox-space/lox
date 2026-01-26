@@ -104,13 +104,11 @@ impl JsOrigin {
     }
 
     /// Return the NAIF ID of this body.
-    #[wasm_bindgen(getter)]
     pub fn id(&self) -> i32 {
         self.0.id().0
     }
 
     /// Return the name of this body.
-    #[wasm_bindgen(getter)]
     pub fn name(&self) -> String {
         self.0.name().to_string()
     }

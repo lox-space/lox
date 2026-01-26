@@ -209,17 +209,15 @@ impl JsState {
 		Ok(JsState(State::new(time.inner(), position, velocity, origin, frame)))
 	}
 
-	#[wasm_bindgen(getter)]
 	pub fn time(&self) -> JsTime {
 		JsTime::from_inner(self.0.time())
 	}
 
-	#[wasm_bindgen(getter)]
 	pub fn origin(&self) -> JsOrigin {
 		JsOrigin::from_inner(self.0.origin())
 	}
 
-	#[wasm_bindgen(js_name = "referenceFrame", getter)]
+	#[wasm_bindgen(js_name = "referenceFrame")]
 	pub fn reference_frame(&self) -> JsFrame {
 		JsFrame::from_inner(self.0.reference_frame())
 	}
@@ -348,42 +346,38 @@ impl JsKeplerian {
 		))
 	}
 
-	#[wasm_bindgen(getter)]
 	pub fn time(&self) -> JsTime {
 		JsTime::from_inner(self.0.time())
 	}
 
-	#[wasm_bindgen(getter)]
 	pub fn origin(&self) -> JsOrigin {
 		JsOrigin::from_inner(self.0.origin())
 	}
 
-	#[wasm_bindgen(getter, js_name = "semiMajorAxis")]
+	#[wasm_bindgen(js_name = "semiMajorAxis")]
 	pub fn semi_major_axis(&self) -> f64 {
 		self.0.semi_major_axis()
 	}
 
-	#[wasm_bindgen(getter)]
 	pub fn eccentricity(&self) -> f64 {
 		self.0.eccentricity()
 	}
 
-	#[wasm_bindgen(getter)]
 	pub fn inclination(&self) -> f64 {
 		self.0.inclination()
 	}
 
-	#[wasm_bindgen(getter, js_name = "longitudeOfAscendingNode")]
+	#[wasm_bindgen(js_name = "longitudeOfAscendingNode")]
 	pub fn longitude_of_ascending_node(&self) -> f64 {
 		self.0.longitude_of_ascending_node()
 	}
 
-	#[wasm_bindgen(getter, js_name = "argumentOfPeriapsis")]
+	#[wasm_bindgen(js_name = "argumentOfPeriapsis")]
 	pub fn argument_of_periapsis(&self) -> f64 {
 		self.0.argument_of_periapsis()
 	}
 
-	#[wasm_bindgen(getter, js_name = "trueAnomaly")]
+	#[wasm_bindgen(js_name = "trueAnomaly")]
 	pub fn true_anomaly(&self) -> f64 {
 		self.0.true_anomaly()
 	}
@@ -414,12 +408,11 @@ impl JsTrajectory {
 		))
 	}
 
-	#[wasm_bindgen(getter)]
 	pub fn origin(&self) -> JsOrigin {
 		JsOrigin::from_inner(self.0.origin())
 	}
 
-	#[wasm_bindgen(js_name = "referenceFrame", getter)]
+	#[wasm_bindgen(js_name = "referenceFrame")]
 	pub fn reference_frame(&self) -> JsFrame {
 		JsFrame::from_inner(self.0.reference_frame())
 	}
@@ -621,17 +614,14 @@ impl JsGroundLocation {
 		Ok(to_js_2d(&rot))
 	}
 
-	#[wasm_bindgen(getter)]
 	pub fn longitude(&self) -> f64 {
 		self.0.longitude()
 	}
 
-	#[wasm_bindgen(getter)]
 	pub fn latitude(&self) -> f64 {
 		self.0.latitude()
 	}
 
-	#[wasm_bindgen(getter)]
 	pub fn altitude(&self) -> f64 {
 		self.0.altitude()
 	}
@@ -699,7 +689,6 @@ impl JsSgp4 {
 		))
 	}
 
-	#[wasm_bindgen(getter)]
 	pub fn time(&self) -> JsTime {
 		JsTime::from_inner(
 			self.0
@@ -836,22 +825,19 @@ impl JsObservables {
 		JsObservables(Observables::new(azimuth, elevation, range, range_rate))
 	}
 
-	#[wasm_bindgen(getter)]
 	pub fn azimuth(&self) -> f64 {
 		self.0.azimuth()
 	}
 
-	#[wasm_bindgen(getter)]
 	pub fn elevation(&self) -> f64 {
 		self.0.elevation()
 	}
 
-	#[wasm_bindgen(getter)]
 	pub fn range(&self) -> f64 {
 		self.0.range()
 	}
 
-	#[wasm_bindgen(getter, js_name = "rangeRate")]
+	#[wasm_bindgen(js_name = "rangeRate")]
 	pub fn range_rate(&self) -> f64 {
 		self.0.range_rate()
 	}
@@ -885,17 +871,14 @@ impl JsPass {
 		Ok(JsPass(pass))
 	}
 
-	#[wasm_bindgen(getter)]
 	pub fn window(&self) -> JsWindow {
 		JsWindow::from_inner(*self.0.window())
 	}
 
-	#[wasm_bindgen(getter)]
 	pub fn times(&self) -> Vec<JsTime> {
 		self.0.times().iter().map(|&t| JsTime::from_inner(t)).collect()
 	}
 
-	#[wasm_bindgen(getter)]
 	pub fn observables(&self) -> Vec<JsObservables> {
 		self.0
 			.observables()
@@ -986,17 +969,14 @@ impl JsGroundStation {
         Self { name, location, mask }
     }
 
-    #[wasm_bindgen(getter)]
     pub fn name(&self) -> String {
         self.name.clone()
     }
 
-    #[wasm_bindgen(getter)]
     pub fn location(&self) -> JsGroundLocation {
         self.location.clone()
     }
 
-    #[wasm_bindgen(getter)]
     pub fn mask(&self) -> JsElevationMask {
         self.mask.clone()
     }
