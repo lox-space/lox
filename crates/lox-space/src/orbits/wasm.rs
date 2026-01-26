@@ -1,4 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Halvor Granskogen Bjørnstad <halvor.bjornstad@ksat.no>
+//                         2026 Hadrien Develay <hadrien.develay@ksat.no>
+//
 // SPDX-License-Identifier: MPL-2.0
 
 use std::collections::HashMap;
