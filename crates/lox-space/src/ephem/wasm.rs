@@ -47,3 +47,13 @@ impl JsSpk {
         Ok(JsSpk(spk))
     }
 }
+
+impl JsSpk {
+    pub fn inner(&self) -> &Spk {
+        &self.0
+    }
+
+    pub fn from_inner(provider: Spk) -> Self {
+        Self(provider)
+    }
+}

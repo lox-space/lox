@@ -47,6 +47,7 @@ impl From<JsDynRotationError> for JsValue {
 /// Raises:
 ///     ValueError: If the frame abbreviation is not recognized.
 #[wasm_bindgen(js_name = "Frame")]
+#[derive(Clone, Debug)]
 pub struct JsFrame(DynFrame);
 
 #[wasm_bindgen(js_class = "Frame")]
@@ -70,5 +71,15 @@ impl JsFrame {
     ///     The short abbreviation (e.g., "ICRF", "ITRF").
     pub fn abbreviation(&self) -> String {
         self.0.abbreviation()
+    }
+}
+
+impl JsFrame {
+    pub fn inner(&self) -> DynFrame {
+        self.0.clone()
+    }
+
+    pub fn from_inner(provider: DynFrame) -> Self {
+        Self(provider)
     }
 }

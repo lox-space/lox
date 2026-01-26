@@ -32,6 +32,9 @@ use crate::time::time_scales::{DynTimeScale, Tai};
 use crate::time::wasm::deltas::JsTimeDelta;
 use crate::time::wasm::time::JsTime;
 use crate::wasm::js_error_with_name;
+use std::error::Error;
+use std::fmt;
+use lox_bodies::Origin;
 
 use lox_frames::providers::DefaultRotationProvider;
 use lox_frames::rotations::TryRotation;
@@ -101,6 +104,27 @@ impl From<JsElevationMaskError> for JsValue {
 	}
 }
 
+#[derive(Debug)]
+struct CallbackError(String);
+
+impl fmt::Display for CallbackError {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		write!(f, "{}", self.0)
+	}
+}
+
+impl Error for CallbackError {}
+
+fn callback_error_box(e: JsValue) -> Box<dyn Error + Send + Sync> {
+	Box::new(CallbackError(
+		e.as_string().unwrap_or_else(|| format!("{:?}", e)),
+	))
+}
+
+fn callback_error_msg(msg: &str) -> Box<dyn Error + Send + Sync> {
+	Box::new(CallbackError(msg.to_string()))
+}
+
 /// Find events where a function crosses zero.
 #[wasm_bindgen]
 pub fn find_events(func: &Function, start: JsTime, times: Vec<f64>) -> Result<Vec<JsEvent>, JsValue> {
@@ -108,11 +132,11 @@ pub fn find_events(func: &Function, start: JsTime, times: Vec<f64>) -> Result<Ve
 	let events = crate::orbits::events::find_events(
 		|t| {
 			func.call1(&JsValue::NULL, &JsValue::from_f64(t))
-				.map_err(|e| js_error_with_name(e, "CallbackError"))?
+				.map_err(callback_error_box)?
 				.as_f64()
-				.ok_or_else(|| js_error_with_name("callback must return number", "TypeError"))
+				.ok_or_else(|| callback_error_msg("callback must return number"))
 		},
-		start.0,
+		start.inner(),
 		&times,
 		root_finder,
 	)
@@ -130,12 +154,12 @@ pub fn find_windows(func: &Function, start: JsTime, end: JsTime, times: Vec<f64>
 	let windows = crate::orbits::events::find_windows(
 		|t| {
 			func.call1(&JsValue::NULL, &JsValue::from_f64(t))
-				.map_err(|e| js_error_with_name(e, "CallbackError"))?
+				.map_err(callback_error_box)?
 				.as_f64()
-				.ok_or_else(|| js_error_with_name("callback must return number", "TypeError"))
+				.ok_or_else(|| callback_error_msg("callback must return number"))
 		},
-		start.0,
-		end.0,
+		start.inner(),
+		end.inner(),
 		&times,
 		root_finder,
 	)
@@ -176,26 +200,26 @@ impl JsState {
 		origin: Option<JsOrigin>,
 		frame: Option<JsFrame>,
 	) -> Result<JsState, JsValue> {
-		let origin = origin.map(|o| o.0).unwrap_or_default();
-		let frame = frame.map(|f| f.0).unwrap_or_default();
+		let origin = origin.map(|o| o.inner()).unwrap_or_else(DynOrigin::default);
+		let frame = frame.map(|f| f.inner()).unwrap_or_else(DynFrame::default);
 		let position = vec3_from_slice(&position)?;
 		let velocity = vec3_from_slice(&velocity)?;
-		Ok(JsState(State::new(time.0, position, velocity, origin, frame)))
+		Ok(JsState(State::new(time.inner(), position, velocity, origin, frame)))
 	}
 
 	#[wasm_bindgen(getter)]
 	pub fn time(&self) -> JsTime {
-		JsTime(self.0.time())
+		JsTime::from_inner(self.0.time())
 	}
 
 	#[wasm_bindgen(getter)]
 	pub fn origin(&self) -> JsOrigin {
-		JsOrigin(self.0.origin())
+		JsOrigin::from_inner(self.0.origin())
 	}
 
 	#[wasm_bindgen(js_name = "referenceFrame", getter)]
 	pub fn reference_frame(&self) -> JsFrame {
-		JsFrame(self.0.reference_frame())
+		JsFrame::from_inner(self.0.reference_frame())
 	}
 
 	#[wasm_bindgen]
@@ -210,11 +234,11 @@ impl JsState {
 
 	#[wasm_bindgen]
 	pub fn to_frame(&self, frame: JsFrame, provider: Option<JsEopProvider>) -> Result<JsState, JsValue> {
-		let provider = provider.as_ref().map(|p| &p.0);
+		let provider = provider.map(|p| p.inner());
 		let origin = self.0.reference_frame();
-		let target = frame.0;
+		let target = frame.inner();
 		let time = self.0.time();
-		let rot = match provider {
+		let rot = match provider.as_ref() {
 			Some(provider) => provider
 				.try_rotation(origin, target, time)
 				.map_err(JsDynRotationError)?,
@@ -228,25 +252,25 @@ impl JsState {
 			r1,
 			v1,
 			self.0.origin(),
-			frame.0,
+			frame.inner(),
 		)))
 	}
 
 	#[wasm_bindgen]
 	pub fn to_origin(&self, target: JsOrigin, ephemeris: &JsSpk) -> Result<JsState, JsValue> {
 		let frame = self.reference_frame();
-		let s = if frame.0 != DynFrame::Icrf {
-			self.to_frame(JsFrame(DynFrame::Icrf), None)?
+		let s = if frame.inner() != DynFrame::Icrf {
+			self.to_frame(JsFrame::from_inner(DynFrame::Icrf), None)?
 		} else {
 			self.clone()
 		};
-		let spk = &ephemeris.0;
+		let spk = ephemeris.inner();
 		let mut s1 = JsState(
 			s.0
-				.to_origin_dynamic(target.0, spk)
+				.to_origin_dynamic(target.inner(), spk)
 				.map_err(JsDafSpkError)?,
 		);
-		if frame.0 != DynFrame::Icrf {
+		if frame.inner() != DynFrame::Icrf {
 			s1 = s1.to_frame(frame, None)?
 		}
 		Ok(s1)
@@ -308,10 +332,10 @@ impl JsKeplerian {
 		true_anomaly: f64,
 		origin: Option<JsOrigin>,
 	) -> Result<JsKeplerian, JsValue> {
-		let origin = origin.map(|o| o.0).unwrap_or_default();
+		let origin = origin.map(|o| o.inner()).unwrap_or_else(DynOrigin::default);
 		Ok(JsKeplerian(
 			Keplerian::with_dynamic(
-				time.0,
+				time.inner(),
 				origin,
 				semi_major_axis,
 				eccentricity,
@@ -326,12 +350,12 @@ impl JsKeplerian {
 
 	#[wasm_bindgen(getter)]
 	pub fn time(&self) -> JsTime {
-		JsTime(self.0.time())
+		JsTime::from_inner(self.0.time())
 	}
 
 	#[wasm_bindgen(getter)]
 	pub fn origin(&self) -> JsOrigin {
-		JsOrigin(self.0.origin())
+		JsOrigin::from_inner(self.0.origin())
 	}
 
 	#[wasm_bindgen(getter)]
@@ -371,7 +395,7 @@ impl JsKeplerian {
 
 	#[wasm_bindgen(js_name = "orbitalPeriod")]
 	pub fn orbital_period(&self) -> JsTimeDelta {
-		JsTimeDelta(self.0.orbital_period())
+		JsTimeDelta::from_inner(self.0.orbital_period())
 	}
 }
 
@@ -390,40 +414,14 @@ impl JsTrajectory {
 		))
 	}
 
-	#[wasm_bindgen(js_name = "fromArray")]
-	pub fn from_array(
-		start_time: JsTime,
-		array: Vec<Vec<f64>>,
-		origin: Option<JsOrigin>,
-		frame: Option<JsFrame>,
-	) -> Result<Self, JsValue> {
-		let origin = origin.unwrap_or_default();
-		let frame = frame.unwrap_or_default();
-		for row in &array {
-			if row.len() != 7 {
-				return Err(js_error_with_name("invalid shape", "ValueError"));
-			}
-		}
-		let mut states: Vec<DynState> = Vec::with_capacity(array.len());
-		for row in array {
-			let time = start_time.0 + TimeDelta::from_seconds_f64(row[0]);
-			let position = DVec3::new(row[1], row[2], row[3]);
-			let velocity = DVec3::new(row[4], row[5], row[6]);
-			states.push(State::new(time, position, velocity, origin.0, frame.0));
-		}
-		Ok(JsTrajectory(
-			Trajectory::new(&states).map_err(JsTrajectoryError)?,
-		))
-	}
-
 	#[wasm_bindgen(getter)]
 	pub fn origin(&self) -> JsOrigin {
-		JsOrigin(self.0.origin())
+		JsOrigin::from_inner(self.0.origin())
 	}
 
 	#[wasm_bindgen(js_name = "referenceFrame", getter)]
 	pub fn reference_frame(&self) -> JsFrame {
-		JsFrame(self.0.reference_frame())
+		JsFrame::from_inner(self.0.reference_frame())
 	}
 
 	#[wasm_bindgen(js_name = "toArray")]
@@ -440,9 +438,9 @@ impl JsTrajectory {
 	pub fn find_events(&self, func: &Function) -> Result<Vec<JsEvent>, JsValue> {
 		let res = self.0.find_events(|s| {
 			func.call1(&JsValue::NULL, &JsValue::from(JsState(s)))
-				.map_err(|e| js_error_with_name(e, "CallbackError"))?
+				.map_err(callback_error_box)?
 				.as_f64()
-				.ok_or_else(|| js_error_with_name("callback must return number", "TypeError"))
+				.ok_or_else(|| callback_error_msg("callback must return number"))
 		});
 		let events = res.map_err(JsFindEventError)?;
 		Ok(events.into_iter().map(JsEvent).collect())
@@ -452,9 +450,9 @@ impl JsTrajectory {
 	pub fn find_windows(&self, func: &Function) -> Result<Vec<JsWindow>, JsValue> {
 		let res = self.0.find_windows(|s| {
 			func.call1(&JsValue::NULL, &JsValue::from(JsState(s)))
-				.map_err(|e| js_error_with_name(e, "CallbackError"))?
+				.map_err(callback_error_box)?
 				.as_f64()
-				.ok_or_else(|| js_error_with_name("callback must return number", "TypeError"))
+				.ok_or_else(|| callback_error_msg("callback must return number"))
 		});
 		let windows = res.map_err(JsRootFinderError)?;
 		Ok(windows.into_iter().map(JsWindow).collect())
@@ -463,10 +461,10 @@ impl JsTrajectory {
 	#[wasm_bindgen]
 	pub fn interpolate(&self, time: JsValue) -> Result<JsState, JsValue> {
 		if let Ok(delta) = time.clone().dyn_into::<JsTimeDelta>() {
-			return Ok(JsState(self.0.interpolate(delta.0)));
+			return Ok(JsState(self.0.interpolate(delta.inner())));
 		}
 		if let Ok(t) = time.clone().dyn_into::<JsTime>() {
-			return Ok(JsState(self.0.interpolate_at(t.0)));
+			return Ok(JsState(self.0.interpolate_at(t.inner())));
 		}
 		Err(js_error_with_name("invalid time argument", "ValueError"))
 	}
@@ -502,7 +500,7 @@ pub struct JsEvent(Event<DynTimeScale>);
 impl JsEvent {
 	#[wasm_bindgen(js_name = "time")]
 	pub fn time(&self) -> JsTime {
-		JsTime(self.0.time())
+		JsTime::from_inner(self.0.time())
 	}
 
 	#[wasm_bindgen(js_name = "crossing")]
@@ -525,17 +523,27 @@ pub struct JsWindow(Window<DynTimeScale>);
 impl JsWindow {
 	#[wasm_bindgen(js_name = "start")]
 	pub fn start(&self) -> JsTime {
-		JsTime(self.0.start())
+		JsTime::from_inner(self.0.start())
 	}
 
 	#[wasm_bindgen(js_name = "end")]
 	pub fn end(&self) -> JsTime {
-		JsTime(self.0.end())
+		JsTime::from_inner(self.0.end())
 	}
 
 	#[wasm_bindgen(js_name = "duration")]
 	pub fn duration(&self) -> JsTimeDelta {
-		JsTimeDelta(self.0.duration())
+		JsTimeDelta::from_inner(self.0.duration())
+	}
+}
+
+impl JsWindow {
+	pub fn inner(&self) -> Window<DynTimeScale> {
+		self.0.clone()
+	}
+
+	pub fn from_inner(window: Window<DynTimeScale>) -> Self {
+		Self(window)
 	}
 }
 
@@ -563,13 +571,13 @@ impl JsVallado {
 	#[wasm_bindgen]
 	pub fn propagate(&self, steps: JsValue) -> Result<JsValue, JsValue> {
 		if let Ok(time) = steps.clone().dyn_into::<JsTime>() {
-			let state = self.0.propagate(time.0).map_err(JsValladoError)?;
+			let state = self.0.propagate(time.inner()).map_err(JsValladoError)?;
 			return Ok(JsState(state).into());
 		}
 		if let Ok(times) = steps.clone().dyn_into::<js_sys::Array>() {
 			let steps: Vec<DynTime> = times
 				.iter()
-				.map(|v| Ok(v.dyn_into::<JsTime>()?.0))
+				.map(|v| Ok(v.dyn_into::<JsTime>()?.inner()))
 				.collect::<Result<_, JsValue>>()?;
 			let traj = self.0.propagate_all(steps.into_iter()).map_err(JsValladoError)?;
 			return Ok(JsTrajectory(traj).into());
@@ -588,7 +596,7 @@ impl JsGroundLocation {
 	#[wasm_bindgen(constructor)]
 	pub fn new(origin: JsOrigin, longitude: f64, latitude: f64, altitude: f64) -> Result<Self, JsValue> {
 		Ok(JsGroundLocation(
-			DynGroundLocation::with_dynamic(longitude, latitude, altitude, origin.0)
+			DynGroundLocation::with_dynamic(longitude, latitude, altitude, origin.inner())
 				.map_err(|e| js_error_with_name(e, "ValueError"))?,
 		))
 	}
@@ -600,7 +608,7 @@ impl JsGroundLocation {
 		provider: Option<JsEopProvider>,
 		frame: Option<JsFrame>,
 	) -> Result<JsObservables, JsValue> {
-		let frame = frame.unwrap_or(JsFrame(DynFrame::Iau(state.0.origin())));
+		let frame = frame.unwrap_or(JsFrame::from_inner(DynFrame::Iau(state.0.origin())));
 		let state = state.to_frame(frame, provider)?;
 		let rot = self.0.rotation_to_topocentric();
 		let position = rot * (state.0.position() - self.0.body_fixed_position());
@@ -653,7 +661,7 @@ impl JsGroundPropagator {
 		if let Ok(time) = steps.clone().dyn_into::<JsTime>() {
 			let state = self
 				.0
-				.propagate_dyn(time.0)
+				.propagate_dyn(time.inner())
 				.map_err(JsGroundPropagatorError)?;
 			return Ok(JsState(state).into());
 		}
@@ -663,7 +671,7 @@ impl JsGroundPropagator {
 				let t: JsTime = v.dyn_into()?;
 				states.push(
 					self.0
-						.propagate_dyn(t.0)
+						.propagate_dyn(t.inner())
 						.map_err(JsGroundPropagatorError)?,
 				);
 			}
@@ -702,7 +710,7 @@ impl JsSgp4 {
 
 	#[wasm_bindgen(getter)]
 	pub fn time(&self) -> JsTime {
-		JsTime(
+		JsTime::from_inner(
 			self.0
 				.time()
 				.try_to_scale(DynTimeScale::Tai, &DefaultOffsetProvider)
@@ -716,20 +724,20 @@ impl JsSgp4 {
 		steps: JsValue,
 		provider: Option<JsEopProvider>,
 	) -> Result<JsValue, JsValue> {
-		let provider = provider.as_ref().map(|p| &p.0);
+		let provider = provider.map(|p| p.inner());
 		if let Ok(pytime) = steps.clone().dyn_into::<JsTime>() {
-			let (time, dyntime) = match provider {
+			let (time, dyntime) = match provider.as_ref() {
 				Some(provider) => (
 					pytime
-						.0
+						.inner()
 						.try_to_scale(Tai, provider)
 						.map_err(JsEopProviderError)?,
 					pytime
-						.0
+						.inner()
 						.try_to_scale(DynTimeScale::Tai, provider)
 						.map_err(JsEopProviderError)?,
 				),
-				None => (pytime.0.to_scale(Tai), pytime.0.to_scale(DynTimeScale::Tai)),
+				None => (pytime.inner().to_scale(Tai), pytime.inner().to_scale(DynTimeScale::Tai)),
 			};
 			let s1 = self.0.propagate(time).map_err(JsSgp4Error)?;
 			return Ok(JsState(State::new(
@@ -745,15 +753,15 @@ impl JsSgp4 {
 			let mut states: Vec<DynState> = Vec::with_capacity(array.length() as usize);
 			for value in array.iter() {
 				let step: JsTime = value.dyn_into()?;
-				let (time, dyntime) = match provider {
+				let (time, dyntime) = match provider.as_ref() {
 					Some(provider) => (
-						step.0.try_to_scale(Tai, provider).map_err(JsEopProviderError)?,
+						step.inner().try_to_scale(Tai, provider).map_err(JsEopProviderError)?,
 						step
-							.0
+							.inner()
 							.try_to_scale(DynTimeScale::Tai, provider)
 							.map_err(JsEopProviderError)?,
 					),
-					None => (step.0.to_scale(Tai), step.0.to_scale(DynTimeScale::Tai)),
+					None => (step.inner().to_scale(Tai), step.inner().to_scale(DynTimeScale::Tai)),
 				};
 				let s = self.0.propagate(time).map_err(JsSgp4Error)?;
 				let s = State::new(
@@ -869,6 +877,16 @@ impl JsObservables {
 	}
 }
 
+impl JsObservables {
+    pub fn inner(&self) -> Observables {
+        self.0.clone()
+    }
+
+    pub fn from_inner(provider: Observables) -> Self {
+        Self(provider)
+    }
+}
+
 /// Represents a visibility pass between a ground station and spacecraft.
 #[wasm_bindgen(js_name = "Pass")]
 #[derive(Debug, Clone)]
@@ -878,7 +896,7 @@ pub struct JsPass(DynPass);
 impl JsPass {
 	#[wasm_bindgen(constructor)]
 	pub fn new(window: JsWindow, times: Vec<JsTime>, observables: Vec<JsObservables>) -> Result<Self, JsValue> {
-		let times: Vec<DynTime> = times.into_iter().map(|t| t.0).collect();
+		let times: Vec<DynTime> = times.into_iter().map(|t| t.inner()).collect();
 		let observables: Vec<Observables> = observables.into_iter().map(|o| o.0).collect();
 
 		let pass = Pass::new(window.0, times, observables)
@@ -889,12 +907,12 @@ impl JsPass {
 
 	#[wasm_bindgen(getter)]
 	pub fn window(&self) -> JsWindow {
-		JsWindow(*self.0.window())
+		JsWindow::from_inner(*self.0.window())
 	}
 
 	#[wasm_bindgen(getter)]
 	pub fn times(&self) -> Vec<JsTime> {
-		self.0.times().iter().map(|&t| JsTime(t)).collect()
+		self.0.times().iter().map(|&t| JsTime::from_inner(t)).collect()
 	}
 
 	#[wasm_bindgen(getter)]
@@ -902,13 +920,13 @@ impl JsPass {
 		self.0
 			.observables()
 			.iter()
-			.map(|o| JsObservables(o.clone()))
+			.map(|o| JsObservables::from_inner(o.clone()))
 			.collect()
 	}
 
 	#[wasm_bindgen]
 	pub fn interpolate(&self, time: JsTime) -> Option<JsObservables> {
-		self.0.interpolate(time.0).map(JsObservables)
+		self.0.interpolate(time.inner()).map(JsObservables)
 	}
 }
 
@@ -968,10 +986,10 @@ pub fn visibility(
 			"ValueError",
 		));
 	}
-	let times: Vec<DynTime> = times.into_iter().map(|s| s.0).collect();
+	let times: Vec<DynTime> = times.into_iter().map(|s| s.inner()).collect();
 	let mask = &mask.0;
-	let ephemeris = &ephemeris.0;
-	let bodies: Vec<DynOrigin> = bodies.unwrap_or_default().into_iter().map(|b| b.0).collect();
+	let ephemeris = ephemeris.inner();
+	let bodies: Vec<DynOrigin> = bodies.unwrap_or_default().into_iter().map(|b| b.inner()).collect();
 	Ok(
 		visibility_combined(&times, &gs.0, mask, &bodies, &sc.0, ephemeris)
 			.map_err(JsVisibilityError)?
@@ -990,10 +1008,10 @@ pub fn visibility_all(
 	ephemeris: &JsSpk,
 	bodies: Option<Vec<JsOrigin>>,
 ) -> Result<Object, JsValue> {
-	let times: Vec<DynTime> = times.into_iter().map(|s| s.0).collect();
-	let bodies: Vec<DynOrigin> = bodies.unwrap_or_default().into_iter().map(|b| b.0).collect();
+	let times: Vec<DynTime> = times.into_iter().map(|s| s.inner()).collect();
+	let bodies: Vec<DynOrigin> = bodies.unwrap_or_default().into_iter().map(|b| b.inner()).collect();
 	let spacecraft = &spacecraft.0;
-	let ephemeris = &ephemeris.0;
+	let ephemeris = ephemeris.inner();
 
 	let gs_object = Object::from(ground_stations);
 	let gs_entries = Object::entries(&gs_object);

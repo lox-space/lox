@@ -69,6 +69,7 @@ fn parse_paths(args: JsValue) -> Result<(PathBuf, PathBuf), JsValue> {
 ///     EopParserError: If the file cannot be parsed.
 ///     OSError: If the file cannot be read.
 #[wasm_bindgen(js_name="EOPProvider")]
+#[derive(Clone, Debug)]
 pub struct JsEopProvider(EopProvider);
 
 #[wasm_bindgen(js_class="EOPProvider")]

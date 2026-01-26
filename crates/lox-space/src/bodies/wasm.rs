@@ -4,7 +4,7 @@
 
 use crate::bodies::dynamic::{DynOrigin, UnknownOriginId, UnknownOriginName};
 use crate::bodies::{
-    Origin as RustOrigin, TryMeanRadius, TryPointMass, TryRotationalElements, TrySpheroid,
+    Origin, TryMeanRadius, TryPointMass, TryRotationalElements, TrySpheroid,
     TryTriaxialEllipsoid,
 };
 use lox_core::types::units::Seconds;
@@ -13,7 +13,7 @@ use crate::wasm::js_error_with_name;
 use std::str::FromStr;
 
 
-pub struct JsUndefinedOriginPropertyError(crate::bodies::UndefinedOriginPropertyError);
+pub struct JsUndefinedOriginPropertyError(pub crate::bodies::UndefinedOriginPropertyError);
 
 impl From<JsUndefinedOriginPropertyError> for JsValue {
     fn from(err: JsUndefinedOriginPropertyError) -> Self {
@@ -21,7 +21,7 @@ impl From<JsUndefinedOriginPropertyError> for JsValue {
     }
 }
 
-pub struct JsUnknownOriginId(UnknownOriginId);
+pub struct JsUnknownOriginId(pub UnknownOriginId);
 
 impl From<JsUnknownOriginId> for JsValue {
     fn from(err: JsUnknownOriginId) -> Self {
@@ -29,7 +29,7 @@ impl From<JsUnknownOriginId> for JsValue {
     }
 }
 
-pub struct JsUnknownOriginName(UnknownOriginName);
+pub struct JsUnknownOriginName(pub UnknownOriginName);
 
 
 impl From<JsUnknownOriginName> for JsValue {
@@ -66,6 +66,7 @@ pub struct JsElements {
 ///     ValueError: If the origin name or ID is not recognized.
 ///     TypeError: If the argument is neither a string nor an integer.
 #[wasm_bindgen(js_name = "Origin")]
+#[derive(Clone, Debug)]
 pub struct JsOrigin(DynOrigin);
 
 #[wasm_bindgen(js_class = "Origin")]
@@ -281,5 +282,15 @@ impl JsOrigin {
             .0
             .try_rotation_rate(et)
             .map_err(JsUndefinedOriginPropertyError)?)
+    }
+}
+
+impl JsOrigin {
+    pub fn inner(&self) -> DynOrigin {
+        self.0.clone()
+    }
+
+    pub fn from_inner(provider: DynOrigin) -> Self {
+        Self(provider)
     }
 }

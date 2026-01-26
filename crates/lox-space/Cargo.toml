@@ -117,6 +117,7 @@ wasm = [
     "dep:wasm-bindgen",
     "dep:js-sys",
     "dep:serde-wasm-bindgen",
+    "dep:sgp4",
 ]
 time = [
     "io",
