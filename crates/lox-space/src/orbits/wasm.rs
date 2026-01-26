@@ -456,15 +456,15 @@ impl JsTrajectory {
 		Ok(windows.into_iter().map(JsWindow).collect())
 	}
 
-	pub fn interpolate(&self, time: JsValue) -> Result<JsState, JsValue> {
-		if let Ok(delta) = time.clone().dyn_into::<JsTimeDelta>() {
-			return Ok(JsState(self.0.interpolate(delta.inner())));
-		}
-		if let Ok(t) = time.clone().dyn_into::<JsTime>() {
-			return Ok(JsState(self.0.interpolate_at(t.inner())));
-		}
-		Err(js_error_with_name("invalid time argument", "ValueError"))
-	}
+    #[wasm_bindgen(js_name = "interpolateDelta")]
+    pub fn interpolate_delta(&self, delta: &JsTimeDelta) -> JsState {
+        JsState(self.0.interpolate(delta.inner()))
+    }
+
+    #[wasm_bindgen(js_name = "interpolateAt")]
+    pub fn interpolate_at(&self, time: &JsTime) -> JsState {
+        JsState(self.0.interpolate_at(time.inner()))
+    }
 
 	#[wasm_bindgen(js_name = "toFrame")]
 	pub fn to_frame(&self, frame: JsFrame, provider: Option<JsEopProvider>) -> Result<Self, JsValue> {
@@ -560,21 +560,21 @@ impl JsVallado {
 		Ok(JsVallado(vallado))
 	}
 
-	pub fn propagate(&self, steps: JsValue) -> Result<JsValue, JsValue> {
-		if let Ok(time) = steps.clone().dyn_into::<JsTime>() {
-			let state = self.0.propagate(time.inner()).map_err(JsValladoError)?;
-			return Ok(JsState(state).into());
-		}
-		if let Ok(times) = steps.clone().dyn_into::<js_sys::Array>() {
-			let steps: Vec<DynTime> = times
-				.iter()
-				.map(|v| Ok(v.dyn_into::<JsTime>()?.inner()))
-				.collect::<Result<_, JsValue>>()?;
-			let traj = self.0.propagate_all(steps.into_iter()).map_err(JsValladoError)?;
-			return Ok(JsTrajectory(traj).into());
-		}
-		Err(js_error_with_name("invalid time delta(s)", "ValueError"))
+	#[wasm_bindgen(js_name = "propagateAt")]
+	pub fn propagate_at(&self, time: JsTime) -> Result<JsState, JsValue> {
+		let state = self.0.propagate(time.inner()).map_err(JsValladoError)?;
+		Ok(JsState(state))
 	}
+
+
+    pub fn propagate(&self, steps: Vec<JsTime>) -> Result<JsTrajectory, JsValue> {
+        let times: Vec<DynTime> = steps.into_iter().map(|t| t.inner()).collect();
+        let traj = self
+            .0
+            .propagate_all(times.into_iter())
+            .map_err(JsValladoError)?;
+        Ok(JsTrajectory(traj))
+    }
 }
 
 /// Represents a location on the surface of a celestial body.
@@ -646,27 +646,27 @@ impl JsGroundPropagator {
 		JsGroundPropagator(DynGroundPropagator::with_dynamic(location.0))
 	}
 
-	pub fn propagate(&self, steps: JsValue) -> Result<JsValue, JsValue> {
-		if let Ok(time) = steps.clone().dyn_into::<JsTime>() {
-			let state = self
+	#[wasm_bindgen(js_name = "propagateAt")]
+	pub fn propagate_at(&self, time: JsTime) -> Result<JsState, JsValue> {
+		let state = self
 				.0
 				.propagate_dyn(time.inner())
 				.map_err(JsGroundPropagatorError)?;
-			return Ok(JsState(state).into());
-		}
-		if let Ok(array) = steps.clone().dyn_into::<Array>() {
-			let mut states: Vec<DynState> = Vec::with_capacity(array.length() as usize);
-			for v in array.iter() {
-				let t: JsTime = v.dyn_into()?;
-				states.push(
-					self.0
-						.propagate_dyn(t.inner())
-						.map_err(JsGroundPropagatorError)?,
-				);
-			}
-			return Ok(JsTrajectory(Trajectory::new(&states).map_err(JsTrajectoryError)?).into());
-		}
-		Err(js_error_with_name("invalid time delta(s)", "ValueError"))
+		Ok(JsState(state).into())
+	}
+
+
+    pub fn propagate(&self, times: Vec<JsTime>) -> Result<JsTrajectory, JsValue> {
+        let mut states: Vec<DynState> = Vec::with_capacity(times.len());
+        for t in times {
+            let state = self
+                .0
+                .propagate_dyn(t.inner())
+                .map_err(JsGroundPropagatorError)?;
+            states.push(state);
+        }
+        let traj = Trajectory::new(&states).map_err(JsTrajectoryError)?;
+        Ok(JsTrajectory(traj))
 	}
 }
 
@@ -707,63 +707,57 @@ impl JsSgp4 {
 		)
 	}
 
-	pub fn propagate(
-		&self,
-		steps: JsValue,
-		provider: Option<JsEopProvider>,
-	) -> Result<JsValue, JsValue> {
+	pub fn propagate_at(&self, jstime: JsTime, provider: Option<JsEopProvider>) -> Result<JsState, JsValue> {
 		let provider = provider.map(|p| p.inner());
-		if let Ok(pytime) = steps.clone().dyn_into::<JsTime>() {
-			let (time, dyntime) = match provider.as_ref() {
-				Some(provider) => (
-					pytime
-						.inner()
-						.try_to_scale(Tai, provider)
-						.map_err(JsEopProviderError)?,
-					pytime
-						.inner()
-						.try_to_scale(DynTimeScale::Tai, provider)
-						.map_err(JsEopProviderError)?,
-				),
-				None => (pytime.inner().to_scale(Tai), pytime.inner().to_scale(DynTimeScale::Tai)),
-			};
-			let s1 = self.0.propagate(time).map_err(JsSgp4Error)?;
-			return Ok(JsState(State::new(
+		let (time, dyntime) = match provider.as_ref() {
+			Some(provider) => (
+				jstime
+					.inner()
+					.try_to_scale(Tai, provider)
+					.map_err(JsEopProviderError)?,
+				jstime
+					.inner()
+					.try_to_scale(DynTimeScale::Tai, provider)
+					.map_err(JsEopProviderError)?,
+			),
+			None => (jstime.inner().to_scale(Tai), jstime.inner().to_scale(DynTimeScale::Tai)),
+		};
+		let s1 = self.0.propagate(time).map_err(JsSgp4Error)?;
+		Ok(JsState(State::new(
 				dyntime,
 				s1.position(),
 				s1.velocity(),
 				DynOrigin::default(),
 				DynFrame::default(),
 			))
-			.into());
+			.into())
+	}
+
+	pub fn propagate(&self, times: Vec<JsTime>, provider: Option<JsEopProvider>) -> Result<JsTrajectory, JsValue> {
+		let provider = provider.map(|p| p.inner());
+		let mut states: Vec<DynState> = Vec::with_capacity(times.len() as usize);
+		for step in times.iter() {
+			let (time, dyntime) = match provider.as_ref() {
+				Some(provider) => (
+					step.inner().try_to_scale(Tai, provider).map_err(JsEopProviderError)?,
+					step
+						.inner()
+						.try_to_scale(DynTimeScale::Tai, provider)
+						.map_err(JsEopProviderError)?,
+				),
+				None => (step.inner().to_scale(Tai), step.inner().to_scale(DynTimeScale::Tai)),
+			};
+			let s = self.0.propagate(time).map_err(JsSgp4Error)?;
+			let s = State::new(
+				dyntime,
+				s.position(),
+				s.velocity(),
+				DynOrigin::default(),
+				DynFrame::default(),
+			);
+			states.push(s);
 		}
-		if let Ok(array) = steps.clone().dyn_into::<Array>() {
-			let mut states: Vec<DynState> = Vec::with_capacity(array.length() as usize);
-			for value in array.iter() {
-				let step: JsTime = value.dyn_into()?;
-				let (time, dyntime) = match provider.as_ref() {
-					Some(provider) => (
-						step.inner().try_to_scale(Tai, provider).map_err(JsEopProviderError)?,
-						step
-							.inner()
-							.try_to_scale(DynTimeScale::Tai, provider)
-							.map_err(JsEopProviderError)?,
-					),
-					None => (step.inner().to_scale(Tai), step.inner().to_scale(DynTimeScale::Tai)),
-				};
-				let s = self.0.propagate(time).map_err(JsSgp4Error)?;
-				let s = State::new(
-					dyntime,
-					s.position(),
-					s.velocity(),
-					DynOrigin::default(),
-					DynFrame::default(),
-				);
-				states.push(s);
-			}
-			return Ok(JsTrajectory(Trajectory::new(&states).map_err(JsTrajectoryError)?).into());
-		}
-		Err(js_error_with_name("invalid time delta(s)", "ValueError"))
+		Ok(JsTrajectory(Trajectory::new(&states).map_err(JsTrajectoryError)?).into())
 	}
 }
 
@@ -932,25 +926,17 @@ pub struct JsEnsemble(HashMap<String, DynTrajectory>);
 
 #[wasm_bindgen(js_class = "Ensemble")]
 impl JsEnsemble {
-	#[wasm_bindgen(constructor)]
-	pub fn new(ensemble: JsValue) -> Result<Self, JsValue> {
-		let object = Object::from(ensemble);
-		let entries = Object::entries(&object);
-		let mut map: HashMap<String, DynTrajectory> = HashMap::new();
-		for entry in entries.iter() {
-			let arr = Array::from(&entry);
-			let name = arr
-				.get(0)
-				.as_string()
-				.ok_or_else(|| js_error_with_name("ensemble keys must be strings", "TypeError"))?;
-			let traj: JsTrajectory = arr
-				.get(1)
-				.dyn_into()
-				.map_err(|_| js_error_with_name("values must be Trajectory", "TypeError"))?;
-			map.insert(name, traj.0);
-		}
-		Ok(Self(map))
-	}
+    #[wasm_bindgen(constructor)]
+    pub fn new(names: Vec<String>, trajectories: Vec<JsTrajectory>) -> Result<Self, JsValue> {
+        if names.len() != trajectories.len() {
+            return Err(js_error_with_name("names and trajectories length mismatch", "TypeError"));
+        }
+        let mut map: HashMap<String, DynTrajectory> = HashMap::with_capacity(names.len());
+        for (name, traj) in names.into_iter().zip(trajectories.into_iter()) {
+            map.insert(name, traj.0);
+        }
+        Ok(Self(map))
+    }
 }
 
 /// Compute visibility passes between a ground station and spacecraft.
@@ -982,60 +968,78 @@ pub fn visibility(
 	)
 }
 
+
+#[wasm_bindgen(js_name = "GroundStation")]
+#[derive(Clone, Debug)]
+pub struct JsGroundStation {
+    name: String,
+    location: JsGroundLocation,
+    mask: JsElevationMask,
+}
+
+#[wasm_bindgen(js_class = "GroundStation")]
+impl JsGroundStation {
+    #[wasm_bindgen(constructor)]
+    pub fn new(name: String, location: JsGroundLocation, mask: JsElevationMask) -> Self {
+        Self { name, location, mask }
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn name(&self) -> String {
+        self.name.clone()
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn location(&self) -> JsGroundLocation {
+        self.location.clone()
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn mask(&self) -> JsElevationMask {
+        self.mask.clone()
+    }
+}
+
 /// Compute visibility for multiple spacecraft and ground stations.
 #[wasm_bindgen(js_name = "visibilityAll")]
 pub fn visibility_all(
-	times: Vec<JsTime>,
-	ground_stations: JsValue,
-	spacecraft: &JsEnsemble,
-	ephemeris: &JsSpk,
-	bodies: Option<Vec<JsOrigin>>,
+    times: Vec<JsTime>,
+    ground_stations: Vec<JsGroundStation>,
+    spacecraft: &JsEnsemble,
+    ephemeris: &JsSpk,
+    bodies: Option<Vec<JsOrigin>>,
 ) -> Result<Object, JsValue> {
-	let times: Vec<DynTime> = times.into_iter().map(|s| s.inner()).collect();
-	let bodies: Vec<DynOrigin> = bodies.unwrap_or_default().into_iter().map(|b| b.inner()).collect();
-	let spacecraft = &spacecraft.0;
-	let ephemeris = ephemeris.inner();
+    let times: Vec<DynTime> = times.into_iter().map(|s| s.inner()).collect();
+    let bodies: Vec<DynOrigin> = bodies.unwrap_or_default().into_iter().map(|b| b.inner()).collect();
+    let spacecraft = &spacecraft.0;
+    let ephemeris = ephemeris.inner();
 
-	let gs_object = Object::from(ground_stations);
-	let gs_entries = Object::entries(&gs_object);
-	let mut gs_map: HashMap<String, (JsGroundLocation, JsElevationMask)> = HashMap::new();
-	for entry in gs_entries.iter() {
-		let arr = Array::from(&entry);
-		let name = arr
-			.get(0)
-			.as_string()
-			.ok_or_else(|| js_error_with_name("ground station key must be string", "TypeError"))?;
-		let value = arr.get(1);
-		let location = Reflect::get(&value, &JsValue::from_str("location"))?
-			.dyn_into::<JsGroundLocation>()
-			.map_err(|_| js_error_with_name("location must be GroundLocation", "TypeError"))?;
-		let mask = Reflect::get(&value, &JsValue::from_str("mask"))?
-			.dyn_into::<JsElevationMask>()
-			.map_err(|_| js_error_with_name("mask must be ElevationMask", "TypeError"))?;
-		gs_map.insert(name, (location, mask));
-	}
+    let mut gs_map: HashMap<String, (JsGroundLocation, JsElevationMask)> = HashMap::new();
+    for gs in ground_stations {
+        gs_map.insert(gs.name.clone(), (gs.location, gs.mask));
+    }
 
-	let result = Object::new();
-	for (sc_name, sc_trajectory) in spacecraft {
-		let inner = Object::new();
-		for (gs_name, (gs_location, gs_mask)) in gs_map.iter() {
-			let passes = visibility_combined(
-				&times,
-				&gs_location.0,
-				&gs_mask.0,
-				&bodies,
-				sc_trajectory,
-				ephemeris,
-			)
-			.map_err(JsVisibilityError)?
-			.into_iter()
-			.map(JsPass)
-			.map(JsValue::from)
-			.collect::<Array>();
-			Reflect::set(&inner, &JsValue::from_str(gs_name), &passes)?;
-		}
-		Reflect::set(&result, &JsValue::from_str(sc_name), &inner)?;
-	}
+    let result = Object::new();
+    for (sc_name, sc_trajectory) in spacecraft {
+        let inner = Object::new();
+        for (gs_name, (gs_location, gs_mask)) in gs_map.iter() {
+            let passes = visibility_combined(
+                &times,
+                &gs_location.0,
+                &gs_mask.0,
+                &bodies,
+                sc_trajectory,
+                ephemeris,
+            )
+            .map_err(JsVisibilityError)?
+            .into_iter()
+            .map(JsPass)
+            .map(JsValue::from)
+            .collect::<Array>();
+            Reflect::set(&inner, &JsValue::from_str(gs_name), &passes)?;
+        }
+        Reflect::set(&result, &JsValue::from_str(sc_name), &inner)?;
+    }
 
-	Ok(result)
+    Ok(result)
 }
