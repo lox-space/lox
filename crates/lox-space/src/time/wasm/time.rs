@@ -111,6 +111,12 @@ impl JsTime {
         Ok(JsTime(time))
     }
 
+    // Can we avoid this? It seems awful to have to clone from js.
+    #[wasm_bindgen(js_name = "clone")]
+    pub fn clone_js(&self) -> JsTime {
+        JsTime(self.0.clone())
+    }
+
     /// Create a Time from a Julian date.
     ///
     /// Args:

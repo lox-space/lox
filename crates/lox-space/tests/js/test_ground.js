@@ -1,9 +1,8 @@
-// SPDX-FileCopyrightText: 2026 Halvor Bjørnstad <halvor.bjornstad@ksat.no>
+// SPDX-FileCopyrightText: 2026 Halvor Granskogen Bjørnstad <halvor.bjornstad@ksat.no>
 //
 // SPDX-License-Identifier: MPL-2.0
-import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import * as bindings from '../../pkg/lox_space.js';
+import { lox as bindings, deg2rad, approxEqual } from './fixtures.js';
 
 const {
   GroundLocation,
@@ -13,16 +12,6 @@ const {
   Frame,
   ElevationMask,
 } = bindings;
-
-const deg2rad = (deg) => (deg * Math.PI) / 180;
-
-const approxEqual = (actual, expected, rel = 1e-2) => {
-  const tol = Math.abs(expected) * rel;
-  assert.ok(
-    Math.abs(actual - expected) <= tol,
-    `actual=${actual}, expected=${expected}, |diff|=${Math.abs(actual - expected)} > tol=${tol}`
-  );
-};
 
 describe('Ground observables', () => {
   it('computes observables', () => {

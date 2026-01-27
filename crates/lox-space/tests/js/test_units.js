@@ -4,7 +4,7 @@
 
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import * as bindings from '../../pkg/lox_space.js';
+import { lox as bindings } from './fixtures.js';
 
 // Bundler target auto-initializes wasm on import.
 // After js_name renames, exports should be Angle/Distance/Frequency/Velocity.

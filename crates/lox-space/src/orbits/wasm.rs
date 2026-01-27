@@ -580,9 +580,10 @@ pub struct JsGroundLocation(DynGroundLocation);
 #[wasm_bindgen(js_class = "GroundLocation")]
 impl JsGroundLocation {
 	#[wasm_bindgen(constructor)]
-	pub fn new(origin: JsOrigin, longitude: f64, latitude: f64, altitude: f64) -> Result<Self, JsValue> {
+	pub fn new(origin: &JsOrigin, longitude: f64, latitude: f64, altitude: f64) -> Result<Self, JsValue> {
+		let origin = origin.inner().clone();
 		Ok(JsGroundLocation(
-			DynGroundLocation::with_dynamic(longitude, latitude, altitude, origin.inner())
+			DynGroundLocation::with_dynamic(longitude, latitude, altitude, origin)
 				.map_err(|e| js_error_with_name(e, "ValueError"))?,
 		))
 	}
@@ -726,29 +727,25 @@ impl JsSgp4 {
 
 	pub fn propagate(&self, times: Vec<JsTime>, provider: Option<JsEopProvider>) -> Result<JsTrajectory, JsValue> {
 		let provider = provider.map(|p| p.inner());
-		let mut states: Vec<DynState> = Vec::with_capacity(times.len() as usize);
-		for step in times.iter() {
-			let (time, dyntime) = match provider.as_ref() {
-				Some(provider) => (
-					step.inner().try_to_scale(Tai, provider).map_err(JsEopProviderError)?,
-					step
-						.inner()
-						.try_to_scale(DynTimeScale::Tai, provider)
-						.map_err(JsEopProviderError)?,
+		let mut states = Vec::with_capacity(times.len());
+
+		for js_time in times {
+			let (tai_time, dyn_time) = match provider.as_ref() {
+				Some(p) => (
+					js_time.inner().try_to_scale(Tai, p).map_err(JsEopProviderError)?,
+					js_time.inner().try_to_scale(DynTimeScale::Tai, p).map_err(JsEopProviderError)?,
 				),
-				None => (step.inner().to_scale(Tai), step.inner().to_scale(DynTimeScale::Tai)),
+				None => (
+					js_time.inner().to_scale(Tai),
+					js_time.inner().to_scale(DynTimeScale::Tai),
+				),
 			};
-			let s = self.0.propagate(time).map_err(JsSgp4Error)?;
-			let s = State::new(
-				dyntime,
-				s.position(),
-				s.velocity(),
-				DynOrigin::default(),
-				DynFrame::default(),
-			);
-			states.push(s);
+
+			let pv = self.0.propagate(tai_time).map_err(JsSgp4Error)?;
+			states.push(State::new(dyn_time, pv.position(), pv.velocity(), DynOrigin::default(), DynFrame::default()));
 		}
-		Ok(JsTrajectory(Trajectory::new(&states).map_err(JsTrajectoryError)?).into())
+
+		Ok(JsTrajectory(Trajectory::new(&states).map_err(JsTrajectoryError)?))
 	}
 }
 

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2026 Halvor Bjørnstad <halvor.bjornstad@ksat.no>
+// SPDX-FileCopyrightText: 2026 Halvor Granskogen Bjørnstad <halvor.bjornstad@ksat.no>
 //
 // SPDX-License-Identifier: MPL-2.0
 
@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { describe, it, before } from 'node:test';
 import fs from 'node:fs';
 import path from 'node:path';
-import * as bindings from '../../pkg/lox_space.js';
+import { lox as bindings } from './fixtures.js';
 
 const {
   Time,

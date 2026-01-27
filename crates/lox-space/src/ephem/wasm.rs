@@ -46,6 +46,12 @@ impl JsSpk {
         let spk = parse_daf_spk(&data).map_err(JsDafSpkError)?;
         Ok(JsSpk(spk))
     }
+
+    #[wasm_bindgen(js_name = "fromBytes")]
+    pub fn from_bytes(bytes: &[u8]) -> Result<JsSpk, JsValue> {
+        let spk = parse_daf_spk(bytes).map_err(JsDafSpkError)?;
+        Ok(JsSpk(spk))
+    }
 }
 
 impl JsSpk {
