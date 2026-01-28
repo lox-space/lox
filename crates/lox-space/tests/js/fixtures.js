@@ -24,27 +24,22 @@ export const approxEqual = (actual, expected, rel = 1e-2) => {
   );
 };
 
-export const makeTimes = (t0, endSeconds, stepSeconds) => {
-  const times = [];
-  for (let t = 0n; t < BigInt(endSeconds); t += BigInt(stepSeconds)) {
-    times.push(t0.add(lox.TimeDelta.fromSeconds(t)));
-  }
-  return times;
-};
-
 export async function loadOneweb() {
   const txt = await readFile(path.join(DATA_DIR, 'oneweb_tle.txt'), 'utf8');
   const lines = txt.split(/\r?\n/).filter(Boolean);
 
   const t0 = new lox.SGP4(lines.slice(0, 3).join('\n')).time();
-  const times = makeTimes(t0, 86400, 60);
+  const times = lox.Times.generateTimes(
+    t0,
+    t0.add(lox.TimeDelta.fromSeconds(86400n)),
+    lox.TimeDelta.fromSeconds(60n)
+  );
 
   const trajectories = [];
   for (let i = 0; i < lines.length; i += 3) {
     const tle = lines.slice(i, i + 3).join('\n');
     const name = lines[i].trim();
-    const timesClone = times.map((t) => t.clone()); // avoid moved Time objects
-    const trajectory = new lox.SGP4(tle).propagate(timesClone);
+    const trajectory = new lox.SGP4(tle).propagate(times);
     trajectories.push([name, trajectory]);
   }
   return Object.fromEntries(trajectories);

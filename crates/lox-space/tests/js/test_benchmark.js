@@ -5,7 +5,7 @@
 
 import assert from 'node:assert/strict';
 import { describe, it, before } from 'node:test';
-import { lox, loadOneweb, loadEstrack, loadEphemeris, makeTimes } from './fixtures.js';
+import { lox, loadOneweb, loadEstrack, loadEphemeris } from './fixtures.js';
 
 describe('visibility benchmark', () => {
   /** @type {Record<string, any>} */
@@ -25,10 +25,14 @@ describe('visibility benchmark', () => {
     oneweb = await loadOneweb();
     const firstSc = Object.values(oneweb)[0];
     const t0 = firstSc.states()[0].time();
-    times = makeTimes(t0, 86400, 3000);
     const names = Object.keys(oneweb);
     const trajectories = Object.values(oneweb);
     ensemble = new lox.Ensemble(names, trajectories);
+    times = lox.Times.generateTimes(
+      t0,
+      t0.add(lox.TimeDelta.fromSeconds(86400n)),
+      lox.TimeDelta.fromSeconds(60n)
+    );
   });
 
 it('computes visibility for all passes', () => {

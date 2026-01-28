@@ -66,6 +66,42 @@ impl FromStr for JsUnit {
     }
 }
 
+#[wasm_bindgen(js_name = "Times")]
+#[derive(Clone)]
+pub struct JsTimes(Vec<JsTime>);
+
+#[wasm_bindgen(js_class = "Times")]
+impl JsTimes {
+    #[wasm_bindgen(js_name = "generateTimes")]
+    pub fn generate_times(
+        start: &JsTime,
+        end: &JsTime,
+        step: &JsTimeDelta
+    ) -> Self {
+        let mut times = Vec::new();
+        let mut current = start.clone();
+        let step = step.inner();
+        while current.inner() <= end.inner() {
+            times.push(current.clone());
+            current = current.add(step);
+        }
+        JsTimes(times)
+    }
+}
+
+impl JsTimes {
+    pub fn inner(&self) -> Vec<JsTime> {
+        self.0.clone()
+    }
+    pub fn from_inner(times: Vec<JsTime>) -> Self {
+        Self(times)
+    }
+
+    pub fn vec_inner(&self) -> Vec<DynTime> {
+        self.0.iter().map(|t| t.inner()).collect()
+    }
+}
+
 /// Represents an instant in time on a specific astronomical time scale.
 ///
 /// `Time` is the fundamental time representation in lox, providing
@@ -88,6 +124,7 @@ impl FromStr for JsUnit {
 ///     TimeDelta: For representing time differences.
 ///     UTC: For UTC time with leap second handling.
 #[wasm_bindgen(js_name = "Time")]
+#[derive(Clone)]
 pub struct JsTime(DynTime);
 
 #[wasm_bindgen(js_class = "Time")]
@@ -109,12 +146,6 @@ impl JsTime {
             .build()
             .map_err(JsTimeError)?;
         Ok(JsTime(time))
-    }
-
-    // Can we avoid this? It seems awful to have to clone from js.
-    #[wasm_bindgen(js_name = "clone")]
-    pub fn clone_js(&self) -> JsTime {
-        JsTime(self.0.clone())
     }
 
     /// Create a Time from a Julian date.

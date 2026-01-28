@@ -32,7 +32,7 @@ use crate::time::deltas::TimeDelta;
 use crate::time::offsets::DefaultOffsetProvider;
 use crate::time::time_scales::{DynTimeScale, Tai};
 use crate::time::wasm::deltas::JsTimeDelta;
-use crate::time::wasm::time::JsTime;
+use crate::time::wasm::time::{JsTime, JsTimes};
 use crate::wasm::js_error_with_name;
 use std::error::Error;
 use std::fmt;
@@ -562,8 +562,8 @@ impl JsVallado {
 	}
 
 
-    pub fn propagate(&self, steps: Vec<JsTime>) -> Result<JsTrajectory, JsValue> {
-        let times: Vec<DynTime> = steps.into_iter().map(|t| t.inner()).collect();
+    pub fn propagate(&self, times: &JsTimes,) -> Result<JsTrajectory, JsValue> {
+        let times: Vec<DynTime> = times.vec_inner();
         let traj = self
             .0
             .propagate_all(times.into_iter())
@@ -649,12 +649,13 @@ impl JsGroundPropagator {
 	}
 
 
-    pub fn propagate(&self, times: Vec<JsTime>) -> Result<JsTrajectory, JsValue> {
+    pub fn propagate(&self, times: &JsTimes,) -> Result<JsTrajectory, JsValue> {
+		let times: Vec<DynTime> = times.vec_inner();
         let mut states: Vec<DynState> = Vec::with_capacity(times.len());
         for t in times {
             let state = self
                 .0
-                .propagate_dyn(t.inner())
+                .propagate_dyn(t)
                 .map_err(JsGroundPropagatorError)?;
             states.push(state);
         }
@@ -725,19 +726,20 @@ impl JsSgp4 {
 			.into())
 	}
 
-	pub fn propagate(&self, times: Vec<JsTime>, provider: Option<JsEopProvider>) -> Result<JsTrajectory, JsValue> {
+	pub fn propagate(&self, times: &JsTimes, provider: Option<JsEopProvider>) -> Result<JsTrajectory, JsValue> {
 		let provider = provider.map(|p| p.inner());
-		let mut states = Vec::with_capacity(times.len());
+		let dyn_times: Vec<DynTime> = times.vec_inner();
+		let mut states = Vec::with_capacity(dyn_times.len());
 
-		for js_time in times {
+		for time in dyn_times {
 			let (tai_time, dyn_time) = match provider.as_ref() {
 				Some(p) => (
-					js_time.inner().try_to_scale(Tai, p).map_err(JsEopProviderError)?,
-					js_time.inner().try_to_scale(DynTimeScale::Tai, p).map_err(JsEopProviderError)?,
+					time.try_to_scale(Tai, p).map_err(JsEopProviderError)?,
+					time.try_to_scale(DynTimeScale::Tai, p).map_err(JsEopProviderError)?,
 				),
 				None => (
-					js_time.inner().to_scale(Tai),
-					js_time.inner().to_scale(DynTimeScale::Tai),
+					time.to_scale(Tai),
+					time.to_scale(DynTimeScale::Tai),
 				),
 			};
 
@@ -858,8 +860,8 @@ pub struct JsPass(DynPass);
 #[wasm_bindgen(js_class = "Pass")]
 impl JsPass {
 	#[wasm_bindgen(constructor)]
-	pub fn new(window: JsWindow, times: Vec<JsTime>, observables: Vec<JsObservables>) -> Result<Self, JsValue> {
-		let times: Vec<DynTime> = times.into_iter().map(|t| t.inner()).collect();
+	pub fn new(window: JsWindow, times: &JsTimes, observables: Vec<JsObservables>) -> Result<Self, JsValue> {
+		let times: Vec<DynTime> = times.vec_inner();
 		let observables: Vec<Observables> = observables.into_iter().map(|o| o.0).collect();
 
 		let pass = Pass::new(window.0, times, observables)
@@ -872,8 +874,8 @@ impl JsPass {
 		JsWindow::from_inner(*self.0.window())
 	}
 
-	pub fn times(&self) -> Vec<JsTime> {
-		self.0.times().iter().map(|&t| JsTime::from_inner(t)).collect()
+	pub fn times(&self) -> JsTimes {
+		JsTimes::from_inner(self.0.times().iter().map(|&t| JsTime::from_inner(t)).collect())
 	}
 
 	pub fn observables(&self) -> Vec<JsObservables> {
@@ -924,7 +926,7 @@ impl JsEnsemble {
 /// Compute visibility passes between a ground station and spacecraft.
 #[wasm_bindgen]
 pub fn visibility(
-	times: Vec<JsTime>,
+	times: &JsTimes,
 	gs: JsGroundLocation,
 	mask: &JsElevationMask,
 	sc: &JsTrajectory,
@@ -937,7 +939,7 @@ pub fn visibility(
 			"ValueError",
 		));
 	}
-	let times: Vec<DynTime> = times.into_iter().map(|s| s.inner()).collect();
+	let times: Vec<DynTime> = times.vec_inner();
 	let mask = &mask.0;
 	let ephemeris = ephemeris.inner();
 	let bodies: Vec<DynOrigin> = bodies.unwrap_or_default().into_iter().map(|b| b.inner()).collect();
@@ -982,13 +984,13 @@ impl JsGroundStation {
 /// Compute visibility for multiple spacecraft and ground stations.
 #[wasm_bindgen(js_name = "visibilityAll")]
 pub fn visibility_all(
-    times: Vec<JsTime>,
+    times: &JsTimes,
     ground_stations: Vec<JsGroundStation>,
     spacecraft: &JsEnsemble,
     ephemeris: &JsSpk,
     bodies: Option<Vec<JsOrigin>>,
 ) -> Result<Object, JsValue> {
-    let times: Vec<DynTime> = times.into_iter().map(|s| s.inner()).collect();
+    let times: Vec<DynTime> = times.vec_inner();
     let bodies: Vec<DynOrigin> = bodies.unwrap_or_default().into_iter().map(|b| b.inner()).collect();
     let spacecraft = &spacecraft.0;
     let ephemeris = ephemeris.inner();
