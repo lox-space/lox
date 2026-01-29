@@ -49,15 +49,16 @@ export const assertVecRelClose = (actual, expected, rtol, atol = 0) => {
     });
 };
 
-export async function loadOneweb() {
+// Only takes the first 3 TLEs for brevity and test speed.
+export async function loadOnewebSlim() {
   const txt = await readFile(path.join(DATA_DIR, 'oneweb_tle.txt'), 'utf8');
-  const lines = txt.split(/\r?\n/).filter(Boolean);
+  const lines = txt.split(/\r?\n/).filter(Boolean).slice(0, 9); // first 3 TLEs (3 lines each)
 
   const t0 = new lox.SGP4(lines.slice(0, 3).join('\n')).time();
   const times = lox.Times.generateTimes(
     t0,
-    t0.add(lox.TimeDelta.fromSeconds(86400n)),
-    lox.TimeDelta.fromSeconds(60n)
+    t0.add(lox.TimeDelta.fromSeconds(86400)),
+    lox.TimeDelta.fromSeconds(60)
   );
 
   const trajectories = [];
