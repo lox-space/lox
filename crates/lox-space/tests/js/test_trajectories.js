@@ -1,30 +1,14 @@
 // SPDX-FileCopyrightText: 2026 Hadrien Develay <hadrien.develay@ksat.no>
+//                         2026 Halvor Granskogen Bjørnstad <halvor.bjornstad@ksat.no>
 //
 // SPDX-License-Identifier: MPL-2.0
 
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { lox as bindings, assertVecClose } from "./fixtures.js";
+import { lox as bindings, assertVecClose, approxEqual, approxEqualAbs } from "./fixtures.js";
 
 const { Keplerian, State, TimeDelta, Times, UTC, Vallado, Trajectory } =
   bindings;
-
-const assertCloseRel = (actual, expected, rel = 1e-8) => {
-  const diff = Math.abs(actual - expected);
-  const tol = Math.abs(expected) * rel;
-  assert.ok(
-    diff <= tol,
-    `actual=${actual}, expected=${expected}, |diff|=${diff} > tol=${tol}`
-  );
-};
-
-const assertCloseAbs = (actual, expected, abs = 1e-8) => {
-  const diff = Math.abs(actual - expected);
-  assert.ok(
-    diff <= abs,
-    `actual=${actual}, expected=${expected}, |diff|=${diff} > abs=${abs}`
-  );
-};
 
 const buildOrbit = () => {
   const utc = new UTC(2023, 3, 25, 21, 8, 0.0);
@@ -43,7 +27,7 @@ const buildOrbit = () => {
 const buildTrajectory = (orbit) => {
   const dt = orbit.orbitalPeriod();
   const totalSeconds = Math.ceil(dt.toDecimalSeconds());
-  const start = orbit.time();
+  const start = orbit.time;
   const end = start.add(TimeDelta.fromSeconds(totalSeconds));
   const times = Times.generateTimes(start, end, TimeDelta.fromSeconds(1));
   const s0 = orbit.toCartesian();
@@ -70,7 +54,7 @@ describe("trajectories", () => {
 
     const trajectory = new Trajectory(jsStates);
     const interpolated = trajectory.interpolateAt(time.add(new TimeDelta(1.5)));
-    assertVecClose(interpolated.position(), [2.5e3, 2.5e3, 2.5e3], 1e-6);
+    assertVecClose(interpolated.position, [2.5e3, 2.5e3, 2.5e3], 1e-6);
 
     const roundTrip = trajectory.toArray();
     assert.equal(roundTrip.length, states.length);
@@ -86,16 +70,16 @@ describe("trajectories", () => {
     const s1 = trajectory.interpolateDelta(dt);
     const k1 = s1.toKeplerian();
 
-    assertCloseRel(k1.semiMajorAxis(), orbit.semiMajorAxis(), 1e-8);
-    assertCloseRel(k1.eccentricity(), orbit.eccentricity(), 1e-8);
-    assertCloseRel(k1.inclination(), orbit.inclination(), 1e-8);
-    assertCloseRel(
-      k1.longitudeOfAscendingNode(),
-      orbit.longitudeOfAscendingNode(),
+    approxEqual(k1.semiMajorAxis, orbit.semiMajorAxis, 1e-8);
+    approxEqual(k1.eccentricity, orbit.eccentricity, 1e-8);
+    approxEqual(k1.inclination, orbit.inclination, 1e-8);
+    approxEqual(
+      k1.longitudeOfAscendingNode,
+      orbit.longitudeOfAscendingNode,
       1e-8
     );
-    assertCloseRel(k1.argumentOfPeriapsis(), orbit.argumentOfPeriapsis(), 1e-8);
-    assertCloseRel(k1.trueAnomaly(), orbit.trueAnomaly(), 1e-8);
+    approxEqual(k1.argumentOfPeriapsis, orbit.argumentOfPeriapsis, 1e-8);
+    approxEqual(k1.trueAnomaly, orbit.trueAnomaly, 1e-8);
   });
 
   it("finds apsis events", () => {
@@ -103,8 +87,8 @@ describe("trajectories", () => {
     const trajectory = buildTrajectory(orbit);
 
     const events = trajectory.findEvents((state) => {
-      const position = state.position();
-      const velocity = state.velocity();
+      const position = state.position;
+      const velocity = state.velocity;
       return (
         position[0] * velocity[0] +
         position[1] * velocity[1] +
@@ -114,17 +98,17 @@ describe("trajectories", () => {
 
     assert.equal(events.length, 2);
 
-    const k1 = trajectory.interpolateAt(events[0].time()).toKeplerian();
-    assertCloseRel(k1.trueAnomaly(), Math.PI, 1e-8);
+    const k1 = trajectory.interpolateAt(events[0].time).toKeplerian();
+    approxEqual(k1.trueAnomaly, Math.PI, 1e-8);
 
-    const k2 = trajectory.interpolateAt(events[1].time()).toKeplerian();
-    assertCloseAbs(k2.trueAnomaly(), 0.0, 1e-8);
+    const k2 = trajectory.interpolateAt(events[1].time).toKeplerian();
+    approxEqualAbs(k2.trueAnomaly, 0.0, 1e-8);
   });
 
   it("finds above-equator windows", () => {
     const orbit = buildOrbit();
     const trajectory = buildTrajectory(orbit);
-    const windows = trajectory.findWindows((state) => state.position()[2]);
+    const windows = trajectory.findWindows((state) => state.position[2]);
     assert.equal(windows.length, 1);
   });
 

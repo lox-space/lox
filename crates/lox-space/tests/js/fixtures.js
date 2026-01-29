@@ -24,6 +24,14 @@ export const approxEqual = (actual, expected, rel = 1e-2) => {
   );
 };
 
+export const approxEqualAbs = (actual, expected, abs = 1e-8) => {
+  const diff = Math.abs(actual - expected);
+  assert.ok(
+    diff <= abs,
+    `actual=${actual}, expected=${expected}, |diff|=${diff} > abs=${abs}`
+  );
+};
+
 export const assertVecClose = (actual, expected, atol = 1e-6) => {
     assert.equal(actual.length, expected.length);
     actual.forEach((v, idx) => {
