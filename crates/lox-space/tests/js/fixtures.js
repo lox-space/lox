@@ -85,7 +85,7 @@ export function loadEstrack() {
     const origin = new lox.Origin('Earth');
     const loc = new lox.GroundLocation(origin, deg2rad(lon), deg2rad(lat), 0);
     const mask = lox.ElevationMask.fixed(0);
-    return new lox.GroundStation(name, loc, mask); // adjust ctor if different
+    return new lox.GroundStation(name, loc, mask);
   });
 }
 

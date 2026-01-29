@@ -37,7 +37,7 @@ const assertVecClose = (a, b, atol = 1e-6) => {
 describe("IAU frame transforms", () => {
   for (const frame of frames) {
     it(`converts J2000 -> ${frame}`, () => {
-      const t = new Time("TDB", 2000n, 1, 1, 0, 0, 0);
+      const t = new Time("TDB", 2000, 1, 1, 0, 0, 0);
       const r0 = [6068.27927, -1692.84394, -2516.61918];
       const v0 = [-0.660415582, 5.495938726, -5.303093233];
 

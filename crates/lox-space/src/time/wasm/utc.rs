@@ -12,7 +12,7 @@ use crate::time::time_of_day::CivilTime;
 use crate::time::utc::{Utc, UtcError};
 use crate::time::wasm::time::JsTime;
 use crate::time::wasm::time_scales::JsTimeScale;
-use crate::wasm::{js_error_with_name_from_string};
+use crate::wasm::{js_error_with_name, js_error_with_name_from_string};
 
 pub struct JsUtcError(pub UtcError);
 
@@ -49,7 +49,7 @@ pub struct JsUtc(Utc);
 impl JsUtc {
     #[wasm_bindgen(constructor)]
     pub fn new(
-        year: i64,
+        year: i32,
         month: u8,
         day: u8,
         hour: Option<u8>,
@@ -57,7 +57,7 @@ impl JsUtc {
         seconds: Option<f64>,
     ) -> Result<JsUtc, JsValue> {
         let utc = Utc::builder()
-            .with_ymd(year, month, day)
+            .with_ymd(year as i64, month, day)
             .with_hms(hour.unwrap_or(0), minute.unwrap_or(0), seconds.unwrap_or(0.0))
             .build()
             .map_err(JsUtcError)?;
@@ -117,8 +117,17 @@ impl JsUtc {
     }
 
     /// Return the year component.
-    pub fn year(&self) -> i64 {
-        self.0.year()
+    pub fn year(&self) -> Result<i32, JsValue> {
+        let year: i64 = self.0.year();
+
+        if year > i32::MAX as i64 || year < i32::MIN as i64 {
+                Err(js_error_with_name(
+                    "OverflowError",
+                    "seconds component out of range for i32",
+                ))
+        } else {
+            Ok(year as i32)
+        }
     }
 
     /// Return the month component (1-12).

@@ -22,7 +22,7 @@ describe('Ground observables', () => {
 
     const position = [3359.927, -2398.072, 5153.0];
     const velocity = [5.0657, 5.485, -0.744];
-    const time = new Time('TDB', 2012n, 7, 1, 0, 0, 0);
+    const time = new Time('TDB', 2012, 7, 1, 0, 0, 0);
     const state = new State(time, position, velocity, new Origin('Earth'), new Frame('IAU_EARTH'));
 
     const observables = location.observables(state);

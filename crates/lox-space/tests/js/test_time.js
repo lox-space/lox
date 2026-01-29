@@ -33,7 +33,7 @@ describe('time', () => {
       });
 
     it('handles time scale conversions and arithmetic', () => {
-        const taiExp = new Time('TAI', 2000n, 1, 1);
+        const taiExp = new Time('TAI', 2000, 1, 1);
         let taiAct = Time.fromISO('2000-01-01T00:00:00.000 TAI');
         assertTimeEqual(taiExp, taiAct);
 
@@ -55,7 +55,7 @@ describe('time', () => {
         taiAct = taiExp.toScale('UT1', provider).toScale('TAI', provider);
         assertTimeClose(taiExp, taiAct);
 
-        const tai1 = new Time('TAI', 2000n, 1, 1, 0, 0, 0.5);
+        const tai1 = new Time('TAI', 2000, 1, 1, 0, 0, 0.5);
         assert.ok(tai1.julianDate('jd', 'seconds') > taiExp.julianDate('jd', 'seconds'));
         const dt = new TimeDelta(0.5);
         assertTimeClose(taiExp.add(dt), tai1);
@@ -65,7 +65,7 @@ describe('time', () => {
     });
 
     it('parses and converts UTC', () => {
-        const utcExp = new UTC(2000n, 1, 1);
+        const utcExp = new UTC(2000, 1, 1);
 
         let utcAct = UTC.fromISO('2000-01-01T00:00:00.000');
         assertTimeEqual(utcExp, utcAct);
@@ -101,7 +101,7 @@ describe('time', () => {
         assert.equal(delta.toString(), '1.5 seconds'); // in case String calls toString
         assert.equal(delta.inspect ? delta.inspect() : delta.toString(), '1.5 seconds');
 
-        assert.equal(delta.seconds(), 1n);
+        assert.equal(delta.seconds(), 1);
         assert.equal(delta.subsecond(), 0.5);
 
         assert.equal(String(delta.add(delta)), '3 seconds');
@@ -115,7 +115,7 @@ describe('time', () => {
     });
 
     it('constructs TimeDelta from various units', () => {
-        let td = TimeDelta.fromSeconds(123n);
+        let td = TimeDelta.fromSeconds(123);
         assert.equal(td.toDecimalSeconds(), 123);
 
         td = TimeDelta.fromMinutes(2);
@@ -135,15 +135,15 @@ describe('time', () => {
     });
 
     it('stringifies Time correctly', () => {
-        const time = new Time('TAI', 2000n, 1, 1, 0, 0, 12.123456789123);
+        const time = new Time('TAI', 2000, 1, 1, 0, 0, 12.123456789123);
         assert.equal(String(time), '2000-01-01T00:00:12.123 TAI');
         assert.equal(time.toString(), '2000-01-01T00:00:12.123 TAI');
     });
 
     it('exposes Time accessors', () => {
-        const time = new Time('TAI', 2000n, 1, 1, 0, 0, 12.123456789123);
+        const time = new Time('TAI', 2000, 1, 1, 0, 0, 12.123456789123);
         assert.equal(time.scale().abbreviation(), 'TAI');
-        assert.equal(time.year(), 2000n);
+        assert.equal(time.year(), 2000);
         assert.equal(time.month(), 1);
         assert.equal(time.day(), 1);
         assert.equal(time.hour(), 0);
@@ -157,19 +157,19 @@ describe('time', () => {
     });
 
     it('rejects invalid dates and hours', () => {
-        assert.throws(() => new Time('TAI', 2000n, 13, 1), /invalid date/);
-        assert.throws(() => new Time('TAI', 2000n, 12, 1, 24, 0, 0), /hour must be in the range/);
+        assert.throws(() => new Time('TAI', 2000, 13, 1), /invalid date/);
+        assert.throws(() => new Time('TAI', 2000, 12, 1, 24, 0, 0), /hour must be in the range/);
     });
 
     it('disallows subtracting different time scales', () => {
-        const t1 = new Time('TAI', 2000n, 1, 1, 0, 0, 1.0);
-        const t0 = new Time('TT', 2000n, 1, 1, 0, 0, 1.0);
+        const t1 = new Time('TAI', 2000, 1, 1, 0, 0, 1.0);
+        const t0 = new Time('TT', 2000, 1, 1, 0, 0, 1.0);
         assert.throws(() => t1.subtractTime(t0), /cannot subtract.*different time scales/i);
     });
 
     it('disallows isclose on different time scales', () => {
-        const t0 = new Time('TAI', 2000n, 1, 1);
-        const t1 = new Time('TT', 2000n, 1, 1);
+        const t0 = new Time('TAI', 2000, 1, 1);
+        const t1 = new Time('TT', 2000, 1, 1);
         assert.throws(() => t0.isClose(t1), /cannot compare.*different time scales/i);
     });
 
@@ -199,27 +199,27 @@ describe('time', () => {
     });
 
     it('rejects invalid epochs and units', () => {
-        const time = new Time('TAI', 2000n, 1, 1);
+        const time = new Time('TAI', 2000, 1, 1);
         assert.throws(() => time.julianDate('unknown', 'days'), /unknown epoch: unknown/);
         assert.throws(() => time.julianDate('jd', 'unknown'), /unknown unit: unknown/);
     });
 
     it('converts to/from two-part Julian dates', () => {
-        const expected = new Time('TAI', 2024n, 7, 11, 8, 2, 14.0);
+        const expected = new Time('TAI', 2024, 7, 11, 8, 2, 14.0);
         const [jd1, jd2] = expected.twoPartJulianDate();
         const actual = Time.fromTwoPartJulianDate('TAI', jd1, jd2);
         assertTimeClose(expected, actual);
     });
 
     it('converts from day-of-year', () => {
-        const expected = new Time('TAI', 2024n, 12, 31);
-        const actual = Time.fromDayOfYear('TAI', 2024n, 366);
+        const expected = new Time('TAI', 2024, 12, 31);
+        const actual = Time.fromDayOfYear('TAI', 2024, 366);
         assertTimeEqual(actual, expected);
     });
 
     it('exposes UTC accessors', () => {
-        const utc = new UTC(2000n, 1, 1, 12, 13, 14.123456789123);
-        assert.equal(utc.year(), 2000n);
+        const utc = new UTC(2000, 1, 1, 12, 13, 14.123456789123);
+        assert.equal(utc.year(), 2000);
         assert.equal(utc.month(), 1);
         assert.equal(utc.day(), 1);
         assert.equal(utc.hour(), 12);
@@ -235,7 +235,7 @@ describe('time', () => {
     });
 
     it('rejects invalid UTC inputs', () => {
-        assert.throws(() => new UTC(2000n, 0, 1), /invalid date/);
+        assert.throws(() => new UTC(2000, 0, 1), /invalid date/);
         assert.throws(() => UTC.fromISO('2000-01-01X00:00:00 UTC'), /invalid ISO/);
     });
 
@@ -243,7 +243,7 @@ describe('time', () => {
         assert.throws(() => new EOPProvider('invalid_path'), EopParserError);
 
         const provider = loadEOPProvider();
-        const tai = new Time('TAI', 2100n, 1, 1);
+        const tai = new Time('TAI', 2100, 1, 1);
         assert.throws(() => tai.toScaleWithProvider('UT1', provider), EopProviderError);
     });
 });

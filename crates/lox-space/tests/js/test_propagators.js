@@ -2,32 +2,10 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { lox as binding, deg2rad } from './fixtures.js';
+import { lox as bindings, deg2rad, approxEqual, assertVecClose } from './fixtures.js';
 
-const { GroundLocation, GroundPropagator, Origin, SGP4, TimeDelta, UTC } =
-  bindings;
-
-const assertCloseRel = (actual, expected, rel = 1e-6) => {
-  const diff = Math.abs(actual - expected);
-  const tol = Math.abs(expected) * rel;
-  assert.ok(
-    diff <= tol,
-    `actual=${actual}, expected=${expected}, |diff|=${diff} > tol=${tol}`
-  );
-};
-
-const assertVecClose = (actual, expected, atol = 1e-6) => {
-  assert.equal(actual.length, expected.length);
-  actual.forEach((v, idx) => {
-    const diff = Math.abs(v - expected[idx]);
-    assert.ok(
-      diff <= atol,
-      `mismatch at idx ${idx}: actual=${v}, expected=${expected[idx]}, |diff|=${diff} > atol=${atol}`
-    );
-  });
-};
+const { GroundLocation, GroundPropagator, Origin, SGP4, TimeDelta, UTC } = bindings;
 
 describe("propagators", () => {
   it("computes SGP4 orbital period", () => {
@@ -43,7 +21,7 @@ describe("propagators", () => {
     const actualPeriod = k1.orbitalPeriod().toDecimalSeconds();
     const expectedPeriod = 92.821 * 60;
 
-    assertCloseRel(actualPeriod, expectedPeriod, 1e-4);
+    approxEqual(actualPeriod, expectedPeriod, 1e-4);
   });
 
   it("propagates ground location state", () => {

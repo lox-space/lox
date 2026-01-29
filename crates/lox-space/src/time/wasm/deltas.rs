@@ -60,12 +60,25 @@ impl JsTimeDelta {
     ///
     /// Raises:
     ///     NonFiniteTimeDeltaError: If the delta is non-finite.
-    pub fn seconds(&self) -> Result<i64, JsValue> {
-        self.0.seconds().ok_or_else(|| {
+    pub fn seconds(&self) -> Result<i32, JsValue> {
+        self
+        .0
+        .seconds()
+        .ok_or_else(|| {
             js_error_with_name(
                 "NonFiniteTimeDeltaError",
                 "cannot access seconds for non-finite time delta",
             )
+        })
+        .and_then(|seconds| {
+            if seconds > i32::MAX as i64 || seconds < i32::MIN as i64 {
+                Err(js_error_with_name(
+                    "OverflowError",
+                    "seconds component out of range for i32",
+                ))
+            } else {
+                Ok(seconds as i32)
+            }
         })
     }
 
@@ -87,8 +100,8 @@ impl JsTimeDelta {
 
     /// Create a TimeDelta from integer seconds.
     #[wasm_bindgen(js_name = "fromSeconds")]
-    pub fn from_seconds(seconds: i64) -> Self {
-        Self(TimeDelta::from_seconds(seconds))
+    pub fn from_seconds(seconds: i32) -> Self {
+        Self(TimeDelta::from_seconds(seconds as i64))
     }
 
     /// Create a TimeDelta from minutes.
@@ -133,9 +146,9 @@ impl JsTimeDelta {
     ///
     /// Examples:
     ///     >>> deltas = lox.TimeDelta.range(0, 10, 2)  # [0, 2, 4, 6, 8, 10]
-    pub fn range(start: i64, end: i64, step: Option<i64>) -> Array {
-        let step = TimeDelta::from_seconds(step.unwrap_or(1));
-        let range = TimeDelta::range(start..=end).with_step(step);
+    pub fn range(start: i32, end: i32, step: Option<i32>) -> Array {
+        let step = TimeDelta::from_seconds(step.unwrap_or(1) as i64);
+        let range = TimeDelta::range(start as i64..=end as i64).with_step(step);
         let arr = Array::new();
         for delta in range {
             arr.push(&JsValue::from(JsTimeDelta(delta)));
