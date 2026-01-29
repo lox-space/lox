@@ -4,12 +4,10 @@
 
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import * as bindings from "../../pkg/lox_space.js";
+import { lox as binding, deg2rad } from './fixtures.js';
 
 const { GroundLocation, GroundPropagator, Origin, SGP4, TimeDelta, UTC } =
   bindings;
-
-const deg2rad = (deg) => (deg * Math.PI) / 180;
 
 const assertCloseRel = (actual, expected, rel = 1e-6) => {
   const diff = Math.abs(actual - expected);
