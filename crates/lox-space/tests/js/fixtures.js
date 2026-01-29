@@ -35,6 +35,20 @@ export const assertVecClose = (actual, expected, atol = 1e-6) => {
     });
 };
 
+export const assertVecRelClose = (actual, expected, rtol, atol = 0) => {
+    if (actual.length !== expected.length) {
+        throw new Error(`Vector length mismatch: got ${actual.length}, expected ${expected.length}`);
+    }
+    actual.forEach((v, i) => {
+        const e = expected[i];
+        const diff = Math.abs(v - e);
+        const tol = atol + rtol * Math.abs(e);
+        if (diff > tol) {
+            throw new Error(`Vector mismatch at index ${i}: got ${v}, expected ${e}, diff ${diff}, tol ${tol}`);
+        }
+    });
+};
+
 export async function loadOneweb() {
   const txt = await readFile(path.join(DATA_DIR, 'oneweb_tle.txt'), 'utf8');
   const lines = txt.split(/\r?\n/).filter(Boolean);
