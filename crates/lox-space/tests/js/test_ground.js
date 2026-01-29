@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Halvor Granskogen Bjørnstad <halvor.bjornstad@ksat.no>
 //
 // SPDX-License-Identifier: MPL-2.0
+
 import { describe, it } from 'node:test';
 import { lox as bindings, deg2rad, approxEqual } from './fixtures.js';
 

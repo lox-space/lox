@@ -24,6 +24,17 @@ export const approxEqual = (actual, expected, rel = 1e-2) => {
   );
 };
 
+export const assertVecClose = (actual, expected, atol = 1e-6) => {
+    assert.equal(actual.length, expected.length);
+    actual.forEach((v, idx) => {
+        const diff = Math.abs(v - expected[idx]);
+        assert.ok(
+            diff <= atol,
+            `mismatch at idx ${idx}: actual=${v}, expected=${expected[idx]}, |diff|=${diff} > atol=${atol}`
+        );
+    });
+};
+
 export async function loadOneweb() {
   const txt = await readFile(path.join(DATA_DIR, 'oneweb_tle.txt'), 'utf8');
   const lines = txt.split(/\r?\n/).filter(Boolean);
