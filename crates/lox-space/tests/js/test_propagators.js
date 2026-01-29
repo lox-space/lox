@@ -14,7 +14,7 @@ describe("propagators", () => {
 2 25544  51.6410 309.3890 0010444 339.5369 107.8830 15.49495945458731`;
 
     const sgp4 = new SGP4(issTle);
-    const t1 = sgp4.time().add(TimeDelta.fromMinutes(92.821));
+    const t1 = sgp4.time.add(TimeDelta.fromMinutes(92.821));
     const s1 = sgp4.propagate_at(t1);
     const k1 = s1.toKeplerian();
 
@@ -32,7 +32,7 @@ describe("propagators", () => {
     const ground = new GroundPropagator(loc);
 
     const state = ground.propagateAt(tai);
-    const position = state.position();
+    const position = state.position;
     const expected = [
       -1765.9535510583582, 4524.585984442561, 4120.189198495323,
     ];

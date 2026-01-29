@@ -99,7 +99,7 @@ describe('time', () => {
         const delta = new TimeDelta(1.5);
         assert.equal(String(delta), '1.5 seconds');
         assert.equal(delta.toString(), '1.5 seconds'); // in case String calls toString
-        assert.equal(delta.inspect ? delta.inspect() : delta.toString(), '1.5 seconds');
+        assert.equal(delta.toString(), '1.5 seconds');
 
         assert.equal(delta.seconds(), 1);
         assert.equal(delta.subsecond(), 0.5);
@@ -142,17 +142,17 @@ describe('time', () => {
 
     it('exposes Time accessors', () => {
         const time = new Time('TAI', 2000, 1, 1, 0, 0, 12.123456789123);
-        assert.equal(time.scale().abbreviation(), 'TAI');
-        assert.equal(time.year(), 2000);
-        assert.equal(time.month(), 1);
-        assert.equal(time.day(), 1);
-        assert.equal(time.hour(), 0);
-        assert.equal(time.minute(), 0);
-        assert.equal(time.second(), 12);
-        assert.equal(time.millisecond(), 123);
-        assert.equal(time.microsecond(), 456);
-        assert.equal(time.nanosecond(), 789);
-        assert.equal(time.picosecond(), 123);
+        assert.equal(time.scale.abbreviation, 'TAI');
+        assert.equal(time.year, 2000);
+        assert.equal(time.month, 1);
+        assert.equal(time.day, 1);
+        assert.equal(time.hour, 0);
+        assert.equal(time.minute, 0);
+        assert.equal(time.second, 12);
+        assert.equal(time.millisecond, 123);
+        assert.equal(time.microsecond, 456);
+        assert.equal(time.nanosecond, 789);
+        assert.equal(time.picosecond, 123);
         approxEqual(time.decimalSeconds(), 12.123456789123, 1e-15);
     });
 
@@ -219,16 +219,16 @@ describe('time', () => {
 
     it('exposes UTC accessors', () => {
         const utc = new UTC(2000, 1, 1, 12, 13, 14.123456789123);
-        assert.equal(utc.year(), 2000);
-        assert.equal(utc.month(), 1);
-        assert.equal(utc.day(), 1);
-        assert.equal(utc.hour(), 12);
-        assert.equal(utc.minute(), 13);
-        assert.equal(utc.second(), 14);
-        assert.equal(utc.millisecond(), 123);
-        assert.equal(utc.microsecond(), 456);
-        assert.equal(utc.nanosecond(), 789);
-        assert.equal(utc.picosecond(), 123);
+        assert.equal(utc.year, 2000);
+        assert.equal(utc.month, 1);
+        assert.equal(utc.day, 1);
+        assert.equal(utc.hour, 12);
+        assert.equal(utc.minute, 13);
+        assert.equal(utc.second, 14);
+        assert.equal(utc.millisecond, 123);
+        assert.equal(utc.microsecond, 456);
+        assert.equal(utc.nanosecond, 789);
+        assert.equal(utc.picosecond, 123);
         approxEqual(utc.decimalSeconds(), 14.123456789123, 1e-15);
         assert.equal(String(utc), '2000-01-01T12:13:14.123 UTC');
         assert.equal(utc.debug(), 'UTC(2000, 1, 1, 12, 13, 14.123456789123)');

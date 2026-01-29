@@ -49,7 +49,7 @@ impl JsTimeScale {
         format!("{}", self.0)
     }
 
-    pub fn repr(&self) -> String {
+    pub fn debug(&self) -> String {
         format!("TimeScale(\"{}\")", self.0)
     }
 
@@ -58,11 +58,13 @@ impl JsTimeScale {
     }
 
     /// Return the time scale abbreviation (e.g., "TAI").
+    #[wasm_bindgen(getter)]
     pub fn abbreviation(&self) -> String {
         self.0.abbreviation().to_owned()
     }
 
     /// Return the full name of the time scale (e.g., "International Atomic Time").
+    #[wasm_bindgen(getter)]
     pub fn name(&self) -> String {
         self.0.name().to_owned()
     }

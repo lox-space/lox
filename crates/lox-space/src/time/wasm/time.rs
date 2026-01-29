@@ -66,6 +66,7 @@ impl FromStr for JsUnit {
     }
 }
 
+/// Represents a range of times to pass to functions.
 #[wasm_bindgen(js_name = "Times")]
 #[derive(Clone)]
 pub struct JsTimes(Vec<JsTime>);
@@ -316,7 +317,7 @@ impl JsTime {
         self.0.to_string()
     }
 
-    pub fn repr(&self) -> String {
+    pub fn debug(&self) -> String {
         format!(
             "Time(\"{}\", {}, {}, {}, {}, {}, {})",
             self.scale().abbreviation(),
@@ -414,11 +415,13 @@ impl JsTime {
     ///
     /// Returns:
     ///     The TimeScale of this Time.
+    #[wasm_bindgen(getter)]
     pub fn scale(&self) -> JsTimeScale {
         JsTimeScale::from_inner(self.0.scale())
     }
 
     /// Return the year component.
+    #[wasm_bindgen(getter)]
     pub fn year(&self) -> Result<i32, JsValue> {
         let year: i64 = self.0.year();
 
@@ -433,57 +436,67 @@ impl JsTime {
     }
 
     /// Return the month component (1-12).
+    #[wasm_bindgen(getter)]
     pub fn month(&self) -> u8 {
         self.0.month()
     }
 
     /// Return the day of month component (1-31).
+    #[wasm_bindgen(getter)]
     pub fn day(&self) -> u8 {
         self.0.day()
     }
 
     /// Return the day of year (1-366).
-    #[wasm_bindgen(js_name = "dayOfYear")]
+    #[wasm_bindgen(getter, js_name = "dayOfYear")]
     pub fn day_of_year(&self) -> u16 {
         self.0.day_of_year()
     }
 
     /// Return the hour component (0-23).
+    #[wasm_bindgen(getter)]
     pub fn hour(&self) -> u8 {
         self.0.hour()
     }
 
     /// Return the minute component (0-59).
+    #[wasm_bindgen(getter)]
     pub fn minute(&self) -> u8 {
         self.0.minute()
     }
 
     /// Return the integer second component (0-59, or 60 for leap second).
+    #[wasm_bindgen(getter)]
     pub fn second(&self) -> u8 {
         self.0.second()
     }
 
     /// Return the millisecond component (0-999).
+    #[wasm_bindgen(getter)]
     pub fn millisecond(&self) -> u32 {
         self.0.millisecond()
     }
 
     /// Return the microsecond component (0-999).
+    #[wasm_bindgen(getter)]
     pub fn microsecond(&self) -> u32 {
         self.0.microsecond()
     }
 
     /// Return the nanosecond component (0-999).
+    #[wasm_bindgen(getter)]
     pub fn nanosecond(&self) -> u32 {
         self.0.nanosecond()
     }
 
     /// Return the picosecond component (0-999).
+    #[wasm_bindgen(getter)]
     pub fn picosecond(&self) -> u32 {
         self.0.picosecond()
     }
 
     /// Return the femtosecond component (0-999).
+    #[wasm_bindgen(getter)]
     pub fn femtosecond(&self) -> u32 {
         self.0.femtosecond()
     }
@@ -519,8 +532,8 @@ impl JsTime {
         Ok(JsTime(time))
     }
 
-    // same as above, mandatory provider.
-    // Can convert anything
+    /// same as above, mandatory provider.
+    /// Can convert anything
     #[wasm_bindgen(js_name = "toScaleWithProvider")]
     pub fn to_scale_with_provider(
         &self,
@@ -553,7 +566,7 @@ impl JsTime {
         Ok(JsUtc::from_inner(utc))
     }
 
-    // same as above, mandatory provider.
+    /// same as above, mandatory provider.
     #[wasm_bindgen(js_name = "toUtcWithProvider")]
     pub fn to_utc_with_provider(&self, provider: &JsEopProvider) -> Result<JsUtc, JsValue> {
         let tai = self

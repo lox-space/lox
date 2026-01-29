@@ -32,10 +32,10 @@ describe('Ground observables', () => {
     const expectedAzimuth = deg2rad(-53.418);
     const expectedElevation = deg2rad(-7.077);
 
-    approxEqual(observables.range(), expectedRange, 1e-2);
-    approxEqual(observables.rangeRate(), expectedRangeRate, 1e-2);
-    approxEqual(observables.azimuth(), expectedAzimuth, 1e-2);
-    approxEqual(observables.elevation(), expectedElevation, 1e-2);
+    approxEqual(observables.range, expectedRange, 1e-2);
+    approxEqual(observables.rangeRate, expectedRangeRate, 1e-2);
+    approxEqual(observables.azimuth, expectedAzimuth, 1e-2);
+    approxEqual(observables.elevation, expectedElevation, 1e-2);
   });
 
   it('computes elevation mask minimum', () => {

@@ -27,8 +27,8 @@ describe('TEME frame transformations', () => {
         const stateTEME = stateICRF.toFrame(new Frame('TEME'));
         const stateICRFBack = stateTEME.toFrame(new Frame('ICRF'));
 
-        assertVecRelClose(stateICRF.position(), stateICRFBack.position(), 1e-10);
-        assertVecRelClose(stateICRF.velocity(), stateICRFBack.velocity(), 1e-10, 1e-15);
+        assertVecRelClose(stateICRF.position, stateICRFBack.position, 1e-10);
+        assertVecRelClose(stateICRF.velocity, stateICRFBack.velocity, 1e-10, 1e-15);
     });
 
     it('Test that TEME differs from PEF by a small z-axis rotation (Equation of Equinoxes).', () => {
@@ -40,8 +40,8 @@ describe('TEME frame transformations', () => {
         const stateICRF = new State(time, position, velocity, new Origin('Earth'), new Frame('ICRF'));
         const stateTEME = stateICRF.toFrame(new Frame('TEME'));
 
-        const normICRF = Math.hypot(...stateICRF.position());
-        const normTEME = Math.hypot(...stateTEME.position());
+        const normICRF = Math.hypot(...stateICRF.position);
+        const normTEME = Math.hypot(...stateTEME.position);
 
         const diff = Math.abs(normICRF - normTEME);
         const tol = 1e-12 * Math.abs(normICRF);

@@ -45,7 +45,7 @@ impl From<JsDynRotationError> for JsValue {
 ///     abbreviation: Frame abbreviation (e.g., "ICRF", "ITRF", "IAU_MOON").
 ///
 /// Raises:
-///     ValueError: If the frame abbreviation is not recognized.
+///     UnknownFrameError: If the frame abbreviation is not recognized.
 #[wasm_bindgen(js_name = "Frame")]
 #[derive(Clone, Debug)]
 pub struct JsFrame(DynFrame);
@@ -61,6 +61,7 @@ impl JsFrame {
     ///
     /// Returns:
     ///     The descriptive name (e.g., "International Celestial Reference Frame").
+    #[wasm_bindgen(getter)]
     pub fn name(&self) -> String {
         self.0.name()
     }
@@ -69,6 +70,7 @@ impl JsFrame {
     ///
     /// Returns:
     ///     The short abbreviation (e.g., "ICRF", "ITRF").
+    #[wasm_bindgen(getter)]
     pub fn abbreviation(&self) -> String {
         self.0.abbreviation()
     }

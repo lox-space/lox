@@ -63,7 +63,7 @@ pub struct JsElements {
 ///     origin: Body name (e.g., "Earth", "Moon") or NAIF ID (e.g., 399 for Earth).
 ///
 /// Raises:
-///     ValueError: If the origin name or ID is not recognized.
+///     JsUnknownOriginId/JsUnknownOriginName: If the origin name or ID is not recognized.
 ///     TypeError: If the argument is neither a string nor an integer.
 #[wasm_bindgen(js_name = "Origin")]
 #[derive(Clone, Debug)]
@@ -99,16 +99,19 @@ impl JsOrigin {
         self.0.name().to_string()
     }
 
-    pub fn repr(&self) -> String {
+    /// Debug representation
+    pub fn debug(&self) -> String {
         format!("Origin(\"{}\")", self.name())
     }
 
     /// Return the NAIF ID of this body.
+    #[wasm_bindgen(getter)]
     pub fn id(&self) -> i32 {
         self.0.id().0
     }
 
     /// Return the name of this body.
+    #[wasm_bindgen(getter)]
     pub fn name(&self) -> String {
         self.0.name().to_string()
     }
@@ -215,6 +218,8 @@ impl JsOrigin {
     ///
     /// Args:
     ///     et: Ephemeris time in seconds from J2000.
+    /// Raises:
+    ///     UndefinedOriginPropertyError: If not defined for this body.
     #[wasm_bindgen(js_name = "rightAscension")]
     pub fn right_ascension(&self, et: Seconds) -> Result<f64, JsValue> {
         Ok(self
@@ -227,6 +232,8 @@ impl JsOrigin {
     ///
     /// Args:
     ///     et: Ephemeris time in seconds from J2000.
+    /// Raises:
+    ///     UndefinedOriginPropertyError: If not defined for this body.
     #[wasm_bindgen(js_name = "rightAscensionRate")]
     pub fn right_ascension_rate(&self, et: Seconds) -> Result<f64, JsValue> {
         Ok(self
@@ -239,6 +246,8 @@ impl JsOrigin {
     ///
     /// Args:
     ///     et: Ephemeris time in seconds from J2000.
+    /// Raises:
+    ///     UndefinedOriginPropertyError: If not defined for this body.
     pub fn declination(&self, et: Seconds) -> Result<f64, JsValue> {
         Ok(self
             .0
@@ -250,6 +259,8 @@ impl JsOrigin {
     ///
     /// Args:
     ///     et: Ephemeris time in seconds from J2000.
+    /// Raises:
+    ///     UndefinedOriginPropertyError: If not defined for this body.
     #[wasm_bindgen(js_name = "declinationRate")]
     pub fn declination_rate(&self, et: Seconds) -> Result<f64, JsValue> {
         Ok(self
@@ -262,6 +273,8 @@ impl JsOrigin {
     ///
     /// Args:
     ///     et: Ephemeris time in seconds from J2000.
+    /// Raises:
+    ///     UndefinedOriginPropertyError: If not defined for this body.
     #[wasm_bindgen(js_name = "rotationAngle")]
     pub fn rotation_angle(&self, et: Seconds) -> Result<f64, JsValue> {
         Ok(self
@@ -274,6 +287,8 @@ impl JsOrigin {
     ///
     /// Args:
     ///     et: Ephemeris time in seconds from J2000.
+    /// Raises:
+    ///     UndefinedOriginPropertyError: If not defined for this body.
     #[wasm_bindgen(js_name = "rotationRate")]
     pub fn rotation_rate(&self, et: Seconds) -> Result<f64, JsValue> {
         Ok(self

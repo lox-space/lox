@@ -43,7 +43,7 @@ macro_rules! wasm_unit {
                     self.0.to_string()
                 }
 
-                pub fn repr(&self) ->  String {
+                pub fn debug(&self) ->  String {
                     format!("{}({})", stringify!($unit), f64::from(self.0))
                 }
 

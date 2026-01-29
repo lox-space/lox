@@ -6,8 +6,6 @@
 //       Are there backend node.js mission analysts?
 //       Here for completeness.
 
-use serde::Deserialize;
-use std::path::PathBuf;
 use wasm_bindgen::prelude::*;
 use crate::wasm::js_error_with_name;
 use lox_earth::eop::{self, EopParser, EopProvider};
@@ -28,28 +26,6 @@ impl From<JsEopProviderError> for JsValue {
     }
 }
 
-#[derive(Deserialize)]
-#[serde(untagged)]
-enum EopArgs {
-    Object { path: PathBuf, #[serde(default = "PathBuf::new")] path2: PathBuf },
-    SingleObject { path: PathBuf },
-    Tuple((PathBuf, PathBuf)),
-    SingleTuple((PathBuf,)),
-}
-
-fn parse_paths(args: JsValue) -> Result<(PathBuf, PathBuf), JsValue> {
-    let parsed: EopArgs = serde_wasm_bindgen::from_value(args)
-        .map_err(|_| JsEopParserError(eop::EopParserError::NoFiles))?;
-    let (path1, path2) = match parsed {
-        EopArgs::Object { path, path2 } if !path2.as_os_str().is_empty() => (path, path2),
-        EopArgs::Object { path, .. } => (path.clone(), path),
-        EopArgs::SingleObject { path } => (path.clone(), path),
-        EopArgs::Tuple((p1, p2)) => (p1, p2),
-        EopArgs::SingleTuple((p,)) => (p.clone(), p),
-    };
-    Ok((path1, path2))
-}
-
 /// Earth Orientation Parameters (EOP) data provider.
 ///
 /// EOP data is required for accurate transformations involving UT1 and
@@ -61,30 +37,20 @@ fn parse_paths(args: JsValue) -> Result<(PathBuf, PathBuf), JsValue> {
 /// - IERS: https://www.iers.org/IERS/EN/DataProducts/EarthOrientationData/eop.html
 /// - Celestrak: https://celestrak.org/SpaceData/
 ///
-/// Args:
-///     path: Path to the EOP data file (CSV format).
-///     path2: Optional second path for separate polar motion and UT1 files.
 ///
 /// Raises:
-///     EopParserError: If the file cannot be parsed.
-///     OSError: If the file cannot be read.
+///     EopParserError: If the file contents cannot be parsed.
 #[wasm_bindgen(js_name="EOPProvider")]
 #[derive(Clone, Debug)]
 pub struct JsEopProvider(EopProvider);
 
 #[wasm_bindgen(js_class="EOPProvider")]
 impl JsEopProvider {
-    #[wasm_bindgen(constructor)]
-    pub fn new(args: JsValue) -> Result<JsEopProvider, JsValue> {
-        let (path1, path2) = parse_paths(args)?;
-        Ok(JsEopProvider(
-            EopParser::new()
-                .from_paths(path1, path2)
-                .parse()
-                .map_err(JsEopParserError)?,
-        ))
-    }
-
+    /// Read EOP data from bytes
+    ///
+    /// example usage:
+    ///   const buf = await readFile(<filepath>));
+    ///   return lox.EOPProvider.fromBytes(new Uint8Array(buf));
     #[wasm_bindgen(js_name = "fromBytes")]
     pub fn from_bytes(bytes: &[u8]) -> Result<JsEopProvider, JsValue> {
         let parser = EopParser::new();

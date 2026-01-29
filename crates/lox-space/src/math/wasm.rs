@@ -26,7 +26,8 @@ impl From<JsSeriesError> for JsValue {
 ///     method: Interpolation method ("linear" or "cubic_spline").
 ///
 /// Raises:
-///     ValueError: If x and y have different lengths or x is not monotonic.
+///     ValueError: If interpolation type is unknown
+///     SeriesError: If x and y have different lengths or x is not monotonic.
 #[wasm_bindgen(js_name = "Series")]
 #[derive(Clone, Debug)]
 pub struct JsSeries(Series);

@@ -44,8 +44,8 @@ describe("IAU frame transforms", () => {
       const s0 = new State(t, r0, v0);
       const s1 = s0.toFrame(new Frame(frame));
 
-      const r1Act = s1.position();
-      const v1Act = s1.velocity();
+      const r1Act = s1.position;
+      const v1Act = s1.velocity;
       const r1Exp = expected[frame].r;
       const v1Exp = expected[frame].v;
 

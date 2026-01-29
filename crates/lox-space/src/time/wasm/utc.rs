@@ -117,6 +117,7 @@ impl JsUtc {
     }
 
     /// Return the year component.
+    #[wasm_bindgen(getter)]
     pub fn year(&self) -> Result<i32, JsValue> {
         let year: i64 = self.0.year();
 
@@ -131,46 +132,55 @@ impl JsUtc {
     }
 
     /// Return the month component (1-12).
+    #[wasm_bindgen(getter)]
     pub fn month(&self) -> u8 {
         self.0.month()
     }
 
     /// Return the day of month component (1-31).
+    #[wasm_bindgen(getter)]
     pub fn day(&self) -> u8 {
         self.0.day()
     }
 
     /// Return the hour component (0-23).
+    #[wasm_bindgen(getter)]
     pub fn hour(&self) -> u8 {
         self.0.hour()
     }
 
     /// Return the minute component (0-59).
+    #[wasm_bindgen(getter)]
     pub fn minute(&self) -> u8 {
         self.0.minute()
     }
 
     /// Return the integer second component (0-60, 60 for leap second).
+    #[wasm_bindgen(getter)]
     pub fn second(&self) -> u8 {
         self.0.second()
     }
 
     /// Return the millisecond component (0-999).
+    #[wasm_bindgen(getter)]
     pub fn millisecond(&self) -> u32 {
         self.0.millisecond()
     }
 
     /// Return the microsecond component (0-999).
+    #[wasm_bindgen(getter)]
     pub fn microsecond(&self) -> u32 {
         self.0.microsecond()
     }
 
     /// Return the nanosecond component (0-999).
+    #[wasm_bindgen(getter)]
     pub fn nanosecond(&self) -> u32 {
         self.0.nanosecond()
     }
 
     /// Return the picosecond component (0-999).
+    #[wasm_bindgen(getter)]
     pub fn picosecond(&self) -> u32 {
         self.0.picosecond()
     }

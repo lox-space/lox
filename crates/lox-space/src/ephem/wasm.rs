@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use serde_wasm_bindgen;
-use std::path::PathBuf;
 use wasm_bindgen::prelude::*;
 use crate::wasm::js_error_with_name;
 use crate::ephem::spk::parser::{DafSpkError, Spk, parse_daf_spk};
@@ -31,22 +30,17 @@ impl From<JsDafSpkError> for JsValue {
 ///     path: Path to the SPK file (.bsp).
 ///
 /// Raises:
-///     ValueError: If the file cannot be parsed or is invalid.
-///     OSError: If the file cannot be read.
+///     DafSpkError: If the file cannot be parsed or is invalid.
 #[wasm_bindgen(js_name = "SPK")]
 pub struct JsSpk(Spk);
 
 #[wasm_bindgen(js_class = "SPK")]
 impl JsSpk {
-    #[wasm_bindgen(constructor)]
-    pub fn new(path: JsValue) -> Result<Self, JsValue> {
-        let path: PathBuf = serde_wasm_bindgen::from_value(path)
-            .map_err(|_| JsValue::from_str("Invalid path"))?;
-        let data = std::fs::read(&path).map_err(|e| js_error_with_name(e, "OSError"))?;
-        let spk = parse_daf_spk(&data).map_err(JsDafSpkError)?;
-        Ok(JsSpk(spk))
-    }
-
+    /// Read SPK data from bytes
+    ///
+    /// example usage:
+    ///   const buf = await readFile(<filepath>));
+    ///   return lox.SPK.fromBytes(new Uint8Array(buf));
     #[wasm_bindgen(js_name = "fromBytes")]
     pub fn from_bytes(bytes: &[u8]) -> Result<JsSpk, JsValue> {
         let spk = parse_daf_spk(bytes).map_err(JsDafSpkError)?;

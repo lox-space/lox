@@ -18,6 +18,7 @@ use crate::time::deltas::TimeDelta;
 ///     seconds: Duration in seconds (can be negative).
 ///
 /// See Also:
+///     Time: For representing instants in time.
 #[wasm_bindgen(js_name = "TimeDelta")]
 pub struct JsTimeDelta(TimeDelta);
 
@@ -33,7 +34,7 @@ impl JsTimeDelta {
         format!("{} seconds", self.to_decimal_seconds())
     }
 
-    pub fn repr(&self) -> String {
+    pub fn debug(&self) -> String {
         format!("TimeDelta({})", self.to_decimal_seconds())
     }
 
@@ -160,7 +161,6 @@ impl JsTimeDelta {
     ///
     /// Returns:
     ///     The duration as a float in seconds.
-
     #[wasm_bindgen(js_name = "toDecimalSeconds")]
     pub fn to_decimal_seconds(&self) -> f64 {
         self.0.to_seconds().to_f64()

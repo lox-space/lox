@@ -54,7 +54,7 @@ export async function loadOnewebSlim() {
   const txt = await readFile(path.join(DATA_DIR, 'oneweb_tle.txt'), 'utf8');
   const lines = txt.split(/\r?\n/).filter(Boolean).slice(0, 9); // first 3 TLEs (3 lines each)
 
-  const t0 = new lox.SGP4(lines.slice(0, 3).join('\n')).time();
+  const t0 = new lox.SGP4(lines.slice(0, 3).join('\n')).time;
   const times = lox.Times.generateTimes(
     t0,
     t0.add(lox.TimeDelta.fromSeconds(86400)),
