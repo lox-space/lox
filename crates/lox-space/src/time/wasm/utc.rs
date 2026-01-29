@@ -52,13 +52,13 @@ impl JsUtc {
         year: i64,
         month: u8,
         day: u8,
-        hour: u8,
-        minute: u8,
-        seconds: f64,
+        hour: Option<u8>,
+        minute: Option<u8>,
+        seconds: Option<f64>,
     ) -> Result<JsUtc, JsValue> {
         let utc = Utc::builder()
             .with_ymd(year, month, day)
-            .with_hms(hour, minute, seconds)
+            .with_hms(hour.unwrap_or(0), minute.unwrap_or(0), seconds.unwrap_or(0.0))
             .build()
             .map_err(JsUtcError)?;
         Ok(JsUtc(utc))
@@ -84,7 +84,7 @@ impl JsUtc {
         self.0.to_string()
     }
 
-    pub fn repr(&self) -> String {
+    pub fn debug(&self) -> String {
         format!(
             "UTC({}, {}, {}, {}, {}, {})",
             self.0.year(),
@@ -185,21 +185,25 @@ impl JsUtc {
     ///     >>> utc = lox.UTC(2024, 1, 1)
     ///     >>> t_tai = utc.to_scale("TAI")
     #[wasm_bindgen(js_name = "toScale")]
-    pub fn to_scale(
+    pub fn to_scale(&self, scale: JsValue) -> Result<JsTime, JsValue> {
+        let scale: JsTimeScale = scale.try_into()?;
+        let time = self.0.to_dyn_time().to_scale(scale.inner());
+        Ok(JsTime::from_inner(time))
+    }
+
+    /// Convert this UTC timestamp to a Time in the target scale using a borrowed EOP provider.
+    #[wasm_bindgen(js_name = "toScaleWithProvider")]
+    pub fn to_scale_with_provider(
         &self,
         scale: JsValue,
-        provider: Option<JsEopProvider>,
+        provider: &JsEopProvider,
     ) -> Result<JsTime, JsValue> {
         let scale: JsTimeScale = scale.try_into()?;
-        let provider = provider.as_ref().map(|p| p.inner());
-        let time = match provider {
-            Some(provider) => self
-                .0
-                .to_dyn_time()
-                .try_to_scale(scale.inner(), &provider)
-                .map_err(JsEopProviderError)?,
-            None => self.0.to_dyn_time().to_scale(scale.inner()),
-        };
+        let time = self
+            .0
+            .to_dyn_time()
+            .try_to_scale(scale.inner(), &provider.inner())
+            .map_err(JsEopProviderError)?;
         Ok(JsTime::from_inner(time))
     }
 }

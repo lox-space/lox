@@ -135,10 +135,13 @@ impl JsTime {
         year: i64,
         month: u8,
         day: u8,
-        hour: u8,
-        minute: u8,
-        seconds: f64,
+        hour: Option<u8>,
+        minute: Option<u8>,
+        seconds: Option<f64>,
     ) -> Result<JsTime, JsValue> {
+        let hour = hour.unwrap_or(0);
+        let minute = minute.unwrap_or(0);
+        let seconds = seconds.unwrap_or(0.0);
         let scale: JsTimeScale = scale.try_into()?;
         let time = Time::builder_with_scale(scale.inner())
             .with_ymd(year, month, day)
@@ -486,8 +489,6 @@ impl JsTime {
     ///
     /// Args:
     ///     scale: Target time scale.
-    ///     provider: EOP provider for UT1 conversions. Required when converting
-    ///         to/from UT1.
     ///
     /// Returns:
     ///     A new Time object in the target scale.
@@ -498,21 +499,30 @@ impl JsTime {
     /// Examples:
     ///     >>> t_tai = Time("TAI", 2024, 1, 1)
     ///     >>> t_tt = t_tai.to_scale("TT")
+    /// TODO: how does this fail when there's no provider? Document and test
     #[wasm_bindgen(js_name = "toScale")]
     pub fn to_scale(
         &self,
-        scale: JsValue,
-        provider: Option<JsEopProvider>,
+        scale: JsValue
     ) -> Result<JsTime, JsValue> {
         let scale: JsTimeScale = scale.try_into()?;
-        let provider = provider.as_ref().map(|p| p.inner());
-        let time = match provider {
-            Some(provider) => self
-                .0
-                .try_to_scale(scale.inner(), &provider)
-                .map_err(JsEopProviderError)?,
-            None => self.0.to_scale(scale.inner()),
-        };
+        let time = self.0.to_scale(scale.inner());
+        Ok(JsTime(time))
+    }
+
+    // same as above, mandatory provider.
+    // Can convert anything
+    #[wasm_bindgen(js_name = "toScaleWithProvider")]
+    pub fn to_scale_with_provider(
+        &self,
+        scale: JsValue,
+        provider: &JsEopProvider,
+    ) -> Result<JsTime, JsValue> {
+        let scale: JsTimeScale = scale.try_into()?;
+        let time = self
+            .0
+            .try_to_scale(scale.inner(), &provider.inner())
+            .map_err(JsEopProviderError)?;
         Ok(JsTime(time))
     }
 
@@ -527,19 +537,24 @@ impl JsTime {
     /// Raises:
     ///     ValueError: If the time is outside the valid UTC range.
     #[wasm_bindgen(js_name = "toUtc")]
-    pub fn to_utc(&self, provider: Option<JsEopProvider>) -> Result<JsUtc, JsValue> {
-        let provider = provider.as_ref().map(|p| p.inner());
-        let utc = match provider {
-            Some(provider) => self
-                .0
-                .try_to_scale(Tai, &provider)
-                .map_err(JsEopProviderError)?,
-            None => self.0.to_scale(Tai),
-        }
-        .try_to_utc()
-        .map_err(JsUtcError)?;
+    pub fn to_utc(&self) -> Result<JsUtc, JsValue> {
+        let utc = self.0.to_scale(Tai)
+            .try_to_utc()
+            .map_err(JsUtcError)?;
         Ok(JsUtc::from_inner(utc))
     }
+
+    // same as above, mandatory provider.
+    #[wasm_bindgen(js_name = "toUtcWithProvider")]
+    pub fn to_utc_with_provider(&self, provider: &JsEopProvider) -> Result<JsUtc, JsValue> {
+        let tai = self
+            .0
+            .try_to_scale(Tai, &provider.inner())
+            .map_err(JsEopProviderError)?;
+        let utc = tai.try_to_utc().map_err(JsUtcError)?;
+        Ok(JsUtc::from_inner(utc))
+    }
+
 }
 
 impl JsTime {

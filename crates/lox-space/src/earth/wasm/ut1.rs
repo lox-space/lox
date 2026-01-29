@@ -84,6 +84,13 @@ impl JsEopProvider {
                 .map_err(JsEopParserError)?,
         ))
     }
+
+    #[wasm_bindgen(js_name = "fromBytes")]
+    pub fn from_bytes(bytes: &[u8]) -> Result<JsEopProvider, JsValue> {
+        let parser = EopParser::new();
+        let provider = parser.from_bytes(bytes, None::<&[u8]>).map_err(JsEopParserError)?;
+        Ok(JsEopProvider(provider))
+    }
 }
 
 impl JsEopProvider {

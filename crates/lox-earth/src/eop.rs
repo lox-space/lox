@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use std::{
+    io::Cursor,
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -111,38 +112,69 @@ impl EopParser {
     }
 
     pub fn parse(self) -> Result<EopProvider, EopParserError> {
-        let n = if let Some(iau1980) = self.paths.0.as_ref() {
-            let mut reader = ReaderBuilder::new().delimiter(b';').from_path(iau1980)?;
-            reader.records().count()
-        } else {
+        let iau1980 = self.paths.0.as_ref().ok_or(EopParserError::NoFiles)?;
+        let iau2000 = self.paths.1.as_ref().or(self.paths.0.as_ref()).unwrap();
+
+        // Pre-count rows for capacity
+        let n = ReaderBuilder::new()
+            .delimiter(b';')
+            .from_path(iau1980)?
+            .records()
+            .count();
+
+        let mut rdr1 = ReaderBuilder::new().delimiter(b';').from_path(iau1980)?;
+        let mut rdr2 = ReaderBuilder::new().delimiter(b';').from_path(iau2000)?;
+        self.parse_with_readers(&mut rdr1, &mut rdr2, Some(n))
+    }
+
+    /// Parse EOP data from in-memory CSV bytes.
+    /// `iau1980` should contain `finals.all.csv`; `iau2000` is optional (`finals2000A.all.csv`).
+    pub fn from_bytes<B1: AsRef<[u8]>, B2: AsRef<[u8]>>(
+        &self,
+        iau1980: B1,
+        iau2000: Option<B2>,
+    ) -> Result<EopProvider, EopParserError> {
+        let data1 = iau1980.as_ref();
+        if data1.is_empty() {
             return Err(EopParserError::NoFiles);
-        };
+        }
+        let data2 = iau2000
+            .as_ref()
+            .map(|b| b.as_ref())
+            .unwrap_or(data1);
 
-        let mut j2000: Vec<f64> = Vec::with_capacity(n);
-        let mut delta_ut1_tai: Vec<f64> = Vec::with_capacity(n);
-        let mut x_pole: Vec<f64> = Vec::with_capacity(n);
-        let mut y_pole: Vec<f64> = Vec::with_capacity(n);
-        let mut dpsi: Vec<f64> = Vec::with_capacity(n);
-        let mut deps: Vec<f64> = Vec::with_capacity(n);
-        let mut dx: Vec<f64> = Vec::with_capacity(n);
-        let mut dy: Vec<f64> = Vec::with_capacity(n);
+        // Pre-count rows for capacity
+        let n = ReaderBuilder::new()
+            .delimiter(b';')
+            .from_reader(Cursor::new(data1))
+            .records()
+            .count();
 
-        // The EOP from the IERS are split into two different files based on the two IAU conventions for some reason.
-        // Both files have the same header and identical data except that the columns for the IAU1980 parameters are
-        // only populated in `finals.all.csv` and the columns for the IAU2000 parameters are only populated in
-        // `finals2000A.all.csv`.
-        // We do not want to force the user to provide both files if they do not need them. At the same time, we want
-        // to parse both files in one pass if they are present to avoid looping over tens of thousands of lines
-        // multiple time.
-        // I have not been able to fulfil both requirements and make the compiler happy without pretending that there
-        // are always two files. In case the user provided two files, we parse both files and merge the records.
-        // If we have only one file, we still parse it twice and record merging is a no-op.
         let mut rdr1 = ReaderBuilder::new()
             .delimiter(b';')
-            .from_path(self.paths.0.as_ref().unwrap())?;
+            .from_reader(Cursor::new(data1));
         let mut rdr2 = ReaderBuilder::new()
             .delimiter(b';')
-            .from_path(self.paths.1.as_ref().or(self.paths.0.as_ref()).unwrap())?;
+            .from_reader(Cursor::new(data2));
+
+        self.parse_with_readers(&mut rdr1, &mut rdr2, Some(n))
+    }
+
+    fn parse_with_readers<R1: std::io::Read, R2: std::io::Read>(
+        &self,
+        rdr1: &mut csv::Reader<R1>,
+        rdr2: &mut csv::Reader<R2>,
+        capacity: Option<usize>,
+    ) -> Result<EopProvider, EopParserError> {
+        let cap = capacity.unwrap_or(0);
+        let mut j2000: Vec<f64> = if cap > 0 { Vec::with_capacity(cap) } else { Vec::new() };
+        let mut delta_ut1_tai: Vec<f64> = if cap > 0 { Vec::with_capacity(cap) } else { Vec::new() };
+        let mut x_pole: Vec<f64> = if cap > 0 { Vec::with_capacity(cap) } else { Vec::new() };
+        let mut y_pole: Vec<f64> = if cap > 0 { Vec::with_capacity(cap) } else { Vec::new() };
+        let mut dpsi: Vec<f64> = if cap > 0 { Vec::with_capacity(cap) } else { Vec::new() };
+        let mut deps: Vec<f64> = if cap > 0 { Vec::with_capacity(cap) } else { Vec::new() };
+        let mut dx: Vec<f64> = if cap > 0 { Vec::with_capacity(cap) } else { Vec::new() };
+        let mut dy: Vec<f64> = if cap > 0 { Vec::with_capacity(cap) } else { Vec::new() };
 
         let mut raw1 = ByteRecord::new();
         let mut raw2 = ByteRecord::new();

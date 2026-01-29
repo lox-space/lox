@@ -93,6 +93,7 @@ export async function loadEphemeris() {
   return lox.SPK.fromBytes(new Uint8Array(buf));
 }
 
-export function loadEOPProvider() {
-  return new lox.EOPProvider(path.join(DATA_DIR, 'iers', 'finals2000A.all.csv'));
+export async function loadEOPProvider() {
+  const buf = await readFile(path.join(DATA_DIR, 'iers', 'finals2000A.all.csv'));
+  return lox.EOPProvider.fromBytes(new Uint8Array(buf));
 }
