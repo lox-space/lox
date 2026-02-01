@@ -1176,7 +1176,7 @@ impl JsEnsemble {
 ///     ground_stations: list of GroundSTation
 ///     spacecraft: Ensemble of spacecraft trajectories.
 ///     ephemeris: SPK ephemeris data.
-///     bodies: Optional list of bodies for occlusion testing.
+///     bodies: Optional list of bodies for occultation checking.
 ///
 /// Returns:
 ///     Nested object: {spacecraft_name: {station_name: [passes]}}.
