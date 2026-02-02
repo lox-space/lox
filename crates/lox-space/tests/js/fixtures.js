@@ -73,7 +73,7 @@ export async function loadOnewebSlim() {
   for (let i = 0; i < lines.length; i += 3) {
     const tle = lines.slice(i, i + 3).join('\n');
     const name = lines[i].trim();
-    const trajectory = new lox.SGP4(tle).propagate(times);
+    const trajectory = new lox.SGP4(tle).propagate(times, new lox.EopConfiguration());
     trajectories.push([name, trajectory]);
   }
   return Object.fromEntries(trajectories);

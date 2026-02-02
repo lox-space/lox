@@ -40,6 +40,7 @@ use lox_bodies::Origin;
 
 use lox_frames::providers::DefaultRotationProvider;
 use lox_frames::rotations::TryRotation;
+use lox_earth::eop::EopProvider;
 use sgp4::Elements;
 
 pub struct JsFindEventError(FindEventError);
@@ -125,6 +126,40 @@ fn callback_error_box(e: JsValue) -> Box<dyn Error + Send + Sync> {
 
 fn callback_error_msg(msg: &str) -> Box<dyn Error + Send + Sync> {
 	Box::new(CallbackError(msg.to_string()))
+}
+
+#[derive(Debug)]
+#[wasm_bindgen(js_name="EopConfiguration")]
+pub struct JsEopConfiguration {
+	eop_provider: Option<JsEopProvider>,
+}
+
+#[wasm_bindgen(js_class="EopConfiguration")]
+impl JsEopConfiguration {
+	#[wasm_bindgen(constructor)]
+	pub fn new(
+	) -> JsEopConfiguration {
+		JsEopConfiguration {
+			eop_provider: None,
+		}
+	}
+	/// Set the EopProvider.
+	///
+	/// Args:
+	///     eop provider
+	///
+	/// Returns:
+	///     Updated EopConfiguration with the provider.
+	#[wasm_bindgen(js_name="set_eop_provider")]
+	pub fn set_eop_provider(&mut self, eop_provider: JsEopProvider) {
+		self.eop_provider = Some(eop_provider);
+	}
+}
+
+impl JsEopConfiguration {
+	pub fn eop_provider(&self) -> Option<EopProvider> {
+		self.eop_provider.as_ref().map(|p| p.inner())
+	}
 }
 
 /// Find events where a function crosses zero.
@@ -1025,9 +1060,8 @@ impl JsSgp4 {
     /// Raises:
     ///     Sgp4Error: If propagation fails.
 	///
-	/// XXX: This is not covered by tests and the provider will have problems when it is optional
-	pub fn propagate_at(&self, time: JsTime, provider: Option<JsEopProvider>) -> Result<JsState, JsValue> {
-		let provider = provider.map(|p| p.inner());
+	pub fn propagate_at(&self, time: JsTime, provider_config: &JsEopConfiguration) -> Result<JsState, JsValue> {
+		let provider = provider_config.eop_provider();
 		let (time, dyntime) = match provider.as_ref() {
 			Some(provider) => (
 				time
@@ -1041,7 +1075,9 @@ impl JsSgp4 {
 			),
 			None => (time.inner().to_scale(Tai), time.inner().to_scale(DynTimeScale::Tai)),
 		};
+
 		let s1 = self.0.propagate(time).map_err(JsSgp4Error)?;
+
 		Ok(JsState(State::new(
 				dyntime,
 				s1.position(),
@@ -1064,9 +1100,8 @@ impl JsSgp4 {
     /// Raises:
     ///     Sgp4Error: If propagation fails.
 	///
-	/// XXX: This is not covered by tests and the provider will have problems when it is optional
-	pub fn propagate(&self, times: &JsTimes, provider: Option<JsEopProvider>) -> Result<JsTrajectory, JsValue> {
-		let provider = provider.map(|p| p.inner());
+	pub fn propagate(&self, times: &JsTimes, provider_config: &JsEopConfiguration) -> Result<JsTrajectory, JsValue> {
+		let provider = provider_config.eop_provider();
 		let dyn_times: Vec<DynTime> = times.vec_inner();
 		let mut states = Vec::with_capacity(dyn_times.len());
 

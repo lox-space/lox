@@ -521,7 +521,6 @@ impl JsTime {
     /// Examples:
     ///     >>> t_tai = Time("TAI", 2024, 1, 1)
     ///     >>> t_tt = t_tai.to_scale("TT")
-    /// TODO: how does this fail when there's no provider? Document and test
     #[wasm_bindgen(js_name = "toScale")]
     pub fn to_scale(
         &self,
