@@ -25,6 +25,7 @@ lox-time.workspace = true
 lox-units.workspace = true
 
 csv.workspace = true
+differential-equations.workspace = true
 glam.workspace = true
 hashbrown.workspace = true
 itertools.workspace = true

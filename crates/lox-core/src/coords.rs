@@ -4,7 +4,7 @@
 
 use core::f64::consts::TAU;
 use std::{
-    ops::{Add, Neg, Sub},
+    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
     sync::Arc,
 };
 
@@ -14,7 +14,7 @@ use thiserror::Error;
 
 use crate::{
     math::series::{InterpolationType, Series},
-    types::units::Seconds,
+    time::deltas::TimeDelta,
     units::{Angle, Distance, Velocity},
 };
 
@@ -215,12 +215,46 @@ impl Cartesian {
         self.pos
     }
 
+    pub fn set_position(&mut self, position: DVec3) {
+        self.pos = position
+    }
+
     pub fn velocity(&self) -> DVec3 {
         self.vel
     }
 
+    pub fn set_velocity(&mut self, velocity: DVec3) {
+        self.vel = velocity
+    }
+
     pub fn x(&self) -> Distance {
         Distance::meters(self.pos.x)
+    }
+
+    pub fn set<const N: usize>(&mut self, value: f64) {
+        const { assert!(N < 6, "index out of bounds") }
+
+        match N {
+            0 => {
+                self.pos.x = value;
+            }
+            1 => {
+                self.pos.y = value;
+            }
+            2 => {
+                self.pos.z = value;
+            }
+            3 => {
+                self.vel.x = value;
+            }
+            4 => {
+                self.vel.y = value;
+            }
+            5 => {
+                self.vel.z = value;
+            }
+            _ => unreachable!(),
+        }
     }
 
     pub fn y(&self) -> Distance {
@@ -294,11 +328,61 @@ impl Add for Cartesian {
     }
 }
 
+impl AddAssign for Cartesian {
+    fn add_assign(&mut self, rhs: Self) {
+        self.pos += rhs.pos;
+        self.vel += rhs.vel;
+    }
+}
+
 impl Sub for Cartesian {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
         Self::from_vecs(self.pos - rhs.pos, self.vel - rhs.vel)
+    }
+}
+
+impl SubAssign for Cartesian {
+    fn sub_assign(&mut self, rhs: Self) {
+        self.pos -= rhs.pos;
+        self.vel -= rhs.vel;
+    }
+}
+
+impl Mul<f64> for Cartesian {
+    type Output = Self;
+
+    fn mul(self, rhs: f64) -> Self::Output {
+        Self {
+            pos: self.pos * rhs,
+            vel: self.vel * rhs,
+        }
+    }
+}
+
+impl MulAssign<f64> for Cartesian {
+    fn mul_assign(&mut self, rhs: f64) {
+        self.pos *= rhs;
+        self.vel *= rhs;
+    }
+}
+
+impl Div<f64> for Cartesian {
+    type Output = Self;
+
+    fn div(self, rhs: f64) -> Self::Output {
+        Self {
+            pos: self.pos / rhs,
+            vel: self.vel / rhs,
+        }
+    }
+}
+
+impl DivAssign<f64> for Cartesian {
+    fn div_assign(&mut self, rhs: f64) {
+        self.pos /= rhs;
+        self.vel /= rhs;
     }
 }
 
@@ -312,20 +396,34 @@ impl Neg for Cartesian {
 
 #[derive(Debug, Clone)]
 pub struct TrajectoryData<const N: usize> {
+    epoch: TimeDelta,
     time_steps: Arc<[f64]>,
     data: [Arc<[f64]>; N],
     series: [Series; N],
 }
 
 impl<const N: usize> TrajectoryData<N> {
-    pub fn from_arrays<const M: usize>(time_steps: [f64; M], data: &[[f64; M]; N]) -> Self {
-        let index: Arc<[f64]> = Arc::from(time_steps);
+    pub fn from_arrays<const M: usize>(
+        epoch: TimeDelta,
+        time_steps: [TimeDelta; M],
+        data: &[[f64; M]; N],
+    ) -> Self {
+        let time_steps: Arc<[f64]> = Arc::from_iter(
+            time_steps
+                .into_iter()
+                .map(|t| (t - epoch).to_seconds().to_f64()),
+        );
         let data: [Arc<[f64]>; N] = data.map(Arc::from);
-        let series = data
-            .clone()
-            .map(|d| Series::new(index.clone(), d.clone(), InterpolationType::CubicSpline));
+        let series = data.clone().map(|d| {
+            Series::new(
+                time_steps.clone(),
+                d.clone(),
+                InterpolationType::CubicSpline,
+            )
+        });
         Self {
-            time_steps: index,
+            epoch,
+            time_steps,
             data,
             series,
         }
@@ -343,7 +441,7 @@ impl<const N: usize> TrajectoryData<N> {
 }
 
 pub struct TimeStampedCartesian {
-    pub time: Seconds,
+    pub time: TimeDelta,
     pub state: Cartesian,
 }
 
@@ -351,7 +449,9 @@ pub type CartesianTrajectory = TrajectoryData<6>;
 
 impl CartesianTrajectory {
     pub fn from_states(states: impl IntoIterator<Item = TimeStampedCartesian>) -> Self {
-        let iter = states.into_iter();
+        let mut iter = states.into_iter().peekable();
+        let epoch = iter.peek().expect("should have at least two states").time;
+        let _ = iter.peek().expect("should have at least two states");
         let (n, _) = iter.size_hint();
 
         let mut time_steps: Vec<f64> = Vec::with_capacity(n);
@@ -363,7 +463,7 @@ impl CartesianTrajectory {
         let mut vz: Vec<f64> = Vec::with_capacity(n);
 
         iter.for_each(|TimeStampedCartesian { time, state }| {
-            time_steps.push(time);
+            time_steps.push((time - epoch).to_seconds().to_f64());
             x.push(state.x().as_f64());
             y.push(state.y().as_f64());
             z.push(state.z().as_f64());
@@ -399,6 +499,7 @@ impl CartesianTrajectory {
         });
 
         Self {
+            epoch,
             time_steps,
             data,
             series,
@@ -496,7 +597,10 @@ impl CartesianTrajectoryIterator {
 
         let time = self.data.time_steps[idx];
         let state = Cartesian::from_array(self.data.data.clone().map(|d| d[idx]));
-        Some(TimeStampedCartesian { time, state })
+        Some(TimeStampedCartesian {
+            time: self.data.epoch + TimeDelta::from_seconds_f64(time),
+            state,
+        })
     }
 }
 
