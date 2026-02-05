@@ -289,6 +289,29 @@ impl<T: RotationalElements> TryRotationalElements for T {
     }
 }
 
+pub trait TryJ2 {
+    fn try_j2(&self) -> Result<f64, UndefinedOriginPropertyError>;
+}
+
+pub trait J2 {
+    fn j2(&self) -> f64;
+}
+
+impl<T> TryJ2 for T
+where
+    T: J2,
+{
+    fn try_j2(&self) -> Result<f64, UndefinedOriginPropertyError> {
+        Ok(self.j2())
+    }
+}
+
+impl J2 for Earth {
+    fn j2(&self) -> f64 {
+        1.08262668e-3
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use lox_test_utils::assert_approx_eq;

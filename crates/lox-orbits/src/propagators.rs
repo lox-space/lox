@@ -10,6 +10,7 @@ use crate::trajectories::TrajectoryError;
 use crate::{states::State, trajectories::Trajectory};
 use lox_frames::ReferenceFrame;
 
+pub mod numerical;
 pub mod semi_analytical;
 pub mod sgp4;
 mod stumpff;
