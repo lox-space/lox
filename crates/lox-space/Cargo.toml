@@ -27,7 +27,7 @@ lox-frames = { workspace = true, optional = true }
 lox-io = { workspace = true, optional = true }
 lox-math = { workspace = true, optional = true }
 lox-orbits = { workspace = true, optional = true }
-lox-time = { workspace = true, optional = true }
+lox-time = { workspace = true, optional = true, features = ["chrono"] }
 lox-units = { workspace = true, optional = true }
 
 glam = { workspace = true, optional = true }
@@ -42,73 +42,41 @@ rstest.workspace = true
 
 [features]
 default = [
-    "bodies",
-    "earth",
-    "ephem",
-    "frames",
-    "io",
-    "math",
-    "orbits",
-    "time",
-    "units",
+  "bodies",
+  "earth",
+  "ephem",
+  "frames",
+  "io",
+  "math",
+  "orbits",
+  "time",
+  "units",
 ]
-bodies = [
-    "math",
-    "units",
-    "dep:lox-bodies"
-]
-earth = [
-    "bodies",
-    "math",
-    "io",
-    "time",
-    "units",
-    "dep:lox-earth",
-]
-ephem = [
-    "math",
-    "dep:lox-ephem"
-]
-frames = [
-    "bodies",
-    "earth",
-    "math",
-    "time",
-    "units",
-    "dep:lox-frames"
-]
-io = [
-    "dep:lox-io"
-]
-math = [
-    "dep:lox-math"
-]
+bodies = ["math", "units", "dep:lox-bodies"]
+earth = ["bodies", "math", "io", "time", "units", "dep:lox-earth"]
+ephem = ["math", "dep:lox-ephem"]
+frames = ["bodies", "earth", "math", "time", "units", "dep:lox-frames"]
+io = ["dep:lox-io"]
+math = ["dep:lox-math"]
 orbits = [
-    "bodies",
-    "earth",
-    "ephem",
-    "frames",
-    "math",
-    "time",
-    "units",
-    "dep:lox-orbits"
+  "bodies",
+  "earth",
+  "ephem",
+  "frames",
+  "math",
+  "time",
+  "units",
+  "dep:lox-orbits",
 ]
 python = [
-    "time",
-    "units",
-    "dep:lox-core",
-    "dep:glam",
-    "dep:numpy",
-    "dep:pyo3",
-    "dep:rayon",
-    "dep:sgp4",
+  "time",
+  "units",
+  "dep:lox-core",
+  "dep:glam",
+  "dep:numpy",
+  "dep:pyo3",
+  "dep:rayon",
+  "dep:sgp4",
 ]
-time = [
-    "io",
-    "math",
-    "units",
-    "dep:lox-time",
-]
-units = [
-    "dep:lox-units",
-]
+time = ["io", "math", "units", "dep:lox-time"]
+units = ["dep:lox-units"]

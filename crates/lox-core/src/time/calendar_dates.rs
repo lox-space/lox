@@ -15,13 +15,7 @@ use std::{
     sync::OnceLock,
 };
 
-use crate::{
-    f64::consts::{self, SECONDS_PER_JULIAN_CENTURY, SECONDS_PER_JULIAN_YEAR},
-    i64::consts::{
-        SECONDS_BETWEEN_J1950_AND_J2000, SECONDS_BETWEEN_JD_AND_J2000,
-        SECONDS_BETWEEN_MJD_AND_J2000,
-    },
-};
+use crate::time::deltas::TimeDelta;
 use num::ToPrimitive;
 use thiserror::Error;
 
@@ -159,6 +153,16 @@ impl Date {
         }
     }
 
+    pub const fn new_unchecked(year: i64, month: u8, day: u8) -> Self {
+        let calendar = calendar(year, month, day);
+        Date {
+            calendar,
+            year,
+            month,
+            day,
+        }
+    }
+
     /// Constructs a new [Date] from an ISO 8601 string.
     ///
     /// # Errors
@@ -243,30 +247,19 @@ impl Date {
     }
 
     /// Returns the day number of `self` relative to J2000.
-    pub fn j2000_day_number(&self) -> i64 {
+    pub const fn j2000_day_number(&self) -> i64 {
         j2000_day_number(self.calendar, self.year, self.month, self.day)
+    }
+
+    pub const fn to_delta(&self) -> TimeDelta {
+        let seconds = self.j2000_day_number() * SECONDS_PER_DAY - SECONDS_PER_HALF_DAY;
+        TimeDelta::from_seconds(seconds)
     }
 }
 
 impl JulianDate for Date {
     fn julian_date(&self, epoch: Epoch, unit: Unit) -> f64 {
-        let mut seconds = j2000_day_number(self.calendar, self.year, self.month, self.day)
-            * SECONDS_PER_DAY
-            - SECONDS_PER_HALF_DAY;
-        seconds = match epoch {
-            Epoch::JulianDate => seconds + SECONDS_BETWEEN_JD_AND_J2000,
-            Epoch::ModifiedJulianDate => seconds + SECONDS_BETWEEN_MJD_AND_J2000,
-            Epoch::J1950 => seconds + SECONDS_BETWEEN_J1950_AND_J2000,
-            Epoch::J2000 => seconds,
-        };
-        let seconds = seconds as f64;
-
-        match unit {
-            Unit::Seconds => seconds,
-            Unit::Days => seconds / consts::SECONDS_PER_DAY,
-            Unit::Years => seconds / SECONDS_PER_JULIAN_YEAR,
-            Unit::Centuries => seconds / SECONDS_PER_JULIAN_CENTURY,
-        }
+        self.to_delta().julian_date(epoch, unit)
     }
 }
 
@@ -285,7 +278,7 @@ fn find_year(calendar: Calendar, j2000day: i64) -> i64 {
     }
 }
 
-fn last_day_of_year_j2k(calendar: Calendar, year: i64) -> i64 {
+const fn last_day_of_year_j2k(calendar: Calendar, year: i64) -> i64 {
     match calendar {
         Calendar::ProlepticJulian => 365 * year + (year + 1) / 4 - 730123,
         Calendar::Julian => 365 * year + year / 4 - 730122,
@@ -293,7 +286,7 @@ fn last_day_of_year_j2k(calendar: Calendar, year: i64) -> i64 {
     }
 }
 
-fn is_leap_year(calendar: Calendar, year: i64) -> bool {
+const fn is_leap_year(calendar: Calendar, year: i64) -> bool {
     match calendar {
         Calendar::ProlepticJulian | Calendar::Julian => year % 4 == 0,
         Calendar::Gregorian => year % 4 == 0 && (year % 400 == 0 || year % 100 != 0),
@@ -333,7 +326,7 @@ fn find_day(day_in_year: u16, month: u8, is_leap: bool) -> Result<u8, DateError>
     }
 }
 
-fn find_day_in_year(month: u8, day: u8, is_leap: bool) -> u16 {
+const fn find_day_in_year(month: u8, day: u8, is_leap: bool) -> u16 {
     let previous_days = if is_leap {
         PREVIOUS_MONTH_END_DAY_LEAP
     } else {
@@ -342,7 +335,7 @@ fn find_day_in_year(month: u8, day: u8, is_leap: bool) -> u16 {
     day as u16 + previous_days[(month - 1) as usize]
 }
 
-fn calendar(year: i64, month: u8, day: u8) -> Calendar {
+const fn calendar(year: i64, month: u8, day: u8) -> Calendar {
     if year < 1583 {
         if year < 1 {
             Calendar::ProlepticJulian
@@ -356,7 +349,7 @@ fn calendar(year: i64, month: u8, day: u8) -> Calendar {
     }
 }
 
-fn j2000_day_number(calendar: Calendar, year: i64, month: u8, day: u8) -> i64 {
+const fn j2000_day_number(calendar: Calendar, year: i64, month: u8, day: u8) -> i64 {
     let d1 = last_day_of_year_j2k(calendar, year - 1);
     let d2 = find_day_in_year(month, day, is_leap_year(calendar, year));
     d1 + d2 as i64
@@ -387,7 +380,7 @@ pub trait CalendarDate {
 
 #[cfg(test)]
 mod tests {
-    use crate::f64::consts::DAYS_PER_JULIAN_CENTURY;
+    use crate::f64::consts::{DAYS_PER_JULIAN_CENTURY, SECONDS_PER_JULIAN_CENTURY};
     use rstest::rstest;
 
     use super::*;
@@ -411,6 +404,15 @@ mod tests {
     fn test_date_iso(#[case] str: &str, #[case] expected: Date) {
         let actual = Date::from_iso(str).expect("date should parse");
         assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_date_unchecked() {
+        let date = Date::new_unchecked(2026, 2, 11);
+        assert_eq!(date.calendar, Calendar::Gregorian);
+        assert_eq!(date.year, 2026);
+        assert_eq!(date.month, 2);
+        assert_eq!(date.day, 11);
     }
 
     #[test]

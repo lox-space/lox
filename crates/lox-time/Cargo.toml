@@ -20,6 +20,7 @@ lox-math.workspace = true
 lox-test-utils.workspace = true
 lox-units.workspace = true
 
+chrono = { workspace = true, optional = true }
 itertools.workspace = true
 num.workspace = true
 regex.workspace = true
@@ -28,3 +29,6 @@ thiserror.workspace = true
 [dev-dependencies]
 proptest.workspace = true
 rstest.workspace = true
+
+[features]
+chrono = ["dep:chrono"]
