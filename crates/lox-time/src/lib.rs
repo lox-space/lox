@@ -31,6 +31,8 @@
 */
 
 pub mod calendar_dates;
+#[cfg(feature = "chrono")]
+pub mod chrono;
 pub mod deltas;
 pub mod intervals;
 pub mod julian_dates;
