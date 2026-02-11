@@ -31,6 +31,7 @@ lox-test-utils = { path = "crates/lox-test-utils", version = "0.1.0-alpha.1" }
 lox-time = { path = "crates/lox-time", version = "0.1.0-alpha.11" }
 lox-units = { path = "crates/lox-units", version = "0.1.0-alpha.1" }
 
+chrono = "0.4.43"
 csv = "1.4.0"
 differential-equations = "0.5.2"
 divan = "0.1.21"
