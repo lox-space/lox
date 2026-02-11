@@ -3,40 +3,29 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use chrono::{DateTime, Utc};
-use lox_core::time::{
-    calendar_dates::Date,
-    deltas::{TimeDelta, ToDelta},
-};
-use thiserror::Error;
+use lox_core::time::{chrono::ChronoError, deltas::ToDelta};
 
 use crate::{Time, time_scales::Tai, utc::UtcError};
-
-const ATTOS_TO_NANOS: i64 = 1_000_000_000;
-const UNIX_EPOCH: TimeDelta = Date::new_unchecked(1970, 1, 1).to_delta();
-
-#[derive(Debug, Error)]
-#[error("{0} cannot be represented as a `chrono::DateTime`")]
-pub struct ChronoError(TimeDelta);
 
 impl TryFrom<Time<Tai>> for DateTime<Utc> {
     type Error = ChronoError;
 
     fn try_from(time: Time<Tai>) -> Result<Self, Self::Error> {
-        delta_to_date_time(time.to_delta())
+        time.to_delta().try_into()
     }
 }
 
 impl From<DateTime<Utc>> for Time<Tai> {
     fn from(dt: DateTime<Utc>) -> Self {
-        Time::from_delta(Tai, date_time_to_delta(dt))
+        Time::from_delta(Tai, dt.into())
     }
 }
 
 impl TryFrom<crate::utc::Utc> for DateTime<Utc> {
     type Error = ChronoError;
 
-    fn try_from(time: crate::utc::Utc) -> Result<Self, Self::Error> {
-        delta_to_date_time(time.to_delta())
+    fn try_from(utc: crate::utc::Utc) -> Result<Self, Self::Error> {
+        utc.to_delta().try_into()
     }
 }
 
@@ -44,27 +33,13 @@ impl TryFrom<DateTime<Utc>> for crate::utc::Utc {
     type Error = UtcError;
 
     fn try_from(dt: DateTime<Utc>) -> Result<Self, Self::Error> {
-        crate::utc::Utc::from_delta(date_time_to_delta(dt))
+        crate::utc::Utc::from_delta(dt.into())
     }
-}
-
-fn delta_to_date_time(delta: TimeDelta) -> Result<DateTime<Utc>, ChronoError> {
-    let dt = delta - UNIX_EPOCH;
-    let (second, subsecond) = dt.as_seconds_and_subsecond().ok_or(ChronoError(delta))?;
-    let nanos = subsecond.as_attoseconds() / ATTOS_TO_NANOS;
-    DateTime::from_timestamp(second, nanos as u32).ok_or(ChronoError(delta))
-}
-
-fn date_time_to_delta(dt: DateTime<Utc>) -> TimeDelta {
-    let delta = TimeDelta::new(
-        dt.timestamp(),
-        dt.timestamp_subsec_nanos() as i64 * ATTOS_TO_NANOS,
-    );
-    delta + UNIX_EPOCH
 }
 
 #[cfg(test)]
 mod tests {
+    use lox_core::time::{constants::UNIX_EPOCH, deltas::TimeDelta};
     use rstest::rstest;
 
     use super::*;
