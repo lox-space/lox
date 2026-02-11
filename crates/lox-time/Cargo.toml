@@ -31,4 +31,4 @@ proptest.workspace = true
 rstest.workspace = true
 
 [features]
-chrono = ["dep:chrono"]
+chrono = ["dep:chrono", "lox-core/chrono"]
