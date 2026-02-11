@@ -15,6 +15,7 @@ repository.workspace = true
 [dependencies]
 lox-test-utils = { workspace = true, features = ["derive"] }
 
+chrono = { workspace = true, optional = true }
 fast_polynomial.workspace = true
 glam.workspace = true
 num.workspace = true
