@@ -1045,6 +1045,7 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
         code.extend(quote! {
 
             #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+            #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
             pub struct #ident;
 
             impl Origin for #ident {

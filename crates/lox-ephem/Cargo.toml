@@ -18,4 +18,8 @@ lox-core.workspace = true
 lox-units.workspace = true
 
 nom.workspace = true
+serde = { workspace = true, optional = true }
 thiserror.workspace = true
+
+[features]
+serde = ["dep:serde", "lox-core/serde"]

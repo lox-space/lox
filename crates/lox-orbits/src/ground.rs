@@ -18,6 +18,7 @@ use lox_time::{DynTime, Time};
 use thiserror::Error;
 
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Observables {
     azimuth: Radians,
     elevation: Radians,
@@ -52,6 +53,7 @@ impl Observables {
 }
 
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct GroundLocation<B: TrySpheroid> {
     longitude: f64,
     latitude: f64,

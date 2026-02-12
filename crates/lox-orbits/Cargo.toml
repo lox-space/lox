@@ -31,8 +31,12 @@ hashbrown.workspace = true
 itertools.workspace = true
 libm.workspace = true
 rayon.workspace = true
+serde = { workspace = true, optional = true }
 sgp4.workspace = true
 thiserror.workspace = true
+
+[features]
+serde = ["dep:serde", "lox-bodies/serde", "lox-frames/serde", "lox-time/serde", "lox-core/serde"]
 
 [dev-dependencies]
 rstest.workspace = true

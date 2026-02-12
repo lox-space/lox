@@ -16,6 +16,7 @@ use crate::states::State;
 use lox_frames::{DynFrame, Icrf, ReferenceFrame};
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct KeplerianElements {
     pub semi_major_axis: f64,
     pub eccentricity: f64,
@@ -56,6 +57,7 @@ impl KeplerianElements {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Keplerian<T: TimeScale, O: TryPointMass, R: ReferenceFrame> {
     time: Time<T>,
     origin: O,

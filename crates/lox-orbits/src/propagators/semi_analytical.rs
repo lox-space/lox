@@ -22,6 +22,7 @@ pub enum ValladoError {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Vallado<T: TimeScale, O: Origin, R: ReferenceFrame> {
     initial_state: State<T, O, R>,
     max_iter: i32,

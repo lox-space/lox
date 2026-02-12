@@ -78,6 +78,7 @@ pub enum ElevationMaskError {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ElevationMask {
     Fixed(f64),
     Variable(Series),
@@ -120,6 +121,7 @@ impl ElevationMask {
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Pass<T: TimeScale> {
     window: Window<T>,
     times: Vec<Time<T>>,
