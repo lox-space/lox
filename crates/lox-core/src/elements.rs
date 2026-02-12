@@ -26,6 +26,7 @@ use crate::{
 
 /// The standard gravitational parameter of a celestial body µ = GM.
 #[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd, ApproxEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
 pub struct GravitationalParameter(f64);
 
@@ -57,6 +58,7 @@ pub type SemiMajorAxis = Distance;
 
 /// The Keplerian orbit types or conic sections.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum OrbitType {
     /// Circular orbit (e ≈ 0).
     Circular,
@@ -85,6 +87,7 @@ pub struct NegativeEccentricityError(f64);
 
 /// Orbital eccentricity.
 #[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd, ApproxEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
 pub struct Eccentricity(f64);
 
@@ -154,6 +157,7 @@ pub struct InclinationError(Angle);
 
 /// Orbital inclination.
 #[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd, ApproxEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
 pub struct Inclination(Angle);
 
@@ -183,6 +187,7 @@ pub struct LongitudeOfAscendingNodeError(Angle);
 
 /// Longitude of ascending node.
 #[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd, ApproxEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
 pub struct LongitudeOfAscendingNode(Angle);
 
@@ -214,6 +219,7 @@ pub struct ArgumentOfPeriapsisError(Angle);
 
 /// Argument of periapsis.
 #[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd, ApproxEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
 pub struct ArgumentOfPeriapsis(Angle);
 
@@ -240,6 +246,7 @@ impl Display for ArgumentOfPeriapsis {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, ApproxEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Keplerian {
     semi_major_axis: SemiMajorAxis,
     eccentricity: Eccentricity,

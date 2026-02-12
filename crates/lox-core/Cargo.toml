@@ -20,7 +20,12 @@ fast_polynomial.workspace = true
 glam.workspace = true
 num.workspace = true
 regex.workspace = true
+serde = { workspace = true, optional = true }
 thiserror.workspace = true
+
+[features]
+chrono = ["dep:chrono"]
+serde = ["dep:serde", "glam/serde"]
 
 [dev-dependencies]
 rstest.workspace = true

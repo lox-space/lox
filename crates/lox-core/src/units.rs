@@ -28,6 +28,7 @@ type Radians = f64;
 
 /// Angle in radians.
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
 pub struct Angle(Radians);
 
@@ -310,6 +311,7 @@ type Meters = f64;
 
 /// Distance in meters.
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
 pub struct Distance(Meters);
 
@@ -414,6 +416,7 @@ type MetersPerSecond = f64;
 
 /// Velocity in meters per second.
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
 pub struct Velocity(MetersPerSecond);
 
@@ -539,6 +542,7 @@ pub const SPEED_OF_LIGHT: f64 = 299792458.0;
 
 /// IEEE letter codes for frequency bands commonly used for satellite communications.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum FrequencyBand {
     /// HF (High Frequency) – 3 to 30 MHz
     HF,
@@ -572,6 +576,7 @@ type Hertz = f64;
 
 /// Frequency in Hertz
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
 pub struct Frequency(Hertz);
 

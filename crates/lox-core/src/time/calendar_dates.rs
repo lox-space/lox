@@ -42,6 +42,7 @@ pub enum DateError {
 
 /// The calendars supported by Lox.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Calendar {
     ProlepticJulian,
     Julian,
@@ -50,6 +51,7 @@ pub enum Calendar {
 
 /// A calendar date.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Date {
     calendar: Calendar,
     year: i64,

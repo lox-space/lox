@@ -18,6 +18,7 @@ type BodyId = i32;
 const RECORD_SIZE: u32 = 1024;
 
 #[derive(Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DafFileRecord {
     pub locidw: String,
     pub nd: u32,
@@ -33,13 +34,14 @@ pub struct DafFileRecord {
 }
 
 #[derive(Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DafComponents {
     pub double_precision_components: Vec<f64>,
     pub integer_components: Vec<i32>,
 }
 
 #[derive(Debug, PartialEq)]
-
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DafSummary {
     pub name: String,
     pub components: DafComponents,
@@ -64,6 +66,7 @@ pub enum DafSpkError {
 }
 
 #[derive(Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SpkType2Coefficients {
     pub x: f64,
     pub y: f64,
@@ -71,6 +74,7 @@ pub struct SpkType2Coefficients {
 }
 
 #[derive(Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SpkType2Array {
     pub records: Vec<Vec<SpkType2Coefficients>>,
     pub init: u32,
@@ -86,11 +90,13 @@ impl SpkType2Array {
 }
 
 #[derive(Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum SpkArray {
     Type2(SpkType2Array),
 }
 
 #[derive(Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SpkSegment {
     pub name: String,
     // In J2000 epoch
@@ -110,6 +116,7 @@ pub struct SpkSegment {
 }
 
 #[derive(Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DafSummaryRecord {
     pub next: u32,
     pub count: u32,
@@ -117,6 +124,7 @@ pub struct DafSummaryRecord {
 }
 
 #[derive(Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Spk {
     pub file_record: DafFileRecord,
     pub comment: String,

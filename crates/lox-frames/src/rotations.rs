@@ -440,6 +440,7 @@ fn rotation_matrix_derivative(m: DMat3, v: DVec3) -> DMat3 {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, ApproxEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Rotation {
     /// Rotation matrix
     pub m: DMat3,

@@ -21,7 +21,11 @@ lox-units.workspace = true
 fast_polynomial.workspace = true
 num-derive.workspace = true
 num-traits.workspace = true
+serde = { workspace = true, optional = true }
 thiserror.workspace = true
+
+[features]
+serde = ["dep:serde", "lox-core/serde"]
 
 [dev-dependencies]
 lox-test-utils.workspace = true

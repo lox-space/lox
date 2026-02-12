@@ -19,6 +19,7 @@ use crate::{
 };
 
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct AzEl(Angle, Angle);
 
 impl AzEl {
@@ -87,6 +88,7 @@ impl AzElBuilder {
 }
 
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct LonLatAlt(Angle, Angle, Distance);
 
 impl LonLatAlt {
@@ -172,6 +174,7 @@ impl LonLatAltBuilder {
 }
 
 #[derive(Copy, Clone, Debug, Default, PartialEq, ApproxEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Cartesian {
     pos: DVec3,
     vel: DVec3,
@@ -440,6 +443,7 @@ impl<const N: usize> TrajectoryData<N> {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TimeStampedCartesian {
     pub time: TimeDelta,
     pub state: Cartesian,

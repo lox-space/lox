@@ -27,6 +27,7 @@ use crate::ground::{DynGroundLocation, GroundLocation};
 use lox_frames::{DynFrame, Iau, Icrf, ReferenceFrame, TryBodyFixed};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct State<T: TimeScale, O: Origin, R: ReferenceFrame> {
     time: Time<T>,
     origin: O,

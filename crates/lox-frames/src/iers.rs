@@ -36,6 +36,7 @@ pub trait IersSystem: sealed::Sealed {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Iers1996;
 
 impl IersSystem for Iers1996 {
@@ -55,6 +56,7 @@ impl Display for Iers1996 {
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Iau2000Model {
     #[default]
     A = 1,
@@ -71,6 +73,7 @@ impl Display for Iau2000Model {
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Iers2003(pub Iau2000Model);
 
 impl IersSystem for Iers2003 {
@@ -90,6 +93,7 @@ impl Display for Iers2003 {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Iers2010;
 
 impl IersSystem for Iers2010 {
@@ -109,6 +113,7 @@ impl Display for Iers2010 {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ReferenceSystem {
     Iers1996,
     Iers2003(Iau2000Model),
@@ -158,6 +163,7 @@ impl From<Iers2010> for ReferenceSystem {
 }
 
 #[derive(Debug, Clone, Copy, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Corrections(pub Angle, pub Angle);
 
 impl Corrections {

@@ -26,12 +26,14 @@ pub enum SeriesError {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Interpolation {
     Linear,
     CubicSpline(Arc<[f64]>, Arc<[f64]>, Arc<[f64]>, Arc<[f64]>),
 }
 
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Series {
     x: Arc<[f64]>,
     y: Arc<[f64]>,

@@ -50,14 +50,17 @@ mod sealed {
 
 /// Marker type for true anomaly
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TrueKind;
 
 /// Marker type for eccentric anomaly (E for elliptic, F for hyperbolic, D for parabolic)
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct EccentricKind;
 
 /// Marker type for mean anomaly
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct MeanKind;
 
 impl AnomalyKind for TrueKind {}
@@ -66,6 +69,8 @@ impl AnomalyKind for MeanKind {}
 
 /// Generic anomaly type parameterized by kind marker
 #[derive(Debug, Clone, Copy, Default, PartialEq, PartialOrd)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(bound = ""))]
 pub struct Anomaly<K: AnomalyKind> {
     anomaly: Angle,
     _kind: PhantomData<K>,

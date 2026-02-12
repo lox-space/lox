@@ -196,6 +196,7 @@ fn two_prod(a: f64, b: f64) -> (f64, f64) {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum TimeDelta {
     Valid { seconds: i64, attoseconds: i64 },
     NaN,

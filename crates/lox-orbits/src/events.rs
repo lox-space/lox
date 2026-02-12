@@ -15,6 +15,7 @@ use lox_math::roots::{Callback, FindBracketedRoot, RootFinderError};
 use lox_time::deltas::TimeDelta;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ZeroCrossing {
     Up,
     Down,
@@ -52,6 +53,7 @@ pub enum FindEventError {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Event<T: TimeScale> {
     crossing: ZeroCrossing,
     time: Time<T>,
@@ -120,6 +122,7 @@ where
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, ApproxEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Window<T: TimeScale> {
     start: Time<T>,
     end: Time<T>,

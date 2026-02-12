@@ -46,6 +46,7 @@ pub enum UtcError {
 
 /// Coordinated Universal Time.
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Utc {
     date: Date,
     time: TimeOfDay,

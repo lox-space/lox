@@ -26,6 +26,7 @@ pub trait TimeScale {
 
 /// International Atomic Time.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Tai;
 
 impl TimeScale for Tai {
@@ -45,6 +46,7 @@ impl Display for Tai {
 
 /// Barycentric Coordinate Time.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Tcb;
 
 impl TimeScale for Tcb {
@@ -64,6 +66,7 @@ impl Display for Tcb {
 
 /// Geocentric Coordinate Time.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Tcg;
 
 impl TimeScale for Tcg {
@@ -83,6 +86,7 @@ impl Display for Tcg {
 
 /// Barycentric Dynamical Time.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Tdb;
 
 impl TimeScale for Tdb {
@@ -102,6 +106,7 @@ impl Display for Tdb {
 
 /// Terrestrial Time.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Tt;
 
 impl TimeScale for Tt {
@@ -121,6 +126,7 @@ impl Display for Tt {
 
 /// Universal Time.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Ut1;
 
 impl TimeScale for Ut1 {
@@ -139,6 +145,7 @@ impl Display for Ut1 {
 }
 
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum DynTimeScale {
     #[default]
     Tai,

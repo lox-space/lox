@@ -446,6 +446,9 @@ name = "glam"
 version = "0.30.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bd47b05dddf0005d850e5644cae7f2b14ac3df487979dbfff3b56f20b1a6ae46"
+dependencies = [
+ "serde_core",
+]
 
 [[package]]
 name = "glob"
@@ -575,6 +578,7 @@ dependencies = [
  "num-derive",
  "num-traits",
  "rstest",
+ "serde",
  "thiserror",
 ]
 
@@ -590,6 +594,7 @@ dependencies = [
  "proptest",
  "regex",
  "rstest",
+ "serde",
  "thiserror",
 ]
 
@@ -630,6 +635,7 @@ dependencies = [
  "lox-core",
  "lox-units",
  "nom",
+ "serde",
  "thiserror",
 ]
 
@@ -647,6 +653,7 @@ dependencies = [
  "lox-time",
  "lox-units",
  "rstest",
+ "serde",
  "thiserror",
 ]
 
@@ -680,6 +687,7 @@ dependencies = [
  "lox-core",
  "lox-test-utils",
  "rstest",
+ "serde",
  "thiserror",
 ]
 
@@ -704,6 +712,7 @@ dependencies = [
  "lox-units",
  "rayon",
  "rstest",
+ "serde",
  "sgp4",
  "thiserror",
 ]
@@ -728,6 +737,8 @@ dependencies = [
  "pyo3",
  "rayon",
  "rstest",
+ "serde",
+ "serde_json",
  "sgp4",
 ]
 
@@ -755,6 +766,7 @@ dependencies = [
  "proptest",
  "regex",
  "rstest",
+ "serde",
  "thiserror",
 ]
 
@@ -763,6 +775,7 @@ name = "lox-units"
 version = "0.1.0-alpha.1"
 dependencies = [
  "lox-core",
+ "serde",
 ]
 
 [[package]]

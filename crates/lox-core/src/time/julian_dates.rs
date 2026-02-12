@@ -16,6 +16,7 @@ use super::deltas::TimeDelta;
 pub const J0: TimeDelta = TimeDelta::from_seconds(-SECONDS_BETWEEN_JD_AND_J2000);
 
 /// The Julian epochs supported by Lox.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Epoch {
     JulianDate,
     ModifiedJulianDate,
@@ -24,6 +25,7 @@ pub enum Epoch {
 }
 
 /// The units of time in which a Julian date may be expressed.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Unit {
     Seconds,
     Days,

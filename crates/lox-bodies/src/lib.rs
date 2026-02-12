@@ -14,6 +14,7 @@ pub mod dynamic;
 mod generated;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
 pub struct NaifId(pub i32);
 

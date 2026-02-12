@@ -24,6 +24,7 @@ chrono = { workspace = true, optional = true }
 itertools.workspace = true
 num.workspace = true
 regex.workspace = true
+serde = { workspace = true, optional = true }
 thiserror.workspace = true
 
 [dev-dependencies]
@@ -32,3 +33,4 @@ rstest.workspace = true
 
 [features]
 chrono = ["dep:chrono", "lox-core/chrono"]
+serde = ["dep:serde", "lox-core/serde"]
