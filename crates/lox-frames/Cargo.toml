@@ -24,7 +24,11 @@ lox-units.workspace = true
 fast_polynomial.workspace = true
 glam.workspace = true
 hashbrown.workspace = true
+serde = { workspace = true, optional = true }
 thiserror.workspace = true
+
+[features]
+serde = ["dep:serde", "lox-bodies/serde", "lox-time/serde", "lox-core/serde"]
 
 [dev-dependencies]
 rstest.workspace = true

@@ -15,3 +15,7 @@ keywords.workspace = true
 
 [dependencies]
 lox-core.workspace = true
+serde = { workspace = true, optional = true }
+
+[features]
+serde = ["dep:serde", "lox-core/serde"]

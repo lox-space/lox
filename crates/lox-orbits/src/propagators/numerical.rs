@@ -97,6 +97,7 @@ where
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CartesianState(Cartesian);
 
 impl CartesianState {

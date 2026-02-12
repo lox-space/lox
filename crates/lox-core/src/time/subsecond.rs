@@ -63,6 +63,7 @@ const FACTORS: [i64; 6] = [
 /// The total precision is 10⁻¹⁸ seconds (one attosecond), providing sufficient accuracy
 /// for astronomical and high-precision timing applications.
 #[derive(Debug, Default, Clone, Copy)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Subsecond([u32; 6]);
 
 impl Subsecond {

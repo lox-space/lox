@@ -37,8 +37,11 @@ rayon = { workspace = true, optional = true }
 sgp4 = { workspace = true, optional = true }
 
 [dev-dependencies]
+glam = { workspace = true, features = ["serde"] }
 pyo3 = { workspace = true, features = ["auto-initialize"] }
 rstest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 
 [features]
 default = [
@@ -80,3 +83,13 @@ python = [
 ]
 time = ["io", "math", "units", "dep:lox-time"]
 units = ["dep:lox-units"]
+serde = [
+  "lox-bodies?/serde",
+  "lox-core?/serde",
+  "lox-ephem?/serde",
+  "lox-frames?/serde",
+  "lox-math?/serde",
+  "lox-orbits?/serde",
+  "lox-time?/serde",
+  "lox-units?/serde",
+]

@@ -19,6 +19,7 @@ const TOD_ID: usize = 12;
 const PEF_ID: usize = 13;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Icrf;
 
 impl ReferenceFrame for Icrf {
@@ -38,6 +39,7 @@ impl ReferenceFrame for Icrf {
 impl QuasiInertial for Icrf {}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Cirf;
 
 impl ReferenceFrame for Cirf {
@@ -55,6 +57,7 @@ impl ReferenceFrame for Cirf {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Tirf;
 
 impl ReferenceFrame for Tirf {
@@ -72,6 +75,7 @@ impl ReferenceFrame for Tirf {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Itrf;
 
 impl ReferenceFrame for Itrf {
@@ -89,6 +93,7 @@ impl ReferenceFrame for Itrf {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Mod<T: IersSystem>(pub T);
 
 impl<T> ReferenceFrame for Mod<T>
@@ -109,6 +114,7 @@ where
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Tod<T: IersSystem>(pub T);
 
 impl<T> ReferenceFrame for Tod<T>
@@ -129,6 +135,7 @@ where
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Pef<T: IersSystem>(pub T);
 
 impl<T> ReferenceFrame for Pef<T>
@@ -149,6 +156,7 @@ where
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Teme;
 
 impl ReferenceFrame for Teme {
@@ -168,6 +176,7 @@ impl ReferenceFrame for Teme {
 impl BodyFixed for Itrf {}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Iau<T: TryRotationalElements>(T);
 
 impl<T> Iau<T>

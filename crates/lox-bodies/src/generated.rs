@@ -24,6 +24,7 @@ use crate::UndefinedOriginPropertyError;
 use std::fmt::Display;
 use std::fmt::Formatter;
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Sun;
 impl Origin for Sun {
     fn id(&self) -> NaifId {
@@ -93,6 +94,7 @@ impl RotationalElements for Sun {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Mercury;
 impl Origin for Mercury {
     fn id(&self) -> NaifId {
@@ -209,6 +211,7 @@ impl RotationalElements for Mercury {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Venus;
 impl Origin for Venus {
     fn id(&self) -> NaifId {
@@ -283,6 +286,7 @@ impl RotationalElements for Venus {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Earth;
 impl Origin for Earth {
     fn id(&self) -> NaifId {
@@ -357,6 +361,7 @@ impl RotationalElements for Earth {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Mars;
 impl Origin for Mars {
     fn id(&self) -> NaifId {
@@ -623,6 +628,7 @@ impl RotationalElements for Mars {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Jupiter;
 impl Origin for Jupiter {
     fn id(&self) -> NaifId {
@@ -827,6 +833,7 @@ impl RotationalElements for Jupiter {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Saturn;
 impl Origin for Saturn {
     fn id(&self) -> NaifId {
@@ -901,6 +908,7 @@ impl RotationalElements for Saturn {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Uranus;
 impl Origin for Uranus {
     fn id(&self) -> NaifId {
@@ -975,6 +983,7 @@ impl RotationalElements for Uranus {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Neptune;
 impl Origin for Neptune {
     fn id(&self) -> NaifId {
@@ -1130,6 +1139,7 @@ impl RotationalElements for Neptune {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Pluto;
 impl Origin for Pluto {
     fn id(&self) -> NaifId {
@@ -1204,6 +1214,7 @@ impl RotationalElements for Pluto {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SolarSystemBarycenter;
 impl Origin for SolarSystemBarycenter {
     fn id(&self) -> NaifId {
@@ -1224,6 +1235,7 @@ impl PointMass for SolarSystemBarycenter {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct MercuryBarycenter;
 impl Origin for MercuryBarycenter {
     fn id(&self) -> NaifId {
@@ -1244,6 +1256,7 @@ impl PointMass for MercuryBarycenter {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct VenusBarycenter;
 impl Origin for VenusBarycenter {
     fn id(&self) -> NaifId {
@@ -1264,6 +1277,7 @@ impl PointMass for VenusBarycenter {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct EarthBarycenter;
 impl Origin for EarthBarycenter {
     fn id(&self) -> NaifId {
@@ -1284,6 +1298,7 @@ impl PointMass for EarthBarycenter {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct MarsBarycenter;
 impl Origin for MarsBarycenter {
     fn id(&self) -> NaifId {
@@ -1304,6 +1319,7 @@ impl PointMass for MarsBarycenter {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct JupiterBarycenter;
 impl Origin for JupiterBarycenter {
     fn id(&self) -> NaifId {
@@ -1324,6 +1340,7 @@ impl PointMass for JupiterBarycenter {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SaturnBarycenter;
 impl Origin for SaturnBarycenter {
     fn id(&self) -> NaifId {
@@ -1344,6 +1361,7 @@ impl PointMass for SaturnBarycenter {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct UranusBarycenter;
 impl Origin for UranusBarycenter {
     fn id(&self) -> NaifId {
@@ -1364,6 +1382,7 @@ impl PointMass for UranusBarycenter {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct NeptuneBarycenter;
 impl Origin for NeptuneBarycenter {
     fn id(&self) -> NaifId {
@@ -1384,6 +1403,7 @@ impl PointMass for NeptuneBarycenter {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PlutoBarycenter;
 impl Origin for PlutoBarycenter {
     fn id(&self) -> NaifId {
@@ -1404,6 +1424,7 @@ impl PointMass for PlutoBarycenter {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Moon;
 impl Origin for Moon {
     fn id(&self) -> NaifId {
@@ -1604,6 +1625,7 @@ impl RotationalElements for Moon {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Phobos;
 impl Origin for Phobos {
     fn id(&self) -> NaifId {
@@ -1725,6 +1747,7 @@ impl RotationalElements for Phobos {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Deimos;
 impl Origin for Deimos {
     fn id(&self) -> NaifId {
@@ -1897,6 +1920,7 @@ impl RotationalElements for Deimos {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Io;
 impl Origin for Io {
     fn id(&self) -> NaifId {
@@ -2015,6 +2039,7 @@ impl RotationalElements for Io {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Europa;
 impl Origin for Europa {
     fn id(&self) -> NaifId {
@@ -2160,6 +2185,7 @@ impl RotationalElements for Europa {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Ganymede;
 impl Origin for Ganymede {
     fn id(&self) -> NaifId {
@@ -2297,6 +2323,7 @@ impl RotationalElements for Ganymede {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Callisto;
 impl Origin for Callisto {
     fn id(&self) -> NaifId {
@@ -2452,6 +2479,7 @@ impl RotationalElements for Callisto {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Amalthea;
 impl Origin for Amalthea {
     fn id(&self) -> NaifId {
@@ -2624,6 +2652,7 @@ impl RotationalElements for Amalthea {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Himalia;
 impl Origin for Himalia {
     fn id(&self) -> NaifId {
@@ -2655,6 +2684,7 @@ impl TriaxialEllipsoid for Himalia {
 }
 impl Spheroid for Himalia {}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Elara;
 impl Origin for Elara {
     fn id(&self) -> NaifId {
@@ -2681,6 +2711,7 @@ impl TriaxialEllipsoid for Elara {
 }
 impl Spheroid for Elara {}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Pasiphae;
 impl Origin for Pasiphae {
     fn id(&self) -> NaifId {
@@ -2707,6 +2738,7 @@ impl TriaxialEllipsoid for Pasiphae {
 }
 impl Spheroid for Pasiphae {}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Sinope;
 impl Origin for Sinope {
     fn id(&self) -> NaifId {
@@ -2733,6 +2765,7 @@ impl TriaxialEllipsoid for Sinope {
 }
 impl Spheroid for Sinope {}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Lysithea;
 impl Origin for Lysithea {
     fn id(&self) -> NaifId {
@@ -2759,6 +2792,7 @@ impl TriaxialEllipsoid for Lysithea {
 }
 impl Spheroid for Lysithea {}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Carme;
 impl Origin for Carme {
     fn id(&self) -> NaifId {
@@ -2785,6 +2819,7 @@ impl TriaxialEllipsoid for Carme {
 }
 impl Spheroid for Carme {}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Ananke;
 impl Origin for Ananke {
     fn id(&self) -> NaifId {
@@ -2811,6 +2846,7 @@ impl TriaxialEllipsoid for Ananke {
 }
 impl Spheroid for Ananke {}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Leda;
 impl Origin for Leda {
     fn id(&self) -> NaifId {
@@ -2837,6 +2873,7 @@ impl TriaxialEllipsoid for Leda {
 }
 impl Spheroid for Leda {}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Thebe;
 impl Origin for Thebe {
     fn id(&self) -> NaifId {
@@ -3009,6 +3046,7 @@ impl RotationalElements for Thebe {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Adrastea;
 impl Origin for Adrastea {
     fn id(&self) -> NaifId {
@@ -3082,6 +3120,7 @@ impl RotationalElements for Adrastea {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Metis;
 impl Origin for Metis {
     fn id(&self) -> NaifId {
@@ -3155,6 +3194,7 @@ impl RotationalElements for Metis {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Callirrhoe;
 impl Origin for Callirrhoe {
     fn id(&self) -> NaifId {
@@ -3170,6 +3210,7 @@ impl Display for Callirrhoe {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Themisto;
 impl Origin for Themisto {
     fn id(&self) -> NaifId {
@@ -3185,6 +3226,7 @@ impl Display for Themisto {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Magaclite;
 impl Origin for Magaclite {
     fn id(&self) -> NaifId {
@@ -3200,6 +3242,7 @@ impl Display for Magaclite {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Taygete;
 impl Origin for Taygete {
     fn id(&self) -> NaifId {
@@ -3215,6 +3258,7 @@ impl Display for Taygete {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Chaldene;
 impl Origin for Chaldene {
     fn id(&self) -> NaifId {
@@ -3230,6 +3274,7 @@ impl Display for Chaldene {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Harpalyke;
 impl Origin for Harpalyke {
     fn id(&self) -> NaifId {
@@ -3245,6 +3290,7 @@ impl Display for Harpalyke {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Kalyke;
 impl Origin for Kalyke {
     fn id(&self) -> NaifId {
@@ -3260,6 +3306,7 @@ impl Display for Kalyke {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Iocaste;
 impl Origin for Iocaste {
     fn id(&self) -> NaifId {
@@ -3275,6 +3322,7 @@ impl Display for Iocaste {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Erinome;
 impl Origin for Erinome {
     fn id(&self) -> NaifId {
@@ -3290,6 +3338,7 @@ impl Display for Erinome {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Isonoe;
 impl Origin for Isonoe {
     fn id(&self) -> NaifId {
@@ -3305,6 +3354,7 @@ impl Display for Isonoe {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Praxidike;
 impl Origin for Praxidike {
     fn id(&self) -> NaifId {
@@ -3320,6 +3370,7 @@ impl Display for Praxidike {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Autonoe;
 impl Origin for Autonoe {
     fn id(&self) -> NaifId {
@@ -3335,6 +3386,7 @@ impl Display for Autonoe {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Thyone;
 impl Origin for Thyone {
     fn id(&self) -> NaifId {
@@ -3350,6 +3402,7 @@ impl Display for Thyone {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Hermippe;
 impl Origin for Hermippe {
     fn id(&self) -> NaifId {
@@ -3365,6 +3418,7 @@ impl Display for Hermippe {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Aitne;
 impl Origin for Aitne {
     fn id(&self) -> NaifId {
@@ -3380,6 +3434,7 @@ impl Display for Aitne {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Eurydome;
 impl Origin for Eurydome {
     fn id(&self) -> NaifId {
@@ -3395,6 +3450,7 @@ impl Display for Eurydome {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Euanthe;
 impl Origin for Euanthe {
     fn id(&self) -> NaifId {
@@ -3410,6 +3466,7 @@ impl Display for Euanthe {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Euporie;
 impl Origin for Euporie {
     fn id(&self) -> NaifId {
@@ -3425,6 +3482,7 @@ impl Display for Euporie {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Orthosie;
 impl Origin for Orthosie {
     fn id(&self) -> NaifId {
@@ -3440,6 +3498,7 @@ impl Display for Orthosie {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Sponde;
 impl Origin for Sponde {
     fn id(&self) -> NaifId {
@@ -3455,6 +3514,7 @@ impl Display for Sponde {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Kale;
 impl Origin for Kale {
     fn id(&self) -> NaifId {
@@ -3470,6 +3530,7 @@ impl Display for Kale {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Pasithee;
 impl Origin for Pasithee {
     fn id(&self) -> NaifId {
@@ -3485,6 +3546,7 @@ impl Display for Pasithee {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Hegemone;
 impl Origin for Hegemone {
     fn id(&self) -> NaifId {
@@ -3500,6 +3562,7 @@ impl Display for Hegemone {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Mneme;
 impl Origin for Mneme {
     fn id(&self) -> NaifId {
@@ -3515,6 +3578,7 @@ impl Display for Mneme {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Aoede;
 impl Origin for Aoede {
     fn id(&self) -> NaifId {
@@ -3530,6 +3594,7 @@ impl Display for Aoede {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Thelxinoe;
 impl Origin for Thelxinoe {
     fn id(&self) -> NaifId {
@@ -3545,6 +3610,7 @@ impl Display for Thelxinoe {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Arche;
 impl Origin for Arche {
     fn id(&self) -> NaifId {
@@ -3560,6 +3626,7 @@ impl Display for Arche {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Kallichore;
 impl Origin for Kallichore {
     fn id(&self) -> NaifId {
@@ -3575,6 +3642,7 @@ impl Display for Kallichore {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Helike;
 impl Origin for Helike {
     fn id(&self) -> NaifId {
@@ -3590,6 +3658,7 @@ impl Display for Helike {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Carpo;
 impl Origin for Carpo {
     fn id(&self) -> NaifId {
@@ -3605,6 +3674,7 @@ impl Display for Carpo {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Eukelade;
 impl Origin for Eukelade {
     fn id(&self) -> NaifId {
@@ -3620,6 +3690,7 @@ impl Display for Eukelade {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Cyllene;
 impl Origin for Cyllene {
     fn id(&self) -> NaifId {
@@ -3635,6 +3706,7 @@ impl Display for Cyllene {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Kore;
 impl Origin for Kore {
     fn id(&self) -> NaifId {
@@ -3650,6 +3722,7 @@ impl Display for Kore {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Herse;
 impl Origin for Herse {
     fn id(&self) -> NaifId {
@@ -3665,6 +3738,7 @@ impl Display for Herse {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Dia;
 impl Origin for Dia {
     fn id(&self) -> NaifId {
@@ -3680,6 +3754,7 @@ impl Display for Dia {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Mimas;
 impl Origin for Mimas {
     fn id(&self) -> NaifId {
@@ -3834,6 +3909,7 @@ impl RotationalElements for Mimas {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Enceladus;
 impl Origin for Enceladus {
     fn id(&self) -> NaifId {
@@ -3907,6 +3983,7 @@ impl RotationalElements for Enceladus {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Tethys;
 impl Origin for Tethys {
     fn id(&self) -> NaifId {
@@ -4061,6 +4138,7 @@ impl RotationalElements for Tethys {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Dione;
 impl Origin for Dione {
     fn id(&self) -> NaifId {
@@ -4134,6 +4212,7 @@ impl RotationalElements for Dione {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Rhea;
 impl Origin for Rhea {
     fn id(&self) -> NaifId {
@@ -4288,6 +4367,7 @@ impl RotationalElements for Rhea {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Titan;
 impl Origin for Titan {
     fn id(&self) -> NaifId {
@@ -4415,6 +4495,7 @@ impl RotationalElements for Titan {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Hyperion;
 impl Origin for Hyperion {
     fn id(&self) -> NaifId {
@@ -4445,6 +4526,7 @@ impl TriaxialEllipsoid for Hyperion {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Iapetus;
 impl Origin for Iapetus {
     fn id(&self) -> NaifId {
@@ -4519,6 +4601,7 @@ impl RotationalElements for Iapetus {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Phoebe;
 impl Origin for Phoebe {
     fn id(&self) -> NaifId {
@@ -4592,6 +4675,7 @@ impl RotationalElements for Phoebe {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Janus;
 impl Origin for Janus {
     fn id(&self) -> NaifId {
@@ -4746,6 +4830,7 @@ impl RotationalElements for Janus {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Epimetheus;
 impl Origin for Epimetheus {
     fn id(&self) -> NaifId {
@@ -4900,6 +4985,7 @@ impl RotationalElements for Epimetheus {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Helene;
 impl Origin for Helene {
     fn id(&self) -> NaifId {
@@ -4973,6 +5059,7 @@ impl RotationalElements for Helene {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Telesto;
 impl Origin for Telesto {
     fn id(&self) -> NaifId {
@@ -5041,6 +5128,7 @@ impl RotationalElements for Telesto {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Calypso;
 impl Origin for Calypso {
     fn id(&self) -> NaifId {
@@ -5109,6 +5197,7 @@ impl RotationalElements for Calypso {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Atlas;
 impl Origin for Atlas {
     fn id(&self) -> NaifId {
@@ -5182,6 +5271,7 @@ impl RotationalElements for Atlas {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Prometheus;
 impl Origin for Prometheus {
     fn id(&self) -> NaifId {
@@ -5255,6 +5345,7 @@ impl RotationalElements for Prometheus {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Pandora;
 impl Origin for Pandora {
     fn id(&self) -> NaifId {
@@ -5328,6 +5419,7 @@ impl RotationalElements for Pandora {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Pan;
 impl Origin for Pan {
     fn id(&self) -> NaifId {
@@ -5396,6 +5488,7 @@ impl RotationalElements for Pan {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Ymir;
 impl Origin for Ymir {
     fn id(&self) -> NaifId {
@@ -5411,6 +5504,7 @@ impl Display for Ymir {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Paaliaq;
 impl Origin for Paaliaq {
     fn id(&self) -> NaifId {
@@ -5426,6 +5520,7 @@ impl Display for Paaliaq {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Tarvos;
 impl Origin for Tarvos {
     fn id(&self) -> NaifId {
@@ -5441,6 +5536,7 @@ impl Display for Tarvos {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Ijiraq;
 impl Origin for Ijiraq {
     fn id(&self) -> NaifId {
@@ -5456,6 +5552,7 @@ impl Display for Ijiraq {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Suttungr;
 impl Origin for Suttungr {
     fn id(&self) -> NaifId {
@@ -5471,6 +5568,7 @@ impl Display for Suttungr {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Kiviuq;
 impl Origin for Kiviuq {
     fn id(&self) -> NaifId {
@@ -5486,6 +5584,7 @@ impl Display for Kiviuq {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Mundilfari;
 impl Origin for Mundilfari {
     fn id(&self) -> NaifId {
@@ -5501,6 +5600,7 @@ impl Display for Mundilfari {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Albiorix;
 impl Origin for Albiorix {
     fn id(&self) -> NaifId {
@@ -5516,6 +5616,7 @@ impl Display for Albiorix {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Skathi;
 impl Origin for Skathi {
     fn id(&self) -> NaifId {
@@ -5531,6 +5632,7 @@ impl Display for Skathi {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Erriapus;
 impl Origin for Erriapus {
     fn id(&self) -> NaifId {
@@ -5546,6 +5648,7 @@ impl Display for Erriapus {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Siarnaq;
 impl Origin for Siarnaq {
     fn id(&self) -> NaifId {
@@ -5561,6 +5664,7 @@ impl Display for Siarnaq {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Thrymr;
 impl Origin for Thrymr {
     fn id(&self) -> NaifId {
@@ -5576,6 +5680,7 @@ impl Display for Thrymr {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Narvi;
 impl Origin for Narvi {
     fn id(&self) -> NaifId {
@@ -5591,6 +5696,7 @@ impl Display for Narvi {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Methone;
 impl Origin for Methone {
     fn id(&self) -> NaifId {
@@ -5616,6 +5722,7 @@ impl TriaxialEllipsoid for Methone {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Pallene;
 impl Origin for Pallene {
     fn id(&self) -> NaifId {
@@ -5641,6 +5748,7 @@ impl TriaxialEllipsoid for Pallene {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Polydeuces;
 impl Origin for Polydeuces {
     fn id(&self) -> NaifId {
@@ -5666,6 +5774,7 @@ impl TriaxialEllipsoid for Polydeuces {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Daphnis;
 impl Origin for Daphnis {
     fn id(&self) -> NaifId {
@@ -5691,6 +5800,7 @@ impl TriaxialEllipsoid for Daphnis {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Aegir;
 impl Origin for Aegir {
     fn id(&self) -> NaifId {
@@ -5706,6 +5816,7 @@ impl Display for Aegir {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Bebhionn;
 impl Origin for Bebhionn {
     fn id(&self) -> NaifId {
@@ -5721,6 +5832,7 @@ impl Display for Bebhionn {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Bergelmir;
 impl Origin for Bergelmir {
     fn id(&self) -> NaifId {
@@ -5736,6 +5848,7 @@ impl Display for Bergelmir {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Bestla;
 impl Origin for Bestla {
     fn id(&self) -> NaifId {
@@ -5751,6 +5864,7 @@ impl Display for Bestla {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Farbauti;
 impl Origin for Farbauti {
     fn id(&self) -> NaifId {
@@ -5766,6 +5880,7 @@ impl Display for Farbauti {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Fenrir;
 impl Origin for Fenrir {
     fn id(&self) -> NaifId {
@@ -5781,6 +5896,7 @@ impl Display for Fenrir {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Fornjot;
 impl Origin for Fornjot {
     fn id(&self) -> NaifId {
@@ -5796,6 +5912,7 @@ impl Display for Fornjot {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Hati;
 impl Origin for Hati {
     fn id(&self) -> NaifId {
@@ -5811,6 +5928,7 @@ impl Display for Hati {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Hyrrokkin;
 impl Origin for Hyrrokkin {
     fn id(&self) -> NaifId {
@@ -5826,6 +5944,7 @@ impl Display for Hyrrokkin {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Kari;
 impl Origin for Kari {
     fn id(&self) -> NaifId {
@@ -5841,6 +5960,7 @@ impl Display for Kari {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Loge;
 impl Origin for Loge {
     fn id(&self) -> NaifId {
@@ -5856,6 +5976,7 @@ impl Display for Loge {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Skoll;
 impl Origin for Skoll {
     fn id(&self) -> NaifId {
@@ -5871,6 +5992,7 @@ impl Display for Skoll {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Surtur;
 impl Origin for Surtur {
     fn id(&self) -> NaifId {
@@ -5886,6 +6008,7 @@ impl Display for Surtur {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Anthe;
 impl Origin for Anthe {
     fn id(&self) -> NaifId {
@@ -5912,6 +6035,7 @@ impl TriaxialEllipsoid for Anthe {
 }
 impl Spheroid for Anthe {}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Jarnsaxa;
 impl Origin for Jarnsaxa {
     fn id(&self) -> NaifId {
@@ -5927,6 +6051,7 @@ impl Display for Jarnsaxa {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Greip;
 impl Origin for Greip {
     fn id(&self) -> NaifId {
@@ -5942,6 +6067,7 @@ impl Display for Greip {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Tarqeq;
 impl Origin for Tarqeq {
     fn id(&self) -> NaifId {
@@ -5957,6 +6083,7 @@ impl Display for Tarqeq {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Aegaeon;
 impl Origin for Aegaeon {
     fn id(&self) -> NaifId {
@@ -5982,6 +6109,7 @@ impl TriaxialEllipsoid for Aegaeon {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Ariel;
 impl Origin for Ariel {
     fn id(&self) -> NaifId {
@@ -6181,6 +6309,7 @@ impl RotationalElements for Ariel {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Umbriel;
 impl Origin for Umbriel {
     fn id(&self) -> NaifId {
@@ -6390,6 +6519,7 @@ impl RotationalElements for Umbriel {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Titania;
 impl Origin for Titania {
     fn id(&self) -> NaifId {
@@ -6608,6 +6738,7 @@ impl RotationalElements for Titania {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Oberon;
 impl Origin for Oberon {
     fn id(&self) -> NaifId {
@@ -6835,6 +6966,7 @@ impl RotationalElements for Oberon {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Miranda;
 impl Origin for Miranda {
     fn id(&self) -> NaifId {
@@ -7079,6 +7211,7 @@ impl RotationalElements for Miranda {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Cordelia;
 impl Origin for Cordelia {
     fn id(&self) -> NaifId {
@@ -7319,6 +7452,7 @@ impl RotationalElements for Cordelia {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Ophelia;
 impl Origin for Ophelia {
     fn id(&self) -> NaifId {
@@ -7559,6 +7693,7 @@ impl RotationalElements for Ophelia {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Bianca;
 impl Origin for Bianca {
     fn id(&self) -> NaifId {
@@ -7799,6 +7934,7 @@ impl RotationalElements for Bianca {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Cressida;
 impl Origin for Cressida {
     fn id(&self) -> NaifId {
@@ -8039,6 +8175,7 @@ impl RotationalElements for Cressida {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Desdemona;
 impl Origin for Desdemona {
     fn id(&self) -> NaifId {
@@ -8279,6 +8416,7 @@ impl RotationalElements for Desdemona {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Juliet;
 impl Origin for Juliet {
     fn id(&self) -> NaifId {
@@ -8519,6 +8657,7 @@ impl RotationalElements for Juliet {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Portia;
 impl Origin for Portia {
     fn id(&self) -> NaifId {
@@ -8759,6 +8898,7 @@ impl RotationalElements for Portia {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Rosalind;
 impl Origin for Rosalind {
     fn id(&self) -> NaifId {
@@ -8999,6 +9139,7 @@ impl RotationalElements for Rosalind {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Belinda;
 impl Origin for Belinda {
     fn id(&self) -> NaifId {
@@ -9239,6 +9380,7 @@ impl RotationalElements for Belinda {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Puck;
 impl Origin for Puck {
     fn id(&self) -> NaifId {
@@ -9479,6 +9621,7 @@ impl RotationalElements for Puck {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Caliban;
 impl Origin for Caliban {
     fn id(&self) -> NaifId {
@@ -9494,6 +9637,7 @@ impl Display for Caliban {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Sycorax;
 impl Origin for Sycorax {
     fn id(&self) -> NaifId {
@@ -9509,6 +9653,7 @@ impl Display for Sycorax {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Prospero;
 impl Origin for Prospero {
     fn id(&self) -> NaifId {
@@ -9524,6 +9669,7 @@ impl Display for Prospero {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Setebos;
 impl Origin for Setebos {
     fn id(&self) -> NaifId {
@@ -9539,6 +9685,7 @@ impl Display for Setebos {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Stephano;
 impl Origin for Stephano {
     fn id(&self) -> NaifId {
@@ -9554,6 +9701,7 @@ impl Display for Stephano {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Trinculo;
 impl Origin for Trinculo {
     fn id(&self) -> NaifId {
@@ -9569,6 +9717,7 @@ impl Display for Trinculo {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Francisco;
 impl Origin for Francisco {
     fn id(&self) -> NaifId {
@@ -9584,6 +9733,7 @@ impl Display for Francisco {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Margaret;
 impl Origin for Margaret {
     fn id(&self) -> NaifId {
@@ -9599,6 +9749,7 @@ impl Display for Margaret {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Ferdinand;
 impl Origin for Ferdinand {
     fn id(&self) -> NaifId {
@@ -9614,6 +9765,7 @@ impl Display for Ferdinand {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Perdita;
 impl Origin for Perdita {
     fn id(&self) -> NaifId {
@@ -9629,6 +9781,7 @@ impl Display for Perdita {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Mab;
 impl Origin for Mab {
     fn id(&self) -> NaifId {
@@ -9644,6 +9797,7 @@ impl Display for Mab {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Cupid;
 impl Origin for Cupid {
     fn id(&self) -> NaifId {
@@ -9659,6 +9813,7 @@ impl Display for Cupid {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Triton;
 impl Origin for Triton {
     fn id(&self) -> NaifId {
@@ -9895,6 +10050,7 @@ impl RotationalElements for Triton {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Nereid;
 impl Origin for Nereid {
     fn id(&self) -> NaifId {
@@ -9921,6 +10077,7 @@ impl TriaxialEllipsoid for Nereid {
 }
 impl Spheroid for Nereid {}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Naiad;
 impl Origin for Naiad {
     fn id(&self) -> NaifId {
@@ -10157,6 +10314,7 @@ impl RotationalElements for Naiad {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Thalassa;
 impl Origin for Thalassa {
     fn id(&self) -> NaifId {
@@ -10393,6 +10551,7 @@ impl RotationalElements for Thalassa {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Despina;
 impl Origin for Despina {
     fn id(&self) -> NaifId {
@@ -10629,6 +10788,7 @@ impl RotationalElements for Despina {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Galatea;
 impl Origin for Galatea {
     fn id(&self) -> NaifId {
@@ -10865,6 +11025,7 @@ impl RotationalElements for Galatea {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Larissa;
 impl Origin for Larissa {
     fn id(&self) -> NaifId {
@@ -11101,6 +11262,7 @@ impl RotationalElements for Larissa {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Proteus;
 impl Origin for Proteus {
     fn id(&self) -> NaifId {
@@ -11336,6 +11498,7 @@ impl RotationalElements for Proteus {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Halimede;
 impl Origin for Halimede {
     fn id(&self) -> NaifId {
@@ -11351,6 +11514,7 @@ impl Display for Halimede {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Psamathe;
 impl Origin for Psamathe {
     fn id(&self) -> NaifId {
@@ -11366,6 +11530,7 @@ impl Display for Psamathe {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Sao;
 impl Origin for Sao {
     fn id(&self) -> NaifId {
@@ -11381,6 +11546,7 @@ impl Display for Sao {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Laomedeia;
 impl Origin for Laomedeia {
     fn id(&self) -> NaifId {
@@ -11396,6 +11562,7 @@ impl Display for Laomedeia {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Neso;
 impl Origin for Neso {
     fn id(&self) -> NaifId {
@@ -11411,6 +11578,7 @@ impl Display for Neso {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Charon;
 impl Origin for Charon {
     fn id(&self) -> NaifId {
@@ -11485,6 +11653,7 @@ impl RotationalElements for Charon {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Nix;
 impl Origin for Nix {
     fn id(&self) -> NaifId {
@@ -11505,6 +11674,7 @@ impl PointMass for Nix {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Hydra;
 impl Origin for Hydra {
     fn id(&self) -> NaifId {
@@ -11525,6 +11695,7 @@ impl PointMass for Hydra {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Kerberos;
 impl Origin for Kerberos {
     fn id(&self) -> NaifId {
@@ -11545,6 +11716,7 @@ impl PointMass for Kerberos {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Styx;
 impl Origin for Styx {
     fn id(&self) -> NaifId {
@@ -11565,6 +11737,7 @@ impl PointMass for Styx {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Gaspra;
 impl Origin for Gaspra {
     fn id(&self) -> NaifId {
@@ -11633,6 +11806,7 @@ impl RotationalElements for Gaspra {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Ida;
 impl Origin for Ida {
     fn id(&self) -> NaifId {
@@ -11701,6 +11875,7 @@ impl RotationalElements for Ida {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Dactyl;
 impl Origin for Dactyl {
     fn id(&self) -> NaifId {
@@ -11716,6 +11891,7 @@ impl Display for Dactyl {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Ceres;
 impl Origin for Ceres {
     fn id(&self) -> NaifId {
@@ -11790,6 +11966,7 @@ impl RotationalElements for Ceres {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Pallas;
 impl Origin for Pallas {
     fn id(&self) -> NaifId {
@@ -11853,6 +12030,7 @@ impl RotationalElements for Pallas {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Vesta;
 impl Origin for Vesta {
     fn id(&self) -> NaifId {
@@ -11921,6 +12099,7 @@ impl RotationalElements for Vesta {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Psyche;
 impl Origin for Psyche {
     fn id(&self) -> NaifId {
@@ -11951,6 +12130,7 @@ impl TriaxialEllipsoid for Psyche {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Lutetia;
 impl Origin for Lutetia {
     fn id(&self) -> NaifId {
@@ -12019,6 +12199,7 @@ impl RotationalElements for Lutetia {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Kleopatra;
 impl Origin for Kleopatra {
     fn id(&self) -> NaifId {
@@ -12034,6 +12215,7 @@ impl Display for Kleopatra {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Eros;
 impl Origin for Eros {
     fn id(&self) -> NaifId {
@@ -12107,6 +12289,7 @@ impl RotationalElements for Eros {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Davida;
 impl Origin for Davida {
     fn id(&self) -> NaifId {
@@ -12180,6 +12363,7 @@ impl RotationalElements for Davida {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Mathilde;
 impl Origin for Mathilde {
     fn id(&self) -> NaifId {
@@ -12205,6 +12389,7 @@ impl TriaxialEllipsoid for Mathilde {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Steins;
 impl Origin for Steins {
     fn id(&self) -> NaifId {
@@ -12273,6 +12458,7 @@ impl RotationalElements for Steins {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Braille;
 impl Origin for Braille {
     fn id(&self) -> NaifId {
@@ -12288,6 +12474,7 @@ impl Display for Braille {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct WilsonHarrington;
 impl Origin for WilsonHarrington {
     fn id(&self) -> NaifId {
@@ -12303,6 +12490,7 @@ impl Display for WilsonHarrington {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Toutatis;
 impl Origin for Toutatis {
     fn id(&self) -> NaifId {
@@ -12323,6 +12511,7 @@ impl TriaxialEllipsoid for Toutatis {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Itokawa;
 impl Origin for Itokawa {
     fn id(&self) -> NaifId {
@@ -12386,6 +12575,7 @@ impl RotationalElements for Itokawa {
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Bennu;
 impl Origin for Bennu {
     fn id(&self) -> NaifId {

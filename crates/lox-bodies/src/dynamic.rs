@@ -20,6 +20,7 @@ pub struct UnknownOriginId(i32);
 #[derive(
     Debug, Copy, Clone, Default, Eq, PartialEq, Hash, FromPrimitive, ToPrimitive, PartialOrd, Ord,
 )]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum DynOrigin {
     Sun = 10,
 

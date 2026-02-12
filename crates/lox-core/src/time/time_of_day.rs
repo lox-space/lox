@@ -109,6 +109,7 @@ pub trait CivilTime {
 
 /// A human-readable time representation with support for representing leap seconds.
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TimeOfDay {
     hour: u8,
     minute: u8,
