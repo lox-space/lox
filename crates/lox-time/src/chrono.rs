@@ -3,7 +3,9 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use chrono::{DateTime, Utc};
-use lox_core::time::{chrono::ChronoError, deltas::ToDelta};
+use lox_core::time::deltas::ToDelta;
+
+pub use lox_core::time::chrono::ChronoError;
 
 use crate::{Time, time_scales::Tai, utc::UtcError};
 
