@@ -32,6 +32,8 @@ const J2_EARTH: f64 = 0.001_082_626_174;
 pub enum SsoError {
     #[error("either altitude, semi-major axis, or inclination need to be provided")]
     InvalidParameters,
+    #[error("semi-major axis is out-of-range: {0}")]
+    SemiMajorAxisOutOfRange(Distance),
     #[error("invalid local time of ascending/descending node: {0}")]
     InvalidLtan(String),
     #[error("offset provider error: {0}")]
@@ -66,7 +68,10 @@ impl Default for LocalTimeOfNode {
     }
 }
 
-fn inclination_sso(semi_major_axis: Distance, eccentricity: Eccentricity) -> Inclination {
+fn inclination_sso(
+    semi_major_axis: Distance,
+    eccentricity: Eccentricity,
+) -> Result<Inclination, SsoError> {
     let r_eq = Earth.equatorial_radius().km().as_f64();
     let mu = GravitationalParameter::km3_per_s2(Earth.gravitational_parameter()).as_f64();
     let num = -semi_major_axis.as_f64().powf(7.0 / 2.0)
@@ -74,7 +79,11 @@ fn inclination_sso(semi_major_axis: Distance, eccentricity: Eccentricity) -> Inc
         * OMEGA_SUN_SYNC
         * (1.0 - eccentricity.as_f64().powi(2)).powi(2);
     let den = 3.0 * r_eq.powi(2) * J2_EARTH * mu.sqrt();
-    Inclination::try_new(Angle::from_acos(num / den)).expect("SSO inclination shoud be valid")
+    let inc = Angle::from_acos(num / den);
+    if !inc.as_f64().is_finite() {
+        return Err(SsoError::SemiMajorAxisOutOfRange(semi_major_axis));
+    }
+    Ok(Inclination::try_new(Angle::from_acos(num / den))?)
 }
 
 fn semi_major_axis_sso(inclination: Inclination, eccentricity: Eccentricity) -> Distance {
@@ -150,12 +159,12 @@ impl SemiMajorAxisOrInclination {
         }
     }
 
-    fn inclination(&self, eccentricity: Eccentricity) -> Inclination {
+    fn inclination(&self, eccentricity: Eccentricity) -> Result<Inclination, SsoError> {
         match self {
             SemiMajorAxisOrInclination::SemiMajorAxis(semi_major_axis) => {
                 inclination_sso(*semi_major_axis, eccentricity)
             }
-            SemiMajorAxisOrInclination::Inclination(inclination) => *inclination,
+            SemiMajorAxisOrInclination::Inclination(inclination) => Ok(*inclination),
         }
     }
 }
@@ -173,7 +182,7 @@ where
     P: TryOffset<T, Ut1> + TryOffset<T, Tdb>,
 {
     let semi_major_axis = semi_major_axis_or_inclination.semi_major_axis(eccentricity);
-    let inclination = semi_major_axis_or_inclination.inclination(eccentricity);
+    let inclination = semi_major_axis_or_inclination.inclination(eccentricity)?;
     let longitude_of_ascending_node =
         LongitudeOfAscendingNode::try_new(longitude_of_ascending_node_sso(time, ltan, provider)?)
             .expect("SSO RAAN should be valid");
@@ -383,11 +392,17 @@ mod tests {
     fn test_sso_inclination() {
         let exp = Inclination::try_new(98.627.deg()).unwrap();
 
-        let act = inclination_sso(7178.1363.km(), Eccentricity::default());
+        let act = inclination_sso(7178.1363.km(), Eccentricity::default()).unwrap();
         assert_approx_eq!(exp, act, rtol <= 1e-5);
 
-        let act = inclination_sso(7179.821.km(), Eccentricity::try_new(0.02).unwrap());
+        let act = inclination_sso(7179.821.km(), Eccentricity::try_new(0.02).unwrap()).unwrap();
         assert_approx_eq!(exp, act, rtol <= 1e-5);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_sso_invalid_sma() {
+        inclination_sso(36000.0.km(), Eccentricity::default()).unwrap();
     }
 
     #[test]
