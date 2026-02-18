@@ -12,6 +12,7 @@ on:
 
 env:
   UV_PROJECT: crates/lox-space
+  VIRTUAL_ENV: crates/lox-space/.venv
 
 jobs:
   codspeed:
@@ -33,9 +34,9 @@ jobs:
       - name: Build Python wrapper
         uses: PyO3/maturin-action@v1
         with:
-          working-directory: ${{ env.UV_PROJECT }}
+          # working-directory: ${{ env.UV_PROJECT }}
           command: develop
-          args: --release --uv
+          args: --release --uv --manifest-path crates/lox-space/Cargo.toml
       - uses: CodSpeedHQ/action@v4
         with:
           mode: instrumentation
