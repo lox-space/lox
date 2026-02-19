@@ -33,9 +33,11 @@ jobs:
       - name: Build Python wrapper
         uses: PyO3/maturin-action@v1
         with:
-          working-directory: ${{ env.UV_PROJECT }}
+          working-directory: crates/lox-space
           command: develop
           args: --release --uv
+        env:
+          UV_PROJECT: .
       - uses: CodSpeedHQ/action@v4
         with:
           mode: instrumentation
