@@ -13,12 +13,8 @@ use glam::DVec3;
 use lox_bodies::{
     J2, MeanRadius, PointMass, TryJ2, TryMeanRadius, TryPointMass, UndefinedOriginPropertyError,
 };
-use lox_core::{
-    coords::{Cartesian, CartesianTrajectory, TimeStampedCartesian},
-    elements::GravitationalParameter,
-};
+use lox_core::coords::{Cartesian, CartesianTrajectory, TimeStampedCartesian};
 use lox_time::deltas::TimeDelta;
-use lox_units::DistanceUnits;
 
 pub struct J2Propagator<O: TryJ2 + TryPointMass + TryMeanRadius>(O);
 
@@ -63,7 +59,7 @@ where
     }
 
     fn gravitational_parameter(&self) -> f64 {
-        GravitationalParameter::km3_per_s2(self.0.try_gravitational_parameter().unwrap()).as_f64()
+        self.0.try_gravitational_parameter().unwrap().as_f64()
     }
 
     fn j2(&self) -> f64 {
@@ -71,7 +67,7 @@ where
     }
 
     fn mean_radius(&self) -> f64 {
-        self.0.try_mean_radius().unwrap().km().as_f64()
+        self.0.try_mean_radius().unwrap().as_f64()
     }
 }
 

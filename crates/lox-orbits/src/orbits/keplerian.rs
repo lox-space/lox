@@ -32,12 +32,7 @@ where
     where
         R: QuasiInertial,
     {
-        Orbit {
-            state: keplerian,
-            time,
-            origin,
-            frame,
-        }
+        Orbit::from_state(keplerian, time, origin, frame)
     }
 
     pub fn try_from_keplerian(
@@ -50,36 +45,31 @@ where
         R: TryQuasiInertial,
     {
         frame.try_quasi_inertial()?;
-        Ok(Orbit {
-            state: keplerian,
-            time,
-            origin,
-            frame,
-        })
+        Ok(Orbit::from_state(keplerian, time, origin, frame))
     }
 
     pub fn semi_major_axis(&self) -> Distance {
-        self.state.semi_major_axis()
+        self.state().semi_major_axis()
     }
 
     pub fn eccentricity(&self) -> Eccentricity {
-        self.state.eccentricity()
+        self.state().eccentricity()
     }
 
     pub fn inclination(&self) -> Inclination {
-        self.state.inclination()
+        self.state().inclination()
     }
 
     pub fn longitude_of_ascending_node(&self) -> LongitudeOfAscendingNode {
-        self.state.longitude_of_ascending_node()
+        self.state().longitude_of_ascending_node()
     }
 
     pub fn argument_of_periapsis(&self) -> ArgumentOfPeriapsis {
-        self.state.argument_of_periapsis()
+        self.state().argument_of_periapsis()
     }
 
     pub fn true_anomaly(&self) -> TrueAnomaly {
-        self.state.true_anomaly()
+        self.state().true_anomaly()
     }
 
     pub fn to_cartesian(&self) -> CartesianOrbit<T, O, R>
@@ -88,12 +78,12 @@ where
         O: Copy + PointMass,
         R: Copy,
     {
-        Orbit {
-            state: self.state.to_cartesian(self.gravitational_parameter()),
-            time: self.time,
-            origin: self.origin,
-            frame: self.frame,
-        }
+        Orbit::from_state(
+            self.state().to_cartesian(self.gravitational_parameter()),
+            self.time(),
+            self.origin(),
+            self.reference_frame(),
+        )
     }
 
     pub fn try_to_cartesian(&self) -> Result<CartesianOrbit<T, O, R>, UndefinedOriginPropertyError>
@@ -102,19 +92,20 @@ where
         O: Copy + TryPointMass,
         R: Copy,
     {
-        Ok(Orbit {
-            state: self.state.to_cartesian(self.try_gravitational_parameter()?),
-            time: self.time,
-            origin: self.origin,
-            frame: self.frame,
-        })
+        Ok(Orbit::from_state(
+            self.state()
+                .to_cartesian(self.try_gravitational_parameter()?),
+            self.time(),
+            self.origin(),
+            self.reference_frame(),
+        ))
     }
 
     pub fn orbital_period(&self) -> Option<TimeDelta>
     where
         O: TryPointMass,
     {
-        self.state
+        self.state()
             .orbital_period(self.try_gravitational_parameter().ok()?)
     }
 
@@ -128,9 +119,8 @@ where
         let mean_motion = TAU / period.to_seconds().to_f64();
         let mean_anomaly_at_epoch = self.true_anomaly().to_mean(self.eccentricity()).ok()?;
 
-        let state_iter = self
-            .state
-            .iter_trace(self.try_gravitational_parameter().ok()?, n);
+        let state = self.state();
+        let state_iter = state.iter_trace(self.try_gravitational_parameter().ok()?, n);
 
         let data: CartesianTrajectory = zip(Linspace::new(-PI, PI, n), state_iter)
             .map(|(ecc, state)| {
@@ -143,11 +133,11 @@ where
             })
             .collect();
 
-        Some(Trajectory {
-            epoch: self.time,
-            origin: self.origin,
-            frame: self.frame,
+        Some(Trajectory::from_parts(
+            self.time(),
+            self.origin(),
+            self.reference_frame(),
             data,
-        })
+        ))
     }
 }

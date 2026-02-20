@@ -7,11 +7,7 @@
 pub use glam::DVec3;
 
 pub mod analysis;
-pub mod anomalies;
-pub mod elements;
 pub mod events;
 pub mod ground;
 pub mod orbits;
 pub mod propagators;
-pub mod states;
-pub mod trajectories;

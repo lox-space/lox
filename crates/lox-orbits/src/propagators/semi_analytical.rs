@@ -2,15 +2,15 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+use lox_core::coords::Cartesian;
 use lox_time::Time;
 use lox_time::time_scales::{DynTimeScale, TimeScale};
 use thiserror::Error;
 
 use lox_bodies::{DynOrigin, Origin, PointMass, TryPointMass};
 
+use crate::orbits::{CartesianOrbit, DynCartesianOrbit, TrajectorError};
 use crate::propagators::{Propagator, stumpff};
-use crate::states::{DynState, State};
-use crate::trajectories::TrajectoryError;
 use lox_frames::{DynFrame, Icrf, ReferenceFrame};
 
 #[derive(Debug, Error, PartialEq)]
@@ -18,13 +18,12 @@ pub enum ValladoError {
     #[error("did not converge")]
     NotConverged,
     #[error(transparent)]
-    TrajectoryError(#[from] TrajectoryError),
+    TrajectoryError(#[from] TrajectorError),
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Vallado<T: TimeScale, O: Origin, R: ReferenceFrame> {
-    initial_state: State<T, O, R>,
+    initial_state: CartesianOrbit<T, O, R>,
     max_iter: i32,
 }
 
@@ -33,7 +32,7 @@ pub type DynVallado = Vallado<DynTimeScale, DynOrigin, DynFrame>;
 impl<T, O, R> Vallado<T, O, R>
 where
     T: TimeScale,
-    O: TryPointMass + Clone,
+    O: TryPointMass + Copy,
     R: ReferenceFrame,
 {
     fn gravitational_parameter(&self) -> f64 {
@@ -41,6 +40,7 @@ where
             .origin()
             .try_gravitational_parameter()
             .expect("gravitational parameter should be available")
+            .as_f64()
     }
 
     pub fn with_max_iter(&mut self, max_iter: i32) -> &mut Self {
@@ -48,16 +48,13 @@ where
         self
     }
 
-    pub fn origin(&self) -> O
-    where
-        O: Clone,
-    {
+    pub fn origin(&self) -> O {
         self.initial_state.origin()
     }
 
     pub fn reference_frame(&self) -> R
     where
-        R: Clone,
+        R: Copy,
     {
         self.initial_state.reference_frame()
     }
@@ -66,9 +63,9 @@ where
 impl<T, O> Vallado<T, O, Icrf>
 where
     T: TimeScale,
-    O: PointMass,
+    O: PointMass + Copy,
 {
-    pub fn new(initial_state: State<T, O, Icrf>) -> Self {
+    pub fn new(initial_state: CartesianOrbit<T, O, Icrf>) -> Self {
         Self {
             initial_state,
             max_iter: 300,
@@ -78,7 +75,7 @@ where
 
 impl DynVallado {
     // TODO: Use better error type
-    pub fn with_dynamic(initial_state: DynState) -> Result<Self, &'static str> {
+    pub fn with_dynamic(initial_state: DynCartesianOrbit) -> Result<Self, &'static str> {
         if initial_state
             .origin()
             .try_gravitational_parameter()
@@ -96,18 +93,18 @@ impl DynVallado {
 
 impl<T, O, R> Propagator<T, O, R> for Vallado<T, O, R>
 where
-    T: TimeScale + Clone,
-    O: TryPointMass + Clone,
-    R: ReferenceFrame + Clone,
+    T: TimeScale + Copy,
+    O: TryPointMass + Copy,
+    R: ReferenceFrame + Copy,
 {
     type Error = ValladoError;
 
-    fn propagate(&self, time: Time<T>) -> Result<State<T, O, R>, Self::Error> {
+    fn propagate(&self, time: Time<T>) -> Result<CartesianOrbit<T, O, R>, Self::Error> {
         let frame = self.reference_frame();
         let origin = self.origin();
         let mu = self.gravitational_parameter();
         let t0 = self.initial_state.time();
-        let dt = (time.clone() - t0).to_seconds().to_f64();
+        let dt = (time - t0).to_seconds().to_f64();
         let sqrt_mu = mu.sqrt();
         let p0 = self.initial_state.position();
         let v0 = self.initial_state.velocity();
@@ -154,7 +151,12 @@ where
                 let p = f * p0 + g * v0;
                 let v = fdot * p0 + gdot * v0;
 
-                return Ok(State::new(time, p, v, origin, frame));
+                return Ok(CartesianOrbit::new(
+                    Cartesian::from_vecs(p, v),
+                    time,
+                    origin,
+                    frame,
+                ));
             } else {
                 count += 1
             }
@@ -166,13 +168,13 @@ where
 #[cfg(test)]
 mod tests {
     use lox_bodies::Earth;
+    use lox_core::elements::Keplerian as CoreKeplerian;
+    use lox_core::units::{AngleUnits, DistanceUnits};
     use lox_test_utils::assert_approx_eq;
     use lox_time::deltas::TimeDelta;
     use lox_time::time_scales::Tdb;
     use lox_time::utc;
     use lox_time::utc::Utc;
-
-    use crate::elements::Keplerian;
 
     use super::*;
 
@@ -187,18 +189,19 @@ mod tests {
         let periapsis_arg = 3.10686;
         let true_anomaly = 0.44369564302687126;
 
-        let k0 = Keplerian::new(
-            time,
-            Earth,
-            semi_major,
-            eccentricity,
-            inclination,
-            ascending_node,
-            periapsis_arg,
-            true_anomaly,
-        );
-        let s0 = k0.to_cartesian();
-        let t1 = time + k0.orbital_period();
+        let k0 = CoreKeplerian::builder()
+            .with_semi_major_axis(semi_major.km(), eccentricity)
+            .with_inclination(inclination.rad())
+            .with_longitude_of_ascending_node(ascending_node.rad())
+            .with_argument_of_periapsis(periapsis_arg.rad())
+            .with_true_anomaly(true_anomaly.rad())
+            .build()
+            .unwrap();
+
+        let mu = Earth.gravitational_parameter();
+        let s0 = CartesianOrbit::new(k0.to_cartesian(mu), time, Earth, Icrf);
+        let period = k0.orbital_period(mu).unwrap();
+        let t1 = time + period;
 
         let propagator = Vallado::new(s0);
         let s1 = propagator
@@ -206,16 +209,24 @@ mod tests {
             .expect("propagator should converge");
 
         let k1 = s1.to_keplerian();
-        assert_approx_eq!(k1.semi_major_axis(), semi_major, rtol <= 1e-8);
-        assert_approx_eq!(k1.eccentricity(), eccentricity, rtol <= 1e-8);
-        assert_approx_eq!(k1.inclination(), inclination, rtol <= 1e-8);
         assert_approx_eq!(
-            k1.longitude_of_ascending_node(),
+            k1.semi_major_axis().as_f64(),
+            semi_major.km().as_f64(),
+            rtol <= 1e-8
+        );
+        assert_approx_eq!(k1.eccentricity().as_f64(), eccentricity, rtol <= 1e-8);
+        assert_approx_eq!(k1.inclination().as_f64(), inclination, rtol <= 1e-8);
+        assert_approx_eq!(
+            k1.longitude_of_ascending_node().as_f64(),
             ascending_node,
             rtol <= 1e-8
         );
-        assert_approx_eq!(k1.argument_of_periapsis(), periapsis_arg, rtol <= 1e-8);
-        assert_approx_eq!(k1.true_anomaly(), true_anomaly, rtol <= 1e-8);
+        assert_approx_eq!(
+            k1.argument_of_periapsis().as_f64(),
+            periapsis_arg,
+            rtol <= 1e-8
+        );
+        assert_approx_eq!(k1.true_anomaly().as_f64(), true_anomaly, rtol <= 1e-8);
         assert_approx_eq!(k1.time(), t1);
     }
 
@@ -230,33 +241,41 @@ mod tests {
         let periapsis_arg = 3.10686;
         let true_anomaly = 0.44369564302687126;
 
-        let k0 = Keplerian::new(
-            time,
-            Earth,
-            semi_major,
-            eccentricity,
-            inclination,
-            ascending_node,
-            periapsis_arg,
-            true_anomaly,
-        );
-        let s0 = k0.to_cartesian();
-        let period = k0.orbital_period();
+        let k0 = CoreKeplerian::builder()
+            .with_semi_major_axis(semi_major.km(), eccentricity)
+            .with_inclination(inclination.rad())
+            .with_longitude_of_ascending_node(ascending_node.rad())
+            .with_argument_of_periapsis(periapsis_arg.rad())
+            .with_true_anomaly(true_anomaly.rad())
+            .build()
+            .unwrap();
+
+        let mu = Earth.gravitational_parameter();
+        let s0 = CartesianOrbit::new(k0.to_cartesian(mu), time, Earth, Icrf);
+        let period = k0.orbital_period(mu).unwrap();
         let t_end = period.to_seconds().to_f64().ceil() as i64;
         let steps = TimeDelta::range(0..=t_end).map(|dt| time + dt);
         let trajectory = Vallado::new(s0).propagate_all(steps).unwrap();
         let s1 = trajectory.interpolate(period);
         let k1 = s1.to_keplerian();
 
-        assert_approx_eq!(k1.semi_major_axis(), semi_major, rtol <= 1e-8);
-        assert_approx_eq!(k1.eccentricity(), eccentricity, rtol <= 1e-8);
-        assert_approx_eq!(k1.inclination(), inclination, rtol <= 1e-8);
         assert_approx_eq!(
-            k1.longitude_of_ascending_node(),
+            k1.semi_major_axis().as_f64(),
+            semi_major.km().as_f64(),
+            rtol <= 1e-8
+        );
+        assert_approx_eq!(k1.eccentricity().as_f64(), eccentricity, rtol <= 1e-8);
+        assert_approx_eq!(k1.inclination().as_f64(), inclination, rtol <= 1e-8);
+        assert_approx_eq!(
+            k1.longitude_of_ascending_node().as_f64(),
             ascending_node,
             rtol <= 1e-8
         );
-        assert_approx_eq!(k1.argument_of_periapsis(), periapsis_arg, rtol <= 1e-8);
-        assert_approx_eq!(k1.true_anomaly(), true_anomaly, rtol <= 1e-8);
+        assert_approx_eq!(
+            k1.argument_of_periapsis().as_f64(),
+            periapsis_arg,
+            rtol <= 1e-8
+        );
+        assert_approx_eq!(k1.true_anomaly().as_f64(), true_anomaly, rtol <= 1e-8);
     }
 }

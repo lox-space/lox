@@ -8,6 +8,7 @@ use lox_bodies::{
     DynOrigin, Origin, RotationalElements, Spheroid, TryMeanRadius, TrySpheroid,
     UndefinedOriginPropertyError,
 };
+use lox_core::coords::Cartesian;
 use lox_core::types::units::Radians;
 use lox_ephem::{Ephemeris, path_from_ids};
 use lox_frames::providers::DefaultRotationProvider;
@@ -26,8 +27,7 @@ use thiserror::Error;
 
 use crate::events::{Window, find_windows, intersect_windows};
 use crate::ground::{DynGroundLocation, DynGroundPropagator, GroundLocation, Observables};
-use crate::states::{DynState, State};
-use crate::trajectories::{DynTrajectory, Trajectory};
+use crate::orbits::{DynCartesianOrbit, DynTrajectory, Trajectory};
 use lox_frames::{DynFrame, Iau, Icrf};
 
 // Salvatore Alfano, David Negron, Jr., and Jennifer L. Moore
@@ -59,9 +59,15 @@ pub fn line_of_sight_spheroid(
 
 pub trait LineOfSight: TrySpheroid + TryMeanRadius {
     fn line_of_sight(&self, r1: DVec3, r2: DVec3) -> Result<f64, UndefinedOriginPropertyError> {
-        let mean_radius = self.try_mean_radius()?;
+        let mean_radius = self.try_mean_radius()?.to_kilometers();
         if let (Ok(r_eq), Ok(r_p)) = (self.try_equatorial_radius(), self.try_polar_radius()) {
-            return Ok(line_of_sight_spheroid(mean_radius, r_eq, r_p, r1, r2));
+            return Ok(line_of_sight_spheroid(
+                mean_radius,
+                r_eq.to_kilometers(),
+                r_p.to_kilometers(),
+                r1,
+                r2,
+            ));
         }
         Ok(line_of_sight(mean_radius, r1, r2))
     }
@@ -159,7 +165,12 @@ impl DynPass {
                 .try_rotation(DynFrame::Icrf, body_fixed, current_time)
                 .unwrap();
             let (r1, v1) = rot.rotate_state(state.position(), state.velocity());
-            let state_bf = DynState::new(state.time(), r1, v1, state.origin(), body_fixed);
+            let state_bf = DynCartesianOrbit::new(
+                Cartesian::from_vecs(r1, v1),
+                state.time(),
+                state.origin(),
+                body_fixed,
+            );
 
             let obs = gs.observables_dyn(state_bf);
 
@@ -309,7 +320,12 @@ pub fn elevation_dyn(
         .try_rotation(DynFrame::Icrf, body_fixed, time)
         .unwrap();
     let (r1, v1) = rot.rotate_state(sc.position(), sc.velocity());
-    let sc = State::new(sc.time(), r1, v1, sc.origin(), body_fixed);
+    let sc = DynCartesianOrbit::new(
+        Cartesian::from_vecs(r1, v1),
+        sc.time(),
+        sc.origin(),
+        body_fixed,
+    );
     let obs = gs.observables_dyn(sc);
     obs.elevation() - mask.min_elevation(obs.azimuth())
 }
@@ -514,7 +530,7 @@ mod tests {
         let r1 = DVec3::new(0.0, -4464.696, -5102.509);
         let r2 = DVec3::new(0.0, 5740.323, 3189.068);
         let r_sun = DVec3::new(122233179.0, -76150708.0, 33016374.0);
-        let r = Earth.equatorial_radius();
+        let r = Earth.equatorial_radius().to_kilometers();
 
         let los = line_of_sight(r, r1, r2);
         let los_sun = line_of_sight(r, r1, r_sun);
@@ -527,7 +543,7 @@ mod tests {
     fn test_line_of_sight_identical() {
         let r1 = DVec3::new(0.0, -4464.696, -5102.509);
         let r2 = DVec3::new(0.0, -4464.696, -5102.509);
-        let r = Earth.equatorial_radius();
+        let r = Earth.equatorial_radius().to_kilometers();
 
         let los = line_of_sight(r, r1, r2);
 
@@ -654,7 +670,7 @@ mod tests {
     }
 
     fn spacecraft_trajectory_dyn() -> DynTrajectory {
-        Trajectory::from_csv_dyn(
+        DynTrajectory::from_csv_dyn(
             &read_data_file("trajectory_lunar.csv"),
             DynOrigin::Earth,
             DynFrame::Icrf,

@@ -21,6 +21,8 @@ use crate::TryRotationalElements;
 use crate::TrySpheroid;
 use crate::TryTriaxialEllipsoid;
 use crate::UndefinedOriginPropertyError;
+use lox_core::elements::GravitationalParameter;
+use lox_core::units::Distance;
 use std::fmt::Display;
 use std::fmt::Formatter;
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -40,13 +42,17 @@ impl Display for Sun {
     }
 }
 impl PointMass for Sun {
-    fn gravitational_parameter(&self) -> f64 {
-        132712440041.27942f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(132712440041.27942f64)
     }
 }
 impl TriaxialEllipsoid for Sun {
     fn radii(&self) -> Radii {
-        (695700f64, 695700f64, 695700f64)
+        (
+            Distance::kilometers(695700f64),
+            Distance::kilometers(695700f64),
+            Distance::kilometers(695700f64),
+        )
     }
 }
 impl Spheroid for Sun {}
@@ -110,18 +116,22 @@ impl Display for Mercury {
     }
 }
 impl PointMass for Mercury {
-    fn gravitational_parameter(&self) -> f64 {
-        22031.868551400003f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(22031.868551400003f64)
     }
 }
 impl MeanRadius for Mercury {
-    fn mean_radius(&self) -> f64 {
-        2439.4f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(2439.4f64)
     }
 }
 impl TriaxialEllipsoid for Mercury {
     fn radii(&self) -> Radii {
-        (2440.53f64, 2440.53f64, 2438.26f64)
+        (
+            Distance::kilometers(2440.53f64),
+            Distance::kilometers(2440.53f64),
+            Distance::kilometers(2438.26f64),
+        )
     }
 }
 impl Spheroid for Mercury {}
@@ -227,18 +237,22 @@ impl Display for Venus {
     }
 }
 impl PointMass for Venus {
-    fn gravitational_parameter(&self) -> f64 {
-        324858.592f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(324858.592f64)
     }
 }
 impl MeanRadius for Venus {
-    fn mean_radius(&self) -> f64 {
-        6051.8f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(6051.8f64)
     }
 }
 impl TriaxialEllipsoid for Venus {
     fn radii(&self) -> Radii {
-        (6051.8f64, 6051.8f64, 6051.8f64)
+        (
+            Distance::kilometers(6051.8f64),
+            Distance::kilometers(6051.8f64),
+            Distance::kilometers(6051.8f64),
+        )
     }
 }
 impl Spheroid for Venus {}
@@ -302,18 +316,22 @@ impl Display for Earth {
     }
 }
 impl PointMass for Earth {
-    fn gravitational_parameter(&self) -> f64 {
-        398600.43550702266f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(398600.43550702266f64)
     }
 }
 impl MeanRadius for Earth {
-    fn mean_radius(&self) -> f64 {
-        6371.0084f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(6371.0084f64)
     }
 }
 impl TriaxialEllipsoid for Earth {
     fn radii(&self) -> Radii {
-        (6378.1366f64, 6378.1366f64, 6356.7519f64)
+        (
+            Distance::kilometers(6378.1366f64),
+            Distance::kilometers(6378.1366f64),
+            Distance::kilometers(6356.7519f64),
+        )
     }
 }
 impl Spheroid for Earth {}
@@ -377,18 +395,22 @@ impl Display for Mars {
     }
 }
 impl PointMass for Mars {
-    fn gravitational_parameter(&self) -> f64 {
-        42828.37362069909f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(42828.37362069909f64)
     }
 }
 impl MeanRadius for Mars {
-    fn mean_radius(&self) -> f64 {
-        3389.5f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(3389.5f64)
     }
 }
 impl TriaxialEllipsoid for Mars {
     fn radii(&self) -> Radii {
-        (3396.19f64, 3396.19f64, 3376.2f64)
+        (
+            Distance::kilometers(3396.19f64),
+            Distance::kilometers(3396.19f64),
+            Distance::kilometers(3376.2f64),
+        )
     }
 }
 impl Spheroid for Mars {}
@@ -644,18 +666,22 @@ impl Display for Jupiter {
     }
 }
 impl PointMass for Jupiter {
-    fn gravitational_parameter(&self) -> f64 {
-        126686531.9003704f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(126686531.9003704f64)
     }
 }
 impl MeanRadius for Jupiter {
-    fn mean_radius(&self) -> f64 {
-        69911f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(69911f64)
     }
 }
 impl TriaxialEllipsoid for Jupiter {
     fn radii(&self) -> Radii {
-        (71492f64, 71492f64, 66854f64)
+        (
+            Distance::kilometers(71492f64),
+            Distance::kilometers(71492f64),
+            Distance::kilometers(66854f64),
+        )
     }
 }
 impl Spheroid for Jupiter {}
@@ -849,18 +875,22 @@ impl Display for Saturn {
     }
 }
 impl PointMass for Saturn {
-    fn gravitational_parameter(&self) -> f64 {
-        37931206.23436167f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(37931206.23436167f64)
     }
 }
 impl MeanRadius for Saturn {
-    fn mean_radius(&self) -> f64 {
-        58232f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(58232f64)
     }
 }
 impl TriaxialEllipsoid for Saturn {
     fn radii(&self) -> Radii {
-        (60268f64, 60268f64, 54364f64)
+        (
+            Distance::kilometers(60268f64),
+            Distance::kilometers(60268f64),
+            Distance::kilometers(54364f64),
+        )
     }
 }
 impl Spheroid for Saturn {}
@@ -924,18 +954,22 @@ impl Display for Uranus {
     }
 }
 impl PointMass for Uranus {
-    fn gravitational_parameter(&self) -> f64 {
-        5793951.256527211f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(5793951.256527211f64)
     }
 }
 impl MeanRadius for Uranus {
-    fn mean_radius(&self) -> f64 {
-        25362f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(25362f64)
     }
 }
 impl TriaxialEllipsoid for Uranus {
     fn radii(&self) -> Radii {
-        (25559f64, 25559f64, 24973f64)
+        (
+            Distance::kilometers(25559f64),
+            Distance::kilometers(25559f64),
+            Distance::kilometers(24973f64),
+        )
     }
 }
 impl Spheroid for Uranus {}
@@ -999,18 +1033,22 @@ impl Display for Neptune {
     }
 }
 impl PointMass for Neptune {
-    fn gravitational_parameter(&self) -> f64 {
-        6835103.145462294f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(6835103.145462294f64)
     }
 }
 impl MeanRadius for Neptune {
-    fn mean_radius(&self) -> f64 {
-        24622f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(24622f64)
     }
 }
 impl TriaxialEllipsoid for Neptune {
     fn radii(&self) -> Radii {
-        (24764f64, 24764f64, 24341f64)
+        (
+            Distance::kilometers(24764f64),
+            Distance::kilometers(24764f64),
+            Distance::kilometers(24341f64),
+        )
     }
 }
 impl Spheroid for Neptune {}
@@ -1155,18 +1193,22 @@ impl Display for Pluto {
     }
 }
 impl PointMass for Pluto {
-    fn gravitational_parameter(&self) -> f64 {
-        869.6138177608748f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(869.6138177608748f64)
     }
 }
 impl MeanRadius for Pluto {
-    fn mean_radius(&self) -> f64 {
-        1188.3f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(1188.3f64)
     }
 }
 impl TriaxialEllipsoid for Pluto {
     fn radii(&self) -> Radii {
-        (1188.3f64, 1188.3f64, 1188.3f64)
+        (
+            Distance::kilometers(1188.3f64),
+            Distance::kilometers(1188.3f64),
+            Distance::kilometers(1188.3f64),
+        )
     }
 }
 impl Spheroid for Pluto {}
@@ -1230,8 +1272,8 @@ impl Display for SolarSystemBarycenter {
     }
 }
 impl PointMass for SolarSystemBarycenter {
-    fn gravitational_parameter(&self) -> f64 {
-        132712440041.27942f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(132712440041.27942f64)
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -1251,8 +1293,8 @@ impl Display for MercuryBarycenter {
     }
 }
 impl PointMass for MercuryBarycenter {
-    fn gravitational_parameter(&self) -> f64 {
-        22031.868551400003f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(22031.868551400003f64)
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -1272,8 +1314,8 @@ impl Display for VenusBarycenter {
     }
 }
 impl PointMass for VenusBarycenter {
-    fn gravitational_parameter(&self) -> f64 {
-        324858.592f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(324858.592f64)
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -1293,8 +1335,8 @@ impl Display for EarthBarycenter {
     }
 }
 impl PointMass for EarthBarycenter {
-    fn gravitational_parameter(&self) -> f64 {
-        403503.2356254802f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(403503.2356254802f64)
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -1314,8 +1356,8 @@ impl Display for MarsBarycenter {
     }
 }
 impl PointMass for MarsBarycenter {
-    fn gravitational_parameter(&self) -> f64 {
-        42828.3758157561f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(42828.3758157561f64)
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -1335,8 +1377,8 @@ impl Display for JupiterBarycenter {
     }
 }
 impl PointMass for JupiterBarycenter {
-    fn gravitational_parameter(&self) -> f64 {
-        126712764.09999998f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(126712764.09999998f64)
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -1356,8 +1398,8 @@ impl Display for SaturnBarycenter {
     }
 }
 impl PointMass for SaturnBarycenter {
-    fn gravitational_parameter(&self) -> f64 {
-        37940584.8418f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(37940584.8418f64)
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -1377,8 +1419,8 @@ impl Display for UranusBarycenter {
     }
 }
 impl PointMass for UranusBarycenter {
-    fn gravitational_parameter(&self) -> f64 {
-        5794556.3999999985f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(5794556.3999999985f64)
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -1398,8 +1440,8 @@ impl Display for NeptuneBarycenter {
     }
 }
 impl PointMass for NeptuneBarycenter {
-    fn gravitational_parameter(&self) -> f64 {
-        6836527.100580399f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(6836527.100580399f64)
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -1419,8 +1461,8 @@ impl Display for PlutoBarycenter {
     }
 }
 impl PointMass for PlutoBarycenter {
-    fn gravitational_parameter(&self) -> f64 {
-        975.5f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(975.5f64)
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -1440,18 +1482,22 @@ impl Display for Moon {
     }
 }
 impl PointMass for Moon {
-    fn gravitational_parameter(&self) -> f64 {
-        4902.80011845755f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(4902.80011845755f64)
     }
 }
 impl MeanRadius for Moon {
-    fn mean_radius(&self) -> f64 {
-        1737.4f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(1737.4f64)
     }
 }
 impl TriaxialEllipsoid for Moon {
     fn radii(&self) -> Radii {
-        (1737.4f64, 1737.4f64, 1737.4f64)
+        (
+            Distance::kilometers(1737.4f64),
+            Distance::kilometers(1737.4f64),
+            Distance::kilometers(1737.4f64),
+        )
     }
 }
 impl Spheroid for Moon {}
@@ -1641,18 +1687,22 @@ impl Display for Phobos {
     }
 }
 impl PointMass for Phobos {
-    fn gravitational_parameter(&self) -> f64 {
-        0.0007087546066894452f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(0.0007087546066894452f64)
     }
 }
 impl MeanRadius for Phobos {
-    fn mean_radius(&self) -> f64 {
-        11.08f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(11.08f64)
     }
 }
 impl TriaxialEllipsoid for Phobos {
     fn radii(&self) -> Radii {
-        (13f64, 11.4f64, 9.1f64)
+        (
+            Distance::kilometers(13f64),
+            Distance::kilometers(11.4f64),
+            Distance::kilometers(9.1f64),
+        )
     }
 }
 const RIGHT_ASCENSION_PHOBOS: RotationalElement<4usize> = RotationalElement {
@@ -1763,18 +1813,22 @@ impl Display for Deimos {
     }
 }
 impl PointMass for Deimos {
-    fn gravitational_parameter(&self) -> f64 {
-        0.00009615569648120313f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(0.00009615569648120313f64)
     }
 }
 impl MeanRadius for Deimos {
-    fn mean_radius(&self) -> f64 {
-        6.2f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(6.2f64)
     }
 }
 impl TriaxialEllipsoid for Deimos {
     fn radii(&self) -> Radii {
-        (7.8f64, 6f64, 5.1f64)
+        (
+            Distance::kilometers(7.8f64),
+            Distance::kilometers(6f64),
+            Distance::kilometers(5.1f64),
+        )
     }
 }
 const RIGHT_ASCENSION_DEIMOS: RotationalElement<10usize> = RotationalElement {
@@ -1936,18 +1990,22 @@ impl Display for Io {
     }
 }
 impl PointMass for Io {
-    fn gravitational_parameter(&self) -> f64 {
-        5959.915466180539f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(5959.915466180539f64)
     }
 }
 impl MeanRadius for Io {
-    fn mean_radius(&self) -> f64 {
-        1821.49f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(1821.49f64)
     }
 }
 impl TriaxialEllipsoid for Io {
     fn radii(&self) -> Radii {
-        (1829.4f64, 1819.4f64, 1815.7f64)
+        (
+            Distance::kilometers(1829.4f64),
+            Distance::kilometers(1819.4f64),
+            Distance::kilometers(1815.7f64),
+        )
     }
 }
 const RIGHT_ASCENSION_IO: RotationalElement<4usize> = RotationalElement {
@@ -2055,18 +2113,22 @@ impl Display for Europa {
     }
 }
 impl PointMass for Europa {
-    fn gravitational_parameter(&self) -> f64 {
-        3202.712099607295f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(3202.712099607295f64)
     }
 }
 impl MeanRadius for Europa {
-    fn mean_radius(&self) -> f64 {
-        1560.8f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(1560.8f64)
     }
 }
 impl TriaxialEllipsoid for Europa {
     fn radii(&self) -> Radii {
-        (1562.6f64, 1560.3f64, 1559.5f64)
+        (
+            Distance::kilometers(1562.6f64),
+            Distance::kilometers(1560.3f64),
+            Distance::kilometers(1559.5f64),
+        )
     }
 }
 const RIGHT_ASCENSION_EUROPA: RotationalElement<7usize> = RotationalElement {
@@ -2201,18 +2263,22 @@ impl Display for Ganymede {
     }
 }
 impl PointMass for Ganymede {
-    fn gravitational_parameter(&self) -> f64 {
-        9887.832752719638f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(9887.832752719638f64)
     }
 }
 impl MeanRadius for Ganymede {
-    fn mean_radius(&self) -> f64 {
-        2631.2f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(2631.2f64)
     }
 }
 impl TriaxialEllipsoid for Ganymede {
     fn radii(&self) -> Radii {
-        (2631.2f64, 2631.2f64, 2631.2f64)
+        (
+            Distance::kilometers(2631.2f64),
+            Distance::kilometers(2631.2f64),
+            Distance::kilometers(2631.2f64),
+        )
     }
 }
 impl Spheroid for Ganymede {}
@@ -2339,18 +2405,22 @@ impl Display for Callisto {
     }
 }
 impl PointMass for Callisto {
-    fn gravitational_parameter(&self) -> f64 {
-        7179.283402579837f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(7179.283402579837f64)
     }
 }
 impl MeanRadius for Callisto {
-    fn mean_radius(&self) -> f64 {
-        2410.3f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(2410.3f64)
     }
 }
 impl TriaxialEllipsoid for Callisto {
     fn radii(&self) -> Radii {
-        (2410.3f64, 2410.3f64, 2410.3f64)
+        (
+            Distance::kilometers(2410.3f64),
+            Distance::kilometers(2410.3f64),
+            Distance::kilometers(2410.3f64),
+        )
     }
 }
 impl Spheroid for Callisto {}
@@ -2495,18 +2565,22 @@ impl Display for Amalthea {
     }
 }
 impl PointMass for Amalthea {
-    fn gravitational_parameter(&self) -> f64 {
-        0.1645634534798259f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(0.1645634534798259f64)
     }
 }
 impl MeanRadius for Amalthea {
-    fn mean_radius(&self) -> f64 {
-        83.5f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(83.5f64)
     }
 }
 impl TriaxialEllipsoid for Amalthea {
     fn radii(&self) -> Radii {
-        (125f64, 73f64, 64f64)
+        (
+            Distance::kilometers(125f64),
+            Distance::kilometers(73f64),
+            Distance::kilometers(64f64),
+        )
     }
 }
 const RIGHT_ASCENSION_AMALTHEA: RotationalElement<10usize> = RotationalElement {
@@ -2668,18 +2742,22 @@ impl Display for Himalia {
     }
 }
 impl PointMass for Himalia {
-    fn gravitational_parameter(&self) -> f64 {
-        0.1515524299611265f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(0.1515524299611265f64)
     }
 }
 impl MeanRadius for Himalia {
-    fn mean_radius(&self) -> f64 {
-        85f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(85f64)
     }
 }
 impl TriaxialEllipsoid for Himalia {
     fn radii(&self) -> Radii {
-        (85f64, 85f64, 85f64)
+        (
+            Distance::kilometers(85f64),
+            Distance::kilometers(85f64),
+            Distance::kilometers(85f64),
+        )
     }
 }
 impl Spheroid for Himalia {}
@@ -2700,13 +2778,17 @@ impl Display for Elara {
     }
 }
 impl MeanRadius for Elara {
-    fn mean_radius(&self) -> f64 {
-        40f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(40f64)
     }
 }
 impl TriaxialEllipsoid for Elara {
     fn radii(&self) -> Radii {
-        (40f64, 40f64, 40f64)
+        (
+            Distance::kilometers(40f64),
+            Distance::kilometers(40f64),
+            Distance::kilometers(40f64),
+        )
     }
 }
 impl Spheroid for Elara {}
@@ -2727,13 +2809,17 @@ impl Display for Pasiphae {
     }
 }
 impl MeanRadius for Pasiphae {
-    fn mean_radius(&self) -> f64 {
-        18f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(18f64)
     }
 }
 impl TriaxialEllipsoid for Pasiphae {
     fn radii(&self) -> Radii {
-        (18f64, 18f64, 18f64)
+        (
+            Distance::kilometers(18f64),
+            Distance::kilometers(18f64),
+            Distance::kilometers(18f64),
+        )
     }
 }
 impl Spheroid for Pasiphae {}
@@ -2754,13 +2840,17 @@ impl Display for Sinope {
     }
 }
 impl MeanRadius for Sinope {
-    fn mean_radius(&self) -> f64 {
-        14f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(14f64)
     }
 }
 impl TriaxialEllipsoid for Sinope {
     fn radii(&self) -> Radii {
-        (14f64, 14f64, 14f64)
+        (
+            Distance::kilometers(14f64),
+            Distance::kilometers(14f64),
+            Distance::kilometers(14f64),
+        )
     }
 }
 impl Spheroid for Sinope {}
@@ -2781,13 +2871,17 @@ impl Display for Lysithea {
     }
 }
 impl MeanRadius for Lysithea {
-    fn mean_radius(&self) -> f64 {
-        12f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(12f64)
     }
 }
 impl TriaxialEllipsoid for Lysithea {
     fn radii(&self) -> Radii {
-        (12f64, 12f64, 12f64)
+        (
+            Distance::kilometers(12f64),
+            Distance::kilometers(12f64),
+            Distance::kilometers(12f64),
+        )
     }
 }
 impl Spheroid for Lysithea {}
@@ -2808,13 +2902,17 @@ impl Display for Carme {
     }
 }
 impl MeanRadius for Carme {
-    fn mean_radius(&self) -> f64 {
-        15f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(15f64)
     }
 }
 impl TriaxialEllipsoid for Carme {
     fn radii(&self) -> Radii {
-        (15f64, 15f64, 15f64)
+        (
+            Distance::kilometers(15f64),
+            Distance::kilometers(15f64),
+            Distance::kilometers(15f64),
+        )
     }
 }
 impl Spheroid for Carme {}
@@ -2835,13 +2933,17 @@ impl Display for Ananke {
     }
 }
 impl MeanRadius for Ananke {
-    fn mean_radius(&self) -> f64 {
-        10f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(10f64)
     }
 }
 impl TriaxialEllipsoid for Ananke {
     fn radii(&self) -> Radii {
-        (10f64, 10f64, 10f64)
+        (
+            Distance::kilometers(10f64),
+            Distance::kilometers(10f64),
+            Distance::kilometers(10f64),
+        )
     }
 }
 impl Spheroid for Ananke {}
@@ -2862,13 +2964,17 @@ impl Display for Leda {
     }
 }
 impl MeanRadius for Leda {
-    fn mean_radius(&self) -> f64 {
-        5f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(5f64)
     }
 }
 impl TriaxialEllipsoid for Leda {
     fn radii(&self) -> Radii {
-        (5f64, 5f64, 5f64)
+        (
+            Distance::kilometers(5f64),
+            Distance::kilometers(5f64),
+            Distance::kilometers(5f64),
+        )
     }
 }
 impl Spheroid for Leda {}
@@ -2889,18 +2995,22 @@ impl Display for Thebe {
     }
 }
 impl PointMass for Thebe {
-    fn gravitational_parameter(&self) -> f64 {
-        0.030148f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(0.030148f64)
     }
 }
 impl MeanRadius for Thebe {
-    fn mean_radius(&self) -> f64 {
-        49.3f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(49.3f64)
     }
 }
 impl TriaxialEllipsoid for Thebe {
     fn radii(&self) -> Radii {
-        (58f64, 49f64, 42f64)
+        (
+            Distance::kilometers(58f64),
+            Distance::kilometers(49f64),
+            Distance::kilometers(42f64),
+        )
     }
 }
 const RIGHT_ASCENSION_THEBE: RotationalElement<10usize> = RotationalElement {
@@ -3062,18 +3172,22 @@ impl Display for Adrastea {
     }
 }
 impl PointMass for Adrastea {
-    fn gravitational_parameter(&self) -> f64 {
-        0.000139f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(0.000139f64)
     }
 }
 impl MeanRadius for Adrastea {
-    fn mean_radius(&self) -> f64 {
-        8.2f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(8.2f64)
     }
 }
 impl TriaxialEllipsoid for Adrastea {
     fn radii(&self) -> Radii {
-        (10f64, 8f64, 7f64)
+        (
+            Distance::kilometers(10f64),
+            Distance::kilometers(8f64),
+            Distance::kilometers(7f64),
+        )
     }
 }
 const RIGHT_ASCENSION_ADRASTEA: RotationalElement<0usize> = RotationalElement {
@@ -3136,18 +3250,22 @@ impl Display for Metis {
     }
 }
 impl PointMass for Metis {
-    fn gravitational_parameter(&self) -> f64 {
-        0.002501f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(0.002501f64)
     }
 }
 impl MeanRadius for Metis {
-    fn mean_radius(&self) -> f64 {
-        21.5f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(21.5f64)
     }
 }
 impl TriaxialEllipsoid for Metis {
     fn radii(&self) -> Radii {
-        (30f64, 20f64, 17f64)
+        (
+            Distance::kilometers(30f64),
+            Distance::kilometers(20f64),
+            Distance::kilometers(17f64),
+        )
     }
 }
 const RIGHT_ASCENSION_METIS: RotationalElement<0usize> = RotationalElement {
@@ -3770,18 +3888,22 @@ impl Display for Mimas {
     }
 }
 impl PointMass for Mimas {
-    fn gravitational_parameter(&self) -> f64 {
-        2.503488768152587f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(2.503488768152587f64)
     }
 }
 impl MeanRadius for Mimas {
-    fn mean_radius(&self) -> f64 {
-        198.2f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(198.2f64)
     }
 }
 impl TriaxialEllipsoid for Mimas {
     fn radii(&self) -> Radii {
-        (207.8f64, 196.7f64, 190.6f64)
+        (
+            Distance::kilometers(207.8f64),
+            Distance::kilometers(196.7f64),
+            Distance::kilometers(190.6f64),
+        )
     }
 }
 const RIGHT_ASCENSION_MIMAS: RotationalElement<8usize> = RotationalElement {
@@ -3925,18 +4047,22 @@ impl Display for Enceladus {
     }
 }
 impl PointMass for Enceladus {
-    fn gravitational_parameter(&self) -> f64 {
-        7.210366688598896f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(7.210366688598896f64)
     }
 }
 impl MeanRadius for Enceladus {
-    fn mean_radius(&self) -> f64 {
-        252.1f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(252.1f64)
     }
 }
 impl TriaxialEllipsoid for Enceladus {
     fn radii(&self) -> Radii {
-        (256.6f64, 251.4f64, 248.3f64)
+        (
+            Distance::kilometers(256.6f64),
+            Distance::kilometers(251.4f64),
+            Distance::kilometers(248.3f64),
+        )
     }
 }
 const RIGHT_ASCENSION_ENCELADUS: RotationalElement<0usize> = RotationalElement {
@@ -3999,18 +4125,22 @@ impl Display for Tethys {
     }
 }
 impl PointMass for Tethys {
-    fn gravitational_parameter(&self) -> f64 {
-        41.21352885489587f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(41.21352885489587f64)
     }
 }
 impl MeanRadius for Tethys {
-    fn mean_radius(&self) -> f64 {
-        531f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(531f64)
     }
 }
 impl TriaxialEllipsoid for Tethys {
     fn radii(&self) -> Radii {
-        (538.4f64, 528.3f64, 526.3f64)
+        (
+            Distance::kilometers(538.4f64),
+            Distance::kilometers(528.3f64),
+            Distance::kilometers(526.3f64),
+        )
     }
 }
 const RIGHT_ASCENSION_TETHYS: RotationalElement<8usize> = RotationalElement {
@@ -4154,18 +4284,22 @@ impl Display for Dione {
     }
 }
 impl PointMass for Dione {
-    fn gravitational_parameter(&self) -> f64 {
-        73.11607172482067f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(73.11607172482067f64)
     }
 }
 impl MeanRadius for Dione {
-    fn mean_radius(&self) -> f64 {
-        561.4f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(561.4f64)
     }
 }
 impl TriaxialEllipsoid for Dione {
     fn radii(&self) -> Radii {
-        (563.4f64, 561.3f64, 559.6f64)
+        (
+            Distance::kilometers(563.4f64),
+            Distance::kilometers(561.3f64),
+            Distance::kilometers(559.6f64),
+        )
     }
 }
 const RIGHT_ASCENSION_DIONE: RotationalElement<0usize> = RotationalElement {
@@ -4228,18 +4362,22 @@ impl Display for Rhea {
     }
 }
 impl PointMass for Rhea {
-    fn gravitational_parameter(&self) -> f64 {
-        153.9417519146563f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(153.9417519146563f64)
     }
 }
 impl MeanRadius for Rhea {
-    fn mean_radius(&self) -> f64 {
-        763.5f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(763.5f64)
     }
 }
 impl TriaxialEllipsoid for Rhea {
     fn radii(&self) -> Radii {
-        (765f64, 763.1f64, 762.4f64)
+        (
+            Distance::kilometers(765f64),
+            Distance::kilometers(763.1f64),
+            Distance::kilometers(762.4f64),
+        )
     }
 }
 const RIGHT_ASCENSION_RHEA: RotationalElement<8usize> = RotationalElement {
@@ -4383,18 +4521,22 @@ impl Display for Titan {
     }
 }
 impl PointMass for Titan {
-    fn gravitational_parameter(&self) -> f64 {
-        8978.137095521046f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(8978.137095521046f64)
     }
 }
 impl MeanRadius for Titan {
-    fn mean_radius(&self) -> f64 {
-        2575f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(2575f64)
     }
 }
 impl TriaxialEllipsoid for Titan {
     fn radii(&self) -> Radii {
-        (2575.15f64, 2574.78f64, 2574.47f64)
+        (
+            Distance::kilometers(2575.15f64),
+            Distance::kilometers(2574.78f64),
+            Distance::kilometers(2574.47f64),
+        )
     }
 }
 const RIGHT_ASCENSION_TITAN: RotationalElement<8usize> = RotationalElement {
@@ -4511,18 +4653,22 @@ impl Display for Hyperion {
     }
 }
 impl PointMass for Hyperion {
-    fn gravitational_parameter(&self) -> f64 {
-        0.3704913747932265f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(0.3704913747932265f64)
     }
 }
 impl MeanRadius for Hyperion {
-    fn mean_radius(&self) -> f64 {
-        135f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(135f64)
     }
 }
 impl TriaxialEllipsoid for Hyperion {
     fn radii(&self) -> Radii {
-        (180.1f64, 133f64, 102.7f64)
+        (
+            Distance::kilometers(180.1f64),
+            Distance::kilometers(133f64),
+            Distance::kilometers(102.7f64),
+        )
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -4542,18 +4688,22 @@ impl Display for Iapetus {
     }
 }
 impl PointMass for Iapetus {
-    fn gravitational_parameter(&self) -> f64 {
-        120.5151060137642f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(120.5151060137642f64)
     }
 }
 impl MeanRadius for Iapetus {
-    fn mean_radius(&self) -> f64 {
-        734.3f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(734.3f64)
     }
 }
 impl TriaxialEllipsoid for Iapetus {
     fn radii(&self) -> Radii {
-        (745.7f64, 745.7f64, 712.1f64)
+        (
+            Distance::kilometers(745.7f64),
+            Distance::kilometers(745.7f64),
+            Distance::kilometers(712.1f64),
+        )
     }
 }
 impl Spheroid for Iapetus {}
@@ -4617,18 +4767,22 @@ impl Display for Phoebe {
     }
 }
 impl PointMass for Phoebe {
-    fn gravitational_parameter(&self) -> f64 {
-        0.5547860052791678f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(0.5547860052791678f64)
     }
 }
 impl MeanRadius for Phoebe {
-    fn mean_radius(&self) -> f64 {
-        106.5f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(106.5f64)
     }
 }
 impl TriaxialEllipsoid for Phoebe {
     fn radii(&self) -> Radii {
-        (109.4f64, 108.5f64, 101.8f64)
+        (
+            Distance::kilometers(109.4f64),
+            Distance::kilometers(108.5f64),
+            Distance::kilometers(101.8f64),
+        )
     }
 }
 const RIGHT_ASCENSION_PHOEBE: RotationalElement<0usize> = RotationalElement {
@@ -4691,18 +4845,22 @@ impl Display for Janus {
     }
 }
 impl PointMass for Janus {
-    fn gravitational_parameter(&self) -> f64 {
-        0.1265765099012197f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(0.1265765099012197f64)
     }
 }
 impl MeanRadius for Janus {
-    fn mean_radius(&self) -> f64 {
-        89.2f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(89.2f64)
     }
 }
 impl TriaxialEllipsoid for Janus {
     fn radii(&self) -> Radii {
-        (101.7f64, 93f64, 76.3f64)
+        (
+            Distance::kilometers(101.7f64),
+            Distance::kilometers(93f64),
+            Distance::kilometers(76.3f64),
+        )
     }
 }
 const RIGHT_ASCENSION_JANUS: RotationalElement<8usize> = RotationalElement {
@@ -4846,18 +5004,22 @@ impl Display for Epimetheus {
     }
 }
 impl PointMass for Epimetheus {
-    fn gravitational_parameter(&self) -> f64 {
-        0.03512333288208074f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(0.03512333288208074f64)
     }
 }
 impl MeanRadius for Epimetheus {
-    fn mean_radius(&self) -> f64 {
-        58.2f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(58.2f64)
     }
 }
 impl TriaxialEllipsoid for Epimetheus {
     fn radii(&self) -> Radii {
-        (64.9f64, 57.3f64, 53f64)
+        (
+            Distance::kilometers(64.9f64),
+            Distance::kilometers(57.3f64),
+            Distance::kilometers(53f64),
+        )
     }
 }
 const RIGHT_ASCENSION_EPIMETHEUS: RotationalElement<8usize> = RotationalElement {
@@ -5001,18 +5163,22 @@ impl Display for Helene {
     }
 }
 impl PointMass for Helene {
-    fn gravitational_parameter(&self) -> f64 {
-        0.0004757419551776972f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(0.0004757419551776972f64)
     }
 }
 impl MeanRadius for Helene {
-    fn mean_radius(&self) -> f64 {
-        18f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(18f64)
     }
 }
 impl TriaxialEllipsoid for Helene {
     fn radii(&self) -> Radii {
-        (22.5f64, 19.6f64, 13.3f64)
+        (
+            Distance::kilometers(22.5f64),
+            Distance::kilometers(19.6f64),
+            Distance::kilometers(13.3f64),
+        )
     }
 }
 const RIGHT_ASCENSION_HELENE: RotationalElement<0usize> = RotationalElement {
@@ -5075,13 +5241,17 @@ impl Display for Telesto {
     }
 }
 impl MeanRadius for Telesto {
-    fn mean_radius(&self) -> f64 {
-        12.4f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(12.4f64)
     }
 }
 impl TriaxialEllipsoid for Telesto {
     fn radii(&self) -> Radii {
-        (16.3f64, 11.8f64, 9.8f64)
+        (
+            Distance::kilometers(16.3f64),
+            Distance::kilometers(11.8f64),
+            Distance::kilometers(9.8f64),
+        )
     }
 }
 const RIGHT_ASCENSION_TELESTO: RotationalElement<0usize> = RotationalElement {
@@ -5144,13 +5314,17 @@ impl Display for Calypso {
     }
 }
 impl MeanRadius for Calypso {
-    fn mean_radius(&self) -> f64 {
-        9.6f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(9.6f64)
     }
 }
 impl TriaxialEllipsoid for Calypso {
     fn radii(&self) -> Radii {
-        (15.3f64, 9.3f64, 6.3f64)
+        (
+            Distance::kilometers(15.3f64),
+            Distance::kilometers(9.3f64),
+            Distance::kilometers(6.3f64),
+        )
     }
 }
 const RIGHT_ASCENSION_CALYPSO: RotationalElement<0usize> = RotationalElement {
@@ -5213,18 +5387,22 @@ impl Display for Atlas {
     }
 }
 impl PointMass for Atlas {
-    fn gravitational_parameter(&self) -> f64 {
-        0.0003718871247516475f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(0.0003718871247516475f64)
     }
 }
 impl MeanRadius for Atlas {
-    fn mean_radius(&self) -> f64 {
-        15.1f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(15.1f64)
     }
 }
 impl TriaxialEllipsoid for Atlas {
     fn radii(&self) -> Radii {
-        (20.5f64, 17.8f64, 9.4f64)
+        (
+            Distance::kilometers(20.5f64),
+            Distance::kilometers(17.8f64),
+            Distance::kilometers(9.4f64),
+        )
     }
 }
 const RIGHT_ASCENSION_ATLAS: RotationalElement<0usize> = RotationalElement {
@@ -5287,18 +5465,22 @@ impl Display for Prometheus {
     }
 }
 impl PointMass for Prometheus {
-    fn gravitational_parameter(&self) -> f64 {
-        0.0107520800100761f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(0.0107520800100761f64)
     }
 }
 impl MeanRadius for Prometheus {
-    fn mean_radius(&self) -> f64 {
-        43.1f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(43.1f64)
     }
 }
 impl TriaxialEllipsoid for Prometheus {
     fn radii(&self) -> Radii {
-        (68.2f64, 41.6f64, 28.2f64)
+        (
+            Distance::kilometers(68.2f64),
+            Distance::kilometers(41.6f64),
+            Distance::kilometers(28.2f64),
+        )
     }
 }
 const RIGHT_ASCENSION_PROMETHEUS: RotationalElement<0usize> = RotationalElement {
@@ -5361,18 +5543,22 @@ impl Display for Pandora {
     }
 }
 impl PointMass for Pandora {
-    fn gravitational_parameter(&self) -> f64 {
-        0.009290325122028795f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(0.009290325122028795f64)
     }
 }
 impl MeanRadius for Pandora {
-    fn mean_radius(&self) -> f64 {
-        40.6f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(40.6f64)
     }
 }
 impl TriaxialEllipsoid for Pandora {
     fn radii(&self) -> Radii {
-        (52.2f64, 40.8f64, 31.5f64)
+        (
+            Distance::kilometers(52.2f64),
+            Distance::kilometers(40.8f64),
+            Distance::kilometers(31.5f64),
+        )
     }
 }
 const RIGHT_ASCENSION_PANDORA: RotationalElement<0usize> = RotationalElement {
@@ -5435,13 +5621,17 @@ impl Display for Pan {
     }
 }
 impl MeanRadius for Pan {
-    fn mean_radius(&self) -> f64 {
-        14f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(14f64)
     }
 }
 impl TriaxialEllipsoid for Pan {
     fn radii(&self) -> Radii {
-        (17.2f64, 15.4f64, 10.4f64)
+        (
+            Distance::kilometers(17.2f64),
+            Distance::kilometers(15.4f64),
+            Distance::kilometers(10.4f64),
+        )
     }
 }
 const RIGHT_ASCENSION_PAN: RotationalElement<0usize> = RotationalElement {
@@ -5712,13 +5902,17 @@ impl Display for Methone {
     }
 }
 impl MeanRadius for Methone {
-    fn mean_radius(&self) -> f64 {
-        1.45f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(1.45f64)
     }
 }
 impl TriaxialEllipsoid for Methone {
     fn radii(&self) -> Radii {
-        (1.94f64, 1.29f64, 1.21f64)
+        (
+            Distance::kilometers(1.94f64),
+            Distance::kilometers(1.29f64),
+            Distance::kilometers(1.21f64),
+        )
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -5738,13 +5932,17 @@ impl Display for Pallene {
     }
 }
 impl MeanRadius for Pallene {
-    fn mean_radius(&self) -> f64 {
-        2.23f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(2.23f64)
     }
 }
 impl TriaxialEllipsoid for Pallene {
     fn radii(&self) -> Radii {
-        (2.88f64, 2.08f64, 1.8f64)
+        (
+            Distance::kilometers(2.88f64),
+            Distance::kilometers(2.08f64),
+            Distance::kilometers(1.8f64),
+        )
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -5764,13 +5962,17 @@ impl Display for Polydeuces {
     }
 }
 impl MeanRadius for Polydeuces {
-    fn mean_radius(&self) -> f64 {
-        1.3f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(1.3f64)
     }
 }
 impl TriaxialEllipsoid for Polydeuces {
     fn radii(&self) -> Radii {
-        (1.5f64, 1.2f64, 1f64)
+        (
+            Distance::kilometers(1.5f64),
+            Distance::kilometers(1.2f64),
+            Distance::kilometers(1f64),
+        )
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -5790,13 +5992,17 @@ impl Display for Daphnis {
     }
 }
 impl MeanRadius for Daphnis {
-    fn mean_radius(&self) -> f64 {
-        3.8f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(3.8f64)
     }
 }
 impl TriaxialEllipsoid for Daphnis {
     fn radii(&self) -> Radii {
-        (4.6f64, 4.5f64, 2.8f64)
+        (
+            Distance::kilometers(4.6f64),
+            Distance::kilometers(4.5f64),
+            Distance::kilometers(2.8f64),
+        )
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -6024,13 +6230,17 @@ impl Display for Anthe {
     }
 }
 impl MeanRadius for Anthe {
-    fn mean_radius(&self) -> f64 {
-        0.5f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(0.5f64)
     }
 }
 impl TriaxialEllipsoid for Anthe {
     fn radii(&self) -> Radii {
-        (0.5f64, 0.5f64, 0.5f64)
+        (
+            Distance::kilometers(0.5f64),
+            Distance::kilometers(0.5f64),
+            Distance::kilometers(0.5f64),
+        )
     }
 }
 impl Spheroid for Anthe {}
@@ -6099,13 +6309,17 @@ impl Display for Aegaeon {
     }
 }
 impl MeanRadius for Aegaeon {
-    fn mean_radius(&self) -> f64 {
-        0.33f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(0.33f64)
     }
 }
 impl TriaxialEllipsoid for Aegaeon {
     fn radii(&self) -> Radii {
-        (0.7f64, 0.25f64, 0.2f64)
+        (
+            Distance::kilometers(0.7f64),
+            Distance::kilometers(0.25f64),
+            Distance::kilometers(0.2f64),
+        )
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -6125,18 +6339,22 @@ impl Display for Ariel {
     }
 }
 impl PointMass for Ariel {
-    fn gravitational_parameter(&self) -> f64 {
-        83.46344431770477f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(83.46344431770477f64)
     }
 }
 impl MeanRadius for Ariel {
-    fn mean_radius(&self) -> f64 {
-        578.9f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(578.9f64)
     }
 }
 impl TriaxialEllipsoid for Ariel {
     fn radii(&self) -> Radii {
-        (581.1f64, 577.9f64, 577.7f64)
+        (
+            Distance::kilometers(581.1f64),
+            Distance::kilometers(577.9f64),
+            Distance::kilometers(577.7f64),
+        )
     }
 }
 const RIGHT_ASCENSION_ARIEL: RotationalElement<13usize> = RotationalElement {
@@ -6325,18 +6543,22 @@ impl Display for Umbriel {
     }
 }
 impl PointMass for Umbriel {
-    fn gravitational_parameter(&self) -> f64 {
-        85.09338094489388f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(85.09338094489388f64)
     }
 }
 impl MeanRadius for Umbriel {
-    fn mean_radius(&self) -> f64 {
-        584.7f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(584.7f64)
     }
 }
 impl TriaxialEllipsoid for Umbriel {
     fn radii(&self) -> Radii {
-        (584.7f64, 584.7f64, 584.7f64)
+        (
+            Distance::kilometers(584.7f64),
+            Distance::kilometers(584.7f64),
+            Distance::kilometers(584.7f64),
+        )
     }
 }
 impl Spheroid for Umbriel {}
@@ -6535,18 +6757,22 @@ impl Display for Titania {
     }
 }
 impl PointMass for Titania {
-    fn gravitational_parameter(&self) -> f64 {
-        226.9437003741248f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(226.9437003741248f64)
     }
 }
 impl MeanRadius for Titania {
-    fn mean_radius(&self) -> f64 {
-        788.9f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(788.9f64)
     }
 }
 impl TriaxialEllipsoid for Titania {
     fn radii(&self) -> Radii {
-        (788.9f64, 788.9f64, 788.9f64)
+        (
+            Distance::kilometers(788.9f64),
+            Distance::kilometers(788.9f64),
+            Distance::kilometers(788.9f64),
+        )
     }
 }
 impl Spheroid for Titania {}
@@ -6754,18 +6980,22 @@ impl Display for Oberon {
     }
 }
 impl PointMass for Oberon {
-    fn gravitational_parameter(&self) -> f64 {
-        205.3234302535623f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(205.3234302535623f64)
     }
 }
 impl MeanRadius for Oberon {
-    fn mean_radius(&self) -> f64 {
-        761.4f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(761.4f64)
     }
 }
 impl TriaxialEllipsoid for Oberon {
     fn radii(&self) -> Radii {
-        (761.4f64, 761.4f64, 761.4f64)
+        (
+            Distance::kilometers(761.4f64),
+            Distance::kilometers(761.4f64),
+            Distance::kilometers(761.4f64),
+        )
     }
 }
 impl Spheroid for Oberon {}
@@ -6982,18 +7212,22 @@ impl Display for Miranda {
     }
 }
 impl PointMass for Miranda {
-    fn gravitational_parameter(&self) -> f64 {
-        4.3195168992321f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(4.3195168992321f64)
     }
 }
 impl MeanRadius for Miranda {
-    fn mean_radius(&self) -> f64 {
-        235.8f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(235.8f64)
     }
 }
 impl TriaxialEllipsoid for Miranda {
     fn radii(&self) -> Radii {
-        (240.4f64, 234.2f64, 232.9f64)
+        (
+            Distance::kilometers(240.4f64),
+            Distance::kilometers(234.2f64),
+            Distance::kilometers(232.9f64),
+        )
     }
 }
 const RIGHT_ASCENSION_MIRANDA: RotationalElement<18usize> = RotationalElement {
@@ -7227,13 +7461,17 @@ impl Display for Cordelia {
     }
 }
 impl MeanRadius for Cordelia {
-    fn mean_radius(&self) -> f64 {
-        13f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(13f64)
     }
 }
 impl TriaxialEllipsoid for Cordelia {
     fn radii(&self) -> Radii {
-        (13f64, 13f64, 13f64)
+        (
+            Distance::kilometers(13f64),
+            Distance::kilometers(13f64),
+            Distance::kilometers(13f64),
+        )
     }
 }
 impl Spheroid for Cordelia {}
@@ -7468,13 +7706,17 @@ impl Display for Ophelia {
     }
 }
 impl MeanRadius for Ophelia {
-    fn mean_radius(&self) -> f64 {
-        15f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(15f64)
     }
 }
 impl TriaxialEllipsoid for Ophelia {
     fn radii(&self) -> Radii {
-        (15f64, 15f64, 15f64)
+        (
+            Distance::kilometers(15f64),
+            Distance::kilometers(15f64),
+            Distance::kilometers(15f64),
+        )
     }
 }
 impl Spheroid for Ophelia {}
@@ -7709,13 +7951,17 @@ impl Display for Bianca {
     }
 }
 impl MeanRadius for Bianca {
-    fn mean_radius(&self) -> f64 {
-        21f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(21f64)
     }
 }
 impl TriaxialEllipsoid for Bianca {
     fn radii(&self) -> Radii {
-        (21f64, 21f64, 21f64)
+        (
+            Distance::kilometers(21f64),
+            Distance::kilometers(21f64),
+            Distance::kilometers(21f64),
+        )
     }
 }
 impl Spheroid for Bianca {}
@@ -7950,13 +8196,17 @@ impl Display for Cressida {
     }
 }
 impl MeanRadius for Cressida {
-    fn mean_radius(&self) -> f64 {
-        31f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(31f64)
     }
 }
 impl TriaxialEllipsoid for Cressida {
     fn radii(&self) -> Radii {
-        (31f64, 31f64, 31f64)
+        (
+            Distance::kilometers(31f64),
+            Distance::kilometers(31f64),
+            Distance::kilometers(31f64),
+        )
     }
 }
 impl Spheroid for Cressida {}
@@ -8191,13 +8441,17 @@ impl Display for Desdemona {
     }
 }
 impl MeanRadius for Desdemona {
-    fn mean_radius(&self) -> f64 {
-        27f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(27f64)
     }
 }
 impl TriaxialEllipsoid for Desdemona {
     fn radii(&self) -> Radii {
-        (27f64, 27f64, 27f64)
+        (
+            Distance::kilometers(27f64),
+            Distance::kilometers(27f64),
+            Distance::kilometers(27f64),
+        )
     }
 }
 impl Spheroid for Desdemona {}
@@ -8432,13 +8686,17 @@ impl Display for Juliet {
     }
 }
 impl MeanRadius for Juliet {
-    fn mean_radius(&self) -> f64 {
-        42f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(42f64)
     }
 }
 impl TriaxialEllipsoid for Juliet {
     fn radii(&self) -> Radii {
-        (42f64, 42f64, 42f64)
+        (
+            Distance::kilometers(42f64),
+            Distance::kilometers(42f64),
+            Distance::kilometers(42f64),
+        )
     }
 }
 impl Spheroid for Juliet {}
@@ -8673,13 +8931,17 @@ impl Display for Portia {
     }
 }
 impl MeanRadius for Portia {
-    fn mean_radius(&self) -> f64 {
-        54f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(54f64)
     }
 }
 impl TriaxialEllipsoid for Portia {
     fn radii(&self) -> Radii {
-        (54f64, 54f64, 54f64)
+        (
+            Distance::kilometers(54f64),
+            Distance::kilometers(54f64),
+            Distance::kilometers(54f64),
+        )
     }
 }
 impl Spheroid for Portia {}
@@ -8914,13 +9176,17 @@ impl Display for Rosalind {
     }
 }
 impl MeanRadius for Rosalind {
-    fn mean_radius(&self) -> f64 {
-        27f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(27f64)
     }
 }
 impl TriaxialEllipsoid for Rosalind {
     fn radii(&self) -> Radii {
-        (27f64, 27f64, 27f64)
+        (
+            Distance::kilometers(27f64),
+            Distance::kilometers(27f64),
+            Distance::kilometers(27f64),
+        )
     }
 }
 impl Spheroid for Rosalind {}
@@ -9155,13 +9421,17 @@ impl Display for Belinda {
     }
 }
 impl MeanRadius for Belinda {
-    fn mean_radius(&self) -> f64 {
-        33f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(33f64)
     }
 }
 impl TriaxialEllipsoid for Belinda {
     fn radii(&self) -> Radii {
-        (33f64, 33f64, 33f64)
+        (
+            Distance::kilometers(33f64),
+            Distance::kilometers(33f64),
+            Distance::kilometers(33f64),
+        )
     }
 }
 impl Spheroid for Belinda {}
@@ -9396,13 +9666,17 @@ impl Display for Puck {
     }
 }
 impl MeanRadius for Puck {
-    fn mean_radius(&self) -> f64 {
-        77f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(77f64)
     }
 }
 impl TriaxialEllipsoid for Puck {
     fn radii(&self) -> Radii {
-        (77f64, 77f64, 77f64)
+        (
+            Distance::kilometers(77f64),
+            Distance::kilometers(77f64),
+            Distance::kilometers(77f64),
+        )
     }
 }
 impl Spheroid for Puck {}
@@ -9829,18 +10103,22 @@ impl Display for Triton {
     }
 }
 impl PointMass for Triton {
-    fn gravitational_parameter(&self) -> f64 {
-        1428.495462910464f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(1428.495462910464f64)
     }
 }
 impl MeanRadius for Triton {
-    fn mean_radius(&self) -> f64 {
-        1352.6f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(1352.6f64)
     }
 }
 impl TriaxialEllipsoid for Triton {
     fn radii(&self) -> Radii {
-        (1352.6f64, 1352.6f64, 1352.6f64)
+        (
+            Distance::kilometers(1352.6f64),
+            Distance::kilometers(1352.6f64),
+            Distance::kilometers(1352.6f64),
+        )
     }
 }
 impl Spheroid for Triton {}
@@ -10066,13 +10344,17 @@ impl Display for Nereid {
     }
 }
 impl MeanRadius for Nereid {
-    fn mean_radius(&self) -> f64 {
-        170f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(170f64)
     }
 }
 impl TriaxialEllipsoid for Nereid {
     fn radii(&self) -> Radii {
-        (170f64, 170f64, 170f64)
+        (
+            Distance::kilometers(170f64),
+            Distance::kilometers(170f64),
+            Distance::kilometers(170f64),
+        )
     }
 }
 impl Spheroid for Nereid {}
@@ -10093,18 +10375,22 @@ impl Display for Naiad {
     }
 }
 impl PointMass for Naiad {
-    fn gravitational_parameter(&self) -> f64 {
-        0.008530281246540886f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(0.008530281246540886f64)
     }
 }
 impl MeanRadius for Naiad {
-    fn mean_radius(&self) -> f64 {
-        29f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(29f64)
     }
 }
 impl TriaxialEllipsoid for Naiad {
     fn radii(&self) -> Radii {
-        (29f64, 29f64, 29f64)
+        (
+            Distance::kilometers(29f64),
+            Distance::kilometers(29f64),
+            Distance::kilometers(29f64),
+        )
     }
 }
 impl Spheroid for Naiad {}
@@ -10330,18 +10616,22 @@ impl Display for Thalassa {
     }
 }
 impl PointMass for Thalassa {
-    fn gravitational_parameter(&self) -> f64 {
-        0.0235887319799217f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(0.0235887319799217f64)
     }
 }
 impl MeanRadius for Thalassa {
-    fn mean_radius(&self) -> f64 {
-        40f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(40f64)
     }
 }
 impl TriaxialEllipsoid for Thalassa {
     fn radii(&self) -> Radii {
-        (40f64, 40f64, 40f64)
+        (
+            Distance::kilometers(40f64),
+            Distance::kilometers(40f64),
+            Distance::kilometers(40f64),
+        )
     }
 }
 impl Spheroid for Thalassa {}
@@ -10567,18 +10857,22 @@ impl Display for Despina {
     }
 }
 impl PointMass for Despina {
-    fn gravitational_parameter(&self) -> f64 {
-        0.1167318403814998f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(0.1167318403814998f64)
     }
 }
 impl MeanRadius for Despina {
-    fn mean_radius(&self) -> f64 {
-        74f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(74f64)
     }
 }
 impl TriaxialEllipsoid for Despina {
     fn radii(&self) -> Radii {
-        (74f64, 74f64, 74f64)
+        (
+            Distance::kilometers(74f64),
+            Distance::kilometers(74f64),
+            Distance::kilometers(74f64),
+        )
     }
 }
 impl Spheroid for Despina {}
@@ -10804,18 +11098,22 @@ impl Display for Galatea {
     }
 }
 impl PointMass for Galatea {
-    fn gravitational_parameter(&self) -> f64 {
-        0.189898503906069f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(0.189898503906069f64)
     }
 }
 impl MeanRadius for Galatea {
-    fn mean_radius(&self) -> f64 {
-        79f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(79f64)
     }
 }
 impl TriaxialEllipsoid for Galatea {
     fn radii(&self) -> Radii {
-        (79f64, 79f64, 79f64)
+        (
+            Distance::kilometers(79f64),
+            Distance::kilometers(79f64),
+            Distance::kilometers(79f64),
+        )
     }
 }
 impl Spheroid for Galatea {}
@@ -11041,18 +11339,22 @@ impl Display for Larissa {
     }
 }
 impl PointMass for Larissa {
-    fn gravitational_parameter(&self) -> f64 {
-        0.2548437405693583f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(0.2548437405693583f64)
     }
 }
 impl MeanRadius for Larissa {
-    fn mean_radius(&self) -> f64 {
-        96f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(96f64)
     }
 }
 impl TriaxialEllipsoid for Larissa {
     fn radii(&self) -> Radii {
-        (96f64, 96f64, 96f64)
+        (
+            Distance::kilometers(96f64),
+            Distance::kilometers(96f64),
+            Distance::kilometers(96f64),
+        )
     }
 }
 impl Spheroid for Larissa {}
@@ -11278,18 +11580,22 @@ impl Display for Proteus {
     }
 }
 impl PointMass for Proteus {
-    fn gravitational_parameter(&self) -> f64 {
-        2.583422379120727f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(2.583422379120727f64)
     }
 }
 impl MeanRadius for Proteus {
-    fn mean_radius(&self) -> f64 {
-        208f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(208f64)
     }
 }
 impl TriaxialEllipsoid for Proteus {
     fn radii(&self) -> Radii {
-        (218f64, 208f64, 201f64)
+        (
+            Distance::kilometers(218f64),
+            Distance::kilometers(208f64),
+            Distance::kilometers(201f64),
+        )
     }
 }
 const RIGHT_ASCENSION_PROTEUS: RotationalElement<17usize> = RotationalElement {
@@ -11594,18 +11900,22 @@ impl Display for Charon {
     }
 }
 impl PointMass for Charon {
-    fn gravitational_parameter(&self) -> f64 {
-        105.8799888601881f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(105.8799888601881f64)
     }
 }
 impl MeanRadius for Charon {
-    fn mean_radius(&self) -> f64 {
-        606f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(606f64)
     }
 }
 impl TriaxialEllipsoid for Charon {
     fn radii(&self) -> Radii {
-        (606f64, 606f64, 606f64)
+        (
+            Distance::kilometers(606f64),
+            Distance::kilometers(606f64),
+            Distance::kilometers(606f64),
+        )
     }
 }
 impl Spheroid for Charon {}
@@ -11669,8 +11979,8 @@ impl Display for Nix {
     }
 }
 impl PointMass for Nix {
-    fn gravitational_parameter(&self) -> f64 {
-        0.00304817564816976f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(0.00304817564816976f64)
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -11690,8 +12000,8 @@ impl Display for Hydra {
     }
 }
 impl PointMass for Hydra {
-    fn gravitational_parameter(&self) -> f64 {
-        0.003211039206155255f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(0.003211039206155255f64)
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -11711,8 +12021,8 @@ impl Display for Kerberos {
     }
 }
 impl PointMass for Kerberos {
-    fn gravitational_parameter(&self) -> f64 {
-        0.001110040850536676f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(0.001110040850536676f64)
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -11732,8 +12042,8 @@ impl Display for Styx {
     }
 }
 impl PointMass for Styx {
-    fn gravitational_parameter(&self) -> f64 {
-        0f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(0f64)
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -11753,13 +12063,17 @@ impl Display for Gaspra {
     }
 }
 impl MeanRadius for Gaspra {
-    fn mean_radius(&self) -> f64 {
-        6.1f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(6.1f64)
     }
 }
 impl TriaxialEllipsoid for Gaspra {
     fn radii(&self) -> Radii {
-        (9.1f64, 5.2f64, 4.4f64)
+        (
+            Distance::kilometers(9.1f64),
+            Distance::kilometers(5.2f64),
+            Distance::kilometers(4.4f64),
+        )
     }
 }
 const RIGHT_ASCENSION_GASPRA: RotationalElement<0usize> = RotationalElement {
@@ -11822,13 +12136,17 @@ impl Display for Ida {
     }
 }
 impl MeanRadius for Ida {
-    fn mean_radius(&self) -> f64 {
-        15.65f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(15.65f64)
     }
 }
 impl TriaxialEllipsoid for Ida {
     fn radii(&self) -> Radii {
-        (26.8f64, 12f64, 7.6f64)
+        (
+            Distance::kilometers(26.8f64),
+            Distance::kilometers(12f64),
+            Distance::kilometers(7.6f64),
+        )
     }
 }
 const RIGHT_ASCENSION_IDA: RotationalElement<0usize> = RotationalElement {
@@ -11907,18 +12225,22 @@ impl Display for Ceres {
     }
 }
 impl PointMass for Ceres {
-    fn gravitational_parameter(&self) -> f64 {
-        62.62888864440993f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(62.62888864440993f64)
     }
 }
 impl MeanRadius for Ceres {
-    fn mean_radius(&self) -> f64 {
-        470f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(470f64)
     }
 }
 impl TriaxialEllipsoid for Ceres {
     fn radii(&self) -> Radii {
-        (487.3f64, 487.3f64, 446f64)
+        (
+            Distance::kilometers(487.3f64),
+            Distance::kilometers(487.3f64),
+            Distance::kilometers(446f64),
+        )
     }
 }
 impl Spheroid for Ceres {}
@@ -11982,8 +12304,8 @@ impl Display for Pallas {
     }
 }
 impl PointMass for Pallas {
-    fn gravitational_parameter(&self) -> f64 {
-        13.665878145967422f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(13.665878145967422f64)
     }
 }
 const RIGHT_ASCENSION_PALLAS: RotationalElement<0usize> = RotationalElement {
@@ -12046,13 +12368,17 @@ impl Display for Vesta {
     }
 }
 impl PointMass for Vesta {
-    fn gravitational_parameter(&self) -> f64 {
-        17.288232879171513f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(17.288232879171513f64)
     }
 }
 impl TriaxialEllipsoid for Vesta {
     fn radii(&self) -> Radii {
-        (289f64, 280f64, 229f64)
+        (
+            Distance::kilometers(289f64),
+            Distance::kilometers(280f64),
+            Distance::kilometers(229f64),
+        )
     }
 }
 const RIGHT_ASCENSION_VESTA: RotationalElement<0usize> = RotationalElement {
@@ -12115,18 +12441,22 @@ impl Display for Psyche {
     }
 }
 impl PointMass for Psyche {
-    fn gravitational_parameter(&self) -> f64 {
-        1.5896582441709424f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(1.5896582441709424f64)
     }
 }
 impl MeanRadius for Psyche {
-    fn mean_radius(&self) -> f64 {
-        113f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(113f64)
     }
 }
 impl TriaxialEllipsoid for Psyche {
     fn radii(&self) -> Radii {
-        (139.5f64, 116f64, 94.5f64)
+        (
+            Distance::kilometers(139.5f64),
+            Distance::kilometers(116f64),
+            Distance::kilometers(94.5f64),
+        )
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -12146,13 +12476,17 @@ impl Display for Lutetia {
     }
 }
 impl MeanRadius for Lutetia {
-    fn mean_radius(&self) -> f64 {
-        52.5f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(52.5f64)
     }
 }
 impl TriaxialEllipsoid for Lutetia {
     fn radii(&self) -> Radii {
-        (62f64, 50.5f64, 46.5f64)
+        (
+            Distance::kilometers(62f64),
+            Distance::kilometers(50.5f64),
+            Distance::kilometers(46.5f64),
+        )
     }
 }
 const RIGHT_ASCENSION_LUTETIA: RotationalElement<0usize> = RotationalElement {
@@ -12231,18 +12565,22 @@ impl Display for Eros {
     }
 }
 impl PointMass for Eros {
-    fn gravitational_parameter(&self) -> f64 {
-        0.0004463f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(0.0004463f64)
     }
 }
 impl MeanRadius for Eros {
-    fn mean_radius(&self) -> f64 {
-        8.45f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(8.45f64)
     }
 }
 impl TriaxialEllipsoid for Eros {
     fn radii(&self) -> Radii {
-        (17f64, 5.5f64, 5.5f64)
+        (
+            Distance::kilometers(17f64),
+            Distance::kilometers(5.5f64),
+            Distance::kilometers(5.5f64),
+        )
     }
 }
 const RIGHT_ASCENSION_EROS: RotationalElement<0usize> = RotationalElement {
@@ -12305,18 +12643,22 @@ impl Display for Davida {
     }
 }
 impl PointMass for Davida {
-    fn gravitational_parameter(&self) -> f64 {
-        3.8944831481705644f64
+    fn gravitational_parameter(&self) -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(3.8944831481705644f64)
     }
 }
 impl MeanRadius for Davida {
-    fn mean_radius(&self) -> f64 {
-        150f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(150f64)
     }
 }
 impl TriaxialEllipsoid for Davida {
     fn radii(&self) -> Radii {
-        (180f64, 147f64, 127f64)
+        (
+            Distance::kilometers(180f64),
+            Distance::kilometers(147f64),
+            Distance::kilometers(127f64),
+        )
     }
 }
 const RIGHT_ASCENSION_DAVIDA: RotationalElement<0usize> = RotationalElement {
@@ -12379,13 +12721,17 @@ impl Display for Mathilde {
     }
 }
 impl MeanRadius for Mathilde {
-    fn mean_radius(&self) -> f64 {
-        26.5f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(26.5f64)
     }
 }
 impl TriaxialEllipsoid for Mathilde {
     fn radii(&self) -> Radii {
-        (33f64, 24f64, 23f64)
+        (
+            Distance::kilometers(33f64),
+            Distance::kilometers(24f64),
+            Distance::kilometers(23f64),
+        )
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -12405,13 +12751,17 @@ impl Display for Steins {
     }
 }
 impl MeanRadius for Steins {
-    fn mean_radius(&self) -> f64 {
-        2.7f64
+    fn mean_radius(&self) -> Distance {
+        Distance::kilometers(2.7f64)
     }
 }
 impl TriaxialEllipsoid for Steins {
     fn radii(&self) -> Radii {
-        (3.24f64, 2.73f64, 2.04f64)
+        (
+            Distance::kilometers(3.24f64),
+            Distance::kilometers(2.73f64),
+            Distance::kilometers(2.04f64),
+        )
     }
 }
 const RIGHT_ASCENSION_STEINS: RotationalElement<0usize> = RotationalElement {
@@ -12507,7 +12857,11 @@ impl Display for Toutatis {
 }
 impl TriaxialEllipsoid for Toutatis {
     fn radii(&self) -> Radii {
-        (2.13f64, 1.015f64, 0.85f64)
+        (
+            Distance::kilometers(2.13f64),
+            Distance::kilometers(1.015f64),
+            Distance::kilometers(0.85f64),
+        )
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -12528,7 +12882,11 @@ impl Display for Itokawa {
 }
 impl TriaxialEllipsoid for Itokawa {
     fn radii(&self) -> Radii {
-        (0.268f64, 0.147f64, 0.104f64)
+        (
+            Distance::kilometers(0.268f64),
+            Distance::kilometers(0.147f64),
+            Distance::kilometers(0.104f64),
+        )
     }
 }
 const RIGHT_ASCENSION_ITOKAWA: RotationalElement<0usize> = RotationalElement {
@@ -12591,78 +12949,96 @@ impl Display for Bennu {
     }
 }
 impl TryPointMass for DynOrigin {
-    fn try_gravitational_parameter(&self) -> Result<f64, UndefinedOriginPropertyError> {
+    fn try_gravitational_parameter(
+        &self,
+    ) -> Result<GravitationalParameter, UndefinedOriginPropertyError> {
         match self {
-            DynOrigin::Sun => Ok(132712440041.27942f64),
-            DynOrigin::Mercury => Ok(22031.868551400003f64),
-            DynOrigin::Venus => Ok(324858.592f64),
-            DynOrigin::Earth => Ok(398600.43550702266f64),
-            DynOrigin::Mars => Ok(42828.37362069909f64),
-            DynOrigin::Jupiter => Ok(126686531.9003704f64),
-            DynOrigin::Saturn => Ok(37931206.23436167f64),
-            DynOrigin::Uranus => Ok(5793951.256527211f64),
-            DynOrigin::Neptune => Ok(6835103.145462294f64),
-            DynOrigin::Pluto => Ok(869.6138177608748f64),
-            DynOrigin::SolarSystemBarycenter => Ok(132712440041.27942f64),
-            DynOrigin::MercuryBarycenter => Ok(22031.868551400003f64),
-            DynOrigin::VenusBarycenter => Ok(324858.592f64),
-            DynOrigin::EarthBarycenter => Ok(403503.2356254802f64),
-            DynOrigin::MarsBarycenter => Ok(42828.3758157561f64),
-            DynOrigin::JupiterBarycenter => Ok(126712764.09999998f64),
-            DynOrigin::SaturnBarycenter => Ok(37940584.8418f64),
-            DynOrigin::UranusBarycenter => Ok(5794556.3999999985f64),
-            DynOrigin::NeptuneBarycenter => Ok(6836527.100580399f64),
-            DynOrigin::PlutoBarycenter => Ok(975.5f64),
-            DynOrigin::Moon => Ok(4902.80011845755f64),
-            DynOrigin::Phobos => Ok(0.0007087546066894452f64),
-            DynOrigin::Deimos => Ok(0.00009615569648120313f64),
-            DynOrigin::Io => Ok(5959.915466180539f64),
-            DynOrigin::Europa => Ok(3202.712099607295f64),
-            DynOrigin::Ganymede => Ok(9887.832752719638f64),
-            DynOrigin::Callisto => Ok(7179.283402579837f64),
-            DynOrigin::Amalthea => Ok(0.1645634534798259f64),
-            DynOrigin::Himalia => Ok(0.1515524299611265f64),
-            DynOrigin::Thebe => Ok(0.030148f64),
-            DynOrigin::Adrastea => Ok(0.000139f64),
-            DynOrigin::Metis => Ok(0.002501f64),
-            DynOrigin::Mimas => Ok(2.503488768152587f64),
-            DynOrigin::Enceladus => Ok(7.210366688598896f64),
-            DynOrigin::Tethys => Ok(41.21352885489587f64),
-            DynOrigin::Dione => Ok(73.11607172482067f64),
-            DynOrigin::Rhea => Ok(153.9417519146563f64),
-            DynOrigin::Titan => Ok(8978.137095521046f64),
-            DynOrigin::Hyperion => Ok(0.3704913747932265f64),
-            DynOrigin::Iapetus => Ok(120.5151060137642f64),
-            DynOrigin::Phoebe => Ok(0.5547860052791678f64),
-            DynOrigin::Janus => Ok(0.1265765099012197f64),
-            DynOrigin::Epimetheus => Ok(0.03512333288208074f64),
-            DynOrigin::Helene => Ok(0.0004757419551776972f64),
-            DynOrigin::Atlas => Ok(0.0003718871247516475f64),
-            DynOrigin::Prometheus => Ok(0.0107520800100761f64),
-            DynOrigin::Pandora => Ok(0.009290325122028795f64),
-            DynOrigin::Ariel => Ok(83.46344431770477f64),
-            DynOrigin::Umbriel => Ok(85.09338094489388f64),
-            DynOrigin::Titania => Ok(226.9437003741248f64),
-            DynOrigin::Oberon => Ok(205.3234302535623f64),
-            DynOrigin::Miranda => Ok(4.3195168992321f64),
-            DynOrigin::Triton => Ok(1428.495462910464f64),
-            DynOrigin::Naiad => Ok(0.008530281246540886f64),
-            DynOrigin::Thalassa => Ok(0.0235887319799217f64),
-            DynOrigin::Despina => Ok(0.1167318403814998f64),
-            DynOrigin::Galatea => Ok(0.189898503906069f64),
-            DynOrigin::Larissa => Ok(0.2548437405693583f64),
-            DynOrigin::Proteus => Ok(2.583422379120727f64),
-            DynOrigin::Charon => Ok(105.8799888601881f64),
-            DynOrigin::Nix => Ok(0.00304817564816976f64),
-            DynOrigin::Hydra => Ok(0.003211039206155255f64),
-            DynOrigin::Kerberos => Ok(0.001110040850536676f64),
-            DynOrigin::Styx => Ok(0f64),
-            DynOrigin::Ceres => Ok(62.62888864440993f64),
-            DynOrigin::Pallas => Ok(13.665878145967422f64),
-            DynOrigin::Vesta => Ok(17.288232879171513f64),
-            DynOrigin::Psyche => Ok(1.5896582441709424f64),
-            DynOrigin::Eros => Ok(0.0004463f64),
-            DynOrigin::Davida => Ok(3.8944831481705644f64),
+            DynOrigin::Sun => Ok(GravitationalParameter::km3_per_s2(132712440041.27942f64)),
+            DynOrigin::Mercury => Ok(GravitationalParameter::km3_per_s2(22031.868551400003f64)),
+            DynOrigin::Venus => Ok(GravitationalParameter::km3_per_s2(324858.592f64)),
+            DynOrigin::Earth => Ok(GravitationalParameter::km3_per_s2(398600.43550702266f64)),
+            DynOrigin::Mars => Ok(GravitationalParameter::km3_per_s2(42828.37362069909f64)),
+            DynOrigin::Jupiter => Ok(GravitationalParameter::km3_per_s2(126686531.9003704f64)),
+            DynOrigin::Saturn => Ok(GravitationalParameter::km3_per_s2(37931206.23436167f64)),
+            DynOrigin::Uranus => Ok(GravitationalParameter::km3_per_s2(5793951.256527211f64)),
+            DynOrigin::Neptune => Ok(GravitationalParameter::km3_per_s2(6835103.145462294f64)),
+            DynOrigin::Pluto => Ok(GravitationalParameter::km3_per_s2(869.6138177608748f64)),
+            DynOrigin::SolarSystemBarycenter => {
+                Ok(GravitationalParameter::km3_per_s2(132712440041.27942f64))
+            }
+            DynOrigin::MercuryBarycenter => {
+                Ok(GravitationalParameter::km3_per_s2(22031.868551400003f64))
+            }
+            DynOrigin::VenusBarycenter => Ok(GravitationalParameter::km3_per_s2(324858.592f64)),
+            DynOrigin::EarthBarycenter => {
+                Ok(GravitationalParameter::km3_per_s2(403503.2356254802f64))
+            }
+            DynOrigin::MarsBarycenter => {
+                Ok(GravitationalParameter::km3_per_s2(42828.3758157561f64))
+            }
+            DynOrigin::JupiterBarycenter => {
+                Ok(GravitationalParameter::km3_per_s2(126712764.09999998f64))
+            }
+            DynOrigin::SaturnBarycenter => Ok(GravitationalParameter::km3_per_s2(37940584.8418f64)),
+            DynOrigin::UranusBarycenter => {
+                Ok(GravitationalParameter::km3_per_s2(5794556.3999999985f64))
+            }
+            DynOrigin::NeptuneBarycenter => {
+                Ok(GravitationalParameter::km3_per_s2(6836527.100580399f64))
+            }
+            DynOrigin::PlutoBarycenter => Ok(GravitationalParameter::km3_per_s2(975.5f64)),
+            DynOrigin::Moon => Ok(GravitationalParameter::km3_per_s2(4902.80011845755f64)),
+            DynOrigin::Phobos => Ok(GravitationalParameter::km3_per_s2(0.0007087546066894452f64)),
+            DynOrigin::Deimos => Ok(GravitationalParameter::km3_per_s2(
+                0.00009615569648120313f64,
+            )),
+            DynOrigin::Io => Ok(GravitationalParameter::km3_per_s2(5959.915466180539f64)),
+            DynOrigin::Europa => Ok(GravitationalParameter::km3_per_s2(3202.712099607295f64)),
+            DynOrigin::Ganymede => Ok(GravitationalParameter::km3_per_s2(9887.832752719638f64)),
+            DynOrigin::Callisto => Ok(GravitationalParameter::km3_per_s2(7179.283402579837f64)),
+            DynOrigin::Amalthea => Ok(GravitationalParameter::km3_per_s2(0.1645634534798259f64)),
+            DynOrigin::Himalia => Ok(GravitationalParameter::km3_per_s2(0.1515524299611265f64)),
+            DynOrigin::Thebe => Ok(GravitationalParameter::km3_per_s2(0.030148f64)),
+            DynOrigin::Adrastea => Ok(GravitationalParameter::km3_per_s2(0.000139f64)),
+            DynOrigin::Metis => Ok(GravitationalParameter::km3_per_s2(0.002501f64)),
+            DynOrigin::Mimas => Ok(GravitationalParameter::km3_per_s2(2.503488768152587f64)),
+            DynOrigin::Enceladus => Ok(GravitationalParameter::km3_per_s2(7.210366688598896f64)),
+            DynOrigin::Tethys => Ok(GravitationalParameter::km3_per_s2(41.21352885489587f64)),
+            DynOrigin::Dione => Ok(GravitationalParameter::km3_per_s2(73.11607172482067f64)),
+            DynOrigin::Rhea => Ok(GravitationalParameter::km3_per_s2(153.9417519146563f64)),
+            DynOrigin::Titan => Ok(GravitationalParameter::km3_per_s2(8978.137095521046f64)),
+            DynOrigin::Hyperion => Ok(GravitationalParameter::km3_per_s2(0.3704913747932265f64)),
+            DynOrigin::Iapetus => Ok(GravitationalParameter::km3_per_s2(120.5151060137642f64)),
+            DynOrigin::Phoebe => Ok(GravitationalParameter::km3_per_s2(0.5547860052791678f64)),
+            DynOrigin::Janus => Ok(GravitationalParameter::km3_per_s2(0.1265765099012197f64)),
+            DynOrigin::Epimetheus => Ok(GravitationalParameter::km3_per_s2(0.03512333288208074f64)),
+            DynOrigin::Helene => Ok(GravitationalParameter::km3_per_s2(0.0004757419551776972f64)),
+            DynOrigin::Atlas => Ok(GravitationalParameter::km3_per_s2(0.0003718871247516475f64)),
+            DynOrigin::Prometheus => Ok(GravitationalParameter::km3_per_s2(0.0107520800100761f64)),
+            DynOrigin::Pandora => Ok(GravitationalParameter::km3_per_s2(0.009290325122028795f64)),
+            DynOrigin::Ariel => Ok(GravitationalParameter::km3_per_s2(83.46344431770477f64)),
+            DynOrigin::Umbriel => Ok(GravitationalParameter::km3_per_s2(85.09338094489388f64)),
+            DynOrigin::Titania => Ok(GravitationalParameter::km3_per_s2(226.9437003741248f64)),
+            DynOrigin::Oberon => Ok(GravitationalParameter::km3_per_s2(205.3234302535623f64)),
+            DynOrigin::Miranda => Ok(GravitationalParameter::km3_per_s2(4.3195168992321f64)),
+            DynOrigin::Triton => Ok(GravitationalParameter::km3_per_s2(1428.495462910464f64)),
+            DynOrigin::Naiad => Ok(GravitationalParameter::km3_per_s2(0.008530281246540886f64)),
+            DynOrigin::Thalassa => Ok(GravitationalParameter::km3_per_s2(0.0235887319799217f64)),
+            DynOrigin::Despina => Ok(GravitationalParameter::km3_per_s2(0.1167318403814998f64)),
+            DynOrigin::Galatea => Ok(GravitationalParameter::km3_per_s2(0.189898503906069f64)),
+            DynOrigin::Larissa => Ok(GravitationalParameter::km3_per_s2(0.2548437405693583f64)),
+            DynOrigin::Proteus => Ok(GravitationalParameter::km3_per_s2(2.583422379120727f64)),
+            DynOrigin::Charon => Ok(GravitationalParameter::km3_per_s2(105.8799888601881f64)),
+            DynOrigin::Nix => Ok(GravitationalParameter::km3_per_s2(0.00304817564816976f64)),
+            DynOrigin::Hydra => Ok(GravitationalParameter::km3_per_s2(0.003211039206155255f64)),
+            DynOrigin::Kerberos => Ok(GravitationalParameter::km3_per_s2(0.001110040850536676f64)),
+            DynOrigin::Styx => Ok(GravitationalParameter::km3_per_s2(0f64)),
+            DynOrigin::Ceres => Ok(GravitationalParameter::km3_per_s2(62.62888864440993f64)),
+            DynOrigin::Pallas => Ok(GravitationalParameter::km3_per_s2(13.665878145967422f64)),
+            DynOrigin::Vesta => Ok(GravitationalParameter::km3_per_s2(17.288232879171513f64)),
+            DynOrigin::Psyche => Ok(GravitationalParameter::km3_per_s2(1.5896582441709424f64)),
+            DynOrigin::Eros => Ok(GravitationalParameter::km3_per_s2(0.0004463f64)),
+            DynOrigin::Davida => Ok(GravitationalParameter::km3_per_s2(3.8944831481705644f64)),
             _ => Err(UndefinedOriginPropertyError {
                 origin: self.to_string(),
                 prop: "gravitational parameter".to_string(),
@@ -12671,93 +13047,93 @@ impl TryPointMass for DynOrigin {
     }
 }
 impl TryMeanRadius for DynOrigin {
-    fn try_mean_radius(&self) -> Result<f64, UndefinedOriginPropertyError> {
+    fn try_mean_radius(&self) -> Result<Distance, UndefinedOriginPropertyError> {
         match self {
-            DynOrigin::Mercury => Ok(2439.4f64),
-            DynOrigin::Venus => Ok(6051.8f64),
-            DynOrigin::Earth => Ok(6371.0084f64),
-            DynOrigin::Mars => Ok(3389.5f64),
-            DynOrigin::Jupiter => Ok(69911f64),
-            DynOrigin::Saturn => Ok(58232f64),
-            DynOrigin::Uranus => Ok(25362f64),
-            DynOrigin::Neptune => Ok(24622f64),
-            DynOrigin::Pluto => Ok(1188.3f64),
-            DynOrigin::Moon => Ok(1737.4f64),
-            DynOrigin::Phobos => Ok(11.08f64),
-            DynOrigin::Deimos => Ok(6.2f64),
-            DynOrigin::Io => Ok(1821.49f64),
-            DynOrigin::Europa => Ok(1560.8f64),
-            DynOrigin::Ganymede => Ok(2631.2f64),
-            DynOrigin::Callisto => Ok(2410.3f64),
-            DynOrigin::Amalthea => Ok(83.5f64),
-            DynOrigin::Himalia => Ok(85f64),
-            DynOrigin::Elara => Ok(40f64),
-            DynOrigin::Pasiphae => Ok(18f64),
-            DynOrigin::Sinope => Ok(14f64),
-            DynOrigin::Lysithea => Ok(12f64),
-            DynOrigin::Carme => Ok(15f64),
-            DynOrigin::Ananke => Ok(10f64),
-            DynOrigin::Leda => Ok(5f64),
-            DynOrigin::Thebe => Ok(49.3f64),
-            DynOrigin::Adrastea => Ok(8.2f64),
-            DynOrigin::Metis => Ok(21.5f64),
-            DynOrigin::Mimas => Ok(198.2f64),
-            DynOrigin::Enceladus => Ok(252.1f64),
-            DynOrigin::Tethys => Ok(531f64),
-            DynOrigin::Dione => Ok(561.4f64),
-            DynOrigin::Rhea => Ok(763.5f64),
-            DynOrigin::Titan => Ok(2575f64),
-            DynOrigin::Hyperion => Ok(135f64),
-            DynOrigin::Iapetus => Ok(734.3f64),
-            DynOrigin::Phoebe => Ok(106.5f64),
-            DynOrigin::Janus => Ok(89.2f64),
-            DynOrigin::Epimetheus => Ok(58.2f64),
-            DynOrigin::Helene => Ok(18f64),
-            DynOrigin::Telesto => Ok(12.4f64),
-            DynOrigin::Calypso => Ok(9.6f64),
-            DynOrigin::Atlas => Ok(15.1f64),
-            DynOrigin::Prometheus => Ok(43.1f64),
-            DynOrigin::Pandora => Ok(40.6f64),
-            DynOrigin::Pan => Ok(14f64),
-            DynOrigin::Methone => Ok(1.45f64),
-            DynOrigin::Pallene => Ok(2.23f64),
-            DynOrigin::Polydeuces => Ok(1.3f64),
-            DynOrigin::Daphnis => Ok(3.8f64),
-            DynOrigin::Anthe => Ok(0.5f64),
-            DynOrigin::Aegaeon => Ok(0.33f64),
-            DynOrigin::Ariel => Ok(578.9f64),
-            DynOrigin::Umbriel => Ok(584.7f64),
-            DynOrigin::Titania => Ok(788.9f64),
-            DynOrigin::Oberon => Ok(761.4f64),
-            DynOrigin::Miranda => Ok(235.8f64),
-            DynOrigin::Cordelia => Ok(13f64),
-            DynOrigin::Ophelia => Ok(15f64),
-            DynOrigin::Bianca => Ok(21f64),
-            DynOrigin::Cressida => Ok(31f64),
-            DynOrigin::Desdemona => Ok(27f64),
-            DynOrigin::Juliet => Ok(42f64),
-            DynOrigin::Portia => Ok(54f64),
-            DynOrigin::Rosalind => Ok(27f64),
-            DynOrigin::Belinda => Ok(33f64),
-            DynOrigin::Puck => Ok(77f64),
-            DynOrigin::Triton => Ok(1352.6f64),
-            DynOrigin::Nereid => Ok(170f64),
-            DynOrigin::Naiad => Ok(29f64),
-            DynOrigin::Thalassa => Ok(40f64),
-            DynOrigin::Despina => Ok(74f64),
-            DynOrigin::Galatea => Ok(79f64),
-            DynOrigin::Larissa => Ok(96f64),
-            DynOrigin::Proteus => Ok(208f64),
-            DynOrigin::Charon => Ok(606f64),
-            DynOrigin::Gaspra => Ok(6.1f64),
-            DynOrigin::Ida => Ok(15.65f64),
-            DynOrigin::Ceres => Ok(470f64),
-            DynOrigin::Psyche => Ok(113f64),
-            DynOrigin::Lutetia => Ok(52.5f64),
-            DynOrigin::Eros => Ok(8.45f64),
-            DynOrigin::Davida => Ok(150f64),
-            DynOrigin::Mathilde => Ok(26.5f64),
-            DynOrigin::Steins => Ok(2.7f64),
+            DynOrigin::Mercury => Ok(Distance::kilometers(2439.4f64)),
+            DynOrigin::Venus => Ok(Distance::kilometers(6051.8f64)),
+            DynOrigin::Earth => Ok(Distance::kilometers(6371.0084f64)),
+            DynOrigin::Mars => Ok(Distance::kilometers(3389.5f64)),
+            DynOrigin::Jupiter => Ok(Distance::kilometers(69911f64)),
+            DynOrigin::Saturn => Ok(Distance::kilometers(58232f64)),
+            DynOrigin::Uranus => Ok(Distance::kilometers(25362f64)),
+            DynOrigin::Neptune => Ok(Distance::kilometers(24622f64)),
+            DynOrigin::Pluto => Ok(Distance::kilometers(1188.3f64)),
+            DynOrigin::Moon => Ok(Distance::kilometers(1737.4f64)),
+            DynOrigin::Phobos => Ok(Distance::kilometers(11.08f64)),
+            DynOrigin::Deimos => Ok(Distance::kilometers(6.2f64)),
+            DynOrigin::Io => Ok(Distance::kilometers(1821.49f64)),
+            DynOrigin::Europa => Ok(Distance::kilometers(1560.8f64)),
+            DynOrigin::Ganymede => Ok(Distance::kilometers(2631.2f64)),
+            DynOrigin::Callisto => Ok(Distance::kilometers(2410.3f64)),
+            DynOrigin::Amalthea => Ok(Distance::kilometers(83.5f64)),
+            DynOrigin::Himalia => Ok(Distance::kilometers(85f64)),
+            DynOrigin::Elara => Ok(Distance::kilometers(40f64)),
+            DynOrigin::Pasiphae => Ok(Distance::kilometers(18f64)),
+            DynOrigin::Sinope => Ok(Distance::kilometers(14f64)),
+            DynOrigin::Lysithea => Ok(Distance::kilometers(12f64)),
+            DynOrigin::Carme => Ok(Distance::kilometers(15f64)),
+            DynOrigin::Ananke => Ok(Distance::kilometers(10f64)),
+            DynOrigin::Leda => Ok(Distance::kilometers(5f64)),
+            DynOrigin::Thebe => Ok(Distance::kilometers(49.3f64)),
+            DynOrigin::Adrastea => Ok(Distance::kilometers(8.2f64)),
+            DynOrigin::Metis => Ok(Distance::kilometers(21.5f64)),
+            DynOrigin::Mimas => Ok(Distance::kilometers(198.2f64)),
+            DynOrigin::Enceladus => Ok(Distance::kilometers(252.1f64)),
+            DynOrigin::Tethys => Ok(Distance::kilometers(531f64)),
+            DynOrigin::Dione => Ok(Distance::kilometers(561.4f64)),
+            DynOrigin::Rhea => Ok(Distance::kilometers(763.5f64)),
+            DynOrigin::Titan => Ok(Distance::kilometers(2575f64)),
+            DynOrigin::Hyperion => Ok(Distance::kilometers(135f64)),
+            DynOrigin::Iapetus => Ok(Distance::kilometers(734.3f64)),
+            DynOrigin::Phoebe => Ok(Distance::kilometers(106.5f64)),
+            DynOrigin::Janus => Ok(Distance::kilometers(89.2f64)),
+            DynOrigin::Epimetheus => Ok(Distance::kilometers(58.2f64)),
+            DynOrigin::Helene => Ok(Distance::kilometers(18f64)),
+            DynOrigin::Telesto => Ok(Distance::kilometers(12.4f64)),
+            DynOrigin::Calypso => Ok(Distance::kilometers(9.6f64)),
+            DynOrigin::Atlas => Ok(Distance::kilometers(15.1f64)),
+            DynOrigin::Prometheus => Ok(Distance::kilometers(43.1f64)),
+            DynOrigin::Pandora => Ok(Distance::kilometers(40.6f64)),
+            DynOrigin::Pan => Ok(Distance::kilometers(14f64)),
+            DynOrigin::Methone => Ok(Distance::kilometers(1.45f64)),
+            DynOrigin::Pallene => Ok(Distance::kilometers(2.23f64)),
+            DynOrigin::Polydeuces => Ok(Distance::kilometers(1.3f64)),
+            DynOrigin::Daphnis => Ok(Distance::kilometers(3.8f64)),
+            DynOrigin::Anthe => Ok(Distance::kilometers(0.5f64)),
+            DynOrigin::Aegaeon => Ok(Distance::kilometers(0.33f64)),
+            DynOrigin::Ariel => Ok(Distance::kilometers(578.9f64)),
+            DynOrigin::Umbriel => Ok(Distance::kilometers(584.7f64)),
+            DynOrigin::Titania => Ok(Distance::kilometers(788.9f64)),
+            DynOrigin::Oberon => Ok(Distance::kilometers(761.4f64)),
+            DynOrigin::Miranda => Ok(Distance::kilometers(235.8f64)),
+            DynOrigin::Cordelia => Ok(Distance::kilometers(13f64)),
+            DynOrigin::Ophelia => Ok(Distance::kilometers(15f64)),
+            DynOrigin::Bianca => Ok(Distance::kilometers(21f64)),
+            DynOrigin::Cressida => Ok(Distance::kilometers(31f64)),
+            DynOrigin::Desdemona => Ok(Distance::kilometers(27f64)),
+            DynOrigin::Juliet => Ok(Distance::kilometers(42f64)),
+            DynOrigin::Portia => Ok(Distance::kilometers(54f64)),
+            DynOrigin::Rosalind => Ok(Distance::kilometers(27f64)),
+            DynOrigin::Belinda => Ok(Distance::kilometers(33f64)),
+            DynOrigin::Puck => Ok(Distance::kilometers(77f64)),
+            DynOrigin::Triton => Ok(Distance::kilometers(1352.6f64)),
+            DynOrigin::Nereid => Ok(Distance::kilometers(170f64)),
+            DynOrigin::Naiad => Ok(Distance::kilometers(29f64)),
+            DynOrigin::Thalassa => Ok(Distance::kilometers(40f64)),
+            DynOrigin::Despina => Ok(Distance::kilometers(74f64)),
+            DynOrigin::Galatea => Ok(Distance::kilometers(79f64)),
+            DynOrigin::Larissa => Ok(Distance::kilometers(96f64)),
+            DynOrigin::Proteus => Ok(Distance::kilometers(208f64)),
+            DynOrigin::Charon => Ok(Distance::kilometers(606f64)),
+            DynOrigin::Gaspra => Ok(Distance::kilometers(6.1f64)),
+            DynOrigin::Ida => Ok(Distance::kilometers(15.65f64)),
+            DynOrigin::Ceres => Ok(Distance::kilometers(470f64)),
+            DynOrigin::Psyche => Ok(Distance::kilometers(113f64)),
+            DynOrigin::Lutetia => Ok(Distance::kilometers(52.5f64)),
+            DynOrigin::Eros => Ok(Distance::kilometers(8.45f64)),
+            DynOrigin::Davida => Ok(Distance::kilometers(150f64)),
+            DynOrigin::Mathilde => Ok(Distance::kilometers(26.5f64)),
+            DynOrigin::Steins => Ok(Distance::kilometers(2.7f64)),
             _ => Err(UndefinedOriginPropertyError {
                 origin: self.to_string(),
                 prop: "mean radius".to_string(),
@@ -12768,95 +13144,451 @@ impl TryMeanRadius for DynOrigin {
 impl TryTriaxialEllipsoid for DynOrigin {
     fn try_radii(&self) -> Result<Radii, UndefinedOriginPropertyError> {
         match self {
-            DynOrigin::Sun => Ok((695700f64, 695700f64, 695700f64)),
-            DynOrigin::Mercury => Ok((2440.53f64, 2440.53f64, 2438.26f64)),
-            DynOrigin::Venus => Ok((6051.8f64, 6051.8f64, 6051.8f64)),
-            DynOrigin::Earth => Ok((6378.1366f64, 6378.1366f64, 6356.7519f64)),
-            DynOrigin::Mars => Ok((3396.19f64, 3396.19f64, 3376.2f64)),
-            DynOrigin::Jupiter => Ok((71492f64, 71492f64, 66854f64)),
-            DynOrigin::Saturn => Ok((60268f64, 60268f64, 54364f64)),
-            DynOrigin::Uranus => Ok((25559f64, 25559f64, 24973f64)),
-            DynOrigin::Neptune => Ok((24764f64, 24764f64, 24341f64)),
-            DynOrigin::Pluto => Ok((1188.3f64, 1188.3f64, 1188.3f64)),
-            DynOrigin::Moon => Ok((1737.4f64, 1737.4f64, 1737.4f64)),
-            DynOrigin::Phobos => Ok((13f64, 11.4f64, 9.1f64)),
-            DynOrigin::Deimos => Ok((7.8f64, 6f64, 5.1f64)),
-            DynOrigin::Io => Ok((1829.4f64, 1819.4f64, 1815.7f64)),
-            DynOrigin::Europa => Ok((1562.6f64, 1560.3f64, 1559.5f64)),
-            DynOrigin::Ganymede => Ok((2631.2f64, 2631.2f64, 2631.2f64)),
-            DynOrigin::Callisto => Ok((2410.3f64, 2410.3f64, 2410.3f64)),
-            DynOrigin::Amalthea => Ok((125f64, 73f64, 64f64)),
-            DynOrigin::Himalia => Ok((85f64, 85f64, 85f64)),
-            DynOrigin::Elara => Ok((40f64, 40f64, 40f64)),
-            DynOrigin::Pasiphae => Ok((18f64, 18f64, 18f64)),
-            DynOrigin::Sinope => Ok((14f64, 14f64, 14f64)),
-            DynOrigin::Lysithea => Ok((12f64, 12f64, 12f64)),
-            DynOrigin::Carme => Ok((15f64, 15f64, 15f64)),
-            DynOrigin::Ananke => Ok((10f64, 10f64, 10f64)),
-            DynOrigin::Leda => Ok((5f64, 5f64, 5f64)),
-            DynOrigin::Thebe => Ok((58f64, 49f64, 42f64)),
-            DynOrigin::Adrastea => Ok((10f64, 8f64, 7f64)),
-            DynOrigin::Metis => Ok((30f64, 20f64, 17f64)),
-            DynOrigin::Mimas => Ok((207.8f64, 196.7f64, 190.6f64)),
-            DynOrigin::Enceladus => Ok((256.6f64, 251.4f64, 248.3f64)),
-            DynOrigin::Tethys => Ok((538.4f64, 528.3f64, 526.3f64)),
-            DynOrigin::Dione => Ok((563.4f64, 561.3f64, 559.6f64)),
-            DynOrigin::Rhea => Ok((765f64, 763.1f64, 762.4f64)),
-            DynOrigin::Titan => Ok((2575.15f64, 2574.78f64, 2574.47f64)),
-            DynOrigin::Hyperion => Ok((180.1f64, 133f64, 102.7f64)),
-            DynOrigin::Iapetus => Ok((745.7f64, 745.7f64, 712.1f64)),
-            DynOrigin::Phoebe => Ok((109.4f64, 108.5f64, 101.8f64)),
-            DynOrigin::Janus => Ok((101.7f64, 93f64, 76.3f64)),
-            DynOrigin::Epimetheus => Ok((64.9f64, 57.3f64, 53f64)),
-            DynOrigin::Helene => Ok((22.5f64, 19.6f64, 13.3f64)),
-            DynOrigin::Telesto => Ok((16.3f64, 11.8f64, 9.8f64)),
-            DynOrigin::Calypso => Ok((15.3f64, 9.3f64, 6.3f64)),
-            DynOrigin::Atlas => Ok((20.5f64, 17.8f64, 9.4f64)),
-            DynOrigin::Prometheus => Ok((68.2f64, 41.6f64, 28.2f64)),
-            DynOrigin::Pandora => Ok((52.2f64, 40.8f64, 31.5f64)),
-            DynOrigin::Pan => Ok((17.2f64, 15.4f64, 10.4f64)),
-            DynOrigin::Methone => Ok((1.94f64, 1.29f64, 1.21f64)),
-            DynOrigin::Pallene => Ok((2.88f64, 2.08f64, 1.8f64)),
-            DynOrigin::Polydeuces => Ok((1.5f64, 1.2f64, 1f64)),
-            DynOrigin::Daphnis => Ok((4.6f64, 4.5f64, 2.8f64)),
-            DynOrigin::Anthe => Ok((0.5f64, 0.5f64, 0.5f64)),
-            DynOrigin::Aegaeon => Ok((0.7f64, 0.25f64, 0.2f64)),
-            DynOrigin::Ariel => Ok((581.1f64, 577.9f64, 577.7f64)),
-            DynOrigin::Umbriel => Ok((584.7f64, 584.7f64, 584.7f64)),
-            DynOrigin::Titania => Ok((788.9f64, 788.9f64, 788.9f64)),
-            DynOrigin::Oberon => Ok((761.4f64, 761.4f64, 761.4f64)),
-            DynOrigin::Miranda => Ok((240.4f64, 234.2f64, 232.9f64)),
-            DynOrigin::Cordelia => Ok((13f64, 13f64, 13f64)),
-            DynOrigin::Ophelia => Ok((15f64, 15f64, 15f64)),
-            DynOrigin::Bianca => Ok((21f64, 21f64, 21f64)),
-            DynOrigin::Cressida => Ok((31f64, 31f64, 31f64)),
-            DynOrigin::Desdemona => Ok((27f64, 27f64, 27f64)),
-            DynOrigin::Juliet => Ok((42f64, 42f64, 42f64)),
-            DynOrigin::Portia => Ok((54f64, 54f64, 54f64)),
-            DynOrigin::Rosalind => Ok((27f64, 27f64, 27f64)),
-            DynOrigin::Belinda => Ok((33f64, 33f64, 33f64)),
-            DynOrigin::Puck => Ok((77f64, 77f64, 77f64)),
-            DynOrigin::Triton => Ok((1352.6f64, 1352.6f64, 1352.6f64)),
-            DynOrigin::Nereid => Ok((170f64, 170f64, 170f64)),
-            DynOrigin::Naiad => Ok((29f64, 29f64, 29f64)),
-            DynOrigin::Thalassa => Ok((40f64, 40f64, 40f64)),
-            DynOrigin::Despina => Ok((74f64, 74f64, 74f64)),
-            DynOrigin::Galatea => Ok((79f64, 79f64, 79f64)),
-            DynOrigin::Larissa => Ok((96f64, 96f64, 96f64)),
-            DynOrigin::Proteus => Ok((218f64, 208f64, 201f64)),
-            DynOrigin::Charon => Ok((606f64, 606f64, 606f64)),
-            DynOrigin::Gaspra => Ok((9.1f64, 5.2f64, 4.4f64)),
-            DynOrigin::Ida => Ok((26.8f64, 12f64, 7.6f64)),
-            DynOrigin::Ceres => Ok((487.3f64, 487.3f64, 446f64)),
-            DynOrigin::Vesta => Ok((289f64, 280f64, 229f64)),
-            DynOrigin::Psyche => Ok((139.5f64, 116f64, 94.5f64)),
-            DynOrigin::Lutetia => Ok((62f64, 50.5f64, 46.5f64)),
-            DynOrigin::Eros => Ok((17f64, 5.5f64, 5.5f64)),
-            DynOrigin::Davida => Ok((180f64, 147f64, 127f64)),
-            DynOrigin::Mathilde => Ok((33f64, 24f64, 23f64)),
-            DynOrigin::Steins => Ok((3.24f64, 2.73f64, 2.04f64)),
-            DynOrigin::Toutatis => Ok((2.13f64, 1.015f64, 0.85f64)),
-            DynOrigin::Itokawa => Ok((0.268f64, 0.147f64, 0.104f64)),
+            DynOrigin::Sun => Ok((
+                Distance::kilometers(695700f64),
+                Distance::kilometers(695700f64),
+                Distance::kilometers(695700f64),
+            )),
+            DynOrigin::Mercury => Ok((
+                Distance::kilometers(2440.53f64),
+                Distance::kilometers(2440.53f64),
+                Distance::kilometers(2438.26f64),
+            )),
+            DynOrigin::Venus => Ok((
+                Distance::kilometers(6051.8f64),
+                Distance::kilometers(6051.8f64),
+                Distance::kilometers(6051.8f64),
+            )),
+            DynOrigin::Earth => Ok((
+                Distance::kilometers(6378.1366f64),
+                Distance::kilometers(6378.1366f64),
+                Distance::kilometers(6356.7519f64),
+            )),
+            DynOrigin::Mars => Ok((
+                Distance::kilometers(3396.19f64),
+                Distance::kilometers(3396.19f64),
+                Distance::kilometers(3376.2f64),
+            )),
+            DynOrigin::Jupiter => Ok((
+                Distance::kilometers(71492f64),
+                Distance::kilometers(71492f64),
+                Distance::kilometers(66854f64),
+            )),
+            DynOrigin::Saturn => Ok((
+                Distance::kilometers(60268f64),
+                Distance::kilometers(60268f64),
+                Distance::kilometers(54364f64),
+            )),
+            DynOrigin::Uranus => Ok((
+                Distance::kilometers(25559f64),
+                Distance::kilometers(25559f64),
+                Distance::kilometers(24973f64),
+            )),
+            DynOrigin::Neptune => Ok((
+                Distance::kilometers(24764f64),
+                Distance::kilometers(24764f64),
+                Distance::kilometers(24341f64),
+            )),
+            DynOrigin::Pluto => Ok((
+                Distance::kilometers(1188.3f64),
+                Distance::kilometers(1188.3f64),
+                Distance::kilometers(1188.3f64),
+            )),
+            DynOrigin::Moon => Ok((
+                Distance::kilometers(1737.4f64),
+                Distance::kilometers(1737.4f64),
+                Distance::kilometers(1737.4f64),
+            )),
+            DynOrigin::Phobos => Ok((
+                Distance::kilometers(13f64),
+                Distance::kilometers(11.4f64),
+                Distance::kilometers(9.1f64),
+            )),
+            DynOrigin::Deimos => Ok((
+                Distance::kilometers(7.8f64),
+                Distance::kilometers(6f64),
+                Distance::kilometers(5.1f64),
+            )),
+            DynOrigin::Io => Ok((
+                Distance::kilometers(1829.4f64),
+                Distance::kilometers(1819.4f64),
+                Distance::kilometers(1815.7f64),
+            )),
+            DynOrigin::Europa => Ok((
+                Distance::kilometers(1562.6f64),
+                Distance::kilometers(1560.3f64),
+                Distance::kilometers(1559.5f64),
+            )),
+            DynOrigin::Ganymede => Ok((
+                Distance::kilometers(2631.2f64),
+                Distance::kilometers(2631.2f64),
+                Distance::kilometers(2631.2f64),
+            )),
+            DynOrigin::Callisto => Ok((
+                Distance::kilometers(2410.3f64),
+                Distance::kilometers(2410.3f64),
+                Distance::kilometers(2410.3f64),
+            )),
+            DynOrigin::Amalthea => Ok((
+                Distance::kilometers(125f64),
+                Distance::kilometers(73f64),
+                Distance::kilometers(64f64),
+            )),
+            DynOrigin::Himalia => Ok((
+                Distance::kilometers(85f64),
+                Distance::kilometers(85f64),
+                Distance::kilometers(85f64),
+            )),
+            DynOrigin::Elara => Ok((
+                Distance::kilometers(40f64),
+                Distance::kilometers(40f64),
+                Distance::kilometers(40f64),
+            )),
+            DynOrigin::Pasiphae => Ok((
+                Distance::kilometers(18f64),
+                Distance::kilometers(18f64),
+                Distance::kilometers(18f64),
+            )),
+            DynOrigin::Sinope => Ok((
+                Distance::kilometers(14f64),
+                Distance::kilometers(14f64),
+                Distance::kilometers(14f64),
+            )),
+            DynOrigin::Lysithea => Ok((
+                Distance::kilometers(12f64),
+                Distance::kilometers(12f64),
+                Distance::kilometers(12f64),
+            )),
+            DynOrigin::Carme => Ok((
+                Distance::kilometers(15f64),
+                Distance::kilometers(15f64),
+                Distance::kilometers(15f64),
+            )),
+            DynOrigin::Ananke => Ok((
+                Distance::kilometers(10f64),
+                Distance::kilometers(10f64),
+                Distance::kilometers(10f64),
+            )),
+            DynOrigin::Leda => Ok((
+                Distance::kilometers(5f64),
+                Distance::kilometers(5f64),
+                Distance::kilometers(5f64),
+            )),
+            DynOrigin::Thebe => Ok((
+                Distance::kilometers(58f64),
+                Distance::kilometers(49f64),
+                Distance::kilometers(42f64),
+            )),
+            DynOrigin::Adrastea => Ok((
+                Distance::kilometers(10f64),
+                Distance::kilometers(8f64),
+                Distance::kilometers(7f64),
+            )),
+            DynOrigin::Metis => Ok((
+                Distance::kilometers(30f64),
+                Distance::kilometers(20f64),
+                Distance::kilometers(17f64),
+            )),
+            DynOrigin::Mimas => Ok((
+                Distance::kilometers(207.8f64),
+                Distance::kilometers(196.7f64),
+                Distance::kilometers(190.6f64),
+            )),
+            DynOrigin::Enceladus => Ok((
+                Distance::kilometers(256.6f64),
+                Distance::kilometers(251.4f64),
+                Distance::kilometers(248.3f64),
+            )),
+            DynOrigin::Tethys => Ok((
+                Distance::kilometers(538.4f64),
+                Distance::kilometers(528.3f64),
+                Distance::kilometers(526.3f64),
+            )),
+            DynOrigin::Dione => Ok((
+                Distance::kilometers(563.4f64),
+                Distance::kilometers(561.3f64),
+                Distance::kilometers(559.6f64),
+            )),
+            DynOrigin::Rhea => Ok((
+                Distance::kilometers(765f64),
+                Distance::kilometers(763.1f64),
+                Distance::kilometers(762.4f64),
+            )),
+            DynOrigin::Titan => Ok((
+                Distance::kilometers(2575.15f64),
+                Distance::kilometers(2574.78f64),
+                Distance::kilometers(2574.47f64),
+            )),
+            DynOrigin::Hyperion => Ok((
+                Distance::kilometers(180.1f64),
+                Distance::kilometers(133f64),
+                Distance::kilometers(102.7f64),
+            )),
+            DynOrigin::Iapetus => Ok((
+                Distance::kilometers(745.7f64),
+                Distance::kilometers(745.7f64),
+                Distance::kilometers(712.1f64),
+            )),
+            DynOrigin::Phoebe => Ok((
+                Distance::kilometers(109.4f64),
+                Distance::kilometers(108.5f64),
+                Distance::kilometers(101.8f64),
+            )),
+            DynOrigin::Janus => Ok((
+                Distance::kilometers(101.7f64),
+                Distance::kilometers(93f64),
+                Distance::kilometers(76.3f64),
+            )),
+            DynOrigin::Epimetheus => Ok((
+                Distance::kilometers(64.9f64),
+                Distance::kilometers(57.3f64),
+                Distance::kilometers(53f64),
+            )),
+            DynOrigin::Helene => Ok((
+                Distance::kilometers(22.5f64),
+                Distance::kilometers(19.6f64),
+                Distance::kilometers(13.3f64),
+            )),
+            DynOrigin::Telesto => Ok((
+                Distance::kilometers(16.3f64),
+                Distance::kilometers(11.8f64),
+                Distance::kilometers(9.8f64),
+            )),
+            DynOrigin::Calypso => Ok((
+                Distance::kilometers(15.3f64),
+                Distance::kilometers(9.3f64),
+                Distance::kilometers(6.3f64),
+            )),
+            DynOrigin::Atlas => Ok((
+                Distance::kilometers(20.5f64),
+                Distance::kilometers(17.8f64),
+                Distance::kilometers(9.4f64),
+            )),
+            DynOrigin::Prometheus => Ok((
+                Distance::kilometers(68.2f64),
+                Distance::kilometers(41.6f64),
+                Distance::kilometers(28.2f64),
+            )),
+            DynOrigin::Pandora => Ok((
+                Distance::kilometers(52.2f64),
+                Distance::kilometers(40.8f64),
+                Distance::kilometers(31.5f64),
+            )),
+            DynOrigin::Pan => Ok((
+                Distance::kilometers(17.2f64),
+                Distance::kilometers(15.4f64),
+                Distance::kilometers(10.4f64),
+            )),
+            DynOrigin::Methone => Ok((
+                Distance::kilometers(1.94f64),
+                Distance::kilometers(1.29f64),
+                Distance::kilometers(1.21f64),
+            )),
+            DynOrigin::Pallene => Ok((
+                Distance::kilometers(2.88f64),
+                Distance::kilometers(2.08f64),
+                Distance::kilometers(1.8f64),
+            )),
+            DynOrigin::Polydeuces => Ok((
+                Distance::kilometers(1.5f64),
+                Distance::kilometers(1.2f64),
+                Distance::kilometers(1f64),
+            )),
+            DynOrigin::Daphnis => Ok((
+                Distance::kilometers(4.6f64),
+                Distance::kilometers(4.5f64),
+                Distance::kilometers(2.8f64),
+            )),
+            DynOrigin::Anthe => Ok((
+                Distance::kilometers(0.5f64),
+                Distance::kilometers(0.5f64),
+                Distance::kilometers(0.5f64),
+            )),
+            DynOrigin::Aegaeon => Ok((
+                Distance::kilometers(0.7f64),
+                Distance::kilometers(0.25f64),
+                Distance::kilometers(0.2f64),
+            )),
+            DynOrigin::Ariel => Ok((
+                Distance::kilometers(581.1f64),
+                Distance::kilometers(577.9f64),
+                Distance::kilometers(577.7f64),
+            )),
+            DynOrigin::Umbriel => Ok((
+                Distance::kilometers(584.7f64),
+                Distance::kilometers(584.7f64),
+                Distance::kilometers(584.7f64),
+            )),
+            DynOrigin::Titania => Ok((
+                Distance::kilometers(788.9f64),
+                Distance::kilometers(788.9f64),
+                Distance::kilometers(788.9f64),
+            )),
+            DynOrigin::Oberon => Ok((
+                Distance::kilometers(761.4f64),
+                Distance::kilometers(761.4f64),
+                Distance::kilometers(761.4f64),
+            )),
+            DynOrigin::Miranda => Ok((
+                Distance::kilometers(240.4f64),
+                Distance::kilometers(234.2f64),
+                Distance::kilometers(232.9f64),
+            )),
+            DynOrigin::Cordelia => Ok((
+                Distance::kilometers(13f64),
+                Distance::kilometers(13f64),
+                Distance::kilometers(13f64),
+            )),
+            DynOrigin::Ophelia => Ok((
+                Distance::kilometers(15f64),
+                Distance::kilometers(15f64),
+                Distance::kilometers(15f64),
+            )),
+            DynOrigin::Bianca => Ok((
+                Distance::kilometers(21f64),
+                Distance::kilometers(21f64),
+                Distance::kilometers(21f64),
+            )),
+            DynOrigin::Cressida => Ok((
+                Distance::kilometers(31f64),
+                Distance::kilometers(31f64),
+                Distance::kilometers(31f64),
+            )),
+            DynOrigin::Desdemona => Ok((
+                Distance::kilometers(27f64),
+                Distance::kilometers(27f64),
+                Distance::kilometers(27f64),
+            )),
+            DynOrigin::Juliet => Ok((
+                Distance::kilometers(42f64),
+                Distance::kilometers(42f64),
+                Distance::kilometers(42f64),
+            )),
+            DynOrigin::Portia => Ok((
+                Distance::kilometers(54f64),
+                Distance::kilometers(54f64),
+                Distance::kilometers(54f64),
+            )),
+            DynOrigin::Rosalind => Ok((
+                Distance::kilometers(27f64),
+                Distance::kilometers(27f64),
+                Distance::kilometers(27f64),
+            )),
+            DynOrigin::Belinda => Ok((
+                Distance::kilometers(33f64),
+                Distance::kilometers(33f64),
+                Distance::kilometers(33f64),
+            )),
+            DynOrigin::Puck => Ok((
+                Distance::kilometers(77f64),
+                Distance::kilometers(77f64),
+                Distance::kilometers(77f64),
+            )),
+            DynOrigin::Triton => Ok((
+                Distance::kilometers(1352.6f64),
+                Distance::kilometers(1352.6f64),
+                Distance::kilometers(1352.6f64),
+            )),
+            DynOrigin::Nereid => Ok((
+                Distance::kilometers(170f64),
+                Distance::kilometers(170f64),
+                Distance::kilometers(170f64),
+            )),
+            DynOrigin::Naiad => Ok((
+                Distance::kilometers(29f64),
+                Distance::kilometers(29f64),
+                Distance::kilometers(29f64),
+            )),
+            DynOrigin::Thalassa => Ok((
+                Distance::kilometers(40f64),
+                Distance::kilometers(40f64),
+                Distance::kilometers(40f64),
+            )),
+            DynOrigin::Despina => Ok((
+                Distance::kilometers(74f64),
+                Distance::kilometers(74f64),
+                Distance::kilometers(74f64),
+            )),
+            DynOrigin::Galatea => Ok((
+                Distance::kilometers(79f64),
+                Distance::kilometers(79f64),
+                Distance::kilometers(79f64),
+            )),
+            DynOrigin::Larissa => Ok((
+                Distance::kilometers(96f64),
+                Distance::kilometers(96f64),
+                Distance::kilometers(96f64),
+            )),
+            DynOrigin::Proteus => Ok((
+                Distance::kilometers(218f64),
+                Distance::kilometers(208f64),
+                Distance::kilometers(201f64),
+            )),
+            DynOrigin::Charon => Ok((
+                Distance::kilometers(606f64),
+                Distance::kilometers(606f64),
+                Distance::kilometers(606f64),
+            )),
+            DynOrigin::Gaspra => Ok((
+                Distance::kilometers(9.1f64),
+                Distance::kilometers(5.2f64),
+                Distance::kilometers(4.4f64),
+            )),
+            DynOrigin::Ida => Ok((
+                Distance::kilometers(26.8f64),
+                Distance::kilometers(12f64),
+                Distance::kilometers(7.6f64),
+            )),
+            DynOrigin::Ceres => Ok((
+                Distance::kilometers(487.3f64),
+                Distance::kilometers(487.3f64),
+                Distance::kilometers(446f64),
+            )),
+            DynOrigin::Vesta => Ok((
+                Distance::kilometers(289f64),
+                Distance::kilometers(280f64),
+                Distance::kilometers(229f64),
+            )),
+            DynOrigin::Psyche => Ok((
+                Distance::kilometers(139.5f64),
+                Distance::kilometers(116f64),
+                Distance::kilometers(94.5f64),
+            )),
+            DynOrigin::Lutetia => Ok((
+                Distance::kilometers(62f64),
+                Distance::kilometers(50.5f64),
+                Distance::kilometers(46.5f64),
+            )),
+            DynOrigin::Eros => Ok((
+                Distance::kilometers(17f64),
+                Distance::kilometers(5.5f64),
+                Distance::kilometers(5.5f64),
+            )),
+            DynOrigin::Davida => Ok((
+                Distance::kilometers(180f64),
+                Distance::kilometers(147f64),
+                Distance::kilometers(127f64),
+            )),
+            DynOrigin::Mathilde => Ok((
+                Distance::kilometers(33f64),
+                Distance::kilometers(24f64),
+                Distance::kilometers(23f64),
+            )),
+            DynOrigin::Steins => Ok((
+                Distance::kilometers(3.24f64),
+                Distance::kilometers(2.73f64),
+                Distance::kilometers(2.04f64),
+            )),
+            DynOrigin::Toutatis => Ok((
+                Distance::kilometers(2.13f64),
+                Distance::kilometers(1.015f64),
+                Distance::kilometers(0.85f64),
+            )),
+            DynOrigin::Itokawa => Ok((
+                Distance::kilometers(0.268f64),
+                Distance::kilometers(0.147f64),
+                Distance::kilometers(0.104f64),
+            )),
             _ => Err(UndefinedOriginPropertyError {
                 origin: self.to_string(),
                 prop: "radii".to_string(),
@@ -12865,106 +13597,106 @@ impl TryTriaxialEllipsoid for DynOrigin {
     }
 }
 impl TrySpheroid for DynOrigin {
-    fn try_polar_radius(&self) -> Result<f64, UndefinedOriginPropertyError> {
+    fn try_polar_radius(&self) -> Result<Distance, UndefinedOriginPropertyError> {
         match self {
-            DynOrigin::Sun => Ok(695700f64),
-            DynOrigin::Mercury => Ok(2438.26f64),
-            DynOrigin::Venus => Ok(6051.8f64),
-            DynOrigin::Earth => Ok(6356.7519f64),
-            DynOrigin::Mars => Ok(3376.2f64),
-            DynOrigin::Jupiter => Ok(66854f64),
-            DynOrigin::Saturn => Ok(54364f64),
-            DynOrigin::Uranus => Ok(24973f64),
-            DynOrigin::Neptune => Ok(24341f64),
-            DynOrigin::Pluto => Ok(1188.3f64),
-            DynOrigin::Moon => Ok(1737.4f64),
-            DynOrigin::Ganymede => Ok(2631.2f64),
-            DynOrigin::Callisto => Ok(2410.3f64),
-            DynOrigin::Himalia => Ok(85f64),
-            DynOrigin::Elara => Ok(40f64),
-            DynOrigin::Pasiphae => Ok(18f64),
-            DynOrigin::Sinope => Ok(14f64),
-            DynOrigin::Lysithea => Ok(12f64),
-            DynOrigin::Carme => Ok(15f64),
-            DynOrigin::Ananke => Ok(10f64),
-            DynOrigin::Leda => Ok(5f64),
-            DynOrigin::Iapetus => Ok(712.1f64),
-            DynOrigin::Anthe => Ok(0.5f64),
-            DynOrigin::Umbriel => Ok(584.7f64),
-            DynOrigin::Titania => Ok(788.9f64),
-            DynOrigin::Oberon => Ok(761.4f64),
-            DynOrigin::Cordelia => Ok(13f64),
-            DynOrigin::Ophelia => Ok(15f64),
-            DynOrigin::Bianca => Ok(21f64),
-            DynOrigin::Cressida => Ok(31f64),
-            DynOrigin::Desdemona => Ok(27f64),
-            DynOrigin::Juliet => Ok(42f64),
-            DynOrigin::Portia => Ok(54f64),
-            DynOrigin::Rosalind => Ok(27f64),
-            DynOrigin::Belinda => Ok(33f64),
-            DynOrigin::Puck => Ok(77f64),
-            DynOrigin::Triton => Ok(1352.6f64),
-            DynOrigin::Nereid => Ok(170f64),
-            DynOrigin::Naiad => Ok(29f64),
-            DynOrigin::Thalassa => Ok(40f64),
-            DynOrigin::Despina => Ok(74f64),
-            DynOrigin::Galatea => Ok(79f64),
-            DynOrigin::Larissa => Ok(96f64),
-            DynOrigin::Charon => Ok(606f64),
-            DynOrigin::Ceres => Ok(446f64),
+            DynOrigin::Sun => Ok(Distance::kilometers(695700f64)),
+            DynOrigin::Mercury => Ok(Distance::kilometers(2438.26f64)),
+            DynOrigin::Venus => Ok(Distance::kilometers(6051.8f64)),
+            DynOrigin::Earth => Ok(Distance::kilometers(6356.7519f64)),
+            DynOrigin::Mars => Ok(Distance::kilometers(3376.2f64)),
+            DynOrigin::Jupiter => Ok(Distance::kilometers(66854f64)),
+            DynOrigin::Saturn => Ok(Distance::kilometers(54364f64)),
+            DynOrigin::Uranus => Ok(Distance::kilometers(24973f64)),
+            DynOrigin::Neptune => Ok(Distance::kilometers(24341f64)),
+            DynOrigin::Pluto => Ok(Distance::kilometers(1188.3f64)),
+            DynOrigin::Moon => Ok(Distance::kilometers(1737.4f64)),
+            DynOrigin::Ganymede => Ok(Distance::kilometers(2631.2f64)),
+            DynOrigin::Callisto => Ok(Distance::kilometers(2410.3f64)),
+            DynOrigin::Himalia => Ok(Distance::kilometers(85f64)),
+            DynOrigin::Elara => Ok(Distance::kilometers(40f64)),
+            DynOrigin::Pasiphae => Ok(Distance::kilometers(18f64)),
+            DynOrigin::Sinope => Ok(Distance::kilometers(14f64)),
+            DynOrigin::Lysithea => Ok(Distance::kilometers(12f64)),
+            DynOrigin::Carme => Ok(Distance::kilometers(15f64)),
+            DynOrigin::Ananke => Ok(Distance::kilometers(10f64)),
+            DynOrigin::Leda => Ok(Distance::kilometers(5f64)),
+            DynOrigin::Iapetus => Ok(Distance::kilometers(712.1f64)),
+            DynOrigin::Anthe => Ok(Distance::kilometers(0.5f64)),
+            DynOrigin::Umbriel => Ok(Distance::kilometers(584.7f64)),
+            DynOrigin::Titania => Ok(Distance::kilometers(788.9f64)),
+            DynOrigin::Oberon => Ok(Distance::kilometers(761.4f64)),
+            DynOrigin::Cordelia => Ok(Distance::kilometers(13f64)),
+            DynOrigin::Ophelia => Ok(Distance::kilometers(15f64)),
+            DynOrigin::Bianca => Ok(Distance::kilometers(21f64)),
+            DynOrigin::Cressida => Ok(Distance::kilometers(31f64)),
+            DynOrigin::Desdemona => Ok(Distance::kilometers(27f64)),
+            DynOrigin::Juliet => Ok(Distance::kilometers(42f64)),
+            DynOrigin::Portia => Ok(Distance::kilometers(54f64)),
+            DynOrigin::Rosalind => Ok(Distance::kilometers(27f64)),
+            DynOrigin::Belinda => Ok(Distance::kilometers(33f64)),
+            DynOrigin::Puck => Ok(Distance::kilometers(77f64)),
+            DynOrigin::Triton => Ok(Distance::kilometers(1352.6f64)),
+            DynOrigin::Nereid => Ok(Distance::kilometers(170f64)),
+            DynOrigin::Naiad => Ok(Distance::kilometers(29f64)),
+            DynOrigin::Thalassa => Ok(Distance::kilometers(40f64)),
+            DynOrigin::Despina => Ok(Distance::kilometers(74f64)),
+            DynOrigin::Galatea => Ok(Distance::kilometers(79f64)),
+            DynOrigin::Larissa => Ok(Distance::kilometers(96f64)),
+            DynOrigin::Charon => Ok(Distance::kilometers(606f64)),
+            DynOrigin::Ceres => Ok(Distance::kilometers(446f64)),
             _ => Err(UndefinedOriginPropertyError {
                 origin: self.to_string(),
                 prop: "polar radius".to_string(),
             }),
         }
     }
-    fn try_equatorial_radius(&self) -> Result<f64, UndefinedOriginPropertyError> {
+    fn try_equatorial_radius(&self) -> Result<Distance, UndefinedOriginPropertyError> {
         match self {
-            DynOrigin::Sun => Ok(695700f64),
-            DynOrigin::Mercury => Ok(2440.53f64),
-            DynOrigin::Venus => Ok(6051.8f64),
-            DynOrigin::Earth => Ok(6378.1366f64),
-            DynOrigin::Mars => Ok(3396.19f64),
-            DynOrigin::Jupiter => Ok(71492f64),
-            DynOrigin::Saturn => Ok(60268f64),
-            DynOrigin::Uranus => Ok(25559f64),
-            DynOrigin::Neptune => Ok(24764f64),
-            DynOrigin::Pluto => Ok(1188.3f64),
-            DynOrigin::Moon => Ok(1737.4f64),
-            DynOrigin::Ganymede => Ok(2631.2f64),
-            DynOrigin::Callisto => Ok(2410.3f64),
-            DynOrigin::Himalia => Ok(85f64),
-            DynOrigin::Elara => Ok(40f64),
-            DynOrigin::Pasiphae => Ok(18f64),
-            DynOrigin::Sinope => Ok(14f64),
-            DynOrigin::Lysithea => Ok(12f64),
-            DynOrigin::Carme => Ok(15f64),
-            DynOrigin::Ananke => Ok(10f64),
-            DynOrigin::Leda => Ok(5f64),
-            DynOrigin::Iapetus => Ok(745.7f64),
-            DynOrigin::Anthe => Ok(0.5f64),
-            DynOrigin::Umbriel => Ok(584.7f64),
-            DynOrigin::Titania => Ok(788.9f64),
-            DynOrigin::Oberon => Ok(761.4f64),
-            DynOrigin::Cordelia => Ok(13f64),
-            DynOrigin::Ophelia => Ok(15f64),
-            DynOrigin::Bianca => Ok(21f64),
-            DynOrigin::Cressida => Ok(31f64),
-            DynOrigin::Desdemona => Ok(27f64),
-            DynOrigin::Juliet => Ok(42f64),
-            DynOrigin::Portia => Ok(54f64),
-            DynOrigin::Rosalind => Ok(27f64),
-            DynOrigin::Belinda => Ok(33f64),
-            DynOrigin::Puck => Ok(77f64),
-            DynOrigin::Triton => Ok(1352.6f64),
-            DynOrigin::Nereid => Ok(170f64),
-            DynOrigin::Naiad => Ok(29f64),
-            DynOrigin::Thalassa => Ok(40f64),
-            DynOrigin::Despina => Ok(74f64),
-            DynOrigin::Galatea => Ok(79f64),
-            DynOrigin::Larissa => Ok(96f64),
-            DynOrigin::Charon => Ok(606f64),
-            DynOrigin::Ceres => Ok(487.3f64),
+            DynOrigin::Sun => Ok(Distance::kilometers(695700f64)),
+            DynOrigin::Mercury => Ok(Distance::kilometers(2440.53f64)),
+            DynOrigin::Venus => Ok(Distance::kilometers(6051.8f64)),
+            DynOrigin::Earth => Ok(Distance::kilometers(6378.1366f64)),
+            DynOrigin::Mars => Ok(Distance::kilometers(3396.19f64)),
+            DynOrigin::Jupiter => Ok(Distance::kilometers(71492f64)),
+            DynOrigin::Saturn => Ok(Distance::kilometers(60268f64)),
+            DynOrigin::Uranus => Ok(Distance::kilometers(25559f64)),
+            DynOrigin::Neptune => Ok(Distance::kilometers(24764f64)),
+            DynOrigin::Pluto => Ok(Distance::kilometers(1188.3f64)),
+            DynOrigin::Moon => Ok(Distance::kilometers(1737.4f64)),
+            DynOrigin::Ganymede => Ok(Distance::kilometers(2631.2f64)),
+            DynOrigin::Callisto => Ok(Distance::kilometers(2410.3f64)),
+            DynOrigin::Himalia => Ok(Distance::kilometers(85f64)),
+            DynOrigin::Elara => Ok(Distance::kilometers(40f64)),
+            DynOrigin::Pasiphae => Ok(Distance::kilometers(18f64)),
+            DynOrigin::Sinope => Ok(Distance::kilometers(14f64)),
+            DynOrigin::Lysithea => Ok(Distance::kilometers(12f64)),
+            DynOrigin::Carme => Ok(Distance::kilometers(15f64)),
+            DynOrigin::Ananke => Ok(Distance::kilometers(10f64)),
+            DynOrigin::Leda => Ok(Distance::kilometers(5f64)),
+            DynOrigin::Iapetus => Ok(Distance::kilometers(745.7f64)),
+            DynOrigin::Anthe => Ok(Distance::kilometers(0.5f64)),
+            DynOrigin::Umbriel => Ok(Distance::kilometers(584.7f64)),
+            DynOrigin::Titania => Ok(Distance::kilometers(788.9f64)),
+            DynOrigin::Oberon => Ok(Distance::kilometers(761.4f64)),
+            DynOrigin::Cordelia => Ok(Distance::kilometers(13f64)),
+            DynOrigin::Ophelia => Ok(Distance::kilometers(15f64)),
+            DynOrigin::Bianca => Ok(Distance::kilometers(21f64)),
+            DynOrigin::Cressida => Ok(Distance::kilometers(31f64)),
+            DynOrigin::Desdemona => Ok(Distance::kilometers(27f64)),
+            DynOrigin::Juliet => Ok(Distance::kilometers(42f64)),
+            DynOrigin::Portia => Ok(Distance::kilometers(54f64)),
+            DynOrigin::Rosalind => Ok(Distance::kilometers(27f64)),
+            DynOrigin::Belinda => Ok(Distance::kilometers(33f64)),
+            DynOrigin::Puck => Ok(Distance::kilometers(77f64)),
+            DynOrigin::Triton => Ok(Distance::kilometers(1352.6f64)),
+            DynOrigin::Nereid => Ok(Distance::kilometers(170f64)),
+            DynOrigin::Naiad => Ok(Distance::kilometers(29f64)),
+            DynOrigin::Thalassa => Ok(Distance::kilometers(40f64)),
+            DynOrigin::Despina => Ok(Distance::kilometers(74f64)),
+            DynOrigin::Galatea => Ok(Distance::kilometers(79f64)),
+            DynOrigin::Larissa => Ok(Distance::kilometers(96f64)),
+            DynOrigin::Charon => Ok(Distance::kilometers(606f64)),
+            DynOrigin::Ceres => Ok(Distance::kilometers(487.3f64)),
             _ => Err(UndefinedOriginPropertyError {
                 origin: self.to_string(),
                 prop: "equatorial radius".to_string(),
@@ -13146,10 +13878,13 @@ mod tests {
     }
     #[test]
     fn test_point_mass_10() {
-        assert_eq!(Sun.gravitational_parameter(), 132712440041.27942f64);
+        assert_eq!(
+            Sun.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(132712440041.27942f64)
+        );
         assert_eq!(
             DynOrigin::Sun.try_gravitational_parameter(),
-            Ok(132712440041.27942f64)
+            Ok(GravitationalParameter::km3_per_s2(132712440041.27942f64))
         );
     }
     #[test]
@@ -13158,17 +13893,34 @@ mod tests {
     }
     #[test]
     fn test_spheroid_10() {
-        assert_eq!(Sun.polar_radius(), 695700f64);
-        assert_eq!(DynOrigin::Sun.try_polar_radius(), Ok(695700f64));
-        assert_eq!(Sun.equatorial_radius(), 695700f64);
-        assert_eq!(DynOrigin::Sun.try_equatorial_radius(), Ok(695700f64));
+        assert_eq!(Sun.polar_radius(), Distance::kilometers(695700f64));
+        assert_eq!(
+            DynOrigin::Sun.try_polar_radius(),
+            Ok(Distance::kilometers(695700f64))
+        );
+        assert_eq!(Sun.equatorial_radius(), Distance::kilometers(695700f64));
+        assert_eq!(
+            DynOrigin::Sun.try_equatorial_radius(),
+            Ok(Distance::kilometers(695700f64))
+        );
     }
     #[test]
     fn test_tri_axial_10() {
-        assert_eq!(Sun.radii(), (695700f64, 695700f64, 695700f64));
+        assert_eq!(
+            Sun.radii(),
+            (
+                Distance::kilometers(695700f64),
+                Distance::kilometers(695700f64),
+                Distance::kilometers(695700f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Sun.try_radii(),
-            Ok((695700f64, 695700f64, 695700f64))
+            Ok((
+                Distance::kilometers(695700f64),
+                Distance::kilometers(695700f64),
+                Distance::kilometers(695700f64)
+            ))
         );
     }
     #[test]
@@ -13178,30 +13930,56 @@ mod tests {
     }
     #[test]
     fn test_point_mass_199() {
-        assert_eq!(Mercury.gravitational_parameter(), 22031.868551400003f64);
+        assert_eq!(
+            Mercury.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(22031.868551400003f64)
+        );
         assert_eq!(
             DynOrigin::Mercury.try_gravitational_parameter(),
-            Ok(22031.868551400003f64)
+            Ok(GravitationalParameter::km3_per_s2(22031.868551400003f64))
         );
     }
     #[test]
     fn test_mean_radius_199() {
-        assert_eq!(Mercury.mean_radius(), 2439.4f64);
-        assert_eq!(DynOrigin::Mercury.try_mean_radius(), Ok(2439.4f64));
+        assert_eq!(Mercury.mean_radius(), Distance::kilometers(2439.4f64));
+        assert_eq!(
+            DynOrigin::Mercury.try_mean_radius(),
+            Ok(Distance::kilometers(2439.4f64))
+        );
     }
     #[test]
     fn test_spheroid_199() {
-        assert_eq!(Mercury.polar_radius(), 2438.26f64);
-        assert_eq!(DynOrigin::Mercury.try_polar_radius(), Ok(2438.26f64));
-        assert_eq!(Mercury.equatorial_radius(), 2440.53f64);
-        assert_eq!(DynOrigin::Mercury.try_equatorial_radius(), Ok(2440.53f64));
+        assert_eq!(Mercury.polar_radius(), Distance::kilometers(2438.26f64));
+        assert_eq!(
+            DynOrigin::Mercury.try_polar_radius(),
+            Ok(Distance::kilometers(2438.26f64))
+        );
+        assert_eq!(
+            Mercury.equatorial_radius(),
+            Distance::kilometers(2440.53f64)
+        );
+        assert_eq!(
+            DynOrigin::Mercury.try_equatorial_radius(),
+            Ok(Distance::kilometers(2440.53f64))
+        );
     }
     #[test]
     fn test_tri_axial_199() {
-        assert_eq!(Mercury.radii(), (2440.53f64, 2440.53f64, 2438.26f64));
+        assert_eq!(
+            Mercury.radii(),
+            (
+                Distance::kilometers(2440.53f64),
+                Distance::kilometers(2440.53f64),
+                Distance::kilometers(2438.26f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Mercury.try_radii(),
-            Ok((2440.53f64, 2440.53f64, 2438.26f64))
+            Ok((
+                Distance::kilometers(2440.53f64),
+                Distance::kilometers(2440.53f64),
+                Distance::kilometers(2438.26f64)
+            ))
         );
     }
     #[test]
@@ -13211,30 +13989,53 @@ mod tests {
     }
     #[test]
     fn test_point_mass_299() {
-        assert_eq!(Venus.gravitational_parameter(), 324858.592f64);
+        assert_eq!(
+            Venus.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(324858.592f64)
+        );
         assert_eq!(
             DynOrigin::Venus.try_gravitational_parameter(),
-            Ok(324858.592f64)
+            Ok(GravitationalParameter::km3_per_s2(324858.592f64))
         );
     }
     #[test]
     fn test_mean_radius_299() {
-        assert_eq!(Venus.mean_radius(), 6051.8f64);
-        assert_eq!(DynOrigin::Venus.try_mean_radius(), Ok(6051.8f64));
+        assert_eq!(Venus.mean_radius(), Distance::kilometers(6051.8f64));
+        assert_eq!(
+            DynOrigin::Venus.try_mean_radius(),
+            Ok(Distance::kilometers(6051.8f64))
+        );
     }
     #[test]
     fn test_spheroid_299() {
-        assert_eq!(Venus.polar_radius(), 6051.8f64);
-        assert_eq!(DynOrigin::Venus.try_polar_radius(), Ok(6051.8f64));
-        assert_eq!(Venus.equatorial_radius(), 6051.8f64);
-        assert_eq!(DynOrigin::Venus.try_equatorial_radius(), Ok(6051.8f64));
+        assert_eq!(Venus.polar_radius(), Distance::kilometers(6051.8f64));
+        assert_eq!(
+            DynOrigin::Venus.try_polar_radius(),
+            Ok(Distance::kilometers(6051.8f64))
+        );
+        assert_eq!(Venus.equatorial_radius(), Distance::kilometers(6051.8f64));
+        assert_eq!(
+            DynOrigin::Venus.try_equatorial_radius(),
+            Ok(Distance::kilometers(6051.8f64))
+        );
     }
     #[test]
     fn test_tri_axial_299() {
-        assert_eq!(Venus.radii(), (6051.8f64, 6051.8f64, 6051.8f64));
+        assert_eq!(
+            Venus.radii(),
+            (
+                Distance::kilometers(6051.8f64),
+                Distance::kilometers(6051.8f64),
+                Distance::kilometers(6051.8f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Venus.try_radii(),
-            Ok((6051.8f64, 6051.8f64, 6051.8f64))
+            Ok((
+                Distance::kilometers(6051.8f64),
+                Distance::kilometers(6051.8f64),
+                Distance::kilometers(6051.8f64)
+            ))
         );
     }
     #[test]
@@ -13244,30 +14045,56 @@ mod tests {
     }
     #[test]
     fn test_point_mass_399() {
-        assert_eq!(Earth.gravitational_parameter(), 398600.43550702266f64);
+        assert_eq!(
+            Earth.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(398600.43550702266f64)
+        );
         assert_eq!(
             DynOrigin::Earth.try_gravitational_parameter(),
-            Ok(398600.43550702266f64)
+            Ok(GravitationalParameter::km3_per_s2(398600.43550702266f64))
         );
     }
     #[test]
     fn test_mean_radius_399() {
-        assert_eq!(Earth.mean_radius(), 6371.0084f64);
-        assert_eq!(DynOrigin::Earth.try_mean_radius(), Ok(6371.0084f64));
+        assert_eq!(Earth.mean_radius(), Distance::kilometers(6371.0084f64));
+        assert_eq!(
+            DynOrigin::Earth.try_mean_radius(),
+            Ok(Distance::kilometers(6371.0084f64))
+        );
     }
     #[test]
     fn test_spheroid_399() {
-        assert_eq!(Earth.polar_radius(), 6356.7519f64);
-        assert_eq!(DynOrigin::Earth.try_polar_radius(), Ok(6356.7519f64));
-        assert_eq!(Earth.equatorial_radius(), 6378.1366f64);
-        assert_eq!(DynOrigin::Earth.try_equatorial_radius(), Ok(6378.1366f64));
+        assert_eq!(Earth.polar_radius(), Distance::kilometers(6356.7519f64));
+        assert_eq!(
+            DynOrigin::Earth.try_polar_radius(),
+            Ok(Distance::kilometers(6356.7519f64))
+        );
+        assert_eq!(
+            Earth.equatorial_radius(),
+            Distance::kilometers(6378.1366f64)
+        );
+        assert_eq!(
+            DynOrigin::Earth.try_equatorial_radius(),
+            Ok(Distance::kilometers(6378.1366f64))
+        );
     }
     #[test]
     fn test_tri_axial_399() {
-        assert_eq!(Earth.radii(), (6378.1366f64, 6378.1366f64, 6356.7519f64));
+        assert_eq!(
+            Earth.radii(),
+            (
+                Distance::kilometers(6378.1366f64),
+                Distance::kilometers(6378.1366f64),
+                Distance::kilometers(6356.7519f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Earth.try_radii(),
-            Ok((6378.1366f64, 6378.1366f64, 6356.7519f64))
+            Ok((
+                Distance::kilometers(6378.1366f64),
+                Distance::kilometers(6378.1366f64),
+                Distance::kilometers(6356.7519f64)
+            ))
         );
     }
     #[test]
@@ -13277,30 +14104,53 @@ mod tests {
     }
     #[test]
     fn test_point_mass_499() {
-        assert_eq!(Mars.gravitational_parameter(), 42828.37362069909f64);
+        assert_eq!(
+            Mars.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(42828.37362069909f64)
+        );
         assert_eq!(
             DynOrigin::Mars.try_gravitational_parameter(),
-            Ok(42828.37362069909f64)
+            Ok(GravitationalParameter::km3_per_s2(42828.37362069909f64))
         );
     }
     #[test]
     fn test_mean_radius_499() {
-        assert_eq!(Mars.mean_radius(), 3389.5f64);
-        assert_eq!(DynOrigin::Mars.try_mean_radius(), Ok(3389.5f64));
+        assert_eq!(Mars.mean_radius(), Distance::kilometers(3389.5f64));
+        assert_eq!(
+            DynOrigin::Mars.try_mean_radius(),
+            Ok(Distance::kilometers(3389.5f64))
+        );
     }
     #[test]
     fn test_spheroid_499() {
-        assert_eq!(Mars.polar_radius(), 3376.2f64);
-        assert_eq!(DynOrigin::Mars.try_polar_radius(), Ok(3376.2f64));
-        assert_eq!(Mars.equatorial_radius(), 3396.19f64);
-        assert_eq!(DynOrigin::Mars.try_equatorial_radius(), Ok(3396.19f64));
+        assert_eq!(Mars.polar_radius(), Distance::kilometers(3376.2f64));
+        assert_eq!(
+            DynOrigin::Mars.try_polar_radius(),
+            Ok(Distance::kilometers(3376.2f64))
+        );
+        assert_eq!(Mars.equatorial_radius(), Distance::kilometers(3396.19f64));
+        assert_eq!(
+            DynOrigin::Mars.try_equatorial_radius(),
+            Ok(Distance::kilometers(3396.19f64))
+        );
     }
     #[test]
     fn test_tri_axial_499() {
-        assert_eq!(Mars.radii(), (3396.19f64, 3396.19f64, 3376.2f64));
+        assert_eq!(
+            Mars.radii(),
+            (
+                Distance::kilometers(3396.19f64),
+                Distance::kilometers(3396.19f64),
+                Distance::kilometers(3376.2f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Mars.try_radii(),
-            Ok((3396.19f64, 3396.19f64, 3376.2f64))
+            Ok((
+                Distance::kilometers(3396.19f64),
+                Distance::kilometers(3396.19f64),
+                Distance::kilometers(3376.2f64)
+            ))
         );
     }
     #[test]
@@ -13310,30 +14160,53 @@ mod tests {
     }
     #[test]
     fn test_point_mass_599() {
-        assert_eq!(Jupiter.gravitational_parameter(), 126686531.9003704f64);
+        assert_eq!(
+            Jupiter.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(126686531.9003704f64)
+        );
         assert_eq!(
             DynOrigin::Jupiter.try_gravitational_parameter(),
-            Ok(126686531.9003704f64)
+            Ok(GravitationalParameter::km3_per_s2(126686531.9003704f64))
         );
     }
     #[test]
     fn test_mean_radius_599() {
-        assert_eq!(Jupiter.mean_radius(), 69911f64);
-        assert_eq!(DynOrigin::Jupiter.try_mean_radius(), Ok(69911f64));
+        assert_eq!(Jupiter.mean_radius(), Distance::kilometers(69911f64));
+        assert_eq!(
+            DynOrigin::Jupiter.try_mean_radius(),
+            Ok(Distance::kilometers(69911f64))
+        );
     }
     #[test]
     fn test_spheroid_599() {
-        assert_eq!(Jupiter.polar_radius(), 66854f64);
-        assert_eq!(DynOrigin::Jupiter.try_polar_radius(), Ok(66854f64));
-        assert_eq!(Jupiter.equatorial_radius(), 71492f64);
-        assert_eq!(DynOrigin::Jupiter.try_equatorial_radius(), Ok(71492f64));
+        assert_eq!(Jupiter.polar_radius(), Distance::kilometers(66854f64));
+        assert_eq!(
+            DynOrigin::Jupiter.try_polar_radius(),
+            Ok(Distance::kilometers(66854f64))
+        );
+        assert_eq!(Jupiter.equatorial_radius(), Distance::kilometers(71492f64));
+        assert_eq!(
+            DynOrigin::Jupiter.try_equatorial_radius(),
+            Ok(Distance::kilometers(71492f64))
+        );
     }
     #[test]
     fn test_tri_axial_599() {
-        assert_eq!(Jupiter.radii(), (71492f64, 71492f64, 66854f64));
+        assert_eq!(
+            Jupiter.radii(),
+            (
+                Distance::kilometers(71492f64),
+                Distance::kilometers(71492f64),
+                Distance::kilometers(66854f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Jupiter.try_radii(),
-            Ok((71492f64, 71492f64, 66854f64))
+            Ok((
+                Distance::kilometers(71492f64),
+                Distance::kilometers(71492f64),
+                Distance::kilometers(66854f64)
+            ))
         );
     }
     #[test]
@@ -13343,30 +14216,53 @@ mod tests {
     }
     #[test]
     fn test_point_mass_699() {
-        assert_eq!(Saturn.gravitational_parameter(), 37931206.23436167f64);
+        assert_eq!(
+            Saturn.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(37931206.23436167f64)
+        );
         assert_eq!(
             DynOrigin::Saturn.try_gravitational_parameter(),
-            Ok(37931206.23436167f64)
+            Ok(GravitationalParameter::km3_per_s2(37931206.23436167f64))
         );
     }
     #[test]
     fn test_mean_radius_699() {
-        assert_eq!(Saturn.mean_radius(), 58232f64);
-        assert_eq!(DynOrigin::Saturn.try_mean_radius(), Ok(58232f64));
+        assert_eq!(Saturn.mean_radius(), Distance::kilometers(58232f64));
+        assert_eq!(
+            DynOrigin::Saturn.try_mean_radius(),
+            Ok(Distance::kilometers(58232f64))
+        );
     }
     #[test]
     fn test_spheroid_699() {
-        assert_eq!(Saturn.polar_radius(), 54364f64);
-        assert_eq!(DynOrigin::Saturn.try_polar_radius(), Ok(54364f64));
-        assert_eq!(Saturn.equatorial_radius(), 60268f64);
-        assert_eq!(DynOrigin::Saturn.try_equatorial_radius(), Ok(60268f64));
+        assert_eq!(Saturn.polar_radius(), Distance::kilometers(54364f64));
+        assert_eq!(
+            DynOrigin::Saturn.try_polar_radius(),
+            Ok(Distance::kilometers(54364f64))
+        );
+        assert_eq!(Saturn.equatorial_radius(), Distance::kilometers(60268f64));
+        assert_eq!(
+            DynOrigin::Saturn.try_equatorial_radius(),
+            Ok(Distance::kilometers(60268f64))
+        );
     }
     #[test]
     fn test_tri_axial_699() {
-        assert_eq!(Saturn.radii(), (60268f64, 60268f64, 54364f64));
+        assert_eq!(
+            Saturn.radii(),
+            (
+                Distance::kilometers(60268f64),
+                Distance::kilometers(60268f64),
+                Distance::kilometers(54364f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Saturn.try_radii(),
-            Ok((60268f64, 60268f64, 54364f64))
+            Ok((
+                Distance::kilometers(60268f64),
+                Distance::kilometers(60268f64),
+                Distance::kilometers(54364f64)
+            ))
         );
     }
     #[test]
@@ -13376,30 +14272,53 @@ mod tests {
     }
     #[test]
     fn test_point_mass_799() {
-        assert_eq!(Uranus.gravitational_parameter(), 5793951.256527211f64);
+        assert_eq!(
+            Uranus.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(5793951.256527211f64)
+        );
         assert_eq!(
             DynOrigin::Uranus.try_gravitational_parameter(),
-            Ok(5793951.256527211f64)
+            Ok(GravitationalParameter::km3_per_s2(5793951.256527211f64))
         );
     }
     #[test]
     fn test_mean_radius_799() {
-        assert_eq!(Uranus.mean_radius(), 25362f64);
-        assert_eq!(DynOrigin::Uranus.try_mean_radius(), Ok(25362f64));
+        assert_eq!(Uranus.mean_radius(), Distance::kilometers(25362f64));
+        assert_eq!(
+            DynOrigin::Uranus.try_mean_radius(),
+            Ok(Distance::kilometers(25362f64))
+        );
     }
     #[test]
     fn test_spheroid_799() {
-        assert_eq!(Uranus.polar_radius(), 24973f64);
-        assert_eq!(DynOrigin::Uranus.try_polar_radius(), Ok(24973f64));
-        assert_eq!(Uranus.equatorial_radius(), 25559f64);
-        assert_eq!(DynOrigin::Uranus.try_equatorial_radius(), Ok(25559f64));
+        assert_eq!(Uranus.polar_radius(), Distance::kilometers(24973f64));
+        assert_eq!(
+            DynOrigin::Uranus.try_polar_radius(),
+            Ok(Distance::kilometers(24973f64))
+        );
+        assert_eq!(Uranus.equatorial_radius(), Distance::kilometers(25559f64));
+        assert_eq!(
+            DynOrigin::Uranus.try_equatorial_radius(),
+            Ok(Distance::kilometers(25559f64))
+        );
     }
     #[test]
     fn test_tri_axial_799() {
-        assert_eq!(Uranus.radii(), (25559f64, 25559f64, 24973f64));
+        assert_eq!(
+            Uranus.radii(),
+            (
+                Distance::kilometers(25559f64),
+                Distance::kilometers(25559f64),
+                Distance::kilometers(24973f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Uranus.try_radii(),
-            Ok((25559f64, 25559f64, 24973f64))
+            Ok((
+                Distance::kilometers(25559f64),
+                Distance::kilometers(25559f64),
+                Distance::kilometers(24973f64)
+            ))
         );
     }
     #[test]
@@ -13409,30 +14328,53 @@ mod tests {
     }
     #[test]
     fn test_point_mass_899() {
-        assert_eq!(Neptune.gravitational_parameter(), 6835103.145462294f64);
+        assert_eq!(
+            Neptune.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(6835103.145462294f64)
+        );
         assert_eq!(
             DynOrigin::Neptune.try_gravitational_parameter(),
-            Ok(6835103.145462294f64)
+            Ok(GravitationalParameter::km3_per_s2(6835103.145462294f64))
         );
     }
     #[test]
     fn test_mean_radius_899() {
-        assert_eq!(Neptune.mean_radius(), 24622f64);
-        assert_eq!(DynOrigin::Neptune.try_mean_radius(), Ok(24622f64));
+        assert_eq!(Neptune.mean_radius(), Distance::kilometers(24622f64));
+        assert_eq!(
+            DynOrigin::Neptune.try_mean_radius(),
+            Ok(Distance::kilometers(24622f64))
+        );
     }
     #[test]
     fn test_spheroid_899() {
-        assert_eq!(Neptune.polar_radius(), 24341f64);
-        assert_eq!(DynOrigin::Neptune.try_polar_radius(), Ok(24341f64));
-        assert_eq!(Neptune.equatorial_radius(), 24764f64);
-        assert_eq!(DynOrigin::Neptune.try_equatorial_radius(), Ok(24764f64));
+        assert_eq!(Neptune.polar_radius(), Distance::kilometers(24341f64));
+        assert_eq!(
+            DynOrigin::Neptune.try_polar_radius(),
+            Ok(Distance::kilometers(24341f64))
+        );
+        assert_eq!(Neptune.equatorial_radius(), Distance::kilometers(24764f64));
+        assert_eq!(
+            DynOrigin::Neptune.try_equatorial_radius(),
+            Ok(Distance::kilometers(24764f64))
+        );
     }
     #[test]
     fn test_tri_axial_899() {
-        assert_eq!(Neptune.radii(), (24764f64, 24764f64, 24341f64));
+        assert_eq!(
+            Neptune.radii(),
+            (
+                Distance::kilometers(24764f64),
+                Distance::kilometers(24764f64),
+                Distance::kilometers(24341f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Neptune.try_radii(),
-            Ok((24764f64, 24764f64, 24341f64))
+            Ok((
+                Distance::kilometers(24764f64),
+                Distance::kilometers(24764f64),
+                Distance::kilometers(24341f64)
+            ))
         );
     }
     #[test]
@@ -13442,30 +14384,53 @@ mod tests {
     }
     #[test]
     fn test_point_mass_999() {
-        assert_eq!(Pluto.gravitational_parameter(), 869.6138177608748f64);
+        assert_eq!(
+            Pluto.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(869.6138177608748f64)
+        );
         assert_eq!(
             DynOrigin::Pluto.try_gravitational_parameter(),
-            Ok(869.6138177608748f64)
+            Ok(GravitationalParameter::km3_per_s2(869.6138177608748f64))
         );
     }
     #[test]
     fn test_mean_radius_999() {
-        assert_eq!(Pluto.mean_radius(), 1188.3f64);
-        assert_eq!(DynOrigin::Pluto.try_mean_radius(), Ok(1188.3f64));
+        assert_eq!(Pluto.mean_radius(), Distance::kilometers(1188.3f64));
+        assert_eq!(
+            DynOrigin::Pluto.try_mean_radius(),
+            Ok(Distance::kilometers(1188.3f64))
+        );
     }
     #[test]
     fn test_spheroid_999() {
-        assert_eq!(Pluto.polar_radius(), 1188.3f64);
-        assert_eq!(DynOrigin::Pluto.try_polar_radius(), Ok(1188.3f64));
-        assert_eq!(Pluto.equatorial_radius(), 1188.3f64);
-        assert_eq!(DynOrigin::Pluto.try_equatorial_radius(), Ok(1188.3f64));
+        assert_eq!(Pluto.polar_radius(), Distance::kilometers(1188.3f64));
+        assert_eq!(
+            DynOrigin::Pluto.try_polar_radius(),
+            Ok(Distance::kilometers(1188.3f64))
+        );
+        assert_eq!(Pluto.equatorial_radius(), Distance::kilometers(1188.3f64));
+        assert_eq!(
+            DynOrigin::Pluto.try_equatorial_radius(),
+            Ok(Distance::kilometers(1188.3f64))
+        );
     }
     #[test]
     fn test_tri_axial_999() {
-        assert_eq!(Pluto.radii(), (1188.3f64, 1188.3f64, 1188.3f64));
+        assert_eq!(
+            Pluto.radii(),
+            (
+                Distance::kilometers(1188.3f64),
+                Distance::kilometers(1188.3f64),
+                Distance::kilometers(1188.3f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Pluto.try_radii(),
-            Ok((1188.3f64, 1188.3f64, 1188.3f64))
+            Ok((
+                Distance::kilometers(1188.3f64),
+                Distance::kilometers(1188.3f64),
+                Distance::kilometers(1188.3f64)
+            ))
         );
     }
     #[test]
@@ -13477,11 +14442,11 @@ mod tests {
     fn test_point_mass_0() {
         assert_eq!(
             SolarSystemBarycenter.gravitational_parameter(),
-            132712440041.27942f64
+            GravitationalParameter::km3_per_s2(132712440041.27942f64)
         );
         assert_eq!(
             DynOrigin::SolarSystemBarycenter.try_gravitational_parameter(),
-            Ok(132712440041.27942f64)
+            Ok(GravitationalParameter::km3_per_s2(132712440041.27942f64))
         );
     }
     #[test]
@@ -13493,11 +14458,11 @@ mod tests {
     fn test_point_mass_1() {
         assert_eq!(
             MercuryBarycenter.gravitational_parameter(),
-            22031.868551400003f64
+            GravitationalParameter::km3_per_s2(22031.868551400003f64)
         );
         assert_eq!(
             DynOrigin::MercuryBarycenter.try_gravitational_parameter(),
-            Ok(22031.868551400003f64)
+            Ok(GravitationalParameter::km3_per_s2(22031.868551400003f64))
         );
     }
     #[test]
@@ -13507,10 +14472,13 @@ mod tests {
     }
     #[test]
     fn test_point_mass_2() {
-        assert_eq!(VenusBarycenter.gravitational_parameter(), 324858.592f64);
+        assert_eq!(
+            VenusBarycenter.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(324858.592f64)
+        );
         assert_eq!(
             DynOrigin::VenusBarycenter.try_gravitational_parameter(),
-            Ok(324858.592f64)
+            Ok(GravitationalParameter::km3_per_s2(324858.592f64))
         );
     }
     #[test]
@@ -13522,11 +14490,11 @@ mod tests {
     fn test_point_mass_3() {
         assert_eq!(
             EarthBarycenter.gravitational_parameter(),
-            403503.2356254802f64
+            GravitationalParameter::km3_per_s2(403503.2356254802f64)
         );
         assert_eq!(
             DynOrigin::EarthBarycenter.try_gravitational_parameter(),
-            Ok(403503.2356254802f64)
+            Ok(GravitationalParameter::km3_per_s2(403503.2356254802f64))
         );
     }
     #[test]
@@ -13538,11 +14506,11 @@ mod tests {
     fn test_point_mass_4() {
         assert_eq!(
             MarsBarycenter.gravitational_parameter(),
-            42828.3758157561f64
+            GravitationalParameter::km3_per_s2(42828.3758157561f64)
         );
         assert_eq!(
             DynOrigin::MarsBarycenter.try_gravitational_parameter(),
-            Ok(42828.3758157561f64)
+            Ok(GravitationalParameter::km3_per_s2(42828.3758157561f64))
         );
     }
     #[test]
@@ -13554,11 +14522,11 @@ mod tests {
     fn test_point_mass_5() {
         assert_eq!(
             JupiterBarycenter.gravitational_parameter(),
-            126712764.09999998f64
+            GravitationalParameter::km3_per_s2(126712764.09999998f64)
         );
         assert_eq!(
             DynOrigin::JupiterBarycenter.try_gravitational_parameter(),
-            Ok(126712764.09999998f64)
+            Ok(GravitationalParameter::km3_per_s2(126712764.09999998f64))
         );
     }
     #[test]
@@ -13568,10 +14536,13 @@ mod tests {
     }
     #[test]
     fn test_point_mass_6() {
-        assert_eq!(SaturnBarycenter.gravitational_parameter(), 37940584.8418f64);
+        assert_eq!(
+            SaturnBarycenter.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(37940584.8418f64)
+        );
         assert_eq!(
             DynOrigin::SaturnBarycenter.try_gravitational_parameter(),
-            Ok(37940584.8418f64)
+            Ok(GravitationalParameter::km3_per_s2(37940584.8418f64))
         );
     }
     #[test]
@@ -13583,11 +14554,11 @@ mod tests {
     fn test_point_mass_7() {
         assert_eq!(
             UranusBarycenter.gravitational_parameter(),
-            5794556.3999999985f64
+            GravitationalParameter::km3_per_s2(5794556.3999999985f64)
         );
         assert_eq!(
             DynOrigin::UranusBarycenter.try_gravitational_parameter(),
-            Ok(5794556.3999999985f64)
+            Ok(GravitationalParameter::km3_per_s2(5794556.3999999985f64))
         );
     }
     #[test]
@@ -13599,11 +14570,11 @@ mod tests {
     fn test_point_mass_8() {
         assert_eq!(
             NeptuneBarycenter.gravitational_parameter(),
-            6836527.100580399f64
+            GravitationalParameter::km3_per_s2(6836527.100580399f64)
         );
         assert_eq!(
             DynOrigin::NeptuneBarycenter.try_gravitational_parameter(),
-            Ok(6836527.100580399f64)
+            Ok(GravitationalParameter::km3_per_s2(6836527.100580399f64))
         );
     }
     #[test]
@@ -13613,10 +14584,13 @@ mod tests {
     }
     #[test]
     fn test_point_mass_9() {
-        assert_eq!(PlutoBarycenter.gravitational_parameter(), 975.5f64);
+        assert_eq!(
+            PlutoBarycenter.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(975.5f64)
+        );
         assert_eq!(
             DynOrigin::PlutoBarycenter.try_gravitational_parameter(),
-            Ok(975.5f64)
+            Ok(GravitationalParameter::km3_per_s2(975.5f64))
         );
     }
     #[test]
@@ -13626,30 +14600,53 @@ mod tests {
     }
     #[test]
     fn test_point_mass_301() {
-        assert_eq!(Moon.gravitational_parameter(), 4902.80011845755f64);
+        assert_eq!(
+            Moon.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(4902.80011845755f64)
+        );
         assert_eq!(
             DynOrigin::Moon.try_gravitational_parameter(),
-            Ok(4902.80011845755f64)
+            Ok(GravitationalParameter::km3_per_s2(4902.80011845755f64))
         );
     }
     #[test]
     fn test_mean_radius_301() {
-        assert_eq!(Moon.mean_radius(), 1737.4f64);
-        assert_eq!(DynOrigin::Moon.try_mean_radius(), Ok(1737.4f64));
+        assert_eq!(Moon.mean_radius(), Distance::kilometers(1737.4f64));
+        assert_eq!(
+            DynOrigin::Moon.try_mean_radius(),
+            Ok(Distance::kilometers(1737.4f64))
+        );
     }
     #[test]
     fn test_spheroid_301() {
-        assert_eq!(Moon.polar_radius(), 1737.4f64);
-        assert_eq!(DynOrigin::Moon.try_polar_radius(), Ok(1737.4f64));
-        assert_eq!(Moon.equatorial_radius(), 1737.4f64);
-        assert_eq!(DynOrigin::Moon.try_equatorial_radius(), Ok(1737.4f64));
+        assert_eq!(Moon.polar_radius(), Distance::kilometers(1737.4f64));
+        assert_eq!(
+            DynOrigin::Moon.try_polar_radius(),
+            Ok(Distance::kilometers(1737.4f64))
+        );
+        assert_eq!(Moon.equatorial_radius(), Distance::kilometers(1737.4f64));
+        assert_eq!(
+            DynOrigin::Moon.try_equatorial_radius(),
+            Ok(Distance::kilometers(1737.4f64))
+        );
     }
     #[test]
     fn test_tri_axial_301() {
-        assert_eq!(Moon.radii(), (1737.4f64, 1737.4f64, 1737.4f64));
+        assert_eq!(
+            Moon.radii(),
+            (
+                Distance::kilometers(1737.4f64),
+                Distance::kilometers(1737.4f64),
+                Distance::kilometers(1737.4f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Moon.try_radii(),
-            Ok((1737.4f64, 1737.4f64, 1737.4f64))
+            Ok((
+                Distance::kilometers(1737.4f64),
+                Distance::kilometers(1737.4f64),
+                Distance::kilometers(1737.4f64)
+            ))
         );
     }
     #[test]
@@ -13659,16 +14656,22 @@ mod tests {
     }
     #[test]
     fn test_point_mass_401() {
-        assert_eq!(Phobos.gravitational_parameter(), 0.0007087546066894452f64);
+        assert_eq!(
+            Phobos.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(0.0007087546066894452f64)
+        );
         assert_eq!(
             DynOrigin::Phobos.try_gravitational_parameter(),
-            Ok(0.0007087546066894452f64)
+            Ok(GravitationalParameter::km3_per_s2(0.0007087546066894452f64))
         );
     }
     #[test]
     fn test_mean_radius_401() {
-        assert_eq!(Phobos.mean_radius(), 11.08f64);
-        assert_eq!(DynOrigin::Phobos.try_mean_radius(), Ok(11.08f64));
+        assert_eq!(Phobos.mean_radius(), Distance::kilometers(11.08f64));
+        assert_eq!(
+            DynOrigin::Phobos.try_mean_radius(),
+            Ok(Distance::kilometers(11.08f64))
+        );
     }
     #[test]
     fn test_spheroid_401() {
@@ -13677,8 +14680,22 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_401() {
-        assert_eq!(Phobos.radii(), (13f64, 11.4f64, 9.1f64));
-        assert_eq!(DynOrigin::Phobos.try_radii(), Ok((13f64, 11.4f64, 9.1f64)));
+        assert_eq!(
+            Phobos.radii(),
+            (
+                Distance::kilometers(13f64),
+                Distance::kilometers(11.4f64),
+                Distance::kilometers(9.1f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Phobos.try_radii(),
+            Ok((
+                Distance::kilometers(13f64),
+                Distance::kilometers(11.4f64),
+                Distance::kilometers(9.1f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_402() {
@@ -13687,16 +14704,24 @@ mod tests {
     }
     #[test]
     fn test_point_mass_402() {
-        assert_eq!(Deimos.gravitational_parameter(), 0.00009615569648120313f64);
+        assert_eq!(
+            Deimos.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(0.00009615569648120313f64)
+        );
         assert_eq!(
             DynOrigin::Deimos.try_gravitational_parameter(),
-            Ok(0.00009615569648120313f64)
+            Ok(GravitationalParameter::km3_per_s2(
+                0.00009615569648120313f64
+            ))
         );
     }
     #[test]
     fn test_mean_radius_402() {
-        assert_eq!(Deimos.mean_radius(), 6.2f64);
-        assert_eq!(DynOrigin::Deimos.try_mean_radius(), Ok(6.2f64));
+        assert_eq!(Deimos.mean_radius(), Distance::kilometers(6.2f64));
+        assert_eq!(
+            DynOrigin::Deimos.try_mean_radius(),
+            Ok(Distance::kilometers(6.2f64))
+        );
     }
     #[test]
     fn test_spheroid_402() {
@@ -13705,8 +14730,22 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_402() {
-        assert_eq!(Deimos.radii(), (7.8f64, 6f64, 5.1f64));
-        assert_eq!(DynOrigin::Deimos.try_radii(), Ok((7.8f64, 6f64, 5.1f64)));
+        assert_eq!(
+            Deimos.radii(),
+            (
+                Distance::kilometers(7.8f64),
+                Distance::kilometers(6f64),
+                Distance::kilometers(5.1f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Deimos.try_radii(),
+            Ok((
+                Distance::kilometers(7.8f64),
+                Distance::kilometers(6f64),
+                Distance::kilometers(5.1f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_501() {
@@ -13715,16 +14754,22 @@ mod tests {
     }
     #[test]
     fn test_point_mass_501() {
-        assert_eq!(Io.gravitational_parameter(), 5959.915466180539f64);
+        assert_eq!(
+            Io.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(5959.915466180539f64)
+        );
         assert_eq!(
             DynOrigin::Io.try_gravitational_parameter(),
-            Ok(5959.915466180539f64)
+            Ok(GravitationalParameter::km3_per_s2(5959.915466180539f64))
         );
     }
     #[test]
     fn test_mean_radius_501() {
-        assert_eq!(Io.mean_radius(), 1821.49f64);
-        assert_eq!(DynOrigin::Io.try_mean_radius(), Ok(1821.49f64));
+        assert_eq!(Io.mean_radius(), Distance::kilometers(1821.49f64));
+        assert_eq!(
+            DynOrigin::Io.try_mean_radius(),
+            Ok(Distance::kilometers(1821.49f64))
+        );
     }
     #[test]
     fn test_spheroid_501() {
@@ -13733,10 +14778,21 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_501() {
-        assert_eq!(Io.radii(), (1829.4f64, 1819.4f64, 1815.7f64));
+        assert_eq!(
+            Io.radii(),
+            (
+                Distance::kilometers(1829.4f64),
+                Distance::kilometers(1819.4f64),
+                Distance::kilometers(1815.7f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Io.try_radii(),
-            Ok((1829.4f64, 1819.4f64, 1815.7f64))
+            Ok((
+                Distance::kilometers(1829.4f64),
+                Distance::kilometers(1819.4f64),
+                Distance::kilometers(1815.7f64)
+            ))
         );
     }
     #[test]
@@ -13746,16 +14802,22 @@ mod tests {
     }
     #[test]
     fn test_point_mass_502() {
-        assert_eq!(Europa.gravitational_parameter(), 3202.712099607295f64);
+        assert_eq!(
+            Europa.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(3202.712099607295f64)
+        );
         assert_eq!(
             DynOrigin::Europa.try_gravitational_parameter(),
-            Ok(3202.712099607295f64)
+            Ok(GravitationalParameter::km3_per_s2(3202.712099607295f64))
         );
     }
     #[test]
     fn test_mean_radius_502() {
-        assert_eq!(Europa.mean_radius(), 1560.8f64);
-        assert_eq!(DynOrigin::Europa.try_mean_radius(), Ok(1560.8f64));
+        assert_eq!(Europa.mean_radius(), Distance::kilometers(1560.8f64));
+        assert_eq!(
+            DynOrigin::Europa.try_mean_radius(),
+            Ok(Distance::kilometers(1560.8f64))
+        );
     }
     #[test]
     fn test_spheroid_502() {
@@ -13764,10 +14826,21 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_502() {
-        assert_eq!(Europa.radii(), (1562.6f64, 1560.3f64, 1559.5f64));
+        assert_eq!(
+            Europa.radii(),
+            (
+                Distance::kilometers(1562.6f64),
+                Distance::kilometers(1560.3f64),
+                Distance::kilometers(1559.5f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Europa.try_radii(),
-            Ok((1562.6f64, 1560.3f64, 1559.5f64))
+            Ok((
+                Distance::kilometers(1562.6f64),
+                Distance::kilometers(1560.3f64),
+                Distance::kilometers(1559.5f64)
+            ))
         );
     }
     #[test]
@@ -13777,30 +14850,56 @@ mod tests {
     }
     #[test]
     fn test_point_mass_503() {
-        assert_eq!(Ganymede.gravitational_parameter(), 9887.832752719638f64);
+        assert_eq!(
+            Ganymede.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(9887.832752719638f64)
+        );
         assert_eq!(
             DynOrigin::Ganymede.try_gravitational_parameter(),
-            Ok(9887.832752719638f64)
+            Ok(GravitationalParameter::km3_per_s2(9887.832752719638f64))
         );
     }
     #[test]
     fn test_mean_radius_503() {
-        assert_eq!(Ganymede.mean_radius(), 2631.2f64);
-        assert_eq!(DynOrigin::Ganymede.try_mean_radius(), Ok(2631.2f64));
+        assert_eq!(Ganymede.mean_radius(), Distance::kilometers(2631.2f64));
+        assert_eq!(
+            DynOrigin::Ganymede.try_mean_radius(),
+            Ok(Distance::kilometers(2631.2f64))
+        );
     }
     #[test]
     fn test_spheroid_503() {
-        assert_eq!(Ganymede.polar_radius(), 2631.2f64);
-        assert_eq!(DynOrigin::Ganymede.try_polar_radius(), Ok(2631.2f64));
-        assert_eq!(Ganymede.equatorial_radius(), 2631.2f64);
-        assert_eq!(DynOrigin::Ganymede.try_equatorial_radius(), Ok(2631.2f64));
+        assert_eq!(Ganymede.polar_radius(), Distance::kilometers(2631.2f64));
+        assert_eq!(
+            DynOrigin::Ganymede.try_polar_radius(),
+            Ok(Distance::kilometers(2631.2f64))
+        );
+        assert_eq!(
+            Ganymede.equatorial_radius(),
+            Distance::kilometers(2631.2f64)
+        );
+        assert_eq!(
+            DynOrigin::Ganymede.try_equatorial_radius(),
+            Ok(Distance::kilometers(2631.2f64))
+        );
     }
     #[test]
     fn test_tri_axial_503() {
-        assert_eq!(Ganymede.radii(), (2631.2f64, 2631.2f64, 2631.2f64));
+        assert_eq!(
+            Ganymede.radii(),
+            (
+                Distance::kilometers(2631.2f64),
+                Distance::kilometers(2631.2f64),
+                Distance::kilometers(2631.2f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Ganymede.try_radii(),
-            Ok((2631.2f64, 2631.2f64, 2631.2f64))
+            Ok((
+                Distance::kilometers(2631.2f64),
+                Distance::kilometers(2631.2f64),
+                Distance::kilometers(2631.2f64)
+            ))
         );
     }
     #[test]
@@ -13810,30 +14909,56 @@ mod tests {
     }
     #[test]
     fn test_point_mass_504() {
-        assert_eq!(Callisto.gravitational_parameter(), 7179.283402579837f64);
+        assert_eq!(
+            Callisto.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(7179.283402579837f64)
+        );
         assert_eq!(
             DynOrigin::Callisto.try_gravitational_parameter(),
-            Ok(7179.283402579837f64)
+            Ok(GravitationalParameter::km3_per_s2(7179.283402579837f64))
         );
     }
     #[test]
     fn test_mean_radius_504() {
-        assert_eq!(Callisto.mean_radius(), 2410.3f64);
-        assert_eq!(DynOrigin::Callisto.try_mean_radius(), Ok(2410.3f64));
+        assert_eq!(Callisto.mean_radius(), Distance::kilometers(2410.3f64));
+        assert_eq!(
+            DynOrigin::Callisto.try_mean_radius(),
+            Ok(Distance::kilometers(2410.3f64))
+        );
     }
     #[test]
     fn test_spheroid_504() {
-        assert_eq!(Callisto.polar_radius(), 2410.3f64);
-        assert_eq!(DynOrigin::Callisto.try_polar_radius(), Ok(2410.3f64));
-        assert_eq!(Callisto.equatorial_radius(), 2410.3f64);
-        assert_eq!(DynOrigin::Callisto.try_equatorial_radius(), Ok(2410.3f64));
+        assert_eq!(Callisto.polar_radius(), Distance::kilometers(2410.3f64));
+        assert_eq!(
+            DynOrigin::Callisto.try_polar_radius(),
+            Ok(Distance::kilometers(2410.3f64))
+        );
+        assert_eq!(
+            Callisto.equatorial_radius(),
+            Distance::kilometers(2410.3f64)
+        );
+        assert_eq!(
+            DynOrigin::Callisto.try_equatorial_radius(),
+            Ok(Distance::kilometers(2410.3f64))
+        );
     }
     #[test]
     fn test_tri_axial_504() {
-        assert_eq!(Callisto.radii(), (2410.3f64, 2410.3f64, 2410.3f64));
+        assert_eq!(
+            Callisto.radii(),
+            (
+                Distance::kilometers(2410.3f64),
+                Distance::kilometers(2410.3f64),
+                Distance::kilometers(2410.3f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Callisto.try_radii(),
-            Ok((2410.3f64, 2410.3f64, 2410.3f64))
+            Ok((
+                Distance::kilometers(2410.3f64),
+                Distance::kilometers(2410.3f64),
+                Distance::kilometers(2410.3f64)
+            ))
         );
     }
     #[test]
@@ -13843,16 +14968,22 @@ mod tests {
     }
     #[test]
     fn test_point_mass_505() {
-        assert_eq!(Amalthea.gravitational_parameter(), 0.1645634534798259f64);
+        assert_eq!(
+            Amalthea.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(0.1645634534798259f64)
+        );
         assert_eq!(
             DynOrigin::Amalthea.try_gravitational_parameter(),
-            Ok(0.1645634534798259f64)
+            Ok(GravitationalParameter::km3_per_s2(0.1645634534798259f64))
         );
     }
     #[test]
     fn test_mean_radius_505() {
-        assert_eq!(Amalthea.mean_radius(), 83.5f64);
-        assert_eq!(DynOrigin::Amalthea.try_mean_radius(), Ok(83.5f64));
+        assert_eq!(Amalthea.mean_radius(), Distance::kilometers(83.5f64));
+        assert_eq!(
+            DynOrigin::Amalthea.try_mean_radius(),
+            Ok(Distance::kilometers(83.5f64))
+        );
     }
     #[test]
     fn test_spheroid_505() {
@@ -13861,8 +14992,22 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_505() {
-        assert_eq!(Amalthea.radii(), (125f64, 73f64, 64f64));
-        assert_eq!(DynOrigin::Amalthea.try_radii(), Ok((125f64, 73f64, 64f64)));
+        assert_eq!(
+            Amalthea.radii(),
+            (
+                Distance::kilometers(125f64),
+                Distance::kilometers(73f64),
+                Distance::kilometers(64f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Amalthea.try_radii(),
+            Ok((
+                Distance::kilometers(125f64),
+                Distance::kilometers(73f64),
+                Distance::kilometers(64f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_506() {
@@ -13871,28 +15016,54 @@ mod tests {
     }
     #[test]
     fn test_point_mass_506() {
-        assert_eq!(Himalia.gravitational_parameter(), 0.1515524299611265f64);
+        assert_eq!(
+            Himalia.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(0.1515524299611265f64)
+        );
         assert_eq!(
             DynOrigin::Himalia.try_gravitational_parameter(),
-            Ok(0.1515524299611265f64)
+            Ok(GravitationalParameter::km3_per_s2(0.1515524299611265f64))
         );
     }
     #[test]
     fn test_mean_radius_506() {
-        assert_eq!(Himalia.mean_radius(), 85f64);
-        assert_eq!(DynOrigin::Himalia.try_mean_radius(), Ok(85f64));
+        assert_eq!(Himalia.mean_radius(), Distance::kilometers(85f64));
+        assert_eq!(
+            DynOrigin::Himalia.try_mean_radius(),
+            Ok(Distance::kilometers(85f64))
+        );
     }
     #[test]
     fn test_spheroid_506() {
-        assert_eq!(Himalia.polar_radius(), 85f64);
-        assert_eq!(DynOrigin::Himalia.try_polar_radius(), Ok(85f64));
-        assert_eq!(Himalia.equatorial_radius(), 85f64);
-        assert_eq!(DynOrigin::Himalia.try_equatorial_radius(), Ok(85f64));
+        assert_eq!(Himalia.polar_radius(), Distance::kilometers(85f64));
+        assert_eq!(
+            DynOrigin::Himalia.try_polar_radius(),
+            Ok(Distance::kilometers(85f64))
+        );
+        assert_eq!(Himalia.equatorial_radius(), Distance::kilometers(85f64));
+        assert_eq!(
+            DynOrigin::Himalia.try_equatorial_radius(),
+            Ok(Distance::kilometers(85f64))
+        );
     }
     #[test]
     fn test_tri_axial_506() {
-        assert_eq!(Himalia.radii(), (85f64, 85f64, 85f64));
-        assert_eq!(DynOrigin::Himalia.try_radii(), Ok((85f64, 85f64, 85f64)));
+        assert_eq!(
+            Himalia.radii(),
+            (
+                Distance::kilometers(85f64),
+                Distance::kilometers(85f64),
+                Distance::kilometers(85f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Himalia.try_radii(),
+            Ok((
+                Distance::kilometers(85f64),
+                Distance::kilometers(85f64),
+                Distance::kilometers(85f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_507() {
@@ -13905,20 +15076,43 @@ mod tests {
     }
     #[test]
     fn test_mean_radius_507() {
-        assert_eq!(Elara.mean_radius(), 40f64);
-        assert_eq!(DynOrigin::Elara.try_mean_radius(), Ok(40f64));
+        assert_eq!(Elara.mean_radius(), Distance::kilometers(40f64));
+        assert_eq!(
+            DynOrigin::Elara.try_mean_radius(),
+            Ok(Distance::kilometers(40f64))
+        );
     }
     #[test]
     fn test_spheroid_507() {
-        assert_eq!(Elara.polar_radius(), 40f64);
-        assert_eq!(DynOrigin::Elara.try_polar_radius(), Ok(40f64));
-        assert_eq!(Elara.equatorial_radius(), 40f64);
-        assert_eq!(DynOrigin::Elara.try_equatorial_radius(), Ok(40f64));
+        assert_eq!(Elara.polar_radius(), Distance::kilometers(40f64));
+        assert_eq!(
+            DynOrigin::Elara.try_polar_radius(),
+            Ok(Distance::kilometers(40f64))
+        );
+        assert_eq!(Elara.equatorial_radius(), Distance::kilometers(40f64));
+        assert_eq!(
+            DynOrigin::Elara.try_equatorial_radius(),
+            Ok(Distance::kilometers(40f64))
+        );
     }
     #[test]
     fn test_tri_axial_507() {
-        assert_eq!(Elara.radii(), (40f64, 40f64, 40f64));
-        assert_eq!(DynOrigin::Elara.try_radii(), Ok((40f64, 40f64, 40f64)));
+        assert_eq!(
+            Elara.radii(),
+            (
+                Distance::kilometers(40f64),
+                Distance::kilometers(40f64),
+                Distance::kilometers(40f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Elara.try_radii(),
+            Ok((
+                Distance::kilometers(40f64),
+                Distance::kilometers(40f64),
+                Distance::kilometers(40f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_508() {
@@ -13931,20 +15125,43 @@ mod tests {
     }
     #[test]
     fn test_mean_radius_508() {
-        assert_eq!(Pasiphae.mean_radius(), 18f64);
-        assert_eq!(DynOrigin::Pasiphae.try_mean_radius(), Ok(18f64));
+        assert_eq!(Pasiphae.mean_radius(), Distance::kilometers(18f64));
+        assert_eq!(
+            DynOrigin::Pasiphae.try_mean_radius(),
+            Ok(Distance::kilometers(18f64))
+        );
     }
     #[test]
     fn test_spheroid_508() {
-        assert_eq!(Pasiphae.polar_radius(), 18f64);
-        assert_eq!(DynOrigin::Pasiphae.try_polar_radius(), Ok(18f64));
-        assert_eq!(Pasiphae.equatorial_radius(), 18f64);
-        assert_eq!(DynOrigin::Pasiphae.try_equatorial_radius(), Ok(18f64));
+        assert_eq!(Pasiphae.polar_radius(), Distance::kilometers(18f64));
+        assert_eq!(
+            DynOrigin::Pasiphae.try_polar_radius(),
+            Ok(Distance::kilometers(18f64))
+        );
+        assert_eq!(Pasiphae.equatorial_radius(), Distance::kilometers(18f64));
+        assert_eq!(
+            DynOrigin::Pasiphae.try_equatorial_radius(),
+            Ok(Distance::kilometers(18f64))
+        );
     }
     #[test]
     fn test_tri_axial_508() {
-        assert_eq!(Pasiphae.radii(), (18f64, 18f64, 18f64));
-        assert_eq!(DynOrigin::Pasiphae.try_radii(), Ok((18f64, 18f64, 18f64)));
+        assert_eq!(
+            Pasiphae.radii(),
+            (
+                Distance::kilometers(18f64),
+                Distance::kilometers(18f64),
+                Distance::kilometers(18f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Pasiphae.try_radii(),
+            Ok((
+                Distance::kilometers(18f64),
+                Distance::kilometers(18f64),
+                Distance::kilometers(18f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_509() {
@@ -13957,20 +15174,43 @@ mod tests {
     }
     #[test]
     fn test_mean_radius_509() {
-        assert_eq!(Sinope.mean_radius(), 14f64);
-        assert_eq!(DynOrigin::Sinope.try_mean_radius(), Ok(14f64));
+        assert_eq!(Sinope.mean_radius(), Distance::kilometers(14f64));
+        assert_eq!(
+            DynOrigin::Sinope.try_mean_radius(),
+            Ok(Distance::kilometers(14f64))
+        );
     }
     #[test]
     fn test_spheroid_509() {
-        assert_eq!(Sinope.polar_radius(), 14f64);
-        assert_eq!(DynOrigin::Sinope.try_polar_radius(), Ok(14f64));
-        assert_eq!(Sinope.equatorial_radius(), 14f64);
-        assert_eq!(DynOrigin::Sinope.try_equatorial_radius(), Ok(14f64));
+        assert_eq!(Sinope.polar_radius(), Distance::kilometers(14f64));
+        assert_eq!(
+            DynOrigin::Sinope.try_polar_radius(),
+            Ok(Distance::kilometers(14f64))
+        );
+        assert_eq!(Sinope.equatorial_radius(), Distance::kilometers(14f64));
+        assert_eq!(
+            DynOrigin::Sinope.try_equatorial_radius(),
+            Ok(Distance::kilometers(14f64))
+        );
     }
     #[test]
     fn test_tri_axial_509() {
-        assert_eq!(Sinope.radii(), (14f64, 14f64, 14f64));
-        assert_eq!(DynOrigin::Sinope.try_radii(), Ok((14f64, 14f64, 14f64)));
+        assert_eq!(
+            Sinope.radii(),
+            (
+                Distance::kilometers(14f64),
+                Distance::kilometers(14f64),
+                Distance::kilometers(14f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Sinope.try_radii(),
+            Ok((
+                Distance::kilometers(14f64),
+                Distance::kilometers(14f64),
+                Distance::kilometers(14f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_510() {
@@ -13983,20 +15223,43 @@ mod tests {
     }
     #[test]
     fn test_mean_radius_510() {
-        assert_eq!(Lysithea.mean_radius(), 12f64);
-        assert_eq!(DynOrigin::Lysithea.try_mean_radius(), Ok(12f64));
+        assert_eq!(Lysithea.mean_radius(), Distance::kilometers(12f64));
+        assert_eq!(
+            DynOrigin::Lysithea.try_mean_radius(),
+            Ok(Distance::kilometers(12f64))
+        );
     }
     #[test]
     fn test_spheroid_510() {
-        assert_eq!(Lysithea.polar_radius(), 12f64);
-        assert_eq!(DynOrigin::Lysithea.try_polar_radius(), Ok(12f64));
-        assert_eq!(Lysithea.equatorial_radius(), 12f64);
-        assert_eq!(DynOrigin::Lysithea.try_equatorial_radius(), Ok(12f64));
+        assert_eq!(Lysithea.polar_radius(), Distance::kilometers(12f64));
+        assert_eq!(
+            DynOrigin::Lysithea.try_polar_radius(),
+            Ok(Distance::kilometers(12f64))
+        );
+        assert_eq!(Lysithea.equatorial_radius(), Distance::kilometers(12f64));
+        assert_eq!(
+            DynOrigin::Lysithea.try_equatorial_radius(),
+            Ok(Distance::kilometers(12f64))
+        );
     }
     #[test]
     fn test_tri_axial_510() {
-        assert_eq!(Lysithea.radii(), (12f64, 12f64, 12f64));
-        assert_eq!(DynOrigin::Lysithea.try_radii(), Ok((12f64, 12f64, 12f64)));
+        assert_eq!(
+            Lysithea.radii(),
+            (
+                Distance::kilometers(12f64),
+                Distance::kilometers(12f64),
+                Distance::kilometers(12f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Lysithea.try_radii(),
+            Ok((
+                Distance::kilometers(12f64),
+                Distance::kilometers(12f64),
+                Distance::kilometers(12f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_511() {
@@ -14009,20 +15272,43 @@ mod tests {
     }
     #[test]
     fn test_mean_radius_511() {
-        assert_eq!(Carme.mean_radius(), 15f64);
-        assert_eq!(DynOrigin::Carme.try_mean_radius(), Ok(15f64));
+        assert_eq!(Carme.mean_radius(), Distance::kilometers(15f64));
+        assert_eq!(
+            DynOrigin::Carme.try_mean_radius(),
+            Ok(Distance::kilometers(15f64))
+        );
     }
     #[test]
     fn test_spheroid_511() {
-        assert_eq!(Carme.polar_radius(), 15f64);
-        assert_eq!(DynOrigin::Carme.try_polar_radius(), Ok(15f64));
-        assert_eq!(Carme.equatorial_radius(), 15f64);
-        assert_eq!(DynOrigin::Carme.try_equatorial_radius(), Ok(15f64));
+        assert_eq!(Carme.polar_radius(), Distance::kilometers(15f64));
+        assert_eq!(
+            DynOrigin::Carme.try_polar_radius(),
+            Ok(Distance::kilometers(15f64))
+        );
+        assert_eq!(Carme.equatorial_radius(), Distance::kilometers(15f64));
+        assert_eq!(
+            DynOrigin::Carme.try_equatorial_radius(),
+            Ok(Distance::kilometers(15f64))
+        );
     }
     #[test]
     fn test_tri_axial_511() {
-        assert_eq!(Carme.radii(), (15f64, 15f64, 15f64));
-        assert_eq!(DynOrigin::Carme.try_radii(), Ok((15f64, 15f64, 15f64)));
+        assert_eq!(
+            Carme.radii(),
+            (
+                Distance::kilometers(15f64),
+                Distance::kilometers(15f64),
+                Distance::kilometers(15f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Carme.try_radii(),
+            Ok((
+                Distance::kilometers(15f64),
+                Distance::kilometers(15f64),
+                Distance::kilometers(15f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_512() {
@@ -14035,20 +15321,43 @@ mod tests {
     }
     #[test]
     fn test_mean_radius_512() {
-        assert_eq!(Ananke.mean_radius(), 10f64);
-        assert_eq!(DynOrigin::Ananke.try_mean_radius(), Ok(10f64));
+        assert_eq!(Ananke.mean_radius(), Distance::kilometers(10f64));
+        assert_eq!(
+            DynOrigin::Ananke.try_mean_radius(),
+            Ok(Distance::kilometers(10f64))
+        );
     }
     #[test]
     fn test_spheroid_512() {
-        assert_eq!(Ananke.polar_radius(), 10f64);
-        assert_eq!(DynOrigin::Ananke.try_polar_radius(), Ok(10f64));
-        assert_eq!(Ananke.equatorial_radius(), 10f64);
-        assert_eq!(DynOrigin::Ananke.try_equatorial_radius(), Ok(10f64));
+        assert_eq!(Ananke.polar_radius(), Distance::kilometers(10f64));
+        assert_eq!(
+            DynOrigin::Ananke.try_polar_radius(),
+            Ok(Distance::kilometers(10f64))
+        );
+        assert_eq!(Ananke.equatorial_radius(), Distance::kilometers(10f64));
+        assert_eq!(
+            DynOrigin::Ananke.try_equatorial_radius(),
+            Ok(Distance::kilometers(10f64))
+        );
     }
     #[test]
     fn test_tri_axial_512() {
-        assert_eq!(Ananke.radii(), (10f64, 10f64, 10f64));
-        assert_eq!(DynOrigin::Ananke.try_radii(), Ok((10f64, 10f64, 10f64)));
+        assert_eq!(
+            Ananke.radii(),
+            (
+                Distance::kilometers(10f64),
+                Distance::kilometers(10f64),
+                Distance::kilometers(10f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Ananke.try_radii(),
+            Ok((
+                Distance::kilometers(10f64),
+                Distance::kilometers(10f64),
+                Distance::kilometers(10f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_513() {
@@ -14061,20 +15370,43 @@ mod tests {
     }
     #[test]
     fn test_mean_radius_513() {
-        assert_eq!(Leda.mean_radius(), 5f64);
-        assert_eq!(DynOrigin::Leda.try_mean_radius(), Ok(5f64));
+        assert_eq!(Leda.mean_radius(), Distance::kilometers(5f64));
+        assert_eq!(
+            DynOrigin::Leda.try_mean_radius(),
+            Ok(Distance::kilometers(5f64))
+        );
     }
     #[test]
     fn test_spheroid_513() {
-        assert_eq!(Leda.polar_radius(), 5f64);
-        assert_eq!(DynOrigin::Leda.try_polar_radius(), Ok(5f64));
-        assert_eq!(Leda.equatorial_radius(), 5f64);
-        assert_eq!(DynOrigin::Leda.try_equatorial_radius(), Ok(5f64));
+        assert_eq!(Leda.polar_radius(), Distance::kilometers(5f64));
+        assert_eq!(
+            DynOrigin::Leda.try_polar_radius(),
+            Ok(Distance::kilometers(5f64))
+        );
+        assert_eq!(Leda.equatorial_radius(), Distance::kilometers(5f64));
+        assert_eq!(
+            DynOrigin::Leda.try_equatorial_radius(),
+            Ok(Distance::kilometers(5f64))
+        );
     }
     #[test]
     fn test_tri_axial_513() {
-        assert_eq!(Leda.radii(), (5f64, 5f64, 5f64));
-        assert_eq!(DynOrigin::Leda.try_radii(), Ok((5f64, 5f64, 5f64)));
+        assert_eq!(
+            Leda.radii(),
+            (
+                Distance::kilometers(5f64),
+                Distance::kilometers(5f64),
+                Distance::kilometers(5f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Leda.try_radii(),
+            Ok((
+                Distance::kilometers(5f64),
+                Distance::kilometers(5f64),
+                Distance::kilometers(5f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_514() {
@@ -14083,16 +15415,22 @@ mod tests {
     }
     #[test]
     fn test_point_mass_514() {
-        assert_eq!(Thebe.gravitational_parameter(), 0.030148f64);
+        assert_eq!(
+            Thebe.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(0.030148f64)
+        );
         assert_eq!(
             DynOrigin::Thebe.try_gravitational_parameter(),
-            Ok(0.030148f64)
+            Ok(GravitationalParameter::km3_per_s2(0.030148f64))
         );
     }
     #[test]
     fn test_mean_radius_514() {
-        assert_eq!(Thebe.mean_radius(), 49.3f64);
-        assert_eq!(DynOrigin::Thebe.try_mean_radius(), Ok(49.3f64));
+        assert_eq!(Thebe.mean_radius(), Distance::kilometers(49.3f64));
+        assert_eq!(
+            DynOrigin::Thebe.try_mean_radius(),
+            Ok(Distance::kilometers(49.3f64))
+        );
     }
     #[test]
     fn test_spheroid_514() {
@@ -14101,8 +15439,22 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_514() {
-        assert_eq!(Thebe.radii(), (58f64, 49f64, 42f64));
-        assert_eq!(DynOrigin::Thebe.try_radii(), Ok((58f64, 49f64, 42f64)));
+        assert_eq!(
+            Thebe.radii(),
+            (
+                Distance::kilometers(58f64),
+                Distance::kilometers(49f64),
+                Distance::kilometers(42f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Thebe.try_radii(),
+            Ok((
+                Distance::kilometers(58f64),
+                Distance::kilometers(49f64),
+                Distance::kilometers(42f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_515() {
@@ -14111,16 +15463,22 @@ mod tests {
     }
     #[test]
     fn test_point_mass_515() {
-        assert_eq!(Adrastea.gravitational_parameter(), 0.000139f64);
+        assert_eq!(
+            Adrastea.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(0.000139f64)
+        );
         assert_eq!(
             DynOrigin::Adrastea.try_gravitational_parameter(),
-            Ok(0.000139f64)
+            Ok(GravitationalParameter::km3_per_s2(0.000139f64))
         );
     }
     #[test]
     fn test_mean_radius_515() {
-        assert_eq!(Adrastea.mean_radius(), 8.2f64);
-        assert_eq!(DynOrigin::Adrastea.try_mean_radius(), Ok(8.2f64));
+        assert_eq!(Adrastea.mean_radius(), Distance::kilometers(8.2f64));
+        assert_eq!(
+            DynOrigin::Adrastea.try_mean_radius(),
+            Ok(Distance::kilometers(8.2f64))
+        );
     }
     #[test]
     fn test_spheroid_515() {
@@ -14129,8 +15487,22 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_515() {
-        assert_eq!(Adrastea.radii(), (10f64, 8f64, 7f64));
-        assert_eq!(DynOrigin::Adrastea.try_radii(), Ok((10f64, 8f64, 7f64)));
+        assert_eq!(
+            Adrastea.radii(),
+            (
+                Distance::kilometers(10f64),
+                Distance::kilometers(8f64),
+                Distance::kilometers(7f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Adrastea.try_radii(),
+            Ok((
+                Distance::kilometers(10f64),
+                Distance::kilometers(8f64),
+                Distance::kilometers(7f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_516() {
@@ -14139,16 +15511,22 @@ mod tests {
     }
     #[test]
     fn test_point_mass_516() {
-        assert_eq!(Metis.gravitational_parameter(), 0.002501f64);
+        assert_eq!(
+            Metis.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(0.002501f64)
+        );
         assert_eq!(
             DynOrigin::Metis.try_gravitational_parameter(),
-            Ok(0.002501f64)
+            Ok(GravitationalParameter::km3_per_s2(0.002501f64))
         );
     }
     #[test]
     fn test_mean_radius_516() {
-        assert_eq!(Metis.mean_radius(), 21.5f64);
-        assert_eq!(DynOrigin::Metis.try_mean_radius(), Ok(21.5f64));
+        assert_eq!(Metis.mean_radius(), Distance::kilometers(21.5f64));
+        assert_eq!(
+            DynOrigin::Metis.try_mean_radius(),
+            Ok(Distance::kilometers(21.5f64))
+        );
     }
     #[test]
     fn test_spheroid_516() {
@@ -14157,8 +15535,22 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_516() {
-        assert_eq!(Metis.radii(), (30f64, 20f64, 17f64));
-        assert_eq!(DynOrigin::Metis.try_radii(), Ok((30f64, 20f64, 17f64)));
+        assert_eq!(
+            Metis.radii(),
+            (
+                Distance::kilometers(30f64),
+                Distance::kilometers(20f64),
+                Distance::kilometers(17f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Metis.try_radii(),
+            Ok((
+                Distance::kilometers(30f64),
+                Distance::kilometers(20f64),
+                Distance::kilometers(17f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_517() {
@@ -14937,16 +16329,22 @@ mod tests {
     }
     #[test]
     fn test_point_mass_601() {
-        assert_eq!(Mimas.gravitational_parameter(), 2.503488768152587f64);
+        assert_eq!(
+            Mimas.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(2.503488768152587f64)
+        );
         assert_eq!(
             DynOrigin::Mimas.try_gravitational_parameter(),
-            Ok(2.503488768152587f64)
+            Ok(GravitationalParameter::km3_per_s2(2.503488768152587f64))
         );
     }
     #[test]
     fn test_mean_radius_601() {
-        assert_eq!(Mimas.mean_radius(), 198.2f64);
-        assert_eq!(DynOrigin::Mimas.try_mean_radius(), Ok(198.2f64));
+        assert_eq!(Mimas.mean_radius(), Distance::kilometers(198.2f64));
+        assert_eq!(
+            DynOrigin::Mimas.try_mean_radius(),
+            Ok(Distance::kilometers(198.2f64))
+        );
     }
     #[test]
     fn test_spheroid_601() {
@@ -14955,10 +16353,21 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_601() {
-        assert_eq!(Mimas.radii(), (207.8f64, 196.7f64, 190.6f64));
+        assert_eq!(
+            Mimas.radii(),
+            (
+                Distance::kilometers(207.8f64),
+                Distance::kilometers(196.7f64),
+                Distance::kilometers(190.6f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Mimas.try_radii(),
-            Ok((207.8f64, 196.7f64, 190.6f64))
+            Ok((
+                Distance::kilometers(207.8f64),
+                Distance::kilometers(196.7f64),
+                Distance::kilometers(190.6f64)
+            ))
         );
     }
     #[test]
@@ -14968,16 +16377,22 @@ mod tests {
     }
     #[test]
     fn test_point_mass_602() {
-        assert_eq!(Enceladus.gravitational_parameter(), 7.210366688598896f64);
+        assert_eq!(
+            Enceladus.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(7.210366688598896f64)
+        );
         assert_eq!(
             DynOrigin::Enceladus.try_gravitational_parameter(),
-            Ok(7.210366688598896f64)
+            Ok(GravitationalParameter::km3_per_s2(7.210366688598896f64))
         );
     }
     #[test]
     fn test_mean_radius_602() {
-        assert_eq!(Enceladus.mean_radius(), 252.1f64);
-        assert_eq!(DynOrigin::Enceladus.try_mean_radius(), Ok(252.1f64));
+        assert_eq!(Enceladus.mean_radius(), Distance::kilometers(252.1f64));
+        assert_eq!(
+            DynOrigin::Enceladus.try_mean_radius(),
+            Ok(Distance::kilometers(252.1f64))
+        );
     }
     #[test]
     fn test_spheroid_602() {
@@ -14986,10 +16401,21 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_602() {
-        assert_eq!(Enceladus.radii(), (256.6f64, 251.4f64, 248.3f64));
+        assert_eq!(
+            Enceladus.radii(),
+            (
+                Distance::kilometers(256.6f64),
+                Distance::kilometers(251.4f64),
+                Distance::kilometers(248.3f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Enceladus.try_radii(),
-            Ok((256.6f64, 251.4f64, 248.3f64))
+            Ok((
+                Distance::kilometers(256.6f64),
+                Distance::kilometers(251.4f64),
+                Distance::kilometers(248.3f64)
+            ))
         );
     }
     #[test]
@@ -14999,16 +16425,22 @@ mod tests {
     }
     #[test]
     fn test_point_mass_603() {
-        assert_eq!(Tethys.gravitational_parameter(), 41.21352885489587f64);
+        assert_eq!(
+            Tethys.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(41.21352885489587f64)
+        );
         assert_eq!(
             DynOrigin::Tethys.try_gravitational_parameter(),
-            Ok(41.21352885489587f64)
+            Ok(GravitationalParameter::km3_per_s2(41.21352885489587f64))
         );
     }
     #[test]
     fn test_mean_radius_603() {
-        assert_eq!(Tethys.mean_radius(), 531f64);
-        assert_eq!(DynOrigin::Tethys.try_mean_radius(), Ok(531f64));
+        assert_eq!(Tethys.mean_radius(), Distance::kilometers(531f64));
+        assert_eq!(
+            DynOrigin::Tethys.try_mean_radius(),
+            Ok(Distance::kilometers(531f64))
+        );
     }
     #[test]
     fn test_spheroid_603() {
@@ -15017,10 +16449,21 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_603() {
-        assert_eq!(Tethys.radii(), (538.4f64, 528.3f64, 526.3f64));
+        assert_eq!(
+            Tethys.radii(),
+            (
+                Distance::kilometers(538.4f64),
+                Distance::kilometers(528.3f64),
+                Distance::kilometers(526.3f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Tethys.try_radii(),
-            Ok((538.4f64, 528.3f64, 526.3f64))
+            Ok((
+                Distance::kilometers(538.4f64),
+                Distance::kilometers(528.3f64),
+                Distance::kilometers(526.3f64)
+            ))
         );
     }
     #[test]
@@ -15030,16 +16473,22 @@ mod tests {
     }
     #[test]
     fn test_point_mass_604() {
-        assert_eq!(Dione.gravitational_parameter(), 73.11607172482067f64);
+        assert_eq!(
+            Dione.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(73.11607172482067f64)
+        );
         assert_eq!(
             DynOrigin::Dione.try_gravitational_parameter(),
-            Ok(73.11607172482067f64)
+            Ok(GravitationalParameter::km3_per_s2(73.11607172482067f64))
         );
     }
     #[test]
     fn test_mean_radius_604() {
-        assert_eq!(Dione.mean_radius(), 561.4f64);
-        assert_eq!(DynOrigin::Dione.try_mean_radius(), Ok(561.4f64));
+        assert_eq!(Dione.mean_radius(), Distance::kilometers(561.4f64));
+        assert_eq!(
+            DynOrigin::Dione.try_mean_radius(),
+            Ok(Distance::kilometers(561.4f64))
+        );
     }
     #[test]
     fn test_spheroid_604() {
@@ -15048,10 +16497,21 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_604() {
-        assert_eq!(Dione.radii(), (563.4f64, 561.3f64, 559.6f64));
+        assert_eq!(
+            Dione.radii(),
+            (
+                Distance::kilometers(563.4f64),
+                Distance::kilometers(561.3f64),
+                Distance::kilometers(559.6f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Dione.try_radii(),
-            Ok((563.4f64, 561.3f64, 559.6f64))
+            Ok((
+                Distance::kilometers(563.4f64),
+                Distance::kilometers(561.3f64),
+                Distance::kilometers(559.6f64)
+            ))
         );
     }
     #[test]
@@ -15061,16 +16521,22 @@ mod tests {
     }
     #[test]
     fn test_point_mass_605() {
-        assert_eq!(Rhea.gravitational_parameter(), 153.9417519146563f64);
+        assert_eq!(
+            Rhea.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(153.9417519146563f64)
+        );
         assert_eq!(
             DynOrigin::Rhea.try_gravitational_parameter(),
-            Ok(153.9417519146563f64)
+            Ok(GravitationalParameter::km3_per_s2(153.9417519146563f64))
         );
     }
     #[test]
     fn test_mean_radius_605() {
-        assert_eq!(Rhea.mean_radius(), 763.5f64);
-        assert_eq!(DynOrigin::Rhea.try_mean_radius(), Ok(763.5f64));
+        assert_eq!(Rhea.mean_radius(), Distance::kilometers(763.5f64));
+        assert_eq!(
+            DynOrigin::Rhea.try_mean_radius(),
+            Ok(Distance::kilometers(763.5f64))
+        );
     }
     #[test]
     fn test_spheroid_605() {
@@ -15079,10 +16545,21 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_605() {
-        assert_eq!(Rhea.radii(), (765f64, 763.1f64, 762.4f64));
+        assert_eq!(
+            Rhea.radii(),
+            (
+                Distance::kilometers(765f64),
+                Distance::kilometers(763.1f64),
+                Distance::kilometers(762.4f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Rhea.try_radii(),
-            Ok((765f64, 763.1f64, 762.4f64))
+            Ok((
+                Distance::kilometers(765f64),
+                Distance::kilometers(763.1f64),
+                Distance::kilometers(762.4f64)
+            ))
         );
     }
     #[test]
@@ -15092,16 +16569,22 @@ mod tests {
     }
     #[test]
     fn test_point_mass_606() {
-        assert_eq!(Titan.gravitational_parameter(), 8978.137095521046f64);
+        assert_eq!(
+            Titan.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(8978.137095521046f64)
+        );
         assert_eq!(
             DynOrigin::Titan.try_gravitational_parameter(),
-            Ok(8978.137095521046f64)
+            Ok(GravitationalParameter::km3_per_s2(8978.137095521046f64))
         );
     }
     #[test]
     fn test_mean_radius_606() {
-        assert_eq!(Titan.mean_radius(), 2575f64);
-        assert_eq!(DynOrigin::Titan.try_mean_radius(), Ok(2575f64));
+        assert_eq!(Titan.mean_radius(), Distance::kilometers(2575f64));
+        assert_eq!(
+            DynOrigin::Titan.try_mean_radius(),
+            Ok(Distance::kilometers(2575f64))
+        );
     }
     #[test]
     fn test_spheroid_606() {
@@ -15110,10 +16593,21 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_606() {
-        assert_eq!(Titan.radii(), (2575.15f64, 2574.78f64, 2574.47f64));
+        assert_eq!(
+            Titan.radii(),
+            (
+                Distance::kilometers(2575.15f64),
+                Distance::kilometers(2574.78f64),
+                Distance::kilometers(2574.47f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Titan.try_radii(),
-            Ok((2575.15f64, 2574.78f64, 2574.47f64))
+            Ok((
+                Distance::kilometers(2575.15f64),
+                Distance::kilometers(2574.78f64),
+                Distance::kilometers(2574.47f64)
+            ))
         );
     }
     #[test]
@@ -15123,16 +16617,22 @@ mod tests {
     }
     #[test]
     fn test_point_mass_607() {
-        assert_eq!(Hyperion.gravitational_parameter(), 0.3704913747932265f64);
+        assert_eq!(
+            Hyperion.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(0.3704913747932265f64)
+        );
         assert_eq!(
             DynOrigin::Hyperion.try_gravitational_parameter(),
-            Ok(0.3704913747932265f64)
+            Ok(GravitationalParameter::km3_per_s2(0.3704913747932265f64))
         );
     }
     #[test]
     fn test_mean_radius_607() {
-        assert_eq!(Hyperion.mean_radius(), 135f64);
-        assert_eq!(DynOrigin::Hyperion.try_mean_radius(), Ok(135f64));
+        assert_eq!(Hyperion.mean_radius(), Distance::kilometers(135f64));
+        assert_eq!(
+            DynOrigin::Hyperion.try_mean_radius(),
+            Ok(Distance::kilometers(135f64))
+        );
     }
     #[test]
     fn test_spheroid_607() {
@@ -15141,10 +16641,21 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_607() {
-        assert_eq!(Hyperion.radii(), (180.1f64, 133f64, 102.7f64));
+        assert_eq!(
+            Hyperion.radii(),
+            (
+                Distance::kilometers(180.1f64),
+                Distance::kilometers(133f64),
+                Distance::kilometers(102.7f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Hyperion.try_radii(),
-            Ok((180.1f64, 133f64, 102.7f64))
+            Ok((
+                Distance::kilometers(180.1f64),
+                Distance::kilometers(133f64),
+                Distance::kilometers(102.7f64)
+            ))
         );
     }
     #[test]
@@ -15154,30 +16665,53 @@ mod tests {
     }
     #[test]
     fn test_point_mass_608() {
-        assert_eq!(Iapetus.gravitational_parameter(), 120.5151060137642f64);
+        assert_eq!(
+            Iapetus.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(120.5151060137642f64)
+        );
         assert_eq!(
             DynOrigin::Iapetus.try_gravitational_parameter(),
-            Ok(120.5151060137642f64)
+            Ok(GravitationalParameter::km3_per_s2(120.5151060137642f64))
         );
     }
     #[test]
     fn test_mean_radius_608() {
-        assert_eq!(Iapetus.mean_radius(), 734.3f64);
-        assert_eq!(DynOrigin::Iapetus.try_mean_radius(), Ok(734.3f64));
+        assert_eq!(Iapetus.mean_radius(), Distance::kilometers(734.3f64));
+        assert_eq!(
+            DynOrigin::Iapetus.try_mean_radius(),
+            Ok(Distance::kilometers(734.3f64))
+        );
     }
     #[test]
     fn test_spheroid_608() {
-        assert_eq!(Iapetus.polar_radius(), 712.1f64);
-        assert_eq!(DynOrigin::Iapetus.try_polar_radius(), Ok(712.1f64));
-        assert_eq!(Iapetus.equatorial_radius(), 745.7f64);
-        assert_eq!(DynOrigin::Iapetus.try_equatorial_radius(), Ok(745.7f64));
+        assert_eq!(Iapetus.polar_radius(), Distance::kilometers(712.1f64));
+        assert_eq!(
+            DynOrigin::Iapetus.try_polar_radius(),
+            Ok(Distance::kilometers(712.1f64))
+        );
+        assert_eq!(Iapetus.equatorial_radius(), Distance::kilometers(745.7f64));
+        assert_eq!(
+            DynOrigin::Iapetus.try_equatorial_radius(),
+            Ok(Distance::kilometers(745.7f64))
+        );
     }
     #[test]
     fn test_tri_axial_608() {
-        assert_eq!(Iapetus.radii(), (745.7f64, 745.7f64, 712.1f64));
+        assert_eq!(
+            Iapetus.radii(),
+            (
+                Distance::kilometers(745.7f64),
+                Distance::kilometers(745.7f64),
+                Distance::kilometers(712.1f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Iapetus.try_radii(),
-            Ok((745.7f64, 745.7f64, 712.1f64))
+            Ok((
+                Distance::kilometers(745.7f64),
+                Distance::kilometers(745.7f64),
+                Distance::kilometers(712.1f64)
+            ))
         );
     }
     #[test]
@@ -15187,16 +16721,22 @@ mod tests {
     }
     #[test]
     fn test_point_mass_609() {
-        assert_eq!(Phoebe.gravitational_parameter(), 0.5547860052791678f64);
+        assert_eq!(
+            Phoebe.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(0.5547860052791678f64)
+        );
         assert_eq!(
             DynOrigin::Phoebe.try_gravitational_parameter(),
-            Ok(0.5547860052791678f64)
+            Ok(GravitationalParameter::km3_per_s2(0.5547860052791678f64))
         );
     }
     #[test]
     fn test_mean_radius_609() {
-        assert_eq!(Phoebe.mean_radius(), 106.5f64);
-        assert_eq!(DynOrigin::Phoebe.try_mean_radius(), Ok(106.5f64));
+        assert_eq!(Phoebe.mean_radius(), Distance::kilometers(106.5f64));
+        assert_eq!(
+            DynOrigin::Phoebe.try_mean_radius(),
+            Ok(Distance::kilometers(106.5f64))
+        );
     }
     #[test]
     fn test_spheroid_609() {
@@ -15205,10 +16745,21 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_609() {
-        assert_eq!(Phoebe.radii(), (109.4f64, 108.5f64, 101.8f64));
+        assert_eq!(
+            Phoebe.radii(),
+            (
+                Distance::kilometers(109.4f64),
+                Distance::kilometers(108.5f64),
+                Distance::kilometers(101.8f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Phoebe.try_radii(),
-            Ok((109.4f64, 108.5f64, 101.8f64))
+            Ok((
+                Distance::kilometers(109.4f64),
+                Distance::kilometers(108.5f64),
+                Distance::kilometers(101.8f64)
+            ))
         );
     }
     #[test]
@@ -15218,16 +16769,22 @@ mod tests {
     }
     #[test]
     fn test_point_mass_610() {
-        assert_eq!(Janus.gravitational_parameter(), 0.1265765099012197f64);
+        assert_eq!(
+            Janus.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(0.1265765099012197f64)
+        );
         assert_eq!(
             DynOrigin::Janus.try_gravitational_parameter(),
-            Ok(0.1265765099012197f64)
+            Ok(GravitationalParameter::km3_per_s2(0.1265765099012197f64))
         );
     }
     #[test]
     fn test_mean_radius_610() {
-        assert_eq!(Janus.mean_radius(), 89.2f64);
-        assert_eq!(DynOrigin::Janus.try_mean_radius(), Ok(89.2f64));
+        assert_eq!(Janus.mean_radius(), Distance::kilometers(89.2f64));
+        assert_eq!(
+            DynOrigin::Janus.try_mean_radius(),
+            Ok(Distance::kilometers(89.2f64))
+        );
     }
     #[test]
     fn test_spheroid_610() {
@@ -15236,8 +16793,22 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_610() {
-        assert_eq!(Janus.radii(), (101.7f64, 93f64, 76.3f64));
-        assert_eq!(DynOrigin::Janus.try_radii(), Ok((101.7f64, 93f64, 76.3f64)));
+        assert_eq!(
+            Janus.radii(),
+            (
+                Distance::kilometers(101.7f64),
+                Distance::kilometers(93f64),
+                Distance::kilometers(76.3f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Janus.try_radii(),
+            Ok((
+                Distance::kilometers(101.7f64),
+                Distance::kilometers(93f64),
+                Distance::kilometers(76.3f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_611() {
@@ -15246,16 +16817,22 @@ mod tests {
     }
     #[test]
     fn test_point_mass_611() {
-        assert_eq!(Epimetheus.gravitational_parameter(), 0.03512333288208074f64);
+        assert_eq!(
+            Epimetheus.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(0.03512333288208074f64)
+        );
         assert_eq!(
             DynOrigin::Epimetheus.try_gravitational_parameter(),
-            Ok(0.03512333288208074f64)
+            Ok(GravitationalParameter::km3_per_s2(0.03512333288208074f64))
         );
     }
     #[test]
     fn test_mean_radius_611() {
-        assert_eq!(Epimetheus.mean_radius(), 58.2f64);
-        assert_eq!(DynOrigin::Epimetheus.try_mean_radius(), Ok(58.2f64));
+        assert_eq!(Epimetheus.mean_radius(), Distance::kilometers(58.2f64));
+        assert_eq!(
+            DynOrigin::Epimetheus.try_mean_radius(),
+            Ok(Distance::kilometers(58.2f64))
+        );
     }
     #[test]
     fn test_spheroid_611() {
@@ -15264,10 +16841,21 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_611() {
-        assert_eq!(Epimetheus.radii(), (64.9f64, 57.3f64, 53f64));
+        assert_eq!(
+            Epimetheus.radii(),
+            (
+                Distance::kilometers(64.9f64),
+                Distance::kilometers(57.3f64),
+                Distance::kilometers(53f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Epimetheus.try_radii(),
-            Ok((64.9f64, 57.3f64, 53f64))
+            Ok((
+                Distance::kilometers(64.9f64),
+                Distance::kilometers(57.3f64),
+                Distance::kilometers(53f64)
+            ))
         );
     }
     #[test]
@@ -15277,16 +16865,22 @@ mod tests {
     }
     #[test]
     fn test_point_mass_612() {
-        assert_eq!(Helene.gravitational_parameter(), 0.0004757419551776972f64);
+        assert_eq!(
+            Helene.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(0.0004757419551776972f64)
+        );
         assert_eq!(
             DynOrigin::Helene.try_gravitational_parameter(),
-            Ok(0.0004757419551776972f64)
+            Ok(GravitationalParameter::km3_per_s2(0.0004757419551776972f64))
         );
     }
     #[test]
     fn test_mean_radius_612() {
-        assert_eq!(Helene.mean_radius(), 18f64);
-        assert_eq!(DynOrigin::Helene.try_mean_radius(), Ok(18f64));
+        assert_eq!(Helene.mean_radius(), Distance::kilometers(18f64));
+        assert_eq!(
+            DynOrigin::Helene.try_mean_radius(),
+            Ok(Distance::kilometers(18f64))
+        );
     }
     #[test]
     fn test_spheroid_612() {
@@ -15295,10 +16889,21 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_612() {
-        assert_eq!(Helene.radii(), (22.5f64, 19.6f64, 13.3f64));
+        assert_eq!(
+            Helene.radii(),
+            (
+                Distance::kilometers(22.5f64),
+                Distance::kilometers(19.6f64),
+                Distance::kilometers(13.3f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Helene.try_radii(),
-            Ok((22.5f64, 19.6f64, 13.3f64))
+            Ok((
+                Distance::kilometers(22.5f64),
+                Distance::kilometers(19.6f64),
+                Distance::kilometers(13.3f64)
+            ))
         );
     }
     #[test]
@@ -15312,8 +16917,11 @@ mod tests {
     }
     #[test]
     fn test_mean_radius_613() {
-        assert_eq!(Telesto.mean_radius(), 12.4f64);
-        assert_eq!(DynOrigin::Telesto.try_mean_radius(), Ok(12.4f64));
+        assert_eq!(Telesto.mean_radius(), Distance::kilometers(12.4f64));
+        assert_eq!(
+            DynOrigin::Telesto.try_mean_radius(),
+            Ok(Distance::kilometers(12.4f64))
+        );
     }
     #[test]
     fn test_spheroid_613() {
@@ -15322,10 +16930,21 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_613() {
-        assert_eq!(Telesto.radii(), (16.3f64, 11.8f64, 9.8f64));
+        assert_eq!(
+            Telesto.radii(),
+            (
+                Distance::kilometers(16.3f64),
+                Distance::kilometers(11.8f64),
+                Distance::kilometers(9.8f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Telesto.try_radii(),
-            Ok((16.3f64, 11.8f64, 9.8f64))
+            Ok((
+                Distance::kilometers(16.3f64),
+                Distance::kilometers(11.8f64),
+                Distance::kilometers(9.8f64)
+            ))
         );
     }
     #[test]
@@ -15339,8 +16958,11 @@ mod tests {
     }
     #[test]
     fn test_mean_radius_614() {
-        assert_eq!(Calypso.mean_radius(), 9.6f64);
-        assert_eq!(DynOrigin::Calypso.try_mean_radius(), Ok(9.6f64));
+        assert_eq!(Calypso.mean_radius(), Distance::kilometers(9.6f64));
+        assert_eq!(
+            DynOrigin::Calypso.try_mean_radius(),
+            Ok(Distance::kilometers(9.6f64))
+        );
     }
     #[test]
     fn test_spheroid_614() {
@@ -15349,10 +16971,21 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_614() {
-        assert_eq!(Calypso.radii(), (15.3f64, 9.3f64, 6.3f64));
+        assert_eq!(
+            Calypso.radii(),
+            (
+                Distance::kilometers(15.3f64),
+                Distance::kilometers(9.3f64),
+                Distance::kilometers(6.3f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Calypso.try_radii(),
-            Ok((15.3f64, 9.3f64, 6.3f64))
+            Ok((
+                Distance::kilometers(15.3f64),
+                Distance::kilometers(9.3f64),
+                Distance::kilometers(6.3f64)
+            ))
         );
     }
     #[test]
@@ -15362,16 +16995,22 @@ mod tests {
     }
     #[test]
     fn test_point_mass_615() {
-        assert_eq!(Atlas.gravitational_parameter(), 0.0003718871247516475f64);
+        assert_eq!(
+            Atlas.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(0.0003718871247516475f64)
+        );
         assert_eq!(
             DynOrigin::Atlas.try_gravitational_parameter(),
-            Ok(0.0003718871247516475f64)
+            Ok(GravitationalParameter::km3_per_s2(0.0003718871247516475f64))
         );
     }
     #[test]
     fn test_mean_radius_615() {
-        assert_eq!(Atlas.mean_radius(), 15.1f64);
-        assert_eq!(DynOrigin::Atlas.try_mean_radius(), Ok(15.1f64));
+        assert_eq!(Atlas.mean_radius(), Distance::kilometers(15.1f64));
+        assert_eq!(
+            DynOrigin::Atlas.try_mean_radius(),
+            Ok(Distance::kilometers(15.1f64))
+        );
     }
     #[test]
     fn test_spheroid_615() {
@@ -15380,8 +17019,22 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_615() {
-        assert_eq!(Atlas.radii(), (20.5f64, 17.8f64, 9.4f64));
-        assert_eq!(DynOrigin::Atlas.try_radii(), Ok((20.5f64, 17.8f64, 9.4f64)));
+        assert_eq!(
+            Atlas.radii(),
+            (
+                Distance::kilometers(20.5f64),
+                Distance::kilometers(17.8f64),
+                Distance::kilometers(9.4f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Atlas.try_radii(),
+            Ok((
+                Distance::kilometers(20.5f64),
+                Distance::kilometers(17.8f64),
+                Distance::kilometers(9.4f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_616() {
@@ -15390,16 +17043,22 @@ mod tests {
     }
     #[test]
     fn test_point_mass_616() {
-        assert_eq!(Prometheus.gravitational_parameter(), 0.0107520800100761f64);
+        assert_eq!(
+            Prometheus.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(0.0107520800100761f64)
+        );
         assert_eq!(
             DynOrigin::Prometheus.try_gravitational_parameter(),
-            Ok(0.0107520800100761f64)
+            Ok(GravitationalParameter::km3_per_s2(0.0107520800100761f64))
         );
     }
     #[test]
     fn test_mean_radius_616() {
-        assert_eq!(Prometheus.mean_radius(), 43.1f64);
-        assert_eq!(DynOrigin::Prometheus.try_mean_radius(), Ok(43.1f64));
+        assert_eq!(Prometheus.mean_radius(), Distance::kilometers(43.1f64));
+        assert_eq!(
+            DynOrigin::Prometheus.try_mean_radius(),
+            Ok(Distance::kilometers(43.1f64))
+        );
     }
     #[test]
     fn test_spheroid_616() {
@@ -15408,10 +17067,21 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_616() {
-        assert_eq!(Prometheus.radii(), (68.2f64, 41.6f64, 28.2f64));
+        assert_eq!(
+            Prometheus.radii(),
+            (
+                Distance::kilometers(68.2f64),
+                Distance::kilometers(41.6f64),
+                Distance::kilometers(28.2f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Prometheus.try_radii(),
-            Ok((68.2f64, 41.6f64, 28.2f64))
+            Ok((
+                Distance::kilometers(68.2f64),
+                Distance::kilometers(41.6f64),
+                Distance::kilometers(28.2f64)
+            ))
         );
     }
     #[test]
@@ -15421,16 +17091,22 @@ mod tests {
     }
     #[test]
     fn test_point_mass_617() {
-        assert_eq!(Pandora.gravitational_parameter(), 0.009290325122028795f64);
+        assert_eq!(
+            Pandora.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(0.009290325122028795f64)
+        );
         assert_eq!(
             DynOrigin::Pandora.try_gravitational_parameter(),
-            Ok(0.009290325122028795f64)
+            Ok(GravitationalParameter::km3_per_s2(0.009290325122028795f64))
         );
     }
     #[test]
     fn test_mean_radius_617() {
-        assert_eq!(Pandora.mean_radius(), 40.6f64);
-        assert_eq!(DynOrigin::Pandora.try_mean_radius(), Ok(40.6f64));
+        assert_eq!(Pandora.mean_radius(), Distance::kilometers(40.6f64));
+        assert_eq!(
+            DynOrigin::Pandora.try_mean_radius(),
+            Ok(Distance::kilometers(40.6f64))
+        );
     }
     #[test]
     fn test_spheroid_617() {
@@ -15439,10 +17115,21 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_617() {
-        assert_eq!(Pandora.radii(), (52.2f64, 40.8f64, 31.5f64));
+        assert_eq!(
+            Pandora.radii(),
+            (
+                Distance::kilometers(52.2f64),
+                Distance::kilometers(40.8f64),
+                Distance::kilometers(31.5f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Pandora.try_radii(),
-            Ok((52.2f64, 40.8f64, 31.5f64))
+            Ok((
+                Distance::kilometers(52.2f64),
+                Distance::kilometers(40.8f64),
+                Distance::kilometers(31.5f64)
+            ))
         );
     }
     #[test]
@@ -15456,8 +17143,11 @@ mod tests {
     }
     #[test]
     fn test_mean_radius_618() {
-        assert_eq!(Pan.mean_radius(), 14f64);
-        assert_eq!(DynOrigin::Pan.try_mean_radius(), Ok(14f64));
+        assert_eq!(Pan.mean_radius(), Distance::kilometers(14f64));
+        assert_eq!(
+            DynOrigin::Pan.try_mean_radius(),
+            Ok(Distance::kilometers(14f64))
+        );
     }
     #[test]
     fn test_spheroid_618() {
@@ -15466,8 +17156,22 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_618() {
-        assert_eq!(Pan.radii(), (17.2f64, 15.4f64, 10.4f64));
-        assert_eq!(DynOrigin::Pan.try_radii(), Ok((17.2f64, 15.4f64, 10.4f64)));
+        assert_eq!(
+            Pan.radii(),
+            (
+                Distance::kilometers(17.2f64),
+                Distance::kilometers(15.4f64),
+                Distance::kilometers(10.4f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Pan.try_radii(),
+            Ok((
+                Distance::kilometers(17.2f64),
+                Distance::kilometers(15.4f64),
+                Distance::kilometers(10.4f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_619() {
@@ -15766,8 +17470,11 @@ mod tests {
     }
     #[test]
     fn test_mean_radius_632() {
-        assert_eq!(Methone.mean_radius(), 1.45f64);
-        assert_eq!(DynOrigin::Methone.try_mean_radius(), Ok(1.45f64));
+        assert_eq!(Methone.mean_radius(), Distance::kilometers(1.45f64));
+        assert_eq!(
+            DynOrigin::Methone.try_mean_radius(),
+            Ok(Distance::kilometers(1.45f64))
+        );
     }
     #[test]
     fn test_spheroid_632() {
@@ -15776,10 +17483,21 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_632() {
-        assert_eq!(Methone.radii(), (1.94f64, 1.29f64, 1.21f64));
+        assert_eq!(
+            Methone.radii(),
+            (
+                Distance::kilometers(1.94f64),
+                Distance::kilometers(1.29f64),
+                Distance::kilometers(1.21f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Methone.try_radii(),
-            Ok((1.94f64, 1.29f64, 1.21f64))
+            Ok((
+                Distance::kilometers(1.94f64),
+                Distance::kilometers(1.29f64),
+                Distance::kilometers(1.21f64)
+            ))
         );
     }
     #[test]
@@ -15793,8 +17511,11 @@ mod tests {
     }
     #[test]
     fn test_mean_radius_633() {
-        assert_eq!(Pallene.mean_radius(), 2.23f64);
-        assert_eq!(DynOrigin::Pallene.try_mean_radius(), Ok(2.23f64));
+        assert_eq!(Pallene.mean_radius(), Distance::kilometers(2.23f64));
+        assert_eq!(
+            DynOrigin::Pallene.try_mean_radius(),
+            Ok(Distance::kilometers(2.23f64))
+        );
     }
     #[test]
     fn test_spheroid_633() {
@@ -15803,10 +17524,21 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_633() {
-        assert_eq!(Pallene.radii(), (2.88f64, 2.08f64, 1.8f64));
+        assert_eq!(
+            Pallene.radii(),
+            (
+                Distance::kilometers(2.88f64),
+                Distance::kilometers(2.08f64),
+                Distance::kilometers(1.8f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Pallene.try_radii(),
-            Ok((2.88f64, 2.08f64, 1.8f64))
+            Ok((
+                Distance::kilometers(2.88f64),
+                Distance::kilometers(2.08f64),
+                Distance::kilometers(1.8f64)
+            ))
         );
     }
     #[test]
@@ -15820,8 +17552,11 @@ mod tests {
     }
     #[test]
     fn test_mean_radius_634() {
-        assert_eq!(Polydeuces.mean_radius(), 1.3f64);
-        assert_eq!(DynOrigin::Polydeuces.try_mean_radius(), Ok(1.3f64));
+        assert_eq!(Polydeuces.mean_radius(), Distance::kilometers(1.3f64));
+        assert_eq!(
+            DynOrigin::Polydeuces.try_mean_radius(),
+            Ok(Distance::kilometers(1.3f64))
+        );
     }
     #[test]
     fn test_spheroid_634() {
@@ -15830,10 +17565,21 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_634() {
-        assert_eq!(Polydeuces.radii(), (1.5f64, 1.2f64, 1f64));
+        assert_eq!(
+            Polydeuces.radii(),
+            (
+                Distance::kilometers(1.5f64),
+                Distance::kilometers(1.2f64),
+                Distance::kilometers(1f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Polydeuces.try_radii(),
-            Ok((1.5f64, 1.2f64, 1f64))
+            Ok((
+                Distance::kilometers(1.5f64),
+                Distance::kilometers(1.2f64),
+                Distance::kilometers(1f64)
+            ))
         );
     }
     #[test]
@@ -15847,8 +17593,11 @@ mod tests {
     }
     #[test]
     fn test_mean_radius_635() {
-        assert_eq!(Daphnis.mean_radius(), 3.8f64);
-        assert_eq!(DynOrigin::Daphnis.try_mean_radius(), Ok(3.8f64));
+        assert_eq!(Daphnis.mean_radius(), Distance::kilometers(3.8f64));
+        assert_eq!(
+            DynOrigin::Daphnis.try_mean_radius(),
+            Ok(Distance::kilometers(3.8f64))
+        );
     }
     #[test]
     fn test_spheroid_635() {
@@ -15857,8 +17606,22 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_635() {
-        assert_eq!(Daphnis.radii(), (4.6f64, 4.5f64, 2.8f64));
-        assert_eq!(DynOrigin::Daphnis.try_radii(), Ok((4.6f64, 4.5f64, 2.8f64)));
+        assert_eq!(
+            Daphnis.radii(),
+            (
+                Distance::kilometers(4.6f64),
+                Distance::kilometers(4.5f64),
+                Distance::kilometers(2.8f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Daphnis.try_radii(),
+            Ok((
+                Distance::kilometers(4.6f64),
+                Distance::kilometers(4.5f64),
+                Distance::kilometers(2.8f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_636() {
@@ -16157,20 +17920,43 @@ mod tests {
     }
     #[test]
     fn test_mean_radius_649() {
-        assert_eq!(Anthe.mean_radius(), 0.5f64);
-        assert_eq!(DynOrigin::Anthe.try_mean_radius(), Ok(0.5f64));
+        assert_eq!(Anthe.mean_radius(), Distance::kilometers(0.5f64));
+        assert_eq!(
+            DynOrigin::Anthe.try_mean_radius(),
+            Ok(Distance::kilometers(0.5f64))
+        );
     }
     #[test]
     fn test_spheroid_649() {
-        assert_eq!(Anthe.polar_radius(), 0.5f64);
-        assert_eq!(DynOrigin::Anthe.try_polar_radius(), Ok(0.5f64));
-        assert_eq!(Anthe.equatorial_radius(), 0.5f64);
-        assert_eq!(DynOrigin::Anthe.try_equatorial_radius(), Ok(0.5f64));
+        assert_eq!(Anthe.polar_radius(), Distance::kilometers(0.5f64));
+        assert_eq!(
+            DynOrigin::Anthe.try_polar_radius(),
+            Ok(Distance::kilometers(0.5f64))
+        );
+        assert_eq!(Anthe.equatorial_radius(), Distance::kilometers(0.5f64));
+        assert_eq!(
+            DynOrigin::Anthe.try_equatorial_radius(),
+            Ok(Distance::kilometers(0.5f64))
+        );
     }
     #[test]
     fn test_tri_axial_649() {
-        assert_eq!(Anthe.radii(), (0.5f64, 0.5f64, 0.5f64));
-        assert_eq!(DynOrigin::Anthe.try_radii(), Ok((0.5f64, 0.5f64, 0.5f64)));
+        assert_eq!(
+            Anthe.radii(),
+            (
+                Distance::kilometers(0.5f64),
+                Distance::kilometers(0.5f64),
+                Distance::kilometers(0.5f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Anthe.try_radii(),
+            Ok((
+                Distance::kilometers(0.5f64),
+                Distance::kilometers(0.5f64),
+                Distance::kilometers(0.5f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_650() {
@@ -16249,8 +18035,11 @@ mod tests {
     }
     #[test]
     fn test_mean_radius_653() {
-        assert_eq!(Aegaeon.mean_radius(), 0.33f64);
-        assert_eq!(DynOrigin::Aegaeon.try_mean_radius(), Ok(0.33f64));
+        assert_eq!(Aegaeon.mean_radius(), Distance::kilometers(0.33f64));
+        assert_eq!(
+            DynOrigin::Aegaeon.try_mean_radius(),
+            Ok(Distance::kilometers(0.33f64))
+        );
     }
     #[test]
     fn test_spheroid_653() {
@@ -16259,10 +18048,21 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_653() {
-        assert_eq!(Aegaeon.radii(), (0.7f64, 0.25f64, 0.2f64));
+        assert_eq!(
+            Aegaeon.radii(),
+            (
+                Distance::kilometers(0.7f64),
+                Distance::kilometers(0.25f64),
+                Distance::kilometers(0.2f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Aegaeon.try_radii(),
-            Ok((0.7f64, 0.25f64, 0.2f64))
+            Ok((
+                Distance::kilometers(0.7f64),
+                Distance::kilometers(0.25f64),
+                Distance::kilometers(0.2f64)
+            ))
         );
     }
     #[test]
@@ -16272,16 +18072,22 @@ mod tests {
     }
     #[test]
     fn test_point_mass_701() {
-        assert_eq!(Ariel.gravitational_parameter(), 83.46344431770477f64);
+        assert_eq!(
+            Ariel.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(83.46344431770477f64)
+        );
         assert_eq!(
             DynOrigin::Ariel.try_gravitational_parameter(),
-            Ok(83.46344431770477f64)
+            Ok(GravitationalParameter::km3_per_s2(83.46344431770477f64))
         );
     }
     #[test]
     fn test_mean_radius_701() {
-        assert_eq!(Ariel.mean_radius(), 578.9f64);
-        assert_eq!(DynOrigin::Ariel.try_mean_radius(), Ok(578.9f64));
+        assert_eq!(Ariel.mean_radius(), Distance::kilometers(578.9f64));
+        assert_eq!(
+            DynOrigin::Ariel.try_mean_radius(),
+            Ok(Distance::kilometers(578.9f64))
+        );
     }
     #[test]
     fn test_spheroid_701() {
@@ -16290,10 +18096,21 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_701() {
-        assert_eq!(Ariel.radii(), (581.1f64, 577.9f64, 577.7f64));
+        assert_eq!(
+            Ariel.radii(),
+            (
+                Distance::kilometers(581.1f64),
+                Distance::kilometers(577.9f64),
+                Distance::kilometers(577.7f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Ariel.try_radii(),
-            Ok((581.1f64, 577.9f64, 577.7f64))
+            Ok((
+                Distance::kilometers(581.1f64),
+                Distance::kilometers(577.9f64),
+                Distance::kilometers(577.7f64)
+            ))
         );
     }
     #[test]
@@ -16303,30 +18120,53 @@ mod tests {
     }
     #[test]
     fn test_point_mass_702() {
-        assert_eq!(Umbriel.gravitational_parameter(), 85.09338094489388f64);
+        assert_eq!(
+            Umbriel.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(85.09338094489388f64)
+        );
         assert_eq!(
             DynOrigin::Umbriel.try_gravitational_parameter(),
-            Ok(85.09338094489388f64)
+            Ok(GravitationalParameter::km3_per_s2(85.09338094489388f64))
         );
     }
     #[test]
     fn test_mean_radius_702() {
-        assert_eq!(Umbriel.mean_radius(), 584.7f64);
-        assert_eq!(DynOrigin::Umbriel.try_mean_radius(), Ok(584.7f64));
+        assert_eq!(Umbriel.mean_radius(), Distance::kilometers(584.7f64));
+        assert_eq!(
+            DynOrigin::Umbriel.try_mean_radius(),
+            Ok(Distance::kilometers(584.7f64))
+        );
     }
     #[test]
     fn test_spheroid_702() {
-        assert_eq!(Umbriel.polar_radius(), 584.7f64);
-        assert_eq!(DynOrigin::Umbriel.try_polar_radius(), Ok(584.7f64));
-        assert_eq!(Umbriel.equatorial_radius(), 584.7f64);
-        assert_eq!(DynOrigin::Umbriel.try_equatorial_radius(), Ok(584.7f64));
+        assert_eq!(Umbriel.polar_radius(), Distance::kilometers(584.7f64));
+        assert_eq!(
+            DynOrigin::Umbriel.try_polar_radius(),
+            Ok(Distance::kilometers(584.7f64))
+        );
+        assert_eq!(Umbriel.equatorial_radius(), Distance::kilometers(584.7f64));
+        assert_eq!(
+            DynOrigin::Umbriel.try_equatorial_radius(),
+            Ok(Distance::kilometers(584.7f64))
+        );
     }
     #[test]
     fn test_tri_axial_702() {
-        assert_eq!(Umbriel.radii(), (584.7f64, 584.7f64, 584.7f64));
+        assert_eq!(
+            Umbriel.radii(),
+            (
+                Distance::kilometers(584.7f64),
+                Distance::kilometers(584.7f64),
+                Distance::kilometers(584.7f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Umbriel.try_radii(),
-            Ok((584.7f64, 584.7f64, 584.7f64))
+            Ok((
+                Distance::kilometers(584.7f64),
+                Distance::kilometers(584.7f64),
+                Distance::kilometers(584.7f64)
+            ))
         );
     }
     #[test]
@@ -16336,30 +18176,53 @@ mod tests {
     }
     #[test]
     fn test_point_mass_703() {
-        assert_eq!(Titania.gravitational_parameter(), 226.9437003741248f64);
+        assert_eq!(
+            Titania.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(226.9437003741248f64)
+        );
         assert_eq!(
             DynOrigin::Titania.try_gravitational_parameter(),
-            Ok(226.9437003741248f64)
+            Ok(GravitationalParameter::km3_per_s2(226.9437003741248f64))
         );
     }
     #[test]
     fn test_mean_radius_703() {
-        assert_eq!(Titania.mean_radius(), 788.9f64);
-        assert_eq!(DynOrigin::Titania.try_mean_radius(), Ok(788.9f64));
+        assert_eq!(Titania.mean_radius(), Distance::kilometers(788.9f64));
+        assert_eq!(
+            DynOrigin::Titania.try_mean_radius(),
+            Ok(Distance::kilometers(788.9f64))
+        );
     }
     #[test]
     fn test_spheroid_703() {
-        assert_eq!(Titania.polar_radius(), 788.9f64);
-        assert_eq!(DynOrigin::Titania.try_polar_radius(), Ok(788.9f64));
-        assert_eq!(Titania.equatorial_radius(), 788.9f64);
-        assert_eq!(DynOrigin::Titania.try_equatorial_radius(), Ok(788.9f64));
+        assert_eq!(Titania.polar_radius(), Distance::kilometers(788.9f64));
+        assert_eq!(
+            DynOrigin::Titania.try_polar_radius(),
+            Ok(Distance::kilometers(788.9f64))
+        );
+        assert_eq!(Titania.equatorial_radius(), Distance::kilometers(788.9f64));
+        assert_eq!(
+            DynOrigin::Titania.try_equatorial_radius(),
+            Ok(Distance::kilometers(788.9f64))
+        );
     }
     #[test]
     fn test_tri_axial_703() {
-        assert_eq!(Titania.radii(), (788.9f64, 788.9f64, 788.9f64));
+        assert_eq!(
+            Titania.radii(),
+            (
+                Distance::kilometers(788.9f64),
+                Distance::kilometers(788.9f64),
+                Distance::kilometers(788.9f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Titania.try_radii(),
-            Ok((788.9f64, 788.9f64, 788.9f64))
+            Ok((
+                Distance::kilometers(788.9f64),
+                Distance::kilometers(788.9f64),
+                Distance::kilometers(788.9f64)
+            ))
         );
     }
     #[test]
@@ -16369,30 +18232,53 @@ mod tests {
     }
     #[test]
     fn test_point_mass_704() {
-        assert_eq!(Oberon.gravitational_parameter(), 205.3234302535623f64);
+        assert_eq!(
+            Oberon.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(205.3234302535623f64)
+        );
         assert_eq!(
             DynOrigin::Oberon.try_gravitational_parameter(),
-            Ok(205.3234302535623f64)
+            Ok(GravitationalParameter::km3_per_s2(205.3234302535623f64))
         );
     }
     #[test]
     fn test_mean_radius_704() {
-        assert_eq!(Oberon.mean_radius(), 761.4f64);
-        assert_eq!(DynOrigin::Oberon.try_mean_radius(), Ok(761.4f64));
+        assert_eq!(Oberon.mean_radius(), Distance::kilometers(761.4f64));
+        assert_eq!(
+            DynOrigin::Oberon.try_mean_radius(),
+            Ok(Distance::kilometers(761.4f64))
+        );
     }
     #[test]
     fn test_spheroid_704() {
-        assert_eq!(Oberon.polar_radius(), 761.4f64);
-        assert_eq!(DynOrigin::Oberon.try_polar_radius(), Ok(761.4f64));
-        assert_eq!(Oberon.equatorial_radius(), 761.4f64);
-        assert_eq!(DynOrigin::Oberon.try_equatorial_radius(), Ok(761.4f64));
+        assert_eq!(Oberon.polar_radius(), Distance::kilometers(761.4f64));
+        assert_eq!(
+            DynOrigin::Oberon.try_polar_radius(),
+            Ok(Distance::kilometers(761.4f64))
+        );
+        assert_eq!(Oberon.equatorial_radius(), Distance::kilometers(761.4f64));
+        assert_eq!(
+            DynOrigin::Oberon.try_equatorial_radius(),
+            Ok(Distance::kilometers(761.4f64))
+        );
     }
     #[test]
     fn test_tri_axial_704() {
-        assert_eq!(Oberon.radii(), (761.4f64, 761.4f64, 761.4f64));
+        assert_eq!(
+            Oberon.radii(),
+            (
+                Distance::kilometers(761.4f64),
+                Distance::kilometers(761.4f64),
+                Distance::kilometers(761.4f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Oberon.try_radii(),
-            Ok((761.4f64, 761.4f64, 761.4f64))
+            Ok((
+                Distance::kilometers(761.4f64),
+                Distance::kilometers(761.4f64),
+                Distance::kilometers(761.4f64)
+            ))
         );
     }
     #[test]
@@ -16402,16 +18288,22 @@ mod tests {
     }
     #[test]
     fn test_point_mass_705() {
-        assert_eq!(Miranda.gravitational_parameter(), 4.3195168992321f64);
+        assert_eq!(
+            Miranda.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(4.3195168992321f64)
+        );
         assert_eq!(
             DynOrigin::Miranda.try_gravitational_parameter(),
-            Ok(4.3195168992321f64)
+            Ok(GravitationalParameter::km3_per_s2(4.3195168992321f64))
         );
     }
     #[test]
     fn test_mean_radius_705() {
-        assert_eq!(Miranda.mean_radius(), 235.8f64);
-        assert_eq!(DynOrigin::Miranda.try_mean_radius(), Ok(235.8f64));
+        assert_eq!(Miranda.mean_radius(), Distance::kilometers(235.8f64));
+        assert_eq!(
+            DynOrigin::Miranda.try_mean_radius(),
+            Ok(Distance::kilometers(235.8f64))
+        );
     }
     #[test]
     fn test_spheroid_705() {
@@ -16420,10 +18312,21 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_705() {
-        assert_eq!(Miranda.radii(), (240.4f64, 234.2f64, 232.9f64));
+        assert_eq!(
+            Miranda.radii(),
+            (
+                Distance::kilometers(240.4f64),
+                Distance::kilometers(234.2f64),
+                Distance::kilometers(232.9f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Miranda.try_radii(),
-            Ok((240.4f64, 234.2f64, 232.9f64))
+            Ok((
+                Distance::kilometers(240.4f64),
+                Distance::kilometers(234.2f64),
+                Distance::kilometers(232.9f64)
+            ))
         );
     }
     #[test]
@@ -16437,20 +18340,43 @@ mod tests {
     }
     #[test]
     fn test_mean_radius_706() {
-        assert_eq!(Cordelia.mean_radius(), 13f64);
-        assert_eq!(DynOrigin::Cordelia.try_mean_radius(), Ok(13f64));
+        assert_eq!(Cordelia.mean_radius(), Distance::kilometers(13f64));
+        assert_eq!(
+            DynOrigin::Cordelia.try_mean_radius(),
+            Ok(Distance::kilometers(13f64))
+        );
     }
     #[test]
     fn test_spheroid_706() {
-        assert_eq!(Cordelia.polar_radius(), 13f64);
-        assert_eq!(DynOrigin::Cordelia.try_polar_radius(), Ok(13f64));
-        assert_eq!(Cordelia.equatorial_radius(), 13f64);
-        assert_eq!(DynOrigin::Cordelia.try_equatorial_radius(), Ok(13f64));
+        assert_eq!(Cordelia.polar_radius(), Distance::kilometers(13f64));
+        assert_eq!(
+            DynOrigin::Cordelia.try_polar_radius(),
+            Ok(Distance::kilometers(13f64))
+        );
+        assert_eq!(Cordelia.equatorial_radius(), Distance::kilometers(13f64));
+        assert_eq!(
+            DynOrigin::Cordelia.try_equatorial_radius(),
+            Ok(Distance::kilometers(13f64))
+        );
     }
     #[test]
     fn test_tri_axial_706() {
-        assert_eq!(Cordelia.radii(), (13f64, 13f64, 13f64));
-        assert_eq!(DynOrigin::Cordelia.try_radii(), Ok((13f64, 13f64, 13f64)));
+        assert_eq!(
+            Cordelia.radii(),
+            (
+                Distance::kilometers(13f64),
+                Distance::kilometers(13f64),
+                Distance::kilometers(13f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Cordelia.try_radii(),
+            Ok((
+                Distance::kilometers(13f64),
+                Distance::kilometers(13f64),
+                Distance::kilometers(13f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_707() {
@@ -16463,20 +18389,43 @@ mod tests {
     }
     #[test]
     fn test_mean_radius_707() {
-        assert_eq!(Ophelia.mean_radius(), 15f64);
-        assert_eq!(DynOrigin::Ophelia.try_mean_radius(), Ok(15f64));
+        assert_eq!(Ophelia.mean_radius(), Distance::kilometers(15f64));
+        assert_eq!(
+            DynOrigin::Ophelia.try_mean_radius(),
+            Ok(Distance::kilometers(15f64))
+        );
     }
     #[test]
     fn test_spheroid_707() {
-        assert_eq!(Ophelia.polar_radius(), 15f64);
-        assert_eq!(DynOrigin::Ophelia.try_polar_radius(), Ok(15f64));
-        assert_eq!(Ophelia.equatorial_radius(), 15f64);
-        assert_eq!(DynOrigin::Ophelia.try_equatorial_radius(), Ok(15f64));
+        assert_eq!(Ophelia.polar_radius(), Distance::kilometers(15f64));
+        assert_eq!(
+            DynOrigin::Ophelia.try_polar_radius(),
+            Ok(Distance::kilometers(15f64))
+        );
+        assert_eq!(Ophelia.equatorial_radius(), Distance::kilometers(15f64));
+        assert_eq!(
+            DynOrigin::Ophelia.try_equatorial_radius(),
+            Ok(Distance::kilometers(15f64))
+        );
     }
     #[test]
     fn test_tri_axial_707() {
-        assert_eq!(Ophelia.radii(), (15f64, 15f64, 15f64));
-        assert_eq!(DynOrigin::Ophelia.try_radii(), Ok((15f64, 15f64, 15f64)));
+        assert_eq!(
+            Ophelia.radii(),
+            (
+                Distance::kilometers(15f64),
+                Distance::kilometers(15f64),
+                Distance::kilometers(15f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Ophelia.try_radii(),
+            Ok((
+                Distance::kilometers(15f64),
+                Distance::kilometers(15f64),
+                Distance::kilometers(15f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_708() {
@@ -16489,20 +18438,43 @@ mod tests {
     }
     #[test]
     fn test_mean_radius_708() {
-        assert_eq!(Bianca.mean_radius(), 21f64);
-        assert_eq!(DynOrigin::Bianca.try_mean_radius(), Ok(21f64));
+        assert_eq!(Bianca.mean_radius(), Distance::kilometers(21f64));
+        assert_eq!(
+            DynOrigin::Bianca.try_mean_radius(),
+            Ok(Distance::kilometers(21f64))
+        );
     }
     #[test]
     fn test_spheroid_708() {
-        assert_eq!(Bianca.polar_radius(), 21f64);
-        assert_eq!(DynOrigin::Bianca.try_polar_radius(), Ok(21f64));
-        assert_eq!(Bianca.equatorial_radius(), 21f64);
-        assert_eq!(DynOrigin::Bianca.try_equatorial_radius(), Ok(21f64));
+        assert_eq!(Bianca.polar_radius(), Distance::kilometers(21f64));
+        assert_eq!(
+            DynOrigin::Bianca.try_polar_radius(),
+            Ok(Distance::kilometers(21f64))
+        );
+        assert_eq!(Bianca.equatorial_radius(), Distance::kilometers(21f64));
+        assert_eq!(
+            DynOrigin::Bianca.try_equatorial_radius(),
+            Ok(Distance::kilometers(21f64))
+        );
     }
     #[test]
     fn test_tri_axial_708() {
-        assert_eq!(Bianca.radii(), (21f64, 21f64, 21f64));
-        assert_eq!(DynOrigin::Bianca.try_radii(), Ok((21f64, 21f64, 21f64)));
+        assert_eq!(
+            Bianca.radii(),
+            (
+                Distance::kilometers(21f64),
+                Distance::kilometers(21f64),
+                Distance::kilometers(21f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Bianca.try_radii(),
+            Ok((
+                Distance::kilometers(21f64),
+                Distance::kilometers(21f64),
+                Distance::kilometers(21f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_709() {
@@ -16515,20 +18487,43 @@ mod tests {
     }
     #[test]
     fn test_mean_radius_709() {
-        assert_eq!(Cressida.mean_radius(), 31f64);
-        assert_eq!(DynOrigin::Cressida.try_mean_radius(), Ok(31f64));
+        assert_eq!(Cressida.mean_radius(), Distance::kilometers(31f64));
+        assert_eq!(
+            DynOrigin::Cressida.try_mean_radius(),
+            Ok(Distance::kilometers(31f64))
+        );
     }
     #[test]
     fn test_spheroid_709() {
-        assert_eq!(Cressida.polar_radius(), 31f64);
-        assert_eq!(DynOrigin::Cressida.try_polar_radius(), Ok(31f64));
-        assert_eq!(Cressida.equatorial_radius(), 31f64);
-        assert_eq!(DynOrigin::Cressida.try_equatorial_radius(), Ok(31f64));
+        assert_eq!(Cressida.polar_radius(), Distance::kilometers(31f64));
+        assert_eq!(
+            DynOrigin::Cressida.try_polar_radius(),
+            Ok(Distance::kilometers(31f64))
+        );
+        assert_eq!(Cressida.equatorial_radius(), Distance::kilometers(31f64));
+        assert_eq!(
+            DynOrigin::Cressida.try_equatorial_radius(),
+            Ok(Distance::kilometers(31f64))
+        );
     }
     #[test]
     fn test_tri_axial_709() {
-        assert_eq!(Cressida.radii(), (31f64, 31f64, 31f64));
-        assert_eq!(DynOrigin::Cressida.try_radii(), Ok((31f64, 31f64, 31f64)));
+        assert_eq!(
+            Cressida.radii(),
+            (
+                Distance::kilometers(31f64),
+                Distance::kilometers(31f64),
+                Distance::kilometers(31f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Cressida.try_radii(),
+            Ok((
+                Distance::kilometers(31f64),
+                Distance::kilometers(31f64),
+                Distance::kilometers(31f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_710() {
@@ -16541,20 +18536,43 @@ mod tests {
     }
     #[test]
     fn test_mean_radius_710() {
-        assert_eq!(Desdemona.mean_radius(), 27f64);
-        assert_eq!(DynOrigin::Desdemona.try_mean_radius(), Ok(27f64));
+        assert_eq!(Desdemona.mean_radius(), Distance::kilometers(27f64));
+        assert_eq!(
+            DynOrigin::Desdemona.try_mean_radius(),
+            Ok(Distance::kilometers(27f64))
+        );
     }
     #[test]
     fn test_spheroid_710() {
-        assert_eq!(Desdemona.polar_radius(), 27f64);
-        assert_eq!(DynOrigin::Desdemona.try_polar_radius(), Ok(27f64));
-        assert_eq!(Desdemona.equatorial_radius(), 27f64);
-        assert_eq!(DynOrigin::Desdemona.try_equatorial_radius(), Ok(27f64));
+        assert_eq!(Desdemona.polar_radius(), Distance::kilometers(27f64));
+        assert_eq!(
+            DynOrigin::Desdemona.try_polar_radius(),
+            Ok(Distance::kilometers(27f64))
+        );
+        assert_eq!(Desdemona.equatorial_radius(), Distance::kilometers(27f64));
+        assert_eq!(
+            DynOrigin::Desdemona.try_equatorial_radius(),
+            Ok(Distance::kilometers(27f64))
+        );
     }
     #[test]
     fn test_tri_axial_710() {
-        assert_eq!(Desdemona.radii(), (27f64, 27f64, 27f64));
-        assert_eq!(DynOrigin::Desdemona.try_radii(), Ok((27f64, 27f64, 27f64)));
+        assert_eq!(
+            Desdemona.radii(),
+            (
+                Distance::kilometers(27f64),
+                Distance::kilometers(27f64),
+                Distance::kilometers(27f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Desdemona.try_radii(),
+            Ok((
+                Distance::kilometers(27f64),
+                Distance::kilometers(27f64),
+                Distance::kilometers(27f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_711() {
@@ -16567,20 +18585,43 @@ mod tests {
     }
     #[test]
     fn test_mean_radius_711() {
-        assert_eq!(Juliet.mean_radius(), 42f64);
-        assert_eq!(DynOrigin::Juliet.try_mean_radius(), Ok(42f64));
+        assert_eq!(Juliet.mean_radius(), Distance::kilometers(42f64));
+        assert_eq!(
+            DynOrigin::Juliet.try_mean_radius(),
+            Ok(Distance::kilometers(42f64))
+        );
     }
     #[test]
     fn test_spheroid_711() {
-        assert_eq!(Juliet.polar_radius(), 42f64);
-        assert_eq!(DynOrigin::Juliet.try_polar_radius(), Ok(42f64));
-        assert_eq!(Juliet.equatorial_radius(), 42f64);
-        assert_eq!(DynOrigin::Juliet.try_equatorial_radius(), Ok(42f64));
+        assert_eq!(Juliet.polar_radius(), Distance::kilometers(42f64));
+        assert_eq!(
+            DynOrigin::Juliet.try_polar_radius(),
+            Ok(Distance::kilometers(42f64))
+        );
+        assert_eq!(Juliet.equatorial_radius(), Distance::kilometers(42f64));
+        assert_eq!(
+            DynOrigin::Juliet.try_equatorial_radius(),
+            Ok(Distance::kilometers(42f64))
+        );
     }
     #[test]
     fn test_tri_axial_711() {
-        assert_eq!(Juliet.radii(), (42f64, 42f64, 42f64));
-        assert_eq!(DynOrigin::Juliet.try_radii(), Ok((42f64, 42f64, 42f64)));
+        assert_eq!(
+            Juliet.radii(),
+            (
+                Distance::kilometers(42f64),
+                Distance::kilometers(42f64),
+                Distance::kilometers(42f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Juliet.try_radii(),
+            Ok((
+                Distance::kilometers(42f64),
+                Distance::kilometers(42f64),
+                Distance::kilometers(42f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_712() {
@@ -16593,20 +18634,43 @@ mod tests {
     }
     #[test]
     fn test_mean_radius_712() {
-        assert_eq!(Portia.mean_radius(), 54f64);
-        assert_eq!(DynOrigin::Portia.try_mean_radius(), Ok(54f64));
+        assert_eq!(Portia.mean_radius(), Distance::kilometers(54f64));
+        assert_eq!(
+            DynOrigin::Portia.try_mean_radius(),
+            Ok(Distance::kilometers(54f64))
+        );
     }
     #[test]
     fn test_spheroid_712() {
-        assert_eq!(Portia.polar_radius(), 54f64);
-        assert_eq!(DynOrigin::Portia.try_polar_radius(), Ok(54f64));
-        assert_eq!(Portia.equatorial_radius(), 54f64);
-        assert_eq!(DynOrigin::Portia.try_equatorial_radius(), Ok(54f64));
+        assert_eq!(Portia.polar_radius(), Distance::kilometers(54f64));
+        assert_eq!(
+            DynOrigin::Portia.try_polar_radius(),
+            Ok(Distance::kilometers(54f64))
+        );
+        assert_eq!(Portia.equatorial_radius(), Distance::kilometers(54f64));
+        assert_eq!(
+            DynOrigin::Portia.try_equatorial_radius(),
+            Ok(Distance::kilometers(54f64))
+        );
     }
     #[test]
     fn test_tri_axial_712() {
-        assert_eq!(Portia.radii(), (54f64, 54f64, 54f64));
-        assert_eq!(DynOrigin::Portia.try_radii(), Ok((54f64, 54f64, 54f64)));
+        assert_eq!(
+            Portia.radii(),
+            (
+                Distance::kilometers(54f64),
+                Distance::kilometers(54f64),
+                Distance::kilometers(54f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Portia.try_radii(),
+            Ok((
+                Distance::kilometers(54f64),
+                Distance::kilometers(54f64),
+                Distance::kilometers(54f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_713() {
@@ -16619,20 +18683,43 @@ mod tests {
     }
     #[test]
     fn test_mean_radius_713() {
-        assert_eq!(Rosalind.mean_radius(), 27f64);
-        assert_eq!(DynOrigin::Rosalind.try_mean_radius(), Ok(27f64));
+        assert_eq!(Rosalind.mean_radius(), Distance::kilometers(27f64));
+        assert_eq!(
+            DynOrigin::Rosalind.try_mean_radius(),
+            Ok(Distance::kilometers(27f64))
+        );
     }
     #[test]
     fn test_spheroid_713() {
-        assert_eq!(Rosalind.polar_radius(), 27f64);
-        assert_eq!(DynOrigin::Rosalind.try_polar_radius(), Ok(27f64));
-        assert_eq!(Rosalind.equatorial_radius(), 27f64);
-        assert_eq!(DynOrigin::Rosalind.try_equatorial_radius(), Ok(27f64));
+        assert_eq!(Rosalind.polar_radius(), Distance::kilometers(27f64));
+        assert_eq!(
+            DynOrigin::Rosalind.try_polar_radius(),
+            Ok(Distance::kilometers(27f64))
+        );
+        assert_eq!(Rosalind.equatorial_radius(), Distance::kilometers(27f64));
+        assert_eq!(
+            DynOrigin::Rosalind.try_equatorial_radius(),
+            Ok(Distance::kilometers(27f64))
+        );
     }
     #[test]
     fn test_tri_axial_713() {
-        assert_eq!(Rosalind.radii(), (27f64, 27f64, 27f64));
-        assert_eq!(DynOrigin::Rosalind.try_radii(), Ok((27f64, 27f64, 27f64)));
+        assert_eq!(
+            Rosalind.radii(),
+            (
+                Distance::kilometers(27f64),
+                Distance::kilometers(27f64),
+                Distance::kilometers(27f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Rosalind.try_radii(),
+            Ok((
+                Distance::kilometers(27f64),
+                Distance::kilometers(27f64),
+                Distance::kilometers(27f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_714() {
@@ -16645,20 +18732,43 @@ mod tests {
     }
     #[test]
     fn test_mean_radius_714() {
-        assert_eq!(Belinda.mean_radius(), 33f64);
-        assert_eq!(DynOrigin::Belinda.try_mean_radius(), Ok(33f64));
+        assert_eq!(Belinda.mean_radius(), Distance::kilometers(33f64));
+        assert_eq!(
+            DynOrigin::Belinda.try_mean_radius(),
+            Ok(Distance::kilometers(33f64))
+        );
     }
     #[test]
     fn test_spheroid_714() {
-        assert_eq!(Belinda.polar_radius(), 33f64);
-        assert_eq!(DynOrigin::Belinda.try_polar_radius(), Ok(33f64));
-        assert_eq!(Belinda.equatorial_radius(), 33f64);
-        assert_eq!(DynOrigin::Belinda.try_equatorial_radius(), Ok(33f64));
+        assert_eq!(Belinda.polar_radius(), Distance::kilometers(33f64));
+        assert_eq!(
+            DynOrigin::Belinda.try_polar_radius(),
+            Ok(Distance::kilometers(33f64))
+        );
+        assert_eq!(Belinda.equatorial_radius(), Distance::kilometers(33f64));
+        assert_eq!(
+            DynOrigin::Belinda.try_equatorial_radius(),
+            Ok(Distance::kilometers(33f64))
+        );
     }
     #[test]
     fn test_tri_axial_714() {
-        assert_eq!(Belinda.radii(), (33f64, 33f64, 33f64));
-        assert_eq!(DynOrigin::Belinda.try_radii(), Ok((33f64, 33f64, 33f64)));
+        assert_eq!(
+            Belinda.radii(),
+            (
+                Distance::kilometers(33f64),
+                Distance::kilometers(33f64),
+                Distance::kilometers(33f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Belinda.try_radii(),
+            Ok((
+                Distance::kilometers(33f64),
+                Distance::kilometers(33f64),
+                Distance::kilometers(33f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_715() {
@@ -16671,20 +18781,43 @@ mod tests {
     }
     #[test]
     fn test_mean_radius_715() {
-        assert_eq!(Puck.mean_radius(), 77f64);
-        assert_eq!(DynOrigin::Puck.try_mean_radius(), Ok(77f64));
+        assert_eq!(Puck.mean_radius(), Distance::kilometers(77f64));
+        assert_eq!(
+            DynOrigin::Puck.try_mean_radius(),
+            Ok(Distance::kilometers(77f64))
+        );
     }
     #[test]
     fn test_spheroid_715() {
-        assert_eq!(Puck.polar_radius(), 77f64);
-        assert_eq!(DynOrigin::Puck.try_polar_radius(), Ok(77f64));
-        assert_eq!(Puck.equatorial_radius(), 77f64);
-        assert_eq!(DynOrigin::Puck.try_equatorial_radius(), Ok(77f64));
+        assert_eq!(Puck.polar_radius(), Distance::kilometers(77f64));
+        assert_eq!(
+            DynOrigin::Puck.try_polar_radius(),
+            Ok(Distance::kilometers(77f64))
+        );
+        assert_eq!(Puck.equatorial_radius(), Distance::kilometers(77f64));
+        assert_eq!(
+            DynOrigin::Puck.try_equatorial_radius(),
+            Ok(Distance::kilometers(77f64))
+        );
     }
     #[test]
     fn test_tri_axial_715() {
-        assert_eq!(Puck.radii(), (77f64, 77f64, 77f64));
-        assert_eq!(DynOrigin::Puck.try_radii(), Ok((77f64, 77f64, 77f64)));
+        assert_eq!(
+            Puck.radii(),
+            (
+                Distance::kilometers(77f64),
+                Distance::kilometers(77f64),
+                Distance::kilometers(77f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Puck.try_radii(),
+            Ok((
+                Distance::kilometers(77f64),
+                Distance::kilometers(77f64),
+                Distance::kilometers(77f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_716() {
@@ -16957,30 +19090,53 @@ mod tests {
     }
     #[test]
     fn test_point_mass_801() {
-        assert_eq!(Triton.gravitational_parameter(), 1428.495462910464f64);
+        assert_eq!(
+            Triton.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(1428.495462910464f64)
+        );
         assert_eq!(
             DynOrigin::Triton.try_gravitational_parameter(),
-            Ok(1428.495462910464f64)
+            Ok(GravitationalParameter::km3_per_s2(1428.495462910464f64))
         );
     }
     #[test]
     fn test_mean_radius_801() {
-        assert_eq!(Triton.mean_radius(), 1352.6f64);
-        assert_eq!(DynOrigin::Triton.try_mean_radius(), Ok(1352.6f64));
+        assert_eq!(Triton.mean_radius(), Distance::kilometers(1352.6f64));
+        assert_eq!(
+            DynOrigin::Triton.try_mean_radius(),
+            Ok(Distance::kilometers(1352.6f64))
+        );
     }
     #[test]
     fn test_spheroid_801() {
-        assert_eq!(Triton.polar_radius(), 1352.6f64);
-        assert_eq!(DynOrigin::Triton.try_polar_radius(), Ok(1352.6f64));
-        assert_eq!(Triton.equatorial_radius(), 1352.6f64);
-        assert_eq!(DynOrigin::Triton.try_equatorial_radius(), Ok(1352.6f64));
+        assert_eq!(Triton.polar_radius(), Distance::kilometers(1352.6f64));
+        assert_eq!(
+            DynOrigin::Triton.try_polar_radius(),
+            Ok(Distance::kilometers(1352.6f64))
+        );
+        assert_eq!(Triton.equatorial_radius(), Distance::kilometers(1352.6f64));
+        assert_eq!(
+            DynOrigin::Triton.try_equatorial_radius(),
+            Ok(Distance::kilometers(1352.6f64))
+        );
     }
     #[test]
     fn test_tri_axial_801() {
-        assert_eq!(Triton.radii(), (1352.6f64, 1352.6f64, 1352.6f64));
+        assert_eq!(
+            Triton.radii(),
+            (
+                Distance::kilometers(1352.6f64),
+                Distance::kilometers(1352.6f64),
+                Distance::kilometers(1352.6f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Triton.try_radii(),
-            Ok((1352.6f64, 1352.6f64, 1352.6f64))
+            Ok((
+                Distance::kilometers(1352.6f64),
+                Distance::kilometers(1352.6f64),
+                Distance::kilometers(1352.6f64)
+            ))
         );
     }
     #[test]
@@ -16994,20 +19150,43 @@ mod tests {
     }
     #[test]
     fn test_mean_radius_802() {
-        assert_eq!(Nereid.mean_radius(), 170f64);
-        assert_eq!(DynOrigin::Nereid.try_mean_radius(), Ok(170f64));
+        assert_eq!(Nereid.mean_radius(), Distance::kilometers(170f64));
+        assert_eq!(
+            DynOrigin::Nereid.try_mean_radius(),
+            Ok(Distance::kilometers(170f64))
+        );
     }
     #[test]
     fn test_spheroid_802() {
-        assert_eq!(Nereid.polar_radius(), 170f64);
-        assert_eq!(DynOrigin::Nereid.try_polar_radius(), Ok(170f64));
-        assert_eq!(Nereid.equatorial_radius(), 170f64);
-        assert_eq!(DynOrigin::Nereid.try_equatorial_radius(), Ok(170f64));
+        assert_eq!(Nereid.polar_radius(), Distance::kilometers(170f64));
+        assert_eq!(
+            DynOrigin::Nereid.try_polar_radius(),
+            Ok(Distance::kilometers(170f64))
+        );
+        assert_eq!(Nereid.equatorial_radius(), Distance::kilometers(170f64));
+        assert_eq!(
+            DynOrigin::Nereid.try_equatorial_radius(),
+            Ok(Distance::kilometers(170f64))
+        );
     }
     #[test]
     fn test_tri_axial_802() {
-        assert_eq!(Nereid.radii(), (170f64, 170f64, 170f64));
-        assert_eq!(DynOrigin::Nereid.try_radii(), Ok((170f64, 170f64, 170f64)));
+        assert_eq!(
+            Nereid.radii(),
+            (
+                Distance::kilometers(170f64),
+                Distance::kilometers(170f64),
+                Distance::kilometers(170f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Nereid.try_radii(),
+            Ok((
+                Distance::kilometers(170f64),
+                Distance::kilometers(170f64),
+                Distance::kilometers(170f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_803() {
@@ -17016,28 +19195,54 @@ mod tests {
     }
     #[test]
     fn test_point_mass_803() {
-        assert_eq!(Naiad.gravitational_parameter(), 0.008530281246540886f64);
+        assert_eq!(
+            Naiad.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(0.008530281246540886f64)
+        );
         assert_eq!(
             DynOrigin::Naiad.try_gravitational_parameter(),
-            Ok(0.008530281246540886f64)
+            Ok(GravitationalParameter::km3_per_s2(0.008530281246540886f64))
         );
     }
     #[test]
     fn test_mean_radius_803() {
-        assert_eq!(Naiad.mean_radius(), 29f64);
-        assert_eq!(DynOrigin::Naiad.try_mean_radius(), Ok(29f64));
+        assert_eq!(Naiad.mean_radius(), Distance::kilometers(29f64));
+        assert_eq!(
+            DynOrigin::Naiad.try_mean_radius(),
+            Ok(Distance::kilometers(29f64))
+        );
     }
     #[test]
     fn test_spheroid_803() {
-        assert_eq!(Naiad.polar_radius(), 29f64);
-        assert_eq!(DynOrigin::Naiad.try_polar_radius(), Ok(29f64));
-        assert_eq!(Naiad.equatorial_radius(), 29f64);
-        assert_eq!(DynOrigin::Naiad.try_equatorial_radius(), Ok(29f64));
+        assert_eq!(Naiad.polar_radius(), Distance::kilometers(29f64));
+        assert_eq!(
+            DynOrigin::Naiad.try_polar_radius(),
+            Ok(Distance::kilometers(29f64))
+        );
+        assert_eq!(Naiad.equatorial_radius(), Distance::kilometers(29f64));
+        assert_eq!(
+            DynOrigin::Naiad.try_equatorial_radius(),
+            Ok(Distance::kilometers(29f64))
+        );
     }
     #[test]
     fn test_tri_axial_803() {
-        assert_eq!(Naiad.radii(), (29f64, 29f64, 29f64));
-        assert_eq!(DynOrigin::Naiad.try_radii(), Ok((29f64, 29f64, 29f64)));
+        assert_eq!(
+            Naiad.radii(),
+            (
+                Distance::kilometers(29f64),
+                Distance::kilometers(29f64),
+                Distance::kilometers(29f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Naiad.try_radii(),
+            Ok((
+                Distance::kilometers(29f64),
+                Distance::kilometers(29f64),
+                Distance::kilometers(29f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_804() {
@@ -17046,28 +19251,54 @@ mod tests {
     }
     #[test]
     fn test_point_mass_804() {
-        assert_eq!(Thalassa.gravitational_parameter(), 0.0235887319799217f64);
+        assert_eq!(
+            Thalassa.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(0.0235887319799217f64)
+        );
         assert_eq!(
             DynOrigin::Thalassa.try_gravitational_parameter(),
-            Ok(0.0235887319799217f64)
+            Ok(GravitationalParameter::km3_per_s2(0.0235887319799217f64))
         );
     }
     #[test]
     fn test_mean_radius_804() {
-        assert_eq!(Thalassa.mean_radius(), 40f64);
-        assert_eq!(DynOrigin::Thalassa.try_mean_radius(), Ok(40f64));
+        assert_eq!(Thalassa.mean_radius(), Distance::kilometers(40f64));
+        assert_eq!(
+            DynOrigin::Thalassa.try_mean_radius(),
+            Ok(Distance::kilometers(40f64))
+        );
     }
     #[test]
     fn test_spheroid_804() {
-        assert_eq!(Thalassa.polar_radius(), 40f64);
-        assert_eq!(DynOrigin::Thalassa.try_polar_radius(), Ok(40f64));
-        assert_eq!(Thalassa.equatorial_radius(), 40f64);
-        assert_eq!(DynOrigin::Thalassa.try_equatorial_radius(), Ok(40f64));
+        assert_eq!(Thalassa.polar_radius(), Distance::kilometers(40f64));
+        assert_eq!(
+            DynOrigin::Thalassa.try_polar_radius(),
+            Ok(Distance::kilometers(40f64))
+        );
+        assert_eq!(Thalassa.equatorial_radius(), Distance::kilometers(40f64));
+        assert_eq!(
+            DynOrigin::Thalassa.try_equatorial_radius(),
+            Ok(Distance::kilometers(40f64))
+        );
     }
     #[test]
     fn test_tri_axial_804() {
-        assert_eq!(Thalassa.radii(), (40f64, 40f64, 40f64));
-        assert_eq!(DynOrigin::Thalassa.try_radii(), Ok((40f64, 40f64, 40f64)));
+        assert_eq!(
+            Thalassa.radii(),
+            (
+                Distance::kilometers(40f64),
+                Distance::kilometers(40f64),
+                Distance::kilometers(40f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Thalassa.try_radii(),
+            Ok((
+                Distance::kilometers(40f64),
+                Distance::kilometers(40f64),
+                Distance::kilometers(40f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_805() {
@@ -17076,28 +19307,54 @@ mod tests {
     }
     #[test]
     fn test_point_mass_805() {
-        assert_eq!(Despina.gravitational_parameter(), 0.1167318403814998f64);
+        assert_eq!(
+            Despina.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(0.1167318403814998f64)
+        );
         assert_eq!(
             DynOrigin::Despina.try_gravitational_parameter(),
-            Ok(0.1167318403814998f64)
+            Ok(GravitationalParameter::km3_per_s2(0.1167318403814998f64))
         );
     }
     #[test]
     fn test_mean_radius_805() {
-        assert_eq!(Despina.mean_radius(), 74f64);
-        assert_eq!(DynOrigin::Despina.try_mean_radius(), Ok(74f64));
+        assert_eq!(Despina.mean_radius(), Distance::kilometers(74f64));
+        assert_eq!(
+            DynOrigin::Despina.try_mean_radius(),
+            Ok(Distance::kilometers(74f64))
+        );
     }
     #[test]
     fn test_spheroid_805() {
-        assert_eq!(Despina.polar_radius(), 74f64);
-        assert_eq!(DynOrigin::Despina.try_polar_radius(), Ok(74f64));
-        assert_eq!(Despina.equatorial_radius(), 74f64);
-        assert_eq!(DynOrigin::Despina.try_equatorial_radius(), Ok(74f64));
+        assert_eq!(Despina.polar_radius(), Distance::kilometers(74f64));
+        assert_eq!(
+            DynOrigin::Despina.try_polar_radius(),
+            Ok(Distance::kilometers(74f64))
+        );
+        assert_eq!(Despina.equatorial_radius(), Distance::kilometers(74f64));
+        assert_eq!(
+            DynOrigin::Despina.try_equatorial_radius(),
+            Ok(Distance::kilometers(74f64))
+        );
     }
     #[test]
     fn test_tri_axial_805() {
-        assert_eq!(Despina.radii(), (74f64, 74f64, 74f64));
-        assert_eq!(DynOrigin::Despina.try_radii(), Ok((74f64, 74f64, 74f64)));
+        assert_eq!(
+            Despina.radii(),
+            (
+                Distance::kilometers(74f64),
+                Distance::kilometers(74f64),
+                Distance::kilometers(74f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Despina.try_radii(),
+            Ok((
+                Distance::kilometers(74f64),
+                Distance::kilometers(74f64),
+                Distance::kilometers(74f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_806() {
@@ -17106,28 +19363,54 @@ mod tests {
     }
     #[test]
     fn test_point_mass_806() {
-        assert_eq!(Galatea.gravitational_parameter(), 0.189898503906069f64);
+        assert_eq!(
+            Galatea.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(0.189898503906069f64)
+        );
         assert_eq!(
             DynOrigin::Galatea.try_gravitational_parameter(),
-            Ok(0.189898503906069f64)
+            Ok(GravitationalParameter::km3_per_s2(0.189898503906069f64))
         );
     }
     #[test]
     fn test_mean_radius_806() {
-        assert_eq!(Galatea.mean_radius(), 79f64);
-        assert_eq!(DynOrigin::Galatea.try_mean_radius(), Ok(79f64));
+        assert_eq!(Galatea.mean_radius(), Distance::kilometers(79f64));
+        assert_eq!(
+            DynOrigin::Galatea.try_mean_radius(),
+            Ok(Distance::kilometers(79f64))
+        );
     }
     #[test]
     fn test_spheroid_806() {
-        assert_eq!(Galatea.polar_radius(), 79f64);
-        assert_eq!(DynOrigin::Galatea.try_polar_radius(), Ok(79f64));
-        assert_eq!(Galatea.equatorial_radius(), 79f64);
-        assert_eq!(DynOrigin::Galatea.try_equatorial_radius(), Ok(79f64));
+        assert_eq!(Galatea.polar_radius(), Distance::kilometers(79f64));
+        assert_eq!(
+            DynOrigin::Galatea.try_polar_radius(),
+            Ok(Distance::kilometers(79f64))
+        );
+        assert_eq!(Galatea.equatorial_radius(), Distance::kilometers(79f64));
+        assert_eq!(
+            DynOrigin::Galatea.try_equatorial_radius(),
+            Ok(Distance::kilometers(79f64))
+        );
     }
     #[test]
     fn test_tri_axial_806() {
-        assert_eq!(Galatea.radii(), (79f64, 79f64, 79f64));
-        assert_eq!(DynOrigin::Galatea.try_radii(), Ok((79f64, 79f64, 79f64)));
+        assert_eq!(
+            Galatea.radii(),
+            (
+                Distance::kilometers(79f64),
+                Distance::kilometers(79f64),
+                Distance::kilometers(79f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Galatea.try_radii(),
+            Ok((
+                Distance::kilometers(79f64),
+                Distance::kilometers(79f64),
+                Distance::kilometers(79f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_807() {
@@ -17136,28 +19419,54 @@ mod tests {
     }
     #[test]
     fn test_point_mass_807() {
-        assert_eq!(Larissa.gravitational_parameter(), 0.2548437405693583f64);
+        assert_eq!(
+            Larissa.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(0.2548437405693583f64)
+        );
         assert_eq!(
             DynOrigin::Larissa.try_gravitational_parameter(),
-            Ok(0.2548437405693583f64)
+            Ok(GravitationalParameter::km3_per_s2(0.2548437405693583f64))
         );
     }
     #[test]
     fn test_mean_radius_807() {
-        assert_eq!(Larissa.mean_radius(), 96f64);
-        assert_eq!(DynOrigin::Larissa.try_mean_radius(), Ok(96f64));
+        assert_eq!(Larissa.mean_radius(), Distance::kilometers(96f64));
+        assert_eq!(
+            DynOrigin::Larissa.try_mean_radius(),
+            Ok(Distance::kilometers(96f64))
+        );
     }
     #[test]
     fn test_spheroid_807() {
-        assert_eq!(Larissa.polar_radius(), 96f64);
-        assert_eq!(DynOrigin::Larissa.try_polar_radius(), Ok(96f64));
-        assert_eq!(Larissa.equatorial_radius(), 96f64);
-        assert_eq!(DynOrigin::Larissa.try_equatorial_radius(), Ok(96f64));
+        assert_eq!(Larissa.polar_radius(), Distance::kilometers(96f64));
+        assert_eq!(
+            DynOrigin::Larissa.try_polar_radius(),
+            Ok(Distance::kilometers(96f64))
+        );
+        assert_eq!(Larissa.equatorial_radius(), Distance::kilometers(96f64));
+        assert_eq!(
+            DynOrigin::Larissa.try_equatorial_radius(),
+            Ok(Distance::kilometers(96f64))
+        );
     }
     #[test]
     fn test_tri_axial_807() {
-        assert_eq!(Larissa.radii(), (96f64, 96f64, 96f64));
-        assert_eq!(DynOrigin::Larissa.try_radii(), Ok((96f64, 96f64, 96f64)));
+        assert_eq!(
+            Larissa.radii(),
+            (
+                Distance::kilometers(96f64),
+                Distance::kilometers(96f64),
+                Distance::kilometers(96f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Larissa.try_radii(),
+            Ok((
+                Distance::kilometers(96f64),
+                Distance::kilometers(96f64),
+                Distance::kilometers(96f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_808() {
@@ -17166,16 +19475,22 @@ mod tests {
     }
     #[test]
     fn test_point_mass_808() {
-        assert_eq!(Proteus.gravitational_parameter(), 2.583422379120727f64);
+        assert_eq!(
+            Proteus.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(2.583422379120727f64)
+        );
         assert_eq!(
             DynOrigin::Proteus.try_gravitational_parameter(),
-            Ok(2.583422379120727f64)
+            Ok(GravitationalParameter::km3_per_s2(2.583422379120727f64))
         );
     }
     #[test]
     fn test_mean_radius_808() {
-        assert_eq!(Proteus.mean_radius(), 208f64);
-        assert_eq!(DynOrigin::Proteus.try_mean_radius(), Ok(208f64));
+        assert_eq!(Proteus.mean_radius(), Distance::kilometers(208f64));
+        assert_eq!(
+            DynOrigin::Proteus.try_mean_radius(),
+            Ok(Distance::kilometers(208f64))
+        );
     }
     #[test]
     fn test_spheroid_808() {
@@ -17184,8 +19499,22 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_808() {
-        assert_eq!(Proteus.radii(), (218f64, 208f64, 201f64));
-        assert_eq!(DynOrigin::Proteus.try_radii(), Ok((218f64, 208f64, 201f64)));
+        assert_eq!(
+            Proteus.radii(),
+            (
+                Distance::kilometers(218f64),
+                Distance::kilometers(208f64),
+                Distance::kilometers(201f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Proteus.try_radii(),
+            Ok((
+                Distance::kilometers(218f64),
+                Distance::kilometers(208f64),
+                Distance::kilometers(201f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_809() {
@@ -17304,28 +19633,54 @@ mod tests {
     }
     #[test]
     fn test_point_mass_901() {
-        assert_eq!(Charon.gravitational_parameter(), 105.8799888601881f64);
+        assert_eq!(
+            Charon.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(105.8799888601881f64)
+        );
         assert_eq!(
             DynOrigin::Charon.try_gravitational_parameter(),
-            Ok(105.8799888601881f64)
+            Ok(GravitationalParameter::km3_per_s2(105.8799888601881f64))
         );
     }
     #[test]
     fn test_mean_radius_901() {
-        assert_eq!(Charon.mean_radius(), 606f64);
-        assert_eq!(DynOrigin::Charon.try_mean_radius(), Ok(606f64));
+        assert_eq!(Charon.mean_radius(), Distance::kilometers(606f64));
+        assert_eq!(
+            DynOrigin::Charon.try_mean_radius(),
+            Ok(Distance::kilometers(606f64))
+        );
     }
     #[test]
     fn test_spheroid_901() {
-        assert_eq!(Charon.polar_radius(), 606f64);
-        assert_eq!(DynOrigin::Charon.try_polar_radius(), Ok(606f64));
-        assert_eq!(Charon.equatorial_radius(), 606f64);
-        assert_eq!(DynOrigin::Charon.try_equatorial_radius(), Ok(606f64));
+        assert_eq!(Charon.polar_radius(), Distance::kilometers(606f64));
+        assert_eq!(
+            DynOrigin::Charon.try_polar_radius(),
+            Ok(Distance::kilometers(606f64))
+        );
+        assert_eq!(Charon.equatorial_radius(), Distance::kilometers(606f64));
+        assert_eq!(
+            DynOrigin::Charon.try_equatorial_radius(),
+            Ok(Distance::kilometers(606f64))
+        );
     }
     #[test]
     fn test_tri_axial_901() {
-        assert_eq!(Charon.radii(), (606f64, 606f64, 606f64));
-        assert_eq!(DynOrigin::Charon.try_radii(), Ok((606f64, 606f64, 606f64)));
+        assert_eq!(
+            Charon.radii(),
+            (
+                Distance::kilometers(606f64),
+                Distance::kilometers(606f64),
+                Distance::kilometers(606f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Charon.try_radii(),
+            Ok((
+                Distance::kilometers(606f64),
+                Distance::kilometers(606f64),
+                Distance::kilometers(606f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_902() {
@@ -17334,10 +19689,13 @@ mod tests {
     }
     #[test]
     fn test_point_mass_902() {
-        assert_eq!(Nix.gravitational_parameter(), 0.00304817564816976f64);
+        assert_eq!(
+            Nix.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(0.00304817564816976f64)
+        );
         assert_eq!(
             DynOrigin::Nix.try_gravitational_parameter(),
-            Ok(0.00304817564816976f64)
+            Ok(GravitationalParameter::km3_per_s2(0.00304817564816976f64))
         );
     }
     #[test]
@@ -17360,10 +19718,13 @@ mod tests {
     }
     #[test]
     fn test_point_mass_903() {
-        assert_eq!(Hydra.gravitational_parameter(), 0.003211039206155255f64);
+        assert_eq!(
+            Hydra.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(0.003211039206155255f64)
+        );
         assert_eq!(
             DynOrigin::Hydra.try_gravitational_parameter(),
-            Ok(0.003211039206155255f64)
+            Ok(GravitationalParameter::km3_per_s2(0.003211039206155255f64))
         );
     }
     #[test]
@@ -17386,10 +19747,13 @@ mod tests {
     }
     #[test]
     fn test_point_mass_904() {
-        assert_eq!(Kerberos.gravitational_parameter(), 0.001110040850536676f64);
+        assert_eq!(
+            Kerberos.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(0.001110040850536676f64)
+        );
         assert_eq!(
             DynOrigin::Kerberos.try_gravitational_parameter(),
-            Ok(0.001110040850536676f64)
+            Ok(GravitationalParameter::km3_per_s2(0.001110040850536676f64))
         );
     }
     #[test]
@@ -17412,8 +19776,14 @@ mod tests {
     }
     #[test]
     fn test_point_mass_905() {
-        assert_eq!(Styx.gravitational_parameter(), 0f64);
-        assert_eq!(DynOrigin::Styx.try_gravitational_parameter(), Ok(0f64));
+        assert_eq!(
+            Styx.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(0f64)
+        );
+        assert_eq!(
+            DynOrigin::Styx.try_gravitational_parameter(),
+            Ok(GravitationalParameter::km3_per_s2(0f64))
+        );
     }
     #[test]
     fn test_mean_radius_905() {
@@ -17439,8 +19809,11 @@ mod tests {
     }
     #[test]
     fn test_mean_radius_9511010() {
-        assert_eq!(Gaspra.mean_radius(), 6.1f64);
-        assert_eq!(DynOrigin::Gaspra.try_mean_radius(), Ok(6.1f64));
+        assert_eq!(Gaspra.mean_radius(), Distance::kilometers(6.1f64));
+        assert_eq!(
+            DynOrigin::Gaspra.try_mean_radius(),
+            Ok(Distance::kilometers(6.1f64))
+        );
     }
     #[test]
     fn test_spheroid_9511010() {
@@ -17449,8 +19822,22 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_9511010() {
-        assert_eq!(Gaspra.radii(), (9.1f64, 5.2f64, 4.4f64));
-        assert_eq!(DynOrigin::Gaspra.try_radii(), Ok((9.1f64, 5.2f64, 4.4f64)));
+        assert_eq!(
+            Gaspra.radii(),
+            (
+                Distance::kilometers(9.1f64),
+                Distance::kilometers(5.2f64),
+                Distance::kilometers(4.4f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Gaspra.try_radii(),
+            Ok((
+                Distance::kilometers(9.1f64),
+                Distance::kilometers(5.2f64),
+                Distance::kilometers(4.4f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_2431010() {
@@ -17463,8 +19850,11 @@ mod tests {
     }
     #[test]
     fn test_mean_radius_2431010() {
-        assert_eq!(Ida.mean_radius(), 15.65f64);
-        assert_eq!(DynOrigin::Ida.try_mean_radius(), Ok(15.65f64));
+        assert_eq!(Ida.mean_radius(), Distance::kilometers(15.65f64));
+        assert_eq!(
+            DynOrigin::Ida.try_mean_radius(),
+            Ok(Distance::kilometers(15.65f64))
+        );
     }
     #[test]
     fn test_spheroid_2431010() {
@@ -17473,8 +19863,22 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_2431010() {
-        assert_eq!(Ida.radii(), (26.8f64, 12f64, 7.6f64));
-        assert_eq!(DynOrigin::Ida.try_radii(), Ok((26.8f64, 12f64, 7.6f64)));
+        assert_eq!(
+            Ida.radii(),
+            (
+                Distance::kilometers(26.8f64),
+                Distance::kilometers(12f64),
+                Distance::kilometers(7.6f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Ida.try_radii(),
+            Ok((
+                Distance::kilometers(26.8f64),
+                Distance::kilometers(12f64),
+                Distance::kilometers(7.6f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_2431011() {
@@ -17505,30 +19909,53 @@ mod tests {
     }
     #[test]
     fn test_point_mass_2000001() {
-        assert_eq!(Ceres.gravitational_parameter(), 62.62888864440993f64);
+        assert_eq!(
+            Ceres.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(62.62888864440993f64)
+        );
         assert_eq!(
             DynOrigin::Ceres.try_gravitational_parameter(),
-            Ok(62.62888864440993f64)
+            Ok(GravitationalParameter::km3_per_s2(62.62888864440993f64))
         );
     }
     #[test]
     fn test_mean_radius_2000001() {
-        assert_eq!(Ceres.mean_radius(), 470f64);
-        assert_eq!(DynOrigin::Ceres.try_mean_radius(), Ok(470f64));
+        assert_eq!(Ceres.mean_radius(), Distance::kilometers(470f64));
+        assert_eq!(
+            DynOrigin::Ceres.try_mean_radius(),
+            Ok(Distance::kilometers(470f64))
+        );
     }
     #[test]
     fn test_spheroid_2000001() {
-        assert_eq!(Ceres.polar_radius(), 446f64);
-        assert_eq!(DynOrigin::Ceres.try_polar_radius(), Ok(446f64));
-        assert_eq!(Ceres.equatorial_radius(), 487.3f64);
-        assert_eq!(DynOrigin::Ceres.try_equatorial_radius(), Ok(487.3f64));
+        assert_eq!(Ceres.polar_radius(), Distance::kilometers(446f64));
+        assert_eq!(
+            DynOrigin::Ceres.try_polar_radius(),
+            Ok(Distance::kilometers(446f64))
+        );
+        assert_eq!(Ceres.equatorial_radius(), Distance::kilometers(487.3f64));
+        assert_eq!(
+            DynOrigin::Ceres.try_equatorial_radius(),
+            Ok(Distance::kilometers(487.3f64))
+        );
     }
     #[test]
     fn test_tri_axial_2000001() {
-        assert_eq!(Ceres.radii(), (487.3f64, 487.3f64, 446f64));
+        assert_eq!(
+            Ceres.radii(),
+            (
+                Distance::kilometers(487.3f64),
+                Distance::kilometers(487.3f64),
+                Distance::kilometers(446f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Ceres.try_radii(),
-            Ok((487.3f64, 487.3f64, 446f64))
+            Ok((
+                Distance::kilometers(487.3f64),
+                Distance::kilometers(487.3f64),
+                Distance::kilometers(446f64)
+            ))
         );
     }
     #[test]
@@ -17538,10 +19965,13 @@ mod tests {
     }
     #[test]
     fn test_point_mass_2000002() {
-        assert_eq!(Pallas.gravitational_parameter(), 13.665878145967422f64);
+        assert_eq!(
+            Pallas.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(13.665878145967422f64)
+        );
         assert_eq!(
             DynOrigin::Pallas.try_gravitational_parameter(),
-            Ok(13.665878145967422f64)
+            Ok(GravitationalParameter::km3_per_s2(13.665878145967422f64))
         );
     }
     #[test]
@@ -17564,10 +19994,13 @@ mod tests {
     }
     #[test]
     fn test_point_mass_2000004() {
-        assert_eq!(Vesta.gravitational_parameter(), 17.288232879171513f64);
+        assert_eq!(
+            Vesta.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(17.288232879171513f64)
+        );
         assert_eq!(
             DynOrigin::Vesta.try_gravitational_parameter(),
-            Ok(17.288232879171513f64)
+            Ok(GravitationalParameter::km3_per_s2(17.288232879171513f64))
         );
     }
     #[test]
@@ -17581,8 +20014,22 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_2000004() {
-        assert_eq!(Vesta.radii(), (289f64, 280f64, 229f64));
-        assert_eq!(DynOrigin::Vesta.try_radii(), Ok((289f64, 280f64, 229f64)));
+        assert_eq!(
+            Vesta.radii(),
+            (
+                Distance::kilometers(289f64),
+                Distance::kilometers(280f64),
+                Distance::kilometers(229f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Vesta.try_radii(),
+            Ok((
+                Distance::kilometers(289f64),
+                Distance::kilometers(280f64),
+                Distance::kilometers(229f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_2000016() {
@@ -17591,16 +20038,22 @@ mod tests {
     }
     #[test]
     fn test_point_mass_2000016() {
-        assert_eq!(Psyche.gravitational_parameter(), 1.5896582441709424f64);
+        assert_eq!(
+            Psyche.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(1.5896582441709424f64)
+        );
         assert_eq!(
             DynOrigin::Psyche.try_gravitational_parameter(),
-            Ok(1.5896582441709424f64)
+            Ok(GravitationalParameter::km3_per_s2(1.5896582441709424f64))
         );
     }
     #[test]
     fn test_mean_radius_2000016() {
-        assert_eq!(Psyche.mean_radius(), 113f64);
-        assert_eq!(DynOrigin::Psyche.try_mean_radius(), Ok(113f64));
+        assert_eq!(Psyche.mean_radius(), Distance::kilometers(113f64));
+        assert_eq!(
+            DynOrigin::Psyche.try_mean_radius(),
+            Ok(Distance::kilometers(113f64))
+        );
     }
     #[test]
     fn test_spheroid_2000016() {
@@ -17609,10 +20062,21 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_2000016() {
-        assert_eq!(Psyche.radii(), (139.5f64, 116f64, 94.5f64));
+        assert_eq!(
+            Psyche.radii(),
+            (
+                Distance::kilometers(139.5f64),
+                Distance::kilometers(116f64),
+                Distance::kilometers(94.5f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Psyche.try_radii(),
-            Ok((139.5f64, 116f64, 94.5f64))
+            Ok((
+                Distance::kilometers(139.5f64),
+                Distance::kilometers(116f64),
+                Distance::kilometers(94.5f64)
+            ))
         );
     }
     #[test]
@@ -17626,8 +20090,11 @@ mod tests {
     }
     #[test]
     fn test_mean_radius_2000021() {
-        assert_eq!(Lutetia.mean_radius(), 52.5f64);
-        assert_eq!(DynOrigin::Lutetia.try_mean_radius(), Ok(52.5f64));
+        assert_eq!(Lutetia.mean_radius(), Distance::kilometers(52.5f64));
+        assert_eq!(
+            DynOrigin::Lutetia.try_mean_radius(),
+            Ok(Distance::kilometers(52.5f64))
+        );
     }
     #[test]
     fn test_spheroid_2000021() {
@@ -17636,10 +20103,21 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_2000021() {
-        assert_eq!(Lutetia.radii(), (62f64, 50.5f64, 46.5f64));
+        assert_eq!(
+            Lutetia.radii(),
+            (
+                Distance::kilometers(62f64),
+                Distance::kilometers(50.5f64),
+                Distance::kilometers(46.5f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Lutetia.try_radii(),
-            Ok((62f64, 50.5f64, 46.5f64))
+            Ok((
+                Distance::kilometers(62f64),
+                Distance::kilometers(50.5f64),
+                Distance::kilometers(46.5f64)
+            ))
         );
     }
     #[test]
@@ -17671,16 +20149,22 @@ mod tests {
     }
     #[test]
     fn test_point_mass_2000433() {
-        assert_eq!(Eros.gravitational_parameter(), 0.0004463f64);
+        assert_eq!(
+            Eros.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(0.0004463f64)
+        );
         assert_eq!(
             DynOrigin::Eros.try_gravitational_parameter(),
-            Ok(0.0004463f64)
+            Ok(GravitationalParameter::km3_per_s2(0.0004463f64))
         );
     }
     #[test]
     fn test_mean_radius_2000433() {
-        assert_eq!(Eros.mean_radius(), 8.45f64);
-        assert_eq!(DynOrigin::Eros.try_mean_radius(), Ok(8.45f64));
+        assert_eq!(Eros.mean_radius(), Distance::kilometers(8.45f64));
+        assert_eq!(
+            DynOrigin::Eros.try_mean_radius(),
+            Ok(Distance::kilometers(8.45f64))
+        );
     }
     #[test]
     fn test_spheroid_2000433() {
@@ -17689,8 +20173,22 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_2000433() {
-        assert_eq!(Eros.radii(), (17f64, 5.5f64, 5.5f64));
-        assert_eq!(DynOrigin::Eros.try_radii(), Ok((17f64, 5.5f64, 5.5f64)));
+        assert_eq!(
+            Eros.radii(),
+            (
+                Distance::kilometers(17f64),
+                Distance::kilometers(5.5f64),
+                Distance::kilometers(5.5f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Eros.try_radii(),
+            Ok((
+                Distance::kilometers(17f64),
+                Distance::kilometers(5.5f64),
+                Distance::kilometers(5.5f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_2000511() {
@@ -17699,16 +20197,22 @@ mod tests {
     }
     #[test]
     fn test_point_mass_2000511() {
-        assert_eq!(Davida.gravitational_parameter(), 3.8944831481705644f64);
+        assert_eq!(
+            Davida.gravitational_parameter(),
+            GravitationalParameter::km3_per_s2(3.8944831481705644f64)
+        );
         assert_eq!(
             DynOrigin::Davida.try_gravitational_parameter(),
-            Ok(3.8944831481705644f64)
+            Ok(GravitationalParameter::km3_per_s2(3.8944831481705644f64))
         );
     }
     #[test]
     fn test_mean_radius_2000511() {
-        assert_eq!(Davida.mean_radius(), 150f64);
-        assert_eq!(DynOrigin::Davida.try_mean_radius(), Ok(150f64));
+        assert_eq!(Davida.mean_radius(), Distance::kilometers(150f64));
+        assert_eq!(
+            DynOrigin::Davida.try_mean_radius(),
+            Ok(Distance::kilometers(150f64))
+        );
     }
     #[test]
     fn test_spheroid_2000511() {
@@ -17717,8 +20221,22 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_2000511() {
-        assert_eq!(Davida.radii(), (180f64, 147f64, 127f64));
-        assert_eq!(DynOrigin::Davida.try_radii(), Ok((180f64, 147f64, 127f64)));
+        assert_eq!(
+            Davida.radii(),
+            (
+                Distance::kilometers(180f64),
+                Distance::kilometers(147f64),
+                Distance::kilometers(127f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Davida.try_radii(),
+            Ok((
+                Distance::kilometers(180f64),
+                Distance::kilometers(147f64),
+                Distance::kilometers(127f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_2000253() {
@@ -17731,8 +20249,11 @@ mod tests {
     }
     #[test]
     fn test_mean_radius_2000253() {
-        assert_eq!(Mathilde.mean_radius(), 26.5f64);
-        assert_eq!(DynOrigin::Mathilde.try_mean_radius(), Ok(26.5f64));
+        assert_eq!(Mathilde.mean_radius(), Distance::kilometers(26.5f64));
+        assert_eq!(
+            DynOrigin::Mathilde.try_mean_radius(),
+            Ok(Distance::kilometers(26.5f64))
+        );
     }
     #[test]
     fn test_spheroid_2000253() {
@@ -17741,8 +20262,22 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_2000253() {
-        assert_eq!(Mathilde.radii(), (33f64, 24f64, 23f64));
-        assert_eq!(DynOrigin::Mathilde.try_radii(), Ok((33f64, 24f64, 23f64)));
+        assert_eq!(
+            Mathilde.radii(),
+            (
+                Distance::kilometers(33f64),
+                Distance::kilometers(24f64),
+                Distance::kilometers(23f64)
+            )
+        );
+        assert_eq!(
+            DynOrigin::Mathilde.try_radii(),
+            Ok((
+                Distance::kilometers(33f64),
+                Distance::kilometers(24f64),
+                Distance::kilometers(23f64)
+            ))
+        );
     }
     #[test]
     fn test_origin_2002867() {
@@ -17755,8 +20290,11 @@ mod tests {
     }
     #[test]
     fn test_mean_radius_2002867() {
-        assert_eq!(Steins.mean_radius(), 2.7f64);
-        assert_eq!(DynOrigin::Steins.try_mean_radius(), Ok(2.7f64));
+        assert_eq!(Steins.mean_radius(), Distance::kilometers(2.7f64));
+        assert_eq!(
+            DynOrigin::Steins.try_mean_radius(),
+            Ok(Distance::kilometers(2.7f64))
+        );
     }
     #[test]
     fn test_spheroid_2002867() {
@@ -17765,10 +20303,21 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_2002867() {
-        assert_eq!(Steins.radii(), (3.24f64, 2.73f64, 2.04f64));
+        assert_eq!(
+            Steins.radii(),
+            (
+                Distance::kilometers(3.24f64),
+                Distance::kilometers(2.73f64),
+                Distance::kilometers(2.04f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Steins.try_radii(),
-            Ok((3.24f64, 2.73f64, 2.04f64))
+            Ok((
+                Distance::kilometers(3.24f64),
+                Distance::kilometers(2.73f64),
+                Distance::kilometers(2.04f64)
+            ))
         );
     }
     #[test]
@@ -17839,10 +20388,21 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_2004179() {
-        assert_eq!(Toutatis.radii(), (2.13f64, 1.015f64, 0.85f64));
+        assert_eq!(
+            Toutatis.radii(),
+            (
+                Distance::kilometers(2.13f64),
+                Distance::kilometers(1.015f64),
+                Distance::kilometers(0.85f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Toutatis.try_radii(),
-            Ok((2.13f64, 1.015f64, 0.85f64))
+            Ok((
+                Distance::kilometers(2.13f64),
+                Distance::kilometers(1.015f64),
+                Distance::kilometers(0.85f64)
+            ))
         );
     }
     #[test]
@@ -17865,10 +20425,21 @@ mod tests {
     }
     #[test]
     fn test_tri_axial_2025143() {
-        assert_eq!(Itokawa.radii(), (0.268f64, 0.147f64, 0.104f64));
+        assert_eq!(
+            Itokawa.radii(),
+            (
+                Distance::kilometers(0.268f64),
+                Distance::kilometers(0.147f64),
+                Distance::kilometers(0.104f64)
+            )
+        );
         assert_eq!(
             DynOrigin::Itokawa.try_radii(),
-            Ok((0.268f64, 0.147f64, 0.104f64))
+            Ok((
+                Distance::kilometers(0.268f64),
+                Distance::kilometers(0.147f64),
+                Distance::kilometers(0.104f64)
+            ))
         );
     }
     #[test]

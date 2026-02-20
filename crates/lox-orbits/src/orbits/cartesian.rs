@@ -29,20 +29,15 @@ where
     R: ReferenceFrame,
 {
     pub const fn new(cartesian: Cartesian, time: lox_time::Time<T>, origin: O, frame: R) -> Self {
-        Self {
-            state: cartesian,
-            time,
-            origin,
-            frame,
-        }
+        Self::from_state(cartesian, time, origin, frame)
     }
 
     pub fn position(&self) -> DVec3 {
-        self.state.position()
+        self.state().position()
     }
 
     pub fn velocity(&self) -> DVec3 {
-        self.state.velocity()
+        self.state().velocity()
     }
 
     pub fn to_keplerian(&self) -> KeplerianOrbit<T, O, R>
@@ -51,12 +46,12 @@ where
         O: Copy + PointMass,
         R: Copy,
     {
-        Orbit {
-            state: self.state.to_keplerian(self.gravitational_parameter()),
-            time: self.time,
-            origin: self.origin,
-            frame: self.frame,
-        }
+        Orbit::from_state(
+            self.state().to_keplerian(self.gravitational_parameter()),
+            self.time(),
+            self.origin(),
+            self.reference_frame(),
+        )
     }
 
     pub fn try_to_keplerian(&self) -> Result<KeplerianOrbit<T, O, R>, UndefinedOriginPropertyError>
@@ -65,12 +60,13 @@ where
         O: Copy + TryPointMass,
         R: Copy,
     {
-        Ok(Orbit {
-            state: self.state.to_keplerian(self.try_gravitational_parameter()?),
-            time: self.time,
-            origin: self.origin,
-            frame: self.frame,
-        })
+        Ok(Orbit::from_state(
+            self.state()
+                .to_keplerian(self.try_gravitational_parameter()?),
+            self.time(),
+            self.origin(),
+            self.reference_frame(),
+        ))
     }
 
     pub fn try_to_frame<R1, P>(
@@ -85,12 +81,12 @@ where
         O: Copy,
         T: Copy,
     {
-        let rot = provider.try_rotation(self.frame, frame, self.time)?;
-        let (r1, v1) = rot.rotate_state(self.state.position(), self.state.velocity());
+        let rot = provider.try_rotation(self.reference_frame(), frame, self.time())?;
+        let (r1, v1) = rot.rotate_state(self.state().position(), self.state().velocity());
         Ok(CartesianOrbit::new(
             Cartesian::from_vecs(r1, v1),
-            self.time,
-            self.origin,
+            self.time(),
+            self.origin(),
             frame,
         ))
     }
@@ -139,10 +135,11 @@ where
 {
     pub fn to_ground_location(&self) -> Result<GroundLocation<O>, RootFinderError> {
         let r = self.position();
-        let r_eq = self.origin.equatorial_radius();
-        let f = self.origin.flattening();
+        let origin = self.origin();
+        let r_eq = origin.equatorial_radius().to_kilometers();
+        let f = origin.flattening();
         let (lon, lat, alt) = rv_to_lla(r, r_eq, f)?;
-        Ok(GroundLocation::new(lon, lat, alt, self.origin))
+        Ok(GroundLocation::new(lon, lat, alt, origin))
     }
 }
 
@@ -190,7 +187,7 @@ where
         let mut vel = self.velocity();
         let mut pos_eph = DVec3::ZERO;
         let mut vel_eph = DVec3::ZERO;
-        let origin_id = self.origin.id();
+        let origin_id = self.origin().id();
         let target_id = target.id();
         let path = path_from_ids(origin_id.0, target_id.0);
         for (origin, target) in path.into_iter().tuple_windows() {
@@ -204,7 +201,7 @@ where
         vel -= vel_eph;
         Ok(CartesianOrbit::new(
             Cartesian::from_vecs(pos, vel),
-            self.time,
+            self.time(),
             target,
             Icrf,
         ))
@@ -222,7 +219,7 @@ impl DynCartesianOrbit {
         let mut vel = self.velocity();
         let mut pos_eph = DVec3::ZERO;
         let mut vel_eph = DVec3::ZERO;
-        let origin_id = self.origin.id();
+        let origin_id = self.origin().id();
         let target_id = target.id();
         let path = path_from_ids(origin_id.0, target_id.0);
         for (origin, target) in path.into_iter().tuple_windows() {
@@ -236,33 +233,35 @@ impl DynCartesianOrbit {
         vel -= vel_eph;
         Ok(CartesianOrbit::new(
             Cartesian::from_vecs(pos, vel),
-            self.time,
+            self.time(),
             target,
             DynFrame::Icrf,
         ))
     }
 
     pub fn to_dyn_ground_location(&self) -> Result<DynGroundLocation, StateToDynGroundError> {
-        if self.frame.try_body_fixed().is_err() {
+        let frame = self.reference_frame();
+        let origin = self.origin();
+        if frame.try_body_fixed().is_err() {
             return Err(StateToDynGroundError::NonBodyFixedFrame(
-                self.frame.name().to_string(),
+                frame.name().to_string(),
             ));
         }
         let r = self.position();
         let (Ok(r_eq), Ok(f)) = (
-            self.origin.try_equatorial_radius(),
-            self.origin.try_flattening(),
+            origin.try_equatorial_radius().map(|d| d.to_kilometers()),
+            origin.try_flattening(),
         ) else {
-            return Err(StateToDynGroundError::UndefinedSpheroid(self.origin));
+            return Err(StateToDynGroundError::UndefinedSpheroid(origin));
         };
 
         let (lon, lat, alt) = rv_to_lla(r, r_eq, f)?;
 
-        Ok(DynGroundLocation::with_dynamic(lon, lat, alt, self.origin).unwrap())
+        Ok(DynGroundLocation::with_dynamic(lon, lat, alt, origin).unwrap())
     }
 
     pub fn try_rotation_lvlh(&self) -> Result<DMat3, &'static str> {
-        if self.frame != DynFrame::Icrf {
+        if self.reference_frame() != DynFrame::Icrf {
             return Err("only valid for ICRF");
         }
         Ok(rotation_lvlh(self.position(), self.velocity()))
@@ -271,9 +270,9 @@ impl DynCartesianOrbit {
 
 impl<T, O, R> Sub for CartesianOrbit<T, O, R>
 where
-    T: TimeScale,
-    O: Origin,
-    R: ReferenceFrame,
+    T: TimeScale + Copy,
+    O: Origin + Copy,
+    R: ReferenceFrame + Copy,
 {
     type Output = Self;
 
@@ -282,7 +281,7 @@ where
             self.position() - rhs.position(),
             self.velocity() - rhs.velocity(),
         );
-        CartesianOrbit::new(state, self.time, self.origin, self.frame)
+        CartesianOrbit::new(state, self.time(), self.origin(), self.reference_frame())
     }
 }
 
