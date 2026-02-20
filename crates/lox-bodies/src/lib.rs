@@ -5,7 +5,9 @@
 
 pub use crate::dynamic::DynOrigin;
 pub use generated::*;
+use lox_core::elements::GravitationalParameter;
 use lox_core::f64::consts::{SECONDS_PER_DAY, SECONDS_PER_JULIAN_CENTURY};
+use lox_core::units::Distance;
 use std::fmt::{Display, Formatter};
 use thiserror::Error;
 
@@ -37,7 +39,7 @@ pub struct UndefinedOriginPropertyError {
     prop: String,
 }
 
-pub type Radii = (f64, f64, f64);
+pub type Radii = (Distance, Distance, Distance);
 
 pub trait TryTriaxialEllipsoid: Origin {
     fn try_radii(&self) -> Result<Radii, UndefinedOriginPropertyError>;
@@ -53,16 +55,18 @@ impl<T: TriaxialEllipsoid> TryTriaxialEllipsoid for T {
     }
 }
 
-fn flattening(equatorial_radius: f64, polar_radius: f64) -> f64 {
-    (equatorial_radius - polar_radius) / equatorial_radius
+fn flattening(equatorial_radius: Distance, polar_radius: Distance) -> f64 {
+    let r_eq = equatorial_radius.as_f64();
+    let r_p = polar_radius.as_f64();
+    (r_eq - r_p) / r_eq
 }
 
 pub trait Spheroid: TriaxialEllipsoid {
-    fn equatorial_radius(&self) -> f64 {
+    fn equatorial_radius(&self) -> Distance {
         self.radii().0
     }
 
-    fn polar_radius(&self) -> f64 {
+    fn polar_radius(&self) -> Distance {
         self.radii().2
     }
 
@@ -72,9 +76,9 @@ pub trait Spheroid: TriaxialEllipsoid {
 }
 
 pub trait TrySpheroid: TryTriaxialEllipsoid {
-    fn try_equatorial_radius(&self) -> Result<f64, UndefinedOriginPropertyError>;
+    fn try_equatorial_radius(&self) -> Result<Distance, UndefinedOriginPropertyError>;
 
-    fn try_polar_radius(&self) -> Result<f64, UndefinedOriginPropertyError>;
+    fn try_polar_radius(&self) -> Result<Distance, UndefinedOriginPropertyError>;
 
     fn try_flattening(&self) -> Result<f64, UndefinedOriginPropertyError> {
         self.try_radii().map(|radii| flattening(radii.0, radii.2))
@@ -82,11 +86,11 @@ pub trait TrySpheroid: TryTriaxialEllipsoid {
 }
 
 impl<T: Spheroid> TrySpheroid for T {
-    fn try_equatorial_radius(&self) -> Result<f64, UndefinedOriginPropertyError> {
+    fn try_equatorial_radius(&self) -> Result<Distance, UndefinedOriginPropertyError> {
         Ok(self.equatorial_radius())
     }
 
-    fn try_polar_radius(&self) -> Result<f64, UndefinedOriginPropertyError> {
+    fn try_polar_radius(&self) -> Result<Distance, UndefinedOriginPropertyError> {
         Ok(self.polar_radius())
     }
 
@@ -96,29 +100,33 @@ impl<T: Spheroid> TrySpheroid for T {
 }
 
 pub trait TryMeanRadius: Origin {
-    fn try_mean_radius(&self) -> Result<f64, UndefinedOriginPropertyError>;
+    fn try_mean_radius(&self) -> Result<Distance, UndefinedOriginPropertyError>;
 }
 
 pub trait MeanRadius: Origin {
-    fn mean_radius(&self) -> f64;
+    fn mean_radius(&self) -> Distance;
 }
 
 impl<T: MeanRadius> TryMeanRadius for T {
-    fn try_mean_radius(&self) -> Result<f64, UndefinedOriginPropertyError> {
+    fn try_mean_radius(&self) -> Result<Distance, UndefinedOriginPropertyError> {
         Ok(self.mean_radius())
     }
 }
 
 pub trait PointMass: Origin {
-    fn gravitational_parameter(&self) -> f64;
+    fn gravitational_parameter(&self) -> GravitationalParameter;
 }
 
 pub trait TryPointMass: Origin {
-    fn try_gravitational_parameter(&self) -> Result<f64, UndefinedOriginPropertyError>;
+    fn try_gravitational_parameter(
+        &self,
+    ) -> Result<GravitationalParameter, UndefinedOriginPropertyError>;
 }
 
 impl<T: PointMass> TryPointMass for T {
-    fn try_gravitational_parameter(&self) -> Result<f64, UndefinedOriginPropertyError> {
+    fn try_gravitational_parameter(
+        &self,
+    ) -> Result<GravitationalParameter, UndefinedOriginPropertyError> {
         Ok(self.gravitational_parameter())
     }
 }

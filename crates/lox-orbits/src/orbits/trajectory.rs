@@ -24,10 +24,10 @@ use super::{CartesianOrbit, Orbit, TrajectorError};
 
 #[derive(Debug, Clone)]
 pub struct Trajectory<T: TimeScale, O: Origin, R: ReferenceFrame> {
-    pub(crate) epoch: Time<T>,
-    pub(crate) origin: O,
-    pub(crate) frame: R,
-    pub(crate) data: CartesianTrajectory,
+    epoch: Time<T>,
+    origin: O,
+    frame: R,
+    data: CartesianTrajectory,
 }
 
 impl<T, O, R> Trajectory<T, O, R>
@@ -51,6 +51,10 @@ where
                 }
             })
             .collect();
+        Self::from_parts(epoch, origin, frame, data)
+    }
+
+    pub fn from_parts(epoch: Time<T>, origin: O, frame: R, data: CartesianTrajectory) -> Self {
         Self {
             epoch,
             origin,
@@ -72,12 +76,7 @@ where
     pub fn at(&self, time: Time<T>) -> CartesianOrbit<T, O, R> {
         let t = (time - self.epoch).to_seconds().to_f64();
         let state = self.data.at(t);
-        Orbit {
-            state,
-            time,
-            origin: self.origin,
-            frame: self.frame,
-        }
+        Orbit::from_state(state, time, self.origin, self.frame)
     }
 
     pub fn into_frame<R1, P>(
@@ -90,12 +89,12 @@ where
         P: TryRotation<R, R1, T>,
     {
         if frame_id(&self.frame) == frame_id(&frame) {
-            return Ok(Trajectory {
-                epoch: self.epoch,
-                origin: self.origin,
+            return Ok(Trajectory::from_parts(
+                self.epoch,
+                self.origin,
                 frame,
-                data: self.data,
-            });
+                self.data,
+            ));
         }
 
         let data: Result<CartesianTrajectory, P::Error> = self
@@ -112,12 +111,12 @@ where
             })
             .collect();
 
-        Ok(Trajectory {
-            epoch: self.epoch,
-            origin: self.origin,
+        Ok(Trajectory::from_parts(
+            self.epoch,
+            self.origin,
             frame,
-            data: data?,
-        })
+            data?,
+        ))
     }
 
     pub fn epoch(&self) -> Time<T> {
@@ -157,12 +156,7 @@ where
             .map(|&t| {
                 let state = self.data.at(t);
                 let time = self.epoch + TimeDelta::from_seconds_f64(t);
-                Orbit {
-                    state,
-                    time,
-                    origin: self.origin,
-                    frame: self.frame,
-                }
+                Orbit::from_state(state, time, self.origin, self.frame)
             })
             .collect()
     }
@@ -189,12 +183,7 @@ where
     pub fn interpolate(&self, dt: TimeDelta) -> CartesianOrbit<T, O, R> {
         let t = dt.to_seconds().to_f64();
         let state = self.data.at(t);
-        Orbit {
-            state,
-            time: self.epoch + dt,
-            origin: self.origin,
-            frame: self.frame,
-        }
+        Orbit::from_state(state, self.epoch + dt, self.origin, self.frame)
     }
 
     pub fn interpolate_at(&self, time: Time<T>) -> CartesianOrbit<T, O, R> {
@@ -219,13 +208,8 @@ where
         find_events(
             |t| {
                 let state = self.data.at(t);
-                func(Orbit {
-                    state,
-                    time: self.epoch + TimeDelta::from_seconds_f64(t),
-                    origin: self.origin,
-                    frame: self.frame,
-                })
-                .map_err(Into::into)
+                let time = self.epoch + TimeDelta::from_seconds_f64(t);
+                func(Orbit::from_state(state, time, self.origin, self.frame)).map_err(Into::into)
             },
             self.epoch,
             &time_steps,
@@ -243,13 +227,8 @@ where
         find_windows(
             |t| {
                 let state = self.data.at(t);
-                func(Orbit {
-                    state,
-                    time: self.epoch + TimeDelta::from_seconds_f64(t),
-                    origin: self.origin,
-                    frame: self.frame,
-                })
-                .map_err(Into::into)
+                let time = self.epoch + TimeDelta::from_seconds_f64(t);
+                func(Orbit::from_state(state, time, self.origin, self.frame)).map_err(Into::into)
             },
             self.epoch,
             self.end_time(),
