@@ -185,8 +185,8 @@ impl PyState {
 
         Ok(PyState(CartesianOrbit::new(
             Cartesian::from_vecs(
-                DVec3::new(position.0, position.1, position.2),
-                DVec3::new(velocity.0, velocity.1, velocity.2),
+                DVec3::new(position.0, position.1, position.2) * 1e3,
+                DVec3::new(velocity.0, velocity.1, velocity.2) * 1e3,
             ),
             time.0,
             origin.0,
@@ -211,13 +211,13 @@ impl PyState {
 
     /// Return the position vector as a numpy array [x, y, z] in km.
     fn position<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<f64>> {
-        let pos = self.0.position().to_array();
+        let pos = (self.0.position() * 1e-3).to_array();
         PyArray1::from_slice(py, &pos)
     }
 
     /// Return the velocity vector as a numpy array [vx, vy, vz] in km/s.
     fn velocity<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<f64>> {
-        let vel = self.0.velocity().to_array();
+        let vel = (self.0.velocity() * 1e-3).to_array();
         PyArray1::from_slice(py, &vel)
     }
 
@@ -537,8 +537,9 @@ impl PyTrajectory {
         let mut states: Vec<DynCartesianOrbit> = Vec::with_capacity(array.nrows());
         for row in array.rows() {
             let time = start_time.0 + TimeDelta::from_seconds_f64(row[0]);
-            let position = DVec3::new(row[1], row[2], row[3]);
-            let velocity = DVec3::new(row[4], row[5], row[6]);
+            // Input is in km and km/s, convert to m and m/s
+            let position = DVec3::new(row[1], row[2], row[3]) * 1e3;
+            let velocity = DVec3::new(row[4], row[5], row[6]) * 1e3;
             states.push(CartesianOrbit::new(
                 Cartesian::from_vecs(position, velocity),
                 time,
@@ -566,7 +567,24 @@ impl PyTrajectory {
     /// Returns:
     ///     2D numpy array with columns [t, x, y, z, vx, vy, vz].
     fn to_numpy<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyArray2<f64>>> {
-        Ok(PyArray2::from_vec2(py, &self.0.to_vec())?)
+        // Internal data is in m and m/s, convert to km and km/s for the Python API
+        let data: Vec<Vec<f64>> = self
+            .0
+            .to_vec()
+            .into_iter()
+            .map(|row| {
+                vec![
+                    row[0],
+                    row[1] * 1e-3,
+                    row[2] * 1e-3,
+                    row[3] * 1e-3,
+                    row[4] * 1e-3,
+                    row[5] * 1e-3,
+                    row[6] * 1e-3,
+                ]
+            })
+            .collect();
+        Ok(PyArray2::from_vec2(py, &data)?)
     }
 
     /// Return the list of states in this trajectory.
@@ -1499,12 +1517,12 @@ impl PyObservables {
 
     /// Return the range (distance) in km.
     fn range(&self) -> f64 {
-        self.0.range()
+        self.0.range() * 1e-3
     }
 
     /// Return the range rate in km/s.
     fn range_rate(&self) -> f64 {
-        self.0.range_rate()
+        self.0.range_rate() * 1e-3
     }
 }
 

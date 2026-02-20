@@ -117,7 +117,7 @@ impl<B: TrySpheroid> GroundLocation<B> {
         self.body
             .try_equatorial_radius()
             .expect("equatorial radius should be available")
-            .to_kilometers()
+            .to_meters()
     }
 
     fn flattening(&self) -> f64 {
@@ -127,7 +127,8 @@ impl<B: TrySpheroid> GroundLocation<B> {
     }
 
     pub fn body_fixed_position(&self) -> DVec3 {
-        let alt = self.altitude;
+        // Convert altitude from km to meters to match the equatorial radius
+        let alt = self.altitude * 1e3;
         let (lon_sin, lon_cos) = self.longitude.sin_cos();
         let (lat_sin, lat_cos) = self.latitude.sin_cos();
         let f = self.flattening();
@@ -279,7 +280,7 @@ mod tests {
         let longitude = -4.3676f64.to_radians();
         let latitude = 40.4527f64.to_radians();
         let location = GroundLocation::new(longitude, latitude, 0.0, Earth);
-        let expected = DVec3::new(4846.130017870638, -370.1328551351891, 4116.364272747229);
+        let expected = DVec3::new(4846130.017870638, -370132.8551351891, 4116364.272747229);
         assert_approx_eq!(location.body_fixed_position(), expected);
     }
 
@@ -306,8 +307,8 @@ mod tests {
         let longitude = -4f64.to_radians();
         let latitude = 41f64.to_radians();
         let location = GroundLocation::new(longitude, latitude, 0.0, Earth);
-        let position = DVec3::new(3359.927, -2398.072, 5153.0);
-        let velocity = DVec3::new(5.0657, 5.485, -0.744);
+        let position = DVec3::new(3359927.0, -2398072.0, 5153000.0);
+        let velocity = DVec3::new(5065.7, 5485.0, -744.0);
         let time = time!(Tdb, 2012, 7, 1).unwrap();
         let state = CartesianOrbit::new(
             Cartesian::from_vecs(position, velocity),
@@ -316,8 +317,8 @@ mod tests {
             Iau::new(Earth),
         );
         let observables = location.observables(state);
-        let expected_range = 2707.7;
-        let expected_range_rate = -7.16;
+        let expected_range = 2707700.0;
+        let expected_range_rate = -7160.0;
         let expected_azimuth = -53.418f64.to_radians();
         let expected_elevation = -7.077f64.to_radians();
         assert_approx_eq!(observables.range, expected_range, rtol <= 1e-2);
@@ -333,7 +334,7 @@ mod tests {
         let location = GroundLocation::new(longitude, latitude, 0.0, Earth);
         let propagator = GroundPropagator::new(location);
         let time = utc!(2022, 1, 31, 23).unwrap().to_time();
-        let expected = DVec3::new(-1765.9535510583582, 4524.585984442561, 4120.189198495323);
+        let expected = DVec3::new(-1765953.5510583583, 4524585.984442561, 4120189.198495323);
         let state = propagator.propagate(time).unwrap();
         assert_approx_eq!(state.position(), expected);
     }

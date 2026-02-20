@@ -161,6 +161,7 @@ impl Series {
         }
     }
 
+    #[inline]
     pub fn interpolate(&self, xp: f64) -> f64 {
         let x = self.x.as_ref();
         let y = self.y.as_ref();

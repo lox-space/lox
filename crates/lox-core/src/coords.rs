@@ -199,6 +199,7 @@ impl Cartesian {
         }
     }
 
+    #[inline]
     pub const fn from_vecs(pos: DVec3, vel: DVec3) -> Self {
         Self { pos, vel }
     }
@@ -214,6 +215,7 @@ impl Cartesian {
         CartesianBuilder::new()
     }
 
+    #[inline]
     pub fn position(&self) -> DVec3 {
         self.pos
     }
@@ -222,6 +224,7 @@ impl Cartesian {
         self.pos = position
     }
 
+    #[inline]
     pub fn velocity(&self) -> DVec3 {
         self.vel
     }
@@ -436,6 +439,7 @@ impl<const N: usize> TrajectoryData<N> {
         self.time_steps.clone()
     }
 
+    #[inline]
     pub fn interpolate<const M: usize>(&self, t: f64) -> f64 {
         const { assert!(M < N, "index is out-of-bounds") }
 
@@ -534,30 +538,37 @@ impl CartesianTrajectory {
         self.data[5].clone()
     }
 
+    #[inline]
     pub fn interpolate_x(&self, t: f64) -> f64 {
         self.interpolate::<0>(t)
     }
 
+    #[inline]
     pub fn interpolate_y(&self, t: f64) -> f64 {
         self.interpolate::<1>(t)
     }
 
+    #[inline]
     pub fn interpolate_z(&self, t: f64) -> f64 {
         self.interpolate::<2>(t)
     }
 
+    #[inline]
     pub fn interpolate_vx(&self, t: f64) -> f64 {
         self.interpolate::<3>(t)
     }
 
+    #[inline]
     pub fn interpolate_vy(&self, t: f64) -> f64 {
         self.interpolate::<4>(t)
     }
 
+    #[inline]
     pub fn interpolate_vz(&self, t: f64) -> f64 {
         self.interpolate::<5>(t)
     }
 
+    #[inline]
     pub fn position(&self, t: f64) -> DVec3 {
         DVec3::new(
             self.interpolate_x(t),
@@ -566,6 +577,7 @@ impl CartesianTrajectory {
         )
     }
 
+    #[inline]
     pub fn velocity(&self, t: f64) -> DVec3 {
         DVec3::new(
             self.interpolate_vx(t),
@@ -574,6 +586,7 @@ impl CartesianTrajectory {
         )
     }
 
+    #[inline]
     pub fn at(&self, t: f64) -> Cartesian {
         Cartesian::from_vecs(self.position(t), self.velocity(t))
     }

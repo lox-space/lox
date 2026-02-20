@@ -44,6 +44,7 @@ where
     O: Origin,
     R: ReferenceFrame,
 {
+    #[inline]
     pub const fn from_state(state: S, time: Time<T>, origin: O, frame: R) -> Self {
         Self {
             state,
@@ -53,6 +54,7 @@ where
         }
     }
 
+    #[inline]
     pub fn state(&self) -> S
     where
         S: Copy,
@@ -60,6 +62,7 @@ where
         self.state
     }
 
+    #[inline]
     pub fn time(&self) -> Time<T>
     where
         T: Copy,
@@ -67,6 +70,7 @@ where
         self.time
     }
 
+    #[inline]
     pub fn origin(&self) -> O
     where
         O: Copy,
@@ -74,6 +78,7 @@ where
         self.origin
     }
 
+    #[inline]
     pub fn reference_frame(&self) -> R
     where
         R: Copy,

@@ -59,12 +59,12 @@ pub fn line_of_sight_spheroid(
 
 pub trait LineOfSight: TrySpheroid + TryMeanRadius {
     fn line_of_sight(&self, r1: DVec3, r2: DVec3) -> Result<f64, UndefinedOriginPropertyError> {
-        let mean_radius = self.try_mean_radius()?.to_kilometers();
+        let mean_radius = self.try_mean_radius()?.to_meters();
         if let (Ok(r_eq), Ok(r_p)) = (self.try_equatorial_radius(), self.try_polar_radius()) {
             return Ok(line_of_sight_spheroid(
                 mean_radius,
-                r_eq.to_kilometers(),
-                r_p.to_kilometers(),
+                r_eq.to_meters(),
+                r_p.to_meters(),
                 r1,
                 r2,
             ));
@@ -392,8 +392,9 @@ pub fn visibility_los(
             let path = path_from_ids(origin_id.0, target_id.0);
             let mut r_body = DVec3::ZERO;
             for (origin, target) in path.into_iter().tuple_windows() {
+                // Ephemeris returns km, convert to meters
                 let p: DVec3 = ephem.position(epoch, origin, target).unwrap().into();
-                r_body += p;
+                r_body += p * 1e3;
             }
             let r_sc = sc.interpolate_at(time).position() - r_body;
             let r_gs = DynGroundPropagator::with_dynamic(gs.clone())
@@ -552,9 +553,9 @@ mod tests {
 
     #[test]
     fn test_line_of_sight_trait() {
-        let r1 = DVec3::new(0.0, -4464.696, -5102.509);
-        let r2 = DVec3::new(0.0, 5740.323, 3189.068);
-        let r_sun = DVec3::new(122233179.0, -76150708.0, 33016374.0);
+        let r1 = DVec3::new(0.0, -4464696.0, -5102509.0);
+        let r2 = DVec3::new(0.0, 5740323.0, 3189068.0);
+        let r_sun = DVec3::new(122233179e3, -76150708e3, 33016374e3);
 
         let los = Earth.line_of_sight(r1, r2).unwrap();
         let los_sun = Earth.line_of_sight(r1, r_sun).unwrap();

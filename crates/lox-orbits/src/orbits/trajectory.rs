@@ -317,8 +317,9 @@ impl DynTrajectory {
             let time: DynTime = Utc::from_iso(record.get(0).unwrap())
                 .map_err(|e| TrajectoryError::CsvError(e.to_string()))?
                 .to_dyn_time();
-            let position = parse_csv_vec3(&record, 1, 2, 3)?;
-            let velocity = parse_csv_vec3(&record, 4, 5, 6)?;
+            // CSV data is in km and km/s, convert to m and m/s
+            let position = parse_csv_vec3(&record, 1, 2, 3)? * 1e3;
+            let velocity = parse_csv_vec3(&record, 4, 5, 6)? * 1e3;
             let state = Cartesian::from_vecs(position, velocity);
             states.push(CartesianOrbit::new(state, time, origin, frame));
         }
@@ -378,8 +379,9 @@ fn parse_csv_states<O: Origin + Copy, R: ReferenceFrame + Copy>(
         let time: Time<Tai> = Utc::from_iso(record.get(0).unwrap())
             .map_err(|e| TrajectoryError::CsvError(e.to_string()))?
             .to_time();
-        let position = parse_csv_vec3(&record, 1, 2, 3)?;
-        let velocity = parse_csv_vec3(&record, 4, 5, 6)?;
+        // CSV data is in km and km/s, convert to m and m/s
+        let position = parse_csv_vec3(&record, 1, 2, 3)? * 1e3;
+        let velocity = parse_csv_vec3(&record, 4, 5, 6)? * 1e3;
         let state = Cartesian::from_vecs(position, velocity);
         states.push(CartesianOrbit::new(state, time, origin, frame));
     }
