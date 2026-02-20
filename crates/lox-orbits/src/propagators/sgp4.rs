@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use glam::DVec3;
+use lox_core::coords::Cartesian;
 pub use sgp4::Elements;
 use sgp4::{Constants, ElementsError, MinutesSinceEpoch};
 use thiserror::Error;
@@ -14,9 +15,8 @@ use lox_time::deltas::TimeDelta;
 use lox_time::time_scales::Tai;
 use lox_time::utc::{Utc, UtcError};
 
+use crate::orbits::{CartesianOrbit, TrajectorError};
 use crate::propagators::Propagator;
-use crate::states::State;
-use crate::trajectories::TrajectoryError;
 use lox_frames::Icrf;
 
 #[derive(Debug, Clone, Error)]
@@ -24,7 +24,7 @@ pub enum Sgp4Error {
     #[error(transparent)]
     ElementsError(#[from] ElementsError),
     #[error(transparent)]
-    TrajectoryError(#[from] TrajectoryError),
+    TrajectoryError(#[from] TrajectorError),
     #[error(transparent)]
     Sgp4(#[from] sgp4::Error),
     #[error(transparent)]
@@ -52,12 +52,18 @@ impl Sgp4 {
 impl Propagator<Tai, Earth, Icrf> for Sgp4 {
     type Error = Sgp4Error;
 
-    fn propagate(&self, time: Time<Tai>) -> Result<State<Tai, Earth, Icrf>, Self::Error> {
+    fn propagate(&self, time: Time<Tai>) -> Result<CartesianOrbit<Tai, Earth, Icrf>, Self::Error> {
         let dt = (time - self.time).to_seconds().to_f64() / SECONDS_PER_MINUTE;
         let prediction = self.constants.propagate(MinutesSinceEpoch(dt))?;
-        let position = DVec3::from_array(prediction.position);
-        let velocity = DVec3::from_array(prediction.velocity);
-        Ok(State::new(time, position, velocity, Earth, Icrf))
+        // sgp4 crate returns km and km/s, convert to m and m/s
+        let position = DVec3::from_array(prediction.position) * 1e3;
+        let velocity = DVec3::from_array(prediction.velocity) * 1e3;
+        Ok(CartesianOrbit::new(
+            Cartesian::from_vecs(position, velocity),
+            time,
+            Earth,
+            Icrf,
+        ))
     }
 }
 
@@ -81,7 +87,7 @@ mod tests {
         let s1 = sgp4.propagate(t1).unwrap();
         let k1 = s1.to_keplerian();
         assert_approx_eq!(
-            k1.orbital_period().to_seconds().to_f64() / SECONDS_PER_MINUTE,
+            k1.orbital_period().unwrap().to_seconds().to_f64() / SECONDS_PER_MINUTE,
             orbital_period,
             rtol <= 1e-4
         );

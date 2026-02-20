@@ -28,11 +28,12 @@ pub enum OrbitType {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Orbit<S, T: TimeScale, O: Origin, R: ReferenceFrame> {
-    pub(crate) state: S,
-    pub(crate) time: Time<T>,
-    pub(crate) origin: O,
-    pub(crate) frame: R,
+    state: S,
+    time: Time<T>,
+    origin: O,
+    frame: R,
 }
 
 pub type DynOrbit = Orbit<OrbitType, DynTimeScale, DynOrigin, DynFrame>;
@@ -86,16 +87,14 @@ where
     where
         O: TryPointMass,
     {
-        self.origin
-            .try_gravitational_parameter()
-            .map(GravitationalParameter::km3_per_s2)
+        self.origin.try_gravitational_parameter()
     }
 
     pub fn gravitational_parameter(&self) -> GravitationalParameter
     where
         O: PointMass,
     {
-        GravitationalParameter::km3_per_s2(self.origin.gravitational_parameter())
+        self.origin.gravitational_parameter()
     }
 }
 
@@ -105,7 +104,7 @@ pub type DynCartesianOrbit = Orbit<Cartesian, DynTimeScale, DynOrigin, DynFrame>
 pub type KeplerianOrbit<T, O, R> = Orbit<Keplerian, T, O, R>;
 pub type DynKeplerianOrbit = Orbit<Keplerian, DynTimeScale, DynOrigin, DynFrame>;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Clone, PartialEq, Error)]
 pub enum TrajectorError {
     #[error("at least 2 states are required but only {0} were provided")]
     InsufficientStates(usize),

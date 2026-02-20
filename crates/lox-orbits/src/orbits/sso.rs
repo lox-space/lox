@@ -5,8 +5,8 @@
 use lox_bodies::{Earth, PointMass, Spheroid};
 use lox_core::anomalies::TrueAnomaly;
 use lox_core::elements::{
-    ArgumentOfPeriapsis, Eccentricity, GravitationalParameter, Inclination, InclinationError,
-    Keplerian, LongitudeOfAscendingNode, NegativeEccentricityError, SemiMajorAxis,
+    ArgumentOfPeriapsis, Eccentricity, Inclination, InclinationError, Keplerian,
+    LongitudeOfAscendingNode, NegativeEccentricityError, SemiMajorAxis,
 };
 use lox_core::glam::Azimuth;
 use lox_core::time::julian_dates::JulianDate;
@@ -72,8 +72,8 @@ fn inclination_sso(
     semi_major_axis: Distance,
     eccentricity: Eccentricity,
 ) -> Result<Inclination, SsoError> {
-    let r_eq = Earth.equatorial_radius().km().as_f64();
-    let mu = GravitationalParameter::km3_per_s2(Earth.gravitational_parameter()).as_f64();
+    let r_eq = Earth.equatorial_radius().as_f64();
+    let mu = Earth.gravitational_parameter().as_f64();
     let num = -semi_major_axis.as_f64().powf(7.0 / 2.0)
         * 2.0
         * OMEGA_SUN_SYNC
@@ -87,8 +87,8 @@ fn inclination_sso(
 }
 
 fn semi_major_axis_sso(inclination: Inclination, eccentricity: Eccentricity) -> Distance {
-    let r_eq = Earth.equatorial_radius().km().as_f64();
-    let mu = GravitationalParameter::km3_per_s2(Earth.gravitational_parameter()).as_f64();
+    let r_eq = Earth.equatorial_radius().as_f64();
+    let mu = Earth.gravitational_parameter().as_f64();
     let num = -3.0 * r_eq.powi(2) * J2_EARTH * mu.sqrt();
     let den = 2.0 * OMEGA_SUN_SYNC * (1.0 - eccentricity.as_f64().powi(2)).powi(2);
     (num * inclination.as_f64().cos() / den).powf(2.0 / 7.0).m()
@@ -314,7 +314,7 @@ where
     }
 
     pub fn with_altitude(mut self, altitude: Distance) -> Self {
-        self.semi_major_axis = Some(altitude + Earth.equatorial_radius().km());
+        self.semi_major_axis = Some(altitude + Earth.equatorial_radius());
         self.eccentricity = Ok(Eccentricity::default());
         self
     }
@@ -456,7 +456,7 @@ mod tests {
         assert_approx_eq!(act_inc, exp_inc, rtol <= 1e-5);
         assert_approx_eq!(act_node, exp_node, rtol <= 4e-3);
 
-        let altitude = semi_major_axis - Earth.equatorial_radius().km();
+        let altitude = semi_major_axis - Earth.equatorial_radius();
         let sso = SsoBuilder::default()
             .with_provider(eop_provider())
             .with_altitude(altitude)

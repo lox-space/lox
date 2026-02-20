@@ -2,7 +2,6 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use crate::bodies::Radii;
 use crate::bodies::dynamic::{DynOrigin, UnknownOriginId, UnknownOriginName};
 use crate::bodies::{
     Elements, Origin, TryMeanRadius, TryPointMass, TryRotationalElements, TrySpheroid,
@@ -100,10 +99,11 @@ impl PyOrigin {
     /// Raises:
     ///     UndefinedOriginPropertyError: If not defined for this body.
     pub fn gravitational_parameter(&self) -> PyResult<f64> {
-        Ok(self
+        let gp = self
             .0
             .try_gravitational_parameter()
-            .map_err(PyUndefinedOriginPropertyError)?)
+            .map_err(PyUndefinedOriginPropertyError)?;
+        Ok(gp.as_f64() * 1e-9)
     }
 
     /// Return the mean radius in km.
@@ -114,15 +114,17 @@ impl PyOrigin {
         Ok(self
             .0
             .try_mean_radius()
-            .map_err(PyUndefinedOriginPropertyError)?)
+            .map_err(PyUndefinedOriginPropertyError)?
+            .to_kilometers())
     }
 
     /// Return the triaxial radii (x, y, z) in km.
     ///
     /// Raises:
     ///     UndefinedOriginPropertyError: If not defined for this body.
-    pub fn radii(&self) -> PyResult<Radii> {
-        Ok(self.0.try_radii().map_err(PyUndefinedOriginPropertyError)?)
+    pub fn radii(&self) -> PyResult<(f64, f64, f64)> {
+        let (a, b, c) = self.0.try_radii().map_err(PyUndefinedOriginPropertyError)?;
+        Ok((a.to_kilometers(), b.to_kilometers(), c.to_kilometers()))
     }
 
     /// Return the equatorial radius in km.
@@ -133,7 +135,8 @@ impl PyOrigin {
         Ok(self
             .0
             .try_equatorial_radius()
-            .map_err(PyUndefinedOriginPropertyError)?)
+            .map_err(PyUndefinedOriginPropertyError)?
+            .to_kilometers())
     }
 
     /// Return the polar radius in km.
@@ -144,7 +147,8 @@ impl PyOrigin {
         Ok(self
             .0
             .try_polar_radius()
-            .map_err(PyUndefinedOriginPropertyError)?)
+            .map_err(PyUndefinedOriginPropertyError)?
+            .to_kilometers())
     }
 
     /// Return rotational elements (right ascension, declination, rotation angle) in radians.

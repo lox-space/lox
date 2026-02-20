@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 
 use crate::bodies::python::{PyOrigin, PyUndefinedOriginPropertyError};
-use crate::bodies::{DynOrigin, Origin};
+use crate::bodies::{DynOrigin, Origin, TryPointMass};
 use crate::earth::python::ut1::{PyEopProvider, PyEopProviderError};
 use crate::ephem::Ephemeris;
 use crate::ephem::python::{PyDafSpkError, PySpk};
@@ -15,26 +15,28 @@ use crate::math::roots::{Brent, RootFinderError};
 use crate::orbits::analysis::{
     DynPass, ElevationMask, ElevationMaskError, Pass, VisibilityError, visibility_combined,
 };
-use crate::orbits::elements::{DynKeplerian, Keplerian};
 use crate::orbits::events::{Event, FindEventError, Window};
 use crate::orbits::ground::{
     DynGroundLocation, DynGroundPropagator, GroundPropagatorError, Observables,
 };
+use crate::orbits::orbits::{
+    CartesianOrbit, DynCartesianOrbit, DynTrajectory, TrajectorError, TrajectoryTransformationError,
+};
 use crate::orbits::propagators::Propagator;
 use crate::orbits::propagators::semi_analytical::{DynVallado, Vallado, ValladoError};
 use crate::orbits::propagators::sgp4::{Sgp4, Sgp4Error};
-use crate::orbits::states::DynState;
-use crate::orbits::trajectories::{DynTrajectory, TrajectoryTransformationError};
-use crate::orbits::{
-    states::State,
-    trajectories::{Trajectory, TrajectoryError},
-};
 use crate::time::DynTime;
 use crate::time::deltas::TimeDelta;
 use crate::time::offsets::DefaultOffsetProvider;
 use crate::time::python::deltas::PyTimeDelta;
 use crate::time::python::time::PyTime;
 use crate::time::time_scales::{DynTimeScale, Tai};
+use lox_core::anomalies::TrueAnomaly;
+use lox_core::coords::Cartesian;
+use lox_core::elements::{
+    ArgumentOfPeriapsis, Eccentricity, Inclination, Keplerian, LongitudeOfAscendingNode,
+};
+use lox_units::{Angle, Distance};
 
 use glam::DVec3;
 use lox_frames::providers::DefaultRotationProvider;
@@ -165,7 +167,7 @@ pub fn find_windows(
 ///     frame: Reference frame (default: ICRF).
 #[pyclass(name = "State", module = "lox_space", frozen)]
 #[derive(Debug, Clone)]
-pub struct PyState(pub DynState);
+pub struct PyState(pub DynCartesianOrbit);
 
 #[pymethods]
 impl PyState {
@@ -181,10 +183,12 @@ impl PyState {
         let origin = origin.unwrap_or_default();
         let frame = frame.unwrap_or_default();
 
-        Ok(PyState(State::new(
+        Ok(PyState(CartesianOrbit::new(
+            Cartesian::from_vecs(
+                DVec3::new(position.0, position.1, position.2),
+                DVec3::new(velocity.0, velocity.1, velocity.2),
+            ),
             time.0,
-            DVec3::new(position.0, position.1, position.2),
-            DVec3::new(velocity.0, velocity.1, velocity.2),
             origin.0,
             frame.0,
         )))
@@ -247,10 +251,9 @@ impl PyState {
                 .map_err(PyDynRotationError),
         }?;
         let (r1, v1) = rot.rotate_state(self.0.position(), self.0.velocity());
-        Ok(PyState(State::new(
+        Ok(PyState(CartesianOrbit::new(
+            Cartesian::from_vecs(r1, v1),
             self.0.time(),
-            r1,
-            v1,
             self.0.origin(),
             frame.0,
         )))
@@ -357,7 +360,7 @@ impl PyState {
 ///     true_anomaly: True anomaly in radians.
 ///     origin: Central body (default: Earth).
 #[pyclass(name = "Keplerian", module = "lox_space", frozen)]
-pub struct PyKeplerian(pub DynKeplerian);
+pub struct PyKeplerian(pub crate::orbits::orbits::DynKeplerianOrbit);
 
 #[pymethods]
 impl PyKeplerian {
@@ -384,19 +387,29 @@ impl PyKeplerian {
         origin: Option<PyOrigin>,
     ) -> PyResult<Self> {
         let origin = origin.map(|origin| origin.0).unwrap_or_default();
-        Ok(PyKeplerian(
-            Keplerian::with_dynamic(
-                time.0,
-                origin,
-                semi_major_axis,
-                eccentricity,
-                inclination,
-                longitude_of_ascending_node,
-                argument_of_periapsis,
-                true_anomaly,
-            )
-            .map_err(|err| PyValueError::new_err(err.to_string()))?,
-        ))
+        origin
+            .try_gravitational_parameter()
+            .map_err(PyUndefinedOriginPropertyError)?;
+        let keplerian = Keplerian::new(
+            Distance::kilometers(semi_major_axis),
+            Eccentricity::try_new(eccentricity)
+                .map_err(|err| PyValueError::new_err(err.to_string()))?,
+            Inclination::try_new(Angle::radians(inclination))
+                .map_err(|err| PyValueError::new_err(err.to_string()))?,
+            LongitudeOfAscendingNode::try_new(Angle::radians(longitude_of_ascending_node))
+                .map_err(|err| PyValueError::new_err(err.to_string()))?,
+            ArgumentOfPeriapsis::try_new(Angle::radians(argument_of_periapsis))
+                .map_err(|err| PyValueError::new_err(err.to_string()))?,
+            TrueAnomaly::new(Angle::radians(true_anomaly)),
+        );
+        let orbit = crate::orbits::orbits::KeplerianOrbit::try_from_keplerian(
+            keplerian,
+            time.0,
+            origin,
+            DynFrame::Icrf,
+        )
+        .map_err(|err| PyValueError::new_err(err.to_string()))?;
+        Ok(PyKeplerian(orbit))
     }
 
     /// Return the epoch of these elements.
@@ -411,32 +424,32 @@ impl PyKeplerian {
 
     /// Return the semi-major axis in km.
     fn semi_major_axis(&self) -> f64 {
-        self.0.semi_major_axis()
+        self.0.semi_major_axis().to_kilometers()
     }
 
     /// Return the orbital eccentricity.
     fn eccentricity(&self) -> f64 {
-        self.0.eccentricity()
+        self.0.eccentricity().as_f64()
     }
 
     /// Return the inclination in radians.
     fn inclination(&self) -> f64 {
-        self.0.inclination()
+        self.0.inclination().as_f64()
     }
 
     /// Return the longitude of the ascending node (RAAN) in radians.
     fn longitude_of_ascending_node(&self) -> f64 {
-        self.0.longitude_of_ascending_node()
+        self.0.longitude_of_ascending_node().as_f64()
     }
 
     /// Return the argument of periapsis in radians.
     fn argument_of_periapsis(&self) -> f64 {
-        self.0.argument_of_periapsis()
+        self.0.argument_of_periapsis().as_f64()
     }
 
     /// Return the true anomaly in radians.
     fn true_anomaly(&self) -> f64 {
-        self.0.true_anomaly()
+        self.0.true_anomaly().as_f64()
     }
 
     /// Convert these Keplerian elements to a Cartesian state.
@@ -444,15 +457,22 @@ impl PyKeplerian {
     /// Returns:
     ///     State with position and velocity vectors.
     fn to_cartesian(&self) -> PyResult<PyState> {
-        Ok(PyState(self.0.to_cartesian()))
+        Ok(PyState(
+            self.0
+                .try_to_cartesian()
+                .map_err(PyUndefinedOriginPropertyError)?,
+        ))
     }
 
     /// Return the orbital period.
     ///
     /// Returns:
     ///     TimeDelta representing one complete orbit.
-    fn orbital_period(&self) -> PyTimeDelta {
-        PyTimeDelta(self.0.orbital_period())
+    fn orbital_period(&self) -> PyResult<PyTimeDelta> {
+        self.0
+            .orbital_period()
+            .map(PyTimeDelta)
+            .ok_or_else(|| PyValueError::new_err("orbital period is not defined for this orbit"))
     }
 }
 
@@ -467,10 +487,10 @@ impl PyKeplerian {
 #[derive(Debug, Clone)]
 pub struct PyTrajectory(pub DynTrajectory);
 
-pub struct PyTrajectoryError(pub TrajectoryError);
+pub struct PyTrajectorError(pub TrajectorError);
 
-impl From<PyTrajectoryError> for PyErr {
-    fn from(err: PyTrajectoryError) -> Self {
+impl From<PyTrajectorError> for PyErr {
+    fn from(err: PyTrajectorError) -> Self {
         PyValueError::new_err(err.0.to_string())
     }
 }
@@ -480,9 +500,9 @@ impl PyTrajectory {
     #[new]
     fn new(states: &Bound<'_, PyList>) -> PyResult<Self> {
         let states: Vec<PyState> = states.extract()?;
-        let states: Vec<DynState> = states.into_iter().map(|s| s.0).collect();
+        let states: Vec<DynCartesianOrbit> = states.into_iter().map(|s| s.0).collect();
         Ok(PyTrajectory(
-            Trajectory::new(&states).map_err(PyTrajectoryError)?,
+            DynTrajectory::try_new(states).map_err(PyTrajectorError)?,
         ))
     }
 
@@ -514,15 +534,20 @@ impl PyTrajectory {
         if array.ncols() != 7 {
             return Err(PyValueError::new_err("invalid shape"));
         }
-        let mut states: Vec<DynState> = Vec::with_capacity(array.nrows());
+        let mut states: Vec<DynCartesianOrbit> = Vec::with_capacity(array.nrows());
         for row in array.rows() {
             let time = start_time.0 + TimeDelta::from_seconds_f64(row[0]);
             let position = DVec3::new(row[1], row[2], row[3]);
             let velocity = DVec3::new(row[4], row[5], row[6]);
-            states.push(State::new(time, position, velocity, origin.0, frame.0));
+            states.push(CartesianOrbit::new(
+                Cartesian::from_vecs(position, velocity),
+                time,
+                origin.0,
+                frame.0,
+            ));
         }
         Ok(PyTrajectory(
-            Trajectory::new(&states).map_err(PyTrajectoryError)?,
+            DynTrajectory::try_new(states).map_err(PyTrajectorError)?,
         ))
     }
 
@@ -618,13 +643,11 @@ impl PyTrajectory {
         frame: PyFrame,
         provider: Option<&Bound<'_, PyEopProvider>>,
     ) -> PyResult<Self> {
-        let mut states: Vec<DynState> = Vec::with_capacity(self.0.states().len());
+        let mut states: Vec<DynCartesianOrbit> = Vec::with_capacity(self.0.states().len());
         for s in self.0.states() {
             states.push(PyState(s).to_frame(frame.clone(), provider)?.0);
         }
-        Ok(PyTrajectory(
-            Trajectory::new(&states).map_err(PyTrajectoryError)?,
-        ))
+        Ok(PyTrajectory(DynTrajectory::new(states)))
     }
 
     /// Transform all states in the trajectory to a different central body.
@@ -636,12 +659,11 @@ impl PyTrajectory {
     /// Returns:
     ///     A new Trajectory relative to the target origin.
     fn to_origin(&self, target: PyOrigin, ephemeris: &Bound<'_, PySpk>) -> PyResult<Self> {
-        let mut states: Vec<PyState> = Vec::with_capacity(self.states().len());
+        let mut states: Vec<DynCartesianOrbit> = Vec::with_capacity(self.states().len());
         for s in self.states() {
-            states.push(s.to_origin(target.clone(), ephemeris)?)
+            states.push(s.to_origin(target.clone(), ephemeris)?.0);
         }
-        let states: Vec<DynState> = states.into_iter().map(|s| s.0).collect();
-        Ok(Self(Trajectory::new(&states).map_err(PyTrajectoryError)?))
+        Ok(Self(DynTrajectory::new(states)))
     }
 }
 
@@ -1018,10 +1040,9 @@ impl PySgp4 {
             let s1 = self.0.propagate(time).map_err(PySgp4Error)?;
             return Ok(Bound::new(
                 py,
-                PyState(State::new(
+                PyState(CartesianOrbit::new(
+                    Cartesian::from_vecs(s1.position(), s1.velocity()),
                     dyntime,
-                    s1.position(),
-                    s1.velocity(),
                     DynOrigin::default(),
                     DynFrame::default(),
                 )),
@@ -1029,7 +1050,7 @@ impl PySgp4 {
             .into_any());
         }
         if let Ok(pysteps) = steps.extract::<Vec<PyTime>>() {
-            let mut states: Vec<DynState> = Vec::with_capacity(pysteps.len());
+            let mut states: Vec<DynCartesianOrbit> = Vec::with_capacity(pysteps.len());
             for step in pysteps {
                 let (time, dyntime) = match provider {
                     Some(provider) => (
@@ -1043,20 +1064,15 @@ impl PySgp4 {
                     None => (step.0.to_scale(Tai), step.0.to_scale(DynTimeScale::Tai)),
                 };
                 let s = self.0.propagate(time).map_err(PySgp4Error)?;
-                let s = State::new(
+                let s = CartesianOrbit::new(
+                    Cartesian::from_vecs(s.position(), s.velocity()),
                     dyntime,
-                    s.position(),
-                    s.velocity(),
                     DynOrigin::default(),
                     DynFrame::default(),
                 );
                 states.push(s);
             }
-            return Ok(Bound::new(
-                py,
-                PyTrajectory(Trajectory::new(&states).map_err(PyTrajectoryError)?),
-            )?
-            .into_any());
+            return Ok(Bound::new(py, PyTrajectory(DynTrajectory::new(states)))?.into_any());
         }
         Err(PyValueError::new_err("invalid time delta(s)"))
     }

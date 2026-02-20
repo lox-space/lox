@@ -4,11 +4,11 @@
 
 use std::f64::consts::FRAC_PI_2;
 
+use crate::orbits::{CartesianOrbit, DynCartesianOrbit, TrajectorError, Trajectory};
 use crate::propagators::Propagator;
-use crate::states::{DynState, State};
-use crate::trajectories::{DynTrajectory, Trajectory, TrajectoryError};
 use glam::{DMat3, DVec3};
 use lox_bodies::{DynOrigin, RotationalElements, Spheroid, TrySpheroid};
+use lox_core::coords::Cartesian;
 use lox_core::types::units::Radians;
 use lox_frames::providers::DefaultRotationProvider;
 use lox_frames::rotations::TryRotation;
@@ -117,6 +117,7 @@ impl<B: TrySpheroid> GroundLocation<B> {
         self.body
             .try_equatorial_radius()
             .expect("equatorial radius should be available")
+            .to_kilometers()
     }
 
     fn flattening(&self) -> f64 {
@@ -145,9 +146,12 @@ impl<B: TrySpheroid> GroundLocation<B> {
         rot2 * rot1
     }
 
-    pub fn observables<T: TimeScale + Clone>(&self, state: State<T, B, Iau<B>>) -> Observables
+    pub fn observables<T: TimeScale + Copy>(
+        &self,
+        state: CartesianOrbit<T, B, Iau<B>>,
+    ) -> Observables
     where
-        B: RotationalElements + Clone,
+        B: RotationalElements + Copy,
     {
         let rot = self.rotation_to_topocentric();
         let position = rot * (state.position() - self.body_fixed_position());
@@ -164,7 +168,7 @@ impl<B: TrySpheroid> GroundLocation<B> {
         }
     }
 
-    pub fn observables_dyn(&self, state: DynState) -> Observables {
+    pub fn observables_dyn(&self, state: DynCartesianOrbit) -> Observables {
         let rot = self.rotation_to_topocentric();
         let position = rot * (state.position() - self.body_fixed_position());
         let velocity = rot * state.velocity();
@@ -186,7 +190,7 @@ pub enum GroundPropagatorError {
     #[error("frame transformation error: {0}")]
     FrameTransformation(String),
     #[error(transparent)]
-    Trajectory(#[from] TrajectoryError),
+    Trajectory(#[from] TrajectorError),
 }
 
 pub struct GroundPropagator<B: TrySpheroid> {
@@ -209,31 +213,30 @@ impl DynGroundPropagator {
         GroundPropagator { location }
     }
 
-    pub fn propagate_dyn(&self, time: DynTime) -> Result<DynState, GroundPropagatorError> {
-        let s = State::new(
-            time,
-            self.location.body_fixed_position(),
-            DVec3::ZERO,
-            self.location.body,
-            DynFrame::Iau(self.location.body),
-        );
+    pub fn propagate_dyn(&self, time: DynTime) -> Result<DynCartesianOrbit, GroundPropagatorError> {
+        let body_fixed_frame = DynFrame::Iau(self.location.body);
         let rot = DefaultRotationProvider
-            .try_rotation(s.reference_frame(), DynFrame::Icrf, time)
+            .try_rotation(body_fixed_frame, DynFrame::Icrf, time)
             .map_err(|err| GroundPropagatorError::FrameTransformation(err.to_string()))?;
-        let (r1, v1) = rot.rotate_state(s.position(), s.velocity());
-        Ok(State::new(time, r1, v1, self.location.body, DynFrame::Icrf))
+        let (r1, v1) = rot.rotate_state(self.location.body_fixed_position(), DVec3::ZERO);
+        Ok(CartesianOrbit::new(
+            Cartesian::from_vecs(r1, v1),
+            time,
+            self.location.body,
+            DynFrame::Icrf,
+        ))
     }
 
     pub fn propagate_all_dyn(
         &self,
         times: impl IntoIterator<Item = DynTime>,
-    ) -> Result<DynTrajectory, GroundPropagatorError> {
+    ) -> Result<crate::orbits::DynTrajectory, GroundPropagatorError> {
         let mut states = vec![];
         for time in times {
             let state = self.propagate_dyn(time)?;
             states.push(state);
         }
-        Ok(Trajectory::new(&states)?)
+        Ok(Trajectory::new(states))
     }
 }
 
@@ -245,25 +248,25 @@ where
 {
     type Error = GroundPropagatorError;
 
-    fn propagate(&self, time: Time<T>) -> Result<State<T, O, Icrf>, Self::Error> {
-        let s = State::new(
-            time,
-            self.location.body_fixed_position(),
-            DVec3::ZERO,
-            self.location.body,
-            Iau::new(self.location.body),
-        );
+    fn propagate(&self, time: Time<T>) -> Result<CartesianOrbit<T, O, Icrf>, Self::Error> {
+        let body_fixed_frame = Iau::new(self.location.body);
         let rot = DefaultRotationProvider
-            .try_rotation(s.reference_frame(), Icrf, time)
+            .try_rotation(body_fixed_frame, Icrf, time)
             .map_err(|err| GroundPropagatorError::FrameTransformation(err.to_string()))?;
-        let (r1, v1) = rot.rotate_state(s.position(), s.velocity());
-        Ok(State::new(time, r1, v1, self.location.body, Icrf))
+        let (r1, v1) = rot.rotate_state(self.location.body_fixed_position(), DVec3::ZERO);
+        Ok(CartesianOrbit::new(
+            Cartesian::from_vecs(r1, v1),
+            time,
+            self.location.body,
+            Icrf,
+        ))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use lox_bodies::Earth;
+    use lox_core::coords::Cartesian;
     use lox_test_utils::assert_approx_eq;
     use lox_time::time_scales::Tdb;
     use lox_time::utc::Utc;
@@ -306,7 +309,12 @@ mod tests {
         let position = DVec3::new(3359.927, -2398.072, 5153.0);
         let velocity = DVec3::new(5.0657, 5.485, -0.744);
         let time = time!(Tdb, 2012, 7, 1).unwrap();
-        let state = State::new(time, position, velocity, Earth, Iau::new(Earth));
+        let state = CartesianOrbit::new(
+            Cartesian::from_vecs(position, velocity),
+            time,
+            Earth,
+            Iau::new(Earth),
+        );
         let observables = location.observables(state);
         let expected_range = 2707.7;
         let expected_range_rate = -7.16;

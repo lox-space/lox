@@ -5,13 +5,14 @@
 #![cfg(feature = "serde")]
 
 use glam::{DMat3, DVec3};
+use lox_core::coords::Cartesian;
 use lox_space::bodies::*;
 use lox_space::frames::frames::Teme;
 use lox_space::frames::rotations::Rotation;
 use lox_space::frames::*;
 use lox_space::orbits::events::{Window, ZeroCrossing};
 use lox_space::orbits::ground::GroundLocation;
-use lox_space::orbits::states::State;
+use lox_space::orbits::orbits::CartesianOrbit;
 use lox_space::time::Time;
 use lox_space::time::time_scales::Tai;
 use lox_space::units::*;
@@ -115,7 +116,7 @@ fn test_state() {
     let t = Time::new(Tai, 0, Default::default());
     let pos = DVec3::new(6778.0, 0.0, 0.0);
     let vel = DVec3::new(0.0, 7.5, 0.0);
-    let state = State::new(t, pos, vel, Earth, Icrf);
+    let state = CartesianOrbit::new(Cartesian::from_vecs(pos, vel), t, Earth, Icrf);
     round_trip(&state);
 }
 
@@ -145,17 +146,15 @@ fn test_zero_crossing() {
 #[test]
 fn test_state_json_structure() {
     let t = Time::new(Tai, 100, Default::default());
-    let state = State::new(
+    let state = CartesianOrbit::new(
+        Cartesian::from_vecs(DVec3::new(6778.0, 0.0, 0.0), DVec3::new(0.0, 7.5, 0.0)),
         t,
-        DVec3::new(6778.0, 0.0, 0.0),
-        DVec3::new(0.0, 7.5, 0.0),
         Earth,
         Icrf,
     );
     let json: serde_json::Value = serde_json::to_value(&state).expect("serialize");
     assert!(json.get("time").is_some());
-    assert!(json.get("position").is_some());
-    assert!(json.get("velocity").is_some());
+    assert!(json.get("state").is_some());
     assert!(json.get("origin").is_some());
     assert!(json.get("frame").is_some());
 }
