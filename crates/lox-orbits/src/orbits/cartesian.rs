@@ -191,9 +191,10 @@ where
         let target_id = target.id();
         let path = path_from_ids(origin_id.0, target_id.0);
         for (origin, target) in path.into_iter().tuple_windows() {
+            // Ephemeris returns km and km/s, convert to m and m/s
             let (p, v) = ephemeris.state(epoch, origin, target)?;
-            let p: DVec3 = p.into();
-            let v: DVec3 = v.into();
+            let p: DVec3 = DVec3::from(p) * 1e3;
+            let v: DVec3 = DVec3::from(v) * 1e3;
             pos_eph += p;
             vel_eph += v;
         }
@@ -223,9 +224,10 @@ impl DynCartesianOrbit {
         let target_id = target.id();
         let path = path_from_ids(origin_id.0, target_id.0);
         for (origin, target) in path.into_iter().tuple_windows() {
+            // Ephemeris returns km and km/s, convert to m and m/s
             let (p, v) = ephemeris.state(epoch, origin, target)?;
-            let p: DVec3 = p.into();
-            let v: DVec3 = v.into();
+            let p: DVec3 = DVec3::from(p) * 1e3;
+            let v: DVec3 = DVec3::from(v) * 1e3;
             pos_eph += p;
             vel_eph += v;
         }
@@ -249,7 +251,7 @@ impl DynCartesianOrbit {
         }
         let r = self.position();
         let (Ok(r_eq), Ok(f)) = (
-            origin.try_equatorial_radius().map(|d| d.to_kilometers()),
+            origin.try_equatorial_radius().map(|d| d.to_meters()),
             origin.try_flattening(),
         ) else {
             return Err(StateToDynGroundError::UndefinedSpheroid(origin));
@@ -257,7 +259,8 @@ impl DynCartesianOrbit {
 
         let (lon, lat, alt) = rv_to_lla(r, r_eq, f)?;
 
-        Ok(DynGroundLocation::with_dynamic(lon, lat, alt, origin).unwrap())
+        // rv_to_lla returns altitude in meters, GroundLocation expects km
+        Ok(DynGroundLocation::with_dynamic(lon, lat, alt * 1e-3, origin).unwrap())
     }
 
     pub fn try_rotation_lvlh(&self) -> Result<DMat3, &'static str> {
@@ -371,13 +374,13 @@ mod tests {
     #[test]
     fn test_to_origin() {
         let r_venus = DVec3::new(
-            1.001977553295792e8,
-            2.200234656010247e8,
-            9.391473630346918e7,
+            1.001977553295792e11,
+            2.200234656010247e11,
+            9.391473630346918e10,
         );
-        let v_venus = DVec3::new(-59.08617935009049, 22.682387107225292, 12.05029567478702);
-        let r = DVec3::new(6068279.27, -1692843.94, -2516619.18) / 1e3;
-        let v = DVec3::new(-660.415582, 5495.938726, -5303.093233) / 1e3;
+        let v_venus = DVec3::new(-59086.17935009049, 22682.387107225292, 12050.29567478702);
+        let r = DVec3::new(6068279.27, -1692843.94, -2516619.18);
+        let v = DVec3::new(-660.415582, 5495.938726, -5303.093233);
 
         let r_exp = r - r_venus;
         let v_exp = v - v_venus;
