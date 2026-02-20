@@ -10,7 +10,10 @@ use std::{
 };
 
 use glam::DVec3;
-use lox_bodies::{DynOrigin, Origin, PointMass, TryPointMass, UndefinedOriginPropertyError};
+use lox_bodies::{
+    DynOrigin, Origin, PointMass, TryMeanRadius, TryPointMass,
+    UndefinedOriginPropertyError,
+};
 use lox_core::units::{AngleUnits, Distance};
 use lox_core::{
     anomalies::{EccentricAnomaly, TrueAnomaly},
@@ -35,6 +38,27 @@ use thiserror::Error;
 pub enum OrbitType {
     Cartesian(Cartesian),
     Keplerian(Keplerian),
+}
+
+#[derive(Debug, Error)]
+pub enum KeplerianOrbitError {
+    #[error(transparent)]
+    NonQuasiInertial(#[from] NonQuasiInertialFrameError),
+
+    #[error("eccentricity must be >= 0")]
+    NegativeEccentricity,
+
+    #[error("semi-major axis must be > 0")]
+    NonPositiveSemiMajorAxis,
+
+    #[error("inclination must be in [0, π]")]
+    InvalidInclination,
+
+    #[error("perigee radius is below the origin mean radius")]
+    PerigeeCrossesBodyRadius,
+
+    #[error("argument of periapsis must be in [0, 2π] radians")]
+    InvalidArgumentOfPeriapsis,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -185,16 +209,53 @@ where
         }
     }
 
+    fn validate_keplerian(k: &Keplerian, origin: &O) -> Result<(), KeplerianOrbitError>
+    where
+        O: TryMeanRadius,
+    {
+        let a_km = k.semi_major_axis().to_kilometers();
+        let e = k.eccentricity().as_f64();
+        let i = k.inclination().as_f64();
+        let perigee_km = a_km * (1.0 - e);
+        let argp = k.argument_of_periapsis().as_f64();
+
+        if e < 0.0 {
+            return Err(KeplerianOrbitError::NegativeEccentricity);
+        }
+        if a_km <= 0.0 {
+            return Err(KeplerianOrbitError::NonPositiveSemiMajorAxis);
+        }
+
+        if i < 0.0 || i > PI {
+            return Err(KeplerianOrbitError::InvalidInclination);
+        }
+
+        if let Ok(body_mean_radius) = origin.try_mean_radius() {
+            if perigee_km < body_mean_radius {
+                return Err(KeplerianOrbitError::PerigeeCrossesBodyRadius);
+            }
+        }
+
+        if argp < 0.0 || argp > TAU {
+            return Err(KeplerianOrbitError::InvalidArgumentOfPeriapsis);
+        }
+
+        Ok(())
+    }
+
     pub fn try_from_keplerian(
         keplerian: Keplerian,
         time: Time<T>,
         origin: O,
         frame: R,
-    ) -> Result<Self, NonQuasiInertialFrameError>
+    ) -> Result<Self, KeplerianOrbitError>
     where
         R: TryQuasiInertial,
+        O: TryMeanRadius,
     {
         frame.try_quasi_inertial()?;
+        Self::validate_keplerian(&keplerian, &origin)?;
+
         Ok(Orbit {
             state: keplerian,
             time,
