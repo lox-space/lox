@@ -7,23 +7,23 @@ use lox_core::time::deltas::ToDelta;
 
 pub use lox_core::time::chrono::ChronoError;
 
-use crate::utc::transformations::TryToUtc;
+use crate::utc::transformations::ToUtc;
 use crate::{Time, time_scales::Tai, utc::UtcError};
 
 impl TryFrom<Time<Tai>> for DateTime<Utc> {
     type Error = ChronoError;
 
     fn try_from(time: Time<Tai>) -> Result<Self, Self::Error> {
-        let utc = time
-            .try_to_utc()
-            .map_err(|_| ChronoError::DateTime(time.to_delta()))?;
+        let utc = time.to_utc();
         utc.to_delta().try_into()
     }
 }
 
 impl From<DateTime<Utc>> for Time<Tai> {
     fn from(dt: DateTime<Utc>) -> Self {
-        crate::utc::Utc::from_delta(dt.into()).unwrap().to_time()
+        crate::utc::Utc::from_delta(dt.into())
+            .expect("chrono::DateTime always produces a finite TimeDelta")
+            .to_time()
     }
 }
 
@@ -58,7 +58,7 @@ mod tests {
     #[case(POST_1972_DELTA)]
     #[case(TimeDelta::default())]
     #[case(TimeDelta::from_seconds_f64(0.123456))]
-    #[should_panic(expected = "NaN")]
+    #[should_panic(expected = "NaN TimeDelta cannot be converted to UTC")]
     #[case(TimeDelta::NaN)]
     fn test_chrono_time_roundtrip(#[case] delta: TimeDelta) {
         let exp = Time::from_delta(Tai, delta);
