@@ -5,6 +5,7 @@
 import math
 import lox_space as lox
 
+
 def test_angle_rad():
     a = math.pi * lox.rad
     assert str(a) == "180 deg"
@@ -12,6 +13,7 @@ def test_angle_rad():
     assert float(a) == math.pi
     assert int(a) == 3
     assert complex(a) == complex(math.pi)
+
 
 def test_angle_deg():
     a = 180 * lox.deg
@@ -21,6 +23,7 @@ def test_angle_deg():
     assert int(a) == 3
     assert complex(a) == complex(math.pi)
 
+
 def test_distance_km():
     d = 1024 * lox.km
     assert str(d) == "1024 km"
@@ -28,6 +31,7 @@ def test_distance_km():
     assert float(d) == 1024000.0
     assert int(d) == 1024000
     assert complex(d) == complex(1024000.0)
+
 
 def test_distance_m():
     d = 2048 * lox.m
@@ -37,6 +41,7 @@ def test_distance_m():
     assert int(d) == 2048
     assert complex(d) == complex(2048.0)
 
+
 def test_frequency_hz():
     f = 1073741824 * lox.hz
     assert str(f) == "1.073741824 GHz"
@@ -44,6 +49,7 @@ def test_frequency_hz():
     assert float(f) == 1073741824.0
     assert int(f) == 1073741824
     assert complex(f) == complex(1073741824.0)
+
 
 def test_frequency_khz():
     f = 2000000 * lox.khz
@@ -53,6 +59,7 @@ def test_frequency_khz():
     assert int(f) == 2000000000
     assert complex(f) == complex(2000000000.0)
 
+
 def test_velocity_ms():
     v = 262144 * lox.ms
     assert str(v) == "262.144 km/s"
@@ -60,6 +67,7 @@ def test_velocity_ms():
     assert float(v) == 262144.0
     assert int(v) == 262144
     assert complex(v) == complex(262144.0)
+
 
 def test_velocity_kms():
     v = 16 * lox.kms

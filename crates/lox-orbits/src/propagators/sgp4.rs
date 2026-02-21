@@ -10,16 +10,18 @@ use thiserror::Error;
 
 use lox_bodies::Earth;
 use lox_core::f64::consts::SECONDS_PER_MINUTE;
+use lox_frames::Icrf;
+use lox_frames::Teme;
+use lox_frames::providers::DefaultRotationProvider;
+use lox_frames::rotations::RotationError;
 use lox_time::Time;
-use lox_time::deltas::TimeDelta;
 use lox_time::time_scales::Tai;
-use lox_time::utc::{Utc, UtcError};
+use lox_time::utc::UtcError;
 
 use crate::orbits::{CartesianOrbit, TrajectorError};
 use crate::propagators::Propagator;
-use lox_frames::Icrf;
 
-#[derive(Debug, Clone, Error)]
+#[derive(Debug, Error)]
 pub enum Sgp4Error {
     #[error(transparent)]
     ElementsError(#[from] ElementsError),
@@ -29,6 +31,8 @@ pub enum Sgp4Error {
     Sgp4(#[from] sgp4::Error),
     #[error(transparent)]
     Utc(#[from] UtcError),
+    #[error(transparent)]
+    Rotation(#[from] RotationError),
 }
 
 pub struct Sgp4 {
@@ -38,9 +42,11 @@ pub struct Sgp4 {
 
 impl Sgp4 {
     pub fn new(initial_state: Elements) -> Result<Self, Sgp4Error> {
-        let epoch = initial_state.epoch();
-        let time = Utc::from_delta(TimeDelta::from_julian_years(epoch))?.to_time();
-        let constants = Constants::from_elements(&initial_state)?;
+        let time: Time<Tai> = initial_state.datetime.and_utc().into();
+        // Use AFSPC compatibility mode because TLE data is fitted using
+        // AFSPC constants (WGS72). Using WGS84 with WGS72-fitted data
+        // introduces systematic errors.
+        let constants = Constants::from_elements_afspc_compatibility_mode(&initial_state)?;
         Ok(Self { constants, time })
     }
 
@@ -58,18 +64,17 @@ impl Propagator<Tai, Earth, Icrf> for Sgp4 {
         // sgp4 crate returns km and km/s, convert to m and m/s
         let position = DVec3::from_array(prediction.position) * 1e3;
         let velocity = DVec3::from_array(prediction.velocity) * 1e3;
-        Ok(CartesianOrbit::new(
-            Cartesian::from_vecs(position, velocity),
-            time,
-            Earth,
-            Icrf,
-        ))
+
+        // SGP4 outputs TEME coordinates — convert to ICRF
+        let teme = CartesianOrbit::new(Cartesian::from_vecs(position, velocity), time, Earth, Teme);
+        Ok(teme.try_to_frame(Icrf, &DefaultRotationProvider)?)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use lox_test_utils::assert_approx_eq;
+    use lox_time::deltas::TimeDelta;
 
     use super::*;
 

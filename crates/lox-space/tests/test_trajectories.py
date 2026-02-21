@@ -98,8 +98,10 @@ def test_windows(trajectory):
 def test_events_callback_error(trajectory):
     def bad_func(_s):
         raise ValueError("boom in events")
+
     with pytest.raises(ValueError, match=r"boom in events"):
         trajectory.find_events(bad_func)
+
 
 def test_windows_callback_error(trajectory):
     def bad_func(_s):

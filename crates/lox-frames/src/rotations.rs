@@ -336,7 +336,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
         Ok(self.pef_to_itrf(time, sys)?.transpose())
     }
 
-    fn pef_to_teme(&self, time: Time<T>) -> Result<Rotation, RotationError>
+    fn tod_to_teme(&self, time: Time<T>) -> Result<Rotation, RotationError>
     where
         T: TimeScale + Copy,
         Self: TryOffset<T, Tdb>,
@@ -345,19 +345,18 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
             .try_to_scale(Tdb, self)
             .map_err(RotationError::offset)?;
 
-        // TEME uses IERS 1996 conventions (IAU 1994 EoE) regardless of PEF variant
         let eoe = EquationOfTheEquinoxes::iau1994(tdb);
 
-        // PEF to TEME rotates by negative EoE (removing the nutation effect)
-        Ok(Rotation::new((-eoe.0).rotation_z()))
+        // TOD to TEME is R_z(EoE)
+        Ok(Rotation::new(eoe.0.rotation_z()))
     }
 
-    fn teme_to_pef(&self, time: Time<T>) -> Result<Rotation, RotationError>
+    fn teme_to_tod(&self, time: Time<T>) -> Result<Rotation, RotationError>
     where
         T: TimeScale + Copy,
         Self: TryOffset<T, Tdb>,
     {
-        Ok(self.pef_to_teme(time)?.transpose())
+        Ok(self.tod_to_teme(time)?.transpose())
     }
 
     fn icrf_to_cirf(&self, time: Time<T>) -> Result<Rotation, RotationError>
@@ -774,58 +773,50 @@ mod tests {
     }
 
     #[test]
-    fn test_pef_to_teme() {
+    fn test_tod_to_teme() {
         // Use the same time as the EoE test to verify against known reference value
         // EoE at this time = 5.357_758_254_609_257e-5 radians (from test_equation_of_the_equinoxes_iau1994)
         let tdb = Time::from_two_part_julian_date(Tdb, 2400000.5, 41234.0);
         let eoe: f64 = 5.357_758_254_609_257e-5; // radians
 
-        let rotation = TestRotationProvider.pef_to_teme(tdb).unwrap();
+        let rotation = TestRotationProvider.tod_to_teme(tdb).unwrap();
 
-        // PEF to TEME is R_z(-EoE), so the rotation matrix should be:
-        // [cos(EoE)   sin(EoE)  0]
-        // [-sin(EoE)  cos(EoE)  0]
+        // TOD to TEME is R_z(EoE), so the rotation matrix should be:
+        // [cos(EoE)  -sin(EoE)  0]
+        // [sin(EoE)   cos(EoE)  0]
         // [0          0         1]
         let (sin_eoe, cos_eoe) = eoe.sin_cos();
         let expected =
-            DMat3::from_cols_array(&[cos_eoe, -sin_eoe, 0.0, sin_eoe, cos_eoe, 0.0, 0.0, 0.0, 1.0])
+            DMat3::from_cols_array(&[cos_eoe, sin_eoe, 0.0, -sin_eoe, cos_eoe, 0.0, 0.0, 0.0, 1.0])
                 .transpose();
 
         assert_approx_eq!(rotation.m, expected, atol <= 1e-15);
 
         // Verify round-trip
-        let roundtrip = rotation.compose(TestRotationProvider.teme_to_pef(tdb).unwrap());
+        let roundtrip = rotation.compose(TestRotationProvider.teme_to_tod(tdb).unwrap());
         assert_approx_eq!(roundtrip.m, DMat3::IDENTITY, atol <= 1e-15);
     }
 
     #[test]
     fn test_teme_icrf_roundtrip() {
         // Test the full TEME <-> ICRF transformation chain
-        // Path: ICRF -> MOD -> TOD -> PEF -> TEME and back
+        // Path: ICRF -> MOD -> TOD -> TEME and back
         let tt = Time::from_two_part_julian_date(Tt, 2454195.5, 0.500754444444444);
         let sys = ReferenceSystem::Iers1996;
 
         // Build the full ICRF to TEME transformation
         let icrf_to_mod = TestRotationProvider.icrf_to_mod(tt, sys).unwrap();
         let mod_to_tod = TestRotationProvider.mod_to_tod(tt, sys).unwrap();
-        let tod_to_pef = TestRotationProvider.tod_to_pef(tt, sys).unwrap();
-        let pef_to_teme = TestRotationProvider.pef_to_teme(tt).unwrap();
+        let tod_to_teme = TestRotationProvider.tod_to_teme(tt).unwrap();
 
-        let icrf_to_teme = icrf_to_mod
-            .compose(mod_to_tod)
-            .compose(tod_to_pef)
-            .compose(pef_to_teme);
+        let icrf_to_teme = icrf_to_mod.compose(mod_to_tod).compose(tod_to_teme);
 
         // Build the reverse transformation
-        let teme_to_pef = TestRotationProvider.teme_to_pef(tt).unwrap();
-        let pef_to_tod = TestRotationProvider.pef_to_tod(tt, sys).unwrap();
+        let teme_to_tod = TestRotationProvider.teme_to_tod(tt).unwrap();
         let tod_to_mod = TestRotationProvider.tod_to_mod(tt, sys).unwrap();
         let mod_to_icrf = TestRotationProvider.mod_to_icrf(tt, sys).unwrap();
 
-        let teme_to_icrf = teme_to_pef
-            .compose(pef_to_tod)
-            .compose(tod_to_mod)
-            .compose(mod_to_icrf);
+        let teme_to_icrf = teme_to_tod.compose(tod_to_mod).compose(mod_to_icrf);
 
         // Round-trip should give identity
         let roundtrip = icrf_to_teme.compose(teme_to_icrf);
