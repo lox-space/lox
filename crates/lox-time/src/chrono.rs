@@ -7,19 +7,23 @@ use lox_core::time::deltas::ToDelta;
 
 pub use lox_core::time::chrono::ChronoError;
 
+use crate::utc::transformations::TryToUtc;
 use crate::{Time, time_scales::Tai, utc::UtcError};
 
 impl TryFrom<Time<Tai>> for DateTime<Utc> {
     type Error = ChronoError;
 
     fn try_from(time: Time<Tai>) -> Result<Self, Self::Error> {
-        time.to_delta().try_into()
+        let utc = time
+            .try_to_utc()
+            .map_err(|_| ChronoError::DateTime(time.to_delta()))?;
+        utc.to_delta().try_into()
     }
 }
 
 impl From<DateTime<Utc>> for Time<Tai> {
     fn from(dt: DateTime<Utc>) -> Self {
-        Time::from_delta(Tai, dt.into())
+        crate::utc::Utc::from_delta(dt.into()).unwrap().to_time()
     }
 }
 
@@ -46,8 +50,12 @@ mod tests {
 
     use super::*;
 
+    // Post-1972 delta where TAI-UTC offset is an exact integer, ensuring
+    // lossless roundtrip through chrono's nanosecond precision.
+    const POST_1972_DELTA: TimeDelta = TimeDelta::from_seconds(-86400);
+
     #[rstest]
-    #[case(UNIX_EPOCH)]
+    #[case(POST_1972_DELTA)]
     #[case(TimeDelta::default())]
     #[case(TimeDelta::from_seconds_f64(0.123456))]
     #[should_panic(expected = "NaN")]
