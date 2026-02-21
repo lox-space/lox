@@ -9,7 +9,9 @@ import sys
 from pathlib import Path
 
 
-def run(cmd: list[str], env: dict[str, str] | None = None, check: bool = True) -> subprocess.CompletedProcess:
+def run(
+    cmd: list[str], env: dict[str, str] | None = None, check: bool = True
+) -> subprocess.CompletedProcess:
     """Run a command and return the result."""
     merged_env = {**os.environ, **(env or {})}
     print(f"$ {' '.join(cmd)}")
@@ -67,12 +69,37 @@ def main():
 
     # Build PyO3 extension with maturin
     print("\nBuilding PyO3 extension...")
-    run(["uv", "run", "--", "maturin", "develop", "--uv", "-m", f"{uv_project}/Cargo.toml"], env=cov_env)
+    run(
+        [
+            "uv",
+            "run",
+            "--",
+            "maturin",
+            "develop",
+            "--uv",
+            "-m",
+            f"{uv_project}/Cargo.toml",
+        ],
+        env=cov_env,
+    )
 
     # Run Python tests with coverage
     # Use --no-sync to prevent uv from rebuilding the extension without coverage instrumentation
     print("\nRunning Python tests...")
-    run(["uv", "run", "--no-sync", "--directory", uv_project, "--", "pytest", "--cov=lox_space", "--cov-report=xml"], env=cov_env)
+    run(
+        [
+            "uv",
+            "run",
+            "--no-sync",
+            "--directory",
+            uv_project,
+            "--",
+            "pytest",
+            "--cov=lox_space",
+            "--cov-report=xml",
+        ],
+        env=cov_env,
+    )
 
     # Generate coverage report
     print("\nGenerating coverage report...")

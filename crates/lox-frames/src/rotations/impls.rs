@@ -617,9 +617,9 @@ where
     }
 }
 
-// PEF <-> TEME
+// TOD <-> TEME
 
-impl<T, U> TryRotation<Pef<Iers1996>, Teme, T> for U
+impl<T, U> TryRotation<Tod<Iers1996>, Teme, T> for U
 where
     T: TimeScale + Copy,
     U: RotationProvider<T> + TryOffset<T, Tdb>,
@@ -628,15 +628,15 @@ where
 
     fn try_rotation(
         &self,
-        _origin: Pef<Iers1996>,
+        _origin: Tod<Iers1996>,
         _target: Teme,
         time: Time<T>,
     ) -> Result<Rotation, Self::Error> {
-        self.pef_to_teme(time)
+        self.tod_to_teme(time)
     }
 }
 
-impl<T, U> TryRotation<Teme, Pef<Iers1996>, T> for U
+impl<T, U> TryRotation<Teme, Tod<Iers1996>, T> for U
 where
     T: TimeScale + Copy,
     U: RotationProvider<T> + TryOffset<T, Tdb>,
@@ -646,14 +646,14 @@ where
     fn try_rotation(
         &self,
         _origin: Teme,
-        _target: Pef<Iers1996>,
+        _target: Tod<Iers1996>,
         time: Time<T>,
     ) -> Result<Rotation, Self::Error> {
-        self.teme_to_pef(time)
+        self.teme_to_tod(time)
     }
 }
 
-impl<T, U> TryRotation<Pef<Iers2003>, Teme, T> for U
+impl<T, U> TryRotation<Tod<Iers2003>, Teme, T> for U
 where
     T: TimeScale + Copy,
     U: RotationProvider<T> + TryOffset<T, Tdb>,
@@ -662,15 +662,15 @@ where
 
     fn try_rotation(
         &self,
-        _origin: Pef<Iers2003>,
+        _origin: Tod<Iers2003>,
         _target: Teme,
         time: Time<T>,
     ) -> Result<Rotation, Self::Error> {
-        self.pef_to_teme(time)
+        self.tod_to_teme(time)
     }
 }
 
-impl<T, U> TryRotation<Teme, Pef<Iers2003>, T> for U
+impl<T, U> TryRotation<Teme, Tod<Iers2003>, T> for U
 where
     T: TimeScale + Copy,
     U: RotationProvider<T> + TryOffset<T, Tdb>,
@@ -680,14 +680,14 @@ where
     fn try_rotation(
         &self,
         _origin: Teme,
-        _target: Pef<Iers2003>,
+        _target: Tod<Iers2003>,
         time: Time<T>,
     ) -> Result<Rotation, Self::Error> {
-        self.teme_to_pef(time)
+        self.teme_to_tod(time)
     }
 }
 
-impl<T, U> TryRotation<Pef<Iers2010>, Teme, T> for U
+impl<T, U> TryRotation<Tod<Iers2010>, Teme, T> for U
 where
     T: TimeScale + Copy,
     U: RotationProvider<T> + TryOffset<T, Tdb>,
@@ -696,15 +696,15 @@ where
 
     fn try_rotation(
         &self,
-        _origin: Pef<Iers2010>,
+        _origin: Tod<Iers2010>,
         _target: Teme,
         time: Time<T>,
     ) -> Result<Rotation, Self::Error> {
-        self.pef_to_teme(time)
+        self.tod_to_teme(time)
     }
 }
 
-impl<T, U> TryRotation<Teme, Pef<Iers2010>, T> for U
+impl<T, U> TryRotation<Teme, Tod<Iers2010>, T> for U
 where
     T: TimeScale + Copy,
     U: RotationProvider<T> + TryOffset<T, Tdb>,
@@ -714,10 +714,10 @@ where
     fn try_rotation(
         &self,
         _origin: Teme,
-        _target: Pef<Iers2010>,
+        _target: Tod<Iers2010>,
         time: Time<T>,
     ) -> Result<Rotation, Self::Error> {
-        self.teme_to_pef(time)
+        self.teme_to_tod(time)
     }
 }
 
@@ -755,7 +755,7 @@ impl_composed!(
     Cirf => Pef<Iers1996>: [Icrf, Mod(Iers1996), Tod(Iers1996)],
     Cirf => Pef<Iers2003>: [Icrf, Mod(Iers2003::default()), Tod(Iers2003::default())],
     Cirf => Pef<Iers2010>: [Icrf, Mod(Iers2010), Tod(Iers2010)],
-    Cirf => Teme: [Icrf, Mod(Iers1996), Tod(Iers1996), Pef(Iers1996)],
+    Cirf => Teme: [Icrf, Mod(Iers1996), Tod(Iers1996)],
     Cirf => Tod<Iers1996>: [Icrf, Mod(Iers1996)],
     Cirf => Tod<Iers2003>: [Icrf, Mod(Iers2003::default())],
     Cirf => Tod<Iers2010>: [Icrf, Mod(Iers2010)],
@@ -771,11 +771,11 @@ impl_composed!(
     Iau<DynOrigin> => Pef<Iers1996>: [Icrf, Mod(Iers1996), Tod(Iers1996)],
     Iau<DynOrigin> => Pef<Iers2003>: [Icrf, Mod(Iers2003::default()), Tod(Iers2003::default())],
     Iau<DynOrigin> => Pef<Iers2010>: [Icrf, Mod(Iers2010), Tod(Iers2010)],
-    Iau<DynOrigin> => Teme: [Icrf, Mod(Iers1996), Tod(Iers1996), Pef(Iers1996)],
+    Iau<DynOrigin> => Teme: [Icrf, Mod(Iers1996), Tod(Iers1996)],
     Icrf => Pef<Iers1996>: [Mod(Iers1996), Tod(Iers1996)],
     Icrf => Pef<Iers2003>: [Mod(Iers2003::default()), Tod(Iers2003::default())],
     Icrf => Pef<Iers2010>: [Mod(Iers2010), Tod(Iers2010)],
-    Icrf => Teme: [Mod(Iers1996), Tod(Iers1996), Pef(Iers1996)],
+    Icrf => Teme: [Mod(Iers1996), Tod(Iers1996)],
     Icrf => Tirf: [Cirf],
     Icrf => Tod<Iers1996>: [Mod(Iers1996)],
     Icrf => Tod<Iers2003>: [Mod(Iers2003::default())],
@@ -788,7 +788,7 @@ impl_composed!(
     Itrf => Tod<Iers1996>: [Pef(Iers1996)],
     Itrf => Tod<Iers2003>: [Pef(Iers2003::default())],
     Itrf => Tod<Iers2010>: [Pef(Iers2010)],
-    Itrf => Teme: [Pef(Iers1996)],
+    Itrf => Teme: [Pef(Iers1996), Tod(Iers1996)],
     Mod<Iers1996> => Cirf: [Icrf],
     Mod<Iers2003> => Cirf: [Icrf],
     Mod<Iers2010> => Cirf: [Icrf],
@@ -804,9 +804,9 @@ impl_composed!(
     Mod<Iers1996> => Pef<Iers1996>: [Tod(Iers1996)],
     Mod<Iers2003> => Pef<Iers2003>: [Tod(Iers2003::default())],
     Mod<Iers2010> => Pef<Iers2010>: [Tod(Iers2010)],
-    Mod<Iers1996> => Teme: [Tod(Iers1996), Pef(Iers1996)],
-    Mod<Iers2003> => Teme: [Tod(Iers2003::default()), Pef(Iers2003::default())],
-    Mod<Iers2010> => Teme: [Tod(Iers2010), Pef(Iers2010)],
+    Mod<Iers1996> => Teme: [Tod(Iers1996)],
+    Mod<Iers2003> => Teme: [Tod(Iers2003::default())],
+    Mod<Iers2010> => Teme: [Tod(Iers2010)],
     Pef<Iers1996> => Cirf: [Tod(Iers1996), Mod(Iers1996), Icrf],
     Pef<Iers2003> => Cirf: [Tod(Iers2003::default()), Mod(Iers2003::default()), Icrf],
     Pef<Iers2010> => Cirf: [Tod(Iers2010), Mod(Iers2010), Icrf],
@@ -822,17 +822,17 @@ impl_composed!(
     Pef<Iers1996> => Mod<Iers1996>: [Tod(Iers1996)],
     Pef<Iers2003> => Mod<Iers2003>: [Tod(Iers2003::default())],
     Pef<Iers2010> => Mod<Iers2010>: [Tod(Iers2010)],
-    Teme => Cirf: [Pef(Iers1996), Tod(Iers1996), Mod(Iers1996), Icrf],
-    Teme => Icrf: [Pef(Iers1996), Tod(Iers1996), Mod(Iers1996)],
-    Teme => Tirf: [Pef(Iers1996), Itrf],
-    Teme => Itrf: [Pef(Iers1996)],
-    Teme => Iau<DynOrigin>: [Pef(Iers1996), Tod(Iers1996), Mod(Iers1996), Icrf],
-    Teme => Mod<Iers1996>: [Pef(Iers1996), Tod(Iers1996)],
-    Teme => Mod<Iers2003>: [Pef(Iers2003::default()), Tod(Iers2003::default())],
-    Teme => Mod<Iers2010>: [Pef(Iers2010), Tod(Iers2010)],
-    Teme => Tod<Iers1996>: [Pef(Iers1996)],
-    Teme => Tod<Iers2003>: [Pef(Iers2003::default())],
-    Teme => Tod<Iers2010>: [Pef(Iers2010)],
+    Teme => Cirf: [Tod(Iers1996), Mod(Iers1996), Icrf],
+    Teme => Icrf: [Tod(Iers1996), Mod(Iers1996)],
+    Teme => Tirf: [Tod(Iers1996), Mod(Iers1996), Icrf, Cirf],
+    Teme => Itrf: [Tod(Iers1996), Pef(Iers1996)],
+    Teme => Iau<DynOrigin>: [Tod(Iers1996), Mod(Iers1996), Icrf],
+    Teme => Mod<Iers1996>: [Tod(Iers1996)],
+    Teme => Mod<Iers2003>: [Tod(Iers2003::default())],
+    Teme => Mod<Iers2010>: [Tod(Iers2010)],
+    Teme => Pef<Iers1996>: [Tod(Iers1996)],
+    Teme => Pef<Iers2003>: [Tod(Iers2003::default())],
+    Teme => Pef<Iers2010>: [Tod(Iers2010)],
     Tirf => Iau<DynOrigin>: [Cirf, Icrf],
     Tirf => Icrf: [Cirf],
     Tirf => Mod<Iers1996>: [Cirf, Icrf],
@@ -841,7 +841,7 @@ impl_composed!(
     Tirf => Pef<Iers1996>: [Itrf],
     Tirf => Pef<Iers2003>: [Itrf],
     Tirf => Pef<Iers2010>: [Itrf],
-    Tirf => Teme: [Itrf, Pef(Iers1996)],
+    Tirf => Teme: [Cirf, Icrf, Mod(Iers1996), Tod(Iers1996)],
     Tirf => Tod<Iers1996>: [Cirf, Icrf, Mod(Iers1996)],
     Tirf => Tod<Iers2003>: [Cirf, Icrf, Mod(Iers2003::default())],
     Tirf => Tod<Iers2010>: [Cirf, Icrf, Mod(Iers2010)],
@@ -860,9 +860,9 @@ impl_composed!(
     Tod<Iers1996> => Iau<DynOrigin>: [Mod(Iers1996), Icrf],
     Tod<Iers2003> => Iau<DynOrigin>: [Mod(Iers2003::default()), Icrf],
     Tod<Iers2010> => Iau<DynOrigin>: [Mod(Iers2010), Icrf],
-    Tod<Iers1996> => Teme: [Pef(Iers1996)],
-    Tod<Iers2003> => Teme: [Pef(Iers2003::default())],
-    Tod<Iers2010> => Teme: [Pef(Iers2010)],
+    Pef<Iers1996> => Teme: [Tod(Iers1996)],
+    Pef<Iers2003> => Teme: [Tod(Iers2003::default())],
+    Pef<Iers2010> => Teme: [Tod(Iers2010)],
 );
 
 // Dynamic
