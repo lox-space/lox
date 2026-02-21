@@ -19,7 +19,7 @@ use lox_time::{
     utc::{
         Utc, UtcError,
         leap_seconds::{DefaultLeapSecondsProvider, LeapSecondsProvider},
-        transformations::TryToUtc,
+        transformations::ToUtc,
     },
 };
 use serde::Deserialize;
@@ -65,8 +65,6 @@ pub enum EopParserError {
     Csv(String),
     #[error("either a 'finals.all.csv' or a 'finals2000A.all.csv' file needs to be provided")]
     NoFiles,
-    #[error("could not find corresponding leap second for {0}")]
-    LeapSecond(Utc),
     #[error("mismatched dimensions for columns '{0} (n={1})' and '{2} (n={3})'")]
     DimensionMismatch(String, usize, String, usize),
     #[error(transparent)]
@@ -161,9 +159,7 @@ impl EopParser {
                     .lsk
                     .as_ref()
                     .map(|lsp| lsp.delta_utc_tai(utc))
-                    .or_else(|| Some(DefaultLeapSecondsProvider.delta_utc_tai(utc)))
-                    .flatten()
-                    .ok_or(EopParserError::LeapSecond(utc))?;
+                    .unwrap_or_else(|| DefaultLeapSecondsProvider.delta_utc_tai(utc));
                 delta_ut1_tai.push(delta_ut1_utc + delta_tai_utc.to_seconds().to_f64())
             }
 
@@ -224,8 +220,6 @@ impl EopParser {
 
 #[derive(Debug, Error)]
 pub enum EopProviderError {
-    #[error(transparent)]
-    Utc(#[from] UtcError),
     #[error("offset error: {0}")]
     Offset(String),
     #[error("value was extrapolated")]
@@ -253,8 +247,8 @@ pub struct EopProvider {
 }
 
 impl EopProvider {
-    pub fn polar_motion<T: TryToUtc>(&self, t: T) -> Result<PoleCoords, EopProviderError> {
-        let t = t.try_to_utc()?.seconds_since_j2000();
+    pub fn polar_motion<T: ToUtc>(&self, t: T) -> Result<PoleCoords, EopProviderError> {
+        let t = t.to_utc().seconds_since_j2000();
         let xp = self.polar_motion.0.interpolate(t);
         let yp = self.polar_motion.1.interpolate(t);
         let (min, _) = self.polar_motion.0.first();
@@ -268,14 +262,14 @@ impl EopProvider {
         })
     }
 
-    pub fn nutation_precession_iau1980<T: TryToUtc>(
+    pub fn nutation_precession_iau1980<T: ToUtc>(
         &self,
         t: T,
     ) -> Result<Corrections, EopProviderError> {
         let Some(nut_prec) = &self.nut_prec.iau1980 else {
             return Err(EopProviderError::MissingIau1980);
         };
-        let t = t.try_to_utc()?.seconds_since_j2000();
+        let t = t.to_utc().seconds_since_j2000();
         let dpsi = nut_prec.0.interpolate(t);
         let deps = nut_prec.1.interpolate(t);
         let (min, _) = nut_prec.0.first();
@@ -289,14 +283,14 @@ impl EopProvider {
         ))
     }
 
-    pub fn nutation_precession_iau2000<T: TryToUtc>(
+    pub fn nutation_precession_iau2000<T: ToUtc>(
         &self,
         t: T,
     ) -> Result<Corrections, EopProviderError> {
         let Some(nut_prec) = &self.nut_prec.iau2000 else {
             return Err(EopProviderError::MissingIau2000);
         };
-        let t = t.try_to_utc()?.seconds_since_j2000();
+        let t = t.to_utc().seconds_since_j2000();
         let dx = nut_prec.0.interpolate(t);
         let dy = nut_prec.1.interpolate(t);
         let (min, _) = nut_prec.0.first();

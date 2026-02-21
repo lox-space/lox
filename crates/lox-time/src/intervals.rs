@@ -12,9 +12,9 @@ use lox_core::time::deltas::TimeDelta;
 
 use crate::{
     Time,
-    offsets::{DefaultOffsetProvider, TryOffset},
+    offsets::{DefaultOffsetProvider, Offset},
     time_scales::{Tai, TimeScale},
-    utc::{Utc, UtcError, transformations::TryToUtc},
+    utc::{Utc, transformations::ToUtc},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -97,14 +97,14 @@ pub type TimeInterval<T> = Interval<Time<T>>;
 
 impl<T> TimeInterval<T>
 where
-    T: TryToUtc + TimeScale + Copy,
-    DefaultOffsetProvider: TryOffset<T, Tai>,
+    T: ToUtc + TimeScale + Copy,
+    DefaultOffsetProvider: Offset<T, Tai>,
 {
-    pub fn to_utc(&self) -> Result<UtcInterval, UtcError> {
-        Ok(Interval {
-            start: self.start.try_to_utc()?,
-            end: self.end.try_to_utc()?,
-        })
+    pub fn to_utc(&self) -> UtcInterval {
+        Interval {
+            start: self.start.to_utc(),
+            end: self.end.to_utc(),
+        }
     }
 }
 

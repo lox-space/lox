@@ -112,11 +112,11 @@ impl LeapSecondsKernel {
 }
 
 impl LeapSecondsProvider for LeapSecondsKernel {
-    fn delta_tai_utc(&self, tai: Time<Tai>) -> Option<TimeDelta> {
+    fn delta_tai_utc(&self, tai: Time<Tai>) -> TimeDelta {
         find_leap_seconds_tai(&self.epochs_tai, &self.leap_seconds, tai)
     }
 
-    fn delta_utc_tai(&self, utc: Utc) -> Option<TimeDelta> {
+    fn delta_utc_tai(&self, utc: Utc) -> TimeDelta {
         find_leap_seconds_utc(&self.epochs_utc, &self.leap_seconds, utc)
     }
 
@@ -190,34 +190,34 @@ DELTET/DELTA_AT        = ( 10,   @1972-JAN-1
     #[case::before_utc(
         time!(Tai, 1971, 12, 31, 23, 59, 59.0).unwrap(),
         utc!(1971, 12, 31, 23, 59, 59.0).unwrap(),
-        None,
+        TimeDelta::ZERO,
     )]
-    #[case::j2000(Time::default(), Utc::default(), Some(TimeDelta::from_seconds(32)))]
+    #[case::j2000(Time::default(), Utc::default(), TimeDelta::from_seconds(32))]
     #[case::new_year_1972(
         time!(Tai, 1972, 1, 1, 0, 0, 10.0).unwrap(),
         utc!(1972, 1, 1).unwrap(),
-        Some(TimeDelta::from_seconds(10)),
+        TimeDelta::from_seconds(10),
     )]
     #[case::new_year_2017(
         time!(Tai, 2017, 1, 1, 0, 0, 37.0).unwrap(),
         utc!(2017, 1, 1, 0, 0, 0.0).unwrap(),
-        Some(TimeDelta::from_seconds(37)),
+        TimeDelta::from_seconds(37),
     )]
     #[case::new_year_2024(
         time!(Tai, 2024, 1, 1).unwrap(),
         utc!(2024, 1, 1).unwrap(),
-        Some(TimeDelta::from_seconds(37)),
+        TimeDelta::from_seconds(37),
     )]
     fn test_leap_seconds_kernel_leap_seconds(
         #[case] tai: Time<Tai>,
         #[case] utc: Utc,
-        #[case] expected: Option<TimeDelta>,
+        #[case] expected: TimeDelta,
     ) {
         let lsk = kernel();
         let ls_tai = lsk.delta_tai_utc(tai);
         let ls_utc = lsk.delta_utc_tai(utc);
         assert_eq!(ls_tai, expected);
-        assert_eq!(ls_utc, expected.map(|ls| -ls));
+        assert_eq!(ls_utc, -expected);
     }
 
     #[rstest]
