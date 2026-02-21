@@ -45,12 +45,12 @@ pub const LEAP_SECONDS: [i64; 28] = [
 /// an instant in either time scale.
 pub trait LeapSecondsProvider {
     /// The difference in leap seconds between TAI and UTC at the given TAI instant.
-    fn delta_tai_utc(&self, tai: Time<Tai>) -> Option<TimeDelta> {
+    fn delta_tai_utc(&self, tai: Time<Tai>) -> TimeDelta {
         find_leap_seconds_tai(&LEAP_SECOND_EPOCHS_TAI, &LEAP_SECONDS, tai)
     }
 
     /// The difference in leap seconds between UTC and TAI at the given UTC instant.
-    fn delta_utc_tai(&self, utc: Utc) -> Option<TimeDelta> {
+    fn delta_utc_tai(&self, utc: Utc) -> TimeDelta {
         find_leap_seconds_utc(&LEAP_SECOND_EPOCHS_UTC, &LEAP_SECONDS, utc)
     }
 
@@ -76,30 +76,30 @@ pub struct DefaultLeapSecondsProvider;
 
 impl LeapSecondsProvider for DefaultLeapSecondsProvider {}
 
-fn find_leap_seconds(epochs: &[i64], leap_seconds: &[i64], seconds: i64) -> Option<TimeDelta> {
+fn find_leap_seconds(epochs: &[i64], leap_seconds: &[i64], seconds: i64) -> TimeDelta {
     if seconds < epochs[0] {
-        return None;
+        return TimeDelta::ZERO;
     }
     let idx = epochs.partition_point(|&epoch| epoch <= seconds) - 1;
     let seconds = leap_seconds[idx];
-    Some(TimeDelta::from_seconds(seconds))
+    TimeDelta::from_seconds(seconds)
 }
 
-pub fn find_leap_seconds_tai(
-    epochs: &[i64],
-    leap_seconds: &[i64],
-    tai: Time<Tai>,
-) -> Option<TimeDelta> {
-    find_leap_seconds(epochs, leap_seconds, tai.seconds()?)
+pub fn find_leap_seconds_tai(epochs: &[i64], leap_seconds: &[i64], tai: Time<Tai>) -> TimeDelta {
+    let seconds = tai.seconds().expect("TAI time should have finite seconds");
+    find_leap_seconds(epochs, leap_seconds, seconds)
 }
 
-pub fn find_leap_seconds_utc(epochs: &[i64], leap_seconds: &[i64], utc: Utc) -> Option<TimeDelta> {
-    find_leap_seconds(epochs, leap_seconds, utc.to_delta().seconds()?).map(|mut ls| {
-        if utc.second() == 60 {
-            ls -= TimeDelta::from_seconds(1);
-        }
-        -ls
-    })
+pub fn find_leap_seconds_utc(epochs: &[i64], leap_seconds: &[i64], utc: Utc) -> TimeDelta {
+    let seconds = utc
+        .to_delta()
+        .seconds()
+        .expect("UTC time should have finite seconds");
+    let mut ls = find_leap_seconds(epochs, leap_seconds, seconds);
+    if utc.second() == 60 {
+        ls -= TimeDelta::from_seconds(1);
+    }
+    -ls
 }
 
 pub fn is_leap_second_date(epochs: &[i64], date: Date) -> bool {
@@ -137,8 +137,8 @@ mod tests {
     #[case::new_year_2017(time!(Tai, 2017, 1, 1, 0, 0, 37.0).unwrap(), utc!(2017, 1, 1, 0, 0, 0.0).unwrap(), 37)]
     #[case::new_year_2024(time!(Tai, 2024, 1, 1).unwrap(), utc!(2024, 1, 1).unwrap(), 37)]
     fn test_builtin_leap_seconds(#[case] tai: Time<Tai>, #[case] utc: Utc, #[case] expected: i64) {
-        let ls_tai = DefaultLeapSecondsProvider.delta_tai_utc(tai).unwrap();
-        let ls_utc = DefaultLeapSecondsProvider.delta_utc_tai(utc).unwrap();
+        let ls_tai = DefaultLeapSecondsProvider.delta_tai_utc(tai);
+        let ls_utc = DefaultLeapSecondsProvider.delta_utc_tai(utc);
         assert_eq!(ls_tai, TimeDelta::from_seconds(expected));
         assert_eq!(ls_utc, TimeDelta::from_seconds(-expected));
     }

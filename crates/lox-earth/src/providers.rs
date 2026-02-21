@@ -12,17 +12,17 @@ use lox_time::offsets::{OffsetProvider, TryOffset};
 use lox_time::time_scales::{Tai, TimeScale};
 use lox_time::utc::Utc;
 use lox_time::utc::leap_seconds::{DefaultLeapSecondsProvider, LeapSecondsProvider};
-use lox_time::utc::transformations::TryToUtc;
+use lox_time::utc::transformations::ToUtc;
 
 impl LeapSecondsProvider for EopProvider {
-    fn delta_tai_utc(&self, tai: Time<Tai>) -> Option<TimeDelta> {
+    fn delta_tai_utc(&self, tai: Time<Tai>) -> TimeDelta {
         self.get_lsk().map_or_else(
             || DefaultLeapSecondsProvider.delta_tai_utc(tai),
             |lsk| lsk.delta_tai_utc(tai),
         )
     }
 
-    fn delta_utc_tai(&self, utc: Utc) -> Option<TimeDelta> {
+    fn delta_utc_tai(&self, utc: Utc) -> TimeDelta {
         self.get_lsk().map_or_else(
             || DefaultLeapSecondsProvider.delta_utc_tai(utc),
             |lsk| lsk.delta_utc_tai(utc),
@@ -71,7 +71,7 @@ where
         let utc = time
             .try_to_scale(Tai, self)
             .map_err(|err| EopProviderError::Offset(err.to_string()))?
-            .try_to_utc()?;
+            .to_utc();
         match sys {
             ReferenceSystem::Iers1996 => self.nutation_precession_iau1980(utc),
             ReferenceSystem::Iers2003(_) | ReferenceSystem::Iers2010 => {
@@ -84,7 +84,7 @@ where
         let utc = time
             .try_to_scale(Tai, self)
             .map_err(|err| EopProviderError::Offset(err.to_string()))?
-            .try_to_utc()?;
+            .to_utc();
         self.polar_motion(utc)
     }
 }
@@ -107,7 +107,7 @@ mod tests {
     use lox_time::time;
     use lox_time::time_scales::DynTimeScale;
     use lox_time::time_scales::{Tai, Ut1};
-    use lox_time::utc::transformations::TryToUtc;
+    use lox_time::utc::transformations::ToUtc;
     use lox_time::{DynTime, calendar_dates::Date, time_of_day::TimeOfDay};
     use rstest::{fixture, rstest};
 
@@ -274,13 +274,9 @@ mod tests {
     #[test]
     fn test_ut1_to_utc() {
         let tai = time!(Tai, 2024, 5, 17, 12, 13, 14.0).unwrap();
-        let exp = tai.try_to_utc().unwrap();
+        let exp = tai.to_utc();
         let ut1 = tai.try_to_scale(Ut1, provider()).unwrap();
-        let act = ut1
-            .try_to_scale(Tai, provider())
-            .unwrap()
-            .try_to_utc()
-            .unwrap();
+        let act = ut1.try_to_scale(Tai, provider()).unwrap().to_utc();
         assert_eq!(act, exp);
     }
 

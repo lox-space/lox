@@ -40,36 +40,45 @@ const DRIFT_RATES: [f64; 14] = [
     0.0012960, 0.0012960, 0.0012960, 0.0012960, 0.0025920, 0.0025920,
 ];
 
-/// UTC minus TAI. Returns [None] if the input is before 1960-01-01, when UTC is defined from,
-/// although this is impossible for all properly constructed [UtcDateTime] instances.
-pub fn delta_utc_tai(utc: &Utc) -> Option<TimeDelta> {
+/// UTC minus TAI. Returns [TimeDelta::ZERO] for dates before the pre-1972 table (i.e. before 1960).
+pub fn delta_utc_tai(utc: &Utc) -> TimeDelta {
     // Invariant: EPOCHS must be sorted for the search below to work
     debug_assert!(&EPOCHS.is_strictly_increasing());
 
     let mjd = utc.to_delta().days_since_modified_julian_epoch();
+    if mjd < EPOCHS[0] as f64 {
+        return TimeDelta::ZERO;
+    }
     let threshold = mjd.floor() as u64;
-    let position = EPOCHS.iter().rposition(|item| item <= &threshold)?;
+    let position = EPOCHS
+        .iter()
+        .rposition(|item| item <= &threshold)
+        .expect("threshold is >= EPOCHS[0]");
     let raw_delta =
         OFFSETS[position] + (mjd - DRIFT_EPOCHS[position] as f64) * DRIFT_RATES[position];
     let delta = TimeDelta::from_seconds_f64(raw_delta);
 
-    Some(-delta)
+    -delta
 }
 
-/// TAI minus UTC.
-pub fn delta_tai_utc(tai: &Time<Tai>) -> Option<TimeDelta> {
+/// TAI minus UTC. Returns [TimeDelta::ZERO] for dates before the pre-1972 table (i.e. before 1960).
+pub fn delta_tai_utc(tai: &Time<Tai>) -> TimeDelta {
     // Invariant: EPOCHS must be sorted for the search below to work
     debug_assert!(&EPOCHS.is_strictly_increasing());
 
     let mjd = tai.julian_date(ModifiedJulianDate, Days);
+    if mjd < EPOCHS[0] as f64 {
+        return TimeDelta::ZERO;
+    }
     let threshold = mjd.floor() as u64;
-    let position = EPOCHS.iter().rposition(|item| item <= &threshold)?;
+    let position = EPOCHS
+        .iter()
+        .rposition(|item| item <= &threshold)
+        .expect("threshold is >= EPOCHS[0]");
     let rate_utc = DRIFT_RATES[position] / SECONDS_PER_DAY;
     let rate_tai = rate_utc / (1.0 + rate_utc) * SECONDS_PER_DAY;
     let offset = OFFSETS[position];
     let dt = mjd - DRIFT_EPOCHS[position] as f64 - offset / SECONDS_PER_DAY;
     let raw_delta = offset + dt * rate_tai;
-    let delta = TimeDelta::from_seconds_f64(raw_delta);
-
-    Some(delta)
+    TimeDelta::from_seconds_f64(raw_delta)
 }

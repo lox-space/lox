@@ -27,21 +27,18 @@ impl OffsetProvider for DefaultRotationProvider {
     type Error = Infallible;
 
     fn tai_to_ut1(&self, delta: TimeDelta) -> Result<TimeDelta, Self::Error> {
+        let Some(_) = delta.seconds() else {
+            return Ok(TimeDelta::ZERO);
+        };
         let tai = Time::from_delta(Tai, delta);
-        Ok(DefaultLeapSecondsProvider
-            .delta_tai_utc(tai)
-            .unwrap_or_default())
+        Ok(DefaultLeapSecondsProvider.delta_tai_utc(tai))
     }
 
     fn ut1_to_tai(&self, delta: TimeDelta) -> Result<TimeDelta, Self::Error> {
-        Ok(Utc::from_delta(delta)
-            .ok()
-            .map(|utc| {
-                DefaultLeapSecondsProvider
-                    .delta_utc_tai(utc)
-                    .unwrap_or_default()
-            })
-            .unwrap_or_default())
+        let Ok(utc) = Utc::from_delta(delta) else {
+            return Ok(TimeDelta::ZERO);
+        };
+        Ok(DefaultLeapSecondsProvider.delta_utc_tai(utc))
     }
 }
 

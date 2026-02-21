@@ -36,12 +36,10 @@ pub enum UtcError {
     TimeError(#[from] TimeOfDayError),
     #[error("no leap second on {0}")]
     NonLeapSecondDate(Date),
-    #[error("UTC is not defined for dates before 1960-01-01")]
+    #[error("unable to construct UTC datetime")]
     UtcUndefined,
     #[error("invalid ISO string `{0}`")]
     InvalidIsoString(String),
-    #[error("UT1 transformation error: {0}")]
-    Ut1(String),
 }
 
 /// Coordinated Universal Time.
@@ -58,7 +56,6 @@ impl Utc {
     ///
     /// # Errors
     ///
-    /// - [UtcError::UtcUndefined] if the date is before 1960-01-01.
     /// - [UtcError::NonLeapSecondDate] if `time.seconds` is 60 seconds and the date is not a leap
     ///   second date.
     pub fn new(
@@ -66,9 +63,6 @@ impl Utc {
         time: TimeOfDay,
         provider: &impl LeapSecondsProvider,
     ) -> Result<Self, UtcError> {
-        if date.year() < 1960 {
-            return Err(UtcError::UtcUndefined);
-        }
         if time.second() == 60 && !provider.is_leap_second_date(date) {
             return Err(UtcError::NonLeapSecondDate(date));
         }
@@ -88,7 +82,6 @@ impl Utc {
     /// - [UtcError::InvalidIsoString] if the input string is not a valid ISO 8601 string.
     /// - [UtcError::DateError] if the date component of the string is invalid.
     /// - [UtcError::TimeError] if the time component of the string is invalid.
-    /// - [UtcError::UtcUndefined] if the date is before 1960-01-01.
     /// - [UtcError::NonLeapSecondDate] if the time component is 60 seconds and the date is not a
     ///   leap second date.
     pub fn from_iso_with_provider<T: LeapSecondsProvider>(
@@ -307,10 +300,9 @@ mod tests {
     }
 
     #[test]
-    fn test_utc_undefined() {
+    fn test_utc_before_1960() {
         let actual = Utc::builder().with_ymd(1959, 12, 31).build();
-        let expected = Err(UtcError::UtcUndefined);
-        assert_eq!(actual, expected)
+        assert!(actual.is_ok());
     }
 
     #[test]

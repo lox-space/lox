@@ -20,11 +20,10 @@ use crate::time::calendar_dates::{CalendarDate, Date};
 use crate::time::deltas::{TimeDelta, ToDelta};
 use crate::time::julian_dates::{Epoch, JulianDate, Unit};
 use crate::time::python::deltas::PyTimeDelta;
-use crate::time::python::utc::PyUtcError;
 use crate::time::time::{DynTime, Time, TimeError};
 use crate::time::time_of_day::{CivilTime, TimeOfDay};
 use crate::time::time_scales::Tai;
-use crate::time::utc::transformations::TryToUtc;
+use crate::time::utc::transformations::ToUtc;
 
 use super::time_scales::PyTimeScale;
 use super::utc::PyUtc;
@@ -527,8 +526,7 @@ impl PyTime {
                 .map_err(PyEopProviderError)?,
             None => self.0.to_scale(Tai),
         }
-        .try_to_utc()
-        .map_err(PyUtcError)?;
+        .to_utc();
         Ok(PyUtc(utc))
     }
 }
