@@ -12,6 +12,7 @@ import lox_space as lox
 
 DATA_DIR = pathlib.Path(__file__).parents[3].joinpath("data")
 
+
 @pytest.fixture(scope="session")
 def data_dir():
     return DATA_DIR

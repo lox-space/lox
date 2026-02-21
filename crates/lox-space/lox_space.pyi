@@ -15,6 +15,7 @@ type Vec3 = tuple[float, float, float]
 # Exceptions
 class NonFiniteTimeDeltaError(Exception):
     """Raised when a TimeDelta operation produces a non-finite result."""
+
     ...
 
 # Unit classes
@@ -680,8 +681,12 @@ class SGP4:
     @overload
     def propagate(self, time: Time, provider: EOPProvider | None = None) -> State: ...
     @overload
-    def propagate(self, time: list[Time], provider: EOPProvider | None = None) -> Trajectory: ...
-    def propagate(self, time: Time | list[Time], provider: EOPProvider | None = None) -> State | Trajectory:
+    def propagate(
+        self, time: list[Time], provider: EOPProvider | None = None
+    ) -> Trajectory: ...
+    def propagate(
+        self, time: Time | list[Time], provider: EOPProvider | None = None
+    ) -> State | Trajectory:
         """Propagate the orbit to one or more times."""
         ...
 

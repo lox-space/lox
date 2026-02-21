@@ -8,6 +8,7 @@ import numpy.testing as npt
 import pytest
 import spiceypy as spice
 
+
 @pytest.fixture(scope="session")
 def kernels(data_dir):
     lsk = data_dir / "spice" / "naif0012.tls"

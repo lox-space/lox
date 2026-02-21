@@ -21,7 +21,7 @@ lox-ephem.workspace = true
 lox-frames.workspace = true
 lox-math.workspace = true
 lox-test-utils.workspace = true
-lox-time.workspace = true
+lox-time = { workspace = true, features = ["chrono"] }
 lox-units.workspace = true
 
 csv.workspace = true
@@ -36,7 +36,13 @@ sgp4.workspace = true
 thiserror.workspace = true
 
 [features]
-serde = ["dep:serde", "lox-bodies/serde", "lox-frames/serde", "lox-time/serde", "lox-core/serde"]
+serde = [
+  "dep:serde",
+  "lox-bodies/serde",
+  "lox-frames/serde",
+  "lox-time/serde",
+  "lox-core/serde",
+]
 
 [dev-dependencies]
 rstest.workspace = true
