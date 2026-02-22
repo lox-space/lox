@@ -389,7 +389,7 @@ mod tests {
         // direct epsa.cos() * dpsi + complementary_terms. The ~8e-13 rad difference
         // (~0.2 μas) is expected.
         let time = Time::from_two_part_julian_date(Tt, 2400000.5, 53736.0);
-        let exp = EquationOfTheEquinoxes(Angle::new(-8.834_195_072_043_790e-6));
+        let exp = EquationOfTheEquinoxes(Angle::new(-8.834_195_072_043_79e-6));
         let act = EquationOfTheEquinoxes::iau2006a(time);
         assert_approx_eq!(act, exp, atol <= 1e-12);
     }
