@@ -20,6 +20,7 @@ Lox provides tools for space mission analysis and orbital mechanics:
 - **Orbital states** in Cartesian and Keplerian representations
 - **Propagators** for orbit prediction (analytical and SGP4)
 - **Ground station** analysis and visibility calculations
+- **RF link budgets** for space communication systems
 - **Coordinate transformations** between reference frames
 
 ## Quick Start
@@ -58,6 +59,7 @@ future_state = propagator.propagate(t + lox.TimeDelta.from_hours(1.5))
 | [Propagators](propagators.md) | `Vallado`, `SGP4`, `GroundPropagator` |
 | [Ground Stations](ground.md) | `GroundLocation`, `ElevationMask`, `Observables`, `Pass` |
 | [Events & Visibility](events.md) | `Event`, `Window`, `find_events`, `find_windows`, `visibility`, `visibility_all` |
+| [Communications](comms.md) | `Decibel`, `Transmitter`, `CommunicationSystem`, `Channel`, `LinkStats` |
 | [Data Providers](data.md) | `EOPProvider`, `Series` |
 | [Units](units.md) | `Angle`, `Distance`, `Frequency`, `Velocity` |
 
