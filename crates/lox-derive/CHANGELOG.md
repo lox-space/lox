@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.6](https://github.com/lox-space/lox/compare/lox-derive-v0.1.0-alpha.5...lox-derive-v0.1.0-alpha.6) - 2026-02-22
+
+### Other
+
+- *(lox-time)* implement offsets via `OffsetProvider` trait
+
 ## [0.1.0-alpha.5](https://github.com/lox-space/lox/compare/lox-derive-v0.1.0-alpha.4...lox-derive-v0.1.0-alpha.5) - 2025-10-29
 
 ### Added
