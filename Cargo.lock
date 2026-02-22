@@ -583,6 +583,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "lox-comms"
+version = "0.1.0-alpha.1"
+dependencies = [
+ "glam 0.30.9",
+ "lox-core",
+ "lox-test-utils",
+ "rstest",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "lox-core"
 version = "0.1.0-alpha.1"
 dependencies = [
@@ -723,6 +735,7 @@ version = "0.1.0-alpha.29"
 dependencies = [
  "glam 0.30.9",
  "lox-bodies",
+ "lox-comms",
  "lox-core",
  "lox-earth",
  "lox-ephem",

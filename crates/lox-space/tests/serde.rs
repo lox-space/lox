@@ -152,7 +152,7 @@ fn test_state_json_structure() {
         Earth,
         Icrf,
     );
-    let json: serde_json::Value = serde_json::to_value(&state).expect("serialize");
+    let json: serde_json::Value = serde_json::to_value(state).expect("serialize");
     assert!(json.get("time").is_some());
     assert!(json.get("state").is_some());
     assert!(json.get("origin").is_some());

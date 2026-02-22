@@ -1,0 +1,27 @@
+# SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+#
+# SPDX-License-Identifier: MPL-2.0
+
+[package]
+name = "lox-comms"
+description = "Communication systems and link budget analysis for the Lox Astrodynamics Toolkit"
+version = "0.1.0-alpha.1"
+rust-version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+lox-core = { workspace = true }
+lox-test-utils = { workspace = true, features = ["derive"] }
+
+glam.workspace = true
+serde = { workspace = true, optional = true }
+thiserror.workspace = true
+
+[features]
+serde = ["dep:serde", "lox-core/serde", "glam/serde"]
+
+[dev-dependencies]
+rstest.workspace = true
