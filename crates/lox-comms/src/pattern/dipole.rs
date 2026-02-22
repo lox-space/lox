@@ -22,6 +22,7 @@ const MINF_GAIN_LINEAR: f64 = 1e-12;
 const SHORT_DIPOLE_LIMIT: f64 = 0.1;
 
 /// Dipole antenna gain pattern.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DipolePattern {
     /// Dipole length.
     pub length: Distance,

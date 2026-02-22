@@ -8,6 +8,7 @@ use lox_core::units::Decibel;
 
 /// Digital modulation scheme.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Modulation {
     Bpsk,
     Qpsk,
@@ -37,12 +38,14 @@ impl Modulation {
 
 /// Link direction.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum LinkDirection {
     Uplink,
     Downlink,
 }
 
 /// A communication channel.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Channel {
     /// Link direction.
     pub link_type: LinkDirection,
