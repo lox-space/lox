@@ -9,7 +9,7 @@ use thiserror::Error;
 
 use crate::{
     frames::{Cirf, Icrf, Itrf, Mod, Pef, Teme, Tirf, Tod},
-    iers::ReferenceSystem,
+    iers::{Iau2000Model, ReferenceSystem},
     traits::{
         NonBodyFixedFrameError, NonQuasiInertialFrameError, ReferenceFrame, TryBodyFixed,
         TryQuasiInertial, frame_id,
@@ -127,6 +127,15 @@ impl FromStr for DynFrame {
             "tirf" | "TIRF" => Ok(DynFrame::Tirf),
             "itrf" | "ITRF" => Ok(DynFrame::Itrf),
             "teme" | "TEME" => Ok(DynFrame::Teme),
+            "mod" | "MOD" => Ok(DynFrame::Mod(ReferenceSystem::Iers1996)),
+            "tod" | "TOD" => Ok(DynFrame::Tod(ReferenceSystem::Iers1996)),
+            "pef" | "PEF" => Ok(DynFrame::Pef(ReferenceSystem::Iers1996)),
+            "MOD_IERS2003" => Ok(DynFrame::Mod(ReferenceSystem::Iers2003(Iau2000Model::A))),
+            "TOD_IERS2003" => Ok(DynFrame::Tod(ReferenceSystem::Iers2003(Iau2000Model::A))),
+            "PEF_IERS2003" => Ok(DynFrame::Pef(ReferenceSystem::Iers2003(Iau2000Model::A))),
+            "MOD_IERS2010" => Ok(DynFrame::Mod(ReferenceSystem::Iers2010)),
+            "TOD_IERS2010" => Ok(DynFrame::Tod(ReferenceSystem::Iers2010)),
+            "PEF_IERS2010" => Ok(DynFrame::Pef(ReferenceSystem::Iers2010)),
             _ => {
                 if let Some(frame) = parse_iau_frame(s) {
                     Ok(frame)
@@ -200,6 +209,33 @@ mod tests {
         let (r_act, v_act) = rot.rotate_state(r, v);
         assert_approx_eq!(r_act, r_exp, rtol <= 1e-8);
         assert_approx_eq!(v_act, v_exp, rtol <= 1e-5);
+    }
+
+    #[rstest]
+    #[case("MOD", DynFrame::Mod(ReferenceSystem::Iers1996))]
+    #[case("mod", DynFrame::Mod(ReferenceSystem::Iers1996))]
+    #[case("TOD", DynFrame::Tod(ReferenceSystem::Iers1996))]
+    #[case("tod", DynFrame::Tod(ReferenceSystem::Iers1996))]
+    #[case("PEF", DynFrame::Pef(ReferenceSystem::Iers1996))]
+    #[case("pef", DynFrame::Pef(ReferenceSystem::Iers1996))]
+    #[case(
+        "MOD_IERS2003",
+        DynFrame::Mod(ReferenceSystem::Iers2003(Iau2000Model::A))
+    )]
+    #[case(
+        "TOD_IERS2003",
+        DynFrame::Tod(ReferenceSystem::Iers2003(Iau2000Model::A))
+    )]
+    #[case(
+        "PEF_IERS2003",
+        DynFrame::Pef(ReferenceSystem::Iers2003(Iau2000Model::A))
+    )]
+    #[case("MOD_IERS2010", DynFrame::Mod(ReferenceSystem::Iers2010))]
+    #[case("TOD_IERS2010", DynFrame::Tod(ReferenceSystem::Iers2010))]
+    #[case("PEF_IERS2010", DynFrame::Pef(ReferenceSystem::Iers2010))]
+    fn test_parse_equinox_frames(#[case] name: &str, #[case] exp: DynFrame) {
+        let act: DynFrame = name.parse().unwrap();
+        assert_eq!(act, exp);
     }
 
     #[test]

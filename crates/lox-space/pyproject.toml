@@ -15,6 +15,7 @@ dynamic = ["version"]
 
 [dependency-groups]
 dev = [
+  "astropy>=6.0",
   "black",
   "ipython",
   "maturin",
