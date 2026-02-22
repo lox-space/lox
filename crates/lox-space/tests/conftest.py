@@ -20,7 +20,10 @@ def data_dir():
 
 @pytest.fixture(scope="session")
 def provider():
-    return lox.EOPProvider(DATA_DIR.joinpath("iers/finals2000A.all.csv"))
+    return lox.EOPProvider(
+        DATA_DIR.joinpath("iers/finals.all.csv"),
+        DATA_DIR.joinpath("iers/finals2000A.all.csv"),
+    )
 
 
 @pytest.fixture(scope="session")
