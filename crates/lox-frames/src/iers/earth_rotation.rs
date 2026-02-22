@@ -67,12 +67,13 @@ impl ReferenceSystem {
         let rpb = self.bias_precession_matrix(tt);
         let epsa = self.mean_obliquity(tt);
         let mut nut = self.nutation(tdb);
-        nut += self.ecliptic_corrections(corr, nut, epsa, rpb);
+        let ecl_corr = self.ecliptic_corrections(corr, nut, epsa, rpb);
+        nut += ecl_corr;
         match self {
             ReferenceSystem::Iers1996 => {
                 let ee = EquationOfTheEquinoxes::iau1994(tdb);
                 GreenwichApparentSiderealTime(
-                    (gmst.0 + ee.0 + epsa.0.cos() * nut.dpsi).mod_two_pi(),
+                    (gmst.0 + ee.0 + epsa.0.cos() * ecl_corr.0).mod_two_pi(),
                 )
             }
             ReferenceSystem::Iers2003(_) => {
