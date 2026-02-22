@@ -6,6 +6,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.22](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.21...lox-orbits-v0.1.0-alpha.22) - 2026-02-22
+
+### Added
+
+- add optional serde feature
+- *(lox-orbits)* implement basic J2 numerical propagator
+- *(lox-time)* use compensated sum for two-float deltas
+- *(lox-time)* add intervals
+- *(lox-orbits)* add inclination to SSOBuilder
+- *(lox-orbits)* re-design trajectories
+- add SSO builder and Earth ephemeris
+
+### Fixed
+
+- *(lox-frames/lox-orbits)* fix TEME transformation
+- *(lox-orbits)* fix unit mismatches
+- *(lox-orbits)* error when encountering invalid SSO
+
+### Other
+
+- *(lox-orbits)* deduplicate API
+- *(lox-orbits)* split orbits.rs into submodules
+- *(lox-orbits)* add missing features to new API
+- clean up lints and simplify errors
+- fix linting error
+- rewrite from closures to a Callback trait, should_panic for roots tests
+- expect success in visibility test
+- Remove redundant closure
+- Combine all root errors to common error domain, bubble up errors everywhere.
+- *(lox-core)* simplify Series type
+- *(lox-frames)* rewrite frame transforms
+- *(lox-orbits)* rename to SsoBuilder
+- refactor orbit tracing
+
 ## [0.1.0-alpha.21](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.20...lox-orbits-v0.1.0-alpha.21) - 2025-10-29
 
 ### Added

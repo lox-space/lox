@@ -6,6 +6,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.12](https://github.com/lox-space/lox/compare/lox-bodies-v0.1.0-alpha.11...lox-bodies-v0.1.0-alpha.12) - 2026-02-22
+
+### Added
+
+- add optional serde feature
+- *(lox-orbits)* implement basic J2 numerical propagator
+
+### Other
+
+- *(lox-orbits)* deduplicate API
+- *(lox-bodies)* improve test coverage
+- *(lox-bodies)* improve test coverage
+- *(lox-bodies)* add more tests for generated code
+- generated file with unit tests
+- *(lox-frames)* rewrite frame transforms
+
 ## [0.1.0-alpha.11](https://github.com/lox-space/lox/compare/lox-bodies-v0.1.0-alpha.10...lox-bodies-v0.1.0-alpha.11) - 2025-10-29
 
 ### Added
