@@ -832,6 +832,7 @@ dependencies = [
  "codspeed-divan-compat",
  "glam 0.30.9",
  "lox-bodies",
+ "lox-comms",
  "lox-core",
  "lox-earth",
  "lox-ephem",
