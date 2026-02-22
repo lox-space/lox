@@ -735,6 +735,7 @@ version = "0.1.0-alpha.29"
 dependencies = [
  "glam 0.30.9",
  "lox-bodies",
+ "lox-comms",
  "lox-core",
  "lox-earth",
  "lox-ephem",

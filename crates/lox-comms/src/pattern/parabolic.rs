@@ -6,7 +6,7 @@
 //!
 //! Reference: Equation 17 of ALMA Memo 456.
 
-use std::f64::consts::PI;
+use std::f64::consts::{FRAC_2_PI, PI};
 
 use lox_core::units::{Angle, Decibel, Distance, Frequency};
 
@@ -125,7 +125,7 @@ fn bessel_j1(x: f64) -> f64 {
             + y * (-0.2002690873e-3
                 + y * (0.8449199096e-5 + y * (-0.88228987e-6 + y * 0.105787412e-6)));
 
-        let amplitude = (0.636_619_772 / ax).sqrt();
+        let amplitude = (FRAC_2_PI / ax).sqrt();
         let result = amplitude * (xx.cos() * p1 - z * xx.sin() * q1);
         if x < 0.0 { -result } else { result }
     }
