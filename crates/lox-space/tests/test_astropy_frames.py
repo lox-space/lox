@@ -16,7 +16,7 @@ Astropy frame mapping:
     | ICRF         | GCRS          | Equivalent for geocentric          |
     | CIRF         | CIRS          | CIO-based intermediate             |
     | ITRF         | ITRS          | Earth-fixed                        |
-    | TOD_IERS2003 | TETE          | True Equator True Equinox (2000A)  |
+    | TOD(IERS2003)| TETE          | True Equator True Equinox (2000A)  |
 """
 
 import numpy as np
@@ -135,10 +135,10 @@ def test_icrf_to_cirf(epoch, provider):
 # ---------------------------------------------------------------------------
 @pytest.mark.parametrize("epoch", EPOCHS)
 def test_icrf_to_tod(epoch, provider):
-    """Validate equinox-based TOD_IERS2003 against Astropy GCRS -> TETE."""
-    # Lox — TOD_IERS2003 uses IAU 2000A nutation, matching Astropy's TETE
+    """Validate equinox-based TOD(IERS2003) against Astropy GCRS -> TETE."""
+    # Lox — TOD(IERS2003) uses IAU 2000A nutation, matching Astropy's TETE
     state_icrf = _lox_state(epoch)
-    state_tod = state_icrf.to_frame(lox.Frame("TOD_IERS2003"), provider)
+    state_tod = state_icrf.to_frame(lox.Frame("TOD(IERS2003)"), provider)
     lox_pos = np.array(state_tod.position())
     lox_vel = np.array(state_tod.velocity())
 
