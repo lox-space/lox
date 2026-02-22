@@ -59,7 +59,7 @@ impl ReferenceSystem {
                     Iau2000Model::A => Gast::iau2000a(tt, ut1),
                     Iau2000Model::B => Gast::iau2000b(tt, ut1),
                 },
-                ReferenceSystem::Iers2010 => todo!(),
+                ReferenceSystem::Iers2010 => Gast::iau2006a(tt, ut1),
             };
         };
         let gmst = self.greenwich_mean_sidereal_time(tt, ut1);
@@ -79,7 +79,10 @@ impl ReferenceSystem {
                 let ee = EquationOfTheEquinoxes::iau2000(tt, epsa.0, nut.dpsi);
                 GreenwichApparentSiderealTime((gmst.0 + ee.0).mod_two_pi())
             }
-            ReferenceSystem::Iers2010 => todo!(),
+            ReferenceSystem::Iers2010 => {
+                let ee = EquationOfTheEquinoxes::iau2000(tt, epsa.0, nut.dpsi);
+                GreenwichApparentSiderealTime((gmst.0 + ee.0).mod_two_pi())
+            }
         }
     }
 }
@@ -180,6 +183,14 @@ impl GreenwichApparentSiderealTime {
                 .mod_two_pi(),
         )
     }
+
+    pub fn iau2006a(tt: Time<Tt>, ut1: Time<Ut1>) -> Self {
+        Self(
+            (GreenwichMeanSiderealTime::iau2006(tt, ut1).0
+                + EquationOfTheEquinoxes::iau2006a(tt).0)
+                .mod_two_pi(),
+        )
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialOrd, PartialEq, ApproxEq)]
@@ -211,6 +222,12 @@ impl EquationOfTheEquinoxes {
         let epsa = MeanObliquity::iau1980(time).0 + depspr;
         let Nutation { dpsi, .. } = Nutation::iau2000b(time.with_scale(Tdb));
         Self::iau2000(time, epsa, dpsi)
+    }
+
+    pub fn iau2006a(time: Time<Tt>) -> Self {
+        let epsa = MeanObliquity::iau2006(time);
+        let Nutation { dpsi, .. } = Nutation::iau2006a(time.with_scale(Tdb));
+        Self::iau2000(time, epsa.0, dpsi)
     }
 
     pub fn iau2000(time: Time<Tt>, epsa: Angle, dpsi: Angle) -> Self {
@@ -353,5 +370,26 @@ mod tests {
         let exp = Angle::new(2.046_085_004_885_125e-9);
         let act = EquationOfTheEquinoxes::complimentary_terms_iau2000(time);
         assert_approx_eq!(act, exp, atol <= 1e-20);
+    }
+
+    #[test]
+    fn test_greenwich_apparent_sidereal_time_iau2006a() {
+        let tt = Time::from_two_part_julian_date(Tt, 2400000.5, 53736.0);
+        let ut1 = Time::from_two_part_julian_date(Ut1, 2400000.5, 53736.0);
+        let exp = GreenwichApparentSiderealTime(Angle::new(1.754_166_137_675_019_2));
+        let act = Gast::iau2006a(tt, ut1);
+        assert_approx_eq!(act, exp, rtol <= 1e-12);
+    }
+
+    #[test]
+    fn test_equation_of_the_equinoxes_iau2006a() {
+        // ERFA ee06a reference value. ERFA computes this via gst06a - gmst06 which
+        // takes a different computational path (through the full NPB matrix) than our
+        // direct epsa.cos() * dpsi + complementary_terms. The ~8e-13 rad difference
+        // (~0.2 μas) is expected.
+        let time = Time::from_two_part_julian_date(Tt, 2400000.5, 53736.0);
+        let exp = EquationOfTheEquinoxes(Angle::new(-8.834_195_072_043_790e-6));
+        let act = EquationOfTheEquinoxes::iau2006a(time);
+        assert_approx_eq!(act, exp, atol <= 1e-12);
     }
 }
