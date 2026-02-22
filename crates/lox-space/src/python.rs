@@ -5,6 +5,11 @@
 use std::f64::consts::PI;
 
 use crate::bodies::python::PyOrigin;
+use crate::comms::python::{
+    PyChannel, PyCommunicationSystem, PyComplexAntenna, PyComplexReceiver, PyDecibel,
+    PyDipolePattern, PyEnvironmentalLosses, PyGaussianPattern, PyLinkStats, PyModulation,
+    PyParabolicPattern, PySimpleAntenna, PySimpleReceiver, PyTransmitter, freq_overlap, fspl,
+};
 use crate::earth::python::ut1::{EopParserError, EopProviderError, PyEopProvider};
 use crate::ephem::python::PySpk;
 use crate::frames::python::PyFrame;
@@ -33,6 +38,24 @@ use pyo3::prelude::*;
 fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // bodies
     m.add_class::<PyOrigin>()?;
+
+    // comms
+    m.add_class::<PyDecibel>()?;
+    m.add_class::<PyModulation>()?;
+    m.add_class::<PyParabolicPattern>()?;
+    m.add_class::<PyGaussianPattern>()?;
+    m.add_class::<PyDipolePattern>()?;
+    m.add_class::<PySimpleAntenna>()?;
+    m.add_class::<PyComplexAntenna>()?;
+    m.add_class::<PyTransmitter>()?;
+    m.add_class::<PySimpleReceiver>()?;
+    m.add_class::<PyComplexReceiver>()?;
+    m.add_class::<PyChannel>()?;
+    m.add_class::<PyEnvironmentalLosses>()?;
+    m.add_class::<PyCommunicationSystem>()?;
+    m.add_class::<PyLinkStats>()?;
+    m.add_function(wrap_pyfunction!(fspl, m)?)?;
+    m.add_function(wrap_pyfunction!(freq_overlap, m)?)?;
 
     // earth
     m.add_class::<PyEopProvider>()?;

@@ -110,7 +110,7 @@ impl AntennaGain for DipolePattern {
 /// `n` must be even.
 fn simpsons_rule(a: f64, b: f64, n: usize, f: impl Fn(f64) -> f64) -> f64 {
     debug_assert!(
-        n % 2 == 0,
+        n.is_multiple_of(2),
         "Simpson's rule requires an even number of intervals"
     );
     let h = (b - a) / n as f64;
