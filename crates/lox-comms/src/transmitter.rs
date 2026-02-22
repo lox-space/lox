@@ -9,6 +9,7 @@ use lox_core::units::{Angle, Decibel, Frequency};
 use crate::antenna::AntennaGain;
 
 /// A radio transmitter.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Transmitter {
     /// Transmit frequency.
     pub frequency: Frequency,
