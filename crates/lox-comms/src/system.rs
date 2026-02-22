@@ -13,6 +13,7 @@ use crate::transmitter::Transmitter;
 use crate::utils::free_space_path_loss;
 
 /// A communication system combining an antenna with optional transmitter and receiver.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CommunicationSystem {
     /// The antenna.
     pub antenna: Antenna,

@@ -13,6 +13,7 @@ use crate::utils::free_space_path_loss;
 /// Environmental losses (rain, atmospheric, etc.).
 ///
 /// ITU-R computation is out of scope; construct manually or use [`EnvironmentalLosses::none`].
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct EnvironmentalLosses {
     /// Rain attenuation.
     pub rain: Decibel,
@@ -53,6 +54,7 @@ impl EnvironmentalLosses {
 }
 
 /// Interference statistics for a link.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct InterferenceStats {
     /// Interference power in watts.
     pub interference_power_w: f64,
@@ -65,6 +67,7 @@ pub struct InterferenceStats {
 }
 
 /// Complete link budget statistics.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct LinkStats {
     /// Slant range between TX and RX.
     pub slant_range: Distance,

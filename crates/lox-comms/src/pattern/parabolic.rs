@@ -22,6 +22,7 @@ const DIV_BY_ZERO_LIMIT: f64 = 1e-6;
 const MINF_GAIN_LINEAR: f64 = 1e-12;
 
 /// Parabolic antenna gain pattern (uniform illuminated aperture).
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ParabolicPattern {
     /// Antenna diameter.
     pub diameter: Distance,
