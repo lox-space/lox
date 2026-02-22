@@ -739,6 +739,75 @@ impl FrequencyUnits for i64 {
     }
 }
 
+/// Temperature in Kelvin.
+pub type Kelvin = f64;
+
+type DecibelValue = f64;
+
+/// A value in decibels.
+#[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[repr(transparent)]
+pub struct Decibel(DecibelValue);
+
+impl Decibel {
+    /// Creates a new `Decibel` from a value already in dB.
+    pub const fn new(db: f64) -> Self {
+        Self(db)
+    }
+
+    /// Converts a linear power-ratio value to decibels.
+    pub fn from_linear(val: f64) -> Self {
+        Self(10.0 * val.log10())
+    }
+
+    /// Converts this decibel value to a linear power-ratio.
+    pub fn to_linear(self) -> f64 {
+        10.0_f64.powf(self.0 / 10.0)
+    }
+
+    /// Returns the raw `f64` value in dB.
+    pub const fn as_f64(self) -> f64 {
+        self.0
+    }
+}
+
+impl Display for Decibel {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        self.0.fmt(f)?;
+        write!(f, " dB")
+    }
+}
+
+/// A trait for creating [`Decibel`] instances from primitives.
+///
+/// By default it is implemented for [`f64`] and [`i64`].
+///
+/// # Examples
+///
+/// ```
+/// use lox_core::units::DecibelUnits;
+///
+/// let d = 3.0.db();
+/// assert_eq!(d.as_f64(), 3.0);
+/// ```
+pub trait DecibelUnits {
+    /// Creates a decibel value.
+    fn db(&self) -> Decibel;
+}
+
+impl DecibelUnits for f64 {
+    fn db(&self) -> Decibel {
+        Decibel::new(*self)
+    }
+}
+
+impl DecibelUnits for i64 {
+    fn db(&self) -> Decibel {
+        Decibel::new(*self as f64)
+    }
+}
+
 macro_rules! trait_impls {
     ($($unit:ident),*) => {
         $(
@@ -795,7 +864,7 @@ macro_rules! trait_impls {
     };
 }
 
-trait_impls!(Angle, Distance, Frequency, Velocity);
+trait_impls!(Angle, Decibel, Distance, Frequency, Velocity);
 
 #[cfg(test)]
 mod tests {
@@ -1014,5 +1083,54 @@ mod tests {
     #[case(1.0.thz(), None)]
     fn test_frequency_band(#[case] f: Frequency, #[case] exp: Option<FrequencyBand>) {
         assert_eq!(f.band(), exp)
+    }
+
+    #[test]
+    fn test_decibel_db() {
+        let d = 3.0.db();
+        assert_eq!(d.as_f64(), 3.0);
+    }
+
+    #[test]
+    fn test_decibel_from_linear() {
+        let d = Decibel::from_linear(100.0);
+        assert_approx_eq!(d.0, 20.0, rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_decibel_to_linear() {
+        let d = Decibel::new(20.0);
+        assert_approx_eq!(d.to_linear(), 100.0, rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_decibel_roundtrip() {
+        let val = 42.5;
+        let d = Decibel::new(val);
+        let roundtripped = Decibel::from_linear(d.to_linear());
+        assert_approx_eq!(roundtripped.0, val, rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_decibel_add() {
+        let sum = 3.0.db() + 3.0.db();
+        assert_approx_eq!(sum.0, 6.0, rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_decibel_sub() {
+        let diff = 6.0.db() - 3.0.db();
+        assert_approx_eq!(diff.0, 3.0, rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_decibel_neg() {
+        assert_eq!(-3.0.db(), Decibel::new(-3.0));
+    }
+
+    #[test]
+    fn test_decibel_display() {
+        let d = 3.0.db();
+        assert_eq!(format!("{:.1}", d), "3.0 dB");
     }
 }
