@@ -5,7 +5,7 @@
 [package]
 name = "lox-core"
 description = "Common data types and utilities for the Lox Astrodynamics Toolkit"
-version = "0.1.0-alpha.0"
+version = "0.1.0-alpha.1"
 rust-version.workspace = true
 edition.workspace = true
 license.workspace = true

@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.1.0-alpha.5](https://github.com/lox-space/lox/compare/lox-frames-v0.1.0-alpha.4...lox-frames-v0.1.0-alpha.5) - 2026-02-22
+
+### Added
+
+- *(lox-frames)* add J2000 frame
+- add optional serde feature
+- *(lox-orbits)* re-design trajectories
+- *(lox-frames)* add frame ID to builtin frames
+
+### Fixed
+
+- *(lox-frames/lox-orbits)* fix TEME transformation
+
+### Other
+
+- *(lox-frames)* test Earth-based frames
+- *(lox-time)* simplify TAI<->UTC conversions
+- *(lox-frames)* rewrite frame transforms
+- *(lox-time)* implement offsets via `OffsetProvider` trait
+- *(lox-time)* make LSP trait easier to implement
+- *(lox-time)* implement offsets via `OffsetProvider` trait
+
 ## [0.1.0-alpha.4](https://github.com/lox-space/lox/compare/lox-frames-v0.1.0-alpha.3...lox-frames-v0.1.0-alpha.4) - 2025-10-29
 
 ### Added

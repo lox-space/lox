@@ -6,7 +6,7 @@
 [package]
 name = "lox-io"
 description = "Interfaces for industry-standard astrodynamics file formats for the Lox ecosystem"
-version = "0.1.0-alpha.9"
+version = "0.1.0-alpha.10"
 rust-version.workspace = true
 edition.workspace = true
 license.workspace = true

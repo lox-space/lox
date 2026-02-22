@@ -6,7 +6,7 @@
 [package]
 name = "lox-time"
 description = "Time modelling tools for the Lox ecosystem"
-version = "0.1.0-alpha.11"
+version = "0.1.0-alpha.12"
 rust-version.workspace = true
 edition.workspace = true
 license.workspace = true
