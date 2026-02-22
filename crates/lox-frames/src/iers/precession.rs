@@ -22,6 +22,11 @@ impl ReferenceSystem {
     pub fn bias_precession_matrix(&self, time: Time<Tt>) -> DMat3 {
         self.precession(time).bias_precession_matrix()
     }
+
+    /// Returns the precession-only rotation from J2000 to the Mean-of-Date (MOD) frame.
+    pub fn precession_matrix(&self, time: Time<Tt>) -> DMat3 {
+        self.precession(time).precession_matrix()
+    }
 }
 
 pub enum PrecessionAngles {
@@ -139,6 +144,31 @@ impl PrecessionAngles {
                 epsa,
             } => {
                 (-epsa).rotation_x() * (-psib).rotation_z() * phib.rotation_x() * gamb.rotation_z()
+            }
+        }
+    }
+
+    /// Returns the precession-only rotation from J2000 to the Mean-of-Date (MOD) frame,
+    /// without the frame bias.
+    pub fn precession_matrix(&self) -> DMat3 {
+        match *self {
+            PrecessionAngles::Iau1976 { zeta, z, theta } => {
+                (-z).rotation_z() * theta.rotation_y() * (-zeta).rotation_z()
+            }
+            PrecessionAngles::Iau2000 { psia, oma, chia } => {
+                chia.rotation_z() * (-oma).rotation_x() * (-psia).rotation_z() * EPS0.rotation_x()
+            }
+            PrecessionAngles::Iau2006 {
+                gamb,
+                phib,
+                psib,
+                epsa,
+            } => {
+                let bp = (-epsa).rotation_x()
+                    * (-psib).rotation_z()
+                    * phib.rotation_x()
+                    * gamb.rotation_z();
+                bp * frame_bias().transpose()
             }
         }
     }
@@ -267,5 +297,32 @@ mod tests {
         };
         let act = PrecessionCorrectionsIau2000::new(time);
         assert_approx_eq!(act, exp, atol <= 1e-22);
+    }
+
+    #[test]
+    fn test_decomposition_invariant_iers1996() {
+        let time = Time::from_two_part_julian_date(Tt, 2400000.5, 50123.9999);
+        let bp = ReferenceSystem::Iers1996.bias_precession_matrix(time);
+        let p = ReferenceSystem::Iers1996.precession_matrix(time);
+        let b = frame_bias();
+        assert_approx_eq!(bp, p * b, atol <= 1e-14);
+    }
+
+    #[test]
+    fn test_decomposition_invariant_iers2003() {
+        let time = Time::from_two_part_julian_date(Tt, 2400000.5, 50123.9999);
+        let bp = ReferenceSystem::Iers2003(Iau2000Model::A).bias_precession_matrix(time);
+        let p = ReferenceSystem::Iers2003(Iau2000Model::A).precession_matrix(time);
+        let b = frame_bias();
+        assert_approx_eq!(bp, p * b, atol <= 1e-14);
+    }
+
+    #[test]
+    fn test_decomposition_invariant_iers2010() {
+        let time = Time::from_two_part_julian_date(Tt, 2400000.5, 50123.9999);
+        let bp = ReferenceSystem::Iers2010.bias_precession_matrix(time);
+        let p = ReferenceSystem::Iers2010.precession_matrix(time);
+        let b = frame_bias();
+        assert_approx_eq!(bp, p * b, atol <= 1e-14);
     }
 }

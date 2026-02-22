@@ -13,6 +13,7 @@ const ICRF_ID: usize = 0;
 const CIRF_ID: usize = 1;
 const TIRF_ID: usize = 2;
 const ITRF_ID: usize = 3;
+const J2000_ID: usize = 4;
 
 const MOD_ID: usize = 11;
 const TOD_ID: usize = 12;
@@ -37,6 +38,26 @@ impl ReferenceFrame for Icrf {
 }
 
 impl QuasiInertial for Icrf {}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct J2000;
+
+impl ReferenceFrame for J2000 {
+    fn name(&self) -> String {
+        "J2000 Mean Equator and Equinox".to_string()
+    }
+
+    fn abbreviation(&self) -> String {
+        "J2000".to_string()
+    }
+
+    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<usize> {
+        Some(J2000_ID)
+    }
+}
+
+impl QuasiInertial for J2000 {}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]

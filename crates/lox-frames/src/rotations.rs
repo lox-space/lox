@@ -25,6 +25,7 @@ use crate::{
         cip::CipCoords,
         earth_rotation::{EarthRotationAngle, EquationOfTheEquinoxes},
         polar_motion::PoleCoords,
+        precession::frame_bias,
     },
 };
 
@@ -255,6 +256,31 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
         Self: TryOffset<T, Tdb> + TryOffset<T, Tt> + TryOffset<T, Ut1>,
     {
         Ok(self.icrf_to_itrf(time)?.transpose())
+    }
+
+    fn icrf_to_j2000(&self) -> Rotation {
+        Rotation::new(frame_bias())
+    }
+
+    fn j2000_to_icrf(&self) -> Rotation {
+        Rotation::new(frame_bias().transpose())
+    }
+
+    fn j2000_to_mod(&self, time: Time<T>, sys: ReferenceSystem) -> Result<Rotation, RotationError>
+    where
+        T: TimeScale + Copy,
+        Self: TryOffset<T, Tt>,
+    {
+        let time = time.try_to_scale(Tt, self).map_err(RotationError::offset)?;
+        Ok(sys.precession_matrix(time).into())
+    }
+
+    fn mod_to_j2000(&self, time: Time<T>, sys: ReferenceSystem) -> Result<Rotation, RotationError>
+    where
+        T: TimeScale + Copy,
+        Self: TryOffset<T, Tt>,
+    {
+        Ok(self.j2000_to_mod(time, sys)?.transpose())
     }
 
     fn icrf_to_mod(&self, time: Time<T>, sys: ReferenceSystem) -> Result<Rotation, RotationError>
@@ -598,28 +624,16 @@ mod tests {
         let tt = Time::from_two_part_julian_date(Tt, 2454195.5, 0.500754444444444);
         let sys = ReferenceSystem::Iers1996;
 
-        // let npb_exp = DMat3::from_cols_array(&[
-        //     0.999998403176203,
-        //     -0.001639032970562,
-        //     -0.000712190961847,
-        //     0.001639000942243,
-        //     0.999998655799521,
-        //     -0.000045552846624,
-        //     0.000712264667137,
-        //     0.000044385492226,
-        //     0.999999745354454,
-        // ])
-        // .transpose();
         let npb_exp = DMat3::from_cols_array(&[
-            9.999_984_026_404_259e-1,
-            -1.639_348_666_725_915e-3,
-            -7.122_166_424_041_306e-4,
-            1.639_316_638_909_414_8e-3,
-            9.999_986_552_821_435e-1,
-            -4.555_065_309_035_662_5e-5,
-            7.122_903_580_761_061e-4,
-            4.438_303_173_715_299e-5,
-            9.999_997_453_362_638e-1,
+            0.999998403176203,
+            -0.001639032970562,
+            -0.000712190961847,
+            0.001639000942243,
+            0.999998655799521,
+            -0.000045552846624,
+            0.000712264667137,
+            0.000044385492226,
+            0.999999745354454,
         ])
         .transpose();
         let c2t_exp = DMat3::from_cols_array(&[
@@ -648,7 +662,7 @@ mod tests {
         .transpose();
 
         let npb_act = TestRotationProvider
-            .icrf_to_mod(tt.with_scale(Tdb), sys)
+            .j2000_to_mod(tt.with_scale(Tdb), sys)
             .unwrap()
             .compose(
                 TestRotationProvider
@@ -657,13 +671,11 @@ mod tests {
             );
         assert_approx_eq!(npb_act.m, npb_exp, atol <= 1e-12);
 
-        // TODO: Generate reference data including frame bias
         let c2t_act = npb_act.compose(TestRotationProvider.tod_to_pef(tt, sys).unwrap());
-        assert_approx_eq!(c2t_act.m, c2t_exp, atol <= 1e-4);
+        assert_approx_eq!(c2t_act.m, c2t_exp, atol <= 1e-12);
 
-        // TODO: Generate reference data including frame bias
         let c2t_pm_act = c2t_act.compose(TestRotationProvider.pef_to_itrf(tt, sys).unwrap());
-        assert_approx_eq!(c2t_pm_act.m, c2t_pm_exp, atol <= 1e-4);
+        assert_approx_eq!(c2t_pm_act.m, c2t_pm_exp, atol <= 1e-12);
     }
 
     #[test]
@@ -821,5 +833,78 @@ mod tests {
         // Round-trip should give identity
         let roundtrip = icrf_to_teme.compose(teme_to_icrf);
         assert_approx_eq!(roundtrip.m, DMat3::IDENTITY, atol <= 1e-14);
+    }
+
+    #[test]
+    fn test_icrf_j2000_roundtrip() {
+        let fwd =
+            <TestRotationProvider as RotationProvider<Tt>>::icrf_to_j2000(&TestRotationProvider);
+        let rev =
+            <TestRotationProvider as RotationProvider<Tt>>::j2000_to_icrf(&TestRotationProvider);
+        let roundtrip = fwd.compose(rev);
+        assert_approx_eq!(roundtrip.m, DMat3::IDENTITY, atol <= 1e-15);
+    }
+
+    #[test]
+    fn test_j2000_mod_equivalence_iers1996() {
+        let tt = Time::from_two_part_julian_date(Tt, 2454195.5, 0.500754444444444);
+        let sys = ReferenceSystem::Iers1996;
+
+        // ICRF -> J2000 -> MOD should equal ICRF -> MOD
+        let via_j2000 =
+            <TestRotationProvider as RotationProvider<Tt>>::icrf_to_j2000(&TestRotationProvider)
+                .compose(TestRotationProvider.j2000_to_mod(tt, sys).unwrap());
+        let direct = TestRotationProvider.icrf_to_mod(tt, sys).unwrap();
+
+        assert_approx_eq!(via_j2000.m, direct.m, atol <= 1e-14);
+    }
+
+    #[test]
+    fn test_j2000_mod_equivalence_iers2003() {
+        let tt = Time::from_two_part_julian_date(Tt, 2454195.5, 0.500754444444444);
+        let sys = ReferenceSystem::Iers2003(Iau2000Model::A);
+
+        let via_j2000 =
+            <TestRotationProvider as RotationProvider<Tt>>::icrf_to_j2000(&TestRotationProvider)
+                .compose(TestRotationProvider.j2000_to_mod(tt, sys).unwrap());
+        let direct = TestRotationProvider.icrf_to_mod(tt, sys).unwrap();
+
+        assert_approx_eq!(via_j2000.m, direct.m, atol <= 1e-14);
+    }
+
+    #[test]
+    fn test_j2000_mod_equivalence_iers2010() {
+        let tt = Time::from_two_part_julian_date(Tt, 2454195.5, 0.500754444444444);
+        let sys = ReferenceSystem::Iers2010;
+
+        let via_j2000 =
+            <TestRotationProvider as RotationProvider<Tt>>::icrf_to_j2000(&TestRotationProvider)
+                .compose(TestRotationProvider.j2000_to_mod(tt, sys).unwrap());
+        let direct = TestRotationProvider.icrf_to_mod(tt, sys).unwrap();
+
+        assert_approx_eq!(via_j2000.m, direct.m, atol <= 1e-14);
+    }
+
+    #[test]
+    fn test_j2000_full_chain_equivalence() {
+        // ICRF -> J2000 -> MOD -> TOD -> PEF -> ITRF == ICRF -> MOD -> TOD -> PEF -> ITRF
+        let tt = Time::from_two_part_julian_date(Tt, 2454195.5, 0.500754444444444);
+        let sys = ReferenceSystem::Iers2003(Iau2000Model::A);
+
+        let via_j2000 =
+            <TestRotationProvider as RotationProvider<Tt>>::icrf_to_j2000(&TestRotationProvider)
+                .compose(TestRotationProvider.j2000_to_mod(tt, sys).unwrap())
+                .compose(TestRotationProvider.mod_to_tod(tt, sys).unwrap())
+                .compose(TestRotationProvider.tod_to_pef(tt, sys).unwrap())
+                .compose(TestRotationProvider.pef_to_itrf(tt, sys).unwrap());
+
+        let direct = TestRotationProvider
+            .icrf_to_mod(tt, sys)
+            .unwrap()
+            .compose(TestRotationProvider.mod_to_tod(tt, sys).unwrap())
+            .compose(TestRotationProvider.tod_to_pef(tt, sys).unwrap())
+            .compose(TestRotationProvider.pef_to_itrf(tt, sys).unwrap());
+
+        assert_approx_eq!(via_j2000.m, direct.m, atol <= 1e-14);
     }
 }

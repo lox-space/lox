@@ -82,7 +82,7 @@ impl IersSystem for Iers2003 {
     }
 
     fn name(&self) -> String {
-        format!("IERS2003/{}", self.0)
+        "IERS2003".to_owned()
     }
 }
 

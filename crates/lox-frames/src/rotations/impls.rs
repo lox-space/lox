@@ -11,7 +11,7 @@ use lox_time::{
 
 use crate::{
     Cirf, DynFrame, Iau, Icrf, Itrf, Tirf,
-    frames::{Mod, Pef, Teme, Tod},
+    frames::{J2000, Mod, Pef, Teme, Tod},
     iers::{Iers1996, Iers2003, Iers2010, ReferenceSystem},
     rotations::{
         DynRotationError, Rotation, RotationError, RotationProvider, TryComposedRotation,
@@ -54,6 +54,146 @@ where
         time: Time<T>,
     ) -> Result<Rotation, Self::Error> {
         self.iau_to_icrf(time, origin)
+    }
+}
+
+// ICRF <-> J2000
+
+impl<T, U> TryRotation<Icrf, J2000, T> for U
+where
+    T: TimeScale + Copy,
+    U: RotationProvider<T>,
+{
+    type Error = RotationError;
+
+    fn try_rotation(
+        &self,
+        _origin: Icrf,
+        _target: J2000,
+        _time: Time<T>,
+    ) -> Result<Rotation, Self::Error> {
+        Ok(self.icrf_to_j2000())
+    }
+}
+
+impl<T, U> TryRotation<J2000, Icrf, T> for U
+where
+    T: TimeScale + Copy,
+    U: RotationProvider<T>,
+{
+    type Error = RotationError;
+
+    fn try_rotation(
+        &self,
+        _origin: J2000,
+        _target: Icrf,
+        _time: Time<T>,
+    ) -> Result<Rotation, Self::Error> {
+        Ok(self.j2000_to_icrf())
+    }
+}
+
+// J2000 <-> MOD
+
+impl<T, U> TryRotation<J2000, Mod<Iers1996>, T> for U
+where
+    T: TimeScale + Copy,
+    U: RotationProvider<T> + TryOffset<T, Tt>,
+{
+    type Error = RotationError;
+
+    fn try_rotation(
+        &self,
+        _origin: J2000,
+        _target: Mod<Iers1996>,
+        time: Time<T>,
+    ) -> Result<Rotation, Self::Error> {
+        self.j2000_to_mod(time, ReferenceSystem::Iers1996)
+    }
+}
+
+impl<T, U> TryRotation<Mod<Iers1996>, J2000, T> for U
+where
+    T: TimeScale + Copy,
+    U: RotationProvider<T> + TryOffset<T, Tt>,
+{
+    type Error = RotationError;
+
+    fn try_rotation(
+        &self,
+        _origin: Mod<Iers1996>,
+        _target: J2000,
+        time: Time<T>,
+    ) -> Result<Rotation, Self::Error> {
+        self.mod_to_j2000(time, ReferenceSystem::Iers1996)
+    }
+}
+
+impl<T, U> TryRotation<J2000, Mod<Iers2003>, T> for U
+where
+    T: TimeScale + Copy,
+    U: RotationProvider<T> + TryOffset<T, Tt>,
+{
+    type Error = RotationError;
+
+    fn try_rotation(
+        &self,
+        _origin: J2000,
+        target: Mod<Iers2003>,
+        time: Time<T>,
+    ) -> Result<Rotation, Self::Error> {
+        self.j2000_to_mod(time, ReferenceSystem::Iers2003(target.0.0))
+    }
+}
+
+impl<T, U> TryRotation<Mod<Iers2003>, J2000, T> for U
+where
+    T: TimeScale + Copy,
+    U: RotationProvider<T> + TryOffset<T, Tt>,
+{
+    type Error = RotationError;
+
+    fn try_rotation(
+        &self,
+        origin: Mod<Iers2003>,
+        _target: J2000,
+        time: Time<T>,
+    ) -> Result<Rotation, Self::Error> {
+        self.mod_to_j2000(time, ReferenceSystem::Iers2003(origin.0.0))
+    }
+}
+
+impl<T, U> TryRotation<J2000, Mod<Iers2010>, T> for U
+where
+    T: TimeScale + Copy,
+    U: RotationProvider<T> + TryOffset<T, Tt>,
+{
+    type Error = RotationError;
+
+    fn try_rotation(
+        &self,
+        _origin: J2000,
+        _target: Mod<Iers2010>,
+        time: Time<T>,
+    ) -> Result<Rotation, Self::Error> {
+        self.j2000_to_mod(time, ReferenceSystem::Iers2010)
+    }
+}
+
+impl<T, U> TryRotation<Mod<Iers2010>, J2000, T> for U
+where
+    T: TimeScale + Copy,
+    U: RotationProvider<T> + TryOffset<T, Tt>,
+{
+    type Error = RotationError;
+
+    fn try_rotation(
+        &self,
+        _origin: Mod<Iers2010>,
+        _target: J2000,
+        time: Time<T>,
+    ) -> Result<Rotation, Self::Error> {
+        self.mod_to_j2000(time, ReferenceSystem::Iers2010)
     }
 }
 
@@ -747,6 +887,30 @@ macro_rules! impl_composed {
 }
 
 impl_composed!(
+    // J2000 composed rotations
+    J2000 => Cirf: [Icrf],
+    J2000 => Tirf: [Icrf, Cirf],
+    J2000 => Itrf: [Icrf, Cirf, Tirf],
+    J2000 => Iau<DynOrigin>: [Icrf],
+    J2000 => Tod<Iers1996>: [Mod(Iers1996)],
+    J2000 => Tod<Iers2003>: [Mod(Iers2003::default())],
+    J2000 => Tod<Iers2010>: [Mod(Iers2010)],
+    J2000 => Pef<Iers1996>: [Mod(Iers1996), Tod(Iers1996)],
+    J2000 => Pef<Iers2003>: [Mod(Iers2003::default()), Tod(Iers2003::default())],
+    J2000 => Pef<Iers2010>: [Mod(Iers2010), Tod(Iers2010)],
+    J2000 => Teme: [Mod(Iers1996), Tod(Iers1996)],
+    Cirf => J2000: [Icrf],
+    Tirf => J2000: [Cirf, Icrf],
+    Itrf => J2000: [Tirf, Cirf, Icrf],
+    Iau<DynOrigin> => J2000: [Icrf],
+    Tod<Iers1996> => J2000: [Mod(Iers1996)],
+    Tod<Iers2003> => J2000: [Mod(Iers2003::default())],
+    Tod<Iers2010> => J2000: [Mod(Iers2010)],
+    Pef<Iers1996> => J2000: [Tod(Iers1996), Mod(Iers1996)],
+    Pef<Iers2003> => J2000: [Tod(Iers2003::default()), Mod(Iers2003::default())],
+    Pef<Iers2010> => J2000: [Tod(Iers2010), Mod(Iers2010)],
+    Teme => J2000: [Tod(Iers1996), Mod(Iers1996)],
+
     Cirf => Iau<DynOrigin>: [Icrf],
     Cirf => Itrf: [Tirf],
     Cirf => Mod<Iers1996>: [Icrf],
@@ -909,6 +1073,36 @@ where
                 ReferenceSystem::Iers2010 => Ok(self.try_rotation(Icrf, Pef(Iers2010), time)?),
             },
             (DynFrame::Icrf, DynFrame::Teme) => Ok(self.try_rotation(Icrf, Teme, time)?),
+            (DynFrame::Icrf, DynFrame::J2000) => Ok(self.try_rotation(Icrf, J2000, time)?),
+            (DynFrame::J2000, DynFrame::Icrf) => Ok(self.try_rotation(J2000, Icrf, time)?),
+            (DynFrame::J2000, DynFrame::Cirf) => Ok(self.try_rotation(J2000, Cirf, time)?),
+            (DynFrame::J2000, DynFrame::Tirf) => Ok(self.try_rotation(J2000, Tirf, time)?),
+            (DynFrame::J2000, DynFrame::Itrf) => Ok(self.try_rotation(J2000, Itrf, time)?),
+            (DynFrame::J2000, DynFrame::Iau(body)) => {
+                Ok(self.try_rotation(J2000, Iau::try_new(body)?, time)?)
+            }
+            (DynFrame::J2000, DynFrame::Mod(sys)) => match sys {
+                ReferenceSystem::Iers1996 => Ok(self.try_rotation(J2000, Mod(Iers1996), time)?),
+                ReferenceSystem::Iers2003(iau2000_model) => {
+                    Ok(self.try_rotation(J2000, Mod(Iers2003(iau2000_model)), time)?)
+                }
+                ReferenceSystem::Iers2010 => Ok(self.try_rotation(J2000, Mod(Iers2010), time)?),
+            },
+            (DynFrame::J2000, DynFrame::Tod(sys)) => match sys {
+                ReferenceSystem::Iers1996 => Ok(self.try_rotation(J2000, Tod(Iers1996), time)?),
+                ReferenceSystem::Iers2003(iau2000_model) => {
+                    Ok(self.try_rotation(J2000, Tod(Iers2003(iau2000_model)), time)?)
+                }
+                ReferenceSystem::Iers2010 => Ok(self.try_rotation(J2000, Tod(Iers2010), time)?),
+            },
+            (DynFrame::J2000, DynFrame::Pef(sys)) => match sys {
+                ReferenceSystem::Iers1996 => Ok(self.try_rotation(J2000, Pef(Iers1996), time)?),
+                ReferenceSystem::Iers2003(iau2000_model) => {
+                    Ok(self.try_rotation(J2000, Pef(Iers2003(iau2000_model)), time)?)
+                }
+                ReferenceSystem::Iers2010 => Ok(self.try_rotation(J2000, Pef(Iers2010), time)?),
+            },
+            (DynFrame::J2000, DynFrame::Teme) => Ok(self.try_rotation(J2000, Teme, time)?),
             (DynFrame::Cirf, DynFrame::Icrf) => Ok(self.try_rotation(Cirf, Icrf, time)?),
             (DynFrame::Cirf, DynFrame::Tirf) => Ok(self.try_rotation(Cirf, Tirf, time)?),
             (DynFrame::Cirf, DynFrame::Itrf) => Ok(self.try_rotation(Cirf, Itrf, time)?),
@@ -937,6 +1131,7 @@ where
                 ReferenceSystem::Iers2010 => Ok(self.try_rotation(Cirf, Pef(Iers2010), time)?),
             },
             (DynFrame::Cirf, DynFrame::Teme) => Ok(self.try_rotation(Cirf, Teme, time)?),
+            (DynFrame::Cirf, DynFrame::J2000) => Ok(self.try_rotation(Cirf, J2000, time)?),
             (DynFrame::Tirf, DynFrame::Icrf) => Ok(self.try_rotation(Tirf, Icrf, time)?),
             (DynFrame::Tirf, DynFrame::Cirf) => Ok(self.try_rotation(Tirf, Cirf, time)?),
             (DynFrame::Tirf, DynFrame::Itrf) => Ok(self.try_rotation(Tirf, Itrf, time)?),
@@ -965,6 +1160,7 @@ where
                 ReferenceSystem::Iers2010 => Ok(self.try_rotation(Tirf, Pef(Iers2010), time)?),
             },
             (DynFrame::Tirf, DynFrame::Teme) => Ok(self.try_rotation(Tirf, Teme, time)?),
+            (DynFrame::Tirf, DynFrame::J2000) => Ok(self.try_rotation(Tirf, J2000, time)?),
             (DynFrame::Itrf, DynFrame::Icrf) => Ok(self.try_rotation(Itrf, Icrf, time)?),
             (DynFrame::Itrf, DynFrame::Cirf) => Ok(self.try_rotation(Itrf, Cirf, time)?),
             (DynFrame::Itrf, DynFrame::Tirf) => Ok(self.try_rotation(Itrf, Tirf, time)?),
@@ -993,6 +1189,7 @@ where
                 ReferenceSystem::Iers2010 => Ok(self.try_rotation(Itrf, Pef(Iers2010), time)?),
             },
             (DynFrame::Itrf, DynFrame::Teme) => Ok(self.try_rotation(Itrf, Teme, time)?),
+            (DynFrame::Itrf, DynFrame::J2000) => Ok(self.try_rotation(Itrf, J2000, time)?),
             (DynFrame::Iau(body), DynFrame::Icrf) => {
                 Ok(self.try_rotation(Iau::try_new(body)?, Icrf, time)?)
             }
@@ -1046,6 +1243,9 @@ where
             },
             (DynFrame::Iau(body), DynFrame::Teme) => {
                 Ok(self.try_rotation(Iau::try_new(body)?, Teme, time)?)
+            }
+            (DynFrame::Iau(body), DynFrame::J2000) => {
+                Ok(self.try_rotation(Iau::try_new(body)?, J2000, time)?)
             }
             (DynFrame::Mod(sys), DynFrame::Icrf) => match sys {
                 ReferenceSystem::Iers1996 => Ok(self.try_rotation(Mod(Iers1996), Icrf, time)?),
@@ -1131,6 +1331,13 @@ where
                 }
                 ReferenceSystem::Iers2010 => Ok(self.try_rotation(Mod(Iers2010), Teme, time)?),
             },
+            (DynFrame::Mod(sys), DynFrame::J2000) => match sys {
+                ReferenceSystem::Iers1996 => Ok(self.try_rotation(Mod(Iers1996), J2000, time)?),
+                ReferenceSystem::Iers2003(iau2000_model) => {
+                    Ok(self.try_rotation(Mod(Iers2003(iau2000_model)), J2000, time)?)
+                }
+                ReferenceSystem::Iers2010 => Ok(self.try_rotation(Mod(Iers2010), J2000, time)?),
+            },
             (DynFrame::Tod(sys), DynFrame::Icrf) => match sys {
                 ReferenceSystem::Iers1996 => Ok(self.try_rotation(Tod(Iers1996), Icrf, time)?),
                 ReferenceSystem::Iers2003(iau2000_model) => {
@@ -1214,6 +1421,13 @@ where
                     Ok(self.try_rotation(Tod(Iers2003(iau2000_model)), Teme, time)?)
                 }
                 ReferenceSystem::Iers2010 => Ok(self.try_rotation(Tod(Iers2010), Teme, time)?),
+            },
+            (DynFrame::Tod(sys), DynFrame::J2000) => match sys {
+                ReferenceSystem::Iers1996 => Ok(self.try_rotation(Tod(Iers1996), J2000, time)?),
+                ReferenceSystem::Iers2003(iau2000_model) => {
+                    Ok(self.try_rotation(Tod(Iers2003(iau2000_model)), J2000, time)?)
+                }
+                ReferenceSystem::Iers2010 => Ok(self.try_rotation(Tod(Iers2010), J2000, time)?),
             },
             (DynFrame::Pef(sys), DynFrame::Icrf) => match sys {
                 ReferenceSystem::Iers1996 => Ok(self.try_rotation(Pef(Iers1996), Icrf, time)?),
@@ -1299,6 +1513,13 @@ where
                 }
                 ReferenceSystem::Iers2010 => Ok(self.try_rotation(Pef(Iers2010), Teme, time)?),
             },
+            (DynFrame::Pef(sys), DynFrame::J2000) => match sys {
+                ReferenceSystem::Iers1996 => Ok(self.try_rotation(Pef(Iers1996), J2000, time)?),
+                ReferenceSystem::Iers2003(iau2000_model) => {
+                    Ok(self.try_rotation(Pef(Iers2003(iau2000_model)), J2000, time)?)
+                }
+                ReferenceSystem::Iers2010 => Ok(self.try_rotation(Pef(Iers2010), J2000, time)?),
+            },
             (DynFrame::Teme, DynFrame::Icrf) => Ok(self.try_rotation(Teme, Icrf, time)?),
             (DynFrame::Teme, DynFrame::Cirf) => Ok(self.try_rotation(Teme, Cirf, time)?),
             (DynFrame::Teme, DynFrame::Tirf) => Ok(self.try_rotation(Teme, Tirf, time)?),
@@ -1327,6 +1548,7 @@ where
                 }
                 ReferenceSystem::Iers2010 => Ok(self.try_rotation(Teme, Pef(Iers2010), time)?),
             },
+            (DynFrame::Teme, DynFrame::J2000) => Ok(self.try_rotation(Teme, J2000, time)?),
             (_, _) => Ok(Rotation::IDENTITY),
         }
     }

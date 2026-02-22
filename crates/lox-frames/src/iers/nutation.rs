@@ -36,9 +36,11 @@ impl ReferenceSystem {
 
     pub fn nutation_matrix(&self, time: Time<Tdb>, corr: Corrections) -> DMat3 {
         match self {
-            ReferenceSystem::Iers1996 => self
-                .nutation(time)
-                .nutation_matrix(self.mean_obliquity(time.with_scale(Tt))),
+            ReferenceSystem::Iers1996 => {
+                let mut nut = self.nutation(time);
+                nut += corr;
+                nut.nutation_matrix(self.mean_obliquity(time.with_scale(Tt)))
+            }
             ReferenceSystem::Iers2003(_) | ReferenceSystem::Iers2010 => {
                 let tt = time.with_scale(Tt);
                 let epsa = self.mean_obliquity(tt);

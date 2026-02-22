@@ -39,10 +39,13 @@ impl From<PyDynRotationError> for PyErr {
 /// Supported frames:
 ///
 /// - **ICRF**: International Celestial Reference Frame (inertial)
-/// - **GCRF**: Geocentric Celestial Reference Frame (inertial, Earth-centered)
+/// - **J2000** / **EME2000**: J2000 Mean Equator and Equinox (inertial)
 /// - **CIRF**: Celestial Intermediate Reference Frame
 /// - **TIRF**: Terrestrial Intermediate Reference Frame
 /// - **ITRF**: International Terrestrial Reference Frame (Earth-fixed)
+/// - **MOD**, **TOD**, **PEF**: Equinox-based frames (default: IERS1996,
+///   e.g., ``MOD(IERS2003)``, ``TOD(IERS2010)``)
+/// - **TEME**: True Equator Mean Equinox (SGP4/TLE)
 /// - **Body-fixed frames**: IAU_EARTH, IAU_MOON, IAU_MARS, etc.
 ///
 /// Args:

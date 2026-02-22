@@ -11,7 +11,7 @@ pub mod rotations;
 pub mod traits;
 
 pub use dynamic::{DynFrame, UnknownFrameError};
-pub use frames::{Cirf, Iau, Icrf, Itrf, Teme, Tirf};
+pub use frames::{Cirf, Iau, Icrf, Itrf, J2000, Teme, Tirf};
 pub use traits::{
     BodyFixed, NonBodyFixedFrameError, NonQuasiInertialFrameError, QuasiInertial, ReferenceFrame,
     TryBodyFixed, TryQuasiInertial,
