@@ -20,6 +20,7 @@ crate-type = ["lib", "cdylib"]
 [dependencies]
 lox-test-utils.workspace = true
 lox-bodies = { workspace = true, optional = true }
+lox-comms = { workspace = true, optional = true }
 lox-core = { workspace = true, optional = true }
 lox-earth = { workspace = true, optional = true }
 lox-ephem = { workspace = true, optional = true }
@@ -52,6 +53,7 @@ harness = false
 [features]
 default = [
   "bodies",
+  "comms",
   "core",
   "earth",
   "ephem",
@@ -63,6 +65,7 @@ default = [
   "units",
 ]
 bodies = ["math", "units", "dep:lox-bodies"]
+comms = ["units", "dep:lox-comms"]
 core = ["dep:lox-core"]
 earth = ["bodies", "math", "io", "time", "units", "dep:lox-earth"]
 ephem = ["math", "dep:lox-ephem"]
@@ -81,6 +84,7 @@ orbits = [
   "dep:lox-orbits",
 ]
 python = [
+  "comms",
   "core",
   "time",
   "units",
@@ -94,6 +98,7 @@ time = ["io", "math", "units", "dep:lox-time"]
 units = ["dep:lox-units"]
 serde = [
   "lox-bodies?/serde",
+  "lox-comms?/serde",
   "lox-core?/serde",
   "lox-ephem?/serde",
   "lox-frames?/serde",
