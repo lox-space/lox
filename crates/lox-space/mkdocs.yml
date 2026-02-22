@@ -16,6 +16,7 @@ nav:
     - Propagators: propagators.md
     - Ground Stations: ground.md
     - Events & Visibility: events.md
+    - Communications: comms.md
     - Data Providers: data.md
     - Units: units.md
 
