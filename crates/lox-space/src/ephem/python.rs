@@ -9,7 +9,7 @@ use pyo3::{
     types::PyAnyMethods,
 };
 
-use crate::ephem::spk::parser::{DafSpkError, Spk, parse_daf_spk};
+use crate::ephem::spk::parser::{DafSpkError, Spk};
 
 pub struct PyDafSpkError(pub DafSpkError);
 
@@ -44,8 +44,7 @@ impl PySpk {
     #[new]
     fn new(path: &Bound<'_, PyAny>) -> PyResult<Self> {
         let path = path.extract::<PathBuf>()?;
-        let data = std::fs::read(path)?;
-        let spk = parse_daf_spk(&data).map_err(PyDafSpkError)?;
+        let spk = Spk::from_file(path).map_err(PyDafSpkError)?;
         Ok(PySpk(spk))
     }
 }
