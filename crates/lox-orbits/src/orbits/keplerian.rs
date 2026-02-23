@@ -7,7 +7,8 @@ use std::{
     iter::zip,
 };
 
-use lox_bodies::{Origin, PointMass, TryPointMass, UndefinedOriginPropertyError};
+use super::{CartesianOrbit, KeplerianOrbit, Orbit, Trajectory};
+use lox_bodies::{Origin, PointMass, TryMeanRadius, TryPointMass, UndefinedOriginPropertyError};
 use lox_core::units::{AngleUnits, Distance};
 use lox_core::{
     anomalies::{EccentricAnomaly, TrueAnomaly},
@@ -19,8 +20,16 @@ use lox_core::{
 };
 use lox_frames::{NonQuasiInertialFrameError, QuasiInertial, ReferenceFrame, TryQuasiInertial};
 use lox_time::{deltas::TimeDelta, time_scales::TimeScale};
+use thiserror::Error;
 
-use super::{CartesianOrbit, KeplerianOrbit, Orbit, Trajectory};
+#[derive(Debug, Error)]
+pub enum KeplerianOrbitError {
+    #[error(transparent)]
+    NonQuasiInertial(#[from] NonQuasiInertialFrameError),
+
+    #[error("perigee radius is below the origin mean radius")]
+    PerigeeCrossesBodyRadius,
+}
 
 impl<T, O, R> KeplerianOrbit<T, O, R>
 where
@@ -35,16 +44,35 @@ where
         Orbit::from_state(keplerian, time, origin, frame)
     }
 
+    fn validate_keplerian(k: &Keplerian, origin: &O) -> Result<(), KeplerianOrbitError>
+    where
+        O: TryMeanRadius,
+    {
+        let a_km = k.semi_major_axis().to_kilometers();
+        let e = k.eccentricity().as_f64();
+        let perigee_km = a_km * (1.0 - e);
+
+        if let Ok(body_mean_radius) = origin.try_mean_radius()
+            && perigee_km < body_mean_radius.to_kilometers()
+        {
+            return Err(KeplerianOrbitError::PerigeeCrossesBodyRadius);
+        }
+
+        Ok(())
+    }
+
     pub fn try_from_keplerian(
         keplerian: Keplerian,
         time: lox_time::Time<T>,
         origin: O,
         frame: R,
-    ) -> Result<Self, NonQuasiInertialFrameError>
+    ) -> Result<Self, KeplerianOrbitError>
     where
         R: TryQuasiInertial,
+        O: TryMeanRadius,
     {
         frame.try_quasi_inertial()?;
+        Self::validate_keplerian(&keplerian, &origin)?;
         Ok(Orbit::from_state(keplerian, time, origin, frame))
     }
 
@@ -139,5 +167,57 @@ where
             self.reference_frame(),
             data,
         ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use lox_bodies::{Earth, MeanRadius};
+    use lox_frames::Icrf;
+    use lox_time::{Time, time_scales::Tai, utc::Utc};
+    use lox_units::DistanceUnits;
+
+    use super::*;
+
+    const JD1: f64 = 2458849.5;
+    const JD2: f64 = 49.78099017 - 1.0;
+
+    #[test]
+    fn test_valid_keplerian() {
+        let elements = Keplerian::new(
+            MeanRadius::mean_radius(&Earth) + 500.0.km(),
+            Eccentricity::try_new(0.0).unwrap(),
+            Inclination::try_new(97.0.deg()).unwrap(),
+            LongitudeOfAscendingNode::try_new(0.0.deg()).unwrap(),
+            ArgumentOfPeriapsis::try_new(0.0.deg()).unwrap(),
+            TrueAnomaly::new(0.0.deg()),
+        );
+
+        let epoch: Time<Tai> = Utc::from_delta(TimeDelta::from_two_part_julian_date(JD1, JD2))
+            .unwrap()
+            .to_time();
+
+        let result = KeplerianOrbit::try_from_keplerian(elements, epoch, Earth, Icrf);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_invalid_sma() {
+        let elements = Keplerian::new(
+            // negative altitude
+            MeanRadius::mean_radius(&Earth) - 500.0.km(),
+            Eccentricity::try_new(0.0).unwrap(),
+            Inclination::try_new(97.0.deg()).unwrap(),
+            LongitudeOfAscendingNode::try_new(0.0.deg()).unwrap(),
+            ArgumentOfPeriapsis::try_new(0.0.deg()).unwrap(),
+            TrueAnomaly::new(0.0.deg()),
+        );
+
+        let epoch: Time<Tai> = Utc::from_delta(TimeDelta::from_two_part_julian_date(JD1, JD2))
+            .unwrap()
+            .to_time();
+
+        KeplerianOrbit::try_from_keplerian(elements, epoch, Earth, Icrf).unwrap();
     }
 }
