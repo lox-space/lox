@@ -46,6 +46,7 @@ serde_json.workspace = true
 [features]
 default = [
   "bodies",
+  "core",
   "earth",
   "ephem",
   "frames",
@@ -56,6 +57,7 @@ default = [
   "units",
 ]
 bodies = ["math", "units", "dep:lox-bodies"]
+core = ["dep:lox-core"]
 earth = ["bodies", "math", "io", "time", "units", "dep:lox-earth"]
 ephem = ["math", "dep:lox-ephem"]
 frames = ["bodies", "earth", "math", "time", "units", "dep:lox-frames"]
@@ -63,6 +65,7 @@ io = ["dep:lox-io"]
 math = ["dep:lox-math"]
 orbits = [
   "bodies",
+  "core",
   "earth",
   "ephem",
   "frames",
@@ -72,9 +75,9 @@ orbits = [
   "dep:lox-orbits",
 ]
 python = [
+  "core",
   "time",
   "units",
-  "dep:lox-core",
   "dep:glam",
   "dep:numpy",
   "dep:pyo3",

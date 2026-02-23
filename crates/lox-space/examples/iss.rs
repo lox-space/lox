@@ -3,14 +3,14 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use lox_bodies::Earth;
-use lox_core::coords::Cartesian;
-use lox_frames::Icrf;
-use lox_orbits::DVec3;
-use lox_orbits::orbits::CartesianOrbit;
-use lox_time::julian_dates::JulianDate;
-use lox_time::time_scales::Tdb;
-use lox_time::{Time, time};
+use lox_space::bodies::Earth;
+use lox_space::core::coords::Cartesian;
+use lox_space::frames::Icrf;
+use lox_space::orbits::DVec3;
+use lox_space::orbits::orbits::CartesianOrbit;
+use lox_space::time::julian_dates::JulianDate;
+use lox_space::time::time_scales::Tdb;
+use lox_space::time::{Time, time};
 
 fn main() {
     let time = time!(Tdb, 2016, 5, 30, 12, 0, 0.0).unwrap();
