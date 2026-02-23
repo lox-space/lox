@@ -632,7 +632,11 @@ dependencies = [
 name = "lox-ephem"
 version = "0.1.0-alpha.9"
 dependencies = [
+ "glam 0.30.9",
+ "itertools",
+ "lox-bodies",
  "lox-core",
+ "lox-time",
  "lox-units",
  "nom",
  "serde",
