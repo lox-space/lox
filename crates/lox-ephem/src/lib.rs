@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+use arrayvec::ArrayVec;
 use glam::DVec3;
 use lox_bodies::Origin;
 use lox_core::coords::Cartesian;
@@ -36,8 +37,9 @@ pub trait Ephemeris {
     }
 }
 
-fn ancestors(id: i32) -> Vec<i32> {
-    let mut ancestors = vec![id];
+fn ancestors(id: i32) -> ArrayVec<i32, 8> {
+    let mut ancestors = ArrayVec::new();
+    ancestors.push(id);
     let mut current = id;
     while current != 0 {
         current /= 100;
@@ -46,7 +48,7 @@ fn ancestors(id: i32) -> Vec<i32> {
     ancestors
 }
 
-pub(crate) fn path_from_ids(origin: i32, target: i32) -> Vec<i32> {
+pub(crate) fn path_from_ids(origin: i32, target: i32) -> ArrayVec<i32, 8> {
     let ancestors_origin = ancestors(origin);
     let ancestors_target = ancestors(target);
     let n = ancestors_target.len();
@@ -61,8 +63,9 @@ pub(crate) fn path_from_ids(origin: i32, target: i32) -> Vec<i32> {
     if *path.first().unwrap() != 0 && *path.last().unwrap() != 0 {
         let idx = path.iter().position(|&id| id == 0).unwrap();
         if path[idx - 1] == path[idx + 1] {
-            let common_ancestor = vec![path[idx - 1]];
-            path.splice((idx - 1)..=(idx + 1), common_ancestor);
+            // Remove the duplicate common ancestor: [... A, 0, A, ...] → [... A, ...]
+            path.remove(idx + 1);
+            path.remove(idx);
         }
     }
 
@@ -75,18 +78,21 @@ mod tests {
 
     #[test]
     fn test_ancestors() {
-        assert_eq!(ancestors(0), vec![0]);
-        assert_eq!(ancestors(3), vec![3, 0]);
-        assert_eq!(ancestors(399), vec![399, 3, 0]);
+        let expected_0: ArrayVec<i32, 8> = [0].into_iter().collect();
+        let expected_3: ArrayVec<i32, 8> = [3, 0].into_iter().collect();
+        let expected_399: ArrayVec<i32, 8> = [399, 3, 0].into_iter().collect();
+        assert_eq!(ancestors(0), expected_0);
+        assert_eq!(ancestors(3), expected_3);
+        assert_eq!(ancestors(399), expected_399);
     }
 
     #[test]
     fn test_path_from_ids() {
-        assert_eq!(path_from_ids(399, 499), [399, 3, 0, 4, 499]);
-        assert_eq!(path_from_ids(399, 0), [399, 3, 0]);
-        assert_eq!(path_from_ids(0, 399), [0, 3, 399]);
-        assert_eq!(path_from_ids(399, 3), [399, 3]);
-        assert_eq!(path_from_ids(3, 399), [3, 399]);
-        assert_eq!(path_from_ids(399, 301), [399, 3, 301]);
+        assert_eq!(path_from_ids(399, 499).as_slice(), [399, 3, 0, 4, 499]);
+        assert_eq!(path_from_ids(399, 0).as_slice(), [399, 3, 0]);
+        assert_eq!(path_from_ids(0, 399).as_slice(), [0, 3, 399]);
+        assert_eq!(path_from_ids(399, 3).as_slice(), [399, 3]);
+        assert_eq!(path_from_ids(3, 399).as_slice(), [3, 399]);
+        assert_eq!(path_from_ids(399, 301).as_slice(), [399, 3, 301]);
     }
 }

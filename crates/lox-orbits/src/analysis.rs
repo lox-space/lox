@@ -503,7 +503,7 @@ where
 #[cfg(test)]
 mod tests {
     use lox_bodies::Earth;
-    use lox_ephem::spk::parser::{Spk, parse_daf_spk};
+    use lox_ephem::spk::parser::Spk;
     use lox_test_utils::{assert_approx_eq, data_dir, data_file, read_data_file};
     use lox_time::Time;
     use lox_time::time_scales::Tai;
@@ -703,8 +703,7 @@ mod tests {
     }
 
     fn ephemeris() -> &'static Spk {
-        let contents = std::fs::read(data_dir().join("spice/de440s.bsp")).unwrap();
         static EPHEMERIS: OnceLock<Spk> = OnceLock::new();
-        EPHEMERIS.get_or_init(|| parse_daf_spk(&contents).unwrap())
+        EPHEMERIS.get_or_init(|| Spk::from_file(data_dir().join("spice/de440s.bsp")).unwrap())
     }
 }

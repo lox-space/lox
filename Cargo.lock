@@ -42,6 +42,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "arrayvec"
+version = "0.7.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7c02d123df017efcdfbd739ef81735b36c5ba83ec3c59c80a9d7ecc718f92e50"
+
+[[package]]
 name = "autocfg"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -632,6 +638,7 @@ dependencies = [
 name = "lox-ephem"
 version = "0.1.0-alpha.9"
 dependencies = [
+ "arrayvec",
  "glam 0.30.9",
  "itertools",
  "lox-bodies",
@@ -725,6 +732,7 @@ dependencies = [
 name = "lox-space"
 version = "0.1.0-alpha.29"
 dependencies = [
+ "divan",
  "glam 0.30.9",
  "lox-bodies",
  "lox-core",

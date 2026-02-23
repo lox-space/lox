@@ -10,16 +10,27 @@ use glam::DVec3;
 use itertools::Itertools;
 use lox_bodies::Origin;
 use lox_core::coords::Cartesian;
-use lox_core::types::julian_dates::Epoch;
+use lox_core::time::deltas::{Seconds, ToDelta};
 use lox_time::Time;
-use lox_time::julian_dates::JulianDate;
 use lox_time::time_scales::Tdb;
 
 use crate::{Ephemeris, path_from_ids};
 
-use super::parser::{DafSpkError, Spk, SpkSegment, SpkType2Array, SpkType2Coefficients};
+use super::parser::{DafSpkError, Spk, SpkArray, SpkSegment, SpkType2Coefficients};
 
 type Body = i32;
+
+const MAX_CHEBYSHEV_DEGREE: usize = 32;
+
+/// Common setup for Chebyshev evaluation: finds the segment, validates the epoch,
+/// and computes the Chebyshev argument `x`, record index, and polynomial degree.
+struct ChebyshevSetup<'a> {
+    record: &'a [SpkType2Coefficients],
+    n: usize,
+    x: f64,
+    intlen: f64,
+    sign: f64,
+}
 
 impl Spk {
     fn find_segment(
@@ -36,9 +47,10 @@ impl Spk {
             sign = -1;
         }
 
-        // An SPK file may contain any number of segments. A single file may contain overlapping segments:
-        // segments containing data for the same body over a common interval. When this happens, the
-        // latest segment in a file supersedes any competing segments earlier in the file.
+        // An SPK file may contain any number of segments. A single file may contain overlapping
+        // segments: segments containing data for the same body over a common interval. When this
+        // happens, the latest segment in a file supersedes any competing segments earlier in the
+        // file.
         let segment = self
             .segments
             .get(&origin)
@@ -51,17 +63,32 @@ impl Spk {
         Ok((segment, sign))
     }
 
-    fn find_record<'a>(
-        &'a self,
-        array: &'a SpkType2Array,
-        initial_epoch: Epoch,
-        epoch: Epoch,
-    ) -> Result<(&'a Vec<SpkType2Coefficients>, f64), DafSpkError> {
-        let seconds_from_record_start = epoch - initial_epoch;
+    /// Performs the common setup for Chebyshev evaluation: segment lookup, epoch
+    /// bounds check, high-precision time computation, record selection.
+    fn chebyshev_setup(
+        &self,
+        time: Time<Tdb>,
+        origin: Body,
+        target: Body,
+    ) -> Result<ChebyshevSetup<'_>, DafSpkError> {
+        let (segment, sign) = self.find_segment(origin, target)?;
+
+        // Coarse epoch bounds check using f64
+        let epoch = time.to_delta().to_seconds().to_f64();
+        if epoch < segment.initial_epoch || epoch > segment.final_epoch {
+            return Err(DafSpkError::UnableToFindMatchingSegment);
+        }
+
+        let SpkArray::Type2(array) = &segment.data;
+
+        // High-precision time computation using two-part Seconds
+        let time_seconds = time.to_delta().to_seconds();
+        let initial_seconds = Seconds::from_f64(segment.initial_epoch);
+        let seconds_from_start = time_seconds - initial_seconds;
 
         let intlen = array.intlen as f64;
-        let mut record_number = (seconds_from_record_start / intlen).floor() as usize;
-        let mut fraction = seconds_from_record_start % intlen;
+        let mut record_number = (seconds_from_start.to_f64() / intlen).floor() as usize;
+        let mut fraction = seconds_from_start - Seconds::from_f64(record_number as f64 * intlen);
 
         // Chebyshev piecewise polynomials overlap at patchpoints. This means that one
         // can safely take the end of the interval from the next record. But this implies
@@ -69,7 +96,7 @@ impl Spk {
         // draw from.
         if record_number == array.n as usize {
             record_number -= 1;
-            fraction = array.intlen as f64;
+            fraction = Seconds::from_f64(intlen);
         }
 
         let record = array
@@ -77,108 +104,106 @@ impl Spk {
             .get(record_number)
             .ok_or(DafSpkError::UnableToFindMatchingRecord)?;
 
-        Ok((record, fraction))
+        // Chebyshev argument in [-1, 1] with compensated arithmetic
+        let x = (fraction * (2.0 / intlen) - Seconds::from_f64(1.0)).to_f64();
+        let n = array.degree_of_polynomial() as usize;
+
+        Ok(ChebyshevSetup {
+            record,
+            n,
+            x,
+            intlen,
+            sign: sign as f64,
+        })
     }
 
     pub fn get_segments(&self) -> &HashMap<i32, HashMap<i32, Vec<SpkSegment>>> {
         &self.segments
     }
 
-    fn get_chebyshev_polynomial<'a>(
-        &'a self,
-        epoch: Epoch,
-        segment: &'a SpkSegment,
-    ) -> Result<(Vec<f64>, &'a Vec<SpkType2Coefficients>), DafSpkError> {
-        let (coefficients, record) = match &segment.data {
-            super::parser::SpkArray::Type2(array) => {
-                let (record, fraction) = self.find_record(array, segment.initial_epoch, epoch)?;
-
-                let degree_of_polynomial = array.degree_of_polynomial() as usize;
-                let mut coefficients = Vec::<f64>::with_capacity(degree_of_polynomial);
-
-                coefficients.push(1f64);
-                coefficients.push(2f64 * fraction / array.intlen as f64 - 1f64);
-
-                for i in 2..degree_of_polynomial {
-                    coefficients
-                        .push(2f64 * coefficients[1] * coefficients[i - 1] - coefficients[i - 2]);
-                }
-
-                (coefficients, record)
-            }
-        };
-
-        Ok((coefficients, record))
-    }
-
     /// Compute the state (position and velocity) for a single adjacent body pair.
     /// Returns a `Cartesian` in meters and m/s (converted from SPK km and km/s).
     fn segment_state(
         &self,
-        epoch: Epoch,
+        time: Time<Tdb>,
         origin: Body,
         target: Body,
     ) -> Result<Cartesian, DafSpkError> {
-        let (segment, sign) = self.find_segment(origin, target)?;
+        let setup = self.chebyshev_setup(time, origin, target)?;
+        let ChebyshevSetup {
+            record,
+            n,
+            x,
+            intlen,
+            sign,
+        } = setup;
 
-        if epoch < segment.initial_epoch || epoch > segment.final_epoch {
-            return Err(DafSpkError::UnableToFindMatchingSegment);
+        // Chebyshev polynomials T_i(x) on the stack
+        let mut t = [0.0; MAX_CHEBYSHEV_DEGREE];
+        t[0] = 1.0;
+        t[1] = x;
+        for i in 2..n {
+            t[i] = 2.0 * x * t[i - 1] - t[i - 2];
         }
 
-        let mut px = 0f64;
-        let mut py = 0f64;
-        let mut pz = 0f64;
-        let mut vx = 0f64;
-        let mut vy = 0f64;
-        let mut vz = 0f64;
+        // Position
+        let mut pos = DVec3::ZERO;
+        for i in 0..n {
+            pos += t[i] * record[i].to_dvec3();
+        }
+        pos *= sign;
 
-        match &segment.data {
-            super::parser::SpkArray::Type2(array) => {
-                let (polynomial, record) = self.get_chebyshev_polynomial(epoch, segment)?;
-                let sign = sign as f64;
-                let degree_of_polynomial = array.degree_of_polynomial() as usize;
-
-                // Compute position
-                #[allow(clippy::needless_range_loop)]
-                for i in 0..degree_of_polynomial {
-                    px += sign * record[i].x * polynomial[i];
-                    py += sign * record[i].y * polynomial[i];
-                    pz += sign * record[i].z * polynomial[i];
-                }
-
-                // Compute velocity derivative
-                let mut derivative = Vec::<f64>::with_capacity(degree_of_polynomial);
-                derivative.push(0f64);
-                derivative.push(1f64);
-
-                if degree_of_polynomial > 2 {
-                    derivative.push(4f64 * polynomial[1]);
-                    for i in 3..degree_of_polynomial {
-                        let d = 2f64 * polynomial[1] * derivative[i - 1] - derivative[i - 2]
-                            + polynomial[i - 1]
-                            + polynomial[i - 1];
-                        derivative.push(d);
-                    }
-                }
-
-                let derivative: Vec<f64> = derivative
-                    .iter()
-                    .map(|d| 2.0 * d / array.intlen as f64)
-                    .collect();
-
-                #[allow(clippy::needless_range_loop)]
-                for i in 0..degree_of_polynomial {
-                    vx += sign * record[i].x * derivative[i];
-                    vy += sign * record[i].y * derivative[i];
-                    vz += sign * record[i].z * derivative[i];
-                }
+        // Chebyshev derivative T'_i(x)
+        let mut dt = [0.0; MAX_CHEBYSHEV_DEGREE];
+        dt[1] = 1.0;
+        if n > 2 {
+            dt[2] = 4.0 * x;
+            for i in 3..n {
+                dt[i] = 2.0 * x * dt[i - 1] - dt[i - 2] + 2.0 * t[i - 1];
             }
         }
 
+        let scale = 2.0 / intlen;
+        let mut vel = DVec3::ZERO;
+        for i in 0..n {
+            vel += (scale * dt[i]) * record[i].to_dvec3();
+        }
+        vel *= sign;
+
         // Convert km → m, km/s → m/s
-        let pos = DVec3::new(px, py, pz) * 1e3;
-        let vel = DVec3::new(vx, vy, vz) * 1e3;
-        Ok(Cartesian::from_vecs(pos, vel))
+        Ok(Cartesian::from_vecs(pos * 1e3, vel * 1e3))
+    }
+
+    /// Compute only the position for a single adjacent body pair.
+    /// Returns a `DVec3` in meters (converted from SPK km).
+    fn segment_position(
+        &self,
+        time: Time<Tdb>,
+        origin: Body,
+        target: Body,
+    ) -> Result<DVec3, DafSpkError> {
+        let setup = self.chebyshev_setup(time, origin, target)?;
+        let ChebyshevSetup {
+            record, n, x, sign, ..
+        } = setup;
+
+        // Chebyshev polynomials T_i(x) on the stack
+        let mut t = [0.0; MAX_CHEBYSHEV_DEGREE];
+        t[0] = 1.0;
+        t[1] = x;
+        for i in 2..n {
+            t[i] = 2.0 * x * t[i - 1] - t[i - 2];
+        }
+
+        // Position only
+        let mut pos = DVec3::ZERO;
+        for i in 0..n {
+            pos += t[i] * record[i].to_dvec3();
+        }
+        pos *= sign;
+
+        // Convert km → m
+        Ok(pos * 1e3)
     }
 }
 
@@ -191,11 +216,24 @@ impl Ephemeris for Spk {
         origin: O1,
         target: O2,
     ) -> Result<Cartesian, DafSpkError> {
-        let epoch = time.seconds_since_j2000();
         let path = path_from_ids(origin.id().0, target.id().0);
         let mut result = Cartesian::default();
         for (from, to) in path.into_iter().tuple_windows() {
-            result += self.segment_state(epoch, from, to)?;
+            result += self.segment_state(time, from, to)?;
+        }
+        Ok(result)
+    }
+
+    fn position<O1: Origin, O2: Origin>(
+        &self,
+        time: Time<Tdb>,
+        origin: O1,
+        target: O2,
+    ) -> Result<DVec3, DafSpkError> {
+        let path = path_from_ids(origin.id().0, target.id().0);
+        let mut result = DVec3::ZERO;
+        for (from, to) in path.into_iter().tuple_windows() {
+            result += self.segment_position(time, from, to)?;
         }
         Ok(result)
     }
@@ -209,7 +247,6 @@ mod test {
     use lox_time::deltas::TimeDelta;
     use lox_time::time_scales::Tdb;
 
-    use crate::spk::parser::parse_daf_spk;
     use crate::spk::parser::test::{FILE_CONTENTS, get_expected_segments};
 
     use super::*;
@@ -221,7 +258,7 @@ mod test {
 
     #[test]
     fn test_unable_to_find_segment() {
-        let spk = parse_daf_spk(&FILE_CONTENTS).expect("Unable to parse DAF/SPK");
+        let spk = Spk::from_bytes(&FILE_CONTENTS).expect("Unable to parse DAF/SPK");
 
         // Use an epoch that doesn't match any segment
         let bad_epoch = Time::from_two_part_julian_date(Tdb, 2457388.5, 0.0);
@@ -231,7 +268,7 @@ mod test {
 
     #[test]
     fn test_state() {
-        let spk = parse_daf_spk(&FILE_CONTENTS).expect("Unable to parse DAF/SPK");
+        let spk = Spk::from_bytes(&FILE_CONTENTS).expect("Unable to parse DAF/SPK");
 
         let state = spk
             .state(test_epoch(), SolarSystemBarycenter, MercuryBarycenter)
@@ -255,7 +292,7 @@ mod test {
 
     #[test]
     fn test_position() {
-        let spk = parse_daf_spk(&FILE_CONTENTS).expect("Unable to parse DAF/SPK");
+        let spk = Spk::from_bytes(&FILE_CONTENTS).expect("Unable to parse DAF/SPK");
 
         let pos = spk
             .position(test_epoch(), SolarSystemBarycenter, MercuryBarycenter)
@@ -272,7 +309,7 @@ mod test {
 
     #[test]
     fn test_get_segments() {
-        let spk = parse_daf_spk(&FILE_CONTENTS).expect("Unable to parse DAF/SPK");
+        let spk = Spk::from_bytes(&FILE_CONTENTS).expect("Unable to parse DAF/SPK");
 
         assert_eq!(&get_expected_segments(), spk.get_segments());
     }

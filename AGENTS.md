@@ -105,7 +105,7 @@ Key details:
 - Unit tests in `#[cfg(test)]` modules within source files.
 - `rstest` for parameterized tests; `proptest` for property-based testing (e.g., anomaly conversions).
 - `lox-test-utils` provides `ApproxEq` for floating-point comparisons.
-- Benchmarks use `divan`.
+- Benchmarks use `divan` and are located in `crates/lox-space/benches/`. All benchmarks should be added to `lox-space`, not to individual crates, so they are centralized in one place. Exception: `lox-test-utils` has its own benchmarks for the `ApproxEq` infrastructure.
 
 ### Python Tests
 - Located in `crates/lox-space/tests/test_*.py`.
