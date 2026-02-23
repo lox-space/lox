@@ -37,7 +37,7 @@ impl AntennaGain for AntennaPattern {
         }
     }
 
-    fn beamwidth(&self, frequency: Frequency) -> Angle {
+    fn beamwidth(&self, frequency: Frequency) -> Option<Angle> {
         match self {
             AntennaPattern::Parabolic(p) => p.beamwidth(frequency),
             AntennaPattern::Gaussian(p) => p.beamwidth(frequency),

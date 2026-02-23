@@ -14,8 +14,9 @@ pub trait AntennaGain {
     /// Returns the antenna gain in dBi at the given frequency and off-boresight angle.
     fn gain(&self, frequency: Frequency, angle: Angle) -> Decibel;
 
-    /// Returns the half-power beamwidth in radians at the given frequency.
-    fn beamwidth(&self, frequency: Frequency) -> Angle;
+    /// Returns the half-power beamwidth at the given frequency, or `None` when
+    /// the beamwidth is not well-defined for this antenna type or configuration.
+    fn beamwidth(&self, frequency: Frequency) -> Option<Angle>;
 }
 
 /// A simple antenna with constant gain and beamwidth.
@@ -32,8 +33,8 @@ impl AntennaGain for SimpleAntenna {
         self.gain
     }
 
-    fn beamwidth(&self, _frequency: Frequency) -> Angle {
-        self.beamwidth
+    fn beamwidth(&self, _frequency: Frequency) -> Option<Angle> {
+        Some(self.beamwidth)
     }
 }
 
@@ -51,7 +52,7 @@ impl AntennaGain for ComplexAntenna {
         self.pattern.gain(frequency, angle)
     }
 
-    fn beamwidth(&self, frequency: Frequency) -> Angle {
+    fn beamwidth(&self, frequency: Frequency) -> Option<Angle> {
         self.pattern.beamwidth(frequency)
     }
 }
@@ -79,7 +80,7 @@ impl AntennaGain for Antenna {
         }
     }
 
-    fn beamwidth(&self, frequency: Frequency) -> Angle {
+    fn beamwidth(&self, frequency: Frequency) -> Option<Angle> {
         match self {
             Antenna::Simple(a) => a.beamwidth(frequency),
             Antenna::Complex(a) => a.beamwidth(frequency),

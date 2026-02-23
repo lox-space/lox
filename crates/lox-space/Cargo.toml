@@ -81,6 +81,7 @@ orbits = [
   "math",
   "time",
   "units",
+  "dep:lox-core",
   "dep:lox-orbits",
 ]
 python = [

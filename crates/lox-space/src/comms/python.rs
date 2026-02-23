@@ -192,9 +192,12 @@ impl PyParabolicPattern {
         )
     }
 
-    /// Returns the half-power beamwidth in degrees.
-    fn beamwidth(&self, frequency_hz: f64) -> f64 {
-        self.0.beamwidth(Frequency::new(frequency_hz)).to_degrees()
+    /// Returns the half-power beamwidth in degrees, or ``None`` when the
+    /// antenna diameter is smaller than ~1.22 wavelengths at this frequency.
+    fn beamwidth(&self, frequency_hz: f64) -> Option<f64> {
+        self.0
+            .beamwidth(Frequency::new(frequency_hz))
+            .map(|a| a.to_degrees())
     }
 
     /// Returns the peak gain in dBi.
@@ -247,8 +250,13 @@ impl PyGaussianPattern {
     }
 
     /// Returns the half-power beamwidth in degrees.
-    fn beamwidth(&self, frequency_hz: f64) -> f64 {
-        self.0.beamwidth(Frequency::new(frequency_hz)).to_degrees()
+    ///
+    /// Always returns a value for ``GaussianPattern`` (the formula is defined
+    /// for any positive diameter).
+    fn beamwidth(&self, frequency_hz: f64) -> Option<f64> {
+        self.0
+            .beamwidth(Frequency::new(frequency_hz))
+            .map(|a| a.to_degrees())
     }
 
     /// Returns the peak gain in dBi.
@@ -389,9 +397,13 @@ impl PyComplexAntenna {
         )
     }
 
-    /// Returns the half-power beamwidth in degrees.
-    fn beamwidth(&self, frequency_hz: f64) -> f64 {
-        self.0.beamwidth(Frequency::new(frequency_hz)).to_degrees()
+    /// Returns the half-power beamwidth in degrees, or ``None`` when the
+    /// underlying pattern does not define a beamwidth (e.g. ``DipolePattern``,
+    /// or a ``ParabolicPattern`` whose diameter is below ~1.22 wavelengths).
+    fn beamwidth(&self, frequency_hz: f64) -> Option<f64> {
+        self.0
+            .beamwidth(Frequency::new(frequency_hz))
+            .map(|a| a.to_degrees())
     }
 
     /// Returns the peak gain in dBi.
