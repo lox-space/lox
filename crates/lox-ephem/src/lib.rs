@@ -2,25 +2,38 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use lox_core::types::julian_dates::Epoch;
+use glam::DVec3;
+use lox_bodies::Origin;
+use lox_core::coords::Cartesian;
+use lox_time::{Time, time_scales::Tdb};
 
 pub mod spk;
 
-pub(crate) type Position = (f64, f64, f64);
-pub(crate) type Velocity = (f64, f64, f64);
-pub(crate) type Body = i32;
-
+/// Returns the state (position and velocity) of `target` relative to `origin`
+/// at the given TDB epoch, in ICRF, in SI units (meters, m/s).
+///
+/// Implementations handle path resolution for non-adjacent body pairs
+/// (e.g. Earth relative to Mars goes via the barycenters automatically).
 pub trait Ephemeris {
-    type Error: std::error::Error;
+    type Error: std::error::Error + Send + Sync;
 
-    fn position(&self, epoch: Epoch, origin: Body, target: Body) -> Result<Position, Self::Error>;
-    fn velocity(&self, epoch: Epoch, origin: Body, target: Body) -> Result<Velocity, Self::Error>;
-    fn state(
+    fn state<O1: Origin, O2: Origin>(
         &self,
-        epoch: Epoch,
-        origin: Body,
-        target: Body,
-    ) -> Result<(Position, Velocity), Self::Error>;
+        time: Time<Tdb>,
+        origin: O1,
+        target: O2,
+    ) -> Result<Cartesian, Self::Error>;
+
+    /// Returns only the position of `target` relative to `origin`.
+    /// Default implementation delegates to `state()`.
+    fn position<O1: Origin, O2: Origin>(
+        &self,
+        time: Time<Tdb>,
+        origin: O1,
+        target: O2,
+    ) -> Result<DVec3, Self::Error> {
+        Ok(self.state(time, origin, target)?.position())
+    }
 }
 
 fn ancestors(id: i32) -> Vec<i32> {
@@ -33,7 +46,7 @@ fn ancestors(id: i32) -> Vec<i32> {
     ancestors
 }
 
-pub fn path_from_ids(origin: i32, target: i32) -> Vec<i32> {
+pub(crate) fn path_from_ids(origin: i32, target: i32) -> Vec<i32> {
     let ancestors_origin = ancestors(origin);
     let ancestors_target = ancestors(target);
     let n = ancestors_target.len();

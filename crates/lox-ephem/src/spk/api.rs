@@ -6,11 +6,20 @@
 
 use std::collections::HashMap;
 
+use glam::DVec3;
+use itertools::Itertools;
+use lox_bodies::Origin;
+use lox_core::coords::Cartesian;
 use lox_core::types::julian_dates::Epoch;
+use lox_time::Time;
+use lox_time::julian_dates::JulianDate;
+use lox_time::time_scales::Tdb;
 
-use crate::{Body, Ephemeris, Position, Velocity};
+use crate::{Ephemeris, path_from_ids};
 
 use super::parser::{DafSpkError, Spk, SpkSegment, SpkType2Array, SpkType2Coefficients};
+
+type Body = i32;
 
 impl Spk {
     fn find_segment(
@@ -101,72 +110,54 @@ impl Spk {
 
         Ok((coefficients, record))
     }
-}
 
-impl Ephemeris for Spk {
-    type Error = DafSpkError;
-
-    fn position(&self, epoch: Epoch, origin: Body, target: Body) -> Result<Position, DafSpkError> {
+    /// Compute the state (position and velocity) for a single adjacent body pair.
+    /// Returns a `Cartesian` in meters and m/s (converted from SPK km and km/s).
+    fn segment_state(
+        &self,
+        epoch: Epoch,
+        origin: Body,
+        target: Body,
+    ) -> Result<Cartesian, DafSpkError> {
         let (segment, sign) = self.find_segment(origin, target)?;
 
         if epoch < segment.initial_epoch || epoch > segment.final_epoch {
             return Err(DafSpkError::UnableToFindMatchingSegment);
         }
 
-        let mut x = 0f64;
-        let mut y = 0f64;
-        let mut z = 0f64;
+        let mut px = 0f64;
+        let mut py = 0f64;
+        let mut pz = 0f64;
+        let mut vx = 0f64;
+        let mut vy = 0f64;
+        let mut vz = 0f64;
 
         match &segment.data {
             super::parser::SpkArray::Type2(array) => {
                 let (polynomial, record) = self.get_chebyshev_polynomial(epoch, segment)?;
                 let sign = sign as f64;
-
                 let degree_of_polynomial = array.degree_of_polynomial() as usize;
 
+                // Compute position
                 #[allow(clippy::needless_range_loop)]
                 for i in 0..degree_of_polynomial {
-                    x += sign * record[i].x * polynomial[i];
-                    y += sign * record[i].y * polynomial[i];
-                    z += sign * record[i].z * polynomial[i];
+                    px += sign * record[i].x * polynomial[i];
+                    py += sign * record[i].y * polynomial[i];
+                    pz += sign * record[i].z * polynomial[i];
                 }
-            }
-        }
 
-        Ok((x, y, z))
-    }
-
-    fn velocity(&self, epoch: Epoch, origin: Body, target: Body) -> Result<Velocity, DafSpkError> {
-        let (segment, sign) = self.find_segment(origin, target)?;
-
-        if epoch < segment.initial_epoch || epoch > segment.final_epoch {
-            return Err(DafSpkError::UnableToFindMatchingSegment);
-        }
-
-        let mut x = 0f64;
-        let mut y = 0f64;
-        let mut z = 0f64;
-
-        match &segment.data {
-            super::parser::SpkArray::Type2(array) => {
-                let (polynomial, record) = self.get_chebyshev_polynomial(epoch, segment)?;
-                let sign = sign as f64;
-
-                let degree_of_polynomial = array.degree_of_polynomial() as usize;
-
+                // Compute velocity derivative
                 let mut derivative = Vec::<f64>::with_capacity(degree_of_polynomial);
-
                 derivative.push(0f64);
                 derivative.push(1f64);
 
                 if degree_of_polynomial > 2 {
                     derivative.push(4f64 * polynomial[1]);
                     for i in 3..degree_of_polynomial {
-                        let x = 2f64 * polynomial[1] * derivative[i - 1] - derivative[i - 2]
+                        let d = 2f64 * polynomial[1] * derivative[i - 1] - derivative[i - 2]
                             + polynomial[i - 1]
                             + polynomial[i - 1];
-
-                        derivative.push(x);
+                        derivative.push(d);
                     }
                 }
 
@@ -177,85 +168,106 @@ impl Ephemeris for Spk {
 
                 #[allow(clippy::needless_range_loop)]
                 for i in 0..degree_of_polynomial {
-                    x += sign * record[i].x * derivative[i];
-                    y += sign * record[i].y * derivative[i];
-                    z += sign * record[i].z * derivative[i];
+                    vx += sign * record[i].x * derivative[i];
+                    vy += sign * record[i].y * derivative[i];
+                    vz += sign * record[i].z * derivative[i];
                 }
             }
         }
 
-        Ok((x, y, z))
+        // Convert km → m, km/s → m/s
+        let pos = DVec3::new(px, py, pz) * 1e3;
+        let vel = DVec3::new(vx, vy, vz) * 1e3;
+        Ok(Cartesian::from_vecs(pos, vel))
     }
+}
 
-    fn state(
+impl Ephemeris for Spk {
+    type Error = DafSpkError;
+
+    fn state<O1: Origin, O2: Origin>(
         &self,
-        epoch: Epoch,
-        origin: Body,
-        target: Body,
-    ) -> Result<(Position, Velocity), DafSpkError> {
-        let position = self.position(epoch, origin, target)?;
-        let velocity = self.velocity(epoch, origin, target)?;
-
-        Ok((position, velocity))
+        time: Time<Tdb>,
+        origin: O1,
+        target: O2,
+    ) -> Result<Cartesian, DafSpkError> {
+        let epoch = time.seconds_since_j2000();
+        let path = path_from_ids(origin.id().0, target.id().0);
+        let mut result = Cartesian::default();
+        for (from, to) in path.into_iter().tuple_windows() {
+            result += self.segment_state(epoch, from, to)?;
+        }
+        Ok(result)
     }
 }
 
 #[cfg(test)]
 mod test {
+    use glam::DVec3;
+    use lox_bodies::{MercuryBarycenter, SolarSystemBarycenter};
+    use lox_time::Time;
+    use lox_time::deltas::TimeDelta;
+    use lox_time::time_scales::Tdb;
+
     use crate::spk::parser::parse_daf_spk;
     use crate::spk::parser::test::{FILE_CONTENTS, get_expected_segments};
 
     use super::*;
 
+    fn test_epoch() -> Time<Tdb> {
+        // -14200747200.0 seconds since J2000
+        Time::j2000(Tdb) + TimeDelta::from_seconds_f64(-14200747200.0)
+    }
+
     #[test]
     fn test_unable_to_find_segment() {
         let spk = parse_daf_spk(&FILE_CONTENTS).expect("Unable to parse DAF/SPK");
 
-        assert_eq!(
-            Err(DafSpkError::UnableToFindMatchingSegment),
-            spk.position(2457388.5000000 as Epoch, 1, 2)
-        );
-    }
-
-    #[test]
-    fn test_position() {
-        let spk = parse_daf_spk(&FILE_CONTENTS).expect("Unable to parse DAF/SPK");
-
-        assert_eq!(
-            Ok((-32703259.291699532, 31370540.51993667, 20159681.594182793)),
-            spk.position(-14200747200.0 as Epoch, 0, 1)
-        );
-    }
-
-    #[test]
-    fn test_velocity() {
-        let spk = parse_daf_spk(&FILE_CONTENTS).expect("Unable to parse DAF/SPK");
-
-        assert_eq!(
-            Ok((
-                -46.723420416476635,
-                -28.050723083678367,
-                -10.055174230490163,
-            )),
-            spk.velocity(-14200747200.0 as Epoch, 0, 1)
-        );
+        // Use an epoch that doesn't match any segment
+        let bad_epoch = Time::from_two_part_julian_date(Tdb, 2457388.5, 0.0);
+        let result = spk.state(bad_epoch, SolarSystemBarycenter, MercuryBarycenter);
+        assert!(result.is_err());
     }
 
     #[test]
     fn test_state() {
         let spk = parse_daf_spk(&FILE_CONTENTS).expect("Unable to parse DAF/SPK");
 
-        assert_eq!(
-            Ok((
-                (-32703259.291699532, 31370540.51993667, 20159681.594182793),
-                (
-                    -46.723420416476635,
-                    -28.050723083678367,
-                    -10.055174230490163,
-                ),
-            )),
-            spk.state(-14200747200.0 as Epoch, 0, 1)
+        let state = spk
+            .state(test_epoch(), SolarSystemBarycenter, MercuryBarycenter)
+            .unwrap();
+
+        // Original SPK values were in km, now converted to meters
+        let expected_pos = DVec3::new(
+            -32703259.291699532e3,
+            31370540.51993667e3,
+            20159681.594182793e3,
         );
+        let expected_vel = DVec3::new(
+            -46.723420416476635e3,
+            -28.050723083678367e3,
+            -10.055174230490163e3,
+        );
+
+        assert_eq!(state.position(), expected_pos);
+        assert_eq!(state.velocity(), expected_vel);
+    }
+
+    #[test]
+    fn test_position() {
+        let spk = parse_daf_spk(&FILE_CONTENTS).expect("Unable to parse DAF/SPK");
+
+        let pos = spk
+            .position(test_epoch(), SolarSystemBarycenter, MercuryBarycenter)
+            .unwrap();
+
+        let expected = DVec3::new(
+            -32703259.291699532e3,
+            31370540.51993667e3,
+            20159681.594182793e3,
+        );
+
+        assert_eq!(pos, expected);
     }
 
     #[test]
