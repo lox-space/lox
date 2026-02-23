@@ -5,6 +5,9 @@
 #[cfg(feature = "bodies")]
 pub mod bodies;
 
+#[cfg(feature = "core")]
+pub mod core;
+
 #[cfg(feature = "earth")]
 pub mod earth;
 
