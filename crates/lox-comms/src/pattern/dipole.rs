@@ -99,9 +99,9 @@ impl AntennaGain for DipolePattern {
         }
     }
 
-    fn beamwidth(&self, _frequency: Frequency) -> Angle {
-        // Beamwidth is not well-defined for a dipole; return π as a sentinel.
-        Angle::radians(PI)
+    fn beamwidth(&self, _frequency: Frequency) -> Option<Angle> {
+        // Beamwidth is not well-defined for a dipole.
+        None
     }
 }
 

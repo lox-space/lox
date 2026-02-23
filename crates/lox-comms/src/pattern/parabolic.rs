@@ -87,11 +87,12 @@ impl AntennaGain for ParabolicPattern {
         self.peak_gain(frequency) + Decibel::from_linear(pattern_loss_linear)
     }
 
-    fn beamwidth(&self, frequency: Frequency) -> Angle {
+    fn beamwidth(&self, frequency: Frequency) -> Option<Angle> {
         let wavelength_m = frequency.wavelength().to_meters();
         let d = self.diameter.to_meters();
         let arg = BESSEL_J1_FIRST_ZERO * wavelength_m / (PI * d);
-        Angle::radians(arg.asin())
+        // When d < ~1.22λ the argument exceeds 1.0 and asin is undefined.
+        if arg > 1.0 { None } else { Some(Angle::radians(arg.asin())) }
     }
 }
 
@@ -151,6 +152,18 @@ mod tests {
         assert_approx_eq!(bessel_j1(0.0), 0.0, atol <= 1e-15);
     }
 
+    /// When the diameter is smaller than ~1.22λ the asin argument exceeds 1.0,
+    /// so beamwidth returns None instead of NaN.
+    ///
+    /// At 1 GHz (λ ≈ 0.300 m) the threshold diameter is ≈ 0.366 m; a 0.1 m
+    /// dish is well below this limit.
+    #[test]
+    fn test_beamwidth_none_for_sub_wavelength_diameter() {
+        let f = 1.0.ghz(); // λ ≈ 0.300 m
+        let p = ParabolicPattern::new(Distance::meters(0.1), 0.65); // d << 1.22λ
+        assert!(p.beamwidth(f).is_none());
+    }
+
     #[test]
     fn test_bessel_j1_known_values() {
         // J1(3.8317) ≈ 0 (first zero)
@@ -166,7 +179,7 @@ mod tests {
     #[test]
     fn test_parabolic_beamwidth() {
         let p = test_pattern();
-        let bw = p.beamwidth(test_frequency());
+        let bw = p.beamwidth(test_frequency()).unwrap();
         let exp = Angle::degrees(0.7371800047831003);
         assert_approx_eq!(bw.to_radians(), exp.to_radians(), rtol <= 1e-6);
     }
@@ -190,7 +203,7 @@ mod tests {
     #[test]
     fn test_parabolic_gain_at_hpbw() {
         let p = test_pattern();
-        let bw = p.beamwidth(test_frequency());
+        let bw = p.beamwidth(test_frequency()).unwrap();
         let gain = p.gain(test_frequency(), bw);
         assert!(gain.as_f64() < -100.0);
     }
@@ -200,7 +213,7 @@ mod tests {
         let beamwidth = Angle::radians(0.1);
         let f = 2.0.ghz();
         let p = ParabolicPattern::from_beamwidth(beamwidth, f, 0.65);
-        let actual_bw = p.beamwidth(f);
+        let actual_bw = p.beamwidth(f).unwrap();
         assert_approx_eq!(actual_bw.to_radians(), beamwidth.to_radians(), rtol <= 0.01);
     }
 }
