@@ -3,20 +3,18 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use glam::DVec3;
-use itertools::Itertools;
 use lox_bodies::{
     DynOrigin, Origin, RotationalElements, Spheroid, TryMeanRadius, TrySpheroid,
     UndefinedOriginPropertyError,
 };
 use lox_core::coords::Cartesian;
 use lox_core::types::units::Radians;
-use lox_ephem::{Ephemeris, path_from_ids};
+use lox_ephem::Ephemeris;
 use lox_frames::providers::DefaultRotationProvider;
 use lox_frames::rotations::TryRotation;
 use lox_math::roots::{Brent, RootFinderError};
 use lox_math::series::{InterpolationType, Series, SeriesError};
 use lox_time::deltas::TimeDelta;
-use lox_time::julian_dates::JulianDate;
 use lox_time::offsets::DefaultOffsetProvider;
 use lox_time::time_scales::DynTimeScale;
 use lox_time::time_scales::{Tdb, TimeScale};
@@ -383,19 +381,8 @@ pub fn visibility_los(
     find_windows(
         |t| {
             let time = start + TimeDelta::from_seconds_f64(t);
-            let epoch = time
-                .try_to_scale(Tdb, &DefaultOffsetProvider)
-                .unwrap()
-                .seconds_since_j2000();
-            let origin_id = sc.origin().id();
-            let target_id = body.id();
-            let path = path_from_ids(origin_id.0, target_id.0);
-            let mut r_body = DVec3::ZERO;
-            for (origin, target) in path.into_iter().tuple_windows() {
-                // Ephemeris returns km, convert to meters
-                let p: DVec3 = ephem.position(epoch, origin, target).unwrap().into();
-                r_body += p * 1e3;
-            }
+            let tdb = time.try_to_scale(Tdb, &DefaultOffsetProvider).unwrap();
+            let r_body = ephem.position(tdb, sc.origin(), body).unwrap();
             let r_sc = sc.interpolate_at(time).position() - r_body;
             let r_gs = DynGroundPropagator::with_dynamic(gs.clone())
                 .propagate_dyn(time)

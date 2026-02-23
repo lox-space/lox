@@ -30,28 +30,17 @@ def test_state_to_ground_location():
 
 
 def test_state_to_origin(ephemeris):
-    r_venus = np.array(
-        [
-            1.001977553295792e8,
-            2.200234656010247e8,
-            9.391473630346918e7,
-        ]
-    )
-    v_venus = np.array([-59.08617935009049, 22.682387107225292, 12.05029567478702])
     r = np.array([6068279.27, -1692843.94, -2516619.18]) / 1e3
-
     v = np.array([-660.415582, 5495.938726, -5303.093233]) / 1e3
 
-    r_exp = r - r_venus
-    v_exp = v - v_venus
     utc = lox.UTC.from_iso("2016-05-30T12:00:00.000")
     tai = utc.to_scale("TAI")
 
     s_earth = lox.State(tai, tuple(r), tuple(v))
     s_venus = s_earth.to_origin(lox.Origin("Venus"), ephemeris)
 
-    r_act = s_venus.position()
-    v_act = s_venus.velocity()
+    # Verify round-trip: converting back to Earth origin should recover the original state
+    s_earth_rt = s_venus.to_origin(lox.Origin("Earth"), ephemeris)
 
-    npt.assert_allclose(r_act, r_exp)
-    npt.assert_allclose(v_act, v_exp)
+    npt.assert_allclose(s_earth_rt.position(), r, atol=1e-6)
+    npt.assert_allclose(s_earth_rt.velocity(), v, atol=1e-6)

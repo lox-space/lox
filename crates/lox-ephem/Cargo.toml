@@ -14,9 +14,13 @@ authors.workspace = true
 repository.workspace = true
 
 [dependencies]
+lox-bodies.workspace = true
 lox-core.workspace = true
+lox-time.workspace = true
 lox-units.workspace = true
 
+glam.workspace = true
+itertools.workspace = true
 nom.workspace = true
 serde = { workspace = true, optional = true }
 thiserror.workspace = true

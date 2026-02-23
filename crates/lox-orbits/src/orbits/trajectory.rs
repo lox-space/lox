@@ -13,7 +13,8 @@ use lox_math::roots::{BoxedError, Brent, RootFinderError};
 use lox_time::{
     DynTime, Time,
     deltas::TimeDelta,
-    time_scales::{DynTimeScale, Tai, TimeScale},
+    offsets::{DefaultOffsetProvider, Offset},
+    time_scales::{DynTimeScale, Tai, Tdb, TimeScale},
     utc::Utc,
 };
 use thiserror::Error;
@@ -264,6 +265,7 @@ impl<T, O> Trajectory<T, O, Icrf>
 where
     T: TimeScale + Copy,
     O: Origin + Copy,
+    DefaultOffsetProvider: Offset<T, Tdb>,
 {
     pub fn to_origin<O1: Origin + Copy, E: Ephemeris>(
         &self,

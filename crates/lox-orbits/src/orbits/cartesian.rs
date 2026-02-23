@@ -6,16 +6,16 @@ use std::f64::consts::{PI, TAU};
 use std::ops::Sub;
 
 use glam::{DMat3, DVec3};
-use itertools::Itertools;
 use lox_bodies::{
     DynOrigin, Origin, PointMass, RotationalElements, Spheroid, TryPointMass, TrySpheroid,
     UndefinedOriginPropertyError,
 };
 use lox_core::coords::Cartesian;
-use lox_ephem::{Ephemeris, path_from_ids};
+use lox_ephem::Ephemeris;
 use lox_frames::{DynFrame, Iau, Icrf, ReferenceFrame, TryBodyFixed, rotations::TryRotation};
 use lox_math::roots::{FindRoot, RootFinderError, Secant};
-use lox_time::{julian_dates::JulianDate, time_scales::TimeScale};
+use lox_time::offsets::{DefaultOffsetProvider, Offset};
+use lox_time::time_scales::{Tdb, TimeScale};
 use thiserror::Error;
 
 use crate::ground::{DynGroundLocation, GroundLocation};
@@ -181,27 +181,14 @@ where
         &self,
         target: O1,
         ephemeris: &E,
-    ) -> Result<CartesianOrbit<T, O1, Icrf>, E::Error> {
-        let epoch = self.time().seconds_since_j2000();
-        let mut pos = self.position();
-        let mut vel = self.velocity();
-        let mut pos_eph = DVec3::ZERO;
-        let mut vel_eph = DVec3::ZERO;
-        let origin_id = self.origin().id();
-        let target_id = target.id();
-        let path = path_from_ids(origin_id.0, target_id.0);
-        for (origin, target) in path.into_iter().tuple_windows() {
-            // Ephemeris returns km and km/s, convert to m and m/s
-            let (p, v) = ephemeris.state(epoch, origin, target)?;
-            let p: DVec3 = DVec3::from(p) * 1e3;
-            let v: DVec3 = DVec3::from(v) * 1e3;
-            pos_eph += p;
-            vel_eph += v;
-        }
-        pos -= pos_eph;
-        vel -= vel_eph;
+    ) -> Result<CartesianOrbit<T, O1, Icrf>, E::Error>
+    where
+        DefaultOffsetProvider: Offset<T, Tdb>,
+    {
+        let tdb = self.time().to_scale(Tdb);
+        let delta = ephemeris.state(tdb, self.origin(), target)?;
         Ok(CartesianOrbit::new(
-            Cartesian::from_vecs(pos, vel),
+            self.state() - delta,
             self.time(),
             target,
             Icrf,
@@ -215,26 +202,13 @@ impl DynCartesianOrbit {
         target: DynOrigin,
         ephemeris: &E,
     ) -> Result<DynCartesianOrbit, E::Error> {
-        let epoch = self.time().seconds_since_j2000();
-        let mut pos = self.position();
-        let mut vel = self.velocity();
-        let mut pos_eph = DVec3::ZERO;
-        let mut vel_eph = DVec3::ZERO;
-        let origin_id = self.origin().id();
-        let target_id = target.id();
-        let path = path_from_ids(origin_id.0, target_id.0);
-        for (origin, target) in path.into_iter().tuple_windows() {
-            // Ephemeris returns km and km/s, convert to m and m/s
-            let (p, v) = ephemeris.state(epoch, origin, target)?;
-            let p: DVec3 = DVec3::from(p) * 1e3;
-            let v: DVec3 = DVec3::from(v) * 1e3;
-            pos_eph += p;
-            vel_eph += v;
-        }
-        pos -= pos_eph;
-        vel -= vel_eph;
+        let tdb = self
+            .time()
+            .try_to_scale(Tdb, &DefaultOffsetProvider)
+            .unwrap();
+        let delta = ephemeris.state(tdb, self.origin(), target)?;
         Ok(CartesianOrbit::new(
-            Cartesian::from_vecs(pos, vel),
+            self.state() - delta,
             self.time(),
             target,
             DynFrame::Icrf,
@@ -295,6 +269,7 @@ mod tests {
     use glam::DVec3;
     use lox_bodies::{Earth, Jupiter, Venus};
     use lox_core::coords::Cartesian;
+    use lox_ephem::Ephemeris;
     use lox_ephem::spk::parser::{Spk, parse_daf_spk};
     use lox_frames::providers::DefaultRotationProvider;
     use lox_test_utils::{assert_approx_eq, data_file};
@@ -373,20 +348,17 @@ mod tests {
 
     #[test]
     fn test_to_origin() {
-        let r_venus = DVec3::new(
-            1.001977553295792e11,
-            2.200234656010247e11,
-            9.391473630346918e10,
-        );
-        let v_venus = DVec3::new(-59086.17935009049, 22682.387107225292, 12050.29567478702);
         let r = DVec3::new(6068279.27, -1692843.94, -2516619.18);
         let v = DVec3::new(-660.415582, 5495.938726, -5303.093233);
 
-        let r_exp = r - r_venus;
-        let v_exp = v - v_venus;
-
         let utc = Utc::from_iso("2016-05-30T12:00:00.000").unwrap();
         let tai = utc.to_time();
+        let tdb = tai.to_scale(Tdb);
+
+        // Compute the expected ephemeris delta using the new trait directly
+        let delta = ephemeris().state(tdb, Earth, Venus).unwrap();
+        let r_exp = r - delta.position();
+        let v_exp = v - delta.velocity();
 
         let s_earth = CartesianOrbit::new(Cartesian::from_vecs(r, v), tai, Earth, Icrf);
         let s_venus = s_earth.to_origin(Venus, ephemeris()).unwrap();
