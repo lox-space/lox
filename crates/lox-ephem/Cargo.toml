@@ -19,6 +19,7 @@ lox-core.workspace = true
 lox-time.workspace = true
 lox-units.workspace = true
 
+arrayvec.workspace = true
 glam.workspace = true
 itertools.workspace = true
 nom.workspace = true

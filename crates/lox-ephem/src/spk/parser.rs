@@ -7,6 +7,7 @@
 use std::collections::HashMap;
 use std::iter::zip;
 
+use glam::DVec3;
 use nom::Parser;
 use nom::bytes::complete as nb;
 use nom::error::ErrorKind;
@@ -49,7 +50,7 @@ pub struct DafSummary {
     pub final_address: usize,
 }
 
-#[derive(Debug, PartialEq, Error)]
+#[derive(Debug, Error)]
 pub enum DafSpkError {
     #[error("the data type integer value does not match the ones in the spec")]
     InvalidSpkSegmentDataType,
@@ -63,6 +64,8 @@ pub enum DafSpkError {
     UnableToFindMatchingSegment,
     #[error("unable to find record for a given date")]
     UnableToFindMatchingRecord,
+    #[error("I/O error: {0}")]
+    Io(#[from] std::io::Error),
 }
 
 #[derive(Debug, PartialEq)]
@@ -71,6 +74,12 @@ pub struct SpkType2Coefficients {
     pub x: f64,
     pub y: f64,
     pub z: f64,
+}
+
+impl SpkType2Coefficients {
+    pub fn to_dvec3(&self) -> DVec3 {
+        DVec3::new(self.x, self.y, self.z)
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -384,52 +393,64 @@ pub fn parse_all_summary_and_name_record_pairs(
     Ok((&[], all_summary_records))
 }
 
-pub fn parse_daf_spk(full_input: &[u8]) -> Result<Spk, DafSpkError> {
-    // - https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/req/daf.html
-    // - https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/req/spk.html
-    // - https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/Tutorials/office/individual_docs/42_making_an_spk.pptx
+impl Spk {
+    pub fn from_file(path: impl AsRef<std::path::Path>) -> Result<Self, DafSpkError> {
+        let data = std::fs::read(path)?;
+        Self::from_bytes(&data)
+    }
 
-    let input_cursor = full_input;
+    pub fn from_bytes(full_input: &[u8]) -> Result<Self, DafSpkError> {
+        // - https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/req/daf.html
+        // - https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/req/spk.html
+        // - https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/Tutorials/office/individual_docs/42_making_an_spk.pptx
 
-    let (input_cursor, (endianness, file_record)) = parse_daf_file_record(input_cursor)?;
+        let input_cursor = full_input;
 
-    let (_, comment) = parse_daf_comment_area(input_cursor, file_record.fward - 2)?;
+        let (input_cursor, (endianness, file_record)) = parse_daf_file_record(input_cursor)?;
 
-    let (_, all_summaries) = parse_all_summary_and_name_record_pairs(
-        full_input,
-        endianness,
-        file_record.nd,
-        file_record.ni,
-        file_record.fward,
-    )?;
+        let (_, comment) = parse_daf_comment_area(input_cursor, file_record.fward - 2)?;
 
-    let segments: HashMap<BodyId, HashMap<BodyId, Vec<SpkSegment>>> = all_summaries
-        .iter()
-        .map(|summary_record| {
-            summary_record
-                .summaries
-                .iter()
-                .map(|summary| parse_spk_segment(summary, full_input, endianness))
-                .collect::<Result<Vec<SpkSegment>, DafSpkError>>()
+        let (_, all_summaries) = parse_all_summary_and_name_record_pairs(
+            full_input,
+            endianness,
+            file_record.nd,
+            file_record.ni,
+            file_record.fward,
+        )?;
+
+        let segments: HashMap<BodyId, HashMap<BodyId, Vec<SpkSegment>>> = all_summaries
+            .iter()
+            .map(|summary_record| {
+                summary_record
+                    .summaries
+                    .iter()
+                    .map(|summary| parse_spk_segment(summary, full_input, endianness))
+                    .collect::<Result<Vec<SpkSegment>, DafSpkError>>()
+            })
+            .collect::<Result<Vec<_>, DafSpkError>>()?
+            .into_iter()
+            .flatten()
+            .fold(HashMap::new(), |mut map, segment| {
+                map.entry(segment.center_id)
+                    .or_default()
+                    .entry(segment.target_id)
+                    .or_default()
+                    .push(segment);
+
+                map
+            });
+
+        Ok(Spk {
+            file_record,
+            comment,
+            segments,
         })
-        .collect::<Result<Vec<_>, DafSpkError>>()?
-        .into_iter()
-        .flatten()
-        .fold(HashMap::new(), |mut map, segment| {
-            map.entry(segment.center_id)
-                .or_default()
-                .entry(segment.target_id)
-                .or_default()
-                .push(segment);
+    }
+}
 
-            map
-        });
-
-    Ok(Spk {
-        file_record,
-        comment,
-        segments,
-    })
+#[deprecated(note = "use Spk::from_bytes instead")]
+pub fn parse_daf_spk(full_input: &[u8]) -> Result<Spk, DafSpkError> {
+    Spk::from_bytes(full_input)
 }
 
 impl<I> From<nom::error::Error<I>> for DafSpkError {
@@ -631,7 +652,7 @@ pub mod test {
 
     #[test]
     fn test_parse_daf_spk() {
-        let spk = parse_daf_spk(&FILE_CONTENTS);
+        let spk = Spk::from_bytes(&FILE_CONTENTS);
 
         assert!(spk.is_ok());
 
@@ -645,7 +666,7 @@ pub mod test {
     fn test_parse_daf_spk_file_is_ok() {
         let contents = std::fs::read("de430.bsp").unwrap();
 
-        assert!(parse_daf_spk(&contents).is_ok());
+        assert!(Spk::from_bytes(&contents).is_ok());
     }
 
     fn get_expected_comment_string() -> String {

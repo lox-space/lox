@@ -270,7 +270,7 @@ mod tests {
     use lox_bodies::{Earth, Jupiter, Venus};
     use lox_core::coords::Cartesian;
     use lox_ephem::Ephemeris;
-    use lox_ephem::spk::parser::{Spk, parse_daf_spk};
+    use lox_ephem::spk::parser::Spk;
     use lox_frames::providers::DefaultRotationProvider;
     use lox_test_utils::{assert_approx_eq, data_file};
     use lox_time::{Time, time, time_scales::Tdb, utc::Utc};
@@ -405,8 +405,7 @@ mod tests {
     }
 
     fn ephemeris() -> &'static Spk {
-        let contents = std::fs::read(data_file("spice/de440s.bsp")).unwrap();
         static EPHEMERIS: OnceLock<Spk> = OnceLock::new();
-        EPHEMERIS.get_or_init(|| parse_daf_spk(&contents).unwrap())
+        EPHEMERIS.get_or_init(|| Spk::from_file(data_file("spice/de440s.bsp")).unwrap())
     }
 }
