@@ -35,7 +35,7 @@ arrayvec = "0.7.6"
 chrono = "0.4.43"
 csv = "1.4.0"
 differential-equations = "0.5.2"
-divan = "0.1.21"
+divan = { package = "codspeed-divan-compat", version = "4.3.0" }
 fast_polynomial = "0.3.0"
 glam = "0.30.9"
 hashbrown = { version = "0.16.0", features = ["rayon"] }
