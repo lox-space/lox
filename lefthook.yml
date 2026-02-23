@@ -20,7 +20,7 @@ pre-push:
   parallel: true
   commands:
     reuse:
-      run: uvx reuse lint
+      run: git ls-files -z | xargs -0 uvx reuse lint-file
     clippy:
       run: cargo clippy --all-features
     rustfmt:
