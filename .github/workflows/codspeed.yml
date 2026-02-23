@@ -14,12 +14,14 @@ env:
   UV_PROJECT: crates/lox-space
 
 jobs:
-  codspeed:
-    name: Run benchmarks
+  codspeed-python:
+    name: Run Python benchmarks
     runs-on: ubuntu-latest
     if: github.actor != 'dependabot[bot]'
     steps:
       - uses: actions/checkout@v6
+        with:
+          lfs: true
       - name: Setup Python
         uses: actions/setup-python@v6
         with:
@@ -42,4 +44,25 @@ jobs:
         with:
           mode: instrumentation
           run: uv run --directory "$UV_PROJECT" pytest --codspeed
-          token: ${{ secrets.CODSPEED_TOKEN }} # Optional for public repositories
+          token: ${{ secrets.CODSPEED_TOKEN }}
+
+  codspeed-rust:
+    name: Run Rust benchmarks
+    runs-on: ubuntu-latest
+    if: github.actor != 'dependabot[bot]'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install cargo-codspeed
+        run: cargo install cargo-codspeed
+      - name: Build benchmarks
+        run: cargo codspeed build -p lox-space
+      - uses: CodSpeedHQ/action@v4
+        with:
+          mode: instrumentation
+          run: cargo codspeed run -p lox-space
+          token: ${{ secrets.CODSPEED_TOKEN }}
