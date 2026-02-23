@@ -42,17 +42,18 @@ impl GaussianPattern {
 impl AntennaGain for GaussianPattern {
     fn gain(&self, frequency: Frequency, angle: Angle) -> Decibel {
         let theta = angle.to_radians();
-        let bw = self.beamwidth(frequency).to_radians();
+        // Gaussian beamwidth is always defined for d > 0, so unwrap is safe.
+        let bw = self.beamwidth(frequency).unwrap().to_radians();
         // Gaussian roll-off: G = G_peak · exp(-4·ln(2)·(θ/θ_3dB)²)
         let exponent = -4.0 * 2.0_f64.ln() * (theta / bw).powi(2);
         self.peak_gain(frequency) + Decibel::from_linear(exponent.exp())
     }
 
-    fn beamwidth(&self, frequency: Frequency) -> Angle {
+    fn beamwidth(&self, frequency: Frequency) -> Option<Angle> {
         let wavelength_m = frequency.wavelength().to_meters();
         let d = self.diameter.to_meters();
-        // θ_3dB = 70·λ/D (in degrees), convert to radians
-        Angle::degrees(70.0 * wavelength_m / d)
+        // θ_3dB = 70·λ/D (in degrees); always defined for d > 0.
+        Some(Angle::degrees(70.0 * wavelength_m / d))
     }
 }
 
@@ -94,7 +95,7 @@ mod tests {
         // HPBW is the full width; the -3dB point is at θ = HPBW/2
         let p = test_pattern();
         let f = test_frequency();
-        let half_bw = Angle::radians(p.beamwidth(f).to_radians() / 2.0);
+        let half_bw = Angle::radians(p.beamwidth(f).unwrap().to_radians() / 2.0);
         let peak = p.peak_gain(f);
         let gain_at_half_bw = p.gain(f, half_bw);
         let diff = peak.as_f64() - gain_at_half_bw.as_f64();

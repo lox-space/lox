@@ -126,6 +126,13 @@ def test_parabolic_beamwidth():
     assert bw == pytest.approx(0.7371800, rel=1e-4)
 
 
+def test_parabolic_beamwidth_none_for_sub_wavelength_diameter():
+    # At 1 GHz (λ ≈ 0.300 m) the threshold diameter is ≈ 0.366 m.
+    # A 0.1 m dish is well below this limit, so beamwidth is undefined.
+    p = lox.ParabolicPattern(diameter_m=0.1, efficiency=0.65)
+    assert p.beamwidth(frequency_hz=1e9) is None
+
+
 def test_parabolic_on_axis_equals_peak():
     p = lox.ParabolicPattern(diameter_m=0.98, efficiency=0.45)
     f = 29e9
@@ -246,6 +253,13 @@ def test_dipole_pickle():
 def test_dipole_repr_roundtrip():
     d = lox.DipolePattern(length_m=0.5)
     assert eval(repr(d), {"DipolePattern": lox.DipolePattern}) == d
+
+
+def test_complex_antenna_dipole_beamwidth_is_none():
+    # DipolePattern has no well-defined HPBW; ComplexAntenna must propagate None.
+    d = lox.DipolePattern(length_m=0.005)
+    a = lox.ComplexAntenna(pattern=d, boresight=[0.0, 0.0, 1.0])
+    assert a.beamwidth(frequency_hz=29e9) is None
 
 
 # --- Antennas ---
