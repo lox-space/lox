@@ -92,7 +92,11 @@ impl AntennaGain for ParabolicPattern {
         let d = self.diameter.to_meters();
         let arg = BESSEL_J1_FIRST_ZERO * wavelength_m / (PI * d);
         // When d < ~1.22λ the argument exceeds 1.0 and asin is undefined.
-        if arg > 1.0 { None } else { Some(Angle::radians(arg.asin())) }
+        if arg > 1.0 {
+            None
+        } else {
+            Some(Angle::radians(arg.asin()))
+        }
     }
 }
 
