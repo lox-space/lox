@@ -1044,6 +1044,9 @@ where
         target: DynFrame,
         time: Time<T>,
     ) -> Result<Rotation, Self::Error> {
+        if origin == target {
+            return Ok(Rotation::IDENTITY);
+        }
         match (origin, target) {
             (DynFrame::Icrf, DynFrame::Cirf) => Ok(self.try_rotation(Icrf, Cirf, time)?),
             (DynFrame::Icrf, DynFrame::Tirf) => Ok(self.try_rotation(Icrf, Tirf, time)?),
