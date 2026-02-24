@@ -27,6 +27,12 @@ impl From<&str> for CallbackError {
     }
 }
 
+impl From<BoxedError> for CallbackError {
+    fn from(e: BoxedError) -> Self {
+        CallbackError(e)
+    }
+}
+
 pub trait Callback {
     fn call(&self, v: f64) -> Result<f64, CallbackError>;
 }

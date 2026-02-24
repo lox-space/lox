@@ -9,6 +9,8 @@ use std::{
 };
 
 use lox_core::time::deltas::TimeDelta;
+use lox_test_utils::approx_eq::ApproxEq;
+use lox_test_utils::approx_eq::results::ApproxEqResults;
 
 use crate::{
     Time,
@@ -22,6 +24,15 @@ use crate::{
 pub struct Interval<T> {
     start: T,
     end: T,
+}
+
+impl<T: ApproxEq + std::fmt::Debug> ApproxEq for Interval<T> {
+    fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
+        let mut results = ApproxEqResults::new();
+        results.merge("start", self.start.approx_eq(&rhs.start, atol, rtol));
+        results.merge("end", self.end.approx_eq(&rhs.end, atol, rtol));
+        results
+    }
 }
 
 impl<T> Interval<T> {
@@ -126,6 +137,14 @@ impl<T> Interval<T> {
             .map(|i| self.start + TimeDelta::from_seconds_f64(step_secs * i as f64))
             .collect()
     }
+
+    /// True if self fully contains other.
+    pub fn contains(&self, other: &Self) -> bool
+    where
+        T: Ord,
+    {
+        self.start <= other.start && self.end >= other.end
+    }
 }
 
 pub struct IntervalStepIter<T> {
@@ -154,6 +173,91 @@ where
         self.current = self.current + self.step;
         Some(value)
     }
+}
+
+/// Intersect two sorted lists of intervals.
+pub fn intersect_intervals<T: Ord + Copy>(
+    a: &[Interval<T>],
+    b: &[Interval<T>],
+) -> Vec<Interval<T>> {
+    let mut result = Vec::new();
+    let mut i = 0;
+    let mut j = 0;
+    while i < a.len() && j < b.len() {
+        let inter = a[i].intersect(b[j]);
+        if !inter.is_empty() {
+            result.push(inter);
+        }
+        // Advance the interval with the smaller end
+        if a[i].end <= b[j].end {
+            i += 1;
+        } else {
+            j += 1;
+        }
+    }
+    result
+}
+
+/// Union two sorted lists of intervals (merge overlapping/adjacent).
+pub fn union_intervals<T: Ord + Copy>(a: &[Interval<T>], b: &[Interval<T>]) -> Vec<Interval<T>> {
+    // Merge the two sorted lists
+    let mut all = Vec::with_capacity(a.len() + b.len());
+    let mut i = 0;
+    let mut j = 0;
+    while i < a.len() && j < b.len() {
+        if a[i].start <= b[j].start {
+            all.push(a[i]);
+            i += 1;
+        } else {
+            all.push(b[j]);
+            j += 1;
+        }
+    }
+    all.extend_from_slice(&a[i..]);
+    all.extend_from_slice(&b[j..]);
+
+    merge_intervals(all)
+}
+
+/// Complement intervals within a bounding interval.
+pub fn complement_intervals<T: Ord + Copy>(
+    intervals: &[Interval<T>],
+    bound: Interval<T>,
+) -> Vec<Interval<T>> {
+    let mut result = Vec::new();
+    let mut cursor = bound.start;
+    for iv in intervals {
+        if iv.start > cursor {
+            let gap = Interval::new(cursor, iv.start);
+            if !gap.is_empty() {
+                result.push(gap);
+            }
+        }
+        if iv.end > cursor {
+            cursor = iv.end;
+        }
+    }
+    if cursor < bound.end {
+        result.push(Interval::new(cursor, bound.end));
+    }
+    result
+}
+
+fn merge_intervals<T: Ord + Copy>(sorted: Vec<Interval<T>>) -> Vec<Interval<T>> {
+    let mut result: Vec<Interval<T>> = Vec::new();
+    for iv in sorted {
+        if iv.is_empty() {
+            continue;
+        }
+        if let Some(last) = result.last_mut()
+            && iv.start <= last.end
+        {
+            last.end = max(last.end, iv.end);
+            continue;
+        }
+        result.push(iv);
+    }
+    result
 }
 
 pub type TimeDeltaInterval = Interval<TimeDelta>;
@@ -308,5 +412,68 @@ mod tests {
         let t1 = time!(Tai, 2025, 11, 6, 1).unwrap();
         let interval = TimeInterval::new(t0, t1);
         let _ = interval.step_by(TimeDelta::default()).collect::<Vec<_>>();
+    }
+
+    #[test]
+    fn test_contains() {
+        let outer = Interval::new(0, 10);
+        let inner = Interval::new(2, 8);
+        assert!(outer.contains(&inner));
+        assert!(!inner.contains(&outer));
+    }
+
+    #[test]
+    fn test_intersect_intervals() {
+        let a = vec![Interval::new(0, 5), Interval::new(10, 15)];
+        let b = vec![Interval::new(3, 12)];
+        let result = intersect_intervals(&a, &b);
+        assert_eq!(result, vec![Interval::new(3, 5), Interval::new(10, 12)]);
+    }
+
+    #[test]
+    fn test_intersect_intervals_no_overlap() {
+        let a = vec![Interval::new(0, 3)];
+        let b = vec![Interval::new(5, 8)];
+        let result = intersect_intervals(&a, &b);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_union_intervals() {
+        let a = vec![Interval::new(0, 5)];
+        let b = vec![Interval::new(3, 8)];
+        let result = union_intervals(&a, &b);
+        assert_eq!(result, vec![Interval::new(0, 8)]);
+    }
+
+    #[test]
+    fn test_union_intervals_disjoint() {
+        let a = vec![Interval::new(0, 3)];
+        let b = vec![Interval::new(5, 8)];
+        let result = union_intervals(&a, &b);
+        assert_eq!(result, vec![Interval::new(0, 3), Interval::new(5, 8)]);
+    }
+
+    #[test]
+    fn test_complement_intervals() {
+        let intervals = vec![Interval::new(2, 4), Interval::new(6, 8)];
+        let bound = Interval::new(0, 10);
+        let result = complement_intervals(&intervals, bound);
+        assert_eq!(
+            result,
+            vec![
+                Interval::new(0, 2),
+                Interval::new(4, 6),
+                Interval::new(8, 10),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_complement_intervals_full_coverage() {
+        let intervals = vec![Interval::new(0, 10)];
+        let bound = Interval::new(0, 10);
+        let result = complement_intervals(&intervals, bound);
+        assert!(result.is_empty());
     }
 }
