@@ -4,14 +4,16 @@
 
 use lox_core::coords::Cartesian;
 use lox_time::Time;
+use lox_time::deltas::TimeDelta;
+use lox_time::intervals::TimeInterval;
 use lox_time::time_scales::{DynTimeScale, TimeScale};
 use thiserror::Error;
 
-use lox_bodies::{DynOrigin, Origin, PointMass, TryPointMass};
+use lox_bodies::{DynOrigin, Origin, PointMass, TryPointMass, UndefinedOriginPropertyError};
 
-use crate::orbits::{CartesianOrbit, TrajectorError};
+use crate::orbits::{CartesianOrbit, TrajectorError, Trajectory};
 use crate::propagators::{Propagator, stumpff};
-use lox_frames::{DynFrame, Icrf, ReferenceFrame, traits::frame_id};
+use lox_frames::{DynFrame, ReferenceFrame};
 
 #[derive(Debug, Error, PartialEq)]
 pub enum ValladoError {
@@ -25,9 +27,45 @@ pub enum ValladoError {
 pub struct Vallado<T: TimeScale, O: Origin, R: ReferenceFrame> {
     initial_state: CartesianOrbit<T, O, R>,
     max_iter: i32,
+    step: Option<TimeDelta>,
 }
 
 pub type DynVallado = Vallado<DynTimeScale, DynOrigin, DynFrame>;
+
+// Infallible — static bounds
+impl<T, O, R> Vallado<T, O, R>
+where
+    T: TimeScale,
+    O: PointMass + Copy,
+    R: ReferenceFrame,
+{
+    pub fn new(initial_state: CartesianOrbit<T, O, R>) -> Self {
+        Self {
+            initial_state,
+            max_iter: 300,
+            step: None,
+        }
+    }
+}
+
+// Fallible — Try* bounds (covers DynOrigin)
+impl<T, O, R> Vallado<T, O, R>
+where
+    T: TimeScale,
+    O: TryPointMass + Copy,
+    R: ReferenceFrame,
+{
+    pub fn try_new(
+        initial_state: CartesianOrbit<T, O, R>,
+    ) -> Result<Self, UndefinedOriginPropertyError> {
+        initial_state.origin().try_gravitational_parameter()?;
+        Ok(Self {
+            initial_state,
+            max_iter: 300,
+            step: None,
+        })
+    }
+}
 
 impl<T, O, R> Vallado<T, O, R>
 where
@@ -43,8 +81,13 @@ where
             .as_f64()
     }
 
-    pub fn with_max_iter(&mut self, max_iter: i32) -> &mut Self {
+    pub fn with_max_iter(mut self, max_iter: i32) -> Self {
         self.max_iter = max_iter;
+        self
+    }
+
+    pub fn with_step(mut self, step: TimeDelta) -> Self {
+        self.step = Some(step);
         self
     }
 
@@ -58,52 +101,13 @@ where
     {
         self.initial_state.reference_frame()
     }
-}
 
-impl<T, O> Vallado<T, O, Icrf>
-where
-    T: TimeScale,
-    O: PointMass + Copy,
-{
-    pub fn new(initial_state: CartesianOrbit<T, O, Icrf>) -> Self {
-        Self {
-            initial_state,
-            max_iter: 300,
-        }
-    }
-}
-
-impl<T: TimeScale, O: TryPointMass + Copy, R: ReferenceFrame + Copy> Vallado<T, O, R> {
-    // TODO: Use better error type
-    pub fn try_new(initial_state: CartesianOrbit<T, O, R>) -> Result<Self, &'static str> {
-        if initial_state
-            .origin()
-            .try_gravitational_parameter()
-            .is_err()
-        {
-            return Err("invalid frame or origin");
-        }
-        if let Some(id) = frame_id(&initial_state.reference_frame())
-            && id != frame_id(&Icrf).unwrap()
-        {
-            return Err("invalid frame or origin");
-        }
-        Ok(Self {
-            initial_state,
-            max_iter: 300,
-        })
-    }
-}
-
-impl<T, O, R> Propagator<T, O, R> for Vallado<T, O, R>
-where
-    T: TimeScale + Copy,
-    O: TryPointMass + Copy,
-    R: ReferenceFrame + Copy,
-{
-    type Error = ValladoError;
-
-    fn propagate(&self, time: Time<T>) -> Result<CartesianOrbit<T, O, R>, Self::Error> {
+    /// Propagate to a single time.
+    pub fn state_at(&self, time: Time<T>) -> Result<CartesianOrbit<T, O, R>, ValladoError>
+    where
+        T: Copy,
+        R: Copy,
+    {
         let frame = self.reference_frame();
         let origin = self.origin();
         let mu = self.gravitational_parameter();
@@ -169,13 +173,34 @@ where
     }
 }
 
+// Single impl covers both typed and DynVallado
+impl<T, O, R> Propagator<T, O> for Vallado<T, O, R>
+where
+    T: TimeScale + Copy + PartialOrd,
+    O: TryPointMass + Copy,
+    R: ReferenceFrame + Copy,
+{
+    type Frame = R;
+    type Error = ValladoError;
+
+    fn propagate(&self, interval: TimeInterval<T>) -> Result<Trajectory<T, O, R>, ValladoError> {
+        let step = self.step.unwrap_or(TimeDelta::from_seconds(1));
+        let states = interval
+            .step_by(step)
+            .map(|t| self.state_at(t))
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(Trajectory::try_new(states)?)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use lox_bodies::Earth;
     use lox_core::elements::Keplerian as CoreKeplerian;
     use lox_core::units::{AngleUnits, DistanceUnits};
+    use lox_frames::Icrf;
     use lox_test_utils::assert_approx_eq;
-    use lox_time::deltas::TimeDelta;
+    use lox_time::intervals::Interval;
     use lox_time::time_scales::Tdb;
     use lox_time::utc;
     use lox_time::utc::Utc;
@@ -183,7 +208,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_vallado_propagate() {
+    fn test_vallado_state_at() {
         let utc = utc!(2023, 3, 25, 21, 8, 0.0).unwrap();
         let time = utc.to_time().to_scale(Tdb);
         let semi_major = 24464.560;
@@ -208,9 +233,7 @@ mod tests {
         let t1 = time + period;
 
         let propagator = Vallado::new(s0);
-        let s1 = propagator
-            .propagate(t1)
-            .expect("propagator should converge");
+        let s1 = propagator.state_at(t1).expect("propagator should converge");
 
         let k1 = s1.to_keplerian();
         assert_approx_eq!(
@@ -235,7 +258,7 @@ mod tests {
     }
 
     #[test]
-    fn test_vallado_propagate_all() {
+    fn test_vallado_propagate() {
         let utc = utc!(2023, 3, 25, 21, 8, 0.0).unwrap();
         let time = utc.to_time().to_scale(Tdb);
         let semi_major = 24464.560;
@@ -257,9 +280,9 @@ mod tests {
         let mu = Earth.gravitational_parameter();
         let s0 = CartesianOrbit::new(k0.to_cartesian(mu), time, Earth, Icrf);
         let period = k0.orbital_period(mu).unwrap();
-        let t_end = period.to_seconds().to_f64().ceil() as i64;
-        let steps = TimeDelta::range(0..=t_end).map(|dt| time + dt);
-        let trajectory = Vallado::new(s0).propagate_all(steps).unwrap();
+        let t_end = time + period;
+        let interval = Interval::new(time, t_end);
+        let trajectory = Vallado::new(s0).propagate(interval).unwrap();
         let s1 = trajectory.interpolate(period);
         let k1 = s1.to_keplerian();
 
@@ -301,7 +324,7 @@ mod tests {
     }
 
     #[test]
-    fn test_try_new_rejects_non_icrf() {
+    fn test_try_new_rejects_non_point_mass() {
         use lox_bodies::DynOrigin;
 
         let utc = utc!(2023, 3, 25, 21, 8, 0.0).unwrap();
@@ -311,8 +334,8 @@ mod tests {
         let s0 = CartesianOrbit::new(
             lox_core::coords::Cartesian::from_vecs(pos, vel),
             time,
-            DynOrigin::Earth,
-            DynFrame::Iau(DynOrigin::Earth),
+            DynOrigin::Callirrhoe,
+            DynFrame::Icrf,
         );
         let result = Vallado::try_new(s0);
         assert!(result.is_err());

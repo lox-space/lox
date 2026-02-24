@@ -97,10 +97,10 @@ def test_sgp4_icrf_against_skyfield():
     t = ts.utc(2025, 1, 27, 0, 0, 0)
     expected_pos = skyfield_sat.at(t).position.km
 
-    # Propagate with Lox
+    # Propagate with Lox — SGP4 now returns TEME; convert to ICRF
     sgp4 = lox.SGP4(INTELSAT_36_TLE)
     time = lox.UTC.from_iso("2025-01-27T00:00:00").to_scale("TAI")
-    state = sgp4.propagate(time)
+    state = sgp4.propagate(time).to_frame(lox.Frame("ICRF"))
     pos = np.array(state.position())
 
     # rtol=1e-4 accounts for different precession/nutation models in the

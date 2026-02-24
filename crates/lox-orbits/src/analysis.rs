@@ -23,7 +23,7 @@ use std::f64::consts::PI;
 use thiserror::Error;
 
 use crate::events::{Window, find_windows, intersect_windows};
-use crate::ground::{DynGroundLocation, DynGroundPropagator, GroundLocation, Observables};
+use crate::ground::{DynGroundLocation, GroundLocation, Observables};
 use crate::orbits::{DynTrajectory, Trajectory};
 use lox_frames::{DynFrame, Iau, Icrf};
 
@@ -366,11 +366,13 @@ pub fn visibility_los(
             let tdb = time.try_to_scale(Tdb, &DefaultOffsetProvider).unwrap();
             let r_body = ephem.position(tdb, sc.origin(), body).unwrap();
             let r_sc = sc.interpolate_at(time).position() - r_body;
-            let r_gs = DynGroundPropagator::new(gs.clone())
-                .propagate_dyn(time)
-                .unwrap()
-                .position()
-                - r_body;
+            // Compute ground station ICRF position by rotating body-fixed position
+            let body_fixed_frame = DynFrame::Iau(gs.origin());
+            let rot = DefaultRotationProvider
+                .try_rotation(body_fixed_frame, DynFrame::Icrf, time)
+                .unwrap();
+            let (r_gs_icrf, _) = rot.rotate_state(gs.body_fixed_position(), DVec3::ZERO);
+            let r_gs = r_gs_icrf - r_body;
             Ok(body.line_of_sight(r_gs, r_sc).unwrap())
         },
         start,
@@ -485,6 +487,8 @@ where
 #[cfg(test)]
 mod tests {
     use lox_bodies::Earth;
+    use lox_core::coords::LonLatAlt;
+    use lox_core::units::{Angle, Distance};
     use lox_ephem::spk::parser::Spk;
     use lox_test_utils::{assert_approx_eq, data_dir, data_file, read_data_file};
     use lox_time::Time;
@@ -648,16 +652,21 @@ mod tests {
         .unwrap()
     }
 
+    fn lla(lon_deg: f64, lat_deg: f64, alt_m: f64) -> LonLatAlt {
+        LonLatAlt::builder()
+            .longitude(Angle::degrees(lon_deg))
+            .latitude(Angle::degrees(lat_deg))
+            .altitude(Distance::meters(alt_m))
+            .build()
+            .unwrap()
+    }
+
     fn location() -> GroundLocation<Earth> {
-        let longitude = -4.3676f64.to_radians();
-        let latitude = 40.4527f64.to_radians();
-        GroundLocation::new(longitude, latitude, 0.0, Earth)
+        GroundLocation::new(lla(-4.3676, 40.4527, 0.0), Earth)
     }
 
     fn location_dyn() -> GroundLocation<DynOrigin> {
-        let longitude = -4.3676f64.to_radians();
-        let latitude = 40.4527f64.to_radians();
-        GroundLocation::try_new(longitude, latitude, 0.0, DynOrigin::Earth).unwrap()
+        GroundLocation::try_new(lla(-4.3676, 40.4527, 0.0), DynOrigin::Earth).unwrap()
     }
 
     fn contacts() -> Vec<Window<Tai>> {

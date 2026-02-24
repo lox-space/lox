@@ -6,6 +6,7 @@
 
 use glam::{DMat3, DVec3};
 use lox_core::coords::Cartesian;
+use lox_core::coords::LonLatAlt;
 use lox_space::bodies::*;
 use lox_space::frames::frames::Teme;
 use lox_space::frames::rotations::Rotation;
@@ -122,7 +123,7 @@ fn test_state() {
 
 #[test]
 fn test_ground_location() {
-    let loc = GroundLocation::new(0.0, 0.0, 0.0, Earth);
+    let loc = GroundLocation::new(LonLatAlt::default(), Earth);
     let json = serde_json::to_string(&loc).expect("serialize");
     let _: GroundLocation<Earth> = serde_json::from_str(&json).expect("deserialize");
 }
