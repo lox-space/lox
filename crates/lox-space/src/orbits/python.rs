@@ -5,17 +5,17 @@
 use std::collections::HashMap;
 
 use crate::bodies::python::{PyOrigin, PyUndefinedOriginPropertyError};
-use crate::bodies::{DynOrigin, Origin, TryPointMass};
+use crate::bodies::{DynOrigin, TryPointMass};
 use crate::earth::python::ut1::{PyEopProvider, PyEopProviderError};
-use crate::ephem::Ephemeris;
 use crate::ephem::python::{PyDafSpkError, PySpk};
 use crate::frames::DynFrame;
 use crate::frames::python::{PyDynRotationError, PyFrame};
-use crate::math::roots::{Brent, RootFinderError};
 use crate::orbits::analysis::{
-    DynPass, ElevationMask, ElevationMaskError, Pass, VisibilityError, visibility_combined,
+    DynPass, ElevationMask, ElevationMaskError, Pass, VisibilityAnalysis, VisibilityError,
+    VisibilityResults,
 };
-use crate::orbits::events::{Event, FindEventError};
+use crate::orbits::assets::{AssetId, GroundAsset, SpaceAsset};
+use crate::orbits::events::{DetectError, Event};
 use crate::orbits::ground::{
     DynGroundLocation, DynGroundPropagator, GroundPropagatorError, Observables,
 };
@@ -46,7 +46,6 @@ use numpy::{PyArray1, PyArray2, PyArrayMethods};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::{PyList, PyType};
-use rayon::prelude::*;
 use sgp4::Elements;
 
 struct PyTrajectoryTransformationError(TrajectoryTransformationError);
@@ -58,21 +57,25 @@ impl From<PyTrajectoryTransformationError> for PyErr {
     }
 }
 
-struct PyFindEventError(FindEventError);
+struct PyDetectError(DetectError);
 
-impl From<PyFindEventError> for PyErr {
-    fn from(err: PyFindEventError) -> Self {
+impl From<PyDetectError> for PyErr {
+    fn from(err: PyDetectError) -> Self {
         PyValueError::new_err(err.0.to_string())
     }
 }
 
-struct PyRootFinderError(RootFinderError);
+/// Concrete error for Python callback failures (avoids `Box<dyn Error>` sizing issues).
+#[derive(Debug)]
+struct PyCallbackError(String);
 
-impl From<PyRootFinderError> for PyErr {
-    fn from(err: PyRootFinderError) -> Self {
-        PyValueError::new_err(err.0.to_string())
+impl std::fmt::Display for PyCallbackError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
     }
 }
+
+impl std::error::Error for PyCallbackError {}
 
 struct PyVisibilityError(VisibilityError);
 
@@ -138,13 +141,13 @@ fn propagate_dispatch<'py>(
 
 /// Find events where a function crosses zero.
 ///
-/// This function detects zero-crossings of a user-defined function over a
-/// time span. Events can be found for any scalar function of time.
+/// Detects zero-crossings of a user-defined function of time.
 ///
 /// Args:
-///     func: Function that takes a float (seconds from start) and returns a float.
-///     start: Reference time (epoch).
-///     times: Array of time offsets in seconds from start.
+///     func: Function that takes a Time and returns a float.
+///     start: Start time of the analysis period.
+///     end: End time of the analysis period.
+///     step: Step size for sampling the function.
 ///
 /// Returns:
 ///     List of Event objects at the detected zero-crossings.
@@ -152,60 +155,57 @@ fn propagate_dispatch<'py>(
 pub fn find_events(
     func: &Bound<'_, PyAny>,
     start: PyTime,
-    times: Vec<f64>,
+    end: PyTime,
+    step: PyTimeDelta,
 ) -> PyResult<Vec<PyEvent>> {
-    let root_finder = Brent::default();
-    Ok(crate::orbits::events::find_events(
+    let interval = TimeInterval::new(start.0, end.0);
+    let events = crate::orbits::events::try_find_events(
         |t| {
-            func.call((t,), None)
+            let py_time = PyTime(t);
+            func.call((py_time,), None)
                 .and_then(|obj| obj.extract::<f64>())
-                .map_err(Into::into)
+                .map_err(|e| PyCallbackError(e.to_string()))
         },
-        start.0,
-        &times,
-        root_finder,
+        interval,
+        step.0,
     )
-    .map_err(PyFindEventError)?
-    .into_iter()
-    .map(PyEvent)
-    .collect())
+    .map_err(PyDetectError)?;
+    Ok(events.into_iter().map(PyEvent).collect())
 }
 
 /// Find time windows where a function is positive.
 ///
-/// This function finds all intervals where a user-defined function is
-/// positive. Windows are bounded by zero-crossings of the function.
+/// Finds all intervals where a user-defined function is positive.
+/// Windows are bounded by zero-crossings of the function.
 ///
 /// Args:
-///     func: Function that takes a float (seconds from start) and returns a float.
+///     func: Function that takes a Time and returns a float.
 ///     start: Start time of the analysis period.
 ///     end: End time of the analysis period.
-///     times: Array of time offsets in seconds from start.
+///     step: Step size for sampling the function.
 ///
 /// Returns:
 ///     List of Window objects for intervals where the function is positive.
 #[pyfunction]
 pub fn find_windows(
-    _py: Python<'_>,
     func: &Bound<'_, PyAny>,
     start: PyTime,
     end: PyTime,
-    times: Vec<f64>,
+    step: PyTimeDelta,
 ) -> PyResult<Vec<PyWindow>> {
-    let root_finder = Brent::default();
-    let res = crate::orbits::events::find_windows(
+    let interval = TimeInterval::new(start.0, end.0);
+    let windows = crate::orbits::events::try_find_windows(
         |t| {
-            func.call((t,), None)
+            let py_time = PyTime(t);
+            func.call((py_time,), None)
                 .and_then(|obj| obj.extract::<f64>())
-                .map_err(Into::into)
+                .map_err(|e| PyCallbackError(e.to_string()))
         },
-        start.0,
-        end.0,
-        &times,
-        root_finder,
-    );
-    let intervals = res.map_err(PyRootFinderError)?;
-    Ok(intervals.into_iter().map(PyWindow).collect())
+        interval,
+        step.0,
+    )
+    .map_err(PyDetectError)?;
+    Ok(windows.into_iter().map(PyWindow).collect())
 }
 
 /// Represents an orbital state (position and velocity) at a specific time.
@@ -649,16 +649,24 @@ impl PyTrajectory {
     /// Args:
     ///     func: Function that takes a State and returns a float.
     ///           Events are detected where the function crosses zero.
+    ///     step: Step size for sampling the function.
     ///
     /// Returns:
     ///     List of Event objects.
-    fn find_events(&self, func: &Bound<'_, PyAny>) -> PyResult<Vec<PyEvent>> {
-        let res = self.0.find_events(|s| {
-            // Python callable gets PyState and must return float; propagate exceptions
-            func.call((PyState(s),), None)
-                .and_then(|obj| obj.extract::<f64>())
-        });
-        let events = res.map_err(PyFindEventError)?;
+    fn find_events(&self, func: &Bound<'_, PyAny>, step: PyTimeDelta) -> PyResult<Vec<PyEvent>> {
+        let traj = &self.0;
+        let interval = TimeInterval::new(traj.start_time(), traj.end_time());
+        let events = crate::orbits::events::try_find_events(
+            |t| {
+                let state = PyState(traj.interpolate_at(t));
+                func.call((state,), None)
+                    .and_then(|obj| obj.extract::<f64>())
+                    .map_err(|e| PyCallbackError(e.to_string()))
+            },
+            interval,
+            step.0,
+        )
+        .map_err(PyDetectError)?;
         Ok(events.into_iter().map(PyEvent).collect())
     }
 
@@ -667,15 +675,24 @@ impl PyTrajectory {
     /// Args:
     ///     func: Function that takes a State and returns a float.
     ///           Windows are periods where the function is positive.
+    ///     step: Step size for sampling the function.
     ///
     /// Returns:
     ///     List of Window objects.
-    fn find_windows(&self, _py: Python<'_>, func: &Bound<'_, PyAny>) -> PyResult<Vec<PyWindow>> {
-        let res = self.0.find_windows(|s| {
-            func.call((PyState(s),), None)
-                .and_then(|obj| obj.extract::<f64>())
-        });
-        let windows = res.map_err(PyRootFinderError)?;
+    fn find_windows(&self, func: &Bound<'_, PyAny>, step: PyTimeDelta) -> PyResult<Vec<PyWindow>> {
+        let traj = &self.0;
+        let interval = TimeInterval::new(traj.start_time(), traj.end_time());
+        let windows = crate::orbits::events::try_find_windows(
+            |t| {
+                let state = PyState(traj.interpolate_at(t));
+                func.call((state,), None)
+                    .and_then(|obj| obj.extract::<f64>())
+                    .map_err(|e| PyCallbackError(e.to_string()))
+            },
+            interval,
+            step.0,
+        )
+        .map_err(PyDetectError)?;
         Ok(windows.into_iter().map(PyWindow).collect())
     }
 
@@ -1193,271 +1210,263 @@ impl PySgp4 {
     }
 }
 
-/// Compute visibility passes between a ground station and spacecraft.
+/// A named ground station for visibility analysis.
 ///
-/// This function finds all visibility windows where the spacecraft is above
-/// the elevation mask as seen from the ground station.
+/// Wraps a ground location and elevation mask with an identifier.
 ///
 /// Args:
-///     times: List of Time objects defining the analysis period.
-///     gs: Ground station location.
+///     id: Unique identifier for this ground asset.
+///     location: Ground station location.
 ///     mask: Elevation mask defining minimum elevation constraints.
-///     sc: Spacecraft trajectory.
-///     ephemeris: SPK ephemeris data.
-///     bodies: Optional list of bodies for occultation checking.
-///
-/// Returns:
-///     List of Pass objects containing visibility windows and observables.
-///
-/// Raises:
-///     ValueError: If ground station and spacecraft have different origins.
-#[pyfunction]
-#[pyo3(signature = (times, gs, mask, sc, ephemeris, bodies=None))]
-pub fn visibility(
-    times: &Bound<'_, PyList>,
-    gs: PyGroundLocation,
-    mask: &Bound<'_, PyElevationMask>,
-    sc: &Bound<'_, PyTrajectory>,
-    ephemeris: &Bound<'_, PySpk>,
-    bodies: Option<Vec<PyOrigin>>,
-) -> PyResult<Vec<PyPass>> {
-    let sc = sc.get();
-    if gs.0.origin().name() != sc.0.origin().name() {
-        return Err(PyValueError::new_err(
-            "ground station and spacecraft must have the same origin",
-        ));
-    }
-    let times: Vec<DynTime> = times
-        .extract::<Vec<PyTime>>()?
-        .into_iter()
-        .map(|s| s.0)
-        .collect();
-    let mask = &mask.borrow().0;
-    let ephemeris = &ephemeris.get().0;
-    let bodies: Vec<DynOrigin> = bodies
-        .unwrap_or_default()
-        .into_iter()
-        .map(|b| b.0)
-        .collect();
-    Ok(
-        crate::orbits::analysis::visibility_combined(
-            &times, &gs.0, mask, &bodies, &sc.0, ephemeris,
-        )
-        .map_err(PyVisibilityError)?
-        .into_iter()
-        .map(PyPass)
-        .collect(),
-    )
-}
-
-/// Collection of named trajectories for batch visibility analysis.
-///
-/// Ensembles allow computing visibility for multiple spacecraft against
-/// multiple ground stations efficiently using `visibility_all`.
-///
-/// Args:
-///     ensemble: Dictionary mapping spacecraft names to their trajectories.
-#[pyclass(name = "Ensemble", module = "lox_space", frozen)]
-pub struct PyEnsemble(pub HashMap<String, DynTrajectory>);
+#[pyclass(name = "GroundAsset", module = "lox_space", frozen)]
+#[derive(Clone, Debug)]
+pub struct PyGroundAsset(pub GroundAsset);
 
 #[pymethods]
-impl PyEnsemble {
+impl PyGroundAsset {
     #[new]
-    pub fn new(ensemble: HashMap<String, PyTrajectory>) -> Self {
-        Self(
-            ensemble
-                .into_iter()
-                .map(|(name, trajectory)| (name, trajectory.0))
-                .collect(),
-        )
+    fn new(id: String, location: PyGroundLocation, mask: PyElevationMask) -> Self {
+        PyGroundAsset(GroundAsset::new(id, location.0, mask.0))
+    }
+
+    /// Return the asset identifier.
+    fn id(&self) -> String {
+        self.0.id().as_str().to_string()
+    }
+
+    /// Return the ground location.
+    fn location(&self) -> PyGroundLocation {
+        PyGroundLocation(self.0.location().clone())
+    }
+
+    /// Return the elevation mask.
+    fn mask(&self) -> PyElevationMask {
+        PyElevationMask(self.0.mask().clone())
     }
 }
 
-/// Compute visibility for multiple spacecraft and ground stations.
+/// A named spacecraft for visibility analysis.
 ///
-/// This function efficiently computes visibility passes for all combinations
-/// of spacecraft and ground stations, using parallel processing for large
-/// workloads.
+/// Wraps a trajectory with an identifier.
 ///
 /// Args:
-///     times: List of Time objects defining the analysis period.
-///     ground_stations: Dictionary mapping station names to (location, mask) tuples.
-///     spacecraft: Ensemble of spacecraft trajectories.
-///     ephemeris: SPK ephemeris data.
-///     bodies: Optional list of bodies for occultation checking.
+///     id: Unique identifier for this space asset.
+///     trajectory: Spacecraft trajectory.
+#[pyclass(name = "SpaceAsset", module = "lox_space", frozen)]
+#[derive(Clone, Debug)]
+pub struct PySpaceAsset(pub SpaceAsset);
+
+#[pymethods]
+impl PySpaceAsset {
+    #[new]
+    fn new(id: String, trajectory: PyTrajectory) -> Self {
+        PySpaceAsset(SpaceAsset::new(id, trajectory.0))
+    }
+
+    /// Return the asset identifier.
+    fn id(&self) -> String {
+        self.0.id().as_str().to_string()
+    }
+
+    /// Return the spacecraft trajectory.
+    fn trajectory(&self) -> PyTrajectory {
+        PyTrajectory(self.0.trajectory().clone())
+    }
+}
+
+/// Computes ground-station-to-spacecraft visibility.
 ///
-/// Returns:
-///     Nested dictionary: {spacecraft_name: {station_name: [passes]}}.
-#[pyfunction]
-#[pyo3(signature = (
-    times,
-    ground_stations,
-    spacecraft,
-    ephemeris,
-    bodies=None,
-))]
-pub fn visibility_all(
-    _py: Python<'_>,
-    times: &Bound<'_, PyList>,
-    ground_stations: HashMap<String, (PyGroundLocation, PyElevationMask)>,
-    spacecraft: &Bound<'_, PyEnsemble>,
-    ephemeris: &Bound<'_, PySpk>,
-    bodies: Option<Vec<PyOrigin>>,
-) -> PyResult<HashMap<String, HashMap<String, Vec<PyPass>>>> {
-    let times: Vec<DynTime> = times
-        .extract::<Vec<PyTime>>()?
-        .into_iter()
-        .map(|s| s.0)
-        .collect();
-    let bodies: Vec<DynOrigin> = bodies
-        .unwrap_or_default()
-        .into_iter()
-        .map(|b| b.0)
-        .collect();
-    let spacecraft = &spacecraft.get().0;
-    let ephemeris = &ephemeris.get().0;
-
-    let _total_combinations = spacecraft.len() * ground_stations.len();
-
-    // Adaptive strategy based on workload size
-    if should_use_parallel(spacecraft.len(), ground_stations.len()) {
-        visibility_all_parallel_optimized(
-            _py,
-            &times,
-            &ground_stations,
-            spacecraft,
-            ephemeris,
-            &bodies,
-        )
-    } else {
-        visibility_all_sequential_optimized(
-            _py,
-            &times,
-            &ground_stations,
-            spacecraft,
-            ephemeris,
-            &bodies,
-        )
-    }
+/// Args:
+///     ground_assets: List of GroundAsset objects.
+///     space_assets: List of SpaceAsset objects.
+///     occulting_bodies: Optional list of bodies for LOS checking.
+///     step: Optional time step in seconds for event detection (default: 60).
+#[pyclass(name = "VisibilityAnalysis", module = "lox_space", frozen)]
+pub struct PyVisibilityAnalysis {
+    ground_assets: Vec<GroundAsset>,
+    space_assets: Vec<SpaceAsset>,
+    occulting_bodies: Vec<DynOrigin>,
+    step: TimeDelta,
 }
 
-/// Determine if parallel processing should be used based on workload characteristics
-fn should_use_parallel(spacecraft_count: usize, ground_station_count: usize) -> bool {
-    let total_combinations = spacecraft_count * ground_station_count;
-
-    // Use parallel processing if:
-    // 1. We have enough work to justify overhead (>100 combinations)
-    // 2. AND either enough spacecraft (>10) OR enough ground stations (>8)
-    total_combinations > 100 && (spacecraft_count > 10 || ground_station_count > 8)
-}
-
-/// Sequential implementation optimized for small workloads
-fn visibility_all_sequential_optimized<E>(
-    _py: Python<'_>,
-    times: &[DynTime],
-    ground_stations: &HashMap<String, (PyGroundLocation, PyElevationMask)>,
-    spacecraft: &HashMap<String, DynTrajectory>,
-    ephemeris: &E,
-    bodies: &[DynOrigin],
-) -> PyResult<HashMap<String, HashMap<String, Vec<PyPass>>>>
-where
-    E: Ephemeris + Send + Sync,
-{
-    // Pre-allocate result with known capacity
-    let mut result = HashMap::with_capacity(spacecraft.len());
-
-    for (sc_name, sc_trajectory) in spacecraft {
-        let mut gs_results = HashMap::with_capacity(ground_stations.len());
-
-        for (gs_name, (gs_location, gs_mask)) in ground_stations {
-            let passes = visibility_combined(
-                times,
-                &gs_location.0,
-                &gs_mask.0,
-                bodies,
-                sc_trajectory,
-                ephemeris,
-            )
-            .map_err(PyVisibilityError)?;
-
-            gs_results.insert(gs_name.clone(), passes.into_iter().map(PyPass).collect());
+#[pymethods]
+impl PyVisibilityAnalysis {
+    #[new]
+    #[pyo3(signature = (ground_assets, space_assets, occulting_bodies=None, step=None))]
+    fn new(
+        ground_assets: Vec<PyGroundAsset>,
+        space_assets: Vec<PySpaceAsset>,
+        occulting_bodies: Option<Vec<PyOrigin>>,
+        step: Option<f64>,
+    ) -> Self {
+        Self {
+            ground_assets: ground_assets.into_iter().map(|g| g.0).collect(),
+            space_assets: space_assets.into_iter().map(|s| s.0).collect(),
+            occulting_bodies: occulting_bodies
+                .unwrap_or_default()
+                .into_iter()
+                .map(|b| b.0)
+                .collect(),
+            step: TimeDelta::from_seconds_f64(step.unwrap_or(60.0)),
         }
-
-        result.insert(sc_name.clone(), gs_results);
     }
 
-    Ok(result)
+    /// Compute visibility intervals for all (ground, space) pairs.
+    ///
+    /// Args:
+    ///     start: Start time of the analysis period.
+    ///     end: End time of the analysis period.
+    ///     ephemeris: SPK ephemeris data.
+    ///
+    /// Returns:
+    ///     VisibilityResults containing intervals for all pairs.
+    fn compute(
+        &self,
+        py: Python<'_>,
+        start: PyTime,
+        end: PyTime,
+        ephemeris: &Bound<'_, PySpk>,
+    ) -> PyResult<PyVisibilityResults> {
+        let ephemeris = &ephemeris.get().0;
+        let interval = TimeInterval::new(start.0, end.0);
+
+        let results = py.detach(|| {
+            let analysis =
+                VisibilityAnalysis::new(&self.ground_assets, &self.space_assets, ephemeris)
+                    .with_occulting_bodies(self.occulting_bodies.clone())
+                    .with_step(self.step);
+            analysis.compute(interval)
+        });
+
+        Ok(PyVisibilityResults {
+            results: results.map_err(PyVisibilityError)?,
+            ground_assets: self.ground_assets.clone(),
+            space_assets: self.space_assets.clone(),
+            step: self.step,
+        })
+    }
 }
 
-/// Parallel implementation optimized for large workloads
-fn visibility_all_parallel_optimized<E>(
-    py: Python<'_>,
-    times: &[DynTime],
-    ground_stations: &HashMap<String, (PyGroundLocation, PyElevationMask)>,
-    spacecraft: &HashMap<String, DynTrajectory>,
-    ephemeris: &E,
-    bodies: &[DynOrigin],
-) -> PyResult<HashMap<String, HashMap<String, Vec<PyPass>>>>
-where
-    E: Ephemeris + Send + Sync,
-{
-    // Create all combinations upfront for better work distribution
-    let combinations: Vec<_> = spacecraft
-        .iter()
-        .flat_map(|(sc_name, sc_trajectory)| {
-            ground_stations
-                .iter()
-                .map(move |(gs_name, (gs_location, gs_mask))| {
-                    (sc_name, sc_trajectory, gs_name, gs_location, gs_mask)
-                })
-        })
-        .collect();
+/// Results of a visibility analysis.
+///
+/// Provides lazy access to visibility intervals and passes. Intervals
+/// (time windows) are computed eagerly; observables-rich Pass objects are
+/// computed on demand to avoid unnecessary work.
+#[pyclass(name = "VisibilityResults", module = "lox_space", frozen)]
+pub struct PyVisibilityResults {
+    results: VisibilityResults,
+    ground_assets: Vec<GroundAsset>,
+    space_assets: Vec<SpaceAsset>,
+    step: TimeDelta,
+}
 
-    // Determine optimal chunk size based on number of combinations and available cores
-    let num_threads = rayon::current_num_threads();
-    let chunk_size = (combinations.len() / (num_threads * 2)).clamp(1, 50);
+#[pymethods]
+impl PyVisibilityResults {
+    /// Return visibility windows for a specific (ground, space) pair.
+    ///
+    /// Args:
+    ///     ground_id: Ground asset identifier.
+    ///     space_id: Space asset identifier.
+    ///
+    /// Returns:
+    ///     List of Window objects, or empty list if pair not found.
+    fn intervals(&self, ground_id: &str, space_id: &str) -> Vec<PyWindow> {
+        let gs_id = AssetId::new(ground_id);
+        let sc_id = AssetId::new(space_id);
+        self.results
+            .intervals_for(&gs_id, &sc_id)
+            .map(|intervals| intervals.iter().map(|i| PyWindow(*i)).collect())
+            .unwrap_or_default()
+    }
 
-    // Process combinations in chunks with periodic GIL release
-    let results: Result<Vec<_>, _> = py.detach(|| {
-        combinations
-            .par_chunks(chunk_size)
-            .map(|chunk| {
-                chunk
+    /// Compute passes with observables for a specific (ground, space) pair.
+    ///
+    /// This is more expensive than `intervals()` as it computes azimuth,
+    /// elevation, range, and range rate for each time step.
+    ///
+    /// Args:
+    ///     ground_id: Ground asset identifier.
+    ///     space_id: Space asset identifier.
+    ///
+    /// Returns:
+    ///     List of Pass objects, or empty list if pair not found.
+    fn passes(&self, ground_id: &str, space_id: &str) -> Vec<PyPass> {
+        let gs_id = AssetId::new(ground_id);
+        let sc_id = AssetId::new(space_id);
+        let gs = self.ground_assets.iter().find(|g| g.id() == &gs_id);
+        let sc = self.space_assets.iter().find(|s| s.id() == &sc_id);
+        match (gs, sc) {
+            (Some(gs), Some(sc)) => self
+                .results
+                .to_passes(
+                    &gs_id,
+                    &sc_id,
+                    gs.location(),
+                    gs.mask(),
+                    sc.trajectory(),
+                    self.step,
+                )
+                .into_iter()
+                .map(PyPass)
+                .collect(),
+            _ => vec![],
+        }
+    }
+
+    /// Compute passes for all pairs.
+    ///
+    /// Returns:
+    ///     Dictionary mapping (ground_id, space_id) to list of Pass objects.
+    fn all_passes(&self) -> HashMap<(String, String), Vec<PyPass>> {
+        let gs_map: HashMap<&AssetId, &GroundAsset> =
+            self.ground_assets.iter().map(|g| (g.id(), g)).collect();
+        let sc_map: HashMap<&AssetId, &SpaceAsset> =
+            self.space_assets.iter().map(|s| (s.id(), s)).collect();
+
+        self.results
+            .all_intervals()
+            .iter()
+            .map(|((gs_id, sc_id), intervals)| {
+                let gs = gs_map[gs_id];
+                let sc = sc_map[sc_id];
+                let passes: Vec<PyPass> = intervals
                     .iter()
-                    .map(|(sc_name, sc_trajectory, gs_name, gs_location, gs_mask)| {
-                        let passes = visibility_combined(
-                            times,
-                            &gs_location.0,
-                            &gs_mask.0,
-                            bodies,
-                            sc_trajectory,
-                            ephemeris,
-                        )?;
-
-                        let py_passes = passes.into_iter().map(PyPass).collect();
-                        Ok(((*sc_name).clone(), (*gs_name).clone(), py_passes))
+                    .filter_map(|interval| {
+                        DynPass::from_interval(
+                            *interval,
+                            self.step,
+                            gs.location(),
+                            gs.mask(),
+                            sc.trajectory(),
+                        )
                     })
-                    .collect::<Result<Vec<_>, VisibilityError>>()
+                    .map(PyPass)
+                    .collect();
+                (
+                    (gs_id.as_str().to_string(), sc_id.as_str().to_string()),
+                    passes,
+                )
             })
             .collect()
-    });
-
-    // Convert the flat results to nested hashmap structure
-    let flat_results: Vec<_> = results
-        .map_err(PyVisibilityError)?
-        .into_iter()
-        .flatten()
-        .collect();
-    let mut final_result: HashMap<String, HashMap<String, Vec<PyPass>>> = HashMap::new();
-
-    for (sc_name, gs_name, passes) in flat_results {
-        final_result
-            .entry(sc_name)
-            .or_default()
-            .insert(gs_name, passes);
     }
 
-    Ok(final_result)
+    /// Return all (ground_id, space_id) pair identifiers.
+    fn pair_ids(&self) -> Vec<(String, String)> {
+        self.results
+            .pair_ids()
+            .map(|(gs_id, sc_id)| (gs_id.as_str().to_string(), sc_id.as_str().to_string()))
+            .collect()
+    }
+
+    /// Return the total number of pairs.
+    fn num_pairs(&self) -> usize {
+        self.results.num_pairs()
+    }
+
+    /// Return the total number of visibility intervals across all pairs.
+    fn total_intervals(&self) -> usize {
+        self.results.total_intervals()
+    }
 }
 
 pub struct PyElevationMaskError(pub ElevationMaskError);
