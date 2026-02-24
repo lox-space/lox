@@ -12,8 +12,11 @@ use lox_core::units::{Angle, Decibel, Distance, Frequency};
 
 use crate::antenna::AntennaGain;
 
-/// First zero of the Bessel function J₁.
-const BESSEL_J1_FIRST_ZERO: f64 = 3.831_705_970_207_512;
+/// Argument `u` at which the Airy disk pattern `|2·J₁(u)/u|²` equals 0.5 (−3 dB).
+///
+/// This is the first positive solution of `2·J₁(u) = u/√2`, i.e. the half-power point
+/// used to compute the half-power beamwidth (HPBW) of a uniformly illuminated circular aperture.
+const BESSEL_J1_HPBW: f64 = 1.616_330_8;
 
 /// Threshold below which we treat `u` as zero to avoid division by zero.
 const DIV_BY_ZERO_LIMIT: f64 = 1e-6;
@@ -39,12 +42,14 @@ impl ParabolicPattern {
         }
     }
 
-    /// Creates a parabolic pattern from a desired beamwidth at a given frequency.
+    /// Creates a parabolic pattern from a desired half-power beamwidth at a given frequency.
     ///
-    /// Uses `diameter = 1.22 · λ / beamwidth`.
+    /// `beamwidth` is the full HPBW (from −3 dB to +3 dB).
+    /// Uses the exact Airy-disk inversion: `diameter = BESSEL_J1_HPBW · λ / (π · sin(HPBW/2))`.
     pub fn from_beamwidth(beamwidth: Angle, frequency: Frequency, efficiency: f64) -> Self {
         let wavelength_m = frequency.wavelength().to_meters();
-        let diameter_m = 1.22 * wavelength_m / beamwidth.to_radians();
+        let half_bw = beamwidth.to_radians() / 2.0;
+        let diameter_m = BESSEL_J1_HPBW * wavelength_m / (PI * half_bw.sin());
         Self {
             diameter: Distance::meters(diameter_m),
             efficiency,
@@ -90,12 +95,13 @@ impl AntennaGain for ParabolicPattern {
     fn beamwidth(&self, frequency: Frequency) -> Option<Angle> {
         let wavelength_m = frequency.wavelength().to_meters();
         let d = self.diameter.to_meters();
-        let arg = BESSEL_J1_FIRST_ZERO * wavelength_m / (PI * d);
-        // When d < ~1.22λ the argument exceeds 1.0 and asin is undefined.
+        let arg = BESSEL_J1_HPBW * wavelength_m / (PI * d);
+        // When d < ~0.51λ the argument exceeds 1.0 and asin is undefined.
         if arg > 1.0 {
             None
         } else {
-            Some(Angle::radians(arg.asin()))
+            // Full HPBW = 2 · arcsin(u_3dB · λ / (π · D))
+            Some(Angle::radians(2.0 * arg.asin()))
         }
     }
 }
@@ -143,6 +149,9 @@ mod tests {
 
     use super::*;
 
+    /// First zero of J₁, used only to verify the Bessel approximation.
+    const BESSEL_J1_FIRST_ZERO: f64 = 3.831_705_970_207_512;
+
     fn test_frequency() -> Frequency {
         29.0.ghz()
     }
@@ -156,15 +165,10 @@ mod tests {
         assert_approx_eq!(bessel_j1(0.0), 0.0, atol <= 1e-15);
     }
 
-    /// When the diameter is smaller than ~1.22λ the asin argument exceeds 1.0,
-    /// so beamwidth returns None instead of NaN.
-    ///
-    /// At 1 GHz (λ ≈ 0.300 m) the threshold diameter is ≈ 0.366 m; a 0.1 m
-    /// dish is well below this limit.
     #[test]
     fn test_beamwidth_none_for_sub_wavelength_diameter() {
         let f = 1.0.ghz(); // λ ≈ 0.300 m
-        let p = ParabolicPattern::new(Distance::meters(0.1), 0.65); // d << 1.22λ
+        let p = ParabolicPattern::new(Distance::meters(0.1), 0.65); // D ≈ 0.33λ < 0.51λ
         assert!(p.beamwidth(f).is_none());
     }
 
@@ -182,10 +186,16 @@ mod tests {
 
     #[test]
     fn test_parabolic_beamwidth() {
+        // D=0.98m, f=29GHz: full HPBW = 2·arcsin(1.6163308·λ/(π·D)) ≈ 0.6219°
+        // (old first-null value was 0.7372°)
         let p = test_pattern();
         let bw = p.beamwidth(test_frequency()).unwrap();
-        let exp = Angle::degrees(0.7371800047831003);
-        assert_approx_eq!(bw.to_radians(), exp.to_radians(), rtol <= 1e-6);
+        let expected = 2.0
+            * (BESSEL_J1_HPBW * test_frequency().wavelength().to_meters()
+                / (PI * p.diameter.to_meters()))
+            .asin()
+            .to_degrees();
+        assert_approx_eq!(bw.to_degrees(), expected, rtol <= 1e-6);
     }
 
     #[test]
@@ -205,11 +215,15 @@ mod tests {
     }
 
     #[test]
-    fn test_parabolic_gain_at_hpbw() {
+    fn test_parabolic_3db_down_at_half_hpbw() {
+        // The −3 dB point is at half the full HPBW.
         let p = test_pattern();
-        let bw = p.beamwidth(test_frequency()).unwrap();
-        let gain = p.gain(test_frequency(), bw);
-        assert!(gain.as_f64() < -100.0);
+        let f = test_frequency();
+        let half_bw = Angle::radians(p.beamwidth(f).unwrap().to_radians() / 2.0);
+        let peak = p.peak_gain(f);
+        let gain_at_half_bw = p.gain(f, half_bw);
+        let diff = (peak - gain_at_half_bw).as_f64();
+        assert_approx_eq!(diff, 3.0103, atol <= 0.5);
     }
 
     #[test]
