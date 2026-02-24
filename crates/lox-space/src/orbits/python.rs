@@ -15,7 +15,7 @@ use crate::math::roots::{Brent, RootFinderError};
 use crate::orbits::analysis::{
     DynPass, ElevationMask, ElevationMaskError, Pass, VisibilityError, visibility_combined,
 };
-use crate::orbits::events::{Event, FindEventError, Window};
+use crate::orbits::events::{Event, FindEventError};
 use crate::orbits::ground::{
     DynGroundLocation, DynGroundPropagator, GroundPropagatorError, Observables,
 };
@@ -36,7 +36,7 @@ use lox_core::coords::{Cartesian, LonLatAlt};
 use lox_core::elements::{
     ArgumentOfPeriapsis, Eccentricity, Inclination, Keplerian, LongitudeOfAscendingNode,
 };
-use lox_time::intervals::Interval;
+use lox_time::intervals::{Interval, TimeInterval};
 use lox_units::{Angle, Distance};
 
 use glam::DVec3;
@@ -204,8 +204,8 @@ pub fn find_windows(
         &times,
         root_finder,
     );
-    let windows = res.map_err(PyRootFinderError)?;
-    Ok(windows.into_iter().map(PyWindow).collect())
+    let intervals = res.map_err(PyRootFinderError)?;
+    Ok(intervals.into_iter().map(PyWindow).collect())
 }
 
 /// Represents an orbital state (position and velocity) at a specific time.
@@ -777,7 +777,7 @@ impl PyEvent {
 /// such as visibility windows between a ground station and spacecraft.
 #[pyclass(name = "Window", module = "lox_space", frozen)]
 #[derive(Clone, Debug)]
-pub struct PyWindow(pub Window<DynTimeScale>);
+pub struct PyWindow(pub TimeInterval<DynTimeScale>);
 
 #[pymethods]
 impl PyWindow {
@@ -1642,7 +1642,7 @@ impl PyPass {
         let times: Vec<DynTime> = times.into_iter().map(|t| t.0).collect();
         let observables: Vec<Observables> = observables.into_iter().map(|o| o.0).collect();
 
-        let pass = Pass::new(window.0, times, observables)
+        let pass = Pass::try_new(window.0, times, observables)
             .map_err(|e| PyValueError::new_err(e.to_string()))?;
 
         Ok(PyPass(pass))
@@ -1650,7 +1650,7 @@ impl PyPass {
 
     /// Return the visibility window for this pass.
     fn window(&self) -> PyWindow {
-        PyWindow(*self.0.window())
+        PyWindow(*self.0.interval())
     }
 
     /// Return the time samples during this pass.
@@ -1679,11 +1679,11 @@ impl PyPass {
     }
 
     fn __repr__(&self) -> String {
-        let window = self.0.window();
+        let interval = self.0.interval();
         format!(
             "Pass(window=Window({}, {}), {} observables)",
-            window.start(),
-            window.end(),
+            interval.start(),
+            interval.end(),
             self.0.observables().len()
         )
     }

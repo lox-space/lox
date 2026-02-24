@@ -21,7 +21,7 @@ use thiserror::Error;
 
 use lox_time::intervals::TimeInterval;
 
-use crate::events::{Event, FindEventError, Window, find_events, find_windows};
+use crate::events::{Event, FindEventError, find_events, find_windows};
 use crate::propagators::Propagator;
 
 use super::{CartesianOrbit, Orbit, TrajectorError};
@@ -225,7 +225,7 @@ where
         )
     }
 
-    pub fn find_windows<F, E>(&self, func: F) -> Result<Vec<Window<T>>, RootFinderError>
+    pub fn find_windows<F, E>(&self, func: F) -> Result<Vec<TimeInterval<T>>, RootFinderError>
     where
         F: Fn(CartesianOrbit<T, O, R>) -> Result<f64, E> + Copy,
         E: Into<BoxedError>,
