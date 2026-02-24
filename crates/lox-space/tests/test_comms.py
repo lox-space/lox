@@ -256,7 +256,10 @@ def test_dipole_repr_roundtrip():
 
 
 def test_complex_antenna_dipole_beamwidth_is_none():
-    # DipolePattern has no well-defined HPBW; ComplexAntenna must propagate None.
+    # DipolePattern returns None because the API has no plane-of-measurement
+    # parameter; the E-plane HPBW is physically defined but not expressible as
+    # a single value here. ComplexAntenna delegates to the pattern, so it also
+    # returns None.
     d = lox.DipolePattern(length_m=0.005)
     a = lox.ComplexAntenna(pattern=d, boresight=[0.0, 0.0, 1.0])
     assert a.beamwidth(frequency_hz=29e9) is None
