@@ -50,6 +50,10 @@ serde_json.workspace = true
 name = "spk"
 harness = false
 
+[[bench]]
+name = "visibility"
+harness = false
+
 [features]
 default = [
   "bodies",

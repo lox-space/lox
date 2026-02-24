@@ -7,6 +7,7 @@
 pub use glam::DVec3;
 
 pub mod analysis;
+pub mod assets;
 pub mod events;
 pub mod ground;
 pub mod orbits;
