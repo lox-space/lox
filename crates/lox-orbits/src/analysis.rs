@@ -14,6 +14,7 @@ use lox_frames::rotations::TryRotation;
 use lox_math::roots::{Brent, RootFinderError};
 use lox_math::series::{InterpolationType, Series, SeriesError};
 use lox_time::deltas::TimeDelta;
+use lox_time::intervals::TimeInterval;
 use lox_time::offsets::DefaultOffsetProvider;
 use lox_time::time_scales::DynTimeScale;
 use lox_time::time_scales::{Tdb, TimeScale};
@@ -22,7 +23,7 @@ use rayon::prelude::*;
 use std::f64::consts::PI;
 use thiserror::Error;
 
-use crate::events::{Window, find_windows, intersect_windows};
+use crate::events::{find_windows, intersect_windows};
 use crate::ground::{DynGroundLocation, GroundLocation, Observables};
 use crate::orbits::{DynTrajectory, Trajectory};
 use lox_frames::{DynFrame, Iau, Icrf};
@@ -123,13 +124,16 @@ impl ElevationMask {
     }
 }
 
+/// A visibility pass between a ground station and spacecraft.
+///
+/// Stores the time interval, sampled times, observables, and `Series` for
+/// each observable channel to support interpolation.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Pass<T: TimeScale> {
-    window: Window<T>,
+    interval: TimeInterval<T>,
     times: Vec<Time<T>>,
     observables: Vec<Observables>,
-    // Series for interpolation
     azimuth_series: Series,
     elevation_series: Series,
     range_series: Series,
@@ -139,21 +143,22 @@ pub struct Pass<T: TimeScale> {
 pub type DynPass = Pass<DynTimeScale>;
 
 impl DynPass {
-    /// Create a Pass from a window, calculating observables for times when the satellite is above the elevation mask
-    pub fn from_window(
-        window: Window<DynTimeScale>,
+    /// Create a Pass from an interval, calculating observables for times when
+    /// the satellite is above the elevation mask.
+    ///
+    /// Returns `None` if the satellite is never above the mask within the interval.
+    pub fn from_interval(
+        interval: TimeInterval<DynTimeScale>,
         time_resolution: TimeDelta,
         gs: &DynGroundLocation,
         mask: &ElevationMask,
         sc: &DynTrajectory,
-    ) -> Result<DynPass, SeriesError> {
+    ) -> Option<DynPass> {
         let mut pass_times = Vec::new();
         let mut pass_observables = Vec::new();
 
-        // Generate times at the specified resolution within the window
-        let mut current_time = window.start();
-
-        while current_time <= window.end() {
+        let mut current_time = interval.start();
+        while current_time <= interval.end() {
             let body_fixed = DynFrame::Iau(gs.origin());
             let state = sc.interpolate_at(current_time);
             let state_bf = state
@@ -161,7 +166,6 @@ impl DynPass {
                 .unwrap();
             let obs = gs.observables_dyn(state_bf);
 
-            // Check if satellite is above the elevation mask
             let min_elev = mask.min_elevation(obs.azimuth());
             if obs.elevation() >= min_elev {
                 pass_times.push(current_time);
@@ -171,71 +175,40 @@ impl DynPass {
             current_time = current_time + time_resolution;
         }
 
-        // Only create a pass if we have valid observations
         if pass_times.is_empty() {
-            return Err(SeriesError::InsufficientPoints(0));
+            return None;
         }
 
-        Pass::new(window, pass_times, pass_observables)
+        Pass::try_new(interval, pass_times, pass_observables).ok()
     }
 }
 
 impl<T: TimeScale> Pass<T> {
-    pub fn new(
-        window: Window<T>,
+    /// Create a new Pass with Series-based interpolation.
+    ///
+    /// Requires at least 2 data points so that the observables can be
+    /// interpolated. Returns `Err(SeriesError::InsufficientPoints)` otherwise.
+    pub fn try_new(
+        interval: TimeInterval<T>,
         times: Vec<Time<T>>,
         observables: Vec<Observables>,
     ) -> Result<Self, SeriesError>
     where
-        T: Clone,
+        T: Copy,
     {
-        // If we have less than 2 points, we can't create a proper Series
-        // We'll create dummy series with duplicate points for Series compatibility
-        let (time_seconds, azimuths, elevations, ranges, range_rates) = if times.len() < 2 {
-            if times.is_empty() {
-                // Create default points at window start and end
-                let start_seconds = 0.0;
-                let end_seconds = window.duration().to_seconds().to_f64();
-                let default_obs = observables
-                    .first()
-                    .cloned()
-                    .unwrap_or_else(|| Observables::new(0.0, 0.0, 0.0, 0.0));
-                (
-                    vec![start_seconds, end_seconds],
-                    vec![default_obs.azimuth(), default_obs.azimuth()],
-                    vec![default_obs.elevation(), default_obs.elevation()],
-                    vec![default_obs.range(), default_obs.range()],
-                    vec![default_obs.range_rate(), default_obs.range_rate()],
-                )
-            } else {
-                // Duplicate the single point
-                let time_sec = (times[0].clone() - window.start()).to_seconds().to_f64();
-                let obs = &observables[0];
-                (
-                    vec![time_sec, time_sec + 1.0], // Add 1 second offset for second point
-                    vec![obs.azimuth(), obs.azimuth()],
-                    vec![obs.elevation(), obs.elevation()],
-                    vec![obs.range(), obs.range()],
-                    vec![obs.range_rate(), obs.range_rate()],
-                )
-            }
-        } else {
-            // Normal case with multiple points
-            let time_seconds: Vec<f64> = times
-                .iter()
-                .map(|t| (t.clone() - window.start()).to_seconds().to_f64())
-                .collect();
+        if times.len() < 2 {
+            return Err(SeriesError::InsufficientPoints(times.len()));
+        }
 
-            // Extract observable arrays
-            let azimuths: Vec<f64> = observables.iter().map(|o| o.azimuth()).collect();
-            let elevations: Vec<f64> = observables.iter().map(|o| o.elevation()).collect();
-            let ranges: Vec<f64> = observables.iter().map(|o| o.range()).collect();
-            let range_rates: Vec<f64> = observables.iter().map(|o| o.range_rate()).collect();
+        let time_seconds: Vec<f64> = times
+            .iter()
+            .map(|t| (*t - interval.start()).to_seconds().to_f64())
+            .collect();
+        let azimuths: Vec<f64> = observables.iter().map(|o| o.azimuth()).collect();
+        let elevations: Vec<f64> = observables.iter().map(|o| o.elevation()).collect();
+        let ranges: Vec<f64> = observables.iter().map(|o| o.range()).collect();
+        let range_rates: Vec<f64> = observables.iter().map(|o| o.range_rate()).collect();
 
-            (time_seconds, azimuths, elevations, ranges, range_rates)
-        };
-
-        // Create series for each observable
         let azimuth_series =
             Series::try_new(time_seconds.clone(), azimuths, InterpolationType::Linear)?;
         let elevation_series =
@@ -246,7 +219,7 @@ impl<T: TimeScale> Pass<T> {
             Series::try_new(time_seconds, range_rates, InterpolationType::Linear)?;
 
         Ok(Pass {
-            window,
+            interval,
             times,
             observables,
             azimuth_series,
@@ -256,8 +229,8 @@ impl<T: TimeScale> Pass<T> {
         })
     }
 
-    pub fn window(&self) -> &Window<T> {
-        &self.window
+    pub fn interval(&self) -> &TimeInterval<T> {
+        &self.interval
     }
 
     pub fn times(&self) -> &[Time<T>] {
@@ -270,22 +243,18 @@ impl<T: TimeScale> Pass<T> {
 
     pub fn interpolate(&self, time: Time<T>) -> Option<Observables>
     where
-        T: Clone + PartialOrd,
+        T: Copy + PartialOrd,
     {
-        // Check if the time is within the window
-        if time < self.window.start() || time > self.window.end() {
+        if time < self.interval.start() || time > self.interval.end() {
             return None;
         }
 
-        // If we have no data points, return None
         if self.times.is_empty() {
             return None;
         }
 
-        // Convert time to seconds since window start for interpolation
-        let target_seconds = (time - self.window.start()).to_seconds().to_f64();
+        let target_seconds = (time - self.interval.start()).to_seconds().to_f64();
 
-        // Use Series interpolation for each observable
         let azimuth = self.azimuth_series.interpolate(target_seconds);
         let elevation = self.elevation_series.interpolate(target_seconds);
         let range = self.range_series.interpolate(target_seconds);
@@ -315,7 +284,7 @@ pub fn visibility_dyn(
     gs: &DynGroundLocation,
     mask: &ElevationMask,
     sc: &DynTrajectory,
-) -> Result<Vec<Window<DynTimeScale>>, VisibilityError> {
+) -> Result<Vec<TimeInterval<DynTimeScale>>, VisibilityError> {
     if times.len() < 2 {
         return Ok(vec![]);
     }
@@ -349,7 +318,7 @@ pub fn visibility_los(
     body: DynOrigin,
     sc: &DynTrajectory,
     ephem: &impl Ephemeris,
-) -> Result<Vec<Window<DynTimeScale>>, RootFinderError> {
+) -> Result<Vec<TimeInterval<DynTimeScale>>, RootFinderError> {
     if times.len() < 2 {
         return Ok(vec![]);
     }
@@ -393,8 +362,8 @@ pub fn visibility_combined<E: Ephemeris + Send + Sync>(
     let w1 = visibility_dyn(times, gs, mask, sc)?;
     let wb = bodies
         .par_iter()
-        .map(|&body| visibility_los(times, gs, body, sc, ephem)) // -> Result<Vec<Window<DynTimeScale>>, RootFinderError>
-        .collect::<Result<Vec<Vec<Window<DynTimeScale>>>, RootFinderError>>()?;
+        .map(|&body| visibility_los(times, gs, body, sc, ephem))
+        .collect::<Result<Vec<Vec<TimeInterval<DynTimeScale>>>, RootFinderError>>()?;
     let mut windows = w1;
 
     for w2 in wb {
@@ -404,7 +373,6 @@ pub fn visibility_combined<E: Ephemeris + Send + Sync>(
     // Convert windows to passes
     let mut passes = Vec::new();
 
-    // Calculate time resolution from the provided times array
     let time_resolution = if times.len() >= 2 {
         times[1] - times[0]
     } else {
@@ -412,14 +380,8 @@ pub fn visibility_combined<E: Ephemeris + Send + Sync>(
     };
 
     for window in windows {
-        // Use the new from_window constructor to properly calculate observables
-        match DynPass::from_window(window, time_resolution, gs, mask, sc) {
-            Ok(pass) => passes.push(pass),
-            Err(SeriesError::InsufficientPoints(_)) => {
-                // Skip windows where the satellite never rises above the elevation mask
-                continue;
-            }
-            Err(e) => return Err(VisibilityError::Series(e)),
+        if let Some(pass) = DynPass::from_interval(window, time_resolution, gs, mask, sc) {
+            passes.push(pass);
         }
     }
 
@@ -451,7 +413,7 @@ pub fn visibility<T, O, P>(
     mask: &ElevationMask,
     sc: &Trajectory<T, O, Icrf>,
     provider: &P,
-) -> Result<Vec<Window<T>>, RootFinderError>
+) -> Result<Vec<TimeInterval<T>>, RootFinderError>
 where
     T: TimeScale + Copy,
     O: Origin + Spheroid + RotationalElements + Copy,
@@ -596,30 +558,20 @@ mod tests {
             visibility_combined(&times, &gs, &mask, &[DynOrigin::Moon], &sc, ephemeris()).unwrap();
         assert_eq!(actual.len(), expected.len());
         for (actual, expected) in zip(actual, expected) {
-            assert_approx_eq!(actual.window().start(), expected.start(), rtol <= 1e-4);
-            assert_approx_eq!(actual.window().end(), expected.end(), rtol <= 1e-4);
+            assert_approx_eq!(actual.interval().start(), expected.start(), rtol <= 1e-4);
+            assert_approx_eq!(actual.interval().end(), expected.end(), rtol <= 1e-4);
         }
     }
 
     #[test]
     fn test_pass_observables_above_mask() {
-        // Test that all observables in a Pass are above the elevation mask
         let gs = location_dyn();
-        let mask = ElevationMask::with_fixed_elevation(10.0_f64.to_radians()); // 10 degree mask
+        let mask = ElevationMask::with_fixed_elevation(10.0_f64.to_radians());
         let sc = spacecraft_trajectory_dyn();
         let times: Vec<DynTime> = sc.states().iter().map(|s| s.time()).collect();
 
-        let passes = visibility_combined(
-            &times,
-            &gs,
-            &mask,
-            &[], // No occluding bodies for this test
-            &sc,
-            ephemeris(),
-        )
-        .unwrap();
+        let passes = visibility_combined(&times, &gs, &mask, &[], &sc, ephemeris()).unwrap();
 
-        // For each pass, verify all observables have elevation >= mask minimum
         for pass in passes {
             for obs in pass.observables() {
                 let min_elevation = mask.min_elevation(obs.azimuth());
@@ -661,28 +613,28 @@ mod tests {
         GroundLocation::try_new(coords, DynOrigin::Earth).unwrap()
     }
 
-    fn contacts() -> Vec<Window<Tai>> {
-        let mut windows = vec![];
+    fn contacts() -> Vec<TimeInterval<Tai>> {
+        let mut intervals = vec![];
         let mut reader = csv::Reader::from_path(data_file("contacts.csv")).unwrap();
         for result in reader.records() {
             let record = result.unwrap();
             let start = record[0].parse::<Utc>().unwrap().to_time();
             let end = record[1].parse::<Utc>().unwrap().to_time();
-            windows.push(Window::new(start, end));
+            intervals.push(TimeInterval::new(start, end));
         }
-        windows
+        intervals
     }
 
-    fn contacts_combined() -> Vec<Window<DynTimeScale>> {
-        let mut windows = vec![];
+    fn contacts_combined() -> Vec<TimeInterval<DynTimeScale>> {
+        let mut intervals = vec![];
         let mut reader = csv::Reader::from_path(data_file("contacts_combined.csv")).unwrap();
         for result in reader.records() {
             let record = result.unwrap();
             let start = record[0].parse::<Utc>().unwrap().to_dyn_time();
             let end = record[1].parse::<Utc>().unwrap().to_dyn_time();
-            windows.push(Window::new(start, end));
+            intervals.push(TimeInterval::new(start, end));
         }
-        windows
+        intervals
     }
 
     fn ephemeris() -> &'static Spk {

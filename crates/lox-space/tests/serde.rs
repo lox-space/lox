@@ -11,10 +11,11 @@ use lox_space::bodies::*;
 use lox_space::frames::frames::Teme;
 use lox_space::frames::rotations::Rotation;
 use lox_space::frames::*;
-use lox_space::orbits::events::{Window, ZeroCrossing};
+use lox_space::orbits::events::ZeroCrossing;
 use lox_space::orbits::ground::GroundLocation;
 use lox_space::orbits::orbits::CartesianOrbit;
 use lox_space::time::Time;
+use lox_space::time::intervals::TimeInterval;
 use lox_space::time::time_scales::Tai;
 use lox_space::units::*;
 use serde::de::DeserializeOwned;
@@ -129,11 +130,11 @@ fn test_ground_location() {
 }
 
 #[test]
-fn test_window() {
+fn test_time_interval() {
     let t0 = Time::new(Tai, 0, Default::default());
     let t1 = Time::new(Tai, 3600, Default::default());
-    let w = Window::new(t0, t1);
-    round_trip(&w);
+    let i = TimeInterval::new(t0, t1);
+    round_trip(&i);
 }
 
 #[test]
