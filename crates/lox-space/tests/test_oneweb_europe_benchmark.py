@@ -7,7 +7,7 @@ OneWeb Europe Coverage Benchmark
 
 This benchmark tests visibility analysis performance with a realistic large-scale scenario:
 - 651 OneWeb satellites from TLE data (using existing oneweb fixture)
-- Ground points covering Europe with 1-degree resolution (≈630 points)
+- Ground points covering Europe with 1-degree resolution (~630 points)
 - Total combinations: ~410,000 visibility calculations
 
 This represents a realistic worst-case scenario for satellite visibility analysis.
@@ -19,9 +19,9 @@ import numpy as np
 import lox_space as lox
 
 
-def create_europe_ground_grid(resolution_deg=1.0, min_elevation_deg=10.0):
+def create_europe_ground_assets(resolution_deg=1.0, min_elevation_deg=10.0):
     """
-    Create a grid of ground points covering Europe with specified resolution.
+    Create a list of ground assets covering Europe with specified resolution.
 
     Parameters
     ----------
@@ -32,8 +32,8 @@ def create_europe_ground_grid(resolution_deg=1.0, min_elevation_deg=10.0):
 
     Returns
     -------
-    dict
-        Dictionary of ground station name -> (GroundLocation, ElevationMask)
+    list[lox.GroundAsset]
+        List of ground assets covering Europe.
     """
     # Europe bounding box (approximate)
     lon_min, lon_max = -10.0, 40.0  # West to East
@@ -43,10 +43,10 @@ def create_europe_ground_grid(resolution_deg=1.0, min_elevation_deg=10.0):
     lons = np.arange(lon_min, lon_max + resolution_deg, resolution_deg)
     lats = np.arange(lat_min, lat_max + resolution_deg, resolution_deg)
 
-    ground_stations = {}
     elevation_mask = lox.ElevationMask.fixed(np.radians(min_elevation_deg))
     origin = lox.Origin("Earth")
 
+    ground_assets = []
     point_count = 0
     for lon in lons:
         for lat in lats:
@@ -59,10 +59,12 @@ def create_europe_ground_grid(resolution_deg=1.0, min_elevation_deg=10.0):
                     latitude=np.radians(lat),
                     altitude=0.0,  # Sea level
                 )
-                ground_stations[gs_name] = (ground_location, elevation_mask)
+                ground_assets.append(
+                    lox.GroundAsset(gs_name, ground_location, elevation_mask)
+                )
                 point_count += 1
 
-    return ground_stations
+    return ground_assets
 
 
 def is_point_in_europe(lon, lat):
@@ -92,24 +94,29 @@ def is_point_in_europe(lon, lat):
 
 
 @pytest.fixture(scope="session")
-def europe_ground_stations():
-    """Fixture providing Europe ground station grid."""
-    return create_europe_ground_grid(resolution_deg=1.0)
+def europe_ground_assets():
+    """Fixture providing Europe ground asset grid."""
+    return create_europe_ground_assets(resolution_deg=1.0)
 
 
 @pytest.fixture(scope="session")
-def europe_ground_stations_coarse():
-    """Fixture providing coarser Europe ground station grid for faster testing."""
-    return create_europe_ground_grid(resolution_deg=2.0)
+def europe_ground_assets_coarse():
+    """Fixture providing coarser Europe ground asset grid for faster testing."""
+    return create_europe_ground_assets(resolution_deg=2.0)
 
 
 @pytest.fixture(scope="session")
-def benchmark_times(oneweb):
-    """Fixture providing time grid optimized for benchmarks."""
-    # Use first OneWeb satellite's epoch as reference
-    t0 = next(iter(oneweb.values())).states()[0].time()
-    # 2-hour analysis with 10-minute steps for performance
-    return [t0 + t for t in lox.TimeDelta.range(0, 7200, 600)]
+def t0(oneweb):
+    return next(iter(oneweb.values())).states()[0].time()
+
+
+@pytest.fixture(scope="session")
+def t1(t0):
+    return t0 + lox.TimeDelta(7200)
+
+
+def make_space_assets(oneweb_dict):
+    return [lox.SpaceAsset(name, traj) for name, traj in oneweb_dict.items()]
 
 
 @pytest.fixture(scope="session")
@@ -133,19 +140,17 @@ def oneweb_sample_large(oneweb):
 class TestOneWebEuropeBenchmark:
     """Benchmark tests for OneWeb Europe coverage scenario."""
 
-    def test_benchmark_info(self, europe_ground_stations, oneweb, benchmark_times):
+    def test_benchmark_info(self, europe_ground_assets, oneweb):
         """Display benchmark scenario information."""
         num_spacecraft = len(oneweb)
-        num_ground_stations = len(europe_ground_stations)
-        num_times = len(benchmark_times)
+        num_ground_stations = len(europe_ground_assets)
         total_combinations = num_spacecraft * num_ground_stations
 
         print(f"\n{'=' * 60}")
         print("OneWeb Europe Coverage Benchmark")
         print(f"{'=' * 60}")
         print(f"Spacecraft (OneWeb): {num_spacecraft}")
-        print(f"Ground stations (Europe 1°): {num_ground_stations}")
-        print(f"Time points: {num_times}")
+        print(f"Ground stations (Europe 1deg): {num_ground_stations}")
         print(f"Total combinations: {total_combinations:,}")
         print(f"Expected visibility calculations: {total_combinations:,}")
         print(f"{'=' * 60}")
@@ -157,247 +162,69 @@ class TestOneWebEuropeBenchmark:
 
     def test_benchmark_sequential_sample(
         self,
-        europe_ground_stations_coarse,
+        europe_ground_assets_coarse,
         oneweb_sample_small,
-        benchmark_times,
+        t0,
+        t1,
         ephemeris,
     ):
-        """Test sequential visibility analysis on a small sample."""
-        sample_ground_stations = dict(list(europe_ground_stations_coarse.items())[:10])
+        """Test visibility analysis on a small sample."""
+        sample_ground_assets = europe_ground_assets_coarse[:10]
+        space_assets = make_space_assets(oneweb_sample_small)
 
-        start_time = time.time()
+        analysis = lox.VisibilityAnalysis(sample_ground_assets, space_assets)
+        results = analysis.compute(t0, t1, ephemeris)
 
-        results = {}
-        for sc_name, sc_trajectory in oneweb_sample_small.items():
-            results[sc_name] = {}
-            for gs_name, (gs_location, gs_mask) in sample_ground_stations.items():
-                try:
-                    windows = lox.visibility(
-                        times=benchmark_times,
-                        gs=gs_location,
-                        mask=gs_mask,
-                        sc=sc_trajectory,
-                        ephemeris=ephemeris,
-                        bodies=None,
-                        provider=None,
-                    )
-                    results[sc_name][gs_name] = windows
-                except Exception as e:
-                    results[sc_name][gs_name] = []
-
-        elapsed = time.time() - start_time
-        total_calcs = len(oneweb_sample_small) * len(sample_ground_stations)
-
-        # Verify we got some results
-        total_windows = sum(
-            len(windows)
-            for sc_results in results.values()
-            for windows in sc_results.values()
+        assert results.num_pairs() == len(oneweb_sample_small) * len(
+            sample_ground_assets
         )
-
-        assert len(results) == len(oneweb_sample_small)
-
-    # @pytest.mark.benchmark
-    # def test_benchmark_parallel_small(self, europe_ground_stations_coarse, oneweb_sample_small, benchmark_times, ephemeris):
-    #     """Test parallel visibility analysis on a small sample."""
-    #     sample_ground_stations = dict(list(europe_ground_stations_coarse.items())[:20])
-
-    #     # Create ensemble for parallel processing
-    #     ensemble = lox.Ensemble(oneweb_sample_small)
-
-    #     start_time = time.time()
-
-    #     try:
-    #         results = lox.visibility_all(
-    #             times=benchmark_times,
-    #             ground_stations=sample_ground_stations,
-    #             spacecraft=ensemble,
-    #             ephemeris=ephemeris,
-    #             bodies=None,
-    #             provider=None,
-    #         )
-
-    #         elapsed = time.time() - start_time
-    #         total_calcs = len(oneweb_sample_small) * len(sample_ground_stations)
-
-    #         # Verify we got some results
-    #         total_windows = sum(len(windows) for sc_results in results.values()
-    #                           for windows in sc_results.values())
-
-    #         assert len(results) == len(oneweb_sample_small)
-
-    #     except Exception as e:
-    #         pytest.skip(f"Parallel visibility_all not available or failed: {e}")
 
     @pytest.mark.benchmark
     def test_benchmark_parallel_medium(
         self,
-        europe_ground_stations_coarse,
+        europe_ground_assets_coarse,
         oneweb_sample_medium,
-        benchmark_times,
+        t0,
+        t1,
         ephemeris,
     ):
-        """Test parallel visibility analysis on a medium sample."""
-        sample_ground_stations = dict(list(europe_ground_stations_coarse.items())[:50])
+        """Test visibility analysis on a medium sample."""
+        sample_ground_assets = europe_ground_assets_coarse[:50]
+        space_assets = make_space_assets(oneweb_sample_medium)
 
-        # Create ensemble for parallel processing
-        ensemble = lox.Ensemble(oneweb_sample_medium)
+        analysis = lox.VisibilityAnalysis(sample_ground_assets, space_assets)
+        results = analysis.compute(t0, t1, ephemeris)
 
-        start_time = time.time()
-
-        try:
-            results = lox.visibility_all(
-                times=benchmark_times,
-                ground_stations=sample_ground_stations,
-                spacecraft=ensemble,
-                ephemeris=ephemeris,
-                bodies=None,
-                provider=None,
-            )
-
-            elapsed = time.time() - start_time
-            total_calcs = len(oneweb_sample_medium) * len(sample_ground_stations)
-
-            # Verify we got some results
-            total_windows = sum(
-                len(windows)
-                for sc_results in results.values()
-                for windows in sc_results.values()
-            )
-
-            assert len(results) == len(oneweb_sample_medium)
-
-        except Exception as e:
-            pytest.skip(f"Parallel visibility_all failed: {e}")
+        assert results.num_pairs() == len(oneweb_sample_medium) * len(
+            sample_ground_assets
+        )
 
     @pytest.mark.slow
     def test_benchmark_parallel_large(
-        self, europe_ground_stations, oneweb_sample_large, benchmark_times, ephemeris
-    ):
-        """Test parallel visibility analysis on a large subset (marked as slow)."""
-        sample_ground_stations = dict(list(europe_ground_stations.items())[:100])
-
-        # Create ensemble for parallel processing
-        ensemble = lox.Ensemble(oneweb_sample_large)
-
-        start_time = time.time()
-
-        try:
-            results = lox.visibility_all(
-                times=benchmark_times,
-                ground_stations=sample_ground_stations,
-                spacecraft=ensemble,
-                ephemeris=ephemeris,
-                bodies=None,
-                provider=None,
-            )
-
-            elapsed = time.time() - start_time
-            total_calcs = len(oneweb_sample_large) * len(sample_ground_stations)
-
-            # Estimate full constellation performance
-            full_calcs = (
-                len(oneweb_sample_large) * 3 * len(europe_ground_stations)
-            )  # Scale up
-            estimated_time = elapsed * full_calcs / total_calcs / 60
-
-            # Verify we got some results
-            total_windows = sum(
-                len(windows)
-                for sc_results in results.values()
-                for windows in sc_results.values()
-            )
-
-            assert len(results) == len(oneweb_sample_large)
-
-        except Exception as e:
-            pytest.skip(f"Large parallel test failed: {e}")
-
-    @pytest.mark.benchmark
-    def test_performance_comparison(
         self,
-        europe_ground_stations_coarse,
-        oneweb_sample_small,
-        benchmark_times,
+        europe_ground_assets,
+        oneweb_sample_large,
+        t0,
+        t1,
         ephemeris,
     ):
-        """Compare sequential vs parallel vs optimized performance with identical datasets."""
-        # Use modest sample size for fair comparison
-        sample_ground_stations = dict(list(europe_ground_stations_coarse.items())[:15])
+        """Test visibility analysis on a large subset (marked as slow)."""
+        sample_ground_assets = europe_ground_assets[:100]
+        space_assets = make_space_assets(oneweb_sample_large)
 
-        # Sequential test
-        seq_start = time.time()
-        seq_results = {}
-        seq_total_windows = 0
+        analysis = lox.VisibilityAnalysis(sample_ground_assets, space_assets)
+        results = analysis.compute(t0, t1, ephemeris)
 
-        for sc_name, sc_trajectory in oneweb_sample_small.items():
-            seq_results[sc_name] = {}
-            for gs_name, (gs_location, gs_mask) in sample_ground_stations.items():
-                try:
-                    windows = lox.visibility(
-                        times=benchmark_times,
-                        gs=gs_location,
-                        mask=gs_mask,
-                        sc=sc_trajectory,
-                        ephemeris=ephemeris,
-                        bodies=None,
-                        provider=None,
-                    )
-                    seq_results[sc_name][gs_name] = windows
-                    seq_total_windows += len(windows)
-                except Exception as e:
-                    seq_results[sc_name][gs_name] = []
-
-        seq_elapsed = time.time() - seq_start
-
-        # Original parallel test
-        par_start = time.time()
-
-        try:
-            ensemble = lox.Ensemble(oneweb_sample_small)
-            par_results = lox.visibility_all(
-                times=benchmark_times,
-                ground_stations=sample_ground_stations,
-                spacecraft=ensemble,
-                ephemeris=ephemeris,
-                bodies=None,
-                provider=None,
-            )
-
-            par_elapsed = time.time() - par_start
-
-            # Count parallel results
-            par_total_windows = sum(
-                len(windows)
-                for sc_results in par_results.values()
-                for windows in sc_results.values()
-            )
-
-        except Exception as e:
-            par_elapsed = float("inf")
-            par_total_windows = 0
-            par_results = {}
-
-        # Note: visibility_all now uses the optimized implementation
-        opt_elapsed = par_elapsed  # Same as parallel since they're now the same
-        opt_total_windows = par_total_windows
-        opt_results = par_results
-
-        # Results
-        total_calcs = len(oneweb_sample_small) * len(sample_ground_stations)
-
-        # Validation - ensure parallel method found similar results to sequential
-        if par_total_windows > 0:
-            assert (
-                abs(seq_total_windows - par_total_windows) <= total_calcs * 0.1
-            )  # Allow 10% variance
+        assert results.num_pairs() == len(oneweb_sample_large) * len(
+            sample_ground_assets
+        )
 
     @pytest.mark.slow
     @pytest.mark.benchmark
-    def test_full_scale_estimate(self, europe_ground_stations, oneweb, benchmark_times):
+    def test_full_scale_estimate(self, europe_ground_assets, oneweb):
         """Estimate performance for full-scale scenario."""
         total_spacecraft = len(oneweb)
-        total_ground_stations = len(europe_ground_stations)
+        total_ground_stations = len(europe_ground_assets)
         total_combinations = total_spacecraft * total_ground_stations
 
         print(f"\n{'=' * 60}")
@@ -409,19 +236,6 @@ class TestOneWebEuropeBenchmark:
         print(
             f"Memory estimate (results only): {total_combinations * 200 / 1024 / 1024:.1f} MB"
         )
-
-        # This would be way too slow to actually run, so just calculate estimates
-        # Based on our medium sample performance
-        estimated_rate = 50  # calculations per second (conservative estimate)
-        estimated_time_seconds = total_combinations / estimated_rate
-        estimated_time_hours = estimated_time_seconds / 3600
-
-        print(f"Estimated computation time: {estimated_time_hours:.1f} hours")
-        print(f"This benchmark demonstrates the need for:")
-        print("- Chunked/streaming processing")
-        print("- Spatial optimization")
-        print("- Memory management")
-        print("- Incremental results")
         print(f"{'=' * 60}")
 
         # This is just an informational test

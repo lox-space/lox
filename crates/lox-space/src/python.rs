@@ -15,9 +15,10 @@ use crate::ephem::python::PySpk;
 use crate::frames::python::PyFrame;
 use crate::math::python::PySeries;
 use crate::orbits::python::{
-    PyElevationMask, PyEnsemble, PyEvent, PyGroundLocation, PyGroundPropagator, PyJ2Propagator,
-    PyKeplerian, PyObservables, PyPass, PySgp4, PyState, PyTrajectory, PyVallado, PyWindow,
-    find_events, find_windows, visibility, visibility_all,
+    PyElevationMask, PyEvent, PyGroundAsset, PyGroundLocation, PyGroundPropagator,
+    PyJ2Propagator, PyKeplerian, PyObservables, PyPass, PySgp4, PySpaceAsset, PyState,
+    PyTrajectory, PyVallado, PyVisibilityAnalysis, PyVisibilityResults, PyWindow, find_events,
+    find_windows,
 };
 use crate::time::python::{
     deltas::{NonFiniteTimeDeltaError, PyTimeDelta},
@@ -72,13 +73,9 @@ fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PySeries>()?;
 
     // orbits
-    m.add_function(wrap_pyfunction!(find_events, m)?)?;
-    m.add_function(wrap_pyfunction!(find_windows, m)?)?;
-    m.add_function(wrap_pyfunction!(visibility, m)?)?;
-    m.add_function(wrap_pyfunction!(visibility_all, m)?)?;
     m.add_class::<PyElevationMask>()?;
-    m.add_class::<PyEnsemble>()?;
     m.add_class::<PyEvent>()?;
+    m.add_class::<PyGroundAsset>()?;
     m.add_class::<PyGroundLocation>()?;
     m.add_class::<PyGroundPropagator>()?;
     m.add_class::<PyJ2Propagator>()?;
@@ -86,10 +83,15 @@ fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyObservables>()?;
     m.add_class::<PyPass>()?;
     m.add_class::<PySgp4>()?;
+    m.add_class::<PySpaceAsset>()?;
     m.add_class::<PyState>()?;
     m.add_class::<PyTrajectory>()?;
     m.add_class::<PyVallado>()?;
+    m.add_class::<PyVisibilityAnalysis>()?;
+    m.add_class::<PyVisibilityResults>()?;
     m.add_class::<PyWindow>()?;
+    m.add_function(wrap_pyfunction!(find_events, m)?)?;
+    m.add_function(wrap_pyfunction!(find_windows, m)?)?;
 
     // time
     m.add_class::<PyTime>()?;

@@ -75,37 +75,3 @@ def test_interpolation(orbit, trajectory):
     assert orbit.true_anomaly() == pytest.approx(k1.true_anomaly(), rel=1e-8)
 
 
-def test_events(trajectory):
-    def apsis_pass(s):
-        return s.position() @ s.velocity()
-
-    events = trajectory.find_events(apsis_pass)
-    assert len(events) == 2
-    k1 = trajectory.interpolate(events[0].time()).to_keplerian()
-    assert k1.true_anomaly() == pytest.approx(np.pi, rel=1e-8)
-    k2 = trajectory.interpolate(events[1].time()).to_keplerian()
-    assert k2.true_anomaly() == pytest.approx(0.0, abs=1e-8)
-
-
-def test_windows(trajectory):
-    def above_equator(s):
-        return s.position()[2]
-
-    windows = trajectory.find_windows(above_equator)
-    assert len(windows) == 1
-
-
-def test_events_callback_error(trajectory):
-    def bad_func(_s):
-        raise ValueError("boom in events")
-
-    with pytest.raises(ValueError, match=r"boom in events"):
-        trajectory.find_events(bad_func)
-
-
-def test_windows_callback_error(trajectory):
-    def bad_func(_s):
-        raise ValueError("boom in windows")
-
-    with pytest.raises(ValueError, match=r"boom in windows"):
-        trajectory.find_windows(bad_func)

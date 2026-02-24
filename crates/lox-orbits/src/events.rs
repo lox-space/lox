@@ -77,16 +77,6 @@ pub enum DetectError {
     Callback(Box<dyn std::error::Error + Send + Sync>),
 }
 
-#[derive(Debug, Error)]
-pub enum FindEventError {
-    #[error("function is always negative")]
-    AlwaysNegative,
-    #[error("function is always positive")]
-    AlwaysPositive,
-    #[error(transparent)]
-    RootFinder(#[from] RootFinderError),
-}
-
 // ---------------------------------------------------------------------------
 // Core traits
 // ---------------------------------------------------------------------------
@@ -113,7 +103,7 @@ pub trait IntervalDetector<T: TimeScale> {
 
 /// A `Callback`-compatible wrapper that bridges `DetectFn` to the root-finder
 /// interface.
-struct DetectCallback<'a, T: TimeScale, F: DetectFn<T>> {
+pub(crate) struct DetectCallback<'a, T: TimeScale, F: DetectFn<T>> {
     func: &'a F,
     start: Time<T>,
 }
@@ -149,7 +139,7 @@ use lox_math::roots::Brent;
 
 /// Wraps a `DetectFn` with a root finder to produce an `EventDetector`.
 pub struct RootFindingDetector<F, R = Brent> {
-    func: F,
+    pub(crate) func: F,
     root_finder: R,
     step: TimeDelta,
 }
@@ -174,13 +164,21 @@ impl<F, R> RootFindingDetector<F, R> {
     }
 }
 
-impl<T, F, R> EventDetector<T> for RootFindingDetector<F, R>
-where
-    T: TimeScale + Copy,
-    F: DetectFn<T>,
-    for<'a> R: FindBracketedRoot<DetectCallback<'a, T, F>>,
-{
-    fn detect(&self, interval: TimeInterval<T>) -> Result<Vec<Event<T>>, DetectError> {
+impl<F, R> RootFindingDetector<F, R> {
+    /// Core detection returning events and the sign at the interval start.
+    ///
+    /// The start sign is needed by [`EventsToIntervals`] to determine whether
+    /// the condition holds throughout when no zero-crossings are found.
+    /// Returning it here avoids a redundant function evaluation.
+    pub(crate) fn detect_with_start_sign<T>(
+        &self,
+        interval: TimeInterval<T>,
+    ) -> Result<(Vec<Event<T>>, f64), DetectError>
+    where
+        T: TimeScale + Copy,
+        F: DetectFn<T>,
+        for<'a> R: FindBracketedRoot<DetectCallback<'a, T, F>>,
+    {
         let start = interval.start();
         let end = interval.end();
         let total_seconds = (end - start).to_seconds().to_f64();
@@ -207,9 +205,11 @@ where
             signs.push(v.signum());
         }
 
+        let start_sign = signs[0];
+
         // All negative or all positive → no events
         if signs.iter().all(|&s| s < 0.0) || signs.iter().all(|&s| s > 0.0) {
-            return Ok(vec![]);
+            return Ok((vec![], start_sign));
         }
 
         // Find zero crossings
@@ -225,7 +225,19 @@ where
             }
         }
 
-        Ok(events)
+        Ok((events, start_sign))
+    }
+}
+
+impl<T, F, R> EventDetector<T> for RootFindingDetector<F, R>
+where
+    T: TimeScale + Copy,
+    F: DetectFn<T>,
+    for<'a> R: FindBracketedRoot<DetectCallback<'a, T, F>>,
+{
+    fn detect(&self, interval: TimeInterval<T>) -> Result<Vec<Event<T>>, DetectError> {
+        self.detect_with_start_sign(interval)
+            .map(|(events, _)| events)
     }
 }
 
@@ -233,30 +245,48 @@ where
 // EventsToIntervals — converts EventDetector → IntervalDetector
 // ---------------------------------------------------------------------------
 
-/// Converts an `EventDetector` into an `IntervalDetector` by pairing
+/// Converts a [`RootFindingDetector`] into an [`IntervalDetector`] by pairing
 /// Up/Down crossings into intervals.
-pub struct EventsToIntervals<D> {
-    detector: D,
+///
+/// When no events are found, the sign of the detect function at the interval
+/// start is checked: if positive, the entire interval is returned; if
+/// negative, an empty list is returned.
+pub struct EventsToIntervals<F, R = Brent> {
+    detector: RootFindingDetector<F, R>,
 }
 
-impl<D> EventsToIntervals<D> {
-    pub fn new(detector: D) -> Self {
+impl<F> EventsToIntervals<F, Brent> {
+    pub fn new(detector: RootFindingDetector<F>) -> Self {
         Self { detector }
     }
 }
 
-impl<T, D> IntervalDetector<T> for EventsToIntervals<D>
+impl<F, R> EventsToIntervals<F, R> {
+    pub fn with_root_finder(detector: RootFindingDetector<F, R>) -> Self {
+        Self { detector }
+    }
+}
+
+impl<T, F, R> IntervalDetector<T> for EventsToIntervals<F, R>
 where
     T: TimeScale + Copy,
-    D: EventDetector<T>,
+    F: DetectFn<T>,
+    for<'a> R: FindBracketedRoot<DetectCallback<'a, T, F>>,
 {
     fn detect(&self, interval: TimeInterval<T>) -> Result<Vec<TimeInterval<T>>, DetectError> {
         let start = interval.start();
         let end = interval.end();
 
-        let events = self.detector.detect(interval)?;
+        let (events, start_sign) = self.detector.detect_with_start_sign(interval)?;
         if events.is_empty() {
-            return Ok(vec![]);
+            // No zero crossings — use the sign at the start (already computed
+            // during step evaluation) to determine if the condition holds
+            // throughout or not at all.
+            return if start_sign >= 0.0 {
+                Ok(vec![interval])
+            } else {
+                Ok(vec![])
+            };
         }
 
         let mut events: VecDeque<Event<T>> = events.into();
@@ -424,126 +454,82 @@ where
 }
 
 // ---------------------------------------------------------------------------
-// Legacy free functions (kept for backward compat during migration)
+// Convenience functions
 // ---------------------------------------------------------------------------
 
-pub fn find_events<F, R, T>(
+/// Find zero-crossing events for an infallible closure over a time interval.
+pub fn find_events<T, F>(
     func: F,
-    start: Time<T>,
-    steps: &[f64],
-    root_finder: R,
-) -> Result<Vec<Event<T>>, FindEventError>
+    interval: TimeInterval<T>,
+    step: TimeDelta,
+) -> Result<Vec<Event<T>>, DetectError>
 where
-    F: Callback + Clone,
-    T: TimeScale + Clone,
-    R: FindBracketedRoot<F>,
+    T: TimeScale + Copy,
+    F: Fn(Time<T>) -> f64,
 {
-    let mut signs = Vec::with_capacity(steps.len());
-    for &t in steps {
-        let v = func
-            .call(t)
-            .map_err(|e| FindEventError::RootFinder(RootFinderError::Callback(e)))?;
-        signs.push(v.signum());
-    }
-
-    if signs.iter().all(|&s| s < 0.0) {
-        return Err(FindEventError::AlwaysNegative);
-    }
-
-    if signs.iter().all(|&s| s > 0.0) {
-        return Err(FindEventError::AlwaysPositive);
-    }
-
-    let mut events = vec![];
-
-    for ((&t0, s0), (&t1, s1)) in std::iter::zip(steps, signs).tuple_windows() {
-        if let Some(crossing) = ZeroCrossing::new(s0, s1) {
-            let t = root_finder
-                .find_in_bracket(func.clone(), (t0, t1))
-                .map_err(FindEventError::RootFinder)?;
-            let time = start.clone() + TimeDelta::from_seconds_f64(t);
-            events.push(Event { crossing, time });
-        }
-    }
-
-    Ok(events)
+    RootFindingDetector::new(FnDetect(func), step).detect(interval)
 }
 
-pub fn find_windows<F, T, R>(
+/// Find zero-crossing events for a fallible closure over a time interval.
+pub fn try_find_events<T, F, E>(
     func: F,
-    start: Time<T>,
-    end: Time<T>,
-    steps: &[f64],
-    root_finder: R,
-) -> Result<Vec<TimeInterval<T>>, RootFinderError>
+    interval: TimeInterval<T>,
+    step: TimeDelta,
+) -> Result<Vec<Event<T>>, DetectError>
 where
-    F: Callback + Clone,
-    T: TimeScale + Clone,
-    R: FindBracketedRoot<F>,
+    T: TimeScale + Copy,
+    F: Fn(Time<T>) -> Result<f64, E>,
+    E: std::error::Error + Send + Sync + 'static,
 {
-    match find_events(func, start.clone(), steps, root_finder) {
-        Err(FindEventError::AlwaysNegative) => Ok(vec![]),
-        Err(FindEventError::AlwaysPositive) => Ok(vec![TimeInterval::new(start, end)]),
-        Err(FindEventError::RootFinder(err)) => Err(err),
-        Ok(events) => {
-            let mut events: VecDeque<Event<T>> = events.into();
-
-            if events.is_empty() {
-                return Ok(vec![]);
-            }
-
-            if events.front().unwrap().crossing == ZeroCrossing::Down {
-                events.push_front(Event {
-                    crossing: ZeroCrossing::Up,
-                    time: start,
-                });
-            }
-
-            if events.back().unwrap().crossing == ZeroCrossing::Up {
-                events.push_back(Event {
-                    crossing: ZeroCrossing::Down,
-                    time: end,
-                });
-            }
-
-            let mut windows = Vec::with_capacity(events.len() / 2);
-
-            for (start, end) in events.into_iter().tuples() {
-                debug_assert!(start.crossing == ZeroCrossing::Up);
-                debug_assert!(end.crossing == ZeroCrossing::Down);
-                windows.push(TimeInterval::new(start.time, end.time));
-            }
-
-            Ok(windows)
-        }
-    }
+    RootFindingDetector::new(TryFnDetect(func), step).detect(interval)
 }
 
-pub fn intersect_windows<T>(w1: &[TimeInterval<T>], w2: &[TimeInterval<T>]) -> Vec<TimeInterval<T>>
+/// Find intervals where an infallible closure is positive.
+pub fn find_windows<T, F>(
+    func: F,
+    interval: TimeInterval<T>,
+    step: TimeDelta,
+) -> Result<Vec<TimeInterval<T>>, DetectError>
 where
-    T: TimeScale + Ord + Copy,
+    T: TimeScale + Copy,
+    F: Fn(Time<T>) -> f64,
 {
-    lox_time::intervals::intersect_intervals(w1, w2)
+    let detector = RootFindingDetector::new(FnDetect(func), step);
+    EventsToIntervals::new(detector).detect(interval)
+}
+
+/// Find intervals where a fallible closure is positive.
+pub fn try_find_windows<T, F, E>(
+    func: F,
+    interval: TimeInterval<T>,
+    step: TimeDelta,
+) -> Result<Vec<TimeInterval<T>>, DetectError>
+where
+    T: TimeScale + Copy,
+    F: Fn(Time<T>) -> Result<f64, E>,
+    E: std::error::Error + Send + Sync + 'static,
+{
+    let detector = RootFindingDetector::new(TryFnDetect(func), step);
+    EventsToIntervals::new(detector).detect(interval)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lox_math::roots::Brent;
     use lox_test_utils::assert_approx_eq;
+    use lox_time::time;
     use lox_time::time_scales::Tai;
-    use lox_time::{Time, time};
     use std::f64::consts::{PI, TAU};
 
     #[test]
     fn test_events() {
-        let func = |t: f64| Ok(t.sin());
         let start = time!(Tai, 2000, 1, 1, 12).unwrap();
-        let steps = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
+        let end = start + TimeDelta::from_seconds(7);
+        let interval = TimeInterval::new(start, end);
 
-        let root_finder = Brent::default();
-
-        let events = find_events(func, start, &steps, root_finder).unwrap();
+        let detect_fn = FnDetect(|t: Time<Tai>| (t - start).to_seconds().to_f64().sin());
+        let detector = RootFindingDetector::new(detect_fn, TimeDelta::from_seconds(1));
+        let events = detector.detect(interval).unwrap();
 
         assert_eq!(events.len(), 2);
         assert_eq!(events[0].crossing, ZeroCrossing::Down);
@@ -562,14 +548,14 @@ mod tests {
 
     #[test]
     fn test_windows() {
-        let func = |t: f64| Ok(t.sin());
         let start = time!(Tai, 2000, 1, 1, 12).unwrap();
-        let steps = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
         let end = start + TimeDelta::from_seconds(7);
+        let interval = TimeInterval::new(start, end);
 
-        let root_finder = Brent::default();
-
-        let windows = find_windows(func, start, end, &steps, root_finder).unwrap();
+        let detect_fn = FnDetect(|t: Time<Tai>| (t - start).to_seconds().to_f64().sin());
+        let detector = RootFindingDetector::new(detect_fn, TimeDelta::from_seconds(1));
+        let intervals_detector = EventsToIntervals::new(detector);
+        let windows = intervals_detector.detect(interval).unwrap();
 
         assert_eq!(windows.len(), 2);
         assert_eq!(windows[0].start(), start);
@@ -582,28 +568,28 @@ mod tests {
 
     #[test]
     fn test_windows_no_windows() {
-        let func = |_: f64| Ok(-1.0);
         let start = time!(Tai, 2000, 1, 1, 12).unwrap();
-        let steps = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
         let end = start + TimeDelta::from_seconds(7);
+        let interval = TimeInterval::new(start, end);
 
-        let root_finder = Brent::default();
-
-        let windows = find_windows(func, start, end, &steps, root_finder).unwrap();
+        let detect_fn = FnDetect(|_t: Time<Tai>| -1.0);
+        let detector = RootFindingDetector::new(detect_fn, TimeDelta::from_seconds(1));
+        let intervals_detector = EventsToIntervals::new(detector);
+        let windows = intervals_detector.detect(interval).unwrap();
 
         assert!(windows.is_empty());
     }
 
     #[test]
     fn test_windows_full_coverage() {
-        let func = |_: f64| Ok(1.0);
         let start = time!(Tai, 2000, 1, 1, 12).unwrap();
-        let steps = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
         let end = start + TimeDelta::from_seconds(7);
+        let interval = TimeInterval::new(start, end);
 
-        let root_finder = Brent::default();
-
-        let windows = find_windows(func, start, end, &steps, root_finder).unwrap();
+        let detect_fn = FnDetect(|_t: Time<Tai>| 1.0);
+        let detector = RootFindingDetector::new(detect_fn, TimeDelta::from_seconds(1));
+        let intervals_detector = EventsToIntervals::new(detector);
+        let windows = intervals_detector.detect(interval).unwrap();
 
         assert_eq!(windows.len(), 1);
         assert_eq!(windows[0].start(), start);

@@ -9,7 +9,6 @@ use lox_bodies::{DynOrigin, Origin};
 use lox_core::coords::{Cartesian, CartesianTrajectory, TimeStampedCartesian};
 use lox_ephem::Ephemeris;
 use lox_frames::{DynFrame, Icrf, ReferenceFrame, rotations::TryRotation, traits::frame_id};
-use lox_math::roots::{BoxedError, Brent, RootFinderError};
 use lox_time::{
     Time,
     deltas::TimeDelta,
@@ -21,7 +20,6 @@ use thiserror::Error;
 
 use lox_time::intervals::TimeInterval;
 
-use crate::events::{Event, FindEventError, find_events, find_windows};
 use crate::propagators::Propagator;
 
 use super::{CartesianOrbit, Orbit, TrajectorError};
@@ -204,45 +202,6 @@ where
 
     pub fn velocity(&self, t: f64) -> DVec3 {
         self.data.velocity(t)
-    }
-
-    pub fn find_events<F, E>(&self, func: F) -> Result<Vec<Event<T>>, FindEventError>
-    where
-        F: Fn(CartesianOrbit<T, O, R>) -> Result<f64, E> + Copy,
-        E: Into<BoxedError>,
-    {
-        let root_finder = Brent::default();
-        let time_steps = self.data.time_steps();
-        find_events(
-            |t| {
-                let state = self.data.at(t);
-                let time = self.epoch + TimeDelta::from_seconds_f64(t);
-                func(Orbit::from_state(state, time, self.origin, self.frame)).map_err(Into::into)
-            },
-            self.epoch,
-            &time_steps,
-            root_finder,
-        )
-    }
-
-    pub fn find_windows<F, E>(&self, func: F) -> Result<Vec<TimeInterval<T>>, RootFinderError>
-    where
-        F: Fn(CartesianOrbit<T, O, R>) -> Result<f64, E> + Copy,
-        E: Into<BoxedError>,
-    {
-        let root_finder = Brent::default();
-        let time_steps = self.data.time_steps();
-        find_windows(
-            |t| {
-                let state = self.data.at(t);
-                let time = self.epoch + TimeDelta::from_seconds_f64(t);
-                func(Orbit::from_state(state, time, self.origin, self.frame)).map_err(Into::into)
-            },
-            self.epoch,
-            self.end_time(),
-            &time_steps,
-            root_finder,
-        )
     }
 }
 

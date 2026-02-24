@@ -8,19 +8,22 @@ import lox_space as lox
 
 
 @pytest.fixture(scope="session")
-def times(oneweb):
-    t0 = next(iter(oneweb.values())).states()[0].time()
-    return [t0 + t for t in lox.TimeDelta.range(0, 86400, 3000)]
+def space_assets(oneweb):
+    return [lox.SpaceAsset(name, traj) for name, traj in oneweb.items()]
 
 
 @pytest.fixture(scope="session")
-def ensemble(oneweb):
-    return lox.Ensemble(oneweb)
+def t0(oneweb):
+    return next(iter(oneweb.values())).states()[0].time()
+
+
+@pytest.fixture(scope="session")
+def t1(t0):
+    return t0 + lox.TimeDelta(86400)
 
 
 @pytest.mark.benchmark()
-def test_visibility_benchmark(estrack, ensemble, oneweb, times, ephemeris):
-    passes = lox.visibility_all(times, estrack, ensemble, ephemeris)
-    assert len(passes) == len(oneweb)
-    for sc_passes in passes.values():
-        assert len(sc_passes) == len(estrack)
+def test_visibility_benchmark(estrack, space_assets, oneweb, t0, t1, ephemeris):
+    analysis = lox.VisibilityAnalysis(estrack, space_assets)
+    results = analysis.compute(t0, t1, ephemeris)
+    assert results.num_pairs() == len(oneweb) * len(estrack)

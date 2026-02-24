@@ -54,15 +54,16 @@ def estrack():
         ("Cebreros", 40.3726, -4.4739),
         ("New Norcia", -30.9855, 116.2041),
     ]
-    return {
-        name: (
+    return [
+        lox.GroundAsset(
+            name,
             lox.GroundLocation(
                 lox.Origin("Earth"), np.radians(lon), np.radians(lat), 0
             ),
             lox.ElevationMask.fixed(0),
         )
         for name, lat, lon in stations
-    }
+    ]
 
 
 @pytest.fixture(scope="session")
