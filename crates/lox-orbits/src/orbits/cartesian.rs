@@ -12,7 +12,9 @@ use lox_bodies::{
 };
 use lox_core::coords::Cartesian;
 use lox_ephem::Ephemeris;
-use lox_frames::{DynFrame, Iau, Icrf, ReferenceFrame, TryBodyFixed, rotations::TryRotation};
+use lox_frames::{
+    DynFrame, Iau, Icrf, ReferenceFrame, TryBodyFixed, rotations::TryRotation, traits::frame_id,
+};
 use lox_math::roots::{FindRoot, RootFinderError, Secant};
 use lox_time::offsets::{DefaultOffsetProvider, Offset};
 use lox_time::time_scales::{Tdb, TimeScale};
@@ -81,6 +83,16 @@ where
         O: Copy,
         T: Copy,
     {
+        if let (Some(id0), Some(id1)) = (frame_id(&self.reference_frame()), frame_id(&frame)) {
+            if id0 == id1 {
+                return Ok(CartesianOrbit::new(
+                    self.state(),
+                    self.time(),
+                    self.origin(),
+                    frame,
+                ));
+            }
+        }
         let rot = provider.try_rotation(self.reference_frame(), frame, self.time())?;
         let (r1, v1) = rot.rotate_state(self.state().position(), self.state().velocity());
         Ok(CartesianOrbit::new(
@@ -185,6 +197,9 @@ where
     where
         DefaultOffsetProvider: Offset<T, Tdb>,
     {
+        if self.origin().id() == target.id() {
+            return Ok(CartesianOrbit::new(self.state(), self.time(), target, Icrf));
+        }
         let tdb = self.time().to_scale(Tdb);
         let delta = ephemeris.state(tdb, self.origin(), target)?;
         Ok(CartesianOrbit::new(
@@ -202,6 +217,14 @@ impl DynCartesianOrbit {
         target: DynOrigin,
         ephemeris: &E,
     ) -> Result<DynCartesianOrbit, E::Error> {
+        if self.origin() == target {
+            return Ok(CartesianOrbit::new(
+                self.state(),
+                self.time(),
+                target,
+                self.reference_frame(),
+            ));
+        }
         let tdb = self
             .time()
             .try_to_scale(Tdb, &DefaultOffsetProvider)

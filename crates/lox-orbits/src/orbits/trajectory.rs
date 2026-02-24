@@ -292,6 +292,14 @@ where
         target: O1,
         ephemeris: &E,
     ) -> Result<Trajectory<T, O1, Icrf>, TrajectoryTransformationError> {
+        if self.origin().id() == target.id() {
+            return Ok(Trajectory::from_parts(
+                self.epoch,
+                target,
+                Icrf,
+                self.data.clone(),
+            ));
+        }
         let states: Result<Vec<_>, _> = self
             .states()
             .into_iter()
