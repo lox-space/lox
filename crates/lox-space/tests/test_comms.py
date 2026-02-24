@@ -385,6 +385,50 @@ def test_complex_receiver_system_noise_temperature():
     assert rx.system_noise_temperature() == pytest.approx(904.53, rel=1e-4)
 
 
+def test_complex_receiver_gt_via_link_budget():
+    # G_total = 30 + 20 - 3 - 1 - 0.5 = 45.5 dB
+    # T_sys   = 904.53 K  (from test_complex_receiver_system_noise_temperature)
+    # G/T = 45.5 − 10·log10(904.53) ≈ 15.935 dB/K
+    #
+    # Verify end-to-end through carrier_to_noise_density.
+    # C/N0 = EIRP + G/T − FSPL − k_B  →  G/T = C/N0 − EIRP + FSPL + k_B
+    #
+    # TX: 46 dBi antenna, 10 W, 1 dB line loss → EIRP = 55 dBW (same as system tests)
+    tx_ant = lox.SimpleAntenna(gain_db=46.0, beamwidth_deg=0.7)
+    tx = lox.Transmitter(frequency_hz=29e9, power_w=10.0, line_loss_db=1.0)
+    tx_sys = lox.CommunicationSystem(antenna=tx_ant, transmitter=tx)
+
+    rx_ant = lox.SimpleAntenna(gain_db=30.0, beamwidth_deg=1.0)
+    rx = lox.ComplexReceiver(
+        frequency_hz=29e9,
+        antenna_noise_temperature_k=265.0,
+        lna_gain_db=20.0,
+        lna_noise_figure_db=1.0,
+        noise_figure_db=5.0,
+        loss_db=3.0,
+        demodulator_loss_db=1.0,
+        implementation_loss_db=0.5,
+    )
+    rx_sys = lox.CommunicationSystem(antenna=rx_ant, receiver=rx)
+
+    c_n0 = float(
+        tx_sys.carrier_to_noise_density(
+            rx_sys, losses_db=0.0, range_km=1000.0,
+            tx_angle_deg=0.0, rx_angle_deg=0.0,
+        )
+    )
+    fspl_db = float(lox.fspl(distance_km=1000.0, frequency_hz=29e9))
+    eirp_db = float(tx.eirp(tx_ant, angle_deg=0.0))
+    k_db = 10.0 * math.log10(1.380_648_52e-23)
+
+    gt_derived = c_n0 - eirp_db + fspl_db + k_db
+
+    t_sys = rx.system_noise_temperature()
+    g_total = 45.5  # 30 + 20 - 3 - 1 - 0.5
+    gt_expected = g_total - 10.0 * math.log10(t_sys)
+    assert gt_derived == pytest.approx(gt_expected, abs=0.01)
+
+
 def test_simple_receiver_eq():
     a = lox.SimpleReceiver(frequency_hz=29e9, system_noise_temperature_k=500.0)
     b = lox.SimpleReceiver(frequency_hz=29e9, system_noise_temperature_k=500.0)

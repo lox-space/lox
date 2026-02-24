@@ -93,14 +93,14 @@ impl Receiver {
 
     /// Returns the gain-to-noise-temperature ratio (G/T) in dB/K.
     ///
-    /// G/T = G_total − 10·log₁₀(T_sys) [− NF_lna for complex receivers]
+    /// G/T = G_total − 10·log₁₀(T_sys)
+    ///
+    /// `T_sys` already incorporates the LNA noise figure through the Friis cascade
+    /// in [`ComplexReceiver::system_noise_temperature`], so no additional NF term is needed.
     pub fn gain_to_noise_temperature(&self, antenna: &impl AntennaGain, angle: Angle) -> Decibel {
         let g_total = self.total_gain(antenna, angle);
         let t_sys = self.system_noise_temperature();
-        match self {
-            Receiver::Simple(_) => g_total - Decibel::from_linear(t_sys),
-            Receiver::Complex(r) => g_total - Decibel::from_linear(t_sys) - r.lna_noise_figure,
-        }
+        g_total - Decibel::from_linear(t_sys)
     }
 
     /// Returns the receive frequency.
@@ -193,5 +193,29 @@ mod tests {
         });
         let g_total = rx.total_gain(&antenna, Angle::radians(0.0));
         assert_approx_eq!(g_total.as_f64(), 45.5, atol <= 1e-10);
+    }
+
+    #[test]
+    fn test_complex_receiver_gt() {
+        // G_total = 45.5 dB (same params as test_complex_receiver_total_gain)
+        // T_sys   = 904.531 K (same params as test_complex_receiver_system_noise_temperature)
+        // G/T = 45.5 − 10·log₁₀(904.531) ≈ 45.5 − 29.565 ≈ 15.935 dB/K
+        let antenna = SimpleAntenna {
+            gain: 30.0.db(),
+            beamwidth: Angle::degrees(1.0),
+        };
+        let rx = Receiver::Complex(ComplexReceiver {
+            frequency: 29.0.ghz(),
+            antenna_noise_temperature: 265.0,
+            lna_gain: 20.0.db(),
+            lna_noise_figure: 1.0.db(),
+            noise_figure: 5.0.db(),
+            loss: 3.0.db(),
+            demodulator_loss: 1.0.db(),
+            implementation_loss: 0.5.db(),
+        });
+        let gt = rx.gain_to_noise_temperature(&antenna, Angle::radians(0.0));
+        let expected = 45.5 - 10.0 * 904.530_840_61_f64.log10();
+        assert_approx_eq!(gt.as_f64(), expected, atol <= 0.001);
     }
 }
