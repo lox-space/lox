@@ -5,7 +5,7 @@
 use std::{
     cmp::{max, min},
     fmt::Display,
-    ops::Sub,
+    ops::{Add, Sub},
 };
 
 use lox_core::time::deltas::TimeDelta;
@@ -80,6 +80,56 @@ impl<T> Interval<T> {
     {
         !self.intersect(other).is_empty()
     }
+
+    /// Returns an iterator of evenly-spaced points from start to end (inclusive)
+    /// with the given step size.
+    pub fn step_by(&self, step: TimeDelta) -> IntervalStepIter<T>
+    where
+        T: Copy + Add<TimeDelta, Output = T> + PartialOrd,
+    {
+        IntervalStepIter {
+            current: self.start,
+            end: self.end,
+            step,
+        }
+    }
+
+    /// Returns `n` evenly-spaced points from start to end (inclusive).
+    ///
+    /// Panics if `n < 2`.
+    pub fn linspace(&self, n: usize) -> Vec<T>
+    where
+        T: Copy + Add<TimeDelta, Output = T> + Sub<Output = TimeDelta>,
+    {
+        assert!(n >= 2, "linspace requires at least 2 points");
+        let duration = self.end - self.start;
+        let step_secs = duration.to_seconds().to_f64() / (n - 1) as f64;
+        (0..n)
+            .map(|i| self.start + TimeDelta::from_seconds_f64(step_secs * i as f64))
+            .collect()
+    }
+}
+
+pub struct IntervalStepIter<T> {
+    current: T,
+    end: T,
+    step: TimeDelta,
+}
+
+impl<T> Iterator for IntervalStepIter<T>
+where
+    T: Copy + Add<TimeDelta, Output = T> + PartialOrd,
+{
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current > self.end {
+            return None;
+        }
+        let value = self.current;
+        self.current = self.current + self.step;
+        Some(value)
+    }
 }
 
 pub type TimeDeltaInterval = Interval<TimeDelta>;
@@ -148,5 +198,52 @@ mod tests {
             format!("{}", i),
             "2025-11-06T00:00:00.000 TAI – 2025-11-06T01:00:00.000 TAI"
         );
+    }
+
+    #[test]
+    fn test_step_by() {
+        let t0 = time!(Tai, 2025, 11, 6).unwrap();
+        let t1 = time!(Tai, 2025, 11, 6, 1).unwrap();
+        let interval = TimeInterval::new(t0, t1);
+        let step = TimeDelta::from_minutes(20.0);
+        let times: Vec<_> = interval.step_by(step).collect();
+        assert_eq!(times.len(), 4); // 0, 20, 40, 60 minutes
+        assert_eq!(times[0], t0);
+        assert_eq!(times[3], t1);
+    }
+
+    #[test]
+    fn test_step_by_non_exact() {
+        let t0 = time!(Tai, 2025, 11, 6).unwrap();
+        let t1 = t0 + TimeDelta::from_minutes(50.0);
+        let interval = TimeInterval::new(t0, t1);
+        let step = TimeDelta::from_minutes(20.0);
+        let times: Vec<_> = interval.step_by(step).collect();
+        assert_eq!(times.len(), 3); // 0, 20, 40 minutes (60 exceeds end)
+    }
+
+    #[test]
+    fn test_linspace() {
+        let t0 = time!(Tai, 2025, 11, 6).unwrap();
+        let t1 = time!(Tai, 2025, 11, 6, 1).unwrap();
+        let interval = TimeInterval::new(t0, t1);
+        let times = interval.linspace(5);
+        assert_eq!(times.len(), 5);
+        assert_eq!(times[0], t0);
+        assert_eq!(times[4], t1);
+        // Equal spacing: 15 minutes apart
+        let dt = TimeDelta::from_minutes(15.0);
+        assert_eq!(times[1], t0 + dt);
+        assert_eq!(times[2], t0 + dt + dt);
+    }
+
+    #[test]
+    fn test_timedelta_interval_step_by() {
+        let td0 = TimeDelta::default();
+        let td1 = TimeDelta::from_minutes(60.0);
+        let interval = TimeDeltaInterval::new(td0, td1);
+        let step = TimeDelta::from_minutes(20.0);
+        let times: Vec<_> = interval.step_by(step).collect();
+        assert_eq!(times.len(), 4);
     }
 }

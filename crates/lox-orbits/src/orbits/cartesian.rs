@@ -20,6 +20,9 @@ use lox_time::offsets::{DefaultOffsetProvider, Offset};
 use lox_time::time_scales::{Tdb, TimeScale};
 use thiserror::Error;
 
+use lox_core::coords::LonLatAlt;
+use lox_core::units::{Angle, Distance};
+
 use crate::ground::{DynGroundLocation, GroundLocation};
 
 use super::{CartesianOrbit, DynCartesianOrbit, KeplerianOrbit, Orbit};
@@ -104,9 +107,7 @@ where
     }
 }
 
-type LonLatAlt = (f64, f64, f64);
-
-fn rv_to_lla(r: DVec3, r_eq: f64, f: f64) -> Result<LonLatAlt, RootFinderError> {
+fn rv_to_lla(r: DVec3, r_eq: f64, f: f64) -> Result<(f64, f64, f64), RootFinderError> {
     let rm = r.length();
     let r_delta = (r.x.powi(2) + r.y.powi(2)).sqrt();
     let mut lon = r.y.atan2(r.x);
@@ -151,7 +152,13 @@ where
         let r_eq = origin.equatorial_radius().to_kilometers();
         let f = origin.flattening();
         let (lon, lat, alt) = rv_to_lla(r, r_eq, f)?;
-        Ok(GroundLocation::new(lon, lat, alt, origin))
+        let coords = LonLatAlt::builder()
+            .longitude(Angle::radians(lon))
+            .latitude(Angle::radians(lat))
+            .altitude(Distance::kilometers(alt))
+            .build()
+            .expect("geodetic coordinates from rv_to_lla should be valid");
+        Ok(GroundLocation::new(coords, origin))
     }
 }
 
@@ -256,8 +263,14 @@ impl DynCartesianOrbit {
 
         let (lon, lat, alt) = rv_to_lla(r, r_eq, f)?;
 
-        // rv_to_lla returns altitude in meters, GroundLocation expects km
-        Ok(DynGroundLocation::try_new(lon, lat, alt * 1e-3, origin).unwrap())
+        // rv_to_lla returns altitude in meters (same units as r_eq)
+        let coords = LonLatAlt::builder()
+            .longitude(Angle::radians(lon))
+            .latitude(Angle::radians(lat))
+            .altitude(Distance::meters(alt))
+            .build()
+            .expect("geodetic coordinates from rv_to_lla should be valid");
+        Ok(DynGroundLocation::try_new(coords, origin).unwrap())
     }
 
     pub fn try_rotation_lvlh(&self) -> Result<DMat3, &'static str> {

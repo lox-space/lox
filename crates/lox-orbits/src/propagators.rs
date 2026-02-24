@@ -3,35 +3,45 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use lox_bodies::Origin;
-use lox_time::Time;
+use lox_frames::ReferenceFrame;
+use lox_frames::rotations::TryRotation;
+use lox_time::intervals::TimeInterval;
 use lox_time::time_scales::TimeScale;
 
-use crate::orbits::{CartesianOrbit, TrajectorError, Trajectory};
-use lox_frames::ReferenceFrame;
+use crate::orbits::Trajectory;
 
 pub mod numerical;
 pub mod semi_analytical;
 pub mod sgp4;
 mod stumpff;
 
-pub trait Propagator<T, O, R>
+pub trait Propagator<T, O>
 where
     T: TimeScale + Copy,
     O: Origin + Copy,
-    R: ReferenceFrame + Copy,
 {
-    type Error: From<TrajectorError>;
+    /// The propagator's native reference frame.
+    type Frame: ReferenceFrame + Copy;
+    type Error: std::error::Error + 'static;
 
-    fn propagate(&self, time: Time<T>) -> Result<CartesianOrbit<T, O, R>, Self::Error>;
-
-    fn propagate_all(
+    /// Propagate over the given interval in the native frame.
+    fn propagate(
         &self,
-        times: impl IntoIterator<Item = Time<T>>,
-    ) -> Result<Trajectory<T, O, R>, Self::Error> {
-        let states: Vec<_> = times
-            .into_iter()
-            .map(|time| self.propagate(time))
-            .collect::<Result<_, _>>()?;
-        Ok(Trajectory::try_new(states)?)
+        interval: TimeInterval<T>,
+    ) -> Result<Trajectory<T, O, Self::Frame>, Self::Error>;
+
+    /// Propagate and transform to a target frame.
+    fn propagate_in_frame<R, P>(
+        &self,
+        interval: TimeInterval<T>,
+        frame: R,
+        provider: &P,
+    ) -> Result<Trajectory<T, O, R>, Box<dyn std::error::Error>>
+    where
+        R: ReferenceFrame + Copy,
+        P: TryRotation<Self::Frame, R, T>,
+    {
+        let traj = self.propagate(interval)?;
+        traj.into_frame(frame, provider)
     }
 }

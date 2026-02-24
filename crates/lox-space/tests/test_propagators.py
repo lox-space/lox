@@ -16,7 +16,8 @@ ISS_TLE = """ISS (ZARYA)
 def test_sgp4():
     sgp4 = lox.SGP4(ISS_TLE)
     t1 = sgp4.time() + lox.TimeDelta.from_minutes(92.821)
-    s1 = sgp4.propagate(t1)
+    # SGP4 now returns TEME states; convert to ICRF for Keplerian conversion
+    s1 = sgp4.propagate(t1).to_frame(lox.Frame("ICRF"))
     k1 = s1.to_keplerian()
     assert k1.orbital_period().to_decimal_seconds() == pytest.approx(
         92.821 * 60, rel=1e-4
@@ -29,6 +30,8 @@ def test_ground(provider):
     tai = lox.UTC.from_iso("2022-01-31T23:00:00").to_scale("TAI")
     loc = lox.GroundLocation(lox.Origin("Earth"), lon, lat, 0.0)
     ground = lox.GroundPropagator(loc)
+    # GroundPropagator now returns body-fixed (IAU) states; transform to ICRF
+    state = ground.propagate(tai).to_frame(lox.Frame("ICRF"))
     expected = np.array([-1765.9535510583582, 4524.585984442561, 4120.189198495323])
-    actual = ground.propagate(tai).position()
+    actual = state.position()
     npt.assert_allclose(actual, expected)

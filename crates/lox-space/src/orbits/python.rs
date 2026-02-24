@@ -23,6 +23,7 @@ use crate::orbits::orbits::{
     CartesianOrbit, DynCartesianOrbit, DynTrajectory, TrajectorError, TrajectoryTransformationError,
 };
 use crate::orbits::propagators::Propagator;
+use crate::orbits::propagators::numerical::{DynJ2Propagator, J2Error, J2Propagator};
 use crate::orbits::propagators::semi_analytical::{DynVallado, Vallado, ValladoError};
 use crate::orbits::propagators::sgp4::{Sgp4, Sgp4Error};
 use crate::time::DynTime;
@@ -31,10 +32,11 @@ use crate::time::python::deltas::PyTimeDelta;
 use crate::time::python::time::PyTime;
 use crate::time::time_scales::{DynTimeScale, Tai};
 use lox_core::anomalies::TrueAnomaly;
-use lox_core::coords::Cartesian;
+use lox_core::coords::{Cartesian, LonLatAlt};
 use lox_core::elements::{
     ArgumentOfPeriapsis, Eccentricity, Inclination, Keplerian, LongitudeOfAscendingNode,
 };
+use lox_time::intervals::Interval;
 use lox_units::{Angle, Distance};
 
 use glam::DVec3;
@@ -776,11 +778,10 @@ impl PyVallado {
     #[new]
     #[pyo3(signature =(initial_state, max_iter=None))]
     fn new(initial_state: PyState, max_iter: Option<i32>) -> PyResult<Self> {
-        let mut vallado = Vallado::try_new(initial_state.0).map_err(|_| {
-            PyValueError::new_err("only inertial frames are supported for the Vallado propagator")
-        })?;
+        let mut vallado =
+            Vallado::try_new(initial_state.0).map_err(PyUndefinedOriginPropertyError)?;
         if let Some(max_iter) = max_iter {
-            vallado.with_max_iter(max_iter);
+            vallado = vallado.with_max_iter(max_iter);
         }
         Ok(PyVallado(vallado))
     }
@@ -803,19 +804,63 @@ impl PyVallado {
         if let Ok(time) = steps.extract::<PyTime>() {
             return Ok(Bound::new(
                 py,
-                PyState(self.0.propagate(time.0).map_err(PyValladoError)?),
+                PyState(self.0.state_at(time.0).map_err(PyValladoError)?),
             )?
             .into_any());
         }
         if let Ok(steps) = steps.extract::<Vec<PyTime>>() {
-            let steps = steps.into_iter().map(|s| s.0);
-            return Ok(Bound::new(
-                py,
-                PyTrajectory(self.0.propagate_all(steps).map_err(PyValladoError)?),
-            )?
-            .into_any());
+            let states: Result<Vec<_>, _> =
+                steps.into_iter().map(|s| self.0.state_at(s.0)).collect();
+            let states = states.map_err(PyValladoError)?;
+            return Ok(Bound::new(py, PyTrajectory(DynTrajectory::new(states)))?.into_any());
         }
         Err(PyValueError::new_err("invalid time delta(s)"))
+    }
+}
+
+pub struct PyJ2Error(pub J2Error);
+
+impl From<PyJ2Error> for PyErr {
+    fn from(err: PyJ2Error) -> Self {
+        PyValueError::new_err(err.0.to_string())
+    }
+}
+
+/// Numerical J2 orbit propagator using Dormand-Prince 8(5,3) integration.
+///
+/// This propagator accounts for the J2 zonal harmonic perturbation, which
+/// models the oblateness of the central body. It uses an adaptive Runge-Kutta
+/// integrator (DOP853).
+///
+/// Args:
+///     initial_state: Initial orbital state.
+#[pyclass(name = "J2", module = "lox_space", frozen)]
+pub struct PyJ2Propagator(pub DynJ2Propagator);
+
+#[pymethods]
+impl PyJ2Propagator {
+    #[new]
+    fn new(initial_state: PyState) -> PyResult<Self> {
+        Ok(PyJ2Propagator(
+            J2Propagator::try_new(initial_state.0).map_err(PyUndefinedOriginPropertyError)?,
+        ))
+    }
+
+    /// Propagate the orbit over a time interval.
+    ///
+    /// Args:
+    ///     start: Start time of the propagation interval.
+    ///     end: End time of the propagation interval.
+    ///
+    /// Returns:
+    ///     Trajectory with the propagated states.
+    ///
+    /// Raises:
+    ///     ValueError: If propagation fails.
+    fn propagate(&self, start: PyTime, end: PyTime) -> PyResult<PyTrajectory> {
+        let interval = Interval::new(start.0, end.0);
+        let traj = self.0.propagate(interval).map_err(PyJ2Error)?;
+        Ok(PyTrajectory(traj))
     }
 }
 
@@ -837,9 +882,14 @@ pub struct PyGroundLocation(pub DynGroundLocation);
 impl PyGroundLocation {
     #[new]
     fn new(origin: PyOrigin, longitude: f64, latitude: f64, altitude: f64) -> PyResult<Self> {
+        let coordinates = LonLatAlt::builder()
+            .longitude(lox_units::Angle::radians(longitude))
+            .latitude(lox_units::Angle::radians(latitude))
+            .altitude(lox_units::Distance::kilometers(altitude))
+            .build()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
         Ok(PyGroundLocation(
-            DynGroundLocation::try_new(longitude, latitude, altitude, origin.0)
-                .map_err(PyValueError::new_err)?,
+            DynGroundLocation::try_new(coordinates, origin.0).map_err(PyValueError::new_err)?,
         ))
     }
 
@@ -920,8 +970,10 @@ impl From<PyGroundPropagatorError> for PyErr {
 #[pymethods]
 impl PyGroundPropagator {
     #[new]
-    fn new(location: PyGroundLocation) -> Self {
-        PyGroundPropagator(DynGroundPropagator::new(location.0))
+    fn new(location: PyGroundLocation) -> PyResult<Self> {
+        Ok(PyGroundPropagator(
+            DynGroundPropagator::try_new(location.0).map_err(PyValueError::new_err)?,
+        ))
     }
 
     /// Propagate the ground station to one or more times.
@@ -940,27 +992,12 @@ impl PyGroundPropagator {
         steps: &Bound<'py, PyAny>,
     ) -> PyResult<Bound<'py, PyAny>> {
         if let Ok(time) = steps.extract::<PyTime>() {
-            return Ok(Bound::new(
-                py,
-                PyState(
-                    self.0
-                        .propagate_dyn(time.0)
-                        .map_err(PyGroundPropagatorError)?,
-                ),
-            )?
-            .into_any());
+            return Ok(Bound::new(py, PyState(self.0.state_at(time.0)))?.into_any());
         }
         if let Ok(steps) = steps.extract::<Vec<PyTime>>() {
-            let steps = steps.into_iter().map(|s| s.0);
-            return Ok(Bound::new(
-                py,
-                PyTrajectory(
-                    self.0
-                        .propagate_all_dyn(steps)
-                        .map_err(PyGroundPropagatorError)?,
-                ),
-            )?
-            .into_any());
+            let states: Vec<DynCartesianOrbit> =
+                steps.iter().map(|s| self.0.state_at(s.0)).collect();
+            return Ok(Bound::new(py, PyTrajectory(DynTrajectory::new(states)))?.into_any());
         }
         Err(PyValueError::new_err("invalid time delta(s)"))
     }
@@ -1040,7 +1077,7 @@ impl PySgp4 {
                     .map_err(PyEopProviderError)?,
                 None => pytime.0.to_scale(Tai),
             };
-            let state = self.0.propagate(time).map_err(PySgp4Error)?;
+            let state = self.0.state_at(time).map_err(PySgp4Error)?;
             return Ok(Bound::new(py, PyState(state.into_dyn()))?.into_any());
         }
         if let Ok(pysteps) = steps.extract::<Vec<PyTime>>() {
@@ -1053,7 +1090,7 @@ impl PySgp4 {
                         .map_err(PyEopProviderError)?,
                     None => step.0.to_scale(Tai),
                 };
-                states.push(self.0.propagate(time).map_err(PySgp4Error)?.into_dyn());
+                states.push(self.0.state_at(time).map_err(PySgp4Error)?.into_dyn());
             }
             return Ok(Bound::new(py, PyTrajectory(DynTrajectory::new(states)))?.into_any());
         }

@@ -11,69 +11,138 @@ use differential_equations::{
 };
 use glam::DVec3;
 use lox_bodies::{
-    J2, MeanRadius, PointMass, TryJ2, TryMeanRadius, TryPointMass, UndefinedOriginPropertyError,
+    DynOrigin, J2, MeanRadius, Origin, PointMass, TryJ2, TryMeanRadius, TryPointMass,
+    UndefinedOriginPropertyError,
 };
-use lox_core::coords::{Cartesian, CartesianTrajectory, TimeStampedCartesian};
+use lox_core::coords::Cartesian;
+use lox_frames::{DynFrame, ReferenceFrame};
 use lox_time::deltas::TimeDelta;
+use lox_time::intervals::TimeInterval;
+use lox_time::time_scales::{DynTimeScale, TimeScale};
+use thiserror::Error;
 
-pub struct J2Propagator<O: TryJ2 + TryPointMass + TryMeanRadius>(O);
+use crate::orbits::{CartesianOrbit, TrajectorError, Trajectory};
+use crate::propagators::Propagator;
 
-impl<O> J2Propagator<O>
+#[derive(Debug, Error)]
+pub enum J2Error {
+    #[error("ODE solver failed")]
+    Solver,
+    #[error(transparent)]
+    Trajectory(#[from] TrajectorError),
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct J2Propagator<T: TimeScale, O: TryJ2 + TryPointMass + TryMeanRadius, R: ReferenceFrame> {
+    initial_state: CartesianOrbit<T, O, R>,
+    rtol: f64,
+    atol: f64,
+    h_max: f64,
+}
+
+pub type DynJ2Propagator = J2Propagator<DynTimeScale, DynOrigin, DynFrame>;
+
+// Infallible — static bounds
+impl<T, O, R> J2Propagator<T, O, R>
 where
-    O: J2 + PointMass + MeanRadius,
+    T: TimeScale,
+    O: J2 + PointMass + MeanRadius + Copy,
+    R: ReferenceFrame,
 {
-    pub fn new(origin: O) -> Self {
-        Self(origin)
+    pub fn new(initial_state: CartesianOrbit<T, O, R>) -> Self {
+        Self {
+            initial_state,
+            rtol: 1e-8,
+            atol: 1e-6,
+            h_max: 100.0,
+        }
     }
 }
 
-impl<O> J2Propagator<O>
+// Fallible — Try* bounds (covers DynOrigin)
+impl<T, O, R> J2Propagator<T, O, R>
 where
-    O: TryJ2 + TryPointMass + TryMeanRadius,
+    T: TimeScale,
+    O: TryJ2 + TryPointMass + TryMeanRadius + Copy,
+    R: ReferenceFrame,
 {
-    pub fn try_new(origin: O) -> Result<Self, UndefinedOriginPropertyError> {
-        origin.try_gravitational_parameter()?;
-        origin.try_j2()?;
-        origin.try_mean_radius()?;
+    pub fn try_new(
+        initial_state: CartesianOrbit<T, O, R>,
+    ) -> Result<Self, UndefinedOriginPropertyError> {
+        initial_state.origin().try_gravitational_parameter()?;
+        initial_state.origin().try_j2()?;
+        initial_state.origin().try_mean_radius()?;
 
-        Ok(Self(origin))
+        Ok(Self {
+            initial_state,
+            rtol: 1e-8,
+            atol: 1e-6,
+            h_max: 100.0,
+        })
+    }
+}
+
+impl<T, O, R> J2Propagator<T, O, R>
+where
+    T: TimeScale,
+    O: TryJ2 + TryPointMass + TryMeanRadius + Copy,
+    R: ReferenceFrame,
+{
+    pub fn with_rtol(mut self, rtol: f64) -> Self {
+        self.rtol = rtol;
+        self
     }
 
-    pub fn propagate(&self, initial: TimeStampedCartesian, dt: TimeDelta) -> CartesianTrajectory {
-        let s0 = CartesianState(initial.state);
-        let t1 = dt.to_seconds().to_f64();
-        let mut solver = ExplicitRungeKutta::dop853()
-            .rtol(1e-8)
-            .atol(1e-6)
-            .h_max(100.0);
+    pub fn with_atol(mut self, atol: f64) -> Self {
+        self.atol = atol;
+        self
+    }
 
-        let problem = ODEProblem::new(self, 0.0, t1, s0);
-        let solution = problem.solve(&mut solver).unwrap();
-        solution
-            .iter()
-            .map(|(t, s)| TimeStampedCartesian {
-                time: initial.time + TimeDelta::from_seconds_f64(*t),
-                state: s.0,
-            })
-            .collect()
+    pub fn with_h_max(mut self, h_max: f64) -> Self {
+        self.h_max = h_max;
+        self
+    }
+
+    pub fn origin(&self) -> O {
+        self.initial_state.origin()
+    }
+
+    pub fn reference_frame(&self) -> R
+    where
+        R: Copy,
+    {
+        self.initial_state.reference_frame()
     }
 
     fn gravitational_parameter(&self) -> f64 {
-        self.0.try_gravitational_parameter().unwrap().as_f64()
+        self.initial_state
+            .origin()
+            .try_gravitational_parameter()
+            .expect("gravitational parameter should be available")
+            .as_f64()
     }
 
     fn j2(&self) -> f64 {
-        self.0.try_j2().unwrap()
+        self.initial_state
+            .origin()
+            .try_j2()
+            .expect("J2 should be available")
     }
 
     fn mean_radius(&self) -> f64 {
-        self.0.try_mean_radius().unwrap().as_f64()
+        self.initial_state
+            .origin()
+            .try_mean_radius()
+            .expect("mean radius should be available")
+            .as_f64()
     }
 }
 
-impl<O> ODE<f64, CartesianState> for J2Propagator<O>
+impl<T, O, R> ODE<f64, CartesianState> for J2Propagator<T, O, R>
 where
-    O: TryJ2 + TryPointMass + TryMeanRadius,
+    T: TimeScale,
+    O: TryJ2 + TryPointMass + TryMeanRadius + Copy,
+    R: ReferenceFrame,
 {
     fn diff(&self, _t: f64, s: &CartesianState, dydt: &mut CartesianState) {
         let mu = self.gravitational_parameter();
@@ -89,6 +158,49 @@ where
 
         dydt.0.set_position(s.velocity());
         dydt.0.set_velocity(acc);
+    }
+}
+
+// Single impl covers both typed and DynJ2Propagator
+impl<T, O, R> Propagator<T, O> for J2Propagator<T, O, R>
+where
+    T: TimeScale + Copy + PartialOrd,
+    O: TryJ2 + TryPointMass + TryMeanRadius + Origin + Copy,
+    R: ReferenceFrame + Copy,
+{
+    type Frame = R;
+    type Error = J2Error;
+
+    fn propagate(&self, interval: TimeInterval<T>) -> Result<Trajectory<T, O, R>, J2Error> {
+        let epoch = self.initial_state.time();
+        let t0 = 0.0_f64;
+        let t1 = (interval.end() - epoch).to_seconds().to_f64();
+        let s0 = CartesianState(Cartesian::from_vecs(
+            self.initial_state.position(),
+            self.initial_state.velocity(),
+        ));
+
+        let mut solver = ExplicitRungeKutta::dop853()
+            .rtol(self.rtol)
+            .atol(self.atol)
+            .h_max(self.h_max);
+
+        let problem = ODEProblem::new(self, t0, t1, s0);
+        let solution = problem.solve(&mut solver).map_err(|_| J2Error::Solver)?;
+
+        let origin = self.initial_state.origin();
+        let frame = self.initial_state.reference_frame();
+        let interval_start_offset = (interval.start() - epoch).to_seconds().to_f64();
+
+        let states: Vec<_> = solution
+            .iter()
+            .filter(|(t, _)| **t >= interval_start_offset)
+            .map(|(t, s)| {
+                CartesianOrbit::new(s.0, epoch + TimeDelta::from_seconds_f64(*t), origin, frame)
+            })
+            .collect();
+
+        Trajectory::try_new(states).map_err(Into::into)
     }
 }
 
@@ -201,14 +313,38 @@ impl Neg for CartesianState {
 #[cfg(test)]
 mod tests {
     use lox_bodies::Earth;
+    use lox_frames::Icrf;
     use lox_test_utils::assert_approx_eq;
+    use lox_time::Time;
+    use lox_time::intervals::Interval;
+    use lox_time::time;
+    use lox_time::time_scales::Tdb;
     use lox_units::{DistanceUnits, VelocityUnits};
 
     use super::*;
 
+    fn initial_state() -> CartesianOrbit<Tdb, Earth, Icrf> {
+        let time = time!(Tdb, 2023, 1, 1).unwrap();
+        CartesianOrbit::new(
+            Cartesian::new(
+                1131.340.km(),
+                -2282.343.km(),
+                6672.423.km(),
+                -5.64305.kps(),
+                4.30333.kps(),
+                2.42879.kps(),
+            ),
+            time,
+            Earth,
+            Icrf,
+        )
+    }
+
     #[test]
     fn test_j2_ode() {
-        let j2 = J2Propagator::new(Earth);
+        let s0_orbit = initial_state();
+        let j2 = J2Propagator::new(s0_orbit);
+
         let s0 = CartesianState(Cartesian::new(
             1131.340.km(),
             -2282.343.km(),
@@ -228,23 +364,15 @@ mod tests {
 
     #[test]
     fn test_j2_propagator() {
-        let j2 = J2Propagator::new(Earth);
-        let s0 = TimeStampedCartesian {
-            state: Cartesian::new(
-                1131.340.km(),
-                -2282.343.km(),
-                6672.423.km(),
-                -5.64305.kps(),
-                4.30333.kps(),
-                2.42879.kps(),
-            ),
-            time: TimeDelta::default(),
-        };
+        let s0_orbit = initial_state();
+        let time = s0_orbit.time();
+        let j2 = J2Propagator::new(s0_orbit);
         let dt = TimeDelta::from_minutes(40.0);
-        let tra = j2.propagate(s0, dt);
-        let s1 = tra.into_iter().last().unwrap();
-        let p_act = s1.state.position();
-        let v_act = s1.state.velocity();
+        let interval = Interval::new(time, time + dt);
+        let traj = j2.propagate(interval).unwrap();
+        let s1 = traj.states().into_iter().last().unwrap();
+        let p_act = s1.position();
+        let v_act = s1.velocity();
         let p_exp = DVec3::new(
             -4255.223590627231e3,
             4384.471704756651e3,
