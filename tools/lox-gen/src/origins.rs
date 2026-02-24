@@ -1065,6 +1065,12 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
                     write!(f, "{}", self.name())
                 }
             }
+
+            impl From<#ident> for DynOrigin {
+                fn from(_: #ident) -> Self {
+                    DynOrigin::#ident
+                }
+            }
         });
 
         let origin_test_name = format_ident!("test_origin_{}", id as u32);

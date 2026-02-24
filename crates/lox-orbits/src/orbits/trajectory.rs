@@ -64,6 +64,10 @@ where
         }
     }
 
+    pub fn into_parts(self) -> (Time<T>, O, R, CartesianTrajectory) {
+        (self.epoch, self.origin, self.frame, self.data)
+    }
+
     pub fn try_new(
         states: impl IntoIterator<Item = CartesianOrbit<T, O, R>>,
     ) -> Result<Self, TrajectorError> {
@@ -235,6 +239,22 @@ where
             self.end_time(),
             &time_steps,
             root_finder,
+        )
+    }
+}
+
+impl<T, O, R> Trajectory<T, O, R>
+where
+    T: TimeScale + Copy + Into<DynTimeScale>,
+    O: Origin + Copy + Into<DynOrigin>,
+    R: ReferenceFrame + Copy + Into<DynFrame>,
+{
+    pub fn into_dyn(self) -> DynTrajectory {
+        Trajectory::from_parts(
+            self.epoch.into_dyn(),
+            self.origin.into(),
+            self.frame.into(),
+            self.data,
         )
     }
 }
