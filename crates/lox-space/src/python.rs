@@ -15,9 +15,9 @@ use crate::ephem::python::PySpk;
 use crate::frames::python::PyFrame;
 use crate::math::python::PySeries;
 use crate::orbits::python::{
-    PyElevationMask, PyEnsemble, PyEvent, PyGroundLocation, PyGroundPropagator, PyKeplerian,
-    PyObservables, PyPass, PySgp4, PyState, PyTrajectory, PyVallado, PyWindow, find_events,
-    find_windows, visibility, visibility_all,
+    PyElevationMask, PyEnsemble, PyEvent, PyGroundLocation, PyGroundPropagator, PyJ2Propagator,
+    PyKeplerian, PyObservables, PyPass, PySgp4, PyState, PyTrajectory, PyVallado, PyWindow,
+    find_events, find_windows, visibility, visibility_all,
 };
 use crate::time::python::{
     deltas::{NonFiniteTimeDeltaError, PyTimeDelta},
@@ -81,6 +81,7 @@ fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyEvent>()?;
     m.add_class::<PyGroundLocation>()?;
     m.add_class::<PyGroundPropagator>()?;
+    m.add_class::<PyJ2Propagator>()?;
     m.add_class::<PyKeplerian>()?;
     m.add_class::<PyObservables>()?;
     m.add_class::<PyPass>()?;

@@ -19,7 +19,10 @@ use lox_time::{
 };
 use thiserror::Error;
 
+use lox_time::intervals::TimeInterval;
+
 use crate::events::{Event, FindEventError, Window, find_events, find_windows};
+use crate::propagators::Propagator;
 
 use super::{CartesianOrbit, Orbit, TrajectorError};
 
@@ -87,7 +90,7 @@ where
     pub fn into_frame<R1, P>(
         self,
         frame: R1,
-        provider: P,
+        provider: &P,
     ) -> Result<Trajectory<T, O, R1>, Box<dyn std::error::Error>>
     where
         R1: ReferenceFrame + Copy,
@@ -256,6 +259,25 @@ where
             self.frame.into(),
             self.data,
         )
+    }
+}
+
+impl<T, O, R> Propagator<T, O> for Trajectory<T, O, R>
+where
+    T: TimeScale + Copy + PartialOrd,
+    O: Origin + Copy,
+    R: ReferenceFrame + Copy,
+{
+    type Frame = R;
+    type Error = TrajectorError;
+
+    fn propagate(&self, interval: TimeInterval<T>) -> Result<Trajectory<T, O, R>, Self::Error> {
+        let states: Vec<_> = self
+            .states()
+            .into_iter()
+            .filter(|s| s.time() >= interval.start() && s.time() <= interval.end())
+            .collect();
+        Trajectory::try_new(states)
     }
 }
 
