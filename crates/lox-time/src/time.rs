@@ -251,6 +251,12 @@ impl<T: TimeScale> Time<T> {
     }
 }
 
+impl<T: TimeScale + Into<DynTimeScale>> Time<T> {
+    pub fn into_dyn(self) -> DynTime {
+        Time::from_delta(self.scale.into(), self.delta)
+    }
+}
+
 impl<T: TimeScale + std::fmt::Debug> ApproxEq for Time<T> {
     fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
         self.to_delta().approx_eq(&rhs.to_delta(), atol, rtol)

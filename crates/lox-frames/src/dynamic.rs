@@ -8,8 +8,8 @@ use lox_bodies::{DynOrigin, Origin, TryRotationalElements};
 use thiserror::Error;
 
 use crate::{
-    frames::{Cirf, Icrf, Itrf, J2000, Mod, Pef, Teme, Tirf, Tod},
-    iers::{Iau2000Model, ReferenceSystem},
+    frames::{Cirf, Iau, Icrf, Itrf, J2000, Mod, Pef, Teme, Tirf, Tod},
+    iers::{Iau2000Model, IersSystem, ReferenceSystem},
     traits::{
         NonBodyFixedFrameError, NonQuasiInertialFrameError, ReferenceFrame, TryBodyFixed,
         TryQuasiInertial, frame_id,
@@ -108,6 +108,72 @@ impl TryBodyFixed for DynFrame {
             DynFrame::Iau(_) | DynFrame::Itrf | DynFrame::Tirf | DynFrame::Pef(_) => Ok(()),
             _ => Err(NonBodyFixedFrameError(self.abbreviation())),
         }
+    }
+}
+
+// Simple frame conversions.
+
+impl From<Icrf> for DynFrame {
+    fn from(_: Icrf) -> Self {
+        DynFrame::Icrf
+    }
+}
+
+impl From<J2000> for DynFrame {
+    fn from(_: J2000) -> Self {
+        DynFrame::J2000
+    }
+}
+
+impl From<Cirf> for DynFrame {
+    fn from(_: Cirf) -> Self {
+        DynFrame::Cirf
+    }
+}
+
+impl From<Tirf> for DynFrame {
+    fn from(_: Tirf) -> Self {
+        DynFrame::Tirf
+    }
+}
+
+impl From<Itrf> for DynFrame {
+    fn from(_: Itrf) -> Self {
+        DynFrame::Itrf
+    }
+}
+
+impl From<Teme> for DynFrame {
+    fn from(_: Teme) -> Self {
+        DynFrame::Teme
+    }
+}
+
+// Parameterized equinox-based frames.
+
+impl<T: IersSystem + Into<ReferenceSystem>> From<Mod<T>> for DynFrame {
+    fn from(frame: Mod<T>) -> Self {
+        DynFrame::Mod(frame.0.into())
+    }
+}
+
+impl<T: IersSystem + Into<ReferenceSystem>> From<Tod<T>> for DynFrame {
+    fn from(frame: Tod<T>) -> Self {
+        DynFrame::Tod(frame.0.into())
+    }
+}
+
+impl<T: IersSystem + Into<ReferenceSystem>> From<Pef<T>> for DynFrame {
+    fn from(frame: Pef<T>) -> Self {
+        DynFrame::Pef(frame.0.into())
+    }
+}
+
+// IAU body-fixed frames.
+
+impl<T: TryRotationalElements + Copy + Into<DynOrigin>> From<Iau<T>> for DynFrame {
+    fn from(frame: Iau<T>) -> Self {
+        DynFrame::Iau(frame.body().into())
     }
 }
 

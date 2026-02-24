@@ -103,6 +103,22 @@ where
     }
 }
 
+impl<S, T, O, R> Orbit<S, T, O, R>
+where
+    T: TimeScale + Copy + Into<DynTimeScale>,
+    O: Origin + Copy + Into<DynOrigin>,
+    R: ReferenceFrame + Copy + Into<DynFrame>,
+{
+    pub fn into_dyn(self) -> Orbit<S, DynTimeScale, DynOrigin, DynFrame> {
+        Orbit::from_state(
+            self.state,
+            self.time.into_dyn(),
+            self.origin.into(),
+            self.frame.into(),
+        )
+    }
+}
+
 pub type CartesianOrbit<T, O, R> = Orbit<Cartesian, T, O, R>;
 pub type DynCartesianOrbit = Orbit<Cartesian, DynTimeScale, DynOrigin, DynFrame>;
 

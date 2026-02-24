@@ -93,6 +93,17 @@ impl DynGroundLocation {
     }
 }
 
+impl<B: TrySpheroid + Into<DynOrigin>> GroundLocation<B> {
+    pub fn into_dyn(self) -> DynGroundLocation {
+        GroundLocation {
+            longitude: self.longitude,
+            latitude: self.latitude,
+            altitude: self.altitude,
+            body: self.body.into(),
+        }
+    }
+}
+
 impl<B: TrySpheroid> GroundLocation<B> {
     pub fn origin(&self) -> B
     where

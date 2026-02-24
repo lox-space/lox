@@ -41,6 +41,11 @@ impl Display for Sun {
         write!(f, "{}", self.name())
     }
 }
+impl From<Sun> for DynOrigin {
+    fn from(_: Sun) -> Self {
+        DynOrigin::Sun
+    }
+}
 impl PointMass for Sun {
     fn gravitational_parameter(&self) -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(132712440041.27942f64)
@@ -113,6 +118,11 @@ impl Origin for Mercury {
 impl Display for Mercury {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Mercury> for DynOrigin {
+    fn from(_: Mercury) -> Self {
+        DynOrigin::Mercury
     }
 }
 impl PointMass for Mercury {
@@ -236,6 +246,11 @@ impl Display for Venus {
         write!(f, "{}", self.name())
     }
 }
+impl From<Venus> for DynOrigin {
+    fn from(_: Venus) -> Self {
+        DynOrigin::Venus
+    }
+}
 impl PointMass for Venus {
     fn gravitational_parameter(&self) -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(324858.592f64)
@@ -315,6 +330,11 @@ impl Display for Earth {
         write!(f, "{}", self.name())
     }
 }
+impl From<Earth> for DynOrigin {
+    fn from(_: Earth) -> Self {
+        DynOrigin::Earth
+    }
+}
 impl PointMass for Earth {
     fn gravitational_parameter(&self) -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(398600.43550702266f64)
@@ -392,6 +412,11 @@ impl Origin for Mars {
 impl Display for Mars {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Mars> for DynOrigin {
+    fn from(_: Mars) -> Self {
+        DynOrigin::Mars
     }
 }
 impl PointMass for Mars {
@@ -665,6 +690,11 @@ impl Display for Jupiter {
         write!(f, "{}", self.name())
     }
 }
+impl From<Jupiter> for DynOrigin {
+    fn from(_: Jupiter) -> Self {
+        DynOrigin::Jupiter
+    }
+}
 impl PointMass for Jupiter {
     fn gravitational_parameter(&self) -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(126686531.9003704f64)
@@ -874,6 +904,11 @@ impl Display for Saturn {
         write!(f, "{}", self.name())
     }
 }
+impl From<Saturn> for DynOrigin {
+    fn from(_: Saturn) -> Self {
+        DynOrigin::Saturn
+    }
+}
 impl PointMass for Saturn {
     fn gravitational_parameter(&self) -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(37931206.23436167f64)
@@ -953,6 +988,11 @@ impl Display for Uranus {
         write!(f, "{}", self.name())
     }
 }
+impl From<Uranus> for DynOrigin {
+    fn from(_: Uranus) -> Self {
+        DynOrigin::Uranus
+    }
+}
 impl PointMass for Uranus {
     fn gravitational_parameter(&self) -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(5793951.256527211f64)
@@ -1030,6 +1070,11 @@ impl Origin for Neptune {
 impl Display for Neptune {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Neptune> for DynOrigin {
+    fn from(_: Neptune) -> Self {
+        DynOrigin::Neptune
     }
 }
 impl PointMass for Neptune {
@@ -1192,6 +1237,11 @@ impl Display for Pluto {
         write!(f, "{}", self.name())
     }
 }
+impl From<Pluto> for DynOrigin {
+    fn from(_: Pluto) -> Self {
+        DynOrigin::Pluto
+    }
+}
 impl PointMass for Pluto {
     fn gravitational_parameter(&self) -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(869.6138177608748f64)
@@ -1271,6 +1321,11 @@ impl Display for SolarSystemBarycenter {
         write!(f, "{}", self.name())
     }
 }
+impl From<SolarSystemBarycenter> for DynOrigin {
+    fn from(_: SolarSystemBarycenter) -> Self {
+        DynOrigin::SolarSystemBarycenter
+    }
+}
 impl PointMass for SolarSystemBarycenter {
     fn gravitational_parameter(&self) -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(132712440041.27942f64)
@@ -1290,6 +1345,11 @@ impl Origin for MercuryBarycenter {
 impl Display for MercuryBarycenter {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<MercuryBarycenter> for DynOrigin {
+    fn from(_: MercuryBarycenter) -> Self {
+        DynOrigin::MercuryBarycenter
     }
 }
 impl PointMass for MercuryBarycenter {
@@ -1313,6 +1373,11 @@ impl Display for VenusBarycenter {
         write!(f, "{}", self.name())
     }
 }
+impl From<VenusBarycenter> for DynOrigin {
+    fn from(_: VenusBarycenter) -> Self {
+        DynOrigin::VenusBarycenter
+    }
+}
 impl PointMass for VenusBarycenter {
     fn gravitational_parameter(&self) -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(324858.592f64)
@@ -1332,6 +1397,11 @@ impl Origin for EarthBarycenter {
 impl Display for EarthBarycenter {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<EarthBarycenter> for DynOrigin {
+    fn from(_: EarthBarycenter) -> Self {
+        DynOrigin::EarthBarycenter
     }
 }
 impl PointMass for EarthBarycenter {
@@ -1355,6 +1425,11 @@ impl Display for MarsBarycenter {
         write!(f, "{}", self.name())
     }
 }
+impl From<MarsBarycenter> for DynOrigin {
+    fn from(_: MarsBarycenter) -> Self {
+        DynOrigin::MarsBarycenter
+    }
+}
 impl PointMass for MarsBarycenter {
     fn gravitational_parameter(&self) -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(42828.3758157561f64)
@@ -1374,6 +1449,11 @@ impl Origin for JupiterBarycenter {
 impl Display for JupiterBarycenter {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<JupiterBarycenter> for DynOrigin {
+    fn from(_: JupiterBarycenter) -> Self {
+        DynOrigin::JupiterBarycenter
     }
 }
 impl PointMass for JupiterBarycenter {
@@ -1397,6 +1477,11 @@ impl Display for SaturnBarycenter {
         write!(f, "{}", self.name())
     }
 }
+impl From<SaturnBarycenter> for DynOrigin {
+    fn from(_: SaturnBarycenter) -> Self {
+        DynOrigin::SaturnBarycenter
+    }
+}
 impl PointMass for SaturnBarycenter {
     fn gravitational_parameter(&self) -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(37940584.8418f64)
@@ -1416,6 +1501,11 @@ impl Origin for UranusBarycenter {
 impl Display for UranusBarycenter {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<UranusBarycenter> for DynOrigin {
+    fn from(_: UranusBarycenter) -> Self {
+        DynOrigin::UranusBarycenter
     }
 }
 impl PointMass for UranusBarycenter {
@@ -1439,6 +1529,11 @@ impl Display for NeptuneBarycenter {
         write!(f, "{}", self.name())
     }
 }
+impl From<NeptuneBarycenter> for DynOrigin {
+    fn from(_: NeptuneBarycenter) -> Self {
+        DynOrigin::NeptuneBarycenter
+    }
+}
 impl PointMass for NeptuneBarycenter {
     fn gravitational_parameter(&self) -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(6836527.100580399f64)
@@ -1460,6 +1555,11 @@ impl Display for PlutoBarycenter {
         write!(f, "{}", self.name())
     }
 }
+impl From<PlutoBarycenter> for DynOrigin {
+    fn from(_: PlutoBarycenter) -> Self {
+        DynOrigin::PlutoBarycenter
+    }
+}
 impl PointMass for PlutoBarycenter {
     fn gravitational_parameter(&self) -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(975.5f64)
@@ -1479,6 +1579,11 @@ impl Origin for Moon {
 impl Display for Moon {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Moon> for DynOrigin {
+    fn from(_: Moon) -> Self {
+        DynOrigin::Moon
     }
 }
 impl PointMass for Moon {
@@ -1686,6 +1791,11 @@ impl Display for Phobos {
         write!(f, "{}", self.name())
     }
 }
+impl From<Phobos> for DynOrigin {
+    fn from(_: Phobos) -> Self {
+        DynOrigin::Phobos
+    }
+}
 impl PointMass for Phobos {
     fn gravitational_parameter(&self) -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(0.0007087546066894452f64)
@@ -1810,6 +1920,11 @@ impl Origin for Deimos {
 impl Display for Deimos {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Deimos> for DynOrigin {
+    fn from(_: Deimos) -> Self {
+        DynOrigin::Deimos
     }
 }
 impl PointMass for Deimos {
@@ -1989,6 +2104,11 @@ impl Display for Io {
         write!(f, "{}", self.name())
     }
 }
+impl From<Io> for DynOrigin {
+    fn from(_: Io) -> Self {
+        DynOrigin::Io
+    }
+}
 impl PointMass for Io {
     fn gravitational_parameter(&self) -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(5959.915466180539f64)
@@ -2110,6 +2230,11 @@ impl Origin for Europa {
 impl Display for Europa {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Europa> for DynOrigin {
+    fn from(_: Europa) -> Self {
+        DynOrigin::Europa
     }
 }
 impl PointMass for Europa {
@@ -2262,6 +2387,11 @@ impl Display for Ganymede {
         write!(f, "{}", self.name())
     }
 }
+impl From<Ganymede> for DynOrigin {
+    fn from(_: Ganymede) -> Self {
+        DynOrigin::Ganymede
+    }
+}
 impl PointMass for Ganymede {
     fn gravitational_parameter(&self) -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(9887.832752719638f64)
@@ -2402,6 +2532,11 @@ impl Origin for Callisto {
 impl Display for Callisto {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Callisto> for DynOrigin {
+    fn from(_: Callisto) -> Self {
+        DynOrigin::Callisto
     }
 }
 impl PointMass for Callisto {
@@ -2562,6 +2697,11 @@ impl Origin for Amalthea {
 impl Display for Amalthea {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Amalthea> for DynOrigin {
+    fn from(_: Amalthea) -> Self {
+        DynOrigin::Amalthea
     }
 }
 impl PointMass for Amalthea {
@@ -2741,6 +2881,11 @@ impl Display for Himalia {
         write!(f, "{}", self.name())
     }
 }
+impl From<Himalia> for DynOrigin {
+    fn from(_: Himalia) -> Self {
+        DynOrigin::Himalia
+    }
+}
 impl PointMass for Himalia {
     fn gravitational_parameter(&self) -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(0.1515524299611265f64)
@@ -2777,6 +2922,11 @@ impl Display for Elara {
         write!(f, "{}", self.name())
     }
 }
+impl From<Elara> for DynOrigin {
+    fn from(_: Elara) -> Self {
+        DynOrigin::Elara
+    }
+}
 impl MeanRadius for Elara {
     fn mean_radius(&self) -> Distance {
         Distance::kilometers(40f64)
@@ -2806,6 +2956,11 @@ impl Origin for Pasiphae {
 impl Display for Pasiphae {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Pasiphae> for DynOrigin {
+    fn from(_: Pasiphae) -> Self {
+        DynOrigin::Pasiphae
     }
 }
 impl MeanRadius for Pasiphae {
@@ -2839,6 +2994,11 @@ impl Display for Sinope {
         write!(f, "{}", self.name())
     }
 }
+impl From<Sinope> for DynOrigin {
+    fn from(_: Sinope) -> Self {
+        DynOrigin::Sinope
+    }
+}
 impl MeanRadius for Sinope {
     fn mean_radius(&self) -> Distance {
         Distance::kilometers(14f64)
@@ -2868,6 +3028,11 @@ impl Origin for Lysithea {
 impl Display for Lysithea {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Lysithea> for DynOrigin {
+    fn from(_: Lysithea) -> Self {
+        DynOrigin::Lysithea
     }
 }
 impl MeanRadius for Lysithea {
@@ -2901,6 +3066,11 @@ impl Display for Carme {
         write!(f, "{}", self.name())
     }
 }
+impl From<Carme> for DynOrigin {
+    fn from(_: Carme) -> Self {
+        DynOrigin::Carme
+    }
+}
 impl MeanRadius for Carme {
     fn mean_radius(&self) -> Distance {
         Distance::kilometers(15f64)
@@ -2930,6 +3100,11 @@ impl Origin for Ananke {
 impl Display for Ananke {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Ananke> for DynOrigin {
+    fn from(_: Ananke) -> Self {
+        DynOrigin::Ananke
     }
 }
 impl MeanRadius for Ananke {
@@ -2963,6 +3138,11 @@ impl Display for Leda {
         write!(f, "{}", self.name())
     }
 }
+impl From<Leda> for DynOrigin {
+    fn from(_: Leda) -> Self {
+        DynOrigin::Leda
+    }
+}
 impl MeanRadius for Leda {
     fn mean_radius(&self) -> Distance {
         Distance::kilometers(5f64)
@@ -2992,6 +3172,11 @@ impl Origin for Thebe {
 impl Display for Thebe {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Thebe> for DynOrigin {
+    fn from(_: Thebe) -> Self {
+        DynOrigin::Thebe
     }
 }
 impl PointMass for Thebe {
@@ -3171,6 +3356,11 @@ impl Display for Adrastea {
         write!(f, "{}", self.name())
     }
 }
+impl From<Adrastea> for DynOrigin {
+    fn from(_: Adrastea) -> Self {
+        DynOrigin::Adrastea
+    }
+}
 impl PointMass for Adrastea {
     fn gravitational_parameter(&self) -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(0.000139f64)
@@ -3247,6 +3437,11 @@ impl Origin for Metis {
 impl Display for Metis {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Metis> for DynOrigin {
+    fn from(_: Metis) -> Self {
+        DynOrigin::Metis
     }
 }
 impl PointMass for Metis {
@@ -3327,6 +3522,11 @@ impl Display for Callirrhoe {
         write!(f, "{}", self.name())
     }
 }
+impl From<Callirrhoe> for DynOrigin {
+    fn from(_: Callirrhoe) -> Self {
+        DynOrigin::Callirrhoe
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Themisto;
@@ -3341,6 +3541,11 @@ impl Origin for Themisto {
 impl Display for Themisto {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Themisto> for DynOrigin {
+    fn from(_: Themisto) -> Self {
+        DynOrigin::Themisto
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -3359,6 +3564,11 @@ impl Display for Magaclite {
         write!(f, "{}", self.name())
     }
 }
+impl From<Magaclite> for DynOrigin {
+    fn from(_: Magaclite) -> Self {
+        DynOrigin::Magaclite
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Taygete;
@@ -3373,6 +3583,11 @@ impl Origin for Taygete {
 impl Display for Taygete {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Taygete> for DynOrigin {
+    fn from(_: Taygete) -> Self {
+        DynOrigin::Taygete
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -3391,6 +3606,11 @@ impl Display for Chaldene {
         write!(f, "{}", self.name())
     }
 }
+impl From<Chaldene> for DynOrigin {
+    fn from(_: Chaldene) -> Self {
+        DynOrigin::Chaldene
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Harpalyke;
@@ -3405,6 +3625,11 @@ impl Origin for Harpalyke {
 impl Display for Harpalyke {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Harpalyke> for DynOrigin {
+    fn from(_: Harpalyke) -> Self {
+        DynOrigin::Harpalyke
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -3423,6 +3648,11 @@ impl Display for Kalyke {
         write!(f, "{}", self.name())
     }
 }
+impl From<Kalyke> for DynOrigin {
+    fn from(_: Kalyke) -> Self {
+        DynOrigin::Kalyke
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Iocaste;
@@ -3437,6 +3667,11 @@ impl Origin for Iocaste {
 impl Display for Iocaste {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Iocaste> for DynOrigin {
+    fn from(_: Iocaste) -> Self {
+        DynOrigin::Iocaste
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -3455,6 +3690,11 @@ impl Display for Erinome {
         write!(f, "{}", self.name())
     }
 }
+impl From<Erinome> for DynOrigin {
+    fn from(_: Erinome) -> Self {
+        DynOrigin::Erinome
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Isonoe;
@@ -3469,6 +3709,11 @@ impl Origin for Isonoe {
 impl Display for Isonoe {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Isonoe> for DynOrigin {
+    fn from(_: Isonoe) -> Self {
+        DynOrigin::Isonoe
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -3487,6 +3732,11 @@ impl Display for Praxidike {
         write!(f, "{}", self.name())
     }
 }
+impl From<Praxidike> for DynOrigin {
+    fn from(_: Praxidike) -> Self {
+        DynOrigin::Praxidike
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Autonoe;
@@ -3501,6 +3751,11 @@ impl Origin for Autonoe {
 impl Display for Autonoe {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Autonoe> for DynOrigin {
+    fn from(_: Autonoe) -> Self {
+        DynOrigin::Autonoe
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -3519,6 +3774,11 @@ impl Display for Thyone {
         write!(f, "{}", self.name())
     }
 }
+impl From<Thyone> for DynOrigin {
+    fn from(_: Thyone) -> Self {
+        DynOrigin::Thyone
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Hermippe;
@@ -3533,6 +3793,11 @@ impl Origin for Hermippe {
 impl Display for Hermippe {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Hermippe> for DynOrigin {
+    fn from(_: Hermippe) -> Self {
+        DynOrigin::Hermippe
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -3551,6 +3816,11 @@ impl Display for Aitne {
         write!(f, "{}", self.name())
     }
 }
+impl From<Aitne> for DynOrigin {
+    fn from(_: Aitne) -> Self {
+        DynOrigin::Aitne
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Eurydome;
@@ -3565,6 +3835,11 @@ impl Origin for Eurydome {
 impl Display for Eurydome {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Eurydome> for DynOrigin {
+    fn from(_: Eurydome) -> Self {
+        DynOrigin::Eurydome
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -3583,6 +3858,11 @@ impl Display for Euanthe {
         write!(f, "{}", self.name())
     }
 }
+impl From<Euanthe> for DynOrigin {
+    fn from(_: Euanthe) -> Self {
+        DynOrigin::Euanthe
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Euporie;
@@ -3597,6 +3877,11 @@ impl Origin for Euporie {
 impl Display for Euporie {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Euporie> for DynOrigin {
+    fn from(_: Euporie) -> Self {
+        DynOrigin::Euporie
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -3615,6 +3900,11 @@ impl Display for Orthosie {
         write!(f, "{}", self.name())
     }
 }
+impl From<Orthosie> for DynOrigin {
+    fn from(_: Orthosie) -> Self {
+        DynOrigin::Orthosie
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Sponde;
@@ -3629,6 +3919,11 @@ impl Origin for Sponde {
 impl Display for Sponde {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Sponde> for DynOrigin {
+    fn from(_: Sponde) -> Self {
+        DynOrigin::Sponde
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -3647,6 +3942,11 @@ impl Display for Kale {
         write!(f, "{}", self.name())
     }
 }
+impl From<Kale> for DynOrigin {
+    fn from(_: Kale) -> Self {
+        DynOrigin::Kale
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Pasithee;
@@ -3661,6 +3961,11 @@ impl Origin for Pasithee {
 impl Display for Pasithee {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Pasithee> for DynOrigin {
+    fn from(_: Pasithee) -> Self {
+        DynOrigin::Pasithee
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -3679,6 +3984,11 @@ impl Display for Hegemone {
         write!(f, "{}", self.name())
     }
 }
+impl From<Hegemone> for DynOrigin {
+    fn from(_: Hegemone) -> Self {
+        DynOrigin::Hegemone
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Mneme;
@@ -3693,6 +4003,11 @@ impl Origin for Mneme {
 impl Display for Mneme {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Mneme> for DynOrigin {
+    fn from(_: Mneme) -> Self {
+        DynOrigin::Mneme
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -3711,6 +4026,11 @@ impl Display for Aoede {
         write!(f, "{}", self.name())
     }
 }
+impl From<Aoede> for DynOrigin {
+    fn from(_: Aoede) -> Self {
+        DynOrigin::Aoede
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Thelxinoe;
@@ -3725,6 +4045,11 @@ impl Origin for Thelxinoe {
 impl Display for Thelxinoe {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Thelxinoe> for DynOrigin {
+    fn from(_: Thelxinoe) -> Self {
+        DynOrigin::Thelxinoe
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -3743,6 +4068,11 @@ impl Display for Arche {
         write!(f, "{}", self.name())
     }
 }
+impl From<Arche> for DynOrigin {
+    fn from(_: Arche) -> Self {
+        DynOrigin::Arche
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Kallichore;
@@ -3757,6 +4087,11 @@ impl Origin for Kallichore {
 impl Display for Kallichore {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Kallichore> for DynOrigin {
+    fn from(_: Kallichore) -> Self {
+        DynOrigin::Kallichore
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -3775,6 +4110,11 @@ impl Display for Helike {
         write!(f, "{}", self.name())
     }
 }
+impl From<Helike> for DynOrigin {
+    fn from(_: Helike) -> Self {
+        DynOrigin::Helike
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Carpo;
@@ -3789,6 +4129,11 @@ impl Origin for Carpo {
 impl Display for Carpo {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Carpo> for DynOrigin {
+    fn from(_: Carpo) -> Self {
+        DynOrigin::Carpo
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -3807,6 +4152,11 @@ impl Display for Eukelade {
         write!(f, "{}", self.name())
     }
 }
+impl From<Eukelade> for DynOrigin {
+    fn from(_: Eukelade) -> Self {
+        DynOrigin::Eukelade
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Cyllene;
@@ -3821,6 +4171,11 @@ impl Origin for Cyllene {
 impl Display for Cyllene {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Cyllene> for DynOrigin {
+    fn from(_: Cyllene) -> Self {
+        DynOrigin::Cyllene
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -3839,6 +4194,11 @@ impl Display for Kore {
         write!(f, "{}", self.name())
     }
 }
+impl From<Kore> for DynOrigin {
+    fn from(_: Kore) -> Self {
+        DynOrigin::Kore
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Herse;
@@ -3853,6 +4213,11 @@ impl Origin for Herse {
 impl Display for Herse {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Herse> for DynOrigin {
+    fn from(_: Herse) -> Self {
+        DynOrigin::Herse
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -3871,6 +4236,11 @@ impl Display for Dia {
         write!(f, "{}", self.name())
     }
 }
+impl From<Dia> for DynOrigin {
+    fn from(_: Dia) -> Self {
+        DynOrigin::Dia
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Mimas;
@@ -3885,6 +4255,11 @@ impl Origin for Mimas {
 impl Display for Mimas {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Mimas> for DynOrigin {
+    fn from(_: Mimas) -> Self {
+        DynOrigin::Mimas
     }
 }
 impl PointMass for Mimas {
@@ -4046,6 +4421,11 @@ impl Display for Enceladus {
         write!(f, "{}", self.name())
     }
 }
+impl From<Enceladus> for DynOrigin {
+    fn from(_: Enceladus) -> Self {
+        DynOrigin::Enceladus
+    }
+}
 impl PointMass for Enceladus {
     fn gravitational_parameter(&self) -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(7.210366688598896f64)
@@ -4122,6 +4502,11 @@ impl Origin for Tethys {
 impl Display for Tethys {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Tethys> for DynOrigin {
+    fn from(_: Tethys) -> Self {
+        DynOrigin::Tethys
     }
 }
 impl PointMass for Tethys {
@@ -4283,6 +4668,11 @@ impl Display for Dione {
         write!(f, "{}", self.name())
     }
 }
+impl From<Dione> for DynOrigin {
+    fn from(_: Dione) -> Self {
+        DynOrigin::Dione
+    }
+}
 impl PointMass for Dione {
     fn gravitational_parameter(&self) -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(73.11607172482067f64)
@@ -4359,6 +4749,11 @@ impl Origin for Rhea {
 impl Display for Rhea {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Rhea> for DynOrigin {
+    fn from(_: Rhea) -> Self {
+        DynOrigin::Rhea
     }
 }
 impl PointMass for Rhea {
@@ -4520,6 +4915,11 @@ impl Display for Titan {
         write!(f, "{}", self.name())
     }
 }
+impl From<Titan> for DynOrigin {
+    fn from(_: Titan) -> Self {
+        DynOrigin::Titan
+    }
+}
 impl PointMass for Titan {
     fn gravitational_parameter(&self) -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(8978.137095521046f64)
@@ -4652,6 +5052,11 @@ impl Display for Hyperion {
         write!(f, "{}", self.name())
     }
 }
+impl From<Hyperion> for DynOrigin {
+    fn from(_: Hyperion) -> Self {
+        DynOrigin::Hyperion
+    }
+}
 impl PointMass for Hyperion {
     fn gravitational_parameter(&self) -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(0.3704913747932265f64)
@@ -4685,6 +5090,11 @@ impl Origin for Iapetus {
 impl Display for Iapetus {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Iapetus> for DynOrigin {
+    fn from(_: Iapetus) -> Self {
+        DynOrigin::Iapetus
     }
 }
 impl PointMass for Iapetus {
@@ -4766,6 +5176,11 @@ impl Display for Phoebe {
         write!(f, "{}", self.name())
     }
 }
+impl From<Phoebe> for DynOrigin {
+    fn from(_: Phoebe) -> Self {
+        DynOrigin::Phoebe
+    }
+}
 impl PointMass for Phoebe {
     fn gravitational_parameter(&self) -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(0.5547860052791678f64)
@@ -4842,6 +5257,11 @@ impl Origin for Janus {
 impl Display for Janus {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Janus> for DynOrigin {
+    fn from(_: Janus) -> Self {
+        DynOrigin::Janus
     }
 }
 impl PointMass for Janus {
@@ -5003,6 +5423,11 @@ impl Display for Epimetheus {
         write!(f, "{}", self.name())
     }
 }
+impl From<Epimetheus> for DynOrigin {
+    fn from(_: Epimetheus) -> Self {
+        DynOrigin::Epimetheus
+    }
+}
 impl PointMass for Epimetheus {
     fn gravitational_parameter(&self) -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(0.03512333288208074f64)
@@ -5162,6 +5587,11 @@ impl Display for Helene {
         write!(f, "{}", self.name())
     }
 }
+impl From<Helene> for DynOrigin {
+    fn from(_: Helene) -> Self {
+        DynOrigin::Helene
+    }
+}
 impl PointMass for Helene {
     fn gravitational_parameter(&self) -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(0.0004757419551776972f64)
@@ -5240,6 +5670,11 @@ impl Display for Telesto {
         write!(f, "{}", self.name())
     }
 }
+impl From<Telesto> for DynOrigin {
+    fn from(_: Telesto) -> Self {
+        DynOrigin::Telesto
+    }
+}
 impl MeanRadius for Telesto {
     fn mean_radius(&self) -> Distance {
         Distance::kilometers(12.4f64)
@@ -5313,6 +5748,11 @@ impl Display for Calypso {
         write!(f, "{}", self.name())
     }
 }
+impl From<Calypso> for DynOrigin {
+    fn from(_: Calypso) -> Self {
+        DynOrigin::Calypso
+    }
+}
 impl MeanRadius for Calypso {
     fn mean_radius(&self) -> Distance {
         Distance::kilometers(9.6f64)
@@ -5384,6 +5824,11 @@ impl Origin for Atlas {
 impl Display for Atlas {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Atlas> for DynOrigin {
+    fn from(_: Atlas) -> Self {
+        DynOrigin::Atlas
     }
 }
 impl PointMass for Atlas {
@@ -5464,6 +5909,11 @@ impl Display for Prometheus {
         write!(f, "{}", self.name())
     }
 }
+impl From<Prometheus> for DynOrigin {
+    fn from(_: Prometheus) -> Self {
+        DynOrigin::Prometheus
+    }
+}
 impl PointMass for Prometheus {
     fn gravitational_parameter(&self) -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(0.0107520800100761f64)
@@ -5540,6 +5990,11 @@ impl Origin for Pandora {
 impl Display for Pandora {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Pandora> for DynOrigin {
+    fn from(_: Pandora) -> Self {
+        DynOrigin::Pandora
     }
 }
 impl PointMass for Pandora {
@@ -5620,6 +6075,11 @@ impl Display for Pan {
         write!(f, "{}", self.name())
     }
 }
+impl From<Pan> for DynOrigin {
+    fn from(_: Pan) -> Self {
+        DynOrigin::Pan
+    }
+}
 impl MeanRadius for Pan {
     fn mean_radius(&self) -> Distance {
         Distance::kilometers(14f64)
@@ -5693,6 +6153,11 @@ impl Display for Ymir {
         write!(f, "{}", self.name())
     }
 }
+impl From<Ymir> for DynOrigin {
+    fn from(_: Ymir) -> Self {
+        DynOrigin::Ymir
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Paaliaq;
@@ -5707,6 +6172,11 @@ impl Origin for Paaliaq {
 impl Display for Paaliaq {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Paaliaq> for DynOrigin {
+    fn from(_: Paaliaq) -> Self {
+        DynOrigin::Paaliaq
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -5725,6 +6195,11 @@ impl Display for Tarvos {
         write!(f, "{}", self.name())
     }
 }
+impl From<Tarvos> for DynOrigin {
+    fn from(_: Tarvos) -> Self {
+        DynOrigin::Tarvos
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Ijiraq;
@@ -5739,6 +6214,11 @@ impl Origin for Ijiraq {
 impl Display for Ijiraq {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Ijiraq> for DynOrigin {
+    fn from(_: Ijiraq) -> Self {
+        DynOrigin::Ijiraq
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -5757,6 +6237,11 @@ impl Display for Suttungr {
         write!(f, "{}", self.name())
     }
 }
+impl From<Suttungr> for DynOrigin {
+    fn from(_: Suttungr) -> Self {
+        DynOrigin::Suttungr
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Kiviuq;
@@ -5771,6 +6256,11 @@ impl Origin for Kiviuq {
 impl Display for Kiviuq {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Kiviuq> for DynOrigin {
+    fn from(_: Kiviuq) -> Self {
+        DynOrigin::Kiviuq
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -5789,6 +6279,11 @@ impl Display for Mundilfari {
         write!(f, "{}", self.name())
     }
 }
+impl From<Mundilfari> for DynOrigin {
+    fn from(_: Mundilfari) -> Self {
+        DynOrigin::Mundilfari
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Albiorix;
@@ -5803,6 +6298,11 @@ impl Origin for Albiorix {
 impl Display for Albiorix {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Albiorix> for DynOrigin {
+    fn from(_: Albiorix) -> Self {
+        DynOrigin::Albiorix
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -5821,6 +6321,11 @@ impl Display for Skathi {
         write!(f, "{}", self.name())
     }
 }
+impl From<Skathi> for DynOrigin {
+    fn from(_: Skathi) -> Self {
+        DynOrigin::Skathi
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Erriapus;
@@ -5835,6 +6340,11 @@ impl Origin for Erriapus {
 impl Display for Erriapus {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Erriapus> for DynOrigin {
+    fn from(_: Erriapus) -> Self {
+        DynOrigin::Erriapus
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -5853,6 +6363,11 @@ impl Display for Siarnaq {
         write!(f, "{}", self.name())
     }
 }
+impl From<Siarnaq> for DynOrigin {
+    fn from(_: Siarnaq) -> Self {
+        DynOrigin::Siarnaq
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Thrymr;
@@ -5867,6 +6382,11 @@ impl Origin for Thrymr {
 impl Display for Thrymr {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Thrymr> for DynOrigin {
+    fn from(_: Thrymr) -> Self {
+        DynOrigin::Thrymr
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -5885,6 +6405,11 @@ impl Display for Narvi {
         write!(f, "{}", self.name())
     }
 }
+impl From<Narvi> for DynOrigin {
+    fn from(_: Narvi) -> Self {
+        DynOrigin::Narvi
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Methone;
@@ -5899,6 +6424,11 @@ impl Origin for Methone {
 impl Display for Methone {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Methone> for DynOrigin {
+    fn from(_: Methone) -> Self {
+        DynOrigin::Methone
     }
 }
 impl MeanRadius for Methone {
@@ -5931,6 +6461,11 @@ impl Display for Pallene {
         write!(f, "{}", self.name())
     }
 }
+impl From<Pallene> for DynOrigin {
+    fn from(_: Pallene) -> Self {
+        DynOrigin::Pallene
+    }
+}
 impl MeanRadius for Pallene {
     fn mean_radius(&self) -> Distance {
         Distance::kilometers(2.23f64)
@@ -5959,6 +6494,11 @@ impl Origin for Polydeuces {
 impl Display for Polydeuces {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Polydeuces> for DynOrigin {
+    fn from(_: Polydeuces) -> Self {
+        DynOrigin::Polydeuces
     }
 }
 impl MeanRadius for Polydeuces {
@@ -5991,6 +6531,11 @@ impl Display for Daphnis {
         write!(f, "{}", self.name())
     }
 }
+impl From<Daphnis> for DynOrigin {
+    fn from(_: Daphnis) -> Self {
+        DynOrigin::Daphnis
+    }
+}
 impl MeanRadius for Daphnis {
     fn mean_radius(&self) -> Distance {
         Distance::kilometers(3.8f64)
@@ -6021,6 +6566,11 @@ impl Display for Aegir {
         write!(f, "{}", self.name())
     }
 }
+impl From<Aegir> for DynOrigin {
+    fn from(_: Aegir) -> Self {
+        DynOrigin::Aegir
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Bebhionn;
@@ -6035,6 +6585,11 @@ impl Origin for Bebhionn {
 impl Display for Bebhionn {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Bebhionn> for DynOrigin {
+    fn from(_: Bebhionn) -> Self {
+        DynOrigin::Bebhionn
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -6053,6 +6608,11 @@ impl Display for Bergelmir {
         write!(f, "{}", self.name())
     }
 }
+impl From<Bergelmir> for DynOrigin {
+    fn from(_: Bergelmir) -> Self {
+        DynOrigin::Bergelmir
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Bestla;
@@ -6067,6 +6627,11 @@ impl Origin for Bestla {
 impl Display for Bestla {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Bestla> for DynOrigin {
+    fn from(_: Bestla) -> Self {
+        DynOrigin::Bestla
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -6085,6 +6650,11 @@ impl Display for Farbauti {
         write!(f, "{}", self.name())
     }
 }
+impl From<Farbauti> for DynOrigin {
+    fn from(_: Farbauti) -> Self {
+        DynOrigin::Farbauti
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Fenrir;
@@ -6099,6 +6669,11 @@ impl Origin for Fenrir {
 impl Display for Fenrir {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Fenrir> for DynOrigin {
+    fn from(_: Fenrir) -> Self {
+        DynOrigin::Fenrir
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -6117,6 +6692,11 @@ impl Display for Fornjot {
         write!(f, "{}", self.name())
     }
 }
+impl From<Fornjot> for DynOrigin {
+    fn from(_: Fornjot) -> Self {
+        DynOrigin::Fornjot
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Hati;
@@ -6131,6 +6711,11 @@ impl Origin for Hati {
 impl Display for Hati {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Hati> for DynOrigin {
+    fn from(_: Hati) -> Self {
+        DynOrigin::Hati
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -6149,6 +6734,11 @@ impl Display for Hyrrokkin {
         write!(f, "{}", self.name())
     }
 }
+impl From<Hyrrokkin> for DynOrigin {
+    fn from(_: Hyrrokkin) -> Self {
+        DynOrigin::Hyrrokkin
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Kari;
@@ -6163,6 +6753,11 @@ impl Origin for Kari {
 impl Display for Kari {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Kari> for DynOrigin {
+    fn from(_: Kari) -> Self {
+        DynOrigin::Kari
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -6181,6 +6776,11 @@ impl Display for Loge {
         write!(f, "{}", self.name())
     }
 }
+impl From<Loge> for DynOrigin {
+    fn from(_: Loge) -> Self {
+        DynOrigin::Loge
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Skoll;
@@ -6195,6 +6795,11 @@ impl Origin for Skoll {
 impl Display for Skoll {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Skoll> for DynOrigin {
+    fn from(_: Skoll) -> Self {
+        DynOrigin::Skoll
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -6213,6 +6818,11 @@ impl Display for Surtur {
         write!(f, "{}", self.name())
     }
 }
+impl From<Surtur> for DynOrigin {
+    fn from(_: Surtur) -> Self {
+        DynOrigin::Surtur
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Anthe;
@@ -6227,6 +6837,11 @@ impl Origin for Anthe {
 impl Display for Anthe {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Anthe> for DynOrigin {
+    fn from(_: Anthe) -> Self {
+        DynOrigin::Anthe
     }
 }
 impl MeanRadius for Anthe {
@@ -6260,6 +6875,11 @@ impl Display for Jarnsaxa {
         write!(f, "{}", self.name())
     }
 }
+impl From<Jarnsaxa> for DynOrigin {
+    fn from(_: Jarnsaxa) -> Self {
+        DynOrigin::Jarnsaxa
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Greip;
@@ -6274,6 +6894,11 @@ impl Origin for Greip {
 impl Display for Greip {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Greip> for DynOrigin {
+    fn from(_: Greip) -> Self {
+        DynOrigin::Greip
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -6292,6 +6917,11 @@ impl Display for Tarqeq {
         write!(f, "{}", self.name())
     }
 }
+impl From<Tarqeq> for DynOrigin {
+    fn from(_: Tarqeq) -> Self {
+        DynOrigin::Tarqeq
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Aegaeon;
@@ -6306,6 +6936,11 @@ impl Origin for Aegaeon {
 impl Display for Aegaeon {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Aegaeon> for DynOrigin {
+    fn from(_: Aegaeon) -> Self {
+        DynOrigin::Aegaeon
     }
 }
 impl MeanRadius for Aegaeon {
@@ -6336,6 +6971,11 @@ impl Origin for Ariel {
 impl Display for Ariel {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Ariel> for DynOrigin {
+    fn from(_: Ariel) -> Self {
+        DynOrigin::Ariel
     }
 }
 impl PointMass for Ariel {
@@ -6540,6 +7180,11 @@ impl Origin for Umbriel {
 impl Display for Umbriel {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Umbriel> for DynOrigin {
+    fn from(_: Umbriel) -> Self {
+        DynOrigin::Umbriel
     }
 }
 impl PointMass for Umbriel {
@@ -6754,6 +7399,11 @@ impl Origin for Titania {
 impl Display for Titania {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Titania> for DynOrigin {
+    fn from(_: Titania) -> Self {
+        DynOrigin::Titania
     }
 }
 impl PointMass for Titania {
@@ -6977,6 +7627,11 @@ impl Origin for Oberon {
 impl Display for Oberon {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Oberon> for DynOrigin {
+    fn from(_: Oberon) -> Self {
+        DynOrigin::Oberon
     }
 }
 impl PointMass for Oberon {
@@ -7209,6 +7864,11 @@ impl Origin for Miranda {
 impl Display for Miranda {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Miranda> for DynOrigin {
+    fn from(_: Miranda) -> Self {
+        DynOrigin::Miranda
     }
 }
 impl PointMass for Miranda {
@@ -7460,6 +8120,11 @@ impl Display for Cordelia {
         write!(f, "{}", self.name())
     }
 }
+impl From<Cordelia> for DynOrigin {
+    fn from(_: Cordelia) -> Self {
+        DynOrigin::Cordelia
+    }
+}
 impl MeanRadius for Cordelia {
     fn mean_radius(&self) -> Distance {
         Distance::kilometers(13f64)
@@ -7703,6 +8368,11 @@ impl Origin for Ophelia {
 impl Display for Ophelia {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Ophelia> for DynOrigin {
+    fn from(_: Ophelia) -> Self {
+        DynOrigin::Ophelia
     }
 }
 impl MeanRadius for Ophelia {
@@ -7950,6 +8620,11 @@ impl Display for Bianca {
         write!(f, "{}", self.name())
     }
 }
+impl From<Bianca> for DynOrigin {
+    fn from(_: Bianca) -> Self {
+        DynOrigin::Bianca
+    }
+}
 impl MeanRadius for Bianca {
     fn mean_radius(&self) -> Distance {
         Distance::kilometers(21f64)
@@ -8193,6 +8868,11 @@ impl Origin for Cressida {
 impl Display for Cressida {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Cressida> for DynOrigin {
+    fn from(_: Cressida) -> Self {
+        DynOrigin::Cressida
     }
 }
 impl MeanRadius for Cressida {
@@ -8440,6 +9120,11 @@ impl Display for Desdemona {
         write!(f, "{}", self.name())
     }
 }
+impl From<Desdemona> for DynOrigin {
+    fn from(_: Desdemona) -> Self {
+        DynOrigin::Desdemona
+    }
+}
 impl MeanRadius for Desdemona {
     fn mean_radius(&self) -> Distance {
         Distance::kilometers(27f64)
@@ -8683,6 +9368,11 @@ impl Origin for Juliet {
 impl Display for Juliet {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Juliet> for DynOrigin {
+    fn from(_: Juliet) -> Self {
+        DynOrigin::Juliet
     }
 }
 impl MeanRadius for Juliet {
@@ -8930,6 +9620,11 @@ impl Display for Portia {
         write!(f, "{}", self.name())
     }
 }
+impl From<Portia> for DynOrigin {
+    fn from(_: Portia) -> Self {
+        DynOrigin::Portia
+    }
+}
 impl MeanRadius for Portia {
     fn mean_radius(&self) -> Distance {
         Distance::kilometers(54f64)
@@ -9173,6 +9868,11 @@ impl Origin for Rosalind {
 impl Display for Rosalind {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Rosalind> for DynOrigin {
+    fn from(_: Rosalind) -> Self {
+        DynOrigin::Rosalind
     }
 }
 impl MeanRadius for Rosalind {
@@ -9420,6 +10120,11 @@ impl Display for Belinda {
         write!(f, "{}", self.name())
     }
 }
+impl From<Belinda> for DynOrigin {
+    fn from(_: Belinda) -> Self {
+        DynOrigin::Belinda
+    }
+}
 impl MeanRadius for Belinda {
     fn mean_radius(&self) -> Distance {
         Distance::kilometers(33f64)
@@ -9663,6 +10368,11 @@ impl Origin for Puck {
 impl Display for Puck {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Puck> for DynOrigin {
+    fn from(_: Puck) -> Self {
+        DynOrigin::Puck
     }
 }
 impl MeanRadius for Puck {
@@ -9910,6 +10620,11 @@ impl Display for Caliban {
         write!(f, "{}", self.name())
     }
 }
+impl From<Caliban> for DynOrigin {
+    fn from(_: Caliban) -> Self {
+        DynOrigin::Caliban
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Sycorax;
@@ -9924,6 +10639,11 @@ impl Origin for Sycorax {
 impl Display for Sycorax {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Sycorax> for DynOrigin {
+    fn from(_: Sycorax) -> Self {
+        DynOrigin::Sycorax
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -9942,6 +10662,11 @@ impl Display for Prospero {
         write!(f, "{}", self.name())
     }
 }
+impl From<Prospero> for DynOrigin {
+    fn from(_: Prospero) -> Self {
+        DynOrigin::Prospero
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Setebos;
@@ -9956,6 +10681,11 @@ impl Origin for Setebos {
 impl Display for Setebos {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Setebos> for DynOrigin {
+    fn from(_: Setebos) -> Self {
+        DynOrigin::Setebos
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -9974,6 +10704,11 @@ impl Display for Stephano {
         write!(f, "{}", self.name())
     }
 }
+impl From<Stephano> for DynOrigin {
+    fn from(_: Stephano) -> Self {
+        DynOrigin::Stephano
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Trinculo;
@@ -9988,6 +10723,11 @@ impl Origin for Trinculo {
 impl Display for Trinculo {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Trinculo> for DynOrigin {
+    fn from(_: Trinculo) -> Self {
+        DynOrigin::Trinculo
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -10006,6 +10746,11 @@ impl Display for Francisco {
         write!(f, "{}", self.name())
     }
 }
+impl From<Francisco> for DynOrigin {
+    fn from(_: Francisco) -> Self {
+        DynOrigin::Francisco
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Margaret;
@@ -10020,6 +10765,11 @@ impl Origin for Margaret {
 impl Display for Margaret {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Margaret> for DynOrigin {
+    fn from(_: Margaret) -> Self {
+        DynOrigin::Margaret
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -10038,6 +10788,11 @@ impl Display for Ferdinand {
         write!(f, "{}", self.name())
     }
 }
+impl From<Ferdinand> for DynOrigin {
+    fn from(_: Ferdinand) -> Self {
+        DynOrigin::Ferdinand
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Perdita;
@@ -10052,6 +10807,11 @@ impl Origin for Perdita {
 impl Display for Perdita {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Perdita> for DynOrigin {
+    fn from(_: Perdita) -> Self {
+        DynOrigin::Perdita
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -10070,6 +10830,11 @@ impl Display for Mab {
         write!(f, "{}", self.name())
     }
 }
+impl From<Mab> for DynOrigin {
+    fn from(_: Mab) -> Self {
+        DynOrigin::Mab
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Cupid;
@@ -10086,6 +10851,11 @@ impl Display for Cupid {
         write!(f, "{}", self.name())
     }
 }
+impl From<Cupid> for DynOrigin {
+    fn from(_: Cupid) -> Self {
+        DynOrigin::Cupid
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Triton;
@@ -10100,6 +10870,11 @@ impl Origin for Triton {
 impl Display for Triton {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Triton> for DynOrigin {
+    fn from(_: Triton) -> Self {
+        DynOrigin::Triton
     }
 }
 impl PointMass for Triton {
@@ -10343,6 +11118,11 @@ impl Display for Nereid {
         write!(f, "{}", self.name())
     }
 }
+impl From<Nereid> for DynOrigin {
+    fn from(_: Nereid) -> Self {
+        DynOrigin::Nereid
+    }
+}
 impl MeanRadius for Nereid {
     fn mean_radius(&self) -> Distance {
         Distance::kilometers(170f64)
@@ -10372,6 +11152,11 @@ impl Origin for Naiad {
 impl Display for Naiad {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Naiad> for DynOrigin {
+    fn from(_: Naiad) -> Self {
+        DynOrigin::Naiad
     }
 }
 impl PointMass for Naiad {
@@ -10615,6 +11400,11 @@ impl Display for Thalassa {
         write!(f, "{}", self.name())
     }
 }
+impl From<Thalassa> for DynOrigin {
+    fn from(_: Thalassa) -> Self {
+        DynOrigin::Thalassa
+    }
+}
 impl PointMass for Thalassa {
     fn gravitational_parameter(&self) -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(0.0235887319799217f64)
@@ -10854,6 +11644,11 @@ impl Origin for Despina {
 impl Display for Despina {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Despina> for DynOrigin {
+    fn from(_: Despina) -> Self {
+        DynOrigin::Despina
     }
 }
 impl PointMass for Despina {
@@ -11097,6 +11892,11 @@ impl Display for Galatea {
         write!(f, "{}", self.name())
     }
 }
+impl From<Galatea> for DynOrigin {
+    fn from(_: Galatea) -> Self {
+        DynOrigin::Galatea
+    }
+}
 impl PointMass for Galatea {
     fn gravitational_parameter(&self) -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(0.189898503906069f64)
@@ -11336,6 +12136,11 @@ impl Origin for Larissa {
 impl Display for Larissa {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Larissa> for DynOrigin {
+    fn from(_: Larissa) -> Self {
+        DynOrigin::Larissa
     }
 }
 impl PointMass for Larissa {
@@ -11579,6 +12384,11 @@ impl Display for Proteus {
         write!(f, "{}", self.name())
     }
 }
+impl From<Proteus> for DynOrigin {
+    fn from(_: Proteus) -> Self {
+        DynOrigin::Proteus
+    }
+}
 impl PointMass for Proteus {
     fn gravitational_parameter(&self) -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(2.583422379120727f64)
@@ -11819,6 +12629,11 @@ impl Display for Halimede {
         write!(f, "{}", self.name())
     }
 }
+impl From<Halimede> for DynOrigin {
+    fn from(_: Halimede) -> Self {
+        DynOrigin::Halimede
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Psamathe;
@@ -11833,6 +12648,11 @@ impl Origin for Psamathe {
 impl Display for Psamathe {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Psamathe> for DynOrigin {
+    fn from(_: Psamathe) -> Self {
+        DynOrigin::Psamathe
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -11851,6 +12671,11 @@ impl Display for Sao {
         write!(f, "{}", self.name())
     }
 }
+impl From<Sao> for DynOrigin {
+    fn from(_: Sao) -> Self {
+        DynOrigin::Sao
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Laomedeia;
@@ -11865,6 +12690,11 @@ impl Origin for Laomedeia {
 impl Display for Laomedeia {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Laomedeia> for DynOrigin {
+    fn from(_: Laomedeia) -> Self {
+        DynOrigin::Laomedeia
     }
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -11883,6 +12713,11 @@ impl Display for Neso {
         write!(f, "{}", self.name())
     }
 }
+impl From<Neso> for DynOrigin {
+    fn from(_: Neso) -> Self {
+        DynOrigin::Neso
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Charon;
@@ -11897,6 +12732,11 @@ impl Origin for Charon {
 impl Display for Charon {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Charon> for DynOrigin {
+    fn from(_: Charon) -> Self {
+        DynOrigin::Charon
     }
 }
 impl PointMass for Charon {
@@ -11978,6 +12818,11 @@ impl Display for Nix {
         write!(f, "{}", self.name())
     }
 }
+impl From<Nix> for DynOrigin {
+    fn from(_: Nix) -> Self {
+        DynOrigin::Nix
+    }
+}
 impl PointMass for Nix {
     fn gravitational_parameter(&self) -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(0.00304817564816976f64)
@@ -11997,6 +12842,11 @@ impl Origin for Hydra {
 impl Display for Hydra {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Hydra> for DynOrigin {
+    fn from(_: Hydra) -> Self {
+        DynOrigin::Hydra
     }
 }
 impl PointMass for Hydra {
@@ -12020,6 +12870,11 @@ impl Display for Kerberos {
         write!(f, "{}", self.name())
     }
 }
+impl From<Kerberos> for DynOrigin {
+    fn from(_: Kerberos) -> Self {
+        DynOrigin::Kerberos
+    }
+}
 impl PointMass for Kerberos {
     fn gravitational_parameter(&self) -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(0.001110040850536676f64)
@@ -12041,6 +12896,11 @@ impl Display for Styx {
         write!(f, "{}", self.name())
     }
 }
+impl From<Styx> for DynOrigin {
+    fn from(_: Styx) -> Self {
+        DynOrigin::Styx
+    }
+}
 impl PointMass for Styx {
     fn gravitational_parameter(&self) -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(0f64)
@@ -12060,6 +12920,11 @@ impl Origin for Gaspra {
 impl Display for Gaspra {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Gaspra> for DynOrigin {
+    fn from(_: Gaspra) -> Self {
+        DynOrigin::Gaspra
     }
 }
 impl MeanRadius for Gaspra {
@@ -12135,6 +13000,11 @@ impl Display for Ida {
         write!(f, "{}", self.name())
     }
 }
+impl From<Ida> for DynOrigin {
+    fn from(_: Ida) -> Self {
+        DynOrigin::Ida
+    }
+}
 impl MeanRadius for Ida {
     fn mean_radius(&self) -> Distance {
         Distance::kilometers(15.65f64)
@@ -12208,6 +13078,11 @@ impl Display for Dactyl {
         write!(f, "{}", self.name())
     }
 }
+impl From<Dactyl> for DynOrigin {
+    fn from(_: Dactyl) -> Self {
+        DynOrigin::Dactyl
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Ceres;
@@ -12222,6 +13097,11 @@ impl Origin for Ceres {
 impl Display for Ceres {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Ceres> for DynOrigin {
+    fn from(_: Ceres) -> Self {
+        DynOrigin::Ceres
     }
 }
 impl PointMass for Ceres {
@@ -12303,6 +13183,11 @@ impl Display for Pallas {
         write!(f, "{}", self.name())
     }
 }
+impl From<Pallas> for DynOrigin {
+    fn from(_: Pallas) -> Self {
+        DynOrigin::Pallas
+    }
+}
 impl PointMass for Pallas {
     fn gravitational_parameter(&self) -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(13.665878145967422f64)
@@ -12365,6 +13250,11 @@ impl Origin for Vesta {
 impl Display for Vesta {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Vesta> for DynOrigin {
+    fn from(_: Vesta) -> Self {
+        DynOrigin::Vesta
     }
 }
 impl PointMass for Vesta {
@@ -12440,6 +13330,11 @@ impl Display for Psyche {
         write!(f, "{}", self.name())
     }
 }
+impl From<Psyche> for DynOrigin {
+    fn from(_: Psyche) -> Self {
+        DynOrigin::Psyche
+    }
+}
 impl PointMass for Psyche {
     fn gravitational_parameter(&self) -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(1.5896582441709424f64)
@@ -12473,6 +13368,11 @@ impl Origin for Lutetia {
 impl Display for Lutetia {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Lutetia> for DynOrigin {
+    fn from(_: Lutetia) -> Self {
+        DynOrigin::Lutetia
     }
 }
 impl MeanRadius for Lutetia {
@@ -12548,6 +13448,11 @@ impl Display for Kleopatra {
         write!(f, "{}", self.name())
     }
 }
+impl From<Kleopatra> for DynOrigin {
+    fn from(_: Kleopatra) -> Self {
+        DynOrigin::Kleopatra
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Eros;
@@ -12562,6 +13467,11 @@ impl Origin for Eros {
 impl Display for Eros {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Eros> for DynOrigin {
+    fn from(_: Eros) -> Self {
+        DynOrigin::Eros
     }
 }
 impl PointMass for Eros {
@@ -12642,6 +13552,11 @@ impl Display for Davida {
         write!(f, "{}", self.name())
     }
 }
+impl From<Davida> for DynOrigin {
+    fn from(_: Davida) -> Self {
+        DynOrigin::Davida
+    }
+}
 impl PointMass for Davida {
     fn gravitational_parameter(&self) -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(3.8944831481705644f64)
@@ -12720,6 +13635,11 @@ impl Display for Mathilde {
         write!(f, "{}", self.name())
     }
 }
+impl From<Mathilde> for DynOrigin {
+    fn from(_: Mathilde) -> Self {
+        DynOrigin::Mathilde
+    }
+}
 impl MeanRadius for Mathilde {
     fn mean_radius(&self) -> Distance {
         Distance::kilometers(26.5f64)
@@ -12748,6 +13668,11 @@ impl Origin for Steins {
 impl Display for Steins {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Steins> for DynOrigin {
+    fn from(_: Steins) -> Self {
+        DynOrigin::Steins
     }
 }
 impl MeanRadius for Steins {
@@ -12823,6 +13748,11 @@ impl Display for Braille {
         write!(f, "{}", self.name())
     }
 }
+impl From<Braille> for DynOrigin {
+    fn from(_: Braille) -> Self {
+        DynOrigin::Braille
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct WilsonHarrington;
@@ -12839,6 +13769,11 @@ impl Display for WilsonHarrington {
         write!(f, "{}", self.name())
     }
 }
+impl From<WilsonHarrington> for DynOrigin {
+    fn from(_: WilsonHarrington) -> Self {
+        DynOrigin::WilsonHarrington
+    }
+}
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Toutatis;
@@ -12853,6 +13788,11 @@ impl Origin for Toutatis {
 impl Display for Toutatis {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Toutatis> for DynOrigin {
+    fn from(_: Toutatis) -> Self {
+        DynOrigin::Toutatis
     }
 }
 impl TriaxialEllipsoid for Toutatis {
@@ -12878,6 +13818,11 @@ impl Origin for Itokawa {
 impl Display for Itokawa {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Itokawa> for DynOrigin {
+    fn from(_: Itokawa) -> Self {
+        DynOrigin::Itokawa
     }
 }
 impl TriaxialEllipsoid for Itokawa {
@@ -12946,6 +13891,11 @@ impl Origin for Bennu {
 impl Display for Bennu {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Bennu> for DynOrigin {
+    fn from(_: Bennu) -> Self {
+        DynOrigin::Bennu
     }
 }
 impl TryPointMass for DynOrigin {
