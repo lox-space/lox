@@ -7,7 +7,6 @@ use lox_bodies::{
     DynOrigin, Origin, RotationalElements, Spheroid, TryMeanRadius, TrySpheroid,
     UndefinedOriginPropertyError,
 };
-use lox_core::coords::Cartesian;
 use lox_core::types::units::Radians;
 use lox_ephem::Ephemeris;
 use lox_frames::providers::DefaultRotationProvider;
@@ -25,7 +24,7 @@ use thiserror::Error;
 
 use crate::events::{Window, find_windows, intersect_windows};
 use crate::ground::{DynGroundLocation, DynGroundPropagator, GroundLocation, Observables};
-use crate::orbits::{DynCartesianOrbit, DynTrajectory, Trajectory};
+use crate::orbits::{DynTrajectory, Trajectory};
 use lox_frames::{DynFrame, Iau, Icrf};
 
 // Salvatore Alfano, David Negron, Jr., and Jennifer L. Moore
@@ -155,21 +154,11 @@ impl DynPass {
         let mut current_time = window.start();
 
         while current_time <= window.end() {
-            let state = sc.interpolate_at(current_time);
-
-            // Transform to body-fixed frame like elevation_dyn does
             let body_fixed = DynFrame::Iau(gs.origin());
-            let rot = DefaultRotationProvider
-                .try_rotation(DynFrame::Icrf, body_fixed, current_time)
+            let state = sc.interpolate_at(current_time);
+            let state_bf = state
+                .try_to_frame(body_fixed, &DefaultRotationProvider)
                 .unwrap();
-            let (r1, v1) = rot.rotate_state(state.position(), state.velocity());
-            let state_bf = DynCartesianOrbit::new(
-                Cartesian::from_vecs(r1, v1),
-                state.time(),
-                state.origin(),
-                body_fixed,
-            );
-
             let obs = gs.observables_dyn(state_bf);
 
             // Check if satellite is above the elevation mask
@@ -314,16 +303,9 @@ pub fn elevation_dyn(
 ) -> Radians {
     let body_fixed = DynFrame::Iau(gs.origin());
     let sc = sc.interpolate_at(time);
-    let rot = DefaultRotationProvider
-        .try_rotation(DynFrame::Icrf, body_fixed, time)
+    let sc = sc
+        .try_to_frame(body_fixed, &DefaultRotationProvider)
         .unwrap();
-    let (r1, v1) = rot.rotate_state(sc.position(), sc.velocity());
-    let sc = DynCartesianOrbit::new(
-        Cartesian::from_vecs(r1, v1),
-        sc.time(),
-        sc.origin(),
-        body_fixed,
-    );
     let obs = gs.observables_dyn(sc);
     obs.elevation() - mask.min_elevation(obs.azimuth())
 }
