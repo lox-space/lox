@@ -121,14 +121,18 @@ def test_parabolic_peak_gain():
 
 
 def test_parabolic_beamwidth():
+    # D=0.98m, f=29GHz: full HPBW = 2·arcsin(1.6163308·λ/(π·D)) ≈ 0.6219°
+    # (the previous value 0.7372° was the first-null angle, not HPBW)
     p = lox.ParabolicPattern(diameter_m=0.98, efficiency=0.45)
     bw = p.beamwidth(frequency_hz=29e9)
-    assert bw == pytest.approx(0.7371800, rel=1e-4)
+    lam = 299_792_458 / 29e9
+    expected = math.degrees(2.0 * math.asin(1.6163308 * lam / (math.pi * 0.98)))
+    assert bw == pytest.approx(expected, rel=1e-4)
 
 
 def test_parabolic_beamwidth_none_for_sub_wavelength_diameter():
-    # At 1 GHz (λ ≈ 0.300 m) the threshold diameter is ≈ 0.366 m.
-    # A 0.1 m dish is well below this limit, so beamwidth is undefined.
+    # At 1 GHz (λ ≈ 0.300 m) the HPBW threshold diameter is ≈ 0.154 m.
+    # A 0.1 m dish is below this limit, so beamwidth is undefined.
     p = lox.ParabolicPattern(diameter_m=0.1, efficiency=0.65)
     assert p.beamwidth(frequency_hz=1e9) is None
 
