@@ -11,7 +11,7 @@ use lox_ephem::Ephemeris;
 use lox_frames::{DynFrame, Icrf, ReferenceFrame, rotations::TryRotation, traits::frame_id};
 use lox_math::roots::{BoxedError, Brent, RootFinderError};
 use lox_time::{
-    DynTime, Time,
+    Time,
     deltas::TimeDelta,
     offsets::{DefaultOffsetProvider, Offset},
     time_scales::{DynTimeScale, Tai, Tdb, TimeScale},
@@ -327,28 +327,7 @@ impl DynTrajectory {
         origin: DynOrigin,
         frame: DynFrame,
     ) -> Result<DynTrajectory, TrajectoryError> {
-        let mut reader = csv::Reader::from_reader(csv.as_bytes());
-        let mut states = Vec::new();
-        for result in reader.records() {
-            let record = result?;
-            if record.len() != 7 {
-                return Err(TrajectoryError::CsvError(
-                    "invalid record length".to_string(),
-                ));
-            }
-            let time: DynTime = Utc::from_iso(record.get(0).unwrap())
-                .map_err(|e| TrajectoryError::CsvError(e.to_string()))?
-                .to_dyn_time();
-            // CSV data is in km and km/s, convert to m and m/s
-            let position = parse_csv_vec3(&record, 1, 2, 3)? * 1e3;
-            let velocity = parse_csv_vec3(&record, 4, 5, 6)? * 1e3;
-            let state = Cartesian::from_vecs(position, velocity);
-            states.push(CartesianOrbit::new(state, time, origin, frame));
-        }
-        if states.len() < 2 {
-            return Err(TrajectoryError::InsufficientStates(states.len()));
-        }
-        Ok(DynTrajectory::new(states))
+        Ok(Trajectory::from_csv(csv, origin, frame)?.into_dyn())
     }
 }
 

@@ -27,7 +27,6 @@ use crate::orbits::propagators::semi_analytical::{DynVallado, Vallado, ValladoEr
 use crate::orbits::propagators::sgp4::{Sgp4, Sgp4Error};
 use crate::time::DynTime;
 use crate::time::deltas::TimeDelta;
-use crate::time::offsets::DefaultOffsetProvider;
 use crate::time::python::deltas::PyTimeDelta;
 use crate::time::python::time::PyTime;
 use crate::time::time_scales::{DynTimeScale, Tai};
@@ -1014,12 +1013,7 @@ impl PySgp4 {
 
     /// Return the TLE epoch time.
     fn time(&self) -> PyTime {
-        PyTime(
-            self.0
-                .time()
-                .try_to_scale(DynTimeScale::Tai, &DefaultOffsetProvider)
-                .unwrap(),
-        )
+        PyTime(self.0.time().into_dyn())
     }
 
     /// Propagate the orbit to one or more times.
@@ -1042,53 +1036,27 @@ impl PySgp4 {
     ) -> PyResult<Bound<'py, PyAny>> {
         let provider = provider.map(|p| &p.get().0);
         if let Ok(pytime) = steps.extract::<PyTime>() {
-            let (time, dyntime) = match provider {
-                Some(provider) => (
-                    pytime
-                        .0
-                        .try_to_scale(Tai, provider)
-                        .map_err(PyEopProviderError)?,
-                    pytime
-                        .0
-                        .try_to_scale(DynTimeScale::Tai, provider)
-                        .map_err(PyEopProviderError)?,
-                ),
-                None => (pytime.0.to_scale(Tai), pytime.0.to_scale(DynTimeScale::Tai)),
+            let time = match provider {
+                Some(provider) => pytime
+                    .0
+                    .try_to_scale(Tai, provider)
+                    .map_err(PyEopProviderError)?,
+                None => pytime.0.to_scale(Tai),
             };
-            let s1 = self.0.propagate(time).map_err(PySgp4Error)?;
-            return Ok(Bound::new(
-                py,
-                PyState(CartesianOrbit::new(
-                    Cartesian::from_vecs(s1.position(), s1.velocity()),
-                    dyntime,
-                    DynOrigin::default(),
-                    DynFrame::default(),
-                )),
-            )?
-            .into_any());
+            let state = self.0.propagate(time).map_err(PySgp4Error)?;
+            return Ok(Bound::new(py, PyState(state.into_dyn()))?.into_any());
         }
         if let Ok(pysteps) = steps.extract::<Vec<PyTime>>() {
             let mut states: Vec<DynCartesianOrbit> = Vec::with_capacity(pysteps.len());
             for step in pysteps {
-                let (time, dyntime) = match provider {
-                    Some(provider) => (
-                        step.0
-                            .try_to_scale(Tai, provider)
-                            .map_err(PyEopProviderError)?,
-                        step.0
-                            .try_to_scale(DynTimeScale::Tai, provider)
-                            .map_err(PyEopProviderError)?,
-                    ),
-                    None => (step.0.to_scale(Tai), step.0.to_scale(DynTimeScale::Tai)),
+                let time = match provider {
+                    Some(provider) => step
+                        .0
+                        .try_to_scale(Tai, provider)
+                        .map_err(PyEopProviderError)?,
+                    None => step.0.to_scale(Tai),
                 };
-                let s = self.0.propagate(time).map_err(PySgp4Error)?;
-                let s = CartesianOrbit::new(
-                    Cartesian::from_vecs(s.position(), s.velocity()),
-                    dyntime,
-                    DynOrigin::default(),
-                    DynFrame::default(),
-                );
-                states.push(s);
+                states.push(self.0.propagate(time).map_err(PySgp4Error)?.into_dyn());
             }
             return Ok(Bound::new(py, PyTrajectory(DynTrajectory::new(states)))?.into_any());
         }

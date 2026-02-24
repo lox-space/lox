@@ -158,16 +158,10 @@ impl<B: TrySpheroid> GroundLocation<B> {
         rot2 * rot1
     }
 
-    pub fn observables<T: TimeScale + Copy>(
-        &self,
-        state: CartesianOrbit<T, B, Iau<B>>,
-    ) -> Observables
-    where
-        B: RotationalElements + Copy,
-    {
+    fn compute_observables(&self, state_position: DVec3, state_velocity: DVec3) -> Observables {
         let rot = self.rotation_to_topocentric();
-        let position = rot * (state.position() - self.body_fixed_position());
-        let velocity = rot * state.velocity();
+        let position = rot * (state_position - self.body_fixed_position());
+        let velocity = rot * state_velocity;
         let range = position.length();
         let range_rate = position.dot(velocity) / range;
         let elevation = (position.z / range).asin();
@@ -180,20 +174,18 @@ impl<B: TrySpheroid> GroundLocation<B> {
         }
     }
 
+    pub fn observables<T: TimeScale + Copy>(
+        &self,
+        state: CartesianOrbit<T, B, Iau<B>>,
+    ) -> Observables
+    where
+        B: RotationalElements + Copy,
+    {
+        self.compute_observables(state.position(), state.velocity())
+    }
+
     pub fn observables_dyn(&self, state: DynCartesianOrbit) -> Observables {
-        let rot = self.rotation_to_topocentric();
-        let position = rot * (state.position() - self.body_fixed_position());
-        let velocity = rot * state.velocity();
-        let range = position.length();
-        let range_rate = position.dot(velocity) / range;
-        let elevation = (position.z / range).asin();
-        let azimuth = position.y.atan2(-position.x);
-        Observables {
-            azimuth,
-            elevation,
-            range,
-            range_rate,
-        }
+        self.compute_observables(state.position(), state.velocity())
     }
 }
 
