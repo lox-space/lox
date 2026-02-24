@@ -314,6 +314,9 @@ where
         target: DynTimeScale,
         delta: TimeDelta,
     ) -> Result<TimeDelta, Self::Error> {
+        if origin == target {
+            return Ok(TimeDelta::default());
+        }
         match (origin, target) {
             (DynTimeScale::Tai, DynTimeScale::Tcb) => Ok(self.offset(Tai, Tcb, delta)),
             (DynTimeScale::Tai, DynTimeScale::Tcg) => Ok(self.offset(Tai, Tcg, delta)),
