@@ -282,4 +282,39 @@ mod tests {
         );
         assert_approx_eq!(k1.true_anomaly().as_f64(), true_anomaly, rtol <= 1e-8);
     }
+
+    #[test]
+    fn test_try_new_with_static_types() {
+        let utc = utc!(2023, 3, 25, 21, 8, 0.0).unwrap();
+        let time = utc.to_time().to_scale(Tdb);
+        let pos = glam::DVec3::new(-1076225.32, -6765896.36, -332308.78);
+        let vel = glam::DVec3::new(9356.86, -3312.35, -1188.02);
+        let s0 = CartesianOrbit::new(
+            lox_core::coords::Cartesian::from_vecs(pos, vel),
+            time,
+            Earth,
+            Icrf,
+        );
+        // try_new should accept static types that implement TryPointMass
+        let vallado = Vallado::try_new(s0);
+        assert!(vallado.is_ok());
+    }
+
+    #[test]
+    fn test_try_new_rejects_non_icrf() {
+        use lox_bodies::DynOrigin;
+
+        let utc = utc!(2023, 3, 25, 21, 8, 0.0).unwrap();
+        let time = utc.to_dyn_time();
+        let pos = glam::DVec3::new(-1076225.32, -6765896.36, -332308.78);
+        let vel = glam::DVec3::new(9356.86, -3312.35, -1188.02);
+        let s0 = CartesianOrbit::new(
+            lox_core::coords::Cartesian::from_vecs(pos, vel),
+            time,
+            DynOrigin::Earth,
+            DynFrame::Iau(DynOrigin::Earth),
+        );
+        let result = Vallado::try_new(s0);
+        assert!(result.is_err());
+    }
 }

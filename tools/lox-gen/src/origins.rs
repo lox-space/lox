@@ -1080,6 +1080,7 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
             fn #origin_test_name() {
                 assert_eq!(#ident.id().0, #id);
                 assert_eq!(#ident.to_string(), #name);
+                assert_eq!(DynOrigin::from(#ident), DynOrigin::#ident);
             }
         });
 
