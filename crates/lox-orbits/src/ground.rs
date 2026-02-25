@@ -271,7 +271,6 @@ where
 mod tests {
     use lox_bodies::Earth;
     use lox_core::coords::Cartesian;
-    use lox_core::units::{Angle, Distance};
     use lox_frames::Icrf;
     use lox_frames::providers::DefaultRotationProvider;
     use lox_test_utils::assert_approx_eq;
@@ -282,18 +281,9 @@ mod tests {
 
     use super::*;
 
-    fn lla(lon_deg: f64, lat_deg: f64, alt_m: f64) -> LonLatAlt {
-        LonLatAlt::builder()
-            .longitude(Angle::degrees(lon_deg))
-            .latitude(Angle::degrees(lat_deg))
-            .altitude(Distance::meters(alt_m))
-            .build()
-            .unwrap()
-    }
-
     #[test]
     fn test_ground_location_to_body_fixed() {
-        let coords = lla(-4.3676, 40.4527, 0.0);
+        let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
         let location = GroundLocation::new(coords, Earth);
         let expected = DVec3::new(4846130.017870638, -370132.8551351891, 4116364.272747229);
         assert_approx_eq!(location.body_fixed_position(), expected);
@@ -301,7 +291,7 @@ mod tests {
 
     #[test]
     fn test_ground_location_rotation_to_topocentric() {
-        let coords = lla(-4.3676, 40.4527, 0.0);
+        let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
         let location = GroundLocation::new(coords, Earth);
         let act = location.rotation_to_topocentric();
         let exp = DMat3::from_cols(
@@ -318,7 +308,7 @@ mod tests {
 
     #[test]
     fn test_ground_location_observables() {
-        let coords = lla(-4.0, 41.0, 0.0);
+        let coords = LonLatAlt::from_degrees(-4.0, 41.0, 0.0).unwrap();
         let location = GroundLocation::new(coords, Earth);
         let position = DVec3::new(3359927.0, -2398072.0, 5153000.0);
         let velocity = DVec3::new(5065.7, 5485.0, -744.0);
@@ -342,7 +332,7 @@ mod tests {
 
     #[test]
     fn test_ground_propagator_body_fixed() {
-        let coords = lla(-4.3676, 40.4527, 0.0);
+        let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
         let location = GroundLocation::new(coords, Earth);
         let propagator = GroundPropagator::new(location.clone());
         let time = utc!(2022, 1, 31, 23).unwrap().to_time();
@@ -359,7 +349,7 @@ mod tests {
 
     #[test]
     fn test_ground_propagator_in_icrf() {
-        let coords = lla(-4.3676, 40.4527, 0.0);
+        let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
         let location = GroundLocation::new(coords, Earth);
         let propagator = GroundPropagator::new(location);
         let time = utc!(2022, 1, 31, 23).unwrap().to_time();
@@ -377,7 +367,7 @@ mod tests {
 
     #[test]
     fn test_try_new_with_static_body() {
-        let coords = lla(-4.3676, 40.4527, 0.0);
+        let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
         let location = GroundLocation::try_new(coords, Earth).unwrap();
         assert_approx_eq!(location.longitude(), -4.3676f64.to_radians());
         assert_approx_eq!(location.latitude(), 40.4527f64.to_radians());
@@ -386,21 +376,21 @@ mod tests {
 
     #[test]
     fn test_try_new_with_dyn_origin() {
-        let coords = lla(-4.3676, 40.4527, 0.0);
+        let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
         let location = GroundLocation::try_new(coords, DynOrigin::Earth).unwrap();
         assert_eq!(location.origin(), DynOrigin::Earth);
     }
 
     #[test]
     fn test_try_new_rejects_non_spheroid() {
-        let coords = lla(0.0, 0.0, 0.0);
+        let coords = LonLatAlt::from_degrees(0.0, 0.0, 0.0).unwrap();
         let result = GroundLocation::try_new(coords, DynOrigin::SolarSystemBarycenter);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_into_dyn_ground_location() {
-        let coords = lla(-4.3676, 40.4527, 0.0);
+        let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
         let location = GroundLocation::new(coords, Earth);
         let dyn_location = location.into_dyn();
         assert_eq!(dyn_location.origin(), DynOrigin::Earth);
@@ -410,7 +400,7 @@ mod tests {
 
     #[test]
     fn test_ground_propagator_try_new_with_dyn_origin() {
-        let coords = lla(-4.3676, 40.4527, 0.0);
+        let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
         let location = GroundLocation::try_new(coords, DynOrigin::Earth).unwrap();
         let propagator = GroundPropagator::try_new(location).unwrap();
         let time = utc!(2022, 1, 31, 23).unwrap().to_time();

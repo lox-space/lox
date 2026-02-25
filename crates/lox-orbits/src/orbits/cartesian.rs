@@ -10,12 +10,12 @@ use lox_bodies::{
     UndefinedOriginPropertyError,
 };
 use lox_core::coords::Cartesian;
+use lox_core::coords::FromBodyFixedError;
 use lox_core::coords::LonLatAlt;
 use lox_ephem::Ephemeris;
 use lox_frames::{
     DynFrame, Iau, Icrf, ReferenceFrame, TryBodyFixed, rotations::TryRotation, traits::frame_id,
 };
-use lox_math::roots::RootFinderError;
 use lox_time::offsets::{DefaultOffsetProvider, Offset};
 use lox_time::time_scales::{Tdb, TimeScale};
 use thiserror::Error;
@@ -109,7 +109,7 @@ where
     T: TimeScale,
     O: Origin + RotationalElements + Spheroid + Copy,
 {
-    pub fn to_ground_location(&self) -> Result<GroundLocation<O>, RootFinderError> {
+    pub fn to_ground_location(&self) -> Result<GroundLocation<O>, FromBodyFixedError> {
         let origin = self.origin();
         let coords = LonLatAlt::from_body_fixed(
             self.position(),
@@ -125,7 +125,7 @@ pub enum StateToDynGroundError {
     #[error("equatorial radius and flattening factor are not available for origin `{}`", .0.name())]
     UndefinedSpheroid(DynOrigin),
     #[error(transparent)]
-    RootFinderError(#[from] RootFinderError),
+    FromBodyFixed(#[from] FromBodyFixedError),
     #[error("not a body-fixed frame {0}")]
     NonBodyFixedFrame(String),
 }

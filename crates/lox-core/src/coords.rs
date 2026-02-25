@@ -95,6 +95,15 @@ impl AzElBuilder {
 pub struct LonLatAlt(Angle, Angle, Distance);
 
 impl LonLatAlt {
+    /// Creates a `LonLatAlt` from longitude and latitude in degrees and altitude in meters.
+    pub fn from_degrees(lon_deg: f64, lat_deg: f64, alt_m: f64) -> Result<Self, LonLatAltError> {
+        LonLatAltBuilder::new()
+            .longitude(Angle::degrees(lon_deg))
+            .latitude(Angle::degrees(lat_deg))
+            .altitude(Distance::meters(alt_m))
+            .build()
+    }
+
     pub fn builder() -> LonLatAltBuilder {
         LonLatAltBuilder::default()
     }
@@ -126,14 +135,38 @@ impl LonLatAlt {
     }
 
     /// Converts a body-fixed Cartesian position (meters) to geodetic coordinates (LLA).
+    ///
+    /// Returns [`FromBodyFixedError::ZeroPosition`] if the position vector has
+    /// zero length. Polar positions (where the equatorial projection is zero)
+    /// are handled as a special case without root-finding.
     pub fn from_body_fixed(
         pos: DVec3,
         equatorial_radius: Distance,
         flattening: f64,
-    ) -> Result<Self, RootFinderError> {
+    ) -> Result<Self, FromBodyFixedError> {
         let r_eq = equatorial_radius.to_meters();
         let rm = pos.length();
+
+        if rm < 1e-10 {
+            return Err(FromBodyFixedError::ZeroPosition);
+        }
+
         let r_delta = (pos.x.powi(2) + pos.y.powi(2)).sqrt();
+
+        // Polar special case: r_delta ≈ 0 means we're on or near a pole.
+        // The iterative solver divides by r_delta so we handle this directly.
+        if r_delta < 1e-10 {
+            let lat = if pos.z >= 0.0 { FRAC_PI_2 } else { -FRAC_PI_2 };
+            let e = (2.0 * flattening - flattening.powi(2)).sqrt();
+            let r_polar = r_eq * (1.0 - e.powi(2)).sqrt();
+            let alt = pos.z.abs() - r_polar;
+            return Ok(LonLatAlt(
+                Angle::radians(0.0),
+                Angle::radians(lat),
+                Distance::meters(alt),
+            ));
+        }
+
         let mut lon = pos.y.atan2(pos.x);
 
         if lon.abs() >= PI {
@@ -185,6 +218,14 @@ pub enum LonLatAltError {
     InvalidLatitude(Angle),
     #[error("invalid altitude {0}")]
     InvalidAltitude(Distance),
+}
+
+#[derive(Debug, Error)]
+pub enum FromBodyFixedError {
+    #[error("position vector has zero length")]
+    ZeroPosition,
+    #[error(transparent)]
+    RootFinder(#[from] RootFinderError),
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -795,22 +836,13 @@ mod tests {
         assert_eq!(c.vz(), 1e3.mps());
     }
 
-    fn lla(lon_deg: f64, lat_deg: f64, alt_m: f64) -> LonLatAlt {
-        LonLatAlt::builder()
-            .longitude(Angle::degrees(lon_deg))
-            .latitude(Angle::degrees(lat_deg))
-            .altitude(Distance::meters(alt_m))
-            .build()
-            .unwrap()
-    }
-
     // Earth constants matching lox-bodies generated values
     const EARTH_R_EQ: f64 = 6378136.6; // meters (6378.1366 km)
     const EARTH_F: f64 = (6378.1366 - 6356.7519) / 6378.1366;
 
     #[test]
     fn test_lla_to_body_fixed() {
-        let coords = lla(-4.3676, 40.4527, 0.0);
+        let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
         let r_eq = Distance::meters(EARTH_R_EQ);
         let result = coords.to_body_fixed(r_eq, EARTH_F);
         let expected = DVec3::new(4846130.017870638, -370132.8551351891, 4116364.272747229);
@@ -819,7 +851,7 @@ mod tests {
 
     #[test]
     fn test_lla_from_body_fixed_roundtrip() {
-        let coords = lla(-4.3676, 40.4527, 100.0);
+        let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 100.0).unwrap();
         let r_eq = Distance::meters(EARTH_R_EQ);
         let body_fixed = coords.to_body_fixed(r_eq, EARTH_F);
         let roundtrip = LonLatAlt::from_body_fixed(body_fixed, r_eq, EARTH_F).unwrap();
@@ -830,7 +862,7 @@ mod tests {
 
     #[test]
     fn test_lla_rotation_to_topocentric() {
-        let coords = lla(-4.3676, 40.4527, 0.0);
+        let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
         let act = coords.rotation_to_topocentric();
         let exp = DMat3::from_cols(
             DVec3::new(0.6469358921661584, 0.07615519584215287, 0.7587320591443464),
@@ -845,5 +877,35 @@ mod tests {
         for i in 0..3 {
             assert!((act.col(i) - exp.col(i)).length() < 1e-10);
         }
+    }
+
+    #[test]
+    fn test_from_body_fixed_north_pole() {
+        let r_eq = Distance::meters(EARTH_R_EQ);
+        let e = (2.0 * EARTH_F - EARTH_F.powi(2)).sqrt();
+        let r_polar = EARTH_R_EQ * (1.0 - e.powi(2)).sqrt();
+        let pos = DVec3::new(0.0, 0.0, r_polar);
+        let result = LonLatAlt::from_body_fixed(pos, r_eq, EARTH_F).unwrap();
+        assert!((result.lat().to_degrees() - 90.0).abs() < 1e-10);
+        assert!(result.alt().to_meters().abs() < 1e-3);
+    }
+
+    #[test]
+    fn test_from_body_fixed_south_pole() {
+        let r_eq = Distance::meters(EARTH_R_EQ);
+        let e = (2.0 * EARTH_F - EARTH_F.powi(2)).sqrt();
+        let r_polar = EARTH_R_EQ * (1.0 - e.powi(2)).sqrt();
+        let pos = DVec3::new(0.0, 0.0, -r_polar - 1000.0);
+        let result = LonLatAlt::from_body_fixed(pos, r_eq, EARTH_F).unwrap();
+        assert!((result.lat().to_degrees() + 90.0).abs() < 1e-10);
+        assert!((result.alt().to_meters() - 1000.0).abs() < 1e-3);
+    }
+
+    #[test]
+    fn test_from_body_fixed_zero_position() {
+        let r_eq = Distance::meters(EARTH_R_EQ);
+        let pos = DVec3::ZERO;
+        let result = LonLatAlt::from_body_fixed(pos, r_eq, EARTH_F);
+        assert!(matches!(result, Err(FromBodyFixedError::ZeroPosition)));
     }
 }

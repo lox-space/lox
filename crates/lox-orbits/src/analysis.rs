@@ -488,7 +488,6 @@ where
 mod tests {
     use lox_bodies::Earth;
     use lox_core::coords::LonLatAlt;
-    use lox_core::units::{Angle, Distance};
     use lox_ephem::spk::parser::Spk;
     use lox_test_utils::{assert_approx_eq, data_dir, data_file, read_data_file};
     use lox_time::Time;
@@ -652,21 +651,14 @@ mod tests {
         .unwrap()
     }
 
-    fn lla(lon_deg: f64, lat_deg: f64, alt_m: f64) -> LonLatAlt {
-        LonLatAlt::builder()
-            .longitude(Angle::degrees(lon_deg))
-            .latitude(Angle::degrees(lat_deg))
-            .altitude(Distance::meters(alt_m))
-            .build()
-            .unwrap()
-    }
-
     fn location() -> GroundLocation<Earth> {
-        GroundLocation::new(lla(-4.3676, 40.4527, 0.0), Earth)
+        let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
+        GroundLocation::new(coords, Earth)
     }
 
     fn location_dyn() -> GroundLocation<DynOrigin> {
-        GroundLocation::try_new(lla(-4.3676, 40.4527, 0.0), DynOrigin::Earth).unwrap()
+        let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
+        GroundLocation::try_new(coords, DynOrigin::Earth).unwrap()
     }
 
     fn contacts() -> Vec<Window<Tai>> {
