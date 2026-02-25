@@ -276,11 +276,14 @@ where
     }
 
     fn propagate(&self, interval: TimeInterval<T>) -> Result<Trajectory<T, O, R>, Self::Error> {
-        let states: Vec<_> = self
-            .states()
-            .into_iter()
-            .filter(|s| s.time() >= interval.start() && s.time() <= interval.end())
-            .collect();
+        let mut states = Vec::new();
+        states.push(self.at(interval.start()));
+        for s in self.states() {
+            if s.time() > interval.start() && s.time() < interval.end() {
+                states.push(s);
+            }
+        }
+        states.push(self.at(interval.end()));
         Trajectory::try_new(states)
     }
 }
