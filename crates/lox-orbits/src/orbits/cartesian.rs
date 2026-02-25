@@ -83,15 +83,15 @@ where
         O: Copy,
         T: Copy,
     {
-        if let (Some(id0), Some(id1)) = (frame_id(&self.reference_frame()), frame_id(&frame)) {
-            if id0 == id1 {
-                return Ok(CartesianOrbit::new(
-                    self.state(),
-                    self.time(),
-                    self.origin(),
-                    frame,
-                ));
-            }
+        if let (Some(id0), Some(id1)) = (frame_id(&self.reference_frame()), frame_id(&frame))
+            && id0 == id1
+        {
+            return Ok(CartesianOrbit::new(
+                self.state(),
+                self.time(),
+                self.origin(),
+                frame,
+            ));
         }
         let rot = provider.try_rotation(self.reference_frame(), frame, self.time())?;
         let (r1, v1) = rot.rotate_state(self.state().position(), self.state().velocity());
@@ -212,7 +212,7 @@ where
 }
 
 impl DynCartesianOrbit {
-    pub fn to_origin_dynamic<E: Ephemeris>(
+    pub fn try_to_origin<E: Ephemeris>(
         &self,
         target: DynOrigin,
         ephemeris: &E,
@@ -238,7 +238,7 @@ impl DynCartesianOrbit {
         ))
     }
 
-    pub fn to_dyn_ground_location(&self) -> Result<DynGroundLocation, StateToDynGroundError> {
+    pub fn try_to_ground_location(&self) -> Result<DynGroundLocation, StateToDynGroundError> {
         let frame = self.reference_frame();
         let origin = self.origin();
         if frame.try_body_fixed().is_err() {
@@ -257,7 +257,7 @@ impl DynCartesianOrbit {
         let (lon, lat, alt) = rv_to_lla(r, r_eq, f)?;
 
         // rv_to_lla returns altitude in meters, GroundLocation expects km
-        Ok(DynGroundLocation::with_dynamic(lon, lat, alt * 1e-3, origin).unwrap())
+        Ok(DynGroundLocation::try_new(lon, lat, alt * 1e-3, origin).unwrap())
     }
 
     pub fn try_rotation_lvlh(&self) -> Result<DMat3, &'static str> {

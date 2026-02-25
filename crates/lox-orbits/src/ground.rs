@@ -74,12 +74,12 @@ impl<B: Spheroid> GroundLocation<B> {
     }
 }
 
-impl DynGroundLocation {
-    pub fn with_dynamic(
+impl<B: TrySpheroid> GroundLocation<B> {
+    pub fn try_new(
         longitude: f64,
         latitude: f64,
         altitude: f64,
-        body: DynOrigin,
+        body: B,
     ) -> Result<Self, &'static str> {
         if body.try_equatorial_radius().is_err() {
             return Err("no spheroid");
@@ -205,7 +205,7 @@ pub type DynGroundPropagator = GroundPropagator<DynOrigin>;
 
 impl<B> GroundPropagator<B>
 where
-    B: Spheroid,
+    B: TrySpheroid,
 {
     pub fn new(location: GroundLocation<B>) -> Self {
         GroundPropagator { location }
@@ -213,10 +213,6 @@ where
 }
 
 impl DynGroundPropagator {
-    pub fn with_dynamic(location: DynGroundLocation) -> Self {
-        GroundPropagator { location }
-    }
-
     pub fn propagate_dyn(&self, time: DynTime) -> Result<DynCartesianOrbit, GroundPropagatorError> {
         let body_fixed_frame = DynFrame::Iau(self.location.body);
         let rot = DefaultRotationProvider
