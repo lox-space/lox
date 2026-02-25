@@ -1281,23 +1281,28 @@ impl PySpaceAsset {
 ///     space_assets: List of SpaceAsset objects.
 ///     occulting_bodies: Optional list of bodies for LOS checking.
 ///     step: Optional time step in seconds for event detection (default: 60).
+///     min_pass_duration: Optional minimum pass duration in seconds. Passes shorter
+///         than this value may be missed. Enables two-level stepping for faster
+///         detection.
 #[pyclass(name = "VisibilityAnalysis", module = "lox_space", frozen)]
 pub struct PyVisibilityAnalysis {
     ground_assets: Vec<GroundAsset>,
     space_assets: Vec<SpaceAsset>,
     occulting_bodies: Vec<DynOrigin>,
     step: TimeDelta,
+    min_pass_duration: Option<TimeDelta>,
 }
 
 #[pymethods]
 impl PyVisibilityAnalysis {
     #[new]
-    #[pyo3(signature = (ground_assets, space_assets, occulting_bodies=None, step=None))]
+    #[pyo3(signature = (ground_assets, space_assets, occulting_bodies=None, step=None, min_pass_duration=None))]
     fn new(
         ground_assets: Vec<PyGroundAsset>,
         space_assets: Vec<PySpaceAsset>,
         occulting_bodies: Option<Vec<PyOrigin>>,
         step: Option<f64>,
+        min_pass_duration: Option<f64>,
     ) -> Self {
         Self {
             ground_assets: ground_assets.into_iter().map(|g| g.0).collect(),
@@ -1308,6 +1313,7 @@ impl PyVisibilityAnalysis {
                 .map(|b| b.0)
                 .collect(),
             step: TimeDelta::from_seconds_f64(step.unwrap_or(60.0)),
+            min_pass_duration: min_pass_duration.map(TimeDelta::from_seconds_f64),
         }
     }
 
@@ -1331,10 +1337,13 @@ impl PyVisibilityAnalysis {
         let interval = TimeInterval::new(start.0, end.0);
 
         let results = py.detach(|| {
-            let analysis =
+            let mut analysis =
                 VisibilityAnalysis::new(&self.ground_assets, &self.space_assets, ephemeris)
                     .with_occulting_bodies(self.occulting_bodies.clone())
                     .with_step(self.step);
+            if let Some(mpd) = self.min_pass_duration {
+                analysis = analysis.with_min_pass_duration(mpd);
+            }
             analysis.compute(interval)
         });
 

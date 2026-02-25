@@ -24,6 +24,6 @@ def t1(t0):
 
 @pytest.mark.benchmark()
 def test_visibility_benchmark(estrack, space_assets, oneweb, t0, t1, ephemeris):
-    analysis = lox.VisibilityAnalysis(estrack, space_assets)
+    analysis = lox.VisibilityAnalysis(estrack, space_assets, min_pass_duration=600)
     results = analysis.compute(t0, t1, ephemeris)
     assert results.num_pairs() == len(oneweb) * len(estrack)
