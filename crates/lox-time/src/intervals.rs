@@ -83,14 +83,32 @@ impl<T> Interval<T> {
 
     /// Returns an iterator of evenly-spaced points from start to end (inclusive)
     /// with the given step size.
+    ///
+    /// The step sign is automatically adjusted to match the interval direction:
+    /// forward if `start <= end`, backward if `start > end`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `step` is zero.
     pub fn step_by(&self, step: TimeDelta) -> IntervalStepIter<T>
     where
         T: Copy + Add<TimeDelta, Output = T> + PartialOrd,
     {
+        assert!(
+            step.is_positive() || step.is_negative(),
+            "step must be non-zero"
+        );
+        let forward = self.start <= self.end;
+        let step = if forward == step.is_positive() {
+            step
+        } else {
+            -step
+        };
         IntervalStepIter {
             current: self.start,
             end: self.end,
             step,
+            forward,
         }
     }
 
@@ -114,6 +132,7 @@ pub struct IntervalStepIter<T> {
     current: T,
     end: T,
     step: TimeDelta,
+    forward: bool,
 }
 
 impl<T> Iterator for IntervalStepIter<T>
@@ -123,7 +142,12 @@ where
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.current > self.end {
+        let done = if self.forward {
+            self.current > self.end
+        } else {
+            self.current < self.end
+        };
+        if done {
             return None;
         }
         let value = self.current;
@@ -245,5 +269,44 @@ mod tests {
         let step = TimeDelta::from_minutes(20.0);
         let times: Vec<_> = interval.step_by(step).collect();
         assert_eq!(times.len(), 4);
+    }
+
+    #[test]
+    fn test_step_by_backward() {
+        let t0 = time!(Tai, 2025, 11, 6).unwrap();
+        let t1 = time!(Tai, 2025, 11, 6, 1).unwrap();
+        // Interval goes backward: start > end
+        let interval = TimeInterval::new(t1, t0);
+        let step = TimeDelta::from_minutes(20.0);
+        let times: Vec<_> = interval.step_by(step).collect();
+        assert_eq!(times.len(), 4); // 60, 40, 20, 0 minutes
+        assert_eq!(times[0], t1);
+        assert_eq!(times[3], t0);
+        // Monotonically decreasing
+        for w in times.windows(2) {
+            assert!(w[0] > w[1]);
+        }
+    }
+
+    #[test]
+    fn test_step_by_backward_auto_negates_step() {
+        let t0 = time!(Tai, 2025, 11, 6).unwrap();
+        let t1 = time!(Tai, 2025, 11, 6, 1).unwrap();
+        // Backward interval with an already-negative step — should still work
+        let interval = TimeInterval::new(t1, t0);
+        let step = -TimeDelta::from_minutes(20.0);
+        let times: Vec<_> = interval.step_by(step).collect();
+        assert_eq!(times.len(), 4);
+        assert_eq!(times[0], t1);
+        assert_eq!(times[3], t0);
+    }
+
+    #[test]
+    #[should_panic(expected = "step must be non-zero")]
+    fn test_step_by_zero_panics() {
+        let t0 = time!(Tai, 2025, 11, 6).unwrap();
+        let t1 = time!(Tai, 2025, 11, 6, 1).unwrap();
+        let interval = TimeInterval::new(t0, t1);
+        let _ = interval.step_by(TimeDelta::default()).collect::<Vec<_>>();
     }
 }

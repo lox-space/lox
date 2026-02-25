@@ -82,6 +82,60 @@ impl From<PyVisibilityError> for PyErr {
     }
 }
 
+/// Convert a `DynTime` to TAI, using the EOP provider if available.
+fn to_tai(
+    time: DynTime,
+    eop: Option<&lox_earth::eop::EopProvider>,
+) -> PyResult<crate::time::Time<Tai>> {
+    match eop {
+        Some(eop) => time
+            .try_to_scale(Tai, eop)
+            .map_err(|e| PyEopProviderError(e).into()),
+        None => Ok(time.to_scale(Tai)),
+    }
+}
+
+/// Shared dispatch for the three-mode `propagate` pattern used by Vallado, J2,
+/// and GroundPropagator.
+///
+/// `state_at` produces a single `DynCartesianOrbit` for a given `DynTime`.
+/// `propagate_interval` produces a `DynTrajectory` for a given interval.
+fn propagate_dispatch<'py>(
+    py: Python<'py>,
+    steps: &Bound<'py, PyAny>,
+    end: Option<PyTime>,
+    frame: Option<PyFrame>,
+    provider: Option<&Bound<'_, PyEopProvider>>,
+    state_at: impl Fn(DynTime) -> PyResult<DynCartesianOrbit>,
+    propagate_interval: impl Fn(Interval<DynTime>) -> PyResult<DynTrajectory>,
+) -> PyResult<Bound<'py, PyAny>> {
+    if let Some(end) = end {
+        let start = steps.extract::<PyTime>()?;
+        let interval = Interval::new(start.0, end.0);
+        let traj = PyTrajectory(propagate_interval(interval)?);
+        return match frame {
+            Some(frame) => Ok(Bound::new(py, traj.to_frame(frame, provider)?)?.into_any()),
+            None => Ok(Bound::new(py, traj)?.into_any()),
+        };
+    }
+    if let Ok(time) = steps.extract::<PyTime>() {
+        let state = PyState(state_at(time.0)?);
+        return match frame {
+            Some(frame) => Ok(Bound::new(py, state.to_frame(frame, provider)?)?.into_any()),
+            None => Ok(Bound::new(py, state)?.into_any()),
+        };
+    }
+    if let Ok(steps) = steps.extract::<Vec<PyTime>>() {
+        let states: Result<Vec<_>, _> = steps.into_iter().map(|s| state_at(s.0)).collect();
+        let traj = PyTrajectory(DynTrajectory::new(states?));
+        return match frame {
+            Some(frame) => Ok(Bound::new(py, traj.to_frame(frame, provider)?)?.into_any()),
+            None => Ok(Bound::new(py, traj)?.into_any()),
+        };
+    }
+    Err(PyValueError::new_err("invalid time argument(s)"))
+}
+
 /// Find events where a function crosses zero.
 ///
 /// This function detects zero-crossings of a user-defined function over a
@@ -778,8 +832,7 @@ impl PyVallado {
     #[new]
     #[pyo3(signature =(initial_state, max_iter=None))]
     fn new(initial_state: PyState, max_iter: Option<i32>) -> PyResult<Self> {
-        let mut vallado =
-            Vallado::try_new(initial_state.0).map_err(PyUndefinedOriginPropertyError)?;
+        let mut vallado = Vallado::try_new(initial_state.0).map_err(PyValladoError)?;
         if let Some(max_iter) = max_iter {
             vallado = vallado.with_max_iter(max_iter);
         }
@@ -814,33 +867,15 @@ impl PyVallado {
         frame: Option<PyFrame>,
         provider: Option<&Bound<'_, PyEopProvider>>,
     ) -> PyResult<Bound<'py, PyAny>> {
-        if let Some(end) = end {
-            let start = steps.extract::<PyTime>()?;
-            let interval = Interval::new(start.0, end.0);
-            let traj = PyTrajectory(self.0.propagate(interval).map_err(PyValladoError)?);
-            return match frame {
-                Some(frame) => Ok(Bound::new(py, traj.to_frame(frame, provider)?)?.into_any()),
-                None => Ok(Bound::new(py, traj)?.into_any()),
-            };
-        }
-        if let Ok(time) = steps.extract::<PyTime>() {
-            let state = PyState(self.0.state_at(time.0).map_err(PyValladoError)?);
-            return match frame {
-                Some(frame) => Ok(Bound::new(py, state.to_frame(frame, provider)?)?.into_any()),
-                None => Ok(Bound::new(py, state)?.into_any()),
-            };
-        }
-        if let Ok(steps) = steps.extract::<Vec<PyTime>>() {
-            let states: Result<Vec<_>, _> =
-                steps.into_iter().map(|s| self.0.state_at(s.0)).collect();
-            let states = states.map_err(PyValladoError)?;
-            let traj = PyTrajectory(DynTrajectory::new(states));
-            return match frame {
-                Some(frame) => Ok(Bound::new(py, traj.to_frame(frame, provider)?)?.into_any()),
-                None => Ok(Bound::new(py, traj)?.into_any()),
-            };
-        }
-        Err(PyValueError::new_err("invalid time argument(s)"))
+        propagate_dispatch(
+            py,
+            steps,
+            end,
+            frame,
+            provider,
+            |t| Ok(self.0.state_at(t).map_err(PyValladoError)?),
+            |i| Ok(self.0.propagate(i).map_err(PyValladoError)?),
+        )
     }
 }
 
@@ -900,33 +935,15 @@ impl PyJ2Propagator {
         frame: Option<PyFrame>,
         provider: Option<&Bound<'_, PyEopProvider>>,
     ) -> PyResult<Bound<'py, PyAny>> {
-        if let Some(end) = end {
-            let start = steps.extract::<PyTime>()?;
-            let interval = Interval::new(start.0, end.0);
-            let traj = PyTrajectory(self.0.propagate(interval).map_err(PyJ2Error)?);
-            return match frame {
-                Some(frame) => Ok(Bound::new(py, traj.to_frame(frame, provider)?)?.into_any()),
-                None => Ok(Bound::new(py, traj)?.into_any()),
-            };
-        }
-        if let Ok(time) = steps.extract::<PyTime>() {
-            let state = PyState(self.0.state_at(time.0).map_err(PyJ2Error)?);
-            return match frame {
-                Some(frame) => Ok(Bound::new(py, state.to_frame(frame, provider)?)?.into_any()),
-                None => Ok(Bound::new(py, state)?.into_any()),
-            };
-        }
-        if let Ok(steps) = steps.extract::<Vec<PyTime>>() {
-            let states: Result<Vec<_>, _> =
-                steps.into_iter().map(|s| self.0.state_at(s.0)).collect();
-            let states = states.map_err(PyJ2Error)?;
-            let traj = PyTrajectory(DynTrajectory::new(states));
-            return match frame {
-                Some(frame) => Ok(Bound::new(py, traj.to_frame(frame, provider)?)?.into_any()),
-                None => Ok(Bound::new(py, traj)?.into_any()),
-            };
-        }
-        Err(PyValueError::new_err("invalid time argument(s)"))
+        propagate_dispatch(
+            py,
+            steps,
+            end,
+            frame,
+            provider,
+            |t| Ok(self.0.state_at(t).map_err(PyJ2Error)?),
+            |i| Ok(self.0.propagate(i).map_err(PyJ2Error)?),
+        )
     }
 }
 
@@ -1070,36 +1087,15 @@ impl PyGroundPropagator {
         frame: Option<PyFrame>,
         provider: Option<&Bound<'_, PyEopProvider>>,
     ) -> PyResult<Bound<'py, PyAny>> {
-        if let Some(end) = end {
-            let start = steps.extract::<PyTime>()?;
-            let interval = Interval::new(start.0, end.0);
-            let traj = PyTrajectory(
-                self.0
-                    .propagate(interval)
-                    .map_err(PyGroundPropagatorError)?,
-            );
-            return match frame {
-                Some(frame) => Ok(Bound::new(py, traj.to_frame(frame, provider)?)?.into_any()),
-                None => Ok(Bound::new(py, traj)?.into_any()),
-            };
-        }
-        if let Ok(time) = steps.extract::<PyTime>() {
-            let state = PyState(self.0.state_at(time.0));
-            return match frame {
-                Some(frame) => Ok(Bound::new(py, state.to_frame(frame, provider)?)?.into_any()),
-                None => Ok(Bound::new(py, state)?.into_any()),
-            };
-        }
-        if let Ok(steps) = steps.extract::<Vec<PyTime>>() {
-            let states: Vec<DynCartesianOrbit> =
-                steps.iter().map(|s| self.0.state_at(s.0)).collect();
-            let traj = PyTrajectory(DynTrajectory::new(states));
-            return match frame {
-                Some(frame) => Ok(Bound::new(py, traj.to_frame(frame, provider)?)?.into_any()),
-                None => Ok(Bound::new(py, traj)?.into_any()),
-            };
-        }
-        Err(PyValueError::new_err("invalid time argument(s)"))
+        propagate_dispatch(
+            py,
+            steps,
+            end,
+            frame,
+            provider,
+            |t| Ok(self.0.state_at(t)),
+            |i| Ok(self.0.propagate(i).map_err(PyGroundPropagatorError)?),
+        )
     }
 }
 
@@ -1179,53 +1175,21 @@ impl PySgp4 {
         provider: Option<&Bound<'_, PyEopProvider>>,
     ) -> PyResult<Bound<'py, PyAny>> {
         let eop = provider.map(|p| &p.get().0);
-        if let Some(end) = end {
-            let start = steps.extract::<PyTime>()?;
-            let start_tai = match eop {
-                Some(eop) => start.0.try_to_scale(Tai, eop).map_err(PyEopProviderError)?,
-                None => start.0.to_scale(Tai),
-            };
-            let end_tai = match eop {
-                Some(eop) => end.0.try_to_scale(Tai, eop).map_err(PyEopProviderError)?,
-                None => end.0.to_scale(Tai),
-            };
-            let interval = Interval::new(start_tai, end_tai);
-            let traj = PyTrajectory(self.0.propagate(interval).map_err(PySgp4Error)?.into_dyn());
-            return match frame {
-                Some(frame) => Ok(Bound::new(py, traj.to_frame(frame, provider)?)?.into_any()),
-                None => Ok(Bound::new(py, traj)?.into_any()),
-            };
-        }
-        if let Ok(pytime) = steps.extract::<PyTime>() {
-            let time = match eop {
-                Some(eop) => pytime
-                    .0
-                    .try_to_scale(Tai, eop)
-                    .map_err(PyEopProviderError)?,
-                None => pytime.0.to_scale(Tai),
-            };
-            let state = PyState(self.0.state_at(time).map_err(PySgp4Error)?.into_dyn());
-            return match frame {
-                Some(frame) => Ok(Bound::new(py, state.to_frame(frame, provider)?)?.into_any()),
-                None => Ok(Bound::new(py, state)?.into_any()),
-            };
-        }
-        if let Ok(pysteps) = steps.extract::<Vec<PyTime>>() {
-            let mut states: Vec<DynCartesianOrbit> = Vec::with_capacity(pysteps.len());
-            for step in pysteps {
-                let time = match eop {
-                    Some(eop) => step.0.try_to_scale(Tai, eop).map_err(PyEopProviderError)?,
-                    None => step.0.to_scale(Tai),
-                };
-                states.push(self.0.state_at(time).map_err(PySgp4Error)?.into_dyn());
-            }
-            let traj = PyTrajectory(DynTrajectory::new(states));
-            return match frame {
-                Some(frame) => Ok(Bound::new(py, traj.to_frame(frame, provider)?)?.into_any()),
-                None => Ok(Bound::new(py, traj)?.into_any()),
-            };
-        }
-        Err(PyValueError::new_err("invalid time argument(s)"))
+        propagate_dispatch(
+            py,
+            steps,
+            end,
+            frame,
+            provider,
+            |t| {
+                let tai = to_tai(t, eop)?;
+                Ok(self.0.state_at(tai).map_err(PySgp4Error)?.into_dyn())
+            },
+            |i| {
+                let interval = Interval::new(to_tai(i.start(), eop)?, to_tai(i.end(), eop)?);
+                Ok(self.0.propagate(interval).map_err(PySgp4Error)?.into_dyn())
+            },
+        )
     }
 }
 

@@ -13,14 +13,20 @@ use lox_bodies::{DynOrigin, Origin, PointMass, TryPointMass, UndefinedOriginProp
 
 use crate::orbits::{CartesianOrbit, TrajectorError, Trajectory};
 use crate::propagators::{Propagator, stumpff};
-use lox_frames::{DynFrame, ReferenceFrame};
+use lox_frames::{
+    DynFrame, NonQuasiInertialFrameError, QuasiInertial, ReferenceFrame, TryQuasiInertial,
+};
 
-#[derive(Debug, Error, PartialEq)]
+#[derive(Debug, Error)]
 pub enum ValladoError {
     #[error("did not converge")]
     NotConverged,
     #[error(transparent)]
     TrajectoryError(#[from] TrajectorError),
+    #[error(transparent)]
+    UndefinedOriginProperty(#[from] UndefinedOriginPropertyError),
+    #[error(transparent)]
+    NonQuasiInertialFrame(#[from] NonQuasiInertialFrameError),
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -32,12 +38,12 @@ pub struct Vallado<T: TimeScale, O: Origin, R: ReferenceFrame> {
 
 pub type DynVallado = Vallado<DynTimeScale, DynOrigin, DynFrame>;
 
-// Infallible — static bounds
+// Infallible — static bounds guarantee inertial frame and point mass.
 impl<T, O, R> Vallado<T, O, R>
 where
     T: TimeScale,
     O: PointMass + Copy,
-    R: ReferenceFrame,
+    R: QuasiInertial,
 {
     pub fn new(initial_state: CartesianOrbit<T, O, R>) -> Self {
         Self {
@@ -48,17 +54,16 @@ where
     }
 }
 
-// Fallible — Try* bounds (covers DynOrigin)
+// Fallible — Try* bounds (covers DynOrigin and DynFrame).
 impl<T, O, R> Vallado<T, O, R>
 where
     T: TimeScale,
     O: TryPointMass + Copy,
-    R: ReferenceFrame,
+    R: TryQuasiInertial + Copy,
 {
-    pub fn try_new(
-        initial_state: CartesianOrbit<T, O, R>,
-    ) -> Result<Self, UndefinedOriginPropertyError> {
+    pub fn try_new(initial_state: CartesianOrbit<T, O, R>) -> Result<Self, ValladoError> {
         initial_state.origin().try_gravitational_parameter()?;
+        initial_state.reference_frame().try_quasi_inertial()?;
         Ok(Self {
             initial_state,
             max_iter: 300,
@@ -340,6 +345,24 @@ mod tests {
             time,
             DynOrigin::Callirrhoe,
             DynFrame::Icrf,
+        );
+        let result = Vallado::try_new(s0);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_try_new_rejects_non_inertial_frame() {
+        use lox_bodies::DynOrigin;
+
+        let utc = utc!(2023, 3, 25, 21, 8, 0.0).unwrap();
+        let time = utc.to_dyn_time();
+        let pos = glam::DVec3::new(-1076225.32, -6765896.36, -332308.78);
+        let vel = glam::DVec3::new(9356.86, -3312.35, -1188.02);
+        let s0 = CartesianOrbit::new(
+            lox_core::coords::Cartesian::from_vecs(pos, vel),
+            time,
+            DynOrigin::Earth,
+            DynFrame::Iau(DynOrigin::Earth),
         );
         let result = Vallado::try_new(s0);
         assert!(result.is_err());
