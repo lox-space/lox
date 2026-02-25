@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.13](https://github.com/lox-space/lox/compare/lox-bodies-v0.1.0-alpha.12...lox-bodies-v0.1.0-alpha.13) - 2026-02-25
+
+### Added
+
+- add conversions to `dyn` types
+
+### Other
+
+- add into_dyn tests
+
 ## [0.1.0-alpha.12](https://github.com/lox-space/lox/compare/lox-bodies-v0.1.0-alpha.11...lox-bodies-v0.1.0-alpha.12) - 2026-02-22
 
 ### Added
