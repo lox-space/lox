@@ -6,6 +6,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.23](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.22...lox-orbits-v0.1.0-alpha.23) - 2026-02-25
+
+### Added
+
+- add conversions to `dyn` types
+
+### Fixed
+
+- *(lox-orbits)* fix trajectory propagator
+
+### Other
+
+- *(lox-orbits)* address review comments
+- *(lox-orbits)* remove frame change and change time parameters
+- *(lox-orbits/lox-core)* move LLA <-> Cartesian logic to lox-core
+- *(lox-orbits)* re-design propagator API
+- add into_dyn tests
+- more simplifications
+- add fast paths for no-op conversions
+- *(lox-orbits)* simplify based on `into_dyn` and co.
+- *(lox-ephem)* clean-up API and style
+- *(lox-ephem)* refactor ephemeris interface
+
 ## [0.1.0-alpha.22](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.21...lox-orbits-v0.1.0-alpha.22) - 2026-02-22
 
 ### Added
