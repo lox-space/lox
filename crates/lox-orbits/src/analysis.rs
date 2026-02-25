@@ -366,7 +366,7 @@ pub fn visibility_los(
             let tdb = time.try_to_scale(Tdb, &DefaultOffsetProvider).unwrap();
             let r_body = ephem.position(tdb, sc.origin(), body).unwrap();
             let r_sc = sc.interpolate_at(time).position() - r_body;
-            let r_gs = DynGroundPropagator::with_dynamic(gs.clone())
+            let r_gs = DynGroundPropagator::new(gs.clone())
                 .propagate_dyn(time)
                 .unwrap()
                 .position()
@@ -657,7 +657,7 @@ mod tests {
     fn location_dyn() -> GroundLocation<DynOrigin> {
         let longitude = -4.3676f64.to_radians();
         let latitude = 40.4527f64.to_radians();
-        GroundLocation::with_dynamic(longitude, latitude, 0.0, DynOrigin::Earth).unwrap()
+        GroundLocation::try_new(longitude, latitude, 0.0, DynOrigin::Earth).unwrap()
     }
 
     fn contacts() -> Vec<Window<Tai>> {
