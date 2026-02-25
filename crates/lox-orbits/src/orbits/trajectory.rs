@@ -396,3 +396,70 @@ fn parse_csv_states<O: Origin + Copy, R: ReferenceFrame + Copy>(
     }
     Ok(states)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use glam::DVec3;
+    use lox_bodies::{DynOrigin, Earth};
+    use lox_frames::{DynFrame, Icrf};
+    use lox_time::time_scales::DynTimeScale;
+    use lox_time::{time, time_scales::Tdb};
+
+    fn sample_trajectory() -> Trajectory<Tdb, Earth, Icrf> {
+        let t0 = time!(Tdb, 2023, 1, 1, 12).unwrap();
+        let t1 = t0 + lox_time::deltas::TimeDelta::from_seconds(60);
+        let t2 = t0 + lox_time::deltas::TimeDelta::from_seconds(120);
+        let s0 = CartesianOrbit::new(
+            Cartesian::from_vecs(DVec3::new(7000e3, 0.0, 0.0), DVec3::new(0.0, 7500.0, 0.0)),
+            t0,
+            Earth,
+            Icrf,
+        );
+        let s1 = CartesianOrbit::new(
+            Cartesian::from_vecs(
+                DVec3::new(6999e3, 100e3, 0.0),
+                DVec3::new(-10.0, 7499.0, 0.0),
+            ),
+            t1,
+            Earth,
+            Icrf,
+        );
+        let s2 = CartesianOrbit::new(
+            Cartesian::from_vecs(
+                DVec3::new(6996e3, 200e3, 0.0),
+                DVec3::new(-20.0, 7498.0, 0.0),
+            ),
+            t2,
+            Earth,
+            Icrf,
+        );
+        Trajectory::new(vec![s0, s1, s2])
+    }
+
+    #[test]
+    fn test_trajectory_into_dyn() {
+        let traj = sample_trajectory();
+        let first_pos = traj.states().first().unwrap().position();
+        let dyn_traj = traj.into_dyn();
+
+        assert_eq!(dyn_traj.origin(), DynOrigin::Earth);
+        assert_eq!(dyn_traj.reference_frame(), DynFrame::Icrf);
+        assert_eq!(
+            dyn_traj.states().first().unwrap().time().scale(),
+            DynTimeScale::Tdb
+        );
+        assert_eq!(dyn_traj.states().first().unwrap().position(), first_pos);
+    }
+
+    #[test]
+    fn test_trajectory_into_parts() {
+        let traj = sample_trajectory();
+        let epoch_before = traj.epoch();
+        let (epoch, origin, frame, _data) = traj.into_parts();
+
+        assert_eq!(origin, Earth);
+        assert_eq!(frame, Icrf);
+        assert_eq!(epoch, epoch_before);
+    }
+}

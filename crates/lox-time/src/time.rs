@@ -1069,4 +1069,19 @@ mod tests {
         let expected = TimeDelta::from_seconds(0);
         assert_eq!(actual, expected);
     }
+
+    #[test]
+    fn test_time_into_dyn() {
+        use crate::time_scales::DynTimeScale;
+
+        let time = time!(Tai, 2000, 1, 1, 12, 0, 0.0).unwrap();
+        let dyn_time = time.into_dyn();
+        assert_eq!(dyn_time.scale(), DynTimeScale::Tai);
+        assert_eq!(dyn_time.to_delta(), time.to_delta());
+
+        let tdb_time = time!(Tdb, 2023, 6, 15, 10, 30, 0.0).unwrap();
+        let dyn_tdb = tdb_time.into_dyn();
+        assert_eq!(dyn_tdb.scale(), DynTimeScale::Tdb);
+        assert_eq!(dyn_tdb.to_delta(), tdb_time.to_delta());
+    }
 }

@@ -337,4 +337,52 @@ mod tests {
         let state = propagator.propagate(time).unwrap();
         assert_approx_eq!(state.position(), expected);
     }
+
+    #[test]
+    fn test_try_new_with_static_body() {
+        let longitude = -4.3676f64.to_radians();
+        let latitude = 40.4527f64.to_radians();
+        let location = GroundLocation::try_new(longitude, latitude, 0.0, Earth).unwrap();
+        assert_approx_eq!(location.longitude(), longitude);
+        assert_approx_eq!(location.latitude(), latitude);
+        assert_approx_eq!(location.altitude(), 0.0);
+    }
+
+    #[test]
+    fn test_try_new_with_dyn_origin() {
+        let longitude = -4.3676f64.to_radians();
+        let latitude = 40.4527f64.to_radians();
+        let location = GroundLocation::try_new(longitude, latitude, 0.0, DynOrigin::Earth).unwrap();
+        assert_eq!(location.origin(), DynOrigin::Earth);
+    }
+
+    #[test]
+    fn test_try_new_rejects_non_spheroid() {
+        let result = GroundLocation::try_new(0.0, 0.0, 0.0, DynOrigin::SolarSystemBarycenter);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_into_dyn_ground_location() {
+        let longitude = -4.3676f64.to_radians();
+        let latitude = 40.4527f64.to_radians();
+        let location = GroundLocation::new(longitude, latitude, 0.0, Earth);
+        let dyn_location = location.into_dyn();
+        assert_eq!(dyn_location.origin(), DynOrigin::Earth);
+        assert_approx_eq!(dyn_location.longitude(), longitude);
+        assert_approx_eq!(dyn_location.latitude(), latitude);
+    }
+
+    #[test]
+    fn test_ground_propagator_new_with_dyn_origin() {
+        let longitude = -4.3676f64.to_radians();
+        let latitude = 40.4527f64.to_radians();
+        let location = GroundLocation::try_new(longitude, latitude, 0.0, DynOrigin::Earth).unwrap();
+        let propagator = GroundPropagator::new(location);
+        let time = utc!(2022, 1, 31, 23).unwrap().to_dyn_time();
+        let state = propagator.propagate_dyn(time).unwrap();
+        // Same result as the static version
+        let expected = DVec3::new(-1765953.5510583583, 4524585.984442561, 4120189.198495323);
+        assert_approx_eq!(state.position(), expected);
+    }
 }
