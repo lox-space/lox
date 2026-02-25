@@ -363,6 +363,42 @@ mod tests {
         assert!(DynFrame::J2000.try_quasi_inertial().is_ok());
     }
 
+    #[test]
+    fn test_from_simple_frames() {
+        assert_eq!(DynFrame::from(Icrf), DynFrame::Icrf);
+        assert_eq!(DynFrame::from(J2000), DynFrame::J2000);
+        assert_eq!(DynFrame::from(Cirf), DynFrame::Cirf);
+        assert_eq!(DynFrame::from(Tirf), DynFrame::Tirf);
+        assert_eq!(DynFrame::from(Itrf), DynFrame::Itrf);
+        assert_eq!(DynFrame::from(Teme), DynFrame::Teme);
+    }
+
+    #[test]
+    fn test_from_parameterized_frames() {
+        use crate::iers::{Iers1996, Iers2003, Iers2010};
+
+        assert_eq!(
+            DynFrame::from(Mod(Iers1996)),
+            DynFrame::Mod(ReferenceSystem::Iers1996)
+        );
+        assert_eq!(
+            DynFrame::from(Tod(Iers2003::default())),
+            DynFrame::Tod(ReferenceSystem::Iers2003(Iau2000Model::A))
+        );
+        assert_eq!(
+            DynFrame::from(Pef(Iers2010)),
+            DynFrame::Pef(ReferenceSystem::Iers2010)
+        );
+    }
+
+    #[test]
+    fn test_from_iau_frame() {
+        assert_eq!(
+            DynFrame::from(Iau::new(Earth)),
+            DynFrame::Iau(DynOrigin::Earth)
+        );
+    }
+
     #[rstest]
     #[case(DynFrame::Icrf)]
     #[case(DynFrame::J2000)]

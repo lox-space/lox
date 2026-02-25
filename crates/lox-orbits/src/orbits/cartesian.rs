@@ -427,6 +427,85 @@ mod tests {
         assert_approx_eq!(diff.velocity(), DVec3::new(0.5, 1.0, 1.5));
     }
 
+    #[test]
+    fn test_into_dyn() {
+        use lox_bodies::DynOrigin;
+        use lox_frames::DynFrame;
+        use lox_time::time_scales::DynTimeScale;
+
+        let time = time!(Tdb, 2023, 3, 25, 21, 8, 0.0).unwrap();
+        let pos = DVec3::new(1000.0, 2000.0, 3000.0);
+        let vel = DVec3::new(1.0, 2.0, 3.0);
+        let state = CartesianOrbit::new(Cartesian::from_vecs(pos, vel), time, Earth, Icrf);
+        let dyn_state = state.into_dyn();
+
+        assert_eq!(dyn_state.origin(), DynOrigin::Earth);
+        assert_eq!(dyn_state.reference_frame(), DynFrame::Icrf);
+        assert_eq!(dyn_state.time().scale(), DynTimeScale::Tdb);
+        assert_approx_eq!(dyn_state.position(), pos);
+        assert_approx_eq!(dyn_state.velocity(), vel);
+    }
+
+    #[test]
+    fn test_try_to_frame_identity() {
+        use lox_bodies::DynOrigin;
+        use lox_frames::DynFrame;
+
+        let time = Utc::from_iso("2024-07-05T09:09:18.173")
+            .unwrap()
+            .to_dyn_time();
+        let pos = DVec3::new(6068.27927, -1692.84394, -2516.61918);
+        let vel = DVec3::new(-0.660415582, 5.495938726, -5.303093233);
+        let state = CartesianOrbit::new(
+            Cartesian::from_vecs(pos, vel),
+            time,
+            DynOrigin::Earth,
+            DynFrame::Icrf,
+        );
+
+        // Converting ICRF→ICRF should be a no-op that preserves state exactly
+        let same = state
+            .try_to_frame(DynFrame::Icrf, &DefaultRotationProvider)
+            .unwrap();
+        assert_eq!(same.position(), pos);
+        assert_eq!(same.velocity(), vel);
+    }
+
+    #[test]
+    fn test_to_origin_same_origin() {
+        let r = DVec3::new(6068279.27, -1692843.94, -2516619.18);
+        let v = DVec3::new(-660.415582, 5495.938726, -5303.093233);
+        let utc = Utc::from_iso("2016-05-30T12:00:00.000").unwrap();
+        let tai = utc.to_time();
+
+        let state = CartesianOrbit::new(Cartesian::from_vecs(r, v), tai, Earth, Icrf);
+        // Same origin should return identical state without needing ephemeris
+        let same = state.to_origin(Earth, ephemeris()).unwrap();
+        assert_eq!(same.position(), r);
+        assert_eq!(same.velocity(), v);
+    }
+
+    #[test]
+    fn test_try_to_origin_same_origin() {
+        use lox_bodies::DynOrigin;
+        use lox_frames::DynFrame;
+
+        let r = DVec3::new(6068279.27, -1692843.94, -2516619.18);
+        let v = DVec3::new(-660.415582, 5495.938726, -5303.093233);
+        let utc = Utc::from_iso("2016-05-30T12:00:00.000").unwrap();
+        let time = utc.to_dyn_time();
+
+        let state = CartesianOrbit::new(
+            Cartesian::from_vecs(r, v),
+            time,
+            DynOrigin::Earth,
+            DynFrame::Icrf,
+        );
+        let same = state.try_to_origin(DynOrigin::Earth, ephemeris()).unwrap();
+        assert_eq!(same.position(), r);
+        assert_eq!(same.velocity(), v);
+    }
+
     fn ephemeris() -> &'static Spk {
         static EPHEMERIS: OnceLock<Spk> = OnceLock::new();
         EPHEMERIS.get_or_init(|| Spk::from_file(data_file("spice/de440s.bsp")).unwrap())

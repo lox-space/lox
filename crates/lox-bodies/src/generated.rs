@@ -14825,6 +14825,7 @@ mod tests {
     fn test_origin_10() {
         assert_eq!(Sun.id().0, 10i32);
         assert_eq!(Sun.to_string(), "Sun");
+        assert_eq!(DynOrigin::from(Sun), DynOrigin::Sun);
     }
     #[test]
     fn test_point_mass_10() {
@@ -14877,6 +14878,7 @@ mod tests {
     fn test_origin_199() {
         assert_eq!(Mercury.id().0, 199i32);
         assert_eq!(Mercury.to_string(), "Mercury");
+        assert_eq!(DynOrigin::from(Mercury), DynOrigin::Mercury);
     }
     #[test]
     fn test_point_mass_199() {
@@ -14936,6 +14938,7 @@ mod tests {
     fn test_origin_299() {
         assert_eq!(Venus.id().0, 299i32);
         assert_eq!(Venus.to_string(), "Venus");
+        assert_eq!(DynOrigin::from(Venus), DynOrigin::Venus);
     }
     #[test]
     fn test_point_mass_299() {
@@ -14992,6 +14995,7 @@ mod tests {
     fn test_origin_399() {
         assert_eq!(Earth.id().0, 399i32);
         assert_eq!(Earth.to_string(), "Earth");
+        assert_eq!(DynOrigin::from(Earth), DynOrigin::Earth);
     }
     #[test]
     fn test_point_mass_399() {
@@ -15051,6 +15055,7 @@ mod tests {
     fn test_origin_499() {
         assert_eq!(Mars.id().0, 499i32);
         assert_eq!(Mars.to_string(), "Mars");
+        assert_eq!(DynOrigin::from(Mars), DynOrigin::Mars);
     }
     #[test]
     fn test_point_mass_499() {
@@ -15107,6 +15112,7 @@ mod tests {
     fn test_origin_599() {
         assert_eq!(Jupiter.id().0, 599i32);
         assert_eq!(Jupiter.to_string(), "Jupiter");
+        assert_eq!(DynOrigin::from(Jupiter), DynOrigin::Jupiter);
     }
     #[test]
     fn test_point_mass_599() {
@@ -15163,6 +15169,7 @@ mod tests {
     fn test_origin_699() {
         assert_eq!(Saturn.id().0, 699i32);
         assert_eq!(Saturn.to_string(), "Saturn");
+        assert_eq!(DynOrigin::from(Saturn), DynOrigin::Saturn);
     }
     #[test]
     fn test_point_mass_699() {
@@ -15219,6 +15226,7 @@ mod tests {
     fn test_origin_799() {
         assert_eq!(Uranus.id().0, 799i32);
         assert_eq!(Uranus.to_string(), "Uranus");
+        assert_eq!(DynOrigin::from(Uranus), DynOrigin::Uranus);
     }
     #[test]
     fn test_point_mass_799() {
@@ -15275,6 +15283,7 @@ mod tests {
     fn test_origin_899() {
         assert_eq!(Neptune.id().0, 899i32);
         assert_eq!(Neptune.to_string(), "Neptune");
+        assert_eq!(DynOrigin::from(Neptune), DynOrigin::Neptune);
     }
     #[test]
     fn test_point_mass_899() {
@@ -15331,6 +15340,7 @@ mod tests {
     fn test_origin_999() {
         assert_eq!(Pluto.id().0, 999i32);
         assert_eq!(Pluto.to_string(), "Pluto");
+        assert_eq!(DynOrigin::from(Pluto), DynOrigin::Pluto);
     }
     #[test]
     fn test_point_mass_999() {
@@ -15387,6 +15397,10 @@ mod tests {
     fn test_origin_0() {
         assert_eq!(SolarSystemBarycenter.id().0, 0i32);
         assert_eq!(SolarSystemBarycenter.to_string(), "Solar System Barycenter");
+        assert_eq!(
+            DynOrigin::from(SolarSystemBarycenter),
+            DynOrigin::SolarSystemBarycenter
+        );
     }
     #[test]
     fn test_point_mass_0() {
@@ -15403,6 +15417,10 @@ mod tests {
     fn test_origin_1() {
         assert_eq!(MercuryBarycenter.id().0, 1i32);
         assert_eq!(MercuryBarycenter.to_string(), "Mercury Barycenter");
+        assert_eq!(
+            DynOrigin::from(MercuryBarycenter),
+            DynOrigin::MercuryBarycenter
+        );
     }
     #[test]
     fn test_point_mass_1() {
@@ -15419,6 +15437,7 @@ mod tests {
     fn test_origin_2() {
         assert_eq!(VenusBarycenter.id().0, 2i32);
         assert_eq!(VenusBarycenter.to_string(), "Venus Barycenter");
+        assert_eq!(DynOrigin::from(VenusBarycenter), DynOrigin::VenusBarycenter);
     }
     #[test]
     fn test_point_mass_2() {
@@ -15435,6 +15454,7 @@ mod tests {
     fn test_origin_3() {
         assert_eq!(EarthBarycenter.id().0, 3i32);
         assert_eq!(EarthBarycenter.to_string(), "Earth Barycenter");
+        assert_eq!(DynOrigin::from(EarthBarycenter), DynOrigin::EarthBarycenter);
     }
     #[test]
     fn test_point_mass_3() {
@@ -15451,6 +15471,7 @@ mod tests {
     fn test_origin_4() {
         assert_eq!(MarsBarycenter.id().0, 4i32);
         assert_eq!(MarsBarycenter.to_string(), "Mars Barycenter");
+        assert_eq!(DynOrigin::from(MarsBarycenter), DynOrigin::MarsBarycenter);
     }
     #[test]
     fn test_point_mass_4() {
@@ -15467,6 +15488,10 @@ mod tests {
     fn test_origin_5() {
         assert_eq!(JupiterBarycenter.id().0, 5i32);
         assert_eq!(JupiterBarycenter.to_string(), "Jupiter Barycenter");
+        assert_eq!(
+            DynOrigin::from(JupiterBarycenter),
+            DynOrigin::JupiterBarycenter
+        );
     }
     #[test]
     fn test_point_mass_5() {
@@ -15483,6 +15508,10 @@ mod tests {
     fn test_origin_6() {
         assert_eq!(SaturnBarycenter.id().0, 6i32);
         assert_eq!(SaturnBarycenter.to_string(), "Saturn Barycenter");
+        assert_eq!(
+            DynOrigin::from(SaturnBarycenter),
+            DynOrigin::SaturnBarycenter
+        );
     }
     #[test]
     fn test_point_mass_6() {
@@ -15499,6 +15528,10 @@ mod tests {
     fn test_origin_7() {
         assert_eq!(UranusBarycenter.id().0, 7i32);
         assert_eq!(UranusBarycenter.to_string(), "Uranus Barycenter");
+        assert_eq!(
+            DynOrigin::from(UranusBarycenter),
+            DynOrigin::UranusBarycenter
+        );
     }
     #[test]
     fn test_point_mass_7() {
@@ -15515,6 +15548,10 @@ mod tests {
     fn test_origin_8() {
         assert_eq!(NeptuneBarycenter.id().0, 8i32);
         assert_eq!(NeptuneBarycenter.to_string(), "Neptune Barycenter");
+        assert_eq!(
+            DynOrigin::from(NeptuneBarycenter),
+            DynOrigin::NeptuneBarycenter
+        );
     }
     #[test]
     fn test_point_mass_8() {
@@ -15531,6 +15568,7 @@ mod tests {
     fn test_origin_9() {
         assert_eq!(PlutoBarycenter.id().0, 9i32);
         assert_eq!(PlutoBarycenter.to_string(), "Pluto Barycenter");
+        assert_eq!(DynOrigin::from(PlutoBarycenter), DynOrigin::PlutoBarycenter);
     }
     #[test]
     fn test_point_mass_9() {
@@ -15547,6 +15585,7 @@ mod tests {
     fn test_origin_301() {
         assert_eq!(Moon.id().0, 301i32);
         assert_eq!(Moon.to_string(), "Moon");
+        assert_eq!(DynOrigin::from(Moon), DynOrigin::Moon);
     }
     #[test]
     fn test_point_mass_301() {
@@ -15603,6 +15642,7 @@ mod tests {
     fn test_origin_401() {
         assert_eq!(Phobos.id().0, 401i32);
         assert_eq!(Phobos.to_string(), "Phobos");
+        assert_eq!(DynOrigin::from(Phobos), DynOrigin::Phobos);
     }
     #[test]
     fn test_point_mass_401() {
@@ -15651,6 +15691,7 @@ mod tests {
     fn test_origin_402() {
         assert_eq!(Deimos.id().0, 402i32);
         assert_eq!(Deimos.to_string(), "Deimos");
+        assert_eq!(DynOrigin::from(Deimos), DynOrigin::Deimos);
     }
     #[test]
     fn test_point_mass_402() {
@@ -15701,6 +15742,7 @@ mod tests {
     fn test_origin_501() {
         assert_eq!(Io.id().0, 501i32);
         assert_eq!(Io.to_string(), "Io");
+        assert_eq!(DynOrigin::from(Io), DynOrigin::Io);
     }
     #[test]
     fn test_point_mass_501() {
@@ -15749,6 +15791,7 @@ mod tests {
     fn test_origin_502() {
         assert_eq!(Europa.id().0, 502i32);
         assert_eq!(Europa.to_string(), "Europa");
+        assert_eq!(DynOrigin::from(Europa), DynOrigin::Europa);
     }
     #[test]
     fn test_point_mass_502() {
@@ -15797,6 +15840,7 @@ mod tests {
     fn test_origin_503() {
         assert_eq!(Ganymede.id().0, 503i32);
         assert_eq!(Ganymede.to_string(), "Ganymede");
+        assert_eq!(DynOrigin::from(Ganymede), DynOrigin::Ganymede);
     }
     #[test]
     fn test_point_mass_503() {
@@ -15856,6 +15900,7 @@ mod tests {
     fn test_origin_504() {
         assert_eq!(Callisto.id().0, 504i32);
         assert_eq!(Callisto.to_string(), "Callisto");
+        assert_eq!(DynOrigin::from(Callisto), DynOrigin::Callisto);
     }
     #[test]
     fn test_point_mass_504() {
@@ -15915,6 +15960,7 @@ mod tests {
     fn test_origin_505() {
         assert_eq!(Amalthea.id().0, 505i32);
         assert_eq!(Amalthea.to_string(), "Amalthea");
+        assert_eq!(DynOrigin::from(Amalthea), DynOrigin::Amalthea);
     }
     #[test]
     fn test_point_mass_505() {
@@ -15963,6 +16009,7 @@ mod tests {
     fn test_origin_506() {
         assert_eq!(Himalia.id().0, 506i32);
         assert_eq!(Himalia.to_string(), "Himalia");
+        assert_eq!(DynOrigin::from(Himalia), DynOrigin::Himalia);
     }
     #[test]
     fn test_point_mass_506() {
@@ -16019,6 +16066,7 @@ mod tests {
     fn test_origin_507() {
         assert_eq!(Elara.id().0, 507i32);
         assert_eq!(Elara.to_string(), "Elara");
+        assert_eq!(DynOrigin::from(Elara), DynOrigin::Elara);
     }
     #[test]
     fn test_point_mass_507() {
@@ -16068,6 +16116,7 @@ mod tests {
     fn test_origin_508() {
         assert_eq!(Pasiphae.id().0, 508i32);
         assert_eq!(Pasiphae.to_string(), "Pasiphae");
+        assert_eq!(DynOrigin::from(Pasiphae), DynOrigin::Pasiphae);
     }
     #[test]
     fn test_point_mass_508() {
@@ -16117,6 +16166,7 @@ mod tests {
     fn test_origin_509() {
         assert_eq!(Sinope.id().0, 509i32);
         assert_eq!(Sinope.to_string(), "Sinope");
+        assert_eq!(DynOrigin::from(Sinope), DynOrigin::Sinope);
     }
     #[test]
     fn test_point_mass_509() {
@@ -16166,6 +16216,7 @@ mod tests {
     fn test_origin_510() {
         assert_eq!(Lysithea.id().0, 510i32);
         assert_eq!(Lysithea.to_string(), "Lysithea");
+        assert_eq!(DynOrigin::from(Lysithea), DynOrigin::Lysithea);
     }
     #[test]
     fn test_point_mass_510() {
@@ -16215,6 +16266,7 @@ mod tests {
     fn test_origin_511() {
         assert_eq!(Carme.id().0, 511i32);
         assert_eq!(Carme.to_string(), "Carme");
+        assert_eq!(DynOrigin::from(Carme), DynOrigin::Carme);
     }
     #[test]
     fn test_point_mass_511() {
@@ -16264,6 +16316,7 @@ mod tests {
     fn test_origin_512() {
         assert_eq!(Ananke.id().0, 512i32);
         assert_eq!(Ananke.to_string(), "Ananke");
+        assert_eq!(DynOrigin::from(Ananke), DynOrigin::Ananke);
     }
     #[test]
     fn test_point_mass_512() {
@@ -16313,6 +16366,7 @@ mod tests {
     fn test_origin_513() {
         assert_eq!(Leda.id().0, 513i32);
         assert_eq!(Leda.to_string(), "Leda");
+        assert_eq!(DynOrigin::from(Leda), DynOrigin::Leda);
     }
     #[test]
     fn test_point_mass_513() {
@@ -16362,6 +16416,7 @@ mod tests {
     fn test_origin_514() {
         assert_eq!(Thebe.id().0, 514i32);
         assert_eq!(Thebe.to_string(), "Thebe");
+        assert_eq!(DynOrigin::from(Thebe), DynOrigin::Thebe);
     }
     #[test]
     fn test_point_mass_514() {
@@ -16410,6 +16465,7 @@ mod tests {
     fn test_origin_515() {
         assert_eq!(Adrastea.id().0, 515i32);
         assert_eq!(Adrastea.to_string(), "Adrastea");
+        assert_eq!(DynOrigin::from(Adrastea), DynOrigin::Adrastea);
     }
     #[test]
     fn test_point_mass_515() {
@@ -16458,6 +16514,7 @@ mod tests {
     fn test_origin_516() {
         assert_eq!(Metis.id().0, 516i32);
         assert_eq!(Metis.to_string(), "Metis");
+        assert_eq!(DynOrigin::from(Metis), DynOrigin::Metis);
     }
     #[test]
     fn test_point_mass_516() {
@@ -16506,6 +16563,7 @@ mod tests {
     fn test_origin_517() {
         assert_eq!(Callirrhoe.id().0, 517i32);
         assert_eq!(Callirrhoe.to_string(), "Callirrhoe");
+        assert_eq!(DynOrigin::from(Callirrhoe), DynOrigin::Callirrhoe);
     }
     #[test]
     fn test_point_mass_517() {
@@ -16528,6 +16586,7 @@ mod tests {
     fn test_origin_518() {
         assert_eq!(Themisto.id().0, 518i32);
         assert_eq!(Themisto.to_string(), "Themisto");
+        assert_eq!(DynOrigin::from(Themisto), DynOrigin::Themisto);
     }
     #[test]
     fn test_point_mass_518() {
@@ -16550,6 +16609,7 @@ mod tests {
     fn test_origin_519() {
         assert_eq!(Magaclite.id().0, 519i32);
         assert_eq!(Magaclite.to_string(), "Magaclite");
+        assert_eq!(DynOrigin::from(Magaclite), DynOrigin::Magaclite);
     }
     #[test]
     fn test_point_mass_519() {
@@ -16572,6 +16632,7 @@ mod tests {
     fn test_origin_520() {
         assert_eq!(Taygete.id().0, 520i32);
         assert_eq!(Taygete.to_string(), "Taygete");
+        assert_eq!(DynOrigin::from(Taygete), DynOrigin::Taygete);
     }
     #[test]
     fn test_point_mass_520() {
@@ -16594,6 +16655,7 @@ mod tests {
     fn test_origin_521() {
         assert_eq!(Chaldene.id().0, 521i32);
         assert_eq!(Chaldene.to_string(), "Chaldene");
+        assert_eq!(DynOrigin::from(Chaldene), DynOrigin::Chaldene);
     }
     #[test]
     fn test_point_mass_521() {
@@ -16616,6 +16678,7 @@ mod tests {
     fn test_origin_522() {
         assert_eq!(Harpalyke.id().0, 522i32);
         assert_eq!(Harpalyke.to_string(), "Harpalyke");
+        assert_eq!(DynOrigin::from(Harpalyke), DynOrigin::Harpalyke);
     }
     #[test]
     fn test_point_mass_522() {
@@ -16638,6 +16701,7 @@ mod tests {
     fn test_origin_523() {
         assert_eq!(Kalyke.id().0, 523i32);
         assert_eq!(Kalyke.to_string(), "Kalyke");
+        assert_eq!(DynOrigin::from(Kalyke), DynOrigin::Kalyke);
     }
     #[test]
     fn test_point_mass_523() {
@@ -16660,6 +16724,7 @@ mod tests {
     fn test_origin_524() {
         assert_eq!(Iocaste.id().0, 524i32);
         assert_eq!(Iocaste.to_string(), "Iocaste");
+        assert_eq!(DynOrigin::from(Iocaste), DynOrigin::Iocaste);
     }
     #[test]
     fn test_point_mass_524() {
@@ -16682,6 +16747,7 @@ mod tests {
     fn test_origin_525() {
         assert_eq!(Erinome.id().0, 525i32);
         assert_eq!(Erinome.to_string(), "Erinome");
+        assert_eq!(DynOrigin::from(Erinome), DynOrigin::Erinome);
     }
     #[test]
     fn test_point_mass_525() {
@@ -16704,6 +16770,7 @@ mod tests {
     fn test_origin_526() {
         assert_eq!(Isonoe.id().0, 526i32);
         assert_eq!(Isonoe.to_string(), "Isonoe");
+        assert_eq!(DynOrigin::from(Isonoe), DynOrigin::Isonoe);
     }
     #[test]
     fn test_point_mass_526() {
@@ -16726,6 +16793,7 @@ mod tests {
     fn test_origin_527() {
         assert_eq!(Praxidike.id().0, 527i32);
         assert_eq!(Praxidike.to_string(), "Praxidike");
+        assert_eq!(DynOrigin::from(Praxidike), DynOrigin::Praxidike);
     }
     #[test]
     fn test_point_mass_527() {
@@ -16748,6 +16816,7 @@ mod tests {
     fn test_origin_528() {
         assert_eq!(Autonoe.id().0, 528i32);
         assert_eq!(Autonoe.to_string(), "Autonoe");
+        assert_eq!(DynOrigin::from(Autonoe), DynOrigin::Autonoe);
     }
     #[test]
     fn test_point_mass_528() {
@@ -16770,6 +16839,7 @@ mod tests {
     fn test_origin_529() {
         assert_eq!(Thyone.id().0, 529i32);
         assert_eq!(Thyone.to_string(), "Thyone");
+        assert_eq!(DynOrigin::from(Thyone), DynOrigin::Thyone);
     }
     #[test]
     fn test_point_mass_529() {
@@ -16792,6 +16862,7 @@ mod tests {
     fn test_origin_530() {
         assert_eq!(Hermippe.id().0, 530i32);
         assert_eq!(Hermippe.to_string(), "Hermippe");
+        assert_eq!(DynOrigin::from(Hermippe), DynOrigin::Hermippe);
     }
     #[test]
     fn test_point_mass_530() {
@@ -16814,6 +16885,7 @@ mod tests {
     fn test_origin_531() {
         assert_eq!(Aitne.id().0, 531i32);
         assert_eq!(Aitne.to_string(), "Aitne");
+        assert_eq!(DynOrigin::from(Aitne), DynOrigin::Aitne);
     }
     #[test]
     fn test_point_mass_531() {
@@ -16836,6 +16908,7 @@ mod tests {
     fn test_origin_532() {
         assert_eq!(Eurydome.id().0, 532i32);
         assert_eq!(Eurydome.to_string(), "Eurydome");
+        assert_eq!(DynOrigin::from(Eurydome), DynOrigin::Eurydome);
     }
     #[test]
     fn test_point_mass_532() {
@@ -16858,6 +16931,7 @@ mod tests {
     fn test_origin_533() {
         assert_eq!(Euanthe.id().0, 533i32);
         assert_eq!(Euanthe.to_string(), "Euanthe");
+        assert_eq!(DynOrigin::from(Euanthe), DynOrigin::Euanthe);
     }
     #[test]
     fn test_point_mass_533() {
@@ -16880,6 +16954,7 @@ mod tests {
     fn test_origin_534() {
         assert_eq!(Euporie.id().0, 534i32);
         assert_eq!(Euporie.to_string(), "Euporie");
+        assert_eq!(DynOrigin::from(Euporie), DynOrigin::Euporie);
     }
     #[test]
     fn test_point_mass_534() {
@@ -16902,6 +16977,7 @@ mod tests {
     fn test_origin_535() {
         assert_eq!(Orthosie.id().0, 535i32);
         assert_eq!(Orthosie.to_string(), "Orthosie");
+        assert_eq!(DynOrigin::from(Orthosie), DynOrigin::Orthosie);
     }
     #[test]
     fn test_point_mass_535() {
@@ -16924,6 +17000,7 @@ mod tests {
     fn test_origin_536() {
         assert_eq!(Sponde.id().0, 536i32);
         assert_eq!(Sponde.to_string(), "Sponde");
+        assert_eq!(DynOrigin::from(Sponde), DynOrigin::Sponde);
     }
     #[test]
     fn test_point_mass_536() {
@@ -16946,6 +17023,7 @@ mod tests {
     fn test_origin_537() {
         assert_eq!(Kale.id().0, 537i32);
         assert_eq!(Kale.to_string(), "Kale");
+        assert_eq!(DynOrigin::from(Kale), DynOrigin::Kale);
     }
     #[test]
     fn test_point_mass_537() {
@@ -16968,6 +17046,7 @@ mod tests {
     fn test_origin_538() {
         assert_eq!(Pasithee.id().0, 538i32);
         assert_eq!(Pasithee.to_string(), "Pasithee");
+        assert_eq!(DynOrigin::from(Pasithee), DynOrigin::Pasithee);
     }
     #[test]
     fn test_point_mass_538() {
@@ -16990,6 +17069,7 @@ mod tests {
     fn test_origin_539() {
         assert_eq!(Hegemone.id().0, 539i32);
         assert_eq!(Hegemone.to_string(), "Hegemone");
+        assert_eq!(DynOrigin::from(Hegemone), DynOrigin::Hegemone);
     }
     #[test]
     fn test_point_mass_539() {
@@ -17012,6 +17092,7 @@ mod tests {
     fn test_origin_540() {
         assert_eq!(Mneme.id().0, 540i32);
         assert_eq!(Mneme.to_string(), "Mneme");
+        assert_eq!(DynOrigin::from(Mneme), DynOrigin::Mneme);
     }
     #[test]
     fn test_point_mass_540() {
@@ -17034,6 +17115,7 @@ mod tests {
     fn test_origin_541() {
         assert_eq!(Aoede.id().0, 541i32);
         assert_eq!(Aoede.to_string(), "Aoede");
+        assert_eq!(DynOrigin::from(Aoede), DynOrigin::Aoede);
     }
     #[test]
     fn test_point_mass_541() {
@@ -17056,6 +17138,7 @@ mod tests {
     fn test_origin_542() {
         assert_eq!(Thelxinoe.id().0, 542i32);
         assert_eq!(Thelxinoe.to_string(), "Thelxinoe");
+        assert_eq!(DynOrigin::from(Thelxinoe), DynOrigin::Thelxinoe);
     }
     #[test]
     fn test_point_mass_542() {
@@ -17078,6 +17161,7 @@ mod tests {
     fn test_origin_543() {
         assert_eq!(Arche.id().0, 543i32);
         assert_eq!(Arche.to_string(), "Arche");
+        assert_eq!(DynOrigin::from(Arche), DynOrigin::Arche);
     }
     #[test]
     fn test_point_mass_543() {
@@ -17100,6 +17184,7 @@ mod tests {
     fn test_origin_544() {
         assert_eq!(Kallichore.id().0, 544i32);
         assert_eq!(Kallichore.to_string(), "Kallichore");
+        assert_eq!(DynOrigin::from(Kallichore), DynOrigin::Kallichore);
     }
     #[test]
     fn test_point_mass_544() {
@@ -17122,6 +17207,7 @@ mod tests {
     fn test_origin_545() {
         assert_eq!(Helike.id().0, 545i32);
         assert_eq!(Helike.to_string(), "Helike");
+        assert_eq!(DynOrigin::from(Helike), DynOrigin::Helike);
     }
     #[test]
     fn test_point_mass_545() {
@@ -17144,6 +17230,7 @@ mod tests {
     fn test_origin_546() {
         assert_eq!(Carpo.id().0, 546i32);
         assert_eq!(Carpo.to_string(), "Carpo");
+        assert_eq!(DynOrigin::from(Carpo), DynOrigin::Carpo);
     }
     #[test]
     fn test_point_mass_546() {
@@ -17166,6 +17253,7 @@ mod tests {
     fn test_origin_547() {
         assert_eq!(Eukelade.id().0, 547i32);
         assert_eq!(Eukelade.to_string(), "Eukelade");
+        assert_eq!(DynOrigin::from(Eukelade), DynOrigin::Eukelade);
     }
     #[test]
     fn test_point_mass_547() {
@@ -17188,6 +17276,7 @@ mod tests {
     fn test_origin_548() {
         assert_eq!(Cyllene.id().0, 548i32);
         assert_eq!(Cyllene.to_string(), "Cyllene");
+        assert_eq!(DynOrigin::from(Cyllene), DynOrigin::Cyllene);
     }
     #[test]
     fn test_point_mass_548() {
@@ -17210,6 +17299,7 @@ mod tests {
     fn test_origin_549() {
         assert_eq!(Kore.id().0, 549i32);
         assert_eq!(Kore.to_string(), "Kore");
+        assert_eq!(DynOrigin::from(Kore), DynOrigin::Kore);
     }
     #[test]
     fn test_point_mass_549() {
@@ -17232,6 +17322,7 @@ mod tests {
     fn test_origin_550() {
         assert_eq!(Herse.id().0, 550i32);
         assert_eq!(Herse.to_string(), "Herse");
+        assert_eq!(DynOrigin::from(Herse), DynOrigin::Herse);
     }
     #[test]
     fn test_point_mass_550() {
@@ -17254,6 +17345,7 @@ mod tests {
     fn test_origin_553() {
         assert_eq!(Dia.id().0, 553i32);
         assert_eq!(Dia.to_string(), "Dia");
+        assert_eq!(DynOrigin::from(Dia), DynOrigin::Dia);
     }
     #[test]
     fn test_point_mass_553() {
@@ -17276,6 +17368,7 @@ mod tests {
     fn test_origin_601() {
         assert_eq!(Mimas.id().0, 601i32);
         assert_eq!(Mimas.to_string(), "Mimas");
+        assert_eq!(DynOrigin::from(Mimas), DynOrigin::Mimas);
     }
     #[test]
     fn test_point_mass_601() {
@@ -17324,6 +17417,7 @@ mod tests {
     fn test_origin_602() {
         assert_eq!(Enceladus.id().0, 602i32);
         assert_eq!(Enceladus.to_string(), "Enceladus");
+        assert_eq!(DynOrigin::from(Enceladus), DynOrigin::Enceladus);
     }
     #[test]
     fn test_point_mass_602() {
@@ -17372,6 +17466,7 @@ mod tests {
     fn test_origin_603() {
         assert_eq!(Tethys.id().0, 603i32);
         assert_eq!(Tethys.to_string(), "Tethys");
+        assert_eq!(DynOrigin::from(Tethys), DynOrigin::Tethys);
     }
     #[test]
     fn test_point_mass_603() {
@@ -17420,6 +17515,7 @@ mod tests {
     fn test_origin_604() {
         assert_eq!(Dione.id().0, 604i32);
         assert_eq!(Dione.to_string(), "Dione");
+        assert_eq!(DynOrigin::from(Dione), DynOrigin::Dione);
     }
     #[test]
     fn test_point_mass_604() {
@@ -17468,6 +17564,7 @@ mod tests {
     fn test_origin_605() {
         assert_eq!(Rhea.id().0, 605i32);
         assert_eq!(Rhea.to_string(), "Rhea");
+        assert_eq!(DynOrigin::from(Rhea), DynOrigin::Rhea);
     }
     #[test]
     fn test_point_mass_605() {
@@ -17516,6 +17613,7 @@ mod tests {
     fn test_origin_606() {
         assert_eq!(Titan.id().0, 606i32);
         assert_eq!(Titan.to_string(), "Titan");
+        assert_eq!(DynOrigin::from(Titan), DynOrigin::Titan);
     }
     #[test]
     fn test_point_mass_606() {
@@ -17564,6 +17662,7 @@ mod tests {
     fn test_origin_607() {
         assert_eq!(Hyperion.id().0, 607i32);
         assert_eq!(Hyperion.to_string(), "Hyperion");
+        assert_eq!(DynOrigin::from(Hyperion), DynOrigin::Hyperion);
     }
     #[test]
     fn test_point_mass_607() {
@@ -17612,6 +17711,7 @@ mod tests {
     fn test_origin_608() {
         assert_eq!(Iapetus.id().0, 608i32);
         assert_eq!(Iapetus.to_string(), "Iapetus");
+        assert_eq!(DynOrigin::from(Iapetus), DynOrigin::Iapetus);
     }
     #[test]
     fn test_point_mass_608() {
@@ -17668,6 +17768,7 @@ mod tests {
     fn test_origin_609() {
         assert_eq!(Phoebe.id().0, 609i32);
         assert_eq!(Phoebe.to_string(), "Phoebe");
+        assert_eq!(DynOrigin::from(Phoebe), DynOrigin::Phoebe);
     }
     #[test]
     fn test_point_mass_609() {
@@ -17716,6 +17817,7 @@ mod tests {
     fn test_origin_610() {
         assert_eq!(Janus.id().0, 610i32);
         assert_eq!(Janus.to_string(), "Janus");
+        assert_eq!(DynOrigin::from(Janus), DynOrigin::Janus);
     }
     #[test]
     fn test_point_mass_610() {
@@ -17764,6 +17866,7 @@ mod tests {
     fn test_origin_611() {
         assert_eq!(Epimetheus.id().0, 611i32);
         assert_eq!(Epimetheus.to_string(), "Epimetheus");
+        assert_eq!(DynOrigin::from(Epimetheus), DynOrigin::Epimetheus);
     }
     #[test]
     fn test_point_mass_611() {
@@ -17812,6 +17915,7 @@ mod tests {
     fn test_origin_612() {
         assert_eq!(Helene.id().0, 612i32);
         assert_eq!(Helene.to_string(), "Helene");
+        assert_eq!(DynOrigin::from(Helene), DynOrigin::Helene);
     }
     #[test]
     fn test_point_mass_612() {
@@ -17860,6 +17964,7 @@ mod tests {
     fn test_origin_613() {
         assert_eq!(Telesto.id().0, 613i32);
         assert_eq!(Telesto.to_string(), "Telesto");
+        assert_eq!(DynOrigin::from(Telesto), DynOrigin::Telesto);
     }
     #[test]
     fn test_point_mass_613() {
@@ -17901,6 +18006,7 @@ mod tests {
     fn test_origin_614() {
         assert_eq!(Calypso.id().0, 614i32);
         assert_eq!(Calypso.to_string(), "Calypso");
+        assert_eq!(DynOrigin::from(Calypso), DynOrigin::Calypso);
     }
     #[test]
     fn test_point_mass_614() {
@@ -17942,6 +18048,7 @@ mod tests {
     fn test_origin_615() {
         assert_eq!(Atlas.id().0, 615i32);
         assert_eq!(Atlas.to_string(), "Atlas");
+        assert_eq!(DynOrigin::from(Atlas), DynOrigin::Atlas);
     }
     #[test]
     fn test_point_mass_615() {
@@ -17990,6 +18097,7 @@ mod tests {
     fn test_origin_616() {
         assert_eq!(Prometheus.id().0, 616i32);
         assert_eq!(Prometheus.to_string(), "Prometheus");
+        assert_eq!(DynOrigin::from(Prometheus), DynOrigin::Prometheus);
     }
     #[test]
     fn test_point_mass_616() {
@@ -18038,6 +18146,7 @@ mod tests {
     fn test_origin_617() {
         assert_eq!(Pandora.id().0, 617i32);
         assert_eq!(Pandora.to_string(), "Pandora");
+        assert_eq!(DynOrigin::from(Pandora), DynOrigin::Pandora);
     }
     #[test]
     fn test_point_mass_617() {
@@ -18086,6 +18195,7 @@ mod tests {
     fn test_origin_618() {
         assert_eq!(Pan.id().0, 618i32);
         assert_eq!(Pan.to_string(), "Pan");
+        assert_eq!(DynOrigin::from(Pan), DynOrigin::Pan);
     }
     #[test]
     fn test_point_mass_618() {
@@ -18127,6 +18237,7 @@ mod tests {
     fn test_origin_619() {
         assert_eq!(Ymir.id().0, 619i32);
         assert_eq!(Ymir.to_string(), "Ymir");
+        assert_eq!(DynOrigin::from(Ymir), DynOrigin::Ymir);
     }
     #[test]
     fn test_point_mass_619() {
@@ -18149,6 +18260,7 @@ mod tests {
     fn test_origin_620() {
         assert_eq!(Paaliaq.id().0, 620i32);
         assert_eq!(Paaliaq.to_string(), "Paaliaq");
+        assert_eq!(DynOrigin::from(Paaliaq), DynOrigin::Paaliaq);
     }
     #[test]
     fn test_point_mass_620() {
@@ -18171,6 +18283,7 @@ mod tests {
     fn test_origin_621() {
         assert_eq!(Tarvos.id().0, 621i32);
         assert_eq!(Tarvos.to_string(), "Tarvos");
+        assert_eq!(DynOrigin::from(Tarvos), DynOrigin::Tarvos);
     }
     #[test]
     fn test_point_mass_621() {
@@ -18193,6 +18306,7 @@ mod tests {
     fn test_origin_622() {
         assert_eq!(Ijiraq.id().0, 622i32);
         assert_eq!(Ijiraq.to_string(), "Ijiraq");
+        assert_eq!(DynOrigin::from(Ijiraq), DynOrigin::Ijiraq);
     }
     #[test]
     fn test_point_mass_622() {
@@ -18215,6 +18329,7 @@ mod tests {
     fn test_origin_623() {
         assert_eq!(Suttungr.id().0, 623i32);
         assert_eq!(Suttungr.to_string(), "Suttungr");
+        assert_eq!(DynOrigin::from(Suttungr), DynOrigin::Suttungr);
     }
     #[test]
     fn test_point_mass_623() {
@@ -18237,6 +18352,7 @@ mod tests {
     fn test_origin_624() {
         assert_eq!(Kiviuq.id().0, 624i32);
         assert_eq!(Kiviuq.to_string(), "Kiviuq");
+        assert_eq!(DynOrigin::from(Kiviuq), DynOrigin::Kiviuq);
     }
     #[test]
     fn test_point_mass_624() {
@@ -18259,6 +18375,7 @@ mod tests {
     fn test_origin_625() {
         assert_eq!(Mundilfari.id().0, 625i32);
         assert_eq!(Mundilfari.to_string(), "Mundilfari");
+        assert_eq!(DynOrigin::from(Mundilfari), DynOrigin::Mundilfari);
     }
     #[test]
     fn test_point_mass_625() {
@@ -18281,6 +18398,7 @@ mod tests {
     fn test_origin_626() {
         assert_eq!(Albiorix.id().0, 626i32);
         assert_eq!(Albiorix.to_string(), "Albiorix");
+        assert_eq!(DynOrigin::from(Albiorix), DynOrigin::Albiorix);
     }
     #[test]
     fn test_point_mass_626() {
@@ -18303,6 +18421,7 @@ mod tests {
     fn test_origin_627() {
         assert_eq!(Skathi.id().0, 627i32);
         assert_eq!(Skathi.to_string(), "Skathi");
+        assert_eq!(DynOrigin::from(Skathi), DynOrigin::Skathi);
     }
     #[test]
     fn test_point_mass_627() {
@@ -18325,6 +18444,7 @@ mod tests {
     fn test_origin_628() {
         assert_eq!(Erriapus.id().0, 628i32);
         assert_eq!(Erriapus.to_string(), "Erriapus");
+        assert_eq!(DynOrigin::from(Erriapus), DynOrigin::Erriapus);
     }
     #[test]
     fn test_point_mass_628() {
@@ -18347,6 +18467,7 @@ mod tests {
     fn test_origin_629() {
         assert_eq!(Siarnaq.id().0, 629i32);
         assert_eq!(Siarnaq.to_string(), "Siarnaq");
+        assert_eq!(DynOrigin::from(Siarnaq), DynOrigin::Siarnaq);
     }
     #[test]
     fn test_point_mass_629() {
@@ -18369,6 +18490,7 @@ mod tests {
     fn test_origin_630() {
         assert_eq!(Thrymr.id().0, 630i32);
         assert_eq!(Thrymr.to_string(), "Thrymr");
+        assert_eq!(DynOrigin::from(Thrymr), DynOrigin::Thrymr);
     }
     #[test]
     fn test_point_mass_630() {
@@ -18391,6 +18513,7 @@ mod tests {
     fn test_origin_631() {
         assert_eq!(Narvi.id().0, 631i32);
         assert_eq!(Narvi.to_string(), "Narvi");
+        assert_eq!(DynOrigin::from(Narvi), DynOrigin::Narvi);
     }
     #[test]
     fn test_point_mass_631() {
@@ -18413,6 +18536,7 @@ mod tests {
     fn test_origin_632() {
         assert_eq!(Methone.id().0, 632i32);
         assert_eq!(Methone.to_string(), "Methone");
+        assert_eq!(DynOrigin::from(Methone), DynOrigin::Methone);
     }
     #[test]
     fn test_point_mass_632() {
@@ -18454,6 +18578,7 @@ mod tests {
     fn test_origin_633() {
         assert_eq!(Pallene.id().0, 633i32);
         assert_eq!(Pallene.to_string(), "Pallene");
+        assert_eq!(DynOrigin::from(Pallene), DynOrigin::Pallene);
     }
     #[test]
     fn test_point_mass_633() {
@@ -18495,6 +18620,7 @@ mod tests {
     fn test_origin_634() {
         assert_eq!(Polydeuces.id().0, 634i32);
         assert_eq!(Polydeuces.to_string(), "Polydeuces");
+        assert_eq!(DynOrigin::from(Polydeuces), DynOrigin::Polydeuces);
     }
     #[test]
     fn test_point_mass_634() {
@@ -18536,6 +18662,7 @@ mod tests {
     fn test_origin_635() {
         assert_eq!(Daphnis.id().0, 635i32);
         assert_eq!(Daphnis.to_string(), "Daphnis");
+        assert_eq!(DynOrigin::from(Daphnis), DynOrigin::Daphnis);
     }
     #[test]
     fn test_point_mass_635() {
@@ -18577,6 +18704,7 @@ mod tests {
     fn test_origin_636() {
         assert_eq!(Aegir.id().0, 636i32);
         assert_eq!(Aegir.to_string(), "Aegir");
+        assert_eq!(DynOrigin::from(Aegir), DynOrigin::Aegir);
     }
     #[test]
     fn test_point_mass_636() {
@@ -18599,6 +18727,7 @@ mod tests {
     fn test_origin_637() {
         assert_eq!(Bebhionn.id().0, 637i32);
         assert_eq!(Bebhionn.to_string(), "Bebhionn");
+        assert_eq!(DynOrigin::from(Bebhionn), DynOrigin::Bebhionn);
     }
     #[test]
     fn test_point_mass_637() {
@@ -18621,6 +18750,7 @@ mod tests {
     fn test_origin_638() {
         assert_eq!(Bergelmir.id().0, 638i32);
         assert_eq!(Bergelmir.to_string(), "Bergelmir");
+        assert_eq!(DynOrigin::from(Bergelmir), DynOrigin::Bergelmir);
     }
     #[test]
     fn test_point_mass_638() {
@@ -18643,6 +18773,7 @@ mod tests {
     fn test_origin_639() {
         assert_eq!(Bestla.id().0, 639i32);
         assert_eq!(Bestla.to_string(), "Bestla");
+        assert_eq!(DynOrigin::from(Bestla), DynOrigin::Bestla);
     }
     #[test]
     fn test_point_mass_639() {
@@ -18665,6 +18796,7 @@ mod tests {
     fn test_origin_640() {
         assert_eq!(Farbauti.id().0, 640i32);
         assert_eq!(Farbauti.to_string(), "Farbauti");
+        assert_eq!(DynOrigin::from(Farbauti), DynOrigin::Farbauti);
     }
     #[test]
     fn test_point_mass_640() {
@@ -18687,6 +18819,7 @@ mod tests {
     fn test_origin_641() {
         assert_eq!(Fenrir.id().0, 641i32);
         assert_eq!(Fenrir.to_string(), "Fenrir");
+        assert_eq!(DynOrigin::from(Fenrir), DynOrigin::Fenrir);
     }
     #[test]
     fn test_point_mass_641() {
@@ -18709,6 +18842,7 @@ mod tests {
     fn test_origin_642() {
         assert_eq!(Fornjot.id().0, 642i32);
         assert_eq!(Fornjot.to_string(), "Fornjot");
+        assert_eq!(DynOrigin::from(Fornjot), DynOrigin::Fornjot);
     }
     #[test]
     fn test_point_mass_642() {
@@ -18731,6 +18865,7 @@ mod tests {
     fn test_origin_643() {
         assert_eq!(Hati.id().0, 643i32);
         assert_eq!(Hati.to_string(), "Hati");
+        assert_eq!(DynOrigin::from(Hati), DynOrigin::Hati);
     }
     #[test]
     fn test_point_mass_643() {
@@ -18753,6 +18888,7 @@ mod tests {
     fn test_origin_644() {
         assert_eq!(Hyrrokkin.id().0, 644i32);
         assert_eq!(Hyrrokkin.to_string(), "Hyrrokkin");
+        assert_eq!(DynOrigin::from(Hyrrokkin), DynOrigin::Hyrrokkin);
     }
     #[test]
     fn test_point_mass_644() {
@@ -18775,6 +18911,7 @@ mod tests {
     fn test_origin_645() {
         assert_eq!(Kari.id().0, 645i32);
         assert_eq!(Kari.to_string(), "Kari");
+        assert_eq!(DynOrigin::from(Kari), DynOrigin::Kari);
     }
     #[test]
     fn test_point_mass_645() {
@@ -18797,6 +18934,7 @@ mod tests {
     fn test_origin_646() {
         assert_eq!(Loge.id().0, 646i32);
         assert_eq!(Loge.to_string(), "Loge");
+        assert_eq!(DynOrigin::from(Loge), DynOrigin::Loge);
     }
     #[test]
     fn test_point_mass_646() {
@@ -18819,6 +18957,7 @@ mod tests {
     fn test_origin_647() {
         assert_eq!(Skoll.id().0, 647i32);
         assert_eq!(Skoll.to_string(), "Skoll");
+        assert_eq!(DynOrigin::from(Skoll), DynOrigin::Skoll);
     }
     #[test]
     fn test_point_mass_647() {
@@ -18841,6 +18980,7 @@ mod tests {
     fn test_origin_648() {
         assert_eq!(Surtur.id().0, 648i32);
         assert_eq!(Surtur.to_string(), "Surtur");
+        assert_eq!(DynOrigin::from(Surtur), DynOrigin::Surtur);
     }
     #[test]
     fn test_point_mass_648() {
@@ -18863,6 +19003,7 @@ mod tests {
     fn test_origin_649() {
         assert_eq!(Anthe.id().0, 649i32);
         assert_eq!(Anthe.to_string(), "Anthe");
+        assert_eq!(DynOrigin::from(Anthe), DynOrigin::Anthe);
     }
     #[test]
     fn test_point_mass_649() {
@@ -18912,6 +19053,7 @@ mod tests {
     fn test_origin_650() {
         assert_eq!(Jarnsaxa.id().0, 650i32);
         assert_eq!(Jarnsaxa.to_string(), "Jarnsaxa");
+        assert_eq!(DynOrigin::from(Jarnsaxa), DynOrigin::Jarnsaxa);
     }
     #[test]
     fn test_point_mass_650() {
@@ -18934,6 +19076,7 @@ mod tests {
     fn test_origin_651() {
         assert_eq!(Greip.id().0, 651i32);
         assert_eq!(Greip.to_string(), "Greip");
+        assert_eq!(DynOrigin::from(Greip), DynOrigin::Greip);
     }
     #[test]
     fn test_point_mass_651() {
@@ -18956,6 +19099,7 @@ mod tests {
     fn test_origin_652() {
         assert_eq!(Tarqeq.id().0, 652i32);
         assert_eq!(Tarqeq.to_string(), "Tarqeq");
+        assert_eq!(DynOrigin::from(Tarqeq), DynOrigin::Tarqeq);
     }
     #[test]
     fn test_point_mass_652() {
@@ -18978,6 +19122,7 @@ mod tests {
     fn test_origin_653() {
         assert_eq!(Aegaeon.id().0, 653i32);
         assert_eq!(Aegaeon.to_string(), "Aegaeon");
+        assert_eq!(DynOrigin::from(Aegaeon), DynOrigin::Aegaeon);
     }
     #[test]
     fn test_point_mass_653() {
@@ -19019,6 +19164,7 @@ mod tests {
     fn test_origin_701() {
         assert_eq!(Ariel.id().0, 701i32);
         assert_eq!(Ariel.to_string(), "Ariel");
+        assert_eq!(DynOrigin::from(Ariel), DynOrigin::Ariel);
     }
     #[test]
     fn test_point_mass_701() {
@@ -19067,6 +19213,7 @@ mod tests {
     fn test_origin_702() {
         assert_eq!(Umbriel.id().0, 702i32);
         assert_eq!(Umbriel.to_string(), "Umbriel");
+        assert_eq!(DynOrigin::from(Umbriel), DynOrigin::Umbriel);
     }
     #[test]
     fn test_point_mass_702() {
@@ -19123,6 +19270,7 @@ mod tests {
     fn test_origin_703() {
         assert_eq!(Titania.id().0, 703i32);
         assert_eq!(Titania.to_string(), "Titania");
+        assert_eq!(DynOrigin::from(Titania), DynOrigin::Titania);
     }
     #[test]
     fn test_point_mass_703() {
@@ -19179,6 +19327,7 @@ mod tests {
     fn test_origin_704() {
         assert_eq!(Oberon.id().0, 704i32);
         assert_eq!(Oberon.to_string(), "Oberon");
+        assert_eq!(DynOrigin::from(Oberon), DynOrigin::Oberon);
     }
     #[test]
     fn test_point_mass_704() {
@@ -19235,6 +19384,7 @@ mod tests {
     fn test_origin_705() {
         assert_eq!(Miranda.id().0, 705i32);
         assert_eq!(Miranda.to_string(), "Miranda");
+        assert_eq!(DynOrigin::from(Miranda), DynOrigin::Miranda);
     }
     #[test]
     fn test_point_mass_705() {
@@ -19283,6 +19433,7 @@ mod tests {
     fn test_origin_706() {
         assert_eq!(Cordelia.id().0, 706i32);
         assert_eq!(Cordelia.to_string(), "Cordelia");
+        assert_eq!(DynOrigin::from(Cordelia), DynOrigin::Cordelia);
     }
     #[test]
     fn test_point_mass_706() {
@@ -19332,6 +19483,7 @@ mod tests {
     fn test_origin_707() {
         assert_eq!(Ophelia.id().0, 707i32);
         assert_eq!(Ophelia.to_string(), "Ophelia");
+        assert_eq!(DynOrigin::from(Ophelia), DynOrigin::Ophelia);
     }
     #[test]
     fn test_point_mass_707() {
@@ -19381,6 +19533,7 @@ mod tests {
     fn test_origin_708() {
         assert_eq!(Bianca.id().0, 708i32);
         assert_eq!(Bianca.to_string(), "Bianca");
+        assert_eq!(DynOrigin::from(Bianca), DynOrigin::Bianca);
     }
     #[test]
     fn test_point_mass_708() {
@@ -19430,6 +19583,7 @@ mod tests {
     fn test_origin_709() {
         assert_eq!(Cressida.id().0, 709i32);
         assert_eq!(Cressida.to_string(), "Cressida");
+        assert_eq!(DynOrigin::from(Cressida), DynOrigin::Cressida);
     }
     #[test]
     fn test_point_mass_709() {
@@ -19479,6 +19633,7 @@ mod tests {
     fn test_origin_710() {
         assert_eq!(Desdemona.id().0, 710i32);
         assert_eq!(Desdemona.to_string(), "Desdemona");
+        assert_eq!(DynOrigin::from(Desdemona), DynOrigin::Desdemona);
     }
     #[test]
     fn test_point_mass_710() {
@@ -19528,6 +19683,7 @@ mod tests {
     fn test_origin_711() {
         assert_eq!(Juliet.id().0, 711i32);
         assert_eq!(Juliet.to_string(), "Juliet");
+        assert_eq!(DynOrigin::from(Juliet), DynOrigin::Juliet);
     }
     #[test]
     fn test_point_mass_711() {
@@ -19577,6 +19733,7 @@ mod tests {
     fn test_origin_712() {
         assert_eq!(Portia.id().0, 712i32);
         assert_eq!(Portia.to_string(), "Portia");
+        assert_eq!(DynOrigin::from(Portia), DynOrigin::Portia);
     }
     #[test]
     fn test_point_mass_712() {
@@ -19626,6 +19783,7 @@ mod tests {
     fn test_origin_713() {
         assert_eq!(Rosalind.id().0, 713i32);
         assert_eq!(Rosalind.to_string(), "Rosalind");
+        assert_eq!(DynOrigin::from(Rosalind), DynOrigin::Rosalind);
     }
     #[test]
     fn test_point_mass_713() {
@@ -19675,6 +19833,7 @@ mod tests {
     fn test_origin_714() {
         assert_eq!(Belinda.id().0, 714i32);
         assert_eq!(Belinda.to_string(), "Belinda");
+        assert_eq!(DynOrigin::from(Belinda), DynOrigin::Belinda);
     }
     #[test]
     fn test_point_mass_714() {
@@ -19724,6 +19883,7 @@ mod tests {
     fn test_origin_715() {
         assert_eq!(Puck.id().0, 715i32);
         assert_eq!(Puck.to_string(), "Puck");
+        assert_eq!(DynOrigin::from(Puck), DynOrigin::Puck);
     }
     #[test]
     fn test_point_mass_715() {
@@ -19773,6 +19933,7 @@ mod tests {
     fn test_origin_716() {
         assert_eq!(Caliban.id().0, 716i32);
         assert_eq!(Caliban.to_string(), "Caliban");
+        assert_eq!(DynOrigin::from(Caliban), DynOrigin::Caliban);
     }
     #[test]
     fn test_point_mass_716() {
@@ -19795,6 +19956,7 @@ mod tests {
     fn test_origin_717() {
         assert_eq!(Sycorax.id().0, 717i32);
         assert_eq!(Sycorax.to_string(), "Sycorax");
+        assert_eq!(DynOrigin::from(Sycorax), DynOrigin::Sycorax);
     }
     #[test]
     fn test_point_mass_717() {
@@ -19817,6 +19979,7 @@ mod tests {
     fn test_origin_718() {
         assert_eq!(Prospero.id().0, 718i32);
         assert_eq!(Prospero.to_string(), "Prospero");
+        assert_eq!(DynOrigin::from(Prospero), DynOrigin::Prospero);
     }
     #[test]
     fn test_point_mass_718() {
@@ -19839,6 +20002,7 @@ mod tests {
     fn test_origin_719() {
         assert_eq!(Setebos.id().0, 719i32);
         assert_eq!(Setebos.to_string(), "Setebos");
+        assert_eq!(DynOrigin::from(Setebos), DynOrigin::Setebos);
     }
     #[test]
     fn test_point_mass_719() {
@@ -19861,6 +20025,7 @@ mod tests {
     fn test_origin_720() {
         assert_eq!(Stephano.id().0, 720i32);
         assert_eq!(Stephano.to_string(), "Stephano");
+        assert_eq!(DynOrigin::from(Stephano), DynOrigin::Stephano);
     }
     #[test]
     fn test_point_mass_720() {
@@ -19883,6 +20048,7 @@ mod tests {
     fn test_origin_721() {
         assert_eq!(Trinculo.id().0, 721i32);
         assert_eq!(Trinculo.to_string(), "Trinculo");
+        assert_eq!(DynOrigin::from(Trinculo), DynOrigin::Trinculo);
     }
     #[test]
     fn test_point_mass_721() {
@@ -19905,6 +20071,7 @@ mod tests {
     fn test_origin_722() {
         assert_eq!(Francisco.id().0, 722i32);
         assert_eq!(Francisco.to_string(), "Francisco");
+        assert_eq!(DynOrigin::from(Francisco), DynOrigin::Francisco);
     }
     #[test]
     fn test_point_mass_722() {
@@ -19927,6 +20094,7 @@ mod tests {
     fn test_origin_723() {
         assert_eq!(Margaret.id().0, 723i32);
         assert_eq!(Margaret.to_string(), "Margaret");
+        assert_eq!(DynOrigin::from(Margaret), DynOrigin::Margaret);
     }
     #[test]
     fn test_point_mass_723() {
@@ -19949,6 +20117,7 @@ mod tests {
     fn test_origin_724() {
         assert_eq!(Ferdinand.id().0, 724i32);
         assert_eq!(Ferdinand.to_string(), "Ferdinand");
+        assert_eq!(DynOrigin::from(Ferdinand), DynOrigin::Ferdinand);
     }
     #[test]
     fn test_point_mass_724() {
@@ -19971,6 +20140,7 @@ mod tests {
     fn test_origin_725() {
         assert_eq!(Perdita.id().0, 725i32);
         assert_eq!(Perdita.to_string(), "Perdita");
+        assert_eq!(DynOrigin::from(Perdita), DynOrigin::Perdita);
     }
     #[test]
     fn test_point_mass_725() {
@@ -19993,6 +20163,7 @@ mod tests {
     fn test_origin_726() {
         assert_eq!(Mab.id().0, 726i32);
         assert_eq!(Mab.to_string(), "Mab");
+        assert_eq!(DynOrigin::from(Mab), DynOrigin::Mab);
     }
     #[test]
     fn test_point_mass_726() {
@@ -20015,6 +20186,7 @@ mod tests {
     fn test_origin_727() {
         assert_eq!(Cupid.id().0, 727i32);
         assert_eq!(Cupid.to_string(), "Cupid");
+        assert_eq!(DynOrigin::from(Cupid), DynOrigin::Cupid);
     }
     #[test]
     fn test_point_mass_727() {
@@ -20037,6 +20209,7 @@ mod tests {
     fn test_origin_801() {
         assert_eq!(Triton.id().0, 801i32);
         assert_eq!(Triton.to_string(), "Triton");
+        assert_eq!(DynOrigin::from(Triton), DynOrigin::Triton);
     }
     #[test]
     fn test_point_mass_801() {
@@ -20093,6 +20266,7 @@ mod tests {
     fn test_origin_802() {
         assert_eq!(Nereid.id().0, 802i32);
         assert_eq!(Nereid.to_string(), "Nereid");
+        assert_eq!(DynOrigin::from(Nereid), DynOrigin::Nereid);
     }
     #[test]
     fn test_point_mass_802() {
@@ -20142,6 +20316,7 @@ mod tests {
     fn test_origin_803() {
         assert_eq!(Naiad.id().0, 803i32);
         assert_eq!(Naiad.to_string(), "Naiad");
+        assert_eq!(DynOrigin::from(Naiad), DynOrigin::Naiad);
     }
     #[test]
     fn test_point_mass_803() {
@@ -20198,6 +20373,7 @@ mod tests {
     fn test_origin_804() {
         assert_eq!(Thalassa.id().0, 804i32);
         assert_eq!(Thalassa.to_string(), "Thalassa");
+        assert_eq!(DynOrigin::from(Thalassa), DynOrigin::Thalassa);
     }
     #[test]
     fn test_point_mass_804() {
@@ -20254,6 +20430,7 @@ mod tests {
     fn test_origin_805() {
         assert_eq!(Despina.id().0, 805i32);
         assert_eq!(Despina.to_string(), "Despina");
+        assert_eq!(DynOrigin::from(Despina), DynOrigin::Despina);
     }
     #[test]
     fn test_point_mass_805() {
@@ -20310,6 +20487,7 @@ mod tests {
     fn test_origin_806() {
         assert_eq!(Galatea.id().0, 806i32);
         assert_eq!(Galatea.to_string(), "Galatea");
+        assert_eq!(DynOrigin::from(Galatea), DynOrigin::Galatea);
     }
     #[test]
     fn test_point_mass_806() {
@@ -20366,6 +20544,7 @@ mod tests {
     fn test_origin_807() {
         assert_eq!(Larissa.id().0, 807i32);
         assert_eq!(Larissa.to_string(), "Larissa");
+        assert_eq!(DynOrigin::from(Larissa), DynOrigin::Larissa);
     }
     #[test]
     fn test_point_mass_807() {
@@ -20422,6 +20601,7 @@ mod tests {
     fn test_origin_808() {
         assert_eq!(Proteus.id().0, 808i32);
         assert_eq!(Proteus.to_string(), "Proteus");
+        assert_eq!(DynOrigin::from(Proteus), DynOrigin::Proteus);
     }
     #[test]
     fn test_point_mass_808() {
@@ -20470,6 +20650,7 @@ mod tests {
     fn test_origin_809() {
         assert_eq!(Halimede.id().0, 809i32);
         assert_eq!(Halimede.to_string(), "Halimede");
+        assert_eq!(DynOrigin::from(Halimede), DynOrigin::Halimede);
     }
     #[test]
     fn test_point_mass_809() {
@@ -20492,6 +20673,7 @@ mod tests {
     fn test_origin_810() {
         assert_eq!(Psamathe.id().0, 810i32);
         assert_eq!(Psamathe.to_string(), "Psamathe");
+        assert_eq!(DynOrigin::from(Psamathe), DynOrigin::Psamathe);
     }
     #[test]
     fn test_point_mass_810() {
@@ -20514,6 +20696,7 @@ mod tests {
     fn test_origin_811() {
         assert_eq!(Sao.id().0, 811i32);
         assert_eq!(Sao.to_string(), "Sao");
+        assert_eq!(DynOrigin::from(Sao), DynOrigin::Sao);
     }
     #[test]
     fn test_point_mass_811() {
@@ -20536,6 +20719,7 @@ mod tests {
     fn test_origin_812() {
         assert_eq!(Laomedeia.id().0, 812i32);
         assert_eq!(Laomedeia.to_string(), "Laomedeia");
+        assert_eq!(DynOrigin::from(Laomedeia), DynOrigin::Laomedeia);
     }
     #[test]
     fn test_point_mass_812() {
@@ -20558,6 +20742,7 @@ mod tests {
     fn test_origin_813() {
         assert_eq!(Neso.id().0, 813i32);
         assert_eq!(Neso.to_string(), "Neso");
+        assert_eq!(DynOrigin::from(Neso), DynOrigin::Neso);
     }
     #[test]
     fn test_point_mass_813() {
@@ -20580,6 +20765,7 @@ mod tests {
     fn test_origin_901() {
         assert_eq!(Charon.id().0, 901i32);
         assert_eq!(Charon.to_string(), "Charon");
+        assert_eq!(DynOrigin::from(Charon), DynOrigin::Charon);
     }
     #[test]
     fn test_point_mass_901() {
@@ -20636,6 +20822,7 @@ mod tests {
     fn test_origin_902() {
         assert_eq!(Nix.id().0, 902i32);
         assert_eq!(Nix.to_string(), "Nix");
+        assert_eq!(DynOrigin::from(Nix), DynOrigin::Nix);
     }
     #[test]
     fn test_point_mass_902() {
@@ -20665,6 +20852,7 @@ mod tests {
     fn test_origin_903() {
         assert_eq!(Hydra.id().0, 903i32);
         assert_eq!(Hydra.to_string(), "Hydra");
+        assert_eq!(DynOrigin::from(Hydra), DynOrigin::Hydra);
     }
     #[test]
     fn test_point_mass_903() {
@@ -20694,6 +20882,7 @@ mod tests {
     fn test_origin_904() {
         assert_eq!(Kerberos.id().0, 904i32);
         assert_eq!(Kerberos.to_string(), "Kerberos");
+        assert_eq!(DynOrigin::from(Kerberos), DynOrigin::Kerberos);
     }
     #[test]
     fn test_point_mass_904() {
@@ -20723,6 +20912,7 @@ mod tests {
     fn test_origin_905() {
         assert_eq!(Styx.id().0, 905i32);
         assert_eq!(Styx.to_string(), "Styx");
+        assert_eq!(DynOrigin::from(Styx), DynOrigin::Styx);
     }
     #[test]
     fn test_point_mass_905() {
@@ -20752,6 +20942,7 @@ mod tests {
     fn test_origin_9511010() {
         assert_eq!(Gaspra.id().0, 9511010i32);
         assert_eq!(Gaspra.to_string(), "Gaspra");
+        assert_eq!(DynOrigin::from(Gaspra), DynOrigin::Gaspra);
     }
     #[test]
     fn test_point_mass_9511010() {
@@ -20793,6 +20984,7 @@ mod tests {
     fn test_origin_2431010() {
         assert_eq!(Ida.id().0, 2431010i32);
         assert_eq!(Ida.to_string(), "Ida");
+        assert_eq!(DynOrigin::from(Ida), DynOrigin::Ida);
     }
     #[test]
     fn test_point_mass_2431010() {
@@ -20834,6 +21026,7 @@ mod tests {
     fn test_origin_2431011() {
         assert_eq!(Dactyl.id().0, 2431011i32);
         assert_eq!(Dactyl.to_string(), "Dactyl");
+        assert_eq!(DynOrigin::from(Dactyl), DynOrigin::Dactyl);
     }
     #[test]
     fn test_point_mass_2431011() {
@@ -20856,6 +21049,7 @@ mod tests {
     fn test_origin_2000001() {
         assert_eq!(Ceres.id().0, 2000001i32);
         assert_eq!(Ceres.to_string(), "Ceres");
+        assert_eq!(DynOrigin::from(Ceres), DynOrigin::Ceres);
     }
     #[test]
     fn test_point_mass_2000001() {
@@ -20912,6 +21106,7 @@ mod tests {
     fn test_origin_2000002() {
         assert_eq!(Pallas.id().0, 2000002i32);
         assert_eq!(Pallas.to_string(), "Pallas");
+        assert_eq!(DynOrigin::from(Pallas), DynOrigin::Pallas);
     }
     #[test]
     fn test_point_mass_2000002() {
@@ -20941,6 +21136,7 @@ mod tests {
     fn test_origin_2000004() {
         assert_eq!(Vesta.id().0, 2000004i32);
         assert_eq!(Vesta.to_string(), "Vesta");
+        assert_eq!(DynOrigin::from(Vesta), DynOrigin::Vesta);
     }
     #[test]
     fn test_point_mass_2000004() {
@@ -20985,6 +21181,7 @@ mod tests {
     fn test_origin_2000016() {
         assert_eq!(Psyche.id().0, 2000016i32);
         assert_eq!(Psyche.to_string(), "Psyche");
+        assert_eq!(DynOrigin::from(Psyche), DynOrigin::Psyche);
     }
     #[test]
     fn test_point_mass_2000016() {
@@ -21033,6 +21230,7 @@ mod tests {
     fn test_origin_2000021() {
         assert_eq!(Lutetia.id().0, 2000021i32);
         assert_eq!(Lutetia.to_string(), "Lutetia");
+        assert_eq!(DynOrigin::from(Lutetia), DynOrigin::Lutetia);
     }
     #[test]
     fn test_point_mass_2000021() {
@@ -21074,6 +21272,7 @@ mod tests {
     fn test_origin_2000216() {
         assert_eq!(Kleopatra.id().0, 2000216i32);
         assert_eq!(Kleopatra.to_string(), "Kleopatra");
+        assert_eq!(DynOrigin::from(Kleopatra), DynOrigin::Kleopatra);
     }
     #[test]
     fn test_point_mass_2000216() {
@@ -21096,6 +21295,7 @@ mod tests {
     fn test_origin_2000433() {
         assert_eq!(Eros.id().0, 2000433i32);
         assert_eq!(Eros.to_string(), "Eros");
+        assert_eq!(DynOrigin::from(Eros), DynOrigin::Eros);
     }
     #[test]
     fn test_point_mass_2000433() {
@@ -21144,6 +21344,7 @@ mod tests {
     fn test_origin_2000511() {
         assert_eq!(Davida.id().0, 2000511i32);
         assert_eq!(Davida.to_string(), "Davida");
+        assert_eq!(DynOrigin::from(Davida), DynOrigin::Davida);
     }
     #[test]
     fn test_point_mass_2000511() {
@@ -21192,6 +21393,7 @@ mod tests {
     fn test_origin_2000253() {
         assert_eq!(Mathilde.id().0, 2000253i32);
         assert_eq!(Mathilde.to_string(), "Mathilde");
+        assert_eq!(DynOrigin::from(Mathilde), DynOrigin::Mathilde);
     }
     #[test]
     fn test_point_mass_2000253() {
@@ -21233,6 +21435,7 @@ mod tests {
     fn test_origin_2002867() {
         assert_eq!(Steins.id().0, 2002867i32);
         assert_eq!(Steins.to_string(), "Steins");
+        assert_eq!(DynOrigin::from(Steins), DynOrigin::Steins);
     }
     #[test]
     fn test_point_mass_2002867() {
@@ -21274,6 +21477,7 @@ mod tests {
     fn test_origin_2009969() {
         assert_eq!(Braille.id().0, 2009969i32);
         assert_eq!(Braille.to_string(), "Braille");
+        assert_eq!(DynOrigin::from(Braille), DynOrigin::Braille);
     }
     #[test]
     fn test_point_mass_2009969() {
@@ -21296,6 +21500,10 @@ mod tests {
     fn test_origin_2004015() {
         assert_eq!(WilsonHarrington.id().0, 2004015i32);
         assert_eq!(WilsonHarrington.to_string(), "Wilson-Harrington");
+        assert_eq!(
+            DynOrigin::from(WilsonHarrington),
+            DynOrigin::WilsonHarrington
+        );
     }
     #[test]
     fn test_point_mass_2004015() {
@@ -21322,6 +21530,7 @@ mod tests {
     fn test_origin_2004179() {
         assert_eq!(Toutatis.id().0, 2004179i32);
         assert_eq!(Toutatis.to_string(), "Toutatis");
+        assert_eq!(DynOrigin::from(Toutatis), DynOrigin::Toutatis);
     }
     #[test]
     fn test_point_mass_2004179() {
@@ -21359,6 +21568,7 @@ mod tests {
     fn test_origin_2025143() {
         assert_eq!(Itokawa.id().0, 2025143i32);
         assert_eq!(Itokawa.to_string(), "Itokawa");
+        assert_eq!(DynOrigin::from(Itokawa), DynOrigin::Itokawa);
     }
     #[test]
     fn test_point_mass_2025143() {
@@ -21396,6 +21606,7 @@ mod tests {
     fn test_origin_2101955() {
         assert_eq!(Bennu.id().0, 2101955i32);
         assert_eq!(Bennu.to_string(), "Bennu");
+        assert_eq!(DynOrigin::from(Bennu), DynOrigin::Bennu);
     }
     #[test]
     fn test_point_mass_2101955() {
