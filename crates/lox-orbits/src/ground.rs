@@ -2,14 +2,13 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use std::f64::consts::FRAC_PI_2;
-
 use crate::orbits::{CartesianOrbit, TrajectorError, Trajectory};
 use crate::propagators::Propagator;
 use glam::{DMat3, DVec3};
 use lox_bodies::{DynOrigin, RotationalElements, Spheroid, TrySpheroid};
 use lox_core::coords::{Cartesian, LonLatAlt};
 use lox_core::types::units::Radians;
+use lox_core::units::Distance;
 use lox_frames::{DynFrame, Iau, ReferenceFrame};
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
@@ -112,11 +111,10 @@ impl<B: TrySpheroid> GroundLocation<B> {
         self.coordinates.alt().to_kilometers()
     }
 
-    fn equatorial_radius(&self) -> f64 {
+    fn equatorial_radius(&self) -> Distance {
         self.body
             .try_equatorial_radius()
             .expect("equatorial radius should be available")
-            .to_meters()
     }
 
     fn flattening(&self) -> f64 {
@@ -126,23 +124,12 @@ impl<B: TrySpheroid> GroundLocation<B> {
     }
 
     pub fn body_fixed_position(&self) -> DVec3 {
-        let alt = self.coordinates.alt().to_meters();
-        let (lon_sin, lon_cos) = self.coordinates.lon().sin_cos();
-        let (lat_sin, lat_cos) = self.coordinates.lat().sin_cos();
-        let f = self.flattening();
-        let r_eq = self.equatorial_radius();
-        let e = (2.0 * f - f.powi(2)).sqrt();
-        let c = r_eq / (1.0 - e.powi(2) * lat_sin.powi(2)).sqrt();
-        let s = c * (1.0 - e.powi(2));
-        let r_delta = (c + alt) * lat_cos;
-        let r_kappa = (s + alt) * lat_sin;
-        DVec3::new(r_delta * lon_cos, r_delta * lon_sin, r_kappa)
+        self.coordinates
+            .to_body_fixed(self.equatorial_radius(), self.flattening())
     }
 
     pub fn rotation_to_topocentric(&self) -> DMat3 {
-        let rot1 = DMat3::from_rotation_z(self.longitude()).transpose();
-        let rot2 = DMat3::from_rotation_y(FRAC_PI_2 - self.latitude()).transpose();
-        rot2 * rot1
+        self.coordinates.rotation_to_topocentric()
     }
 
     fn compute_observables(&self, state_position: DVec3, state_velocity: DVec3) -> Observables {
