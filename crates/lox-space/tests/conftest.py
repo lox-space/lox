@@ -38,7 +38,7 @@ def oneweb():
     for i in range(0, len(lines), 3):
         tle = lines[i : i + 3]
         name = tle[0].strip()
-        trajectory = lox.SGP4("".join(tle)).propagate(times)
+        trajectory = lox.SGP4("".join(tle)).propagate(times, frame=lox.Frame("ICRF"))
         trajectories.append((name, trajectory))
 
     return dict(trajectories)
