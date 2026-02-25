@@ -359,8 +359,7 @@ where
         let r_sc = self.sc.interpolate_at(time).position() - r_body;
         // Compute ground station ICRF position by rotating body-fixed position
         let body_fixed_frame = DynFrame::Iau(self.gs.origin());
-        let rot = DefaultRotationProvider
-            .try_rotation(body_fixed_frame, DynFrame::Icrf, time)?;
+        let rot = DefaultRotationProvider.try_rotation(body_fixed_frame, DynFrame::Icrf, time)?;
         let (r_gs_icrf, _) = rot.rotate_state(self.gs.body_fixed_position(), DVec3::ZERO);
         let r_gs = r_gs_icrf - r_body;
         Ok(self.body.line_of_sight(r_gs, r_sc)?)

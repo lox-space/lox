@@ -15,10 +15,9 @@ use crate::ephem::python::PySpk;
 use crate::frames::python::PyFrame;
 use crate::math::python::PySeries;
 use crate::orbits::python::{
-    PyElevationMask, PyEvent, PyGroundAsset, PyGroundLocation, PyGroundPropagator,
-    PyJ2Propagator, PyKeplerian, PyObservables, PyPass, PySgp4, PySpaceAsset, PyState,
-    PyTrajectory, PyVallado, PyVisibilityAnalysis, PyVisibilityResults, PyWindow, find_events,
-    find_windows,
+    PyElevationMask, PyEvent, PyGroundAsset, PyGroundLocation, PyGroundPropagator, PyJ2Propagator,
+    PyKeplerian, PyObservables, PyPass, PySgp4, PySpaceAsset, PyState, PyTrajectory, PyVallado,
+    PyVisibilityAnalysis, PyVisibilityResults, PyWindow, find_events, find_windows,
 };
 use crate::time::python::{
     deltas::{NonFiniteTimeDeltaError, PyTimeDelta},
