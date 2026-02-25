@@ -6,7 +6,6 @@ use std::collections::HashMap;
 
 use glam::DVec3;
 use lox_bodies::{DynOrigin, TryMeanRadius, TrySpheroid, UndefinedOriginPropertyError};
-use lox_core::coords::Cartesian;
 use lox_ephem::Ephemeris;
 use lox_frames::providers::DefaultRotationProvider;
 use lox_frames::rotations::{DynRotationError, TryRotation};
@@ -26,8 +25,8 @@ use crate::events::{
     DetectError, DetectFn, EventsToIntervals, IntervalDetector, IntervalDetectorExt,
     RootFindingDetector,
 };
-use crate::ground::{DynGroundLocation, GroundPropagatorError, Observables};
-use crate::orbits::{DynCartesianOrbit, DynTrajectory};
+use crate::ground::{DynGroundLocation, Observables};
+use crate::orbits::DynTrajectory;
 use lox_frames::DynFrame;
 
 // ---------------------------------------------------------------------------
@@ -174,10 +173,9 @@ impl DynPass {
     ) -> Option<DynPass> {
         let mut pass_times = Vec::new();
         let mut pass_observables = Vec::new();
+        let body_fixed = DynFrame::Iau(gs.origin());
 
-        let mut current_time = interval.start();
-        while current_time <= interval.end() {
-            let body_fixed = DynFrame::Iau(gs.origin());
+        for current_time in interval.step_by(time_resolution) {
             let state = sc.interpolate_at(current_time);
             let state_bf = state
                 .try_to_frame(body_fixed, &DefaultRotationProvider)
@@ -189,8 +187,6 @@ impl DynPass {
                 pass_times.push(current_time);
                 pass_observables.push(obs);
             }
-
-            current_time = current_time + time_resolution;
         }
 
         if pass_times.is_empty() {
@@ -292,8 +288,6 @@ pub enum EvalError {
     #[error(transparent)]
     Rotation(#[from] DynRotationError),
     #[error(transparent)]
-    GroundPropagation(#[from] GroundPropagatorError),
-    #[error(transparent)]
     UndefinedProperty(#[from] UndefinedOriginPropertyError),
     #[error("ephemeris error: {0}")]
     Ephemeris(Box<dyn std::error::Error + Send + Sync>),
@@ -319,16 +313,9 @@ impl DetectFn<DynTimeScale> for ElevationDetectFn<'_> {
     fn eval(&self, time: DynTime) -> Result<f64, Self::Error> {
         let body_fixed = DynFrame::Iau(self.gs.origin());
         let sc = self.sc.interpolate_at(time);
-        let rot = DefaultRotationProvider
-            .try_rotation(DynFrame::Icrf, body_fixed, time)
+        let sc = sc
+            .try_to_frame(body_fixed, &DefaultRotationProvider)
             .unwrap();
-        let (r1, v1) = rot.rotate_state(sc.position(), sc.velocity());
-        let sc = DynCartesianOrbit::new(
-            Cartesian::from_vecs(r1, v1),
-            sc.time(),
-            sc.origin(),
-            body_fixed,
-        );
         let obs = self.gs.observables_dyn(sc);
         Ok(obs.elevation() - self.mask.min_elevation(obs.azimuth()))
     }

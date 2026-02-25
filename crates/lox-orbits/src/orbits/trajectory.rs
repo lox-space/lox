@@ -203,6 +203,66 @@ where
     pub fn velocity(&self, t: f64) -> DVec3 {
         self.data.velocity(t)
     }
+
+    /// Find zero-crossing events of `func` evaluated along this trajectory.
+    ///
+    /// The closure receives the interpolated [`CartesianOrbit`] at each sample
+    /// time and must return a scalar whose sign changes define events.
+    pub fn find_events<F>(
+        &self,
+        func: F,
+        step: TimeDelta,
+    ) -> Result<Vec<crate::events::Event<T>>, crate::events::DetectError>
+    where
+        F: Fn(CartesianOrbit<T, O, R>) -> f64,
+    {
+        let interval = TimeInterval::new(self.start_time(), self.end_time());
+        crate::events::find_events(|t| func(self.interpolate_at(t)), interval, step)
+    }
+
+    /// Find zero-crossing events of a fallible `func` evaluated along this
+    /// trajectory.
+    pub fn try_find_events<F, E>(
+        &self,
+        func: F,
+        step: TimeDelta,
+    ) -> Result<Vec<crate::events::Event<T>>, crate::events::DetectError>
+    where
+        F: Fn(CartesianOrbit<T, O, R>) -> Result<f64, E>,
+        E: std::error::Error + Send + Sync + 'static,
+    {
+        let interval = TimeInterval::new(self.start_time(), self.end_time());
+        crate::events::try_find_events(|t| func(self.interpolate_at(t)), interval, step)
+    }
+
+    /// Find time intervals where `func` is positive, evaluated along this
+    /// trajectory.
+    pub fn find_windows<F>(
+        &self,
+        func: F,
+        step: TimeDelta,
+    ) -> Result<Vec<TimeInterval<T>>, crate::events::DetectError>
+    where
+        F: Fn(CartesianOrbit<T, O, R>) -> f64,
+    {
+        let interval = TimeInterval::new(self.start_time(), self.end_time());
+        crate::events::find_windows(|t| func(self.interpolate_at(t)), interval, step)
+    }
+
+    /// Find time intervals where a fallible `func` is positive, evaluated
+    /// along this trajectory.
+    pub fn try_find_windows<F, E>(
+        &self,
+        func: F,
+        step: TimeDelta,
+    ) -> Result<Vec<TimeInterval<T>>, crate::events::DetectError>
+    where
+        F: Fn(CartesianOrbit<T, O, R>) -> Result<f64, E>,
+        E: std::error::Error + Send + Sync + 'static,
+    {
+        let interval = TimeInterval::new(self.start_time(), self.end_time());
+        crate::events::try_find_windows(|t| func(self.interpolate_at(t)), interval, step)
+    }
 }
 
 impl<T, O, R> Trajectory<T, O, R>
