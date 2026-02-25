@@ -271,6 +271,10 @@ where
     type Frame = R;
     type Error = TrajectorError;
 
+    fn state_at(&self, time: Time<T>) -> Result<CartesianOrbit<T, O, R>, TrajectorError> {
+        Ok(self.at(time))
+    }
+
     fn propagate(&self, interval: TimeInterval<T>) -> Result<Trajectory<T, O, R>, Self::Error> {
         let states: Vec<_> = self
             .states()

@@ -183,6 +183,10 @@ where
     type Frame = R;
     type Error = ValladoError;
 
+    fn state_at(&self, time: Time<T>) -> Result<CartesianOrbit<T, O, R>, ValladoError> {
+        self.state_at(time)
+    }
+
     fn propagate(&self, interval: TimeInterval<T>) -> Result<Trajectory<T, O, R>, ValladoError> {
         let step = self.step.unwrap_or(TimeDelta::from_seconds(1));
         let states = interval

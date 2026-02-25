@@ -16,6 +16,7 @@ use lox_bodies::{
 };
 use lox_core::coords::Cartesian;
 use lox_frames::{DynFrame, ReferenceFrame};
+use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
 use lox_time::time_scales::{DynTimeScale, TimeScale};
@@ -170,6 +171,30 @@ where
 {
     type Frame = R;
     type Error = J2Error;
+
+    fn state_at(&self, time: Time<T>) -> Result<CartesianOrbit<T, O, R>, J2Error> {
+        let epoch = self.initial_state.time();
+        let t0 = 0.0_f64;
+        let t1 = (time - epoch).to_seconds().to_f64();
+        let s0 = CartesianState(Cartesian::from_vecs(
+            self.initial_state.position(),
+            self.initial_state.velocity(),
+        ));
+
+        let mut solver = ExplicitRungeKutta::dop853()
+            .rtol(self.rtol)
+            .atol(self.atol)
+            .h_max(self.h_max);
+
+        let problem = ODEProblem::new(self, t0, t1, s0);
+        let solution = problem.solve(&mut solver).map_err(|_| J2Error::Solver)?;
+
+        let (_, final_state) = solution.iter().last().ok_or(J2Error::Solver)?;
+
+        let origin = self.initial_state.origin();
+        let frame = self.initial_state.reference_frame();
+        Ok(CartesianOrbit::new(final_state.0, time, origin, frame))
+    }
 
     fn propagate(&self, interval: TimeInterval<T>) -> Result<Trajectory<T, O, R>, J2Error> {
         let epoch = self.initial_state.time();
