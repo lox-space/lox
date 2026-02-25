@@ -245,6 +245,10 @@ where
     type Frame = R;
     type Error = GroundPropagatorError;
 
+    fn state_at(&self, time: Time<T>) -> Result<CartesianOrbit<T, B, R>, GroundPropagatorError> {
+        Ok(self.state_at(time))
+    }
+
     fn propagate(&self, interval: TimeInterval<T>) -> Result<Trajectory<T, B, R>, Self::Error> {
         let pos = self.location.body_fixed_position();
         let step = self.step.unwrap_or(TimeDelta::from_seconds(60));
@@ -362,7 +366,9 @@ mod tests {
         let t1 = time + TimeDelta::from_minutes(5.0);
         let interval = Interval::new(time, t1);
         let traj = propagator
-            .propagate_in_frame(interval, Icrf, &DefaultRotationProvider)
+            .propagate(interval)
+            .unwrap()
+            .into_frame(Icrf, &DefaultRotationProvider)
             .unwrap();
         let state = traj.states()[0].clone();
         let expected = DVec3::new(-1765953.5510583583, 4524585.984442561, 4120189.198495323);
@@ -411,7 +417,9 @@ mod tests {
         let t1 = time + TimeDelta::from_minutes(5.0);
         let interval = Interval::new(time, t1);
         let traj = propagator
-            .propagate_in_frame(interval, DynFrame::Icrf, &DefaultRotationProvider)
+            .propagate(interval)
+            .unwrap()
+            .into_frame(DynFrame::Icrf, &DefaultRotationProvider)
             .unwrap();
         let state = traj.states()[0].clone();
         // Same result as the static version

@@ -81,6 +81,10 @@ impl Propagator<Tai, Earth> for Sgp4 {
     type Frame = Teme;
     type Error = Sgp4Error;
 
+    fn state_at(&self, time: Time<Tai>) -> Result<CartesianOrbit<Tai, Earth, Teme>, Sgp4Error> {
+        self.state_at(time)
+    }
+
     fn propagate(
         &self,
         interval: TimeInterval<Tai>,
@@ -155,7 +159,9 @@ mod tests {
         let t1 = t0 + TimeDelta::from_minutes(10.0);
         let interval = Interval::new(t0, t1);
         let traj = sgp4
-            .propagate_in_frame(interval, Icrf, &DefaultRotationProvider)
+            .propagate(interval)
+            .unwrap()
+            .into_frame(Icrf, &DefaultRotationProvider)
             .unwrap();
         assert!(traj.states().len() > 5);
         assert_eq!(traj.reference_frame(), Icrf);
