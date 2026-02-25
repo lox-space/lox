@@ -1090,3 +1090,404 @@ class Series:
     def interpolate(self, xp: float) -> float:
         """Interpolate a y value at the given x coordinate."""
         ...
+
+# Communications
+
+class Decibel:
+    """A value in decibels.
+
+    Args:
+        value: The value in dB.
+    """
+    def __new__(cls, value: float) -> Self: ...
+    @staticmethod
+    def from_linear(value: float) -> Decibel:
+        """Creates a Decibel value from a linear power ratio."""
+        ...
+    def to_linear(self) -> float:
+        """Returns the linear power ratio."""
+        ...
+    def __float__(self) -> float: ...
+    def __add__(self, other: Decibel) -> Decibel: ...
+    def __sub__(self, other: Decibel) -> Decibel: ...
+    def __neg__(self) -> Decibel: ...
+    def __eq__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
+    def __str__(self) -> str: ...
+
+class Modulation:
+    """Digital modulation scheme.
+
+    Args:
+        name: One of "BPSK", "QPSK", "8PSK", "16QAM", "32QAM", "64QAM", "128QAM", "256QAM".
+    """
+    def __new__(cls, name: str) -> Self: ...
+    def bits_per_symbol(self) -> int:
+        """Returns the number of bits per symbol."""
+        ...
+    def __eq__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
+
+class ParabolicPattern:
+    """Parabolic antenna gain pattern.
+
+    Args:
+        diameter_m: Antenna diameter in meters.
+        efficiency: Aperture efficiency (0, 1].
+    """
+    def __new__(cls, diameter_m: float, efficiency: float) -> Self: ...
+    @staticmethod
+    def from_beamwidth(beamwidth_deg: float, frequency_hz: float, efficiency: float) -> ParabolicPattern:
+        """Creates a parabolic pattern from a desired beamwidth.
+
+        Args:
+            beamwidth_deg: Half-power beamwidth in degrees.
+            frequency_hz: Frequency in Hz.
+            efficiency: Aperture efficiency (0, 1].
+        """
+        ...
+    def gain(self, frequency_hz: float, angle_deg: float) -> Decibel:
+        """Returns the gain in dBi at the given frequency and off-boresight angle."""
+        ...
+    def beamwidth(self, frequency_hz: float) -> float | None:
+        """Returns the half-power beamwidth in degrees, or ``None`` when the
+        antenna diameter is smaller than ~1.22 wavelengths at this frequency."""
+        ...
+    def peak_gain(self, frequency_hz: float) -> Decibel:
+        """Returns the peak gain in dBi."""
+        ...
+    def __eq__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
+
+class GaussianPattern:
+    """Gaussian antenna gain pattern.
+
+    Args:
+        diameter_m: Antenna diameter in meters.
+        efficiency: Aperture efficiency (0, 1].
+    """
+    def __new__(cls, diameter_m: float, efficiency: float) -> Self: ...
+    def gain(self, frequency_hz: float, angle_deg: float) -> Decibel:
+        """Returns the gain in dBi at the given frequency and off-boresight angle."""
+        ...
+    def beamwidth(self, frequency_hz: float) -> float | None:
+        """Returns the half-power beamwidth in degrees."""
+        ...
+    def peak_gain(self, frequency_hz: float) -> Decibel:
+        """Returns the peak gain in dBi."""
+        ...
+    def __eq__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
+
+class DipolePattern:
+    """Dipole antenna gain pattern.
+
+    Args:
+        length_m: Dipole length in meters.
+    """
+    def __new__(cls, length_m: float) -> Self: ...
+    def gain(self, frequency_hz: float, angle_deg: float) -> Decibel:
+        """Returns the gain in dBi at the given frequency and off-boresight angle."""
+        ...
+    def peak_gain(self, frequency_hz: float) -> Decibel:
+        """Returns the peak gain in dBi."""
+        ...
+    def __eq__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
+
+class SimpleAntenna:
+    """A simple antenna with constant gain and beamwidth.
+
+    Args:
+        gain_db: Peak gain in dBi.
+        beamwidth_deg: Half-power beamwidth in degrees.
+    """
+    def __new__(cls, gain_db: float, beamwidth_deg: float) -> Self: ...
+    def __eq__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
+
+class ComplexAntenna:
+    """An antenna with a physics-based gain pattern and boresight vector.
+
+    Args:
+        pattern: An antenna pattern (ParabolicPattern, GaussianPattern, or DipolePattern).
+        boresight: Boresight direction as [x, y, z].
+    """
+    def __new__(cls, pattern: ParabolicPattern | GaussianPattern | DipolePattern, boresight: list[float]) -> Self: ...
+    def gain(self, frequency_hz: float, angle_deg: float) -> Decibel:
+        """Returns the gain in dBi at the given frequency and off-boresight angle."""
+        ...
+    def beamwidth(self, frequency_hz: float) -> float | None:
+        """Returns the half-power beamwidth in degrees, or ``None`` when the
+        underlying pattern does not define a beamwidth."""
+        ...
+    def peak_gain(self, frequency_hz: float) -> Decibel:
+        """Returns the peak gain in dBi."""
+        ...
+    def __repr__(self) -> str: ...
+
+class Transmitter:
+    """A radio transmitter.
+
+    Args:
+        frequency_hz: Transmit frequency in Hz.
+        power_w: Transmit power in watts.
+        line_loss_db: Feed/line loss in dB.
+        output_back_off_db: Output back-off in dB (default 0).
+    """
+    def __new__(cls, frequency_hz: float, power_w: float, line_loss_db: float, output_back_off_db: float = 0.0) -> Self: ...
+    def eirp(self, antenna: SimpleAntenna | ComplexAntenna, angle_deg: float) -> Decibel:
+        """Returns the EIRP in dBW for the given antenna and off-boresight angle."""
+        ...
+    def __eq__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
+
+class SimpleReceiver:
+    """A simple receiver with a known system noise temperature.
+
+    Args:
+        frequency_hz: Receive frequency in Hz.
+        system_noise_temperature_k: System noise temperature in Kelvin.
+    """
+    def __new__(cls, frequency_hz: float, system_noise_temperature_k: float) -> Self: ...
+    def __eq__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
+
+class ComplexReceiver:
+    """A complex receiver with detailed noise and gain parameters.
+
+    Args:
+        frequency_hz: Receive frequency in Hz.
+        antenna_noise_temperature_k: Antenna noise temperature in Kelvin.
+        lna_gain_db: LNA gain in dB.
+        lna_noise_figure_db: LNA noise figure in dB.
+        noise_figure_db: Receiver noise figure in dB.
+        loss_db: Receiver chain loss in dB.
+        demodulator_loss_db: Demodulator loss in dB (default 0).
+        implementation_loss_db: Other implementation losses in dB (default 0).
+    """
+    def __new__(
+        cls,
+        frequency_hz: float,
+        antenna_noise_temperature_k: float,
+        lna_gain_db: float,
+        lna_noise_figure_db: float,
+        noise_figure_db: float,
+        loss_db: float,
+        demodulator_loss_db: float = 0.0,
+        implementation_loss_db: float = 0.0,
+    ) -> Self: ...
+    def noise_temperature(self) -> float:
+        """Returns the receiver noise temperature in Kelvin."""
+        ...
+    def system_noise_temperature(self) -> float:
+        """Returns the system noise temperature in Kelvin."""
+        ...
+    def __eq__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
+
+class Channel:
+    """A communication channel.
+
+    Args:
+        link_type: "uplink" or "downlink".
+        data_rate: Data rate in bits per second.
+        required_eb_n0_db: Required Eb/N0 in dB.
+        margin_db: Required link margin in dB.
+        modulation: Modulation scheme.
+        roll_off: Roll-off factor (default 1.5).
+        fec: Forward error correction code rate (default 0.5).
+    """
+    def __new__(
+        cls,
+        link_type: str,
+        data_rate: float,
+        required_eb_n0_db: float,
+        margin_db: float,
+        modulation: Modulation,
+        roll_off: float = 1.5,
+        fec: float = 0.5,
+    ) -> Self: ...
+    def bandwidth(self) -> float:
+        """Returns the channel bandwidth in Hz."""
+        ...
+    def eb_n0(self, c_n0: Decibel) -> Decibel:
+        """Computes Eb/N0 from a given C/N0."""
+        ...
+    def link_margin(self, eb_n0: Decibel) -> Decibel:
+        """Computes the link margin from a given Eb/N0."""
+        ...
+    def __repr__(self) -> str: ...
+
+class EnvironmentalLosses:
+    """Environmental losses for a link.
+
+    Args:
+        rain_db: Rain attenuation in dB (default 0).
+        gaseous_db: Gaseous absorption in dB (default 0).
+        scintillation_db: Scintillation loss in dB (default 0).
+        atmospheric_db: Atmospheric loss in dB (default 0).
+        cloud_db: Cloud attenuation in dB (default 0).
+        depolarization_db: Depolarization loss in dB (default 0).
+    """
+    def __new__(
+        cls,
+        rain_db: float = 0.0,
+        gaseous_db: float = 0.0,
+        scintillation_db: float = 0.0,
+        atmospheric_db: float = 0.0,
+        cloud_db: float = 0.0,
+        depolarization_db: float = 0.0,
+    ) -> Self: ...
+    def total(self) -> Decibel:
+        """Returns the total environmental loss in dB."""
+        ...
+    def __eq__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
+
+class CommunicationSystem:
+    """A communication system combining an antenna with optional transmitter and receiver.
+
+    Args:
+        antenna: A SimpleAntenna or ComplexAntenna.
+        receiver: A SimpleReceiver or ComplexReceiver (optional).
+        transmitter: A Transmitter (optional).
+    """
+    def __new__(
+        cls,
+        antenna: SimpleAntenna | ComplexAntenna,
+        receiver: SimpleReceiver | ComplexReceiver | None = None,
+        transmitter: Transmitter | None = None,
+    ) -> Self: ...
+    def carrier_to_noise_density(
+        self,
+        rx_system: CommunicationSystem,
+        losses_db: float,
+        range_km: float,
+        tx_angle_deg: float,
+        rx_angle_deg: float,
+    ) -> Decibel:
+        """Computes the carrier-to-noise density ratio (C/N0) in dB·Hz.
+
+        Args:
+            rx_system: The receiving CommunicationSystem.
+            losses_db: Additional losses in dB.
+            range_km: Slant range in kilometers.
+            tx_angle_deg: Off-boresight angle at transmitter in degrees.
+            rx_angle_deg: Off-boresight angle at receiver in degrees.
+        """
+        ...
+    def carrier_power(
+        self,
+        rx_system: CommunicationSystem,
+        losses_db: float,
+        range_km: float,
+        tx_angle_deg: float,
+        rx_angle_deg: float,
+    ) -> Decibel:
+        """Computes the received carrier power in dBW."""
+        ...
+    def noise_power(self, bandwidth_hz: float) -> Decibel:
+        """Computes the noise power in dBW for a given bandwidth."""
+        ...
+    def __repr__(self) -> str: ...
+
+class LinkStats:
+    """Complete link budget statistics."""
+    @staticmethod
+    def calculate(
+        tx_system: CommunicationSystem,
+        rx_system: CommunicationSystem,
+        channel: Channel,
+        range_km: float,
+        tx_angle_deg: float,
+        rx_angle_deg: float,
+        losses: EnvironmentalLosses | None = None,
+    ) -> LinkStats:
+        """Computes a full link budget.
+
+        Args:
+            tx_system: The transmitting CommunicationSystem.
+            rx_system: The receiving CommunicationSystem.
+            channel: The Channel.
+            range_km: Slant range in kilometers.
+            tx_angle_deg: Off-boresight angle at transmitter in degrees.
+            rx_angle_deg: Off-boresight angle at receiver in degrees.
+            losses: EnvironmentalLosses (optional, defaults to none).
+        """
+        ...
+    @property
+    def slant_range_km(self) -> float:
+        """Slant range in kilometers."""
+        ...
+    @property
+    def fspl(self) -> Decibel:
+        """Free-space path loss in dB."""
+        ...
+    @property
+    def eirp(self) -> Decibel:
+        """EIRP in dBW."""
+        ...
+    @property
+    def gt(self) -> Decibel:
+        """Receiver G/T in dB/K."""
+        ...
+    @property
+    def c_n0(self) -> Decibel:
+        """Carrier-to-noise density ratio in dB·Hz."""
+        ...
+    @property
+    def eb_n0(self) -> Decibel:
+        """Eb/N0 in dB."""
+        ...
+    @property
+    def margin(self) -> Decibel:
+        """Link margin in dB."""
+        ...
+    @property
+    def carrier_rx_power(self) -> Decibel:
+        """Received carrier power in dBW."""
+        ...
+    @property
+    def noise_power(self) -> Decibel:
+        """Noise power in dBW."""
+        ...
+    @property
+    def data_rate(self) -> float:
+        """Data rate in bits per second."""
+        ...
+    @property
+    def bandwidth_hz(self) -> float:
+        """Channel bandwidth in Hz."""
+        ...
+    @property
+    def frequency_hz(self) -> float:
+        """Link frequency in Hz."""
+        ...
+    def __repr__(self) -> str: ...
+
+def fspl(distance_km: float, frequency_hz: float) -> Decibel:
+    """Computes the free-space path loss in dB.
+
+    Args:
+        distance_km: Distance in kilometers.
+        frequency_hz: Frequency in Hz.
+
+    Returns:
+        Free-space path loss as a Decibel value.
+    """
+    ...
+
+def freq_overlap(rx_freq_hz: float, rx_bw_hz: float, tx_freq_hz: float, tx_bw_hz: float) -> float:
+    """Computes the frequency overlap factor between a receiver and an interferer.
+
+    Args:
+        rx_freq_hz: Receiver center frequency in Hz.
+        rx_bw_hz: Receiver bandwidth in Hz.
+        tx_freq_hz: Interferer center frequency in Hz.
+        tx_bw_hz: Interferer bandwidth in Hz.
+
+    Returns:
+        Overlap factor in [0, 1].
+    """
+    ...
