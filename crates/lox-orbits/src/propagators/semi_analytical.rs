@@ -9,9 +9,9 @@ use thiserror::Error;
 
 use lox_bodies::{DynOrigin, Origin, PointMass, TryPointMass};
 
-use crate::orbits::{CartesianOrbit, DynCartesianOrbit, TrajectorError};
+use crate::orbits::{CartesianOrbit, TrajectorError};
 use crate::propagators::{Propagator, stumpff};
-use lox_frames::{DynFrame, Icrf, ReferenceFrame};
+use lox_frames::{DynFrame, Icrf, ReferenceFrame, traits::frame_id};
 
 #[derive(Debug, Error, PartialEq)]
 pub enum ValladoError {
@@ -73,14 +73,18 @@ where
     }
 }
 
-impl DynVallado {
+impl<T: TimeScale, O: TryPointMass + Copy, R: ReferenceFrame + Copy> Vallado<T, O, R> {
     // TODO: Use better error type
-    pub fn with_dynamic(initial_state: DynCartesianOrbit) -> Result<Self, &'static str> {
+    pub fn try_new(initial_state: CartesianOrbit<T, O, R>) -> Result<Self, &'static str> {
         if initial_state
             .origin()
             .try_gravitational_parameter()
             .is_err()
-            || initial_state.reference_frame() != DynFrame::Icrf
+        {
+            return Err("invalid frame or origin");
+        }
+        if let Some(id) = frame_id(&initial_state.reference_frame())
+            && id != frame_id(&Icrf).unwrap()
         {
             return Err("invalid frame or origin");
         }

@@ -277,10 +277,7 @@ impl PyState {
             self.clone()
         };
         let spk = &ephemeris.borrow().0;
-        let mut s1 = Self(
-            s.0.to_origin_dynamic(target.0, spk)
-                .map_err(PyDafSpkError)?,
-        );
+        let mut s1 = Self(s.0.try_to_origin(target.0, spk).map_err(PyDafSpkError)?);
         if frame.0 != DynFrame::Icrf {
             s1 = s1.to_frame(frame, None)?
         }
@@ -338,7 +335,7 @@ impl PyState {
     fn to_ground_location(&self) -> PyResult<PyGroundLocation> {
         Ok(PyGroundLocation(
             self.0
-                .to_dyn_ground_location()
+                .try_to_ground_location()
                 .map_err(|err| PyValueError::new_err(err.to_string()))?,
         ))
     }
@@ -779,7 +776,7 @@ impl PyVallado {
     #[new]
     #[pyo3(signature =(initial_state, max_iter=None))]
     fn new(initial_state: PyState, max_iter: Option<i32>) -> PyResult<Self> {
-        let mut vallado = Vallado::with_dynamic(initial_state.0).map_err(|_| {
+        let mut vallado = Vallado::try_new(initial_state.0).map_err(|_| {
             PyValueError::new_err("only inertial frames are supported for the Vallado propagator")
         })?;
         if let Some(max_iter) = max_iter {
@@ -841,7 +838,7 @@ impl PyGroundLocation {
     #[new]
     fn new(origin: PyOrigin, longitude: f64, latitude: f64, altitude: f64) -> PyResult<Self> {
         Ok(PyGroundLocation(
-            DynGroundLocation::with_dynamic(longitude, latitude, altitude, origin.0)
+            DynGroundLocation::try_new(longitude, latitude, altitude, origin.0)
                 .map_err(PyValueError::new_err)?,
         ))
     }
@@ -924,7 +921,7 @@ impl From<PyGroundPropagatorError> for PyErr {
 impl PyGroundPropagator {
     #[new]
     fn new(location: PyGroundLocation) -> Self {
-        PyGroundPropagator(DynGroundPropagator::with_dynamic(location.0))
+        PyGroundPropagator(DynGroundPropagator::new(location.0))
     }
 
     /// Propagate the ground station to one or more times.
