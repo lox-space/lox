@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.1.0-alpha.6](https://github.com/lox-space/lox/compare/lox-frames-v0.1.0-alpha.5...lox-frames-v0.1.0-alpha.6) - 2026-02-25
+
+### Added
+
+- add conversions to `dyn` types
+
+### Fixed
+
+- fix various lints
+
+### Other
+
+- add into_dyn tests
+- add fast paths for no-op conversions
+
 ## [0.1.0-alpha.5](https://github.com/lox-space/lox/compare/lox-frames-v0.1.0-alpha.4...lox-frames-v0.1.0-alpha.5) - 2026-02-22
 
 ### Added

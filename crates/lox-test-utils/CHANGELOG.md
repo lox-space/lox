@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.3](https://github.com/lox-space/lox/compare/lox-test-utils-v0.1.0-alpha.2...lox-test-utils-v0.1.0-alpha.3) - 2026-02-25
+
+### Other
+
+- update Cargo.toml dependencies
+
 ## [0.1.0-alpha.2](https://github.com/lox-space/lox/compare/lox-test-utils-v0.1.0-alpha.1...lox-test-utils-v0.1.0-alpha.2) - 2026-02-22
 
 ### Other

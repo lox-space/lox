@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.15](https://github.com/lox-space/lox/compare/lox-earth-v0.1.0-alpha.14...lox-earth-v0.1.0-alpha.15) - 2026-02-25
+
+### Other
+
+- updated the following local packages: lox-test-utils, lox-core, lox-bodies, lox-time, lox-frames, lox-math, lox-io
+
 ## [0.1.0-alpha.14](https://github.com/lox-space/lox/compare/lox-earth-v0.1.0-alpha.13...lox-earth-v0.1.0-alpha.14) - 2026-02-22
 
 ### Added

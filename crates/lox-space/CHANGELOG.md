@@ -6,6 +6,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.30](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.29...lox-space-v0.1.0-alpha.30) - 2026-02-25
+
+### Added
+
+- *(spacelink-validation)* map Lox calulations to Spacelink and cross-validate implementations
+- *(lox-comms)* add Python wrapper
+
+### Fixed
+
+- *(lox-space)* add comms type stubs to fix Python docs build
+- add spacelink and bump python version to >=3.11
+- correct inconsistent trait-contract AntennaGain::beamwidth()
+- update dipole-test comment
+- explicitly handle case where beamwidth is not defined
+- fix various lints
+- *(lox-space)* fix core re-exports
+
+### Other
+
+- *(lox-orbits)* fix performance regression
+- *(lox-orbits)* address review comments
+- *(lox-orbits)* remove frame change and change time parameters
+- *(lox-orbits)* re-design propagator API
+- more simplifications
+- *(lox-orbits)* simplify based on `into_dyn` and co.
+- *(lox-comms)* add Python wrapper docs
+- *(lox-ephem)* clean-up API and style
+- *(lox-ephem)* refactor ephemeris interface
+
 ## [0.1.0-alpha.29](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.28...lox-space-v0.1.0-alpha.29) - 2026-02-22
 
 ### Added
