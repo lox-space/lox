@@ -27,8 +27,10 @@ use crate::propagators::Propagator;
 
 #[derive(Debug, Error)]
 pub enum J2Error {
-    #[error("ODE solver failed")]
-    Solver,
+    #[error("ODE solver failed: {0}")]
+    Solver(String),
+    #[error("ODE solver returned no solution")]
+    EmptySolution,
     #[error(transparent)]
     Trajectory(#[from] TrajectorError),
 }
@@ -187,9 +189,11 @@ where
             .h_max(self.h_max);
 
         let problem = ODEProblem::new(self, t0, t1, s0);
-        let solution = problem.solve(&mut solver).map_err(|_| J2Error::Solver)?;
+        let solution = problem
+            .solve(&mut solver)
+            .map_err(|e| J2Error::Solver(format!("{:?}", e)))?;
 
-        let (_, final_state) = solution.iter().last().ok_or(J2Error::Solver)?;
+        let (_, final_state) = solution.iter().next_back().ok_or(J2Error::EmptySolution)?;
 
         let origin = self.initial_state.origin();
         let frame = self.initial_state.reference_frame();
@@ -211,7 +215,9 @@ where
             .h_max(self.h_max);
 
         let problem = ODEProblem::new(self, t0, t1, s0);
-        let solution = problem.solve(&mut solver).map_err(|_| J2Error::Solver)?;
+        let solution = problem
+            .solve(&mut solver)
+            .map_err(|e| J2Error::Solver(format!("{:?}", e)))?;
 
         let origin = self.initial_state.origin();
         let frame = self.initial_state.reference_frame();
