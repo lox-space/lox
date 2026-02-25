@@ -2,18 +2,21 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use core::f64::consts::TAU;
+use core::f64::consts::{FRAC_PI_2, PI, TAU};
 use std::{
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
     sync::Arc,
 };
 
-use glam::DVec3;
+use glam::{DMat3, DVec3};
 use lox_test_utils::ApproxEq;
 use thiserror::Error;
 
 use crate::{
-    math::series::{InterpolationType, Series},
+    math::{
+        roots::{FindRoot, RootFinderError, Secant},
+        series::{InterpolationType, Series},
+    },
     time::deltas::TimeDelta,
     units::{Angle, Distance, Velocity},
 };
@@ -106,6 +109,71 @@ impl LonLatAlt {
 
     pub fn alt(&self) -> Distance {
         self.2
+    }
+
+    /// Converts geodetic coordinates (LLA) to body-fixed Cartesian position (meters).
+    pub fn to_body_fixed(&self, equatorial_radius: Distance, flattening: f64) -> DVec3 {
+        let alt = self.alt().to_meters();
+        let (lon_sin, lon_cos) = self.lon().sin_cos();
+        let (lat_sin, lat_cos) = self.lat().sin_cos();
+        let r_eq = equatorial_radius.to_meters();
+        let e = (2.0 * flattening - flattening.powi(2)).sqrt();
+        let c = r_eq / (1.0 - e.powi(2) * lat_sin.powi(2)).sqrt();
+        let s = c * (1.0 - e.powi(2));
+        let r_delta = (c + alt) * lat_cos;
+        let r_kappa = (s + alt) * lat_sin;
+        DVec3::new(r_delta * lon_cos, r_delta * lon_sin, r_kappa)
+    }
+
+    /// Converts a body-fixed Cartesian position (meters) to geodetic coordinates (LLA).
+    pub fn from_body_fixed(
+        pos: DVec3,
+        equatorial_radius: Distance,
+        flattening: f64,
+    ) -> Result<Self, RootFinderError> {
+        let r_eq = equatorial_radius.to_meters();
+        let rm = pos.length();
+        let r_delta = (pos.x.powi(2) + pos.y.powi(2)).sqrt();
+        let mut lon = pos.y.atan2(pos.x);
+
+        if lon.abs() >= PI {
+            if lon < 0.0 {
+                lon += TAU;
+            } else {
+                lon -= TAU;
+            }
+        }
+
+        let delta = (pos.z / rm).asin();
+
+        let root_finder = Secant::default();
+
+        let f = flattening;
+        let lat = root_finder.find(
+            |lat: f64| {
+                let e = (2.0 * f - f.powi(2)).sqrt();
+                let c = r_eq / (1.0 - e.powi(2) * lat.sin().powi(2)).sqrt();
+                Ok(pos.z + c * e.powi(2) * lat.sin()).map(|v| v / r_delta - lat.tan())
+            },
+            delta,
+        )?;
+
+        let e = (2.0 * f - f.powi(2)).sqrt();
+        let c = r_eq / (1.0 - e.powi(2) * lat.sin().powi(2)).sqrt();
+        let alt = r_delta / lat.cos() - c;
+
+        Ok(LonLatAlt(
+            Angle::radians(lon),
+            Angle::radians(lat),
+            Distance::meters(alt),
+        ))
+    }
+
+    /// Returns the rotation matrix from body-fixed to topocentric (SEZ) frame.
+    pub fn rotation_to_topocentric(&self) -> DMat3 {
+        let rot1 = DMat3::from_rotation_z(self.lon().to_radians()).transpose();
+        let rot2 = DMat3::from_rotation_y(FRAC_PI_2 - self.lat().to_radians()).transpose();
+        rot2 * rot1
     }
 }
 
@@ -725,5 +793,57 @@ mod tests {
         assert_eq!(c.vx(), 1e3.mps());
         assert_eq!(c.vy(), 1e3.mps());
         assert_eq!(c.vz(), 1e3.mps());
+    }
+
+    fn lla(lon_deg: f64, lat_deg: f64, alt_m: f64) -> LonLatAlt {
+        LonLatAlt::builder()
+            .longitude(Angle::degrees(lon_deg))
+            .latitude(Angle::degrees(lat_deg))
+            .altitude(Distance::meters(alt_m))
+            .build()
+            .unwrap()
+    }
+
+    // Earth constants matching lox-bodies generated values
+    const EARTH_R_EQ: f64 = 6378136.6; // meters (6378.1366 km)
+    const EARTH_F: f64 = (6378.1366 - 6356.7519) / 6378.1366;
+
+    #[test]
+    fn test_lla_to_body_fixed() {
+        let coords = lla(-4.3676, 40.4527, 0.0);
+        let r_eq = Distance::meters(EARTH_R_EQ);
+        let result = coords.to_body_fixed(r_eq, EARTH_F);
+        let expected = DVec3::new(4846130.017870638, -370132.8551351891, 4116364.272747229);
+        assert!((result - expected).length() < 1e-3);
+    }
+
+    #[test]
+    fn test_lla_from_body_fixed_roundtrip() {
+        let coords = lla(-4.3676, 40.4527, 100.0);
+        let r_eq = Distance::meters(EARTH_R_EQ);
+        let body_fixed = coords.to_body_fixed(r_eq, EARTH_F);
+        let roundtrip = LonLatAlt::from_body_fixed(body_fixed, r_eq, EARTH_F).unwrap();
+        assert!((roundtrip.lon().to_degrees() - coords.lon().to_degrees()).abs() < 1e-6);
+        assert!((roundtrip.lat().to_degrees() - coords.lat().to_degrees()).abs() < 1e-6);
+        assert!((roundtrip.alt().to_meters() - coords.alt().to_meters()).abs() < 1e-3);
+    }
+
+    #[test]
+    fn test_lla_rotation_to_topocentric() {
+        let coords = lla(-4.3676, 40.4527, 0.0);
+        let act = coords.rotation_to_topocentric();
+        let exp = DMat3::from_cols(
+            DVec3::new(0.6469358921661584, 0.07615519584215287, 0.7587320591443464),
+            DVec3::new(
+                -0.049411020334552434,
+                0.9970959763965771,
+                -0.05794967578213965,
+            ),
+            DVec3::new(-0.7609418522440956, 0.0, 0.6488200809957448),
+        );
+        // Check element-wise within tolerance
+        for i in 0..3 {
+            assert!((act.col(i) - exp.col(i)).length() < 1e-10);
+        }
     }
 }

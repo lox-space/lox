@@ -2,7 +2,6 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use std::f64::consts::{PI, TAU};
 use std::ops::Sub;
 
 use glam::{DMat3, DVec3};
@@ -11,17 +10,15 @@ use lox_bodies::{
     UndefinedOriginPropertyError,
 };
 use lox_core::coords::Cartesian;
+use lox_core::coords::LonLatAlt;
 use lox_ephem::Ephemeris;
 use lox_frames::{
     DynFrame, Iau, Icrf, ReferenceFrame, TryBodyFixed, rotations::TryRotation, traits::frame_id,
 };
-use lox_math::roots::{FindRoot, RootFinderError, Secant};
+use lox_math::roots::RootFinderError;
 use lox_time::offsets::{DefaultOffsetProvider, Offset};
 use lox_time::time_scales::{Tdb, TimeScale};
 use thiserror::Error;
-
-use lox_core::coords::LonLatAlt;
-use lox_core::units::{Angle, Distance};
 
 use crate::ground::{DynGroundLocation, GroundLocation};
 
@@ -107,57 +104,18 @@ where
     }
 }
 
-fn rv_to_lla(r: DVec3, r_eq: f64, f: f64) -> Result<(f64, f64, f64), RootFinderError> {
-    let rm = r.length();
-    let r_delta = (r.x.powi(2) + r.y.powi(2)).sqrt();
-    let mut lon = r.y.atan2(r.x);
-
-    if lon.abs() >= PI {
-        if lon < 0.0 {
-            lon += TAU;
-        } else {
-            lon -= TAU;
-        }
-    }
-
-    let delta = (r.z / rm).asin();
-
-    let root_finder = Secant::default();
-
-    let lat = root_finder.find(
-        |lat: f64| {
-            let e = (2.0 * f - f.powi(2)).sqrt();
-            let c = r_eq / (1.0 - e.powi(2) * lat.sin().powi(2)).sqrt();
-            Ok((r.z + c * e.powi(2) * lat.sin()) / r_delta - lat.tan())
-        },
-        delta,
-    )?;
-
-    let e = (2.0 * f - f.powi(2)).sqrt();
-    let c = r_eq / (1.0 - e.powi(2) * lat.sin().powi(2)).sqrt();
-
-    let alt = r_delta / lat.cos() - c;
-
-    Ok((lon, lat, alt))
-}
-
 impl<T, O> CartesianOrbit<T, O, Iau<O>>
 where
     T: TimeScale,
     O: Origin + RotationalElements + Spheroid + Copy,
 {
     pub fn to_ground_location(&self) -> Result<GroundLocation<O>, RootFinderError> {
-        let r = self.position();
         let origin = self.origin();
-        let r_eq = origin.equatorial_radius().to_kilometers();
-        let f = origin.flattening();
-        let (lon, lat, alt) = rv_to_lla(r, r_eq, f)?;
-        let coords = LonLatAlt::builder()
-            .longitude(Angle::radians(lon))
-            .latitude(Angle::radians(lat))
-            .altitude(Distance::kilometers(alt))
-            .build()
-            .expect("geodetic coordinates from rv_to_lla should be valid");
+        let coords = LonLatAlt::from_body_fixed(
+            self.position(),
+            origin.equatorial_radius(),
+            origin.flattening(),
+        )?;
         Ok(GroundLocation::new(coords, origin))
     }
 }
@@ -253,23 +211,11 @@ impl DynCartesianOrbit {
                 frame.name().to_string(),
             ));
         }
-        let r = self.position();
-        let (Ok(r_eq), Ok(f)) = (
-            origin.try_equatorial_radius().map(|d| d.to_meters()),
-            origin.try_flattening(),
-        ) else {
+        let (Ok(r_eq), Ok(f)) = (origin.try_equatorial_radius(), origin.try_flattening()) else {
             return Err(StateToDynGroundError::UndefinedSpheroid(origin));
         };
 
-        let (lon, lat, alt) = rv_to_lla(r, r_eq, f)?;
-
-        // rv_to_lla returns altitude in meters (same units as r_eq)
-        let coords = LonLatAlt::builder()
-            .longitude(Angle::radians(lon))
-            .latitude(Angle::radians(lat))
-            .altitude(Distance::meters(alt))
-            .build()
-            .expect("geodetic coordinates from rv_to_lla should be valid");
+        let coords = LonLatAlt::from_body_fixed(self.position(), r_eq, f)?;
         Ok(DynGroundLocation::try_new(coords, origin).unwrap())
     }
 
@@ -367,8 +313,8 @@ mod tests {
         let lon_exp = -35.516f64.to_radians();
         let alt_exp = 237.434; // km
 
-        let position = DVec3::new(3359.927, -2398.072, 5153.0);
-        let velocity = DVec3::new(5.0657, 5.485, -0.744);
+        let position = DVec3::new(3359927.0, -2398072.0, 5153000.0);
+        let velocity = DVec3::new(5065.7, 5485.0, -744.0);
         let time = time!(Tdb, 2012, 7, 1).unwrap();
         let state = CartesianOrbit::new(
             Cartesian::from_vecs(position, velocity),
