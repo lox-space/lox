@@ -47,4 +47,14 @@ impl PySpk {
         let spk = Spk::from_file(path).map_err(PyDafSpkError)?;
         Ok(PySpk(spk))
     }
+
+    fn __repr__(&self) -> String {
+        let n: usize = self
+            .0
+            .segments
+            .values()
+            .map(|m| m.values().map(|v| v.len()).sum::<usize>())
+            .sum();
+        format!("SPK({n} segments)")
+    }
 }
