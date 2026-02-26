@@ -57,13 +57,19 @@ def test_interpolation(orbit, trajectory):
     dt = orbit.orbital_period()
     s1 = trajectory.interpolate(dt)
     k1 = s1.to_keplerian()
-    assert float(orbit.semi_major_axis()) == pytest.approx(float(k1.semi_major_axis()), rel=1e-8)
+    assert float(orbit.semi_major_axis()) == pytest.approx(
+        float(k1.semi_major_axis()), rel=1e-8
+    )
     assert orbit.eccentricity() == pytest.approx(k1.eccentricity(), rel=1e-8)
-    assert float(orbit.inclination()) == pytest.approx(float(k1.inclination()), rel=1e-8)
+    assert float(orbit.inclination()) == pytest.approx(
+        float(k1.inclination()), rel=1e-8
+    )
     assert float(orbit.longitude_of_ascending_node()) == pytest.approx(
         float(k1.longitude_of_ascending_node()), rel=1e-8
     )
     assert float(orbit.argument_of_periapsis()) == pytest.approx(
         float(k1.argument_of_periapsis()), rel=1e-8
     )
-    assert float(orbit.true_anomaly()) == pytest.approx(float(k1.true_anomaly()), rel=1e-8)
+    assert float(orbit.true_anomaly()) == pytest.approx(
+        float(k1.true_anomaly()), rel=1e-8
+    )
