@@ -897,4 +897,264 @@ mod tests {
             "two-level ({two_level_evals}) should use fewer evals than single-level ({single_evals})"
         );
     }
+
+    // -----------------------------------------------------------------------
+    // Combinator and extension-trait tests
+    // -----------------------------------------------------------------------
+
+    /// Helper: build an `EventsToIntervals` detector from an infallible closure.
+    fn make_window_detector<F: Fn(Time<Tai>) -> f64>(
+        func: F,
+        step: TimeDelta,
+    ) -> EventsToIntervals<FnDetect<F>> {
+        EventsToIntervals::new(RootFindingDetector::new(FnDetect(func), step))
+    }
+
+    /// sin(t) is positive on (0, PI) within [0, 7].
+    fn sin_detector(start: Time<Tai>) -> EventsToIntervals<FnDetect<impl Fn(Time<Tai>) -> f64>> {
+        make_window_detector(
+            move |t: Time<Tai>| (t - start).to_seconds().to_f64().sin(),
+            TimeDelta::from_seconds(1),
+        )
+    }
+
+    /// cos(t) is positive on [0, PI/2) and (3PI/2, 7] within [0, 7].
+    fn cos_detector(start: Time<Tai>) -> EventsToIntervals<FnDetect<impl Fn(Time<Tai>) -> f64>> {
+        make_window_detector(
+            move |t: Time<Tai>| (t - start).to_seconds().to_f64().cos(),
+            TimeDelta::from_seconds(1),
+        )
+    }
+
+    fn test_interval() -> (Time<Tai>, TimeInterval<Tai>) {
+        let start = time!(Tai, 2000, 1, 1, 12).unwrap();
+        let end = start + TimeDelta::from_seconds(7);
+        (start, TimeInterval::new(start, end))
+    }
+
+    #[test]
+    fn test_intersect() {
+        let (start, interval) = test_interval();
+        // sin > 0 on (0, PI), cos > 0 on [0, PI/2) ∪ (3PI/2, 7]
+        // intersection: (0, PI/2) — both positive only here (within [0, PI])
+        let det = sin_detector(start).intersect(cos_detector(start));
+        let windows = det.detect(interval).unwrap();
+        assert_eq!(windows.len(), 2);
+        // First window: start..PI/2
+        assert_approx_eq!(windows[0].start(), start, rtol <= 1e-6);
+        assert_approx_eq!(
+            windows[0].end(),
+            start + TimeDelta::from_seconds_f64(PI / 2.0),
+            rtol <= 1e-4
+        );
+    }
+
+    #[test]
+    fn test_union() {
+        let (start, interval) = test_interval();
+        // sin > 0 on (0, PI), cos > 0 on [0, PI/2) ∪ (3PI/2, 7]
+        // union covers most of the interval
+        let det = sin_detector(start).union(cos_detector(start));
+        let windows = det.detect(interval).unwrap();
+        // The union should cover [0, PI] ∪ [3PI/2, 7]
+        assert_eq!(windows.len(), 2);
+        // First window spans from start to PI (sin covers 0..PI, cos covers 0..PI/2)
+        assert_approx_eq!(windows[0].start(), start, rtol <= 1e-6);
+        assert_approx_eq!(
+            windows[0].end(),
+            start + TimeDelta::from_seconds_f64(PI),
+            rtol <= 1e-4
+        );
+    }
+
+    #[test]
+    fn test_complement() {
+        let (start, interval) = test_interval();
+        // sin > 0 on [start, PI] ∪ [TAU, end] within [0, 7]
+        // complement: [PI, TAU]
+        let det = sin_detector(start).complement();
+        let windows = det.detect(interval).unwrap();
+        assert_eq!(windows.len(), 1);
+        assert_approx_eq!(
+            windows[0].start(),
+            start + TimeDelta::from_seconds_f64(PI),
+            rtol <= 1e-4
+        );
+        assert_approx_eq!(
+            windows[0].end(),
+            start + TimeDelta::from_seconds_f64(TAU),
+            rtol <= 1e-4
+        );
+    }
+
+    #[test]
+    fn test_chain() {
+        let (start, interval) = test_interval();
+        // Chain: first find sin > 0 windows, then within those evaluate cos > 0.
+        // sin > 0 on [start, PI] ∪ [TAU, end].
+        // Within [start, PI]: cos > 0 on [start, PI/2].
+        // Within [TAU, end]: cos(TAU..7) > 0 throughout, so [TAU, end].
+        let det = sin_detector(start).chain(cos_detector(start));
+        let windows = det.detect(interval).unwrap();
+        assert_eq!(windows.len(), 2);
+        // First window: [start, PI/2]
+        assert_approx_eq!(windows[0].start(), start, rtol <= 1e-6);
+        assert_approx_eq!(
+            windows[0].end(),
+            start + TimeDelta::from_seconds_f64(PI / 2.0),
+            rtol <= 1e-4
+        );
+        // Second window: [TAU, end]
+        assert_approx_eq!(
+            windows[1].start(),
+            start + TimeDelta::from_seconds_f64(TAU),
+            rtol <= 1e-4
+        );
+        assert_approx_eq!(
+            windows[1].end(),
+            start + TimeDelta::from_seconds(7),
+            rtol <= 1e-6
+        );
+    }
+
+    #[test]
+    fn test_chain_restricts_evaluation() {
+        // Chain should only evaluate B within A's windows.
+        // Use a constant-negative A to prove B is never called.
+        let (start, interval) = test_interval();
+        let counter = AtomicUsize::new(0);
+        let a = make_window_detector(|_t: Time<Tai>| -1.0, TimeDelta::from_seconds(1));
+        let b = EventsToIntervals::new(RootFindingDetector::new(
+            CountingDetectFn {
+                inner: move |t: Time<Tai>| (t - start).to_seconds().to_f64().sin(),
+                counter: &counter,
+            },
+            TimeDelta::from_seconds(1),
+        ));
+        let windows = a.chain(b).detect(interval).unwrap();
+        assert!(windows.is_empty());
+        assert_eq!(counter.load(Ordering::Relaxed), 0);
+    }
+
+    // -----------------------------------------------------------------------
+    // Boxed IntervalDetector tests
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_boxed_interval_detector() {
+        let (start, interval) = test_interval();
+        let det: Box<dyn IntervalDetector<Tai>> = Box::new(sin_detector(start));
+        let windows = det.detect(interval).unwrap();
+        // sin > 0 on (0, PI) and (TAU, 7)
+        assert_eq!(windows.len(), 2);
+        assert_approx_eq!(
+            windows[0].end(),
+            start + TimeDelta::from_seconds_f64(PI),
+            rtol <= 1e-4
+        );
+    }
+
+    #[test]
+    fn test_boxed_send_interval_detector() {
+        let (start, interval) = test_interval();
+        let det: Box<dyn IntervalDetector<Tai> + Send> = Box::new(sin_detector(start));
+        let windows = det.detect(interval).unwrap();
+        assert_eq!(windows.len(), 2);
+    }
+
+    #[test]
+    fn test_boxed_dynamic_fold() {
+        // Fold multiple detectors via Box<dyn IntervalDetector>, simulating
+        // the pattern used in VisibilityAnalysis for occulting bodies.
+        let (start, interval) = test_interval();
+
+        // sin > 0 on (0, PI) ∪ (TAU, 7)
+        // cos > 0 on [0, PI/2) ∪ (3PI/2, 7]
+        // intersection: [0, PI/2) ∪ (TAU, 7] (approximately)
+        let detectors: Vec<Box<dyn IntervalDetector<Tai>>> =
+            vec![Box::new(sin_detector(start)), Box::new(cos_detector(start))];
+
+        let mut combined: Box<dyn IntervalDetector<Tai>> = detectors.into_iter().next().unwrap();
+        for det in vec![Box::new(cos_detector(start)) as Box<dyn IntervalDetector<Tai>>] {
+            combined = Box::new(combined.intersect(det));
+        }
+
+        let windows = combined.detect(interval).unwrap();
+        assert_eq!(windows.len(), 2);
+        // First window should end around PI/2
+        assert_approx_eq!(
+            windows[0].end(),
+            start + TimeDelta::from_seconds_f64(PI / 2.0),
+            rtol <= 1e-4
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Convenience function tests
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_find_events() {
+        let start = time!(Tai, 2000, 1, 1, 12).unwrap();
+        let end = start + TimeDelta::from_seconds(7);
+        let interval = TimeInterval::new(start, end);
+        let events = find_events(
+            |t: Time<Tai>| (t - start).to_seconds().to_f64().sin(),
+            interval,
+            TimeDelta::from_seconds(1),
+        )
+        .unwrap();
+        assert_eq!(events.len(), 2);
+    }
+
+    #[test]
+    fn test_try_find_events() {
+        let start = time!(Tai, 2000, 1, 1, 12).unwrap();
+        let end = start + TimeDelta::from_seconds(7);
+        let interval = TimeInterval::new(start, end);
+        let events = try_find_events(
+            |t: Time<Tai>| {
+                Ok::<f64, std::convert::Infallible>((t - start).to_seconds().to_f64().sin())
+            },
+            interval,
+            TimeDelta::from_seconds(1),
+        )
+        .unwrap();
+        assert_eq!(events.len(), 2);
+    }
+
+    #[test]
+    fn test_find_windows() {
+        let start = time!(Tai, 2000, 1, 1, 12).unwrap();
+        let end = start + TimeDelta::from_seconds(7);
+        let interval = TimeInterval::new(start, end);
+        let windows = find_windows(
+            |t: Time<Tai>| (t - start).to_seconds().to_f64().sin(),
+            interval,
+            TimeDelta::from_seconds(1),
+        )
+        .unwrap();
+        assert_eq!(windows.len(), 2);
+        assert_approx_eq!(
+            windows[0].end(),
+            start + TimeDelta::from_seconds_f64(PI),
+            rtol <= 1e-4
+        );
+    }
+
+    #[test]
+    fn test_try_find_windows() {
+        let start = time!(Tai, 2000, 1, 1, 12).unwrap();
+        let end = start + TimeDelta::from_seconds(7);
+        let interval = TimeInterval::new(start, end);
+        let windows = try_find_windows(
+            |t: Time<Tai>| {
+                Ok::<f64, std::convert::Infallible>((t - start).to_seconds().to_f64().sin())
+            },
+            interval,
+            TimeDelta::from_seconds(1),
+        )
+        .unwrap();
+        assert_eq!(windows.len(), 2);
+    }
 }
