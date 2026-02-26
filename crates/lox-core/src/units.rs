@@ -739,8 +739,197 @@ impl FrequencyUnits for i64 {
     }
 }
 
-/// Temperature in Kelvin.
+/// Temperature in Kelvin (deprecated type alias, use [`Temperature`] instead).
 pub type Kelvin = f64;
+
+type KelvinValue = f64;
+
+/// Temperature in Kelvin.
+#[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[repr(transparent)]
+pub struct Temperature(KelvinValue);
+
+impl Temperature {
+    /// Creates a new temperature from an `f64` value in Kelvin.
+    pub const fn new(k: f64) -> Self {
+        Self(k)
+    }
+
+    /// Creates a new temperature from an `f64` value in Kelvin.
+    pub const fn kelvin(k: f64) -> Self {
+        Self(k)
+    }
+
+    pub const fn as_f64(&self) -> f64 {
+        self.0
+    }
+
+    /// Returns the value in Kelvin.
+    pub const fn to_kelvin(&self) -> f64 {
+        self.0
+    }
+}
+
+impl Display for Temperature {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        self.0.fmt(f)?;
+        write!(f, " K")
+    }
+}
+
+type Watts = f64;
+
+/// Power in Watts.
+#[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[repr(transparent)]
+pub struct Power(Watts);
+
+impl Power {
+    /// Creates a new power from an `f64` value in Watts.
+    pub const fn new(w: f64) -> Self {
+        Self(w)
+    }
+
+    /// Creates a new power from an `f64` value in Watts.
+    pub const fn watts(w: f64) -> Self {
+        Self(w)
+    }
+
+    /// Creates a new power from an `f64` value in kilowatts.
+    pub const fn kilowatts(kw: f64) -> Self {
+        Self(kw * 1e3)
+    }
+
+    pub const fn as_f64(&self) -> f64 {
+        self.0
+    }
+
+    /// Returns the value in Watts.
+    pub const fn to_watts(&self) -> f64 {
+        self.0
+    }
+
+    /// Returns the value in kilowatts.
+    pub const fn to_kilowatts(&self) -> f64 {
+        self.0 * 1e-3
+    }
+
+    /// Returns the value in dBW.
+    pub fn to_dbw(&self) -> f64 {
+        10.0 * self.0.log10()
+    }
+}
+
+impl Display for Power {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        self.0.fmt(f)?;
+        write!(f, " W")
+    }
+}
+
+type BitsPerSecond = f64;
+
+/// Data rate in bits per second.
+#[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[repr(transparent)]
+pub struct DataRate(BitsPerSecond);
+
+impl DataRate {
+    /// Creates a new data rate from an `f64` value in bits/s.
+    pub const fn new(bps: f64) -> Self {
+        Self(bps)
+    }
+
+    /// Creates a new data rate from an `f64` value in bits/s.
+    pub const fn bits_per_second(bps: f64) -> Self {
+        Self(bps)
+    }
+
+    /// Creates a new data rate from an `f64` value in kilobits/s.
+    pub const fn kilobits_per_second(kbps: f64) -> Self {
+        Self(kbps * 1e3)
+    }
+
+    /// Creates a new data rate from an `f64` value in megabits/s.
+    pub const fn megabits_per_second(mbps: f64) -> Self {
+        Self(mbps * 1e6)
+    }
+
+    pub const fn as_f64(&self) -> f64 {
+        self.0
+    }
+
+    /// Returns the value in bits/s.
+    pub const fn to_bits_per_second(&self) -> f64 {
+        self.0
+    }
+
+    /// Returns the value in kilobits/s.
+    pub const fn to_kilobits_per_second(&self) -> f64 {
+        self.0 * 1e-3
+    }
+
+    /// Returns the value in megabits/s.
+    pub const fn to_megabits_per_second(&self) -> f64 {
+        self.0 * 1e-6
+    }
+}
+
+impl Display for DataRate {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        (1e-3 * self.0).fmt(f)?;
+        write!(f, " kbps")
+    }
+}
+
+type RadiansPerSecond = f64;
+
+/// Angular rate in radians per second.
+#[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[repr(transparent)]
+pub struct AngularRate(RadiansPerSecond);
+
+impl AngularRate {
+    /// Creates a new angular rate from an `f64` value in rad/s.
+    pub const fn new(rps: f64) -> Self {
+        Self(rps)
+    }
+
+    /// Creates a new angular rate from an `f64` value in rad/s.
+    pub const fn radians_per_second(rps: f64) -> Self {
+        Self(rps)
+    }
+
+    /// Creates a new angular rate from an `f64` value in deg/s.
+    pub const fn degrees_per_second(dps: f64) -> Self {
+        Self(dps.to_radians())
+    }
+
+    pub const fn as_f64(&self) -> f64 {
+        self.0
+    }
+
+    /// Returns the value in rad/s.
+    pub const fn to_radians_per_second(&self) -> f64 {
+        self.0
+    }
+
+    /// Returns the value in deg/s.
+    pub const fn to_degrees_per_second(&self) -> f64 {
+        self.0.to_degrees()
+    }
+}
+
+impl Display for AngularRate {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        self.0.to_degrees().fmt(f)?;
+        write!(f, " deg/s")
+    }
+}
 
 type DecibelValue = f64;
 
@@ -864,7 +1053,17 @@ macro_rules! trait_impls {
     };
 }
 
-trait_impls!(Angle, Decibel, Distance, Frequency, Velocity);
+trait_impls!(
+    Angle,
+    AngularRate,
+    DataRate,
+    Decibel,
+    Distance,
+    Frequency,
+    Power,
+    Temperature,
+    Velocity
+);
 
 #[cfg(test)]
 mod tests {

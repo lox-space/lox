@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: MPL-2.0
 
 import lox_space as lox
-import numpy as np
 import numpy.testing as npt
 import pytest
 
@@ -25,13 +24,11 @@ def test_sgp4():
 
 
 def test_ground(provider):
-    lat = np.radians(40.4527)
-    lon = np.radians(-4.3676)
     tai = lox.UTC.from_iso("2022-01-31T23:00:00").to_scale("TAI")
-    loc = lox.GroundLocation(lox.Origin("Earth"), lon, lat, 0.0)
+    loc = lox.GroundLocation(lox.Origin("Earth"), -4.3676 * lox.deg, 40.4527 * lox.deg, 0.0 * lox.km)
     ground = lox.GroundPropagator(loc)
     # GroundPropagator now returns body-fixed (IAU) states; transform to ICRF
     state = ground.propagate(tai).to_frame(lox.Frame("ICRF"))
-    expected = np.array([-1765.9535510583582, 4524.585984442561, 4120.189198495323])
-    actual = state.position()
-    npt.assert_allclose(actual, expected)
+    expected_km = [-1765.9535510583582, 4524.585984442561, 4120.189198495323]
+    actual_km = state.position() * 1e-3
+    npt.assert_allclose(actual_km, expected_km)

@@ -4,10 +4,11 @@
 
 use crate::bodies::dynamic::{DynOrigin, UnknownOriginId, UnknownOriginName};
 use crate::bodies::{
-    Elements, Origin, TryMeanRadius, TryPointMass, TryRotationalElements, TrySpheroid,
-    TryTriaxialEllipsoid,
+    Origin, TryMeanRadius, TryPointMass, TryRotationalElements, TrySpheroid, TryTriaxialEllipsoid,
 };
+use crate::units::python::{PyAngle, PyAngularRate, PyDistance, PyGravitationalParameter};
 use lox_core::types::units::Seconds;
+use lox_units::{Angle, AngularRate};
 use pyo3::create_exception;
 use pyo3::exceptions::{PyException, PyTypeError, PyValueError};
 use pyo3::prelude::*;
@@ -94,160 +95,179 @@ impl PyOrigin {
         self.0.name()
     }
 
-    /// Return the gravitational parameter (GM) in km³/s².
+    /// Return the gravitational parameter (GM).
     ///
     /// Raises:
     ///     UndefinedOriginPropertyError: If not defined for this body.
-    pub fn gravitational_parameter(&self) -> PyResult<f64> {
+    pub fn gravitational_parameter(&self) -> PyResult<PyGravitationalParameter> {
         let gp = self
             .0
             .try_gravitational_parameter()
             .map_err(PyUndefinedOriginPropertyError)?;
-        Ok(gp.as_f64() * 1e-9)
+        Ok(PyGravitationalParameter(gp))
     }
 
-    /// Return the mean radius in km.
+    /// Return the mean radius.
     ///
     /// Raises:
     ///     UndefinedOriginPropertyError: If not defined for this body.
-    pub fn mean_radius(&self) -> PyResult<f64> {
-        Ok(self
-            .0
-            .try_mean_radius()
-            .map_err(PyUndefinedOriginPropertyError)?
-            .to_kilometers())
+    pub fn mean_radius(&self) -> PyResult<PyDistance> {
+        Ok(PyDistance(
+            self.0
+                .try_mean_radius()
+                .map_err(PyUndefinedOriginPropertyError)?,
+        ))
     }
 
-    /// Return the triaxial radii (x, y, z) in km.
+    /// Return the triaxial radii (x, y, z).
     ///
     /// Raises:
     ///     UndefinedOriginPropertyError: If not defined for this body.
-    pub fn radii(&self) -> PyResult<(f64, f64, f64)> {
+    pub fn radii(&self) -> PyResult<(PyDistance, PyDistance, PyDistance)> {
         let (a, b, c) = self.0.try_radii().map_err(PyUndefinedOriginPropertyError)?;
-        Ok((a.to_kilometers(), b.to_kilometers(), c.to_kilometers()))
+        Ok((PyDistance(a), PyDistance(b), PyDistance(c)))
     }
 
-    /// Return the equatorial radius in km.
+    /// Return the equatorial radius.
     ///
     /// Raises:
     ///     UndefinedOriginPropertyError: If not defined for this body.
-    pub fn equatorial_radius(&self) -> PyResult<f64> {
-        Ok(self
-            .0
-            .try_equatorial_radius()
-            .map_err(PyUndefinedOriginPropertyError)?
-            .to_kilometers())
+    pub fn equatorial_radius(&self) -> PyResult<PyDistance> {
+        Ok(PyDistance(
+            self.0
+                .try_equatorial_radius()
+                .map_err(PyUndefinedOriginPropertyError)?,
+        ))
     }
 
-    /// Return the polar radius in km.
+    /// Return the polar radius.
     ///
     /// Raises:
     ///     UndefinedOriginPropertyError: If not defined for this body.
-    pub fn polar_radius(&self) -> PyResult<f64> {
-        Ok(self
-            .0
-            .try_polar_radius()
-            .map_err(PyUndefinedOriginPropertyError)?
-            .to_kilometers())
+    pub fn polar_radius(&self) -> PyResult<PyDistance> {
+        Ok(PyDistance(
+            self.0
+                .try_polar_radius()
+                .map_err(PyUndefinedOriginPropertyError)?,
+        ))
     }
 
-    /// Return rotational elements (right ascension, declination, rotation angle) in radians.
+    /// Return rotational elements (right ascension, declination, rotation angle).
     ///
     /// Args:
     ///     et: Ephemeris time in seconds from J2000.
     ///
     /// Returns:
-    ///     Tuple of (right_ascension, declination, rotation_angle) in radians.
+    ///     Tuple of (right_ascension, declination, rotation_angle) as Angles.
     ///
     /// Raises:
     ///     UndefinedOriginPropertyError: If not defined for this body.
-    pub fn rotational_elements(&self, et: Seconds) -> PyResult<Elements> {
-        Ok(self
+    pub fn rotational_elements(&self, et: Seconds) -> PyResult<(PyAngle, PyAngle, PyAngle)> {
+        let (ra, dec, rot) = self
             .0
             .try_rotational_elements(et)
-            .map_err(PyUndefinedOriginPropertyError)?)
+            .map_err(PyUndefinedOriginPropertyError)?;
+        Ok((
+            PyAngle(Angle::radians(ra)),
+            PyAngle(Angle::radians(dec)),
+            PyAngle(Angle::radians(rot)),
+        ))
     }
 
-    /// Return rotational element rates in radians/second.
+    /// Return rotational element rates.
     ///
     /// Args:
     ///     et: Ephemeris time in seconds from J2000.
     ///
     /// Returns:
-    ///     Tuple of (ra_rate, dec_rate, rotation_rate) in radians/second.
+    ///     Tuple of (ra_rate, dec_rate, rotation_rate) as AngularRates.
     ///
     /// Raises:
     ///     UndefinedOriginPropertyError: If not defined for this body.
-    pub fn rotational_element_rates(&self, et: Seconds) -> PyResult<Elements> {
-        Ok(self
+    pub fn rotational_element_rates(
+        &self,
+        et: Seconds,
+    ) -> PyResult<(PyAngularRate, PyAngularRate, PyAngularRate)> {
+        let (ra_rate, dec_rate, rot_rate) = self
             .0
             .try_rotational_element_rates(et)
-            .map_err(PyUndefinedOriginPropertyError)?)
+            .map_err(PyUndefinedOriginPropertyError)?;
+        Ok((
+            PyAngularRate(AngularRate::radians_per_second(ra_rate)),
+            PyAngularRate(AngularRate::radians_per_second(dec_rate)),
+            PyAngularRate(AngularRate::radians_per_second(rot_rate)),
+        ))
     }
 
-    /// Return the right ascension of the pole in radians.
+    /// Return the right ascension of the pole.
     ///
     /// Args:
     ///     et: Ephemeris time in seconds from J2000.
-    pub fn right_ascension(&self, et: Seconds) -> PyResult<f64> {
-        Ok(self
-            .0
-            .try_right_ascension(et)
-            .map_err(PyUndefinedOriginPropertyError)?)
+    pub fn right_ascension(&self, et: Seconds) -> PyResult<PyAngle> {
+        Ok(PyAngle(Angle::radians(
+            self.0
+                .try_right_ascension(et)
+                .map_err(PyUndefinedOriginPropertyError)?,
+        )))
     }
 
-    /// Return the rate of change of right ascension in radians/second.
+    /// Return the rate of change of right ascension.
     ///
     /// Args:
     ///     et: Ephemeris time in seconds from J2000.
-    pub fn right_ascension_rate(&self, et: Seconds) -> PyResult<f64> {
-        Ok(self
-            .0
-            .try_right_ascension_rate(et)
-            .map_err(PyUndefinedOriginPropertyError)?)
+    pub fn right_ascension_rate(&self, et: Seconds) -> PyResult<PyAngularRate> {
+        Ok(PyAngularRate(AngularRate::radians_per_second(
+            self.0
+                .try_right_ascension_rate(et)
+                .map_err(PyUndefinedOriginPropertyError)?,
+        )))
     }
 
-    /// Return the declination of the pole in radians.
+    /// Return the declination of the pole.
     ///
     /// Args:
     ///     et: Ephemeris time in seconds from J2000.
-    pub fn declination(&self, et: Seconds) -> PyResult<f64> {
-        Ok(self
-            .0
-            .try_declination(et)
-            .map_err(PyUndefinedOriginPropertyError)?)
+    pub fn declination(&self, et: Seconds) -> PyResult<PyAngle> {
+        Ok(PyAngle(Angle::radians(
+            self.0
+                .try_declination(et)
+                .map_err(PyUndefinedOriginPropertyError)?,
+        )))
     }
 
-    /// Return the rate of change of declination in radians/second.
+    /// Return the rate of change of declination.
     ///
     /// Args:
     ///     et: Ephemeris time in seconds from J2000.
-    pub fn declination_rate(&self, et: Seconds) -> PyResult<f64> {
-        Ok(self
-            .0
-            .try_declination_rate(et)
-            .map_err(PyUndefinedOriginPropertyError)?)
+    pub fn declination_rate(&self, et: Seconds) -> PyResult<PyAngularRate> {
+        Ok(PyAngularRate(AngularRate::radians_per_second(
+            self.0
+                .try_declination_rate(et)
+                .map_err(PyUndefinedOriginPropertyError)?,
+        )))
     }
 
-    /// Return the rotation angle (prime meridian) in radians.
+    /// Return the rotation angle (prime meridian).
     ///
     /// Args:
     ///     et: Ephemeris time in seconds from J2000.
-    pub fn rotation_angle(&self, et: Seconds) -> PyResult<f64> {
-        Ok(self
-            .0
-            .try_rotation_angle(et)
-            .map_err(PyUndefinedOriginPropertyError)?)
+    pub fn rotation_angle(&self, et: Seconds) -> PyResult<PyAngle> {
+        Ok(PyAngle(Angle::radians(
+            self.0
+                .try_rotation_angle(et)
+                .map_err(PyUndefinedOriginPropertyError)?,
+        )))
     }
 
-    /// Return the rotation rate in radians/second.
+    /// Return the rotation rate.
     ///
     /// Args:
     ///     et: Ephemeris time in seconds from J2000.
-    pub fn rotation_rate(&self, et: Seconds) -> PyResult<f64> {
-        Ok(self
-            .0
-            .try_rotation_rate(et)
-            .map_err(PyUndefinedOriginPropertyError)?)
+    pub fn rotation_rate(&self, et: Seconds) -> PyResult<PyAngularRate> {
+        Ok(PyAngularRate(AngularRate::radians_per_second(
+            self.0
+                .try_rotation_rate(et)
+                .map_err(PyUndefinedOriginPropertyError)?,
+        )))
     }
 }

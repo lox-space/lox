@@ -5,8 +5,6 @@
 import pathlib
 from pathlib import Path
 
-import numpy as np
-
 import pytest
 import lox_space as lox
 
@@ -58,9 +56,9 @@ def estrack():
         lox.GroundAsset(
             name,
             lox.GroundLocation(
-                lox.Origin("Earth"), np.radians(lon), np.radians(lat), 0
+                lox.Origin("Earth"), lon * lox.deg, lat * lox.deg, 0 * lox.km
             ),
-            lox.ElevationMask.fixed(0),
+            lox.ElevationMask.fixed(0 * lox.rad),
         )
         for name, lat, lon in stations
     ]
