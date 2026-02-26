@@ -5,12 +5,12 @@
 from collections.abc import Callable
 from typing import Literal, Self, overload
 import numpy as np
+from numpy.typing import ArrayLike
 import os
 
 type Scale = Literal["TAI", "TCB", "TCG", "TDB", "TT", "UT1"]
 type Epoch = Literal["jd", "mjd", "j1950", "j2000"]
 type Unit = Literal["seconds", "days", "centuries"]
-type Vec3 = tuple[float, float, float]
 
 # Exceptions
 class NonFiniteTimeDeltaError(Exception):
@@ -23,83 +23,285 @@ class Angle:
     """Angle type for type-safe angular values.
 
     Use with unit constants: `45 * lox.deg` or `1.5 * lox.rad`
-    Convert to float with `float(angle)`.
+    Convert to float with `float(angle)` (returns radians).
     """
     def __new__(cls, value: float) -> Self: ...
-    def __rmul__(self, other: float) -> Self: ...
+    def __add__(self, other: Angle) -> Angle: ...
+    def __sub__(self, other: Angle) -> Angle: ...
+    def __neg__(self) -> Angle: ...
+    def __mul__(self, other: float) -> Angle: ...
+    def __rmul__(self, other: float) -> Angle: ...
+    def __eq__(self, other: object) -> bool: ...
     def __repr__(self) -> str: ...
     def __str__(self) -> str: ...
     def __complex__(self) -> complex: ...
     def __float__(self) -> float: ...
     def __int__(self) -> int: ...
+    def to_radians(self) -> float:
+        """Returns the value in radians."""
+        ...
+    def to_degrees(self) -> float:
+        """Returns the value in degrees."""
+        ...
+    def to_arcseconds(self) -> float:
+        """Returns the value in arcseconds."""
+        ...
+
+class AngularRate:
+    """Angular rate type for type-safe angular velocity values.
+
+    Use with unit constants: `1.0 * lox.rad_per_s` or `15 * lox.deg_per_s`
+    Convert to float with `float(rate)` (returns rad/s).
+    """
+    def __new__(cls, value: float) -> Self: ...
+    def __add__(self, other: AngularRate) -> AngularRate: ...
+    def __sub__(self, other: AngularRate) -> AngularRate: ...
+    def __neg__(self) -> AngularRate: ...
+    def __mul__(self, other: float) -> AngularRate: ...
+    def __rmul__(self, other: float) -> AngularRate: ...
+    def __eq__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
+    def __str__(self) -> str: ...
+    def __complex__(self) -> complex: ...
+    def __float__(self) -> float: ...
+    def __int__(self) -> int: ...
+    def to_radians_per_second(self) -> float:
+        """Returns the value in radians per second."""
+        ...
+    def to_degrees_per_second(self) -> float:
+        """Returns the value in degrees per second."""
+        ...
+
+class DataRate:
+    """Data rate type for type-safe data rate values.
+
+    Use with unit constants: `1e6 * lox.bps` or `10 * lox.Mbps`
+    Convert to float with `float(rate)` (returns bits/s).
+    """
+    def __new__(cls, value: float) -> Self: ...
+    def __add__(self, other: DataRate) -> DataRate: ...
+    def __sub__(self, other: DataRate) -> DataRate: ...
+    def __neg__(self) -> DataRate: ...
+    def __mul__(self, other: float) -> DataRate: ...
+    def __rmul__(self, other: float) -> DataRate: ...
+    def __eq__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
+    def __str__(self) -> str: ...
+    def __complex__(self) -> complex: ...
+    def __float__(self) -> float: ...
+    def __int__(self) -> int: ...
+    def to_bits_per_second(self) -> float:
+        """Returns the value in bits per second."""
+        ...
+    def to_kilobits_per_second(self) -> float:
+        """Returns the value in kilobits per second."""
+        ...
+    def to_megabits_per_second(self) -> float:
+        """Returns the value in megabits per second."""
+        ...
 
 class Distance:
     """Distance type for type-safe length values.
 
     Use with unit constants: `100 * lox.km` or `1.5 * lox.au`
-    Convert to float with `float(distance)`.
+    Convert to float with `float(distance)` (returns meters).
     """
     def __new__(cls, value: float) -> Self: ...
-    def __rmul__(self, other: float) -> Self: ...
+    def __add__(self, other: Distance) -> Distance: ...
+    def __sub__(self, other: Distance) -> Distance: ...
+    def __neg__(self) -> Distance: ...
+    def __mul__(self, other: float) -> Distance: ...
+    def __rmul__(self, other: float) -> Distance: ...
+    def __eq__(self, other: object) -> bool: ...
     def __repr__(self) -> str: ...
     def __str__(self) -> str: ...
     def __complex__(self) -> complex: ...
     def __float__(self) -> float: ...
     def __int__(self) -> int: ...
+    def to_meters(self) -> float:
+        """Returns the value in meters."""
+        ...
+    def to_kilometers(self) -> float:
+        """Returns the value in kilometers."""
+        ...
+    def to_astronomical_units(self) -> float:
+        """Returns the value in astronomical units."""
+        ...
 
 class Frequency:
     """Frequency type for type-safe frequency values.
 
-    Use with unit constants: `2.4 * lox.ghz` or `100 * lox.mhz`
-    Convert to float with `float(frequency)`.
+    Use with unit constants: `2.4 * lox.GHz` or `100 * lox.MHz`
+    Convert to float with `float(frequency)` (returns Hz).
     """
     def __new__(cls, value: float) -> Self: ...
-    def __rmul__(self, other: float) -> Self: ...
+    def __add__(self, other: Frequency) -> Frequency: ...
+    def __sub__(self, other: Frequency) -> Frequency: ...
+    def __neg__(self) -> Frequency: ...
+    def __mul__(self, other: float) -> Frequency: ...
+    def __rmul__(self, other: float) -> Frequency: ...
+    def __eq__(self, other: object) -> bool: ...
     def __repr__(self) -> str: ...
     def __str__(self) -> str: ...
     def __complex__(self) -> complex: ...
     def __float__(self) -> float: ...
     def __int__(self) -> int: ...
+    def to_hertz(self) -> float:
+        """Returns the value in hertz."""
+        ...
+    def to_kilohertz(self) -> float:
+        """Returns the value in kilohertz."""
+        ...
+    def to_megahertz(self) -> float:
+        """Returns the value in megahertz."""
+        ...
+    def to_gigahertz(self) -> float:
+        """Returns the value in gigahertz."""
+        ...
+    def to_terahertz(self) -> float:
+        """Returns the value in terahertz."""
+        ...
+
+class GravitationalParameter:
+    """Gravitational parameter (GM) type.
+
+    Constructor takes the value in m³/s².
+    Convert to float with `float(gm)` (returns m³/s²).
+    """
+    def __new__(cls, value: float) -> Self: ...
+    @staticmethod
+    def from_km3_per_s2(value: float) -> GravitationalParameter:
+        """Creates from a value in km³/s²."""
+        ...
+    def to_m3_per_s2(self) -> float:
+        """Returns the value in m³/s²."""
+        ...
+    def to_km3_per_s2(self) -> float:
+        """Returns the value in km³/s²."""
+        ...
+    def __float__(self) -> float: ...
+    def __eq__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
+    def __str__(self) -> str: ...
+
+class Power:
+    """Power type for type-safe power values.
+
+    Use with unit constants: `10 * lox.W` or `1.5 * lox.kW`
+    Convert to float with `float(power)` (returns Watts).
+    """
+    def __new__(cls, value: float) -> Self: ...
+    def __add__(self, other: Power) -> Power: ...
+    def __sub__(self, other: Power) -> Power: ...
+    def __neg__(self) -> Power: ...
+    def __mul__(self, other: float) -> Power: ...
+    def __rmul__(self, other: float) -> Power: ...
+    def __eq__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
+    def __str__(self) -> str: ...
+    def __complex__(self) -> complex: ...
+    def __float__(self) -> float: ...
+    def __int__(self) -> int: ...
+    def to_watts(self) -> float:
+        """Returns the value in Watts."""
+        ...
+    def to_kilowatts(self) -> float:
+        """Returns the value in kilowatts."""
+        ...
+    def to_dbw(self) -> float:
+        """Returns the value in dBW."""
+        ...
+
+class Temperature:
+    """Temperature type for type-safe temperature values.
+
+    Use with unit constants: `290 * lox.K`
+    Convert to float with `float(temp)` (returns Kelvin).
+    """
+    def __new__(cls, value: float) -> Self: ...
+    def __add__(self, other: Temperature) -> Temperature: ...
+    def __sub__(self, other: Temperature) -> Temperature: ...
+    def __neg__(self) -> Temperature: ...
+    def __mul__(self, other: float) -> Temperature: ...
+    def __rmul__(self, other: float) -> Temperature: ...
+    def __eq__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
+    def __str__(self) -> str: ...
+    def __complex__(self) -> complex: ...
+    def __float__(self) -> float: ...
+    def __int__(self) -> int: ...
+    def to_kelvin(self) -> float:
+        """Returns the value in Kelvin."""
+        ...
 
 class Velocity:
     """Velocity type for type-safe speed values.
 
-    Use with unit constants: `7.8 * lox.kms` or `100 * lox.ms`
-    Convert to float with `float(velocity)`.
+    Use with unit constants: `7.8 * lox.km_per_s` or `100 * lox.m_per_s`
+    Convert to float with `float(velocity)` (returns m/s).
     """
     def __new__(cls, value: float) -> Self: ...
-    def __rmul__(self, other: float) -> Self: ...
+    def __add__(self, other: Velocity) -> Velocity: ...
+    def __sub__(self, other: Velocity) -> Velocity: ...
+    def __neg__(self) -> Velocity: ...
+    def __mul__(self, other: float) -> Velocity: ...
+    def __rmul__(self, other: float) -> Velocity: ...
+    def __eq__(self, other: object) -> bool: ...
     def __repr__(self) -> str: ...
     def __str__(self) -> str: ...
     def __complex__(self) -> complex: ...
     def __float__(self) -> float: ...
     def __int__(self) -> int: ...
+    def to_meters_per_second(self) -> float:
+        """Returns the value in meters per second."""
+        ...
+    def to_kilometers_per_second(self) -> float:
+        """Returns the value in kilometers per second."""
+        ...
 
 # Unit constants
 rad: Angle
 """1 radian"""
 deg: Angle
 """π/180 radians"""
+rad_per_s: AngularRate
+"""1 radian per second"""
+deg_per_s: AngularRate
+"""π/180 radians per second"""
+bps: DataRate
+"""1 bit per second"""
+kbps: DataRate
+"""1000 bits per second"""
+Mbps: DataRate
+"""1000000 bits per second"""
 m: Distance
 """1 meter"""
 km: Distance
 """1000 meters"""
 au: Distance
 """1 astronomical unit"""
-hz: Frequency
+Hz: Frequency
 """1 Hz"""
-khz: Frequency
+kHz: Frequency
 """1 kHz"""
-mhz: Frequency
+MHz: Frequency
 """1 MHz"""
-ghz: Frequency
+GHz: Frequency
 """1 GHz"""
-thz: Frequency
+THz: Frequency
 """1 THz"""
-ms: Velocity
+W: Power
+"""1 Watt"""
+kW: Power
+"""1000 Watts"""
+K: Temperature
+"""1 Kelvin"""
+m_per_s: Velocity
 """1 m/s"""
-kms: Velocity
+km_per_s: Velocity
 """1 km/s"""
+dB: Decibel
+"""1 dB"""
 
 class GroundAsset:
     """A named ground station for visibility analysis.
@@ -152,8 +354,8 @@ class VisibilityAnalysis:
         ground_assets: List of GroundAsset objects.
         space_assets: List of SpaceAsset objects.
         occulting_bodies: Optional list of bodies for line-of-sight checking.
-        step: Optional time step in seconds for event detection (default: 60).
-        min_pass_duration: Optional minimum pass duration in seconds. Passes
+        step: Optional time step for event detection (default: 60s).
+        min_pass_duration: Optional minimum pass duration. Passes
             shorter than this value may be missed. Enables two-level stepping
             for faster detection.
 
@@ -161,7 +363,7 @@ class VisibilityAnalysis:
         >>> analysis = lox.VisibilityAnalysis(
         ...     [ground_asset],
         ...     [space_asset],
-        ...     step=60.0,
+        ...     step=lox.TimeDelta(60),
         ... )
         >>> results = analysis.compute(start, end, spk)
     """
@@ -170,8 +372,8 @@ class VisibilityAnalysis:
         ground_assets: list[GroundAsset],
         space_assets: list[SpaceAsset],
         occulting_bodies: list[Origin] | None = None,
-        step: float | None = None,
-        min_pass_duration: float | None = None,
+        step: TimeDelta | None = None,
+        min_pass_duration: TimeDelta | None = None,
     ) -> Self: ...
     def compute(self, start: Time, end: Time, ephemeris: SPK) -> VisibilityResults:
         """Compute visibility intervals for all (ground, space) pairs.
@@ -245,7 +447,7 @@ class ElevationMask:
     Args:
         azimuth: Array of azimuth angles in radians (for variable mask).
         elevation: Array of minimum elevations in radians (for variable mask).
-        min_elevation: Fixed minimum elevation in radians.
+        min_elevation: Fixed minimum elevation as Angle.
 
     Examples:
         >>> # Fixed elevation mask (5 degrees)
@@ -258,14 +460,14 @@ class ElevationMask:
         cls,
         azimuth: np.ndarray | None = None,
         elevation: np.ndarray | None = None,
-        min_elevation: float | None = None,
+        min_elevation: Angle | None = None,
     ) -> Self: ...
     @classmethod
     def variable(cls, azimuth: np.ndarray, elevation: np.ndarray) -> Self:
         """Create a variable elevation mask from azimuth-dependent data."""
         ...
     @classmethod
-    def fixed(cls, min_elevation: float) -> Self:
+    def fixed(cls, min_elevation: Angle) -> Self:
         """Create a fixed elevation mask with constant minimum elevation."""
         ...
     def azimuth(self) -> list[float] | None:
@@ -274,10 +476,10 @@ class ElevationMask:
     def elevation(self) -> list[float] | None:
         """Return the elevation array (for variable masks only)."""
         ...
-    def fixed_elevation(self) -> float | None:
+    def fixed_elevation(self) -> Angle | None:
         """Return the fixed elevation value (for fixed masks only)."""
         ...
-    def min_elevation(self, azimuth: float) -> float:
+    def min_elevation(self, azimuth: Angle) -> Angle:
         """Return the minimum elevation at the given azimuth."""
         ...
 
@@ -342,44 +544,44 @@ class Origin:
     def name(self) -> str:
         """Return the name of this body."""
         ...
-    def gravitational_parameter(self) -> float:
-        """Return the gravitational parameter (GM) in km³/s²."""
+    def gravitational_parameter(self) -> GravitationalParameter:
+        """Return the gravitational parameter (GM)."""
         ...
-    def mean_radius(self) -> float:
-        """Return the mean radius in km."""
+    def mean_radius(self) -> Distance:
+        """Return the mean radius."""
         ...
-    def radii(self) -> tuple[float, float, float]:
-        """Return the triaxial radii (x, y, z) in km."""
+    def radii(self) -> tuple[Distance, Distance, Distance]:
+        """Return the triaxial radii (x, y, z)."""
         ...
-    def equatorial_radius(self) -> float:
-        """Return the equatorial radius in km."""
+    def equatorial_radius(self) -> Distance:
+        """Return the equatorial radius."""
         ...
-    def polar_radius(self) -> float:
-        """Return the polar radius in km."""
+    def polar_radius(self) -> Distance:
+        """Return the polar radius."""
         ...
-    def rotational_elements(self, et: float) -> tuple[float, float, float]:
-        """Return rotational elements (right ascension, declination, rotation angle) in radians."""
+    def rotational_elements(self, et: float) -> tuple[Angle, Angle, Angle]:
+        """Return rotational elements (right ascension, declination, rotation angle)."""
         ...
-    def rotational_element_rates(self, et: float) -> tuple[float, float, float]:
-        """Return rotational element rates in radians/second."""
+    def rotational_element_rates(self, et: float) -> tuple[AngularRate, AngularRate, AngularRate]:
+        """Return rotational element rates."""
         ...
-    def right_ascension(self, et: float) -> float:
-        """Return the right ascension of the pole in radians."""
+    def right_ascension(self, et: float) -> Angle:
+        """Return the right ascension of the pole."""
         ...
-    def right_ascension_rate(self, et: float) -> float:
-        """Return the rate of change of right ascension in radians/second."""
+    def right_ascension_rate(self, et: float) -> AngularRate:
+        """Return the rate of change of right ascension."""
         ...
-    def declination(self, et: float) -> float:
-        """Return the declination of the pole in radians."""
+    def declination(self, et: float) -> Angle:
+        """Return the declination of the pole."""
         ...
-    def declination_rate(self, et: float) -> float:
-        """Return the rate of change of declination in radians/second."""
+    def declination_rate(self, et: float) -> AngularRate:
+        """Return the rate of change of declination."""
         ...
-    def rotation_angle(self, et: float) -> float:
-        """Return the rotation angle (prime meridian) in radians."""
+    def rotation_angle(self, et: float) -> Angle:
+        """Return the rotation angle (prime meridian)."""
         ...
-    def rotation_rate(self, et: float) -> float:
-        """Return the rotation rate in radians/second."""
+    def rotation_rate(self, et: float) -> AngularRate:
+        """Return the rotation rate."""
         ...
 
 class Frame:
@@ -430,29 +632,45 @@ class SPK:
     """
     def __new__(cls, path: os.PathLike) -> Self: ...
 
-class State:
+class Cartesian:
     """Represents an orbital state (position and velocity) at a specific time.
 
     Args:
         time: The epoch of this state.
-        position: Position vector (x, y, z) in km.
-        velocity: Velocity vector (vx, vy, vz) in km/s.
+        position: Position vector as array-like [x, y, z] in meters.
+        velocity: Velocity vector as array-like [vx, vy, vz] in m/s.
+        x, y, z: Individual position components as Distance (keyword-only, alternative to position).
+        vx, vy, vz: Individual velocity components as Velocity (keyword-only, alternative to velocity).
         origin: Central body (default: Earth).
         frame: Reference frame (default: ICRF).
 
     Examples:
         >>> t = lox.Time("TAI", 2024, 1, 1)
-        >>> state = lox.State(
+        >>> # Array pattern (meters, m/s)
+        >>> state = lox.Cartesian(
         ...     t,
-        ...     position=(6678.0, 0.0, 0.0),
-        ...     velocity=(0.0, 7.73, 0.0),
+        ...     position=[6678e3, 0.0, 0.0],
+        ...     velocity=[0.0, 7730.0, 0.0],
+        ... )
+        >>> # Elementwise pattern (unitful)
+        >>> state = lox.Cartesian(
+        ...     t,
+        ...     x=6678.0 * lox.km, y=0.0 * lox.km, z=0.0 * lox.km,
+        ...     vx=0.0 * lox.km_per_s, vy=7.73 * lox.km_per_s, vz=0.0 * lox.km_per_s,
         ... )
     """
     def __new__(
         cls,
         time: Time,
-        position: Vec3,
-        velocity: Vec3,
+        position: ArrayLike | None = None,
+        velocity: ArrayLike | None = None,
+        *,
+        x: Distance | None = None,
+        y: Distance | None = None,
+        z: Distance | None = None,
+        vx: Velocity | None = None,
+        vy: Velocity | None = None,
+        vz: Velocity | None = None,
         origin: Origin | None = None,
         frame: Frame | None = None,
     ) -> Self: ...
@@ -466,10 +684,34 @@ class State:
         """Return the reference frame of this state."""
         ...
     def position(self) -> np.ndarray:
-        """Return the position vector as a numpy array [x, y, z] in km."""
+        """Return the position vector as a numpy array in meters, shape (3,)."""
         ...
     def velocity(self) -> np.ndarray:
-        """Return the velocity vector as a numpy array [vx, vy, vz] in km/s."""
+        """Return the velocity vector as a numpy array in m/s, shape (3,)."""
+        ...
+    @property
+    def x(self) -> Distance:
+        """Return the x component of the position."""
+        ...
+    @property
+    def y(self) -> Distance:
+        """Return the y component of the position."""
+        ...
+    @property
+    def z(self) -> Distance:
+        """Return the z component of the position."""
+        ...
+    @property
+    def vx(self) -> Velocity:
+        """Return the x component of the velocity."""
+        ...
+    @property
+    def vy(self) -> Velocity:
+        """Return the y component of the velocity."""
+        ...
+    @property
+    def vz(self) -> Velocity:
+        """Return the z component of the velocity."""
         ...
     def to_frame(self, frame: Frame, provider: EOPProvider | None = None) -> Self:
         """Transform this state to a different reference frame."""
@@ -487,41 +729,42 @@ class State:
         """Convert this state to a ground location."""
         ...
 
+# Keep old name as alias
+
 class Keplerian:
     """Represents an orbit using Keplerian (classical) orbital elements.
 
     Args:
         time: Epoch of the elements.
-        semi_major_axis: Semi-major axis in km.
+        semi_major_axis: Semi-major axis as Distance.
         eccentricity: Orbital eccentricity (0 = circular, <1 = elliptical).
-        inclination: Inclination in radians.
-        longitude_of_ascending_node: RAAN in radians.
-        argument_of_periapsis: Argument of periapsis in radians.
-        true_anomaly: True anomaly in radians.
+        inclination: Inclination as Angle.
+        longitude_of_ascending_node: RAAN as Angle.
+        argument_of_periapsis: Argument of periapsis as Angle.
+        true_anomaly: True anomaly as Angle.
         origin: Central body (default: Earth).
 
     Examples:
-        >>> import math
         >>> t = lox.Time("TAI", 2024, 1, 1)
         >>> orbit = lox.Keplerian(
         ...     t,
-        ...     semi_major_axis=6678.0,
+        ...     semi_major_axis=6678.0 * lox.km,
         ...     eccentricity=0.001,
-        ...     inclination=math.radians(51.6),
-        ...     longitude_of_ascending_node=0.0,
-        ...     argument_of_periapsis=0.0,
-        ...     true_anomaly=0.0,
+        ...     inclination=51.6 * lox.deg,
+        ...     longitude_of_ascending_node=0.0 * lox.rad,
+        ...     argument_of_periapsis=0.0 * lox.rad,
+        ...     true_anomaly=0.0 * lox.rad,
         ... )
     """
     def __new__(
         cls,
         time: Time,
-        semi_major_axis: float,
+        semi_major_axis: Distance,
         eccentricity: float,
-        inclination: float,
-        longitude_of_ascending_node: float,
-        argument_of_periapsis: float,
-        true_anomaly: float,
+        inclination: Angle,
+        longitude_of_ascending_node: Angle,
+        argument_of_periapsis: Angle,
+        true_anomaly: Angle,
         origin: Origin | None = None,
     ) -> Self: ...
     def time(self) -> Time:
@@ -530,25 +773,25 @@ class Keplerian:
     def origin(self) -> Origin:
         """Return the central body (origin) of this orbit."""
         ...
-    def semi_major_axis(self) -> float:
-        """Return the semi-major axis in km."""
+    def semi_major_axis(self) -> Distance:
+        """Return the semi-major axis."""
         ...
     def eccentricity(self) -> float:
         """Return the orbital eccentricity."""
         ...
-    def inclination(self) -> float:
-        """Return the inclination in radians."""
+    def inclination(self) -> Angle:
+        """Return the inclination."""
         ...
-    def longitude_of_ascending_node(self) -> float:
-        """Return the longitude of the ascending node (RAAN) in radians."""
+    def longitude_of_ascending_node(self) -> Angle:
+        """Return the longitude of the ascending node (RAAN)."""
         ...
-    def argument_of_periapsis(self) -> float:
-        """Return the argument of periapsis in radians."""
+    def argument_of_periapsis(self) -> Angle:
+        """Return the argument of periapsis."""
         ...
-    def true_anomaly(self) -> float:
-        """Return the true anomaly in radians."""
+    def true_anomaly(self) -> Angle:
+        """Return the true anomaly."""
         ...
-    def to_cartesian(self) -> State:
+    def to_cartesian(self) -> Cartesian:
         """Convert these Keplerian elements to a Cartesian state."""
         ...
     def orbital_period(self) -> TimeDelta:
@@ -559,14 +802,14 @@ class Trajectory:
     """A time-series of orbital states with interpolation support.
 
     Args:
-        states: List of State objects in chronological order.
+        states: List of Cartesian objects in chronological order.
 
     Examples:
         >>> trajectory = propagator.propagate(times)
         >>> state = trajectory.interpolate(t)
         >>> arr = trajectory.to_numpy()
     """
-    def __new__(cls, states: list[State]) -> Self: ...
+    def __new__(cls, states: list[Cartesian]) -> Self: ...
     @classmethod
     def from_numpy(
         cls,
@@ -579,7 +822,7 @@ class Trajectory:
 
         Args:
             start_time: Reference epoch for the trajectory.
-            states: 2D array with columns [t, x, y, z, vx, vy, vz].
+            states: 2D array with columns [t(s), x(m), y(m), z(m), vx(m/s), vy(m/s), vz(m/s)].
             origin: Central body (default: Earth).
             frame: Reference frame (default: ICRF).
         """
@@ -591,18 +834,18 @@ class Trajectory:
         """Return the reference frame of this trajectory."""
         ...
     def to_numpy(self) -> np.ndarray:
-        """Export trajectory to a numpy array."""
+        """Export trajectory to a numpy array with columns [t(s), x(m), y(m), z(m), vx(m/s), vy(m/s), vz(m/s)]."""
         ...
-    def states(self) -> list[State]:
+    def states(self) -> list[Cartesian]:
         """Return the list of states in this trajectory."""
         ...
-    def find_events(self, func: Callable[[State], float], step: TimeDelta) -> list[Event]:
+    def find_events(self, func: Callable[[Cartesian], float], step: TimeDelta) -> list[Event]:
         """Find events where a function crosses zero."""
         ...
-    def find_windows(self, func: Callable[[State], float], step: TimeDelta) -> list[Window]:
+    def find_windows(self, func: Callable[[Cartesian], float], step: TimeDelta) -> list[Window]:
         """Find time windows where a function is positive."""
         ...
-    def interpolate(self, time: Time | TimeDelta) -> State:
+    def interpolate(self, time: Time | TimeDelta) -> Cartesian:
         """Interpolate the trajectory at a specific time."""
         ...
     def to_frame(self, frame: Frame, provider: EOPProvider | None = None) -> Self:
@@ -653,16 +896,33 @@ class Vallado:
         max_iter: Maximum iterations for Kepler's equation solver.
 
     Examples:
-        >>> state = lox.State(t, position=(6678.0, 0.0, 0.0), velocity=(0.0, 7.73, 0.0))
+        >>> state = lox.Cartesian(t,
+        ...     position=(6678.0 * km, 0.0 * km, 0.0 * km),
+        ...     velocity=(0.0 * km_per_s, 7.73 * km_per_s, 0.0 * km_per_s))
         >>> prop = lox.Vallado(state)
         >>> trajectory = prop.propagate([t1, t2, t3])
     """
-    def __new__(cls, initial_state: State, max_iter: int | None = None) -> Self: ...
+    def __new__(cls, initial_state: Cartesian, max_iter: int | None = None) -> Self: ...
     @overload
-    def propagate(self, time: Time) -> State: ...
+    def propagate(self, steps: Time) -> Cartesian: ...
     @overload
-    def propagate(self, time: list[Time]) -> Trajectory: ...
-    def propagate(self, time: Time | list[Time]) -> State | Trajectory:
+    def propagate(self, steps: list[Time]) -> Trajectory: ...
+    def propagate(self, steps: Time | list[Time], end: Time | None = None, frame: Frame | None = None, provider: EOPProvider | None = None) -> Cartesian | Trajectory:
+        """Propagate the orbit to one or more times."""
+        ...
+
+class J2:
+    """Numerical J2 orbit propagator using Dormand-Prince 8(5,3) integration.
+
+    Args:
+        initial_state: Initial orbital state.
+    """
+    def __new__(cls, initial_state: Cartesian) -> Self: ...
+    @overload
+    def propagate(self, steps: Time) -> Cartesian: ...
+    @overload
+    def propagate(self, steps: list[Time]) -> Trajectory: ...
+    def propagate(self, steps: Time | list[Time], end: Time | None = None, frame: Frame | None = None, provider: EOPProvider | None = None) -> Cartesian | Trajectory:
         """Propagate the orbit to one or more times."""
         ...
 
@@ -671,38 +931,37 @@ class GroundLocation:
 
     Args:
         origin: The central body (e.g., Earth, Moon).
-        longitude: Geodetic longitude in radians.
-        latitude: Geodetic latitude in radians.
-        altitude: Altitude above the reference ellipsoid in km.
+        longitude: Geodetic longitude as Angle.
+        latitude: Geodetic latitude as Angle.
+        altitude: Altitude above the reference ellipsoid as Distance.
 
     Examples:
-        >>> import math
         >>> darmstadt = lox.GroundLocation(
         ...     lox.Origin("Earth"),
-        ...     longitude=math.radians(8.6512),
-        ...     latitude=math.radians(49.8728),
-        ...     altitude=0.108,
+        ...     longitude=8.6512 * lox.deg,
+        ...     latitude=49.8728 * lox.deg,
+        ...     altitude=0.108 * lox.km,
         ... )
     """
     def __new__(
         cls,
         origin: Origin,
-        longitude: float,
-        latitude: float,
-        altitude: float,
+        longitude: Angle,
+        latitude: Angle,
+        altitude: Distance,
     ) -> Self: ...
-    def longitude(self) -> float:
-        """Return the geodetic longitude in radians."""
+    def longitude(self) -> Angle:
+        """Return the geodetic longitude."""
         ...
-    def latitude(self) -> float:
-        """Return the geodetic latitude in radians."""
+    def latitude(self) -> Angle:
+        """Return the geodetic latitude."""
         ...
-    def altitude(self) -> float:
-        """Return the altitude above the reference ellipsoid in km."""
+    def altitude(self) -> Distance:
+        """Return the altitude above the reference ellipsoid."""
         ...
     def observables(
         self,
-        state: State,
+        state: Cartesian,
         provider: EOPProvider | None = None,
         frame: Frame | None = None,
     ) -> Observables:
@@ -725,10 +984,10 @@ class GroundPropagator:
     """
     def __new__(cls, location: GroundLocation) -> Self: ...
     @overload
-    def propagate(self, time: Time) -> State: ...
+    def propagate(self, steps: Time) -> Cartesian: ...
     @overload
-    def propagate(self, time: list[Time]) -> Trajectory: ...
-    def propagate(self, time: Time | list[Time]) -> State | Trajectory:
+    def propagate(self, steps: list[Time]) -> Trajectory: ...
+    def propagate(self, steps: Time | list[Time], end: Time | None = None, frame: Frame | None = None, provider: EOPProvider | None = None) -> Cartesian | Trajectory:
         """Propagate the ground station to one or more times."""
         ...
 
@@ -753,14 +1012,14 @@ class SGP4:
         """Return the TLE epoch time."""
         ...
     @overload
-    def propagate(self, time: Time, provider: EOPProvider | None = None) -> State: ...
+    def propagate(self, steps: Time, provider: EOPProvider | None = None) -> Cartesian: ...
     @overload
     def propagate(
-        self, time: list[Time], provider: EOPProvider | None = None
+        self, steps: list[Time], provider: EOPProvider | None = None
     ) -> Trajectory: ...
     def propagate(
-        self, time: Time | list[Time], provider: EOPProvider | None = None
-    ) -> State | Trajectory:
+        self, steps: Time | list[Time], end: Time | None = None, frame: Frame | None = None, provider: EOPProvider | None = None
+    ) -> Cartesian | Trajectory:
         """Propagate the orbit to one or more times."""
         ...
 
@@ -768,25 +1027,25 @@ class Observables:
     """Observation data from a ground station to a target.
 
     Args:
-        azimuth: Azimuth angle in radians (measured from north, clockwise).
-        elevation: Elevation angle in radians (above local horizon).
-        range: Distance to target in km.
-        range_rate: Rate of change of range in km/s.
+        azimuth: Azimuth angle as Angle.
+        elevation: Elevation angle as Angle.
+        range: Distance to target as Distance.
+        range_rate: Rate of change of range as Velocity.
     """
     def __new__(
-        cls, azimuth: float, elevation: float, range: float, range_rate: float
+        cls, azimuth: Angle, elevation: Angle, range: Distance, range_rate: Velocity
     ) -> Self: ...
-    def azimuth(self) -> float:
-        """Return the azimuth angle in radians."""
+    def azimuth(self) -> Angle:
+        """Return the azimuth angle."""
         ...
-    def elevation(self) -> float:
-        """Return the elevation angle in radians."""
+    def elevation(self) -> Angle:
+        """Return the elevation angle."""
         ...
-    def range(self) -> float:
-        """Return the range (distance) in km."""
+    def range(self) -> Distance:
+        """Return the range (distance)."""
         ...
-    def range_rate(self) -> float:
-        """Return the range rate in km/s."""
+    def range_rate(self) -> Velocity:
+        """Return the range rate."""
         ...
 
 class Pass:
@@ -1184,6 +1443,8 @@ class Decibel:
     def __float__(self) -> float: ...
     def __add__(self, other: Decibel) -> Decibel: ...
     def __sub__(self, other: Decibel) -> Decibel: ...
+    def __mul__(self, other: float) -> Decibel: ...
+    def __rmul__(self, other: float) -> Decibel: ...
     def __neg__(self) -> Decibel: ...
     def __eq__(self, other: object) -> bool: ...
     def __repr__(self) -> str: ...
@@ -1206,28 +1467,28 @@ class ParabolicPattern:
     """Parabolic antenna gain pattern.
 
     Args:
-        diameter_m: Antenna diameter in meters.
+        diameter: Antenna diameter as Distance.
         efficiency: Aperture efficiency (0, 1].
     """
-    def __new__(cls, diameter_m: float, efficiency: float) -> Self: ...
+    def __new__(cls, diameter: Distance, efficiency: float) -> Self: ...
     @staticmethod
-    def from_beamwidth(beamwidth_deg: float, frequency_hz: float, efficiency: float) -> ParabolicPattern:
+    def from_beamwidth(beamwidth: Angle, frequency: Frequency, efficiency: float) -> ParabolicPattern:
         """Creates a parabolic pattern from a desired beamwidth.
 
         Args:
-            beamwidth_deg: Half-power beamwidth in degrees.
-            frequency_hz: Frequency in Hz.
+            beamwidth: Half-power beamwidth as Angle.
+            frequency: Frequency.
             efficiency: Aperture efficiency (0, 1].
         """
         ...
-    def gain(self, frequency_hz: float, angle_deg: float) -> Decibel:
+    def gain(self, frequency: Frequency, angle: Angle) -> Decibel:
         """Returns the gain in dBi at the given frequency and off-boresight angle."""
         ...
-    def beamwidth(self, frequency_hz: float) -> float | None:
-        """Returns the half-power beamwidth in degrees, or ``None`` when the
+    def beamwidth(self, frequency: Frequency) -> Angle | None:
+        """Returns the half-power beamwidth, or ``None`` when the
         antenna diameter is smaller than ~1.22 wavelengths at this frequency."""
         ...
-    def peak_gain(self, frequency_hz: float) -> Decibel:
+    def peak_gain(self, frequency: Frequency) -> Decibel:
         """Returns the peak gain in dBi."""
         ...
     def __eq__(self, other: object) -> bool: ...
@@ -1237,17 +1498,17 @@ class GaussianPattern:
     """Gaussian antenna gain pattern.
 
     Args:
-        diameter_m: Antenna diameter in meters.
+        diameter: Antenna diameter as Distance.
         efficiency: Aperture efficiency (0, 1].
     """
-    def __new__(cls, diameter_m: float, efficiency: float) -> Self: ...
-    def gain(self, frequency_hz: float, angle_deg: float) -> Decibel:
+    def __new__(cls, diameter: Distance, efficiency: float) -> Self: ...
+    def gain(self, frequency: Frequency, angle: Angle) -> Decibel:
         """Returns the gain in dBi at the given frequency and off-boresight angle."""
         ...
-    def beamwidth(self, frequency_hz: float) -> float | None:
-        """Returns the half-power beamwidth in degrees."""
+    def beamwidth(self, frequency: Frequency) -> Angle | None:
+        """Returns the half-power beamwidth."""
         ...
-    def peak_gain(self, frequency_hz: float) -> Decibel:
+    def peak_gain(self, frequency: Frequency) -> Decibel:
         """Returns the peak gain in dBi."""
         ...
     def __eq__(self, other: object) -> bool: ...
@@ -1257,13 +1518,13 @@ class DipolePattern:
     """Dipole antenna gain pattern.
 
     Args:
-        length_m: Dipole length in meters.
+        length: Dipole length as Distance.
     """
-    def __new__(cls, length_m: float) -> Self: ...
-    def gain(self, frequency_hz: float, angle_deg: float) -> Decibel:
+    def __new__(cls, length: Distance) -> Self: ...
+    def gain(self, frequency: Frequency, angle: Angle) -> Decibel:
         """Returns the gain in dBi at the given frequency and off-boresight angle."""
         ...
-    def peak_gain(self, frequency_hz: float) -> Decibel:
+    def peak_gain(self, frequency: Frequency) -> Decibel:
         """Returns the peak gain in dBi."""
         ...
     def __eq__(self, other: object) -> bool: ...
@@ -1273,10 +1534,10 @@ class SimpleAntenna:
     """A simple antenna with constant gain and beamwidth.
 
     Args:
-        gain_db: Peak gain in dBi.
-        beamwidth_deg: Half-power beamwidth in degrees.
+        gain: Peak gain as Decibel.
+        beamwidth: Half-power beamwidth as Angle.
     """
-    def __new__(cls, gain_db: float, beamwidth_deg: float) -> Self: ...
+    def __new__(cls, gain: Decibel, beamwidth: Angle) -> Self: ...
     def __eq__(self, other: object) -> bool: ...
     def __repr__(self) -> str: ...
 
@@ -1288,14 +1549,14 @@ class ComplexAntenna:
         boresight: Boresight direction as [x, y, z].
     """
     def __new__(cls, pattern: ParabolicPattern | GaussianPattern | DipolePattern, boresight: list[float]) -> Self: ...
-    def gain(self, frequency_hz: float, angle_deg: float) -> Decibel:
+    def gain(self, frequency: Frequency, angle: Angle) -> Decibel:
         """Returns the gain in dBi at the given frequency and off-boresight angle."""
         ...
-    def beamwidth(self, frequency_hz: float) -> float | None:
-        """Returns the half-power beamwidth in degrees, or ``None`` when the
+    def beamwidth(self, frequency: Frequency) -> Angle | None:
+        """Returns the half-power beamwidth, or ``None`` when the
         underlying pattern does not define a beamwidth."""
         ...
-    def peak_gain(self, frequency_hz: float) -> Decibel:
+    def peak_gain(self, frequency: Frequency) -> Decibel:
         """Returns the peak gain in dBi."""
         ...
     def __repr__(self) -> str: ...
@@ -1304,13 +1565,13 @@ class Transmitter:
     """A radio transmitter.
 
     Args:
-        frequency_hz: Transmit frequency in Hz.
-        power_w: Transmit power in watts.
-        line_loss_db: Feed/line loss in dB.
-        output_back_off_db: Output back-off in dB (default 0).
+        frequency: Transmit frequency.
+        power: Transmit power.
+        line_loss: Feed/line loss as Decibel.
+        output_back_off: Output back-off as Decibel (default Decibel(0)).
     """
-    def __new__(cls, frequency_hz: float, power_w: float, line_loss_db: float, output_back_off_db: float = 0.0) -> Self: ...
-    def eirp(self, antenna: SimpleAntenna | ComplexAntenna, angle_deg: float) -> Decibel:
+    def __new__(cls, frequency: Frequency, power: Power, line_loss: Decibel, output_back_off: Decibel | None = None) -> Self: ...
+    def eirp(self, antenna: SimpleAntenna | ComplexAntenna, angle: Angle) -> Decibel:
         """Returns the EIRP in dBW for the given antenna and off-boresight angle."""
         ...
     def __eq__(self, other: object) -> bool: ...
@@ -1320,10 +1581,10 @@ class SimpleReceiver:
     """A simple receiver with a known system noise temperature.
 
     Args:
-        frequency_hz: Receive frequency in Hz.
-        system_noise_temperature_k: System noise temperature in Kelvin.
+        frequency: Receive frequency.
+        system_noise_temperature: System noise temperature.
     """
-    def __new__(cls, frequency_hz: float, system_noise_temperature_k: float) -> Self: ...
+    def __new__(cls, frequency: Frequency, system_noise_temperature: Temperature) -> Self: ...
     def __eq__(self, other: object) -> bool: ...
     def __repr__(self) -> str: ...
 
@@ -1331,31 +1592,31 @@ class ComplexReceiver:
     """A complex receiver with detailed noise and gain parameters.
 
     Args:
-        frequency_hz: Receive frequency in Hz.
-        antenna_noise_temperature_k: Antenna noise temperature in Kelvin.
-        lna_gain_db: LNA gain in dB.
-        lna_noise_figure_db: LNA noise figure in dB.
-        noise_figure_db: Receiver noise figure in dB.
-        loss_db: Receiver chain loss in dB.
-        demodulator_loss_db: Demodulator loss in dB (default 0).
-        implementation_loss_db: Other implementation losses in dB (default 0).
+        frequency: Receive frequency.
+        antenna_noise_temperature: Antenna noise temperature.
+        lna_gain: LNA gain as Decibel.
+        lna_noise_figure: LNA noise figure as Decibel.
+        noise_figure: Receiver noise figure as Decibel.
+        loss: Receiver chain loss as Decibel.
+        demodulator_loss: Demodulator loss as Decibel (default Decibel(0)).
+        implementation_loss: Other implementation losses as Decibel (default Decibel(0)).
     """
     def __new__(
         cls,
-        frequency_hz: float,
-        antenna_noise_temperature_k: float,
-        lna_gain_db: float,
-        lna_noise_figure_db: float,
-        noise_figure_db: float,
-        loss_db: float,
-        demodulator_loss_db: float = 0.0,
-        implementation_loss_db: float = 0.0,
+        frequency: Frequency,
+        antenna_noise_temperature: Temperature,
+        lna_gain: Decibel,
+        lna_noise_figure: Decibel,
+        noise_figure: Decibel,
+        loss: Decibel,
+        demodulator_loss: Decibel | None = None,
+        implementation_loss: Decibel | None = None,
     ) -> Self: ...
-    def noise_temperature(self) -> float:
-        """Returns the receiver noise temperature in Kelvin."""
+    def noise_temperature(self) -> Temperature:
+        """Returns the receiver noise temperature."""
         ...
-    def system_noise_temperature(self) -> float:
-        """Returns the system noise temperature in Kelvin."""
+    def system_noise_temperature(self) -> Temperature:
+        """Returns the system noise temperature."""
         ...
     def __eq__(self, other: object) -> bool: ...
     def __repr__(self) -> str: ...
@@ -1365,9 +1626,9 @@ class Channel:
 
     Args:
         link_type: "uplink" or "downlink".
-        data_rate: Data rate in bits per second.
-        required_eb_n0_db: Required Eb/N0 in dB.
-        margin_db: Required link margin in dB.
+        data_rate: Data rate.
+        required_eb_n0: Required Eb/N0 as Decibel.
+        margin: Required link margin as Decibel.
         modulation: Modulation scheme.
         roll_off: Roll-off factor (default 1.5).
         fec: Forward error correction code rate (default 0.5).
@@ -1375,15 +1636,15 @@ class Channel:
     def __new__(
         cls,
         link_type: str,
-        data_rate: float,
-        required_eb_n0_db: float,
-        margin_db: float,
+        data_rate: DataRate,
+        required_eb_n0: Decibel,
+        margin: Decibel,
         modulation: Modulation,
         roll_off: float = 1.5,
         fec: float = 0.5,
     ) -> Self: ...
-    def bandwidth(self) -> float:
-        """Returns the channel bandwidth in Hz."""
+    def bandwidth(self) -> Frequency:
+        """Returns the channel bandwidth."""
         ...
     def eb_n0(self, c_n0: Decibel) -> Decibel:
         """Computes Eb/N0 from a given C/N0."""
@@ -1397,21 +1658,21 @@ class EnvironmentalLosses:
     """Environmental losses for a link.
 
     Args:
-        rain_db: Rain attenuation in dB (default 0).
-        gaseous_db: Gaseous absorption in dB (default 0).
-        scintillation_db: Scintillation loss in dB (default 0).
-        atmospheric_db: Atmospheric loss in dB (default 0).
-        cloud_db: Cloud attenuation in dB (default 0).
-        depolarization_db: Depolarization loss in dB (default 0).
+        rain: Rain attenuation as Decibel (default Decibel(0)).
+        gaseous: Gaseous absorption as Decibel (default Decibel(0)).
+        scintillation: Scintillation loss as Decibel (default Decibel(0)).
+        atmospheric: Atmospheric loss as Decibel (default Decibel(0)).
+        cloud: Cloud attenuation as Decibel (default Decibel(0)).
+        depolarization: Depolarization loss as Decibel (default Decibel(0)).
     """
     def __new__(
         cls,
-        rain_db: float = 0.0,
-        gaseous_db: float = 0.0,
-        scintillation_db: float = 0.0,
-        atmospheric_db: float = 0.0,
-        cloud_db: float = 0.0,
-        depolarization_db: float = 0.0,
+        rain: Decibel | None = None,
+        gaseous: Decibel | None = None,
+        scintillation: Decibel | None = None,
+        atmospheric: Decibel | None = None,
+        cloud: Decibel | None = None,
+        depolarization: Decibel | None = None,
     ) -> Self: ...
     def total(self) -> Decibel:
         """Returns the total environmental loss in dB."""
@@ -1436,32 +1697,32 @@ class CommunicationSystem:
     def carrier_to_noise_density(
         self,
         rx_system: CommunicationSystem,
-        losses_db: float,
-        range_km: float,
-        tx_angle_deg: float,
-        rx_angle_deg: float,
+        losses: Decibel,
+        range: Distance,
+        tx_angle: Angle,
+        rx_angle: Angle,
     ) -> Decibel:
         """Computes the carrier-to-noise density ratio (C/N0) in dB·Hz.
 
         Args:
             rx_system: The receiving CommunicationSystem.
-            losses_db: Additional losses in dB.
-            range_km: Slant range in kilometers.
-            tx_angle_deg: Off-boresight angle at transmitter in degrees.
-            rx_angle_deg: Off-boresight angle at receiver in degrees.
+            losses: Additional losses as Decibel.
+            range: Slant range as Distance.
+            tx_angle: Off-boresight angle at transmitter as Angle.
+            rx_angle: Off-boresight angle at receiver as Angle.
         """
         ...
     def carrier_power(
         self,
         rx_system: CommunicationSystem,
-        losses_db: float,
-        range_km: float,
-        tx_angle_deg: float,
-        rx_angle_deg: float,
+        losses: Decibel,
+        range: Distance,
+        tx_angle: Angle,
+        rx_angle: Angle,
     ) -> Decibel:
         """Computes the received carrier power in dBW."""
         ...
-    def noise_power(self, bandwidth_hz: float) -> Decibel:
+    def noise_power(self, bandwidth: Frequency) -> Decibel:
         """Computes the noise power in dBW for a given bandwidth."""
         ...
     def __repr__(self) -> str: ...
@@ -1473,9 +1734,9 @@ class LinkStats:
         tx_system: CommunicationSystem,
         rx_system: CommunicationSystem,
         channel: Channel,
-        range_km: float,
-        tx_angle_deg: float,
-        rx_angle_deg: float,
+        range: Distance,
+        tx_angle: Angle,
+        rx_angle: Angle,
         losses: EnvironmentalLosses | None = None,
     ) -> LinkStats:
         """Computes a full link budget.
@@ -1484,15 +1745,15 @@ class LinkStats:
             tx_system: The transmitting CommunicationSystem.
             rx_system: The receiving CommunicationSystem.
             channel: The Channel.
-            range_km: Slant range in kilometers.
-            tx_angle_deg: Off-boresight angle at transmitter in degrees.
-            rx_angle_deg: Off-boresight angle at receiver in degrees.
+            range: Slant range as Distance.
+            tx_angle: Off-boresight angle at transmitter as Angle.
+            rx_angle: Off-boresight angle at receiver as Angle.
             losses: EnvironmentalLosses (optional, defaults to none).
         """
         ...
     @property
-    def slant_range_km(self) -> float:
-        """Slant range in kilometers."""
+    def slant_range(self) -> Distance:
+        """Slant range."""
         ...
     @property
     def fspl(self) -> Decibel:
@@ -1527,39 +1788,39 @@ class LinkStats:
         """Noise power in dBW."""
         ...
     @property
-    def data_rate(self) -> float:
-        """Data rate in bits per second."""
+    def data_rate(self) -> DataRate:
+        """Data rate."""
         ...
     @property
-    def bandwidth_hz(self) -> float:
-        """Channel bandwidth in Hz."""
+    def bandwidth(self) -> Frequency:
+        """Channel bandwidth."""
         ...
     @property
-    def frequency_hz(self) -> float:
-        """Link frequency in Hz."""
+    def frequency(self) -> Frequency:
+        """Link frequency."""
         ...
     def __repr__(self) -> str: ...
 
-def fspl(distance_km: float, frequency_hz: float) -> Decibel:
+def fspl(distance: Distance, frequency: Frequency) -> Decibel:
     """Computes the free-space path loss in dB.
 
     Args:
-        distance_km: Distance in kilometers.
-        frequency_hz: Frequency in Hz.
+        distance: Distance.
+        frequency: Frequency.
 
     Returns:
         Free-space path loss as a Decibel value.
     """
     ...
 
-def freq_overlap(rx_freq_hz: float, rx_bw_hz: float, tx_freq_hz: float, tx_bw_hz: float) -> float:
+def freq_overlap(rx_freq: Frequency, rx_bw: Frequency, tx_freq: Frequency, tx_bw: Frequency) -> float:
     """Computes the frequency overlap factor between a receiver and an interferer.
 
     Args:
-        rx_freq_hz: Receiver center frequency in Hz.
-        rx_bw_hz: Receiver bandwidth in Hz.
-        tx_freq_hz: Interferer center frequency in Hz.
-        tx_bw_hz: Interferer bandwidth in Hz.
+        rx_freq: Receiver center frequency.
+        rx_bw: Receiver bandwidth.
+        tx_freq: Interferer center frequency.
+        tx_bw: Interferer bandwidth.
 
     Returns:
         Overlap factor in [0, 1].

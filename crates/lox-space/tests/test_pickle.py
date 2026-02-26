@@ -13,7 +13,7 @@ import pytest
     [
         lox.Origin("Earth"),
         lox.Frame("ICRF"),
-        lox.ElevationMask.fixed(0.0),
+        lox.ElevationMask.fixed(0.0 * lox.rad),
         lox.TimeScale("TAI"),
         lox.Time("TAI", 2000, 1, 1),
     ],

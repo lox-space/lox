@@ -16,24 +16,24 @@ import lox_space as lox
 # Define a ground station
 gs = lox.GroundLocation(
     origin=lox.Origin("Earth"),
-    longitude=0.0,          # radians (Greenwich)
-    latitude=0.9,           # radians (~51.5° N)
-    altitude=0.0,           # km
+    longitude=0.0 * lox.rad,    # Greenwich
+    latitude=51.5 * lox.deg,    # ~51.5° N
+    altitude=0.0 * lox.km,
 )
 
 # Calculate observables for a spacecraft state
 obs = gs.observables(state)
-print(f"Azimuth: {obs.azimuth():.2f} rad")
-print(f"Elevation: {obs.elevation():.2f} rad")
-print(f"Range: {obs.range():.1f} km")
+print(f"Azimuth: {obs.azimuth().to_degrees():.2f} deg")
+print(f"Elevation: {obs.elevation().to_degrees():.2f} deg")
+print(f"Range: {obs.range().to_kilometers():.1f} km")
 
 # Define elevation mask
-mask = lox.ElevationMask.fixed(0.1)  # ~5.7° minimum elevation
+mask = lox.ElevationMask.fixed(5 * lox.deg)
 
 # Or variable mask based on azimuth
 import numpy as np
 azimuth = np.linspace(0, 2*np.pi, 36)
-elevation = np.full(36, 0.1)  # same minimum everywhere
+elevation = np.full(36, 0.1)  # radians
 mask = lox.ElevationMask.variable(azimuth, elevation)
 ```
 

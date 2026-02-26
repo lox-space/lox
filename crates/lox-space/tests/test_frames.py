@@ -95,14 +95,18 @@ def kernels(data_dir):
 def test_iau_frames(frame, kernels):
     t = lox.Time("TDB", 2000, 1, 1)
     et = t.julian_date(epoch="j2000", unit="seconds")
-    r0 = (6068.27927, -1692.84394, -2516.61918)
-    v0 = (-0.660415582, 5.495938726, -5.303093233)
-    s0 = lox.State(t, position=r0, velocity=v0)
+    r0_km = (6068.27927, -1692.84394, -2516.61918)
+    v0_kms = (-0.660415582, 5.495938726, -5.303093233)
+    s0 = lox.Cartesian(
+        t,
+        position=[c * 1e3 for c in r0_km],
+        velocity=[c * 1e3 for c in v0_kms],
+    )
     s1 = s0.to_frame(lox.Frame(frame))
-    r1_act = s1.position()
-    v1_act = s1.velocity()
+    r1_act = s1.position() * 1e-3
+    v1_act = s1.velocity() * 1e-3
     ms = spice.sxform("J2000", frame, et)
-    s1_exp = ms @ np.array([*r0, *v0])
+    s1_exp = ms @ np.array([*r0_km, *v0_kms])
     r1_exp = s1_exp[0:3]
     v1_exp = s1_exp[3:]
     npt.assert_allclose(r1_act, r1_exp)

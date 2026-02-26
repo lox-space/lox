@@ -52,10 +52,14 @@ VEL_KMS = (-0.660415582, 5.495938726, -5.303093233)
 
 
 def _lox_state(epoch_iso, frame="ICRF"):
-    """Create a lox State from an ISO epoch string."""
+    """Create a lox Cartesian from an ISO epoch string."""
     time = lox.UTC.from_iso(epoch_iso).to_scale("TAI")
-    return lox.State(
-        time, POS_KM, VEL_KMS, lox.Origin("Earth"), lox.Frame(frame)
+    return lox.Cartesian(
+        time,
+        position=[c * 1e3 for c in POS_KM],
+        velocity=[c * 1e3 for c in VEL_KMS],
+        origin=lox.Origin("Earth"),
+        frame=lox.Frame(frame),
     )
 
 
@@ -95,8 +99,8 @@ def test_icrf_to_itrf(epoch, provider):
     # Lox
     state_icrf = _lox_state(epoch)
     state_itrf = state_icrf.to_frame(lox.Frame("ITRF"), provider)
-    lox_pos = np.array(state_itrf.position())
-    lox_vel = np.array(state_itrf.velocity())
+    lox_pos = state_itrf.position() * 1e-3
+    lox_vel = state_itrf.velocity() * 1e-3
 
     # Astropy
     gcrs = _astropy_gcrs(epoch)
@@ -117,8 +121,8 @@ def test_icrf_to_cirf(epoch, provider):
     # Lox
     state_icrf = _lox_state(epoch)
     state_cirf = state_icrf.to_frame(lox.Frame("CIRF"), provider)
-    lox_pos = np.array(state_cirf.position())
-    lox_vel = np.array(state_cirf.velocity())
+    lox_pos = state_cirf.position() * 1e-3
+    lox_vel = state_cirf.velocity() * 1e-3
 
     # Astropy
     gcrs = _astropy_gcrs(epoch)
@@ -139,8 +143,8 @@ def test_icrf_to_tod(epoch, provider):
     # Lox — TOD(IERS2003) uses IAU 2000A nutation, matching Astropy's TETE
     state_icrf = _lox_state(epoch)
     state_tod = state_icrf.to_frame(lox.Frame("TOD(IERS2003)"), provider)
-    lox_pos = np.array(state_tod.position())
-    lox_vel = np.array(state_tod.velocity())
+    lox_pos = state_tod.position() * 1e-3
+    lox_vel = state_tod.velocity() * 1e-3
 
     # Astropy
     gcrs = _astropy_gcrs(epoch)
@@ -168,11 +172,13 @@ def test_roundtrip(frame, provider):
     state_back = state_frame.to_frame(lox.Frame("ICRF"), provider)
 
     npt.assert_allclose(
-        state_icrf.position(), state_back.position(),
+        state_icrf.position(),
+        state_back.position(),
         rtol=1e-12, err_msg=f"Roundtrip position failed for {frame}",
     )
     npt.assert_allclose(
-        state_icrf.velocity(), state_back.velocity(),
+        state_icrf.velocity(),
+        state_back.velocity(),
         rtol=1e-10, atol=1e-15, err_msg=f"Roundtrip velocity failed for {frame}",
     )
 
@@ -186,8 +192,8 @@ def test_velocity_includes_earth_rotation(provider):
     state_icrf = _lox_state(epoch)
     state_itrf = state_icrf.to_frame(lox.Frame("ITRF"), provider)
 
-    v_icrf_mag = np.linalg.norm(state_icrf.velocity())
-    v_itrf_mag = np.linalg.norm(state_itrf.velocity())
+    v_icrf_mag = np.linalg.norm(state_icrf.velocity()) * 1e-3
+    v_itrf_mag = np.linalg.norm(state_itrf.velocity()) * 1e-3
 
     # Rotation preserves position magnitude
     npt.assert_allclose(

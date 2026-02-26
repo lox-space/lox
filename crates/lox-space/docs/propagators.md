@@ -23,7 +23,11 @@ import lox_space as lox
 
 # Analytical (Kepler) propagation
 t = lox.Time("TAI", 2024, 1, 1)
-state = lox.State(t, (6678.0, 0.0, 0.0), (0.0, 7.73, 0.0))
+state = lox.Cartesian(
+    t,
+    position=(6678.0 * lox.km, 0.0 * lox.km, 0.0 * lox.km),
+    velocity=(0.0 * lox.km_per_s, 7.73 * lox.km_per_s, 0.0 * lox.km_per_s),
+)
 
 propagator = lox.Vallado(state)
 

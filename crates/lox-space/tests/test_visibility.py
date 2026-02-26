@@ -79,7 +79,7 @@ class TestVisibilityAnalysis:
         self, ground_assets, space_assets, t0, t1, ephemeris
     ):
         analysis = lox.VisibilityAnalysis(
-            ground_assets, space_assets, step=30
+            ground_assets, space_assets, step=lox.TimeDelta(30)
         )
         results = analysis.compute(t0, t1, ephemeris)
         assert results.num_pairs() == len(ground_assets) * len(space_assets)
@@ -88,7 +88,7 @@ class TestVisibilityAnalysis:
         self, ground_assets, space_assets, t0, t1, ephemeris
     ):
         analysis = lox.VisibilityAnalysis(
-            ground_assets, space_assets, min_pass_duration=300
+            ground_assets, space_assets, min_pass_duration=lox.TimeDelta(300)
         )
         results = analysis.compute(t0, t1, ephemeris)
         assert results.num_pairs() == len(ground_assets) * len(space_assets)
@@ -100,8 +100,8 @@ class TestVisibilityAnalysis:
             ground_assets,
             space_assets,
             occulting_bodies=[lox.Origin("Earth")],
-            step=30,
-            min_pass_duration=300,
+            step=lox.TimeDelta(30),
+            min_pass_duration=lox.TimeDelta(300),
         )
         results = analysis.compute(t0, t1, ephemeris)
         assert results.num_pairs() == len(ground_assets) * len(space_assets)
@@ -244,8 +244,8 @@ class TestPass:
         assert len(obs_list) == len(p.times())
         for obs in obs_list:
             assert isinstance(obs, lox.Observables)
-            assert obs.range() > 0
-            assert -math.pi <= obs.azimuth() <= math.pi
+            assert float(obs.range()) > 0
+            assert -math.pi <= float(obs.azimuth()) <= math.pi
 
     def test_observables_above_mask(
         self, results, ground_assets, space_assets
@@ -257,7 +257,7 @@ class TestPass:
         mask = gs.mask()
         for obs in p.observables():
             min_elev = mask.min_elevation(obs.azimuth())
-            assert obs.elevation() >= min_elev
+            assert float(obs.elevation()) >= float(min_elev)
 
     def test_interpolate_within_pass(
         self, results, ground_assets, space_assets
@@ -267,7 +267,7 @@ class TestPass:
         obs = p.interpolate(mid)
         assert obs is not None
         assert isinstance(obs, lox.Observables)
-        assert obs.range() > 0
+        assert float(obs.range()) > 0
 
     def test_interpolate_outside_pass(
         self, results, ground_assets, space_assets, t0
@@ -323,10 +323,10 @@ class TestAssets:
 
 class TestElevationMask:
     def test_fixed(self):
-        mask = lox.ElevationMask.fixed(np.radians(10))
-        assert mask.min_elevation(0) == pytest.approx(np.radians(10))
-        assert mask.min_elevation(np.pi) == pytest.approx(np.radians(10))
-        assert mask.fixed_elevation() == pytest.approx(np.radians(10))
+        mask = lox.ElevationMask.fixed(np.radians(10) * lox.rad)
+        assert float(mask.min_elevation(0 * lox.rad)) == pytest.approx(np.radians(10))
+        assert float(mask.min_elevation(np.pi * lox.rad)) == pytest.approx(np.radians(10))
+        assert float(mask.fixed_elevation()) == pytest.approx(np.radians(10))
         assert mask.azimuth() is None
         assert mask.elevation() is None
 
@@ -334,29 +334,29 @@ class TestElevationMask:
         az = np.array([-np.pi, 0.0, np.pi])
         el = np.array([0.0, np.radians(10), 0.0])
         mask = lox.ElevationMask.variable(az, el)
-        assert mask.min_elevation(0) == pytest.approx(np.radians(10))
-        assert mask.min_elevation(-np.pi) == pytest.approx(0.0)
+        assert float(mask.min_elevation(0 * lox.rad)) == pytest.approx(np.radians(10))
+        assert float(mask.min_elevation(-np.pi * lox.rad)) == pytest.approx(0.0)
         assert mask.fixed_elevation() is None
         assert mask.azimuth() is not None
         assert mask.elevation() is not None
 
     def test_constructor_with_min_elevation(self):
-        mask = lox.ElevationMask(min_elevation=np.radians(5))
-        assert mask.min_elevation(0) == pytest.approx(np.radians(5))
+        mask = lox.ElevationMask(min_elevation=np.radians(5) * lox.rad)
+        assert float(mask.min_elevation(0 * lox.rad)) == pytest.approx(np.radians(5))
 
     def test_constructor_with_arrays(self):
         az = np.array([-np.pi, 0.0, np.pi])
         el = np.array([0.0, np.radians(10), 0.0])
         mask = lox.ElevationMask(azimuth=az, elevation=el)
-        assert mask.min_elevation(0) == pytest.approx(np.radians(10))
+        assert float(mask.min_elevation(0 * lox.rad)) == pytest.approx(np.radians(10))
 
     def test_constructor_invalid(self):
         with pytest.raises(ValueError):
             lox.ElevationMask()
 
     def test_equality(self):
-        a = lox.ElevationMask.fixed(0.1)
-        b = lox.ElevationMask.fixed(0.1)
-        c = lox.ElevationMask.fixed(0.2)
+        a = lox.ElevationMask.fixed(0.1 * lox.rad)
+        b = lox.ElevationMask.fixed(0.1 * lox.rad)
+        c = lox.ElevationMask.fixed(0.2 * lox.rad)
         assert a == b
         assert a != c

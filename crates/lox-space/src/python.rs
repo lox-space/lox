@@ -15,9 +15,9 @@ use crate::ephem::python::PySpk;
 use crate::frames::python::PyFrame;
 use crate::math::python::PySeries;
 use crate::orbits::python::{
-    PyElevationMask, PyEvent, PyGroundAsset, PyGroundLocation, PyGroundPropagator, PyJ2Propagator,
-    PyKeplerian, PyObservables, PyPass, PySgp4, PySpaceAsset, PyState, PyTrajectory, PyVallado,
-    PyVisibilityAnalysis, PyVisibilityResults, PyWindow, find_events, find_windows,
+    PyCartesian, PyElevationMask, PyEvent, PyGroundAsset, PyGroundLocation, PyGroundPropagator,
+    PyJ2Propagator, PyKeplerian, PyObservables, PyPass, PySgp4, PySpaceAsset, PyTrajectory,
+    PyVallado, PyVisibilityAnalysis, PyVisibilityResults, PyWindow, find_events, find_windows,
 };
 use crate::time::python::{
     deltas::{NonFiniteTimeDeltaError, PyTimeDelta},
@@ -27,7 +27,10 @@ use crate::time::python::{
 };
 use crate::units::{
     ASTRONOMICAL_UNIT,
-    python::{PyAngle, PyDistance, PyFrequency, PyVelocity},
+    python::{
+        PyAngle, PyAngularRate, PyDataRate, PyDistance, PyFrequency, PyGravitationalParameter,
+        PyPower, PyTemperature, PyVelocity,
+    },
 };
 
 use pyo3::prelude::*;
@@ -41,6 +44,7 @@ fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     // comms
     m.add_class::<PyDecibel>()?;
+    m.add("dB", PyDecibel::new(1.0))?;
     m.add_class::<PyModulation>()?;
     m.add_class::<PyParabolicPattern>()?;
     m.add_class::<PyGaussianPattern>()?;
@@ -72,6 +76,7 @@ fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PySeries>()?;
 
     // orbits
+    m.add_class::<PyCartesian>()?;
     m.add_class::<PyElevationMask>()?;
     m.add_class::<PyEvent>()?;
     m.add_class::<PyGroundAsset>()?;
@@ -83,7 +88,6 @@ fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyPass>()?;
     m.add_class::<PySgp4>()?;
     m.add_class::<PySpaceAsset>()?;
-    m.add_class::<PyState>()?;
     m.add_class::<PyTrajectory>()?;
     m.add_class::<PyVallado>()?;
     m.add_class::<PyVisibilityAnalysis>()?;
@@ -106,19 +110,32 @@ fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyAngle>()?;
     m.add("rad", PyAngle::new(1.0))?;
     m.add("deg", PyAngle::new(PI / 180.0))?;
+    m.add_class::<PyAngularRate>()?;
+    m.add("rad_per_s", PyAngularRate::new(1.0))?;
+    m.add("deg_per_s", PyAngularRate::new(PI / 180.0))?;
+    m.add_class::<PyDataRate>()?;
+    m.add("bps", PyDataRate::new(1.0))?;
+    m.add("kbps", PyDataRate::new(1e3))?;
+    m.add("Mbps", PyDataRate::new(1e6))?;
     m.add_class::<PyDistance>()?;
     m.add("m", PyDistance::new(1.0))?;
     m.add("km", PyDistance::new(1e3))?;
     m.add("au", PyDistance::new(ASTRONOMICAL_UNIT))?;
     m.add_class::<PyFrequency>()?;
-    m.add("hz", PyFrequency::new(1.0))?;
-    m.add("khz", PyFrequency::new(1e3))?;
-    m.add("mhz", PyFrequency::new(1e6))?;
-    m.add("ghz", PyFrequency::new(1e9))?;
-    m.add("thz", PyFrequency::new(1e12))?;
+    m.add("Hz", PyFrequency::new(1.0))?;
+    m.add("kHz", PyFrequency::new(1e3))?;
+    m.add("MHz", PyFrequency::new(1e6))?;
+    m.add("GHz", PyFrequency::new(1e9))?;
+    m.add("THz", PyFrequency::new(1e12))?;
+    m.add_class::<PyGravitationalParameter>()?;
+    m.add_class::<PyPower>()?;
+    m.add("W", PyPower::new(1.0))?;
+    m.add("kW", PyPower::new(1e3))?;
+    m.add_class::<PyTemperature>()?;
+    m.add("K", PyTemperature::new(1.0))?;
     m.add_class::<PyVelocity>()?;
-    m.add("ms", PyVelocity::new(1.0))?;
-    m.add("kms", PyVelocity::new(1e3))?;
+    m.add("m_per_s", PyVelocity::new(1.0))?;
+    m.add("km_per_s", PyVelocity::new(1e3))?;
 
     Ok(())
 }

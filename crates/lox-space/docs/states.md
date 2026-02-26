@@ -13,29 +13,44 @@ Representations of orbital states in Cartesian and Keplerian forms.
 ```python
 import lox_space as lox
 
-# Create a Cartesian state
 t = lox.Time("TAI", 2024, 1, 1)
-state = lox.State(
+
+# Array pattern — position in meters, velocity in m/s
+state = lox.Cartesian(
     time=t,
-    position=(6678.0, 0.0, 0.0),  # km
-    velocity=(0.0, 7.73, 0.0),    # km/s
+    position=[6678e3, 0.0, 0.0],
+    velocity=[0.0, 7730.0, 0.0],
 )
+
+# Elementwise pattern — unitful keyword arguments
+state = lox.Cartesian(
+    time=t,
+    x=6678.0 * lox.km, y=0.0 * lox.km, z=0.0 * lox.km,
+    vx=0.0 * lox.km_per_s, vy=7.73 * lox.km_per_s, vz=0.0 * lox.km_per_s,
+)
+
+# Access as numpy arrays (meters, m/s)
+pos = state.position()   # shape (3,)
+vel = state.velocity()   # shape (3,)
+
+# Access as unitful scalars
+print(f"x = {state.x.to_kilometers():.1f} km")
 
 # Convert to Keplerian elements
 kep = state.to_keplerian()
-print(f"a = {kep.semi_major_axis():.1f} km")
+print(f"a = {kep.semi_major_axis().to_kilometers():.1f} km")
 print(f"e = {kep.eccentricity():.6f}")
-print(f"i = {kep.inclination():.4f} rad")
+print(f"i = {kep.inclination().to_degrees():.2f} deg")
 
 # Create from Keplerian elements
 kep = lox.Keplerian(
     time=t,
-    semi_major_axis=6678.0,
+    semi_major_axis=6678.0 * lox.km,
     eccentricity=0.001,
-    inclination=0.5,
-    longitude_of_ascending_node=0.0,
-    argument_of_periapsis=0.0,
-    true_anomaly=0.0,
+    inclination=0.5 * lox.rad,
+    longitude_of_ascending_node=0.0 * lox.rad,
+    argument_of_periapsis=0.0 * lox.rad,
+    true_anomaly=0.0 * lox.rad,
 )
 state = kep.to_cartesian()
 
@@ -46,7 +61,7 @@ interpolated = trajectory.interpolate(t + lox.TimeDelta(100))
 
 ---
 
-::: lox_space.State
+::: lox_space.Cartesian
     options:
       show_source: false
 
@@ -61,4 +76,3 @@ interpolated = trajectory.interpolate(t + lox.TimeDelta(100))
 ::: lox_space.Trajectory
     options:
       show_source: false
-

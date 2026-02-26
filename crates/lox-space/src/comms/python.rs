@@ -16,7 +16,9 @@ use lox_comms::receiver::{ComplexReceiver, Receiver, SimpleReceiver};
 use lox_comms::system::CommunicationSystem;
 use lox_comms::transmitter::Transmitter;
 use lox_comms::utils::free_space_path_loss;
-use lox_core::units::{Angle, Decibel, Distance, Frequency};
+use lox_core::units::Decibel;
+
+use crate::units::python::{PyAngle, PyDataRate, PyDistance, PyFrequency, PyPower, PyTemperature};
 
 /// Formats an f64 as a valid Python float literal (always includes a decimal point).
 fn repr_f64(v: f64) -> String {
@@ -54,7 +56,7 @@ pub struct PyDecibel(pub Decibel);
 #[pymethods]
 impl PyDecibel {
     #[new]
-    fn new(value: f64) -> Self {
+    pub fn new(value: f64) -> Self {
         Self(Decibel::new(value))
     }
 
@@ -80,6 +82,14 @@ impl PyDecibel {
 
     fn __sub__(&self, other: &PyDecibel) -> Self {
         Self(self.0 - other.0)
+    }
+
+    fn __mul__(&self, other: f64) -> Self {
+        Self(Decibel::new(other * self.0.as_f64()))
+    }
+
+    fn __rmul__(&self, other: f64) -> Self {
+        Self(Decibel::new(other * self.0.as_f64()))
     }
 
     fn __neg__(&self) -> Self {
@@ -154,7 +164,7 @@ impl PyModulation {
 /// Parabolic antenna gain pattern.
 ///
 /// Args:
-///     diameter_m: Antenna diameter in meters.
+///     diameter: Antenna diameter as Distance.
 ///     efficiency: Aperture efficiency (0, 1].
 #[pyclass(name = "ParabolicPattern", module = "lox_space", frozen)]
 pub struct PyParabolicPattern(pub ParabolicPattern);
@@ -162,47 +172,39 @@ pub struct PyParabolicPattern(pub ParabolicPattern);
 #[pymethods]
 impl PyParabolicPattern {
     #[new]
-    fn new(diameter_m: f64, efficiency: f64) -> Self {
-        Self(ParabolicPattern::new(
-            Distance::meters(diameter_m),
-            efficiency,
-        ))
+    fn new(diameter: PyDistance, efficiency: f64) -> Self {
+        Self(ParabolicPattern::new(diameter.0, efficiency))
     }
 
     /// Creates a parabolic pattern from a desired beamwidth.
     ///
     /// Args:
-    ///     beamwidth_deg: Half-power beamwidth in degrees.
-    ///     frequency_hz: Frequency in Hz.
+    ///     beamwidth: Half-power beamwidth as Angle.
+    ///     frequency: Frequency.
     ///     efficiency: Aperture efficiency (0, 1].
     #[staticmethod]
-    fn from_beamwidth(beamwidth_deg: f64, frequency_hz: f64, efficiency: f64) -> Self {
+    fn from_beamwidth(beamwidth: PyAngle, frequency: PyFrequency, efficiency: f64) -> Self {
         Self(ParabolicPattern::from_beamwidth(
-            Angle::degrees(beamwidth_deg),
-            Frequency::new(frequency_hz),
+            beamwidth.0,
+            frequency.0,
             efficiency,
         ))
     }
 
     /// Returns the gain in dBi at the given frequency and off-boresight angle.
-    fn gain(&self, frequency_hz: f64, angle_deg: f64) -> PyDecibel {
-        PyDecibel(
-            self.0
-                .gain(Frequency::new(frequency_hz), Angle::degrees(angle_deg)),
-        )
+    fn gain(&self, frequency: PyFrequency, angle: PyAngle) -> PyDecibel {
+        PyDecibel(self.0.gain(frequency.0, angle.0))
     }
 
-    /// Returns the half-power beamwidth in degrees, or ``None`` when the
+    /// Returns the half-power beamwidth, or ``None`` when the
     /// antenna diameter is smaller than ~1.22 wavelengths at this frequency.
-    fn beamwidth(&self, frequency_hz: f64) -> Option<f64> {
-        self.0
-            .beamwidth(Frequency::new(frequency_hz))
-            .map(|a| a.to_degrees())
+    fn beamwidth(&self, frequency: PyFrequency) -> Option<PyAngle> {
+        self.0.beamwidth(frequency.0).map(PyAngle)
     }
 
     /// Returns the peak gain in dBi.
-    fn peak_gain(&self, frequency_hz: f64) -> PyDecibel {
-        PyDecibel(self.0.peak_gain(Frequency::new(frequency_hz)))
+    fn peak_gain(&self, frequency: PyFrequency) -> PyDecibel {
+        PyDecibel(self.0.peak_gain(frequency.0))
     }
 
     fn __eq__(&self, other: &PyParabolicPattern) -> bool {
@@ -210,14 +212,14 @@ impl PyParabolicPattern {
             && self.0.efficiency == other.0.efficiency
     }
 
-    fn __getnewargs__(&self) -> (f64, f64) {
-        (self.0.diameter.to_meters(), self.0.efficiency)
+    fn __getnewargs__(&self) -> (PyDistance, f64) {
+        (PyDistance(self.0.diameter), self.0.efficiency)
     }
 
     fn __repr__(&self) -> String {
         format!(
-            "ParabolicPattern(diameter_m={}, efficiency={})",
-            repr_f64(self.0.diameter.to_meters()),
+            "ParabolicPattern(diameter={}, efficiency={})",
+            PyDistance(self.0.diameter).__repr__(),
             repr_f64(self.0.efficiency),
         )
     }
@@ -226,7 +228,7 @@ impl PyParabolicPattern {
 /// Gaussian antenna gain pattern.
 ///
 /// Args:
-///     diameter_m: Antenna diameter in meters.
+///     diameter: Antenna diameter as Distance.
 ///     efficiency: Aperture efficiency (0, 1].
 #[pyclass(name = "GaussianPattern", module = "lox_space", frozen)]
 pub struct PyGaussianPattern(pub GaussianPattern);
@@ -234,34 +236,24 @@ pub struct PyGaussianPattern(pub GaussianPattern);
 #[pymethods]
 impl PyGaussianPattern {
     #[new]
-    fn new(diameter_m: f64, efficiency: f64) -> Self {
-        Self(GaussianPattern::new(
-            Distance::meters(diameter_m),
-            efficiency,
-        ))
+    fn new(diameter: PyDistance, efficiency: f64) -> Self {
+        Self(GaussianPattern::new(diameter.0, efficiency))
     }
 
     /// Returns the gain in dBi at the given frequency and off-boresight angle.
-    fn gain(&self, frequency_hz: f64, angle_deg: f64) -> PyDecibel {
-        PyDecibel(
-            self.0
-                .gain(Frequency::new(frequency_hz), Angle::degrees(angle_deg)),
-        )
+    fn gain(&self, frequency: PyFrequency, angle: PyAngle) -> PyDecibel {
+        PyDecibel(self.0.gain(frequency.0, angle.0))
     }
 
-    /// Returns the half-power beamwidth in degrees.
-    ///
-    /// Always returns a value for ``GaussianPattern`` (the formula is defined
-    /// for any positive diameter).
-    fn beamwidth(&self, frequency_hz: f64) -> Option<f64> {
-        self.0
-            .beamwidth(Frequency::new(frequency_hz))
-            .map(|a| a.to_degrees())
+    /// Returns the half-power beamwidth, or ``None`` when the
+    /// antenna diameter is smaller than ~1.22 wavelengths at this frequency.
+    fn beamwidth(&self, frequency: PyFrequency) -> Option<PyAngle> {
+        self.0.beamwidth(frequency.0).map(PyAngle)
     }
 
     /// Returns the peak gain in dBi.
-    fn peak_gain(&self, frequency_hz: f64) -> PyDecibel {
-        PyDecibel(self.0.peak_gain(Frequency::new(frequency_hz)))
+    fn peak_gain(&self, frequency: PyFrequency) -> PyDecibel {
+        PyDecibel(self.0.peak_gain(frequency.0))
     }
 
     fn __eq__(&self, other: &PyGaussianPattern) -> bool {
@@ -269,14 +261,14 @@ impl PyGaussianPattern {
             && self.0.efficiency == other.0.efficiency
     }
 
-    fn __getnewargs__(&self) -> (f64, f64) {
-        (self.0.diameter.to_meters(), self.0.efficiency)
+    fn __getnewargs__(&self) -> (PyDistance, f64) {
+        (PyDistance(self.0.diameter), self.0.efficiency)
     }
 
     fn __repr__(&self) -> String {
         format!(
-            "GaussianPattern(diameter_m={}, efficiency={})",
-            repr_f64(self.0.diameter.to_meters()),
+            "GaussianPattern(diameter={}, efficiency={})",
+            PyDistance(self.0.diameter).__repr__(),
             repr_f64(self.0.efficiency),
         )
     }
@@ -285,42 +277,39 @@ impl PyGaussianPattern {
 /// Dipole antenna gain pattern.
 ///
 /// Args:
-///     length_m: Dipole length in meters.
+///     length: Dipole length as Distance.
 #[pyclass(name = "DipolePattern", module = "lox_space", frozen)]
 pub struct PyDipolePattern(pub DipolePattern);
 
 #[pymethods]
 impl PyDipolePattern {
     #[new]
-    fn new(length_m: f64) -> Self {
-        Self(DipolePattern::new(Distance::meters(length_m)))
+    fn new(length: PyDistance) -> Self {
+        Self(DipolePattern::new(length.0))
     }
 
     /// Returns the gain in dBi at the given frequency and off-boresight angle.
-    fn gain(&self, frequency_hz: f64, angle_deg: f64) -> PyDecibel {
-        PyDecibel(
-            self.0
-                .gain(Frequency::new(frequency_hz), Angle::degrees(angle_deg)),
-        )
+    fn gain(&self, frequency: PyFrequency, angle: PyAngle) -> PyDecibel {
+        PyDecibel(self.0.gain(frequency.0, angle.0))
     }
 
     /// Returns the peak gain in dBi.
-    fn peak_gain(&self, frequency_hz: f64) -> PyDecibel {
-        PyDecibel(self.0.peak_gain(Frequency::new(frequency_hz)))
+    fn peak_gain(&self, frequency: PyFrequency) -> PyDecibel {
+        PyDecibel(self.0.peak_gain(frequency.0))
     }
 
     fn __eq__(&self, other: &PyDipolePattern) -> bool {
         self.0.length.to_meters() == other.0.length.to_meters()
     }
 
-    fn __getnewargs__(&self) -> (f64,) {
-        (self.0.length.to_meters(),)
+    fn __getnewargs__(&self) -> (PyDistance,) {
+        (PyDistance(self.0.length),)
     }
 
     fn __repr__(&self) -> String {
         format!(
-            "DipolePattern(length_m={})",
-            repr_f64(self.0.length.to_meters()),
+            "DipolePattern(length={})",
+            PyDistance(self.0.length).__repr__(),
         )
     }
 }
@@ -330,42 +319,39 @@ impl PyDipolePattern {
 /// A simple antenna with constant gain and beamwidth.
 ///
 /// Args:
-///     gain_db: Peak gain in dBi.
-///     beamwidth_deg: Half-power beamwidth in degrees.
+///     gain: Peak gain as Decibel.
+///     beamwidth: Half-power beamwidth as Angle.
 #[pyclass(name = "SimpleAntenna", module = "lox_space", frozen)]
 pub struct PySimpleAntenna {
     pub inner: SimpleAntenna,
-    gain_db: f64,
-    beamwidth_deg: f64,
 }
 
 #[pymethods]
 impl PySimpleAntenna {
     #[new]
-    fn new(gain_db: f64, beamwidth_deg: f64) -> Self {
+    fn new(gain: PyDecibel, beamwidth: PyAngle) -> Self {
         Self {
             inner: SimpleAntenna {
-                gain: Decibel::new(gain_db),
-                beamwidth: Angle::degrees(beamwidth_deg),
+                gain: gain.0,
+                beamwidth: beamwidth.0,
             },
-            gain_db,
-            beamwidth_deg,
         }
     }
 
     fn __eq__(&self, other: &PySimpleAntenna) -> bool {
-        self.gain_db == other.gain_db && self.beamwidth_deg == other.beamwidth_deg
+        self.inner.gain.as_f64() == other.inner.gain.as_f64()
+            && f64::from(self.inner.beamwidth) == f64::from(other.inner.beamwidth)
     }
 
-    fn __getnewargs__(&self) -> (f64, f64) {
-        (self.gain_db, self.beamwidth_deg)
+    fn __getnewargs__(&self) -> (PyDecibel, PyAngle) {
+        (PyDecibel(self.inner.gain), PyAngle(self.inner.beamwidth))
     }
 
     fn __repr__(&self) -> String {
         format!(
-            "SimpleAntenna(gain_db={}, beamwidth_deg={})",
-            repr_f64(self.gain_db),
-            repr_f64(self.beamwidth_deg),
+            "SimpleAntenna(gain={}, beamwidth={})",
+            PyDecibel(self.inner.gain).__repr__(),
+            PyAngle(self.inner.beamwidth).__repr__(),
         )
     }
 }
@@ -390,25 +376,20 @@ impl PyComplexAntenna {
     }
 
     /// Returns the gain in dBi at the given frequency and off-boresight angle.
-    fn gain(&self, frequency_hz: f64, angle_deg: f64) -> PyDecibel {
-        PyDecibel(
-            self.0
-                .gain(Frequency::new(frequency_hz), Angle::degrees(angle_deg)),
-        )
+    fn gain(&self, frequency: PyFrequency, angle: PyAngle) -> PyDecibel {
+        PyDecibel(self.0.gain(frequency.0, angle.0))
     }
 
-    /// Returns the half-power beamwidth in degrees, or ``None`` when the
+    /// Returns the half-power beamwidth, or ``None`` when the
     /// underlying pattern does not define a beamwidth (e.g. ``DipolePattern``,
     /// or a ``ParabolicPattern`` whose diameter is below ~1.22 wavelengths).
-    fn beamwidth(&self, frequency_hz: f64) -> Option<f64> {
-        self.0
-            .beamwidth(Frequency::new(frequency_hz))
-            .map(|a| a.to_degrees())
+    fn beamwidth(&self, frequency: PyFrequency) -> Option<PyAngle> {
+        self.0.beamwidth(frequency.0).map(PyAngle)
     }
 
     /// Returns the peak gain in dBi.
-    fn peak_gain(&self, frequency_hz: f64) -> PyDecibel {
-        PyDecibel(self.0.peak_gain(Frequency::new(frequency_hz)))
+    fn peak_gain(&self, frequency: PyFrequency) -> PyDecibel {
+        PyDecibel(self.0.peak_gain(frequency.0))
     }
 
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> (Bound<'py, PyAny>, [f64; 3]) {
@@ -420,17 +401,17 @@ impl PyComplexAntenna {
     fn __repr__(&self) -> String {
         let pattern_repr = match &self.0.pattern {
             AntennaPattern::Parabolic(p) => format!(
-                "ParabolicPattern(diameter_m={}, efficiency={})",
-                repr_f64(p.diameter.to_meters()),
+                "ParabolicPattern(diameter={}, efficiency={})",
+                PyDistance(p.diameter).__repr__(),
                 repr_f64(p.efficiency),
             ),
             AntennaPattern::Gaussian(p) => format!(
-                "GaussianPattern(diameter_m={}, efficiency={})",
-                repr_f64(p.diameter.to_meters()),
+                "GaussianPattern(diameter={}, efficiency={})",
+                PyDistance(p.diameter).__repr__(),
                 repr_f64(p.efficiency),
             ),
             AntennaPattern::Dipole(p) => {
-                format!("DipolePattern(length_m={})", repr_f64(p.length.to_meters()))
+                format!("DipolePattern(length={})", PyDistance(p.length).__repr__())
             }
         };
         let b = self.0.boresight;
@@ -485,23 +466,17 @@ fn pattern_to_py<'py>(py: Python<'py>, pattern: &AntennaPattern) -> Bound<'py, P
 
 fn antenna_to_py<'py>(py: Python<'py>, antenna: &Antenna) -> Bound<'py, PyAny> {
     match antenna {
-        Antenna::Simple(a) => {
-            let gain_db = a.gain.as_f64();
-            let beamwidth_deg = a.beamwidth.to_degrees();
-            Bound::new(
-                py,
-                PySimpleAntenna {
-                    inner: SimpleAntenna {
-                        gain: a.gain,
-                        beamwidth: a.beamwidth,
-                    },
-                    gain_db,
-                    beamwidth_deg,
+        Antenna::Simple(a) => Bound::new(
+            py,
+            PySimpleAntenna {
+                inner: SimpleAntenna {
+                    gain: a.gain,
+                    beamwidth: a.beamwidth,
                 },
-            )
-            .unwrap()
-            .into_any()
-        }
+            },
+        )
+        .unwrap()
+        .into_any(),
         Antenna::Complex(a) => {
             let pattern = match &a.pattern {
                 AntennaPattern::Parabolic(p) => {
@@ -610,30 +585,35 @@ fn build_receiver(obj: &Bound<'_, PyAny>) -> PyResult<Receiver> {
 /// A radio transmitter.
 ///
 /// Args:
-///     frequency_hz: Transmit frequency in Hz.
-///     power_w: Transmit power in watts.
-///     line_loss_db: Feed/line loss in dB.
-///     output_back_off_db: Output back-off in dB (default 0).
+///     frequency: Transmit frequency.
+///     power: Transmit power.
+///     line_loss: Feed/line loss as Decibel.
+///     output_back_off: Output back-off as Decibel (default Decibel(0)).
 #[pyclass(name = "Transmitter", module = "lox_space", frozen)]
 pub struct PyTransmitter(pub Transmitter);
 
 #[pymethods]
 impl PyTransmitter {
     #[new]
-    #[pyo3(signature = (frequency_hz, power_w, line_loss_db, output_back_off_db=0.0))]
-    fn new(frequency_hz: f64, power_w: f64, line_loss_db: f64, output_back_off_db: f64) -> Self {
+    #[pyo3(signature = (frequency, power, line_loss, output_back_off=None))]
+    fn new(
+        frequency: PyFrequency,
+        power: PyPower,
+        line_loss: PyDecibel,
+        output_back_off: Option<PyDecibel>,
+    ) -> Self {
         Self(Transmitter::new(
-            Frequency::new(frequency_hz),
-            power_w,
-            Decibel::new(line_loss_db),
-            Decibel::new(output_back_off_db),
+            frequency.0,
+            f64::from(power.0),
+            line_loss.0,
+            output_back_off.map_or(Decibel::new(0.0), |d| d.0),
         ))
     }
 
     /// Returns the EIRP in dBW for the given antenna and off-boresight angle.
-    fn eirp(&self, antenna: &Bound<'_, PyAny>, angle_deg: f64) -> PyResult<PyDecibel> {
+    fn eirp(&self, antenna: &Bound<'_, PyAny>, angle: PyAngle) -> PyResult<PyDecibel> {
         let ant = build_antenna(antenna)?;
-        Ok(PyDecibel(self.0.eirp(&ant, Angle::degrees(angle_deg))))
+        Ok(PyDecibel(self.0.eirp(&ant, angle.0)))
     }
 
     fn __eq__(&self, other: &PyTransmitter) -> bool {
@@ -643,22 +623,22 @@ impl PyTransmitter {
             && self.0.output_back_off.as_f64() == other.0.output_back_off.as_f64()
     }
 
-    fn __getnewargs__(&self) -> (f64, f64, f64, f64) {
+    fn __getnewargs__(&self) -> (PyFrequency, PyPower, PyDecibel, Option<PyDecibel>) {
         (
-            f64::from(self.0.frequency),
-            self.0.power_w,
-            self.0.line_loss.as_f64(),
-            self.0.output_back_off.as_f64(),
+            PyFrequency(self.0.frequency),
+            PyPower::new(self.0.power_w),
+            PyDecibel(self.0.line_loss),
+            Some(PyDecibel(self.0.output_back_off)),
         )
     }
 
     fn __repr__(&self) -> String {
         format!(
-            "Transmitter(frequency_hz={}, power_w={}, line_loss_db={}, output_back_off_db={})",
-            repr_f64(f64::from(self.0.frequency)),
-            repr_f64(self.0.power_w),
-            repr_f64(self.0.line_loss.as_f64()),
-            repr_f64(self.0.output_back_off.as_f64()),
+            "Transmitter(frequency={}, power={}, line_loss={}, output_back_off={})",
+            PyFrequency(self.0.frequency).__repr__(),
+            PyPower::new(self.0.power_w).__repr__(),
+            PyDecibel(self.0.line_loss).__repr__(),
+            PyDecibel(self.0.output_back_off).__repr__(),
         )
     }
 }
@@ -668,18 +648,18 @@ impl PyTransmitter {
 /// A simple receiver with a known system noise temperature.
 ///
 /// Args:
-///     frequency_hz: Receive frequency in Hz.
-///     system_noise_temperature_k: System noise temperature in Kelvin.
+///     frequency: Receive frequency.
+///     system_noise_temperature: System noise temperature.
 #[pyclass(name = "SimpleReceiver", module = "lox_space", frozen)]
 pub struct PySimpleReceiver(pub SimpleReceiver);
 
 #[pymethods]
 impl PySimpleReceiver {
     #[new]
-    fn new(frequency_hz: f64, system_noise_temperature_k: f64) -> Self {
+    fn new(frequency: PyFrequency, system_noise_temperature: PyTemperature) -> Self {
         Self(SimpleReceiver {
-            frequency: Frequency::new(frequency_hz),
-            system_noise_temperature: system_noise_temperature_k,
+            frequency: frequency.0,
+            system_noise_temperature: f64::from(system_noise_temperature.0),
         })
     }
 
@@ -688,15 +668,18 @@ impl PySimpleReceiver {
             && self.0.system_noise_temperature == other.0.system_noise_temperature
     }
 
-    fn __getnewargs__(&self) -> (f64, f64) {
-        (f64::from(self.0.frequency), self.0.system_noise_temperature)
+    fn __getnewargs__(&self) -> (PyFrequency, PyTemperature) {
+        (
+            PyFrequency(self.0.frequency),
+            PyTemperature::new(self.0.system_noise_temperature),
+        )
     }
 
     fn __repr__(&self) -> String {
         format!(
-            "SimpleReceiver(frequency_hz={}, system_noise_temperature_k={})",
-            repr_f64(f64::from(self.0.frequency)),
-            repr_f64(self.0.system_noise_temperature),
+            "SimpleReceiver(frequency={}, system_noise_temperature={})",
+            PyFrequency(self.0.frequency).__repr__(),
+            PyTemperature::new(self.0.system_noise_temperature).__repr__(),
         )
     }
 }
@@ -704,52 +687,52 @@ impl PySimpleReceiver {
 /// A complex receiver with detailed noise and gain parameters.
 ///
 /// Args:
-///     frequency_hz: Receive frequency in Hz.
-///     antenna_noise_temperature_k: Antenna noise temperature in Kelvin.
-///     lna_gain_db: LNA gain in dB.
-///     lna_noise_figure_db: LNA noise figure in dB.
-///     noise_figure_db: Receiver noise figure in dB.
-///     loss_db: Receiver chain loss in dB.
-///     demodulator_loss_db: Demodulator loss in dB (default 0).
-///     implementation_loss_db: Other implementation losses in dB (default 0).
+///     frequency: Receive frequency.
+///     antenna_noise_temperature: Antenna noise temperature.
+///     lna_gain: LNA gain as Decibel.
+///     lna_noise_figure: LNA noise figure as Decibel.
+///     noise_figure: Receiver noise figure as Decibel.
+///     loss: Receiver chain loss as Decibel.
+///     demodulator_loss: Demodulator loss as Decibel (default Decibel(0)).
+///     implementation_loss: Other implementation losses as Decibel (default Decibel(0)).
 #[pyclass(name = "ComplexReceiver", module = "lox_space", frozen)]
 pub struct PyComplexReceiver(pub ComplexReceiver);
 
 #[pymethods]
 impl PyComplexReceiver {
     #[new]
-    #[pyo3(signature = (frequency_hz, antenna_noise_temperature_k, lna_gain_db, lna_noise_figure_db, noise_figure_db, loss_db, demodulator_loss_db=0.0, implementation_loss_db=0.0))]
+    #[pyo3(signature = (frequency, antenna_noise_temperature, lna_gain, lna_noise_figure, noise_figure, loss, demodulator_loss=None, implementation_loss=None))]
     #[allow(clippy::too_many_arguments)]
     fn new(
-        frequency_hz: f64,
-        antenna_noise_temperature_k: f64,
-        lna_gain_db: f64,
-        lna_noise_figure_db: f64,
-        noise_figure_db: f64,
-        loss_db: f64,
-        demodulator_loss_db: f64,
-        implementation_loss_db: f64,
+        frequency: PyFrequency,
+        antenna_noise_temperature: PyTemperature,
+        lna_gain: PyDecibel,
+        lna_noise_figure: PyDecibel,
+        noise_figure: PyDecibel,
+        loss: PyDecibel,
+        demodulator_loss: Option<PyDecibel>,
+        implementation_loss: Option<PyDecibel>,
     ) -> Self {
         Self(ComplexReceiver {
-            frequency: Frequency::new(frequency_hz),
-            antenna_noise_temperature: antenna_noise_temperature_k,
-            lna_gain: Decibel::new(lna_gain_db),
-            lna_noise_figure: Decibel::new(lna_noise_figure_db),
-            noise_figure: Decibel::new(noise_figure_db),
-            loss: Decibel::new(loss_db),
-            demodulator_loss: Decibel::new(demodulator_loss_db),
-            implementation_loss: Decibel::new(implementation_loss_db),
+            frequency: frequency.0,
+            antenna_noise_temperature: f64::from(antenna_noise_temperature.0),
+            lna_gain: lna_gain.0,
+            lna_noise_figure: lna_noise_figure.0,
+            noise_figure: noise_figure.0,
+            loss: loss.0,
+            demodulator_loss: demodulator_loss.map_or(Decibel::new(0.0), |d| d.0),
+            implementation_loss: implementation_loss.map_or(Decibel::new(0.0), |d| d.0),
         })
     }
 
-    /// Returns the receiver noise temperature in Kelvin.
-    fn noise_temperature(&self) -> f64 {
-        self.0.noise_temperature()
+    /// Returns the receiver noise temperature.
+    fn noise_temperature(&self) -> PyTemperature {
+        PyTemperature::new(self.0.noise_temperature())
     }
 
-    /// Returns the system noise temperature in Kelvin.
-    fn system_noise_temperature(&self) -> f64 {
-        self.0.system_noise_temperature()
+    /// Returns the system noise temperature.
+    fn system_noise_temperature(&self) -> PyTemperature {
+        PyTemperature::new(self.0.system_noise_temperature())
     }
 
     fn __eq__(&self, other: &PyComplexReceiver) -> bool {
@@ -764,30 +747,41 @@ impl PyComplexReceiver {
     }
 
     #[allow(clippy::type_complexity)]
-    fn __getnewargs__(&self) -> (f64, f64, f64, f64, f64, f64, f64, f64) {
+    fn __getnewargs__(
+        &self,
+    ) -> (
+        PyFrequency,
+        PyTemperature,
+        PyDecibel,
+        PyDecibel,
+        PyDecibel,
+        PyDecibel,
+        Option<PyDecibel>,
+        Option<PyDecibel>,
+    ) {
         (
-            f64::from(self.0.frequency),
-            self.0.antenna_noise_temperature,
-            self.0.lna_gain.as_f64(),
-            self.0.lna_noise_figure.as_f64(),
-            self.0.noise_figure.as_f64(),
-            self.0.loss.as_f64(),
-            self.0.demodulator_loss.as_f64(),
-            self.0.implementation_loss.as_f64(),
+            PyFrequency(self.0.frequency),
+            PyTemperature::new(self.0.antenna_noise_temperature),
+            PyDecibel(self.0.lna_gain),
+            PyDecibel(self.0.lna_noise_figure),
+            PyDecibel(self.0.noise_figure),
+            PyDecibel(self.0.loss),
+            Some(PyDecibel(self.0.demodulator_loss)),
+            Some(PyDecibel(self.0.implementation_loss)),
         )
     }
 
     fn __repr__(&self) -> String {
         format!(
-            "ComplexReceiver(frequency_hz={}, antenna_noise_temperature_k={}, lna_gain_db={}, lna_noise_figure_db={}, noise_figure_db={}, loss_db={}, demodulator_loss_db={}, implementation_loss_db={})",
-            repr_f64(f64::from(self.0.frequency)),
-            repr_f64(self.0.antenna_noise_temperature),
-            repr_f64(self.0.lna_gain.as_f64()),
-            repr_f64(self.0.lna_noise_figure.as_f64()),
-            repr_f64(self.0.noise_figure.as_f64()),
-            repr_f64(self.0.loss.as_f64()),
-            repr_f64(self.0.demodulator_loss.as_f64()),
-            repr_f64(self.0.implementation_loss.as_f64()),
+            "ComplexReceiver(frequency={}, antenna_noise_temperature={}, lna_gain={}, lna_noise_figure={}, noise_figure={}, loss={}, demodulator_loss={}, implementation_loss={})",
+            PyFrequency(self.0.frequency).__repr__(),
+            PyTemperature::new(self.0.antenna_noise_temperature).__repr__(),
+            PyDecibel(self.0.lna_gain).__repr__(),
+            PyDecibel(self.0.lna_noise_figure).__repr__(),
+            PyDecibel(self.0.noise_figure).__repr__(),
+            PyDecibel(self.0.loss).__repr__(),
+            PyDecibel(self.0.demodulator_loss).__repr__(),
+            PyDecibel(self.0.implementation_loss).__repr__(),
         )
     }
 }
@@ -798,9 +792,9 @@ impl PyComplexReceiver {
 ///
 /// Args:
 ///     link_type: "uplink" or "downlink".
-///     data_rate: Data rate in bits per second.
-///     required_eb_n0_db: Required Eb/N0 in dB.
-///     margin_db: Required link margin in dB.
+///     data_rate: Data rate.
+///     required_eb_n0: Required Eb/N0 as Decibel.
+///     margin: Required link margin as Decibel.
 ///     modulation: Modulation scheme.
 ///     roll_off: Roll-off factor (default 1.5).
 ///     fec: Forward error correction code rate (default 0.5).
@@ -810,12 +804,12 @@ pub struct PyChannel(pub Channel);
 #[pymethods]
 impl PyChannel {
     #[new]
-    #[pyo3(signature = (link_type, data_rate, required_eb_n0_db, margin_db, modulation, roll_off=1.5, fec=0.5))]
+    #[pyo3(signature = (link_type, data_rate, required_eb_n0, margin, modulation, roll_off=1.5, fec=0.5))]
     fn new(
         link_type: &str,
-        data_rate: f64,
-        required_eb_n0_db: f64,
-        margin_db: f64,
+        data_rate: PyDataRate,
+        required_eb_n0: PyDecibel,
+        margin: PyDecibel,
         modulation: &PyModulation,
         roll_off: f64,
         fec: f64,
@@ -831,18 +825,18 @@ impl PyChannel {
         };
         Ok(Self(Channel {
             link_type: lt,
-            data_rate,
-            required_eb_n0: Decibel::new(required_eb_n0_db),
-            margin: Decibel::new(margin_db),
+            data_rate: f64::from(data_rate.0),
+            required_eb_n0: required_eb_n0.0,
+            margin: margin.0,
             modulation: modulation.0,
             roll_off,
             fec,
         }))
     }
 
-    /// Returns the channel bandwidth in Hz.
-    fn bandwidth(&self) -> f64 {
-        self.0.bandwidth()
+    /// Returns the channel bandwidth.
+    fn bandwidth(&self) -> PyFrequency {
+        PyFrequency::new(self.0.bandwidth())
     }
 
     /// Computes Eb/N0 from a given C/N0.
@@ -858,7 +852,15 @@ impl PyChannel {
     fn __getnewargs__<'py>(
         &self,
         py: Python<'py>,
-    ) -> (&str, f64, f64, f64, Bound<'py, PyAny>, f64, f64) {
+    ) -> (
+        &str,
+        PyDataRate,
+        PyDecibel,
+        PyDecibel,
+        Bound<'py, PyAny>,
+        f64,
+        f64,
+    ) {
         let lt = match self.0.link_type {
             LinkDirection::Uplink => "uplink",
             LinkDirection::Downlink => "downlink",
@@ -868,9 +870,9 @@ impl PyChannel {
             .into_any();
         (
             lt,
-            self.0.data_rate,
-            self.0.required_eb_n0.as_f64(),
-            self.0.margin.as_f64(),
+            PyDataRate::new(self.0.data_rate),
+            PyDecibel(self.0.required_eb_n0),
+            PyDecibel(self.0.margin),
             modulation,
             self.0.roll_off,
             self.0.fec,
@@ -883,11 +885,11 @@ impl PyChannel {
             LinkDirection::Downlink => "downlink",
         };
         format!(
-            "Channel(link_type='{}', data_rate={}, required_eb_n0_db={}, margin_db={}, modulation=Modulation('{}'), roll_off={}, fec={})",
+            "Channel(link_type='{}', data_rate={}, required_eb_n0={}, margin={}, modulation=Modulation('{}'), roll_off={}, fec={})",
             lt,
-            repr_f64(self.0.data_rate),
-            repr_f64(self.0.required_eb_n0.as_f64()),
-            repr_f64(self.0.margin.as_f64()),
+            PyDataRate::new(self.0.data_rate).__repr__(),
+            PyDecibel(self.0.required_eb_n0).__repr__(),
+            PyDecibel(self.0.margin).__repr__(),
             modulation_name(self.0.modulation),
             repr_f64(self.0.roll_off),
             repr_f64(self.0.fec),
@@ -900,38 +902,38 @@ impl PyChannel {
 /// Environmental losses for a link.
 ///
 /// Args:
-///     rain_db: Rain attenuation in dB (default 0).
-///     gaseous_db: Gaseous absorption in dB (default 0).
-///     scintillation_db: Scintillation loss in dB (default 0).
-///     atmospheric_db: Atmospheric loss in dB (default 0).
-///     cloud_db: Cloud attenuation in dB (default 0).
-///     depolarization_db: Depolarization loss in dB (default 0).
+///     rain: Rain attenuation as Decibel (default Decibel(0)).
+///     gaseous: Gaseous absorption as Decibel (default Decibel(0)).
+///     scintillation: Scintillation loss as Decibel (default Decibel(0)).
+///     atmospheric: Atmospheric loss as Decibel (default Decibel(0)).
+///     cloud: Cloud attenuation as Decibel (default Decibel(0)).
+///     depolarization: Depolarization loss as Decibel (default Decibel(0)).
 #[pyclass(name = "EnvironmentalLosses", module = "lox_space", frozen)]
 pub struct PyEnvironmentalLosses(pub EnvironmentalLosses);
 
 #[pymethods]
 impl PyEnvironmentalLosses {
     #[new]
-    #[pyo3(signature = (rain_db=0.0, gaseous_db=0.0, scintillation_db=0.0, atmospheric_db=0.0, cloud_db=0.0, depolarization_db=0.0))]
+    #[pyo3(signature = (rain=None, gaseous=None, scintillation=None, atmospheric=None, cloud=None, depolarization=None))]
     fn new(
-        rain_db: f64,
-        gaseous_db: f64,
-        scintillation_db: f64,
-        atmospheric_db: f64,
-        cloud_db: f64,
-        depolarization_db: f64,
+        rain: Option<PyDecibel>,
+        gaseous: Option<PyDecibel>,
+        scintillation: Option<PyDecibel>,
+        atmospheric: Option<PyDecibel>,
+        cloud: Option<PyDecibel>,
+        depolarization: Option<PyDecibel>,
     ) -> Self {
         Self(EnvironmentalLosses {
-            rain: Decibel::new(rain_db),
-            gaseous: Decibel::new(gaseous_db),
-            scintillation: Decibel::new(scintillation_db),
-            atmospheric: Decibel::new(atmospheric_db),
-            cloud: Decibel::new(cloud_db),
-            depolarization: Decibel::new(depolarization_db),
+            rain: rain.map_or(Decibel::new(0.0), |d| d.0),
+            gaseous: gaseous.map_or(Decibel::new(0.0), |d| d.0),
+            scintillation: scintillation.map_or(Decibel::new(0.0), |d| d.0),
+            atmospheric: atmospheric.map_or(Decibel::new(0.0), |d| d.0),
+            cloud: cloud.map_or(Decibel::new(0.0), |d| d.0),
+            depolarization: depolarization.map_or(Decibel::new(0.0), |d| d.0),
         })
     }
 
-    /// Returns the total environmental loss in dB.
+    /// Returns the total environmental loss.
     fn total(&self) -> PyDecibel {
         PyDecibel(self.0.total())
     }
@@ -945,26 +947,36 @@ impl PyEnvironmentalLosses {
             && self.0.depolarization.as_f64() == other.0.depolarization.as_f64()
     }
 
-    fn __getnewargs__(&self) -> (f64, f64, f64, f64, f64, f64) {
+    #[allow(clippy::type_complexity)]
+    fn __getnewargs__(
+        &self,
+    ) -> (
+        Option<PyDecibel>,
+        Option<PyDecibel>,
+        Option<PyDecibel>,
+        Option<PyDecibel>,
+        Option<PyDecibel>,
+        Option<PyDecibel>,
+    ) {
         (
-            self.0.rain.as_f64(),
-            self.0.gaseous.as_f64(),
-            self.0.scintillation.as_f64(),
-            self.0.atmospheric.as_f64(),
-            self.0.cloud.as_f64(),
-            self.0.depolarization.as_f64(),
+            Some(PyDecibel(self.0.rain)),
+            Some(PyDecibel(self.0.gaseous)),
+            Some(PyDecibel(self.0.scintillation)),
+            Some(PyDecibel(self.0.atmospheric)),
+            Some(PyDecibel(self.0.cloud)),
+            Some(PyDecibel(self.0.depolarization)),
         )
     }
 
     fn __repr__(&self) -> String {
         format!(
-            "EnvironmentalLosses(rain_db={}, gaseous_db={}, scintillation_db={}, atmospheric_db={}, cloud_db={}, depolarization_db={})",
-            repr_f64(self.0.rain.as_f64()),
-            repr_f64(self.0.gaseous.as_f64()),
-            repr_f64(self.0.scintillation.as_f64()),
-            repr_f64(self.0.atmospheric.as_f64()),
-            repr_f64(self.0.cloud.as_f64()),
-            repr_f64(self.0.depolarization.as_f64()),
+            "EnvironmentalLosses(rain={}, gaseous={}, scintillation={}, atmospheric={}, cloud={}, depolarization={})",
+            PyDecibel(self.0.rain).__repr__(),
+            PyDecibel(self.0.gaseous).__repr__(),
+            PyDecibel(self.0.scintillation).__repr__(),
+            PyDecibel(self.0.atmospheric).__repr__(),
+            PyDecibel(self.0.cloud).__repr__(),
+            PyDecibel(self.0.depolarization).__repr__(),
         )
     }
 }
@@ -1006,28 +1018,28 @@ impl PyCommunicationSystem {
         }))
     }
 
-    /// Computes the carrier-to-noise density ratio (C/N0) in dB·Hz.
+    /// Computes the carrier-to-noise density ratio (C/N0).
     ///
     /// Args:
     ///     rx_system: The receiving CommunicationSystem.
-    ///     losses_db: Additional losses in dB.
-    ///     range_km: Slant range in kilometers.
-    ///     tx_angle_deg: Off-boresight angle at transmitter in degrees.
-    ///     rx_angle_deg: Off-boresight angle at receiver in degrees.
+    ///     losses: Additional losses as Decibel.
+    ///     range: Slant range as Distance.
+    ///     tx_angle: Off-boresight angle at transmitter as Angle.
+    ///     rx_angle: Off-boresight angle at receiver as Angle.
     fn carrier_to_noise_density(
         &self,
         rx_system: &PyCommunicationSystem,
-        losses_db: f64,
-        range_km: f64,
-        tx_angle_deg: f64,
-        rx_angle_deg: f64,
+        losses: PyDecibel,
+        range: PyDistance,
+        tx_angle: PyAngle,
+        rx_angle: PyAngle,
     ) -> PyDecibel {
         PyDecibel(self.0.carrier_to_noise_density(
             &rx_system.0,
-            Decibel::new(losses_db),
-            Distance::kilometers(range_km),
-            Angle::degrees(tx_angle_deg),
-            Angle::degrees(rx_angle_deg),
+            losses.0,
+            range.0,
+            tx_angle.0,
+            rx_angle.0,
         ))
     }
 
@@ -1035,23 +1047,20 @@ impl PyCommunicationSystem {
     fn carrier_power(
         &self,
         rx_system: &PyCommunicationSystem,
-        losses_db: f64,
-        range_km: f64,
-        tx_angle_deg: f64,
-        rx_angle_deg: f64,
+        losses: PyDecibel,
+        range: PyDistance,
+        tx_angle: PyAngle,
+        rx_angle: PyAngle,
     ) -> PyDecibel {
-        PyDecibel(self.0.carrier_power(
-            &rx_system.0,
-            Decibel::new(losses_db),
-            Distance::kilometers(range_km),
-            Angle::degrees(tx_angle_deg),
-            Angle::degrees(rx_angle_deg),
-        ))
+        PyDecibel(
+            self.0
+                .carrier_power(&rx_system.0, losses.0, range.0, tx_angle.0, rx_angle.0),
+        )
     }
 
     /// Computes the noise power in dBW for a given bandwidth.
-    fn noise_power(&self, bandwidth_hz: f64) -> PyDecibel {
-        PyDecibel(self.0.noise_power(bandwidth_hz))
+    fn noise_power(&self, bandwidth: PyFrequency) -> PyDecibel {
+        PyDecibel(self.0.noise_power(f64::from(bandwidth.0)))
     }
 
     #[allow(clippy::type_complexity)]
@@ -1097,19 +1106,19 @@ impl PyLinkStats {
     ///     tx_system: The transmitting CommunicationSystem.
     ///     rx_system: The receiving CommunicationSystem.
     ///     channel: The Channel.
-    ///     range_km: Slant range in kilometers.
-    ///     tx_angle_deg: Off-boresight angle at transmitter in degrees.
-    ///     rx_angle_deg: Off-boresight angle at receiver in degrees.
+    ///     range: Slant range as Distance.
+    ///     tx_angle: Off-boresight angle at transmitter as Angle.
+    ///     rx_angle: Off-boresight angle at receiver as Angle.
     ///     losses: EnvironmentalLosses (optional, defaults to none).
     #[staticmethod]
-    #[pyo3(signature = (tx_system, rx_system, channel, range_km, tx_angle_deg, rx_angle_deg, losses=None))]
+    #[pyo3(signature = (tx_system, rx_system, channel, range, tx_angle, rx_angle, losses=None))]
     fn calculate(
         tx_system: &PyCommunicationSystem,
         rx_system: &PyCommunicationSystem,
         channel: &PyChannel,
-        range_km: f64,
-        tx_angle_deg: f64,
-        rx_angle_deg: f64,
+        range: PyDistance,
+        tx_angle: PyAngle,
+        rx_angle: PyAngle,
         losses: Option<&PyEnvironmentalLosses>,
     ) -> Self {
         let env_losses = losses
@@ -1127,17 +1136,17 @@ impl PyLinkStats {
             &tx_system.0,
             &rx_system.0,
             &channel.0,
-            Distance::kilometers(range_km),
-            Angle::degrees(tx_angle_deg),
-            Angle::degrees(rx_angle_deg),
+            range.0,
+            tx_angle.0,
+            rx_angle.0,
             env_losses,
         ))
     }
 
-    /// Slant range in kilometers.
+    /// Slant range.
     #[getter]
-    fn slant_range_km(&self) -> f64 {
-        self.0.slant_range.to_kilometers()
+    fn slant_range(&self) -> PyDistance {
+        PyDistance(self.0.slant_range)
     }
 
     /// Free-space path loss in dB.
@@ -1188,22 +1197,22 @@ impl PyLinkStats {
         PyDecibel(self.0.noise_power)
     }
 
-    /// Data rate in bits per second.
+    /// Data rate.
     #[getter]
-    fn data_rate(&self) -> f64 {
-        self.0.data_rate
+    fn data_rate(&self) -> PyDataRate {
+        PyDataRate::new(self.0.data_rate)
     }
 
-    /// Channel bandwidth in Hz.
+    /// Channel bandwidth.
     #[getter]
-    fn bandwidth_hz(&self) -> f64 {
-        self.0.bandwidth_hz
+    fn bandwidth(&self) -> PyFrequency {
+        PyFrequency::new(self.0.bandwidth_hz)
     }
 
-    /// Link frequency in Hz.
+    /// Link frequency.
     #[getter]
-    fn frequency_hz(&self) -> f64 {
-        f64::from(self.0.frequency)
+    fn frequency(&self) -> PyFrequency {
+        PyFrequency(self.0.frequency)
     }
 
     fn __repr__(&self) -> String {
@@ -1221,30 +1230,37 @@ impl PyLinkStats {
 /// Computes the free-space path loss in dB.
 ///
 /// Args:
-///     distance_km: Distance in kilometers.
-///     frequency_hz: Frequency in Hz.
+///     distance: Distance.
+///     frequency: Frequency.
 ///
 /// Returns:
 ///     Free-space path loss as a Decibel value.
 #[pyfunction]
-pub fn fspl(distance_km: f64, frequency_hz: f64) -> PyDecibel {
-    PyDecibel(free_space_path_loss(
-        Distance::kilometers(distance_km),
-        Frequency::new(frequency_hz),
-    ))
+pub fn fspl(distance: PyDistance, frequency: PyFrequency) -> PyDecibel {
+    PyDecibel(free_space_path_loss(distance.0, frequency.0))
 }
 
 /// Computes the frequency overlap factor between a receiver and an interferer.
 ///
 /// Args:
-///     rx_freq_hz: Receiver center frequency in Hz.
-///     rx_bw_hz: Receiver bandwidth in Hz.
-///     tx_freq_hz: Interferer center frequency in Hz.
-///     tx_bw_hz: Interferer bandwidth in Hz.
+///     rx_freq: Receiver center frequency.
+///     rx_bw: Receiver bandwidth.
+///     tx_freq: Interferer center frequency.
+///     tx_bw: Interferer bandwidth.
 ///
 /// Returns:
 ///     Overlap factor in [0, 1].
 #[pyfunction]
-pub fn freq_overlap(rx_freq_hz: f64, rx_bw_hz: f64, tx_freq_hz: f64, tx_bw_hz: f64) -> f64 {
-    frequency_overlap_factor(rx_freq_hz, rx_bw_hz, tx_freq_hz, tx_bw_hz)
+pub fn freq_overlap(
+    rx_freq: PyFrequency,
+    rx_bw: PyFrequency,
+    tx_freq: PyFrequency,
+    tx_bw: PyFrequency,
+) -> f64 {
+    frequency_overlap_factor(
+        f64::from(rx_freq.0),
+        f64::from(rx_bw.0),
+        f64::from(tx_freq.0),
+        f64::from(tx_bw.0),
+    )
 }

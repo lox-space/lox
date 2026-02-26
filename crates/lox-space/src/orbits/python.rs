@@ -37,7 +37,9 @@ use lox_core::elements::{
     ArgumentOfPeriapsis, Eccentricity, Inclination, Keplerian, LongitudeOfAscendingNode,
 };
 use lox_time::intervals::{Interval, TimeInterval};
-use lox_units::{Angle, Distance};
+use lox_units::{Angle, Distance, Velocity};
+
+use crate::units::python::{PyAngle, PyDistance, PyVelocity};
 
 use glam::DVec3;
 use lox_frames::providers::DefaultRotationProvider;
@@ -122,7 +124,7 @@ fn propagate_dispatch<'py>(
         };
     }
     if let Ok(time) = steps.extract::<PyTime>() {
-        let state = PyState(state_at(time.0)?);
+        let state = PyCartesian(state_at(time.0)?);
         return match frame {
             Some(frame) => Ok(Bound::new(py, state.to_frame(frame, provider)?)?.into_any()),
             None => Ok(Bound::new(py, state)?.into_any()),
@@ -210,39 +212,79 @@ pub fn find_windows(
 
 /// Represents an orbital state (position and velocity) at a specific time.
 ///
-/// A `State` captures the complete kinematic state of an object in space,
+/// A `Cartesian` captures the complete kinematic state of an object in space,
 /// including its position, velocity, time, central body (origin), and
 /// reference frame.
 ///
 /// Args:
 ///     time: The epoch of this state.
-///     position: Position vector (x, y, z) in km.
-///     velocity: Velocity vector (vx, vy, vz) in km/s.
+///     position: Position vector as array-like [x, y, z] in meters.
+///     velocity: Velocity vector as array-like [vx, vy, vz] in m/s.
+///     x, y, z: Individual position components as Distance (alternative to position).
+///     vx, vy, vz: Individual velocity components as Velocity (alternative to velocity).
 ///     origin: Central body (default: Earth).
 ///     frame: Reference frame (default: ICRF).
-#[pyclass(name = "State", module = "lox_space", frozen)]
+#[pyclass(name = "Cartesian", module = "lox_space", frozen)]
 #[derive(Debug, Clone)]
-pub struct PyState(pub DynCartesianOrbit);
+pub struct PyCartesian(pub DynCartesianOrbit);
 
 #[pymethods]
-impl PyState {
+impl PyCartesian {
     #[new]
-    #[pyo3(signature = (time, position, velocity, origin=None, frame=None))]
+    #[pyo3(signature = (time, position=None, velocity=None, *, x=None, y=None, z=None, vx=None, vy=None, vz=None, origin=None, frame=None))]
+    #[allow(clippy::too_many_arguments)]
     fn new(
         time: PyTime,
-        position: (f64, f64, f64),
-        velocity: (f64, f64, f64),
+        position: Option<Vec<f64>>,
+        velocity: Option<Vec<f64>>,
+        x: Option<PyDistance>,
+        y: Option<PyDistance>,
+        z: Option<PyDistance>,
+        vx: Option<PyVelocity>,
+        vy: Option<PyVelocity>,
+        vz: Option<PyVelocity>,
         origin: Option<PyOrigin>,
         frame: Option<PyFrame>,
     ) -> PyResult<Self> {
         let origin = origin.unwrap_or_default();
         let frame = frame.unwrap_or_default();
 
-        Ok(PyState(CartesianOrbit::new(
-            Cartesian::from_vecs(
-                DVec3::new(position.0, position.1, position.2) * 1e3,
-                DVec3::new(velocity.0, velocity.1, velocity.2) * 1e3,
-            ),
+        let pos = if let Some(arr) = position {
+            if arr.len() != 3 {
+                return Err(PyValueError::new_err(
+                    "position array must have exactly 3 elements",
+                ));
+            }
+            DVec3::new(arr[0], arr[1], arr[2])
+        } else if let (Some(x), Some(y), Some(z)) = (x, y, z) {
+            DVec3::new(x.0.to_meters(), y.0.to_meters(), z.0.to_meters())
+        } else {
+            return Err(PyValueError::new_err(
+                "either 'position' array or 'x', 'y', 'z' keyword arguments are required",
+            ));
+        };
+
+        let vel = if let Some(arr) = velocity {
+            if arr.len() != 3 {
+                return Err(PyValueError::new_err(
+                    "velocity array must have exactly 3 elements",
+                ));
+            }
+            DVec3::new(arr[0], arr[1], arr[2])
+        } else if let (Some(vx), Some(vy), Some(vz)) = (vx, vy, vz) {
+            DVec3::new(
+                vx.0.to_meters_per_second(),
+                vy.0.to_meters_per_second(),
+                vz.0.to_meters_per_second(),
+            )
+        } else {
+            return Err(PyValueError::new_err(
+                "either 'velocity' array or 'vx', 'vy', 'vz' keyword arguments are required",
+            ));
+        };
+
+        Ok(PyCartesian(CartesianOrbit::new(
+            Cartesian::from_vecs(pos, vel),
             time.0,
             origin.0,
             frame.0,
@@ -264,16 +306,52 @@ impl PyState {
         PyFrame(self.0.reference_frame())
     }
 
-    /// Return the position vector as a numpy array [x, y, z] in km.
+    /// Return the position vector as a numpy array in meters.
     fn position<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<f64>> {
-        let pos = (self.0.position() * 1e-3).to_array();
-        PyArray1::from_slice(py, &pos)
+        let pos = self.0.position();
+        PyArray1::from_slice(py, &[pos.x, pos.y, pos.z])
     }
 
-    /// Return the velocity vector as a numpy array [vx, vy, vz] in km/s.
+    /// Return the velocity vector as a numpy array in m/s.
     fn velocity<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<f64>> {
-        let vel = (self.0.velocity() * 1e-3).to_array();
-        PyArray1::from_slice(py, &vel)
+        let vel = self.0.velocity();
+        PyArray1::from_slice(py, &[vel.x, vel.y, vel.z])
+    }
+
+    /// Return the x component of the position.
+    #[getter]
+    fn x(&self) -> PyDistance {
+        PyDistance(Distance::meters(self.0.position().x))
+    }
+
+    /// Return the y component of the position.
+    #[getter]
+    fn y(&self) -> PyDistance {
+        PyDistance(Distance::meters(self.0.position().y))
+    }
+
+    /// Return the z component of the position.
+    #[getter]
+    fn z(&self) -> PyDistance {
+        PyDistance(Distance::meters(self.0.position().z))
+    }
+
+    /// Return the x component of the velocity.
+    #[getter]
+    fn vx(&self) -> PyVelocity {
+        PyVelocity(Velocity::meters_per_second(self.0.velocity().x))
+    }
+
+    /// Return the y component of the velocity.
+    #[getter]
+    fn vy(&self) -> PyVelocity {
+        PyVelocity(Velocity::meters_per_second(self.0.velocity().y))
+    }
+
+    /// Return the z component of the velocity.
+    #[getter]
+    fn vz(&self) -> PyVelocity {
+        PyVelocity(Velocity::meters_per_second(self.0.velocity().z))
     }
 
     /// Transform this state to a different reference frame.
@@ -283,7 +361,7 @@ impl PyState {
     ///     provider: EOP provider (required for ITRF transformations).
     ///
     /// Returns:
-    ///     A new State in the target frame.
+    ///     A new Cartesian in the target frame.
     ///
     /// Raises:
     ///     FrameTransformationError: If the transformation fails.
@@ -306,7 +384,7 @@ impl PyState {
                 .map_err(PyDynRotationError),
         }?;
         let (r1, v1) = rot.rotate_state(self.0.position(), self.0.velocity());
-        Ok(PyState(CartesianOrbit::new(
+        Ok(PyCartesian(CartesianOrbit::new(
             Cartesian::from_vecs(r1, v1),
             self.0.time(),
             self.0.origin(),
@@ -321,7 +399,7 @@ impl PyState {
     ///     ephemeris: SPK ephemeris data for computing body positions.
     ///
     /// Returns:
-    ///     A new State relative to the target origin.
+    ///     A new Cartesian relative to the target origin.
     ///
     /// Raises:
     ///     ValueError: If the transformation fails.
@@ -404,12 +482,12 @@ impl PyState {
 ///
 /// Args:
 ///     time: Epoch of the elements.
-///     semi_major_axis: Semi-major axis in km.
+///     semi_major_axis: Semi-major axis as Distance.
 ///     eccentricity: Orbital eccentricity (0 = circular, <1 = elliptical).
-///     inclination: Inclination in radians.
-///     longitude_of_ascending_node: RAAN in radians.
-///     argument_of_periapsis: Argument of periapsis in radians.
-///     true_anomaly: True anomaly in radians.
+///     inclination: Inclination as Angle.
+///     longitude_of_ascending_node: RAAN as Angle.
+///     argument_of_periapsis: Argument of periapsis as Angle.
+///     true_anomaly: True anomaly as Angle.
 ///     origin: Central body (default: Earth).
 #[pyclass(name = "Keplerian", module = "lox_space", frozen)]
 pub struct PyKeplerian(pub crate::orbits::orbits::DynKeplerianOrbit);
@@ -430,12 +508,12 @@ impl PyKeplerian {
     #[allow(clippy::too_many_arguments)]
     fn new(
         time: PyTime,
-        semi_major_axis: f64,
+        semi_major_axis: PyDistance,
         eccentricity: f64,
-        inclination: f64,
-        longitude_of_ascending_node: f64,
-        argument_of_periapsis: f64,
-        true_anomaly: f64,
+        inclination: PyAngle,
+        longitude_of_ascending_node: PyAngle,
+        argument_of_periapsis: PyAngle,
+        true_anomaly: PyAngle,
         origin: Option<PyOrigin>,
     ) -> PyResult<Self> {
         let origin = origin.map(|origin| origin.0).unwrap_or_default();
@@ -443,16 +521,18 @@ impl PyKeplerian {
             .try_gravitational_parameter()
             .map_err(PyUndefinedOriginPropertyError)?;
         let keplerian = Keplerian::new(
-            Distance::kilometers(semi_major_axis),
+            Distance::meters(semi_major_axis.0.to_meters()),
             Eccentricity::try_new(eccentricity)
                 .map_err(|err| PyValueError::new_err(err.to_string()))?,
-            Inclination::try_new(Angle::radians(inclination))
+            Inclination::try_new(Angle::radians(inclination.0.to_radians()))
                 .map_err(|err| PyValueError::new_err(err.to_string()))?,
-            LongitudeOfAscendingNode::try_new(Angle::radians(longitude_of_ascending_node))
+            LongitudeOfAscendingNode::try_new(Angle::radians(
+                longitude_of_ascending_node.0.to_radians(),
+            ))
+            .map_err(|err| PyValueError::new_err(err.to_string()))?,
+            ArgumentOfPeriapsis::try_new(Angle::radians(argument_of_periapsis.0.to_radians()))
                 .map_err(|err| PyValueError::new_err(err.to_string()))?,
-            ArgumentOfPeriapsis::try_new(Angle::radians(argument_of_periapsis))
-                .map_err(|err| PyValueError::new_err(err.to_string()))?,
-            TrueAnomaly::new(Angle::radians(true_anomaly)),
+            TrueAnomaly::new(Angle::radians(true_anomaly.0.to_radians())),
         );
         let orbit = crate::orbits::orbits::KeplerianOrbit::try_from_keplerian(
             keplerian,
@@ -474,9 +554,9 @@ impl PyKeplerian {
         PyOrigin(self.0.origin())
     }
 
-    /// Return the semi-major axis in km.
-    fn semi_major_axis(&self) -> f64 {
-        self.0.semi_major_axis().to_kilometers()
+    /// Return the semi-major axis.
+    fn semi_major_axis(&self) -> PyDistance {
+        PyDistance(self.0.semi_major_axis())
     }
 
     /// Return the orbital eccentricity.
@@ -484,32 +564,34 @@ impl PyKeplerian {
         self.0.eccentricity().as_f64()
     }
 
-    /// Return the inclination in radians.
-    fn inclination(&self) -> f64 {
-        self.0.inclination().as_f64()
+    /// Return the inclination.
+    fn inclination(&self) -> PyAngle {
+        PyAngle(Angle::radians(self.0.inclination().as_f64()))
     }
 
-    /// Return the longitude of the ascending node (RAAN) in radians.
-    fn longitude_of_ascending_node(&self) -> f64 {
-        self.0.longitude_of_ascending_node().as_f64()
+    /// Return the longitude of the ascending node (RAAN).
+    fn longitude_of_ascending_node(&self) -> PyAngle {
+        PyAngle(Angle::radians(
+            self.0.longitude_of_ascending_node().as_f64(),
+        ))
     }
 
-    /// Return the argument of periapsis in radians.
-    fn argument_of_periapsis(&self) -> f64 {
-        self.0.argument_of_periapsis().as_f64()
+    /// Return the argument of periapsis.
+    fn argument_of_periapsis(&self) -> PyAngle {
+        PyAngle(Angle::radians(self.0.argument_of_periapsis().as_f64()))
     }
 
-    /// Return the true anomaly in radians.
-    fn true_anomaly(&self) -> f64 {
-        self.0.true_anomaly().as_f64()
+    /// Return the true anomaly.
+    fn true_anomaly(&self) -> PyAngle {
+        PyAngle(Angle::radians(self.0.true_anomaly().as_f64()))
     }
 
     /// Convert these Keplerian elements to a Cartesian state.
     ///
     /// Returns:
-    ///     State with position and velocity vectors.
-    fn to_cartesian(&self) -> PyResult<PyState> {
-        Ok(PyState(
+    ///     Cartesian with position and velocity vectors.
+    fn to_cartesian(&self) -> PyResult<PyCartesian> {
+        Ok(PyCartesian(
             self.0
                 .try_to_cartesian()
                 .map_err(PyUndefinedOriginPropertyError)?,
@@ -551,7 +633,7 @@ impl From<PyTrajectorError> for PyErr {
 impl PyTrajectory {
     #[new]
     fn new(states: &Bound<'_, PyList>) -> PyResult<Self> {
-        let states: Vec<PyState> = states.extract()?;
+        let states: Vec<PyCartesian> = states.extract()?;
         let states: Vec<DynCartesianOrbit> = states.into_iter().map(|s| s.0).collect();
         Ok(PyTrajectory(
             DynTrajectory::try_new(states).map_err(PyTrajectorError)?,
@@ -589,9 +671,8 @@ impl PyTrajectory {
         let mut states: Vec<DynCartesianOrbit> = Vec::with_capacity(array.nrows());
         for row in array.rows() {
             let time = start_time.0 + TimeDelta::from_seconds_f64(row[0]);
-            // Input is in km and km/s, convert to m and m/s
-            let position = DVec3::new(row[1], row[2], row[3]) * 1e3;
-            let velocity = DVec3::new(row[4], row[5], row[6]) * 1e3;
+            let position = DVec3::new(row[1], row[2], row[3]);
+            let velocity = DVec3::new(row[4], row[5], row[6]);
             states.push(CartesianOrbit::new(
                 Cartesian::from_vecs(position, velocity),
                 time,
@@ -619,29 +700,13 @@ impl PyTrajectory {
     /// Returns:
     ///     2D numpy array with columns [t, x, y, z, vx, vy, vz].
     fn to_numpy<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyArray2<f64>>> {
-        // Internal data is in m and m/s, convert to km and km/s for the Python API
-        let data: Vec<Vec<f64>> = self
-            .0
-            .to_vec()
-            .into_iter()
-            .map(|row| {
-                vec![
-                    row[0],
-                    row[1] * 1e-3,
-                    row[2] * 1e-3,
-                    row[3] * 1e-3,
-                    row[4] * 1e-3,
-                    row[5] * 1e-3,
-                    row[6] * 1e-3,
-                ]
-            })
-            .collect();
+        let data: Vec<Vec<f64>> = self.0.to_vec();
         Ok(PyArray2::from_vec2(py, &data)?)
     }
 
     /// Return the list of states in this trajectory.
-    fn states(&self) -> Vec<PyState> {
-        self.0.states().into_iter().map(PyState).collect()
+    fn states(&self) -> Vec<PyCartesian> {
+        self.0.states().into_iter().map(PyCartesian).collect()
     }
 
     /// Find events where a function crosses zero.
@@ -658,7 +723,7 @@ impl PyTrajectory {
         let interval = TimeInterval::new(traj.start_time(), traj.end_time());
         let events = crate::orbits::events::try_find_events(
             |t| {
-                let state = PyState(traj.interpolate_at(t));
+                let state = PyCartesian(traj.interpolate_at(t));
                 func.call((state,), None)
                     .and_then(|obj| obj.extract::<f64>())
                     .map_err(|e| PyCallbackError(e.to_string()))
@@ -684,7 +749,7 @@ impl PyTrajectory {
         let interval = TimeInterval::new(traj.start_time(), traj.end_time());
         let windows = crate::orbits::events::try_find_windows(
             |t| {
-                let state = PyState(traj.interpolate_at(t));
+                let state = PyCartesian(traj.interpolate_at(t));
                 func.call((state,), None)
                     .and_then(|obj| obj.extract::<f64>())
                     .map_err(|e| PyCallbackError(e.to_string()))
@@ -706,12 +771,12 @@ impl PyTrajectory {
     ///
     /// Raises:
     ///     ValueError: If the time argument is invalid.
-    fn interpolate(&self, time: &Bound<'_, PyAny>) -> PyResult<PyState> {
+    fn interpolate(&self, time: &Bound<'_, PyAny>) -> PyResult<PyCartesian> {
         if let Ok(delta) = time.extract::<PyTimeDelta>() {
-            return Ok(PyState(self.0.interpolate(delta.0)));
+            return Ok(PyCartesian(self.0.interpolate(delta.0)));
         }
         if let Ok(time) = time.extract::<PyTime>() {
-            return Ok(PyState(self.0.interpolate_at(time.0)));
+            return Ok(PyCartesian(self.0.interpolate_at(time.0)));
         }
         Err(PyValueError::new_err("invalid time argument"))
     }
@@ -732,7 +797,7 @@ impl PyTrajectory {
     ) -> PyResult<Self> {
         let mut states: Vec<DynCartesianOrbit> = Vec::with_capacity(self.0.states().len());
         for s in self.0.states() {
-            states.push(PyState(s).to_frame(frame.clone(), provider)?.0);
+            states.push(PyCartesian(s).to_frame(frame.clone(), provider)?.0);
         }
         Ok(PyTrajectory(DynTrajectory::new(states)))
     }
@@ -848,7 +913,7 @@ impl From<PyValladoError> for PyErr {
 impl PyVallado {
     #[new]
     #[pyo3(signature =(initial_state, max_iter=None))]
-    fn new(initial_state: PyState, max_iter: Option<i32>) -> PyResult<Self> {
+    fn new(initial_state: PyCartesian, max_iter: Option<i32>) -> PyResult<Self> {
         let mut vallado = Vallado::try_new(initial_state.0).map_err(PyValladoError)?;
         if let Some(max_iter) = max_iter {
             vallado = vallado.with_max_iter(max_iter);
@@ -918,7 +983,7 @@ pub struct PyJ2Propagator(pub DynJ2Propagator);
 #[pymethods]
 impl PyJ2Propagator {
     #[new]
-    fn new(initial_state: PyState) -> PyResult<Self> {
+    fn new(initial_state: PyCartesian) -> PyResult<Self> {
         Ok(PyJ2Propagator(
             J2Propagator::try_new(initial_state.0).map_err(PyUndefinedOriginPropertyError)?,
         ))
@@ -971,9 +1036,9 @@ impl PyJ2Propagator {
 ///
 /// Args:
 ///     origin: The central body (e.g., Earth, Moon).
-///     longitude: Geodetic longitude in radians.
-///     latitude: Geodetic latitude in radians.
-///     altitude: Altitude above the reference ellipsoid in km.
+///     longitude: Geodetic longitude as Angle.
+///     latitude: Geodetic latitude as Angle.
+///     altitude: Altitude above the reference ellipsoid as Distance.
 #[pyclass(name = "GroundLocation", module = "lox_space", frozen)]
 #[derive(Clone, Debug)]
 pub struct PyGroundLocation(pub DynGroundLocation);
@@ -981,11 +1046,16 @@ pub struct PyGroundLocation(pub DynGroundLocation);
 #[pymethods]
 impl PyGroundLocation {
     #[new]
-    fn new(origin: PyOrigin, longitude: f64, latitude: f64, altitude: f64) -> PyResult<Self> {
+    fn new(
+        origin: PyOrigin,
+        longitude: PyAngle,
+        latitude: PyAngle,
+        altitude: PyDistance,
+    ) -> PyResult<Self> {
         let coordinates = LonLatAlt::builder()
-            .longitude(lox_units::Angle::radians(longitude))
-            .latitude(lox_units::Angle::radians(latitude))
-            .altitude(lox_units::Distance::kilometers(altitude))
+            .longitude(longitude.0)
+            .latitude(latitude.0)
+            .altitude(altitude.0)
             .build()
             .map_err(|e| PyValueError::new_err(e.to_string()))?;
         Ok(PyGroundLocation(
@@ -1005,7 +1075,7 @@ impl PyGroundLocation {
     #[pyo3(signature = (state, provider=None, frame=None))]
     fn observables(
         &self,
-        state: PyState,
+        state: PyCartesian,
         provider: Option<&Bound<'_, PyEopProvider>>,
         frame: Option<PyFrame>,
     ) -> PyResult<PyObservables> {
@@ -1033,19 +1103,19 @@ impl PyGroundLocation {
         Ok(PyArray2::from_vec2(py, &rot)?)
     }
 
-    /// Return the geodetic longitude in radians.
-    fn longitude(&self) -> f64 {
-        self.0.longitude()
+    /// Return the geodetic longitude.
+    fn longitude(&self) -> PyAngle {
+        PyAngle(Angle::radians(self.0.longitude()))
     }
 
-    /// Return the geodetic latitude in radians.
-    fn latitude(&self) -> f64 {
-        self.0.latitude()
+    /// Return the geodetic latitude.
+    fn latitude(&self) -> PyAngle {
+        PyAngle(Angle::radians(self.0.latitude()))
     }
 
-    /// Return the altitude above the reference ellipsoid in km.
-    fn altitude(&self) -> f64 {
-        self.0.altitude()
+    /// Return the altitude above the reference ellipsoid.
+    fn altitude(&self) -> PyDistance {
+        PyDistance(Distance::kilometers(self.0.altitude()))
     }
 }
 
@@ -1280,8 +1350,8 @@ impl PySpaceAsset {
 ///     ground_assets: List of GroundAsset objects.
 ///     space_assets: List of SpaceAsset objects.
 ///     occulting_bodies: Optional list of bodies for LOS checking.
-///     step: Optional time step in seconds for event detection (default: 60).
-///     min_pass_duration: Optional minimum pass duration in seconds. Passes shorter
+///     step: Optional time step for event detection (default: 60s).
+///     min_pass_duration: Optional minimum pass duration. Passes shorter
 ///         than this value may be missed. Enables two-level stepping for faster
 ///         detection.
 #[pyclass(name = "VisibilityAnalysis", module = "lox_space", frozen)]
@@ -1301,8 +1371,8 @@ impl PyVisibilityAnalysis {
         ground_assets: Vec<PyGroundAsset>,
         space_assets: Vec<PySpaceAsset>,
         occulting_bodies: Option<Vec<PyOrigin>>,
-        step: Option<f64>,
-        min_pass_duration: Option<f64>,
+        step: Option<PyTimeDelta>,
+        min_pass_duration: Option<PyTimeDelta>,
     ) -> Self {
         Self {
             ground_assets: ground_assets.into_iter().map(|g| g.0).collect(),
@@ -1312,8 +1382,10 @@ impl PyVisibilityAnalysis {
                 .into_iter()
                 .map(|b| b.0)
                 .collect(),
-            step: TimeDelta::from_seconds_f64(step.unwrap_or(60.0)),
-            min_pass_duration: min_pass_duration.map(TimeDelta::from_seconds_f64),
+            step: step
+                .map(|s| s.0)
+                .unwrap_or_else(|| TimeDelta::from_seconds_f64(60.0)),
+            min_pass_duration: min_pass_duration.map(|d| d.0),
         }
     }
 
@@ -1507,11 +1579,11 @@ impl PyElevationMask {
     fn new(
         azimuth: Option<&Bound<'_, PyArray1<f64>>>,
         elevation: Option<&Bound<'_, PyArray1<f64>>>,
-        min_elevation: Option<f64>,
+        min_elevation: Option<PyAngle>,
     ) -> PyResult<Self> {
         if let Some(min_elevation) = min_elevation {
             return Ok(PyElevationMask(ElevationMask::with_fixed_elevation(
-                min_elevation,
+                min_elevation.0.to_radians(),
             )));
         }
         if let (Some(azimuth), Some(elevation)) = (azimuth, elevation) {
@@ -1529,13 +1601,15 @@ impl PyElevationMask {
     /// Create a fixed elevation mask with constant minimum elevation.
     ///
     /// Args:
-    ///     min_elevation: Minimum elevation angle in radians.
+    ///     min_elevation: Minimum elevation angle as Angle.
     ///
     /// Returns:
     ///     ElevationMask with fixed minimum elevation.
     #[classmethod]
-    fn fixed(_cls: &Bound<'_, PyType>, min_elevation: f64) -> Self {
-        PyElevationMask(ElevationMask::with_fixed_elevation(min_elevation))
+    fn fixed(_cls: &Bound<'_, PyType>, min_elevation: PyAngle) -> Self {
+        PyElevationMask(ElevationMask::with_fixed_elevation(
+            min_elevation.0.to_radians(),
+        ))
     }
 
     /// Create a variable elevation mask from azimuth-dependent data.
@@ -1559,7 +1633,7 @@ impl PyElevationMask {
         ))
     }
 
-    fn __getnewargs__(&self) -> (Option<Vec<f64>>, Option<Vec<f64>>, Option<f64>) {
+    fn __getnewargs__(&self) -> (Option<Vec<f64>>, Option<Vec<f64>>, Option<PyAngle>) {
         (self.azimuth(), self.elevation(), self.fixed_elevation())
     }
 
@@ -1580,9 +1654,9 @@ impl PyElevationMask {
     }
 
     /// Return the fixed elevation value (for fixed masks only).
-    fn fixed_elevation(&self) -> Option<f64> {
+    fn fixed_elevation(&self) -> Option<PyAngle> {
         match &self.0 {
-            ElevationMask::Fixed(min_elevation) => Some(*min_elevation),
+            ElevationMask::Fixed(min_elevation) => Some(PyAngle(Angle::radians(*min_elevation))),
             ElevationMask::Variable(_) => None,
         }
     }
@@ -1590,12 +1664,12 @@ impl PyElevationMask {
     /// Return the minimum elevation at the given azimuth.
     ///
     /// Args:
-    ///     azimuth: Azimuth angle in radians.
+    ///     azimuth: Azimuth angle as Angle.
     ///
     /// Returns:
-    ///     Minimum elevation in radians.
-    fn min_elevation(&self, azimuth: f64) -> f64 {
-        self.0.min_elevation(azimuth)
+    ///     Minimum elevation as Angle.
+    fn min_elevation(&self, azimuth: PyAngle) -> PyAngle {
+        PyAngle(Angle::radians(self.0.min_elevation(azimuth.0.to_radians())))
     }
 }
 
@@ -1605,10 +1679,10 @@ impl PyElevationMask {
 /// and a spacecraft, including angles and range information.
 ///
 /// Args:
-///     azimuth: Azimuth angle in radians (measured from north, clockwise).
-///     elevation: Elevation angle in radians (above local horizon).
-///     range: Distance to target in km.
-///     range_rate: Rate of change of range in km/s.
+///     azimuth: Azimuth angle as Angle.
+///     elevation: Elevation angle as Angle.
+///     range: Distance to target as Distance.
+///     range_rate: Rate of change of range as Velocity.
 #[pyclass(name = "Observables", module = "lox_space", frozen)]
 #[derive(Clone, Debug)]
 pub struct PyObservables(pub Observables);
@@ -1616,28 +1690,38 @@ pub struct PyObservables(pub Observables);
 #[pymethods]
 impl PyObservables {
     #[new]
-    fn new(azimuth: f64, elevation: f64, range: f64, range_rate: f64) -> Self {
-        PyObservables(Observables::new(azimuth, elevation, range, range_rate))
+    fn new(
+        azimuth: PyAngle,
+        elevation: PyAngle,
+        range: PyDistance,
+        range_rate: PyVelocity,
+    ) -> Self {
+        PyObservables(Observables::new(
+            azimuth.0.to_radians(),
+            elevation.0.to_radians(),
+            range.0.to_meters(),
+            range_rate.0.to_meters_per_second(),
+        ))
     }
 
-    /// Return the azimuth angle in radians.
-    fn azimuth(&self) -> f64 {
-        self.0.azimuth()
+    /// Return the azimuth angle.
+    fn azimuth(&self) -> PyAngle {
+        PyAngle(Angle::radians(self.0.azimuth()))
     }
 
-    /// Return the elevation angle in radians.
-    fn elevation(&self) -> f64 {
-        self.0.elevation()
+    /// Return the elevation angle.
+    fn elevation(&self) -> PyAngle {
+        PyAngle(Angle::radians(self.0.elevation()))
     }
 
-    /// Return the range (distance) in km.
-    fn range(&self) -> f64 {
-        self.0.range() * 1e-3
+    /// Return the range (distance).
+    fn range(&self) -> PyDistance {
+        PyDistance(Distance::meters(self.0.range()))
     }
 
-    /// Return the range rate in km/s.
-    fn range_rate(&self) -> f64 {
-        self.0.range_rate() * 1e-3
+    /// Return the range rate.
+    fn range_rate(&self) -> PyVelocity {
+        PyVelocity(Velocity::meters_per_second(self.0.range_rate()))
     }
 }
 

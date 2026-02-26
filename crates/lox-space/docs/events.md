@@ -30,8 +30,9 @@ import lox_space as lox
 # Find events on a trajectory
 def altitude(state):
     """Returns altitude above reference radius."""
-    r = (state.position()[0]**2 + state.position()[1]**2 + state.position()[2]**2)**0.5
-    return r - 6378.0  # km above Earth radius
+    x, y, z = state.position()
+    r = (float(x)**2 + float(y)**2 + float(z)**2)**0.5
+    return r - 6378000.0  # meters above Earth radius
 
 step = lox.TimeDelta(10.0)  # 10-second step size
 events = trajectory.find_events(altitude, step)
@@ -46,7 +47,11 @@ for w in windows:
 # Visibility analysis
 gs = lox.GroundAsset("ESOC", ground_location, elevation_mask)
 sc = lox.SpaceAsset("ISS", trajectory)
-analysis = lox.VisibilityAnalysis([gs], [sc], step=60.0)
+analysis = lox.VisibilityAnalysis(
+    [gs], [sc],
+    step=lox.TimeDelta(60),
+    min_pass_duration=lox.TimeDelta(300),
+)
 results = analysis.compute(start, end, spk)
 
 for w in results.intervals("ESOC", "ISS"):
