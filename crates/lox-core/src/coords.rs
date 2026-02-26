@@ -554,6 +554,14 @@ impl<const N: usize> TrajectoryData<N> {
 
         self.series[M].interpolate(t)
     }
+
+    #[inline]
+    pub fn interpolate_all(&self, t: f64) -> [f64; N] {
+        let idx = self.series[0].find_index(t);
+        self.series
+            .each_ref()
+            .map(|s| s.interpolate_at_index(t, idx))
+    }
 }
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -679,25 +687,28 @@ impl CartesianTrajectory {
 
     #[inline]
     pub fn position(&self, t: f64) -> DVec3 {
+        let idx = self.series[0].find_index(t);
         DVec3::new(
-            self.interpolate_x(t),
-            self.interpolate_y(t),
-            self.interpolate_z(t),
+            self.series[0].interpolate_at_index(t, idx),
+            self.series[1].interpolate_at_index(t, idx),
+            self.series[2].interpolate_at_index(t, idx),
         )
     }
 
     #[inline]
     pub fn velocity(&self, t: f64) -> DVec3 {
+        let idx = self.series[3].find_index(t);
         DVec3::new(
-            self.interpolate_vx(t),
-            self.interpolate_vy(t),
-            self.interpolate_vz(t),
+            self.series[3].interpolate_at_index(t, idx),
+            self.series[4].interpolate_at_index(t, idx),
+            self.series[5].interpolate_at_index(t, idx),
         )
     }
 
     #[inline]
     pub fn at(&self, t: f64) -> Cartesian {
-        Cartesian::from_vecs(self.position(t), self.velocity(t))
+        let vals = self.interpolate_all(t);
+        Cartesian::from_array(vals)
     }
 }
 
