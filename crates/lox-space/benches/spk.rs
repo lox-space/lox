@@ -23,21 +23,21 @@ fn test_epoch() -> Time<Tdb> {
     Time::j2000(Tdb) + TimeDelta::from_seconds_f64(-14200747200.0)
 }
 
-#[divan::bench]
+#[divan::bench(sample_size = 100000)]
 fn state_ssb_mercury(bencher: Bencher) {
     let spk = ephemeris();
     let epoch = test_epoch();
     bencher.bench(|| spk.state(epoch, SolarSystemBarycenter, MercuryBarycenter));
 }
 
-#[divan::bench]
+#[divan::bench(sample_size = 100000)]
 fn position_ssb_mercury(bencher: Bencher) {
     let spk = ephemeris();
     let epoch = test_epoch();
     bencher.bench(|| spk.position(epoch, SolarSystemBarycenter, MercuryBarycenter));
 }
 
-#[divan::bench]
+#[divan::bench(sample_size = 100000)]
 fn state_earth_moon(bencher: Bencher) {
     let spk = ephemeris();
     let epoch = test_epoch();
