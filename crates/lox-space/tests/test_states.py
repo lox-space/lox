@@ -49,3 +49,91 @@ def test_state_to_origin(ephemeris):
 
     npt.assert_allclose(s_earth_rt.position(), r_m, atol=1e-3)
     npt.assert_allclose(s_earth_rt.velocity(), v_ms, atol=1e-3)
+
+
+def test_cartesian_component_kwargs():
+    """Test Cartesian construction with x, y, z, vx, vy, vz keyword arguments."""
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    state = lox.Cartesian(
+        time,
+        x=7000 * lox.km,
+        y=0 * lox.km,
+        z=0 * lox.km,
+        vx=0 * lox.m_per_s,
+        vy=7500 * lox.m_per_s,
+        vz=0 * lox.m_per_s,
+    )
+    assert state.x.to_kilometers() == pytest.approx(7000.0)
+    assert state.y.to_kilometers() == pytest.approx(0.0)
+    assert state.z.to_kilometers() == pytest.approx(0.0)
+    assert state.vx.to_meters_per_second() == pytest.approx(0.0)
+    assert state.vy.to_meters_per_second() == pytest.approx(7500.0)
+    assert state.vz.to_meters_per_second() == pytest.approx(0.0)
+
+
+def test_cartesian_component_getters():
+    """Test that x, y, z, vx, vy, vz return unit types."""
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    state = lox.Cartesian(
+        time,
+        position=[7000e3, 1000e3, 500e3],
+        velocity=[100.0, 7500.0, -200.0],
+    )
+    assert isinstance(state.x, lox.Distance)
+    assert isinstance(state.y, lox.Distance)
+    assert isinstance(state.z, lox.Distance)
+    assert isinstance(state.vx, lox.Velocity)
+    assert isinstance(state.vy, lox.Velocity)
+    assert isinstance(state.vz, lox.Velocity)
+    assert state.x.to_meters() == pytest.approx(7000e3)
+    assert state.vy.to_meters_per_second() == pytest.approx(7500.0)
+
+
+def test_cartesian_repr():
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    state = lox.Cartesian(
+        time,
+        position=[7000e3, 0.0, 0.0],
+        velocity=[0.0, 7500.0, 0.0],
+    )
+    r = repr(state)
+    assert r.startswith("Cartesian(")
+    assert "7000000.0" in r
+
+
+def test_cartesian_string_origin_and_frame():
+    """Test that string origin and frame work in Cartesian constructor."""
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    state = lox.Cartesian(
+        time,
+        position=[7000e3, 0.0, 0.0],
+        velocity=[0.0, 7500.0, 0.0],
+        origin="Earth",
+        frame="ICRF",
+    )
+    assert state.origin().name() == "Earth"
+    assert repr(state.reference_frame()) == 'Frame("ICRF")'
+
+
+def test_cartesian_to_frame_string():
+    """Test that to_frame accepts a string frame name."""
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    state = lox.Cartesian(
+        time,
+        position=[7000e3, 0.0, 0.0],
+        velocity=[0.0, 7500.0, 0.0],
+    )
+    s2 = state.to_frame("ICRF")
+    assert repr(s2.reference_frame()) == 'Frame("ICRF")'
+
+
+def test_cartesian_to_origin_string(ephemeris):
+    """Test that to_origin accepts a string origin name."""
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    state = lox.Cartesian(
+        time,
+        position=[7000e3, 0.0, 0.0],
+        velocity=[0.0, 7500.0, 0.0],
+    )
+    s2 = state.to_origin("Moon", ephemeris)
+    assert s2.origin().name() == "Moon"
