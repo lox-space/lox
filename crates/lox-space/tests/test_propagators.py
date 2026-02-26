@@ -25,7 +25,9 @@ def test_sgp4():
 
 def test_ground(provider):
     tai = lox.UTC.from_iso("2022-01-31T23:00:00").to_scale("TAI")
-    loc = lox.GroundLocation(lox.Origin("Earth"), -4.3676 * lox.deg, 40.4527 * lox.deg, 0.0 * lox.km)
+    loc = lox.GroundLocation(
+        lox.Origin("Earth"), -4.3676 * lox.deg, 40.4527 * lox.deg, 0.0 * lox.km
+    )
     ground = lox.GroundPropagator(loc)
     # GroundPropagator now returns body-fixed (IAU) states; transform to ICRF
     state = ground.propagate(tai).to_frame(lox.Frame("ICRF"))

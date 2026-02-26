@@ -68,16 +68,10 @@ class TestVisibilityAnalysis:
     def test_basic(self, results, ground_assets, space_assets):
         assert results.num_pairs() == len(ground_assets) * len(space_assets)
 
-    def test_with_occulting_bodies(
-        self, results_with_los, ground_assets, space_assets
-    ):
-        assert results_with_los.num_pairs() == len(ground_assets) * len(
-            space_assets
-        )
+    def test_with_occulting_bodies(self, results_with_los, ground_assets, space_assets):
+        assert results_with_los.num_pairs() == len(ground_assets) * len(space_assets)
 
-    def test_with_custom_step(
-        self, ground_assets, space_assets, t0, t1, ephemeris
-    ):
+    def test_with_custom_step(self, ground_assets, space_assets, t0, t1, ephemeris):
         analysis = lox.VisibilityAnalysis(
             ground_assets, space_assets, step=lox.TimeDelta(30)
         )
@@ -93,9 +87,7 @@ class TestVisibilityAnalysis:
         results = analysis.compute(t0, t1, ephemeris)
         assert results.num_pairs() == len(ground_assets) * len(space_assets)
 
-    def test_with_all_options(
-        self, ground_assets, space_assets, t0, t1, ephemeris
-    ):
+    def test_with_all_options(self, ground_assets, space_assets, t0, t1, ephemeris):
         analysis = lox.VisibilityAnalysis(
             ground_assets,
             space_assets,
@@ -139,9 +131,7 @@ class TestVisibilityResults:
         assert isinstance(total, int)
         assert total >= 0
 
-    def test_intervals_for_known_pair(
-        self, results, ground_assets, space_assets
-    ):
+    def test_intervals_for_known_pair(self, results, ground_assets, space_assets):
         gs_id = ground_assets[0].id()
         sc_id = space_assets[0].id()
         intervals = results.intervals(gs_id, sc_id)
@@ -151,9 +141,7 @@ class TestVisibilityResults:
         intervals = results.intervals("nonexistent_gs", "nonexistent_sc")
         assert intervals == []
 
-    def test_passes_for_known_pair(
-        self, results, ground_assets, space_assets
-    ):
+    def test_passes_for_known_pair(self, results, ground_assets, space_assets):
         gs_id = ground_assets[0].id()
         sc_id = space_assets[0].id()
         passes = results.passes(gs_id, sc_id)
@@ -188,9 +176,7 @@ class TestWindow:
                     return windows[0]
         pytest.skip("no visibility windows in test interval")
 
-    def test_start_end_duration(
-        self, results, ground_assets, space_assets, t0, t1
-    ):
+    def test_start_end_duration(self, results, ground_assets, space_assets, t0, t1):
         w = self._first_window(results, ground_assets, space_assets)
         start = w.start()
         end = w.end()
@@ -247,21 +233,15 @@ class TestPass:
             assert float(obs.range()) > 0
             assert -math.pi <= float(obs.azimuth()) <= math.pi
 
-    def test_observables_above_mask(
-        self, results, ground_assets, space_assets
-    ):
+    def test_observables_above_mask(self, results, ground_assets, space_assets):
         """All observables in a pass should be above the elevation mask."""
-        p, gs = self._first_pass_with_gs(
-            results, ground_assets, space_assets
-        )
+        p, gs = self._first_pass_with_gs(results, ground_assets, space_assets)
         mask = gs.mask()
         for obs in p.observables():
             min_elev = mask.min_elevation(obs.azimuth())
             assert float(obs.elevation()) >= float(min_elev)
 
-    def test_interpolate_within_pass(
-        self, results, ground_assets, space_assets
-    ):
+    def test_interpolate_within_pass(self, results, ground_assets, space_assets):
         p = self._first_pass(results, ground_assets, space_assets)
         mid = p.times()[len(p.times()) // 2]
         obs = p.interpolate(mid)
@@ -269,9 +249,7 @@ class TestPass:
         assert isinstance(obs, lox.Observables)
         assert float(obs.range()) > 0
 
-    def test_interpolate_outside_pass(
-        self, results, ground_assets, space_assets, t0
-    ):
+    def test_interpolate_outside_pass(self, results, ground_assets, space_assets, t0):
         p = self._first_pass(results, ground_assets, space_assets)
         # Well before the pass
         before = t0 - lox.TimeDelta(86400)
@@ -325,7 +303,9 @@ class TestElevationMask:
     def test_fixed(self):
         mask = lox.ElevationMask.fixed(np.radians(10) * lox.rad)
         assert float(mask.min_elevation(0 * lox.rad)) == pytest.approx(np.radians(10))
-        assert float(mask.min_elevation(np.pi * lox.rad)) == pytest.approx(np.radians(10))
+        assert float(mask.min_elevation(np.pi * lox.rad)) == pytest.approx(
+            np.radians(10)
+        )
         assert float(mask.fixed_elevation()) == pytest.approx(np.radians(10))
         assert mask.azimuth() is None
         assert mask.elevation() is None

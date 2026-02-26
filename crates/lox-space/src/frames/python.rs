@@ -10,6 +10,7 @@ use lox_frames::rotations::DynRotationError;
 use pyo3::{
     PyErr, PyResult, create_exception,
     exceptions::{PyException, PyValueError},
+    prelude::*,
     pyclass, pymethods,
 };
 
@@ -87,5 +88,21 @@ impl PyFrame {
 
     pub fn __repr__(&self) -> String {
         format!("Frame(\"{}\")", self.0.abbreviation())
+    }
+}
+
+impl TryFrom<&Bound<'_, PyAny>> for PyFrame {
+    type Error = PyErr;
+
+    fn try_from(value: &Bound<'_, PyAny>) -> Result<Self, Self::Error> {
+        if let Ok(frame) = value.extract::<PyFrame>() {
+            return Ok(frame);
+        }
+        if let Ok(name) = value.extract::<&str>() {
+            return Ok(Self(name.parse().map_err(PyUnknownFrameError)?));
+        }
+        Err(PyValueError::new_err(
+            "'frame' argument must be a string or a 'Frame' instance",
+        ))
     }
 }
