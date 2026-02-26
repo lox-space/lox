@@ -62,8 +62,3 @@ interpolated = trajectory.interpolate(t + lox.TimeDelta(100))
     options:
       show_source: false
 
----
-
-::: lox_space.Ensemble
-    options:
-      show_source: false
