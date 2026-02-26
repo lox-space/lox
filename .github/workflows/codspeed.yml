@@ -23,10 +23,6 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      # - name: Setup Python
-      #   uses: actions/setup-python@v6
-      #   with:
-      #     python-version: "3.13"
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
@@ -46,7 +42,7 @@ jobs:
       - uses: CodSpeedHQ/action@v4
         with:
           mode: walltime
-          run: uv run --directory "$UV_PROJECT" pytest --codspeed --ignore tests/test_frames.py
+          run: uv run --directory "$UV_PROJECT" pytest --codspeed
           token: ${{ secrets.CODSPEED_TOKEN }}
 
   codspeed-rust:

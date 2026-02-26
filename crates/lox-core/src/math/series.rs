@@ -29,7 +29,7 @@ pub enum SeriesError {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Interpolation {
     Linear,
-    CubicSpline(Arc<[f64]>, Arc<[f64]>, Arc<[f64]>, Arc<[f64]>),
+    CubicSpline(Arc<[[f64; 4]]>),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -145,47 +145,57 @@ impl Series {
             .map(|(idx, si)| (si + s[idx + 1] - 2.0 * slope[idx]) / dx[idx])
             .collect();
 
-        let c1 = y[0..n - 1].to_vec();
-        let c2 = s[0..n - 1].to_vec();
-        let c3: Vec<f64> = slope
-            .iter()
-            .enumerate()
-            .map(|(idx, si)| (si - s[idx]) / dx[idx] - t[idx])
+        let coeffs: Vec<[f64; 4]> = (0..n - 1)
+            .map(|i| {
+                let c1 = y[i];
+                let c2 = s[i];
+                let c3 = (slope[i] - s[i]) / dx[i] - t[i];
+                let c4 = t[i] / dx[i];
+                [c1, c2, c3, c4]
+            })
             .collect();
-        let c4: Vec<f64> = t.iter().enumerate().map(|(idx, ti)| ti / dx[idx]).collect();
 
         Self {
             x,
             y,
-            interpolation: Interpolation::CubicSpline(c1.into(), c2.into(), c3.into(), c4.into()),
+            interpolation: Interpolation::CubicSpline(coeffs.into()),
         }
     }
 
     #[inline]
-    pub fn interpolate(&self, xp: f64) -> f64 {
+    pub fn find_index(&self, xp: f64) -> usize {
         let x = self.x.as_ref();
-        let y = self.y.as_ref();
         let x0 = *x.first().unwrap();
         let xn = *x.last().unwrap();
-        let idx = if xp <= x0 {
+        if xp <= x0 {
             0
         } else if xp >= xn {
             x.len() - 2
         } else {
             x.partition_point(|&val| xp > val) - 1
-        };
+        }
+    }
+
+    #[inline]
+    pub fn interpolate_at_index(&self, xp: f64, idx: usize) -> f64 {
         match &self.interpolation {
             Interpolation::Linear => {
+                let x = self.x.as_ref();
+                let y = self.y.as_ref();
                 let x0 = x[idx];
                 let x1 = x[idx + 1];
                 let y0 = y[idx];
                 let y1 = y[idx + 1];
                 y0 + (y1 - y0) * (xp - x0) / (x1 - x0)
             }
-            Interpolation::CubicSpline(c1, c2, c3, c4) => {
-                poly_array(xp - x[idx], &[c1[idx], c2[idx], c3[idx], c4[idx]])
-            }
+            Interpolation::CubicSpline(coeffs) => poly_array(xp - self.x[idx], &coeffs[idx]),
         }
+    }
+
+    #[inline]
+    pub fn interpolate(&self, xp: f64) -> f64 {
+        let idx = self.find_index(xp);
+        self.interpolate_at_index(xp, idx)
     }
 
     pub fn x(&self) -> &[f64] {
