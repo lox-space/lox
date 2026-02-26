@@ -529,6 +529,22 @@ pub trait IntervalDetectorExt<T: TimeScale>: IntervalDetector<T> + Sized {
 impl<T: TimeScale, D: IntervalDetector<T>> IntervalDetectorExt<T> for D {}
 
 // ---------------------------------------------------------------------------
+// IntervalDetector impls for boxed trait objects
+// ---------------------------------------------------------------------------
+
+impl<T: TimeScale> IntervalDetector<T> for Box<dyn IntervalDetector<T> + '_> {
+    fn detect(&self, interval: TimeInterval<T>) -> Result<Vec<TimeInterval<T>>, DetectError> {
+        (**self).detect(interval)
+    }
+}
+
+impl<T: TimeScale> IntervalDetector<T> for Box<dyn IntervalDetector<T> + Send + '_> {
+    fn detect(&self, interval: TimeInterval<T>) -> Result<Vec<TimeInterval<T>>, DetectError> {
+        (**self).detect(interval)
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Closure-based DetectFn adapters
 // ---------------------------------------------------------------------------
 

@@ -22,7 +22,8 @@ use thiserror::Error;
 
 use crate::assets::{AssetId, GroundAsset, SpaceAsset};
 use crate::events::{
-    DetectError, DetectFn, EventsToIntervals, IntervalDetector, RootFindingDetector,
+    DetectError, DetectFn, EventsToIntervals, IntervalDetector, IntervalDetectorExt,
+    RootFindingDetector,
 };
 use crate::ground::{DynGroundLocation, Observables};
 use crate::orbits::DynTrajectory;
@@ -304,17 +305,12 @@ struct ElevationDetectFn<'a> {
 }
 
 impl DetectFn<DynTimeScale> for ElevationDetectFn<'_> {
-    // Infallible: ICRF→IAU rotations always succeed for known origins.
-    // Using Infallible lets the compiler eliminate the error path, which
-    // is critical for performance on this hot path (~1400 evals/pair).
-    type Error = std::convert::Infallible;
+    type Error = EvalError;
 
     fn eval(&self, time: DynTime) -> Result<f64, Self::Error> {
         let body_fixed = DynFrame::Iau(self.gs.origin());
         let sc = self.sc.interpolate_at(time);
-        let sc = sc
-            .try_to_frame(body_fixed, &DefaultRotationProvider)
-            .unwrap();
+        let sc = sc.try_to_frame(body_fixed, &DefaultRotationProvider)?;
         let obs = self.gs.observables_dyn(sc);
         Ok(obs.elevation() - self.mask.min_elevation(obs.azimuth()))
     }
@@ -469,6 +465,7 @@ pub struct VisibilityAnalysis<'a, E> {
     occulting_bodies: Vec<DynOrigin>,
     step: TimeDelta,
     min_pass_duration: Option<TimeDelta>,
+    inter_satellite: bool,
 }
 
 impl<'a, E> VisibilityAnalysis<'a, E>
@@ -488,6 +485,19 @@ where
             occulting_bodies: Vec::new(),
             step: TimeDelta::from_seconds(60),
             min_pass_duration: None,
+            inter_satellite: false,
+        }
+    }
+
+    pub fn inter_satellite(space_assets: &'a [SpaceAsset], ephemeris: &'a E) -> Self {
+        Self {
+            ground_assets: &[],
+            space_assets,
+            ephemeris,
+            occulting_bodies: Vec::new(),
+            step: TimeDelta::from_seconds(60),
+            min_pass_duration: None,
+            inter_satellite: true,
         }
     }
 
@@ -544,46 +554,73 @@ where
             return Ok(make_elev().detect(interval)?);
         }
 
-        // Compute elevation windows once and reuse across occulting bodies.
-        let elev_windows = make_elev().detect(interval)?;
+        let make_los = |body: DynOrigin| {
+            EventsToIntervals::new(self.apply_coarse_step(RootFindingDetector::new(
+                LineOfSightDetectFn {
+                    gs: gs.location(),
+                    sc: sc.trajectory(),
+                    body,
+                    ephemeris: self.ephemeris,
+                },
+                self.step,
+            )))
+        };
 
-        if elev_windows.is_empty() {
-            return Ok(vec![]);
+        let mut los: Box<dyn IntervalDetector<DynTimeScale> + '_> =
+            Box::new(make_los(self.occulting_bodies[0]));
+        for &body in &self.occulting_bodies[1..] {
+            los = Box::new(los.intersect(make_los(body)));
         }
 
-        // For each occulting body, run LOS detection within the cached
-        // elevation windows instead of recomputing elevation each time.
-        let body_windows: Vec<Vec<TimeInterval<DynTimeScale>>> = self
-            .occulting_bodies
-            .par_iter()
-            .map(|&body| {
-                let los = EventsToIntervals::new(self.apply_coarse_step(RootFindingDetector::new(
-                    LineOfSightDetectFn {
-                        gs: gs.location(),
-                        sc: sc.trajectory(),
-                        body,
-                        ephemeris: self.ephemeris,
-                    },
-                    self.step,
-                )));
-                let mut windows = Vec::new();
-                for sub in &elev_windows {
-                    windows.extend(los.detect(*sub)?);
-                }
-                Ok(windows)
-            })
-            .collect::<Result<Vec<_>, DetectError>>()?;
-
-        let mut windows = body_windows[0].clone();
-        for bw in &body_windows[1..] {
-            windows = lox_time::intervals::intersect_intervals(&windows, bw);
-        }
-
-        Ok(windows)
+        Ok(make_elev().chain(los).detect(interval)?)
     }
 
-    /// Compute visibility intervals for all (ground, space) pairs.
+    /// Compute LOS intervals for a single inter-satellite pair.
+    fn compute_inter_satellite_pair(
+        &self,
+        sc1: &SpaceAsset,
+        sc2: &SpaceAsset,
+        interval: TimeInterval<DynTimeScale>,
+    ) -> Result<Vec<TimeInterval<DynTimeScale>>, VisibilityError> {
+        if self.occulting_bodies.is_empty() {
+            return Ok(vec![interval]);
+        }
+
+        let make_los = |body: DynOrigin| {
+            EventsToIntervals::new(self.apply_coarse_step(RootFindingDetector::new(
+                InterSatelliteLosDetectFn {
+                    sc1: sc1.trajectory(),
+                    sc2: sc2.trajectory(),
+                    body,
+                    ephemeris: self.ephemeris,
+                },
+                self.step,
+            )))
+        };
+
+        let mut los: Box<dyn IntervalDetector<DynTimeScale> + '_> =
+            Box::new(make_los(self.occulting_bodies[0]));
+        for &body in &self.occulting_bodies[1..] {
+            los = Box::new(los.intersect(make_los(body)));
+        }
+
+        Ok(los.detect(interval)?)
+    }
+
+    /// Compute visibility intervals for all pairs.
     pub fn compute(
+        &self,
+        interval: TimeInterval<DynTimeScale>,
+    ) -> Result<VisibilityResults, VisibilityError> {
+        if self.inter_satellite {
+            self.compute_inter_satellite(interval)
+        } else {
+            self.compute_ground_space(interval)
+        }
+    }
+
+    /// Compute ground-to-space visibility for all (ground, space) pairs.
+    fn compute_ground_space(
         &self,
         interval: TimeInterval<DynTimeScale>,
     ) -> Result<VisibilityResults, VisibilityError> {
@@ -593,9 +630,6 @@ where
             .flat_map(|gs| self.space_assets.iter().map(move |sc| (gs, sc)))
             .collect();
 
-        // Parallelise across pairs when the rayon overhead is worthwhile.
-        // Each pair already parallelises internally (LOS per occulting body),
-        // so outer-level parallelism only helps with many pairs.
         const PARALLEL_THRESHOLD: usize = 100;
         let use_parallel = pairs.len() > PARALLEL_THRESHOLD;
 
@@ -618,6 +652,35 @@ where
                 })
                 .collect()
         };
+
+        Ok(VisibilityResults {
+            intervals: results?.into_iter().collect(),
+        })
+    }
+
+    /// Compute LOS visibility for all unique spacecraft pairs (i, j) where i < j.
+    fn compute_inter_satellite(
+        &self,
+        interval: TimeInterval<DynTimeScale>,
+    ) -> Result<VisibilityResults, VisibilityError> {
+        let n = self.space_assets.len();
+        let mut pairs: Vec<(usize, usize)> = Vec::with_capacity(n * (n - 1) / 2);
+        for i in 0..n {
+            for j in (i + 1)..n {
+                pairs.push((i, j));
+            }
+        }
+
+        let results: Result<Vec<_>, VisibilityError> = pairs
+            .par_iter()
+            .map(|&(i, j)| {
+                let sc1 = &self.space_assets[i];
+                let sc2 = &self.space_assets[j];
+                let key = (sc1.id().clone(), sc2.id().clone());
+                let windows = self.compute_inter_satellite_pair(sc1, sc2, interval)?;
+                Ok((key, windows))
+            })
+            .collect();
 
         Ok(VisibilityResults {
             intervals: results?.into_iter().collect(),
@@ -655,110 +718,6 @@ where
                 ((gs_id.clone(), sc_id.clone()), passes)
             })
             .collect()
-    }
-}
-
-// ---------------------------------------------------------------------------
-// InterSatelliteVisibility
-// ---------------------------------------------------------------------------
-
-/// Computes line-of-sight visibility between spacecraft pairs.
-pub struct InterSatelliteVisibility<'a, E> {
-    space_assets: &'a [SpaceAsset],
-    ephemeris: &'a E,
-    occulting_bodies: Vec<DynOrigin>,
-    step: TimeDelta,
-    min_pass_duration: Option<TimeDelta>,
-}
-
-impl<'a, E> InterSatelliteVisibility<'a, E>
-where
-    E: Ephemeris + Send + Sync,
-    E::Error: 'static,
-{
-    pub fn new(space_assets: &'a [SpaceAsset], ephemeris: &'a E) -> Self {
-        Self {
-            space_assets,
-            ephemeris,
-            occulting_bodies: Vec::new(),
-            step: TimeDelta::from_seconds(60),
-            min_pass_duration: None,
-        }
-    }
-
-    pub fn with_occulting_bodies(mut self, bodies: Vec<DynOrigin>) -> Self {
-        self.occulting_bodies = bodies;
-        self
-    }
-
-    pub fn with_step(mut self, step: TimeDelta) -> Self {
-        self.step = step;
-        self
-    }
-
-    pub fn with_min_pass_duration(mut self, min_pass_duration: TimeDelta) -> Self {
-        self.min_pass_duration = Some(min_pass_duration);
-        self
-    }
-
-    /// Apply `min_pass_duration` → `coarse_step` conversion to a detector.
-    fn apply_coarse_step<F>(&self, det: RootFindingDetector<F>) -> RootFindingDetector<F> {
-        match self.min_pass_duration {
-            Some(d) => {
-                let coarse = TimeDelta::from_seconds_f64(d.to_seconds().to_f64() / 2.0);
-                if coarse > self.step {
-                    det.with_coarse_step(coarse)
-                } else {
-                    det
-                }
-            }
-            None => det,
-        }
-    }
-
-    /// Compute LOS intervals for all unique ordered pairs `(i, j)` where `i < j`.
-    pub fn compute(
-        &self,
-        interval: TimeInterval<DynTimeScale>,
-    ) -> Result<VisibilityResults, VisibilityError> {
-        let n = self.space_assets.len();
-        let mut pairs: Vec<(usize, usize)> = Vec::with_capacity(n * (n - 1) / 2);
-        for i in 0..n {
-            for j in (i + 1)..n {
-                pairs.push((i, j));
-            }
-        }
-
-        let results: Result<Vec<_>, VisibilityError> = pairs
-            .par_iter()
-            .map(|&(i, j)| {
-                let sc1 = &self.space_assets[i];
-                let sc2 = &self.space_assets[j];
-                let key = (sc1.id().clone(), sc2.id().clone());
-
-                let mut windows = vec![interval];
-
-                for &body in &self.occulting_bodies {
-                    let los_fn = InterSatelliteLosDetectFn {
-                        sc1: sc1.trajectory(),
-                        sc2: sc2.trajectory(),
-                        body,
-                        ephemeris: self.ephemeris,
-                    };
-                    let los_detector =
-                        self.apply_coarse_step(RootFindingDetector::new(los_fn, self.step));
-                    let los_intervals = EventsToIntervals::new(los_detector);
-                    let body_windows = los_intervals.detect(interval)?;
-                    windows = lox_time::intervals::intersect_intervals(&windows, &body_windows);
-                }
-
-                Ok((key, windows))
-            })
-            .collect();
-
-        Ok(VisibilityResults {
-            intervals: results?.into_iter().collect(),
-        })
     }
 }
 
@@ -994,9 +953,9 @@ mod tests {
         let sc2 = SpaceAsset::new("sc2", sc_traj);
         let spk = ephemeris();
         let space_assets = [sc1.clone(), sc2.clone()];
-        let isv = InterSatelliteVisibility::new(&space_assets, spk)
+        let analysis = VisibilityAnalysis::inter_satellite(&space_assets, spk)
             .with_occulting_bodies(vec![DynOrigin::Earth]);
-        let results = isv.compute(interval).unwrap();
+        let results = analysis.compute(interval).unwrap();
         let intervals = results
             .intervals_for(sc1.id(), sc2.id())
             .expect("pair not found");
