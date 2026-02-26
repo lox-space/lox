@@ -271,3 +271,24 @@ impl PyOrigin {
         )))
     }
 }
+
+impl TryFrom<&Bound<'_, PyAny>> for PyOrigin {
+    type Error = PyErr;
+
+    fn try_from(value: &Bound<'_, PyAny>) -> Result<Self, Self::Error> {
+        if let Ok(origin) = value.extract::<PyOrigin>() {
+            return Ok(origin);
+        }
+        if let Ok(name) = value.extract::<&str>() {
+            return Ok(Self(
+                DynOrigin::from_str(name).map_err(PyUnknownOriginName)?,
+            ));
+        }
+        if let Ok(id) = value.extract::<i32>() {
+            return Ok(Self(id.try_into().map_err(PyUnknownOriginId)?));
+        }
+        Err(PyTypeError::new_err(
+            "'origin' argument must be a string, an integer, or an 'Origin' instance",
+        ))
+    }
+}

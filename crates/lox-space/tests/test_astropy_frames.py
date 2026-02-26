@@ -80,13 +80,17 @@ def _astropy_gcrs(epoch_iso):
 def _extract_pos_vel(coord):
     """Extract position (km) and velocity (km/s) from an Astropy coordinate."""
     cart = coord.cartesian
-    pos = np.array([cart.x.to(u.km).value, cart.y.to(u.km).value, cart.z.to(u.km).value])
+    pos = np.array(
+        [cart.x.to(u.km).value, cart.y.to(u.km).value, cart.z.to(u.km).value]
+    )
     diff = cart.differentials["s"]
-    vel = np.array([
-        diff.d_x.to(u.km / u.s).value,
-        diff.d_y.to(u.km / u.s).value,
-        diff.d_z.to(u.km / u.s).value,
-    ])
+    vel = np.array(
+        [
+            diff.d_x.to(u.km / u.s).value,
+            diff.d_y.to(u.km / u.s).value,
+            diff.d_z.to(u.km / u.s).value,
+        ]
+    )
     return pos, vel
 
 
@@ -108,8 +112,12 @@ def test_icrf_to_itrf(epoch, provider):
     itrs = gcrs.transform_to(ITRS(obstime=t))
     ap_pos, ap_vel = _extract_pos_vel(itrs)
 
-    npt.assert_allclose(lox_pos, ap_pos, rtol=1e-8, err_msg=f"ITRF position mismatch at {epoch}")
-    npt.assert_allclose(lox_vel, ap_vel, rtol=1e-6, err_msg=f"ITRF velocity mismatch at {epoch}")
+    npt.assert_allclose(
+        lox_pos, ap_pos, rtol=1e-8, err_msg=f"ITRF position mismatch at {epoch}"
+    )
+    npt.assert_allclose(
+        lox_vel, ap_vel, rtol=1e-6, err_msg=f"ITRF velocity mismatch at {epoch}"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -130,8 +138,12 @@ def test_icrf_to_cirf(epoch, provider):
     cirs = gcrs.transform_to(CIRS(obstime=t))
     ap_pos, ap_vel = _extract_pos_vel(cirs)
 
-    npt.assert_allclose(lox_pos, ap_pos, rtol=1e-8, err_msg=f"CIRF position mismatch at {epoch}")
-    npt.assert_allclose(lox_vel, ap_vel, rtol=1e-6, err_msg=f"CIRF velocity mismatch at {epoch}")
+    npt.assert_allclose(
+        lox_pos, ap_pos, rtol=1e-8, err_msg=f"CIRF position mismatch at {epoch}"
+    )
+    npt.assert_allclose(
+        lox_vel, ap_vel, rtol=1e-6, err_msg=f"CIRF velocity mismatch at {epoch}"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -152,8 +164,12 @@ def test_icrf_to_tod(epoch, provider):
     tete = gcrs.transform_to(TETE(obstime=t))
     ap_pos, ap_vel = _extract_pos_vel(tete)
 
-    npt.assert_allclose(lox_pos, ap_pos, rtol=1e-7, err_msg=f"TOD position mismatch at {epoch}")
-    npt.assert_allclose(lox_vel, ap_vel, rtol=1e-5, err_msg=f"TOD velocity mismatch at {epoch}")
+    npt.assert_allclose(
+        lox_pos, ap_pos, rtol=1e-7, err_msg=f"TOD position mismatch at {epoch}"
+    )
+    npt.assert_allclose(
+        lox_vel, ap_vel, rtol=1e-5, err_msg=f"TOD velocity mismatch at {epoch}"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -174,12 +190,15 @@ def test_roundtrip(frame, provider):
     npt.assert_allclose(
         state_icrf.position(),
         state_back.position(),
-        rtol=1e-12, err_msg=f"Roundtrip position failed for {frame}",
+        rtol=1e-12,
+        err_msg=f"Roundtrip position failed for {frame}",
     )
     npt.assert_allclose(
         state_icrf.velocity(),
         state_back.velocity(),
-        rtol=1e-10, atol=1e-15, err_msg=f"Roundtrip velocity failed for {frame}",
+        rtol=1e-10,
+        atol=1e-15,
+        err_msg=f"Roundtrip velocity failed for {frame}",
     )
 
 
@@ -205,5 +224,9 @@ def test_velocity_includes_earth_rotation(provider):
     # ITRF velocity magnitude should differ from ICRF by roughly omega x r
     # (~0.5 km/s for LEO), but the total magnitude change depends on geometry.
     # Just verify both are in the expected LEO velocity range (6-9 km/s).
-    assert 6.0 < v_icrf_mag < 9.0, f"ICRF velocity {v_icrf_mag:.3f} km/s outside LEO range"
-    assert 6.0 < v_itrf_mag < 9.0, f"ITRF velocity {v_itrf_mag:.3f} km/s outside LEO range"
+    assert 6.0 < v_icrf_mag < 9.0, (
+        f"ICRF velocity {v_icrf_mag:.3f} km/s outside LEO range"
+    )
+    assert 6.0 < v_itrf_mag < 9.0, (
+        f"ITRF velocity {v_itrf_mag:.3f} km/s outside LEO range"
+    )

@@ -8,7 +8,9 @@ import pytest
 
 
 def test_observables():
-    location = lox.GroundLocation(lox.Origin("Earth"), -4 * lox.deg, 41 * lox.deg, 0 * lox.km)
+    location = lox.GroundLocation(
+        lox.Origin("Earth"), -4 * lox.deg, 41 * lox.deg, 0 * lox.km
+    )
     time = lox.Time("TDB", 2012, 7, 1)
     state = lox.Cartesian(
         time,
@@ -21,8 +23,12 @@ def test_observables():
     expected_range_rate = -7.16
     expected_azimuth = np.radians(-53.418)
     expected_elevation = np.radians(-7.077)
-    assert observables.range().to_kilometers() == pytest.approx(expected_range, rel=1e-2)
-    assert observables.range_rate().to_kilometers_per_second() == pytest.approx(expected_range_rate, rel=1e-2)
+    assert observables.range().to_kilometers() == pytest.approx(
+        expected_range, rel=1e-2
+    )
+    assert observables.range_rate().to_kilometers_per_second() == pytest.approx(
+        expected_range_rate, rel=1e-2
+    )
     assert float(observables.azimuth()) == pytest.approx(expected_azimuth, rel=1e-2)
     assert float(observables.elevation()) == pytest.approx(expected_elevation, rel=1e-2)
 

@@ -316,7 +316,9 @@ class GroundAsset:
     Examples:
         >>> gs = lox.GroundAsset("ESOC", ground_location, elevation_mask)
     """
-    def __new__(cls, id: str, location: GroundLocation, mask: ElevationMask) -> Self: ...
+    def __new__(
+        cls, id: str, location: GroundLocation, mask: ElevationMask
+    ) -> Self: ...
     def id(self) -> str:
         """Return the asset identifier."""
         ...
@@ -371,7 +373,7 @@ class VisibilityAnalysis:
         cls,
         ground_assets: list[GroundAsset],
         space_assets: list[SpaceAsset],
-        occulting_bodies: list[Origin] | None = None,
+        occulting_bodies: list[str | int | Origin] | None = None,
         step: TimeDelta | None = None,
         min_pass_duration: TimeDelta | None = None,
     ) -> Self: ...
@@ -515,7 +517,6 @@ def find_windows(
     """
     ...
 
-
 class Origin:
     """Represents a celestial body (planet, moon, barycenter, etc.).
 
@@ -562,7 +563,9 @@ class Origin:
     def rotational_elements(self, et: float) -> tuple[Angle, Angle, Angle]:
         """Return rotational elements (right ascension, declination, rotation angle)."""
         ...
-    def rotational_element_rates(self, et: float) -> tuple[AngularRate, AngularRate, AngularRate]:
+    def rotational_element_rates(
+        self, et: float
+    ) -> tuple[AngularRate, AngularRate, AngularRate]:
         """Return rotational element rates."""
         ...
     def right_ascension(self, et: float) -> Angle:
@@ -671,8 +674,8 @@ class Cartesian:
         vx: Velocity | None = None,
         vy: Velocity | None = None,
         vz: Velocity | None = None,
-        origin: Origin | None = None,
-        frame: Frame | None = None,
+        origin: str | int | Origin | None = None,
+        frame: str | Frame | None = None,
     ) -> Self: ...
     def time(self) -> Time:
         """Return the epoch of this state."""
@@ -713,10 +716,10 @@ class Cartesian:
     def vz(self) -> Velocity:
         """Return the z component of the velocity."""
         ...
-    def to_frame(self, frame: Frame, provider: EOPProvider | None = None) -> Self:
+    def to_frame(self, frame: str | Frame, provider: EOPProvider | None = None) -> Self:
         """Transform this state to a different reference frame."""
         ...
-    def to_origin(self, target: Origin, ephemeris: SPK) -> Self:
+    def to_origin(self, target: str | int | Origin, ephemeris: SPK) -> Self:
         """Transform this state to a different central body."""
         ...
     def to_keplerian(self) -> Keplerian:
@@ -765,7 +768,7 @@ class Keplerian:
         longitude_of_ascending_node: Angle,
         argument_of_periapsis: Angle,
         true_anomaly: Angle,
-        origin: Origin | None = None,
+        origin: str | int | Origin | None = None,
     ) -> Self: ...
     def time(self) -> Time:
         """Return the epoch of these elements."""
@@ -815,8 +818,8 @@ class Trajectory:
         cls,
         start_time: Time,
         states: np.ndarray,
-        origin: Origin | None = None,
-        frame: Frame | None = None,
+        origin: str | int | Origin | None = None,
+        frame: str | Frame | None = None,
     ) -> Self:
         """Create a Trajectory from a numpy array.
 
@@ -839,19 +842,23 @@ class Trajectory:
     def states(self) -> list[Cartesian]:
         """Return the list of states in this trajectory."""
         ...
-    def find_events(self, func: Callable[[Cartesian], float], step: TimeDelta) -> list[Event]:
+    def find_events(
+        self, func: Callable[[Cartesian], float], step: TimeDelta
+    ) -> list[Event]:
         """Find events where a function crosses zero."""
         ...
-    def find_windows(self, func: Callable[[Cartesian], float], step: TimeDelta) -> list[Window]:
+    def find_windows(
+        self, func: Callable[[Cartesian], float], step: TimeDelta
+    ) -> list[Window]:
         """Find time windows where a function is positive."""
         ...
     def interpolate(self, time: Time | TimeDelta) -> Cartesian:
         """Interpolate the trajectory at a specific time."""
         ...
-    def to_frame(self, frame: Frame, provider: EOPProvider | None = None) -> Self:
+    def to_frame(self, frame: str | Frame, provider: EOPProvider | None = None) -> Self:
         """Transform all states to a different reference frame."""
         ...
-    def to_origin(self, target: Origin, ephemeris: SPK) -> Self:
+    def to_origin(self, target: str | int | Origin, ephemeris: SPK) -> Self:
         """Transform all states to a different central body."""
         ...
 
@@ -907,7 +914,13 @@ class Vallado:
     def propagate(self, steps: Time) -> Cartesian: ...
     @overload
     def propagate(self, steps: list[Time]) -> Trajectory: ...
-    def propagate(self, steps: Time | list[Time], end: Time | None = None, frame: Frame | None = None, provider: EOPProvider | None = None) -> Cartesian | Trajectory:
+    def propagate(
+        self,
+        steps: Time | list[Time],
+        end: Time | None = None,
+        frame: str | Frame | None = None,
+        provider: EOPProvider | None = None,
+    ) -> Cartesian | Trajectory:
         """Propagate the orbit to one or more times."""
         ...
 
@@ -922,7 +935,13 @@ class J2:
     def propagate(self, steps: Time) -> Cartesian: ...
     @overload
     def propagate(self, steps: list[Time]) -> Trajectory: ...
-    def propagate(self, steps: Time | list[Time], end: Time | None = None, frame: Frame | None = None, provider: EOPProvider | None = None) -> Cartesian | Trajectory:
+    def propagate(
+        self,
+        steps: Time | list[Time],
+        end: Time | None = None,
+        frame: str | Frame | None = None,
+        provider: EOPProvider | None = None,
+    ) -> Cartesian | Trajectory:
         """Propagate the orbit to one or more times."""
         ...
 
@@ -945,7 +964,7 @@ class GroundLocation:
     """
     def __new__(
         cls,
-        origin: Origin,
+        origin: str | int | Origin,
         longitude: Angle,
         latitude: Angle,
         altitude: Distance,
@@ -963,7 +982,7 @@ class GroundLocation:
         self,
         state: Cartesian,
         provider: EOPProvider | None = None,
-        frame: Frame | None = None,
+        frame: str | Frame | None = None,
     ) -> Observables:
         """Compute observables to a target state."""
         ...
@@ -987,7 +1006,13 @@ class GroundPropagator:
     def propagate(self, steps: Time) -> Cartesian: ...
     @overload
     def propagate(self, steps: list[Time]) -> Trajectory: ...
-    def propagate(self, steps: Time | list[Time], end: Time | None = None, frame: Frame | None = None, provider: EOPProvider | None = None) -> Cartesian | Trajectory:
+    def propagate(
+        self,
+        steps: Time | list[Time],
+        end: Time | None = None,
+        frame: str | Frame | None = None,
+        provider: EOPProvider | None = None,
+    ) -> Cartesian | Trajectory:
         """Propagate the ground station to one or more times."""
         ...
 
@@ -1012,13 +1037,19 @@ class SGP4:
         """Return the TLE epoch time."""
         ...
     @overload
-    def propagate(self, steps: Time, provider: EOPProvider | None = None) -> Cartesian: ...
+    def propagate(
+        self, steps: Time, provider: EOPProvider | None = None
+    ) -> Cartesian: ...
     @overload
     def propagate(
         self, steps: list[Time], provider: EOPProvider | None = None
     ) -> Trajectory: ...
     def propagate(
-        self, steps: Time | list[Time], end: Time | None = None, frame: Frame | None = None, provider: EOPProvider | None = None
+        self,
+        steps: Time | list[Time],
+        end: Time | None = None,
+        frame: str | Frame | None = None,
+        provider: EOPProvider | None = None,
     ) -> Cartesian | Trajectory:
         """Propagate the orbit to one or more times."""
         ...
@@ -1472,7 +1503,9 @@ class ParabolicPattern:
     """
     def __new__(cls, diameter: Distance, efficiency: float) -> Self: ...
     @staticmethod
-    def from_beamwidth(beamwidth: Angle, frequency: Frequency, efficiency: float) -> ParabolicPattern:
+    def from_beamwidth(
+        beamwidth: Angle, frequency: Frequency, efficiency: float
+    ) -> ParabolicPattern:
         """Creates a parabolic pattern from a desired beamwidth.
 
         Args:
@@ -1548,7 +1581,11 @@ class ComplexAntenna:
         pattern: An antenna pattern (ParabolicPattern, GaussianPattern, or DipolePattern).
         boresight: Boresight direction as [x, y, z].
     """
-    def __new__(cls, pattern: ParabolicPattern | GaussianPattern | DipolePattern, boresight: list[float]) -> Self: ...
+    def __new__(
+        cls,
+        pattern: ParabolicPattern | GaussianPattern | DipolePattern,
+        boresight: list[float],
+    ) -> Self: ...
     def gain(self, frequency: Frequency, angle: Angle) -> Decibel:
         """Returns the gain in dBi at the given frequency and off-boresight angle."""
         ...
@@ -1570,7 +1607,13 @@ class Transmitter:
         line_loss: Feed/line loss as Decibel.
         output_back_off: Output back-off as Decibel (default Decibel(0)).
     """
-    def __new__(cls, frequency: Frequency, power: Power, line_loss: Decibel, output_back_off: Decibel | None = None) -> Self: ...
+    def __new__(
+        cls,
+        frequency: Frequency,
+        power: Power,
+        line_loss: Decibel,
+        output_back_off: Decibel | None = None,
+    ) -> Self: ...
     def eirp(self, antenna: SimpleAntenna | ComplexAntenna, angle: Angle) -> Decibel:
         """Returns the EIRP in dBW for the given antenna and off-boresight angle."""
         ...
@@ -1584,7 +1627,9 @@ class SimpleReceiver:
         frequency: Receive frequency.
         system_noise_temperature: System noise temperature.
     """
-    def __new__(cls, frequency: Frequency, system_noise_temperature: Temperature) -> Self: ...
+    def __new__(
+        cls, frequency: Frequency, system_noise_temperature: Temperature
+    ) -> Self: ...
     def __eq__(self, other: object) -> bool: ...
     def __repr__(self) -> str: ...
 
@@ -1813,7 +1858,9 @@ def fspl(distance: Distance, frequency: Frequency) -> Decibel:
     """
     ...
 
-def freq_overlap(rx_freq: Frequency, rx_bw: Frequency, tx_freq: Frequency, tx_bw: Frequency) -> float:
+def freq_overlap(
+    rx_freq: Frequency, rx_bw: Frequency, tx_freq: Frequency, tx_bw: Frequency
+) -> float:
     """Computes the frequency overlap factor between a receiver and an interferer.
 
     Args:

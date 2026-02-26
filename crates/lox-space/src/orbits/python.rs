@@ -129,14 +129,14 @@ fn propagate_dispatch<'py>(
         let interval = Interval::new(start.0, end.0);
         let traj = PyTrajectory(propagate_interval(interval)?);
         return match frame {
-            Some(frame) => Ok(Bound::new(py, traj.to_frame(frame, provider)?)?.into_any()),
+            Some(frame) => Ok(Bound::new(py, traj.to_frame_inner(frame, provider)?)?.into_any()),
             None => Ok(Bound::new(py, traj)?.into_any()),
         };
     }
     if let Ok(time) = steps.extract::<PyTime>() {
         let state = PyCartesian(state_at(time.0)?);
         return match frame {
-            Some(frame) => Ok(Bound::new(py, state.to_frame(frame, provider)?)?.into_any()),
+            Some(frame) => Ok(Bound::new(py, state.to_frame_inner(frame, provider)?)?.into_any()),
             None => Ok(Bound::new(py, state)?.into_any()),
         };
     }
@@ -144,7 +144,7 @@ fn propagate_dispatch<'py>(
         let states: Result<Vec<_>, _> = steps.into_iter().map(|s| state_at(s.0)).collect();
         let traj = PyTrajectory(DynTrajectory::new(states?));
         return match frame {
-            Some(frame) => Ok(Bound::new(py, traj.to_frame(frame, provider)?)?.into_any()),
+            Some(frame) => Ok(Bound::new(py, traj.to_frame_inner(frame, provider)?)?.into_any()),
             None => Ok(Bound::new(py, traj)?.into_any()),
         };
     }
@@ -253,11 +253,17 @@ impl PyCartesian {
         vx: Option<PyVelocity>,
         vy: Option<PyVelocity>,
         vz: Option<PyVelocity>,
-        origin: Option<PyOrigin>,
-        frame: Option<PyFrame>,
+        origin: Option<&Bound<'_, PyAny>>,
+        frame: Option<&Bound<'_, PyAny>>,
     ) -> PyResult<Self> {
-        let origin = origin.unwrap_or_default();
-        let frame = frame.unwrap_or_default();
+        let origin = origin
+            .map(PyOrigin::try_from)
+            .transpose()?
+            .unwrap_or_default();
+        let frame = frame
+            .map(PyFrame::try_from)
+            .transpose()?
+            .unwrap_or_default();
 
         let pos = if let Some(arr) = position {
             if arr.len() != 3 {
@@ -378,28 +384,11 @@ impl PyCartesian {
     #[pyo3(signature = (frame, provider=None))]
     fn to_frame(
         &self,
-        frame: PyFrame,
+        frame: &Bound<'_, PyAny>,
         provider: Option<&Bound<'_, PyEopProvider>>,
     ) -> PyResult<Self> {
-        let provider = provider.map(|p| &p.get().0);
-        let origin = self.0.reference_frame();
-        let target = frame.0;
-        let time = self.0.time();
-        let rot = match provider {
-            Some(provider) => provider
-                .try_rotation(origin, target, time)
-                .map_err(PyDynRotationError),
-            None => DefaultRotationProvider
-                .try_rotation(origin, target, time)
-                .map_err(PyDynRotationError),
-        }?;
-        let (r1, v1) = rot.rotate_state(self.0.position(), self.0.velocity());
-        Ok(PyCartesian(CartesianOrbit::new(
-            Cartesian::from_vecs(r1, v1),
-            self.0.time(),
-            self.0.origin(),
-            frame.0,
-        )))
+        let frame: PyFrame = frame.try_into()?;
+        self.to_frame_inner(frame, provider)
     }
 
     /// Transform this state to a different central body.
@@ -413,19 +402,9 @@ impl PyCartesian {
     ///
     /// Raises:
     ///     ValueError: If the transformation fails.
-    fn to_origin(&self, target: PyOrigin, ephemeris: &Bound<'_, PySpk>) -> PyResult<Self> {
-        let frame = self.reference_frame();
-        let s = if frame.0 != DynFrame::Icrf {
-            self.to_frame(PyFrame(DynFrame::Icrf), None)?
-        } else {
-            self.clone()
-        };
-        let spk = &ephemeris.borrow().0;
-        let mut s1 = Self(s.0.try_to_origin(target.0, spk).map_err(PyDafSpkError)?);
-        if frame.0 != DynFrame::Icrf {
-            s1 = s1.to_frame(frame, None)?
-        }
-        Ok(s1)
+    fn to_origin(&self, target: &Bound<'_, PyAny>, ephemeris: &Bound<'_, PySpk>) -> PyResult<Self> {
+        let target: PyOrigin = target.try_into()?;
+        self.to_origin_inner(target, ephemeris)
     }
 
     /// Convert this Cartesian state to Keplerian orbital elements.
@@ -502,6 +481,53 @@ impl PyCartesian {
     }
 }
 
+impl PyCartesian {
+    pub(crate) fn to_frame_inner(
+        &self,
+        frame: PyFrame,
+        provider: Option<&Bound<'_, PyEopProvider>>,
+    ) -> PyResult<Self> {
+        let provider = provider.map(|p| &p.get().0);
+        let origin = self.0.reference_frame();
+        let target = frame.0;
+        let time = self.0.time();
+        let rot = match provider {
+            Some(provider) => provider
+                .try_rotation(origin, target, time)
+                .map_err(PyDynRotationError),
+            None => DefaultRotationProvider
+                .try_rotation(origin, target, time)
+                .map_err(PyDynRotationError),
+        }?;
+        let (r1, v1) = rot.rotate_state(self.0.position(), self.0.velocity());
+        Ok(PyCartesian(CartesianOrbit::new(
+            Cartesian::from_vecs(r1, v1),
+            self.0.time(),
+            self.0.origin(),
+            frame.0,
+        )))
+    }
+
+    pub(crate) fn to_origin_inner(
+        &self,
+        target: PyOrigin,
+        ephemeris: &Bound<'_, PySpk>,
+    ) -> PyResult<Self> {
+        let frame = self.reference_frame();
+        let s = if frame.0 != DynFrame::Icrf {
+            self.to_frame_inner(PyFrame(DynFrame::Icrf), None)?
+        } else {
+            self.clone()
+        };
+        let spk = &ephemeris.borrow().0;
+        let mut s1 = Self(s.0.try_to_origin(target.0, spk).map_err(PyDafSpkError)?);
+        if frame.0 != DynFrame::Icrf {
+            s1 = s1.to_frame_inner(frame, None)?
+        }
+        Ok(s1)
+    }
+}
+
 /// Represents an orbit using Keplerian (classical) orbital elements.
 ///
 /// Keplerian elements describe an orbit using six parameters that define
@@ -541,9 +567,13 @@ impl PyKeplerian {
         longitude_of_ascending_node: PyAngle,
         argument_of_periapsis: PyAngle,
         true_anomaly: PyAngle,
-        origin: Option<PyOrigin>,
+        origin: Option<&Bound<'_, PyAny>>,
     ) -> PyResult<Self> {
-        let origin = origin.map(|origin| origin.0).unwrap_or_default();
+        let origin = origin
+            .map(PyOrigin::try_from)
+            .transpose()?
+            .map(|o| o.0)
+            .unwrap_or_default();
         origin
             .try_gravitational_parameter()
             .map_err(PyUndefinedOriginPropertyError)?;
@@ -700,11 +730,17 @@ impl PyTrajectory {
         _cls: &Bound<'_, PyType>,
         start_time: PyTime,
         array: &Bound<'_, PyArray2<f64>>,
-        origin: Option<PyOrigin>,
-        frame: Option<PyFrame>,
+        origin: Option<&Bound<'_, PyAny>>,
+        frame: Option<&Bound<'_, PyAny>>,
     ) -> PyResult<Self> {
-        let origin = origin.unwrap_or_default();
-        let frame = frame.unwrap_or_default();
+        let origin = origin
+            .map(PyOrigin::try_from)
+            .transpose()?
+            .unwrap_or_default();
+        let frame = frame
+            .map(PyFrame::try_from)
+            .transpose()?
+            .unwrap_or_default();
         let array = array.to_owned_array();
         if array.ncols() != 7 {
             return Err(PyValueError::new_err("invalid shape"));
@@ -833,14 +869,11 @@ impl PyTrajectory {
     #[pyo3(signature = (frame, provider=None))]
     fn to_frame(
         &self,
-        frame: PyFrame,
+        frame: &Bound<'_, PyAny>,
         provider: Option<&Bound<'_, PyEopProvider>>,
     ) -> PyResult<Self> {
-        let mut states: Vec<DynCartesianOrbit> = Vec::with_capacity(self.0.states().len());
-        for s in self.0.states() {
-            states.push(PyCartesian(s).to_frame(frame.clone(), provider)?.0);
-        }
-        Ok(PyTrajectory(DynTrajectory::new(states)))
+        let frame: PyFrame = frame.try_into()?;
+        self.to_frame_inner(frame, provider)
     }
 
     /// Transform all states in the trajectory to a different central body.
@@ -851,10 +884,11 @@ impl PyTrajectory {
     ///
     /// Returns:
     ///     A new Trajectory relative to the target origin.
-    fn to_origin(&self, target: PyOrigin, ephemeris: &Bound<'_, PySpk>) -> PyResult<Self> {
+    fn to_origin(&self, target: &Bound<'_, PyAny>, ephemeris: &Bound<'_, PySpk>) -> PyResult<Self> {
+        let target: PyOrigin = target.try_into()?;
         let mut states: Vec<DynCartesianOrbit> = Vec::with_capacity(self.states().len());
         for s in self.states() {
-            states.push(s.to_origin(target.clone(), ephemeris)?.0);
+            states.push(s.to_origin_inner(target.clone(), ephemeris)?.0);
         }
         Ok(Self(DynTrajectory::new(states)))
     }
@@ -866,6 +900,20 @@ impl PyTrajectory {
             self.origin().__repr__(),
             self.reference_frame().__repr__(),
         )
+    }
+}
+
+impl PyTrajectory {
+    pub(crate) fn to_frame_inner(
+        &self,
+        frame: PyFrame,
+        provider: Option<&Bound<'_, PyEopProvider>>,
+    ) -> PyResult<Self> {
+        let mut states: Vec<DynCartesianOrbit> = Vec::with_capacity(self.0.states().len());
+        for s in self.0.states() {
+            states.push(PyCartesian(s).to_frame_inner(frame.clone(), provider)?.0);
+        }
+        Ok(PyTrajectory(DynTrajectory::new(states)))
     }
 }
 
@@ -1019,9 +1067,10 @@ impl PyVallado {
         py: Python<'py>,
         steps: &Bound<'py, PyAny>,
         end: Option<PyTime>,
-        frame: Option<PyFrame>,
+        frame: Option<&Bound<'_, PyAny>>,
         provider: Option<&Bound<'_, PyEopProvider>>,
     ) -> PyResult<Bound<'py, PyAny>> {
+        let frame = frame.map(PyFrame::try_from).transpose()?;
         propagate_dispatch(
             py,
             steps,
@@ -1093,9 +1142,10 @@ impl PyJ2Propagator {
         py: Python<'py>,
         steps: &Bound<'py, PyAny>,
         end: Option<PyTime>,
-        frame: Option<PyFrame>,
+        frame: Option<&Bound<'_, PyAny>>,
         provider: Option<&Bound<'_, PyEopProvider>>,
     ) -> PyResult<Bound<'py, PyAny>> {
+        let frame = frame.map(PyFrame::try_from).transpose()?;
         propagate_dispatch(
             py,
             steps,
@@ -1131,11 +1181,12 @@ pub struct PyGroundLocation(pub DynGroundLocation);
 impl PyGroundLocation {
     #[new]
     fn new(
-        origin: PyOrigin,
+        origin: &Bound<'_, PyAny>,
         longitude: PyAngle,
         latitude: PyAngle,
         altitude: PyDistance,
     ) -> PyResult<Self> {
+        let origin: PyOrigin = origin.try_into()?;
         let coordinates = LonLatAlt::builder()
             .longitude(longitude.0)
             .latitude(latitude.0)
@@ -1161,10 +1212,13 @@ impl PyGroundLocation {
         &self,
         state: PyCartesian,
         provider: Option<&Bound<'_, PyEopProvider>>,
-        frame: Option<PyFrame>,
+        frame: Option<&Bound<'_, PyAny>>,
     ) -> PyResult<PyObservables> {
-        let frame = frame.unwrap_or(PyFrame(DynFrame::Iau(state.0.origin())));
-        let state = state.to_frame(frame, provider)?;
+        let frame = frame
+            .map(PyFrame::try_from)
+            .transpose()?
+            .unwrap_or(PyFrame(DynFrame::Iau(state.0.origin())));
+        let state = state.to_frame_inner(frame, provider)?;
         let rot = self.0.rotation_to_topocentric();
         let position = rot * (state.0.position() - self.0.body_fixed_position());
         let velocity = rot * state.0.velocity();
@@ -1270,9 +1324,10 @@ impl PyGroundPropagator {
         py: Python<'py>,
         steps: &Bound<'py, PyAny>,
         end: Option<PyTime>,
-        frame: Option<PyFrame>,
+        frame: Option<&Bound<'_, PyAny>>,
         provider: Option<&Bound<'_, PyEopProvider>>,
     ) -> PyResult<Bound<'py, PyAny>> {
+        let frame = frame.map(PyFrame::try_from).transpose()?;
         propagate_dispatch(
             py,
             steps,
@@ -1367,9 +1422,10 @@ impl PySgp4 {
         py: Python<'py>,
         steps: &Bound<'py, PyAny>,
         end: Option<PyTime>,
-        frame: Option<PyFrame>,
+        frame: Option<&Bound<'_, PyAny>>,
         provider: Option<&Bound<'_, PyEopProvider>>,
     ) -> PyResult<Bound<'py, PyAny>> {
+        let frame = frame.map(PyFrame::try_from).transpose()?;
         let eop = provider.map(|p| &p.get().0);
         propagate_dispatch(
             py,
@@ -1502,23 +1558,24 @@ impl PyVisibilityAnalysis {
     fn new(
         ground_assets: Vec<PyGroundAsset>,
         space_assets: Vec<PySpaceAsset>,
-        occulting_bodies: Option<Vec<PyOrigin>>,
+        occulting_bodies: Option<Vec<Bound<'_, PyAny>>>,
         step: Option<PyTimeDelta>,
         min_pass_duration: Option<PyTimeDelta>,
-    ) -> Self {
-        Self {
+    ) -> PyResult<Self> {
+        let occulting_bodies: Vec<DynOrigin> = occulting_bodies
+            .unwrap_or_default()
+            .iter()
+            .map(|b| Ok(PyOrigin::try_from(b)?.0))
+            .collect::<PyResult<_>>()?;
+        Ok(Self {
             ground_assets: ground_assets.into_iter().map(|g| g.0).collect(),
             space_assets: space_assets.into_iter().map(|s| s.0).collect(),
-            occulting_bodies: occulting_bodies
-                .unwrap_or_default()
-                .into_iter()
-                .map(|b| b.0)
-                .collect(),
+            occulting_bodies,
             step: step
                 .map(|s| s.0)
                 .unwrap_or_else(|| TimeDelta::from_seconds_f64(60.0)),
             min_pass_duration: min_pass_duration.map(|d| d.0),
-        }
+        })
     }
 
     /// Compute visibility intervals for all (ground, space) pairs.
