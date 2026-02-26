@@ -106,6 +106,10 @@ where
         self
     }
 
+    pub fn initial_state(&self) -> &CartesianOrbit<T, O, R> {
+        &self.initial_state
+    }
+
     pub fn origin(&self) -> O {
         self.initial_state.origin()
     }

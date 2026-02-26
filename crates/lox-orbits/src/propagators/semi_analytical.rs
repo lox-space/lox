@@ -91,9 +91,17 @@ where
         self
     }
 
+    pub fn max_iter(&self) -> i32 {
+        self.max_iter
+    }
+
     pub fn with_step(mut self, step: TimeDelta) -> Self {
         self.step = Some(step);
         self
+    }
+
+    pub fn initial_state(&self) -> &CartesianOrbit<T, O, R> {
+        &self.initial_state
     }
 
     pub fn origin(&self) -> O {

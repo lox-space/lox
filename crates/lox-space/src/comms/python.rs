@@ -1086,9 +1086,67 @@ impl PyCommunicationSystem {
     }
 
     fn __repr__(&self) -> String {
-        let has_tx = self.0.transmitter.is_some();
-        let has_rx = self.0.receiver.is_some();
-        format!("CommunicationSystem(has_tx={has_tx}, has_rx={has_rx})")
+        let antenna_repr = match &self.0.antenna {
+            Antenna::Simple(a) => format!(
+                "SimpleAntenna(gain={}, beamwidth={})",
+                PyDecibel(a.gain).__repr__(),
+                PyAngle(a.beamwidth).__repr__(),
+            ),
+            Antenna::Complex(a) => {
+                let pattern_repr = match &a.pattern {
+                    AntennaPattern::Parabolic(p) => format!(
+                        "ParabolicPattern(diameter={}, efficiency={})",
+                        PyDistance(p.diameter).__repr__(),
+                        repr_f64(p.efficiency),
+                    ),
+                    AntennaPattern::Gaussian(p) => format!(
+                        "GaussianPattern(diameter={}, efficiency={})",
+                        PyDistance(p.diameter).__repr__(),
+                        repr_f64(p.efficiency),
+                    ),
+                    AntennaPattern::Dipole(p) => {
+                        format!("DipolePattern(length={})", PyDistance(p.length).__repr__())
+                    }
+                };
+                let b = a.boresight;
+                format!(
+                    "ComplexAntenna(pattern={pattern_repr}, boresight=[{}, {}, {}])",
+                    repr_f64(b.x),
+                    repr_f64(b.y),
+                    repr_f64(b.z),
+                )
+            }
+        };
+        let rx_repr = match &self.0.receiver {
+            Some(Receiver::Simple(r)) => format!(
+                ", receiver=SimpleReceiver(frequency={}, system_noise_temperature={})",
+                PyFrequency(r.frequency).__repr__(),
+                PyTemperature::new(r.system_noise_temperature).__repr__(),
+            ),
+            Some(Receiver::Complex(r)) => format!(
+                ", receiver=ComplexReceiver(frequency={}, antenna_noise_temperature={}, lna_gain={}, lna_noise_figure={}, noise_figure={}, loss={}, demodulator_loss={}, implementation_loss={})",
+                PyFrequency(r.frequency).__repr__(),
+                PyTemperature::new(r.antenna_noise_temperature).__repr__(),
+                PyDecibel(r.lna_gain).__repr__(),
+                PyDecibel(r.lna_noise_figure).__repr__(),
+                PyDecibel(r.noise_figure).__repr__(),
+                PyDecibel(r.loss).__repr__(),
+                PyDecibel(r.demodulator_loss).__repr__(),
+                PyDecibel(r.implementation_loss).__repr__(),
+            ),
+            None => String::new(),
+        };
+        let tx_repr = match &self.0.transmitter {
+            Some(t) => format!(
+                ", transmitter=Transmitter(frequency={}, power={}, line_loss={}, output_back_off={})",
+                PyFrequency(t.frequency).__repr__(),
+                PyPower::new(t.power_w).__repr__(),
+                PyDecibel(t.line_loss).__repr__(),
+                PyDecibel(t.output_back_off).__repr__(),
+            ),
+            None => String::new(),
+        };
+        format!("CommunicationSystem(antenna={antenna_repr}{rx_repr}{tx_repr})")
     }
 }
 

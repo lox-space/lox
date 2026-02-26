@@ -73,7 +73,7 @@ impl PyOrigin {
         ))
     }
 
-    fn __repr__(&self) -> String {
+    pub fn __repr__(&self) -> String {
         format!("Origin(\"{}\")", self.name())
     }
 
