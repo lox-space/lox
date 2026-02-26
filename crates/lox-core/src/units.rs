@@ -1332,4 +1332,143 @@ mod tests {
         let d = 3.0.db();
         assert_eq!(format!("{:.1}", d), "3.0 dB");
     }
+
+    // --- Temperature ---
+
+    #[test]
+    fn test_temperature_new() {
+        let t = Temperature::new(290.0);
+        assert_eq!(t.as_f64(), 290.0);
+    }
+
+    #[test]
+    fn test_temperature_kelvin() {
+        let t = Temperature::kelvin(300.0);
+        assert_eq!(t.to_kelvin(), 300.0);
+    }
+
+    #[test]
+    fn test_temperature_display() {
+        let t = Temperature::new(290.0);
+        assert_eq!(format!("{}", t), "290 K");
+    }
+
+    #[test]
+    fn test_temperature_arithmetic() {
+        let a = Temperature::new(100.0);
+        let b = Temperature::new(200.0);
+        assert_eq!((a + b).as_f64(), 300.0);
+        assert_eq!((b - a).as_f64(), 100.0);
+        assert_eq!((-a).as_f64(), -100.0);
+        assert_eq!((2.0 * a).as_f64(), 200.0);
+    }
+
+    // --- Power ---
+
+    #[test]
+    fn test_power_watts() {
+        let p = Power::watts(100.0);
+        assert_eq!(p.to_watts(), 100.0);
+    }
+
+    #[test]
+    fn test_power_kilowatts() {
+        let p = Power::kilowatts(1.0);
+        assert_eq!(p.to_watts(), 1000.0);
+        assert_eq!(p.to_kilowatts(), 1.0);
+    }
+
+    #[test]
+    fn test_power_dbw() {
+        let p = Power::watts(100.0);
+        assert_approx_eq!(p.to_dbw(), 20.0, rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_power_display() {
+        let p = Power::watts(100.0);
+        assert_eq!(format!("{}", p), "100 W");
+    }
+
+    #[test]
+    fn test_power_arithmetic() {
+        let a = Power::watts(50.0);
+        let b = Power::watts(150.0);
+        assert_eq!((a + b).as_f64(), 200.0);
+        assert_eq!((b - a).as_f64(), 100.0);
+        assert_eq!((-a).as_f64(), -50.0);
+    }
+
+    // --- DataRate ---
+
+    #[test]
+    fn test_data_rate_bps() {
+        let dr = DataRate::bits_per_second(1000.0);
+        assert_eq!(dr.to_bits_per_second(), 1000.0);
+        assert_eq!(dr.to_kilobits_per_second(), 1.0);
+        assert_eq!(dr.to_megabits_per_second(), 0.001);
+    }
+
+    #[test]
+    fn test_data_rate_kbps() {
+        let dr = DataRate::kilobits_per_second(1.0);
+        assert_eq!(dr.to_bits_per_second(), 1000.0);
+    }
+
+    #[test]
+    fn test_data_rate_mbps() {
+        let dr = DataRate::megabits_per_second(1.0);
+        assert_eq!(dr.to_bits_per_second(), 1_000_000.0);
+    }
+
+    #[test]
+    fn test_data_rate_display() {
+        let dr = DataRate::kilobits_per_second(1.0);
+        assert_eq!(format!("{}", dr), "1 kbps");
+    }
+
+    #[test]
+    fn test_data_rate_arithmetic() {
+        let a = DataRate::new(100.0);
+        let b = DataRate::new(200.0);
+        assert_eq!((a + b).as_f64(), 300.0);
+        assert_eq!((b - a).as_f64(), 100.0);
+        assert_eq!((-a).as_f64(), -100.0);
+    }
+
+    // --- AngularRate ---
+
+    #[test]
+    fn test_angular_rate_rps() {
+        let ar = AngularRate::radians_per_second(1.0);
+        assert_eq!(ar.to_radians_per_second(), 1.0);
+        assert_approx_eq!(ar.to_degrees_per_second(), 57.29577951308232, rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_angular_rate_dps() {
+        let ar = AngularRate::degrees_per_second(180.0);
+        assert_approx_eq!(
+            ar.to_radians_per_second(),
+            core::f64::consts::PI,
+            rtol <= 1e-10
+        );
+    }
+
+    #[test]
+    fn test_angular_rate_display() {
+        let ar = AngularRate::radians_per_second(1.0);
+        let s = format!("{}", ar);
+        assert!(s.contains("deg/s"));
+    }
+
+    #[test]
+    fn test_angular_rate_arithmetic() {
+        let a = AngularRate::new(1.0);
+        let b = AngularRate::new(2.0);
+        assert_eq!((a + b).as_f64(), 3.0);
+        assert_eq!((b - a).as_f64(), 1.0);
+        assert_eq!((-a).as_f64(), -1.0);
+        assert_eq!((3.0 * a).as_f64(), 3.0);
+    }
 }

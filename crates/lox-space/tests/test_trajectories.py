@@ -73,3 +73,64 @@ def test_interpolation(orbit, trajectory):
     assert float(orbit.true_anomaly()) == pytest.approx(
         float(k1.true_anomaly()), rel=1e-8
     )
+
+
+def test_keplerian_repr(orbit):
+    r = repr(orbit)
+    assert r.startswith("Keplerian(")
+    assert "Distance(" in r
+    assert "Angle(" in r
+    assert "Origin(" in r
+
+
+def test_keplerian_returns_unit_types(orbit):
+    assert isinstance(orbit.semi_major_axis(), lox.Distance)
+    assert isinstance(orbit.inclination(), lox.Angle)
+    assert isinstance(orbit.longitude_of_ascending_node(), lox.Angle)
+    assert isinstance(orbit.argument_of_periapsis(), lox.Angle)
+    assert isinstance(orbit.true_anomaly(), lox.Angle)
+
+
+def test_trajectory_repr(trajectory):
+    r = repr(trajectory)
+    assert r.startswith("Trajectory(")
+    assert "states" in r
+    assert "Origin(" in r
+    assert "Frame(" in r
+
+
+def test_event_constructor():
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    event = lox.Event(time, "up")
+    assert event.crossing() == "up"
+    r = repr(event)
+    assert r.startswith("Event(")
+
+
+def test_event_down():
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    event = lox.Event(time, "down")
+    assert event.crossing() == "down"
+
+
+def test_window_constructor():
+    t1 = lox.UTC(2024, 1, 1).to_scale("TDB")
+    t2 = lox.UTC(2024, 1, 2).to_scale("TDB")
+    window = lox.Window(t1, t2)
+    r = repr(window)
+    assert r.startswith("Window(")
+
+
+def test_keplerian_with_string_origin():
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    k = lox.Keplerian(
+        time,
+        24464.560 * lox.km,
+        0.7311,
+        0.122138 * lox.rad,
+        1.00681 * lox.rad,
+        3.10686 * lox.rad,
+        0.44369564302687126 * lox.rad,
+        origin="Earth",
+    )
+    assert k.origin().name() == "Earth"

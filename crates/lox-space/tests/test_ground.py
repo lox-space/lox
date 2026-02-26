@@ -33,6 +33,31 @@ def test_observables():
     assert float(observables.elevation()) == pytest.approx(expected_elevation, rel=1e-2)
 
 
+def test_ground_location_repr():
+    location = lox.GroundLocation(
+        lox.Origin("Earth"), -4 * lox.deg, 41 * lox.deg, 0 * lox.km
+    )
+    r = repr(location)
+    assert r.startswith("GroundLocation(")
+    assert "Origin(" in r
+    assert "Angle(" in r
+    assert "Distance(" in r
+
+
+def test_ground_location_origin():
+    location = lox.GroundLocation(
+        lox.Origin("Earth"), 0 * lox.deg, 0 * lox.deg, 0 * lox.km
+    )
+    assert location.origin().name() == "Earth"
+
+
+def test_ground_location_string_origin():
+    location = lox.GroundLocation(
+        "Earth", 0 * lox.deg, 0 * lox.deg, 0 * lox.km
+    )
+    assert location.origin().name() == "Earth"
+
+
 def test_elevation_mask():
     mask = lox.ElevationMask.variable(
         np.array([-np.pi, 0.0, np.pi]), np.array([0.0, 5.0, 0.0])

@@ -1083,7 +1083,7 @@ impl PyVallado {
     }
 
     fn __repr__(&self) -> String {
-        let state = PyCartesian(self.0.initial_state().clone());
+        let state = PyCartesian(*self.0.initial_state());
         let max_iter = self.0.max_iter();
         format!("Vallado({}, max_iter={})", state.__repr__(), max_iter,)
     }
@@ -1158,7 +1158,7 @@ impl PyJ2Propagator {
     }
 
     fn __repr__(&self) -> String {
-        let state = PyCartesian(self.0.initial_state().clone());
+        let state = PyCartesian(*self.0.initial_state());
         format!("J2({})", state.__repr__())
     }
 }
