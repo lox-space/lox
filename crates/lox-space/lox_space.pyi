@@ -101,20 +101,139 @@ ms: Velocity
 kms: Velocity
 """1 km/s"""
 
-class Ensemble:
-    """Collection of named trajectories for batch visibility analysis.
+class GroundAsset:
+    """A named ground station for visibility analysis.
+
+    Wraps a ground location and elevation mask with an identifier.
 
     Args:
-        ensemble: Dictionary mapping spacecraft names to their trajectories.
+        id: Unique identifier for this ground asset.
+        location: Ground station location.
+        mask: Elevation mask defining minimum elevation constraints.
 
     Examples:
-        >>> ensemble = lox.Ensemble({
-        ...     "SC1": trajectory1,
-        ...     "SC2": trajectory2,
-        ... })
-        >>> results = lox.visibility_all(times, ground_stations, ensemble, spk)
+        >>> gs = lox.GroundAsset("ESOC", ground_location, elevation_mask)
     """
-    def __new__(cls, ensemble: dict[str, Trajectory]) -> Self: ...
+    def __new__(cls, id: str, location: GroundLocation, mask: ElevationMask) -> Self: ...
+    def id(self) -> str:
+        """Return the asset identifier."""
+        ...
+    def location(self) -> GroundLocation:
+        """Return the ground location."""
+        ...
+    def mask(self) -> ElevationMask:
+        """Return the elevation mask."""
+        ...
+
+class SpaceAsset:
+    """A named spacecraft for visibility analysis.
+
+    Wraps a trajectory with an identifier.
+
+    Args:
+        id: Unique identifier for this space asset.
+        trajectory: Spacecraft trajectory.
+
+    Examples:
+        >>> sc = lox.SpaceAsset("ISS", trajectory)
+    """
+    def __new__(cls, id: str, trajectory: Trajectory) -> Self: ...
+    def id(self) -> str:
+        """Return the asset identifier."""
+        ...
+    def trajectory(self) -> Trajectory:
+        """Return the spacecraft trajectory."""
+        ...
+
+class VisibilityAnalysis:
+    """Computes ground-station-to-spacecraft visibility.
+
+    Args:
+        ground_assets: List of GroundAsset objects.
+        space_assets: List of SpaceAsset objects.
+        occulting_bodies: Optional list of bodies for line-of-sight checking.
+        step: Optional time step in seconds for event detection (default: 60).
+        min_pass_duration: Optional minimum pass duration in seconds. Passes
+            shorter than this value may be missed. Enables two-level stepping
+            for faster detection.
+
+    Examples:
+        >>> analysis = lox.VisibilityAnalysis(
+        ...     [ground_asset],
+        ...     [space_asset],
+        ...     step=60.0,
+        ... )
+        >>> results = analysis.compute(start, end, spk)
+    """
+    def __new__(
+        cls,
+        ground_assets: list[GroundAsset],
+        space_assets: list[SpaceAsset],
+        occulting_bodies: list[Origin] | None = None,
+        step: float | None = None,
+        min_pass_duration: float | None = None,
+    ) -> Self: ...
+    def compute(self, start: Time, end: Time, ephemeris: SPK) -> VisibilityResults:
+        """Compute visibility intervals for all (ground, space) pairs.
+
+        Args:
+            start: Start time of the analysis period.
+            end: End time of the analysis period.
+            ephemeris: SPK ephemeris data.
+
+        Returns:
+            VisibilityResults containing intervals for all pairs.
+        """
+        ...
+
+class VisibilityResults:
+    """Results of a visibility analysis.
+
+    Provides access to visibility intervals and passes. Intervals (time
+    windows) are computed eagerly; observables-rich Pass objects are
+    computed on demand.
+    """
+    def intervals(self, ground_id: str, space_id: str) -> list[Window]:
+        """Return visibility windows for a specific (ground, space) pair.
+
+        Args:
+            ground_id: Ground asset identifier.
+            space_id: Space asset identifier.
+
+        Returns:
+            List of Window objects, or empty list if pair not found.
+        """
+        ...
+    def passes(self, ground_id: str, space_id: str) -> list[Pass]:
+        """Compute passes with observables for a specific (ground, space) pair.
+
+        This is more expensive than ``intervals()`` as it computes azimuth,
+        elevation, range, and range rate for each time step.
+
+        Args:
+            ground_id: Ground asset identifier.
+            space_id: Space asset identifier.
+
+        Returns:
+            List of Pass objects, or empty list if pair not found.
+        """
+        ...
+    def all_passes(self) -> dict[tuple[str, str], list[Pass]]:
+        """Compute passes for all pairs.
+
+        Returns:
+            Dictionary mapping (ground_id, space_id) to list of Pass objects.
+        """
+        ...
+    def pair_ids(self) -> list[tuple[str, str]]:
+        """Return all (ground_id, space_id) pair identifiers."""
+        ...
+    def num_pairs(self) -> int:
+        """Return the total number of pairs."""
+        ...
+    def total_intervals(self) -> int:
+        """Return the total number of visibility intervals across all pairs."""
+        ...
 
 class ElevationMask:
     """Defines elevation constraints for visibility analysis.
@@ -163,14 +282,15 @@ class ElevationMask:
         ...
 
 def find_events(
-    func: Callable[[float], float], start: Time, times: list[float]
+    func: Callable[[Time], float], start: Time, end: Time, step: TimeDelta
 ) -> list[Event]:
     """Find events where a function crosses zero.
 
     Args:
-        func: Function that takes a float (seconds from start) and returns a float.
-        start: Reference time (epoch).
-        times: Array of time offsets in seconds from start.
+        func: Function that takes a Time and returns a float.
+        start: Start time of the analysis period.
+        end: End time of the analysis period.
+        step: Step size for sampling the function.
 
     Returns:
         List of Event objects at the detected zero-crossings.
@@ -178,67 +298,21 @@ def find_events(
     ...
 
 def find_windows(
-    func: Callable[[float], float], start: Time, end: Time, times: list[float]
+    func: Callable[[Time], float], start: Time, end: Time, step: TimeDelta
 ) -> list[Window]:
     """Find time windows where a function is positive.
 
     Args:
-        func: Function that takes a float (seconds from start) and returns a float.
+        func: Function that takes a Time and returns a float.
         start: Start time of the analysis period.
         end: End time of the analysis period.
-        times: Array of time offsets in seconds from start.
+        step: Step size for sampling the function.
 
     Returns:
         List of Window objects for intervals where the function is positive.
     """
     ...
 
-def visibility(
-    times: list[Time],
-    gs: GroundLocation,
-    mask: ElevationMask,
-    sc: Trajectory,
-    ephemeris: SPK,
-    bodies: list[Origin] | None = None,
-) -> list[Pass]:
-    """Compute visibility passes between a ground station and spacecraft.
-
-    Args:
-        times: List of Time objects defining the analysis period.
-        gs: Ground station location.
-        mask: Elevation mask defining minimum elevation constraints.
-        sc: Spacecraft trajectory.
-        ephemeris: SPK ephemeris data.
-        bodies: Optional list of bodies for occultation checking.
-
-    Returns:
-        List of Pass objects containing visibility windows and observables.
-
-    Raises:
-        ValueError: If ground station and spacecraft have different origins.
-    """
-    ...
-
-def visibility_all(
-    times: list[Time],
-    ground_stations: dict[str, tuple[GroundLocation, ElevationMask]],
-    spacecraft: Ensemble,
-    ephemeris: SPK,
-    bodies: list[Origin] | None = None,
-) -> dict[str, dict[str, list[Pass]]]:
-    """Compute visibility for multiple spacecraft and ground stations.
-
-    Args:
-        times: List of Time objects defining the analysis period.
-        ground_stations: Dictionary mapping station names to (location, mask) tuples.
-        spacecraft: Ensemble of spacecraft trajectories.
-        ephemeris: SPK ephemeris data.
-        bodies: Optional list of bodies for occultation checking.
-
-    Returns:
-        Nested dictionary: {spacecraft_name: {station_name: [passes]}}.
-    """
-    ...
 
 class Origin:
     """Represents a celestial body (planet, moon, barycenter, etc.).
@@ -522,10 +596,10 @@ class Trajectory:
     def states(self) -> list[State]:
         """Return the list of states in this trajectory."""
         ...
-    def find_events(self, func: Callable[[State], float]) -> list[Event]:
+    def find_events(self, func: Callable[[State], float], step: TimeDelta) -> list[Event]:
         """Find events where a function crosses zero."""
         ...
-    def find_windows(self, func: Callable[[State], float]) -> list[Window]:
+    def find_windows(self, func: Callable[[State], float], step: TimeDelta) -> list[Window]:
         """Find time windows where a function is positive."""
         ...
     def interpolate(self, time: Time | TimeDelta) -> State:

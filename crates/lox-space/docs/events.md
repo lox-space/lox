@@ -18,8 +18,9 @@ indicates the direction:
 
 ## Visibility Analysis
 
-The `visibility` function computes visibility windows between a ground station
-and a spacecraft, accounting for elevation constraints.
+The `VisibilityAnalysis` class computes visibility windows between ground
+stations and spacecraft, accounting for elevation constraints and optional
+body occultation.
 
 ## Quick Example
 
@@ -32,25 +33,26 @@ def altitude(state):
     r = (state.position()[0]**2 + state.position()[1]**2 + state.position()[2]**2)**0.5
     return r - 6378.0  # km above Earth radius
 
-events = trajectory.find_events(altitude)
+step = lox.TimeDelta(10.0)  # 10-second step size
+events = trajectory.find_events(altitude, step)
 for event in events:
     print(f"{event.crossing()} crossing at {event.time()}")
 
 # Find time windows
-windows = trajectory.find_windows(altitude)
+windows = trajectory.find_windows(altitude, step)
 for w in windows:
     print(f"Window: {w.start()} to {w.end()}, duration: {w.duration()}")
 
 # Visibility analysis
-passes = lox.visibility(
-    times=times,
-    gs=ground_station,
-    mask=elevation_mask,
-    sc=trajectory,
-    ephemeris=spk,
-)
+gs = lox.GroundAsset("ESOC", ground_location, elevation_mask)
+sc = lox.SpaceAsset("ISS", trajectory)
+analysis = lox.VisibilityAnalysis([gs], [sc], step=60.0)
+results = analysis.compute(start, end, spk)
 
-for p in passes:
+for w in results.intervals("ESOC", "ISS"):
+    print(f"Window: {w.start()} to {w.end()}")
+
+for p in results.passes("ESOC", "ISS"):
     print(f"Pass: {p.window().start()} to {p.window().end()}")
 ```
 
@@ -80,12 +82,24 @@ for p in passes:
 
 ---
 
-::: lox_space.visibility
+::: lox_space.GroundAsset
     options:
       show_source: false
 
 ---
 
-::: lox_space.visibility_all
+::: lox_space.SpaceAsset
+    options:
+      show_source: false
+
+---
+
+::: lox_space.VisibilityAnalysis
+    options:
+      show_source: false
+
+---
+
+::: lox_space.VisibilityResults
     options:
       show_source: false
