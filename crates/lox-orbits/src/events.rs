@@ -53,6 +53,10 @@ pub struct Event<T: TimeScale> {
 }
 
 impl<T: TimeScale> Event<T> {
+    pub fn new(time: Time<T>, crossing: ZeroCrossing) -> Self {
+        Self { crossing, time }
+    }
+
     pub fn time(&self) -> Time<T>
     where
         T: Copy,

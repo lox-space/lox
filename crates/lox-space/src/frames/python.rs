@@ -84,4 +84,8 @@ impl PyFrame {
     fn abbreviation(&self) -> String {
         self.0.abbreviation()
     }
+
+    pub fn __repr__(&self) -> String {
+        format!("Frame(\"{}\")", self.0.abbreviation())
+    }
 }

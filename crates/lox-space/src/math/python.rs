@@ -55,4 +55,13 @@ impl PySeries {
     fn interpolate(&self, xp: f64) -> f64 {
         self.0.interpolate(xp)
     }
+
+    fn __repr__(&self) -> String {
+        let x = self.0.x();
+        let n = x.len();
+        if n == 0 {
+            return "Series([], [])".to_string();
+        }
+        format!("Series([{}, ..., {}], [...], {n} points)", x[0], x[n - 1],)
+    }
 }

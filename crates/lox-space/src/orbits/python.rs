@@ -15,7 +15,7 @@ use crate::orbits::analysis::{
     VisibilityResults,
 };
 use crate::orbits::assets::{AssetId, GroundAsset, SpaceAsset};
-use crate::orbits::events::{DetectError, Event};
+use crate::orbits::events::{DetectError, Event, ZeroCrossing};
 use crate::orbits::ground::{
     DynGroundLocation, DynGroundPropagator, GroundPropagatorError, Observables,
 };
@@ -49,6 +49,16 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::{PyList, PyType};
 use sgp4::Elements;
+
+/// Formats an f64 as a valid Python float literal (always includes a decimal point).
+fn repr_f64(v: f64) -> String {
+    let s = v.to_string();
+    if v.is_finite() && !s.contains('.') {
+        format!("{s}.0")
+    } else {
+        s
+    }
+}
 
 struct PyTrajectoryTransformationError(TrajectoryTransformationError);
 
@@ -473,6 +483,23 @@ impl PyCartesian {
                 .map_err(|err| PyValueError::new_err(err.to_string()))?,
         ))
     }
+
+    fn __repr__(&self) -> String {
+        let pos = self.0.position();
+        let vel = self.0.velocity();
+        format!(
+            "Cartesian({}, [{}, {}, {}], [{}, {}, {}], origin={}, frame={})",
+            self.time().__repr__(),
+            repr_f64(pos.x),
+            repr_f64(pos.y),
+            repr_f64(pos.z),
+            repr_f64(vel.x),
+            repr_f64(vel.y),
+            repr_f64(vel.z),
+            self.origin().__repr__(),
+            self.reference_frame().__repr__(),
+        )
+    }
 }
 
 /// Represents an orbit using Keplerian (classical) orbital elements.
@@ -607,6 +634,20 @@ impl PyKeplerian {
             .orbital_period()
             .map(PyTimeDelta)
             .ok_or_else(|| PyValueError::new_err("orbital period is not defined for this orbit"))
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "Keplerian({}, {}, {}, {}, {}, {}, {}, origin={})",
+            self.time().__repr__(),
+            self.semi_major_axis().__repr__(),
+            repr_f64(self.eccentricity()),
+            self.inclination().__repr__(),
+            self.longitude_of_ascending_node().__repr__(),
+            self.argument_of_periapsis().__repr__(),
+            self.true_anomaly().__repr__(),
+            self.origin().__repr__(),
+        )
     }
 }
 
@@ -817,6 +858,15 @@ impl PyTrajectory {
         }
         Ok(Self(DynTrajectory::new(states)))
     }
+
+    fn __repr__(&self) -> String {
+        let n = self.0.states().len();
+        format!(
+            "Trajectory({n} states, origin={}, frame={})",
+            self.origin().__repr__(),
+            self.reference_frame().__repr__(),
+        )
+    }
 }
 
 /// Represents a detected event (zero-crossing of a function).
@@ -824,14 +874,28 @@ impl PyTrajectory {
 /// Events are detected when a monitored function crosses zero during
 /// trajectory analysis. The crossing direction indicates whether the
 /// function went from negative to positive ("up") or positive to negative ("down").
+///
+/// Args:
+///     time: The time of the event.
+///     crossing: The crossing direction ("up" or "down").
 #[pyclass(name = "Event", module = "lox_space", frozen)]
 #[derive(Clone, Debug)]
 pub struct PyEvent(pub Event<DynTimeScale>);
 
 #[pymethods]
 impl PyEvent {
+    #[new]
+    fn new(time: PyTime, crossing: &str) -> PyResult<Self> {
+        let crossing = match crossing {
+            "up" => ZeroCrossing::Up,
+            "down" => ZeroCrossing::Down,
+            _ => return Err(PyValueError::new_err("crossing must be 'up' or 'down'")),
+        };
+        Ok(PyEvent(Event::new(time.0, crossing)))
+    }
+
     fn __repr__(&self) -> String {
-        format!("Event({}, {})", self.time().__str__(), self.crossing())
+        format!("Event({}, \"{}\")", self.time().__repr__(), self.crossing(),)
     }
 
     fn __str__(&self) -> String {
@@ -857,17 +921,26 @@ impl PyEvent {
 ///
 /// Windows are used to represent periods when certain conditions are met,
 /// such as visibility windows between a ground station and spacecraft.
+///
+/// Args:
+///     start: The start time of the window.
+///     end: The end time of the window.
 #[pyclass(name = "Window", module = "lox_space", frozen)]
 #[derive(Clone, Debug)]
 pub struct PyWindow(pub TimeInterval<DynTimeScale>);
 
 #[pymethods]
 impl PyWindow {
+    #[new]
+    fn new(start: PyTime, end: PyTime) -> Self {
+        PyWindow(TimeInterval::new(start.0, end.0))
+    }
+
     fn __repr__(&self) -> String {
         format!(
             "Window({}, {})",
-            self.start().__str__(),
-            self.end().__str__()
+            self.start().__repr__(),
+            self.end().__repr__(),
         )
     }
 
@@ -959,6 +1032,12 @@ impl PyVallado {
             |i| Ok(self.0.propagate(i).map_err(PyValladoError)?),
         )
     }
+
+    fn __repr__(&self) -> String {
+        let state = PyCartesian(self.0.initial_state().clone());
+        let max_iter = self.0.max_iter();
+        format!("Vallado({}, max_iter={})", state.__repr__(), max_iter,)
+    }
 }
 
 pub struct PyJ2Error(pub J2Error);
@@ -1026,6 +1105,11 @@ impl PyJ2Propagator {
             |t| Ok(self.0.state_at(t).map_err(PyJ2Error)?),
             |i| Ok(self.0.propagate(i).map_err(PyJ2Error)?),
         )
+    }
+
+    fn __repr__(&self) -> String {
+        let state = PyCartesian(self.0.initial_state().clone());
+        format!("J2({})", state.__repr__())
     }
 }
 
@@ -1117,6 +1201,21 @@ impl PyGroundLocation {
     fn altitude(&self) -> PyDistance {
         PyDistance(Distance::kilometers(self.0.altitude()))
     }
+
+    /// Return the central body (origin).
+    fn origin(&self) -> PyOrigin {
+        PyOrigin(self.0.origin())
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "GroundLocation({}, {}, {}, {})",
+            PyOrigin(self.0.origin()).__repr__(),
+            self.longitude().__repr__(),
+            self.latitude().__repr__(),
+            self.altitude().__repr__(),
+        )
+    }
 }
 
 /// Propagator for ground station positions.
@@ -1184,6 +1283,11 @@ impl PyGroundPropagator {
             |i| Ok(self.0.propagate(i).map_err(PyGroundPropagatorError)?),
         )
     }
+
+    fn __repr__(&self) -> String {
+        let loc = PyGroundLocation(self.0.location().clone());
+        format!("GroundPropagator({})", loc.__repr__())
+    }
 }
 
 pub struct PySgp4Error(pub Sgp4Error);
@@ -1203,7 +1307,10 @@ impl From<PySgp4Error> for PyErr {
 /// Args:
 ///     tle: Two-Line Element set (2 or 3 lines).
 #[pyclass(name = "SGP4", module = "lox_space", frozen)]
-pub struct PySgp4(pub Sgp4);
+pub struct PySgp4 {
+    pub inner: Sgp4,
+    tle: String,
+}
 
 #[pymethods]
 impl PySgp4 {
@@ -1223,14 +1330,16 @@ impl PySgp4 {
         } else {
             return Err(PyValueError::new_err("invalid TLE"));
         };
-        Ok(PySgp4(
-            Sgp4::new(elements).map_err(|err| PyValueError::new_err(err.to_string()))?,
-        ))
+        let sgp4 = Sgp4::new(elements).map_err(|err| PyValueError::new_err(err.to_string()))?;
+        Ok(PySgp4 {
+            inner: sgp4,
+            tle: tle.trim().to_string(),
+        })
     }
 
     /// Return the TLE epoch time.
     fn time(&self) -> PyTime {
-        PyTime(self.0.time().into_dyn())
+        PyTime(self.inner.time().into_dyn())
     }
 
     /// Propagate the orbit.
@@ -1270,13 +1379,22 @@ impl PySgp4 {
             provider,
             |t| {
                 let tai = to_tai(t, eop)?;
-                Ok(self.0.state_at(tai).map_err(PySgp4Error)?.into_dyn())
+                Ok(self.inner.state_at(tai).map_err(PySgp4Error)?.into_dyn())
             },
             |i| {
                 let interval = Interval::new(to_tai(i.start(), eop)?, to_tai(i.end(), eop)?);
-                Ok(self.0.propagate(interval).map_err(PySgp4Error)?.into_dyn())
+                Ok(self
+                    .inner
+                    .propagate(interval)
+                    .map_err(PySgp4Error)?
+                    .into_dyn())
             },
         )
+    }
+
+    fn __repr__(&self) -> String {
+        let escaped = self.tle.replace('\\', "\\\\").replace('\n', "\\n");
+        format!("SGP4(\"{}\")", escaped)
     }
 }
 
@@ -1313,6 +1431,15 @@ impl PyGroundAsset {
     fn mask(&self) -> PyElevationMask {
         PyElevationMask(self.0.mask().clone())
     }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "GroundAsset(\"{}\", {}, {})",
+            self.id(),
+            self.location().__repr__(),
+            self.mask().__repr__(),
+        )
+    }
 }
 
 /// A named spacecraft for visibility analysis.
@@ -1341,6 +1468,11 @@ impl PySpaceAsset {
     /// Return the spacecraft trajectory.
     fn trajectory(&self) -> PyTrajectory {
         PyTrajectory(self.0.trajectory().clone())
+    }
+
+    fn __repr__(&self) -> String {
+        let traj = self.trajectory();
+        format!("SpaceAsset(\"{}\", {})", self.id(), traj.__repr__(),)
     }
 }
 
@@ -1425,6 +1557,14 @@ impl PyVisibilityAnalysis {
             space_assets: self.space_assets.clone(),
             step: self.step,
         })
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "VisibilityAnalysis({} ground assets, {} space assets)",
+            self.ground_assets.len(),
+            self.space_assets.len(),
+        )
     }
 }
 
@@ -1547,6 +1687,14 @@ impl PyVisibilityResults {
     /// Return the total number of visibility intervals across all pairs.
     fn total_intervals(&self) -> usize {
         self.results.total_intervals()
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "VisibilityResults({} pairs, {} intervals)",
+            self.results.num_pairs(),
+            self.results.total_intervals(),
+        )
     }
 }
 
@@ -1671,6 +1819,21 @@ impl PyElevationMask {
     fn min_elevation(&self, azimuth: PyAngle) -> PyAngle {
         PyAngle(Angle::radians(self.0.min_elevation(azimuth.0.to_radians())))
     }
+
+    fn __repr__(&self) -> String {
+        match &self.0 {
+            ElevationMask::Fixed(min_elevation) => {
+                format!(
+                    "ElevationMask(min_elevation={})",
+                    PyAngle(Angle::radians(*min_elevation)).__repr__(),
+                )
+            }
+            ElevationMask::Variable(series) => {
+                let n = series.x().len();
+                format!("ElevationMask({n} azimuth/elevation pairs)")
+            }
+        }
+    }
 }
 
 /// Observation data from a ground station to a target.
@@ -1722,6 +1885,16 @@ impl PyObservables {
     /// Return the range rate.
     fn range_rate(&self) -> PyVelocity {
         PyVelocity(Velocity::meters_per_second(self.0.range_rate()))
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "Observables({}, {}, {}, {})",
+            self.azimuth().__repr__(),
+            self.elevation().__repr__(),
+            self.range().__repr__(),
+            self.range_rate().__repr__(),
+        )
     }
 }
 
@@ -1781,12 +1954,10 @@ impl PyPass {
     }
 
     fn __repr__(&self) -> String {
-        let interval = self.0.interval();
         format!(
-            "Pass(window=Window({}, {}), {} observables)",
-            interval.start(),
-            interval.end(),
-            self.0.observables().len()
+            "Pass(window={}, {} observables)",
+            self.window().__repr__(),
+            self.0.observables().len(),
         )
     }
 }
