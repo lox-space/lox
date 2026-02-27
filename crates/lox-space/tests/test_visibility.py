@@ -98,6 +98,25 @@ class TestVisibilityAnalysis:
         results = analysis.compute(t0, t1, ephemeris)
         assert results.num_pairs() == len(ground_assets) * len(space_assets)
 
+    def test_inter_satellite_only(self, space_assets, t0, t1, ephemeris):
+        """Inter-satellite with no ground assets."""
+        analysis = lox.VisibilityAnalysis([], space_assets, inter_satellite=True)
+        results = analysis.compute(t0, t1, ephemeris)
+        n = len(space_assets)
+        assert results.num_pairs() == n * (n - 1) // 2
+
+    def test_combined_ground_and_inter_satellite(
+        self, ground_assets, space_assets, t0, t1, ephemeris
+    ):
+        """Ground-to-space and inter-satellite pairs together."""
+        analysis = lox.VisibilityAnalysis(
+            ground_assets, space_assets, inter_satellite=True
+        )
+        results = analysis.compute(t0, t1, ephemeris)
+        n_gs = len(ground_assets) * len(space_assets)
+        n_is = len(space_assets) * (len(space_assets) - 1) // 2
+        assert results.num_pairs() == n_gs + n_is
+
     def test_los_is_subset_of_basic(
         self, results, results_with_los, ground_assets, space_assets
     ):
