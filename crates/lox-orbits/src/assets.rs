@@ -4,6 +4,8 @@
 
 use std::fmt;
 
+use lox_core::units::AngularRate;
+
 use crate::analysis::ElevationMask;
 use crate::ground::DynGroundLocation;
 use crate::orbits::DynTrajectory;
@@ -60,6 +62,7 @@ impl GroundAsset {
 pub struct SpaceAsset {
     id: AssetId,
     trajectory: DynTrajectory,
+    max_slew_rate: Option<AngularRate>,
 }
 
 impl SpaceAsset {
@@ -67,7 +70,13 @@ impl SpaceAsset {
         Self {
             id: AssetId::new(id),
             trajectory,
+            max_slew_rate: None,
         }
+    }
+
+    pub fn with_max_slew_rate(mut self, rate: AngularRate) -> Self {
+        self.max_slew_rate = Some(rate);
+        self
     }
 
     pub fn id(&self) -> &AssetId {
@@ -76,5 +85,9 @@ impl SpaceAsset {
 
     pub fn trajectory(&self) -> &DynTrajectory {
         &self.trajectory
+    }
+
+    pub fn max_slew_rate(&self) -> Option<AngularRate> {
+        self.max_slew_rate
     }
 }
