@@ -20,7 +20,7 @@ use rayon::prelude::*;
 use std::f64::consts::PI;
 use thiserror::Error;
 
-use lox_core::units::Distance;
+use lox_core::units::{AngularRate, Distance};
 
 use crate::assets::{AssetId, GroundAsset, SpaceAsset};
 use crate::events::{
@@ -417,6 +417,35 @@ impl DetectFn<DynTimeScale> for InterSatelliteRangeDetectFn<'_> {
     }
 }
 
+/// Slew rate (angular rate) threshold detector for inter-satellite pairs.
+///
+/// The angular rate ω = |r × v| / |r|² is symmetric between the two
+/// spacecraft.  The detector returns `threshold - ω`, positive when the
+/// angular rate is within the limit.
+struct InterSatelliteSlewRateDetectFn<'a> {
+    sc1: &'a DynTrajectory,
+    sc2: &'a DynTrajectory,
+    threshold: AngularRate,
+}
+
+impl DetectFn<DynTimeScale> for InterSatelliteSlewRateDetectFn<'_> {
+    type Error = EvalError;
+
+    fn eval(&self, time: DynTime) -> Result<f64, Self::Error> {
+        let s1 = self.sc1.interpolate_at(time);
+        let s2 = self.sc2.interpolate_at(time);
+        let r = s2.position() - s1.position();
+        let v = s2.velocity() - s1.velocity();
+        let r_len_sq = r.length_squared();
+        let omega = if r_len_sq > 0.0 {
+            r.cross(v).length() / r_len_sq
+        } else {
+            0.0
+        };
+        Ok(self.threshold.to_radians_per_second() - omega)
+    }
+}
+
 // ---------------------------------------------------------------------------
 // VisibilityResults
 // ---------------------------------------------------------------------------
@@ -683,7 +712,20 @@ where
         let has_range = self.min_range.is_some() || self.max_range.is_some();
         let has_los = !self.occulting_bodies.is_empty();
 
-        if !has_range && !has_los {
+        // Resolve per-pair slew rate limit: min of both assets' limits.
+        let effective_slew_rate = match (sc1.max_slew_rate(), sc2.max_slew_rate()) {
+            (Some(a), Some(b)) => Some(if a.to_radians_per_second() < b.to_radians_per_second() {
+                a
+            } else {
+                b
+            }),
+            (Some(a), None) => Some(a),
+            (None, Some(b)) => Some(b),
+            (None, None) => None,
+        };
+        let has_slew_rate = effective_slew_rate.is_some();
+
+        if !has_range && !has_slew_rate && !has_los {
             return Ok(vec![interval]);
         }
 
@@ -711,7 +753,7 @@ where
             )))
         };
 
-        // Start with range constraints (cheap, position-only).
+        // Start with range constraints (cheapest: position-only).
         let mut detector: Option<Box<dyn IntervalDetector<DynTimeScale> + '_>> = None;
 
         if let Some(max) = self.max_range {
@@ -725,7 +767,23 @@ where
             });
         }
 
-        // Chain LOS detectors onto range windows.
+        // Slew rate constraint (medium cost: position + velocity).
+        if let Some(threshold) = effective_slew_rate {
+            let slew = EventsToIntervals::new(self.apply_coarse_step(RootFindingDetector::new(
+                InterSatelliteSlewRateDetectFn {
+                    sc1: sc1.trajectory(),
+                    sc2: sc2.trajectory(),
+                    threshold,
+                },
+                self.step,
+            )));
+            detector = Some(match detector {
+                Some(d) => Box::new(d.chain(slew)),
+                None => Box::new(slew),
+            });
+        }
+
+        // Chain LOS detectors onto previous windows (most expensive: requires ephemeris).
         for &body in &self.occulting_bodies {
             let los = make_los(body);
             detector = Some(match detector {
@@ -1164,6 +1222,186 @@ mod tests {
             intervals.is_empty(),
             "expected no intervals for colocated spacecraft with min_range, got {}",
             intervals.len()
+        );
+    }
+
+    #[test]
+    fn test_slew_rate_detect_fn() {
+        // Two colocated trajectories have zero angular rate → always within limit.
+        let sc_traj = spacecraft_trajectory_dyn();
+        let threshold = AngularRate::degrees_per_second(1.0);
+        let detect = InterSatelliteSlewRateDetectFn {
+            sc1: &sc_traj,
+            sc2: &sc_traj,
+            threshold,
+        };
+        let time = sc_traj.start_time();
+        let val = detect.eval(time).unwrap();
+        // ω = 0 for colocated → threshold - 0 = threshold
+        assert_approx_eq!(val, threshold.to_radians_per_second(), rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_inter_satellite_visibility_with_slew_rate() {
+        let sc_traj = spacecraft_trajectory_dyn();
+        let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
+
+        // Colocated spacecraft have ω = 0. A generous slew rate limit should
+        // keep the full interval.
+        let sc1 = SpaceAsset::new("sc1", sc_traj.clone())
+            .with_max_slew_rate(AngularRate::degrees_per_second(10.0));
+        let sc2 = SpaceAsset::new("sc2", sc_traj.clone())
+            .with_max_slew_rate(AngularRate::degrees_per_second(5.0));
+        let spk = ephemeris();
+        let space_assets = [sc1.clone(), sc2.clone()];
+        let analysis = VisibilityAnalysis::new(&[], &space_assets, spk).with_inter_satellite();
+        let results = analysis.compute(interval).unwrap();
+        let intervals = results
+            .intervals_for(sc1.id(), sc2.id())
+            .expect("pair not found");
+        // ω = 0 everywhere, so full interval should be returned.
+        assert_eq!(intervals.len(), 1);
+        assert_approx_eq!(intervals[0].start(), interval.start(), rtol <= 1e-10);
+        assert_approx_eq!(intervals[0].end(), interval.end(), rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_space_asset_max_slew_rate() {
+        let sc_traj = spacecraft_trajectory_dyn();
+        let sc = SpaceAsset::new("sc1", sc_traj.clone());
+        assert!(sc.max_slew_rate().is_none());
+
+        let rate = AngularRate::degrees_per_second(2.5);
+        let sc = sc.with_max_slew_rate(rate);
+        assert_approx_eq!(
+            sc.max_slew_rate().unwrap().to_degrees_per_second(),
+            2.5,
+            rtol <= 1e-10
+        );
+    }
+
+    // Two OneWeb satellites in different orbital planes (~192° RAAN separation).
+    // ONEWEB-0012: RAAN 343.68°, ONEWEB-0017: RAAN 151.03°
+    // Their crossing orbits produce high angular rates during close approaches.
+
+    fn oneweb_trajectories() -> (DynTrajectory, DynTrajectory) {
+        use crate::propagators::Propagator;
+        use crate::propagators::sgp4::{Elements, Sgp4};
+        use lox_time::intervals::Interval;
+
+        let tle1 = Elements::from_tle(
+            Some("ONEWEB-0012".to_string()),
+            b"1 44057U 19010A   24322.58825131  .00000088  00000+0  19693-3 0  9993",
+            b"2 44057  87.9092 343.6767 0002420  76.7970 283.3431 13.16592150275693",
+        )
+        .unwrap();
+        let tle2 = Elements::from_tle(
+            Some("ONEWEB-0017".to_string()),
+            b"1 45132U 20008B   24322.88240834 -.00000016  00000+0 -81930-4 0  9998",
+            b"2 45132  87.8896 151.0343 0001369  78.1189 282.0092 13.10376984232476",
+        )
+        .unwrap();
+
+        let sgp4_1 = Sgp4::new(tle1).unwrap();
+        let sgp4_2 = Sgp4::new(tle2).unwrap();
+
+        // Use the later epoch as start so both TLEs are valid.
+        let t0 = sgp4_1.time().max(sgp4_2.time());
+        let t1 = t0 + TimeDelta::from_hours(2.0);
+        let interval = Interval::new(t0, t1);
+
+        let traj1 = sgp4_1
+            .with_step(TimeDelta::from_seconds(10))
+            .propagate(interval)
+            .unwrap()
+            .into_dyn();
+        let traj2 = sgp4_2
+            .with_step(TimeDelta::from_seconds(10))
+            .propagate(interval)
+            .unwrap()
+            .into_dyn();
+
+        (traj1, traj2)
+    }
+
+    #[test]
+    fn test_slew_rate_trims_windows_for_crossing_orbits() {
+        let (traj1, traj2) = oneweb_trajectories();
+        let interval = TimeInterval::new(traj1.start_time(), traj1.end_time());
+
+        let spk = ephemeris();
+
+        // Without slew rate constraint: should have visibility (no other
+        // constraints → full interval returned).
+        let sc1_no_limit = SpaceAsset::new("ow12", traj1.clone());
+        let sc2_no_limit = SpaceAsset::new("ow17", traj2.clone());
+        let space_assets = [sc1_no_limit.clone(), sc2_no_limit.clone()];
+        let analysis = VisibilityAnalysis::new(&[], &space_assets, spk).with_inter_satellite();
+        let results_no_limit = analysis.compute(interval).unwrap();
+        let intervals_no_limit = results_no_limit
+            .intervals_for(sc1_no_limit.id(), sc2_no_limit.id())
+            .expect("pair not found");
+
+        // With a tight slew rate constraint (0.01 deg/s): should trim windows
+        // where the angular rate exceeds the limit during close approaches.
+        let sc1_limited = SpaceAsset::new("ow12", traj1.clone())
+            .with_max_slew_rate(AngularRate::degrees_per_second(0.01));
+        let sc2_limited = SpaceAsset::new("ow17", traj2.clone())
+            .with_max_slew_rate(AngularRate::degrees_per_second(0.01));
+        let space_assets = [sc1_limited.clone(), sc2_limited.clone()];
+        let analysis = VisibilityAnalysis::new(&[], &space_assets, spk).with_inter_satellite();
+        let results_limited = analysis.compute(interval).unwrap();
+        let intervals_limited = results_limited
+            .intervals_for(sc1_limited.id(), sc2_limited.id())
+            .expect("pair not found");
+
+        // The constrained result must have less total visibility time.
+        let total_no_limit: f64 = intervals_no_limit
+            .iter()
+            .map(|i| (i.end() - i.start()).to_seconds().to_f64())
+            .sum();
+        let total_limited: f64 = intervals_limited
+            .iter()
+            .map(|i| (i.end() - i.start()).to_seconds().to_f64())
+            .sum();
+        assert!(
+            total_limited < total_no_limit,
+            "slew rate constraint should reduce total visibility time: \
+             {total_limited:.1}s (limited) vs {total_no_limit:.1}s (unlimited)"
+        );
+
+        // Sanity: the limited result should still have some windows.
+        assert!(
+            !intervals_limited.is_empty(),
+            "expected some visibility windows to survive the slew rate filter"
+        );
+    }
+
+    #[test]
+    fn test_slew_rate_one_sided_limit() {
+        // Only one spacecraft has a slew rate limit. The constraint should
+        // still apply (limit governs the pair).
+        let (traj1, traj2) = oneweb_trajectories();
+        let interval = TimeInterval::new(traj1.start_time(), traj1.end_time());
+        let spk = ephemeris();
+
+        let sc1 = SpaceAsset::new("ow12", traj1)
+            .with_max_slew_rate(AngularRate::degrees_per_second(0.01));
+        let sc2 = SpaceAsset::new("ow17", traj2); // no limit
+        let space_assets = [sc1.clone(), sc2.clone()];
+        let analysis = VisibilityAnalysis::new(&[], &space_assets, spk).with_inter_satellite();
+        let results = analysis.compute(interval).unwrap();
+        let intervals = results
+            .intervals_for(sc1.id(), sc2.id())
+            .expect("pair not found");
+        let total: f64 = intervals
+            .iter()
+            .map(|i| (i.end() - i.start()).to_seconds().to_f64())
+            .sum();
+        // 2 hours = 7200s. With a tight limit the total should be less.
+        assert!(
+            total < 7200.0,
+            "one-sided slew rate limit should reduce visibility: {total:.1}s"
         );
     }
 

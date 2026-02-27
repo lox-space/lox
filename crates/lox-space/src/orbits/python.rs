@@ -41,7 +41,7 @@ use lox_time::intervals::{
 };
 use lox_units::{Angle, Distance, Velocity};
 
-use crate::units::python::{PyAngle, PyDistance, PyVelocity};
+use crate::units::python::{PyAngle, PyAngularRate, PyDistance, PyVelocity};
 
 use glam::DVec3;
 use lox_frames::providers::DefaultRotationProvider;
@@ -1626,6 +1626,8 @@ impl PyGroundAsset {
 /// Args:
 ///     id: Unique identifier for this space asset.
 ///     trajectory: Spacecraft trajectory.
+///     max_slew_rate: Optional maximum slew rate (angular rate) for this
+///         spacecraft's antenna/gimbal.
 #[pyclass(name = "SpaceAsset", module = "lox_space", frozen)]
 #[derive(Clone, Debug)]
 pub struct PySpaceAsset(pub SpaceAsset);
@@ -1633,8 +1635,13 @@ pub struct PySpaceAsset(pub SpaceAsset);
 #[pymethods]
 impl PySpaceAsset {
     #[new]
-    fn new(id: String, trajectory: PyTrajectory) -> Self {
-        PySpaceAsset(SpaceAsset::new(id, trajectory.0))
+    #[pyo3(signature = (id, trajectory, max_slew_rate=None))]
+    fn new(id: String, trajectory: PyTrajectory, max_slew_rate: Option<PyAngularRate>) -> Self {
+        let mut asset = SpaceAsset::new(id, trajectory.0);
+        if let Some(rate) = max_slew_rate {
+            asset = asset.with_max_slew_rate(rate.0);
+        }
+        PySpaceAsset(asset)
     }
 
     /// Return the asset identifier.
@@ -1645,6 +1652,11 @@ impl PySpaceAsset {
     /// Return the spacecraft trajectory.
     fn trajectory(&self) -> PyTrajectory {
         PyTrajectory(self.0.trajectory().clone())
+    }
+
+    /// Return the maximum slew rate, if set.
+    fn max_slew_rate(&self) -> Option<PyAngularRate> {
+        self.0.max_slew_rate().map(PyAngularRate)
     }
 
     fn __repr__(&self) -> String {
