@@ -1542,6 +1542,8 @@ impl PySpaceAsset {
 ///     min_pass_duration: Optional minimum pass duration. Passes shorter
 ///         than this value may be missed. Enables two-level stepping for faster
 ///         detection.
+///     inter_satellite: If True, also compute inter-satellite visibility
+///         for all unique spacecraft pairs (default: False).
 #[pyclass(name = "VisibilityAnalysis", module = "lox_space", frozen)]
 pub struct PyVisibilityAnalysis {
     ground_assets: Vec<GroundAsset>,
@@ -1549,18 +1551,20 @@ pub struct PyVisibilityAnalysis {
     occulting_bodies: Vec<DynOrigin>,
     step: TimeDelta,
     min_pass_duration: Option<TimeDelta>,
+    inter_satellite: bool,
 }
 
 #[pymethods]
 impl PyVisibilityAnalysis {
     #[new]
-    #[pyo3(signature = (ground_assets, space_assets, occulting_bodies=None, step=None, min_pass_duration=None))]
+    #[pyo3(signature = (ground_assets, space_assets, occulting_bodies=None, step=None, min_pass_duration=None, inter_satellite=false))]
     fn new(
         ground_assets: Vec<PyGroundAsset>,
         space_assets: Vec<PySpaceAsset>,
         occulting_bodies: Option<Vec<Bound<'_, PyAny>>>,
         step: Option<PyTimeDelta>,
         min_pass_duration: Option<PyTimeDelta>,
+        inter_satellite: bool,
     ) -> PyResult<Self> {
         let occulting_bodies: Vec<DynOrigin> = occulting_bodies
             .unwrap_or_default()
@@ -1575,6 +1579,7 @@ impl PyVisibilityAnalysis {
                 .map(|s| s.0)
                 .unwrap_or_else(|| TimeDelta::from_seconds_f64(60.0)),
             min_pass_duration: min_pass_duration.map(|d| d.0),
+            inter_satellite,
         })
     }
 
@@ -1605,6 +1610,9 @@ impl PyVisibilityAnalysis {
             if let Some(mpd) = self.min_pass_duration {
                 analysis = analysis.with_min_pass_duration(mpd);
             }
+            if self.inter_satellite {
+                analysis = analysis.with_inter_satellite();
+            }
             analysis.compute(interval)
         });
 
@@ -1617,11 +1625,19 @@ impl PyVisibilityAnalysis {
     }
 
     fn __repr__(&self) -> String {
-        format!(
-            "VisibilityAnalysis({} ground assets, {} space assets)",
-            self.ground_assets.len(),
-            self.space_assets.len(),
-        )
+        if self.inter_satellite {
+            format!(
+                "VisibilityAnalysis({} ground assets, {} space assets, inter_satellite=True)",
+                self.ground_assets.len(),
+                self.space_assets.len(),
+            )
+        } else {
+            format!(
+                "VisibilityAnalysis({} ground assets, {} space assets)",
+                self.ground_assets.len(),
+                self.space_assets.len(),
+            )
+        }
     }
 }
 
@@ -1704,9 +1720,9 @@ impl PyVisibilityResults {
         self.results
             .all_intervals()
             .iter()
-            .map(|((gs_id, sc_id), intervals)| {
-                let gs = gs_map[gs_id];
-                let sc = sc_map[sc_id];
+            .filter_map(|((gs_id, sc_id), intervals)| {
+                let gs = gs_map.get(gs_id)?;
+                let sc = sc_map.get(sc_id)?;
                 let passes: Vec<PyPass> = intervals
                     .iter()
                     .filter_map(|interval| {
@@ -1720,10 +1736,10 @@ impl PyVisibilityResults {
                     })
                     .map(PyPass)
                     .collect();
-                (
+                Some((
                     (gs_id.as_str().to_string(), sc_id.as_str().to_string()),
                     passes,
-                )
+                ))
             })
             .collect()
     }
