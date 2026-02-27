@@ -181,22 +181,22 @@ class TestVisibilityResults:
 
 
 # ---------------------------------------------------------------------------
-# Window API
+# Interval API
 # ---------------------------------------------------------------------------
 
 
-class TestWindow:
-    def _first_window(self, results, ground_assets, space_assets):
-        """Find the first non-empty pair and return its first window."""
+class TestInterval:
+    def _first_interval(self, results, ground_assets, space_assets):
+        """Find the first non-empty pair and return its first interval."""
         for gs in ground_assets:
             for sc in space_assets:
-                windows = results.intervals(gs.id(), sc.id())
-                if windows:
-                    return windows[0]
-        pytest.skip("no visibility windows in test interval")
+                intervals = results.intervals(gs.id(), sc.id())
+                if intervals:
+                    return intervals[0]
+        pytest.skip("no visibility intervals in test interval")
 
     def test_start_end_duration(self, results, ground_assets, space_assets, t0, t1):
-        w = self._first_window(results, ground_assets, space_assets)
+        w = self._first_interval(results, ground_assets, space_assets)
         start = w.start()
         end = w.end()
         duration = w.duration()
@@ -206,10 +206,121 @@ class TestWindow:
         assert float(duration) > 0
 
     def test_repr(self, results, ground_assets, space_assets):
-        w = self._first_window(results, ground_assets, space_assets)
+        w = self._first_interval(results, ground_assets, space_assets)
         r = repr(w)
-        assert r.startswith("Window(")
+        assert r.startswith("Interval(")
         assert ")" in r
+
+    def test_is_empty(self, results, ground_assets, space_assets):
+        w = self._first_interval(results, ground_assets, space_assets)
+        assert not w.is_empty()
+        # Reversed interval is empty
+        empty = lox.Interval(w.end(), w.start())
+        assert empty.is_empty()
+
+    def test_contains_time(self, results, ground_assets, space_assets, t0):
+        w = self._first_interval(results, ground_assets, space_assets)
+        mid = w.start() + lox.TimeDelta(float(w.duration()) / 2.0)
+        assert w.contains_time(mid)
+        before = w.start() - lox.TimeDelta(86400)
+        assert not w.contains_time(before)
+
+    def test_contains(self, results, ground_assets, space_assets):
+        w = self._first_interval(results, ground_assets, space_assets)
+        assert w.contains(w)
+
+    def test_intersect(self, results, ground_assets, space_assets):
+        w = self._first_interval(results, ground_assets, space_assets)
+        # Self-intersection equals self
+        inter = w.intersect(w)
+        assert float(inter.duration()) == pytest.approx(float(w.duration()))
+        # Intersection with non-overlapping is empty
+        far = lox.Interval(
+            w.end() + lox.TimeDelta(86400),
+            w.end() + lox.TimeDelta(2 * 86400),
+        )
+        assert w.intersect(far).is_empty()
+
+    def test_overlaps(self, results, ground_assets, space_assets):
+        w = self._first_interval(results, ground_assets, space_assets)
+        assert w.overlaps(w)
+        far = lox.Interval(
+            w.end() + lox.TimeDelta(86400),
+            w.end() + lox.TimeDelta(2 * 86400),
+        )
+        assert not w.overlaps(far)
+
+    def test_step_by(self, results, ground_assets, space_assets):
+        w = self._first_interval(results, ground_assets, space_assets)
+        step = lox.TimeDelta(60)
+        times = w.step_by(step)
+        assert all(isinstance(t, lox.Time) for t in times)
+        expected_count = int(float(w.duration()) / 60) + 1
+        assert abs(len(times) - expected_count) <= 1
+
+    def test_linspace(self, results, ground_assets, space_assets):
+        w = self._first_interval(results, ground_assets, space_assets)
+        times = w.linspace(5)
+        assert len(times) == 5
+        assert all(isinstance(t, lox.Time) for t in times)
+
+    def test_step_by_zero_raises(self, results, ground_assets, space_assets):
+        w = self._first_interval(results, ground_assets, space_assets)
+        with pytest.raises(ValueError):
+            w.step_by(lox.TimeDelta(0))
+
+    def test_linspace_one_raises(self, results, ground_assets, space_assets):
+        w = self._first_interval(results, ground_assets, space_assets)
+        with pytest.raises(ValueError):
+            w.linspace(1)
+
+
+# ---------------------------------------------------------------------------
+# Interval set operations
+# ---------------------------------------------------------------------------
+
+
+class TestIntervalOperations:
+    def test_intersect_intervals(self, t0):
+        t1 = t0 + lox.TimeDelta(100)
+        t2 = t0 + lox.TimeDelta(200)
+        t3 = t0 + lox.TimeDelta(300)
+        # Disjoint → empty
+        a = [lox.Interval(t0, t1)]
+        b = [lox.Interval(t2, t3)]
+        assert lox.intersect_intervals(a, b) == []
+        # Overlapping → non-empty
+        b2 = [lox.Interval(t0 + lox.TimeDelta(50), t2)]
+        result = lox.intersect_intervals(a, b2)
+        assert len(result) == 1
+        assert not result[0].is_empty()
+
+    def test_union_intervals(self, t0):
+        t1 = t0 + lox.TimeDelta(100)
+        t2 = t0 + lox.TimeDelta(200)
+        t3 = t0 + lox.TimeDelta(300)
+        # Adjacent/overlapping → merged
+        a = [lox.Interval(t0, t2)]
+        b = [lox.Interval(t1, t3)]
+        result = lox.union_intervals(a, b)
+        assert len(result) == 1
+        # Disjoint → both preserved
+        a2 = [lox.Interval(t0, t1)]
+        b2 = [lox.Interval(t2, t3)]
+        result2 = lox.union_intervals(a2, b2)
+        assert len(result2) == 2
+
+    def test_complement_intervals(self, t0):
+        t1 = t0 + lox.TimeDelta(100)
+        t2 = t0 + lox.TimeDelta(200)
+        t3 = t0 + lox.TimeDelta(300)
+        bound = lox.Interval(t0, t3)
+        intervals = [lox.Interval(t1, t2)]
+        result = lox.complement_intervals(intervals, bound)
+        assert len(result) == 2
+        # The gaps should be [t0, t1) and [t2, t3)
+        assert float(result[0].duration()) == pytest.approx(100.0)
+        assert float(result[1].duration()) == pytest.approx(100.0)
 
 
 # ---------------------------------------------------------------------------
@@ -231,10 +342,10 @@ class TestPass:
         p, _ = self._first_pass_with_gs(results, ground_assets, space_assets)
         return p
 
-    def test_window(self, results, ground_assets, space_assets):
+    def test_interval(self, results, ground_assets, space_assets):
         p = self._first_pass(results, ground_assets, space_assets)
-        w = p.window()
-        assert isinstance(w, lox.Window)
+        w = p.interval()
+        assert isinstance(w, lox.Interval)
         assert float(w.duration()) > 0
 
     def test_times(self, results, ground_assets, space_assets):
