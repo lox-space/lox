@@ -113,12 +113,12 @@ def test_event_down():
     assert event.crossing() == "down"
 
 
-def test_window_constructor():
+def test_interval_constructor():
     t1 = lox.UTC(2024, 1, 1).to_scale("TDB")
     t2 = lox.UTC(2024, 1, 2).to_scale("TDB")
-    window = lox.Window(t1, t2)
-    r = repr(window)
-    assert r.startswith("Window(")
+    interval = lox.Interval(t1, t2)
+    r = repr(interval)
+    assert r.startswith("Interval(")
 
 
 def test_keplerian_with_string_origin():

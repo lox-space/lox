@@ -58,7 +58,7 @@ future_state = propagator.propagate(t + lox.TimeDelta.from_hours(1.5))
 | [Orbital States](states.md) | `State`, `Keplerian`, `Trajectory` |
 | [Propagators](propagators.md) | `Vallado`, `SGP4`, `GroundPropagator` |
 | [Ground Stations](ground.md) | `GroundLocation`, `ElevationMask`, `Observables`, `Pass` |
-| [Events & Visibility](events.md) | `Event`, `Window`, `find_events`, `find_windows`, `GroundAsset`, `SpaceAsset`, `VisibilityAnalysis`, `VisibilityResults` |
+| [Events & Visibility](events.md) | `Event`, `Interval`, `find_events`, `find_windows`, `intersect_intervals`, `union_intervals`, `complement_intervals`, `GroundAsset`, `SpaceAsset`, `VisibilityAnalysis`, `VisibilityResults` |
 | [Communications](comms.md) | `Decibel`, `Transmitter`, `CommunicationSystem`, `Channel`, `LinkStats` |
 | [Data Providers](data.md) | `EOPProvider`, `Series` |
 | [Units](units.md) | `Angle`, `Distance`, `Frequency`, `Velocity` |

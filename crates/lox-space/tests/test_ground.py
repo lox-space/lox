@@ -52,9 +52,7 @@ def test_ground_location_origin():
 
 
 def test_ground_location_string_origin():
-    location = lox.GroundLocation(
-        "Earth", 0 * lox.deg, 0 * lox.deg, 0 * lox.km
-    )
+    location = lox.GroundLocation("Earth", 0 * lox.deg, 0 * lox.deg, 0 * lox.km)
     assert location.origin().name() == "Earth"
 
 
