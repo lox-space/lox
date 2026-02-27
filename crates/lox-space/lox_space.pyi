@@ -404,22 +404,46 @@ class VisibilityResults:
     windows) are computed eagerly; observables-rich Pass objects are
     computed on demand.
     """
-    def intervals(self, ground_id: str, space_id: str) -> list[Interval]:
-        """Return visibility intervals for a specific (ground, space) pair.
+    def intervals(self, id1: str, id2: str) -> list[Interval]:
+        """Return visibility intervals for a specific pair.
 
         Args:
-            ground_id: Ground asset identifier.
-            space_id: Space asset identifier.
+            id1: First asset identifier (ground or space).
+            id2: Second asset identifier (space).
 
         Returns:
             List of Interval objects, or empty list if pair not found.
         """
         ...
+    def all_intervals(self) -> dict[tuple[str, str], list[Interval]]:
+        """Return all intervals for all pairs.
+
+        Returns:
+            Dictionary mapping (id1, id2) to list of Interval objects.
+        """
+        ...
+    def ground_space_intervals(self) -> dict[tuple[str, str], list[Interval]]:
+        """Return intervals for ground-to-space pairs only.
+
+        Returns:
+            Dictionary mapping (ground_id, space_id) to list of Interval objects.
+        """
+        ...
+    def inter_satellite_intervals(self) -> dict[tuple[str, str], list[Interval]]:
+        """Return intervals for inter-satellite pairs only.
+
+        Returns:
+            Dictionary mapping (sc1_id, sc2_id) to list of Interval objects.
+        """
+        ...
     def passes(self, ground_id: str, space_id: str) -> list[Pass]:
-        """Compute passes with observables for a specific (ground, space) pair.
+        """Compute passes with observables for a specific ground-to-space pair.
 
         This is more expensive than ``intervals()`` as it computes azimuth,
         elevation, range, and range rate for each time step.
+
+        Raises:
+            ValueError: If the pair is an inter-satellite pair.
 
         Args:
             ground_id: Ground asset identifier.
@@ -430,14 +454,22 @@ class VisibilityResults:
         """
         ...
     def all_passes(self) -> dict[tuple[str, str], list[Pass]]:
-        """Compute passes for all pairs.
+        """Compute passes for all ground-to-space pairs.
+
+        Inter-satellite pairs are skipped.
 
         Returns:
             Dictionary mapping (ground_id, space_id) to list of Pass objects.
         """
         ...
     def pair_ids(self) -> list[tuple[str, str]]:
-        """Return all (ground_id, space_id) pair identifiers."""
+        """Return all pair identifiers."""
+        ...
+    def ground_space_pair_ids(self) -> list[tuple[str, str]]:
+        """Return pair identifiers for ground-to-space pairs only."""
+        ...
+    def inter_satellite_pair_ids(self) -> list[tuple[str, str]]:
+        """Return pair identifiers for inter-satellite pairs only."""
         ...
     def num_pairs(self) -> int:
         """Return the total number of pairs."""
