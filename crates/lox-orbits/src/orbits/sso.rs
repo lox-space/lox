@@ -5,8 +5,8 @@
 use lox_bodies::{Earth, PointMass, Spheroid};
 use lox_core::anomalies::TrueAnomaly;
 use lox_core::elements::{
-    ArgumentOfPeriapsis, Eccentricity, Inclination, InclinationError, Keplerian,
-    LongitudeOfAscendingNode, NegativeEccentricityError, SemiMajorAxis,
+    ArgumentOfPeriapsis, ArgumentOfPeriapsisError, Eccentricity, Inclination, InclinationError,
+    Keplerian, LongitudeOfAscendingNode, NegativeEccentricityError, SemiMajorAxis,
 };
 use lox_core::glam::Azimuth;
 use lox_core::time::julian_dates::JulianDate;
@@ -42,6 +42,8 @@ pub enum SsoError {
     Inclination(#[from] InclinationError),
     #[error(transparent)]
     Eccentricity(#[from] NegativeEccentricityError),
+    #[error(transparent)]
+    ArgumentOfPeriapsis(#[from] ArgumentOfPeriapsisError),
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -174,6 +176,7 @@ fn keplerian_from_sso<T, P>(
     semi_major_axis_or_inclination: SemiMajorAxisOrInclination,
     eccentricity: Eccentricity,
     ltan: LocalTimeOfNode,
+    argument_of_periapsis: ArgumentOfPeriapsis,
     true_anomaly: TrueAnomaly,
     provider: &P,
 ) -> Result<Keplerian, SsoError>
@@ -186,7 +189,6 @@ where
     let longitude_of_ascending_node =
         LongitudeOfAscendingNode::try_new(longitude_of_ascending_node_sso(time, ltan, provider)?)
             .expect("SSO RAAN should be valid");
-    let argument_of_periapsis = ArgumentOfPeriapsis::default();
 
     Ok(Keplerian::new(
         semi_major_axis,
@@ -207,6 +209,7 @@ where
         semi_major_axis_or_inclination: SemiMajorAxisOrInclination,
         eccentricity: Eccentricity,
         ltan: LocalTimeOfNode,
+        argument_of_periapsis: ArgumentOfPeriapsis,
         true_anomaly: TrueAnomaly,
         provider: &P,
     ) -> Result<Self, SsoError>
@@ -218,6 +221,7 @@ where
             semi_major_axis_or_inclination,
             eccentricity,
             ltan,
+            argument_of_periapsis,
             true_anomaly,
             provider,
         )?;
@@ -232,6 +236,7 @@ pub struct SsoBuilder<'a, T: TimeScale + Copy, P: TryOffset<T, Ut1> + TryOffset<
     eccentricity: Result<Eccentricity, NegativeEccentricityError>,
     inclination: Option<Result<Inclination, InclinationError>>,
     ltan: Result<LocalTimeOfNode, TimeOfDayError>,
+    argument_of_periapsis: Result<ArgumentOfPeriapsis, ArgumentOfPeriapsisError>,
     true_anomaly: TrueAnomaly,
     provider: Option<&'a P>,
 }
@@ -244,6 +249,7 @@ impl<'a> SsoBuilder<'a, Tai, DefaultOffsetProvider> {
             eccentricity: Ok(Eccentricity::default()),
             inclination: None,
             ltan: Ok(LocalTimeOfNode::default()),
+            argument_of_periapsis: Ok(ArgumentOfPeriapsis::default()),
             true_anomaly: TrueAnomaly::default(),
             provider: None,
         }
@@ -271,6 +277,7 @@ where
             eccentricity: self.eccentricity,
             inclination: self.inclination,
             ltan: self.ltan,
+            argument_of_periapsis: self.argument_of_periapsis,
             true_anomaly: self.true_anomaly,
             provider: Some(provider),
         }
@@ -292,6 +299,7 @@ where
             eccentricity: self.eccentricity,
             inclination: self.inclination,
             ltan: self.ltan,
+            argument_of_periapsis: self.argument_of_periapsis,
             true_anomaly: self.true_anomaly,
             provider: self.provider,
         }
@@ -336,6 +344,11 @@ where
         self
     }
 
+    pub fn with_argument_of_periapsis(mut self, argument_of_periapsis: Angle) -> Self {
+        self.argument_of_periapsis = ArgumentOfPeriapsis::try_new(argument_of_periapsis);
+        self
+    }
+
     pub fn with_true_anomaly(mut self, true_anomaly: Angle) -> Self {
         self.true_anomaly = TrueAnomaly::new(true_anomaly);
         self
@@ -353,6 +366,7 @@ where
             (_, _) => return Err(SsoError::InvalidParameters),
         };
         let eccentricity = self.eccentricity?;
+        let argument_of_periapsis = self.argument_of_periapsis?;
         let ltan = self
             .ltan
             .map_err(|err| SsoError::InvalidLtan(err.to_string()))?;
@@ -362,6 +376,7 @@ where
                 semi_major_axis_or_inclination,
                 eccentricity,
                 ltan,
+                argument_of_periapsis,
                 self.true_anomaly,
                 provider,
             ),
@@ -370,6 +385,7 @@ where
                 semi_major_axis_or_inclination,
                 eccentricity,
                 ltan,
+                argument_of_periapsis,
                 self.true_anomaly,
                 &DefaultOffsetProvider,
             ),

@@ -845,6 +845,50 @@ class Keplerian:
         true_anomaly: Angle,
         origin: str | int | Origin | None = None,
     ) -> Self: ...
+    @classmethod
+    def sso(
+        cls,
+        time: Time,
+        *,
+        altitude: Distance | None = None,
+        semi_major_axis: Distance | None = None,
+        inclination: Angle | None = None,
+        eccentricity: float = 0.0,
+        ltan: tuple[int, int] | None = None,
+        ltdn: tuple[int, int] | None = None,
+        argument_of_periapsis: Angle | None = None,
+        true_anomaly: Angle | None = None,
+        provider: EOPProvider | None = None,
+    ) -> Self:
+        """Construct a Sun-synchronous orbit.
+
+        Exactly one of ``altitude``, ``semi_major_axis``, or ``inclination``
+        must be provided.  The remaining orbital elements are derived from the
+        SSO constraint.
+
+        Args:
+            time: Epoch of the orbit.
+            altitude: Orbital altitude (mutually exclusive with semi_major_axis/inclination).
+            semi_major_axis: Semi-major axis (mutually exclusive with altitude/inclination).
+            inclination: Inclination (mutually exclusive with altitude/semi_major_axis).
+            eccentricity: Eccentricity (default 0.0).
+            ltan: Local time of ascending node as ``(hours, minutes)`` tuple.
+            ltdn: Local time of descending node as ``(hours, minutes)`` tuple.
+            argument_of_periapsis: Argument of periapsis (default 0.0).
+            true_anomaly: True anomaly (default 0.0).
+            provider: EOP provider for time scale conversions.
+
+        Examples:
+            >>> eop = lox.EOPProvider("finals.csv")
+            >>> t = lox.UTC(2020, 2, 18).to_scale("TDB")
+            >>> orbit = lox.Keplerian.sso(
+            ...     t,
+            ...     altitude=800 * lox.km,
+            ...     ltan=(13, 30),
+            ...     provider=eop,
+            ... )
+        """
+        ...
     def time(self) -> Time:
         """Return the epoch of these elements."""
         ...

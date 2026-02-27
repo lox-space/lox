@@ -54,6 +54,15 @@ kep = lox.Keplerian(
 )
 state = kep.to_cartesian()
 
+# Create a Sun-synchronous orbit from altitude
+eop = lox.EOPProvider("finals.csv")
+sso = lox.Keplerian.sso(
+    t,
+    altitude=800 * lox.km,
+    ltan=(13, 30),
+    provider=eop,
+)
+
 # Work with trajectories
 trajectory = lox.Trajectory([state1, state2, state3])
 interpolated = trajectory.interpolate(t + lox.TimeDelta(100))
