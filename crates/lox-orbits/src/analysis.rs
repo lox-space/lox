@@ -137,6 +137,15 @@ pub enum VisibilityError {
     Series(#[from] SeriesError),
 }
 
+/// Error returned when computing passes for an invalid pair type.
+#[derive(Debug, Error)]
+pub enum PassError {
+    #[error(
+        "passes are not supported for inter-satellite pair ({0}, {1}): use intervals() instead"
+    )]
+    InterSatellitePair(String, String),
+}
+
 // ---------------------------------------------------------------------------
 // Pass
 // ---------------------------------------------------------------------------
@@ -379,34 +388,68 @@ where
 // VisibilityResults
 // ---------------------------------------------------------------------------
 
+/// Distinguishes ground-to-space from inter-satellite visibility pairs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum PairType {
+    GroundSpace,
+    InterSatellite,
+}
+
+type IntervalMap = HashMap<(AssetId, AssetId), Vec<TimeInterval<DynTimeScale>>>;
+type PairTypeMap = HashMap<(AssetId, AssetId), PairType>;
+
 /// Stores raw visibility intervals per asset pair.
 ///
 /// This is the primary result type for visibility analysis. Intervals are
 /// cheap to compute; conversion to [`DynPass`] (with observables) happens
 /// separately and on demand.
 pub struct VisibilityResults {
-    intervals: HashMap<(AssetId, AssetId), Vec<TimeInterval<DynTimeScale>>>,
+    intervals: IntervalMap,
+    pair_types: PairTypeMap,
 }
 
 impl VisibilityResults {
-    /// Return all intervals for a specific (ground, space) pair.
+    /// Return all intervals for a specific pair.
     pub fn intervals_for(
         &self,
-        ground_id: &AssetId,
-        space_id: &AssetId,
+        id1: &AssetId,
+        id2: &AssetId,
     ) -> Option<&[TimeInterval<DynTimeScale>]> {
-        let key = (ground_id.clone(), space_id.clone());
+        let key = (id1.clone(), id2.clone());
         self.intervals.get(&key).map(|v| v.as_slice())
     }
 
-    /// Return all intervals keyed by (ground_id, space_id).
-    pub fn all_intervals(&self) -> &HashMap<(AssetId, AssetId), Vec<TimeInterval<DynTimeScale>>> {
+    /// Return all intervals keyed by pair ids.
+    pub fn all_intervals(&self) -> &IntervalMap {
         &self.intervals
     }
 
-    /// Iterate over all (ground_id, space_id) pair keys.
+    /// Iterate over all pair keys.
     pub fn pair_ids(&self) -> impl Iterator<Item = &(AssetId, AssetId)> {
         self.intervals.keys()
+    }
+
+    /// Return the [`PairType`] for a given pair, if present.
+    pub fn pair_type(&self, id1: &AssetId, id2: &AssetId) -> Option<PairType> {
+        self.pair_types.get(&(id1.clone(), id2.clone())).copied()
+    }
+
+    /// Return pair ids for ground-to-space pairs only.
+    pub fn ground_space_pair_ids(&self) -> Vec<&(AssetId, AssetId)> {
+        self.pair_types
+            .iter()
+            .filter(|&(_, &pt)| pt == PairType::GroundSpace)
+            .map(|(k, _)| k)
+            .collect()
+    }
+
+    /// Return pair ids for inter-satellite pairs only.
+    pub fn inter_satellite_pair_ids(&self) -> Vec<&(AssetId, AssetId)> {
+        self.pair_types
+            .iter()
+            .filter(|&(_, &pt)| pt == PairType::InterSatellite)
+            .map(|(k, _)| k)
+            .collect()
     }
 
     pub fn is_empty(&self) -> bool {
@@ -422,15 +465,16 @@ impl VisibilityResults {
         self.intervals.values().map(|v| v.len()).sum()
     }
 
-    /// Consume self and return the inner intervals map.
-    pub fn into_intervals(self) -> HashMap<(AssetId, AssetId), Vec<TimeInterval<DynTimeScale>>> {
-        self.intervals
+    /// Consume self and return the inner intervals and pair types maps.
+    pub fn into_parts(self) -> (IntervalMap, PairTypeMap) {
+        (self.intervals, self.pair_types)
     }
 
-    /// Convert intervals for a specific pair to visibility passes.
+    /// Convert intervals for a specific ground-space pair to visibility passes.
     ///
-    /// Each interval is populated with observables by sampling the spacecraft
-    /// trajectory. Returns an empty vec if the pair is not found.
+    /// Returns an error if the pair is an inter-satellite pair, since passes
+    /// with ground-station observables are not meaningful for such pairs.
+    /// Returns an empty vec if the pair is not found.
     pub fn to_passes(
         &self,
         ground_id: &AssetId,
@@ -439,9 +483,16 @@ impl VisibilityResults {
         mask: &ElevationMask,
         sc: &DynTrajectory,
         time_resolution: TimeDelta,
-    ) -> Vec<DynPass> {
+    ) -> Result<Vec<DynPass>, PassError> {
         let key = (ground_id.clone(), space_id.clone());
-        self.intervals
+        if self.pair_types.get(&key) == Some(&PairType::InterSatellite) {
+            return Err(PassError::InterSatellitePair(
+                ground_id.as_str().to_string(),
+                space_id.as_str().to_string(),
+            ));
+        }
+        Ok(self
+            .intervals
             .get(&key)
             .map(|intervals| {
                 intervals
@@ -451,7 +502,7 @@ impl VisibilityResults {
                     })
                     .collect()
             })
-            .unwrap_or_default()
+            .unwrap_or_default())
     }
 }
 
@@ -612,18 +663,26 @@ where
         interval: TimeInterval<DynTimeScale>,
     ) -> Result<VisibilityResults, VisibilityError> {
         let mut intervals = HashMap::new();
+        let mut pair_types = HashMap::new();
 
         if !self.ground_assets.is_empty() {
             let gs_results = self.compute_ground_space(interval)?;
-            intervals.extend(gs_results.into_intervals());
+            let (gs_intervals, gs_pair_types) = gs_results.into_parts();
+            intervals.extend(gs_intervals);
+            pair_types.extend(gs_pair_types);
         }
 
         if self.inter_satellite {
             let is_results = self.compute_inter_satellite(interval)?;
-            intervals.extend(is_results.into_intervals());
+            let (is_intervals, is_pair_types) = is_results.into_parts();
+            intervals.extend(is_intervals);
+            pair_types.extend(is_pair_types);
         }
 
-        Ok(VisibilityResults { intervals })
+        Ok(VisibilityResults {
+            intervals,
+            pair_types,
+        })
     }
 
     /// Compute ground-to-space visibility for all (ground, space) pairs.
@@ -660,8 +719,14 @@ where
                 .collect()
         };
 
+        let intervals: HashMap<_, _> = results?.into_iter().collect();
+        let pair_types = intervals
+            .keys()
+            .map(|k| (k.clone(), PairType::GroundSpace))
+            .collect();
         Ok(VisibilityResults {
-            intervals: results?.into_iter().collect(),
+            intervals,
+            pair_types,
         })
     }
 
@@ -689,12 +754,21 @@ where
             })
             .collect();
 
+        let intervals: HashMap<_, _> = results?.into_iter().collect();
+        let pair_types = intervals
+            .keys()
+            .map(|k| (k.clone(), PairType::InterSatellite))
+            .collect();
         Ok(VisibilityResults {
-            intervals: results?.into_iter().collect(),
+            intervals,
+            pair_types,
         })
     }
 
-    /// Convert all intervals in a [`VisibilityResults`] to passes.
+    /// Convert all ground-space intervals in a [`VisibilityResults`] to passes.
+    ///
+    /// Inter-satellite pairs are skipped since passes with ground-station
+    /// observables are not meaningful for them.
     pub fn to_passes(
         &self,
         results: &VisibilityResults,
@@ -705,11 +779,12 @@ where
             self.space_assets.iter().map(|s| (s.id(), s)).collect();
 
         results
-            .all_intervals()
-            .iter()
-            .filter_map(|((gs_id, sc_id), intervals)| {
+            .ground_space_pair_ids()
+            .into_iter()
+            .filter_map(|(gs_id, sc_id)| {
                 let gs = gs_map.get(gs_id)?;
                 let sc = sc_map.get(sc_id)?;
+                let intervals = results.intervals_for(gs_id, sc_id)?;
                 let passes: Vec<DynPass> = intervals
                     .iter()
                     .filter_map(|interval| {
