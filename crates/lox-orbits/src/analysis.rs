@@ -20,6 +20,8 @@ use rayon::prelude::*;
 use std::f64::consts::PI;
 use thiserror::Error;
 
+use lox_core::units::Distance;
+
 use crate::assets::{AssetId, GroundAsset, SpaceAsset};
 use crate::events::{
     DetectError, DetectFn, EventsToIntervals, IntervalDetector, IntervalDetectorExt,
@@ -384,6 +386,37 @@ where
     }
 }
 
+/// Direction for inter-satellite range threshold comparison.
+enum RangeDirection {
+    /// Positive when range < threshold (i.e. `threshold - range`).
+    Max,
+    /// Positive when range > threshold (i.e. `range - threshold`).
+    Min,
+}
+
+/// Range threshold detector for inter-satellite pairs.
+struct InterSatelliteRangeDetectFn<'a> {
+    sc1: &'a DynTrajectory,
+    sc2: &'a DynTrajectory,
+    threshold: Distance,
+    direction: RangeDirection,
+}
+
+impl DetectFn<DynTimeScale> for InterSatelliteRangeDetectFn<'_> {
+    type Error = EvalError;
+
+    fn eval(&self, time: DynTime) -> Result<f64, Self::Error> {
+        let r1 = self.sc1.interpolate_at(time).position();
+        let r2 = self.sc2.interpolate_at(time).position();
+        let range = (r1 - r2).length();
+        let threshold = self.threshold.to_meters();
+        Ok(match self.direction {
+            RangeDirection::Max => threshold - range,
+            RangeDirection::Min => range - threshold,
+        })
+    }
+}
+
 // ---------------------------------------------------------------------------
 // VisibilityResults
 // ---------------------------------------------------------------------------
@@ -523,6 +556,8 @@ pub struct VisibilityAnalysis<'a, E> {
     step: TimeDelta,
     min_pass_duration: Option<TimeDelta>,
     inter_satellite: bool,
+    min_range: Option<Distance>,
+    max_range: Option<Distance>,
 }
 
 impl<'a, E> VisibilityAnalysis<'a, E>
@@ -543,6 +578,8 @@ where
             step: TimeDelta::from_seconds(60),
             min_pass_duration: None,
             inter_satellite: false,
+            min_range: None,
+            max_range: None,
         }
     }
 
@@ -563,6 +600,16 @@ where
 
     pub fn with_min_pass_duration(mut self, min_pass_duration: TimeDelta) -> Self {
         self.min_pass_duration = Some(min_pass_duration);
+        self
+    }
+
+    pub fn with_min_range(mut self, min_range: Distance) -> Self {
+        self.min_range = Some(min_range);
+        self
+    }
+
+    pub fn with_max_range(mut self, max_range: Distance) -> Self {
+        self.max_range = Some(max_range);
         self
     }
 
@@ -625,16 +672,32 @@ where
         Ok(make_elev().chain(los).detect(interval)?)
     }
 
-    /// Compute LOS intervals for a single inter-satellite pair.
+    /// Compute LOS intervals for a single inter-satellite pair,
+    /// optionally filtered by min/max range constraints.
     fn compute_inter_satellite_pair(
         &self,
         sc1: &SpaceAsset,
         sc2: &SpaceAsset,
         interval: TimeInterval<DynTimeScale>,
     ) -> Result<Vec<TimeInterval<DynTimeScale>>, VisibilityError> {
-        if self.occulting_bodies.is_empty() {
+        let has_range = self.min_range.is_some() || self.max_range.is_some();
+        let has_los = !self.occulting_bodies.is_empty();
+
+        if !has_range && !has_los {
             return Ok(vec![interval]);
         }
+
+        let make_range = |threshold: Distance, direction: RangeDirection| {
+            EventsToIntervals::new(self.apply_coarse_step(RootFindingDetector::new(
+                InterSatelliteRangeDetectFn {
+                    sc1: sc1.trajectory(),
+                    sc2: sc2.trajectory(),
+                    threshold,
+                    direction,
+                },
+                self.step,
+            )))
+        };
 
         let make_los = |body: DynOrigin| {
             EventsToIntervals::new(self.apply_coarse_step(RootFindingDetector::new(
@@ -648,13 +711,30 @@ where
             )))
         };
 
-        let mut los: Box<dyn IntervalDetector<DynTimeScale> + '_> =
-            Box::new(make_los(self.occulting_bodies[0]));
-        for &body in &self.occulting_bodies[1..] {
-            los = Box::new(los.intersect(make_los(body)));
+        // Start with range constraints (cheap, position-only).
+        let mut detector: Option<Box<dyn IntervalDetector<DynTimeScale> + '_>> = None;
+
+        if let Some(max) = self.max_range {
+            detector = Some(Box::new(make_range(max, RangeDirection::Max)));
+        }
+        if let Some(min) = self.min_range {
+            let min_det = make_range(min, RangeDirection::Min);
+            detector = Some(match detector {
+                Some(d) => Box::new(d.intersect(min_det)),
+                None => Box::new(min_det),
+            });
         }
 
-        Ok(los.detect(interval)?)
+        // Chain LOS detectors onto range windows.
+        for &body in &self.occulting_bodies {
+            let los = make_los(body);
+            detector = Some(match detector {
+                Some(d) => Box::new(d.chain(los)),
+                None => Box::new(los),
+            });
+        }
+
+        Ok(detector.unwrap().detect(interval)?)
     }
 
     /// Compute visibility intervals for all pairs.
@@ -811,6 +891,7 @@ where
 mod tests {
     use lox_bodies::{Earth, Spheroid};
     use lox_core::coords::LonLatAlt;
+    use lox_core::units::Distance;
     use lox_ephem::spk::parser::Spk;
     use lox_test_utils::{assert_approx_eq, data_dir, data_file, read_data_file};
     use lox_time::time_scales::Tai;
@@ -1046,6 +1127,44 @@ mod tests {
         assert_eq!(intervals.len(), 1);
         assert_approx_eq!(intervals[0].start(), interval.start(), rtol <= 1e-10);
         assert_approx_eq!(intervals[0].end(), interval.end(), rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_inter_satellite_visibility_with_range_filter() {
+        let sc_traj = spacecraft_trajectory_dyn();
+        let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
+        let sc1 = SpaceAsset::new("sc1", sc_traj.clone());
+        let sc2 = SpaceAsset::new("sc2", sc_traj);
+        let spk = ephemeris();
+        let space_assets = [sc1.clone(), sc2.clone()];
+
+        // Colocated spacecraft have range = 0. A max_range filter with a large
+        // threshold should still return the full interval.
+        let analysis = VisibilityAnalysis::new(&[], &space_assets, spk)
+            .with_inter_satellite()
+            .with_max_range(Distance::kilometers(1000.0));
+        let results = analysis.compute(interval).unwrap();
+        let intervals = results
+            .intervals_for(sc1.id(), sc2.id())
+            .expect("pair not found");
+        assert_eq!(intervals.len(), 1);
+        assert_approx_eq!(intervals[0].start(), interval.start(), rtol <= 1e-10);
+        assert_approx_eq!(intervals[0].end(), interval.end(), rtol <= 1e-10);
+
+        // A min_range filter with a positive threshold should exclude colocated
+        // spacecraft entirely (range = 0 < threshold at all times).
+        let analysis = VisibilityAnalysis::new(&[], &space_assets, spk)
+            .with_inter_satellite()
+            .with_min_range(Distance::kilometers(100.0));
+        let results = analysis.compute(interval).unwrap();
+        let intervals = results
+            .intervals_for(sc1.id(), sc2.id())
+            .expect("pair not found");
+        assert!(
+            intervals.is_empty(),
+            "expected no intervals for colocated spacecraft with min_range, got {}",
+            intervals.len()
+        );
     }
 
     fn ephemeris() -> &'static Spk {
