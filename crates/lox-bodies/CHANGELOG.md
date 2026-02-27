@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.14](https://github.com/lox-space/lox/compare/lox-bodies-v0.1.0-alpha.13...lox-bodies-v0.1.0-alpha.14) - 2026-02-27
+
+### Other
+
+- updated the following local packages: lox-core, lox-math, lox-units
+
 ## [0.1.0-alpha.13](https://github.com/lox-space/lox/compare/lox-bodies-v0.1.0-alpha.12...lox-bodies-v0.1.0-alpha.13) - 2026-02-25
 
 ### Added

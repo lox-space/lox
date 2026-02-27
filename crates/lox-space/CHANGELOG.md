@@ -6,6 +6,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.31](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.30...lox-space-v0.1.0-alpha.31) - 2026-02-27
+
+### Added
+
+- *(lox-space)* add Python SSO constructor
+- *(lox-orbits)* add slew rate constraint
+- *(lox-orbits)* add min/max range to ISL
+- *(lox-orbits)* improve visibility results API
+- *(lox-space)* expose intervals from Python
+- *(lox-space)* allow names/ids for origins and frames
+- *(lox-space)* add more __repr__s
+- *(lox-space)* make Python wrapper unitful
+
+### Fixed
+
+- *(lox-orbits/lox-space)* fix inter-satellite vis API
+
+### Other
+
+- *(lox-space)* more tests
+- *(lox-space)* denoise ephem benchmarks
+- *(lox-orbits)* update Python docs and type stubs
+- *(lox-orbits)* add Python visibility tests
+- *(lox-orbits)* improve performance
+- fix formatting
+- *(lox-orbits)* refactor visibility analysis
+- *(lox-orbits)* refactor event detection
+
 ## [0.1.0-alpha.30](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.29...lox-space-v0.1.0-alpha.30) - 2026-02-25
 
 ### Added
