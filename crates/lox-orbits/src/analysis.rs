@@ -422,6 +422,11 @@ impl VisibilityResults {
         self.intervals.values().map(|v| v.len()).sum()
     }
 
+    /// Consume self and return the inner intervals map.
+    pub fn into_intervals(self) -> HashMap<(AssetId, AssetId), Vec<TimeInterval<DynTimeScale>>> {
+        self.intervals
+    }
+
     /// Convert intervals for a specific pair to visibility passes.
     ///
     /// Each interval is populated with observables by sampling the spacecraft
@@ -454,10 +459,11 @@ impl VisibilityResults {
 // VisibilityAnalysis
 // ---------------------------------------------------------------------------
 
-/// Computes ground-station-to-spacecraft visibility.
+/// Computes ground-station-to-spacecraft and inter-satellite visibility.
 ///
-/// Uses the new `DetectFn` / `RootFindingDetector` / `EventsToIntervals`
-/// pipeline for event detection.
+/// Ground-to-space pairs are always computed when ground assets are present.
+/// Inter-satellite pairs are additionally computed when enabled via
+/// [`with_inter_satellite`](Self::with_inter_satellite).
 pub struct VisibilityAnalysis<'a, E> {
     ground_assets: &'a [GroundAsset],
     space_assets: &'a [SpaceAsset],
@@ -489,16 +495,9 @@ where
         }
     }
 
-    pub fn inter_satellite(space_assets: &'a [SpaceAsset], ephemeris: &'a E) -> Self {
-        Self {
-            ground_assets: &[],
-            space_assets,
-            ephemeris,
-            occulting_bodies: Vec::new(),
-            step: TimeDelta::from_seconds(60),
-            min_pass_duration: None,
-            inter_satellite: true,
-        }
+    pub fn with_inter_satellite(mut self) -> Self {
+        self.inter_satellite = true;
+        self
     }
 
     pub fn with_occulting_bodies(mut self, bodies: Vec<DynOrigin>) -> Self {
@@ -612,11 +611,19 @@ where
         &self,
         interval: TimeInterval<DynTimeScale>,
     ) -> Result<VisibilityResults, VisibilityError> {
-        if self.inter_satellite {
-            self.compute_inter_satellite(interval)
-        } else {
-            self.compute_ground_space(interval)
+        let mut intervals = HashMap::new();
+
+        if !self.ground_assets.is_empty() {
+            let gs_results = self.compute_ground_space(interval)?;
+            intervals.extend(gs_results.into_intervals());
         }
+
+        if self.inter_satellite {
+            let is_results = self.compute_inter_satellite(interval)?;
+            intervals.extend(is_results.into_intervals());
+        }
+
+        Ok(VisibilityResults { intervals })
     }
 
     /// Compute ground-to-space visibility for all (ground, space) pairs.
@@ -700,9 +707,9 @@ where
         results
             .all_intervals()
             .iter()
-            .map(|((gs_id, sc_id), intervals)| {
-                let gs = gs_map[gs_id];
-                let sc = sc_map[sc_id];
+            .filter_map(|((gs_id, sc_id), intervals)| {
+                let gs = gs_map.get(gs_id)?;
+                let sc = sc_map.get(sc_id)?;
                 let passes: Vec<DynPass> = intervals
                     .iter()
                     .filter_map(|interval| {
@@ -715,7 +722,7 @@ where
                         )
                     })
                     .collect();
-                ((gs_id.clone(), sc_id.clone()), passes)
+                Some(((gs_id.clone(), sc_id.clone()), passes))
             })
             .collect()
     }
@@ -953,7 +960,8 @@ mod tests {
         let sc2 = SpaceAsset::new("sc2", sc_traj);
         let spk = ephemeris();
         let space_assets = [sc1.clone(), sc2.clone()];
-        let analysis = VisibilityAnalysis::inter_satellite(&space_assets, spk)
+        let analysis = VisibilityAnalysis::new(&[], &space_assets, spk)
+            .with_inter_satellite()
             .with_occulting_bodies(vec![DynOrigin::Earth]);
         let results = analysis.compute(interval).unwrap();
         let intervals = results

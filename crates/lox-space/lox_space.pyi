@@ -350,7 +350,11 @@ class SpaceAsset:
         ...
 
 class VisibilityAnalysis:
-    """Computes ground-station-to-spacecraft visibility.
+    """Computes ground-station-to-spacecraft and inter-satellite visibility.
+
+    Ground-to-space pairs are always computed when ground assets are present.
+    Inter-satellite pairs are additionally computed when ``inter_satellite``
+    is set to True.
 
     Args:
         ground_assets: List of GroundAsset objects.
@@ -360,6 +364,8 @@ class VisibilityAnalysis:
         min_pass_duration: Optional minimum pass duration. Passes
             shorter than this value may be missed. Enables two-level stepping
             for faster detection.
+        inter_satellite: If True, also compute inter-satellite visibility
+            for all unique spacecraft pairs (default: False).
 
     Examples:
         >>> analysis = lox.VisibilityAnalysis(
@@ -376,6 +382,7 @@ class VisibilityAnalysis:
         occulting_bodies: list[str | int | Origin] | None = None,
         step: TimeDelta | None = None,
         min_pass_duration: TimeDelta | None = None,
+        inter_satellite: bool = False,
     ) -> Self: ...
     def compute(self, start: Time, end: Time, ephemeris: SPK) -> VisibilityResults:
         """Compute visibility intervals for all (ground, space) pairs.
