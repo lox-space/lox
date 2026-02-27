@@ -561,3 +561,129 @@ class TestElevationMask:
         c = lox.ElevationMask.fixed(0.2 * lox.rad)
         assert a == b
         assert a != c
+
+
+# ---------------------------------------------------------------------------
+# Inter-satellite range filtering
+# ---------------------------------------------------------------------------
+
+
+class TestInterSatelliteRangeFiltering:
+    def test_max_range_restricts_intervals(
+        self, space_assets, t0, t1, ephemeris
+    ):
+        """A tight max_range should produce fewer/shorter intervals than no limit."""
+        unlimited = lox.VisibilityAnalysis(
+            [], space_assets, inter_satellite=True
+        )
+        limited = lox.VisibilityAnalysis(
+            [], space_assets, inter_satellite=True, max_range=500 * lox.km
+        )
+        res_unlimited = unlimited.compute(t0, t1, ephemeris)
+        res_limited = limited.compute(t0, t1, ephemeris)
+        # Every pair in the limited result should have at most as many intervals
+        # as the unlimited result (usually fewer or shorter).
+        for pair in res_unlimited.inter_satellite_pair_ids():
+            id1, id2 = pair
+            ivs_unlim = res_unlimited.intervals(id1, id2)
+            ivs_lim = res_limited.intervals(id1, id2)
+            dur_unlim = sum(float(iv.duration()) for iv in ivs_unlim)
+            dur_lim = sum(float(iv.duration()) for iv in ivs_lim)
+            assert dur_lim <= dur_unlim + 1e-6
+
+    def test_large_max_range_matches_unlimited(
+        self, space_assets, t0, t1, ephemeris
+    ):
+        """A very large max_range should not remove any intervals."""
+        unlimited = lox.VisibilityAnalysis(
+            [], space_assets, inter_satellite=True
+        )
+        limited = lox.VisibilityAnalysis(
+            [],
+            space_assets,
+            inter_satellite=True,
+            max_range=1_000_000 * lox.km,
+        )
+        res_unlimited = unlimited.compute(t0, t1, ephemeris)
+        res_limited = limited.compute(t0, t1, ephemeris)
+        assert res_limited.num_pairs() == res_unlimited.num_pairs()
+        for pair in res_unlimited.inter_satellite_pair_ids():
+            id1, id2 = pair
+            ivs_unlim = res_unlimited.intervals(id1, id2)
+            ivs_lim = res_limited.intervals(id1, id2)
+            dur_unlim = sum(float(iv.duration()) for iv in ivs_unlim)
+            dur_lim = sum(float(iv.duration()) for iv in ivs_lim)
+            assert dur_lim == pytest.approx(dur_unlim, abs=1.0)
+
+    def test_min_range_restricts_intervals(
+        self, space_assets, t0, t1, ephemeris
+    ):
+        """A positive min_range should produce fewer/shorter intervals than no limit."""
+        unlimited = lox.VisibilityAnalysis(
+            [], space_assets, inter_satellite=True
+        )
+        limited = lox.VisibilityAnalysis(
+            [], space_assets, inter_satellite=True, min_range=1000 * lox.km
+        )
+        res_unlimited = unlimited.compute(t0, t1, ephemeris)
+        res_limited = limited.compute(t0, t1, ephemeris)
+        for pair in res_unlimited.inter_satellite_pair_ids():
+            id1, id2 = pair
+            ivs_unlim = res_unlimited.intervals(id1, id2)
+            ivs_lim = res_limited.intervals(id1, id2)
+            dur_unlim = sum(float(iv.duration()) for iv in ivs_unlim)
+            dur_lim = sum(float(iv.duration()) for iv in ivs_lim)
+            assert dur_lim <= dur_unlim + 1e-6
+
+    def test_combined_min_and_max_range(
+        self, space_assets, t0, t1, ephemeris
+    ):
+        """Using both min and max range should be more restrictive than either alone."""
+        max_only = lox.VisibilityAnalysis(
+            [], space_assets, inter_satellite=True, max_range=2000 * lox.km
+        )
+        both = lox.VisibilityAnalysis(
+            [],
+            space_assets,
+            inter_satellite=True,
+            min_range=500 * lox.km,
+            max_range=2000 * lox.km,
+        )
+        res_max = max_only.compute(t0, t1, ephemeris)
+        res_both = both.compute(t0, t1, ephemeris)
+        for pair in res_max.inter_satellite_pair_ids():
+            id1, id2 = pair
+            dur_max = sum(float(iv.duration()) for iv in res_max.intervals(id1, id2))
+            dur_both = sum(
+                float(iv.duration()) for iv in res_both.intervals(id1, id2)
+            )
+            assert dur_both <= dur_max + 1e-6
+
+    def test_range_with_los(self, space_assets, t0, t1, ephemeris):
+        """Range filtering combined with LOS occlusion should work together."""
+        analysis = lox.VisibilityAnalysis(
+            [],
+            space_assets,
+            occulting_bodies=[lox.Origin("Earth")],
+            inter_satellite=True,
+            max_range=2000 * lox.km,
+        )
+        results = analysis.compute(t0, t1, ephemeris)
+        n = len(space_assets)
+        assert results.num_pairs() == n * (n - 1) // 2
+
+    def test_range_does_not_affect_ground_space(
+        self, ground_assets, space_assets, t0, t1, ephemeris
+    ):
+        """Range constraints only apply to inter-satellite pairs, not ground-space."""
+        without_range = lox.VisibilityAnalysis(ground_assets, space_assets)
+        with_range = lox.VisibilityAnalysis(
+            ground_assets, space_assets, max_range=100 * lox.km
+        )
+        res_without = without_range.compute(t0, t1, ephemeris)
+        res_with = with_range.compute(t0, t1, ephemeris)
+        for pair in res_without.ground_space_pair_ids():
+            id1, id2 = pair
+            ivs_without = res_without.intervals(id1, id2)
+            ivs_with = res_with.intervals(id1, id2)
+            assert len(ivs_without) == len(ivs_with)

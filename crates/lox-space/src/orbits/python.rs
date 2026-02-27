@@ -1665,6 +1665,8 @@ impl PySpaceAsset {
 ///         detection.
 ///     inter_satellite: If True, also compute inter-satellite visibility
 ///         for all unique spacecraft pairs (default: False).
+///     min_range: Optional minimum range constraint for inter-satellite pairs.
+///     max_range: Optional maximum range constraint for inter-satellite pairs.
 #[pyclass(name = "VisibilityAnalysis", module = "lox_space", frozen)]
 pub struct PyVisibilityAnalysis {
     ground_assets: Vec<GroundAsset>,
@@ -1673,12 +1675,15 @@ pub struct PyVisibilityAnalysis {
     step: TimeDelta,
     min_pass_duration: Option<TimeDelta>,
     inter_satellite: bool,
+    min_range: Option<Distance>,
+    max_range: Option<Distance>,
 }
 
 #[pymethods]
 impl PyVisibilityAnalysis {
     #[new]
-    #[pyo3(signature = (ground_assets, space_assets, occulting_bodies=None, step=None, min_pass_duration=None, inter_satellite=false))]
+    #[pyo3(signature = (ground_assets, space_assets, occulting_bodies=None, step=None, min_pass_duration=None, inter_satellite=false, min_range=None, max_range=None))]
+    #[allow(clippy::too_many_arguments)]
     fn new(
         ground_assets: Vec<PyGroundAsset>,
         space_assets: Vec<PySpaceAsset>,
@@ -1686,6 +1691,8 @@ impl PyVisibilityAnalysis {
         step: Option<PyTimeDelta>,
         min_pass_duration: Option<PyTimeDelta>,
         inter_satellite: bool,
+        min_range: Option<PyDistance>,
+        max_range: Option<PyDistance>,
     ) -> PyResult<Self> {
         let occulting_bodies: Vec<DynOrigin> = occulting_bodies
             .unwrap_or_default()
@@ -1701,6 +1708,8 @@ impl PyVisibilityAnalysis {
                 .unwrap_or_else(|| TimeDelta::from_seconds_f64(60.0)),
             min_pass_duration: min_pass_duration.map(|d| d.0),
             inter_satellite,
+            min_range: min_range.map(|d| d.0),
+            max_range: max_range.map(|d| d.0),
         })
     }
 
@@ -1733,6 +1742,12 @@ impl PyVisibilityAnalysis {
             }
             if self.inter_satellite {
                 analysis = analysis.with_inter_satellite();
+            }
+            if let Some(min_range) = self.min_range {
+                analysis = analysis.with_min_range(min_range);
+            }
+            if let Some(max_range) = self.max_range {
+                analysis = analysis.with_max_range(max_range);
             }
             analysis.compute(interval)
         });
