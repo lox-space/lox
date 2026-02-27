@@ -36,7 +36,9 @@ use lox_core::coords::{Cartesian, LonLatAlt};
 use lox_core::elements::{
     ArgumentOfPeriapsis, Eccentricity, Inclination, Keplerian, LongitudeOfAscendingNode,
 };
-use lox_time::intervals::{Interval, TimeInterval};
+use lox_time::intervals::{
+    Interval, TimeInterval, complement_intervals, intersect_intervals, union_intervals,
+};
 use lox_units::{Angle, Distance, Velocity};
 
 use crate::units::python::{PyAngle, PyDistance, PyVelocity};
@@ -197,14 +199,14 @@ pub fn find_events(
 ///     step: Step size for sampling the function.
 ///
 /// Returns:
-///     List of Window objects for intervals where the function is positive.
+///     List of Interval objects for intervals where the function is positive.
 #[pyfunction]
 pub fn find_windows(
     func: &Bound<'_, PyAny>,
     start: PyTime,
     end: PyTime,
     step: PyTimeDelta,
-) -> PyResult<Vec<PyWindow>> {
+) -> PyResult<Vec<PyInterval>> {
     let interval = TimeInterval::new(start.0, end.0);
     let windows = crate::orbits::events::try_find_windows(
         |t| {
@@ -217,7 +219,63 @@ pub fn find_windows(
         step.0,
     )
     .map_err(PyDetectError)?;
-    Ok(windows.into_iter().map(PyWindow).collect())
+    Ok(windows.into_iter().map(PyInterval).collect())
+}
+
+/// Intersect two sorted lists of intervals.
+///
+/// Args:
+///     a: First list of intervals.
+///     b: Second list of intervals.
+///
+/// Returns:
+///     List of intervals representing the intersection.
+#[pyfunction]
+#[pyo3(name = "intersect_intervals")]
+pub fn py_intersect_intervals(a: Vec<PyInterval>, b: Vec<PyInterval>) -> Vec<PyInterval> {
+    let a: Vec<_> = a.into_iter().map(|i| i.0).collect();
+    let b: Vec<_> = b.into_iter().map(|i| i.0).collect();
+    intersect_intervals(&a, &b)
+        .into_iter()
+        .map(PyInterval)
+        .collect()
+}
+
+/// Compute the union of two sorted lists of intervals.
+///
+/// Args:
+///     a: First list of intervals.
+///     b: Second list of intervals.
+///
+/// Returns:
+///     List of merged intervals representing the union.
+#[pyfunction]
+#[pyo3(name = "union_intervals")]
+pub fn py_union_intervals(a: Vec<PyInterval>, b: Vec<PyInterval>) -> Vec<PyInterval> {
+    let a: Vec<_> = a.into_iter().map(|i| i.0).collect();
+    let b: Vec<_> = b.into_iter().map(|i| i.0).collect();
+    union_intervals(&a, &b)
+        .into_iter()
+        .map(PyInterval)
+        .collect()
+}
+
+/// Compute the complement of intervals within a bounding interval.
+///
+/// Args:
+///     intervals: List of intervals to complement.
+///     bound: Bounding interval.
+///
+/// Returns:
+///     List of gap intervals within the bound.
+#[pyfunction]
+#[pyo3(name = "complement_intervals")]
+pub fn py_complement_intervals(intervals: Vec<PyInterval>, bound: PyInterval) -> Vec<PyInterval> {
+    let intervals: Vec<_> = intervals.into_iter().map(|i| i.0).collect();
+    complement_intervals(&intervals, bound.0)
+        .into_iter()
+        .map(PyInterval)
+        .collect()
 }
 
 /// Represents an orbital state (position and velocity) at a specific time.
@@ -820,8 +878,12 @@ impl PyTrajectory {
     ///     step: Step size for sampling the function.
     ///
     /// Returns:
-    ///     List of Window objects.
-    fn find_windows(&self, func: &Bound<'_, PyAny>, step: PyTimeDelta) -> PyResult<Vec<PyWindow>> {
+    ///     List of Interval objects.
+    fn find_windows(
+        &self,
+        func: &Bound<'_, PyAny>,
+        step: PyTimeDelta,
+    ) -> PyResult<Vec<PyInterval>> {
         let traj = &self.0;
         let interval = TimeInterval::new(traj.start_time(), traj.end_time());
         let windows = crate::orbits::events::try_find_windows(
@@ -835,7 +897,7 @@ impl PyTrajectory {
             step.0,
         )
         .map_err(PyDetectError)?;
-        Ok(windows.into_iter().map(PyWindow).collect())
+        Ok(windows.into_iter().map(PyInterval).collect())
     }
 
     /// Interpolate the trajectory at a specific time.
@@ -967,44 +1029,103 @@ impl PyEvent {
 
 /// Represents a time window (interval between two times).
 ///
-/// Windows are used to represent periods when certain conditions are met,
-/// such as visibility windows between a ground station and spacecraft.
+/// Intervals are used to represent periods when certain conditions are met,
+/// such as visibility intervals between a ground station and spacecraft.
 ///
 /// Args:
-///     start: The start time of the window.
-///     end: The end time of the window.
-#[pyclass(name = "Window", module = "lox_space", frozen)]
+///     start: The start time of the interval.
+///     end: The end time of the interval.
+#[pyclass(name = "Interval", module = "lox_space", frozen)]
 #[derive(Clone, Debug)]
-pub struct PyWindow(pub TimeInterval<DynTimeScale>);
+pub struct PyInterval(pub TimeInterval<DynTimeScale>);
 
 #[pymethods]
-impl PyWindow {
+impl PyInterval {
     #[new]
     fn new(start: PyTime, end: PyTime) -> Self {
-        PyWindow(TimeInterval::new(start.0, end.0))
+        PyInterval(TimeInterval::new(start.0, end.0))
     }
 
     fn __repr__(&self) -> String {
         format!(
-            "Window({}, {})",
+            "Interval({}, {})",
             self.start().__repr__(),
             self.end().__repr__(),
         )
     }
 
-    /// Return the start time of this window.
+    /// Return the start time of this interval.
     fn start(&self) -> PyTime {
         PyTime(self.0.start())
     }
 
-    /// Return the end time of this window.
+    /// Return the end time of this interval.
     fn end(&self) -> PyTime {
         PyTime(self.0.end())
     }
 
-    /// Return the duration of this window.
+    /// Return the duration of this interval.
     fn duration(&self) -> PyTimeDelta {
         PyTimeDelta(self.0.duration())
+    }
+
+    /// Return whether this interval is empty (start >= end).
+    fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    /// Return whether this interval contains the given time.
+    fn contains_time(&self, time: PyTime) -> bool {
+        self.0.contains_time(time.0)
+    }
+
+    /// Return whether this interval fully contains another interval.
+    fn contains(&self, other: &PyInterval) -> bool {
+        self.0.contains(&other.0)
+    }
+
+    /// Return the intersection of this interval with another.
+    fn intersect(&self, other: PyInterval) -> PyInterval {
+        PyInterval(self.0.intersect(other.0))
+    }
+
+    /// Return whether this interval overlaps with another.
+    fn overlaps(&self, other: PyInterval) -> bool {
+        self.0.overlaps(other.0)
+    }
+
+    /// Return a list of times spaced by the given step within this interval.
+    ///
+    /// Args:
+    ///     step: The step size (must be non-zero).
+    ///
+    /// Returns:
+    ///     List of Time objects.
+    ///
+    /// Raises:
+    ///     ValueError: If step is zero.
+    fn step_by(&self, step: PyTimeDelta) -> PyResult<Vec<PyTime>> {
+        if step.0.is_zero() {
+            return Err(PyValueError::new_err("step must be non-zero"));
+        }
+        Ok(self.0.step_by(step.0).map(PyTime).collect())
+    }
+
+    /// Return a list of n evenly-spaced times within this interval.
+    ///
+    /// Args:
+    ///     n: Number of points (must be >= 2).
+    ///
+    /// Returns:
+    ///     List of Time objects.
+    ///
+    /// Raises:
+    ///     ValueError: If n < 2.
+    fn linspace(&self, n: usize) -> PyResult<Vec<PyTime>> {
+        if n < 2 {
+            return Err(PyValueError::new_err("n must be >= 2"));
+        }
+        Ok(self.0.linspace(n).into_iter().map(PyTime).collect())
     }
 }
 
@@ -1656,20 +1777,20 @@ pub struct PyVisibilityResults {
 
 #[pymethods]
 impl PyVisibilityResults {
-    /// Return visibility windows for a specific (ground, space) pair.
+    /// Return visibility intervals for a specific (ground, space) pair.
     ///
     /// Args:
     ///     ground_id: Ground asset identifier.
     ///     space_id: Space asset identifier.
     ///
     /// Returns:
-    ///     List of Window objects, or empty list if pair not found.
-    fn intervals(&self, ground_id: &str, space_id: &str) -> Vec<PyWindow> {
+    ///     List of Interval objects, or empty list if pair not found.
+    fn intervals(&self, ground_id: &str, space_id: &str) -> Vec<PyInterval> {
         let gs_id = AssetId::new(ground_id);
         let sc_id = AssetId::new(space_id);
         self.results
             .intervals_for(&gs_id, &sc_id)
-            .map(|intervals| intervals.iter().map(|i| PyWindow(*i)).collect())
+            .map(|intervals| intervals.iter().map(|i| PyInterval(*i)).collect())
             .unwrap_or_default()
     }
 
@@ -1973,7 +2094,7 @@ impl PyObservables {
 
 /// Represents a visibility pass between a ground station and spacecraft.
 ///
-/// A Pass contains the visibility window (start and end times) along with
+/// A Pass contains the visibility interval (start and end times) along with
 /// observables computed at regular intervals throughout the pass.
 #[pyclass(name = "Pass", module = "lox_space", frozen)]
 #[derive(Debug, Clone)]
@@ -1983,22 +2104,22 @@ pub struct PyPass(pub DynPass);
 impl PyPass {
     #[new]
     fn new(
-        window: PyWindow,
+        interval: PyInterval,
         times: Vec<PyTime>,
         observables: Vec<PyObservables>,
     ) -> PyResult<Self> {
         let times: Vec<DynTime> = times.into_iter().map(|t| t.0).collect();
         let observables: Vec<Observables> = observables.into_iter().map(|o| o.0).collect();
 
-        let pass = Pass::try_new(window.0, times, observables)
+        let pass = Pass::try_new(interval.0, times, observables)
             .map_err(|e| PyValueError::new_err(e.to_string()))?;
 
         Ok(PyPass(pass))
     }
 
-    /// Return the visibility window for this pass.
-    fn window(&self) -> PyWindow {
-        PyWindow(*self.0.interval())
+    /// Return the visibility interval for this pass.
+    fn interval(&self) -> PyInterval {
+        PyInterval(*self.0.interval())
     }
 
     /// Return the time samples during this pass.
@@ -2028,8 +2149,8 @@ impl PyPass {
 
     fn __repr__(&self) -> String {
         format!(
-            "Pass(window={}, {} observables)",
-            self.window().__repr__(),
+            "Pass(interval={}, {} observables)",
+            self.interval().__repr__(),
             self.0.observables().len(),
         )
     }

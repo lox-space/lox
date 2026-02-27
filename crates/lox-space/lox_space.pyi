@@ -404,15 +404,15 @@ class VisibilityResults:
     windows) are computed eagerly; observables-rich Pass objects are
     computed on demand.
     """
-    def intervals(self, ground_id: str, space_id: str) -> list[Window]:
-        """Return visibility windows for a specific (ground, space) pair.
+    def intervals(self, ground_id: str, space_id: str) -> list[Interval]:
+        """Return visibility intervals for a specific (ground, space) pair.
 
         Args:
             ground_id: Ground asset identifier.
             space_id: Space asset identifier.
 
         Returns:
-            List of Window objects, or empty list if pair not found.
+            List of Interval objects, or empty list if pair not found.
         """
         ...
     def passes(self, ground_id: str, space_id: str) -> list[Pass]:
@@ -510,7 +510,7 @@ def find_events(
 
 def find_windows(
     func: Callable[[Time], float], start: Time, end: Time, step: TimeDelta
-) -> list[Window]:
+) -> list[Interval]:
     """Find time windows where a function is positive.
 
     Args:
@@ -520,7 +520,43 @@ def find_windows(
         step: Step size for sampling the function.
 
     Returns:
-        List of Window objects for intervals where the function is positive.
+        List of Interval objects for intervals where the function is positive.
+    """
+    ...
+
+def intersect_intervals(a: list[Interval], b: list[Interval]) -> list[Interval]:
+    """Intersect two sorted lists of intervals.
+
+    Args:
+        a: First list of intervals.
+        b: Second list of intervals.
+
+    Returns:
+        List of intervals representing the intersection.
+    """
+    ...
+
+def union_intervals(a: list[Interval], b: list[Interval]) -> list[Interval]:
+    """Compute the union of two sorted lists of intervals.
+
+    Args:
+        a: First list of intervals.
+        b: Second list of intervals.
+
+    Returns:
+        List of merged intervals representing the union.
+    """
+    ...
+
+def complement_intervals(intervals: list[Interval], bound: Interval) -> list[Interval]:
+    """Compute the complement of intervals within a bounding interval.
+
+    Args:
+        intervals: List of intervals to complement.
+        bound: Bounding interval.
+
+    Returns:
+        List of gap intervals within the bound.
     """
     ...
 
@@ -856,7 +892,7 @@ class Trajectory:
         ...
     def find_windows(
         self, func: Callable[[Cartesian], float], step: TimeDelta
-    ) -> list[Window]:
+    ) -> list[Interval]:
         """Find time windows where a function is positive."""
         ...
     def interpolate(self, time: Time | TimeDelta) -> Cartesian:
@@ -885,21 +921,51 @@ class Event:
         """Return the crossing direction ("up" or "down")."""
         ...
 
-class Window:
-    """Represents a time window (interval between two times).
+class Interval:
+    """Represents a time interval between two times.
 
-    Windows represent periods when certain conditions are met,
-    such as visibility windows.
+    Intervals represent periods when certain conditions are met,
+    such as visibility intervals between a ground station and spacecraft.
     """
+    def __new__(cls, start: Time, end: Time) -> Self: ...
     def __repr__(self) -> str: ...
     def start(self) -> Time:
-        """Return the start time of this window."""
+        """Return the start time of this interval."""
         ...
     def end(self) -> Time:
-        """Return the end time of this window."""
+        """Return the end time of this interval."""
         ...
     def duration(self) -> TimeDelta:
-        """Return the duration of this window."""
+        """Return the duration of this interval."""
+        ...
+    def is_empty(self) -> bool:
+        """Return whether this interval is empty (start >= end)."""
+        ...
+    def contains_time(self, time: Time) -> bool:
+        """Return whether this interval contains the given time."""
+        ...
+    def contains(self, other: Interval) -> bool:
+        """Return whether this interval fully contains another interval."""
+        ...
+    def intersect(self, other: Interval) -> Interval:
+        """Return the intersection of this interval with another."""
+        ...
+    def overlaps(self, other: Interval) -> bool:
+        """Return whether this interval overlaps with another."""
+        ...
+    def step_by(self, step: TimeDelta) -> list[Time]:
+        """Return a list of times spaced by the given step within this interval.
+
+        Raises:
+            ValueError: If step is zero.
+        """
+        ...
+    def linspace(self, n: int) -> list[Time]:
+        """Return a list of n evenly-spaced times within this interval.
+
+        Raises:
+            ValueError: If n < 2.
+        """
         ...
 
 class Vallado:
@@ -1089,14 +1155,14 @@ class Observables:
 class Pass:
     """Represents a visibility pass between a ground station and spacecraft.
 
-    A Pass contains the visibility window (start and end times) along with
+    A Pass contains the visibility interval (start and end times) along with
     observables computed at regular intervals throughout the pass.
     """
     def __new__(
-        cls, window: Window, times: list[Time], observables: list[Observables]
+        cls, interval: Interval, times: list[Time], observables: list[Observables]
     ) -> Self: ...
-    def window(self) -> Window:
-        """Return the visibility window for this pass."""
+    def interval(self) -> Interval:
+        """Return the visibility interval for this pass."""
         ...
     def times(self) -> list[Time]:
         """Return the time samples during this pass."""

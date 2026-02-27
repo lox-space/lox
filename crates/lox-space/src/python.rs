@@ -16,8 +16,9 @@ use crate::frames::python::PyFrame;
 use crate::math::python::PySeries;
 use crate::orbits::python::{
     PyCartesian, PyElevationMask, PyEvent, PyGroundAsset, PyGroundLocation, PyGroundPropagator,
-    PyJ2Propagator, PyKeplerian, PyObservables, PyPass, PySgp4, PySpaceAsset, PyTrajectory,
-    PyVallado, PyVisibilityAnalysis, PyVisibilityResults, PyWindow, find_events, find_windows,
+    PyInterval, PyJ2Propagator, PyKeplerian, PyObservables, PyPass, PySgp4, PySpaceAsset,
+    PyTrajectory, PyVallado, PyVisibilityAnalysis, PyVisibilityResults, find_events, find_windows,
+    py_complement_intervals, py_intersect_intervals, py_union_intervals,
 };
 use crate::time::python::{
     deltas::{NonFiniteTimeDeltaError, PyTimeDelta},
@@ -92,9 +93,12 @@ fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyVallado>()?;
     m.add_class::<PyVisibilityAnalysis>()?;
     m.add_class::<PyVisibilityResults>()?;
-    m.add_class::<PyWindow>()?;
+    m.add_class::<PyInterval>()?;
     m.add_function(wrap_pyfunction!(find_events, m)?)?;
     m.add_function(wrap_pyfunction!(find_windows, m)?)?;
+    m.add_function(wrap_pyfunction!(py_intersect_intervals, m)?)?;
+    m.add_function(wrap_pyfunction!(py_union_intervals, m)?)?;
+    m.add_function(wrap_pyfunction!(py_complement_intervals, m)?)?;
 
     // time
     m.add_class::<PyTime>()?;
