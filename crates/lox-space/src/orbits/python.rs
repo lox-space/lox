@@ -99,6 +99,14 @@ impl From<PyVisibilityError> for PyErr {
     }
 }
 
+struct PySsoError(lox_orbits::orbits::sso::SsoError);
+
+impl From<PySsoError> for PyErr {
+    fn from(err: PySsoError) -> Self {
+        PyValueError::new_err(err.0.to_string())
+    }
+}
+
 /// Convert a `DynTime` to TAI, using the EOP provider if available.
 fn to_tai(
     time: DynTime,
@@ -657,6 +665,111 @@ impl PyKeplerian {
         )
         .map_err(|err| PyValueError::new_err(err.to_string()))?;
         Ok(PyKeplerian(orbit))
+    }
+
+    /// Construct a Sun-synchronous orbit.
+    ///
+    /// Exactly one of ``altitude``, ``semi_major_axis``, or ``inclination``
+    /// must be provided. The remaining orbital elements are derived from the
+    /// SSO constraint.
+    ///
+    /// Args:
+    ///     time: Epoch of the orbit.
+    ///     altitude: Orbital altitude (mutually exclusive with semi_major_axis/inclination).
+    ///     semi_major_axis: Semi-major axis (mutually exclusive with altitude/inclination).
+    ///     inclination: Inclination (mutually exclusive with altitude/semi_major_axis).
+    ///     eccentricity: Eccentricity (default 0.0).
+    ///     ltan: Local time of ascending node as ``(hours, minutes)`` tuple.
+    ///     ltdn: Local time of descending node as ``(hours, minutes)`` tuple.
+    ///     argument_of_periapsis: Argument of periapsis (default 0.0).
+    ///     true_anomaly: True anomaly (default 0.0).
+    ///     provider: EOP provider for time scale conversions.
+    #[classmethod]
+    #[pyo3(signature = (
+        time,
+        *,
+        altitude=None,
+        semi_major_axis=None,
+        inclination=None,
+        eccentricity=0.0,
+        ltan=None,
+        ltdn=None,
+        argument_of_periapsis=None,
+        true_anomaly=None,
+        provider=None,
+    ))]
+    #[allow(clippy::too_many_arguments)]
+    fn sso(
+        _cls: &Bound<'_, PyType>,
+        time: PyTime,
+        altitude: Option<PyDistance>,
+        semi_major_axis: Option<PyDistance>,
+        inclination: Option<PyAngle>,
+        eccentricity: f64,
+        ltan: Option<(u8, u8)>,
+        ltdn: Option<(u8, u8)>,
+        argument_of_periapsis: Option<PyAngle>,
+        true_anomaly: Option<PyAngle>,
+        provider: Option<&Bound<'_, PyEopProvider>>,
+    ) -> PyResult<Self> {
+        use lox_orbits::orbits::sso::SsoBuilder;
+
+        let tai = to_tai(time.0, provider.map(|p| &p.get().0))?;
+
+        // Pre-extract values as Copy types for use in both match arms.
+        let alt = altitude.map(|a| Distance::meters(a.0.to_meters()));
+        let sma = semi_major_axis.map(|s| Distance::meters(s.0.to_meters()));
+        let inc = inclination.map(|i| Angle::radians(i.0.to_radians()));
+        let aop = argument_of_periapsis.map(|a| Angle::radians(a.0.to_radians()));
+        let ta = true_anomaly.map(|a| Angle::radians(a.0.to_radians()));
+
+        macro_rules! configure_and_build {
+            ($builder:expr) => {{
+                let mut builder = $builder;
+                match (alt, sma, inc) {
+                    (Some(a), None, None) => builder = builder.with_altitude(a),
+                    (None, Some(s), None) => builder = builder.with_semi_major_axis(s),
+                    (None, None, Some(i)) => builder = builder.with_inclination(i),
+                    _ => {
+                        return Err(PyValueError::new_err(
+                            "exactly one of `altitude`, `semi_major_axis`, \
+                             or `inclination` must be specified",
+                        ));
+                    }
+                }
+                builder = builder.with_eccentricity(eccentricity);
+                match (ltan, ltdn) {
+                    (Some((h, m)), None) => builder = builder.with_ltan(h, m),
+                    (None, Some((h, m))) => builder = builder.with_ltdn(h, m),
+                    (None, None) => {}
+                    _ => {
+                        return Err(PyValueError::new_err(
+                            "at most one of `ltan` or `ltdn` can be specified",
+                        ));
+                    }
+                }
+                if let Some(aop) = aop {
+                    builder = builder.with_argument_of_periapsis(aop);
+                }
+                if let Some(ta) = ta {
+                    builder = builder.with_true_anomaly(ta);
+                }
+                builder.build().map_err(PySsoError)?
+            }};
+        }
+
+        let orbit = match provider {
+            Some(p) => {
+                configure_and_build!(
+                    SsoBuilder::default()
+                        .with_provider(&p.get().0)
+                        .with_time(tai)
+                )
+            }
+            None => configure_and_build!(SsoBuilder::default().with_time(tai)),
+        };
+
+        Ok(PyKeplerian(orbit.into_dyn()))
     }
 
     /// Return the epoch of these elements.
