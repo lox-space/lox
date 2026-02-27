@@ -6,6 +6,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.24](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.23...lox-orbits-v0.1.0-alpha.24) - 2026-02-27
+
+### Added
+
+- *(lox-space)* add Python SSO constructor
+- *(lox-orbits)* add slew rate constraint
+- *(lox-orbits)* add min/max range to ISL
+- *(lox-orbits)* improve visibility results API
+- *(lox-space)* add more __repr__s
+
+### Fixed
+
+- *(lox-orbits/lox-space)* fix inter-satellite vis API
+
+### Other
+
+- validate SMA vs mean radius (if it exists for said body)
+- *(lox-orbits)* add more event tests
+- *(lox-orbits)* reduce code duplication
+- *(lox-orbits)* improve performance
+- *(lox-orbits)* cleanup rebase artifacts
+- fix formatting
+- *(lox-orbits)* refactor visibility analysis
+- *(lox-orbits)* refactor event detection
+
 ## [0.1.0-alpha.23](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.22...lox-orbits-v0.1.0-alpha.23) - 2026-02-25
 
 ### Added
