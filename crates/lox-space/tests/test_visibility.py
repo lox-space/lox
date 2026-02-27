@@ -59,6 +59,22 @@ def results_with_los(ground_assets, space_assets, t0, t1, ephemeris):
     return analysis.compute(t0, t1, ephemeris)
 
 
+@pytest.fixture(scope="module")
+def combined_results(ground_assets, space_assets, t0, t1, ephemeris):
+    """Results with both ground-to-space and inter-satellite pairs."""
+    analysis = lox.VisibilityAnalysis(
+        ground_assets, space_assets, inter_satellite=True
+    )
+    return analysis.compute(t0, t1, ephemeris)
+
+
+@pytest.fixture(scope="module")
+def inter_satellite_results(space_assets, t0, t1, ephemeris):
+    """Results with inter-satellite pairs only."""
+    analysis = lox.VisibilityAnalysis([], space_assets, inter_satellite=True)
+    return analysis.compute(t0, t1, ephemeris)
+
+
 # ---------------------------------------------------------------------------
 # VisibilityAnalysis construction & compute
 # ---------------------------------------------------------------------------
@@ -178,6 +194,81 @@ class TestVisibilityResults:
             assert isinstance(gs_id, str)
             assert isinstance(sc_id, str)
             assert isinstance(passes, list)
+
+
+# ---------------------------------------------------------------------------
+# Pair type filtering
+# ---------------------------------------------------------------------------
+
+
+class TestPairTypeFiltering:
+    def test_ground_space_pair_ids(self, results, ground_assets, space_assets):
+        """Ground-only results should have all pairs as ground-space."""
+        gs_pair_ids = results.ground_space_pair_ids()
+        assert len(gs_pair_ids) == len(ground_assets) * len(space_assets)
+
+    def test_inter_satellite_pair_ids_empty(self, results):
+        """Ground-only results should have no inter-satellite pairs."""
+        is_pair_ids = results.inter_satellite_pair_ids()
+        assert is_pair_ids == []
+
+    def test_combined_ground_space_pair_ids(
+        self, combined_results, ground_assets, space_assets
+    ):
+        gs_pair_ids = combined_results.ground_space_pair_ids()
+        assert len(gs_pair_ids) == len(ground_assets) * len(space_assets)
+
+    def test_combined_inter_satellite_pair_ids(
+        self, combined_results, space_assets
+    ):
+        is_pair_ids = combined_results.inter_satellite_pair_ids()
+        n = len(space_assets)
+        assert len(is_pair_ids) == n * (n - 1) // 2
+
+    def test_combined_pair_ids_partition(
+        self, combined_results, ground_assets, space_assets
+    ):
+        """ground_space + inter_satellite should equal all pair_ids."""
+        all_ids = set(combined_results.pair_ids())
+        gs_ids = set(combined_results.ground_space_pair_ids())
+        is_ids = set(combined_results.inter_satellite_pair_ids())
+        assert gs_ids | is_ids == all_ids
+        assert gs_ids & is_ids == set()
+
+    def test_all_intervals(self, combined_results, ground_assets, space_assets):
+        all_ivs = combined_results.all_intervals()
+        n_gs = len(ground_assets) * len(space_assets)
+        n_is = len(space_assets) * (len(space_assets) - 1) // 2
+        assert len(all_ivs) == n_gs + n_is
+
+    def test_ground_space_intervals(
+        self, combined_results, ground_assets, space_assets
+    ):
+        gs_ivs = combined_results.ground_space_intervals()
+        assert len(gs_ivs) == len(ground_assets) * len(space_assets)
+
+    def test_inter_satellite_intervals(self, combined_results, space_assets):
+        is_ivs = combined_results.inter_satellite_intervals()
+        n = len(space_assets)
+        assert len(is_ivs) == n * (n - 1) // 2
+
+    def test_passes_raises_for_inter_satellite(
+        self, inter_satellite_results, space_assets
+    ):
+        """passes() should raise ValueError for inter-satellite pairs."""
+        pair_ids = inter_satellite_results.inter_satellite_pair_ids()
+        assert len(pair_ids) > 0
+        id1, id2 = pair_ids[0]
+        with pytest.raises(ValueError, match="inter-satellite"):
+            inter_satellite_results.passes(id1, id2)
+
+    def test_all_passes_skips_inter_satellite(
+        self, combined_results, ground_assets, space_assets
+    ):
+        """all_passes() should only return ground-to-space pairs."""
+        all_passes = combined_results.all_passes()
+        gs_pair_ids = set(combined_results.ground_space_pair_ids())
+        assert set(all_passes.keys()) == gs_pair_ids
 
 
 # ---------------------------------------------------------------------------

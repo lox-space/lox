@@ -11,8 +11,8 @@ use crate::ephem::python::{PyDafSpkError, PySpk};
 use crate::frames::DynFrame;
 use crate::frames::python::{PyDynRotationError, PyFrame};
 use crate::orbits::analysis::{
-    DynPass, ElevationMask, ElevationMaskError, Pass, VisibilityAnalysis, VisibilityError,
-    VisibilityResults,
+    DynPass, ElevationMask, ElevationMaskError, PairType, Pass, VisibilityAnalysis,
+    VisibilityError, VisibilityResults,
 };
 use crate::orbits::assets::{AssetId, GroundAsset, SpaceAsset};
 use crate::orbits::events::{DetectError, Event, ZeroCrossing};
@@ -1777,27 +1777,83 @@ pub struct PyVisibilityResults {
 
 #[pymethods]
 impl PyVisibilityResults {
-    /// Return visibility intervals for a specific (ground, space) pair.
+    /// Return visibility intervals for a specific pair.
     ///
     /// Args:
-    ///     ground_id: Ground asset identifier.
-    ///     space_id: Space asset identifier.
+    ///     id1: First asset identifier (ground or space).
+    ///     id2: Second asset identifier (space).
     ///
     /// Returns:
     ///     List of Interval objects, or empty list if pair not found.
-    fn intervals(&self, ground_id: &str, space_id: &str) -> Vec<PyInterval> {
-        let gs_id = AssetId::new(ground_id);
-        let sc_id = AssetId::new(space_id);
+    fn intervals(&self, id1: &str, id2: &str) -> Vec<PyInterval> {
+        let id1 = AssetId::new(id1);
+        let id2 = AssetId::new(id2);
         self.results
-            .intervals_for(&gs_id, &sc_id)
+            .intervals_for(&id1, &id2)
             .map(|intervals| intervals.iter().map(|i| PyInterval(*i)).collect())
             .unwrap_or_default()
     }
 
-    /// Compute passes with observables for a specific (ground, space) pair.
+    /// Return all intervals for all pairs.
+    ///
+    /// Returns:
+    ///     Dictionary mapping (id1, id2) to list of Interval objects.
+    fn all_intervals(&self) -> HashMap<(String, String), Vec<PyInterval>> {
+        self.results
+            .all_intervals()
+            .iter()
+            .map(|((id1, id2), intervals)| {
+                (
+                    (id1.as_str().to_string(), id2.as_str().to_string()),
+                    intervals.iter().map(|i| PyInterval(*i)).collect(),
+                )
+            })
+            .collect()
+    }
+
+    /// Return intervals for ground-to-space pairs only.
+    ///
+    /// Returns:
+    ///     Dictionary mapping (ground_id, space_id) to list of Interval objects.
+    fn ground_space_intervals(&self) -> HashMap<(String, String), Vec<PyInterval>> {
+        self.results
+            .ground_space_pair_ids()
+            .into_iter()
+            .filter_map(|(gs_id, sc_id)| {
+                let intervals = self.results.intervals_for(gs_id, sc_id)?;
+                Some((
+                    (gs_id.as_str().to_string(), sc_id.as_str().to_string()),
+                    intervals.iter().map(|i| PyInterval(*i)).collect(),
+                ))
+            })
+            .collect()
+    }
+
+    /// Return intervals for inter-satellite pairs only.
+    ///
+    /// Returns:
+    ///     Dictionary mapping (sc1_id, sc2_id) to list of Interval objects.
+    fn inter_satellite_intervals(&self) -> HashMap<(String, String), Vec<PyInterval>> {
+        self.results
+            .inter_satellite_pair_ids()
+            .into_iter()
+            .filter_map(|(sc1_id, sc2_id)| {
+                let intervals = self.results.intervals_for(sc1_id, sc2_id)?;
+                Some((
+                    (sc1_id.as_str().to_string(), sc2_id.as_str().to_string()),
+                    intervals.iter().map(|i| PyInterval(*i)).collect(),
+                ))
+            })
+            .collect()
+    }
+
+    /// Compute passes with observables for a specific ground-to-space pair.
     ///
     /// This is more expensive than `intervals()` as it computes azimuth,
     /// elevation, range, and range rate for each time step.
+    ///
+    /// Raises ValueError for inter-satellite pairs since ground-station
+    /// observables are not meaningful for them.
     ///
     /// Args:
     ///     ground_id: Ground asset identifier.
@@ -1805,30 +1861,43 @@ impl PyVisibilityResults {
     ///
     /// Returns:
     ///     List of Pass objects, or empty list if pair not found.
-    fn passes(&self, ground_id: &str, space_id: &str) -> Vec<PyPass> {
+    fn passes(&self, ground_id: &str, space_id: &str) -> PyResult<Vec<PyPass>> {
         let gs_id = AssetId::new(ground_id);
         let sc_id = AssetId::new(space_id);
+
+        // Check if this is an inter-satellite pair before looking up assets.
+        if self.results.pair_type(&gs_id, &sc_id) == Some(PairType::InterSatellite) {
+            return Err(PyValueError::new_err(format!(
+                "passes are not supported for inter-satellite pair ({}, {}): use intervals() instead",
+                ground_id, space_id,
+            )));
+        }
+
         let gs = self.ground_assets.iter().find(|g| g.id() == &gs_id);
         let sc = self.space_assets.iter().find(|s| s.id() == &sc_id);
         match (gs, sc) {
-            (Some(gs), Some(sc)) => self
-                .results
-                .to_passes(
-                    &gs_id,
-                    &sc_id,
-                    gs.location(),
-                    gs.mask(),
-                    sc.trajectory(),
-                    self.step,
-                )
-                .into_iter()
-                .map(PyPass)
-                .collect(),
-            _ => vec![],
+            (Some(gs), Some(sc)) => {
+                let passes = self
+                    .results
+                    .to_passes(
+                        &gs_id,
+                        &sc_id,
+                        gs.location(),
+                        gs.mask(),
+                        sc.trajectory(),
+                        self.step,
+                    )
+                    .map_err(|e| PyValueError::new_err(e.to_string()))?;
+                Ok(passes.into_iter().map(PyPass).collect())
+            }
+            _ => Ok(vec![]),
         }
     }
 
-    /// Compute passes for all pairs.
+    /// Compute passes for all ground-to-space pairs.
+    ///
+    /// Inter-satellite pairs are skipped since ground-station observables
+    /// are not meaningful for them.
     ///
     /// Returns:
     ///     Dictionary mapping (ground_id, space_id) to list of Pass objects.
@@ -1839,11 +1908,12 @@ impl PyVisibilityResults {
             self.space_assets.iter().map(|s| (s.id(), s)).collect();
 
         self.results
-            .all_intervals()
-            .iter()
-            .filter_map(|((gs_id, sc_id), intervals)| {
+            .ground_space_pair_ids()
+            .into_iter()
+            .filter_map(|(gs_id, sc_id)| {
                 let gs = gs_map.get(gs_id)?;
                 let sc = sc_map.get(sc_id)?;
+                let intervals = self.results.intervals_for(gs_id, sc_id)?;
                 let passes: Vec<PyPass> = intervals
                     .iter()
                     .filter_map(|interval| {
@@ -1865,11 +1935,29 @@ impl PyVisibilityResults {
             .collect()
     }
 
-    /// Return all (ground_id, space_id) pair identifiers.
+    /// Return all pair identifiers.
     fn pair_ids(&self) -> Vec<(String, String)> {
         self.results
             .pair_ids()
-            .map(|(gs_id, sc_id)| (gs_id.as_str().to_string(), sc_id.as_str().to_string()))
+            .map(|(id1, id2)| (id1.as_str().to_string(), id2.as_str().to_string()))
+            .collect()
+    }
+
+    /// Return pair identifiers for ground-to-space pairs only.
+    fn ground_space_pair_ids(&self) -> Vec<(String, String)> {
+        self.results
+            .ground_space_pair_ids()
+            .into_iter()
+            .map(|(id1, id2)| (id1.as_str().to_string(), id2.as_str().to_string()))
+            .collect()
+    }
+
+    /// Return pair identifiers for inter-satellite pairs only.
+    fn inter_satellite_pair_ids(&self) -> Vec<(String, String)> {
+        self.results
+            .inter_satellite_pair_ids()
+            .into_iter()
+            .map(|(id1, id2)| (id1.as_str().to_string(), id2.as_str().to_string()))
             .collect()
     }
 
