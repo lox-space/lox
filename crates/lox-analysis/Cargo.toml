@@ -1,0 +1,45 @@
+# SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+#
+# SPDX-License-Identifier: MPL-2.0
+
+[package]
+name = "lox-analysis"
+description = "Mission analysis tools for the Lox ecosystem"
+version = "0.1.0-alpha.1"
+rust-version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+lox-bodies.workspace = true
+lox-comms = { workspace = true, optional = true }
+lox-core.workspace = true
+lox-ephem.workspace = true
+lox-frames.workspace = true
+lox-math.workspace = true
+lox-orbits.workspace = true
+lox-time = { workspace = true, features = ["chrono"] }
+
+glam.workspace = true
+rayon.workspace = true
+serde = { workspace = true, optional = true }
+thiserror.workspace = true
+
+[features]
+comms = ["dep:lox-comms"]
+serde = [
+  "dep:serde",
+  "lox-bodies/serde",
+  "lox-comms?/serde",
+  "lox-core/serde",
+  "lox-frames/serde",
+  "lox-orbits/serde",
+  "lox-time/serde",
+]
+
+[dev-dependencies]
+csv.workspace = true
+rstest.workspace = true
+lox-test-utils.workspace = true

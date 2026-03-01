@@ -4,6 +4,10 @@
 
 use std::f64::consts::PI;
 
+use crate::analysis::python::{
+    PyElevationMask, PyGroundStation, PyObservables, PyPass, PySpacecraft, PyVisibilityAnalysis,
+    PyVisibilityResults,
+};
 use crate::bodies::python::PyOrigin;
 use crate::comms::python::{
     PyChannel, PyCommunicationSystem, PyComplexAntenna, PyComplexReceiver, PyDecibel,
@@ -15,9 +19,8 @@ use crate::ephem::python::PySpk;
 use crate::frames::python::PyFrame;
 use crate::math::python::PySeries;
 use crate::orbits::python::{
-    PyCartesian, PyElevationMask, PyEvent, PyGroundAsset, PyGroundLocation, PyGroundPropagator,
-    PyInterval, PyJ2Propagator, PyKeplerian, PyObservables, PyPass, PySgp4, PySpaceAsset,
-    PyTrajectory, PyVallado, PyVisibilityAnalysis, PyVisibilityResults, find_events, find_windows,
+    PyCartesian, PyEvent, PyGroundLocation, PyGroundPropagator, PyInterval, PyJ2Propagator,
+    PyKeplerian, PySgp4, PyTrajectory, PyVallado, find_events, find_windows,
     py_complement_intervals, py_intersect_intervals, py_union_intervals,
 };
 use crate::time::python::{
@@ -76,24 +79,26 @@ fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // math
     m.add_class::<PySeries>()?;
 
-    // orbits
-    m.add_class::<PyCartesian>()?;
+    // analysis
     m.add_class::<PyElevationMask>()?;
-    m.add_class::<PyEvent>()?;
-    m.add_class::<PyGroundAsset>()?;
-    m.add_class::<PyGroundLocation>()?;
-    m.add_class::<PyGroundPropagator>()?;
-    m.add_class::<PyJ2Propagator>()?;
-    m.add_class::<PyKeplerian>()?;
+    m.add_class::<PyGroundStation>()?;
     m.add_class::<PyObservables>()?;
     m.add_class::<PyPass>()?;
-    m.add_class::<PySgp4>()?;
-    m.add_class::<PySpaceAsset>()?;
-    m.add_class::<PyTrajectory>()?;
-    m.add_class::<PyVallado>()?;
+    m.add_class::<PySpacecraft>()?;
     m.add_class::<PyVisibilityAnalysis>()?;
     m.add_class::<PyVisibilityResults>()?;
+
+    // orbits
+    m.add_class::<PyCartesian>()?;
+    m.add_class::<PyEvent>()?;
+    m.add_class::<PyGroundLocation>()?;
+    m.add_class::<PyGroundPropagator>()?;
     m.add_class::<PyInterval>()?;
+    m.add_class::<PyJ2Propagator>()?;
+    m.add_class::<PyKeplerian>()?;
+    m.add_class::<PySgp4>()?;
+    m.add_class::<PyTrajectory>()?;
+    m.add_class::<PyVallado>()?;
     m.add_function(wrap_pyfunction!(find_events, m)?)?;
     m.add_function(wrap_pyfunction!(find_windows, m)?)?;
     m.add_function(wrap_pyfunction!(py_intersect_intervals, m)?)?;

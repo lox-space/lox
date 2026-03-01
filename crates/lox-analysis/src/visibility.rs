@@ -22,14 +22,14 @@ use thiserror::Error;
 
 use lox_core::units::{AngularRate, Distance};
 
-use crate::assets::{AssetId, GroundAsset, SpaceAsset};
-use crate::events::{
+use crate::assets::{AssetId, GroundStation, Spacecraft};
+use lox_frames::DynFrame;
+use lox_orbits::events::{
     DetectError, DetectFn, EventsToIntervals, IntervalDetector, IntervalDetectorExt,
     RootFindingDetector,
 };
-use crate::ground::{DynGroundLocation, Observables};
-use crate::orbits::DynTrajectory;
-use lox_frames::DynFrame;
+use lox_orbits::ground::{DynGroundLocation, Observables};
+use lox_orbits::orbits::DynTrajectory;
 
 // ---------------------------------------------------------------------------
 // Line-of-sight geometry
@@ -578,8 +578,8 @@ impl VisibilityResults {
 /// Inter-satellite pairs are additionally computed when enabled via
 /// [`with_inter_satellite`](Self::with_inter_satellite).
 pub struct VisibilityAnalysis<'a, E> {
-    ground_assets: &'a [GroundAsset],
-    space_assets: &'a [SpaceAsset],
+    ground_assets: &'a [GroundStation],
+    space_assets: &'a [Spacecraft],
     ephemeris: &'a E,
     occulting_bodies: Vec<DynOrigin>,
     step: TimeDelta,
@@ -595,8 +595,8 @@ where
     E::Error: 'static,
 {
     pub fn new(
-        ground_assets: &'a [GroundAsset],
-        space_assets: &'a [SpaceAsset],
+        ground_assets: &'a [GroundStation],
+        space_assets: &'a [Spacecraft],
         ephemeris: &'a E,
     ) -> Self {
         Self {
@@ -660,8 +660,8 @@ where
     /// Compute visibility intervals for a single (ground, space) pair.
     pub fn compute_pair(
         &self,
-        gs: &GroundAsset,
-        sc: &SpaceAsset,
+        gs: &GroundStation,
+        sc: &Spacecraft,
         interval: TimeInterval<DynTimeScale>,
     ) -> Result<Vec<TimeInterval<DynTimeScale>>, VisibilityError> {
         let make_elev = || {
@@ -705,8 +705,8 @@ where
     /// optionally filtered by min/max range constraints.
     fn compute_inter_satellite_pair(
         &self,
-        sc1: &SpaceAsset,
-        sc2: &SpaceAsset,
+        sc1: &Spacecraft,
+        sc2: &Spacecraft,
         interval: TimeInterval<DynTimeScale>,
     ) -> Result<Vec<TimeInterval<DynTimeScale>>, VisibilityError> {
         let has_range = self.min_range.is_some() || self.max_range.is_some();
@@ -911,9 +911,9 @@ where
         &self,
         results: &VisibilityResults,
     ) -> HashMap<(AssetId, AssetId), Vec<DynPass>> {
-        let gs_map: HashMap<&AssetId, &GroundAsset> =
+        let gs_map: HashMap<&AssetId, &GroundStation> =
             self.ground_assets.iter().map(|g| (g.id(), g)).collect();
-        let sc_map: HashMap<&AssetId, &SpaceAsset> =
+        let sc_map: HashMap<&AssetId, &Spacecraft> =
             self.space_assets.iter().map(|s| (s.id(), s)).collect();
 
         results
@@ -958,9 +958,9 @@ mod tests {
     use std::sync::OnceLock;
 
     use super::*;
-    use crate::ground::GroundLocation;
-    use crate::orbits::Trajectory;
     use lox_frames::Icrf;
+    use lox_orbits::ground::GroundLocation;
+    use lox_orbits::orbits::Trajectory;
 
     #[test]
     fn test_line_of_sight() {
@@ -1051,8 +1051,8 @@ mod tests {
         let gs_loc = location_dyn();
         let mask = ElevationMask::with_fixed_elevation(0.0);
         let sc_traj = spacecraft_trajectory_dyn();
-        let gs = GroundAsset::new("cebreros", gs_loc, mask);
-        let sc = SpaceAsset::new("lunar", sc_traj.clone());
+        let gs = GroundStation::new("cebreros", gs_loc, mask);
+        let sc = Spacecraft::new("lunar", sc_traj.clone());
         let spk = ephemeris();
         let ground_assets = [gs.clone()];
         let space_assets = [sc.clone()];
@@ -1072,8 +1072,8 @@ mod tests {
         let gs_loc = location_dyn();
         let mask = ElevationMask::with_fixed_elevation(0.0);
         let sc_traj = spacecraft_trajectory_dyn();
-        let gs = GroundAsset::new("cebreros", gs_loc, mask);
-        let sc = SpaceAsset::new("lunar", sc_traj.clone());
+        let gs = GroundStation::new("cebreros", gs_loc, mask);
+        let sc = Spacecraft::new("lunar", sc_traj.clone());
         let spk = ephemeris();
         let ground_assets = [gs.clone()];
         let space_assets = [sc.clone()];
@@ -1097,8 +1097,8 @@ mod tests {
         let gs_loc = location_dyn();
         let mask = ElevationMask::with_fixed_elevation(10.0_f64.to_radians());
         let sc_traj = spacecraft_trajectory_dyn();
-        let gs = GroundAsset::new("cebreros", gs_loc, mask);
-        let sc = SpaceAsset::new("lunar", sc_traj.clone());
+        let gs = GroundStation::new("cebreros", gs_loc, mask);
+        let sc = Spacecraft::new("lunar", sc_traj.clone());
         let spk = ephemeris();
         let ground_assets = [gs.clone()];
         let space_assets = [sc.clone()];
@@ -1170,8 +1170,8 @@ mod tests {
     fn test_inter_satellite_visibility() {
         let sc_traj = spacecraft_trajectory_dyn();
         let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
-        let sc1 = SpaceAsset::new("sc1", sc_traj.clone());
-        let sc2 = SpaceAsset::new("sc2", sc_traj);
+        let sc1 = Spacecraft::new("sc1", sc_traj.clone());
+        let sc2 = Spacecraft::new("sc2", sc_traj);
         let spk = ephemeris();
         let space_assets = [sc1.clone(), sc2.clone()];
         let analysis = VisibilityAnalysis::new(&[], &space_assets, spk)
@@ -1191,8 +1191,8 @@ mod tests {
     fn test_inter_satellite_visibility_with_range_filter() {
         let sc_traj = spacecraft_trajectory_dyn();
         let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
-        let sc1 = SpaceAsset::new("sc1", sc_traj.clone());
-        let sc2 = SpaceAsset::new("sc2", sc_traj);
+        let sc1 = Spacecraft::new("sc1", sc_traj.clone());
+        let sc2 = Spacecraft::new("sc2", sc_traj);
         let spk = ephemeris();
         let space_assets = [sc1.clone(), sc2.clone()];
 
@@ -1248,9 +1248,9 @@ mod tests {
 
         // Colocated spacecraft have ω = 0. A generous slew rate limit should
         // keep the full interval.
-        let sc1 = SpaceAsset::new("sc1", sc_traj.clone())
+        let sc1 = Spacecraft::new("sc1", sc_traj.clone())
             .with_max_slew_rate(AngularRate::degrees_per_second(10.0));
-        let sc2 = SpaceAsset::new("sc2", sc_traj.clone())
+        let sc2 = Spacecraft::new("sc2", sc_traj.clone())
             .with_max_slew_rate(AngularRate::degrees_per_second(5.0));
         let spk = ephemeris();
         let space_assets = [sc1.clone(), sc2.clone()];
@@ -1268,7 +1268,7 @@ mod tests {
     #[test]
     fn test_space_asset_max_slew_rate() {
         let sc_traj = spacecraft_trajectory_dyn();
-        let sc = SpaceAsset::new("sc1", sc_traj.clone());
+        let sc = Spacecraft::new("sc1", sc_traj.clone());
         assert!(sc.max_slew_rate().is_none());
 
         let rate = AngularRate::degrees_per_second(2.5);
@@ -1285,8 +1285,8 @@ mod tests {
     // Their crossing orbits produce high angular rates during close approaches.
 
     fn oneweb_trajectories() -> (DynTrajectory, DynTrajectory) {
-        use crate::propagators::Propagator;
-        use crate::propagators::sgp4::{Elements, Sgp4};
+        use lox_orbits::propagators::Propagator;
+        use lox_orbits::propagators::sgp4::{Elements, Sgp4};
         use lox_time::intervals::Interval;
 
         let tle1 = Elements::from_tle(
@@ -1333,8 +1333,8 @@ mod tests {
 
         // Without slew rate constraint: should have visibility (no other
         // constraints → full interval returned).
-        let sc1_no_limit = SpaceAsset::new("ow12", traj1.clone());
-        let sc2_no_limit = SpaceAsset::new("ow17", traj2.clone());
+        let sc1_no_limit = Spacecraft::new("ow12", traj1.clone());
+        let sc2_no_limit = Spacecraft::new("ow17", traj2.clone());
         let space_assets = [sc1_no_limit.clone(), sc2_no_limit.clone()];
         let analysis = VisibilityAnalysis::new(&[], &space_assets, spk).with_inter_satellite();
         let results_no_limit = analysis.compute(interval).unwrap();
@@ -1344,9 +1344,9 @@ mod tests {
 
         // With a tight slew rate constraint (0.01 deg/s): should trim windows
         // where the angular rate exceeds the limit during close approaches.
-        let sc1_limited = SpaceAsset::new("ow12", traj1.clone())
+        let sc1_limited = Spacecraft::new("ow12", traj1.clone())
             .with_max_slew_rate(AngularRate::degrees_per_second(0.01));
-        let sc2_limited = SpaceAsset::new("ow17", traj2.clone())
+        let sc2_limited = Spacecraft::new("ow17", traj2.clone())
             .with_max_slew_rate(AngularRate::degrees_per_second(0.01));
         let space_assets = [sc1_limited.clone(), sc2_limited.clone()];
         let analysis = VisibilityAnalysis::new(&[], &space_assets, spk).with_inter_satellite();
@@ -1385,9 +1385,9 @@ mod tests {
         let interval = TimeInterval::new(traj1.start_time(), traj1.end_time());
         let spk = ephemeris();
 
-        let sc1 = SpaceAsset::new("ow12", traj1)
+        let sc1 = Spacecraft::new("ow12", traj1)
             .with_max_slew_rate(AngularRate::degrees_per_second(0.01));
-        let sc2 = SpaceAsset::new("ow17", traj2); // no limit
+        let sc2 = Spacecraft::new("ow17", traj2); // no limit
         let space_assets = [sc1.clone(), sc2.clone()];
         let analysis = VisibilityAnalysis::new(&[], &space_assets, spk).with_inter_satellite();
         let results = analysis.compute(interval).unwrap();

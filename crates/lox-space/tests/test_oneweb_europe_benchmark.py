@@ -32,7 +32,7 @@ def create_europe_ground_assets(resolution_deg=1.0, min_elevation_deg=10.0):
 
     Returns
     -------
-    list[lox.GroundAsset]
+    list[lox.GroundStation]
         List of ground assets covering Europe.
     """
     # Europe bounding box (approximate)
@@ -60,7 +60,7 @@ def create_europe_ground_assets(resolution_deg=1.0, min_elevation_deg=10.0):
                     altitude=0.0 * lox.km,  # Sea level
                 )
                 ground_assets.append(
-                    lox.GroundAsset(gs_name, ground_location, elevation_mask)
+                    lox.GroundStation(gs_name, ground_location, elevation_mask)
                 )
                 point_count += 1
 
@@ -116,7 +116,7 @@ def t1(t0):
 
 
 def make_space_assets(oneweb_dict):
-    return [lox.SpaceAsset(name, traj) for name, traj in oneweb_dict.items()]
+    return [lox.Spacecraft(name, traj) for name, traj in oneweb_dict.items()]
 
 
 @pytest.fixture(scope="session")

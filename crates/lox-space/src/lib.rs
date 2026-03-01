@@ -2,6 +2,9 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+#[cfg(feature = "analysis")]
+pub mod analysis;
+
 #[cfg(feature = "bodies")]
 pub mod bodies;
 
