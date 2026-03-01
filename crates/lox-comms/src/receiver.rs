@@ -10,6 +10,7 @@ use crate::ROOM_TEMPERATURE;
 use crate::antenna::AntennaGain;
 
 /// A simple receiver with a known system noise temperature.
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SimpleReceiver {
     /// Receive frequency.
@@ -19,6 +20,7 @@ pub struct SimpleReceiver {
 }
 
 /// A complex receiver with detailed noise and gain parameters.
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ComplexReceiver {
     /// Receive frequency.
@@ -59,6 +61,7 @@ impl ComplexReceiver {
 }
 
 /// A receiver, either simple (known T_sys) or complex (detailed parameters).
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub enum Receiver {

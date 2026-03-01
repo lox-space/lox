@@ -24,7 +24,7 @@ def oneweb_subset(oneweb):
 
 @pytest.fixture(scope="module")
 def space_assets(oneweb_subset):
-    return [lox.SpaceAsset(name, traj) for name, traj in oneweb_subset.items()]
+    return [lox.Spacecraft(name, traj) for name, traj in oneweb_subset.items()]
 
 
 @pytest.fixture(scope="module")
@@ -678,7 +678,7 @@ class TestInterSatelliteSlewRateFiltering:
     def test_space_asset_max_slew_rate(self, oneweb_subset):
         """SpaceAsset accepts max_slew_rate and exposes it via accessor."""
         name, traj = next(iter(oneweb_subset.items()))
-        sa = lox.SpaceAsset(name, traj, max_slew_rate=2.5 * lox.deg_per_s)
+        sa = lox.Spacecraft(name, traj, max_slew_rate=2.5 * lox.deg_per_s)
         rate = sa.max_slew_rate()
         assert rate is not None
         assert float(rate.to_degrees_per_second()) == pytest.approx(2.5)
@@ -686,16 +686,16 @@ class TestInterSatelliteSlewRateFiltering:
     def test_space_asset_no_slew_rate(self, oneweb_subset):
         """SpaceAsset without max_slew_rate returns None."""
         name, traj = next(iter(oneweb_subset.items()))
-        sa = lox.SpaceAsset(name, traj)
+        sa = lox.Spacecraft(name, traj)
         assert sa.max_slew_rate() is None
 
     def test_slew_rate_restricts_intervals(self, oneweb_subset, t0, t1, ephemeris):
         """A tight slew rate limit should produce less total visibility time."""
         assets_unlimited = [
-            lox.SpaceAsset(name, traj) for name, traj in oneweb_subset.items()
+            lox.Spacecraft(name, traj) for name, traj in oneweb_subset.items()
         ]
         assets_limited = [
-            lox.SpaceAsset(name, traj, max_slew_rate=0.01 * lox.deg_per_s)
+            lox.Spacecraft(name, traj, max_slew_rate=0.01 * lox.deg_per_s)
             for name, traj in oneweb_subset.items()
         ]
         res_unlimited = lox.VisibilityAnalysis(
@@ -717,10 +717,10 @@ class TestInterSatelliteSlewRateFiltering:
     def test_large_slew_rate_matches_unlimited(self, oneweb_subset, t0, t1, ephemeris):
         """A very generous slew rate should not remove any intervals."""
         assets_unlimited = [
-            lox.SpaceAsset(name, traj) for name, traj in oneweb_subset.items()
+            lox.Spacecraft(name, traj) for name, traj in oneweb_subset.items()
         ]
         assets_generous = [
-            lox.SpaceAsset(name, traj, max_slew_rate=1000 * lox.deg_per_s)
+            lox.Spacecraft(name, traj, max_slew_rate=1000 * lox.deg_per_s)
             for name, traj in oneweb_subset.items()
         ]
         res_unlimited = lox.VisibilityAnalysis(
@@ -743,7 +743,7 @@ class TestInterSatelliteSlewRateFiltering:
     def test_slew_rate_with_range_and_los(self, oneweb_subset, t0, t1, ephemeris):
         """Slew rate combined with range and LOS constraints should work."""
         assets = [
-            lox.SpaceAsset(name, traj, max_slew_rate=1.0 * lox.deg_per_s)
+            lox.Spacecraft(name, traj, max_slew_rate=1.0 * lox.deg_per_s)
             for name, traj in oneweb_subset.items()
         ]
         analysis = lox.VisibilityAnalysis(

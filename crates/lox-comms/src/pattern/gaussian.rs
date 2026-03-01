@@ -13,6 +13,7 @@ use lox_core::units::{Angle, Decibel, Distance, Frequency};
 use crate::antenna::AntennaGain;
 
 /// Gaussian antenna gain pattern.
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct GaussianPattern {
     /// Antenna diameter.

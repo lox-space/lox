@@ -9,7 +9,7 @@ import lox_space as lox
 
 @pytest.fixture(scope="session")
 def space_assets(oneweb):
-    return [lox.SpaceAsset(name, traj) for name, traj in oneweb.items()]
+    return [lox.Spacecraft(name, traj) for name, traj in oneweb.items()]
 
 
 @pytest.fixture(scope="session")

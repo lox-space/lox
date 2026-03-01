@@ -20,6 +20,7 @@ pub trait AntennaGain {
 }
 
 /// A simple antenna with constant gain and beamwidth.
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SimpleAntenna {
     /// Peak gain in dBi.
@@ -39,6 +40,7 @@ impl AntennaGain for SimpleAntenna {
 }
 
 /// An antenna with a physics-based gain pattern and a boresight vector.
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ComplexAntenna {
     /// The gain pattern model.
@@ -65,6 +67,7 @@ impl ComplexAntenna {
 }
 
 /// An antenna, either simple (constant gain) or complex (pattern-based).
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub enum Antenna {

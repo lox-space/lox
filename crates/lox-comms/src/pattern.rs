@@ -17,6 +17,7 @@ pub use gaussian::GaussianPattern;
 pub use parabolic::ParabolicPattern;
 
 /// An antenna gain pattern model.
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub enum AntennaPattern {
