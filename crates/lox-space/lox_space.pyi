@@ -311,21 +311,26 @@ hours: TimeDelta
 days: TimeDelta
 """86400 seconds"""
 
-class GroundAsset:
+class GroundStation:
     """A named ground station for visibility analysis.
 
     Wraps a ground location and elevation mask with an identifier.
 
     Args:
-        id: Unique identifier for this ground asset.
+        id: Unique identifier for this ground station.
         location: Ground station location.
         mask: Elevation mask defining minimum elevation constraints.
+        communication_systems: Optional list of communication systems.
 
     Examples:
-        >>> gs = lox.GroundAsset("ESOC", ground_location, elevation_mask)
+        >>> gs = lox.GroundStation("ESOC", ground_location, elevation_mask)
     """
     def __new__(
-        cls, id: str, location: GroundLocation, mask: ElevationMask
+        cls,
+        id: str,
+        location: GroundLocation,
+        mask: ElevationMask,
+        communication_systems: list[CommunicationSystem] | None = None,
     ) -> Self: ...
     def id(self) -> str:
         """Return the asset identifier."""
@@ -336,25 +341,42 @@ class GroundAsset:
     def mask(self) -> ElevationMask:
         """Return the elevation mask."""
         ...
+    def communication_systems(self) -> list[CommunicationSystem]:
+        """Return the communication systems."""
+        ...
 
-class SpaceAsset:
+class Spacecraft:
     """A named spacecraft for visibility analysis.
 
     Wraps a trajectory with an identifier.
 
     Args:
-        id: Unique identifier for this space asset.
+        id: Unique identifier for this spacecraft.
         trajectory: Spacecraft trajectory.
+        max_slew_rate: Optional maximum slew rate.
+        communication_systems: Optional list of communication systems.
 
     Examples:
-        >>> sc = lox.SpaceAsset("ISS", trajectory)
+        >>> sc = lox.Spacecraft("ISS", trajectory)
     """
-    def __new__(cls, id: str, trajectory: Trajectory) -> Self: ...
+    def __new__(
+        cls,
+        id: str,
+        trajectory: Trajectory,
+        max_slew_rate: AngularRate | None = None,
+        communication_systems: list[CommunicationSystem] | None = None,
+    ) -> Self: ...
     def id(self) -> str:
         """Return the asset identifier."""
         ...
     def trajectory(self) -> Trajectory:
         """Return the spacecraft trajectory."""
+        ...
+    def max_slew_rate(self) -> AngularRate | None:
+        """Return the maximum slew rate, if set."""
+        ...
+    def communication_systems(self) -> list[CommunicationSystem]:
+        """Return the communication systems."""
         ...
 
 class VisibilityAnalysis:
@@ -365,8 +387,8 @@ class VisibilityAnalysis:
     is set to True.
 
     Args:
-        ground_assets: List of GroundAsset objects.
-        space_assets: List of SpaceAsset objects.
+        ground_assets: List of GroundStation objects.
+        space_assets: List of Spacecraft objects.
         occulting_bodies: Optional list of bodies for line-of-sight checking.
         step: Optional time step for event detection (default: 60s).
         min_pass_duration: Optional minimum pass duration. Passes
@@ -385,8 +407,8 @@ class VisibilityAnalysis:
     """
     def __new__(
         cls,
-        ground_assets: list[GroundAsset],
-        space_assets: list[SpaceAsset],
+        ground_assets: list[GroundStation],
+        space_assets: list[Spacecraft],
         occulting_bodies: list[str | int | Origin] | None = None,
         step: TimeDelta | None = None,
         min_pass_duration: TimeDelta | None = None,

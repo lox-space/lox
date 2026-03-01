@@ -45,6 +45,7 @@ pub enum LinkDirection {
 }
 
 /// A communication channel.
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Channel {
     /// Link direction.

@@ -658,6 +658,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "34080505efa8e45a4b816c349525ebe327ceaa8559756f0356cba97ef3bf7432"
 
 [[package]]
+name = "lox-analysis"
+version = "0.1.0-alpha.1"
+dependencies = [
+ "csv",
+ "glam 0.30.9",
+ "lox-bodies",
+ "lox-comms",
+ "lox-core",
+ "lox-ephem",
+ "lox-frames",
+ "lox-math",
+ "lox-orbits",
+ "lox-test-utils",
+ "lox-time",
+ "rayon",
+ "rstest",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "lox-bodies"
 version = "0.1.0-alpha.15"
 dependencies = [
@@ -831,6 +852,7 @@ version = "0.1.0-alpha.34"
 dependencies = [
  "codspeed-divan-compat",
  "glam 0.30.9",
+ "lox-analysis",
  "lox-bodies",
  "lox-comms",
  "lox-core",
