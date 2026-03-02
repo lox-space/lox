@@ -45,7 +45,7 @@ pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                 .named
                 .into_iter()
                 .map(|f| {
-                    let f = f.ident.unwrap();
+                    let f = f.ident.expect("named field must have an identifier");
                     quote! {#f}
                 })
                 .collect::<Vec<proc_macro2::TokenStream>>(),
@@ -176,7 +176,7 @@ fn generate_call_to_deserializer_for_kvn_type(
                             )?;
 
                             let result = if line_matches {
-                                let next_line = lines.next().unwrap();
+                                let next_line = lines.next().expect("line must exist after successful peek");
 
                                 Ok(#parser #unpack_insert)
                             } else {
@@ -193,7 +193,7 @@ fn generate_call_to_deserializer_for_kvn_type(
             } else {
                 Ok(quote! {
                    {
-                      let next_line = lines.next().unwrap();
+                      let next_line = lines.next().expect("line must exist after successful peek");
                       #parser #unpack_insert
                    }
                 })
@@ -218,7 +218,7 @@ fn generate_call_to_deserializer_for_kvn_type(
                     }).map(|x| x.into());
 
                     if result.is_ok() {
-                        let _ = lines.next().unwrap();
+                        let _ = lines.next().expect("line must exist after successful peek");
                     }
 
                     result
@@ -259,7 +259,7 @@ fn get_generic_type_argument(field: &Field) -> Option<(String, &syn::Path)> {
                     .into_iter()
                     .map(|ident| ident.to_token_stream().to_string())
                     .reduce(|a, b| a + "::" + &b)
-                    .unwrap(),
+                    .expect("type path must have at least one segment"),
                 &r#type.path,
             ));
         }
@@ -440,19 +440,19 @@ fn handle_version_field(
         .to_string()
         .to_uppercase();
 
-    let field_name = field.ident.as_ref().unwrap();
+    let field_name = field
+        .ident
+        .as_ref()
+        .expect("named field must have an identifier");
 
     // 7.4.4 Keywords must be uppercase and must not contain blanks
     let expected_kvn_name = format!("CCSDS_{message_type_name}_VERS");
 
-    // Unwrap is okay because we expect this to be a well defined type path,
-    // because this is not a general-purpose proc macro, but one that we
-    // control the input to ourselves.
     let field_type = extract_type_path(&field.ty)
-        .unwrap()
+        .expect("field must have a valid type path")
         .to_token_stream()
         .to_string();
-    let field_type_new = extract_type_path(&field.ty).unwrap();
+    let field_type_new = extract_type_path(&field.ty).expect("field must have a valid type path");
 
     let parser = generate_call_to_deserializer_for_kvn_type(
         &field_type,
@@ -489,8 +489,10 @@ fn deserializer_for_struct_with_named_fields(
         let mut field_type_new: Option<&syn::Path> = None;
 
         for (index, field) in fields.iter().enumerate() {
-            // Unwrap is okay because we only support named structs
-            let field_name_ident = field.ident.as_ref().unwrap();
+            let field_name_ident = field
+                .ident
+                .as_ref()
+                .expect("named field must have an identifier");
 
             let field_name = field_name_ident.to_token_stream().to_string();
 
@@ -504,14 +506,12 @@ fn deserializer_for_struct_with_named_fields(
                         .into_compile_error();
                     }
 
-                    // Unwrap is okay because we expect this to be a well defined type path,
-                    // because this is not a general-purpose proc macro, but one that we
-                    // control the input to ourselves.
                     let local_field_type = extract_type_path(&field.ty)
-                        .unwrap()
+                        .expect("field must have a valid type path")
                         .to_token_stream()
                         .to_string();
-                    let local_field_type_new = extract_type_path(&field.ty).unwrap();
+                    let local_field_type_new =
+                        extract_type_path(&field.ty).expect("field must have a valid type path");
 
                     match local_field_type.as_str() {
                         "KvnDateTimeValue" | "String" | "f64" | "i32" | "NonNegativeDouble"
@@ -564,11 +564,12 @@ fn deserializer_for_struct_with_named_fields(
             }
         }
 
-        // This unwrap is okay because we know the field exists. If it didn't exist we would've thrown an error.
-        let unit_type = unit_type.unwrap();
-        let unit_field_name_ident = unit_field_name_ident.unwrap();
-        let field_type = field_type.unwrap();
-        let field_type_new = field_type_new.unwrap();
+        let unit_type = unit_type.expect("value unit struct must have a unit type field");
+        let unit_field_name_ident =
+            unit_field_name_ident.expect("value unit struct must have a unit field name");
+        let field_type = field_type.expect("value unit struct must have a base field type");
+        let field_type_new =
+            field_type_new.expect("value unit struct must have a base field type path");
 
         let unit_type_ident = syn::Ident::new(&unit_type, Span::call_site());
 
@@ -598,28 +599,23 @@ fn deserializer_for_struct_with_named_fields(
                 return true
             }
 
-            // Unwrap is okay because we only support named structs
-            let field_name = field.ident.as_ref().unwrap().to_token_stream().to_string();
+            let field_name = field.ident.as_ref().expect("named field must have an identifier").to_token_stream().to_string();
 
             !field_name.starts_with("cx")
                 && !field_name.starts_with("cy")
                 && !field_name.starts_with("cz")
         }).map(|field| {
-                let field_name = field.ident.as_ref().unwrap();
+                let field_name = field.ident.as_ref().expect("named field must have an identifier");
 
-                // Unwrap is okay because we only support named structs
                 // 7.4.4 Keywords must be uppercase and must not contain blanks
                 let expected_kvn_name = field_name.to_token_stream().to_string().to_uppercase();
 
-                // Unwrap is okay because we expect this to be a well defined type path,
-                // because this is not a general-purpose proc macro, but one that we
-                // control the input to ourselves.
-                let field_type_new = extract_type_path(&field.ty).unwrap();
+                let field_type_new = extract_type_path(&field.ty)
+                    .expect("field must have a valid type path");
 
-                // Unwrap is okay becuase we always expect at least one type
                 let field_main_type = field_type_new.segments.iter()
                     .next_back()
-                    .unwrap()
+                    .expect("type path must have at least one segment")
                     .ident
                     .to_string();
 
@@ -695,7 +691,8 @@ fn deserializer_for_struct_with_named_fields(
             return e;
         }
 
-        let mut field_deserializers = field_deserializers.unwrap();
+        let mut field_deserializers =
+            field_deserializers.expect("field deserializers already checked for errors");
 
         if type_name == "OemCovarianceMatrixType" {
             let covariance_matrix_parser =
@@ -804,7 +801,7 @@ fn add_prefix_and_postfix_keyword_checks(
                         )?;
 
                         if line_matches {
-                            lines.next().unwrap();
+                            lines.next().expect("line must exist after successful peek");
 
                             let result = { #parser_to_wrap };
 
@@ -822,7 +819,7 @@ fn add_prefix_and_postfix_keyword_checks(
                                     )?;
 
                                     if line_matches {
-                                        lines.next().unwrap();
+                                        lines.next().expect("line must exist after successful peek");
                                     } else {
                                         Err(
                                             crate::ndm::kvn::KvnDeserializerErr::<String>::UnexpectedKeyword {
@@ -857,17 +854,14 @@ fn deserializers_for_struct_with_unnamed_fields(
         return quote! {
             Ok(#type_name (
                 crate::ndm::kvn::parser::parse_kvn_datetime_line(
-                    lines.next().unwrap()
+                    lines.next().expect("line must exist after successful peek")
                 ).map_err(|x| crate::ndm::kvn::KvnDeserializerErr::from(x))
                 .map(|x| x)?.full_value
             ))
         };
     }
 
-    // Unwrap is okay because we expect this to be a well defined type path,
-    // because this is not a general-purpose proc macro, but one that we
-    // control the input to ourselves.
-    let field_type_new = extract_type_path(&field.ty).unwrap();
+    let field_type_new = extract_type_path(&field.ty).expect("field must have a valid type path");
     let field_type = field_type_new.to_token_stream().to_string();
 
     let deserializer_for_kvn_type = generate_call_to_deserializer_for_kvn_type(
