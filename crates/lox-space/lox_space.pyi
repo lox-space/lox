@@ -302,6 +302,14 @@ km_per_s: Velocity
 """1 km/s"""
 dB: Decibel
 """1 dB"""
+seconds: TimeDelta
+"""1 second"""
+minutes: TimeDelta
+"""60 seconds"""
+hours: TimeDelta
+"""3600 seconds"""
+days: TimeDelta
+"""86400 seconds"""
 
 class GroundAsset:
     """A named ground station for visibility analysis.
@@ -1509,6 +1517,8 @@ class TimeDelta:
     def __neg__(self) -> Self: ...
     def __add__(self, other: Self) -> Self: ...
     def __sub__(self, other: Self) -> Self: ...
+    def __mul__(self, other: float) -> Self: ...
+    def __rmul__(self, other: float) -> Self: ...
     def seconds(self) -> int:
         """Return integer seconds."""
         ...
@@ -1538,6 +1548,30 @@ class TimeDelta:
     @classmethod
     def from_julian_centuries(cls, centuries: float) -> Self:
         """Create from Julian centuries (36525 days)."""
+        ...
+    @classmethod
+    def from_milliseconds(cls, ms: int) -> Self:
+        """Create from integer milliseconds."""
+        ...
+    @classmethod
+    def from_microseconds(cls, us: int) -> Self:
+        """Create from integer microseconds."""
+        ...
+    @classmethod
+    def from_nanoseconds(cls, ns: int) -> Self:
+        """Create from integer nanoseconds."""
+        ...
+    @classmethod
+    def from_picoseconds(cls, ps: int) -> Self:
+        """Create from integer picoseconds."""
+        ...
+    @classmethod
+    def from_femtoseconds(cls, fs: int) -> Self:
+        """Create from integer femtoseconds."""
+        ...
+    @classmethod
+    def from_attoseconds(cls, atto: int) -> Self:
+        """Create from integer attoseconds."""
         ...
     def to_decimal_seconds(self) -> float:
         """Return the duration as decimal seconds."""

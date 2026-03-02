@@ -1307,7 +1307,7 @@ mod tests {
 
         // Use the later epoch as start so both TLEs are valid.
         let t0 = sgp4_1.time().max(sgp4_2.time());
-        let t1 = t0 + TimeDelta::from_hours(2.0);
+        let t1 = t0 + TimeDelta::from_hours(2);
         let interval = Interval::new(t0, t1);
 
         let traj1 = sgp4_1

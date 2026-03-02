@@ -33,6 +33,18 @@ pub const SECONDS_PER_JULIAN_YEAR: f64 = SECONDS_PER_DAY * DAYS_PER_JULIAN_YEAR;
 /// Number of seconds in a Julian century.
 pub const SECONDS_PER_JULIAN_CENTURY: f64 = SECONDS_PER_JULIAN_YEAR * 100.0;
 
+/// Number of seconds in a millisecond.
+pub const SECONDS_PER_MILLISECOND: f64 = 1e-3;
+
+/// Number of seconds in a microsecond.
+pub const SECONDS_PER_MICROSECOND: f64 = 1e-6;
+
+/// Number of seconds in a nanosecond.
+pub const SECONDS_PER_NANOSECOND: f64 = 1e-9;
+
+/// Number of seconds in a picosecond.
+pub const SECONDS_PER_PICOSECOND: f64 = 1e-12;
+
 /// Number of seconds in a femtosecond.
 pub const SECONDS_PER_FEMTOSECOND: f64 = 1e-15;
 

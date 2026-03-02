@@ -118,7 +118,7 @@ mod tests {
         .unwrap();
         let sgp4 = Sgp4::new(tle).unwrap();
         let orbital_period = 92.821;
-        let t1 = sgp4.time() + TimeDelta::from_minutes(orbital_period);
+        let t1 = sgp4.time() + TimeDelta::from_minutes_f64(orbital_period);
         let s1 = sgp4.state_at(t1).unwrap();
         let s1_icrf = s1.try_to_frame(Icrf, &DefaultRotationProvider).unwrap();
         let k1 = s1_icrf.to_keplerian();
@@ -139,7 +139,7 @@ mod tests {
         .unwrap();
         let sgp4 = Sgp4::new(tle).unwrap();
         let t0 = sgp4.time();
-        let t1 = t0 + TimeDelta::from_minutes(92.821);
+        let t1 = t0 + TimeDelta::from_minutes_f64(92.821);
         let interval = Interval::new(t0, t1);
         let traj = sgp4.propagate(interval).unwrap();
         // With 60s default step over ~93 min, we should have ~94 points
@@ -156,7 +156,7 @@ mod tests {
         .unwrap();
         let sgp4 = Sgp4::new(tle).unwrap();
         let t0 = sgp4.time();
-        let t1 = t0 + TimeDelta::from_minutes(10.0);
+        let t1 = t0 + TimeDelta::from_minutes(10);
         let interval = Interval::new(t0, t1);
         let traj = sgp4
             .propagate(interval)

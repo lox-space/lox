@@ -19,24 +19,116 @@ use std::ops::{Add, AddAssign, Mul, Neg, RangeInclusive, Sub, SubAssign};
 use lox_test_utils::approx_eq::ApproxEq;
 
 use crate::f64;
-use crate::i64::consts::{ATTOSECONDS_IN_SECOND, SECONDS_BETWEEN_JD_AND_J2000};
+use crate::i64::consts::{
+    ATTOSECONDS_IN_FEMTOSECOND, ATTOSECONDS_IN_MICROSECOND, ATTOSECONDS_IN_MILLISECOND,
+    ATTOSECONDS_IN_NANOSECOND, ATTOSECONDS_IN_PICOSECOND, ATTOSECONDS_IN_SECOND,
+    SECONDS_BETWEEN_JD_AND_J2000, SECONDS_PER_DAY as I64_SECONDS_PER_DAY,
+    SECONDS_PER_HOUR as I64_SECONDS_PER_HOUR, SECONDS_PER_MINUTE as I64_SECONDS_PER_MINUTE,
+};
 use crate::types::units::Days;
 
 use super::julian_dates::{Epoch, JulianDate, Unit};
 use super::ranges::TimeDeltaRange;
 use super::subsecond::Subsecond;
 
+/// Extension trait for creating [`TimeDelta`] values from numeric types.
+///
+/// # Examples
+///
+/// ```
+/// use lox_core::time::deltas::TimeUnits;
+///
+/// let delta = 1.5.days();
+/// let delta = 30.mins();
+/// let delta = 500.millis();
+/// ```
 pub trait TimeUnits {
+    /// Creates a [`TimeDelta`] from a value in days.
     fn days(&self) -> TimeDelta;
+    /// Creates a [`TimeDelta`] from a value in hours.
     fn hours(&self) -> TimeDelta;
+    /// Creates a [`TimeDelta`] from a value in minutes.
     fn mins(&self) -> TimeDelta;
+    /// Creates a [`TimeDelta`] from a value in seconds.
     fn secs(&self) -> TimeDelta;
+    /// Creates a [`TimeDelta`] from a value in milliseconds.
     fn millis(&self) -> TimeDelta;
+    /// Creates a [`TimeDelta`] from a value in microseconds.
     fn micros(&self) -> TimeDelta;
+    /// Creates a [`TimeDelta`] from a value in nanoseconds.
     fn nanos(&self) -> TimeDelta;
+    /// Creates a [`TimeDelta`] from a value in picoseconds.
     fn picos(&self) -> TimeDelta;
+    /// Creates a [`TimeDelta`] from a value in femtoseconds.
     fn femtos(&self) -> TimeDelta;
+    /// Creates a [`TimeDelta`] from a value in attoseconds.
     fn attos(&self) -> TimeDelta;
+}
+
+impl TimeUnits for f64 {
+    fn days(&self) -> TimeDelta {
+        TimeDelta::from_days_f64(*self)
+    }
+    fn hours(&self) -> TimeDelta {
+        TimeDelta::from_hours_f64(*self)
+    }
+    fn mins(&self) -> TimeDelta {
+        TimeDelta::from_minutes_f64(*self)
+    }
+    fn secs(&self) -> TimeDelta {
+        TimeDelta::from_seconds_f64(*self)
+    }
+    fn millis(&self) -> TimeDelta {
+        TimeDelta::from_seconds_f64(*self * f64::consts::SECONDS_PER_MILLISECOND)
+    }
+    fn micros(&self) -> TimeDelta {
+        TimeDelta::from_seconds_f64(*self * f64::consts::SECONDS_PER_MICROSECOND)
+    }
+    fn nanos(&self) -> TimeDelta {
+        TimeDelta::from_seconds_f64(*self * f64::consts::SECONDS_PER_NANOSECOND)
+    }
+    fn picos(&self) -> TimeDelta {
+        TimeDelta::from_seconds_f64(*self * f64::consts::SECONDS_PER_PICOSECOND)
+    }
+    fn femtos(&self) -> TimeDelta {
+        TimeDelta::from_seconds_f64(*self * f64::consts::SECONDS_PER_FEMTOSECOND)
+    }
+    fn attos(&self) -> TimeDelta {
+        TimeDelta::from_seconds_f64(*self * f64::consts::SECONDS_PER_ATTOSECOND)
+    }
+}
+
+impl TimeUnits for i64 {
+    fn days(&self) -> TimeDelta {
+        TimeDelta::from_days(*self)
+    }
+    fn hours(&self) -> TimeDelta {
+        TimeDelta::from_hours(*self)
+    }
+    fn mins(&self) -> TimeDelta {
+        TimeDelta::from_minutes(*self)
+    }
+    fn secs(&self) -> TimeDelta {
+        TimeDelta::from_seconds(*self)
+    }
+    fn millis(&self) -> TimeDelta {
+        TimeDelta::from_milliseconds(*self)
+    }
+    fn micros(&self) -> TimeDelta {
+        TimeDelta::from_microseconds(*self)
+    }
+    fn nanos(&self) -> TimeDelta {
+        TimeDelta::from_nanoseconds(*self)
+    }
+    fn picos(&self) -> TimeDelta {
+        TimeDelta::from_picoseconds(*self)
+    }
+    fn femtos(&self) -> TimeDelta {
+        TimeDelta::from_femtoseconds(*self)
+    }
+    fn attos(&self) -> TimeDelta {
+        TimeDelta::from_attoseconds(*self)
+    }
 }
 
 /// A unifying trait for types that can be converted into a [TimeDelta].
@@ -287,16 +379,64 @@ impl TimeDelta {
         Self::new(seconds, 0)
     }
 
-    pub const fn from_minutes(value: f64) -> Self {
+    pub const fn from_minutes(minutes: i64) -> Self {
+        Self::from_seconds(minutes * I64_SECONDS_PER_MINUTE)
+    }
+
+    pub const fn from_minutes_f64(value: f64) -> Self {
         Self::from_seconds_f64(value * f64::consts::SECONDS_PER_MINUTE)
     }
 
-    pub const fn from_hours(value: f64) -> Self {
+    pub const fn from_hours(hours: i64) -> Self {
+        Self::from_seconds(hours * I64_SECONDS_PER_HOUR)
+    }
+
+    pub const fn from_hours_f64(value: f64) -> Self {
         Self::from_seconds_f64(value * f64::consts::SECONDS_PER_HOUR)
     }
 
-    pub const fn from_days(value: f64) -> Self {
+    pub const fn from_days(days: i64) -> Self {
+        Self::from_seconds(days * I64_SECONDS_PER_DAY)
+    }
+
+    pub const fn from_days_f64(value: f64) -> Self {
         Self::from_seconds_f64(value * f64::consts::SECONDS_PER_DAY)
+    }
+
+    pub const fn from_milliseconds(ms: i64) -> Self {
+        let seconds = ms / 1000;
+        let remainder = ms % 1000;
+        Self::new(seconds, remainder * ATTOSECONDS_IN_MILLISECOND)
+    }
+
+    pub const fn from_microseconds(us: i64) -> Self {
+        let seconds = us / 1_000_000;
+        let remainder = us % 1_000_000;
+        Self::new(seconds, remainder * ATTOSECONDS_IN_MICROSECOND)
+    }
+
+    pub const fn from_nanoseconds(ns: i64) -> Self {
+        let seconds = ns / 1_000_000_000;
+        let remainder = ns % 1_000_000_000;
+        Self::new(seconds, remainder * ATTOSECONDS_IN_NANOSECOND)
+    }
+
+    pub const fn from_picoseconds(ps: i64) -> Self {
+        let seconds = ps / 1_000_000_000_000;
+        let remainder = ps % 1_000_000_000_000;
+        Self::new(seconds, remainder * ATTOSECONDS_IN_PICOSECOND)
+    }
+
+    pub const fn from_femtoseconds(fs: i64) -> Self {
+        let seconds = fs / 1_000_000_000_000_000;
+        let remainder = fs % 1_000_000_000_000_000;
+        Self::new(seconds, remainder * ATTOSECONDS_IN_FEMTOSECOND)
+    }
+
+    pub const fn from_attoseconds(atto: i64) -> Self {
+        let seconds = atto / ATTOSECONDS_IN_SECOND;
+        let remainder = atto % ATTOSECONDS_IN_SECOND;
+        Self::new(seconds, remainder)
     }
 
     pub const fn from_julian_years(value: f64) -> Self {
@@ -896,19 +1036,19 @@ mod tests {
 
     #[test]
     fn test_from_minutes() {
-        let dt = TimeDelta::from_minutes(1.0);
+        let dt = TimeDelta::from_minutes_f64(1.0);
         assert_eq!(dt.seconds(), Some(60));
     }
 
     #[test]
     fn test_from_hours() {
-        let dt = TimeDelta::from_hours(1.0);
+        let dt = TimeDelta::from_hours_f64(1.0);
         assert_eq!(dt.seconds(), Some(3600));
     }
 
     #[test]
     fn test_from_days() {
-        let dt = TimeDelta::from_days(1.0);
+        let dt = TimeDelta::from_days_f64(1.0);
         assert_eq!(dt.seconds(), Some(86400));
     }
 
@@ -1281,5 +1421,90 @@ mod tests {
         let neg = -a;
         assert_eq!(neg.hi, -1e15);
         assert_eq!(neg.lo, -0.5);
+    }
+
+    #[test]
+    fn test_time_units_f64() {
+        assert_eq!(1.0.days(), TimeDelta::from_days_f64(1.0));
+        assert_eq!(2.0.hours(), TimeDelta::from_hours_f64(2.0));
+        assert_eq!(30.0.mins(), TimeDelta::from_minutes_f64(30.0));
+        assert_eq!(60.0.secs(), TimeDelta::from_seconds_f64(60.0));
+        assert_eq!(500.0.millis(), TimeDelta::from_seconds_f64(0.5));
+        assert_eq!(1000.0.micros(), TimeDelta::from_seconds_f64(1e-3));
+        assert_eq!(1000.0.nanos(), TimeDelta::from_seconds_f64(1e-6));
+        assert_eq!(1000.0.picos(), TimeDelta::from_seconds_f64(1e-9));
+        assert_eq!(1000.0.femtos(), TimeDelta::from_seconds_f64(1e-12));
+        assert_eq!(1000.0.attos(), TimeDelta::from_seconds_f64(1e-15));
+    }
+
+    #[test]
+    fn test_time_units_i64() {
+        assert_eq!(1_i64.days(), TimeDelta::from_days_f64(1.0));
+        assert_eq!(2_i64.hours(), TimeDelta::from_hours_f64(2.0));
+        assert_eq!(30_i64.mins(), TimeDelta::from_minutes_f64(30.0));
+        assert_eq!(60_i64.secs(), TimeDelta::from_seconds(60));
+        assert_eq!(500_i64.millis(), TimeDelta::from_milliseconds(500));
+        assert_eq!(1000_i64.micros(), TimeDelta::from_microseconds(1000));
+        assert_eq!(1000_i64.nanos(), TimeDelta::from_nanoseconds(1000));
+        assert_eq!(1000_i64.picos(), TimeDelta::from_picoseconds(1000));
+        assert_eq!(1000_i64.femtos(), TimeDelta::from_femtoseconds(1000));
+        assert_eq!(1000_i64.attos(), TimeDelta::from_attoseconds(1000));
+    }
+
+    #[test]
+    fn test_from_milliseconds() {
+        let dt = TimeDelta::from_milliseconds(1500);
+        assert_eq!(dt.seconds(), Some(1));
+        assert_eq!(dt.attoseconds(), Some(500_000_000_000_000_000));
+
+        let dt = TimeDelta::from_milliseconds(-1500);
+        assert_eq!(dt.seconds(), Some(-2));
+        assert_eq!(dt.attoseconds(), Some(500_000_000_000_000_000));
+    }
+
+    #[test]
+    fn test_from_microseconds() {
+        let dt = TimeDelta::from_microseconds(1_000_000);
+        assert_eq!(dt.seconds(), Some(1));
+        assert_eq!(dt.attoseconds(), Some(0));
+
+        let dt = TimeDelta::from_microseconds(1_500_000);
+        assert_eq!(dt.seconds(), Some(1));
+        assert_eq!(dt.attoseconds(), Some(500_000_000_000_000_000));
+    }
+
+    #[test]
+    fn test_from_nanoseconds() {
+        let dt = TimeDelta::from_nanoseconds(500_000_000);
+        assert_eq!(dt.to_seconds().to_f64(), 0.5);
+
+        let dt = TimeDelta::from_nanoseconds(1_500_000_000);
+        assert_eq!(dt.seconds(), Some(1));
+        assert_eq!(dt.attoseconds(), Some(500_000_000_000_000_000));
+    }
+
+    #[test]
+    fn test_from_picoseconds() {
+        let dt = TimeDelta::from_picoseconds(1_000_000_000_000);
+        assert_eq!(dt.seconds(), Some(1));
+        assert_eq!(dt.attoseconds(), Some(0));
+    }
+
+    #[test]
+    fn test_from_femtoseconds() {
+        let dt = TimeDelta::from_femtoseconds(1_000_000_000_000_000);
+        assert_eq!(dt.seconds(), Some(1));
+        assert_eq!(dt.attoseconds(), Some(0));
+    }
+
+    #[test]
+    fn test_from_attoseconds() {
+        let dt = TimeDelta::from_attoseconds(ATTOSECONDS_IN_SECOND);
+        assert_eq!(dt.seconds(), Some(1));
+        assert_eq!(dt.attoseconds(), Some(0));
+
+        let dt = TimeDelta::from_attoseconds(ATTOSECONDS_IN_SECOND + 42);
+        assert_eq!(dt.seconds(), Some(1));
+        assert_eq!(dt.attoseconds(), Some(42));
     }
 }

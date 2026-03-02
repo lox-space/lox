@@ -487,7 +487,7 @@ mod tests {
         let s0_orbit = initial_state();
         let time = s0_orbit.time();
         let j2 = J2Propagator::new(s0_orbit);
-        let dt = TimeDelta::from_minutes(40.0);
+        let dt = TimeDelta::from_minutes(40);
         let interval = Interval::new(time, time + dt);
         let traj = j2.propagate(interval).unwrap();
         let s1 = traj.states().into_iter().last().unwrap();
@@ -515,8 +515,8 @@ mod tests {
         let epoch = s0_orbit.time();
         let j2 = J2Propagator::new(s0_orbit);
 
-        let dt = TimeDelta::from_minutes(40.0);
-        let offset = TimeDelta::from_minutes(20.0);
+        let dt = TimeDelta::from_minutes(40);
+        let offset = TimeDelta::from_minutes(20);
 
         // Full interval from epoch
         let full = Interval::new(epoch, epoch + dt);
@@ -543,7 +543,7 @@ mod tests {
         let epoch = s0_orbit.time();
         let j2 = J2Propagator::new(s0_orbit);
 
-        let target = epoch + TimeDelta::from_minutes(40.0);
+        let target = epoch + TimeDelta::from_minutes(40);
         let state = j2.state_at(target).unwrap();
 
         let interval = Interval::new(epoch, target);
@@ -560,9 +560,9 @@ mod tests {
         let epoch = s0_orbit.time();
         let j2 = J2Propagator::new(s0_orbit);
 
-        let dt = TimeDelta::from_minutes(40.0);
+        let dt = TimeDelta::from_minutes(40);
         let interval = Interval::new(epoch, epoch + dt);
-        let times: Vec<_> = interval.step_by(TimeDelta::from_minutes(10.0)).collect();
+        let times: Vec<_> = interval.step_by(TimeDelta::from_minutes(10)).collect();
 
         let traj = j2.propagate_to(times.clone()).unwrap();
         let states = traj.states();
@@ -591,10 +591,10 @@ mod tests {
         let epoch = s0_orbit.time();
         let j2 = J2Propagator::new(s0_orbit);
 
-        let start = epoch + TimeDelta::from_minutes(20.0);
-        let end = start + TimeDelta::from_minutes(20.0);
+        let start = epoch + TimeDelta::from_minutes(20);
+        let end = start + TimeDelta::from_minutes(20);
         let interval = Interval::new(start, end);
-        let times: Vec<_> = interval.step_by(TimeDelta::from_minutes(5.0)).collect();
+        let times: Vec<_> = interval.step_by(TimeDelta::from_minutes(5)).collect();
 
         let traj = j2.propagate_to(times.clone()).unwrap();
         let states = traj.states();

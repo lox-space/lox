@@ -217,6 +217,23 @@ def test_utc_from_iso_invalid():
         lox.UTC.from_iso("2000-01-01X00:00:00 UTC")
 
 
+def test_time_delta_units():
+    assert (60 * lox.seconds).to_decimal_seconds() == 60.0
+    assert (2 * lox.minutes).to_decimal_seconds() == 120.0
+    assert (0.5 * lox.hours).to_decimal_seconds() == 1800.0
+    assert (1 * lox.days).to_decimal_seconds() == 86400.0
+
+
+def test_time_delta_subsecond_constructors():
+    td = lox.TimeDelta.from_milliseconds(1500)
+    assert td.seconds() == 1
+    assert td.subsecond() == 0.5
+    td = lox.TimeDelta.from_microseconds(1_000_000)
+    assert td.to_decimal_seconds() == 1.0
+    td = lox.TimeDelta.from_nanoseconds(500_000_000)
+    assert td.to_decimal_seconds() == 0.5
+
+
 def test_eop_provider_invalid_path():
     with pytest.raises(lox.EopParserError):
         lox.EOPProvider("invalid_path")
