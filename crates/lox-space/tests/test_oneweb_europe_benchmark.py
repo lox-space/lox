@@ -107,7 +107,7 @@ def europe_ground_assets_coarse():
 
 @pytest.fixture(scope="session")
 def t0(oneweb):
-    return next(iter(oneweb.values())).states()[0].time()
+    return next(iter(oneweb.values())).time()
 
 
 @pytest.fixture(scope="session")
@@ -116,7 +116,16 @@ def t1(t0):
 
 
 def make_space_assets(oneweb_dict):
-    return [lox.Spacecraft(name, traj) for name, traj in oneweb_dict.items()]
+    return [lox.Spacecraft(name, sgp4) for name, sgp4 in oneweb_dict.items()]
+
+
+def make_scenario_and_ensemble(oneweb_dict, ground_assets, t0, t1):
+    space_assets = make_space_assets(oneweb_dict)
+    scenario = lox.Scenario(
+        t0, t1, spacecraft=space_assets, ground_stations=ground_assets
+    )
+    ensemble = scenario.propagate()
+    return scenario, ensemble
 
 
 @pytest.fixture(scope="session")
@@ -170,10 +179,11 @@ class TestOneWebEuropeBenchmark:
     ):
         """Test visibility analysis on a small sample."""
         sample_ground_assets = europe_ground_assets_coarse[:10]
-        space_assets = make_space_assets(oneweb_sample_small)
-
-        analysis = lox.VisibilityAnalysis(sample_ground_assets, space_assets)
-        results = analysis.compute(t0, t1, ephemeris)
+        scenario, ensemble = make_scenario_and_ensemble(
+            oneweb_sample_small, sample_ground_assets, t0, t1
+        )
+        analysis = lox.VisibilityAnalysis(scenario, ensemble=ensemble)
+        results = analysis.compute(ephemeris)
 
         assert results.num_pairs() == len(oneweb_sample_small) * len(
             sample_ground_assets
@@ -190,10 +200,11 @@ class TestOneWebEuropeBenchmark:
     ):
         """Test visibility analysis on a medium sample."""
         sample_ground_assets = europe_ground_assets_coarse[:50]
-        space_assets = make_space_assets(oneweb_sample_medium)
-
-        analysis = lox.VisibilityAnalysis(sample_ground_assets, space_assets)
-        results = analysis.compute(t0, t1, ephemeris)
+        scenario, ensemble = make_scenario_and_ensemble(
+            oneweb_sample_medium, sample_ground_assets, t0, t1
+        )
+        analysis = lox.VisibilityAnalysis(scenario, ensemble=ensemble)
+        results = analysis.compute(ephemeris)
 
         assert results.num_pairs() == len(oneweb_sample_medium) * len(
             sample_ground_assets
@@ -210,10 +221,11 @@ class TestOneWebEuropeBenchmark:
     ):
         """Test visibility analysis on a large subset (marked as slow)."""
         sample_ground_assets = europe_ground_assets[:100]
-        space_assets = make_space_assets(oneweb_sample_large)
-
-        analysis = lox.VisibilityAnalysis(sample_ground_assets, space_assets)
-        results = analysis.compute(t0, t1, ephemeris)
+        scenario, ensemble = make_scenario_and_ensemble(
+            oneweb_sample_large, sample_ground_assets, t0, t1
+        )
+        analysis = lox.VisibilityAnalysis(scenario, ensemble=ensemble)
+        results = analysis.compute(ephemeris)
 
         assert results.num_pairs() == len(oneweb_sample_large) * len(
             sample_ground_assets

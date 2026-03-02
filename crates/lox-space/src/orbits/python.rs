@@ -1475,6 +1475,7 @@ impl From<PyJ2Error> for PyErr {
 ///     h_min: Minimum step size in seconds (default: 1e-6).
 ///     max_steps: Maximum number of integration steps (default: 100000).
 #[pyclass(name = "J2", module = "lox_space", frozen)]
+#[derive(Clone)]
 pub struct PyJ2Propagator(pub DynJ2Propagator);
 
 #[pymethods]
@@ -1754,6 +1755,7 @@ impl From<PySgp4Error> for PyErr {
 /// Args:
 ///     tle: Two-Line Element set (2 or 3 lines).
 #[pyclass(name = "SGP4", module = "lox_space", frozen)]
+#[derive(Clone)]
 pub struct PySgp4 {
     pub inner: Sgp4,
     tle: String,

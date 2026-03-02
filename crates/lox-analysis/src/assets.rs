@@ -2,19 +2,24 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+use std::collections::HashMap;
 use std::fmt;
 
 use lox_core::units::AngularRate;
+use lox_frames::DynFrame;
+use lox_frames::rotations::TryRotation;
 use lox_time::Time;
 use lox_time::intervals::TimeInterval;
-use lox_time::time_scales::Tai;
+use lox_time::time_scales::{DynTimeScale, Tai};
+use rayon::prelude::*;
 
 #[cfg(feature = "comms")]
 use lox_comms::system::CommunicationSystem;
 
 use crate::visibility::ElevationMask;
 use lox_orbits::ground::DynGroundLocation;
-use lox_orbits::orbits::DynTrajectory;
+use lox_orbits::orbits::DynEnsemble;
+use lox_orbits::propagators::{OrbitSource, PropagateError};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct AssetId(String);
@@ -127,7 +132,7 @@ impl GroundStation {
 #[derive(Debug, Clone)]
 pub struct Spacecraft {
     id: AssetId,
-    trajectory: DynTrajectory,
+    orbit: OrbitSource,
     max_slew_rate: Option<AngularRate>,
     constellation: Option<ConstellationId>,
     #[cfg(feature = "comms")]
@@ -135,10 +140,10 @@ pub struct Spacecraft {
 }
 
 impl Spacecraft {
-    pub fn new(id: impl Into<String>, trajectory: DynTrajectory) -> Self {
+    pub fn new(id: impl Into<String>, orbit: OrbitSource) -> Self {
         Self {
             id: AssetId::new(id),
-            trajectory,
+            orbit,
             max_slew_rate: None,
             constellation: None,
             #[cfg(feature = "comms")]
@@ -166,8 +171,8 @@ impl Spacecraft {
         &self.id
     }
 
-    pub fn trajectory(&self) -> &DynTrajectory {
-        &self.trajectory
+    pub fn orbit(&self) -> &OrbitSource {
+        &self.orbit
     }
 
     pub fn max_slew_rate(&self) -> Option<AngularRate> {
@@ -180,12 +185,19 @@ impl Spacecraft {
     }
 }
 
-#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct Scenario {
     interval: TimeInterval<Tai>,
     ground_stations: Vec<GroundStation>,
     spacecraft: Vec<Spacecraft>,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum ScenarioPropagateError {
+    #[error("propagation failed for spacecraft \"{0}\": {1}")]
+    Propagate(AssetId, PropagateError),
+    #[error("frame transformation failed for spacecraft \"{0}\": {1}")]
+    FrameTransformation(AssetId, String),
 }
 
 impl Scenario {
@@ -210,6 +222,55 @@ impl Scenario {
     pub fn with_ground_stations(mut self, ground_stations: &[GroundStation]) -> Self {
         self.ground_stations = ground_stations.into();
         self
+    }
+
+    pub fn interval(&self) -> &TimeInterval<Tai> {
+        &self.interval
+    }
+
+    pub fn ground_stations(&self) -> &[GroundStation] {
+        &self.ground_stations
+    }
+
+    pub fn spacecraft(&self) -> &[Spacecraft] {
+        &self.spacecraft
+    }
+
+    /// Propagate all spacecraft over the scenario interval, transforming
+    /// trajectories to the given target `frame` using the provided rotation
+    /// `provider`.
+    pub fn propagate<P>(
+        &self,
+        frame: DynFrame,
+        provider: &P,
+    ) -> Result<DynEnsemble<AssetId>, ScenarioPropagateError>
+    where
+        P: TryRotation<DynFrame, DynFrame, DynTimeScale> + Send + Sync,
+        P::Error: std::fmt::Display,
+    {
+        let dyn_interval = TimeInterval::new(
+            self.interval.start().into_dyn(),
+            self.interval.end().into_dyn(),
+        );
+        let entries: Result<HashMap<_, _>, _> = self
+            .spacecraft
+            .par_iter()
+            .map(|sc| {
+                let traj = sc
+                    .orbit
+                    .propagate(dyn_interval)
+                    .map_err(|e| ScenarioPropagateError::Propagate(sc.id.clone(), e))?;
+                let traj = if traj.reference_frame() != frame {
+                    traj.into_frame(frame, provider).map_err(|e| {
+                        ScenarioPropagateError::FrameTransformation(sc.id.clone(), e.to_string())
+                    })?
+                } else {
+                    traj
+                };
+                Ok((sc.id.clone(), traj))
+            })
+            .collect();
+        Ok(DynEnsemble::new(entries?))
     }
 
     pub fn filter_by_constellations(&self, constellations: &[ConstellationId]) -> Self {
