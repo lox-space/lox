@@ -348,29 +348,29 @@ class GroundStation:
 class Spacecraft:
     """A named spacecraft for visibility analysis.
 
-    Wraps a trajectory with an identifier.
+    Wraps an orbit source (propagator or pre-computed trajectory) with an
+    identifier.
 
     Args:
         id: Unique identifier for this spacecraft.
-        trajectory: Spacecraft trajectory.
+        orbit: Orbit source — an SGP4, Vallado, J2 propagator, or a
+            pre-computed Trajectory.
         max_slew_rate: Optional maximum slew rate.
         communication_systems: Optional list of communication systems.
 
     Examples:
-        >>> sc = lox.Spacecraft("ISS", trajectory)
+        >>> sc = lox.Spacecraft("ISS", lox.SGP4(tle))
+        >>> sc = lox.Spacecraft("SAT", trajectory)
     """
     def __new__(
         cls,
         id: str,
-        trajectory: Trajectory,
+        orbit: SGP4 | Vallado | J2 | Trajectory,
         max_slew_rate: AngularRate | None = None,
         communication_systems: list[CommunicationSystem] | None = None,
     ) -> Self: ...
     def id(self) -> str:
         """Return the asset identifier."""
-        ...
-    def trajectory(self) -> Trajectory:
-        """Return the spacecraft trajectory."""
         ...
     def max_slew_rate(self) -> AngularRate | None:
         """Return the maximum slew rate, if set."""
@@ -378,6 +378,52 @@ class Spacecraft:
     def communication_systems(self) -> list[CommunicationSystem]:
         """Return the communication systems."""
         ...
+
+class Scenario:
+    """A scenario grouping spacecraft, ground stations, and a time interval.
+
+    Args:
+        start: Start time of the scenario.
+        end: End time of the scenario.
+        spacecraft: List of Spacecraft objects.
+        ground_stations: List of GroundStation objects.
+
+    Examples:
+        >>> scenario = lox.Scenario(t0, t1, spacecraft=[sc], ground_stations=[gs])
+    """
+    def __new__(
+        cls,
+        start: Time,
+        end: Time,
+        spacecraft: list[Spacecraft] | None = None,
+        ground_stations: list[GroundStation] | None = None,
+    ) -> Self: ...
+    def propagate(self) -> "Ensemble":
+        """Propagate all spacecraft, returning an Ensemble.
+
+        Trajectories are transformed to ICRF using the default rotation
+        provider.
+        """
+        ...
+    def start(self) -> Time:
+        """Return the start time."""
+        ...
+    def end(self) -> Time:
+        """Return the end time."""
+        ...
+
+class Ensemble:
+    """A collection of propagated trajectories keyed by spacecraft id.
+
+    Examples:
+        >>> ensemble = scenario.propagate()
+        >>> traj = ensemble.get("ISS")
+    """
+    def get(self, id: str) -> Trajectory | None:
+        """Return the trajectory for a given spacecraft id."""
+        ...
+    def __len__(self) -> int: ...
+    def __repr__(self) -> str: ...
 
 class VisibilityAnalysis:
     """Computes ground-station-to-spacecraft and inter-satellite visibility.
@@ -387,8 +433,10 @@ class VisibilityAnalysis:
     is set to True.
 
     Args:
-        ground_assets: List of GroundStation objects.
-        space_assets: List of Spacecraft objects.
+        scenario: Scenario containing spacecraft, ground stations, and
+            time interval.
+        ensemble: Optional pre-computed Ensemble. If not provided, the
+            scenario is propagated automatically.
         occulting_bodies: Optional list of bodies for line-of-sight checking.
         step: Optional time step for event detection (default: 60s).
         min_pass_duration: Optional minimum pass duration. Passes
@@ -396,30 +444,32 @@ class VisibilityAnalysis:
             for faster detection.
         inter_satellite: If True, also compute inter-satellite visibility
             for all unique spacecraft pairs (default: False).
+        min_range: Optional minimum range constraint for inter-satellite pairs.
+        max_range: Optional maximum range constraint for inter-satellite pairs.
 
     Examples:
-        >>> analysis = lox.VisibilityAnalysis(
-        ...     [ground_asset],
-        ...     [space_asset],
-        ...     step=lox.TimeDelta(60),
-        ... )
-        >>> results = analysis.compute(start, end, spk)
+        >>> scenario = lox.Scenario(t0, t1, spacecraft=[sc], ground_stations=[gs])
+        >>> analysis = lox.VisibilityAnalysis(scenario, step=lox.TimeDelta(60))
+        >>> results = analysis.compute(spk)
     """
     def __new__(
         cls,
-        ground_assets: list[GroundStation],
-        space_assets: list[Spacecraft],
+        scenario: Scenario,
+        ensemble: Ensemble | None = None,
         occulting_bodies: list[str | int | Origin] | None = None,
         step: TimeDelta | None = None,
         min_pass_duration: TimeDelta | None = None,
         inter_satellite: bool = False,
+        min_range: Distance | None = None,
+        max_range: Distance | None = None,
     ) -> Self: ...
-    def compute(self, start: Time, end: Time, ephemeris: SPK) -> VisibilityResults:
-        """Compute visibility intervals for all (ground, space) pairs.
+    def compute(self, ephemeris: SPK) -> VisibilityResults:
+        """Compute visibility intervals for all pairs.
+
+        If no ensemble was provided at construction, the scenario is
+        propagated automatically (trajectories transformed to ICRF).
 
         Args:
-            start: Start time of the analysis period.
-            end: End time of the analysis period.
             ephemeris: SPK ephemeris data.
 
         Returns:

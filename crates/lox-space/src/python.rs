@@ -5,8 +5,8 @@
 use std::f64::consts::PI;
 
 use crate::analysis::python::{
-    PyElevationMask, PyGroundStation, PyObservables, PyPass, PySpacecraft, PyVisibilityAnalysis,
-    PyVisibilityResults,
+    PyElevationMask, PyEnsemble, PyGroundStation, PyObservables, PyPass, PyScenario, PySpacecraft,
+    PyVisibilityAnalysis, PyVisibilityResults,
 };
 use crate::bodies::python::PyOrigin;
 use crate::comms::python::{
@@ -84,7 +84,9 @@ fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyGroundStation>()?;
     m.add_class::<PyObservables>()?;
     m.add_class::<PyPass>()?;
+    m.add_class::<PyScenario>()?;
     m.add_class::<PySpacecraft>()?;
+    m.add_class::<PyEnsemble>()?;
     m.add_class::<PyVisibilityAnalysis>()?;
     m.add_class::<PyVisibilityResults>()?;
 

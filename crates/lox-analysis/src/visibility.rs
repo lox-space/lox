@@ -22,14 +22,14 @@ use thiserror::Error;
 
 use lox_core::units::{AngularRate, Distance};
 
-use crate::assets::{AssetId, GroundStation, Spacecraft};
+use crate::assets::{AssetId, GroundStation, Scenario, Spacecraft};
 use lox_frames::DynFrame;
 use lox_orbits::events::{
     DetectError, DetectFn, EventsToIntervals, IntervalDetector, IntervalDetectorExt,
     RootFindingDetector,
 };
 use lox_orbits::ground::{DynGroundLocation, Observables};
-use lox_orbits::orbits::DynTrajectory;
+use lox_orbits::orbits::{DynEnsemble, DynTrajectory};
 
 // ---------------------------------------------------------------------------
 // Line-of-sight geometry
@@ -577,9 +577,11 @@ impl VisibilityResults {
 /// Ground-to-space pairs are always computed when ground assets are present.
 /// Inter-satellite pairs are additionally computed when enabled via
 /// [`with_inter_satellite`](Self::with_inter_satellite).
+///
+/// Trajectories are looked up from a pre-computed [`DynEnsemble`] by asset id.
 pub struct VisibilityAnalysis<'a, E> {
-    ground_assets: &'a [GroundStation],
-    space_assets: &'a [Spacecraft],
+    scenario: &'a Scenario,
+    ensemble: &'a DynEnsemble<AssetId>,
     ephemeris: &'a E,
     occulting_bodies: Vec<DynOrigin>,
     step: TimeDelta,
@@ -595,13 +597,13 @@ where
     E::Error: 'static,
 {
     pub fn new(
-        ground_assets: &'a [GroundStation],
-        space_assets: &'a [Spacecraft],
+        scenario: &'a Scenario,
+        ensemble: &'a DynEnsemble<AssetId>,
         ephemeris: &'a E,
     ) -> Self {
         Self {
-            ground_assets,
-            space_assets,
+            scenario,
+            ensemble,
             ephemeris,
             occulting_bodies: Vec::new(),
             step: TimeDelta::from_seconds(60),
@@ -642,6 +644,10 @@ where
         self
     }
 
+    pub fn step(&self) -> TimeDelta {
+        self.step
+    }
+
     /// Apply `min_pass_duration` → `coarse_step` conversion to a detector.
     fn apply_coarse_step<F>(&self, det: RootFindingDetector<F>) -> RootFindingDetector<F> {
         match self.min_pass_duration {
@@ -658,10 +664,10 @@ where
     }
 
     /// Compute visibility intervals for a single (ground, space) pair.
-    pub fn compute_pair(
+    fn compute_pair(
         &self,
         gs: &GroundStation,
-        sc: &Spacecraft,
+        sc_traj: &DynTrajectory,
         interval: TimeInterval<DynTimeScale>,
     ) -> Result<Vec<TimeInterval<DynTimeScale>>, VisibilityError> {
         let make_elev = || {
@@ -669,7 +675,7 @@ where
                 ElevationDetectFn {
                     gs: gs.location(),
                     mask: gs.mask(),
-                    sc: sc.trajectory(),
+                    sc: sc_traj,
                 },
                 self.step,
             );
@@ -684,7 +690,7 @@ where
             EventsToIntervals::new(self.apply_coarse_step(RootFindingDetector::new(
                 LineOfSightDetectFn {
                     gs: gs.location(),
-                    sc: sc.trajectory(),
+                    sc: sc_traj,
                     body,
                     ephemeris: self.ephemeris,
                 },
@@ -707,6 +713,8 @@ where
         &self,
         sc1: &Spacecraft,
         sc2: &Spacecraft,
+        traj1: &DynTrajectory,
+        traj2: &DynTrajectory,
         interval: TimeInterval<DynTimeScale>,
     ) -> Result<Vec<TimeInterval<DynTimeScale>>, VisibilityError> {
         let has_range = self.min_range.is_some() || self.max_range.is_some();
@@ -732,8 +740,8 @@ where
         let make_range = |threshold: Distance, direction: RangeDirection| {
             EventsToIntervals::new(self.apply_coarse_step(RootFindingDetector::new(
                 InterSatelliteRangeDetectFn {
-                    sc1: sc1.trajectory(),
-                    sc2: sc2.trajectory(),
+                    sc1: traj1,
+                    sc2: traj2,
                     threshold,
                     direction,
                 },
@@ -744,8 +752,8 @@ where
         let make_los = |body: DynOrigin| {
             EventsToIntervals::new(self.apply_coarse_step(RootFindingDetector::new(
                 InterSatelliteLosDetectFn {
-                    sc1: sc1.trajectory(),
-                    sc2: sc2.trajectory(),
+                    sc1: traj1,
+                    sc2: traj2,
                     body,
                     ephemeris: self.ephemeris,
                 },
@@ -771,8 +779,8 @@ where
         if let Some(threshold) = effective_slew_rate {
             let slew = EventsToIntervals::new(self.apply_coarse_step(RootFindingDetector::new(
                 InterSatelliteSlewRateDetectFn {
-                    sc1: sc1.trajectory(),
-                    sc2: sc2.trajectory(),
+                    sc1: traj1,
+                    sc2: traj2,
                     threshold,
                 },
                 self.step,
@@ -796,14 +804,16 @@ where
     }
 
     /// Compute visibility intervals for all pairs.
-    pub fn compute(
-        &self,
-        interval: TimeInterval<DynTimeScale>,
-    ) -> Result<VisibilityResults, VisibilityError> {
+    pub fn compute(&self) -> Result<VisibilityResults, VisibilityError> {
+        let interval = TimeInterval::new(
+            self.scenario.interval().start().into_dyn(),
+            self.scenario.interval().end().into_dyn(),
+        );
+
         let mut intervals = HashMap::new();
         let mut pair_types = HashMap::new();
 
-        if !self.ground_assets.is_empty() {
+        if !self.scenario.ground_stations().is_empty() {
             let gs_results = self.compute_ground_space(interval)?;
             let (gs_intervals, gs_pair_types) = gs_results.into_parts();
             intervals.extend(gs_intervals);
@@ -828,33 +838,30 @@ where
         &self,
         interval: TimeInterval<DynTimeScale>,
     ) -> Result<VisibilityResults, VisibilityError> {
-        let pairs: Vec<_> = self
-            .ground_assets
+        let ground_stations = self.scenario.ground_stations();
+        let spacecraft = self.scenario.spacecraft();
+
+        let pairs: Vec<_> = ground_stations
             .iter()
-            .flat_map(|gs| self.space_assets.iter().map(move |sc| (gs, sc)))
+            .flat_map(|gs| spacecraft.iter().map(move |sc| (gs, sc)))
             .collect();
 
         const PARALLEL_THRESHOLD: usize = 100;
         let use_parallel = pairs.len() > PARALLEL_THRESHOLD;
 
+        let compute_one = |(gs, sc): &(&GroundStation, &Spacecraft)| {
+            let key = (gs.id().clone(), sc.id().clone());
+            let sc_traj = self.ensemble.get(sc.id()).expect(
+                "trajectory not found in ensemble; did you forget to propagate this spacecraft?",
+            );
+            let windows = self.compute_pair(gs, sc_traj, interval)?;
+            Ok((key, windows))
+        };
+
         let results: Result<Vec<_>, VisibilityError> = if use_parallel {
-            pairs
-                .par_iter()
-                .map(|(gs, sc)| {
-                    let key = (gs.id().clone(), sc.id().clone());
-                    let windows = self.compute_pair(gs, sc, interval)?;
-                    Ok((key, windows))
-                })
-                .collect()
+            pairs.par_iter().map(compute_one).collect()
         } else {
-            pairs
-                .iter()
-                .map(|(gs, sc)| {
-                    let key = (gs.id().clone(), sc.id().clone());
-                    let windows = self.compute_pair(gs, sc, interval)?;
-                    Ok((key, windows))
-                })
-                .collect()
+            pairs.iter().map(compute_one).collect()
         };
 
         let intervals: HashMap<_, _> = results?.into_iter().collect();
@@ -873,7 +880,8 @@ where
         &self,
         interval: TimeInterval<DynTimeScale>,
     ) -> Result<VisibilityResults, VisibilityError> {
-        let n = self.space_assets.len();
+        let spacecraft = self.scenario.spacecraft();
+        let n = spacecraft.len();
         let mut pairs: Vec<(usize, usize)> = Vec::with_capacity(n * (n - 1) / 2);
         for i in 0..n {
             for j in (i + 1)..n {
@@ -884,10 +892,19 @@ where
         let results: Result<Vec<_>, VisibilityError> = pairs
             .par_iter()
             .map(|&(i, j)| {
-                let sc1 = &self.space_assets[i];
-                let sc2 = &self.space_assets[j];
+                let sc1 = &spacecraft[i];
+                let sc2 = &spacecraft[j];
                 let key = (sc1.id().clone(), sc2.id().clone());
-                let windows = self.compute_inter_satellite_pair(sc1, sc2, interval)?;
+                let traj1 = self
+                    .ensemble
+                    .get(sc1.id())
+                    .expect("trajectory not found in ensemble");
+                let traj2 = self
+                    .ensemble
+                    .get(sc2.id())
+                    .expect("trajectory not found in ensemble");
+                let windows =
+                    self.compute_inter_satellite_pair(sc1, sc2, traj1, traj2, interval)?;
                 Ok((key, windows))
             })
             .collect();
@@ -911,17 +928,19 @@ where
         &self,
         results: &VisibilityResults,
     ) -> HashMap<(AssetId, AssetId), Vec<DynPass>> {
-        let gs_map: HashMap<&AssetId, &GroundStation> =
-            self.ground_assets.iter().map(|g| (g.id(), g)).collect();
-        let sc_map: HashMap<&AssetId, &Spacecraft> =
-            self.space_assets.iter().map(|s| (s.id(), s)).collect();
+        let gs_map: HashMap<&AssetId, &GroundStation> = self
+            .scenario
+            .ground_stations()
+            .iter()
+            .map(|g| (g.id(), g))
+            .collect();
 
         results
             .ground_space_pair_ids()
             .into_iter()
             .filter_map(|(gs_id, sc_id)| {
                 let gs = gs_map.get(gs_id)?;
-                let sc = sc_map.get(sc_id)?;
+                let sc_traj = self.ensemble.get(sc_id)?;
                 let intervals = results.intervals_for(gs_id, sc_id)?;
                 let passes: Vec<DynPass> = intervals
                     .iter()
@@ -931,7 +950,7 @@ where
                             self.step,
                             gs.location(),
                             gs.mask(),
-                            sc.trajectory(),
+                            sc_traj,
                         )
                     })
                     .collect();
@@ -951,6 +970,7 @@ mod tests {
     use lox_core::coords::LonLatAlt;
     use lox_core::units::Distance;
     use lox_ephem::spk::parser::Spk;
+    use lox_orbits::propagators::OrbitSource;
     use lox_test_utils::{assert_approx_eq, data_dir, data_file, read_data_file};
     use lox_time::time_scales::Tai;
     use lox_time::utc::Utc;
@@ -961,6 +981,29 @@ mod tests {
     use lox_frames::Icrf;
     use lox_orbits::ground::GroundLocation;
     use lox_orbits::orbits::Trajectory;
+
+    /// Build a Scenario + DynEnsemble from ground/space assets and a DynTimeScale interval.
+    /// The Tai interval is derived from the DynTimeScale interval.
+    fn make_scenario_and_ensemble(
+        ground_assets: &[GroundStation],
+        space_assets: &[Spacecraft],
+        interval: TimeInterval<DynTimeScale>,
+    ) -> (Scenario, DynEnsemble<AssetId>) {
+        let tai_interval =
+            TimeInterval::new(interval.start().to_scale(Tai), interval.end().to_scale(Tai));
+        let scenario = Scenario::with_interval(tai_interval)
+            .with_ground_stations(ground_assets)
+            .with_spacecraft(space_assets);
+        // Build ensemble from OrbitSource::Trajectory entries
+        let mut map = HashMap::new();
+        for sc in space_assets {
+            if let OrbitSource::Trajectory(traj) = sc.orbit() {
+                map.insert(sc.id().clone(), traj.clone());
+            }
+        }
+        let ensemble = DynEnsemble::new(map);
+        (scenario, ensemble)
+    }
 
     #[test]
     fn test_line_of_sight() {
@@ -1052,13 +1095,15 @@ mod tests {
         let mask = ElevationMask::with_fixed_elevation(0.0);
         let sc_traj = spacecraft_trajectory_dyn();
         let gs = GroundStation::new("cebreros", gs_loc, mask);
-        let sc = Spacecraft::new("lunar", sc_traj.clone());
+        let sc = Spacecraft::new("lunar", OrbitSource::Trajectory(sc_traj.clone()));
         let spk = ephemeris();
         let ground_assets = [gs.clone()];
         let space_assets = [sc.clone()];
-        let analysis = VisibilityAnalysis::new(&ground_assets, &space_assets, spk);
         let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
-        let results = analysis.compute(interval).expect("visibility");
+        let (scenario, ensemble) =
+            make_scenario_and_ensemble(&ground_assets, &space_assets, interval);
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk);
+        let results = analysis.compute().expect("visibility");
         let intervals = results
             .intervals_for(gs.id(), sc.id())
             .expect("pair not found");
@@ -1073,14 +1118,16 @@ mod tests {
         let mask = ElevationMask::with_fixed_elevation(0.0);
         let sc_traj = spacecraft_trajectory_dyn();
         let gs = GroundStation::new("cebreros", gs_loc, mask);
-        let sc = Spacecraft::new("lunar", sc_traj.clone());
+        let sc = Spacecraft::new("lunar", OrbitSource::Trajectory(sc_traj.clone()));
         let spk = ephemeris();
         let ground_assets = [gs.clone()];
         let space_assets = [sc.clone()];
-        let analysis = VisibilityAnalysis::new(&ground_assets, &space_assets, spk)
-            .with_occulting_bodies(vec![DynOrigin::Moon]);
         let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
-        let results = analysis.compute(interval).unwrap();
+        let (scenario, ensemble) =
+            make_scenario_and_ensemble(&ground_assets, &space_assets, interval);
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk)
+            .with_occulting_bodies(vec![DynOrigin::Moon]);
+        let results = analysis.compute().unwrap();
         let passes = analysis.to_passes(&results);
         let key = (gs.id().clone(), sc.id().clone());
         let pair_passes = &passes[&key];
@@ -1098,13 +1145,15 @@ mod tests {
         let mask = ElevationMask::with_fixed_elevation(10.0_f64.to_radians());
         let sc_traj = spacecraft_trajectory_dyn();
         let gs = GroundStation::new("cebreros", gs_loc, mask);
-        let sc = Spacecraft::new("lunar", sc_traj.clone());
+        let sc = Spacecraft::new("lunar", OrbitSource::Trajectory(sc_traj.clone()));
         let spk = ephemeris();
         let ground_assets = [gs.clone()];
         let space_assets = [sc.clone()];
-        let analysis = VisibilityAnalysis::new(&ground_assets, &space_assets, spk);
         let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
-        let results = analysis.compute(interval).unwrap();
+        let (scenario, ensemble) =
+            make_scenario_and_ensemble(&ground_assets, &space_assets, interval);
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk);
+        let results = analysis.compute().unwrap();
         let passes = analysis.to_passes(&results);
         let key = (gs.id().clone(), sc.id().clone());
         let pair_passes = &passes[&key];
@@ -1170,14 +1219,15 @@ mod tests {
     fn test_inter_satellite_visibility() {
         let sc_traj = spacecraft_trajectory_dyn();
         let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
-        let sc1 = Spacecraft::new("sc1", sc_traj.clone());
-        let sc2 = Spacecraft::new("sc2", sc_traj);
+        let sc1 = Spacecraft::new("sc1", OrbitSource::Trajectory(sc_traj.clone()));
+        let sc2 = Spacecraft::new("sc2", OrbitSource::Trajectory(sc_traj));
         let spk = ephemeris();
         let space_assets = [sc1.clone(), sc2.clone()];
-        let analysis = VisibilityAnalysis::new(&[], &space_assets, spk)
+        let (scenario, ensemble) = make_scenario_and_ensemble(&[], &space_assets, interval);
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk)
             .with_inter_satellite()
             .with_occulting_bodies(vec![DynOrigin::Earth]);
-        let results = analysis.compute(interval).unwrap();
+        let results = analysis.compute().unwrap();
         let intervals = results
             .intervals_for(sc1.id(), sc2.id())
             .expect("pair not found");
@@ -1191,17 +1241,18 @@ mod tests {
     fn test_inter_satellite_visibility_with_range_filter() {
         let sc_traj = spacecraft_trajectory_dyn();
         let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
-        let sc1 = Spacecraft::new("sc1", sc_traj.clone());
-        let sc2 = Spacecraft::new("sc2", sc_traj);
+        let sc1 = Spacecraft::new("sc1", OrbitSource::Trajectory(sc_traj.clone()));
+        let sc2 = Spacecraft::new("sc2", OrbitSource::Trajectory(sc_traj));
         let spk = ephemeris();
         let space_assets = [sc1.clone(), sc2.clone()];
 
         // Colocated spacecraft have range = 0. A max_range filter with a large
         // threshold should still return the full interval.
-        let analysis = VisibilityAnalysis::new(&[], &space_assets, spk)
+        let (scenario, ensemble) = make_scenario_and_ensemble(&[], &space_assets, interval);
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk)
             .with_inter_satellite()
             .with_max_range(Distance::kilometers(1000.0));
-        let results = analysis.compute(interval).unwrap();
+        let results = analysis.compute().unwrap();
         let intervals = results
             .intervals_for(sc1.id(), sc2.id())
             .expect("pair not found");
@@ -1211,10 +1262,11 @@ mod tests {
 
         // A min_range filter with a positive threshold should exclude colocated
         // spacecraft entirely (range = 0 < threshold at all times).
-        let analysis = VisibilityAnalysis::new(&[], &space_assets, spk)
+        let (scenario, ensemble) = make_scenario_and_ensemble(&[], &space_assets, interval);
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk)
             .with_inter_satellite()
             .with_min_range(Distance::kilometers(100.0));
-        let results = analysis.compute(interval).unwrap();
+        let results = analysis.compute().unwrap();
         let intervals = results
             .intervals_for(sc1.id(), sc2.id())
             .expect("pair not found");
@@ -1248,14 +1300,15 @@ mod tests {
 
         // Colocated spacecraft have ω = 0. A generous slew rate limit should
         // keep the full interval.
-        let sc1 = Spacecraft::new("sc1", sc_traj.clone())
+        let sc1 = Spacecraft::new("sc1", OrbitSource::Trajectory(sc_traj.clone()))
             .with_max_slew_rate(AngularRate::degrees_per_second(10.0));
-        let sc2 = Spacecraft::new("sc2", sc_traj.clone())
+        let sc2 = Spacecraft::new("sc2", OrbitSource::Trajectory(sc_traj))
             .with_max_slew_rate(AngularRate::degrees_per_second(5.0));
         let spk = ephemeris();
         let space_assets = [sc1.clone(), sc2.clone()];
-        let analysis = VisibilityAnalysis::new(&[], &space_assets, spk).with_inter_satellite();
-        let results = analysis.compute(interval).unwrap();
+        let (scenario, ensemble) = make_scenario_and_ensemble(&[], &space_assets, interval);
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk).with_inter_satellite();
+        let results = analysis.compute().unwrap();
         let intervals = results
             .intervals_for(sc1.id(), sc2.id())
             .expect("pair not found");
@@ -1268,7 +1321,7 @@ mod tests {
     #[test]
     fn test_space_asset_max_slew_rate() {
         let sc_traj = spacecraft_trajectory_dyn();
-        let sc = Spacecraft::new("sc1", sc_traj.clone());
+        let sc = Spacecraft::new("sc1", OrbitSource::Trajectory(sc_traj));
         assert!(sc.max_slew_rate().is_none());
 
         let rate = AngularRate::degrees_per_second(2.5);
@@ -1333,24 +1386,26 @@ mod tests {
 
         // Without slew rate constraint: should have visibility (no other
         // constraints → full interval returned).
-        let sc1_no_limit = Spacecraft::new("ow12", traj1.clone());
-        let sc2_no_limit = Spacecraft::new("ow17", traj2.clone());
+        let sc1_no_limit = Spacecraft::new("ow12", OrbitSource::Trajectory(traj1.clone()));
+        let sc2_no_limit = Spacecraft::new("ow17", OrbitSource::Trajectory(traj2.clone()));
         let space_assets = [sc1_no_limit.clone(), sc2_no_limit.clone()];
-        let analysis = VisibilityAnalysis::new(&[], &space_assets, spk).with_inter_satellite();
-        let results_no_limit = analysis.compute(interval).unwrap();
+        let (scenario, ensemble) = make_scenario_and_ensemble(&[], &space_assets, interval);
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk).with_inter_satellite();
+        let results_no_limit = analysis.compute().unwrap();
         let intervals_no_limit = results_no_limit
             .intervals_for(sc1_no_limit.id(), sc2_no_limit.id())
             .expect("pair not found");
 
         // With a tight slew rate constraint (0.01 deg/s): should trim windows
         // where the angular rate exceeds the limit during close approaches.
-        let sc1_limited = Spacecraft::new("ow12", traj1.clone())
+        let sc1_limited = Spacecraft::new("ow12", OrbitSource::Trajectory(traj1.clone()))
             .with_max_slew_rate(AngularRate::degrees_per_second(0.01));
-        let sc2_limited = Spacecraft::new("ow17", traj2.clone())
+        let sc2_limited = Spacecraft::new("ow17", OrbitSource::Trajectory(traj2.clone()))
             .with_max_slew_rate(AngularRate::degrees_per_second(0.01));
         let space_assets = [sc1_limited.clone(), sc2_limited.clone()];
-        let analysis = VisibilityAnalysis::new(&[], &space_assets, spk).with_inter_satellite();
-        let results_limited = analysis.compute(interval).unwrap();
+        let (scenario, ensemble) = make_scenario_and_ensemble(&[], &space_assets, interval);
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk).with_inter_satellite();
+        let results_limited = analysis.compute().unwrap();
         let intervals_limited = results_limited
             .intervals_for(sc1_limited.id(), sc2_limited.id())
             .expect("pair not found");
@@ -1385,12 +1440,13 @@ mod tests {
         let interval = TimeInterval::new(traj1.start_time(), traj1.end_time());
         let spk = ephemeris();
 
-        let sc1 = Spacecraft::new("ow12", traj1)
+        let sc1 = Spacecraft::new("ow12", OrbitSource::Trajectory(traj1))
             .with_max_slew_rate(AngularRate::degrees_per_second(0.01));
-        let sc2 = Spacecraft::new("ow17", traj2); // no limit
+        let sc2 = Spacecraft::new("ow17", OrbitSource::Trajectory(traj2)); // no limit
         let space_assets = [sc1.clone(), sc2.clone()];
-        let analysis = VisibilityAnalysis::new(&[], &space_assets, spk).with_inter_satellite();
-        let results = analysis.compute(interval).unwrap();
+        let (scenario, ensemble) = make_scenario_and_ensemble(&[], &space_assets, interval);
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk).with_inter_satellite();
+        let results = analysis.compute().unwrap();
         let intervals = results
             .intervals_for(sc1.id(), sc2.id())
             .expect("pair not found");

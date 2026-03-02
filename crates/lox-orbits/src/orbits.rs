@@ -4,11 +4,13 @@
 
 pub mod builders;
 mod cartesian;
+pub mod ensemble;
 mod keplerian;
 pub mod sso;
 mod trajectory;
 
 pub use cartesian::StateToDynGroundError;
+pub use ensemble::{DynEnsemble, Ensemble};
 pub use trajectory::{DynTrajectory, Trajectory, TrajectoryError, TrajectoryTransformationError};
 
 use lox_bodies::{DynOrigin, Origin, PointMass, TryPointMass, UndefinedOriginPropertyError};

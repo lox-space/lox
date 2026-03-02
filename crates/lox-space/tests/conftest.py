@@ -29,18 +29,13 @@ def oneweb():
     with open(DATA_DIR.joinpath("oneweb_tle.txt")) as f:
         lines = f.readlines()
 
-    t0 = lox.SGP4("".join(lines[0:3])).time()
-    t1 = t0 + 1 * lox.days
-    times = lox.Interval(t0, t1).step_by(60 * lox.seconds)
-
-    trajectories = []
+    sgp4s = []
     for i in range(0, len(lines), 3):
         tle = lines[i : i + 3]
         name = tle[0].strip()
-        trajectory = lox.SGP4("".join(tle)).propagate(times, frame=lox.Frame("ICRF"))
-        trajectories.append((name, trajectory))
+        sgp4s.append((name, lox.SGP4("".join(tle))))
 
-    return dict(trajectories)
+    return dict(sgp4s)
 
 
 @pytest.fixture(scope="session")

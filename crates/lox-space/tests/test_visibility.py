@@ -24,7 +24,7 @@ def oneweb_subset(oneweb):
 
 @pytest.fixture(scope="module")
 def space_assets(oneweb_subset):
-    return [lox.Spacecraft(name, traj) for name, traj in oneweb_subset.items()]
+    return [lox.Spacecraft(name, sgp4) for name, sgp4 in oneweb_subset.items()]
 
 
 @pytest.fixture(scope="module")
@@ -34,8 +34,8 @@ def ground_assets(estrack):
 
 @pytest.fixture(scope="module")
 def t0(oneweb_subset):
-    traj = next(iter(oneweb_subset.values()))
-    return traj.states()[0].time()
+    sgp4 = next(iter(oneweb_subset.values()))
+    return sgp4.time()
 
 
 @pytest.fixture(scope="module")
@@ -44,33 +44,37 @@ def t1(t0):
 
 
 @pytest.fixture(scope="module")
-def results(ground_assets, space_assets, t0, t1, ephemeris):
-    analysis = lox.VisibilityAnalysis(ground_assets, space_assets)
-    return analysis.compute(t0, t1, ephemeris)
+def scenario(t0, t1, space_assets, ground_assets):
+    return lox.Scenario(t0, t1, spacecraft=space_assets, ground_stations=ground_assets)
 
 
 @pytest.fixture(scope="module")
-def results_with_los(ground_assets, space_assets, t0, t1, ephemeris):
+def results(scenario, ephemeris):
+    analysis = lox.VisibilityAnalysis(scenario)
+    return analysis.compute(ephemeris)
+
+
+@pytest.fixture(scope="module")
+def results_with_los(scenario, ephemeris):
     analysis = lox.VisibilityAnalysis(
-        ground_assets,
-        space_assets,
-        occulting_bodies=[lox.Origin("Earth")],
+        scenario, occulting_bodies=[lox.Origin("Earth")]
     )
-    return analysis.compute(t0, t1, ephemeris)
+    return analysis.compute(ephemeris)
 
 
 @pytest.fixture(scope="module")
-def combined_results(ground_assets, space_assets, t0, t1, ephemeris):
+def combined_results(scenario, ephemeris):
     """Results with both ground-to-space and inter-satellite pairs."""
-    analysis = lox.VisibilityAnalysis(ground_assets, space_assets, inter_satellite=True)
-    return analysis.compute(t0, t1, ephemeris)
+    analysis = lox.VisibilityAnalysis(scenario, inter_satellite=True)
+    return analysis.compute(ephemeris)
 
 
 @pytest.fixture(scope="module")
-def inter_satellite_results(space_assets, t0, t1, ephemeris):
+def inter_satellite_results(t0, t1, space_assets, ephemeris):
     """Results with inter-satellite pairs only."""
-    analysis = lox.VisibilityAnalysis([], space_assets, inter_satellite=True)
-    return analysis.compute(t0, t1, ephemeris)
+    scenario = lox.Scenario(t0, t1, spacecraft=space_assets)
+    analysis = lox.VisibilityAnalysis(scenario, inter_satellite=True)
+    return analysis.compute(ephemeris)
 
 
 # ---------------------------------------------------------------------------
@@ -85,48 +89,44 @@ class TestVisibilityAnalysis:
     def test_with_occulting_bodies(self, results_with_los, ground_assets, space_assets):
         assert results_with_los.num_pairs() == len(ground_assets) * len(space_assets)
 
-    def test_with_custom_step(self, ground_assets, space_assets, t0, t1, ephemeris):
-        analysis = lox.VisibilityAnalysis(
-            ground_assets, space_assets, step=lox.TimeDelta(30)
-        )
-        results = analysis.compute(t0, t1, ephemeris)
+    def test_with_custom_step(self, scenario, ephemeris, ground_assets, space_assets):
+        analysis = lox.VisibilityAnalysis(scenario, step=lox.TimeDelta(30))
+        results = analysis.compute(ephemeris)
         assert results.num_pairs() == len(ground_assets) * len(space_assets)
 
     def test_with_min_pass_duration(
-        self, ground_assets, space_assets, t0, t1, ephemeris
+        self, scenario, ephemeris, ground_assets, space_assets
     ):
         analysis = lox.VisibilityAnalysis(
-            ground_assets, space_assets, min_pass_duration=lox.TimeDelta(300)
+            scenario, min_pass_duration=lox.TimeDelta(300)
         )
-        results = analysis.compute(t0, t1, ephemeris)
+        results = analysis.compute(ephemeris)
         assert results.num_pairs() == len(ground_assets) * len(space_assets)
 
-    def test_with_all_options(self, ground_assets, space_assets, t0, t1, ephemeris):
+    def test_with_all_options(self, scenario, ephemeris, ground_assets, space_assets):
         analysis = lox.VisibilityAnalysis(
-            ground_assets,
-            space_assets,
+            scenario,
             occulting_bodies=[lox.Origin("Earth")],
             step=lox.TimeDelta(30),
             min_pass_duration=lox.TimeDelta(300),
         )
-        results = analysis.compute(t0, t1, ephemeris)
+        results = analysis.compute(ephemeris)
         assert results.num_pairs() == len(ground_assets) * len(space_assets)
 
-    def test_inter_satellite_only(self, space_assets, t0, t1, ephemeris):
+    def test_inter_satellite_only(self, t0, t1, space_assets, ephemeris):
         """Inter-satellite with no ground assets."""
-        analysis = lox.VisibilityAnalysis([], space_assets, inter_satellite=True)
-        results = analysis.compute(t0, t1, ephemeris)
+        scenario = lox.Scenario(t0, t1, spacecraft=space_assets)
+        analysis = lox.VisibilityAnalysis(scenario, inter_satellite=True)
+        results = analysis.compute(ephemeris)
         n = len(space_assets)
         assert results.num_pairs() == n * (n - 1) // 2
 
     def test_combined_ground_and_inter_satellite(
-        self, ground_assets, space_assets, t0, t1, ephemeris
+        self, scenario, ephemeris, ground_assets, space_assets
     ):
         """Ground-to-space and inter-satellite pairs together."""
-        analysis = lox.VisibilityAnalysis(
-            ground_assets, space_assets, inter_satellite=True
-        )
-        results = analysis.compute(t0, t1, ephemeris)
+        analysis = lox.VisibilityAnalysis(scenario, inter_satellite=True)
+        results = analysis.compute(ephemeris)
         n_gs = len(ground_assets) * len(space_assets)
         n_is = len(space_assets) * (len(space_assets) - 1) // 2
         assert results.num_pairs() == n_gs + n_is
@@ -505,10 +505,41 @@ class TestAssets:
             assert isinstance(sa.id(), str)
             assert len(sa.id()) > 0
 
-    def test_space_asset_trajectory(self, space_assets):
+
+# ---------------------------------------------------------------------------
+# Scenario & Ensemble
+# ---------------------------------------------------------------------------
+
+
+class TestScenario:
+    def test_repr(self, scenario):
+        r = repr(scenario)
+        assert "Scenario(" in r
+
+    def test_start_end(self, scenario, t0, t1):
+        assert isinstance(scenario.start(), lox.Time)
+        assert isinstance(scenario.end(), lox.Time)
+
+    def test_propagate(self, scenario):
+        ensemble = scenario.propagate()
+        assert isinstance(ensemble, lox.Ensemble)
+        assert len(ensemble) > 0
+
+    def test_ensemble_get(self, scenario, space_assets):
+        ensemble = scenario.propagate()
         for sa in space_assets:
-            traj = sa.trajectory()
+            traj = ensemble.get(sa.id())
+            assert traj is not None
             assert isinstance(traj, lox.Trajectory)
+
+    def test_ensemble_get_missing(self, scenario):
+        ensemble = scenario.propagate()
+        assert ensemble.get("nonexistent") is None
+
+    def test_ensemble_repr(self, scenario):
+        ensemble = scenario.propagate()
+        r = repr(ensemble)
+        assert "Ensemble(" in r
 
 
 # ---------------------------------------------------------------------------
@@ -565,14 +596,15 @@ class TestElevationMask:
 
 
 class TestInterSatelliteRangeFiltering:
-    def test_max_range_restricts_intervals(self, space_assets, t0, t1, ephemeris):
+    def test_max_range_restricts_intervals(self, t0, t1, space_assets, ephemeris):
         """A tight max_range should produce fewer/shorter intervals than no limit."""
-        unlimited = lox.VisibilityAnalysis([], space_assets, inter_satellite=True)
+        scenario = lox.Scenario(t0, t1, spacecraft=space_assets)
+        unlimited = lox.VisibilityAnalysis(scenario, inter_satellite=True)
         limited = lox.VisibilityAnalysis(
-            [], space_assets, inter_satellite=True, max_range=500 * lox.km
+            scenario, inter_satellite=True, max_range=500 * lox.km
         )
-        res_unlimited = unlimited.compute(t0, t1, ephemeris)
-        res_limited = limited.compute(t0, t1, ephemeris)
+        res_unlimited = unlimited.compute(ephemeris)
+        res_limited = limited.compute(ephemeris)
         # Every pair in the limited result should have at most as many intervals
         # as the unlimited result (usually fewer or shorter).
         for pair in res_unlimited.inter_satellite_pair_ids():
@@ -583,17 +615,17 @@ class TestInterSatelliteRangeFiltering:
             dur_lim = sum(float(iv.duration()) for iv in ivs_lim)
             assert dur_lim <= dur_unlim + 1e-6
 
-    def test_large_max_range_matches_unlimited(self, space_assets, t0, t1, ephemeris):
+    def test_large_max_range_matches_unlimited(self, t0, t1, space_assets, ephemeris):
         """A very large max_range should not remove any intervals."""
-        unlimited = lox.VisibilityAnalysis([], space_assets, inter_satellite=True)
+        scenario = lox.Scenario(t0, t1, spacecraft=space_assets)
+        unlimited = lox.VisibilityAnalysis(scenario, inter_satellite=True)
         limited = lox.VisibilityAnalysis(
-            [],
-            space_assets,
+            scenario,
             inter_satellite=True,
             max_range=1_000_000 * lox.km,
         )
-        res_unlimited = unlimited.compute(t0, t1, ephemeris)
-        res_limited = limited.compute(t0, t1, ephemeris)
+        res_unlimited = unlimited.compute(ephemeris)
+        res_limited = limited.compute(ephemeris)
         assert res_limited.num_pairs() == res_unlimited.num_pairs()
         for pair in res_unlimited.inter_satellite_pair_ids():
             id1, id2 = pair
@@ -603,14 +635,15 @@ class TestInterSatelliteRangeFiltering:
             dur_lim = sum(float(iv.duration()) for iv in ivs_lim)
             assert dur_lim == pytest.approx(dur_unlim, abs=1.0)
 
-    def test_min_range_restricts_intervals(self, space_assets, t0, t1, ephemeris):
+    def test_min_range_restricts_intervals(self, t0, t1, space_assets, ephemeris):
         """A positive min_range should produce fewer/shorter intervals than no limit."""
-        unlimited = lox.VisibilityAnalysis([], space_assets, inter_satellite=True)
+        scenario = lox.Scenario(t0, t1, spacecraft=space_assets)
+        unlimited = lox.VisibilityAnalysis(scenario, inter_satellite=True)
         limited = lox.VisibilityAnalysis(
-            [], space_assets, inter_satellite=True, min_range=1000 * lox.km
+            scenario, inter_satellite=True, min_range=1000 * lox.km
         )
-        res_unlimited = unlimited.compute(t0, t1, ephemeris)
-        res_limited = limited.compute(t0, t1, ephemeris)
+        res_unlimited = unlimited.compute(ephemeris)
+        res_limited = limited.compute(ephemeris)
         for pair in res_unlimited.inter_satellite_pair_ids():
             id1, id2 = pair
             ivs_unlim = res_unlimited.intervals(id1, id2)
@@ -619,49 +652,47 @@ class TestInterSatelliteRangeFiltering:
             dur_lim = sum(float(iv.duration()) for iv in ivs_lim)
             assert dur_lim <= dur_unlim + 1e-6
 
-    def test_combined_min_and_max_range(self, space_assets, t0, t1, ephemeris):
+    def test_combined_min_and_max_range(self, t0, t1, space_assets, ephemeris):
         """Using both min and max range should be more restrictive than either alone."""
+        scenario = lox.Scenario(t0, t1, spacecraft=space_assets)
         max_only = lox.VisibilityAnalysis(
-            [], space_assets, inter_satellite=True, max_range=2000 * lox.km
+            scenario, inter_satellite=True, max_range=2000 * lox.km
         )
         both = lox.VisibilityAnalysis(
-            [],
-            space_assets,
+            scenario,
             inter_satellite=True,
             min_range=500 * lox.km,
             max_range=2000 * lox.km,
         )
-        res_max = max_only.compute(t0, t1, ephemeris)
-        res_both = both.compute(t0, t1, ephemeris)
+        res_max = max_only.compute(ephemeris)
+        res_both = both.compute(ephemeris)
         for pair in res_max.inter_satellite_pair_ids():
             id1, id2 = pair
             dur_max = sum(float(iv.duration()) for iv in res_max.intervals(id1, id2))
             dur_both = sum(float(iv.duration()) for iv in res_both.intervals(id1, id2))
             assert dur_both <= dur_max + 1e-6
 
-    def test_range_with_los(self, space_assets, t0, t1, ephemeris):
+    def test_range_with_los(self, t0, t1, space_assets, ephemeris):
         """Range filtering combined with LOS occlusion should work together."""
+        scenario = lox.Scenario(t0, t1, spacecraft=space_assets)
         analysis = lox.VisibilityAnalysis(
-            [],
-            space_assets,
+            scenario,
             occulting_bodies=[lox.Origin("Earth")],
             inter_satellite=True,
             max_range=2000 * lox.km,
         )
-        results = analysis.compute(t0, t1, ephemeris)
+        results = analysis.compute(ephemeris)
         n = len(space_assets)
         assert results.num_pairs() == n * (n - 1) // 2
 
     def test_range_does_not_affect_ground_space(
-        self, ground_assets, space_assets, t0, t1, ephemeris
+        self, scenario, ephemeris, ground_assets, space_assets
     ):
         """Range constraints only apply to inter-satellite pairs, not ground-space."""
-        without_range = lox.VisibilityAnalysis(ground_assets, space_assets)
-        with_range = lox.VisibilityAnalysis(
-            ground_assets, space_assets, max_range=100 * lox.km
-        )
-        res_without = without_range.compute(t0, t1, ephemeris)
-        res_with = with_range.compute(t0, t1, ephemeris)
+        without_range = lox.VisibilityAnalysis(scenario)
+        with_range = lox.VisibilityAnalysis(scenario, max_range=100 * lox.km)
+        res_without = without_range.compute(ephemeris)
+        res_with = with_range.compute(ephemeris)
         for pair in res_without.ground_space_pair_ids():
             id1, id2 = pair
             ivs_without = res_without.intervals(id1, id2)
@@ -677,33 +708,35 @@ class TestInterSatelliteRangeFiltering:
 class TestInterSatelliteSlewRateFiltering:
     def test_space_asset_max_slew_rate(self, oneweb_subset):
         """SpaceAsset accepts max_slew_rate and exposes it via accessor."""
-        name, traj = next(iter(oneweb_subset.items()))
-        sa = lox.Spacecraft(name, traj, max_slew_rate=2.5 * lox.deg_per_s)
+        name, sgp4 = next(iter(oneweb_subset.items()))
+        sa = lox.Spacecraft(name, sgp4, max_slew_rate=2.5 * lox.deg_per_s)
         rate = sa.max_slew_rate()
         assert rate is not None
         assert float(rate.to_degrees_per_second()) == pytest.approx(2.5)
 
     def test_space_asset_no_slew_rate(self, oneweb_subset):
         """SpaceAsset without max_slew_rate returns None."""
-        name, traj = next(iter(oneweb_subset.items()))
-        sa = lox.Spacecraft(name, traj)
+        name, sgp4 = next(iter(oneweb_subset.items()))
+        sa = lox.Spacecraft(name, sgp4)
         assert sa.max_slew_rate() is None
 
     def test_slew_rate_restricts_intervals(self, oneweb_subset, t0, t1, ephemeris):
         """A tight slew rate limit should produce less total visibility time."""
         assets_unlimited = [
-            lox.Spacecraft(name, traj) for name, traj in oneweb_subset.items()
+            lox.Spacecraft(name, sgp4) for name, sgp4 in oneweb_subset.items()
         ]
         assets_limited = [
-            lox.Spacecraft(name, traj, max_slew_rate=0.01 * lox.deg_per_s)
-            for name, traj in oneweb_subset.items()
+            lox.Spacecraft(name, sgp4, max_slew_rate=0.01 * lox.deg_per_s)
+            for name, sgp4 in oneweb_subset.items()
         ]
+        scenario_unlimited = lox.Scenario(t0, t1, spacecraft=assets_unlimited)
+        scenario_limited = lox.Scenario(t0, t1, spacecraft=assets_limited)
         res_unlimited = lox.VisibilityAnalysis(
-            [], assets_unlimited, inter_satellite=True
-        ).compute(t0, t1, ephemeris)
+            scenario_unlimited, inter_satellite=True
+        ).compute(ephemeris)
         res_limited = lox.VisibilityAnalysis(
-            [], assets_limited, inter_satellite=True
-        ).compute(t0, t1, ephemeris)
+            scenario_limited, inter_satellite=True
+        ).compute(ephemeris)
         for pair in res_unlimited.inter_satellite_pair_ids():
             id1, id2 = pair
             dur_unlim = sum(
@@ -717,18 +750,20 @@ class TestInterSatelliteSlewRateFiltering:
     def test_large_slew_rate_matches_unlimited(self, oneweb_subset, t0, t1, ephemeris):
         """A very generous slew rate should not remove any intervals."""
         assets_unlimited = [
-            lox.Spacecraft(name, traj) for name, traj in oneweb_subset.items()
+            lox.Spacecraft(name, sgp4) for name, sgp4 in oneweb_subset.items()
         ]
         assets_generous = [
-            lox.Spacecraft(name, traj, max_slew_rate=1000 * lox.deg_per_s)
-            for name, traj in oneweb_subset.items()
+            lox.Spacecraft(name, sgp4, max_slew_rate=1000 * lox.deg_per_s)
+            for name, sgp4 in oneweb_subset.items()
         ]
+        scenario_unlimited = lox.Scenario(t0, t1, spacecraft=assets_unlimited)
+        scenario_generous = lox.Scenario(t0, t1, spacecraft=assets_generous)
         res_unlimited = lox.VisibilityAnalysis(
-            [], assets_unlimited, inter_satellite=True
-        ).compute(t0, t1, ephemeris)
+            scenario_unlimited, inter_satellite=True
+        ).compute(ephemeris)
         res_generous = lox.VisibilityAnalysis(
-            [], assets_generous, inter_satellite=True
-        ).compute(t0, t1, ephemeris)
+            scenario_generous, inter_satellite=True
+        ).compute(ephemeris)
         assert res_generous.num_pairs() == res_unlimited.num_pairs()
         for pair in res_unlimited.inter_satellite_pair_ids():
             id1, id2 = pair
@@ -743,16 +778,16 @@ class TestInterSatelliteSlewRateFiltering:
     def test_slew_rate_with_range_and_los(self, oneweb_subset, t0, t1, ephemeris):
         """Slew rate combined with range and LOS constraints should work."""
         assets = [
-            lox.Spacecraft(name, traj, max_slew_rate=1.0 * lox.deg_per_s)
-            for name, traj in oneweb_subset.items()
+            lox.Spacecraft(name, sgp4, max_slew_rate=1.0 * lox.deg_per_s)
+            for name, sgp4 in oneweb_subset.items()
         ]
+        scenario = lox.Scenario(t0, t1, spacecraft=assets)
         analysis = lox.VisibilityAnalysis(
-            [],
-            assets,
+            scenario,
             occulting_bodies=[lox.Origin("Earth")],
             inter_satellite=True,
             max_range=5000 * lox.km,
         )
-        results = analysis.compute(t0, t1, ephemeris)
+        results = analysis.compute(ephemeris)
         n = len(assets)
         assert results.num_pairs() == n * (n - 1) // 2

@@ -4,7 +4,7 @@
 
 use std::collections::HashMap;
 
-use crate::analysis::assets::{AssetId, GroundStation, Spacecraft};
+use crate::analysis::assets::{AssetId, GroundStation, Scenario, Spacecraft};
 use crate::analysis::visibility::{
     DynPass, ElevationMask, ElevationMaskError, PairType, Pass, VisibilityAnalysis,
     VisibilityError, VisibilityResults,
@@ -14,12 +14,18 @@ use crate::bodies::python::PyOrigin;
 use crate::comms::python::PyCommunicationSystem;
 use crate::ephem::python::PySpk;
 use crate::orbits::ground::Observables;
-use crate::orbits::python::{PyGroundLocation, PyInterval, PyTrajectory};
+use crate::orbits::python::{
+    PyGroundLocation, PyInterval, PyJ2Propagator, PySgp4, PyTrajectory, PyVallado,
+};
 use crate::time::deltas::TimeDelta;
 use crate::time::python::deltas::PyTimeDelta;
 use crate::time::python::time::PyTime;
 use crate::units::python::{PyAngle, PyAngularRate, PyDistance, PyVelocity};
-use lox_time::intervals::TimeInterval;
+use lox_frames::DynFrame;
+use lox_frames::providers::DefaultRotationProvider;
+use lox_orbits::orbits::DynEnsemble;
+use lox_orbits::propagators::OrbitSource;
+use lox_time::time_scales::Tai;
 use lox_units::{Angle, Distance, Velocity};
 
 use numpy::{PyArray1, PyArrayMethods};
@@ -109,13 +115,34 @@ impl PyGroundStation {
     }
 }
 
+/// Extract an OrbitSource from a Python object (SGP4, Vallado, J2, or Trajectory).
+fn extract_orbit_source(obj: &Bound<'_, PyAny>) -> PyResult<OrbitSource> {
+    if let Ok(sgp4) = obj.extract::<PySgp4>() {
+        return Ok(OrbitSource::Sgp4(sgp4.inner));
+    }
+    if let Ok(vallado) = obj.extract::<PyVallado>() {
+        return Ok(OrbitSource::Vallado(vallado.0));
+    }
+    if let Ok(j2) = obj.extract::<PyJ2Propagator>() {
+        return Ok(OrbitSource::J2(j2.0));
+    }
+    if let Ok(traj) = obj.extract::<PyTrajectory>() {
+        return Ok(OrbitSource::Trajectory(traj.0));
+    }
+    Err(PyValueError::new_err(
+        "expected an SGP4, Vallado, J2, or Trajectory object",
+    ))
+}
+
 /// A named spacecraft for visibility analysis.
 ///
-/// Wraps a trajectory with an identifier.
+/// Wraps an orbit source (propagator or pre-computed trajectory) with an
+/// identifier.
 ///
 /// Args:
 ///     id: Unique identifier for this spacecraft.
-///     trajectory: Spacecraft trajectory.
+///     orbit: Orbit source — an SGP4, Vallado, J2 propagator, or a
+///         pre-computed Trajectory.
 ///     max_slew_rate: Optional maximum slew rate (angular rate) for this
 ///         spacecraft's antenna/gimbal.
 ///     communication_systems: Optional list of communication systems.
@@ -126,14 +153,15 @@ pub struct PySpacecraft(pub Spacecraft);
 #[pymethods]
 impl PySpacecraft {
     #[new]
-    #[pyo3(signature = (id, trajectory, max_slew_rate=None, communication_systems=None))]
+    #[pyo3(signature = (id, orbit, max_slew_rate=None, communication_systems=None))]
     fn new(
         id: String,
-        trajectory: PyTrajectory,
+        orbit: &Bound<'_, PyAny>,
         max_slew_rate: Option<PyAngularRate>,
         communication_systems: Option<Vec<PyCommunicationSystem>>,
-    ) -> Self {
-        let mut asset = Spacecraft::new(id, trajectory.0);
+    ) -> PyResult<Self> {
+        let orbit_source = extract_orbit_source(orbit)?;
+        let mut asset = Spacecraft::new(id, orbit_source);
         if let Some(rate) = max_slew_rate {
             asset = asset.with_max_slew_rate(rate.0);
         }
@@ -142,17 +170,12 @@ impl PySpacecraft {
                 asset = asset.with_communication_system(system.0);
             }
         }
-        PySpacecraft(asset)
+        Ok(PySpacecraft(asset))
     }
 
     /// Return the asset identifier.
     fn id(&self) -> String {
         self.0.id().as_str().to_string()
-    }
-
-    /// Return the spacecraft trajectory.
-    fn trajectory(&self) -> PyTrajectory {
-        PyTrajectory(self.0.trajectory().clone())
     }
 
     /// Return the maximum slew rate, if set.
@@ -170,16 +193,106 @@ impl PySpacecraft {
     }
 
     fn __repr__(&self) -> String {
-        let traj = self.trajectory();
-        format!("Spacecraft(\"{}\", {})", self.id(), traj.__repr__(),)
+        format!("Spacecraft(\"{}\")", self.id())
     }
 }
 
-/// Computes ground-station-to-spacecraft visibility.
+/// A scenario grouping spacecraft, ground stations, and a time interval.
 ///
 /// Args:
-///     ground_assets: List of GroundStation objects.
-///     space_assets: List of Spacecraft objects.
+///     start: Start time of the scenario.
+///     end: End time of the scenario.
+///     spacecraft: List of Spacecraft objects.
+///     ground_stations: List of GroundStation objects.
+#[pyclass(name = "Scenario", module = "lox_space", frozen)]
+#[derive(Clone, Debug)]
+pub struct PyScenario(pub Scenario);
+
+#[pymethods]
+impl PyScenario {
+    #[new]
+    #[pyo3(signature = (start, end, spacecraft=None, ground_stations=None))]
+    fn new(
+        start: PyTime,
+        end: PyTime,
+        spacecraft: Option<Vec<PySpacecraft>>,
+        ground_stations: Option<Vec<PyGroundStation>>,
+    ) -> Self {
+        let tai_start = start.0.to_scale(Tai);
+        let tai_end = end.0.to_scale(Tai);
+        let mut scenario = Scenario::new(tai_start, tai_end);
+        if let Some(sc) = spacecraft {
+            let sc_vec: Vec<Spacecraft> = sc.into_iter().map(|s| s.0).collect();
+            scenario = scenario.with_spacecraft(&sc_vec);
+        }
+        if let Some(gs) = ground_stations {
+            let gs_vec: Vec<GroundStation> = gs.into_iter().map(|g| g.0).collect();
+            scenario = scenario.with_ground_stations(&gs_vec);
+        }
+        PyScenario(scenario)
+    }
+
+    /// Propagate all spacecraft, returning an Ensemble.
+    ///
+    /// Trajectories are transformed to ICRF using the default rotation
+    /// provider.
+    fn propagate(&self, py: Python<'_>) -> PyResult<PyEnsemble> {
+        let ensemble = py.detach(|| self.0.propagate(DynFrame::Icrf, &DefaultRotationProvider));
+        Ok(PyEnsemble(
+            ensemble.map_err(|e| PyValueError::new_err(e.to_string()))?,
+        ))
+    }
+
+    /// Return the start time.
+    fn start(&self) -> PyTime {
+        PyTime(self.0.interval().start().into_dyn())
+    }
+
+    /// Return the end time.
+    fn end(&self) -> PyTime {
+        PyTime(self.0.interval().end().into_dyn())
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "Scenario({} spacecraft, {} ground stations)",
+            self.0.spacecraft().len(),
+            self.0.ground_stations().len(),
+        )
+    }
+}
+
+/// A collection of propagated trajectories keyed by spacecraft id.
+#[pyclass(name = "Ensemble", module = "lox_space", frozen)]
+#[derive(Clone, Debug)]
+pub struct PyEnsemble(pub DynEnsemble<AssetId>);
+
+#[pymethods]
+impl PyEnsemble {
+    /// Return the trajectory for a given spacecraft id.
+    fn get(&self, id: &str) -> Option<PyTrajectory> {
+        self.0
+            .get(&AssetId::new(id))
+            .map(|t| PyTrajectory(t.clone()))
+    }
+
+    fn __len__(&self) -> usize {
+        self.0.len()
+    }
+
+    fn __repr__(&self) -> String {
+        format!("Ensemble({} trajectories)", self.0.len())
+    }
+}
+
+/// Computes ground-station-to-spacecraft and inter-satellite visibility.
+///
+/// Args:
+///     scenario: Scenario containing spacecraft, ground stations, and
+///         time interval.
+///     ephemeris: SPK ephemeris data.
+///     ensemble: Optional pre-computed Ensemble. If not provided, the
+///         scenario is propagated automatically.
 ///     occulting_bodies: Optional list of bodies for LOS checking.
 ///     step: Optional time step for event detection (default: 60s).
 ///     min_pass_duration: Optional minimum pass duration. Passes shorter
@@ -191,8 +304,8 @@ impl PySpacecraft {
 ///     max_range: Optional maximum range constraint for inter-satellite pairs.
 #[pyclass(name = "VisibilityAnalysis", module = "lox_space", frozen)]
 pub struct PyVisibilityAnalysis {
-    ground_assets: Vec<GroundStation>,
-    space_assets: Vec<Spacecraft>,
+    scenario: Scenario,
+    ensemble: Option<DynEnsemble<AssetId>>,
     occulting_bodies: Vec<DynOrigin>,
     step: TimeDelta,
     min_pass_duration: Option<TimeDelta>,
@@ -204,11 +317,11 @@ pub struct PyVisibilityAnalysis {
 #[pymethods]
 impl PyVisibilityAnalysis {
     #[new]
-    #[pyo3(signature = (ground_assets, space_assets, occulting_bodies=None, step=None, min_pass_duration=None, inter_satellite=false, min_range=None, max_range=None))]
+    #[pyo3(signature = (scenario, ensemble=None, occulting_bodies=None, step=None, min_pass_duration=None, inter_satellite=false, min_range=None, max_range=None))]
     #[allow(clippy::too_many_arguments)]
     fn new(
-        ground_assets: Vec<PyGroundStation>,
-        space_assets: Vec<PySpacecraft>,
+        scenario: PyScenario,
+        ensemble: Option<PyEnsemble>,
         occulting_bodies: Option<Vec<Bound<'_, PyAny>>>,
         step: Option<PyTimeDelta>,
         min_pass_duration: Option<PyTimeDelta>,
@@ -222,8 +335,8 @@ impl PyVisibilityAnalysis {
             .map(|b| Ok(PyOrigin::try_from(b)?.0))
             .collect::<PyResult<_>>()?;
         Ok(Self {
-            ground_assets: ground_assets.into_iter().map(|g| g.0).collect(),
-            space_assets: space_assets.into_iter().map(|s| s.0).collect(),
+            scenario: scenario.0,
+            ensemble: ensemble.map(|e| e.0),
             occulting_bodies,
             step: step
                 .map(|s| s.0)
@@ -235,11 +348,12 @@ impl PyVisibilityAnalysis {
         })
     }
 
-    /// Compute visibility intervals for all (ground, space) pairs.
+    /// Compute visibility intervals for all pairs.
+    ///
+    /// If no ensemble was provided at construction, the scenario is
+    /// propagated automatically (trajectories transformed to ICRF).
     ///
     /// Args:
-    ///     start: Start time of the analysis period.
-    ///     end: End time of the analysis period.
     ///     ephemeris: SPK ephemeris data.
     ///
     /// Returns:
@@ -247,54 +361,66 @@ impl PyVisibilityAnalysis {
     fn compute(
         &self,
         py: Python<'_>,
-        start: PyTime,
-        end: PyTime,
         ephemeris: &Bound<'_, PySpk>,
     ) -> PyResult<PyVisibilityResults> {
         let ephemeris = &ephemeris.get().0;
-        let interval = TimeInterval::new(start.0, end.0);
+        let step = self.step;
+        let scenario = &self.scenario;
+
+        // Auto-propagate if no ensemble was provided.
+        let auto_ensemble;
+        let ensemble = match &self.ensemble {
+            Some(e) => e,
+            None => {
+                auto_ensemble = scenario
+                    .propagate(DynFrame::Icrf, &DefaultRotationProvider)
+                    .map_err(|e| PyValueError::new_err(e.to_string()))?;
+                &auto_ensemble
+            }
+        };
+
+        let occulting_bodies = self.occulting_bodies.clone();
+        let min_pass_duration = self.min_pass_duration;
+        let inter_satellite = self.inter_satellite;
+        let min_range = self.min_range;
+        let max_range = self.max_range;
 
         let results = py.detach(|| {
-            let mut analysis =
-                VisibilityAnalysis::new(&self.ground_assets, &self.space_assets, ephemeris)
-                    .with_occulting_bodies(self.occulting_bodies.clone())
-                    .with_step(self.step);
-            if let Some(mpd) = self.min_pass_duration {
+            let mut analysis = VisibilityAnalysis::new(scenario, ensemble, ephemeris)
+                .with_occulting_bodies(occulting_bodies)
+                .with_step(step);
+            if let Some(mpd) = min_pass_duration {
                 analysis = analysis.with_min_pass_duration(mpd);
             }
-            if self.inter_satellite {
+            if inter_satellite {
                 analysis = analysis.with_inter_satellite();
             }
-            if let Some(min_range) = self.min_range {
+            if let Some(min_range) = min_range {
                 analysis = analysis.with_min_range(min_range);
             }
-            if let Some(max_range) = self.max_range {
+            if let Some(max_range) = max_range {
                 analysis = analysis.with_max_range(max_range);
             }
-            analysis.compute(interval)
+            analysis.compute()
         });
 
         Ok(PyVisibilityResults {
             results: results.map_err(PyVisibilityError)?,
-            ground_assets: self.ground_assets.clone(),
-            space_assets: self.space_assets.clone(),
+            scenario: self.scenario.clone(),
+            ensemble: ensemble.clone(),
             step: self.step,
         })
     }
 
     fn __repr__(&self) -> String {
+        let sc_count = self.scenario.spacecraft().len();
+        let gs_count = self.scenario.ground_stations().len();
         if self.inter_satellite {
             format!(
-                "VisibilityAnalysis({} ground assets, {} space assets, inter_satellite=True)",
-                self.ground_assets.len(),
-                self.space_assets.len(),
+                "VisibilityAnalysis({gs_count} ground assets, {sc_count} space assets, inter_satellite=True)",
             )
         } else {
-            format!(
-                "VisibilityAnalysis({} ground assets, {} space assets)",
-                self.ground_assets.len(),
-                self.space_assets.len(),
-            )
+            format!("VisibilityAnalysis({gs_count} ground assets, {sc_count} space assets)",)
         }
     }
 }
@@ -307,8 +433,8 @@ impl PyVisibilityAnalysis {
 #[pyclass(name = "VisibilityResults", module = "lox_space", frozen)]
 pub struct PyVisibilityResults {
     results: VisibilityResults,
-    ground_assets: Vec<GroundStation>,
-    space_assets: Vec<Spacecraft>,
+    scenario: Scenario,
+    ensemble: DynEnsemble<AssetId>,
     step: TimeDelta,
 }
 
@@ -410,20 +536,17 @@ impl PyVisibilityResults {
             )));
         }
 
-        let gs = self.ground_assets.iter().find(|g| g.id() == &gs_id);
-        let sc = self.space_assets.iter().find(|s| s.id() == &sc_id);
-        match (gs, sc) {
-            (Some(gs), Some(sc)) => {
+        let gs = self
+            .scenario
+            .ground_stations()
+            .iter()
+            .find(|g| g.id() == &gs_id);
+        let sc_traj = self.ensemble.get(&sc_id);
+        match (gs, sc_traj) {
+            (Some(gs), Some(sc_traj)) => {
                 let passes = self
                     .results
-                    .to_passes(
-                        &gs_id,
-                        &sc_id,
-                        gs.location(),
-                        gs.mask(),
-                        sc.trajectory(),
-                        self.step,
-                    )
+                    .to_passes(&gs_id, &sc_id, gs.location(), gs.mask(), sc_traj, self.step)
                     .map_err(|e| PyValueError::new_err(e.to_string()))?;
                 Ok(passes.into_iter().map(PyPass).collect())
             }
@@ -439,17 +562,19 @@ impl PyVisibilityResults {
     /// Returns:
     ///     Dictionary mapping (ground_id, space_id) to list of Pass objects.
     fn all_passes(&self) -> HashMap<(String, String), Vec<PyPass>> {
-        let gs_map: HashMap<&AssetId, &GroundStation> =
-            self.ground_assets.iter().map(|g| (g.id(), g)).collect();
-        let sc_map: HashMap<&AssetId, &Spacecraft> =
-            self.space_assets.iter().map(|s| (s.id(), s)).collect();
+        let gs_map: HashMap<&AssetId, &GroundStation> = self
+            .scenario
+            .ground_stations()
+            .iter()
+            .map(|g| (g.id(), g))
+            .collect();
 
         self.results
             .ground_space_pair_ids()
             .into_iter()
             .filter_map(|(gs_id, sc_id)| {
                 let gs = gs_map.get(gs_id)?;
-                let sc = sc_map.get(sc_id)?;
+                let sc_traj = self.ensemble.get(sc_id)?;
                 let intervals = self.results.intervals_for(gs_id, sc_id)?;
                 let passes: Vec<PyPass> = intervals
                     .iter()
@@ -459,7 +584,7 @@ impl PyVisibilityResults {
                             self.step,
                             gs.location(),
                             gs.mask(),
-                            sc.trajectory(),
+                            sc_traj,
                         )
                     })
                     .map(PyPass)
