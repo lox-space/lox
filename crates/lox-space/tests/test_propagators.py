@@ -36,7 +36,7 @@ def iss_state():
 def test_j2_single_time():
     state = iss_state()
     j2 = lox.J2(state)
-    t1 = state.time() + lox.TimeDelta.from_minutes(90)
+    t1 = state.time() + 90 * lox.minutes
     result = j2.propagate(t1)
     assert isinstance(result, lox.Cartesian)
 
@@ -45,7 +45,7 @@ def test_j2_time_interval():
     state = iss_state()
     j2 = lox.J2(state)
     t0 = state.time()
-    t1 = t0 + lox.TimeDelta.from_hours(1)
+    t1 = t0 + 1 * lox.hours
     trajectory = j2.propagate(t0, end=t1)
     assert isinstance(trajectory, lox.Trajectory)
 
@@ -53,8 +53,9 @@ def test_j2_time_interval():
 def test_j2_multiple_times():
     state = iss_state()
     j2 = lox.J2(state)
-    t0 = state.time()
-    times = [t0 + lox.TimeDelta(i * 60) for i in range(1, 11)]
+    t0 = state.time() + 1 * lox.minutes
+    t1 = t0 + 9 * lox.minutes
+    times = lox.Interval(t0, t1).step_by(1 * lox.minutes)
     trajectory = j2.propagate(times)
     assert isinstance(trajectory, lox.Trajectory)
 
@@ -62,7 +63,7 @@ def test_j2_multiple_times():
 def test_j2_custom_tolerances():
     state = iss_state()
     j2 = lox.J2(state, rtol=1e-12, atol=1e-10)
-    t1 = state.time() + lox.TimeDelta.from_minutes(90)
+    t1 = state.time() + 90 * lox.minutes
     result = j2.propagate(t1)
     assert isinstance(result, lox.Cartesian)
 
@@ -70,7 +71,7 @@ def test_j2_custom_tolerances():
 def test_j2_custom_step_size():
     state = iss_state()
     j2 = lox.J2(state, h_max=10.0, h_min=1e-8, max_steps=200_000)
-    t1 = state.time() + lox.TimeDelta.from_minutes(90)
+    t1 = state.time() + 90 * lox.minutes
     result = j2.propagate(t1)
     assert isinstance(result, lox.Cartesian)
 

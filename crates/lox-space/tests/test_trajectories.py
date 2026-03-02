@@ -5,7 +5,6 @@
 import lox_space as lox
 import numpy as np
 import numpy.testing as npt
-import math
 import pytest
 
 
@@ -27,7 +26,7 @@ def orbit():
 @pytest.fixture
 def trajectory(orbit):
     dt = orbit.orbital_period()
-    rng = [orbit.time() + dt for dt in lox.TimeDelta.range(0, math.ceil(dt))]
+    rng = lox.Interval(orbit.time(), orbit.time() + dt).step_by(1 * lox.seconds)
     s0 = orbit.to_cartesian()
     prop = lox.Vallado(s0)
     return prop.propagate(rng)

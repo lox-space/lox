@@ -30,7 +30,8 @@ def oneweb():
         lines = f.readlines()
 
     t0 = lox.SGP4("".join(lines[0:3])).time()
-    times = [t0 + t for t in lox.TimeDelta.range(0, 86400, 60)]
+    t1 = t0 + 1 * lox.days
+    times = lox.Interval(t0, t1).step_by(60 * lox.seconds)
 
     trajectories = []
     for i in range(0, len(lines), 3):
