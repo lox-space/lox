@@ -22,7 +22,7 @@ use lox_frames::{NonQuasiInertialFrameError, QuasiInertial, ReferenceFrame, TryQ
 use lox_time::{deltas::TimeDelta, time_scales::TimeScale};
 use thiserror::Error;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Clone, Error)]
 pub enum KeplerianOrbitError {
     #[error(transparent)]
     NonQuasiInertial(#[from] NonQuasiInertialFrameError),
