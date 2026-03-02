@@ -31,11 +31,7 @@ use crate::time::deltas::TimeDelta;
 use crate::time::python::deltas::PyTimeDelta;
 use crate::time::python::time::PyTime;
 use crate::time::time_scales::{DynTimeScale, Tai};
-use lox_core::anomalies::TrueAnomaly;
 use lox_core::coords::{Cartesian, LonLatAlt};
-use lox_core::elements::{
-    ArgumentOfPeriapsis, Eccentricity, Inclination, Keplerian, LongitudeOfAscendingNode,
-};
 use lox_time::intervals::{
     Interval, TimeInterval, complement_intervals, intersect_intervals, union_intervals,
 };
@@ -599,15 +595,25 @@ impl PyCartesian {
 /// Keplerian elements describe an orbit using six parameters that define
 /// its shape, orientation, and position along the orbit.
 ///
+/// The orbital shape can be specified in three ways:
+/// - ``semi_major_axis`` + ``eccentricity``
+/// - ``periapsis_radius`` + ``apoapsis_radius`` (keyword-only)
+/// - ``periapsis_altitude`` + ``apoapsis_altitude`` (keyword-only)
+///
 /// Args:
 ///     time: Epoch of the elements.
 ///     semi_major_axis: Semi-major axis as Distance.
 ///     eccentricity: Orbital eccentricity (0 = circular, <1 = elliptical).
-///     inclination: Inclination as Angle.
-///     longitude_of_ascending_node: RAAN as Angle.
-///     argument_of_periapsis: Argument of periapsis as Angle.
-///     true_anomaly: True anomaly as Angle.
+///     inclination: Inclination as Angle (default 0).
+///     longitude_of_ascending_node: RAAN as Angle (default 0).
+///     argument_of_periapsis: Argument of periapsis as Angle (default 0).
+///     true_anomaly: True anomaly as Angle (default 0).
 ///     origin: Central body (default: Earth).
+///     periapsis_radius: Periapsis radius as Distance (keyword-only).
+///     apoapsis_radius: Apoapsis radius as Distance (keyword-only).
+///     periapsis_altitude: Periapsis altitude as Distance (keyword-only).
+///     apoapsis_altitude: Apoapsis altitude as Distance (keyword-only).
+///     mean_anomaly: Mean anomaly as Angle (keyword-only, mutually exclusive with true_anomaly).
 #[pyclass(name = "Keplerian", module = "lox_space", frozen)]
 pub struct PyKeplerian(pub crate::orbits::orbits::DynKeplerianOrbit);
 
@@ -616,25 +622,38 @@ impl PyKeplerian {
     #[new]
     #[pyo3(signature = (
         time,
-        semi_major_axis,
-        eccentricity,
-        inclination,
-        longitude_of_ascending_node,
-        argument_of_periapsis,
-        true_anomaly,
+        semi_major_axis=None,
+        eccentricity=None,
+        inclination=None,
+        longitude_of_ascending_node=None,
+        argument_of_periapsis=None,
+        true_anomaly=None,
         origin=None,
+        *,
+        periapsis_radius=None,
+        apoapsis_radius=None,
+        periapsis_altitude=None,
+        apoapsis_altitude=None,
+        mean_anomaly=None,
     ))]
     #[allow(clippy::too_many_arguments)]
     fn new(
         time: PyTime,
-        semi_major_axis: PyDistance,
-        eccentricity: f64,
-        inclination: PyAngle,
-        longitude_of_ascending_node: PyAngle,
-        argument_of_periapsis: PyAngle,
-        true_anomaly: PyAngle,
+        semi_major_axis: Option<PyDistance>,
+        eccentricity: Option<f64>,
+        inclination: Option<PyAngle>,
+        longitude_of_ascending_node: Option<PyAngle>,
+        argument_of_periapsis: Option<PyAngle>,
+        true_anomaly: Option<PyAngle>,
         origin: Option<&Bound<'_, PyAny>>,
+        periapsis_radius: Option<PyDistance>,
+        apoapsis_radius: Option<PyDistance>,
+        periapsis_altitude: Option<PyDistance>,
+        apoapsis_altitude: Option<PyDistance>,
+        mean_anomaly: Option<PyAngle>,
     ) -> PyResult<Self> {
+        use lox_orbits::orbits::builders::KeplerianOrbitBuilder;
+
         let origin = origin
             .map(PyOrigin::try_from)
             .transpose()?
@@ -643,28 +662,155 @@ impl PyKeplerian {
         origin
             .try_gravitational_parameter()
             .map_err(PyUndefinedOriginPropertyError)?;
-        let keplerian = Keplerian::new(
-            Distance::meters(semi_major_axis.0.to_meters()),
-            Eccentricity::try_new(eccentricity)
-                .map_err(|err| PyValueError::new_err(err.to_string()))?,
-            Inclination::try_new(Angle::radians(inclination.0.to_radians()))
-                .map_err(|err| PyValueError::new_err(err.to_string()))?,
-            LongitudeOfAscendingNode::try_new(Angle::radians(
-                longitude_of_ascending_node.0.to_radians(),
-            ))
-            .map_err(|err| PyValueError::new_err(err.to_string()))?,
-            ArgumentOfPeriapsis::try_new(Angle::radians(argument_of_periapsis.0.to_radians()))
-                .map_err(|err| PyValueError::new_err(err.to_string()))?,
-            TrueAnomaly::new(Angle::radians(true_anomaly.0.to_radians())),
-        );
-        let orbit = crate::orbits::orbits::KeplerianOrbit::try_from_keplerian(
-            keplerian,
-            time.0,
-            origin,
-            DynFrame::Icrf,
-        )
-        .map_err(|err| PyValueError::new_err(err.to_string()))?;
-        Ok(PyKeplerian(orbit))
+
+        let tai = to_tai(time.0, None)?;
+        let mut builder = KeplerianOrbitBuilder::new()
+            .with_time(tai)
+            .with_origin(origin);
+
+        match (
+            semi_major_axis,
+            eccentricity,
+            periapsis_radius,
+            apoapsis_radius,
+            periapsis_altitude,
+            apoapsis_altitude,
+        ) {
+            (Some(sma), Some(ecc), None, None, None, None) => {
+                builder = builder.with_semi_major_axis(Distance::meters(sma.0.to_meters()), ecc);
+            }
+            (None, None, Some(rp), Some(ra), None, None) => {
+                builder = builder.with_radii(
+                    Distance::meters(rp.0.to_meters()),
+                    Distance::meters(ra.0.to_meters()),
+                );
+            }
+            (None, None, None, None, Some(alt_p), Some(alt_a)) => {
+                builder = builder.with_altitudes(
+                    Distance::meters(alt_p.0.to_meters()),
+                    Distance::meters(alt_a.0.to_meters()),
+                );
+            }
+            (None, None, None, None, None, None) => {
+                return Err(PyValueError::new_err(
+                    "orbital shape must be specified via one of: \
+                     (semi_major_axis, eccentricity), \
+                     (periapsis_radius, apoapsis_radius), or \
+                     (periapsis_altitude, apoapsis_altitude)",
+                ));
+            }
+            _ => {
+                return Err(PyValueError::new_err(
+                    "orbital shape must be specified via exactly one of: \
+                     (semi_major_axis, eccentricity), \
+                     (periapsis_radius, apoapsis_radius), or \
+                     (periapsis_altitude, apoapsis_altitude)",
+                ));
+            }
+        }
+
+        if let Some(inc) = inclination {
+            builder = builder.with_inclination(Angle::radians(inc.0.to_radians()));
+        }
+        if let Some(raan) = longitude_of_ascending_node {
+            builder = builder.with_longitude_of_ascending_node(Angle::radians(raan.0.to_radians()));
+        }
+        if let Some(aop) = argument_of_periapsis {
+            builder = builder.with_argument_of_periapsis(Angle::radians(aop.0.to_radians()));
+        }
+        if let Some(ta) = true_anomaly {
+            builder = builder.with_true_anomaly(Angle::radians(ta.0.to_radians()));
+        }
+        if let Some(ma) = mean_anomaly {
+            builder = builder.with_mean_anomaly(Angle::radians(ma.0.to_radians()));
+        }
+
+        let orbit = builder
+            .build()
+            .map_err(|err| PyValueError::new_err(err.to_string()))?;
+
+        Ok(PyKeplerian(orbit.into_dyn()))
+    }
+
+    /// Construct a circular orbit.
+    ///
+    /// Exactly one of ``semi_major_axis`` or ``altitude`` must be provided.
+    /// Eccentricity is always 0 and argument of periapsis is always 0.
+    ///
+    /// Args:
+    ///     time: Epoch of the orbit.
+    ///     semi_major_axis: Semi-major axis (mutually exclusive with altitude).
+    ///     altitude: Orbital altitude (mutually exclusive with semi_major_axis).
+    ///     inclination: Inclination (default 0).
+    ///     longitude_of_ascending_node: RAAN (default 0).
+    ///     true_anomaly: True anomaly (default 0).
+    ///     origin: Central body (default: Earth).
+    #[classmethod]
+    #[pyo3(signature = (
+        time,
+        *,
+        semi_major_axis=None,
+        altitude=None,
+        inclination=None,
+        longitude_of_ascending_node=None,
+        true_anomaly=None,
+        origin=None,
+    ))]
+    #[allow(clippy::too_many_arguments)]
+    fn circular(
+        _cls: &Bound<'_, PyType>,
+        time: PyTime,
+        semi_major_axis: Option<PyDistance>,
+        altitude: Option<PyDistance>,
+        inclination: Option<PyAngle>,
+        longitude_of_ascending_node: Option<PyAngle>,
+        true_anomaly: Option<PyAngle>,
+        origin: Option<&Bound<'_, PyAny>>,
+    ) -> PyResult<Self> {
+        use lox_orbits::orbits::builders::CircularBuilder;
+
+        let origin = origin
+            .map(PyOrigin::try_from)
+            .transpose()?
+            .map(|o| o.0)
+            .unwrap_or_default();
+        origin
+            .try_gravitational_parameter()
+            .map_err(PyUndefinedOriginPropertyError)?;
+
+        let tai = to_tai(time.0, None)?;
+
+        let mut builder = CircularBuilder::new().with_time(tai).with_origin(origin);
+
+        match (semi_major_axis, altitude) {
+            (Some(sma), None) => {
+                builder = builder.with_semi_major_axis(Distance::meters(sma.0.to_meters()));
+            }
+            (None, Some(alt)) => {
+                builder = builder.with_altitude(Distance::meters(alt.0.to_meters()));
+            }
+            _ => {
+                return Err(PyValueError::new_err(
+                    "exactly one of `semi_major_axis` or `altitude` must be specified",
+                ));
+            }
+        }
+
+        if let Some(inc) = inclination {
+            builder = builder.with_inclination(Angle::radians(inc.0.to_radians()));
+        }
+        if let Some(raan) = longitude_of_ascending_node {
+            builder = builder.with_longitude_of_ascending_node(Angle::radians(raan.0.to_radians()));
+        }
+        if let Some(ta) = true_anomaly {
+            builder = builder.with_true_anomaly(Angle::radians(ta.0.to_radians()));
+        }
+
+        let orbit = builder
+            .build()
+            .map_err(|err| PyValueError::new_err(err.to_string()))?;
+
+        Ok(PyKeplerian(orbit.into_dyn()))
     }
 
     /// Construct a Sun-synchronous orbit.

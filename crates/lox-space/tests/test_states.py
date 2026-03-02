@@ -137,3 +137,185 @@ def test_cartesian_to_origin_string(ephemeris):
     )
     s2 = state.to_origin("Moon", ephemeris)
     assert s2.origin().name() == "Moon"
+
+
+# --- Keplerian constructor tests ---
+
+
+def test_keplerian_positional_backward_compat():
+    """Test that existing positional usage still works."""
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    k = lox.Keplerian(
+        time,
+        7178.0 * lox.km,
+        0.001,
+        97.0 * lox.deg,
+        0.0 * lox.deg,
+        0.0 * lox.deg,
+        0.0 * lox.deg,
+    )
+    assert k.semi_major_axis().to_kilometers() == pytest.approx(7178.0, rel=1e-10)
+    assert k.eccentricity() == pytest.approx(0.001, abs=1e-15)
+
+
+def test_keplerian_keyword_backward_compat():
+    """Test that existing keyword usage still works."""
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    k = lox.Keplerian(
+        time,
+        semi_major_axis=7178.0 * lox.km,
+        eccentricity=0.001,
+        inclination=97.0 * lox.deg,
+        longitude_of_ascending_node=0.0 * lox.deg,
+        argument_of_periapsis=0.0 * lox.deg,
+        true_anomaly=0.0 * lox.deg,
+    )
+    assert k.semi_major_axis().to_kilometers() == pytest.approx(7178.0, rel=1e-10)
+    assert k.eccentricity() == pytest.approx(0.001, abs=1e-15)
+    assert k.inclination().to_degrees() == pytest.approx(97.0, rel=1e-10)
+
+
+def test_keplerian_radii():
+    """Test Keplerian construction from periapsis/apoapsis radii."""
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    k = lox.Keplerian(
+        time,
+        periapsis_radius=7000.0 * lox.km,
+        apoapsis_radius=7400.0 * lox.km,
+    )
+    assert k.semi_major_axis().to_kilometers() == pytest.approx(7200.0, rel=1e-10)
+    exp_ecc = (7400.0 - 7000.0) / (7400.0 + 7000.0)
+    assert k.eccentricity() == pytest.approx(exp_ecc, rel=1e-10)
+
+
+def test_keplerian_altitudes():
+    """Test Keplerian construction from periapsis/apoapsis altitudes."""
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    k = lox.Keplerian(
+        time,
+        periapsis_altitude=600.0 * lox.km,
+        apoapsis_altitude=1000.0 * lox.km,
+    )
+    # Mean radius of Earth ~6371 km
+    sma_km = k.semi_major_axis().to_kilometers()
+    assert sma_km > 6971.0
+    assert sma_km < 7371.0
+    assert k.eccentricity() > 0.0
+
+
+def test_keplerian_defaults():
+    """Test that angular elements default to 0."""
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    k = lox.Keplerian(
+        time,
+        periapsis_radius=7000.0 * lox.km,
+        apoapsis_radius=7000.0 * lox.km,
+    )
+    assert float(k.inclination()) == pytest.approx(0.0, abs=1e-15)
+    assert float(k.longitude_of_ascending_node()) == pytest.approx(0.0, abs=1e-15)
+    assert float(k.argument_of_periapsis()) == pytest.approx(0.0, abs=1e-15)
+    assert float(k.true_anomaly()) == pytest.approx(0.0, abs=1e-15)
+
+
+def test_keplerian_mean_anomaly():
+    """Test Keplerian construction with mean_anomaly keyword."""
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    k = lox.Keplerian(
+        time,
+        7178.0 * lox.km,
+        0.001,
+        mean_anomaly=90.0 * lox.deg,
+    )
+    # mean anomaly of 90 deg should produce a non-zero true anomaly
+    assert float(k.true_anomaly()) != pytest.approx(0.0, abs=1e-3)
+
+
+def test_keplerian_both_anomalies_raises():
+    """Test that providing both true_anomaly and mean_anomaly raises."""
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    with pytest.raises(ValueError, match="true anomaly.*mean anomaly"):
+        lox.Keplerian(
+            time,
+            7178.0 * lox.km,
+            0.001,
+            true_anomaly=0.0 * lox.deg,
+            mean_anomaly=0.0 * lox.deg,
+        )
+
+
+def test_keplerian_no_shape_raises():
+    """Test that omitting shape params raises ValueError."""
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    with pytest.raises(ValueError, match="orbital shape"):
+        lox.Keplerian(time)
+
+
+def test_keplerian_mixed_shape_raises():
+    """Test that mixing shape params raises ValueError."""
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    with pytest.raises(ValueError, match="exactly one"):
+        lox.Keplerian(
+            time,
+            7000.0 * lox.km,
+            0.0,
+            periapsis_radius=7000.0 * lox.km,
+            apoapsis_radius=7000.0 * lox.km,
+        )
+
+
+def test_keplerian_partial_radii_raises():
+    """Test that providing only one radius raises ValueError."""
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    with pytest.raises(ValueError, match="periapsis_radius"):
+        lox.Keplerian(time, apoapsis_radius=7000.0 * lox.km)
+
+
+# --- Keplerian.circular() tests ---
+
+
+def test_circular_from_sma():
+    """Test circular orbit from semi-major axis."""
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    k = lox.Keplerian.circular(time, semi_major_axis=7178.0 * lox.km)
+    assert k.semi_major_axis().to_kilometers() == pytest.approx(7178.0, rel=1e-10)
+    assert k.eccentricity() == pytest.approx(0.0, abs=1e-15)
+
+
+def test_circular_from_altitude():
+    """Test circular orbit from altitude."""
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    k = lox.Keplerian.circular(time, altitude=800.0 * lox.km)
+    # sma should be altitude + mean radius
+    sma_km = k.semi_major_axis().to_kilometers()
+    assert sma_km > 7100.0
+    assert sma_km < 7200.0
+    assert k.eccentricity() == pytest.approx(0.0, abs=1e-15)
+
+
+def test_circular_with_inclination():
+    """Test circular orbit with inclination."""
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    k = lox.Keplerian.circular(
+        time,
+        semi_major_axis=7178.0 * lox.km,
+        inclination=97.0 * lox.deg,
+    )
+    assert k.inclination().to_degrees() == pytest.approx(97.0, rel=1e-10)
+
+
+def test_circular_no_size_raises():
+    """Test that omitting size raises ValueError."""
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    with pytest.raises(ValueError, match="exactly one"):
+        lox.Keplerian.circular(time)
+
+
+def test_circular_both_size_raises():
+    """Test that providing both sma and altitude raises ValueError."""
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    with pytest.raises(ValueError, match="exactly one"):
+        lox.Keplerian.circular(
+            time,
+            semi_major_axis=7178.0 * lox.km,
+            altitude=800.0 * lox.km,
+        )

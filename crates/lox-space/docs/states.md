@@ -42,17 +42,35 @@ print(f"a = {kep.semi_major_axis().to_kilometers():.1f} km")
 print(f"e = {kep.eccentricity():.6f}")
 print(f"i = {kep.inclination().to_degrees():.2f} deg")
 
-# Create from Keplerian elements
+# Create from Keplerian elements (semi-major axis + eccentricity)
 kep = lox.Keplerian(
     time=t,
     semi_major_axis=6678.0 * lox.km,
     eccentricity=0.001,
-    inclination=0.5 * lox.rad,
-    longitude_of_ascending_node=0.0 * lox.rad,
-    argument_of_periapsis=0.0 * lox.rad,
-    true_anomaly=0.0 * lox.rad,
+    inclination=51.6 * lox.deg,
 )
 state = kep.to_cartesian()
+
+# Create from periapsis/apoapsis radii
+kep = lox.Keplerian(
+    time=t,
+    periapsis_radius=7000.0 * lox.km,
+    apoapsis_radius=7400.0 * lox.km,
+)
+
+# Create from periapsis/apoapsis altitudes
+kep = lox.Keplerian(
+    time=t,
+    periapsis_altitude=600.0 * lox.km,
+    apoapsis_altitude=1000.0 * lox.km,
+)
+
+# Create a circular orbit from altitude
+circ = lox.Keplerian.circular(
+    t,
+    altitude=800 * lox.km,
+    inclination=51.6 * lox.deg,
+)
 
 # Create a Sun-synchronous orbit from altitude
 eop = lox.EOPProvider("finals.csv")

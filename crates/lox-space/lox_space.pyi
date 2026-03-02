@@ -812,15 +812,26 @@ class Cartesian:
 class Keplerian:
     """Represents an orbit using Keplerian (classical) orbital elements.
 
+    The orbital shape can be specified in three ways:
+
+    - ``semi_major_axis`` + ``eccentricity``
+    - ``periapsis_radius`` + ``apoapsis_radius`` (keyword-only)
+    - ``periapsis_altitude`` + ``apoapsis_altitude`` (keyword-only)
+
     Args:
         time: Epoch of the elements.
         semi_major_axis: Semi-major axis as Distance.
         eccentricity: Orbital eccentricity (0 = circular, <1 = elliptical).
-        inclination: Inclination as Angle.
-        longitude_of_ascending_node: RAAN as Angle.
-        argument_of_periapsis: Argument of periapsis as Angle.
-        true_anomaly: True anomaly as Angle.
+        inclination: Inclination as Angle (default 0).
+        longitude_of_ascending_node: RAAN as Angle (default 0).
+        argument_of_periapsis: Argument of periapsis as Angle (default 0).
+        true_anomaly: True anomaly as Angle (default 0).
         origin: Central body (default: Earth).
+        periapsis_radius: Periapsis radius as Distance (keyword-only).
+        apoapsis_radius: Apoapsis radius as Distance (keyword-only).
+        periapsis_altitude: Periapsis altitude as Distance (keyword-only).
+        apoapsis_altitude: Apoapsis altitude as Distance (keyword-only).
+        mean_anomaly: Mean anomaly as Angle (keyword-only, mutually exclusive with true_anomaly).
 
     Examples:
         >>> t = lox.Time("TAI", 2024, 1, 1)
@@ -829,22 +840,76 @@ class Keplerian:
         ...     semi_major_axis=6678.0 * lox.km,
         ...     eccentricity=0.001,
         ...     inclination=51.6 * lox.deg,
-        ...     longitude_of_ascending_node=0.0 * lox.rad,
-        ...     argument_of_periapsis=0.0 * lox.rad,
-        ...     true_anomaly=0.0 * lox.rad,
+        ... )
+
+        From radii:
+
+        >>> orbit = lox.Keplerian(
+        ...     t,
+        ...     periapsis_radius=7000.0 * lox.km,
+        ...     apoapsis_radius=7400.0 * lox.km,
+        ... )
+
+        From altitudes:
+
+        >>> orbit = lox.Keplerian(
+        ...     t,
+        ...     periapsis_altitude=600.0 * lox.km,
+        ...     apoapsis_altitude=1000.0 * lox.km,
         ... )
     """
     def __new__(
         cls,
         time: Time,
-        semi_major_axis: Distance,
-        eccentricity: float,
-        inclination: Angle,
-        longitude_of_ascending_node: Angle,
-        argument_of_periapsis: Angle,
-        true_anomaly: Angle,
+        semi_major_axis: Distance | None = None,
+        eccentricity: float | None = None,
+        inclination: Angle | None = None,
+        longitude_of_ascending_node: Angle | None = None,
+        argument_of_periapsis: Angle | None = None,
+        true_anomaly: Angle | None = None,
         origin: str | int | Origin | None = None,
+        *,
+        periapsis_radius: Distance | None = None,
+        apoapsis_radius: Distance | None = None,
+        periapsis_altitude: Distance | None = None,
+        apoapsis_altitude: Distance | None = None,
+        mean_anomaly: Angle | None = None,
     ) -> Self: ...
+    @classmethod
+    def circular(
+        cls,
+        time: Time,
+        *,
+        semi_major_axis: Distance | None = None,
+        altitude: Distance | None = None,
+        inclination: Angle | None = None,
+        longitude_of_ascending_node: Angle | None = None,
+        true_anomaly: Angle | None = None,
+        origin: str | int | Origin | None = None,
+    ) -> Self:
+        """Construct a circular orbit.
+
+        Exactly one of ``semi_major_axis`` or ``altitude`` must be provided.
+        Eccentricity is always 0 and argument of periapsis is always 0.
+
+        Args:
+            time: Epoch of the orbit.
+            semi_major_axis: Semi-major axis (mutually exclusive with altitude).
+            altitude: Orbital altitude (mutually exclusive with semi_major_axis).
+            inclination: Inclination (default 0).
+            longitude_of_ascending_node: RAAN (default 0).
+            true_anomaly: True anomaly (default 0).
+            origin: Central body (default: Earth).
+
+        Examples:
+            >>> t = lox.Time("TAI", 2024, 1, 1)
+            >>> orbit = lox.Keplerian.circular(
+            ...     t,
+            ...     altitude=800 * lox.km,
+            ...     inclination=51.6 * lox.deg,
+            ... )
+        """
+        ...
     @classmethod
     def sso(
         cls,
