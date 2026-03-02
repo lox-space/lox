@@ -36,9 +36,9 @@ t = lox.Time.from_iso("2024-06-15T12:30:45.5 TAI")
 # Convert between scales
 t_tt = t.to_scale("TT")
 
-# Time arithmetic
-dt = lox.TimeDelta.from_hours(1.5)
-t2 = t + dt
+# Time arithmetic with unit constants
+t2 = t + 1.5 * lox.hours
+dt = 30 * lox.minutes
 
 # Work with UTC
 utc = lox.UTC(2024, 6, 15, 12, 30, 45.5)

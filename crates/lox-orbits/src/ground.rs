@@ -336,7 +336,7 @@ mod tests {
         let location = GroundLocation::new(coords, Earth);
         let propagator = GroundPropagator::new(location.clone());
         let time = utc!(2022, 1, 31, 23).unwrap().to_time();
-        let t1 = time + TimeDelta::from_minutes(5.0);
+        let t1 = time + TimeDelta::from_minutes(5);
         let interval = Interval::new(time, t1);
         let traj = propagator.propagate(interval).unwrap();
         // All states should have the same body-fixed position
@@ -353,7 +353,7 @@ mod tests {
         let location = GroundLocation::new(coords, Earth);
         let propagator = GroundPropagator::new(location);
         let time = utc!(2022, 1, 31, 23).unwrap().to_time();
-        let t1 = time + TimeDelta::from_minutes(5.0);
+        let t1 = time + TimeDelta::from_minutes(5);
         let interval = Interval::new(time, t1);
         let traj = propagator
             .propagate(interval)
@@ -404,7 +404,7 @@ mod tests {
         let location = GroundLocation::try_new(coords, DynOrigin::Earth).unwrap();
         let propagator = GroundPropagator::try_new(location).unwrap();
         let time = utc!(2022, 1, 31, 23).unwrap().to_time();
-        let t1 = time + TimeDelta::from_minutes(5.0);
+        let t1 = time + TimeDelta::from_minutes(5);
         let interval = Interval::new(time, t1);
         let traj = propagator
             .propagate(interval)
