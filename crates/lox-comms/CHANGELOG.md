@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.3](https://github.com/lox-space/lox/compare/lox-comms-v0.1.0-alpha.2...lox-comms-v0.1.0-alpha.3) - 2026-03-02
+
+### Other
+
+- updated the following local packages: lox-core, lox-test-utils
+
 ## [0.1.0-alpha.2](https://github.com/lox-space/lox/compare/lox-comms-v0.1.0-alpha.1...lox-comms-v0.1.0-alpha.2) - 2026-02-27
 
 ### Other
