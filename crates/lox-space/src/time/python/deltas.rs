@@ -56,6 +56,14 @@ impl PyTimeDelta {
         Self(self.0 - other.0)
     }
 
+    pub fn __mul__(&self, other: f64) -> Self {
+        Self(other * self.0)
+    }
+
+    pub fn __rmul__(&self, other: f64) -> Self {
+        Self(other * self.0)
+    }
+
     pub fn __eq__(&self, other: PyTimeDelta) -> bool {
         self.0 == other.0
     }
@@ -95,19 +103,19 @@ impl PyTimeDelta {
     /// Create a TimeDelta from minutes.
     #[classmethod]
     pub fn from_minutes(_cls: &Bound<'_, PyType>, minutes: f64) -> PyResult<Self> {
-        Ok(Self(TimeDelta::from_minutes(minutes)))
+        Ok(Self(TimeDelta::from_minutes_f64(minutes)))
     }
 
     /// Create a TimeDelta from hours.
     #[classmethod]
     pub fn from_hours(_cls: &Bound<'_, PyType>, hours: f64) -> PyResult<Self> {
-        Ok(Self(TimeDelta::from_hours(hours)))
+        Ok(Self(TimeDelta::from_hours_f64(hours)))
     }
 
     /// Create a TimeDelta from days (86400 seconds per day).
     #[classmethod]
     pub fn from_days(_cls: &Bound<'_, PyType>, days: f64) -> PyResult<Self> {
-        Ok(Self(TimeDelta::from_days(days)))
+        Ok(Self(TimeDelta::from_days_f64(days)))
     }
 
     /// Create a TimeDelta from Julian years (365.25 days per year).
@@ -120,6 +128,42 @@ impl PyTimeDelta {
     #[classmethod]
     pub fn from_julian_centuries(_cls: &Bound<'_, PyType>, centuries: f64) -> PyResult<Self> {
         Ok(Self(TimeDelta::from_julian_centuries(centuries)))
+    }
+
+    /// Create a TimeDelta from integer milliseconds.
+    #[classmethod]
+    pub fn from_milliseconds(_cls: &Bound<'_, PyType>, ms: i64) -> Self {
+        Self(TimeDelta::from_milliseconds(ms))
+    }
+
+    /// Create a TimeDelta from integer microseconds.
+    #[classmethod]
+    pub fn from_microseconds(_cls: &Bound<'_, PyType>, us: i64) -> Self {
+        Self(TimeDelta::from_microseconds(us))
+    }
+
+    /// Create a TimeDelta from integer nanoseconds.
+    #[classmethod]
+    pub fn from_nanoseconds(_cls: &Bound<'_, PyType>, ns: i64) -> Self {
+        Self(TimeDelta::from_nanoseconds(ns))
+    }
+
+    /// Create a TimeDelta from integer picoseconds.
+    #[classmethod]
+    pub fn from_picoseconds(_cls: &Bound<'_, PyType>, ps: i64) -> Self {
+        Self(TimeDelta::from_picoseconds(ps))
+    }
+
+    /// Create a TimeDelta from integer femtoseconds.
+    #[classmethod]
+    pub fn from_femtoseconds(_cls: &Bound<'_, PyType>, fs: i64) -> Self {
+        Self(TimeDelta::from_femtoseconds(fs))
+    }
+
+    /// Create a TimeDelta from integer attoseconds.
+    #[classmethod]
+    pub fn from_attoseconds(_cls: &Bound<'_, PyType>, atto: i64) -> Self {
+        Self(TimeDelta::from_attoseconds(atto))
     }
 
     /// Create a range of TimeDelta values.

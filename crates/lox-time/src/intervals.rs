@@ -321,7 +321,7 @@ mod tests {
         let i = TimeInterval::new(t0, t1);
         assert_eq!(i.start(), t0);
         assert_eq!(i.end(), t1);
-        assert_eq!(i.duration(), TimeDelta::from_hours(1.0));
+        assert_eq!(i.duration(), TimeDelta::from_hours(1));
         assert_eq!(
             format!("{}", i),
             "2025-11-06T00:00:00.000 TAI – 2025-11-06T01:00:00.000 TAI"
@@ -333,7 +333,7 @@ mod tests {
         let t0 = time!(Tai, 2025, 11, 6).unwrap();
         let t1 = time!(Tai, 2025, 11, 6, 1).unwrap();
         let interval = TimeInterval::new(t0, t1);
-        let step = TimeDelta::from_minutes(20.0);
+        let step = TimeDelta::from_minutes(20);
         let times: Vec<_> = interval.step_by(step).collect();
         assert_eq!(times.len(), 4); // 0, 20, 40, 60 minutes
         assert_eq!(times[0], t0);
@@ -343,9 +343,9 @@ mod tests {
     #[test]
     fn test_step_by_non_exact() {
         let t0 = time!(Tai, 2025, 11, 6).unwrap();
-        let t1 = t0 + TimeDelta::from_minutes(50.0);
+        let t1 = t0 + TimeDelta::from_minutes(50);
         let interval = TimeInterval::new(t0, t1);
-        let step = TimeDelta::from_minutes(20.0);
+        let step = TimeDelta::from_minutes(20);
         let times: Vec<_> = interval.step_by(step).collect();
         assert_eq!(times.len(), 3); // 0, 20, 40 minutes (60 exceeds end)
     }
@@ -360,7 +360,7 @@ mod tests {
         assert_eq!(times[0], t0);
         assert_eq!(times[4], t1);
         // Equal spacing: 15 minutes apart
-        let dt = TimeDelta::from_minutes(15.0);
+        let dt = TimeDelta::from_minutes(15);
         assert_eq!(times[1], t0 + dt);
         assert_eq!(times[2], t0 + dt + dt);
     }
@@ -368,9 +368,9 @@ mod tests {
     #[test]
     fn test_timedelta_interval_step_by() {
         let td0 = TimeDelta::default();
-        let td1 = TimeDelta::from_minutes(60.0);
+        let td1 = TimeDelta::from_minutes(60);
         let interval = TimeDeltaInterval::new(td0, td1);
-        let step = TimeDelta::from_minutes(20.0);
+        let step = TimeDelta::from_minutes(20);
         let times: Vec<_> = interval.step_by(step).collect();
         assert_eq!(times.len(), 4);
     }
@@ -381,7 +381,7 @@ mod tests {
         let t1 = time!(Tai, 2025, 11, 6, 1).unwrap();
         // Interval goes backward: start > end
         let interval = TimeInterval::new(t1, t0);
-        let step = TimeDelta::from_minutes(20.0);
+        let step = TimeDelta::from_minutes(20);
         let times: Vec<_> = interval.step_by(step).collect();
         assert_eq!(times.len(), 4); // 60, 40, 20, 0 minutes
         assert_eq!(times[0], t1);
@@ -398,7 +398,7 @@ mod tests {
         let t1 = time!(Tai, 2025, 11, 6, 1).unwrap();
         // Backward interval with an already-negative step — should still work
         let interval = TimeInterval::new(t1, t0);
-        let step = -TimeDelta::from_minutes(20.0);
+        let step = -TimeDelta::from_minutes(20);
         let times: Vec<_> = interval.step_by(step).collect();
         assert_eq!(times.len(), 4);
         assert_eq!(times[0], t1);
