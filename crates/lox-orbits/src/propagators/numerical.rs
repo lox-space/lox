@@ -5,7 +5,8 @@
 use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub};
 
 use differential_equations::{
-    ode::{ODE, ODEProblem},
+    interpolate::Interpolation,
+    ode::{ODE, ODEProblem, OrdinaryNumericalMethod},
     prelude::ExplicitRungeKutta,
     traits::State,
 };
@@ -43,6 +44,8 @@ pub struct J2Propagator<T: TimeScale, O: TryJ2 + TryPointMass + TryMeanRadius, R
     rtol: f64,
     atol: f64,
     h_max: f64,
+    h_min: f64,
+    max_steps: usize,
 }
 
 pub type DynJ2Propagator = J2Propagator<DynTimeScale, DynOrigin, DynFrame>;
@@ -60,6 +63,8 @@ where
             rtol: 1e-8,
             atol: 1e-6,
             h_max: 100.0,
+            h_min: 1e-6,
+            max_steps: 100_000,
         }
     }
 }
@@ -83,6 +88,8 @@ where
             rtol: 1e-8,
             atol: 1e-6,
             h_max: 100.0,
+            h_min: 1e-6,
+            max_steps: 100_000,
         })
     }
 }
@@ -105,6 +112,16 @@ where
 
     pub fn with_h_max(mut self, h_max: f64) -> Self {
         self.h_max = h_max;
+        self
+    }
+
+    pub fn with_h_min(mut self, h_min: f64) -> Self {
+        self.h_min = h_min;
+        self
+    }
+
+    pub fn with_max_steps(mut self, max_steps: usize) -> Self {
+        self.max_steps = max_steps;
         self
     }
 
@@ -144,6 +161,18 @@ where
             .try_mean_radius()
             .expect("mean radius should be available")
             .as_f64()
+    }
+
+    fn solver(
+        &self,
+    ) -> impl OrdinaryNumericalMethod<f64, CartesianState> + Interpolation<f64, CartesianState>
+    {
+        ExplicitRungeKutta::dop853()
+            .rtol(self.rtol)
+            .atol(self.atol)
+            .h_max(self.h_max)
+            .h_min(self.h_min)
+            .max_steps(self.max_steps)
     }
 }
 
@@ -185,10 +214,7 @@ where
         let t1 = (time - epoch).to_seconds().to_f64();
         let s0 = CartesianState::from(*self.initial_state());
 
-        let mut solver = ExplicitRungeKutta::dop853()
-            .rtol(self.rtol)
-            .atol(self.atol)
-            .h_max(self.h_max);
+        let mut solver = self.solver();
 
         let problem = ODEProblem::new(self, t0, t1, s0);
         let solution = problem
@@ -215,10 +241,7 @@ where
 
         let t1 = (interval.end() - start).to_seconds().to_f64();
 
-        let mut solver = ExplicitRungeKutta::dop853()
-            .rtol(self.rtol)
-            .atol(self.atol)
-            .h_max(self.h_max);
+        let mut solver = self.solver();
 
         let problem = ODEProblem::new(self, 0.0, t1, s0);
         let solution = problem
@@ -260,10 +283,7 @@ where
         }
         .into();
 
-        let mut solver = ExplicitRungeKutta::dop853()
-            .rtol(self.rtol)
-            .atol(self.atol)
-            .h_max(self.h_max);
+        let mut solver = self.solver();
 
         let problem = ODEProblem::new(self, 0.0, t1, s0);
         let solution = problem
