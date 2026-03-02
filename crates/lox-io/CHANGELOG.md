@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.13](https://github.com/lox-space/lox/compare/lox-io-v0.1.0-alpha.12...lox-io-v0.1.0-alpha.13) - 2026-03-02
+
+### Other
+
+- updated the following local packages: lox-derive, lox-core, lox-time, lox-test-utils, lox-math, lox-units
+
 ## [0.1.0-alpha.12](https://github.com/lox-space/lox/compare/lox-io-v0.1.0-alpha.11...lox-io-v0.1.0-alpha.12) - 2026-02-27
 
 ### Other
