@@ -1151,8 +1151,21 @@ class J2:
 
     Args:
         initial_state: Initial orbital state.
+        rtol: Relative tolerance (default: 1e-8).
+        atol: Absolute tolerance (default: 1e-6).
+        h_max: Maximum step size in seconds (default: auto from orbital timescale).
+        h_min: Minimum step size in seconds (default: 1e-6).
+        max_steps: Maximum number of integration steps (default: 100000).
     """
-    def __new__(cls, initial_state: Cartesian) -> Self: ...
+    def __new__(
+        cls,
+        initial_state: Cartesian,
+        rtol: float | None = None,
+        atol: float | None = None,
+        h_max: float | None = None,
+        h_min: float | None = None,
+        max_steps: int | None = None,
+    ) -> Self: ...
     @overload
     def propagate(self, steps: Time) -> Cartesian: ...
     @overload
