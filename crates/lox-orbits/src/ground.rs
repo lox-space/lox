@@ -360,7 +360,7 @@ mod tests {
             .unwrap()
             .into_frame(Icrf, &DefaultRotationProvider)
             .unwrap();
-        let state = traj.states()[0].clone();
+        let state = traj.states()[0];
         let expected = DVec3::new(-1765953.5510583583, 4524585.984442561, 4120189.198495323);
         assert_approx_eq!(state.position(), expected);
     }
@@ -411,7 +411,7 @@ mod tests {
             .unwrap()
             .into_frame(DynFrame::Icrf, &DefaultRotationProvider)
             .unwrap();
-        let state = traj.states()[0].clone();
+        let state = traj.states()[0];
         // Same result as the static version
         let expected = DVec3::new(-1765953.5510583583, 4524585.984442561, 4120189.198495323);
         assert_approx_eq!(state.position(), expected);

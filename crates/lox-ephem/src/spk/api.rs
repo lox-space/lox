@@ -276,7 +276,7 @@ mod test {
 
         // Original SPK values were in km, now converted to meters
         let expected_pos = DVec3::new(
-            -32703259.291699532e3,
+            -3.270_325_929_169_953e10,
             31370540.51993667e3,
             20159681.594182793e3,
         );
@@ -299,7 +299,7 @@ mod test {
             .unwrap();
 
         let expected = DVec3::new(
-            -32703259.291699532e3,
+            -3.270_325_929_169_953e10,
             31370540.51993667e3,
             20159681.594182793e3,
         );

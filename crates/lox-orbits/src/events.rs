@@ -1079,9 +1079,9 @@ mod tests {
             vec![Box::new(sin_detector(start)), Box::new(cos_detector(start))];
 
         let mut combined: Box<dyn IntervalDetector<Tai>> = detectors.into_iter().next().unwrap();
-        for det in vec![Box::new(cos_detector(start)) as Box<dyn IntervalDetector<Tai>>] {
-            combined = Box::new(combined.intersect(det));
-        }
+
+        let det = Box::new(cos_detector(start)) as Box<dyn IntervalDetector<Tai>>;
+        combined = Box::new(combined.intersect(det));
 
         let windows = combined.detect(interval).unwrap();
         assert_eq!(windows.len(), 2);
