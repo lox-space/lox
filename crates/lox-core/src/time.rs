@@ -12,6 +12,5 @@ pub mod chrono;
 pub mod constants;
 pub mod deltas;
 pub mod julian_dates;
-pub mod ranges;
 pub mod subsecond;
 pub mod time_of_day;

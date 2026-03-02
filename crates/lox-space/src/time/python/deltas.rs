@@ -7,6 +7,7 @@ use pyo3::types::PyType;
 use pyo3::{Bound, PyResult, create_exception, pyclass, pymethods};
 
 use crate::time::deltas::TimeDelta;
+use crate::time::intervals::TimeDeltaInterval;
 
 create_exception!(lox_space, NonFiniteTimeDeltaError, PyException);
 
@@ -187,8 +188,9 @@ impl PyTimeDelta {
         step: Option<i64>,
     ) -> PyResult<Vec<Self>> {
         let step = TimeDelta::from_seconds(step.unwrap_or(1));
-        let range = TimeDelta::range(start..=end).with_step(step);
-        Ok(range.into_iter().map(Self).collect())
+        let interval =
+            TimeDeltaInterval::new(TimeDelta::from_seconds(start), TimeDelta::from_seconds(end));
+        Ok(interval.step_by(step).map(Self).collect())
     }
 
     /// Convert to decimal seconds.

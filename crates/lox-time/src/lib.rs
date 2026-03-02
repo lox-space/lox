@@ -37,7 +37,6 @@ pub mod deltas;
 pub mod intervals;
 pub mod julian_dates;
 pub mod offsets;
-pub mod ranges;
 pub mod subsecond;
 pub mod time;
 pub mod time_of_day;
