@@ -23,11 +23,11 @@ lox-comms = { path = "crates/lox-comms", version = "0.1.0-alpha.2" }
 lox-core = { path = "crates/lox-core", version = "0.1.0-alpha.3" }
 lox-derive = { path = "crates/lox-derive", version = "0.1.0-alpha.6" }
 lox-earth = { path = "crates/lox-earth", version = "0.1.0-alpha.16" }
-lox-ephem = { path = "crates/lox-ephem", version = "0.1.0-alpha.11" }
+lox-ephem = { path = "crates/lox-ephem", version = "0.1.0-alpha.12" }
 lox-frames = { path = "crates/lox-frames", version = "0.1.0-alpha.7" }
 lox-io = { path = "crates/lox-io", version = "0.1.0-alpha.12" }
 lox-math = { path = "crates/lox-math", version = "0.1.0-alpha.12" }
-lox-orbits = { path = "crates/lox-orbits", version = "0.1.0-alpha.24" }
+lox-orbits = { path = "crates/lox-orbits", version = "0.1.0-alpha.25" }
 lox-test-utils = { path = "crates/lox-test-utils", version = "0.1.0-alpha.3" }
 lox-time = { path = "crates/lox-time", version = "0.1.0-alpha.14" }
 lox-units = { path = "crates/lox-units", version = "0.1.0-alpha.4" }
