@@ -31,6 +31,8 @@ pub enum J2Error {
     Solver(String),
     #[error("ODE solver returned no solution")]
     EmptySolution,
+    #[error("at least two time steps are needed")]
+    InvalidTimeSteps,
     #[error(transparent)]
     Trajectory(#[from] TrajectorError),
 }
@@ -168,7 +170,6 @@ where
     }
 }
 
-// Single impl covers both typed and DynJ2Propagator
 impl<T, O, R> Propagator<T, O> for J2Propagator<T, O, R>
 where
     T: TimeScale + Copy + PartialOrd,
@@ -182,10 +183,7 @@ where
         let epoch = self.initial_state.time();
         let t0 = 0.0_f64;
         let t1 = (time - epoch).to_seconds().to_f64();
-        let s0 = CartesianState(Cartesian::from_vecs(
-            self.initial_state.position(),
-            self.initial_state.velocity(),
-        ));
+        let s0 = CartesianState::from(*self.initial_state());
 
         let mut solver = ExplicitRungeKutta::dop853()
             .rtol(self.rtol)
@@ -205,37 +203,83 @@ where
     }
 
     fn propagate(&self, interval: TimeInterval<T>) -> Result<Trajectory<T, O, R>, J2Error> {
-        let epoch = self.initial_state.time();
-        let t0 = 0.0_f64;
-        let t1 = (interval.end() - epoch).to_seconds().to_f64();
-        let s0 = CartesianState(Cartesian::from_vecs(
-            self.initial_state.position(),
-            self.initial_state.velocity(),
-        ));
+        let start = interval.start();
+
+        // Propagate to start of interval
+        let s0: CartesianState = if start != self.initial_state.time() {
+            self.state_at(start)?
+        } else {
+            *self.initial_state()
+        }
+        .into();
+
+        let t1 = (interval.end() - start).to_seconds().to_f64();
 
         let mut solver = ExplicitRungeKutta::dop853()
             .rtol(self.rtol)
             .atol(self.atol)
             .h_max(self.h_max);
 
-        let problem = ODEProblem::new(self, t0, t1, s0);
+        let problem = ODEProblem::new(self, 0.0, t1, s0);
         let solution = problem
             .solve(&mut solver)
             .map_err(|e| J2Error::Solver(format!("{:?}", e)))?;
 
         let origin = self.initial_state.origin();
         let frame = self.initial_state.reference_frame();
-        let interval_start_offset = (interval.start() - epoch).to_seconds().to_f64();
 
-        let states: Vec<_> = solution
+        Ok(solution
             .iter()
-            .filter(|(t, _)| **t >= interval_start_offset)
             .map(|(t, s)| {
-                CartesianOrbit::new(s.0, epoch + TimeDelta::from_seconds_f64(*t), origin, frame)
+                CartesianOrbit::new(s.0, start + TimeDelta::from_seconds_f64(*t), origin, frame)
             })
-            .collect();
+            .collect())
+    }
 
-        Trajectory::try_new(states).map_err(Into::into)
+    fn propagate_to(
+        &self,
+        times: impl IntoIterator<Item = Time<T>>,
+    ) -> Result<Trajectory<T, O, Self::Frame>, Self::Error> {
+        let times: Vec<Time<T>> = times.into_iter().collect();
+        if times.len() < 2 {
+            return Err(J2Error::InvalidTimeSteps);
+        }
+
+        let t0 = times[0];
+        let steps: Vec<f64> = times
+            .iter()
+            .map(|t| (*t - t0).to_seconds().to_f64())
+            .collect();
+        let t1 = *steps.last().unwrap();
+
+        // Propagate to first time step
+        let s0: CartesianState = if t0 != self.initial_state.time() {
+            self.state_at(t0)?
+        } else {
+            *self.initial_state()
+        }
+        .into();
+
+        let mut solver = ExplicitRungeKutta::dop853()
+            .rtol(self.rtol)
+            .atol(self.atol)
+            .h_max(self.h_max);
+
+        let problem = ODEProblem::new(self, 0.0, t1, s0);
+        let solution = problem
+            .t_eval(steps)
+            .solve(&mut solver)
+            .map_err(|e| J2Error::Solver(format!("{:?}", e)))?;
+
+        let origin = self.initial_state.origin();
+        let frame = self.initial_state.reference_frame();
+
+        Ok(solution
+            .iter()
+            .map(|(t, s)| {
+                CartesianOrbit::new(s.0, t0 + TimeDelta::from_seconds_f64(*t), origin, frame)
+            })
+            .collect())
     }
 }
 
@@ -345,6 +389,17 @@ impl Neg for CartesianState {
     }
 }
 
+impl<T, O, R> From<CartesianOrbit<T, O, R>> for CartesianState
+where
+    T: TimeScale,
+    O: Origin,
+    R: ReferenceFrame,
+{
+    fn from(orbit: CartesianOrbit<T, O, R>) -> Self {
+        Self(orbit.state())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use lox_bodies::Earth;
@@ -420,5 +475,130 @@ mod tests {
         );
         assert_approx_eq!(p_act, p_exp, rtol <= 1e-1);
         assert_approx_eq!(v_act, v_exp, rtol <= 1e-1);
+    }
+
+    /// Propagating [epoch, epoch+40m] and [epoch+20m, epoch+40m] should
+    /// produce the same final state.
+    #[test]
+    fn test_propagate_with_offset_interval() {
+        let s0_orbit = initial_state();
+        let epoch = s0_orbit.time();
+        let j2 = J2Propagator::new(s0_orbit);
+
+        let dt = TimeDelta::from_minutes(40.0);
+        let offset = TimeDelta::from_minutes(20.0);
+
+        // Full interval from epoch
+        let full = Interval::new(epoch, epoch + dt);
+        let traj_full = j2.propagate(full).unwrap();
+        let s_full = traj_full.states().into_iter().last().unwrap();
+
+        // Offset interval starting 20 minutes after epoch
+        let offset_interval = Interval::new(epoch + offset, epoch + dt);
+        let traj_offset = j2.propagate(offset_interval).unwrap();
+        let s_offset = traj_offset.states().into_iter().last().unwrap();
+
+        // Final states should match
+        assert_approx_eq!(s_full.position(), s_offset.position(), rtol <= 1e-6);
+        assert_approx_eq!(s_full.velocity(), s_offset.velocity(), rtol <= 1e-6);
+
+        // Trajectory timestamps should be consistent with the interval
+        assert_eq!(traj_offset.start_time(), epoch + offset);
+    }
+
+    /// `state_at` and `propagate` should agree on the final state.
+    #[test]
+    fn test_state_at_matches_propagate() {
+        let s0_orbit = initial_state();
+        let epoch = s0_orbit.time();
+        let j2 = J2Propagator::new(s0_orbit);
+
+        let target = epoch + TimeDelta::from_minutes(40.0);
+        let state = j2.state_at(target).unwrap();
+
+        let interval = Interval::new(epoch, target);
+        let traj = j2.propagate(interval).unwrap();
+        let last = traj.states().into_iter().last().unwrap();
+
+        assert_approx_eq!(state.position(), last.position(), rtol <= 1e-6);
+        assert_approx_eq!(state.velocity(), last.velocity(), rtol <= 1e-6);
+    }
+
+    #[test]
+    fn test_propagate_to() {
+        let s0_orbit = initial_state();
+        let epoch = s0_orbit.time();
+        let j2 = J2Propagator::new(s0_orbit);
+
+        let dt = TimeDelta::from_minutes(40.0);
+        let interval = Interval::new(epoch, epoch + dt);
+        let times: Vec<_> = interval.step_by(TimeDelta::from_minutes(10.0)).collect();
+
+        let traj = j2.propagate_to(times.clone()).unwrap();
+        let states = traj.states();
+
+        // Should have exactly as many states as requested times
+        assert_eq!(states.len(), times.len());
+
+        // First state should match the initial state
+        assert_approx_eq!(states[0].position(), s0_orbit.position(), rtol <= 1e-10);
+
+        // Last state should match state_at for the same time
+        let last_time = *times.last().unwrap();
+        let expected = j2.state_at(last_time).unwrap();
+        assert_approx_eq!(
+            states.last().unwrap().position(),
+            expected.position(),
+            rtol <= 1e-6
+        );
+    }
+
+    /// `propagate_to` with times starting after epoch should produce the
+    /// same final state as propagating from epoch.
+    #[test]
+    fn test_propagate_to_with_offset_times() {
+        let s0_orbit = initial_state();
+        let epoch = s0_orbit.time();
+        let j2 = J2Propagator::new(s0_orbit);
+
+        let start = epoch + TimeDelta::from_minutes(20.0);
+        let end = start + TimeDelta::from_minutes(20.0);
+        let interval = Interval::new(start, end);
+        let times: Vec<_> = interval.step_by(TimeDelta::from_minutes(5.0)).collect();
+
+        let traj = j2.propagate_to(times.clone()).unwrap();
+        let states = traj.states();
+
+        assert_eq!(states.len(), times.len());
+
+        // First state should match state_at for the offset time
+        let expected_first = j2.state_at(times[0]).unwrap();
+        assert_approx_eq!(
+            states[0].position(),
+            expected_first.position(),
+            rtol <= 1e-6
+        );
+
+        // Last state should match state_at
+        let expected_last = j2.state_at(*times.last().unwrap()).unwrap();
+        assert_approx_eq!(
+            states.last().unwrap().position(),
+            expected_last.position(),
+            rtol <= 1e-6
+        );
+    }
+
+    #[test]
+    fn test_propagate_to_too_few_times() {
+        let s0_orbit = initial_state();
+        let j2 = J2Propagator::new(s0_orbit);
+
+        // Empty
+        let result = j2.propagate_to(vec![]);
+        assert!(result.is_err());
+
+        // Single element
+        let result = j2.propagate_to(vec![s0_orbit.time()]);
+        assert!(result.is_err());
     }
 }
