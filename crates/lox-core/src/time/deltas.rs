@@ -14,7 +14,7 @@
 */
 
 use std::fmt::Display;
-use std::ops::{Add, AddAssign, Mul, Neg, RangeInclusive, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 
 use lox_test_utils::approx_eq::ApproxEq;
 
@@ -28,7 +28,6 @@ use crate::i64::consts::{
 use crate::types::units::Days;
 
 use super::julian_dates::{Epoch, JulianDate, Unit};
-use super::ranges::TimeDeltaRange;
 use super::subsecond::Subsecond;
 
 /// Extension trait for creating [`TimeDelta`] values from numeric types.
@@ -546,10 +545,6 @@ impl TimeDelta {
 
     pub const fn is_infinite(&self) -> bool {
         matches!(self, Self::PosInf | Self::NegInf)
-    }
-
-    pub fn range(range: RangeInclusive<i64>) -> TimeDeltaRange {
-        range.into()
     }
 
     pub const fn seconds(&self) -> Option<i64> {
