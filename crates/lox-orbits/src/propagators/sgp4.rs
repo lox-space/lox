@@ -32,6 +32,7 @@ pub enum Sgp4Error {
     Utc(#[from] UtcError),
 }
 
+#[derive(Debug, Clone)]
 pub struct Sgp4 {
     constants: Constants,
     time: Time<Tai>,
