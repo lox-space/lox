@@ -26,6 +26,10 @@ use thiserror::Error;
 use crate::orbits::{CartesianOrbit, TrajectorError, Trajectory};
 use crate::propagators::Propagator;
 
+/// Number of maximum-size integration steps per characteristic orbital timescale (r/v).
+/// Since r/v ≈ T/(2π) for a circular orbit, this yields ~50 steps per orbit.
+const H_MAX_STEPS_PER_TIMESCALE: f64 = 8.0;
+
 #[derive(Debug, Error)]
 pub enum J2Error {
     #[error("ODE solver failed: {0}")]
@@ -50,6 +54,10 @@ pub struct J2Propagator<T: TimeScale, O: TryJ2 + TryPointMass + TryMeanRadius, R
 
 pub type DynJ2Propagator = J2Propagator<DynTimeScale, DynOrigin, DynFrame>;
 
+fn default_h_max(position: DVec3, velocity: DVec3) -> f64 {
+    position.length() / velocity.length() / H_MAX_STEPS_PER_TIMESCALE
+}
+
 // Infallible — static bounds
 impl<T, O, R> J2Propagator<T, O, R>
 where
@@ -58,11 +66,12 @@ where
     R: ReferenceFrame,
 {
     pub fn new(initial_state: CartesianOrbit<T, O, R>) -> Self {
+        let h_max = default_h_max(initial_state.position(), initial_state.velocity());
         Self {
             initial_state,
             rtol: 1e-8,
             atol: 1e-6,
-            h_max: 100.0,
+            h_max,
             h_min: 1e-6,
             max_steps: 100_000,
         }
@@ -83,11 +92,12 @@ where
         initial_state.origin().try_j2()?;
         initial_state.origin().try_mean_radius()?;
 
+        let h_max = default_h_max(initial_state.position(), initial_state.velocity());
         Ok(Self {
             initial_state,
             rtol: 1e-8,
             atol: 1e-6,
-            h_max: 100.0,
+            h_max,
             h_min: 1e-6,
             max_steps: 100_000,
         })
