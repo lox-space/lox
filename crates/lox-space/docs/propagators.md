@@ -13,6 +13,7 @@ Orbit propagation methods for predicting future states.
 | Propagator | Description | Use Case |
 |------------|-------------|----------|
 | `Vallado` | Analytical Kepler propagator | Two-body motion |
+| `J2` | Numerical J2 perturbation propagator | Oblateness effects |
 | `SGP4` | Simplified General Perturbations | TLE-based propagation |
 | `GroundPropagator` | Ground station state | Earth-fixed locations |
 
@@ -38,6 +39,16 @@ future = propagator.propagate(t + lox.TimeDelta.from_hours(1))
 times = [t + lox.TimeDelta(i * 60) for i in range(100)]
 trajectory = propagator.propagate(times)
 
+# Numerical J2 propagation (accounts for oblateness)
+j2 = lox.J2(state)
+
+# Propagate over a time interval (adaptive steps)
+t_end = t + lox.TimeDelta.from_hours(2)
+trajectory = j2.propagate(t, end=t_end)
+
+# Custom solver tolerances
+j2_tight = lox.J2(state, rtol=1e-12, atol=1e-10)
+
 # SGP4 propagation from TLE
 tle = """ISS (ZARYA)
 1 25544U 98067A   24001.50000000  .00016717  00000-0  30472-3 0  9993
@@ -50,6 +61,12 @@ state = sgp4.propagate(t)
 ---
 
 ::: lox_space.Vallado
+    options:
+      show_source: false
+
+---
+
+::: lox_space.J2
     options:
       show_source: false
 

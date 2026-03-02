@@ -23,6 +23,64 @@ def test_sgp4():
     )
 
 
+def iss_state():
+    """Create an ISS-like state in Earth orbit."""
+    t = lox.Time("TAI", 2024, 1, 1)
+    return lox.Cartesian(
+        t,
+        position=(6678.0 * lox.km, 0.0 * lox.km, 0.0 * lox.km),
+        velocity=(0.0 * lox.km_per_s, 7.73 * lox.km_per_s, 0.0 * lox.km_per_s),
+    )
+
+
+def test_j2_single_time():
+    state = iss_state()
+    j2 = lox.J2(state)
+    t1 = state.time() + lox.TimeDelta.from_minutes(90)
+    result = j2.propagate(t1)
+    assert isinstance(result, lox.Cartesian)
+
+
+def test_j2_time_interval():
+    state = iss_state()
+    j2 = lox.J2(state)
+    t0 = state.time()
+    t1 = t0 + lox.TimeDelta.from_hours(1)
+    trajectory = j2.propagate(t0, end=t1)
+    assert isinstance(trajectory, lox.Trajectory)
+
+
+def test_j2_multiple_times():
+    state = iss_state()
+    j2 = lox.J2(state)
+    t0 = state.time()
+    times = [t0 + lox.TimeDelta(i * 60) for i in range(1, 11)]
+    trajectory = j2.propagate(times)
+    assert isinstance(trajectory, lox.Trajectory)
+
+
+def test_j2_custom_tolerances():
+    state = iss_state()
+    j2 = lox.J2(state, rtol=1e-12, atol=1e-10)
+    t1 = state.time() + lox.TimeDelta.from_minutes(90)
+    result = j2.propagate(t1)
+    assert isinstance(result, lox.Cartesian)
+
+
+def test_j2_custom_step_size():
+    state = iss_state()
+    j2 = lox.J2(state, h_max=10.0, h_min=1e-8, max_steps=200_000)
+    t1 = state.time() + lox.TimeDelta.from_minutes(90)
+    result = j2.propagate(t1)
+    assert isinstance(result, lox.Cartesian)
+
+
+def test_j2_repr():
+    state = iss_state()
+    j2 = lox.J2(state)
+    assert "J2(" in repr(j2)
+
+
 def test_ground(provider):
     tai = lox.UTC.from_iso("2022-01-31T23:00:00").to_scale("TAI")
     loc = lox.GroundLocation(

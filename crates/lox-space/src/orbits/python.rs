@@ -1485,16 +1485,44 @@ impl From<PyJ2Error> for PyErr {
 ///
 /// Args:
 ///     initial_state: Initial orbital state.
+///     rtol: Relative tolerance (default: 1e-8).
+///     atol: Absolute tolerance (default: 1e-6).
+///     h_max: Maximum step size in seconds (default: auto from orbital timescale).
+///     h_min: Minimum step size in seconds (default: 1e-6).
+///     max_steps: Maximum number of integration steps (default: 100000).
 #[pyclass(name = "J2", module = "lox_space", frozen)]
 pub struct PyJ2Propagator(pub DynJ2Propagator);
 
 #[pymethods]
 impl PyJ2Propagator {
     #[new]
-    fn new(initial_state: PyCartesian) -> PyResult<Self> {
-        Ok(PyJ2Propagator(
-            J2Propagator::try_new(initial_state.0).map_err(PyUndefinedOriginPropertyError)?,
-        ))
+    #[pyo3(signature = (initial_state, rtol=None, atol=None, h_max=None, h_min=None, max_steps=None))]
+    fn new(
+        initial_state: PyCartesian,
+        rtol: Option<f64>,
+        atol: Option<f64>,
+        h_max: Option<f64>,
+        h_min: Option<f64>,
+        max_steps: Option<usize>,
+    ) -> PyResult<Self> {
+        let mut propagator =
+            J2Propagator::try_new(initial_state.0).map_err(PyUndefinedOriginPropertyError)?;
+        if let Some(rtol) = rtol {
+            propagator = propagator.with_rtol(rtol);
+        }
+        if let Some(atol) = atol {
+            propagator = propagator.with_atol(atol);
+        }
+        if let Some(h_max) = h_max {
+            propagator = propagator.with_h_max(h_max);
+        }
+        if let Some(h_min) = h_min {
+            propagator = propagator.with_h_min(h_min);
+        }
+        if let Some(max_steps) = max_steps {
+            propagator = propagator.with_max_steps(max_steps);
+        }
+        Ok(PyJ2Propagator(propagator))
     }
 
     /// Propagate the orbit.
