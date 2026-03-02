@@ -27,7 +27,7 @@ lox-ephem = { path = "crates/lox-ephem", version = "0.1.0-alpha.12" }
 lox-frames = { path = "crates/lox-frames", version = "0.1.0-alpha.7" }
 lox-io = { path = "crates/lox-io", version = "0.1.0-alpha.12" }
 lox-math = { path = "crates/lox-math", version = "0.1.0-alpha.12" }
-lox-orbits = { path = "crates/lox-orbits", version = "0.1.0-alpha.25" }
+lox-orbits = { path = "crates/lox-orbits", version = "0.1.0-alpha.26" }
 lox-test-utils = { path = "crates/lox-test-utils", version = "0.1.0-alpha.3" }
 lox-time = { path = "crates/lox-time", version = "0.1.0-alpha.14" }
 lox-units = { path = "crates/lox-units", version = "0.1.0-alpha.4" }

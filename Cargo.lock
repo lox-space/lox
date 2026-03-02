@@ -801,7 +801,7 @@ dependencies = [
 
 [[package]]
 name = "lox-orbits"
-version = "0.1.0-alpha.25"
+version = "0.1.0-alpha.26"
 dependencies = [
  "csv",
  "differential-equations",
@@ -827,7 +827,7 @@ dependencies = [
 
 [[package]]
 name = "lox-space"
-version = "0.1.0-alpha.32"
+version = "0.1.0-alpha.33"
 dependencies = [
  "codspeed-divan-compat",
  "glam 0.30.9",
