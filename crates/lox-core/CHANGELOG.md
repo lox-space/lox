@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.4](https://github.com/lox-space/lox/compare/lox-core-v0.1.0-alpha.3...lox-core-v0.1.0-alpha.4) - 2026-03-02
+
+### Added
+
+- *(lox-core)* add time units
+
+### Other
+
+- *(lox-core/lox-time)* deduplicate time range APIs
+
 ## [0.1.0-alpha.3](https://github.com/lox-space/lox/compare/lox-core-v0.1.0-alpha.2...lox-core-v0.1.0-alpha.3) - 2026-02-27
 
 ### Added

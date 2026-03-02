@@ -6,6 +6,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.34](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.33...lox-space-v0.1.0-alpha.34) - 2026-03-02
+
+### Added
+
+- *(lox-core)* add time units
+
+### Fixed
+
+- *(lox-orbits)* align J2 APIs
+
+### Other
+
+- *(lox-core/lox-time)* deduplicate time range APIs
+- *(lox-space)* used interval time range API
+
 ## [0.1.0-alpha.33](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.32...lox-space-v0.1.0-alpha.33) - 2026-03-02
 
 ### Other
