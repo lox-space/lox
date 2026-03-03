@@ -13,6 +13,7 @@ use crate::bodies::DynOrigin;
 use crate::bodies::python::PyOrigin;
 use crate::comms::python::PyCommunicationSystem;
 use crate::ephem::python::PySpk;
+use crate::frames::python::PyFrame;
 use crate::orbits::ground::Observables;
 use crate::orbits::python::{
     PyGroundLocation, PyInterval, PyJ2Propagator, PySgp4, PyTrajectory, PyVallado,
@@ -66,14 +67,18 @@ pub struct PyGroundStation(pub GroundStation);
 #[pymethods]
 impl PyGroundStation {
     #[new]
-    #[pyo3(signature = (id, location, mask, communication_systems=None))]
+    #[pyo3(signature = (id, location, mask, body_fixed_frame=None, communication_systems=None))]
     fn new(
         id: String,
         location: PyGroundLocation,
         mask: PyElevationMask,
+        body_fixed_frame: Option<PyFrame>,
         communication_systems: Option<Vec<PyCommunicationSystem>>,
     ) -> Self {
         let mut gs = GroundStation::new(id, location.0, mask.0);
+        if let Some(frame) = body_fixed_frame {
+            gs = gs.with_body_fixed_frame(frame.0);
+        }
         if let Some(systems) = communication_systems {
             for system in systems {
                 gs = gs.with_communication_system(system.0);
@@ -95,6 +100,11 @@ impl PyGroundStation {
     /// Return the elevation mask.
     fn mask(&self) -> PyElevationMask {
         PyElevationMask(self.0.mask().clone())
+    }
+
+    /// Return the body-fixed frame.
+    fn body_fixed_frame(&self) -> PyFrame {
+        PyFrame(self.0.body_fixed_frame())
     }
 
     /// Return the communication systems.
@@ -577,6 +587,7 @@ impl PyVisibilityResults {
                         gs.mask(),
                         &dyn_traj,
                         self.step,
+                        gs.body_fixed_frame(),
                     )
                     .map_err(|e| PyValueError::new_err(e.to_string()))?;
                 Ok(passes.into_iter().map(PyPass).collect())
@@ -621,6 +632,7 @@ impl PyVisibilityResults {
                             gs.location(),
                             gs.mask(),
                             &dyn_traj,
+                            gs.body_fixed_frame(),
                         )
                     })
                     .map(PyPass)

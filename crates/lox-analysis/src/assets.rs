@@ -84,6 +84,7 @@ pub struct GroundStation {
     id: AssetId,
     location: DynGroundLocation,
     mask: ElevationMask,
+    body_fixed_frame: DynFrame,
     network: Option<NetworkId>,
     #[cfg(feature = "comms")]
     communication_systems: Vec<CommunicationSystem>,
@@ -91,14 +92,21 @@ pub struct GroundStation {
 
 impl GroundStation {
     pub fn new(id: impl Into<String>, location: DynGroundLocation, mask: ElevationMask) -> Self {
+        let body_fixed_frame = DynFrame::Iau(location.origin());
         Self {
             id: AssetId::new(id),
             location,
             mask,
+            body_fixed_frame,
             network: None,
             #[cfg(feature = "comms")]
             communication_systems: Vec::new(),
         }
+    }
+
+    pub fn with_body_fixed_frame(mut self, frame: impl Into<DynFrame>) -> Self {
+        self.body_fixed_frame = frame.into();
+        self
     }
 
     pub fn with_network_id(mut self, id: impl Into<String>) -> Self {
@@ -122,6 +130,10 @@ impl GroundStation {
 
     pub fn mask(&self) -> &ElevationMask {
         &self.mask
+    }
+
+    pub fn body_fixed_frame(&self) -> DynFrame {
+        self.body_fixed_frame
     }
 
     #[cfg(feature = "comms")]

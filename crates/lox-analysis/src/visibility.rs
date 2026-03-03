@@ -9,7 +9,7 @@ use lox_bodies::{DynOrigin, Origin, TryMeanRadius, TrySpheroid, UndefinedOriginP
 use lox_ephem::Ephemeris;
 use lox_frames::providers::DefaultRotationProvider;
 use lox_frames::rotations::{DynRotationError, RotationError, TryRotation};
-use lox_frames::{DynFrame, Iau, ReferenceFrame};
+use lox_frames::{DynFrame, ReferenceFrame};
 use lox_math::series::{InterpolationType, Series, SeriesError};
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
@@ -28,56 +28,6 @@ use lox_orbits::events::{
 };
 use lox_orbits::ground::{DynGroundLocation, Observables};
 use lox_orbits::orbits::{Ensemble, Trajectory};
-
-// ---------------------------------------------------------------------------
-// BodyFixedFrame trait
-// ---------------------------------------------------------------------------
-
-/// Maps an origin body to its body-fixed reference frame type.
-///
-/// For concrete origins (e.g. `Earth`), this resolves to `Iau<Earth>` — a
-/// monomorphic type with zero dispatch overhead. For `DynOrigin`, it resolves
-/// to `DynFrame`, preserving the existing dynamic dispatch path.
-pub trait BodyFixedFrame: Origin {
-    type Frame: ReferenceFrame + Copy;
-    fn body_fixed_frame(&self) -> Self::Frame;
-}
-
-/// Concrete origins — each maps to `Iau<Self>` for monomorphic rotation.
-macro_rules! impl_body_fixed_frame {
-    ($($body:ty),* $(,)?) => {
-        $(
-            impl BodyFixedFrame for $body {
-                type Frame = Iau<$body>;
-                fn body_fixed_frame(&self) -> Iau<$body> {
-                    Iau::new(*self)
-                }
-            }
-        )*
-    };
-}
-
-impl_body_fixed_frame!(
-    lox_bodies::Sun,
-    lox_bodies::Mercury,
-    lox_bodies::Venus,
-    lox_bodies::Earth,
-    lox_bodies::Mars,
-    lox_bodies::Jupiter,
-    lox_bodies::Saturn,
-    lox_bodies::Uranus,
-    lox_bodies::Neptune,
-    lox_bodies::Pluto,
-    lox_bodies::Moon,
-);
-
-/// DynOrigin resolves to `DynFrame::Iau(body)` — the dynamic dispatch path.
-impl BodyFixedFrame for DynOrigin {
-    type Frame = DynFrame;
-    fn body_fixed_frame(&self) -> DynFrame {
-        DynFrame::Iau(*self)
-    }
-}
 
 // ---------------------------------------------------------------------------
 // Line-of-sight geometry
@@ -229,15 +179,15 @@ impl DynPass {
         gs: &DynGroundLocation,
         mask: &ElevationMask,
         sc: &lox_orbits::orbits::DynTrajectory,
+        body_fixed_frame: DynFrame,
     ) -> Option<DynPass> {
         let mut pass_times = Vec::new();
         let mut pass_observables = Vec::new();
-        let body_fixed = DynFrame::Iau(gs.origin());
 
         for current_time in interval.step_by(time_resolution) {
             let state = sc.interpolate_at(current_time);
             let state_bf = state
-                .try_to_frame(body_fixed, &DefaultRotationProvider)
+                .try_to_frame(body_fixed_frame, &DefaultRotationProvider)
                 .unwrap();
             let obs = gs.observables_dyn(state_bf);
 
@@ -372,31 +322,30 @@ impl From<RotationError> for EvalError {
 ///
 /// Generic over origin `O` and frame `R`. The detect function:
 /// 1. Interpolates the spacecraft trajectory at the given time
-/// 2. Rotates the state into the body-fixed frame via `TryRotation<R, O::Frame, Tai>`
+/// 2. Rotates the state into the body-fixed frame via `TryRotation<R, DynFrame, Tai>`
 /// 3. Computes observables (azimuth, elevation, range, range rate)
 /// 4. Returns elevation minus minimum elevation from the mask
 struct ElevationDetectFn<'a, O: Origin, R: ReferenceFrame> {
     gs: &'a DynGroundLocation,
     mask: &'a ElevationMask,
     sc: &'a Trajectory<Tai, O, R>,
-    origin: O,
+    body_fixed_frame: DynFrame,
 }
 
 impl<O, R> DetectFn<Tai> for ElevationDetectFn<'_, O, R>
 where
-    O: BodyFixedFrame + TrySpheroid + Copy,
+    O: TrySpheroid + Copy,
     R: ReferenceFrame + Copy,
-    DefaultRotationProvider: TryRotation<R, O::Frame, Tai>,
-    <DefaultRotationProvider as TryRotation<R, O::Frame, Tai>>::Error:
+    DefaultRotationProvider: TryRotation<R, DynFrame, Tai>,
+    <DefaultRotationProvider as TryRotation<R, DynFrame, Tai>>::Error:
         std::error::Error + Send + Sync + 'static,
 {
     type Error = EvalError;
 
     fn eval(&self, time: Time<Tai>) -> Result<f64, Self::Error> {
-        let body_fixed = self.origin.body_fixed_frame();
         let sc = self.sc.interpolate_at(time);
         let sc = sc
-            .try_to_frame(body_fixed, &DefaultRotationProvider)
+            .try_to_frame(self.body_fixed_frame, &DefaultRotationProvider)
             .map_err(|e| EvalError::Rotation(Box::new(e)))?;
         let obs = self.gs.compute_observables(sc.position(), sc.velocity());
         Ok(obs.elevation() - self.mask.min_elevation(obs.azimuth()))
@@ -410,16 +359,16 @@ struct LineOfSightDetectFn<'a, O: Origin, R: ReferenceFrame, E> {
     sc: &'a Trajectory<Tai, O, R>,
     body: DynOrigin,
     ephemeris: &'a E,
-    origin: O,
+    body_fixed_frame: DynFrame,
 }
 
 impl<O, R, E: Ephemeris> DetectFn<Tai> for LineOfSightDetectFn<'_, O, R, E>
 where
-    O: BodyFixedFrame + TrySpheroid + Copy,
+    O: TrySpheroid + Copy,
     R: ReferenceFrame + Copy,
     E::Error: 'static,
-    DefaultRotationProvider: TryRotation<O::Frame, R, Tai>,
-    <DefaultRotationProvider as TryRotation<O::Frame, R, Tai>>::Error:
+    DefaultRotationProvider: TryRotation<DynFrame, R, Tai>,
+    <DefaultRotationProvider as TryRotation<DynFrame, R, Tai>>::Error:
         std::error::Error + Send + Sync + 'static,
 {
     type Error = EvalError;
@@ -434,9 +383,8 @@ where
         let r_sc = self.sc.interpolate_at(time).position() - r_body;
         // Compute ground station position in the scenario frame R by rotating
         // from body-fixed → R.
-        let body_fixed = self.origin.body_fixed_frame();
         let rot = DefaultRotationProvider
-            .try_rotation(body_fixed, self.sc.reference_frame(), time)
+            .try_rotation(self.body_fixed_frame, self.sc.reference_frame(), time)
             .map_err(|e| EvalError::Rotation(Box::new(e)))?;
         let (r_gs_frame, _) = rot.rotate_state(self.gs.body_fixed_position(), DVec3::ZERO);
         let r_gs = r_gs_frame - r_body;
@@ -635,6 +583,7 @@ impl VisibilityResults {
         mask: &ElevationMask,
         sc: &lox_orbits::orbits::DynTrajectory,
         time_resolution: TimeDelta,
+        body_fixed_frame: DynFrame,
     ) -> Result<Vec<DynPass>, PassError> {
         let key = (ground_id.clone(), space_id.clone());
         if self.pair_types.get(&key) == Some(&PairType::InterSatellite) {
@@ -654,7 +603,14 @@ impl VisibilityResults {
                             interval.start().into_dyn(),
                             interval.end().into_dyn(),
                         );
-                        DynPass::from_interval(dyn_interval, time_resolution, gs, mask, sc)
+                        DynPass::from_interval(
+                            dyn_interval,
+                            time_resolution,
+                            gs,
+                            mask,
+                            sc,
+                            body_fixed_frame,
+                        )
                     })
                     .collect()
             })
@@ -688,14 +644,14 @@ pub struct VisibilityAnalysis<'a, O: Origin, R: ReferenceFrame, E> {
 
 impl<'a, O, R, E> VisibilityAnalysis<'a, O, R, E>
 where
-    O: BodyFixedFrame + TrySpheroid + TryMeanRadius + Copy + Send + Sync + Into<DynOrigin>,
+    O: TrySpheroid + TryMeanRadius + Copy + Send + Sync + Into<DynOrigin>,
     R: ReferenceFrame + Copy + Send + Sync + Into<DynFrame>,
     E: Ephemeris + Send + Sync,
     E::Error: 'static,
-    DefaultRotationProvider: TryRotation<R, O::Frame, Tai> + TryRotation<O::Frame, R, Tai>,
-    <DefaultRotationProvider as TryRotation<R, O::Frame, Tai>>::Error:
+    DefaultRotationProvider: TryRotation<R, DynFrame, Tai> + TryRotation<DynFrame, R, Tai>,
+    <DefaultRotationProvider as TryRotation<R, DynFrame, Tai>>::Error:
         std::error::Error + Send + Sync + 'static,
-    <DefaultRotationProvider as TryRotation<O::Frame, R, Tai>>::Error:
+    <DefaultRotationProvider as TryRotation<DynFrame, R, Tai>>::Error:
         std::error::Error + Send + Sync + 'static,
 {
     pub fn new(
@@ -772,7 +728,7 @@ where
         sc_traj: &Trajectory<Tai, O, R>,
         interval: TimeInterval<Tai>,
     ) -> Result<Vec<TimeInterval<Tai>>, VisibilityError> {
-        let origin = self.scenario.origin();
+        let body_fixed_frame = gs.body_fixed_frame();
 
         let make_elev = || {
             let det = RootFindingDetector::new(
@@ -780,7 +736,7 @@ where
                     gs: gs.location(),
                     mask: gs.mask(),
                     sc: sc_traj,
-                    origin,
+                    body_fixed_frame,
                 },
                 self.step,
             );
@@ -798,7 +754,7 @@ where
                     sc: sc_traj,
                     body,
                     ephemeris: self.ephemeris,
-                    origin,
+                    body_fixed_frame,
                 },
                 self.step,
             )))
@@ -1061,6 +1017,7 @@ where
                             gs.location(),
                             gs.mask(),
                             &dyn_traj,
+                            gs.body_fixed_frame(),
                         )
                     })
                     .collect();
@@ -1168,7 +1125,6 @@ mod tests {
             .lines()
             .map(|line| line.parse::<f64>().unwrap().to_radians())
             .collect();
-        let origin = DynOrigin::Earth;
         // Build a typed trajectory for the ElevationDetectFn
         let (epoch, o, f, data) = sc.clone().into_parts();
         let typed_sc = Trajectory::from_parts(epoch.with_scale(Tai), o, f, data);
@@ -1176,7 +1132,7 @@ mod tests {
             gs: &gs,
             mask: &mask,
             sc: &typed_sc,
-            origin,
+            body_fixed_frame: DynFrame::Iau(DynOrigin::Earth),
         };
         // Use the ground station trajectory times converted to Tai
         let actual: Vec<f64> = gs_traj

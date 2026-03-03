@@ -330,6 +330,7 @@ class GroundStation:
         id: str,
         location: GroundLocation,
         mask: ElevationMask,
+        body_fixed_frame: Frame | None = None,
         communication_systems: list[CommunicationSystem] | None = None,
     ) -> Self: ...
     def id(self) -> str:
@@ -340,6 +341,9 @@ class GroundStation:
         ...
     def mask(self) -> ElevationMask:
         """Return the elevation mask."""
+        ...
+    def body_fixed_frame(self) -> Frame:
+        """Return the body-fixed frame."""
         ...
     def communication_systems(self) -> list[CommunicationSystem]:
         """Return the communication systems."""
