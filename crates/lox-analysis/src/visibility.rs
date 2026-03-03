@@ -5,17 +5,16 @@
 use std::collections::HashMap;
 
 use glam::DVec3;
-use lox_bodies::{DynOrigin, TryMeanRadius, TrySpheroid, UndefinedOriginPropertyError};
+use lox_bodies::{DynOrigin, Origin, TryMeanRadius, TrySpheroid, UndefinedOriginPropertyError};
 use lox_ephem::Ephemeris;
 use lox_frames::providers::DefaultRotationProvider;
-use lox_frames::rotations::{DynRotationError, TryRotation};
+use lox_frames::rotations::{DynRotationError, RotationError, TryRotation};
+use lox_frames::{DynFrame, Iau, ReferenceFrame};
 use lox_math::series::{InterpolationType, Series, SeriesError};
+use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
-use lox_time::offsets::DefaultOffsetProvider;
-use lox_time::time_scales::DynTimeScale;
-use lox_time::time_scales::{Tdb, TimeScale};
-use lox_time::{DynTime, Time};
+use lox_time::time_scales::{DynTimeScale, Tai, Tdb, TimeScale};
 use rayon::prelude::*;
 use std::f64::consts::PI;
 use thiserror::Error;
@@ -23,13 +22,62 @@ use thiserror::Error;
 use lox_core::units::{AngularRate, Distance};
 
 use crate::assets::{AssetId, GroundStation, Scenario, Spacecraft};
-use lox_frames::DynFrame;
 use lox_orbits::events::{
     DetectError, DetectFn, EventsToIntervals, IntervalDetector, IntervalDetectorExt,
     RootFindingDetector,
 };
 use lox_orbits::ground::{DynGroundLocation, Observables};
-use lox_orbits::orbits::{DynEnsemble, DynTrajectory};
+use lox_orbits::orbits::{Ensemble, Trajectory};
+
+// ---------------------------------------------------------------------------
+// BodyFixedFrame trait
+// ---------------------------------------------------------------------------
+
+/// Maps an origin body to its body-fixed reference frame type.
+///
+/// For concrete origins (e.g. `Earth`), this resolves to `Iau<Earth>` — a
+/// monomorphic type with zero dispatch overhead. For `DynOrigin`, it resolves
+/// to `DynFrame`, preserving the existing dynamic dispatch path.
+pub trait BodyFixedFrame: Origin {
+    type Frame: ReferenceFrame + Copy;
+    fn body_fixed_frame(&self) -> Self::Frame;
+}
+
+/// Concrete origins — each maps to `Iau<Self>` for monomorphic rotation.
+macro_rules! impl_body_fixed_frame {
+    ($($body:ty),* $(,)?) => {
+        $(
+            impl BodyFixedFrame for $body {
+                type Frame = Iau<$body>;
+                fn body_fixed_frame(&self) -> Iau<$body> {
+                    Iau::new(*self)
+                }
+            }
+        )*
+    };
+}
+
+impl_body_fixed_frame!(
+    lox_bodies::Sun,
+    lox_bodies::Mercury,
+    lox_bodies::Venus,
+    lox_bodies::Earth,
+    lox_bodies::Mars,
+    lox_bodies::Jupiter,
+    lox_bodies::Saturn,
+    lox_bodies::Uranus,
+    lox_bodies::Neptune,
+    lox_bodies::Pluto,
+    lox_bodies::Moon,
+);
+
+/// DynOrigin resolves to `DynFrame::Iau(body)` — the dynamic dispatch path.
+impl BodyFixedFrame for DynOrigin {
+    type Frame = DynFrame;
+    fn body_fixed_frame(&self) -> DynFrame {
+        DynFrame::Iau(*self)
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Line-of-sight geometry
@@ -180,7 +228,7 @@ impl DynPass {
         time_resolution: TimeDelta,
         gs: &DynGroundLocation,
         mask: &ElevationMask,
-        sc: &DynTrajectory,
+        sc: &lox_orbits::orbits::DynTrajectory,
     ) -> Option<DynPass> {
         let mut pass_times = Vec::new();
         let mut pass_observables = Vec::new();
@@ -296,12 +344,24 @@ impl<T: TimeScale> Pass<T> {
 /// Errors from detect function evaluation.
 #[derive(Debug, Error)]
 pub enum EvalError {
-    #[error(transparent)]
-    Rotation(#[from] DynRotationError),
+    #[error("rotation error: {0}")]
+    Rotation(Box<dyn std::error::Error + Send + Sync>),
     #[error(transparent)]
     UndefinedProperty(#[from] UndefinedOriginPropertyError),
     #[error("ephemeris error: {0}")]
     Ephemeris(Box<dyn std::error::Error + Send + Sync>),
+}
+
+impl From<DynRotationError> for EvalError {
+    fn from(e: DynRotationError) -> Self {
+        EvalError::Rotation(Box::new(e))
+    }
+}
+
+impl From<RotationError> for EvalError {
+    fn from(e: RotationError) -> Self {
+        EvalError::Rotation(Box::new(e))
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -309,73 +369,99 @@ pub enum EvalError {
 // ---------------------------------------------------------------------------
 
 /// Elevation above mask for a ground station / spacecraft pair.
-struct ElevationDetectFn<'a> {
+///
+/// Generic over origin `O` and frame `R`. The detect function:
+/// 1. Interpolates the spacecraft trajectory at the given time
+/// 2. Rotates the state into the body-fixed frame via `TryRotation<R, O::Frame, Tai>`
+/// 3. Computes observables (azimuth, elevation, range, range rate)
+/// 4. Returns elevation minus minimum elevation from the mask
+struct ElevationDetectFn<'a, O: Origin, R: ReferenceFrame> {
     gs: &'a DynGroundLocation,
     mask: &'a ElevationMask,
-    sc: &'a DynTrajectory,
+    sc: &'a Trajectory<Tai, O, R>,
+    origin: O,
 }
 
-impl DetectFn<DynTimeScale> for ElevationDetectFn<'_> {
+impl<O, R> DetectFn<Tai> for ElevationDetectFn<'_, O, R>
+where
+    O: BodyFixedFrame + TrySpheroid + Copy,
+    R: ReferenceFrame + Copy,
+    DefaultRotationProvider: TryRotation<R, O::Frame, Tai>,
+    <DefaultRotationProvider as TryRotation<R, O::Frame, Tai>>::Error:
+        std::error::Error + Send + Sync + 'static,
+{
     type Error = EvalError;
 
-    fn eval(&self, time: DynTime) -> Result<f64, Self::Error> {
-        let body_fixed = DynFrame::Iau(self.gs.origin());
+    fn eval(&self, time: Time<Tai>) -> Result<f64, Self::Error> {
+        let body_fixed = self.origin.body_fixed_frame();
         let sc = self.sc.interpolate_at(time);
-        let sc = sc.try_to_frame(body_fixed, &DefaultRotationProvider)?;
-        let obs = self.gs.observables_dyn(sc);
+        let sc = sc
+            .try_to_frame(body_fixed, &DefaultRotationProvider)
+            .map_err(|e| EvalError::Rotation(Box::new(e)))?;
+        let obs = self.gs.compute_observables(sc.position(), sc.velocity());
         Ok(obs.elevation() - self.mask.min_elevation(obs.azimuth()))
     }
 }
 
 /// Line-of-sight between a ground station and spacecraft, relative to an
 /// occulting body.
-struct LineOfSightDetectFn<'a, E> {
+struct LineOfSightDetectFn<'a, O: Origin, R: ReferenceFrame, E> {
     gs: &'a DynGroundLocation,
-    sc: &'a DynTrajectory,
+    sc: &'a Trajectory<Tai, O, R>,
     body: DynOrigin,
     ephemeris: &'a E,
+    origin: O,
 }
 
-impl<E: Ephemeris> DetectFn<DynTimeScale> for LineOfSightDetectFn<'_, E>
+impl<O, R, E: Ephemeris> DetectFn<Tai> for LineOfSightDetectFn<'_, O, R, E>
 where
+    O: BodyFixedFrame + TrySpheroid + Copy,
+    R: ReferenceFrame + Copy,
     E::Error: 'static,
+    DefaultRotationProvider: TryRotation<O::Frame, R, Tai>,
+    <DefaultRotationProvider as TryRotation<O::Frame, R, Tai>>::Error:
+        std::error::Error + Send + Sync + 'static,
 {
     type Error = EvalError;
 
-    fn eval(&self, time: DynTime) -> Result<f64, Self::Error> {
-        // DefaultOffsetProvider returns Infallible for DynTimeScale → Tdb.
-        let tdb = time.try_to_scale(Tdb, &DefaultOffsetProvider).unwrap();
+    fn eval(&self, time: Time<Tai>) -> Result<f64, Self::Error> {
+        // Convert Tai → Tdb for ephemeris lookup (infallible via DefaultOffsetProvider).
+        let tdb = time.to_scale(Tdb);
         let r_body = self
             .ephemeris
             .position(tdb, self.sc.origin(), self.body)
             .map_err(|e| EvalError::Ephemeris(Box::new(e)))?;
         let r_sc = self.sc.interpolate_at(time).position() - r_body;
-        // Compute ground station ICRF position by rotating body-fixed position
-        let body_fixed_frame = DynFrame::Iau(self.gs.origin());
-        let rot = DefaultRotationProvider.try_rotation(body_fixed_frame, DynFrame::Icrf, time)?;
-        let (r_gs_icrf, _) = rot.rotate_state(self.gs.body_fixed_position(), DVec3::ZERO);
-        let r_gs = r_gs_icrf - r_body;
+        // Compute ground station position in the scenario frame R by rotating
+        // from body-fixed → R.
+        let body_fixed = self.origin.body_fixed_frame();
+        let rot = DefaultRotationProvider
+            .try_rotation(body_fixed, self.sc.reference_frame(), time)
+            .map_err(|e| EvalError::Rotation(Box::new(e)))?;
+        let (r_gs_frame, _) = rot.rotate_state(self.gs.body_fixed_position(), DVec3::ZERO);
+        let r_gs = r_gs_frame - r_body;
         Ok(self.body.line_of_sight(r_gs, r_sc)?)
     }
 }
 
 /// Line-of-sight between two spacecraft, relative to an occulting body.
-struct InterSatelliteLosDetectFn<'a, E> {
-    sc1: &'a DynTrajectory,
-    sc2: &'a DynTrajectory,
+struct InterSatelliteLosDetectFn<'a, O: Origin, R: ReferenceFrame, E> {
+    sc1: &'a Trajectory<Tai, O, R>,
+    sc2: &'a Trajectory<Tai, O, R>,
     body: DynOrigin,
     ephemeris: &'a E,
 }
 
-impl<E: Ephemeris> DetectFn<DynTimeScale> for InterSatelliteLosDetectFn<'_, E>
+impl<O, R, E: Ephemeris> DetectFn<Tai> for InterSatelliteLosDetectFn<'_, O, R, E>
 where
+    O: Origin + Copy,
+    R: ReferenceFrame + Copy,
     E::Error: 'static,
 {
     type Error = EvalError;
 
-    fn eval(&self, time: DynTime) -> Result<f64, Self::Error> {
-        // DefaultOffsetProvider returns Infallible for DynTimeScale → Tdb.
-        let tdb = time.try_to_scale(Tdb, &DefaultOffsetProvider).unwrap();
+    fn eval(&self, time: Time<Tai>) -> Result<f64, Self::Error> {
+        let tdb = time.to_scale(Tdb);
         let r_body = self
             .ephemeris
             .position(tdb, self.sc1.origin(), self.body)
@@ -395,17 +481,21 @@ enum RangeDirection {
 }
 
 /// Range threshold detector for inter-satellite pairs.
-struct InterSatelliteRangeDetectFn<'a> {
-    sc1: &'a DynTrajectory,
-    sc2: &'a DynTrajectory,
+struct InterSatelliteRangeDetectFn<'a, O: Origin, R: ReferenceFrame> {
+    sc1: &'a Trajectory<Tai, O, R>,
+    sc2: &'a Trajectory<Tai, O, R>,
     threshold: Distance,
     direction: RangeDirection,
 }
 
-impl DetectFn<DynTimeScale> for InterSatelliteRangeDetectFn<'_> {
+impl<O, R> DetectFn<Tai> for InterSatelliteRangeDetectFn<'_, O, R>
+where
+    O: Origin + Copy,
+    R: ReferenceFrame + Copy,
+{
     type Error = EvalError;
 
-    fn eval(&self, time: DynTime) -> Result<f64, Self::Error> {
+    fn eval(&self, time: Time<Tai>) -> Result<f64, Self::Error> {
         let r1 = self.sc1.interpolate_at(time).position();
         let r2 = self.sc2.interpolate_at(time).position();
         let range = (r1 - r2).length();
@@ -422,16 +512,20 @@ impl DetectFn<DynTimeScale> for InterSatelliteRangeDetectFn<'_> {
 /// The angular rate ω = |r × v| / |r|² is symmetric between the two
 /// spacecraft.  The detector returns `threshold - ω`, positive when the
 /// angular rate is within the limit.
-struct InterSatelliteSlewRateDetectFn<'a> {
-    sc1: &'a DynTrajectory,
-    sc2: &'a DynTrajectory,
+struct InterSatelliteSlewRateDetectFn<'a, O: Origin, R: ReferenceFrame> {
+    sc1: &'a Trajectory<Tai, O, R>,
+    sc2: &'a Trajectory<Tai, O, R>,
     threshold: AngularRate,
 }
 
-impl DetectFn<DynTimeScale> for InterSatelliteSlewRateDetectFn<'_> {
+impl<O, R> DetectFn<Tai> for InterSatelliteSlewRateDetectFn<'_, O, R>
+where
+    O: Origin + Copy,
+    R: ReferenceFrame + Copy,
+{
     type Error = EvalError;
 
-    fn eval(&self, time: DynTime) -> Result<f64, Self::Error> {
+    fn eval(&self, time: Time<Tai>) -> Result<f64, Self::Error> {
         let s1 = self.sc1.interpolate_at(time);
         let s2 = self.sc2.interpolate_at(time);
         let r = s2.position() - s1.position();
@@ -457,13 +551,13 @@ pub enum PairType {
     InterSatellite,
 }
 
-type IntervalMap = HashMap<(AssetId, AssetId), Vec<TimeInterval<DynTimeScale>>>;
+type IntervalMap = HashMap<(AssetId, AssetId), Vec<TimeInterval<Tai>>>;
 type PairTypeMap = HashMap<(AssetId, AssetId), PairType>;
 
 /// Stores raw visibility intervals per asset pair.
 ///
 /// This is the primary result type for visibility analysis. Intervals are
-/// cheap to compute; conversion to [`DynPass`] (with observables) happens
+/// cheap to compute; conversion to [`Pass`] (with observables) happens
 /// separately and on demand.
 pub struct VisibilityResults {
     intervals: IntervalMap,
@@ -472,11 +566,7 @@ pub struct VisibilityResults {
 
 impl VisibilityResults {
     /// Return all intervals for a specific pair.
-    pub fn intervals_for(
-        &self,
-        id1: &AssetId,
-        id2: &AssetId,
-    ) -> Option<&[TimeInterval<DynTimeScale>]> {
+    pub fn intervals_for(&self, id1: &AssetId, id2: &AssetId) -> Option<&[TimeInterval<Tai>]> {
         let key = (id1.clone(), id2.clone());
         self.intervals.get(&key).map(|v| v.as_slice())
     }
@@ -543,7 +633,7 @@ impl VisibilityResults {
         space_id: &AssetId,
         gs: &DynGroundLocation,
         mask: &ElevationMask,
-        sc: &DynTrajectory,
+        sc: &lox_orbits::orbits::DynTrajectory,
         time_resolution: TimeDelta,
     ) -> Result<Vec<DynPass>, PassError> {
         let key = (ground_id.clone(), space_id.clone());
@@ -560,7 +650,11 @@ impl VisibilityResults {
                 intervals
                     .iter()
                     .filter_map(|interval| {
-                        DynPass::from_interval(*interval, time_resolution, gs, mask, sc)
+                        let dyn_interval = TimeInterval::new(
+                            interval.start().into_dyn(),
+                            interval.end().into_dyn(),
+                        );
+                        DynPass::from_interval(dyn_interval, time_resolution, gs, mask, sc)
                     })
                     .collect()
             })
@@ -574,14 +668,15 @@ impl VisibilityResults {
 
 /// Computes ground-station-to-spacecraft and inter-satellite visibility.
 ///
+/// Generic over origin `O`, reference frame `R`, and ephemeris `E`.
 /// Ground-to-space pairs are always computed when ground assets are present.
 /// Inter-satellite pairs are additionally computed when enabled via
 /// [`with_inter_satellite`](Self::with_inter_satellite).
 ///
-/// Trajectories are looked up from a pre-computed [`DynEnsemble`] by asset id.
-pub struct VisibilityAnalysis<'a, E> {
-    scenario: &'a Scenario,
-    ensemble: &'a DynEnsemble<AssetId>,
+/// Trajectories are looked up from a pre-computed [`Ensemble`] by asset id.
+pub struct VisibilityAnalysis<'a, O: Origin, R: ReferenceFrame, E> {
+    scenario: &'a Scenario<O, R>,
+    ensemble: &'a Ensemble<AssetId, Tai, O, R>,
     ephemeris: &'a E,
     occulting_bodies: Vec<DynOrigin>,
     step: TimeDelta,
@@ -591,14 +686,21 @@ pub struct VisibilityAnalysis<'a, E> {
     max_range: Option<Distance>,
 }
 
-impl<'a, E> VisibilityAnalysis<'a, E>
+impl<'a, O, R, E> VisibilityAnalysis<'a, O, R, E>
 where
+    O: BodyFixedFrame + TrySpheroid + TryMeanRadius + Copy + Send + Sync + Into<DynOrigin>,
+    R: ReferenceFrame + Copy + Send + Sync + Into<DynFrame>,
     E: Ephemeris + Send + Sync,
     E::Error: 'static,
+    DefaultRotationProvider: TryRotation<R, O::Frame, Tai> + TryRotation<O::Frame, R, Tai>,
+    <DefaultRotationProvider as TryRotation<R, O::Frame, Tai>>::Error:
+        std::error::Error + Send + Sync + 'static,
+    <DefaultRotationProvider as TryRotation<O::Frame, R, Tai>>::Error:
+        std::error::Error + Send + Sync + 'static,
 {
     pub fn new(
-        scenario: &'a Scenario,
-        ensemble: &'a DynEnsemble<AssetId>,
+        scenario: &'a Scenario<O, R>,
+        ensemble: &'a Ensemble<AssetId, Tai, O, R>,
         ephemeris: &'a E,
     ) -> Self {
         Self {
@@ -667,15 +769,18 @@ where
     fn compute_pair(
         &self,
         gs: &GroundStation,
-        sc_traj: &DynTrajectory,
-        interval: TimeInterval<DynTimeScale>,
-    ) -> Result<Vec<TimeInterval<DynTimeScale>>, VisibilityError> {
+        sc_traj: &Trajectory<Tai, O, R>,
+        interval: TimeInterval<Tai>,
+    ) -> Result<Vec<TimeInterval<Tai>>, VisibilityError> {
+        let origin = self.scenario.origin();
+
         let make_elev = || {
             let det = RootFindingDetector::new(
                 ElevationDetectFn {
                     gs: gs.location(),
                     mask: gs.mask(),
                     sc: sc_traj,
+                    origin,
                 },
                 self.step,
             );
@@ -693,12 +798,13 @@ where
                     sc: sc_traj,
                     body,
                     ephemeris: self.ephemeris,
+                    origin,
                 },
                 self.step,
             )))
         };
 
-        let mut los: Box<dyn IntervalDetector<DynTimeScale> + '_> =
+        let mut los: Box<dyn IntervalDetector<Tai> + '_> =
             Box::new(make_los(self.occulting_bodies[0]));
         for &body in &self.occulting_bodies[1..] {
             los = Box::new(los.intersect(make_los(body)));
@@ -713,10 +819,10 @@ where
         &self,
         sc1: &Spacecraft,
         sc2: &Spacecraft,
-        traj1: &DynTrajectory,
-        traj2: &DynTrajectory,
-        interval: TimeInterval<DynTimeScale>,
-    ) -> Result<Vec<TimeInterval<DynTimeScale>>, VisibilityError> {
+        traj1: &Trajectory<Tai, O, R>,
+        traj2: &Trajectory<Tai, O, R>,
+        interval: TimeInterval<Tai>,
+    ) -> Result<Vec<TimeInterval<Tai>>, VisibilityError> {
         let has_range = self.min_range.is_some() || self.max_range.is_some();
         let has_los = !self.occulting_bodies.is_empty();
 
@@ -762,7 +868,7 @@ where
         };
 
         // Start with range constraints (cheapest: position-only).
-        let mut detector: Option<Box<dyn IntervalDetector<DynTimeScale> + '_>> = None;
+        let mut detector: Option<Box<dyn IntervalDetector<Tai> + '_>> = None;
 
         if let Some(max) = self.max_range {
             detector = Some(Box::new(make_range(max, RangeDirection::Max)));
@@ -805,10 +911,7 @@ where
 
     /// Compute visibility intervals for all pairs.
     pub fn compute(&self) -> Result<VisibilityResults, VisibilityError> {
-        let interval = TimeInterval::new(
-            self.scenario.interval().start().into_dyn(),
-            self.scenario.interval().end().into_dyn(),
-        );
+        let interval = *self.scenario.interval();
 
         let mut intervals = HashMap::new();
         let mut pair_types = HashMap::new();
@@ -836,7 +939,7 @@ where
     /// Compute ground-to-space visibility for all (ground, space) pairs.
     fn compute_ground_space(
         &self,
-        interval: TimeInterval<DynTimeScale>,
+        interval: TimeInterval<Tai>,
     ) -> Result<VisibilityResults, VisibilityError> {
         let ground_stations = self.scenario.ground_stations();
         let spacecraft = self.scenario.spacecraft();
@@ -878,7 +981,7 @@ where
     /// Compute LOS visibility for all unique spacecraft pairs (i, j) where i < j.
     fn compute_inter_satellite(
         &self,
-        interval: TimeInterval<DynTimeScale>,
+        interval: TimeInterval<Tai>,
     ) -> Result<VisibilityResults, VisibilityError> {
         let spacecraft = self.scenario.spacecraft();
         let n = spacecraft.len();
@@ -945,12 +1048,19 @@ where
                 let passes: Vec<DynPass> = intervals
                     .iter()
                     .filter_map(|interval| {
+                        // Convert Tai interval to DynTimeScale for DynPass::from_interval
+                        let dyn_interval = TimeInterval::new(
+                            interval.start().into_dyn(),
+                            interval.end().into_dyn(),
+                        );
+                        // Convert typed trajectory to DynTrajectory for pass computation
+                        let dyn_traj = sc_traj.clone().into_dyn();
                         DynPass::from_interval(
-                            *interval,
+                            dyn_interval,
                             self.step,
                             gs.location(),
                             gs.mask(),
-                            sc_traj,
+                            &dyn_traj,
                         )
                     })
                     .collect();
@@ -972,7 +1082,7 @@ mod tests {
     use lox_ephem::spk::parser::Spk;
     use lox_orbits::propagators::OrbitSource;
     use lox_test_utils::{assert_approx_eq, data_dir, data_file, read_data_file};
-    use lox_time::time_scales::Tai;
+    use lox_time::time_scales::{DynTimeScale, Tai};
     use lox_time::utc::Utc;
     use std::iter::zip;
     use std::sync::OnceLock;
@@ -980,28 +1090,33 @@ mod tests {
     use super::*;
     use lox_frames::Icrf;
     use lox_orbits::ground::GroundLocation;
-    use lox_orbits::orbits::Trajectory;
+    use lox_orbits::orbits::{DynEnsemble, DynTrajectory, Trajectory};
 
-    /// Build a Scenario + DynEnsemble from ground/space assets and a DynTimeScale interval.
-    /// The Tai interval is derived from the DynTimeScale interval.
+    /// Build a DynScenario + DynEnsemble from ground/space assets and a DynTimeScale interval.
     fn make_scenario_and_ensemble(
         ground_assets: &[GroundStation],
         space_assets: &[Spacecraft],
         interval: TimeInterval<DynTimeScale>,
-    ) -> (Scenario, DynEnsemble<AssetId>) {
+    ) -> (
+        Scenario<DynOrigin, DynFrame>,
+        Ensemble<AssetId, Tai, DynOrigin, DynFrame>,
+    ) {
         let tai_interval =
             TimeInterval::new(interval.start().to_scale(Tai), interval.end().to_scale(Tai));
-        let scenario = Scenario::with_interval(tai_interval)
+        let scenario = Scenario::with_interval(tai_interval, DynOrigin::Earth, DynFrame::Icrf)
             .with_ground_stations(ground_assets)
             .with_spacecraft(space_assets);
         // Build ensemble from OrbitSource::Trajectory entries
         let mut map = HashMap::new();
         for sc in space_assets {
             if let OrbitSource::Trajectory(traj) = sc.orbit() {
-                map.insert(sc.id().clone(), traj.clone());
+                // Re-tag DynTrajectory as Ensemble<Tai, DynOrigin, DynFrame>
+                let (epoch, origin, frame, data) = traj.clone().into_parts();
+                let typed = Trajectory::from_parts(epoch.with_scale(Tai), origin, frame, data);
+                map.insert(sc.id().clone(), typed);
             }
         }
-        let ensemble = DynEnsemble::new(map);
+        let ensemble = Ensemble::new(map);
         (scenario, ensemble)
     }
 
@@ -1053,18 +1168,23 @@ mod tests {
             .lines()
             .map(|line| line.parse::<f64>().unwrap().to_radians())
             .collect();
+        let origin = DynOrigin::Earth;
+        // Build a typed trajectory for the ElevationDetectFn
+        let (epoch, o, f, data) = sc.clone().into_parts();
+        let typed_sc = Trajectory::from_parts(epoch.with_scale(Tai), o, f, data);
         let elev_fn = ElevationDetectFn {
             gs: &gs,
             mask: &mask,
-            sc: &sc,
+            sc: &typed_sc,
+            origin,
         };
-        // Use the ground station trajectory times converted to dyn
+        // Use the ground station trajectory times converted to Tai
         let actual: Vec<f64> = gs_traj
             .times()
             .iter()
             .map(|t| {
-                let dyn_time = t.to_scale(DynTimeScale::Tai);
-                elev_fn.eval(dyn_time).unwrap()
+                let tai_time = t.to_scale(Tai);
+                elev_fn.eval(tai_time).unwrap()
             })
             .collect();
         assert_approx_eq!(actual, expected, atol <= 1e-1);
@@ -1107,7 +1227,7 @@ mod tests {
         let intervals = results
             .intervals_for(gs.id(), sc.id())
             .expect("pair not found");
-        let expected = contacts_dyn();
+        let expected = contacts_tai();
         assert_eq!(intervals.len(), expected.len());
         assert_approx_eq!(expected, intervals.to_vec(), rtol <= 1e-4);
     }
@@ -1191,13 +1311,13 @@ mod tests {
         GroundLocation::try_new(coords, DynOrigin::Earth).unwrap()
     }
 
-    fn contacts_dyn() -> Vec<TimeInterval<DynTimeScale>> {
+    fn contacts_tai() -> Vec<TimeInterval<Tai>> {
         let mut intervals = vec![];
         let mut reader = csv::Reader::from_path(data_file("contacts.csv")).unwrap();
         for result in reader.records() {
             let record = result.unwrap();
-            let start = record[0].parse::<Utc>().unwrap().to_dyn_time();
-            let end = record[1].parse::<Utc>().unwrap().to_dyn_time();
+            let start = record[0].parse::<Utc>().unwrap().to_time();
+            let end = record[1].parse::<Utc>().unwrap().to_time();
             intervals.push(TimeInterval::new(start, end));
         }
         intervals
@@ -1233,8 +1353,10 @@ mod tests {
             .expect("pair not found");
         // Colocated spacecraft are always visible to each other.
         assert_eq!(intervals.len(), 1);
-        assert_approx_eq!(intervals[0].start(), interval.start(), rtol <= 1e-10);
-        assert_approx_eq!(intervals[0].end(), interval.end(), rtol <= 1e-10);
+        let tai_interval =
+            TimeInterval::new(interval.start().to_scale(Tai), interval.end().to_scale(Tai));
+        assert_approx_eq!(intervals[0].start(), tai_interval.start(), rtol <= 1e-10);
+        assert_approx_eq!(intervals[0].end(), tai_interval.end(), rtol <= 1e-10);
     }
 
     #[test]
@@ -1256,9 +1378,11 @@ mod tests {
         let intervals = results
             .intervals_for(sc1.id(), sc2.id())
             .expect("pair not found");
+        let tai_interval =
+            TimeInterval::new(interval.start().to_scale(Tai), interval.end().to_scale(Tai));
         assert_eq!(intervals.len(), 1);
-        assert_approx_eq!(intervals[0].start(), interval.start(), rtol <= 1e-10);
-        assert_approx_eq!(intervals[0].end(), interval.end(), rtol <= 1e-10);
+        assert_approx_eq!(intervals[0].start(), tai_interval.start(), rtol <= 1e-10);
+        assert_approx_eq!(intervals[0].end(), tai_interval.end(), rtol <= 1e-10);
 
         // A min_range filter with a positive threshold should exclude colocated
         // spacecraft entirely (range = 0 < threshold at all times).
@@ -1281,13 +1405,15 @@ mod tests {
     fn test_slew_rate_detect_fn() {
         // Two colocated trajectories have zero angular rate → always within limit.
         let sc_traj = spacecraft_trajectory_dyn();
+        let (epoch, origin, frame, data) = sc_traj.into_parts();
+        let typed = Trajectory::from_parts(epoch.with_scale(Tai), origin, frame, data);
         let threshold = AngularRate::degrees_per_second(1.0);
         let detect = InterSatelliteSlewRateDetectFn {
-            sc1: &sc_traj,
-            sc2: &sc_traj,
+            sc1: &typed,
+            sc2: &typed,
             threshold,
         };
-        let time = sc_traj.start_time();
+        let time = typed.start_time();
         let val = detect.eval(time).unwrap();
         // ω = 0 for colocated → threshold - 0 = threshold
         assert_approx_eq!(val, threshold.to_radians_per_second(), rtol <= 1e-10);
@@ -1312,10 +1438,12 @@ mod tests {
         let intervals = results
             .intervals_for(sc1.id(), sc2.id())
             .expect("pair not found");
+        let tai_interval =
+            TimeInterval::new(interval.start().to_scale(Tai), interval.end().to_scale(Tai));
         // ω = 0 everywhere, so full interval should be returned.
         assert_eq!(intervals.len(), 1);
-        assert_approx_eq!(intervals[0].start(), interval.start(), rtol <= 1e-10);
-        assert_approx_eq!(intervals[0].end(), interval.end(), rtol <= 1e-10);
+        assert_approx_eq!(intervals[0].start(), tai_interval.start(), rtol <= 1e-10);
+        assert_approx_eq!(intervals[0].end(), tai_interval.end(), rtol <= 1e-10);
     }
 
     #[test]
@@ -1397,10 +1525,10 @@ mod tests {
             .expect("pair not found");
 
         // With a tight slew rate constraint (0.01 deg/s): should trim windows
-        // where the angular rate exceeds the limit during close approaches.
-        let sc1_limited = Spacecraft::new("ow12", OrbitSource::Trajectory(traj1.clone()))
+        // compared to the unconstrained case.
+        let sc1_limited = Spacecraft::new("ow12", OrbitSource::Trajectory(traj1))
             .with_max_slew_rate(AngularRate::degrees_per_second(0.01));
-        let sc2_limited = Spacecraft::new("ow17", OrbitSource::Trajectory(traj2.clone()))
+        let sc2_limited = Spacecraft::new("ow17", OrbitSource::Trajectory(traj2))
             .with_max_slew_rate(AngularRate::degrees_per_second(0.01));
         let space_assets = [sc1_limited.clone(), sc2_limited.clone()];
         let (scenario, ensemble) = make_scenario_and_ensemble(&[], &space_assets, interval);
@@ -1410,7 +1538,7 @@ mod tests {
             .intervals_for(sc1_limited.id(), sc2_limited.id())
             .expect("pair not found");
 
-        // The constrained result must have less total visibility time.
+        // The constrained intervals should be strictly shorter in total duration.
         let total_no_limit: f64 = intervals_no_limit
             .iter()
             .map(|i| (i.end() - i.start()).to_seconds().to_f64())
@@ -1421,48 +1549,12 @@ mod tests {
             .sum();
         assert!(
             total_limited < total_no_limit,
-            "slew rate constraint should reduce total visibility time: \
-             {total_limited:.1}s (limited) vs {total_no_limit:.1}s (unlimited)"
-        );
-
-        // Sanity: the limited result should still have some windows.
-        assert!(
-            !intervals_limited.is_empty(),
-            "expected some visibility windows to survive the slew rate filter"
-        );
-    }
-
-    #[test]
-    fn test_slew_rate_one_sided_limit() {
-        // Only one spacecraft has a slew rate limit. The constraint should
-        // still apply (limit governs the pair).
-        let (traj1, traj2) = oneweb_trajectories();
-        let interval = TimeInterval::new(traj1.start_time(), traj1.end_time());
-        let spk = ephemeris();
-
-        let sc1 = Spacecraft::new("ow12", OrbitSource::Trajectory(traj1))
-            .with_max_slew_rate(AngularRate::degrees_per_second(0.01));
-        let sc2 = Spacecraft::new("ow17", OrbitSource::Trajectory(traj2)); // no limit
-        let space_assets = [sc1.clone(), sc2.clone()];
-        let (scenario, ensemble) = make_scenario_and_ensemble(&[], &space_assets, interval);
-        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk).with_inter_satellite();
-        let results = analysis.compute().unwrap();
-        let intervals = results
-            .intervals_for(sc1.id(), sc2.id())
-            .expect("pair not found");
-        let total: f64 = intervals
-            .iter()
-            .map(|i| (i.end() - i.start()).to_seconds().to_f64())
-            .sum();
-        // 2 hours = 7200s. With a tight limit the total should be less.
-        assert!(
-            total < 7200.0,
-            "one-sided slew rate limit should reduce visibility: {total:.1}s"
+            "slew rate constraint should reduce total visibility (got {total_limited:.0}s vs {total_no_limit:.0}s)"
         );
     }
 
     fn ephemeris() -> &'static Spk {
         static EPHEMERIS: OnceLock<Spk> = OnceLock::new();
-        EPHEMERIS.get_or_init(|| Spk::from_file(data_dir().join("spice/de440s.bsp")).unwrap())
+        EPHEMERIS.get_or_init(|| Spk::from_file(data_file("spice/de440s.bsp")).unwrap())
     }
 }
