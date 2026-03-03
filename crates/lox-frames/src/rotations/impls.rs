@@ -1556,3 +1556,110 @@ where
         }
     }
 }
+
+// Mixed DynFrame <-> ConcreteFrame rotations
+//
+// These impls allow rotation providers to handle `DynFrame → R` and `R → DynFrame`
+// for concrete frame types. They delegate to the existing `DynFrame → DynFrame` impl
+// by converting the concrete frame via `Into<DynFrame>`.
+
+macro_rules! impl_mixed_dyn_rotation {
+    ($($frame:ty),* $(,)?) => {
+        $(
+            impl<T, U> TryRotation<DynFrame, $frame, T> for U
+            where
+                T: TimeScale + Copy,
+                U: RotationProvider<T> + TryOffset<T, Tt> + TryOffset<T, Tdb> + TryOffset<T, Ut1>,
+            {
+                type Error = DynRotationError;
+
+                fn try_rotation(
+                    &self,
+                    origin: DynFrame,
+                    target: $frame,
+                    time: Time<T>,
+                ) -> Result<Rotation, Self::Error> {
+                    let target_dyn: DynFrame = target.into();
+                    <Self as TryRotation<DynFrame, DynFrame, T>>::try_rotation(
+                        self, origin, target_dyn, time,
+                    )
+                }
+            }
+
+            impl<T, U> TryRotation<$frame, DynFrame, T> for U
+            where
+                T: TimeScale + Copy,
+                U: RotationProvider<T> + TryOffset<T, Tt> + TryOffset<T, Tdb> + TryOffset<T, Ut1>,
+            {
+                type Error = DynRotationError;
+
+                fn try_rotation(
+                    &self,
+                    origin: $frame,
+                    target: DynFrame,
+                    time: Time<T>,
+                ) -> Result<Rotation, Self::Error> {
+                    let origin_dyn: DynFrame = origin.into();
+                    <Self as TryRotation<DynFrame, DynFrame, T>>::try_rotation(
+                        self, origin_dyn, target, time,
+                    )
+                }
+            }
+        )*
+    };
+}
+
+impl_mixed_dyn_rotation!(
+    Icrf,
+    J2000,
+    Cirf,
+    Tirf,
+    Itrf,
+    Teme,
+    Mod<Iers1996>,
+    Mod<Iers2003>,
+    Mod<Iers2010>,
+    Tod<Iers1996>,
+    Tod<Iers2003>,
+    Tod<Iers2010>,
+    Pef<Iers1996>,
+    Pef<Iers2003>,
+    Pef<Iers2010>,
+);
+
+// Iau<DynOrigin> mixed impls — used by the Dyn path for body-fixed frames.
+impl<T, U> TryRotation<DynFrame, Iau<DynOrigin>, T> for U
+where
+    T: TimeScale + Copy,
+    U: RotationProvider<T> + TryOffset<T, Tt> + TryOffset<T, Tdb> + TryOffset<T, Ut1>,
+{
+    type Error = DynRotationError;
+
+    fn try_rotation(
+        &self,
+        origin: DynFrame,
+        target: Iau<DynOrigin>,
+        time: Time<T>,
+    ) -> Result<Rotation, Self::Error> {
+        let target_dyn: DynFrame = target.into();
+        <Self as TryRotation<DynFrame, DynFrame, T>>::try_rotation(self, origin, target_dyn, time)
+    }
+}
+
+impl<T, U> TryRotation<Iau<DynOrigin>, DynFrame, T> for U
+where
+    T: TimeScale + Copy,
+    U: RotationProvider<T> + TryOffset<T, Tt> + TryOffset<T, Tdb> + TryOffset<T, Ut1>,
+{
+    type Error = DynRotationError;
+
+    fn try_rotation(
+        &self,
+        origin: Iau<DynOrigin>,
+        target: DynFrame,
+        time: Time<T>,
+    ) -> Result<Rotation, Self::Error> {
+        let origin_dyn: DynFrame = origin.into();
+        <Self as TryRotation<DynFrame, DynFrame, T>>::try_rotation(self, origin_dyn, target, time)
+    }
+}
