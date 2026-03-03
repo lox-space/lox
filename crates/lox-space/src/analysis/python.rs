@@ -4,7 +4,7 @@
 
 use std::collections::HashMap;
 
-use crate::analysis::assets::{AssetId, GroundStation, Scenario, Spacecraft};
+use crate::analysis::assets::{AssetId, DynScenario, GroundStation, Spacecraft};
 use crate::analysis::visibility::{
     DynPass, ElevationMask, ElevationMaskError, PairType, Pass, VisibilityAnalysis,
     VisibilityError, VisibilityResults,
@@ -23,8 +23,9 @@ use crate::time::python::time::PyTime;
 use crate::units::python::{PyAngle, PyAngularRate, PyDistance, PyVelocity};
 use lox_frames::DynFrame;
 use lox_frames::providers::DefaultRotationProvider;
-use lox_orbits::orbits::DynEnsemble;
+use lox_orbits::orbits::Ensemble;
 use lox_orbits::propagators::OrbitSource;
+use lox_time::intervals::TimeInterval;
 use lox_time::time_scales::Tai;
 use lox_units::{Angle, Distance, Velocity};
 
@@ -206,7 +207,7 @@ impl PySpacecraft {
 ///     ground_stations: List of GroundStation objects.
 #[pyclass(name = "Scenario", module = "lox_space", frozen)]
 #[derive(Clone, Debug)]
-pub struct PyScenario(pub Scenario);
+pub struct PyScenario(pub DynScenario);
 
 #[pymethods]
 impl PyScenario {
@@ -220,7 +221,7 @@ impl PyScenario {
     ) -> Self {
         let tai_start = start.0.to_scale(Tai);
         let tai_end = end.0.to_scale(Tai);
-        let mut scenario = Scenario::new(tai_start, tai_end);
+        let mut scenario = DynScenario::new(tai_start, tai_end, DynOrigin::Earth, DynFrame::Icrf);
         if let Some(sc) = spacecraft {
             let sc_vec: Vec<Spacecraft> = sc.into_iter().map(|s| s.0).collect();
             scenario = scenario.with_spacecraft(&sc_vec);
@@ -237,7 +238,7 @@ impl PyScenario {
     /// Trajectories are transformed to ICRF using the default rotation
     /// provider.
     fn propagate(&self, py: Python<'_>) -> PyResult<PyEnsemble> {
-        let ensemble = py.detach(|| self.0.propagate(DynFrame::Icrf, &DefaultRotationProvider));
+        let ensemble = py.detach(|| self.0.propagate(&DefaultRotationProvider));
         Ok(PyEnsemble(
             ensemble.map_err(|e| PyValueError::new_err(e.to_string()))?,
         ))
@@ -265,7 +266,7 @@ impl PyScenario {
 /// A collection of propagated trajectories keyed by spacecraft id.
 #[pyclass(name = "Ensemble", module = "lox_space", frozen)]
 #[derive(Clone, Debug)]
-pub struct PyEnsemble(pub DynEnsemble<AssetId>);
+pub struct PyEnsemble(pub Ensemble<AssetId, Tai, DynOrigin, DynFrame>);
 
 #[pymethods]
 impl PyEnsemble {
@@ -273,7 +274,7 @@ impl PyEnsemble {
     fn get(&self, id: &str) -> Option<PyTrajectory> {
         self.0
             .get(&AssetId::new(id))
-            .map(|t| PyTrajectory(t.clone()))
+            .map(|t| PyTrajectory(t.clone().into_dyn()))
     }
 
     fn __len__(&self) -> usize {
@@ -304,8 +305,8 @@ impl PyEnsemble {
 ///     max_range: Optional maximum range constraint for inter-satellite pairs.
 #[pyclass(name = "VisibilityAnalysis", module = "lox_space", frozen)]
 pub struct PyVisibilityAnalysis {
-    scenario: Scenario,
-    ensemble: Option<DynEnsemble<AssetId>>,
+    scenario: DynScenario,
+    ensemble: Option<Ensemble<AssetId, Tai, DynOrigin, DynFrame>>,
     occulting_bodies: Vec<DynOrigin>,
     step: TimeDelta,
     min_pass_duration: Option<TimeDelta>,
@@ -373,7 +374,7 @@ impl PyVisibilityAnalysis {
             Some(e) => e,
             None => {
                 auto_ensemble = scenario
-                    .propagate(DynFrame::Icrf, &DefaultRotationProvider)
+                    .propagate(&DefaultRotationProvider)
                     .map_err(|e| PyValueError::new_err(e.to_string()))?;
                 &auto_ensemble
             }
@@ -433,8 +434,8 @@ impl PyVisibilityAnalysis {
 #[pyclass(name = "VisibilityResults", module = "lox_space", frozen)]
 pub struct PyVisibilityResults {
     results: VisibilityResults,
-    scenario: Scenario,
-    ensemble: DynEnsemble<AssetId>,
+    scenario: DynScenario,
+    ensemble: Ensemble<AssetId, Tai, DynOrigin, DynFrame>,
     step: TimeDelta,
 }
 
@@ -453,7 +454,14 @@ impl PyVisibilityResults {
         let id2 = AssetId::new(id2);
         self.results
             .intervals_for(&id1, &id2)
-            .map(|intervals| intervals.iter().map(|i| PyInterval(*i)).collect())
+            .map(|intervals| {
+                intervals
+                    .iter()
+                    .map(|i| {
+                        PyInterval(TimeInterval::new(i.start().into_dyn(), i.end().into_dyn()))
+                    })
+                    .collect()
+            })
             .unwrap_or_default()
     }
 
@@ -468,7 +476,12 @@ impl PyVisibilityResults {
             .map(|((id1, id2), intervals)| {
                 (
                     (id1.as_str().to_string(), id2.as_str().to_string()),
-                    intervals.iter().map(|i| PyInterval(*i)).collect(),
+                    intervals
+                        .iter()
+                        .map(|i| {
+                            PyInterval(TimeInterval::new(i.start().into_dyn(), i.end().into_dyn()))
+                        })
+                        .collect(),
                 )
             })
             .collect()
@@ -486,7 +499,12 @@ impl PyVisibilityResults {
                 let intervals = self.results.intervals_for(gs_id, sc_id)?;
                 Some((
                     (gs_id.as_str().to_string(), sc_id.as_str().to_string()),
-                    intervals.iter().map(|i| PyInterval(*i)).collect(),
+                    intervals
+                        .iter()
+                        .map(|i| {
+                            PyInterval(TimeInterval::new(i.start().into_dyn(), i.end().into_dyn()))
+                        })
+                        .collect(),
                 ))
             })
             .collect()
@@ -504,7 +522,12 @@ impl PyVisibilityResults {
                 let intervals = self.results.intervals_for(sc1_id, sc2_id)?;
                 Some((
                     (sc1_id.as_str().to_string(), sc2_id.as_str().to_string()),
-                    intervals.iter().map(|i| PyInterval(*i)).collect(),
+                    intervals
+                        .iter()
+                        .map(|i| {
+                            PyInterval(TimeInterval::new(i.start().into_dyn(), i.end().into_dyn()))
+                        })
+                        .collect(),
                 ))
             })
             .collect()
@@ -544,9 +567,17 @@ impl PyVisibilityResults {
         let sc_traj = self.ensemble.get(&sc_id);
         match (gs, sc_traj) {
             (Some(gs), Some(sc_traj)) => {
+                let dyn_traj = sc_traj.clone().into_dyn();
                 let passes = self
                     .results
-                    .to_passes(&gs_id, &sc_id, gs.location(), gs.mask(), sc_traj, self.step)
+                    .to_passes(
+                        &gs_id,
+                        &sc_id,
+                        gs.location(),
+                        gs.mask(),
+                        &dyn_traj,
+                        self.step,
+                    )
                     .map_err(|e| PyValueError::new_err(e.to_string()))?;
                 Ok(passes.into_iter().map(PyPass).collect())
             }
@@ -575,16 +606,21 @@ impl PyVisibilityResults {
             .filter_map(|(gs_id, sc_id)| {
                 let gs = gs_map.get(gs_id)?;
                 let sc_traj = self.ensemble.get(sc_id)?;
+                let dyn_traj = sc_traj.clone().into_dyn();
                 let intervals = self.results.intervals_for(gs_id, sc_id)?;
                 let passes: Vec<PyPass> = intervals
                     .iter()
                     .filter_map(|interval| {
+                        let dyn_interval = TimeInterval::new(
+                            interval.start().into_dyn(),
+                            interval.end().into_dyn(),
+                        );
                         DynPass::from_interval(
-                            *interval,
+                            dyn_interval,
                             self.step,
                             gs.location(),
                             gs.mask(),
-                            sc_traj,
+                            &dyn_traj,
                         )
                     })
                     .map(PyPass)

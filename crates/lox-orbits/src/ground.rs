@@ -132,7 +132,7 @@ impl<B: TrySpheroid> GroundLocation<B> {
         self.coordinates.rotation_to_topocentric()
     }
 
-    fn compute_observables(&self, state_position: DVec3, state_velocity: DVec3) -> Observables {
+    pub fn compute_observables(&self, state_position: DVec3, state_velocity: DVec3) -> Observables {
         let rot = self.rotation_to_topocentric();
         let position = rot * (state_position - self.body_fixed_position());
         let velocity = rot * state_velocity;

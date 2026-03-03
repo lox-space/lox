@@ -5,9 +5,10 @@
 use std::collections::HashMap;
 use std::fmt;
 
+use lox_bodies::{DynOrigin, Origin};
 use lox_core::units::AngularRate;
-use lox_frames::DynFrame;
 use lox_frames::rotations::TryRotation;
+use lox_frames::{DynFrame, ReferenceFrame};
 use lox_time::Time;
 use lox_time::intervals::TimeInterval;
 use lox_time::time_scales::{DynTimeScale, Tai};
@@ -18,7 +19,7 @@ use lox_comms::system::CommunicationSystem;
 
 use crate::visibility::ElevationMask;
 use lox_orbits::ground::DynGroundLocation;
-use lox_orbits::orbits::DynEnsemble;
+use lox_orbits::orbits::Ensemble;
 use lox_orbits::propagators::{OrbitSource, PropagateError};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -185,12 +186,22 @@ impl Spacecraft {
     }
 }
 
+/// A scenario declaring the analysis origin, reference frame, time interval,
+/// and the assets (ground stations and spacecraft) involved.
+///
+/// The type parameters `O` and `R` specify the "native" origin body and
+/// reference frame. For dynamic dispatch (e.g. via Python), use `DynScenario`.
 #[derive(Debug, Clone)]
-pub struct Scenario {
+pub struct Scenario<O: Origin, R: ReferenceFrame> {
     interval: TimeInterval<Tai>,
+    origin: O,
+    frame: R,
     ground_stations: Vec<GroundStation>,
     spacecraft: Vec<Spacecraft>,
 }
+
+/// Dynamic scenario — preserves backward compatibility and serves the Python API.
+pub type DynScenario = Scenario<DynOrigin, DynFrame>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ScenarioPropagateError {
@@ -200,15 +211,17 @@ pub enum ScenarioPropagateError {
     FrameTransformation(AssetId, String),
 }
 
-impl Scenario {
-    pub fn new(start_time: Time<Tai>, end_time: Time<Tai>) -> Self {
+impl<O: Origin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send + Sync> Scenario<O, R> {
+    pub fn new(start_time: Time<Tai>, end_time: Time<Tai>, origin: O, frame: R) -> Self {
         let interval = TimeInterval::new(start_time, end_time);
-        Self::with_interval(interval)
+        Self::with_interval(interval, origin, frame)
     }
 
-    pub fn with_interval(interval: TimeInterval<Tai>) -> Self {
+    pub fn with_interval(interval: TimeInterval<Tai>, origin: O, frame: R) -> Self {
         Self {
             interval,
+            origin,
+            frame,
             ground_stations: Vec::new(),
             spacecraft: Vec::new(),
         }
@@ -228,6 +241,14 @@ impl Scenario {
         &self.interval
     }
 
+    pub fn origin(&self) -> O {
+        self.origin
+    }
+
+    pub fn frame(&self) -> R {
+        self.frame
+    }
+
     pub fn ground_stations(&self) -> &[GroundStation] {
         &self.ground_stations
     }
@@ -237,21 +258,28 @@ impl Scenario {
     }
 
     /// Propagate all spacecraft over the scenario interval, transforming
-    /// trajectories to the given target `frame` using the provided rotation
+    /// trajectories to the scenario's frame using the provided rotation
     /// `provider`.
+    ///
+    /// Internally, each spacecraft's `OrbitSource` produces a `DynTrajectory`
+    /// which is then rotated into the concrete frame `R` via the mixed
+    /// `TryRotation<DynFrame, R, T>` impls, and finally re-tagged to
+    /// `Trajectory<Tai, O, R>`.
     pub fn propagate<P>(
         &self,
-        frame: DynFrame,
         provider: &P,
-    ) -> Result<DynEnsemble<AssetId>, ScenarioPropagateError>
+    ) -> Result<Ensemble<AssetId, Tai, O, R>, ScenarioPropagateError>
     where
-        P: TryRotation<DynFrame, DynFrame, DynTimeScale> + Send + Sync,
+        R: Into<DynFrame>,
+        P: TryRotation<DynFrame, R, DynTimeScale> + Send + Sync,
         P::Error: std::fmt::Display,
     {
         let dyn_interval = TimeInterval::new(
             self.interval.start().into_dyn(),
             self.interval.end().into_dyn(),
         );
+        let origin = self.origin;
+        let frame = self.frame;
         let entries: Result<HashMap<_, _>, _> = self
             .spacecraft
             .par_iter()
@@ -260,17 +288,23 @@ impl Scenario {
                     .orbit
                     .propagate(dyn_interval)
                     .map_err(|e| ScenarioPropagateError::Propagate(sc.id.clone(), e))?;
-                let traj = if traj.reference_frame() != frame {
-                    traj.into_frame(frame, provider).map_err(|e| {
-                        ScenarioPropagateError::FrameTransformation(sc.id.clone(), e.to_string())
-                    })?
-                } else {
-                    traj
-                };
-                Ok((sc.id.clone(), traj))
+                // Rotate DynTrajectory directly into concrete frame R
+                // (uses mixed TryRotation<DynFrame, R, DynTimeScale>).
+                let rotated = traj.into_frame(frame, provider).map_err(|e| {
+                    ScenarioPropagateError::FrameTransformation(sc.id.clone(), e.to_string())
+                })?;
+                // Re-tag origin and time scale (data unchanged, just type markers).
+                let (epoch, _origin, frame, data) = rotated.into_parts();
+                let typed = lox_orbits::orbits::Trajectory::from_parts(
+                    epoch.with_scale(Tai),
+                    origin,
+                    frame,
+                    data,
+                );
+                Ok((sc.id.clone(), typed))
             })
             .collect();
-        Ok(DynEnsemble::new(entries?))
+        Ok(Ensemble::new(entries?))
     }
 
     pub fn filter_by_constellations(&self, constellations: &[ConstellationId]) -> Self {
