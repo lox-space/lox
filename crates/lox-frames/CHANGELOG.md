@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.0-alpha.9](https://github.com/lox-space/lox/compare/lox-frames-v0.1.0-alpha.8...lox-frames-v0.1.0-alpha.9) - 2026-03-04
+
+### Other
+
+- *(lox-analysis)* add more tests
+- *(lox-analysis)* monomorphize scenarios and analyses
+
 ## [0.1.0-alpha.8](https://github.com/lox-space/lox/compare/lox-frames-v0.1.0-alpha.7...lox-frames-v0.1.0-alpha.8) - 2026-03-02
 
 ### Other

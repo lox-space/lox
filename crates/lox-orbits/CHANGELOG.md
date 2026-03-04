@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.28](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.27...lox-orbits-v0.1.0-alpha.28) - 2026-03-04
+
+### Added
+
+- *(lox-analysis)* add `lox-analysis` crate
+
+### Other
+
+- *(lox-analysis)* add more tests
+- *(lox-analysis)* monomorphize scenarios and analyses
+- *(lox-analysis)* use scenario-based analyses
+
 ## [0.1.0-alpha.27](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.26...lox-orbits-v0.1.0-alpha.27) - 2026-03-02
 
 ### Added

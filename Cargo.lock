@@ -696,7 +696,7 @@ dependencies = [
 
 [[package]]
 name = "lox-comms"
-version = "0.1.0-alpha.3"
+version = "0.1.0-alpha.4"
 dependencies = [
  "glam 0.30.9",
  "lox-core",
@@ -734,7 +734,7 @@ dependencies = [
 
 [[package]]
 name = "lox-earth"
-version = "0.1.0-alpha.17"
+version = "0.1.0-alpha.18"
 dependencies = [
  "csv",
  "fast_polynomial",
@@ -770,7 +770,7 @@ dependencies = [
 
 [[package]]
 name = "lox-frames"
-version = "0.1.0-alpha.8"
+version = "0.1.0-alpha.9"
 dependencies = [
  "fast_polynomial",
  "glam 0.30.9",
@@ -822,7 +822,7 @@ dependencies = [
 
 [[package]]
 name = "lox-orbits"
-version = "0.1.0-alpha.27"
+version = "0.1.0-alpha.28"
 dependencies = [
  "csv",
  "differential-equations",
@@ -848,7 +848,7 @@ dependencies = [
 
 [[package]]
 name = "lox-space"
-version = "0.1.0-alpha.34"
+version = "0.1.0-alpha.35"
 dependencies = [
  "codspeed-divan-compat",
  "glam 0.30.9",
