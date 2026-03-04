@@ -12,6 +12,113 @@ ISS_TLE = """ISS (ZARYA)
 """
 
 
+ISS_TLE_LINES = [
+    "ISS (ZARYA)",
+    "1 25544U 98067A   24170.37528350  .00016566  00000+0  30244-3 0  9996",
+    "2 25544  51.6410 309.3890 0010444 339.5369 107.8830 15.49495945458731",
+]
+
+
+def test_tle_from_string():
+    tle = lox.TLE(ISS_TLE)
+    assert tle.object_name() == "ISS (ZARYA)"
+    assert tle.international_designator() == "1998-067A"
+    assert tle.norad_id() == 25544
+    assert tle.classification() == "U"
+
+
+def test_tle_two_line():
+    two_line = "\n".join(ISS_TLE_LINES[1:])
+    tle = lox.TLE(two_line)
+    assert tle.object_name() is None
+    assert tle.norad_id() == 25544
+
+
+def test_tle_from_list():
+    tle = lox.TLE(ISS_TLE_LINES)
+    assert tle.object_name() == "ISS (ZARYA)"
+    assert tle.norad_id() == 25544
+
+
+def test_tle_epoch():
+    tle = lox.TLE(ISS_TLE)
+    epoch = tle.epoch()
+    assert isinstance(epoch, lox.Time)
+    # 2024, day 170.37528350 → June 18, 2024
+    assert "2024-06-18" in str(epoch)
+
+
+def test_tle_orbital_elements():
+    tle = lox.TLE(ISS_TLE)
+    assert tle.inclination().to_degrees() == pytest.approx(51.6410)
+    assert tle.right_ascension().to_degrees() == pytest.approx(309.3890)
+    assert tle.eccentricity() == pytest.approx(0.0010444)
+    assert tle.argument_of_perigee().to_degrees() == pytest.approx(339.5369)
+    assert tle.mean_anomaly().to_degrees() == pytest.approx(107.8830)
+    assert tle.mean_motion() == pytest.approx(15.49495945)
+
+
+def test_tle_metadata():
+    tle = lox.TLE(ISS_TLE)
+    assert tle.element_set_number() == 999
+    assert tle.revolution_number() == 45873
+    assert tle.ephemeris_type() == 0
+    assert tle.mean_motion_dot() == pytest.approx(0.00016566)
+    assert tle.mean_motion_ddot() == pytest.approx(0.0)
+    assert tle.drag_term() == pytest.approx(0.30244e-3)
+
+
+def test_tle_repr_and_str():
+    tle = lox.TLE(ISS_TLE)
+    assert "TLE(" in repr(tle)
+    assert "25544" in str(tle)
+
+
+def test_tle_pickle():
+    import pickle
+
+    tle = lox.TLE(ISS_TLE)
+    roundtripped = pickle.loads(pickle.dumps(tle))
+    assert roundtripped.norad_id() == tle.norad_id()
+    assert str(roundtripped) == str(tle)
+
+
+def test_tle_invalid():
+    with pytest.raises(ValueError):
+        lox.TLE("not a valid TLE")
+    with pytest.raises((ValueError, TypeError)):
+        lox.TLE(42)
+
+
+def test_sgp4_from_tle_object():
+    tle = lox.TLE(ISS_TLE)
+    sgp4 = lox.SGP4(tle)
+    t1 = sgp4.time() + lox.TimeDelta.from_minutes(92.821)
+    s1 = sgp4.propagate(t1).to_frame(lox.Frame("ICRF"))
+    k1 = s1.to_keplerian()
+    assert k1.orbital_period().to_decimal_seconds() == pytest.approx(
+        92.821 * 60, rel=1e-4
+    )
+
+
+def test_sgp4_from_list():
+    sgp4 = lox.SGP4(ISS_TLE_LINES)
+    assert isinstance(sgp4.time(), lox.Time)
+
+
+def test_sgp4_tle_accessor():
+    sgp4 = lox.SGP4(ISS_TLE)
+    tle = sgp4.tle()
+    assert isinstance(tle, lox.TLE)
+    assert tle.norad_id() == 25544
+
+
+def test_sgp4_repr():
+    sgp4 = lox.SGP4(ISS_TLE)
+    assert "SGP4(" in repr(sgp4)
+    assert "25544" in repr(sgp4)
+
+
 def test_sgp4():
     sgp4 = lox.SGP4(ISS_TLE)
     t1 = sgp4.time() + lox.TimeDelta.from_minutes(92.821)
