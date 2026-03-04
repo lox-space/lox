@@ -37,8 +37,9 @@ use lox_units::{Angle, Distance, Velocity};
 use numpy::{PyArray1, PyArray2, PyArrayMethods};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use pyo3::types::{PyList, PyType};
-use sgp4::Elements;
+use pyo3::types::{PyList, PyString, PyType};
+use sgp4::{Classification, Elements};
+use std::f64::consts::PI;
 
 /// Formats an f64 as a valid Python float literal (always includes a decimal point).
 fn repr_f64(v: f64) -> String {
@@ -1738,6 +1739,162 @@ impl PyGroundPropagator {
     }
 }
 
+/// Two-Line Element set (TLE) for satellite orbit data.
+///
+/// Parses and exposes the orbital elements from a NORAD Two-Line Element set.
+///
+/// Args:
+///     tle: TLE as a string (2 or 3 lines) or a list of 2–3 strings.
+#[pyclass(name = "TLE", module = "lox_space", frozen)]
+#[derive(Clone)]
+pub struct PyTle {
+    elements: Elements,
+    raw: String,
+}
+
+impl PyTle {
+    fn from_string(tle: &str) -> PyResult<Self> {
+        let lines: Vec<&str> = tle.trim().split('\n').collect();
+        let elements = if lines.len() == 3 {
+            Elements::from_tle(
+                Some(lines[0].to_string()),
+                lines[1].as_bytes(),
+                lines[2].as_bytes(),
+            )
+            .map_err(|err| PyValueError::new_err(err.to_string()))?
+        } else if lines.len() == 2 {
+            Elements::from_tle(None, lines[0].as_bytes(), lines[1].as_bytes())
+                .map_err(|err| PyValueError::new_err(err.to_string()))?
+        } else {
+            return Err(PyValueError::new_err("invalid TLE"));
+        };
+        Ok(PyTle {
+            elements,
+            raw: tle.trim().to_string(),
+        })
+    }
+}
+
+#[pymethods]
+impl PyTle {
+    #[new]
+    fn new(tle: &Bound<'_, PyAny>) -> PyResult<Self> {
+        if let Ok(s) = tle.cast::<PyString>() {
+            Self::from_string(&s.to_string())
+        } else if let Ok(list) = tle.cast::<PyList>() {
+            let lines: Vec<String> = list.extract()?;
+            Self::from_string(&lines.join("\n"))
+        } else {
+            Err(PyValueError::new_err(
+                "expected a TLE string or list of strings",
+            ))
+        }
+    }
+
+    /// Satellite name, if present (line 0 of a 3-line TLE).
+    fn object_name(&self) -> Option<String> {
+        self.elements.object_name.clone()
+    }
+
+    /// International designator (e.g. "98067A").
+    fn international_designator(&self) -> Option<String> {
+        self.elements.international_designator.clone()
+    }
+
+    /// NORAD catalog number.
+    fn norad_id(&self) -> u64 {
+        self.elements.norad_id
+    }
+
+    /// Classification: "U" (unclassified), "C" (classified), or "S" (secret).
+    fn classification(&self) -> &str {
+        match self.elements.classification {
+            Classification::Unclassified => "U",
+            Classification::Classified => "C",
+            Classification::Secret => "S",
+        }
+    }
+
+    /// TLE epoch as a Time (TAI scale).
+    fn epoch(&self) -> PyTime {
+        let tai: lox_time::time::Time<Tai> = self.elements.datetime.and_utc().into();
+        PyTime(tai.into_dyn())
+    }
+
+    /// Orbital inclination.
+    fn inclination(&self) -> PyAngle {
+        PyAngle::new(self.elements.inclination * PI / 180.0)
+    }
+
+    /// Right ascension of the ascending node (RAAN).
+    fn right_ascension(&self) -> PyAngle {
+        PyAngle::new(self.elements.right_ascension * PI / 180.0)
+    }
+
+    /// Orbital eccentricity (dimensionless).
+    fn eccentricity(&self) -> f64 {
+        self.elements.eccentricity
+    }
+
+    /// Argument of perigee.
+    fn argument_of_perigee(&self) -> PyAngle {
+        PyAngle::new(self.elements.argument_of_perigee * PI / 180.0)
+    }
+
+    /// Mean anomaly.
+    fn mean_anomaly(&self) -> PyAngle {
+        PyAngle::new(self.elements.mean_anomaly * PI / 180.0)
+    }
+
+    /// Mean motion in revolutions per day (Kozai convention).
+    fn mean_motion(&self) -> f64 {
+        self.elements.mean_motion
+    }
+
+    /// First derivative of mean motion (rev/day²).
+    fn mean_motion_dot(&self) -> f64 {
+        self.elements.mean_motion_dot
+    }
+
+    /// Second derivative of mean motion (rev/day³).
+    fn mean_motion_ddot(&self) -> f64 {
+        self.elements.mean_motion_ddot
+    }
+
+    /// BSTAR drag term (earth radii⁻¹).
+    fn drag_term(&self) -> f64 {
+        self.elements.drag_term
+    }
+
+    /// Element set number.
+    fn element_set_number(&self) -> u64 {
+        self.elements.element_set_number
+    }
+
+    /// Revolution number at epoch.
+    fn revolution_number(&self) -> u64 {
+        self.elements.revolution_number
+    }
+
+    /// Ephemeris type (always 0 in distributed data).
+    fn ephemeris_type(&self) -> u8 {
+        self.elements.ephemeris_type
+    }
+
+    fn __repr__(&self) -> String {
+        let escaped = self.raw.replace('\\', "\\\\").replace('\n', "\\n");
+        format!("TLE(\"{}\")", escaped)
+    }
+
+    fn __str__(&self) -> &str {
+        &self.raw
+    }
+
+    fn __getnewargs__(&self) -> (String,) {
+        (self.raw.clone(),)
+    }
+}
+
 pub struct PySgp4Error(pub Sgp4Error);
 
 impl From<PySgp4Error> for PyErr {
@@ -1753,42 +1910,36 @@ impl From<PySgp4Error> for PyErr {
 /// radiation pressure, and gravitational perturbations.
 ///
 /// Args:
-///     tle: Two-Line Element set (2 or 3 lines).
+///     tle: TLE object, string (2 or 3 lines), or list of 2–3 strings.
 #[pyclass(name = "SGP4", module = "lox_space", frozen)]
 #[derive(Clone)]
 pub struct PySgp4 {
     pub inner: Sgp4,
-    tle: String,
+    tle: PyTle,
 }
 
 #[pymethods]
 impl PySgp4 {
     #[new]
-    fn new(tle: &str) -> PyResult<Self> {
-        let lines: Vec<&str> = tle.trim().split('\n').collect();
-        let elements = if lines.len() == 3 {
-            Elements::from_tle(
-                Some(lines[0].to_string()),
-                lines[1].as_bytes(),
-                lines[2].as_bytes(),
-            )
-            .map_err(|err| PyValueError::new_err(err.to_string()))?
-        } else if lines.len() == 2 {
-            Elements::from_tle(None, lines[0].as_bytes(), lines[1].as_bytes())
-                .map_err(|err| PyValueError::new_err(err.to_string()))?
+    fn new(tle: &Bound<'_, PyAny>) -> PyResult<Self> {
+        let tle = if let Ok(t) = tle.extract::<PyTle>() {
+            t
         } else {
-            return Err(PyValueError::new_err("invalid TLE"));
+            PyTle::new(tle)?
         };
-        let sgp4 = Sgp4::new(elements).map_err(|err| PyValueError::new_err(err.to_string()))?;
-        Ok(PySgp4 {
-            inner: sgp4,
-            tle: tle.trim().to_string(),
-        })
+        let sgp4 = Sgp4::new(tle.elements.clone())
+            .map_err(|err| PyValueError::new_err(err.to_string()))?;
+        Ok(PySgp4 { inner: sgp4, tle })
+    }
+
+    /// Return the parsed TLE.
+    fn tle(&self) -> PyTle {
+        self.tle.clone()
     }
 
     /// Return the TLE epoch time.
     fn time(&self) -> PyTime {
-        PyTime(self.inner.time().into_dyn())
+        self.tle.epoch()
     }
 
     /// Propagate the orbit.
@@ -1843,7 +1994,7 @@ impl PySgp4 {
     }
 
     fn __repr__(&self) -> String {
-        let escaped = self.tle.replace('\\', "\\\\").replace('\n', "\\n");
+        let escaped = self.tle.raw.replace('\\', "\\\\").replace('\n', "\\n");
         format!("SGP4(\"{}\")", escaped)
     }
 }

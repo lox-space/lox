@@ -20,7 +20,7 @@ use crate::frames::python::PyFrame;
 use crate::math::python::PySeries;
 use crate::orbits::python::{
     PyCartesian, PyEvent, PyGroundLocation, PyGroundPropagator, PyInterval, PyJ2Propagator,
-    PyKeplerian, PySgp4, PyTrajectory, PyVallado, find_events, find_windows,
+    PyKeplerian, PySgp4, PyTle, PyTrajectory, PyVallado, find_events, find_windows,
     py_complement_intervals, py_intersect_intervals, py_union_intervals,
 };
 use crate::time::python::{
@@ -99,6 +99,7 @@ fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyJ2Propagator>()?;
     m.add_class::<PyKeplerian>()?;
     m.add_class::<PySgp4>()?;
+    m.add_class::<PyTle>()?;
     m.add_class::<PyTrajectory>()?;
     m.add_class::<PyVallado>()?;
     m.add_function(wrap_pyfunction!(find_events, m)?)?;
