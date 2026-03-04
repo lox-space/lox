@@ -20,7 +20,8 @@ indicates the direction:
 
 The `VisibilityAnalysis` class computes visibility intervals between ground
 stations and spacecraft, accounting for elevation constraints and optional
-body occultation.
+body occultation. A `Scenario` groups spacecraft, ground stations, and a
+time interval together.
 
 ## Quick Example
 
@@ -45,14 +46,15 @@ for iv in intervals:
     print(f"Interval: {iv.start()} to {iv.end()}, duration: {iv.duration()}")
 
 # Visibility analysis
-gs = lox.GroundAsset("ESOC", ground_location, elevation_mask)
-sc = lox.SpaceAsset("ISS", trajectory)
+gs = lox.GroundStation("ESOC", ground_location, elevation_mask)
+sc = lox.Spacecraft("ISS", lox.SGP4(tle))
+scenario = lox.Scenario(start, end, spacecraft=[sc], ground_stations=[gs])
 analysis = lox.VisibilityAnalysis(
-    [gs], [sc],
+    scenario,
     step=lox.TimeDelta(60),
     min_pass_duration=lox.TimeDelta(300),
 )
-results = analysis.compute(start, end, spk)
+results = analysis.compute(spk)
 
 for iv in results.intervals("ESOC", "ISS"):
     print(f"Interval: {iv.start()} to {iv.end()}")
@@ -105,13 +107,25 @@ for p in results.passes("ESOC", "ISS"):
 
 ---
 
-::: lox_space.GroundAsset
+::: lox_space.GroundStation
     options:
       show_source: false
 
 ---
 
-::: lox_space.SpaceAsset
+::: lox_space.Spacecraft
+    options:
+      show_source: false
+
+---
+
+::: lox_space.Scenario
+    options:
+      show_source: false
+
+---
+
+::: lox_space.Ensemble
     options:
       show_source: false
 

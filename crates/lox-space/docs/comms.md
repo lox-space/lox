@@ -210,3 +210,15 @@ stats = lox.LinkStats.calculate(
 ::: lox_space.LinkStats
     options:
       show_source: false
+
+---
+
+::: lox_space.fspl
+    options:
+      show_source: false
+
+---
+
+::: lox_space.freq_overlap
+    options:
+      show_source: false
