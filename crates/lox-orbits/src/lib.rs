@@ -6,6 +6,7 @@
 
 pub use glam::DVec3;
 
+pub mod constellations;
 pub mod events;
 pub mod ground;
 pub mod orbits;

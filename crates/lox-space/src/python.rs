@@ -14,6 +14,7 @@ use crate::comms::python::{
     PyDipolePattern, PyEnvironmentalLosses, PyGaussianPattern, PyLinkStats, PyModulation,
     PyParabolicPattern, PySimpleAntenna, PySimpleReceiver, PyTransmitter, freq_overlap, fspl,
 };
+use crate::constellations::python::{PyConstellation, PyConstellationSatellite};
 use crate::earth::python::ut1::{EopParserError, EopProviderError, PyEopProvider};
 use crate::ephem::python::PySpk;
 use crate::frames::python::PyFrame;
@@ -89,6 +90,10 @@ fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyEnsemble>()?;
     m.add_class::<PyVisibilityAnalysis>()?;
     m.add_class::<PyVisibilityResults>()?;
+
+    // constellations
+    m.add_class::<PyConstellation>()?;
+    m.add_class::<PyConstellationSatellite>()?;
 
     // orbits
     m.add_class::<PyCartesian>()?;
