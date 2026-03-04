@@ -1039,7 +1039,7 @@ mod tests {
     use lox_core::units::Distance;
     use lox_ephem::spk::parser::Spk;
     use lox_orbits::propagators::OrbitSource;
-    use lox_test_utils::{assert_approx_eq, data_dir, data_file, read_data_file};
+    use lox_test_utils::{assert_approx_eq, data_file, read_data_file};
     use lox_time::time_scales::{DynTimeScale, Tai};
     use lox_time::utc::Utc;
     use std::iter::zip;
@@ -1048,7 +1048,7 @@ mod tests {
     use super::*;
     use lox_frames::Icrf;
     use lox_orbits::ground::GroundLocation;
-    use lox_orbits::orbits::{DynEnsemble, DynTrajectory, Trajectory};
+    use lox_orbits::orbits::{DynTrajectory, Trajectory};
 
     /// Build a DynScenario + DynEnsemble from ground/space assets and a DynTimeScale interval.
     fn make_scenario_and_ensemble(

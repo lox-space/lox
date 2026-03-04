@@ -18,8 +18,11 @@ use rayon::prelude::*;
 use lox_comms::system::CommunicationSystem;
 
 use crate::visibility::ElevationMask;
+use lox_orbits::constellations::{ConstellationPropagator, DynConstellation};
 use lox_orbits::ground::DynGroundLocation;
-use lox_orbits::orbits::Ensemble;
+use lox_orbits::orbits::{Ensemble, KeplerianOrbit};
+use lox_orbits::propagators::numerical::DynJ2Propagator;
+use lox_orbits::propagators::semi_analytical::DynVallado;
 use lox_orbits::propagators::{OrbitSource, PropagateError};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -210,10 +213,21 @@ pub struct Scenario<O: Origin, R: ReferenceFrame> {
     frame: R,
     ground_stations: Vec<GroundStation>,
     spacecraft: Vec<Spacecraft>,
+    constellations: Vec<DynConstellation>,
 }
 
 /// Dynamic scenario — preserves backward compatibility and serves the Python API.
 pub type DynScenario = Scenario<DynOrigin, DynFrame>;
+
+#[derive(Debug, thiserror::Error)]
+pub enum ConstellationConvertError {
+    #[error("failed to create Keplerian orbit: {0}")]
+    KeplerianOrbit(String),
+    #[error("failed to convert to Cartesian orbit: {0}")]
+    CartesianConversion(String),
+    #[error("failed to create propagator: {0}")]
+    Propagator(String),
+}
 
 #[derive(Debug, thiserror::Error)]
 pub enum ScenarioPropagateError {
@@ -236,6 +250,7 @@ impl<O: Origin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send + Sync> Sce
             frame,
             ground_stations: Vec::new(),
             spacecraft: Vec::new(),
+            constellations: Vec::new(),
         }
     }
 
@@ -259,6 +274,52 @@ impl<O: Origin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send + Sync> Sce
 
     pub fn frame(&self) -> R {
         self.frame
+    }
+
+    /// Add a constellation to the scenario, converting each satellite into a
+    /// [`Spacecraft`] using the constellation's selected propagator.
+    pub fn with_constellation(
+        mut self,
+        constellation: DynConstellation,
+    ) -> Result<Self, ConstellationConvertError> {
+        let epoch = constellation.epoch();
+        let origin = constellation.origin();
+        let frame = constellation.frame();
+        let propagator_kind = constellation.propagator();
+        let name = constellation.name().to_string();
+
+        for sat in constellation.satellites() {
+            let keplerian_orbit =
+                KeplerianOrbit::try_from_keplerian(sat.elements, epoch, origin, frame)
+                    .map_err(|e| ConstellationConvertError::KeplerianOrbit(e.to_string()))?;
+            let cartesian_orbit = keplerian_orbit
+                .try_to_cartesian()
+                .map_err(|e| ConstellationConvertError::CartesianConversion(e.to_string()))?;
+
+            let orbit_source = match propagator_kind {
+                ConstellationPropagator::Vallado => {
+                    let v = DynVallado::try_new(cartesian_orbit)
+                        .map_err(|e| ConstellationConvertError::Propagator(e.to_string()))?;
+                    OrbitSource::Vallado(v)
+                }
+                ConstellationPropagator::J2 => {
+                    let j2 = DynJ2Propagator::try_new(cartesian_orbit)
+                        .map_err(|e| ConstellationConvertError::Propagator(e.to_string()))?;
+                    OrbitSource::J2(j2)
+                }
+            };
+
+            let sc_id = format!("{} P{} S{}", name, sat.plane + 1, sat.index_in_plane + 1);
+            let sc = Spacecraft::new(sc_id, orbit_source).with_constellation_id(&name);
+            self.spacecraft.push(sc);
+        }
+
+        self.constellations.push(constellation);
+        Ok(self)
+    }
+
+    pub fn constellations(&self) -> &[DynConstellation] {
+        &self.constellations
     }
 
     pub fn ground_stations(&self) -> &[GroundStation] {
@@ -412,8 +473,27 @@ mod tests {
     fn test_ground_station_with_network_id() {
         let gs =
             GroundStation::new("gs1", dummy_location(), dummy_mask()).with_network_id("estrack");
-        // Network is private, but we can test via filter_by_networks.
-        let _ = gs;
+        // Verify network via filter_by_networks round-trip.
+        let start = Time::j2000(Tai);
+        let end = start + TimeDelta::from_seconds(86400);
+        let scenario = DynScenario::new(start, end, DynOrigin::Earth, DynFrame::Icrf)
+            .with_ground_stations(&[gs]);
+        let filtered = scenario.filter_by_networks(&[NetworkId::new("estrack")]);
+        assert_eq!(filtered.ground_stations().len(), 1);
+    }
+
+    #[test]
+    fn test_ground_station_location_getter() {
+        let loc = dummy_location();
+        let gs = GroundStation::new("gs1", loc.clone(), dummy_mask());
+        let _ = gs.location(); // verify it compiles and returns
+    }
+
+    #[test]
+    fn test_ground_station_mask_getter() {
+        let mask = ElevationMask::with_fixed_elevation(0.1);
+        let gs = GroundStation::new("gs1", dummy_location(), mask.clone());
+        assert_eq!(gs.mask().min_elevation(0.0), 0.1);
     }
 
     // --- Spacecraft ---
@@ -455,6 +535,18 @@ mod tests {
         let sc =
             Spacecraft::new("sc1", OrbitSource::Trajectory(traj)).with_constellation_id("oneweb");
         let _ = sc;
+    }
+
+    #[test]
+    fn test_spacecraft_orbit_getter() {
+        let traj = lox_orbits::orbits::DynTrajectory::from_csv_dyn(
+            &lox_test_utils::read_data_file("trajectory_lunar.csv"),
+            DynOrigin::Earth,
+            DynFrame::Icrf,
+        )
+        .unwrap();
+        let sc = Spacecraft::new("sc1", OrbitSource::Trajectory(traj));
+        assert!(matches!(sc.orbit(), OrbitSource::Trajectory(_)));
     }
 
     // --- Scenario ---
@@ -521,6 +613,39 @@ mod tests {
         let filtered = scenario.filter_by_networks(&[NetworkId::new("estrack")]);
         assert_eq!(filtered.ground_stations().len(), 1);
         assert_eq!(filtered.ground_stations()[0].id().as_str(), "gs1");
+    }
+
+    #[test]
+    fn test_scenario_with_constellation() {
+        use lox_core::units::{AngleUnits, DistanceUnits};
+        use lox_orbits::constellations::WalkerDeltaBuilder;
+
+        let start = Time::j2000(Tai);
+        let end = start + TimeDelta::from_seconds(86400);
+        let scenario = DynScenario::new(start, end, DynOrigin::Earth, DynFrame::Icrf);
+
+        let constellation = WalkerDeltaBuilder::new(6, 3)
+            .with_semi_major_axis(7000.0_f64.km(), 0.0)
+            .with_inclination(53.0_f64.deg())
+            .build_constellation("test", start, DynOrigin::Earth, DynFrame::Icrf)
+            .unwrap()
+            .into_dyn();
+
+        let scenario = scenario.with_constellation(constellation).unwrap();
+        assert_eq!(scenario.spacecraft().len(), 6);
+        assert_eq!(scenario.constellations().len(), 1);
+        assert_eq!(scenario.constellations()[0].name(), "test");
+        // Verify spacecraft IDs contain constellation name
+        assert!(scenario.spacecraft()[0].id().as_str().contains("test"));
+    }
+
+    #[test]
+    fn test_scenario_interval() {
+        let start = Time::j2000(Tai);
+        let end = start + TimeDelta::from_seconds(86400);
+        let scenario = DynScenario::new(start, end, DynOrigin::Earth, DynFrame::Icrf);
+        assert_eq!(scenario.interval().start(), start);
+        assert_eq!(scenario.interval().end(), end);
     }
 
     #[test]

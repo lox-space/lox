@@ -259,6 +259,20 @@ impl PyScenario {
         PyTime(self.0.interval().start().into_dyn())
     }
 
+    /// Add a constellation to the scenario, converting all its satellites
+    /// to spacecraft using the constellation's selected propagator.
+    fn with_constellation(
+        &self,
+        constellation: crate::constellations::python::PyConstellation,
+    ) -> PyResult<Self> {
+        let scenario = self
+            .0
+            .clone()
+            .with_constellation(constellation.0)
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        Ok(PyScenario(scenario))
+    }
+
     /// Return the end time.
     fn end(&self) -> PyTime {
         PyTime(self.0.interval().end().into_dyn())

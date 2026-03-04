@@ -662,19 +662,13 @@ impl PyKeplerian {
             apoapsis_altitude,
         ) {
             (Some(sma), Some(ecc), None, None, None, None) => {
-                builder = builder.with_semi_major_axis(Distance::meters(sma.0.to_meters()), ecc);
+                builder = builder.with_semi_major_axis(sma.0, ecc);
             }
             (None, None, Some(rp), Some(ra), None, None) => {
-                builder = builder.with_radii(
-                    Distance::meters(rp.0.to_meters()),
-                    Distance::meters(ra.0.to_meters()),
-                );
+                builder = builder.with_radii(rp.0, ra.0);
             }
             (None, None, None, None, Some(alt_p), Some(alt_a)) => {
-                builder = builder.with_altitudes(
-                    Distance::meters(alt_p.0.to_meters()),
-                    Distance::meters(alt_a.0.to_meters()),
-                );
+                builder = builder.with_altitudes(alt_p.0, alt_a.0);
             }
             (None, None, None, None, None, None) => {
                 return Err(PyValueError::new_err(
@@ -695,19 +689,19 @@ impl PyKeplerian {
         }
 
         if let Some(inc) = inclination {
-            builder = builder.with_inclination(Angle::radians(inc.0.to_radians()));
+            builder = builder.with_inclination(inc.0);
         }
         if let Some(raan) = longitude_of_ascending_node {
-            builder = builder.with_longitude_of_ascending_node(Angle::radians(raan.0.to_radians()));
+            builder = builder.with_longitude_of_ascending_node(raan.0);
         }
         if let Some(aop) = argument_of_periapsis {
-            builder = builder.with_argument_of_periapsis(Angle::radians(aop.0.to_radians()));
+            builder = builder.with_argument_of_periapsis(aop.0);
         }
         if let Some(ta) = true_anomaly {
-            builder = builder.with_true_anomaly(Angle::radians(ta.0.to_radians()));
+            builder = builder.with_true_anomaly(ta.0);
         }
         if let Some(ma) = mean_anomaly {
-            builder = builder.with_mean_anomaly(Angle::radians(ma.0.to_radians()));
+            builder = builder.with_mean_anomaly(ma.0);
         }
 
         let orbit = builder
@@ -769,10 +763,10 @@ impl PyKeplerian {
 
         match (semi_major_axis, altitude) {
             (Some(sma), None) => {
-                builder = builder.with_semi_major_axis(Distance::meters(sma.0.to_meters()));
+                builder = builder.with_semi_major_axis(sma.0);
             }
             (None, Some(alt)) => {
-                builder = builder.with_altitude(Distance::meters(alt.0.to_meters()));
+                builder = builder.with_altitude(alt.0);
             }
             _ => {
                 return Err(PyValueError::new_err(
@@ -782,13 +776,13 @@ impl PyKeplerian {
         }
 
         if let Some(inc) = inclination {
-            builder = builder.with_inclination(Angle::radians(inc.0.to_radians()));
+            builder = builder.with_inclination(inc.0);
         }
         if let Some(raan) = longitude_of_ascending_node {
-            builder = builder.with_longitude_of_ascending_node(Angle::radians(raan.0.to_radians()));
+            builder = builder.with_longitude_of_ascending_node(raan.0);
         }
         if let Some(ta) = true_anomaly {
-            builder = builder.with_true_anomaly(Angle::radians(ta.0.to_radians()));
+            builder = builder.with_true_anomaly(ta.0);
         }
 
         let orbit = builder
@@ -848,11 +842,11 @@ impl PyKeplerian {
         let tai = to_tai(time.0, provider.map(|p| &p.get().0))?;
 
         // Pre-extract values as Copy types for use in both match arms.
-        let alt = altitude.map(|a| Distance::meters(a.0.to_meters()));
-        let sma = semi_major_axis.map(|s| Distance::meters(s.0.to_meters()));
-        let inc = inclination.map(|i| Angle::radians(i.0.to_radians()));
-        let aop = argument_of_periapsis.map(|a| Angle::radians(a.0.to_radians()));
-        let ta = true_anomaly.map(|a| Angle::radians(a.0.to_radians()));
+        let alt = altitude.map(|a| a.0);
+        let sma = semi_major_axis.map(|s| s.0);
+        let inc = inclination.map(|i| i.0);
+        let aop = argument_of_periapsis.map(|a| a.0);
+        let ta = true_anomaly.map(|a| a.0);
 
         macro_rules! configure_and_build {
             ($builder:expr) => {{

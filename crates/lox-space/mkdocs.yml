@@ -17,6 +17,7 @@ nav:
     - Ground Stations: ground.md
     - Events & Visibility: events.md
     - Communications: comms.md
+    - Constellations: constellations.md
     - Data Providers: data.md
     - Units: units.md
 
@@ -47,6 +48,12 @@ plugins:
             # Discard first line of `__init__` method docstrings,
             # useful when merging such docstrings into their parent class'.
             ignore_init_summary: true
+            # Suppress warnings for parameters documented in docstrings
+            # that are not visible in compiled PyO3 extension signatures.
+            warn_unknown_params: false
+            # Suppress warnings for missing type annotations in docstrings
+            # (types are provided in the .pyi stub file instead).
+            warn_missing_types: false
 
           # Tables are generally too large, lists will fix this.
           docstring_section_style: list

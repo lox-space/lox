@@ -409,6 +409,13 @@ class Scenario:
         provider.
         """
         ...
+    def with_constellation(self, constellation: "Constellation") -> "Scenario":
+        """Add a constellation to the scenario.
+
+        Converts each satellite into a Spacecraft using the constellation's
+        selected propagator.
+        """
+        ...
     def start(self) -> Time:
         """Return the start time."""
         ...
@@ -425,6 +432,109 @@ class Ensemble:
     """
     def get(self, id: str) -> Trajectory | None:
         """Return the trajectory for a given spacecraft id."""
+        ...
+    def __len__(self) -> int: ...
+    def __repr__(self) -> str: ...
+
+class ConstellationSatellite:
+    """A single satellite in a constellation."""
+    @property
+    def plane(self) -> int:
+        """Return the orbital plane index (0-based)."""
+        ...
+    @property
+    def index_in_plane(self) -> int:
+        """Return the index within the plane (0-based)."""
+        ...
+    def __repr__(self) -> str: ...
+
+class Constellation:
+    """A named collection of satellites produced by a constellation design algorithm.
+
+    Use the classmethods to create constellations of different types.
+    """
+    @classmethod
+    def walker_delta(
+        cls,
+        name: str,
+        time: Time,
+        origin: Origin,
+        *,
+        nsats: int,
+        nplanes: int,
+        semi_major_axis: Distance,
+        inclination: Angle,
+        eccentricity: float = 0.0,
+        phasing: int = 0,
+        argument_of_periapsis: Angle | None = None,
+        propagator: str = "vallado",
+    ) -> "Constellation":
+        """Create a Walker Delta constellation (RAAN spread = 360 deg)."""
+        ...
+    @classmethod
+    def walker_star(
+        cls,
+        name: str,
+        time: Time,
+        origin: Origin,
+        *,
+        nsats: int,
+        nplanes: int,
+        semi_major_axis: Distance,
+        inclination: Angle,
+        eccentricity: float = 0.0,
+        phasing: int = 0,
+        argument_of_periapsis: Angle | None = None,
+        propagator: str = "vallado",
+    ) -> "Constellation":
+        """Create a Walker Star constellation (RAAN spread = 180 deg)."""
+        ...
+    @classmethod
+    def street_of_coverage(
+        cls,
+        name: str,
+        time: Time,
+        origin: Origin,
+        *,
+        nsats: int,
+        nplanes: int,
+        semi_major_axis: Distance,
+        inclination: Angle,
+        eccentricity: float = 0.0,
+        coverage_fold: int = 1,
+        argument_of_periapsis: Angle | None = None,
+        propagator: str = "vallado",
+    ) -> "Constellation":
+        """Create a Street-of-Coverage constellation."""
+        ...
+    @classmethod
+    def flower(
+        cls,
+        name: str,
+        time: Time,
+        origin: Origin,
+        *,
+        n_petals: int,
+        n_days: int,
+        nsats: int,
+        phasing_numerator: int,
+        phasing_denominator: int,
+        inclination: Angle,
+        perigee_altitude: Distance | None = None,
+        semi_major_axis: Distance | None = None,
+        eccentricity: float | None = None,
+        argument_of_periapsis: Angle | None = None,
+        propagator: str = "vallado",
+    ) -> "Constellation":
+        """Create a Flower constellation (repeating ground tracks)."""
+        ...
+    @property
+    def name(self) -> str:
+        """Return the constellation name."""
+        ...
+    @property
+    def satellites(self) -> list[ConstellationSatellite]:
+        """Return the list of satellites."""
         ...
     def __len__(self) -> int: ...
     def __repr__(self) -> str: ...

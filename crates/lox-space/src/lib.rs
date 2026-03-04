@@ -8,6 +8,9 @@ pub mod analysis;
 #[cfg(feature = "bodies")]
 pub mod bodies;
 
+#[cfg(feature = "orbits")]
+pub mod constellations;
+
 #[cfg(feature = "comms")]
 pub mod comms;
 
