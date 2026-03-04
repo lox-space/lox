@@ -485,25 +485,61 @@ class TestPass:
 
 
 class TestAssets:
-    def test_ground_asset_id(self, ground_assets):
+    def test_ground_station_id(self, ground_assets):
         for ga in ground_assets:
             assert isinstance(ga.id(), str)
             assert len(ga.id()) > 0
 
-    def test_ground_asset_location(self, ground_assets):
+    def test_ground_station_location(self, ground_assets):
         for ga in ground_assets:
             loc = ga.location()
             assert isinstance(loc, lox.GroundLocation)
 
-    def test_ground_asset_mask(self, ground_assets):
+    def test_ground_station_mask(self, ground_assets):
         for ga in ground_assets:
             mask = ga.mask()
             assert isinstance(mask, lox.ElevationMask)
 
-    def test_space_asset_id(self, space_assets):
+    def test_ground_station_body_fixed_frame_default(self, ground_assets):
+        """Default body-fixed frame should be IAU_EARTH."""
+        ga = ground_assets[0]
+        frame = ga.body_fixed_frame()
+        assert isinstance(frame, lox.Frame)
+        assert repr(frame) == 'Frame("IAU_EARTH")'
+
+    def test_ground_station_body_fixed_frame_custom(self):
+        """Custom body-fixed frame should be preserved."""
+        loc = lox.GroundLocation(
+            origin=lox.Origin("Earth"),
+            longitude=0 * lox.deg,
+            latitude=0 * lox.deg,
+            altitude=0 * lox.km,
+        )
+        mask = lox.ElevationMask.fixed(0 * lox.deg)
+        itrf = lox.Frame("ITRF")
+        gs = lox.GroundStation("test", loc, mask, body_fixed_frame=itrf)
+        assert repr(gs.body_fixed_frame()) == 'Frame("ITRF")'
+
+    def test_ground_station_repr(self, ground_assets):
+        r = repr(ground_assets[0])
+        assert "GroundStation(" in r
+
+    def test_spacecraft_id(self, space_assets):
         for sa in space_assets:
             assert isinstance(sa.id(), str)
             assert len(sa.id()) > 0
+
+    def test_spacecraft_repr(self, space_assets):
+        r = repr(space_assets[0])
+        assert "Spacecraft(" in r
+
+    def test_spacecraft_max_slew_rate_none(self, space_assets):
+        assert space_assets[0].max_slew_rate() is None
+
+    def test_spacecraft_max_slew_rate_set(self, oneweb_subset):
+        sgp4 = next(iter(oneweb_subset.values()))
+        sc = lox.Spacecraft("test", sgp4, max_slew_rate=5 * lox.deg_per_s)
+        assert sc.max_slew_rate() is not None
 
 
 # ---------------------------------------------------------------------------

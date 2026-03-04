@@ -96,3 +96,32 @@ impl OrbitSource {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use lox_bodies::DynOrigin;
+    use lox_frames::DynFrame;
+    use lox_time::time_scales::DynTimeScale;
+
+    fn make_trajectory() -> DynTrajectory {
+        DynTrajectory::from_csv_dyn(
+            &lox_test_utils::read_data_file("trajectory_lunar.csv"),
+            DynOrigin::Earth,
+            DynFrame::Icrf,
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn test_orbit_source_trajectory_propagate() {
+        let traj = make_trajectory();
+        let interval = TimeInterval::new(
+            traj.start_time().to_scale(DynTimeScale::Tai),
+            traj.end_time().to_scale(DynTimeScale::Tai),
+        );
+        let source = OrbitSource::Trajectory(traj.clone());
+        let result = source.propagate(interval).unwrap();
+        assert_eq!(result.states().len(), traj.states().len());
+    }
+}

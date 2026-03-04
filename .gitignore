@@ -10,3 +10,4 @@ flamegraph.svg
 .codspeed/
 .idea/
 .claude/
+*.profraw
