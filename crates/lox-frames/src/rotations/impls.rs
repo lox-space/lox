@@ -1663,3 +1663,78 @@ where
         <Self as TryRotation<DynFrame, DynFrame, T>>::try_rotation(self, origin_dyn, target, time)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::providers::DefaultRotationProvider;
+    use lox_time::time_scales::Tai;
+
+    fn tai_j2000() -> Time<Tai> {
+        Time::j2000(Tai)
+    }
+
+    #[test]
+    fn test_mixed_icrf_to_dynframe() {
+        let time = tai_j2000();
+        let rot: Rotation = DefaultRotationProvider
+            .try_rotation(Icrf, DynFrame::Icrf, time)
+            .unwrap();
+        assert!(
+            rot.position_matrix()
+                .abs_diff_eq(glam::DMat3::IDENTITY, 1e-14)
+        );
+    }
+
+    #[test]
+    fn test_mixed_dynframe_to_icrf() {
+        let time = tai_j2000();
+        let rot: Rotation = DefaultRotationProvider
+            .try_rotation(DynFrame::Icrf, Icrf, time)
+            .unwrap();
+        assert!(
+            rot.position_matrix()
+                .abs_diff_eq(glam::DMat3::IDENTITY, 1e-14)
+        );
+    }
+
+    #[test]
+    fn test_mixed_iau_dynorigin_to_dynframe() {
+        let time = tai_j2000();
+        let iau_earth = Iau::try_new(DynOrigin::Earth).unwrap();
+        let rot: Rotation = DefaultRotationProvider
+            .try_rotation(iau_earth, DynFrame::Icrf, time)
+            .unwrap();
+        assert!(
+            !rot.position_matrix()
+                .abs_diff_eq(glam::DMat3::IDENTITY, 1e-6)
+        );
+    }
+
+    #[test]
+    fn test_mixed_dynframe_to_iau_dynorigin() {
+        let time = tai_j2000();
+        let iau_earth = Iau::try_new(DynOrigin::Earth).unwrap();
+        let rot: Rotation = DefaultRotationProvider
+            .try_rotation(DynFrame::Icrf, iau_earth, time)
+            .unwrap();
+        assert!(
+            !rot.position_matrix()
+                .abs_diff_eq(glam::DMat3::IDENTITY, 1e-6)
+        );
+    }
+
+    #[test]
+    fn test_mixed_roundtrip_icrf_iau_earth() {
+        let time = tai_j2000();
+        let iau_earth = Iau::try_new(DynOrigin::Earth).unwrap();
+        let rot_fwd: Rotation = DefaultRotationProvider
+            .try_rotation(Icrf, DynFrame::Iau(DynOrigin::Earth), time)
+            .unwrap();
+        let rot_bwd: Rotation = DefaultRotationProvider
+            .try_rotation(iau_earth, DynFrame::Icrf, time)
+            .unwrap();
+        let product = rot_fwd.position_matrix() * rot_bwd.position_matrix();
+        assert!(product.abs_diff_eq(glam::DMat3::IDENTITY, 1e-14));
+    }
+}
