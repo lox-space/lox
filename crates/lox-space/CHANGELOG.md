@@ -6,6 +6,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.35](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.34...lox-space-v0.1.0-alpha.35) - 2026-03-04
+
+### Added
+
+- *(lox-space)* add TLE class
+- *(lox-analysis)* add `lox-analysis` crate
+
+### Other
+
+- *(lox-space)* fix Python docs
+- *(lox-analysis)* add more tests
+- *(lox-analysis)* fix benchmarks
+- *(lox-analysis)* add body-fixed frame to G/S
+- *(lox-analysis)* monomorphize scenarios and analyses
+- *(lox-analysis)* use scenario-based analyses
+
 ## [0.1.0-alpha.34](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.33...lox-space-v0.1.0-alpha.34) - 2026-03-02
 
 ### Added
