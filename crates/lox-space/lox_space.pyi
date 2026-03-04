@@ -1327,6 +1327,70 @@ class GroundPropagator:
         """Propagate the ground station to one or more times."""
         ...
 
+class TLE:
+    """Two-Line Element set (TLE) for satellite orbit data.
+
+    Parses and exposes the orbital elements from a NORAD Two-Line Element set.
+
+    Args:
+        tle: TLE as a string (2 or 3 lines) or a list of 2–3 strings.
+    """
+    def __new__(cls, tle: str | list[str]) -> Self: ...
+    def object_name(self) -> str | None:
+        """Satellite name, if present (line 0 of a 3-line TLE)."""
+        ...
+    def international_designator(self) -> str | None:
+        """International designator (e.g. '98067A')."""
+        ...
+    def norad_id(self) -> int:
+        """NORAD catalog number."""
+        ...
+    def classification(self) -> str:
+        """Classification: 'U' (unclassified), 'C' (classified), or 'S' (secret)."""
+        ...
+    def epoch(self) -> Time:
+        """TLE epoch as a Time (TAI scale)."""
+        ...
+    def inclination(self) -> Angle:
+        """Orbital inclination."""
+        ...
+    def right_ascension(self) -> Angle:
+        """Right ascension of the ascending node (RAAN)."""
+        ...
+    def eccentricity(self) -> float:
+        """Orbital eccentricity (dimensionless)."""
+        ...
+    def argument_of_perigee(self) -> Angle:
+        """Argument of perigee."""
+        ...
+    def mean_anomaly(self) -> Angle:
+        """Mean anomaly."""
+        ...
+    def mean_motion(self) -> float:
+        """Mean motion in revolutions per day (Kozai convention)."""
+        ...
+    def mean_motion_dot(self) -> float:
+        """First derivative of mean motion (rev/day²)."""
+        ...
+    def mean_motion_ddot(self) -> float:
+        """Second derivative of mean motion (rev/day³)."""
+        ...
+    def drag_term(self) -> float:
+        """BSTAR drag term (earth radii⁻¹)."""
+        ...
+    def element_set_number(self) -> int:
+        """Element set number."""
+        ...
+    def revolution_number(self) -> int:
+        """Revolution number at epoch."""
+        ...
+    def ephemeris_type(self) -> int:
+        """Ephemeris type (always 0 in distributed data)."""
+        ...
+    def __repr__(self) -> str: ...
+    def __str__(self) -> str: ...
+    def __getnewargs__(self) -> tuple[str]: ...
+
 class SGP4:
     """SGP4 (Simplified General Perturbations 4) orbit propagator.
 
@@ -1334,7 +1398,7 @@ class SGP4:
     It uses Two-Line Element (TLE) data.
 
     Args:
-        tle: Two-Line Element set (2 or 3 lines).
+        tle: TLE object, string (2 or 3 lines), or list of 2–3 strings.
 
     Examples:
         >>> tle = '''ISS (ZARYA)
@@ -1343,7 +1407,10 @@ class SGP4:
         >>> sgp4 = lox.SGP4(tle)
         >>> trajectory = sgp4.propagate([t1, t2, t3])
     """
-    def __new__(cls, tle: str) -> Self: ...
+    def __new__(cls, tle: TLE | str | list[str]) -> Self: ...
+    def tle(self) -> TLE:
+        """Return the parsed TLE."""
+        ...
     def time(self) -> Time:
         """Return the TLE epoch time."""
         ...
