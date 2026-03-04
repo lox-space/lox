@@ -52,3 +52,49 @@ where
         self.0.is_empty()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use lox_bodies::DynOrigin;
+    use lox_frames::DynFrame;
+    use lox_time::time_scales::DynTimeScale;
+
+    type TestEnsemble = Ensemble<String, DynTimeScale, DynOrigin, DynFrame>;
+
+    fn make_trajectory() -> Trajectory<DynTimeScale, DynOrigin, DynFrame> {
+        Trajectory::from_csv_dyn(
+            &lox_test_utils::read_data_file("trajectory_lunar.csv"),
+            DynOrigin::Earth,
+            DynFrame::Icrf,
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn test_new_empty() {
+        let ensemble = TestEnsemble::new(HashMap::new());
+        assert!(ensemble.is_empty());
+        assert_eq!(ensemble.len(), 0);
+    }
+
+    #[test]
+    fn test_insert_and_get() {
+        let mut ensemble = TestEnsemble::new(HashMap::new());
+        let traj = make_trajectory();
+        ensemble.insert("sc1".to_string(), traj);
+        assert_eq!(ensemble.len(), 1);
+        assert!(!ensemble.is_empty());
+        assert!(ensemble.get(&"sc1".to_string()).is_some());
+        assert!(ensemble.get(&"sc2".to_string()).is_none());
+    }
+
+    #[test]
+    fn test_iter() {
+        let mut map = HashMap::new();
+        map.insert("sc1".to_string(), make_trajectory());
+        let ensemble = TestEnsemble::new(map);
+        let keys: Vec<_> = ensemble.iter().map(|(k, _)| k.clone()).collect();
+        assert_eq!(keys, vec!["sc1".to_string()]);
+    }
+}

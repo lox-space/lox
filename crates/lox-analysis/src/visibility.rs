@@ -575,6 +575,7 @@ impl VisibilityResults {
     /// Returns an error if the pair is an inter-satellite pair, since passes
     /// with ground-station observables are not meaningful for such pairs.
     /// Returns an empty vec if the pair is not found.
+    #[allow(clippy::too_many_arguments)]
     pub fn to_passes(
         &self,
         ground_id: &AssetId,
@@ -1507,6 +1508,69 @@ mod tests {
             total_limited < total_no_limit,
             "slew rate constraint should reduce total visibility (got {total_limited:.0}s vs {total_no_limit:.0}s)"
         );
+    }
+
+    #[test]
+    fn test_inter_satellite_asymmetric_slew_rate_sc1_only() {
+        let sc_traj = spacecraft_trajectory_dyn();
+        let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
+
+        // Only sc1 has a slew rate limit — exercises the (Some(a), None) branch.
+        let sc1 = Spacecraft::new("sc1", OrbitSource::Trajectory(sc_traj.clone()))
+            .with_max_slew_rate(AngularRate::degrees_per_second(10.0));
+        let sc2 = Spacecraft::new("sc2", OrbitSource::Trajectory(sc_traj));
+        let spk = ephemeris();
+        let space_assets = [sc1.clone(), sc2.clone()];
+        let (scenario, ensemble) = make_scenario_and_ensemble(&[], &space_assets, interval);
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk).with_inter_satellite();
+        let results = analysis.compute().unwrap();
+        let intervals = results
+            .intervals_for(sc1.id(), sc2.id())
+            .expect("pair not found");
+        // Colocated → ω = 0, full interval returned.
+        assert_eq!(intervals.len(), 1);
+    }
+
+    #[test]
+    fn test_inter_satellite_asymmetric_slew_rate_sc2_only() {
+        let sc_traj = spacecraft_trajectory_dyn();
+        let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
+
+        // Only sc2 has a slew rate limit — exercises the (None, Some(b)) branch.
+        let sc1 = Spacecraft::new("sc1", OrbitSource::Trajectory(sc_traj.clone()));
+        let sc2 = Spacecraft::new("sc2", OrbitSource::Trajectory(sc_traj))
+            .with_max_slew_rate(AngularRate::degrees_per_second(10.0));
+        let spk = ephemeris();
+        let space_assets = [sc1.clone(), sc2.clone()];
+        let (scenario, ensemble) = make_scenario_and_ensemble(&[], &space_assets, interval);
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk).with_inter_satellite();
+        let results = analysis.compute().unwrap();
+        let intervals = results
+            .intervals_for(sc1.id(), sc2.id())
+            .expect("pair not found");
+        assert_eq!(intervals.len(), 1);
+    }
+
+    #[test]
+    fn test_inter_satellite_both_min_and_max_range() {
+        let (traj1, traj2) = oneweb_trajectories();
+        let interval = TimeInterval::new(traj1.start_time(), traj1.end_time());
+        let sc1 = Spacecraft::new("ow12", OrbitSource::Trajectory(traj1));
+        let sc2 = Spacecraft::new("ow17", OrbitSource::Trajectory(traj2));
+        let spk = ephemeris();
+        let space_assets = [sc1.clone(), sc2.clone()];
+        let (scenario, ensemble) = make_scenario_and_ensemble(&[], &space_assets, interval);
+        // Set both min and max range to exercise the intersection branch (line 835).
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk)
+            .with_inter_satellite()
+            .with_min_range(Distance::kilometers(100.0))
+            .with_max_range(Distance::kilometers(5000.0));
+        let results = analysis.compute().unwrap();
+        let intervals = results
+            .intervals_for(sc1.id(), sc2.id())
+            .expect("pair not found");
+        // Should have some visibility windows within the range band.
+        assert!(!intervals.is_empty());
     }
 
     fn ephemeris() -> &'static Spk {
