@@ -14,6 +14,7 @@ Orbit propagation methods for predicting future states.
 |------------|-------------|----------|
 | `Vallado` | Analytical Kepler propagator | Two-body motion |
 | `J2` | Numerical J2 perturbation propagator | Oblateness effects |
+| `TLE` | Two-Line Element set parser | Satellite catalog data |
 | `SGP4` | Simplified General Perturbations | TLE-based propagation |
 | `GroundPropagator` | Ground station state | Earth-fixed locations |
 
@@ -67,6 +68,12 @@ state = sgp4.propagate(t)
 ---
 
 ::: lox_space.J2
+    options:
+      show_source: false
+
+---
+
+::: lox_space.TLE
     options:
       show_source: false
 
