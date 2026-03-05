@@ -2,10 +2,13 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+//! Tridiagonal matrix representation and solver.
+
 use std::ops::Index;
 
 use thiserror::Error;
 
+/// Error returned when the diagonal dimensions of a [`Tridiagonal`] matrix are inconsistent.
 #[derive(Clone, Debug, Error, Eq, PartialEq)]
 #[error("lengths of `dl` and `du` must be `d.len() - 1 = {0}` but was {1} and {2}")]
 pub struct LoxTridiagonalError(usize, usize, usize);
@@ -21,6 +24,7 @@ pub struct Tridiagonal<'a> {
 }
 
 impl<'a> Tridiagonal<'a> {
+    /// Creates a new tridiagonal matrix from lower, main, and upper diagonals.
     pub fn new(dl: &'a [f64], d: &'a [f64], du: &'a [f64]) -> Result<Self, LoxTridiagonalError> {
         let n = d.len();
         if (dl.len() != n - 1 || du.len() != n - 1)
@@ -31,10 +35,12 @@ impl<'a> Tridiagonal<'a> {
         Ok(Self { dl, d, du })
     }
 
+    /// Returns the shape `(n, n)` of the matrix.
     pub fn shape(&self) -> (usize, usize) {
         (self.d.len(), self.d.len())
     }
 
+    /// Solves the tridiagonal system `Ax = d` using the Thomas algorithm.
     pub fn solve(&self, d: &[f64]) -> Vec<f64> {
         let n = self.d.len();
         let a = self.dl;

@@ -120,6 +120,9 @@ impl Subsecond {
         this
     }
 
+    /// Creates a `Subsecond` from an `f64` value, extracting the fractional part.
+    ///
+    /// Returns `None` if the value is not finite (NaN or infinite).
     pub const fn from_f64(value: f64) -> Option<Self> {
         if !value.is_finite() {
             return None;

@@ -2,21 +2,29 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+//! Root-finding algorithms: Steffensen, Newton, Brent, and Secant methods.
+
 use lox_test_utils::approx_eq;
 use thiserror::Error;
 
+/// Error returned by root-finding algorithms.
 #[derive(Debug, Error)]
 pub enum RootFinderError {
+    /// The algorithm did not converge within the maximum number of iterations.
     #[error("not converged after {0} iterations, residual {1}")]
     NotConverged(u32, f64),
+    /// The root is not within the given bracket.
     #[error("root not in bracket")]
     NotInBracket,
+    /// The objective function returned an error.
     #[error(transparent)]
     Callback(#[from] CallbackError),
 }
 
+/// A boxed error type for use in root-finding callbacks.
 pub type BoxedError = Box<dyn std::error::Error + Send + Sync + 'static>;
 
+/// An error returned by a root-finding callback function.
 #[derive(Debug, Error)]
 #[error(transparent)]
 pub struct CallbackError(BoxedError);
@@ -33,7 +41,9 @@ impl From<BoxedError> for CallbackError {
     }
 }
 
+/// A callable function for root-finding algorithms.
 pub trait Callback {
+    /// Evaluates the function at `v`.
     fn call(&self, v: f64) -> Result<f64, CallbackError>;
 }
 
@@ -46,18 +56,22 @@ where
     }
 }
 
+/// Finds a root of `f` starting from an initial guess.
 pub trait FindRoot<F>
 where
     F: Callback,
 {
+    /// Finds a root of `f` starting from `initial_guess`.
     fn find(&self, f: F, initial_guess: f64) -> Result<f64, RootFinderError>;
 }
 
+/// Finds a root of `f` using both the function and its derivative.
 pub trait FindRootWithDerivative<F, D>
 where
     F: Callback,
     D: Callback,
 {
+    /// Finds a root of `f` using `derivative`, starting from `initial_guess`.
     fn find_with_derivative(
         &self,
         f: F,
@@ -66,13 +80,16 @@ where
     ) -> Result<f64, RootFinderError>;
 }
 
+/// Finds a root of `f` within a bracket `(a, b)`.
 pub trait FindBracketedRoot<F>
 where
     F: Callback,
 {
+    /// Finds a root of `f` within the given `bracket`.
     fn find_in_bracket(&self, f: F, bracket: (f64, f64)) -> Result<f64, RootFinderError>;
 }
 
+/// Steffensen's method for root-finding (derivative-free).
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Steffensen {
     max_iter: u32,
@@ -107,6 +124,7 @@ where
     }
 }
 
+/// Newton-Raphson method for root-finding (requires derivative).
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Newton {
     max_iter: u32,
@@ -147,6 +165,7 @@ where
     }
 }
 
+/// Brent's method for bracketed root-finding.
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Brent {
     max_iter: u32,
@@ -255,6 +274,7 @@ where
     }
 }
 
+/// Secant method for root-finding.
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Secant {
     max_iter: u32,

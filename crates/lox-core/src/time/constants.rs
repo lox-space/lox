@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+//! Well-known time constants.
+
 use crate::time::{calendar_dates::Date, deltas::TimeDelta};
 
 /// The Unix Epoch (1970-01-01T00:00:00 TAI) as a [TimeDelta].

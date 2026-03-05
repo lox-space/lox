@@ -4,6 +4,8 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+//! Mathematical utilities: root-finding, interpolation, optimization, and linear algebra.
+
 pub mod glam;
 pub mod linear_algebra;
 pub mod optim;

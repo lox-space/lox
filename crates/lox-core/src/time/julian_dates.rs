@@ -18,18 +18,26 @@ pub const J0: TimeDelta = TimeDelta::from_seconds(-SECONDS_BETWEEN_JD_AND_J2000)
 /// The Julian epochs supported by Lox.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Epoch {
+    /// Julian Date epoch (JD 0 = 4713 BC January 1 12:00).
     JulianDate,
+    /// Modified Julian Date epoch (MJD 0 = 1858 November 17 00:00).
     ModifiedJulianDate,
+    /// J1950 epoch (1950 January 1 12:00).
     J1950,
+    /// J2000 epoch (2000 January 1 12:00).
     J2000,
 }
 
 /// The units of time in which a Julian date may be expressed.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Unit {
+    /// Seconds.
     Seconds,
+    /// Days (86400 seconds).
     Days,
+    /// Julian years (365.25 days).
     Years,
+    /// Julian centuries (36525 days).
     Centuries,
 }
 
