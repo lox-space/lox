@@ -18,128 +18,188 @@ type BodyId = i32;
 
 const RECORD_SIZE: u32 = 1024;
 
+/// The file record at the beginning of every DAF file.
 #[derive(Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DafFileRecord {
+    /// Identification word (e.g. `"DAF/SPK"`).
     pub locidw: String,
+    /// Number of double-precision components per summary.
     pub nd: u32,
+    /// Number of integer components per summary.
     pub ni: u32,
+    /// Internal file name.
     pub locifn: String,
+    /// Record number of the first summary record.
     pub fward: u32,
+    /// Record number of the last summary record.
     pub bward: u32,
+    /// First free address in the file.
     pub free: u32,
+    /// Numeric binary format (`"LTL-IEEE"` or `"BIG-IEEE"`).
     pub locfmt: String,
+    /// Pre-null bytes.
     pub prenul: Vec<u8>,
+    /// FTP validation string.
     pub ftpstr: Vec<u8>,
+    /// Post-null bytes.
     pub pstnul: Vec<u8>,
 }
 
+/// Double-precision and integer components of a DAF array summary.
 #[derive(Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DafComponents {
+    /// Double-precision summary components.
     pub double_precision_components: Vec<f64>,
+    /// Integer summary components.
     pub integer_components: Vec<i32>,
 }
 
+/// A named DAF array summary with its data address range.
 #[derive(Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DafSummary {
+    /// Segment name.
     pub name: String,
+    /// Summary components.
     pub components: DafComponents,
+    /// First word address of the segment data.
     pub initial_address: usize,
+    /// Last word address of the segment data.
     pub final_address: usize,
 }
 
+/// Errors from DAF/SPK parsing and lookup.
 #[derive(Debug, Error)]
 pub enum DafSpkError {
+    /// The segment data type integer is invalid.
     #[error("the data type integer value does not match the ones in the spec")]
     InvalidSpkSegmentDataType,
+    /// The number of DAF components is unexpected.
     #[error("the number of DAF components does not match the SPK specification")]
     UnexpectedNumberOfComponents,
+    /// Generic parse failure.
     #[error("unable to parse")]
     UnableToParse,
+    /// Unsupported SPK segment data type.
     #[error("unsupported SPK type {data_type}")]
-    UnsupportedSpkArrayType { data_type: i32 },
+    UnsupportedSpkArrayType {
+        /// The unsupported data type identifier.
+        data_type: i32,
+    },
+    /// No segment matches the requested body pair.
     #[error("unable to find the segment for a given center body and target body")]
     UnableToFindMatchingSegment,
+    /// No record matches the requested epoch.
     #[error("unable to find record for a given date")]
     UnableToFindMatchingRecord,
+    /// I/O error reading the file.
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
 }
 
+/// Chebyshev coefficients for a single record in an SPK Type 2 segment.
 #[derive(Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SpkType2Coefficients {
+    /// X-axis coefficient.
     pub x: f64,
+    /// Y-axis coefficient.
     pub y: f64,
+    /// Z-axis coefficient.
     pub z: f64,
 }
 
 impl SpkType2Coefficients {
+    /// Converts to a `DVec3`.
     pub fn to_dvec3(&self) -> DVec3 {
         DVec3::new(self.x, self.y, self.z)
     }
 }
 
+/// Data array for an SPK Type 2 (Chebyshev position) segment.
 #[derive(Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SpkType2Array {
+    /// Chebyshev coefficient records.
     pub records: Vec<Vec<SpkType2Coefficients>>,
+    /// Initial epoch (integer days).
     pub init: u32,
+    /// Interval length (seconds).
     pub intlen: u32,
+    /// Record size.
     pub rsize: u32,
+    /// Number of records.
     pub n: u32,
 }
 
 impl SpkType2Array {
+    /// Returns the degree of the Chebyshev polynomial.
     pub fn degree_of_polynomial(&self) -> u32 {
         degree_of_chebyshev_polynomial(self.rsize)
     }
 }
 
+/// SPK segment data, tagged by type.
 #[derive(Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum SpkArray {
+    /// Type 2: Chebyshev polynomials for position.
     Type2(SpkType2Array),
 }
 
+/// A single SPK ephemeris segment.
 #[derive(Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SpkSegment {
+    /// Segment name.
     pub name: String,
-    // In J2000 epoch
+    /// Initial epoch in seconds since J2000.
     pub initial_epoch: f64,
-    // In J2000 epoch
+    /// Final epoch in seconds since J2000.
     pub final_epoch: f64,
-    // NAIF id of the target
+    /// NAIF ID of the target body.
     pub target_id: BodyId,
-    // NAIF id of the center
+    /// NAIF ID of the center body.
     pub center_id: BodyId,
-    // NAIF id of the reference frame
+    /// NAIF ID of the reference frame.
     pub reference_frame_id: BodyId,
+    /// SPK data type identifier.
     pub data_type: i32,
+    /// First word address.
     pub initial_address: usize,
+    /// Last word address.
     pub final_address: usize,
+    /// Segment data array.
     pub data: SpkArray,
 }
 
+/// A DAF summary record containing multiple summaries.
 #[derive(Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DafSummaryRecord {
+    /// Record number of the next summary record (0 if last).
     pub next: u32,
+    /// Number of summaries in this record.
     pub count: u32,
+    /// The summaries.
     pub summaries: Vec<DafSummary>,
 }
 
+/// A parsed SPICE SPK (Spacecraft and Planet Kernel) file.
 #[derive(Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Spk {
+    /// The DAF file record header.
     pub file_record: DafFileRecord,
+    /// The comment area text.
     pub comment: String,
+    /// Segments indexed by center body ID and target body ID.
     pub segments: HashMap<BodyId, HashMap<BodyId, Vec<SpkSegment>>>,
 }
 
+/// Detects the byte order of a DAF file from the `LOCFMT` field.
 pub fn parse_daf_file_record_endianness(
     input: &[u8],
 ) -> nom::IResult<&[u8], nom::number::Endianness> {
@@ -162,6 +222,7 @@ pub fn parse_daf_file_record_endianness(
     Ok((input, endianness))
 }
 
+/// Parses the file record of a DAF file, returning the endianness and record.
 pub fn parse_daf_file_record(
     input: &[u8],
 ) -> nom::IResult<&[u8], (nom::number::Endianness, DafFileRecord)> {
@@ -244,6 +305,7 @@ pub fn parse_daf_file_record(
     ))
 }
 
+/// Parses the comment area of a DAF file.
 pub fn parse_daf_comment_area(
     input: &[u8],
     comment_areas_count: u32,
@@ -283,6 +345,7 @@ pub fn parse_daf_comment_area(
     Ok((input_cursor, comment_area))
 }
 
+/// Parses a single DAF summary/name record pair.
 pub fn parse_daf_summary_and_name_record_pair(
     input: &[u8],
     endianness: nom::number::Endianness,
@@ -358,6 +421,7 @@ pub fn parse_daf_summary_and_name_record_pair(
     ))
 }
 
+/// Parses all summary/name record pairs from a DAF file.
 pub fn parse_all_summary_and_name_record_pairs(
     input: &[u8],
     endianness: nom::number::Endianness,
@@ -394,11 +458,13 @@ pub fn parse_all_summary_and_name_record_pairs(
 }
 
 impl Spk {
+    /// Reads and parses an SPK file from the given path.
     pub fn from_file(path: impl AsRef<std::path::Path>) -> Result<Self, DafSpkError> {
         let data = std::fs::read(path)?;
         Self::from_bytes(&data)
     }
 
+    /// Parses an SPK file from a byte slice.
     pub fn from_bytes(full_input: &[u8]) -> Result<Self, DafSpkError> {
         // - https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/req/daf.html
         // - https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/req/spk.html
@@ -448,6 +514,7 @@ impl Spk {
     }
 }
 
+/// Parses a complete DAF/SPK file from a byte slice.
 #[deprecated(note = "use Spk::from_bytes instead")]
 pub fn parse_daf_spk(full_input: &[u8]) -> Result<Spk, DafSpkError> {
     Spk::from_bytes(full_input)
@@ -469,6 +536,7 @@ fn degree_of_chebyshev_polynomial(rsize: u32) -> u32 {
     (rsize - 2) / 3
 }
 
+/// Parses a single SPK segment from a DAF summary and the full file data.
 pub fn parse_spk_segment(
     summary: &DafSummary,
     full_input: &[u8],

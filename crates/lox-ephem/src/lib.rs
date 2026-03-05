@@ -2,12 +2,17 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+#![warn(missing_docs)]
+
+//! Ephemeris providers for solar system bodies, including SPK/DAF file support.
+
 use arrayvec::ArrayVec;
 use glam::DVec3;
 use lox_bodies::Origin;
 use lox_core::coords::Cartesian;
 use lox_time::{Time, time_scales::Tdb};
 
+/// SPICE SPK/DAF file parser and ephemeris implementation.
 pub mod spk;
 
 /// Returns the state (position and velocity) of `target` relative to `origin`
@@ -16,8 +21,10 @@ pub mod spk;
 /// Implementations handle path resolution for non-adjacent body pairs
 /// (e.g. Earth relative to Mars goes via the barycenters automatically).
 pub trait Ephemeris {
+    /// The error type returned by ephemeris lookups.
     type Error: std::error::Error + Send + Sync;
 
+    /// Returns the state (position and velocity) of `target` relative to `origin`.
     fn state<O1: Origin, O2: Origin>(
         &self,
         time: Time<Tdb>,

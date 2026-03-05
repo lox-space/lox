@@ -25,14 +25,17 @@ use lox_orbits::propagators::numerical::DynJ2Propagator;
 use lox_orbits::propagators::semi_analytical::DynVallado;
 use lox_orbits::propagators::{OrbitSource, PropagateError};
 
+/// Unique identifier for a ground station or spacecraft.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct AssetId(String);
 
 impl AssetId {
+    /// Creates a new asset identifier.
     pub fn new(id: impl Into<String>) -> Self {
         Self(id.into())
     }
 
+    /// Returns the identifier as a string slice.
     pub fn as_str(&self) -> &str {
         &self.0
     }
@@ -44,14 +47,17 @@ impl fmt::Display for AssetId {
     }
 }
 
+/// Unique identifier for a satellite constellation.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ConstellationId(String);
 
 impl ConstellationId {
+    /// Creates a new constellation identifier.
     pub fn new(id: impl Into<String>) -> Self {
         Self(id.into())
     }
 
+    /// Returns the identifier as a string slice.
     pub fn as_str(&self) -> &str {
         &self.0
     }
@@ -63,14 +69,17 @@ impl fmt::Display for ConstellationId {
     }
 }
 
+/// Unique identifier for a ground station network.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct NetworkId(String);
 
 impl NetworkId {
+    /// Creates a new network identifier.
     pub fn new(id: impl Into<String>) -> Self {
         Self(id.into())
     }
 
+    /// Returns the identifier as a string slice.
     pub fn as_str(&self) -> &str {
         &self.0
     }
@@ -82,6 +91,7 @@ impl fmt::Display for NetworkId {
     }
 }
 
+/// A ground station with location, elevation mask, and optional network membership.
 #[derive(Debug, Clone)]
 pub struct GroundStation {
     id: AssetId,
@@ -94,6 +104,7 @@ pub struct GroundStation {
 }
 
 impl GroundStation {
+    /// Creates a new ground station with the given location and elevation mask.
     pub fn new(id: impl Into<String>, location: DynGroundLocation, mask: ElevationMask) -> Self {
         let body_fixed_frame = DynFrame::Iau(location.origin());
         Self {
@@ -107,44 +118,53 @@ impl GroundStation {
         }
     }
 
+    /// Overrides the body-fixed frame (defaults to IAU frame of the location's origin).
     pub fn with_body_fixed_frame(mut self, frame: impl Into<DynFrame>) -> Self {
         self.body_fixed_frame = frame.into();
         self
     }
 
+    /// Assigns this ground station to a network.
     pub fn with_network_id(mut self, id: impl Into<String>) -> Self {
         self.network = Some(NetworkId(id.into()));
         self
     }
 
+    /// Adds a communication system to this ground station.
     #[cfg(feature = "comms")]
     pub fn with_communication_system(mut self, system: CommunicationSystem) -> Self {
         self.communication_systems.push(system);
         self
     }
 
+    /// Returns the asset identifier.
     pub fn id(&self) -> &AssetId {
         &self.id
     }
 
+    /// Returns the ground location.
     pub fn location(&self) -> &DynGroundLocation {
         &self.location
     }
 
+    /// Returns the elevation mask.
     pub fn mask(&self) -> &ElevationMask {
         &self.mask
     }
 
+    /// Returns the body-fixed reference frame.
     pub fn body_fixed_frame(&self) -> DynFrame {
         self.body_fixed_frame
     }
 
+    /// Returns the communication systems attached to this ground station.
     #[cfg(feature = "comms")]
     pub fn communication_systems(&self) -> &[CommunicationSystem] {
         &self.communication_systems
     }
 }
 
+/// A spacecraft with an orbit source, optional slew rate, and constellation membership.
 #[derive(Debug, Clone)]
 pub struct Spacecraft {
     id: AssetId,
@@ -156,6 +176,7 @@ pub struct Spacecraft {
 }
 
 impl Spacecraft {
+    /// Creates a new spacecraft with the given orbit source.
     pub fn new(id: impl Into<String>, orbit: OrbitSource) -> Self {
         Self {
             id: AssetId::new(id),
@@ -167,34 +188,41 @@ impl Spacecraft {
         }
     }
 
+    /// Sets the maximum slew rate for the spacecraft.
     pub fn with_max_slew_rate(mut self, rate: AngularRate) -> Self {
         self.max_slew_rate = Some(rate);
         self
     }
 
+    /// Assigns this spacecraft to a constellation.
     pub fn with_constellation_id(mut self, id: impl Into<String>) -> Self {
         self.constellation = Some(ConstellationId(id.into()));
         self
     }
 
+    /// Adds a communication system to this spacecraft.
     #[cfg(feature = "comms")]
     pub fn with_communication_system(mut self, system: CommunicationSystem) -> Self {
         self.communication_systems.push(system);
         self
     }
 
+    /// Returns the asset identifier.
     pub fn id(&self) -> &AssetId {
         &self.id
     }
 
+    /// Returns the orbit source.
     pub fn orbit(&self) -> &OrbitSource {
         &self.orbit
     }
 
+    /// Returns the maximum slew rate, if set.
     pub fn max_slew_rate(&self) -> Option<AngularRate> {
         self.max_slew_rate
     }
 
+    /// Returns the communication systems attached to this spacecraft.
     #[cfg(feature = "comms")]
     pub fn communication_systems(&self) -> &[CommunicationSystem] {
         &self.communication_systems
@@ -219,30 +247,39 @@ pub struct Scenario<O: Origin, R: ReferenceFrame> {
 /// Dynamic scenario — preserves backward compatibility and serves the Python API.
 pub type DynScenario = Scenario<DynOrigin, DynFrame>;
 
+/// Errors from converting a constellation into individual [`Spacecraft`].
 #[derive(Debug, thiserror::Error)]
 pub enum ConstellationConvertError {
+    /// Failed to create a Keplerian orbit from satellite elements.
     #[error("failed to create Keplerian orbit: {0}")]
     KeplerianOrbit(String),
+    /// Failed to convert Keplerian orbit to Cartesian state.
     #[error("failed to convert to Cartesian orbit: {0}")]
     CartesianConversion(String),
+    /// Failed to create an orbit propagator.
     #[error("failed to create propagator: {0}")]
     Propagator(String),
 }
 
+/// Errors from propagating spacecraft trajectories within a scenario.
 #[derive(Debug, thiserror::Error)]
 pub enum ScenarioPropagateError {
+    /// Orbit propagation failed for the named spacecraft.
     #[error("propagation failed for spacecraft \"{0}\": {1}")]
     Propagate(AssetId, PropagateError),
+    /// Frame transformation failed for the named spacecraft.
     #[error("frame transformation failed for spacecraft \"{0}\": {1}")]
     FrameTransformation(AssetId, String),
 }
 
 impl<O: Origin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send + Sync> Scenario<O, R> {
+    /// Creates a new scenario from start/end times, origin, and frame.
     pub fn new(start_time: Time<Tai>, end_time: Time<Tai>, origin: O, frame: R) -> Self {
         let interval = TimeInterval::new(start_time, end_time);
         Self::with_interval(interval, origin, frame)
     }
 
+    /// Creates a new scenario from a time interval, origin, and frame.
     pub fn with_interval(interval: TimeInterval<Tai>, origin: O, frame: R) -> Self {
         Self {
             interval,
@@ -254,24 +291,29 @@ impl<O: Origin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send + Sync> Sce
         }
     }
 
+    /// Sets the spacecraft for this scenario.
     pub fn with_spacecraft(mut self, spacecraft: &[Spacecraft]) -> Self {
         self.spacecraft = spacecraft.into();
         self
     }
 
+    /// Sets the ground stations for this scenario.
     pub fn with_ground_stations(mut self, ground_stations: &[GroundStation]) -> Self {
         self.ground_stations = ground_stations.into();
         self
     }
 
+    /// Returns the scenario time interval.
     pub fn interval(&self) -> &TimeInterval<Tai> {
         &self.interval
     }
 
+    /// Returns the central body origin.
     pub fn origin(&self) -> O {
         self.origin
     }
 
+    /// Returns the reference frame.
     pub fn frame(&self) -> R {
         self.frame
     }
@@ -318,14 +360,17 @@ impl<O: Origin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send + Sync> Sce
         Ok(self)
     }
 
+    /// Returns the constellations in this scenario.
     pub fn constellations(&self) -> &[DynConstellation] {
         &self.constellations
     }
 
+    /// Returns the ground stations in this scenario.
     pub fn ground_stations(&self) -> &[GroundStation] {
         &self.ground_stations
     }
 
+    /// Returns the spacecraft in this scenario.
     pub fn spacecraft(&self) -> &[Spacecraft] {
         &self.spacecraft
     }
@@ -380,6 +425,7 @@ impl<O: Origin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send + Sync> Sce
         Ok(Ensemble::new(entries?))
     }
 
+    /// Returns a new scenario containing only spacecraft belonging to the given constellations.
     pub fn filter_by_constellations(&self, constellations: &[ConstellationId]) -> Self {
         let spacecraft = self
             .spacecraft
@@ -394,6 +440,7 @@ impl<O: Origin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send + Sync> Sce
         }
     }
 
+    /// Returns a new scenario containing only ground stations belonging to the given networks.
     pub fn filter_by_networks(&self, networks: &[NetworkId]) -> Self {
         let ground_stations = self
             .ground_stations
