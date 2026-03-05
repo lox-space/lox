@@ -2,6 +2,9 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+//! General-purpose utilities.
+
+/// An iterator that yields `n` evenly spaced values from `start` to `end` (inclusive).
 pub struct Linspace {
     start: f64,
     end: f64,
@@ -10,6 +13,7 @@ pub struct Linspace {
 }
 
 impl Linspace {
+    /// Creates a new `Linspace` iterator with `n` points from `start` to `end`.
     pub fn new(start: f64, end: f64, n: usize) -> Self {
         Self {
             start,

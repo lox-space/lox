@@ -4,4 +4,6 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+//! Linear algebra utilities.
+
 pub mod tridiagonal;

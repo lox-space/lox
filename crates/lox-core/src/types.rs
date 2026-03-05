@@ -3,5 +3,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+//! Shared type aliases for Julian dates and physical units.
+
 pub mod julian_dates;
 pub mod units;

@@ -10,10 +10,13 @@ use crate::{
     time::{constants::UNIX_EPOCH, deltas::TimeDelta},
 };
 
+/// Errors that can occur when converting between Lox and `chrono` time types.
 #[derive(Debug, Error)]
 pub enum ChronoError {
+    /// The [`TimeDelta`] cannot be represented as a `chrono::DateTime`.
     #[error("{0} cannot be represented as a `chrono::DateTime`")]
     DateTime(TimeDelta),
+    /// The [`TimeDelta`] cannot be represented as a `chrono::TimeDelta`.
     #[error("{0} cannot be represented as a `chrono::TimeDelta`")]
     TimeDelta(TimeDelta),
 }

@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+//! Interpolated data series with linear and cubic spline support.
+
 use std::sync::Arc;
 
 use fast_polynomial::poly_array;
@@ -15,23 +17,31 @@ use super::slices::Diff;
 const MIN_POINTS_LINEAR: usize = 2;
 const MIN_POINTS_SPLINE: usize = 4;
 
+/// Error returned when constructing a [`Series`] with invalid data.
 #[derive(Clone, Debug, Error, PartialEq)]
 pub enum SeriesError {
+    /// The `x` and `y` arrays have different lengths.
     #[error("`x` and `y` must have the same length but were {0} and {1}")]
     DimensionMismatch(usize, usize),
+    /// Fewer than 2 data points were provided.
     #[error("length of `x` and `y` must at least 2 but was {0}")]
     InsufficientPoints(usize),
+    /// The x-axis is not strictly monotonically increasing.
     #[error("x-axis must be strictly monotonic")]
     NonMonotonic,
 }
 
+/// The interpolation method and its precomputed coefficients.
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Interpolation {
+    /// Linear interpolation between data points.
     Linear,
+    /// Cubic spline interpolation with precomputed polynomial coefficients.
     CubicSpline(Arc<[[f64; 4]]>),
 }
 
+/// An interpolated 1-D data series.
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Series {
@@ -40,12 +50,16 @@ pub struct Series {
     interpolation: Interpolation,
 }
 
+/// Selects the interpolation method for a [`Series`].
 pub enum InterpolationType {
+    /// Linear interpolation.
     Linear,
+    /// Natural cubic spline interpolation (falls back to linear if fewer than 4 points).
     CubicSpline,
 }
 
 impl Series {
+    /// Creates a new series, returning an error if the data is invalid.
     pub fn try_new(
         x: impl Into<Arc<[f64]>>,
         y: impl Into<Arc<[f64]>>,
@@ -59,6 +73,7 @@ impl Series {
         Ok(Self::new(x, y, interpolation))
     }
 
+    /// Creates a new series, panicking if the data is invalid.
     pub fn new(
         x: impl Into<Arc<[f64]>>,
         y: impl Into<Arc<[f64]>>,
@@ -162,6 +177,7 @@ impl Series {
         }
     }
 
+    /// Finds the interval index for interpolation at point `xp`.
     #[inline]
     pub fn find_index(&self, xp: f64) -> usize {
         let x = self.x.as_ref();
@@ -176,6 +192,7 @@ impl Series {
         }
     }
 
+    /// Interpolates at point `xp` using the precomputed interval `idx`.
     #[inline]
     pub fn interpolate_at_index(&self, xp: f64, idx: usize) -> f64 {
         match &self.interpolation {
@@ -192,24 +209,29 @@ impl Series {
         }
     }
 
+    /// Interpolates the series at point `xp`.
     #[inline]
     pub fn interpolate(&self, xp: f64) -> f64 {
         let idx = self.find_index(xp);
         self.interpolate_at_index(xp, idx)
     }
 
+    /// Returns the x data points.
     pub fn x(&self) -> &[f64] {
         self.x.as_ref()
     }
 
+    /// Returns the y data points.
     pub fn y(&self) -> &[f64] {
         self.y.as_ref()
     }
 
+    /// Returns the first `(x, y)` data point.
     pub fn first(&self) -> (f64, f64) {
         (*self.x().first().unwrap(), *self.y().first().unwrap())
     }
 
+    /// Returns the last `(x, y)` data point.
     pub fn last(&self) -> (f64, f64) {
         (*self.x().last().unwrap(), *self.y().last().unwrap())
     }

@@ -4,5 +4,9 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+//! Mathematical utilities re-exported from [`lox_core::math`].
+
+#![warn(missing_docs)]
+
 #[doc(inline)]
 pub use lox_core::math::*;

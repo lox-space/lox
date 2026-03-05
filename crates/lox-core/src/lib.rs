@@ -2,15 +2,13 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-//! # lox-units
+//! Core types, constants, and utilities for the Lox Astrodynamics Toolkit.
 //!
-//! *Physical units, constants, and common data types for the Lox Astrodynamics Toolkit*
-//!
-//! ## Units
-//!
-//! ## Constants
-//!
-//! ## Types
+//! This crate provides the foundational building blocks used across Lox:
+//! physical units, coordinate types, orbital elements, time representation,
+//! mathematical utilities, and numerical constants.
+
+#![warn(missing_docs)]
 
 pub mod anomalies;
 pub mod coords;

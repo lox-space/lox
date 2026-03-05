@@ -6,14 +6,20 @@
 
 //! Mod `units` exposes shared type aliases representing a variety of physical units.
 
+/// Arcseconds as an `f64`.
 pub type Arcseconds = f64;
 
+/// Microarcseconds as an `f64`.
 pub type Microarcseconds = f64;
 
+/// Radians as an `f64`.
 pub type Radians = f64;
 
+/// Seconds as an `f64`.
 pub type Seconds = f64;
 
+/// Julian centuries as an `f64`.
 pub type JulianCenturies = f64;
 
+/// Days as an `f64`.
 pub type Days = f64;

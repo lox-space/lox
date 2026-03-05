@@ -6,7 +6,10 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+//! Time representation: deltas, calendar dates, Julian dates, and time-of-day.
+
 pub mod calendar_dates;
+/// Conversions between Lox and `chrono` types.
 #[cfg(feature = "chrono")]
 pub mod chrono;
 pub mod constants;

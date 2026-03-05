@@ -71,4 +71,5 @@ pub const SECONDS_BETWEEN_J1950_AND_J2000: f64 = 1577880000.0;
  * Physical constants
  */
 
+/// Earth's rotation rate in radians per second (IERS 2010).
 pub const ROTATION_RATE_EARTH: f64 = 7.2921150e-5;

@@ -54,6 +54,7 @@ impl Display for GravitationalParameter {
     }
 }
 
+/// Type alias for the semi-major axis of an orbit, stored as a [`Distance`].
 pub type SemiMajorAxis = Distance;
 
 /// The Keplerian orbit types or conic sections.
@@ -81,6 +82,7 @@ impl Display for OrbitType {
     }
 }
 
+/// Error returned when attempting to create an [`Eccentricity`] with a negative value.
 #[derive(Debug, Clone, Error)]
 #[error("eccentricity cannot be negative but was {0}")]
 pub struct NegativeEccentricityError(f64);
@@ -151,6 +153,7 @@ impl Display for Eccentricity {
     }
 }
 
+/// Error returned when an [`Inclination`] is outside the valid range [0°, 180°].
 #[derive(Debug, Clone, Error)]
 #[error("inclination must be between 0 and 180 deg but was {0}")]
 pub struct InclinationError(Angle);
@@ -162,6 +165,7 @@ pub struct InclinationError(Angle);
 pub struct Inclination(Angle);
 
 impl Inclination {
+    /// Tries to create a new [`Inclination`] from an angle. Must be between 0 and π.
     pub const fn try_new(inclination: Angle) -> Result<Inclination, InclinationError> {
         let inc = inclination.as_f64();
         if inc < 0.0 || inc > PI {
@@ -170,6 +174,7 @@ impl Inclination {
         Ok(Inclination(inclination))
     }
 
+    /// Returns the inclination in radians as an `f64`.
     pub const fn as_f64(&self) -> f64 {
         self.0.as_f64()
     }
@@ -181,6 +186,7 @@ impl Display for Inclination {
     }
 }
 
+/// Error returned when a [`LongitudeOfAscendingNode`] is outside the valid range [0°, 360°].
 #[derive(Debug, Clone, Error)]
 #[error("longitude of ascending node must be between 0 and 360 deg but was {0}")]
 pub struct LongitudeOfAscendingNodeError(Angle);
@@ -192,6 +198,7 @@ pub struct LongitudeOfAscendingNodeError(Angle);
 pub struct LongitudeOfAscendingNode(Angle);
 
 impl LongitudeOfAscendingNode {
+    /// Tries to create a new [`LongitudeOfAscendingNode`]. Must be between 0 and 2π.
     pub const fn try_new(
         longitude_of_ascending_node: Angle,
     ) -> Result<LongitudeOfAscendingNode, LongitudeOfAscendingNodeError> {
@@ -202,6 +209,7 @@ impl LongitudeOfAscendingNode {
         Ok(LongitudeOfAscendingNode(longitude_of_ascending_node))
     }
 
+    /// Returns the longitude of ascending node in radians as an `f64`.
     pub const fn as_f64(&self) -> f64 {
         self.0.as_f64()
     }
@@ -213,6 +221,7 @@ impl Display for LongitudeOfAscendingNode {
     }
 }
 
+/// Error returned when an [`ArgumentOfPeriapsis`] is outside the valid range [0°, 360°].
 #[derive(Debug, Clone, Error)]
 #[error("argument of periapsis must be between 0 and 360 deg but was {0}")]
 pub struct ArgumentOfPeriapsisError(Angle);
@@ -224,6 +233,7 @@ pub struct ArgumentOfPeriapsisError(Angle);
 pub struct ArgumentOfPeriapsis(Angle);
 
 impl ArgumentOfPeriapsis {
+    /// Tries to create a new [`ArgumentOfPeriapsis`]. Must be between 0 and 2π.
     pub const fn try_new(
         argument_of_periapsis: Angle,
     ) -> Result<ArgumentOfPeriapsis, ArgumentOfPeriapsisError> {
@@ -234,6 +244,7 @@ impl ArgumentOfPeriapsis {
         Ok(ArgumentOfPeriapsis(argument_of_periapsis))
     }
 
+    /// Returns the argument of periapsis in radians as an `f64`.
     pub const fn as_f64(&self) -> f64 {
         self.0.as_f64()
     }
@@ -245,6 +256,7 @@ impl Display for ArgumentOfPeriapsis {
     }
 }
 
+/// A set of Keplerian orbital elements.
 #[derive(Debug, Clone, Copy, PartialEq, ApproxEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Keplerian {
@@ -257,6 +269,7 @@ pub struct Keplerian {
 }
 
 impl Keplerian {
+    /// Creates a new set of Keplerian elements from pre-validated components.
     pub fn new(
         semi_major_axis: SemiMajorAxis,
         eccentricity: Eccentricity,
@@ -275,34 +288,42 @@ impl Keplerian {
         }
     }
 
+    /// Returns a new [`KeplerianBuilder`].
     pub fn builder() -> KeplerianBuilder {
         KeplerianBuilder::default()
     }
 
+    /// Returns the semi-major axis.
     pub fn semi_major_axis(&self) -> SemiMajorAxis {
         self.semi_major_axis
     }
 
+    /// Returns the eccentricity.
     pub fn eccentricity(&self) -> Eccentricity {
         self.eccentricity
     }
 
+    /// Returns the inclination.
     pub fn inclination(&self) -> Inclination {
         self.inclination
     }
 
+    /// Returns the longitude of ascending node.
     pub fn longitude_of_ascending_node(&self) -> LongitudeOfAscendingNode {
         self.longitude_of_ascending_node
     }
 
+    /// Returns the argument of periapsis.
     pub fn argument_of_periapsis(&self) -> ArgumentOfPeriapsis {
         self.argument_of_periapsis
     }
 
+    /// Returns the true anomaly.
     pub fn true_anomaly(&self) -> TrueAnomaly {
         self.true_anomaly
     }
 
+    /// Returns the semi-parameter (semi-latus rectum) of the orbit.
     pub fn semi_parameter(&self) -> Distance {
         if self.eccentricity.is_circular() {
             self.semi_major_axis
@@ -311,6 +332,7 @@ impl Keplerian {
         }
     }
 
+    /// Converts the orbital elements to position and velocity in the perifocal frame.
     pub fn to_perifocal(&self, grav_param: GravitationalParameter) -> (DVec3, DVec3) {
         let ecc = self.eccentricity.as_f64();
         let mu = grav_param.as_f64();
@@ -324,6 +346,7 @@ impl Keplerian {
         (pos, vel)
     }
 
+    /// Converts the orbital elements to a Cartesian state vector.
     pub fn to_cartesian(&self, grav_param: GravitationalParameter) -> Cartesian {
         let (pos, vel) = self.to_perifocal(grav_param);
         let rot = self.longitude_of_ascending_node.0.rotation_z().transpose()
@@ -332,6 +355,7 @@ impl Keplerian {
         Cartesian::from_vecs(rot * pos, rot * vel)
     }
 
+    /// Returns the orbital period, or `None` for non-elliptic orbits.
     pub fn orbital_period(&self, grav_param: GravitationalParameter) -> Option<TimeDelta> {
         if !self.eccentricity().is_circular_or_elliptic() {
             return None;
@@ -341,6 +365,7 @@ impl Keplerian {
         Some(TimeDelta::from_seconds_f64(TAU * (a.powf(3.0) / mu).sqrt()))
     }
 
+    /// Returns an iterator over `n` Cartesian positions equally spaced around the orbit.
     pub fn iter_trace(
         &self,
         grav_param: GravitationalParameter,
@@ -357,6 +382,7 @@ impl Keplerian {
         })
     }
 
+    /// Returns `n` Cartesian positions equally spaced around the orbit, or `None` for non-elliptic orbits.
     pub fn trace(&self, grav_param: GravitationalParameter, n: usize) -> Option<Vec<Cartesian>> {
         if !self.eccentricity().is_circular_or_elliptic() {
             return None;
@@ -366,6 +392,7 @@ impl Keplerian {
 }
 
 impl Cartesian {
+    /// Computes the eccentricity vector from the Cartesian state.
     pub fn eccentricity_vector(&self, grav_param: GravitationalParameter) -> DVec3 {
         let mu = grav_param.as_f64();
         let r = self.position();
@@ -378,6 +405,7 @@ impl Cartesian {
         ((v2 - mu / rm) * r - rv * v) / mu
     }
 
+    /// Converts the Cartesian state to Keplerian orbital elements.
     pub fn to_keplerian(&self, grav_param: GravitationalParameter) -> Keplerian {
         let r = self.position();
         let v = self.velocity();
@@ -449,33 +477,44 @@ impl Cartesian {
     }
 }
 
+/// Error returned when constructing a [`Keplerian`] via the builder.
 #[derive(Debug, Clone, Error)]
 pub enum KeplerianError {
+    /// The eccentricity is negative.
     #[error(transparent)]
     NegativeEccentricity(#[from] NegativeEccentricityError),
+    /// The semi-major axis sign is inconsistent with the eccentricity.
     #[error(
         "{} semi-major axis ({semi_major_axis}) for {} eccentricity ({eccentricity})",
         if .semi_major_axis.as_f64().signum() == -1.0 {"negative"} else {"positive"},
         .eccentricity.orbit_type()
     )]
     InvalidShape {
+        /// The invalid semi-major axis.
         semi_major_axis: SemiMajorAxis,
+        /// The eccentricity that conflicts with the semi-major axis sign.
         eccentricity: Eccentricity,
     },
+    /// No shape parameters were provided.
     #[error(
         "no orbital shape parameters (semi-major axis and eccentricity, radii, or altitudes) were provided"
     )]
     MissingShape,
+    /// The inclination is invalid.
     #[error(transparent)]
     InvalidInclination(#[from] InclinationError),
+    /// The longitude of ascending node is invalid.
     #[error(transparent)]
     InvalidLongitudeOfAscendingNode(#[from] LongitudeOfAscendingNodeError),
+    /// The argument of periapsis is invalid.
     #[error(transparent)]
     InvalidArgumentOfPeriapsis(#[from] ArgumentOfPeriapsisError),
+    /// The anomaly conversion failed.
     #[error(transparent)]
     Anomaly(#[from] AnomalyError),
 }
 
+/// Builder for constructing validated [`Keplerian`] elements.
 #[derive(Debug, Default, Clone)]
 pub struct KeplerianBuilder {
     shape: Option<(
@@ -490,10 +529,12 @@ pub struct KeplerianBuilder {
 }
 
 impl KeplerianBuilder {
+    /// Creates a new builder with default values.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Sets the semi-major axis and eccentricity.
     pub fn with_semi_major_axis(
         mut self,
         semi_major_axis: SemiMajorAxis,
@@ -503,6 +544,7 @@ impl KeplerianBuilder {
         self
     }
 
+    /// Sets the orbit shape from periapsis and apoapsis radii.
     pub fn with_radii(mut self, periapsis_radius: Distance, apoapsis_radius: Distance) -> Self {
         let rp = periapsis_radius.as_f64();
         let ra = apoapsis_radius.as_f64();
@@ -515,6 +557,7 @@ impl KeplerianBuilder {
         self
     }
 
+    /// Sets the orbit shape from periapsis and apoapsis altitudes above a mean radius.
     pub fn with_altitudes(
         self,
         periapsis_altitude: Distance,
@@ -526,31 +569,37 @@ impl KeplerianBuilder {
         self.with_radii(rp, ra)
     }
 
+    /// Sets the inclination.
     pub fn with_inclination(mut self, inclination: Angle) -> Self {
         self.inclination = inclination;
         self
     }
 
+    /// Sets the longitude of ascending node.
     pub fn with_longitude_of_ascending_node(mut self, longitude_of_ascending_node: Angle) -> Self {
         self.longitude_of_ascending_node = longitude_of_ascending_node;
         self
     }
 
+    /// Sets the argument of periapsis.
     pub fn with_argument_of_periapsis(mut self, argument_of_periapsis: Angle) -> Self {
         self.argument_of_periapsis = argument_of_periapsis;
         self
     }
 
+    /// Sets the true anomaly.
     pub fn with_true_anomaly(mut self, true_anomaly: Angle) -> Self {
         self.true_anomaly = Some(true_anomaly);
         self
     }
 
+    /// Sets the mean anomaly (converted to true anomaly during build).
     pub fn with_mean_anomaly(mut self, mean_anomaly: Angle) -> Self {
         self.mean_anomaly = Some(mean_anomaly);
         self
     }
 
+    /// Validates all parameters and builds the [`Keplerian`] elements.
     pub fn build(self) -> Result<Keplerian, KeplerianError> {
         let (semi_major_axis, eccentricity) = self.shape.ok_or(KeplerianError::MissingShape)?;
 

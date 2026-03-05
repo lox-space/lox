@@ -49,18 +49,25 @@ impl Eq for InvalidSeconds {}
 /// Error type returned when attempting to construct a [TimeOfDay] from invalid components.
 #[derive(Debug, Clone, Error, PartialEq, Eq)]
 pub enum TimeOfDayError {
+    /// Hour is outside the valid range `[0, 24)`.
     #[error("hour must be in the range [0..24) but was {0}")]
     InvalidHour(u8),
+    /// Minute is outside the valid range `[0, 60)`.
     #[error("minute must be in the range [0..60) but was {0}")]
     InvalidMinute(u8),
+    /// Second is outside the valid range `[0, 61)`.
     #[error("second must be in the range [0..61) but was {0}")]
     InvalidSecond(u8),
+    /// Second of day is outside the valid range `[0, 86401)`.
     #[error("second must be in the range [0..86401) but was {0}")]
     InvalidSecondOfDay(u64),
+    /// Floating-point seconds value is out of range.
     #[error(transparent)]
     InvalidSeconds(#[from] InvalidSeconds),
+    /// A leap second was specified at a time other than the end of the day.
     #[error("leap seconds are only valid at the end of the day")]
     InvalidLeapSecond,
+    /// The input string is not a valid ISO 8601 time.
     #[error("invalid ISO string `{0}`")]
     InvalidIsoString(String),
 }
@@ -68,40 +75,50 @@ pub enum TimeOfDayError {
 /// `CivilTime` is the trait by which high-precision time representations expose human-readable time
 /// components.
 pub trait CivilTime {
+    /// Returns the time-of-day component.
     fn time(&self) -> TimeOfDay;
 
+    /// Returns the hour (0–23).
     fn hour(&self) -> u8 {
         self.time().hour()
     }
 
+    /// Returns the minute (0–59).
     fn minute(&self) -> u8 {
         self.time().minute()
     }
 
+    /// Returns the second (0–60, where 60 represents a leap second).
     fn second(&self) -> u8 {
         self.time().second()
     }
 
+    /// Returns the second including the subsecond fraction as an `f64`.
     fn as_seconds_f64(&self) -> f64 {
         self.time().subsecond().as_seconds_f64() + self.time().second() as f64
     }
 
+    /// Returns the millisecond component (0–999).
     fn millisecond(&self) -> u32 {
         self.time().subsecond().milliseconds()
     }
 
+    /// Returns the microsecond component (0–999).
     fn microsecond(&self) -> u32 {
         self.time().subsecond().microseconds()
     }
 
+    /// Returns the nanosecond component (0–999).
     fn nanosecond(&self) -> u32 {
         self.time().subsecond().nanoseconds()
     }
 
+    /// Returns the picosecond component (0–999).
     fn picosecond(&self) -> u32 {
         self.time().subsecond().picoseconds()
     }
 
+    /// Returns the femtosecond component (0–999).
     fn femtosecond(&self) -> u32 {
         self.time().subsecond().femtoseconds()
     }
@@ -118,6 +135,7 @@ pub struct TimeOfDay {
 }
 
 impl TimeOfDay {
+    /// Midnight (00:00:00.000).
     pub const MIDNIGHT: Self = TimeOfDay {
         hour: 0,
         minute: 0,
@@ -125,6 +143,7 @@ impl TimeOfDay {
         subsecond: Subsecond::ZERO,
     };
 
+    /// Noon (12:00:00.000).
     pub const NOON: Self = TimeOfDay {
         hour: 12,
         minute: 0,
@@ -189,10 +208,12 @@ impl TimeOfDay {
         Ok(time)
     }
 
+    /// Constructs a `TimeOfDay` from an hour only (minute and second default to zero).
     pub fn from_hour(hour: u8) -> Result<Self, TimeOfDayError> {
         Self::new(hour, 0, 0)
     }
 
+    /// Constructs a `TimeOfDay` from hour and minute (second defaults to zero).
     pub fn from_hour_and_minute(hour: u8, minute: u8) -> Result<Self, TimeOfDayError> {
         Self::new(hour, minute, 0)
     }
@@ -256,22 +277,27 @@ impl TimeOfDay {
         *self
     }
 
+    /// Returns the hour (0–23).
     pub fn hour(&self) -> u8 {
         self.hour
     }
 
+    /// Returns the minute (0–59).
     pub fn minute(&self) -> u8 {
         self.minute
     }
 
+    /// Returns the second (0–60, where 60 represents a leap second).
     pub fn second(&self) -> u8 {
         self.second
     }
 
+    /// Returns the subsecond component.
     pub fn subsecond(&self) -> Subsecond {
         self.subsecond
     }
 
+    /// Returns the second including the subsecond fraction as an `f64`.
     pub fn seconds_f64(&self) -> f64 {
         self.subsecond.as_seconds_f64() + self.second as f64
     }
@@ -283,6 +309,7 @@ impl TimeOfDay {
             + self.second as i64
     }
 
+    /// Converts the time of day to an [`Angle`] (hour angle representation).
     pub fn to_angle(&self) -> Angle {
         Angle::from_hms(self.hour as i64, self.minute, self.seconds_f64())
     }

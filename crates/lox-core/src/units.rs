@@ -71,6 +71,7 @@ impl Angle {
         Self(deg.to_radians())
     }
 
+    /// Creates a new angle from hours, minutes, and seconds (HMS notation).
     pub const fn from_hms(hours: i64, minutes: u8, seconds: f64) -> Self {
         Self::degrees(15.0 * (hours as f64 + minutes as f64 / 60.0 + seconds / 3600.0))
     }
@@ -104,38 +105,47 @@ impl Angle {
         Self((asec % ARCSECONDS_IN_CIRCLE) * RADIANS_IN_ARCSECOND)
     }
 
+    /// Returns `true` if the angle is exactly zero.
     pub fn is_zero(&self) -> bool {
         self.0 == 0.0
     }
 
+    /// Returns the absolute value of the angle.
     pub const fn abs(&self) -> Self {
         Self(self.0.abs())
     }
 
+    /// Creates an angle from the arcsine of a value.
     pub fn from_asin(value: f64) -> Self {
         Self(value.asin())
     }
 
+    /// Creates an angle from the inverse hyperbolic sine of a value.
     pub fn from_asinh(value: f64) -> Self {
         Self(value.asinh())
     }
 
+    /// Creates an angle from the arccosine of a value.
     pub fn from_acos(value: f64) -> Self {
         Self(value.acos())
     }
 
+    /// Creates an angle from the inverse hyperbolic cosine of a value.
     pub fn from_acosh(value: f64) -> Self {
         Self(value.acosh())
     }
 
+    /// Creates an angle from the arctangent of a value.
     pub fn from_atan(value: f64) -> Self {
         Self(value.atan())
     }
 
+    /// Creates an angle from the inverse hyperbolic tangent of a value.
     pub fn from_atanh(value: f64) -> Self {
         Self(value.atanh())
     }
 
+    /// Creates an angle from the two-argument arctangent of `y` and `x`.
     pub fn from_atan2(y: f64, x: f64) -> Self {
         Self(y.atan2(x))
     }
@@ -215,14 +225,17 @@ impl Angle {
         self.0 / RADIANS_IN_ARCSECOND
     }
 
+    /// Returns the 3×3 rotation matrix for a rotation about the X axis.
     pub fn rotation_x(&self) -> DMat3 {
         DMat3::from_rotation_x(-self.to_radians())
     }
 
+    /// Returns the 3×3 rotation matrix for a rotation about the Y axis.
     pub fn rotation_y(&self) -> DMat3 {
         DMat3::from_rotation_y(-self.to_radians())
     }
 
+    /// Returns the 3×3 rotation matrix for a rotation about the Z axis.
     pub fn rotation_z(&self) -> DMat3 {
         DMat3::from_rotation_z(-self.to_radians())
     }
@@ -336,6 +349,7 @@ impl Distance {
         Self(au * ASTRONOMICAL_UNIT)
     }
 
+    /// Returns the value of the distance in meters as an `f64`.
     pub const fn as_f64(&self) -> f64 {
         self.0
     }
@@ -446,6 +460,7 @@ impl Velocity {
         Self(c * SPEED_OF_LIGHT)
     }
 
+    /// Returns the value of the velocity in m/s as an `f64`.
     pub const fn as_f64(&self) -> f64 {
         self.0
     }
@@ -761,6 +776,7 @@ impl Temperature {
         Self(k)
     }
 
+    /// Returns the value in Kelvin as an `f64`.
     pub const fn as_f64(&self) -> f64 {
         self.0
     }
@@ -802,6 +818,7 @@ impl Power {
         Self(kw * 1e3)
     }
 
+    /// Returns the value in Watts as an `f64`.
     pub const fn as_f64(&self) -> f64 {
         self.0
     }
@@ -858,6 +875,7 @@ impl DataRate {
         Self(mbps * 1e6)
     }
 
+    /// Returns the value in bits/s as an `f64`.
     pub const fn as_f64(&self) -> f64 {
         self.0
     }
@@ -909,6 +927,7 @@ impl AngularRate {
         Self(dps.to_radians())
     }
 
+    /// Returns the value in rad/s as an `f64`.
     pub const fn as_f64(&self) -> f64 {
         self.0
     }

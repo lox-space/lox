@@ -286,16 +286,30 @@ fn two_prod(a: f64, b: f64) -> (f64, f64) {
     (p, e)
 }
 
+/// A signed time delta with attosecond precision.
+///
+/// `TimeDelta` represents a duration as whole seconds plus a fractional attosecond
+/// component. It also supports sentinel values for NaN and positive/negative infinity.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum TimeDelta {
-    Valid { seconds: i64, attoseconds: i64 },
+    /// A finite time delta with whole seconds and an attosecond remainder in `[0, 10¹⁸)`.
+    Valid {
+        /// Whole seconds component.
+        seconds: i64,
+        /// Attosecond remainder in `[0, 10¹⁸)`.
+        attoseconds: i64,
+    },
+    /// Not-a-number sentinel.
     NaN,
+    /// Positive infinity sentinel.
     PosInf,
+    /// Negative infinity sentinel.
     NegInf,
 }
 
 impl TimeDelta {
+    /// A zero-length time delta.
     pub const ZERO: Self = TimeDelta::from_seconds(0);
 
     /// Creates a new `TimeDelta` from seconds and attoseconds.
@@ -340,10 +354,14 @@ impl TimeDelta {
         (seconds, attoseconds)
     }
 
+    /// Returns a [`TimeDeltaBuilder`] for constructing a `TimeDelta` from individual components.
     pub const fn builder() -> TimeDeltaBuilder {
         TimeDeltaBuilder::new()
     }
 
+    /// Creates a `TimeDelta` from a floating-point number of seconds.
+    ///
+    /// Returns `NaN`, `PosInf`, or `NegInf` for the corresponding special float values.
     pub const fn from_seconds_f64(value: f64) -> Self {
         if value.is_nan() {
             return TimeDelta::NaN;
@@ -374,86 +392,104 @@ impl TimeDelta {
         }
     }
 
+    /// Creates a `TimeDelta` from a whole number of seconds.
     pub const fn from_seconds(seconds: i64) -> Self {
         Self::new(seconds, 0)
     }
 
+    /// Creates a `TimeDelta` from a whole number of minutes.
     pub const fn from_minutes(minutes: i64) -> Self {
         Self::from_seconds(minutes * I64_SECONDS_PER_MINUTE)
     }
 
+    /// Creates a `TimeDelta` from a floating-point number of minutes.
     pub const fn from_minutes_f64(value: f64) -> Self {
         Self::from_seconds_f64(value * f64::consts::SECONDS_PER_MINUTE)
     }
 
+    /// Creates a `TimeDelta` from a whole number of hours.
     pub const fn from_hours(hours: i64) -> Self {
         Self::from_seconds(hours * I64_SECONDS_PER_HOUR)
     }
 
+    /// Creates a `TimeDelta` from a floating-point number of hours.
     pub const fn from_hours_f64(value: f64) -> Self {
         Self::from_seconds_f64(value * f64::consts::SECONDS_PER_HOUR)
     }
 
+    /// Creates a `TimeDelta` from a whole number of days.
     pub const fn from_days(days: i64) -> Self {
         Self::from_seconds(days * I64_SECONDS_PER_DAY)
     }
 
+    /// Creates a `TimeDelta` from a floating-point number of days.
     pub const fn from_days_f64(value: f64) -> Self {
         Self::from_seconds_f64(value * f64::consts::SECONDS_PER_DAY)
     }
 
+    /// Creates a `TimeDelta` from a number of milliseconds.
     pub const fn from_milliseconds(ms: i64) -> Self {
         let seconds = ms / 1000;
         let remainder = ms % 1000;
         Self::new(seconds, remainder * ATTOSECONDS_IN_MILLISECOND)
     }
 
+    /// Creates a `TimeDelta` from a number of microseconds.
     pub const fn from_microseconds(us: i64) -> Self {
         let seconds = us / 1_000_000;
         let remainder = us % 1_000_000;
         Self::new(seconds, remainder * ATTOSECONDS_IN_MICROSECOND)
     }
 
+    /// Creates a `TimeDelta` from a number of nanoseconds.
     pub const fn from_nanoseconds(ns: i64) -> Self {
         let seconds = ns / 1_000_000_000;
         let remainder = ns % 1_000_000_000;
         Self::new(seconds, remainder * ATTOSECONDS_IN_NANOSECOND)
     }
 
+    /// Creates a `TimeDelta` from a number of picoseconds.
     pub const fn from_picoseconds(ps: i64) -> Self {
         let seconds = ps / 1_000_000_000_000;
         let remainder = ps % 1_000_000_000_000;
         Self::new(seconds, remainder * ATTOSECONDS_IN_PICOSECOND)
     }
 
+    /// Creates a `TimeDelta` from a number of femtoseconds.
     pub const fn from_femtoseconds(fs: i64) -> Self {
         let seconds = fs / 1_000_000_000_000_000;
         let remainder = fs % 1_000_000_000_000_000;
         Self::new(seconds, remainder * ATTOSECONDS_IN_FEMTOSECOND)
     }
 
+    /// Creates a `TimeDelta` from a number of attoseconds.
     pub const fn from_attoseconds(atto: i64) -> Self {
         let seconds = atto / ATTOSECONDS_IN_SECOND;
         let remainder = atto % ATTOSECONDS_IN_SECOND;
         Self::new(seconds, remainder)
     }
 
+    /// Creates a `TimeDelta` from a floating-point number of Julian years (365.25 days each).
     pub const fn from_julian_years(value: f64) -> Self {
         Self::from_seconds_f64(value * f64::consts::SECONDS_PER_JULIAN_YEAR)
     }
 
+    /// Creates a `TimeDelta` from a floating-point number of Julian centuries (36525 days each).
     pub const fn from_julian_centuries(value: f64) -> Self {
         Self::from_seconds_f64(value * f64::consts::SECONDS_PER_JULIAN_CENTURY)
     }
 
+    /// Creates a `TimeDelta` from whole seconds and a [`Subsecond`] fractional part.
     pub const fn from_seconds_and_subsecond(seconds: i64, subsecond: Subsecond) -> Self {
         Self::new(seconds, subsecond.as_attoseconds())
     }
 
+    /// Creates a `TimeDelta` from floating-point seconds and a subsecond fraction.
     pub const fn from_seconds_and_subsecond_f64(seconds: f64, subsecond: f64) -> Self {
         Self::from_seconds_f64(subsecond).add_const(Self::from_seconds_f64(seconds))
     }
 
+    /// Creates a `TimeDelta` from a Julian date relative to the given epoch.
     pub const fn from_julian_date(julian_date: Days, epoch: Epoch) -> Self {
         let seconds = julian_date * f64::consts::SECONDS_PER_DAY;
         let seconds = match epoch {
@@ -465,6 +501,7 @@ impl TimeDelta {
         Self::from_seconds_f64(seconds)
     }
 
+    /// Creates a `TimeDelta` from a two-part Julian date (`jd1 + jd2`).
     pub const fn from_two_part_julian_date(jd1: Days, jd2: Days) -> Self {
         TimeDelta::from_seconds_f64(jd1 * f64::consts::SECONDS_PER_DAY)
             .add_const(TimeDelta::from_seconds_f64(
@@ -473,6 +510,7 @@ impl TimeDelta {
             .sub_const(TimeDelta::from_seconds(SECONDS_BETWEEN_JD_AND_J2000))
     }
 
+    /// Returns the whole seconds and [`Subsecond`] components, or `None` for non-finite values.
     pub const fn as_seconds_and_subsecond(&self) -> Option<(i64, Subsecond)> {
         match self {
             TimeDelta::Valid {
@@ -506,6 +544,7 @@ impl TimeDelta {
         )
     }
 
+    /// Returns `true` if the time delta is negative.
     pub const fn is_negative(&self) -> bool {
         match self {
             TimeDelta::Valid { seconds, .. } => *seconds < 0,
@@ -514,6 +553,7 @@ impl TimeDelta {
         }
     }
 
+    /// Returns `true` if the time delta is exactly zero.
     pub const fn is_zero(&self) -> bool {
         match &self {
             TimeDelta::Valid {
@@ -524,6 +564,7 @@ impl TimeDelta {
         }
     }
 
+    /// Returns `true` if the time delta is positive.
     pub const fn is_positive(&self) -> bool {
         match self {
             TimeDelta::Valid {
@@ -535,18 +576,22 @@ impl TimeDelta {
         }
     }
 
+    /// Returns `true` if the time delta is a finite value (not NaN or infinite).
     pub const fn is_finite(&self) -> bool {
         matches!(self, Self::Valid { .. })
     }
 
+    /// Returns `true` if the time delta is NaN.
     pub const fn is_nan(&self) -> bool {
         matches!(self, Self::NaN)
     }
 
+    /// Returns `true` if the time delta is positive or negative infinity.
     pub const fn is_infinite(&self) -> bool {
         matches!(self, Self::PosInf | Self::NegInf)
     }
 
+    /// Returns the whole seconds component, or `None` for non-finite values.
     pub const fn seconds(&self) -> Option<i64> {
         match self {
             Self::Valid { seconds, .. } => Some(*seconds),
@@ -554,6 +599,7 @@ impl TimeDelta {
         }
     }
 
+    /// Returns the subsecond fraction as an `f64`, or `None` for non-finite values.
     pub const fn subsecond(&self) -> Option<f64> {
         match self.as_seconds_and_subsecond() {
             Some((_, subsecond)) => Some(subsecond.as_seconds_f64()),
@@ -561,6 +607,7 @@ impl TimeDelta {
         }
     }
 
+    /// Returns the attosecond component, or `None` for non-finite values.
     pub const fn attoseconds(&self) -> Option<i64> {
         match self {
             Self::Valid { attoseconds, .. } => Some(*attoseconds),
@@ -591,6 +638,7 @@ impl TimeDelta {
         }
     }
 
+    /// Adds two `TimeDelta` values in a `const` context.
     pub const fn add_const(self, rhs: Self) -> Self {
         let (secs_lhs, attos_lhs, secs_rhs, attos_rhs) = match (self, rhs) {
             (
@@ -620,6 +668,7 @@ impl TimeDelta {
         Self::new(seconds, attoseconds)
     }
 
+    /// Subtracts `rhs` from `self` in a `const` context.
     pub const fn sub_const(self, rhs: Self) -> Self {
         let (secs_lhs, attos_lhs, secs_rhs, attos_rhs) = match (self, rhs) {
             (
@@ -649,6 +698,7 @@ impl TimeDelta {
         Self::new(seconds, attoseconds)
     }
 
+    /// Multiplies the time delta by an `f64` scalar in a `const` context.
     pub const fn mul_const(self, rhs: f64) -> Self {
         let (seconds, attoseconds) = match self {
             TimeDelta::Valid {
@@ -851,6 +901,7 @@ impl ApproxEq for TimeDelta {
     }
 }
 
+/// A builder for constructing [`TimeDelta`] values from individual time components.
 #[derive(Copy, Clone, Debug, Default)]
 pub struct TimeDeltaBuilder {
     seconds: i64,
@@ -859,6 +910,7 @@ pub struct TimeDeltaBuilder {
 }
 
 impl TimeDeltaBuilder {
+    /// Creates a new builder with all components set to zero.
     pub const fn new() -> Self {
         Self {
             seconds: 0,
@@ -867,16 +919,19 @@ impl TimeDeltaBuilder {
         }
     }
 
+    /// Sets the whole seconds component.
     pub const fn seconds(mut self, seconds: i64) -> Self {
         self.seconds = seconds;
         self
     }
 
+    /// Marks the resulting `TimeDelta` as negative.
     pub const fn negative(mut self) -> Self {
         self.negative = true;
         self
     }
 
+    /// Sets the milliseconds component, carrying overflow into seconds.
     pub const fn milliseconds(mut self, milliseconds: u32) -> Self {
         let extra_seconds = milliseconds / 1000;
         let milliseconds = milliseconds % 1000;
@@ -885,6 +940,7 @@ impl TimeDeltaBuilder {
         self
     }
 
+    /// Sets the microseconds component, carrying overflow into milliseconds.
     pub const fn microseconds(mut self, microseconds: u32) -> Self {
         let extra_milliseconds = microseconds / 1000;
         let microseconds = microseconds % 1000;
@@ -896,6 +952,7 @@ impl TimeDeltaBuilder {
         self
     }
 
+    /// Sets the nanoseconds component, carrying overflow into microseconds.
     pub const fn nanoseconds(mut self, nanoseconds: u32) -> Self {
         let extra_microseconds = nanoseconds / 1000;
         let nanoseconds = nanoseconds % 1000;
@@ -907,6 +964,7 @@ impl TimeDeltaBuilder {
         self
     }
 
+    /// Sets the picoseconds component, carrying overflow into nanoseconds.
     pub const fn picoseconds(mut self, picoseconds: u32) -> Self {
         let extra_nanoseconds = picoseconds / 1000;
         let picoseconds = picoseconds % 1000;
@@ -918,6 +976,7 @@ impl TimeDeltaBuilder {
         self
     }
 
+    /// Sets the femtoseconds component, carrying overflow into picoseconds.
     pub const fn femtoseconds(mut self, femtoseconds: u32) -> Self {
         let extra_picoseconds = femtoseconds / 1000;
         let femtoseconds = femtoseconds % 1000;
@@ -929,6 +988,7 @@ impl TimeDeltaBuilder {
         self
     }
 
+    /// Sets the attoseconds component, carrying overflow into femtoseconds.
     pub const fn attoseconds(mut self, attoseconds: u32) -> Self {
         let extra_femtoseconds = attoseconds / 1000;
         let attoseconds = attoseconds % 1000;
