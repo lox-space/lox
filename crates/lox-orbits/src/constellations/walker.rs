@@ -119,36 +119,43 @@ pub struct WalkerDeltaBuilder {
 }
 
 impl WalkerDeltaBuilder {
+    /// Creates a new Walker Delta builder with the given satellite and plane counts.
     pub fn new(nsats: usize, nplanes: usize) -> Self {
         Self {
             params: WalkerParams::new(nsats, nplanes),
         }
     }
 
+    /// Sets the semi-major axis and eccentricity.
     pub fn with_semi_major_axis(mut self, sma: Distance, eccentricity: f64) -> Self {
         self.params.semi_major_axis = Some((sma, eccentricity));
         self
     }
 
+    /// Sets the orbital inclination.
     pub fn with_inclination(mut self, inclination: Angle) -> Self {
         self.params.inclination = inclination;
         self
     }
 
+    /// Sets the inter-plane phasing parameter.
     pub fn with_phasing(mut self, phasing: usize) -> Self {
         self.params.phasing = phasing;
         self
     }
 
+    /// Sets the argument of periapsis.
     pub fn with_argument_of_periapsis(mut self, aop: Angle) -> Self {
         self.params.argument_of_periapsis = aop;
         self
     }
 
+    /// Builds the satellite list without wrapping in a [`Constellation`].
     pub fn build(&self) -> Result<Vec<ConstellationSatellite>, ConstellationError> {
         walker_build(&self.params, WalkerVariant::Delta)
     }
 
+    /// Builds a full [`Constellation`] with the given metadata.
     pub fn build_constellation<T: TimeScale, O: Origin, R: ReferenceFrame>(
         &self,
         name: impl Into<String>,
@@ -168,36 +175,43 @@ pub struct WalkerStarBuilder {
 }
 
 impl WalkerStarBuilder {
+    /// Creates a new Walker Star builder with the given satellite and plane counts.
     pub fn new(nsats: usize, nplanes: usize) -> Self {
         Self {
             params: WalkerParams::new(nsats, nplanes),
         }
     }
 
+    /// Sets the semi-major axis and eccentricity.
     pub fn with_semi_major_axis(mut self, sma: Distance, eccentricity: f64) -> Self {
         self.params.semi_major_axis = Some((sma, eccentricity));
         self
     }
 
+    /// Sets the orbital inclination.
     pub fn with_inclination(mut self, inclination: Angle) -> Self {
         self.params.inclination = inclination;
         self
     }
 
+    /// Sets the inter-plane phasing parameter.
     pub fn with_phasing(mut self, phasing: usize) -> Self {
         self.params.phasing = phasing;
         self
     }
 
+    /// Sets the argument of periapsis.
     pub fn with_argument_of_periapsis(mut self, aop: Angle) -> Self {
         self.params.argument_of_periapsis = aop;
         self
     }
 
+    /// Builds the satellite list without wrapping in a [`Constellation`].
     pub fn build(&self) -> Result<Vec<ConstellationSatellite>, ConstellationError> {
         walker_build(&self.params, WalkerVariant::Star)
     }
 
+    /// Builds a full [`Constellation`] with the given metadata.
     pub fn build_constellation<T: TimeScale, O: Origin, R: ReferenceFrame>(
         &self,
         name: impl Into<String>,

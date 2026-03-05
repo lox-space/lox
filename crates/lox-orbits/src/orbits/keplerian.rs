@@ -22,11 +22,14 @@ use lox_frames::{NonQuasiInertialFrameError, QuasiInertial, ReferenceFrame, TryQ
 use lox_time::{deltas::TimeDelta, time_scales::TimeScale};
 use thiserror::Error;
 
+/// Errors that can occur when constructing a Keplerian orbit.
 #[derive(Debug, Clone, Error)]
 pub enum KeplerianOrbitError {
+    /// The reference frame is not quasi-inertial.
     #[error(transparent)]
     NonQuasiInertial(#[from] NonQuasiInertialFrameError),
 
+    /// The perigee radius is below the central body's mean radius.
     #[error("perigee radius is below the origin mean radius")]
     PerigeeCrossesBodyRadius,
 }
@@ -37,6 +40,7 @@ where
     O: Origin,
     R: ReferenceFrame,
 {
+    /// Constructs a new Keplerian orbit in a quasi-inertial frame.
     pub const fn new(keplerian: Keplerian, time: lox_time::Time<T>, origin: O, frame: R) -> Self
     where
         R: QuasiInertial,
@@ -61,6 +65,7 @@ where
         Ok(())
     }
 
+    /// Constructs a Keplerian orbit with validation of the frame and perigee radius.
     pub fn try_from_keplerian(
         keplerian: Keplerian,
         time: lox_time::Time<T>,
@@ -76,30 +81,37 @@ where
         Ok(Orbit::from_state(keplerian, time, origin, frame))
     }
 
+    /// Returns the semi-major axis.
     pub fn semi_major_axis(&self) -> Distance {
         self.state().semi_major_axis()
     }
 
+    /// Returns the eccentricity.
     pub fn eccentricity(&self) -> Eccentricity {
         self.state().eccentricity()
     }
 
+    /// Returns the inclination.
     pub fn inclination(&self) -> Inclination {
         self.state().inclination()
     }
 
+    /// Returns the longitude of the ascending node.
     pub fn longitude_of_ascending_node(&self) -> LongitudeOfAscendingNode {
         self.state().longitude_of_ascending_node()
     }
 
+    /// Returns the argument of periapsis.
     pub fn argument_of_periapsis(&self) -> ArgumentOfPeriapsis {
         self.state().argument_of_periapsis()
     }
 
+    /// Returns the true anomaly.
     pub fn true_anomaly(&self) -> TrueAnomaly {
         self.state().true_anomaly()
     }
 
+    /// Converts this Keplerian orbit to Cartesian position and velocity.
     pub fn to_cartesian(&self) -> CartesianOrbit<T, O, R>
     where
         T: Copy,
@@ -114,6 +126,7 @@ where
         )
     }
 
+    /// Converts this Keplerian orbit to Cartesian, returning an error if the gravitational parameter is undefined.
     pub fn try_to_cartesian(&self) -> Result<CartesianOrbit<T, O, R>, UndefinedOriginPropertyError>
     where
         T: Copy,
@@ -129,6 +142,7 @@ where
         ))
     }
 
+    /// Returns the orbital period, or `None` for non-elliptical orbits or undefined gravitational parameters.
     pub fn orbital_period(&self) -> Option<TimeDelta>
     where
         O: TryPointMass,
@@ -137,6 +151,7 @@ where
             .orbital_period(self.try_gravitational_parameter().ok()?)
     }
 
+    /// Generates a trajectory by tracing the full orbit with `n` evenly-spaced samples.
     pub fn trace(&self, n: usize) -> Option<Trajectory<T, O, R>>
     where
         T: Copy,

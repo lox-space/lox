@@ -17,10 +17,13 @@ use thiserror::Error;
 // Core event types
 // ---------------------------------------------------------------------------
 
+/// Direction of a zero-crossing event.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ZeroCrossing {
+    /// Signal crosses from negative to positive.
     Up,
+    /// Signal crosses from positive to negative.
     Down,
 }
 
@@ -45,6 +48,7 @@ impl Display for ZeroCrossing {
     }
 }
 
+/// A zero-crossing event at a specific time.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Event<T: TimeScale> {
@@ -53,10 +57,12 @@ pub struct Event<T: TimeScale> {
 }
 
 impl<T: TimeScale> Event<T> {
+    /// Creates a new event at the given time with the specified crossing direction.
     pub fn new(time: Time<T>, crossing: ZeroCrossing) -> Self {
         Self { crossing, time }
     }
 
+    /// Returns the time of the event.
     pub fn time(&self) -> Time<T>
     where
         T: Copy,
@@ -64,6 +70,7 @@ impl<T: TimeScale> Event<T> {
         self.time
     }
 
+    /// Returns the crossing direction.
     pub fn crossing(&self) -> ZeroCrossing {
         self.crossing
     }
@@ -73,10 +80,13 @@ impl<T: TimeScale> Event<T> {
 // Error types
 // ---------------------------------------------------------------------------
 
+/// Errors that can occur during event detection.
 #[derive(Debug, Error)]
 pub enum DetectError {
+    /// The root-finding algorithm failed.
     #[error(transparent)]
     RootFinder(#[from] RootFinderError),
+    /// The user-provided callback returned an error.
     #[error(transparent)]
     Callback(Box<dyn std::error::Error + Send + Sync>),
 }
@@ -87,17 +97,21 @@ pub enum DetectError {
 
 /// Scalar function whose zero-crossings define events.
 pub trait DetectFn<T: TimeScale> {
+    /// The error type returned by [`eval`](Self::eval).
     type Error: std::error::Error + Send + Sync + 'static;
+    /// Evaluates the detection function at the given time.
     fn eval(&self, time: Time<T>) -> Result<f64, Self::Error>;
 }
 
 /// Detects instantaneous events (zero-crossings) within a time interval.
 pub trait EventDetector<T: TimeScale> {
+    /// Detects all zero-crossing events within the given time interval.
     fn detect(&self, interval: TimeInterval<T>) -> Result<Vec<Event<T>>, DetectError>;
 }
 
 /// Detects intervals where a condition holds within a time interval.
 pub trait IntervalDetector<T: TimeScale> {
+    /// Detects all sub-intervals where the condition holds.
     fn detect(&self, interval: TimeInterval<T>) -> Result<Vec<TimeInterval<T>>, DetectError>;
 }
 
@@ -150,6 +164,7 @@ pub struct RootFindingDetector<F, R = Brent> {
 }
 
 impl<F> RootFindingDetector<F, Brent> {
+    /// Creates a new detector with Brent's root-finding method and the given step size.
     pub fn new(func: F, step: TimeDelta) -> Self {
         Self {
             func,
@@ -161,6 +176,7 @@ impl<F> RootFindingDetector<F, Brent> {
 }
 
 impl<F, R> RootFindingDetector<F, R> {
+    /// Creates a new detector with a custom root-finding algorithm.
     pub fn with_root_finder(func: F, step: TimeDelta, root_finder: R) -> Self {
         Self {
             func,
@@ -170,6 +186,7 @@ impl<F, R> RootFindingDetector<F, R> {
         }
     }
 
+    /// Enables two-level detection with the given coarse step size.
     pub fn with_coarse_step(mut self, coarse_step: TimeDelta) -> Self {
         self.coarse_step = Some(coarse_step);
         self
@@ -368,12 +385,14 @@ pub struct EventsToIntervals<F, R = Brent> {
 }
 
 impl<F> EventsToIntervals<F, Brent> {
+    /// Creates a new converter from a Brent-based root-finding detector.
     pub fn new(detector: RootFindingDetector<F>) -> Self {
         Self { detector }
     }
 }
 
 impl<F, R> EventsToIntervals<F, R> {
+    /// Creates a new converter from a detector with a custom root finder.
     pub fn with_root_finder(detector: RootFindingDetector<F, R>) -> Self {
         Self { detector }
     }
@@ -512,19 +531,24 @@ where
 // Extension trait for IntervalDetector combinators
 // ---------------------------------------------------------------------------
 
+/// Extension trait providing combinator methods for [`IntervalDetector`] implementations.
 pub trait IntervalDetectorExt<T: TimeScale>: IntervalDetector<T> + Sized {
+    /// Returns intervals where both `self` and `other` are active (intersection).
     fn intersect<B>(self, other: B) -> Intersection<Self, B> {
         Intersection { a: self, b: other }
     }
 
+    /// Returns intervals where either `self` or `other` is active (union).
     fn union<B>(self, other: B) -> Union<Self, B> {
         Union { a: self, b: other }
     }
 
+    /// Returns intervals where `self` is NOT active (complement).
     fn complement(self) -> Complement<Self> {
         Complement { detector: self }
     }
 
+    /// Evaluates `other` only within intervals detected by `self`.
     fn chain<B>(self, other: B) -> Chain<Self, B> {
         Chain { a: self, b: other }
     }
@@ -552,7 +576,7 @@ impl<T: TimeScale> IntervalDetector<T> for Box<dyn IntervalDetector<T> + Send + 
 // Closure-based DetectFn adapters
 // ---------------------------------------------------------------------------
 
-/// Wraps an infallible closure into a `DetectFn`.
+/// Wraps an infallible closure into a [`DetectFn`].
 pub struct FnDetect<F>(pub F);
 
 impl<T, F> DetectFn<T> for FnDetect<F>
@@ -566,7 +590,7 @@ where
     }
 }
 
-/// Wraps a fallible closure into a `DetectFn`.
+/// Wraps a fallible closure into a [`DetectFn`].
 pub struct TryFnDetect<F>(pub F);
 
 impl<T, F, E> DetectFn<T> for TryFnDetect<F>
