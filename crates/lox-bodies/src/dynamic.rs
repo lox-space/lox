@@ -9,217 +9,410 @@ use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use thiserror::Error;
 
+/// Error returned when an origin name is not recognized.
 #[derive(Debug, Clone, Eq, PartialEq, Error)]
 #[error("no origin with name `{0}` is known")]
 pub struct UnknownOriginName(String);
 
+/// Error returned when a NAIF ID does not correspond to a known origin.
 #[derive(Debug, Clone, Eq, PartialEq, Error)]
 #[error("no origin with NAIF ID `{0}` is known")]
 pub struct UnknownOriginId(i32);
 
+/// Enum representation of all known origins, for use in dynamic dispatch contexts.
 #[derive(
     Debug, Copy, Clone, Default, Eq, PartialEq, Hash, FromPrimitive, ToPrimitive, PartialOrd, Ord,
 )]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum DynOrigin {
+    /// Sun (NAIF ID: 10).
     Sun = 10,
 
     // Planets.
+    /// Mercury (NAIF ID: 199).
     Mercury = 199,
+    /// Venus (NAIF ID: 299).
     Venus = 299,
+    /// Earth (NAIF ID: 399).
     #[default]
     Earth = 399,
+    /// Mars (NAIF ID: 499).
     Mars = 499,
+    /// Jupiter (NAIF ID: 599).
     Jupiter = 599,
+    /// Saturn (NAIF ID: 699).
     Saturn = 699,
+    /// Uranus (NAIF ID: 799).
     Uranus = 799,
+    /// Neptune (NAIF ID: 899).
     Neptune = 899,
+    /// Pluto (NAIF ID: 999).
     Pluto = 999,
 
     // Barycenters.
+    /// Solar System Barycenter (NAIF ID: 0).
     SolarSystemBarycenter = 0,
+    /// Mercury Barycenter (NAIF ID: 1).
     MercuryBarycenter = 1,
+    /// Venus Barycenter (NAIF ID: 2).
     VenusBarycenter = 2,
+    /// Earth Barycenter (NAIF ID: 3).
     EarthBarycenter = 3,
+    /// Mars Barycenter (NAIF ID: 4).
     MarsBarycenter = 4,
+    /// Jupiter Barycenter (NAIF ID: 5).
     JupiterBarycenter = 5,
+    /// Saturn Barycenter (NAIF ID: 6).
     SaturnBarycenter = 6,
+    /// Uranus Barycenter (NAIF ID: 7).
     UranusBarycenter = 7,
+    /// Neptune Barycenter (NAIF ID: 8).
     NeptuneBarycenter = 8,
+    /// Pluto Barycenter (NAIF ID: 9).
     PlutoBarycenter = 9,
 
     // Satellites.
+    /// Moon (NAIF ID: 301).
     Moon = 301,
+    /// Phobos (NAIF ID: 401).
     Phobos = 401,
+    /// Deimos (NAIF ID: 402).
     Deimos = 402,
+    /// Io (NAIF ID: 501).
     Io = 501,
+    /// Europa (NAIF ID: 502).
     Europa = 502,
+    /// Ganymede (NAIF ID: 503).
     Ganymede = 503,
+    /// Callisto (NAIF ID: 504).
     Callisto = 504,
+    /// Amalthea (NAIF ID: 505).
     Amalthea = 505,
+    /// Himalia (NAIF ID: 506).
     Himalia = 506,
+    /// Elara (NAIF ID: 507).
     Elara = 507,
+    /// Pasiphae (NAIF ID: 508).
     Pasiphae = 508,
+    /// Sinope (NAIF ID: 509).
     Sinope = 509,
+    /// Lysithea (NAIF ID: 510).
     Lysithea = 510,
+    /// Carme (NAIF ID: 511).
     Carme = 511,
+    /// Ananke (NAIF ID: 512).
     Ananke = 512,
+    /// Leda (NAIF ID: 513).
     Leda = 513,
+    /// Thebe (NAIF ID: 514).
     Thebe = 514,
+    /// Adrastea (NAIF ID: 515).
     Adrastea = 515,
+    /// Metis (NAIF ID: 516).
     Metis = 516,
+    /// Callirrhoe (NAIF ID: 517).
     Callirrhoe = 517,
+    /// Themisto (NAIF ID: 518).
     Themisto = 518,
+    /// Magaclite (NAIF ID: 519).
     Magaclite = 519,
+    /// Taygete (NAIF ID: 520).
     Taygete = 520,
+    /// Chaldene (NAIF ID: 521).
     Chaldene = 521,
+    /// Harpalyke (NAIF ID: 522).
     Harpalyke = 522,
+    /// Kalyke (NAIF ID: 523).
     Kalyke = 523,
+    /// Iocaste (NAIF ID: 524).
     Iocaste = 524,
+    /// Erinome (NAIF ID: 525).
     Erinome = 525,
+    /// Isonoe (NAIF ID: 526).
     Isonoe = 526,
+    /// Praxidike (NAIF ID: 527).
     Praxidike = 527,
+    /// Autonoe (NAIF ID: 528).
     Autonoe = 528,
+    /// Thyone (NAIF ID: 529).
     Thyone = 529,
+    /// Hermippe (NAIF ID: 530).
     Hermippe = 530,
+    /// Aitne (NAIF ID: 531).
     Aitne = 531,
+    /// Eurydome (NAIF ID: 532).
     Eurydome = 532,
+    /// Euanthe (NAIF ID: 533).
     Euanthe = 533,
+    /// Euporie (NAIF ID: 534).
     Euporie = 534,
+    /// Orthosie (NAIF ID: 535).
     Orthosie = 535,
+    /// Sponde (NAIF ID: 536).
     Sponde = 536,
+    /// Kale (NAIF ID: 537).
     Kale = 537,
+    /// Pasithee (NAIF ID: 538).
     Pasithee = 538,
+    /// Hegemone (NAIF ID: 539).
     Hegemone = 539,
+    /// Mneme (NAIF ID: 540).
     Mneme = 540,
+    /// Aoede (NAIF ID: 541).
     Aoede = 541,
+    /// Thelxinoe (NAIF ID: 542).
     Thelxinoe = 542,
+    /// Arche (NAIF ID: 543).
     Arche = 543,
+    /// Kallichore (NAIF ID: 544).
     Kallichore = 544,
+    /// Helike (NAIF ID: 545).
     Helike = 545,
+    /// Carpo (NAIF ID: 546).
     Carpo = 546,
+    /// Eukelade (NAIF ID: 547).
     Eukelade = 547,
+    /// Cyllene (NAIF ID: 548).
     Cyllene = 548,
+    /// Kore (NAIF ID: 549).
     Kore = 549,
+    /// Herse (NAIF ID: 550).
     Herse = 550,
+    /// Dia (NAIF ID: 553).
     Dia = 553,
+    /// Mimas (NAIF ID: 601).
     Mimas = 601,
+    /// Enceladus (NAIF ID: 602).
     Enceladus = 602,
+    /// Tethys (NAIF ID: 603).
     Tethys = 603,
+    /// Dione (NAIF ID: 604).
     Dione = 604,
+    /// Rhea (NAIF ID: 605).
     Rhea = 605,
+    /// Titan (NAIF ID: 606).
     Titan = 606,
+    /// Hyperion (NAIF ID: 607).
     Hyperion = 607,
+    /// Iapetus (NAIF ID: 608).
     Iapetus = 608,
+    /// Phoebe (NAIF ID: 609).
     Phoebe = 609,
+    /// Janus (NAIF ID: 610).
     Janus = 610,
+    /// Epimetheus (NAIF ID: 611).
     Epimetheus = 611,
+    /// Helene (NAIF ID: 612).
     Helene = 612,
+    /// Telesto (NAIF ID: 613).
     Telesto = 613,
+    /// Calypso (NAIF ID: 614).
     Calypso = 614,
+    /// Atlas (NAIF ID: 615).
     Atlas = 615,
+    /// Prometheus (NAIF ID: 616).
     Prometheus = 616,
+    /// Pandora (NAIF ID: 617).
     Pandora = 617,
+    /// Pan (NAIF ID: 618).
     Pan = 618,
+    /// Ymir (NAIF ID: 619).
     Ymir = 619,
+    /// Paaliaq (NAIF ID: 620).
     Paaliaq = 620,
+    /// Tarvos (NAIF ID: 621).
     Tarvos = 621,
+    /// Ijiraq (NAIF ID: 622).
     Ijiraq = 622,
+    /// Suttungr (NAIF ID: 623).
     Suttungr = 623,
+    /// Kiviuq (NAIF ID: 624).
     Kiviuq = 624,
+    /// Mundilfari (NAIF ID: 625).
     Mundilfari = 625,
+    /// Albiorix (NAIF ID: 626).
     Albiorix = 626,
+    /// Skathi (NAIF ID: 627).
     Skathi = 627,
+    /// Erriapus (NAIF ID: 628).
     Erriapus = 628,
+    /// Siarnaq (NAIF ID: 629).
     Siarnaq = 629,
+    /// Thrymr (NAIF ID: 630).
     Thrymr = 630,
+    /// Narvi (NAIF ID: 631).
     Narvi = 631,
+    /// Methone (NAIF ID: 632).
     Methone = 632,
+    /// Pallene (NAIF ID: 633).
     Pallene = 633,
+    /// Polydeuces (NAIF ID: 634).
     Polydeuces = 634,
+    /// Daphnis (NAIF ID: 635).
     Daphnis = 635,
+    /// Aegir (NAIF ID: 636).
     Aegir = 636,
+    /// Bebhionn (NAIF ID: 637).
     Bebhionn = 637,
+    /// Bergelmir (NAIF ID: 638).
     Bergelmir = 638,
+    /// Bestla (NAIF ID: 639).
     Bestla = 639,
+    /// Farbauti (NAIF ID: 640).
     Farbauti = 640,
+    /// Fenrir (NAIF ID: 641).
     Fenrir = 641,
+    /// Fornjot (NAIF ID: 642).
     Fornjot = 642,
+    /// Hati (NAIF ID: 643).
     Hati = 643,
+    /// Hyrrokkin (NAIF ID: 644).
     Hyrrokkin = 644,
+    /// Kari (NAIF ID: 645).
     Kari = 645,
+    /// Loge (NAIF ID: 646).
     Loge = 646,
+    /// Skoll (NAIF ID: 647).
     Skoll = 647,
+    /// Surtur (NAIF ID: 648).
     Surtur = 648,
+    /// Anthe (NAIF ID: 649).
     Anthe = 649,
+    /// Jarnsaxa (NAIF ID: 650).
     Jarnsaxa = 650,
+    /// Greip (NAIF ID: 651).
     Greip = 651,
+    /// Tarqeq (NAIF ID: 652).
     Tarqeq = 652,
+    /// Aegaeon (NAIF ID: 653).
     Aegaeon = 653,
+    /// Ariel (NAIF ID: 701).
     Ariel = 701,
+    /// Umbriel (NAIF ID: 702).
     Umbriel = 702,
+    /// Titania (NAIF ID: 703).
     Titania = 703,
+    /// Oberon (NAIF ID: 704).
     Oberon = 704,
+    /// Miranda (NAIF ID: 705).
     Miranda = 705,
+    /// Cordelia (NAIF ID: 706).
     Cordelia = 706,
+    /// Ophelia (NAIF ID: 707).
     Ophelia = 707,
+    /// Bianca (NAIF ID: 708).
     Bianca = 708,
+    /// Cressida (NAIF ID: 709).
     Cressida = 709,
+    /// Desdemona (NAIF ID: 710).
     Desdemona = 710,
+    /// Juliet (NAIF ID: 711).
     Juliet = 711,
+    /// Portia (NAIF ID: 712).
     Portia = 712,
+    /// Rosalind (NAIF ID: 713).
     Rosalind = 713,
+    /// Belinda (NAIF ID: 714).
     Belinda = 714,
+    /// Puck (NAIF ID: 715).
     Puck = 715,
+    /// Caliban (NAIF ID: 716).
     Caliban = 716,
+    /// Sycorax (NAIF ID: 717).
     Sycorax = 717,
+    /// Prospero (NAIF ID: 718).
     Prospero = 718,
+    /// Setebos (NAIF ID: 719).
     Setebos = 719,
+    /// Stephano (NAIF ID: 720).
     Stephano = 720,
+    /// Trinculo (NAIF ID: 721).
     Trinculo = 721,
+    /// Francisco (NAIF ID: 722).
     Francisco = 722,
+    /// Margaret (NAIF ID: 723).
     Margaret = 723,
+    /// Ferdinand (NAIF ID: 724).
     Ferdinand = 724,
+    /// Perdita (NAIF ID: 725).
     Perdita = 725,
+    /// Mab (NAIF ID: 726).
     Mab = 726,
+    /// Cupid (NAIF ID: 727).
     Cupid = 727,
+    /// Triton (NAIF ID: 801).
     Triton = 801,
+    /// Nereid (NAIF ID: 802).
     Nereid = 802,
+    /// Naiad (NAIF ID: 803).
     Naiad = 803,
+    /// Thalassa (NAIF ID: 804).
     Thalassa = 804,
+    /// Despina (NAIF ID: 805).
     Despina = 805,
+    /// Galatea (NAIF ID: 806).
     Galatea = 806,
+    /// Larissa (NAIF ID: 807).
     Larissa = 807,
+    /// Proteus (NAIF ID: 808).
     Proteus = 808,
+    /// Halimede (NAIF ID: 809).
     Halimede = 809,
+    /// Psamathe (NAIF ID: 810).
     Psamathe = 810,
+    /// Sao (NAIF ID: 811).
     Sao = 811,
+    /// Laomedeia (NAIF ID: 812).
     Laomedeia = 812,
+    /// Neso (NAIF ID: 813).
     Neso = 813,
+    /// Charon (NAIF ID: 901).
     Charon = 901,
+    /// Nix (NAIF ID: 902).
     Nix = 902,
+    /// Hydra (NAIF ID: 903).
     Hydra = 903,
+    /// Kerberos (NAIF ID: 904).
     Kerberos = 904,
+    /// Styx (NAIF ID: 905).
     Styx = 905,
 
     // Minor bodies.
+    /// Gaspra (NAIF ID: 9511010).
     Gaspra = 9511010,
+    /// Ida (NAIF ID: 2431010).
     Ida = 2431010,
+    /// Dactyl (NAIF ID: 2431011).
     Dactyl = 2431011,
+    /// Ceres (NAIF ID: 2000001).
     Ceres = 2000001,
+    /// Pallas (NAIF ID: 2000002).
     Pallas = 2000002,
+    /// Vesta (NAIF ID: 2000004).
     Vesta = 2000004,
+    /// Psyche (NAIF ID: 2000016).
     Psyche = 2000016,
+    /// Lutetia (NAIF ID: 2000021).
     Lutetia = 2000021,
+    /// Kleopatra (NAIF ID: 2000216).
     Kleopatra = 2000216,
+    /// Eros (NAIF ID: 2000433).
     Eros = 2000433,
+    /// Davida (NAIF ID: 2000511).
     Davida = 2000511,
+    /// Mathilde (NAIF ID: 2000253).
     Mathilde = 2000253,
+    /// Steins (NAIF ID: 2002867).
     Steins = 2002867,
+    /// Braille (NAIF ID: 2009969).
     Braille = 2009969,
+    /// Wilson-Harrington (NAIF ID: 2004015).
     WilsonHarrington = 2004015,
+    /// Toutatis (NAIF ID: 2004179).
     Toutatis = 2004179,
+    /// Itokawa (NAIF ID: 2025143).
     Itokawa = 2025143,
+    /// Bennu (NAIF ID: 2101955).
     Bennu = 2101955,
 }
 

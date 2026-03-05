@@ -1044,8 +1044,10 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
         let ident = ident(name);
         let ident_upper = ident_uppercase(name);
 
+        let doc_string = format!("{name} (NAIF ID: {id}).");
         code.extend(quote! {
 
+            #[doc = #doc_string]
             #[derive(Debug, Copy, Clone, Eq, PartialEq)]
             #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
             pub struct #ident;
