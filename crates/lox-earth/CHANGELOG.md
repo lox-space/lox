@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.20](https://github.com/lox-space/lox/compare/lox-earth-v0.1.0-alpha.19...lox-earth-v0.1.0-alpha.20) - 2026-03-05
+
+### Other
+
+- add crate-level READMEs
+- *(lox-analysis/lox-earth/lox-ephem)* add doc comments
+- clean up metadata
+
 ## [0.1.0-alpha.19](https://github.com/lox-space/lox/compare/lox-earth-v0.1.0-alpha.18...lox-earth-v0.1.0-alpha.19) - 2026-03-05
 
 ### Other

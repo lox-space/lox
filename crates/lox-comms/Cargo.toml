@@ -5,7 +5,7 @@
 [package]
 name = "lox-comms"
 description = "Communication systems and link budget analysis for the Lox ecosystem"
-version = "0.1.0-alpha.5"
+version = "0.1.0-alpha.6"
 rust-version.workspace = true
 edition.workspace = true
 license.workspace = true
