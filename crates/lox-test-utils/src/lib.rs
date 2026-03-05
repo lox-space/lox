@@ -2,6 +2,13 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+//! Test utilities for the Lox ecosystem.
+//!
+//! Provides approximate equality testing (`approx_eq`), test data helpers, and the
+//! `#[derive(ApproxEq)]` macro (behind the `derive` feature).
+
+#![warn(missing_docs)]
+
 use std::{
     fs::read_to_string,
     path::{Path, PathBuf},

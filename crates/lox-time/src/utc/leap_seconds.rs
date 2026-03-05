@@ -22,6 +22,7 @@ use crate::time_scales::Tai;
 use crate::utc::Utc;
 use lox_core::i64::consts::SECONDS_PER_DAY;
 
+/// UTC epochs (seconds since J2000) at which each leap second takes effect.
 pub const LEAP_SECOND_EPOCHS_UTC: [i64; 28] = [
     -883656000, -867931200, -852033600, -820497600, -788961600, -757425600, -725803200, -694267200,
     -662731200, -631195200, -583934400, -552398400, -520862400, -457704000, -378734400, -315576000,
@@ -29,6 +30,7 @@ pub const LEAP_SECOND_EPOCHS_UTC: [i64; 28] = [
     284040000, 394372800, 488980800, 536500800,
 ];
 
+/// TAI epochs (seconds since J2000) corresponding to each leap second.
 pub const LEAP_SECOND_EPOCHS_TAI: [i64; 28] = [
     -883655991, -867931190, -852033589, -820497588, -788961587, -757425586, -725803185, -694267184,
     -662731183, -631195182, -583934381, -552398380, -520862379, -457703978, -378734377, -315575976,
@@ -36,6 +38,7 @@ pub const LEAP_SECOND_EPOCHS_TAI: [i64; 28] = [
     284040033, 394372834, 488980835, 536500836,
 ];
 
+/// Cumulative TAI−UTC offset in seconds at each leap second epoch.
 pub const LEAP_SECONDS: [i64; 28] = [
     10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33,
     34, 35, 36, 37,
@@ -85,11 +88,13 @@ fn find_leap_seconds(epochs: &[i64], leap_seconds: &[i64], seconds: i64) -> Time
     TimeDelta::from_seconds(seconds)
 }
 
+/// Returns the TAI−UTC leap second offset at the given TAI instant.
 pub fn find_leap_seconds_tai(epochs: &[i64], leap_seconds: &[i64], tai: Time<Tai>) -> TimeDelta {
     let seconds = tai.seconds().expect("TAI time should have finite seconds");
     find_leap_seconds(epochs, leap_seconds, seconds)
 }
 
+/// Returns the UTC−TAI leap second offset at the given UTC instant.
 pub fn find_leap_seconds_utc(epochs: &[i64], leap_seconds: &[i64], utc: Utc) -> TimeDelta {
     let seconds = utc
         .to_delta()
@@ -102,6 +107,7 @@ pub fn find_leap_seconds_utc(epochs: &[i64], leap_seconds: &[i64], utc: Utc) -> 
     -ls
 }
 
+/// Returns `true` if a leap second occurs on `date`.
 pub fn is_leap_second_date(epochs: &[i64], date: Date) -> bool {
     let epochs: Vec<i64> = epochs
         .iter()
@@ -111,6 +117,7 @@ pub fn is_leap_second_date(epochs: &[i64], date: Date) -> bool {
     epochs.binary_search(&day_number).is_ok()
 }
 
+/// Returns `true` if a leap second occurs at the given TAI instant.
 pub fn is_leap_second(epochs: &[i64], tai: Time<Tai>) -> bool {
     match tai.seconds() {
         Some(seconds) => epochs.binary_search(&seconds).is_ok(),

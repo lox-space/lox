@@ -7,6 +7,8 @@
 //! This crate provides types and calculations for modelling radio communication systems,
 //! antenna gain patterns, and link budget analysis.
 
+#![warn(missing_docs)]
+
 pub mod antenna;
 pub mod channel;
 pub mod link_budget;

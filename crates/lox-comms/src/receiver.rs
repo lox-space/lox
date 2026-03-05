@@ -65,7 +65,9 @@ impl ComplexReceiver {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub enum Receiver {
+    /// Receiver with a known system noise temperature.
     Simple(SimpleReceiver),
+    /// Receiver with detailed noise and gain parameters.
     Complex(ComplexReceiver),
 }
 

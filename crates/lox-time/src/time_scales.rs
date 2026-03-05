@@ -20,7 +20,9 @@ use thiserror::Error;
 
 /// Marker trait denoting a continuous astronomical time scale.
 pub trait TimeScale {
+    /// Returns the standard abbreviation of this time scale (e.g. `"TAI"`).
     fn abbreviation(&self) -> &'static str;
+    /// Returns the full name of this time scale (e.g. `"International Atomic Time"`).
     fn name(&self) -> &'static str;
 }
 
@@ -144,15 +146,22 @@ impl Display for Ut1 {
     }
 }
 
+/// Dynamic time scale selector for runtime-determined time scales.
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum DynTimeScale {
+    /// International Atomic Time.
     #[default]
     Tai,
+    /// Barycentric Coordinate Time.
     Tcb,
+    /// Geocentric Coordinate Time.
     Tcg,
+    /// Barycentric Dynamical Time.
     Tdb,
+    /// Terrestrial Time.
     Tt,
+    /// Universal Time.
     Ut1,
 }
 
@@ -216,6 +225,7 @@ impl From<Ut1> for DynTimeScale {
     }
 }
 
+/// Error returned when parsing an unknown time scale abbreviation.
 #[derive(Clone, Debug, Error, Eq, PartialEq)]
 #[error("unknown time scale: {0}")]
 pub struct UnknownTimeScaleError(String);

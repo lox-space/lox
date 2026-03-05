@@ -71,7 +71,9 @@ impl ComplexAntenna {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub enum Antenna {
+    /// Constant-gain antenna.
     Simple(SimpleAntenna),
+    /// Pattern-based antenna with boresight direction.
     Complex(ComplexAntenna),
 }
 

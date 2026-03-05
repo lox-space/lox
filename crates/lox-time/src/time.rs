@@ -44,14 +44,19 @@ use crate::time_scales::TimeScale;
 use crate::time_scales::Tt;
 use crate::time_scales::Ut1;
 
+/// Error type for [`Time`] construction failures.
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
 pub enum TimeError {
+    /// Invalid date component.
     #[error(transparent)]
     DateError(#[from] DateError),
+    /// Invalid time-of-day component.
     #[error(transparent)]
     TimeError(#[from] TimeOfDayError),
+    /// Attempted to represent a leap second in a continuous time scale.
     #[error("leap seconds do not exist in continuous time scales; use `Utc` instead")]
     LeapSecondOutsideUtc,
+    /// The ISO 8601 string could not be parsed.
     #[error("invalid ISO string `{0}`")]
     InvalidIsoString(String),
 }
@@ -67,6 +72,7 @@ pub struct Time<T: TimeScale> {
     delta: TimeDelta,
 }
 
+/// A [`Time`] with a runtime-determined time scale.
 pub type DynTime = Time<DynTimeScale>;
 
 impl<T: TimeScale> Time<T> {
@@ -162,6 +168,7 @@ impl<T: TimeScale> Time<T> {
         Self { scale, delta }
     }
 
+    /// Instantiates a [Time] from a two-part Julian date `jd1 + jd2` in days.
     pub fn from_two_part_julian_date(scale: T, jd1: Days, jd2: Days) -> Self {
         let delta = TimeDelta::from_two_part_julian_date(jd1, jd2);
         Self { scale, delta }
@@ -187,6 +194,7 @@ impl<T: TimeScale> Time<T> {
         Time::from_delta(scale, self.delta)
     }
 
+    /// Converts this time to `scale` using the given offset `provider`.
     pub fn try_to_scale<S, P>(&self, scale: S, provider: &P) -> Result<Time<S>, P::Error>
     where
         T: Copy,
@@ -197,6 +205,7 @@ impl<T: TimeScale> Time<T> {
         Ok(self.with_scale_and_delta(scale, offset))
     }
 
+    /// Converts this time to `scale` using the default offset provider.
     pub fn to_scale<S>(&self, scale: S) -> Time<S>
     where
         T: Copy,
@@ -235,6 +244,7 @@ impl<T: TimeScale> Time<T> {
         Self::from_epoch(scale, Epoch::J2000)
     }
 
+    /// Returns the seconds and subsecond components, or `None` if the delta is non-finite.
     pub fn as_seconds_and_subsecond(&self) -> Option<(i64, Subsecond)> {
         self.delta.as_seconds_and_subsecond()
     }
@@ -252,6 +262,7 @@ impl<T: TimeScale> Time<T> {
 }
 
 impl<T: TimeScale + Into<DynTimeScale>> Time<T> {
+    /// Converts this time into a [`DynTime`] with a runtime time scale.
     pub fn into_dyn(self) -> DynTime {
         Time::from_delta(self.scale.into(), self.delta)
     }

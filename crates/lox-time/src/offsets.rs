@@ -12,13 +12,16 @@ use crate::utc::leap_seconds::{DefaultLeapSecondsProvider, LeapSecondsProvider};
 
 mod impls;
 
+/// Fallible time scale offset computation.
 pub trait TryOffset<Origin, Target>
 where
     Origin: TimeScale,
     Target: TimeScale,
 {
+    /// The error type returned when the offset cannot be computed.
     type Error: std::error::Error + Send + Sync + 'static;
 
+    /// Computes the offset from `origin` to `target` at the given `delta` since J2000.
     fn try_offset(
         &self,
         origin: Origin,
@@ -27,11 +30,13 @@ where
     ) -> Result<TimeDelta, Self::Error>;
 }
 
+/// Infallible time scale offset computation.
 pub trait Offset<Origin, Target>
 where
     Origin: TimeScale,
     Target: TimeScale,
 {
+    /// Computes the offset from `origin` to `target` at the given `delta` since J2000.
     fn offset(&self, origin: Origin, target: Target, delta: TimeDelta) -> TimeDelta;
 }
 
@@ -46,45 +51,58 @@ where
     }
 }
 
+/// Provides time scale offset computations for all supported scale pairs.
 pub trait OffsetProvider {
+    /// The error type for fallible offset computations (e.g. UT1).
     type Error: std::error::Error + Send + Sync + 'static;
 
+    /// Returns the TAI→UT1 offset at the given delta.
     fn tai_to_ut1(&self, delta: TimeDelta) -> Result<TimeDelta, Self::Error>;
+    /// Returns the UT1→TAI offset at the given delta.
     fn ut1_to_tai(&self, delta: TimeDelta) -> Result<TimeDelta, Self::Error>;
 
+    /// Returns the constant TAI→TT offset.
     fn tai_to_tt(&self) -> TimeDelta {
         D_TAI_TT
     }
 
+    /// Returns the constant TT→TAI offset.
     fn tt_to_tai(&self) -> TimeDelta {
         -D_TAI_TT
     }
 
+    /// Returns the TT→TCG offset at the given delta.
     fn tt_to_tcg(&self, delta: TimeDelta) -> TimeDelta {
         tt_to_tcg(delta)
     }
 
+    /// Returns the TCG→TT offset at the given delta.
     fn tcg_to_tt(&self, delta: TimeDelta) -> TimeDelta {
         tcg_to_tt(delta)
     }
 
+    /// Returns the TDB→TCB offset at the given delta.
     fn tdb_to_tcb(&self, delta: TimeDelta) -> TimeDelta {
         tdb_to_tcb(delta)
     }
 
+    /// Returns the TCB→TDB offset at the given delta.
     fn tcb_to_tdb(&self, delta: TimeDelta) -> TimeDelta {
         tcb_to_tdb(delta)
     }
 
+    /// Returns the TT→TDB offset at the given delta.
     fn tt_to_tdb(&self, delta: TimeDelta) -> TimeDelta {
         tt_to_tdb(delta)
     }
 
+    /// Returns the TDB→TT offset at the given delta.
     fn tdb_to_tt(&self, delta: TimeDelta) -> TimeDelta {
         tdb_to_tt(delta)
     }
 }
 
+/// Default offset provider using built-in leap second tables and standard algorithms.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct DefaultOffsetProvider;
 
