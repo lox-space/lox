@@ -13,16 +13,22 @@ use thiserror::Error;
 use crate::orbits::KeplerianOrbit;
 use crate::orbits::keplerian::KeplerianOrbitError;
 
+/// Errors that can occur when building an orbit.
 #[derive(Debug, Clone, Error)]
 pub enum OrbitBuilderError {
+    /// Invalid Keplerian elements.
     #[error(transparent)]
     Keplerian(#[from] KeplerianError),
+    /// Keplerian orbit validation failed.
     #[error(transparent)]
     Orbit(#[from] KeplerianOrbitError),
+    /// The origin body does not define a mean radius.
     #[error("the origin does not have a mean radius")]
     MissingMeanRadius,
+    /// No orbital shape (semi-major axis, radii, or altitudes) was specified.
     #[error("no orbital shape was specified")]
     MissingShape,
+    /// Both true anomaly and mean anomaly were provided.
     #[error("both true anomaly and mean anomaly were specified")]
     AmbiguousAnomaly,
 }
@@ -38,6 +44,7 @@ enum Shape {
     Altitudes(Distance, Distance),
 }
 
+/// Builder for constructing Keplerian orbits from orbital elements.
 #[derive(Debug, Clone)]
 pub struct KeplerianOrbitBuilder<T: TimeScale, O: Origin> {
     time: Time<T>,
@@ -57,6 +64,7 @@ impl Default for KeplerianOrbitBuilder<Tai, Earth> {
 }
 
 impl KeplerianOrbitBuilder<Tai, Earth> {
+    /// Creates a new builder with default TAI time scale and Earth origin.
     pub fn new() -> Self {
         Self {
             time: Time::default(),
@@ -73,6 +81,7 @@ impl KeplerianOrbitBuilder<Tai, Earth> {
 
 // Typestate: change time scale
 impl<S: TimeScale, O: Origin> KeplerianOrbitBuilder<S, O> {
+    /// Sets the epoch and changes the time scale.
     pub fn with_time<T: TimeScale>(self, time: Time<T>) -> KeplerianOrbitBuilder<T, O> {
         KeplerianOrbitBuilder {
             time,
@@ -86,6 +95,7 @@ impl<S: TimeScale, O: Origin> KeplerianOrbitBuilder<S, O> {
         }
     }
 
+    /// Sets the central body origin.
     pub fn with_origin<N: Origin>(self, origin: N) -> KeplerianOrbitBuilder<S, N> {
         KeplerianOrbitBuilder {
             time: self.time,
@@ -101,16 +111,19 @@ impl<S: TimeScale, O: Origin> KeplerianOrbitBuilder<S, O> {
 }
 
 impl<T: TimeScale, O: Origin> KeplerianOrbitBuilder<T, O> {
+    /// Sets the orbital shape via semi-major axis and eccentricity.
     pub fn with_semi_major_axis(mut self, semi_major_axis: Distance, eccentricity: f64) -> Self {
         self.shape = Some(Shape::SemiMajorAxis(semi_major_axis, eccentricity));
         self
     }
 
+    /// Sets the orbital shape via periapsis and apoapsis radii.
     pub fn with_radii(mut self, periapsis_radius: Distance, apoapsis_radius: Distance) -> Self {
         self.shape = Some(Shape::Radii(periapsis_radius, apoapsis_radius));
         self
     }
 
+    /// Sets the orbital shape via periapsis and apoapsis altitudes above the mean radius.
     pub fn with_altitudes(
         mut self,
         periapsis_altitude: Distance,
@@ -120,31 +133,37 @@ impl<T: TimeScale, O: Origin> KeplerianOrbitBuilder<T, O> {
         self
     }
 
+    /// Sets the orbital inclination.
     pub fn with_inclination(mut self, inclination: Angle) -> Self {
         self.inclination = inclination;
         self
     }
 
+    /// Sets the longitude of the ascending node.
     pub fn with_longitude_of_ascending_node(mut self, longitude_of_ascending_node: Angle) -> Self {
         self.longitude_of_ascending_node = longitude_of_ascending_node;
         self
     }
 
+    /// Sets the argument of periapsis.
     pub fn with_argument_of_periapsis(mut self, argument_of_periapsis: Angle) -> Self {
         self.argument_of_periapsis = argument_of_periapsis;
         self
     }
 
+    /// Sets the true anomaly.
     pub fn with_true_anomaly(mut self, true_anomaly: Angle) -> Self {
         self.true_anomaly = Some(true_anomaly);
         self
     }
 
+    /// Sets the mean anomaly.
     pub fn with_mean_anomaly(mut self, mean_anomaly: Angle) -> Self {
         self.mean_anomaly = Some(mean_anomaly);
         self
     }
 
+    /// Builds the Keplerian orbit in the ICRF frame.
     pub fn build(self) -> Result<KeplerianOrbit<T, O, Icrf>, OrbitBuilderError>
     where
         O: TryMeanRadius + TrySpheroid + Copy,
@@ -200,6 +219,7 @@ enum CircularSize {
     Altitude(Distance),
 }
 
+/// Builder for constructing circular orbits (eccentricity = 0).
 #[derive(Debug, Clone)]
 pub struct CircularBuilder<T: TimeScale, O: Origin> {
     time: Time<T>,
@@ -217,6 +237,7 @@ impl Default for CircularBuilder<Tai, Earth> {
 }
 
 impl CircularBuilder<Tai, Earth> {
+    /// Creates a new circular orbit builder with default TAI time scale and Earth origin.
     pub fn new() -> Self {
         Self {
             time: Time::default(),
@@ -231,6 +252,7 @@ impl CircularBuilder<Tai, Earth> {
 
 // Typestate: change time scale
 impl<S: TimeScale, O: Origin> CircularBuilder<S, O> {
+    /// Sets the epoch and changes the time scale.
     pub fn with_time<T: TimeScale>(self, time: Time<T>) -> CircularBuilder<T, O> {
         CircularBuilder {
             time,
@@ -242,6 +264,7 @@ impl<S: TimeScale, O: Origin> CircularBuilder<S, O> {
         }
     }
 
+    /// Sets the central body origin.
     pub fn with_origin<N: Origin>(self, origin: N) -> CircularBuilder<S, N> {
         CircularBuilder {
             time: self.time,
@@ -255,31 +278,37 @@ impl<S: TimeScale, O: Origin> CircularBuilder<S, O> {
 }
 
 impl<T: TimeScale, O: Origin> CircularBuilder<T, O> {
+    /// Sets the orbit size via semi-major axis.
     pub fn with_semi_major_axis(mut self, semi_major_axis: Distance) -> Self {
         self.size = Some(CircularSize::SemiMajorAxis(semi_major_axis));
         self
     }
 
+    /// Sets the orbit size via altitude above the mean radius.
     pub fn with_altitude(mut self, altitude: Distance) -> Self {
         self.size = Some(CircularSize::Altitude(altitude));
         self
     }
 
+    /// Sets the orbital inclination.
     pub fn with_inclination(mut self, inclination: Angle) -> Self {
         self.inclination = inclination;
         self
     }
 
+    /// Sets the longitude of the ascending node.
     pub fn with_longitude_of_ascending_node(mut self, longitude_of_ascending_node: Angle) -> Self {
         self.longitude_of_ascending_node = longitude_of_ascending_node;
         self
     }
 
+    /// Sets the true anomaly.
     pub fn with_true_anomaly(mut self, true_anomaly: Angle) -> Self {
         self.true_anomaly = true_anomaly;
         self
     }
 
+    /// Builds the circular Keplerian orbit in the ICRF frame.
     pub fn build(self) -> Result<KeplerianOrbit<T, O, Icrf>, OrbitBuilderError>
     where
         O: TryMeanRadius + TrySpheroid + Copy,

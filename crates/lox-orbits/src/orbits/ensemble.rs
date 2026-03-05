@@ -19,6 +19,7 @@ pub struct Ensemble<K, T: TimeScale, O: Origin, R: ReferenceFrame>(
 where
     K: Eq + Hash;
 
+/// A dynamically-typed ensemble with runtime time scale, origin, and frame.
 pub type DynEnsemble<K> = Ensemble<K, DynTimeScale, DynOrigin, DynFrame>;
 
 impl<K, T, O, R> Ensemble<K, T, O, R>
@@ -28,26 +29,32 @@ where
     O: Origin,
     R: ReferenceFrame,
 {
+    /// Creates a new ensemble from a map of trajectories.
     pub fn new(map: HashMap<K, Trajectory<T, O, R>>) -> Self {
         Self(map)
     }
 
+    /// Returns a reference to the trajectory for the given key, if present.
     pub fn get(&self, key: &K) -> Option<&Trajectory<T, O, R>> {
         self.0.get(key)
     }
 
+    /// Inserts a trajectory with the given key.
     pub fn insert(&mut self, key: K, trajectory: Trajectory<T, O, R>) {
         self.0.insert(key, trajectory);
     }
 
+    /// Returns an iterator over all key-trajectory pairs.
     pub fn iter(&self) -> impl Iterator<Item = (&K, &Trajectory<T, O, R>)> {
         self.0.iter()
     }
 
+    /// Returns the number of trajectories in the ensemble.
     pub fn len(&self) -> usize {
         self.0.len()
     }
 
+    /// Returns `true` if the ensemble contains no trajectories.
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }

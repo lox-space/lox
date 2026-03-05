@@ -16,6 +16,7 @@ use lox_time::intervals::TimeInterval;
 use lox_time::time_scales::TimeScale;
 use thiserror::Error;
 
+/// Topocentric observation of a satellite from a ground location.
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Observables {
@@ -26,6 +27,7 @@ pub struct Observables {
 }
 
 impl Observables {
+    /// Creates a new set of observables.
     pub fn new(azimuth: Radians, elevation: Radians, range: f64, range_rate: f64) -> Self {
         Observables {
             azimuth,
@@ -34,23 +36,28 @@ impl Observables {
             range_rate,
         }
     }
+    /// Returns the azimuth angle in radians.
     pub fn azimuth(&self) -> Radians {
         self.azimuth
     }
 
+    /// Returns the elevation angle in radians.
     pub fn elevation(&self) -> Radians {
         self.elevation
     }
 
+    /// Returns the slant range in meters.
     pub fn range(&self) -> f64 {
         self.range
     }
 
+    /// Returns the range rate in meters per second.
     pub fn range_rate(&self) -> f64 {
         self.range_rate
     }
 }
 
+/// A location on the surface of a celestial body.
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct GroundLocation<B: TrySpheroid> {
@@ -58,10 +65,12 @@ pub struct GroundLocation<B: TrySpheroid> {
     body: B,
 }
 
+/// Type alias for a ground location with a dynamic origin.
 pub type DynGroundLocation = GroundLocation<DynOrigin>;
 
 /// Infallible constructor — requires compile-time `Spheroid` guarantee.
 impl<B: Spheroid> GroundLocation<B> {
+    /// Creates a new ground location on a body that is guaranteed to be a spheroid.
     pub fn new(coordinates: LonLatAlt, body: B) -> Self {
         GroundLocation { coordinates, body }
     }
@@ -69,6 +78,7 @@ impl<B: Spheroid> GroundLocation<B> {
 
 /// Fallible constructor — for `DynOrigin` and other `TrySpheroid` types.
 impl<B: TrySpheroid> GroundLocation<B> {
+    /// Creates a new ground location, returning an error if the body has no spheroid.
     pub fn try_new(coordinates: LonLatAlt, body: B) -> Result<Self, &'static str> {
         if body.try_equatorial_radius().is_err() {
             return Err("no spheroid");
@@ -78,6 +88,7 @@ impl<B: TrySpheroid> GroundLocation<B> {
 }
 
 impl<B: TrySpheroid + Into<DynOrigin>> GroundLocation<B> {
+    /// Converts the ground location into a dynamic representation.
     pub fn into_dyn(self) -> DynGroundLocation {
         GroundLocation {
             coordinates: self.coordinates,
@@ -87,6 +98,7 @@ impl<B: TrySpheroid + Into<DynOrigin>> GroundLocation<B> {
 }
 
 impl<B: TrySpheroid> GroundLocation<B> {
+    /// Returns the central body.
     pub fn origin(&self) -> B
     where
         B: Clone,
@@ -94,14 +106,17 @@ impl<B: TrySpheroid> GroundLocation<B> {
         self.body.clone()
     }
 
+    /// Returns the geodetic coordinates.
     pub fn coordinates(&self) -> LonLatAlt {
         self.coordinates
     }
 
+    /// Returns the longitude in radians.
     pub fn longitude(&self) -> f64 {
         self.coordinates.lon().to_radians()
     }
 
+    /// Returns the latitude in radians.
     pub fn latitude(&self) -> f64 {
         self.coordinates.lat().to_radians()
     }
@@ -123,15 +138,18 @@ impl<B: TrySpheroid> GroundLocation<B> {
             .expect("flattening should be available")
     }
 
+    /// Returns the body-fixed Cartesian position in meters.
     pub fn body_fixed_position(&self) -> DVec3 {
         self.coordinates
             .to_body_fixed(self.equatorial_radius(), self.flattening())
     }
 
+    /// Returns the rotation matrix from body-fixed to topocentric (SEZ) frame.
     pub fn rotation_to_topocentric(&self) -> DMat3 {
         self.coordinates.rotation_to_topocentric()
     }
 
+    /// Computes topocentric observables from raw body-fixed position and velocity vectors.
     pub fn compute_observables(&self, state_position: DVec3, state_velocity: DVec3) -> Observables {
         let rot = self.rotation_to_topocentric();
         let position = rot * (state_position - self.body_fixed_position());
@@ -148,6 +166,7 @@ impl<B: TrySpheroid> GroundLocation<B> {
         }
     }
 
+    /// Computes topocentric observables from a Cartesian orbit in the body-fixed frame.
     pub fn observables<T: TimeScale + Copy>(
         &self,
         state: CartesianOrbit<T, B, Iau<B>>,
@@ -158,29 +177,36 @@ impl<B: TrySpheroid> GroundLocation<B> {
         self.compute_observables(state.position(), state.velocity())
     }
 
+    /// Computes topocentric observables from a dynamic Cartesian orbit.
     pub fn observables_dyn(&self, state: crate::orbits::DynCartesianOrbit) -> Observables {
         self.compute_observables(state.position(), state.velocity())
     }
 }
 
+/// Errors that can occur during ground propagation.
 #[derive(Debug, Error)]
 pub enum GroundPropagatorError {
+    /// A frame transformation failed.
     #[error("frame transformation error: {0}")]
     FrameTransformation(String),
+    /// A trajectory construction error occurred.
     #[error(transparent)]
     Trajectory(#[from] TrajectorError),
 }
 
+/// Propagator that produces a stationary body-fixed trajectory for a ground location.
 pub struct GroundPropagator<B: TrySpheroid, R: ReferenceFrame> {
     location: GroundLocation<B>,
     frame: R,
     step: Option<TimeDelta>,
 }
 
+/// Type alias for a ground propagator with dynamic origin and frame.
 pub type DynGroundPropagator = GroundPropagator<DynOrigin, DynFrame>;
 
-/// Typed constructor — for static bodies with `Spheroid + RotationalElements`.
+/// Typed constructor -- for static bodies with `Spheroid + RotationalElements`.
 impl<B: Spheroid + RotationalElements> GroundPropagator<B, Iau<B>> {
+    /// Creates a new ground propagator in the body's IAU frame.
     pub fn new(location: GroundLocation<B>) -> Self
     where
         B: Copy,
@@ -196,6 +222,7 @@ impl<B: Spheroid + RotationalElements> GroundPropagator<B, Iau<B>> {
 
 /// Fallible constructor for `DynOrigin`.
 impl GroundPropagator<DynOrigin, DynFrame> {
+    /// Creates a new ground propagator, returning an error if the body has no spheroid.
     pub fn try_new(location: GroundLocation<DynOrigin>) -> Result<Self, &'static str> {
         if location.body.try_equatorial_radius().is_err() {
             return Err("no spheroid");
@@ -210,11 +237,13 @@ impl GroundPropagator<DynOrigin, DynFrame> {
 }
 
 impl<B: TrySpheroid, R: ReferenceFrame> GroundPropagator<B, R> {
+    /// Sets the propagation time step.
     pub fn with_step(mut self, step: TimeDelta) -> Self {
         self.step = Some(step);
         self
     }
 
+    /// Returns a reference to the underlying ground location.
     pub fn location(&self) -> &GroundLocation<B> {
         &self.location
     }

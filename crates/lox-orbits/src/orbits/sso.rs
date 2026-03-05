@@ -28,31 +28,43 @@ const OMEGA_SUN_SYNC: f64 = 1.99651502e-7; // rad/sec
 // FIXME: Implement trait in lox-bodies
 const J2_EARTH: f64 = 0.001_082_626_174;
 
+/// Errors that can occur when constructing a sun-synchronous orbit.
 #[derive(Debug, Error)]
 pub enum SsoError {
+    /// Neither altitude/semi-major axis nor inclination was provided.
     #[error("either altitude, semi-major axis, or inclination need to be provided")]
     InvalidParameters,
+    /// The semi-major axis is too large for a sun-synchronous orbit.
     #[error("semi-major axis is out-of-range: {0}")]
     SemiMajorAxisOutOfRange(Distance),
+    /// The local time of the ascending or descending node is invalid.
     #[error("invalid local time of ascending/descending node: {0}")]
     InvalidLtan(String),
+    /// The time scale offset provider returned an error.
     #[error("offset provider error: {0}")]
     OffsetProvider(String),
+    /// Invalid inclination value.
     #[error(transparent)]
     Inclination(#[from] InclinationError),
+    /// Negative eccentricity value.
     #[error(transparent)]
     Eccentricity(#[from] NegativeEccentricityError),
+    /// Invalid argument of periapsis value.
     #[error(transparent)]
     ArgumentOfPeriapsis(#[from] ArgumentOfPeriapsisError),
 }
 
+/// Specifies the local time of the ascending or descending node.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum LocalTimeOfNode {
+    /// Local time of the ascending node.
     LTAN(TimeOfDay),
+    /// Local time of the descending node.
     LTDN(TimeOfDay),
 }
 
 impl LocalTimeOfNode {
+    /// Returns the local time of the ascending node as an angle.
     pub fn local_time_of_ascending_node(&self) -> Angle {
         let ltan = match self {
             LocalTimeOfNode::LTAN(time_of_day) => time_of_day.to_angle(),
@@ -229,6 +241,7 @@ where
     }
 }
 
+/// Builder for constructing sun-synchronous orbits around Earth.
 #[derive(Debug, Clone)]
 pub struct SsoBuilder<'a, T: TimeScale + Copy, P: TryOffset<T, Ut1> + TryOffset<T, Tdb>> {
     time: Time<T>,
@@ -242,6 +255,7 @@ pub struct SsoBuilder<'a, T: TimeScale + Copy, P: TryOffset<T, Ut1> + TryOffset<
 }
 
 impl<'a> SsoBuilder<'a, Tai, DefaultOffsetProvider> {
+    /// Creates a new SSO builder with default TAI time scale and offset provider.
     pub fn new() -> Self {
         Self {
             time: Time::default(),
@@ -267,6 +281,7 @@ where
     T: TimeScale + Copy,
     U: TryOffset<T, Ut1> + TryOffset<T, Tdb>,
 {
+    /// Sets the time scale offset provider.
     pub fn with_provider<P>(self, provider: &'a P) -> SsoBuilder<'a, T, P>
     where
         P: TryOffset<T, Ut1> + TryOffset<T, Tdb>,
@@ -289,6 +304,7 @@ where
     S: TimeScale + Copy,
     P: TryOffset<S, Ut1> + TryOffset<S, Tdb>,
 {
+    /// Sets the epoch and changes the time scale.
     pub fn with_time<T: TimeScale + Copy>(self, time: Time<T>) -> SsoBuilder<'a, T, P>
     where
         P: TryOffset<T, Ut1> + TryOffset<T, Tdb>,
@@ -311,49 +327,58 @@ where
     T: TimeScale + Copy,
     P: TryOffset<T, Ut1> + TryOffset<T, Tdb>,
 {
+    /// Sets the semi-major axis (mutually exclusive with inclination).
     pub fn with_semi_major_axis(mut self, semi_major_axis: SemiMajorAxis) -> Self {
         self.semi_major_axis = Some(semi_major_axis);
         self
     }
 
+    /// Sets the eccentricity.
     pub fn with_eccentricity(mut self, eccentricity: f64) -> Self {
         self.eccentricity = Eccentricity::try_new(eccentricity);
         self
     }
 
+    /// Sets the orbit size via altitude, implying a circular orbit.
     pub fn with_altitude(mut self, altitude: Distance) -> Self {
         self.semi_major_axis = Some(altitude + Earth.equatorial_radius());
         self.eccentricity = Ok(Eccentricity::default());
         self
     }
 
+    /// Sets the inclination (mutually exclusive with semi-major axis).
     pub fn with_inclination(mut self, inclination: Angle) -> Self {
         self.inclination = Some(Inclination::try_new(inclination));
         self
     }
 
+    /// Sets the local time of the ascending node.
     pub fn with_ltan(mut self, hours: u8, minutes: u8) -> Self {
         let time = TimeOfDay::from_hour_and_minute(hours, minutes);
         self.ltan = time.map(LocalTimeOfNode::LTAN);
         self
     }
 
+    /// Sets the local time of the descending node.
     pub fn with_ltdn(mut self, hours: u8, minutes: u8) -> Self {
         let time = TimeOfDay::from_hour_and_minute(hours, minutes);
         self.ltan = time.map(LocalTimeOfNode::LTDN);
         self
     }
 
+    /// Sets the argument of periapsis.
     pub fn with_argument_of_periapsis(mut self, argument_of_periapsis: Angle) -> Self {
         self.argument_of_periapsis = ArgumentOfPeriapsis::try_new(argument_of_periapsis);
         self
     }
 
+    /// Sets the true anomaly.
     pub fn with_true_anomaly(mut self, true_anomaly: Angle) -> Self {
         self.true_anomaly = TrueAnomaly::new(true_anomaly);
         self
     }
 
+    /// Builds the sun-synchronous Keplerian orbit in the ICRF frame around Earth.
     pub fn build(self) -> Result<KeplerianOrbit<T, Earth, Icrf>, SsoError>
     where
         DefaultOffsetProvider: TryOffset<T, Ut1> + TryOffset<T, Tdb>,

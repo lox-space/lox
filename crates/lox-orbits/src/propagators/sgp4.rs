@@ -20,18 +20,24 @@ use lox_time::utc::UtcError;
 use crate::orbits::{CartesianOrbit, TrajectorError, Trajectory};
 use crate::propagators::Propagator;
 
+/// Errors that can occur during SGP4 propagation.
 #[derive(Debug, Error)]
 pub enum Sgp4Error {
+    /// Invalid TLE elements.
     #[error(transparent)]
     ElementsError(#[from] ElementsError),
+    /// Error constructing the output trajectory.
     #[error(transparent)]
     TrajectoryError(#[from] TrajectorError),
+    /// SGP4 prediction error.
     #[error(transparent)]
     Sgp4(#[from] sgp4::Error),
+    /// UTC conversion error.
     #[error(transparent)]
     Utc(#[from] UtcError),
 }
 
+/// SGP4/SDP4 orbit propagator for satellites described by Two-Line Element sets.
 #[derive(Debug, Clone)]
 pub struct Sgp4 {
     constants: Constants,
@@ -40,6 +46,7 @@ pub struct Sgp4 {
 }
 
 impl Sgp4 {
+    /// Create a new SGP4 propagator from TLE elements.
     pub fn new(initial_state: Elements) -> Result<Self, Sgp4Error> {
         let time: Time<Tai> = initial_state.datetime.and_utc().into();
         // Use AFSPC compatibility mode because TLE data is fitted using
@@ -53,11 +60,13 @@ impl Sgp4 {
         })
     }
 
+    /// Set the fixed time step used during propagation.
     pub fn with_step(mut self, step: TimeDelta) -> Self {
         self.step = Some(step);
         self
     }
 
+    /// Return the TLE epoch as a TAI time.
     pub fn time(&self) -> Time<Tai> {
         self.time
     }

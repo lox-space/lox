@@ -30,18 +30,22 @@ where
     O: Origin,
     R: ReferenceFrame,
 {
+    /// Constructs a new Cartesian orbit from position/velocity state, epoch, origin, and frame.
     pub const fn new(cartesian: Cartesian, time: lox_time::Time<T>, origin: O, frame: R) -> Self {
         Self::from_state(cartesian, time, origin, frame)
     }
 
+    /// Returns the position vector in meters.
     pub fn position(&self) -> DVec3 {
         self.state().position()
     }
 
+    /// Returns the velocity vector in meters per second.
     pub fn velocity(&self) -> DVec3 {
         self.state().velocity()
     }
 
+    /// Converts this Cartesian orbit to Keplerian elements.
     pub fn to_keplerian(&self) -> KeplerianOrbit<T, O, R>
     where
         T: Copy,
@@ -56,6 +60,7 @@ where
         )
     }
 
+    /// Converts this Cartesian orbit to Keplerian elements, returning an error if the gravitational parameter is undefined.
     pub fn try_to_keplerian(&self) -> Result<KeplerianOrbit<T, O, R>, UndefinedOriginPropertyError>
     where
         T: Copy,
@@ -71,6 +76,7 @@ where
         ))
     }
 
+    /// Transforms this orbit into a different reference frame using the given rotation provider.
     pub fn try_to_frame<R1, P>(
         &self,
         frame: R1,
@@ -109,6 +115,7 @@ where
     T: TimeScale,
     O: Origin + RotationalElements + Spheroid + Copy,
 {
+    /// Converts this body-fixed Cartesian orbit to a ground location.
     pub fn to_ground_location(&self) -> Result<GroundLocation<O>, FromBodyFixedError> {
         let origin = self.origin();
         let coords = LonLatAlt::from_body_fixed(
@@ -120,12 +127,16 @@ where
     }
 }
 
+/// Errors that can occur when converting a dynamic Cartesian orbit to a ground location.
 #[derive(Debug, Error)]
 pub enum StateToDynGroundError {
+    /// The origin body does not define equatorial radius and flattening.
     #[error("equatorial radius and flattening factor are not available for origin `{}`", .0.name())]
     UndefinedSpheroid(DynOrigin),
+    /// Failed to convert from body-fixed coordinates.
     #[error(transparent)]
     FromBodyFixed(#[from] FromBodyFixedError),
+    /// The frame is not a body-fixed frame.
     #[error("not a body-fixed frame {0}")]
     NonBodyFixedFrame(String),
 }
@@ -144,6 +155,7 @@ where
     T: TimeScale,
     O: Origin,
 {
+    /// Returns the rotation matrix from ICRF to the Local Vertical Local Horizontal (LVLH) frame.
     pub fn rotation_lvlh(&self) -> DMat3 {
         rotation_lvlh(self.position(), self.velocity())
     }
@@ -154,6 +166,7 @@ where
     T: TimeScale + Copy,
     O: Origin + Copy,
 {
+    /// Transforms this orbit to a different central body origin using an ephemeris.
     pub fn to_origin<O1: Origin + Copy, E: Ephemeris>(
         &self,
         target: O1,
@@ -177,6 +190,7 @@ where
 }
 
 impl DynCartesianOrbit {
+    /// Transforms this dynamic orbit to a different central body origin using an ephemeris.
     pub fn try_to_origin<E: Ephemeris>(
         &self,
         target: DynOrigin,
@@ -203,6 +217,7 @@ impl DynCartesianOrbit {
         ))
     }
 
+    /// Converts this dynamic Cartesian orbit to a ground location.
     pub fn try_to_ground_location(&self) -> Result<DynGroundLocation, StateToDynGroundError> {
         let frame = self.reference_frame();
         let origin = self.origin();
@@ -219,6 +234,7 @@ impl DynCartesianOrbit {
         Ok(DynGroundLocation::try_new(coords, origin).unwrap())
     }
 
+    /// Returns the LVLH rotation matrix, returning an error if the frame is not ICRF.
     pub fn try_rotation_lvlh(&self) -> Result<DMat3, &'static str> {
         if self.reference_frame() != DynFrame::Icrf {
             return Err("only valid for ICRF");

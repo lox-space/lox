@@ -24,6 +24,7 @@ use crate::propagators::Propagator;
 
 use super::{CartesianOrbit, Orbit, TrajectorError};
 
+/// A time-ordered sequence of Cartesian orbital states with Hermite interpolation.
 #[derive(Debug, Clone)]
 pub struct Trajectory<T: TimeScale, O: Origin, R: ReferenceFrame> {
     epoch: Time<T>,
@@ -38,6 +39,7 @@ where
     O: Origin + Copy,
     R: ReferenceFrame + Copy,
 {
+    /// Constructs a trajectory from an iterator of Cartesian orbital states.
     pub fn new(states: impl IntoIterator<Item = CartesianOrbit<T, O, R>>) -> Self {
         let mut states = states.into_iter().peekable();
         let first = states.peek().unwrap();
@@ -56,6 +58,7 @@ where
         Self::from_parts(epoch, origin, frame, data)
     }
 
+    /// Constructs a trajectory from its constituent parts.
     pub fn from_parts(epoch: Time<T>, origin: O, frame: R, data: CartesianTrajectory) -> Self {
         Self {
             epoch,
@@ -65,10 +68,12 @@ where
         }
     }
 
+    /// Decomposes this trajectory into its constituent parts.
     pub fn into_parts(self) -> (Time<T>, O, R, CartesianTrajectory) {
         (self.epoch, self.origin, self.frame, self.data)
     }
 
+    /// Constructs a trajectory, returning an error if fewer than 2 states are provided.
     pub fn try_new(
         states: impl IntoIterator<Item = CartesianOrbit<T, O, R>>,
     ) -> Result<Self, TrajectorError> {
@@ -79,12 +84,14 @@ where
         Ok(Self::new(states))
     }
 
+    /// Interpolates the trajectory at the given absolute time.
     pub fn at(&self, time: Time<T>) -> CartesianOrbit<T, O, R> {
         let t = (time - self.epoch).to_seconds().to_f64();
         let state = self.data.at(t);
         Orbit::from_state(state, time, self.origin, self.frame)
     }
 
+    /// Transforms the entire trajectory into a different reference frame.
     pub fn into_frame<R1, P>(
         self,
         frame: R1,
@@ -125,28 +132,34 @@ where
         ))
     }
 
+    /// Returns the reference epoch of the trajectory.
     pub fn epoch(&self) -> Time<T> {
         self.epoch
     }
 
+    /// Returns the central body origin.
     pub fn origin(&self) -> O {
         self.origin
     }
 
+    /// Returns the reference frame.
     pub fn reference_frame(&self) -> R {
         self.frame
     }
 
+    /// Returns the start time of the trajectory (same as the epoch).
     pub fn start_time(&self) -> Time<T> {
         self.epoch
     }
 
+    /// Returns the end time of the trajectory.
     pub fn end_time(&self) -> Time<T> {
         let time_steps = self.data.time_steps();
         let last = time_steps.last().copied().unwrap_or(0.0);
         self.epoch + TimeDelta::from_seconds_f64(last)
     }
 
+    /// Returns the absolute times of all data points in the trajectory.
     pub fn times(&self) -> Vec<Time<T>> {
         let time_steps = self.data.time_steps();
         time_steps
@@ -155,6 +168,7 @@ where
             .collect()
     }
 
+    /// Returns all orbital states at the original data points.
     pub fn states(&self) -> Vec<CartesianOrbit<T, O, R>> {
         let time_steps = self.data.time_steps();
         time_steps
@@ -167,6 +181,7 @@ where
             .collect()
     }
 
+    /// Returns the trajectory as a vector of `[t, x, y, z, vx, vy, vz]` rows.
     pub fn to_vec(&self) -> Vec<Vec<f64>> {
         let time_steps = self.data.time_steps();
         time_steps
@@ -186,20 +201,24 @@ where
             .collect()
     }
 
+    /// Interpolates the trajectory at the given time delta from the epoch.
     pub fn interpolate(&self, dt: TimeDelta) -> CartesianOrbit<T, O, R> {
         let t = dt.to_seconds().to_f64();
         let state = self.data.at(t);
         Orbit::from_state(state, self.epoch + dt, self.origin, self.frame)
     }
 
+    /// Interpolates the trajectory at the given absolute time.
     pub fn interpolate_at(&self, time: Time<T>) -> CartesianOrbit<T, O, R> {
         self.interpolate(time - self.epoch)
     }
 
+    /// Returns the interpolated position at time `t` seconds from the epoch.
     pub fn position(&self, t: f64) -> DVec3 {
         self.data.position(t)
     }
 
+    /// Returns the interpolated velocity at time `t` seconds from the epoch.
     pub fn velocity(&self, t: f64) -> DVec3 {
         self.data.velocity(t)
     }
@@ -271,6 +290,7 @@ where
     O: Origin + Copy + Into<DynOrigin>,
     R: ReferenceFrame + Copy + Into<DynFrame>,
 {
+    /// Converts this trajectory into a dynamically-typed trajectory.
     pub fn into_dyn(self) -> DynTrajectory {
         Trajectory::from_parts(
             self.epoch.into_dyn(),
@@ -307,10 +327,13 @@ where
     }
 }
 
+/// Errors that can occur when constructing or parsing a trajectory.
 #[derive(Clone, Debug, Error, PartialEq)]
 pub enum TrajectoryError {
+    /// Too few states were provided.
     #[error("`states` must have at least 2 elements but had {0}")]
     InsufficientStates(usize),
+    /// An error occurred while parsing CSV data.
     #[error("CSV error: {0}")]
     CsvError(String),
 }
@@ -321,10 +344,13 @@ impl From<csv::Error> for TrajectoryError {
     }
 }
 
+/// Errors that can occur when transforming a trajectory to a different origin.
 #[derive(Debug, Error)]
 pub enum TrajectoryTransformationError {
+    /// The underlying trajectory construction failed.
     #[error(transparent)]
     TrajectoryError(#[from] TrajectorError),
+    /// A state transformation (e.g. origin change) failed.
     #[error("state transformation failed: {0}")]
     StateTransformationError(String),
 }
@@ -335,6 +361,7 @@ where
     O: Origin + Copy,
     DefaultOffsetProvider: Offset<T, Tdb>,
 {
+    /// Transforms the entire trajectory to a different central body origin using an ephemeris.
     pub fn to_origin<O1: Origin + Copy, E: Ephemeris>(
         &self,
         target: O1,
@@ -366,6 +393,7 @@ where
     O: Origin + Copy,
     R: ReferenceFrame + Copy,
 {
+    /// Parses a trajectory from CSV data with columns `[time, x, y, z, vx, vy, vz]` in km and km/s.
     pub fn from_csv(csv: &str, origin: O, frame: R) -> Result<Self, TrajectoryError> {
         let states = parse_csv_states(csv, origin, frame)?;
         if states.len() < 2 {
@@ -375,9 +403,11 @@ where
     }
 }
 
+/// A dynamically-typed trajectory with runtime time scale, origin, and frame.
 pub type DynTrajectory = Trajectory<DynTimeScale, DynOrigin, DynFrame>;
 
 impl DynTrajectory {
+    /// Parses a dynamically-typed trajectory from CSV data.
     pub fn from_csv_dyn(
         csv: &str,
         origin: DynOrigin,

@@ -17,18 +17,24 @@ use lox_frames::{
     DynFrame, NonQuasiInertialFrameError, QuasiInertial, ReferenceFrame, TryQuasiInertial,
 };
 
+/// Errors that can occur during Vallado universal-variable propagation.
 #[derive(Debug, Error)]
 pub enum ValladoError {
+    /// The iterative solver did not converge within the maximum number of iterations.
     #[error("did not converge")]
     NotConverged,
+    /// Error constructing the output trajectory.
     #[error(transparent)]
     TrajectoryError(#[from] TrajectorError),
+    /// The origin body lacks a required physical property.
     #[error(transparent)]
     UndefinedOriginProperty(#[from] UndefinedOriginPropertyError),
+    /// The reference frame is not quasi-inertial.
     #[error(transparent)]
     NonQuasiInertialFrame(#[from] NonQuasiInertialFrameError),
 }
 
+/// Keplerian orbit propagator using Vallado's universal-variable formulation.
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Vallado<T: TimeScale, O: Origin, R: ReferenceFrame> {
     initial_state: CartesianOrbit<T, O, R>,
@@ -36,6 +42,7 @@ pub struct Vallado<T: TimeScale, O: Origin, R: ReferenceFrame> {
     step: Option<TimeDelta>,
 }
 
+/// Type alias for a [`Vallado`] propagator using dynamic time scale, origin, and frame.
 pub type DynVallado = Vallado<DynTimeScale, DynOrigin, DynFrame>;
 
 // Infallible — static bounds guarantee inertial frame and point mass.
@@ -45,6 +52,7 @@ where
     O: PointMass + Copy,
     R: QuasiInertial,
 {
+    /// Create a new Vallado propagator from the given initial state.
     pub fn new(initial_state: CartesianOrbit<T, O, R>) -> Self {
         Self {
             initial_state,
@@ -61,6 +69,7 @@ where
     O: TryPointMass + Copy,
     R: TryQuasiInertial + Copy,
 {
+    /// Try to create a new Vallado propagator, returning an error if the origin or frame is invalid.
     pub fn try_new(initial_state: CartesianOrbit<T, O, R>) -> Result<Self, ValladoError> {
         initial_state.origin().try_gravitational_parameter()?;
         initial_state.reference_frame().try_quasi_inertial()?;
@@ -86,28 +95,34 @@ where
             .as_f64()
     }
 
+    /// Set the maximum number of iterations for the universal-variable solver.
     pub fn with_max_iter(mut self, max_iter: i32) -> Self {
         self.max_iter = max_iter;
         self
     }
 
+    /// Return the maximum number of solver iterations.
     pub fn max_iter(&self) -> i32 {
         self.max_iter
     }
 
+    /// Set the fixed time step used during propagation.
     pub fn with_step(mut self, step: TimeDelta) -> Self {
         self.step = Some(step);
         self
     }
 
+    /// Return a reference to the initial orbital state.
     pub fn initial_state(&self) -> &CartesianOrbit<T, O, R> {
         &self.initial_state
     }
 
+    /// Return the central body origin.
     pub fn origin(&self) -> O {
         self.initial_state.origin()
     }
 
+    /// Return the reference frame.
     pub fn reference_frame(&self) -> R
     where
         R: Copy,

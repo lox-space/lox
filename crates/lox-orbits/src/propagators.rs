@@ -14,11 +14,15 @@ use self::numerical::{DynJ2Propagator, J2Error};
 use self::semi_analytical::{DynVallado, ValladoError};
 use self::sgp4::{Sgp4, Sgp4Error};
 
+/// Numerical orbit propagators (e.g. J2 perturbation via ODE integration).
 pub mod numerical;
+/// Semi-analytical orbit propagators (e.g. Vallado universal variable method).
 pub mod semi_analytical;
+/// SGP4 orbit propagator for TLE-based satellite prediction.
 pub mod sgp4;
 mod stumpff;
 
+/// Common interface for orbit propagators.
 pub trait Propagator<T, O>
 where
     T: TimeScale + Copy,
@@ -26,6 +30,7 @@ where
 {
     /// The propagator's native reference frame.
     type Frame: ReferenceFrame + Copy;
+    /// The error type returned by propagation methods.
     type Error: std::error::Error + 'static;
 
     /// Evaluate the state at a single time.
@@ -58,18 +63,26 @@ where
 /// trajectory.
 #[derive(Debug, Clone)]
 pub enum OrbitSource {
+    /// SGP4 propagator initialized from a TLE.
     Sgp4(Sgp4),
+    /// Vallado universal-variable Keplerian propagator.
     Vallado(DynVallado),
+    /// J2-perturbed numerical propagator.
     J2(DynJ2Propagator),
+    /// Pre-computed trajectory used as-is.
     Trajectory(DynTrajectory),
 }
 
+/// Errors that can occur when propagating an [`OrbitSource`].
 #[derive(Debug, thiserror::Error)]
 pub enum PropagateError {
+    /// SGP4 propagation error.
     #[error(transparent)]
     Sgp4(#[from] Sgp4Error),
+    /// Vallado propagation error.
     #[error(transparent)]
     Vallado(#[from] ValladoError),
+    /// J2 numerical propagation error.
     #[error(transparent)]
     J2(#[from] J2Error),
 }

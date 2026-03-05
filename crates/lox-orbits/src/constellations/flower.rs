@@ -37,6 +37,7 @@ enum FlowerShape {
 }
 
 impl FlowerBuilder {
+    /// Creates a new Flower constellation builder.
     pub fn new(
         n_petals: u32,
         n_days: u32,
@@ -71,11 +72,13 @@ impl FlowerBuilder {
         self
     }
 
+    /// Sets the orbital inclination.
     pub fn with_inclination(mut self, inclination: Angle) -> Self {
         self.inclination = inclination;
         self
     }
 
+    /// Sets the argument of periapsis.
     pub fn with_argument_of_periapsis(mut self, aop: Angle) -> Self {
         self.argument_of_periapsis = aop;
         self

@@ -47,6 +47,7 @@ pub struct StreetOfCoverageBuilder {
 }
 
 impl StreetOfCoverageBuilder {
+    /// Creates a new Street-of-Coverage builder with the given satellite and plane counts.
     pub fn new(nsats: usize, nplanes: usize) -> Self {
         Self {
             nsats,
@@ -58,26 +59,31 @@ impl StreetOfCoverageBuilder {
         }
     }
 
+    /// Sets the semi-major axis and eccentricity.
     pub fn with_semi_major_axis(mut self, sma: Distance, eccentricity: f64) -> Self {
         self.semi_major_axis = Some((sma, eccentricity));
         self
     }
 
+    /// Sets the orbital inclination.
     pub fn with_inclination(mut self, inclination: Angle) -> Self {
         self.inclination = inclination;
         self
     }
 
+    /// Sets the coverage fold (number of simultaneous covering satellites).
     pub fn with_coverage_fold(mut self, j: usize) -> Self {
         self.coverage_fold = j;
         self
     }
 
+    /// Sets the argument of periapsis.
     pub fn with_argument_of_periapsis(mut self, aop: Angle) -> Self {
         self.argument_of_periapsis = aop;
         self
     }
 
+    /// Builds the satellite list without wrapping in a [`Constellation`].
     pub fn build(&self) -> Result<Vec<ConstellationSatellite>, ConstellationError> {
         if self.nplanes == 0 {
             return Err(ConstellationError::ZeroPlanes);
@@ -166,6 +172,7 @@ impl StreetOfCoverageBuilder {
         Ok(satellites)
     }
 
+    /// Builds a full [`Constellation`] with the given metadata.
     pub fn build_constellation<T: TimeScale, O: Origin, R: ReferenceFrame>(
         &self,
         name: impl Into<String>,
