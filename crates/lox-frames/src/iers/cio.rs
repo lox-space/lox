@@ -10,5 +10,6 @@ use lox_test_utils::ApproxEq;
 
 pub mod iau2006;
 
+/// Celestial Intermediate Origin (CIO) locator, s.
 #[derive(Debug, Clone, Copy, Default, PartialEq, ApproxEq)]
 pub struct CioLocator(pub Angle);

@@ -11,6 +11,7 @@ use lox_units::Angle;
 use crate::iers::{ReferenceSystem, ecliptic::MeanObliquity};
 
 impl ReferenceSystem {
+    /// Computes the precession angles for the active IERS convention.
     pub fn precession(&self, time: Time<Tt>) -> PrecessionAngles {
         match self {
             ReferenceSystem::Iers1996 => PrecessionAngles::iau1976(time),
@@ -29,25 +30,41 @@ impl ReferenceSystem {
     }
 }
 
+/// Precession angles for a specific IAU model.
 pub enum PrecessionAngles {
     /// IAU1976 precession angles.
-    Iau1976 { zeta: Angle, z: Angle, theta: Angle },
+    Iau1976 {
+        /// Equatorial precession angle zeta_A.
+        zeta: Angle,
+        /// Equatorial precession angle z_A.
+        z: Angle,
+        /// Ecliptic precession angle theta_A.
+        theta: Angle,
+    },
     /// IAU2000 precession angles.
     Iau2000 {
+        /// Precession in longitude.
         psia: Angle,
+        /// Precession in obliquity.
         oma: Angle,
+        /// Planetary precession.
         chia: Angle,
     },
     /// IAU2006 Fukushima-Williams precession angles.
     Iau2006 {
+        /// First rotation angle (F-W parameterisation).
         gamb: Angle,
+        /// Second rotation angle (F-W parameterisation).
         phib: Angle,
+        /// Third rotation angle (F-W parameterisation).
         psib: Angle,
+        /// Mean obliquity of the ecliptic.
         epsa: Angle,
     },
 }
 
 impl PrecessionAngles {
+    /// Computes precession angles using the IAU 1976 (Lieske) model.
     pub fn iau1976(time: Time<Tt>) -> Self {
         let t = time.centuries_since_j2000();
 
@@ -60,6 +77,7 @@ impl PrecessionAngles {
         Self::Iau1976 { zeta, z, theta }
     }
 
+    /// Computes precession angles using the IAU 2000 model.
     pub fn iau2000(time: Time<Tt>) -> Self {
         let t = time.centuries_since_j2000();
 
@@ -77,6 +95,7 @@ impl PrecessionAngles {
         Self::Iau2000 { psia, oma, chia }
     }
 
+    /// Computes precession angles using the IAU 2006 (Fukushima-Williams) model.
     pub fn iau2006(time: Time<Tt>) -> Self {
         let t = time.centuries_since_j2000();
 
@@ -123,6 +142,7 @@ impl PrecessionAngles {
         }
     }
 
+    /// Returns the combined bias-precession rotation matrix.
     pub fn bias_precession_matrix(&self) -> DMat3 {
         match *self {
             PrecessionAngles::Iau1976 { zeta, z, theta } => {
@@ -179,6 +199,7 @@ const D_EPS_BIAS: Angle = Angle::arcseconds(-0.0068192);
 const D_RA0: Angle = Angle::arcseconds(-0.0146);
 const EPS0: Angle = Angle::arcseconds(84381.448);
 
+/// Returns the ICRS frame bias rotation matrix.
 pub fn frame_bias() -> DMat3 {
     (-D_EPS_BIAS).rotation_x() * (EPS0.sin() * D_PSI_BIAS).rotation_y() * D_RA0.rotation_z()
 }
@@ -186,13 +207,17 @@ pub fn frame_bias() -> DMat3 {
 const PRECOR: Angle = Angle::arcseconds(-0.29965);
 const OBLCOR: Angle = Angle::arcseconds(-0.02524);
 
+/// IAU 2000 precession-rate corrections (dpsipr, depspr).
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, ApproxEq)]
 pub struct PrecessionCorrectionsIau2000 {
+    /// Precession correction in longitude.
     pub dpsipr: Angle,
+    /// Precession correction in obliquity.
     pub depspr: Angle,
 }
 
 impl PrecessionCorrectionsIau2000 {
+    /// Computes the IAU 2000 precession-rate corrections.
     pub fn new(time: Time<Tt>) -> Self {
         let t = time.centuries_since_j2000();
 

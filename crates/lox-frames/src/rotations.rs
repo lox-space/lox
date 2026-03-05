@@ -31,14 +31,17 @@ use crate::{
 
 mod impls;
 
+/// Computes the rotation from one reference frame to another at a given time.
 pub trait TryRotation<Origin, Target, T>
 where
     Origin: ReferenceFrame,
     Target: ReferenceFrame,
     T: TimeScale,
 {
+    /// The error type returned when the rotation cannot be computed.
     type Error: std::error::Error + Send + Sync + 'static;
 
+    /// Computes the rotation from `origin` to `target` at the given `time`.
     fn try_rotation(
         &self,
         origin: Origin,
@@ -47,10 +50,12 @@ where
     ) -> Result<Rotation, Self::Error>;
 }
 
+/// Computes a composed rotation through multiple intermediate frames.
 pub trait TryComposedRotation<T, P>
 where
     T: TimeScale + Copy,
 {
+    /// Computes the composed rotation at the given time using the provider.
     fn try_composed_rotation(&self, provider: &P, time: Time<T>)
     -> Result<Rotation, RotationError>;
 }
@@ -157,9 +162,12 @@ where
     }
 }
 
+/// The source of a rotation error.
 #[derive(Debug)]
 pub enum RotationErrorKind {
+    /// Time scale offset computation failed.
     Offset,
+    /// Earth orientation parameter lookup failed.
     Eop,
 }
 
@@ -172,6 +180,7 @@ impl Display for RotationErrorKind {
     }
 }
 
+/// A rotation computation failed due to a time offset or EOP error.
 #[derive(Debug, Error)]
 #[error("{kind}: {error}")]
 pub struct RotationError {
@@ -180,6 +189,7 @@ pub struct RotationError {
 }
 
 impl RotationError {
+    /// Creates a rotation error from a time offset error.
     pub fn offset(err: impl std::error::Error + Send + Sync + 'static) -> Self {
         RotationError {
             kind: RotationErrorKind::Offset,
@@ -187,6 +197,7 @@ impl RotationError {
         }
     }
 
+    /// Creates a rotation error from an EOP error.
     pub fn eop(err: impl std::error::Error + Send + Sync + 'static) -> Self {
         RotationError {
             kind: RotationErrorKind::Eop,
@@ -195,26 +206,35 @@ impl RotationError {
     }
 }
 
+/// Errors from dynamic-dispatch rotation computations.
 #[derive(Debug, Error)]
 pub enum DynRotationError {
+    /// Underlying rotation error (offset or EOP).
     #[error(transparent)]
     Offset(#[from] RotationError),
+    /// The origin and target frames use incompatible IERS reference systems.
     #[error("incompatible reference systems")]
     IncompatibleReferenceSystems,
+    /// A required body property is undefined.
     #[error(transparent)]
     UndefinedProperty(#[from] UndefinedOriginPropertyError),
 }
 
+/// Provides Earth orientation data and frame rotation methods for a given time scale.
 pub trait RotationProvider<T: TimeScale>: OffsetProvider {
+    /// The error type for EOP lookups.
     type EopError: std::error::Error + Send + Sync + 'static;
 
+    /// Returns nutation/precession corrections for the given reference system.
     fn corrections(
         &self,
         time: Time<T>,
         sys: ReferenceSystem,
     ) -> Result<Corrections, Self::EopError>;
+    /// Returns polar motion coordinates at the given time.
     fn pole_coords(&self, time: Time<T>) -> Result<PoleCoords, Self::EopError>;
 
+    /// Rotation from ICRF to an IAU body-fixed frame.
     fn icrf_to_iau<R>(&self, time: Time<T>, frame: Iau<R>) -> Result<Rotation, RotationError>
     where
         T: TimeScale + Copy,
@@ -230,6 +250,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
 
         Ok(icrf_to_iau(angles, rates))
     }
+    /// Rotation from an IAU body-fixed frame to ICRF.
     fn iau_to_icrf<R>(&self, time: Time<T>, frame: Iau<R>) -> Result<Rotation, RotationError>
     where
         T: TimeScale + Copy,
@@ -239,7 +260,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
         Ok(self.icrf_to_iau(time, frame)?.transpose())
     }
 
-    // TODO: Support other IERS conventions
+    /// Rotation from ICRF to ITRF (via CIO-based path).
     fn icrf_to_itrf(&self, time: Time<T>) -> Result<Rotation, RotationError>
     where
         T: TimeScale + Copy,
@@ -250,6 +271,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
             .compose(self.cirf_to_tirf(time)?)
             .compose(self.tirf_to_itrf(time)?))
     }
+    /// Rotation from ITRF to ICRF.
     fn itrf_to_icrf(&self, time: Time<T>) -> Result<Rotation, RotationError>
     where
         T: TimeScale + Copy,
@@ -258,14 +280,17 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
         Ok(self.icrf_to_itrf(time)?.transpose())
     }
 
+    /// Rotation from ICRF to J2000 (frame bias).
     fn icrf_to_j2000(&self) -> Rotation {
         Rotation::new(frame_bias())
     }
 
+    /// Rotation from J2000 to ICRF (inverse frame bias).
     fn j2000_to_icrf(&self) -> Rotation {
         Rotation::new(frame_bias().transpose())
     }
 
+    /// Rotation from J2000 to Mean of Date.
     fn j2000_to_mod(&self, time: Time<T>, sys: ReferenceSystem) -> Result<Rotation, RotationError>
     where
         T: TimeScale + Copy,
@@ -275,6 +300,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
         Ok(sys.precession_matrix(time).into())
     }
 
+    /// Rotation from Mean of Date to J2000.
     fn mod_to_j2000(&self, time: Time<T>, sys: ReferenceSystem) -> Result<Rotation, RotationError>
     where
         T: TimeScale + Copy,
@@ -283,6 +309,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
         Ok(self.j2000_to_mod(time, sys)?.transpose())
     }
 
+    /// Rotation from ICRF to Mean of Date (bias + precession).
     fn icrf_to_mod(&self, time: Time<T>, sys: ReferenceSystem) -> Result<Rotation, RotationError>
     where
         T: TimeScale + Copy,
@@ -291,6 +318,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
         let time = time.try_to_scale(Tt, self).map_err(RotationError::offset)?;
         Ok(sys.bias_precession_matrix(time).into())
     }
+    /// Rotation from Mean of Date to ICRF.
     fn mod_to_icrf(&self, time: Time<T>, sys: ReferenceSystem) -> Result<Rotation, RotationError>
     where
         T: TimeScale + Copy,
@@ -299,6 +327,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
         Ok(self.icrf_to_mod(time, sys)?.transpose())
     }
 
+    /// Rotation from Mean of Date to True of Date (nutation).
     fn mod_to_tod(&self, time: Time<T>, sys: ReferenceSystem) -> Result<Rotation, RotationError>
     where
         T: TimeScale + Copy,
@@ -310,6 +339,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
         let corr = self.corrections(time, sys).map_err(RotationError::eop)?;
         Ok(sys.nutation_matrix(tdb, corr).into())
     }
+    /// Rotation from True of Date to Mean of Date.
     fn tod_to_mod(&self, time: Time<T>, sys: ReferenceSystem) -> Result<Rotation, RotationError>
     where
         T: TimeScale + Copy,
@@ -318,6 +348,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
         Ok(self.mod_to_tod(time, sys)?.transpose())
     }
 
+    /// Rotation from True of Date to Pseudo-Earth Fixed (Earth rotation).
     fn tod_to_pef(&self, time: Time<T>, sys: ReferenceSystem) -> Result<Rotation, RotationError>
     where
         T: TimeScale + Copy,
@@ -336,6 +367,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
             )),
         )
     }
+    /// Rotation from Pseudo-Earth Fixed to True of Date.
     fn pef_to_tod(&self, time: Time<T>, sys: ReferenceSystem) -> Result<Rotation, RotationError>
     where
         T: TimeScale + Copy,
@@ -344,6 +376,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
         Ok(self.tod_to_pef(time, sys)?.transpose())
     }
 
+    /// Rotation from Pseudo-Earth Fixed to ITRF (polar motion).
     fn pef_to_itrf(&self, time: Time<T>, sys: ReferenceSystem) -> Result<Rotation, RotationError>
     where
         T: TimeScale + Copy,
@@ -354,6 +387,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
         Ok(sys.polar_motion_matrix(tt, pole_coords).into())
     }
 
+    /// Rotation from ITRF to Pseudo-Earth Fixed.
     fn itrf_to_pef(&self, time: Time<T>, sys: ReferenceSystem) -> Result<Rotation, RotationError>
     where
         T: TimeScale + Copy,
@@ -362,6 +396,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
         Ok(self.pef_to_itrf(time, sys)?.transpose())
     }
 
+    /// Rotation from True of Date to TEME.
     fn tod_to_teme(&self, time: Time<T>) -> Result<Rotation, RotationError>
     where
         T: TimeScale + Copy,
@@ -377,6 +412,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
         Ok(Rotation::new(eoe.0.rotation_z()))
     }
 
+    /// Rotation from TEME to True of Date.
     fn teme_to_tod(&self, time: Time<T>) -> Result<Rotation, RotationError>
     where
         T: TimeScale + Copy,
@@ -385,6 +421,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
         Ok(self.tod_to_teme(time)?.transpose())
     }
 
+    /// Rotation from ICRF to CIRF (CIP + CIO).
     fn icrf_to_cirf(&self, time: Time<T>) -> Result<Rotation, RotationError>
     where
         T: TimeScale + Copy,
@@ -402,6 +439,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
 
         Ok(Rotation::new(xy.celestial_to_intermediate_matrix(s)))
     }
+    /// Rotation from CIRF to ICRF.
     fn cirf_to_icrf(&self, time: Time<T>) -> Result<Rotation, RotationError>
     where
         T: TimeScale + Copy,
@@ -410,6 +448,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
         Ok(self.icrf_to_cirf(time)?.transpose())
     }
 
+    /// Rotation from CIRF to TIRF (Earth rotation angle).
     fn cirf_to_tirf(&self, time: Time<T>) -> Result<Rotation, RotationError>
     where
         T: TimeScale + Copy,
@@ -427,6 +466,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
             )),
         )
     }
+    /// Rotation from TIRF to CIRF.
     fn tirf_to_cirf(&self, time: Time<T>) -> Result<Rotation, RotationError>
     where
         T: TimeScale + Copy,
@@ -435,6 +475,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
         Ok(self.cirf_to_tirf(time)?.transpose())
     }
 
+    /// Rotation from TIRF to ITRF (polar motion).
     fn tirf_to_itrf(&self, time: Time<T>) -> Result<Rotation, RotationError>
     where
         T: TimeScale + Copy,
@@ -447,6 +488,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
             .into())
     }
 
+    /// Rotation from ITRF to TIRF.
     fn itrf_to_tirf(&self, time: Time<T>) -> Result<Rotation, RotationError>
     where
         T: TimeScale + Copy,
@@ -464,43 +506,51 @@ fn rotation_matrix_derivative(m: DMat3, v: DVec3) -> DMat3 {
     -s * m
 }
 
+/// A rotation matrix with its time derivative, for transforming position and velocity vectors.
 #[derive(Debug, Clone, Copy, PartialEq, ApproxEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Rotation {
-    /// Rotation matrix
+    /// Rotation matrix.
     pub m: DMat3,
-    /// Time derivative of the rotation matrix
+    /// Time derivative of the rotation matrix.
     pub dm: DMat3,
 }
 
 impl Rotation {
+    /// Identity rotation (no rotation, zero derivative).
     pub const IDENTITY: Self = Self {
         m: DMat3::IDENTITY,
         dm: DMat3::ZERO,
     };
 
+    /// Creates a rotation from a matrix with zero time derivative.
     pub fn new(m: DMat3) -> Self {
         Self { m, dm: DMat3::ZERO }
     }
 
+    /// Sets the time derivative of the rotation matrix.
     pub fn with_derivative(mut self, dm: DMat3) -> Self {
         self.dm = dm;
         self
     }
 
+    /// Sets the time derivative from an angular velocity vector.
     pub fn with_angular_velocity(mut self, v: DVec3) -> Self {
         self.dm = rotation_matrix_derivative(self.m, v);
         self
     }
 
+    /// Returns the position rotation matrix.
     pub fn position_matrix(&self) -> DMat3 {
         self.m
     }
 
+    /// Returns the velocity rotation matrix (time derivative).
     pub fn velocity_matrix(&self) -> DMat3 {
         self.dm
     }
 
+    /// Composes this rotation with another (self then other).
     pub fn compose(self, other: Self) -> Self {
         Self {
             m: other.m * self.m,
@@ -508,20 +558,24 @@ impl Rotation {
         }
     }
 
+    /// Returns the transpose (inverse) rotation.
     pub fn transpose(&self) -> Self {
         let m = self.m.transpose();
         let dm = self.dm.transpose();
         Self { m, dm }
     }
 
+    /// Rotates a position vector.
     pub fn rotate_position(&self, pos: DVec3) -> DVec3 {
         self.m * pos
     }
 
+    /// Rotates a velocity vector (accounting for the rotation rate).
     pub fn rotate_velocity(&self, pos: DVec3, vel: DVec3) -> DVec3 {
         self.dm * pos + self.m * vel
     }
 
+    /// Rotates a full state (position and velocity).
     pub fn rotate_state(&self, pos: DVec3, vel: DVec3) -> (DVec3, DVec3) {
         (self.rotate_position(pos), self.rotate_velocity(pos, vel))
     }
