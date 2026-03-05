@@ -659,7 +659,7 @@ checksum = "34080505efa8e45a4b816c349525ebe327ceaa8559756f0356cba97ef3bf7432"
 
 [[package]]
 name = "lox-analysis"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.2"
 dependencies = [
  "csv",
  "glam 0.30.9",
@@ -680,7 +680,7 @@ dependencies = [
 
 [[package]]
 name = "lox-bodies"
-version = "0.1.0-alpha.15"
+version = "0.1.0-alpha.16"
 dependencies = [
  "fast_polynomial",
  "lox-core",
@@ -696,7 +696,7 @@ dependencies = [
 
 [[package]]
 name = "lox-comms"
-version = "0.1.0-alpha.4"
+version = "0.1.0-alpha.5"
 dependencies = [
  "glam 0.30.9",
  "lox-core",
@@ -708,7 +708,7 @@ dependencies = [
 
 [[package]]
 name = "lox-core"
-version = "0.1.0-alpha.4"
+version = "0.1.0-alpha.5"
 dependencies = [
  "chrono",
  "fast_polynomial",
@@ -734,7 +734,7 @@ dependencies = [
 
 [[package]]
 name = "lox-earth"
-version = "0.1.0-alpha.18"
+version = "0.1.0-alpha.19"
 dependencies = [
  "csv",
  "fast_polynomial",
@@ -754,7 +754,7 @@ dependencies = [
 
 [[package]]
 name = "lox-ephem"
-version = "0.1.0-alpha.13"
+version = "0.1.0-alpha.14"
 dependencies = [
  "arrayvec",
  "glam 0.30.9",
@@ -770,7 +770,7 @@ dependencies = [
 
 [[package]]
 name = "lox-frames"
-version = "0.1.0-alpha.9"
+version = "0.1.0-alpha.10"
 dependencies = [
  "fast_polynomial",
  "glam 0.30.9",
@@ -788,7 +788,7 @@ dependencies = [
 
 [[package]]
 name = "lox-io"
-version = "0.1.0-alpha.13"
+version = "0.1.0-alpha.14"
 dependencies = [
  "csv",
  "lox-core",
@@ -809,7 +809,7 @@ dependencies = [
 
 [[package]]
 name = "lox-math"
-version = "0.1.0-alpha.13"
+version = "0.1.0-alpha.14"
 dependencies = [
  "fast_polynomial",
  "glam 0.30.9",
@@ -822,7 +822,7 @@ dependencies = [
 
 [[package]]
 name = "lox-orbits"
-version = "0.1.0-alpha.28"
+version = "0.1.0-alpha.29"
 dependencies = [
  "csv",
  "differential-equations",
@@ -848,7 +848,7 @@ dependencies = [
 
 [[package]]
 name = "lox-space"
-version = "0.1.0-alpha.35"
+version = "0.1.0-alpha.36"
 dependencies = [
  "codspeed-divan-compat",
  "glam 0.30.9",
@@ -885,7 +885,7 @@ dependencies = [
 
 [[package]]
 name = "lox-time"
-version = "0.1.0-alpha.15"
+version = "0.1.0-alpha.16"
 dependencies = [
  "chrono",
  "itertools",
@@ -904,7 +904,7 @@ dependencies = [
 
 [[package]]
 name = "lox-units"
-version = "0.1.0-alpha.5"
+version = "0.1.0-alpha.6"
 dependencies = [
  "lox-core",
  "serde",
