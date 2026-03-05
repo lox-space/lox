@@ -3,6 +3,13 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+#![warn(missing_docs)]
+
+//! Definitions for celestial bodies, barycenters, and minor bodies in the solar system.
+//!
+//! Body properties such as gravitational parameters, radii, and rotational elements are derived
+//! from the IAU/NAIF SPICE planetary constants kernel (PCK).
+
 pub use crate::dynamic::DynOrigin;
 pub use generated::*;
 use lox_core::elements::GravitationalParameter;
@@ -11,10 +18,12 @@ use lox_core::units::Distance;
 use std::fmt::{Display, Formatter};
 use thiserror::Error;
 
+/// Dynamic dispatch variants of origin types.
 pub mod dynamic;
 #[allow(clippy::approx_constant)]
 mod generated;
 
+/// A NAIF ID code identifying a celestial body or barycenter.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
@@ -28,10 +37,13 @@ impl Display for NaifId {
 
 /// `Origin` is implemented for all bodies and barycenters.
 pub trait Origin {
+    /// Returns the NAIF ID of the origin.
     fn id(&self) -> NaifId;
+    /// Returns the name of the origin.
     fn name(&self) -> &'static str;
 }
 
+/// Error returned when a property is not defined for a given origin.
 #[derive(Clone, Debug, Error, Eq, PartialEq)]
 #[error("undefined property '{prop}' for origin '{origin}'")]
 pub struct UndefinedOriginPropertyError {
@@ -39,13 +51,18 @@ pub struct UndefinedOriginPropertyError {
     prop: String,
 }
 
+/// Equatorial-a, equatorial-b, and polar radii of a triaxial ellipsoid.
 pub type Radii = (Distance, Distance, Distance);
 
+/// Fallible accessor for the triaxial ellipsoid radii of a body.
 pub trait TryTriaxialEllipsoid: Origin {
+    /// Returns the triaxial ellipsoid radii, or an error if undefined.
     fn try_radii(&self) -> Result<Radii, UndefinedOriginPropertyError>;
 }
 
+/// Infallible accessor for the triaxial ellipsoid radii of a body.
 pub trait TriaxialEllipsoid: Origin {
+    /// Returns the triaxial ellipsoid radii.
     fn radii(&self) -> Radii;
 }
 
@@ -61,25 +78,33 @@ fn flattening(equatorial_radius: Distance, polar_radius: Distance) -> f64 {
     (r_eq - r_p) / r_eq
 }
 
+/// Infallible accessor for the spheroid properties of a body.
 pub trait Spheroid: TriaxialEllipsoid {
+    /// Returns the equatorial radius.
     fn equatorial_radius(&self) -> Distance {
         self.radii().0
     }
 
+    /// Returns the polar radius.
     fn polar_radius(&self) -> Distance {
         self.radii().2
     }
 
+    /// Returns the flattening factor.
     fn flattening(&self) -> f64 {
         flattening(self.equatorial_radius(), self.polar_radius())
     }
 }
 
+/// Fallible accessor for the spheroid properties of a body.
 pub trait TrySpheroid: TryTriaxialEllipsoid {
+    /// Returns the equatorial radius, or an error if undefined.
     fn try_equatorial_radius(&self) -> Result<Distance, UndefinedOriginPropertyError>;
 
+    /// Returns the polar radius, or an error if undefined.
     fn try_polar_radius(&self) -> Result<Distance, UndefinedOriginPropertyError>;
 
+    /// Returns the flattening factor, or an error if undefined.
     fn try_flattening(&self) -> Result<f64, UndefinedOriginPropertyError> {
         self.try_radii().map(|radii| flattening(radii.0, radii.2))
     }
@@ -99,11 +124,15 @@ impl<T: Spheroid> TrySpheroid for T {
     }
 }
 
+/// Fallible accessor for the mean radius of a body.
 pub trait TryMeanRadius: Origin {
+    /// Returns the mean radius, or an error if undefined.
     fn try_mean_radius(&self) -> Result<Distance, UndefinedOriginPropertyError>;
 }
 
+/// Infallible accessor for the mean radius of a body.
 pub trait MeanRadius: Origin {
+    /// Returns the mean radius.
     fn mean_radius(&self) -> Distance;
 }
 
@@ -113,11 +142,15 @@ impl<T: MeanRadius> TryMeanRadius for T {
     }
 }
 
+/// Infallible accessor for the gravitational parameter of a body.
 pub trait PointMass: Origin {
+    /// Returns the gravitational parameter.
     fn gravitational_parameter(&self) -> GravitationalParameter;
 }
 
+/// Fallible accessor for the gravitational parameter of a body.
 pub trait TryPointMass: Origin {
+    /// Returns the gravitational parameter, or an error if undefined.
     fn try_gravitational_parameter(
         &self,
     ) -> Result<GravitationalParameter, UndefinedOriginPropertyError>;
@@ -220,66 +253,85 @@ impl<const N: usize> RotationalElement<N> {
     }
 }
 
+/// Right ascension, declination, and prime meridian angles in radians.
 pub type Elements = (f64, f64, f64);
 
+/// Infallible accessor for the rotational elements of a body.
 pub trait RotationalElements: Origin {
+    /// Returns the right ascension, declination, and prime meridian at epoch `t` (seconds since J2000 TDB).
     fn rotational_elements(&self, t: f64) -> Elements;
 
+    /// Returns the rates of the rotational elements at epoch `t`.
     fn rotational_element_rates(&self, t: f64) -> Elements;
 
+    /// Returns the right ascension at epoch `t`.
     fn right_ascension(&self, t: f64) -> f64 {
         self.rotational_elements(t).0
     }
 
+    /// Returns the right ascension rate at epoch `t`.
     fn right_ascension_rate(&self, t: f64) -> f64 {
         self.rotational_element_rates(t).0
     }
 
+    /// Returns the declination at epoch `t`.
     fn declination(&self, t: f64) -> f64 {
         self.rotational_elements(t).1
     }
 
+    /// Returns the declination rate at epoch `t`.
     fn declination_rate(&self, t: f64) -> f64 {
         self.rotational_element_rates(t).1
     }
 
+    /// Returns the prime meridian angle at epoch `t`.
     fn rotation_angle(&self, t: f64) -> f64 {
         self.rotational_elements(t).2
     }
 
+    /// Returns the prime meridian rotation rate at epoch `t`.
     fn rotation_rate(&self, t: f64) -> f64 {
         self.rotational_element_rates(t).2
     }
 }
 
+/// Fallible accessor for the rotational elements of a body.
 pub trait TryRotationalElements: Origin {
+    /// Returns the rotational elements at epoch `t`, or an error if undefined.
     fn try_rotational_elements(&self, t: f64) -> Result<Elements, UndefinedOriginPropertyError>;
 
+    /// Returns the rotational element rates at epoch `t`, or an error if undefined.
     fn try_rotational_element_rates(
         &self,
         t: f64,
     ) -> Result<Elements, UndefinedOriginPropertyError>;
 
+    /// Returns the right ascension at epoch `t`, or an error if undefined.
     fn try_right_ascension(&self, t: f64) -> Result<f64, UndefinedOriginPropertyError> {
         self.try_rotational_elements(t).map(|r| r.0)
     }
 
+    /// Returns the right ascension rate at epoch `t`, or an error if undefined.
     fn try_right_ascension_rate(&self, t: f64) -> Result<f64, UndefinedOriginPropertyError> {
         self.try_rotational_element_rates(t).map(|r| r.0)
     }
 
+    /// Returns the declination at epoch `t`, or an error if undefined.
     fn try_declination(&self, t: f64) -> Result<f64, UndefinedOriginPropertyError> {
         self.try_rotational_elements(t).map(|r| r.1)
     }
 
+    /// Returns the declination rate at epoch `t`, or an error if undefined.
     fn try_declination_rate(&self, t: f64) -> Result<f64, UndefinedOriginPropertyError> {
         self.try_rotational_element_rates(t).map(|r| r.1)
     }
 
+    /// Returns the prime meridian angle at epoch `t`, or an error if undefined.
     fn try_rotation_angle(&self, t: f64) -> Result<f64, UndefinedOriginPropertyError> {
         self.try_rotational_elements(t).map(|r| r.2)
     }
 
+    /// Returns the prime meridian rotation rate at epoch `t`, or an error if undefined.
     fn try_rotation_rate(&self, t: f64) -> Result<f64, UndefinedOriginPropertyError> {
         self.try_rotational_element_rates(t).map(|r| r.2)
     }
@@ -298,11 +350,15 @@ impl<T: RotationalElements> TryRotationalElements for T {
     }
 }
 
+/// Fallible accessor for the J2 zonal harmonic coefficient.
 pub trait TryJ2 {
+    /// Returns the J2 coefficient, or an error if undefined.
     fn try_j2(&self) -> Result<f64, UndefinedOriginPropertyError>;
 }
 
+/// Infallible accessor for the J2 zonal harmonic coefficient.
 pub trait J2 {
+    /// Returns the J2 coefficient.
     fn j2(&self) -> f64;
 }
 
