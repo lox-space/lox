@@ -27,6 +27,10 @@ theme:
     scheme: slate
     primary: indigo
 
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.superfences
+
 plugins:
 - mkdocstrings:
     handlers:
