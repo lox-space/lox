@@ -7,7 +7,7 @@ name = "lox-space"
 description = "An astrodynamics library for orbital mechanics, mission analysis, and telecommunications"
 authors = [{name = "Helge Eichhorn", email = "git@helgeeichhorn.de"}]
 license = {text = "MPL-2.0"}
-readme = "../../README.md"
+readme = "README.md"
 requires-python = ">=3.11"
 keywords = ["astrodynamics", "orbital-mechanics", "mission-analysis", "space"]
 classifiers = [
