@@ -24,11 +24,15 @@ const AM33: f64 = 0.917482137087;
 const ECLIPTIC_TO_ICRF: DMat3 =
     DMat3::from_cols_array(&[AM11, AM21, AM31, AM12, AM22, AM32, AM13, AM23, AM33]);
 
+/// Heliocentric and barycentric state of the Earth at a given TDB epoch.
 pub struct EarthState {
+    /// Heliocentric position and velocity in ICRF (meters, m/s).
     pub heliocentric: Cartesian,
+    /// Barycentric position and velocity in ICRF (meters, m/s).
     pub barycentric: Cartesian,
 }
 
+/// Computes the heliocentric and barycentric state of the Earth at the given TDB epoch.
 pub fn earth_state(time: Time<Tdb>) -> EarthState {
     let t = time.years_since_j2000();
     let t2 = t * t;
@@ -69,6 +73,7 @@ fn aberration(pnat: DVec3, v: DVec3, s: Distance, bm1: f64) -> DVec3 {
     DVec3::from(p) / r
 }
 
+/// Computes the apparent position of the Sun as seen from Earth, corrected for aberration.
 pub fn apparent_sun_position(time: Time<Tdb>) -> DVec3 {
     let s = earth_state(time);
     let pe = s.heliocentric.position();

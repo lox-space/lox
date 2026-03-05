@@ -36,6 +36,11 @@ use lox_orbits::orbits::{Ensemble, Trajectory};
 // Salvatore Alfano, David Negron, Jr., and Jennifer L. Moore
 // Rapid Determination of Satellite Visibility Periods
 // The Journal of the Astronautical Sciences. Vol. 40, No. 2, April-June 1992, pp. 281-296
+
+/// Computes the line-of-sight angle for a spherical body with the given `radius`.
+///
+/// Returns a positive value when the two position vectors `r1` and `r2` have
+/// mutual line of sight, and a negative value when they are occluded.
 pub fn line_of_sight(radius: f64, r1: DVec3, r2: DVec3) -> f64 {
     let r1n = r1.length();
     let r2n = r2.length();
@@ -46,6 +51,8 @@ pub fn line_of_sight(radius: f64, r1: DVec3, r2: DVec3) -> f64 {
     theta1.acos() + theta2.acos() - theta.acos()
 }
 
+/// Computes the line-of-sight angle for a spheroid body, scaling the z-axis
+/// to account for oblateness before delegating to [`line_of_sight`].
 pub fn line_of_sight_spheroid(
     mean_radius: f64,
     radius_eq: f64,
@@ -60,7 +67,10 @@ pub fn line_of_sight_spheroid(
     line_of_sight(mean_radius, r1, r2)
 }
 
+/// Extension trait for computing line-of-sight between two position vectors
+/// around a body that implements [`TrySpheroid`] and [`TryMeanRadius`].
 pub trait LineOfSight: TrySpheroid + TryMeanRadius {
+    /// Computes the line-of-sight angle, using a spheroid model when available.
     fn line_of_sight(&self, r1: DVec3, r2: DVec3) -> Result<f64, UndefinedOriginPropertyError> {
         let mean_radius = self.try_mean_radius()?.to_meters();
         if let (Ok(r_eq), Ok(r_p)) = (self.try_equatorial_radius(), self.try_polar_radius()) {
@@ -82,22 +92,32 @@ impl<T: TrySpheroid + TryMeanRadius> LineOfSight for T {}
 // Elevation mask
 // ---------------------------------------------------------------------------
 
+/// Errors from constructing an [`ElevationMask`].
 #[derive(Debug, Clone, Error, PartialEq)]
 pub enum ElevationMaskError {
+    /// The azimuth range does not span \[-π, π\].
     #[error("invalid azimuth range: {}..{}", .0.to_degrees(), .1.to_degrees())]
     InvalidAzimuthRange(f64, f64),
+    /// Failed to construct the interpolation series.
     #[error("series error")]
     SeriesError(#[from] SeriesError),
 }
 
+/// Minimum elevation angle as a function of azimuth.
+///
+/// Can be either a constant angle ([`Fixed`](Self::Fixed)) or an
+/// azimuth-dependent piecewise-linear profile ([`Variable`](Self::Variable)).
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ElevationMask {
+    /// Constant minimum elevation angle (radians).
     Fixed(f64),
+    /// Azimuth-dependent minimum elevation angle (interpolated series).
     Variable(Series),
 }
 
 impl ElevationMask {
+    /// Creates a variable elevation mask from paired azimuth/elevation vectors (radians).
     pub fn new(azimuth: Vec<f64>, elevation: Vec<f64>) -> Result<Self, ElevationMaskError> {
         if !azimuth.is_empty() {
             let az_min = *azimuth.iter().min_by(|a, b| a.total_cmp(b)).unwrap();
@@ -113,10 +133,12 @@ impl ElevationMask {
         )?))
     }
 
+    /// Creates a fixed elevation mask with a constant minimum elevation (radians).
     pub fn with_fixed_elevation(elevation: f64) -> Self {
         Self::Fixed(elevation)
     }
 
+    /// Returns the minimum elevation angle (radians) at the given azimuth.
     pub fn min_elevation(&self, azimuth: f64) -> f64 {
         match self {
             ElevationMask::Fixed(min_elevation) => *min_elevation,
@@ -129,10 +151,13 @@ impl ElevationMask {
 // Error types
 // ---------------------------------------------------------------------------
 
+/// Errors from visibility interval computation.
 #[derive(Debug, Error)]
 pub enum VisibilityError {
+    /// Event detection failed.
     #[error(transparent)]
     Detect(#[from] DetectError),
+    /// Series interpolation failed.
     #[error(transparent)]
     Series(#[from] SeriesError),
 }
@@ -143,6 +168,7 @@ pub enum PassError {
     #[error(
         "passes are not supported for inter-satellite pair ({0}, {1}): use intervals() instead"
     )]
+    /// Passes are not supported for inter-satellite pairs; use intervals instead.
     InterSatellitePair(String, String),
 }
 
@@ -166,6 +192,7 @@ pub struct Pass<T: TimeScale> {
     range_rate_series: Series,
 }
 
+/// A visibility pass using a dynamic time scale.
 pub type DynPass = Pass<DynTimeScale>;
 
 impl DynPass {
@@ -252,18 +279,22 @@ impl<T: TimeScale> Pass<T> {
         })
     }
 
+    /// Returns the time interval of this pass.
     pub fn interval(&self) -> &TimeInterval<T> {
         &self.interval
     }
 
+    /// Returns the sampled time points within the pass.
     pub fn times(&self) -> &[Time<T>] {
         &self.times
     }
 
+    /// Returns the sampled observables at each time point.
     pub fn observables(&self) -> &[Observables] {
         &self.observables
     }
 
+    /// Interpolates observables at the given time, or `None` if outside the pass interval.
     pub fn interpolate(&self, time: Time<T>) -> Option<Observables>
     where
         T: Copy + PartialOrd,
@@ -294,10 +325,13 @@ impl<T: TimeScale> Pass<T> {
 /// Errors from detect function evaluation.
 #[derive(Debug, Error)]
 pub enum EvalError {
+    /// Frame rotation failed.
     #[error("rotation error: {0}")]
     Rotation(Box<dyn std::error::Error + Send + Sync>),
+    /// A required origin property (e.g. mean radius) is undefined.
     #[error(transparent)]
     UndefinedProperty(#[from] UndefinedOriginPropertyError),
+    /// Ephemeris lookup failed.
     #[error("ephemeris error: {0}")]
     Ephemeris(Box<dyn std::error::Error + Send + Sync>),
 }
@@ -495,7 +529,9 @@ where
 /// Distinguishes ground-to-space from inter-satellite visibility pairs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PairType {
+    /// Ground station to spacecraft pair.
     GroundSpace,
+    /// Spacecraft to spacecraft pair.
     InterSatellite,
 }
 
@@ -552,10 +588,12 @@ impl VisibilityResults {
             .collect()
     }
 
+    /// Returns `true` if no visibility intervals were found.
     pub fn is_empty(&self) -> bool {
         self.intervals.is_empty()
     }
 
+    /// Returns the number of asset pairs with visibility data.
     pub fn num_pairs(&self) -> usize {
         self.intervals.len()
     }
@@ -655,6 +693,7 @@ where
     <DefaultRotationProvider as TryRotation<DynFrame, R, Tai>>::Error:
         std::error::Error + Send + Sync + 'static,
 {
+    /// Creates a new visibility analysis for the given scenario, ensemble, and ephemeris.
     pub fn new(
         scenario: &'a Scenario<O, R>,
         ensemble: &'a Ensemble<AssetId, Tai, O, R>,
@@ -673,36 +712,43 @@ where
         }
     }
 
+    /// Enables inter-satellite visibility computation.
     pub fn with_inter_satellite(mut self) -> Self {
         self.inter_satellite = true;
         self
     }
 
+    /// Sets bodies that may occlude the line of sight.
     pub fn with_occulting_bodies(mut self, bodies: Vec<DynOrigin>) -> Self {
         self.occulting_bodies = bodies;
         self
     }
 
+    /// Sets the time step for event detection sampling.
     pub fn with_step(mut self, step: TimeDelta) -> Self {
         self.step = step;
         self
     }
 
+    /// Sets the minimum pass duration; shorter passes will be discarded.
     pub fn with_min_pass_duration(mut self, min_pass_duration: TimeDelta) -> Self {
         self.min_pass_duration = Some(min_pass_duration);
         self
     }
 
+    /// Sets the minimum range filter for inter-satellite links.
     pub fn with_min_range(mut self, min_range: Distance) -> Self {
         self.min_range = Some(min_range);
         self
     }
 
+    /// Sets the maximum range filter for inter-satellite links.
     pub fn with_max_range(mut self, max_range: Distance) -> Self {
         self.max_range = Some(max_range);
         self
     }
 
+    /// Returns the current time step.
     pub fn step(&self) -> TimeDelta {
         self.step
     }

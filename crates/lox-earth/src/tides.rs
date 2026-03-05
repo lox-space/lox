@@ -25,6 +25,7 @@ type Microarcseconds = f64;
 #[error(
     "sizes of `x`, `y`, `t` and `epochs` must match, but were x: {nx}, y: {ny}, t: {nt}, epochs: {nepochs}"
 )]
+/// Error returned when the input vectors to [`Arguments::new`] have mismatched lengths.
 pub struct ArgumentSizeMismatchError {
     nx: usize,
     ny: usize,
@@ -32,6 +33,7 @@ pub struct ArgumentSizeMismatchError {
     nepochs: usize,
 }
 
+/// Input data for tidal correction interpolation.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Arguments {
     /// x polar motion.
@@ -47,6 +49,7 @@ pub struct Arguments {
 }
 
 impl Arguments {
+    /// Creates new arguments, returning an error if vector lengths do not match.
     pub fn new(
         x: Vec<Arcseconds>,
         y: Vec<Arcseconds>,

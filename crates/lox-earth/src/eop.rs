@@ -59,16 +59,22 @@ impl EopRecord {
     }
 }
 
+/// Errors that can occur when parsing EOP data files.
 #[derive(Debug, Error)]
 pub enum EopParserError {
+    /// CSV parsing error.
     #[error("{0}")]
     Csv(String),
+    /// No input files were provided.
     #[error("either a 'finals.all.csv' or a 'finals2000A.all.csv' file needs to be provided")]
     NoFiles,
+    /// Column lengths do not match.
     #[error("mismatched dimensions for columns '{0} (n={1})' and '{2} (n={3})'")]
     DimensionMismatch(String, usize, String, usize),
+    /// UTC conversion error.
     #[error(transparent)]
     Utc(#[from] UtcError),
+    /// Interpolation series error.
     #[error(transparent)]
     Series(#[from] SeriesError),
 }
@@ -79,6 +85,7 @@ impl From<csv::Error> for EopParserError {
     }
 }
 
+/// Builder for parsing IERS EOP CSV files into an [`EopProvider`].
 #[derive(Default)]
 pub struct EopParser {
     paths: (Option<PathBuf>, Option<PathBuf>),
@@ -86,15 +93,18 @@ pub struct EopParser {
 }
 
 impl EopParser {
+    /// Creates a new parser with no files configured.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Sets a single EOP CSV file path.
     pub fn from_path(mut self, path: impl AsRef<Path>) -> Self {
         self.paths = (Some(path.as_ref().to_owned()), None);
         self
     }
 
+    /// Sets two EOP CSV file paths (IAU 1980 and IAU 2000).
     pub fn from_paths(mut self, path1: impl AsRef<Path>, path2: impl AsRef<Path>) -> Self {
         self.paths = (
             Some(path1.as_ref().to_owned()),
@@ -103,11 +113,13 @@ impl EopParser {
         self
     }
 
+    /// Configures a leap seconds kernel for UTC conversion.
     pub fn with_leap_seconds_kernel(mut self, lsp: LeapSecondsKernel) -> Self {
         self.lsk = Some(lsp);
         self
     }
 
+    /// Parses the configured files and returns an [`EopProvider`].
     pub fn parse(self) -> Result<EopProvider, EopParserError> {
         let n = if let Some(iau1980) = self.paths.0.as_ref() {
             let mut reader = ReaderBuilder::new().delimiter(b';').from_path(iau1980)?;
@@ -218,16 +230,22 @@ impl EopParser {
     }
 }
 
+/// Errors returned by [`EopProvider`] queries.
 #[derive(Debug, Error)]
 pub enum EopProviderError {
+    /// Time-scale offset conversion failed.
     #[error("offset error: {0}")]
     Offset(String),
+    /// The queried epoch lies outside the data range (single value).
     #[error("value was extrapolated")]
     ExtrapolatedValue(f64),
+    /// The queried epoch lies outside the data range (pair of values).
     #[error("values were extrapolated")]
     ExtrapolatedValues(f64, f64),
+    /// No IAU 1980 nutation/precession data was loaded.
     #[error("no 'finals.all.csv' file was loaded")]
     MissingIau1980,
+    /// No IAU 2000 nutation/precession data was loaded.
     #[error("no 'finals2000A.all.csv' file was loaded")]
     MissingIau2000,
 }
@@ -238,6 +256,7 @@ struct NutPrecCorrections {
     iau2000: Option<(Series, Series)>,
 }
 
+/// Interpolates Earth orientation parameters from parsed IERS data.
 #[derive(Debug)]
 pub struct EopProvider {
     polar_motion: (Series, Series),
@@ -247,6 +266,7 @@ pub struct EopProvider {
 }
 
 impl EopProvider {
+    /// Returns the pole coordinates at the given epoch.
     pub fn polar_motion<T: ToUtc>(&self, t: T) -> Result<PoleCoords, EopProviderError> {
         let t = t.to_utc().seconds_since_j2000();
         let xp = self.polar_motion.0.interpolate(t);
@@ -262,6 +282,7 @@ impl EopProvider {
         })
     }
 
+    /// Returns the IAU 1980 nutation/precession corrections at the given epoch.
     pub fn nutation_precession_iau1980<T: ToUtc>(
         &self,
         t: T,
@@ -283,6 +304,7 @@ impl EopProvider {
         ))
     }
 
+    /// Returns the IAU 2000 nutation/precession corrections at the given epoch.
     pub fn nutation_precession_iau2000<T: ToUtc>(
         &self,
         t: T,
@@ -304,6 +326,7 @@ impl EopProvider {
         ))
     }
 
+    /// Returns the UT1-TAI offset for the given TAI epoch.
     pub fn delta_ut1_tai(&self, tai: TimeDelta) -> Result<TimeDelta, EopProviderError> {
         let seconds = tai.seconds_since_j2000();
         let (t0, _) = self.delta_ut1_tai.first();
@@ -315,6 +338,7 @@ impl EopProvider {
         Ok(TimeDelta::from_seconds_f64(val))
     }
 
+    /// Returns the TAI-UT1 offset for the given UT1 epoch.
     pub fn delta_tai_ut1(&self, ut1: TimeDelta) -> Result<TimeDelta, EopProviderError> {
         let seconds = ut1.seconds_since_j2000();
         let (t0, _) = self.delta_ut1_tai.first();
@@ -331,6 +355,7 @@ impl EopProvider {
         Ok(-TimeDelta::from_seconds_f64(val))
     }
 
+    /// Returns the leap seconds kernel, if one was configured.
     pub fn get_lsk(&self) -> Option<&LeapSecondsKernel> {
         self.lsk.as_ref()
     }
