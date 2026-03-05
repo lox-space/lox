@@ -30,18 +30,24 @@ use crate::propagators::Propagator;
 /// Since r/v ≈ T/(2π) for a circular orbit, this yields ~50 steps per orbit.
 const H_MAX_STEPS_PER_TIMESCALE: f64 = 8.0;
 
+/// Errors that can occur during J2-perturbed numerical propagation.
 #[derive(Debug, Error)]
 pub enum J2Error {
+    /// The ODE solver failed with the given message.
     #[error("ODE solver failed: {0}")]
     Solver(String),
+    /// The ODE solver returned an empty solution.
     #[error("ODE solver returned no solution")]
     EmptySolution,
+    /// Fewer than two time steps were provided to `propagate_to`.
     #[error("at least two time steps are needed")]
     InvalidTimeSteps,
+    /// Error constructing the output trajectory.
     #[error(transparent)]
     Trajectory(#[from] TrajectorError),
 }
 
+/// Numerical orbit propagator with J2 zonal harmonic perturbation.
 #[derive(Debug, Clone, Copy)]
 pub struct J2Propagator<T: TimeScale, O: TryJ2 + TryPointMass + TryMeanRadius, R: ReferenceFrame> {
     initial_state: CartesianOrbit<T, O, R>,
@@ -52,6 +58,7 @@ pub struct J2Propagator<T: TimeScale, O: TryJ2 + TryPointMass + TryMeanRadius, R
     max_steps: usize,
 }
 
+/// Type alias for a [`J2Propagator`] using dynamic time scale, origin, and frame.
 pub type DynJ2Propagator = J2Propagator<DynTimeScale, DynOrigin, DynFrame>;
 
 fn default_h_max(position: DVec3, velocity: DVec3) -> f64 {
@@ -65,6 +72,7 @@ where
     O: J2 + PointMass + MeanRadius + Copy,
     R: ReferenceFrame,
 {
+    /// Create a new J2 propagator from the given initial state.
     pub fn new(initial_state: CartesianOrbit<T, O, R>) -> Self {
         let h_max = default_h_max(initial_state.position(), initial_state.velocity());
         Self {
@@ -85,6 +93,7 @@ where
     O: TryJ2 + TryPointMass + TryMeanRadius + Copy,
     R: ReferenceFrame,
 {
+    /// Try to create a new J2 propagator, returning an error if the origin lacks required properties.
     pub fn try_new(
         initial_state: CartesianOrbit<T, O, R>,
     ) -> Result<Self, UndefinedOriginPropertyError> {
@@ -110,39 +119,47 @@ where
     O: TryJ2 + TryPointMass + TryMeanRadius + Copy,
     R: ReferenceFrame,
 {
+    /// Set the relative tolerance for the ODE solver.
     pub fn with_rtol(mut self, rtol: f64) -> Self {
         self.rtol = rtol;
         self
     }
 
+    /// Set the absolute tolerance for the ODE solver.
     pub fn with_atol(mut self, atol: f64) -> Self {
         self.atol = atol;
         self
     }
 
+    /// Set the maximum integration step size in seconds.
     pub fn with_h_max(mut self, h_max: f64) -> Self {
         self.h_max = h_max;
         self
     }
 
+    /// Set the minimum integration step size in seconds.
     pub fn with_h_min(mut self, h_min: f64) -> Self {
         self.h_min = h_min;
         self
     }
 
+    /// Set the maximum number of integration steps.
     pub fn with_max_steps(mut self, max_steps: usize) -> Self {
         self.max_steps = max_steps;
         self
     }
 
+    /// Return a reference to the initial orbital state.
     pub fn initial_state(&self) -> &CartesianOrbit<T, O, R> {
         &self.initial_state
     }
 
+    /// Return the central body origin.
     pub fn origin(&self) -> O {
         self.initial_state.origin()
     }
 
+    /// Return the reference frame.
     pub fn reference_frame(&self) -> R
     where
         R: Copy,
@@ -313,6 +330,7 @@ where
     }
 }
 
+/// A six-element Cartesian state vector (position + velocity) used as the ODE state.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CartesianState(Cartesian);

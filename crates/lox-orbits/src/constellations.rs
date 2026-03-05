@@ -30,30 +30,47 @@ pub use walker::{WalkerDeltaBuilder, WalkerStarBuilder};
 /// position within the plane, and Keplerian orbital elements.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ConstellationSatellite {
+    /// Index of the orbital plane this satellite belongs to.
     pub plane: usize,
+    /// Zero-based index of the satellite within its plane.
     pub index_in_plane: usize,
+    /// Keplerian orbital elements of the satellite.
     pub elements: Keplerian,
 }
 
 /// Errors that can occur when building a constellation.
 #[derive(Debug, Clone, Error)]
 pub enum ConstellationError {
+    /// The number of satellites is not evenly divisible by the number of planes.
     #[error("number of satellites ({nsats}) is not divisible by number of planes ({nplanes})")]
-    SatellitePlaneMismatch { nsats: usize, nplanes: usize },
+    SatellitePlaneMismatch {
+        /// Total satellite count.
+        nsats: usize,
+        /// Number of orbital planes.
+        nplanes: usize,
+    },
+    /// Zero orbital planes were specified.
     #[error("number of planes must be greater than zero")]
     ZeroPlanes,
+    /// Zero satellites were specified.
     #[error("number of satellites must be greater than zero")]
     ZeroSatellites,
+    /// Too few satellites to satisfy the requested coverage fold.
     #[error("too few satellites for the requested coverage fold")]
     SocConstraint,
+    /// Street-of-coverage requires a non-equatorial inclination.
     #[error("street-of-coverage requires non-equatorial inclination")]
     SocEquatorialInclination,
+    /// The street-of-coverage optimizer failed to converge.
     #[error("street-of-coverage optimization did not converge")]
     SocNotConverged,
+    /// Neither perigee altitude nor semi-major axis was provided.
     #[error("neither perigee altitude nor semi-major axis was provided")]
     MissingShape,
+    /// A required body property is not defined for the chosen origin.
     #[error("required body property is not defined: {0}")]
     UndefinedProperty(String),
+    /// An error occurred while constructing Keplerian elements.
     #[error(transparent)]
     Keplerian(#[from] KeplerianError),
 }
@@ -62,8 +79,10 @@ pub enum ConstellationError {
 /// propagatable spacecraft.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum ConstellationPropagator {
+    /// Vallado two-body propagator (default).
     #[default]
     Vallado,
+    /// J2-perturbed analytical propagator.
     J2,
 }
 
@@ -79,9 +98,11 @@ pub struct Constellation<T: TimeScale, O: Origin, R: ReferenceFrame> {
     propagator: ConstellationPropagator,
 }
 
+/// Type alias for a constellation with fully dynamic time scale, origin, and frame.
 pub type DynConstellation = Constellation<DynTimeScale, DynOrigin, DynFrame>;
 
 impl<T: TimeScale, O: Origin, R: ReferenceFrame> Constellation<T, O, R> {
+    /// Creates a new constellation from precomputed satellites.
     pub fn new(
         name: impl Into<String>,
         epoch: Time<T>,
@@ -99,15 +120,18 @@ impl<T: TimeScale, O: Origin, R: ReferenceFrame> Constellation<T, O, R> {
         }
     }
 
+    /// Sets the propagator to use for this constellation.
     pub fn with_propagator(mut self, propagator: ConstellationPropagator) -> Self {
         self.propagator = propagator;
         self
     }
 
+    /// Returns the constellation name.
     pub fn name(&self) -> &str {
         &self.name
     }
 
+    /// Returns the reference epoch.
     pub fn epoch(&self) -> Time<T>
     where
         T: Copy,
@@ -115,6 +139,7 @@ impl<T: TimeScale, O: Origin, R: ReferenceFrame> Constellation<T, O, R> {
         self.epoch
     }
 
+    /// Returns the central body.
     pub fn origin(&self) -> O
     where
         O: Copy,
@@ -122,6 +147,7 @@ impl<T: TimeScale, O: Origin, R: ReferenceFrame> Constellation<T, O, R> {
         self.origin
     }
 
+    /// Returns the reference frame.
     pub fn frame(&self) -> R
     where
         R: Copy,
@@ -129,18 +155,22 @@ impl<T: TimeScale, O: Origin, R: ReferenceFrame> Constellation<T, O, R> {
         self.frame
     }
 
+    /// Returns a slice of all satellites in the constellation.
     pub fn satellites(&self) -> &[ConstellationSatellite] {
         &self.satellites
     }
 
+    /// Returns the selected propagator type.
     pub fn propagator(&self) -> ConstellationPropagator {
         self.propagator
     }
 
+    /// Returns the total number of satellites.
     pub fn len(&self) -> usize {
         self.satellites.len()
     }
 
+    /// Returns `true` if the constellation contains no satellites.
     pub fn is_empty(&self) -> bool {
         self.satellites.is_empty()
     }
@@ -152,6 +182,7 @@ where
     O: Origin + Copy + Into<DynOrigin>,
     R: ReferenceFrame + Copy + Into<DynFrame>,
 {
+    /// Converts the constellation into a fully dynamic representation.
     pub fn into_dyn(self) -> DynConstellation {
         Constellation {
             name: self.name,
