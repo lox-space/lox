@@ -25,6 +25,7 @@ use lox_core::elements::GravitationalParameter;
 use lox_core::units::Distance;
 use std::fmt::Display;
 use std::fmt::Formatter;
+#[doc = "Sun (NAIF ID: 10)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Sun;
@@ -104,6 +105,7 @@ impl RotationalElements for Sun {
         )
     }
 }
+#[doc = "Mercury (NAIF ID: 199)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Mercury;
@@ -230,6 +232,7 @@ impl RotationalElements for Mercury {
         )
     }
 }
+#[doc = "Venus (NAIF ID: 299)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Venus;
@@ -314,6 +317,7 @@ impl RotationalElements for Venus {
         )
     }
 }
+#[doc = "Earth (NAIF ID: 399)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Earth;
@@ -398,6 +402,7 @@ impl RotationalElements for Earth {
         )
     }
 }
+#[doc = "Mars (NAIF ID: 499)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Mars;
@@ -674,6 +679,7 @@ impl RotationalElements for Mars {
         )
     }
 }
+#[doc = "Jupiter (NAIF ID: 599)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Jupiter;
@@ -888,6 +894,7 @@ impl RotationalElements for Jupiter {
         )
     }
 }
+#[doc = "Saturn (NAIF ID: 699)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Saturn;
@@ -972,6 +979,7 @@ impl RotationalElements for Saturn {
         )
     }
 }
+#[doc = "Uranus (NAIF ID: 799)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Uranus;
@@ -1056,6 +1064,7 @@ impl RotationalElements for Uranus {
         )
     }
 }
+#[doc = "Neptune (NAIF ID: 899)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Neptune;
@@ -1221,6 +1230,7 @@ impl RotationalElements for Neptune {
         )
     }
 }
+#[doc = "Pluto (NAIF ID: 999)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Pluto;
@@ -1305,6 +1315,7 @@ impl RotationalElements for Pluto {
         )
     }
 }
+#[doc = "Solar System Barycenter (NAIF ID: 0)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SolarSystemBarycenter;
@@ -1331,6 +1342,7 @@ impl PointMass for SolarSystemBarycenter {
         GravitationalParameter::km3_per_s2(132712440041.27942f64)
     }
 }
+#[doc = "Mercury Barycenter (NAIF ID: 1)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct MercuryBarycenter;
@@ -1357,6 +1369,7 @@ impl PointMass for MercuryBarycenter {
         GravitationalParameter::km3_per_s2(22031.868551400003f64)
     }
 }
+#[doc = "Venus Barycenter (NAIF ID: 2)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct VenusBarycenter;
@@ -1383,6 +1396,7 @@ impl PointMass for VenusBarycenter {
         GravitationalParameter::km3_per_s2(324858.592f64)
     }
 }
+#[doc = "Earth Barycenter (NAIF ID: 3)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct EarthBarycenter;
@@ -1409,6 +1423,7 @@ impl PointMass for EarthBarycenter {
         GravitationalParameter::km3_per_s2(403503.2356254802f64)
     }
 }
+#[doc = "Mars Barycenter (NAIF ID: 4)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct MarsBarycenter;
@@ -1435,6 +1450,7 @@ impl PointMass for MarsBarycenter {
         GravitationalParameter::km3_per_s2(42828.3758157561f64)
     }
 }
+#[doc = "Jupiter Barycenter (NAIF ID: 5)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct JupiterBarycenter;
@@ -1461,6 +1477,7 @@ impl PointMass for JupiterBarycenter {
         GravitationalParameter::km3_per_s2(126712764.09999998f64)
     }
 }
+#[doc = "Saturn Barycenter (NAIF ID: 6)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SaturnBarycenter;
@@ -1487,6 +1504,7 @@ impl PointMass for SaturnBarycenter {
         GravitationalParameter::km3_per_s2(37940584.8418f64)
     }
 }
+#[doc = "Uranus Barycenter (NAIF ID: 7)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct UranusBarycenter;
@@ -1513,6 +1531,7 @@ impl PointMass for UranusBarycenter {
         GravitationalParameter::km3_per_s2(5794556.3999999985f64)
     }
 }
+#[doc = "Neptune Barycenter (NAIF ID: 8)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct NeptuneBarycenter;
@@ -1539,6 +1558,7 @@ impl PointMass for NeptuneBarycenter {
         GravitationalParameter::km3_per_s2(6836527.100580399f64)
     }
 }
+#[doc = "Pluto Barycenter (NAIF ID: 9)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PlutoBarycenter;
@@ -1565,6 +1585,7 @@ impl PointMass for PlutoBarycenter {
         GravitationalParameter::km3_per_s2(975.5f64)
     }
 }
+#[doc = "Moon (NAIF ID: 301)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Moon;
@@ -1775,6 +1796,7 @@ impl RotationalElements for Moon {
         )
     }
 }
+#[doc = "Phobos (NAIF ID: 401)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Phobos;
@@ -1906,6 +1928,7 @@ impl RotationalElements for Phobos {
         )
     }
 }
+#[doc = "Deimos (NAIF ID: 402)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Deimos;
@@ -2088,6 +2111,7 @@ impl RotationalElements for Deimos {
         )
     }
 }
+#[doc = "Io (NAIF ID: 501)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Io;
@@ -2216,6 +2240,7 @@ impl RotationalElements for Io {
         )
     }
 }
+#[doc = "Europa (NAIF ID: 502)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Europa;
@@ -2371,6 +2396,7 @@ impl RotationalElements for Europa {
         )
     }
 }
+#[doc = "Ganymede (NAIF ID: 503)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Ganymede;
@@ -2518,6 +2544,7 @@ impl RotationalElements for Ganymede {
         )
     }
 }
+#[doc = "Callisto (NAIF ID: 504)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Callisto;
@@ -2683,6 +2710,7 @@ impl RotationalElements for Callisto {
         )
     }
 }
+#[doc = "Amalthea (NAIF ID: 505)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Amalthea;
@@ -2865,6 +2893,7 @@ impl RotationalElements for Amalthea {
         )
     }
 }
+#[doc = "Himalia (NAIF ID: 506)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Himalia;
@@ -2906,6 +2935,7 @@ impl TriaxialEllipsoid for Himalia {
     }
 }
 impl Spheroid for Himalia {}
+#[doc = "Elara (NAIF ID: 507)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Elara;
@@ -2942,6 +2972,7 @@ impl TriaxialEllipsoid for Elara {
     }
 }
 impl Spheroid for Elara {}
+#[doc = "Pasiphae (NAIF ID: 508)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Pasiphae;
@@ -2978,6 +3009,7 @@ impl TriaxialEllipsoid for Pasiphae {
     }
 }
 impl Spheroid for Pasiphae {}
+#[doc = "Sinope (NAIF ID: 509)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Sinope;
@@ -3014,6 +3046,7 @@ impl TriaxialEllipsoid for Sinope {
     }
 }
 impl Spheroid for Sinope {}
+#[doc = "Lysithea (NAIF ID: 510)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Lysithea;
@@ -3050,6 +3083,7 @@ impl TriaxialEllipsoid for Lysithea {
     }
 }
 impl Spheroid for Lysithea {}
+#[doc = "Carme (NAIF ID: 511)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Carme;
@@ -3086,6 +3120,7 @@ impl TriaxialEllipsoid for Carme {
     }
 }
 impl Spheroid for Carme {}
+#[doc = "Ananke (NAIF ID: 512)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Ananke;
@@ -3122,6 +3157,7 @@ impl TriaxialEllipsoid for Ananke {
     }
 }
 impl Spheroid for Ananke {}
+#[doc = "Leda (NAIF ID: 513)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Leda;
@@ -3158,6 +3194,7 @@ impl TriaxialEllipsoid for Leda {
     }
 }
 impl Spheroid for Leda {}
+#[doc = "Thebe (NAIF ID: 514)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Thebe;
@@ -3340,6 +3377,7 @@ impl RotationalElements for Thebe {
         )
     }
 }
+#[doc = "Adrastea (NAIF ID: 515)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Adrastea;
@@ -3423,6 +3461,7 @@ impl RotationalElements for Adrastea {
         )
     }
 }
+#[doc = "Metis (NAIF ID: 516)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Metis;
@@ -3506,6 +3545,7 @@ impl RotationalElements for Metis {
         )
     }
 }
+#[doc = "Callirrhoe (NAIF ID: 517)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Callirrhoe;
@@ -3527,6 +3567,7 @@ impl From<Callirrhoe> for DynOrigin {
         DynOrigin::Callirrhoe
     }
 }
+#[doc = "Themisto (NAIF ID: 518)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Themisto;
@@ -3548,6 +3589,7 @@ impl From<Themisto> for DynOrigin {
         DynOrigin::Themisto
     }
 }
+#[doc = "Magaclite (NAIF ID: 519)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Magaclite;
@@ -3569,6 +3611,7 @@ impl From<Magaclite> for DynOrigin {
         DynOrigin::Magaclite
     }
 }
+#[doc = "Taygete (NAIF ID: 520)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Taygete;
@@ -3590,6 +3633,7 @@ impl From<Taygete> for DynOrigin {
         DynOrigin::Taygete
     }
 }
+#[doc = "Chaldene (NAIF ID: 521)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Chaldene;
@@ -3611,6 +3655,7 @@ impl From<Chaldene> for DynOrigin {
         DynOrigin::Chaldene
     }
 }
+#[doc = "Harpalyke (NAIF ID: 522)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Harpalyke;
@@ -3632,6 +3677,7 @@ impl From<Harpalyke> for DynOrigin {
         DynOrigin::Harpalyke
     }
 }
+#[doc = "Kalyke (NAIF ID: 523)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Kalyke;
@@ -3653,6 +3699,7 @@ impl From<Kalyke> for DynOrigin {
         DynOrigin::Kalyke
     }
 }
+#[doc = "Iocaste (NAIF ID: 524)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Iocaste;
@@ -3674,6 +3721,7 @@ impl From<Iocaste> for DynOrigin {
         DynOrigin::Iocaste
     }
 }
+#[doc = "Erinome (NAIF ID: 525)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Erinome;
@@ -3695,6 +3743,7 @@ impl From<Erinome> for DynOrigin {
         DynOrigin::Erinome
     }
 }
+#[doc = "Isonoe (NAIF ID: 526)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Isonoe;
@@ -3716,6 +3765,7 @@ impl From<Isonoe> for DynOrigin {
         DynOrigin::Isonoe
     }
 }
+#[doc = "Praxidike (NAIF ID: 527)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Praxidike;
@@ -3737,6 +3787,7 @@ impl From<Praxidike> for DynOrigin {
         DynOrigin::Praxidike
     }
 }
+#[doc = "Autonoe (NAIF ID: 528)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Autonoe;
@@ -3758,6 +3809,7 @@ impl From<Autonoe> for DynOrigin {
         DynOrigin::Autonoe
     }
 }
+#[doc = "Thyone (NAIF ID: 529)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Thyone;
@@ -3779,6 +3831,7 @@ impl From<Thyone> for DynOrigin {
         DynOrigin::Thyone
     }
 }
+#[doc = "Hermippe (NAIF ID: 530)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Hermippe;
@@ -3800,6 +3853,7 @@ impl From<Hermippe> for DynOrigin {
         DynOrigin::Hermippe
     }
 }
+#[doc = "Aitne (NAIF ID: 531)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Aitne;
@@ -3821,6 +3875,7 @@ impl From<Aitne> for DynOrigin {
         DynOrigin::Aitne
     }
 }
+#[doc = "Eurydome (NAIF ID: 532)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Eurydome;
@@ -3842,6 +3897,7 @@ impl From<Eurydome> for DynOrigin {
         DynOrigin::Eurydome
     }
 }
+#[doc = "Euanthe (NAIF ID: 533)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Euanthe;
@@ -3863,6 +3919,7 @@ impl From<Euanthe> for DynOrigin {
         DynOrigin::Euanthe
     }
 }
+#[doc = "Euporie (NAIF ID: 534)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Euporie;
@@ -3884,6 +3941,7 @@ impl From<Euporie> for DynOrigin {
         DynOrigin::Euporie
     }
 }
+#[doc = "Orthosie (NAIF ID: 535)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Orthosie;
@@ -3905,6 +3963,7 @@ impl From<Orthosie> for DynOrigin {
         DynOrigin::Orthosie
     }
 }
+#[doc = "Sponde (NAIF ID: 536)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Sponde;
@@ -3926,6 +3985,7 @@ impl From<Sponde> for DynOrigin {
         DynOrigin::Sponde
     }
 }
+#[doc = "Kale (NAIF ID: 537)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Kale;
@@ -3947,6 +4007,7 @@ impl From<Kale> for DynOrigin {
         DynOrigin::Kale
     }
 }
+#[doc = "Pasithee (NAIF ID: 538)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Pasithee;
@@ -3968,6 +4029,7 @@ impl From<Pasithee> for DynOrigin {
         DynOrigin::Pasithee
     }
 }
+#[doc = "Hegemone (NAIF ID: 539)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Hegemone;
@@ -3989,6 +4051,7 @@ impl From<Hegemone> for DynOrigin {
         DynOrigin::Hegemone
     }
 }
+#[doc = "Mneme (NAIF ID: 540)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Mneme;
@@ -4010,6 +4073,7 @@ impl From<Mneme> for DynOrigin {
         DynOrigin::Mneme
     }
 }
+#[doc = "Aoede (NAIF ID: 541)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Aoede;
@@ -4031,6 +4095,7 @@ impl From<Aoede> for DynOrigin {
         DynOrigin::Aoede
     }
 }
+#[doc = "Thelxinoe (NAIF ID: 542)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Thelxinoe;
@@ -4052,6 +4117,7 @@ impl From<Thelxinoe> for DynOrigin {
         DynOrigin::Thelxinoe
     }
 }
+#[doc = "Arche (NAIF ID: 543)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Arche;
@@ -4073,6 +4139,7 @@ impl From<Arche> for DynOrigin {
         DynOrigin::Arche
     }
 }
+#[doc = "Kallichore (NAIF ID: 544)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Kallichore;
@@ -4094,6 +4161,7 @@ impl From<Kallichore> for DynOrigin {
         DynOrigin::Kallichore
     }
 }
+#[doc = "Helike (NAIF ID: 545)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Helike;
@@ -4115,6 +4183,7 @@ impl From<Helike> for DynOrigin {
         DynOrigin::Helike
     }
 }
+#[doc = "Carpo (NAIF ID: 546)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Carpo;
@@ -4136,6 +4205,7 @@ impl From<Carpo> for DynOrigin {
         DynOrigin::Carpo
     }
 }
+#[doc = "Eukelade (NAIF ID: 547)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Eukelade;
@@ -4157,6 +4227,7 @@ impl From<Eukelade> for DynOrigin {
         DynOrigin::Eukelade
     }
 }
+#[doc = "Cyllene (NAIF ID: 548)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Cyllene;
@@ -4178,6 +4249,7 @@ impl From<Cyllene> for DynOrigin {
         DynOrigin::Cyllene
     }
 }
+#[doc = "Kore (NAIF ID: 549)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Kore;
@@ -4199,6 +4271,7 @@ impl From<Kore> for DynOrigin {
         DynOrigin::Kore
     }
 }
+#[doc = "Herse (NAIF ID: 550)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Herse;
@@ -4220,6 +4293,7 @@ impl From<Herse> for DynOrigin {
         DynOrigin::Herse
     }
 }
+#[doc = "Dia (NAIF ID: 553)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Dia;
@@ -4241,6 +4315,7 @@ impl From<Dia> for DynOrigin {
         DynOrigin::Dia
     }
 }
+#[doc = "Mimas (NAIF ID: 601)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Mimas;
@@ -4405,6 +4480,7 @@ impl RotationalElements for Mimas {
         )
     }
 }
+#[doc = "Enceladus (NAIF ID: 602)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Enceladus;
@@ -4488,6 +4564,7 @@ impl RotationalElements for Enceladus {
         )
     }
 }
+#[doc = "Tethys (NAIF ID: 603)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Tethys;
@@ -4652,6 +4729,7 @@ impl RotationalElements for Tethys {
         )
     }
 }
+#[doc = "Dione (NAIF ID: 604)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Dione;
@@ -4735,6 +4813,7 @@ impl RotationalElements for Dione {
         )
     }
 }
+#[doc = "Rhea (NAIF ID: 605)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Rhea;
@@ -4899,6 +4978,7 @@ impl RotationalElements for Rhea {
         )
     }
 }
+#[doc = "Titan (NAIF ID: 606)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Titan;
@@ -5036,6 +5116,7 @@ impl RotationalElements for Titan {
         )
     }
 }
+#[doc = "Hyperion (NAIF ID: 607)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Hyperion;
@@ -5076,6 +5157,7 @@ impl TriaxialEllipsoid for Hyperion {
         )
     }
 }
+#[doc = "Iapetus (NAIF ID: 608)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Iapetus;
@@ -5160,6 +5242,7 @@ impl RotationalElements for Iapetus {
         )
     }
 }
+#[doc = "Phoebe (NAIF ID: 609)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Phoebe;
@@ -5243,6 +5326,7 @@ impl RotationalElements for Phoebe {
         )
     }
 }
+#[doc = "Janus (NAIF ID: 610)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Janus;
@@ -5407,6 +5491,7 @@ impl RotationalElements for Janus {
         )
     }
 }
+#[doc = "Epimetheus (NAIF ID: 611)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Epimetheus;
@@ -5571,6 +5656,7 @@ impl RotationalElements for Epimetheus {
         )
     }
 }
+#[doc = "Helene (NAIF ID: 612)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Helene;
@@ -5654,6 +5740,7 @@ impl RotationalElements for Helene {
         )
     }
 }
+#[doc = "Telesto (NAIF ID: 613)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Telesto;
@@ -5732,6 +5819,7 @@ impl RotationalElements for Telesto {
         )
     }
 }
+#[doc = "Calypso (NAIF ID: 614)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Calypso;
@@ -5810,6 +5898,7 @@ impl RotationalElements for Calypso {
         )
     }
 }
+#[doc = "Atlas (NAIF ID: 615)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Atlas;
@@ -5893,6 +5982,7 @@ impl RotationalElements for Atlas {
         )
     }
 }
+#[doc = "Prometheus (NAIF ID: 616)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Prometheus;
@@ -5976,6 +6066,7 @@ impl RotationalElements for Prometheus {
         )
     }
 }
+#[doc = "Pandora (NAIF ID: 617)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Pandora;
@@ -6059,6 +6150,7 @@ impl RotationalElements for Pandora {
         )
     }
 }
+#[doc = "Pan (NAIF ID: 618)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Pan;
@@ -6137,6 +6229,7 @@ impl RotationalElements for Pan {
         )
     }
 }
+#[doc = "Ymir (NAIF ID: 619)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Ymir;
@@ -6158,6 +6251,7 @@ impl From<Ymir> for DynOrigin {
         DynOrigin::Ymir
     }
 }
+#[doc = "Paaliaq (NAIF ID: 620)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Paaliaq;
@@ -6179,6 +6273,7 @@ impl From<Paaliaq> for DynOrigin {
         DynOrigin::Paaliaq
     }
 }
+#[doc = "Tarvos (NAIF ID: 621)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Tarvos;
@@ -6200,6 +6295,7 @@ impl From<Tarvos> for DynOrigin {
         DynOrigin::Tarvos
     }
 }
+#[doc = "Ijiraq (NAIF ID: 622)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Ijiraq;
@@ -6221,6 +6317,7 @@ impl From<Ijiraq> for DynOrigin {
         DynOrigin::Ijiraq
     }
 }
+#[doc = "Suttungr (NAIF ID: 623)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Suttungr;
@@ -6242,6 +6339,7 @@ impl From<Suttungr> for DynOrigin {
         DynOrigin::Suttungr
     }
 }
+#[doc = "Kiviuq (NAIF ID: 624)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Kiviuq;
@@ -6263,6 +6361,7 @@ impl From<Kiviuq> for DynOrigin {
         DynOrigin::Kiviuq
     }
 }
+#[doc = "Mundilfari (NAIF ID: 625)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Mundilfari;
@@ -6284,6 +6383,7 @@ impl From<Mundilfari> for DynOrigin {
         DynOrigin::Mundilfari
     }
 }
+#[doc = "Albiorix (NAIF ID: 626)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Albiorix;
@@ -6305,6 +6405,7 @@ impl From<Albiorix> for DynOrigin {
         DynOrigin::Albiorix
     }
 }
+#[doc = "Skathi (NAIF ID: 627)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Skathi;
@@ -6326,6 +6427,7 @@ impl From<Skathi> for DynOrigin {
         DynOrigin::Skathi
     }
 }
+#[doc = "Erriapus (NAIF ID: 628)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Erriapus;
@@ -6347,6 +6449,7 @@ impl From<Erriapus> for DynOrigin {
         DynOrigin::Erriapus
     }
 }
+#[doc = "Siarnaq (NAIF ID: 629)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Siarnaq;
@@ -6368,6 +6471,7 @@ impl From<Siarnaq> for DynOrigin {
         DynOrigin::Siarnaq
     }
 }
+#[doc = "Thrymr (NAIF ID: 630)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Thrymr;
@@ -6389,6 +6493,7 @@ impl From<Thrymr> for DynOrigin {
         DynOrigin::Thrymr
     }
 }
+#[doc = "Narvi (NAIF ID: 631)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Narvi;
@@ -6410,6 +6515,7 @@ impl From<Narvi> for DynOrigin {
         DynOrigin::Narvi
     }
 }
+#[doc = "Methone (NAIF ID: 632)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Methone;
@@ -6445,6 +6551,7 @@ impl TriaxialEllipsoid for Methone {
         )
     }
 }
+#[doc = "Pallene (NAIF ID: 633)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Pallene;
@@ -6480,6 +6587,7 @@ impl TriaxialEllipsoid for Pallene {
         )
     }
 }
+#[doc = "Polydeuces (NAIF ID: 634)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Polydeuces;
@@ -6515,6 +6623,7 @@ impl TriaxialEllipsoid for Polydeuces {
         )
     }
 }
+#[doc = "Daphnis (NAIF ID: 635)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Daphnis;
@@ -6550,6 +6659,7 @@ impl TriaxialEllipsoid for Daphnis {
         )
     }
 }
+#[doc = "Aegir (NAIF ID: 636)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Aegir;
@@ -6571,6 +6681,7 @@ impl From<Aegir> for DynOrigin {
         DynOrigin::Aegir
     }
 }
+#[doc = "Bebhionn (NAIF ID: 637)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Bebhionn;
@@ -6592,6 +6703,7 @@ impl From<Bebhionn> for DynOrigin {
         DynOrigin::Bebhionn
     }
 }
+#[doc = "Bergelmir (NAIF ID: 638)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Bergelmir;
@@ -6613,6 +6725,7 @@ impl From<Bergelmir> for DynOrigin {
         DynOrigin::Bergelmir
     }
 }
+#[doc = "Bestla (NAIF ID: 639)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Bestla;
@@ -6634,6 +6747,7 @@ impl From<Bestla> for DynOrigin {
         DynOrigin::Bestla
     }
 }
+#[doc = "Farbauti (NAIF ID: 640)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Farbauti;
@@ -6655,6 +6769,7 @@ impl From<Farbauti> for DynOrigin {
         DynOrigin::Farbauti
     }
 }
+#[doc = "Fenrir (NAIF ID: 641)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Fenrir;
@@ -6676,6 +6791,7 @@ impl From<Fenrir> for DynOrigin {
         DynOrigin::Fenrir
     }
 }
+#[doc = "Fornjot (NAIF ID: 642)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Fornjot;
@@ -6697,6 +6813,7 @@ impl From<Fornjot> for DynOrigin {
         DynOrigin::Fornjot
     }
 }
+#[doc = "Hati (NAIF ID: 643)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Hati;
@@ -6718,6 +6835,7 @@ impl From<Hati> for DynOrigin {
         DynOrigin::Hati
     }
 }
+#[doc = "Hyrrokkin (NAIF ID: 644)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Hyrrokkin;
@@ -6739,6 +6857,7 @@ impl From<Hyrrokkin> for DynOrigin {
         DynOrigin::Hyrrokkin
     }
 }
+#[doc = "Kari (NAIF ID: 645)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Kari;
@@ -6760,6 +6879,7 @@ impl From<Kari> for DynOrigin {
         DynOrigin::Kari
     }
 }
+#[doc = "Loge (NAIF ID: 646)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Loge;
@@ -6781,6 +6901,7 @@ impl From<Loge> for DynOrigin {
         DynOrigin::Loge
     }
 }
+#[doc = "Skoll (NAIF ID: 647)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Skoll;
@@ -6802,6 +6923,7 @@ impl From<Skoll> for DynOrigin {
         DynOrigin::Skoll
     }
 }
+#[doc = "Surtur (NAIF ID: 648)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Surtur;
@@ -6823,6 +6945,7 @@ impl From<Surtur> for DynOrigin {
         DynOrigin::Surtur
     }
 }
+#[doc = "Anthe (NAIF ID: 649)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Anthe;
@@ -6859,6 +6982,7 @@ impl TriaxialEllipsoid for Anthe {
     }
 }
 impl Spheroid for Anthe {}
+#[doc = "Jarnsaxa (NAIF ID: 650)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Jarnsaxa;
@@ -6880,6 +7004,7 @@ impl From<Jarnsaxa> for DynOrigin {
         DynOrigin::Jarnsaxa
     }
 }
+#[doc = "Greip (NAIF ID: 651)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Greip;
@@ -6901,6 +7026,7 @@ impl From<Greip> for DynOrigin {
         DynOrigin::Greip
     }
 }
+#[doc = "Tarqeq (NAIF ID: 652)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Tarqeq;
@@ -6922,6 +7048,7 @@ impl From<Tarqeq> for DynOrigin {
         DynOrigin::Tarqeq
     }
 }
+#[doc = "Aegaeon (NAIF ID: 653)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Aegaeon;
@@ -6957,6 +7084,7 @@ impl TriaxialEllipsoid for Aegaeon {
         )
     }
 }
+#[doc = "Ariel (NAIF ID: 701)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Ariel;
@@ -7166,6 +7294,7 @@ impl RotationalElements for Ariel {
         )
     }
 }
+#[doc = "Umbriel (NAIF ID: 702)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Umbriel;
@@ -7385,6 +7514,7 @@ impl RotationalElements for Umbriel {
         )
     }
 }
+#[doc = "Titania (NAIF ID: 703)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Titania;
@@ -7613,6 +7743,7 @@ impl RotationalElements for Titania {
         )
     }
 }
+#[doc = "Oberon (NAIF ID: 704)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Oberon;
@@ -7850,6 +7981,7 @@ impl RotationalElements for Oberon {
         )
     }
 }
+#[doc = "Miranda (NAIF ID: 705)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Miranda;
@@ -8104,6 +8236,7 @@ impl RotationalElements for Miranda {
         )
     }
 }
+#[doc = "Cordelia (NAIF ID: 706)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Cordelia;
@@ -8354,6 +8487,7 @@ impl RotationalElements for Cordelia {
         )
     }
 }
+#[doc = "Ophelia (NAIF ID: 707)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Ophelia;
@@ -8604,6 +8738,7 @@ impl RotationalElements for Ophelia {
         )
     }
 }
+#[doc = "Bianca (NAIF ID: 708)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Bianca;
@@ -8854,6 +8989,7 @@ impl RotationalElements for Bianca {
         )
     }
 }
+#[doc = "Cressida (NAIF ID: 709)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Cressida;
@@ -9104,6 +9240,7 @@ impl RotationalElements for Cressida {
         )
     }
 }
+#[doc = "Desdemona (NAIF ID: 710)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Desdemona;
@@ -9354,6 +9491,7 @@ impl RotationalElements for Desdemona {
         )
     }
 }
+#[doc = "Juliet (NAIF ID: 711)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Juliet;
@@ -9604,6 +9742,7 @@ impl RotationalElements for Juliet {
         )
     }
 }
+#[doc = "Portia (NAIF ID: 712)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Portia;
@@ -9854,6 +9993,7 @@ impl RotationalElements for Portia {
         )
     }
 }
+#[doc = "Rosalind (NAIF ID: 713)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Rosalind;
@@ -10104,6 +10244,7 @@ impl RotationalElements for Rosalind {
         )
     }
 }
+#[doc = "Belinda (NAIF ID: 714)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Belinda;
@@ -10354,6 +10495,7 @@ impl RotationalElements for Belinda {
         )
     }
 }
+#[doc = "Puck (NAIF ID: 715)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Puck;
@@ -10604,6 +10746,7 @@ impl RotationalElements for Puck {
         )
     }
 }
+#[doc = "Caliban (NAIF ID: 716)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Caliban;
@@ -10625,6 +10768,7 @@ impl From<Caliban> for DynOrigin {
         DynOrigin::Caliban
     }
 }
+#[doc = "Sycorax (NAIF ID: 717)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Sycorax;
@@ -10646,6 +10790,7 @@ impl From<Sycorax> for DynOrigin {
         DynOrigin::Sycorax
     }
 }
+#[doc = "Prospero (NAIF ID: 718)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Prospero;
@@ -10667,6 +10812,7 @@ impl From<Prospero> for DynOrigin {
         DynOrigin::Prospero
     }
 }
+#[doc = "Setebos (NAIF ID: 719)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Setebos;
@@ -10688,6 +10834,7 @@ impl From<Setebos> for DynOrigin {
         DynOrigin::Setebos
     }
 }
+#[doc = "Stephano (NAIF ID: 720)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Stephano;
@@ -10709,6 +10856,7 @@ impl From<Stephano> for DynOrigin {
         DynOrigin::Stephano
     }
 }
+#[doc = "Trinculo (NAIF ID: 721)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Trinculo;
@@ -10730,6 +10878,7 @@ impl From<Trinculo> for DynOrigin {
         DynOrigin::Trinculo
     }
 }
+#[doc = "Francisco (NAIF ID: 722)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Francisco;
@@ -10751,6 +10900,7 @@ impl From<Francisco> for DynOrigin {
         DynOrigin::Francisco
     }
 }
+#[doc = "Margaret (NAIF ID: 723)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Margaret;
@@ -10772,6 +10922,7 @@ impl From<Margaret> for DynOrigin {
         DynOrigin::Margaret
     }
 }
+#[doc = "Ferdinand (NAIF ID: 724)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Ferdinand;
@@ -10793,6 +10944,7 @@ impl From<Ferdinand> for DynOrigin {
         DynOrigin::Ferdinand
     }
 }
+#[doc = "Perdita (NAIF ID: 725)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Perdita;
@@ -10814,6 +10966,7 @@ impl From<Perdita> for DynOrigin {
         DynOrigin::Perdita
     }
 }
+#[doc = "Mab (NAIF ID: 726)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Mab;
@@ -10835,6 +10988,7 @@ impl From<Mab> for DynOrigin {
         DynOrigin::Mab
     }
 }
+#[doc = "Cupid (NAIF ID: 727)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Cupid;
@@ -10856,6 +11010,7 @@ impl From<Cupid> for DynOrigin {
         DynOrigin::Cupid
     }
 }
+#[doc = "Triton (NAIF ID: 801)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Triton;
@@ -11102,6 +11257,7 @@ impl RotationalElements for Triton {
         )
     }
 }
+#[doc = "Nereid (NAIF ID: 802)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Nereid;
@@ -11138,6 +11294,7 @@ impl TriaxialEllipsoid for Nereid {
     }
 }
 impl Spheroid for Nereid {}
+#[doc = "Naiad (NAIF ID: 803)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Naiad;
@@ -11384,6 +11541,7 @@ impl RotationalElements for Naiad {
         )
     }
 }
+#[doc = "Thalassa (NAIF ID: 804)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Thalassa;
@@ -11630,6 +11788,7 @@ impl RotationalElements for Thalassa {
         )
     }
 }
+#[doc = "Despina (NAIF ID: 805)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Despina;
@@ -11876,6 +12035,7 @@ impl RotationalElements for Despina {
         )
     }
 }
+#[doc = "Galatea (NAIF ID: 806)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Galatea;
@@ -12122,6 +12282,7 @@ impl RotationalElements for Galatea {
         )
     }
 }
+#[doc = "Larissa (NAIF ID: 807)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Larissa;
@@ -12368,6 +12529,7 @@ impl RotationalElements for Larissa {
         )
     }
 }
+#[doc = "Proteus (NAIF ID: 808)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Proteus;
@@ -12613,6 +12775,7 @@ impl RotationalElements for Proteus {
         )
     }
 }
+#[doc = "Halimede (NAIF ID: 809)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Halimede;
@@ -12634,6 +12797,7 @@ impl From<Halimede> for DynOrigin {
         DynOrigin::Halimede
     }
 }
+#[doc = "Psamathe (NAIF ID: 810)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Psamathe;
@@ -12655,6 +12819,7 @@ impl From<Psamathe> for DynOrigin {
         DynOrigin::Psamathe
     }
 }
+#[doc = "Sao (NAIF ID: 811)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Sao;
@@ -12676,6 +12841,7 @@ impl From<Sao> for DynOrigin {
         DynOrigin::Sao
     }
 }
+#[doc = "Laomedeia (NAIF ID: 812)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Laomedeia;
@@ -12697,6 +12863,7 @@ impl From<Laomedeia> for DynOrigin {
         DynOrigin::Laomedeia
     }
 }
+#[doc = "Neso (NAIF ID: 813)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Neso;
@@ -12718,6 +12885,7 @@ impl From<Neso> for DynOrigin {
         DynOrigin::Neso
     }
 }
+#[doc = "Charon (NAIF ID: 901)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Charon;
@@ -12802,6 +12970,7 @@ impl RotationalElements for Charon {
         )
     }
 }
+#[doc = "Nix (NAIF ID: 902)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Nix;
@@ -12828,6 +12997,7 @@ impl PointMass for Nix {
         GravitationalParameter::km3_per_s2(0.00304817564816976f64)
     }
 }
+#[doc = "Hydra (NAIF ID: 903)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Hydra;
@@ -12854,6 +13024,7 @@ impl PointMass for Hydra {
         GravitationalParameter::km3_per_s2(0.003211039206155255f64)
     }
 }
+#[doc = "Kerberos (NAIF ID: 904)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Kerberos;
@@ -12880,6 +13051,7 @@ impl PointMass for Kerberos {
         GravitationalParameter::km3_per_s2(0.001110040850536676f64)
     }
 }
+#[doc = "Styx (NAIF ID: 905)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Styx;
@@ -12906,6 +13078,7 @@ impl PointMass for Styx {
         GravitationalParameter::km3_per_s2(0f64)
     }
 }
+#[doc = "Gaspra (NAIF ID: 9511010)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Gaspra;
@@ -12984,6 +13157,7 @@ impl RotationalElements for Gaspra {
         )
     }
 }
+#[doc = "Ida (NAIF ID: 2431010)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Ida;
@@ -13062,6 +13236,7 @@ impl RotationalElements for Ida {
         )
     }
 }
+#[doc = "Dactyl (NAIF ID: 2431011)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Dactyl;
@@ -13083,6 +13258,7 @@ impl From<Dactyl> for DynOrigin {
         DynOrigin::Dactyl
     }
 }
+#[doc = "Ceres (NAIF ID: 2000001)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Ceres;
@@ -13167,6 +13343,7 @@ impl RotationalElements for Ceres {
         )
     }
 }
+#[doc = "Pallas (NAIF ID: 2000002)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Pallas;
@@ -13236,6 +13413,7 @@ impl RotationalElements for Pallas {
         )
     }
 }
+#[doc = "Vesta (NAIF ID: 2000004)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Vesta;
@@ -13314,6 +13492,7 @@ impl RotationalElements for Vesta {
         )
     }
 }
+#[doc = "Psyche (NAIF ID: 2000016)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Psyche;
@@ -13354,6 +13533,7 @@ impl TriaxialEllipsoid for Psyche {
         )
     }
 }
+#[doc = "Lutetia (NAIF ID: 2000021)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Lutetia;
@@ -13432,6 +13612,7 @@ impl RotationalElements for Lutetia {
         )
     }
 }
+#[doc = "Kleopatra (NAIF ID: 2000216)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Kleopatra;
@@ -13453,6 +13634,7 @@ impl From<Kleopatra> for DynOrigin {
         DynOrigin::Kleopatra
     }
 }
+#[doc = "Eros (NAIF ID: 2000433)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Eros;
@@ -13536,6 +13718,7 @@ impl RotationalElements for Eros {
         )
     }
 }
+#[doc = "Davida (NAIF ID: 2000511)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Davida;
@@ -13619,6 +13802,7 @@ impl RotationalElements for Davida {
         )
     }
 }
+#[doc = "Mathilde (NAIF ID: 2000253)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Mathilde;
@@ -13654,6 +13838,7 @@ impl TriaxialEllipsoid for Mathilde {
         )
     }
 }
+#[doc = "Steins (NAIF ID: 2002867)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Steins;
@@ -13732,6 +13917,7 @@ impl RotationalElements for Steins {
         )
     }
 }
+#[doc = "Braille (NAIF ID: 2009969)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Braille;
@@ -13753,6 +13939,7 @@ impl From<Braille> for DynOrigin {
         DynOrigin::Braille
     }
 }
+#[doc = "Wilson-Harrington (NAIF ID: 2004015)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct WilsonHarrington;
@@ -13774,6 +13961,7 @@ impl From<WilsonHarrington> for DynOrigin {
         DynOrigin::WilsonHarrington
     }
 }
+#[doc = "Toutatis (NAIF ID: 2004179)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Toutatis;
@@ -13804,6 +13992,7 @@ impl TriaxialEllipsoid for Toutatis {
         )
     }
 }
+#[doc = "Itokawa (NAIF ID: 2025143)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Itokawa;
@@ -13877,6 +14066,7 @@ impl RotationalElements for Itokawa {
         )
     }
 }
+#[doc = "Bennu (NAIF ID: 2101955)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Bennu;

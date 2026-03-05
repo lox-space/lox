@@ -197,7 +197,7 @@ checksum = "30bde2b3dc3671ae49d8e2e9f044c7c005836e7a023ee57cffa25ab82764bb9e"
 
 [[package]]
 name = "lox-core"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.5"
 dependencies = [
  "fast_polynomial",
  "glam",
@@ -209,7 +209,7 @@ dependencies = [
 
 [[package]]
 name = "lox-derive"
-version = "0.1.0-alpha.6"
+version = "0.1.0-alpha.7"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -230,7 +230,7 @@ dependencies = [
 
 [[package]]
 name = "lox-io"
-version = "0.1.0-alpha.10"
+version = "0.1.0-alpha.14"
 dependencies = [
  "csv",
  "lox-core",
@@ -249,7 +249,7 @@ dependencies = [
 
 [[package]]
 name = "lox-math"
-version = "0.1.0-alpha.10"
+version = "0.1.0-alpha.14"
 dependencies = [
  "fast_polynomial",
  "glam",
@@ -260,7 +260,7 @@ dependencies = [
 
 [[package]]
 name = "lox-test-utils"
-version = "0.1.0-alpha.2"
+version = "0.1.0-alpha.4"
 dependencies = [
  "glam",
  "lox-derive",
@@ -268,7 +268,7 @@ dependencies = [
 
 [[package]]
 name = "lox-time"
-version = "0.1.0-alpha.12"
+version = "0.1.0-alpha.16"
 dependencies = [
  "itertools",
  "lox-core",
@@ -283,7 +283,7 @@ dependencies = [
 
 [[package]]
 name = "lox-units"
-version = "0.1.0-alpha.2"
+version = "0.1.0-alpha.6"
 dependencies = [
  "lox-core",
 ]
