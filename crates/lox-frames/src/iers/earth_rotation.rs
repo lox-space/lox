@@ -28,12 +28,14 @@ use crate::iers::{Corrections, Iau2000Model, ReferenceSystem};
 mod complementary_terms;
 
 impl ReferenceSystem {
+    /// Returns the Earth rotation matrix for the given times and corrections.
     pub fn earth_rotation(&self, tt: Time<Tt>, ut1: Time<Ut1>, corr: Corrections) -> DMat3 {
         self.greenwich_apparent_sidereal_time(tt, ut1, corr)
             .0
             .rotation_z()
     }
 
+    /// Computes Greenwich Mean Sidereal Time (GMST) for the active IERS convention.
     pub fn greenwich_mean_sidereal_time(
         &self,
         tt: Time<Tt>,
@@ -46,6 +48,7 @@ impl ReferenceSystem {
         }
     }
 
+    /// Computes Greenwich Apparent Sidereal Time (GAST) for the active IERS convention.
     pub fn greenwich_apparent_sidereal_time(
         &self,
         tt: Time<Tt>,
@@ -88,10 +91,12 @@ impl ReferenceSystem {
     }
 }
 
+/// Earth Rotation Angle (ERA).
 #[derive(Debug, Clone, Copy, PartialOrd, PartialEq, ApproxEq)]
 pub struct EarthRotationAngle(pub Angle);
 
 impl EarthRotationAngle {
+    /// Computes the ERA using the IAU 2000 model.
     pub fn iau2000(time: Time<Ut1>) -> Self {
         let d = time.days_since_j2000();
         let f = d.rem_euclid(1.0); // fractional part of t
@@ -103,11 +108,14 @@ impl EarthRotationAngle {
     }
 }
 
+/// Alias for [`EarthRotationAngle`].
 pub type Era = EarthRotationAngle;
 
+/// Greenwich Mean Sidereal Time (GMST).
 #[derive(Debug, Clone, Copy, PartialOrd, PartialEq, ApproxEq)]
 pub struct GreenwichMeanSiderealTime(pub Angle);
 
+/// Alias for [`GreenwichMeanSiderealTime`].
 pub type Gmst = GreenwichMeanSiderealTime;
 
 // Coefficients of IAU 1982 GMST-UT1 model
@@ -117,12 +125,14 @@ const C: f64 = 0.093104;
 const D: f64 = -6.2e-6;
 
 impl GreenwichMeanSiderealTime {
+    /// Computes GMST using the IAU 1982 model.
     pub fn iau1982(time: Time<Ut1>) -> Self {
         let t = time.centuries_since_j2000();
         let f = time.days_since_j2000().rem_euclid(1.0) * SECONDS_PER_DAY;
         Self(Angle::from_hms(0, 0, poly_array(t, &[A, B, C, D]) + f).mod_two_pi())
     }
 
+    /// Computes GMST using the IAU 2000 model.
     pub fn iau2000(tt: Time<Tt>, ut1: Time<Ut1>) -> Self {
         let t = tt.centuries_since_j2000();
         Self(
@@ -135,6 +145,7 @@ impl GreenwichMeanSiderealTime {
         )
     }
 
+    /// Computes GMST using the IAU 2006 model.
     pub fn iau2006(tt: Time<Tt>, ut1: Time<Ut1>) -> Self {
         let t = tt.centuries_since_j2000();
         Self(
@@ -155,12 +166,15 @@ impl GreenwichMeanSiderealTime {
     }
 }
 
+/// Greenwich Apparent Sidereal Time (GAST).
 #[derive(Debug, Clone, Copy, PartialOrd, PartialEq, ApproxEq)]
 pub struct GreenwichApparentSiderealTime(pub Angle);
 
+/// Alias for [`GreenwichApparentSiderealTime`].
 pub type Gast = GreenwichApparentSiderealTime;
 
 impl GreenwichApparentSiderealTime {
+    /// Computes GAST using the IAU 1994 model.
     pub fn iau1994(time: Time<Ut1>) -> Self {
         Self(
             (GreenwichMeanSiderealTime::iau1982(time).0
@@ -169,6 +183,7 @@ impl GreenwichApparentSiderealTime {
         )
     }
 
+    /// Computes GAST using the IAU 2000A model.
     pub fn iau2000a(tt: Time<Tt>, ut1: Time<Ut1>) -> Self {
         Self(
             (GreenwichMeanSiderealTime::iau2000(tt, ut1).0
@@ -177,6 +192,7 @@ impl GreenwichApparentSiderealTime {
         )
     }
 
+    /// Computes GAST using the IAU 2000B model.
     pub fn iau2000b(tt: Time<Tt>, ut1: Time<Ut1>) -> Self {
         Self(
             (GreenwichMeanSiderealTime::iau2000(tt, ut1).0
@@ -185,6 +201,7 @@ impl GreenwichApparentSiderealTime {
         )
     }
 
+    /// Computes GAST using the IAU 2006A model.
     pub fn iau2006a(tt: Time<Tt>, ut1: Time<Ut1>) -> Self {
         Self(
             (GreenwichMeanSiderealTime::iau2006(tt, ut1).0
@@ -194,10 +211,12 @@ impl GreenwichApparentSiderealTime {
     }
 }
 
+/// Equation of the equinoxes (GAST - GMST).
 #[derive(Debug, Clone, Copy, PartialOrd, PartialEq, ApproxEq)]
 pub struct EquationOfTheEquinoxes(pub Angle);
 
 impl EquationOfTheEquinoxes {
+    /// Computes the equation of the equinoxes using the IAU 1994 model.
     pub fn iau1994(time: Time<Tdb>) -> Self {
         let t = time.centuries_since_j2000();
         let om = (Angle::arcseconds(poly_array(t, &[450160.280, -482890.539, 7.455, 0.008]))
@@ -211,6 +230,7 @@ impl EquationOfTheEquinoxes {
         )
     }
 
+    /// Computes the equation of the equinoxes using the IAU 2000A model.
     pub fn iau2000a(time: Time<Tt>) -> Self {
         let PrecessionCorrectionsIau2000 { depspr, .. } = PrecessionCorrectionsIau2000::new(time);
         let epsa = MeanObliquity::iau1980(time).0 + depspr;
@@ -218,6 +238,7 @@ impl EquationOfTheEquinoxes {
         Self::iau2000(time, epsa, dpsi)
     }
 
+    /// Computes the equation of the equinoxes using the IAU 2000B model.
     pub fn iau2000b(time: Time<Tt>) -> Self {
         let PrecessionCorrectionsIau2000 { depspr, .. } = PrecessionCorrectionsIau2000::new(time);
         let epsa = MeanObliquity::iau1980(time).0 + depspr;
@@ -225,12 +246,14 @@ impl EquationOfTheEquinoxes {
         Self::iau2000(time, epsa, dpsi)
     }
 
+    /// Computes the equation of the equinoxes using the IAU 2006A model.
     pub fn iau2006a(time: Time<Tt>) -> Self {
         let epsa = MeanObliquity::iau2006(time);
         let Nutation { dpsi, .. } = Nutation::iau2006a(time.with_scale(Tdb));
         Self::iau2000(time, epsa.0, dpsi)
     }
 
+    /// Computes the equation of the equinoxes given mean obliquity and nutation in longitude.
     pub fn iau2000(time: Time<Tt>, epsa: Angle, dpsi: Angle) -> Self {
         Self(epsa.cos() * dpsi + Self::complimentary_terms_iau2000(time))
     }

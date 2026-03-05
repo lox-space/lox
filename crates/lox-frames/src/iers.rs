@@ -12,14 +12,23 @@ use lox_units::Angle;
 
 use crate::iers::{cip::CipCoords, ecliptic::MeanObliquity, nutation::Nutation};
 
+/// Celestial Intermediate Origin locator.
 pub mod cio;
+/// Celestial Intermediate Pole coordinates.
 pub mod cip;
+/// Earth rotation angle and equation of the equinoxes.
 pub mod earth_rotation;
+/// Obliquity of the ecliptic.
 pub mod ecliptic;
+/// Fundamental (Delaunay) arguments.
 pub mod fundamental;
+/// Nutation models.
 pub mod nutation;
+/// Polar motion coordinates and matrices.
 pub mod polar_motion;
+/// Precession matrices and frame bias.
 pub mod precession;
+/// Terrestrial Intermediate Origin locator.
 pub mod tio;
 
 mod sealed {
@@ -30,11 +39,15 @@ mod sealed {
     impl Sealed for super::ReferenceSystem {}
 }
 
+/// Sealed trait for IERS convention systems.
 pub trait IersSystem: sealed::Sealed {
+    /// Returns the numeric identifier for this convention.
     fn id(&self) -> usize;
+    /// Returns the convention name (e.g. "IERS1996").
     fn name(&self) -> String;
 }
 
+/// IERS 1996 conventions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Iers1996;
@@ -55,11 +68,14 @@ impl Display for Iers1996 {
     }
 }
 
+/// IAU 2000 nutation model variant.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Iau2000Model {
+    /// Full IAU 2000A model.
     #[default]
     A = 1,
+    /// Truncated IAU 2000B model.
     B = 2,
 }
 
@@ -72,6 +88,7 @@ impl Display for Iau2000Model {
     }
 }
 
+/// IERS 2003 conventions, parameterised by IAU 2000 nutation model.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Iers2003(pub Iau2000Model);
@@ -92,6 +109,7 @@ impl Display for Iers2003 {
     }
 }
 
+/// IERS 2010 conventions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Iers2010;
@@ -112,11 +130,15 @@ impl Display for Iers2010 {
     }
 }
 
+/// Dynamic dispatch enum for IERS convention systems.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ReferenceSystem {
+    /// IERS 1996 conventions.
     Iers1996,
+    /// IERS 2003 conventions with the given IAU 2000 model.
     Iers2003(Iau2000Model),
+    /// IERS 2010 conventions.
     Iers2010,
 }
 
@@ -162,11 +184,13 @@ impl From<Iers2010> for ReferenceSystem {
     }
 }
 
+/// Earth orientation parameter corrections (δψ/δX, δε/δY).
 #[derive(Debug, Clone, Copy, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Corrections(pub Angle, pub Angle);
 
 impl Corrections {
+    /// Returns `true` if both correction angles are zero.
     pub fn is_zero(&self) -> bool {
         self.0.is_zero() && self.1.is_zero()
     }
@@ -209,6 +233,7 @@ impl AddAssign<Corrections> for CipCoords {
 }
 
 impl ReferenceSystem {
+    /// Converts EOP corrections between ecliptic and equatorial representations.
     pub fn ecliptic_corrections(
         &self,
         corr: Corrections,

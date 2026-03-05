@@ -53,6 +53,7 @@ struct PlanetaryCoefficients {
 }
 
 impl Nutation {
+    /// Computes nutation using the IAU 2000A model.
     pub fn iau2000a(time: Time<Tdb>) -> Nutation {
         let t = time.centuries_since_j2000();
         let luni_solar_args = DelaunayArguments {

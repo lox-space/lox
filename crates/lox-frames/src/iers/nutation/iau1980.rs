@@ -29,6 +29,7 @@ struct Coefficients {
 }
 
 impl Nutation {
+    /// Computes nutation using the IAU 1980 model.
     pub fn iau1980(time: Time<Tdb>) -> Self {
         let t = time.centuries_since_j2000();
         let l = l(t);

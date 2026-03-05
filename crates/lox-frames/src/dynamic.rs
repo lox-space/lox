@@ -16,19 +16,30 @@ use crate::{
     },
 };
 
+/// Enum representation of all known reference frames, for dynamic dispatch.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum DynFrame {
+    /// International Celestial Reference Frame.
     #[default]
     Icrf,
+    /// J2000 Mean Equator and Equinox.
     J2000,
+    /// Celestial Intermediate Reference Frame.
     Cirf,
+    /// Terrestrial Intermediate Reference Frame.
     Tirf,
+    /// International Terrestrial Reference Frame.
     Itrf,
+    /// IAU body-fixed frame for the given origin.
     Iau(DynOrigin),
+    /// Mean of Date frame for the given IERS convention.
     Mod(ReferenceSystem),
+    /// True of Date frame for the given IERS convention.
     Tod(ReferenceSystem),
+    /// Pseudo-Earth Fixed frame for the given IERS convention.
     Pef(ReferenceSystem),
+    /// True Equator Mean Equinox.
     Teme,
 }
 
@@ -209,6 +220,7 @@ fn parse_equinox_frame(s: &str) -> Option<DynFrame> {
     }
 }
 
+/// No frame matching the given name is known.
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[error("no frame with name '{0}' is known")]
 pub struct UnknownFrameError(String);

@@ -23,6 +23,7 @@ mod iau2000;
 mod iau2006;
 
 impl ReferenceSystem {
+    /// Computes nutation for the active IERS convention.
     pub fn nutation(&self, time: Time<Tdb>) -> Nutation {
         match self {
             ReferenceSystem::Iers1996 => Nutation::iau1980(time),
@@ -34,6 +35,7 @@ impl ReferenceSystem {
         }
     }
 
+    /// Computes the nutation rotation matrix, applying the given corrections.
     pub fn nutation_matrix(&self, time: Time<Tdb>, corr: Corrections) -> DMat3 {
         match self {
             ReferenceSystem::Iers1996 => {
@@ -65,6 +67,7 @@ pub struct Nutation {
 }
 
 impl Nutation {
+    /// Builds the nutation rotation matrix from the mean obliquity of the ecliptic.
     pub fn nutation_matrix(&self, epsa: MeanObliquity) -> DMat3 {
         let epsa = epsa.0;
         let rot1 = epsa.rotation_x();

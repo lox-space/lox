@@ -20,6 +20,7 @@ use crate::{
     rotations::RotationProvider,
 };
 
+/// Default rotation provider with no EOP data (zero corrections, zero polar motion).
 #[derive(Copy, Clone, Debug)]
 pub struct DefaultRotationProvider;
 
