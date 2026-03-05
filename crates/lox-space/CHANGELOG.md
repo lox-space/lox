@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.36](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.35...lox-space-v0.1.0-alpha.36) - 2026-03-05
+
+### Added
+
+- *(lox-orbits/lox-analysis)* add constellation design tools
+
 ## [0.1.0-alpha.35](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.34...lox-space-v0.1.0-alpha.35) - 2026-03-04
 
 ### Added
