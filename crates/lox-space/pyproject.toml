@@ -4,14 +4,28 @@
 
 [project]
 name = "lox-space"
+description = "An astrodynamics library for orbital mechanics, mission analysis, and telecommunications"
+authors = [{name = "Helge Eichhorn", email = "git@helgeeichhorn.de"}]
+license = {text = "MPL-2.0"}
+readme = "../../README.md"
 requires-python = ">=3.11"
+keywords = ["astrodynamics", "orbital-mechanics", "mission-analysis", "space"]
 classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
   "Programming Language :: Rust",
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
+  "Topic :: Scientific/Engineering :: Astronomy",
 ]
 dependencies = ["numpy >= 1.16.0"]
 dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://github.com/lox-space/lox"
+Documentation = "https://python.lox.rs"
+Repository = "https://github.com/lox-space/lox"
 
 [dependency-groups]
 dev = [

@@ -4,13 +4,16 @@
 
 [package]
 name = "lox-core"
-description = "Common data types and utilities for the Lox Astrodynamics Toolkit"
+description = "Common data types and utilities for the Lox ecosystem"
 version = "0.1.0-alpha.5"
 rust-version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
 
 [dependencies]
 lox-test-utils = { workspace = true, features = ["derive"] }
