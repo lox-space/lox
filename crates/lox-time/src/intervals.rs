@@ -19,6 +19,7 @@ use crate::{
     utc::{Utc, transformations::ToUtc},
 };
 
+/// A half-open interval `[start, end)`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Interval<T> {
@@ -36,10 +37,12 @@ impl<T: ApproxEq + std::fmt::Debug> ApproxEq for Interval<T> {
 }
 
 impl<T> Interval<T> {
+    /// Creates a new interval from `start` to `end`.
     pub fn new(start: T, end: T) -> Self {
         Interval { start, end }
     }
 
+    /// Returns the start of the interval.
     pub fn start(&self) -> T
     where
         T: Copy,
@@ -47,6 +50,7 @@ impl<T> Interval<T> {
         self.start
     }
 
+    /// Returns the end of the interval.
     pub fn end(&self) -> T
     where
         T: Copy,
@@ -54,6 +58,7 @@ impl<T> Interval<T> {
         self.end
     }
 
+    /// Returns the duration of the interval as a [`TimeDelta`].
     pub fn duration(&self) -> TimeDelta
     where
         T: Sub<Output = TimeDelta> + Copy,
@@ -61,6 +66,7 @@ impl<T> Interval<T> {
         self.end - self.start
     }
 
+    /// Returns `true` if the interval is empty (`start >= end`).
     pub fn is_empty(&self) -> bool
     where
         T: Ord,
@@ -68,6 +74,7 @@ impl<T> Interval<T> {
         self.start >= self.end
     }
 
+    /// Returns `true` if `time` falls within `[start, end)`.
     pub fn contains_time(&self, time: T) -> bool
     where
         T: Ord,
@@ -75,6 +82,7 @@ impl<T> Interval<T> {
         self.start <= time && time < self.end
     }
 
+    /// Returns the intersection of `self` and `other`.
     pub fn intersect(&self, other: Self) -> Self
     where
         T: Ord + Copy,
@@ -85,6 +93,7 @@ impl<T> Interval<T> {
         }
     }
 
+    /// Returns `true` if `self` and `other` overlap.
     pub fn overlaps(&self, other: Self) -> bool
     where
         T: Ord + Copy,
@@ -147,6 +156,7 @@ impl<T> Interval<T> {
     }
 }
 
+/// Iterator that steps through an interval with a fixed time step.
 pub struct IntervalStepIter<T> {
     current: T,
     end: T,
@@ -260,9 +270,11 @@ fn merge_intervals<T: Ord + Copy>(sorted: Vec<Interval<T>>) -> Vec<Interval<T>> 
     result
 }
 
+/// An interval of [`TimeDelta`] values.
 pub type TimeDeltaInterval = Interval<TimeDelta>;
 
 impl TimeDeltaInterval {
+    /// Converts this delta-based interval to a [`TimeInterval`] in the given time scale.
     pub fn to_scale<T: TimeScale + Copy>(&self, scale: T) -> TimeInterval<T> {
         Interval {
             start: Time::from_delta(scale, self.start),
@@ -271,6 +283,7 @@ impl TimeDeltaInterval {
     }
 }
 
+/// An interval of [`Time`] values in a given time scale.
 pub type TimeInterval<T> = Interval<Time<T>>;
 
 impl<T> TimeInterval<T>
@@ -278,6 +291,7 @@ where
     T: ToUtc + TimeScale + Copy,
     DefaultOffsetProvider: Offset<T, Tai>,
 {
+    /// Converts this time interval to a [`UtcInterval`].
     pub fn to_utc(&self) -> UtcInterval {
         Interval {
             start: self.start.to_utc(),
@@ -286,9 +300,11 @@ where
     }
 }
 
+/// An interval of [`Utc`] values.
 pub type UtcInterval = Interval<Utc>;
 
 impl UtcInterval {
+    /// Converts this UTC interval to a [`TimeInterval`] in TAI.
     pub fn to_time(&self) -> TimeInterval<Tai> {
         Interval {
             start: self.start.to_time(),

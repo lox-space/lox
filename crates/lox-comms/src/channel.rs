@@ -10,13 +10,21 @@ use lox_core::units::Decibel;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Modulation {
+    /// Binary Phase-Shift Keying (1 bit/symbol).
     Bpsk,
+    /// Quadrature Phase-Shift Keying (2 bits/symbol).
     Qpsk,
+    /// 8-Phase-Shift Keying (3 bits/symbol).
     Psk8,
+    /// 16-Quadrature Amplitude Modulation (4 bits/symbol).
     Qam16,
+    /// 32-Quadrature Amplitude Modulation (5 bits/symbol).
     Qam32,
+    /// 64-Quadrature Amplitude Modulation (6 bits/symbol).
     Qam64,
+    /// 128-Quadrature Amplitude Modulation (7 bits/symbol).
     Qam128,
+    /// 256-Quadrature Amplitude Modulation (8 bits/symbol).
     Qam256,
 }
 
@@ -40,7 +48,9 @@ impl Modulation {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum LinkDirection {
+    /// Ground-to-space link.
     Uplink,
+    /// Space-to-ground link.
     Downlink,
 }
 

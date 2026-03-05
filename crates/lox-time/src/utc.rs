@@ -24,20 +24,27 @@ use crate::julian_dates::{self, Epoch, JulianDate};
 use crate::time_of_day::{CivilTime, TimeOfDay, TimeOfDayError};
 use crate::utc::leap_seconds::{DefaultLeapSecondsProvider, LeapSecondsProvider};
 
+/// Leap second tables and provider trait.
 pub mod leap_seconds;
+/// Transformations between UTC and continuous time scales.
 pub mod transformations;
 
 /// Error type returned when attempting to construct a [Utc] instance from invalid inputs.
 #[derive(Debug, Clone, Error, PartialEq, Eq)]
 pub enum UtcError {
+    /// Invalid date component.
     #[error(transparent)]
     DateError(#[from] DateError),
+    /// Invalid time-of-day component.
     #[error(transparent)]
     TimeError(#[from] TimeOfDayError),
+    /// Second 60 was specified on a date without a leap second.
     #[error("no leap second on {0}")]
     NonLeapSecondDate(Date),
+    /// The UTC datetime could not be constructed (e.g. from a non-finite delta).
     #[error("unable to construct UTC datetime")]
     UtcUndefined,
+    /// The input string is not valid ISO 8601.
     #[error("invalid ISO string `{0}`")]
     InvalidIsoString(String),
 }
