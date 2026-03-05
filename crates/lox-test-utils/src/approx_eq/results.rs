@@ -96,6 +96,10 @@ impl ApproxEqResult {
         }
     }
 
+    /// Creates a failing comparison result for two values that cannot be meaningfully compared.
+    ///
+    /// This is used for non-finite values (NaN, infinity) where the difference and tolerance
+    /// are not defined.
     #[inline]
     pub fn fail(left: f64, right: f64) -> Self {
         Self::Fail {

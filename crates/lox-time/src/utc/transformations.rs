@@ -23,6 +23,7 @@ use super::leap_seconds::DefaultLeapSecondsProvider;
 mod before1972;
 
 impl Utc {
+    /// Returns the TAI−UTC offset at this UTC instant.
     pub fn offset_tai(&self, provider: &impl LeapSecondsProvider) -> TimeDelta {
         if self < utc_1972_01_01() {
             before1972::delta_utc_tai(self)
@@ -31,28 +32,35 @@ impl Utc {
         }
     }
 
+    /// Converts this UTC instant to TAI using the given leap-seconds provider.
     pub fn to_time_with_provider(&self, provider: &impl LeapSecondsProvider) -> Time<Tai> {
         let offset = self.offset_tai(provider);
         Time::from_delta(Tai, self.to_delta() - offset)
     }
 
+    /// Converts this UTC instant to TAI using the built-in leap-seconds table.
     pub fn to_time(&self) -> Time<Tai> {
         self.to_time_with_provider(&DefaultLeapSecondsProvider)
     }
 
+    /// Converts this UTC instant to a [`DynTime`] in TAI using the given provider.
     pub fn to_dyn_time_with_provider(&self, provider: &impl LeapSecondsProvider) -> DynTime {
         let offset = self.offset_tai(provider);
         Time::from_delta(DynTimeScale::Tai, self.to_delta() - offset)
     }
 
+    /// Converts this UTC instant to a [`DynTime`] in TAI using the built-in table.
     pub fn to_dyn_time(&self) -> DynTime {
         self.to_dyn_time_with_provider(&DefaultLeapSecondsProvider)
     }
 }
 
+/// Trait for types that can be converted to [`Utc`].
 pub trait ToUtc {
+    /// Converts to UTC using the given leap-seconds provider.
     fn to_utc_with_provider(&self, provider: &impl LeapSecondsProvider) -> Utc;
 
+    /// Converts to UTC using the built-in leap-seconds table.
     fn to_utc(&self) -> Utc {
         self.to_utc_with_provider(&DefaultLeapSecondsProvider)
     }

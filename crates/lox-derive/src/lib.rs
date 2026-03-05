@@ -3,6 +3,13 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+//! Procedural derive macros for the Lox ecosystem.
+//!
+//! This crate provides `#[derive(ApproxEq)]` for automatic approximate-equality
+//! implementations and `#[derive(KvnDeserialize)]` for CCSDS KVN message parsing.
+
+#![warn(missing_docs)]
+
 use proc_macro_crate::{FoundCrate, crate_name};
 use proc_macro2::Span;
 use quote::{ToTokens, quote};
@@ -21,6 +28,10 @@ fn add_trait_bounds(mut generics: Generics) -> Generics {
     generics
 }
 
+/// Derives the `ApproxEq` trait for structs with named or unnamed fields.
+///
+/// All fields must implement `ApproxEq` and `Debug`. The generated implementation
+/// compares each field individually, collecting per-field results.
 #[proc_macro_derive(ApproxEq)]
 pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let DeriveInput {
@@ -884,6 +895,10 @@ fn deserializers_for_struct_with_unnamed_fields(
     }
 }
 
+/// Derives a `KvnDeserializer` implementation for CCSDS Keyword-Value Notation (KVN) messages.
+///
+/// Supports structs with named and unnamed fields. Use the `#[kvn(...)]` helper attribute
+/// to control prefix/postfix keywords and value-unit parsing.
 #[proc_macro_derive(KvnDeserialize, attributes(kvn))]
 pub fn derive_kvn_deserialize(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let item = syn::parse_macro_input!(item as syn::DeriveInput);
