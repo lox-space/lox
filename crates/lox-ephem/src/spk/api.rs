@@ -117,6 +117,7 @@ impl Spk {
         })
     }
 
+    /// Returns all segments indexed by center and target body ID.
     pub fn get_segments(&self) -> &HashMap<i32, HashMap<i32, Vec<SpkSegment>>> {
         &self.segments
     }
