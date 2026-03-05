@@ -41,5 +41,7 @@ pub mod time;
 #[cfg(feature = "units")]
 pub mod units;
 
+pub mod prelude;
+
 #[cfg(feature = "python")]
 pub(crate) mod python;

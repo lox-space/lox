@@ -7,71 +7,100 @@ SPDX-License-Identifier: MPL-2.0
 
 # Lox – Oxidized Astrodynamics
 
-### A safe, ergonomic astrodynamics library for the modern space industry
+[![codecov][codecov-badge]][codecov-url]
+[![Rust][rust-badge]][rust-url]
+[![Python][python-badge]][python-url]
+[![CodSpeed][codspeed-badge]][codspeed-url]
 
-[![codecov](https://codecov.io/gh/lox-space/lox/graph/badge.svg?token=R1W6HLN2N2)](https://codecov.io/gh/lox-space/lox) ![Rust](https://github.com/lox-space/lox/actions/workflows/rust.yml/badge.svg) ![Python](https://github.com/lox-space/lox/actions/workflows/python.yml/badge.svg) [![CodSpeed Badge](https://img.shields.io/endpoint?url=https://codspeed.io/badge.json)](https://codspeed.io/lox-space/lox)
+Lox is an MPLv2-licensed Rust astrodynamics library with first-class Python bindings for
+orbital mechanics, mission analysis, and telecommunications.
 
-![A star chart of a crab constellation](public/crabstellation.webp)
+## Python Quick Start
 
+```python
+import lox_space as lox
 
-> **Note:** Lox is under active development and does not yet have a stable release. The API of all crates is subject to
-> significant change.
+# Parse a UTC epoch and convert to the TDB time scale
+epoch = lox.UTC.from_iso("2025-01-01T12:00:00").to_scale("TDB")
+
+# Load Earth orientation parameters
+provider = lox.EOPProvider("finals2000A.all.csv")
+
+# Design a sun-synchronous orbit at 800 km altitude with a 10:30 LTAN
+sso = lox.Keplerian.sso(
+    epoch, altitude=800 * lox.km, ltan=(10, 30), provider=provider
+)
+
+# Convert to Cartesian state and propagate with J2 perturbations
+state = sso.to_cartesian()
+j2 = lox.J2(state)
+trajectory = j2.propagate(epoch, end=epoch + 100 * lox.minutes)
+```
+
+## Rust Quick Start
+
+```rust
+use lox_space::prelude::*;
+
+let epoch = Utc::from_iso("2025-01-01T12:00:00").unwrap().to_time().to_scale(Tdb);
+let provider = EopParser::new().from_path("finals2000A.all.csv").parse().unwrap();
+
+let sso = SsoBuilder::default()
+    .with_provider(&provider)
+    .with_time(epoch)
+    .with_altitude(800.0.km())
+    .with_ltan(10, 30)
+    .build()
+    .unwrap();
+
+// Convert to Cartesian state and propagate with J2 perturbations
+let state = sso.to_cartesian();
+let j2 = J2Propagator::new(state);
+let end = epoch + TimeDelta::from_minutes(100);
+let trajectory = j2.propagate(Interval::new(epoch, end)).unwrap();
+```
+
+## Installation
+
+### Python
+
+```sh
+uv add lox-space
+# or
+pip install lox-space
+```
+
+### Rust
+
+```sh
+cargo add lox-space
+```
+
+Or add to your `Cargo.toml`:
+
+```toml
+[dependencies]
+lox-space = "0.1"
+```
 
 ## Features
 
-Lox exposes a comprehensive astrodynamics API at varying levels of granularity. The high-level interface offered
-by `lox-space` is designed specifically for mission planning and analysis, while crates like `lox-time`, `lox-earth`
-and `lox-orbits` provide tools for advanced users.
+- **Orbital Mechanics** — Keplerian elements, state vectors, SSO design, Vallado/J2/SGP4 propagation, TLE parsing
+- **Time Systems** — TAI, TT, TDB, TCB, TCG, UTC, UT1; femtosecond precision, leap-second aware
+- **Reference Frames** — ICRF, ITRF, TEME; CIO and equinox-based transformation chains
+- **Ground Stations** — Visibility windows, elevation masks, pass prediction
+- **Constellation Design** — Walker Delta/Star, Street-of-Coverage, Flower
+- **RF Link Budgets** — Antenna patterns, modulation schemes, path loss
+- **Python Bindings** — Full API with type stubs and NumPy interop
 
-* A fully featured space mission simulator backend.
-* Python bindings for interactive use.
-* Tools for working with time in astronomical and terrestrial time scales.
-* Define orbits as Keplerian elements or state vectors in different coordinate frames.
-* Ephemeris, size and shape data for all major celestial bodies.
-* Ingest and interpolate Earth orientation parameters with ease.
-* Extensible – bring your own time scales, transformation algorithms, data sources and more.
+## Status
 
-## Crates
+Lox is pre-1.0. The API may change between releases.
 
-### lox-space
+## Documentation
 
-The entrypoint to the Lox ecosystem, suitable for most use cases. Provides a high-level interface for mission planning
-and analysis. Also includes Lox's Python bindings.
-
-### lox-time
-
-Tools for working with time in all commonly-used astronomical time scales based on a high-precision timestamp
-representation. Offers leap-second aware conversion from UTC to continuous time scales.
-
-### lox-bodies
-
-Provides structs representing all major celestial bodies, conveniently categorized by a variety of traits exposing
-SPICE-derived data.
-
-### lox-earth
-
-Essential algorithms for Earth-centric astrodynamics, including nutation-precession models, Earth rotation angle, CIP
-and CIO locations, and coordinate transformations.
-
-### lox-ephem
-
-Parses ephemeris data from external sources such as SPICE kernels.
-
-### lox-io
-
-Utilities for reading and writing data in various formats.
-
-### lox-math
-
-A collection of mathematical utilities used across the Lox ecosystem.
-
-## Used by...
-
-### Ephemerista
-
-[![The Ephemerista logo](public/ephemerista-logo.webp)][ephemerista]
-
-A next-generation, open-source space mission simulator [commissioned by the European Space Agency][artes].
+- Python: https://python.lox.rs
+- Rust: https://docs.rs/lox-space
 
 ## Why "Lox"?
 
@@ -80,6 +109,11 @@ A next-generation, open-source space mission simulator [commissioned by the Euro
 > Goddard,
 > an application which has continued to the present. [Wikipedia](https://en.wikipedia.org/wiki/Liquid_oxygen)
 
-[ephemerista]: https://gitlab.com/librespacefoundation/ephemerista/ephemerista-simulator
-
-[artes]: https://connectivity.esa.int/projects/ossmisi
+[codecov-badge]: https://codecov.io/gh/lox-space/lox/graph/badge.svg?token=R1W6HLN2N2
+[codecov-url]: https://codecov.io/gh/lox-space/lox
+[rust-badge]: https://github.com/lox-space/lox/actions/workflows/rust.yml/badge.svg
+[rust-url]: https://github.com/lox-space/lox/actions/workflows/rust.yml
+[python-badge]: https://github.com/lox-space/lox/actions/workflows/python.yml/badge.svg
+[python-url]: https://github.com/lox-space/lox/actions/workflows/python.yml
+[codspeed-badge]: https://img.shields.io/endpoint?url=https://codspeed.io/badge.json
+[codspeed-url]: https://codspeed.io/lox-space/lox
