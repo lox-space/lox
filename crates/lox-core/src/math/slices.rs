@@ -7,7 +7,9 @@
 
 use std::ops::Sub;
 
+/// Computes consecutive differences of a slice.
 pub trait Diff<T> {
+    /// Returns a vector of differences between consecutive elements.
     fn diff(&self) -> Vec<T>;
 }
 
@@ -25,10 +27,15 @@ where
     }
 }
 
+/// Tests whether a slice is monotonically ordered.
 pub trait Monotonic {
+    /// Returns `true` if elements are non-decreasing.
     fn is_increasing(&self) -> bool;
+    /// Returns `true` if elements are non-increasing.
     fn is_decreasing(&self) -> bool;
+    /// Returns `true` if each element is strictly greater than the previous.
     fn is_strictly_increasing(&self) -> bool;
+    /// Returns `true` if each element is strictly less than the previous.
     fn is_strictly_decreasing(&self) -> bool;
 }
 

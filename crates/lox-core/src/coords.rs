@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+//! Coordinate types for representing positions, velocities, and trajectories.
+
 use core::f64::consts::{FRAC_PI_2, PI, TAU};
 use std::{
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
@@ -21,32 +23,40 @@ use crate::{
     units::{Angle, Distance, Velocity},
 };
 
+/// Azimuth-elevation pair for representing direction in a topocentric frame.
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct AzEl(Angle, Angle);
 
 impl AzEl {
+    /// Returns a new [`AzElBuilder`].
     pub fn builder() -> AzElBuilder {
         AzElBuilder::default()
     }
 
+    /// Returns the azimuth angle.
     pub fn azimuth(&self) -> Angle {
         self.0
     }
 
+    /// Returns the elevation angle.
     pub fn elevation(&self) -> Angle {
         self.1
     }
 }
 
+/// Error returned when constructing an [`AzEl`] with invalid angles.
 #[derive(Copy, Clone, Debug, Error, PartialEq)]
 pub enum AzElError {
+    /// The azimuth angle is outside the valid range [0°, 360°].
     #[error("azimuth must be between 0 deg and 360 deg but was {0}")]
     InvalidAzimuth(Angle),
+    /// The elevation angle is outside the valid range [0°, 360°].
     #[error("elevation must be between 0 deg and 360 deg but was {0}")]
     InvalidElevation(Angle),
 }
 
+/// Builder for constructing validated [`AzEl`] instances.
 #[derive(Copy, Clone, Debug)]
 pub struct AzElBuilder {
     azimuth: Result<Angle, AzElError>,
@@ -60,6 +70,7 @@ impl Default for AzElBuilder {
 }
 
 impl AzElBuilder {
+    /// Creates a new builder with default (zero) angles.
     pub fn new() -> Self {
         Self {
             azimuth: Ok(Angle::default()),
@@ -67,6 +78,7 @@ impl AzElBuilder {
         }
     }
 
+    /// Sets the azimuth angle. Must be between 0° and 360°.
     pub fn azimuth(&mut self, azimuth: Angle) -> &mut Self {
         self.azimuth = match azimuth.to_radians() {
             lon if lon < 0.0 => Err(AzElError::InvalidAzimuth(azimuth)),
@@ -76,6 +88,7 @@ impl AzElBuilder {
         self
     }
 
+    /// Sets the elevation angle. Must be between 0° and 360°.
     pub fn elevation(&mut self, elevation: Angle) -> &mut Self {
         self.elevation = match elevation.to_radians() {
             lat if lat < 0.0 => Err(AzElError::InvalidElevation(elevation)),
@@ -85,11 +98,13 @@ impl AzElBuilder {
         self
     }
 
+    /// Builds the [`AzEl`], returning an error if any angle is invalid.
     pub fn build(&self) -> Result<AzEl, AzElError> {
         Ok(AzEl(self.azimuth?, self.elevation?))
     }
 }
 
+/// Geodetic coordinates: longitude, latitude, and altitude.
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct LonLatAlt(Angle, Angle, Distance);
@@ -104,18 +119,22 @@ impl LonLatAlt {
             .build()
     }
 
+    /// Returns a new [`LonLatAltBuilder`].
     pub fn builder() -> LonLatAltBuilder {
         LonLatAltBuilder::default()
     }
 
+    /// Returns the longitude.
     pub fn lon(&self) -> Angle {
         self.0
     }
 
+    /// Returns the latitude.
     pub fn lat(&self) -> Angle {
         self.1
     }
 
+    /// Returns the altitude.
     pub fn alt(&self) -> Distance {
         self.2
     }
@@ -210,24 +229,32 @@ impl LonLatAlt {
     }
 }
 
+/// Error returned when constructing a [`LonLatAlt`] with invalid values.
 #[derive(Copy, Clone, Debug, Error, PartialEq)]
 pub enum LonLatAltError {
+    /// The longitude is outside the valid range [-180°, 180°].
     #[error("longitude must be between -180 deg and 180 deg but was {0}")]
     InvalidLongitude(Angle),
+    /// The latitude is outside the valid range [-90°, 90°].
     #[error("latitude must between -90 deg and 90 deg but was {0}")]
     InvalidLatitude(Angle),
+    /// The altitude is not a finite value.
     #[error("invalid altitude {0}")]
     InvalidAltitude(Distance),
 }
 
+/// Error returned when converting from body-fixed coordinates to geodetic.
 #[derive(Debug, Error)]
 pub enum FromBodyFixedError {
+    /// The position vector has zero length.
     #[error("position vector has zero length")]
     ZeroPosition,
+    /// The root finder failed to converge.
     #[error(transparent)]
     RootFinder(#[from] RootFinderError),
 }
 
+/// Builder for constructing validated [`LonLatAlt`] instances.
 #[derive(Copy, Clone, Debug)]
 pub struct LonLatAltBuilder {
     longitude: Result<Angle, LonLatAltError>,
@@ -242,6 +269,7 @@ impl Default for LonLatAltBuilder {
 }
 
 impl LonLatAltBuilder {
+    /// Creates a new builder with default (zero) values.
     pub fn new() -> Self {
         Self {
             longitude: Ok(Angle::default()),
@@ -250,6 +278,7 @@ impl LonLatAltBuilder {
         }
     }
 
+    /// Sets the longitude. Must be between -180° and 180°.
     pub fn longitude(&mut self, longitude: Angle) -> &mut Self {
         self.longitude = match longitude.to_degrees() {
             lon if lon < -180.0 => Err(LonLatAltError::InvalidLongitude(longitude)),
@@ -259,6 +288,7 @@ impl LonLatAltBuilder {
         self
     }
 
+    /// Sets the latitude. Must be between -90° and 90°.
     pub fn latitude(&mut self, latitude: Angle) -> &mut Self {
         self.latitude = match latitude.to_degrees() {
             lat if lat < -90.0 => Err(LonLatAltError::InvalidLatitude(latitude)),
@@ -268,6 +298,7 @@ impl LonLatAltBuilder {
         self
     }
 
+    /// Sets the altitude. Must be a finite value.
     pub fn altitude(&mut self, altitude: Distance) -> &mut Self {
         self.altitude = if !altitude.to_meters().is_finite() {
             Err(LonLatAltError::InvalidAltitude(altitude))
@@ -277,11 +308,13 @@ impl LonLatAltBuilder {
         self
     }
 
+    /// Builds the [`LonLatAlt`], returning an error if any value is invalid.
     pub fn build(&self) -> Result<LonLatAlt, LonLatAltError> {
         Ok(LonLatAlt(self.longitude?, self.latitude?, self.altitude?))
     }
 }
 
+/// Cartesian state vector with position and velocity in meters and m/s.
 #[derive(Copy, Clone, Debug, Default, PartialEq, ApproxEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Cartesian {
@@ -290,6 +323,7 @@ pub struct Cartesian {
 }
 
 impl Cartesian {
+    /// Creates a new Cartesian state from individual position and velocity components.
     pub const fn new(
         x: Distance,
         y: Distance,
@@ -308,11 +342,13 @@ impl Cartesian {
         }
     }
 
+    /// Creates a new Cartesian state from position and velocity vectors in meters and m/s.
     #[inline]
     pub const fn from_vecs(pos: DVec3, vel: DVec3) -> Self {
         Self { pos, vel }
     }
 
+    /// Creates a new Cartesian state from a `[x, y, z, vx, vy, vz]` array in meters and m/s.
     pub const fn from_array([x, y, z, vx, vy, vz]: [f64; 6]) -> Self {
         Self {
             pos: DVec3::new(x, y, z),
@@ -320,32 +356,39 @@ impl Cartesian {
         }
     }
 
+    /// Returns a new [`CartesianBuilder`].
     pub const fn builder() -> CartesianBuilder {
         CartesianBuilder::new()
     }
 
+    /// Returns the position vector in meters.
     #[inline]
     pub fn position(&self) -> DVec3 {
         self.pos
     }
 
+    /// Sets the position vector in meters.
     pub fn set_position(&mut self, position: DVec3) {
         self.pos = position
     }
 
+    /// Returns the velocity vector in m/s.
     #[inline]
     pub fn velocity(&self) -> DVec3 {
         self.vel
     }
 
+    /// Sets the velocity vector in m/s.
     pub fn set_velocity(&mut self, velocity: DVec3) {
         self.vel = velocity
     }
 
+    /// Returns the x position component.
     pub fn x(&self) -> Distance {
         Distance::meters(self.pos.x)
     }
 
+    /// Sets the `N`-th component (0–5 for x, y, z, vx, vy, vz) to `value`.
     pub fn set<const N: usize>(&mut self, value: f64) {
         const { assert!(N < 6, "index out of bounds") }
 
@@ -372,27 +415,33 @@ impl Cartesian {
         }
     }
 
+    /// Returns the y position component.
     pub fn y(&self) -> Distance {
         Distance::meters(self.pos.y)
     }
 
+    /// Returns the z position component.
     pub fn z(&self) -> Distance {
         Distance::meters(self.pos.z)
     }
 
+    /// Returns the x velocity component.
     pub fn vx(&self) -> Velocity {
         Velocity::meters_per_second(self.vel.x)
     }
 
+    /// Returns the y velocity component.
     pub fn vy(&self) -> Velocity {
         Velocity::meters_per_second(self.vel.y)
     }
 
+    /// Returns the z velocity component.
     pub fn vz(&self) -> Velocity {
         Velocity::meters_per_second(self.vel.z)
     }
 }
 
+/// Builder for constructing [`Cartesian`] states from unitful components.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct CartesianBuilder {
     pos: Option<DVec3>,
@@ -400,6 +449,7 @@ pub struct CartesianBuilder {
 }
 
 impl CartesianBuilder {
+    /// Creates a new builder with no position or velocity set.
     pub const fn new() -> Self {
         Self {
             pos: None,
@@ -407,11 +457,13 @@ impl CartesianBuilder {
         }
     }
 
+    /// Sets the position components.
     pub const fn position(&mut self, x: Distance, y: Distance, z: Distance) -> &mut Self {
         self.pos = Some(DVec3::new(x.to_meters(), y.to_meters(), z.to_meters()));
         self
     }
 
+    /// Sets the velocity components.
     pub const fn velocity(&mut self, vx: Velocity, vy: Velocity, vz: Velocity) -> &mut Self {
         self.vel = Some(DVec3::new(
             vx.to_meters_per_second(),
@@ -421,6 +473,7 @@ impl CartesianBuilder {
         self
     }
 
+    /// Builds the [`Cartesian`] state. Unset components default to zero.
     pub const fn build(&self) -> Cartesian {
         Cartesian {
             pos: match self.pos {
@@ -509,6 +562,7 @@ impl Neg for Cartesian {
     }
 }
 
+/// Generic interpolated time series data with `N` components.
 #[derive(Debug, Clone)]
 pub struct TrajectoryData<const N: usize> {
     epoch: TimeDelta,
@@ -518,6 +572,7 @@ pub struct TrajectoryData<const N: usize> {
 }
 
 impl<const N: usize> TrajectoryData<N> {
+    /// Creates trajectory data from fixed-size arrays of time steps and component data.
     pub fn from_arrays<const M: usize>(
         epoch: TimeDelta,
         time_steps: [TimeDelta; M],
@@ -544,10 +599,12 @@ impl<const N: usize> TrajectoryData<N> {
         }
     }
 
+    /// Returns the time steps relative to the epoch in seconds.
     pub fn time_steps(&self) -> Arc<[f64]> {
         self.time_steps.clone()
     }
 
+    /// Interpolates the `M`-th component at time `t` (seconds since epoch).
     #[inline]
     pub fn interpolate<const M: usize>(&self, t: f64) -> f64 {
         const { assert!(M < N, "index is out-of-bounds") }
@@ -555,6 +612,7 @@ impl<const N: usize> TrajectoryData<N> {
         self.series[M].interpolate(t)
     }
 
+    /// Interpolates all `N` components at time `t` (seconds since epoch).
     #[inline]
     pub fn interpolate_all(&self, t: f64) -> [f64; N] {
         let idx = self.series[0].find_index(t);
@@ -564,15 +622,20 @@ impl<const N: usize> TrajectoryData<N> {
     }
 }
 
+/// A Cartesian state paired with a timestamp.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TimeStampedCartesian {
+    /// The timestamp of the state.
     pub time: TimeDelta,
+    /// The Cartesian state vector.
     pub state: Cartesian,
 }
 
+/// A 6-component trajectory (x, y, z, vx, vy, vz) with cubic spline interpolation.
 pub type CartesianTrajectory = TrajectoryData<6>;
 
 impl CartesianTrajectory {
+    /// Creates a trajectory from an iterator of timestamped Cartesian states.
     pub fn from_states(states: impl IntoIterator<Item = TimeStampedCartesian>) -> Self {
         let mut iter = states.into_iter().peekable();
         let epoch = iter.peek().expect("should have at least two states").time;
@@ -631,60 +694,73 @@ impl CartesianTrajectory {
         }
     }
 
+    /// Returns the x position data points.
     pub fn x(&self) -> Arc<[f64]> {
         self.data[0].clone()
     }
 
+    /// Returns the y position data points.
     pub fn y(&self) -> Arc<[f64]> {
         self.data[1].clone()
     }
 
+    /// Returns the z position data points.
     pub fn z(&self) -> Arc<[f64]> {
         self.data[2].clone()
     }
 
+    /// Returns the x velocity data points.
     pub fn vx(&self) -> Arc<[f64]> {
         self.data[3].clone()
     }
 
+    /// Returns the y velocity data points.
     pub fn vy(&self) -> Arc<[f64]> {
         self.data[4].clone()
     }
 
+    /// Returns the z velocity data points.
     pub fn vz(&self) -> Arc<[f64]> {
         self.data[5].clone()
     }
 
+    /// Interpolates the x position at time `t` (seconds since epoch).
     #[inline]
     pub fn interpolate_x(&self, t: f64) -> f64 {
         self.interpolate::<0>(t)
     }
 
+    /// Interpolates the y position at time `t` (seconds since epoch).
     #[inline]
     pub fn interpolate_y(&self, t: f64) -> f64 {
         self.interpolate::<1>(t)
     }
 
+    /// Interpolates the z position at time `t` (seconds since epoch).
     #[inline]
     pub fn interpolate_z(&self, t: f64) -> f64 {
         self.interpolate::<2>(t)
     }
 
+    /// Interpolates the x velocity at time `t` (seconds since epoch).
     #[inline]
     pub fn interpolate_vx(&self, t: f64) -> f64 {
         self.interpolate::<3>(t)
     }
 
+    /// Interpolates the y velocity at time `t` (seconds since epoch).
     #[inline]
     pub fn interpolate_vy(&self, t: f64) -> f64 {
         self.interpolate::<4>(t)
     }
 
+    /// Interpolates the z velocity at time `t` (seconds since epoch).
     #[inline]
     pub fn interpolate_vz(&self, t: f64) -> f64 {
         self.interpolate::<5>(t)
     }
 
+    /// Interpolates the position vector at time `t` (seconds since epoch).
     #[inline]
     pub fn position(&self, t: f64) -> DVec3 {
         let idx = self.series[0].find_index(t);
@@ -695,6 +771,7 @@ impl CartesianTrajectory {
         )
     }
 
+    /// Interpolates the velocity vector at time `t` (seconds since epoch).
     #[inline]
     pub fn velocity(&self, t: f64) -> DVec3 {
         let idx = self.series[3].find_index(t);
@@ -705,6 +782,7 @@ impl CartesianTrajectory {
         )
     }
 
+    /// Interpolates the full Cartesian state at time `t` (seconds since epoch).
     #[inline]
     pub fn at(&self, t: f64) -> Cartesian {
         let vals = self.interpolate_all(t);
@@ -712,6 +790,7 @@ impl CartesianTrajectory {
     }
 }
 
+/// Iterator over the discrete states in a [`CartesianTrajectory`].
 pub struct CartesianTrajectoryIterator {
     data: CartesianTrajectory,
     curr: usize,

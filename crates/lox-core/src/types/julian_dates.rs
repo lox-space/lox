@@ -6,8 +6,11 @@
 
 //! Mod `types` exposes shared type aliases and utility functions for working with Julian dates.
 
+/// Julian date as an `f64` (days since epoch).
 pub type Epoch = f64;
 
+/// Modified Julian Date as an `f64`.
 pub type ModifiedJulianDate = f64;
 
+/// Modified Julian Day Number as an `i32`.
 pub type ModifiedJulianDayNumber = i32;

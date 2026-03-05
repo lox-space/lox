@@ -49,8 +49,11 @@ pub const ATTOSECONDS_IN_FEMTOSECOND: i64 = 1_000;
  * Julian date constants
  */
 
+/// Seconds between the Julian Date epoch (JD 0) and J2000.
 pub const SECONDS_BETWEEN_JD_AND_J2000: i64 = 211813488000;
 
+/// Seconds between the Modified Julian Date epoch and J2000.
 pub const SECONDS_BETWEEN_MJD_AND_J2000: i64 = 4453444800;
 
+/// Seconds between J1950 and J2000.
 pub const SECONDS_BETWEEN_J1950_AND_J2000: i64 = 1577880000;

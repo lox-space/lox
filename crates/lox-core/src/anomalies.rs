@@ -314,12 +314,25 @@ impl<K: AnomalyKind> ApproxEq for Anomaly<K> {
 /// Error types for anomaly conversions
 #[derive(Error, Debug, Clone, PartialEq)]
 pub enum AnomalyError {
+    /// The iterative solver did not converge within the allowed iterations.
     #[error("failed to converge after {iterations} iterations (residual: {residual})")]
-    ConvergenceFailure { iterations: usize, residual: f64 },
+    ConvergenceFailure {
+        /// Number of iterations attempted.
+        iterations: usize,
+        /// Final residual value.
+        residual: f64,
+    },
+    /// The true anomaly is outside the valid range for the given eccentricity.
     #[error("True anomaly {nu} rad outside valid range [-{max_nu} rad, {max_nu} rad]")]
-    InvalidTrueAnomaly { nu: Angle, max_nu: Angle },
+    InvalidTrueAnomaly {
+        /// The invalid true anomaly.
+        nu: Angle,
+        /// The maximum valid true anomaly magnitude.
+        max_nu: Angle,
+    },
 }
 
+/// A type alias for `Result<T, AnomalyError>`.
 pub type Result<T> = std::result::Result<T, AnomalyError>;
 
 // ============================================================================

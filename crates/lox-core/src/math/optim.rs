@@ -8,10 +8,12 @@ use lox_test_utils::approx_eq;
 
 use super::roots::{Callback, RootFinderError};
 
+/// Finds the minimum of a function within a bracket.
 pub trait FindBracketedMinimum<F>
 where
     F: Callback,
 {
+    /// Finds the x value that minimizes `f` within the given `bracket`.
     fn find_minimum_in_bracket(&self, f: F, bracket: (f64, f64)) -> Result<f64, RootFinderError>;
 }
 
@@ -20,7 +22,9 @@ where
 /// Combines golden section search with parabolic interpolation.
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct BrentMinimizer {
+    /// Maximum number of iterations.
     pub max_iter: u32,
+    /// Absolute tolerance for convergence.
     pub abs_tol: f64,
 }
 

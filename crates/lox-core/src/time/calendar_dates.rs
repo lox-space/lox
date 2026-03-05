@@ -32,10 +32,13 @@ fn iso_regex() -> &'static Regex {
 /// Error type returned when attempting to construct a [Date] from invalid inputs.
 #[derive(Debug, Clone, Error, PartialEq, Eq, PartialOrd, Ord)]
 pub enum DateError {
+    /// The given year, month, and day do not form a valid date.
     #[error("invalid date `{0}-{1}-{2}`")]
     InvalidDate(i64, u8, u8),
+    /// The input string is not a valid ISO 8601 date.
     #[error("invalid ISO string `{0}`")]
     InvalidIsoString(String),
+    /// Day 366 was requested for a non-leap year.
     #[error("day of year cannot be 366 for a non-leap year")]
     NonLeapYear,
 }
@@ -44,8 +47,11 @@ pub enum DateError {
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Calendar {
+    /// The Proleptic Julian calendar (year < 1).
     ProlepticJulian,
+    /// The Julian calendar (year 1 to October 4, 1582).
     Julian,
+    /// The Gregorian calendar (October 15, 1582 onwards).
     Gregorian,
 }
 
@@ -113,18 +119,22 @@ const LAST_PROLEPTIC_JULIAN_DAY_J2K: i64 = -730122;
 const LAST_JULIAN_DAY_J2K: i64 = -152384;
 
 impl Date {
+    /// Returns the calendar system of this date.
     pub fn calendar(&self) -> Calendar {
         self.calendar
     }
 
+    /// Returns the year.
     pub fn year(&self) -> i64 {
         self.year
     }
 
+    /// Returns the month (1–12).
     pub fn month(&self) -> u8 {
         self.month
     }
 
+    /// Returns the day of the month (1–31).
     pub fn day(&self) -> u8 {
         self.day
     }
@@ -155,6 +165,7 @@ impl Date {
         }
     }
 
+    /// Constructs a new [Date] without validation. The [Calendar] is inferred.
     pub const fn new_unchecked(year: i64, month: u8, day: u8) -> Self {
         let calendar = calendar(year, month, day);
         Date {
@@ -253,6 +264,7 @@ impl Date {
         j2000_day_number(self.calendar, self.year, self.month, self.day)
     }
 
+    /// Converts this date to a [`TimeDelta`] relative to J2000.
     pub const fn to_delta(&self) -> TimeDelta {
         let seconds = self.j2000_day_number() * SECONDS_PER_DAY - SECONDS_PER_HALF_DAY;
         TimeDelta::from_seconds(seconds)
@@ -359,20 +371,25 @@ const fn j2000_day_number(calendar: Calendar, year: i64, month: u8, day: u8) -> 
 
 /// `CalendarDate` allows any date-time format to report its date in a human-readable way.
 pub trait CalendarDate {
+    /// Returns the date component.
     fn date(&self) -> Date;
 
+    /// Returns the year.
     fn year(&self) -> i64 {
         self.date().year()
     }
 
+    /// Returns the month (1–12).
     fn month(&self) -> u8 {
         self.date().month()
     }
 
+    /// Returns the day of the month (1–31).
     fn day(&self) -> u8 {
         self.date().day()
     }
 
+    /// Returns the day number within the year (1–366).
     fn day_of_year(&self) -> u16 {
         let date = self.date();
         let leap = is_leap_year(date.calendar(), date.year());
