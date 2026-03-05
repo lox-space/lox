@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.17](https://github.com/lox-space/lox/compare/lox-time-v0.1.0-alpha.16...lox-time-v0.1.0-alpha.17) - 2026-03-05
+
+### Other
+
+- add crate-level READMEs
+- *(lox-derive/lox-test-utils/lox-comms/lox-time)* add doc comments
+- clean up metadata
+
 ## [0.1.0-alpha.16](https://github.com/lox-space/lox/compare/lox-time-v0.1.0-alpha.15...lox-time-v0.1.0-alpha.16) - 2026-03-05
 
 ### Other

@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.0-alpha.11](https://github.com/lox-space/lox/compare/lox-frames-v0.1.0-alpha.10...lox-frames-v0.1.0-alpha.11) - 2026-03-05
+
+### Other
+
+- add crate-level READMEs
+- *(lox-frames)* add doc comments
+- clean up metadata
+
 ## [0.1.0-alpha.10](https://github.com/lox-space/lox/compare/lox-frames-v0.1.0-alpha.9...lox-frames-v0.1.0-alpha.10) - 2026-03-05
 
 ### Other
