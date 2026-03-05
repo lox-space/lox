@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.37](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.36...lox-space-v0.1.0-alpha.37) - 2026-03-05
+
+### Added
+
+- *(lox-space)* add prelude and re-write README
+
+### Other
+
+- *(lox-space)* remove deprecated PyO3 feature
+- add crate-level READMEs
+- *(lox-space)* update Python docs
+- clean up metadata
+
 ## [0.1.0-alpha.36](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.35...lox-space-v0.1.0-alpha.36) - 2026-03-05
 
 ### Added

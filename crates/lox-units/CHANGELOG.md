@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.7](https://github.com/lox-space/lox/compare/lox-units-v0.1.0-alpha.6...lox-units-v0.1.0-alpha.7) - 2026-03-05
+
+### Other
+
+- add crate-level READMEs
+- *(lox-core/lox-math/lox-units)* add doc comments
+- clean up metadata
+
 ## [0.1.0-alpha.6](https://github.com/lox-space/lox/compare/lox-units-v0.1.0-alpha.5...lox-units-v0.1.0-alpha.6) - 2026-03-05
 
 ### Other
