@@ -30,6 +30,7 @@ pub fn tio_locator(centuries_since_j2000_tt: JulianCenturies) -> Angle {
 pub struct TioLocator(pub Angle);
 
 impl TioLocator {
+    /// Computes the TIO locator s' using the IAU 2000 model.
     pub fn iau2000(time: Time<Tt>) -> Self {
         let t = time.centuries_since_j2000();
         TioLocator(Angle::arcseconds(SECULAR_DRIFT * t))

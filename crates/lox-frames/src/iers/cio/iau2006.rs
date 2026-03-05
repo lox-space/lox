@@ -23,6 +23,7 @@ use crate::iers::fundamental::iers03::{
 mod terms;
 
 impl CioLocator {
+    /// Computes the CIO locator using IAU 2006 precession and IAU 2000A nutation.
     pub fn iau2006(time: Time<Tdb>, CipCoords { x, y }: CipCoords) -> Self {
         let t = time.centuries_since_j2000();
         let fundamental_args = fundamental_args(t);

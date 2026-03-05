@@ -8,6 +8,7 @@ use glam::{DMat3, DVec3};
 
 use crate::rotations::Rotation;
 
+/// Builds the ICRF-to-IAU rotation from rotational elements and their rates.
 pub fn icrf_to_iau(
     (right_ascension, declination, rotation_angle): (f64, f64, f64),
     (right_ascension_rate, declination_rate, rotation_rate): (f64, f64, f64),

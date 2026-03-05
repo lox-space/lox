@@ -9,6 +9,7 @@ use lox_time::{Time, time_scales::Tt};
 use crate::iers::{ReferenceSystem, tio::TioLocator};
 
 impl ReferenceSystem {
+    /// Returns the polar motion rotation matrix for the given pole coordinates.
     pub fn polar_motion_matrix(&self, time: Time<Tt>, pole_coords: PoleCoords) -> DMat3 {
         if pole_coords.is_zero() {
             return DMat3::IDENTITY;
@@ -23,21 +24,27 @@ impl ReferenceSystem {
     }
 }
 
+/// Pole coordinates (xp, yp) describing polar motion.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct PoleCoords {
+    /// x-coordinate of the pole.
     pub xp: Angle,
+    /// y-coordinate of the pole.
     pub yp: Angle,
 }
 
 impl PoleCoords {
+    /// Computes the classical polar motion matrix W = R_y(-xp) * R_x(-yp).
     pub fn polar_motion_matrix(&self) -> DMat3 {
         (-self.xp).rotation_y() * (-self.yp).rotation_x()
     }
 
+    /// Computes the polar motion matrix including the TIO locator s' (IAU 2000+).
     pub fn polar_motion_matrix_iau2000(&self, sp: TioLocator) -> DMat3 {
         self.polar_motion_matrix() * sp.0.rotation_z()
     }
 
+    /// Returns `true` if both pole coordinates are zero.
     pub fn is_zero(&self) -> bool {
         self.xp.is_zero() && self.yp.is_zero()
     }

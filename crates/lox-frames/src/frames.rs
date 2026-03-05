@@ -19,6 +19,7 @@ const MOD_ID: usize = 11;
 const TOD_ID: usize = 12;
 const PEF_ID: usize = 13;
 
+/// International Celestial Reference Frame.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Icrf;
@@ -39,6 +40,7 @@ impl ReferenceFrame for Icrf {
 
 impl QuasiInertial for Icrf {}
 
+/// J2000 Mean Equator and Equinox frame.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct J2000;
@@ -59,6 +61,7 @@ impl ReferenceFrame for J2000 {
 
 impl QuasiInertial for J2000 {}
 
+/// Celestial Intermediate Reference Frame.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Cirf;
@@ -77,6 +80,7 @@ impl ReferenceFrame for Cirf {
     }
 }
 
+/// Terrestrial Intermediate Reference Frame.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Tirf;
@@ -95,6 +99,7 @@ impl ReferenceFrame for Tirf {
     }
 }
 
+/// International Terrestrial Reference Frame.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Itrf;
@@ -113,6 +118,7 @@ impl ReferenceFrame for Itrf {
     }
 }
 
+/// Mean of Date frame, parameterised by IERS convention.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Mod<T: IersSystem>(pub T);
@@ -134,6 +140,7 @@ where
     }
 }
 
+/// True of Date frame, parameterised by IERS convention.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Tod<T: IersSystem>(pub T);
@@ -155,6 +162,7 @@ where
     }
 }
 
+/// Pseudo-Earth Fixed frame, parameterised by IERS convention.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Pef<T: IersSystem>(pub T);
@@ -176,6 +184,7 @@ where
     }
 }
 
+/// True Equator Mean Equinox frame.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Teme;
@@ -196,6 +205,7 @@ impl ReferenceFrame for Teme {
 
 impl BodyFixed for Itrf {}
 
+/// IAU body-fixed reference frame derived from rotational elements.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Iau<T: TryRotationalElements>(T);
@@ -204,6 +214,7 @@ impl<T> Iau<T>
 where
     T: RotationalElements,
 {
+    /// Creates an IAU frame for a body with known rotational elements.
     pub fn new(body: T) -> Self {
         Self(body)
     }
@@ -213,11 +224,13 @@ impl<T> Iau<T>
 where
     T: TryRotationalElements,
 {
+    /// Creates an IAU frame, returning an error if rotational elements are undefined.
     pub fn try_new(body: T) -> Result<Self, UndefinedOriginPropertyError> {
         let _ = body.try_right_ascension(0.0)?;
         Ok(Self(body))
     }
 
+    /// Returns the underlying body.
     pub fn body(&self) -> T
     where
         T: Copy,
@@ -225,10 +238,13 @@ where
         self.0
     }
 
+    /// Returns the rotational elements (right ascension, declination, prime meridian) at
+    /// the given Julian centuries since J2000.
     pub fn rotational_elements(&self, j2000: f64) -> (f64, f64, f64) {
         self.0.try_rotational_elements(j2000).unwrap()
     }
 
+    /// Returns the time derivatives of the rotational elements.
     pub fn rotational_element_rates(&self, j2000: f64) -> (f64, f64, f64) {
         self.0.try_rotational_element_rates(j2000).unwrap()
     }

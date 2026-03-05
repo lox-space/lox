@@ -16,9 +16,12 @@ use crate::iers::cio::CioLocator;
 
 mod iau2006;
 
+/// Coordinates (X, Y) of the Celestial Intermediate Pole (CIP).
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct CipCoords {
+    /// X coordinate of the CIP.
     pub x: Angle,
+    /// Y coordinate of the CIP.
     pub y: Angle,
 }
 
@@ -38,6 +41,7 @@ impl CipCoords {
         Self { x, y }
     }
 
+    /// Computes the celestial-to-intermediate rotation matrix given the CIO locator.
     pub fn celestial_to_intermediate_matrix(&self, s: CioLocator) -> DMat3 {
         let x = self.x.to_radians();
         let y = self.y.to_radians();

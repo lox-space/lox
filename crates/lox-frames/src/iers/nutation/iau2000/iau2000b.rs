@@ -17,6 +17,7 @@ mod luni_solar;
 mod planetary;
 
 impl Nutation {
+    /// Computes nutation using the IAU 2000B model.
     pub fn iau2000b(time: Time<Tdb>) -> Nutation {
         let t = time.centuries_since_j2000();
         let luni_solar_args = DelaunayArguments {
