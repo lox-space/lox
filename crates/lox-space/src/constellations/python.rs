@@ -85,6 +85,7 @@ impl PyConstellation {
         eccentricity=0.0,
         phasing=0,
         argument_of_periapsis=None,
+        longitude_of_ascending_node=None,
         propagator="vallado",
     ))]
     #[allow(clippy::too_many_arguments)]
@@ -100,9 +101,13 @@ impl PyConstellation {
         eccentricity: f64,
         phasing: usize,
         argument_of_periapsis: Option<PyAngle>,
+        longitude_of_ascending_node: Option<PyAngle>,
         propagator: &str,
     ) -> PyResult<Self> {
         let aop = argument_of_periapsis.map(|a| a.0).unwrap_or(Angle::ZERO);
+        let lan = longitude_of_ascending_node
+            .map(|a| a.0)
+            .unwrap_or(Angle::ZERO);
         let prop = parse_propagator(propagator)?;
         let epoch = time.0.to_scale(Tai);
 
@@ -111,6 +116,7 @@ impl PyConstellation {
             .with_inclination(inclination.0)
             .with_phasing(phasing)
             .with_argument_of_periapsis(aop)
+            .with_longitude_of_ascending_node(lan)
             .build_constellation(name, epoch, origin.0, DynFrame::Icrf)
             .map_err(PyConstellationError)?;
 
@@ -133,6 +139,7 @@ impl PyConstellation {
         eccentricity=0.0,
         phasing=0,
         argument_of_periapsis=None,
+        longitude_of_ascending_node=None,
         propagator="vallado",
     ))]
     #[allow(clippy::too_many_arguments)]
@@ -148,9 +155,13 @@ impl PyConstellation {
         eccentricity: f64,
         phasing: usize,
         argument_of_periapsis: Option<PyAngle>,
+        longitude_of_ascending_node: Option<PyAngle>,
         propagator: &str,
     ) -> PyResult<Self> {
         let aop = argument_of_periapsis.map(|a| a.0).unwrap_or(Angle::ZERO);
+        let lan = longitude_of_ascending_node
+            .map(|a| a.0)
+            .unwrap_or(Angle::ZERO);
         let prop = parse_propagator(propagator)?;
         let epoch = time.0.to_scale(Tai);
 
@@ -159,6 +170,7 @@ impl PyConstellation {
             .with_inclination(inclination.0)
             .with_phasing(phasing)
             .with_argument_of_periapsis(aop)
+            .with_longitude_of_ascending_node(lan)
             .build_constellation(name, epoch, origin.0, DynFrame::Icrf)
             .map_err(PyConstellationError)?;
 
@@ -181,6 +193,7 @@ impl PyConstellation {
         eccentricity=0.0,
         coverage_fold=1,
         argument_of_periapsis=None,
+        longitude_of_ascending_node=None,
         propagator="vallado",
     ))]
     #[allow(clippy::too_many_arguments)]
@@ -196,9 +209,13 @@ impl PyConstellation {
         eccentricity: f64,
         coverage_fold: usize,
         argument_of_periapsis: Option<PyAngle>,
+        longitude_of_ascending_node: Option<PyAngle>,
         propagator: &str,
     ) -> PyResult<Self> {
         let aop = argument_of_periapsis.map(|a| a.0).unwrap_or(Angle::ZERO);
+        let lan = longitude_of_ascending_node
+            .map(|a| a.0)
+            .unwrap_or(Angle::ZERO);
         let prop = parse_propagator(propagator)?;
         let epoch = time.0.to_scale(Tai);
 
@@ -207,6 +224,7 @@ impl PyConstellation {
             .with_inclination(inclination.0)
             .with_coverage_fold(coverage_fold)
             .with_argument_of_periapsis(aop)
+            .with_longitude_of_ascending_node(lan)
             .build_constellation(name, epoch, origin.0, DynFrame::Icrf)
             .map_err(PyConstellationError)?;
 
@@ -232,6 +250,7 @@ impl PyConstellation {
         semi_major_axis=None,
         eccentricity=None,
         argument_of_periapsis=None,
+        longitude_of_ascending_node=None,
         propagator="vallado",
     ))]
     #[allow(clippy::too_many_arguments)]
@@ -250,9 +269,13 @@ impl PyConstellation {
         semi_major_axis: Option<PyDistance>,
         eccentricity: Option<f64>,
         argument_of_periapsis: Option<PyAngle>,
+        longitude_of_ascending_node: Option<PyAngle>,
         propagator: &str,
     ) -> PyResult<Self> {
         let aop = argument_of_periapsis.map(|a| a.0).unwrap_or(Angle::ZERO);
+        let lan = longitude_of_ascending_node
+            .map(|a| a.0)
+            .unwrap_or(Angle::ZERO);
         let prop = parse_propagator(propagator)?;
         let epoch = time.0.to_scale(Tai);
 
@@ -264,7 +287,8 @@ impl PyConstellation {
             phasing_denominator,
         )
         .with_inclination(inclination.0)
-        .with_argument_of_periapsis(aop);
+        .with_argument_of_periapsis(aop)
+        .with_longitude_of_ascending_node(lan);
 
         match (perigee_altitude, semi_major_axis) {
             (Some(alt), None) => {

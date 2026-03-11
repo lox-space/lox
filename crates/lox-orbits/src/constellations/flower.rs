@@ -28,6 +28,7 @@ pub struct FlowerBuilder {
     shape: Option<FlowerShape>,
     inclination: Angle,
     argument_of_periapsis: Angle,
+    longitude_of_ascending_node: Angle,
 }
 
 #[derive(Debug, Clone)]
@@ -54,6 +55,7 @@ impl FlowerBuilder {
             shape: None,
             inclination: Angle::ZERO,
             argument_of_periapsis: Angle::ZERO,
+            longitude_of_ascending_node: Angle::ZERO,
         }
     }
 
@@ -84,6 +86,12 @@ impl FlowerBuilder {
         self
     }
 
+    /// Sets the longitude of ascending node offset applied to all satellites.
+    pub fn with_longitude_of_ascending_node(mut self, longitude_of_ascending_node: Angle) -> Self {
+        self.longitude_of_ascending_node = longitude_of_ascending_node;
+        self
+    }
+
     fn build_satellites(
         &self,
         sma: Distance,
@@ -108,7 +116,9 @@ impl FlowerBuilder {
         let mut satellites = Vec::with_capacity(self.nsats);
 
         for i_sat in 0..self.nsats {
-            let raan = Angle::radians_normalized(i_sat as f64 * delta_raan);
+            let raan = Angle::radians_normalized(
+                self.longitude_of_ascending_node.as_f64() + i_sat as f64 * delta_raan,
+            );
             let mean_anomaly = Angle::radians_normalized(i_sat as f64 * delta_anom);
 
             let elements = KeplerianBuilder::new()
@@ -276,6 +286,27 @@ mod tests {
         assert_approx_eq!(
             c.satellites()[0].elements.argument_of_periapsis().as_f64(),
             45.0_f64.to_radians(),
+            atol <= 1e-10
+        );
+    }
+
+    #[test]
+    fn test_flower_with_longitude_of_ascending_node() {
+        let epoch = Time::j2000(Tai);
+        let c = FlowerBuilder::new(14, 1, 5, 1, 28)
+            .with_semi_major_axis(7000.0.km(), 0.01)
+            .with_inclination(53.0.deg())
+            .with_longitude_of_ascending_node(90.0.deg())
+            .build_constellation("flower", epoch, Earth, Icrf)
+            .unwrap();
+
+        // First satellite's RAAN should be 90 deg
+        assert_approx_eq!(
+            c.satellites()[0]
+                .elements
+                .longitude_of_ascending_node()
+                .as_f64(),
+            90.0_f64.to_radians(),
             atol <= 1e-10
         );
     }
