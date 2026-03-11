@@ -467,6 +467,7 @@ class Constellation:
         eccentricity: float = 0.0,
         phasing: int = 0,
         argument_of_periapsis: Angle | None = None,
+        longitude_of_ascending_node: Angle | None = None,
         propagator: str = "vallado",
     ) -> "Constellation":
         """Create a Walker Delta constellation (RAAN spread = 360 deg)."""
@@ -485,6 +486,7 @@ class Constellation:
         eccentricity: float = 0.0,
         phasing: int = 0,
         argument_of_periapsis: Angle | None = None,
+        longitude_of_ascending_node: Angle | None = None,
         propagator: str = "vallado",
     ) -> "Constellation":
         """Create a Walker Star constellation (RAAN spread = 180 deg)."""
@@ -503,6 +505,7 @@ class Constellation:
         eccentricity: float = 0.0,
         coverage_fold: int = 1,
         argument_of_periapsis: Angle | None = None,
+        longitude_of_ascending_node: Angle | None = None,
         propagator: str = "vallado",
     ) -> "Constellation":
         """Create a Street-of-Coverage constellation."""
@@ -524,6 +527,7 @@ class Constellation:
         semi_major_axis: Distance | None = None,
         eccentricity: float | None = None,
         argument_of_periapsis: Angle | None = None,
+        longitude_of_ascending_node: Angle | None = None,
         propagator: str = "vallado",
     ) -> "Constellation":
         """Create a Flower constellation (repeating ground tracks)."""
