@@ -11,6 +11,7 @@ SPDX-License-Identifier: MPL-2.0
 [![Rust][rust-badge]][rust-url]
 [![Python][python-badge]][python-url]
 [![CodSpeed][codspeed-badge]][codspeed-url]
+[![project chat][zulip-badge]][zulip-url]
 
 Lox is an MPLv2-licensed Rust astrodynamics library with first-class Python bindings for
 orbital mechanics, mission analysis, and telecommunications.
@@ -102,6 +103,10 @@ Lox is pre-1.0. The API may change between releases.
 - Python: https://python.lox.rs
 - Rust: https://docs.rs/lox-space
 
+## Community
+
+- [Zulip Chat][zulip-url]
+
 ## Why "Lox"?
 
 > Liquid oxygen—abbreviated LOx, LOX or Lox in the aerospace, submarine and gas industries—is the liquid form of
@@ -117,3 +122,5 @@ Lox is pre-1.0. The API may change between releases.
 [python-url]: https://github.com/lox-space/lox/actions/workflows/python.yml
 [codspeed-badge]: https://img.shields.io/endpoint?url=https://codspeed.io/badge.json
 [codspeed-url]: https://codspeed.io/lox-space/lox
+[zulip-badge]: https://img.shields.io/badge/zulip-join_chat-brightgreen.svg
+[zulip-url]: https://lox-space.zulipchat.com
