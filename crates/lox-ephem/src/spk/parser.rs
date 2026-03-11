@@ -655,7 +655,7 @@ pub fn parse_spk_segment(
 }
 
 #[cfg(test)]
-pub mod test {
+pub(crate) mod tests {
     use super::*;
 
     #[test]
