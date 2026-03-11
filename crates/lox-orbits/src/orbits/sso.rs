@@ -82,7 +82,8 @@ impl Default for LocalTimeOfNode {
     }
 }
 
-fn inclination_sso(
+/// Computes the sun-synchronous inclination for the given semi-major axis and eccentricity.
+pub fn inclination_sso(
     semi_major_axis: Distance,
     eccentricity: Eccentricity,
 ) -> Result<Inclination, SsoError> {

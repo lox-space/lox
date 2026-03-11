@@ -34,6 +34,24 @@ print(len(constellation))  # 66
 print(constellation.name)  # "iridium"
 ```
 
+All constellation types accept an optional `longitude_of_ascending_node`
+parameter to set the longitude of ascending node offset for the first
+orbital plane. The remaining planes are spaced relative to this offset.
+
+```python
+constellation = lox.Constellation.walker_delta(
+    "iridium_offset",
+    epoch,
+    lox.Origin("Earth"),
+    nsats=66,
+    nplanes=6,
+    semi_major_axis=7159 * lox.km,
+    inclination=53 * lox.deg,
+    phasing=1,
+    longitude_of_ascending_node=30 * lox.deg,
+)
+```
+
 ## Walker Star
 
 Same as Walker Delta but with a RAAN spread of 180 degrees.

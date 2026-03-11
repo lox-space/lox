@@ -243,6 +243,64 @@ class TestFlowerEdgeCases:
         assert len(c) == 5
 
 
+class TestLongitudeOfAscendingNode:
+    def test_walker_delta(self, epoch):
+        c = lox.Constellation.walker_delta(
+            "lan",
+            epoch,
+            lox.Origin("Earth"),
+            nsats=6,
+            nplanes=3,
+            semi_major_axis=7000 * lox.km,
+            inclination=53 * lox.deg,
+            longitude_of_ascending_node=30 * lox.deg,
+        )
+        assert len(c) == 6
+
+    def test_walker_star(self, epoch):
+        c = lox.Constellation.walker_star(
+            "lan",
+            epoch,
+            lox.Origin("Earth"),
+            nsats=8,
+            nplanes=4,
+            semi_major_axis=7000 * lox.km,
+            inclination=90 * lox.deg,
+            longitude_of_ascending_node=45 * lox.deg,
+        )
+        assert len(c) == 8
+
+    def test_street_of_coverage(self, epoch):
+        c = lox.Constellation.street_of_coverage(
+            "lan",
+            epoch,
+            lox.Origin("Earth"),
+            nsats=24,
+            nplanes=4,
+            semi_major_axis=7159 * lox.km,
+            inclination=53 * lox.deg,
+            longitude_of_ascending_node=60 * lox.deg,
+        )
+        assert len(c) == 24
+
+    def test_flower(self, epoch):
+        c = lox.Constellation.flower(
+            "lan",
+            epoch,
+            lox.Origin("Earth"),
+            n_petals=14,
+            n_days=1,
+            nsats=5,
+            phasing_numerator=1,
+            phasing_denominator=28,
+            inclination=53 * lox.deg,
+            semi_major_axis=7000 * lox.km,
+            eccentricity=0.01,
+            longitude_of_ascending_node=90 * lox.deg,
+        )
+        assert len(c) == 5
+
+
 class TestWalkerStarEdgeCases:
     def test_with_phasing(self, epoch):
         c = lox.Constellation.walker_star(

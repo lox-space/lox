@@ -44,6 +44,7 @@ pub struct StreetOfCoverageBuilder {
     inclination: Angle,
     coverage_fold: usize,
     argument_of_periapsis: Angle,
+    longitude_of_ascending_node: Angle,
 }
 
 impl StreetOfCoverageBuilder {
@@ -56,6 +57,7 @@ impl StreetOfCoverageBuilder {
             inclination: Angle::ZERO,
             coverage_fold: 1,
             argument_of_periapsis: Angle::ZERO,
+            longitude_of_ascending_node: Angle::ZERO,
         }
     }
 
@@ -80,6 +82,12 @@ impl StreetOfCoverageBuilder {
     /// Sets the argument of periapsis.
     pub fn with_argument_of_periapsis(mut self, aop: Angle) -> Self {
         self.argument_of_periapsis = aop;
+        self
+    }
+
+    /// Sets the longitude of ascending node offset applied to all orbital planes.
+    pub fn with_longitude_of_ascending_node(mut self, longitude_of_ascending_node: Angle) -> Self {
+        self.longitude_of_ascending_node = longitude_of_ascending_node;
         self
     }
 
@@ -146,7 +154,9 @@ impl StreetOfCoverageBuilder {
         let mut satellites = Vec::with_capacity(self.nsats);
 
         for plane in 0..p {
-            let raan = Angle::radians_normalized(plane as f64 * delta_raan);
+            let raan = Angle::radians_normalized(
+                self.longitude_of_ascending_node.as_f64() + plane as f64 * delta_raan,
+            );
 
             for sat in 0..s {
                 let mean_anomaly = Angle::radians_normalized(
@@ -294,6 +304,33 @@ mod tests {
                     < 1e-10
             );
         }
+    }
+
+    #[test]
+    fn test_soc_with_longitude_of_ascending_node() {
+        let sats_no_raan = StreetOfCoverageBuilder::new(24, 4)
+            .with_semi_major_axis(7159.0.km(), 0.0)
+            .with_inclination(53.0.deg())
+            .build()
+            .unwrap();
+
+        let sats_with_raan = StreetOfCoverageBuilder::new(24, 4)
+            .with_semi_major_axis(7159.0.km(), 0.0)
+            .with_inclination(53.0.deg())
+            .with_longitude_of_ascending_node(60.0.deg())
+            .build()
+            .unwrap();
+
+        // First plane RAAN should differ by 60 deg
+        let diff = sats_with_raan[0]
+            .elements
+            .longitude_of_ascending_node()
+            .as_f64()
+            - sats_no_raan[0]
+                .elements
+                .longitude_of_ascending_node()
+                .as_f64();
+        assert!((diff - 60.0_f64.to_radians()).abs() < 1e-10);
     }
 
     #[test]

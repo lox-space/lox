@@ -42,6 +42,7 @@ struct WalkerParams {
     inclination: Angle,
     phasing: usize,
     argument_of_periapsis: Angle,
+    longitude_of_ascending_node: Angle,
 }
 
 impl WalkerParams {
@@ -53,6 +54,7 @@ impl WalkerParams {
             inclination: Angle::ZERO,
             phasing: 0,
             argument_of_periapsis: Angle::ZERO,
+            longitude_of_ascending_node: Angle::ZERO,
         }
     }
 }
@@ -86,7 +88,9 @@ fn walker_build(
     let mut satellites = Vec::with_capacity(params.nsats);
 
     for plane in 0..params.nplanes {
-        let raan = Angle::radians_normalized(plane as f64 * raan_spacing);
+        let raan = Angle::radians_normalized(
+            params.longitude_of_ascending_node.as_f64() + plane as f64 * raan_spacing,
+        );
 
         for sat in 0..sats_per_plane {
             let mean_anomaly = Angle::radians_normalized(
@@ -150,6 +154,12 @@ impl WalkerDeltaBuilder {
         self
     }
 
+    /// Sets the longitude of ascending node offset applied to all orbital planes.
+    pub fn with_longitude_of_ascending_node(mut self, longitude_of_ascending_node: Angle) -> Self {
+        self.params.longitude_of_ascending_node = longitude_of_ascending_node;
+        self
+    }
+
     /// Builds the satellite list without wrapping in a [`Constellation`].
     pub fn build(&self) -> Result<Vec<ConstellationSatellite>, ConstellationError> {
         walker_build(&self.params, WalkerVariant::Delta)
@@ -203,6 +213,12 @@ impl WalkerStarBuilder {
     /// Sets the argument of periapsis.
     pub fn with_argument_of_periapsis(mut self, aop: Angle) -> Self {
         self.params.argument_of_periapsis = aop;
+        self
+    }
+
+    /// Sets the longitude of ascending node offset applied to all orbital planes.
+    pub fn with_longitude_of_ascending_node(mut self, longitude_of_ascending_node: Angle) -> Self {
+        self.params.longitude_of_ascending_node = longitude_of_ascending_node;
         self
     }
 
@@ -401,6 +417,52 @@ mod tests {
 
         assert_eq!(c.name(), "star");
         assert_eq!(c.len(), 8);
+    }
+
+    #[test]
+    fn test_walker_delta_with_longitude_of_ascending_node() {
+        let sats = WalkerDeltaBuilder::new(6, 3)
+            .with_semi_major_axis(7000.0.km(), 0.0)
+            .with_inclination(53.0.deg())
+            .with_longitude_of_ascending_node(30.0.deg())
+            .build()
+            .unwrap();
+
+        // First plane should start at 30 deg
+        assert_approx_eq!(
+            sats[0].elements.longitude_of_ascending_node().as_f64(),
+            30.0_f64.to_radians(),
+            atol <= 1e-10
+        );
+        // Second plane at 30 + 120 = 150 deg
+        assert_approx_eq!(
+            sats[2].elements.longitude_of_ascending_node().as_f64(),
+            150.0_f64.to_radians(),
+            atol <= 1e-10
+        );
+    }
+
+    #[test]
+    fn test_walker_star_with_longitude_of_ascending_node() {
+        let sats = WalkerStarBuilder::new(8, 4)
+            .with_semi_major_axis(7000.0.km(), 0.0)
+            .with_inclination(90.0.deg())
+            .with_longitude_of_ascending_node(45.0.deg())
+            .build()
+            .unwrap();
+
+        // First plane at 45 deg
+        assert_approx_eq!(
+            sats[0].elements.longitude_of_ascending_node().as_f64(),
+            45.0_f64.to_radians(),
+            atol <= 1e-10
+        );
+        // Second plane at 45 + 45 = 90 deg (180/4 = 45 deg spacing)
+        assert_approx_eq!(
+            sats[2].elements.longitude_of_ascending_node().as_f64(),
+            90.0_f64.to_radians(),
+            atol <= 1e-10
+        );
     }
 
     #[test]
