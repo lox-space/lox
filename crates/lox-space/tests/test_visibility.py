@@ -711,9 +711,9 @@ class TestInterSatelliteRangeFiltering:
     def test_range_with_los(self, t0, t1, space_assets, ephemeris):
         """Range filtering combined with LOS occlusion should work together."""
         scenario = lox.Scenario(t0, t1, spacecraft=space_assets)
+        # Central body (Earth) LOS is always applied for inter-satellite pairs.
         analysis = lox.VisibilityAnalysis(
             scenario,
-            occulting_bodies=[lox.Origin("Earth")],
             inter_satellite=True,
             max_range=2000 * lox.km,
         )
@@ -818,9 +818,10 @@ class TestInterSatelliteSlewRateFiltering:
             for name, sgp4 in oneweb_subset.items()
         ]
         scenario = lox.Scenario(t0, t1, spacecraft=assets)
+        # Central body LOS is always applied; only additional bodies need
+        # to be passed via occulting_bodies.
         analysis = lox.VisibilityAnalysis(
             scenario,
-            occulting_bodies=[lox.Origin("Earth")],
             inter_satellite=True,
             max_range=5000 * lox.km,
         )
