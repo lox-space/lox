@@ -700,7 +700,7 @@ checksum = "5e5032e24019045c762d3c0f28f5b6b8bbf38563a65908389bf7978758920897"
 
 [[package]]
 name = "lox-analysis"
-version = "0.1.0-alpha.3"
+version = "0.1.0-alpha.4"
 dependencies = [
  "csv",
  "glam 0.30.10",
@@ -795,7 +795,7 @@ dependencies = [
 
 [[package]]
 name = "lox-ephem"
-version = "0.1.0-alpha.15"
+version = "0.1.0-alpha.16"
 dependencies = [
  "arrayvec",
  "glam 0.30.10",
@@ -863,7 +863,7 @@ dependencies = [
 
 [[package]]
 name = "lox-orbits"
-version = "0.1.0-alpha.30"
+version = "0.1.0-alpha.31"
 dependencies = [
  "csv",
  "differential-equations",
@@ -889,7 +889,7 @@ dependencies = [
 
 [[package]]
 name = "lox-space"
-version = "0.1.0-alpha.37"
+version = "0.1.0-alpha.38"
 dependencies = [
  "codspeed-divan-compat",
  "glam 0.30.10",

@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.31](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.30...lox-orbits-v0.1.0-alpha.31) - 2026-03-13
+
+### Added
+
+- *(lox-orbits)* add RAAN to constellation design tools
+
 ## [0.1.0-alpha.30](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.29...lox-orbits-v0.1.0-alpha.30) - 2026-03-05
 
 ### Other
