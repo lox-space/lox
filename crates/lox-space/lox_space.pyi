@@ -555,7 +555,9 @@ class VisibilityAnalysis:
             time interval.
         ensemble: Optional pre-computed Ensemble. If not provided, the
             scenario is propagated automatically.
-        occulting_bodies: Optional list of bodies for line-of-sight checking.
+        occulting_bodies: Optional list of additional occulting bodies for
+            line-of-sight checking. For inter-satellite visibility, the
+            scenario's central body is always checked automatically.
         step: Optional time step for event detection (default: 60s).
         min_pass_duration: Optional minimum pass duration. Passes
             shorter than this value may be missed. Enables two-level stepping

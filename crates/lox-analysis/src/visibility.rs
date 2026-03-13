@@ -718,7 +718,11 @@ where
         self
     }
 
-    /// Sets bodies that may occlude the line of sight.
+    /// Sets additional bodies that may occlude the line of sight.
+    ///
+    /// For inter-satellite visibility, the scenario's central body is always
+    /// checked for occultation automatically. Use this method to add extra
+    /// occulting bodies (e.g. the Moon for an Earth-centred scenario).
     pub fn with_occulting_bodies(mut self, bodies: Vec<DynOrigin>) -> Self {
         self.occulting_bodies = bodies;
         self
@@ -818,6 +822,10 @@ where
 
     /// Compute LOS intervals for a single inter-satellite pair,
     /// optionally filtered by min/max range constraints.
+    ///
+    /// The scenario's central body is always checked for occultation.
+    /// Any additional bodies set via [`with_occulting_bodies`](Self::with_occulting_bodies)
+    /// are checked as well.
     fn compute_inter_satellite_pair(
         &self,
         sc1: &Spacecraft,
@@ -826,9 +834,6 @@ where
         traj2: &Trajectory<Tai, O, R>,
         interval: TimeInterval<Tai>,
     ) -> Result<Vec<TimeInterval<Tai>>, VisibilityError> {
-        let has_range = self.min_range.is_some() || self.max_range.is_some();
-        let has_los = !self.occulting_bodies.is_empty();
-
         // Resolve per-pair slew rate limit: min of both assets' limits.
         let effective_slew_rate = match (sc1.max_slew_rate(), sc2.max_slew_rate()) {
             (Some(a), Some(b)) => Some(if a.to_radians_per_second() < b.to_radians_per_second() {
@@ -840,11 +845,6 @@ where
             (None, Some(b)) => Some(b),
             (None, None) => None,
         };
-        let has_slew_rate = effective_slew_rate.is_some();
-
-        if !has_range && !has_slew_rate && !has_los {
-            return Ok(vec![interval]);
-        }
 
         let make_range = |threshold: Distance, direction: RangeDirection| {
             EventsToIntervals::new(self.apply_coarse_step(RootFindingDetector::new(
@@ -901,6 +901,13 @@ where
         }
 
         // Chain LOS detectors onto previous windows (most expensive: requires ephemeris).
+        // Always check the central body first, then any additional occulting bodies.
+        let central_body: DynOrigin = self.scenario.origin().into();
+        let los = make_los(central_body);
+        detector = Some(match detector {
+            Some(d) => Box::new(d.chain(los)),
+            None => Box::new(los),
+        });
         for &body in &self.occulting_bodies {
             let los = make_los(body);
             detector = Some(match detector {
@@ -1347,9 +1354,7 @@ mod tests {
         let spk = ephemeris();
         let space_assets = [sc1.clone(), sc2.clone()];
         let (scenario, ensemble) = make_scenario_and_ensemble(&[], &space_assets, interval);
-        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk)
-            .with_inter_satellite()
-            .with_occulting_bodies(vec![DynOrigin::Earth]);
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk).with_inter_satellite();
         let results = analysis.compute().unwrap();
         let intervals = results
             .intervals_for(sc1.id(), sc2.id())
@@ -1515,8 +1520,8 @@ mod tests {
 
         let spk = ephemeris();
 
-        // Without slew rate constraint: should have visibility (no other
-        // constraints → full interval returned).
+        // Without slew rate constraint: should have visibility (central body
+        // LOS is always applied but these LEO sats have mutual visibility).
         let sc1_no_limit = Spacecraft::new("ow12", OrbitSource::Trajectory(traj1.clone()));
         let sc2_no_limit = Spacecraft::new("ow17", OrbitSource::Trajectory(traj2.clone()));
         let space_assets = [sc1_no_limit.clone(), sc2_no_limit.clone()];
