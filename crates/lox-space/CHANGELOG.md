@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.38](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.37...lox-space-v0.1.0-alpha.38) - 2026-03-13
+
+### Added
+
+- *(lox-orbits)* add RAAN to constellation design tools
+
+### Fixed
+
+- *(lox-analysis)* always check for occultation by central body
+
 ## [0.1.0-alpha.37](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.36...lox-space-v0.1.0-alpha.37) - 2026-03-05
 
 ### Added
