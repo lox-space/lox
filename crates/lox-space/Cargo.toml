@@ -20,6 +20,7 @@ readme = "README.md"
 [lib]
 name = "lox_space"
 crate-type = ["lib", "cdylib"]
+test = false
 
 [dependencies]
 lox-test-utils.workspace = true
@@ -39,7 +40,6 @@ lox-units = { workspace = true, optional = true }
 glam = { workspace = true, optional = true }
 numpy = { workspace = true, optional = true }
 pyo3 = { workspace = true, optional = true }
-rayon = { workspace = true, optional = true }
 sgp4 = { workspace = true, optional = true }
 
 [dev-dependencies]
@@ -47,7 +47,6 @@ divan.workspace = true
 glam = { workspace = true, features = ["serde"] }
 lox-test-utils.workspace = true
 pyo3 = { workspace = true, features = ["auto-initialize"] }
-rstest.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 
@@ -104,7 +103,6 @@ python = [
   "dep:glam",
   "dep:numpy",
   "dep:pyo3",
-  "dep:rayon",
   "dep:sgp4",
 ]
 time = ["io", "math", "units", "dep:lox-time"]

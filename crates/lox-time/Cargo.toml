@@ -19,20 +19,15 @@ readme = "README.md"
 
 [dependencies]
 lox-core.workspace = true
-lox-derive.workspace = true
-lox-math.workspace = true
 lox-test-utils.workspace = true
-lox-units.workspace = true
 
 chrono = { workspace = true, optional = true }
 itertools.workspace = true
 num.workspace = true
-regex.workspace = true
 serde = { workspace = true, optional = true }
 thiserror.workspace = true
 
 [dev-dependencies]
-proptest.workspace = true
 rstest.workspace = true
 
 [features]
