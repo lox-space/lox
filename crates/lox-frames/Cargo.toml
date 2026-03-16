@@ -27,7 +27,6 @@ lox-units.workspace = true
 
 fast_polynomial.workspace = true
 glam.workspace = true
-hashbrown.workspace = true
 serde = { workspace = true, optional = true }
 thiserror.workspace = true
 
