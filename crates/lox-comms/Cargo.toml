@@ -22,10 +22,9 @@ lox-test-utils = { workspace = true, features = ["derive"] }
 
 glam.workspace = true
 serde = { workspace = true, optional = true }
-thiserror.workspace = true
 
 [features]
 serde = ["dep:serde", "lox-core/serde", "glam/serde"]
 
-[dev-dependencies]
-rstest.workspace = true
+[lib]
+doctest = false

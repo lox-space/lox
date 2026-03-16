@@ -687,7 +687,6 @@ dependencies = [
  "lox-test-utils",
  "lox-time",
  "rayon",
- "rstest",
  "serde",
  "thiserror",
 ]
@@ -696,11 +695,8 @@ dependencies = [
 name = "lox-bodies"
 version = "0.1.0-alpha.17"
 dependencies = [
- "fast_polynomial",
  "lox-core",
- "lox-math",
  "lox-test-utils",
- "lox-units",
  "num-derive",
  "num-traits",
  "rstest",
@@ -715,9 +711,7 @@ dependencies = [
  "glam 0.30.10",
  "lox-core",
  "lox-test-utils",
- "rstest",
  "serde",
- "thiserror",
 ]
 
 [[package]]
@@ -753,14 +747,12 @@ dependencies = [
  "csv",
  "fast_polynomial",
  "glam 0.30.10",
- "lox-bodies",
  "lox-core",
  "lox-frames",
  "lox-io",
  "lox-math",
  "lox-test-utils",
  "lox-time",
- "num",
  "rstest",
  "serde",
  "thiserror",
@@ -776,7 +768,6 @@ dependencies = [
  "lox-bodies",
  "lox-core",
  "lox-time",
- "lox-units",
  "nom",
  "serde",
  "thiserror",
@@ -790,7 +781,6 @@ dependencies = [
  "glam 0.30.10",
  "lox-bodies",
  "lox-core",
- "lox-math",
  "lox-test-utils",
  "lox-time",
  "lox-units",
@@ -803,13 +793,10 @@ dependencies = [
 name = "lox-io"
 version = "0.1.0-alpha.15"
 dependencies = [
- "csv",
  "lox-core",
  "lox-derive",
- "lox-math",
  "lox-test-utils",
  "lox-time",
- "lox-units",
  "nom",
  "quick-xml",
  "regex",
@@ -824,13 +811,7 @@ dependencies = [
 name = "lox-math"
 version = "0.1.0-alpha.15"
 dependencies = [
- "fast_polynomial",
- "glam 0.30.10",
  "lox-core",
- "lox-test-utils",
- "rstest",
- "serde",
- "thiserror",
 ]
 
 [[package]]
@@ -851,8 +832,6 @@ dependencies = [
  "lox-test-utils",
  "lox-time",
  "lox-units",
- "rayon",
- "rstest",
  "serde",
  "sgp4",
  "thiserror",
@@ -879,8 +858,6 @@ dependencies = [
  "lox-units",
  "numpy",
  "pyo3",
- "rayon",
- "rstest",
  "serde",
  "serde_json",
  "sgp4",
@@ -902,13 +879,8 @@ dependencies = [
  "chrono",
  "itertools",
  "lox-core",
- "lox-derive",
- "lox-math",
  "lox-test-utils",
- "lox-units",
  "num",
- "proptest",
- "regex",
  "rstest",
  "serde",
  "thiserror",
@@ -919,7 +891,6 @@ name = "lox-units"
 version = "0.1.0-alpha.7"
 dependencies = [
  "lox-core",
- "serde",
 ]
 
 [[package]]

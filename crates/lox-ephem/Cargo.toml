@@ -21,7 +21,6 @@ readme = "README.md"
 lox-bodies.workspace = true
 lox-core.workspace = true
 lox-time.workspace = true
-lox-units.workspace = true
 
 arrayvec.workspace = true
 glam.workspace = true
@@ -32,3 +31,6 @@ thiserror.workspace = true
 
 [features]
 serde = ["dep:serde", "lox-core/serde"]
+
+[lib]
+doctest = false

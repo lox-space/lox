@@ -18,7 +18,10 @@ readme = "README.md"
 
 [dependencies]
 lox-core.workspace = true
-serde = { workspace = true, optional = true }
 
 [features]
-serde = ["dep:serde", "lox-core/serde"]
+serde = ["lox-core/serde"]
+
+[lib]
+test = false
+doctest = false
