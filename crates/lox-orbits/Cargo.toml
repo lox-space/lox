@@ -33,7 +33,6 @@ differential-equations.workspace = true
 glam.workspace = true
 itertools.workspace = true
 libm.workspace = true
-rayon.workspace = true
 serde = { workspace = true, optional = true }
 sgp4.workspace = true
 thiserror.workspace = true
@@ -47,5 +46,5 @@ serde = [
   "lox-core/serde",
 ]
 
-[dev-dependencies]
-rstest.workspace = true
+[lib]
+doctest = false

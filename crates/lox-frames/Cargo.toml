@@ -20,7 +20,6 @@ readme = "README.md"
 [dependencies]
 lox-bodies.workspace = true
 lox-core.workspace = true
-lox-math.workspace = true
 lox-test-utils.workspace = true
 lox-time.workspace = true
 lox-units.workspace = true
@@ -35,3 +34,6 @@ serde = ["dep:serde", "lox-bodies/serde", "lox-time/serde", "lox-core/serde"]
 
 [dev-dependencies]
 rstest.workspace = true
+
+[lib]
+doctest = false

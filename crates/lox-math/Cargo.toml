@@ -20,15 +20,10 @@ readme = "README.md"
 
 [dependencies]
 lox-core.workspace = true
-lox-test-utils.workspace = true
-
-fast_polynomial.workspace = true
-glam.workspace = true
-serde = { workspace = true, optional = true }
-thiserror.workspace = true
 
 [features]
-serde = ["dep:serde", "lox-core/serde"]
+serde = ["lox-core/serde"]
 
-[dev-dependencies]
-rstest.workspace = true
+[lib]
+test = false
+doctest = false
