@@ -22,7 +22,7 @@ create_exception!(lox_space, NonFiniteTimeDeltaError, PyException);
 ///
 /// See Also:
 ///     Time: For representing instants in time.
-#[pyclass(name = "TimeDelta", module = "lox_space", frozen)]
+#[pyclass(name = "TimeDelta", module = "lox_space", frozen, from_py_object)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PyTimeDelta(pub TimeDelta);
 

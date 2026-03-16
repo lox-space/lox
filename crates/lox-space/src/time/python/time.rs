@@ -92,7 +92,7 @@ impl FromStr for PyUnit {
 /// See Also:
 ///     TimeDelta: For representing time differences.
 ///     UTC: For UTC time with leap second handling.
-#[pyclass(name = "Time", module = "lox_space", frozen)]
+#[pyclass(name = "Time", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone, Debug, Eq, PartialEq, ApproxEq)]
 pub struct PyTime(pub DynTime);
 

@@ -27,7 +27,7 @@ impl From<PySeriesError> for PyErr {
 ///
 /// Raises:
 ///     ValueError: If x and y have different lengths or x is not monotonic.
-#[pyclass(name = "Series", module = "lox_space", frozen)]
+#[pyclass(name = "Series", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PySeries(pub Series);
 

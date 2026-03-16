@@ -40,7 +40,7 @@ impl From<PyUtcError> for PyErr {
 ///
 /// See Also:
 ///     Time: For continuous astronomical time scales.
-#[pyclass(name = "UTC", module = "lox_space", frozen)]
+#[pyclass(name = "UTC", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone, Debug, Eq, PartialEq, ApproxEq)]
 pub struct PyUtc(pub Utc);
 

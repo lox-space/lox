@@ -33,7 +33,7 @@ impl From<PyUnknownTimeScaleError> for PyErr {
 /// Raises:
 ///     ValueError: If the abbreviation is not recognized.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
-#[pyclass(name = "TimeScale", module = "lox_space", frozen, eq)]
+#[pyclass(name = "TimeScale", module = "lox_space", frozen, eq, from_py_object)]
 pub struct PyTimeScale(pub DynTimeScale);
 
 #[pymethods]
