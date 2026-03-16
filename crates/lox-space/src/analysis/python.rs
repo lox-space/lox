@@ -67,17 +67,21 @@ pub struct PyGroundStation(pub GroundStation);
 #[pymethods]
 impl PyGroundStation {
     #[new]
-    #[pyo3(signature = (id, location, mask, body_fixed_frame=None, communication_systems=None))]
+    #[pyo3(signature = (id, location, mask, body_fixed_frame=None, network_id=None, communication_systems=None))]
     fn new(
         id: String,
         location: PyGroundLocation,
         mask: PyElevationMask,
         body_fixed_frame: Option<PyFrame>,
+        network_id: Option<String>,
         communication_systems: Option<Vec<PyCommunicationSystem>>,
     ) -> Self {
         let mut gs = GroundStation::new(id, location.0, mask.0);
         if let Some(frame) = body_fixed_frame {
             gs = gs.with_body_fixed_frame(frame.0);
+        }
+        if let Some(nid) = network_id {
+            gs = gs.with_network_id(nid);
         }
         if let Some(systems) = communication_systems {
             for system in systems {
@@ -100,6 +104,11 @@ impl PyGroundStation {
     /// Return the elevation mask.
     fn mask(&self) -> PyElevationMask {
         PyElevationMask(self.0.mask().clone())
+    }
+
+    /// Return the network identifier, if assigned.
+    fn network_id(&self) -> Option<String> {
+        self.0.network_id().map(|id| id.as_str().to_string())
     }
 
     /// Return the body-fixed frame.
@@ -164,17 +173,21 @@ pub struct PySpacecraft(pub Spacecraft);
 #[pymethods]
 impl PySpacecraft {
     #[new]
-    #[pyo3(signature = (id, orbit, max_slew_rate=None, communication_systems=None))]
+    #[pyo3(signature = (id, orbit, max_slew_rate=None, constellation_id=None, communication_systems=None))]
     fn new(
         id: String,
         orbit: &Bound<'_, PyAny>,
         max_slew_rate: Option<PyAngularRate>,
+        constellation_id: Option<String>,
         communication_systems: Option<Vec<PyCommunicationSystem>>,
     ) -> PyResult<Self> {
         let orbit_source = extract_orbit_source(orbit)?;
         let mut asset = Spacecraft::new(id, orbit_source);
         if let Some(rate) = max_slew_rate {
             asset = asset.with_max_slew_rate(rate.0);
+        }
+        if let Some(cid) = constellation_id {
+            asset = asset.with_constellation_id(cid);
         }
         if let Some(systems) = communication_systems {
             for system in systems {
@@ -187,6 +200,11 @@ impl PySpacecraft {
     /// Return the asset identifier.
     fn id(&self) -> String {
         self.0.id().as_str().to_string()
+    }
+
+    /// Return the constellation identifier, if assigned.
+    fn constellation_id(&self) -> Option<String> {
+        self.0.constellation_id().map(|id| id.as_str().to_string())
     }
 
     /// Return the maximum slew rate, if set.

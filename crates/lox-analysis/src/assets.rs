@@ -152,6 +152,11 @@ impl GroundStation {
         &self.mask
     }
 
+    /// Returns the network identifier, if assigned.
+    pub fn network_id(&self) -> Option<&NetworkId> {
+        self.network.as_ref()
+    }
+
     /// Returns the body-fixed reference frame.
     pub fn body_fixed_frame(&self) -> DynFrame {
         self.body_fixed_frame
@@ -215,6 +220,11 @@ impl Spacecraft {
     /// Returns the orbit source.
     pub fn orbit(&self) -> &OrbitSource {
         &self.orbit
+    }
+
+    /// Returns the constellation identifier, if assigned.
+    pub fn constellation_id(&self) -> Option<&ConstellationId> {
+        self.constellation.as_ref()
     }
 
     /// Returns the maximum slew rate, if set.
@@ -517,9 +527,16 @@ mod tests {
     }
 
     #[test]
+    fn test_ground_station_network_id_none_by_default() {
+        let gs = GroundStation::new("gs1", dummy_location(), dummy_mask());
+        assert!(gs.network_id().is_none());
+    }
+
+    #[test]
     fn test_ground_station_with_network_id() {
         let gs =
             GroundStation::new("gs1", dummy_location(), dummy_mask()).with_network_id("estrack");
+        assert_eq!(gs.network_id(), Some(&NetworkId::new("estrack")));
         // Verify network via filter_by_networks round-trip.
         let start = Time::j2000(Tai);
         let end = start + TimeDelta::from_seconds(86400);
@@ -556,6 +573,7 @@ mod tests {
         let sc = Spacecraft::new("sc1", OrbitSource::Trajectory(traj));
         assert_eq!(sc.id().as_str(), "sc1");
         assert!(sc.max_slew_rate().is_none());
+        assert!(sc.constellation_id().is_none());
     }
 
     #[test]
@@ -581,7 +599,7 @@ mod tests {
         .unwrap();
         let sc =
             Spacecraft::new("sc1", OrbitSource::Trajectory(traj)).with_constellation_id("oneweb");
-        let _ = sc;
+        assert_eq!(sc.constellation_id(), Some(&ConstellationId::new("oneweb")));
     }
 
     #[test]
