@@ -5,4 +5,4 @@
 pub use lox_comms::*;
 
 #[cfg(feature = "python")]
-pub(crate) mod python;
+pub mod python;

@@ -49,7 +49,7 @@ fn modulation_name(m: Modulation) -> &'static str {
 ///
 /// Args:
 ///     value: The value in dB.
-#[pyclass(name = "Decibel", module = "lox_space", frozen)]
+#[pyclass(name = "Decibel", module = "lox_space", frozen, from_py_object)]
 #[derive(Debug, Clone, Copy)]
 pub struct PyDecibel(pub Decibel);
 
@@ -119,7 +119,7 @@ impl PyDecibel {
 ///
 /// Args:
 ///     name: One of "BPSK", "QPSK", "8PSK", "16QAM", "32QAM", "64QAM", "128QAM", "256QAM".
-#[pyclass(name = "Modulation", module = "lox_space", frozen)]
+#[pyclass(name = "Modulation", module = "lox_space", frozen, from_py_object)]
 #[derive(Debug, Clone, Copy)]
 pub struct PyModulation(pub Modulation);
 
@@ -166,7 +166,12 @@ impl PyModulation {
 /// Args:
 ///     diameter: Antenna diameter as Distance.
 ///     efficiency: Aperture efficiency (0, 1].
-#[pyclass(name = "ParabolicPattern", module = "lox_space", frozen)]
+#[pyclass(
+    name = "ParabolicPattern",
+    module = "lox_space",
+    frozen,
+    from_py_object
+)]
 #[derive(Debug, Clone)]
 pub struct PyParabolicPattern(pub ParabolicPattern);
 
@@ -231,7 +236,7 @@ impl PyParabolicPattern {
 /// Args:
 ///     diameter: Antenna diameter as Distance.
 ///     efficiency: Aperture efficiency (0, 1].
-#[pyclass(name = "GaussianPattern", module = "lox_space", frozen)]
+#[pyclass(name = "GaussianPattern", module = "lox_space", frozen, from_py_object)]
 #[derive(Debug, Clone)]
 pub struct PyGaussianPattern(pub GaussianPattern);
 
@@ -280,7 +285,7 @@ impl PyGaussianPattern {
 ///
 /// Args:
 ///     length: Dipole length as Distance.
-#[pyclass(name = "DipolePattern", module = "lox_space", frozen)]
+#[pyclass(name = "DipolePattern", module = "lox_space", frozen, from_py_object)]
 #[derive(Debug, Clone)]
 pub struct PyDipolePattern(pub DipolePattern);
 
@@ -324,7 +329,7 @@ impl PyDipolePattern {
 /// Args:
 ///     gain: Peak gain as Decibel.
 ///     beamwidth: Half-power beamwidth as Angle.
-#[pyclass(name = "SimpleAntenna", module = "lox_space", frozen)]
+#[pyclass(name = "SimpleAntenna", module = "lox_space", frozen, from_py_object)]
 #[derive(Debug, Clone)]
 pub struct PySimpleAntenna {
     pub inner: SimpleAntenna,
@@ -365,7 +370,7 @@ impl PySimpleAntenna {
 /// Args:
 ///     pattern: An antenna pattern (ParabolicPattern, GaussianPattern, or DipolePattern).
 ///     boresight: Boresight direction as [x, y, z].
-#[pyclass(name = "ComplexAntenna", module = "lox_space", frozen)]
+#[pyclass(name = "ComplexAntenna", module = "lox_space", frozen, from_py_object)]
 #[derive(Debug, Clone)]
 pub struct PyComplexAntenna(pub ComplexAntenna);
 
@@ -594,7 +599,7 @@ fn build_receiver(obj: &Bound<'_, PyAny>) -> PyResult<Receiver> {
 ///     power: Transmit power.
 ///     line_loss: Feed/line loss as Decibel.
 ///     output_back_off: Output back-off as Decibel (default Decibel(0)).
-#[pyclass(name = "Transmitter", module = "lox_space", frozen)]
+#[pyclass(name = "Transmitter", module = "lox_space", frozen, from_py_object)]
 #[derive(Debug, Clone)]
 pub struct PyTransmitter(pub Transmitter);
 
@@ -656,7 +661,7 @@ impl PyTransmitter {
 /// Args:
 ///     frequency: Receive frequency.
 ///     system_noise_temperature: System noise temperature.
-#[pyclass(name = "SimpleReceiver", module = "lox_space", frozen)]
+#[pyclass(name = "SimpleReceiver", module = "lox_space", frozen, from_py_object)]
 #[derive(Debug, Clone)]
 pub struct PySimpleReceiver(pub SimpleReceiver);
 
@@ -702,7 +707,7 @@ impl PySimpleReceiver {
 ///     loss: Receiver chain loss as Decibel.
 ///     demodulator_loss: Demodulator loss as Decibel (default Decibel(0)).
 ///     implementation_loss: Other implementation losses as Decibel (default Decibel(0)).
-#[pyclass(name = "ComplexReceiver", module = "lox_space", frozen)]
+#[pyclass(name = "ComplexReceiver", module = "lox_space", frozen, from_py_object)]
 #[derive(Debug, Clone)]
 pub struct PyComplexReceiver(pub ComplexReceiver);
 
@@ -806,7 +811,7 @@ impl PyComplexReceiver {
 ///     modulation: Modulation scheme.
 ///     roll_off: Roll-off factor (default 1.5).
 ///     fec: Forward error correction code rate (default 0.5).
-#[pyclass(name = "Channel", module = "lox_space", frozen)]
+#[pyclass(name = "Channel", module = "lox_space", frozen, from_py_object)]
 #[derive(Debug, Clone)]
 pub struct PyChannel(pub Channel);
 
@@ -917,7 +922,12 @@ impl PyChannel {
 ///     atmospheric: Atmospheric loss as Decibel (default Decibel(0)).
 ///     cloud: Cloud attenuation as Decibel (default Decibel(0)).
 ///     depolarization: Depolarization loss as Decibel (default Decibel(0)).
-#[pyclass(name = "EnvironmentalLosses", module = "lox_space", frozen)]
+#[pyclass(
+    name = "EnvironmentalLosses",
+    module = "lox_space",
+    frozen,
+    from_py_object
+)]
 #[derive(Debug, Clone)]
 pub struct PyEnvironmentalLosses(pub EnvironmentalLosses);
 
@@ -999,7 +1009,12 @@ impl PyEnvironmentalLosses {
 ///     antenna: A SimpleAntenna or ComplexAntenna.
 ///     receiver: A SimpleReceiver or ComplexReceiver (optional).
 ///     transmitter: A Transmitter (optional).
-#[pyclass(name = "CommunicationSystem", module = "lox_space", frozen)]
+#[pyclass(
+    name = "CommunicationSystem",
+    module = "lox_space",
+    frozen,
+    from_py_object
+)]
 #[derive(Debug, Clone)]
 pub struct PyCommunicationSystem(pub CommunicationSystem);
 
@@ -1164,7 +1179,7 @@ impl PyCommunicationSystem {
 // --- Link Stats ---
 
 /// Complete link budget statistics.
-#[pyclass(name = "LinkStats", module = "lox_space", frozen)]
+#[pyclass(name = "LinkStats", module = "lox_space", frozen, from_py_object)]
 #[derive(Debug, Clone)]
 pub struct PyLinkStats(pub LinkStats);
 

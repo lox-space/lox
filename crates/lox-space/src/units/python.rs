@@ -25,7 +25,7 @@ fn repr_f64(v: f64) -> String {
 macro_rules! py_unit {
     ($(($unit:ident, $name:literal, $pyunit:ident $(, { $($extra:tt)* })?)),*) => {
         $(
-            #[pyclass(name = $name, module = "lox_space", frozen)]
+            #[pyclass(name = $name, module = "lox_space", frozen, from_py_object)]
             #[derive(Clone, Copy)]
             pub struct $pyunit(pub $unit);
 
@@ -220,7 +220,12 @@ use lox_core::elements::GravitationalParameter;
 ///
 /// Args:
 ///     value: The value in m³/s².
-#[pyclass(name = "GravitationalParameter", module = "lox_space", frozen)]
+#[pyclass(
+    name = "GravitationalParameter",
+    module = "lox_space",
+    frozen,
+    from_py_object
+)]
 #[derive(Clone, Copy)]
 pub struct PyGravitationalParameter(pub GravitationalParameter);
 

@@ -281,7 +281,7 @@ pub fn py_complement_intervals(intervals: Vec<PyInterval>, bound: PyInterval) ->
 ///     vx, vy, vz: Individual velocity components as Velocity (alternative to velocity).
 ///     origin: Central body (default: Earth).
 ///     frame: Reference frame (default: ICRF).
-#[pyclass(name = "Cartesian", module = "lox_space", frozen)]
+#[pyclass(name = "Cartesian", module = "lox_space", frozen, from_py_object)]
 #[derive(Debug, Clone)]
 pub struct PyCartesian(pub DynCartesianOrbit);
 
@@ -984,7 +984,7 @@ impl PyKeplerian {
 ///
 /// Args:
 ///     states: List of State objects in chronological order.
-#[pyclass(name = "Trajectory", module = "lox_space", frozen)]
+#[pyclass(name = "Trajectory", module = "lox_space", frozen, from_py_object)]
 #[derive(Debug, Clone)]
 pub struct PyTrajectory(pub DynTrajectory);
 
@@ -1226,7 +1226,7 @@ impl PyTrajectory {
 /// Args:
 ///     time: The time of the event.
 ///     crossing: The crossing direction ("up" or "down").
-#[pyclass(name = "Event", module = "lox_space", frozen)]
+#[pyclass(name = "Event", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyEvent(pub Event<DynTimeScale>);
 
@@ -1273,7 +1273,7 @@ impl PyEvent {
 /// Args:
 ///     start: The start time of the interval.
 ///     end: The end time of the interval.
-#[pyclass(name = "Interval", module = "lox_space", frozen)]
+#[pyclass(name = "Interval", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyInterval(pub TimeInterval<DynTimeScale>);
 
@@ -1376,7 +1376,7 @@ impl PyInterval {
 /// Args:
 ///     initial_state: Initial orbital state (must be in an inertial frame).
 ///     max_iter: Maximum iterations for Kepler's equation solver (default: 50).
-#[pyclass(name = "Vallado", module = "lox_space", frozen)]
+#[pyclass(name = "Vallado", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyVallado(pub DynVallado);
 
@@ -1469,7 +1469,7 @@ impl From<PyJ2Error> for PyErr {
 ///     h_max: Maximum step size in seconds (default: auto from orbital timescale).
 ///     h_min: Minimum step size in seconds (default: 1e-6).
 ///     max_steps: Maximum number of integration steps (default: 100000).
-#[pyclass(name = "J2", module = "lox_space", frozen)]
+#[pyclass(name = "J2", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone)]
 pub struct PyJ2Propagator(pub DynJ2Propagator);
 
@@ -1561,7 +1561,7 @@ impl PyJ2Propagator {
 ///     longitude: Geodetic longitude as Angle.
 ///     latitude: Geodetic latitude as Angle.
 ///     altitude: Altitude above the reference ellipsoid as Distance.
-#[pyclass(name = "GroundLocation", module = "lox_space", frozen)]
+#[pyclass(name = "GroundLocation", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyGroundLocation(pub DynGroundLocation);
 
@@ -1739,7 +1739,7 @@ impl PyGroundPropagator {
 ///
 /// Args:
 ///     tle: TLE as a string (2 or 3 lines) or a list of 2–3 strings.
-#[pyclass(name = "TLE", module = "lox_space", frozen)]
+#[pyclass(name = "TLE", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone)]
 pub struct PyTle {
     elements: Elements,
@@ -1905,7 +1905,7 @@ impl From<PySgp4Error> for PyErr {
 ///
 /// Args:
 ///     tle: TLE object, string (2 or 3 lines), or list of 2–3 strings.
-#[pyclass(name = "SGP4", module = "lox_space", frozen)]
+#[pyclass(name = "SGP4", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone)]
 pub struct PySgp4 {
     pub inner: Sgp4,

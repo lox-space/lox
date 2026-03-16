@@ -44,4 +44,4 @@ pub mod units;
 pub mod prelude;
 
 #[cfg(feature = "python")]
-pub(crate) mod python;
+pub mod python;

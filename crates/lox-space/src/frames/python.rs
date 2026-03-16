@@ -54,7 +54,7 @@ impl From<PyDynRotationError> for PyErr {
 ///
 /// Raises:
 ///     ValueError: If the frame abbreviation is not recognized.
-#[pyclass(name = "Frame", module = "lox_space", frozen)]
+#[pyclass(name = "Frame", module = "lox_space", frozen, from_py_object)]
 #[pyo3(eq)]
 #[derive(Debug, Clone, Default, Eq, PartialEq)]
 pub struct PyFrame(pub DynFrame);

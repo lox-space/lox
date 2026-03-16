@@ -52,7 +52,7 @@ impl From<PyUnknownOriginName> for PyErr {
 /// Raises:
 ///     ValueError: If the origin name or ID is not recognized.
 ///     TypeError: If the argument is neither a string nor an integer.
-#[pyclass(name = "Origin", module = "lox_space", frozen, eq)]
+#[pyclass(name = "Origin", module = "lox_space", frozen, eq, from_py_object)]
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct PyOrigin(pub DynOrigin);
 

@@ -60,7 +60,7 @@ impl From<PyElevationMaskError> for PyErr {
 ///     location: Ground station location.
 ///     mask: Elevation mask defining minimum elevation constraints.
 ///     communication_systems: Optional list of communication systems.
-#[pyclass(name = "GroundStation", module = "lox_space", frozen)]
+#[pyclass(name = "GroundStation", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyGroundStation(pub GroundStation);
 
@@ -157,7 +157,7 @@ fn extract_orbit_source(obj: &Bound<'_, PyAny>) -> PyResult<OrbitSource> {
 ///     max_slew_rate: Optional maximum slew rate (angular rate) for this
 ///         spacecraft's antenna/gimbal.
 ///     communication_systems: Optional list of communication systems.
-#[pyclass(name = "Spacecraft", module = "lox_space", frozen)]
+#[pyclass(name = "Spacecraft", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PySpacecraft(pub Spacecraft);
 
@@ -215,7 +215,7 @@ impl PySpacecraft {
 ///     end: End time of the scenario.
 ///     spacecraft: List of Spacecraft objects.
 ///     ground_stations: List of GroundStation objects.
-#[pyclass(name = "Scenario", module = "lox_space", frozen)]
+#[pyclass(name = "Scenario", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyScenario(pub DynScenario);
 
@@ -288,7 +288,7 @@ impl PyScenario {
 }
 
 /// A collection of propagated trajectories keyed by spacecraft id.
-#[pyclass(name = "Ensemble", module = "lox_space", frozen)]
+#[pyclass(name = "Ensemble", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyEnsemble(pub Ensemble<AssetId, Tai, DynOrigin, DynFrame>);
 
@@ -716,7 +716,13 @@ impl PyVisibilityResults {
 ///     azimuth: Array of azimuth angles in radians (for variable mask).
 ///     elevation: Array of minimum elevations in radians (for variable mask).
 ///     min_elevation: Fixed minimum elevation in radians.
-#[pyclass(name = "ElevationMask", module = "lox_space", frozen, eq)]
+#[pyclass(
+    name = "ElevationMask",
+    module = "lox_space",
+    frozen,
+    eq,
+    from_py_object
+)]
 #[derive(Debug, Clone, PartialEq)]
 pub struct PyElevationMask(pub ElevationMask);
 
@@ -846,7 +852,7 @@ impl PyElevationMask {
 ///     elevation: Elevation angle as Angle.
 ///     range: Distance to target as Distance.
 ///     range_rate: Rate of change of range as Velocity.
-#[pyclass(name = "Observables", module = "lox_space", frozen)]
+#[pyclass(name = "Observables", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyObservables(pub Observables);
 
@@ -902,7 +908,7 @@ impl PyObservables {
 ///
 /// A Pass contains the visibility interval (start and end times) along with
 /// observables computed at regular intervals throughout the pass.
-#[pyclass(name = "Pass", module = "lox_space", frozen)]
+#[pyclass(name = "Pass", module = "lox_space", frozen, from_py_object)]
 #[derive(Debug, Clone)]
 pub struct PyPass(pub DynPass);
 
