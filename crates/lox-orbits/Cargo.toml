@@ -31,7 +31,6 @@ lox-units.workspace = true
 csv.workspace = true
 differential-equations.workspace = true
 glam.workspace = true
-hashbrown.workspace = true
 itertools.workspace = true
 libm.workspace = true
 rayon.workspace = true
