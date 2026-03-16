@@ -541,6 +541,28 @@ class TestAssets:
         sc = lox.Spacecraft("test", sgp4, max_slew_rate=5 * lox.deg_per_s)
         assert sc.max_slew_rate() is not None
 
+    def test_ground_station_network_id_none(self, ground_assets):
+        assert ground_assets[0].network_id() is None
+
+    def test_ground_station_network_id_set(self):
+        loc = lox.GroundLocation(
+            origin=lox.Origin("Earth"),
+            longitude=0 * lox.deg,
+            latitude=0 * lox.deg,
+            altitude=0 * lox.km,
+        )
+        mask = lox.ElevationMask.fixed(0 * lox.deg)
+        gs = lox.GroundStation("test", loc, mask, network_id="estrack")
+        assert gs.network_id() == "estrack"
+
+    def test_spacecraft_constellation_id_none(self, space_assets):
+        assert space_assets[0].constellation_id() is None
+
+    def test_spacecraft_constellation_id_set(self, oneweb_subset):
+        sgp4 = next(iter(oneweb_subset.values()))
+        sc = lox.Spacecraft("test", sgp4, constellation_id="oneweb")
+        assert sc.constellation_id() == "oneweb"
+
 
 # ---------------------------------------------------------------------------
 # Scenario & Ensemble
