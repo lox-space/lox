@@ -331,6 +331,7 @@ class GroundStation:
         location: GroundLocation,
         mask: ElevationMask,
         body_fixed_frame: Frame | None = None,
+        network_id: str | None = None,
         communication_systems: list[CommunicationSystem] | None = None,
     ) -> Self: ...
     def id(self) -> str:
@@ -341,6 +342,9 @@ class GroundStation:
         ...
     def mask(self) -> ElevationMask:
         """Return the elevation mask."""
+        ...
+    def network_id(self) -> str | None:
+        """Return the network identifier, if assigned."""
         ...
     def body_fixed_frame(self) -> Frame:
         """Return the body-fixed frame."""
@@ -371,10 +375,14 @@ class Spacecraft:
         id: str,
         orbit: SGP4 | Vallado | J2 | Trajectory,
         max_slew_rate: AngularRate | None = None,
+        constellation_id: str | None = None,
         communication_systems: list[CommunicationSystem] | None = None,
     ) -> Self: ...
     def id(self) -> str:
         """Return the asset identifier."""
+        ...
+    def constellation_id(self) -> str | None:
+        """Return the constellation identifier, if assigned."""
         ...
     def max_slew_rate(self) -> AngularRate | None:
         """Return the maximum slew rate, if set."""
