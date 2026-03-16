@@ -38,7 +38,12 @@ fn parse_propagator(s: &str) -> PyResult<ConstellationPropagator> {
 }
 
 /// A single satellite in a constellation.
-#[pyclass(name = "ConstellationSatellite", module = "lox_space", frozen)]
+#[pyclass(
+    name = "ConstellationSatellite",
+    module = "lox_space",
+    frozen,
+    from_py_object
+)]
 #[derive(Clone, Debug)]
 pub struct PyConstellationSatellite(pub RustConstellationSatellite);
 
@@ -65,7 +70,7 @@ impl PyConstellationSatellite {
 }
 
 /// A named collection of satellites produced by a constellation design algorithm.
-#[pyclass(name = "Constellation", module = "lox_space", frozen)]
+#[pyclass(name = "Constellation", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyConstellation(pub DynConstellation);
 
