@@ -7,6 +7,8 @@
 #
 #    maturin generate-ci github -m crates/lox-space/Cargo.toml -o .github/workflows/python.yml --pytest
 #
+# NOTE: Path filters and concurrency group were added manually.
+# Re-running `maturin generate-ci` will overwrite these changes.
 name: Python
 
 on:
@@ -17,7 +19,16 @@ on:
     tags:
       - 'lox-space-*'
   pull_request:
+    paths:
+      - 'crates/lox-space/**'
+      - 'crates/lox-*/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
 
 permissions:
   contents: read

@@ -7,8 +7,16 @@ name: CodSpeed
 on:
   push:
     branches:
-      - main # Run on pushes to the main branch
-  pull_request: # Run on all pull requests
+      - main
+  pull_request:
+    paths:
+      - 'crates/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
 
 env:
   UV_PROJECT: crates/lox-space
