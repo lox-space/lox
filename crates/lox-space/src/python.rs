@@ -40,10 +40,10 @@ use crate::units::{
 
 use pyo3::prelude::*;
 
-// LCOV_EXCL_START - PyO3 module initialization cannot be directly tested.
-// See: https://github.com/rust-lang/rust/issues/84605
-#[pymodule]
-fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
+/// Register all lox-space Python types, functions, and constants into the given module.
+///
+/// This can be used to embed all Lox types into a downstream Python extension module.
+pub fn register_types(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // bodies
     m.add_class::<PyOrigin>()?;
 
@@ -159,5 +159,12 @@ fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("km_per_s", PyVelocity::new(1e3))?;
 
     Ok(())
+}
+
+// LCOV_EXCL_START - PyO3 module initialization cannot be directly tested.
+// See: https://github.com/rust-lang/rust/issues/84605
+#[pymodule]
+fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    register_types(m)
 }
 // LCOV_EXCL_STOP
