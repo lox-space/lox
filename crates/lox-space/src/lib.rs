@@ -38,6 +38,25 @@ pub mod orbits;
 #[cfg(feature = "time")]
 pub mod time;
 
+// Re-export lox_time macros so users can write `lox_space::time!` / `lox_space::utc!`.
+#[cfg(feature = "time")]
+#[macro_export]
+macro_rules! time {
+    ($($args:tt)*) => { $crate::__private_time!($($args)*) };
+}
+#[cfg(feature = "time")]
+#[doc(hidden)]
+pub use lox_time::time as __private_time;
+
+#[cfg(feature = "time")]
+#[macro_export]
+macro_rules! utc {
+    ($($args:tt)*) => { $crate::__private_utc!($($args)*) };
+}
+#[cfg(feature = "time")]
+#[doc(hidden)]
+pub use lox_time::utc as __private_utc;
+
 #[cfg(feature = "units")]
 pub mod units;
 

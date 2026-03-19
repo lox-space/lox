@@ -246,22 +246,24 @@ impl UtcBuilder {
 #[macro_export]
 macro_rules! utc {
     ($year:literal, $month:literal, $day:literal) => {
-        Utc::builder().with_ymd($year, $month, $day).build()
+        $crate::utc::Utc::builder()
+            .with_ymd($year, $month, $day)
+            .build()
     };
     ($year:literal, $month:literal, $day:literal, $hour:literal) => {
-        Utc::builder()
+        $crate::utc::Utc::builder()
             .with_ymd($year, $month, $day)
             .with_hms($hour, 0, 0.0)
             .build()
     };
     ($year:literal, $month:literal, $day:literal, $hour:literal, $minute:literal) => {
-        Utc::builder()
+        $crate::utc::Utc::builder()
             .with_ymd($year, $month, $day)
             .with_hms($hour, $minute, 0.0)
             .build()
     };
     ($year:literal, $month:literal, $day:literal, $hour:literal, $minute:literal, $second:literal) => {
-        Utc::builder()
+        $crate::utc::Utc::builder()
             .with_ymd($year, $month, $day)
             .with_hms($hour, $minute, $second)
             .build()
