@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::analysis::assets::{AssetId, ConstellationId, DynScenario, GroundStation, Spacecraft};
 use crate::analysis::power::{
@@ -351,9 +351,9 @@ impl PyEnsemble {
 ///         detection.
 ///     inter_satellite: If True, also compute inter-satellite visibility
 ///         for all unique spacecraft pairs (default: False).
-///     inter_satellite_pairs: Optional list of specific spacecraft pairs to
-///         evaluate. Pair order does not matter. When provided, inter-satellite
-///         visibility is limited to these pairs.
+///     filter: Optional callable that receives two Spacecraft objects and
+///         returns True if the pair should be evaluated. Called once per
+///         candidate pair before the parallel computation phase.
 ///     min_range: Optional minimum range constraint for inter-satellite pairs.
 ///     max_range: Optional maximum range constraint for inter-satellite pairs.
 #[pyclass(name = "VisibilityAnalysis", module = "lox_space", frozen)]
@@ -364,7 +364,7 @@ pub struct PyVisibilityAnalysis {
     step: TimeDelta,
     min_pass_duration: Option<TimeDelta>,
     inter_satellite: bool,
-    inter_satellite_pairs: Option<Vec<(AssetId, AssetId)>>,
+    filter: Option<Py<PyAny>>,
     min_range: Option<Distance>,
     max_range: Option<Distance>,
 }
@@ -372,16 +372,17 @@ pub struct PyVisibilityAnalysis {
 #[pymethods]
 impl PyVisibilityAnalysis {
     #[new]
-    #[pyo3(signature = (scenario, ensemble=None, occulting_bodies=None, step=None, min_pass_duration=None, inter_satellite=false, inter_satellite_pairs=None, min_range=None, max_range=None))]
+    #[pyo3(signature = (scenario, ensemble=None, occulting_bodies=None, step=None, min_pass_duration=None, inter_satellite=false, filter=None, min_range=None, max_range=None))]
     #[allow(clippy::too_many_arguments)]
     fn new(
+        py: Python<'_>,
         scenario: PyScenario,
         ensemble: Option<PyEnsemble>,
         occulting_bodies: Option<Vec<Bound<'_, PyAny>>>,
         step: Option<PyTimeDelta>,
         min_pass_duration: Option<PyTimeDelta>,
         inter_satellite: bool,
-        inter_satellite_pairs: Option<Vec<(String, String)>>,
+        filter: Option<Py<PyAny>>,
         min_range: Option<PyDistance>,
         max_range: Option<PyDistance>,
     ) -> PyResult<Self> {
@@ -390,12 +391,11 @@ impl PyVisibilityAnalysis {
             .iter()
             .map(|b| Ok(PyOrigin::try_from(b)?.0))
             .collect::<PyResult<_>>()?;
-        let inter_satellite_pairs = inter_satellite_pairs.map(|pairs| {
-            pairs
-                .into_iter()
-                .map(|(id1, id2)| (AssetId::new(id1), AssetId::new(id2)))
-                .collect()
-        });
+        if let Some(ref filter) = filter
+            && !filter.bind(py).is_callable()
+        {
+            return Err(PyValueError::new_err("filter must be callable"));
+        }
         Ok(Self {
             scenario: scenario.0,
             ensemble: ensemble.map(|e| e.0),
@@ -405,7 +405,7 @@ impl PyVisibilityAnalysis {
                 .unwrap_or_else(|| TimeDelta::from_seconds_f64(60.0)),
             min_pass_duration: min_pass_duration.map(|d| d.0),
             inter_satellite,
-            inter_satellite_pairs,
+            filter,
             min_range: min_range.map(|d| d.0),
             max_range: max_range.map(|d| d.0),
         })
@@ -445,9 +445,31 @@ impl PyVisibilityAnalysis {
         let occulting_bodies = self.occulting_bodies.clone();
         let min_pass_duration = self.min_pass_duration;
         let inter_satellite = self.inter_satellite;
-        let inter_satellite_pairs = self.inter_satellite_pairs.clone();
         let min_range = self.min_range;
         let max_range = self.max_range;
+
+        // Eagerly evaluate the Python filter while we still hold the GIL,
+        // collecting the matching spacecraft IDs into a plain set that can
+        // cross into the GIL-free parallel section.
+        let accepted_pairs: Option<HashSet<(AssetId, AssetId)>> =
+            if let Some(ref filter) = self.filter {
+                let spacecraft = scenario.spacecraft();
+                let n = spacecraft.len();
+                let mut set = HashSet::new();
+                for i in 0..n {
+                    for j in (i + 1)..n {
+                        let py_sc1 = PySpacecraft(spacecraft[i].clone());
+                        let py_sc2 = PySpacecraft(spacecraft[j].clone());
+                        let accept: bool = filter.call1(py, (py_sc1, py_sc2))?.extract(py)?;
+                        if accept {
+                            set.insert((spacecraft[i].id().clone(), spacecraft[j].id().clone()));
+                        }
+                    }
+                }
+                Some(set)
+            } else {
+                None
+            };
 
         let results = py.detach(|| {
             let mut analysis = VisibilityAnalysis::new(scenario, ensemble, ephemeris)
@@ -456,8 +478,10 @@ impl PyVisibilityAnalysis {
             if let Some(mpd) = min_pass_duration {
                 analysis = analysis.with_min_pass_duration(mpd);
             }
-            if let Some(pairs) = inter_satellite_pairs {
-                analysis = analysis.with_inter_satellite_pairs(&pairs);
+            if let Some(ref accepted) = accepted_pairs {
+                analysis = analysis.with_filter(|sc1, sc2| {
+                    accepted.contains(&(sc1.id().clone(), sc2.id().clone()))
+                });
             } else if inter_satellite {
                 analysis = analysis.with_inter_satellite();
             }
@@ -481,10 +505,9 @@ impl PyVisibilityAnalysis {
     fn __repr__(&self) -> String {
         let sc_count = self.scenario.spacecraft().len();
         let gs_count = self.scenario.ground_stations().len();
-        if let Some(pairs) = &self.inter_satellite_pairs {
+        if self.filter.is_some() {
             format!(
-                "VisibilityAnalysis({gs_count} ground assets, {sc_count} space assets, inter_satellite_pairs={})",
-                pairs.len(),
+                "VisibilityAnalysis({gs_count} ground assets, {sc_count} space assets, filter=True)",
             )
         } else if self.inter_satellite {
             format!(

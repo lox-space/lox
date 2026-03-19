@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use lox_bodies::{DynOrigin, Origin, TryMeanRadius, TrySpheroid, UndefinedOriginPropertyError};
 use lox_core::glam::DVec3;
@@ -549,15 +549,7 @@ pub enum PairType {
 
 type IntervalMap = HashMap<(AssetId, AssetId), Vec<TimeInterval<Tai>>>;
 type PairTypeMap = HashMap<(AssetId, AssetId), PairType>;
-type InterSatellitePairSet = HashSet<(AssetId, AssetId)>;
-
-fn normalize_pair_ids(id1: &AssetId, id2: &AssetId) -> (AssetId, AssetId) {
-    if id1.as_str() <= id2.as_str() {
-        (id1.clone(), id2.clone())
-    } else {
-        (id2.clone(), id1.clone())
-    }
-}
+type PairFilter<'a> = Box<dyn Fn(&Spacecraft, &Spacecraft) -> bool + Send + Sync + 'a>;
 
 /// Stores raw visibility intervals per asset pair.
 ///
@@ -698,7 +690,7 @@ pub struct VisibilityAnalysis<'a, O: Origin, R: ReferenceFrame, E> {
     step: TimeDelta,
     min_pass_duration: Option<TimeDelta>,
     inter_satellite: bool,
-    inter_satellite_pairs: Option<InterSatellitePairSet>,
+    filter: Option<PairFilter<'a>>,
     min_range: Option<Distance>,
     max_range: Option<Distance>,
 }
@@ -729,7 +721,7 @@ where
             step: TimeDelta::from_seconds(60),
             min_pass_duration: None,
             inter_satellite: false,
-            inter_satellite_pairs: None,
+            filter: None,
             min_range: None,
             max_range: None,
         }
@@ -738,24 +730,21 @@ where
     /// Enables inter-satellite visibility computation.
     pub fn with_inter_satellite(mut self) -> Self {
         self.inter_satellite = true;
-        self.inter_satellite_pairs = None;
+        self.filter = None;
         self
     }
 
-    /// Restrict inter-satellite visibility to the specified spacecraft pairs.
+    /// Enables inter-satellite visibility with a pre-filter.
     ///
-    /// Pair order is ignored, so `(a, b)` and `(b, a)` are treated identically.
-    /// Self-pairs and pairs whose spacecraft are not present in the scenario are
-    /// ignored at compute time.
-    pub fn with_inter_satellite_pairs(mut self, pairs: &[(AssetId, AssetId)]) -> Self {
+    /// The filter is called once per candidate pair during pair enumeration,
+    /// before the parallel computation phase. Only pairs for which the filter
+    /// returns `true` are evaluated.
+    pub fn with_filter(
+        mut self,
+        filter: impl Fn(&Spacecraft, &Spacecraft) -> bool + Send + Sync + 'a,
+    ) -> Self {
         self.inter_satellite = true;
-        self.inter_satellite_pairs = Some(
-            pairs
-                .iter()
-                .filter(|(id1, id2)| id1 != id2)
-                .map(|(id1, id2)| normalize_pair_ids(id1, id2))
-                .collect(),
-        );
+        self.filter = Some(Box::new(filter));
         self
     }
 
@@ -798,10 +787,8 @@ where
         self.step
     }
 
-    fn includes_inter_satellite_pair(&self, id1: &AssetId, id2: &AssetId) -> bool {
-        self.inter_satellite_pairs
-            .as_ref()
-            .is_none_or(|pairs| pairs.contains(&normalize_pair_ids(id1, id2)))
+    fn includes_inter_satellite_pair(&self, sc1: &Spacecraft, sc2: &Spacecraft) -> bool {
+        self.filter.as_ref().is_none_or(|filter| filter(sc1, sc2))
     }
 
     /// Apply `min_pass_duration` → `coarse_step` conversion to a detector.
@@ -1045,7 +1032,7 @@ where
         let mut pairs: Vec<(usize, usize)> = Vec::with_capacity(n * (n - 1) / 2);
         for i in 0..n {
             for j in (i + 1)..n {
-                if self.includes_inter_satellite_pair(spacecraft[i].id(), spacecraft[j].id()) {
+                if self.includes_inter_satellite_pair(&spacecraft[i], &spacecraft[j]) {
                     pairs.push((i, j));
                 }
             }
@@ -1417,7 +1404,7 @@ mod tests {
     }
 
     #[test]
-    fn test_inter_satellite_visibility_selected_pairs_only() {
+    fn test_inter_satellite_visibility_with_filter() {
         let sc_traj = spacecraft_trajectory_dyn();
         let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
         let sc1 = Spacecraft::new("sc1", OrbitSource::Trajectory(sc_traj.clone()));
@@ -1426,10 +1413,12 @@ mod tests {
         let spk = ephemeris();
         let space_assets = [sc1.clone(), sc2.clone(), sc3.clone()];
         let (scenario, ensemble) = make_scenario_and_ensemble(&[], &space_assets, interval);
-        let selected_pairs = vec![(sc3.id().clone(), sc1.id().clone())];
 
-        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk)
-            .with_inter_satellite_pairs(&selected_pairs);
+        let analysis =
+            VisibilityAnalysis::new(&scenario, &ensemble, spk).with_filter(|sc_a, sc_b| {
+                let ids = [sc_a.id().as_str(), sc_b.id().as_str()];
+                ids.contains(&"sc1") && ids.contains(&"sc3")
+            });
         let results = analysis.compute().unwrap();
 
         assert_eq!(results.num_pairs(), 1);
@@ -1439,7 +1428,7 @@ mod tests {
     }
 
     #[test]
-    fn test_inter_satellite_visibility_selected_pairs_combined_with_ground_space() {
+    fn test_inter_satellite_visibility_filter_combined_with_ground_space() {
         let gs_loc = location_dyn();
         let mask = ElevationMask::with_fixed_elevation(0.0);
         let gs = GroundStation::new("cebreros", gs_loc, mask);
@@ -1454,10 +1443,12 @@ mod tests {
         let space_assets = [sc1.clone(), sc2.clone(), sc3.clone()];
         let (scenario, ensemble) =
             make_scenario_and_ensemble(&ground_assets, &space_assets, interval);
-        let selected_pairs = vec![(sc1.id().clone(), sc2.id().clone())];
 
-        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk)
-            .with_inter_satellite_pairs(&selected_pairs);
+        let analysis =
+            VisibilityAnalysis::new(&scenario, &ensemble, spk).with_filter(|sc_a, sc_b| {
+                let ids = [sc_a.id().as_str(), sc_b.id().as_str()];
+                ids.contains(&"sc1") && ids.contains(&"sc2")
+            });
         let results = analysis.compute().unwrap();
 
         assert_eq!(results.num_pairs(), space_assets.len() + 1);
