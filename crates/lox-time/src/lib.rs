@@ -45,6 +45,8 @@ pub mod intervals;
 pub mod julian_dates;
 /// Time scale offset computation.
 pub mod offsets;
+/// Time-indexed interpolation series.
+pub mod series;
 /// Sub-second precision types (re-exported from `lox-core`).
 pub mod subsecond;
 /// The [`Time`] type representing an instant in a continuous time scale.

@@ -4,6 +4,8 @@
 
 //! Interpolated data series with linear and cubic spline support.
 
+use std::fmt;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use fast_polynomial::poly_array;
@@ -51,11 +53,38 @@ pub struct Series {
 }
 
 /// Selects the interpolation method for a [`Series`].
+#[derive(Clone, Debug, PartialEq)]
 pub enum InterpolationType {
     /// Linear interpolation.
     Linear,
     /// Natural cubic spline interpolation (falls back to linear if fewer than 4 points).
     CubicSpline,
+}
+
+/// Error returned when parsing an unknown interpolation type string.
+#[derive(Clone, Debug, Error, PartialEq)]
+#[error("unknown interpolation type: \"{0}\"")]
+pub struct UnknownInterpolationType(String);
+
+impl FromStr for InterpolationType {
+    type Err = UnknownInterpolationType;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "linear" => Ok(Self::Linear),
+            "cubic" => Ok(Self::CubicSpline),
+            _ => Err(UnknownInterpolationType(s.to_owned())),
+        }
+    }
+}
+
+impl fmt::Display for InterpolationType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Linear => write!(f, "linear"),
+            Self::CubicSpline => write!(f, "cubic"),
+        }
+    }
 }
 
 impl Series {
@@ -373,5 +402,25 @@ mod tests {
         #[case] expected: Result<Series, SeriesError>,
     ) {
         assert_eq!(actual, expected);
+    }
+
+    #[rstest]
+    #[case("linear", InterpolationType::Linear)]
+    #[case("cubic", InterpolationType::CubicSpline)]
+    fn test_interpolation_type_from_str(#[case] input: &str, #[case] expected: InterpolationType) {
+        assert_eq!(input.parse::<InterpolationType>().unwrap(), expected);
+    }
+
+    #[test]
+    fn test_interpolation_type_from_str_unknown() {
+        let err = "quadratic".parse::<InterpolationType>().unwrap_err();
+        assert_eq!(err.to_string(), "unknown interpolation type: \"quadratic\"");
+    }
+
+    #[rstest]
+    #[case(InterpolationType::Linear, "linear")]
+    #[case(InterpolationType::CubicSpline, "cubic")]
+    fn test_interpolation_type_display(#[case] input: InterpolationType, #[case] expected: &str) {
+        assert_eq!(input.to_string(), expected);
     }
 }
