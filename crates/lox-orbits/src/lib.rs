@@ -8,7 +8,7 @@
 
 //! Orbit representations, propagators, ground stations, constellations, and event detection.
 
-pub use glam::DVec3;
+pub use lox_core::glam::DVec3;
 
 /// Satellite constellation builders (Walker, Flower, Street of Coverage).
 pub mod constellations;

@@ -4,9 +4,9 @@
 
 use std::num::ParseFloatError;
 
-use glam::DVec3;
 use lox_bodies::{DynOrigin, Origin};
 use lox_core::coords::{Cartesian, CartesianTrajectory, TimeStampedCartesian};
+use lox_core::glam::DVec3;
 use lox_ephem::Ephemeris;
 use lox_frames::{DynFrame, Icrf, ReferenceFrame, rotations::TryRotation, traits::frame_id};
 use lox_time::{
@@ -478,8 +478,8 @@ fn parse_csv_states<O: Origin + Copy, R: ReferenceFrame + Copy>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use glam::DVec3;
     use lox_bodies::{DynOrigin, Earth};
+    use lox_core::glam::DVec3;
     use lox_frames::{DynFrame, Icrf};
     use lox_time::time_scales::DynTimeScale;
     use lox_time::{time, time_scales::Tdb};

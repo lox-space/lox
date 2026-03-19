@@ -7,7 +7,7 @@ use std::{
     ops::{Add, AddAssign},
 };
 
-use glam::{DMat3, DVec3};
+use lox_core::glam::{DMat3, DVec3};
 use lox_units::Angle;
 
 use crate::iers::{cip::CipCoords, ecliptic::MeanObliquity, nutation::Nutation};

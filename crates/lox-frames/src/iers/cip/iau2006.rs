@@ -6,7 +6,7 @@
 //! Module xy06 provides a function to calculate the (X, Y) position of the Celestial Intermediate
 //! Pole (CIP) using the IAU 2006 precession and IAU 2000A nutation models.
 
-use glam::DVec2;
+use lox_core::glam::DVec2;
 
 use lox_core::types::units::JulianCenturies;
 use lox_core::units::{Angle, AngleUnits};

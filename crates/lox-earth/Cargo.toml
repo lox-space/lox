@@ -27,7 +27,6 @@ lox-test-utils.workspace = true
 
 csv.workspace = true
 fast_polynomial.workspace = true
-glam.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 

@@ -4,7 +4,6 @@
 
 use std::ops::Sub;
 
-use glam::{DMat3, DVec3};
 use lox_bodies::{
     DynOrigin, Origin, PointMass, RotationalElements, Spheroid, TryPointMass, TrySpheroid,
     UndefinedOriginPropertyError,
@@ -12,6 +11,7 @@ use lox_bodies::{
 use lox_core::coords::Cartesian;
 use lox_core::coords::FromBodyFixedError;
 use lox_core::coords::LonLatAlt;
+use lox_core::glam::{DMat3, DVec3};
 use lox_ephem::Ephemeris;
 use lox_frames::{
     DynFrame, Iau, Icrf, ReferenceFrame, TryBodyFixed, rotations::TryRotation, traits::frame_id,
@@ -264,14 +264,14 @@ where
 mod tests {
     use std::sync::OnceLock;
 
-    use glam::DVec3;
     use lox_bodies::{Earth, Jupiter, Venus};
     use lox_core::coords::Cartesian;
+    use lox_core::glam::DVec3;
     use lox_ephem::Ephemeris;
     use lox_ephem::spk::parser::Spk;
     use lox_frames::providers::DefaultRotationProvider;
     use lox_test_utils::{assert_approx_eq, data_file};
-    use lox_time::{Time, time, time_scales::Tdb, utc::Utc};
+    use lox_time::{time, time_scales::Tdb, utc::Utc};
 
     use super::*;
 

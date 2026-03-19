@@ -37,14 +37,12 @@ lox-orbits = { workspace = true, optional = true }
 lox-time = { workspace = true, optional = true, features = ["chrono"] }
 lox-units = { workspace = true, optional = true }
 
-glam = { workspace = true, optional = true }
 numpy = { workspace = true, optional = true }
 pyo3 = { workspace = true, optional = true }
 sgp4 = { workspace = true, optional = true }
 
 [dev-dependencies]
 divan.workspace = true
-glam = { workspace = true, features = ["serde"] }
 lox-test-utils.workspace = true
 pyo3 = { workspace = true, features = ["auto-initialize"] }
 serde.workspace = true
@@ -100,7 +98,6 @@ python = [
   "core",
   "time",
   "units",
-  "dep:glam",
   "dep:numpy",
   "dep:pyo3",
   "dep:sgp4",

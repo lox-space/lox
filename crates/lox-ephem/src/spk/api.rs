@@ -6,10 +6,10 @@
 
 use std::collections::HashMap;
 
-use glam::DVec3;
 use itertools::Itertools;
 use lox_bodies::Origin;
 use lox_core::coords::Cartesian;
+use lox_core::glam::DVec3;
 use lox_core::time::deltas::{Seconds, ToDelta};
 use lox_time::Time;
 use lox_time::time_scales::Tdb;
@@ -242,8 +242,8 @@ impl Ephemeris for Spk {
 
 #[cfg(test)]
 mod test {
-    use glam::DVec3;
     use lox_bodies::{MercuryBarycenter, SolarSystemBarycenter};
+    use lox_core::glam::DVec3;
     use lox_time::Time;
     use lox_time::deltas::TimeDelta;
     use lox_time::time_scales::Tdb;

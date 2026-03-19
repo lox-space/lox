@@ -4,8 +4,8 @@
 
 use std::{fmt::Display, ops::Mul};
 
-use glam::{DMat3, DVec3};
 use lox_bodies::{TryRotationalElements, UndefinedOriginPropertyError};
+use lox_core::glam::{DMat3, DVec3};
 use lox_core::{coords::Cartesian, f64::consts::ROTATION_RATE_EARTH};
 use lox_test_utils::ApproxEq;
 use lox_time::{

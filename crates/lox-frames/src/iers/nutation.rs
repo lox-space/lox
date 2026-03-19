@@ -8,7 +8,7 @@
 
 use std::ops::Add;
 
-use glam::DMat3;
+use lox_core::glam::DMat3;
 use lox_core::units::Angle;
 use lox_test_utils::ApproxEq;
 use lox_time::{

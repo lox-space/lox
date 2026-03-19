@@ -1682,7 +1682,7 @@ mod tests {
             .unwrap();
         assert!(
             rot.position_matrix()
-                .abs_diff_eq(glam::DMat3::IDENTITY, 1e-14)
+                .abs_diff_eq(lox_core::glam::DMat3::IDENTITY, 1e-14)
         );
     }
 
@@ -1694,7 +1694,7 @@ mod tests {
             .unwrap();
         assert!(
             rot.position_matrix()
-                .abs_diff_eq(glam::DMat3::IDENTITY, 1e-14)
+                .abs_diff_eq(lox_core::glam::DMat3::IDENTITY, 1e-14)
         );
     }
 
@@ -1707,7 +1707,7 @@ mod tests {
             .unwrap();
         assert!(
             !rot.position_matrix()
-                .abs_diff_eq(glam::DMat3::IDENTITY, 1e-6)
+                .abs_diff_eq(lox_core::glam::DMat3::IDENTITY, 1e-6)
         );
     }
 
@@ -1720,7 +1720,7 @@ mod tests {
             .unwrap();
         assert!(
             !rot.position_matrix()
-                .abs_diff_eq(glam::DMat3::IDENTITY, 1e-6)
+                .abs_diff_eq(lox_core::glam::DMat3::IDENTITY, 1e-6)
         );
     }
 
@@ -1735,6 +1735,6 @@ mod tests {
             .try_rotation(iau_earth, DynFrame::Icrf, time)
             .unwrap();
         let product = rot_fwd.position_matrix() * rot_bwd.position_matrix();
-        assert!(product.abs_diff_eq(glam::DMat3::IDENTITY, 1e-14));
+        assert!(product.abs_diff_eq(lox_core::glam::DMat3::IDENTITY, 1e-14));
     }
 }
