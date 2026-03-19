@@ -78,13 +78,13 @@ def inter_satellite_results(t0, t1, space_assets, ephemeris):
 
 
 @pytest.fixture(scope="module")
-def selected_inter_satellite_results(t0, t1, space_assets, ephemeris):
-    """Results with a restricted set of inter-satellite pairs."""
+def filtered_inter_satellite_results(t0, t1, space_assets, ephemeris):
+    """Results with a closure-filtered set of inter-satellite pairs."""
     scenario = lox.Scenario(t0, t1, spacecraft=space_assets)
-    selected_pair = (space_assets[2].id(), space_assets[0].id())
+    target_ids = {space_assets[0].id(), space_assets[2].id()}
     analysis = lox.VisibilityAnalysis(
         scenario,
-        inter_satellite_pairs=[selected_pair],
+        filter=lambda sc1, sc2: {sc1.id(), sc2.id()} == target_ids,
     )
     return analysis.compute(ephemeris)
 
@@ -143,12 +143,12 @@ class TestVisibilityAnalysis:
         n_is = len(space_assets) * (len(space_assets) - 1) // 2
         assert results.num_pairs() == n_gs + n_is
 
-    def test_with_selected_inter_satellite_pairs(self, t0, t1, space_assets, ephemeris):
+    def test_with_filter(self, t0, t1, space_assets, ephemeris):
         scenario = lox.Scenario(t0, t1, spacecraft=space_assets)
-        selected_pair = (space_assets[2].id(), space_assets[0].id())
+        target_ids = {space_assets[0].id(), space_assets[2].id()}
         analysis = lox.VisibilityAnalysis(
             scenario,
-            inter_satellite_pairs=[selected_pair],
+            filter=lambda sc1, sc2: {sc1.id(), sc2.id()} == target_ids,
         )
         results = analysis.compute(ephemeris)
 
@@ -245,10 +245,10 @@ class TestPairTypeFiltering:
         n = len(space_assets)
         assert len(is_pair_ids) == n * (n - 1) // 2
 
-    def test_selected_inter_satellite_pair_ids(
-        self, selected_inter_satellite_results, space_assets
+    def test_filtered_inter_satellite_pair_ids(
+        self, filtered_inter_satellite_results, space_assets
     ):
-        assert selected_inter_satellite_results.inter_satellite_pair_ids() == [
+        assert filtered_inter_satellite_results.inter_satellite_pair_ids() == [
             (space_assets[0].id(), space_assets[2].id())
         ]
 

@@ -572,9 +572,11 @@ class VisibilityAnalysis:
             for faster detection.
         inter_satellite: If True, also compute inter-satellite visibility
             for all unique spacecraft pairs (default: False).
-        inter_satellite_pairs: Optional list of specific spacecraft pairs to
-            evaluate. Pair order does not matter. When provided,
-            inter-satellite visibility is limited to these pairs.
+        filter: Optional callable ``(Spacecraft, Spacecraft) -> bool`` that
+            receives two spacecraft and returns whether the pair should be
+            evaluated. Called once per candidate pair before the parallel
+            phase. When provided, inter-satellite visibility is automatically
+            enabled.
         min_range: Optional minimum range constraint for inter-satellite pairs.
         max_range: Optional maximum range constraint for inter-satellite pairs.
 
@@ -591,7 +593,7 @@ class VisibilityAnalysis:
         step: TimeDelta | None = None,
         min_pass_duration: TimeDelta | None = None,
         inter_satellite: bool = False,
-        inter_satellite_pairs: list[tuple[str, str]] | None = None,
+        filter: Callable[[Spacecraft, Spacecraft], bool] | None = None,
         min_range: Distance | None = None,
         max_range: Distance | None = None,
     ) -> Self: ...
