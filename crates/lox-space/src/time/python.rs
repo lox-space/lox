@@ -8,4 +8,5 @@
 pub mod deltas;
 pub mod time;
 pub mod time_scales;
+pub mod time_series;
 pub mod utc;

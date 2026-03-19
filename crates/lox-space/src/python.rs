@@ -28,6 +28,7 @@ use crate::time::python::{
     deltas::{NonFiniteTimeDeltaError, PyTimeDelta},
     time::PyTime,
     time_scales::PyTimeScale,
+    time_series::PyTimeSeries,
     utc::PyUtc,
 };
 use crate::units::{
@@ -121,6 +122,7 @@ pub fn register_types(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("hours", PyTimeDelta::new(3600.0))?;
     m.add("days", PyTimeDelta::new(86400.0))?;
     m.add_class::<PyTimeScale>()?;
+    m.add_class::<PyTimeSeries>()?;
     m.add_class::<PyUtc>()?;
     m.add(
         "NonFiniteTimeDeltaError",

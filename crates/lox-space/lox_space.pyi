@@ -1964,12 +1964,12 @@ class Series:
     Args:
         x: Array of x values (must be monotonically increasing).
         y: Array of y values (same length as x).
-        method: Interpolation method ("linear" or "cubic_spline").
+        method: Interpolation method ("linear" or "cubic").
 
     Examples:
         >>> x = [0.0, 1.0, 2.0, 3.0]
         >>> y = [0.0, 1.0, 4.0, 9.0]
-        >>> series = lox.Series(x, y, method="cubic_spline")
+        >>> series = lox.Series(x, y, method="cubic")
         >>> series.interpolate(1.5)
         2.25
     """
@@ -1977,10 +1977,64 @@ class Series:
         cls,
         x: list[float],
         y: list[float],
-        interpolation: Literal["linear", "cubic_spline"] = "linear",
+        interpolation: Literal["linear", "cubic"] = "linear",
     ) -> Self: ...
     def interpolate(self, xp: float) -> float:
         """Interpolate a y value at the given x coordinate."""
+        ...
+
+class TimeSeries:
+    """Time-indexed interpolation series.
+
+    Wraps a Series with a start epoch, allowing interpolation by Time values
+    rather than raw float offsets.
+
+    Args:
+        times: List of Time objects (must be in chronological order).
+        values: List of y values (same length as times).
+        interpolation: Interpolation method ("linear" or "cubic").
+
+    Examples:
+        >>> epoch = lox.Time("TAI", 2024, 1, 1)
+        >>> times = [epoch, epoch + 60 * lox.seconds, epoch + 120 * lox.seconds]
+        >>> ts = lox.TimeSeries(times, [1.0, 2.0, 3.0])
+        >>> ts.interpolate(epoch + 30 * lox.seconds)
+        1.5
+    """
+    def __new__(
+        cls,
+        times: list[Time],
+        values: list[float],
+        interpolation: Literal["linear", "cubic"] = "linear",
+    ) -> Self: ...
+    @classmethod
+    def from_offsets(
+        cls,
+        epoch: Time,
+        x: list[float],
+        y: list[float],
+        interpolation: Literal["linear", "cubic"] = "linear",
+    ) -> TimeSeries:
+        """Create a TimeSeries from an epoch and relative offsets in seconds."""
+        ...
+    def interpolate(self, time: Time) -> float:
+        """Interpolate a y value at the given time."""
+        ...
+    @property
+    def epoch(self) -> Time:
+        """The reference epoch of this time series."""
+        ...
+    def times(self) -> list[Time]:
+        """Return absolute timestamps for each data point."""
+        ...
+    def values(self) -> list[float]:
+        """Return the y values."""
+        ...
+    def first(self) -> tuple[Time, float]:
+        """Return the first data point as (time, value)."""
+        ...
+    def last(self) -> tuple[Time, float]:
+        """Return the last data point as (time, value)."""
         ...
 
 # Communications
