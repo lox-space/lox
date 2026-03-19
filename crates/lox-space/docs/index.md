@@ -52,13 +52,13 @@ future_state = propagator.propagate(t + lox.TimeDelta.from_hours(1.5))
 
 | Section | Description |
 |---------|-------------|
-| [Time & Dates](time.md) | `Time`, `UTC`, `TimeDelta`, `TimeScale` |
+| [Time & Dates](time.md) | `Time`, `UTC`, `TimeDelta`, `TimeScale`, `TimeSeries` |
 | [Celestial Bodies](bodies.md) | `Origin` |
 | [Reference Frames](frames.md) | `Frame`, `SPK` |
 | [Orbital States](states.md) | `Cartesian`, `Keplerian`, `Trajectory` |
 | [Propagators](propagators.md) | `Vallado`, `SGP4`, `TLE`, `GroundPropagator` |
 | [Ground Stations](ground.md) | `GroundLocation`, `ElevationMask`, `Observables`, `Pass` |
-| [Events & Visibility](events.md) | `Event`, `Interval`, `find_events`, `find_windows`, `intersect_intervals`, `union_intervals`, `complement_intervals`, `GroundStation`, `Spacecraft`, `Scenario`, `Ensemble`, `VisibilityAnalysis`, `VisibilityResults` |
+| [Events & Visibility](events.md) | `Event`, `Interval`, `find_events`, `find_windows`, `intersect_intervals`, `union_intervals`, `complement_intervals`, `GroundStation`, `Spacecraft`, `Scenario`, `Ensemble`, `VisibilityAnalysis`, `VisibilityResults`, `PowerBudgetAnalysis`, `PowerBudgetResults` |
 | [Communications](comms.md) | `Decibel`, `Transmitter`, `CommunicationSystem`, `Channel`, `LinkStats`, `fspl`, `freq_overlap` |
 | [Constellations](constellations.md) | `Constellation`, `ConstellationSatellite` |
 | [Data Providers](data.md) | `EOPProvider`, `Series` |
