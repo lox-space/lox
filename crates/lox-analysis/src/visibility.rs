@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use glam::DVec3;
 use lox_bodies::{DynOrigin, Origin, TryMeanRadius, TrySpheroid, UndefinedOriginPropertyError};
@@ -549,6 +549,15 @@ pub enum PairType {
 
 type IntervalMap = HashMap<(AssetId, AssetId), Vec<TimeInterval<Tai>>>;
 type PairTypeMap = HashMap<(AssetId, AssetId), PairType>;
+type InterSatellitePairSet = HashSet<(AssetId, AssetId)>;
+
+fn normalize_pair_ids(id1: &AssetId, id2: &AssetId) -> (AssetId, AssetId) {
+    if id1.as_str() <= id2.as_str() {
+        (id1.clone(), id2.clone())
+    } else {
+        (id2.clone(), id1.clone())
+    }
+}
 
 /// Stores raw visibility intervals per asset pair.
 ///
@@ -689,6 +698,7 @@ pub struct VisibilityAnalysis<'a, O: Origin, R: ReferenceFrame, E> {
     step: TimeDelta,
     min_pass_duration: Option<TimeDelta>,
     inter_satellite: bool,
+    inter_satellite_pairs: Option<InterSatellitePairSet>,
     min_range: Option<Distance>,
     max_range: Option<Distance>,
 }
@@ -719,6 +729,7 @@ where
             step: TimeDelta::from_seconds(60),
             min_pass_duration: None,
             inter_satellite: false,
+            inter_satellite_pairs: None,
             min_range: None,
             max_range: None,
         }
@@ -727,6 +738,24 @@ where
     /// Enables inter-satellite visibility computation.
     pub fn with_inter_satellite(mut self) -> Self {
         self.inter_satellite = true;
+        self.inter_satellite_pairs = None;
+        self
+    }
+
+    /// Restrict inter-satellite visibility to the specified spacecraft pairs.
+    ///
+    /// Pair order is ignored, so `(a, b)` and `(b, a)` are treated identically.
+    /// Self-pairs and pairs whose spacecraft are not present in the scenario are
+    /// ignored at compute time.
+    pub fn with_inter_satellite_pairs(mut self, pairs: &[(AssetId, AssetId)]) -> Self {
+        self.inter_satellite = true;
+        self.inter_satellite_pairs = Some(
+            pairs
+                .iter()
+                .filter(|(id1, id2)| id1 != id2)
+                .map(|(id1, id2)| normalize_pair_ids(id1, id2))
+                .collect(),
+        );
         self
     }
 
@@ -767,6 +796,12 @@ where
     /// Returns the current time step.
     pub fn step(&self) -> TimeDelta {
         self.step
+    }
+
+    fn includes_inter_satellite_pair(&self, id1: &AssetId, id2: &AssetId) -> bool {
+        self.inter_satellite_pairs
+            .as_ref()
+            .is_none_or(|pairs| pairs.contains(&normalize_pair_ids(id1, id2)))
     }
 
     /// Apply `min_pass_duration` → `coarse_step` conversion to a detector.
@@ -1010,7 +1045,9 @@ where
         let mut pairs: Vec<(usize, usize)> = Vec::with_capacity(n * (n - 1) / 2);
         for i in 0..n {
             for j in (i + 1)..n {
-                pairs.push((i, j));
+                if self.includes_inter_satellite_pair(spacecraft[i].id(), spacecraft[j].id()) {
+                    pairs.push((i, j));
+                }
             }
         }
 
@@ -1377,6 +1414,59 @@ mod tests {
             TimeInterval::new(interval.start().to_scale(Tai), interval.end().to_scale(Tai));
         assert_approx_eq!(intervals[0].start(), tai_interval.start(), rtol <= 1e-10);
         assert_approx_eq!(intervals[0].end(), tai_interval.end(), rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_inter_satellite_visibility_selected_pairs_only() {
+        let sc_traj = spacecraft_trajectory_dyn();
+        let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
+        let sc1 = Spacecraft::new("sc1", OrbitSource::Trajectory(sc_traj.clone()));
+        let sc2 = Spacecraft::new("sc2", OrbitSource::Trajectory(sc_traj.clone()));
+        let sc3 = Spacecraft::new("sc3", OrbitSource::Trajectory(sc_traj));
+        let spk = ephemeris();
+        let space_assets = [sc1.clone(), sc2.clone(), sc3.clone()];
+        let (scenario, ensemble) = make_scenario_and_ensemble(&[], &space_assets, interval);
+        let selected_pairs = vec![(sc3.id().clone(), sc1.id().clone())];
+
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk)
+            .with_inter_satellite_pairs(&selected_pairs);
+        let results = analysis.compute().unwrap();
+
+        assert_eq!(results.num_pairs(), 1);
+        assert!(results.intervals_for(sc1.id(), sc3.id()).is_some());
+        assert!(results.intervals_for(sc1.id(), sc2.id()).is_none());
+        assert!(results.intervals_for(sc2.id(), sc3.id()).is_none());
+    }
+
+    #[test]
+    fn test_inter_satellite_visibility_selected_pairs_combined_with_ground_space() {
+        let gs_loc = location_dyn();
+        let mask = ElevationMask::with_fixed_elevation(0.0);
+        let gs = GroundStation::new("cebreros", gs_loc, mask);
+
+        let sc_traj = spacecraft_trajectory_dyn();
+        let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
+        let sc1 = Spacecraft::new("sc1", OrbitSource::Trajectory(sc_traj.clone()));
+        let sc2 = Spacecraft::new("sc2", OrbitSource::Trajectory(sc_traj.clone()));
+        let sc3 = Spacecraft::new("sc3", OrbitSource::Trajectory(sc_traj));
+        let spk = ephemeris();
+        let ground_assets = [gs.clone()];
+        let space_assets = [sc1.clone(), sc2.clone(), sc3.clone()];
+        let (scenario, ensemble) =
+            make_scenario_and_ensemble(&ground_assets, &space_assets, interval);
+        let selected_pairs = vec![(sc1.id().clone(), sc2.id().clone())];
+
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk)
+            .with_inter_satellite_pairs(&selected_pairs);
+        let results = analysis.compute().unwrap();
+
+        assert_eq!(results.num_pairs(), space_assets.len() + 1);
+        assert!(results.intervals_for(gs.id(), sc1.id()).is_some());
+        assert!(results.intervals_for(gs.id(), sc2.id()).is_some());
+        assert!(results.intervals_for(gs.id(), sc3.id()).is_some());
+        assert!(results.intervals_for(sc1.id(), sc2.id()).is_some());
+        assert!(results.intervals_for(sc1.id(), sc3.id()).is_none());
+        assert!(results.intervals_for(sc2.id(), sc3.id()).is_none());
     }
 
     #[test]
