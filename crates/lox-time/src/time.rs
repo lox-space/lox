@@ -468,24 +468,24 @@ impl<T: TimeScale> TimeBuilder<T> {
 #[macro_export]
 macro_rules! time {
     ($scale:expr, $year:literal, $month:literal, $day:literal) => {
-        Time::builder_with_scale($scale)
+        $crate::time::Time::builder_with_scale($scale)
             .with_ymd($year, $month, $day)
             .build()
     };
     ($scale:expr, $year:literal, $month:literal, $day:literal, $hour:literal) => {
-        Time::builder_with_scale($scale)
+        $crate::time::Time::builder_with_scale($scale)
             .with_ymd($year, $month, $day)
             .with_hms($hour, 0, 0.0)
             .build()
     };
     ($scale:expr, $year:literal, $month:literal, $day:literal, $hour:literal, $minute:literal) => {
-        Time::builder_with_scale($scale)
+        $crate::time::Time::builder_with_scale($scale)
             .with_ymd($year, $month, $day)
             .with_hms($hour, $minute, 0.0)
             .build()
     };
     ($scale:expr, $year:literal, $month:literal, $day:literal, $hour:literal, $minute:literal, $second:literal) => {
-        Time::builder_with_scale($scale)
+        $crate::time::Time::builder_with_scale($scale)
             .with_ymd($year, $month, $day)
             .with_hms($hour, $minute, $second)
             .build()
