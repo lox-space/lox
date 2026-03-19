@@ -21,8 +21,8 @@ pub use crate::core::units::{Angle, AngleUnits, Distance, DistanceUnits, Velocit
 // Orbital elements & state
 pub use crate::core::coords::Cartesian;
 pub use crate::core::elements::Keplerian;
-pub use crate::orbits::orbits::sso::SsoBuilder;
-pub use crate::orbits::orbits::{CartesianOrbit, KeplerianOrbit, Orbit, Trajectory};
+pub use crate::orbits::sso::SsoBuilder;
+pub use crate::orbits::{CartesianOrbit, KeplerianOrbit, Orbit, Trajectory};
 
 // Propagation
 pub use crate::orbits::propagators::Propagator;
