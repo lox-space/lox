@@ -14,6 +14,7 @@ use lox_math::series::{InterpolationType, Series, SeriesError};
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
+use lox_time::series::TimeSeries;
 use lox_time::time_scales::{DynTimeScale, Tai, Tdb, TimeScale};
 use rayon::prelude::*;
 use std::f64::consts::PI;
@@ -178,7 +179,7 @@ pub enum PassError {
 
 /// A visibility pass between a ground station and spacecraft.
 ///
-/// Stores the time interval, sampled times, observables, and `Series` for
+/// Stores the time interval, sampled times, observables, and [`TimeSeries`] for
 /// each observable channel to support interpolation.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -186,10 +187,10 @@ pub struct Pass<T: TimeScale> {
     interval: TimeInterval<T>,
     times: Vec<Time<T>>,
     observables: Vec<Observables>,
-    azimuth_series: Series,
-    elevation_series: Series,
-    range_series: Series,
-    range_rate_series: Series,
+    azimuth_series: TimeSeries<T>,
+    elevation_series: TimeSeries<T>,
+    range_series: TimeSeries<T>,
+    range_rate_series: TimeSeries<T>,
 }
 
 /// A visibility pass using a dynamic time scale.
@@ -250,23 +251,36 @@ impl<T: TimeScale> Pass<T> {
             return Err(SeriesError::InsufficientPoints(times.len()));
         }
 
+        let epoch = interval.start();
         let time_seconds: Vec<f64> = times
             .iter()
-            .map(|t| (*t - interval.start()).to_seconds().to_f64())
+            .map(|t| (*t - epoch).to_seconds().to_f64())
             .collect();
         let azimuths: Vec<f64> = observables.iter().map(|o| o.azimuth()).collect();
         let elevations: Vec<f64> = observables.iter().map(|o| o.elevation()).collect();
         let ranges: Vec<f64> = observables.iter().map(|o| o.range()).collect();
         let range_rates: Vec<f64> = observables.iter().map(|o| o.range_rate()).collect();
 
-        let azimuth_series =
-            Series::try_new(time_seconds.clone(), azimuths, InterpolationType::Linear)?;
-        let elevation_series =
-            Series::try_new(time_seconds.clone(), elevations, InterpolationType::Linear)?;
-        let range_series =
-            Series::try_new(time_seconds.clone(), ranges, InterpolationType::Linear)?;
+        let azimuth_series = TimeSeries::try_new(
+            epoch,
+            time_seconds.clone(),
+            azimuths,
+            InterpolationType::Linear,
+        )?;
+        let elevation_series = TimeSeries::try_new(
+            epoch,
+            time_seconds.clone(),
+            elevations,
+            InterpolationType::Linear,
+        )?;
+        let range_series = TimeSeries::try_new(
+            epoch,
+            time_seconds.clone(),
+            ranges,
+            InterpolationType::Linear,
+        )?;
         let range_rate_series =
-            Series::try_new(time_seconds, range_rates, InterpolationType::Linear)?;
+            TimeSeries::try_new(epoch, time_seconds, range_rates, InterpolationType::Linear)?;
 
         Ok(Pass {
             interval,
@@ -307,12 +321,10 @@ impl<T: TimeScale> Pass<T> {
             return None;
         }
 
-        let target_seconds = (time - self.interval.start()).to_seconds().to_f64();
-
-        let azimuth = self.azimuth_series.interpolate(target_seconds);
-        let elevation = self.elevation_series.interpolate(target_seconds);
-        let range = self.range_series.interpolate(target_seconds);
-        let range_rate = self.range_rate_series.interpolate(target_seconds);
+        let azimuth = self.azimuth_series.interpolate(time);
+        let elevation = self.elevation_series.interpolate(time);
+        let range = self.range_series.interpolate(time);
+        let range_rate = self.range_rate_series.interpolate(time);
 
         Some(Observables::new(azimuth, elevation, range, range_rate))
     }
