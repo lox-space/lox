@@ -68,3 +68,9 @@ t_tai = utc.to_scale("TAI")
 ::: lox_space.TimeScale
     options:
       show_source: false
+
+---
+
+::: lox_space.TimeSeries
+    options:
+      show_source: false
