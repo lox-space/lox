@@ -8,7 +8,7 @@
 
 use std::ops::{Add, AddAssign};
 
-use glam::DMat3;
+use lox_core::glam::DMat3;
 use lox_core::units::{Angle, AngleUnits};
 use lox_time::{Time, julian_dates::JulianDate, time_scales::Tdb};
 

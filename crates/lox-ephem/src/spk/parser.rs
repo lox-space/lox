@@ -7,7 +7,7 @@
 use std::collections::HashMap;
 use std::iter::zip;
 
-use glam::DVec3;
+use lox_core::glam::DVec3;
 use nom::Parser;
 use nom::bytes::complete as nb;
 use nom::error::ErrorKind;

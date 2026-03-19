@@ -10,12 +10,12 @@ use differential_equations::{
     prelude::ExplicitRungeKutta,
     traits::State,
 };
-use glam::DVec3;
 use lox_bodies::{
     DynOrigin, J2, MeanRadius, Origin, PointMass, TryJ2, TryMeanRadius, TryPointMass,
     UndefinedOriginPropertyError,
 };
 use lox_core::coords::Cartesian;
+use lox_core::glam::DVec3;
 use lox_frames::{DynFrame, ReferenceFrame};
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
@@ -453,7 +453,6 @@ mod tests {
     use lox_bodies::Earth;
     use lox_frames::Icrf;
     use lox_test_utils::assert_approx_eq;
-    use lox_time::Time;
     use lox_time::intervals::Interval;
     use lox_time::time;
     use lox_time::time_scales::Tdb;

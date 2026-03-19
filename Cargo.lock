@@ -676,7 +676,6 @@ name = "lox-analysis"
 version = "0.1.0-alpha.3"
 dependencies = [
  "csv",
- "glam 0.30.10",
  "lox-bodies",
  "lox-comms",
  "lox-core",
@@ -708,7 +707,6 @@ dependencies = [
 name = "lox-comms"
 version = "0.1.0-alpha.6"
 dependencies = [
- "glam 0.30.10",
  "lox-core",
  "lox-test-utils",
  "serde",
@@ -746,7 +744,6 @@ version = "0.1.0-alpha.20"
 dependencies = [
  "csv",
  "fast_polynomial",
- "glam 0.30.10",
  "lox-core",
  "lox-frames",
  "lox-io",
@@ -763,7 +760,6 @@ name = "lox-ephem"
 version = "0.1.0-alpha.15"
 dependencies = [
  "arrayvec",
- "glam 0.30.10",
  "itertools",
  "lox-bodies",
  "lox-core",
@@ -778,7 +774,6 @@ name = "lox-frames"
 version = "0.1.0-alpha.11"
 dependencies = [
  "fast_polynomial",
- "glam 0.30.10",
  "lox-bodies",
  "lox-core",
  "lox-test-utils",
@@ -820,7 +815,6 @@ version = "0.1.0-alpha.30"
 dependencies = [
  "csv",
  "differential-equations",
- "glam 0.30.10",
  "itertools",
  "libm",
  "lox-bodies",
@@ -842,7 +836,6 @@ name = "lox-space"
 version = "0.1.0-alpha.37"
 dependencies = [
  "codspeed-divan-compat",
- "glam 0.30.10",
  "lox-analysis",
  "lox-bodies",
  "lox-comms",

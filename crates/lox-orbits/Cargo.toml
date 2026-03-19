@@ -30,7 +30,6 @@ lox-units.workspace = true
 
 csv.workspace = true
 differential-equations.workspace = true
-glam.workspace = true
 itertools.workspace = true
 libm.workspace = true
 serde = { workspace = true, optional = true }

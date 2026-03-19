@@ -4,7 +4,7 @@
 
 use std::f64::consts::{FRAC_PI_2, TAU};
 
-use glam::{DMat3, DVec3};
+use lox_core::glam::{DMat3, DVec3};
 
 use crate::rotations::Rotation;
 

@@ -9,8 +9,8 @@ use std::f64::consts::TAU;
 use std::iter::zip;
 
 use fast_polynomial::poly_array;
-use glam::DMat3;
 use lox_core::f64::consts::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
+use lox_core::glam::DMat3;
 use lox_core::units::{Angle, AngleUnits};
 use lox_test_utils::ApproxEq;
 use lox_time::time_scales::{Tdb, Tt, Ut1};

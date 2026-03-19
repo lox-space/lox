@@ -229,13 +229,13 @@ where
 mod tests {
     use lox_bodies::Earth;
     use lox_core::elements::Keplerian as CoreKeplerian;
+    use lox_core::glam::DVec3;
     use lox_core::units::{AngleUnits, DistanceUnits};
     use lox_frames::Icrf;
     use lox_test_utils::assert_approx_eq;
     use lox_time::intervals::Interval;
     use lox_time::time_scales::Tdb;
     use lox_time::utc;
-    use lox_time::utc::Utc;
 
     use super::*;
 
@@ -342,8 +342,8 @@ mod tests {
     fn test_try_new_with_static_types() {
         let utc = utc!(2023, 3, 25, 21, 8, 0.0).unwrap();
         let time = utc.to_time().to_scale(Tdb);
-        let pos = glam::DVec3::new(-1076225.32, -6765896.36, -332308.78);
-        let vel = glam::DVec3::new(9356.86, -3312.35, -1188.02);
+        let pos = DVec3::new(-1076225.32, -6765896.36, -332308.78);
+        let vel = DVec3::new(9356.86, -3312.35, -1188.02);
         let s0 = CartesianOrbit::new(
             lox_core::coords::Cartesian::from_vecs(pos, vel),
             time,
@@ -361,8 +361,8 @@ mod tests {
 
         let utc = utc!(2023, 3, 25, 21, 8, 0.0).unwrap();
         let time = utc.to_dyn_time();
-        let pos = glam::DVec3::new(-1076225.32, -6765896.36, -332308.78);
-        let vel = glam::DVec3::new(9356.86, -3312.35, -1188.02);
+        let pos = DVec3::new(-1076225.32, -6765896.36, -332308.78);
+        let vel = DVec3::new(9356.86, -3312.35, -1188.02);
         let s0 = CartesianOrbit::new(
             lox_core::coords::Cartesian::from_vecs(pos, vel),
             time,
@@ -379,8 +379,8 @@ mod tests {
 
         let utc = utc!(2023, 3, 25, 21, 8, 0.0).unwrap();
         let time = utc.to_dyn_time();
-        let pos = glam::DVec3::new(-1076225.32, -6765896.36, -332308.78);
-        let vel = glam::DVec3::new(9356.86, -3312.35, -1188.02);
+        let pos = DVec3::new(-1076225.32, -6765896.36, -332308.78);
+        let vel = DVec3::new(9356.86, -3312.35, -1188.02);
         let s0 = CartesianOrbit::new(
             lox_core::coords::Cartesian::from_vecs(pos, vel),
             time,
