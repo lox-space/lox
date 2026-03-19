@@ -77,6 +77,18 @@ def inter_satellite_results(t0, t1, space_assets, ephemeris):
     return analysis.compute(ephemeris)
 
 
+@pytest.fixture(scope="module")
+def selected_inter_satellite_results(t0, t1, space_assets, ephemeris):
+    """Results with a restricted set of inter-satellite pairs."""
+    scenario = lox.Scenario(t0, t1, spacecraft=space_assets)
+    selected_pair = (space_assets[2].id(), space_assets[0].id())
+    analysis = lox.VisibilityAnalysis(
+        scenario,
+        inter_satellite_pairs=[selected_pair],
+    )
+    return analysis.compute(ephemeris)
+
+
 # ---------------------------------------------------------------------------
 # VisibilityAnalysis construction & compute
 # ---------------------------------------------------------------------------
@@ -130,6 +142,18 @@ class TestVisibilityAnalysis:
         n_gs = len(ground_assets) * len(space_assets)
         n_is = len(space_assets) * (len(space_assets) - 1) // 2
         assert results.num_pairs() == n_gs + n_is
+
+    def test_with_selected_inter_satellite_pairs(self, t0, t1, space_assets, ephemeris):
+        scenario = lox.Scenario(t0, t1, spacecraft=space_assets)
+        selected_pair = (space_assets[2].id(), space_assets[0].id())
+        analysis = lox.VisibilityAnalysis(
+            scenario,
+            inter_satellite_pairs=[selected_pair],
+        )
+        results = analysis.compute(ephemeris)
+
+        assert results.num_pairs() == 1
+        assert results.pair_ids() == [(space_assets[0].id(), space_assets[2].id())]
 
     def test_los_is_subset_of_basic(
         self, results, results_with_los, ground_assets, space_assets
@@ -220,6 +244,13 @@ class TestPairTypeFiltering:
         is_pair_ids = combined_results.inter_satellite_pair_ids()
         n = len(space_assets)
         assert len(is_pair_ids) == n * (n - 1) // 2
+
+    def test_selected_inter_satellite_pair_ids(
+        self, selected_inter_satellite_results, space_assets
+    ):
+        assert selected_inter_satellite_results.inter_satellite_pair_ids() == [
+            (space_assets[0].id(), space_assets[2].id())
+        ]
 
     def test_combined_pair_ids_partition(
         self, combined_results, ground_assets, space_assets

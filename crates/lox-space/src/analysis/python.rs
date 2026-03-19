@@ -351,6 +351,9 @@ impl PyEnsemble {
 ///         detection.
 ///     inter_satellite: If True, also compute inter-satellite visibility
 ///         for all unique spacecraft pairs (default: False).
+///     inter_satellite_pairs: Optional list of specific spacecraft pairs to
+///         evaluate. Pair order does not matter. When provided, inter-satellite
+///         visibility is limited to these pairs.
 ///     min_range: Optional minimum range constraint for inter-satellite pairs.
 ///     max_range: Optional maximum range constraint for inter-satellite pairs.
 #[pyclass(name = "VisibilityAnalysis", module = "lox_space", frozen)]
@@ -361,6 +364,7 @@ pub struct PyVisibilityAnalysis {
     step: TimeDelta,
     min_pass_duration: Option<TimeDelta>,
     inter_satellite: bool,
+    inter_satellite_pairs: Option<Vec<(AssetId, AssetId)>>,
     min_range: Option<Distance>,
     max_range: Option<Distance>,
 }
@@ -368,7 +372,7 @@ pub struct PyVisibilityAnalysis {
 #[pymethods]
 impl PyVisibilityAnalysis {
     #[new]
-    #[pyo3(signature = (scenario, ensemble=None, occulting_bodies=None, step=None, min_pass_duration=None, inter_satellite=false, min_range=None, max_range=None))]
+    #[pyo3(signature = (scenario, ensemble=None, occulting_bodies=None, step=None, min_pass_duration=None, inter_satellite=false, inter_satellite_pairs=None, min_range=None, max_range=None))]
     #[allow(clippy::too_many_arguments)]
     fn new(
         scenario: PyScenario,
@@ -377,6 +381,7 @@ impl PyVisibilityAnalysis {
         step: Option<PyTimeDelta>,
         min_pass_duration: Option<PyTimeDelta>,
         inter_satellite: bool,
+        inter_satellite_pairs: Option<Vec<(String, String)>>,
         min_range: Option<PyDistance>,
         max_range: Option<PyDistance>,
     ) -> PyResult<Self> {
@@ -385,6 +390,12 @@ impl PyVisibilityAnalysis {
             .iter()
             .map(|b| Ok(PyOrigin::try_from(b)?.0))
             .collect::<PyResult<_>>()?;
+        let inter_satellite_pairs = inter_satellite_pairs.map(|pairs| {
+            pairs
+                .into_iter()
+                .map(|(id1, id2)| (AssetId::new(id1), AssetId::new(id2)))
+                .collect()
+        });
         Ok(Self {
             scenario: scenario.0,
             ensemble: ensemble.map(|e| e.0),
@@ -394,6 +405,7 @@ impl PyVisibilityAnalysis {
                 .unwrap_or_else(|| TimeDelta::from_seconds_f64(60.0)),
             min_pass_duration: min_pass_duration.map(|d| d.0),
             inter_satellite,
+            inter_satellite_pairs,
             min_range: min_range.map(|d| d.0),
             max_range: max_range.map(|d| d.0),
         })
@@ -433,6 +445,7 @@ impl PyVisibilityAnalysis {
         let occulting_bodies = self.occulting_bodies.clone();
         let min_pass_duration = self.min_pass_duration;
         let inter_satellite = self.inter_satellite;
+        let inter_satellite_pairs = self.inter_satellite_pairs.clone();
         let min_range = self.min_range;
         let max_range = self.max_range;
 
@@ -443,7 +456,9 @@ impl PyVisibilityAnalysis {
             if let Some(mpd) = min_pass_duration {
                 analysis = analysis.with_min_pass_duration(mpd);
             }
-            if inter_satellite {
+            if let Some(pairs) = inter_satellite_pairs {
+                analysis = analysis.with_inter_satellite_pairs(&pairs);
+            } else if inter_satellite {
                 analysis = analysis.with_inter_satellite();
             }
             if let Some(min_range) = min_range {
@@ -466,7 +481,12 @@ impl PyVisibilityAnalysis {
     fn __repr__(&self) -> String {
         let sc_count = self.scenario.spacecraft().len();
         let gs_count = self.scenario.ground_stations().len();
-        if self.inter_satellite {
+        if let Some(pairs) = &self.inter_satellite_pairs {
+            format!(
+                "VisibilityAnalysis({gs_count} ground assets, {sc_count} space assets, inter_satellite_pairs={})",
+                pairs.len(),
+            )
+        } else if self.inter_satellite {
             format!(
                 "VisibilityAnalysis({gs_count} ground assets, {sc_count} space assets, inter_satellite=True)",
             )
