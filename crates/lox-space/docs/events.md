@@ -140,3 +140,15 @@ for p in results.passes("ESOC", "ISS"):
 ::: lox_space.VisibilityResults
     options:
       show_source: false
+
+---
+
+::: lox_space.PowerBudgetAnalysis
+    options:
+      show_source: false
+
+---
+
+::: lox_space.PowerBudgetResults
+    options:
+      show_source: false

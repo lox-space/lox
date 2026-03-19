@@ -1517,6 +1517,9 @@ class GroundLocation:
     ) -> Observables:
         """Compute observables to a target state."""
         ...
+    def origin(self) -> Origin:
+        """Return the central body (origin)."""
+        ...
     def rotation_to_topocentric(self) -> np.ndarray:
         """Return the rotation matrix from body-fixed to topocentric frame."""
         ...
