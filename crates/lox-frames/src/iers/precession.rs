@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use fast_polynomial::poly_array;
-use glam::DMat3;
+use lox_core::glam::DMat3;
 use lox_test_utils::ApproxEq;
 use lox_time::{Time, julian_dates::JulianDate, time_scales::Tt};
 use lox_units::Angle;

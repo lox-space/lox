@@ -4,7 +4,7 @@
 
 use std::string::String;
 
-use glam::DVec3;
+use lox_core::glam::DVec3;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 

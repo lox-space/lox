@@ -10,8 +10,8 @@
 
 use std::collections::HashMap;
 
-use glam::DVec3;
 use lox_bodies::{DynOrigin, Origin, Sun, TryMeanRadius, TrySpheroid};
+use lox_core::glam::DVec3;
 use lox_core::math::series::InterpolationType;
 use lox_core::units::ASTRONOMICAL_UNIT;
 use lox_ephem::Ephemeris;
@@ -343,8 +343,8 @@ mod tests {
     use std::f64::consts::{FRAC_PI_2, PI};
     use std::sync::OnceLock;
 
-    use glam::DVec3;
     use lox_bodies::DynOrigin;
+    use lox_core::glam::DVec3;
     use lox_ephem::spk::parser::Spk;
     use lox_frames::DynFrame;
     use lox_orbits::propagators::sgp4::{Elements, Sgp4};
@@ -426,7 +426,7 @@ mod tests {
 
         let sc = Spacecraft::new("ISS", OrbitSource::Trajectory(sc_traj.clone()));
         let scenario = Scenario::with_interval(tai_interval, DynOrigin::Earth, DynFrame::Icrf)
-            .with_spacecraft(&[sc.clone()]);
+            .with_spacecraft(std::slice::from_ref(&sc));
 
         // Build ensemble
         let (epoch, origin, frame, data) = sc_traj.into_parts();
@@ -462,7 +462,7 @@ mod tests {
         let betas = results.beta_angles_for(sc.id()).expect("beta angles");
         assert!(!betas.values().is_empty());
         for &b in betas.values() {
-            assert!(b >= -FRAC_PI_2 && b <= FRAC_PI_2);
+            assert!((-FRAC_PI_2..=FRAC_PI_2).contains(&b));
         }
 
         let fluxes = results.solar_flux_for(sc.id()).expect("solar flux");

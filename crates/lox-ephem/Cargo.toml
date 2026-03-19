@@ -23,7 +23,6 @@ lox-core.workspace = true
 lox-time.workspace = true
 
 arrayvec.workspace = true
-glam.workspace = true
 itertools.workspace = true
 nom.workspace = true
 serde = { workspace = true, optional = true }

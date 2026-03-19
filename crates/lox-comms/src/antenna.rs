@@ -4,7 +4,7 @@
 
 //! Antenna types and the [`AntennaGain`] trait.
 
-use glam::DVec3;
+use lox_core::glam::DVec3;
 use lox_core::units::{Angle, Decibel, Frequency};
 
 use crate::pattern::AntennaPattern;

@@ -11,9 +11,9 @@
 use std::error::Error;
 use std::fmt::{self, Display, Formatter};
 
-use glam::DVec3;
 use lox_bodies::{NaifId, Origin};
 use lox_core::coords::Cartesian;
+use lox_core::glam::DVec3;
 use lox_earth::ephemeris::apparent_sun_position;
 use lox_ephem::Ephemeris;
 use lox_time::{Time, time_scales::Tdb};

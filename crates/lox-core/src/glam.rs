@@ -2,9 +2,9 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-//! Extension traits for `glam` vector types.
+//! Re-exports of `glam` types used in the public API, plus extension traits.
 
-use glam::DVec3;
+pub use glam::{DMat3, DVec2, DVec3};
 
 use crate::units::Angle;
 

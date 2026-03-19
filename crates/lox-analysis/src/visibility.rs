@@ -4,8 +4,8 @@
 
 use std::collections::HashMap;
 
-use glam::DVec3;
 use lox_bodies::{DynOrigin, Origin, TryMeanRadius, TrySpheroid, UndefinedOriginPropertyError};
+use lox_core::glam::DVec3;
 use lox_ephem::Ephemeris;
 use lox_frames::providers::DefaultRotationProvider;
 use lox_frames::rotations::{DynRotationError, RotationError, TryRotation};

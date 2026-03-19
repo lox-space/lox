@@ -4,9 +4,9 @@
 
 use crate::orbits::{CartesianOrbit, TrajectorError, Trajectory};
 use crate::propagators::Propagator;
-use glam::{DMat3, DVec3};
 use lox_bodies::{DynOrigin, RotationalElements, Spheroid, TrySpheroid};
 use lox_core::coords::{Cartesian, LonLatAlt};
+use lox_core::glam::{DMat3, DVec3};
 use lox_core::types::units::Radians;
 use lox_core::units::Distance;
 use lox_frames::{DynFrame, Iau, ReferenceFrame};
@@ -305,8 +305,7 @@ mod tests {
     use lox_test_utils::assert_approx_eq;
     use lox_time::intervals::Interval;
     use lox_time::time_scales::Tdb;
-    use lox_time::utc::Utc;
-    use lox_time::{Time, time, utc};
+    use lox_time::{time, utc};
 
     use super::*;
 

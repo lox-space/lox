@@ -7,9 +7,9 @@
 //! Ephemeris providers for solar system bodies, including SPK/DAF file support.
 
 use arrayvec::ArrayVec;
-use glam::DVec3;
 use lox_bodies::Origin;
 use lox_core::coords::Cartesian;
+use lox_core::glam::DVec3;
 use lox_time::{Time, time_scales::Tdb};
 
 /// SPICE SPK/DAF file parser and ephemeris implementation.

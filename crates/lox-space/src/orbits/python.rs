@@ -13,21 +13,21 @@ use crate::orbits::events::{DetectError, Event, ZeroCrossing};
 use crate::orbits::ground::{
     DynGroundLocation, DynGroundPropagator, GroundPropagatorError, Observables,
 };
-use crate::orbits::orbits::{
-    CartesianOrbit, DynCartesianOrbit, DynTrajectory, TrajectorError, TrajectoryTransformationError,
-};
 use crate::orbits::propagators::Propagator;
 use crate::orbits::propagators::numerical::{DynJ2Propagator, J2Error, J2Propagator};
 use crate::orbits::propagators::semi_analytical::{DynVallado, Vallado, ValladoError};
 use crate::orbits::propagators::sgp4::{Sgp4, Sgp4Error};
+use crate::orbits::{
+    CartesianOrbit, DynCartesianOrbit, DynTrajectory, TrajectorError, TrajectoryTransformationError,
+};
 use crate::time::DynTime;
 use crate::time::deltas::TimeDelta;
 use crate::time::python::deltas::PyTimeDelta;
 use crate::time::python::time::PyTime;
 use crate::time::time_scales::{DynTimeScale, Tai};
 use crate::units::python::{PyAngle, PyDistance, PyVelocity};
-use glam::DVec3;
 use lox_core::coords::{Cartesian, LonLatAlt};
+use lox_core::glam::DVec3;
 use lox_frames::providers::DefaultRotationProvider;
 use lox_frames::rotations::TryRotation;
 use lox_time::intervals::{
@@ -600,7 +600,7 @@ impl PyCartesian {
 ///     apoapsis_altitude: Apoapsis altitude as Distance (keyword-only).
 ///     mean_anomaly: Mean anomaly as Angle (keyword-only, mutually exclusive with true_anomaly).
 #[pyclass(name = "Keplerian", module = "lox_space", frozen)]
-pub struct PyKeplerian(pub crate::orbits::orbits::DynKeplerianOrbit);
+pub struct PyKeplerian(pub crate::orbits::DynKeplerianOrbit);
 
 #[pymethods]
 impl PyKeplerian {

@@ -2,8 +2,8 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use glam::DVec3;
 use lox_core::coords::Cartesian;
+use lox_core::glam::DVec3;
 pub use sgp4::Elements;
 use sgp4::{Constants, ElementsError, MinutesSinceEpoch};
 use thiserror::Error;

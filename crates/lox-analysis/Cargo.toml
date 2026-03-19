@@ -26,7 +26,6 @@ lox-math.workspace = true
 lox-orbits.workspace = true
 lox-time = { workspace = true, features = ["chrono"] }
 
-glam.workspace = true
 rayon.workspace = true
 serde = { workspace = true, optional = true }
 thiserror.workspace = true
