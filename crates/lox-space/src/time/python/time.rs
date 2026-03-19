@@ -20,10 +20,10 @@ use crate::time::calendar_dates::{CalendarDate, Date};
 use crate::time::deltas::{TimeDelta, ToDelta};
 use crate::time::julian_dates::{Epoch, JulianDate, Unit};
 use crate::time::python::deltas::PyTimeDelta;
-use crate::time::time::{DynTime, Time, TimeError};
 use crate::time::time_of_day::{CivilTime, TimeOfDay};
 use crate::time::time_scales::Tai;
 use crate::time::utc::transformations::ToUtc;
+use crate::time::{DynTime, Time, TimeError};
 
 use super::time_scales::PyTimeScale;
 use super::utc::PyUtc;
