@@ -4,5 +4,8 @@
 
 pub use lox_analysis::*;
 
+/// Analytical Sun ephemeris adapter for Earth-centred scenarios.
+pub mod sun;
+
 #[cfg(feature = "python")]
 pub mod python;

@@ -551,6 +551,102 @@ class Constellation:
     def __len__(self) -> int: ...
     def __repr__(self) -> str: ...
 
+class PowerBudgetAnalysis:
+    """Power budget analysis for spacecraft in a scenario.
+
+    Computes eclipse intervals, sun beta angle, and solar flux for each
+    spacecraft.  The shadow model is cylindrical (umbra only) — penumbra
+    is **not** modelled.
+
+    Args:
+        scenario: Scenario containing spacecraft and time interval.
+        ensemble: Optional pre-computed Ensemble.
+        step: Optional time step for sampling / event detection (default: 60s).
+        spacecraft_ids: Optional list of spacecraft ids to restrict the analysis.
+
+    Examples:
+        >>> analysis = lox.PowerBudgetAnalysis(scenario)
+        >>> results = analysis.compute()          # analytical Sun
+        >>> results = analysis.compute(ephemeris)  # SPK Sun
+    """
+    def __new__(
+        cls,
+        scenario: Scenario,
+        ensemble: Ensemble | None = None,
+        step: TimeDelta | None = None,
+        spacecraft_ids: list[str] | None = None,
+        constellation_id: str | None = None,
+    ) -> Self: ...
+    def compute(self, ephemeris: SPK | None = None) -> "PowerBudgetResults":
+        """Compute the power budget analysis.
+
+        Args:
+            ephemeris: Optional SPK ephemeris for Sun position. When omitted,
+                an analytical model is used (valid for Earth-centred scenarios).
+
+        Returns:
+            PowerBudgetResults with eclipse intervals, beta angles, and
+            solar flux for each spacecraft.
+        """
+        ...
+
+class PowerBudgetResults:
+    """Results of a power budget analysis.
+
+    Provides access to eclipse intervals, eclipse/sunlit fractions,
+    beta-angle time series, and solar-flux time series for each spacecraft.
+    """
+    def eclipse_intervals(self, id: str) -> list[Interval]:
+        """Return eclipse intervals for a specific spacecraft.
+
+        Args:
+            id: Spacecraft identifier.
+
+        Returns:
+            List of Interval objects, or empty list if id not found.
+        """
+        ...
+    def eclipse_fraction(self, id: str) -> float | None:
+        """Return eclipse fraction (0 = fully sunlit, 1 = always eclipsed).
+
+        Args:
+            id: Spacecraft identifier.
+
+        Returns:
+            Eclipse fraction, or None if id not found.
+        """
+        ...
+    def sunlit_fraction(self, id: str) -> float | None:
+        """Return sunlit fraction (1 - eclipse_fraction).
+
+        Args:
+            id: Spacecraft identifier.
+
+        Returns:
+            Sunlit fraction, or None if id not found.
+        """
+        ...
+    def beta_angles(self, id: str) -> TimeSeries | None:
+        """Return beta-angle time series (radians).
+
+        Args:
+            id: Spacecraft identifier.
+
+        Returns:
+            TimeSeries of beta angles in radians, or None if id not found.
+        """
+        ...
+    def solar_flux(self, id: str) -> TimeSeries | None:
+        """Return solar-flux time series (W/m²).
+
+        Args:
+            id: Spacecraft identifier.
+
+        Returns:
+            TimeSeries of solar flux in W/m², or None if id not found.
+        """
+        ...
+
 class VisibilityAnalysis:
     """Computes ground-station-to-spacecraft and inter-satellite visibility.
 
