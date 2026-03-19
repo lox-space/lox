@@ -4,7 +4,11 @@
 
 use std::collections::HashMap;
 
-use crate::analysis::assets::{AssetId, DynScenario, GroundStation, Spacecraft};
+use crate::analysis::assets::{AssetId, ConstellationId, DynScenario, GroundStation, Spacecraft};
+use crate::analysis::power::{
+    PowerBudgetAnalysis, PowerBudgetResults, PowerError, SpacecraftFilter,
+};
+use crate::analysis::sun::AnalyticalSunEphemeris;
 use crate::analysis::visibility::{
     DynPass, ElevationMask, ElevationMaskError, PairType, Pass, VisibilityAnalysis,
     VisibilityError, VisibilityResults,
@@ -21,12 +25,14 @@ use crate::orbits::python::{
 use crate::time::deltas::TimeDelta;
 use crate::time::python::deltas::PyTimeDelta;
 use crate::time::python::time::PyTime;
+use crate::time::python::time_series::PyTimeSeries;
 use crate::units::python::{PyAngle, PyAngularRate, PyDistance, PyVelocity};
 use lox_frames::DynFrame;
 use lox_frames::providers::DefaultRotationProvider;
 use lox_orbits::orbits::Ensemble;
 use lox_orbits::propagators::OrbitSource;
 use lox_time::intervals::TimeInterval;
+use lox_time::series::TimeSeries;
 use lox_time::time_scales::Tai;
 use lox_units::{Angle, Distance, Velocity};
 
@@ -983,5 +989,237 @@ impl PyPass {
             self.interval().__repr__(),
             self.0.observables().len(),
         )
+    }
+}
+
+// ---------------------------------------------------------------------------
+// PowerBudgetAnalysis / PowerBudgetResults Python bindings
+// ---------------------------------------------------------------------------
+
+struct PyPowerError(PowerError);
+
+impl From<PyPowerError> for PyErr {
+    fn from(err: PyPowerError) -> Self {
+        PyValueError::new_err(err.0.to_string())
+    }
+}
+
+/// Power budget analysis for spacecraft in a scenario.
+///
+/// Computes eclipse intervals, sun beta angle, and solar flux for each
+/// spacecraft.  The shadow model is cylindrical (umbra only) — penumbra
+/// is **not** modelled.
+///
+/// Args:
+///     scenario: Scenario containing spacecraft and time interval.
+///     ensemble: Optional pre-computed Ensemble. If not provided, the
+///         scenario is propagated automatically.
+///     step: Optional time step for sampling / event detection (default: 60s).
+///     spacecraft_ids: Optional list of spacecraft ids to analyse. Mutually
+///         exclusive with ``constellation_id``.
+///     constellation_id: Optional constellation id — only spacecraft belonging
+///         to this constellation are analysed. Mutually exclusive with
+///         ``spacecraft_ids``.
+#[pyclass(name = "PowerBudgetAnalysis", module = "lox_space", frozen)]
+pub struct PyPowerBudgetAnalysis {
+    scenario: DynScenario,
+    ensemble: Option<Ensemble<AssetId, Tai, DynOrigin, DynFrame>>,
+    step: TimeDelta,
+    filter: Option<SpacecraftFilter>,
+}
+
+#[pymethods]
+impl PyPowerBudgetAnalysis {
+    #[new]
+    #[pyo3(signature = (scenario, ensemble=None, step=None, spacecraft_ids=None, constellation_id=None))]
+    fn new(
+        scenario: PyScenario,
+        ensemble: Option<PyEnsemble>,
+        step: Option<PyTimeDelta>,
+        spacecraft_ids: Option<Vec<String>>,
+        constellation_id: Option<String>,
+    ) -> PyResult<Self> {
+        let filter = match (spacecraft_ids, constellation_id) {
+            (Some(_), Some(_)) => {
+                return Err(PyValueError::new_err(
+                    "spacecraft_ids and constellation_id are mutually exclusive",
+                ));
+            }
+            (Some(ids), None) => Some(SpacecraftFilter::Ids(
+                ids.into_iter().map(AssetId::new).collect(),
+            )),
+            (None, Some(cid)) => Some(SpacecraftFilter::Constellation(ConstellationId::new(cid))),
+            (None, None) => None,
+        };
+        Ok(Self {
+            scenario: scenario.0,
+            ensemble: ensemble.map(|e| e.0),
+            step: step
+                .map(|s| s.0)
+                .unwrap_or_else(|| TimeDelta::from_seconds_f64(60.0)),
+            filter,
+        })
+    }
+
+    /// Compute the power budget analysis.
+    ///
+    /// Args:
+    ///     ephemeris: Optional SPK ephemeris for Sun position. When omitted,
+    ///         an analytical model is used (valid for Earth-centred scenarios).
+    ///
+    /// Returns:
+    ///     PowerBudgetResults with eclipse intervals, beta angles, and
+    ///     solar flux for each spacecraft.
+    #[pyo3(signature = (ephemeris=None))]
+    fn compute(
+        &self,
+        py: Python<'_>,
+        ephemeris: Option<&Bound<'_, PySpk>>,
+    ) -> PyResult<PyPowerBudgetResults> {
+        let scenario = &self.scenario;
+        let step = self.step;
+        let filter = self.filter.clone();
+
+        // Auto-propagate if no ensemble was provided.
+        let auto_ensemble;
+        let ensemble = match &self.ensemble {
+            Some(e) => e,
+            None => {
+                auto_ensemble = scenario
+                    .propagate(&DefaultRotationProvider)
+                    .map_err(|e| PyValueError::new_err(e.to_string()))?;
+                &auto_ensemble
+            }
+        };
+
+        let results = if let Some(spk_bound) = ephemeris {
+            let spk = &spk_bound.get().0;
+            py.detach(|| {
+                let mut a = PowerBudgetAnalysis::new(scenario, ensemble, spk).with_step(step);
+                if let Some(f) = &filter {
+                    a = a.with_filter(f.clone());
+                }
+                a.compute()
+            })
+        } else {
+            let analytical = AnalyticalSunEphemeris;
+            py.detach(|| {
+                let mut a =
+                    PowerBudgetAnalysis::new(scenario, ensemble, &analytical).with_step(step);
+                if let Some(f) = &filter {
+                    a = a.with_filter(f.clone());
+                }
+                a.compute()
+            })
+        };
+
+        Ok(PyPowerBudgetResults {
+            results: results.map_err(PyPowerError)?,
+        })
+    }
+
+    fn __repr__(&self) -> String {
+        let sc_count = self.scenario.spacecraft().len();
+        match &self.filter {
+            Some(SpacecraftFilter::Ids(ids)) => format!(
+                "PowerBudgetAnalysis({sc_count} spacecraft, filtered to {} ids)",
+                ids.len()
+            ),
+            Some(SpacecraftFilter::Constellation(cid)) => {
+                format!("PowerBudgetAnalysis({sc_count} spacecraft, constellation=\"{cid}\")",)
+            }
+            None => format!("PowerBudgetAnalysis({sc_count} spacecraft)"),
+        }
+    }
+}
+
+/// Convert a `TimeSeries<Tai>` to a `PyTimeSeries` (which uses `DynTimeScale`).
+fn to_py_time_series(ts: &TimeSeries<Tai>) -> PyTimeSeries {
+    let dyn_ts = TimeSeries::new(ts.epoch().into_dyn(), ts.series().clone());
+    PyTimeSeries(dyn_ts)
+}
+
+/// Results of a power budget analysis.
+///
+/// Provides access to eclipse intervals, eclipse/sunlit fractions,
+/// beta-angle time series, and solar-flux time series for each spacecraft.
+#[pyclass(name = "PowerBudgetResults", module = "lox_space", frozen)]
+pub struct PyPowerBudgetResults {
+    results: PowerBudgetResults,
+}
+
+#[pymethods]
+impl PyPowerBudgetResults {
+    /// Eclipse intervals for a given spacecraft.
+    ///
+    /// Args:
+    ///     id: Spacecraft identifier.
+    ///
+    /// Returns:
+    ///     List of Interval objects, or empty list if id not found.
+    fn eclipse_intervals(&self, id: &str) -> Vec<PyInterval> {
+        let asset_id = AssetId::new(id);
+        self.results
+            .eclipse_intervals_for(&asset_id)
+            .map(|intervals| {
+                intervals
+                    .iter()
+                    .map(|i| {
+                        PyInterval(TimeInterval::new(i.start().into_dyn(), i.end().into_dyn()))
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    /// Eclipse fraction for a given spacecraft (0 = fully sunlit, 1 = always eclipsed).
+    ///
+    /// Args:
+    ///     id: Spacecraft identifier.
+    ///
+    /// Returns:
+    ///     Eclipse fraction as float, or None if id not found.
+    fn eclipse_fraction(&self, id: &str) -> Option<f64> {
+        self.results.eclipse_fraction(&AssetId::new(id))
+    }
+
+    /// Sunlit fraction for a given spacecraft (1 - eclipse_fraction).
+    ///
+    /// Args:
+    ///     id: Spacecraft identifier.
+    ///
+    /// Returns:
+    ///     Sunlit fraction as float, or None if id not found.
+    fn sunlit_fraction(&self, id: &str) -> Option<f64> {
+        self.results.sunlit_fraction(&AssetId::new(id))
+    }
+
+    /// Beta-angle time series for a given spacecraft (radians).
+    ///
+    /// Args:
+    ///     id: Spacecraft identifier.
+    ///
+    /// Returns:
+    ///     TimeSeries of beta angles in radians, or None if id not found.
+    fn beta_angles(&self, id: &str) -> Option<PyTimeSeries> {
+        let ts = self.results.beta_angles_for(&AssetId::new(id))?;
+        Some(to_py_time_series(ts))
+    }
+
+    /// Solar-flux time series for a given spacecraft (W/m²).
+    ///
+    /// Args:
+    ///     id: Spacecraft identifier.
+    ///
+    /// Returns:
+    ///     TimeSeries of solar flux in W/m², or None if id not found.
+    fn solar_flux(&self, id: &str) -> Option<PyTimeSeries> {
+        let ts = self.results.solar_flux_for(&AssetId::new(id))?;
+        Some(to_py_time_series(ts))
+    }
+
+    fn __repr__(&self) -> String {
+        let n = self.results.all_eclipse_intervals().len();
+        format!("PowerBudgetResults({n} spacecraft)")
     }
 }

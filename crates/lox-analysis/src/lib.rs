@@ -8,5 +8,7 @@
 
 /// Asset definitions: ground stations, spacecraft, constellations, and scenarios.
 pub mod assets;
+/// Power budget analysis: eclipse detection, beta angle, solar flux.
+pub mod power;
 /// Visibility analysis: line-of-sight, elevation masks, passes, and interval computation.
 pub mod visibility;
