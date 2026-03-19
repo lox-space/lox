@@ -15,7 +15,7 @@ pytest *FLAGS:
     uv run --directory $UV_PROJECT pytest {{FLAGS}}
 
 rstest *FLAGS:
-    cargo nextest run --all-features {{FLAGS}}
+    cargo nextest run --all-features --lib --bins --tests --examples {{FLAGS}}
 
 doctest *FLAGS:
     cargo test --doc --all-features {{FLAGS}}
@@ -30,7 +30,7 @@ lint-reuse *ARGS:
     uvx reuse lint {{ARGS}}
 
 lint-clippy *ARGS:
-    cargo clippy --all-features {{ARGS}}
+    cargo clippy --all-features --all-targets {{ARGS}}
 
 lint-rustfmt *ARGS:
     cargo fmt --check {{ARGS}}
