@@ -5,8 +5,8 @@
 use std::f64::consts::PI;
 
 use crate::analysis::python::{
-    PyElevationMask, PyEnsemble, PyGroundStation, PyObservables, PyPass, PyScenario, PySpacecraft,
-    PyVisibilityAnalysis, PyVisibilityResults,
+    PyElevationMask, PyEnsemble, PyGroundStation, PyObservables, PyPass, PyPowerBudgetAnalysis,
+    PyPowerBudgetResults, PyScenario, PySpacecraft, PyVisibilityAnalysis, PyVisibilityResults,
 };
 use crate::bodies::python::PyOrigin;
 use crate::comms::python::{
@@ -91,6 +91,8 @@ pub fn register_types(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyEnsemble>()?;
     m.add_class::<PyVisibilityAnalysis>()?;
     m.add_class::<PyVisibilityResults>()?;
+    m.add_class::<PyPowerBudgetAnalysis>()?;
+    m.add_class::<PyPowerBudgetResults>()?;
 
     // constellations
     m.add_class::<PyConstellation>()?;
