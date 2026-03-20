@@ -16,6 +16,7 @@ nav:
     - Propagators: propagators.md
     - Ground Stations: ground.md
     - Events & Visibility: events.md
+    - Coverage: coverage.md
     - Communications: comms.md
     - Constellations: constellations.md
     - Data Providers: data.md
