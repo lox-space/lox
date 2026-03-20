@@ -8,6 +8,9 @@
 
 /// Asset definitions: ground stations, spacecraft, constellations, and scenarios.
 pub mod assets;
+/// AOI imaging event detection: sub-satellite point, swath, and off-nadir coverage.
+#[cfg(feature = "coverage")]
+pub mod imaging;
 /// Power budget analysis: eclipse detection, beta angle, solar flux.
 pub mod power;
 /// Visibility analysis: line-of-sight, elevation masks, passes, and interval computation.

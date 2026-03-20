@@ -41,6 +41,8 @@ csv = "1.4.0"
 differential-equations = "0.5.2"
 divan = { package = "codspeed-divan-compat", version = "4.3.0" }
 fast_polynomial = "0.3.0"
+geo = "0.29"
+geojson = "0.24"
 glam = "0.30.9"
 itertools = "0.14.0"
 libm = "0.2.15"

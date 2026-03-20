@@ -56,9 +56,7 @@ def results(scenario, ephemeris):
 
 @pytest.fixture(scope="module")
 def results_with_los(scenario, ephemeris):
-    analysis = lox.VisibilityAnalysis(
-        scenario, occulting_bodies=[lox.Origin("Earth")]
-    )
+    analysis = lox.VisibilityAnalysis(scenario, occulting_bodies=[lox.Origin("Earth")])
     return analysis.compute(ephemeris)
 
 
@@ -157,9 +155,7 @@ class TestVisibilityAnalysis:
         for sc in space_assets:
             assert len(results.intervals(target_gs, sc.id())) > 0
 
-    def test_with_inter_satellite_filter(
-        self, t0, t1, space_assets, ephemeris
-    ):
+    def test_with_inter_satellite_filter(self, t0, t1, space_assets, ephemeris):
         """inter_satellite_filter prunes spacecraft pairs."""
         scenario = lox.Scenario(t0, t1, spacecraft=space_assets)
         target_ids = {space_assets[0].id(), space_assets[2].id()}

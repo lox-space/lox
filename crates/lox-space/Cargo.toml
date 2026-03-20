@@ -37,6 +37,7 @@ lox-orbits = { workspace = true, optional = true }
 lox-time = { workspace = true, optional = true, features = ["chrono"] }
 lox-units = { workspace = true, optional = true }
 
+geo = { workspace = true, optional = true }
 numpy = { workspace = true, optional = true }
 pyo3 = { workspace = true, optional = true }
 sgp4 = { workspace = true, optional = true }
@@ -65,6 +66,7 @@ default = [
   "earth",
   "ephem",
   "frames",
+  "coverage",
   "io",
   "math",
   "orbits",
@@ -72,6 +74,7 @@ default = [
   "units",
 ]
 analysis = ["orbits", "dep:lox-analysis", "lox-analysis?/comms"]
+coverage = ["analysis", "dep:geo", "lox-analysis?/coverage", "lox-analysis?/geojson"]
 bodies = ["math", "units", "dep:lox-bodies"]
 comms = ["units", "dep:lox-comms"]
 core = ["dep:lox-core"]
@@ -96,6 +99,7 @@ python = [
   "analysis",
   "comms",
   "core",
+  "coverage",
   "time",
   "units",
   "dep:numpy",

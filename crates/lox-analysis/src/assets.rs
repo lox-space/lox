@@ -7,6 +7,9 @@ use std::fmt;
 
 use lox_bodies::{DynOrigin, Origin};
 use lox_core::units::AngularRate;
+
+#[cfg(feature = "coverage")]
+use crate::imaging::ImagingPayload;
 use lox_frames::rotations::TryRotation;
 use lox_frames::{DynFrame, ReferenceFrame};
 use lox_time::Time;
@@ -176,6 +179,8 @@ pub struct Spacecraft {
     orbit: OrbitSource,
     max_slew_rate: Option<AngularRate>,
     constellation: Option<ConstellationId>,
+    #[cfg(feature = "coverage")]
+    imaging_payload: Option<ImagingPayload>,
     #[cfg(feature = "comms")]
     communication_systems: Vec<CommunicationSystem>,
 }
@@ -188,6 +193,8 @@ impl Spacecraft {
             orbit,
             max_slew_rate: None,
             constellation: None,
+            #[cfg(feature = "coverage")]
+            imaging_payload: None,
             #[cfg(feature = "comms")]
             communication_systems: Vec::new(),
         }
@@ -202,6 +209,13 @@ impl Spacecraft {
     /// Assigns this spacecraft to a constellation.
     pub fn with_constellation_id(mut self, id: impl Into<String>) -> Self {
         self.constellation = Some(ConstellationId(id.into()));
+        self
+    }
+
+    /// Sets the imaging payload for this spacecraft.
+    #[cfg(feature = "coverage")]
+    pub fn with_imaging_payload(mut self, payload: ImagingPayload) -> Self {
+        self.imaging_payload = Some(payload);
         self
     }
 
@@ -230,6 +244,12 @@ impl Spacecraft {
     /// Returns the maximum slew rate, if set.
     pub fn max_slew_rate(&self) -> Option<AngularRate> {
         self.max_slew_rate
+    }
+
+    /// Returns the imaging payload, if set.
+    #[cfg(feature = "coverage")]
+    pub fn imaging_payload(&self) -> Option<ImagingPayload> {
+        self.imaging_payload
     }
 
     /// Returns the communication systems attached to this spacecraft.
