@@ -84,7 +84,7 @@ def filtered_inter_satellite_results(t0, t1, space_assets, ephemeris):
     target_ids = {space_assets[0].id(), space_assets[2].id()}
     analysis = lox.VisibilityAnalysis(
         scenario,
-        filter=lambda sc1, sc2: {sc1.id(), sc2.id()} == target_ids,
+        inter_satellite_filter=lambda sc1, sc2: {sc1.id(), sc2.id()} == target_ids,
     )
     return analysis.compute(ephemeris)
 
@@ -143,17 +143,68 @@ class TestVisibilityAnalysis:
         n_is = len(space_assets) * (len(space_assets) - 1) // 2
         assert results.num_pairs() == n_gs + n_is
 
-    def test_with_filter(self, t0, t1, space_assets, ephemeris):
+    def test_with_ground_space_filter(
+        self, scenario, ephemeris, ground_assets, space_assets
+    ):
+        """ground_space_filter prunes pairs before computation."""
+        target_gs = ground_assets[0].id()
+        analysis = lox.VisibilityAnalysis(
+            scenario,
+            ground_space_filter=lambda gs, _sc: gs.id() == target_gs,
+        )
+        results = analysis.compute(ephemeris)
+        assert results.num_pairs() == len(space_assets)
+        for sc in space_assets:
+            assert len(results.intervals(target_gs, sc.id())) > 0
+
+    def test_with_inter_satellite_filter(
+        self, t0, t1, space_assets, ephemeris
+    ):
+        """inter_satellite_filter prunes spacecraft pairs."""
         scenario = lox.Scenario(t0, t1, spacecraft=space_assets)
         target_ids = {space_assets[0].id(), space_assets[2].id()}
         analysis = lox.VisibilityAnalysis(
             scenario,
-            filter=lambda sc1, sc2: {sc1.id(), sc2.id()} == target_ids,
+            inter_satellite_filter=lambda sc1, sc2: {sc1.id(), sc2.id()} == target_ids,
         )
         results = analysis.compute(ephemeris)
-
         assert results.num_pairs() == 1
         assert results.pair_ids() == [(space_assets[0].id(), space_assets[2].id())]
+
+    def test_ground_space_filter_rejects_non_callable(self, scenario):
+        """Passing a non-callable ground_space_filter raises ValueError."""
+        with pytest.raises(ValueError, match="ground_space_filter must be callable"):
+            lox.VisibilityAnalysis(scenario, ground_space_filter="not_callable")
+
+    def test_inter_satellite_filter_rejects_non_callable(self, t0, t1, space_assets):
+        """Passing a non-callable inter_satellite_filter raises ValueError."""
+        scenario = lox.Scenario(t0, t1, spacecraft=space_assets)
+        with pytest.raises(ValueError, match="inter_satellite_filter must be callable"):
+            lox.VisibilityAnalysis(scenario, inter_satellite_filter=42)
+
+    def test_repr_basic(self, scenario):
+        analysis = lox.VisibilityAnalysis(scenario)
+        r = repr(analysis)
+        assert "VisibilityAnalysis(" in r
+        assert "ground assets" in r
+        assert "space assets" in r
+
+    def test_repr_with_ground_space_filter(self, scenario):
+        analysis = lox.VisibilityAnalysis(
+            scenario, ground_space_filter=lambda gs, sc: True
+        )
+        assert "ground_space_filter=True" in repr(analysis)
+
+    def test_repr_with_inter_satellite_filter(self, t0, t1, space_assets):
+        scenario = lox.Scenario(t0, t1, spacecraft=space_assets)
+        analysis = lox.VisibilityAnalysis(
+            scenario, inter_satellite_filter=lambda s1, s2: True
+        )
+        assert "inter_satellite_filter=True" in repr(analysis)
+
+    def test_repr_with_inter_satellite(self, scenario):
+        analysis = lox.VisibilityAnalysis(scenario, inter_satellite=True)
+        assert "inter_satellite=True" in repr(analysis)
 
     def test_los_is_subset_of_basic(
         self, results, results_with_los, ground_assets, space_assets
