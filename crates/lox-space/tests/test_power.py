@@ -158,9 +158,7 @@ class TestPowerBudgetFiltering:
         sc3 = lox.Spacecraft("CUSTOMER", iss_sgp4, constellation_id="other")
         scenario = lox.Scenario(t0, t1, spacecraft=[sc1, sc2, sc3])
 
-        analysis = lox.PowerBudgetAnalysis(
-            scenario, constellation_id="mysat"
-        )
+        analysis = lox.PowerBudgetAnalysis(scenario, constellation_id="mysat")
         results = analysis.compute()
 
         assert results.eclipse_fraction("SAT-1") is not None
@@ -183,9 +181,7 @@ class TestPowerBudgetFiltering:
 
 class TestPowerBudgetCustomStep:
     def test_custom_step(self, scenario):
-        analysis = lox.PowerBudgetAnalysis(
-            scenario, step=lox.TimeDelta(120)
-        )
+        analysis = lox.PowerBudgetAnalysis(scenario, step=lox.TimeDelta(120))
         results = analysis.compute()
         # Should still produce valid results
         ts = results.beta_angles("ISS")

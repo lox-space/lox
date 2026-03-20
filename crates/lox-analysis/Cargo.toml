@@ -26,12 +26,16 @@ lox-math.workspace = true
 lox-orbits.workspace = true
 lox-time = { workspace = true, features = ["chrono"] }
 
+geo = { workspace = true, optional = true }
+geojson = { workspace = true, optional = true }
 rayon.workspace = true
 serde = { workspace = true, optional = true }
 thiserror.workspace = true
 
 [features]
 comms = ["dep:lox-comms"]
+geojson = ["dep:geojson"]
+coverage = ["dep:geo"]
 serde = [
   "dep:serde",
   "lox-bodies/serde",

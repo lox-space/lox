@@ -95,7 +95,9 @@ def test_time_series_unknown_interpolation():
 def test_time_series_from_offsets_unknown_interpolation():
     epoch = lox.Time("TAI", 2024, 1, 1)
     with pytest.raises(ValueError, match="unknown interpolation type"):
-        lox.TimeSeries.from_offsets(epoch, [0.0, 1.0], [1.0, 2.0], interpolation="spline")
+        lox.TimeSeries.from_offsets(
+            epoch, [0.0, 1.0], [1.0, 2.0], interpolation="spline"
+        )
 
 
 def test_series_unknown_interpolation():

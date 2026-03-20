@@ -5,6 +5,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::analysis::assets::{AssetId, ConstellationId, DynScenario, GroundStation, Spacecraft};
+use crate::analysis::imaging::{Aoi, AoiId, ImagingAnalysis, ImagingPayload};
 use crate::analysis::power::{
     PowerBudgetAnalysis, PowerBudgetResults, PowerError, SpacecraftFilter,
 };
@@ -179,12 +180,14 @@ pub struct PySpacecraft(pub Spacecraft);
 #[pymethods]
 impl PySpacecraft {
     #[new]
-    #[pyo3(signature = (id, orbit, max_slew_rate=None, constellation_id=None, communication_systems=None))]
+    #[pyo3(signature = (id, orbit, max_slew_rate=None, constellation_id=None, imaging_payload=None, communication_systems=None))]
+    #[allow(clippy::too_many_arguments)]
     fn new(
         id: String,
         orbit: &Bound<'_, PyAny>,
         max_slew_rate: Option<PyAngularRate>,
         constellation_id: Option<String>,
+        imaging_payload: Option<PyImagingPayload>,
         communication_systems: Option<Vec<PyCommunicationSystem>>,
     ) -> PyResult<Self> {
         let orbit_source = extract_orbit_source(orbit)?;
@@ -194,6 +197,9 @@ impl PySpacecraft {
         }
         if let Some(cid) = constellation_id {
             asset = asset.with_constellation_id(cid);
+        }
+        if let Some(payload) = imaging_payload {
+            asset = asset.with_imaging_payload(payload.0);
         }
         if let Some(systems) = communication_systems {
             for system in systems {
@@ -216,6 +222,11 @@ impl PySpacecraft {
     /// Return the maximum slew rate, if set.
     fn max_slew_rate(&self) -> Option<PyAngularRate> {
         self.0.max_slew_rate().map(PyAngularRate)
+    }
+
+    /// Return the imaging payload, if set.
+    fn imaging_payload(&self) -> Option<PyImagingPayload> {
+        self.0.imaging_payload().map(PyImagingPayload)
     }
 
     /// Return the communication systems.
@@ -1312,5 +1323,256 @@ impl PyPowerBudgetResults {
     fn __repr__(&self) -> String {
         let n = self.results.all_eclipse_intervals().len();
         format!("PowerBudgetResults({n} spacecraft)")
+    }
+}
+
+// ---------------------------------------------------------------------------
+// ImagingAnalysis Python bindings
+// ---------------------------------------------------------------------------
+
+struct PyImagingError(crate::analysis::imaging::ImagingError);
+
+impl From<PyImagingError> for PyErr {
+    fn from(err: PyImagingError) -> Self {
+        PyValueError::new_err(err.0.to_string())
+    }
+}
+
+/// An area of interest (AOI) defined as a geographic polygon.
+///
+/// Coordinates follow GeoJSON convention: longitude/latitude in degrees.
+///
+/// Args:
+///     coords: List of (longitude, latitude) tuples in degrees forming the
+///         polygon exterior ring. The ring should be closed (first == last).
+#[pyclass(name = "Aoi", module = "lox_space", frozen, from_py_object)]
+#[derive(Clone, Debug)]
+pub struct PyAoi(pub Aoi);
+
+#[pymethods]
+impl PyAoi {
+    #[new]
+    fn new(coords: Vec<(f64, f64)>) -> Self {
+        let line_string = geo::LineString::from(coords);
+        let polygon = geo::Polygon::new(line_string, vec![]);
+        PyAoi(Aoi::new(polygon))
+    }
+
+    /// Parse an AOI from a GeoJSON string.
+    ///
+    /// Expects a GeoJSON Polygon geometry, Feature containing a Polygon,
+    /// or FeatureCollection containing a Feature with a Polygon.
+    ///
+    /// Args:
+    ///     geojson: GeoJSON string.
+    ///
+    /// Returns:
+    ///     Aoi parsed from the GeoJSON.
+    #[classmethod]
+    fn from_geojson(_cls: &Bound<'_, PyType>, geojson: &str) -> PyResult<Self> {
+        let aoi = Aoi::from_geojson(geojson).map_err(|e| PyValueError::new_err(e.to_string()))?;
+        Ok(PyAoi(aoi))
+    }
+
+    fn __repr__(&self) -> String {
+        let n = self.0.polygon().exterior().0.len();
+        format!("Aoi({n} vertices)")
+    }
+}
+
+/// Imaging sensor payload describing a spacecraft's ground coverage capability.
+///
+/// Defines the sensor's swath width and optional off-nadir pointing capability.
+/// Assign to a spacecraft via the ``imaging_payload`` parameter.
+#[pyclass(name = "ImagingPayload", module = "lox_space", frozen, from_py_object)]
+#[derive(Clone, Debug)]
+pub struct PyImagingPayload(pub ImagingPayload);
+
+#[pymethods]
+impl PyImagingPayload {
+    /// Create parameters for a nadir-only sensor.
+    ///
+    /// Args:
+    ///     swath_width: Full swath width as Distance.
+    ///
+    /// Returns:
+    ///     ImagingPayload for nadir-only imaging.
+    #[classmethod]
+    fn nadir_only(_cls: &Bound<'_, PyType>, swath_width: PyDistance) -> Self {
+        PyImagingPayload(ImagingPayload::nadir_only(swath_width.0))
+    }
+
+    /// Create parameters for a sensor with off-nadir pointing capability.
+    ///
+    /// Args:
+    ///     swath_width: Full swath width as Distance.
+    ///     max_off_nadir: Maximum off-nadir angle as Angle.
+    ///
+    /// Returns:
+    ///     ImagingPayload for off-nadir imaging.
+    #[classmethod]
+    fn off_nadir(
+        _cls: &Bound<'_, PyType>,
+        swath_width: PyDistance,
+        max_off_nadir: PyAngle,
+    ) -> Self {
+        PyImagingPayload(ImagingPayload::off_nadir(swath_width.0, max_off_nadir.0))
+    }
+
+    fn __repr__(&self) -> String {
+        "ImagingPayload(...)".to_string()
+    }
+}
+
+/// AOI imaging analysis: computes imaging windows for spacecraft over AOIs.
+///
+/// Imaging payloads are read from each spacecraft; spacecraft without a
+/// payload are skipped.
+///
+/// Args:
+///     scenario: Scenario containing spacecraft and time interval.
+///         Spacecraft must have an ``imaging_payload`` assigned.
+///     aois: List of (id, Aoi) tuples defining the areas of interest.
+///     ensemble: Optional pre-computed Ensemble. If not provided, the
+///         scenario is propagated automatically.
+///     step: Optional time step for event detection (default: 60s).
+///     body_fixed_frame: Optional body-fixed frame override (e.g. "ITRF").
+///         Defaults to IAU frame of the scenario's origin.
+#[pyclass(name = "ImagingAnalysis", module = "lox_space", frozen)]
+pub struct PyImagingAnalysis {
+    scenario: DynScenario,
+    aois: Vec<(AoiId, Aoi)>,
+    ensemble: Option<Ensemble<AssetId, Tai, DynOrigin, DynFrame>>,
+    step: TimeDelta,
+    body_fixed_frame: Option<DynFrame>,
+}
+
+#[pymethods]
+impl PyImagingAnalysis {
+    #[new]
+    #[pyo3(signature = (scenario, aois, ensemble=None, step=None, body_fixed_frame=None))]
+    fn new(
+        scenario: PyScenario,
+        aois: Vec<(String, PyAoi)>,
+        ensemble: Option<PyEnsemble>,
+        step: Option<PyTimeDelta>,
+        body_fixed_frame: Option<PyFrame>,
+    ) -> Self {
+        let aois = aois
+            .into_iter()
+            .map(|(id, aoi)| (AoiId::new(id), aoi.0))
+            .collect();
+        Self {
+            scenario: scenario.0,
+            aois,
+            ensemble: ensemble.map(|e| e.0),
+            step: step
+                .map(|s| s.0)
+                .unwrap_or_else(|| TimeDelta::from_seconds_f64(60.0)),
+            body_fixed_frame: body_fixed_frame.map(|f| f.0),
+        }
+    }
+
+    /// Compute imaging intervals for all (spacecraft, AOI) pairs.
+    ///
+    /// If no ensemble was provided at construction, the scenario is
+    /// propagated automatically (trajectories transformed to ICRF).
+    ///
+    /// Returns:
+    ///     ImagingResults containing intervals for all pairs.
+    fn compute(&self, py: Python<'_>) -> PyResult<PyImagingResults> {
+        let scenario = &self.scenario;
+        let step = self.step;
+        let body_fixed_frame = self.body_fixed_frame;
+
+        // Auto-propagate if no ensemble was provided.
+        let auto_ensemble;
+        let ensemble = match &self.ensemble {
+            Some(e) => e,
+            None => {
+                auto_ensemble = scenario
+                    .propagate(&DefaultRotationProvider)
+                    .map_err(|e| PyValueError::new_err(e.to_string()))?;
+                &auto_ensemble
+            }
+        };
+
+        let aois = self.aois.clone();
+
+        let results = py.detach(|| {
+            let mut analysis = ImagingAnalysis::new(scenario, ensemble, aois).with_step(step);
+            if let Some(frame) = body_fixed_frame {
+                analysis = analysis.with_body_fixed_frame(frame);
+            }
+            analysis.compute()
+        });
+
+        Ok(PyImagingResults {
+            results: results.map_err(PyImagingError)?,
+        })
+    }
+
+    fn __repr__(&self) -> String {
+        let sc_count = self.scenario.spacecraft().len();
+        let aoi_count = self.aois.len();
+        let aoi_label = if aoi_count == 1 { "AOI" } else { "AOIs" };
+        format!("ImagingAnalysis({sc_count} spacecraft, {aoi_count} {aoi_label})")
+    }
+}
+
+/// Results of an imaging analysis.
+///
+/// Provides access to imaging intervals for each (spacecraft, AOI) pair.
+#[pyclass(name = "ImagingResults", module = "lox_space", frozen)]
+pub struct PyImagingResults {
+    results: crate::analysis::imaging::ImagingResults,
+}
+
+#[pymethods]
+impl PyImagingResults {
+    /// Return imaging intervals for a specific (spacecraft, AOI) pair.
+    ///
+    /// Args:
+    ///     spacecraft_id: Spacecraft identifier.
+    ///     aoi_id: AOI identifier.
+    ///
+    /// Returns:
+    ///     List of Interval objects, or empty list if pair not found.
+    fn intervals(&self, spacecraft_id: &str, aoi_id: &str) -> Vec<PyInterval> {
+        let sc_id = AssetId::new(spacecraft_id);
+        let aoi_id = AoiId::new(aoi_id);
+        self.results
+            .intervals(&sc_id, &aoi_id)
+            .iter()
+            .map(|i| PyInterval(TimeInterval::new(i.start().into_dyn(), i.end().into_dyn())))
+            .collect()
+    }
+
+    /// Return all intervals for all (spacecraft, AOI) pairs.
+    ///
+    /// Returns:
+    ///     Dictionary mapping (spacecraft_id, aoi_id) to list of Interval objects.
+    fn all_intervals(&self) -> HashMap<(String, String), Vec<PyInterval>> {
+        self.results
+            .all_intervals()
+            .iter()
+            .map(|((sc_id, aoi_id), intervals)| {
+                (
+                    (sc_id.as_str().to_string(), aoi_id.as_str().to_string()),
+                    intervals
+                        .iter()
+                        .map(|i| {
+                            PyInterval(TimeInterval::new(i.start().into_dyn(), i.end().into_dyn()))
+                        })
+                        .collect(),
+                )
+            })
+            .collect()
+    }
+
+    fn __repr__(&self) -> String {
+        let n = self.results.num_pairs();
+        let label = if n == 1 { "pair" } else { "pairs" };
+        format!("ImagingResults({n} {label})")
     }
 }

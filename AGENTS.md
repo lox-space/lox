@@ -107,6 +107,14 @@ Key details:
 - `lox-test-utils` provides `ApproxEq` for floating-point comparisons.
 - Benchmarks use `divan` and are located in `crates/lox-space/benches/`. All benchmarks should be added to `lox-space`, not to individual crates, so they are centralized in one place. Exception: `lox-test-utils` has its own benchmarks for the `ApproxEq` infrastructure.
 
+### Python Wrapper Checklist
+
+When modifying the Python API (`#[pyclass]`/`#[pymethods]` in `lox-space`), **always** update all three of:
+
+1. **Type stubs** — `crates/lox-space/lox_space.pyi`
+2. **Docs** — `crates/lox-space/docs/` (e.g. `states.md` for orbits, `analysis.md` for analysis classes)
+3. **Tests** — `crates/lox-space/tests/`
+
 ### Python Tests
 - Located in `crates/lox-space/tests/test_*.py`.
 - `conftest.py` provides fixtures: `data_dir`, `provider` (EOPProvider), `oneweb` (TLE constellation), `estrack` (ground stations).
