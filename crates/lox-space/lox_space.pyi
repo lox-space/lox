@@ -376,6 +376,7 @@ class Spacecraft:
         orbit: SGP4 | Vallado | J2 | Trajectory,
         max_slew_rate: AngularRate | None = None,
         constellation_id: str | None = None,
+        imaging_payload: "ImagingPayload | None" = None,
         communication_systems: list[CommunicationSystem] | None = None,
     ) -> Self: ...
     def id(self) -> str:
@@ -386,6 +387,9 @@ class Spacecraft:
         ...
     def max_slew_rate(self) -> AngularRate | None:
         """Return the maximum slew rate, if set."""
+        ...
+    def imaging_payload(self) -> "ImagingPayload | None":
+        """Return the imaging payload, if set."""
         ...
     def communication_systems(self) -> list[CommunicationSystem]:
         """Return the communication systems."""
@@ -2566,3 +2570,115 @@ def freq_overlap(
         Overlap factor in [0, 1].
     """
     ...
+
+# ---------------------------------------------------------------------------
+# Imaging analysis
+# ---------------------------------------------------------------------------
+
+class Aoi:
+    """An area of interest (AOI) defined as a geographic polygon.
+
+    Coordinates follow GeoJSON convention: longitude/latitude in degrees.
+
+    Args:
+        coords: List of (longitude, latitude) tuples forming the polygon
+            exterior ring. The ring should be closed (first == last).
+
+    Examples:
+        >>> aoi = lox.Aoi([(10, 45), (11, 45), (11, 46), (10, 46), (10, 45)])
+        >>> aoi = lox.Aoi.from_geojson('{"type":"Polygon","coordinates":[[[10,45],[11,45],[11,46],[10,46],[10,45]]]}')
+    """
+    def __new__(cls, coords: list[tuple[float, float]]) -> Self: ...
+    @classmethod
+    def from_geojson(cls, geojson: str) -> Self:
+        """Parse an AOI from a GeoJSON string.
+
+        Expects a GeoJSON Polygon geometry, Feature, or FeatureCollection.
+        """
+        ...
+
+class ImagingPayload:
+    """Imaging sensor payload describing a spacecraft's ground coverage capability.
+
+    Defines the sensor's swath width and optional off-nadir pointing capability.
+    Assign to a spacecraft via the ``imaging_payload`` parameter.
+
+    Examples:
+        >>> payload = lox.ImagingPayload.nadir_only(20.0 * lox.km)
+        >>> payload = lox.ImagingPayload.off_nadir(20.0 * lox.km, 30.0 * lox.deg)
+        >>> sc = lox.Spacecraft("sat1", orbit, imaging_payload=payload)
+    """
+    @classmethod
+    def nadir_only(cls, swath_width: Distance) -> Self:
+        """Create a payload for a nadir-only sensor.
+
+        Args:
+            swath_width: Full swath width as Distance.
+        """
+        ...
+    @classmethod
+    def off_nadir(cls, swath_width: Distance, max_off_nadir: Angle) -> Self:
+        """Create a payload for a sensor with off-nadir pointing capability.
+
+        Args:
+            swath_width: Full swath width as Distance.
+            max_off_nadir: Maximum off-nadir angle as Angle.
+        """
+        ...
+
+class ImagingAnalysis:
+    """AOI imaging analysis: computes imaging windows for spacecraft over AOIs.
+
+    Imaging payloads are read from each spacecraft; spacecraft without a
+    payload are silently skipped.
+
+    Args:
+        scenario: Scenario containing spacecraft with ``imaging_payload``.
+        aois: List of (id, Aoi) tuples defining the areas of interest.
+        ensemble: Optional pre-computed Ensemble.
+        step: Optional time step for event detection (default: 60s).
+        body_fixed_frame: Optional body-fixed frame override.
+
+    Examples:
+        >>> payload = lox.ImagingPayload.off_nadir(20.0 * lox.km, 30.0 * lox.deg)
+        >>> sc = lox.Spacecraft("sat1", orbit, imaging_payload=payload)
+        >>> scenario = lox.Scenario(t0, t1, spacecraft=[sc])
+        >>> aoi = lox.Aoi.from_geojson('{"type":"Polygon","coordinates":[[[10,45],[11,45],[11,46],[10,46],[10,45]]]}')
+        >>> imaging = lox.ImagingAnalysis(scenario, aois=[("rome", aoi)])
+        >>> results = imaging.compute()
+    """
+    def __new__(
+        cls,
+        scenario: Scenario,
+        aois: list[tuple[str, Aoi]],
+        ensemble: Ensemble | None = None,
+        step: TimeDelta | None = None,
+        body_fixed_frame: Frame | None = None,
+    ) -> Self: ...
+    def compute(self) -> "ImagingResults":
+        """Compute imaging intervals for all (spacecraft, AOI) pairs.
+
+        If no ensemble was provided, the scenario is propagated automatically.
+        Spacecraft without an imaging payload are skipped.
+        """
+        ...
+
+class ImagingResults:
+    """Results of an imaging analysis.
+
+    Provides access to imaging intervals for each (spacecraft, AOI) pair.
+    """
+    def intervals(self, spacecraft_id: str, aoi_id: str) -> list[Interval]:
+        """Return imaging intervals for a specific pair.
+
+        Args:
+            spacecraft_id: Spacecraft identifier.
+            aoi_id: AOI identifier.
+
+        Returns:
+            List of Interval objects, or empty list if pair not found.
+        """
+        ...
+    def all_intervals(self) -> dict[tuple[str, str], list[Interval]]:
+        """Return all intervals for all (spacecraft, AOI) pairs."""
+        ...

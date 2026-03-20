@@ -147,17 +147,23 @@ def oneweb_sample_large(oneweb):
 
 
 @pytest.fixture(scope="session")
-def small_scenario_and_ensemble(oneweb_sample_small, europe_ground_assets_coarse, t0, t1):
+def small_scenario_and_ensemble(
+    oneweb_sample_small, europe_ground_assets_coarse, t0, t1
+):
     """Pre-computed scenario and ensemble for small benchmark."""
     sample_ground_assets = europe_ground_assets_coarse[:10]
     return make_scenario_and_ensemble(oneweb_sample_small, sample_ground_assets, t0, t1)
 
 
 @pytest.fixture(scope="session")
-def medium_scenario_and_ensemble(oneweb_sample_medium, europe_ground_assets_coarse, t0, t1):
+def medium_scenario_and_ensemble(
+    oneweb_sample_medium, europe_ground_assets_coarse, t0, t1
+):
     """Pre-computed scenario and ensemble for medium benchmark."""
     sample_ground_assets = europe_ground_assets_coarse[:50]
-    return make_scenario_and_ensemble(oneweb_sample_medium, sample_ground_assets, t0, t1)
+    return make_scenario_and_ensemble(
+        oneweb_sample_medium, sample_ground_assets, t0, t1
+    )
 
 
 @pytest.fixture(scope="session")
