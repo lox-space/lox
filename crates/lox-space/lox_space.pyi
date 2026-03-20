@@ -668,11 +668,16 @@ class VisibilityAnalysis:
             for faster detection.
         inter_satellite: If True, also compute inter-satellite visibility
             for all unique spacecraft pairs (default: False).
-        filter: Optional callable ``(Spacecraft, Spacecraft) -> bool`` that
-            receives two spacecraft and returns whether the pair should be
+        ground_space_filter: Optional callable
+            ``(GroundStation, Spacecraft) -> bool`` that receives a ground
+            station and a spacecraft and returns whether the pair should be
             evaluated. Called once per candidate pair before the parallel
-            phase. When provided, inter-satellite visibility is automatically
-            enabled.
+            phase.
+        inter_satellite_filter: Optional callable
+            ``(Spacecraft, Spacecraft) -> bool`` that receives two spacecraft
+            and returns whether the pair should be evaluated. Called once per
+            candidate pair before the parallel phase. When provided,
+            inter-satellite visibility is automatically enabled.
         min_range: Optional minimum range constraint for inter-satellite pairs.
         max_range: Optional maximum range constraint for inter-satellite pairs.
 
@@ -689,7 +694,8 @@ class VisibilityAnalysis:
         step: TimeDelta | None = None,
         min_pass_duration: TimeDelta | None = None,
         inter_satellite: bool = False,
-        filter: Callable[[Spacecraft, Spacecraft], bool] | None = None,
+        ground_space_filter: Callable[[GroundStation, Spacecraft], bool] | None = None,
+        inter_satellite_filter: Callable[[Spacecraft, Spacecraft], bool] | None = None,
         min_range: Distance | None = None,
         max_range: Distance | None = None,
     ) -> Self: ...
