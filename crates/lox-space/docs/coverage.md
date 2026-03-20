@@ -4,9 +4,9 @@ SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
 SPDX-License-Identifier: MPL-2.0
 -->
 
-# AOI Imaging
+# Coverage
 
-Compute when Earth observation spacecraft can image ground areas of interest.
+Compute when spacecraft can observe ground areas of interest.
 
 ## Overview
 
