@@ -11,7 +11,7 @@ use differential_equations::{
     traits::State,
 };
 use lox_bodies::{
-    DynOrigin, J2, MeanRadius, Origin, PointMass, TryJ2, TryMeanRadius, TryPointMass,
+    DynOrigin, J2, Origin, PointMass, Spheroid, TryJ2, TryPointMass, TrySpheroid,
     UndefinedOriginPropertyError,
 };
 use lox_core::coords::Cartesian;
@@ -49,7 +49,7 @@ pub enum J2Error {
 
 /// Numerical orbit propagator with J2 zonal harmonic perturbation.
 #[derive(Debug, Clone, Copy)]
-pub struct J2Propagator<T: TimeScale, O: TryJ2 + TryPointMass + TryMeanRadius, R: ReferenceFrame> {
+pub struct J2Propagator<T: TimeScale, O: TryJ2 + TryPointMass + TrySpheroid, R: ReferenceFrame> {
     initial_state: CartesianOrbit<T, O, R>,
     rtol: f64,
     atol: f64,
@@ -69,7 +69,7 @@ fn default_h_max(position: DVec3, velocity: DVec3) -> f64 {
 impl<T, O, R> J2Propagator<T, O, R>
 where
     T: TimeScale,
-    O: J2 + PointMass + MeanRadius + Copy,
+    O: J2 + PointMass + Spheroid + Copy,
     R: ReferenceFrame,
 {
     /// Create a new J2 propagator from the given initial state.
@@ -90,7 +90,7 @@ where
 impl<T, O, R> J2Propagator<T, O, R>
 where
     T: TimeScale,
-    O: TryJ2 + TryPointMass + TryMeanRadius + Copy,
+    O: TryJ2 + TryPointMass + TrySpheroid + Copy,
     R: ReferenceFrame,
 {
     /// Try to create a new J2 propagator, returning an error if the origin lacks required properties.
@@ -99,7 +99,7 @@ where
     ) -> Result<Self, UndefinedOriginPropertyError> {
         initial_state.origin().try_gravitational_parameter()?;
         initial_state.origin().try_j2()?;
-        initial_state.origin().try_mean_radius()?;
+        initial_state.origin().try_equatorial_radius()?;
 
         let h_max = default_h_max(initial_state.position(), initial_state.velocity());
         Ok(Self {
@@ -116,7 +116,7 @@ where
 impl<T, O, R> J2Propagator<T, O, R>
 where
     T: TimeScale,
-    O: TryJ2 + TryPointMass + TryMeanRadius + Copy,
+    O: TryJ2 + TryPointMass + TrySpheroid + Copy,
     R: ReferenceFrame,
 {
     /// Set the relative tolerance for the ODE solver.
@@ -182,11 +182,11 @@ where
             .expect("J2 should be available")
     }
 
-    fn mean_radius(&self) -> f64 {
+    fn equatorial_radius(&self) -> f64 {
         self.initial_state
             .origin()
-            .try_mean_radius()
-            .expect("mean radius should be available")
+            .try_equatorial_radius()
+            .expect("equatorial radius should be available")
             .as_f64()
     }
 
@@ -206,13 +206,13 @@ where
 impl<T, O, R> ODE<f64, CartesianState> for J2Propagator<T, O, R>
 where
     T: TimeScale,
-    O: TryJ2 + TryPointMass + TryMeanRadius + Copy,
+    O: TryJ2 + TryPointMass + TrySpheroid + Copy,
     R: ReferenceFrame,
 {
     fn diff(&self, _t: f64, s: &CartesianState, dydt: &mut CartesianState) {
         let mu = self.gravitational_parameter();
         let j2 = self.j2();
-        let rm = self.mean_radius();
+        let rm = self.equatorial_radius();
 
         let p = s.position();
         let pm = p.length();
@@ -229,7 +229,7 @@ where
 impl<T, O, R> Propagator<T, O> for J2Propagator<T, O, R>
 where
     T: TimeScale + Copy + PartialOrd,
-    O: TryJ2 + TryPointMass + TryMeanRadius + Origin + Copy,
+    O: TryJ2 + TryPointMass + TrySpheroid + Origin + Copy,
     R: ReferenceFrame + Copy,
 {
     type Frame = R;
@@ -493,7 +493,7 @@ mod tests {
         let mut dsdt = CartesianState::default();
         j2.diff(0.0, &s0, &mut dsdt);
 
-        let acc_exp = DVec3::new(-1.2324031762444367, 2.4862258582559233, -7.287340551142344);
+        let acc_exp = DVec3::new(-1.232391129555646, 2.4862015555035812, -7.2873117435524986);
 
         assert_eq!(dsdt.position(), s0.velocity());
         assert_approx_eq!(dsdt.velocity(), acc_exp, rtol <= 1e-8);
