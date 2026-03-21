@@ -37,10 +37,10 @@ def test_from_numpy():
     time = utc.to_scale("TDB")
     states = np.array(
         [
-            [0.0, 1e3, 1e3, 1e3, 1.0, 1.0, 1.0],
-            [1.0, 2e3, 2e3, 2e3, 2.0, 2.0, 2.0],
-            [2.0, 3e3, 3e3, 3e3, 3.0, 3.0, 3.0],
-            [3.0, 4e3, 4e3, 4e3, 4.0, 4.0, 4.0],
+            [0.0, 1e3, 1e3, 1e3, 1e3, 1e3, 1e3],
+            [1.0, 2e3, 2e3, 2e3, 1e3, 1e3, 1e3],
+            [2.0, 3e3, 3e3, 3e3, 1e3, 1e3, 1e3],
+            [3.0, 4e3, 4e3, 4e3, 1e3, 1e3, 1e3],
         ]
     )
     trajectory = lox.Trajectory.from_numpy(time, states)
