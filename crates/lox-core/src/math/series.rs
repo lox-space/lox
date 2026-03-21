@@ -41,6 +41,13 @@ pub enum Interpolation {
     Linear,
     /// Cubic spline interpolation with precomputed polynomial coefficients.
     CubicSpline(Arc<[[f64; 4]]>),
+    /// Hermite cubic interpolation with precomputed polynomial coefficients.
+    ///
+    /// Uses both function values and their derivatives at knot points to construct
+    /// a C1-continuous piecewise cubic. The coefficients are stored in the same
+    /// `[c0, c1, c2, c3]` format as `CubicSpline`, evaluated as
+    /// `c0 + c1·dt + c2·dt² + c3·dt³` where `dt = t - t_i`.
+    HermiteCubic(Arc<[[f64; 4]]>),
 }
 
 /// An interpolated 1-D data series.
@@ -131,6 +138,46 @@ impl Series {
             x,
             y,
             interpolation: Interpolation::Linear,
+        }
+    }
+
+    /// Creates a Hermite cubic spline from function values `y` and their derivatives `dy`.
+    ///
+    /// On each interval `[x_i, x_{i+1}]` with `h = x_{i+1} - x_i`, the polynomial
+    /// `p(dt) = c0 + c1·dt + c2·dt² + c3·dt³` is constructed so that:
+    /// - `p(0)  = y_i`,  `p(h)  = y_{i+1}`
+    /// - `p'(0) = dy_i`, `p'(h) = dy_{i+1}`
+    pub fn hermite_cubic(
+        x: impl Into<Arc<[f64]>>,
+        y: impl Into<Arc<[f64]>>,
+        dy: impl Into<Arc<[f64]>>,
+    ) -> Self {
+        let x: Arc<[f64]> = x.into();
+        let y: Arc<[f64]> = y.into();
+        let dy: Arc<[f64]> = dy.into();
+
+        Self::assert(&x, &y);
+        assert!(dy.len() == x.len());
+
+        let n = x.len();
+        let coeffs: Vec<[f64; 4]> = (0..n - 1)
+            .map(|i| {
+                let h = x[i + 1] - x[i];
+                let h2 = h * h;
+                let h3 = h2 * h;
+                let delta_y = y[i + 1] - y[i];
+                let c0 = y[i];
+                let c1 = dy[i];
+                let c2 = 3.0 * delta_y / h2 - (2.0 * dy[i] + dy[i + 1]) / h;
+                let c3 = -2.0 * delta_y / h3 + (dy[i] + dy[i + 1]) / h2;
+                [c0, c1, c2, c3]
+            })
+            .collect();
+
+        Self {
+            x,
+            y,
+            interpolation: Interpolation::HermiteCubic(coeffs.into()),
         }
     }
 
@@ -234,7 +281,31 @@ impl Series {
                 let y1 = y[idx + 1];
                 y0 + (y1 - y0) * (xp - x0) / (x1 - x0)
             }
-            Interpolation::CubicSpline(coeffs) => poly_array(xp - self.x[idx], &coeffs[idx]),
+            Interpolation::CubicSpline(coeffs) | Interpolation::HermiteCubic(coeffs) => {
+                poly_array(xp - self.x[idx], &coeffs[idx])
+            }
+        }
+    }
+
+    /// Returns the first derivative at point `xp` using the precomputed interval `idx`.
+    ///
+    /// For `CubicSpline` and `HermiteCubic`, the derivative of
+    /// `p(dt) = c0 + c1·dt + c2·dt² + c3·dt³` is `p'(dt) = c1 + 2·c2·dt + 3·c3·dt²`.
+    ///
+    /// For `Linear` interpolation, returns the constant slope `(y_{i+1} - y_i) / (x_{i+1} - x_i)`.
+    #[inline]
+    pub fn derivative_at_index(&self, xp: f64, idx: usize) -> f64 {
+        match &self.interpolation {
+            Interpolation::Linear => {
+                let x = self.x.as_ref();
+                let y = self.y.as_ref();
+                (y[idx + 1] - y[idx]) / (x[idx + 1] - x[idx])
+            }
+            Interpolation::CubicSpline(coeffs) | Interpolation::HermiteCubic(coeffs) => {
+                let c = &coeffs[idx];
+                let dt = xp - self.x[idx];
+                poly_array(dt, &[c[1], 2.0 * c[2], 3.0 * c[3]])
+            }
         }
     }
 
