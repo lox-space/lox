@@ -13,7 +13,8 @@ Orbit propagation methods for predicting future states.
 | Propagator | Description | Use Case |
 |------------|-------------|----------|
 | `Vallado` | Analytical Kepler propagator | Two-body motion |
-| `J2` | Numerical J2 perturbation propagator | Oblateness effects |
+| `J2` | Semi-analytical J2 propagator (Brouwer) | Fast J2 oblateness effects |
+| `Numerical` | Numerical orbit propagator (J2 perturbation) | High-fidelity oblateness |
 | `TLE` | Two-Line Element set parser | Satellite catalog data |
 | `SGP4` | Simplified General Perturbations | TLE-based propagation |
 | `GroundPropagator` | Ground station state | Earth-fixed locations |
@@ -40,15 +41,19 @@ future = propagator.propagate(t + lox.TimeDelta.from_hours(1))
 times = [t + lox.TimeDelta(i * 60) for i in range(100)]
 trajectory = propagator.propagate(times)
 
-# Numerical J2 propagation (accounts for oblateness)
+# Semi-analytical J2 propagation (Brouwer theory)
 j2 = lox.J2(state)
+future = j2.propagate(t + lox.TimeDelta.from_hours(1))
+
+# Numerical propagation (accounts for J2 oblateness)
+numerical = lox.Numerical(state)
 
 # Propagate over a time interval (adaptive steps)
 t_end = t + lox.TimeDelta.from_hours(2)
-trajectory = j2.propagate(t, end=t_end)
+trajectory = numerical.propagate(t, end=t_end)
 
 # Custom solver tolerances
-j2_tight = lox.J2(state, rtol=1e-12, atol=1e-10)
+numerical_tight = lox.Numerical(state, rtol=1e-12, atol=1e-10)
 
 # SGP4 propagation from TLE
 tle = """ISS (ZARYA)
@@ -68,6 +73,12 @@ state = sgp4.propagate(t)
 ---
 
 ::: lox_space.J2
+    options:
+      show_source: false
+
+---
+
+::: lox_space.Numerical
     options:
       show_source: false
 

@@ -30,9 +30,10 @@ impl From<PyConstellationError> for PyErr {
 fn parse_propagator(s: &str) -> PyResult<ConstellationPropagator> {
     match s {
         "vallado" => Ok(ConstellationPropagator::Vallado),
+        "numerical" => Ok(ConstellationPropagator::Numerical),
         "j2" => Ok(ConstellationPropagator::J2),
         _ => Err(PyValueError::new_err(format!(
-            "unknown propagator \"{s}\", expected \"vallado\" or \"j2\""
+            "unknown propagator \"{s}\", expected \"vallado\", \"numerical\", or \"j2\""
         ))),
     }
 }

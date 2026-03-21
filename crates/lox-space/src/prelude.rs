@@ -26,7 +26,8 @@ pub use crate::orbits::{CartesianOrbit, KeplerianOrbit, Orbit, Trajectory};
 
 // Propagation
 pub use crate::orbits::propagators::Propagator;
-pub use crate::orbits::propagators::numerical::J2Propagator;
+pub use crate::orbits::propagators::j2::J2Propagator;
+pub use crate::orbits::propagators::numerical::NumericalPropagator;
 pub use crate::orbits::propagators::semi_analytical::Vallado;
 
 // Bodies & frames

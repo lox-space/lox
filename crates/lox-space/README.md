@@ -52,7 +52,7 @@ let sso = SsoBuilder::default()
 
 // Convert to Cartesian state and propagate with J2 perturbations
 let state = sso.to_cartesian();
-let j2 = J2Propagator::new(state);
+let j2 = J2Propagator::new(state).unwrap();
 let end = epoch + TimeDelta::from_minutes(100);
 let trajectory = j2.propagate(Interval::new(epoch, end)).unwrap();
 ```
