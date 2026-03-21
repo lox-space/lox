@@ -572,33 +572,6 @@ pub struct TrajectoryData<const N: usize> {
 }
 
 impl<const N: usize> TrajectoryData<N> {
-    /// Creates trajectory data from fixed-size arrays of time steps and component data.
-    pub fn from_arrays<const M: usize>(
-        epoch: TimeDelta,
-        time_steps: [TimeDelta; M],
-        data: &[[f64; M]; N],
-    ) -> Self {
-        let time_steps: Arc<[f64]> = Arc::from_iter(
-            time_steps
-                .into_iter()
-                .map(|t| (t - epoch).to_seconds().to_f64()),
-        );
-        let data: [Arc<[f64]>; N] = data.map(Arc::from);
-        let series = data.clone().map(|d| {
-            Series::new(
-                time_steps.clone(),
-                d.clone(),
-                InterpolationType::CubicSpline,
-            )
-        });
-        Self {
-            epoch,
-            time_steps,
-            data,
-            series,
-        }
-    }
-
     /// Returns the time steps relative to the epoch in seconds.
     pub fn time_steps(&self) -> Arc<[f64]> {
         self.time_steps.clone()
@@ -631,11 +604,21 @@ pub struct TimeStampedCartesian {
     pub state: Cartesian,
 }
 
-/// A 6-component trajectory (x, y, z, vx, vy, vz) with cubic spline interpolation.
+/// A 6-component trajectory (x, y, z, vx, vy, vz) with Hermite cubic interpolation.
+///
+/// Position components use Hermite cubic splines constructed from both position
+/// values and velocity derivatives at each knot point. Velocity is obtained as the
+/// analytical derivative of the position spline, guaranteeing physical consistency
+/// between interpolated position and velocity.
 pub type CartesianTrajectory = TrajectoryData<6>;
 
 impl CartesianTrajectory {
     /// Creates a trajectory from an iterator of timestamped Cartesian states.
+    ///
+    /// Position components (x, y, z) are interpolated with Hermite cubic splines
+    /// using velocity (vx, vy, vz) as the known derivatives. Velocity components
+    /// are stored as cubic splines for raw data access but the [`velocity`] and
+    /// [`at`] methods derive velocity from the position spline derivative.
     pub fn from_states(states: impl IntoIterator<Item = TimeStampedCartesian>) -> Self {
         let mut iter = states.into_iter().peekable();
         let epoch = iter.peek().expect("should have at least two states").time;
@@ -678,13 +661,17 @@ impl CartesianTrajectory {
             vz.clone(),
         ];
 
-        let series = data.clone().map(|d| {
-            Series::new(
-                time_steps.clone(),
-                d.clone(),
-                InterpolationType::CubicSpline,
-            )
-        });
+        // Position series use Hermite cubic interpolation with velocity as derivatives.
+        let sx = Series::hermite_cubic(time_steps.clone(), x, vx.clone());
+        let sy = Series::hermite_cubic(time_steps.clone(), y, vy.clone());
+        let sz = Series::hermite_cubic(time_steps.clone(), z, vz.clone());
+
+        // Velocity series use standard cubic splines (used only for raw data access).
+        let svx = Series::new(time_steps.clone(), vx, InterpolationType::CubicSpline);
+        let svy = Series::new(time_steps.clone(), vy, InterpolationType::CubicSpline);
+        let svz = Series::new(time_steps.clone(), vz, InterpolationType::CubicSpline);
+
+        let series = [sx, sy, sz, svx, svy, svz];
 
         Self {
             epoch,
@@ -743,21 +730,30 @@ impl CartesianTrajectory {
     }
 
     /// Interpolates the x velocity at time `t` (seconds since epoch).
+    ///
+    /// Derived as the analytical derivative of the Hermite position spline.
     #[inline]
     pub fn interpolate_vx(&self, t: f64) -> f64 {
-        self.interpolate::<3>(t)
+        let idx = self.series[0].find_index(t);
+        self.series[0].derivative_at_index(t, idx)
     }
 
     /// Interpolates the y velocity at time `t` (seconds since epoch).
+    ///
+    /// Derived as the analytical derivative of the Hermite position spline.
     #[inline]
     pub fn interpolate_vy(&self, t: f64) -> f64 {
-        self.interpolate::<4>(t)
+        let idx = self.series[1].find_index(t);
+        self.series[1].derivative_at_index(t, idx)
     }
 
     /// Interpolates the z velocity at time `t` (seconds since epoch).
+    ///
+    /// Derived as the analytical derivative of the Hermite position spline.
     #[inline]
     pub fn interpolate_vz(&self, t: f64) -> f64 {
-        self.interpolate::<5>(t)
+        let idx = self.series[2].find_index(t);
+        self.series[2].derivative_at_index(t, idx)
     }
 
     /// Interpolates the position vector at time `t` (seconds since epoch).
@@ -772,21 +768,37 @@ impl CartesianTrajectory {
     }
 
     /// Interpolates the velocity vector at time `t` (seconds since epoch).
+    ///
+    /// Velocity is derived as the analytical derivative of the Hermite position
+    /// spline, ensuring physical consistency with the interpolated position.
     #[inline]
     pub fn velocity(&self, t: f64) -> DVec3 {
-        let idx = self.series[3].find_index(t);
+        let idx = self.series[0].find_index(t);
         DVec3::new(
-            self.series[3].interpolate_at_index(t, idx),
-            self.series[4].interpolate_at_index(t, idx),
-            self.series[5].interpolate_at_index(t, idx),
+            self.series[0].derivative_at_index(t, idx),
+            self.series[1].derivative_at_index(t, idx),
+            self.series[2].derivative_at_index(t, idx),
         )
     }
 
     /// Interpolates the full Cartesian state at time `t` (seconds since epoch).
+    ///
+    /// Position is interpolated from the Hermite spline; velocity is derived as
+    /// the analytical derivative of the same spline.
     #[inline]
     pub fn at(&self, t: f64) -> Cartesian {
-        let vals = self.interpolate_all(t);
-        Cartesian::from_array(vals)
+        let idx = self.series[0].find_index(t);
+        let pos = DVec3::new(
+            self.series[0].interpolate_at_index(t, idx),
+            self.series[1].interpolate_at_index(t, idx),
+            self.series[2].interpolate_at_index(t, idx),
+        );
+        let vel = DVec3::new(
+            self.series[0].derivative_at_index(t, idx),
+            self.series[1].derivative_at_index(t, idx),
+            self.series[2].derivative_at_index(t, idx),
+        );
+        Cartesian::from_vecs(pos, vel)
     }
 }
 

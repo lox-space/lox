@@ -24,7 +24,11 @@ use crate::propagators::Propagator;
 
 use super::{CartesianOrbit, Orbit, TrajectorError};
 
-/// A time-ordered sequence of Cartesian orbital states with Hermite interpolation.
+/// A time-ordered sequence of Cartesian orbital states with Hermite cubic interpolation.
+///
+/// Position is interpolated using Hermite cubic splines that incorporate both
+/// position and velocity at each knot point. Velocity is derived as the
+/// analytical derivative of the position spline.
 #[derive(Debug, Clone)]
 pub struct Trajectory<T: TimeScale, O: Origin, R: ReferenceFrame> {
     epoch: Time<T>,
