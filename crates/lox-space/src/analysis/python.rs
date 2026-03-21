@@ -21,7 +21,8 @@ use crate::ephem::python::PySpk;
 use crate::frames::python::PyFrame;
 use crate::orbits::ground::Observables;
 use crate::orbits::python::{
-    PyGroundLocation, PyInterval, PyJ2Propagator, PySgp4, PyTrajectory, PyVallado,
+    PyGroundLocation, PyInterval, PyJ2Propagator, PyNumericalPropagator, PySgp4, PyTrajectory,
+    PyVallado,
 };
 use crate::time::deltas::TimeDelta;
 use crate::time::python::deltas::PyTimeDelta;
@@ -150,6 +151,9 @@ fn extract_orbit_source(obj: &Bound<'_, PyAny>) -> PyResult<OrbitSource> {
     if let Ok(vallado) = obj.extract::<PyVallado>() {
         return Ok(OrbitSource::Vallado(vallado.0));
     }
+    if let Ok(n) = obj.extract::<PyNumericalPropagator>() {
+        return Ok(OrbitSource::Numerical(n.0));
+    }
     if let Ok(j2) = obj.extract::<PyJ2Propagator>() {
         return Ok(OrbitSource::J2(j2.0));
     }
@@ -157,7 +161,7 @@ fn extract_orbit_source(obj: &Bound<'_, PyAny>) -> PyResult<OrbitSource> {
         return Ok(OrbitSource::Trajectory(traj.0));
     }
     Err(PyValueError::new_err(
-        "expected an SGP4, Vallado, J2, or Trajectory object",
+        "expected an SGP4, Vallado, Numerical, J2, or Trajectory object",
     ))
 }
 

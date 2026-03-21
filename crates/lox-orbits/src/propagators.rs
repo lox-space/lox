@@ -10,10 +10,13 @@ use lox_time::time_scales::{DynTimeScale, TimeScale};
 
 use crate::orbits::{CartesianOrbit, DynTrajectory, TrajectorError, Trajectory};
 
-use self::numerical::{DynJ2Propagator, J2Error};
+use self::j2::{DynJ2Propagator, J2Error};
+use self::numerical::{DynNumericalPropagator, NumericalError};
 use self::semi_analytical::{DynVallado, ValladoError};
 use self::sgp4::{Sgp4, Sgp4Error};
 
+/// Semi-analytical J2 orbit propagator (Brouwer first-order theory).
+pub mod j2;
 /// Numerical orbit propagators (e.g. J2 perturbation via ODE integration).
 pub mod numerical;
 /// Semi-analytical orbit propagators (e.g. Vallado universal variable method).
@@ -59,15 +62,17 @@ where
 /// An orbit source that can be propagated over a time interval to produce
 /// a [`DynTrajectory`].
 ///
-/// Wraps the concrete propagator types (SGP4, Vallado, J2) or a pre-computed
-/// trajectory.
+/// Wraps the concrete propagator types (SGP4, Vallado, Numerical) or a
+/// pre-computed trajectory.
 #[derive(Debug, Clone)]
 pub enum OrbitSource {
     /// SGP4 propagator initialized from a TLE.
     Sgp4(Sgp4),
     /// Vallado universal-variable Keplerian propagator.
     Vallado(DynVallado),
-    /// J2-perturbed numerical propagator.
+    /// Numerical orbit propagator.
+    Numerical(DynNumericalPropagator),
+    /// Semi-analytical J2 propagator (Brouwer).
     J2(DynJ2Propagator),
     /// Pre-computed trajectory used as-is.
     Trajectory(DynTrajectory),
@@ -82,7 +87,10 @@ pub enum PropagateError {
     /// Vallado propagation error.
     #[error(transparent)]
     Vallado(#[from] ValladoError),
-    /// J2 numerical propagation error.
+    /// Numerical propagation error.
+    #[error(transparent)]
+    Numerical(#[from] NumericalError),
+    /// Semi-analytical J2 propagation error.
     #[error(transparent)]
     J2(#[from] J2Error),
 }
@@ -104,6 +112,7 @@ impl OrbitSource {
                 Ok(traj.into_dyn())
             }
             Self::Vallado(v) => Ok(Propagator::propagate(v, interval)?),
+            Self::Numerical(n) => Ok(Propagator::propagate(n, interval)?),
             Self::J2(j2) => Ok(Propagator::propagate(j2, interval)?),
             Self::Trajectory(t) => Ok(t.clone()),
         }

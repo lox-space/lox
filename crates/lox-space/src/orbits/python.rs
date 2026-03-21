@@ -14,7 +14,10 @@ use crate::orbits::ground::{
     DynGroundLocation, DynGroundPropagator, GroundPropagatorError, Observables,
 };
 use crate::orbits::propagators::Propagator;
-use crate::orbits::propagators::numerical::{DynJ2Propagator, J2Error, J2Propagator};
+use crate::orbits::propagators::j2::{DynJ2Propagator, J2Error, J2Propagator};
+use crate::orbits::propagators::numerical::{
+    DynNumericalPropagator, NumericalError, NumericalPropagator,
+};
 use crate::orbits::propagators::semi_analytical::{DynVallado, Vallado, ValladoError};
 use crate::orbits::propagators::sgp4::{Sgp4, Sgp4Error};
 use crate::orbits::{
@@ -1448,15 +1451,15 @@ impl PyVallado {
     }
 }
 
-pub struct PyJ2Error(pub J2Error);
+pub struct PyNumericalError(pub NumericalError);
 
-impl From<PyJ2Error> for PyErr {
-    fn from(err: PyJ2Error) -> Self {
+impl From<PyNumericalError> for PyErr {
+    fn from(err: PyNumericalError) -> Self {
         PyValueError::new_err(err.0.to_string())
     }
 }
 
-/// Numerical J2 orbit propagator using Dormand-Prince 8(5,3) integration.
+/// Numerical orbit propagator using Dormand-Prince 8(5,3) integration.
 ///
 /// This propagator accounts for the J2 zonal harmonic perturbation, which
 /// models the oblateness of the central body. It uses an adaptive Runge-Kutta
@@ -1469,12 +1472,12 @@ impl From<PyJ2Error> for PyErr {
 ///     h_max: Maximum step size in seconds (default: auto from orbital timescale).
 ///     h_min: Minimum step size in seconds (default: 1e-6).
 ///     max_steps: Maximum number of integration steps (default: 100000).
-#[pyclass(name = "J2", module = "lox_space", frozen, from_py_object)]
+#[pyclass(name = "Numerical", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone)]
-pub struct PyJ2Propagator(pub DynJ2Propagator);
+pub struct PyNumericalPropagator(pub DynNumericalPropagator);
 
 #[pymethods]
-impl PyJ2Propagator {
+impl PyNumericalPropagator {
     #[new]
     #[pyo3(signature = (initial_state, rtol=None, atol=None, h_max=None, h_min=None, max_steps=None))]
     fn new(
@@ -1485,8 +1488,8 @@ impl PyJ2Propagator {
         h_min: Option<f64>,
         max_steps: Option<usize>,
     ) -> PyResult<Self> {
-        let mut propagator =
-            J2Propagator::try_new(initial_state.0).map_err(PyUndefinedOriginPropertyError)?;
+        let mut propagator = NumericalPropagator::try_new(initial_state.0)
+            .map_err(PyUndefinedOriginPropertyError)?;
         if let Some(rtol) = rtol {
             propagator = propagator.with_rtol(rtol);
         }
@@ -1502,7 +1505,7 @@ impl PyJ2Propagator {
         if let Some(max_steps) = max_steps {
             propagator = propagator.with_max_steps(max_steps);
         }
-        Ok(PyJ2Propagator(propagator))
+        Ok(PyNumericalPropagator(propagator))
     }
 
     /// Propagate the orbit.
@@ -1511,6 +1514,88 @@ impl PyJ2Propagator {
     ///
     /// - Single time: ``propagate(time)`` → State
     /// - Two times: ``propagate(start, end)`` → Trajectory (adaptive ODE steps)
+    /// - List of times: ``propagate([t1, t2, ...])`` → Trajectory (caller-chosen steps)
+    ///
+    /// Args:
+    ///     steps: Single Time, list of Times, or start Time (when ``end`` is given).
+    ///     end: End time (optional, for interval propagation).
+    ///     frame: Target reference frame (optional).
+    ///     provider: EOP provider for frame transformation (optional).
+    ///
+    /// Returns:
+    ///     State or Trajectory, optionally transformed to the target frame.
+    ///
+    /// Raises:
+    ///     ValueError: If propagation or frame transformation fails.
+    #[pyo3(signature = (steps, end=None, frame=None, provider=None))]
+    fn propagate<'py>(
+        &self,
+        py: Python<'py>,
+        steps: &Bound<'py, PyAny>,
+        end: Option<PyTime>,
+        frame: Option<&Bound<'_, PyAny>>,
+        provider: Option<&Bound<'_, PyEopProvider>>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let frame = frame.map(PyFrame::try_from).transpose()?;
+        propagate_dispatch(
+            py,
+            steps,
+            end,
+            frame,
+            provider,
+            |t| Ok(self.0.state_at(t).map_err(PyNumericalError)?),
+            |i| Ok(self.0.propagate(i).map_err(PyNumericalError)?),
+        )
+    }
+
+    fn __repr__(&self) -> String {
+        let state = PyCartesian(*self.0.initial_state());
+        format!("Numerical({})", state.__repr__())
+    }
+}
+
+pub struct PyJ2Error(pub J2Error);
+
+impl From<PyJ2Error> for PyErr {
+    fn from(err: PyJ2Error) -> Self {
+        PyValueError::new_err(err.0.to_string())
+    }
+}
+
+/// Semi-analytical J2 orbit propagator using first-order Brouwer theory.
+///
+/// Propagates mean Keplerian elements with J2 secular rates for RAAN, argument
+/// of periapsis, and mean anomaly, plus short-period and long-period corrections.
+/// Much faster than numerical propagation but limited to the J2 perturbation.
+///
+/// Only valid for elliptic orbits.
+///
+/// Args:
+///     initial_state: Initial orbital state.
+///     step: Fixed time step in seconds for interval propagation (default: 60).
+#[pyclass(name = "J2", module = "lox_space", frozen, from_py_object)]
+#[derive(Clone)]
+pub struct PyJ2Propagator(pub DynJ2Propagator);
+
+#[pymethods]
+impl PyJ2Propagator {
+    #[new]
+    #[pyo3(signature = (initial_state, step=None))]
+    fn new(initial_state: PyCartesian, step: Option<f64>) -> PyResult<Self> {
+        let mut propagator = J2Propagator::try_new(initial_state.0)
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        if let Some(step) = step {
+            propagator = propagator.with_step(TimeDelta::from_seconds_f64(step));
+        }
+        Ok(PyJ2Propagator(propagator))
+    }
+
+    /// Propagate the orbit.
+    ///
+    /// Supports three calling modes:
+    ///
+    /// - Single time: ``propagate(time)`` → State
+    /// - Two times: ``propagate(start, end)`` → Trajectory (fixed steps)
     /// - List of times: ``propagate([t1, t2, ...])`` → Trajectory (caller-chosen steps)
     ///
     /// Args:

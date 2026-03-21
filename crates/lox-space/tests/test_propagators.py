@@ -140,6 +140,55 @@ def iss_state():
     )
 
 
+def test_numerical_single_time():
+    state = iss_state()
+    n = lox.Numerical(state)
+    t1 = state.time() + 90 * lox.minutes
+    result = n.propagate(t1)
+    assert isinstance(result, lox.Cartesian)
+
+
+def test_numerical_time_interval():
+    state = iss_state()
+    n = lox.Numerical(state)
+    t0 = state.time()
+    t1 = t0 + 1 * lox.hours
+    trajectory = n.propagate(t0, end=t1)
+    assert isinstance(trajectory, lox.Trajectory)
+
+
+def test_numerical_multiple_times():
+    state = iss_state()
+    n = lox.Numerical(state)
+    t0 = state.time() + 1 * lox.minutes
+    t1 = t0 + 9 * lox.minutes
+    times = lox.Interval(t0, t1).step_by(1 * lox.minutes)
+    trajectory = n.propagate(times)
+    assert isinstance(trajectory, lox.Trajectory)
+
+
+def test_numerical_custom_tolerances():
+    state = iss_state()
+    n = lox.Numerical(state, rtol=1e-12, atol=1e-10)
+    t1 = state.time() + 90 * lox.minutes
+    result = n.propagate(t1)
+    assert isinstance(result, lox.Cartesian)
+
+
+def test_numerical_custom_step_size():
+    state = iss_state()
+    n = lox.Numerical(state, h_max=10.0, h_min=1e-8, max_steps=200_000)
+    t1 = state.time() + 90 * lox.minutes
+    result = n.propagate(t1)
+    assert isinstance(result, lox.Cartesian)
+
+
+def test_numerical_repr():
+    state = iss_state()
+    n = lox.Numerical(state)
+    assert "Numerical(" in repr(n)
+
+
 def test_j2_single_time():
     state = iss_state()
     j2 = lox.J2(state)
@@ -167,20 +216,13 @@ def test_j2_multiple_times():
     assert isinstance(trajectory, lox.Trajectory)
 
 
-def test_j2_custom_tolerances():
+def test_j2_custom_step():
     state = iss_state()
-    j2 = lox.J2(state, rtol=1e-12, atol=1e-10)
-    t1 = state.time() + 90 * lox.minutes
-    result = j2.propagate(t1)
-    assert isinstance(result, lox.Cartesian)
-
-
-def test_j2_custom_step_size():
-    state = iss_state()
-    j2 = lox.J2(state, h_max=10.0, h_min=1e-8, max_steps=200_000)
-    t1 = state.time() + 90 * lox.minutes
-    result = j2.propagate(t1)
-    assert isinstance(result, lox.Cartesian)
+    j2 = lox.J2(state, step=30.0)
+    t0 = state.time()
+    t1 = t0 + 10 * lox.minutes
+    trajectory = j2.propagate(t0, end=t1)
+    assert isinstance(trajectory, lox.Trajectory)
 
 
 def test_j2_repr():

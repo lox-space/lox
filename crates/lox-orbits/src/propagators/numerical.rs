@@ -30,9 +30,9 @@ use crate::propagators::Propagator;
 /// Since r/v ≈ T/(2π) for a circular orbit, this yields ~50 steps per orbit.
 const H_MAX_STEPS_PER_TIMESCALE: f64 = 8.0;
 
-/// Errors that can occur during J2-perturbed numerical propagation.
+/// Errors that can occur during numerical orbit propagation.
 #[derive(Debug, Error)]
-pub enum J2Error {
+pub enum NumericalError {
     /// The ODE solver failed with the given message.
     #[error("ODE solver failed: {0}")]
     Solver(String),
@@ -49,7 +49,11 @@ pub enum J2Error {
 
 /// Numerical orbit propagator with J2 zonal harmonic perturbation.
 #[derive(Debug, Clone, Copy)]
-pub struct J2Propagator<T: TimeScale, O: TryJ2 + TryPointMass + TrySpheroid, R: ReferenceFrame> {
+pub struct NumericalPropagator<
+    T: TimeScale,
+    O: TryJ2 + TryPointMass + TrySpheroid,
+    R: ReferenceFrame,
+> {
     initial_state: CartesianOrbit<T, O, R>,
     rtol: f64,
     atol: f64,
@@ -58,15 +62,15 @@ pub struct J2Propagator<T: TimeScale, O: TryJ2 + TryPointMass + TrySpheroid, R: 
     max_steps: usize,
 }
 
-/// Type alias for a [`J2Propagator`] using dynamic time scale, origin, and frame.
-pub type DynJ2Propagator = J2Propagator<DynTimeScale, DynOrigin, DynFrame>;
+/// Type alias for a [`NumericalPropagator`] using dynamic time scale, origin, and frame.
+pub type DynNumericalPropagator = NumericalPropagator<DynTimeScale, DynOrigin, DynFrame>;
 
 fn default_h_max(position: DVec3, velocity: DVec3) -> f64 {
     position.length() / velocity.length() / H_MAX_STEPS_PER_TIMESCALE
 }
 
 // Infallible — static bounds
-impl<T, O, R> J2Propagator<T, O, R>
+impl<T, O, R> NumericalPropagator<T, O, R>
 where
     T: TimeScale,
     O: J2 + PointMass + Spheroid + Copy,
@@ -87,7 +91,7 @@ where
 }
 
 // Fallible — Try* bounds (covers DynOrigin)
-impl<T, O, R> J2Propagator<T, O, R>
+impl<T, O, R> NumericalPropagator<T, O, R>
 where
     T: TimeScale,
     O: TryJ2 + TryPointMass + TrySpheroid + Copy,
@@ -113,7 +117,7 @@ where
     }
 }
 
-impl<T, O, R> J2Propagator<T, O, R>
+impl<T, O, R> NumericalPropagator<T, O, R>
 where
     T: TimeScale,
     O: TryJ2 + TryPointMass + TrySpheroid + Copy,
@@ -203,7 +207,7 @@ where
     }
 }
 
-impl<T, O, R> ODE<f64, CartesianState> for J2Propagator<T, O, R>
+impl<T, O, R> ODE<f64, CartesianState> for NumericalPropagator<T, O, R>
 where
     T: TimeScale,
     O: TryJ2 + TryPointMass + TrySpheroid + Copy,
@@ -226,16 +230,16 @@ where
     }
 }
 
-impl<T, O, R> Propagator<T, O> for J2Propagator<T, O, R>
+impl<T, O, R> Propagator<T, O> for NumericalPropagator<T, O, R>
 where
     T: TimeScale + Copy + PartialOrd,
     O: TryJ2 + TryPointMass + TrySpheroid + Origin + Copy,
     R: ReferenceFrame + Copy,
 {
     type Frame = R;
-    type Error = J2Error;
+    type Error = NumericalError;
 
-    fn state_at(&self, time: Time<T>) -> Result<CartesianOrbit<T, O, R>, J2Error> {
+    fn state_at(&self, time: Time<T>) -> Result<CartesianOrbit<T, O, R>, NumericalError> {
         let epoch = self.initial_state.time();
         let t0 = 0.0_f64;
         let t1 = (time - epoch).to_seconds().to_f64();
@@ -246,16 +250,19 @@ where
         let problem = ODEProblem::new(self, t0, t1, s0);
         let solution = problem
             .solve(&mut solver)
-            .map_err(|e| J2Error::Solver(format!("{:?}", e)))?;
+            .map_err(|e| NumericalError::Solver(format!("{:?}", e)))?;
 
-        let (_, final_state) = solution.iter().next_back().ok_or(J2Error::EmptySolution)?;
+        let (_, final_state) = solution
+            .iter()
+            .next_back()
+            .ok_or(NumericalError::EmptySolution)?;
 
         let origin = self.initial_state.origin();
         let frame = self.initial_state.reference_frame();
         Ok(CartesianOrbit::new(final_state.0, time, origin, frame))
     }
 
-    fn propagate(&self, interval: TimeInterval<T>) -> Result<Trajectory<T, O, R>, J2Error> {
+    fn propagate(&self, interval: TimeInterval<T>) -> Result<Trajectory<T, O, R>, NumericalError> {
         let start = interval.start();
 
         // Propagate to start of interval
@@ -273,7 +280,7 @@ where
         let problem = ODEProblem::new(self, 0.0, t1, s0);
         let solution = problem
             .solve(&mut solver)
-            .map_err(|e| J2Error::Solver(format!("{:?}", e)))?;
+            .map_err(|e| NumericalError::Solver(format!("{:?}", e)))?;
 
         let origin = self.initial_state.origin();
         let frame = self.initial_state.reference_frame();
@@ -292,7 +299,7 @@ where
     ) -> Result<Trajectory<T, O, Self::Frame>, Self::Error> {
         let times: Vec<Time<T>> = times.into_iter().collect();
         if times.len() < 2 {
-            return Err(J2Error::InvalidTimeSteps);
+            return Err(NumericalError::InvalidTimeSteps);
         }
 
         let t0 = times[0];
@@ -316,7 +323,7 @@ where
         let solution = problem
             .t_eval(steps)
             .solve(&mut solver)
-            .map_err(|e| J2Error::Solver(format!("{:?}", e)))?;
+            .map_err(|e| NumericalError::Solver(format!("{:?}", e)))?;
 
         let origin = self.initial_state.origin();
         let frame = self.initial_state.reference_frame();
@@ -478,9 +485,9 @@ mod tests {
     }
 
     #[test]
-    fn test_j2_ode() {
+    fn test_numerical_ode() {
         let s0_orbit = initial_state();
-        let j2 = J2Propagator::new(s0_orbit);
+        let j2 = NumericalPropagator::new(s0_orbit);
 
         let s0 = CartesianState(Cartesian::new(
             1131.340.km(),
@@ -500,10 +507,10 @@ mod tests {
     }
 
     #[test]
-    fn test_j2_propagator() {
+    fn test_numerical_propagator() {
         let s0_orbit = initial_state();
         let time = s0_orbit.time();
-        let j2 = J2Propagator::new(s0_orbit);
+        let j2 = NumericalPropagator::new(s0_orbit);
         let dt = TimeDelta::from_minutes(40);
         let interval = Interval::new(time, time + dt);
         let traj = j2.propagate(interval).unwrap();
@@ -530,7 +537,7 @@ mod tests {
     fn test_propagate_with_offset_interval() {
         let s0_orbit = initial_state();
         let epoch = s0_orbit.time();
-        let j2 = J2Propagator::new(s0_orbit);
+        let j2 = NumericalPropagator::new(s0_orbit);
 
         let dt = TimeDelta::from_minutes(40);
         let offset = TimeDelta::from_minutes(20);
@@ -558,7 +565,7 @@ mod tests {
     fn test_state_at_matches_propagate() {
         let s0_orbit = initial_state();
         let epoch = s0_orbit.time();
-        let j2 = J2Propagator::new(s0_orbit);
+        let j2 = NumericalPropagator::new(s0_orbit);
 
         let target = epoch + TimeDelta::from_minutes(40);
         let state = j2.state_at(target).unwrap();
@@ -575,7 +582,7 @@ mod tests {
     fn test_propagate_to() {
         let s0_orbit = initial_state();
         let epoch = s0_orbit.time();
-        let j2 = J2Propagator::new(s0_orbit);
+        let j2 = NumericalPropagator::new(s0_orbit);
 
         let dt = TimeDelta::from_minutes(40);
         let interval = Interval::new(epoch, epoch + dt);
@@ -606,7 +613,7 @@ mod tests {
     fn test_propagate_to_with_offset_times() {
         let s0_orbit = initial_state();
         let epoch = s0_orbit.time();
-        let j2 = J2Propagator::new(s0_orbit);
+        let j2 = NumericalPropagator::new(s0_orbit);
 
         let start = epoch + TimeDelta::from_minutes(20);
         let end = start + TimeDelta::from_minutes(20);
@@ -638,7 +645,7 @@ mod tests {
     #[test]
     fn test_propagate_to_too_few_times() {
         let s0_orbit = initial_state();
-        let j2 = J2Propagator::new(s0_orbit);
+        let j2 = NumericalPropagator::new(s0_orbit);
 
         // Empty
         let result = j2.propagate_to(vec![]);

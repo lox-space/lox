@@ -1458,8 +1458,12 @@ class Vallado:
         """Propagate the orbit to one or more times."""
         ...
 
-class J2:
-    """Numerical J2 orbit propagator using Dormand-Prince 8(5,3) integration.
+class Numerical:
+    """Numerical orbit propagator using Dormand-Prince 8(5,3) integration.
+
+    This propagator accounts for the J2 zonal harmonic perturbation, which
+    models the oblateness of the central body. It uses an adaptive Runge-Kutta
+    integrator (DOP853).
 
     Args:
         initial_state: Initial orbital state.
@@ -1477,6 +1481,38 @@ class J2:
         h_max: float | None = None,
         h_min: float | None = None,
         max_steps: int | None = None,
+    ) -> Self: ...
+    @overload
+    def propagate(self, steps: Time) -> Cartesian: ...
+    @overload
+    def propagate(self, steps: list[Time]) -> Trajectory: ...
+    def propagate(
+        self,
+        steps: Time | list[Time],
+        end: Time | None = None,
+        frame: str | Frame | None = None,
+        provider: EOPProvider | None = None,
+    ) -> Cartesian | Trajectory:
+        """Propagate the orbit to one or more times."""
+        ...
+
+class J2:
+    """Semi-analytical J2 orbit propagator using first-order Brouwer theory.
+
+    Propagates mean Keplerian elements with J2 secular rates plus short-period
+    and long-period corrections. Much faster than numerical propagation but
+    limited to J2 perturbation only.
+
+    Only valid for elliptic orbits.
+
+    Args:
+        initial_state: Initial orbital state.
+        step: Fixed time step in seconds for interval propagation (default: 60).
+    """
+    def __new__(
+        cls,
+        initial_state: Cartesian,
+        step: float | None = None,
     ) -> Self: ...
     @overload
     def propagate(self, steps: Time) -> Cartesian: ...

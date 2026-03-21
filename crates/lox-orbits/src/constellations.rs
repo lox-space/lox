@@ -82,7 +82,9 @@ pub enum ConstellationPropagator {
     /// Vallado two-body propagator (default).
     #[default]
     Vallado,
-    /// J2-perturbed analytical propagator.
+    /// Numerical orbit propagator.
+    Numerical,
+    /// Semi-analytical J2 propagator (Brouwer-Lyddane).
     J2,
 }
 
@@ -237,8 +239,8 @@ mod tests {
 
     #[test]
     fn test_constellation_with_propagator() {
-        let c = make_constellation().with_propagator(ConstellationPropagator::J2);
-        assert_eq!(c.propagator(), ConstellationPropagator::J2);
+        let c = make_constellation().with_propagator(ConstellationPropagator::Numerical);
+        assert_eq!(c.propagator(), ConstellationPropagator::Numerical);
     }
 
     #[test]
@@ -251,13 +253,13 @@ mod tests {
 
     #[test]
     fn test_constellation_into_dyn() {
-        let c = make_constellation().with_propagator(ConstellationPropagator::J2);
+        let c = make_constellation().with_propagator(ConstellationPropagator::Numerical);
         let dyn_c = c.into_dyn();
         assert_eq!(dyn_c.name(), "test");
         assert_eq!(dyn_c.len(), 6);
         assert_eq!(dyn_c.origin(), DynOrigin::Earth);
         assert_eq!(dyn_c.frame(), DynFrame::Icrf);
-        assert_eq!(dyn_c.propagator(), ConstellationPropagator::J2);
+        assert_eq!(dyn_c.propagator(), ConstellationPropagator::Numerical);
     }
 
     #[test]
