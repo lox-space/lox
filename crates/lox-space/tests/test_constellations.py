@@ -382,7 +382,7 @@ class TestPropagatorOption:
             nplanes=3,
             semi_major_axis=7000 * lox.km,
             inclination=53 * lox.deg,
-            propagator="j2",
+            propagator="numerical",
         )
         assert len(c) == 6
 

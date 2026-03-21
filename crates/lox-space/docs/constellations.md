@@ -117,7 +117,7 @@ scenario = lox.Scenario(t0, t1).with_constellation(constellation)
 ```
 
 Each satellite is converted to a `Spacecraft` using the propagator specified
-at constellation creation time (default: `"vallado"`, also available: `"j2"`).
+at constellation creation time (default: `"vallado"`, also available: `"numerical"` and `"j2"`).
 
 ---
 

@@ -24,7 +24,8 @@ use crate::visibility::ElevationMask;
 use lox_orbits::constellations::{ConstellationPropagator, DynConstellation};
 use lox_orbits::ground::DynGroundLocation;
 use lox_orbits::orbits::{Ensemble, KeplerianOrbit};
-use lox_orbits::propagators::numerical::DynJ2Propagator;
+use lox_orbits::propagators::j2::DynJ2Propagator;
+use lox_orbits::propagators::numerical::DynNumericalPropagator;
 use lox_orbits::propagators::semi_analytical::DynVallado;
 use lox_orbits::propagators::{OrbitSource, PropagateError};
 
@@ -373,6 +374,11 @@ impl<O: Origin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send + Sync> Sce
                     let v = DynVallado::try_new(cartesian_orbit)
                         .map_err(|e| ConstellationConvertError::Propagator(e.to_string()))?;
                     OrbitSource::Vallado(v)
+                }
+                ConstellationPropagator::Numerical => {
+                    let n = DynNumericalPropagator::try_new(cartesian_orbit)
+                        .map_err(|e| ConstellationConvertError::Propagator(e.to_string()))?;
+                    OrbitSource::Numerical(n)
                 }
                 ConstellationPropagator::J2 => {
                     let j2 = DynJ2Propagator::try_new(cartesian_orbit)
