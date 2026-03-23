@@ -1631,8 +1631,8 @@ impl PyJ2Propagator {
     }
 
     fn __repr__(&self) -> String {
-        let state = PyCartesian(*self.0.initial_state());
-        format!("J2({})", state.__repr__())
+        let orbit = PyKeplerian(*self.0.initial_orbit());
+        format!("J2({})", orbit.__repr__())
     }
 }
 

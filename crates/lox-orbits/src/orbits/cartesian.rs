@@ -260,6 +260,19 @@ where
     }
 }
 
+impl<T, O, R> TryFrom<CartesianOrbit<T, O, R>> for KeplerianOrbit<T, O, R>
+where
+    T: TimeScale + Copy,
+    O: Origin + TryPointMass + Copy,
+    R: ReferenceFrame + Copy,
+{
+    type Error = UndefinedOriginPropertyError;
+
+    fn try_from(orbit: CartesianOrbit<T, O, R>) -> Result<Self, Self::Error> {
+        orbit.try_to_keplerian()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::sync::OnceLock;
