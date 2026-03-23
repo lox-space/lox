@@ -233,68 +233,90 @@ where
 impl BrouwerMeanElements {
     /// Convert osculating Keplerian elements to mean elements using an
     /// iterative procedure, then compute secular rates.
+    ///
+    /// The iteration uses equinoctial-like variables `[a, k, h, i, Ω, λ]`
+    /// where `k = e·cos(ω+Ω)`, `h = e·sin(ω+Ω)`, `λ = M + ω + Ω`,
+    /// following Orekit's `FixedPointConverter` approach. This avoids the
+    /// singularity in ω at e = 0 and allows the eccentricity vector to
+    /// take on the correct nonzero mean value for circular orbits.
     fn from_osculating(osc: &Keplerian, mu: f64, j2: f64, r_eq: f64) -> Result<Self, J2Error> {
         let a_osc = osc.semi_major_axis().as_f64();
         let e_osc = osc.eccentricity().as_f64();
         let i_osc = osc.inclination().as_f64();
         let raan_osc = osc.longitude_of_ascending_node().as_f64();
         let aop_osc = osc.argument_of_periapsis().as_f64();
-        let nu_osc = osc.true_anomaly();
-        let m_osc = nu_osc.to_mean(osc.eccentricity())?.as_f64();
+        let m_osc = osc.true_anomaly().to_mean(osc.eccentricity())?.as_f64();
 
-        // Iterative osculating-to-mean conversion:
-        // Start with mean = osculating, compute corrections, subtract.
-        let mut a_mean = a_osc;
-        let mut e_mean = e_osc;
-        let mut i_mean = i_osc;
-        let mut raan_mean = raan_osc;
-        let mut aop_mean = aop_osc;
-        let mut m_mean = m_osc;
+        // Convert osculating target to equinoctial.
+        let pomega_osc = aop_osc + raan_osc;
+        let k_osc = e_osc * pomega_osc.cos();
+        let h_osc = e_osc * pomega_osc.sin();
+        let lambda_osc = m_osc + pomega_osc;
+
+        // Equinoctial iteration state: [a, k, h, i, Ω, λ].
+        let mut state = [a_osc, k_osc, h_osc, i_osc, raan_osc, lambda_osc];
 
         for iteration in 0..MAX_OSC_TO_MEAN_ITERATIONS {
-            // Compute what osculating elements the current mean elements produce
-            let corr = periodic_corrections(a_mean, e_mean, i_mean, aop_mean, m_mean, j2, r_eq)?;
+            let prev = state;
+            let [a_m, k_m, h_m, i_m, raan_m, lam_m] = state;
+            let e_m = (k_m * k_m + h_m * h_m).sqrt();
 
-            // Use the Lyddane rotation for e/l recovery
-            let (sin_l, cos_l) = m_mean.sin_cos();
+            // Recover classical elements for the correction function.
+            // Use Orekit-style ω extraction: ω = atan2(e·sin ω, e·cos ω)
+            // which gives ω = 0 (not −Ω) when e = 0.
+            let (sin_raan, cos_raan) = raan_m.sin_cos();
+            let e_sin_omega = h_m * cos_raan - k_m * sin_raan;
+            let e_cos_omega = k_m * cos_raan + h_m * sin_raan;
+            let omega_m = e_sin_omega.atan2(e_cos_omega);
+            let m_m = lam_m - omega_m - raan_m;
+
+            // Compute trial osculating from current mean guess.
+            let corr = periodic_corrections(a_m, e_m, i_m, omega_m, m_m, j2, r_eq)?;
+
+            // Lyddane non-singular assembly (same as state_at_dt).
+            let (sin_l, cos_l) = m_m.sin_cos();
             let dk = corr.de * cos_l - corr.eppd_l * sin_l;
             let dh_e = corr.de * sin_l + corr.eppd_l * cos_l;
-            let k_trial = e_mean * cos_l + dk;
-            let h_trial = e_mean * sin_l + dh_e;
-            let e_trial = (k_trial * k_trial + h_trial * h_trial).sqrt();
-            let l_trial = h_trial.atan2(k_trial);
-
-            let i_trial = i_mean + corr.di;
-            let h_trial_raan = if i_mean.sin().abs() > 1e-10 {
-                raan_mean + corr.sid_h / i_mean.sin()
+            let kl_trial = e_m * cos_l + dk;
+            let hl_trial = e_m * sin_l + dh_e;
+            let i_trial = i_m + corr.di;
+            let raan_trial = if i_m.sin().abs() > 1e-10 {
+                raan_m + corr.sid_h / i_m.sin()
             } else {
-                raan_mean
+                raan_m
             };
-            let z_trial = m_mean + aop_mean + raan_mean + corr.dz;
-            let g_trial = z_trial - l_trial - h_trial_raan;
-            let a_trial = a_mean + corr.da;
+            let z_trial = m_m + omega_m + raan_m + corr.dz;
 
-            // Fixed-point iteration: mean = mean + (osc_target - osc_computed)
-            let a_new = a_mean + (a_osc - a_trial);
-            let e_new = e_mean + (e_osc - e_trial);
-            let i_new = i_mean + (i_osc - i_trial);
-            let raan_new = raan_mean + (raan_osc - h_trial_raan);
-            let aop_new = aop_mean + (aop_osc - g_trial);
-            let m_new = m_mean + (m_osc - l_trial);
+            // Convert trial osculating to equinoctial.
+            // pomega_osc = z - l_osc, so:
+            //   k_eq = e·cos(z-l) = cos(z)·kl + sin(z)·hl
+            //   h_eq = e·sin(z-l) = sin(z)·kl - cos(z)·hl
+            let (sin_z, cos_z) = z_trial.sin_cos();
+            let k_trial = cos_z * kl_trial + sin_z * hl_trial;
+            let h_trial = sin_z * kl_trial - cos_z * hl_trial;
+            let a_trial = a_m + corr.da;
 
-            let converged = (a_new - a_mean).abs() < OSC_TO_MEAN_TOL * a_osc.abs()
-                && (e_new - e_mean).abs() < OSC_TO_MEAN_TOL
-                && (i_new - i_mean).abs() < OSC_TO_MEAN_TOL
-                && (raan_new - raan_mean).abs() < OSC_TO_MEAN_TOL
-                && (aop_new - aop_mean).abs() < OSC_TO_MEAN_TOL
-                && (m_new - m_mean).abs() < OSC_TO_MEAN_TOL;
+            // Fixed-point update in equinoctial space.
+            state = [
+                a_m + (a_osc - a_trial),
+                k_m + (k_osc - k_trial),
+                h_m + (h_osc - h_trial),
+                i_m + (i_osc - i_trial),
+                raan_m + (raan_osc - raan_trial),
+                lam_m + (lambda_osc - z_trial),
+            ];
 
-            a_mean = a_new;
-            e_mean = e_new;
-            i_mean = i_new;
-            raan_mean = raan_new;
-            aop_mean = aop_new;
-            m_mean = m_new;
+            // Convergence: Orekit-style thresholds on equinoctial step sizes.
+            let e_cur = (state[1] * state[1] + state[2] * state[2]).sqrt();
+            let tol_a = OSC_TO_MEAN_TOL * a_osc.abs();
+            let tol_e = OSC_TO_MEAN_TOL * (1.0 + e_cur);
+            let tol_ang = OSC_TO_MEAN_TOL * std::f64::consts::PI;
+            let converged = (state[0] - prev[0]).abs() < tol_a
+                && (state[1] - prev[1]).abs() < tol_e
+                && (state[2] - prev[2]).abs() < tol_e
+                && (state[3] - prev[3]).abs() < tol_ang
+                && (state[4] - prev[4]).abs() < tol_ang
+                && (state[5] - prev[5]).abs() < tol_ang;
 
             if converged {
                 break;
@@ -303,6 +325,13 @@ impl BrouwerMeanElements {
                 return Err(J2Error::MeanElementConvergence(MAX_OSC_TO_MEAN_ITERATIONS));
             }
         }
+
+        // Recover classical mean elements from converged equinoctial state.
+        let [a_mean, k_m, h_m, i_mean, raan_mean, lam_m] = state;
+        let e_mean = (k_m * k_m + h_m * h_m).sqrt();
+        let pomega_m = h_m.atan2(k_m);
+        let aop_mean = pomega_m - raan_mean;
+        let m_mean = lam_m - pomega_m;
 
         // Compute secular rates on mean elements (Brouwer with J2² terms).
         let n0 = (mu / a_mean.powi(3)).sqrt();
@@ -538,9 +567,12 @@ fn periodic_corrections(
     let ecfp1_3 = ecfp1 * ecfp1 * ecfp1;
 
     // Working variables (Orekit naming)
-    // Wrap mean anomaly to avoid drift in w17 when m is accumulated
-    let m_wrapped = m.rem_euclid(std::f64::consts::TAU);
-    let w17 = f + e_sin_f - m_wrapped;
+    // w17 = f − M + e·sin f. Normalise to (−π, π] so that a branch
+    // mismatch between f and m (e.g. m = −π wrapped to π while f stays
+    // at −π) does not produce a spurious ±2π offset, while remaining
+    // safe for large accumulated m values during propagation.
+    let w17_raw = f + e_sin_f - m;
+    let w17 = w17_raw - (w17_raw / std::f64::consts::TAU).round() * std::f64::consts::TAU;
     let w20 = cos_f * (ecfp3 * e_cos_f + 3.0);
     let w21 = 3.0 * (s2g2f + e * s2gf) + e * s2g3f;
     let w22 = ecfp1 * ecfp2 / eta2;
@@ -841,5 +873,52 @@ mod tests {
         let traj = j2.propagate(interval).unwrap();
         // 10 minutes / 30 seconds = 20 steps + 1 = 21 states
         assert_eq!(traj.states().len(), 21);
+    }
+
+    #[test]
+    fn test_j2_circular_orbit_all_true_anomalies() {
+        use lox_core::elements::Keplerian;
+        use lox_units::AngleUnits;
+
+        let time = time!(Tdb, 2025, 6, 1).unwrap();
+        let mu = Earth.gravitational_parameter();
+
+        // Must converge for ALL true anomalies — constellation satellites
+        // are distributed around the full orbit.
+        for ta_deg in [0.0_f64, 45.0, 90.0, 135.0, 180.0, 225.0, 270.0, 315.0] {
+            let kep = Keplerian::builder()
+                .with_semi_major_axis(Distance::new(6_878_137.0), 0.0)
+                .with_inclination(97.42_f64.to_radians().rad())
+                .with_longitude_of_ascending_node(69.3_f64.to_radians().rad())
+                .with_argument_of_periapsis(0.0.rad())
+                .with_true_anomaly(ta_deg.to_radians().rad())
+                .build()
+                .unwrap();
+            let cart = kep.to_cartesian(mu);
+            let state = CartesianOrbit::new(cart, time, Earth, Icrf);
+            let j2 = J2Propagator::new(state);
+            assert!(
+                j2.is_ok(),
+                "J2 must handle circular orbit at TA={ta_deg}: {}",
+                j2.unwrap_err()
+            );
+
+            // Roundtrip: osculating → mean → osculating should recover position.
+            // 1 m / 1 mm/s absolute tolerance handles components near zero.
+            let j2 = j2.unwrap();
+            let result = j2.state_at(state.time()).unwrap();
+            assert_approx_eq!(
+                result.position(),
+                state.position(),
+                rtol <= 1e-4,
+                atol <= 1.0
+            );
+            assert_approx_eq!(
+                result.velocity(),
+                state.velocity(),
+                rtol <= 1e-4,
+                atol <= 1e-3
+            );
+        }
     }
 }
