@@ -283,6 +283,47 @@ mod tests {
     }
 
     #[test]
+    fn test_j2_rejects_hyperbolic_orbit() {
+        let time = time!(Tdb, 2025, 6, 1).unwrap();
+        let kep = Keplerian::builder()
+            .with_semi_major_axis(Distance::new(-7_000_000.0), 1.5)
+            .with_inclination(0.5.rad())
+            .with_longitude_of_ascending_node(0.0.rad())
+            .with_argument_of_periapsis(0.0.rad())
+            .with_true_anomaly(0.0.rad())
+            .build()
+            .unwrap();
+        let orbit = KeplerianOrbit::new(kep, time, Earth, Icrf);
+        let err = J2Propagator::try_new(orbit).unwrap_err();
+        assert!(matches!(err, J2Error::NonElliptic(_)));
+    }
+
+    #[test]
+    fn test_j2_propagate_interval() {
+        let orbit = sso_orbit();
+        let j2 = J2Propagator::try_new(orbit).unwrap();
+        let dt = TimeDelta::from_minutes(90);
+        let interval = lox_time::intervals::Interval::new(j2.epoch(), j2.epoch() + dt);
+        let traj = j2.propagate(interval).unwrap();
+        assert!(traj.states().len() > 1);
+    }
+
+    #[test]
+    fn test_j2_accessors() {
+        let orbit = sso_orbit();
+        let j2 = J2Propagator::try_new(orbit).unwrap();
+        assert!(!j2.is_osculating());
+        assert_eq!(j2.epoch(), orbit.time());
+        assert_eq!(
+            j2.initial_orbit().state().semi_major_axis(),
+            orbit.state().semi_major_axis()
+        );
+
+        let osc = j2.with_osculating(true);
+        assert!(osc.is_osculating());
+    }
+
+    #[test]
     fn test_osculating_has_short_period_oscillations() {
         let orbit = sso_orbit();
         let sec = J2Propagator::try_new(orbit).unwrap();

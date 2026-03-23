@@ -253,6 +253,43 @@ mod tests {
     }
 
     #[test]
+    fn test_j4_rejects_hyperbolic_orbit() {
+        let time = time!(Tdb, 2025, 6, 1).unwrap();
+        let kep = Keplerian::builder()
+            .with_semi_major_axis(Distance::new(-7_000_000.0), 1.5)
+            .with_inclination(0.5.rad())
+            .with_longitude_of_ascending_node(0.0.rad())
+            .with_argument_of_periapsis(0.0.rad())
+            .with_true_anomaly(0.0.rad())
+            .build()
+            .unwrap();
+        let orbit = KeplerianOrbit::new(kep, time, Earth, Icrf);
+        let err = J4Propagator::try_new(orbit).unwrap_err();
+        assert!(matches!(err, J4Error::NonElliptic(_)));
+    }
+
+    #[test]
+    fn test_j4_propagate_interval() {
+        let orbit = sso_orbit();
+        let j4 = J4Propagator::try_new(orbit).unwrap();
+        let dt = TimeDelta::from_minutes(90);
+        let interval = lox_time::intervals::Interval::new(j4.epoch(), j4.epoch() + dt);
+        let traj = j4.propagate(interval).unwrap();
+        assert!(traj.states().len() > 1);
+    }
+
+    #[test]
+    fn test_j4_accessors() {
+        let orbit = sso_orbit();
+        let j4 = J4Propagator::try_new(orbit).unwrap();
+        assert!(!j4.is_osculating());
+        assert_eq!(j4.epoch(), orbit.time());
+
+        let osc = j4.with_osculating(true);
+        assert!(osc.is_osculating());
+    }
+
+    #[test]
     fn test_j4_secular_rates_differ_from_j2() {
         let orbit = sso_orbit();
         let j2 = J2Propagator::try_new(orbit).unwrap();
