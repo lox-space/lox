@@ -1095,4 +1095,18 @@ mod tests {
     fn test_dyn_origin_unknown_id() {
         assert_eq!(DynOrigin::try_from(666), Err(UnknownOriginId(666)))
     }
+
+    #[test]
+    fn test_try_j4_earth() {
+        let earth = DynOrigin::Earth;
+        let j4 = earth.try_j4().unwrap();
+        assert!(j4 < 0.0); // J4 is negative
+        assert!(j4.abs() < 1e-5); // O(1e-6)
+    }
+
+    #[test]
+    fn test_try_j4_undefined_for_moon() {
+        let moon = DynOrigin::Moon;
+        assert!(moon.try_j4().is_err());
+    }
 }
