@@ -185,6 +185,19 @@ where
     }
 }
 
+impl<T, O, R> TryFrom<KeplerianOrbit<T, O, R>> for CartesianOrbit<T, O, R>
+where
+    T: TimeScale + Copy,
+    O: Origin + TryPointMass + Copy,
+    R: ReferenceFrame + Copy,
+{
+    type Error = UndefinedOriginPropertyError;
+
+    fn try_from(orbit: KeplerianOrbit<T, O, R>) -> Result<Self, Self::Error> {
+        orbit.try_to_cartesian()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use lox_bodies::{Earth, MeanRadius};
