@@ -25,7 +25,7 @@
 //!   Center (NAVSPASUR) Satellite Model." Naval Postgraduate School.
 
 use lox_bodies::{
-    DynOrigin, J2 as J2Trait, Origin, PointMass, Spheroid, TryJ2, TryPointMass, TrySpheroid,
+    DynOrigin, Origin, TryJ2, TryPointMass, TrySpheroid, UndefinedOriginPropertyError,
 };
 use lox_core::anomalies::{AnomalyError, MeanAnomaly};
 use lox_core::coords::Cartesian;
@@ -38,7 +38,7 @@ use lox_time::intervals::TimeInterval;
 use lox_time::time_scales::{DynTimeScale, TimeScale};
 use thiserror::Error;
 
-use crate::orbits::{CartesianOrbit, TrajectorError, Trajectory};
+use crate::orbits::{CartesianOrbit, KeplerianOrbit, TrajectorError, Trajectory};
 use crate::propagators::Propagator;
 
 /// Default time step for interval propagation (60 seconds).
@@ -58,7 +58,7 @@ pub enum J2Error {
     NonElliptic(OrbitType),
     /// The origin body lacks a required physical property.
     #[error("undefined origin property: {0}")]
-    UndefinedOriginProperty(String),
+    UndefinedOriginProperty(#[from] UndefinedOriginPropertyError),
     /// Anomaly conversion failed.
     #[error("anomaly conversion failed: {0}")]
     Anomaly(#[from] AnomalyError),
@@ -70,6 +70,12 @@ pub enum J2Error {
     MeanElementConvergence(usize),
 }
 
+impl From<std::convert::Infallible> for J2Error {
+    fn from(x: std::convert::Infallible) -> Self {
+        unreachable!("{}", x)
+    }
+}
+
 /// Semi-analytical J2 orbit propagator using first-order Brouwer theory.
 ///
 /// Propagates mean Keplerian elements with secular rates for RAAN, argument of
@@ -77,7 +83,7 @@ pub enum J2Error {
 /// applied when evaluating the osculating state.
 #[derive(Debug, Clone, Copy)]
 pub struct J2Propagator<T: TimeScale, O: TryJ2 + TryPointMass + TrySpheroid, R: ReferenceFrame> {
-    initial_state: CartesianOrbit<T, O, R>,
+    initial_orbit: KeplerianOrbit<T, O, R>,
     mean_elements: BrouwerMeanElements,
     step: TimeDelta,
 }
@@ -114,76 +120,35 @@ struct BrouwerMeanElements {
     r_eq: f64,
 }
 
-// Infallible — static bounds
-impl<T, O, R> J2Propagator<T, O, R>
-where
-    T: TimeScale + Copy,
-    O: J2Trait + PointMass + Spheroid + Origin + Copy,
-    R: ReferenceFrame + Copy,
-{
-    /// Create a new semi-analytical J2 propagator from the given initial
-    /// osculating state.
-    pub fn new(initial_state: CartesianOrbit<T, O, R>) -> Result<Self, J2Error> {
-        let mu = initial_state.origin().gravitational_parameter().as_f64();
-        let j2 = initial_state.origin().j2();
-        let r_eq = initial_state.origin().equatorial_radius().as_f64();
-        Self::build(initial_state, mu, j2, r_eq)
-    }
-}
-
-// Fallible — Try* bounds (covers DynOrigin)
 impl<T, O, R> J2Propagator<T, O, R>
 where
     T: TimeScale + Copy,
     O: TryJ2 + TryPointMass + TrySpheroid + Origin + Copy,
     R: ReferenceFrame + Copy,
 {
-    /// Try to create a new semi-analytical J2 propagator, returning an error if
-    /// the origin lacks required properties or the orbit is non-elliptic.
-    pub fn try_new(initial_state: CartesianOrbit<T, O, R>) -> Result<Self, J2Error> {
-        let mu = initial_state
-            .origin()
-            .try_gravitational_parameter()
-            .map_err(|e| J2Error::UndefinedOriginProperty(e.to_string()))?
-            .as_f64();
-        let j2 = initial_state
-            .origin()
-            .try_j2()
-            .map_err(|e| J2Error::UndefinedOriginProperty(e.to_string()))?;
-        let r_eq = initial_state
-            .origin()
-            .try_equatorial_radius()
-            .map_err(|e| J2Error::UndefinedOriginProperty(e.to_string()))?
-            .as_f64();
-        Self::build(initial_state, mu, j2, r_eq)
-    }
-}
-
-impl<T, O, R> J2Propagator<T, O, R>
-where
-    T: TimeScale + Copy,
-    O: TryJ2 + TryPointMass + TrySpheroid + Origin + Copy,
-    R: ReferenceFrame + Copy,
-{
-    fn build(
-        initial_state: CartesianOrbit<T, O, R>,
-        mu: f64,
-        j2: f64,
-        r_eq: f64,
+    /// Try to create a new semi-analytical J2 propagator from an osculating
+    /// orbit, returning an error if the origin lacks required properties
+    /// or the orbit is non-elliptic.
+    ///
+    /// Accepts any orbit type that converts into [`KeplerianOrbit`],
+    /// including [`CartesianOrbit`] and [`KeplerianOrbit`] itself.
+    pub fn try_new(
+        orbit: impl TryInto<KeplerianOrbit<T, O, R>, Error: Into<J2Error>>,
     ) -> Result<Self, J2Error> {
-        let gm = GravitationalParameter::m3_per_s2(mu);
-        let osc_kep = initial_state.state().to_keplerian(gm);
+        let orbit = orbit.try_into().map_err(Into::into)?;
+        let mu = orbit.origin().try_gravitational_parameter()?.as_f64();
+        let j2 = orbit.origin().try_j2()?;
+        let r_eq = orbit.origin().try_equatorial_radius()?.as_f64();
 
+        let osc_kep = orbit.state();
         let ecc = osc_kep.eccentricity();
         if !ecc.is_circular_or_elliptic() {
             return Err(J2Error::NonElliptic(ecc.orbit_type()));
         }
 
-        let mean_elements = BrouwerMeanElements::from_osculating(&osc_kep, mu, j2, r_eq)?;
-
         Ok(Self {
-            initial_state,
-            mean_elements,
+            mean_elements: BrouwerMeanElements::from_osculating(&osc_kep, mu, j2, r_eq)?,
+            initial_orbit: orbit,
             step: TimeDelta::from_seconds_f64(DEFAULT_STEP_SECONDS),
         })
     }
@@ -195,9 +160,14 @@ where
         self
     }
 
-    /// Return a reference to the initial orbital state.
-    pub fn initial_state(&self) -> &CartesianOrbit<T, O, R> {
-        &self.initial_state
+    /// Return the initial osculating Keplerian orbit.
+    pub fn initial_orbit(&self) -> &KeplerianOrbit<T, O, R> {
+        &self.initial_orbit
+    }
+
+    /// Return the epoch of the initial state.
+    pub fn epoch(&self) -> Time<T> {
+        self.initial_orbit.time()
     }
 }
 
@@ -211,13 +181,13 @@ where
     type Error = J2Error;
 
     fn state_at(&self, time: Time<T>) -> Result<CartesianOrbit<T, O, R>, J2Error> {
-        let dt = (time - self.initial_state.time()).to_seconds().to_f64();
+        let dt = (time - self.initial_orbit.time()).to_seconds().to_f64();
         let cartesian = self.mean_elements.state_at_dt(dt)?;
         Ok(CartesianOrbit::new(
             cartesian,
             time,
-            self.initial_state.origin(),
-            self.initial_state.reference_frame(),
+            self.initial_orbit.origin(),
+            self.initial_orbit.reference_frame(),
         ))
     }
 
@@ -643,7 +613,7 @@ fn periodic_corrections(
 
 #[cfg(test)]
 mod tests {
-    use lox_bodies::Earth;
+    use lox_bodies::{Earth, PointMass};
     use lox_frames::Icrf;
     use lox_test_utils::assert_approx_eq;
     use lox_time::intervals::Interval;
@@ -654,8 +624,9 @@ mod tests {
     use lox_core::glam::DVec3;
 
     use super::*;
+    use crate::orbits::KeplerianOrbit;
 
-    fn initial_state() -> CartesianOrbit<Tdb, Earth, Icrf> {
+    fn initial_orbit() -> KeplerianOrbit<Tdb, Earth, Icrf> {
         let time = time!(Tdb, 2023, 1, 1).unwrap();
         CartesianOrbit::new(
             Cartesian::new(
@@ -670,32 +641,34 @@ mod tests {
             Earth,
             Icrf,
         )
+        .to_keplerian()
     }
 
     #[test]
     fn test_j2_construction() {
-        let state = initial_state();
-        let j2 = J2Propagator::new(state);
+        let orbit = initial_orbit();
+        let j2 = J2Propagator::try_new(orbit);
         assert!(j2.is_ok());
     }
 
     #[test]
     fn test_j2_state_at_epoch_roundtrip() {
-        let state = initial_state();
-        let j2 = J2Propagator::new(state).unwrap();
-        let result = j2.state_at(state.time()).unwrap();
+        let orbit = initial_orbit();
+        let cart = orbit.to_cartesian();
+        let j2 = J2Propagator::try_new(orbit).unwrap();
+        let result = j2.state_at(cart.time()).unwrap();
 
         // At epoch, the osculating state should match the initial state
-        assert_approx_eq!(result.position(), state.position(), rtol <= 1e-4);
-        assert_approx_eq!(result.velocity(), state.velocity(), rtol <= 1e-4);
+        assert_approx_eq!(result.position(), cart.position(), rtol <= 1e-4);
+        assert_approx_eq!(result.velocity(), cart.velocity(), rtol <= 1e-4);
     }
 
     #[test]
     fn test_j2_propagate_interval() {
-        let state = initial_state();
-        let j2 = J2Propagator::new(state).unwrap();
+        let orbit = initial_orbit();
+        let j2 = J2Propagator::try_new(orbit).unwrap();
         let dt = TimeDelta::from_minutes(90);
-        let interval = Interval::new(state.time(), state.time() + dt);
+        let interval = Interval::new(j2.epoch(), j2.epoch() + dt);
         let traj = j2.propagate(interval).unwrap();
         assert!(traj.states().len() > 1);
     }
@@ -705,19 +678,18 @@ mod tests {
         // Propagate for 1 day and verify RAAN drift is in the right direction
         // and order of magnitude. Comparing osculating RAANs includes short-period
         // oscillations, so we use a loose tolerance.
-        let state = initial_state();
-        let j2 = J2Propagator::new(state).unwrap();
+        let orbit = initial_orbit();
+        let j2 = J2Propagator::try_new(orbit).unwrap();
         let dt_day = TimeDelta::from_seconds_f64(86400.0);
-        let t1 = state.time() + dt_day;
+        let t1 = j2.epoch() + dt_day;
         let result = j2.state_at(t1).unwrap();
 
-        let mu = GravitationalParameter::m3_per_s2(j2.mean_elements.mu);
-        let kep_initial = state.state().to_keplerian(mu);
+        let mu = Earth.gravitational_parameter();
         let kep_final = result.state().to_keplerian(mu);
 
         let expected_raan_drift = j2.mean_elements.raan_dot * 86400.0;
         let mut actual_raan_drift = kep_final.longitude_of_ascending_node().as_f64()
-            - kep_initial.longitude_of_ascending_node().as_f64();
+            - orbit.state().longitude_of_ascending_node().as_f64();
         // Unwrap modular arithmetic
         if actual_raan_drift > std::f64::consts::PI {
             actual_raan_drift -= std::f64::consts::TAU;
@@ -814,11 +786,11 @@ mod tests {
         // Our implementation uses simplified Brouwer corrections while Orekit
         // uses the full Brouwer-Lyddane theory, so we expect position errors
         // of ~10-30 km per orbit (first-order J2 vs. higher-order corrections).
-        let state = initial_state();
-        let j2 = J2Propagator::new(state).unwrap();
+        let orbit = initial_orbit();
+        let j2 = J2Propagator::try_new(orbit).unwrap();
 
         for &(dt_min, x, y, z, vx, vy, vz) in OREKIT_REFERENCE {
-            let t = state.time() + TimeDelta::from_seconds_f64(dt_min * 60.0);
+            let t = j2.epoch() + TimeDelta::from_seconds_f64(dt_min * 60.0);
             let result = j2.state_at(t).unwrap();
 
             let pos_exp = DVec3::new(x, y, z);
@@ -852,10 +824,10 @@ mod tests {
 
     #[test]
     fn test_j2_propagate_to() {
-        let state = initial_state();
-        let j2 = J2Propagator::new(state).unwrap();
+        let orbit = initial_orbit();
+        let j2 = J2Propagator::try_new(orbit).unwrap();
         let dt = TimeDelta::from_minutes(40);
-        let interval = Interval::new(state.time(), state.time() + dt);
+        let interval = Interval::new(j2.epoch(), j2.epoch() + dt);
         let times: Vec<_> = interval.step_by(TimeDelta::from_minutes(10)).collect();
 
         let traj = j2.propagate_to(times.clone()).unwrap();
@@ -864,12 +836,12 @@ mod tests {
 
     #[test]
     fn test_j2_with_step() {
-        let state = initial_state();
-        let j2 = J2Propagator::new(state)
+        let orbit = initial_orbit();
+        let j2 = J2Propagator::try_new(orbit)
             .unwrap()
             .with_step(TimeDelta::from_seconds_f64(30.0));
         let dt = TimeDelta::from_minutes(10);
-        let interval = Interval::new(state.time(), state.time() + dt);
+        let interval = Interval::new(j2.epoch(), j2.epoch() + dt);
         let traj = j2.propagate(interval).unwrap();
         // 10 minutes / 30 seconds = 20 steps + 1 = 21 states
         assert_eq!(traj.states().len(), 21);
@@ -881,7 +853,6 @@ mod tests {
         use lox_units::AngleUnits;
 
         let time = time!(Tdb, 2025, 6, 1).unwrap();
-        let mu = Earth.gravitational_parameter();
 
         // Must converge for ALL true anomalies — constellation satellites
         // are distributed around the full orbit.
@@ -894,9 +865,9 @@ mod tests {
                 .with_true_anomaly(ta_deg.to_radians().rad())
                 .build()
                 .unwrap();
-            let cart = kep.to_cartesian(mu);
-            let state = CartesianOrbit::new(cart, time, Earth, Icrf);
-            let j2 = J2Propagator::new(state);
+            let orbit = KeplerianOrbit::new(kep, time, Earth, Icrf);
+            let cart = orbit.to_cartesian();
+            let j2 = J2Propagator::try_new(orbit);
             assert!(
                 j2.is_ok(),
                 "J2 must handle circular orbit at TA={ta_deg}: {}",
@@ -906,16 +877,16 @@ mod tests {
             // Roundtrip: osculating → mean → osculating should recover position.
             // 1 m / 1 mm/s absolute tolerance handles components near zero.
             let j2 = j2.unwrap();
-            let result = j2.state_at(state.time()).unwrap();
+            let result = j2.state_at(cart.time()).unwrap();
             assert_approx_eq!(
                 result.position(),
-                state.position(),
+                cart.position(),
                 rtol <= 1e-4,
                 atol <= 1.0
             );
             assert_approx_eq!(
                 result.velocity(),
-                state.velocity(),
+                cart.velocity(),
                 rtol <= 1e-4,
                 atol <= 1e-3
             );
