@@ -101,6 +101,10 @@ Key details:
 
 ## Testing
 
+### Development Workflow
+
+Always use **red-green TDD** when possible: write a failing test first, then implement the minimum code to make it pass, then refactor.
+
 ### Rust Tests
 - Unit tests in `#[cfg(test)]` modules within source files.
 - `rstest` for parameterized tests; `proptest` for property-based testing (e.g., anomaly conversions).
