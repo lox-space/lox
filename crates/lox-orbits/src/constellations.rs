@@ -84,8 +84,14 @@ pub enum ConstellationPropagator {
     Vallado,
     /// Numerical orbit propagator.
     Numerical,
-    /// Semi-analytical J2 propagator (Brouwer-Lyddane).
+    /// Kozai J2 secular propagator.
     J2,
+    /// Kozai J2 osculating propagator (secular + Kwok short-period).
+    J2Osc,
+    /// Kozai J4 secular propagator.
+    J4,
+    /// Kozai J4 osculating propagator (secular + Kwok short-period).
+    J4Osc,
 }
 
 /// A named collection of satellites produced by a constellation design algorithm,

@@ -13,7 +13,9 @@ Orbit propagation methods for predicting future states.
 | Propagator | Description | Use Case |
 |------------|-------------|----------|
 | `Vallado` | Analytical Kepler propagator | Two-body motion |
-| `J2` | Semi-analytical J2 propagator (Brouwer) | Fast J2 oblateness effects |
+| `J2` | Kozai J2 secular (± Kwok osculating) | Fast J2 oblateness, works for all orbits |
+| `J4` | Kozai J4 secular (± Kwok osculating) | Higher-order J2²+J4 effects |
+| `BrouwerLyddane` | Brouwer-Lyddane J2 propagator | Legacy; fails for circular orbits |
 | `Numerical` | Numerical orbit propagator (J2 perturbation) | High-fidelity oblateness |
 | `TLE` | Two-Line Element set parser | Satellite catalog data |
 | `SGP4` | Simplified General Perturbations | TLE-based propagation |
@@ -41,9 +43,15 @@ future = propagator.propagate(t + lox.TimeDelta.from_hours(1))
 times = [t + lox.TimeDelta(i * 60) for i in range(100)]
 trajectory = propagator.propagate(times)
 
-# Semi-analytical J2 propagation (Brouwer theory)
+# J2 secular propagation (Kozai theory, works for all orbits)
 j2 = lox.J2(state)
 future = j2.propagate(t + lox.TimeDelta.from_hours(1))
+
+# J2 with Kwok short-period corrections (osculating output)
+j2_osc = lox.J2(state, osculating=True)
+
+# J4 propagation (includes J2², J4 zonal harmonic terms)
+j4 = lox.J4(state, osculating=True)
 
 # Numerical propagation (accounts for J2 oblateness)
 numerical = lox.Numerical(state)
@@ -73,6 +81,18 @@ state = sgp4.propagate(t)
 ---
 
 ::: lox_space.J2
+    options:
+      show_source: false
+
+---
+
+::: lox_space.J4
+    options:
+      show_source: false
+
+---
+
+::: lox_space.BrouwerLyddane
     options:
       show_source: false
 

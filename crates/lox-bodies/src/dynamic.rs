@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use crate::{Earth, J2, NaifId, Origin, TryJ2, UndefinedOriginPropertyError};
+use crate::{Earth, J2, J4, NaifId, Origin, TryJ2, TryJ4, UndefinedOriginPropertyError};
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::{FromPrimitive, ToPrimitive};
 use std::fmt::{Display, Formatter};
@@ -861,6 +861,18 @@ impl TryJ2 for DynOrigin {
             _ => Err(UndefinedOriginPropertyError {
                 origin: self.to_string(),
                 prop: "J2".to_owned(),
+            }),
+        }
+    }
+}
+
+impl TryJ4 for DynOrigin {
+    fn try_j4(&self) -> Result<f64, UndefinedOriginPropertyError> {
+        match self {
+            DynOrigin::Earth => Ok(Earth.j4()),
+            _ => Err(UndefinedOriginPropertyError {
+                origin: self.to_string(),
+                prop: "J4".to_owned(),
             }),
         }
     }

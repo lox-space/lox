@@ -32,8 +32,12 @@ fn parse_propagator(s: &str) -> PyResult<ConstellationPropagator> {
         "vallado" => Ok(ConstellationPropagator::Vallado),
         "numerical" => Ok(ConstellationPropagator::Numerical),
         "j2" => Ok(ConstellationPropagator::J2),
+        "j2osc" => Ok(ConstellationPropagator::J2Osc),
+        "j4" => Ok(ConstellationPropagator::J4),
+        "j4osc" => Ok(ConstellationPropagator::J4Osc),
         _ => Err(PyValueError::new_err(format!(
-            "unknown propagator \"{s}\", expected \"vallado\", \"numerical\", or \"j2\""
+            "unknown propagator \"{s}\", expected one of: \
+             \"vallado\", \"numerical\", \"j2\", \"j2osc\", \"j4\", \"j4osc\""
         ))),
     }
 }

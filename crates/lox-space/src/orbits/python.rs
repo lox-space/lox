@@ -14,7 +14,11 @@ use crate::orbits::ground::{
     DynGroundLocation, DynGroundPropagator, GroundPropagatorError, Observables,
 };
 use crate::orbits::propagators::Propagator;
-use crate::orbits::propagators::j2::{DynJ2Propagator, J2Error, J2Propagator};
+use crate::orbits::propagators::brouwer_lyddane::{
+    BrouwerLyddaneError, BrouwerLyddanePropagator, DynBrouwerLyddanePropagator,
+};
+use crate::orbits::propagators::j2::DynJ2Propagator;
+use crate::orbits::propagators::j4::DynJ4Propagator;
 use crate::orbits::propagators::numerical::{
     DynNumericalPropagator, NumericalError, NumericalPropagator,
 };
@@ -1554,10 +1558,10 @@ impl PyNumericalPropagator {
     }
 }
 
-pub struct PyJ2Error(pub J2Error);
+pub struct PyBrouwerLyddaneError(pub BrouwerLyddaneError);
 
-impl From<PyJ2Error> for PyErr {
-    fn from(err: PyJ2Error) -> Self {
+impl From<PyBrouwerLyddaneError> for PyErr {
+    fn from(err: PyBrouwerLyddaneError) -> Self {
         PyValueError::new_err(err.0.to_string())
     }
 }
@@ -1573,21 +1577,21 @@ impl From<PyJ2Error> for PyErr {
 /// Args:
 ///     initial_state: Initial orbital state.
 ///     step: Fixed time step in seconds for interval propagation (default: 60).
-#[pyclass(name = "J2", module = "lox_space", frozen, from_py_object)]
+#[pyclass(name = "BrouwerLyddane", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone)]
-pub struct PyJ2Propagator(pub DynJ2Propagator);
+pub struct PyBrouwerLyddane(pub DynBrouwerLyddanePropagator);
 
 #[pymethods]
-impl PyJ2Propagator {
+impl PyBrouwerLyddane {
     #[new]
     #[pyo3(signature = (initial_state, step=None))]
     fn new(initial_state: PyCartesian, step: Option<f64>) -> PyResult<Self> {
-        let mut propagator = J2Propagator::try_new(initial_state.0)
+        let mut propagator = BrouwerLyddanePropagator::try_new(initial_state.0)
             .map_err(|e| PyValueError::new_err(e.to_string()))?;
         if let Some(step) = step {
             propagator = propagator.with_step(TimeDelta::from_seconds_f64(step));
         }
-        Ok(PyJ2Propagator(propagator))
+        Ok(PyBrouwerLyddane(propagator))
     }
 
     /// Propagate the orbit.
@@ -1625,14 +1629,144 @@ impl PyJ2Propagator {
             end,
             frame,
             provider,
-            |t| Ok(self.0.state_at(t).map_err(PyJ2Error)?),
-            |i| Ok(self.0.propagate(i).map_err(PyJ2Error)?),
+            |t| Ok(self.0.state_at(t).map_err(PyBrouwerLyddaneError)?),
+            |i| Ok(self.0.propagate(i).map_err(PyBrouwerLyddaneError)?),
         )
     }
 
     fn __repr__(&self) -> String {
         let orbit = PyKeplerian(*self.0.initial_orbit());
-        format!("J2({})", orbit.__repr__())
+        format!("BrouwerLyddane({})", orbit.__repr__())
+    }
+}
+
+// ─── Kozai-based J2/J4 propagators ──────────────────────────────────────────
+
+/// Analytical J2 orbit propagator (Kozai secular ± Kwok short-period).
+///
+/// Args:
+///     initial_state: Initial orbital state (mean Keplerian elements).
+///     osculating: Enable Kwok short-period corrections (default: False).
+///     step: Fixed time step in seconds for interval propagation (default: 60).
+#[pyclass(name = "J2", module = "lox_space", frozen, from_py_object)]
+#[derive(Clone)]
+pub struct PyJ2Propagator(pub DynJ2Propagator);
+
+#[pymethods]
+impl PyJ2Propagator {
+    #[new]
+    #[pyo3(signature = (initial_state, osculating=false, step=None))]
+    fn new(initial_state: PyCartesian, osculating: bool, step: Option<f64>) -> PyResult<Self> {
+        let mut propagator = DynJ2Propagator::try_new(initial_state.0)
+            .map_err(|e| PyValueError::new_err(e.to_string()))?
+            .with_osculating(osculating);
+        if let Some(step) = step {
+            propagator = propagator.with_step(TimeDelta::from_seconds_f64(step));
+        }
+        Ok(Self(propagator))
+    }
+
+    #[pyo3(signature = (steps, end=None, frame=None, provider=None))]
+    fn propagate<'py>(
+        &self,
+        py: Python<'py>,
+        steps: &Bound<'py, PyAny>,
+        end: Option<PyTime>,
+        frame: Option<&Bound<'_, PyAny>>,
+        provider: Option<&Bound<'_, PyEopProvider>>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let frame = frame.map(PyFrame::try_from).transpose()?;
+        propagate_dispatch(
+            py,
+            steps,
+            end,
+            frame,
+            provider,
+            |t| {
+                self.0
+                    .state_at(t)
+                    .map_err(|e| PyValueError::new_err(e.to_string()))
+            },
+            |i| {
+                self.0
+                    .propagate(i)
+                    .map_err(|e| PyValueError::new_err(e.to_string()))
+            },
+        )
+    }
+
+    fn __repr__(&self) -> String {
+        let orbit = PyKeplerian(*self.0.initial_orbit());
+        let osc = if self.0.is_osculating() {
+            ", osculating=True"
+        } else {
+            ""
+        };
+        format!("J2({}{osc})", orbit.__repr__())
+    }
+}
+
+/// Analytical J4 orbit propagator (Kozai secular with J2²+J4 ± Kwok short-period).
+///
+/// Args:
+///     initial_state: Initial orbital state (mean Keplerian elements).
+///     osculating: Enable Kwok short-period corrections (default: False).
+///     step: Fixed time step in seconds for interval propagation (default: 60).
+#[pyclass(name = "J4", module = "lox_space", frozen, from_py_object)]
+#[derive(Clone)]
+pub struct PyJ4Propagator(pub DynJ4Propagator);
+
+#[pymethods]
+impl PyJ4Propagator {
+    #[new]
+    #[pyo3(signature = (initial_state, osculating=false, step=None))]
+    fn new(initial_state: PyCartesian, osculating: bool, step: Option<f64>) -> PyResult<Self> {
+        let mut propagator = DynJ4Propagator::try_new(initial_state.0)
+            .map_err(|e| PyValueError::new_err(e.to_string()))?
+            .with_osculating(osculating);
+        if let Some(step) = step {
+            propagator = propagator.with_step(TimeDelta::from_seconds_f64(step));
+        }
+        Ok(Self(propagator))
+    }
+
+    #[pyo3(signature = (steps, end=None, frame=None, provider=None))]
+    fn propagate<'py>(
+        &self,
+        py: Python<'py>,
+        steps: &Bound<'py, PyAny>,
+        end: Option<PyTime>,
+        frame: Option<&Bound<'_, PyAny>>,
+        provider: Option<&Bound<'_, PyEopProvider>>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let frame = frame.map(PyFrame::try_from).transpose()?;
+        propagate_dispatch(
+            py,
+            steps,
+            end,
+            frame,
+            provider,
+            |t| {
+                self.0
+                    .state_at(t)
+                    .map_err(|e| PyValueError::new_err(e.to_string()))
+            },
+            |i| {
+                self.0
+                    .propagate(i)
+                    .map_err(|e| PyValueError::new_err(e.to_string()))
+            },
+        )
+    }
+
+    fn __repr__(&self) -> String {
+        let orbit = PyKeplerian(*self.0.initial_orbit());
+        let osc = if self.0.is_osculating() {
+            ", osculating=True"
+        } else {
+            ""
+        };
+        format!("J4({}{osc})", orbit.__repr__())
     }
 }
 
