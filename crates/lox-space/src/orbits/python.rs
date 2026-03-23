@@ -14,9 +14,6 @@ use crate::orbits::ground::{
     DynGroundLocation, DynGroundPropagator, GroundPropagatorError, Observables,
 };
 use crate::orbits::propagators::Propagator;
-use crate::orbits::propagators::brouwer_lyddane::{
-    BrouwerLyddaneError, BrouwerLyddanePropagator, DynBrouwerLyddanePropagator,
-};
 use crate::orbits::propagators::j2::DynJ2Propagator;
 use crate::orbits::propagators::j4::DynJ4Propagator;
 use crate::orbits::propagators::numerical::{
@@ -1555,88 +1552,6 @@ impl PyNumericalPropagator {
     fn __repr__(&self) -> String {
         let state = PyCartesian(*self.0.initial_state());
         format!("Numerical({})", state.__repr__())
-    }
-}
-
-pub struct PyBrouwerLyddaneError(pub BrouwerLyddaneError);
-
-impl From<PyBrouwerLyddaneError> for PyErr {
-    fn from(err: PyBrouwerLyddaneError) -> Self {
-        PyValueError::new_err(err.0.to_string())
-    }
-}
-
-/// Semi-analytical J2 orbit propagator using first-order Brouwer theory.
-///
-/// Propagates mean Keplerian elements with J2 secular rates for RAAN, argument
-/// of periapsis, and mean anomaly, plus short-period and long-period corrections.
-/// Much faster than numerical propagation but limited to the J2 perturbation.
-///
-/// Only valid for elliptic orbits.
-///
-/// Args:
-///     initial_state: Initial orbital state.
-///     step: Fixed time step in seconds for interval propagation (default: 60).
-#[pyclass(name = "BrouwerLyddane", module = "lox_space", frozen, from_py_object)]
-#[derive(Clone)]
-pub struct PyBrouwerLyddane(pub DynBrouwerLyddanePropagator);
-
-#[pymethods]
-impl PyBrouwerLyddane {
-    #[new]
-    #[pyo3(signature = (initial_state, step=None))]
-    fn new(initial_state: PyCartesian, step: Option<f64>) -> PyResult<Self> {
-        let mut propagator = BrouwerLyddanePropagator::try_new(initial_state.0)
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-        if let Some(step) = step {
-            propagator = propagator.with_step(TimeDelta::from_seconds_f64(step));
-        }
-        Ok(PyBrouwerLyddane(propagator))
-    }
-
-    /// Propagate the orbit.
-    ///
-    /// Supports three calling modes:
-    ///
-    /// - Single time: ``propagate(time)`` → State
-    /// - Two times: ``propagate(start, end)`` → Trajectory (fixed steps)
-    /// - List of times: ``propagate([t1, t2, ...])`` → Trajectory (caller-chosen steps)
-    ///
-    /// Args:
-    ///     steps: Single Time, list of Times, or start Time (when ``end`` is given).
-    ///     end: End time (optional, for interval propagation).
-    ///     frame: Target reference frame (optional).
-    ///     provider: EOP provider for frame transformation (optional).
-    ///
-    /// Returns:
-    ///     State or Trajectory, optionally transformed to the target frame.
-    ///
-    /// Raises:
-    ///     ValueError: If propagation or frame transformation fails.
-    #[pyo3(signature = (steps, end=None, frame=None, provider=None))]
-    fn propagate<'py>(
-        &self,
-        py: Python<'py>,
-        steps: &Bound<'py, PyAny>,
-        end: Option<PyTime>,
-        frame: Option<&Bound<'_, PyAny>>,
-        provider: Option<&Bound<'_, PyEopProvider>>,
-    ) -> PyResult<Bound<'py, PyAny>> {
-        let frame = frame.map(PyFrame::try_from).transpose()?;
-        propagate_dispatch(
-            py,
-            steps,
-            end,
-            frame,
-            provider,
-            |t| Ok(self.0.state_at(t).map_err(PyBrouwerLyddaneError)?),
-            |i| Ok(self.0.propagate(i).map_err(PyBrouwerLyddaneError)?),
-        )
-    }
-
-    fn __repr__(&self) -> String {
-        let orbit = PyKeplerian(*self.0.initial_orbit());
-        format!("BrouwerLyddane({})", orbit.__repr__())
     }
 }
 
