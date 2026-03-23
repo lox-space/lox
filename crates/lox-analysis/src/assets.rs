@@ -25,6 +25,7 @@ use lox_orbits::constellations::{ConstellationPropagator, DynConstellation};
 use lox_orbits::ground::DynGroundLocation;
 use lox_orbits::orbits::{Ensemble, KeplerianOrbit};
 use lox_orbits::propagators::j2::DynJ2Propagator;
+use lox_orbits::propagators::j4::DynJ4Propagator;
 use lox_orbits::propagators::numerical::DynNumericalPropagator;
 use lox_orbits::propagators::semi_analytical::DynVallado;
 use lox_orbits::propagators::{OrbitSource, PropagateError};
@@ -381,9 +382,26 @@ impl<O: Origin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send + Sync> Sce
                     OrbitSource::Numerical(n)
                 }
                 ConstellationPropagator::J2 => {
-                    let j2 = DynJ2Propagator::try_new(cartesian_orbit)
+                    let p = DynJ2Propagator::try_new(cartesian_orbit)
                         .map_err(|e| ConstellationConvertError::Propagator(e.to_string()))?;
-                    OrbitSource::J2(j2)
+                    OrbitSource::J2(p)
+                }
+                ConstellationPropagator::J2Osc => {
+                    let p = DynJ2Propagator::try_new(cartesian_orbit)
+                        .map(|p| p.with_osculating(true))
+                        .map_err(|e| ConstellationConvertError::Propagator(e.to_string()))?;
+                    OrbitSource::J2(p)
+                }
+                ConstellationPropagator::J4 => {
+                    let p = DynJ4Propagator::try_new(cartesian_orbit)
+                        .map_err(|e| ConstellationConvertError::Propagator(e.to_string()))?;
+                    OrbitSource::J4(p)
+                }
+                ConstellationPropagator::J4Osc => {
+                    let p = DynJ4Propagator::try_new(cartesian_orbit)
+                        .map(|p| p.with_osculating(true))
+                        .map_err(|e| ConstellationConvertError::Propagator(e.to_string()))?;
+                    OrbitSource::J4(p)
                 }
             };
 

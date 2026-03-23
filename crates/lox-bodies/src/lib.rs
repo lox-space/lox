@@ -377,6 +377,33 @@ impl J2 for Earth {
     }
 }
 
+/// Fallible accessor for the J4 zonal harmonic coefficient.
+pub trait TryJ4 {
+    /// Returns the J4 coefficient, or an error if undefined.
+    fn try_j4(&self) -> Result<f64, UndefinedOriginPropertyError>;
+}
+
+/// Infallible accessor for the J4 zonal harmonic coefficient.
+pub trait J4 {
+    /// Returns the J4 coefficient.
+    fn j4(&self) -> f64;
+}
+
+impl<T> TryJ4 for T
+where
+    T: J4,
+{
+    fn try_j4(&self) -> Result<f64, UndefinedOriginPropertyError> {
+        Ok(self.j4())
+    }
+}
+
+impl J4 for Earth {
+    fn j4(&self) -> f64 {
+        -1.65597e-6
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use lox_test_utils::assert_approx_eq;

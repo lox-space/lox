@@ -10,13 +10,21 @@ use lox_time::time_scales::{DynTimeScale, TimeScale};
 
 use crate::orbits::{CartesianOrbit, DynTrajectory, TrajectorError, Trajectory};
 
+use self::brouwer_lyddane::{BrouwerLyddaneError, DynBrouwerLyddanePropagator};
 use self::j2::{DynJ2Propagator, J2Error};
+use self::j4::{DynJ4Propagator, J4Error};
 use self::numerical::{DynNumericalPropagator, NumericalError};
 use self::semi_analytical::{DynVallado, ValladoError};
 use self::sgp4::{Sgp4, Sgp4Error};
 
-/// Semi-analytical J2 orbit propagator (Brouwer first-order theory).
+/// Semi-analytical orbit propagator using Brouwer-Lyddane theory.
+pub mod brouwer_lyddane;
+/// Analytical J2 orbit propagators (Kozai secular ± Kwok short-period).
 pub mod j2;
+/// Analytical J4 orbit propagators (Kozai secular ± Kwok short-period).
+pub mod j4;
+/// Shared math for Kozai-based analytical propagators.
+pub mod kozai;
 /// Numerical orbit propagators (e.g. J2 perturbation via ODE integration).
 pub mod numerical;
 /// Semi-analytical orbit propagators (e.g. Vallado universal variable method).
@@ -72,8 +80,12 @@ pub enum OrbitSource {
     Vallado(DynVallado),
     /// Numerical orbit propagator.
     Numerical(DynNumericalPropagator),
-    /// Semi-analytical J2 propagator (Brouwer).
+    /// Semi-analytical Brouwer-Lyddane propagator.
+    BrouwerLyddane(DynBrouwerLyddanePropagator),
+    /// Kozai J2 propagator (secular, optionally osculating).
     J2(DynJ2Propagator),
+    /// Kozai J4 propagator (secular, optionally osculating).
+    J4(DynJ4Propagator),
     /// Pre-computed trajectory used as-is.
     Trajectory(DynTrajectory),
 }
@@ -90,9 +102,15 @@ pub enum PropagateError {
     /// Numerical propagation error.
     #[error(transparent)]
     Numerical(#[from] NumericalError),
-    /// Semi-analytical J2 propagation error.
+    /// Brouwer-Lyddane propagation error.
+    #[error(transparent)]
+    BrouwerLyddane(#[from] BrouwerLyddaneError),
+    /// J2 propagation error.
     #[error(transparent)]
     J2(#[from] J2Error),
+    /// J4 propagation error.
+    #[error(transparent)]
+    J4(#[from] J4Error),
 }
 
 impl OrbitSource {
@@ -113,7 +131,9 @@ impl OrbitSource {
             }
             Self::Vallado(v) => Ok(Propagator::propagate(v, interval)?),
             Self::Numerical(n) => Ok(Propagator::propagate(n, interval)?),
-            Self::J2(j2) => Ok(Propagator::propagate(j2, interval)?),
+            Self::BrouwerLyddane(bl) => Ok(Propagator::propagate(bl, interval)?),
+            Self::J2(p) => Ok(Propagator::propagate(p, interval)?),
+            Self::J4(p) => Ok(Propagator::propagate(p, interval)?),
             Self::Trajectory(t) => Ok(t.clone()),
         }
     }

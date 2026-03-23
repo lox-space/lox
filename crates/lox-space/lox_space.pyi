@@ -361,8 +361,8 @@ class Spacecraft:
 
     Args:
         id: Unique identifier for this spacecraft.
-        orbit: Orbit source — an SGP4, Vallado, J2 propagator, or a
-            pre-computed Trajectory.
+        orbit: Orbit source — an SGP4, Vallado, J2, J4, BrouwerLyddane
+            propagator, or a pre-computed Trajectory.
         max_slew_rate: Optional maximum slew rate.
         communication_systems: Optional list of communication systems.
 
@@ -373,7 +373,7 @@ class Spacecraft:
     def __new__(
         cls,
         id: str,
-        orbit: SGP4 | Vallado | J2 | Trajectory,
+        orbit: SGP4 | Vallado | J2 | J4 | BrouwerLyddane | Numerical | Trajectory,
         max_slew_rate: AngularRate | None = None,
         constellation_id: str | None = None,
         imaging_payload: "ImagingPayload | None" = None,
@@ -1496,14 +1496,13 @@ class Numerical:
         """Propagate the orbit to one or more times."""
         ...
 
-class J2:
-    """Semi-analytical J2 orbit propagator using first-order Brouwer theory.
+class BrouwerLyddane:
+    """Semi-analytical orbit propagator using Brouwer-Lyddane theory.
 
     Propagates mean Keplerian elements with J2 secular rates plus short-period
-    and long-period corrections. Much faster than numerical propagation but
-    limited to J2 perturbation only.
-
-    Only valid for elliptic orbits.
+    and long-period corrections. Only valid for elliptic orbits with
+    eccentricity above ~0.001 (fails for circular orbits at certain true
+    anomalies). For circular orbits, use ``J2`` or ``J4`` instead.
 
     Args:
         initial_state: Initial orbital state.
@@ -1512,6 +1511,70 @@ class J2:
     def __new__(
         cls,
         initial_state: Cartesian,
+        step: float | None = None,
+    ) -> Self: ...
+    @overload
+    def propagate(self, steps: Time) -> Cartesian: ...
+    @overload
+    def propagate(self, steps: list[Time]) -> Trajectory: ...
+    def propagate(
+        self,
+        steps: Time | list[Time],
+        end: Time | None = None,
+        frame: str | Frame | None = None,
+        provider: EOPProvider | None = None,
+    ) -> Cartesian | Trajectory:
+        """Propagate the orbit to one or more times."""
+        ...
+
+class J2:
+    """Analytical J2 orbit propagator (Kozai secular ± Kwok short-period).
+
+    Propagates mean Keplerian elements with first-order J2 secular rates.
+    Optionally applies Kwok short-period corrections for osculating output.
+    Works for all orbit types including circular (e = 0).
+
+    Args:
+        initial_state: Initial orbital state (mean elements).
+        osculating: Enable Kwok short-period corrections (default: False).
+        step: Fixed time step in seconds for interval propagation (default: 60).
+    """
+    def __new__(
+        cls,
+        initial_state: Cartesian,
+        osculating: bool = False,
+        step: float | None = None,
+    ) -> Self: ...
+    @overload
+    def propagate(self, steps: Time) -> Cartesian: ...
+    @overload
+    def propagate(self, steps: list[Time]) -> Trajectory: ...
+    def propagate(
+        self,
+        steps: Time | list[Time],
+        end: Time | None = None,
+        frame: str | Frame | None = None,
+        provider: EOPProvider | None = None,
+    ) -> Cartesian | Trajectory:
+        """Propagate the orbit to one or more times."""
+        ...
+
+class J4:
+    """Analytical J4 orbit propagator (Kozai secular with J2²+J4 ± Kwok short-period).
+
+    Like ``J2`` but uses higher-order secular rates including J2² and J4
+    zonal harmonic terms. Short-period corrections (when enabled) are
+    J2-only. Works for all orbit types including circular (e = 0).
+
+    Args:
+        initial_state: Initial orbital state (mean elements).
+        osculating: Enable Kwok short-period corrections (default: False).
+        step: Fixed time step in seconds for interval propagation (default: 60).
+    """
+    def __new__(
+        cls,
+        initial_state: Cartesian,
+        osculating: bool = False,
         step: float | None = None,
     ) -> Self: ...
     @overload
