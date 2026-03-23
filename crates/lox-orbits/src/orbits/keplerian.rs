@@ -248,4 +248,24 @@ mod tests {
 
         KeplerianOrbit::try_from_keplerian(elements, epoch, Earth, Icrf).unwrap();
     }
+
+    #[test]
+    fn test_try_from_keplerian_to_cartesian() {
+        use lox_core::elements::Keplerian;
+        use lox_core::units::{AngleUnits, Distance};
+        use lox_units::DistanceUnits;
+
+        let time = Time::j2000(Tai);
+        let kep = Keplerian::builder()
+            .with_semi_major_axis(Distance::new(7_000_000.0), 0.001)
+            .with_inclination(51.6_f64.to_radians().rad())
+            .with_longitude_of_ascending_node(0.0.rad())
+            .with_argument_of_periapsis(0.0.rad())
+            .with_true_anomaly(0.0.rad())
+            .build()
+            .unwrap();
+        let kep_orbit = KeplerianOrbit::new(kep, time, Earth, Icrf);
+        let cart: CartesianOrbit<_, _, _> = kep_orbit.try_into().unwrap();
+        assert!(cart.position().length() > 6_000.0.km().as_f64());
+    }
 }
