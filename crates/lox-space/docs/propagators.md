@@ -15,7 +15,6 @@ Orbit propagation methods for predicting future states.
 | `Vallado` | Analytical Kepler propagator | Two-body motion |
 | `J2` | Kozai J2 secular (± Kwok osculating) | Fast J2 oblateness, works for all orbits |
 | `J4` | Kozai J4 secular (± Kwok osculating) | Higher-order J2²+J4 effects |
-| `BrouwerLyddane` | Brouwer-Lyddane J2 propagator | Legacy; fails for circular orbits |
 | `Numerical` | Numerical orbit propagator (J2 perturbation) | High-fidelity oblateness |
 | `TLE` | Two-Line Element set parser | Satellite catalog data |
 | `SGP4` | Simplified General Perturbations | TLE-based propagation |
@@ -87,12 +86,6 @@ state = sgp4.propagate(t)
 ---
 
 ::: lox_space.J4
-    options:
-      show_source: false
-
----
-
-::: lox_space.BrouwerLyddane
     options:
       show_source: false
 
