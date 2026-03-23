@@ -361,7 +361,7 @@ class Spacecraft:
 
     Args:
         id: Unique identifier for this spacecraft.
-        orbit: Orbit source — an SGP4, Vallado, J2, J4, BrouwerLyddane
+        orbit: Orbit source — an SGP4, Vallado, J2, J4, Numerical
             propagator, or a pre-computed Trajectory.
         max_slew_rate: Optional maximum slew rate.
         communication_systems: Optional list of communication systems.
@@ -373,7 +373,7 @@ class Spacecraft:
     def __new__(
         cls,
         id: str,
-        orbit: SGP4 | Vallado | J2 | J4 | BrouwerLyddane | Numerical | Trajectory,
+        orbit: SGP4 | Vallado | J2 | J4 | Numerical | Trajectory,
         max_slew_rate: AngularRate | None = None,
         constellation_id: str | None = None,
         imaging_payload: "ImagingPayload | None" = None,
@@ -1481,37 +1481,6 @@ class Numerical:
         h_max: float | None = None,
         h_min: float | None = None,
         max_steps: int | None = None,
-    ) -> Self: ...
-    @overload
-    def propagate(self, steps: Time) -> Cartesian: ...
-    @overload
-    def propagate(self, steps: list[Time]) -> Trajectory: ...
-    def propagate(
-        self,
-        steps: Time | list[Time],
-        end: Time | None = None,
-        frame: str | Frame | None = None,
-        provider: EOPProvider | None = None,
-    ) -> Cartesian | Trajectory:
-        """Propagate the orbit to one or more times."""
-        ...
-
-class BrouwerLyddane:
-    """Semi-analytical orbit propagator using Brouwer-Lyddane theory.
-
-    Propagates mean Keplerian elements with J2 secular rates plus short-period
-    and long-period corrections. Only valid for elliptic orbits with
-    eccentricity above ~0.001 (fails for circular orbits at certain true
-    anomalies). For circular orbits, use ``J2`` or ``J4`` instead.
-
-    Args:
-        initial_state: Initial orbital state.
-        step: Fixed time step in seconds for interval propagation (default: 60).
-    """
-    def __new__(
-        cls,
-        initial_state: Cartesian,
-        step: float | None = None,
     ) -> Self: ...
     @overload
     def propagate(self, steps: Time) -> Cartesian: ...
