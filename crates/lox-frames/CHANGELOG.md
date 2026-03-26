@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.0-alpha.12](https://github.com/lox-space/lox/compare/lox-frames-v0.1.0-alpha.11...lox-frames-v0.1.0-alpha.12) - 2026-03-26
+
+### Other
+
+- re-export glam types from lox-core
+- fix all cargo-shear lints
+- remove unused hashbrown dependency
+
 ## [0.1.0-alpha.11](https://github.com/lox-space/lox/compare/lox-frames-v0.1.0-alpha.10...lox-frames-v0.1.0-alpha.11) - 2026-03-05
 
 ### Other

@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.18](https://github.com/lox-space/lox/compare/lox-time-v0.1.0-alpha.17...lox-time-v0.1.0-alpha.18) - 2026-03-26
+
+### Added
+
+- *(lox-time)* add time series
+
+### Fixed
+
+- *(lox-time)* use $crate paths in time! and utc! macros
+
+### Other
+
+- fix all cargo-shear lints
+
 ## [0.1.0-alpha.17](https://github.com/lox-space/lox/compare/lox-time-v0.1.0-alpha.16...lox-time-v0.1.0-alpha.17) - 2026-03-05
 
 ### Other
