@@ -19,7 +19,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  UV_PROJECT: crates/lox-space
+  UV_PROJECT: .
 
 jobs:
   codspeed-python:
@@ -42,11 +42,8 @@ jobs:
       - name: Build Python wrapper
         uses: PyO3/maturin-action@v1
         with:
-          working-directory: crates/lox-space
           command: develop
           args: --release --uv
-        env:
-          UV_PROJECT: .
       - uses: CodSpeedHQ/action@v4
         with:
           mode: walltime

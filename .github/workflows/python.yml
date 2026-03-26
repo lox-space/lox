@@ -57,7 +57,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist --find-interpreter --manifest-path crates/lox-space/Cargo.toml
+          args: --release --out dist --find-interpreter
           sccache: 'true'
           manylinux: auto
       - name: Upload wheels
@@ -71,10 +71,10 @@ jobs:
         run: |
           set -e
           uv venv
-          uv pip install --project crates/lox-space --group dev
+          uv pip install --group dev
           uv pip install lox-space --offline --find-links dist --force-reinstall
           source .venv/bin/activate
-          cd crates/lox-space && pytest
+          pytest
 
   windows:
     runs-on: ${{ matrix.platform.runner }}
@@ -98,7 +98,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist --find-interpreter --manifest-path crates/lox-space/Cargo.toml
+          args: --release --out dist --find-interpreter
           sccache: 'true'
       - name: Upload wheels
         uses: actions/upload-artifact@v7
@@ -111,10 +111,10 @@ jobs:
         run: |
           set -e
           uv venv
-          uv pip install --project crates/lox-space --group dev
+          uv pip install --group dev
           uv pip install lox-space --offline --find-links dist --force-reinstall
           source .venv/Scripts/activate
-          cd crates/lox-space && pytest
+          pytest
 
   macos:
     runs-on: ${{ matrix.platform.runner }}
@@ -137,7 +137,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist --find-interpreter --manifest-path crates/lox-space/Cargo.toml
+          args: --release --out dist --find-interpreter
           sccache: 'true'
       - name: Upload wheels
         uses: actions/upload-artifact@v7
@@ -148,10 +148,10 @@ jobs:
         run: |
           set -e
           uv venv
-          uv pip install --project crates/lox-space --group dev
+          uv pip install --group dev
           uv pip install lox-space --offline --find-links dist --force-reinstall
           source .venv/bin/activate
-          cd crates/lox-space && pytest
+          pytest
 
   sdist:
     runs-on: ubuntu-latest
@@ -161,7 +161,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           command: sdist
-          args: --out dist --manifest-path crates/lox-space/Cargo.toml
+          args: --out dist
       - name: Upload sdist
         uses: actions/upload-artifact@v7
         with:

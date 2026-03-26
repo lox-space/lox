@@ -7,7 +7,7 @@ name = "lox-space"
 description = "An astrodynamics library for orbital mechanics, mission analysis, and telecommunications"
 authors = [{name = "Helge Eichhorn", email = "git@helgeeichhorn.de"}]
 license = {text = "MPL-2.0"}
-readme = "README.md"
+readme = "crates/lox-space/README.md"
 requires-python = ">=3.11"
 keywords = ["astrodynamics", "orbital-mechanics", "mission-analysis", "space"]
 classifiers = [
@@ -47,9 +47,11 @@ requires = ["maturin>=1.3,<2.0"]
 build-backend = "maturin"
 
 [tool.maturin]
+manifest-path = "crates/lox-space/Cargo.toml"
 features = ["python"]
 
 [tool.pytest.ini_options]
+testpaths = ["crates/lox-space/tests"]
 markers = [
   "slow: marks tests as slow (deselect with '-m \"not slow\"')",
   "benchmark: marks tests as benchmark tests",
@@ -60,7 +62,6 @@ markers = [
 cache-keys = [
   { file = "pyproject.toml" },
   { file = "Cargo.toml" },
-  { file = "**/*.pyi" },
-  { file = "**/*.rs" },
-  { file = "../**/*.rs" },
+  { file = "crates/**/*.pyi" },
+  { file = "crates/**/*.rs" },
 ]
