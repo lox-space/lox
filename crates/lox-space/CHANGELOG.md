@@ -6,6 +6,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.38](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.37...lox-space-v0.1.0-alpha.38) - 2026-03-26
+
+### Added
+
+- *(lox-orbits)* add Kozai J2/J4 propagators
+- *(lox-orbits)* add Brouwer-Lyddane J2 propagator
+- *(lox-core)* implement Hermite interpolation for trajectories
+- *(lox-analysis)* implement AOI-based coverage detection
+- *(lox-analysis)* add G/S<->S/C filter to vis analysis
+- *(lox-analysis)* accept a closure as inter-satellite filter
+- *(lox-analysis)* adds an optional satellite pair filter to visibility analysis
+- *(lox-analysis)* add basic environmental analysis for power budget
+- *(lox-time)* add time series
+- *(lox-space)* add Python type registration func
+- *(lox-analysis)* add accessors for network/constellation ids
+- *(lox-orbits)* add RAAN to constellation design tools
+
+### Fixed
+
+- *(lox-time)* use $crate paths in time! and utc! macros
+- *(lox-space)* fix Python wrapper visibility and bump PyO3
+- *(lox-analysis)* always check for occultation by central body
+
+### Other
+
+- move pyproject.toml to root
+- *(lox-orbits)* remove Brouwer-Lyddane again
+- *(lox-orbits)* clean-up J2 API
+- *(python)* fix coverage links
+- *(lox-space)* flatten facade re-exports to remove path stutter
+- add --all-targets to clippy and nextest
+- re-export glam types from lox-core
+- *(lox-space)* add missing type stubs and doc references
+- *(lox-space)* update Python deps and fix lib type
+- fix all cargo-shear lints
+
 ## [0.1.0-alpha.37](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.36...lox-space-v0.1.0-alpha.37) - 2026-03-05
 
 ### Added
