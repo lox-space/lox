@@ -3,16 +3,15 @@
 # SPDX-License-Identifier: MPL-2.0
 
 export PYO3_PYTHON := `uv python find`
-export UV_PROJECT := "crates/lox-space"
 
 _default:
     just -l
 
 build-pyo3 *FLAGS:
-    uv run maturin develop --uv -m $UV_PROJECT/Cargo.toml {{FLAGS}}
+    uv run maturin develop --uv {{FLAGS}}
 
 pytest *FLAGS:
-    uv run --directory $UV_PROJECT pytest {{FLAGS}}
+    uv run pytest {{FLAGS}}
 
 rstest *FLAGS:
     cargo nextest run --all-features --lib --bins --tests --examples {{FLAGS}}

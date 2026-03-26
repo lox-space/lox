@@ -1,13 +1,31 @@
 # SPDX-FileCopyrightText: 2023 Helge Eichhorn <git@helgeeichhorn.de>
 #
 # SPDX-License-Identifier: MPL-2.0
+
+# Rust
 /target
 /tools/*/target/
+
+# Python
+__pycache__/
+.pytest_cache/
+*.py[cod]
+*.so
 .venv/
+build/
+dist/
+*.egg-info/
+.coverage
+coverage.xml
+.python-version
+site/
+
+# Tools / IDE
 .DS_Store
 flamegraph.svg
 .mise.local.toml
 .codspeed/
 .idea/
+.vscode/
 .claude/
 *.profraw
