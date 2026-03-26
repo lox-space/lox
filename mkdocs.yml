@@ -5,6 +5,8 @@
 site_name: Lox Python
 site_url: https://python.lox.rs
 repo_url: https://github.com/lox-space/lox
+docs_dir: crates/lox-space/docs
+site_dir: crates/lox-space/site
 
 nav:
   - Home: index.md
