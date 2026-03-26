@@ -53,8 +53,6 @@ def main():
     project_root = Path(__file__).parent.parent
     os.chdir(project_root)
 
-    uv_project = "crates/lox-space"
-
     # Get llvm-cov environment
     print("Setting up coverage environment...")
     cov_env = get_llvm_cov_env()
@@ -77,8 +75,6 @@ def main():
             "maturin",
             "develop",
             "--uv",
-            "-m",
-            f"{uv_project}/Cargo.toml",
         ],
         env=cov_env,
     )
@@ -91,8 +87,6 @@ def main():
             "uv",
             "run",
             "--no-sync",
-            "--directory",
-            uv_project,
             "--",
             "pytest",
             "--cov=lox_space",

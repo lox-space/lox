@@ -69,8 +69,6 @@ jobs:
     name: Code coverage
     runs-on: ubuntu-latest
     if: github.actor != 'dependabot[bot]'
-    env:
-      UV_PROJECT: crates/lox-space
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -86,5 +84,5 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
-          files: codecov.json,crates/lox-space/coverage.xml
+          files: codecov.json,coverage.xml
           fail_ci_if_error: true
