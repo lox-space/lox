@@ -6,6 +6,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.31](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.30...lox-orbits-v0.1.0-alpha.31) - 2026-03-26
+
+### Added
+
+- *(lox-orbits)* add Kozai J2/J4 propagators
+- *(lox-orbits)* add Brouwer-Lyddane J2 propagator
+- *(lox-core)* implement Hermite interpolation for trajectories
+- *(lox-orbits)* add RAAN to constellation design tools
+
+### Fixed
+
+- *(lox-orbits)* fix J2 propagator convergence for circular
+- *(lox-orbits)* use r_eq in J2 propagator
+
+### Other
+
+- *(lox-orbits)* more Kozai tests
+- *(lox-orbits)* remove Brouwer-Lyddane again
+- *(lox-orbits)* clean-up J2 API
+- re-export glam types from lox-core
+- fix all cargo-shear lints
+- remove unused hashbrown dependency
+
 ## [0.1.0-alpha.30](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.29...lox-orbits-v0.1.0-alpha.30) - 2026-03-05
 
 ### Other

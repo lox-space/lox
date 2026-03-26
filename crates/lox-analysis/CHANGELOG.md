@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.4](https://github.com/lox-space/lox/compare/lox-analysis-v0.1.0-alpha.3...lox-analysis-v0.1.0-alpha.4) - 2026-03-26
+
+### Added
+
+- *(lox-orbits)* add Kozai J2/J4 propagators
+- *(lox-orbits)* add Brouwer-Lyddane J2 propagator
+- *(lox-analysis)* implement AOI-based coverage detection
+- *(lox-analysis)* add G/S<->S/C filter to vis analysis
+- *(lox-analysis)* accept a closure as inter-satellite filter
+- *(lox-analysis)* adds an optional satellite pair filter to visibility analysis
+- *(lox-analysis)* add basic environmental analysis for power budget
+- *(lox-analysis)* add accessors for network/constellation ids
+
+### Fixed
+
+- *(lox-analysis)* always check for occultation by central body
+
+### Other
+
+- re-export glam types from lox-core
+- *(lox-analysis)* use `TimeSeries` for `Pass`
+- fix all cargo-shear lints
+
 ## [0.1.0-alpha.3](https://github.com/lox-space/lox/compare/lox-analysis-v0.1.0-alpha.2...lox-analysis-v0.1.0-alpha.3) - 2026-03-05
 
 ### Other

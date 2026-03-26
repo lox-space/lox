@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.18](https://github.com/lox-space/lox/compare/lox-bodies-v0.1.0-alpha.17...lox-bodies-v0.1.0-alpha.18) - 2026-03-26
+
+### Added
+
+- *(lox-orbits)* add Kozai J2/J4 propagators
+
+### Other
+
+- *(lox-orbits)* more Kozai tests
+- fix all cargo-shear lints
+
 ## [0.1.0-alpha.17](https://github.com/lox-space/lox/compare/lox-bodies-v0.1.0-alpha.16...lox-bodies-v0.1.0-alpha.17) - 2026-03-05
 
 ### Other
