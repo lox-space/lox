@@ -42,3 +42,15 @@ headers:
 
 install-hooks:
     lefthook install
+
+# Build Python documentation with zensical
+docs-build:
+    uv run zensical build
+
+# Serve Python documentation with live reload
+docs-serve:
+    uv run zensical serve
+
+# Serve Python documentation and open in browser
+docs-open:
+    uv run zensical serve --open
