@@ -81,7 +81,7 @@ jobs:
       - name: Generate code coverage
         run: uv run --no-project tools/coverage.py --codecov --output-path codecov.json
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
           files: codecov.json,coverage.xml
