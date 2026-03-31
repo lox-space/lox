@@ -846,63 +846,6 @@ impl Display for Power {
     }
 }
 
-type BitsPerSecond = f64;
-
-/// Data rate in bits per second.
-#[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[repr(transparent)]
-pub struct DataRate(BitsPerSecond);
-
-impl DataRate {
-    /// Creates a new data rate from an `f64` value in bits/s.
-    pub const fn new(bps: f64) -> Self {
-        Self(bps)
-    }
-
-    /// Creates a new data rate from an `f64` value in bits/s.
-    pub const fn bits_per_second(bps: f64) -> Self {
-        Self(bps)
-    }
-
-    /// Creates a new data rate from an `f64` value in kilobits/s.
-    pub const fn kilobits_per_second(kbps: f64) -> Self {
-        Self(kbps * 1e3)
-    }
-
-    /// Creates a new data rate from an `f64` value in megabits/s.
-    pub const fn megabits_per_second(mbps: f64) -> Self {
-        Self(mbps * 1e6)
-    }
-
-    /// Returns the value in bits/s as an `f64`.
-    pub const fn as_f64(&self) -> f64 {
-        self.0
-    }
-
-    /// Returns the value in bits/s.
-    pub const fn to_bits_per_second(&self) -> f64 {
-        self.0
-    }
-
-    /// Returns the value in kilobits/s.
-    pub const fn to_kilobits_per_second(&self) -> f64 {
-        self.0 * 1e-3
-    }
-
-    /// Returns the value in megabits/s.
-    pub const fn to_megabits_per_second(&self) -> f64 {
-        self.0 * 1e-6
-    }
-}
-
-impl Display for DataRate {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        (1e-3 * self.0).fmt(f)?;
-        write!(f, " kbps")
-    }
-}
-
 type RadiansPerSecond = f64;
 
 /// Angular rate in radians per second.
@@ -1075,7 +1018,6 @@ macro_rules! trait_impls {
 trait_impls!(
     Angle,
     AngularRate,
-    DataRate,
     Decibel,
     Distance,
     Frequency,
@@ -1416,43 +1358,6 @@ mod tests {
         assert_eq!((a + b).as_f64(), 200.0);
         assert_eq!((b - a).as_f64(), 100.0);
         assert_eq!((-a).as_f64(), -50.0);
-    }
-
-    // --- DataRate ---
-
-    #[test]
-    fn test_data_rate_bps() {
-        let dr = DataRate::bits_per_second(1000.0);
-        assert_eq!(dr.to_bits_per_second(), 1000.0);
-        assert_eq!(dr.to_kilobits_per_second(), 1.0);
-        assert_eq!(dr.to_megabits_per_second(), 0.001);
-    }
-
-    #[test]
-    fn test_data_rate_kbps() {
-        let dr = DataRate::kilobits_per_second(1.0);
-        assert_eq!(dr.to_bits_per_second(), 1000.0);
-    }
-
-    #[test]
-    fn test_data_rate_mbps() {
-        let dr = DataRate::megabits_per_second(1.0);
-        assert_eq!(dr.to_bits_per_second(), 1_000_000.0);
-    }
-
-    #[test]
-    fn test_data_rate_display() {
-        let dr = DataRate::kilobits_per_second(1.0);
-        assert_eq!(format!("{}", dr), "1 kbps");
-    }
-
-    #[test]
-    fn test_data_rate_arithmetic() {
-        let a = DataRate::new(100.0);
-        let b = DataRate::new(200.0);
-        assert_eq!((a + b).as_f64(), 300.0);
-        assert_eq!((b - a).as_f64(), 100.0);
-        assert_eq!((-a).as_f64(), -100.0);
     }
 
     // --- AngularRate ---

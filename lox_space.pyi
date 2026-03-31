@@ -72,34 +72,6 @@ class AngularRate:
         """Returns the value in degrees per second."""
         ...
 
-class DataRate:
-    """Data rate type for type-safe data rate values.
-
-    Use with unit constants: `1e6 * lox.bps` or `10 * lox.Mbps`
-    Convert to float with `float(rate)` (returns bits/s).
-    """
-    def __new__(cls, value: float) -> Self: ...
-    def __add__(self, other: DataRate) -> DataRate: ...
-    def __sub__(self, other: DataRate) -> DataRate: ...
-    def __neg__(self) -> DataRate: ...
-    def __mul__(self, other: float) -> DataRate: ...
-    def __rmul__(self, other: float) -> DataRate: ...
-    def __eq__(self, other: object) -> bool: ...
-    def __repr__(self) -> str: ...
-    def __str__(self) -> str: ...
-    def __complex__(self) -> complex: ...
-    def __float__(self) -> float: ...
-    def __int__(self) -> int: ...
-    def to_bits_per_second(self) -> float:
-        """Returns the value in bits per second."""
-        ...
-    def to_kilobits_per_second(self) -> float:
-        """Returns the value in kilobits per second."""
-        ...
-    def to_megabits_per_second(self) -> float:
-        """Returns the value in megabits per second."""
-        ...
-
 class Distance:
     """Distance type for type-safe length values.
 
@@ -268,12 +240,6 @@ rad_per_s: AngularRate
 """1 radian per second"""
 deg_per_s: AngularRate
 """π/180 radians per second"""
-bps: DataRate
-"""1 bit per second"""
-kbps: DataRate
-"""1000 bits per second"""
-Mbps: DataRate
-"""1000000 bits per second"""
 m: Distance
 """1 meter"""
 km: Distance
@@ -2398,16 +2364,23 @@ class SimpleReceiver:
     def __eq__(self, other: object) -> bool: ...
     def __repr__(self) -> str: ...
 
+class NoiseStage:
+    """A single stage in an RF receiver chain.
+
+    Args:
+        gain: Stage gain as Decibel.
+        noise_temperature: Stage equivalent noise temperature.
+    """
+    def __new__(cls, gain: Decibel, noise_temperature: Temperature) -> Self: ...
+    def __repr__(self) -> str: ...
+
 class ComplexReceiver:
-    """A complex receiver with detailed noise and gain parameters.
+    """An N-stage cascade receiver using the Friis noise formula.
 
     Args:
         frequency: Receive frequency.
         antenna_noise_temperature: Antenna noise temperature.
-        lna_gain: LNA gain as Decibel.
-        lna_noise_figure: LNA noise figure as Decibel.
-        noise_figure: Receiver noise figure as Decibel.
-        loss: Receiver chain loss as Decibel.
+        stages: List of NoiseStage (ordered: LNA first, then downstream).
         demodulator_loss: Demodulator loss as Decibel (default Decibel(0)).
         implementation_loss: Other implementation losses as Decibel (default Decibel(0)).
     """
@@ -2415,52 +2388,92 @@ class ComplexReceiver:
         cls,
         frequency: Frequency,
         antenna_noise_temperature: Temperature,
-        lna_gain: Decibel,
-        lna_noise_figure: Decibel,
-        noise_figure: Decibel,
-        loss: Decibel,
+        stages: list[NoiseStage],
         demodulator_loss: Decibel | None = None,
         implementation_loss: Decibel | None = None,
     ) -> Self: ...
-    def noise_temperature(self) -> Temperature:
-        """Returns the receiver noise temperature."""
+    @staticmethod
+    def from_feed_loss_and_noise_figure(
+        frequency: Frequency,
+        antenna_noise_temperature: Temperature,
+        feed_loss: Decibel,
+        receiver_noise_figure: Decibel,
+        receiver_gain: Decibel,
+        demodulator_loss: Decibel | None = None,
+        implementation_loss: Decibel | None = None,
+    ) -> ComplexReceiver:
+        """Creates a two-stage model: lossy feed line at room temperature followed by a receiver."""
+        ...
+    @staticmethod
+    def from_lna_and_noise_figure(
+        frequency: Frequency,
+        antenna_noise_temperature: Temperature,
+        lna_gain: Decibel,
+        lna_noise_temperature: Temperature,
+        receiver_noise_figure: Decibel,
+        demodulator_loss: Decibel | None = None,
+        implementation_loss: Decibel | None = None,
+    ) -> ComplexReceiver:
+        """Creates a two-stage model: LNA followed by a receiver characterised by noise figure."""
         ...
     def system_noise_temperature(self) -> Temperature:
-        """Returns the system noise temperature."""
+        """Returns the system noise temperature via the Friis formula."""
         ...
-    def __eq__(self, other: object) -> bool: ...
+    def chain_gain(self) -> Decibel:
+        """Returns the total RF chain gain in dB."""
+        ...
     def __repr__(self) -> str: ...
 
 class Channel:
     """A communication channel.
 
     Args:
-        link_type: "uplink" or "downlink".
-        data_rate: Data rate.
+        link_type: "uplink", "downlink", or "crosslink".
+        symbol_rate: Symbol rate as Frequency.
         required_eb_n0: Required Eb/N0 as Decibel.
         margin: Required link margin as Decibel.
         modulation: Modulation scheme.
-        roll_off: Roll-off factor (default 1.5).
+        roll_off: Roll-off factor (default 0.35).
         fec: Forward error correction code rate (default 0.5).
+        chip_rate: Chip rate for DSSS as Frequency (optional).
     """
     def __new__(
         cls,
         link_type: str,
-        data_rate: DataRate,
+        symbol_rate: Frequency,
         required_eb_n0: Decibel,
         margin: Decibel,
         modulation: Modulation,
-        roll_off: float = 1.5,
+        roll_off: float = 0.35,
         fec: float = 0.5,
+        chip_rate: Frequency | None = None,
     ) -> Self: ...
+    def data_rate(self) -> Frequency:
+        """Returns the raw bit rate."""
+        ...
+    def information_rate(self) -> Frequency:
+        """Returns the information (post-FEC) bit rate."""
+        ...
     def bandwidth(self) -> Frequency:
-        """Returns the channel bandwidth."""
+        """Returns the occupied channel bandwidth."""
+        ...
+    def es_n0(self, c_n0: Decibel) -> Decibel:
+        """Computes Es/N0 from a given C/N0."""
         ...
     def eb_n0(self, c_n0: Decibel) -> Decibel:
         """Computes Eb/N0 from a given C/N0."""
         ...
+    def c_n(self, c_n0: Decibel) -> Decibel:
+        """Computes C/N from a given C/N0."""
+        ...
     def link_margin(self, eb_n0: Decibel) -> Decibel:
         """Computes the link margin from a given Eb/N0."""
+        ...
+    def spreading_factor(self) -> float | None:
+        """Returns the DSSS spreading factor, or None for narrowband."""
+        ...
+    def processing_gain(self) -> Decibel | None:
+        """Returns the DSSS processing gain in dB, or None for narrowband."""
         ...
     def __repr__(self) -> str: ...
 
@@ -2582,8 +2595,16 @@ class LinkStats:
         """Carrier-to-noise density ratio in dB·Hz."""
         ...
     @property
+    def es_n0(self) -> Decibel:
+        """Es/N0 in dB."""
+        ...
+    @property
     def eb_n0(self) -> Decibel:
         """Eb/N0 in dB."""
+        ...
+    @property
+    def c_n(self) -> Decibel:
+        """C/N in dB."""
         ...
     @property
     def margin(self) -> Decibel:
@@ -2598,8 +2619,8 @@ class LinkStats:
         """Noise power in dBW."""
         ...
     @property
-    def data_rate(self) -> DataRate:
-        """Data rate."""
+    def symbol_rate(self) -> Frequency:
+        """Symbol rate."""
         ...
     @property
     def bandwidth(self) -> Frequency:
@@ -2636,6 +2657,48 @@ def freq_overlap(
 
     Returns:
         Overlap factor in [0, 1].
+    """
+    ...
+
+def power_flux_density(
+    eirp: Decibel, distance: Distance, occupied_bw: Frequency, reference_bw: Frequency
+) -> Decibel:
+    """Computes the power flux density in dBW/m²/ref_bw.
+
+    Args:
+        eirp: EIRP as Decibel.
+        distance: Distance.
+        occupied_bw: Occupied bandwidth as Frequency.
+        reference_bw: ITU reference bandwidth as Frequency.
+
+    Returns:
+        PFD as Decibel.
+    """
+    ...
+
+def pfd_mask(elevation: Angle, start_val: Decibel, end_val: Decibel) -> Decibel:
+    """Computes the ITU RR Article 21.16 PFD mask value.
+
+    Args:
+        elevation: Elevation angle.
+        start_val: PFD limit at low elevation as Decibel.
+        end_val: PFD limit at high elevation as Decibel.
+
+    Returns:
+        PFD mask value as Decibel.
+    """
+    ...
+
+def slant_range(elevation: Angle, earth_radius: Distance, altitude: Distance) -> Distance:
+    """Computes the slant range from a ground station to a satellite.
+
+    Args:
+        elevation: Elevation angle.
+        earth_radius: Earth radius as Distance.
+        altitude: Satellite altitude as Distance.
+
+    Returns:
+        Slant range as Distance.
     """
     ...
 

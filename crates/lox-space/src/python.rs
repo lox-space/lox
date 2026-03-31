@@ -13,7 +13,8 @@ use crate::bodies::python::PyOrigin;
 use crate::comms::python::{
     PyChannel, PyCommunicationSystem, PyComplexAntenna, PyComplexReceiver, PyDecibel,
     PyDipolePattern, PyEnvironmentalLosses, PyGaussianPattern, PyLinkStats, PyModulation,
-    PyParabolicPattern, PySimpleAntenna, PySimpleReceiver, PyTransmitter, freq_overlap, fspl,
+    PyNoiseStage, PyParabolicPattern, PySimpleAntenna, PySimpleReceiver, PyTransmitter,
+    freq_overlap, fspl, pfd_mask, power_flux_density, slant_range,
 };
 use crate::constellations::python::{PyConstellation, PyConstellationSatellite};
 use crate::earth::python::ut1::{EopParserError, EopProviderError, PyEopProvider};
@@ -35,8 +36,8 @@ use crate::time::python::{
 use crate::units::{
     ASTRONOMICAL_UNIT,
     python::{
-        PyAngle, PyAngularRate, PyDataRate, PyDistance, PyFrequency, PyGravitationalParameter,
-        PyPower, PyTemperature, PyVelocity,
+        PyAngle, PyAngularRate, PyDistance, PyFrequency, PyGravitationalParameter, PyPower,
+        PyTemperature, PyVelocity,
     },
 };
 
@@ -61,12 +62,16 @@ pub fn register_types(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyTransmitter>()?;
     m.add_class::<PySimpleReceiver>()?;
     m.add_class::<PyComplexReceiver>()?;
+    m.add_class::<PyNoiseStage>()?;
     m.add_class::<PyChannel>()?;
     m.add_class::<PyEnvironmentalLosses>()?;
     m.add_class::<PyCommunicationSystem>()?;
     m.add_class::<PyLinkStats>()?;
     m.add_function(wrap_pyfunction!(fspl, m)?)?;
     m.add_function(wrap_pyfunction!(freq_overlap, m)?)?;
+    m.add_function(wrap_pyfunction!(power_flux_density, m)?)?;
+    m.add_function(wrap_pyfunction!(pfd_mask, m)?)?;
+    m.add_function(wrap_pyfunction!(slant_range, m)?)?;
 
     // earth
     m.add_class::<PyEopProvider>()?;
@@ -145,10 +150,7 @@ pub fn register_types(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyAngularRate>()?;
     m.add("rad_per_s", PyAngularRate::new(1.0))?;
     m.add("deg_per_s", PyAngularRate::new(PI / 180.0))?;
-    m.add_class::<PyDataRate>()?;
-    m.add("bps", PyDataRate::new(1.0))?;
-    m.add("kbps", PyDataRate::new(1e3))?;
-    m.add("Mbps", PyDataRate::new(1e6))?;
+
     m.add_class::<PyDistance>()?;
     m.add("m", PyDistance::new(1.0))?;
     m.add("km", PyDistance::new(1e3))?;
@@ -172,10 +174,7 @@ pub fn register_types(m: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 
-// LCOV_EXCL_START - PyO3 module initialization cannot be directly tested.
-// See: https://github.com/rust-lang/rust/issues/84605
 #[pymodule]
 fn lox_space(m: &Bound<'_, PyModule>) -> PyResult<()> {
     register_types(m)
 }
-// LCOV_EXCL_STOP

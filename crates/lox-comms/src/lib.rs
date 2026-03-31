@@ -13,6 +13,7 @@ pub mod antenna;
 pub mod channel;
 pub mod link_budget;
 pub mod pattern;
+pub mod pfd;
 pub mod receiver;
 pub mod system;
 pub mod transmitter;

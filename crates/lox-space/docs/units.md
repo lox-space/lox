@@ -24,14 +24,6 @@ Physical quantity types for type-safe unit handling.
 | `rad_per_s` | 1 rad/s |
 | `deg_per_s` | π/180 rad/s |
 
-### DataRate
-
-| Constant | Value |
-|----------|-------|
-| `bps` | 1 bit/s |
-| `kbps` | 1 kbit/s |
-| `Mbps` | 1 Mbit/s |
-
 ### Distance
 
 | Constant | Value |
@@ -88,7 +80,6 @@ frequency = 2.4 * lox.GHz
 velocity = 7.8 * lox.km_per_s
 power = 10 * lox.W
 temperature = 290 * lox.K
-data_rate = 10 * lox.Mbps
 
 # Convert to specific units
 angle_deg = angle.to_degrees()       # 45.0
@@ -114,12 +105,6 @@ scaled = 2.0 * distance              # Distance
 ---
 
 ::: lox_space.AngularRate
-    options:
-      show_source: false
-
----
-
-::: lox_space.DataRate
     options:
       show_source: false
 
