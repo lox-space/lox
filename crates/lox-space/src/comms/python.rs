@@ -12,13 +12,14 @@ use lox_comms::antenna::{Antenna, AntennaGain, ComplexAntenna, SimpleAntenna};
 use lox_comms::channel::{Channel, LinkDirection, Modulation};
 use lox_comms::link_budget::{EnvironmentalLosses, LinkStats, frequency_overlap_factor};
 use lox_comms::pattern::{AntennaPattern, DipolePattern, GaussianPattern, ParabolicPattern};
-use lox_comms::receiver::{ComplexReceiver, Receiver, SimpleReceiver};
+use lox_comms::pfd;
+use lox_comms::receiver::{ComplexReceiver, NoiseStage, Receiver, SimpleReceiver};
 use lox_comms::system::CommunicationSystem;
 use lox_comms::transmitter::Transmitter;
-use lox_comms::utils::free_space_path_loss;
+use lox_comms::utils::{free_space_path_loss, slant_range as comms_slant_range};
 use lox_core::units::Decibel;
 
-use crate::units::python::{PyAngle, PyDataRate, PyDistance, PyFrequency, PyPower, PyTemperature};
+use crate::units::python::{PyAngle, PyDistance, PyFrequency, PyPower, PyTemperature};
 
 /// Formats an f64 as a valid Python float literal (always includes a decimal point).
 fn repr_f64(v: f64) -> String {
@@ -521,21 +522,9 @@ fn receiver_to_py<'py>(py: Python<'py>, receiver: &Receiver) -> Bound<'py, PyAny
         )
         .unwrap()
         .into_any(),
-        Receiver::Complex(r) => Bound::new(
-            py,
-            PyComplexReceiver(ComplexReceiver {
-                frequency: r.frequency,
-                antenna_noise_temperature: r.antenna_noise_temperature,
-                lna_gain: r.lna_gain,
-                lna_noise_figure: r.lna_noise_figure,
-                noise_figure: r.noise_figure,
-                loss: r.loss,
-                demodulator_loss: r.demodulator_loss,
-                implementation_loss: r.implementation_loss,
-            }),
-        )
-        .unwrap()
-        .into_any(),
+        Receiver::Complex(r) => Bound::new(py, PyComplexReceiver(r.clone()))
+            .unwrap()
+            .into_any(),
     }
 }
 
@@ -573,16 +562,7 @@ fn build_receiver(obj: &Bound<'_, PyAny>) -> PyResult<Receiver> {
             system_noise_temperature: r.0.system_noise_temperature,
         }))
     } else if let Ok(r) = obj.extract::<PyRef<'_, PyComplexReceiver>>() {
-        Ok(Receiver::Complex(ComplexReceiver {
-            frequency: r.0.frequency,
-            antenna_noise_temperature: r.0.antenna_noise_temperature,
-            lna_gain: r.0.lna_gain,
-            lna_noise_figure: r.0.lna_noise_figure,
-            noise_figure: r.0.noise_figure,
-            loss: r.0.loss,
-            demodulator_loss: r.0.demodulator_loss,
-            implementation_loss: r.0.implementation_loss,
-        }))
+        Ok(Receiver::Complex(r.0.clone()))
     } else {
         Err(PyValueError::new_err(
             "expected a SimpleReceiver or ComplexReceiver",
@@ -696,15 +676,51 @@ impl PySimpleReceiver {
     }
 }
 
-/// A complex receiver with detailed noise and gain parameters.
+// --- Noise Stage ---
+
+/// A single stage in an RF receiver chain.
+///
+/// Args:
+///     gain: Stage gain as Decibel.
+///     noise_temperature: Stage equivalent noise temperature.
+#[pyclass(name = "NoiseStage", module = "lox_space", frozen, from_py_object)]
+#[derive(Debug, Clone)]
+pub struct PyNoiseStage(pub NoiseStage);
+
+#[pymethods]
+impl PyNoiseStage {
+    #[new]
+    fn new(gain: PyDecibel, noise_temperature: PyTemperature) -> Self {
+        Self(NoiseStage {
+            gain: gain.0,
+            noise_temperature: f64::from(noise_temperature.0),
+        })
+    }
+
+    fn __getnewargs__(&self) -> (PyDecibel, PyTemperature) {
+        (
+            PyDecibel(self.0.gain),
+            PyTemperature::new(self.0.noise_temperature),
+        )
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "NoiseStage(gain={}, noise_temperature={})",
+            PyDecibel(self.0.gain).__repr__(),
+            PyTemperature::new(self.0.noise_temperature).__repr__(),
+        )
+    }
+}
+
+// --- Complex Receiver ---
+
+/// An N-stage cascade receiver using the Friis noise formula.
 ///
 /// Args:
 ///     frequency: Receive frequency.
 ///     antenna_noise_temperature: Antenna noise temperature.
-///     lna_gain: LNA gain as Decibel.
-///     lna_noise_figure: LNA noise figure as Decibel.
-///     noise_figure: Receiver noise figure as Decibel.
-///     loss: Receiver chain loss as Decibel.
+///     stages: List of NoiseStage (ordered: LNA first, then downstream).
 ///     demodulator_loss: Demodulator loss as Decibel (default Decibel(0)).
 ///     implementation_loss: Other implementation losses as Decibel (default Decibel(0)).
 #[pyclass(name = "ComplexReceiver", module = "lox_space", frozen, from_py_object)]
@@ -714,85 +730,137 @@ pub struct PyComplexReceiver(pub ComplexReceiver);
 #[pymethods]
 impl PyComplexReceiver {
     #[new]
-    #[pyo3(signature = (frequency, antenna_noise_temperature, lna_gain, lna_noise_figure, noise_figure, loss, demodulator_loss=None, implementation_loss=None))]
-    #[allow(clippy::too_many_arguments)]
+    #[pyo3(signature = (frequency, antenna_noise_temperature, stages, demodulator_loss=None, implementation_loss=None))]
     fn new(
         frequency: PyFrequency,
         antenna_noise_temperature: PyTemperature,
-        lna_gain: PyDecibel,
-        lna_noise_figure: PyDecibel,
-        noise_figure: PyDecibel,
-        loss: PyDecibel,
+        stages: Vec<PyNoiseStage>,
         demodulator_loss: Option<PyDecibel>,
         implementation_loss: Option<PyDecibel>,
     ) -> Self {
         Self(ComplexReceiver {
             frequency: frequency.0,
             antenna_noise_temperature: f64::from(antenna_noise_temperature.0),
-            lna_gain: lna_gain.0,
-            lna_noise_figure: lna_noise_figure.0,
-            noise_figure: noise_figure.0,
-            loss: loss.0,
+            stages: stages.into_iter().map(|s| s.0).collect(),
             demodulator_loss: demodulator_loss.map_or(Decibel::new(0.0), |d| d.0),
             implementation_loss: implementation_loss.map_or(Decibel::new(0.0), |d| d.0),
         })
     }
 
-    /// Returns the receiver noise temperature.
-    fn noise_temperature(&self) -> PyTemperature {
-        PyTemperature::new(self.0.noise_temperature())
+    /// Creates a two-stage model: lossy feed line at room temperature → receiver.
+    #[staticmethod]
+    #[pyo3(signature = (frequency, antenna_noise_temperature, feed_loss, receiver_noise_figure, receiver_gain, demodulator_loss=None, implementation_loss=None))]
+    #[allow(clippy::too_many_arguments)]
+    fn from_feed_loss_and_noise_figure(
+        frequency: PyFrequency,
+        antenna_noise_temperature: PyTemperature,
+        feed_loss: PyDecibel,
+        receiver_noise_figure: PyDecibel,
+        receiver_gain: PyDecibel,
+        demodulator_loss: Option<PyDecibel>,
+        implementation_loss: Option<PyDecibel>,
+    ) -> Self {
+        Self(ComplexReceiver::from_feed_loss_and_noise_figure(
+            frequency.0,
+            f64::from(antenna_noise_temperature.0),
+            feed_loss.0,
+            receiver_noise_figure.0,
+            receiver_gain.0,
+            demodulator_loss.map_or(Decibel::new(0.0), |d| d.0),
+            implementation_loss.map_or(Decibel::new(0.0), |d| d.0),
+        ))
     }
 
-    /// Returns the system noise temperature.
+    /// Creates a two-stage model: LNA → receiver (from noise figure).
+    #[staticmethod]
+    #[pyo3(signature = (frequency, antenna_noise_temperature, lna_gain, lna_noise_temperature, receiver_noise_figure, demodulator_loss=None, implementation_loss=None))]
+    #[allow(clippy::too_many_arguments)]
+    fn from_lna_and_noise_figure(
+        frequency: PyFrequency,
+        antenna_noise_temperature: PyTemperature,
+        lna_gain: PyDecibel,
+        lna_noise_temperature: PyTemperature,
+        receiver_noise_figure: PyDecibel,
+        demodulator_loss: Option<PyDecibel>,
+        implementation_loss: Option<PyDecibel>,
+    ) -> Self {
+        Self(ComplexReceiver::from_lna_and_noise_figure(
+            frequency.0,
+            f64::from(antenna_noise_temperature.0),
+            lna_gain.0,
+            f64::from(lna_noise_temperature.0),
+            receiver_noise_figure.0,
+            demodulator_loss.map_or(Decibel::new(0.0), |d| d.0),
+            implementation_loss.map_or(Decibel::new(0.0), |d| d.0),
+        ))
+    }
+
+    /// Returns the system noise temperature via the Friis formula.
     fn system_noise_temperature(&self) -> PyTemperature {
         PyTemperature::new(self.0.system_noise_temperature())
+    }
+
+    /// Returns the total RF chain gain in dB.
+    fn chain_gain(&self) -> PyDecibel {
+        PyDecibel(self.0.chain_gain())
     }
 
     fn __eq__(&self, other: &PyComplexReceiver) -> bool {
         f64::from(self.0.frequency) == f64::from(other.0.frequency)
             && self.0.antenna_noise_temperature == other.0.antenna_noise_temperature
-            && self.0.lna_gain.as_f64() == other.0.lna_gain.as_f64()
-            && self.0.lna_noise_figure.as_f64() == other.0.lna_noise_figure.as_f64()
-            && self.0.noise_figure.as_f64() == other.0.noise_figure.as_f64()
-            && self.0.loss.as_f64() == other.0.loss.as_f64()
+            && self.0.stages.len() == other.0.stages.len()
+            && self
+                .0
+                .stages
+                .iter()
+                .zip(other.0.stages.iter())
+                .all(|(a, b)| {
+                    a.gain.as_f64() == b.gain.as_f64() && a.noise_temperature == b.noise_temperature
+                })
             && self.0.demodulator_loss.as_f64() == other.0.demodulator_loss.as_f64()
             && self.0.implementation_loss.as_f64() == other.0.implementation_loss.as_f64()
     }
 
-    #[allow(clippy::type_complexity)]
     fn __getnewargs__(
         &self,
     ) -> (
         PyFrequency,
         PyTemperature,
-        PyDecibel,
-        PyDecibel,
-        PyDecibel,
-        PyDecibel,
+        Vec<PyNoiseStage>,
         Option<PyDecibel>,
         Option<PyDecibel>,
     ) {
         (
             PyFrequency(self.0.frequency),
             PyTemperature::new(self.0.antenna_noise_temperature),
-            PyDecibel(self.0.lna_gain),
-            PyDecibel(self.0.lna_noise_figure),
-            PyDecibel(self.0.noise_figure),
-            PyDecibel(self.0.loss),
+            self.0
+                .stages
+                .iter()
+                .map(|s| PyNoiseStage(s.clone()))
+                .collect(),
             Some(PyDecibel(self.0.demodulator_loss)),
             Some(PyDecibel(self.0.implementation_loss)),
         )
     }
 
     fn __repr__(&self) -> String {
+        let stages_repr: Vec<String> = self
+            .0
+            .stages
+            .iter()
+            .map(|s| {
+                format!(
+                    "NoiseStage(gain={}, noise_temperature={})",
+                    PyDecibel(s.gain).__repr__(),
+                    PyTemperature::new(s.noise_temperature).__repr__(),
+                )
+            })
+            .collect();
         format!(
-            "ComplexReceiver(frequency={}, antenna_noise_temperature={}, lna_gain={}, lna_noise_figure={}, noise_figure={}, loss={}, demodulator_loss={}, implementation_loss={})",
+            "ComplexReceiver(frequency={}, antenna_noise_temperature={}, stages=[{}], demodulator_loss={}, implementation_loss={})",
             PyFrequency(self.0.frequency).__repr__(),
             PyTemperature::new(self.0.antenna_noise_temperature).__repr__(),
-            PyDecibel(self.0.lna_gain).__repr__(),
-            PyDecibel(self.0.lna_noise_figure).__repr__(),
-            PyDecibel(self.0.noise_figure).__repr__(),
-            PyDecibel(self.0.loss).__repr__(),
+            stages_repr.join(", "),
             PyDecibel(self.0.demodulator_loss).__repr__(),
             PyDecibel(self.0.implementation_loss).__repr__(),
         )
@@ -804,53 +872,68 @@ impl PyComplexReceiver {
 /// A communication channel.
 ///
 /// Args:
-///     link_type: "uplink" or "downlink".
-///     data_rate: Data rate.
+///     link_type: "uplink", "downlink", or "crosslink".
+///     symbol_rate: Symbol rate in symbols per second.
 ///     required_eb_n0: Required Eb/N0 as Decibel.
 ///     margin: Required link margin as Decibel.
 ///     modulation: Modulation scheme.
-///     roll_off: Roll-off factor (default 1.5).
+///     roll_off: Roll-off factor (default 0.35).
 ///     fec: Forward error correction code rate (default 0.5).
+///     chip_rate: Chip rate for DSSS in chips per second (optional).
 #[pyclass(name = "Channel", module = "lox_space", frozen, from_py_object)]
 #[derive(Debug, Clone)]
 pub struct PyChannel(pub Channel);
 
+fn parse_link_direction(s: &str) -> PyResult<LinkDirection> {
+    s.parse().map_err(|e: String| PyValueError::new_err(e))
+}
+
 #[pymethods]
 impl PyChannel {
     #[new]
-    #[pyo3(signature = (link_type, data_rate, required_eb_n0, margin, modulation, roll_off=1.5, fec=0.5))]
+    #[pyo3(signature = (link_type, symbol_rate, required_eb_n0, margin, modulation, roll_off=0.35, fec=0.5, chip_rate=None))]
+    #[allow(clippy::too_many_arguments)]
     fn new(
         link_type: &str,
-        data_rate: PyDataRate,
+        symbol_rate: PyFrequency,
         required_eb_n0: PyDecibel,
         margin: PyDecibel,
         modulation: &PyModulation,
         roll_off: f64,
         fec: f64,
+        chip_rate: Option<PyFrequency>,
     ) -> PyResult<Self> {
-        let lt = match link_type {
-            "uplink" => LinkDirection::Uplink,
-            "downlink" => LinkDirection::Downlink,
-            _ => {
-                return Err(PyValueError::new_err(format!(
-                    "unknown link type: {link_type}, expected 'uplink' or 'downlink'"
-                )));
-            }
-        };
+        let lt = parse_link_direction(link_type)?;
         Ok(Self(Channel {
             link_type: lt,
-            data_rate: f64::from(data_rate.0),
+            symbol_rate: symbol_rate.0,
             required_eb_n0: required_eb_n0.0,
             margin: margin.0,
             modulation: modulation.0,
             roll_off,
             fec,
+            chip_rate: chip_rate.map(|cr| cr.0),
         }))
     }
 
-    /// Returns the channel bandwidth.
+    /// Returns the raw bit rate.
+    fn data_rate(&self) -> PyFrequency {
+        PyFrequency(self.0.data_rate())
+    }
+
+    /// Returns the information (post-FEC) bit rate.
+    fn information_rate(&self) -> PyFrequency {
+        PyFrequency(self.0.information_rate())
+    }
+
+    /// Returns the occupied channel bandwidth.
     fn bandwidth(&self) -> PyFrequency {
-        PyFrequency::new(self.0.bandwidth())
+        PyFrequency(self.0.bandwidth())
+    }
+
+    /// Computes Es/N0 from a given C/N0.
+    fn es_n0(&self, c_n0: &PyDecibel) -> PyDecibel {
+        PyDecibel(self.0.es_n0(c_n0.0))
     }
 
     /// Computes Eb/N0 from a given C/N0.
@@ -858,55 +941,74 @@ impl PyChannel {
         PyDecibel(self.0.eb_n0(c_n0.0))
     }
 
+    /// Computes C/N from a given C/N0.
+    fn c_n(&self, c_n0: &PyDecibel) -> PyDecibel {
+        PyDecibel(self.0.c_n(c_n0.0))
+    }
+
     /// Computes the link margin from a given Eb/N0.
     fn link_margin(&self, eb_n0: &PyDecibel) -> PyDecibel {
         PyDecibel(self.0.link_margin(eb_n0.0))
     }
 
+    /// Returns the DSSS spreading factor, or None for narrowband.
+    fn spreading_factor(&self) -> Option<f64> {
+        self.0.spreading_factor()
+    }
+
+    /// Returns the DSSS processing gain in dB, or None for narrowband.
+    fn processing_gain(&self) -> Option<PyDecibel> {
+        self.0.processing_gain().map(PyDecibel)
+    }
+
+    #[allow(clippy::type_complexity)]
     fn __getnewargs__<'py>(
         &self,
         py: Python<'py>,
     ) -> (
         &str,
-        PyDataRate,
+        PyFrequency,
         PyDecibel,
         PyDecibel,
         Bound<'py, PyAny>,
         f64,
         f64,
+        Option<PyFrequency>,
     ) {
         let lt = match self.0.link_type {
             LinkDirection::Uplink => "uplink",
             LinkDirection::Downlink => "downlink",
+            LinkDirection::Crosslink => "crosslink",
         };
         let modulation = Bound::new(py, PyModulation(self.0.modulation))
             .unwrap()
             .into_any();
         (
             lt,
-            PyDataRate::new(self.0.data_rate),
+            PyFrequency(self.0.symbol_rate),
             PyDecibel(self.0.required_eb_n0),
             PyDecibel(self.0.margin),
             modulation,
             self.0.roll_off,
             self.0.fec,
+            self.0.chip_rate.map(PyFrequency),
         )
     }
 
     fn __repr__(&self) -> String {
-        let lt = match self.0.link_type {
-            LinkDirection::Uplink => "uplink",
-            LinkDirection::Downlink => "downlink",
-        };
+        let chip = self.0.chip_rate.map_or(String::new(), |cr| {
+            format!(", chip_rate={}", PyFrequency(cr).__repr__())
+        });
         format!(
-            "Channel(link_type='{}', data_rate={}, required_eb_n0={}, margin={}, modulation=Modulation('{}'), roll_off={}, fec={})",
-            lt,
-            PyDataRate::new(self.0.data_rate).__repr__(),
+            "Channel(link_type='{}', symbol_rate={}, required_eb_n0={}, margin={}, modulation=Modulation('{}'), roll_off={}, fec={}{})",
+            self.0.link_type,
+            PyFrequency(self.0.symbol_rate).__repr__(),
             PyDecibel(self.0.required_eb_n0).__repr__(),
             PyDecibel(self.0.margin).__repr__(),
             modulation_name(self.0.modulation),
             repr_f64(self.0.roll_off),
             repr_f64(self.0.fec),
+            chip,
         )
     }
 }
@@ -1149,17 +1251,9 @@ impl PyCommunicationSystem {
                 PyFrequency(r.frequency).__repr__(),
                 PyTemperature::new(r.system_noise_temperature).__repr__(),
             ),
-            Some(Receiver::Complex(r)) => format!(
-                ", receiver=ComplexReceiver(frequency={}, antenna_noise_temperature={}, lna_gain={}, lna_noise_figure={}, noise_figure={}, loss={}, demodulator_loss={}, implementation_loss={})",
-                PyFrequency(r.frequency).__repr__(),
-                PyTemperature::new(r.antenna_noise_temperature).__repr__(),
-                PyDecibel(r.lna_gain).__repr__(),
-                PyDecibel(r.lna_noise_figure).__repr__(),
-                PyDecibel(r.noise_figure).__repr__(),
-                PyDecibel(r.loss).__repr__(),
-                PyDecibel(r.demodulator_loss).__repr__(),
-                PyDecibel(r.implementation_loss).__repr__(),
-            ),
+            Some(Receiver::Complex(r)) => {
+                format!(", receiver={}", PyComplexReceiver(r.clone()).__repr__())
+            }
             None => String::new(),
         };
         let tx_repr = match &self.0.transmitter {
@@ -1258,10 +1352,22 @@ impl PyLinkStats {
         PyDecibel(self.0.c_n0)
     }
 
+    /// Es/N0 in dB.
+    #[getter]
+    fn es_n0(&self) -> PyDecibel {
+        PyDecibel(self.0.es_n0)
+    }
+
     /// Eb/N0 in dB.
     #[getter]
     fn eb_n0(&self) -> PyDecibel {
         PyDecibel(self.0.eb_n0)
+    }
+
+    /// C/N in dB.
+    #[getter]
+    fn c_n(&self) -> PyDecibel {
+        PyDecibel(self.0.c_n)
     }
 
     /// Link margin in dB.
@@ -1282,16 +1388,16 @@ impl PyLinkStats {
         PyDecibel(self.0.noise_power)
     }
 
-    /// Data rate.
+    /// Symbol rate.
     #[getter]
-    fn data_rate(&self) -> PyDataRate {
-        PyDataRate::new(self.0.data_rate)
+    fn symbol_rate(&self) -> PyFrequency {
+        PyFrequency(self.0.symbol_rate)
     }
 
     /// Channel bandwidth.
     #[getter]
     fn bandwidth(&self) -> PyFrequency {
-        PyFrequency::new(self.0.bandwidth_hz)
+        PyFrequency(self.0.bandwidth)
     }
 
     /// Link frequency.
@@ -1302,8 +1408,9 @@ impl PyLinkStats {
 
     fn __repr__(&self) -> String {
         format!(
-            "LinkStats(c_n0={:.2} dB·Hz, eb_n0={:.2} dB, margin={:.2} dB)",
+            "LinkStats(c_n0={:.2} dB·Hz, es_n0={:.2} dB, eb_n0={:.2} dB, margin={:.2} dB)",
             self.0.c_n0.as_f64(),
+            self.0.es_n0.as_f64(),
             self.0.eb_n0.as_f64(),
             self.0.margin.as_f64(),
         )
@@ -1348,4 +1455,61 @@ pub fn freq_overlap(
         f64::from(tx_freq.0),
         f64::from(tx_bw.0),
     )
+}
+
+/// Computes the power flux density in dBW/m²/ref_bw.
+///
+/// Args:
+///     eirp: EIRP as Decibel.
+///     distance: Distance.
+///     occupied_bw: Occupied bandwidth as Frequency.
+///     reference_bw: ITU reference bandwidth as Frequency.
+///
+/// Returns:
+///     PFD as Decibel.
+#[pyfunction]
+pub fn power_flux_density(
+    eirp: PyDecibel,
+    distance: PyDistance,
+    occupied_bw: PyFrequency,
+    reference_bw: PyFrequency,
+) -> PyDecibel {
+    PyDecibel(pfd::power_flux_density(
+        eirp.0,
+        distance.0,
+        occupied_bw.0,
+        reference_bw.0,
+    ))
+}
+
+/// Computes the ITU RR Article 21.16 PFD mask value.
+///
+/// Args:
+///     elevation: Elevation angle.
+///     start_val: PFD limit at low elevation as Decibel.
+///     end_val: PFD limit at high elevation as Decibel.
+///
+/// Returns:
+///     PFD mask value as Decibel.
+#[pyfunction]
+pub fn pfd_mask(elevation: PyAngle, start_val: PyDecibel, end_val: PyDecibel) -> PyDecibel {
+    PyDecibel(pfd::pfd_mask(elevation.0, start_val.0, end_val.0))
+}
+
+/// Computes the slant range from a ground station to a satellite.
+///
+/// Args:
+///     elevation: Elevation angle.
+///     earth_radius: Earth radius as Distance.
+///     altitude: Satellite altitude as Distance.
+///
+/// Returns:
+///     Slant range as Distance.
+#[pyfunction]
+pub fn slant_range(
+    elevation: PyAngle,
+    earth_radius: PyDistance,
+    altitude: PyDistance,
+) -> PyDistance {
+    PyDistance(comms_slant_range(elevation.0, earth_radius.0, altitude.0))
 }

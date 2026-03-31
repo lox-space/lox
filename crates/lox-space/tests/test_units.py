@@ -172,32 +172,6 @@ def test_angular_rate_arithmetic():
     assert -a == lox.AngularRate(-1.0)
 
 
-def test_data_rate():
-    dr = 1000 * lox.bps
-    assert repr(dr) == "DataRate(1000.0)"
-    assert float(dr) == 1000.0
-    assert dr.to_bits_per_second() == pytest.approx(1000.0)
-    assert dr.to_kilobits_per_second() == pytest.approx(1.0)
-    assert dr.to_megabits_per_second() == pytest.approx(0.001)
-
-
-def test_data_rate_kbps():
-    dr = 1 * lox.kbps
-    assert dr.to_bits_per_second() == pytest.approx(1000.0)
-
-
-def test_data_rate_mbps():
-    dr = 1 * lox.Mbps
-    assert dr.to_bits_per_second() == pytest.approx(1e6)
-
-
-def test_data_rate_arithmetic():
-    a = 100 * lox.bps
-    b = 200 * lox.bps
-    assert a + b == lox.DataRate(300.0)
-    assert b - a == lox.DataRate(100.0)
-
-
 def test_power():
     p = 100 * lox.W
     assert repr(p) == "Power(100.0)"

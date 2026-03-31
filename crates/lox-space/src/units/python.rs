@@ -10,7 +10,7 @@ use pyo3::{Bound, Python, pyclass, pymethods, types::PyComplex};
 use std::format;
 use std::string::{String, ToString};
 
-use lox_units::{Angle, AngularRate, DataRate, Distance, Frequency, Power, Temperature, Velocity};
+use lox_units::{Angle, AngularRate, Distance, Frequency, Power, Temperature, Velocity};
 
 /// Formats an f64 as a valid Python float literal (always includes a decimal point).
 fn repr_f64(v: f64) -> String {
@@ -117,22 +117,6 @@ py_unit!(
         /// Returns the value in degrees per second.
         fn to_degrees_per_second(&self) -> f64 {
             self.0.to_degrees_per_second()
-        }
-    }),
-    (DataRate, "DataRate", PyDataRate, {
-        /// Returns the value in bits per second.
-        fn to_bits_per_second(&self) -> f64 {
-            self.0.to_bits_per_second()
-        }
-
-        /// Returns the value in kilobits per second.
-        fn to_kilobits_per_second(&self) -> f64 {
-            self.0.to_kilobits_per_second()
-        }
-
-        /// Returns the value in megabits per second.
-        fn to_megabits_per_second(&self) -> f64 {
-            self.0.to_megabits_per_second()
         }
     }),
     (Distance, "Distance", PyDistance, {

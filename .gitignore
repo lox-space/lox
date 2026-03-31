@@ -20,6 +20,9 @@ coverage.xml
 .python-version
 site/
 
+# Notebooks
+.ipynb_checkpoints/
+
 # Tools / IDE
 .DS_Store
 flamegraph.svg
