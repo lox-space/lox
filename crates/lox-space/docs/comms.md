@@ -48,10 +48,10 @@ rx_antenna = lox.SimpleAntenna(gain=40.0 * lox.dB, beamwidth=0.5 * lox.deg)
 rx = lox.SimpleReceiver(frequency=frequency, system_noise_temperature=200 * lox.K)
 rx_system = lox.CommunicationSystem(antenna=rx_antenna, receiver=rx)
 
-# Define a QPSK channel at 10 Mbit/s
+# Define a QPSK channel at 5 Msps
 channel = lox.Channel(
     link_type="downlink",
-    data_rate=10 * lox.Mbps,
+    symbol_rate=5 * lox.MHz,
     required_eb_n0=10.0 * lox.dB,
     margin=3.0 * lox.dB,
     modulation=lox.Modulation("QPSK"),
@@ -72,6 +72,7 @@ stats = lox.LinkStats.calculate(
 print(f"EIRP:        {float(stats.eirp):.1f} dBW")
 print(f"FSPL:        {float(stats.fspl):.1f} dB")
 print(f"C/N0:        {float(stats.c_n0):.1f} dB·Hz")
+print(f"Es/N0:       {float(stats.es_n0):.1f} dB")
 print(f"Eb/N0:       {float(stats.eb_n0):.1f} dB")
 print(f"Link margin: {float(stats.margin):.1f} dB")
 ```
@@ -189,6 +190,12 @@ stats = lox.LinkStats.calculate(
 
 ---
 
+::: lox_space.NoiseStage
+    options:
+      show_source: false
+
+---
+
 ::: lox_space.Channel
     options:
       show_source: false
@@ -220,5 +227,23 @@ stats = lox.LinkStats.calculate(
 ---
 
 ::: lox_space.freq_overlap
+    options:
+      show_source: false
+
+---
+
+::: lox_space.power_flux_density
+    options:
+      show_source: false
+
+---
+
+::: lox_space.pfd_mask
+    options:
+      show_source: false
+
+---
+
+::: lox_space.slant_range
     options:
       show_source: false

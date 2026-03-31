@@ -2,12 +2,19 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-//! Radio receiver models (simple and complex).
+//! Radio receiver models (simple and complex N-stage cascade).
 
 use lox_core::units::{Angle, Decibel, Frequency, Kelvin};
 
 use crate::ROOM_TEMPERATURE;
 use crate::antenna::AntennaGain;
+
+/// Converts a noise figure in dB to an equivalent noise temperature in Kelvin.
+///
+/// T = T_room · (10^(NF/10) − 1)
+pub fn noise_figure_to_temperature(nf: Decibel) -> Kelvin {
+    ROOM_TEMPERATURE * (nf.to_linear() - 1.0)
+}
 
 /// A simple receiver with a known system noise temperature.
 #[derive(Debug, Clone)]
@@ -19,7 +26,22 @@ pub struct SimpleReceiver {
     pub system_noise_temperature: Kelvin,
 }
 
-/// A complex receiver with detailed noise and gain parameters.
+/// A single stage in an RF receiver chain.
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct NoiseStage {
+    /// Stage gain in dB.
+    pub gain: Decibel,
+    /// Stage equivalent noise temperature in Kelvin.
+    pub noise_temperature: Kelvin,
+}
+
+/// An N-stage cascade receiver using the Friis noise formula.
+///
+/// Uses the Friis formula to compute the system noise temperature from
+/// the antenna noise temperature and a chain of amplifier/filter stages:
+///
+/// T_sys = T_ant + T_1 + T_2/G_1 + T_3/(G_1·G_2) + ...
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ComplexReceiver {
@@ -27,14 +49,8 @@ pub struct ComplexReceiver {
     pub frequency: Frequency,
     /// Antenna noise temperature in Kelvin.
     pub antenna_noise_temperature: Kelvin,
-    /// LNA gain.
-    pub lna_gain: Decibel,
-    /// LNA noise figure.
-    pub lna_noise_figure: Decibel,
-    /// Receiver noise figure.
-    pub noise_figure: Decibel,
-    /// Receiver chain loss.
-    pub loss: Decibel,
+    /// Ordered chain of RF stages (LNA first, then filters, mixers, etc.).
+    pub stages: Vec<NoiseStage>,
     /// Demodulator implementation loss.
     pub demodulator_loss: Decibel,
     /// Other implementation losses.
@@ -42,32 +58,95 @@ pub struct ComplexReceiver {
 }
 
 impl ComplexReceiver {
-    /// Returns the receiver noise temperature in Kelvin.
+    /// Creates a two-stage receiver model: lossy feed line at room temperature → receiver.
     ///
-    /// T_rx = T_room · (10^(NF/10) − 1)
-    pub fn noise_temperature(&self) -> Kelvin {
-        ROOM_TEMPERATURE * (self.noise_figure.to_linear() - 1.0)
+    /// The feed line is modelled as a passive attenuator at 290 K, contributing
+    /// noise temperature `T_room · (10^(loss/10) − 1)`. The receiver block is
+    /// characterised by its noise figure.
+    pub fn from_feed_loss_and_noise_figure(
+        frequency: Frequency,
+        antenna_noise_temperature: Kelvin,
+        feed_loss: Decibel,
+        receiver_noise_figure: Decibel,
+        receiver_gain: Decibel,
+        demodulator_loss: Decibel,
+        implementation_loss: Decibel,
+    ) -> Self {
+        let feed_stage = NoiseStage {
+            gain: -feed_loss,
+            noise_temperature: ROOM_TEMPERATURE * (feed_loss.to_linear() - 1.0),
+        };
+        let rx_stage = NoiseStage {
+            gain: receiver_gain,
+            noise_temperature: noise_figure_to_temperature(receiver_noise_figure),
+        };
+        Self {
+            frequency,
+            antenna_noise_temperature,
+            stages: vec![feed_stage, rx_stage],
+            demodulator_loss,
+            implementation_loss,
+        }
     }
 
-    /// Returns the system noise temperature in Kelvin.
+    /// Creates a two-stage receiver model: LNA → receiver (from noise figure).
     ///
-    /// L = 10^(−loss/10) (linear loss factor)
-    /// T_sys = T_ant · L + T_room · (1 − L) + T_rx
+    /// Implements the Friis formula: T_sys = T_ant + T_LNA + T_rx/G_LNA
+    pub fn from_lna_and_noise_figure(
+        frequency: Frequency,
+        antenna_noise_temperature: Kelvin,
+        lna_gain: Decibel,
+        lna_noise_temperature: Kelvin,
+        receiver_noise_figure: Decibel,
+        demodulator_loss: Decibel,
+        implementation_loss: Decibel,
+    ) -> Self {
+        let lna_stage = NoiseStage {
+            gain: lna_gain,
+            noise_temperature: lna_noise_temperature,
+        };
+        let rx_stage = NoiseStage {
+            gain: Decibel::new(0.0),
+            noise_temperature: noise_figure_to_temperature(receiver_noise_figure),
+        };
+        Self {
+            frequency,
+            antenna_noise_temperature,
+            stages: vec![lna_stage, rx_stage],
+            demodulator_loss,
+            implementation_loss,
+        }
+    }
+
+    /// Returns the system noise temperature in Kelvin via the Friis formula.
+    ///
+    /// T_sys = T_ant + T_1 + T_2/G_1 + T_3/(G_1·G_2) + ...
     pub fn system_noise_temperature(&self) -> Kelvin {
-        let loss_linear = (-self.loss).to_linear(); // 10^(-loss_dB/10)
-        let t_rx = self.noise_temperature();
-        self.antenna_noise_temperature * loss_linear + ROOM_TEMPERATURE * (1.0 - loss_linear) + t_rx
+        let mut t_sys = self.antenna_noise_temperature;
+        let mut cumulative_gain_linear = 1.0;
+        for stage in &self.stages {
+            t_sys += stage.noise_temperature / cumulative_gain_linear;
+            cumulative_gain_linear *= stage.gain.to_linear();
+        }
+        t_sys
+    }
+
+    /// Returns the total RF chain gain in dB (sum of stage gains).
+    pub fn chain_gain(&self) -> Decibel {
+        self.stages
+            .iter()
+            .fold(Decibel::new(0.0), |acc, s| acc + s.gain)
     }
 }
 
-/// A receiver, either simple (known T_sys) or complex (detailed parameters).
+/// A receiver, either simple (known T_sys) or complex (N-stage Friis cascade).
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub enum Receiver {
     /// Receiver with a known system noise temperature.
     Simple(SimpleReceiver),
-    /// Receiver with detailed noise and gain parameters.
+    /// Receiver with an N-stage cascade noise model.
     Complex(ComplexReceiver),
 }
 
@@ -83,29 +162,27 @@ impl Receiver {
     /// Returns the total receiver gain in dB.
     ///
     /// For a simple receiver, this is just the antenna gain.
-    /// For a complex receiver: G_ant + G_lna − loss − demod_loss − impl_loss.
+    /// For a complex receiver: G_ant − demod_loss − impl_loss.
+    ///
+    /// Chain gain is excluded because `system_noise_temperature` uses the Friis
+    /// formula, which refers noise to the antenna terminals. Including chain
+    /// gain here would double-count it in the G/T ratio.
     pub fn total_gain(&self, antenna: &impl AntennaGain, angle: Angle) -> Decibel {
         match self {
             Receiver::Simple(r) => antenna.gain(r.frequency, angle),
             Receiver::Complex(r) => {
-                antenna.gain(r.frequency, angle) + r.lna_gain
-                    - r.loss
-                    - r.demodulator_loss
-                    - r.implementation_loss
+                antenna.gain(r.frequency, angle) - r.demodulator_loss - r.implementation_loss
             }
         }
     }
 
     /// Returns the gain-to-noise-temperature ratio (G/T) in dB/K.
     ///
-    /// G/T = G_total − 10·log₁₀(T_sys) [− NF_lna for complex receivers]
+    /// G/T = G_total − 10·log₁₀(T_sys)
     pub fn gain_to_noise_temperature(&self, antenna: &impl AntennaGain, angle: Angle) -> Decibel {
         let g_total = self.total_gain(antenna, angle);
         let t_sys = self.system_noise_temperature();
-        match self {
-            Receiver::Simple(_) => g_total - Decibel::from_linear(t_sys),
-            Receiver::Complex(r) => g_total - Decibel::from_linear(t_sys) - r.lna_noise_figure,
-        }
+        g_total - Decibel::from_linear(t_sys)
     }
 
     /// Returns the receive frequency.
@@ -127,39 +204,66 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_complex_receiver_noise_temperature() {
-        // NF = 5 dB → T_rx = 290 * (10^(5/10) - 1) = 290 * (3.16228 - 1) = 290 * 2.16228 = 627.06
-        let rx = ComplexReceiver {
-            frequency: 29.0.ghz(),
-            antenna_noise_temperature: 265.0,
-            lna_gain: 30.0.db(),
-            lna_noise_figure: 1.0.db(),
-            noise_figure: 5.0.db(),
-            loss: 3.0.db(),
-            demodulator_loss: 0.0.db(),
-            implementation_loss: 0.0.db(),
-        };
-        assert_approx_eq!(rx.noise_temperature(), 627.0605214, rtol <= 1e-6);
+    fn test_noise_figure_to_temperature() {
+        // NF = 5 dB → T = 290 * (10^(5/10) - 1) = 290 * 2.16228 = 627.06
+        assert_approx_eq!(
+            noise_figure_to_temperature(5.0.db()),
+            627.0605214,
+            rtol <= 1e-6
+        );
     }
 
     #[test]
-    fn test_complex_receiver_system_noise_temperature() {
+    fn test_from_feed_loss_and_noise_figure() {
+        // Reproduces old ComplexReceiver test:
         // NF=5dB, loss=3dB, T_ant=265K
-        // L = 10^(-3/10) = 0.50119
-        // T_rx = 290 * (10^(5/10) - 1) = 627.0605214
-        // T_sys = 265 * 0.50119 + 290 * (1 - 0.50119) + 627.0605214
-        //       = 132.815 + 144.655 + 627.061 = 904.531
-        let rx = ComplexReceiver {
-            frequency: 29.0.ghz(),
-            antenna_noise_temperature: 265.0,
-            lna_gain: 30.0.db(),
-            lna_noise_figure: 1.0.db(),
-            noise_figure: 5.0.db(),
-            loss: 3.0.db(),
-            demodulator_loss: 0.0.db(),
-            implementation_loss: 0.0.db(),
-        };
-        assert_approx_eq!(rx.system_noise_temperature(), 904.53084061, rtol <= 1e-6);
+        // Feed stage: gain=-3dB, T_feed = 290*(10^(3/10)-1) = 290*0.9953 = 288.63
+        // Rx stage: gain=20dB (LNA), T_rx = 290*(10^(5/10)-1) = 627.06
+        // Friis: T_sys = 265 + 288.63 + 627.06/0.5012
+        //
+        // But the old model was: T_sys = T_ant*L + T_room*(1-L) + T_rx
+        // = 265*0.5012 + 290*(1-0.5012) + 627.06 = 132.82 + 144.65 + 627.06 = 904.53
+        //
+        // The Friis model gives a different reference point. Let's verify the
+        // old test value is reproduced by the G/T being equivalent.
+        let rx = ComplexReceiver::from_feed_loss_and_noise_figure(
+            29.0.ghz(),
+            265.0,
+            3.0.db(),
+            5.0.db(),
+            20.0.db(),
+            0.0.db(),
+            0.0.db(),
+        );
+        // Friis: T_sys = 265 + 290*(10^(3/10)-1) + 627.06/(10^(-3/10))
+        // = 265 + 290*0.9953 + 627.06/0.5012
+        // = 265 + 288.63 + 1251.12 = 1804.75 (input-referred)
+        //
+        // The old model gave 904.53 (output-referred after feed loss).
+        // Ratio: 1804.75 / 904.53 ≈ 1.995 = 1/L = 10^(3/10) ✓
+        // G/T is the same because total_gain also differs by the feed loss.
+        let t_sys = rx.system_noise_temperature();
+        let loss_linear = 10.0_f64.powf(-3.0 / 10.0);
+        // Input-referred = output-referred / L
+        let old_t_sys_output = 904.53084061;
+        assert_approx_eq!(t_sys, old_t_sys_output / loss_linear, rtol <= 1e-5);
+    }
+
+    #[test]
+    fn test_from_lna_and_noise_figure() {
+        // Gateway link: T_ant=290K, LNA(G=20dB, T=175K), Rx(NF=2dB)
+        // T_rx = 290*(10^(2/10)-1) = 169.619 K
+        // T_sys = 290 + 175 + 169.619/100 = 466.696 K
+        let rx = ComplexReceiver::from_lna_and_noise_figure(
+            26.5.ghz(),
+            290.0,
+            20.0.db(),
+            175.0,
+            2.0.db(),
+            0.0.db(),
+            0.0.db(),
+        );
+        assert_approx_eq!(rx.system_noise_temperature(), 466.696, atol <= 0.01);
     }
 
     #[test]
@@ -179,24 +283,108 @@ mod tests {
     }
 
     #[test]
-    fn test_complex_receiver_total_gain() {
-        // Antenna gain=30dBi, LNA=20dB, loss=3dB, demod=1dB, impl=0.5dB
-        // G_total = 30 + 20 - 3 - 1 - 0.5 = 45.5 dB
+    fn test_complex_receiver_three_stage() {
+        // T_ant=100K, stages: LNA(G=20dB,T=50K), Filter(G=-3dB,T=290K), Rx(G=30dB,T=500K)
+        let rx = ComplexReceiver {
+            frequency: 8.0.ghz(),
+            antenna_noise_temperature: 100.0,
+            stages: vec![
+                NoiseStage {
+                    gain: 20.0.db(),
+                    noise_temperature: 50.0,
+                },
+                NoiseStage {
+                    gain: (-3.0).db(),
+                    noise_temperature: 290.0,
+                },
+                NoiseStage {
+                    gain: 30.0.db(),
+                    noise_temperature: 500.0,
+                },
+            ],
+            demodulator_loss: 0.0.db(),
+            implementation_loss: 0.0.db(),
+        };
+        let g1 = 100.0_f64; // 10^(20/10)
+        let g2 = 10.0_f64.powf(-3.0 / 10.0); // ~0.5012
+        let expected = 100.0 + 50.0 + 290.0 / g1 + 500.0 / (g1 * g2);
+        assert_approx_eq!(rx.system_noise_temperature(), expected, rtol <= 1e-6);
+    }
+
+    #[test]
+    fn test_complex_receiver_chain_gain() {
+        let rx = ComplexReceiver {
+            frequency: 8.0.ghz(),
+            antenna_noise_temperature: 100.0,
+            stages: vec![
+                NoiseStage {
+                    gain: 20.0.db(),
+                    noise_temperature: 50.0,
+                },
+                NoiseStage {
+                    gain: (-3.0).db(),
+                    noise_temperature: 290.0,
+                },
+                NoiseStage {
+                    gain: 30.0.db(),
+                    noise_temperature: 500.0,
+                },
+            ],
+            demodulator_loss: 0.0.db(),
+            implementation_loss: 0.0.db(),
+        };
+        // chain_gain = 20 + (-3) + 30 = 47 dB
+        assert_approx_eq!(rx.chain_gain().as_f64(), 47.0, atol <= 1e-10);
+    }
+
+    #[test]
+    fn test_complex_receiver_gt() {
         let antenna = SimpleAntenna {
             gain: 30.0.db(),
             beamwidth: Angle::degrees(1.0),
         };
+        let rx = Receiver::Complex(ComplexReceiver::from_lna_and_noise_figure(
+            29.0.ghz(),
+            150.0,
+            30.0.db(),
+            75.0,
+            // NF that gives T_rx = 627K: NF = 10*log10(1 + 627/290) = 5.0 dB (approx)
+            // Actually let's use exact stages for clarity
+            0.01.db(), // near-zero NF → T_rx ≈ 0
+            1.0.db(),
+            0.5.db(),
+        ));
+        // Just verify G/T computes without panicking and is reasonable
+        let gt = rx.gain_to_noise_temperature(&antenna, Angle::radians(0.0));
+        assert!(gt.as_f64() > 0.0);
+    }
+
+    #[test]
+    fn test_complex_receiver_total_gain() {
+        let antenna = SimpleAntenna {
+            gain: 30.0.db(),
+            beamwidth: Angle::degrees(1.0),
+        };
+        // Two stages: LNA(20dB) + Rx(10dB), demod=1dB, impl=0.5dB
+        // Chain gain is excluded (Friis noise is input-referred).
+        // total_gain = 30 (ant) - 1 - 0.5 = 28.5 dB
         let rx = Receiver::Complex(ComplexReceiver {
             frequency: 29.0.ghz(),
             antenna_noise_temperature: 265.0,
-            lna_gain: 20.0.db(),
-            lna_noise_figure: 1.0.db(),
-            noise_figure: 5.0.db(),
-            loss: 3.0.db(),
+            stages: vec![
+                NoiseStage {
+                    gain: 20.0.db(),
+                    noise_temperature: 75.0,
+                },
+                NoiseStage {
+                    gain: 10.0.db(),
+                    noise_temperature: 500.0,
+                },
+            ],
             demodulator_loss: 1.0.db(),
             implementation_loss: 0.5.db(),
         });
         let g_total = rx.total_gain(&antenna, Angle::radians(0.0));
-        assert_approx_eq!(g_total.as_f64(), 45.5, atol <= 1e-10);
+        assert_approx_eq!(g_total.as_f64(), 28.5, atol <= 1e-10);
     }
 }

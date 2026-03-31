@@ -6,7 +6,7 @@
 
 use std::f64::consts::PI;
 
-use lox_core::units::{Decibel, Distance, Frequency};
+use lox_core::units::{Angle, Decibel, Distance, Frequency};
 
 /// Computes the free-space path loss (FSPL) in decibels.
 ///
@@ -18,6 +18,18 @@ pub fn free_space_path_loss(distance: Distance, frequency: Frequency) -> Decibel
     let d_m = distance.to_meters();
     let ratio = 4.0 * PI * d_m / wavelength_m;
     Decibel::from_linear(ratio * ratio)
+}
+
+/// Computes the slant range from a ground station to a satellite at a given elevation angle.
+///
+/// d = √(Re²·sin²(el) + 2·Re·h + h²) − Re·sin(el)
+pub fn slant_range(elevation: Angle, earth_radius: Distance, altitude: Distance) -> Distance {
+    let el = elevation.as_f64();
+    let re = earth_radius.to_meters();
+    let h = altitude.to_meters();
+    let sin_el = el.sin();
+    let d = (re * re * sin_el * sin_el + 2.0 * re * h + h * h).sqrt() - re * sin_el;
+    Distance::meters(d)
 }
 
 #[cfg(test)]
@@ -61,5 +73,32 @@ mod tests {
         let fspl_2 = free_space_path_loss(200.0.km(), frequency);
         let diff = fspl_2 - fspl_1;
         assert_approx_eq!(diff.as_f64(), 6.0206, atol <= 0.001);
+    }
+
+    #[test]
+    fn test_slant_range_zenith() {
+        // At 90° elevation, slant range = altitude
+        let re = Distance::kilometers(6371.0);
+        let h = Distance::kilometers(525.0);
+        let range = slant_range(Angle::degrees(90.0), re, h);
+        assert_approx_eq!(range.to_kilometers(), 525.0, atol <= 0.01);
+    }
+
+    #[test]
+    fn test_slant_range_low_elevation() {
+        let re = Distance::kilometers(6371.0);
+        let h = Distance::kilometers(525.0);
+        let range = slant_range(Angle::degrees(5.0), re, h);
+        assert!(range.to_kilometers() > 1500.0);
+        assert!(range.to_kilometers() < 3000.0);
+    }
+
+    #[test]
+    fn test_slant_range_decreases_with_elevation() {
+        let re = Distance::kilometers(6371.0);
+        let h = Distance::kilometers(525.0);
+        let range_low = slant_range(Angle::degrees(10.0), re, h);
+        let range_high = slant_range(Angle::degrees(45.0), re, h);
+        assert!(range_low.to_meters() > range_high.to_meters());
     }
 }

@@ -86,18 +86,22 @@ pub struct LinkStats {
     pub gt: Decibel,
     /// Carrier-to-noise density ratio.
     pub c_n0: Decibel,
-    /// Eb/N0.
+    /// Es/N0 (energy per symbol to noise spectral density).
+    pub es_n0: Decibel,
+    /// Eb/N0 (energy per information bit to noise spectral density).
     pub eb_n0: Decibel,
+    /// Carrier-to-noise ratio.
+    pub c_n: Decibel,
     /// Link margin.
     pub margin: Decibel,
     /// Environmental losses.
     pub losses: EnvironmentalLosses,
     /// Received carrier power.
     pub carrier_rx_power: Decibel,
-    /// Data rate in bits per second.
-    pub data_rate: f64,
-    /// Channel bandwidth in Hz.
-    pub bandwidth_hz: f64,
+    /// Symbol rate.
+    pub symbol_rate: Frequency,
+    /// Channel bandwidth.
+    pub bandwidth: Frequency,
     /// Link frequency.
     pub frequency: Frequency,
     /// Noise power.
@@ -137,9 +141,11 @@ impl LinkStats {
         let eirp = tx.eirp(&tx_system.antenna, tx_angle);
         let gt = receiver.gain_to_noise_temperature(&rx_system.antenna, rx_angle);
         let fspl = free_space_path_loss(range, frequency);
-        let bandwidth_hz = channel.bandwidth();
-        let noise_power = rx_system.noise_power(bandwidth_hz);
+        let bandwidth = channel.bandwidth();
+        let noise_power = rx_system.noise_power(bandwidth.to_hertz());
+        let es_n0 = channel.es_n0(c_n0);
         let eb_n0 = channel.eb_n0(c_n0);
+        let c_n = channel.c_n(c_n0);
         let margin = channel.link_margin(eb_n0);
 
         Self {
@@ -150,12 +156,14 @@ impl LinkStats {
             eirp,
             gt,
             c_n0,
+            es_n0,
             eb_n0,
+            c_n,
             margin,
             losses,
             carrier_rx_power,
-            data_rate: channel.data_rate,
-            bandwidth_hz,
+            symbol_rate: channel.symbol_rate,
+            bandwidth,
             frequency,
             noise_power,
             interference: None,
@@ -167,8 +175,12 @@ impl LinkStats {
         let noise_linear = self.noise_power.to_linear();
         let total_ni = noise_linear + interference_power_w;
         let c_n0i0 = self.carrier_rx_power - Decibel::from_linear(total_ni)
-            + Decibel::from_linear(self.bandwidth_hz);
-        let eb_n0i0 = c_n0i0 - Decibel::from_linear(self.data_rate);
+            + Decibel::from_linear(self.bandwidth.to_hertz());
+        // Reuse the nominal C/N0 → Eb/N0 offset (which encodes modulation order,
+        // FEC rate, and symbol rate) rather than recomputing through the Channel,
+        // since LinkStats does not store a reference to the Channel.
+        let c_n0_to_eb_n0 = self.eb_n0 - self.c_n0;
+        let eb_n0i0 = c_n0i0 + c_n0_to_eb_n0;
 
         // margin = eb_n0 - (required_eb_n0 + required_margin)
         // So the threshold (required_eb_n0 + required_margin) = eb_n0 - margin
@@ -204,7 +216,7 @@ mod tests {
     use lox_test_utils::assert_approx_eq;
 
     use crate::antenna::{Antenna, SimpleAntenna};
-    use crate::channel::{Channel, LinkDirection, Modulation};
+    use crate::channel::{LinkDirection, Modulation};
     use crate::receiver::{Receiver, SimpleReceiver};
     use crate::transmitter::Transmitter;
 
@@ -232,12 +244,13 @@ mod tests {
         };
         let channel = Channel {
             link_type: LinkDirection::Downlink,
-            data_rate: 10e6,
+            symbol_rate: 5.0.mhz(),
             required_eb_n0: 10.0.db(),
             margin: 3.0.db(),
             modulation: Modulation::Qpsk,
             roll_off: 0.35,
             fec: 0.5,
+            chip_rate: None,
         };
         (tx_sys, rx_sys, channel)
     }
@@ -280,10 +293,12 @@ mod tests {
         assert_approx_eq!(stats.fspl.as_f64(), 181.696, atol <= 0.1);
         // C/N0 ≈ 104.9 dB·Hz
         assert_approx_eq!(stats.c_n0.as_f64(), 104.9, atol <= 0.2);
-        // Eb/N0 = C/N0 - 10*log10(10e6) = 104.9 - 70 = 34.9
-        assert_approx_eq!(stats.eb_n0.as_f64(), 34.9, atol <= 0.2);
-        // Margin = Eb/N0 - 10 - 3 = 21.9
-        assert_approx_eq!(stats.margin.as_f64(), 21.9, atol <= 0.2);
+        // Es/N0 = C/N0 - 10*log10(5e6) ≈ 104.9 - 66.99 = 37.91
+        assert_approx_eq!(stats.es_n0.as_f64(), 37.91, atol <= 0.2);
+        // Eb/N0 = Es/N0 - 10*log10(2 * 0.5) = Es/N0 - 0 = 37.91
+        assert_approx_eq!(stats.eb_n0.as_f64(), 37.91, atol <= 0.2);
+        // Margin = Eb/N0 - 10 - 3 = 24.91
+        assert_approx_eq!(stats.margin.as_f64(), 24.91, atol <= 0.2);
     }
 
     #[test]

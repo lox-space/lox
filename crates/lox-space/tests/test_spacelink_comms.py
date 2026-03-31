@@ -17,8 +17,7 @@ spacelink function mapping:
     | lox.fspl() (combined)                              | spreading_loss() + aperture_loss()                      |
     | lox.ParabolicPattern.peak_gain()                   | spacelink.core.antenna.dish_gain()                      |
     | lox.GaussianPattern.peak_gain()                    | spacelink.core.antenna.dish_gain()                      |
-    | lox.ComplexReceiver.noise_temperature()            | spacelink.core.noise.noise_factor_to_temperature()      |
-    | lox.ComplexReceiver.system_noise_temperature()     | (degenerate case only → noise_factor_to_temperature())  |
+    | lox.ComplexReceiver.system_noise_temperature()     | spacelink.core.noise.noise_factor_to_temperature()      |
     | lox.CommunicationSystem.noise_power()              | spacelink.core.noise.noise_power()                      |
     | lox.Channel.eb_n0()                                | spacelink.core.noise.cn0_to_ebn0()                      |
     | lox.DipolePattern.peak_gain()                      | (no spacelink equivalent — see internal unit tests)     |
@@ -144,10 +143,8 @@ def test_gaussian_peak_gain(diameter_m, frequency_ghz, efficiency):
 # ---------------------------------------------------------------------------
 # Test 5: Noise figure → noise temperature
 #
-# lox.ComplexReceiver.noise_temperature() returns the noise temperature of the
-# back-end receive chain, computed as T = (10^(NF/10) − 1) × 290 K.
-# lna_gain_db and lna_noise_figure_db have no effect on noise_temperature(),
-# which only reads self.noise_figure.
+# T = (10^(NF/10) − 1) × 290 K.
+# Verified via from_lna_and_noise_figure with zero LNA contribution.
 # ---------------------------------------------------------------------------
 
 # (noise_figure_db,)
@@ -156,16 +153,17 @@ NF_CASES = [0.1, 1.0, 2.5, 5.0, 8.0, 15.0]
 
 @pytest.mark.parametrize("noise_figure_db", NF_CASES)
 def test_noise_temperature(noise_figure_db):
-    """Backend noise temperature should agree between lox and spacelink to 0.01 K."""
-    rx = lox.ComplexReceiver(
+    """Noise figure to temperature should agree between lox and spacelink to 0.01 K."""
+    # Build a receiver with only the NF stage (LNA has zero noise, unity gain)
+    rx = lox.ComplexReceiver.from_lna_and_noise_figure(
         frequency=29 * lox.GHz,
         antenna_noise_temperature=0.0 * lox.K,
-        lna_gain=1.0 * lox.dB,  # not used by noise_temperature()
-        lna_noise_figure=1.0 * lox.dB,  # not used by noise_temperature()
-        noise_figure=noise_figure_db * lox.dB,
-        loss=0.0 * lox.dB,
+        lna_gain=0.0 * lox.dB,
+        lna_noise_temperature=0.0 * lox.K,
+        receiver_noise_figure=noise_figure_db * lox.dB,
     )
-    lox_t = rx.noise_temperature().to_kelvin()
+    # T_sys = 0 + 0 + T_rx/1 = T_rx
+    lox_t = rx.system_noise_temperature().to_kelvin()
     sl_t = float(sl_nf_to_temp(noise_figure_db * u.dB).value)
     assert lox_t == pytest.approx(sl_t, abs=0.01)
 
@@ -173,26 +171,24 @@ def test_noise_temperature(noise_figure_db):
 # ---------------------------------------------------------------------------
 # Test 6: system_noise_temperature() degenerate case
 #
-# With loss_db=0 and antenna_noise_temperature_k=0 the formula
-# T_sys = T_ant·L + T_room·(1−L) + T_rx reduces to T_rx alone, so
-# system_noise_temperature() must equal sl_nf_to_temp(noise_figure_db).
-# This exercises a different code path from Test 5 and guards against bugs
-# in the loss/antenna-temperature terms.
+# With T_ant=0 and no LNA noise, T_sys should equal the receiver noise
+# temperature from the noise figure alone.
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("noise_figure_db", NF_CASES)
 def test_system_noise_temperature_degenerate(noise_figure_db):
-    """With no loss and no antenna temperature, system_noise_temperature()
-    must equal the bare receiver noise temperature returned by
-    spacelink.core.noise.noise_factor_to_temperature()."""
+    """With no antenna temperature and transparent LNA,
+    system_noise_temperature() must equal the bare receiver noise temperature."""
     rx = lox.ComplexReceiver(
         frequency=29 * lox.GHz,
         antenna_noise_temperature=0.0 * lox.K,
-        lna_gain=1.0 * lox.dB,
-        lna_noise_figure=1.0 * lox.dB,
-        noise_figure=noise_figure_db * lox.dB,
-        loss=0.0 * lox.dB,
+        stages=[
+            lox.NoiseStage(
+                gain=0.0 * lox.dB,
+                noise_temperature=lox.Temperature(290.0 * (10 ** (noise_figure_db / 10) - 1)),
+            ),
+        ],
     )
     lox_t = rx.system_noise_temperature().to_kelvin()
     sl_t = float(sl_nf_to_temp(noise_figure_db * u.dB).value)
@@ -207,6 +203,8 @@ def test_system_noise_temperature_degenerate(noise_figure_db):
 # ---------------------------------------------------------------------------
 
 # (cn0_dbhz, data_rate_hz)
+# Using BPSK with fec=1.0 so that symbol_rate == data_rate and
+# Eb/N0 = C/N0 - 10*log10(data_rate), matching the spacelink formula.
 CN0_CASES = [
     (70.0, 1e6),  # 1 Mbit/s   → Eb/N0 = 70 - 60 = 10 dB
     (80.0, 1e6),  # 1 Mbit/s   → Eb/N0 = 80 - 60 = 20 dB
@@ -219,10 +217,11 @@ CN0_CASES = [
 def test_cn0_to_ebn0(cn0_dbhz, data_rate_hz):
     ch = lox.Channel(
         link_type="downlink",
-        data_rate=data_rate_hz * lox.bps,
+        symbol_rate=lox.Frequency(data_rate_hz),
         required_eb_n0=10.0 * lox.dB,
         margin=3.0 * lox.dB,
-        modulation=lox.Modulation("QPSK"),
+        modulation=lox.Modulation("BPSK"),
+        fec=1.0,
     )
     lox_ebn0 = float(ch.eb_n0(cn0_dbhz * lox.dB))
     sl_ebn0 = float(
