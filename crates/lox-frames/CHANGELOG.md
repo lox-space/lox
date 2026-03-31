@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.0-alpha.13](https://github.com/lox-space/lox/compare/lox-frames-v0.1.0-alpha.12...lox-frames-v0.1.0-alpha.13) - 2026-03-31
+
+### Other
+
+- updated the following local packages: lox-core, lox-bodies, lox-time, lox-units
+
 ## [0.1.0-alpha.12](https://github.com/lox-space/lox/compare/lox-frames-v0.1.0-alpha.11...lox-frames-v0.1.0-alpha.12) - 2026-03-26
 
 ### Other
