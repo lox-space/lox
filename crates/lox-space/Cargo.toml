@@ -32,6 +32,7 @@ lox-earth = { workspace = true, optional = true }
 lox-ephem = { workspace = true, optional = true }
 lox-frames = { workspace = true, optional = true }
 lox-io = { workspace = true, optional = true }
+lox-itur = { workspace = true, optional = true }
 lox-math = { workspace = true, optional = true }
 lox-orbits = { workspace = true, optional = true }
 lox-time = { workspace = true, optional = true, features = ["chrono"] }
@@ -64,6 +65,7 @@ default = [
   "comms",
   "core",
   "earth",
+  "itur",
   "ephem",
   "frames",
   "coverage",
@@ -78,6 +80,7 @@ coverage = ["analysis", "dep:geo", "lox-analysis?/coverage", "lox-analysis?/geoj
 bodies = ["math", "units", "dep:lox-bodies"]
 comms = ["units", "dep:lox-comms"]
 core = ["dep:lox-core"]
+itur = ["comms", "dep:lox-itur"]
 earth = ["bodies", "math", "io", "time", "units", "dep:lox-earth"]
 ephem = ["math", "dep:lox-ephem"]
 frames = ["bodies", "earth", "math", "time", "units", "dep:lox-frames"]
@@ -100,6 +103,7 @@ python = [
   "comms",
   "core",
   "coverage",
+  "itur",
   "time",
   "units",
   "dep:numpy",

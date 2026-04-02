@@ -1,0 +1,40 @@
+# SPDX-FileCopyrightText: 2016 Inigo del Portillo, Massachusetts Institute of Technology
+# SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+#
+# SPDX-License-Identifier: MIT AND MPL-2.0
+
+[package]
+name = "lox-itur"
+description = "ITU-R P-series atmospheric propagation models for the Lox ecosystem"
+version = "0.1.0-alpha.0"
+rust-version.workspace = true
+edition.workspace = true
+license = "MIT AND MPL-2.0"
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme = "README.md"
+
+[dependencies]
+lox-core = { workspace = true }
+
+libm = { workspace = true }
+serde = { workspace = true, optional = true }
+thiserror = { workspace = true }
+zstd = { workspace = true }
+
+[dev-dependencies]
+lox-test-utils = { workspace = true, features = ["derive"] }
+
+[build-dependencies]
+ureq = { workspace = true }
+zip = { workspace = true }
+zstd = { workspace = true }
+
+[features]
+serde = ["dep:serde", "lox-core/serde"]
+
+[lib]
+doctest = false

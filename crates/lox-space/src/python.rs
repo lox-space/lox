@@ -20,6 +20,7 @@ use crate::constellations::python::{PyConstellation, PyConstellationSatellite};
 use crate::earth::python::ut1::{EopParserError, EopProviderError, PyEopProvider};
 use crate::ephem::python::PySpk;
 use crate::frames::python::PyFrame;
+use crate::itur::python::register_itur_functions;
 use crate::math::python::PySeries;
 use crate::orbits::python::{
     PyCartesian, PyEvent, PyGroundLocation, PyGroundPropagator, PyInterval, PyJ2Propagator,
@@ -37,7 +38,7 @@ use crate::units::{
     ASTRONOMICAL_UNIT,
     python::{
         PyAngle, PyAngularRate, PyDistance, PyFrequency, PyGravitationalParameter, PyPower,
-        PyTemperature, PyVelocity,
+        PyPressure, PyTemperature, PyVelocity,
     },
 };
 
@@ -72,6 +73,9 @@ pub fn register_types(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(power_flux_density, m)?)?;
     m.add_function(wrap_pyfunction!(pfd_mask, m)?)?;
     m.add_function(wrap_pyfunction!(slant_range, m)?)?;
+
+    // itur
+    register_itur_functions(m)?;
 
     // earth
     m.add_class::<PyEopProvider>()?;
@@ -165,6 +169,9 @@ pub fn register_types(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyPower>()?;
     m.add("W", PyPower::new(1.0))?;
     m.add("kW", PyPower::new(1e3))?;
+    m.add_class::<PyPressure>()?;
+    m.add("Pa", PyPressure::new(1.0))?;
+    m.add("hPa", PyPressure::new(100.0))?;
     m.add_class::<PyTemperature>()?;
     m.add("K", PyTemperature::new(1.0))?;
     m.add_class::<PyVelocity>()?;

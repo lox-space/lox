@@ -1060,6 +1060,42 @@ impl PyEnvironmentalLosses {
         PyDecibel(self.0.total())
     }
 
+    /// Rain attenuation.
+    #[getter]
+    fn rain(&self) -> PyDecibel {
+        PyDecibel(self.0.rain)
+    }
+
+    /// Gaseous absorption.
+    #[getter]
+    fn gaseous(&self) -> PyDecibel {
+        PyDecibel(self.0.gaseous)
+    }
+
+    /// Scintillation loss.
+    #[getter]
+    fn scintillation(&self) -> PyDecibel {
+        PyDecibel(self.0.scintillation)
+    }
+
+    /// General atmospheric loss (combined total).
+    #[getter]
+    fn atmospheric(&self) -> PyDecibel {
+        PyDecibel(self.0.atmospheric)
+    }
+
+    /// Cloud attenuation.
+    #[getter]
+    fn cloud(&self) -> PyDecibel {
+        PyDecibel(self.0.cloud)
+    }
+
+    /// Depolarization loss.
+    #[getter]
+    fn depolarization(&self) -> PyDecibel {
+        PyDecibel(self.0.depolarization)
+    }
+
     fn __eq__(&self, other: &PyEnvironmentalLosses) -> bool {
         self.0.rain.as_f64() == other.0.rain.as_f64()
             && self.0.gaseous.as_f64() == other.0.gaseous.as_f64()

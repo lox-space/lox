@@ -794,6 +794,53 @@ impl Display for Temperature {
     }
 }
 
+type Pascals = f64;
+
+/// Pressure in pascals.
+#[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[repr(transparent)]
+pub struct Pressure(Pascals);
+
+impl Pressure {
+    /// Creates a new pressure from an `f64` value in pascals.
+    pub const fn new(pa: f64) -> Self {
+        Self(pa)
+    }
+
+    /// Creates a new pressure from an `f64` value in pascals.
+    pub const fn pa(pa: f64) -> Self {
+        Self(pa)
+    }
+
+    /// Creates a new pressure from an `f64` value in hectopascals.
+    pub const fn hpa(hpa: f64) -> Self {
+        Self(hpa * 100.0)
+    }
+
+    /// Returns the value in pascals as an `f64`.
+    pub const fn as_f64(&self) -> f64 {
+        self.0
+    }
+
+    /// Returns the value in pascals.
+    pub const fn to_pa(&self) -> f64 {
+        self.0
+    }
+
+    /// Returns the value in hectopascals.
+    pub const fn to_hpa(&self) -> f64 {
+        self.0 * 0.01
+    }
+}
+
+impl Display for Pressure {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        self.0.fmt(f)?;
+        write!(f, " Pa")
+    }
+}
+
 type Watts = f64;
 
 /// Power in Watts.
@@ -1022,6 +1069,7 @@ trait_impls!(
     Distance,
     Frequency,
     Power,
+    Pressure,
     Temperature,
     Velocity
 );
@@ -1394,5 +1442,27 @@ mod tests {
         assert_eq!((b - a).as_f64(), 1.0);
         assert_eq!((-a).as_f64(), -1.0);
         assert_eq!((3.0 * a).as_f64(), 3.0);
+    }
+
+    // --- Pressure ---
+
+    #[test]
+    fn test_pressure_hpa() {
+        let p = Pressure::hpa(1013.25);
+        assert_eq!(p.to_hpa(), 1013.25);
+        assert_approx_eq!(p.to_pa(), 101325.0, rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_pressure_pa() {
+        let p = Pressure::pa(101325.0);
+        assert_approx_eq!(p.to_hpa(), 1013.25, rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_pressure_display() {
+        let p = Pressure::pa(101325.0);
+        let s = format!("{}", p);
+        assert!(s.contains("Pa"));
     }
 }

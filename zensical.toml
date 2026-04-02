@@ -22,6 +22,7 @@ nav = [
         { "Events & Visibility" = "events.md" },
         { "Coverage" = "coverage.md" },
         { "Communications" = "comms.md" },
+        { "Atmospheric Propagation" = "itur.md" },
         { "Constellations" = "constellations.md" },
         { "Data Providers" = "data.md" },
         { "Units" = "units.md" },
