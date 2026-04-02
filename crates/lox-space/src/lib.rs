@@ -29,6 +29,9 @@ pub mod frames;
 #[cfg(feature = "io")]
 pub mod io;
 
+#[cfg(feature = "itur")]
+pub mod itur;
+
 #[cfg(feature = "math")]
 pub mod math;
 

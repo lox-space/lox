@@ -10,49 +10,7 @@ use crate::channel::Channel;
 use crate::system::CommunicationSystem;
 use crate::utils::free_space_path_loss;
 
-/// Environmental losses (rain, atmospheric, etc.).
-///
-/// ITU-R computation is out of scope; construct manually or use [`EnvironmentalLosses::none`].
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct EnvironmentalLosses {
-    /// Rain attenuation.
-    pub rain: Decibel,
-    /// Gaseous absorption.
-    pub gaseous: Decibel,
-    /// Scintillation loss.
-    pub scintillation: Decibel,
-    /// General atmospheric loss.
-    pub atmospheric: Decibel,
-    /// Cloud attenuation.
-    pub cloud: Decibel,
-    /// Depolarization loss.
-    pub depolarization: Decibel,
-}
-
-impl EnvironmentalLosses {
-    /// Returns zero environmental losses.
-    pub fn none() -> Self {
-        Self {
-            rain: Decibel::new(0.0),
-            gaseous: Decibel::new(0.0),
-            scintillation: Decibel::new(0.0),
-            atmospheric: Decibel::new(0.0),
-            cloud: Decibel::new(0.0),
-            depolarization: Decibel::new(0.0),
-        }
-    }
-
-    /// Returns the total environmental loss in dB.
-    pub fn total(&self) -> Decibel {
-        self.rain
-            + self.gaseous
-            + self.scintillation
-            + self.atmospheric
-            + self.cloud
-            + self.depolarization
-    }
-}
+pub use lox_itur::EnvironmentalLosses;
 
 /// Interference statistics for a link.
 #[derive(Debug, Clone)]
