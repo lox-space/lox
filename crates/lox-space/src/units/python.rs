@@ -10,7 +10,7 @@ use pyo3::{Bound, Python, pyclass, pymethods, types::PyComplex};
 use std::format;
 use std::string::{String, ToString};
 
-use lox_units::{Angle, AngularRate, Distance, Frequency, Power, Temperature, Velocity};
+use lox_units::{Angle, AngularRate, Distance, Frequency, Power, Pressure, Temperature, Velocity};
 
 /// Formats an f64 as a valid Python float literal (always includes a decimal point).
 fn repr_f64(v: f64) -> String {
@@ -175,6 +175,17 @@ py_unit!(
         /// Returns the value in dBW.
         fn to_dbw(&self) -> f64 {
             self.0.to_dbw()
+        }
+    }),
+    (Pressure, "Pressure", PyPressure, {
+        /// Returns the value in hectopascals.
+        fn to_hpa(&self) -> f64 {
+            self.0.to_hpa()
+        }
+
+        /// Returns the value in pascals.
+        fn to_pa(&self) -> f64 {
+            self.0.to_pa()
         }
     }),
     (Temperature, "Temperature", PyTemperature, {

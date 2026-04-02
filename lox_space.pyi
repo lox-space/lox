@@ -206,6 +206,31 @@ class Temperature:
         """Returns the value in Kelvin."""
         ...
 
+class Pressure:
+    """Pressure type for type-safe pressure values.
+
+    Use with unit constants: `1013.25 * lox.hPa`
+    Convert to float with `float(pressure)` (returns Pa).
+    """
+    def __new__(cls, value: float) -> Self: ...
+    def __add__(self, other: Pressure) -> Pressure: ...
+    def __sub__(self, other: Pressure) -> Pressure: ...
+    def __neg__(self) -> Pressure: ...
+    def __mul__(self, other: float) -> Pressure: ...
+    def __rmul__(self, other: float) -> Pressure: ...
+    def __eq__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
+    def __str__(self) -> str: ...
+    def __complex__(self) -> complex: ...
+    def __float__(self) -> float: ...
+    def __int__(self) -> int: ...
+    def to_hpa(self) -> float:
+        """Returns the value in hectopascals."""
+        ...
+    def to_pa(self) -> float:
+        """Returns the value in pascals."""
+        ...
+
 class Velocity:
     """Velocity type for type-safe speed values.
 
@@ -262,6 +287,10 @@ kW: Power
 """1000 Watts"""
 K: Temperature
 """1 Kelvin"""
+Pa: Pressure
+"""1 pascal"""
+hPa: Pressure
+"""100 pascals"""
 m_per_s: Velocity
 """1 m/s"""
 km_per_s: Velocity
@@ -2497,6 +2526,30 @@ class EnvironmentalLosses:
         cloud: Decibel | None = None,
         depolarization: Decibel | None = None,
     ) -> Self: ...
+    @property
+    def rain(self) -> Decibel:
+        """Rain attenuation."""
+        ...
+    @property
+    def gaseous(self) -> Decibel:
+        """Gaseous absorption."""
+        ...
+    @property
+    def scintillation(self) -> Decibel:
+        """Scintillation loss."""
+        ...
+    @property
+    def atmospheric(self) -> Decibel:
+        """General atmospheric loss (combined total)."""
+        ...
+    @property
+    def cloud(self) -> Decibel:
+        """Cloud attenuation."""
+        ...
+    @property
+    def depolarization(self) -> Decibel:
+        """Depolarization loss."""
+        ...
     def total(self) -> Decibel:
         """Returns the total environmental loss in dB."""
         ...
@@ -2813,3 +2866,102 @@ class ImagingResults:
     def all_intervals(self) -> dict[tuple[str, str], list[Interval]]:
         """Return all intervals for all (spacecraft, AOI) pairs."""
         ...
+
+# ITU-R atmospheric propagation
+
+def atmospheric_attenuation_slant_path(
+    lat: Angle,
+    lon: Angle,
+    frequency: Frequency,
+    elevation: Angle,
+    probability: float,
+    diameter: Distance,
+    polarisation_tilt: Angle | None = None,
+) -> EnvironmentalLosses:
+    """Compute atmospheric attenuation on a slant path.
+
+    Combines rain (P.618), gaseous (P.676), cloud (P.840), and
+    scintillation (P.618) attenuation per ITU-R recommendations.
+
+    Args:
+        lat: Latitude.
+        lon: Longitude.
+        frequency: Frequency.
+        elevation: Elevation angle.
+        probability: Exceedance probability (% of average year).
+        diameter: Physical antenna diameter.
+        polarisation_tilt: Polarisation tilt angle (default 45° for circular).
+    """
+    ...
+
+def rain_attenuation(
+    lat: Angle,
+    lon: Angle,
+    frequency: Frequency,
+    elevation: Angle,
+    probability: float,
+    polarisation_tilt: Angle | None = None,
+) -> Decibel:
+    """Compute rain attenuation exceeded for a given probability (P.618-13)."""
+    ...
+
+def gaseous_attenuation_slant_path(
+    frequency: Frequency,
+    elevation: Angle,
+    pressure: Pressure,
+    rho: float,
+    temperature: Temperature,
+) -> tuple[Decibel, Decibel]:
+    """Compute gaseous attenuation on a slant path (P.676-12).
+
+    Returns:
+        Tuple of (oxygen attenuation, water vapour attenuation).
+    """
+    ...
+
+def cloud_attenuation(
+    lat: Angle,
+    lon: Angle,
+    elevation: Angle,
+    frequency: Frequency,
+    probability: float,
+) -> Decibel:
+    """Compute cloud attenuation on a slant path (P.840-8)."""
+    ...
+
+def scintillation_attenuation(
+    frequency: Frequency,
+    elevation: Angle,
+    probability: float,
+    diameter: Distance,
+    eta: float = 0.5,
+    lat: Angle | None = None,
+    lon: Angle | None = None,
+) -> Decibel:
+    """Compute tropospheric scintillation fade depth (P.618-13)."""
+    ...
+
+def rain_specific_attenuation(
+    rain_rate: float,
+    frequency: Frequency,
+    elevation: Angle,
+    polarisation_tilt: Angle | None = None,
+) -> float:
+    """Compute specific attenuation from rain in dB/km (P.838-3)."""
+    ...
+
+def topographic_altitude(lat: Angle, lon: Angle) -> Distance:
+    """Return topographic altitude at the given location (P.1511-2)."""
+    ...
+
+def surface_mean_temperature(lat: Angle, lon: Angle) -> Temperature:
+    """Return annual mean surface temperature at the given location (P.1510-1)."""
+    ...
+
+def rainfall_rate(lat: Angle, lon: Angle, probability: float) -> float:
+    """Return rainfall rate in mm/h exceeded for a given probability (P.837-7)."""
+    ...
+
+def rain_height(lat: Angle, lon: Angle) -> Distance:
+    """Return mean annual rain height at the given location (P.839-4)."""
+    ...
