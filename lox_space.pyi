@@ -2507,24 +2507,29 @@ class Channel:
     def __repr__(self) -> str: ...
 
 class EnvironmentalLosses:
-    """Environmental losses for a link.
+    """Atmospheric environmental losses computed from ITU-R models.
+
+    Computes rain, gaseous, cloud, scintillation, and depolarization
+    attenuation for a slant path.
 
     Args:
-        rain: Rain attenuation as Decibel (default Decibel(0)).
-        gaseous: Gaseous absorption as Decibel (default Decibel(0)).
-        scintillation: Scintillation loss as Decibel (default Decibel(0)).
-        atmospheric: Atmospheric loss as Decibel (default Decibel(0)).
-        cloud: Cloud attenuation as Decibel (default Decibel(0)).
-        depolarization: Depolarization loss as Decibel (default Decibel(0)).
+        lat: Latitude.
+        lon: Longitude.
+        frequency: Frequency.
+        elevation: Elevation angle (clamped to >= 5 deg).
+        probability: Exceedance probability (% of average year).
+        diameter: Physical antenna diameter.
+        polarisation_tilt: Polarisation tilt angle (default 45 deg for circular).
     """
     def __new__(
         cls,
-        rain: Decibel | None = None,
-        gaseous: Decibel | None = None,
-        scintillation: Decibel | None = None,
-        atmospheric: Decibel | None = None,
-        cloud: Decibel | None = None,
-        depolarization: Decibel | None = None,
+        lat: Angle,
+        lon: Angle,
+        frequency: Frequency,
+        elevation: Angle,
+        probability: float,
+        diameter: Distance,
+        polarisation_tilt: Angle | None = None,
     ) -> Self: ...
     @property
     def rain(self) -> Decibel:

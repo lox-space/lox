@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-pub use lox_itur::{EnvironmentalLosses, atmospheric_attenuation_slant_path};
+pub use lox_itur::EnvironmentalLosses;
 
 #[cfg(feature = "python")]
 pub mod python;
