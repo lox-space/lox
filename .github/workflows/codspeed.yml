@@ -47,7 +47,7 @@ jobs:
       - uses: CodSpeedHQ/action@v4
         with:
           mode: walltime
-          run: uv run --directory "$UV_PROJECT" pytest --codspeed
+          run: uv run --directory "$UV_PROJECT" pytest --codspeed crates/lox-space/tests/test_*benchmark*
           token: ${{ secrets.CODSPEED_TOKEN }}
 
   codspeed-rust:
