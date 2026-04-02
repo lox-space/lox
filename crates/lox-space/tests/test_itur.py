@@ -7,8 +7,22 @@
 import lox_space as lox
 
 
+def test_environmental_losses_constructor():
+    """Test EnvironmentalLosses constructor."""
+    losses = lox.EnvironmentalLosses(
+        lat=40.4 * lox.deg,
+        lon=-3.7 * lox.deg,
+        frequency=14.25 * lox.GHz,
+        elevation=30.0 * lox.deg,
+        probability=0.01,
+        diameter=1.2 * lox.m,
+    )
+    assert float(losses.rain) >= 0.0
+    assert 0.0 < float(losses.atmospheric) < 30.0
+
+
 def test_atmospheric_attenuation_slant_path():
-    """End-to-end test for the main atmospheric attenuation function."""
+    """End-to-end test for the free-standing function."""
     losses = lox.atmospheric_attenuation_slant_path(
         lat=40.4 * lox.deg,
         lon=-3.7 * lox.deg,

@@ -18,7 +18,7 @@ receiving at 14.25 GHz from a satellite at 30° elevation:
 ```python
 import lox_space as lox
 
-losses = lox.atmospheric_attenuation_slant_path(
+losses = lox.EnvironmentalLosses(
     lat=40.4 * lox.deg,
     lon=-3.7 * lox.deg,
     frequency=14.25 * lox.GHz,
@@ -34,8 +34,25 @@ print(f"Scintillation: {losses.scintillation}")
 print(f"Total:         {losses.atmospheric}")
 ```
 
-The result is an `EnvironmentalLosses` object that plugs directly into
-`LinkStats.calculate` for link budget analysis.
+The same computation is also available as a free-standing function:
+
+```python
+losses = lox.atmospheric_attenuation_slant_path(
+    lat=40.4 * lox.deg, lon=-3.7 * lox.deg,
+    frequency=14.25 * lox.GHz, elevation=30.0 * lox.deg,
+    probability=0.01, diameter=1.2 * lox.m,
+)
+```
+
+For link budgets with known loss values, use `EnvironmentalLosses.from_values`
+or `EnvironmentalLosses.none`:
+
+```python
+losses = lox.EnvironmentalLosses.from_values(rain=2.0 * lox.dB, gaseous=0.5 * lox.dB)
+losses = lox.EnvironmentalLosses.none()
+```
+
+The result plugs directly into `LinkStats.calculate` for link budget analysis.
 
 ## Individual Models
 
@@ -132,12 +149,10 @@ print(f"Rain height: {h.to_kilometers():.1f} km")
 
 ## Link Budget Integration
 
-The `atmospheric_attenuation_slant_path` function returns an
-`EnvironmentalLosses` object that can be passed directly to
-`LinkStats.calculate`:
+`EnvironmentalLosses` can be passed directly to `LinkStats.calculate`:
 
 ```python
-losses = lox.atmospheric_attenuation_slant_path(
+losses = lox.EnvironmentalLosses(
     lat=40.4 * lox.deg,
     lon=-3.7 * lox.deg,
     frequency=29.0 * lox.GHz,

@@ -34,9 +34,9 @@ standards published by the ITU Radiocommunication Sector.
 
 ```rust
 use lox_core::units::{Angle, Distance, Frequency};
-use lox_itur::atmospheric_attenuation_slant_path;
+use lox_itur::EnvironmentalLosses;
 
-let losses = atmospheric_attenuation_slant_path(
+let losses = EnvironmentalLosses::new(
     Angle::degrees(40.4),       // latitude (Madrid)
     Angle::degrees(-3.7),       // longitude
     Frequency::gigahertz(14.25), // Ku-band

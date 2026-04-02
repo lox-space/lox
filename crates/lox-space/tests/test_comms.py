@@ -661,44 +661,33 @@ def test_channel_repr():
 # --- Environmental Losses ---
 
 
-def test_environmental_losses_default():
-    losses = lox.EnvironmentalLosses()
+def test_environmental_losses_none():
+    losses = lox.EnvironmentalLosses.none()
     assert float(losses.total()) == pytest.approx(0.0, abs=1e-15)
 
 
-def test_environmental_losses_total():
-    losses = lox.EnvironmentalLosses(
+def test_environmental_losses_from_values():
+    losses = lox.EnvironmentalLosses.from_values(
         rain=2.0 * lox.dB, gaseous=0.5 * lox.dB, atmospheric=1.0 * lox.dB
     )
     assert float(losses.total()) == pytest.approx(3.5, abs=1e-10)
 
 
 def test_environmental_losses_eq():
-    a = lox.EnvironmentalLosses(rain=2.0 * lox.dB)
-    b = lox.EnvironmentalLosses(rain=2.0 * lox.dB)
-    c = lox.EnvironmentalLosses(rain=3.0 * lox.dB)
+    a = lox.EnvironmentalLosses.from_values(rain=2.0 * lox.dB)
+    b = lox.EnvironmentalLosses.from_values(rain=2.0 * lox.dB)
+    c = lox.EnvironmentalLosses.from_values(rain=3.0 * lox.dB)
     assert a == b
     assert not (a == c)
 
 
-def test_environmental_losses_pickle():
-    losses = lox.EnvironmentalLosses(
+def test_environmental_losses_repr():
+    losses = lox.EnvironmentalLosses.from_values(
         rain=2.0 * lox.dB, gaseous=0.5 * lox.dB, atmospheric=1.0 * lox.dB
     )
-    assert pickle.loads(pickle.dumps(losses)) == losses
-
-
-def test_environmental_losses_repr_roundtrip():
-    losses = lox.EnvironmentalLosses(
-        rain=2.0 * lox.dB, gaseous=0.5 * lox.dB, atmospheric=1.0 * lox.dB
-    )
-    assert (
-        eval(
-            repr(losses),
-            {"EnvironmentalLosses": lox.EnvironmentalLosses, "Decibel": lox.Decibel},
-        )
-        == losses
-    )
+    r = repr(losses)
+    assert "rain" in r
+    assert "gaseous" in r
 
 
 # --- Free functions ---
@@ -865,7 +854,7 @@ def test_link_stats_with_losses():
         fec=0.5,
     )
 
-    losses = lox.EnvironmentalLosses(rain=2.0 * lox.dB, atmospheric=1.0 * lox.dB)
+    losses = lox.EnvironmentalLosses.from_values(rain=2.0 * lox.dB, atmospheric=1.0 * lox.dB)
 
     stats_no_loss = lox.LinkStats.calculate(
         tx_sys, rx_sys, ch, 1000 * lox.km, 0 * lox.deg, 0 * lox.deg

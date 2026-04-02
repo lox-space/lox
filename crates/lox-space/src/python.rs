@@ -12,14 +12,15 @@ use crate::analysis::python::{
 use crate::bodies::python::PyOrigin;
 use crate::comms::python::{
     PyChannel, PyCommunicationSystem, PyComplexAntenna, PyComplexReceiver, PyDecibel,
-    PyDipolePattern, PyEnvironmentalLosses, PyGaussianPattern, PyLinkStats, PyModulation,
-    PyNoiseStage, PyParabolicPattern, PySimpleAntenna, PySimpleReceiver, PyTransmitter,
-    freq_overlap, fspl, pfd_mask, power_flux_density, slant_range,
+    PyDipolePattern, PyGaussianPattern, PyLinkStats, PyModulation, PyNoiseStage,
+    PyParabolicPattern, PySimpleAntenna, PySimpleReceiver, PyTransmitter, freq_overlap, fspl,
+    pfd_mask, power_flux_density, slant_range,
 };
 use crate::constellations::python::{PyConstellation, PyConstellationSatellite};
 use crate::earth::python::ut1::{EopParserError, EopProviderError, PyEopProvider};
 use crate::ephem::python::PySpk;
 use crate::frames::python::PyFrame;
+use crate::itur::python::PyEnvironmentalLosses;
 use crate::itur::python::register_itur_functions;
 use crate::math::python::PySeries;
 use crate::orbits::python::{

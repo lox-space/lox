@@ -10,7 +10,10 @@ use pyo3::prelude::*;
 
 use lox_comms::antenna::{Antenna, AntennaGain, ComplexAntenna, SimpleAntenna};
 use lox_comms::channel::{Channel, LinkDirection, Modulation};
-use lox_comms::link_budget::{EnvironmentalLosses, LinkStats, frequency_overlap_factor};
+use lox_comms::link_budget::{LinkStats, frequency_overlap_factor};
+use lox_itur::EnvironmentalLosses;
+
+use crate::itur::python::PyEnvironmentalLosses;
 use lox_comms::pattern::{AntennaPattern, DipolePattern, GaussianPattern, ParabolicPattern};
 use lox_comms::pfd;
 use lox_comms::receiver::{ComplexReceiver, NoiseStage, Receiver, SimpleReceiver};
@@ -105,7 +108,7 @@ impl PyDecibel {
         (self.0.as_f64(),)
     }
 
-    fn __repr__(&self) -> String {
+    pub fn __repr__(&self) -> String {
         format!("Decibel({})", repr_f64(self.0.as_f64()))
     }
 
@@ -1009,132 +1012,6 @@ impl PyChannel {
             repr_f64(self.0.roll_off),
             repr_f64(self.0.fec),
             chip,
-        )
-    }
-}
-
-// --- Environmental Losses ---
-
-/// Environmental losses for a link.
-///
-/// Args:
-///     rain: Rain attenuation as Decibel (default Decibel(0)).
-///     gaseous: Gaseous absorption as Decibel (default Decibel(0)).
-///     scintillation: Scintillation loss as Decibel (default Decibel(0)).
-///     atmospheric: Atmospheric loss as Decibel (default Decibel(0)).
-///     cloud: Cloud attenuation as Decibel (default Decibel(0)).
-///     depolarization: Depolarization loss as Decibel (default Decibel(0)).
-#[pyclass(
-    name = "EnvironmentalLosses",
-    module = "lox_space",
-    frozen,
-    from_py_object
-)]
-#[derive(Debug, Clone)]
-pub struct PyEnvironmentalLosses(pub EnvironmentalLosses);
-
-#[pymethods]
-impl PyEnvironmentalLosses {
-    #[new]
-    #[pyo3(signature = (rain=None, gaseous=None, scintillation=None, atmospheric=None, cloud=None, depolarization=None))]
-    fn new(
-        rain: Option<PyDecibel>,
-        gaseous: Option<PyDecibel>,
-        scintillation: Option<PyDecibel>,
-        atmospheric: Option<PyDecibel>,
-        cloud: Option<PyDecibel>,
-        depolarization: Option<PyDecibel>,
-    ) -> Self {
-        Self(EnvironmentalLosses {
-            rain: rain.map_or(Decibel::new(0.0), |d| d.0),
-            gaseous: gaseous.map_or(Decibel::new(0.0), |d| d.0),
-            scintillation: scintillation.map_or(Decibel::new(0.0), |d| d.0),
-            atmospheric: atmospheric.map_or(Decibel::new(0.0), |d| d.0),
-            cloud: cloud.map_or(Decibel::new(0.0), |d| d.0),
-            depolarization: depolarization.map_or(Decibel::new(0.0), |d| d.0),
-        })
-    }
-
-    /// Returns the total environmental loss.
-    fn total(&self) -> PyDecibel {
-        PyDecibel(self.0.total())
-    }
-
-    /// Rain attenuation.
-    #[getter]
-    fn rain(&self) -> PyDecibel {
-        PyDecibel(self.0.rain)
-    }
-
-    /// Gaseous absorption.
-    #[getter]
-    fn gaseous(&self) -> PyDecibel {
-        PyDecibel(self.0.gaseous)
-    }
-
-    /// Scintillation loss.
-    #[getter]
-    fn scintillation(&self) -> PyDecibel {
-        PyDecibel(self.0.scintillation)
-    }
-
-    /// General atmospheric loss (combined total).
-    #[getter]
-    fn atmospheric(&self) -> PyDecibel {
-        PyDecibel(self.0.atmospheric)
-    }
-
-    /// Cloud attenuation.
-    #[getter]
-    fn cloud(&self) -> PyDecibel {
-        PyDecibel(self.0.cloud)
-    }
-
-    /// Depolarization loss.
-    #[getter]
-    fn depolarization(&self) -> PyDecibel {
-        PyDecibel(self.0.depolarization)
-    }
-
-    fn __eq__(&self, other: &PyEnvironmentalLosses) -> bool {
-        self.0.rain.as_f64() == other.0.rain.as_f64()
-            && self.0.gaseous.as_f64() == other.0.gaseous.as_f64()
-            && self.0.scintillation.as_f64() == other.0.scintillation.as_f64()
-            && self.0.atmospheric.as_f64() == other.0.atmospheric.as_f64()
-            && self.0.cloud.as_f64() == other.0.cloud.as_f64()
-            && self.0.depolarization.as_f64() == other.0.depolarization.as_f64()
-    }
-
-    #[allow(clippy::type_complexity)]
-    fn __getnewargs__(
-        &self,
-    ) -> (
-        Option<PyDecibel>,
-        Option<PyDecibel>,
-        Option<PyDecibel>,
-        Option<PyDecibel>,
-        Option<PyDecibel>,
-        Option<PyDecibel>,
-    ) {
-        (
-            Some(PyDecibel(self.0.rain)),
-            Some(PyDecibel(self.0.gaseous)),
-            Some(PyDecibel(self.0.scintillation)),
-            Some(PyDecibel(self.0.atmospheric)),
-            Some(PyDecibel(self.0.cloud)),
-            Some(PyDecibel(self.0.depolarization)),
-        )
-    }
-
-    fn __repr__(&self) -> String {
-        format!(
-            "EnvironmentalLosses(rain={}, gaseous={}, scintillation={}, atmospheric={}, cloud={}, depolarization={})",
-            PyDecibel(self.0.rain).__repr__(),
-            PyDecibel(self.0.gaseous).__repr__(),
-            PyDecibel(self.0.scintillation).__repr__(),
-            PyDecibel(self.0.atmospheric).__repr__(),
-            PyDecibel(self.0.cloud).__repr__(),
-            PyDecibel(self.0.depolarization).__repr__(),
         )
     }
 }
