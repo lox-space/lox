@@ -118,7 +118,8 @@ pub fn atmospheric_attenuation_slant_path(
     let lat_deg = lat.to_degrees();
     let lon_deg = lon.to_degrees();
     let f_ghz = frequency.to_gigahertz();
-    let el_deg = elevation.to_degrees();
+    // ITU-R P.618/P.676 approximate methods are only valid for el ≥ 5°.
+    let el_deg = elevation.to_degrees().max(5.0);
     let d_m = diameter.to_meters();
     let tau_deg = polarisation_tilt.to_degrees();
 

@@ -141,7 +141,8 @@ pub fn cloud_attenuation(
 ) -> f64 {
     let lred = columnar_content_reduced_liquid(lat, lon, p);
     let kl = cloud_liquid_mass_absorption_coefficient(frequency.to_gigahertz());
-    lred * kl / elevation.to_radians().sin()
+    let sin_el = elevation.to_degrees().max(5.0).to_radians().sin();
+    lred * kl / sin_el
 }
 
 /// Coefficients for the log-normal approximation of cloud liquid water content.
