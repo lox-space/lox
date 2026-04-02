@@ -36,7 +36,7 @@ pub fn rain_attenuation(
         lat.to_degrees(),
         lon.to_degrees(),
         frequency.to_gigahertz(),
-        elevation.to_degrees(),
+        elevation.to_degrees().max(5.0),
         p,
         polarisation_tilt.to_degrees(),
         station_altitude.map(|d| d.to_kilometers()),
@@ -151,7 +151,7 @@ pub fn scintillation_attenuation_sigma(
 ) -> Decibel {
     Decibel::new(scintillation_attenuation_sigma_raw(
         frequency.to_gigahertz(),
-        elevation.to_degrees(),
+        elevation.to_degrees().max(5.0),
         diameter.to_meters(),
         eta,
         n_wet,
@@ -217,7 +217,7 @@ pub fn scintillation_attenuation(
 ) -> Decibel {
     Decibel::new(scintillation_attenuation_raw(
         frequency.to_gigahertz(),
-        elevation.to_degrees(),
+        elevation.to_degrees().max(5.0),
         p,
         diameter.to_meters(),
         eta,

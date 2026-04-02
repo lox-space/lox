@@ -310,7 +310,7 @@ pub fn gaseous_attenuation_slant_path(
 ) -> (Decibel, Decibel) {
     let (a_o, a_w) = gaseous_attenuation_slant_path_raw(
         frequency.to_gigahertz(),
-        elevation.to_degrees(),
+        elevation.to_degrees().max(5.0),
         pressure.to_hpa(),
         rho,
         temperature.to_kelvin(),
