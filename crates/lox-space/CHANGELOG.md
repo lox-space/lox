@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.41](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.40...lox-space-v0.1.0-alpha.41) - 2026-04-03
+
+### Added
+
+- *(lox-itur)* port `itur` to Rust
+
+### Other
+
+- *(lox-itur)* refactor constructors
+
 ## [0.1.0-alpha.40](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.39...lox-space-v0.1.0-alpha.40) - 2026-03-31
 
 ### Added
