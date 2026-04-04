@@ -3,14 +3,18 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+use std::f64::consts::TAU;
 use std::str::FromStr;
 
 use lox_space::bodies::DynOrigin;
 use lox_space::bodies::Origin as OriginTrait;
 use lox_space::bodies::TryMeanRadius;
 use lox_space::bodies::TryPointMass;
+use lox_space::core::elements::Keplerian as LoxKeplerian;
+use lox_space::core::units::{AngleUnits, DistanceUnits};
 use lox_space::frames::dynamic::DynFrame;
 use lox_space::frames::traits::ReferenceFrame;
+use lox_space::orbits::sso::inclination_sso;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::prelude::*;
 
@@ -95,6 +99,235 @@ impl Frame {
     }
 }
 
+/// Represents a set of Keplerian orbital elements.
+///
+/// All angular values are in radians and distances in meters.
+#[wasm_bindgen]
+pub struct Keplerian {
+    elements: LoxKeplerian,
+    origin: DynOrigin,
+}
+
+#[wasm_bindgen]
+impl Keplerian {
+    /// Construct a Keplerian orbit from classical elements.
+    ///
+    /// - `semi_major_axis`: meters
+    /// - `eccentricity`: dimensionless
+    /// - `inclination`: radians
+    /// - `raan`: right ascension of ascending node, radians
+    /// - `arg_periapsis`: argument of periapsis, radians
+    /// - `true_anomaly`: radians
+    #[wasm_bindgen(constructor)]
+    pub fn new(
+        semi_major_axis: f64,
+        eccentricity: f64,
+        inclination: f64,
+        raan: f64,
+        arg_periapsis: f64,
+        true_anomaly: f64,
+        origin: &Origin,
+    ) -> Result<Keplerian, JsValue> {
+        let elements = LoxKeplerian::builder()
+            .with_semi_major_axis(semi_major_axis.m(), eccentricity)
+            .with_inclination(inclination.rad())
+            .with_longitude_of_ascending_node(raan.rad())
+            .with_argument_of_periapsis(arg_periapsis.rad())
+            .with_true_anomaly(true_anomaly.rad())
+            .build()
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        Ok(Keplerian {
+            elements,
+            origin: origin.0,
+        })
+    }
+
+    /// Construct a Keplerian orbit from periapsis and apoapsis radii.
+    ///
+    /// - `periapsis_radius`: meters
+    /// - `apoapsis_radius`: meters
+    pub fn from_radii(
+        periapsis_radius: f64,
+        apoapsis_radius: f64,
+        inclination: f64,
+        raan: f64,
+        arg_periapsis: f64,
+        true_anomaly: f64,
+        origin: &Origin,
+    ) -> Result<Keplerian, JsValue> {
+        let elements = LoxKeplerian::builder()
+            .with_radii(periapsis_radius.m(), apoapsis_radius.m())
+            .with_inclination(inclination.rad())
+            .with_longitude_of_ascending_node(raan.rad())
+            .with_argument_of_periapsis(arg_periapsis.rad())
+            .with_true_anomaly(true_anomaly.rad())
+            .build()
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        Ok(Keplerian {
+            elements,
+            origin: origin.0,
+        })
+    }
+
+    /// Construct a Keplerian orbit from periapsis and apoapsis altitudes above the body's mean radius.
+    ///
+    /// - `periapsis_altitude`: meters above mean radius
+    /// - `apoapsis_altitude`: meters above mean radius
+    pub fn from_altitudes(
+        periapsis_altitude: f64,
+        apoapsis_altitude: f64,
+        inclination: f64,
+        raan: f64,
+        arg_periapsis: f64,
+        true_anomaly: f64,
+        origin: &Origin,
+    ) -> Result<Keplerian, JsValue> {
+        let mean_radius = TryMeanRadius::try_mean_radius(&origin.0)
+            .map(|r| r.to_meters().m())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        let elements = LoxKeplerian::builder()
+            .with_altitudes(periapsis_altitude.m(), apoapsis_altitude.m(), mean_radius)
+            .with_inclination(inclination.rad())
+            .with_longitude_of_ascending_node(raan.rad())
+            .with_argument_of_periapsis(arg_periapsis.rad())
+            .with_true_anomaly(true_anomaly.rad())
+            .build()
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        Ok(Keplerian {
+            elements,
+            origin: origin.0,
+        })
+    }
+
+    /// Construct a circular orbit (eccentricity=0, argument of periapsis=0, true anomaly=0).
+    ///
+    /// - `semi_major_axis`: meters
+    /// - `inclination`: radians
+    /// - `raan`: right ascension of ascending node, radians
+    pub fn circular(
+        semi_major_axis: f64,
+        inclination: f64,
+        raan: f64,
+        origin: &Origin,
+    ) -> Result<Keplerian, JsValue> {
+        let elements = LoxKeplerian::builder()
+            .with_semi_major_axis(semi_major_axis.m(), 0.0)
+            .with_inclination(inclination.rad())
+            .with_longitude_of_ascending_node(raan.rad())
+            .with_argument_of_periapsis(0.0f64.rad())
+            .with_true_anomaly(0.0f64.rad())
+            .build()
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        Ok(Keplerian {
+            elements,
+            origin: origin.0,
+        })
+    }
+
+    /// Construct a sun-synchronous orbit (SSO) around Earth by altitude and eccentricity.
+    ///
+    /// The SSO inclination is computed analytically. The orbit is Earth-only.
+    ///
+    /// - `altitude`: meters above Earth's equatorial radius
+    /// - `eccentricity`: dimensionless
+    pub fn sso(altitude: f64, eccentricity: f64, origin: &Origin) -> Result<Keplerian, JsValue> {
+        use lox_space::core::elements::Eccentricity;
+        use lox_space::core::elements::LongitudeOfAscendingNode;
+
+        let ecc =
+            Eccentricity::try_new(eccentricity).map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+        // For SSO we compute semi-major axis from altitude (altitude + equatorial radius of Earth)
+        // inclination_sso takes a semi-major axis (Distance) and eccentricity
+        // We use the Earth equatorial radius via TryMeanRadius as a proxy
+        let mean_radius = TryMeanRadius::try_mean_radius(&origin.0)
+            .map(|r| r.to_meters())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+        let semi_major_axis = (altitude + mean_radius).m();
+
+        let inclination =
+            inclination_sso(semi_major_axis, ecc).map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+        // RAAN defaults to 0 for a time-independent constructor
+        let longitude_of_ascending_node = LongitudeOfAscendingNode::try_new(0.0f64.rad())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+        use lox_space::core::anomalies::TrueAnomaly;
+        use lox_space::core::elements::{ArgumentOfPeriapsis, Keplerian as LoxKeplerianDirect};
+        use lox_space::core::units::Angle;
+
+        let aop = ArgumentOfPeriapsis::try_new(Angle::ZERO)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        let ta = TrueAnomaly::new(Angle::ZERO);
+
+        let elements = LoxKeplerianDirect::new(
+            semi_major_axis,
+            ecc,
+            inclination,
+            longitude_of_ascending_node,
+            aop,
+            ta,
+        );
+
+        Ok(Keplerian {
+            elements,
+            origin: origin.0,
+        })
+    }
+
+    /// Returns the semi-major axis in meters.
+    pub fn semi_major_axis(&self) -> f64 {
+        self.elements.semi_major_axis().to_meters()
+    }
+
+    /// Returns the eccentricity.
+    pub fn eccentricity(&self) -> f64 {
+        self.elements.eccentricity().as_f64()
+    }
+
+    /// Returns the inclination in radians.
+    pub fn inclination(&self) -> f64 {
+        self.elements.inclination().as_f64()
+    }
+
+    /// Returns the right ascension of the ascending node in radians.
+    pub fn raan(&self) -> f64 {
+        self.elements.longitude_of_ascending_node().as_f64()
+    }
+
+    /// Returns the argument of periapsis in radians.
+    pub fn arg_periapsis(&self) -> f64 {
+        self.elements.argument_of_periapsis().as_f64()
+    }
+
+    /// Returns the true anomaly in radians.
+    pub fn true_anomaly(&self) -> f64 {
+        self.elements.true_anomaly().as_f64()
+    }
+
+    /// Returns the orbital period in seconds.
+    ///
+    /// Returns an error for non-elliptic orbits or if the origin's GM is undefined.
+    pub fn orbital_period(&self) -> Result<f64, JsValue> {
+        let mu = TryPointMass::try_gravitational_parameter(&self.origin)
+            .map(|gp| gp.as_f64())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        let a = self.elements.semi_major_axis().to_meters();
+        if !self.elements.eccentricity().is_circular_or_elliptic() {
+            return Err(JsValue::from_str(
+                "orbital period is only defined for circular and elliptic orbits",
+            ));
+        }
+        Ok(TAU * (a.powi(3) / mu).sqrt())
+    }
+
+    /// Returns the origin (central body) of this orbit.
+    pub fn origin(&self) -> Origin {
+        Origin(self.origin)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -156,5 +389,152 @@ mod tests {
     #[test]
     fn test_frame_unknown() {
         assert!(DynFrame::from_str("UNKNOWN_FRAME_XYZ").is_err());
+    }
+
+    // Keplerian tests
+    //
+    // These tests use lox_core types directly to avoid triggering JsValue on non-wasm32
+    // targets (wasm-bindgen's JsValue panics outside wasm).
+
+    use lox_space::core::elements::{Eccentricity, Keplerian as LoxKeplerianTest};
+    use lox_space::orbits::sso::inclination_sso;
+
+    #[test]
+    fn test_keplerian_roundtrip() {
+        // Molniya-like orbit
+        let sma = 26_600_000.0_f64;
+        let ecc = 0.74;
+        let inc = 63.4_f64.to_radians();
+        let raan = 0.5;
+        let aop = 1.2;
+        let ta = 0.0;
+
+        let k = LoxKeplerianTest::builder()
+            .with_semi_major_axis(sma.m(), ecc)
+            .with_inclination(inc.rad())
+            .with_longitude_of_ascending_node(raan.rad())
+            .with_argument_of_periapsis(aop.rad())
+            .with_true_anomaly(ta.rad())
+            .build()
+            .unwrap();
+
+        assert!((k.semi_major_axis().to_meters() - sma).abs() < 1.0);
+        assert!((k.eccentricity().as_f64() - ecc).abs() < 1e-12);
+        assert!((k.inclination().as_f64() - inc).abs() < 1e-12);
+        assert!((k.longitude_of_ascending_node().as_f64() - raan).abs() < 1e-12);
+        assert!((k.argument_of_periapsis().as_f64() - aop).abs() < 1e-12);
+        assert!((k.true_anomaly().as_f64() - ta).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_keplerian_orbital_period_molniya() {
+        use lox_space::core::elements::GravitationalParameter;
+
+        let sma = 26_600_000.0_f64;
+        let ecc = 0.74;
+        let inc = 63.4_f64.to_radians();
+        let mu_km3 = 398600.43550702266; // km³/s²
+        let mu = GravitationalParameter::km3_per_s2(mu_km3);
+
+        let k = LoxKeplerianTest::builder()
+            .with_semi_major_axis(sma.m(), ecc)
+            .with_inclination(inc.rad())
+            .with_longitude_of_ascending_node(0.0_f64.rad())
+            .with_argument_of_periapsis(0.0_f64.rad())
+            .build()
+            .unwrap();
+
+        let period = k.orbital_period(mu).unwrap();
+        let secs = period.to_seconds();
+        let period_s = secs.hi + secs.lo;
+        assert!((period_s - 43082.0).abs() < 500.0, "period = {period_s}");
+    }
+
+    #[test]
+    fn test_keplerian_invalid_eccentricity() {
+        let result = Eccentricity::try_new(-0.1);
+        assert!(result.is_err(), "Expected error for negative eccentricity");
+    }
+
+    #[test]
+    fn test_keplerian_from_radii_leo() {
+        // LEO: periapsis ~6578 km, apoapsis ~6728 km
+        let rp = 6_578_000.0_f64;
+        let ra = 6_728_000.0_f64;
+        let inc = 51.6_f64.to_radians();
+
+        let k = LoxKeplerianTest::builder()
+            .with_radii(rp.m(), ra.m())
+            .with_inclination(inc.rad())
+            .with_longitude_of_ascending_node(0.0_f64.rad())
+            .with_argument_of_periapsis(0.0_f64.rad())
+            .build()
+            .unwrap();
+
+        let expected_sma = (rp + ra) / 2.0;
+        assert!((k.semi_major_axis().to_meters() - expected_sma).abs() < 1.0);
+        assert!(k.eccentricity().as_f64() > 0.0);
+        assert!((k.eccentricity().as_f64() - (ra - rp) / (ra + rp)).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_keplerian_from_altitudes_leo() {
+        // LEO altitudes: periapsis 200 km, apoapsis 350 km above mean radius ~6371 km
+        let alt_p = 200_000.0_f64;
+        let alt_a = 350_000.0_f64;
+        let inc = 51.6_f64.to_radians();
+        let mean_r = TryMeanRadius::try_mean_radius(&DynOrigin::from_str("Earth").unwrap())
+            .unwrap()
+            .to_meters();
+
+        let k = LoxKeplerianTest::builder()
+            .with_altitudes(alt_p.m(), alt_a.m(), mean_r.m())
+            .with_inclination(inc.rad())
+            .with_longitude_of_ascending_node(0.0_f64.rad())
+            .with_argument_of_periapsis(0.0_f64.rad())
+            .build()
+            .unwrap();
+
+        let expected_sma = (alt_p + alt_a) / 2.0 + mean_r;
+        assert!((k.semi_major_axis().to_meters() - expected_sma).abs() < 1.0);
+    }
+
+    #[test]
+    fn test_keplerian_circular() {
+        let sma = 7_000_000.0_f64;
+        let inc = 45.0_f64.to_radians();
+        let raan = 0.3_f64;
+
+        let k = LoxKeplerianTest::builder()
+            .with_semi_major_axis(sma.m(), 0.0)
+            .with_inclination(inc.rad())
+            .with_longitude_of_ascending_node(raan.rad())
+            .with_argument_of_periapsis(0.0_f64.rad())
+            .with_true_anomaly(0.0_f64.rad())
+            .build()
+            .unwrap();
+
+        assert!(
+            (k.eccentricity().as_f64() - 0.0).abs() < 1e-12,
+            "eccentricity should be 0"
+        );
+        assert!((k.argument_of_periapsis().as_f64() - 0.0).abs() < 1e-12);
+        assert!((k.true_anomaly().as_f64() - 0.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_keplerian_sso() {
+        // 600 km altitude
+        let alt = 600_000.0_f64;
+        let ecc = Eccentricity::default(); // 0.0
+        let earth = DynOrigin::from_str("Earth").unwrap();
+        let mean_r = TryMeanRadius::try_mean_radius(&earth).unwrap().to_meters();
+        let semi_major_axis = (alt + mean_r).m();
+        let inclination = inclination_sso(semi_major_axis, ecc).unwrap();
+        let inc_deg = inclination.as_f64().to_degrees();
+        assert!(
+            inc_deg > 97.0 && inc_deg < 99.0,
+            "SSO inclination = {inc_deg} deg"
+        );
     }
 }
