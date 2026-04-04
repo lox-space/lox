@@ -1,0 +1,110 @@
+---
+title: Getting Started
+description: Getting started with Lox
+---
+
+import { Code, Tabs, TabItem } from "@astrojs/starlight/components";
+import mainPy from "/src/assets/code/main.py?raw";
+import mainRs from "/src/assets/code/main.rs?raw";
+
+Lox is an MPLv2-licensed open-source astrodynamics toolbox that can be used in Rust and Python.
+This guide will help you get started with a new project.
+
+## Prerequisites
+
+Lox is currently supported on the following operating systems:
+
+- macOS (ARM/Intel)
+- Linux (x64)
+- Windows (x86/x64)
+
+Lox does not have any external dependencies except a working Rust or Python environment.
+We recommend installing Rust via [rustup](https://rustup.rs) and Python via [uv](https://docs.astral.sh/uv)
+if they are not already installed.
+If you already have Rust or Python installed, make sure that the installed versions
+meet or exceed the versions below.
+
+- Rust 1.90+
+- Python 3.9+
+
+## Required Data
+
+Some functionality of Lox requires external data such as Earth orientation data or an ephemeris.
+
+- [finals.all.csv](https://datacenter.iers.org/data/csv/finals.all.csv)
+  - Earth orientation data for the IAU1980 theory of nutation.
+- [finals2000A.all.csv](https://datacenter.iers.org/data/csv/finals2000A.all.csv)
+  - Earth orientation data for the IAU2000A theory of nutation.
+- [de440s.bsp](https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de442s.bsp)
+  - Planetary ephemerides (or any other planetary SPK kernel).
+
+## Quickstart
+
+### Create a new project
+
+Create a new project called `learn-lox` by running the following commands in your terminal.
+
+<Tabs syncKey="lang">
+  <TabItem label="Rust">
+    <Code code="cargo new --bin learn-lox" lang="shell" />
+  </TabItem>
+  <TabItem label="Python">
+    <Code code="uv init learn-lox" lang="shell" />
+  </TabItem>
+  <TabItem label="Python (pip)">
+    <Code
+      code={"mkdir learn-lox\n" + "python -m venv learn-lox/.venv"}
+      lang="shell"
+    />
+  </TabItem>
+</Tabs>
+
+### Install Lox
+
+Change into the newly created `learn-lox` directory and install the Lox library by running the
+following commands.
+
+<Tabs syncKey="lang">
+  <TabItem label="Rust">
+    <Code code={"cd learn-lox\n" + "cargo add lox-space"} lang="shell" />
+  </TabItem>
+  <TabItem label="Python">
+    <Code code={"cd learn-lox\n" + "uv add lox-space"} lang="shell" />
+  </TabItem>
+  <TabItem label="Python (pip)">
+    <Code
+      code={
+        "cd learn-lox\n" + "source .venv/activate\n" + "pip install lox-space"
+      }
+      lang="shell"
+    />
+  </TabItem>
+</Tabs>
+
+### Hello, Lox!
+
+Open `main.{py,rs}` in your favourite code editor (or create it if it does not exist)
+and replace its contents with the following code.
+
+<Tabs syncKey="lang">
+  <TabItem label="Rust">
+    <Code code={mainRs} title="src/main.rs" lang="rust" />
+  </TabItem>
+  <TabItem label="Python">
+    <Code code={mainPy} title="main.py" lang="python" />
+  </TabItem>
+</Tabs>
+
+Run the program to make sure that everything works.
+
+<Tabs syncKey="lang">
+  <TabItem label="Rust">
+    <Code code={"cargo run"} lang="shell" />
+  </TabItem>
+  <TabItem label="Python">
+    <Code code={"uv run main.py"} lang="shell" />
+  </TabItem>
+  <TabItem label="Python (pip)">
+    <Code code={"python main.py"} lang="shell" />
+  </TabItem>
+</Tabs>

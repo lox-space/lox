@@ -1,0 +1,38 @@
+{
+  "name": "kerolox",
+  "private": true,
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro check && astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/check": "^0.9.8",
+    "@astrojs/react": "^5.0.2",
+    "@astrojs/svelte": "^8.0.4",
+    "@lox-space/react": "workspace:^",
+    "@lox-space/wasm": "workspace:*",
+    "@react-three/fiber": "^9.5.0",
+    "@tailwindcss/vite": "^4.2.2",
+    "@threlte/core": "^8.5.4",
+    "@threlte/extras": "^9.13.3",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "astro": "^6.1.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "svelte": "^5.55.0",
+    "svelte-tweakpane-ui": "^1.5.15",
+    "tailwindcss": "^4.2.2",
+    "three": "^0.183.2",
+    "typescript": "^6.0.2",
+    "vite-plugin-wasm": "^3.6.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.183.1"
+  }
+}

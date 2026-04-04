@@ -1,0 +1,20 @@
+{
+  "name": "@lox-space/tsconfig",
+  "version": "0.0.0",
+  "license": "MPL-2.0",
+  "main": "index.js",
+  "files": [
+    "base.json",
+    "node16.json",
+    "react-library.json"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lox-space/lox",
+    "directory": "packages/lox-space-tsconfig"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}

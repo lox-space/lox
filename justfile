@@ -73,3 +73,16 @@ docs-serve:
 # Serve Python documentation and open in browser
 docs-open:
     uv run --group docs zensical serve --open
+
+# Web / TypeScript commands
+web-build:
+    pnpm turbo build
+
+web-dev:
+    pnpm turbo dev
+
+web-test:
+    pnpm turbo test
+
+web-lint:
+    pnpm turbo lint
