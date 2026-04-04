@@ -342,6 +342,23 @@ impl Keplerian {
             frame: DynFrame::default(),
         })
     }
+
+    /// Trace the orbit into `n` evenly-spaced Cartesian states over one full revolution.
+    ///
+    /// Returns an error for non-elliptic orbits or if the origin's GM is undefined.
+    pub fn trace(&self, n: usize) -> Result<Trajectory, JsValue> {
+        let gp = TryPointMass::try_gravitational_parameter(&self.origin)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        let states = self
+            .elements
+            .trace(gp, n)
+            .ok_or_else(|| JsValue::from_str("trace is only available for elliptic orbits"))?;
+        Ok(Trajectory {
+            states,
+            origin: self.origin,
+            frame: DynFrame::default(),
+        })
+    }
 }
 
 /// Represents a Cartesian state vector (position + velocity).
@@ -446,6 +463,54 @@ impl Cartesian {
             elements,
             origin: self.origin,
         })
+    }
+}
+
+/// A sequence of Cartesian states sampled along an orbit.
+#[wasm_bindgen]
+pub struct Trajectory {
+    states: Vec<LoxCartesian>,
+    origin: DynOrigin,
+    frame: DynFrame,
+}
+
+#[wasm_bindgen]
+impl Trajectory {
+    /// Returns the number of states in this trajectory.
+    pub fn len(&self) -> usize {
+        self.states.len()
+    }
+
+    /// Returns `true` if the trajectory contains no states.
+    pub fn is_empty(&self) -> bool {
+        self.states.is_empty()
+    }
+
+    /// Returns all states as an array of `Cartesian` objects.
+    pub fn states(&self) -> js_sys::Array {
+        self.states
+            .iter()
+            .map(|c| {
+                JsValue::from(Cartesian {
+                    state: *c,
+                    origin: self.origin,
+                    frame: self.frame,
+                })
+            })
+            .collect()
+    }
+
+    /// Returns interleaved position components `[x0,y0,z0, x1,y1,z1, ...]` in meters.
+    ///
+    /// This is the fast path for populating a Three.js `BufferGeometry`.
+    pub fn to_buffer(&self) -> Vec<f64> {
+        self.states
+            .iter()
+            .flat_map(|c| {
+                let p = c.position();
+                [p.x, p.y, p.z]
+            })
+            .collect()
     }
 }
 
@@ -771,5 +836,73 @@ mod tests {
             (k1.true_anomaly().as_f64() - k2.true_anomaly().as_f64()).abs() < 1e-10,
             "ta mismatch"
         );
+    }
+
+    // Trajectory tests
+
+    fn molniya_keplerian() -> LoxKeplerianTest {
+        LoxKeplerianTest::builder()
+            .with_semi_major_axis(26_600_000.0_f64.m(), 0.74)
+            .with_inclination(63.4_f64.to_radians().rad())
+            .with_longitude_of_ascending_node(0.0_f64.rad())
+            .with_argument_of_periapsis(0.0_f64.rad())
+            .with_true_anomaly(0.0_f64.rad())
+            .build()
+            .unwrap()
+    }
+
+    fn earth_gp() -> lox_space::core::elements::GravitationalParameter {
+        lox_space::core::elements::GravitationalParameter::km3_per_s2(398600.43550702266)
+    }
+
+    #[test]
+    fn test_trajectory_to_buffer() {
+        let n = 100;
+        let k = molniya_keplerian();
+        let gp = earth_gp();
+        let states = k.trace(gp, n).unwrap();
+        let traj = Trajectory {
+            states,
+            origin: DynOrigin::from_str("Earth").unwrap(),
+            frame: DynFrame::default(),
+        };
+        let buf = traj.to_buffer();
+        assert_eq!(buf.len(), n * 3);
+        // First position should be non-zero (orbit is far from origin)
+        let r2 = buf[0] * buf[0] + buf[1] * buf[1] + buf[2] * buf[2];
+        assert!(r2 > 0.0, "first position should be non-zero");
+    }
+
+    #[test]
+    fn test_trajectory_len() {
+        let n = 72;
+        let k = molniya_keplerian();
+        let gp = earth_gp();
+        let states = k.trace(gp, n).unwrap();
+        let traj = Trajectory {
+            states,
+            origin: DynOrigin::from_str("Earth").unwrap(),
+            frame: DynFrame::default(),
+        };
+        assert_eq!(traj.len(), n);
+        assert!(!traj.is_empty());
+    }
+
+    #[test]
+    fn test_trace_positions_reasonable() {
+        // Molniya orbit: periapsis ~6900 km, apoapsis ~46300 km
+        let n = 360;
+        let k = molniya_keplerian();
+        let gp = earth_gp();
+        let states = k.trace(gp, n).unwrap();
+        for state in &states {
+            let p = state.position();
+            let r_m = p.length();
+            let r_km = r_m / 1000.0;
+            assert!(
+                r_km >= 6_000.0 && r_km <= 50_000.0,
+                "position radius out of range: {r_km} km"
+            );
+        }
     }
 }
