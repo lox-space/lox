@@ -10,7 +10,9 @@ use lox_space::bodies::DynOrigin;
 use lox_space::bodies::Origin as OriginTrait;
 use lox_space::bodies::TryMeanRadius;
 use lox_space::bodies::TryPointMass;
+use lox_space::core::coords::Cartesian as LoxCartesian;
 use lox_space::core::elements::Keplerian as LoxKeplerian;
+use lox_space::core::glam::DVec3;
 use lox_space::core::units::{AngleUnits, DistanceUnits};
 use lox_space::frames::dynamic::DynFrame;
 use lox_space::frames::traits::ReferenceFrame;
@@ -326,6 +328,125 @@ impl Keplerian {
     pub fn origin(&self) -> Origin {
         Origin(self.origin)
     }
+
+    /// Convert this Keplerian orbit to a Cartesian state vector.
+    ///
+    /// Returns an error if the origin's gravitational parameter is not defined.
+    pub fn to_cartesian(&self) -> Result<Cartesian, JsValue> {
+        let gp = TryPointMass::try_gravitational_parameter(&self.origin)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        let cart = self.elements.to_cartesian(gp);
+        Ok(Cartesian {
+            state: cart,
+            origin: self.origin,
+            frame: DynFrame::default(),
+        })
+    }
+}
+
+/// Represents a Cartesian state vector (position + velocity).
+///
+/// Position components are in meters; velocity components are in m/s.
+#[wasm_bindgen]
+pub struct Cartesian {
+    state: LoxCartesian,
+    origin: DynOrigin,
+    frame: DynFrame,
+}
+
+#[wasm_bindgen]
+impl Cartesian {
+    /// Construct a Cartesian state from position and velocity arrays.
+    ///
+    /// - `position`: `[x, y, z]` in meters
+    /// - `velocity`: `[vx, vy, vz]` in m/s
+    #[wasm_bindgen(constructor)]
+    pub fn new(
+        position: &[f64],
+        velocity: &[f64],
+        origin: &Origin,
+        frame: &Frame,
+    ) -> Result<Cartesian, JsValue> {
+        if position.len() != 3 {
+            return Err(JsValue::from_str("`position` must have exactly 3 elements"));
+        }
+        if velocity.len() != 3 {
+            return Err(JsValue::from_str("`velocity` must have exactly 3 elements"));
+        }
+        let pos = DVec3::new(position[0], position[1], position[2]);
+        let vel = DVec3::new(velocity[0], velocity[1], velocity[2]);
+        let state = LoxCartesian::from_vecs(pos, vel);
+        Ok(Cartesian {
+            state,
+            origin: origin.0,
+            frame: frame.0,
+        })
+    }
+
+    /// Returns the position vector `[x, y, z]` in meters.
+    pub fn position(&self) -> Vec<f64> {
+        let p = self.state.position();
+        vec![p.x, p.y, p.z]
+    }
+
+    /// Returns the velocity vector `[vx, vy, vz]` in m/s.
+    pub fn velocity(&self) -> Vec<f64> {
+        let v = self.state.velocity();
+        vec![v.x, v.y, v.z]
+    }
+
+    /// Returns the x position component in meters.
+    pub fn x(&self) -> f64 {
+        self.state.x().to_meters()
+    }
+
+    /// Returns the y position component in meters.
+    pub fn y(&self) -> f64 {
+        self.state.y().to_meters()
+    }
+
+    /// Returns the z position component in meters.
+    pub fn z(&self) -> f64 {
+        self.state.z().to_meters()
+    }
+
+    /// Returns the x velocity component in m/s.
+    pub fn vx(&self) -> f64 {
+        self.state.vx().to_meters_per_second()
+    }
+
+    /// Returns the y velocity component in m/s.
+    pub fn vy(&self) -> f64 {
+        self.state.vy().to_meters_per_second()
+    }
+
+    /// Returns the z velocity component in m/s.
+    pub fn vz(&self) -> f64 {
+        self.state.vz().to_meters_per_second()
+    }
+
+    /// Returns the origin (central body) of this state.
+    pub fn origin(&self) -> Origin {
+        Origin(self.origin)
+    }
+
+    /// Returns the reference frame of this state.
+    pub fn frame(&self) -> Frame {
+        Frame(self.frame)
+    }
+
+    /// Convert this Cartesian state to Keplerian orbital elements.
+    ///
+    /// Returns an error if the origin's gravitational parameter is not defined.
+    pub fn to_keplerian(&self) -> Result<Keplerian, JsValue> {
+        let gp = TryPointMass::try_gravitational_parameter(&self.origin)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        let elements = self.state.to_keplerian(gp);
+        Ok(Keplerian {
+            elements,
+            origin: self.origin,
+        })
+    }
 }
 
 #[cfg(test)]
@@ -535,6 +656,120 @@ mod tests {
         assert!(
             inc_deg > 97.0 && inc_deg < 99.0,
             "SSO inclination = {inc_deg} deg"
+        );
+    }
+
+    // Cartesian tests
+
+    #[test]
+    fn test_cartesian_construction_roundtrip() {
+        let pos = [7_000_000.0_f64, 0.0, 0.0];
+        let vel = [0.0_f64, 7_500.0, 0.0];
+        let state = LoxCartesian::from_vecs(
+            DVec3::new(pos[0], pos[1], pos[2]),
+            DVec3::new(vel[0], vel[1], vel[2]),
+        );
+        let p = state.position();
+        let v = state.velocity();
+        assert!((p.x - pos[0]).abs() < 1e-6);
+        assert!((p.y - pos[1]).abs() < 1e-6);
+        assert!((p.z - pos[2]).abs() < 1e-6);
+        assert!((v.x - vel[0]).abs() < 1e-9);
+        assert!((v.y - vel[1]).abs() < 1e-9);
+        assert!((v.z - vel[2]).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_cartesian_component_getters() {
+        let px = 6_778_000.0_f64;
+        let py = 100_000.0_f64;
+        let pz = -50_000.0_f64;
+        let vx = 200.0_f64;
+        let vy = 7_500.0_f64;
+        let vz = -10.0_f64;
+        let state = LoxCartesian::from_vecs(DVec3::new(px, py, pz), DVec3::new(vx, vy, vz));
+        assert!((state.x().to_meters() - px).abs() < 1e-6);
+        assert!((state.y().to_meters() - py).abs() < 1e-6);
+        assert!((state.z().to_meters() - pz).abs() < 1e-6);
+        assert!((state.vx().to_meters_per_second() - vx).abs() < 1e-9);
+        assert!((state.vy().to_meters_per_second() - vy).abs() < 1e-9);
+        assert!((state.vz().to_meters_per_second() - vz).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_keplerian_to_cartesian_position_magnitude() {
+        use lox_space::core::elements::GravitationalParameter;
+
+        // Circular LEO at 7000 km radius
+        let sma = 7_000_000.0_f64;
+        let mu = GravitationalParameter::km3_per_s2(398600.43550702266);
+
+        let k = LoxKeplerianTest::builder()
+            .with_semi_major_axis(sma.m(), 0.0)
+            .with_inclination(0.0_f64.rad())
+            .with_longitude_of_ascending_node(0.0_f64.rad())
+            .with_argument_of_periapsis(0.0_f64.rad())
+            .with_true_anomaly(0.0_f64.rad())
+            .build()
+            .unwrap();
+
+        let cart = k.to_cartesian(mu);
+        let r = cart.position().length();
+        // For circular orbit at true anomaly = 0, |r| should equal sma
+        assert!((r - sma).abs() < 1.0, "position magnitude = {r}");
+    }
+
+    #[test]
+    fn test_keplerian_cartesian_roundtrip() {
+        use lox_space::core::elements::GravitationalParameter;
+
+        let sma = 26_600_000.0_f64;
+        let ecc = 0.74;
+        let inc = 63.4_f64.to_radians();
+        let raan = 0.5;
+        let aop = 1.2;
+        let ta = 0.3;
+        let mu = GravitationalParameter::km3_per_s2(398600.43550702266);
+
+        let k1 = LoxKeplerianTest::builder()
+            .with_semi_major_axis(sma.m(), ecc)
+            .with_inclination(inc.rad())
+            .with_longitude_of_ascending_node(raan.rad())
+            .with_argument_of_periapsis(aop.rad())
+            .with_true_anomaly(ta.rad())
+            .build()
+            .unwrap();
+
+        let k2 = k1.to_cartesian(mu).to_keplerian(mu);
+
+        assert!(
+            (k1.semi_major_axis().to_meters() - k2.semi_major_axis().to_meters()).abs() < 1.0,
+            "sma mismatch: {} vs {}",
+            k1.semi_major_axis().to_meters(),
+            k2.semi_major_axis().to_meters()
+        );
+        assert!(
+            (k1.eccentricity().as_f64() - k2.eccentricity().as_f64()).abs() < 1e-10,
+            "ecc mismatch"
+        );
+        assert!(
+            (k1.inclination().as_f64() - k2.inclination().as_f64()).abs() < 1e-10,
+            "inc mismatch"
+        );
+        assert!(
+            (k1.longitude_of_ascending_node().as_f64() - k2.longitude_of_ascending_node().as_f64())
+                .abs()
+                < 1e-10,
+            "raan mismatch"
+        );
+        assert!(
+            (k1.argument_of_periapsis().as_f64() - k2.argument_of_periapsis().as_f64()).abs()
+                < 1e-10,
+            "aop mismatch"
+        );
+        assert!(
+            (k1.true_anomaly().as_f64() - k2.true_anomaly().as_f64()).abs() < 1e-10,
+            "ta mismatch"
         );
     }
 }
