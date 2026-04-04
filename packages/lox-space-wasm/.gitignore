@@ -1,0 +1,12 @@
+# Rust build artifacts
+/target/
+Cargo.lock
+
+# wasm-pack build output
+/pkg/
+
+# Node modules (if any)
+node_modules/
+
+# Debug files
+*.pdb

@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+#
+# SPDX-License-Identifier: MPL-2.0
+
+[package]
+name = "lox-space-wasm"
+version = "0.1.0"
+authors = ["Lox Space Contributors"]
+edition = "2021"
+description = "WebAssembly bindings for Lox Space orbital mechanics"
+license = "MPL-2.0"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+console_error_panic_hook = { version = "0.1", optional = true }
+lox-space = { path = "../../crates/lox-space" }
+
+[features]
+default = ["console_error_panic_hook"]

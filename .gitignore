@@ -33,3 +33,10 @@ flamegraph.svg
 .vscode/
 .claude/
 *.profraw
+
+# Node / Web
+node_modules/
+.turbo/
+pkg/
+.astro/
+*.local
