@@ -1,162 +1,160 @@
 // SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+// SPDX-FileCopyrightText: 2026 Lox Space Contributors
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use lox_space::core::{
-    elements::{GravitationalParameter, Keplerian},
-    units::{AngleUnits, DistanceUnits},
-};
-use lox_space::orbits::DynKeplerianOrbit;
+use std::str::FromStr;
+
+use lox_space::bodies::DynOrigin;
+use lox_space::bodies::Origin as OriginTrait;
+use lox_space::bodies::TryMeanRadius;
+use lox_space::bodies::TryPointMass;
+use lox_space::frames::dynamic::DynFrame;
+use lox_space::frames::traits::ReferenceFrame;
+use wasm_bindgen::JsValue;
 use wasm_bindgen::prelude::*;
 
-/// Initialize the WASM module with panic hook for better error messages
+/// Initialize the WASM module with panic hook for better error messages.
 #[wasm_bindgen(start)]
 pub fn init() {
     #[cfg(feature = "console_error_panic_hook")]
     console_error_panic_hook::set_once();
 }
 
-/// A simple greeting function demonstrating string handling
+/// Represents a celestial body (planet, moon, barycenter, etc.).
 #[wasm_bindgen]
-pub fn greet(name: &str) -> String {
-    format!("Hello, {}! Welcome to Lox Space WASM.", name)
-}
-
-/// Example math function: calculate orbital velocity
-/// v = sqrt(μ / r)
-#[wasm_bindgen]
-pub fn orbital_velocity(gravitational_parameter: f64, radius: f64) -> f64 {
-    (gravitational_parameter / radius).sqrt()
-}
-
-/// Example function: convert degrees to radians
-#[wasm_bindgen]
-pub fn deg_to_rad(degrees: f64) -> f64 {
-    degrees * std::f64::consts::PI / 180.0
-}
-
-/// Example function: convert radians to degrees
-#[wasm_bindgen]
-pub fn rad_to_deg(radians: f64) -> f64 {
-    radians * 180.0 / std::f64::consts::PI
-}
+pub struct Origin(DynOrigin);
 
 #[wasm_bindgen]
-pub struct KeplerianOrbit(DynKeplerianOrbit);
-
-#[wasm_bindgen]
-impl KeplerianOrbit {
+impl Origin {
+    /// Construct an Origin from a body name (string) or NAIF ID (number).
     #[wasm_bindgen(constructor)]
-    pub fn new() -> Self {
-        todo!()
+    pub fn new(value: JsValue) -> Result<Origin, JsValue> {
+        if let Some(name) = value.as_string() {
+            let origin =
+                DynOrigin::from_str(&name).map_err(|e| JsValue::from_str(&e.to_string()))?;
+            return Ok(Origin(origin));
+        }
+        if let Some(id) = value.as_f64() {
+            let origin =
+                DynOrigin::try_from(id as i32).map_err(|e| JsValue::from_str(&e.to_string()))?;
+            return Ok(Origin(origin));
+        }
+        Err(JsValue::from_str(
+            "`origin` must be either a string (name) or a number (NAIF ID)",
+        ))
+    }
+
+    /// Return the name of this body.
+    pub fn name(&self) -> String {
+        OriginTrait::name(&self.0).to_string()
+    }
+
+    /// Return the NAIF ID of this body.
+    pub fn id(&self) -> i32 {
+        OriginTrait::id(&self.0).0
+    }
+
+    /// Return the gravitational parameter (GM) in m³/s².
+    pub fn gravitational_parameter(&self) -> Result<f64, JsValue> {
+        TryPointMass::try_gravitational_parameter(&self.0)
+            .map(|gp| gp.as_f64())
+            .map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+
+    /// Return the mean radius in meters.
+    pub fn mean_radius(&self) -> Result<f64, JsValue> {
+        TryMeanRadius::try_mean_radius(&self.0)
+            .map(|r| r.to_meters())
+            .map_err(|e| JsValue::from_str(&e.to_string()))
     }
 }
 
+/// Represents a reference frame for positioning and transformations.
 #[wasm_bindgen]
-pub struct KeplerianElements {
-    semi_major_axis: f64,
-    eccentricity: f64,
-    inclination: f64,
-    longitude_of_ascending_node: f64,
-    argument_of_periapsis: f64,
-    true_anomaly: f64,
-}
+pub struct Frame(DynFrame);
 
 #[wasm_bindgen]
-impl KeplerianElements {
+impl Frame {
+    /// Construct a Frame from its abbreviation (e.g., "ICRF", "ITRF").
     #[wasm_bindgen(constructor)]
-    pub fn new(
-        semi_major_axis: f64,
-        eccentricity: f64,
-        inclination: f64,
-        longitude_of_ascending_node: f64,
-        argument_of_periapsis: f64,
-        true_anomaly: f64,
-    ) -> Self {
-        Self {
-            semi_major_axis,
-            eccentricity,
-            inclination,
-            longitude_of_ascending_node,
-            argument_of_periapsis,
-            true_anomaly,
-        }
+    pub fn new(abbreviation: &str) -> Result<Frame, JsValue> {
+        DynFrame::from_str(abbreviation)
+            .map(Frame)
+            .map_err(|e| JsValue::from_str(&e.to_string()))
     }
 
-    #[wasm_bindgen]
-    pub fn position(&self, grav_param: f64) -> Vec<f64> {
-        let grav_param = GravitationalParameter::km3_per_s2(grav_param);
-        self.to_lox()
-            .to_cartesian(grav_param)
-            .position()
-            .to_array()
-            .map(|v| v * 1e-3)
-            .to_vec()
+    /// Return the full name of this reference frame.
+    pub fn name(&self) -> String {
+        ReferenceFrame::name(&self.0)
     }
 
-    #[wasm_bindgen]
-    pub fn trace(&self, grav_param: f64, n: usize) -> Positions {
-        let grav_param = GravitationalParameter::km3_per_s2(grav_param);
-        let orbit = self.to_lox().trace(grav_param, n).unwrap();
-
-        let mut x = Vec::with_capacity(n);
-        let mut y = Vec::with_capacity(n);
-        let mut z = Vec::with_capacity(n);
-        for c in orbit {
-            x.push(c.x().to_kilometers());
-            y.push(c.y().to_kilometers());
-            z.push(c.z().to_kilometers());
-        }
-
-        Positions { x, y, z }
+    /// Return the abbreviation of this reference frame.
+    pub fn abbreviation(&self) -> String {
+        self.0.abbreviation()
     }
-
-    fn to_lox(&self) -> Keplerian {
-        Keplerian::builder()
-            .with_semi_major_axis(self.semi_major_axis.km(), self.eccentricity)
-            .with_inclination(self.inclination.deg())
-            .with_longitude_of_ascending_node(self.longitude_of_ascending_node.deg())
-            .with_argument_of_periapsis(self.argument_of_periapsis.deg())
-            .with_true_anomaly(self.true_anomaly.deg())
-            .build()
-            .unwrap()
-    }
-}
-
-#[wasm_bindgen(getter_with_clone)]
-pub struct Positions {
-    pub x: Vec<f64>,
-    pub y: Vec<f64>,
-    pub z: Vec<f64>,
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    // Origin tests
+
     #[test]
-    fn test_greet() {
-        let result = greet("World");
-        assert!(result.contains("Hello, World!"));
+    fn test_origin_from_name() {
+        let origin = DynOrigin::from_str("Earth").unwrap();
+        assert_eq!(OriginTrait::name(&origin), "Earth");
     }
 
     #[test]
-    fn test_orbital_velocity() {
-        // Earth's standard gravitational parameter: 398600.4418 km³/s²
-        // Low Earth orbit radius: ~6700 km
-        let velocity = orbital_velocity(398600.4418, 6700.0);
-        assert!((velocity - 7.714).abs() < 0.01);
+    fn test_origin_from_naif_id() {
+        let origin = DynOrigin::try_from(399i32).unwrap();
+        assert_eq!(OriginTrait::name(&origin), "Earth");
     }
 
     #[test]
-    fn test_deg_to_rad() {
-        let radians = deg_to_rad(180.0);
-        assert!((radians - std::f64::consts::PI).abs() < 1e-10);
+    fn test_origin_gravitational_parameter() {
+        let origin = DynOrigin::from_str("Earth").unwrap();
+        let gp = TryPointMass::try_gravitational_parameter(&origin)
+            .unwrap()
+            .as_f64();
+        assert!((gp - 3.986e14).abs() < 1e11, "gp = {gp}");
     }
 
     #[test]
-    fn test_rad_to_deg() {
-        let degrees = rad_to_deg(std::f64::consts::PI);
-        assert!((degrees - 180.0).abs() < 1e-10);
+    fn test_origin_mean_radius() {
+        let origin = DynOrigin::from_str("Earth").unwrap();
+        let r = TryMeanRadius::try_mean_radius(&origin).unwrap().to_meters();
+        assert!((r - 6.371e6).abs() < 1e4, "r = {r}");
+    }
+
+    #[test]
+    fn test_origin_unknown_name() {
+        assert!(DynOrigin::from_str("Tatooine").is_err());
+    }
+
+    #[test]
+    fn test_origin_unknown_id() {
+        assert!(DynOrigin::try_from(999999i32).is_err());
+    }
+
+    // Frame tests
+
+    #[test]
+    fn test_frame_icrf() {
+        let frame = DynFrame::from_str("ICRF").unwrap();
+        assert_eq!(frame.abbreviation(), "ICRF");
+    }
+
+    #[test]
+    fn test_frame_itrf() {
+        let frame = DynFrame::from_str("ITRF").unwrap();
+        assert_eq!(frame.abbreviation(), "ITRF");
+    }
+
+    #[test]
+    fn test_frame_unknown() {
+        assert!(DynFrame::from_str("UNKNOWN_FRAME_XYZ").is_err());
     }
 }

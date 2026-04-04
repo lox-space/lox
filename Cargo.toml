@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: MPL-2.0
 
 [workspace]
-members = ["crates/*"]
+members = ["crates/*", "packages/lox-space-wasm"]
 exclude = ["tools/lox-gen", "crates/lox-odm/fuzz"]
 resolver = "3"
 
