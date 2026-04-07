@@ -49,7 +49,6 @@ def has_author_copyright(file, author):
 
 
 STYLE_OVERRIDES = {
-    ".astro": "cppsingle",
     ".svelte": "html",
     ".mdx": "html",
     ".css": "c",
@@ -57,10 +56,47 @@ STYLE_OVERRIDES = {
 
 FORCE_DOT_LICENSE = {".jpg", ".jpeg", ".png", ".gif", ".svg", ".ico", ".webp"}
 
+# Astro files need special handling: SPDX headers must be inside the frontmatter
+# fences (---), not before them.
+# REUSE-IgnoreStart
+def astro_header(year, copyright, license):
+    return (
+        "---\n"
+        f"// SPDX-FileCopyrightText: {year} {copyright}\n"
+        "//\n"
+        f"// SPDX-License-Identifier: {license}\n"
+    )
+# REUSE-IgnoreEnd
+
+
+def add_astro_header(file, copyright):
+    """Add SPDX header inside Astro frontmatter fences."""
+    year = str(date.today().year)
+    with open(file, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    header = astro_header(year, copyright, LICENSE)
+
+    if content.startswith("---\n"):
+        # Has frontmatter — replace opening fence with fence + header
+        content = header + content[4:]
+    else:
+        # No frontmatter — wrap in fences
+        content = header + "---\n\n" + content
+
+    with open(file, "w", encoding="utf-8") as f:
+        f.write(content)
+
 
 def add_header(file, copyright):
     """Add SPDX header with current year to the file."""
     year = str(date.today().year)
+    suffix = Path(file).suffix.lower()
+
+    if suffix == ".astro":
+        add_astro_header(file, copyright)
+        return
+
     cmd = [
         "uvx",
         "--from",
@@ -74,7 +110,6 @@ def add_header(file, copyright):
         "-l",
         LICENSE,
     ]
-    suffix = Path(file).suffix.lower()
     if suffix in FORCE_DOT_LICENSE:
         cmd.append("--force-dot-license")
     else:
