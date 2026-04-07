@@ -20,6 +20,7 @@
     "@lox-space/threlte": "workspace:^",
     "@lox-space/wasm": "workspace:*",
     "leva": "^0.10.0",
+    "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
     "@tailwindcss/vite": "^4.2.2",
     "@threlte/core": "^8.5.4",
