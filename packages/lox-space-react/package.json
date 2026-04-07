@@ -25,7 +25,6 @@
     "@lox-space/tsconfig": "workspace:^",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@types/three": "^0.183.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "typescript": "^6.0.2"
@@ -41,6 +40,6 @@
   },
   "dependencies": {
     "@lox-space/wasm": "workspace:^",
-    "three": "^0.183.2"
+    "leva": "^0.10.0"
   }
 }
