@@ -1,0 +1,22 @@
+{
+  "name": "@lox-space/svelte",
+  "version": "0.0.1",
+  "type": "module",
+  "svelte": "./src/index.ts",
+  "exports": {
+    ".": {
+      "svelte": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "license": "MPL-2.0",
+  "dependencies": {
+    "svelte-tweakpane-ui": "^1.5.15"
+  },
+  "devDependencies": {
+    "svelte": "^5.55.0"
+  },
+  "peerDependencies": {
+    "svelte": "^5.0.0"
+  }
+}
