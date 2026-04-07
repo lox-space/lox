@@ -40,3 +40,5 @@ node_modules/
 pkg/
 .astro/
 *.local
+.superpowers/
+docs/superpowers/

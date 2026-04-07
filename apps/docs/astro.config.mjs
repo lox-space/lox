@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+//
+// SPDX-License-Identifier: MPL-2.0
+
 // @ts-check
 import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";

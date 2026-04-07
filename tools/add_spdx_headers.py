@@ -48,25 +48,41 @@ def has_author_copyright(file, author):
         return False
 
 
+STYLE_OVERRIDES = {
+    ".astro": "cppsingle",
+    ".svelte": "html",
+    ".mdx": "html",
+    ".css": "c",
+}
+
+FORCE_DOT_LICENSE = {".jpg", ".jpeg", ".png", ".gif", ".svg", ".ico", ".webp"}
+
+
 def add_header(file, copyright):
     """Add SPDX header with current year to the file."""
     year = str(date.today().year)
-    subprocess.call(
-        [
-            "uvx",
-            "--from",
-            "reuse[charset-normalizer]",
-            "reuse",
-            "annotate",
-            "-c",
-            copyright,
-            "-y",
-            year,
-            "-l",
-            LICENSE,
-            file,
-        ]
-    )
+    cmd = [
+        "uvx",
+        "--from",
+        "reuse[charset-normalizer]",
+        "reuse",
+        "annotate",
+        "-c",
+        copyright,
+        "-y",
+        year,
+        "-l",
+        LICENSE,
+    ]
+    suffix = Path(file).suffix.lower()
+    if suffix in FORCE_DOT_LICENSE:
+        cmd.append("--force-dot-license")
+    else:
+        style = STYLE_OVERRIDES.get(suffix)
+        if style:
+            cmd.extend(["--style", style])
+    cmd.append(file)
+    subprocess.call(cmd)
 
 
 if __name__ == "__main__":

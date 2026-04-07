@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+//
+// SPDX-License-Identifier: MPL-2.0
+
 import { useThree } from "@react-three/fiber";
 import { CubeTextureLoader, sRGBEncoding } from "three";
 import star_map_bounds_back from "./assets/bounds_back.jpg";
