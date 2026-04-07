@@ -900,7 +900,7 @@ mod tests {
             let r_m = p.length();
             let r_km = r_m / 1000.0;
             assert!(
-                r_km >= 6_000.0 && r_km <= 50_000.0,
+                (6_000.0..=50_000.0).contains(&r_km),
                 "position radius out of range: {r_km} km"
             );
         }
