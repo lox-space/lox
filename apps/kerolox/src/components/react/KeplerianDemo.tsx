@@ -45,7 +45,7 @@ export default function KeplerianDemo() {
     <>
       <Leva />
       <div className="fixed inset-0 overflow-hidden">
-        <Canvas gl={{ logarithmicDepthBuffer: true }}>
+        <Canvas gl={{ logarithmicDepthBuffer: true }} onCreated={({ gl }) => gl.setClearColor("#000000")}>
           <Suspense fallback={null}>
             <Scene />
           </Suspense>
