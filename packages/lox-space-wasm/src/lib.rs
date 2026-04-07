@@ -452,6 +452,13 @@ impl Cartesian {
         Frame(self.frame)
     }
 
+    /// Position in Three.js coordinates (Y-up right-handed).
+    /// Applies ICRF-to-Three.js transform. Values in meters.
+    pub fn to_threejs(&self) -> Vec<f64> {
+        let p = self.state.position();
+        vec![p.x, p.z, -p.y]
+    }
+
     /// Convert this Cartesian state to Keplerian orbital elements.
     ///
     /// Returns an error if the origin's gravitational parameter is not defined.
@@ -509,6 +516,19 @@ impl Trajectory {
             .flat_map(|c| {
                 let p = c.position();
                 [p.x, p.y, p.z]
+            })
+            .collect()
+    }
+
+    /// Interleaved position buffer in Three.js coordinates.
+    /// Returns [x0,y0,z0, x1,y1,z1, ...] with ICRF-to-Three.js transform applied.
+    /// All values in meters.
+    pub fn to_threejs_buffer(&self) -> Vec<f64> {
+        self.states
+            .iter()
+            .flat_map(|c| {
+                let p = c.position();
+                [p.x, p.z, -p.y]
             })
             .collect()
     }
@@ -904,5 +924,41 @@ mod tests {
                 "position radius out of range: {r_km} km"
             );
         }
+    }
+
+    #[test]
+    fn test_cartesian_to_threejs() {
+        let cart = LoxCartesian::from_vecs(
+            DVec3::new(1000.0, 2000.0, 3000.0),
+            DVec3::new(0.0, 0.0, 0.0),
+        );
+        let state = Cartesian {
+            state: cart,
+            origin: DynOrigin::default(),
+            frame: DynFrame::default(),
+        };
+        let threejs = state.to_threejs();
+        assert!((threejs[0] - 1000.0).abs() < 1e-10);
+        assert!((threejs[1] - 3000.0).abs() < 1e-10);
+        assert!((threejs[2] - (-2000.0)).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_trajectory_to_threejs_buffer() {
+        let p1 = LoxCartesian::from_vecs(DVec3::new(1.0, 2.0, 3.0), DVec3::new(0.0, 0.0, 0.0));
+        let p2 = LoxCartesian::from_vecs(DVec3::new(4.0, 5.0, 6.0), DVec3::new(0.0, 0.0, 0.0));
+        let traj = Trajectory {
+            states: vec![p1, p2],
+            origin: DynOrigin::default(),
+            frame: DynFrame::default(),
+        };
+        let buf = traj.to_threejs_buffer();
+        assert_eq!(buf.len(), 6);
+        assert!((buf[0] - 1.0).abs() < 1e-10);
+        assert!((buf[1] - 3.0).abs() < 1e-10);
+        assert!((buf[2] - (-2.0)).abs() < 1e-10);
+        assert!((buf[3] - 4.0).abs() < 1e-10);
+        assert!((buf[4] - 6.0).abs() < 1e-10);
+        assert!((buf[5] - (-5.0)).abs() < 1e-10);
     }
 }
