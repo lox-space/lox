@@ -1,0 +1,25 @@
+{
+  "name": "@lox-space/threlte",
+  "version": "0.0.1",
+  "type": "module",
+  "svelte": "./src/index.ts",
+  "exports": {
+    ".": {
+      "svelte": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "license": "MPL-2.0",
+  "dependencies": {
+    "@lox-space/wasm": "workspace:^",
+    "@threlte/core": "^8.5.4",
+    "@threlte/extras": "^9.13.3",
+    "three": "^0.183.2"
+  },
+  "devDependencies": {
+    "svelte": "^5.55.0"
+  },
+  "peerDependencies": {
+    "svelte": "^5.0.0"
+  }
+}
