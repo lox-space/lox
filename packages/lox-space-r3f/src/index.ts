@@ -2,4 +2,5 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-export { default } from "./components/Planetarium";
+export { Earth } from "./Earth";
+export { KeplerianOrbit } from "./KeplerianOrbit";
