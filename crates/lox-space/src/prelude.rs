@@ -41,5 +41,7 @@ pub use crate::earth::eop::{EopParser, EopProvider};
 pub use crate::orbits::ground::GroundLocation;
 
 // Analysis
+#[cfg(feature = "analysis")]
 pub use crate::analysis::assets::{GroundStation, Scenario, Spacecraft};
+#[cfg(feature = "analysis")]
 pub use crate::analysis::visibility::{Pass, VisibilityAnalysis, VisibilityResults};
