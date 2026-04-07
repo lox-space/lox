@@ -84,7 +84,7 @@ SPDX-License-Identifier: MPL-2.0
   useTask(() => {
     if (billboardRef) {
       const distance = billboardRef.position.distanceTo($camera.position);
-      fontSize = distance * 0.02;
+      fontSize = distance * 0.01;
       scale = distance * 0.001;
     }
   });
@@ -98,7 +98,7 @@ SPDX-License-Identifier: MPL-2.0
   <Billboard {position} bind:ref={billboardRef}>
     <Text text={name} {fontSize} {color} />
     <T.Mesh>
-      <T.CircleGeometry args={[scale * 100, 32]} />
+      <T.CircleGeometry args={[scale * 5, 32]} />
       <T.MeshBasicMaterial {color} />
     </T.Mesh>
   </Billboard>

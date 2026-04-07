@@ -3,20 +3,23 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, GizmoHelper, GizmoViewport } from "@react-three/drei";
+import { OrbitControls, GizmoHelper, GizmoViewport, PerspectiveCamera } from "@react-three/drei";
 import { Suspense } from "react";
 import { Earth, KeplerianOrbit } from "@lox-space/r3f";
-import { useKeplerianControls } from "@lox-space/react";
+import { useLox, useKeplerianControls } from "@lox-space/react";
 import { Leva } from "leva";
 
 function Scene() {
+  // Ensure WASM is initialized before rendering components that use it
+  useLox();
+
   const { semiMajorAxis, eccentricity, inclination, raan, argPeriapsis, trueAnomaly, color } =
     useKeplerianControls();
 
   return (
     <>
       <ambientLight intensity={2} />
-      <perspectiveCamera makeDefault position={[0, 0, 7e4]} far={1e12} />
+      <PerspectiveCamera makeDefault position={[0, 0, 7e4]} far={1e12} />
       <OrbitControls />
       <GizmoHelper alignment="bottom-right">
         <GizmoViewport />
