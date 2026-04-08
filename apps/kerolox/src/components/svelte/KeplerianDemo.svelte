@@ -38,7 +38,7 @@ SPDX-License-Identifier: MPL-2.0
 
     <T.PerspectiveCamera makeDefault position={[0, 0, 7e4]} far={1e12}>
       <OrbitControls>
-        <Gizmo />
+        <Gizmo xColor="#ff4060" yColor="#40ff60" zColor="#4060ff" labelX="X" labelY="Z" labelZ="-Y" />
       </OrbitControls>
     </T.PerspectiveCamera>
 

@@ -43,6 +43,7 @@ SPDX-License-Identifier: MPL-2.0
   }: Props = $props();
 
   let wasmOrigin = $derived(new Origin(originName));
+  $effect(() => () => { wasmOrigin.free(); });
 
   let orbit = $derived(
     new KeplerianWasm(
@@ -55,6 +56,7 @@ SPDX-License-Identifier: MPL-2.0
       wasmOrigin,
     )
   );
+  $effect(() => () => { orbit.free(); });
 
   let position = $derived.by((): [number, number, number] => {
     const pos = orbit.to_cartesian().to_threejs();

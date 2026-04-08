@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Billboard, Line, Text } from "@react-three/drei";
 import { Keplerian as KeplerianWasm, Origin } from "@lox-space/wasm";
 import { Vector3 } from "three";
@@ -34,6 +34,7 @@ export function KeplerianOrbit({
   name,
 }: KeplerianOrbitProps) {
   const wasmOrigin = useMemo(() => new Origin(originName), [originName]);
+  useEffect(() => () => { wasmOrigin.free(); }, [wasmOrigin]);
 
   const orbit = useMemo(
     () =>
@@ -48,6 +49,7 @@ export function KeplerianOrbit({
       ),
     [semiMajorAxis, eccentricity, inclination, raan, argPeriapsis, trueAnomaly, wasmOrigin],
   );
+  useEffect(() => () => { orbit.free(); }, [orbit]);
 
   const points = useMemo(() => {
     const buffer = orbit.trace(360).to_threejs_buffer();

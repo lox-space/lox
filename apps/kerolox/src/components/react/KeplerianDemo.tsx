@@ -19,10 +19,11 @@ function Scene() {
   return (
     <>
       <ambientLight intensity={2} />
-      <PerspectiveCamera makeDefault position={[0, 0, 7e4]} far={1e12} />
-      <OrbitControls />
+      <PerspectiveCamera makeDefault position={[0, 0, 7e4]} far={1e12}>
+        <OrbitControls makeDefault />
+      </PerspectiveCamera>
       <GizmoHelper alignment="bottom-right">
-        <GizmoViewport />
+        <GizmoViewport labels={["X", "Z", "-Y"]} />
       </GizmoHelper>
 
       <Earth textureUrl="/assets/Earth-color.jpg" />
