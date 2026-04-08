@@ -39,6 +39,7 @@ node_modules/
 .turbo/
 pkg/
 .astro/
+.svelte-kit/
 *.local
 .superpowers/
 docs/superpowers/
