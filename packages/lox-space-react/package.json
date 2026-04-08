@@ -39,7 +39,9 @@
     "provenance": true
   },
   "dependencies": {
-    "@lox-space/wasm": "workspace:^",
+    "@lox-space/wasm": "workspace:^"
+  },
+  "peerDependencies": {
     "leva": "^0.10.0"
   }
 }

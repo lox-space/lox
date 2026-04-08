@@ -18,6 +18,7 @@ SPDX-License-Identifier: MPL-2.0
   const earth = new Origin("Earth");
   // WASM returns meters, Three.js scene uses km
   const meanRadius = earth.mean_radius() / 1000;
+  $effect(() => () => { earth.free(); });
 </script>
 
 <T.Mesh>

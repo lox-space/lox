@@ -2,9 +2,9 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+import { useEffect, useMemo } from "react";
 import { useLoader } from "@react-three/fiber";
 import { Origin } from "@lox-space/wasm";
-import { useMemo } from "react";
 import { TextureLoader } from "three";
 
 interface EarthProps {
@@ -12,10 +12,9 @@ interface EarthProps {
 }
 
 export function Earth({ textureUrl }: EarthProps) {
-  const meanRadius = useMemo(() => {
-    const earth = new Origin("Earth");
-    return earth.mean_radius() / 1000; // m to km
-  }, []);
+  const earth = useMemo(() => new Origin("Earth"), []);
+  useEffect(() => () => { earth.free(); }, [earth]);
+  const meanRadius = earth.mean_radius() / 1000; // m to km
 
   return (
     <mesh>

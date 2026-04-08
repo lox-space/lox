@@ -10,10 +10,12 @@ use lox_space::bodies::DynOrigin;
 use lox_space::bodies::Origin as OriginTrait;
 use lox_space::bodies::TryMeanRadius;
 use lox_space::bodies::TryPointMass;
+use lox_space::core::anomalies::TrueAnomaly;
 use lox_space::core::coords::Cartesian as LoxCartesian;
 use lox_space::core::elements::Keplerian as LoxKeplerian;
+use lox_space::core::elements::{ArgumentOfPeriapsis, Eccentricity, LongitudeOfAscendingNode};
 use lox_space::core::glam::DVec3;
-use lox_space::core::units::{AngleUnits, DistanceUnits};
+use lox_space::core::units::{Angle, AngleUnits, DistanceUnits};
 use lox_space::frames::dynamic::DynFrame;
 use lox_space::frames::traits::ReferenceFrame;
 use lox_space::orbits::sso::inclination_sso;
@@ -230,18 +232,14 @@ impl Keplerian {
     ///
     /// The SSO inclination is computed analytically. The orbit is Earth-only.
     ///
-    /// - `altitude`: meters above Earth's equatorial radius
+    /// - `altitude`: meters above Earth's mean radius
     /// - `eccentricity`: dimensionless
     pub fn sso(altitude: f64, eccentricity: f64, origin: &Origin) -> Result<Keplerian, JsValue> {
-        use lox_space::core::elements::Eccentricity;
-        use lox_space::core::elements::LongitudeOfAscendingNode;
-
         let ecc =
             Eccentricity::try_new(eccentricity).map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-        // For SSO we compute semi-major axis from altitude (altitude + equatorial radius of Earth)
+        // For SSO we compute semi-major axis from altitude (altitude + mean radius of Earth)
         // inclination_sso takes a semi-major axis (Distance) and eccentricity
-        // We use the Earth equatorial radius via TryMeanRadius as a proxy
         let mean_radius = TryMeanRadius::try_mean_radius(&origin.0)
             .map(|r| r.to_meters())
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -255,15 +253,11 @@ impl Keplerian {
         let longitude_of_ascending_node = LongitudeOfAscendingNode::try_new(0.0f64.rad())
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-        use lox_space::core::anomalies::TrueAnomaly;
-        use lox_space::core::elements::{ArgumentOfPeriapsis, Keplerian as LoxKeplerianDirect};
-        use lox_space::core::units::Angle;
-
         let aop = ArgumentOfPeriapsis::try_new(Angle::ZERO)
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
         let ta = TrueAnomaly::new(Angle::ZERO);
 
-        let elements = LoxKeplerianDirect::new(
+        let elements = LoxKeplerian::new(
             semi_major_axis,
             ecc,
             inclination,

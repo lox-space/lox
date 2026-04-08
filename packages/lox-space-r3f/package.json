@@ -40,9 +40,11 @@
     "provenance": true
   },
   "dependencies": {
-    "@lox-space/wasm": "workspace:^",
-    "@react-three/drei": "^10.7.7",
-    "@react-three/fiber": "^9.5.0",
-    "three": "^0.183.2"
+    "@lox-space/wasm": "workspace:^"
+  },
+  "peerDependencies": {
+    "@react-three/drei": "^10.0.0",
+    "@react-three/fiber": "^9.0.0",
+    "three": ">=0.170.0"
   }
 }

@@ -10,8 +10,18 @@ async function init() {
   return module;
 }
 
-const wasm = init();
+let wasm: Promise<typeof import("@lox-space/wasm")> | null = null;
+
+function getWasm() {
+  if (!wasm) {
+    wasm = init().catch((err) => {
+      wasm = null;
+      throw err;
+    });
+  }
+  return wasm;
+}
 
 export function useLox() {
-  return use(wasm);
+  return use(getWasm());
 }

@@ -5,7 +5,6 @@
     "build": {
       "outputs": [
         "dist/**",
-        ".next/**",
         "pkg/**"
       ],
       "dependsOn": [
