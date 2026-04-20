@@ -20,21 +20,21 @@ homepage = "https://github.com/lox-space/lox"
 categories = ["aerospace", "science"]
 
 [workspace.dependencies]
-lox-analysis = { path = "crates/lox-analysis", version = "0.1.0-alpha.6" }
-lox-bodies = { path = "crates/lox-bodies", version = "0.1.0-alpha.20" }
-lox-comms = { path = "crates/lox-comms", version = "0.1.0-alpha.9" }
-lox-core = { path = "crates/lox-core", version = "0.1.0-alpha.9" }
+lox-analysis = { path = "crates/lox-analysis", version = "0.1.0-alpha.7" }
+lox-bodies = { path = "crates/lox-bodies", version = "0.1.0-alpha.21" }
+lox-comms = { path = "crates/lox-comms", version = "0.1.0-alpha.10" }
+lox-core = { path = "crates/lox-core", version = "0.1.0-alpha.10" }
 lox-derive = { path = "crates/lox-derive", version = "0.1.0-alpha.9" }
-lox-earth = { path = "crates/lox-earth", version = "0.1.0-alpha.23" }
-lox-ephem = { path = "crates/lox-ephem", version = "0.1.0-alpha.18" }
-lox-frames = { path = "crates/lox-frames", version = "0.1.0-alpha.14" }
-lox-io = { path = "crates/lox-io", version = "0.1.0-alpha.18" }
-lox-itur = { path = "crates/lox-itur", version = "0.1.0-alpha.0" }
-lox-math = { path = "crates/lox-math", version = "0.1.0-alpha.18" }
-lox-orbits = { path = "crates/lox-orbits", version = "0.1.0-alpha.33" }
+lox-earth = { path = "crates/lox-earth", version = "0.1.0-alpha.24" }
+lox-ephem = { path = "crates/lox-ephem", version = "0.1.0-alpha.19" }
+lox-frames = { path = "crates/lox-frames", version = "0.1.0-alpha.15" }
+lox-io = { path = "crates/lox-io", version = "0.1.0-alpha.19" }
+lox-itur = { path = "crates/lox-itur", version = "0.1.0-alpha.1" }
+lox-math = { path = "crates/lox-math", version = "0.1.0-alpha.19" }
+lox-orbits = { path = "crates/lox-orbits", version = "0.1.0-alpha.34" }
 lox-test-utils = { path = "crates/lox-test-utils", version = "0.1.0-alpha.6" }
-lox-time = { path = "crates/lox-time", version = "0.1.0-alpha.20" }
-lox-units = { path = "crates/lox-units", version = "0.1.0-alpha.10" }
+lox-time = { path = "crates/lox-time", version = "0.1.0-alpha.21" }
+lox-units = { path = "crates/lox-units", version = "0.1.0-alpha.11" }
 
 arrayvec = "0.7.6"
 chrono = "0.4.43"

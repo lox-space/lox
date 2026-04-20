@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.42](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.41...lox-space-v0.1.0-alpha.42) - 2026-04-20
+
+### Other
+
+- updated the following local packages: lox-core, lox-bodies, lox-itur, lox-comms, lox-time, lox-ephem, lox-units, lox-frames, lox-math, lox-io, lox-earth, lox-orbits, lox-analysis
+
 ## [0.1.0-alpha.41](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.40...lox-space-v0.1.0-alpha.41) - 2026-04-03
 
 ### Added
