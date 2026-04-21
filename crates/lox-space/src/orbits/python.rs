@@ -514,6 +514,24 @@ impl PyCartesian {
         ))
     }
 
+    /// Convert this Cartesian state to modified equinoctial elements.
+    ///
+    /// Returns:
+    ///     Modified equinoctial elements representing this orbit.
+    fn to_modified_equinoctial(&self) -> PyResult<PyModifiedEquinoctial> {
+        let mu = self
+            .0
+            .try_gravitational_parameter()
+            .map_err(PyUndefinedOriginPropertyError)?;
+        let mee = self.0.state().to_modified_equinoctial(mu).unwrap();
+        Ok(PyModifiedEquinoctial {
+            state: mee,
+            time: PyTime(self.0.time()),
+            origin: PyOrigin(self.0.origin()),
+            frame: PyFrame(self.0.reference_frame()),
+        })
+    }
+
     fn __repr__(&self) -> String {
         let pos = self.0.position();
         let vel = self.0.velocity();
@@ -955,6 +973,20 @@ impl PyKeplerian {
         ))
     }
 
+    /// Convert these Keplerian elements to modified equinoctial elements.
+    ///
+    /// Returns:
+    ///     Modified equinoctial elements representing this orbit.
+    fn to_modified_equinoctial(&self) -> PyResult<PyModifiedEquinoctial> {
+        let mee = self.0.state().to_modified_equinoctial();
+        Ok(PyModifiedEquinoctial {
+            state: mee,
+            time: PyTime(self.0.time()),
+            origin: PyOrigin(self.0.origin()),
+            frame: PyFrame(self.0.reference_frame()),
+        })
+    }
+
     /// Return the orbital period.
     ///
     /// Returns:
@@ -978,6 +1010,194 @@ impl PyKeplerian {
             self.true_anomaly().__repr__(),
             self.origin().__repr__(),
         )
+    }
+}
+
+/// Represents an orbit using Modified Equinoctial Elements (MEE).
+///
+/// Modified Equinoctial Elements are non-singular for circular (e = 0) and equatorial (i = 0)
+/// orbits. They also fully support parabolic (e = 1) orbits.
+///
+/// Args:
+///     time: Epoch of the elements.
+///     p: Semi-latus rectum (semi-parameter) as Distance.
+///     f: Eccentricity vector component 1.
+///     g: Eccentricity vector component 2.
+///     h: Node vector component 1.
+///     k: Node vector component 2.
+///     l: True longitude as Angle.
+///     origin: Central body (default: Earth).
+///     frame: Reference frame (default: ICRF).
+#[pyclass(
+    name = "ModifiedEquinoctial",
+    module = "lox_space",
+    frozen,
+    from_py_object
+)]
+#[derive(Debug, Clone)]
+pub struct PyModifiedEquinoctial {
+    pub(crate) state: lox_core::elements::modified_equinoctial::ModifiedEquinoctial,
+    pub(crate) time: PyTime,
+    pub(crate) origin: PyOrigin,
+    pub(crate) frame: PyFrame,
+}
+
+#[pymethods]
+impl PyModifiedEquinoctial {
+    #[new]
+    #[pyo3(signature = (
+        time,
+        p,
+        f,
+        g,
+        h,
+        k,
+        l,
+        origin=None,
+        frame=None,
+    ))]
+    #[allow(clippy::too_many_arguments)]
+    fn new(
+        time: PyTime,
+        p: PyDistance,
+        f: f64,
+        g: f64,
+        h: f64,
+        k: f64,
+        l: PyAngle,
+        origin: Option<&Bound<'_, PyAny>>,
+        frame: Option<&Bound<'_, PyAny>>,
+    ) -> PyResult<Self> {
+        let origin = origin
+            .map(PyOrigin::try_from)
+            .transpose()?
+            .unwrap_or(PyOrigin(lox_bodies::Earth.into()));
+        let frame = frame
+            .map(PyFrame::try_from)
+            .transpose()?
+            .unwrap_or(PyFrame(DynFrame::Icrf));
+
+        let state = lox_core::elements::modified_equinoctial::ModifiedEquinoctial::new(
+            p.0, f, g, h, k, l.0,
+        );
+
+        Ok(Self {
+            state,
+            time,
+            origin,
+            frame,
+        })
+    }
+
+    /// Return the epoch of this orbit.
+    fn time(&self) -> PyTime {
+        self.time.clone()
+    }
+
+    /// Return the semi-latus rectum (semi-parameter) `p`.
+    fn p(&self) -> PyDistance {
+        PyDistance(self.state.p())
+    }
+
+    /// Return `f` = e·cos(ω + Ω).
+    fn f(&self) -> f64 {
+        self.state.f()
+    }
+
+    /// Return `g` = e·sin(ω + Ω).
+    fn g(&self) -> f64 {
+        self.state.g()
+    }
+
+    /// Return `h` = tan(i/2)·cos(Ω).
+    fn h(&self) -> f64 {
+        self.state.h()
+    }
+
+    /// Return `k` = tan(i/2)·sin(Ω).
+    fn k(&self) -> f64 {
+        self.state.k()
+    }
+
+    /// Return the true longitude `l` = Ω + ω + ν.
+    fn l(&self) -> PyAngle {
+        PyAngle(self.state.l())
+    }
+
+    /// Return the orbital eccentricity.
+    fn eccentricity(&self) -> f64 {
+        self.state.eccentricity()
+    }
+
+    /// Return the orbital inclination.
+    fn inclination(&self) -> PyAngle {
+        PyAngle(Angle::radians(self.state.inclination()))
+    }
+
+    /// Return the central body (origin) of this orbit.
+    fn origin(&self) -> PyOrigin {
+        self.origin.clone()
+    }
+
+    /// Return the reference frame.
+    fn frame(&self) -> PyFrame {
+        self.frame.clone()
+    }
+
+    /// Convert these modified equinoctial elements to a Cartesian state.
+    ///
+    /// Returns:
+    ///     Cartesian state representing this orbit.
+    fn to_cartesian(&self) -> PyResult<PyCartesian> {
+        let mu = self
+            .origin
+            .0
+            .try_gravitational_parameter()
+            .map_err(PyUndefinedOriginPropertyError)?;
+        let cart = self.state.to_cartesian(mu).unwrap();
+        Ok(PyCartesian(crate::orbits::DynCartesianOrbit::from_state(
+            cart,
+            self.time.0,
+            self.origin.0,
+            self.frame.0,
+        )))
+    }
+
+    /// Convert these modified equinoctial elements to Keplerian orbital elements.
+    ///
+    /// Returns:
+    ///     Keplerian elements representing this orbit.
+    fn to_keplerian(&self) -> PyResult<PyKeplerian> {
+        let kep = self.state.to_keplerian().map_err(
+            |e: lox_core::elements::modified_equinoctial::ModifiedEquinoctialError| {
+                PyValueError::new_err(e.to_string())
+            },
+        )?;
+        Ok(PyKeplerian(crate::orbits::DynKeplerianOrbit::from_state(
+            kep,
+            self.time.0,
+            self.origin.0,
+            self.frame.0,
+        )))
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "ModifiedEquinoctial({}, {}, {}, {}, {}, {}, {}, origin={}, frame={})",
+            self.time().__repr__(),
+            self.p().__repr__(),
+            repr_f64(self.f()),
+            repr_f64(self.g()),
+            repr_f64(self.h()),
+            repr_f64(self.k()),
+            self.l().__repr__(),
+            self.origin().__repr__(),
+            self.frame().__repr__(),
+        )
+    }
+
+    fn __str__(&self) -> String {
+        self.__repr__()
     }
 }
 

@@ -100,6 +100,12 @@ interpolated = trajectory.interpolate(t + lox.TimeDelta(100))
 
 ---
 
+::: lox_space.ModifiedEquinoctial
+    options:
+      show_source: false
+
+---
+
 ::: lox_space.Trajectory
     options:
       show_source: false
