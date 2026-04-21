@@ -319,3 +319,119 @@ def test_circular_both_size_raises():
             semi_major_axis=7178.0 * lox.km,
             altitude=800.0 * lox.km,
         )
+
+
+# --- ModifiedEquinoctial tests ---
+
+
+def test_modified_equinoctial_roundtrip():
+    """Test ModifiedEquinoctial construction and properties."""
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    # Circular equatorial orbit (~621.86 km altitude)
+    mee = lox.ModifiedEquinoctial(
+        time,
+        p=7000.0 * lox.km,
+        f=0.0,
+        g=0.0,
+        h=0.0,
+        k=0.0,
+        l=90.0 * lox.deg,
+        origin="Earth",
+        frame="ICRF",
+    )
+    
+    assert mee.p().to_kilometers() == pytest.approx(7000.0)
+    assert mee.f() == pytest.approx(0.0)
+    assert mee.g() == pytest.approx(0.0)
+    assert mee.h() == pytest.approx(0.0)
+    assert mee.k() == pytest.approx(0.0)
+    assert mee.l().to_degrees() == pytest.approx(90.0)
+    assert mee.eccentricity() == pytest.approx(0.0)
+    assert mee.inclination().to_degrees() == pytest.approx(0.0)
+    assert mee.origin().name() == "Earth"
+    assert repr(mee.frame()) == 'Frame("ICRF")'
+    assert repr(mee).startswith("ModifiedEquinoctial(")
+    assert str(mee) == repr(mee)
+
+    # Convert to Cartesian
+    cart = mee.to_cartesian()
+    # For circular equatorial orbit, position should be at y axis, velocity at -x axis
+    pos = cart.position()
+    vel = cart.velocity()
+    npt.assert_allclose(pos, [0.0, 7000e3, 0.0], atol=1e-5)
+
+    # Convert back to MEE
+    mee2 = cart.to_modified_equinoctial()
+    assert mee2.p().to_kilometers() == pytest.approx(mee.p().to_kilometers())
+    assert mee2.f() == pytest.approx(mee.f())
+    assert mee2.g() == pytest.approx(mee.g())
+    assert mee2.h() == pytest.approx(mee.h())
+    assert mee2.k() == pytest.approx(mee.k())
+    assert mee2.l().to_degrees() == pytest.approx(mee.l().to_degrees())
+
+def test_modified_equinoctial_to_keplerian():
+    """Test conversion to Keplerian elements."""
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    mee = lox.ModifiedEquinoctial(
+        time,
+        p=7178.0 * lox.km,
+        f=0.001,
+        g=0.0,
+        h=0.0,
+        k=0.0,
+        l=0.0 * lox.deg,
+    )
+    kep = mee.to_keplerian()
+    
+    # sma = p / (1 - e^2)
+    e = mee.eccentricity()
+    sma = mee.p().to_meters() / (1.0 - e**2)
+    assert kep.semi_major_axis().to_meters() == pytest.approx(sma)
+    assert kep.eccentricity() == pytest.approx(0.001)
+    
+    # And convert back
+    mee_back = kep.to_modified_equinoctial()
+    assert mee_back.p().to_kilometers() == pytest.approx(mee.p().to_kilometers())
+    assert mee_back.f() == pytest.approx(mee.f())
+    assert mee_back.g() == pytest.approx(mee.g())
+
+def test_modified_equinoctial_errors():
+    """Test error handling in ModifiedEquinoctial conversions."""
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    
+    # Origin without gravitational parameter
+    mee_no_mu = lox.ModifiedEquinoctial(
+        time,
+        p=7000.0 * lox.km,
+        f=0.0,
+        g=0.0,
+        h=0.0,
+        k=0.0,
+        l=0.0 * lox.deg,
+        origin="Itokawa",
+    )
+    with pytest.raises(Exception, match="undefined property 'gravitational parameter'"):
+        mee_no_mu.to_cartesian()
+        
+    # Cartesian -> MEE with Itokawa origin
+    cart = lox.Cartesian(
+        time,
+        position=[7000e3, 0.0, 0.0],
+        velocity=[0.0, 7000.0, 0.0],
+        origin="Itokawa"
+    )
+    with pytest.raises(Exception, match="undefined property 'gravitational parameter'"):
+        cart.to_modified_equinoctial()
+
+    # Invalid shape for Keplerian conversion should fail
+    mee_invalid = lox.ModifiedEquinoctial(
+        time,
+        p=-7000.0 * lox.km,
+        f=0.5,
+        g=0.0,
+        h=0.0,
+        k=0.0,
+        l=0.0 * lox.deg,
+    )
+    with pytest.raises(ValueError, match="negative semi-major axis"):
+        mee_invalid.to_keplerian()
