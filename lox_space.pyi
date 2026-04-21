@@ -1115,6 +1115,9 @@ class Cartesian:
     def to_keplerian(self) -> Keplerian:
         """Convert this Cartesian state to Keplerian orbital elements."""
         ...
+    def to_modified_equinoctial(self) -> ModifiedEquinoctial:
+        """Convert this Cartesian state to modified equinoctial elements."""
+        ...
     def rotation_lvlh(self) -> np.ndarray:
         """Compute the rotation matrix from inertial to LVLH frame."""
         ...
@@ -1296,8 +1299,92 @@ class Keplerian:
     def to_cartesian(self) -> Cartesian:
         """Convert these Keplerian elements to a Cartesian state."""
         ...
+    def to_modified_equinoctial(self) -> ModifiedEquinoctial:
+        """Convert these Keplerian elements to modified equinoctial elements."""
+        ...
     def orbital_period(self) -> TimeDelta:
         """Return the orbital period."""
+        ...
+
+class ModifiedEquinoctial:
+    """Represents an orbit using Modified Equinoctial Elements (MEE).
+
+    Modified Equinoctial Elements are non-singular for circular (e = 0) and equatorial (i = 0)
+    orbits. They also fully support parabolic (e = 1) orbits.
+
+    Args:
+        time: Epoch of the elements.
+        p: Semi-latus rectum (semi-parameter) as Distance.
+        f: Eccentricity vector component 1.
+        g: Eccentricity vector component 2.
+        h: Node vector component 1.
+        k: Node vector component 2.
+        l: True longitude as Angle.
+        origin: Central body (default: Earth).
+        frame: Reference frame (default: ICRF).
+
+    Examples:
+        >>> t = lox.Time("TAI", 2024, 1, 1)
+        >>> mee = lox.ModifiedEquinoctial(
+        ...     t,
+        ...     p=7000.0 * lox.km,
+        ...     f=0.001,
+        ...     g=0.001,
+        ...     h=0.0,
+        ...     k=0.0,
+        ...     l=0.0 * lox.deg,
+        ... )
+    """
+    def __new__(
+        cls,
+        time: Time,
+        p: Distance,
+        f: float,
+        g: float,
+        h: float,
+        k: float,
+        l: Angle,
+        origin: str | int | Origin | None = None,
+        frame: str | Frame | None = None,
+    ) -> Self: ...
+    def time(self) -> Time:
+        """Return the epoch of this orbit."""
+        ...
+    def origin(self) -> Origin:
+        """Return the central body (origin) of this orbit."""
+        ...
+    def frame(self) -> Frame:
+        """Return the reference frame."""
+        ...
+    def p(self) -> Distance:
+        """Return the semi-latus rectum (semi-parameter) `p`."""
+        ...
+    def f(self) -> float:
+        """Return `f` = e·cos(ω + Ω)."""
+        ...
+    def g(self) -> float:
+        """Return `g` = e·sin(ω + Ω)."""
+        ...
+    def h(self) -> float:
+        """Return `h` = tan(i/2)·cos(Ω)."""
+        ...
+    def k(self) -> float:
+        """Return `k` = tan(i/2)·sin(Ω)."""
+        ...
+    def l(self) -> Angle:
+        """Return the true longitude `l` = Ω + ω + ν."""
+        ...
+    def eccentricity(self) -> float:
+        """Return the orbital eccentricity."""
+        ...
+    def inclination(self) -> Angle:
+        """Return the orbital inclination."""
+        ...
+    def to_cartesian(self) -> Cartesian:
+        """Convert these modified equinoctial elements to a Cartesian state."""
+        ...
+    def to_keplerian(self) -> Keplerian:
+        """Convert these modified equinoctial elements to Keplerian orbital elements."""
         ...
 
 class Trajectory:

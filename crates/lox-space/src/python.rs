@@ -25,8 +25,9 @@ use crate::itur::python::register_itur_functions;
 use crate::math::python::PySeries;
 use crate::orbits::python::{
     PyCartesian, PyEvent, PyGroundLocation, PyGroundPropagator, PyInterval, PyJ2Propagator,
-    PyJ4Propagator, PyKeplerian, PyNumericalPropagator, PySgp4, PyTle, PyTrajectory, PyVallado,
-    find_events, find_windows, py_complement_intervals, py_intersect_intervals, py_union_intervals,
+    PyJ4Propagator, PyKeplerian, PyModifiedEquinoctial, PyNumericalPropagator, PySgp4, PyTle,
+    PyTrajectory, PyVallado, find_events, find_windows, py_complement_intervals,
+    py_intersect_intervals, py_union_intervals,
 };
 use crate::time::python::{
     deltas::{NonFiniteTimeDeltaError, PyTimeDelta},
@@ -123,6 +124,7 @@ pub fn register_types(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyJ4Propagator>()?;
     m.add_class::<PyNumericalPropagator>()?;
     m.add_class::<PyKeplerian>()?;
+    m.add_class::<PyModifiedEquinoctial>()?;
     m.add_class::<PySgp4>()?;
     m.add_class::<PyTle>()?;
     m.add_class::<PyTrajectory>()?;
