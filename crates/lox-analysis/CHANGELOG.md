@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.8](https://github.com/lox-space/lox/compare/lox-analysis-v0.1.0-alpha.7...lox-analysis-v0.1.0-alpha.8) - 2026-04-26
+
+### Fixed
+
+- add missing serde derives
+
 ## [0.1.0-alpha.7](https://github.com/lox-space/lox/compare/lox-analysis-v0.1.0-alpha.6...lox-analysis-v0.1.0-alpha.7) - 2026-04-20
 
 ### Other

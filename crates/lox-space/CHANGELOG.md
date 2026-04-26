@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.43](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.42...lox-space-v0.1.0-alpha.43) - 2026-04-26
+
+### Added
+
+- *(python)* add Python wrapper for Modified Equinoctial Elements
+
 ## [0.1.0-alpha.42](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.41...lox-space-v0.1.0-alpha.42) - 2026-04-20
 
 ### Other
