@@ -30,6 +30,7 @@ use super::{CartesianOrbit, Orbit, TrajectorError};
 /// position and velocity at each knot point. Velocity is derived as the
 /// analytical derivative of the position spline.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Trajectory<T: TimeScale, O: Origin, R: ReferenceFrame> {
     epoch: Time<T>,
     origin: O,

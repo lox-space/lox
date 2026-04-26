@@ -152,6 +152,7 @@ impl Aoi {
 
 /// Imaging sensor payload describing a spacecraft's ground coverage capability.
 #[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ImagingPayload {
     half_swath_ground_range: f64,
     max_off_nadir: f64,

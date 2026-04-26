@@ -29,6 +29,7 @@ pub use walker::{WalkerDeltaBuilder, WalkerStarBuilder};
 /// A single satellite in a constellation, described by its plane index,
 /// position within the plane, and Keplerian orbital elements.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ConstellationSatellite {
     /// Index of the orbital plane this satellite belongs to.
     pub plane: usize,
@@ -78,6 +79,7 @@ pub enum ConstellationError {
 /// The propagator to use when converting constellation satellites into
 /// propagatable spacecraft.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ConstellationPropagator {
     /// Vallado two-body propagator (default).
     #[default]
@@ -97,6 +99,7 @@ pub enum ConstellationPropagator {
 /// A named collection of satellites produced by a constellation design algorithm,
 /// combined with the epoch, origin, and frame needed to create propagatable orbits.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Constellation<T: TimeScale, O: Origin, R: ReferenceFrame> {
     name: String,
     epoch: Time<T>,

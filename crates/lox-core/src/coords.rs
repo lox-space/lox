@@ -562,12 +562,43 @@ impl Neg for Cartesian {
     }
 }
 
+/// Serde helper for `[T; N]` with const-generic `N`.
+///
+/// The derive macro cannot handle `[T; N]` when `N` is a const generic parameter,
+/// so we serialize/deserialize as a `Vec<T>` on the wire.
+#[cfg(feature = "serde")]
+mod const_array_serde {
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    pub fn serialize<S, T, const N: usize>(arr: &[T; N], serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+        T: Serialize,
+    {
+        arr.as_slice().serialize(serializer)
+    }
+
+    pub fn deserialize<'de, D, T, const N: usize>(deserializer: D) -> Result<[T; N], D::Error>
+    where
+        D: Deserializer<'de>,
+        T: Deserialize<'de>,
+    {
+        let vec = Vec::<T>::deserialize(deserializer)?;
+        vec.try_into().map_err(|v: Vec<T>| {
+            serde::de::Error::custom(format!("expected array of length {N}, got {}", v.len()))
+        })
+    }
+}
+
 /// Generic interpolated time series data with `N` components.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TrajectoryData<const N: usize> {
     epoch: TimeDelta,
     time_steps: Arc<[f64]>,
+    #[cfg_attr(feature = "serde", serde(with = "const_array_serde"))]
     data: [Arc<[f64]>; N],
+    #[cfg_attr(feature = "serde", serde(with = "const_array_serde"))]
     series: [Series; N],
 }
 

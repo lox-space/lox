@@ -36,6 +36,7 @@ pub enum ValladoError {
 
 /// Keplerian orbit propagator using Vallado's universal-variable formulation.
 #[derive(Debug, Copy, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Vallado<T: TimeScale, O: Origin, R: ReferenceFrame> {
     initial_state: CartesianOrbit<T, O, R>,
     max_iter: i32,

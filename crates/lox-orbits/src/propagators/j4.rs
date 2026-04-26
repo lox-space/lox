@@ -65,6 +65,7 @@ impl From<std::convert::Infallible> for J4Error {
 /// secular rates. Short-period corrections (when enabled) are J2-only
 /// per the standard reference.
 #[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct J4Propagator<
     T: TimeScale,
     O: TryJ2 + TryJ4 + TryPointMass + TrySpheroid,
