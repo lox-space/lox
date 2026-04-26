@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.20](https://github.com/lox-space/lox/compare/lox-math-v0.1.0-alpha.19...lox-math-v0.1.0-alpha.20) - 2026-04-26
+
+### Other
+
+- updated the following local packages: lox-core
+
 ## [0.1.0-alpha.19](https://github.com/lox-space/lox/compare/lox-math-v0.1.0-alpha.18...lox-math-v0.1.0-alpha.19) - 2026-04-20
 
 ### Other

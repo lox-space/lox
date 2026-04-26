@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.35](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.34...lox-orbits-v0.1.0-alpha.35) - 2026-04-26
+
+### Fixed
+
+- add missing serde derives
+
 ## [0.1.0-alpha.34](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.33...lox-orbits-v0.1.0-alpha.34) - 2026-04-20
 
 ### Other
