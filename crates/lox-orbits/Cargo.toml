@@ -40,9 +40,10 @@ thiserror.workspace = true
 serde = [
   "dep:serde",
   "lox-bodies/serde",
+  "lox-core/serde",
   "lox-frames/serde",
   "lox-time/serde",
-  "lox-core/serde",
+  "sgp4/serde",
 ]
 
 [lib]

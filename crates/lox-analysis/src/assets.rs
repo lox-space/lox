@@ -32,6 +32,7 @@ use lox_orbits::propagators::{OrbitSource, PropagateError};
 
 /// Unique identifier for a ground station or spacecraft.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct AssetId(String);
 
 impl AssetId {
@@ -54,6 +55,7 @@ impl fmt::Display for AssetId {
 
 /// Unique identifier for a satellite constellation.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ConstellationId(String);
 
 impl ConstellationId {
@@ -76,6 +78,7 @@ impl fmt::Display for ConstellationId {
 
 /// Unique identifier for a ground station network.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct NetworkId(String);
 
 impl NetworkId {
@@ -98,6 +101,7 @@ impl fmt::Display for NetworkId {
 
 /// A ground station with location, elevation mask, and optional network membership.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct GroundStation {
     id: AssetId,
     location: DynGroundLocation,
@@ -176,6 +180,7 @@ impl GroundStation {
 
 /// A spacecraft with an orbit source, optional slew rate, and constellation membership.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Spacecraft {
     id: AssetId,
     orbit: OrbitSource,
@@ -267,6 +272,7 @@ impl Spacecraft {
 /// The type parameters `O` and `R` specify the "native" origin body and
 /// reference frame. For dynamic dispatch (e.g. via Python), use `DynScenario`.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Scenario<O: Origin, R: ReferenceFrame> {
     interval: TimeInterval<Tai>,
     origin: O,
