@@ -6,7 +6,7 @@
 [package]
 name = "lox-itur"
 description = "ITU-R P-series atmospheric propagation models for the Lox ecosystem"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.2"
 rust-version.workspace = true
 edition.workspace = true
 license = "MIT AND MPL-2.0"

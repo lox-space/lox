@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.2](https://github.com/lox-space/lox/compare/lox-itur-v0.1.0-alpha.1...lox-itur-v0.1.0-alpha.2) - 2026-04-26
+
+### Other
+
+- updated the following local packages: lox-core
+
 ## [0.1.0-alpha.1](https://github.com/lox-space/lox/compare/lox-itur-v0.1.0-alpha.0...lox-itur-v0.1.0-alpha.1) - 2026-04-20
 
 ### Other
