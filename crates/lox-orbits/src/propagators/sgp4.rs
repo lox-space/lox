@@ -39,6 +39,7 @@ pub enum Sgp4Error {
 
 /// SGP4/SDP4 orbit propagator for satellites described by Two-Line Element sets.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Sgp4 {
     constants: Constants,
     time: Time<Tai>,

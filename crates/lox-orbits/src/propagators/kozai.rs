@@ -39,6 +39,7 @@ pub struct MeanElements {
 
 /// Body constants needed by the propagator.
 #[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct BodyConstants {
     /// Gravitational parameter [m³/s²].
     pub mu: f64,
@@ -50,6 +51,7 @@ pub struct BodyConstants {
 
 /// Pre-computed secular rates for a Kozai-based propagator.
 #[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SecularRates {
     /// Perturbed mean motion [rad/s].
     pub n_bar: f64,

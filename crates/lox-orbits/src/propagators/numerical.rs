@@ -49,6 +49,7 @@ pub enum NumericalError {
 
 /// Numerical orbit propagator with J2 zonal harmonic perturbation.
 #[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct NumericalPropagator<
     T: TimeScale,
     O: TryJ2 + TryPointMass + TrySpheroid,

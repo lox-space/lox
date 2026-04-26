@@ -70,6 +70,7 @@ where
 /// Wraps the concrete propagator types (SGP4, Vallado, Numerical) or a
 /// pre-computed trajectory.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum OrbitSource {
     /// SGP4 propagator initialized from a TLE.
     Sgp4(Sgp4),

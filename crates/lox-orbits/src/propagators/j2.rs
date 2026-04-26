@@ -72,6 +72,7 @@ impl From<std::convert::Infallible> for J2Error {
 /// The input orbit is treated as **mean** elements. No osculating-to-mean
 /// conversion is performed.
 #[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct J2Propagator<T: TimeScale, O: TryJ2 + TryPointMass + TrySpheroid, R: ReferenceFrame> {
     initial_orbit: KeplerianOrbit<T, O, R>,
     kep: Keplerian,
