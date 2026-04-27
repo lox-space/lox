@@ -22,6 +22,7 @@ const PEF_ID: usize = 13;
 /// International Celestial Reference Frame.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Icrf;
 
 impl ReferenceFrame for Icrf {
@@ -43,6 +44,7 @@ impl QuasiInertial for Icrf {}
 /// J2000 Mean Equator and Equinox frame.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct J2000;
 
 impl ReferenceFrame for J2000 {
@@ -64,6 +66,7 @@ impl QuasiInertial for J2000 {}
 /// Celestial Intermediate Reference Frame.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Cirf;
 
 impl ReferenceFrame for Cirf {
@@ -83,6 +86,7 @@ impl ReferenceFrame for Cirf {
 /// Terrestrial Intermediate Reference Frame.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Tirf;
 
 impl ReferenceFrame for Tirf {
@@ -102,6 +106,7 @@ impl ReferenceFrame for Tirf {
 /// International Terrestrial Reference Frame.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Itrf;
 
 impl ReferenceFrame for Itrf {
@@ -187,6 +192,7 @@ where
 /// True Equator Mean Equinox frame.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Teme;
 
 impl ReferenceFrame for Teme {
@@ -204,6 +210,38 @@ impl ReferenceFrame for Teme {
 }
 
 impl BodyFixed for Itrf {}
+
+// -- serde: serialize frame ZSTs as their abbreviation --
+
+macro_rules! impl_frame_serde {
+    ($ty:ident, $abbrev:literal) => {
+        #[cfg(feature = "serde")]
+        impl From<$ty> for &'static str {
+            fn from(_: $ty) -> Self {
+                $abbrev
+            }
+        }
+
+        #[cfg(feature = "serde")]
+        impl TryFrom<String> for $ty {
+            type Error = String;
+            fn try_from(s: String) -> Result<Self, Self::Error> {
+                if s == $abbrev {
+                    Ok($ty)
+                } else {
+                    Err(format!("expected \"{}\", got \"{}\"", $abbrev, s))
+                }
+            }
+        }
+    };
+}
+
+impl_frame_serde!(Icrf, "ICRF");
+impl_frame_serde!(J2000, "J2000");
+impl_frame_serde!(Cirf, "CIRF");
+impl_frame_serde!(Tirf, "TIRF");
+impl_frame_serde!(Itrf, "ITRF");
+impl_frame_serde!(Teme, "TEME");
 
 /// IAU body-fixed reference frame derived from rotational elements.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

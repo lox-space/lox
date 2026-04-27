@@ -72,27 +72,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b"
 
 [[package]]
-name = "csv"
-version = "1.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52cd9d68cf7efc6ddfaaee42e7288d3a99d613d4b50f76ce9827ae0c6e14f938"
-dependencies = [
- "csv-core",
- "itoa",
- "ryu",
- "serde_core",
-]
-
-[[package]]
-name = "csv-core"
-version = "0.1.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d02f3b0da4c6504f86e9cd789d8dbafab48c2321be74e9987593de5a894d93d"
-dependencies = [
- "memchr",
-]
-
-[[package]]
 name = "either"
 version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -197,7 +176,7 @@ checksum = "30bde2b3dc3671ae49d8e2e9f044c7c005836e7a023ee57cffa25ab82764bb9e"
 
 [[package]]
 name = "lox-core"
-version = "0.1.0-alpha.5"
+version = "0.1.0-alpha.10"
 dependencies = [
  "fast_polynomial",
  "glam",
@@ -209,7 +188,7 @@ dependencies = [
 
 [[package]]
 name = "lox-derive"
-version = "0.1.0-alpha.7"
+version = "0.1.0-alpha.9"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -230,14 +209,11 @@ dependencies = [
 
 [[package]]
 name = "lox-io"
-version = "0.1.0-alpha.14"
+version = "0.1.0-alpha.19"
 dependencies = [
- "csv",
  "lox-core",
  "lox-derive",
- "lox-math",
  "lox-time",
- "lox-units",
  "nom",
  "quick-xml",
  "regex",
@@ -248,19 +224,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "lox-math"
-version = "0.1.0-alpha.14"
-dependencies = [
- "fast_polynomial",
- "glam",
- "lox-core",
- "lox-test-utils",
- "thiserror",
-]
-
-[[package]]
 name = "lox-test-utils"
-version = "0.1.0-alpha.4"
+version = "0.1.0-alpha.6"
 dependencies = [
  "glam",
  "lox-derive",
@@ -268,24 +233,13 @@ dependencies = [
 
 [[package]]
 name = "lox-time"
-version = "0.1.0-alpha.16"
+version = "0.1.0-alpha.21"
 dependencies = [
  "itertools",
  "lox-core",
- "lox-derive",
- "lox-math",
  "lox-test-utils",
- "lox-units",
  "num",
- "regex",
  "thiserror",
-]
-
-[[package]]
-name = "lox-units"
-version = "0.1.0-alpha.6"
-dependencies = [
- "lox-core",
 ]
 
 [[package]]
