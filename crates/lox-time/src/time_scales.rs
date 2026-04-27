@@ -29,6 +29,7 @@ pub trait TimeScale {
 /// International Atomic Time.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Tai;
 
 impl TimeScale for Tai {
@@ -49,6 +50,7 @@ impl Display for Tai {
 /// Barycentric Coordinate Time.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Tcb;
 
 impl TimeScale for Tcb {
@@ -69,6 +71,7 @@ impl Display for Tcb {
 /// Geocentric Coordinate Time.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Tcg;
 
 impl TimeScale for Tcg {
@@ -89,6 +92,7 @@ impl Display for Tcg {
 /// Barycentric Dynamical Time.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Tdb;
 
 impl TimeScale for Tdb {
@@ -109,6 +113,7 @@ impl Display for Tdb {
 /// Terrestrial Time.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Tt;
 
 impl TimeScale for Tt {
@@ -129,6 +134,7 @@ impl Display for Tt {
 /// Universal Time.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Ut1;
 
 impl TimeScale for Ut1 {
@@ -145,6 +151,38 @@ impl Display for Ut1 {
         write!(f, "{}", self.abbreviation())
     }
 }
+
+// -- serde: serialize time scale ZSTs as their abbreviation --
+
+macro_rules! impl_time_scale_serde {
+    ($ty:ident, $abbrev:literal) => {
+        #[cfg(feature = "serde")]
+        impl From<$ty> for &'static str {
+            fn from(_: $ty) -> Self {
+                $abbrev
+            }
+        }
+
+        #[cfg(feature = "serde")]
+        impl TryFrom<String> for $ty {
+            type Error = String;
+            fn try_from(s: String) -> Result<Self, Self::Error> {
+                if s == $abbrev {
+                    Ok($ty)
+                } else {
+                    Err(format!("expected \"{}\", got \"{}\"", $abbrev, s))
+                }
+            }
+        }
+    };
+}
+
+impl_time_scale_serde!(Tai, "TAI");
+impl_time_scale_serde!(Tcb, "TCB");
+impl_time_scale_serde!(Tcg, "TCG");
+impl_time_scale_serde!(Tdb, "TDB");
+impl_time_scale_serde!(Tt, "TT");
+impl_time_scale_serde!(Ut1, "UT1");
 
 /// Dynamic time scale selector for runtime-determined time scales.
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]

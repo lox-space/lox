@@ -1050,6 +1050,7 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
             #[doc = #doc_string]
             #[derive(Debug, Copy, Clone, Eq, PartialEq)]
             #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+            #[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
             pub struct #ident;
 
             impl Origin for #ident {
@@ -1065,6 +1066,19 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
             impl Display for #ident {
                 fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
                     write!(f, "{}", self.name())
+                }
+            }
+
+            impl From<#ident> for &'static str {
+                fn from(_: #ident) -> Self {
+                    #name
+                }
+            }
+
+            impl TryFrom<String> for #ident {
+                type Error = String;
+                fn try_from(s: String) -> Result<Self, Self::Error> {
+                    if s == #name { Ok(#ident) } else { Err(format!("expected \"{}\", got \"{}\"", #name, s)) }
                 }
             }
 

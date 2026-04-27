@@ -28,6 +28,7 @@ use std::fmt::Formatter;
 #[doc = "Sun (NAIF ID: 10)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Sun;
 impl Origin for Sun {
     fn id(&self) -> NaifId {
@@ -40,6 +41,21 @@ impl Origin for Sun {
 impl Display for Sun {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Sun> for &'static str {
+    fn from(_: Sun) -> Self {
+        "Sun"
+    }
+}
+impl TryFrom<String> for Sun {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Sun" {
+            Ok(Sun)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Sun", s))
+        }
     }
 }
 impl From<Sun> for DynOrigin {
@@ -108,6 +124,7 @@ impl RotationalElements for Sun {
 #[doc = "Mercury (NAIF ID: 199)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Mercury;
 impl Origin for Mercury {
     fn id(&self) -> NaifId {
@@ -120,6 +137,21 @@ impl Origin for Mercury {
 impl Display for Mercury {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Mercury> for &'static str {
+    fn from(_: Mercury) -> Self {
+        "Mercury"
+    }
+}
+impl TryFrom<String> for Mercury {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Mercury" {
+            Ok(Mercury)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Mercury", s))
+        }
     }
 }
 impl From<Mercury> for DynOrigin {
@@ -235,6 +267,7 @@ impl RotationalElements for Mercury {
 #[doc = "Venus (NAIF ID: 299)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Venus;
 impl Origin for Venus {
     fn id(&self) -> NaifId {
@@ -247,6 +280,21 @@ impl Origin for Venus {
 impl Display for Venus {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Venus> for &'static str {
+    fn from(_: Venus) -> Self {
+        "Venus"
+    }
+}
+impl TryFrom<String> for Venus {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Venus" {
+            Ok(Venus)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Venus", s))
+        }
     }
 }
 impl From<Venus> for DynOrigin {
@@ -320,6 +368,7 @@ impl RotationalElements for Venus {
 #[doc = "Earth (NAIF ID: 399)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Earth;
 impl Origin for Earth {
     fn id(&self) -> NaifId {
@@ -332,6 +381,21 @@ impl Origin for Earth {
 impl Display for Earth {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Earth> for &'static str {
+    fn from(_: Earth) -> Self {
+        "Earth"
+    }
+}
+impl TryFrom<String> for Earth {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Earth" {
+            Ok(Earth)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Earth", s))
+        }
     }
 }
 impl From<Earth> for DynOrigin {
@@ -405,6 +469,7 @@ impl RotationalElements for Earth {
 #[doc = "Mars (NAIF ID: 499)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Mars;
 impl Origin for Mars {
     fn id(&self) -> NaifId {
@@ -417,6 +482,21 @@ impl Origin for Mars {
 impl Display for Mars {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Mars> for &'static str {
+    fn from(_: Mars) -> Self {
+        "Mars"
+    }
+}
+impl TryFrom<String> for Mars {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Mars" {
+            Ok(Mars)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Mars", s))
+        }
     }
 }
 impl From<Mars> for DynOrigin {
@@ -682,6 +762,7 @@ impl RotationalElements for Mars {
 #[doc = "Jupiter (NAIF ID: 599)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Jupiter;
 impl Origin for Jupiter {
     fn id(&self) -> NaifId {
@@ -694,6 +775,21 @@ impl Origin for Jupiter {
 impl Display for Jupiter {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Jupiter> for &'static str {
+    fn from(_: Jupiter) -> Self {
+        "Jupiter"
+    }
+}
+impl TryFrom<String> for Jupiter {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Jupiter" {
+            Ok(Jupiter)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Jupiter", s))
+        }
     }
 }
 impl From<Jupiter> for DynOrigin {
@@ -897,6 +993,7 @@ impl RotationalElements for Jupiter {
 #[doc = "Saturn (NAIF ID: 699)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Saturn;
 impl Origin for Saturn {
     fn id(&self) -> NaifId {
@@ -909,6 +1006,21 @@ impl Origin for Saturn {
 impl Display for Saturn {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Saturn> for &'static str {
+    fn from(_: Saturn) -> Self {
+        "Saturn"
+    }
+}
+impl TryFrom<String> for Saturn {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Saturn" {
+            Ok(Saturn)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Saturn", s))
+        }
     }
 }
 impl From<Saturn> for DynOrigin {
@@ -982,6 +1094,7 @@ impl RotationalElements for Saturn {
 #[doc = "Uranus (NAIF ID: 799)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Uranus;
 impl Origin for Uranus {
     fn id(&self) -> NaifId {
@@ -994,6 +1107,21 @@ impl Origin for Uranus {
 impl Display for Uranus {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Uranus> for &'static str {
+    fn from(_: Uranus) -> Self {
+        "Uranus"
+    }
+}
+impl TryFrom<String> for Uranus {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Uranus" {
+            Ok(Uranus)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Uranus", s))
+        }
     }
 }
 impl From<Uranus> for DynOrigin {
@@ -1067,6 +1195,7 @@ impl RotationalElements for Uranus {
 #[doc = "Neptune (NAIF ID: 899)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Neptune;
 impl Origin for Neptune {
     fn id(&self) -> NaifId {
@@ -1079,6 +1208,21 @@ impl Origin for Neptune {
 impl Display for Neptune {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Neptune> for &'static str {
+    fn from(_: Neptune) -> Self {
+        "Neptune"
+    }
+}
+impl TryFrom<String> for Neptune {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Neptune" {
+            Ok(Neptune)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Neptune", s))
+        }
     }
 }
 impl From<Neptune> for DynOrigin {
@@ -1233,6 +1377,7 @@ impl RotationalElements for Neptune {
 #[doc = "Pluto (NAIF ID: 999)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Pluto;
 impl Origin for Pluto {
     fn id(&self) -> NaifId {
@@ -1245,6 +1390,21 @@ impl Origin for Pluto {
 impl Display for Pluto {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Pluto> for &'static str {
+    fn from(_: Pluto) -> Self {
+        "Pluto"
+    }
+}
+impl TryFrom<String> for Pluto {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Pluto" {
+            Ok(Pluto)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Pluto", s))
+        }
     }
 }
 impl From<Pluto> for DynOrigin {
@@ -1318,6 +1478,7 @@ impl RotationalElements for Pluto {
 #[doc = "Solar System Barycenter (NAIF ID: 0)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct SolarSystemBarycenter;
 impl Origin for SolarSystemBarycenter {
     fn id(&self) -> NaifId {
@@ -1330,6 +1491,24 @@ impl Origin for SolarSystemBarycenter {
 impl Display for SolarSystemBarycenter {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<SolarSystemBarycenter> for &'static str {
+    fn from(_: SolarSystemBarycenter) -> Self {
+        "Solar System Barycenter"
+    }
+}
+impl TryFrom<String> for SolarSystemBarycenter {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Solar System Barycenter" {
+            Ok(SolarSystemBarycenter)
+        } else {
+            Err(format!(
+                "expected \"{}\", got \"{}\"",
+                "Solar System Barycenter", s
+            ))
+        }
     }
 }
 impl From<SolarSystemBarycenter> for DynOrigin {
@@ -1345,6 +1524,7 @@ impl PointMass for SolarSystemBarycenter {
 #[doc = "Mercury Barycenter (NAIF ID: 1)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct MercuryBarycenter;
 impl Origin for MercuryBarycenter {
     fn id(&self) -> NaifId {
@@ -1357,6 +1537,24 @@ impl Origin for MercuryBarycenter {
 impl Display for MercuryBarycenter {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<MercuryBarycenter> for &'static str {
+    fn from(_: MercuryBarycenter) -> Self {
+        "Mercury Barycenter"
+    }
+}
+impl TryFrom<String> for MercuryBarycenter {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Mercury Barycenter" {
+            Ok(MercuryBarycenter)
+        } else {
+            Err(format!(
+                "expected \"{}\", got \"{}\"",
+                "Mercury Barycenter", s
+            ))
+        }
     }
 }
 impl From<MercuryBarycenter> for DynOrigin {
@@ -1372,6 +1570,7 @@ impl PointMass for MercuryBarycenter {
 #[doc = "Venus Barycenter (NAIF ID: 2)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct VenusBarycenter;
 impl Origin for VenusBarycenter {
     fn id(&self) -> NaifId {
@@ -1384,6 +1583,24 @@ impl Origin for VenusBarycenter {
 impl Display for VenusBarycenter {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<VenusBarycenter> for &'static str {
+    fn from(_: VenusBarycenter) -> Self {
+        "Venus Barycenter"
+    }
+}
+impl TryFrom<String> for VenusBarycenter {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Venus Barycenter" {
+            Ok(VenusBarycenter)
+        } else {
+            Err(format!(
+                "expected \"{}\", got \"{}\"",
+                "Venus Barycenter", s
+            ))
+        }
     }
 }
 impl From<VenusBarycenter> for DynOrigin {
@@ -1399,6 +1616,7 @@ impl PointMass for VenusBarycenter {
 #[doc = "Earth Barycenter (NAIF ID: 3)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct EarthBarycenter;
 impl Origin for EarthBarycenter {
     fn id(&self) -> NaifId {
@@ -1411,6 +1629,24 @@ impl Origin for EarthBarycenter {
 impl Display for EarthBarycenter {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<EarthBarycenter> for &'static str {
+    fn from(_: EarthBarycenter) -> Self {
+        "Earth Barycenter"
+    }
+}
+impl TryFrom<String> for EarthBarycenter {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Earth Barycenter" {
+            Ok(EarthBarycenter)
+        } else {
+            Err(format!(
+                "expected \"{}\", got \"{}\"",
+                "Earth Barycenter", s
+            ))
+        }
     }
 }
 impl From<EarthBarycenter> for DynOrigin {
@@ -1426,6 +1662,7 @@ impl PointMass for EarthBarycenter {
 #[doc = "Mars Barycenter (NAIF ID: 4)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct MarsBarycenter;
 impl Origin for MarsBarycenter {
     fn id(&self) -> NaifId {
@@ -1438,6 +1675,21 @@ impl Origin for MarsBarycenter {
 impl Display for MarsBarycenter {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<MarsBarycenter> for &'static str {
+    fn from(_: MarsBarycenter) -> Self {
+        "Mars Barycenter"
+    }
+}
+impl TryFrom<String> for MarsBarycenter {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Mars Barycenter" {
+            Ok(MarsBarycenter)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Mars Barycenter", s))
+        }
     }
 }
 impl From<MarsBarycenter> for DynOrigin {
@@ -1453,6 +1705,7 @@ impl PointMass for MarsBarycenter {
 #[doc = "Jupiter Barycenter (NAIF ID: 5)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct JupiterBarycenter;
 impl Origin for JupiterBarycenter {
     fn id(&self) -> NaifId {
@@ -1465,6 +1718,24 @@ impl Origin for JupiterBarycenter {
 impl Display for JupiterBarycenter {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<JupiterBarycenter> for &'static str {
+    fn from(_: JupiterBarycenter) -> Self {
+        "Jupiter Barycenter"
+    }
+}
+impl TryFrom<String> for JupiterBarycenter {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Jupiter Barycenter" {
+            Ok(JupiterBarycenter)
+        } else {
+            Err(format!(
+                "expected \"{}\", got \"{}\"",
+                "Jupiter Barycenter", s
+            ))
+        }
     }
 }
 impl From<JupiterBarycenter> for DynOrigin {
@@ -1480,6 +1751,7 @@ impl PointMass for JupiterBarycenter {
 #[doc = "Saturn Barycenter (NAIF ID: 6)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct SaturnBarycenter;
 impl Origin for SaturnBarycenter {
     fn id(&self) -> NaifId {
@@ -1492,6 +1764,24 @@ impl Origin for SaturnBarycenter {
 impl Display for SaturnBarycenter {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<SaturnBarycenter> for &'static str {
+    fn from(_: SaturnBarycenter) -> Self {
+        "Saturn Barycenter"
+    }
+}
+impl TryFrom<String> for SaturnBarycenter {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Saturn Barycenter" {
+            Ok(SaturnBarycenter)
+        } else {
+            Err(format!(
+                "expected \"{}\", got \"{}\"",
+                "Saturn Barycenter", s
+            ))
+        }
     }
 }
 impl From<SaturnBarycenter> for DynOrigin {
@@ -1507,6 +1797,7 @@ impl PointMass for SaturnBarycenter {
 #[doc = "Uranus Barycenter (NAIF ID: 7)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct UranusBarycenter;
 impl Origin for UranusBarycenter {
     fn id(&self) -> NaifId {
@@ -1519,6 +1810,24 @@ impl Origin for UranusBarycenter {
 impl Display for UranusBarycenter {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<UranusBarycenter> for &'static str {
+    fn from(_: UranusBarycenter) -> Self {
+        "Uranus Barycenter"
+    }
+}
+impl TryFrom<String> for UranusBarycenter {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Uranus Barycenter" {
+            Ok(UranusBarycenter)
+        } else {
+            Err(format!(
+                "expected \"{}\", got \"{}\"",
+                "Uranus Barycenter", s
+            ))
+        }
     }
 }
 impl From<UranusBarycenter> for DynOrigin {
@@ -1534,6 +1843,7 @@ impl PointMass for UranusBarycenter {
 #[doc = "Neptune Barycenter (NAIF ID: 8)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct NeptuneBarycenter;
 impl Origin for NeptuneBarycenter {
     fn id(&self) -> NaifId {
@@ -1546,6 +1856,24 @@ impl Origin for NeptuneBarycenter {
 impl Display for NeptuneBarycenter {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<NeptuneBarycenter> for &'static str {
+    fn from(_: NeptuneBarycenter) -> Self {
+        "Neptune Barycenter"
+    }
+}
+impl TryFrom<String> for NeptuneBarycenter {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Neptune Barycenter" {
+            Ok(NeptuneBarycenter)
+        } else {
+            Err(format!(
+                "expected \"{}\", got \"{}\"",
+                "Neptune Barycenter", s
+            ))
+        }
     }
 }
 impl From<NeptuneBarycenter> for DynOrigin {
@@ -1561,6 +1889,7 @@ impl PointMass for NeptuneBarycenter {
 #[doc = "Pluto Barycenter (NAIF ID: 9)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct PlutoBarycenter;
 impl Origin for PlutoBarycenter {
     fn id(&self) -> NaifId {
@@ -1573,6 +1902,24 @@ impl Origin for PlutoBarycenter {
 impl Display for PlutoBarycenter {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<PlutoBarycenter> for &'static str {
+    fn from(_: PlutoBarycenter) -> Self {
+        "Pluto Barycenter"
+    }
+}
+impl TryFrom<String> for PlutoBarycenter {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Pluto Barycenter" {
+            Ok(PlutoBarycenter)
+        } else {
+            Err(format!(
+                "expected \"{}\", got \"{}\"",
+                "Pluto Barycenter", s
+            ))
+        }
     }
 }
 impl From<PlutoBarycenter> for DynOrigin {
@@ -1588,6 +1935,7 @@ impl PointMass for PlutoBarycenter {
 #[doc = "Moon (NAIF ID: 301)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Moon;
 impl Origin for Moon {
     fn id(&self) -> NaifId {
@@ -1600,6 +1948,21 @@ impl Origin for Moon {
 impl Display for Moon {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Moon> for &'static str {
+    fn from(_: Moon) -> Self {
+        "Moon"
+    }
+}
+impl TryFrom<String> for Moon {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Moon" {
+            Ok(Moon)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Moon", s))
+        }
     }
 }
 impl From<Moon> for DynOrigin {
@@ -1799,6 +2162,7 @@ impl RotationalElements for Moon {
 #[doc = "Phobos (NAIF ID: 401)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Phobos;
 impl Origin for Phobos {
     fn id(&self) -> NaifId {
@@ -1811,6 +2175,21 @@ impl Origin for Phobos {
 impl Display for Phobos {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Phobos> for &'static str {
+    fn from(_: Phobos) -> Self {
+        "Phobos"
+    }
+}
+impl TryFrom<String> for Phobos {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Phobos" {
+            Ok(Phobos)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Phobos", s))
+        }
     }
 }
 impl From<Phobos> for DynOrigin {
@@ -1931,6 +2310,7 @@ impl RotationalElements for Phobos {
 #[doc = "Deimos (NAIF ID: 402)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Deimos;
 impl Origin for Deimos {
     fn id(&self) -> NaifId {
@@ -1943,6 +2323,21 @@ impl Origin for Deimos {
 impl Display for Deimos {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Deimos> for &'static str {
+    fn from(_: Deimos) -> Self {
+        "Deimos"
+    }
+}
+impl TryFrom<String> for Deimos {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Deimos" {
+            Ok(Deimos)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Deimos", s))
+        }
     }
 }
 impl From<Deimos> for DynOrigin {
@@ -2114,6 +2509,7 @@ impl RotationalElements for Deimos {
 #[doc = "Io (NAIF ID: 501)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Io;
 impl Origin for Io {
     fn id(&self) -> NaifId {
@@ -2126,6 +2522,21 @@ impl Origin for Io {
 impl Display for Io {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Io> for &'static str {
+    fn from(_: Io) -> Self {
+        "Io"
+    }
+}
+impl TryFrom<String> for Io {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Io" {
+            Ok(Io)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Io", s))
+        }
     }
 }
 impl From<Io> for DynOrigin {
@@ -2243,6 +2654,7 @@ impl RotationalElements for Io {
 #[doc = "Europa (NAIF ID: 502)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Europa;
 impl Origin for Europa {
     fn id(&self) -> NaifId {
@@ -2255,6 +2667,21 @@ impl Origin for Europa {
 impl Display for Europa {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Europa> for &'static str {
+    fn from(_: Europa) -> Self {
+        "Europa"
+    }
+}
+impl TryFrom<String> for Europa {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Europa" {
+            Ok(Europa)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Europa", s))
+        }
     }
 }
 impl From<Europa> for DynOrigin {
@@ -2399,6 +2826,7 @@ impl RotationalElements for Europa {
 #[doc = "Ganymede (NAIF ID: 503)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Ganymede;
 impl Origin for Ganymede {
     fn id(&self) -> NaifId {
@@ -2411,6 +2839,21 @@ impl Origin for Ganymede {
 impl Display for Ganymede {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Ganymede> for &'static str {
+    fn from(_: Ganymede) -> Self {
+        "Ganymede"
+    }
+}
+impl TryFrom<String> for Ganymede {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Ganymede" {
+            Ok(Ganymede)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Ganymede", s))
+        }
     }
 }
 impl From<Ganymede> for DynOrigin {
@@ -2547,6 +2990,7 @@ impl RotationalElements for Ganymede {
 #[doc = "Callisto (NAIF ID: 504)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Callisto;
 impl Origin for Callisto {
     fn id(&self) -> NaifId {
@@ -2559,6 +3003,21 @@ impl Origin for Callisto {
 impl Display for Callisto {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Callisto> for &'static str {
+    fn from(_: Callisto) -> Self {
+        "Callisto"
+    }
+}
+impl TryFrom<String> for Callisto {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Callisto" {
+            Ok(Callisto)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Callisto", s))
+        }
     }
 }
 impl From<Callisto> for DynOrigin {
@@ -2713,6 +3172,7 @@ impl RotationalElements for Callisto {
 #[doc = "Amalthea (NAIF ID: 505)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Amalthea;
 impl Origin for Amalthea {
     fn id(&self) -> NaifId {
@@ -2725,6 +3185,21 @@ impl Origin for Amalthea {
 impl Display for Amalthea {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Amalthea> for &'static str {
+    fn from(_: Amalthea) -> Self {
+        "Amalthea"
+    }
+}
+impl TryFrom<String> for Amalthea {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Amalthea" {
+            Ok(Amalthea)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Amalthea", s))
+        }
     }
 }
 impl From<Amalthea> for DynOrigin {
@@ -2896,6 +3371,7 @@ impl RotationalElements for Amalthea {
 #[doc = "Himalia (NAIF ID: 506)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Himalia;
 impl Origin for Himalia {
     fn id(&self) -> NaifId {
@@ -2908,6 +3384,21 @@ impl Origin for Himalia {
 impl Display for Himalia {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Himalia> for &'static str {
+    fn from(_: Himalia) -> Self {
+        "Himalia"
+    }
+}
+impl TryFrom<String> for Himalia {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Himalia" {
+            Ok(Himalia)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Himalia", s))
+        }
     }
 }
 impl From<Himalia> for DynOrigin {
@@ -2938,6 +3429,7 @@ impl Spheroid for Himalia {}
 #[doc = "Elara (NAIF ID: 507)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Elara;
 impl Origin for Elara {
     fn id(&self) -> NaifId {
@@ -2950,6 +3442,21 @@ impl Origin for Elara {
 impl Display for Elara {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Elara> for &'static str {
+    fn from(_: Elara) -> Self {
+        "Elara"
+    }
+}
+impl TryFrom<String> for Elara {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Elara" {
+            Ok(Elara)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Elara", s))
+        }
     }
 }
 impl From<Elara> for DynOrigin {
@@ -2975,6 +3482,7 @@ impl Spheroid for Elara {}
 #[doc = "Pasiphae (NAIF ID: 508)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Pasiphae;
 impl Origin for Pasiphae {
     fn id(&self) -> NaifId {
@@ -2987,6 +3495,21 @@ impl Origin for Pasiphae {
 impl Display for Pasiphae {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Pasiphae> for &'static str {
+    fn from(_: Pasiphae) -> Self {
+        "Pasiphae"
+    }
+}
+impl TryFrom<String> for Pasiphae {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Pasiphae" {
+            Ok(Pasiphae)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Pasiphae", s))
+        }
     }
 }
 impl From<Pasiphae> for DynOrigin {
@@ -3012,6 +3535,7 @@ impl Spheroid for Pasiphae {}
 #[doc = "Sinope (NAIF ID: 509)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Sinope;
 impl Origin for Sinope {
     fn id(&self) -> NaifId {
@@ -3024,6 +3548,21 @@ impl Origin for Sinope {
 impl Display for Sinope {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Sinope> for &'static str {
+    fn from(_: Sinope) -> Self {
+        "Sinope"
+    }
+}
+impl TryFrom<String> for Sinope {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Sinope" {
+            Ok(Sinope)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Sinope", s))
+        }
     }
 }
 impl From<Sinope> for DynOrigin {
@@ -3049,6 +3588,7 @@ impl Spheroid for Sinope {}
 #[doc = "Lysithea (NAIF ID: 510)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Lysithea;
 impl Origin for Lysithea {
     fn id(&self) -> NaifId {
@@ -3061,6 +3601,21 @@ impl Origin for Lysithea {
 impl Display for Lysithea {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Lysithea> for &'static str {
+    fn from(_: Lysithea) -> Self {
+        "Lysithea"
+    }
+}
+impl TryFrom<String> for Lysithea {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Lysithea" {
+            Ok(Lysithea)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Lysithea", s))
+        }
     }
 }
 impl From<Lysithea> for DynOrigin {
@@ -3086,6 +3641,7 @@ impl Spheroid for Lysithea {}
 #[doc = "Carme (NAIF ID: 511)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Carme;
 impl Origin for Carme {
     fn id(&self) -> NaifId {
@@ -3098,6 +3654,21 @@ impl Origin for Carme {
 impl Display for Carme {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Carme> for &'static str {
+    fn from(_: Carme) -> Self {
+        "Carme"
+    }
+}
+impl TryFrom<String> for Carme {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Carme" {
+            Ok(Carme)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Carme", s))
+        }
     }
 }
 impl From<Carme> for DynOrigin {
@@ -3123,6 +3694,7 @@ impl Spheroid for Carme {}
 #[doc = "Ananke (NAIF ID: 512)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Ananke;
 impl Origin for Ananke {
     fn id(&self) -> NaifId {
@@ -3135,6 +3707,21 @@ impl Origin for Ananke {
 impl Display for Ananke {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Ananke> for &'static str {
+    fn from(_: Ananke) -> Self {
+        "Ananke"
+    }
+}
+impl TryFrom<String> for Ananke {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Ananke" {
+            Ok(Ananke)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Ananke", s))
+        }
     }
 }
 impl From<Ananke> for DynOrigin {
@@ -3160,6 +3747,7 @@ impl Spheroid for Ananke {}
 #[doc = "Leda (NAIF ID: 513)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Leda;
 impl Origin for Leda {
     fn id(&self) -> NaifId {
@@ -3172,6 +3760,21 @@ impl Origin for Leda {
 impl Display for Leda {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Leda> for &'static str {
+    fn from(_: Leda) -> Self {
+        "Leda"
+    }
+}
+impl TryFrom<String> for Leda {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Leda" {
+            Ok(Leda)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Leda", s))
+        }
     }
 }
 impl From<Leda> for DynOrigin {
@@ -3197,6 +3800,7 @@ impl Spheroid for Leda {}
 #[doc = "Thebe (NAIF ID: 514)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Thebe;
 impl Origin for Thebe {
     fn id(&self) -> NaifId {
@@ -3209,6 +3813,21 @@ impl Origin for Thebe {
 impl Display for Thebe {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Thebe> for &'static str {
+    fn from(_: Thebe) -> Self {
+        "Thebe"
+    }
+}
+impl TryFrom<String> for Thebe {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Thebe" {
+            Ok(Thebe)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Thebe", s))
+        }
     }
 }
 impl From<Thebe> for DynOrigin {
@@ -3380,6 +3999,7 @@ impl RotationalElements for Thebe {
 #[doc = "Adrastea (NAIF ID: 515)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Adrastea;
 impl Origin for Adrastea {
     fn id(&self) -> NaifId {
@@ -3392,6 +4012,21 @@ impl Origin for Adrastea {
 impl Display for Adrastea {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Adrastea> for &'static str {
+    fn from(_: Adrastea) -> Self {
+        "Adrastea"
+    }
+}
+impl TryFrom<String> for Adrastea {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Adrastea" {
+            Ok(Adrastea)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Adrastea", s))
+        }
     }
 }
 impl From<Adrastea> for DynOrigin {
@@ -3464,6 +4099,7 @@ impl RotationalElements for Adrastea {
 #[doc = "Metis (NAIF ID: 516)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Metis;
 impl Origin for Metis {
     fn id(&self) -> NaifId {
@@ -3476,6 +4112,21 @@ impl Origin for Metis {
 impl Display for Metis {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Metis> for &'static str {
+    fn from(_: Metis) -> Self {
+        "Metis"
+    }
+}
+impl TryFrom<String> for Metis {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Metis" {
+            Ok(Metis)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Metis", s))
+        }
     }
 }
 impl From<Metis> for DynOrigin {
@@ -3548,6 +4199,7 @@ impl RotationalElements for Metis {
 #[doc = "Callirrhoe (NAIF ID: 517)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Callirrhoe;
 impl Origin for Callirrhoe {
     fn id(&self) -> NaifId {
@@ -3562,6 +4214,21 @@ impl Display for Callirrhoe {
         write!(f, "{}", self.name())
     }
 }
+impl From<Callirrhoe> for &'static str {
+    fn from(_: Callirrhoe) -> Self {
+        "Callirrhoe"
+    }
+}
+impl TryFrom<String> for Callirrhoe {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Callirrhoe" {
+            Ok(Callirrhoe)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Callirrhoe", s))
+        }
+    }
+}
 impl From<Callirrhoe> for DynOrigin {
     fn from(_: Callirrhoe) -> Self {
         DynOrigin::Callirrhoe
@@ -3570,6 +4237,7 @@ impl From<Callirrhoe> for DynOrigin {
 #[doc = "Themisto (NAIF ID: 518)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Themisto;
 impl Origin for Themisto {
     fn id(&self) -> NaifId {
@@ -3584,6 +4252,21 @@ impl Display for Themisto {
         write!(f, "{}", self.name())
     }
 }
+impl From<Themisto> for &'static str {
+    fn from(_: Themisto) -> Self {
+        "Themisto"
+    }
+}
+impl TryFrom<String> for Themisto {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Themisto" {
+            Ok(Themisto)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Themisto", s))
+        }
+    }
+}
 impl From<Themisto> for DynOrigin {
     fn from(_: Themisto) -> Self {
         DynOrigin::Themisto
@@ -3592,6 +4275,7 @@ impl From<Themisto> for DynOrigin {
 #[doc = "Magaclite (NAIF ID: 519)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Magaclite;
 impl Origin for Magaclite {
     fn id(&self) -> NaifId {
@@ -3606,6 +4290,21 @@ impl Display for Magaclite {
         write!(f, "{}", self.name())
     }
 }
+impl From<Magaclite> for &'static str {
+    fn from(_: Magaclite) -> Self {
+        "Magaclite"
+    }
+}
+impl TryFrom<String> for Magaclite {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Magaclite" {
+            Ok(Magaclite)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Magaclite", s))
+        }
+    }
+}
 impl From<Magaclite> for DynOrigin {
     fn from(_: Magaclite) -> Self {
         DynOrigin::Magaclite
@@ -3614,6 +4313,7 @@ impl From<Magaclite> for DynOrigin {
 #[doc = "Taygete (NAIF ID: 520)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Taygete;
 impl Origin for Taygete {
     fn id(&self) -> NaifId {
@@ -3628,6 +4328,21 @@ impl Display for Taygete {
         write!(f, "{}", self.name())
     }
 }
+impl From<Taygete> for &'static str {
+    fn from(_: Taygete) -> Self {
+        "Taygete"
+    }
+}
+impl TryFrom<String> for Taygete {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Taygete" {
+            Ok(Taygete)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Taygete", s))
+        }
+    }
+}
 impl From<Taygete> for DynOrigin {
     fn from(_: Taygete) -> Self {
         DynOrigin::Taygete
@@ -3636,6 +4351,7 @@ impl From<Taygete> for DynOrigin {
 #[doc = "Chaldene (NAIF ID: 521)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Chaldene;
 impl Origin for Chaldene {
     fn id(&self) -> NaifId {
@@ -3650,6 +4366,21 @@ impl Display for Chaldene {
         write!(f, "{}", self.name())
     }
 }
+impl From<Chaldene> for &'static str {
+    fn from(_: Chaldene) -> Self {
+        "Chaldene"
+    }
+}
+impl TryFrom<String> for Chaldene {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Chaldene" {
+            Ok(Chaldene)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Chaldene", s))
+        }
+    }
+}
 impl From<Chaldene> for DynOrigin {
     fn from(_: Chaldene) -> Self {
         DynOrigin::Chaldene
@@ -3658,6 +4389,7 @@ impl From<Chaldene> for DynOrigin {
 #[doc = "Harpalyke (NAIF ID: 522)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Harpalyke;
 impl Origin for Harpalyke {
     fn id(&self) -> NaifId {
@@ -3672,6 +4404,21 @@ impl Display for Harpalyke {
         write!(f, "{}", self.name())
     }
 }
+impl From<Harpalyke> for &'static str {
+    fn from(_: Harpalyke) -> Self {
+        "Harpalyke"
+    }
+}
+impl TryFrom<String> for Harpalyke {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Harpalyke" {
+            Ok(Harpalyke)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Harpalyke", s))
+        }
+    }
+}
 impl From<Harpalyke> for DynOrigin {
     fn from(_: Harpalyke) -> Self {
         DynOrigin::Harpalyke
@@ -3680,6 +4427,7 @@ impl From<Harpalyke> for DynOrigin {
 #[doc = "Kalyke (NAIF ID: 523)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Kalyke;
 impl Origin for Kalyke {
     fn id(&self) -> NaifId {
@@ -3694,6 +4442,21 @@ impl Display for Kalyke {
         write!(f, "{}", self.name())
     }
 }
+impl From<Kalyke> for &'static str {
+    fn from(_: Kalyke) -> Self {
+        "Kalyke"
+    }
+}
+impl TryFrom<String> for Kalyke {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Kalyke" {
+            Ok(Kalyke)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Kalyke", s))
+        }
+    }
+}
 impl From<Kalyke> for DynOrigin {
     fn from(_: Kalyke) -> Self {
         DynOrigin::Kalyke
@@ -3702,6 +4465,7 @@ impl From<Kalyke> for DynOrigin {
 #[doc = "Iocaste (NAIF ID: 524)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Iocaste;
 impl Origin for Iocaste {
     fn id(&self) -> NaifId {
@@ -3716,6 +4480,21 @@ impl Display for Iocaste {
         write!(f, "{}", self.name())
     }
 }
+impl From<Iocaste> for &'static str {
+    fn from(_: Iocaste) -> Self {
+        "Iocaste"
+    }
+}
+impl TryFrom<String> for Iocaste {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Iocaste" {
+            Ok(Iocaste)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Iocaste", s))
+        }
+    }
+}
 impl From<Iocaste> for DynOrigin {
     fn from(_: Iocaste) -> Self {
         DynOrigin::Iocaste
@@ -3724,6 +4503,7 @@ impl From<Iocaste> for DynOrigin {
 #[doc = "Erinome (NAIF ID: 525)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Erinome;
 impl Origin for Erinome {
     fn id(&self) -> NaifId {
@@ -3738,6 +4518,21 @@ impl Display for Erinome {
         write!(f, "{}", self.name())
     }
 }
+impl From<Erinome> for &'static str {
+    fn from(_: Erinome) -> Self {
+        "Erinome"
+    }
+}
+impl TryFrom<String> for Erinome {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Erinome" {
+            Ok(Erinome)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Erinome", s))
+        }
+    }
+}
 impl From<Erinome> for DynOrigin {
     fn from(_: Erinome) -> Self {
         DynOrigin::Erinome
@@ -3746,6 +4541,7 @@ impl From<Erinome> for DynOrigin {
 #[doc = "Isonoe (NAIF ID: 526)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Isonoe;
 impl Origin for Isonoe {
     fn id(&self) -> NaifId {
@@ -3760,6 +4556,21 @@ impl Display for Isonoe {
         write!(f, "{}", self.name())
     }
 }
+impl From<Isonoe> for &'static str {
+    fn from(_: Isonoe) -> Self {
+        "Isonoe"
+    }
+}
+impl TryFrom<String> for Isonoe {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Isonoe" {
+            Ok(Isonoe)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Isonoe", s))
+        }
+    }
+}
 impl From<Isonoe> for DynOrigin {
     fn from(_: Isonoe) -> Self {
         DynOrigin::Isonoe
@@ -3768,6 +4579,7 @@ impl From<Isonoe> for DynOrigin {
 #[doc = "Praxidike (NAIF ID: 527)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Praxidike;
 impl Origin for Praxidike {
     fn id(&self) -> NaifId {
@@ -3782,6 +4594,21 @@ impl Display for Praxidike {
         write!(f, "{}", self.name())
     }
 }
+impl From<Praxidike> for &'static str {
+    fn from(_: Praxidike) -> Self {
+        "Praxidike"
+    }
+}
+impl TryFrom<String> for Praxidike {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Praxidike" {
+            Ok(Praxidike)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Praxidike", s))
+        }
+    }
+}
 impl From<Praxidike> for DynOrigin {
     fn from(_: Praxidike) -> Self {
         DynOrigin::Praxidike
@@ -3790,6 +4617,7 @@ impl From<Praxidike> for DynOrigin {
 #[doc = "Autonoe (NAIF ID: 528)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Autonoe;
 impl Origin for Autonoe {
     fn id(&self) -> NaifId {
@@ -3804,6 +4632,21 @@ impl Display for Autonoe {
         write!(f, "{}", self.name())
     }
 }
+impl From<Autonoe> for &'static str {
+    fn from(_: Autonoe) -> Self {
+        "Autonoe"
+    }
+}
+impl TryFrom<String> for Autonoe {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Autonoe" {
+            Ok(Autonoe)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Autonoe", s))
+        }
+    }
+}
 impl From<Autonoe> for DynOrigin {
     fn from(_: Autonoe) -> Self {
         DynOrigin::Autonoe
@@ -3812,6 +4655,7 @@ impl From<Autonoe> for DynOrigin {
 #[doc = "Thyone (NAIF ID: 529)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Thyone;
 impl Origin for Thyone {
     fn id(&self) -> NaifId {
@@ -3826,6 +4670,21 @@ impl Display for Thyone {
         write!(f, "{}", self.name())
     }
 }
+impl From<Thyone> for &'static str {
+    fn from(_: Thyone) -> Self {
+        "Thyone"
+    }
+}
+impl TryFrom<String> for Thyone {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Thyone" {
+            Ok(Thyone)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Thyone", s))
+        }
+    }
+}
 impl From<Thyone> for DynOrigin {
     fn from(_: Thyone) -> Self {
         DynOrigin::Thyone
@@ -3834,6 +4693,7 @@ impl From<Thyone> for DynOrigin {
 #[doc = "Hermippe (NAIF ID: 530)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Hermippe;
 impl Origin for Hermippe {
     fn id(&self) -> NaifId {
@@ -3848,6 +4708,21 @@ impl Display for Hermippe {
         write!(f, "{}", self.name())
     }
 }
+impl From<Hermippe> for &'static str {
+    fn from(_: Hermippe) -> Self {
+        "Hermippe"
+    }
+}
+impl TryFrom<String> for Hermippe {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Hermippe" {
+            Ok(Hermippe)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Hermippe", s))
+        }
+    }
+}
 impl From<Hermippe> for DynOrigin {
     fn from(_: Hermippe) -> Self {
         DynOrigin::Hermippe
@@ -3856,6 +4731,7 @@ impl From<Hermippe> for DynOrigin {
 #[doc = "Aitne (NAIF ID: 531)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Aitne;
 impl Origin for Aitne {
     fn id(&self) -> NaifId {
@@ -3870,6 +4746,21 @@ impl Display for Aitne {
         write!(f, "{}", self.name())
     }
 }
+impl From<Aitne> for &'static str {
+    fn from(_: Aitne) -> Self {
+        "Aitne"
+    }
+}
+impl TryFrom<String> for Aitne {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Aitne" {
+            Ok(Aitne)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Aitne", s))
+        }
+    }
+}
 impl From<Aitne> for DynOrigin {
     fn from(_: Aitne) -> Self {
         DynOrigin::Aitne
@@ -3878,6 +4769,7 @@ impl From<Aitne> for DynOrigin {
 #[doc = "Eurydome (NAIF ID: 532)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Eurydome;
 impl Origin for Eurydome {
     fn id(&self) -> NaifId {
@@ -3892,6 +4784,21 @@ impl Display for Eurydome {
         write!(f, "{}", self.name())
     }
 }
+impl From<Eurydome> for &'static str {
+    fn from(_: Eurydome) -> Self {
+        "Eurydome"
+    }
+}
+impl TryFrom<String> for Eurydome {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Eurydome" {
+            Ok(Eurydome)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Eurydome", s))
+        }
+    }
+}
 impl From<Eurydome> for DynOrigin {
     fn from(_: Eurydome) -> Self {
         DynOrigin::Eurydome
@@ -3900,6 +4807,7 @@ impl From<Eurydome> for DynOrigin {
 #[doc = "Euanthe (NAIF ID: 533)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Euanthe;
 impl Origin for Euanthe {
     fn id(&self) -> NaifId {
@@ -3914,6 +4822,21 @@ impl Display for Euanthe {
         write!(f, "{}", self.name())
     }
 }
+impl From<Euanthe> for &'static str {
+    fn from(_: Euanthe) -> Self {
+        "Euanthe"
+    }
+}
+impl TryFrom<String> for Euanthe {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Euanthe" {
+            Ok(Euanthe)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Euanthe", s))
+        }
+    }
+}
 impl From<Euanthe> for DynOrigin {
     fn from(_: Euanthe) -> Self {
         DynOrigin::Euanthe
@@ -3922,6 +4845,7 @@ impl From<Euanthe> for DynOrigin {
 #[doc = "Euporie (NAIF ID: 534)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Euporie;
 impl Origin for Euporie {
     fn id(&self) -> NaifId {
@@ -3936,6 +4860,21 @@ impl Display for Euporie {
         write!(f, "{}", self.name())
     }
 }
+impl From<Euporie> for &'static str {
+    fn from(_: Euporie) -> Self {
+        "Euporie"
+    }
+}
+impl TryFrom<String> for Euporie {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Euporie" {
+            Ok(Euporie)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Euporie", s))
+        }
+    }
+}
 impl From<Euporie> for DynOrigin {
     fn from(_: Euporie) -> Self {
         DynOrigin::Euporie
@@ -3944,6 +4883,7 @@ impl From<Euporie> for DynOrigin {
 #[doc = "Orthosie (NAIF ID: 535)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Orthosie;
 impl Origin for Orthosie {
     fn id(&self) -> NaifId {
@@ -3958,6 +4898,21 @@ impl Display for Orthosie {
         write!(f, "{}", self.name())
     }
 }
+impl From<Orthosie> for &'static str {
+    fn from(_: Orthosie) -> Self {
+        "Orthosie"
+    }
+}
+impl TryFrom<String> for Orthosie {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Orthosie" {
+            Ok(Orthosie)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Orthosie", s))
+        }
+    }
+}
 impl From<Orthosie> for DynOrigin {
     fn from(_: Orthosie) -> Self {
         DynOrigin::Orthosie
@@ -3966,6 +4921,7 @@ impl From<Orthosie> for DynOrigin {
 #[doc = "Sponde (NAIF ID: 536)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Sponde;
 impl Origin for Sponde {
     fn id(&self) -> NaifId {
@@ -3980,6 +4936,21 @@ impl Display for Sponde {
         write!(f, "{}", self.name())
     }
 }
+impl From<Sponde> for &'static str {
+    fn from(_: Sponde) -> Self {
+        "Sponde"
+    }
+}
+impl TryFrom<String> for Sponde {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Sponde" {
+            Ok(Sponde)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Sponde", s))
+        }
+    }
+}
 impl From<Sponde> for DynOrigin {
     fn from(_: Sponde) -> Self {
         DynOrigin::Sponde
@@ -3988,6 +4959,7 @@ impl From<Sponde> for DynOrigin {
 #[doc = "Kale (NAIF ID: 537)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Kale;
 impl Origin for Kale {
     fn id(&self) -> NaifId {
@@ -4002,6 +4974,21 @@ impl Display for Kale {
         write!(f, "{}", self.name())
     }
 }
+impl From<Kale> for &'static str {
+    fn from(_: Kale) -> Self {
+        "Kale"
+    }
+}
+impl TryFrom<String> for Kale {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Kale" {
+            Ok(Kale)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Kale", s))
+        }
+    }
+}
 impl From<Kale> for DynOrigin {
     fn from(_: Kale) -> Self {
         DynOrigin::Kale
@@ -4010,6 +4997,7 @@ impl From<Kale> for DynOrigin {
 #[doc = "Pasithee (NAIF ID: 538)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Pasithee;
 impl Origin for Pasithee {
     fn id(&self) -> NaifId {
@@ -4024,6 +5012,21 @@ impl Display for Pasithee {
         write!(f, "{}", self.name())
     }
 }
+impl From<Pasithee> for &'static str {
+    fn from(_: Pasithee) -> Self {
+        "Pasithee"
+    }
+}
+impl TryFrom<String> for Pasithee {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Pasithee" {
+            Ok(Pasithee)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Pasithee", s))
+        }
+    }
+}
 impl From<Pasithee> for DynOrigin {
     fn from(_: Pasithee) -> Self {
         DynOrigin::Pasithee
@@ -4032,6 +5035,7 @@ impl From<Pasithee> for DynOrigin {
 #[doc = "Hegemone (NAIF ID: 539)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Hegemone;
 impl Origin for Hegemone {
     fn id(&self) -> NaifId {
@@ -4046,6 +5050,21 @@ impl Display for Hegemone {
         write!(f, "{}", self.name())
     }
 }
+impl From<Hegemone> for &'static str {
+    fn from(_: Hegemone) -> Self {
+        "Hegemone"
+    }
+}
+impl TryFrom<String> for Hegemone {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Hegemone" {
+            Ok(Hegemone)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Hegemone", s))
+        }
+    }
+}
 impl From<Hegemone> for DynOrigin {
     fn from(_: Hegemone) -> Self {
         DynOrigin::Hegemone
@@ -4054,6 +5073,7 @@ impl From<Hegemone> for DynOrigin {
 #[doc = "Mneme (NAIF ID: 540)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Mneme;
 impl Origin for Mneme {
     fn id(&self) -> NaifId {
@@ -4068,6 +5088,21 @@ impl Display for Mneme {
         write!(f, "{}", self.name())
     }
 }
+impl From<Mneme> for &'static str {
+    fn from(_: Mneme) -> Self {
+        "Mneme"
+    }
+}
+impl TryFrom<String> for Mneme {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Mneme" {
+            Ok(Mneme)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Mneme", s))
+        }
+    }
+}
 impl From<Mneme> for DynOrigin {
     fn from(_: Mneme) -> Self {
         DynOrigin::Mneme
@@ -4076,6 +5111,7 @@ impl From<Mneme> for DynOrigin {
 #[doc = "Aoede (NAIF ID: 541)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Aoede;
 impl Origin for Aoede {
     fn id(&self) -> NaifId {
@@ -4090,6 +5126,21 @@ impl Display for Aoede {
         write!(f, "{}", self.name())
     }
 }
+impl From<Aoede> for &'static str {
+    fn from(_: Aoede) -> Self {
+        "Aoede"
+    }
+}
+impl TryFrom<String> for Aoede {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Aoede" {
+            Ok(Aoede)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Aoede", s))
+        }
+    }
+}
 impl From<Aoede> for DynOrigin {
     fn from(_: Aoede) -> Self {
         DynOrigin::Aoede
@@ -4098,6 +5149,7 @@ impl From<Aoede> for DynOrigin {
 #[doc = "Thelxinoe (NAIF ID: 542)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Thelxinoe;
 impl Origin for Thelxinoe {
     fn id(&self) -> NaifId {
@@ -4112,6 +5164,21 @@ impl Display for Thelxinoe {
         write!(f, "{}", self.name())
     }
 }
+impl From<Thelxinoe> for &'static str {
+    fn from(_: Thelxinoe) -> Self {
+        "Thelxinoe"
+    }
+}
+impl TryFrom<String> for Thelxinoe {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Thelxinoe" {
+            Ok(Thelxinoe)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Thelxinoe", s))
+        }
+    }
+}
 impl From<Thelxinoe> for DynOrigin {
     fn from(_: Thelxinoe) -> Self {
         DynOrigin::Thelxinoe
@@ -4120,6 +5187,7 @@ impl From<Thelxinoe> for DynOrigin {
 #[doc = "Arche (NAIF ID: 543)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Arche;
 impl Origin for Arche {
     fn id(&self) -> NaifId {
@@ -4134,6 +5202,21 @@ impl Display for Arche {
         write!(f, "{}", self.name())
     }
 }
+impl From<Arche> for &'static str {
+    fn from(_: Arche) -> Self {
+        "Arche"
+    }
+}
+impl TryFrom<String> for Arche {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Arche" {
+            Ok(Arche)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Arche", s))
+        }
+    }
+}
 impl From<Arche> for DynOrigin {
     fn from(_: Arche) -> Self {
         DynOrigin::Arche
@@ -4142,6 +5225,7 @@ impl From<Arche> for DynOrigin {
 #[doc = "Kallichore (NAIF ID: 544)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Kallichore;
 impl Origin for Kallichore {
     fn id(&self) -> NaifId {
@@ -4156,6 +5240,21 @@ impl Display for Kallichore {
         write!(f, "{}", self.name())
     }
 }
+impl From<Kallichore> for &'static str {
+    fn from(_: Kallichore) -> Self {
+        "Kallichore"
+    }
+}
+impl TryFrom<String> for Kallichore {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Kallichore" {
+            Ok(Kallichore)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Kallichore", s))
+        }
+    }
+}
 impl From<Kallichore> for DynOrigin {
     fn from(_: Kallichore) -> Self {
         DynOrigin::Kallichore
@@ -4164,6 +5263,7 @@ impl From<Kallichore> for DynOrigin {
 #[doc = "Helike (NAIF ID: 545)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Helike;
 impl Origin for Helike {
     fn id(&self) -> NaifId {
@@ -4178,6 +5278,21 @@ impl Display for Helike {
         write!(f, "{}", self.name())
     }
 }
+impl From<Helike> for &'static str {
+    fn from(_: Helike) -> Self {
+        "Helike"
+    }
+}
+impl TryFrom<String> for Helike {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Helike" {
+            Ok(Helike)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Helike", s))
+        }
+    }
+}
 impl From<Helike> for DynOrigin {
     fn from(_: Helike) -> Self {
         DynOrigin::Helike
@@ -4186,6 +5301,7 @@ impl From<Helike> for DynOrigin {
 #[doc = "Carpo (NAIF ID: 546)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Carpo;
 impl Origin for Carpo {
     fn id(&self) -> NaifId {
@@ -4200,6 +5316,21 @@ impl Display for Carpo {
         write!(f, "{}", self.name())
     }
 }
+impl From<Carpo> for &'static str {
+    fn from(_: Carpo) -> Self {
+        "Carpo"
+    }
+}
+impl TryFrom<String> for Carpo {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Carpo" {
+            Ok(Carpo)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Carpo", s))
+        }
+    }
+}
 impl From<Carpo> for DynOrigin {
     fn from(_: Carpo) -> Self {
         DynOrigin::Carpo
@@ -4208,6 +5339,7 @@ impl From<Carpo> for DynOrigin {
 #[doc = "Eukelade (NAIF ID: 547)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Eukelade;
 impl Origin for Eukelade {
     fn id(&self) -> NaifId {
@@ -4222,6 +5354,21 @@ impl Display for Eukelade {
         write!(f, "{}", self.name())
     }
 }
+impl From<Eukelade> for &'static str {
+    fn from(_: Eukelade) -> Self {
+        "Eukelade"
+    }
+}
+impl TryFrom<String> for Eukelade {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Eukelade" {
+            Ok(Eukelade)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Eukelade", s))
+        }
+    }
+}
 impl From<Eukelade> for DynOrigin {
     fn from(_: Eukelade) -> Self {
         DynOrigin::Eukelade
@@ -4230,6 +5377,7 @@ impl From<Eukelade> for DynOrigin {
 #[doc = "Cyllene (NAIF ID: 548)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Cyllene;
 impl Origin for Cyllene {
     fn id(&self) -> NaifId {
@@ -4244,6 +5392,21 @@ impl Display for Cyllene {
         write!(f, "{}", self.name())
     }
 }
+impl From<Cyllene> for &'static str {
+    fn from(_: Cyllene) -> Self {
+        "Cyllene"
+    }
+}
+impl TryFrom<String> for Cyllene {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Cyllene" {
+            Ok(Cyllene)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Cyllene", s))
+        }
+    }
+}
 impl From<Cyllene> for DynOrigin {
     fn from(_: Cyllene) -> Self {
         DynOrigin::Cyllene
@@ -4252,6 +5415,7 @@ impl From<Cyllene> for DynOrigin {
 #[doc = "Kore (NAIF ID: 549)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Kore;
 impl Origin for Kore {
     fn id(&self) -> NaifId {
@@ -4266,6 +5430,21 @@ impl Display for Kore {
         write!(f, "{}", self.name())
     }
 }
+impl From<Kore> for &'static str {
+    fn from(_: Kore) -> Self {
+        "Kore"
+    }
+}
+impl TryFrom<String> for Kore {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Kore" {
+            Ok(Kore)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Kore", s))
+        }
+    }
+}
 impl From<Kore> for DynOrigin {
     fn from(_: Kore) -> Self {
         DynOrigin::Kore
@@ -4274,6 +5453,7 @@ impl From<Kore> for DynOrigin {
 #[doc = "Herse (NAIF ID: 550)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Herse;
 impl Origin for Herse {
     fn id(&self) -> NaifId {
@@ -4288,6 +5468,21 @@ impl Display for Herse {
         write!(f, "{}", self.name())
     }
 }
+impl From<Herse> for &'static str {
+    fn from(_: Herse) -> Self {
+        "Herse"
+    }
+}
+impl TryFrom<String> for Herse {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Herse" {
+            Ok(Herse)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Herse", s))
+        }
+    }
+}
 impl From<Herse> for DynOrigin {
     fn from(_: Herse) -> Self {
         DynOrigin::Herse
@@ -4296,6 +5491,7 @@ impl From<Herse> for DynOrigin {
 #[doc = "Dia (NAIF ID: 553)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Dia;
 impl Origin for Dia {
     fn id(&self) -> NaifId {
@@ -4310,6 +5506,21 @@ impl Display for Dia {
         write!(f, "{}", self.name())
     }
 }
+impl From<Dia> for &'static str {
+    fn from(_: Dia) -> Self {
+        "Dia"
+    }
+}
+impl TryFrom<String> for Dia {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Dia" {
+            Ok(Dia)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Dia", s))
+        }
+    }
+}
 impl From<Dia> for DynOrigin {
     fn from(_: Dia) -> Self {
         DynOrigin::Dia
@@ -4318,6 +5529,7 @@ impl From<Dia> for DynOrigin {
 #[doc = "Mimas (NAIF ID: 601)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Mimas;
 impl Origin for Mimas {
     fn id(&self) -> NaifId {
@@ -4330,6 +5542,21 @@ impl Origin for Mimas {
 impl Display for Mimas {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Mimas> for &'static str {
+    fn from(_: Mimas) -> Self {
+        "Mimas"
+    }
+}
+impl TryFrom<String> for Mimas {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Mimas" {
+            Ok(Mimas)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Mimas", s))
+        }
     }
 }
 impl From<Mimas> for DynOrigin {
@@ -4483,6 +5710,7 @@ impl RotationalElements for Mimas {
 #[doc = "Enceladus (NAIF ID: 602)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Enceladus;
 impl Origin for Enceladus {
     fn id(&self) -> NaifId {
@@ -4495,6 +5723,21 @@ impl Origin for Enceladus {
 impl Display for Enceladus {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Enceladus> for &'static str {
+    fn from(_: Enceladus) -> Self {
+        "Enceladus"
+    }
+}
+impl TryFrom<String> for Enceladus {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Enceladus" {
+            Ok(Enceladus)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Enceladus", s))
+        }
     }
 }
 impl From<Enceladus> for DynOrigin {
@@ -4567,6 +5810,7 @@ impl RotationalElements for Enceladus {
 #[doc = "Tethys (NAIF ID: 603)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Tethys;
 impl Origin for Tethys {
     fn id(&self) -> NaifId {
@@ -4579,6 +5823,21 @@ impl Origin for Tethys {
 impl Display for Tethys {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Tethys> for &'static str {
+    fn from(_: Tethys) -> Self {
+        "Tethys"
+    }
+}
+impl TryFrom<String> for Tethys {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Tethys" {
+            Ok(Tethys)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Tethys", s))
+        }
     }
 }
 impl From<Tethys> for DynOrigin {
@@ -4732,6 +5991,7 @@ impl RotationalElements for Tethys {
 #[doc = "Dione (NAIF ID: 604)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Dione;
 impl Origin for Dione {
     fn id(&self) -> NaifId {
@@ -4744,6 +6004,21 @@ impl Origin for Dione {
 impl Display for Dione {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Dione> for &'static str {
+    fn from(_: Dione) -> Self {
+        "Dione"
+    }
+}
+impl TryFrom<String> for Dione {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Dione" {
+            Ok(Dione)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Dione", s))
+        }
     }
 }
 impl From<Dione> for DynOrigin {
@@ -4816,6 +6091,7 @@ impl RotationalElements for Dione {
 #[doc = "Rhea (NAIF ID: 605)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Rhea;
 impl Origin for Rhea {
     fn id(&self) -> NaifId {
@@ -4828,6 +6104,21 @@ impl Origin for Rhea {
 impl Display for Rhea {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Rhea> for &'static str {
+    fn from(_: Rhea) -> Self {
+        "Rhea"
+    }
+}
+impl TryFrom<String> for Rhea {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Rhea" {
+            Ok(Rhea)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Rhea", s))
+        }
     }
 }
 impl From<Rhea> for DynOrigin {
@@ -4981,6 +6272,7 @@ impl RotationalElements for Rhea {
 #[doc = "Titan (NAIF ID: 606)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Titan;
 impl Origin for Titan {
     fn id(&self) -> NaifId {
@@ -4993,6 +6285,21 @@ impl Origin for Titan {
 impl Display for Titan {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Titan> for &'static str {
+    fn from(_: Titan) -> Self {
+        "Titan"
+    }
+}
+impl TryFrom<String> for Titan {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Titan" {
+            Ok(Titan)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Titan", s))
+        }
     }
 }
 impl From<Titan> for DynOrigin {
@@ -5119,6 +6426,7 @@ impl RotationalElements for Titan {
 #[doc = "Hyperion (NAIF ID: 607)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Hyperion;
 impl Origin for Hyperion {
     fn id(&self) -> NaifId {
@@ -5131,6 +6439,21 @@ impl Origin for Hyperion {
 impl Display for Hyperion {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Hyperion> for &'static str {
+    fn from(_: Hyperion) -> Self {
+        "Hyperion"
+    }
+}
+impl TryFrom<String> for Hyperion {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Hyperion" {
+            Ok(Hyperion)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Hyperion", s))
+        }
     }
 }
 impl From<Hyperion> for DynOrigin {
@@ -5160,6 +6483,7 @@ impl TriaxialEllipsoid for Hyperion {
 #[doc = "Iapetus (NAIF ID: 608)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Iapetus;
 impl Origin for Iapetus {
     fn id(&self) -> NaifId {
@@ -5172,6 +6496,21 @@ impl Origin for Iapetus {
 impl Display for Iapetus {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Iapetus> for &'static str {
+    fn from(_: Iapetus) -> Self {
+        "Iapetus"
+    }
+}
+impl TryFrom<String> for Iapetus {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Iapetus" {
+            Ok(Iapetus)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Iapetus", s))
+        }
     }
 }
 impl From<Iapetus> for DynOrigin {
@@ -5245,6 +6584,7 @@ impl RotationalElements for Iapetus {
 #[doc = "Phoebe (NAIF ID: 609)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Phoebe;
 impl Origin for Phoebe {
     fn id(&self) -> NaifId {
@@ -5257,6 +6597,21 @@ impl Origin for Phoebe {
 impl Display for Phoebe {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Phoebe> for &'static str {
+    fn from(_: Phoebe) -> Self {
+        "Phoebe"
+    }
+}
+impl TryFrom<String> for Phoebe {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Phoebe" {
+            Ok(Phoebe)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Phoebe", s))
+        }
     }
 }
 impl From<Phoebe> for DynOrigin {
@@ -5329,6 +6684,7 @@ impl RotationalElements for Phoebe {
 #[doc = "Janus (NAIF ID: 610)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Janus;
 impl Origin for Janus {
     fn id(&self) -> NaifId {
@@ -5341,6 +6697,21 @@ impl Origin for Janus {
 impl Display for Janus {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Janus> for &'static str {
+    fn from(_: Janus) -> Self {
+        "Janus"
+    }
+}
+impl TryFrom<String> for Janus {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Janus" {
+            Ok(Janus)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Janus", s))
+        }
     }
 }
 impl From<Janus> for DynOrigin {
@@ -5494,6 +6865,7 @@ impl RotationalElements for Janus {
 #[doc = "Epimetheus (NAIF ID: 611)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Epimetheus;
 impl Origin for Epimetheus {
     fn id(&self) -> NaifId {
@@ -5506,6 +6878,21 @@ impl Origin for Epimetheus {
 impl Display for Epimetheus {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Epimetheus> for &'static str {
+    fn from(_: Epimetheus) -> Self {
+        "Epimetheus"
+    }
+}
+impl TryFrom<String> for Epimetheus {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Epimetheus" {
+            Ok(Epimetheus)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Epimetheus", s))
+        }
     }
 }
 impl From<Epimetheus> for DynOrigin {
@@ -5659,6 +7046,7 @@ impl RotationalElements for Epimetheus {
 #[doc = "Helene (NAIF ID: 612)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Helene;
 impl Origin for Helene {
     fn id(&self) -> NaifId {
@@ -5671,6 +7059,21 @@ impl Origin for Helene {
 impl Display for Helene {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Helene> for &'static str {
+    fn from(_: Helene) -> Self {
+        "Helene"
+    }
+}
+impl TryFrom<String> for Helene {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Helene" {
+            Ok(Helene)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Helene", s))
+        }
     }
 }
 impl From<Helene> for DynOrigin {
@@ -5743,6 +7146,7 @@ impl RotationalElements for Helene {
 #[doc = "Telesto (NAIF ID: 613)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Telesto;
 impl Origin for Telesto {
     fn id(&self) -> NaifId {
@@ -5755,6 +7159,21 @@ impl Origin for Telesto {
 impl Display for Telesto {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Telesto> for &'static str {
+    fn from(_: Telesto) -> Self {
+        "Telesto"
+    }
+}
+impl TryFrom<String> for Telesto {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Telesto" {
+            Ok(Telesto)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Telesto", s))
+        }
     }
 }
 impl From<Telesto> for DynOrigin {
@@ -5822,6 +7241,7 @@ impl RotationalElements for Telesto {
 #[doc = "Calypso (NAIF ID: 614)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Calypso;
 impl Origin for Calypso {
     fn id(&self) -> NaifId {
@@ -5834,6 +7254,21 @@ impl Origin for Calypso {
 impl Display for Calypso {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Calypso> for &'static str {
+    fn from(_: Calypso) -> Self {
+        "Calypso"
+    }
+}
+impl TryFrom<String> for Calypso {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Calypso" {
+            Ok(Calypso)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Calypso", s))
+        }
     }
 }
 impl From<Calypso> for DynOrigin {
@@ -5901,6 +7336,7 @@ impl RotationalElements for Calypso {
 #[doc = "Atlas (NAIF ID: 615)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Atlas;
 impl Origin for Atlas {
     fn id(&self) -> NaifId {
@@ -5913,6 +7349,21 @@ impl Origin for Atlas {
 impl Display for Atlas {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Atlas> for &'static str {
+    fn from(_: Atlas) -> Self {
+        "Atlas"
+    }
+}
+impl TryFrom<String> for Atlas {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Atlas" {
+            Ok(Atlas)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Atlas", s))
+        }
     }
 }
 impl From<Atlas> for DynOrigin {
@@ -5985,6 +7436,7 @@ impl RotationalElements for Atlas {
 #[doc = "Prometheus (NAIF ID: 616)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Prometheus;
 impl Origin for Prometheus {
     fn id(&self) -> NaifId {
@@ -5997,6 +7449,21 @@ impl Origin for Prometheus {
 impl Display for Prometheus {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Prometheus> for &'static str {
+    fn from(_: Prometheus) -> Self {
+        "Prometheus"
+    }
+}
+impl TryFrom<String> for Prometheus {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Prometheus" {
+            Ok(Prometheus)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Prometheus", s))
+        }
     }
 }
 impl From<Prometheus> for DynOrigin {
@@ -6069,6 +7536,7 @@ impl RotationalElements for Prometheus {
 #[doc = "Pandora (NAIF ID: 617)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Pandora;
 impl Origin for Pandora {
     fn id(&self) -> NaifId {
@@ -6081,6 +7549,21 @@ impl Origin for Pandora {
 impl Display for Pandora {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Pandora> for &'static str {
+    fn from(_: Pandora) -> Self {
+        "Pandora"
+    }
+}
+impl TryFrom<String> for Pandora {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Pandora" {
+            Ok(Pandora)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Pandora", s))
+        }
     }
 }
 impl From<Pandora> for DynOrigin {
@@ -6153,6 +7636,7 @@ impl RotationalElements for Pandora {
 #[doc = "Pan (NAIF ID: 618)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Pan;
 impl Origin for Pan {
     fn id(&self) -> NaifId {
@@ -6165,6 +7649,21 @@ impl Origin for Pan {
 impl Display for Pan {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Pan> for &'static str {
+    fn from(_: Pan) -> Self {
+        "Pan"
+    }
+}
+impl TryFrom<String> for Pan {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Pan" {
+            Ok(Pan)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Pan", s))
+        }
     }
 }
 impl From<Pan> for DynOrigin {
@@ -6232,6 +7731,7 @@ impl RotationalElements for Pan {
 #[doc = "Ymir (NAIF ID: 619)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Ymir;
 impl Origin for Ymir {
     fn id(&self) -> NaifId {
@@ -6246,6 +7746,21 @@ impl Display for Ymir {
         write!(f, "{}", self.name())
     }
 }
+impl From<Ymir> for &'static str {
+    fn from(_: Ymir) -> Self {
+        "Ymir"
+    }
+}
+impl TryFrom<String> for Ymir {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Ymir" {
+            Ok(Ymir)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Ymir", s))
+        }
+    }
+}
 impl From<Ymir> for DynOrigin {
     fn from(_: Ymir) -> Self {
         DynOrigin::Ymir
@@ -6254,6 +7769,7 @@ impl From<Ymir> for DynOrigin {
 #[doc = "Paaliaq (NAIF ID: 620)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Paaliaq;
 impl Origin for Paaliaq {
     fn id(&self) -> NaifId {
@@ -6268,6 +7784,21 @@ impl Display for Paaliaq {
         write!(f, "{}", self.name())
     }
 }
+impl From<Paaliaq> for &'static str {
+    fn from(_: Paaliaq) -> Self {
+        "Paaliaq"
+    }
+}
+impl TryFrom<String> for Paaliaq {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Paaliaq" {
+            Ok(Paaliaq)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Paaliaq", s))
+        }
+    }
+}
 impl From<Paaliaq> for DynOrigin {
     fn from(_: Paaliaq) -> Self {
         DynOrigin::Paaliaq
@@ -6276,6 +7807,7 @@ impl From<Paaliaq> for DynOrigin {
 #[doc = "Tarvos (NAIF ID: 621)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Tarvos;
 impl Origin for Tarvos {
     fn id(&self) -> NaifId {
@@ -6290,6 +7822,21 @@ impl Display for Tarvos {
         write!(f, "{}", self.name())
     }
 }
+impl From<Tarvos> for &'static str {
+    fn from(_: Tarvos) -> Self {
+        "Tarvos"
+    }
+}
+impl TryFrom<String> for Tarvos {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Tarvos" {
+            Ok(Tarvos)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Tarvos", s))
+        }
+    }
+}
 impl From<Tarvos> for DynOrigin {
     fn from(_: Tarvos) -> Self {
         DynOrigin::Tarvos
@@ -6298,6 +7845,7 @@ impl From<Tarvos> for DynOrigin {
 #[doc = "Ijiraq (NAIF ID: 622)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Ijiraq;
 impl Origin for Ijiraq {
     fn id(&self) -> NaifId {
@@ -6312,6 +7860,21 @@ impl Display for Ijiraq {
         write!(f, "{}", self.name())
     }
 }
+impl From<Ijiraq> for &'static str {
+    fn from(_: Ijiraq) -> Self {
+        "Ijiraq"
+    }
+}
+impl TryFrom<String> for Ijiraq {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Ijiraq" {
+            Ok(Ijiraq)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Ijiraq", s))
+        }
+    }
+}
 impl From<Ijiraq> for DynOrigin {
     fn from(_: Ijiraq) -> Self {
         DynOrigin::Ijiraq
@@ -6320,6 +7883,7 @@ impl From<Ijiraq> for DynOrigin {
 #[doc = "Suttungr (NAIF ID: 623)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Suttungr;
 impl Origin for Suttungr {
     fn id(&self) -> NaifId {
@@ -6334,6 +7898,21 @@ impl Display for Suttungr {
         write!(f, "{}", self.name())
     }
 }
+impl From<Suttungr> for &'static str {
+    fn from(_: Suttungr) -> Self {
+        "Suttungr"
+    }
+}
+impl TryFrom<String> for Suttungr {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Suttungr" {
+            Ok(Suttungr)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Suttungr", s))
+        }
+    }
+}
 impl From<Suttungr> for DynOrigin {
     fn from(_: Suttungr) -> Self {
         DynOrigin::Suttungr
@@ -6342,6 +7921,7 @@ impl From<Suttungr> for DynOrigin {
 #[doc = "Kiviuq (NAIF ID: 624)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Kiviuq;
 impl Origin for Kiviuq {
     fn id(&self) -> NaifId {
@@ -6356,6 +7936,21 @@ impl Display for Kiviuq {
         write!(f, "{}", self.name())
     }
 }
+impl From<Kiviuq> for &'static str {
+    fn from(_: Kiviuq) -> Self {
+        "Kiviuq"
+    }
+}
+impl TryFrom<String> for Kiviuq {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Kiviuq" {
+            Ok(Kiviuq)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Kiviuq", s))
+        }
+    }
+}
 impl From<Kiviuq> for DynOrigin {
     fn from(_: Kiviuq) -> Self {
         DynOrigin::Kiviuq
@@ -6364,6 +7959,7 @@ impl From<Kiviuq> for DynOrigin {
 #[doc = "Mundilfari (NAIF ID: 625)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Mundilfari;
 impl Origin for Mundilfari {
     fn id(&self) -> NaifId {
@@ -6378,6 +7974,21 @@ impl Display for Mundilfari {
         write!(f, "{}", self.name())
     }
 }
+impl From<Mundilfari> for &'static str {
+    fn from(_: Mundilfari) -> Self {
+        "Mundilfari"
+    }
+}
+impl TryFrom<String> for Mundilfari {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Mundilfari" {
+            Ok(Mundilfari)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Mundilfari", s))
+        }
+    }
+}
 impl From<Mundilfari> for DynOrigin {
     fn from(_: Mundilfari) -> Self {
         DynOrigin::Mundilfari
@@ -6386,6 +7997,7 @@ impl From<Mundilfari> for DynOrigin {
 #[doc = "Albiorix (NAIF ID: 626)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Albiorix;
 impl Origin for Albiorix {
     fn id(&self) -> NaifId {
@@ -6400,6 +8012,21 @@ impl Display for Albiorix {
         write!(f, "{}", self.name())
     }
 }
+impl From<Albiorix> for &'static str {
+    fn from(_: Albiorix) -> Self {
+        "Albiorix"
+    }
+}
+impl TryFrom<String> for Albiorix {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Albiorix" {
+            Ok(Albiorix)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Albiorix", s))
+        }
+    }
+}
 impl From<Albiorix> for DynOrigin {
     fn from(_: Albiorix) -> Self {
         DynOrigin::Albiorix
@@ -6408,6 +8035,7 @@ impl From<Albiorix> for DynOrigin {
 #[doc = "Skathi (NAIF ID: 627)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Skathi;
 impl Origin for Skathi {
     fn id(&self) -> NaifId {
@@ -6422,6 +8050,21 @@ impl Display for Skathi {
         write!(f, "{}", self.name())
     }
 }
+impl From<Skathi> for &'static str {
+    fn from(_: Skathi) -> Self {
+        "Skathi"
+    }
+}
+impl TryFrom<String> for Skathi {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Skathi" {
+            Ok(Skathi)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Skathi", s))
+        }
+    }
+}
 impl From<Skathi> for DynOrigin {
     fn from(_: Skathi) -> Self {
         DynOrigin::Skathi
@@ -6430,6 +8073,7 @@ impl From<Skathi> for DynOrigin {
 #[doc = "Erriapus (NAIF ID: 628)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Erriapus;
 impl Origin for Erriapus {
     fn id(&self) -> NaifId {
@@ -6444,6 +8088,21 @@ impl Display for Erriapus {
         write!(f, "{}", self.name())
     }
 }
+impl From<Erriapus> for &'static str {
+    fn from(_: Erriapus) -> Self {
+        "Erriapus"
+    }
+}
+impl TryFrom<String> for Erriapus {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Erriapus" {
+            Ok(Erriapus)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Erriapus", s))
+        }
+    }
+}
 impl From<Erriapus> for DynOrigin {
     fn from(_: Erriapus) -> Self {
         DynOrigin::Erriapus
@@ -6452,6 +8111,7 @@ impl From<Erriapus> for DynOrigin {
 #[doc = "Siarnaq (NAIF ID: 629)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Siarnaq;
 impl Origin for Siarnaq {
     fn id(&self) -> NaifId {
@@ -6466,6 +8126,21 @@ impl Display for Siarnaq {
         write!(f, "{}", self.name())
     }
 }
+impl From<Siarnaq> for &'static str {
+    fn from(_: Siarnaq) -> Self {
+        "Siarnaq"
+    }
+}
+impl TryFrom<String> for Siarnaq {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Siarnaq" {
+            Ok(Siarnaq)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Siarnaq", s))
+        }
+    }
+}
 impl From<Siarnaq> for DynOrigin {
     fn from(_: Siarnaq) -> Self {
         DynOrigin::Siarnaq
@@ -6474,6 +8149,7 @@ impl From<Siarnaq> for DynOrigin {
 #[doc = "Thrymr (NAIF ID: 630)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Thrymr;
 impl Origin for Thrymr {
     fn id(&self) -> NaifId {
@@ -6488,6 +8164,21 @@ impl Display for Thrymr {
         write!(f, "{}", self.name())
     }
 }
+impl From<Thrymr> for &'static str {
+    fn from(_: Thrymr) -> Self {
+        "Thrymr"
+    }
+}
+impl TryFrom<String> for Thrymr {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Thrymr" {
+            Ok(Thrymr)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Thrymr", s))
+        }
+    }
+}
 impl From<Thrymr> for DynOrigin {
     fn from(_: Thrymr) -> Self {
         DynOrigin::Thrymr
@@ -6496,6 +8187,7 @@ impl From<Thrymr> for DynOrigin {
 #[doc = "Narvi (NAIF ID: 631)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Narvi;
 impl Origin for Narvi {
     fn id(&self) -> NaifId {
@@ -6510,6 +8202,21 @@ impl Display for Narvi {
         write!(f, "{}", self.name())
     }
 }
+impl From<Narvi> for &'static str {
+    fn from(_: Narvi) -> Self {
+        "Narvi"
+    }
+}
+impl TryFrom<String> for Narvi {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Narvi" {
+            Ok(Narvi)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Narvi", s))
+        }
+    }
+}
 impl From<Narvi> for DynOrigin {
     fn from(_: Narvi) -> Self {
         DynOrigin::Narvi
@@ -6518,6 +8225,7 @@ impl From<Narvi> for DynOrigin {
 #[doc = "Methone (NAIF ID: 632)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Methone;
 impl Origin for Methone {
     fn id(&self) -> NaifId {
@@ -6530,6 +8238,21 @@ impl Origin for Methone {
 impl Display for Methone {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Methone> for &'static str {
+    fn from(_: Methone) -> Self {
+        "Methone"
+    }
+}
+impl TryFrom<String> for Methone {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Methone" {
+            Ok(Methone)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Methone", s))
+        }
     }
 }
 impl From<Methone> for DynOrigin {
@@ -6554,6 +8277,7 @@ impl TriaxialEllipsoid for Methone {
 #[doc = "Pallene (NAIF ID: 633)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Pallene;
 impl Origin for Pallene {
     fn id(&self) -> NaifId {
@@ -6566,6 +8290,21 @@ impl Origin for Pallene {
 impl Display for Pallene {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Pallene> for &'static str {
+    fn from(_: Pallene) -> Self {
+        "Pallene"
+    }
+}
+impl TryFrom<String> for Pallene {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Pallene" {
+            Ok(Pallene)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Pallene", s))
+        }
     }
 }
 impl From<Pallene> for DynOrigin {
@@ -6590,6 +8329,7 @@ impl TriaxialEllipsoid for Pallene {
 #[doc = "Polydeuces (NAIF ID: 634)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Polydeuces;
 impl Origin for Polydeuces {
     fn id(&self) -> NaifId {
@@ -6602,6 +8342,21 @@ impl Origin for Polydeuces {
 impl Display for Polydeuces {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Polydeuces> for &'static str {
+    fn from(_: Polydeuces) -> Self {
+        "Polydeuces"
+    }
+}
+impl TryFrom<String> for Polydeuces {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Polydeuces" {
+            Ok(Polydeuces)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Polydeuces", s))
+        }
     }
 }
 impl From<Polydeuces> for DynOrigin {
@@ -6626,6 +8381,7 @@ impl TriaxialEllipsoid for Polydeuces {
 #[doc = "Daphnis (NAIF ID: 635)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Daphnis;
 impl Origin for Daphnis {
     fn id(&self) -> NaifId {
@@ -6638,6 +8394,21 @@ impl Origin for Daphnis {
 impl Display for Daphnis {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Daphnis> for &'static str {
+    fn from(_: Daphnis) -> Self {
+        "Daphnis"
+    }
+}
+impl TryFrom<String> for Daphnis {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Daphnis" {
+            Ok(Daphnis)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Daphnis", s))
+        }
     }
 }
 impl From<Daphnis> for DynOrigin {
@@ -6662,6 +8433,7 @@ impl TriaxialEllipsoid for Daphnis {
 #[doc = "Aegir (NAIF ID: 636)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Aegir;
 impl Origin for Aegir {
     fn id(&self) -> NaifId {
@@ -6676,6 +8448,21 @@ impl Display for Aegir {
         write!(f, "{}", self.name())
     }
 }
+impl From<Aegir> for &'static str {
+    fn from(_: Aegir) -> Self {
+        "Aegir"
+    }
+}
+impl TryFrom<String> for Aegir {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Aegir" {
+            Ok(Aegir)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Aegir", s))
+        }
+    }
+}
 impl From<Aegir> for DynOrigin {
     fn from(_: Aegir) -> Self {
         DynOrigin::Aegir
@@ -6684,6 +8471,7 @@ impl From<Aegir> for DynOrigin {
 #[doc = "Bebhionn (NAIF ID: 637)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Bebhionn;
 impl Origin for Bebhionn {
     fn id(&self) -> NaifId {
@@ -6698,6 +8486,21 @@ impl Display for Bebhionn {
         write!(f, "{}", self.name())
     }
 }
+impl From<Bebhionn> for &'static str {
+    fn from(_: Bebhionn) -> Self {
+        "Bebhionn"
+    }
+}
+impl TryFrom<String> for Bebhionn {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Bebhionn" {
+            Ok(Bebhionn)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Bebhionn", s))
+        }
+    }
+}
 impl From<Bebhionn> for DynOrigin {
     fn from(_: Bebhionn) -> Self {
         DynOrigin::Bebhionn
@@ -6706,6 +8509,7 @@ impl From<Bebhionn> for DynOrigin {
 #[doc = "Bergelmir (NAIF ID: 638)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Bergelmir;
 impl Origin for Bergelmir {
     fn id(&self) -> NaifId {
@@ -6720,6 +8524,21 @@ impl Display for Bergelmir {
         write!(f, "{}", self.name())
     }
 }
+impl From<Bergelmir> for &'static str {
+    fn from(_: Bergelmir) -> Self {
+        "Bergelmir"
+    }
+}
+impl TryFrom<String> for Bergelmir {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Bergelmir" {
+            Ok(Bergelmir)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Bergelmir", s))
+        }
+    }
+}
 impl From<Bergelmir> for DynOrigin {
     fn from(_: Bergelmir) -> Self {
         DynOrigin::Bergelmir
@@ -6728,6 +8547,7 @@ impl From<Bergelmir> for DynOrigin {
 #[doc = "Bestla (NAIF ID: 639)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Bestla;
 impl Origin for Bestla {
     fn id(&self) -> NaifId {
@@ -6742,6 +8562,21 @@ impl Display for Bestla {
         write!(f, "{}", self.name())
     }
 }
+impl From<Bestla> for &'static str {
+    fn from(_: Bestla) -> Self {
+        "Bestla"
+    }
+}
+impl TryFrom<String> for Bestla {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Bestla" {
+            Ok(Bestla)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Bestla", s))
+        }
+    }
+}
 impl From<Bestla> for DynOrigin {
     fn from(_: Bestla) -> Self {
         DynOrigin::Bestla
@@ -6750,6 +8585,7 @@ impl From<Bestla> for DynOrigin {
 #[doc = "Farbauti (NAIF ID: 640)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Farbauti;
 impl Origin for Farbauti {
     fn id(&self) -> NaifId {
@@ -6764,6 +8600,21 @@ impl Display for Farbauti {
         write!(f, "{}", self.name())
     }
 }
+impl From<Farbauti> for &'static str {
+    fn from(_: Farbauti) -> Self {
+        "Farbauti"
+    }
+}
+impl TryFrom<String> for Farbauti {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Farbauti" {
+            Ok(Farbauti)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Farbauti", s))
+        }
+    }
+}
 impl From<Farbauti> for DynOrigin {
     fn from(_: Farbauti) -> Self {
         DynOrigin::Farbauti
@@ -6772,6 +8623,7 @@ impl From<Farbauti> for DynOrigin {
 #[doc = "Fenrir (NAIF ID: 641)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Fenrir;
 impl Origin for Fenrir {
     fn id(&self) -> NaifId {
@@ -6786,6 +8638,21 @@ impl Display for Fenrir {
         write!(f, "{}", self.name())
     }
 }
+impl From<Fenrir> for &'static str {
+    fn from(_: Fenrir) -> Self {
+        "Fenrir"
+    }
+}
+impl TryFrom<String> for Fenrir {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Fenrir" {
+            Ok(Fenrir)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Fenrir", s))
+        }
+    }
+}
 impl From<Fenrir> for DynOrigin {
     fn from(_: Fenrir) -> Self {
         DynOrigin::Fenrir
@@ -6794,6 +8661,7 @@ impl From<Fenrir> for DynOrigin {
 #[doc = "Fornjot (NAIF ID: 642)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Fornjot;
 impl Origin for Fornjot {
     fn id(&self) -> NaifId {
@@ -6808,6 +8676,21 @@ impl Display for Fornjot {
         write!(f, "{}", self.name())
     }
 }
+impl From<Fornjot> for &'static str {
+    fn from(_: Fornjot) -> Self {
+        "Fornjot"
+    }
+}
+impl TryFrom<String> for Fornjot {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Fornjot" {
+            Ok(Fornjot)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Fornjot", s))
+        }
+    }
+}
 impl From<Fornjot> for DynOrigin {
     fn from(_: Fornjot) -> Self {
         DynOrigin::Fornjot
@@ -6816,6 +8699,7 @@ impl From<Fornjot> for DynOrigin {
 #[doc = "Hati (NAIF ID: 643)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Hati;
 impl Origin for Hati {
     fn id(&self) -> NaifId {
@@ -6830,6 +8714,21 @@ impl Display for Hati {
         write!(f, "{}", self.name())
     }
 }
+impl From<Hati> for &'static str {
+    fn from(_: Hati) -> Self {
+        "Hati"
+    }
+}
+impl TryFrom<String> for Hati {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Hati" {
+            Ok(Hati)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Hati", s))
+        }
+    }
+}
 impl From<Hati> for DynOrigin {
     fn from(_: Hati) -> Self {
         DynOrigin::Hati
@@ -6838,6 +8737,7 @@ impl From<Hati> for DynOrigin {
 #[doc = "Hyrrokkin (NAIF ID: 644)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Hyrrokkin;
 impl Origin for Hyrrokkin {
     fn id(&self) -> NaifId {
@@ -6852,6 +8752,21 @@ impl Display for Hyrrokkin {
         write!(f, "{}", self.name())
     }
 }
+impl From<Hyrrokkin> for &'static str {
+    fn from(_: Hyrrokkin) -> Self {
+        "Hyrrokkin"
+    }
+}
+impl TryFrom<String> for Hyrrokkin {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Hyrrokkin" {
+            Ok(Hyrrokkin)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Hyrrokkin", s))
+        }
+    }
+}
 impl From<Hyrrokkin> for DynOrigin {
     fn from(_: Hyrrokkin) -> Self {
         DynOrigin::Hyrrokkin
@@ -6860,6 +8775,7 @@ impl From<Hyrrokkin> for DynOrigin {
 #[doc = "Kari (NAIF ID: 645)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Kari;
 impl Origin for Kari {
     fn id(&self) -> NaifId {
@@ -6874,6 +8790,21 @@ impl Display for Kari {
         write!(f, "{}", self.name())
     }
 }
+impl From<Kari> for &'static str {
+    fn from(_: Kari) -> Self {
+        "Kari"
+    }
+}
+impl TryFrom<String> for Kari {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Kari" {
+            Ok(Kari)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Kari", s))
+        }
+    }
+}
 impl From<Kari> for DynOrigin {
     fn from(_: Kari) -> Self {
         DynOrigin::Kari
@@ -6882,6 +8813,7 @@ impl From<Kari> for DynOrigin {
 #[doc = "Loge (NAIF ID: 646)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Loge;
 impl Origin for Loge {
     fn id(&self) -> NaifId {
@@ -6896,6 +8828,21 @@ impl Display for Loge {
         write!(f, "{}", self.name())
     }
 }
+impl From<Loge> for &'static str {
+    fn from(_: Loge) -> Self {
+        "Loge"
+    }
+}
+impl TryFrom<String> for Loge {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Loge" {
+            Ok(Loge)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Loge", s))
+        }
+    }
+}
 impl From<Loge> for DynOrigin {
     fn from(_: Loge) -> Self {
         DynOrigin::Loge
@@ -6904,6 +8851,7 @@ impl From<Loge> for DynOrigin {
 #[doc = "Skoll (NAIF ID: 647)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Skoll;
 impl Origin for Skoll {
     fn id(&self) -> NaifId {
@@ -6918,6 +8866,21 @@ impl Display for Skoll {
         write!(f, "{}", self.name())
     }
 }
+impl From<Skoll> for &'static str {
+    fn from(_: Skoll) -> Self {
+        "Skoll"
+    }
+}
+impl TryFrom<String> for Skoll {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Skoll" {
+            Ok(Skoll)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Skoll", s))
+        }
+    }
+}
 impl From<Skoll> for DynOrigin {
     fn from(_: Skoll) -> Self {
         DynOrigin::Skoll
@@ -6926,6 +8889,7 @@ impl From<Skoll> for DynOrigin {
 #[doc = "Surtur (NAIF ID: 648)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Surtur;
 impl Origin for Surtur {
     fn id(&self) -> NaifId {
@@ -6940,6 +8904,21 @@ impl Display for Surtur {
         write!(f, "{}", self.name())
     }
 }
+impl From<Surtur> for &'static str {
+    fn from(_: Surtur) -> Self {
+        "Surtur"
+    }
+}
+impl TryFrom<String> for Surtur {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Surtur" {
+            Ok(Surtur)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Surtur", s))
+        }
+    }
+}
 impl From<Surtur> for DynOrigin {
     fn from(_: Surtur) -> Self {
         DynOrigin::Surtur
@@ -6948,6 +8927,7 @@ impl From<Surtur> for DynOrigin {
 #[doc = "Anthe (NAIF ID: 649)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Anthe;
 impl Origin for Anthe {
     fn id(&self) -> NaifId {
@@ -6960,6 +8940,21 @@ impl Origin for Anthe {
 impl Display for Anthe {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Anthe> for &'static str {
+    fn from(_: Anthe) -> Self {
+        "Anthe"
+    }
+}
+impl TryFrom<String> for Anthe {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Anthe" {
+            Ok(Anthe)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Anthe", s))
+        }
     }
 }
 impl From<Anthe> for DynOrigin {
@@ -6985,6 +8980,7 @@ impl Spheroid for Anthe {}
 #[doc = "Jarnsaxa (NAIF ID: 650)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Jarnsaxa;
 impl Origin for Jarnsaxa {
     fn id(&self) -> NaifId {
@@ -6999,6 +8995,21 @@ impl Display for Jarnsaxa {
         write!(f, "{}", self.name())
     }
 }
+impl From<Jarnsaxa> for &'static str {
+    fn from(_: Jarnsaxa) -> Self {
+        "Jarnsaxa"
+    }
+}
+impl TryFrom<String> for Jarnsaxa {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Jarnsaxa" {
+            Ok(Jarnsaxa)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Jarnsaxa", s))
+        }
+    }
+}
 impl From<Jarnsaxa> for DynOrigin {
     fn from(_: Jarnsaxa) -> Self {
         DynOrigin::Jarnsaxa
@@ -7007,6 +9018,7 @@ impl From<Jarnsaxa> for DynOrigin {
 #[doc = "Greip (NAIF ID: 651)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Greip;
 impl Origin for Greip {
     fn id(&self) -> NaifId {
@@ -7021,6 +9033,21 @@ impl Display for Greip {
         write!(f, "{}", self.name())
     }
 }
+impl From<Greip> for &'static str {
+    fn from(_: Greip) -> Self {
+        "Greip"
+    }
+}
+impl TryFrom<String> for Greip {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Greip" {
+            Ok(Greip)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Greip", s))
+        }
+    }
+}
 impl From<Greip> for DynOrigin {
     fn from(_: Greip) -> Self {
         DynOrigin::Greip
@@ -7029,6 +9056,7 @@ impl From<Greip> for DynOrigin {
 #[doc = "Tarqeq (NAIF ID: 652)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Tarqeq;
 impl Origin for Tarqeq {
     fn id(&self) -> NaifId {
@@ -7043,6 +9071,21 @@ impl Display for Tarqeq {
         write!(f, "{}", self.name())
     }
 }
+impl From<Tarqeq> for &'static str {
+    fn from(_: Tarqeq) -> Self {
+        "Tarqeq"
+    }
+}
+impl TryFrom<String> for Tarqeq {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Tarqeq" {
+            Ok(Tarqeq)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Tarqeq", s))
+        }
+    }
+}
 impl From<Tarqeq> for DynOrigin {
     fn from(_: Tarqeq) -> Self {
         DynOrigin::Tarqeq
@@ -7051,6 +9094,7 @@ impl From<Tarqeq> for DynOrigin {
 #[doc = "Aegaeon (NAIF ID: 653)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Aegaeon;
 impl Origin for Aegaeon {
     fn id(&self) -> NaifId {
@@ -7063,6 +9107,21 @@ impl Origin for Aegaeon {
 impl Display for Aegaeon {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Aegaeon> for &'static str {
+    fn from(_: Aegaeon) -> Self {
+        "Aegaeon"
+    }
+}
+impl TryFrom<String> for Aegaeon {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Aegaeon" {
+            Ok(Aegaeon)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Aegaeon", s))
+        }
     }
 }
 impl From<Aegaeon> for DynOrigin {
@@ -7087,6 +9146,7 @@ impl TriaxialEllipsoid for Aegaeon {
 #[doc = "Ariel (NAIF ID: 701)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Ariel;
 impl Origin for Ariel {
     fn id(&self) -> NaifId {
@@ -7099,6 +9159,21 @@ impl Origin for Ariel {
 impl Display for Ariel {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Ariel> for &'static str {
+    fn from(_: Ariel) -> Self {
+        "Ariel"
+    }
+}
+impl TryFrom<String> for Ariel {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Ariel" {
+            Ok(Ariel)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Ariel", s))
+        }
     }
 }
 impl From<Ariel> for DynOrigin {
@@ -7297,6 +9372,7 @@ impl RotationalElements for Ariel {
 #[doc = "Umbriel (NAIF ID: 702)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Umbriel;
 impl Origin for Umbriel {
     fn id(&self) -> NaifId {
@@ -7309,6 +9385,21 @@ impl Origin for Umbriel {
 impl Display for Umbriel {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Umbriel> for &'static str {
+    fn from(_: Umbriel) -> Self {
+        "Umbriel"
+    }
+}
+impl TryFrom<String> for Umbriel {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Umbriel" {
+            Ok(Umbriel)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Umbriel", s))
+        }
     }
 }
 impl From<Umbriel> for DynOrigin {
@@ -7517,6 +9608,7 @@ impl RotationalElements for Umbriel {
 #[doc = "Titania (NAIF ID: 703)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Titania;
 impl Origin for Titania {
     fn id(&self) -> NaifId {
@@ -7529,6 +9621,21 @@ impl Origin for Titania {
 impl Display for Titania {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Titania> for &'static str {
+    fn from(_: Titania) -> Self {
+        "Titania"
+    }
+}
+impl TryFrom<String> for Titania {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Titania" {
+            Ok(Titania)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Titania", s))
+        }
     }
 }
 impl From<Titania> for DynOrigin {
@@ -7746,6 +9853,7 @@ impl RotationalElements for Titania {
 #[doc = "Oberon (NAIF ID: 704)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Oberon;
 impl Origin for Oberon {
     fn id(&self) -> NaifId {
@@ -7758,6 +9866,21 @@ impl Origin for Oberon {
 impl Display for Oberon {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Oberon> for &'static str {
+    fn from(_: Oberon) -> Self {
+        "Oberon"
+    }
+}
+impl TryFrom<String> for Oberon {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Oberon" {
+            Ok(Oberon)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Oberon", s))
+        }
     }
 }
 impl From<Oberon> for DynOrigin {
@@ -7984,6 +10107,7 @@ impl RotationalElements for Oberon {
 #[doc = "Miranda (NAIF ID: 705)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Miranda;
 impl Origin for Miranda {
     fn id(&self) -> NaifId {
@@ -7996,6 +10120,21 @@ impl Origin for Miranda {
 impl Display for Miranda {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Miranda> for &'static str {
+    fn from(_: Miranda) -> Self {
+        "Miranda"
+    }
+}
+impl TryFrom<String> for Miranda {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Miranda" {
+            Ok(Miranda)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Miranda", s))
+        }
     }
 }
 impl From<Miranda> for DynOrigin {
@@ -8239,6 +10378,7 @@ impl RotationalElements for Miranda {
 #[doc = "Cordelia (NAIF ID: 706)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Cordelia;
 impl Origin for Cordelia {
     fn id(&self) -> NaifId {
@@ -8251,6 +10391,21 @@ impl Origin for Cordelia {
 impl Display for Cordelia {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Cordelia> for &'static str {
+    fn from(_: Cordelia) -> Self {
+        "Cordelia"
+    }
+}
+impl TryFrom<String> for Cordelia {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Cordelia" {
+            Ok(Cordelia)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Cordelia", s))
+        }
     }
 }
 impl From<Cordelia> for DynOrigin {
@@ -8490,6 +10645,7 @@ impl RotationalElements for Cordelia {
 #[doc = "Ophelia (NAIF ID: 707)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Ophelia;
 impl Origin for Ophelia {
     fn id(&self) -> NaifId {
@@ -8502,6 +10658,21 @@ impl Origin for Ophelia {
 impl Display for Ophelia {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Ophelia> for &'static str {
+    fn from(_: Ophelia) -> Self {
+        "Ophelia"
+    }
+}
+impl TryFrom<String> for Ophelia {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Ophelia" {
+            Ok(Ophelia)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Ophelia", s))
+        }
     }
 }
 impl From<Ophelia> for DynOrigin {
@@ -8741,6 +10912,7 @@ impl RotationalElements for Ophelia {
 #[doc = "Bianca (NAIF ID: 708)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Bianca;
 impl Origin for Bianca {
     fn id(&self) -> NaifId {
@@ -8753,6 +10925,21 @@ impl Origin for Bianca {
 impl Display for Bianca {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Bianca> for &'static str {
+    fn from(_: Bianca) -> Self {
+        "Bianca"
+    }
+}
+impl TryFrom<String> for Bianca {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Bianca" {
+            Ok(Bianca)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Bianca", s))
+        }
     }
 }
 impl From<Bianca> for DynOrigin {
@@ -8992,6 +11179,7 @@ impl RotationalElements for Bianca {
 #[doc = "Cressida (NAIF ID: 709)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Cressida;
 impl Origin for Cressida {
     fn id(&self) -> NaifId {
@@ -9004,6 +11192,21 @@ impl Origin for Cressida {
 impl Display for Cressida {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Cressida> for &'static str {
+    fn from(_: Cressida) -> Self {
+        "Cressida"
+    }
+}
+impl TryFrom<String> for Cressida {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Cressida" {
+            Ok(Cressida)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Cressida", s))
+        }
     }
 }
 impl From<Cressida> for DynOrigin {
@@ -9243,6 +11446,7 @@ impl RotationalElements for Cressida {
 #[doc = "Desdemona (NAIF ID: 710)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Desdemona;
 impl Origin for Desdemona {
     fn id(&self) -> NaifId {
@@ -9255,6 +11459,21 @@ impl Origin for Desdemona {
 impl Display for Desdemona {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Desdemona> for &'static str {
+    fn from(_: Desdemona) -> Self {
+        "Desdemona"
+    }
+}
+impl TryFrom<String> for Desdemona {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Desdemona" {
+            Ok(Desdemona)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Desdemona", s))
+        }
     }
 }
 impl From<Desdemona> for DynOrigin {
@@ -9494,6 +11713,7 @@ impl RotationalElements for Desdemona {
 #[doc = "Juliet (NAIF ID: 711)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Juliet;
 impl Origin for Juliet {
     fn id(&self) -> NaifId {
@@ -9506,6 +11726,21 @@ impl Origin for Juliet {
 impl Display for Juliet {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Juliet> for &'static str {
+    fn from(_: Juliet) -> Self {
+        "Juliet"
+    }
+}
+impl TryFrom<String> for Juliet {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Juliet" {
+            Ok(Juliet)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Juliet", s))
+        }
     }
 }
 impl From<Juliet> for DynOrigin {
@@ -9745,6 +11980,7 @@ impl RotationalElements for Juliet {
 #[doc = "Portia (NAIF ID: 712)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Portia;
 impl Origin for Portia {
     fn id(&self) -> NaifId {
@@ -9757,6 +11993,21 @@ impl Origin for Portia {
 impl Display for Portia {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Portia> for &'static str {
+    fn from(_: Portia) -> Self {
+        "Portia"
+    }
+}
+impl TryFrom<String> for Portia {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Portia" {
+            Ok(Portia)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Portia", s))
+        }
     }
 }
 impl From<Portia> for DynOrigin {
@@ -9996,6 +12247,7 @@ impl RotationalElements for Portia {
 #[doc = "Rosalind (NAIF ID: 713)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Rosalind;
 impl Origin for Rosalind {
     fn id(&self) -> NaifId {
@@ -10008,6 +12260,21 @@ impl Origin for Rosalind {
 impl Display for Rosalind {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Rosalind> for &'static str {
+    fn from(_: Rosalind) -> Self {
+        "Rosalind"
+    }
+}
+impl TryFrom<String> for Rosalind {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Rosalind" {
+            Ok(Rosalind)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Rosalind", s))
+        }
     }
 }
 impl From<Rosalind> for DynOrigin {
@@ -10247,6 +12514,7 @@ impl RotationalElements for Rosalind {
 #[doc = "Belinda (NAIF ID: 714)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Belinda;
 impl Origin for Belinda {
     fn id(&self) -> NaifId {
@@ -10259,6 +12527,21 @@ impl Origin for Belinda {
 impl Display for Belinda {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Belinda> for &'static str {
+    fn from(_: Belinda) -> Self {
+        "Belinda"
+    }
+}
+impl TryFrom<String> for Belinda {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Belinda" {
+            Ok(Belinda)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Belinda", s))
+        }
     }
 }
 impl From<Belinda> for DynOrigin {
@@ -10498,6 +12781,7 @@ impl RotationalElements for Belinda {
 #[doc = "Puck (NAIF ID: 715)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Puck;
 impl Origin for Puck {
     fn id(&self) -> NaifId {
@@ -10510,6 +12794,21 @@ impl Origin for Puck {
 impl Display for Puck {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Puck> for &'static str {
+    fn from(_: Puck) -> Self {
+        "Puck"
+    }
+}
+impl TryFrom<String> for Puck {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Puck" {
+            Ok(Puck)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Puck", s))
+        }
     }
 }
 impl From<Puck> for DynOrigin {
@@ -10749,6 +13048,7 @@ impl RotationalElements for Puck {
 #[doc = "Caliban (NAIF ID: 716)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Caliban;
 impl Origin for Caliban {
     fn id(&self) -> NaifId {
@@ -10763,6 +13063,21 @@ impl Display for Caliban {
         write!(f, "{}", self.name())
     }
 }
+impl From<Caliban> for &'static str {
+    fn from(_: Caliban) -> Self {
+        "Caliban"
+    }
+}
+impl TryFrom<String> for Caliban {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Caliban" {
+            Ok(Caliban)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Caliban", s))
+        }
+    }
+}
 impl From<Caliban> for DynOrigin {
     fn from(_: Caliban) -> Self {
         DynOrigin::Caliban
@@ -10771,6 +13086,7 @@ impl From<Caliban> for DynOrigin {
 #[doc = "Sycorax (NAIF ID: 717)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Sycorax;
 impl Origin for Sycorax {
     fn id(&self) -> NaifId {
@@ -10785,6 +13101,21 @@ impl Display for Sycorax {
         write!(f, "{}", self.name())
     }
 }
+impl From<Sycorax> for &'static str {
+    fn from(_: Sycorax) -> Self {
+        "Sycorax"
+    }
+}
+impl TryFrom<String> for Sycorax {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Sycorax" {
+            Ok(Sycorax)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Sycorax", s))
+        }
+    }
+}
 impl From<Sycorax> for DynOrigin {
     fn from(_: Sycorax) -> Self {
         DynOrigin::Sycorax
@@ -10793,6 +13124,7 @@ impl From<Sycorax> for DynOrigin {
 #[doc = "Prospero (NAIF ID: 718)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Prospero;
 impl Origin for Prospero {
     fn id(&self) -> NaifId {
@@ -10807,6 +13139,21 @@ impl Display for Prospero {
         write!(f, "{}", self.name())
     }
 }
+impl From<Prospero> for &'static str {
+    fn from(_: Prospero) -> Self {
+        "Prospero"
+    }
+}
+impl TryFrom<String> for Prospero {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Prospero" {
+            Ok(Prospero)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Prospero", s))
+        }
+    }
+}
 impl From<Prospero> for DynOrigin {
     fn from(_: Prospero) -> Self {
         DynOrigin::Prospero
@@ -10815,6 +13162,7 @@ impl From<Prospero> for DynOrigin {
 #[doc = "Setebos (NAIF ID: 719)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Setebos;
 impl Origin for Setebos {
     fn id(&self) -> NaifId {
@@ -10829,6 +13177,21 @@ impl Display for Setebos {
         write!(f, "{}", self.name())
     }
 }
+impl From<Setebos> for &'static str {
+    fn from(_: Setebos) -> Self {
+        "Setebos"
+    }
+}
+impl TryFrom<String> for Setebos {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Setebos" {
+            Ok(Setebos)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Setebos", s))
+        }
+    }
+}
 impl From<Setebos> for DynOrigin {
     fn from(_: Setebos) -> Self {
         DynOrigin::Setebos
@@ -10837,6 +13200,7 @@ impl From<Setebos> for DynOrigin {
 #[doc = "Stephano (NAIF ID: 720)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Stephano;
 impl Origin for Stephano {
     fn id(&self) -> NaifId {
@@ -10851,6 +13215,21 @@ impl Display for Stephano {
         write!(f, "{}", self.name())
     }
 }
+impl From<Stephano> for &'static str {
+    fn from(_: Stephano) -> Self {
+        "Stephano"
+    }
+}
+impl TryFrom<String> for Stephano {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Stephano" {
+            Ok(Stephano)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Stephano", s))
+        }
+    }
+}
 impl From<Stephano> for DynOrigin {
     fn from(_: Stephano) -> Self {
         DynOrigin::Stephano
@@ -10859,6 +13238,7 @@ impl From<Stephano> for DynOrigin {
 #[doc = "Trinculo (NAIF ID: 721)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Trinculo;
 impl Origin for Trinculo {
     fn id(&self) -> NaifId {
@@ -10873,6 +13253,21 @@ impl Display for Trinculo {
         write!(f, "{}", self.name())
     }
 }
+impl From<Trinculo> for &'static str {
+    fn from(_: Trinculo) -> Self {
+        "Trinculo"
+    }
+}
+impl TryFrom<String> for Trinculo {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Trinculo" {
+            Ok(Trinculo)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Trinculo", s))
+        }
+    }
+}
 impl From<Trinculo> for DynOrigin {
     fn from(_: Trinculo) -> Self {
         DynOrigin::Trinculo
@@ -10881,6 +13276,7 @@ impl From<Trinculo> for DynOrigin {
 #[doc = "Francisco (NAIF ID: 722)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Francisco;
 impl Origin for Francisco {
     fn id(&self) -> NaifId {
@@ -10895,6 +13291,21 @@ impl Display for Francisco {
         write!(f, "{}", self.name())
     }
 }
+impl From<Francisco> for &'static str {
+    fn from(_: Francisco) -> Self {
+        "Francisco"
+    }
+}
+impl TryFrom<String> for Francisco {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Francisco" {
+            Ok(Francisco)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Francisco", s))
+        }
+    }
+}
 impl From<Francisco> for DynOrigin {
     fn from(_: Francisco) -> Self {
         DynOrigin::Francisco
@@ -10903,6 +13314,7 @@ impl From<Francisco> for DynOrigin {
 #[doc = "Margaret (NAIF ID: 723)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Margaret;
 impl Origin for Margaret {
     fn id(&self) -> NaifId {
@@ -10917,6 +13329,21 @@ impl Display for Margaret {
         write!(f, "{}", self.name())
     }
 }
+impl From<Margaret> for &'static str {
+    fn from(_: Margaret) -> Self {
+        "Margaret"
+    }
+}
+impl TryFrom<String> for Margaret {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Margaret" {
+            Ok(Margaret)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Margaret", s))
+        }
+    }
+}
 impl From<Margaret> for DynOrigin {
     fn from(_: Margaret) -> Self {
         DynOrigin::Margaret
@@ -10925,6 +13352,7 @@ impl From<Margaret> for DynOrigin {
 #[doc = "Ferdinand (NAIF ID: 724)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Ferdinand;
 impl Origin for Ferdinand {
     fn id(&self) -> NaifId {
@@ -10939,6 +13367,21 @@ impl Display for Ferdinand {
         write!(f, "{}", self.name())
     }
 }
+impl From<Ferdinand> for &'static str {
+    fn from(_: Ferdinand) -> Self {
+        "Ferdinand"
+    }
+}
+impl TryFrom<String> for Ferdinand {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Ferdinand" {
+            Ok(Ferdinand)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Ferdinand", s))
+        }
+    }
+}
 impl From<Ferdinand> for DynOrigin {
     fn from(_: Ferdinand) -> Self {
         DynOrigin::Ferdinand
@@ -10947,6 +13390,7 @@ impl From<Ferdinand> for DynOrigin {
 #[doc = "Perdita (NAIF ID: 725)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Perdita;
 impl Origin for Perdita {
     fn id(&self) -> NaifId {
@@ -10961,6 +13405,21 @@ impl Display for Perdita {
         write!(f, "{}", self.name())
     }
 }
+impl From<Perdita> for &'static str {
+    fn from(_: Perdita) -> Self {
+        "Perdita"
+    }
+}
+impl TryFrom<String> for Perdita {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Perdita" {
+            Ok(Perdita)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Perdita", s))
+        }
+    }
+}
 impl From<Perdita> for DynOrigin {
     fn from(_: Perdita) -> Self {
         DynOrigin::Perdita
@@ -10969,6 +13428,7 @@ impl From<Perdita> for DynOrigin {
 #[doc = "Mab (NAIF ID: 726)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Mab;
 impl Origin for Mab {
     fn id(&self) -> NaifId {
@@ -10983,6 +13443,21 @@ impl Display for Mab {
         write!(f, "{}", self.name())
     }
 }
+impl From<Mab> for &'static str {
+    fn from(_: Mab) -> Self {
+        "Mab"
+    }
+}
+impl TryFrom<String> for Mab {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Mab" {
+            Ok(Mab)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Mab", s))
+        }
+    }
+}
 impl From<Mab> for DynOrigin {
     fn from(_: Mab) -> Self {
         DynOrigin::Mab
@@ -10991,6 +13466,7 @@ impl From<Mab> for DynOrigin {
 #[doc = "Cupid (NAIF ID: 727)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Cupid;
 impl Origin for Cupid {
     fn id(&self) -> NaifId {
@@ -11005,6 +13481,21 @@ impl Display for Cupid {
         write!(f, "{}", self.name())
     }
 }
+impl From<Cupid> for &'static str {
+    fn from(_: Cupid) -> Self {
+        "Cupid"
+    }
+}
+impl TryFrom<String> for Cupid {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Cupid" {
+            Ok(Cupid)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Cupid", s))
+        }
+    }
+}
 impl From<Cupid> for DynOrigin {
     fn from(_: Cupid) -> Self {
         DynOrigin::Cupid
@@ -11013,6 +13504,7 @@ impl From<Cupid> for DynOrigin {
 #[doc = "Triton (NAIF ID: 801)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Triton;
 impl Origin for Triton {
     fn id(&self) -> NaifId {
@@ -11025,6 +13517,21 @@ impl Origin for Triton {
 impl Display for Triton {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Triton> for &'static str {
+    fn from(_: Triton) -> Self {
+        "Triton"
+    }
+}
+impl TryFrom<String> for Triton {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Triton" {
+            Ok(Triton)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Triton", s))
+        }
     }
 }
 impl From<Triton> for DynOrigin {
@@ -11260,6 +13767,7 @@ impl RotationalElements for Triton {
 #[doc = "Nereid (NAIF ID: 802)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Nereid;
 impl Origin for Nereid {
     fn id(&self) -> NaifId {
@@ -11272,6 +13780,21 @@ impl Origin for Nereid {
 impl Display for Nereid {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Nereid> for &'static str {
+    fn from(_: Nereid) -> Self {
+        "Nereid"
+    }
+}
+impl TryFrom<String> for Nereid {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Nereid" {
+            Ok(Nereid)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Nereid", s))
+        }
     }
 }
 impl From<Nereid> for DynOrigin {
@@ -11297,6 +13820,7 @@ impl Spheroid for Nereid {}
 #[doc = "Naiad (NAIF ID: 803)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Naiad;
 impl Origin for Naiad {
     fn id(&self) -> NaifId {
@@ -11309,6 +13833,21 @@ impl Origin for Naiad {
 impl Display for Naiad {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Naiad> for &'static str {
+    fn from(_: Naiad) -> Self {
+        "Naiad"
+    }
+}
+impl TryFrom<String> for Naiad {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Naiad" {
+            Ok(Naiad)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Naiad", s))
+        }
     }
 }
 impl From<Naiad> for DynOrigin {
@@ -11544,6 +14083,7 @@ impl RotationalElements for Naiad {
 #[doc = "Thalassa (NAIF ID: 804)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Thalassa;
 impl Origin for Thalassa {
     fn id(&self) -> NaifId {
@@ -11556,6 +14096,21 @@ impl Origin for Thalassa {
 impl Display for Thalassa {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Thalassa> for &'static str {
+    fn from(_: Thalassa) -> Self {
+        "Thalassa"
+    }
+}
+impl TryFrom<String> for Thalassa {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Thalassa" {
+            Ok(Thalassa)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Thalassa", s))
+        }
     }
 }
 impl From<Thalassa> for DynOrigin {
@@ -11791,6 +14346,7 @@ impl RotationalElements for Thalassa {
 #[doc = "Despina (NAIF ID: 805)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Despina;
 impl Origin for Despina {
     fn id(&self) -> NaifId {
@@ -11803,6 +14359,21 @@ impl Origin for Despina {
 impl Display for Despina {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Despina> for &'static str {
+    fn from(_: Despina) -> Self {
+        "Despina"
+    }
+}
+impl TryFrom<String> for Despina {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Despina" {
+            Ok(Despina)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Despina", s))
+        }
     }
 }
 impl From<Despina> for DynOrigin {
@@ -12038,6 +14609,7 @@ impl RotationalElements for Despina {
 #[doc = "Galatea (NAIF ID: 806)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Galatea;
 impl Origin for Galatea {
     fn id(&self) -> NaifId {
@@ -12050,6 +14622,21 @@ impl Origin for Galatea {
 impl Display for Galatea {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Galatea> for &'static str {
+    fn from(_: Galatea) -> Self {
+        "Galatea"
+    }
+}
+impl TryFrom<String> for Galatea {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Galatea" {
+            Ok(Galatea)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Galatea", s))
+        }
     }
 }
 impl From<Galatea> for DynOrigin {
@@ -12285,6 +14872,7 @@ impl RotationalElements for Galatea {
 #[doc = "Larissa (NAIF ID: 807)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Larissa;
 impl Origin for Larissa {
     fn id(&self) -> NaifId {
@@ -12297,6 +14885,21 @@ impl Origin for Larissa {
 impl Display for Larissa {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Larissa> for &'static str {
+    fn from(_: Larissa) -> Self {
+        "Larissa"
+    }
+}
+impl TryFrom<String> for Larissa {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Larissa" {
+            Ok(Larissa)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Larissa", s))
+        }
     }
 }
 impl From<Larissa> for DynOrigin {
@@ -12532,6 +15135,7 @@ impl RotationalElements for Larissa {
 #[doc = "Proteus (NAIF ID: 808)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Proteus;
 impl Origin for Proteus {
     fn id(&self) -> NaifId {
@@ -12544,6 +15148,21 @@ impl Origin for Proteus {
 impl Display for Proteus {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Proteus> for &'static str {
+    fn from(_: Proteus) -> Self {
+        "Proteus"
+    }
+}
+impl TryFrom<String> for Proteus {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Proteus" {
+            Ok(Proteus)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Proteus", s))
+        }
     }
 }
 impl From<Proteus> for DynOrigin {
@@ -12778,6 +15397,7 @@ impl RotationalElements for Proteus {
 #[doc = "Halimede (NAIF ID: 809)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Halimede;
 impl Origin for Halimede {
     fn id(&self) -> NaifId {
@@ -12792,6 +15412,21 @@ impl Display for Halimede {
         write!(f, "{}", self.name())
     }
 }
+impl From<Halimede> for &'static str {
+    fn from(_: Halimede) -> Self {
+        "Halimede"
+    }
+}
+impl TryFrom<String> for Halimede {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Halimede" {
+            Ok(Halimede)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Halimede", s))
+        }
+    }
+}
 impl From<Halimede> for DynOrigin {
     fn from(_: Halimede) -> Self {
         DynOrigin::Halimede
@@ -12800,6 +15435,7 @@ impl From<Halimede> for DynOrigin {
 #[doc = "Psamathe (NAIF ID: 810)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Psamathe;
 impl Origin for Psamathe {
     fn id(&self) -> NaifId {
@@ -12814,6 +15450,21 @@ impl Display for Psamathe {
         write!(f, "{}", self.name())
     }
 }
+impl From<Psamathe> for &'static str {
+    fn from(_: Psamathe) -> Self {
+        "Psamathe"
+    }
+}
+impl TryFrom<String> for Psamathe {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Psamathe" {
+            Ok(Psamathe)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Psamathe", s))
+        }
+    }
+}
 impl From<Psamathe> for DynOrigin {
     fn from(_: Psamathe) -> Self {
         DynOrigin::Psamathe
@@ -12822,6 +15473,7 @@ impl From<Psamathe> for DynOrigin {
 #[doc = "Sao (NAIF ID: 811)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Sao;
 impl Origin for Sao {
     fn id(&self) -> NaifId {
@@ -12836,6 +15488,21 @@ impl Display for Sao {
         write!(f, "{}", self.name())
     }
 }
+impl From<Sao> for &'static str {
+    fn from(_: Sao) -> Self {
+        "Sao"
+    }
+}
+impl TryFrom<String> for Sao {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Sao" {
+            Ok(Sao)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Sao", s))
+        }
+    }
+}
 impl From<Sao> for DynOrigin {
     fn from(_: Sao) -> Self {
         DynOrigin::Sao
@@ -12844,6 +15511,7 @@ impl From<Sao> for DynOrigin {
 #[doc = "Laomedeia (NAIF ID: 812)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Laomedeia;
 impl Origin for Laomedeia {
     fn id(&self) -> NaifId {
@@ -12858,6 +15526,21 @@ impl Display for Laomedeia {
         write!(f, "{}", self.name())
     }
 }
+impl From<Laomedeia> for &'static str {
+    fn from(_: Laomedeia) -> Self {
+        "Laomedeia"
+    }
+}
+impl TryFrom<String> for Laomedeia {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Laomedeia" {
+            Ok(Laomedeia)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Laomedeia", s))
+        }
+    }
+}
 impl From<Laomedeia> for DynOrigin {
     fn from(_: Laomedeia) -> Self {
         DynOrigin::Laomedeia
@@ -12866,6 +15549,7 @@ impl From<Laomedeia> for DynOrigin {
 #[doc = "Neso (NAIF ID: 813)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Neso;
 impl Origin for Neso {
     fn id(&self) -> NaifId {
@@ -12880,6 +15564,21 @@ impl Display for Neso {
         write!(f, "{}", self.name())
     }
 }
+impl From<Neso> for &'static str {
+    fn from(_: Neso) -> Self {
+        "Neso"
+    }
+}
+impl TryFrom<String> for Neso {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Neso" {
+            Ok(Neso)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Neso", s))
+        }
+    }
+}
 impl From<Neso> for DynOrigin {
     fn from(_: Neso) -> Self {
         DynOrigin::Neso
@@ -12888,6 +15587,7 @@ impl From<Neso> for DynOrigin {
 #[doc = "Charon (NAIF ID: 901)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Charon;
 impl Origin for Charon {
     fn id(&self) -> NaifId {
@@ -12900,6 +15600,21 @@ impl Origin for Charon {
 impl Display for Charon {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Charon> for &'static str {
+    fn from(_: Charon) -> Self {
+        "Charon"
+    }
+}
+impl TryFrom<String> for Charon {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Charon" {
+            Ok(Charon)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Charon", s))
+        }
     }
 }
 impl From<Charon> for DynOrigin {
@@ -12973,6 +15688,7 @@ impl RotationalElements for Charon {
 #[doc = "Nix (NAIF ID: 902)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Nix;
 impl Origin for Nix {
     fn id(&self) -> NaifId {
@@ -12985,6 +15701,21 @@ impl Origin for Nix {
 impl Display for Nix {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Nix> for &'static str {
+    fn from(_: Nix) -> Self {
+        "Nix"
+    }
+}
+impl TryFrom<String> for Nix {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Nix" {
+            Ok(Nix)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Nix", s))
+        }
     }
 }
 impl From<Nix> for DynOrigin {
@@ -13000,6 +15731,7 @@ impl PointMass for Nix {
 #[doc = "Hydra (NAIF ID: 903)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Hydra;
 impl Origin for Hydra {
     fn id(&self) -> NaifId {
@@ -13012,6 +15744,21 @@ impl Origin for Hydra {
 impl Display for Hydra {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Hydra> for &'static str {
+    fn from(_: Hydra) -> Self {
+        "Hydra"
+    }
+}
+impl TryFrom<String> for Hydra {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Hydra" {
+            Ok(Hydra)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Hydra", s))
+        }
     }
 }
 impl From<Hydra> for DynOrigin {
@@ -13027,6 +15774,7 @@ impl PointMass for Hydra {
 #[doc = "Kerberos (NAIF ID: 904)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Kerberos;
 impl Origin for Kerberos {
     fn id(&self) -> NaifId {
@@ -13039,6 +15787,21 @@ impl Origin for Kerberos {
 impl Display for Kerberos {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Kerberos> for &'static str {
+    fn from(_: Kerberos) -> Self {
+        "Kerberos"
+    }
+}
+impl TryFrom<String> for Kerberos {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Kerberos" {
+            Ok(Kerberos)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Kerberos", s))
+        }
     }
 }
 impl From<Kerberos> for DynOrigin {
@@ -13054,6 +15817,7 @@ impl PointMass for Kerberos {
 #[doc = "Styx (NAIF ID: 905)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Styx;
 impl Origin for Styx {
     fn id(&self) -> NaifId {
@@ -13066,6 +15830,21 @@ impl Origin for Styx {
 impl Display for Styx {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Styx> for &'static str {
+    fn from(_: Styx) -> Self {
+        "Styx"
+    }
+}
+impl TryFrom<String> for Styx {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Styx" {
+            Ok(Styx)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Styx", s))
+        }
     }
 }
 impl From<Styx> for DynOrigin {
@@ -13081,6 +15860,7 @@ impl PointMass for Styx {
 #[doc = "Gaspra (NAIF ID: 9511010)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Gaspra;
 impl Origin for Gaspra {
     fn id(&self) -> NaifId {
@@ -13093,6 +15873,21 @@ impl Origin for Gaspra {
 impl Display for Gaspra {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Gaspra> for &'static str {
+    fn from(_: Gaspra) -> Self {
+        "Gaspra"
+    }
+}
+impl TryFrom<String> for Gaspra {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Gaspra" {
+            Ok(Gaspra)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Gaspra", s))
+        }
     }
 }
 impl From<Gaspra> for DynOrigin {
@@ -13160,6 +15955,7 @@ impl RotationalElements for Gaspra {
 #[doc = "Ida (NAIF ID: 2431010)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Ida;
 impl Origin for Ida {
     fn id(&self) -> NaifId {
@@ -13172,6 +15968,21 @@ impl Origin for Ida {
 impl Display for Ida {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Ida> for &'static str {
+    fn from(_: Ida) -> Self {
+        "Ida"
+    }
+}
+impl TryFrom<String> for Ida {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Ida" {
+            Ok(Ida)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Ida", s))
+        }
     }
 }
 impl From<Ida> for DynOrigin {
@@ -13239,6 +16050,7 @@ impl RotationalElements for Ida {
 #[doc = "Dactyl (NAIF ID: 2431011)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Dactyl;
 impl Origin for Dactyl {
     fn id(&self) -> NaifId {
@@ -13253,6 +16065,21 @@ impl Display for Dactyl {
         write!(f, "{}", self.name())
     }
 }
+impl From<Dactyl> for &'static str {
+    fn from(_: Dactyl) -> Self {
+        "Dactyl"
+    }
+}
+impl TryFrom<String> for Dactyl {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Dactyl" {
+            Ok(Dactyl)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Dactyl", s))
+        }
+    }
+}
 impl From<Dactyl> for DynOrigin {
     fn from(_: Dactyl) -> Self {
         DynOrigin::Dactyl
@@ -13261,6 +16088,7 @@ impl From<Dactyl> for DynOrigin {
 #[doc = "Ceres (NAIF ID: 2000001)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Ceres;
 impl Origin for Ceres {
     fn id(&self) -> NaifId {
@@ -13273,6 +16101,21 @@ impl Origin for Ceres {
 impl Display for Ceres {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Ceres> for &'static str {
+    fn from(_: Ceres) -> Self {
+        "Ceres"
+    }
+}
+impl TryFrom<String> for Ceres {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Ceres" {
+            Ok(Ceres)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Ceres", s))
+        }
     }
 }
 impl From<Ceres> for DynOrigin {
@@ -13346,6 +16189,7 @@ impl RotationalElements for Ceres {
 #[doc = "Pallas (NAIF ID: 2000002)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Pallas;
 impl Origin for Pallas {
     fn id(&self) -> NaifId {
@@ -13358,6 +16202,21 @@ impl Origin for Pallas {
 impl Display for Pallas {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Pallas> for &'static str {
+    fn from(_: Pallas) -> Self {
+        "Pallas"
+    }
+}
+impl TryFrom<String> for Pallas {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Pallas" {
+            Ok(Pallas)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Pallas", s))
+        }
     }
 }
 impl From<Pallas> for DynOrigin {
@@ -13416,6 +16275,7 @@ impl RotationalElements for Pallas {
 #[doc = "Vesta (NAIF ID: 2000004)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Vesta;
 impl Origin for Vesta {
     fn id(&self) -> NaifId {
@@ -13428,6 +16288,21 @@ impl Origin for Vesta {
 impl Display for Vesta {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Vesta> for &'static str {
+    fn from(_: Vesta) -> Self {
+        "Vesta"
+    }
+}
+impl TryFrom<String> for Vesta {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Vesta" {
+            Ok(Vesta)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Vesta", s))
+        }
     }
 }
 impl From<Vesta> for DynOrigin {
@@ -13495,6 +16370,7 @@ impl RotationalElements for Vesta {
 #[doc = "Psyche (NAIF ID: 2000016)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Psyche;
 impl Origin for Psyche {
     fn id(&self) -> NaifId {
@@ -13507,6 +16383,21 @@ impl Origin for Psyche {
 impl Display for Psyche {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Psyche> for &'static str {
+    fn from(_: Psyche) -> Self {
+        "Psyche"
+    }
+}
+impl TryFrom<String> for Psyche {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Psyche" {
+            Ok(Psyche)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Psyche", s))
+        }
     }
 }
 impl From<Psyche> for DynOrigin {
@@ -13536,6 +16427,7 @@ impl TriaxialEllipsoid for Psyche {
 #[doc = "Lutetia (NAIF ID: 2000021)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Lutetia;
 impl Origin for Lutetia {
     fn id(&self) -> NaifId {
@@ -13548,6 +16440,21 @@ impl Origin for Lutetia {
 impl Display for Lutetia {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Lutetia> for &'static str {
+    fn from(_: Lutetia) -> Self {
+        "Lutetia"
+    }
+}
+impl TryFrom<String> for Lutetia {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Lutetia" {
+            Ok(Lutetia)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Lutetia", s))
+        }
     }
 }
 impl From<Lutetia> for DynOrigin {
@@ -13615,6 +16522,7 @@ impl RotationalElements for Lutetia {
 #[doc = "Kleopatra (NAIF ID: 2000216)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Kleopatra;
 impl Origin for Kleopatra {
     fn id(&self) -> NaifId {
@@ -13629,6 +16537,21 @@ impl Display for Kleopatra {
         write!(f, "{}", self.name())
     }
 }
+impl From<Kleopatra> for &'static str {
+    fn from(_: Kleopatra) -> Self {
+        "Kleopatra"
+    }
+}
+impl TryFrom<String> for Kleopatra {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Kleopatra" {
+            Ok(Kleopatra)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Kleopatra", s))
+        }
+    }
+}
 impl From<Kleopatra> for DynOrigin {
     fn from(_: Kleopatra) -> Self {
         DynOrigin::Kleopatra
@@ -13637,6 +16560,7 @@ impl From<Kleopatra> for DynOrigin {
 #[doc = "Eros (NAIF ID: 2000433)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Eros;
 impl Origin for Eros {
     fn id(&self) -> NaifId {
@@ -13649,6 +16573,21 @@ impl Origin for Eros {
 impl Display for Eros {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Eros> for &'static str {
+    fn from(_: Eros) -> Self {
+        "Eros"
+    }
+}
+impl TryFrom<String> for Eros {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Eros" {
+            Ok(Eros)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Eros", s))
+        }
     }
 }
 impl From<Eros> for DynOrigin {
@@ -13721,6 +16660,7 @@ impl RotationalElements for Eros {
 #[doc = "Davida (NAIF ID: 2000511)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Davida;
 impl Origin for Davida {
     fn id(&self) -> NaifId {
@@ -13733,6 +16673,21 @@ impl Origin for Davida {
 impl Display for Davida {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Davida> for &'static str {
+    fn from(_: Davida) -> Self {
+        "Davida"
+    }
+}
+impl TryFrom<String> for Davida {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Davida" {
+            Ok(Davida)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Davida", s))
+        }
     }
 }
 impl From<Davida> for DynOrigin {
@@ -13805,6 +16760,7 @@ impl RotationalElements for Davida {
 #[doc = "Mathilde (NAIF ID: 2000253)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Mathilde;
 impl Origin for Mathilde {
     fn id(&self) -> NaifId {
@@ -13817,6 +16773,21 @@ impl Origin for Mathilde {
 impl Display for Mathilde {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Mathilde> for &'static str {
+    fn from(_: Mathilde) -> Self {
+        "Mathilde"
+    }
+}
+impl TryFrom<String> for Mathilde {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Mathilde" {
+            Ok(Mathilde)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Mathilde", s))
+        }
     }
 }
 impl From<Mathilde> for DynOrigin {
@@ -13841,6 +16812,7 @@ impl TriaxialEllipsoid for Mathilde {
 #[doc = "Steins (NAIF ID: 2002867)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Steins;
 impl Origin for Steins {
     fn id(&self) -> NaifId {
@@ -13853,6 +16825,21 @@ impl Origin for Steins {
 impl Display for Steins {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Steins> for &'static str {
+    fn from(_: Steins) -> Self {
+        "Steins"
+    }
+}
+impl TryFrom<String> for Steins {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Steins" {
+            Ok(Steins)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Steins", s))
+        }
     }
 }
 impl From<Steins> for DynOrigin {
@@ -13920,6 +16907,7 @@ impl RotationalElements for Steins {
 #[doc = "Braille (NAIF ID: 2009969)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Braille;
 impl Origin for Braille {
     fn id(&self) -> NaifId {
@@ -13934,6 +16922,21 @@ impl Display for Braille {
         write!(f, "{}", self.name())
     }
 }
+impl From<Braille> for &'static str {
+    fn from(_: Braille) -> Self {
+        "Braille"
+    }
+}
+impl TryFrom<String> for Braille {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Braille" {
+            Ok(Braille)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Braille", s))
+        }
+    }
+}
 impl From<Braille> for DynOrigin {
     fn from(_: Braille) -> Self {
         DynOrigin::Braille
@@ -13942,6 +16945,7 @@ impl From<Braille> for DynOrigin {
 #[doc = "Wilson-Harrington (NAIF ID: 2004015)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct WilsonHarrington;
 impl Origin for WilsonHarrington {
     fn id(&self) -> NaifId {
@@ -13956,6 +16960,24 @@ impl Display for WilsonHarrington {
         write!(f, "{}", self.name())
     }
 }
+impl From<WilsonHarrington> for &'static str {
+    fn from(_: WilsonHarrington) -> Self {
+        "Wilson-Harrington"
+    }
+}
+impl TryFrom<String> for WilsonHarrington {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Wilson-Harrington" {
+            Ok(WilsonHarrington)
+        } else {
+            Err(format!(
+                "expected \"{}\", got \"{}\"",
+                "Wilson-Harrington", s
+            ))
+        }
+    }
+}
 impl From<WilsonHarrington> for DynOrigin {
     fn from(_: WilsonHarrington) -> Self {
         DynOrigin::WilsonHarrington
@@ -13964,6 +16986,7 @@ impl From<WilsonHarrington> for DynOrigin {
 #[doc = "Toutatis (NAIF ID: 2004179)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Toutatis;
 impl Origin for Toutatis {
     fn id(&self) -> NaifId {
@@ -13976,6 +16999,21 @@ impl Origin for Toutatis {
 impl Display for Toutatis {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Toutatis> for &'static str {
+    fn from(_: Toutatis) -> Self {
+        "Toutatis"
+    }
+}
+impl TryFrom<String> for Toutatis {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Toutatis" {
+            Ok(Toutatis)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Toutatis", s))
+        }
     }
 }
 impl From<Toutatis> for DynOrigin {
@@ -13995,6 +17033,7 @@ impl TriaxialEllipsoid for Toutatis {
 #[doc = "Itokawa (NAIF ID: 2025143)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Itokawa;
 impl Origin for Itokawa {
     fn id(&self) -> NaifId {
@@ -14007,6 +17046,21 @@ impl Origin for Itokawa {
 impl Display for Itokawa {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Itokawa> for &'static str {
+    fn from(_: Itokawa) -> Self {
+        "Itokawa"
+    }
+}
+impl TryFrom<String> for Itokawa {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Itokawa" {
+            Ok(Itokawa)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Itokawa", s))
+        }
     }
 }
 impl From<Itokawa> for DynOrigin {
@@ -14069,6 +17123,7 @@ impl RotationalElements for Itokawa {
 #[doc = "Bennu (NAIF ID: 2101955)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Bennu;
 impl Origin for Bennu {
     fn id(&self) -> NaifId {
@@ -14081,6 +17136,21 @@ impl Origin for Bennu {
 impl Display for Bennu {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
+    }
+}
+impl From<Bennu> for &'static str {
+    fn from(_: Bennu) -> Self {
+        "Bennu"
+    }
+}
+impl TryFrom<String> for Bennu {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        if s == "Bennu" {
+            Ok(Bennu)
+        } else {
+            Err(format!("expected \"{}\", got \"{}\"", "Bennu", s))
+        }
     }
 }
 impl From<Bennu> for DynOrigin {
