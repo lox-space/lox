@@ -26,6 +26,11 @@
     "onlyBuiltDependencies": [
       "esbuild",
       "@tailwindcss/oxide"
-    ]
+    ],
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "shiki-magic-move>shiki": "4"
+      }
+    }
   }
 }

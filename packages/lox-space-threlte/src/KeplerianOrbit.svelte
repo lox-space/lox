@@ -13,7 +13,7 @@ SPDX-License-Identifier: MPL-2.0
     MeshLineMaterial,
     Text,
   } from "@threlte/extras";
-  import { Group, Vector3 } from "three";
+  import { DoubleSide, Euler, Group, Quaternion, Vector3 } from "three";
 
   const DEG_TO_RAD = Math.PI / 180;
   const M_TO_KM = 1e-3;
@@ -28,6 +28,7 @@ SPDX-License-Identifier: MPL-2.0
     origin?: string;
     color?: string;
     name?: string;
+    withOrbitalPlane?: boolean;
   }
 
   let {
@@ -40,6 +41,7 @@ SPDX-License-Identifier: MPL-2.0
     origin: originName = "Earth",
     color = "#e92093",
     name,
+    withOrbitalPlane = false,
   }: Props = $props();
 
   let wasmOrigin = $derived(new Origin(originName));
@@ -90,12 +92,36 @@ SPDX-License-Identifier: MPL-2.0
       scale = distance * 0.001;
     }
   });
+
+  let planeQuaternion = $derived.by((): [number, number, number, number] => {
+    const euler = new Euler(
+      Math.PI / 2 + inclination * DEG_TO_RAD,
+      raan * DEG_TO_RAD,
+      -argPeriapsis * DEG_TO_RAD,
+      "YXZ",
+    );
+    const q = new Quaternion().setFromEuler(euler);
+    return [q.x, q.y, q.z, q.w];
+  });
+  let planeDimensions = $derived.by((): [number, number] => {
+    const semiMinorAxis = semiMajorAxis * Math.sqrt(1 - eccentricity ** 2);
+    return [semiMajorAxis * 2.1, semiMinorAxis * 2.1];
+  });
+  let linearEccentricity = $derived(eccentricity * semiMajorAxis);
 </script>
 
 <T.Mesh>
   <MeshLineGeometry {points} />
   <MeshLineMaterial {color} attenuate={false} width={2} />
 </T.Mesh>
+{#if withOrbitalPlane}
+  <T.Group quaternion={planeQuaternion}>
+    <T.Mesh position={[-linearEccentricity, 0, 0]}>
+      <T.PlaneGeometry args={planeDimensions} />
+      <T.MeshBasicMaterial {color} transparent opacity={0.3} side={DoubleSide} />
+    </T.Mesh>
+  </T.Group>
+{/if}
 {#if name}
   <Billboard {position} bind:ref={billboardRef}>
     <Text text={name} {fontSize} {color} />

@@ -19,6 +19,12 @@ use lox_space::core::units::{Angle, AngleUnits, DistanceUnits};
 use lox_space::frames::dynamic::DynFrame;
 use lox_space::frames::traits::ReferenceFrame;
 use lox_space::orbits::sso::inclination_sso;
+use lox_space::time::DynTime;
+use lox_space::time::calendar_dates::CalendarDate;
+use lox_space::time::time_of_day::CivilTime;
+use lox_space::time::time_scales::{DynTimeScale, TimeScale};
+use lox_space::time::utc::Utc as LoxUtc;
+use lox_space::time::utc::transformations::ToUtc;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::prelude::*;
 
@@ -38,6 +44,7 @@ impl Origin {
     /// Construct an Origin from a body name (string) or NAIF ID (number).
     #[wasm_bindgen(constructor)]
     pub fn new(value: JsValue) -> Result<Origin, JsValue> {
+        dbg!(&value);
         if let Some(name) = value.as_string() {
             let origin =
                 DynOrigin::from_str(&name).map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -218,6 +225,29 @@ impl Keplerian {
             .with_semi_major_axis(semi_major_axis.m(), 0.0)
             .with_inclination(inclination.rad())
             .with_longitude_of_ascending_node(raan.rad())
+            .with_argument_of_periapsis(0.0f64.rad())
+            .with_true_anomaly(0.0f64.rad())
+            .build()
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        Ok(Keplerian {
+            elements,
+            origin: origin.0,
+        })
+    }
+
+    /// Construct a circular orbit from altitude above the body's mean radius.
+    ///
+    /// - `altitude`: meters above mean radius
+    /// - `origin`: central body (must have mean radius and GM defined)
+    pub fn circular_from_altitude(altitude: f64, origin: &Origin) -> Result<Keplerian, JsValue> {
+        let mean_radius = TryMeanRadius::try_mean_radius(&origin.0)
+            .map(|r| r.to_meters())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        let semi_major_axis = (altitude + mean_radius).m();
+        let elements = LoxKeplerian::builder()
+            .with_semi_major_axis(semi_major_axis, 0.0)
+            .with_inclination(0.0f64.rad())
+            .with_longitude_of_ascending_node(0.0f64.rad())
             .with_argument_of_periapsis(0.0f64.rad())
             .with_true_anomaly(0.0f64.rad())
             .build()
@@ -528,6 +558,109 @@ impl Trajectory {
     }
 }
 
+fn parse_scale(scale: &str) -> Result<DynTimeScale, JsValue> {
+    scale
+        .parse()
+        .map_err(|_| JsValue::from_str(&format!("unknown time scale: {scale}")))
+}
+
+#[wasm_bindgen]
+pub struct Utc(LoxUtc);
+
+#[wasm_bindgen]
+impl Utc {
+    /// Parse a UTC timestamp from an ISO 8601 string.
+    #[wasm_bindgen(js_name = fromIso)]
+    pub fn from_iso(iso: &str) -> Result<Utc, JsValue> {
+        iso.parse::<LoxUtc>()
+            .map(Utc)
+            .map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+
+    /// Convert to a `Time` in the given scale ("TAI", "TT", "TDB", "TCG", "TCB").
+    #[wasm_bindgen(js_name = toScale)]
+    pub fn to_scale(&self, scale: &str) -> Result<WasmTime, JsValue> {
+        let scale = parse_scale(scale)?;
+        Ok(WasmTime(self.0.to_dyn_time().to_scale(scale)))
+    }
+
+    pub fn year(&self) -> i64 {
+        self.0.year()
+    }
+    pub fn month(&self) -> u8 {
+        self.0.month()
+    }
+    pub fn day(&self) -> u8 {
+        self.0.day()
+    }
+    pub fn hour(&self) -> u8 {
+        self.0.hour()
+    }
+    pub fn minute(&self) -> u8 {
+        self.0.minute()
+    }
+    pub fn second(&self) -> u8 {
+        self.0.second()
+    }
+    pub fn millisecond(&self) -> u32 {
+        self.0.millisecond()
+    }
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string(&self) -> String {
+        self.0.to_string()
+    }
+}
+
+#[wasm_bindgen]
+pub struct WasmTime(DynTime);
+
+#[wasm_bindgen]
+impl WasmTime {
+    /// Convert to another time scale.
+    #[wasm_bindgen(js_name = toScale)]
+    pub fn to_scale(&self, scale: &str) -> Result<WasmTime, JsValue> {
+        let scale = parse_scale(scale)?;
+        Ok(WasmTime(self.0.to_scale(scale)))
+    }
+
+    /// Convert back to UTC.
+    #[wasm_bindgen(js_name = toUtc)]
+    pub fn to_utc(&self) -> Utc {
+        Utc(self.0.to_utc())
+    }
+
+    /// The time scale abbreviation, e.g. "TAI", "TT", "TDB".
+    pub fn scale(&self) -> String {
+        self.0.scale().abbreviation().to_string()
+    }
+
+    pub fn year(&self) -> i64 {
+        self.0.year()
+    }
+    pub fn month(&self) -> u8 {
+        self.0.month()
+    }
+    pub fn day(&self) -> u8 {
+        self.0.day()
+    }
+    pub fn hour(&self) -> u8 {
+        self.0.hour()
+    }
+    pub fn minute(&self) -> u8 {
+        self.0.minute()
+    }
+    pub fn second(&self) -> u8 {
+        self.0.second()
+    }
+    pub fn millisecond(&self) -> u32 {
+        self.0.millisecond()
+    }
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string(&self) -> String {
+        self.0.to_string()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -720,6 +853,33 @@ mod tests {
         );
         assert!((k.argument_of_periapsis().as_f64() - 0.0).abs() < 1e-12);
         assert!((k.true_anomaly().as_f64() - 0.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_keplerian_circular_from_altitude() {
+        let altitude = 400_000.0_f64; // 400 km in meters
+        let earth = DynOrigin::from_str("Earth").unwrap();
+        let mean_r = TryMeanRadius::try_mean_radius(&earth).unwrap().to_meters();
+
+        let k = LoxKeplerianTest::builder()
+            .with_semi_major_axis((altitude + mean_r).m(), 0.0)
+            .with_inclination(0.0_f64.rad())
+            .with_longitude_of_ascending_node(0.0_f64.rad())
+            .with_argument_of_periapsis(0.0_f64.rad())
+            .with_true_anomaly(0.0_f64.rad())
+            .build()
+            .unwrap();
+
+        let expected_sma = altitude + mean_r;
+        assert!((k.semi_major_axis().to_meters() - expected_sma).abs() < 1.0);
+        assert!(k.eccentricity().as_f64().abs() < 1e-12);
+
+        // Verify orbital period is reasonable (~92 min for 400 km LEO)
+        let mu = TryPointMass::try_gravitational_parameter(&earth)
+            .unwrap()
+            .as_f64();
+        let period = TAU * (k.semi_major_axis().to_meters().powi(3) / mu).sqrt();
+        assert!(period > 5400.0 && period < 5700.0, "period = {period}");
     }
 
     #[test]
