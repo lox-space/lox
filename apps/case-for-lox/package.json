@@ -1,0 +1,46 @@
+{
+	"name": "case-for-lox",
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"preview": "vite preview",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
+	},
+	"devDependencies": {
+		"@sveltejs/adapter-auto": "^7.0.1",
+		"@sveltejs/kit": "^2.51.0",
+		"@sveltejs/vite-plugin-svelte": "^6.2.4",
+		"@types/qrcode": "^1.5.6",
+		"@types/reveal.js": "^5.2.2",
+		"@types/three": "^0.183.1",
+		"prettier": "^3.8.1",
+		"prettier-plugin-svelte": "^3.4.1",
+		"prettier-plugin-tailwindcss": "^0.7.2",
+		"shiki": "^3.22.0",
+		"shiki-magic-move": "^1.2.1",
+		"svelte": "^5.50.3",
+		"svelte-check": "^4.3.6",
+		"tslib": "^2.8.1",
+		"typescript": "^5.9.3",
+		"vite": "^7.3.1"
+	},
+	"dependencies": {
+		"@animotion/core": "*",
+		"@animotion/motion": "*",
+		"@fontsource/atkinson-hyperlegible": "^5.2.8",
+		"@fontsource/monaspace-neon": "^5.2.5",
+		"@lox-space/svelte": "workspace:^",
+		"@lox-space/threlte": "workspace:^",
+		"@lox-space/wasm": "workspace:*",
+		"@tailwindcss/vite": "^4.1.18",
+		"@threlte/core": "^8.5.4",
+		"@threlte/extras": "^9.13.3",
+		"qrcode": "^1.5.4",
+		"reveal.js": "^5.2.1",
+		"tailwindcss": "^4.1.18",
+		"three": "^0.183.2",
+		"vite-plugin-wasm": "^3.6.0"
+	}
+}

@@ -28,7 +28,7 @@
     "@types/three": "^0.183.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "typescript": "^6.0.2"
+    "typescript": "^5.9.3"
   },
   "repository": {
     "type": "git",

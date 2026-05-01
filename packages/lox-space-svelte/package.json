@@ -24,12 +24,11 @@
     "build": "svelte-package --input src",
     "clean": "rm -rf dist"
   },
-  "dependencies": {
-    "svelte-tweakpane-ui": "^1.5.15"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@sveltejs/package": "^2.3.11",
-    "@sveltejs/vite-plugin-svelte": "^7.0.0",
+    "typescript": "^5.9.3",
+    "@sveltejs/vite-plugin-svelte": "^6.2.4",
     "svelte": "^5.55.0"
   },
   "peerDependencies": {

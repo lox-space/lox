@@ -29,10 +29,12 @@
   },
   "devDependencies": {
     "@sveltejs/package": "^2.3.11",
-    "@sveltejs/vite-plugin-svelte": "^7.0.0",
+    "typescript": "^5.9.3",
+    "@sveltejs/vite-plugin-svelte": "^6.2.4",
     "@threlte/core": "^8.5.4",
     "@threlte/extras": "^9.13.3",
     "svelte": "^5.55.0",
+    "@types/three": "^0.183.1",
     "three": "^0.183.2"
   },
   "peerDependencies": {
