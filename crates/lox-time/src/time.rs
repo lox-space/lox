@@ -65,7 +65,7 @@ pub enum TimeError {
 ///
 /// `Time` supports femtosecond precision, but be aware that many algorithms operating on `Time`s
 /// are not accurate to this level of precision.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Time<T: TimeScale> {
     scale: T,
@@ -265,6 +265,43 @@ impl<T: TimeScale + Into<DynTimeScale>> Time<T> {
     /// Converts this time into a [`DynTime`] with a runtime time scale.
     pub fn into_dyn(self) -> DynTime {
         Time::from_delta(self.scale.into(), self.delta)
+    }
+}
+
+impl<T: TimeScale + Eq> PartialOrd for Time<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<T: TimeScale + Eq> Ord for Time<T> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        assert!(
+            self.scale == other.scale,
+            "cannot compare `Time` objects with different time scales"
+        );
+        self.delta.cmp(&other.delta)
+    }
+}
+
+/// Error returned when comparing [`DynTime`] objects with different time scales.
+#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
+#[error("cannot compare `Time` objects with different time scales `{lhs}` and `{rhs}`")]
+pub struct TimeScaleMismatch {
+    lhs: DynTimeScale,
+    rhs: DynTimeScale,
+}
+
+impl DynTime {
+    /// Compares two [`DynTime`] objects, returning an error if they have different time scales.
+    pub fn checked_cmp(&self, other: &Self) -> Result<std::cmp::Ordering, TimeScaleMismatch> {
+        if self.scale != other.scale {
+            return Err(TimeScaleMismatch {
+                lhs: self.scale,
+                rhs: other.scale,
+            });
+        }
+        Ok(self.delta.cmp(&other.delta))
     }
 }
 
@@ -1094,5 +1131,31 @@ mod tests {
         let dyn_tdb = tdb_time.into_dyn();
         assert_eq!(dyn_tdb.scale(), DynTimeScale::Tdb);
         assert_eq!(dyn_tdb.to_delta(), tdb_time.to_delta());
+    }
+
+    #[test]
+    fn test_checked_cmp_same_scale() {
+        use std::cmp::Ordering;
+        let t1 = time!(Tai, 2000, 1, 1, 12, 0, 0.0).unwrap().into_dyn();
+        let t2 = time!(Tai, 2000, 1, 1, 13, 0, 0.0).unwrap().into_dyn();
+        assert_eq!(t1.checked_cmp(&t2), Ok(Ordering::Less));
+        assert_eq!(t2.checked_cmp(&t1), Ok(Ordering::Greater));
+        assert_eq!(t1.checked_cmp(&t1), Ok(Ordering::Equal));
+    }
+
+    #[test]
+    fn test_checked_cmp_different_scale_returns_err() {
+        let t_tai = time!(Tai, 2000, 1, 1, 12, 0, 0.0).unwrap().into_dyn();
+        let t_tt = time!(Tt, 2000, 1, 1, 12, 0, 0.0).unwrap().into_dyn();
+        assert!(t_tai.checked_cmp(&t_tt).is_err());
+        assert!(t_tt.checked_cmp(&t_tai).is_err());
+    }
+
+    #[test]
+    #[should_panic(expected = "cannot compare `Time` objects with different time scales")]
+    fn test_ord_different_scale_panics() {
+        let t_tai = time!(Tai, 2000, 1, 1, 12, 0, 0.0).unwrap().into_dyn();
+        let t_tt = time!(Tt, 2000, 1, 1, 12, 0, 0.0).unwrap().into_dyn();
+        let _ = t_tai < t_tt;
     }
 }
