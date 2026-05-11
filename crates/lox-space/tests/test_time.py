@@ -243,3 +243,20 @@ def test_eop_provider_extrapolated(provider):
     tai = lox.Time("TAI", 2100, 1, 1)
     with pytest.raises(lox.EopProviderError, match="extrapolated"):
         tai.to_scale("UT1", provider)
+
+
+def test_time_comparison_same_scale():
+    t1 = lox.Time("TAI", 2000, 1, 1)
+    t2 = lox.Time("TAI", 2000, 1, 2)
+    assert t1 < t2
+    assert t2 > t1
+    assert t1 == t1
+
+
+def test_time_comparison_different_scale_raises():
+    t_tai = lox.Time("TAI", 2000, 1, 1)
+    t_tt = lox.Time("TT", 2000, 1, 1)
+    with pytest.raises(ValueError, match="different time scales"):
+        _ = t_tai < t_tt
+    with pytest.raises(ValueError, match="different time scales"):
+        _ = t_tt > t_tai

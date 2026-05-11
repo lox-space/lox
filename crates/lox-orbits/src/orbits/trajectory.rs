@@ -308,7 +308,7 @@ where
 
 impl<T, O, R> Propagator<T, O> for Trajectory<T, O, R>
 where
-    T: TimeScale + Copy + PartialOrd,
+    T: TimeScale + Copy + Eq,
     O: Origin + Copy,
     R: ReferenceFrame + Copy,
 {
