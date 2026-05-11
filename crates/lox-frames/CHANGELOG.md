@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.0-alpha.17](https://github.com/lox-space/lox/compare/lox-frames-v0.1.0-alpha.16...lox-frames-v0.1.0-alpha.17) - 2026-05-11
+
+### Fixed
+
+- fix ZST serialization
+
 ## [0.1.0-alpha.16](https://github.com/lox-space/lox/compare/lox-frames-v0.1.0-alpha.15...lox-frames-v0.1.0-alpha.16) - 2026-04-26
 
 ### Other

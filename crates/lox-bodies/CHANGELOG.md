@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.23](https://github.com/lox-space/lox/compare/lox-bodies-v0.1.0-alpha.22...lox-bodies-v0.1.0-alpha.23) - 2026-05-11
+
+### Fixed
+
+- fix ZST serialization
+
 ## [0.1.0-alpha.22](https://github.com/lox-space/lox/compare/lox-bodies-v0.1.0-alpha.21...lox-bodies-v0.1.0-alpha.22) - 2026-04-26
 
 ### Other
