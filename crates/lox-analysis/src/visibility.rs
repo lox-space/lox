@@ -311,7 +311,7 @@ impl<T: TimeScale> Pass<T> {
     /// Interpolates observables at the given time, or `None` if outside the pass interval.
     pub fn interpolate(&self, time: Time<T>) -> Option<Observables>
     where
-        T: Copy + PartialOrd,
+        T: Copy + Eq,
     {
         if time < self.interval.start() || time > self.interval.end() {
             return None;

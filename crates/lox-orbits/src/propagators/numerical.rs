@@ -233,7 +233,7 @@ where
 
 impl<T, O, R> Propagator<T, O> for NumericalPropagator<T, O, R>
 where
-    T: TimeScale + Copy + PartialOrd,
+    T: TimeScale + Copy + Eq,
     O: TryJ2 + TryPointMass + TrySpheroid + Origin + Copy,
     R: ReferenceFrame + Copy,
 {

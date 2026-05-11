@@ -158,7 +158,7 @@ where
 
 impl<T, O, R> Propagator<T, O> for J4Propagator<T, O, R>
 where
-    T: TimeScale + Copy + PartialOrd,
+    T: TimeScale + Copy + Eq,
     O: TryJ2 + TryJ4 + TryPointMass + TrySpheroid + Origin + Copy,
     R: ReferenceFrame + Copy,
 {

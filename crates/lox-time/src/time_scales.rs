@@ -185,7 +185,7 @@ impl_time_scale_serde!(Tt, "TT");
 impl_time_scale_serde!(Ut1, "UT1");
 
 /// Dynamic time scale selector for runtime-determined time scales.
-#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum DynTimeScale {
     /// International Atomic Time.

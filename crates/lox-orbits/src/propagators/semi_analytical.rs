@@ -205,7 +205,7 @@ where
 // Single impl covers both typed and DynVallado
 impl<T, O, R> Propagator<T, O> for Vallado<T, O, R>
 where
-    T: TimeScale + Copy + PartialOrd,
+    T: TimeScale + Copy + Eq,
     O: TryPointMass + Copy,
     R: ReferenceFrame + Copy,
 {

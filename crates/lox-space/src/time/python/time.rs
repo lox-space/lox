@@ -23,7 +23,7 @@ use crate::time::python::deltas::PyTimeDelta;
 use crate::time::time_of_day::{CivilTime, TimeOfDay};
 use crate::time::time_scales::Tai;
 use crate::time::utc::transformations::ToUtc;
-use crate::time::{DynTime, Time, TimeError};
+use crate::time::{DynTime, Time, TimeError, TimeScaleMismatch};
 
 use super::time_scales::PyTimeScale;
 use super::utc::PyUtc;
@@ -34,6 +34,14 @@ pub struct PyTimeError(pub TimeError);
 
 impl From<PyTimeError> for PyErr {
     fn from(err: PyTimeError) -> Self {
+        PyValueError::new_err(err.0.to_string())
+    }
+}
+
+struct PyTimeScaleMismatch(TimeScaleMismatch);
+
+impl From<PyTimeScaleMismatch> for PyErr {
+    fn from(err: PyTimeScaleMismatch) -> Self {
         PyValueError::new_err(err.0.to_string())
     }
 }
@@ -347,8 +355,9 @@ impl PyTime {
         }
     }
 
-    fn __richcmp__(&self, other: PyTime, op: CompareOp) -> bool {
-        op.matches(self.0.cmp(&other.0))
+    fn __richcmp__(&self, other: PyTime, op: CompareOp) -> PyResult<bool> {
+        let ordering = self.0.checked_cmp(&other.0).map_err(PyTimeScaleMismatch)?;
+        Ok(op.matches(ordering))
     }
 
     /// Check if two Time objects are approximately equal.

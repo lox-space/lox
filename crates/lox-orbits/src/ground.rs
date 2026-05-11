@@ -267,7 +267,7 @@ impl<B: TrySpheroid, R: ReferenceFrame> GroundPropagator<B, R> {
 /// Single `Propagator` impl covers both typed and Dyn paths.
 impl<T, B, R> Propagator<T, B> for GroundPropagator<B, R>
 where
-    T: TimeScale + Copy + PartialOrd,
+    T: TimeScale + Copy + Eq,
     B: TrySpheroid + lox_bodies::Origin + Copy,
     R: ReferenceFrame + Copy,
 {
