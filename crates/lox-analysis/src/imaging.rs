@@ -28,6 +28,51 @@ use thiserror::Error;
 use crate::assets::{AssetId, Scenario, Spacecraft};
 use crate::visibility::EvalError;
 
+/// Densify a polygon by inserting intermediate vertices via linear lon/lat
+/// interpolation so that no sub-segment exceeds `max_deg` degrees (Euclidean
+/// distance in lon/lat coordinate space).
+///
+/// `geo::HaversineClosestPoint` treats each polygon edge as a great-circle arc.
+/// For long edges (e.g. 100° of longitude at mid-latitudes) that arc can curve
+/// many degrees away from the intended constant-latitude boundary, producing
+/// near-zero cross-track distances for satellites that are in fact far outside
+/// the AOI. By keeping sub-segments ≤ 0.5° long the great-circle arc and the
+/// straight lon/lat line are indistinguishable for practical sensor ranges.
+fn densify_polygon_linear(polygon: geo::Polygon<f64>, max_deg: f64) -> geo::Polygon<f64> {
+    let exterior = densify_ring_linear(polygon.exterior(), max_deg);
+    let interiors: Vec<_> = polygon
+        .interiors()
+        .iter()
+        .map(|ring| densify_ring_linear(ring, max_deg))
+        .collect();
+    geo::Polygon::new(exterior, interiors)
+}
+
+fn densify_ring_linear(ring: &geo::LineString<f64>, max_deg: f64) -> geo::LineString<f64> {
+    let coords: Vec<geo::Coord<f64>> = ring.coords().copied().collect();
+    let mut out: Vec<geo::Coord<f64>> = Vec::with_capacity(coords.len() * 4);
+    for pair in coords.windows(2) {
+        let (x0, y0) = (pair[0].x, pair[0].y);
+        let (x1, y1) = (pair[1].x, pair[1].y);
+        let dx = x1 - x0;
+        let dy = y1 - y0;
+        let len = (dx * dx + dy * dy).sqrt();
+        let n = ((len / max_deg).ceil() as usize).max(1);
+        out.push(geo::Coord { x: x0, y: y0 });
+        for i in 1..n {
+            let t = i as f64 / n as f64;
+            out.push(geo::Coord {
+                x: x0 + t * dx,
+                y: y0 + t * dy,
+            });
+        }
+    }
+    if let Some(&last) = coords.last() {
+        out.push(last);
+    }
+    geo::LineString::new(out)
+}
+
 /// Haversine great-circle distance between two lon/lat points (degrees) on a
 /// sphere of the given radius (meters).
 fn haversine_distance(a: geo::Point<f64>, b: geo::Point<f64>, radius_m: f64) -> f64 {
@@ -92,6 +137,7 @@ pub enum AoiError {
 impl Aoi {
     /// Creates a new AOI from a `geo::Polygon` (lon/lat in degrees).
     pub fn new(polygon: geo::Polygon<f64>) -> Self {
+        let polygon = densify_polygon_linear(polygon, 0.5);
         Self { polygon }
     }
 
@@ -120,7 +166,7 @@ impl Aoi {
         let polygon: geo::Polygon<f64> =
             geometry.value.try_into().map_err(|_| AoiError::NoPolygon)?;
 
-        Ok(Self { polygon })
+        Ok(Self::new(polygon))
     }
 
     /// Returns the great-circle distance in meters from a point to the AOI polygon.
@@ -448,6 +494,40 @@ mod tests {
         let aoi = Aoi::new(polygon);
         let inside = point!(x: 10.5, y: 45.5);
         assert_eq!(aoi.distance_to(&inside, earth_mean_radius_m()), 0.0);
+    }
+
+    // Regression test for issue #401: large AOI at high latitudes produced false
+    // imaging intervals because geo::HaversineClosestPoint treats polygon edges as
+    // great-circle arcs. The great circle connecting (-45°,50°) to (55°,50°)
+    // curves up to ~61.7°N at its midpoint (lon≈5°). A satellite at (5°,62°N)
+    // therefore appeared to be only ~38 km from the polygon boundary, even though
+    // the true distance to the lat=50° edge is ~1334 km. With a sensor range of
+    // ~290 km this produced a false imaging detection.
+    #[test]
+    fn test_aoi_distance_large_polygon_near_great_circle_arc_peak() {
+        let polygon = Polygon::new(
+            LineString::from(vec![
+                (-45.0, 30.0),
+                (55.0, 30.0),
+                (55.0, 50.0),
+                (-45.0, 50.0),
+                (-45.0, 30.0),
+            ]),
+            vec![],
+        );
+        let aoi = Aoi::new(polygon);
+        // 12° north of the top edge – the great-circle arc of that edge peaks at
+        // ~61.7°N, so (5°,62°) sits almost on the arc, yielding a near-zero
+        // computed distance before the fix.
+        let near_arc_peak = point!(x: 5.0, y: 62.0);
+        let d = aoi.distance_to(&near_arc_peak, earth_mean_radius_m());
+        // True distance to the 50°N boundary is ~1334 km.
+        // Before the fix this returned ~38 km (false positive).
+        assert!(
+            d > 1_000_000.0,
+            "expected distance > 1000 km for point 12° north of AOI boundary, got {:.0} m",
+            d
+        );
     }
 
     #[test]
