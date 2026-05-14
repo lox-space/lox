@@ -17,6 +17,7 @@ use crate::kvn::error::{KvnError, KvnErrorKind, Span};
 use crate::types::common::OdmTime;
 
 pub mod oem;
+pub mod omm;
 pub mod opm;
 
 /// Looks up the *single* field with the given keyword among a slice of
