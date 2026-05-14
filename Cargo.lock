@@ -1360,6 +1360,7 @@ dependencies = [
  "lox-orbits",
  "lox-time",
  "nalgebra",
+ "nom",
  "rstest",
  "thiserror",
 ]

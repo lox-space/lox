@@ -23,6 +23,7 @@ lox-frames.workspace = true
 lox-orbits.workspace = true
 lox-time.workspace = true
 nalgebra.workspace = true
+nom.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
