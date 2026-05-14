@@ -8,7 +8,7 @@ use lox_time::Time;
 use lox_time::intervals::TimeInterval;
 use lox_time::time_scales::{DynTimeScale, TimeScale};
 
-use crate::orbits::{CartesianOrbit, DynTrajectory, TrajectorError, Trajectory};
+use crate::orbits::{CartesianOrbit, DynTrajectory, Trajectory, TrajectoryError};
 
 use self::j2::{DynJ2Propagator, J2Error};
 use self::j4::{DynJ4Propagator, J4Error};
@@ -57,7 +57,7 @@ where
         times: impl IntoIterator<Item = Time<T>>,
     ) -> Result<Trajectory<T, O, Self::Frame>, Self::Error>
     where
-        Self::Error: From<TrajectorError>,
+        Self::Error: From<TrajectoryError>,
     {
         let states: Result<Vec<_>, _> = times.into_iter().map(|t| self.state_at(t)).collect();
         Ok(Trajectory::try_new(states?)?)

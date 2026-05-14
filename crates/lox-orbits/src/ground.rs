@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use crate::orbits::{CartesianOrbit, TrajectorError, Trajectory};
+use crate::orbits::{CartesianOrbit, Trajectory, TrajectoryError};
 use crate::propagators::Propagator;
 use lox_bodies::{DynOrigin, RotationalElements, Spheroid, TrySpheroid};
 use lox_core::coords::{Cartesian, LonLatAlt};
@@ -191,7 +191,7 @@ pub enum GroundPropagatorError {
     FrameTransformation(String),
     /// A trajectory construction error occurred.
     #[error(transparent)]
-    Trajectory(#[from] TrajectorError),
+    Trajectory(#[from] TrajectoryError),
 }
 
 /// Propagator that produces a stationary body-fixed trajectory for a ground location.
