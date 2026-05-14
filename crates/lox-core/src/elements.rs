@@ -6,6 +6,8 @@
 
 pub mod equinoctial;
 pub mod keplerian;
+pub mod mean;
 pub mod modified_equinoctial;
 
 pub use keplerian::*;
+pub use mean::MeanElements;
