@@ -17,7 +17,7 @@ use lox_time::intervals::TimeInterval;
 use lox_time::time_scales::Tai;
 use lox_time::utc::UtcError;
 
-use crate::orbits::{CartesianOrbit, TrajectorError, Trajectory};
+use crate::orbits::{CartesianOrbit, Trajectory, TrajectoryError};
 use crate::propagators::Propagator;
 
 /// Errors that can occur during SGP4 propagation.
@@ -28,7 +28,7 @@ pub enum Sgp4Error {
     ElementsError(#[from] ElementsError),
     /// Error constructing the output trajectory.
     #[error(transparent)]
-    TrajectoryError(#[from] TrajectorError),
+    TrajectoryError(#[from] TrajectoryError),
     /// SGP4 prediction error.
     #[error(transparent)]
     Sgp4(#[from] sgp4::Error),

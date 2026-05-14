@@ -22,7 +22,8 @@ use crate::orbits::propagators::numerical::{
 use crate::orbits::propagators::semi_analytical::{DynVallado, Vallado, ValladoError};
 use crate::orbits::propagators::sgp4::{Sgp4, Sgp4Error};
 use crate::orbits::{
-    CartesianOrbit, DynCartesianOrbit, DynTrajectory, TrajectorError, TrajectoryTransformationError,
+    CartesianOrbit, DynCartesianOrbit, DynTrajectory, TrajectoryError,
+    TrajectoryTransformationError,
 };
 use crate::time::DynTime;
 use crate::time::deltas::TimeDelta;
@@ -1212,10 +1213,10 @@ impl PyModifiedEquinoctial {
 #[derive(Debug, Clone)]
 pub struct PyTrajectory(pub DynTrajectory);
 
-pub struct PyTrajectorError(pub TrajectorError);
+pub struct PyTrajectoryError(pub TrajectoryError);
 
-impl From<PyTrajectorError> for PyErr {
-    fn from(err: PyTrajectorError) -> Self {
+impl From<PyTrajectoryError> for PyErr {
+    fn from(err: PyTrajectoryError) -> Self {
         PyValueError::new_err(err.0.to_string())
     }
 }
@@ -1227,7 +1228,7 @@ impl PyTrajectory {
         let states: Vec<PyCartesian> = states.extract()?;
         let states: Vec<DynCartesianOrbit> = states.into_iter().map(|s| s.0).collect();
         Ok(PyTrajectory(
-            DynTrajectory::try_new(states).map_err(PyTrajectorError)?,
+            DynTrajectory::try_new(states).map_err(PyTrajectoryError)?,
         ))
     }
 
@@ -1278,7 +1279,7 @@ impl PyTrajectory {
             ));
         }
         Ok(PyTrajectory(
-            DynTrajectory::try_new(states).map_err(PyTrajectorError)?,
+            DynTrajectory::try_new(states).map_err(PyTrajectoryError)?,
         ))
     }
 

@@ -26,7 +26,6 @@ use lox_time::{
     Time,
     time_scales::{DynTimeScale, TimeScale},
 };
-use thiserror::Error;
 
 /// The state representation of an orbit, either Cartesian or Keplerian.
 pub enum OrbitType {
@@ -147,11 +146,3 @@ pub type DynCartesianOrbit = Orbit<Cartesian, DynTimeScale, DynOrigin, DynFrame>
 pub type KeplerianOrbit<T, O, R> = Orbit<Keplerian, T, O, R>;
 /// A dynamically-typed Keplerian orbit.
 pub type DynKeplerianOrbit = Orbit<Keplerian, DynTimeScale, DynOrigin, DynFrame>;
-
-/// Errors that can occur when constructing a trajectory.
-#[derive(Debug, Clone, PartialEq, Error)]
-pub enum TrajectorError {
-    /// Too few states were provided to construct a trajectory.
-    #[error("at least 2 states are required but only {0} were provided")]
-    InsufficientStates(usize),
-}
