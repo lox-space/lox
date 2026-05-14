@@ -1351,6 +1351,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "lox-odm"
+version = "0.1.0-alpha.1"
+dependencies = [
+ "lox-bodies",
+ "lox-frames",
+ "lox-time",
+ "rstest",
+]
+
+[[package]]
 name = "lox-orbits"
 version = "0.1.0-alpha.36"
 dependencies = [
