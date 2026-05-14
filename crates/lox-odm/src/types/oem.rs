@@ -20,6 +20,8 @@ use crate::types::common::{CustomBodyOrFrameError, OdmCenter, OdmFrame, OdmHeade
 /// Per-segment metadata for the OEM (CCSDS 502.0-B-3 §5.3).
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct OemMetadata {
+    /// `COMMENT` lines for the metadata block, in document order.
+    pub comments: Vec<String>,
     /// `OBJECT_NAME` — human-readable spacecraft name.
     pub object_name: String,
     /// `OBJECT_ID` — international designator.
@@ -54,6 +56,8 @@ pub struct OemMetadata {
 /// A segment's full covariance history is a `Vec<OemCovariance>`.
 #[derive(Clone, Debug, PartialEq)]
 pub struct OemCovariance {
+    /// `COMMENT` lines for the covariance block, in document order.
+    pub comments: Vec<String>,
     /// `EPOCH` — the epoch this covariance is valid at.
     pub epoch: OdmTime,
     /// `COV_REF_FRAME` — optional frame override; when `None` the
@@ -74,6 +78,10 @@ pub struct OemCovariance {
 pub struct OemSegment {
     /// Per-segment metadata.
     pub metadata: OemMetadata,
+    /// `COMMENT` lines that appear in the DATA region of the segment
+    /// (between `META_STOP` and the first state row, or between rows
+    /// and the first `COVARIANCE_START`).
+    pub data_comments: Vec<String>,
     /// Time-ordered ephemeris state vectors.
     pub states: Vec<(OdmTime, Cartesian)>,
     /// Optional covariance history (empty when the segment has no
@@ -156,6 +164,7 @@ mod tests {
     #[test]
     fn oem_metadata_construction() {
         let m = OemMetadata {
+            comments: Vec::new(),
             object_name: "ISS".to_string(),
             object_id: "1998-067A".to_string(),
             center: OdmCenter::Known(DynOrigin::Earth),
@@ -176,6 +185,7 @@ mod tests {
     #[test]
     fn oem_covariance_construction() {
         let cov = OemCovariance {
+            comments: Vec::new(),
             epoch: sample_epoch(),
             frame: None,
             matrix: Matrix6::identity(),
@@ -187,6 +197,7 @@ mod tests {
     #[test]
     fn oem_covariance_with_frame_override() {
         let cov = OemCovariance {
+            comments: Vec::new(),
             epoch: sample_epoch(),
             frame: Some(OdmFrame::Known(DynFrame::Itrf)),
             matrix: Matrix6::zeros(),
@@ -208,6 +219,7 @@ mod tests {
 
     fn sample_metadata() -> OemMetadata {
         OemMetadata {
+            comments: Vec::new(),
             object_name: "TEST".to_string(),
             object_id: "2024-000A".to_string(),
             center: OdmCenter::Known(DynOrigin::Earth),
@@ -225,6 +237,7 @@ mod tests {
     #[test]
     fn oem_segment_construction() {
         let seg = OemSegment {
+            data_comments: Vec::new(),
             metadata: sample_metadata(),
             states: vec![
                 (sample_epoch(), sample_state(0.0)),
@@ -239,6 +252,7 @@ mod tests {
     #[test]
     fn oem_segment_iter_states_yields_references() {
         let seg = OemSegment {
+            data_comments: Vec::new(),
             metadata: sample_metadata(),
             states: vec![
                 (sample_epoch(), sample_state(0.0)),
@@ -254,6 +268,7 @@ mod tests {
     #[test]
     fn oem_segment_try_into_trajectory_succeeds_for_known() {
         let seg = OemSegment {
+            data_comments: Vec::new(),
             metadata: sample_metadata(),
             states: vec![
                 (sample_epoch(), sample_state(0.0)),
@@ -273,6 +288,7 @@ mod tests {
         let mut metadata = sample_metadata();
         metadata.center = OdmCenter::Custom("APOPHIS".to_string());
         let seg = OemSegment {
+            data_comments: Vec::new(),
             metadata,
             states: vec![
                 (sample_epoch(), sample_state(0.0)),
@@ -292,6 +308,7 @@ mod tests {
     #[test]
     fn oem_segment_try_into_trajectory_fails_for_insufficient_states() {
         let seg = OemSegment {
+            data_comments: Vec::new(),
             metadata: sample_metadata(),
             states: vec![(sample_epoch(), sample_state(0.0))],
             covariance_history: Vec::new(),
@@ -317,6 +334,7 @@ mod tests {
 
     fn sample_segment() -> OemSegment {
         OemSegment {
+            data_comments: Vec::new(),
             metadata: sample_metadata(),
             states: vec![
                 (sample_epoch(), sample_state(0.0)),
