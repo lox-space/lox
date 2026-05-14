@@ -19,14 +19,8 @@ readme = "README.md"
 
 [dependencies]
 lox-core.workspace = true
-lox-derive.workspace = true
 lox-time.workspace = true
 nom.workspace = true
-quick-xml.workspace = true
-regex.workspace = true
-serde-aux.workspace = true
-serde.workspace = true
-serde_json.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
