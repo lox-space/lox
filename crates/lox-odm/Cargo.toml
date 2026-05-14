@@ -18,8 +18,12 @@ readme = "README.md"
 
 [dependencies]
 lox-bodies.workspace = true
+lox-core.workspace = true
 lox-frames.workspace = true
+lox-orbits.workspace = true
 lox-time.workspace = true
+nalgebra.workspace = true
+thiserror.workspace = true
 
 [dev-dependencies]
 rstest.workspace = true

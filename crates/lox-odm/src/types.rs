@@ -9,5 +9,9 @@
 //! from KVN, XML, or JSON.
 
 pub mod common;
+pub mod opm;
 
-pub use common::{MessageKind, OdmCenter, OdmFrame, OdmHeader};
+pub use common::{
+    CustomBodyOrFrameError, MessageKind, OdmCenter, OdmFrame, OdmHeader, SpacecraftParameters,
+};
+pub use opm::{Maneuver, Opm, OpmCovariance, OpmMetadata};
