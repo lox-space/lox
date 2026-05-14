@@ -754,6 +754,377 @@ impl FrequencyUnits for i64 {
     }
 }
 
+type Kilograms = f64;
+
+/// Mass in kilograms.
+#[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[repr(transparent)]
+pub struct Mass(Kilograms);
+
+impl Mass {
+    /// Creates a new mass from an `f64` value in kilograms.
+    pub const fn new(kg: f64) -> Self {
+        Self(kg)
+    }
+
+    /// Creates a new mass from an `f64` value in kilograms.
+    pub const fn kilograms(kg: f64) -> Self {
+        Self(kg)
+    }
+
+    /// Creates a new mass from an `f64` value in grams.
+    pub const fn grams(g: f64) -> Self {
+        Self(g * 1e-3)
+    }
+
+    /// Creates a new mass from an `f64` value in metric tons (1000 kg).
+    pub const fn metric_tons(t: f64) -> Self {
+        Self(t * 1e3)
+    }
+
+    /// Returns the value of the mass in kilograms as an `f64`.
+    pub const fn as_f64(&self) -> f64 {
+        self.0
+    }
+
+    /// Returns the value of the mass in kilograms.
+    pub const fn to_kilograms(&self) -> f64 {
+        self.0
+    }
+
+    /// Returns the value of the mass in grams.
+    pub const fn to_grams(&self) -> f64 {
+        self.0 * 1e3
+    }
+
+    /// Returns the value of the mass in metric tons.
+    pub const fn to_metric_tons(&self) -> f64 {
+        self.0 * 1e-3
+    }
+}
+
+impl Display for Mass {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        self.0.fmt(f)?;
+        write!(f, " kg")
+    }
+}
+
+/// A trait for creating [`Mass`] instances from primitives.
+///
+/// By default it is implemented for [`f64`] and [`i64`].
+///
+/// # Examples
+///
+/// ```
+/// use lox_core::units::MassUnits;
+///
+/// let m = 1.kg();
+/// assert_eq!(m.to_kilograms(), 1.0);
+/// ```
+pub trait MassUnits {
+    /// Creates a mass from a value in kilograms.
+    fn kg(&self) -> Mass;
+    /// Creates a mass from a value in grams.
+    fn g(&self) -> Mass;
+    /// Creates a mass from a value in metric tons.
+    fn t(&self) -> Mass;
+}
+
+impl MassUnits for f64 {
+    fn kg(&self) -> Mass {
+        Mass::kilograms(*self)
+    }
+
+    fn g(&self) -> Mass {
+        Mass::grams(*self)
+    }
+
+    fn t(&self) -> Mass {
+        Mass::metric_tons(*self)
+    }
+}
+
+impl MassUnits for i64 {
+    fn kg(&self) -> Mass {
+        Mass::kilograms(*self as f64)
+    }
+
+    fn g(&self) -> Mass {
+        Mass::grams(*self as f64)
+    }
+
+    fn t(&self) -> Mass {
+        Mass::metric_tons(*self as f64)
+    }
+}
+
+type SquareMeters = f64;
+
+/// Area in square meters.
+#[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[repr(transparent)]
+pub struct Area(SquareMeters);
+
+impl Area {
+    /// Creates a new area from an `f64` value in square meters.
+    pub const fn new(m2: f64) -> Self {
+        Self(m2)
+    }
+
+    /// Creates a new area from an `f64` value in square meters.
+    pub const fn square_meters(m2: f64) -> Self {
+        Self(m2)
+    }
+
+    /// Creates a new area from an `f64` value in square kilometers.
+    pub const fn square_kilometers(km2: f64) -> Self {
+        Self(km2 * 1e6)
+    }
+
+    /// Returns the value of the area in square meters as an `f64`.
+    pub const fn as_f64(&self) -> f64 {
+        self.0
+    }
+
+    /// Returns the value of the area in square meters.
+    pub const fn to_square_meters(&self) -> f64 {
+        self.0
+    }
+
+    /// Returns the value of the area in square kilometers.
+    pub const fn to_square_kilometers(&self) -> f64 {
+        self.0 * 1e-6
+    }
+}
+
+impl Display for Area {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        self.0.fmt(f)?;
+        write!(f, " m²")
+    }
+}
+
+/// A trait for creating [`Area`] instances from primitives.
+///
+/// By default it is implemented for [`f64`] and [`i64`].
+///
+/// # Examples
+///
+/// ```
+/// use lox_core::units::AreaUnits;
+///
+/// let a = 4.m2();
+/// assert_eq!(a.to_square_meters(), 4.0);
+/// ```
+pub trait AreaUnits {
+    /// Creates an area from a value in square meters.
+    fn m2(&self) -> Area;
+    /// Creates an area from a value in square kilometers.
+    fn km2(&self) -> Area;
+}
+
+impl AreaUnits for f64 {
+    fn m2(&self) -> Area {
+        Area::square_meters(*self)
+    }
+
+    fn km2(&self) -> Area {
+        Area::square_kilometers(*self)
+    }
+}
+
+impl AreaUnits for i64 {
+    fn m2(&self) -> Area {
+        Area::square_meters(*self as f64)
+    }
+
+    fn km2(&self) -> Area {
+        Area::square_kilometers(*self as f64)
+    }
+}
+
+type SquareMetersPerKilogram = f64;
+
+/// Area-to-mass ratio in m²/kg.
+///
+/// Used for ballistic and radiation-pressure coefficients (e.g. the OMM
+/// `BTERM` and `AGOM` fields in CCSDS 502.0-B-3).
+#[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[repr(transparent)]
+pub struct AreaToMass(SquareMetersPerKilogram);
+
+impl AreaToMass {
+    /// Creates a new area-to-mass ratio from an `f64` value in m²/kg.
+    pub const fn new(m2_per_kg: f64) -> Self {
+        Self(m2_per_kg)
+    }
+
+    /// Creates a new area-to-mass ratio from an `f64` value in m²/kg.
+    pub const fn square_meters_per_kilogram(m2_per_kg: f64) -> Self {
+        Self(m2_per_kg)
+    }
+
+    /// Returns the value in m²/kg as an `f64`.
+    pub const fn as_f64(&self) -> f64 {
+        self.0
+    }
+
+    /// Returns the value in m²/kg.
+    pub const fn to_square_meters_per_kilogram(&self) -> f64 {
+        self.0
+    }
+}
+
+impl Display for AreaToMass {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        self.0.fmt(f)?;
+        write!(f, " m²/kg")
+    }
+}
+
+/// A trait for creating [`AreaToMass`] instances from primitives.
+///
+/// By default it is implemented for [`f64`] and [`i64`].
+///
+/// # Examples
+///
+/// ```
+/// use lox_core::units::AreaToMassUnits;
+///
+/// let r = 0.05.m2_per_kg();
+/// assert_eq!(r.to_square_meters_per_kilogram(), 0.05);
+/// ```
+pub trait AreaToMassUnits {
+    /// Creates an area-to-mass ratio from a value in m²/kg.
+    fn m2_per_kg(&self) -> AreaToMass;
+}
+
+impl AreaToMassUnits for f64 {
+    fn m2_per_kg(&self) -> AreaToMass {
+        AreaToMass::square_meters_per_kilogram(*self)
+    }
+}
+
+impl AreaToMassUnits for i64 {
+    fn m2_per_kg(&self) -> AreaToMass {
+        AreaToMass::square_meters_per_kilogram(*self as f64)
+    }
+}
+
+/// Standard gravitational acceleration at Earth's surface, m/s².
+/// CGPM 1901 definition, used as the unit `g₀` in many engineering contexts.
+pub const STANDARD_GRAVITY: f64 = 9.806_65;
+
+type MetersPerSecondSquared = f64;
+
+/// Acceleration in meters per second squared.
+#[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[repr(transparent)]
+pub struct Acceleration(MetersPerSecondSquared);
+
+impl Acceleration {
+    /// Creates a new acceleration from an `f64` value in m/s².
+    pub const fn new(mps2: f64) -> Self {
+        Self(mps2)
+    }
+
+    /// Creates a new acceleration from an `f64` value in m/s².
+    pub const fn meters_per_second_squared(mps2: f64) -> Self {
+        Self(mps2)
+    }
+
+    /// Creates a new acceleration from an `f64` value in km/s².
+    pub const fn kilometers_per_second_squared(kps2: f64) -> Self {
+        Self(kps2 * 1e3)
+    }
+
+    /// Creates a new acceleration from an `f64` value in standard gravities (g₀).
+    pub const fn standard_gravities(g: f64) -> Self {
+        Self(g * STANDARD_GRAVITY)
+    }
+
+    /// Returns the value in m/s² as an `f64`.
+    pub const fn as_f64(&self) -> f64 {
+        self.0
+    }
+
+    /// Returns the value in m/s².
+    pub const fn to_meters_per_second_squared(&self) -> f64 {
+        self.0
+    }
+
+    /// Returns the value in km/s².
+    pub const fn to_kilometers_per_second_squared(&self) -> f64 {
+        self.0 * 1e-3
+    }
+
+    /// Returns the value in standard gravities (g₀).
+    pub const fn to_standard_gravities(&self) -> f64 {
+        self.0 / STANDARD_GRAVITY
+    }
+}
+
+impl Display for Acceleration {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        self.0.fmt(f)?;
+        write!(f, " m/s²")
+    }
+}
+
+/// A trait for creating [`Acceleration`] instances from primitives.
+///
+/// By default it is implemented for [`f64`] and [`i64`].
+///
+/// # Examples
+///
+/// ```
+/// use lox_core::units::AccelerationUnits;
+///
+/// let a = 9.81.mps2();
+/// assert_eq!(a.to_meters_per_second_squared(), 9.81);
+/// ```
+pub trait AccelerationUnits {
+    /// Creates an acceleration from a value in m/s².
+    fn mps2(&self) -> Acceleration;
+    /// Creates an acceleration from a value in km/s².
+    fn kps2(&self) -> Acceleration;
+    /// Creates an acceleration from a value in standard gravities (g₀).
+    fn g0(&self) -> Acceleration;
+}
+
+impl AccelerationUnits for f64 {
+    fn mps2(&self) -> Acceleration {
+        Acceleration::meters_per_second_squared(*self)
+    }
+
+    fn kps2(&self) -> Acceleration {
+        Acceleration::kilometers_per_second_squared(*self)
+    }
+
+    fn g0(&self) -> Acceleration {
+        Acceleration::standard_gravities(*self)
+    }
+}
+
+impl AccelerationUnits for i64 {
+    fn mps2(&self) -> Acceleration {
+        Acceleration::meters_per_second_squared(*self as f64)
+    }
+
+    fn kps2(&self) -> Acceleration {
+        Acceleration::kilometers_per_second_squared(*self as f64)
+    }
+
+    fn g0(&self) -> Acceleration {
+        Acceleration::standard_gravities(*self as f64)
+    }
+}
+
 /// Temperature in Kelvin (deprecated type alias, use [`Temperature`] instead).
 pub type Kelvin = f64;
 
@@ -1063,11 +1434,15 @@ macro_rules! trait_impls {
 }
 
 trait_impls!(
+    Acceleration,
     Angle,
     AngularRate,
+    Area,
+    AreaToMass,
     Decibel,
     Distance,
     Frequency,
+    Mass,
     Power,
     Pressure,
     Temperature,
@@ -1464,5 +1839,149 @@ mod tests {
         let p = Pressure::pa(101325.0);
         let s = format!("{}", p);
         assert!(s.contains("Pa"));
+    }
+
+    #[test]
+    fn test_mass_kilograms() {
+        let m = Mass::kilograms(1.5);
+        assert_eq!(m.to_kilograms(), 1.5);
+    }
+
+    #[test]
+    fn test_mass_grams() {
+        let m = Mass::grams(2500.0);
+        assert_approx_eq!(m.to_kilograms(), 2.5, rtol <= 1e-12);
+    }
+
+    #[test]
+    fn test_mass_metric_tons() {
+        let m = Mass::metric_tons(0.5);
+        assert_approx_eq!(m.to_kilograms(), 500.0, rtol <= 1e-12);
+    }
+
+    #[test]
+    fn test_mass_units_kg() {
+        let m = 1.5.kg();
+        assert_eq!(m.to_kilograms(), 1.5);
+    }
+
+    #[test]
+    fn test_mass_units_g() {
+        let m = 500.0.g();
+        assert_approx_eq!(m.to_kilograms(), 0.5, rtol <= 1e-12);
+    }
+
+    #[test]
+    fn test_mass_display() {
+        let m = 12.5.kg();
+        assert_eq!(format!("{:.2}", m), "12.50 kg");
+    }
+
+    #[test]
+    fn test_mass_neg() {
+        assert_eq!(Mass(-1.0), -1.0.kg())
+    }
+
+    #[test]
+    fn test_area_square_meters() {
+        let a = Area::square_meters(2.5);
+        assert_eq!(a.to_square_meters(), 2.5);
+    }
+
+    #[test]
+    fn test_area_square_kilometers() {
+        let a = Area::square_kilometers(1.0);
+        assert_approx_eq!(a.to_square_meters(), 1e6, rtol <= 1e-12);
+    }
+
+    #[test]
+    fn test_area_units_m2() {
+        let a = 9.0.m2();
+        assert_eq!(a.to_square_meters(), 9.0);
+    }
+
+    #[test]
+    fn test_area_units_km2() {
+        let a = 2.0.km2();
+        assert_approx_eq!(a.to_square_meters(), 2e6, rtol <= 1e-12);
+    }
+
+    #[test]
+    fn test_area_display() {
+        let a = 4.5.m2();
+        assert_eq!(format!("{:.2}", a), "4.50 m²");
+    }
+
+    #[test]
+    fn test_area_neg() {
+        assert_eq!(Area(-1.0), -1.0.m2())
+    }
+
+    #[test]
+    fn test_area_to_mass_square_meters_per_kilogram() {
+        let r = AreaToMass::square_meters_per_kilogram(0.025);
+        assert_eq!(r.to_square_meters_per_kilogram(), 0.025);
+    }
+
+    #[test]
+    fn test_area_to_mass_units_shorthand() {
+        let r = 0.05.m2_per_kg();
+        assert_eq!(r.to_square_meters_per_kilogram(), 0.05);
+    }
+
+    #[test]
+    fn test_area_to_mass_display() {
+        let r = 0.05.m2_per_kg();
+        assert_eq!(format!("{:.2}", r), "0.05 m²/kg");
+    }
+
+    #[test]
+    fn test_area_to_mass_neg() {
+        assert_eq!(AreaToMass(-1.0), -1.0.m2_per_kg())
+    }
+
+    #[test]
+    fn test_acceleration_meters_per_second_squared() {
+        let a = Acceleration::meters_per_second_squared(9.81);
+        assert_eq!(a.to_meters_per_second_squared(), 9.81);
+    }
+
+    #[test]
+    fn test_acceleration_kilometers_per_second_squared() {
+        let a = Acceleration::kilometers_per_second_squared(1e-3);
+        assert_approx_eq!(a.to_meters_per_second_squared(), 1.0, rtol <= 1e-12);
+    }
+
+    #[test]
+    fn test_acceleration_standard_gravities() {
+        let a = Acceleration::standard_gravities(2.0);
+        assert_approx_eq!(a.to_meters_per_second_squared(), 19.6133, rtol <= 1e-6);
+    }
+
+    #[test]
+    fn test_acceleration_units_mps2() {
+        let a = 9.81.mps2();
+        assert_eq!(a.to_meters_per_second_squared(), 9.81);
+    }
+
+    #[test]
+    fn test_acceleration_units_g0() {
+        let a = 1.0.g0();
+        assert_approx_eq!(
+            a.to_meters_per_second_squared(),
+            STANDARD_GRAVITY,
+            rtol <= 1e-12
+        );
+    }
+
+    #[test]
+    fn test_acceleration_display() {
+        let a = 9.81.mps2();
+        assert_eq!(format!("{:.2}", a), "9.81 m/s²");
+    }
+
+    #[test]
+    fn test_acceleration_neg() {
+        assert_eq!(Acceleration(-1.0), -1.0.mps2())
     }
 }
