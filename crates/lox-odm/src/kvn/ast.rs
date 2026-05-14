@@ -4,21 +4,25 @@
 
 //! Lossless KVN AST.
 //!
-//! See spec section 7.1 for the design rationale (comment ownership,
-//! semantic-lossless round-trip).
+//! `COMMENT` lines are first-class entries via [`KvnEntry::Comment`] —
+//! they preserve their wire-order position alongside fields and rows
+//! without any "comment ownership" disambiguation at the AST layer.
+//! The projection layer (Phase 2b-{opm,oem,omm,ci}) decides which typed
+//! `comments: Vec<String>` field receives the comments of each section.
 
 use crate::types::common::MessageKind;
 
 /// A complete KVN-encoded ODM message in AST form.
-///
-/// Carries the message-kind discriminator, the wire-format version
-/// literal (e.g. `"3.0"`), and a sequence of sections in document order.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct KvnDocument {
     /// Which ODM message type this document represents.
     pub message_kind: MessageKind,
     /// The wire-format `CCSDS_<KIND>_VERS` literal (e.g. `"3.0"`).
     pub version: String,
+    /// `COMMENT` lines that appear before the version-header line.
+    /// Empty in most files; populated when an originator prepends a
+    /// banner.
+    pub preamble: Vec<String>,
     /// Sections in document order. The first section is conventionally
     /// the header (with `keyword == "HEADER"`, `bracketed == false`).
     pub sections: Vec<KvnSection>,
@@ -40,17 +44,18 @@ pub struct KvnSection {
     /// write. `true` for genuinely bracketed sections; `false` for
     /// implicit ones synthesised from document structure.
     pub bracketed: bool,
-    /// `COMMENT` lines that precede this section's first entry.
-    pub leading_comments: Vec<String>,
-    /// The section's content, in document order.
+    /// The section's content, in document order. `COMMENT` lines appear
+    /// as [`KvnEntry::Comment`] entries interleaved with fields, rows,
+    /// and subsections.
     pub entries: Vec<KvnEntry>,
 }
 
 /// One entry within a [`KvnSection`].
 ///
-/// `KvnEntry` is an enum (rather than three separate `Vec`s on
-/// `KvnSection`) so that document order is preserved across mixed
-/// content — essential for `COMMENT` association during round-trip.
+/// `KvnEntry` is an enum (rather than separate `Vec`s for each kind)
+/// so that document order is preserved across mixed content. Comments
+/// are first-class entries — no separate "leading/trailing comments"
+/// bookkeeping.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum KvnEntry {
     /// A standard `KEY = VALUE [unit]` line.
@@ -60,6 +65,10 @@ pub enum KvnEntry {
     /// A nested section (e.g. a single maneuver block inside the OPM
     /// `DATA` section, or a covariance epoch inside an OEM segment).
     Subsection(KvnSection),
+    /// A `COMMENT` line. The string is the text following the `COMMENT`
+    /// keyword (a single leading space is stripped on parse and
+    /// re-inserted on write).
+    Comment(String),
 }
 
 /// A standard `KEY = VALUE [unit]` line.
@@ -75,9 +84,6 @@ pub struct KvnField {
     /// Optional `[unit]` annotation. Stored without the surrounding
     /// brackets (e.g. `"km"`, not `"[km]"`).
     pub unit: Option<String>,
-    /// `COMMENT` lines that follow this field, up to the next
-    /// non-comment entry.
-    pub trailing_comments: Vec<String>,
 }
 
 /// A positional row of values — used for OEM and OCM ephemeris bodies
@@ -89,6 +95,4 @@ pub struct KvnRow {
     /// projection layer assigns column semantics based on the enclosing
     /// section's expected schema.
     pub values: Vec<String>,
-    /// `COMMENT` lines that follow this row.
-    pub trailing_comments: Vec<String>,
 }
