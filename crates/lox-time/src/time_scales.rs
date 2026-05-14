@@ -110,6 +110,28 @@ impl Display for Tdb {
     }
 }
 
+/// GPS time. A continuous atomic timescale used by the Global Positioning
+/// System. Related to TAI by a constant offset: `TAI = GPS + 19s`.
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
+pub struct Gps;
+
+impl TimeScale for Gps {
+    fn abbreviation(&self) -> &'static str {
+        "GPS"
+    }
+    fn name(&self) -> &'static str {
+        "Global Positioning System time"
+    }
+}
+
+impl Display for Gps {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.abbreviation())
+    }
+}
+
 /// Terrestrial Time.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -181,6 +203,7 @@ impl_time_scale_serde!(Tai, "TAI");
 impl_time_scale_serde!(Tcb, "TCB");
 impl_time_scale_serde!(Tcg, "TCG");
 impl_time_scale_serde!(Tdb, "TDB");
+impl_time_scale_serde!(Gps, "GPS");
 impl_time_scale_serde!(Tt, "TT");
 impl_time_scale_serde!(Ut1, "UT1");
 
@@ -188,6 +211,8 @@ impl_time_scale_serde!(Ut1, "UT1");
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum DynTimeScale {
+    /// GPS Time.
+    Gps,
     /// International Atomic Time.
     #[default]
     Tai,
@@ -206,6 +231,7 @@ pub enum DynTimeScale {
 impl TimeScale for DynTimeScale {
     fn abbreviation(&self) -> &'static str {
         match self {
+            DynTimeScale::Gps => Gps.abbreviation(),
             DynTimeScale::Tai => Tai.abbreviation(),
             DynTimeScale::Tcb => Tcb.abbreviation(),
             DynTimeScale::Tcg => Tcg.abbreviation(),
@@ -217,6 +243,7 @@ impl TimeScale for DynTimeScale {
 
     fn name(&self) -> &'static str {
         match self {
+            DynTimeScale::Gps => Gps.name(),
             DynTimeScale::Tai => Tai.name(),
             DynTimeScale::Tcb => Tcb.name(),
             DynTimeScale::Tcg => Tcg.name(),
@@ -224,6 +251,12 @@ impl TimeScale for DynTimeScale {
             DynTimeScale::Tt => Tt.name(),
             DynTimeScale::Ut1 => Ut1.name(),
         }
+    }
+}
+
+impl From<Gps> for DynTimeScale {
+    fn from(_: Gps) -> Self {
+        Self::Gps
     }
 }
 
@@ -273,6 +306,7 @@ impl FromStr for DynTimeScale {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
+            "gps" | "GPS" => Ok(DynTimeScale::Gps),
             "tai" | "TAI" => Ok(DynTimeScale::Tai),
             "tcb" | "TCB" => Ok(DynTimeScale::Tcb),
             "tcg" | "TCG" => Ok(DynTimeScale::Tcg),
@@ -330,5 +364,27 @@ mod tests {
     fn test_dyn_time_scale_invalid() {
         let scale: Result<DynTimeScale, UnknownTimeScaleError> = "NTS".parse();
         assert_eq!(scale, Err(UnknownTimeScaleError("NTS".to_owned())))
+    }
+
+    #[test]
+    fn gps_time_scale_abbreviation_and_name() {
+        assert_eq!(Gps.abbreviation(), "GPS");
+        assert_eq!(Gps.name(), "Global Positioning System time");
+    }
+
+    #[test]
+    fn dyn_time_scale_gps_abbreviation() {
+        assert_eq!(DynTimeScale::Gps.abbreviation(), "GPS");
+    }
+
+    #[test]
+    fn dyn_time_scale_parses_gps_both_cases() {
+        assert_eq!("GPS".parse::<DynTimeScale>().unwrap(), DynTimeScale::Gps);
+        assert_eq!("gps".parse::<DynTimeScale>().unwrap(), DynTimeScale::Gps);
+    }
+
+    #[test]
+    fn dyn_time_scale_rejects_unknown() {
+        assert!("XYZ".parse::<DynTimeScale>().is_err());
     }
 }
