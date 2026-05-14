@@ -13,12 +13,15 @@ use std::collections::BTreeMap;
 use crate::types::common::{
     Covariance, OdmCenter, OdmFrame, OdmHeader, OdmTime, SpacecraftParameters,
 };
-use lox_core::elements::MeanElements;
+use lox_bodies::TryPointMass;
+use lox_core::elements::{GravitationalParameter, MeanElements};
 use lox_core::units::AreaToMass;
 
 /// Per-message metadata for the OMM (CCSDS 502.0-B-3 §4.3).
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct OmmMetadata {
+    /// `COMMENT` lines for the metadata block, in document order.
+    pub comments: Vec<String>,
     /// `OBJECT_NAME` — human-readable spacecraft name.
     pub object_name: String,
     /// `OBJECT_ID` — international designator.
@@ -44,6 +47,8 @@ pub struct OmmMetadata {
 /// use the typed `AreaToMass` newtype.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct TleParameters {
+    /// `COMMENT` lines for the TLE-parameters block, in document order.
+    pub comments: Vec<String>,
     /// `EPHEMERIS_TYPE` — SGP4 model variant code (typically `0`).
     pub ephemeris_type: Option<i32>,
     /// `CLASSIFICATION_TYPE` — single-character classification marker
@@ -70,6 +75,27 @@ pub struct TleParameters {
     pub agom: Option<AreaToMass>,
 }
 
+/// OMM mean-elements block (CCSDS 502.0-B-3 §4.4).
+///
+/// Wraps the pure-physics [`MeanElements`] with wire-specific
+/// decorations: an optional `GM` and any `COMMENT` lines that precede
+/// the block on the wire. Mirrors [`crate::types::opm::OpmKeplerian`].
+///
+/// The `gm` field captures the operator's wire `GM` value exactly.
+/// Preserved regardless of whether the center is `Known` or `Custom`.
+/// When `None`, the wire did not include `GM`.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct OmmMeanElements {
+    /// `COMMENT` lines for this sub-block, in document order.
+    pub comments: Vec<String>,
+    /// Mean Keplerian elements (semi-major axis in meters, angles
+    /// in radians).
+    pub elements: MeanElements,
+    /// `GM [km**3/s**2]` from the wire, stored in canonical m³/s².
+    /// `None` when the wire did not specify GM.
+    pub gm: Option<GravitationalParameter>,
+}
+
 /// The Orbit Mean Elements Message (OMM, CCSDS 502.0-B-3 §4).
 ///
 /// Mean Keplerian elements at an epoch, tuned for a particular
@@ -85,14 +111,15 @@ pub struct Omm {
     pub metadata: OmmMetadata,
     /// Mean-elements epoch.
     pub epoch: OdmTime,
-    /// Mean Keplerian elements.
+    /// Mean Keplerian elements plus wire-specific decorations (`GM`,
+    /// COMMENTs).
     ///
     /// On the wire, the size element may appear as either
     /// `SEMI_MAJOR_AXIS` (km) or `MEAN_MOTION` (rev/day) per
     /// CCSDS §4.4; the parser normalises to semi-major axis using
-    /// the center body's `GM` (or the optional wire `GM` if present).
+    /// the wire `GM` (preferred) or the center body's canonical GM.
     /// The choice of wire form is preserved at the AST layer, not here.
-    pub mean_elements: MeanElements,
+    pub mean_elements: OmmMeanElements,
     /// Optional SGP4-specific element-set parameters.
     pub tle_parameters: Option<TleParameters>,
     /// Optional spacecraft physical properties.
@@ -101,6 +128,25 @@ pub struct Omm {
     pub covariance: Option<Covariance>,
     /// User-defined parameters (preserved verbatim for round-trip).
     pub user_defined: BTreeMap<String, String>,
+}
+
+impl Omm {
+    /// Returns a gravitational parameter for this OMM, preferring the
+    /// operator's wire `GM` (stored on [`OmmMeanElements::gm`]) and
+    /// falling back to the canonical body GM via
+    /// [`TryPointMass::try_gravitational_parameter`].
+    ///
+    /// Returns `None` only when both are unavailable — i.e. the wire
+    /// did not include `GM` *and* the center is [`OdmCenter::Custom`]
+    /// or the body has no defined gravitational parameter.
+    pub fn gm(&self) -> Option<GravitationalParameter> {
+        self.mean_elements.gm.or_else(|| {
+            self.metadata
+                .center
+                .known()
+                .and_then(|o| o.try_gravitational_parameter().ok())
+        })
+    }
 }
 
 #[cfg(test)]
@@ -114,6 +160,7 @@ mod tests {
     #[test]
     fn omm_metadata_construction() {
         let m = OmmMetadata {
+            comments: Vec::new(),
             object_name: "ISS".to_string(),
             object_id: "1998-067A".to_string(),
             center: OdmCenter::Known(DynOrigin::Earth),
@@ -138,6 +185,7 @@ mod tests {
     #[test]
     fn tle_parameters_typical_sgp4() {
         let p = TleParameters {
+            comments: Vec::new(),
             ephemeris_type: Some(0),
             classification_type: Some("U".to_string()),
             norad_cat_id: Some(45018),
@@ -170,6 +218,7 @@ mod tests {
 
     fn sample_metadata() -> OmmMetadata {
         OmmMetadata {
+            comments: Vec::new(),
             object_name: "TEST-SAT".to_string(),
             object_id: "2024-000A".to_string(),
             center: OdmCenter::Known(DynOrigin::Earth),
@@ -179,14 +228,18 @@ mod tests {
         }
     }
 
-    fn sample_mean_elements() -> MeanElements {
-        MeanElements {
-            a: 6_859_961.0, // m (~ 482 km altitude)
-            e: 0.001_335_6,
-            i: 1.697_775,    // rad (~ 97.297 deg)
-            raan: 1.159_523, // rad
-            aop: 1.931_018,  // rad
-            m: 5.842_034,    // rad
+    fn sample_mean_elements() -> OmmMeanElements {
+        OmmMeanElements {
+            comments: Vec::new(),
+            elements: MeanElements {
+                a: 6_859_961.0, // m (~ 482 km altitude)
+                e: 0.001_335_6,
+                i: 1.697_775,    // rad (~ 97.297 deg)
+                raan: 1.159_523, // rad
+                aop: 1.931_018,  // rad
+                m: 5.842_034,    // rad
+            },
+            gm: None,
         }
     }
 
@@ -205,6 +258,41 @@ mod tests {
         assert_eq!(omm.metadata.mean_element_theory, "SGP/SGP4");
         assert!(omm.tle_parameters.is_none());
         assert!(omm.user_defined.is_empty());
+    }
+
+    fn sample_omm() -> Omm {
+        Omm {
+            header: sample_header(),
+            metadata: sample_metadata(),
+            epoch: sample_epoch(),
+            mean_elements: sample_mean_elements(),
+            tle_parameters: None,
+            spacecraft: None,
+            covariance: None,
+            user_defined: BTreeMap::new(),
+        }
+    }
+
+    #[test]
+    fn omm_gm_prefers_wire_value() {
+        let mut omm = sample_omm();
+        let wire_gm = GravitationalParameter::km3_per_s2(398600.4415);
+        omm.mean_elements.gm = Some(wire_gm);
+        assert_eq!(omm.gm(), Some(wire_gm));
+    }
+
+    #[test]
+    fn omm_gm_falls_back_to_canonical_for_known_center() {
+        let omm = sample_omm();
+        let expected = DynOrigin::Earth.try_gravitational_parameter().ok();
+        assert_eq!(omm.gm(), expected);
+    }
+
+    #[test]
+    fn omm_gm_returns_none_for_custom_center_without_wire_gm() {
+        let mut omm = sample_omm();
+        omm.metadata.center = OdmCenter::Custom("APOPHIS".to_string());
+        assert_eq!(omm.gm(), None);
     }
 
     #[test]

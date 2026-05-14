@@ -74,9 +74,8 @@ impl From<Omm> for OdmCi {
 mod tests {
     use super::*;
     use crate::types::common::{OdmCenter, OdmFrame, OdmHeader, OdmTime};
-    use crate::types::omm::OmmMetadata;
+    use crate::types::omm::{OmmMeanElements, OmmMetadata};
     use lox_bodies::DynOrigin;
-    use lox_core::elements::MeanElements;
     use lox_frames::DynFrame;
     use lox_time::time::Time;
     use lox_time::time_scales::DynTimeScale;
@@ -96,6 +95,7 @@ mod tests {
                 message_id: None,
             },
             metadata: OmmMetadata {
+                comments: Vec::new(),
                 object_name: "TEST-SAT".to_string(),
                 object_id: "2024-000A".to_string(),
                 center: OdmCenter::Known(DynOrigin::Earth),
@@ -104,7 +104,7 @@ mod tests {
                 mean_element_theory: "SGP/SGP4".to_string(),
             },
             epoch: sample_epoch(),
-            mean_elements: MeanElements::default(),
+            mean_elements: OmmMeanElements::default(),
             tle_parameters: None,
             spacecraft: None,
             covariance: None,
